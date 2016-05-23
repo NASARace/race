@@ -1,0 +1,4 @@
+<schedule>
+    <event when="00:00:02" file="race-actors/src/test/scala/message1"/>
+    <event when="00:00:04" file="race-actors/src/test/scala/message2"/>
+</schedule>

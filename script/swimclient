@@ -1,0 +1,11 @@
+#!/bin/bash
+
+DIR="$(dirname ${BASH_SOURCE[0]})"
+SCRIPT=$DIR/../test-tools/swim-client/target/universal/stage/bin/swimclient
+
+if [ -x $SCRIPT ]; then
+  $SCRIPT $@
+else
+  echo "executable does not exist, run sbt swimClient/stage"
+fi
+

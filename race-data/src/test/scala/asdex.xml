@@ -1,0 +1,168 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<asdexMsg xmlns:ns2="urn:us:gov:dot:faa:atm:terminal:entities:smes:smestypes"
+          xmlns="urn:us:gov:dot:faa:atm:terminal:entities:smes:surfacemovementevent">
+    <airport>KCLT</airport>
+    <positionReport full="false">
+        <time>2015-10-13T21:47:20.000Z</time>
+        <track>5</track>
+    </positionReport>
+    <positionReport full="false">
+        <time>2015-10-13T21:47:20.000Z</time>
+        <track>3299</track>
+        <position>
+            <x>14042</x>
+            <y>-14486</y>
+            <latitude>35.092780804261565</latitude>
+            <longitude>-80.79033326357603</longitude>
+            <altitude>6631</altitude>
+        </position>
+    </positionReport>
+    <positionReport full="false">
+        <time>2015-10-13T21:47:20.000Z</time>
+        <track>3470</track>
+    </positionReport>
+    <positionReport full="false">
+        <time>2015-10-13T21:47:20.000Z</time>
+        <track>3544</track>
+        <position>
+            <x>-13400</x>
+            <y>-14353</y>
+            <latitude>35.09399609640241</latitude>
+            <longitude>-81.09117829240859</longitude>
+            <altitude>7581</altitude>
+        </position>
+    </positionReport>
+    <positionReport full="false">
+        <time>2015-10-13T21:47:20.000Z</time>
+        <track>117</track>
+        <position>
+            <x>-10905</x>
+            <y>-7286</y>
+            <latitude>35.15770861878991</latitude>
+            <longitude>-81.06391657143831</longitude>
+            <altitude>8794</altitude>
+            <flightLevel>88.0</flightLevel>
+        </position>
+        <movement>
+            <speed>283</speed>
+            <heading>353.0511474609375</heading>
+            <vx>-17.0</vx>
+            <ax>-0.25</ax>
+            <ay>0.25</ay>
+        </movement>
+        <status>
+            <mon>1</mon>
+            <src>radar</src>
+            <a9s>1</a9s>
+        </status>
+    </positionReport>
+    <positionReport full="false">
+        <time>2015-10-13T21:47:20.000Z</time>
+        <track>3922</track>
+        <position>
+            <x>-481</x>
+            <y>-812</y>
+            <latitude>35.21609268151224</latitude>
+            <longitude>-80.9495625179261</longitude>
+        </position>
+        <movement>
+            <speed>11</speed>
+            <heading>78.9532470703125</heading>
+            <vx>5.0</vx>
+            <vy>2.0</vy>
+            <ax>0.0</ax>
+            <ay>-0.5</ay>
+        </movement>
+        <status>
+            <src>default</src>
+            <quality>3</quality>
+            <NACp>9</NACp>
+            <uncorrBaroAlt>36</uncorrBaroAlt>
+        </status>
+        <targetExtent>
+            <startRange>940</startRange>
+            <endRange>985</endRange>
+            <startAzimuth>210.60791015625</startAzimuth>
+            <endAzimuth>212.54150390625</endAzimuth>
+        </targetExtent>
+        <plotNumber>
+            <plot1 src="mlat" rdr="smr1">28245124</plot1>
+            <plot2 src="smr" rdr="smr1">10160112</plot2>
+        </plotNumber>
+    </positionReport>
+    <positionReport full="false">
+        <time>2015-10-13T21:47:20.000Z</time>
+        <track>1900</track>
+        <position>
+            <latitude>35.217010248452425</latitude>
+            <longitude>-80.9486679174006</longitude>
+        </position>
+        <targetExtent>
+            <startRange>801</startRange>
+            <endRange>834</endRange>
+            <startAzimuth>207.982177734375</startAzimuth>
+            <endAzimuth>210.794677734375</endAzimuth>
+        </targetExtent>
+        <plotNumber>
+            <plot1 src="smr" rdr="smr1">10160110</plot1>
+        </plotNumber>
+    </positionReport>
+    <positionReport full="false">
+        <time>2015-10-13T21:47:20.000Z</time>
+        <track>457</track>
+        <position>
+            <x>941</x>
+            <y>-2512</y>
+            <latitude>35.200768299400806</latitude>
+            <longitude>-80.93394611030817</longitude>
+            <altitude>1144</altitude>
+            <flightLevel>11.25</flightLevel>
+        </position>
+        <movement>
+            <heading>173.6224365234375</heading>
+            <ax>0.25</ax>
+            <ay>0.0</ay>
+        </movement>
+        <status>
+            <uncorrBaroAlt>53</uncorrBaroAlt>
+        </status>
+        <plotNumber>
+            <plot1 src="mlat" rdr="smr1">28245140</plot1>
+        </plotNumber>
+    </positionReport>
+    <positionReport full="false">
+        <time>2015-10-13T21:47:20.000Z</time>
+        <track>2495</track>
+        <position>
+            <latitude>35.204167580232024</latitude>
+            <longitude>-80.94016757793725</longitude>
+        </position>
+        <plotNumber>
+            <plot1 src="mlat" rdr="smr1">28245148</plot1>
+        </plotNumber>
+    </positionReport>
+    <positionReport full="false">
+        <time>2015-10-13T21:47:20.000Z</time>
+        <track>1948</track>
+        <position>
+            <x>471</x>
+            <y>-1072</y>
+            <latitude>35.21374641917646</latitude>
+            <longitude>-80.93910902738571</longitude>
+        </position>
+        <status>
+            <mon>0</mon>
+            <ss>0</ss>
+            <quality>0</quality>
+            <aa r="1">0</aa>
+            <av r="1"/>
+            <sil r="1">0</sil>
+            <nic r="1">9</nic>
+            <NACp r="1">10</NACp>
+            <vs r="1"/>
+            <ud r="1"/>
+            <vertRate r="1"/>
+            <uncorrBaroAlt r="1"/>
+        </status>
+    </positionReport>
+</asdexMsg>

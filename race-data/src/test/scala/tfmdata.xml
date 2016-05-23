@@ -1,0 +1,151 @@
+<ds:tfmDataService xmlns:ds="urn:us:gov:dot:faa:atm:tfm:tfmdataservice" xmlns="urn:us:gov:dot:faa:atm:tfm:tfmdataservice" xmlns:fdm="urn:us:gov:dot:faa:atm:tfm:flightdata" xmlns:nxce="urn:us:gov:dot:faa:atm:tfm:tfmdatacoreelements" xmlns:nxcm="urn:us:gov:dot:faa:atm:tfm:flightdatacommonmessages" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="urn:us:gov:dot:faa:atm:tfm:tfmdataservice TFMData_Service.xsd">
+    <fltdOutput>
+        <fdm:fltdMessage airline="LOF" fdTrigger="HCS_AMENDMENT_MSG" flightRef="40020972" msgType="flightPlanAmendmentInformation" sensitivity="A" sourceFacility="KZID" sourceTimeStamp="2016-01-28T22:53:37Z">
+            <fdm:flightPlanAmendmentInformation>
+                <nxcm:qualifiedAircraftId>
+                    <nxce:aircraftId>LOF3414</nxce:aircraftId>
+                    <nxce:computerId>
+                        <nxce:facilityIdentifier>KZID</nxce:facilityIdentifier>
+                    </nxce:computerId>
+                    <nxce:gufi>KW78054500</nxce:gufi>
+                    <nxce:igtd>2016-01-28T22:30:00Z</nxce:igtd>
+                    <nxce:departurePoint>
+                        <nxce:airport>KIAD</nxce:airport>
+                    </nxce:departurePoint>
+                    <nxce:arrivalPoint>
+                        <nxce:airport>KCVG</nxce:airport>
+                    </nxce:arrivalPoint>
+                </nxcm:qualifiedAircraftId>
+                <nxcm:amendmentData>
+                    <nxcm:newFlightAircraftSpecs equipmentQualifier="L">E45X</nxcm:newFlightAircraftSpecs>
+                    <nxcm:newSpeed>
+                        <nxce:filedTrueAirSpeed>447</nxce:filedTrueAirSpeed>
+                    </nxcm:newSpeed>
+                    <nxcm:newCoordinationPoint>
+                        <nxce:fixRadialDistance distance="064" radial="067">HVQ</nxce:fixRadialDistance>
+                    </nxcm:newCoordinationPoint>
+                    <nxcm:newCoordinationTime type="ESTIMATED">2016-01-28T23:07:00Z</nxcm:newCoordinationTime>
+                    <nxcm:newAltitude>
+                        <nxce:assignedAltitude>
+                            <nxce:simpleAltitude>260</nxce:simpleAltitude>
+                        </nxce:assignedAltitude>
+                    </nxcm:newAltitude>
+                    <nxcm:newRouteOfFlight legacyFormat="KIAD.RNLDI4.OTTTO..COLNS.GAVNN4.KCVG/2348"/>
+                </nxcm:amendmentData>
+            </fdm:flightPlanAmendmentInformation>
+        </fdm:fltdMessage>
+
+        <fdm:fltdMessage airline="SWG" fdTrigger="HCS_UPDATE_MSG" flightRef="40102281" msgType="boundaryCrossingUpdate" sensitivity="A" sourceFacility="KZJX" sourceTimeStamp="2016-01-28T22:53:48Z">
+            <fdm:boundaryCrossingUpdate>
+                <nxcm:qualifiedAircraftId>
+                    <nxce:aircraftId>SWG333</nxce:aircraftId>
+                    <nxce:computerId>
+                        <nxce:facilityIdentifier>KZJX</nxce:facilityIdentifier>
+                    </nxce:computerId>
+                    <nxce:gufi>KR79114500</nxce:gufi>
+                    <nxce:departurePoint>
+                        <nxce:airport>MUHG</nxce:airport>
+                    </nxce:departurePoint>
+                    <nxce:arrivalPoint>
+                        <nxce:airport>CYQR</nxce:airport>
+                    </nxce:arrivalPoint>
+                </nxcm:qualifiedAircraftId>
+                <nxcm:flightAircraftSpecs equipmentQualifier="L">B738</nxcm:flightAircraftSpecs>
+                <nxcm:speed>
+                    <nxce:filedTrueAirSpeed>466</nxce:filedTrueAirSpeed>
+                </nxcm:speed>
+                <nxcm:boundaryPosition boundaryCrossingTime="2016-01-28T22:54:00Z">
+                    <nxce:fixRadialDistance distance="007" radial="321">LAL</nxce:fixRadialDistance>
+                </nxcm:boundaryPosition>
+                <nxcm:reportedAltitude>
+                    <nxce:assignedAltitude>
+                        <nxce:simpleAltitude>360</nxce:simpleAltitude>
+                    </nxce:assignedAltitude>
+                </nxcm:reportedAltitude>
+                <nxcm:routeOfFlight legacyFormat="MUHG./.URSUS..LAL.J73.SZW..VUZ.J151.FAM..IRK.J45.DSM..FOD..ABR..MOT.J483.VLN..CYQR"/>
+            </fdm:boundaryCrossingUpdate>
+        </fdm:fltdMessage>
+
+        <fdm:fltdMessage airline="ASQ" fdTrigger="HCS_TRACK_MSG" flightRef="40015151" msgType="trackInformation" sensitivity="A" sourceFacility="KZID" sourceTimeStamp="2016-01-28T22:53:38Z">
+            <fdm:trackInformation>
+                <nxcm:qualifiedAircraftId>
+                    <nxce:aircraftId>ASQ4201</nxce:aircraftId>
+                    <nxce:computerId>
+                        <nxce:facilityIdentifier>KZID</nxce:facilityIdentifier>
+                        <nxce:idNumber>703</nxce:idNumber>
+                    </nxce:computerId>
+                    <nxce:gufi>KN71897500</nxce:gufi>
+                    <nxce:igtd>2016-01-28T21:13:00Z</nxce:igtd>
+                    <nxce:departurePoint>
+                        <nxce:airport>KEWR</nxce:airport>
+                    </nxce:departurePoint>
+                    <nxce:arrivalPoint>
+                        <nxce:airport>KDAY</nxce:airport>
+                    </nxce:arrivalPoint>
+                </nxcm:qualifiedAircraftId>
+                <nxcm:speed>241</nxcm:speed>
+                <nxcm:reportedAltitude>
+                    <nxce:assignedAltitude>
+                        <nxce:simpleAltitude>050</nxce:simpleAltitude>
+                    </nxce:assignedAltitude>
+                </nxcm:reportedAltitude>
+                <nxcm:position>
+                    <nxce:latitude>
+                        <nxce:latitudeDMS degrees="40" direction="NORTH" minutes="02" seconds="43"/>
+                    </nxce:latitude>
+                    <nxce:longitude>
+                        <nxce:longitudeDMS degrees="083" direction="WEST" minutes="57" seconds="32"/>
+                    </nxce:longitude>
+                </nxcm:position>
+                <nxcm:timeAtPosition>2016-01-28T22:53:38Z</nxcm:timeAtPosition>
+                <nxcm:ncsmTrackData>
+                    <nxcm:eta etaType="ESTIMATED" timeValue="2016-01-28T22:58:01Z"/>
+                    <nxcm:rvsmData currentCompliance="true" equipped="true" futureCompliance="true"/>
+                    <nxcm:departureFixAndTime arrTime="2016-01-28T21:43:57Z" fixName="ZIMMZ"/>
+                    <nxcm:nextEvent latitudeDecimal="40.008405117911934" longitudeDecimal="-84.01566022698924"/>
+                </nxcm:ncsmTrackData>
+            </fdm:trackInformation>
+        </fdm:fltdMessage>
+
+        <fdm:fltdMessage airline="XXX" fdTrigger="HCS_TRACK_MSG" flightRef="40094482" msgType="trackInformation" sensitivity="A" sourceFacility="KN90" sourceTimeStamp="2016-01-28T22:53:39Z">
+            <fdm:trackInformation>
+                <nxcm:qualifiedAircraftId>
+                    <nxce:aircraftId>N87HF</nxce:aircraftId>
+                    <nxce:computerId>
+                        <nxce:facilityIdentifier>KN90</nxce:facilityIdentifier>
+                        <nxce:idNumber>494</nxce:idNumber>
+                    </nxce:computerId>
+                    <nxce:gufi>KN78463500</nxce:gufi>
+                    <nxce:igtd>2016-01-28T22:30:00Z</nxce:igtd>
+                    <nxce:departurePoint>
+                        <nxce:airport>KISP</nxce:airport>
+                    </nxce:departurePoint>
+                    <nxce:arrivalPoint>
+                        <nxce:airport>GON</nxce:airport>
+                    </nxce:arrivalPoint>
+                </nxcm:qualifiedAircraftId>
+                <nxcm:speed>109</nxcm:speed>
+                <nxcm:reportedAltitude>
+                    <nxce:assignedAltitude>
+                        <nxce:simpleAltitude>047</nxce:simpleAltitude>
+                    </nxce:assignedAltitude>
+                </nxcm:reportedAltitude>
+                <nxcm:position>
+                    <nxce:latitude>
+                        <nxce:latitudeDMS degrees="40" direction="NORTH" minutes="47"/>
+                    </nxce:latitude>
+                    <nxce:longitude>
+                        <nxce:longitudeDMS degrees="073" direction="WEST" minutes="00"/>
+                    </nxce:longitude>
+                </nxcm:position>
+                <nxcm:timeAtPosition>2016-01-28T22:53:39Z</nxcm:timeAtPosition>
+                <nxcm:ncsmTrackData>
+                    <nxcm:eta etaType="ESTIMATED" timeValue="2016-01-28T23:22:49Z"/>
+                    <nxcm:rvsmData currentCompliance="true" equipped="true" futureCompliance="true"/>
+                    <nxcm:nextEvent latitudeDecimal="40.823264516355664" longitudeDecimal="-72.92600058205907"/>
+                </nxcm:ncsmTrackData>
+            </fdm:trackInformation>
+        </fdm:fltdMessage>
+
+    </fltdOutput>
+</ds:tfmDataService>

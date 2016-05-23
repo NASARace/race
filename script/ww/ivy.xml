@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ivy-module version="2.0">
+  <info organisation="gov.nasa" module="worldwind"/>
+  <publications>
+      <artifact name="worldwind" type="jar"/>
+  </publications>
+  <dependencies>
+    <dependency org="org.jogamp.jogl" name="jogl-all-main" rev="2.1.5-01"/>
+    <dependency org="org.jogamp.gluegen" name="gluegen-rt-main" rev="2.1.5-01"/>
+    <dependency org="org.gdal" name="gdal" rev="1.11.2"/>
+  </dependencies>
+</ivy-module>

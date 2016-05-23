@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?><ns5:NasFlight xmlns:ns2="http://www.fixm.aero/base/3.0" xmlns:ns3="http://www.fixm.aero/flight/3.0" xmlns:ns4="http://www.fixm.aero/foundation/3.0" xmlns:ns5="http://www.faa.aero/nas/3.0" centre="ZDC" source="TH" system="FDPS1">
+    <arrival xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="ns5:NasArrivalType">
+        <runwayPositionAndTime>
+            <runwayTime>
+                <estimated time="2015-09-11T19:08:00Z"/>
+            </runwayTime>
+        </runwayPositionAndTime>
+    </arrival>
+    <controllingUnit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="ns2:IdentifiedUnitReferenceType" unitIdentifier="ZDC" sectorIdentifier="07"/>
+    <departure xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="ns5:NasDepartureType">
+        <runwayPositionAndTime>
+            <runwayTime>
+                <actual time="2015-09-11T15:58:00Z"/>
+            </runwayTime>
+        </runwayPositionAndTime>
+    </departure>
+    <enRoute xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="ns5:NasEnRouteType">
+        <position xsi:type="ns5:NasAircraftPositionType" targetPositionTime="2015-09-11T17:59:30Z" positionTime="2015-09-11T17:59:30Z" reportSource="SURVEILLANCE">
+            <actualSpeed>
+                <surveillance uom="KNOTS">488.0</surveillance>
+            </actualSpeed>
+            <altitude uom="FEET">35000.0</altitude>
+            <position xsi:type="ns2:LocationPointType">
+                <location srsName="urn:ogc:def:crs:EPSG::4326">
+                    <pos>37.898333 -79.169722</pos>
+                </location>
+            </position>
+            <targetAltitude uom="FEET">35000.0</targetAltitude>
+            <targetPosition srsName="urn:ogc:def:crs:EPSG::4326">
+                <pos>37.898333 -79.170278</pos>
+            </targetPosition>
+            <trackVelocity>
+                <x uom="KNOTS">487.0</x>
+                <y uom="KNOTS">30.0</y>
+            </trackVelocity>
+        </position>
+    </enRoute>
+    <flightIdentification xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="ns5:NasFlightIdentificationType" computerId="647" siteSpecificPlanId="159" aircraftIdentification="UAL1634"/>
+    <flightStatus xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="ns5:NasFlightStatusType" fdpsFlightStatus="ACTIVE"/>
+    <gufi codeSpace="urn:uuid">d5a952d7-47dc-4f0f-8090-6d5fb1761fa7</gufi>
+    <supplementalData xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="ns5:NasSupplementalDataType">
+        <additionalFlightInformation>
+            <nameValue name="FDPS_GUFI" value="us.fdps.2015-09-18T13:22:24Z.000/07/600"/>
+            <nameValue name="FLIGHT_PLAN_SEQ_NO" value="7"/>
+        </additionalFlightInformation>
+    </supplementalData>
+    <assignedAltitude>
+        <simple uom="FEET">35000.0</simple>
+    </assignedAltitude>
+    <flightPlan identifier="KH48144600"/>
+</ns5:NasFlight>
