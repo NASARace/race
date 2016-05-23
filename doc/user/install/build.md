@@ -27,6 +27,14 @@ Once the SBT prompt appears, start compilation by entering the `compile` command
 Again, this will take longer the first time RACE is built since it will resolve
 all external libraries that are required to compile and run RACE.
 
+Once RACE is compiled, you can verify your build from within the SBT console by running
+
+    [race]> run config/local/aircraft-ww.conf
+    
+This should start RACE and then pop up a WorldWind window showing a single airplane that is updated every
+5 sec. Stop RACE by typing '9' + <enter> at the menu prompt in the console, which should bring you
+back into SBT.
+
 As a last step, you can build stand-alone scripts to start RACE from outside of
 SBT by executing the `stage` command
 
@@ -39,5 +47,6 @@ SBT by executing the `stage` command
 The script is created in the `target/universal/stage/bin` directory. The main executable is linked
 to `./race`, which is located in the RACE root directory. Please make sure the link has the right
 file permissions to be executable.
+
 
 [sbt]: http://www.scala-sbt.org/0.13/tutorial/index.html

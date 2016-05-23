@@ -2,7 +2,7 @@
 
 The public RACE repository resides on [GitHub][github], you can clone it by executing
 
-    > git clone https://github.com/orgs/NASARace/race.git
+    > git clone https://github.com/NASARace/race.git
 
 We do not provide downloads/snapshots at this point. Once you have cloned the repository, please
 check periodically for changes by executing
