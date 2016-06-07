@@ -77,8 +77,8 @@ class JMSExportActor(val config: Config) extends SubscribingRaceActor {
   val topicName = config.getString("jms-topic")
   var conn: Option[LiveConnection] = None
 
-  override def initializeRaceActor (raceContext: RaceContext, actorConf: Config) = {
-    super.initializeRaceActor(raceContext, actorConf)
+  override def onInitializeRaceActor(raceContext: RaceContext, actorConf: Config) = {
+    super.onInitializeRaceActor(raceContext, actorConf)
     info(s"initializing $name")
 
     // this is from a try context that would catch and report exceptions
@@ -93,8 +93,8 @@ class JMSExportActor(val config: Config) extends SubscribingRaceActor {
     conn = Some(LiveConnection(connection,session,producer))
   }
 
-  override def terminateRaceActor (originator: ActorRef) = {
-    super.terminateRaceActor(originator)
+  override def onTerminateRaceActor(originator: ActorRef) = {
+    super.onTerminateRaceActor(originator)
     info(s"terminating $name")
 
     conn = conn match {

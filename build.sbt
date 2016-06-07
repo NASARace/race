@@ -41,7 +41,7 @@ lazy val root = createRootProject("race").
   dependsOn(raceCommon  % "test->test;compile->compile;multi-jvm->multi-jvm",
             raceCore,raceActors,raceTools,raceSwing,raceWW,swimServer,swimClient,kafkaServer,zkServer).
   configs(MultiJvm).
-  enablePlugins(JavaAppPackaging,GitVersioning).
+  enablePlugins(JavaAppPackaging,GitVersioning).  // add SiteScaladocPlugin to include scaladoc in site generation
   settings(
     commonSettings,
     Defaults.itSettings,

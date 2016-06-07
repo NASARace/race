@@ -65,8 +65,8 @@ class ProcessLauncher (val config: Config) extends MonitoredRaceActor {
   var restartCount = 0
 
 
-  override def initializeRaceActor(rc: RaceContext, actorConf: Config) = {
-    super.initializeRaceActor(rc,actorConf)
+  override def onInitializeRaceActor(rc: RaceContext, actorConf: Config) = {
+    super.onInitializeRaceActor(rc,actorConf)
 
     def checkIgnored (path: String) = {
       if (actorConf.hasPath(path)){
@@ -90,8 +90,8 @@ class ProcessLauncher (val config: Config) extends MonitoredRaceActor {
     }
   }
 
-  override def startRaceActor(originator: ActorRef) = {
-    super.startRaceActor(originator)
+  override def onStartRaceActor(originator: ActorRef) = {
+    super.onStartRaceActor(originator)
 
     if (!proc.isDefined) proc = startProcess
     ifSome(proc){ p=>
@@ -99,14 +99,16 @@ class ProcessLauncher (val config: Config) extends MonitoredRaceActor {
     }
   }
 
-  override def terminateRaceActor (originator: ActorRef) = {
-    super.terminateRaceActor(originator)
+  override def onTerminateRaceActor(originator: ActorRef) = {
+    super.onTerminateRaceActor(originator)
 
     ifSome(proc) { p=>
       p.destroy()
       if (ensureKill & p.isAlive){ // try harder
         Thread.sleep(500)
         if (p.isAlive) p.destroyForcibly()
+        Thread.sleep(500)
+        if (p.isAlive) throw new RaceException(s"ProcessLauncher termintation failed: $procName")
       }
     }
 

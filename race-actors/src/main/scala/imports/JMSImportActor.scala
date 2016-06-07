@@ -134,8 +134,8 @@ class JMSImportActor(val config: Config) extends PublishingRaceActor with Filter
   log.info(s"$name initialized (unconnected)")
 
   // note that we return the next state here
-  override def initializeRaceActor (raceContext: RaceContext, actorConf: Config) = {
-    super.initializeRaceActor(raceContext,actorConf)
+  override def onInitializeRaceActor(raceContext: RaceContext, actorConf: Config) = {
+    super.onInitializeRaceActor(raceContext,actorConf)
 
     try {
       connection = requestConnection(this)
@@ -147,8 +147,8 @@ class JMSImportActor(val config: Config) extends PublishingRaceActor with Filter
     }
   }
 
-  override def startRaceActor(originator: ActorRef) = {
-    super.startRaceActor(originator)
+  override def onStartRaceActor(originator: ActorRef) = {
+    super.onStartRaceActor(originator)
 
     session = createSession(connection)
     if (session.isDefined){
@@ -174,8 +174,8 @@ class JMSImportActor(val config: Config) extends PublishingRaceActor with Filter
     })
   }
 
-  override def terminateRaceActor (originator: ActorRef) = {
-    super.terminateRaceActor(originator)
+  override def onTerminateRaceActor(originator: ActorRef) = {
+    super.onTerminateRaceActor(originator)
 
     info(s"$name closing session")
     try {

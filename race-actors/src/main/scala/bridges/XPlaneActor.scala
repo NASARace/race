@@ -105,8 +105,8 @@ class XPlaneActor (val config: Config) extends PublishingRaceActor
   })
   importThread.setDaemon(true)
 
-  override def startRaceActor(originator: ActorRef) = {
-    super.startRaceActor(originator)
+  override def onStartRaceActor(originator: ActorRef) = {
+    super.onStartRaceActor(originator)
     sendOwnAircraft
     sendAirport
     sendRPOSrequest
@@ -116,8 +116,8 @@ class XPlaneActor (val config: Config) extends PublishingRaceActor
     importThread.start
   }
 
-  override def terminateRaceActor (originator: ActorRef) = {
-    super.terminateRaceActor(originator)
+  override def onTerminateRaceActor(originator: ActorRef) = {
+    super.onTerminateRaceActor(originator)
     ifSome(publishScheduler){ _.cancel }
     socket.close()
   }

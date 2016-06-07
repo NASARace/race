@@ -19,13 +19,13 @@ package gov.nasa.race.actors.exports
 
 import java.util.Properties
 
-import kafka.producer.{Producer,ProducerConfig,KeyedMessage}
 import com.typesafe.config.Config
 import gov.nasa.race.common._
 import gov.nasa.race.core._
 import gov.nasa.race.common.ConfigUtils._
 import gov.nasa.race.core.Messages.RaceSystemMessage
 import gov.nasa.race.core.{BusEvent, SubscribingRaceActor}
+import org.apache.kafka.clients.producer.{KafkaProducer, ProducerRecord}
 
 /**
  * a RaceActor that sends string messages to a Kafka broker (list)
@@ -33,9 +33,9 @@ import gov.nasa.race.core.{BusEvent, SubscribingRaceActor}
 class KafkaProducerActor (val config: Config) extends SubscribingRaceActor {
 
   val topicName = config.getString("kafka-topic")
-  val producer = new Producer[String,String](getProducerConfig)
+  val producer = new KafkaProducer[String,String](getProducerConfig)
 
-  def getProducerConfig: ProducerConfig = {
+  def getProducerConfig: Properties = {
     val props = new Properties
 
     //--- mandatory entries
@@ -50,7 +50,7 @@ class KafkaProducerActor (val config: Config) extends SubscribingRaceActor {
       props.put("request.required.acks", _)
     }
 
-    new ProducerConfig(props)
+    props
   }
 
   override def handleMessage: Receive = {
@@ -59,7 +59,7 @@ class KafkaProducerActor (val config: Config) extends SubscribingRaceActor {
     case BusEvent(_,msg,_) =>
       val msgText = msg.toString
       info(s"${name} sending: $msg")
-      val keyedMessage = new KeyedMessage[String,String](topicName,msgText)
-      producer.send(keyedMessage)
+      val rec = new ProducerRecord[String,String](topicName,msgText)
+      producer.send(rec)
   }
 }

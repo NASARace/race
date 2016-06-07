@@ -1,0 +1,120 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<svg width="100%" height="100%" version="1.1" viewBox="90 95.9736 663 327.0264" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <filter id="shadow1" width="150%" height="150%">
+      <feGaussianBlur in="SourceAlpha" result="blur" stdDeviation="3" />
+      <feOffset dx="3" dy="3" in="blur" result="offsetBlur" />
+      <feMerge>
+        <feMergeNode in="offsetBlur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+    <filter id="shadow2" width="150%" height="150%">
+      <feGaussianBlur in="SourceAlpha" result="blur" stdDeviation="3" />
+      <feOffset dx="3" dy="3" in="blur" result="offsetBlur" />
+      <feMerge>
+        <feMergeNode in="offsetBlur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+  </defs>
+  <linearGradient id="gradient1" x1="100%" y1="50.00001%" x2="0%" y2="49.99999%">
+    <stop offset="2%" stop-color="#969696" stop-opacity="1" />
+    <stop offset="44%" stop-color="#FFFFFF" stop-opacity="1" />
+  </linearGradient>
+  <linearGradient id="gradient2" x1="100%" y1="50%" x2="0%" y2="50%">
+    <stop offset="1%" stop-color="#9B9B9B" stop-opacity="1" />
+    <stop offset="41%" stop-color="#FFFFFF" stop-opacity="1" />
+  </linearGradient>
+  <marker id="marker1" markerUnits="strokeWidth" orient="auto" refX="-11.17254" refY="0" markerWidth="13.27247" markerHeight="10.22955" viewBox="-12.27247 -5.114774 13.27247 10.22955">
+    <path d="M-11.27247 -4.114774 L0 0 L-11.27247 4.114773 Z " fill="#FF0000" fill-opacity="1" stroke="#FF0000" stroke-opacity="1" />
+  </marker>
+  <marker id="marker2" markerUnits="strokeWidth" orient="auto" refX="11.17254" refY="0" markerWidth="13.27247" markerHeight="10.22955" viewBox="-1 -5.114774 13.27247 10.22955">
+    <path d="M11.27247 4.114773 L0 0 L11.27247 -4.114774 Z " fill="#FF0000" fill-opacity="1" stroke="#FF0000" stroke-opacity="1" />
+  </marker>
+  <marker id="marker3" markerUnits="strokeWidth" orient="auto" refX="-11.17254" refY="0" markerWidth="13.27247" markerHeight="10.22955" viewBox="-12.27247 -5.114774 13.27247 10.22955">
+    <path d="M-11.27247 -4.114774 L0 0 L-11.27247 4.114773 Z " fill="#FF0000" fill-opacity="1" stroke="#FF0000" stroke-opacity="1" />
+  </marker>
+  <marker id="marker4" markerUnits="strokeWidth" orient="auto" refX="-11.17254" refY="0" markerWidth="13.27247" markerHeight="10.22955" viewBox="-12.27247 -5.114774 13.27247 10.22955">
+    <path d="M-11.27247 -4.114774 L0 0 L-11.27247 4.114773 Z " fill="#FF0000" fill-opacity="1" stroke="#FF0000" stroke-opacity="1" />
+  </marker>
+  <marker id="marker5" markerUnits="strokeWidth" orient="auto" refX="-11.17254" refY="0" markerWidth="13.27247" markerHeight="10.22955" viewBox="-12.27247 -5.114774 13.27247 10.22955">
+    <path d="M-11.27247 -4.114774 L0 0 L-11.27247 4.114773 Z " fill="#FF0000" fill-opacity="1" stroke="#FF0000" stroke-opacity="1" />
+  </marker>
+  <g id="layer1" inkscape:label="Layer 1" inkscape:groupmode="layer">
+    <g>
+      <rect x="350.027" y="121.7313" width="19.83533" height="296.6144" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="url(#gradient1)" />
+      <ellipse cx="359.9519" cy="121.5005" rx="9.951875" ry="1.50055" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" />
+      <ellipse cx="360.0483" cy="418.4995" rx="9.95172" ry="1.50055" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" />
+      <rect x="351.2058" y="415.1267" width="17.55933" height="3.278503" opacity="1" fill="url(#gradient2)" />
+    </g>
+    <g>
+      <path d="M200.6667 206 L239.3333 206 C245.2244 206 250 209.5817 250 214 L250 252 C250 256.4183 245.2244 260 239.3333 260 L200.6667 260 C194.7756 260 190 256.4183 190 252 L190 214 C190 209.5817 194.7756 206 200.6667 206 Z " opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" filter="url(#shadow1)" />
+      <path d="M200.6667 206 L239.3333 206 C245.2244 206 250 209.5817 250 214 L250 252 C250 256.4183 245.2244 260 239.3333 260 L200.6667 260 C194.7756 260 190 256.4183 190 252 L190 214 C190 209.5817 194.7756 206 200.6667 206 Z " opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" filter="url(#shadow1)" />
+      <text x="201.769" y="238.3797" font-size="14" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">Actor1</text>
+    </g>
+    <g>
+      <rect x="212.6797" y="192.6797" width="18" height="27" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" />
+      <rect x="212.6797" y="192.6797" width="18" height="27" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="none" fill-opacity="0" />
+      <path d="M212.6797 201.6797 C212.6797 201.6797 230.6797 201.6797 230.6797 201.6797" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="none" fill-opacity="0" />
+      <path d="M212.6797 210.6797 C212.6797 210.6797 230.6797 210.6797 230.6797 210.6797" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="none" fill-opacity="0" />
+    </g>
+    <g>
+      <path d="M262.6124 284 L308.9475 284 C313.704 284 317.5599 289.0903 317.5599 295.3697 L317.5599 316.6303 C317.5599 322.9097 313.704 328 308.9475 328 L262.6124 328 C257.856 328 254 322.9097 254 316.6303 L254 295.3697 C254 289.0903 257.856 284 262.6124 284 Z " opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" filter="url(#shadow2)" />
+      <path d="M262.6124 284 L308.9475 284 C313.704 284 317.5599 289.0903 317.5599 295.3697 L317.5599 316.6303 C317.5599 322.9097 313.704 328 308.9475 328 L262.6124 328 C257.856 328 254 322.9097 254 316.6303 L254 295.3697 C254 289.0903 257.856 284 262.6124 284 Z " opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" filter="url(#shadow2)" />
+      <text x="267.549" y="311.3797" font-size="14" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">Actor2</text>
+    </g>
+    <g>
+      <path d="M409.1539 179 L449.0063 179 C455.0778 179 460 184.0741 460 190.3333 L460 218.6667 C460 224.9259 455.0778 230 449.0063 230 L409.1539 230 C403.0822 230 398.1602 224.9259 398.1602 218.6667 L398.1602 190.3333 C398.1602 184.0741 403.0822 179 409.1539 179 Z " opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" filter="url(#shadow1)" />
+      <path d="M409.1539 179 L449.0063 179 C455.0778 179 460 184.0741 460 190.3333 L460 218.6667 C460 224.9259 455.0778 230 449.0063 230 L409.1539 230 C403.0822 230 398.1602 224.9259 398.1602 218.6667 L398.1602 190.3333 C398.1602 184.0741 403.0822 179 409.1539 179 Z " opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" filter="url(#shadow1)" />
+      <text x="410.8491" y="209.8797" font-size="14" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">Actor3</text>
+    </g>
+    <rect x="421.8398" y="165.6797" width="18" height="27" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" />
+    <rect x="421.8398" y="165.6797" width="18" height="27" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="none" fill-opacity="0" />
+    <path d="M421.8398 174.6797 C421.8398 174.6797 439.8398 174.6797 439.8398 174.6797" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="none" fill-opacity="0" />
+    <path d="M421.8398 183.6797 C421.8398 183.6797 439.8398 183.6797 439.8398 183.6797" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="none" fill-opacity="0" />
+    <g>
+      <path d="M430.1198 335.7201 L470.2799 335.7201 C474.6982 335.7201 478.2799 339.3018 478.2799 343.7201 L478.2799 381 C478.2799 385.4183 474.6982 389 470.2799 389 L430.1198 389 C425.7015 389 422.1198 385.4183 422.1198 381 L422.1198 343.7201 C422.1198 339.3018 425.7015 335.7201 430.1198 335.7201 Z " opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" filter="url(#shadow1)" />
+      <path d="M430.1198 335.7201 L470.2799 335.7201 C474.6982 335.7201 478.2799 339.3018 478.2799 343.7201 L478.2799 381 C478.2799 385.4183 474.6982 389 470.2799 389 L430.1198 389 C425.7015 389 422.1198 385.4183 422.1198 381 L422.1198 343.7201 C422.1198 339.3018 425.7015 335.7201 430.1198 335.7201 Z " opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" filter="url(#shadow1)" />
+      <text x="431.9689" y="367.7397" font-size="14" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">Actor4</text>
+    </g>
+    <rect x="440.8398" y="322.3997" width="18" height="27" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" />
+    <rect x="440.8398" y="322.3997" width="18" height="27" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="none" fill-opacity="0" />
+    <path d="M440.8398 331.3997 C440.8398 331.3997 458.8398 331.3997 458.8398 331.3997" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="none" fill-opacity="0" />
+    <path d="M440.8398 340.3997 C440.8398 340.3997 458.8398 340.3997 458.8398 340.3997" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="none" fill-opacity="0" />
+    <path d="M222.625 244.25 C223 272 245.6185 275.7904 261.8278 275.9101" marker-end="url(#marker1)" opacity="1" stroke="#FF0000" stroke-opacity="1" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="none" fill-opacity="0" />
+    <text x="91" y="350.1122" font-size="13" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">def receive = {
+⁣⁣⁣⁢⁤</text>
+    <text x="91" y="365.1122" font-size="13" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">⁪˙ case msg: Y =&gt;</text>
+    <text x="91" y="380.1122" font-size="13" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">˙ ˙ .. Actor1 ! x</text>
+    <text x="91" y="395.1122" font-size="13" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">˙ ..</text>
+    <text x="91" y="410.1122" font-size="13" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">˙ ˙ publish(“/data/myChannel”,z)</text>
+    <text x="244.3155" y="164.9799" font-size="13" fill="#FF0000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">point-to-point</text>
+    <text x="330.8466" y="108.6119" font-size="13.00001" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">EventBus</text>
+    <text x="396.113" y="142.8943" font-size="13" fill="#FF0000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">publish-subscribe</text>
+    <g>
+      <path d="M288.7135 220.4111 L288.7135 236.6316 L297.4953 236.6316" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="0.72" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="none" fill-opacity="0" />
+      <rect x="292.173" y="231.7163" width="10.64465" height="9.830612" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" />
+      <rect x="292.173" y="231.7163" width="10.64465" height="9.830612" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="0.72" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="none" fill-opacity="0" />
+      <path d="M283.125 220.4111 L283.125 220.4111 C283.125 217.5607 285.627 215.25 288.7134 215.25 C291.7999 215.25 294.3019 217.5607 294.3019 220.4111 L294.3019 220.4111 C294.3019 223.2614 291.7999 225.5721 288.7134 225.5721 C285.627 225.5721 283.125 223.2614 283.125 220.4111 Z " opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#D8D8D8" fill-opacity="1" />
+      <path d="M283.125 220.4111 L283.125 220.4111 C283.125 217.5607 285.627 215.25 288.7134 215.25 C291.7999 215.25 294.3019 217.5607 294.3019 220.4111 L294.3019 220.4111 C294.3019 223.2614 291.7999 225.5721 288.7134 225.5721 C285.627 225.5721 283.125 223.2614 283.125 220.4111 Z " opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="0.72" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="none" fill-opacity="0" />
+    </g>
+    <text x="233.5" y="288.9619" font-size="13" fill="#FF0000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">y</text>
+    <text x="313.0912" y="255.4133" font-size="13" fill="#FF0000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">x</text>
+    <path d="M397.8275 170 L360 170 L360 330 L417.8275 330" marker-start="url(#marker2)" marker-end="url(#marker3)" opacity="1" stroke="#FF0000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+    <line x1="310" y1="310" x2="347.8275" y2="310" marker-end="url(#marker4)" opacity="1" stroke="#FF0000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    <path d="M310 290 C338 253 330 200 252.1725 200" marker-end="url(#marker5)" opacity="1" stroke="#FF0000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+    <text x="373.8466" y="272.1251" font-size="13.00001" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">“/data/myChannel”</text>
+    <g>
+      <rect x="277.6797" y="269.6797" width="18" height="27" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" />
+      <rect x="277.6797" y="269.6797" width="18" height="27" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="none" fill-opacity="0" />
+      <path d="M277.6797 278.6797 C277.6797 278.6797 295.6797 278.6797 295.6797 278.6797" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="none" fill-opacity="0" />
+      <path d="M277.6797 287.6797 C277.6797 287.6797 295.6797 287.6797 295.6797 287.6797" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="none" fill-opacity="0" />
+    </g>
+    <text x="493" y="284.1122" font-size="13" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">def initialize = { ..</text>
+    <text x="493" y="299.1122" font-size="13" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">˙ subscribe(“/data/myChannel”)</text>
+    <text x="493" y="314.1122" font-size="13" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal"></text>
+    <text x="493" y="329.1122" font-size="13" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">def receive = {</text>
+    <text x="493" y="344.1122" font-size="13" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">˙ case msg: Z =&gt; ..</text>
+  </g>
+</svg>

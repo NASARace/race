@@ -19,7 +19,6 @@ import java.io.File
 
 import sbt._
 import Keys._
-import com.orrsella.sbtstats.StatsPlugin._
 
 // NOTE - using macros such as "++=" and "+=" is dangerous since it
 // uses a implicit (context dependent) Append.Value(s) argument
@@ -29,9 +28,51 @@ object PluginSettings {
   // some of these are just examples for now, to show how to initialize plugin settings
   // without proliferating build.sbt with plugin configs
 
+
   //----------------------------------------------------------------------------------
-  // from https://github.com/orrsella/sbt-stats
+  // laika from https://github.com/planet42/Laika
+  // adds laika:site and laika:clean to generate web site and/pr PDFs
+  import laika.sbt.LaikaSbtPlugin.LaikaPlugin
+  import laika.sbt.LaikaSbtPlugin.LaikaKeys._
+  val laikaSettings = LaikaPlugin.defaults ++ Seq(
+    sourceDirectories in Laika := Seq(file("doc/manual")),
+    rawContent in Laika := true,
+    includePDF in Laika := false,
+    includeAPI in Laika := false, // not yet
+    excludeFilter in Laika := new FileFilter {
+      override def accept(file:File): Boolean = file.getName == "attic"
+    },
+    aggregate in Laika := false
+  )
+
+  //----------------------------------------------------------------------------------
+  // sbt-ghpages from https://github.com/sbt/sbt-ghpages
+  // adds ghpages-push-site task to push generated site to
+  import com.typesafe.sbt.SbtGhPages.ghpages
+  import com.typesafe.sbt.SbtGit.GitKeys
+  import laika.sbt.LaikaSbtPlugin.LaikaKeys
+  import com.typesafe.sbt.SbtGhPages.GhPagesKeys._
+  val ghPagesSettings = ghpages.settings ++  Seq(
+    GitKeys.gitRemoteRepo := "git@github.com:/NASARace/race.git",
+    GitKeys.gitCurrentBranch := "master",
+    mappings in synchLocal := (mappings in LaikaKeys.site in Laika).value
+  ) 
+
+  //----------------------------------------------------------------------------------
+  // sbt-header from: https://github.com/sbt/sbt-header
+  import de.heikoseeberger.sbtheader.{HeaderKey,HeaderPattern}
+  val license = IO.read(file("LICENSE.txt"))
+  val headersSettings = Seq(
+    HeaderKey.headers := Map(
+      "scala" -> (HeaderPattern.cStyleBlockComment, license),
+      "java" -> (HeaderPattern.cStyleBlockComment, license)
+    )
+  )
+
+  //----------------------------------------------------------------------------------
+  // sbtstats from https://github.com/orrsella/sbt-stats
   import com.orrsella.sbtstats._
+  import com.orrsella.sbtstats.StatsPlugin._
   val sbtStatsSettings = Seq(
     StatsPlugin.statsAnalyzers := Seq(new FilesAnalyzer,new LinesAnalyzer),
     aggregate in statsProject := false  // it can't handle RootProjects and we want a per project breakdown anyways
@@ -39,7 +80,6 @@ object PluginSettings {
 
   //----------------------------------------------------------------------------------
   // sbt-scalariform: https://github.com/daniel-trinh/sbt-scalariform
-  //   using scalariform: from https://github.com/daniel-trinh/scalariform
 
   import com.typesafe.sbt.{SbtScalariform => SSF}
   val scalariformSettings = SSF.defaultScalariformSettings
@@ -80,5 +120,5 @@ object PluginSettings {
   )
 
   // collect all settings for all active plugins. This goes into build.sbt commonSettings
-  val pluginSettings = sbtStatsSettings ++ scalariformSettings //++ depGraphSettings
+  val pluginSettings = headersSettings ++ laikaSettings ++ sbtStatsSettings ++ scalariformSettings //++ depGraphSettings
 }

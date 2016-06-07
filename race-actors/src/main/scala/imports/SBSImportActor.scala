@@ -60,19 +60,19 @@ class SBSImportActor(val config: Config) extends PublishingRaceActor {
   }
   thread.setDaemon(true)
 
-  override def initializeRaceActor(rc: RaceContext, actorConf: Config) = {
-    super.initializeRaceActor(rc, actorConf)
+  override def onInitializeRaceActor(rc: RaceContext, actorConf: Config) = {
+    super.onInitializeRaceActor(rc, actorConf)
 
     sock = Some(new Socket(host, port))
   }
 
-  override def startRaceActor(originator: ActorRef) = {
-    super.startRaceActor(originator)
+  override def onStartRaceActor(originator: ActorRef) = {
+    super.onStartRaceActor(originator)
     thread.start
   }
 
-  override def terminateRaceActor(originator: ActorRef) = {
+  override def onTerminateRaceActor(originator: ActorRef) = {
     ifSome(sock) { _.close }
-    super.terminateRaceActor(originator)
+    super.onTerminateRaceActor(originator)
   }
 }

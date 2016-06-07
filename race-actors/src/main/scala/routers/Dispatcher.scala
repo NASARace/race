@@ -38,18 +38,18 @@ class Dispatcher (val config: Config) extends SubscribingRaceActor {
 
   info(s"$name created $replication workers")
 
-  override def initializeRaceActor(rc: RaceContext, actorConf: Config): Unit = {
-    super.initializeRaceActor(rc, actorConf)
+  override def onInitializeRaceActor(rc: RaceContext, actorConf: Config): Unit = {
+    super.onInitializeRaceActor(rc, actorConf)
     initDependentRaceActors(workers, rc, workerConfig)
   }
 
-  override def startRaceActor(originator: ActorRef) = {
-    super.startRaceActor(originator)
+  override def onStartRaceActor(originator: ActorRef) = {
+    super.onStartRaceActor(originator)
     startDependentRaceActors(workers)
   }
 
-  override def terminateRaceActor (originator: ActorRef) = {
-    super.terminateRaceActor(originator)
+  override def onTerminateRaceActor(originator: ActorRef) = {
+    super.onTerminateRaceActor(originator)
     terminateDependentRaceActors(workers)
   }
 

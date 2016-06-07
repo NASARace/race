@@ -62,19 +62,19 @@ class KafkaConsumerActor (val config: Config) extends PublishingRaceActor {
     )
   }
 
-  override def initializeRaceActor(rc: RaceContext, actorConf: Config): Unit = {
-    super.initializeRaceActor(rc,actorConf)
+  override def onInitializeRaceActor(rc: RaceContext, actorConf: Config): Unit = {
+    super.onInitializeRaceActor(rc,actorConf)
     consumer = new AkkaConsumer(getConsumerProps(actorConf))
     //setInitFuture( consumer.start()) // we delay this until startRaceActor
   }
 
-  override def startRaceActor(originator: ActorRef) = {
-    super.startRaceActor(originator)
+  override def onStartRaceActor(originator: ActorRef) = {
+    super.onStartRaceActor(originator)
     consumer.start
   }
 
-  override def terminateRaceActor (originator: ActorRef) = {
-    super.terminateRaceActor(originator)
+  override def onTerminateRaceActor(originator: ActorRef) = {
+    super.onTerminateRaceActor(originator)
     // sync shutdown
     val timeout = Duration(30, SECONDS)
     val commit = consumer.commit()

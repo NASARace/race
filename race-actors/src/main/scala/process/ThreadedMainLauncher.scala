@@ -91,8 +91,8 @@ class ThreadedMainLauncher (val config: Config) extends RaceActor {
   }
 
 
-  override def startRaceActor(originator: ActorRef) = {
-    super.startRaceActor(originator)
+  override def onStartRaceActor(originator: ActorRef) = {
+    super.onStartRaceActor(originator)
 
     if (optMainMethod != None) {
       thread.start()
@@ -101,8 +101,8 @@ class ThreadedMainLauncher (val config: Config) extends RaceActor {
     }
   }
 
-  override def terminateRaceActor (originator: ActorRef) = {
-    super.terminateRaceActor(originator)
+  override def onTerminateRaceActor(originator: ActorRef) = {
+    super.onTerminateRaceActor(originator)
 
     stop(thread) // only API that /could/ work
   }

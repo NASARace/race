@@ -56,8 +56,8 @@ class ArchiveActor (val config: Config) extends SubscribingRaceActor with Contin
     if (compressedMode) new GZIPOutputStream(fs,bufSize) else new BufferedOutputStream( fs, bufSize)
   }
 
-  override def terminateRaceActor (originator: ActorRef) = {
-    super.terminateRaceActor(originator)
+  override def onTerminateRaceActor(originator: ActorRef) = {
+    super.onTerminateRaceActor(originator)
     stopArchiving = true
     archiveWriter.close
     oStream.close

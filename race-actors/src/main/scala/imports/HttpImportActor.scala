@@ -60,8 +60,8 @@ class HttpImportActor (val config: Config) extends PublishingRaceActor {
 
 
   //--- system message callbacks
-  override def startRaceActor(originator: ActorRef) = {
-    super.startRaceActor(originator)
+  override def onStartRaceActor(originator: ActorRef) = {
+    super.onStartRaceActor(originator)
 
     if (intervalSec > 0) {
       optSchedule = Some(scheduler.schedule(0 seconds, intervalSec seconds,self, SendRequest))
@@ -70,8 +70,8 @@ class HttpImportActor (val config: Config) extends PublishingRaceActor {
     }
   }
 
-  override def terminateRaceActor (originator: ActorRef) = {
-    super.terminateRaceActor(originator)
+  override def onTerminateRaceActor(originator: ActorRef) = {
+    super.onTerminateRaceActor(originator)
     ifSome(optSchedule){ _.cancel }
     client.close
   }

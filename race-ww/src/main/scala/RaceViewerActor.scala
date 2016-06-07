@@ -54,23 +54,23 @@ class RaceViewerActor(val config: Config) extends ContinuousTimeRaceActor
 
   //--- RaceActor callbacks
 
-  override def initializeRaceActor(rc: RaceContext, actorConf: Config): Unit = {
-    super.initializeRaceActor(rc, actorConf)
+  override def onInitializeRaceActor(rc: RaceContext, actorConf: Config): Unit = {
+    super.onInitializeRaceActor(rc, actorConf)
     initDependentRaceActors(actors, rc, actorConf)
   }
 
-  override def reInitializeRaceActor(rc: RaceContext, actorConf: Config): Any = {
-    super.reInitializeRaceActor(rc,actorConf)
+  override def onReInitializeRaceActor(rc: RaceContext, actorConf: Config): Any = {
+    super.onReInitializeRaceActor(rc,actorConf)
     initDependentRaceActors(actors, rc, actorConf)
   }
 
-  override def startRaceActor(originator: ActorRef) = {
-    super.startRaceActor(originator)
+  override def onStartRaceActor(originator: ActorRef) = {
+    super.onStartRaceActor(originator)
     startDependentRaceActors(actors)
   }
 
-  override def terminateRaceActor (originator: ActorRef) = {
-    super.terminateRaceActor(originator)
+  override def onTerminateRaceActor(originator: ActorRef) = {
+    super.onTerminateRaceActor(originator)
 
     info(s"${name} terminating")
     terminateDependentRaceActors(actors)

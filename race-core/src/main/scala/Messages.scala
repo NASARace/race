@@ -46,6 +46,15 @@ object Messages {
   case object RaceActorStarted extends RaceSystemMessage
   case class RaceActorStartFailed (reason: String) extends RaceSystemMessage
 
+  /** pause/resume of RaceActors */
+  case class PauseRaceActor (originator: ActorRef) extends RaceSystemMessage
+  case object RaceActorPaused extends RaceSystemMessage
+  case class RaceActorPauseFailed (reason: String) extends RaceSystemMessage
+
+  case class ResumeRaceActor (originator: ActorRef) extends RaceSystemMessage
+  case object RaceActorResumed extends RaceSystemMessage
+  case class RaceActorResumeFailed (reason: String) extends RaceSystemMessage
+
   /** liveness check */
   case object ProcessRaceActor extends RaceSystemMessage
   case object RaceActorProcessed extends RaceSystemMessage

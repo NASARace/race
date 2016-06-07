@@ -60,14 +60,14 @@ class SimpleAircraft (val config: Config) extends ContinuousTimeRaceActor with S
 
   //--- overridden system hooks
 
-  override def startRaceActor(originator: ActorRef) = {
-    super.startRaceActor(originator)
+  override def onStartRaceActor(originator: ActorRef) = {
+    super.onStartRaceActor(originator)
     info(s"${name} simulation started")
     schedule = Some(scheduler.schedule(0 seconds, intervalSec seconds, self, UpdateFlightPos))
   }
 
-  override def terminateRaceActor (originator: ActorRef) = {
-    super.terminateRaceActor(originator)
+  override def onTerminateRaceActor(originator: ActorRef) = {
+    super.onTerminateRaceActor(originator)
     ifSome(schedule){ _.cancel }
     info(s"${name} terminating")
   }

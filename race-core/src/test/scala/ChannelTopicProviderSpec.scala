@@ -42,14 +42,14 @@ object ChannelTopicProviderSpec {
     var timer: Cancellable = null
     var msg: String = "??"
 
-    override def startRaceActor(originator: ActorRef) = {
-      super.startRaceActor(originator)
+    override def onStartRaceActor(originator: ActorRef) = {
+      super.onStartRaceActor(originator)
       println(s"$name scheduling ticks")
       timer = scheduler.schedule(1.second,1.second,self,Tick)
     }
 
-    override def terminateRaceActor(originator: ActorRef) = {
-      super.terminateRaceActor(originator)
+    override def onTerminateRaceActor(originator: ActorRef) = {
+      super.onTerminateRaceActor(originator)
       timer.cancel()
     }
 
@@ -88,8 +88,8 @@ object ChannelTopicProviderSpec {
   class TestClient(val config: Config) extends ChannelTopicSubscriber {
     var n = 0
 
-    override def startRaceActor(originator: ActorRef) = {
-      super.startRaceActor(originator)
+    override def onStartRaceActor(originator: ActorRef) = {
+      super.onStartRaceActor(originator)
       println(s"$name requesting $TOPIC")
       requestTopic(TOPIC)
     }

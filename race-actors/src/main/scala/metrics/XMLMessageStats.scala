@@ -156,8 +156,8 @@ class XMLMessageStats (val config: Config) extends SubscribingRaceActor with Pub
 
   val fullpath = pathName + facility + "/"
 
-  override def startRaceActor(originator: ActorRef) = {
-    super.startRaceActor(originator)
+  override def onStartRaceActor(originator: ActorRef) = {
+    super.onStartRaceActor(originator)
 
     new File(fullpath).mkdirs()
     log.info(s"created $fullpath")
@@ -199,8 +199,8 @@ class XMLMessageStats (val config: Config) extends SubscribingRaceActor with Pub
     idx = if(idx==maps.size-1) 0 else idx+1
   }
 
-  override def terminateRaceActor (originator: ActorRef) = {
-    super.terminateRaceActor(originator)
+  override def onTerminateRaceActor(originator: ActorRef) = {
+    super.onTerminateRaceActor(originator)
 
     log.info(s"${name} terminating")
 

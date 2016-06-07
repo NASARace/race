@@ -61,7 +61,7 @@ object ConsoleMain extends MainBase {
 
     if (!delayStart) universes.foreach { ras => if (!ras.delayStart) start(ras) }
 
-    menu("enter command [1:show universes, 2:show actors, 3:show channels, 4:send message, 5:set loglevel, 8:start, 9:exit]\n") {
+    menu("enter command [1:show universes, 2:show actors, 3:show channels, 4:send message, 5:set loglevel, 7: pause/resume, 8:start, 9:exit]\n") {
       case "1" | "universes" => showUniverses(universes)
         repeatMenu
 
@@ -75,6 +75,9 @@ object ConsoleMain extends MainBase {
         repeatMenu
 
       case "5" | "log" => runOnSelectedUniverse(universes) { setLogLevel }
+        repeatMenu
+
+      case "7" | "pause" | "resume" => // not yet
         repeatMenu
 
       case "8" | "start" => universes.foreach(start)

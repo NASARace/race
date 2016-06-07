@@ -78,10 +78,12 @@ trait RaceActor extends Actor with ImplicitActorLogging {
     case msg => info(f"${name} in pre-init mode ignored: $msg%30.30s..")
   }
 
-  def handleInitializeRaceActor (raceContext: RaceContext, actorConf: Config) = {
+  def handleInitializeRaceActor (rctx: RaceContext, actorConf: Config) = {
     info(s"$name got InitializeRaceActor")
     try {
-      initializeRaceActor(raceContext, actorConf)
+      raceContext = rctx
+      context.become(receiveLive)
+      onInitializeRaceActor(rctx, actorConf)
       status = Initialized
       sender ! RaceActorInitialized
     } catch {
@@ -121,7 +123,8 @@ trait RaceActor extends Actor with ImplicitActorLogging {
     if (rc != raceContext) {
       info(s"$name got remote InitializeRaceActor")
       try {
-        reInitializeRaceActor(rc, actorConf)
+        raceContext = rc
+        onReInitializeRaceActor(rc, actorConf)
         sender ! RaceActorInitialized
       } catch {
         case ex: Throwable => sender ! RaceActorInitializeFailed(ex.getMessage)
@@ -137,9 +140,9 @@ trait RaceActor extends Actor with ImplicitActorLogging {
     info(s"$name got StartRaceActor")
     try {
       if (status == Running) {
-        reStartRaceActor(originator)
+        onReStartRaceActor(originator)
       } else {
-        startRaceActor(originator)
+        onStartRaceActor(originator)
         status = Running
       }
       sender ! RaceActorStarted
@@ -162,7 +165,7 @@ trait RaceActor extends Actor with ImplicitActorLogging {
     if (isMandatoryTermination(originator)){
       try {
         status = Terminating
-        terminateRaceActor(originator)
+        onTerminateRaceActor(originator)
         status = common.Status.Terminated
         // note that we don't stop this actor - that is the responsibility of the master/ras
         sender ! RaceActorTerminated
@@ -177,18 +180,25 @@ trait RaceActor extends Actor with ImplicitActorLogging {
 
   //--- the general system message callbacks
 
-  def initializeRaceActor(rc: RaceContext, actorConf: Config): Any = {
-    raceContext = rc
-    context.become(receiveLive)
-  }
-  def reInitializeRaceActor(rc: RaceContext, actorConf: Config): Any = {
-    raceContext = rc
-  }
-  def startRaceActor(originator: ActorRef): Any = {}
+  // note that RaceActor itself does not depend on overrides properly calling super.onXX(), all the
+  // critical system processing we do in the non-overridden handleXX() that call the overridable onXX()
 
-  def reStartRaceActor(originator: ActorRef): Any = {}
+  // we allow non-Unit returns because FSMRaceActors need them for state transitions. However, there is no
+  // return value processing in plain RaceActors
 
-  def terminateRaceActor(originator: ActorRef): Any = {}
+  // Note alse that there are no separate ReXX messages, calling onReXX() is just done on the basis of the current
+  // RaceActor state (we might support re-initialization in local RAS in the future)
+
+  def onInitializeRaceActor(rc: RaceContext, actorConf: Config): Any = {}
+  def onReInitializeRaceActor(rc: RaceContext, actorConf: Config): Any = {}
+
+  def onStartRaceActor(originator: ActorRef): Any = {}
+  def onReStartRaceActor(originator: ActorRef): Any = {}
+
+  def onPauseRaceActor(originator: ActorRef): Any = {}
+  def onResumeRaceActor(originator: ActorRef): Any = {}
+
+  def onTerminateRaceActor(originator: ActorRef): Any = {}
 
   //--- utilities for RaceActors with dependents (TODO - turn this into a interface)
 
@@ -274,7 +284,7 @@ trait FSMRaceActor[S,D] extends FSM[S,D] with  RaceActor {
   // this takes the role of handleSystemMessage since we can't bypass FSM.receive
   whenUnhandled {
     case Event(InitializeRaceActor(rc: RaceContext,conf: Config), _) =>
-      val nextState = initializeRaceActor(rc, conf) match {
+      val nextState = onInitializeRaceActor(rc, conf) match {
         case newState: State => newState
         case _ => stay
       }
@@ -282,13 +292,13 @@ trait FSMRaceActor[S,D] extends FSM[S,D] with  RaceActor {
       nextState
 
     case Event(StartRaceActor(originator), _) =>
-      startRaceActor(originator) match {
+      onStartRaceActor(originator) match {
         case newState: State => newState
         case _ => stay
       }
 
     case Event(TerminateRaceActor(originator), _) =>
-      val nextState = terminateRaceActor(originator) match {
+      val nextState = onTerminateRaceActor(originator) match {
         case newState: State => newState
         case _ => stay
       }
@@ -341,20 +351,20 @@ trait SubscribingRaceActor extends RaceActor {
   def addSubscription (channel: String*) = readFrom ++= channel
   def addSubscriptions (channels: Seq[String]) = readFrom ++= channels
 
-  override def initializeRaceActor(raceContext: RaceContext, actorConf: Config): Any = {
-    super.initializeRaceActor(raceContext,actorConf)
+  override def onInitializeRaceActor(raceContext: RaceContext, actorConf: Config): Any = {
+    super.onInitializeRaceActor(raceContext,actorConf)
     readFrom ++= actorConf.getOptionalStringList("read-from")
     readFrom.foreach { channel => busFor(channel).subscribe(self,channel) }
   }
 
-  override def reInitializeRaceActor(raceContext: RaceContext, actorConf: Config): Any = {
+  override def onReInitializeRaceActor(raceContext: RaceContext, actorConf: Config): Any = {
     if (status == Initialized){
       // unsubscribe all global channels, but keep channels set since we re-subscribe after setting the new context
       readFrom.foreach { channel =>
         if (!isLocalChannel(channel)) bus.unsubscribe(self,channel)
       }
     }
-    super.reInitializeRaceActor(raceContext,actorConf)
+    super.onReInitializeRaceActor(raceContext,actorConf)
     readFrom ++= actorConf.getOptionalStringList("read-from")
     readFrom.foreach { channel =>
       if (!isLocalChannel(channel)) bus.subscribe(self,channel)
@@ -376,8 +386,8 @@ trait SubscribingRaceActor extends RaceActor {
     readFrom.clear
   }
 
-  override def terminateRaceActor(originator: ActorRef): Unit = {
-    super.terminateRaceActor(originator)
+  override def onTerminateRaceActor(originator: ActorRef): Unit = {
+    super.onTerminateRaceActor(originator)
     unsubscribeAll
   }
 
@@ -401,10 +411,10 @@ trait ContinuousTimeRaceActor extends RaceActor {
   var startSimTimeMillis: Long = 0
   var startWallTimeMillis: Long = 0
 
-  override def startRaceActor(originator: ActorRef): Any = {
+  override def onStartRaceActor(originator: ActorRef): Any = {
     startSimTimeMillis = updatedSimTimeMillis
     startWallTimeMillis = System.currentTimeMillis()
-    super.startRaceActor(originator)
+    super.onStartRaceActor(originator)
   }
 
 
@@ -462,8 +472,8 @@ trait MonitoredRaceActor extends RaceActor {
   var checkInterval = config.getFiniteDurationOrElse(CheckIntervalKey, 5.seconds)
   var schedule: Option[Cancellable] = None
 
-  override def initializeRaceActor(rc: RaceContext, actorConf: Config) = {
-    super.initializeRaceActor(rc, actorConf)
+  override def onInitializeRaceActor(rc: RaceContext, actorConf: Config) = {
+    super.onInitializeRaceActor(rc, actorConf)
 
     if (!isLocalContext(rc)) {
       // check if we have a different remote check interval
@@ -477,8 +487,8 @@ trait MonitoredRaceActor extends RaceActor {
     }
   }
 
-  override def terminateRaceActor (originator: ActorRef): Any = {
-    super.terminateRaceActor(originator)
+  override def onTerminateRaceActor(originator: ActorRef): Any = {
+    super.onTerminateRaceActor(originator)
     stopMonitoring
   }
 

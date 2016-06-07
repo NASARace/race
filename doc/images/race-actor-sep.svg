@@ -1,0 +1,97 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<svg width="100%" height="100%" version="1.1" viewBox="384 393 879 456" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <filter id="shadow1" width="150%" height="150%">
+      <feGaussianBlur in="SourceAlpha" result="blur" stdDeviation="3" />
+      <feOffset dx="3" dy="3" in="blur" result="offsetBlur" />
+      <feMerge>
+        <feMergeNode in="offsetBlur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+  </defs>
+  <marker id="marker1" markerUnits="strokeWidth" orient="auto" refX="-11.17254" refY="0" markerWidth="13.27247" markerHeight="10.22955" viewBox="-12.27247 -5.114774 13.27247 10.22955">
+    <path d="M-11.27247 -4.114774 L0 0 L-11.27247 4.114773 Z " fill="#000000" fill-opacity="1" stroke="#000000" stroke-opacity="1" />
+  </marker>
+  <marker id="marker2" markerUnits="strokeWidth" orient="auto" refX="-11.17254" refY="0" markerWidth="13.27247" markerHeight="10.22955" viewBox="-12.27247 -5.114774 13.27247 10.22955">
+    <path d="M-11.27247 -4.114774 L0 0 L-11.27247 4.114773 Z " fill="#000000" fill-opacity="1" stroke="#000000" stroke-opacity="1" />
+  </marker>
+  <marker id="marker3" markerUnits="strokeWidth" orient="auto" refX="-11.17254" refY="0" markerWidth="13.27247" markerHeight="10.22955" viewBox="-12.27247 -5.114774 13.27247 10.22955">
+    <path d="M-11.27247 -4.114774 L0 0 L-11.27247 4.114773 Z " fill="#000000" fill-opacity="1" stroke="#000000" stroke-opacity="1" />
+  </marker>
+  <marker id="marker4" markerUnits="strokeWidth" orient="auto" refX="-11.17254" refY="0" markerWidth="13.27247" markerHeight="10.22955" viewBox="-12.27247 -5.114774 13.27247 10.22955">
+    <path d="M-11.27247 -4.114774 L0 0 L-11.27247 4.114773 Z " fill="#000000" fill-opacity="1" stroke="#000000" stroke-opacity="1" />
+  </marker>
+  <marker id="marker5" markerUnits="strokeWidth" orient="auto" refX="-11.17254" refY="0" markerWidth="13.27247" markerHeight="10.22955" viewBox="-12.27247 -5.114774 13.27247 10.22955">
+    <path d="M-11.27247 -4.114774 L0 0 L-11.27247 4.114773 Z " fill="#000000" fill-opacity="1" stroke="#000000" stroke-opacity="1" />
+  </marker>
+  <marker id="marker6" markerUnits="strokeWidth" orient="auto" refX="-11.17254" refY="0" markerWidth="13.27247" markerHeight="10.22955" viewBox="-12.27247 -5.114774 13.27247 10.22955">
+    <path d="M-11.27247 -4.114774 L0 0 L-11.27247 4.114773 Z " fill="#000000" fill-opacity="1" stroke="#000000" stroke-opacity="1" />
+  </marker>
+  <marker id="marker7" markerUnits="strokeWidth" orient="auto" refX="-11.17254" refY="0" markerWidth="13.27247" markerHeight="10.22955" viewBox="-12.27247 -5.114774 13.27247 10.22955">
+    <path d="M-11.27247 -4.114774 L0 0 L-11.27247 4.114773 Z " fill="#000000" fill-opacity="1" stroke="#000000" stroke-opacity="1" />
+  </marker>
+  <g id="layer1" inkscape:label="Layer 1" inkscape:groupmode="layer">
+    <rect x="675" y="396" width="252" height="35.99997" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" filter="url(#shadow1)" />
+    <text x="765.6523" y="418.8625" font-size="16" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">RaceActor</text>
+    <rect x="675" y="432" width="252" height="45.00007" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" filter="url(#shadow1)" />
+    <text x="683" y="462.7" font-size="14" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">name, state, bus, config</text>
+    <rect x="675" y="477" width="252" height="369" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" filter="url(#shadow1)" />
+    <text x="688" y="510.7" font-size="14" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">def receive = {</text>
+    <text x="688" y="526.7" font-size="14" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">˙ case msg: Initialize =&gt;</text>
+    <text x="688" y="542.7" font-size="14" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">˙ state = Initializing</text>
+    <text x="688" y="558.7" font-size="14" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">˙ onInitialize (msg)</text>
+    <text x="688" y="574.7" font-size="14" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">˙ become receiveLive</text>
+    <text x="688" y="590.7" font-size="14" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">˙ sender ! Initialized</text>
+    <text x="688" y="633.7" font-size="14" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">def onInitialize = {</text>
+    <text x="688" y="649.7" font-size="14" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">˙ subscribe (bus)</text>
+    <text x="688" y="665.7" font-size="14" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">˙ state = Initialized</text>
+    <text x="688" y="714.7" font-size="14" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">def receiveLive = {</text>
+    <text x="688" y="730.7" font-size="14" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">˙ handleMessage orElse</text>
+    <text x="688" y="746.7" font-size="14" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">˙ ˙ handleSystemMessage</text>
+    <rect x="1017" y="450" width="243" height="36" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" filter="url(#shadow1)" />
+    <text x="1111.164" y="472.8625" font-size="16" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">MyActor</text>
+    <rect x="1017" y="486" width="243" height="45" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" filter="url(#shadow1)" />
+    <text x="1025" y="516.7" font-size="14" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">data</text>
+    <rect x="1017" y="531" width="243" height="180" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" filter="url(#shadow1)" />
+    <text x="1030" y="570.7" font-size="14" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">def onInitialize = {</text>
+    <text x="1030" y="586.7" font-size="14" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">˙ data = ...</text>
+    <text x="1030" y="602.7" font-size="14" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">˙ super.onInitialize</text>
+    <text x="1030" y="660.7" font-size="14" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">def handleMessage = {</text>
+    <text x="1030" y="676.7" font-size="14" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">˙ case msg: X =&gt;</text>
+    <text x="1030" y="692.7" font-size="14" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">˙ ˙    ... data ...</text>
+    <path d="M900 540 C963 540 945 567 1013.827 567" marker-end="url(#marker1)" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+    <path d="M1071 603 Q999 657 864 648 Q936 576 884.7042 561.3441" marker-end="url(#marker2)" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+    <path d="M558 459 C639 459 603 495 653.8274 495" marker-end="url(#marker3)" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+    <path d="M702 549 Q540 549 540 635.8274" marker-end="url(#marker4)" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="2,2" fill-opacity="0" />
+    <path d="M576 684 C657 684 621 720 671.8274 720" marker-end="url(#marker5)" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+    <path d="M873 720 C981 720 927 666 1013.827 666" marker-end="url(#marker6)" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+    <text x="688" y="795.7" font-size="14" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">def handleSystemMessage = {</text>
+    <text x="688" y="811.7" font-size="14" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">˙ case msg: Terminate =&gt;</text>
+    <text x="688" y="827.7" font-size="14" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">˙ ˙ state = Terminating</text>
+    <path d="M882 738 C999 756 990 801 921.0981 808.6558" marker-end="url(#marker7)" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+    <path d="M1143 450 L1143 414 L945 414" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+    <path d="M927 414 L945 405 L945 423 Z " opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" transform="rotate(359 936 414)" />
+    <text x="512.938" y="464.3797" font-size="14" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">Akka</text>
+    <text x="521.938" y="666.8797" font-size="14" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">Akka</text>
+    <text x="418" y="497.7" font-size="14" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">myActor !</text>
+    <text x="418" y="513.7" font-size="14" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">Initialize(..)</text>
+    <text x="410.6621" y="475.2" font-size="14" fill="#000000" fill-opacity="1" font-family="Droid Sans Mono" font-weight="normal" font-style="normal">master:</text>
+    <text x="445" y="686.7" font-size="14" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">publish(bus, X)</text>
+    <text x="445" y="702.7" font-size="14" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">...</text>
+    <ellipse cx="630" cy="459" rx="9" ry="9" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" />
+    <text x="628.6097" y="464.533" font-size="12" fill="#000000" fill-opacity="1" font-family=".Helvetica Neue DeskInterface" font-weight="normal" font-style="normal">1</text>
+    <ellipse cx="972" cy="540" rx="9" ry="9" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" />
+    <text x="970.6097" y="545.5329" font-size="12" fill="#000000" fill-opacity="1" font-family=".Helvetica Neue DeskInterface" font-weight="normal" font-style="normal">2</text>
+    <ellipse cx="954" cy="630" rx="9" ry="9" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" />
+    <text x="952.6097" y="635.5329" font-size="12" fill="#000000" fill-opacity="1" font-family=".Helvetica Neue DeskInterface" font-weight="normal" font-style="normal">3</text>
+    <ellipse cx="585" cy="594" rx="9" ry="9" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" />
+    <text x="583.6097" y="599.5329" font-size="12" fill="#000000" fill-opacity="1" font-family=".Helvetica Neue DeskInterface" font-weight="normal" font-style="normal">4</text>
+    <ellipse cx="630" cy="675" rx="9" ry="9" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" />
+    <text x="628.6097" y="680.5329" font-size="12" fill="#000000" fill-opacity="1" font-family=".Helvetica Neue DeskInterface" font-weight="normal" font-style="normal">5</text>
+    <ellipse cx="963" cy="702" rx="9" ry="9" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" />
+    <text x="961.6097" y="707.5329" font-size="12" fill="#000000" fill-opacity="1" font-family=".Helvetica Neue DeskInterface" font-weight="normal" font-style="normal">6</text>
+    <ellipse cx="972" cy="756" rx="9" ry="9" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" />
+    <text x="970.6097" y="761.5329" font-size="12" fill="#000000" fill-opacity="1" font-family=".Helvetica Neue DeskInterface" font-weight="normal" font-style="normal">7</text>
+  </g>
+</svg>

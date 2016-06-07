@@ -48,8 +48,8 @@ class ScheduledFileImportActor (val config: Config)  extends PublishingRaceActor
     log.warning(s"schedule file not found: $schedule")
   }
 
-  override def startRaceActor(originator: ActorRef) = {
-    super.startRaceActor(originator)  // <2do> - this has to translate simTime to wallTime
+  override def onStartRaceActor(originator: ActorRef) = {
+    super.onStartRaceActor(originator)  // <2do> - this has to translate simTime to wallTime
     fileScheduler.setTimeBase(DateTime.now)
     scheduleNext
   }

@@ -95,8 +95,8 @@ class PortForwarder (val config: Config) extends MonitoredRaceActor {
     }
   }
 
-  override def terminateRaceActor(originator: ActorRef) = {
-    super.terminateRaceActor(originator)
+  override def onTerminateRaceActor(originator: ActorRef) = {
+    super.onTerminateRaceActor(originator)
 
     if (session.isConnected) {
       session.disconnect()

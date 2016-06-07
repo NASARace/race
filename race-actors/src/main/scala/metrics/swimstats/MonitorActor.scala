@@ -39,8 +39,8 @@ trait MonitorActor extends SubscribingRaceActor with PublishingRaceActor {
     }
   }
 
-  override def terminateRaceActor (originator: ActorRef) = {
-    super.terminateRaceActor(originator)
+  override def onTerminateRaceActor(originator: ActorRef) = {
+    super.onTerminateRaceActor(originator)
 
     log.info(s"${name} terminating")
 
