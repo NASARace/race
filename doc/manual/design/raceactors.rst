@@ -1,5 +1,6 @@
 RaceActors
 ==========
+.. _RaceActor:
 RaceActors are specialized Akka actors that primarily implement three RACE specific aspects:
 
 - a RACE specific state model

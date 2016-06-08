@@ -18,7 +18,8 @@ of element nesting and hence is suitable for selective XML parsing.
 a Scala abstraction layer on top of ``javax.swing``. Apart from custom widgets this especially
 holds support for CSS like styling of Swing components.
 
-**core** is the layer that implements the `basic runtime structure`_ of RACE, consisting of:
+**core** is the layer that implements the basic runtime structure of RACE as described in the
+RaceActors_ section, consisting of:
 
 - ``RaceActor`` (and derived traits such as ``SubscribingRaceActor`` and ``PublishingRaceActor``)
 - ``MasterActor`` (which instantiates and supervises configured RaceActors)
@@ -54,7 +55,6 @@ belongs to a ``gov.nasa.race.<layer>`` package. Each layer is compiled separatel
 it can only depend on lower layers.
 
 
-.. _basic runtime structure: RaceActors_
 .. _NASA WorldWind: https://goworldwind.org/
 .. _ActiveMQ: http://activemq.apache.org/
 .. _Kafka: http://kafka.apache.org/

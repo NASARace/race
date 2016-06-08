@@ -46,19 +46,6 @@ object PluginSettings {
   )
 
   //----------------------------------------------------------------------------------
-  // sbt-ghpages from https://github.com/sbt/sbt-ghpages
-  // adds ghpages-push-site task to push generated site to
-  import com.typesafe.sbt.SbtGhPages.ghpages
-  import com.typesafe.sbt.SbtGit.GitKeys
-  import laika.sbt.LaikaSbtPlugin.LaikaKeys
-  import com.typesafe.sbt.SbtGhPages.GhPagesKeys._
-  val ghPagesSettings = ghpages.settings ++  Seq(
-    GitKeys.gitRemoteRepo := "git@github.com:/NASARace/race.git",
-    GitKeys.gitCurrentBranch := "master",
-    mappings in synchLocal := (mappings in LaikaKeys.site in Laika).value
-  ) 
-
-  //----------------------------------------------------------------------------------
   // sbt-header from: https://github.com/sbt/sbt-header
   import de.heikoseeberger.sbtheader.{HeaderKey,HeaderPattern}
   val license = IO.read(file("LICENSE.txt"))

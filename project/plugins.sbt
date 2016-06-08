@@ -25,10 +25,6 @@ addSbtPlugin("com.jsuereth" % "sbt-pgp" % "1.0.0")
 // document site generation with Laika: https://github.com/planet42/Laika
 addSbtPlugin("org.planet42" % "laika-sbt" % "0.6.0")
 
-// to publish to gh_pages on GitHub
-//resolvers += "jgit-repo" at "http://download.eclipse.org/jgit/maven" // prefer native git
-addSbtPlugin("com.typesafe.sbt" % "sbt-ghpages" % "0.5.4")
-
 // git commands from within sbt: https://github.com/sbt/sbt-git
 addSbtPlugin("com.typesafe.sbt" % "sbt-git" % "0.8.5")
 

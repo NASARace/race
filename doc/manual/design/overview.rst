@@ -112,8 +112,6 @@ the master actor initialization phase that connects participating RACE instances
 the RaceActor publish/subscribe interface, which distinguishes between local and global bus by means
 of channel names (e.g. ``/local/x``)
 
-Please refer to details in the `Remote RACE Instances`_ section.
-
 
 .. _Actor Remoting: http://doc.akka.io/docs/akka/current/scala/remoting.html
 .. _Location Transparency: http://doc.akka.io/docs/akka/current/general/remoting.html#remoting

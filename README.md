@@ -1,23 +1,31 @@
-## RACE - Building Distributed Simulations
+## RACE - Building Distributed Actor Systems
 
 The *Runtime for Airspace Concept Evaluation* (RACE) is a software architecture and framework to
 build configurable, highly concurrent and distributed message based systems. Among other things,
 RACE can be used to rapidly build simulations that span several machines (including synchronized
 displays), interface existing hardware simulators and other live data feeds, and incorporate
 sophisticated visualization components such as NASA’s [WorldWind](https://goworldwind.org/) viewer.
-RACE is implemented as a distributed actor system that runs within Java virtual machines.
+
+RACE is implemented as a distributed [actor system](https://en.wikipedia.org/wiki/Actor_model) built
+on top of the [Akka](http://akka.io/) framework, primarily uses [Scala](http://www.scala-lang.org/)
+as programming language and runs within Java Virtual Machines.
+
 
 ### Learn More
 
- - [What is RACE](doc/about.md)
- - [Prerequisites](doc/user/install/prerequisites.md)
- - [Download](doc/user/install/download.md)
- - [Build](doc/user/install/build.md)
- - [Run](doc/user/running.md)
+Please refer to our [RACE website](http://NASARace.github.io/race) for more details about:
+
+  - [prerequisites](http://NASARace.github.io/race/installation/prerequisites.html)
+  - [how to build RACE](http://NASARace.github.io/race/installation/build.html)
+  - [running RACE](http://NASARace.github.io/race/usage/running.html)
+  - [RACE configuration](http://NASARace.github.io/race/usage/configuration.html)
+  - [RACE design](http://NASARace.github.io/race/design/overview.html)
+
 
 ### License
 
-RACE is distributed under the Apache v2 license, quoted below:
+RACE was developed at the [NASA Ames Research Center](https://www.nasa.gov/centers/ames/home/index.html)
+and is distributed under the Apache v2 license, quoted below:
 
     Copyright (c) 2016, United States Government, as represented by the 
     Administrator of the National Aeronautics and Space Administration. 
