@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8"/>
+        <title>RACE</title>
+
+        <link href="../race-html.css" rel="stylesheet"/>
+    </head>
+
+    <body>
+        <div class="navbar">
+            <div class=""banner>
+                <a href="index.html" ><img class="logo" src="../images/race128.png"></a>
+                <p class="doctitle">RACE Manual</p>
+            </div>
+            <br/>
+            <div class="globaltoc">
+                <div class="toc">
+                  <p class="title">Contents</p>
+                  <ul>
+                    <li><span class="toc level1"><a href="../about.html">About RACE</a></span></li>
+                    <li>
+                      <p class="toc level1">Installing RACE</p>
+                      <ul>
+                        <li><span class="toc level2"><a href="../installation/prerequisites.html">Prerequisites</a></span></li>
+                        <li><span class="toc level2"><a href="../installation/download.html">Downloading RACE</a></span></li>
+                        <li><span class="toc level2"><a href="../installation/build.html">Building RACE</a></span></li>
+                        <li><span class="toc level2"><a href="../installation/osx.html">OS X Specifics</a></span></li>
+                      </ul>
+                    </li>
+                    <li>
+                      <p class="toc level1">Using RACE</p>
+                      <ul>
+                        <li><span class="toc level2"><a href="../usage/running.html">How to Run RACE</a></span></li>
+                        <li><span class="toc level2"><a href="../usage/configuration.html">RACE Configuration</a></span></li>
+                        <li><span class="toc level2"><a href="../usage/encryption.html">Using Encrypted Configurations</a></span></li>
+                        <li><span class="toc level2"><a href="../usage/examples.html">RACE examples</a></span></li>
+                      </ul>
+                    </li>
+                    <li>
+                      <p class="toc level1"><a href="../actors.html">Actors</a></p>
+                      <ul>
+                        <li><span class="toc level2"><a href="../actors.html#actor-components-and-properties">Actor Components and Properties</a></span></li>
+                        <li><span class="toc level2"><a href="../actors.html#actor-communication">Actor Communication</a></span></li>
+                      </ul>
+                    </li>
+                    <li>
+                      <p class="toc level1">RACE Design</p>
+                      <ul>
+                        <li><span class="toc level2"><a href="overview.html">Design Overview</a></span></li>
+                        <li><span class="toc level2"><a href="configuration.html">Runtime Configuration</a></span></li>
+                        <li><span class="toc level2"><a href="raceactors.html">RaceActors</a></span></li>
+                        <li><span class="toc level2"><a href="channeltopics.html">ChannelTopics</a></span></li>
+                        <li><span class="toc level2 active">WorldWind Viewer</span></li>
+                        <li><span class="toc level2"><a href="remotelauncher.html">RemoteLauncher</a></span></li>
+                        <li><span class="toc level2"><a href="layers-and-modules.html">Layers and Modules</a></span></li>
+                        <li><span class="toc level2"><a href="directory-structure.html">Directory Structure</a></span></li>
+                        <li><span class="toc level2"><a href="whyscala.html">Why Scala</a></span></li>
+                      </ul>
+                    </li>
+                    <li><span class="toc level1"><a href="../glossary.html">Glossary</a></span></li>
+                  </ul>
+                </div>
+            </div>
+            <div class="pagetoc">
+                <div class="toc">
+                  <p class="title">Page</p>
+                </div>
+            </div>
+            <div class="toc">
+                <p class="title">Project Links</p>
+                <ul>
+                    <li><span class="toc level2"><a href="https://github.com/NASARace/race.git">Repository</a></span></li>
+                    <li><span class="toc level2"><a href="https://NASARace/github.io/race">Website</a></span></li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="main">
+            <h1 id="worldwind-viewer" class="title">WorldWind Viewer</h1>
+            <p>One of the primary use cases of RACE is to visualize large geospatial, dynamic data sets, such as
+            live flight positions within the whole NAS. Respective applications vary widely in terms of:</p>
+            <ul>
+              <li>input sources</li>
+              <li>context aware rendering of display relevant data</li>
+              <li>interactions</li>
+            </ul>
+            <p>Rendering intensive graphical user interfaces tend to require a large amount of code that is often
+            platform specific. In addition, related code is difficult to develop because user interface
+            frameworks are often not thread safe, and thus need explicit, error prone and hard to test
+            synchronization between asynchronous data acquisition- and user interface (event dispatcher) threads.</p>
+            <p>RACE includes substantial infrastructure to mitigate these challenges. Centerpiece of this
+            infrastructure is <a href="https://goworldwind.org/">NASA WorldWind</a> - an open sourced Java- and <a href="https://www.opengl.org/">OpenGL</a>-based geo viewer
+            that runs on all major platforms and can be embedded into various applications.</p>
+            <p>The primary <a href="https://goworldwind.org/developers-guide/concepts/">WorldWind concept</a> in the context of RACE is the <a href="http://builds.worldwind.arc.nasa.gov/worldwind-releases/daily/docs/api/gov/nasa/worldwind/layers/RenderableLayer.html">RenderableLayer</a>, which represents
+            a display relevant data set that can be separately controlled in terms of visibility, rendering and
+            updates. RACE uses <code>RaceLayers</code> to map its bus channels to WorldWind layers. While a <code>RaceLayer</code>
+            is a GUI object that executes within the user interface thread, it has an associated
+            <code>RaceLayerActor</code> which is responsible for data acquisition by means of channel subscription.
+            Since <code>RaceLayerActors</code> execute within Akka threads, they use a dedicated queue within the
+            associated <code>RaceLayer</code> to perform the thread-safe handover of display data.</p>
+            <p>The second general concept is the <em>UI panel</em>, which represents a part of the user interface outside
+            of, but potentially interacting with, WorldWind. RACE comes with panels for various tasks such as
+            controlling view positions, selecting layers and displaying information about selected objects.</p>
+            <p>UI panels are collapsible and stacked in a column to the left of the toplevel window, whereas
+            WorldWind occupies the large canvas to the right of the panel column.</p>
+            <p><img class="center scale80" src="../images/race-viewer.svg" alt="WorldWind Viewer"></p>
+            <p>WorldWind is incorporated into RACE applications by means of a <code>RaceViewerActor</code>, which is just
+            a normal <code>RaceActor</code> within RACE configurations. However, <code>RaceViewerActors</code> themselves can
+            be extensively configured with both <code>RaceLayers</code> and (less often) UI panels:</p>
+            <pre><code>universe {
+    ...
+    actors = [
+        ...
+        { name = &quot;geoViewer&quot;
+          class = &quot;gov.nasa.race.ww.RaceViewerActor&quot;
+          ...
+          layers = [
+              { name = &quot;livePos&quot;
+                class = &quot;gov.nasa.race.ww.layers.FlightPosLayer&quot;
+                read-from = &quot;/live/fpos&quot;
+                description = &quot;SWIM sfdps flight positions&quot; ...
+              },
+           ...</code></pre>
+            <p>Just as <code>RaceLayerActors</code>, the <code>RaceViewerActor</code> has a UI dual in form of the <code>RaceView</code>, which
+            is both the aggregation and the <a href="https://en.wikipedia.org/wiki/Mediator_pattern">mediator</a> between the configured panels and the WorldWind window.</p>
+            <p>The data that is acquired through RACE channels does not have to represent external entities such
+            as aircraft, and does not need to be displayed in <code>RaceLayers</code>. The whole RACE viewer
+            infrastructure lends itself naturally to use RACE channels on the global bus for the purpose of
+            synchronizing RaceViewers across the network.</p>
+            <p>To that end, the viewer infrastructure includes a <code>SyncPanel</code>/<code>SyncActor</code> pair, which can publish
+            viewer changes such as eye position and layer selection to a global channel, and conversely subscribe
+            to this channel to update the local display with remote viewer changes. This is a powerful basis
+            to implement applications such as situation rooms because it</p>
+            <ul>
+              <li>supports control of synchronization aspects at the local site</li>
+              <li>requires minimal data transfer for updates</li>
+              <li>is robust in terms of re-synchronization</li>
+            </ul>
+            <p>Moreover, by using different synchronization channels it is easy to create and switch between
+            display groups.</p>
+        </div>
+
+    </body>
+</html>

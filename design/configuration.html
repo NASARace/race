@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8"/>
+        <title>RACE</title>
+
+        <link href="../race-html.css" rel="stylesheet"/>
+    </head>
+
+    <body>
+        <div class="navbar">
+            <div class=""banner>
+                <a href="index.html" ><img class="logo" src="../images/race128.png"></a>
+                <p class="doctitle">RACE Manual</p>
+            </div>
+            <br/>
+            <div class="globaltoc">
+                <div class="toc">
+                  <p class="title">Contents</p>
+                  <ul>
+                    <li><span class="toc level1"><a href="../about.html">About RACE</a></span></li>
+                    <li>
+                      <p class="toc level1">Installing RACE</p>
+                      <ul>
+                        <li><span class="toc level2"><a href="../installation/prerequisites.html">Prerequisites</a></span></li>
+                        <li><span class="toc level2"><a href="../installation/download.html">Downloading RACE</a></span></li>
+                        <li><span class="toc level2"><a href="../installation/build.html">Building RACE</a></span></li>
+                        <li><span class="toc level2"><a href="../installation/osx.html">OS X Specifics</a></span></li>
+                      </ul>
+                    </li>
+                    <li>
+                      <p class="toc level1">Using RACE</p>
+                      <ul>
+                        <li><span class="toc level2"><a href="../usage/running.html">How to Run RACE</a></span></li>
+                        <li><span class="toc level2"><a href="../usage/configuration.html">RACE Configuration</a></span></li>
+                        <li><span class="toc level2"><a href="../usage/encryption.html">Using Encrypted Configurations</a></span></li>
+                        <li><span class="toc level2"><a href="../usage/examples.html">RACE examples</a></span></li>
+                      </ul>
+                    </li>
+                    <li>
+                      <p class="toc level1"><a href="../actors.html">Actors</a></p>
+                      <ul>
+                        <li><span class="toc level2"><a href="../actors.html#actor-components-and-properties">Actor Components and Properties</a></span></li>
+                        <li><span class="toc level2"><a href="../actors.html#actor-communication">Actor Communication</a></span></li>
+                      </ul>
+                    </li>
+                    <li>
+                      <p class="toc level1">RACE Design</p>
+                      <ul>
+                        <li><span class="toc level2"><a href="overview.html">Design Overview</a></span></li>
+                        <li><span class="toc level2 active">Runtime Configuration</span></li>
+                        <li><span class="toc level2"><a href="raceactors.html">RaceActors</a></span></li>
+                        <li><span class="toc level2"><a href="channeltopics.html">ChannelTopics</a></span></li>
+                        <li><span class="toc level2"><a href="worldwind.html">WorldWind Viewer</a></span></li>
+                        <li><span class="toc level2"><a href="remotelauncher.html">RemoteLauncher</a></span></li>
+                        <li><span class="toc level2"><a href="layers-and-modules.html">Layers and Modules</a></span></li>
+                        <li><span class="toc level2"><a href="directory-structure.html">Directory Structure</a></span></li>
+                        <li><span class="toc level2"><a href="whyscala.html">Why Scala</a></span></li>
+                      </ul>
+                    </li>
+                    <li><span class="toc level1"><a href="../glossary.html">Glossary</a></span></li>
+                  </ul>
+                </div>
+            </div>
+            <div class="pagetoc">
+                <div class="toc">
+                  <p class="title">Page</p>
+                  <ul>
+                    <li><span class="toc level1"><a href="#config-file-format">Config File Format</a></span></li>
+                    <li><span class="toc level1"><a href="#encrypted-configurations">Encrypted Configurations</a></span></li>
+                  </ul>
+                </div>
+            </div>
+            <div class="toc">
+                <p class="title">Project Links</p>
+                <ul>
+                    <li><span class="toc level2"><a href="https://github.com/NASARace/race.git">Repository</a></span></li>
+                    <li><span class="toc level2"><a href="https://NASARace/github.io/race">Website</a></span></li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="main">
+            <h1 id="runtime-configuration" class="title">Runtime Configuration</h1>
+            <p>Concrete RACE applications are not hard coded. They are defined by configuration files
+            that specify which actors the application consists of, how these actors communicate, and what
+            parameters they take.</p>
+            <p>The underlying library to process configuration files is the same <a href="https://github.com/typesafehub/config">TypesafeConfig</a> library that
+            is used by Akka itself, hence all configuration (Akka <em>and</em> RACE) can be done through a single,
+            consistent mechanism and the same text file(s). While TypesafeConfig supports various formats such
+            as XML and Java properties, we promote the use of <a href="https://github.com/typesafehub/config/blob/master/HOCON.md">HOCON</a> (Human-Optimized Config Object Notation).
+            RACE configuration files can get large, and HOCON&#39;s more readable syntax and especially
+            factorization features (includes, string interpolation) are helpful to understand configurations.</p>
+            <p>The underlying data model is a tree of key/value elements, where each value is either a primitive
+            (String, Boolean, Int etc.), an object (set of key/value pairs &quot;{..}&quot;), or an array of element
+            values &quot;[..]&quot;.</p>
+            
+            <h2 id="config-file-format" class="section">Config File Format</h2>
+            <p>A typical RACE configuration file looks like this:</p>
+            <pre class="code HOCON"><code>// example RACE configuration
+universe = {
+  name = &quot;SimpleProbe&quot;                                         // name of universe
+  actors = [                                                   // list of actor objects
+    { name = &quot;aircraft&quot;                                        // name of actor
+      class = &quot;gov.nasa.race.actors.models.SimpleAircraft&quot;     // class of actor
+      write-to = &quot;/flights/positions&quot;                          // channel this actor writes to
+      ...
+    },
+    { name = &quot;probe&quot;
+      class = &quot;gov.nasa.race.actors.viewers.ProbeActor&quot;
+      read-from = &quot;/flights/positions&quot;                         // channel this actor reads from
+    }
+  ]
+  include classpath(&quot;config/logging-race.conf&quot;)
+}</code></pre>
+            <p>The top element of a RACE configuration is a <code>universe</code> object, which holds two main sub-elements:</p>
+            <ul>
+              <li><code>name</code> identifies this RACE instance at runtime so that it can be referenced from remote RACEs</li>
+              <li><code>actors</code> is a list of the actor specifications this RACE instance consists of</li>
+            </ul>
+            <p>Each <code>actors</code> element describes a single <a href="raceactors.html#raceactor">RaceActor</a> instance, identified by <code>name</code> and
+            respective implementation <code>class</code>. Communication between RaceActors happens through <em>bus
+            channels</em>, which are specified as path strings such as <code>/flights/positions</code>. Output channels of
+            RaceActors are specified with a &quot;write-to&quot; element that can hold either a single string or an array
+            of strings. Input channels are configured with respective &quot;read-from&quot; elements. Note that channels
+            do not need to be defined separately as they are merely selectors for the Akka EventBus at runtime.
+            The <code>read-from</code> values can contain wildcards such as <code>flights/*</code>, which allow subscriptions to
+            a whole sub-tree of channels.</p>
+            <p>Depending on the concrete <a href="raceactors.html#raceactor">RaceActor</a> class, each <code>actors</code> element can also hold class specific
+            parameters.</p>
+            <p>Communication between different RACE instances (processes) is done by means of <em>remote</em> actors, as
+            shown by the following diagram:</p>
+            <p><img class="center scale90" src="../images/race-config.svg" alt="RACE configuration"></p>
+            <p>Here, the <code>remotePlane</code> actor of the <code>mySimulation</code> universe (to the left) does not contain a
+            <code>class</code> specification, but instead has a <code>remote</code> element that holds a URI that specifies the
+            hostname and universe name of the remote RACE (to the right). Remote actors can either be
+            started by the remote configuration, or upon request from the referencing universe. The first case
+            represents a <em>remote lookup</em> that allows to split respective actor configuration into local and
+            remote settings.</p>
+            
+            <h2 id="encrypted-configurations" class="section">Encrypted Configurations</h2>
+            <p>Some <a href="raceactors.html#raceactors">RaceActors</a> might need to be parameterized with values that are confidential, such as
+            user credentials or non-public URIs. RACE supports this case by means of encrypted configuration
+            values - instead of having a pain text parameter specification such as <code>password = &quot;12345&quot;</code>, a
+            symbolic value prefixed by <code>??</code> (such as <code>password = ??server.pw</code>) is used. This symbolic value
+            (e.g. <code>server.pw</code>) is a key into a special, encrypted <em>vault</em> configuration file that is specified
+            alongside the normal configuration file when starting RACE.</p>
+            <p><img class="center scale70" src="../images/race-vault.svg" alt="encrypted configurations"></p>
+            <p>Vault files are encrypted with symmetric ciphers (either user provided or retrieved from a
+            keystore). Vault values are never stored as plain text at runtime, and have to be retrieved by
+            actors by means of special APIs. The top element of a vault configuration file has to be named
+            <code>secret</code>.</p>
+            <p>Please refer to the <a href="../usage/encryption.html#using-encrypted-configurations">Using Encrypted Configurations</a> section for a description of related tools
+            and commands to create vaults and/or keystores.</p>
+        </div>
+
+    </body>
+</html>

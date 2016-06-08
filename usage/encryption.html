@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8"/>
+        <title>RACE</title>
+
+        <link href="../race-html.css" rel="stylesheet"/>
+    </head>
+
+    <body>
+        <div class="navbar">
+            <div class=""banner>
+                <a href="index.html" ><img class="logo" src="../images/race128.png"></a>
+                <p class="doctitle">RACE Manual</p>
+            </div>
+            <br/>
+            <div class="globaltoc">
+                <div class="toc">
+                  <p class="title">Contents</p>
+                  <ul>
+                    <li><span class="toc level1"><a href="../about.html">About RACE</a></span></li>
+                    <li>
+                      <p class="toc level1">Installing RACE</p>
+                      <ul>
+                        <li><span class="toc level2"><a href="../installation/prerequisites.html">Prerequisites</a></span></li>
+                        <li><span class="toc level2"><a href="../installation/download.html">Downloading RACE</a></span></li>
+                        <li><span class="toc level2"><a href="../installation/build.html">Building RACE</a></span></li>
+                        <li><span class="toc level2"><a href="../installation/osx.html">OS X Specifics</a></span></li>
+                      </ul>
+                    </li>
+                    <li>
+                      <p class="toc level1">Using RACE</p>
+                      <ul>
+                        <li><span class="toc level2"><a href="running.html">How to Run RACE</a></span></li>
+                        <li><span class="toc level2"><a href="configuration.html">RACE Configuration</a></span></li>
+                        <li><span class="toc level2 active">Using Encrypted Configurations</span></li>
+                        <li><span class="toc level2"><a href="examples.html">RACE examples</a></span></li>
+                      </ul>
+                    </li>
+                    <li>
+                      <p class="toc level1"><a href="../actors.html">Actors</a></p>
+                      <ul>
+                        <li><span class="toc level2"><a href="../actors.html#actor-components-and-properties">Actor Components and Properties</a></span></li>
+                        <li><span class="toc level2"><a href="../actors.html#actor-communication">Actor Communication</a></span></li>
+                      </ul>
+                    </li>
+                    <li>
+                      <p class="toc level1">RACE Design</p>
+                      <ul>
+                        <li><span class="toc level2"><a href="../design/overview.html">Design Overview</a></span></li>
+                        <li><span class="toc level2"><a href="../design/configuration.html">Runtime Configuration</a></span></li>
+                        <li><span class="toc level2"><a href="../design/raceactors.html">RaceActors</a></span></li>
+                        <li><span class="toc level2"><a href="../design/channeltopics.html">ChannelTopics</a></span></li>
+                        <li><span class="toc level2"><a href="../design/worldwind.html">WorldWind Viewer</a></span></li>
+                        <li><span class="toc level2"><a href="../design/remotelauncher.html">RemoteLauncher</a></span></li>
+                        <li><span class="toc level2"><a href="../design/layers-and-modules.html">Layers and Modules</a></span></li>
+                        <li><span class="toc level2"><a href="../design/directory-structure.html">Directory Structure</a></span></li>
+                        <li><span class="toc level2"><a href="../design/whyscala.html">Why Scala</a></span></li>
+                      </ul>
+                    </li>
+                    <li><span class="toc level1"><a href="../glossary.html">Glossary</a></span></li>
+                  </ul>
+                </div>
+            </div>
+            <div class="pagetoc">
+                <div class="toc">
+                  <p class="title">Page</p>
+                  <ul>
+                    <li><span class="toc level1"><a href="#1-create-plain-text-config-file-with-sensitive-data">(1) create plain text config file with sensitive data</a></span></li>
+                    <li><span class="toc level1"><a href="#2-encrypt-file">(2) encrypt file</a></span></li>
+                    <li><span class="toc level1"><a href="#3-use-encryption-keys-in-universe-satellite-config-values">(3) use encryption keys in universe/satellite config values</a></span></li>
+                    <li><span class="toc level1"><a href="#4-run-race">(4) run RACE</a></span></li>
+                    <li><span class="toc level1"><a href="#using-keystores">using keystores</a></span></li>
+                  </ul>
+                </div>
+            </div>
+            <div class="toc">
+                <p class="title">Project Links</p>
+                <ul>
+                    <li><span class="toc level2"><a href="https://github.com/NASARace/race.git">Repository</a></span></li>
+                    <li><span class="toc level2"><a href="https://NASARace/github.io/race">Website</a></span></li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="main">
+            <h1 id="using-encrypted-configurations" class="title">Using Encrypted Configurations</h1>
+            <p>RACE supports encrypted configuration values for sensitive information such as
+            user credentials. To use encryption, follow these steps:</p>
+            
+            <h4 id="1-create-plain-text-config-file-with-sensitive-data" class="section">(1) create plain text config file with sensitive data</h4>
+            <p>This is a normal configuration file. The toplevel node has to be &quot;secret {..}&quot;,
+            but all other keys can be chosen freely, those will be later-on referenced as config
+            values in the universe configs:</p>
+            <pre><code>//------ crypt: encrypted configuration values
+secret {
+  swim.user = &quot;gonzo&quot;
+  swim.pw = &quot;mysupersecretpassword&quot;
+  ...
+}</code></pre>
+            <p>Store this file in the RACE root directory as <code>conf</code></p>
+            
+            <h4 id="2-encrypt-file" class="section">(2) encrypt file</h4>
+            <p>RACE comes with a <code>CryptConfig</code> application and a respective wrapper script,
+            which is executed like this:</p>
+            <pre><code>&gt; script/encryptconfig --delete conf</code></pre>
+            <p>When asked, enter a passphrase (and remember - it is not stored anywhere). This
+            will create a encrypted file <code>conf.crypt</code> and delete the plain text <code>conf</code> file.</p>
+            <p>Values in the encrypted file will be double-encrypted and are never stored as
+            plain text during RACE execution</p>
+            
+            <h4 id="3-use-encryption-keys-in-universe-satellite-config-values" class="section">(3) use encryption keys in universe/satellite config values</h4>
+            <p>The keys from step (1) are used as <code>??</code> prefixed values in the respective
+            config files, e.g.</p>
+            <pre><code>//--- myuniverse.conf : sample universe config
+  ...
+  user = &quot;??swim.user&quot;
+  pw = &quot;??swim.pw&quot;
+  ...</code></pre>
+            
+            <h4 id="4-run-race" class="section">(4) run RACE</h4>
+            <p>When executing RACE, use the <code>--vault &lt;path&gt;</code> option to specify which encrypted config file to use</p>
+            <pre><code>&gt; ./race --vault conf.crypt config/myuniverse.conf</code></pre>
+            <p>The system will prompt you for the same pass phrase that was entered in step (1). If the user enters 
+            a wrong pass phrase, RACE will terminate immediately.</p>
+            <p><strong>NOTE</strong> <code>*.crypt</code> files are not kept in the repository, they are filtered by <code>.gitignore</code></p>
+            
+            <h2 id="using-keystores" class="section">using keystores</h2>
+            <p>Both <code>encryptconfig</code> and <code>race</code> also support the use of a keystore file for vault encryption/decryption,
+            such as in</p>
+            <pre><code>&gt; ./race --vault conf.crypt --keystore race.ks --alias mykeyname someconfig.conf
+</code></pre>
+            <p>KeyStores can be created with the <a href="http://docs.oracle.com/javase/8/docs/technotes/tools/windows/keytool.html">standard keytool</a> that is distributed with Java, and 
+            should have a store type of &quot;JCEKS&quot;. Keys used for vault encryption have to be &quot;AES&quot; keys. A sample
+            use would be</p>
+            <pre><code>&gt; keytool -genseckey -alias mykeyname -keystore race-ks -storetype jceks -keyalg AES -keysize 256
+</code></pre>
+            <p>If a keystore is specified, RACE will ask for the keystore password instead of the vault password</p>
+        </div>
+
+    </body>
+</html>

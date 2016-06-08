@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8"/>
+        <title>RACE</title>
+
+        <link href="../race-html.css" rel="stylesheet"/>
+    </head>
+
+    <body>
+        <div class="navbar">
+            <div class=""banner>
+                <a href="index.html" ><img class="logo" src="../images/race128.png"></a>
+                <p class="doctitle">RACE Manual</p>
+            </div>
+            <br/>
+            <div class="globaltoc">
+                <div class="toc">
+                  <p class="title">Contents</p>
+                  <ul>
+                    <li><span class="toc level1"><a href="../about.html">About RACE</a></span></li>
+                    <li>
+                      <p class="toc level1">Installing RACE</p>
+                      <ul>
+                        <li><span class="toc level2"><a href="../installation/prerequisites.html">Prerequisites</a></span></li>
+                        <li><span class="toc level2"><a href="../installation/download.html">Downloading RACE</a></span></li>
+                        <li><span class="toc level2"><a href="../installation/build.html">Building RACE</a></span></li>
+                        <li><span class="toc level2"><a href="../installation/osx.html">OS X Specifics</a></span></li>
+                      </ul>
+                    </li>
+                    <li>
+                      <p class="toc level1">Using RACE</p>
+                      <ul>
+                        <li><span class="toc level2"><a href="running.html">How to Run RACE</a></span></li>
+                        <li><span class="toc level2 active">RACE Configuration</span></li>
+                        <li><span class="toc level2"><a href="encryption.html">Using Encrypted Configurations</a></span></li>
+                        <li><span class="toc level2"><a href="examples.html">RACE examples</a></span></li>
+                      </ul>
+                    </li>
+                    <li>
+                      <p class="toc level1"><a href="../actors.html">Actors</a></p>
+                      <ul>
+                        <li><span class="toc level2"><a href="../actors.html#actor-components-and-properties">Actor Components and Properties</a></span></li>
+                        <li><span class="toc level2"><a href="../actors.html#actor-communication">Actor Communication</a></span></li>
+                      </ul>
+                    </li>
+                    <li>
+                      <p class="toc level1">RACE Design</p>
+                      <ul>
+                        <li><span class="toc level2"><a href="../design/overview.html">Design Overview</a></span></li>
+                        <li><span class="toc level2"><a href="../design/configuration.html">Runtime Configuration</a></span></li>
+                        <li><span class="toc level2"><a href="../design/raceactors.html">RaceActors</a></span></li>
+                        <li><span class="toc level2"><a href="../design/channeltopics.html">ChannelTopics</a></span></li>
+                        <li><span class="toc level2"><a href="../design/worldwind.html">WorldWind Viewer</a></span></li>
+                        <li><span class="toc level2"><a href="../design/remotelauncher.html">RemoteLauncher</a></span></li>
+                        <li><span class="toc level2"><a href="../design/layers-and-modules.html">Layers and Modules</a></span></li>
+                        <li><span class="toc level2"><a href="../design/directory-structure.html">Directory Structure</a></span></li>
+                        <li><span class="toc level2"><a href="../design/whyscala.html">Why Scala</a></span></li>
+                      </ul>
+                    </li>
+                    <li><span class="toc level1"><a href="../glossary.html">Glossary</a></span></li>
+                  </ul>
+                </div>
+            </div>
+            <div class="pagetoc">
+                <div class="toc">
+                  <p class="title">Page</p>
+                </div>
+            </div>
+            <div class="toc">
+                <p class="title">Project Links</p>
+                <ul>
+                    <li><span class="toc level2"><a href="https://github.com/NASARace/race.git">Repository</a></span></li>
+                    <li><span class="toc level2"><a href="https://NASARace/github.io/race">Website</a></span></li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="main">
+            <h1 id="race-configuration" class="title">RACE Configuration</h1>
+            <p>The RACE executable is a generic driver that just instantiates and initializes
+            actors according to configuration files that are specified as command line
+            arguments. Those files use the <a href="https://github.com/typesafehub/config/blob/master/HOCON.md">HOCON</a> format, which is a JSON dialect
+            that improves readability by means of extensions such as string substitutions and
+            includes.</p>
+            <p>Each concrete simulation (aka <em>RACE run</em>) is fully specified by its configuration file(s). The main
+            parts of a configuration file is the name of the actor system, and an ordered list of actors:</p>
+            <pre><code>name = &lt;universe-name&gt;
+...
+actors = [
+  {
+     name = &lt;actor-name&gt;
+     ...
+  }, ...
+]
+</code></pre>
+            <p>The order in which actors are specified does matter since it defines the order in which they are
+            created, initialized, started and (in reverse order) terminated. Please refer to 
+            <a href="raceactor.md">RaceActor lifecycle</a> for details.</p>
+            <p>Each actor needs to have a <code>name</code> property that uniquely identifies the actor within this universe.</p>
+            <p>Actors running within this RACE process, or to be started on (already running) remote RACE processes,
+            need a <code>class</code> specification, such as</p>
+            <pre><code>{ name = &quot;test-aircraft-1&quot;
+  class = &quot;gov.nasa.race.actors.models.SimpleAircraft&quot;
+  ...
+}</code></pre>
+            <p>Actors running within a (remote) RACE process need a <code>remote</code> URI, specifying the respective 
+            protocol, remote universe name, host and port, e.g.</p>
+            <pre><code>{ ...
+  remote = &quot;akka.tcp://satellite-1@localhost:2552&quot;
+  ...
+}</code></pre>
+            <p>Please refer to <a href="remoting.md">how to use remote actors</a> for further details.</p>
+            <p>Communication between actors is defined by means of <code>read-fom</code> and <code>write-to</code> values, which contain
+            the names of respective channels, e.g.</p>
+            <pre><code>{ name = &quot;fnear2fpos&quot;
+  class = &quot;gov.nasa.race.actors.translators.FlightsNear2FlightPos&quot;
+
+  read-from = &quot;flightsnear/json&quot;
+  write-to = &quot;fpos&quot;
+  ...</code></pre>
+            <p>Channel names are strings that should have a path structure, to support (prefix based) channel set 
+            subscriptions (such as <code>flights/*</code>). Both <code>read-from</code> and <code>write-to</code> values can be either single
+            strings (<code>read-from = &quot;test&quot;</code>) or arrays of strings (<code>read-from = [ &quot;channel-1&quot;, &quot;channel-2&quot;, ..]</code>)</p>
+            <p>Channel names starting with <code>/local/..</code> are not shared between connected RACE systems.</p>
+        </div>
+
+    </body>
+</html>

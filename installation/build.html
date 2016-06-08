@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8"/>
+        <title>RACE</title>
+
+        <link href="../race-html.css" rel="stylesheet"/>
+    </head>
+
+    <body>
+        <div class="navbar">
+            <div class=""banner>
+                <a href="index.html" ><img class="logo" src="../images/race128.png"></a>
+                <p class="doctitle">RACE Manual</p>
+            </div>
+            <br/>
+            <div class="globaltoc">
+                <div class="toc">
+                  <p class="title">Contents</p>
+                  <ul>
+                    <li><span class="toc level1"><a href="../about.html">About RACE</a></span></li>
+                    <li>
+                      <p class="toc level1">Installing RACE</p>
+                      <ul>
+                        <li><span class="toc level2"><a href="prerequisites.html">Prerequisites</a></span></li>
+                        <li><span class="toc level2"><a href="download.html">Downloading RACE</a></span></li>
+                        <li><span class="toc level2 active">Building RACE</span></li>
+                        <li><span class="toc level2"><a href="osx.html">OS X Specifics</a></span></li>
+                      </ul>
+                    </li>
+                    <li>
+                      <p class="toc level1">Using RACE</p>
+                      <ul>
+                        <li><span class="toc level2"><a href="../usage/running.html">How to Run RACE</a></span></li>
+                        <li><span class="toc level2"><a href="../usage/configuration.html">RACE Configuration</a></span></li>
+                        <li><span class="toc level2"><a href="../usage/encryption.html">Using Encrypted Configurations</a></span></li>
+                        <li><span class="toc level2"><a href="../usage/examples.html">RACE examples</a></span></li>
+                      </ul>
+                    </li>
+                    <li>
+                      <p class="toc level1"><a href="../actors.html">Actors</a></p>
+                      <ul>
+                        <li><span class="toc level2"><a href="../actors.html#actor-components-and-properties">Actor Components and Properties</a></span></li>
+                        <li><span class="toc level2"><a href="../actors.html#actor-communication">Actor Communication</a></span></li>
+                      </ul>
+                    </li>
+                    <li>
+                      <p class="toc level1">RACE Design</p>
+                      <ul>
+                        <li><span class="toc level2"><a href="../design/overview.html">Design Overview</a></span></li>
+                        <li><span class="toc level2"><a href="../design/configuration.html">Runtime Configuration</a></span></li>
+                        <li><span class="toc level2"><a href="../design/raceactors.html">RaceActors</a></span></li>
+                        <li><span class="toc level2"><a href="../design/channeltopics.html">ChannelTopics</a></span></li>
+                        <li><span class="toc level2"><a href="../design/worldwind.html">WorldWind Viewer</a></span></li>
+                        <li><span class="toc level2"><a href="../design/remotelauncher.html">RemoteLauncher</a></span></li>
+                        <li><span class="toc level2"><a href="../design/layers-and-modules.html">Layers and Modules</a></span></li>
+                        <li><span class="toc level2"><a href="../design/directory-structure.html">Directory Structure</a></span></li>
+                        <li><span class="toc level2"><a href="../design/whyscala.html">Why Scala</a></span></li>
+                      </ul>
+                    </li>
+                    <li><span class="toc level1"><a href="../glossary.html">Glossary</a></span></li>
+                  </ul>
+                </div>
+            </div>
+            <div class="pagetoc">
+                <div class="toc">
+                  <p class="title">Page</p>
+                </div>
+            </div>
+            <div class="toc">
+                <p class="title">Project Links</p>
+                <ul>
+                    <li><span class="toc level2"><a href="https://github.com/NASARace/race.git">Repository</a></span></li>
+                    <li><span class="toc level2"><a href="https://NASARace/github.io/race">Website</a></span></li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="main">
+            <h1 id="building-race" class="title">Building RACE</h1>
+            <p>To build RACE, open a terminal window and switch to the directory RACE was
+            cloned to, then execute <a href="http://www.scala-sbt.org/0.13/tutorial/index.html">SBT</a> from inside of this directory:</p>
+            <pre><code>&gt; cd race
+&gt; sbt
+...
+[info] Loading project definition from ...
+[info] Set current project to race ...
+[race]&gt;</code></pre>
+            <p>The first time SBT is started, it will download a number of external dependencies (plugins, libraries)
+            that are used by SBT itself. Subsequent starts should be much faster.</p>
+            <p>Once the SBT prompt appears, start compilation by entering the <code>compile</code> command:</p>
+            <pre><code>[race]&gt; compile
+[info] Updating ...
+[info] Resolving ...
+...
+[info] Compiling ...
+[success] Total time: 42 s, completed Jul 16, 2015 6:48:37 PM
+[race]&gt;</code></pre>
+            <p>Again, this will take longer the first time RACE is built since it will resolve
+            all external libraries that are required to compile and run RACE.</p>
+            <p>Once RACE is compiled, you can verify your build from within the SBT console by running</p>
+            <pre><code>[race]&gt; run config/local/aircraft-ww.conf
+</code></pre>
+            <p>This should start RACE and then pop up a WorldWind window showing a single airplane that is updated every
+            5 sec. Stop RACE by typing &#39;9&#39; + <enter> at the menu prompt in the console, which should bring you
+            back into SBT.</p>
+            <p>As a last step, you can build stand-alone scripts to start RACE from outside of
+            SBT by executing the <code>stage</code> command</p>
+            <pre><code>[race]&gt; stage
+[info] Packaging ...
+[info] Done packaging.
+[success] Total time: 13 s, completed Jul 16, 2015 9:50:22 PM
+[race]&gt;</code></pre>
+            <p>The script is created in the <code>target/universal/stage/bin</code> directory. The main executable is linked
+            to <code>./race</code>, which is located in the RACE root directory. Please make sure the link has the right
+            file permissions to be executable.</p>
+        </div>
+
+    </body>
+</html>
