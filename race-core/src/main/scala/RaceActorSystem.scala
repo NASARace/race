@@ -1,4 +1,21 @@
 /*
+ * Copyright (c) 2016, United States Government, as represented by the
+ * Administrator of the National Aeronautics and Space Administration.
+ * All rights reserved.
+ *
+ * The RACE - Runtime for Airspace Concept Evaluation platform is licensed
+ * under the Apache License, Version 2.0 (the "License"); you may not use
+ * this file except in compliance with the License. You may obtain a copy
+ * of the License at http://www.apache.org/licenses/LICENSE-2.0.
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/*
  * Copyright (c) 2016, United States Government, as represented by the 
  * Administrator of the National Aeronautics and Space Administration. 
  * All rights reserved.
@@ -67,6 +84,9 @@ object RaceActorSystem { // aka RAS
   def shutdownLiveSystems = {
     liveSystems.values.foreach(_.terminate)
   }
+
+  private var isRunningEmbedded = false
+  def runEmbedded = isRunningEmbedded = true
 }
 
 /**
@@ -99,8 +119,8 @@ class RaceActorSystem(val config: Config) extends LogController with VerifiableA
   val bus = createBus(system)
   val simClock = createSimClock
 
-  val wallStartTime = wallClockStartTime
-  val delayStart = config.getBooleanOrElse("delay-start", wallStartTime.isDefined)
+  var wallStartTime = wallClockStartTime(false) // will be re-evaluated during launch
+  val delayLaunch = config.getBooleanOrElse("delay-launch", false)
 
   // do we allow external (remote) termination
   val allowRemoteTermination = config.getBooleanOrElse("remote-termination", false)
@@ -118,8 +138,13 @@ class RaceActorSystem(val config: Config) extends LogController with VerifiableA
   // those are set during master initialization
   // Note that master init involves round-trips, i.e. can cause exceptions in other threads
   // that can go unnoticed here, hence we have to turn this into explicit state
-  var actors = ListMap.empty[ActorRef, Config]
-  var satellites = Map.empty[UrlString, ActorRef]
+  // NOTE - only use threadsafe types here (e.g. immutable collections)
+
+  var actors = ListMap.empty[ActorRef, Config] // our configured actors (including remotes)
+
+  // remote RAS book keeping
+  var usedRemoteMasters = Map.empty[UrlString, ActorRef] // the remote masters we use (via our remote actors)
+  var usingRemoteMasters = Set.empty[ActorRef] // the remote masters that use us (some of our actors are their remotes)
 
   val master = system.actorOf(Props(getMasterClass, this), name)
   waitForActor(master) {
@@ -138,11 +163,23 @@ class RaceActorSystem(val config: Config) extends LogController with VerifiableA
     throw new RaceInitializeException("race actor system did not initialize")
   }
 
-  ifSome(wallStartTime) { scheduleStart }
-
   // done with initialization
 
   //--- those can be overridden by subclasses
+
+  /**
+    * either schedule the start if there is a configured start time, or start right away if not
+    *
+    * @return true if status is started
+    */
+  def launch: Boolean = {
+    wallStartTime = wallClockStartTime(true)
+    wallStartTime match {
+      case Some(startDate) => scheduleStart(startDate)
+      case None => startActors
+    }
+    status == Started
+  }
 
   def createActorSystem(name: String, conf: Config): ActorSystem = ActorSystem(name, config)
 
@@ -158,16 +195,15 @@ class RaceActorSystem(val config: Config) extends LogController with VerifiableA
     new SettableClock(date, timeScale, isStopped = true)
   }
 
-  def wallClockStartTime: Option[DateTime] = {
-    val startAt = config.getOptionalDateTime("start-at")
-    if (startAt.isDefined) return startAt
-
-    ifSome(config.getOptionalFiniteDuration("start-in")) { dur =>
-      return Some(DateTime.now.plusMillis(dur.toMillis.toInt))
+  def wallClockStartTime (isLaunched: Boolean): Option[DateTime] = {
+    config.getOptionalDateTime("start-at") match {
+      case absDateOpt @ Some(date) => absDateOpt // value is wallclock time
+      case None =>
+        if (isLaunched) config.getOptionalFiniteDuration("start-in").map(DateTimeUtils.fromNow)
+        else None
     }
-
-    None
   }
+
   def wallClockEndTime: Option[DateTime] = {
     ifSome(config.getOptionalDateTime("end-time")) { date => // value is sim time
       return Some(simClock.wallTime(date))
@@ -200,6 +236,7 @@ class RaceActorSystem(val config: Config) extends LogController with VerifiableA
 
   def getActorConfigs = config.getOptionalConfigList("actors")
 
+
   def createActors = {
     info(s"creating actors of universe $name ..")
     askVerifiableForResult(master, RaceCreate) {
@@ -220,6 +257,7 @@ class RaceActorSystem(val config: Config) extends LogController with VerifiableA
     }
   }
 
+  // called by RACE driver (TODO enforce or verify)
   def startActors = {
     if (status == Initialized) {
       info(s"starting actors of universe $name ..")
@@ -234,18 +272,17 @@ class RaceActorSystem(val config: Config) extends LogController with VerifiableA
     } else warning(s"universe $name cannot be started in state $status")
   }
 
-  //--- actor termination
-
   def stoppedRaceActor(actorRef: ActorRef): Unit = {
     info(s"unregister stopped ${actorRef.path}")
     actors = actors.filter(_ != actorRef)
   }
 
   /**
-   * graceful shutdown that synchronously processes terminateRaceActor() actions
-   */
+    * graceful shutdown that synchronously processes terminateRaceActor() actions
+    * called by RACE driver (TODO enforce or verify)
+    */
   def terminate: Boolean = {
-    if (status == Initialized || status == Running) {
+    if (isLive) {
       info(s"universe $name terminating..")
       status = Terminating
       askVerifiableForResult(master, RaceTerminate) {
@@ -262,12 +299,17 @@ class RaceActorSystem(val config: Config) extends LogController with VerifiableA
   }
 
   def isTerminating = status == Terminating
+  def isLive = status != Terminating && status != gov.nasa.race.common.Status.Terminated
+
+  def currentStatus = status
 
   // internal (overridable) method to clean up *after* successful termination of all actors
   protected def raceTerminated: Unit = {
     info(s"universe $name terminated")
     status = common.Status.Terminated
-    system.terminate
+    RaceLogger.terminate(system)
+
+    if (!isRunningEmbedded) system.terminate  // don't terminate if running in a MultiJvm test
   }
   // some actor asked for termination
   def terminationRequest(actorRef: ActorRef) = {
@@ -277,6 +319,21 @@ class RaceActorSystem(val config: Config) extends LogController with VerifiableA
       else warning(s"universe ignoring termination request from ${actorRef.path}")
     }
   }
+
+  /**
+    * check if we accept connection requests from this remote master, i.e. some of our local actors are used
+    * as its remote actors. In case the request is accepted, store the master in `usingRemoteMasters`
+    *
+    * @return true if request is accepted
+    */
+  def acceptsRemoteConnectionRequest (remoteMaster: ActorRef): Boolean = {
+    // TODO check against config if we accept a connection request from this remote master
+    // this can filter based on network (ip address) and universe name
+    usingRemoteMasters = usingRemoteMasters + remoteMaster
+    true
+  }
+
+  def isKnownRemoteMaster (actorRef: ActorRef) = usingRemoteMasters.contains(actorRef)
 
   final val systemPrefix = s"akka://$name" // <2do> check managed remote actor paths
   def isRemoteActor(actorRef: ActorRef) = !actorRef.path.toString.startsWith(systemPrefix)
@@ -290,11 +347,15 @@ class RaceActorSystem(val config: Config) extends LogController with VerifiableA
   def kill = {
     info(s"universe $name killed")
     status = common.Status.Terminated // there is no coming back from here
+    RaceLogger.terminate(system)
     system.terminate
   }
 
   override def logLevel: LogLevel = system.eventStream.logLevel
-  override def setLogLevel(logLevel: LogLevel) = system.eventStream.setLogLevel(logLevel)
+  override def setLogLevel(logLevel: LogLevel) = {
+    system.eventStream.setLogLevel(logLevel)
+    master ! SetLogLevel(logLevel)
+  }
 
   def publish(channel: String, msg: Any) = bus.publish(BusEvent(channel, msg, master))
 

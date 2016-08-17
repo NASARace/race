@@ -30,8 +30,7 @@ lazy val commonSettings =
     Keys.connectInput in run := true,
 
     //coverageEnabled := true, // this should only be enabled for generating coverage reports
-    ReCov.requirementSources ++= Seq( file("doc/specs/y1demo.md"),
-                                      file("doc/specs/nonfunctional.md"))
+    ReCov.requirementSources ++= Seq(file("doc/specs/nonfunctional.md"))
   )
 
 
@@ -46,6 +45,7 @@ lazy val root = createRootProject("race").
     commonSettings,
     Defaults.itSettings,
     multiJVMSettings,
+    commands ++= LaikaCommands.commands,
     aggregate in MultiJvm := false,
     mainClass in Compile := Some("gov.nasa.race.ConsoleMain")
   ).
@@ -72,7 +72,7 @@ lazy val raceCommon = createProject("race-common").
 lazy val raceData = createProject("race-data").
   dependsOn(raceCommon % "test->test;compile->compile").
   settings(commonSettings).
-  addLibraryDependencies(defaultLibs,scodecAll,breeze).
+  addLibraryDependencies(defaultLibs,scodecAll,breeze,scalaParser).
   addTestLibraryDependencies(defaultTestLibs)
 
 // lib artifact with core components 

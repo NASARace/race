@@ -1,4 +1,21 @@
 /*
+ * Copyright (c) 2016, United States Government, as represented by the
+ * Administrator of the National Aeronautics and Space Administration.
+ * All rights reserved.
+ *
+ * The RACE - Runtime for Airspace Concept Evaluation platform is licensed
+ * under the Apache License, Version 2.0 (the "License"); you may not use
+ * this file except in compliance with the License. You may obtain a copy
+ * of the License at http://www.apache.org/licenses/LICENSE-2.0.
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/*
  * Copyright (c) 2016, United States Government, as represented by the 
  * Administrator of the National Aeronautics and Space Administration. 
  * All rights reserved.
@@ -17,8 +34,9 @@
 
 package gov.nasa.race.core
 
+import akka.actor.SupervisorStrategy.{Escalate, Restart, Resume, Stop}
 import akka.actor._
-import akka.pattern.ask
+import akka.pattern.{AskSupport, ask}
 import com.typesafe.config.Config
 import gov.nasa.race.common._
 import gov.nasa.race.common.StringUtils._
@@ -29,7 +47,15 @@ import org.joda.time.DateTime
 
 import scala.collection.immutable.ListMap
 import scala.collection.{Seq, mutable}
+import scala.concurrent.duration._
 import scala.language.postfixOps
+
+
+// these are only exchanged between masters during remote actor creation
+// note - we can't use protected or objects because that would not match between different processes
+case class RemoteConnectionRequest (requestingMaster: ActorRef)
+case object RemoteConnectionAccept
+case object RemoteConnectionReject
 
 /**
   * the master for a RaceActorSystem
@@ -58,7 +84,7 @@ import scala.language.postfixOps
   * Shutdown/termination is also synchronous, in reverse order of actor specification to guarantee
   * symmetric behavior
   */
-class MasterActor (ras: RaceActorSystem) extends Actor with ImplicitActorLogging {
+class MasterActor (ras: RaceActorSystem) extends Actor with ImplicitActorLogging with AskSupport {
 
   info(s"master created: ${self.path}")
 
@@ -66,11 +92,86 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ImplicitActorLogging
   def name = self.path.name
   def simClock = ras.simClock
   def actors = ras.actors
-  def satellites = ras.satellites
+  def usedRemoteMasters = ras.usedRemoteMasters
   def actorRefs = ras.actors.keys
   def localContext = ras.localRaceContext
 
+  def executeProtected (f: => Unit): Unit = {
+    try f catch {
+      case x: Throwable => error(s"master caught exception in receive(): $x")
+    }
+  }
+
+  def isLegitimateRequest(msg: Any): Boolean = ras.isVerifiedSenderOf(msg) || ras.isKnownRemoteMaster(sender)
+
+  /**
+    *   master message processing
+    *   verify that critical messages come from a legit source (our RAS or remote master), and
+    *   make sure we catch any exceptions - the master is the one actor that is not allowed to crash, it
+    *   has to stay responsive
+    */
+  override def receive: Receive = {
+    case RemoteConnectionRequest(remoteMaster) => onRemoteConnectionRequest(remoteMaster)
+
+    case RaceCreate => onRaceCreate
+    case RaceInitialize => onRaceInitialize
+    case RaceStart => onRaceStart
+    case RemoteRaceStart (remoteMaster: ActorRef, simTime: DateTime, timeScale: Double) => onRemoteRaceStart(remoteMaster,simTime,timeScale)
+    case RaceTerminate => onRaceTerminate
+    case RemoteRaceTerminate (remoteMaster: ActorRef) => onRemoteRaceTerminate(remoteMaster)
+
+    case msg:SetLogLevel => actorRefs.foreach(_ ! msg) // just forward
+
+    case RaceTerminateRequest => // from some actor, let the RAS decide
+      info(s"master $name got RaceTerminateRequest")
+      ras.terminationRequest(sender)
+
+    //--- time management
+    case SyncSimClock(dateTime: DateTime, timeScale: Double) =>
+      simClock.reset(dateTime,timeScale)
+      sender ! RaceAck
+    case StopSimClock =>
+      simClock.stop
+      sender ! RaceAck
+    case ResumeSimClock =>
+      simClock.resume
+      sender ! RaceAck
+  }
+
+  //--- failure strategy
+
+  override val supervisorStrategy = OneForOneStrategy(maxNrOfRetries = 10, withinTimeRange = 1 minute) {
+    case x: Throwable => Stop
+
+    //case _: ArithmeticException      => Resume
+    //case _: NullPointerException     => Restart
+    //case _: IllegalArgumentException => Stop
+    //case _: Exception                => Escalate
+  }
+
+  //--- remote connection management
+
+  def onRemoteConnectionRequest(remoteMaster: ActorRef) = executeProtected {
+    info(s"received remote connection request from: ${remoteMaster.path}")
+    if (ras.acceptsRemoteConnectionRequest(remoteMaster)) {
+      info(s"accepted remote connection request from: ${remoteMaster.path}")
+      sender ! RemoteConnectionAccept
+    } else {
+      warning(s"rejected remote connection request from: ${remoteMaster.path}")
+      sender ! RemoteConnectionReject
+    }
+  }
+
+
+
   //--- creation of RaceActors
+
+  def onRaceCreate = executeProtected {
+    if (ras.isVerifiedSenderOf(RaceCreate)) {
+      createRaceActors
+      sender ! RaceCreated
+    } else warning(s"RaceCreate request from $sender ignored")
+  }
 
   def createRaceActors = {
     try {
@@ -93,7 +194,7 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ImplicitActorLogging
       case Some(remoteUri) =>
         val isOptional = actorConfig.getBooleanOrElse("optional", false)
         val remoteUniverseName = userInUrl(remoteUri).get
-        if (satellites.get(remoteUri).isEmpty) {
+        if (usedRemoteMasters.get(remoteUri).isEmpty) {
           if (isConflictingHost(remoteUri)){
             if (isOptional) {
               warning(s"ignoring $actorName from conflicting host $remoteUri")
@@ -102,7 +203,8 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ImplicitActorLogging
             else throw new RaceException("conflicting host of $remoteUri")
           } else {
             lookupRemoteMaster(remoteUniverseName, remoteUri, isOptional) match {
-              case Some(remoteMasterRef) => ras.satellites = satellites + (remoteUri -> remoteMasterRef)
+              case Some(remoteMasterRef) =>
+                ras.usedRemoteMasters = usedRemoteMasters + (remoteUri -> remoteMasterRef)
               case None => return None // no (optional) satellite, nothing to look up or start
             }
           }
@@ -115,17 +217,24 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ImplicitActorLogging
 
   def isConflictingHost (remoteUri: String): Boolean = {
     val loc = stringTail(remoteUri,'@')
-    satellites.exists( e => loc == stringTail(e._1,'@'))
+    usedRemoteMasters.exists(e => loc == stringTail(e._1,'@'))
   }
 
   def lookupRemoteMaster (remoteUniverseName: String, remoteUri: String, isOptional: Boolean): Option[ActorRef] = {
     val path = s"$remoteUri/user/$remoteUniverseName"
     info(s"looking up remote actor system $path")
     val sel = context.actorSelection(path)
+    // two step process: (1) obtain the reference for a remote master, (2) p2p check if it is accepting the connection
     askForResult (sel ? Identify(path)) {
       case ActorIdentity(path: String, Some(actorRef:ActorRef)) =>
-        info(s"got master response from remote actor system: ${actorRef.path}")
-        Some(actorRef)
+        info(s"found master for remote actor system: ${actorRef.path}")
+        if (isRemoteConnectionAcceptedBy(actorRef)) {
+          info(s"remote master accepted connection request: ${actorRef.path}")
+          Some(actorRef)
+        } else {
+          warning(s"remote master did not accept connection request: ${actorRef.path}")
+          None
+        }
       case ActorIdentity(path: String, None) =>
         if (isOptional) {
           warning(s"no optional remote actor system: $remoteUri")
@@ -137,6 +246,14 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ImplicitActorLogging
       case TimedOut => // timeout is always an error since it indicates a network or satellite problem
         error(s"timeout for remote actor system: $remoteUri")
         throw new RaceException("satellite response timeout")
+    }
+  }
+
+  def isRemoteConnectionAcceptedBy(remoteMaster: ActorRef): Boolean = {
+    askForResult (remoteMaster ? RemoteConnectionRequest(self)) {
+      case RemoteConnectionAccept => true
+      case RemoteConnectionReject => false
+      case TimedOut => false
     }
   }
 
@@ -199,6 +316,13 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ImplicitActorLogging
 
   //--- actor initialization
 
+  def onRaceInitialize = executeProtected {
+    if (ras.isVerifiedSenderOf(RaceInitialize)) {
+      initializeRaceActors
+      sender ! RaceInitialized
+    } else warning(s"RaceInitialize request from $sender ignored")
+  }
+
   // cache to be only used during actor initialization
   protected val remoteContexts = mutable.Map.empty[UrlString,RaceContext]
 
@@ -237,19 +361,6 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ImplicitActorLogging
     RaceContext(self,busIfc)
   }
 
-  def startSatellites = {
-    ras.satellites.values.foreach { remoteMaster =>
-      info(s"starting satellite ${remoteMaster.path}")
-      askForResult( remoteMaster ? StartSimClock( simClock.dateTime, simClock.timeScale)) {
-        case RaceAck => info(s"set satellite clock: ${remoteMaster.path}")
-        case TimedOut => throw new RuntimeException("failed to set satellite clock")
-      }
-      askForResult( remoteMaster ? RaceStart) {
-        case RaceStarted => info(s"satellite started: ${remoteMaster.path}")
-        case TimedOut => throw new RuntimeException("failed to start satellite")
-      }
-    }
-  }
 
   // check if this is an actor we know about (is part of our RAS)
   def isManaged (actorRef: ActorRef) = actors.contains(actorRef)
@@ -259,6 +370,29 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ImplicitActorLogging
 
 
   //--- actor start
+
+  /**
+    * this is called from receive and is not allowed to let exceptions pass
+    */
+  def onRaceStart = executeProtected {
+    if (ras.isVerifiedSenderOf(RaceStart)) {
+      simClock.resume
+      startSatellites
+      startRaceActors
+      sender ! RaceStarted
+    } else warning(s"RaceStart request from $sender ignored")
+  }
+
+  // TODO this should detect cycles
+  def onRemoteRaceStart (remoteMaster: ActorRef, simTime: DateTime, timeScale: Double) = executeProtected {
+    if (ras.isKnownRemoteMaster(remoteMaster)) {
+      info(s"master $name got RemoteRaceStart at $simTime")
+      simClock.reset(simTime,timeScale).resume
+      startSatellites
+      startRaceActors
+      sender ! RaceStarted
+    } else warning(s"RemoteRaceStart from unknown remote master: $remoteMaster")
+  }
 
   def startRaceActors = {
     for ((actorRef,actorConfig) <- actors){
@@ -280,20 +414,38 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ImplicitActorLogging
     }
   }
 
-  //--- actor termination
-
-  def terminateSatellites = {
-    ras.satellites.values.foreach { remoteMaster =>
-      info(s"terminating satellite ${remoteMaster.path}")
-      askForResult(remoteMaster ? RaceTerminate) {
-        case RaceTerminated =>
-          info(s"got RaceTerminated from satellite ${remoteMaster.path}")
-        case RaceAck =>
-          info(s"got RaceAck termination response from satellite ${remoteMaster.path}")
-        case TimedOut =>
-          warning(s"satellite ${remoteMaster.path} termination timeout")
+  def startSatellites = {
+    ras.usedRemoteMasters.values.foreach { remoteMaster =>
+      info(s"starting satellite ${remoteMaster.path}")
+      askForResult( remoteMaster ? RemoteRaceStart(self, simClock.dateTime, simClock.timeScale)) {
+        case RaceStarted => info(s"satellite started: ${remoteMaster.path}")
+        case TimedOut => throw new RuntimeException(s"failed to start satellite ${remoteMaster.path}")
       }
     }
+  }
+
+  //--- actor termination
+
+  def onRaceTerminate = executeProtected {
+    if (ras.isVerifiedSenderOf(RaceTerminate)) {
+      info(s"master $name got RaceTerminate, shutting down")
+      terminateRaceActors
+      terminateSatellites
+      sender ! RaceTerminated
+    } else warning(s"RaceTerminate request from $sender ignored")
+  }
+
+  def onRemoteRaceTerminate (remoteMaster: ActorRef) = executeProtected {
+    if (ras.isKnownRemoteMaster(remoteMaster)) {
+      if (ras.allowRemoteTermination) {
+        info(s"master $name got RemoteRaceTerminate, shutting down")
+        terminateRaceActors
+        terminateSatellites
+      } else {
+        warning(s"RemoteRaceTerminate from $remoteMaster ignored")
+      }
+      sender ! RaceTerminated
+    } else warning(s"RemoteRaceTerminate from unknown remote master: $remoteMaster")
   }
 
   def terminateRaceActors = { // terminate in reverse order of creation
@@ -331,47 +483,17 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ImplicitActorLogging
     context.stop(actorRef) // finishes current and discards all pending, then calls postStop
   }
 
-  //--- RAS message processing - make sure these really came from our RAS
-
-  override def receive: Receive = {
-    case q @ RaceCreate if ras.isVerifiedSenderOf(q) =>
-      createRaceActors
-      sender ! RaceCreated
-
-    case q @ RaceInitialize if ras.isVerifiedSenderOf(q) =>
-      initializeRaceActors
-      sender ! RaceInitialized
-
-    case q @ RaceStart if ras.isVerifiedSenderOf(q) =>
-      simClock.resume
-      startSatellites
-      startRaceActors
-      sender ! RaceStarted
-
-    case q @ RaceTerminate if ras.isVerifiedSenderOf(q) =>
-      info(s"master $name got RaceTerminate, shutting down")
-      terminateRaceActors
-      terminateSatellites
-      sender ! RaceTerminated
-
-    case RaceTerminateRequest => // from some actor, let the RAS decide
-      info(s"master $name got RaceTerminateRequest")
-      ras.terminationRequest(sender)
-
-
-    //--- time management
-    case StartSimClock(dateTime: DateTime, timeScale: Double) =>
-      simClock.reset(dateTime,timeScale).resume
-      sender ! RaceAck
-    case SyncSimClock(dateTime: DateTime, timeScale: Double) =>
-      simClock.reset(dateTime,timeScale)
-      sender ! RaceAck
-    case StopSimClock =>
-      simClock.stop
-      sender ! RaceAck
-    case ResumeSimClock =>
-      simClock.resume
-      sender ! RaceAck
+  def terminateSatellites = {
+    ras.usedRemoteMasters.values.foreach { remoteMaster =>
+      info(s"terminating satellite ${remoteMaster.path}")
+      askForResult(remoteMaster ? RemoteRaceTerminate(self)) {
+        case RaceTerminated =>
+          info(s"got RaceTerminated from satellite ${remoteMaster.path}")
+        case RaceAck =>
+          info(s"got RaceAck termination response from satellite ${remoteMaster.path}")
+        case TimedOut =>
+          warning(s"satellite ${remoteMaster.path} termination timeout")
+      }
+    }
   }
-
 }

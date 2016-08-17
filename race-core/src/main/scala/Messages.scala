@@ -1,4 +1,21 @@
 /*
+ * Copyright (c) 2016, United States Government, as represented by the
+ * Administrator of the National Aeronautics and Space Administration.
+ * All rights reserved.
+ *
+ * The RACE - Runtime for Airspace Concept Evaluation platform is licensed
+ * under the Apache License, Version 2.0 (the "License"); you may not use
+ * this file except in compliance with the License. You may obtain a copy
+ * of the License at http://www.apache.org/licenses/LICENSE-2.0.
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/*
  * Copyright (c) 2016, United States Government, as represented by the 
  * Administrator of the National Aeronautics and Space Administration. 
  * All rights reserved.
@@ -18,6 +35,7 @@
 package gov.nasa.race.core
 
 import akka.actor.ActorRef
+import akka.event.Logging.LogLevel
 import com.typesafe.config.Config
 import org.joda.time.DateTime
 
@@ -70,18 +88,21 @@ object Messages {
   case object RaceAck // generic acknowledgement
   case object RaceCheck // used to trigger actor specific check action
 
-  //--- RaceActorSystem control messages (not processed by handleMessage)
-  case object RaceCreate
-  case object RaceCreated
-  case object RaceInitialize
-  case object RaceInitialized
-  case object RaceStart
-  case object RaceStarted
-  case object RaceTerminate
-  case object RaceTerminated
+  //--- RaceActorSystem control messages (RaceActorSystem <-> Master <-> remoteMaster)
+  case object RaceCreate                // RAS -> Master
+  case object RaceCreated               // Master -> RAS
+  case object RaceInitialize            // RAS -> Master
+  case object RaceInitialized           // Master -> RAS
+  case object RaceStart                 // RAS -> Master
+  case class RemoteRaceStart (remoteMaster: ActorRef, simTime: DateTime, timeScale: Double) // Master -> remote Master
+  case object RaceStarted               // Master -> RAS, remote Master -> Master
+  case object RaceTerminate             // RAS -> Master
+  case class RemoteRaceTerminate (remoteMaster: ActorRef) // Master -> RemoteMaster
+  case object RaceTerminated            // Master -> RAS, remote Master -> Master
+
+  case class SetLogLevel (newLevel: LogLevel) extends RaceSystemMessage
 
   // time keeping between actor systems
-  case class StartSimClock (date: DateTime, timeScale: Double)
   case class SyncSimClock (date: DateTime, timeScale: Double)
   case object StopSimClock
   case object ResumeSimClock

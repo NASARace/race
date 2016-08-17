@@ -1,4 +1,21 @@
 /*
+ * Copyright (c) 2016, United States Government, as represented by the
+ * Administrator of the National Aeronautics and Space Administration.
+ * All rights reserved.
+ *
+ * The RACE - Runtime for Airspace Concept Evaluation platform is licensed
+ * under the Apache License, Version 2.0 (the "License"); you may not use
+ * this file except in compliance with the License. You may obtain a copy
+ * of the License at http://www.apache.org/licenses/LICENSE-2.0.
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/*
  * Copyright (c) 2016, United States Government, as represented by the 
  * Administrator of the National Aeronautics and Space Administration. 
  * All rights reserved.
@@ -18,20 +35,21 @@
 package gov.nasa.race.ww
 
 import java.awt.event._
+import java.awt.{Cursor, Toolkit}
 import javax.swing._
 
 import com.typesafe.config.Config
-import gov.nasa.race.common._
 import gov.nasa.race.common.ConfigUtils._
-import gov.nasa.race.swing._
-import gov.nasa.race.swing.{Redrawable, AppFrame}
+import gov.nasa.race.common._
 import gov.nasa.race.swing.Style._
-import gov.nasa.worldwind.{Model, WorldWind}
+import gov.nasa.race.swing._
 import gov.nasa.worldwind.avlist.AVKey
 import gov.nasa.worldwind.awt.WorldWindowGLCanvas
 import gov.nasa.worldwind.geom.Position
+import gov.nasa.worldwind.{Model, WorldWind}
 
 import scala.swing._
+
 
 /**
   * a toplevel frame with a WorldWindGLCanvas
@@ -51,9 +69,12 @@ class WorldWindFrame (config: Config, raceView: RaceView) extends AppFrame {
   val wwd = createWorldWindow(config, raceView)
   val worldPanel = new AWTWrapper(wwd).styled('world)
   val consolePanel = new CollapsiblePanel().styled('console)
+  val consoleWrapper = new ScrollPane(consolePanel).styled('verticalAsNeeded)
+
+  wwd.setCursor(loadMapCursor)
 
   val top = new BorderPanel {
-    layout(consolePanel) = BorderPanel.Position.West
+    layout(consoleWrapper) = BorderPanel.Position.West
     layout(worldPanel) = BorderPanel.Position.Center
   } styled ('toplevel)
   contents = top
@@ -71,11 +92,18 @@ class WorldWindFrame (config: Config, raceView: RaceView) extends AppFrame {
       wwd.getView.setEyePosition(eyePos)
     }
 
+    if (config.getBooleanOrElse("offline", false)) WorldWind.setOfflineMode(true)
+
     wwd.setModel(WorldWind.createConfigurationComponent(AVKey.MODEL_CLASS_NAME).asInstanceOf[Model])
     //wwd.getSceneController().setDeepPickEnabled(true)
     setWwdMenu(config,raceView,wwd)
 
     wwd
+  }
+
+  def loadMapCursor: Cursor = {
+    val icon = Swing.Icon(getClass.getResource("mapcursor-33.png"))
+    Toolkit.getDefaultToolkit.createCustomCursor(icon.getImage,new Point(16,16),"map cursor")
   }
 
   def setWwdMenu(config: Config, raceView: RaceView, wwd: WorldWindowGLCanvas) = {

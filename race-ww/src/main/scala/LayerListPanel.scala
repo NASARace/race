@@ -1,4 +1,21 @@
 /*
+ * Copyright (c) 2016, United States Government, as represented by the
+ * Administrator of the National Aeronautics and Space Administration.
+ * All rights reserved.
+ *
+ * The RACE - Runtime for Airspace Concept Evaluation platform is licensed
+ * under the Apache License, Version 2.0 (the "License"); you may not use
+ * this file except in compliance with the License. You may obtain a copy
+ * of the License at http://www.apache.org/licenses/LICENSE-2.0.
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/*
  * Copyright (c) 2016, United States Government, as represented by the 
  * Administrator of the National Aeronautics and Space Administration. 
  * All rights reserved.
@@ -17,12 +34,11 @@
 
 package gov.nasa.race.ww
 
-import java.awt.Rectangle
-
 import com.typesafe.config.Config
 import gov.nasa.race.common._
+import gov.nasa.race.common.ConfigUtils._
 import gov.nasa.race.swing.Style._
-import gov.nasa.race.swing.{GBPanel, Style, GBPanel$}
+import gov.nasa.race.swing.{ItemRenderPanel, ListItemRenderer, VisibilityBounding}
 import gov.nasa.race.swing.GBPanel.{Anchor, Fill}
 import gov.nasa.race.ww.LayerInfoList._
 import gov.nasa.worldwind.layers.Layer
@@ -53,31 +69,48 @@ class LayerListPanel (raceView: RaceView, config: Option[Config]=None) extends B
       listView.listData = getListData(selectedCategories, layerInfoList)
   }
 
-  val categoryPanel = new GridPanel ((categoryCheckBoxes.size+2)/3, 3) {
+  val categoryPanel = new GridPanel ((categoryCheckBoxes.size+3)/4, 4) {
     contents ++= categoryCheckBoxes
   } styled()
   contents += categoryPanel
 
-  var cbBounds: Rectangle = _
-  val listView: ListView[Layer] = new ListView(getListData(selectedCategories,layerInfoList)){
-    renderer = new ListView.AbstractRenderer[Layer,LayerInfoRenderer](new LayerInfoRenderer().styled()) {
-      def configure(list: ListView[_], isSelected: Boolean, focused: Boolean, layer: Layer, index: Int) = {
-        component.setLayer(layer)
-        cbBounds = component.checkBoxBounds
-      }
+  // note this is only used for rendering, we can't listen to components
+  class LayerInfoRenderer extends ItemRenderPanel[Layer] {
+    var checkBox = new CheckBox().styled()
+    var nameLabel = new Label().styled('layerName)
+    var catLabel = new Label().styled('layerCategory)
+
+    val c = new Constraints(fill=Fill.Horizontal, anchor=Anchor.West)
+    layout(checkBox)  = c(0,0)
+    layout(nameLabel) = c(1,0)
+    layout(catLabel)  = c(2,0).weightx(0.5)
+
+    def configure(list: ListView[_], isSelected: Boolean, focused: Boolean, layer: Layer, index: Int) = {
+      val layerInfo = layer.layerInfo
+      checkBox.selected = layer.isEnabled
+      nameLabel.text = layerInfo.name
+      catLabel.text = layerInfo.categories.mkString(",")
     }
-  }.styled('layerList)
-  val scrollPane = new ScrollPane(listView).styled()
+  }
+  val layerInfoRenderer = new LayerInfoRenderer
+
+  val listView = new ListView[Layer](getListData(selectedCategories,layerInfoList))
+                      with VisibilityBounding[Layer].styled('layerList)
+  listView.maxVisibleRows = 8 // FIXME should be configured
+  listView.renderer = new ListItemRenderer(layerInfoRenderer)
+  val scrollPane = new ScrollPane(listView).styled('verticalIfNeeded)
   contents += scrollPane
 
   var selectionChanged = false
   listenTo(listView.mouse.clicks, listView.selection)
   reactions += {
     case MouseClicked(`listView`,pos,mod,clicks,triggerPopup) =>
-      if (/* !selectionChanged && */ cbBounds != null && cbBounds.contains(pos.x,0)) {
-        listView.selection.items.foreach { layer =>
-          layer.toggleEnabled
-          raceView.layerChanged(layer)
+      if (layerInfoRenderer.checkBox.bounds.contains(pos.x,0)) {
+        raceView.trackUserAction {
+          listView.selection.items.foreach { layer =>
+            layer.toggleEnabled
+            raceView.layerChanged(layer)
+          }
         }
         listView.repaint
       }
@@ -114,25 +147,4 @@ class LayerListPanel (raceView: RaceView, config: Option[Config]=None) extends B
   }
 }
 
-// note this is only used for rendering, we can't listen to components
-class LayerInfoRenderer extends GBPanel {
-  var checkBox = new CheckBox().styled()
-  var nameLabel = new Label().styled('layerName)
-  var catLabel = new Label().styled('layerCategory)
-
-  val c = new Constraints(fill=Fill.Horizontal, anchor=Anchor.West)
-  layout(checkBox)  = c(0,0)
-  layout(nameLabel) = c(1,0)
-  layout(catLabel)  = c(2,0).weightx(0.5)
-
-  def checkBoxBounds = checkBox.bounds
-
-  def setLayer (layer: Layer) = {
-    val layerInfo = layer.layerInfo
-    checkBox.selected = layer.isEnabled
-    nameLabel.text = layerInfo.name
-    catLabel.text = layerInfo.categories.mkString(",")
-  }
-
-}
 

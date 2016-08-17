@@ -1,4 +1,21 @@
 /*
+ * Copyright (c) 2016, United States Government, as represented by the
+ * Administrator of the National Aeronautics and Space Administration.
+ * All rights reserved.
+ *
+ * The RACE - Runtime for Airspace Concept Evaluation platform is licensed
+ * under the Apache License, Version 2.0 (the "License"); you may not use
+ * this file except in compliance with the License. You may obtain a copy
+ * of the License at http://www.apache.org/licenses/LICENSE-2.0.
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/*
  * Copyright (c) 2016, United States Government, as represented by the 
  * Administrator of the National Aeronautics and Space Administration. 
  * All rights reserved.
@@ -17,27 +34,30 @@
 
 package gov.nasa.race.ww
 
+import gov.nasa.race.swing._
 import java.awt.Color._
-import java.awt.{Color, Cursor, Font}
+import java.awt.{Color, Font, Button => _, Component => _, Label => _, Panel => _, ScrollPane => _, TextComponent => _, TextField => _, _}
 import javax.swing.UIManager
 import javax.swing.border._
 import javax.swing.plaf.basic.BasicScrollBarUI
 import javax.swing.text.StyleConstants
-
-import gov.nasa.race.swing.{AWTWrapper, DigitalClock, Stylist, _}
 import org.fife.ui.rsyntaxtextarea.Theme
-
-import scala.swing._
+import scala.swing.{UIElement,Component,ListView,TextField,Button,CheckBox,ComboBox,Label,Panel,TextPane,
+                    FlowPanel,ScrollPane,TextComponent,Alignment}
 
 /**
  * default Swing component styles for Race
  */
 class RaceDefaultStyle extends Stylist {
 
-  val preferredConsoleWidth = 350
+  val preferredConsoleWidth = 360
 
   val background = DARK_GRAY
   val foreground = WHITE
+  val selectionBackground = new Color(0,32,127)
+  val focusColor = Color.BLUE
+  val separatorColor = new Color(42,42,42)
+
   val sysFont = new Font("lucida grande", Font.PLAIN, 12)
   val txtFont = new Font("Monospaced", Font.PLAIN, 12)
 
@@ -45,6 +65,9 @@ class RaceDefaultStyle extends Stylist {
   val hiOuter = hiInner.brighter
   val shadowInner = background.darker
   val shadowOuter = shadowInner.darker
+
+  val sysFontMetrics = new Canvas().getFontMetrics(sysFont)
+  val lineHeight = sysFontMetrics.getHeight
 
   def loweredBevelBorder = new BevelBorder(BevelBorder.LOWERED,
                                     hiOuter, hiInner, shadowOuter, shadowInner)
@@ -60,6 +83,7 @@ class RaceDefaultStyle extends Stylist {
   UIManager.put("ScrollBar.width", 12)
 
   UIManager.put("SplitPane.background", background)
+  UIManager.put("Focus.color", focusColor)
 
   //--- component styles
 
@@ -79,16 +103,27 @@ class RaceDefaultStyle extends Stylist {
     }
   }
 
+  override def style (c: Separator, id: Symbol) = {
+    super.style(c,id)
+
+    c.preferredSize = new Dimension(7,7)
+    var clr = separatorColor
+    setIdStyle(id) {
+      case 'panel => clr = GRAY
+    }
+    c.border = new CompoundBorder( new EmptyBorder(3,3,3,3), new LineBorder(clr))
+  }
+
   override def style (c: Panel, id: Symbol) = {
     super.style(c,id)
     //c.opaque = true
 
     setIdStyle(id) {
       case 'console =>
-        c.border = new EmptyBorder(5,5,5,5)
-        c.preferredSize = (preferredConsoleWidth, 1000)
+        //c.border = new EmptyBorder(5,5,5,5)
+        //c.preferredSize = (preferredConsoleWidth, 1400) // this would force the v-scroll bar
       case 'collapsible =>
-        c.border = new EmptyBorder(12,5,5,5)  // top,left,bottom,right
+        c.border = new EmptyBorder(12,5,5,10)  // top,left,bottom,right (compensate for v-scroll)
       case 'consolePanel =>
         c.border = new EmptyBorder(5,5,5,5)
       case 'layerInfo =>
@@ -117,6 +152,7 @@ class RaceDefaultStyle extends Stylist {
     setIdStyle(id) {
       case 'fieldGrid =>
         c.background = BLACK
+        //c.minimumSize = (300,lineHeight * 3)
     }
   }
 
@@ -128,14 +164,21 @@ class RaceDefaultStyle extends Stylist {
     // normal color setting doesn't work for scrollbars
     c.peer.getVerticalScrollBar.setUI(new BasicScrollBarUI)
     c.peer.getHorizontalScrollBar.setUI(new BasicScrollBarUI)
+
+    setIdStyle(id) {
+      case 'verticalAsNeeded =>
+        c.horizontalScrollBarPolicy = ScrollPane.BarPolicy.Never
+    }
   }
 
   override def style (c: ListView[_], id: Symbol) = {
     super.style(c,id)
+    //c.minimumSize = (300,lineHeight * 4)
 
     setIdStyle(id) {
-      case 'layerList =>
+      case 'layerList | 'itemList =>
         c.background = BLACK
+        c.selectionBackground = selectionBackground
     }
   }
 
@@ -223,17 +266,20 @@ class RaceDefaultStyle extends Stylist {
     super.style(c,id)
 
     val prefSize = c.preferredSize
-    c.preferredSize = (prefSize.width, (prefSize.height * 1.1).toInt)
+    c.preferredSize = (prefSize.width, (prefSize.height * 1.2).toInt)
     c.border = loweredBevelBorder
     c.caret.color = Color.red
 
     setIdStyle(id) {
       case 'numField =>
         c.foreground = GREEN
-        c.font = new Font("Monospaced", Font.BOLD, 13)
+        c.font = txtFont
 
       case 'stringField =>
         c.foreground = GREEN
+
+      case 'queryField =>
+        c.foreground = YELLOW
     }
   }
 
@@ -252,6 +298,16 @@ class RaceDefaultStyle extends Stylist {
       case 'fieldValue =>
         c.foreground = GREEN
         //c.font = txtFont
+        c.horizontalAlignment = Alignment.Left
+      case 'fixedHeader =>
+        c.foreground = LIGHT_GRAY
+        c.font = txtFont
+        c.horizontalAlignment = Alignment.Left
+        c.opaque = false
+        //c.border = new LineBorder(LIGHT_GRAY)
+      case 'fixedFieldValue =>
+        c.foreground = GREEN
+        c.font = txtFont
         c.horizontalAlignment = Alignment.Left
       case 'labelFor =>
         c.verticalAlignment = Alignment.Center
@@ -299,5 +355,47 @@ class RaceDefaultStyle extends Stylist {
   override def style (c: DigitalStopWatch, id: Symbol) = styleTimePanel(c, id)
   override def style (c: DigitalStopWatch#StopWatchLabel, id: Symbol) = styleTimeLabel(c,id)
 
+  //--- icons, fonts & colors
 
+  val flightIconColor = Color.white
+  val flightBlankIcon = Images.blankFlightIcon
+  val flightCenteredIcon = Images.getFlightCenteredIcon(flightIconColor)
+  val flightHiddenIcon = Images.getFlightHiddenIcon(flightIconColor)
+  val flightPathIcon = Images.getFlightPathIcon(flightIconColor)
+  val flightInfoIcon = Images.getFlightInfoIcon(flightIconColor)
+  val flightMarkIcon = Images.getFlightMarkIcon(flightIconColor)
+
+  override def getIcon (id: Symbol) = {
+    id match {
+      case 'flightNone => flightBlankIcon
+      case 'flightCentered => flightCenteredIcon
+      case 'flightHidden => flightHiddenIcon
+      case 'flightPath => flightPathIcon
+      case 'flightInfo => flightInfoIcon
+      case 'flightMark => flightMarkIcon
+      case other => super.getIcon(id)
+    }
+  }
+
+  val balloonFont = txtFont
+
+  override def getFont (id: Symbol) = {
+    id match {
+      case 'balloonText => txtFont
+      case other => sysFont
+    }
+  }
+
+  val balloonTextColor = Color.cyan
+  val balloonBackgroundColor = new Color(0, 0, 0, 0.4f)
+  val balloonBorderColor = Color.cyan.darker.darker
+
+  override def getColor (id: Symbol) = {
+    id match {
+      case 'balloonText => balloonTextColor
+      case 'balloonBackground => balloonBackgroundColor
+      case 'balloonBorder => balloonBorderColor
+      case other => super.getColor(id)
+    }
+  }
 }

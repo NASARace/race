@@ -1,4 +1,21 @@
 /*
+ * Copyright (c) 2016, United States Government, as represented by the
+ * Administrator of the National Aeronautics and Space Administration.
+ * All rights reserved.
+ *
+ * The RACE - Runtime for Airspace Concept Evaluation platform is licensed
+ * under the Apache License, Version 2.0 (the "License"); you may not use
+ * this file except in compliance with the License. You may obtain a copy
+ * of the License at http://www.apache.org/licenses/LICENSE-2.0.
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/*
  * Copyright (c) 2016, United States Government, as represented by the 
  * Administrator of the National Aeronautics and Space Administration. 
  * All rights reserved.
@@ -40,10 +57,12 @@ import scala.concurrent.ExecutionContext.Implicits.global
   * (was added by Java 8). Scala 2.12 will add that, so we probably
   * port to scala.sys.process once 2.12 is out
   *
-  * <2do> - not clear yet to what extend we should support external (dynamic)
+  * TODO - not clear yet to what extend we should support external (dynamic)
   * init, but since this relies on proper local permissions anyways, we
   * do support mixed local/remote argument config, i.e. remote lookup. Remote
   * init is not allowed to change the procName, procEnv or launchDir though
+  *
+  * TODO - failures to start/terminate process should not un-conditionally throw exceptions
   */
 class ProcessLauncher (val config: Config) extends MonitoredRaceActor {
 
@@ -70,7 +89,7 @@ class ProcessLauncher (val config: Config) extends MonitoredRaceActor {
 
     def checkIgnored (path: String) = {
       if (actorConf.hasPath(path)){
-        warning(s"$name ignoring remote config $path=${actorConf.getAnyRef(path).toString}")
+        warning(s"ignoring remote config $path=${actorConf.getAnyRef(path).toString}")
       }
     }
 
@@ -111,8 +130,6 @@ class ProcessLauncher (val config: Config) extends MonitoredRaceActor {
         if (p.isAlive) throw new RaceException(s"ProcessLauncher termintation failed: $procName")
       }
     }
-
-    info(s"$name terminated")
   }
 
   def procSpec: String = (procName +: procArgs).mkString(" ")
@@ -130,7 +147,7 @@ class ProcessLauncher (val config: Config) extends MonitoredRaceActor {
       pb.redirectOutput(if (appendLog) Redirect.appendTo(f) else Redirect.to(f))
     }
 
-    info(s"$name starting process '$procSpec'")
+    info(s"starting process '$procSpec'")
     Some(pb.start()) // this might throw an IOException or SecurityException, which we pass up
   }
 
@@ -140,10 +157,10 @@ class ProcessLauncher (val config: Config) extends MonitoredRaceActor {
         if (autoRestart) {
           if (restartCount < maxRestart){
             restartCount += 1
-            warning(s"$name detected death of '$procSpec', restart $restartCount")
+            warning(s"detected death of '$procSpec', restart $restartCount")
             proc = startProcess
-          } else commitSuicide(s"$name detected death of '$procSpec' after $restartCount restarts, terminating")
-        } else commitSuicide(s"$name detected death of '$procSpec', terminating")
+          } else commitSuicide(s"detected death of '$procSpec' after $restartCount restarts, terminating")
+        } else commitSuicide(s"detected death of '$procSpec', terminating")
       }
     }
   }

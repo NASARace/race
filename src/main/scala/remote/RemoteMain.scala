@@ -1,4 +1,21 @@
 /*
+ * Copyright (c) 2016, United States Government, as represented by the
+ * Administrator of the National Aeronautics and Space Administration.
+ * All rights reserved.
+ *
+ * The RACE - Runtime for Airspace Concept Evaluation platform is licensed
+ * under the Apache License, Version 2.0 (the "License"); you may not use
+ * this file except in compliance with the License. You may obtain a copy
+ * of the License at http://www.apache.org/licenses/LICENSE-2.0.
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/*
  * Copyright (c) 2016, United States Government, as represented by the 
  * Administrator of the National Aeronautics and Space Administration. 
  * All rights reserved.
@@ -77,12 +94,22 @@ object RemoteMain extends MainBase with RemoteProtocolLaunchee {
       util.Arrays.fill(o._2,0.toByte)
     }
 
-    println(s"RemoteMain launching universes: {$universeNames}")
-    universes = launchData.configs.map(new RaceActorSystem(_))
+    universes = launchData.configs.map { universeConf =>
+      println(s"RemoteMain creating universe: ${universeConf.getStringOrElse("name","?")}")
+      new RaceActorSystem(universeConf)
+    }
+    universes.foreach { universe =>
+      if (universe.delayLaunch) {
+        println(s"RemoteMain delaying launch of universe ${universe.name}")
+      } else {
+        println(s"RemoteMain launching universe ${universe.name}")
+        launch(universe)  // the driver launch() might be overridden
+      }
+    }
   }
 
   override def processInspectCmd (topic: String) = {
-    println(s"@@@ received inspect $topic")
+    println(s"RemoteMain received inspect $topic")
   }
 
   override def processTerminateCmd = {

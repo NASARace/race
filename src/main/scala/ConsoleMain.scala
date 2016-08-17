@@ -1,4 +1,21 @@
 /*
+ * Copyright (c) 2016, United States Government, as represented by the
+ * Administrator of the National Aeronautics and Space Administration.
+ * All rights reserved.
+ *
+ * The RACE - Runtime for Airspace Concept Evaluation platform is licensed
+ * under the Apache License, Version 2.0 (the "License"); you may not use
+ * this file except in compliance with the License. You may obtain a copy
+ * of the License at http://www.apache.org/licenses/LICENSE-2.0.
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/*
  * Copyright (c) 2016, United States Government, as represented by the 
  * Administrator of the National Aeronautics and Space Administration. 
  * All rights reserved.
@@ -59,7 +76,7 @@ object ConsoleMain extends MainBase {
     val vmShutdownHook = addShutdownHook(universes.foreach(shutDown)) // ctrl-C (user) termination
     RaceActorSystem.addTerminationListener(systemExit)
 
-    if (!delayStart) universes.foreach { ras => if (!ras.delayStart) start(ras) }
+    if (!delayStart) universes.foreach { ras => if (!ras.delayLaunch) launch(ras) }
 
     menu("enter command [1:show universes, 2:show actors, 3:show channels, 4:send message, 5:set loglevel, 7: pause/resume, 8:start, 9:exit]\n") {
       case "1" | "universes" => showUniverses(universes)
@@ -80,7 +97,7 @@ object ConsoleMain extends MainBase {
       case "7" | "pause" | "resume" => // not yet
         repeatMenu
 
-      case "8" | "start" => universes.foreach(start)
+      case "8" | "start" => universes.foreach(launch)
         repeatMenu
 
       case "9" | "exit" => // don't use System.exit here, it would break MultiNodeJVM tests
@@ -92,7 +109,7 @@ object ConsoleMain extends MainBase {
 
   def showUniverses(universes: Seq[RaceActorSystem]): Unit = {
     for ((u, i) <- universes.zip(Stream from 1)) {
-      println(f"${i}%3d: ${u.master.path}")
+      println(f"${i}%3d: ${u.master.path} : ${u.currentStatus}")
     }
   }
 

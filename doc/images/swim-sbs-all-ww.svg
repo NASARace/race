@@ -1,0 +1,774 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<svg width="100%" height="100%" version="1.1" viewBox="-228 -156 1077 897" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <filter id="shadow1" width="150%" height="150%">
+      <feGaussianBlur in="SourceAlpha" result="blur" stdDeviation="3" />
+      <feOffset dx="3" dy="3" in="blur" result="offsetBlur" />
+      <feMerge>
+        <feMergeNode in="offsetBlur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+  </defs>
+  <marker id="marker1" markerUnits="strokeWidth" orient="auto" refX="-6.2" refY="0" markerWidth="9.200001" markerHeight="9.200001" viewBox="-8.200001 -4.6 9.200001 9.200001">
+    <path d="M-3.6 -3.6 C-1.62 -3.6 8.654856E-08 -1.98 0 0 C-8.654856E-08 1.98 -1.62 3.6 -3.6 3.6 C-5.58 3.6 -7.2 1.98 -7.2 -3.14722E-07 C-7.2 -1.98 -5.58 -3.6 -3.6 -3.6 Z " fill="#000000" fill-opacity="1" stroke="#000000" stroke-opacity="1" />
+  </marker>
+  <marker id="marker2" markerUnits="strokeWidth" orient="auto" refX="-5.086271" refY="0" markerWidth="7.636236" markerHeight="6.114774" viewBox="-6.636236 -3.057387 7.636236 6.114774">
+    <path d="M-5.636236 -2.057387 L0 0 L-5.636236 2.057387 Z " fill="#000000" fill-opacity="1" stroke="#000000" stroke-opacity="1" />
+  </marker>
+  <marker id="marker3" markerUnits="strokeWidth" orient="auto" refX="-5.086271" refY="0" markerWidth="7.636236" markerHeight="6.114774" viewBox="-6.636236 -3.057387 7.636236 6.114774">
+    <path d="M-5.636236 -2.057387 L0 0 L-5.636236 2.057387 Z " fill="#000000" fill-opacity="1" stroke="#000000" stroke-opacity="1" />
+  </marker>
+  <marker id="marker4" markerUnits="strokeWidth" orient="auto" refX="-5.086271" refY="0" markerWidth="7.636236" markerHeight="6.114774" viewBox="-6.636236 -3.057387 7.636236 6.114774">
+    <path d="M-5.636236 -2.057387 L0 0 L-5.636236 2.057387 Z " fill="#000000" fill-opacity="1" stroke="#000000" stroke-opacity="1" />
+  </marker>
+  <marker id="marker5" markerUnits="strokeWidth" orient="auto" refX="-6.2" refY="0" markerWidth="9.200001" markerHeight="9.200001" viewBox="-8.200001 -4.6 9.200001 9.200001">
+    <path d="M-3.6 -3.6 C-1.62 -3.6 8.654856E-08 -1.98 0 0 C-8.654856E-08 1.98 -1.62 3.6 -3.6 3.6 C-5.58 3.6 -7.2 1.98 -7.2 -3.14722E-07 C-7.2 -1.98 -5.58 -3.6 -3.6 -3.6 Z " fill="#000000" fill-opacity="1" stroke="#000000" stroke-opacity="1" />
+  </marker>
+  <marker id="marker6" markerUnits="strokeWidth" orient="auto" refX="6.2" refY="0" markerWidth="9.200001" markerHeight="9.200001" viewBox="-1 -4.6 9.200001 9.200001">
+    <path d="M3.6 3.6 C1.62 3.6 8.654856E-08 1.98 0 0 C-8.654856E-08 -1.98 1.62 -3.6 3.6 -3.6 C5.58 -3.6 7.2 -1.98 7.2 -3.14722E-07 C7.2 1.98 5.58 3.6 3.6 3.6 Z " fill="#000000" fill-opacity="1" stroke="#000000" stroke-opacity="1" />
+  </marker>
+  <marker id="marker7" markerUnits="strokeWidth" orient="auto" refX="6.2" refY="0" markerWidth="9.200001" markerHeight="9.200001" viewBox="-1 -4.6 9.200001 9.200001">
+    <path d="M3.6 3.6 C1.62 3.6 8.654856E-08 1.98 0 0 C-8.654856E-08 -1.98 1.62 -3.6 3.6 -3.6 C5.58 -3.6 7.2 -1.98 7.2 -3.14722E-07 C7.2 1.98 5.58 3.6 3.6 3.6 Z " fill="#000000" fill-opacity="1" stroke="#000000" stroke-opacity="1" />
+  </marker>
+  <marker id="marker8" markerUnits="strokeWidth" orient="auto" refX="6.2" refY="0" markerWidth="9.200001" markerHeight="9.200001" viewBox="-1 -4.6 9.200001 9.200001">
+    <path d="M3.6 3.6 C1.62 3.6 8.654856E-08 1.98 0 0 C-8.654856E-08 -1.98 1.62 -3.6 3.6 -3.6 C5.58 -3.6 7.2 -1.98 7.2 -3.14722E-07 C7.2 1.98 5.58 3.6 3.6 3.6 Z " fill="#000000" fill-opacity="1" stroke="#000000" stroke-opacity="1" />
+  </marker>
+  <marker id="marker9" markerUnits="strokeWidth" orient="auto" refX="-11.17254" refY="0" markerWidth="13.27247" markerHeight="10.22955" viewBox="-12.27247 -5.114774 13.27247 10.22955">
+    <path d="M-11.27247 -4.114774 L0 0 L-11.27247 4.114773 Z " fill="#0000FF" fill-opacity="1" stroke="#0000FF" stroke-opacity="1" />
+  </marker>
+  <marker id="marker10" markerUnits="strokeWidth" orient="auto" refX="-11.17254" refY="0" markerWidth="13.27247" markerHeight="10.22955" viewBox="-12.27247 -5.114774 13.27247 10.22955">
+    <path d="M-11.27247 -4.114774 L0 0 L-11.27247 4.114773 Z " fill="#0000FF" fill-opacity="1" stroke="#0000FF" stroke-opacity="1" />
+  </marker>
+  <marker id="marker11" markerUnits="strokeWidth" orient="auto" refX="-11.17254" refY="0" markerWidth="13.27247" markerHeight="10.22955" viewBox="-12.27247 -5.114774 13.27247 10.22955">
+    <path d="M-11.27247 -4.114774 L0 0 L-11.27247 4.114773 Z " fill="#0000FF" fill-opacity="1" stroke="#0000FF" stroke-opacity="1" />
+  </marker>
+  <marker id="marker12" markerUnits="strokeWidth" orient="auto" refX="-11.17254" refY="0" markerWidth="13.27247" markerHeight="10.22955" viewBox="-12.27247 -5.114774 13.27247 10.22955">
+    <path d="M-11.27247 -4.114774 L0 0 L-11.27247 4.114773 Z " fill="#0000FF" fill-opacity="1" stroke="#0000FF" stroke-opacity="1" />
+  </marker>
+  <marker id="marker13" markerUnits="strokeWidth" orient="auto" refX="0.8697562" refY="0" markerWidth="13.27247" markerHeight="10.22955" viewBox="-1 -5.114774 13.27247 10.22955">
+    <path d="M11.27247 4.114773 L0 0 L11.27247 -4.114774" fill="none" stroke="#0000FF" stroke-opacity="1" />
+  </marker>
+  <marker id="marker14" markerUnits="strokeWidth" orient="auto" refX="-11.17254" refY="0" markerWidth="13.27247" markerHeight="10.22955" viewBox="-12.27247 -5.114774 13.27247 10.22955">
+    <path d="M-11.27247 -4.114774 L0 0 L-11.27247 4.114773 Z " fill="#0000FF" fill-opacity="1" stroke="#0000FF" stroke-opacity="1" />
+  </marker>
+  <marker id="marker15" markerUnits="strokeWidth" orient="auto" refX="0.8697562" refY="0" markerWidth="13.27247" markerHeight="10.22955" viewBox="-1 -5.114774 13.27247 10.22955">
+    <path d="M11.27247 4.114773 L0 0 L11.27247 -4.114774" fill="none" stroke="#0000FF" stroke-opacity="1" />
+  </marker>
+  <marker id="marker16" markerUnits="strokeWidth" orient="auto" refX="-11.17254" refY="0" markerWidth="13.27247" markerHeight="10.22955" viewBox="-12.27247 -5.114774 13.27247 10.22955">
+    <path d="M-11.27247 -4.114774 L0 0 L-11.27247 4.114773 Z " fill="#0000FF" fill-opacity="1" stroke="#0000FF" stroke-opacity="1" />
+  </marker>
+  <marker id="marker17" markerUnits="strokeWidth" orient="auto" refX="-11.17254" refY="0" markerWidth="13.27247" markerHeight="10.22955" viewBox="-12.27247 -5.114774 13.27247 10.22955">
+    <path d="M-11.27247 -4.114774 L0 0 L-11.27247 4.114773 Z " fill="#0000FF" fill-opacity="1" stroke="#0000FF" stroke-opacity="1" />
+  </marker>
+  <marker id="marker18" markerUnits="strokeWidth" orient="auto" refX="-11.17254" refY="0" markerWidth="13.27247" markerHeight="10.22955" viewBox="-12.27247 -5.114774 13.27247 10.22955">
+    <path d="M-11.27247 -4.114774 L0 0 L-11.27247 4.114773 Z " fill="#0000FF" fill-opacity="1" stroke="#0000FF" stroke-opacity="1" />
+  </marker>
+  <marker id="marker19" markerUnits="strokeWidth" orient="auto" refX="-11.17254" refY="0" markerWidth="13.27247" markerHeight="10.22955" viewBox="-12.27247 -5.114774 13.27247 10.22955">
+    <path d="M-11.27247 -4.114774 L0 0 L-11.27247 4.114773 Z " fill="#0000FF" fill-opacity="1" stroke="#0000FF" stroke-opacity="1" />
+  </marker>
+  <marker id="marker20" markerUnits="strokeWidth" orient="auto" refX="-5.086271" refY="0" markerWidth="7.636236" markerHeight="6.114774" viewBox="-6.636236 -3.057387 7.636236 6.114774">
+    <path d="M-5.636236 -2.057387 L0 0 L-5.636236 2.057387 Z " fill="#000000" fill-opacity="1" stroke="#000000" stroke-opacity="1" />
+  </marker>
+  <marker id="marker21" markerUnits="strokeWidth" orient="auto" refX="-5.086271" refY="0" markerWidth="7.636236" markerHeight="6.114774" viewBox="-6.636236 -3.057387 7.636236 6.114774">
+    <path d="M-5.636236 -2.057387 L0 0 L-5.636236 2.057387 Z " fill="#000000" fill-opacity="1" stroke="#000000" stroke-opacity="1" />
+  </marker>
+  <marker id="marker22" markerUnits="strokeWidth" orient="auto" refX="-1.660927" refY="0" markerWidth="5.381742" markerHeight="4.468864" viewBox="-4.381742 -2.234432 5.381742 4.468864">
+    <path d="M-3.381742 -1.234432 L0 0 L-3.381742 1.234432 L-2.4 -1.049073E-07 Z " fill="#000000" fill-opacity="1" stroke="#000000" stroke-opacity="1" />
+  </marker>
+  <marker id="marker23" markerUnits="strokeWidth" orient="auto" refX="-1.660927" refY="0" markerWidth="5.381742" markerHeight="4.468864" viewBox="-4.381742 -2.234432 5.381742 4.468864">
+    <path d="M-3.381742 -1.234432 L0 0 L-3.381742 1.234432 L-2.4 -1.049073E-07 Z " fill="#000000" fill-opacity="1" stroke="#000000" stroke-opacity="1" />
+  </marker>
+  <marker id="marker24" markerUnits="strokeWidth" orient="auto" refX="-11.17254" refY="0" markerWidth="13.27247" markerHeight="10.22955" viewBox="-12.27247 -5.114774 13.27247 10.22955">
+    <path d="M-11.27247 -4.114774 L0 0 L-11.27247 4.114773 Z " fill="#0000FF" fill-opacity="1" stroke="#0000FF" stroke-opacity="1" />
+  </marker>
+  <marker id="marker25" markerUnits="strokeWidth" orient="auto" refX="11.17254" refY="0" markerWidth="13.27247" markerHeight="10.22955" viewBox="-1 -5.114774 13.27247 10.22955">
+    <path d="M11.27247 4.114773 L0 0 L11.27247 -4.114774 Z " fill="#0000FF" fill-opacity="1" stroke="#0000FF" stroke-opacity="1" />
+  </marker>
+  <marker id="marker26" markerUnits="strokeWidth" orient="auto" refX="-11.17254" refY="0" markerWidth="13.27247" markerHeight="10.22955" viewBox="-12.27247 -5.114774 13.27247 10.22955">
+    <path d="M-11.27247 -4.114774 L0 0 L-11.27247 4.114773 Z " fill="#0000FF" fill-opacity="1" stroke="#0000FF" stroke-opacity="1" />
+  </marker>
+  <marker id="marker27" markerUnits="strokeWidth" orient="auto" refX="-11.17254" refY="0" markerWidth="13.27247" markerHeight="10.22955" viewBox="-12.27247 -5.114774 13.27247 10.22955">
+    <path d="M-11.27247 -4.114774 L0 0 L-11.27247 4.114773 Z " fill="#000000" fill-opacity="1" stroke="#000000" stroke-opacity="1" />
+  </marker>
+  <marker id="marker28" markerUnits="strokeWidth" orient="auto" refX="-11.17254" refY="0" markerWidth="13.27247" markerHeight="10.22955" viewBox="-12.27247 -5.114774 13.27247 10.22955">
+    <path d="M-11.27247 -4.114774 L0 0 L-11.27247 4.114773 Z " fill="#000000" fill-opacity="1" stroke="#000000" stroke-opacity="1" />
+  </marker>
+  <marker id="marker29" markerUnits="strokeWidth" orient="auto" refX="-11.17254" refY="0" markerWidth="13.27247" markerHeight="10.22955" viewBox="-12.27247 -5.114774 13.27247 10.22955">
+    <path d="M-11.27247 -4.114774 L0 0 L-11.27247 4.114773 Z " fill="#000000" fill-opacity="1" stroke="#000000" stroke-opacity="1" />
+  </marker>
+  <marker id="marker30" markerUnits="strokeWidth" orient="auto" refX="-11.17254" refY="0" markerWidth="13.27247" markerHeight="10.22955" viewBox="-12.27247 -5.114774 13.27247 10.22955">
+    <path d="M-11.27247 -4.114774 L0 0 L-11.27247 4.114773 Z " fill="#000000" fill-opacity="1" stroke="#000000" stroke-opacity="1" />
+  </marker>
+  <marker id="marker31" markerUnits="strokeWidth" orient="auto" refX="-11.17254" refY="0" markerWidth="13.27247" markerHeight="10.22955" viewBox="-12.27247 -5.114774 13.27247 10.22955">
+    <path d="M-11.27247 -4.114774 L0 0 L-11.27247 4.114773 Z " fill="#000000" fill-opacity="1" stroke="#000000" stroke-opacity="1" />
+  </marker>
+  <marker id="marker32" markerUnits="strokeWidth" orient="auto" refX="-11.17254" refY="0" markerWidth="13.27247" markerHeight="10.22955" viewBox="-12.27247 -5.114774 13.27247 10.22955">
+    <path d="M-11.27247 -4.114774 L0 0 L-11.27247 4.114773 Z " fill="#000000" fill-opacity="1" stroke="#000000" stroke-opacity="1" />
+  </marker>
+  <marker id="marker33" markerUnits="strokeWidth" orient="auto" refX="-11.17254" refY="0" markerWidth="13.27247" markerHeight="10.22955" viewBox="-12.27247 -5.114774 13.27247 10.22955">
+    <path d="M-11.27247 -4.114774 L0 0 L-11.27247 4.114773 Z " fill="#000000" fill-opacity="1" stroke="#000000" stroke-opacity="1" />
+  </marker>
+  <marker id="marker34" markerUnits="strokeWidth" orient="auto" refX="-5.086271" refY="0" markerWidth="7.636236" markerHeight="6.114774" viewBox="-6.636236 -3.057387 7.636236 6.114774">
+    <path d="M-5.636236 -2.057387 L0 0 L-5.636236 2.057387 Z " fill="#9D9D9D" fill-opacity="1" stroke="#9D9D9D" stroke-opacity="1" />
+  </marker>
+  <marker id="marker35" markerUnits="strokeWidth" orient="auto" refX="-5.086271" refY="0" markerWidth="7.636236" markerHeight="6.114774" viewBox="-6.636236 -3.057387 7.636236 6.114774">
+    <path d="M-5.636236 -2.057387 L0 0 L-5.636236 2.057387 Z " fill="#9D9D9D" fill-opacity="1" stroke="#9D9D9D" stroke-opacity="1" />
+  </marker>
+  <marker id="marker36" markerUnits="strokeWidth" orient="auto" refX="-11.17254" refY="0" markerWidth="13.27247" markerHeight="10.22955" viewBox="-12.27247 -5.114774 13.27247 10.22955">
+    <path d="M-11.27247 -4.114774 L0 0 L-11.27247 4.114773 Z " fill="#0000FF" fill-opacity="1" stroke="#0000FF" stroke-opacity="1" />
+  </marker>
+  <marker id="marker37" markerUnits="strokeWidth" orient="auto" refX="-2.651763" refY="0" markerWidth="5.381742" markerHeight="4.468864" viewBox="-4.381742 -2.234432 5.381742 4.468864">
+    <path d="M-3.381742 -1.234432 L0 0 L-3.381742 1.234432 Z " fill="#000000" fill-opacity="1" stroke="#000000" stroke-opacity="1" />
+  </marker>
+  <marker id="marker38" markerUnits="strokeWidth" orient="auto" refX="11.17254" refY="0" markerWidth="13.27247" markerHeight="10.22955" viewBox="-1 -5.114774 13.27247 10.22955">
+    <path d="M11.27247 4.114773 L0 0 L11.27247 -4.114774 Z " fill="#000000" fill-opacity="1" stroke="#000000" stroke-opacity="1" />
+  </marker>
+  <marker id="marker39" markerUnits="strokeWidth" orient="auto" refX="-11.17254" refY="0" markerWidth="13.27247" markerHeight="10.22955" viewBox="-12.27247 -5.114774 13.27247 10.22955">
+    <path d="M-11.27247 -4.114774 L0 0 L-11.27247 4.114773 Z " fill="#000000" fill-opacity="1" stroke="#000000" stroke-opacity="1" />
+  </marker>
+  <marker id="marker40" markerUnits="strokeWidth" orient="auto" refX="-2.651763" refY="0" markerWidth="5.381742" markerHeight="4.468864" viewBox="-4.381742 -2.234432 5.381742 4.468864">
+    <path d="M-3.381742 -1.234432 L0 0 L-3.381742 1.234432 Z " fill="#000000" fill-opacity="1" stroke="#000000" stroke-opacity="1" />
+  </marker>
+  <marker id="marker41" markerUnits="strokeWidth" orient="auto" refX="-11.17254" refY="0" markerWidth="13.27247" markerHeight="10.22955" viewBox="-12.27247 -5.114774 13.27247 10.22955">
+    <path d="M-11.27247 -4.114774 L0 0 L-11.27247 4.114773 Z " fill="#0000FF" fill-opacity="1" stroke="#0000FF" stroke-opacity="1" />
+  </marker>
+  <marker id="marker42" markerUnits="strokeWidth" orient="auto" refX="0.8697562" refY="0" markerWidth="13.27247" markerHeight="10.22955" viewBox="-1 -5.114774 13.27247 10.22955">
+    <path d="M11.27247 4.114773 L0 0 L11.27247 -4.114774" fill="none" stroke="#0000FF" stroke-opacity="1" />
+  </marker>
+  <marker id="marker43" markerUnits="strokeWidth" orient="auto" refX="-11.17254" refY="0" markerWidth="13.27247" markerHeight="10.22955" viewBox="-12.27247 -5.114774 13.27247 10.22955">
+    <path d="M-11.27247 -4.114774 L0 0 L-11.27247 4.114773 Z " fill="#0000FF" fill-opacity="1" stroke="#0000FF" stroke-opacity="1" />
+  </marker>
+  <marker id="marker44" markerUnits="strokeWidth" orient="auto" refX="-11.17254" refY="0" markerWidth="13.27247" markerHeight="10.22955" viewBox="-12.27247 -5.114774 13.27247 10.22955">
+    <path d="M-11.27247 -4.114774 L0 0 L-11.27247 4.114773 Z " fill="#0000FF" fill-opacity="1" stroke="#0000FF" stroke-opacity="1" />
+  </marker>
+  <marker id="marker45" markerUnits="strokeWidth" orient="auto" refX="-11.17254" refY="0" markerWidth="13.27247" markerHeight="10.22955" viewBox="-12.27247 -5.114774 13.27247 10.22955">
+    <path d="M-11.27247 -4.114774 L0 0 L-11.27247 4.114773 Z " fill="#0000FF" fill-opacity="1" stroke="#0000FF" stroke-opacity="1" />
+  </marker>
+  <marker id="marker46" markerUnits="strokeWidth" orient="auto" refX="-11.17254" refY="0" markerWidth="13.27247" markerHeight="10.22955" viewBox="-12.27247 -5.114774 13.27247 10.22955">
+    <path d="M-11.27247 -4.114774 L0 0 L-11.27247 4.114773 Z " fill="#0000FF" fill-opacity="1" stroke="#0000FF" stroke-opacity="1" />
+  </marker>
+  <marker id="marker47" markerUnits="strokeWidth" orient="auto" refX="-11.17254" refY="0" markerWidth="13.27247" markerHeight="10.22955" viewBox="-12.27247 -5.114774 13.27247 10.22955">
+    <path d="M-11.27247 -4.114774 L0 0 L-11.27247 4.114773 Z " fill="#000000" fill-opacity="1" stroke="#000000" stroke-opacity="1" />
+  </marker>
+  <marker id="marker48" markerUnits="strokeWidth" orient="auto" refX="-0.8697562" refY="0" markerWidth="13.27247" markerHeight="10.22955" viewBox="-12.27247 -5.114774 13.27247 10.22955">
+    <path d="M-11.27247 -4.114774 L0 0 L-11.27247 4.114773" fill="none" stroke="#000000" stroke-opacity="1" />
+  </marker>
+  <marker id="marker49" markerUnits="strokeWidth" orient="auto" refX="-0.8697562" refY="0" markerWidth="13.27247" markerHeight="10.22955" viewBox="-12.27247 -5.114774 13.27247 10.22955">
+    <path d="M-11.27247 -4.114774 L0 0 L-11.27247 4.114773" fill="none" stroke="#000000" stroke-opacity="1" />
+  </marker>
+  <marker id="marker50" markerUnits="strokeWidth" orient="auto" refX="-11.17254" refY="0" markerWidth="13.27247" markerHeight="10.22955" viewBox="-12.27247 -5.114774 13.27247 10.22955">
+    <path d="M-11.27247 -4.114774 L0 0 L-11.27247 4.114773 Z " fill="#0000FF" fill-opacity="1" stroke="#0000FF" stroke-opacity="1" />
+  </marker>
+  <marker id="marker51" markerUnits="strokeWidth" orient="auto" refX="0.8697562" refY="0" markerWidth="13.27247" markerHeight="10.22955" viewBox="-1 -5.114774 13.27247 10.22955">
+    <path d="M11.27247 4.114773 L0 0 L11.27247 -4.114774" fill="none" stroke="#0000FF" stroke-opacity="1" />
+  </marker>
+  <marker id="marker52" markerUnits="strokeWidth" orient="auto" refX="-11.17254" refY="0" markerWidth="13.27247" markerHeight="10.22955" viewBox="-12.27247 -5.114774 13.27247 10.22955">
+    <path d="M-11.27247 -4.114774 L0 0 L-11.27247 4.114773 Z " fill="#0000FF" fill-opacity="1" stroke="#0000FF" stroke-opacity="1" />
+  </marker>
+  <g id="layer1" inkscape:label="Layer 1" inkscape:groupmode="layer">
+    <rect x="18" y="-153" width="675" height="891" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFBEB" fill-opacity="1" filter="url(#shadow1)" />
+    <rect x="549" y="-126" width="126" height="747" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" filter="url(#shadow1)" />
+    <g>
+      <g>
+        <rect x="45" y="-9" width="135" height="63" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" filter="url(#shadow1)" />
+        <g>
+          <rect x="54" y="5.000015" width="51.42858" height="39.99998" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" filter="url(#shadow1)" />
+          <path d="M65.42857 16.42861 L94.00001 16.42861 L99.71428 33.5714 L59.71429 33.5714 Z " opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" />
+        </g>
+        <g>
+          <rect x="117" y="5.000015" width="51.59822" height="40.13189" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" filter="url(#shadow1)" />
+          <path d="M128.4663 10.73313 L157.1319 10.73313 L145.6657 27.9325 L145.6657 39.39879 L139.9325 39.39879 L139.9325 27.9325 Z " opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" />
+        </g>
+      </g>
+      <rect x="45.74587" y="46.28371" width="7.041425" height="6.970426" opacity="1" fill="#FFFFFF" fill-opacity="1" />
+    </g>
+    <g>
+      <rect x="297" y="324" width="144" height="81" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" filter="url(#shadow1)" />
+      <g>
+        <rect x="306" y="345" width="54" height="42" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" filter="url(#shadow1)" />
+        <line x1="312" y1="366.8451" x2="322.8" y2="366.8451" marker-end="url(#marker1)" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+        <line x1="327.5886" y1="366.772" x2="339.8901" y2="358.2678" marker-end="url(#marker2)" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+        <line x1="327.3878" y1="366.9282" x2="338.2715" y2="366.9282" marker-end="url(#marker3)" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+        <line x1="327.3808" y1="366.9193" x2="339.2203" y2="374.4395" marker-end="url(#marker4)" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+        <ellipse cx="347.3208" cy="354.1333" rx="2.424305" ry="2.289598" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#000000" fill-opacity="1" />
+        <ellipse cx="347.1254" cy="366.5981" rx="2.424288" ry="2.289594" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#000000" fill-opacity="1" />
+        <ellipse cx="347.1994" cy="378.2548" rx="2.424305" ry="2.289589" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#000000" fill-opacity="1" />
+      </g>
+      <rect x="378" y="354" width="54" height="41.99998" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" filter="url(#shadow1)" />
+      <text x="372.645" y="340.8797" font-size="14" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">nasf2fpos</text>
+      <g>
+        <rect x="369" y="345" width="54" height="41.99998" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" filter="url(#shadow1)" />
+        <rect x="381" y="351" width="12.00002" height="29.99997" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" />
+        <rect x="398.9999" y="351" width="12.00002" height="29.99997" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" />
+        <line x1="387" y1="357" x2="405" y2="375" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+        <line x1="387" y1="375" x2="405" y2="357" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+      </g>
+    </g>
+    <g>
+      <rect x="293" y="-9" width="135" height="63" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" filter="url(#shadow1)" />
+      <g>
+        <rect x="365" y="3.000023" width="54" height="41.99998" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" filter="url(#shadow1)" />
+        <g>
+          <line x1="371" y1="24.8451" x2="381.8" y2="24.8451" marker-end="url(#marker5)" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+          <line x1="402.2" y1="12.84515" x2="413" y2="12.84515" marker-start="url(#marker6)" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+          <line x1="402.2" y1="24.8451" x2="413" y2="24.8451" marker-start="url(#marker7)" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+          <line x1="402.2" y1="36.84502" x2="413" y2="36.84502" marker-start="url(#marker8)" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+          <line x1="386.5886" y1="24.77208" x2="397.8643" y2="12.83299" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+        </g>
+      </g>
+      <g>
+        <rect x="302" y="3.000023" width="54" height="41.99998" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" filter="url(#shadow1)" />
+        <rect x="314" y="9" width="12.00002" height="29.99997" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" />
+        <rect x="332" y="9" width="12.00002" height="29.99997" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" />
+        <line x1="320" y1="15.00001" x2="338" y2="32.99998" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+        <line x1="320" y1="32.99998" x2="338" y2="15.00001" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+      </g>
+    </g>
+    <g>
+      <rect x="72" y="333" width="81" height="63" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" filter="url(#shadow1)" />
+      <path d="M90 351 L135 351 L144 378 L81 378 Z " opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" />
+    </g>
+    <g>
+      <rect x="72" y="189" width="81" height="63" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" filter="url(#shadow1)" />
+      <path d="M90 207 L135 207 L144 234 L81 234 Z " opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" />
+    </g>
+    <g>
+      <rect x="567" y="333" width="81" height="63" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" filter="url(#shadow1)" />
+      <g>
+        <ellipse cx="607.7873" cy="364.1037" rx="18" ry="18" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" />
+        <ellipse cx="607.7873" cy="364.1037" rx="9" ry="18" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" />
+        <line x1="589.7873" y1="364.1037" x2="625.7873" y2="364.1037" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+        <path d="M591.5934 356.8782 Q608.692 350.3807 623.7388 356.8782" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+        <path d="M592.0446 372.7177 Q608.4592 377.1634 624.19 372.7177" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+        <line x1="607.666" y1="346.6191" x2="607.666" y2="382.5262" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+      </g>
+      <rect x="576" y="342" width="9" height="45" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" />
+    </g>
+    <g>
+      <rect x="320" y="189" width="81" height="63" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" filter="url(#shadow1)" />
+      <rect x="338" y="198" width="18" height="45" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" />
+      <rect x="365" y="198" width="18" height="45" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" />
+      <line x1="347" y1="207" x2="374" y2="234" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+      <line x1="347" y1="234" x2="374" y2="207" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    </g>
+    <text x="71.70703" y="331.8797" font-size="14" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">sfdpsImporter</text>
+    <text x="78.71729" y="187.8797" font-size="14" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">tfmImporter</text>
+    <text x="76.38281" y="-10.12031" font-size="14" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">itwsImporter</text>
+    <text x="333.7173" y="187.8797" font-size="14" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">tfm2track</text>
+    <text x="339.2036" y="322.8797" font-size="14" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">dispatcher</text>
+    <text x="326.7104" y="-10.12031" font-size="14" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">itws2Precip</text>
+    <text x="69.75879" y="88.87968" font-size="14" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">asdexImporter</text>
+    <g>
+      <rect x="320" y="90" width="81" height="63" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" filter="url(#shadow1)" />
+      <rect x="338" y="99" width="18" height="45" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" />
+      <rect x="365" y="99" width="18" height="45" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" />
+      <line x1="347" y1="108" x2="374" y2="135" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+      <line x1="347" y1="135" x2="374" y2="108" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    </g>
+    <text x="320.0864" y="88.87968" font-size="14" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">asdex2airport</text>
+    <g>
+      <rect x="72" y="441" width="81" height="63" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" filter="url(#shadow1)" />
+      <path d="M90 459 L135 459 L144 486 L81 486 Z " opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" />
+    </g>
+    <text x="77.54492" y="439.8797" font-size="14" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">sbsImporter</text>
+    <g>
+      <rect x="266" y="441" width="81" height="63" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" filter="url(#shadow1)" />
+      <rect x="284" y="450" width="18" height="45" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" />
+      <rect x="311" y="450" width="18" height="45" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" />
+      <line x1="293" y1="459" x2="320" y2="486" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+      <line x1="293" y1="486" x2="320" y2="459" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    </g>
+    <text x="280.4829" y="439.8797" font-size="14" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">sbs2fpos</text>
+    <g>
+      <rect x="45" y="90" width="135" height="63" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" filter="url(#shadow1)" />
+      <g>
+        <rect x="54" y="104" width="51.42859" height="39.99998" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" filter="url(#shadow1)" />
+        <path d="M65.42856 115.4286 L94.00004 115.4286 L99.71431 132.5714 L59.71428 132.5714 Z " opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" />
+      </g>
+      <g>
+        <rect x="117" y="104" width="51.59822" height="40.13189" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" filter="url(#shadow1)" />
+        <path d="M128.4663 109.7331 L157.1319 109.7331 L145.6656 126.9325 L145.6656 138.3988 L139.9325 138.3988 L139.9325 126.9325 Z " opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" />
+      </g>
+    </g>
+    <line x1="153" y1="364.5" x2="284.8275" y2="364.5" marker-end="url(#marker9)" opacity="1" stroke="#0000FF" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    <line x1="153" y1="220.5" x2="307.8275" y2="220.5" marker-end="url(#marker10)" opacity="1" stroke="#0000FF" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    <line x1="180" y1="22.5" x2="280.8275" y2="22.5" marker-end="url(#marker11)" opacity="1" stroke="#0000FF" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    <line x1="428" y1="22.5" x2="554.8275" y2="22.5" marker-end="url(#marker12)" opacity="1" stroke="#0000FF" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    <line x1="180.8698" y1="121.5" x2="307.8275" y2="121.5" marker-start="url(#marker13)" marker-end="url(#marker14)" opacity="1" stroke="#0000FF" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    <line x1="401.8698" y1="121.5" x2="554.8275" y2="121.5" marker-start="url(#marker15)" marker-end="url(#marker16)" opacity="1" stroke="#0000FF" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    <line x1="153" y1="472.5" x2="253.8275" y2="472.5" marker-end="url(#marker17)" opacity="1" stroke="#0000FF" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    <line x1="347" y1="472.5" x2="554.8275" y2="472.5" marker-end="url(#marker18)" opacity="1" stroke="#0000FF" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    <g>
+      <rect x="567" y="189" width="81" height="63" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" filter="url(#shadow1)" />
+      <g>
+        <ellipse cx="607.7873" cy="220.1037" rx="18" ry="18" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" />
+        <ellipse cx="607.7873" cy="220.1037" rx="9" ry="18" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" />
+        <line x1="589.7873" y1="220.1037" x2="625.7873" y2="220.1037" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+        <path d="M591.5934 212.8782 Q608.692 206.3808 623.7388 212.8782" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+        <path d="M592.0446 228.7177 Q608.4592 233.1634 624.19 228.7177" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+        <line x1="607.666" y1="202.619" x2="607.666" y2="238.5261" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+      </g>
+      <rect x="576" y="198" width="9" height="45" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" />
+    </g>
+    <line x1="401" y1="220.5" x2="554.8275" y2="220.5" marker-end="url(#marker19)" opacity="1" stroke="#0000FF" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    <g>
+      <rect x="567" y="90" width="81" height="63" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" filter="url(#shadow1)" />
+      <g>
+        <ellipse cx="607.7873" cy="121.1036" rx="18" ry="18" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" />
+        <ellipse cx="607.7873" cy="121.1036" rx="9" ry="18" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" />
+        <line x1="589.7873" y1="121.1037" x2="625.7873" y2="121.1037" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+        <path d="M591.5934 113.8782 Q608.692 107.3807 623.7388 113.8782" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+        <path d="M592.0446 129.7177 Q608.4592 134.1634 624.19 129.7177" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+        <line x1="607.666" y1="103.619" x2="607.666" y2="139.5261" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+      </g>
+      <rect x="576" y="99" width="9" height="45" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" />
+    </g>
+    <g>
+      <rect x="567" y="441" width="81" height="63" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" filter="url(#shadow1)" />
+      <g>
+        <ellipse cx="607.7873" cy="472.1036" rx="18" ry="18" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" />
+        <ellipse cx="607.7873" cy="472.1036" rx="9" ry="18" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" />
+        <line x1="589.7873" y1="472.1037" x2="625.7873" y2="472.1037" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+        <path d="M591.5934 464.8782 Q608.692 458.3807 623.7388 464.8782" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+        <path d="M592.0446 480.7177 Q608.4592 485.1634 624.19 480.7177" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+        <line x1="607.666" y1="454.619" x2="607.666" y2="490.5261" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+      </g>
+      <rect x="576" y="450" width="9" height="45" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" />
+    </g>
+    <g>
+      <rect x="567" y="-99" width="81" height="63" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" filter="url(#shadow1)" />
+      <g>
+        <ellipse cx="587.3937" cy="-79.13493" rx="11.39365" ry="11.39365" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" />
+        <ellipse cx="587.3937" cy="-79.13493" rx="5.696823" ry="11.39365" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" />
+        <line x1="576" y1="-79.13493" x2="598.7873" y2="-79.13493" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+        <path d="M577.1432 -83.70847 Q587.9662 -87.82127 597.4906 -83.70847" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+        <path d="M577.4288 -73.68239 Q587.819 -70.86841 597.7762 -73.68239" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+        <line x1="587.3169" y1="-90.20235" x2="587.3169" y2="-67.47388" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+      </g>
+      <g>
+        <ellipse cx="623.3937" cy="-61.1349" rx="11.39365" ry="11.39365" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" />
+        <ellipse cx="623.3934" cy="-61.1349" rx="5.696824" ry="11.39365" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" />
+        <line x1="612" y1="-61.1349" x2="634.7873" y2="-61.1349" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+        <path d="M613.1433 -65.70851 Q623.9664 -69.82127 633.4905 -65.70851" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+        <path d="M613.4292 -55.68235 Q623.8188 -52.86837 633.7764 -55.68235" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+        <line x1="623.317" y1="-72.20232" x2="623.317" y2="-49.47387" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+      </g>
+      <path d="M620.0343 -74.75471 Q618.5826 -85.27901 606.1597 -85.52163" marker-end="url(#marker20)" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+      <path d="M589.5503 -63.14176 Q591.7277 -47.89981 604.7217 -51.3982" marker-end="url(#marker21)" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+    </g>
+    <g>
+      <rect x="320" y="539.9277" width="81" height="63" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" filter="url(#shadow1)" />
+      <line x1="338.0723" y1="594" x2="338.0723" y2="551.6609" marker-end="url(#marker22)" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+      <line x1="338.0723" y1="594" x2="389.4114" y2="594" marker-end="url(#marker23)" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+      <path d="M344.962 581.0305 C350.4056 570.8693 357.1611 562.8011 363.8331 568.3289 C370.418 574.3071 378.1721 569.0544 382.9246 564.0518" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+    </g>
+    <g>
+      <rect x="567" y="540" width="81" height="63" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" filter="url(#shadow1)" />
+      <g>
+        <ellipse cx="607.7873" cy="571.1036" rx="18" ry="18" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" />
+        <ellipse cx="607.7873" cy="571.1036" rx="9" ry="18" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" />
+        <line x1="589.7873" y1="571.1036" x2="625.7873" y2="571.1036" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+        <path d="M591.5934 563.8782 Q608.692 557.3807 623.7388 563.8782" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+        <path d="M592.0446 579.7177 Q608.4592 584.1634 624.19 579.7177" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+        <line x1="607.666" y1="553.6191" x2="607.666" y2="589.5261" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+      </g>
+      <rect x="576" y="549" width="9" height="45" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" />
+    </g>
+    <line x1="401" y1="571.4395" x2="554.8275" y2="571.4846" marker-end="url(#marker24)" opacity="1" stroke="#0000FF" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    <text x="568.1519" y="331.8797" font-size="14" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">sfdpsFlights</text>
+    <text x="575.1621" y="187.8797" font-size="14" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">tfmFlights</text>
+    <g>
+      <rect x="576" y="0" width="81" height="63" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" filter="url(#shadow1)" />
+      <g>
+        <ellipse cx="616.7873" cy="31.10363" rx="18" ry="18" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" />
+        <ellipse cx="616.7873" cy="31.10363" rx="9" ry="18" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" />
+        <line x1="598.7873" y1="31.10374" x2="634.7873" y2="31.10374" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+        <path d="M600.5934 23.87822 Q617.692 17.38073 632.7388 23.87822" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+        <path d="M601.0446 39.7177 Q617.4592 44.16336 633.19 39.7177" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+        <line x1="616.666" y1="13.61901" x2="616.666" y2="49.52613" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+      </g>
+      <rect x="585" y="9" width="9" height="45" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" />
+    </g>
+    <g>
+      <rect x="567" y="-9" width="81" height="63" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" filter="url(#shadow1)" />
+      <g>
+        <ellipse cx="607.7873" cy="22.10363" rx="18" ry="18" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" />
+        <ellipse cx="607.7873" cy="22.10363" rx="9" ry="18" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" />
+        <line x1="589.7873" y1="22.10372" x2="625.7873" y2="22.10372" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+        <path d="M591.5934 14.87822 Q608.692 8.380732 623.7388 14.87822" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+        <path d="M592.0446 30.7177 Q608.4592 35.16336 624.19 30.7177" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+        <line x1="607.666" y1="4.619013" x2="607.666" y2="40.52616" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+      </g>
+      <rect x="576" y="0" width="9" height="45" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" />
+    </g>
+    <text x="571.9727" y="-10.12031" font-size="14" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">precip&lt;Prod&gt;</text>
+    <text x="575.6685" y="88.87968" font-size="14" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">airportTracks</text>
+    <text x="569.7036" y="439.8797" font-size="14" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">adsbFlights</text>
+    <text x="329.0483" y="538.8797" font-size="14" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">testAircraft</text>
+    <text x="573.9966" y="538.8797" font-size="14" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">simFlights</text>
+    <text x="569.7104" y="-100.1203" font-size="14" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">viewerSync</text>
+    <text x="579.6128" y="-130.5781" font-size="14" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">raceViewer</text>
+    <line x1="660.1726" y1="-67.5" x2="752.8274" y2="-67.5" marker-start="url(#marker25)" marker-end="url(#marker26)" opacity="1" stroke="#0000FF" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    <g>
+      <g>
+        <path d="M-96.69354 472.5652 L-94.87044 472.5561 L-93.07163 472.5302 L-91.29861 472.4877 L-89.55445 472.4285 L-87.84065 472.3543 L-86.16025 472.263 L-84.51324 472.1583 L-82.90567 472.0387 L-81.33607 471.9048 L-79.809 471.756 L-78.32593 471.5951 L-76.88839 471.4208 L-75.49944 471.234 L-74.16058 471.0351 L-72.87635 470.8242 L-71.64527 470.6024 L-70.47187 470.3689 L-69.35918 470.1258 L-68.30723 469.8723 L-67.31902 469.6096 L-66.3976 469.3378 L-65.54449 469.0572 L-64.76273 468.7675 L-64.05383 468.4698 L-63.41931 468.1662 L-62.86221 467.8535 L-62.38404 467.5363 L-61.98936 467.2115 L-61.67818 466.8805 L-61.452 466.5448 L-61.31538 466.2034 L-61.26984 465.859 C-61.26984 462.1533 -77.13127 459.1523 -96.69354 459.1523 C-116.2543 459.1523 -132.1107 462.1533 -132.1107 465.859 C-132.1107 469.5642 -116.2543 472.5652 -96.69354 472.5652 Z " opacity="1" fill="#FFFFFF" fill-opacity="1" />
+        <path d="M-96.69354 472.5652 L-94.87044 472.5561 L-93.07163 472.5302 L-91.29861 472.4877 L-89.55445 472.4285 L-87.84065 472.3543 L-86.16025 472.263 L-84.51324 472.1583 L-82.90567 472.0387 L-81.33607 471.9048 L-79.809 471.756 L-78.32593 471.5951 L-76.88839 471.4208 L-75.49944 471.234 L-74.16058 471.0351 L-72.87635 470.8242 L-71.64527 470.6024 L-70.47187 470.3689 L-69.35918 470.1258 L-68.30723 469.8723 L-67.31902 469.6096 L-66.3976 469.3378 L-65.54449 469.0572 L-64.76273 468.7675 L-64.05383 468.4698 L-63.41931 468.1662 L-62.86221 467.8535 L-62.38404 467.5363 L-61.98936 467.2115 L-61.67818 466.8805 L-61.452 466.5448 L-61.31538 466.2034 L-61.26984 465.859 C-61.26984 462.1533 -77.13127 459.1523 -96.69354 459.1523 C-116.2543 459.1523 -132.1107 462.1533 -132.1107 465.859 C-132.1107 469.5642 -116.2543 472.5652 -96.69354 472.5652 Z " opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="0.14999" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+        <path d="M-96.5038 484.3355 L-94.68069 484.293 L-92.88339 484.1688 L-91.11343 483.9673 L-89.3723 483.6935 L-87.66305 483.352 L-85.98719 482.9484 L-84.34778 482.4852 L-82.74477 481.9691 L-81.18277 481.4045 L-79.66327 480.7975 L-78.18777 480.1492 L-76.75784 479.4658 L-75.378 478.7541 L-74.04824 478.0178 L-72.77162 477.2603 L-71.55116 476.4861 L-70.38686 475.703 L-69.28176 474.9134 L-68.23891 474.1212 L-67.25981 473.3333 L-66.34598 472.5532 L-65.50047 471.7864 L-64.7263 471.0368 L-64.02347 470.3097 L-63.39654 469.6084 L-62.84399 468.9405 L-62.37189 468.3072 L-61.98026 467.7168 L-61.67363 467.1719 L-61.45048 466.677 L-61.31538 466.2384 L-61.26984 465.859 C-61.26984 462.1533 -77.13127 459.1523 -96.69354 459.1523 C-116.2543 459.1523 -132.1107 462.1533 -132.1107 465.859 C-132.1107 469.5642 -116.0645 484.3355 -96.5038 484.3355 Z " opacity="1" fill="#036998" fill-opacity="1" />
+        <path d="M-96.69354 472.5652 L-94.87044 472.5561 L-93.07163 472.5302 L-91.29861 472.4877 L-89.55445 472.4285 L-87.84065 472.3543 L-86.16025 472.263 L-84.51324 472.1583 L-82.90567 472.0387 L-81.33607 471.9048 L-79.809 471.756 L-78.32593 471.5951 L-76.88839 471.4208 L-75.49944 471.234 L-74.16058 471.0351 L-72.87635 470.8242 L-71.64527 470.6024 L-70.47187 470.3689 L-69.35918 470.1258 L-68.30723 469.8723 L-67.31902 469.6096 L-66.3976 469.3378 L-65.54449 469.0572 L-64.76273 468.7675 L-64.05383 468.4698 L-63.41931 468.1662 L-62.86221 467.8535 L-62.38404 467.5363 L-61.98936 467.2115 L-61.67818 466.8805 L-61.452 466.5448 L-61.31538 466.2034 L-61.26984 465.859 C-61.26984 462.1533 -77.13127 459.1523 -96.69354 459.1523 C-116.2543 459.1523 -132.1107 462.1533 -132.1107 465.859 C-132.1107 469.5642 -116.2543 472.5652 -96.69354 472.5652 Z " opacity="1" fill="#FFFFFF" fill-opacity="1" />
+        <path d="M-96.69354 472.5652 L-94.87044 472.5561 L-93.07163 472.5302 L-91.29861 472.4877 L-89.55445 472.4285 L-87.84065 472.3543 L-86.16025 472.263 L-84.51324 472.1583 L-82.90567 472.0387 L-81.33607 471.9048 L-79.809 471.756 L-78.32593 471.5951 L-76.88839 471.4208 L-75.49944 471.234 L-74.16058 471.0351 L-72.87635 470.8242 L-71.64527 470.6024 L-70.47187 470.3689 L-69.35918 470.1258 L-68.30723 469.8723 L-67.31902 469.6096 L-66.3976 469.3378 L-65.54449 469.0572 L-64.76273 468.7675 L-64.05383 468.4698 L-63.41931 468.1662 L-62.86221 467.8535 L-62.38404 467.5363 L-61.98936 467.2115 L-61.67818 466.8805 L-61.452 466.5448 L-61.31538 466.2034 L-61.26984 465.859 C-61.26984 462.1533 -77.13127 459.1523 -96.69354 459.1523 C-116.2543 459.1523 -132.1107 462.1533 -132.1107 465.859 C-132.1107 469.5642 -116.2543 472.5652 -96.69354 472.5652 Z " opacity="1" stroke="#036998" stroke-opacity="1" stroke-width="0.39999" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+        <path d="M-105.9016 460.8358 C-111.4878 461.1744 -116.4501 461.8269 -120.3225 462.6924" opacity="1" stroke="#036998" stroke-opacity="1" stroke-width="0.375" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+        <path d="M-105.5221 462.2355 C-110.9474 462.6332 -115.6911 463.357 -119.2789 464.3059" opacity="1" stroke="#036998" stroke-opacity="1" stroke-width="0.375" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+        <path d="M-105.1366 463.7414 C-110.4434 464.2042 -115.0156 465.0164 -118.3183 466.0608" opacity="1" stroke="#036998" stroke-opacity="1" stroke-width="0.375" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+        <path d="M-104.3715 465.4975 C-109.5539 466.0016 -113.9712 466.8729 -117.0436 467.9932" opacity="1" stroke="#036998" stroke-opacity="1" stroke-width="0.375" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+        <path d="M-104.0042 467.1339 C-108.9194 467.6972 -113.0286 468.6457 -115.7685 469.8315" opacity="1" stroke="#036998" stroke-opacity="1" stroke-width="0.375" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+        <path d="M-103.3347 469.0664 C-107.2359 469.6005 -110.5451 470.4005 -112.9223 471.3857" opacity="1" stroke="#036998" stroke-opacity="1" stroke-width="0.375" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+        <path d="M-103.1086 470.8638 C-104.6797 471.1473 -106.1263 471.4858 -107.4196 471.8656" opacity="1" stroke="#036998" stroke-opacity="1" stroke-width="0.375" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+        <path d="M-132.2055 466.4994 L-96.5038 448.5915 L-61.26984 465.859" opacity="1" stroke="#036998" stroke-opacity="1" stroke-width="0.39999" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+        <path d="M-96.31405 453.1214 L-96.18957 453.1198 L-96.06662 453.1152 L-95.94517 453.1077 L-95.82676 453.0973 L-95.70988 453.0835 L-95.59452 453.0681 L-95.48219 453.0485 L-95.37288 453.0272 L-95.26511 453.0031 L-95.1619 452.9755 L-95.06019 452.9467 L-94.96152 452.9163 L-94.86741 452.8817 L-94.7748 452.8467 L-94.68829 452.8087 L-94.60327 452.7679 L-94.52282 452.7266 L-94.44692 452.6828 L-94.37557 452.637 L-94.30727 452.5903 L-94.24503 452.5398 L-94.18736 452.4898 L-94.13271 452.4381 L-94.08412 452.3835 L-94.04161 452.3289 L-94.00368 452.273 L-93.97028 452.2151 L-93.94296 452.1558 L-93.92169 452.0966 L-93.90653 452.0362 L-93.8974 451.9753 L-93.89438 451.9115 C-93.89438 451.2482 -94.97974 450.7032 -96.31405 450.7032 C-97.64835 450.7032 -98.72612 451.2482 -98.72612 451.9115 C-98.72612 452.5823 -97.64835 453.1214 -96.31405 453.1214 Z " opacity="1" fill="#036998" fill-opacity="1" />
+        <path d="M-96.31405 446.125 L-97.07303 470.9822 L-95.3653 470.9822 Z " opacity="1" fill="#036998" fill-opacity="1" />
+        <path d="M-87.01639 488.6286 L-87.01639 484.644 L-104.0937 484.644 L-104.0937 488.6286 Z " opacity="1" fill="#036998" fill-opacity="1" />
+        <path d="M-100.868 488.2492 L-90.05235 488.2492 L-90.05235 495.4595 C-90.05235 495.4595 -101.0577 498.875 -100.868 498.875 C-100.6783 498.875 -100.868 488.2492 -100.868 488.2492 Z " opacity="1" fill="#036998" fill-opacity="1" />
+      </g>
+    </g>
+    <g>
+      <g>
+        <path d="M-177.4454 153.0501 L-205.7841 153.0501 L-205.7841 216 L-177.4454 216" opacity="1" fill="#026C9B" fill-opacity="1" />
+        <path d="M-177.4454 153.0501 L-205.7841 153.0501 L-205.7841 216 L-177.4454 216" opacity="1" stroke="#FFFFFF" stroke-opacity="1" stroke-width="0.4" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+        <path d="M-177.4454 216 L-168.3951 206.9499 L-168.3951 144 L-196.734 144 L-205.7841 153.0501 L-177.4454 153.0501 Z " opacity="1" fill="#026C9B" fill-opacity="1" />
+        <path d="M-177.4454 216 L-168.3951 206.9499 L-168.3951 144 L-196.734 144 L-205.7841 153.0501 L-177.4454 153.0501 Z " opacity="1" stroke="#FFFFFF" stroke-opacity="1" stroke-width="0.4" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+        <line x1="-177.4454" y1="153.0501" x2="-168.3951" y2="144" opacity="1" stroke="#026C9B" stroke-opacity="1" stroke-width="0" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+        <line x1="-177.4454" y1="153.0501" x2="-168.3951" y2="144" opacity="1" stroke="#FFFFFF" stroke-opacity="1" stroke-width="0.4" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+        <path d="M-189.0576 181.8421 L-189.0576 179.7701 L-203.3309 179.7701 L-203.3309 181.8421 Z " opacity="1" fill="#026C9B" fill-opacity="1" />
+        <path d="M-203.3309 181.8421 L-189.0576 181.8421 L-189.0576 179.7701 L-203.3309 179.7701 Z " opacity="1" stroke="#FFFFFF" stroke-opacity="1" stroke-width="0.4" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+        <path d="M-189.0576 186.1372 L-189.0576 184.0652 L-203.3309 184.0652 L-203.3309 186.1372 Z " opacity="1" fill="#026C9B" fill-opacity="1" />
+        <path d="M-203.3309 186.1372 L-189.0576 186.1372 L-189.0576 184.0652 L-203.3309 184.0652 Z " opacity="1" stroke="#FFFFFF" stroke-opacity="1" stroke-width="0.4" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+        <path d="M-189.0576 190.4395 L-189.0576 188.3675 L-203.3309 188.3675 L-203.3309 190.4395 Z " opacity="1" fill="#026C9B" fill-opacity="1" />
+        <path d="M-203.3309 190.4395 L-189.0576 190.4395 L-189.0576 188.3675 L-203.3309 188.3675 Z " opacity="1" stroke="#FFFFFF" stroke-opacity="1" stroke-width="0.4" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+        <path d="M-189.0576 194.7346 L-189.0576 192.6627 L-203.3309 192.6627 L-203.3309 194.7346 Z " opacity="1" fill="#026C9B" fill-opacity="1" />
+        <path d="M-203.3309 194.7346 L-189.0576 194.7346 L-189.0576 192.6627 L-203.3309 192.6627 Z " opacity="1" stroke="#FFFFFF" stroke-opacity="1" stroke-width="0.4" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+        <path d="M-189.0576 199.0288 L-189.0576 196.9573 L-203.3309 196.9573 L-203.3309 199.0288 Z " opacity="1" fill="#026C9B" fill-opacity="1" />
+        <path d="M-203.3309 199.0288 L-189.0576 199.0288 L-189.0576 196.9573 L-203.3309 196.9573 Z " opacity="1" stroke="#FFFFFF" stroke-opacity="1" stroke-width="0.4" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+        <path d="M-189.0576 203.3239 L-189.0576 201.252 L-203.3309 201.252 L-203.3309 203.3239 Z " opacity="1" fill="#026C9B" fill-opacity="1" />
+        <path d="M-203.3309 203.3239 L-189.0576 203.3239 L-189.0576 201.252 L-203.3309 201.252 Z " opacity="1" stroke="#FFFFFF" stroke-opacity="1" stroke-width="0.4" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+        <path d="M-189.0576 207.6262 L-189.0576 205.5542 L-203.3309 205.5542 L-203.3309 207.6262 Z " opacity="1" fill="#026C9B" fill-opacity="1" />
+        <path d="M-203.3309 207.6262 L-189.0576 207.6262 L-189.0576 205.5542 L-203.3309 205.5542 Z " opacity="1" stroke="#FFFFFF" stroke-opacity="1" stroke-width="0.4" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+        <path d="M-189.0576 211.9137 L-189.0576 209.8418 L-203.3309 209.8418 L-203.3309 211.9137 Z " opacity="1" fill="#026C9B" fill-opacity="1" />
+        <path d="M-203.3309 211.9137 L-189.0576 211.9137 L-189.0576 209.8418 L-203.3309 209.8418 Z " opacity="1" stroke="#FFFFFF" stroke-opacity="1" stroke-width="0.4" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+        <path d="M-187.3374 160.3804 L-187.3558 160.653 L-187.4111 160.9237 L-187.5031 161.1887 L-187.6284 161.4488 L-187.7886 161.7067 L-187.982 161.9571 L-188.2085 162.204 L-188.4646 162.4453 L-188.7518 162.679 L-189.0686 162.9091 L-189.413 163.1302 L-189.7851 163.3457 L-190.1847 163.5536 L-190.6102 163.7544 L-191.0614 163.9461 L-191.5366 164.1303 L-192.0338 164.3053 L-192.5532 164.4727 L-193.0947 164.6295 L-193.6564 164.7788 L-194.2384 164.9148 L-194.8388 165.0438 L-195.4558 165.1597 L-196.0912 165.2664 L-196.7413 165.3625 L-197.408 165.4454 L-198.0878 165.5173 L-198.7811 165.576 L-199.4868 165.622 L-200.2038 165.6554 L-200.9317 165.6756 L-201.6689 165.6827 C-209.5827 165.6827 -216 163.3087 -216 160.3804 L-216 172.6113 C-216 175.5326 -209.5827 177.9137 -201.6689 177.9137 C-193.7559 177.9137 -187.3374 175.5326 -187.3374 172.6113 Z " opacity="1" fill="#026C9B" fill-opacity="1" />
+        <path d="M-187.3374 160.3804 L-187.3558 160.653 L-187.4111 160.9237 L-187.5031 161.1887 L-187.6284 161.4488 L-187.7886 161.7067 L-187.982 161.9571 L-188.2085 162.204 L-188.4646 162.4453 L-188.7518 162.679 L-189.0686 162.9091 L-189.413 163.1302 L-189.7851 163.3457 L-190.1847 163.5536 L-190.6102 163.7544 L-191.0614 163.9461 L-191.5366 164.1303 L-192.0338 164.3053 L-192.5532 164.4727 L-193.0947 164.6295 L-193.6564 164.7788 L-194.2384 164.9148 L-194.8388 165.0438 L-195.4558 165.1597 L-196.0912 165.2664 L-196.7413 165.3625 L-197.408 165.4454 L-198.0878 165.5173 L-198.7811 165.576 L-199.4868 165.622 L-200.2038 165.6554 L-200.9317 165.6756 L-201.6689 165.6827 C-209.5827 165.6827 -216 163.3087 -216 160.3804 L-216 172.6113 C-216 175.5326 -209.5827 177.9137 -201.6689 177.9137 C-193.7559 177.9137 -187.3374 175.5326 -187.3374 172.6113 Z " opacity="1" stroke="#FFFFFF" stroke-opacity="1" stroke-width="0.4" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+        <path d="M-201.6689 165.6827 L-200.9317 165.6756 L-200.2038 165.6554 L-199.4868 165.622 L-198.7811 165.576 L-198.0878 165.5173 L-197.408 165.4454 L-196.7413 165.3625 L-196.0912 165.2664 L-195.4558 165.1597 L-194.8388 165.0438 L-194.2384 164.9148 L-193.6564 164.7788 L-193.0947 164.6295 L-192.5532 164.4727 L-192.0338 164.3053 L-191.5366 164.1303 L-191.0614 163.9461 L-190.6102 163.7544 L-190.1847 163.5536 L-189.7851 163.3457 L-189.413 163.1302 L-189.0686 162.9091 L-188.7518 162.679 L-188.4646 162.4453 L-188.2085 162.204 L-187.982 161.9571 L-187.7886 161.7067 L-187.6284 161.4488 L-187.5031 161.1887 L-187.4111 160.9237 L-187.3558 160.653 L-187.3374 160.3804 C-187.3374 157.4465 -193.7559 155.0725 -201.6689 155.0725 C-209.5827 155.0725 -216 157.4465 -216 160.3804 C-216 163.3087 -209.5827 165.6827 -201.6689 165.6827 Z " opacity="1" fill="#026C9B" fill-opacity="1" />
+        <path d="M-201.6689 165.6827 L-200.9317 165.6756 L-200.2038 165.6554 L-199.4868 165.622 L-198.7811 165.576 L-198.0878 165.5173 L-197.408 165.4454 L-196.7413 165.3625 L-196.0912 165.2664 L-195.4558 165.1597 L-194.8388 165.0438 L-194.2384 164.9148 L-193.6564 164.7788 L-193.0947 164.6295 L-192.5532 164.4727 L-192.0338 164.3053 L-191.5366 164.1303 L-191.0614 163.9461 L-190.6102 163.7544 L-190.1847 163.5536 L-189.7851 163.3457 L-189.413 163.1302 L-189.0686 162.9091 L-188.7518 162.679 L-188.4646 162.4453 L-188.2085 162.204 L-187.982 161.9571 L-187.7886 161.7067 L-187.6284 161.4488 L-187.5031 161.1887 L-187.4111 160.9237 L-187.3558 160.653 L-187.3374 160.3804 C-187.3374 157.4465 -193.7559 155.0725 -201.6689 155.0725 C-209.5827 155.0725 -216 157.4465 -216 160.3804 C-216 163.3087 -209.5827 165.6827 -201.6689 165.6827 Z " opacity="1" stroke="#FFFFFF" stroke-opacity="1" stroke-width="0.4" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+        <path d="M-171.992 171.4307 L-172.0104 171.7034 L-172.0657 171.9739 L-172.1578 172.2395 L-172.283 172.499 L-172.4433 172.757 L-172.6366 173.0074 L-172.8613 173.2543 L-173.1192 173.4956 L-173.4065 173.7292 L-173.7214 173.9594 L-174.0677 174.1805 L-174.4397 174.3959 L-174.8393 174.6044 L-175.2648 174.8052 L-175.716 174.9964 L-176.1912 175.1805 L-176.6885 175.3556 L-177.2078 175.523 L-177.7493 175.6798 L-178.311 175.829 L-178.893 175.9651 L-179.4934 176.0941 L-180.1104 176.2104 L-180.7458 176.3172 L-181.396 176.4128 L-182.0627 176.4957 L-182.7423 176.5676 L-183.4348 176.6262 L-184.142 176.6723 L-184.8584 176.7057 L-185.5859 176.7259 L-186.3244 176.7335 C-194.2366 176.7335 -200.6547 174.359 -200.6547 171.4307 L-200.6547 183.6621 C-200.6547 186.5829 -194.2366 188.9644 -186.3244 188.9644 C-178.4105 188.9644 -171.992 186.5829 -171.992 183.6621 Z " opacity="1" fill="#026C9B" fill-opacity="1" />
+        <path d="M-171.992 171.4307 L-172.0104 171.7034 L-172.0657 171.9739 L-172.1578 172.2395 L-172.283 172.499 L-172.4433 172.757 L-172.6366 173.0074 L-172.8613 173.2543 L-173.1192 173.4956 L-173.4065 173.7292 L-173.7214 173.9594 L-174.0677 174.1805 L-174.4397 174.3959 L-174.8393 174.6044 L-175.2648 174.8052 L-175.716 174.9964 L-176.1912 175.1805 L-176.6885 175.3556 L-177.2078 175.523 L-177.7493 175.6798 L-178.311 175.829 L-178.893 175.9651 L-179.4934 176.0941 L-180.1104 176.2104 L-180.7458 176.3172 L-181.396 176.4128 L-182.0627 176.4957 L-182.7423 176.5676 L-183.4348 176.6262 L-184.142 176.6723 L-184.8584 176.7057 L-185.5859 176.7259 L-186.3244 176.7335 C-194.2366 176.7335 -200.6547 174.359 -200.6547 171.4307 L-200.6547 183.6621 C-200.6547 186.5829 -194.2366 188.9644 -186.3244 188.9644 C-178.4105 188.9644 -171.992 186.5829 -171.992 183.6621 Z " opacity="1" stroke="#FFFFFF" stroke-opacity="1" stroke-width="0.4" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+        <path d="M-186.3244 176.7335 L-185.5859 176.7259 L-184.8584 176.7057 L-184.142 176.6723 L-183.4348 176.6262 L-182.7423 176.5676 L-182.0627 176.4957 L-181.396 176.4128 L-180.7458 176.3172 L-180.1104 176.2104 L-179.4934 176.0941 L-178.893 175.9651 L-178.311 175.829 L-177.7493 175.6798 L-177.2078 175.523 L-176.6885 175.3556 L-176.1912 175.1805 L-175.716 174.9964 L-175.2648 174.8052 L-174.8393 174.6044 L-174.4397 174.3959 L-174.0677 174.1805 L-173.7214 173.9594 L-173.4065 173.7292 L-173.1192 173.4956 L-172.8613 173.2543 L-172.6366 173.0074 L-172.4433 172.757 L-172.283 172.499 L-172.1578 172.2395 L-172.0657 171.9739 L-172.0104 171.7034 L-171.992 171.4307 C-171.992 168.4967 -178.4105 166.1228 -186.3244 166.1228 C-194.2366 166.1228 -200.6547 168.4967 -200.6547 171.4307 C-200.6547 174.359 -194.2366 176.7335 -186.3244 176.7335 Z " opacity="1" fill="#026C9B" fill-opacity="1" />
+        <path d="M-186.3244 176.7335 L-185.5859 176.7259 L-184.8584 176.7057 L-184.142 176.6723 L-183.4348 176.6262 L-182.7423 176.5676 L-182.0627 176.4957 L-181.396 176.4128 L-180.7458 176.3172 L-180.1104 176.2104 L-179.4934 176.0941 L-178.893 175.9651 L-178.311 175.829 L-177.7493 175.6798 L-177.2078 175.523 L-176.6885 175.3556 L-176.1912 175.1805 L-175.716 174.9964 L-175.2648 174.8052 L-174.8393 174.6044 L-174.4397 174.3959 L-174.0677 174.1805 L-173.7214 173.9594 L-173.4065 173.7292 L-173.1192 173.4956 L-172.8613 173.2543 L-172.6366 173.0074 L-172.4433 172.757 L-172.283 172.499 L-172.1578 172.2395 L-172.0657 171.9739 L-172.0104 171.7034 L-171.992 171.4307 C-171.992 168.4967 -178.4105 166.1228 -186.3244 166.1228 C-194.2366 166.1228 -200.6547 168.4967 -200.6547 171.4307 C-200.6547 174.359 -194.2366 176.7335 -186.3244 176.7335 Z " opacity="1" stroke="#FFFFFF" stroke-opacity="1" stroke-width="0.4" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+      </g>
+    </g>
+    <g>
+      <g>
+        <path d="M-63.01593 239.7114 L-63.01593 218.2331 L-125.153 218.2331 L-125.153 239.7114 Z " opacity="1" fill="#00A6D4" fill-opacity="1" />
+        <path d="M-125.153 239.7114 L-63.01593 239.7114 L-63.01593 218.2331 L-125.153 218.2331 Z " opacity="1" stroke="#FFFFFF" stroke-opacity="1" stroke-width="0.39999" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+        <path d="M-125.3161 218.3356 L-100.217 198 L-42.2385 198 L-63.07681 218.3356 Z " opacity="1" fill="#00A6D4" fill-opacity="1" />
+        <path d="M-125.3161 218.3356 L-100.217 198 L-42.2385 198 L-63.07681 218.3356 Z " opacity="1" stroke="#FFFFFF" stroke-opacity="1" stroke-width="0.39999" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+        <path d="M-63.05071 240.3432 L-42.29938 217.9216 L-42.28547 198.033 L-63.05071 218.3078 Z " opacity="1" fill="#00A6D4" fill-opacity="1" />
+        <path d="M-63.05071 240.3432 L-42.29938 217.9216 L-42.28547 198.033 L-63.05071 218.3078 Z " opacity="1" stroke="#FFFFFF" stroke-opacity="1" stroke-width="0.39999" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+        <path d="M-88.88988 213.0426 L-90.09879 214.0339 L-105.5919 214.0339 L-107.1399 215.5768 L-111.3394 213.7487 L-102.894 211.3361 L-104.3882 213.0426 Z " opacity="1" fill="#FFFFFF" fill-opacity="1" />
+        <path d="M-76.71391 205.4326 L-77.92281 206.4241 L-93.41586 206.4241 L-94.96396 207.967 L-99.16293 206.1387 L-90.71803 203.728 L-92.21218 205.4326 Z " opacity="1" fill="#FFFFFF" fill-opacity="1" />
+        <path d="M-86.15898 210.3586 L-84.9553 209.367 L-69.45702 209.367 L-67.90893 207.8242 L-63.70996 209.6525 L-72.15488 212.0701 L-70.66071 210.3586 Z " opacity="1" fill="#FFFFFF" fill-opacity="1" />
+        <path d="M-78.11415 202.7486 L-76.91046 201.7572 L-61.41217 201.7572 L-59.86409 200.2144 L-55.66511 202.0424 L-64.11002 204.4603 L-62.61586 202.7486 Z " opacity="1" fill="#FFFFFF" fill-opacity="1" />
+        <path d="M-66.20952 235.9745 L-66.20952 221.3587 L-80.81721 221.3587 L-80.81721 235.9745 Z " opacity="1" fill="#00A6D4" fill-opacity="1" />
+        <path d="M-80.81721 235.9745 L-66.20952 235.9745 L-66.20952 221.3587 L-80.81721 221.3587 Z " opacity="1" stroke="#FFFFFF" stroke-opacity="1" stroke-width="0.39999" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+        <path d="M-104.2247 235.3493 L-103.4054 235.2875 L-102.5966 235.2103 L-101.7999 235.1186 L-101.0172 235.0128 L-100.2501 234.8929 L-99.49864 234.7598 L-98.76286 234.6138 L-98.04622 234.4555 L-97.34697 234.2849 L-96.66859 234.1029 L-96.00935 233.9099 L-95.37273 233.7061 L-94.75697 233.4923 L-94.1673 233.269 L-93.60024 233.0361 L-93.05928 232.7944 L-92.54442 232.5445 L-92.05737 232.2867 L-91.59991 232.0213 L-91.17027 231.7488 L-90.7702 231.47 L-90.40319 231.1851 L-90.06748 230.8943 L-89.76656 230.5986 L-89.49868 230.2981 L-89.26559 229.9931 L-89.06905 229.6844 L-88.91076 229.3725 L-88.789 229.0574 L-88.70724 228.7399 L-88.6655 228.4206 L-88.6655 228.0993 C-88.88988 224.675 -96.22156 222.3572 -105.0335 222.9365 C-113.8536 223.5069 -120.8181 226.7542 -120.5939 230.1854 C-120.3697 233.6099 -113.0449 235.9267 -104.2247 235.3493 Z " opacity="1" fill="#00A6D4" fill-opacity="1" />
+        <path d="M-104.2247 235.3493 L-103.4054 235.2875 L-102.5966 235.2103 L-101.7999 235.1186 L-101.0172 235.0128 L-100.2501 234.8929 L-99.49864 234.7598 L-98.76286 234.6138 L-98.04622 234.4555 L-97.34697 234.2849 L-96.66859 234.1029 L-96.00935 233.9099 L-95.37273 233.7061 L-94.75697 233.4923 L-94.1673 233.269 L-93.60024 233.0361 L-93.05928 232.7944 L-92.54442 232.5445 L-92.05737 232.2867 L-91.59991 232.0213 L-91.17027 231.7488 L-90.7702 231.47 L-90.40319 231.1851 L-90.06748 230.8943 L-89.76656 230.5986 L-89.49868 230.2981 L-89.26559 229.9931 L-89.06905 229.6844 L-88.91076 229.3725 L-88.789 229.0574 L-88.70724 228.7399 L-88.6655 228.4206 L-88.6655 228.0993 C-88.88988 224.675 -96.22156 222.3572 -105.0335 222.9365 C-113.8536 223.5069 -120.8181 226.7542 -120.5939 230.1854 C-120.3697 233.6099 -113.0449 235.9267 -104.2247 235.3493 Z " opacity="1" stroke="#FFFFFF" stroke-opacity="1" stroke-width="0.39999" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+        <path d="M-108.4375 226.9513 L-106.9903 228.8467 L-111.8967 230.3213 L-110.8707 229.3429 L-118.6574 228.5273 L-116.816 226.9513 L-109.3012 227.7257 Z " opacity="1" fill="#FFFFFF" fill-opacity="1" />
+        <path d="M-101.1128 231.293 L-102.1391 229.3087 L-97.70876 228.1198 L-98.43584 228.8672 L-90.86761 229.6555 L-92.56529 231.2113 L-100.1074 230.3008 Z " opacity="1" fill="#FFFFFF" fill-opacity="1" />
+        <path d="M-103.9533 225.5787 L-99.00638 223.8662 L-98.80982 226.0201 L-100.0813 225.8641 L-102.4052 228.0654 L-104.7761 227.8752 L-102.3635 225.7144 Z " opacity="1" fill="#FFFFFF" fill-opacity="1" />
+        <path d="M-105.6058 233.4467 L-110.3406 234.6631 L-110.6668 232.4547 L-109.2671 232.6653 L-106.7729 230.2398 L-104.416 230.4842 L-107.0721 233.1207 Z " opacity="1" fill="#FFFFFF" fill-opacity="1" />
+      </g>
+    </g>
+    <g>
+      <g>
+        <path d="M-177.4454 261.0501 L-205.7841 261.0501 L-205.7841 324 L-177.4454 324" opacity="1" fill="#026C9B" fill-opacity="1" />
+        <path d="M-177.4454 261.0501 L-205.7841 261.0501 L-205.7841 324 L-177.4454 324" opacity="1" stroke="#FFFFFF" stroke-opacity="1" stroke-width="0.4" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+        <path d="M-177.4454 324 L-168.3951 314.9499 L-168.3951 252 L-196.7339 252 L-205.7841 261.0501 L-177.4454 261.0501 Z " opacity="1" fill="#026C9B" fill-opacity="1" />
+        <path d="M-177.4454 324 L-168.3951 314.9499 L-168.3951 252 L-196.7339 252 L-205.7841 261.0501 L-177.4454 261.0501 Z " opacity="1" stroke="#FFFFFF" stroke-opacity="1" stroke-width="0.4" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+        <line x1="-177.4454" y1="261.0501" x2="-168.3951" y2="252" opacity="1" stroke="#026C9B" stroke-opacity="1" stroke-width="0" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+        <line x1="-177.4454" y1="261.0501" x2="-168.3951" y2="252" opacity="1" stroke="#FFFFFF" stroke-opacity="1" stroke-width="0.4" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+        <path d="M-189.0576 289.8421 L-189.0576 287.7701 L-203.3309 287.7701 L-203.3309 289.8421 Z " opacity="1" fill="#026C9B" fill-opacity="1" />
+        <path d="M-203.3309 289.8421 L-189.0576 289.8421 L-189.0576 287.7701 L-203.3309 287.7701 Z " opacity="1" stroke="#FFFFFF" stroke-opacity="1" stroke-width="0.4" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+        <path d="M-189.0576 294.1372 L-189.0576 292.0653 L-203.3309 292.0653 L-203.3309 294.1372 Z " opacity="1" fill="#026C9B" fill-opacity="1" />
+        <path d="M-203.3309 294.1372 L-189.0576 294.1372 L-189.0576 292.0653 L-203.3309 292.0653 Z " opacity="1" stroke="#FFFFFF" stroke-opacity="1" stroke-width="0.4" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+        <path d="M-189.0576 298.4394 L-189.0576 296.3675 L-203.3309 296.3675 L-203.3309 298.4394 Z " opacity="1" fill="#026C9B" fill-opacity="1" />
+        <path d="M-203.3309 298.4394 L-189.0576 298.4394 L-189.0576 296.3675 L-203.3309 296.3675 Z " opacity="1" stroke="#FFFFFF" stroke-opacity="1" stroke-width="0.4" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+        <path d="M-189.0576 302.7346 L-189.0576 300.6626 L-203.3309 300.6626 L-203.3309 302.7346 Z " opacity="1" fill="#026C9B" fill-opacity="1" />
+        <path d="M-203.3309 302.7346 L-189.0576 302.7346 L-189.0576 300.6626 L-203.3309 300.6626 Z " opacity="1" stroke="#FFFFFF" stroke-opacity="1" stroke-width="0.4" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+        <path d="M-189.0576 307.0287 L-189.0576 304.9573 L-203.3309 304.9573 L-203.3309 307.0287 Z " opacity="1" fill="#026C9B" fill-opacity="1" />
+        <path d="M-203.3309 307.0287 L-189.0576 307.0287 L-189.0576 304.9573 L-203.3309 304.9573 Z " opacity="1" stroke="#FFFFFF" stroke-opacity="1" stroke-width="0.4" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+        <path d="M-189.0576 311.324 L-189.0576 309.252 L-203.3309 309.252 L-203.3309 311.324 Z " opacity="1" fill="#026C9B" fill-opacity="1" />
+        <path d="M-203.3309 311.324 L-189.0576 311.324 L-189.0576 309.252 L-203.3309 309.252 Z " opacity="1" stroke="#FFFFFF" stroke-opacity="1" stroke-width="0.4" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+        <path d="M-189.0576 315.6262 L-189.0576 313.5542 L-203.3309 313.5542 L-203.3309 315.6262 Z " opacity="1" fill="#026C9B" fill-opacity="1" />
+        <path d="M-203.3309 315.6262 L-189.0576 315.6262 L-189.0576 313.5542 L-203.3309 313.5542 Z " opacity="1" stroke="#FFFFFF" stroke-opacity="1" stroke-width="0.4" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+        <path d="M-189.0576 319.9137 L-189.0576 317.8417 L-203.3309 317.8417 L-203.3309 319.9137 Z " opacity="1" fill="#026C9B" fill-opacity="1" />
+        <path d="M-203.3309 319.9137 L-189.0576 319.9137 L-189.0576 317.8417 L-203.3309 317.8417 Z " opacity="1" stroke="#FFFFFF" stroke-opacity="1" stroke-width="0.4" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+        <path d="M-187.3374 268.3804 L-187.3558 268.653 L-187.411 268.9237 L-187.5031 269.1887 L-187.6284 269.4488 L-187.7887 269.7068 L-187.982 269.9571 L-188.2085 270.204 L-188.4645 270.4453 L-188.7518 270.679 L-189.0686 270.9091 L-189.4131 271.1302 L-189.7851 271.3457 L-190.1848 271.5536 L-190.6102 271.7544 L-191.0614 271.9462 L-191.5366 272.1303 L-192.0339 272.3053 L-192.5532 272.4727 L-193.0947 272.6295 L-193.6564 272.7788 L-194.2384 272.9148 L-194.8388 273.0438 L-195.4558 273.1596 L-196.0912 273.2664 L-196.7413 273.3625 L-197.408 273.4454 L-198.0878 273.5173 L-198.7811 273.576 L-199.4868 273.6219 L-200.2038 273.6554 L-200.9317 273.6756 L-201.6689 273.6827 C-209.5827 273.6827 -216 271.3087 -216 268.3804 L-216 280.6114 C-216 283.5326 -209.5827 285.9137 -201.6689 285.9137 C-193.7559 285.9137 -187.3374 283.5326 -187.3374 280.6114 Z " opacity="1" fill="#026C9B" fill-opacity="1" />
+        <path d="M-187.3374 268.3804 L-187.3558 268.653 L-187.411 268.9237 L-187.5031 269.1887 L-187.6284 269.4488 L-187.7887 269.7068 L-187.982 269.9571 L-188.2085 270.204 L-188.4645 270.4453 L-188.7518 270.679 L-189.0686 270.9091 L-189.4131 271.1302 L-189.7851 271.3457 L-190.1848 271.5536 L-190.6102 271.7544 L-191.0614 271.9462 L-191.5366 272.1303 L-192.0339 272.3053 L-192.5532 272.4727 L-193.0947 272.6295 L-193.6564 272.7788 L-194.2384 272.9148 L-194.8388 273.0438 L-195.4558 273.1596 L-196.0912 273.2664 L-196.7413 273.3625 L-197.408 273.4454 L-198.0878 273.5173 L-198.7811 273.576 L-199.4868 273.6219 L-200.2038 273.6554 L-200.9317 273.6756 L-201.6689 273.6827 C-209.5827 273.6827 -216 271.3087 -216 268.3804 L-216 280.6114 C-216 283.5326 -209.5827 285.9137 -201.6689 285.9137 C-193.7559 285.9137 -187.3374 283.5326 -187.3374 280.6114 Z " opacity="1" stroke="#FFFFFF" stroke-opacity="1" stroke-width="0.4" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+        <path d="M-201.6689 273.6827 L-200.9317 273.6756 L-200.2038 273.6554 L-199.4868 273.6219 L-198.7811 273.576 L-198.0878 273.5173 L-197.408 273.4454 L-196.7413 273.3625 L-196.0912 273.2664 L-195.4558 273.1596 L-194.8388 273.0438 L-194.2384 272.9148 L-193.6564 272.7788 L-193.0947 272.6295 L-192.5532 272.4727 L-192.0339 272.3053 L-191.5366 272.1303 L-191.0614 271.9462 L-190.6102 271.7544 L-190.1848 271.5536 L-189.7851 271.3457 L-189.4131 271.1302 L-189.0686 270.9091 L-188.7518 270.679 L-188.4645 270.4453 L-188.2085 270.204 L-187.982 269.9571 L-187.7887 269.7068 L-187.6284 269.4488 L-187.5031 269.1887 L-187.411 268.9237 L-187.3558 268.653 L-187.3374 268.3804 C-187.3374 265.4465 -193.7559 263.0725 -201.6689 263.0725 C-209.5827 263.0725 -216 265.4465 -216 268.3804 C-216 271.3087 -209.5827 273.6827 -201.6689 273.6827 Z " opacity="1" fill="#026C9B" fill-opacity="1" />
+        <path d="M-201.6689 273.6827 L-200.9317 273.6756 L-200.2038 273.6554 L-199.4868 273.6219 L-198.7811 273.576 L-198.0878 273.5173 L-197.408 273.4454 L-196.7413 273.3625 L-196.0912 273.2664 L-195.4558 273.1596 L-194.8388 273.0438 L-194.2384 272.9148 L-193.6564 272.7788 L-193.0947 272.6295 L-192.5532 272.4727 L-192.0339 272.3053 L-191.5366 272.1303 L-191.0614 271.9462 L-190.6102 271.7544 L-190.1848 271.5536 L-189.7851 271.3457 L-189.4131 271.1302 L-189.0686 270.9091 L-188.7518 270.679 L-188.4645 270.4453 L-188.2085 270.204 L-187.982 269.9571 L-187.7887 269.7068 L-187.6284 269.4488 L-187.5031 269.1887 L-187.411 268.9237 L-187.3558 268.653 L-187.3374 268.3804 C-187.3374 265.4465 -193.7559 263.0725 -201.6689 263.0725 C-209.5827 263.0725 -216 265.4465 -216 268.3804 C-216 271.3087 -209.5827 273.6827 -201.6689 273.6827 Z " opacity="1" stroke="#FFFFFF" stroke-opacity="1" stroke-width="0.4" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+        <path d="M-171.992 279.4306 L-172.0105 279.7034 L-172.0657 279.9739 L-172.1577 280.2396 L-172.283 280.499 L-172.4432 280.757 L-172.6366 281.0074 L-172.8613 281.2542 L-173.1192 281.4956 L-173.4064 281.7292 L-173.7214 281.9594 L-174.0677 282.1805 L-174.4397 282.396 L-174.8393 282.6044 L-175.2648 282.8052 L-175.716 282.9964 L-176.1912 283.1805 L-176.6884 283.3556 L-177.2078 283.523 L-177.7493 283.6798 L-178.311 283.829 L-178.893 283.9651 L-179.4934 284.0941 L-180.1104 284.2104 L-180.7458 284.3172 L-181.3959 284.4128 L-182.0627 284.4957 L-182.7422 284.5675 L-183.4348 284.6262 L-184.142 284.6723 L-184.8584 284.7057 L-185.5859 284.7259 L-186.3244 284.7335 C-194.2366 284.7335 -200.6546 282.359 -200.6546 279.4306 L-200.6546 291.6621 C-200.6546 294.5829 -194.2366 296.9644 -186.3244 296.9644 C-178.4104 296.9644 -171.992 294.5829 -171.992 291.6621 Z " opacity="1" fill="#026C9B" fill-opacity="1" />
+        <path d="M-171.992 279.4306 L-172.0105 279.7034 L-172.0657 279.9739 L-172.1577 280.2396 L-172.283 280.499 L-172.4432 280.757 L-172.6366 281.0074 L-172.8613 281.2542 L-173.1192 281.4956 L-173.4064 281.7292 L-173.7214 281.9594 L-174.0677 282.1805 L-174.4397 282.396 L-174.8393 282.6044 L-175.2648 282.8052 L-175.716 282.9964 L-176.1912 283.1805 L-176.6884 283.3556 L-177.2078 283.523 L-177.7493 283.6798 L-178.311 283.829 L-178.893 283.9651 L-179.4934 284.0941 L-180.1104 284.2104 L-180.7458 284.3172 L-181.3959 284.4128 L-182.0627 284.4957 L-182.7422 284.5675 L-183.4348 284.6262 L-184.142 284.6723 L-184.8584 284.7057 L-185.5859 284.7259 L-186.3244 284.7335 C-194.2366 284.7335 -200.6546 282.359 -200.6546 279.4306 L-200.6546 291.6621 C-200.6546 294.5829 -194.2366 296.9644 -186.3244 296.9644 C-178.4104 296.9644 -171.992 294.5829 -171.992 291.6621 Z " opacity="1" stroke="#FFFFFF" stroke-opacity="1" stroke-width="0.4" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+        <path d="M-186.3244 284.7335 L-185.5859 284.7259 L-184.8584 284.7057 L-184.142 284.6723 L-183.4348 284.6262 L-182.7422 284.5675 L-182.0627 284.4957 L-181.3959 284.4128 L-180.7458 284.3172 L-180.1104 284.2104 L-179.4934 284.0941 L-178.893 283.9651 L-178.311 283.829 L-177.7493 283.6798 L-177.2078 283.523 L-176.6884 283.3556 L-176.1912 283.1805 L-175.716 282.9964 L-175.2648 282.8052 L-174.8393 282.6044 L-174.4397 282.396 L-174.0677 282.1805 L-173.7214 281.9594 L-173.4064 281.7292 L-173.1192 281.4956 L-172.8613 281.2542 L-172.6366 281.0074 L-172.4432 280.757 L-172.283 280.499 L-172.1577 280.2396 L-172.0657 279.9739 L-172.0105 279.7034 L-171.992 279.4306 C-171.992 276.4967 -178.4104 274.1228 -186.3244 274.1228 C-194.2366 274.1228 -200.6546 276.4967 -200.6546 279.4306 C-200.6546 282.359 -194.2366 284.7335 -186.3244 284.7335 Z " opacity="1" fill="#026C9B" fill-opacity="1" />
+        <path d="M-186.3244 284.7335 L-185.5859 284.7259 L-184.8584 284.7057 L-184.142 284.6723 L-183.4348 284.6262 L-182.7422 284.5675 L-182.0627 284.4957 L-181.3959 284.4128 L-180.7458 284.3172 L-180.1104 284.2104 L-179.4934 284.0941 L-178.893 283.9651 L-178.311 283.829 L-177.7493 283.6798 L-177.2078 283.523 L-176.6884 283.3556 L-176.1912 283.1805 L-175.716 282.9964 L-175.2648 282.8052 L-174.8393 282.6044 L-174.4397 282.396 L-174.0677 282.1805 L-173.7214 281.9594 L-173.4064 281.7292 L-173.1192 281.4956 L-172.8613 281.2542 L-172.6366 281.0074 L-172.4432 280.757 L-172.283 280.499 L-172.1577 280.2396 L-172.0657 279.9739 L-172.0105 279.7034 L-171.992 279.4306 C-171.992 276.4967 -178.4104 274.1228 -186.3244 274.1228 C-194.2366 274.1228 -200.6546 276.4967 -200.6546 279.4306 C-200.6546 282.359 -194.2366 284.7335 -186.3244 284.7335 Z " opacity="1" stroke="#FFFFFF" stroke-opacity="1" stroke-width="0.4" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+      </g>
+    </g>
+    <line x1="-168.3951" y1="272.8895" x2="-126.4087" y2="246.2353" marker-end="url(#marker27)" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    <line x1="-168.3951" y1="188.5997" x2="-124.6674" y2="204.3983" marker-end="url(#marker28)" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    <line x1="-59.85167" y1="236.8867" x2="62.21718" y2="327.2694" marker-end="url(#marker29)" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    <line x1="-43.70726" y1="219.4428" x2="59.82774" y2="220.1435" marker-end="url(#marker30)" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    <line x1="-67.1497" y1="198" x2="39.01097" y2="62.82722" marker-end="url(#marker31)" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    <line x1="-66.28738" y1="472.5" x2="59.82746" y2="472.5" marker-end="url(#marker32)" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    <g>
+      <rect x="72" y="-117" width="81" height="63" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" filter="url(#shadow1)" />
+      <g>
+        <path d="M97.84764 -92.99548 L125.8418 -92.99548 L125.8418 -80.99815 C125.8418 -80.99815 122.3426 -72 111.8447 -72 C101.3472 -72 97.84764 -80.99815 97.84764 -80.99815 Z " opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#C0C0C0" fill-opacity="1" />
+        <path d="M97.84764 -92.99548 L125.8418 -92.99548 L125.8418 -80.99815 C125.8418 -80.99815 122.3426 -72 111.8447 -72 C101.3472 -72 97.84764 -80.99815 97.84764 -80.99815 Z " opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="none" fill-opacity="0" />
+        <path d="M101.3472 -92.99548 C101.3472 -99.99418 104.8463 -108 111.8447 -108 C118.8434 -108 123.1645 -99.99418 123.1645 -92.99548" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="none" fill-opacity="0" />
+        <path d="M110.1448 -82.93759 L110.1448 -74.9752 L113.6441 -74.9752 L113.6441 -82.9946 C113.8845 -83.13916 114.1116 -83.31518 114.3195 -83.52271 C115.6859 -84.88933 115.6859 -87.10481 114.3195 -88.47144 C112.9528 -89.83788 110.737 -89.83788 109.3706 -88.47144 C108.0039 -87.10481 108.0039 -84.88933 109.3706 -83.52271 C109.6064 -83.28696 109.8672 -83.09196 110.1448 -82.93759 Z " opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" />
+        <path d="M110.1448 -82.93759 L110.1448 -74.9752 L113.6441 -74.9752 L113.6441 -82.9946 C113.8845 -83.13916 114.1116 -83.31518 114.3195 -83.52271 C115.6859 -84.88933 115.6859 -87.10481 114.3195 -88.47144 C112.9528 -89.83788 110.737 -89.83788 109.3706 -88.47144 C108.0039 -87.10481 108.0039 -84.88933 109.3706 -83.52271 C109.6064 -83.28696 109.8672 -83.09196 110.1448 -82.93759 Z " opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="none" fill-opacity="0" />
+      </g>
+    </g>
+    <path d="M72 -81 L-72 -81 L-72 167.8275" marker-end="url(#marker33)" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+    <text x="78.70361" y="-118.1203" font-size="14" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">portMapper</text>
+    <text x="-113.8223" y="268.8797" font-size="14" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">gateway</text>
+    <text x="-205.8017" y="352.8797" font-size="14" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">SWIM 
+</text>
+    <text x="-206.1982" y="368.8797" font-size="14" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">server</text>
+    <text x="-118.1431" y="532.8797" font-size="14" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">ADS-B
+</text>
+    <text x="-121.6465" y="548.8797" font-size="14" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">receiver</text>
+    <text x="-61.64304" y="70.87968" font-size="14" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">SSH</text>
+    <text x="559.5249" y="646.8797" font-size="14" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">remoteViewerX</text>
+    <g>
+      <rect x="576" y="657" width="81" height="63" opacity="1" stroke="#9C9C9C" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" filter="url(#shadow1)" />
+      <rect x="585" y="666" width="63" height="45" rx="9" ry="9" opacity="1" stroke="#9C9C9C" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" />
+      <g>
+        <ellipse cx="616.7873" cy="688.1036" rx="18" ry="18" opacity="1" stroke="#9C9C9C" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" />
+        <ellipse cx="616.7873" cy="688.1036" rx="9" ry="18" opacity="1" stroke="#9C9C9C" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" />
+        <line x1="598.7873" y1="688.1038" x2="634.7873" y2="688.1038" opacity="1" stroke="#9C9C9C" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+        <path d="M600.5934 680.8782 Q617.692 674.3807 632.7388 680.8782" opacity="1" stroke="#9C9C9C" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+        <path d="M601.0446 696.7177 Q617.4592 701.1634 633.19 696.7177" opacity="1" stroke="#9C9C9C" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+        <line x1="616.666" y1="670.619" x2="616.666" y2="706.5261" opacity="1" stroke="#9C9C9C" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+      </g>
+    </g>
+    <g>
+      <rect x="567" y="648" width="81" height="63" opacity="1" stroke="#9C9C9C" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" filter="url(#shadow1)" />
+      <rect x="576" y="657" width="63" height="45" rx="9" ry="9" opacity="1" stroke="#9C9C9C" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" />
+      <g>
+        <ellipse cx="607.7873" cy="679.1036" rx="18" ry="18" opacity="1" stroke="#9C9C9C" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" />
+        <ellipse cx="607.7873" cy="679.1036" rx="9" ry="18" opacity="1" stroke="#9C9C9C" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" />
+        <line x1="589.7873" y1="679.1036" x2="625.7873" y2="679.1036" opacity="1" stroke="#9C9C9C" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+        <path d="M591.5934 671.8782 Q608.692 665.3808 623.7388 671.8782" opacity="1" stroke="#9C9C9C" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+        <path d="M592.0446 687.7177 Q608.4592 692.1634 624.19 687.7177" opacity="1" stroke="#9C9C9C" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+        <line x1="607.666" y1="661.6191" x2="607.666" y2="697.5261" opacity="1" stroke="#9C9C9C" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+      </g>
+    </g>
+    <g>
+      <rect x="765" y="-99" width="81" height="63" opacity="1" stroke="#9D9D9D" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" filter="url(#shadow1)" />
+      <g>
+        <ellipse cx="785.3937" cy="-79.13493" rx="11.39365" ry="11.39365" opacity="1" stroke="#9D9D9D" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" />
+        <ellipse cx="785.3937" cy="-79.13493" rx="5.696824" ry="11.39365" opacity="1" stroke="#9D9D9D" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" />
+        <line x1="774" y1="-79.13493" x2="796.7873" y2="-79.13493" opacity="1" stroke="#9D9D9D" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+        <path d="M775.1432 -83.70847 Q785.9662 -87.82127 795.4906 -83.70847" opacity="1" stroke="#9D9D9D" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+        <path d="M775.4288 -73.68239 Q785.819 -70.86841 795.7762 -73.68239" opacity="1" stroke="#9D9D9D" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+        <line x1="785.3169" y1="-90.20235" x2="785.3169" y2="-67.47388" opacity="1" stroke="#9D9D9D" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+      </g>
+      <g>
+        <ellipse cx="821.3937" cy="-61.1349" rx="11.39365" ry="11.39365" opacity="1" stroke="#9D9D9D" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" />
+        <ellipse cx="821.3934" cy="-61.1349" rx="5.696824" ry="11.39365" opacity="1" stroke="#9D9D9D" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" />
+        <line x1="810" y1="-61.1349" x2="832.7873" y2="-61.1349" opacity="1" stroke="#9D9D9D" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+        <path d="M811.1433 -65.70851 Q821.9664 -69.82127 831.4905 -65.70851" opacity="1" stroke="#9D9D9D" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+        <path d="M811.4292 -55.68235 Q821.8188 -52.86837 831.7764 -55.68235" opacity="1" stroke="#9D9D9D" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+        <line x1="821.317" y1="-72.20232" x2="821.317" y2="-49.47387" opacity="1" stroke="#9D9D9D" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+      </g>
+      <path d="M818.0343 -74.75471 Q816.5826 -85.27901 804.1597 -85.52161" marker-end="url(#marker34)" opacity="1" stroke="#9D9D9D" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+      <path d="M787.5503 -63.14176 Q789.7277 -47.89981 802.7217 -51.3982" marker-end="url(#marker35)" opacity="1" stroke="#9D9D9D" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+    </g>
+    <text x="185.938" y="358.8797" font-size="14" fill="#0000FF" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">/swim/sfdps</text>
+    <text x="453.5933" y="358.8797" font-size="14" fill="#0000FF" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">/flights/sfdps</text>
+    <text x="202.1983" y="214.8797" font-size="14" fill="#0000FF" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">/swim/tfm</text>
+    <text x="433.8535" y="214.8797" font-size="14" fill="#0000FF" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">/flights/tfm</text>
+    <text x="199.8638" y="16.87969" font-size="14" fill="#0000FF" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">/swim/itws</text>
+    <text x="438.3589" y="16.87969" font-size="14" fill="#0000FF" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">/precip/&lt;prod&gt;</text>
+    <text x="210.9897" y="115.8797" font-size="14" fill="#0000FF" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">/swim/asdex</text>
+    <text x="432.1001" y="115.8797" font-size="14" fill="#0000FF" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">/airport/tracks</text>
+    <text x="214.1621" y="466.8797" font-size="14" fill="#0000FF" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">/sbs</text>
+    <text x="464.145" y="466.8797" font-size="14" fill="#0000FF" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">/flights/adsb</text>
+    <text x="441.438" y="565.8797" font-size="14" fill="#0000FF" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">/flights/sim</text>
+    <text x="703.7983" y="-73.12032" font-size="14" fill="#0000FF" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">/sync/X</text>
+    <path d="M288 639 L468 639 L468.4801 571.5216" opacity="1" stroke="#0000FF" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+    <text x="306.438" y="637.8797" font-size="14" fill="#0000FF" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">/flights/sim</text>
+    <g>
+      <g>
+        <path d="M-97.02056 668.0614 L-96.98521 668.01 L-96.95605 667.9587 L-96.93526 667.9062 L-96.92274 667.8533 L-96.91444 667.8002 L-96.91444 667.7464 L-96.91861 667.6923 L-96.93107 667.6376 L-96.94566 667.5827 L-96.96648 667.5273 L-96.99146 667.4718 L-97.02056 667.4156 L-97.05386 667.359 L-97.09135 667.3026 L-97.1309 667.2458 L-97.17252 667.1886 L-97.26408 667.0734 L-97.36397 666.9576 L-97.46598 666.8416 L-97.57002 666.725 L-97.67203 666.6082 L-97.76984 666.4912 L-97.8614 666.3748 L-97.90302 666.3165 L-97.94256 666.2584 L-97.97794 666.2003 L-98.01123 666.1426 L-98.03829 666.0848 L-98.06329 666.0275 L-98.08202 665.9701 L-98.09658 665.9132 L-98.10698 665.8564 L-98.10906 665.7999 L-98.10698 665.744 L-98.09868 665.6881 L-98.08202 665.6326 L-98.0612 665.5773 L-98.03 665.5225 L-97.99252 665.4685 L-97.9467 665.4144 L-97.89263 665.361 L-97.83017 665.3081 L-97.75732 665.2556 L-97.67616 665.2036 L-97.5846 665.1523 L-97.48263 665.1013 L-97.42851 665.0762 L-97.37022 665.0513 L-97.30989 665.0265 L-97.24744 665.0015 L-97.18083 664.9771 L-97.11213 664.9525 L-97.0414 664.9283 L-96.96648 664.9042 L-96.88944 664.8801 L-96.8083 664.8563 L-96.72505 664.8328 L-96.63766 664.8096 L-96.54811 664.7864 L-96.45448 664.7631 L-96.35873 664.7403 L-96.25884 664.7177 L-96.15689 664.6949 L-96.05074 664.6729 L-95.94041 664.6511 L-95.82594 664.6291 L-95.7094 664.6074 L-95.59079 664.5857 C-92.26495 664.0034 -82.19179 657.6693 -105.818 657.3392" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="0.39999" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+        <path d="M-151.0677 666.2105 L-151.0677 660.0503 L-112.8734 660.0503 L-112.8734 666.2105 Z " opacity="1" fill="#036998" fill-opacity="1" />
+        <path d="M-151.0677 666.2105 L-112.8734 666.2105 L-112.8734 660.0503 L-151.0677 660.0503 Z " opacity="1" stroke="#FFFFFF" stroke-opacity="1" stroke-width="0.39999" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+        <path d="M-112.915 666.2368 L-112.915 660.0503 L-105.2082 651.6655 L-105.2082 657.9997 Z " opacity="1" fill="#036998" fill-opacity="1" />
+        <path d="M-112.915 666.2368 L-112.915 660.0503 L-105.2082 651.6655 L-105.2082 657.9997 Z " opacity="1" stroke="#FFFFFF" stroke-opacity="1" stroke-width="0.39999" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+        <path d="M-151.0677 667.3228 L-151.0677 660.0503 L-112.8734 660.0503 L-112.8734 667.3228 Z " opacity="1" fill="#036998" fill-opacity="1" />
+        <path d="M-151.0677 667.3228 L-112.8734 667.3228 L-112.8734 660.0503 L-151.0677 660.0503 Z " opacity="1" stroke="#FFFFFF" stroke-opacity="1" stroke-width="0.39999" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+        <path d="M-112.915 667.3489 L-112.915 660.0503 L-105.2082 651.6655 L-105.2082 659.1116 Z " opacity="1" fill="#036998" fill-opacity="1" />
+        <path d="M-112.915 667.3489 L-112.915 660.0503 L-105.2082 651.6655 L-105.2082 659.1116 Z " opacity="1" stroke="#FFFFFF" stroke-opacity="1" stroke-width="0.39999" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+        <path d="M-102.5317 650.5534 L-107.9304 658.938 L-155.4658 658.938 L-147.8156 650.5534 Z " opacity="1" fill="#036998" fill-opacity="1" />
+        <path d="M-102.5317 650.5534 L-107.9304 658.938 L-155.4658 658.938 L-147.8156 650.5534 Z " opacity="1" stroke="#FFFFFF" stroke-opacity="1" stroke-width="0.39999" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+        <path d="M-155.5796 661.7618 L-155.5796 658.938 L-110.1011 658.938 L-110.1011 661.7618 Z " opacity="1" fill="#036998" fill-opacity="1" />
+        <path d="M-155.5796 661.7618 L-110.1011 661.7618 L-110.1011 658.938 L-155.5796 658.938 Z " opacity="1" stroke="#FFFFFF" stroke-opacity="1" stroke-width="0.39999" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+        <path d="M-110.1428 661.7878 L-110.1428 658.938 L-102.436 650.5534 L-102.436 653.5519 Z " opacity="1" fill="#036998" fill-opacity="1" />
+        <path d="M-110.1428 661.7878 L-110.1428 658.938 L-102.436 650.5534 L-102.436 653.5519 Z " opacity="1" stroke="#FFFFFF" stroke-opacity="1" stroke-width="0.39999" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+        <path d="M-102.5317 650.5534 L-107.9304 658.938 L-155.4658 658.938 L-147.8156 650.5534 Z " opacity="1" fill="#036998" fill-opacity="1" />
+        <path d="M-102.5317 650.5534 L-107.9304 658.938 L-155.4658 658.938 L-147.8156 650.5534 Z " opacity="1" stroke="#FFFFFF" stroke-opacity="1" stroke-width="0.39999" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+        <path d="M-155.5796 661.7618 L-155.5796 658.938 L-110.1011 658.938 L-110.1011 661.7618 Z " opacity="1" fill="#036998" fill-opacity="1" />
+        <path d="M-155.5796 661.7618 L-110.1011 661.7618 L-110.1011 658.938 L-155.5796 658.938 Z " opacity="1" stroke="#FFFFFF" stroke-opacity="1" stroke-width="0.39999" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+        <path d="M-110.1428 661.7878 L-110.1428 658.938 L-102.436 650.5534 L-102.436 653.5519 Z " opacity="1" fill="#036998" fill-opacity="1" />
+        <path d="M-110.1428 661.7878 L-110.1428 658.938 L-102.436 650.5534 L-102.436 653.5519 Z " opacity="1" stroke="#FFFFFF" stroke-opacity="1" stroke-width="0.39999" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+        <path d="M-102.2882 612 L-143.3613 612 L-155.3765 615.023 L-107.8014 615.023 Z " opacity="1" fill="#036998" fill-opacity="1" />
+        <path d="M-102.2882 612 L-143.3613 612 L-155.3765 615.023 L-107.8014 615.023 Z " opacity="1" stroke="#FFFFFF" stroke-opacity="1" stroke-width="0.39999" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+        <path d="M-109.8576 655.3759 L-111.9639 653.525 L-150.5474 653.525 L-148.5149 655.3759 Z " opacity="1" fill="#036998" fill-opacity="1" />
+        <path d="M-109.8576 655.3759 L-111.9639 653.525 L-150.5474 653.525 L-148.5149 655.3759 Z " opacity="1" stroke="#FFFFFF" stroke-opacity="1" stroke-width="0.39999" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+        <path d="M-109.6225 655.0533 L-112.2802 653.1514 L-102.4422 647.5903 L-108.7754 654.2881 Z " opacity="1" fill="#036998" fill-opacity="1" />
+        <path d="M-109.6225 655.0533 L-112.2802 653.1514 L-102.4422 647.5903 L-108.7754 654.2881 Z " opacity="1" stroke="#FFFFFF" stroke-opacity="1" stroke-width="0.39999" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+        <path d="M-107.8014 615.023 L-107.8014 652.9422 L-102.2882 647.4591 L-102.2882 612 Z " opacity="1" fill="#036998" fill-opacity="1" />
+        <path d="M-107.8014 615.023 L-107.8014 652.9422 L-102.2882 647.4591 L-102.2882 612 Z " opacity="1" stroke="#FFFFFF" stroke-opacity="1" stroke-width="0.39999" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+        <path d="M-107.8014 653.3604 L-107.8014 615.023 L-155.3765 615.023 L-155.3765 653.3604 Z " opacity="1" fill="#036998" fill-opacity="1" />
+        <path d="M-155.3765 653.3604 L-107.8014 653.3604 L-107.8014 615.023 L-155.3765 615.023 Z " opacity="1" stroke="#FFFFFF" stroke-opacity="1" stroke-width="0.39999" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+        <path d="M-111.8015 677.2718 L-111.8015 674.326 L-105.8492 665.524 L-105.8492 670.9114 Z " opacity="1" fill="#036998" fill-opacity="1" />
+        <path d="M-111.8015 677.2718 L-111.8015 674.326 L-105.8492 665.524 L-105.8492 670.9114 Z " opacity="1" stroke="#FFFFFF" stroke-opacity="1" stroke-width="0.39999" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+        <path d="M-111.8015 674.3696 L-111.8015 677.2718 L-164.2786 677.2718 L-164.2786 674.3696 Z " opacity="1" fill="#036998" fill-opacity="1" />
+        <path d="M-164.2786 677.2718 L-111.8015 677.2718 L-111.8015 674.3696 L-164.2786 674.3696 Z " opacity="1" stroke="#FFFFFF" stroke-opacity="1" stroke-width="0.39999" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+        <path d="M-96.88319 674.9431 L-93.39505 667.5051 L-101.3537 667.5051 L-104.8335 674.9431 Z " opacity="1" fill="#036998" fill-opacity="1" />
+        <path d="M-96.88319 674.9431 L-93.39505 667.5051 L-101.3537 667.5051 L-104.8335 674.9431 Z " opacity="1" stroke="#FFFFFF" stroke-opacity="1" stroke-width="0.39999" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+        <path d="M-104.8335 674.9431 L-96.88319 674.9431 L-96.88319 677.3413 L-104.8335 677.3413 Z " opacity="1" fill="#036998" fill-opacity="1" />
+        <path d="M-104.8335 677.3413 L-96.88319 677.3413 L-96.88319 674.9431 L-104.8335 674.9431 Z " opacity="1" stroke="#FFFFFF" stroke-opacity="1" stroke-width="0.39999" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+        <path d="M-96.93941 677.4022 L-96.92274 674.9431 L-93.44295 667.5051 L-93.45958 672.623 Z " opacity="1" fill="#036998" fill-opacity="1" />
+        <path d="M-96.93941 677.4022 L-96.92274 674.9431 L-93.44295 667.5051 L-93.45958 672.623 Z " opacity="1" stroke="#FFFFFF" stroke-opacity="1" stroke-width="0.39999" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+        <path d="M-111.8015 674.3696 L-164.1078 674.3696 L-158.1568 665.524 L-105.8492 665.524 Z " opacity="1" fill="#036998" fill-opacity="1" />
+        <path d="M-111.8015 674.3696 L-164.1078 674.3696 L-158.1568 665.524 L-105.8492 665.524 Z " opacity="1" stroke="#FFFFFF" stroke-opacity="1" stroke-width="0.39999" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+        <path d="M-148.4662 619.029 L-115.0524 619.029 C-112.8817 619.029 -111.1168 620.9065 -111.1168 623.2354 L-111.1168 645.7906 C-111.1168 648.1199 -112.8817 650.006 -115.0524 650.006 L-148.4662 650.006 C-150.6448 650.006 -152.401 648.1199 -152.401 645.7906 L-152.401 623.2354 C-152.401 620.9065 -150.6448 619.029 -148.4662 619.029 Z " opacity="1" fill="#036998" fill-opacity="1" />
+        <path d="M-148.4662 619.029 L-115.0524 619.029 C-112.8817 619.029 -111.1168 620.9065 -111.1168 623.2354 L-111.1168 645.7906 C-111.1168 648.1199 -112.8817 650.006 -115.0524 650.006 L-148.4662 650.006 C-150.6448 650.006 -152.401 648.1199 -152.401 645.7906 L-152.401 623.2354 C-152.401 620.9065 -150.6448 619.029 -148.4662 619.029 Z " opacity="1" stroke="#FFFFFF" stroke-opacity="1" stroke-width="0.39999" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+      </g>
+    </g>
+    <text x="-174.6343" y="694.8797" font-size="14" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">X-Plane flight </text>
+    <text x="-161.3965" y="710.8797" font-size="14" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">simulator</text>
+    <text x="224.8726" y="574.8797" font-size="14" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">xplane</text>
+    <path d="M171.303 473.2991 L171 612 L191.7084 612.1307" marker-end="url(#marker36)" opacity="1" stroke="#0000FF" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+    <text x="316.6697" y="-124.5097" font-size="21" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">RACE</text>
+    <text x="249.756" y="-106.3622" font-size="14" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">configs/swim-sbs-xp-ww-sync.conf</text>
+    <g>
+      <rect x="203.8097" y="578.7546" width="84.19029" height="132.2454" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" filter="url(#shadow1)" />
+      <g>
+        <rect x="224.4792" y="668.6713" width="42.85128" height="33.32874" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" filter="url(#shadow1)" />
+        <path d="M234.0018 678.1938 L257.808 678.1938 L262.5693 692.4775 L229.2404 692.4775 Z " opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" />
+      </g>
+      <g>
+        <rect x="225.2277" y="588.8356" width="41.35429" height="32.16436" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" filter="url(#shadow1)" />
+        <path d="M234.4176 593.4305 L257.3922 593.4305 L248.2023 607.2153 L248.2023 616.4051 L243.6074 616.4051 L243.6074 607.2153 Z " opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" />
+      </g>
+      <g>
+        <rect x="225.1534" y="626.8889" width="41.50288" height="32.27996" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" filter="url(#shadow1)" />
+        <rect x="231.2015" y="640.7273" width="5.812832" height="5.425323" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" />
+        <rect x="250.5777" y="637.8208" width="10.46317" height="11.23822" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" />
+        <line x1="237.0143" y1="643.44" x2="246.9259" y2="643.4399" marker-end="url(#marker37)" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+      </g>
+    </g>
+    <line x1="-90.11566" y1="644.7188" x2="191.6372" y2="644.8517" marker-start="url(#marker38)" marker-end="url(#marker39)" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    <g>
+      <rect x="375.2486" y="441" width="74.75142" height="63" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" filter="url(#shadow1)" />
+      <rect x="386.1418" y="468.0081" width="10.46966" height="10.58852" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" />
+      <rect x="421.0406" y="462.3356" width="18.84529" height="21.93335" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" />
+      <line x1="396.6115" y1="473.3023" x2="417.3889" y2="473.3023" marker-end="url(#marker40)" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    </g>
+    <text x="379.1416" y="439.8797" font-size="14" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">fposdropper</text>
+    <g>
+      <rect x="198" y="261" width="81" height="63" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" filter="url(#shadow1)" />
+      <g>
+        <g>
+          <g>
+            <path d="M220.5 279 L220.5 306 Q225.25 310.5 239.5 310.5 Q253.75 310.5 258.5 306 L258.5 279 Z " opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" />
+            <ellipse cx="239.5" cy="279" rx="19" ry="4.5" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" />
+          </g>
+        </g>
+      </g>
+    </g>
+    <text x="197.3071" y="259.8797" font-size="14" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">flightInfoStore</text>
+    <path d="M170.9074 220.9 L171 288 L185.8275 288" marker-end="url(#marker41)" opacity="1" stroke="#0000FF" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+    <line x1="279.8698" y1="288" x2="522" y2="288" marker-start="url(#marker42)" opacity="1" stroke="#0000FF" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    <line x1="522" y1="252" x2="522" y2="441" opacity="1" stroke="#0000FF" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    <line x1="522" y1="252" x2="554.8275" y2="252" marker-end="url(#marker43)" opacity="1" stroke="#0000FF" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    <line x1="522" y1="333" x2="554.8275" y2="333" marker-end="url(#marker44)" opacity="1" stroke="#0000FF" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    <line x1="522" y1="441" x2="554.8275" y2="441" marker-end="url(#marker45)" opacity="1" stroke="#0000FF" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    <rect x="513" y="359.5029" width="18" height="10.54138" opacity="1" fill="#FFFFFF" fill-opacity="0.77" />
+    <line x1="441" y1="364.5" x2="554.8275" y2="364.5" marker-end="url(#marker46)" opacity="1" stroke="#0000FF" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    <text x="366.3623" y="286.8797" font-size="14" fill="#0000FF" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">/flightinfo/&lt;cs&gt;</text>
+    <line x1="-42.2858" y1="198.5246" x2="38.30095" y2="158.423" marker-end="url(#marker47)" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    <g>
+      <g>
+        <path d="M367.5333 -54.3567 L367.5562 -54.38995 L367.5751 -54.42321 L367.5886 -54.45717 L367.5967 -54.49136 L367.602 -54.52583 L367.602 -54.56058 L367.5993 -54.59563 L367.5913 -54.63096 L367.5819 -54.66654 L367.5684 -54.70235 L367.5522 -54.7383 L367.5333 -54.77471 L367.5118 -54.81131 L367.4875 -54.84787 L367.462 -54.88457 L367.435 -54.92163 L367.3757 -54.99617 L367.3111 -55.07111 L367.2451 -55.1462 L367.1777 -55.22171 L367.1117 -55.29728 L367.0484 -55.37298 L366.9891 -55.44838 L366.9622 -55.48614 L366.9366 -55.52367 L366.9137 -55.56131 L366.8922 -55.59865 L366.8746 -55.63602 L366.8585 -55.67313 L366.8464 -55.71033 L366.8369 -55.74714 L366.8302 -55.78389 L366.8288 -55.82047 L366.8302 -55.85664 L366.8355 -55.89281 L366.8464 -55.92877 L366.8598 -55.96455 L366.88 -56.00001 L366.9043 -56.03494 L366.9339 -56.07001 L366.9689 -56.10462 L367.0093 -56.13878 L367.0565 -56.17281 L367.109 -56.20643 L367.1683 -56.23965 L367.2343 -56.27262 L367.2693 -56.2889 L367.307 -56.30503 L367.3461 -56.32107 L367.3865 -56.33727 L367.4296 -56.3531 L367.4741 -56.36894 L367.5199 -56.38458 L367.5684 -56.40018 L367.6182 -56.41579 L367.6707 -56.43122 L367.7247 -56.44641 L367.7812 -56.46147 L367.8392 -56.47646 L367.8998 -56.49149 L367.9617 -56.50634 L368.0264 -56.521 L368.0924 -56.53564 L368.1611 -56.54993 L368.2325 -56.56406 L368.3066 -56.57829 L368.382 -56.59235 L368.4588 -56.60637 C370.6115 -56.98323 377.1314 -61.08304 361.8392 -61.29674" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="0.39999" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+        <path d="M332.5508 -55.55469 L332.5508 -59.54197 L357.2725 -59.54197 L357.2725 -55.55469 Z " opacity="1" fill="#036998" fill-opacity="1" />
+        <path d="M332.5508 -55.55469 L357.2725 -55.55469 L357.2725 -59.54197 L332.5508 -59.54197 Z " opacity="1" stroke="#FFFFFF" stroke-opacity="1" stroke-width="0.39999" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+        <path d="M357.2455 -55.53769 L357.2455 -59.54197 L362.2339 -64.96908 L362.2339 -60.86924 Z " opacity="1" fill="#036998" fill-opacity="1" />
+        <path d="M357.2455 -55.53769 L357.2455 -59.54197 L362.2339 -64.96908 L362.2339 -60.86924 Z " opacity="1" stroke="#FFFFFF" stroke-opacity="1" stroke-width="0.39999" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+        <path d="M332.5508 -54.83479 L332.5508 -59.54197 L357.2725 -59.54197 L357.2725 -54.83479 Z " opacity="1" fill="#036998" fill-opacity="1" />
+        <path d="M332.5508 -54.83479 L357.2725 -54.83479 L357.2725 -59.54197 L332.5508 -59.54197 Z " opacity="1" stroke="#FFFFFF" stroke-opacity="1" stroke-width="0.39999" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+        <path d="M357.2455 -54.81785 L357.2455 -59.54197 L362.2339 -64.96908 L362.2339 -60.14954 Z " opacity="1" fill="#036998" fill-opacity="1" />
+        <path d="M357.2455 -54.81785 L357.2455 -59.54197 L362.2339 -64.96908 L362.2339 -60.14954 Z " opacity="1" stroke="#FFFFFF" stroke-opacity="1" stroke-width="0.39999" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+        <path d="M363.9662 -65.6889 L360.4718 -60.26185 L329.7041 -60.26185 L334.6559 -65.6889 Z " opacity="1" fill="#036998" fill-opacity="1" />
+        <path d="M363.9662 -65.6889 L360.4718 -60.26185 L329.7041 -60.26185 L334.6559 -65.6889 Z " opacity="1" stroke="#FFFFFF" stroke-opacity="1" stroke-width="0.39999" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+        <path d="M329.6305 -58.43415 L329.6305 -60.26185 L359.0668 -60.26185 L359.0668 -58.43415 Z " opacity="1" fill="#036998" fill-opacity="1" />
+        <path d="M329.6305 -58.43415 L359.0668 -58.43415 L359.0668 -60.26185 L329.6305 -60.26185 Z " opacity="1" stroke="#FFFFFF" stroke-opacity="1" stroke-width="0.39999" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+        <path d="M359.0399 -58.41731 L359.0399 -60.26185 L364.0282 -65.6889 L364.0282 -63.74809 Z " opacity="1" fill="#036998" fill-opacity="1" />
+        <path d="M359.0399 -58.41731 L359.0399 -60.26185 L364.0282 -65.6889 L364.0282 -63.74809 Z " opacity="1" stroke="#FFFFFF" stroke-opacity="1" stroke-width="0.39999" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+        <path d="M363.9662 -65.6889 L360.4718 -60.26185 L329.7041 -60.26185 L334.6559 -65.6889 Z " opacity="1" fill="#036998" fill-opacity="1" />
+        <path d="M363.9662 -65.6889 L360.4718 -60.26185 L329.7041 -60.26185 L334.6559 -65.6889 Z " opacity="1" stroke="#FFFFFF" stroke-opacity="1" stroke-width="0.39999" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+        <path d="M329.6305 -58.43415 L329.6305 -60.26185 L359.0668 -60.26185 L359.0668 -58.43415 Z " opacity="1" fill="#036998" fill-opacity="1" />
+        <path d="M329.6305 -58.43415 L359.0668 -58.43415 L359.0668 -60.26185 L329.6305 -60.26185 Z " opacity="1" stroke="#FFFFFF" stroke-opacity="1" stroke-width="0.39999" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+        <path d="M359.0399 -58.41731 L359.0399 -60.26185 L364.0282 -65.6889 L364.0282 -63.74809 Z " opacity="1" fill="#036998" fill-opacity="1" />
+        <path d="M359.0399 -58.41731 L359.0399 -60.26185 L364.0282 -65.6889 L364.0282 -63.74809 Z " opacity="1" stroke="#FFFFFF" stroke-opacity="1" stroke-width="0.39999" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+        <path d="M364.1238 -90.64296 L337.5389 -90.64296 L329.762 -88.68629 L360.5554 -88.68629 Z " opacity="1" fill="#036998" fill-opacity="1" />
+        <path d="M364.1238 -90.64296 L337.5389 -90.64296 L329.762 -88.68629 L360.5554 -88.68629 Z " opacity="1" stroke="#FFFFFF" stroke-opacity="1" stroke-width="0.39999" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+        <path d="M359.2245 -62.56752 L357.8612 -63.76551 L332.8876 -63.76551 L334.2032 -62.56752 Z " opacity="1" fill="#036998" fill-opacity="1" />
+        <path d="M359.2245 -62.56752 L357.8612 -63.76551 L332.8876 -63.76551 L334.2032 -62.56752 Z " opacity="1" stroke="#FFFFFF" stroke-opacity="1" stroke-width="0.39999" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+        <path d="M359.3767 -62.77626 L357.6564 -64.00728 L364.0242 -67.60681 L359.925 -63.27158 Z " opacity="1" fill="#036998" fill-opacity="1" />
+        <path d="M359.3767 -62.77626 L357.6564 -64.00728 L364.0242 -67.60681 L359.925 -63.27158 Z " opacity="1" stroke="#FFFFFF" stroke-opacity="1" stroke-width="0.39999" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+        <path d="M360.5554 -88.68629 L360.5554 -64.14275 L364.1238 -67.69171 L364.1238 -90.64296 Z " opacity="1" fill="#036998" fill-opacity="1" />
+        <path d="M360.5554 -88.68629 L360.5554 -64.14275 L364.1238 -67.69171 L364.1238 -90.64296 Z " opacity="1" stroke="#FFFFFF" stroke-opacity="1" stroke-width="0.39999" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+        <path d="M360.5554 -63.87209 L360.5554 -88.68629 L329.762 -88.68629 L329.762 -63.87209 Z " opacity="1" fill="#036998" fill-opacity="1" />
+        <path d="M329.762 -63.87209 L360.5554 -63.87209 L360.5554 -88.68629 L329.762 -88.68629 Z " opacity="1" stroke="#FFFFFF" stroke-opacity="1" stroke-width="0.39999" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+        <path d="M357.9662 -48.39519 L357.9662 -50.30186 L361.819 -55.99905 L361.819 -52.51197 Z " opacity="1" fill="#036998" fill-opacity="1" />
+        <path d="M357.9662 -48.39519 L357.9662 -50.30186 L361.819 -55.99905 L361.819 -52.51197 Z " opacity="1" stroke="#FFFFFF" stroke-opacity="1" stroke-width="0.39999" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+        <path d="M357.9662 -50.27361 L357.9662 -48.39519 L324 -48.39519 L324 -50.27361 Z " opacity="1" fill="#036998" fill-opacity="1" />
+        <path d="M324 -48.39519 L357.9662 -48.39519 L357.9662 -50.27361 L324 -50.27361 Z " opacity="1" stroke="#FFFFFF" stroke-opacity="1" stroke-width="0.39999" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+        <path d="M367.6223 -49.90243 L369.8801 -54.71679 L364.7286 -54.71679 L362.4764 -49.90243 Z " opacity="1" fill="#036998" fill-opacity="1" />
+        <path d="M367.6223 -49.90243 L369.8801 -54.71679 L364.7286 -54.71679 L362.4764 -49.90243 Z " opacity="1" stroke="#FFFFFF" stroke-opacity="1" stroke-width="0.39999" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+        <path d="M362.4764 -49.90243 L367.6223 -49.90243 L367.6223 -48.35018 L362.4764 -48.35018 Z " opacity="1" fill="#036998" fill-opacity="1" />
+        <path d="M362.4764 -48.35018 L367.6223 -48.35018 L367.6223 -49.90243 L362.4764 -49.90243 Z " opacity="1" stroke="#FFFFFF" stroke-opacity="1" stroke-width="0.39999" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+        <path d="M367.5858 -48.3108 L367.5967 -49.90243 L369.849 -54.71679 L369.8383 -51.40417 Z " opacity="1" fill="#036998" fill-opacity="1" />
+        <path d="M367.5858 -48.3108 L367.5967 -49.90243 L369.849 -54.71679 L369.8383 -51.40417 Z " opacity="1" stroke="#FFFFFF" stroke-opacity="1" stroke-width="0.39999" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+        <path d="M357.9662 -50.27361 L324.1105 -50.27361 L327.9623 -55.99905 L361.819 -55.99905 Z " opacity="1" fill="#036998" fill-opacity="1" />
+        <path d="M357.9662 -50.27361 L324.1105 -50.27361 L327.9623 -55.99905 L361.819 -55.99905 Z " opacity="1" stroke="#FFFFFF" stroke-opacity="1" stroke-width="0.39999" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+        <path d="M334.2347 -86.09338 L355.8621 -86.09338 C357.2671 -86.09338 358.4095 -84.87814 358.4095 -83.37077 L358.4095 -68.77164 C358.4095 -67.26398 357.2671 -66.0432 355.8621 -66.0432 L334.2347 -66.0432 C332.8246 -66.0432 331.6879 -67.26398 331.6879 -68.77164 L331.6879 -83.37077 C331.6879 -84.87814 332.8246 -86.09338 334.2347 -86.09338 Z " opacity="1" fill="#036998" fill-opacity="1" />
+        <path d="M334.2347 -86.09338 L355.8621 -86.09338 C357.2671 -86.09338 358.4095 -84.87814 358.4095 -83.37077 L358.4095 -68.77164 C358.4095 -67.26398 357.2671 -66.0432 355.8621 -66.0432 L334.2347 -66.0432 C332.8246 -66.0432 331.6879 -67.26398 331.6879 -68.77164 L331.6879 -83.37077 C331.6879 -84.87814 332.8246 -86.09338 334.2347 -86.09338 Z " opacity="1" stroke="#FFFFFF" stroke-opacity="1" stroke-width="0.39999" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+      </g>
+    </g>
+    <line x1="369" y1="-72" x2="557.1302" y2="-72" marker-end="url(#marker48)" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="2,2" />
+    <line x1="324" y1="-72" x2="153.8698" y2="-72" marker-end="url(#marker49)" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="2,2" />
+    <text x="765.2295" y="88.87968" font-size="14" fill="#0000FF" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">channel</text>
+    <line x1="751.75" y1="99" x2="811.5775" y2="99" marker-end="url(#marker50)" opacity="1" stroke="#0000FF" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    <text x="754.3364" y="152.8797" font-size="14" fill="#0000FF" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">on-demand
+</text>
+    <text x="765.2295" y="168.8797" font-size="14" fill="#0000FF" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">channel</text>
+    <line x1="752.6198" y1="180" x2="811.5775" y2="180" marker-start="url(#marker51)" marker-end="url(#marker52)" opacity="1" stroke="#0000FF" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    <rect x="758.8214" y="252" width="57.85716" height="45" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" filter="url(#shadow1)" />
+    <text x="774.188" y="241.8797" font-size="14" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">actor</text>
+    <rect x="758.8214" y="360" width="57.85716" height="45" opacity="1" stroke="#BFBFBF" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" filter="url(#shadow1)" />
+    <text x="750.457" y="349.8797" font-size="14" fill="#7F7F7F" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">remote actor</text>
+  </g>
+</svg>

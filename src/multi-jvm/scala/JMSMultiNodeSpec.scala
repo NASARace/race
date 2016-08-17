@@ -1,4 +1,21 @@
 /*
+ * Copyright (c) 2016, United States Government, as represented by the
+ * Administrator of the National Aeronautics and Space Administration.
+ * All rights reserved.
+ *
+ * The RACE - Runtime for Airspace Concept Evaluation platform is licensed
+ * under the Apache License, Version 2.0 (the "License"); you may not use
+ * this file except in compliance with the License. You may obtain a copy
+ * of the License at http://www.apache.org/licenses/LICENSE-2.0.
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/*
  * Copyright (c) 2016, United States Government, as represented by the 
  * Administrator of the National Aeronautics and Space Administration. 
  * All rights reserved.
@@ -21,18 +38,18 @@ import org.scalatest.{Suite, WordSpecLike}
 
 import scala.language.postfixOps
 import scala.concurrent.duration._
-
 import akka.remote.testkit.MultiNodeConfig
-
 import gov.nasa.race.common.RaceMultiNodeSpec
 import gov.nasa.race.common.WrappedApp
 import gov.nasa.race.common.WrappedApp._
+import gov.nasa.race.core.RaceActorSystem
 
 
 object JMSMultiNodeConfig extends MultiNodeConfig {
-  val jmsServerNode = role("jmsServer")
+  // NOTE - the first node is not supposed to call system.terminate if it runs an actor system
+  val jmsServerNode = role("jmsServer") // not a RaceActorsystem
   val raceNode = role("race")
-  val jmsClientNode = role("jmsClient")
+  val jmsClientNode = role("jmsClient") // not a RaceactorSystem
 }
 
 import JMSMultiNodeConfig._
@@ -68,11 +85,15 @@ class JMSMultiNodeSpec extends RaceMultiNodeSpec(JMSMultiNodeConfig)
           expectOutput(jmsServer, 10 seconds, "^enter command".r)
           sendMsg(raceNode, ServerUp)
           expectMsg(10 seconds, ClientUp)
-          sendInput(jmsServer, "1")  // send test message
+          sendInput(jmsServer, "1") // send test message
 
           expectOutput(jmsServer, 10 seconds, "^enter command".r)
           expectMsg(20 seconds, RaceDone)
-          sendInput(jmsServer, "9")  // exit
+          sendInput(jmsServer, "9") // exit
+          expectOutput(jmsServer, 10 seconds, "shutting down".r)
+
+        } afterExecuting {
+          enterBarrier("finished")
 
         } onFailure {
           sendInput(jmsServer, "9") // trying to shut it down gracefully
@@ -81,6 +102,7 @@ class JMSMultiNodeSpec extends RaceMultiNodeSpec(JMSMultiNodeConfig)
 
       runOn(raceNode) {
         val race = WrappedApp {
+          RaceActorSystem.runEmbedded
           gov.nasa.race.ConsoleMain.main(Array("--info", "config/exports/jms.conf"))
         }
 
@@ -92,9 +114,11 @@ class JMSMultiNodeSpec extends RaceMultiNodeSpec(JMSMultiNodeConfig)
           sendMsg(jmsClientNode, RaceUp)
           expectMsg(20 seconds, ClientDone)
           sendInput(race, "9") // exit
+          expectOutput(race, 10 seconds, "terminated".r)
 
         } afterExecuting {
           sendMsg(jmsServerNode, RaceDone)
+          enterBarrier("finished")
 
         } onFailure {
           sendInput(race, "9") // trying to shut it down gracefully
@@ -114,17 +138,22 @@ class JMSMultiNodeSpec extends RaceMultiNodeSpec(JMSMultiNodeConfig)
           sendMsg(jmsServerNode, ClientUp)
           expectOutput(jmsClient, 10 seconds, "got message: JMS TEST MESSAGE".r)
           sendInput(jmsClient, "9") // exit
+          expectOutput(jmsClient, 10 seconds, "shutting down".r)
 
         } afterExecuting {
           sendMsg(raceNode, ClientDone)
+          enterBarrier("finished")
 
         } onFailure {
           sendInput(jmsClient,"9") // trying to shut it down gracefully
         } execute
       }
-
-      enterBarrier("finished")
     }
+
+    // don't do this as a default action - only if each node finished properly
+    //"terminate all nodes properly" in {
+    //  enterBarrier("finished")
+    //}
   }
 }
 

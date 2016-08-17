@@ -1,4 +1,21 @@
 /*
+ * Copyright (c) 2016, United States Government, as represented by the
+ * Administrator of the National Aeronautics and Space Administration.
+ * All rights reserved.
+ *
+ * The RACE - Runtime for Airspace Concept Evaluation platform is licensed
+ * under the Apache License, Version 2.0 (the "License"); you may not use
+ * this file except in compliance with the License. You may obtain a copy
+ * of the License at http://www.apache.org/licenses/LICENSE-2.0.
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/*
  * Copyright (c) 2016, United States Government, as represented by the 
  * Administrator of the National Aeronautics and Space Administration. 
  * All rights reserved.
@@ -18,6 +35,7 @@
 package gov.nasa.race.common
 
 import scala.annotation.tailrec
+import scala.util.matching.Regex
 
 /**
   * common String related functions
@@ -57,6 +75,38 @@ object StringUtils {
     } else s
   }
 
+
+  def capLength(s: String)(implicit maxStringLength: Int = 30): String = {
+    if (s.length < maxStringLength) s else s.substring(0, maxStringLength-1) + "…"
+  }
+
+  def mkString[E] (it: Iterable[E], prefix: String, sep: String, postfix: String)(f: E=>String = (e:E)=>{e.toString}): String = {
+    val sb = new StringBuilder(prefix)
+    var i = 0
+    it.foreach { e =>
+      if (i>0) sb.append(sep)
+      i += 1
+      sb.append(f(e))
+    }
+    sb.append(postfix)
+    sb.toString
+  }
+
+  def append(s0: String, sep: String, s: String): String = {
+    if (s0 == null || s0.isEmpty) s
+    else s0 + sep + s
+  }
+
   val IntRE = """(\d+)""".r
   val QuotedRE = """"(.*)"""".r
+
+  val digitRE = """\d""".r
+  val latinLetterRE = """[a-zA-Z]""".r
+  def containsDigit(s: String) = digitRE.findFirstIn(s).isDefined
+  def containsLatinLetter(s: String) = latinLetterRE.findFirstIn(s).isDefined
+
+  def globToRegex (glob: String) = {
+    // TODO - should also cover '?'
+    new Regex("^" + glob.replace("*", ".*") + '$').anchored
+  }
 }

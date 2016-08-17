@@ -1,4 +1,21 @@
 /*
+ * Copyright (c) 2016, United States Government, as represented by the
+ * Administrator of the National Aeronautics and Space Administration.
+ * All rights reserved.
+ *
+ * The RACE - Runtime for Airspace Concept Evaluation platform is licensed
+ * under the Apache License, Version 2.0 (the "License"); you may not use
+ * this file except in compliance with the License. You may obtain a copy
+ * of the License at http://www.apache.org/licenses/LICENSE-2.0.
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/*
  * Copyright (c) 2016, United States Government, as represented by the 
  * Administrator of the National Aeronautics and Space Administration. 
  * All rights reserved.
@@ -101,6 +118,20 @@ trait ChannelTopicSubscriber extends SubscribingRaceActor {
     false // no release sent to provider
   }
 
+  def release(channel: Channel, topic: Topic):Unit = releaseChannelTopic(ChannelTopic(channel,topic))
+
+  def releaseTopic (topic: Topic) = {
+    subscriptions.foreach { e =>
+      e._1 match {
+        case ct@ChannelTopic(_,`topic`) =>
+          val provider = e._2._1
+          info(s"$name releasing $ct")
+          provider ! ChannelTopicRelease(ct, self)
+        case other =>
+      }
+    }
+  }
+
   // watch out - this releases all without looking at subscription counts
   // <2do> check this in the context of transitive providers
   def releaseAll: Boolean = {
@@ -135,6 +166,13 @@ trait ChannelTopicProvider extends PublishingRaceActor {
   val clients = MutableSet.empty[ChannelTopicRelease] // the releases for all active clients
 
   def hasClients = clients.nonEmpty // used to control publishing
+
+  def hasClientsForTopic[T] (topic: T): Boolean = {
+    clients.exists(_ match {
+      case ChannelTopicRelease(ChannelTopic(_, Some(`topic`)), _) => true
+      case other => false
+    })
+  }
 
   override def onInitializeRaceActor(raceContext: RaceContext, actorConf: Config): Any = {
     super.onInitializeRaceActor(raceContext, actorConf)

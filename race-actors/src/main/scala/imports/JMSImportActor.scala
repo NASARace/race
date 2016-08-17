@@ -1,4 +1,21 @@
 /*
+ * Copyright (c) 2016, United States Government, as represented by the
+ * Administrator of the National Aeronautics and Space Administration.
+ * All rights reserved.
+ *
+ * The RACE - Runtime for Airspace Concept Evaluation platform is licensed
+ * under the Apache License, Version 2.0 (the "License"); you may not use
+ * this file except in compliance with the License. You may obtain a copy
+ * of the License at http://www.apache.org/licenses/LICENSE-2.0.
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/*
  * Copyright (c) 2016, United States Government, as represented by the 
  * Administrator of the National Aeronautics and Space Administration. 
  * All rights reserved.
@@ -52,7 +69,7 @@ object JMSImportActor {
       return Some(e.connection)
     }
 
-    importer.log.info(s"attempting to connect to $brokerURI")
+    importer.info(s"attempting to connect to $brokerURI")
     val factory = factories.get(brokerURI) match {
       case Some(f) => f
       case None =>
@@ -84,7 +101,7 @@ object JMSImportActor {
         if (clients.size == 1) {
           connection.stop()
           connection.close()
-          importer.log.info(s"closed connection to $brokerURI")
+          importer.info(s"closed connection to $brokerURI")
           connections = connections - brokerURI
         } else {
           connections = connections + (brokerURI -> (e - importer))
@@ -104,8 +121,7 @@ import gov.nasa.race.actors.imports.JMSImportActor._
   *
   * <todo> - reconnection and timeouts
   */
-class JMSImportActor(val config: Config) extends PublishingRaceActor with FilteringPublisher {
-  val writeTo = config.getString("write-to") // default output channel (if filter spec does not have one)
+class JMSImportActor(val config: Config) extends FilteringPublisher {
 
   // NOTE - the listener executes in non-Akka threads (multiple!)
   private[this] class Listener(val topic: JMSTopic) extends MessageListener {
@@ -131,7 +147,8 @@ class JMSImportActor(val config: Config) extends PublishingRaceActor with Filter
   var session: Option[Session] = None
   var consumer: Option[MessageConsumer] = None
 
-  log.info(s"$name initialized (unconnected)")
+
+  //--- end initialization
 
   // note that we return the next state here
   override def onInitializeRaceActor(raceContext: RaceContext, actorConf: Config) = {
@@ -139,11 +156,11 @@ class JMSImportActor(val config: Config) extends PublishingRaceActor with Filter
 
     try {
       connection = requestConnection(this)
-      info(s"$name connected to $brokerURI")
+      info(s"connected to $brokerURI")
 
     } catch {
       case ex: Throwable =>
-        warning(s"$name failed to open connection: $ex")
+        warning(s"failed to open connection: $ex")
     }
   }
 
@@ -153,9 +170,9 @@ class JMSImportActor(val config: Config) extends PublishingRaceActor with Filter
     session = createSession(connection)
     if (session.isDefined){
       consumer = createConsumer(session)
-      if (consumer.isDefined) info(s"$name opened session on jms topic '$jmsTopic'")
-      else warning(s"$name failed to create JMS consumer for jms topic '$jmsTopic'")
-    } else warning(s"$name failed to create JMS session for connection '$brokerURI'")
+      if (consumer.isDefined) info(s"opened session on jms topic '$jmsTopic'")
+      else warning(s"failed to create JMS consumer for jms topic '$jmsTopic'")
+    } else warning(s"failed to create JMS session for connection '$brokerURI'")
   }
 
   def createSession (connection: Option[Connection]) = {
@@ -177,12 +194,12 @@ class JMSImportActor(val config: Config) extends PublishingRaceActor with Filter
   override def onTerminateRaceActor(originator: ActorRef) = {
     super.onTerminateRaceActor(originator)
 
-    info(s"$name closing session")
+    info(s"closing session")
     try {
       session.foreach(_.close())
       connection.foreach( releaseConnection(this,_))
     } catch {
-      case ex: Throwable => warning(s"$name failed to close session: $ex")
+      case ex: Throwable => warning(s"failed to close session: $ex")
     }
   }
 }

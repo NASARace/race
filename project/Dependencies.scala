@@ -1,4 +1,21 @@
 /*
+ * Copyright (c) 2016, United States Government, as represented by the
+ * Administrator of the National Aeronautics and Space Administration.
+ * All rights reserved.
+ *
+ * The RACE - Runtime for Airspace Concept Evaluation platform is licensed
+ * under the Apache License, Version 2.0 (the "License"); you may not use
+ * this file except in compliance with the License. You may obtain a copy
+ * of the License at http://www.apache.org/licenses/LICENSE-2.0.
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/*
  * Copyright (c) 2016, United States Government, as represented by the 
  * Administrator of the National Aeronautics and Space Administration. 
  * All rights reserved.
@@ -48,6 +65,9 @@ object Dependencies {
 
   //--- Scala XML (sep. library as of 2.11.6)
   val scalaXml =  "org.scala-lang.modules" %% "scala-xml" % "latest.release" // >= 1.0.3
+
+  //--- Scala parser combinators (https://github.com/scala/scala-parser-combinators)
+  val scalaParser =  "org.scala-lang.modules" %% "scala-parser-combinators"  % "latest.release"
 
   //--- new scala reflection (TypeTags etc.)
   val scalaReflect =  "org.scala-lang" % "scala-reflect" % "2.11.7"
@@ -124,7 +144,7 @@ object Dependencies {
   val akkaActor = akkaOrg %% "akka-actor" % akkaVersion
   val akkaRemote = akkaOrg %% "akka-remote" % akkaVersion
   val akkaSlf4j = akkaOrg %% "akka-slf4j" % akkaVersion
-  //val akkaCamel = akkaOrg %% "akka-camel" % akkaVersion
+
 
   val akkaTestkit = akkaOrg %% "akka-testkit" % akkaVersion
   val akkaMultiNodeTestkit = akkaOrg %% "akka-multi-node-testkit" % akkaVersion // % "test,multi-jvm"

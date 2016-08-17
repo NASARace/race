@@ -1,4 +1,21 @@
 /*
+ * Copyright (c) 2016, United States Government, as represented by the
+ * Administrator of the National Aeronautics and Space Administration.
+ * All rights reserved.
+ *
+ * The RACE - Runtime for Airspace Concept Evaluation platform is licensed
+ * under the Apache License, Version 2.0 (the "License"); you may not use
+ * this file except in compliance with the License. You may obtain a copy
+ * of the License at http://www.apache.org/licenses/LICENSE-2.0.
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/*
  * Copyright (c) 2016, United States Government, as represented by the 
  * Administrator of the National Aeronautics and Space Administration. 
  * All rights reserved.
@@ -22,6 +39,7 @@ import gov.nasa.race.common.ConfigUtils._
 import gov.nasa.race.common._
 import gov.nasa.race.core._
 import gov.nasa.race.swing.AkkaSwingBridge
+import gov.nasa.race.ww.EventAction.EventAction
 import gov.nasa.worldwind.layers.RenderableLayer
 
 /**
@@ -46,6 +64,22 @@ abstract class RaceLayer (val config: Config) extends RenderableLayer with RaceL
   setName(name)
   ifSome(config.getOptionalDouble("min-altitude")){setMinActiveAltitude}
   ifSome(config.getOptionalDouble("max-altitude")){setMaxActiveAltitude}
+
+  // this is called once we have a wwd and redrawManager
+  override def initializeLayer() = {
+    // set a select handler
+    onSelected { e =>
+      e.getTopObject match {
+        case o:RaceLayerPickable => if (o.layer == this) selectObject(o, getEventAction(e))
+        case other =>
+      }
+    }
+  }
+
+  def changeObject(objectId: String, action: String) = {}
+
+  // NOTE this is only called for the layer that owns the picked renderable
+  def selectObject(o:RaceLayerPickable, a:EventAction): Unit = {} // default is do nothing
 }
 
 /**
@@ -70,6 +104,8 @@ abstract class SubscribingRaceLayer (raceView: RaceView, config: Config)
   // forwards (?? thread safety)
   def request (channel: String, topic: Topic) = actor.request(channel, topic)
   def requestTopic (topic: Topic) = actor.requestTopic(topic)
+  def release (channel: String, topic: Topic) = actor.release(channel, topic)
+  def releaseTopic (topic: Topic) = actor.releaseTopic(topic)
   def releaseAll = actor.releaseAll
 
   def debug(f: => String) = gov.nasa.race.core.debug(f)(actor.log)
@@ -94,4 +130,12 @@ class RaceLayerActor (val config: Config, val layer: SubscribingRaceLayer) exten
   override def handleMessage: Receive = {
     case msg: BusEvent => layer.queueMessage(msg)
   }
+}
+
+/**
+  * a Renderable that is pick enabled and associated with a RaceLayer
+  */
+trait RaceLayerPickable {
+  def layer: RaceLayer
+  def layerItem: AnyRef
 }

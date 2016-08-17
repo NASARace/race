@@ -1,4 +1,21 @@
 /*
+ * Copyright (c) 2016, United States Government, as represented by the
+ * Administrator of the National Aeronautics and Space Administration.
+ * All rights reserved.
+ *
+ * The RACE - Runtime for Airspace Concept Evaluation platform is licensed
+ * under the Apache License, Version 2.0 (the "License"); you may not use
+ * this file except in compliance with the License. You may obtain a copy
+ * of the License at http://www.apache.org/licenses/LICENSE-2.0.
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/*
  * Copyright (c) 2016, United States Government, as represented by the 
  * Administrator of the National Aeronautics and Space Administration. 
  * All rights reserved.
@@ -179,13 +196,13 @@ class SBS2FlightPos (val config: Config=null) extends ConfigurableTranslator {
           val transType = nextFields(1,i0)
 
           transType.charAt(0) match {
-            case '1' => // identification & category
+            case '1' => // identification & category, just update
               val acInfo = getAcInfo
               skipNextFields(2,i0) // dateLogged , timeLogged
               acInfo.setCS(nextFields(1,i0))  // watch out - dump1090 has trailing spaces
-              acInfo.tryToFlightPos
+              acInfo.tryToFlightPos // don't return a FlightPos until we have a position (clients might not check the timestamp)
 
-            case '3' =>  // airborne position message
+            case '3' =>  // airborne position message, report if we already got id and velocity
               val acInfo = getAcInfo
               acInfo.setPosDtg
               skipNextFields(2, i0) // dateLogged , timeLogged
@@ -198,13 +215,13 @@ class SBS2FlightPos (val config: Config=null) extends ConfigurableTranslator {
               // we ignore the rest for now
               acInfo.tryToFlightPos
 
-            case '4' => // airborne velocity
+
+            case '4' => // airborne velocity, just update
               val acInfo = getAcInfo
               skipNextFields(4,i0)
               acInfo.setSpeed(nextFields(1,i0))
               acInfo.setTrack(nextFields(1,i0))
-              // ignore the rest
-              acInfo.tryToFlightPos
+              None // don't return a FlightPos until we have a position (clients might not check the timestamp)
 
             case _ => None
           }

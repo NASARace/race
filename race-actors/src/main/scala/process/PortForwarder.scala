@@ -1,4 +1,21 @@
 /*
+ * Copyright (c) 2016, United States Government, as represented by the
+ * Administrator of the National Aeronautics and Space Administration.
+ * All rights reserved.
+ *
+ * The RACE - Runtime for Airspace Concept Evaluation platform is licensed
+ * under the Apache License, Version 2.0 (the "License"); you may not use
+ * this file except in compliance with the License. You may obtain a copy
+ * of the License at http://www.apache.org/licenses/LICENSE-2.0.
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/*
  * Copyright (c) 2016, United States Government, as represented by the 
  * Administrator of the National Aeronautics and Space Administration. 
  * All rights reserved.
@@ -72,7 +89,7 @@ class PortForwarder (val config: Config) extends MonitoredRaceActor {
     ifSome(UserInfoFactory.factory) { f =>
       val ui = f.getUserInfo
       session.setUserInfo(ui)
-      ui.showMessage(s"port forwarder connecting as $user@$host")
+      ui.showMessage(s"port forwarder connecting as $user@$host\n")
     }
 
     session.connect(connectTimeout)
@@ -82,9 +99,9 @@ class PortForwarder (val config: Config) extends MonitoredRaceActor {
       ifSome(forwardR){setPortForward(_,"reverse forward", (lp,h,rp)=> session.setPortForwardingR(lp,h,rp))}
 
       startMonitoring
-      info(s"$name connected and forwarding")
-    } else failDuringConstruction(s"$name failed to connect as $user@$host")
-  } else  failDuringConstruction(s"$name no forwards specified")
+      info("connected and forwarding")
+    } else failDuringConstruction(s"failed to connect as $user@$host")
+  } else  failDuringConstruction("no forwards specified")
 
   def setPortForward (spec: String, action: String, f: (Int,String,Int)=>Unit) = {
     spec.split("[,; ]+").foreach {
@@ -100,7 +117,7 @@ class PortForwarder (val config: Config) extends MonitoredRaceActor {
 
     if (session.isConnected) {
       session.disconnect()
-      info(s"$name stopped port forwarding to $host")
+      info(s"stopped port forwarding to $host")
     }
   }
 
@@ -110,7 +127,7 @@ class PortForwarder (val config: Config) extends MonitoredRaceActor {
 
   def checkConnected = {
     if (!session.isConnected) {
-      commitSuicide(s"$name detected lost connection to $host, committing suicide")
+      commitSuicide(s"detected lost connection to $host, committing suicide")
     }
   }
 }

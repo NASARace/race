@@ -1,4 +1,21 @@
 /*
+ * Copyright (c) 2016, United States Government, as represented by the
+ * Administrator of the National Aeronautics and Space Administration.
+ * All rights reserved.
+ *
+ * The RACE - Runtime for Airspace Concept Evaluation platform is licensed
+ * under the Apache License, Version 2.0 (the "License"); you may not use
+ * this file except in compliance with the License. You may obtain a copy
+ * of the License at http://www.apache.org/licenses/LICENSE-2.0.
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/*
  * Copyright (c) 2016, United States Government, as represented by the 
  * Administrator of the National Aeronautics and Space Administration. 
  * All rights reserved.
@@ -20,6 +37,7 @@ package gov.nasa.race.actors.models
 import akka.actor.{ActorRef, Cancellable}
 import com.typesafe.config.Config
 import gov.nasa.race.common._
+import gov.nasa.race.common.ConfigUtils._
 import gov.nasa.race.data._
 import gov.nasa.race.data.GreatCircle._
 import gov.nasa.race.core._
@@ -40,12 +58,11 @@ class SimpleAircraft (val config: Config) extends ContinuousTimeRaceActor with S
   val cs = config.getString("cs")
 
   var pos = LatLonPos(Degrees(config.getDouble("lat")), Degrees(config.getDouble("lon")))
-  var speed = UsMilesPerHour(config.getDouble("speed-mph"))
+  var speed = Knots(config.getDouble("speed-kn"))
   var altitude = Feet(config.getDouble("altitude-ft"))
   var heading = Degrees(config.getDouble("heading"))
 
-  val writeTo = config.getString("write-to")
-  var intervalSec = config.getInt("interval-sec")
+  var publishInterval = config.getFiniteDurationOrElse("interval", 1 second)
 
   var schedule: Option[Cancellable] = None
 
@@ -53,23 +70,20 @@ class SimpleAircraft (val config: Config) extends ContinuousTimeRaceActor with S
   override def handleMessage = {
     case UpdateFlightPos =>
       updatePos
-      val flightPos = FlightPos(id, cs, pos, altitude, speed, heading, simTime)
-      //info(s"${name} publishing to $writeTo flightPos: $flightPos")
-      publish(writeTo, flightPos)
+      debug(s"publishing $pos")
+      publish(FlightPos(id, cs, pos, altitude, speed, heading, simTime))
   }
 
   //--- overridden system hooks
 
   override def onStartRaceActor(originator: ActorRef) = {
     super.onStartRaceActor(originator)
-    info(s"${name} simulation started")
-    schedule = Some(scheduler.schedule(0 seconds, intervalSec seconds, self, UpdateFlightPos))
+    schedule = Some(scheduler.schedule(0 seconds, publishInterval, self, UpdateFlightPos))
   }
 
   override def onTerminateRaceActor(originator: ActorRef) = {
     super.onTerminateRaceActor(originator)
     ifSome(schedule){ _.cancel }
-    info(s"${name} terminating")
   }
 
   //--- internal functions
@@ -78,6 +92,4 @@ class SimpleAircraft (val config: Config) extends ContinuousTimeRaceActor with S
     val dist: Length = speed * updateElapsedSimTime
     pos = endPos(pos, dist, heading, altitude)
   }
-
-
 }

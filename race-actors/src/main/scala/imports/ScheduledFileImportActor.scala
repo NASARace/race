@@ -1,4 +1,21 @@
 /*
+ * Copyright (c) 2016, United States Government, as represented by the
+ * Administrator of the National Aeronautics and Space Administration.
+ * All rights reserved.
+ *
+ * The RACE - Runtime for Airspace Concept Evaluation platform is licensed
+ * under the Apache License, Version 2.0 (the "License"); you may not use
+ * this file except in compliance with the License. You may obtain a copy
+ * of the License at http://www.apache.org/licenses/LICENSE-2.0.
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/*
  * Copyright (c) 2016, United States Government, as represented by the 
  * Administrator of the National Aeronautics and Space Administration. 
  * All rights reserved.
@@ -38,14 +55,12 @@ class ScheduledFileImportActor (val config: Config)  extends PublishingRaceActor
   case class ProcessEvent(event: SchedulerEvent)
 
   val schedule = new File(config.getString("schedule"))
-  val writeTo = config.getString("write-to")
-
   val fileScheduler = new FileEventScheduler(publishFile)
 
   if (schedule.isFile){
     fileScheduler.loadSchedule(schedule)
   } else {
-    log.warning(s"schedule file not found: $schedule")
+    warning(s"schedule file not found: $schedule")
   }
 
   override def onStartRaceActor(originator: ActorRef) = {
@@ -64,8 +79,8 @@ class ScheduledFileImportActor (val config: Config)  extends PublishingRaceActor
 
   def publishFile (file: File) = {
     fileContentsAsUTF8String(file) match {
-      case Some(s) => publish(writeTo, s)
-      case None => log.warning(s"scheduled file not found: $file")
+      case Some(s) => publish(s)
+      case None => warning(s"scheduled file not found: $file")
     }
   }
 
@@ -77,10 +92,10 @@ class ScheduledFileImportActor (val config: Config)  extends PublishingRaceActor
         if (delay >= 0) {
           scheduler.scheduleOnce(delay.millis, self, ProcessEvent(nextEvent))
         } else {
-          log.warning(s"event time has already passed: $e")
+          warning(s"event time has already passed: $e")
         }
       case None =>
-        log.info(s"all scheduled events of $schedule processed")
+        info(s"all scheduled events of $schedule processed")
     }
   }
 }

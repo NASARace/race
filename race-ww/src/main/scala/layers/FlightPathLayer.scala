@@ -1,4 +1,21 @@
 /*
+ * Copyright (c) 2016, United States Government, as represented by the
+ * Administrator of the National Aeronautics and Space Administration.
+ * All rights reserved.
+ *
+ * The RACE - Runtime for Airspace Concept Evaluation platform is licensed
+ * under the Apache License, Version 2.0 (the "License"); you may not use
+ * this file except in compliance with the License. You may obtain a copy
+ * of the License at http://www.apache.org/licenses/LICENSE-2.0.
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/*
  * Copyright (c) 2016, United States Government, as represented by the 
  * Administrator of the National Aeronautics and Space Administration. 
  * All rights reserved.
@@ -36,7 +53,7 @@ import java.awt.Color
 import java.util.Vector
 
 object FlightPathLayer {
-  val flightPathLayerPanel = new DefaultDynamicLayerInfoPanel styled 'consolePanel
+  val flightPathLayerPanel = new DynamicLayerInfoPanel styled 'consolePanel
 }
 import FlightPathLayer._
 
@@ -49,7 +66,7 @@ import FlightPathLayer._
   */
 class FlightPathLayer (raceView: RaceView,config: Config)
                                    extends SubscribingRaceLayer(raceView,config)
-                                      with DynamicRaceLayerInfo with AltitudeSensitiveRaceLayerInfo {
+                                      with DynamicRaceLayerInfo with AltitudeSensitiveLayerInfo {
   /**
     * NOTE - WorldWind's Path is not thread safe, and it is not enough to have a thread safe
     * Iterable positions object. The Iterable needs to have a thread safe Iterator
@@ -89,8 +106,8 @@ class FlightPathLayer (raceView: RaceView,config: Config)
   if (getMaxActiveAltitude == Double.MaxValue) setMaxActiveAltitude(600000)
   val showVertices = config.getBooleanOrElse("show-vertices", true)
   val vertexThreshold = config.getDoubleOrElse("vertex-altitude", 40000.0)
-  val thresholds = Array(vertexThreshold)
-  override def crossedEyeAltitudeThreshold (oldAlt: Double, newAlt: Double, threshold: Double) = updateAllAttributes
+
+  thresholds += new Threshold(vertexThreshold, updateAllAttributes)
 
   @inline def displayVertices = showVertices && (eyeAltitude < vertexThreshold)
 

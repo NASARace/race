@@ -1,4 +1,21 @@
 /*
+ * Copyright (c) 2016, United States Government, as represented by the
+ * Administrator of the National Aeronautics and Space Administration.
+ * All rights reserved.
+ *
+ * The RACE - Runtime for Airspace Concept Evaluation platform is licensed
+ * under the Apache License, Version 2.0 (the "License"); you may not use
+ * this file except in compliance with the License. You may obtain a copy
+ * of the License at http://www.apache.org/licenses/LICENSE-2.0.
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/*
  * Copyright (c) 2016, United States Government, as represented by the 
  * Administrator of the National Aeronautics and Space Administration. 
  * All rights reserved.
@@ -32,6 +49,10 @@ object FlightPos {
   def isTempCS (cs: String) = cs.charAt(0) == '?'
 }
 
+trait FlightMessage {
+  def cs: String
+}
+
 /**
  * in-flight state consisting of geographic position, altitude, speed and bearing
  * <2do> this is more than just pos - how can we extend this (dynamically/statically)?
@@ -42,7 +63,7 @@ case class FlightPos (flightId: String,
                       altitude: Length,
                       speed: Velocity,
                       heading: Angle,
-                      date: DateTime) extends Dated with IdentifiableInFlightAircraft {
+                      date: DateTime) extends Dated with InFlightAircraft with FlightMessage {
   var amendments = List.empty[Any] // <2do> not sure yet this is the right extension
 
   def this (id:String, pos: LatLonPos, alt: Length,spd: Velocity,hdg: Angle, dtg: DateTime) =
@@ -54,14 +75,16 @@ case class FlightPos (flightId: String,
   def amend (a: Any) = amendments = a +: amendments
 }
 
+trait FlightTerminationMessage extends FlightMessage
+
 case class FlightCompleted (flightId: String,
                             cs: String,
                             arrivalPoint: String,
-                            date: DateTime) extends Dated with IdentifiableAircraft
+                            date: DateTime) extends Dated with IdentifiableAircraft with FlightTerminationMessage
 
 case class FlightDropped (flightId: String,
                           cs: String,
-                          date: DateTime) extends Dated with IdentifiableAircraft
+                          date: DateTime) extends Dated with IdentifiableAircraft with FlightTerminationMessage
 
 case class FlightCsChanged (flightId: String,
                             cs: String,

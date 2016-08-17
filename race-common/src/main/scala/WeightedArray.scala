@@ -1,4 +1,21 @@
 /*
+ * Copyright (c) 2016, United States Government, as represented by the
+ * Administrator of the National Aeronautics and Space Administration.
+ * All rights reserved.
+ *
+ * The RACE - Runtime for Airspace Concept Evaluation platform is licensed
+ * under the Apache License, Version 2.0 (the "License"); you may not use
+ * this file except in compliance with the License. You may obtain a copy
+ * of the License at http://www.apache.org/licenses/LICENSE-2.0.
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/*
  * Copyright (c) 2016, United States Government, as represented by the 
  * Administrator of the National Aeronautics and Space Administration. 
  * All rights reserved.
@@ -20,6 +37,7 @@ package gov.nasa.race.common
 import java.util
 import java.util.Comparator
 
+import scala.collection.Iterable
 import scala.annotation.tailrec
 
 object WeightedArray {
@@ -33,6 +51,16 @@ object WeightedArray {
     }
 
     override def toString = s"($weight,$obj)"
+  }
+
+  class EntryComparator[E <: Entry[_]] extends Comparator[E] {
+    override def compare (a: E, b: E): Int = {
+      val wa: Double = a.weight
+      val wb: Double = b.weight
+      if (wa < wb) -1
+      else if (wa == wb) 0
+      else  1
+    }
   }
 }
 
@@ -50,18 +78,18 @@ object WeightedArray {
   *    update and successive iteration(s) should execute in constant space (no heap)
   *  - thread safety is guaranteed by the caller
   */
-trait WeightedArray[T<:AnyRef,E<:WeightedArray.Entry[T]] extends Comparator[E] {
+trait WeightedArray[T<:AnyRef,E<:WeightedArray.Entry[T]] extends Iterable[E] {
 
   protected val array: Array[E]                                     // provided by concrete type
   protected var _size = 0
+  protected val comparator = new WeightedArray.EntryComparator[E]()
 
   //--- entry management)
   def createEntry (obj: T, weight: Double): E             // has to be provided by concrete types
   def isSame (obj1: T, obj2: T): Boolean = obj1 == obj2   // can be overridden to correlate type
   def setEntry(e: E, obj: T, weight: Double): Unit = e.set(obj,weight)
+  def releaseEntry(e: E): Unit = {}                       // entry is dropped (can be used to update cache)
   def updateEntry (e: E): Boolean = false                 // can be overridden to recompute weight etc.
-  def entryRemoved(e: E): Unit = {}                       // entry is dropped (can be used to update cache)
-  def entryRecycled(e: E): Unit = {}                      // entry is going to be re-used for another object
 
   @tailrec final protected def _indexOfSame(a: Array[E], n: Int, o: T, i: Int): Int = {
     if (i < n) {
@@ -88,7 +116,7 @@ trait WeightedArray[T<:AnyRef,E<:WeightedArray.Entry[T]] extends Comparator[E] {
         i
       } else { // object is going to shift up
         System.arraycopy(a, i+1, a, i, iMax-i) // shift tail down
-        e.set(obj,weight)
+        setEntry(e,obj,weight)
         val i1 = _indexExceeding(a, n-1, weight, i)
         if (i1 < 0) { // shift to last position
           a(iMax) = e
@@ -108,12 +136,11 @@ trait WeightedArray[T<:AnyRef,E<:WeightedArray.Entry[T]] extends Comparator[E] {
         setEntry(e1, obj, weight)
         a(i) = e1
       } else { // we don't have this object yet
-        if (i == a.length-1) {
-          entryRecycled(e)
-          setEntry(e, obj, weight) // we replace the last entry
+        if (i == a.length-1) { // last entry gets replaces
+          releaseEntry(e)
         } else { // we sort in a new entry
           if (n == a.length) {
-            entryRemoved(a(iMax))
+            releaseEntry(a(iMax))
             System.arraycopy(a, i, a, i+1, n-i-1)
           } else {
             _size += 1
@@ -137,8 +164,8 @@ trait WeightedArray[T<:AnyRef,E<:WeightedArray.Entry[T]] extends Comparator[E] {
     */
   def tryAdd(obj: T, weight: Double): Int = {
     if (_size == 0) { // trivial case, first entry
-      _size = 1
       array(0) = createEntry(obj, weight)
+      _size = 1
       0
 
     } else {
@@ -161,9 +188,9 @@ trait WeightedArray[T<:AnyRef,E<:WeightedArray.Entry[T]] extends Comparator[E] {
       if (i < len){
         val e = a(i)
         if (isSame(o, e.obj)) {
-          entryRemoved(e)
           _size -= 1
           System.arraycopy(a, i+1, a, i, len-i-1)
+          releaseEntry(e)
           i
         } else {
           _remove(a,len,o,i+1)
@@ -176,29 +203,22 @@ trait WeightedArray[T<:AnyRef,E<:WeightedArray.Entry[T]] extends Comparator[E] {
     _remove(array, _size, obj, 0)
   }
 
-  def removeEvery(f: E=>Boolean): Boolean = {
-    var entryChanged = false
-    @tailrec def _filter (a: Array[E], len: Int, i: Int): Unit = {
+  def removeEvery(f: E=>Boolean) = _remove(f,true)
+  def removeFirst(f: E=>Boolean) = _remove(f,false)
+
+  private def _remove(f: E=>Boolean, removeAll: Boolean): Boolean = {
+    @tailrec def _filter (a: Array[E], len: Int, i: Int, entryChanged: Boolean): Boolean = {
       if (i < len) {
         val e = a(i)
         if (f(e)) {
-          entryChanged = true
           System.arraycopy(a,i+1,a,i,len-i-1)
+          releaseEntry(e)
           _size -= 1
-          _filter(a,len-1,i)
-        } else _filter(a,len,i+1)
-      }
+          if (removeAll) _filter(a,len-1,i,true) else true
+        } else _filter(a,len,i+1,entryChanged)
+      } else entryChanged
     }
-    _filter(array,_size,0)
-    entryChanged
-  }
-
-  override def compare (a: E, b: E): Int = {
-    val wa: Double = a.weight
-    val wb: Double = b.weight
-    if (wa < wb) -1
-    else if (wa == wb) 0
-    else  1
+    _filter(array,_size,0,false)
   }
 
   def updateWeights = {
@@ -211,7 +231,7 @@ trait WeightedArray[T<:AnyRef,E<:WeightedArray.Entry[T]] extends Comparator[E] {
     }
 
     _updateWeight(array, _size, 0)
-    if (entryChanged) util.Arrays.sort(array, this)
+    if (entryChanged) util.Arrays.sort(array, comparator)
   }
 
   def updateObjects (f: E=>T): Boolean = {
@@ -247,7 +267,7 @@ trait WeightedArray[T<:AnyRef,E<:WeightedArray.Entry[T]] extends Comparator[E] {
     }
 
     _updateWeight(array, _size, 0)
-    if (entryChanged) util.Arrays.sort(array, this)
+    if (entryChanged) util.Arrays.sort(array, 0, _size, comparator)
     entryChanged
   }
 
@@ -255,7 +275,7 @@ trait WeightedArray[T<:AnyRef,E<:WeightedArray.Entry[T]] extends Comparator[E] {
   def weightCut (maxWeight: Double) = {
     @tailrec def _removeTail (a: Array[E], len: Int, i: Int): Unit = {
       if (i < len){
-        entryRemoved(a(i))
+        releaseEntry(a(i))
         _removeTail(a, len, i+1)
       }
     }
@@ -274,15 +294,17 @@ trait WeightedArray[T<:AnyRef,E<:WeightedArray.Entry[T]] extends Comparator[E] {
 
   //--- minimal iteration interface
 
-  def size: Int = _size
+  override def iterator: Iterator[E] = new ArraySliceIterator[E](array,0,_size)
+
+  override def size: Int = _size
 
   def apply (i: Int): E = {
     if (i>=0 && i<_size) array(i)
     else throw new ArrayIndexOutOfBoundsException(s"$i outside [0..${_size-1}]")
   }
 
-  // constant space iterator
-  def foreach (f: E => Any) = {
+  // constant space iteration (no Iterator object required)
+  def foreachEntry (f: E => Unit) = {
     @tailrec def _visit (a: Array[E],  len: Int, i: Int, f: E=>Any): Unit = {
       if (i < len) {
         f(a(i))
@@ -292,18 +314,5 @@ trait WeightedArray[T<:AnyRef,E<:WeightedArray.Entry[T]] extends Comparator[E] {
     _visit(array, _size, 0, f)
   }
 
-  def toString (prefix: String) = {
-    val sb = new StringBuilder
-    sb.append(prefix)
-    sb.append('[')
-    var i=0
-    foreach { e =>
-      if (i > 0) sb.append(',')
-      sb.append(e)
-      i += 1
-    }
-    sb.append(']')
-    sb.toString
-  }
-  override def toString = toString("")
+  override def toString = mkString(getClass.getSimpleName + " [", ",", "]")
 }

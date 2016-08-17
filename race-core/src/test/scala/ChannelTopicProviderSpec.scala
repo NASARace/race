@@ -1,4 +1,21 @@
 /*
+ * Copyright (c) 2016, United States Government, as represented by the
+ * Administrator of the National Aeronautics and Space Administration.
+ * All rights reserved.
+ *
+ * The RACE - Runtime for Airspace Concept Evaluation platform is licensed
+ * under the Apache License, Version 2.0 (the "License"); you may not use
+ * this file except in compliance with the License. You may obtain a copy
+ * of the License at http://www.apache.org/licenses/LICENSE-2.0.
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/*
  * Copyright (c) 2016, United States Government, as represented by the 
  * Administrator of the National Aeronautics and Space Administration. 
  * All rights reserved.
@@ -37,7 +54,6 @@ object ChannelTopicProviderSpec {
   //------------------------- actors to test the mixed in ChannelTopicXX traits
 
   class TestServer(val config: Config) extends ChannelTopicProvider {
-    val writeTo = config.getString("write-to")
     var n = 0
     var timer: Cancellable = null
     var msg: String = "??"
@@ -59,7 +75,7 @@ object ChannelTopicProviderSpec {
           n = n + 1
           assert(n <= N)
           println(s"$name publishing message $n '$msg' to channel '$writeTo'")
-          publish( writeTo, msg)
+          publish(msg)
         } else {
           println(s"$name ignoring tick (no clients)")
         }
@@ -67,9 +83,11 @@ object ChannelTopicProviderSpec {
 
     override def isRequestAccepted (request: ChannelTopicRequest) = {
       request.channelTopic match {
-        case ChannelTopic(`writeTo`, TOPIC) =>
-          println(s"$name responding to $request")
-          true
+        case ChannelTopic(channel, TOPIC) =>
+          if (writeTo.contains(channel)) {
+            println(s"$name responding to $request")
+            true
+          } else false
         case _ => false
       }
     }
@@ -120,7 +138,6 @@ object ChannelTopicProviderSpec {
   //------------------------------------------------------------------
   class TestTranslator (val config: Config) extends TransitiveChannelTopicProvider {
     var n = 0
-    val writeTo = config.getString("write-to")
 
     override def handleMessage: Receive = {
       case BusEvent(channel,msg,_) if !msg.isInstanceOf[RaceSystemMessage] =>
@@ -131,15 +148,17 @@ object ChannelTopicProviderSpec {
         if (hasClients) {
           val obj = Some(msg)
           println(s"$name publishing translated object '$obj' to channel '$writeTo'")
-          publish(writeTo, obj)
+          publish(obj)
         }
     }
 
     override def isRequestAccepted(request: ChannelTopicRequest): Boolean = {
       request.channelTopic match {
-        case ChannelTopic(`writeTo`, TOPIC) =>
-          println(s"$name responding to $request")
-          true
+        case ChannelTopic(channel, TOPIC) =>
+          if (writeTo.contains(channel)) {
+            println(s"$name responding to $request")
+            true
+          } else false
         case _ => false
       }
     }

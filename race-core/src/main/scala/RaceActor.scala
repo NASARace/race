@@ -1,4 +1,21 @@
 /*
+ * Copyright (c) 2016, United States Government, as represented by the
+ * Administrator of the National Aeronautics and Space Administration.
+ * All rights reserved.
+ *
+ * The RACE - Runtime for Airspace Concept Evaluation platform is licensed
+ * under the Apache License, Version 2.0 (the "License"); you may not use
+ * this file except in compliance with the License. You may obtain a copy
+ * of the License at http://www.apache.org/licenses/LICENSE-2.0.
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/*
  * Copyright (c) 2016, United States Government, as represented by the 
  * Administrator of the National Aeronautics and Space Administration. 
  * All rights reserved.
@@ -19,6 +36,8 @@ package gov.nasa.race.core
 
 import akka.actor.Actor.Receive
 import akka.actor._
+import akka.event.Logging.{Error, Info, LogLevel}
+import akka.event.{Logging, LoggingAdapter}
 import akka.pattern.ask
 import com.typesafe.config.Config
 import gov.nasa.race.common
@@ -51,6 +70,7 @@ trait RaceActor extends Actor with ImplicitActorLogging {
 
   //--- convenience aliases
   @inline final def name = self.path.name
+  @inline final def pathString = self.path.toString
   @inline final def system = context.system
   @inline final def scheduler = context.system.scheduler
 
@@ -75,17 +95,18 @@ trait RaceActor extends Actor with ImplicitActorLogging {
     case TerminateRaceActor(originator) => handleTerminateRaceActor(originator)
     case msg: PingRaceActor => sender ! msg.copy(tReceivedNanos=System.nanoTime())
 
-    case msg => info(f"${name} in pre-init mode ignored: $msg%30.30s..")
+    case msg => info(f"ignored in pre-init mode: $msg%30.30s..")
   }
 
   def handleInitializeRaceActor (rctx: RaceContext, actorConf: Config) = {
-    info(s"$name got InitializeRaceActor")
+    info("got InitializeRaceActor")
     try {
       raceContext = rctx
       context.become(receiveLive)
       onInitializeRaceActor(rctx, actorConf)
       status = Initialized
       sender ! RaceActorInitialized
+      info("initialized")
     } catch {
       case ex: Throwable => sender ! RaceActorInitializeFailed(ex.getMessage)
     }
@@ -115,35 +136,40 @@ trait RaceActor extends Actor with ImplicitActorLogging {
     case rc: ChildNodeRollCall => answerChildNodes(rc)
     case rc: RollCall => rc.answer(self) // generic response
 
+    case SetLogLevel(newLevel) => logLevel = newLevel
+
     case SetTimeout(msg,duration) =>
       context.system.scheduler.scheduleOnce(duration, self, msg)
   }
 
   def handleLiveInitializeRaceActor (rc: RaceContext, actorConf: Config) = {
     if (rc != raceContext) {
-      info(s"$name got remote InitializeRaceActor")
+      info(s"got remote InitializeRaceActor from: ${rc.masterRef.path}")
       try {
         raceContext = rc
         onReInitializeRaceActor(rc, actorConf)
         sender ! RaceActorInitialized
+        info("reinitialized")
       } catch {
         case ex: Throwable => sender ! RaceActorInitializeFailed(ex.getMessage)
       }
     } else {
       // no point re-initializing same context - maybe we should raise an exception
-      warning(s"$name ignored re-initialization from same context")
+      warning("ignored re-initialization from same context")
       sender ! RaceActorInitialized
     }
   }
 
   def handleStartRaceActor  (originator: ActorRef) = {
-    info(s"$name got StartRaceActor")
+    info(s"got StartRaceActor from: ${originator.path}")
     try {
       if (status == Running) {
         onReStartRaceActor(originator)
+        info("restarted")
       } else {
         onStartRaceActor(originator)
         status = Running
+        info("started")
       }
       sender ! RaceActorStarted
     } catch {
@@ -161,7 +187,7 @@ trait RaceActor extends Actor with ImplicitActorLogging {
   def isDone = status.id >= Terminating.id
 
   def handleTerminateRaceActor (originator: ActorRef) = {
-    info(s"$name got TerminateRaceActor from $sender")
+    info(s"got TerminateRaceActor from ${originator.path}")
     if (isMandatoryTermination(originator)){
       try {
         status = Terminating
@@ -169,11 +195,12 @@ trait RaceActor extends Actor with ImplicitActorLogging {
         status = common.Status.Terminated
         // note that we don't stop this actor - that is the responsibility of the master/ras
         sender ! RaceActorTerminated
+        info("terminated")
       } catch {
         case ex: Throwable => sender ! RaceActorTerminateFailed(ex.getMessage)
       }
     } else {
-      info(s"$name ignored remote TerminateRaceActor")
+      info("ignored remote TerminateRaceActor")
       sender ! RaceActorTerminateIgnored
     }
   }
@@ -265,6 +292,30 @@ trait RaceActor extends Actor with ImplicitActorLogging {
     error(errMsg)
     throw new RuntimeException(s"constructor failed: $errMsg")
   }
+
+  def scheduleNow (interval: FiniteDuration, msg: Any) : Option[Cancellable] = {
+    Some(scheduler.schedule(0.seconds, interval, self, msg))
+  }
+
+  //--- per actor configurable logging
+
+  // note that we effectively bypass the Akka LoggingAdapter here since we want to use our own configuration
+  // Unfortunately, Akka does not easily support per-actor log levels.
+  // This might cause unwanted log events in case Akka system classes do the same trick, bypassing the LoggingAdapter and
+  // directly publishing to the event stream.
+  // note also that per-actor logging only works if the RaceActor APIs are used, not the LoggingAdapter (which does
+  // filtering on its own)
+  // TODO - this is brittle, it depends on Akka's logging internals and our own logger configuration (see RaceLogger)
+  import akka.event.Logging._
+
+  var logLevel: LogLevel = RaceLogger.getConfigLogLevel(system, config.getOptionalString("loglevel"))
+
+  @inline final def isLoggingEnabled (testLevel: LogLevel) = testLevel <= logLevel
+
+  @inline final def debug(msg: => String): Unit = if (DebugLevel <= logLevel) system.eventStream.publish(Debug(pathString,getClass,msg))
+  @inline final def info(msg: => String): Unit = if (InfoLevel <= logLevel) system.eventStream.publish(Info(pathString,getClass,msg))
+  @inline final def warning(msg: => String): Unit = if (WarningLevel <= logLevel) system.eventStream.publish(Warning(pathString,getClass,msg))
+  @inline final def error(msg: => String): Unit = if (ErrorLevel <= logLevel) system.eventStream.publish(Error(pathString,getClass,msg))
 }
 
 /**
@@ -305,9 +356,6 @@ trait FSMRaceActor[S,D] extends FSM[S,D] with  RaceActor {
       sender ! RaceActorTerminated
       nextState
 
-    case Event(RaceTerminate, _) =>
-      stop
-
     case Event(rc: ChildNodeRollCall, _) =>
       answerChildNodes(rc)
       stay
@@ -330,14 +378,36 @@ trait FSMRaceActor[S,D] extends FSM[S,D] with  RaceActor {
  * a RaceActor that can publish to the Bus
  */
 trait PublishingRaceActor extends RaceActor {
+  var writeTo = MutableSet.empty[String]
+
+  override def onInitializeRaceActor(raceContext: RaceContext, actorConf: Config): Any = {
+    super.onInitializeRaceActor(raceContext, actorConf)
+    writeTo ++= actorConf.getOptionalStringList("write-to")
+  }
+
+  // we just add the new channels
+  override def onReInitializeRaceActor(raceContext: RaceContext, actorConf: Config): Any = {
+    super.onReInitializeRaceActor(raceContext, actorConf)
+    writeTo ++= actorConf.getOptionalStringList("write-to")
+  }
+
+  // publish on all configured channels
+  def publish (msg: Any): Unit = {
+    writeTo.foreach { publish(_,msg) }
+  }
+
   def publish (channel: String, msg: Any): Unit = {
     busFor(channel).publish( BusEvent(channel,msg,self))
   }
 
+  def publishBusEvent (e: BusEvent): Unit = {
+    writeTo.foreach { publishBusEvent(_,e) }
+  }
+
   // can be used for re-publishing BusEvents on a different channel
-  def publishBusEvent (channel: String, e: BusEvent): Unit = {
-    val be = if (e.channel == channel) e else e.copy(channel=channel)
-    busFor(channel).publish(be)
+  def publishBusEvent (otherChannel: String, e: BusEvent): Unit = {
+    val be = if (e.channel == otherChannel) e else e.copy(channel=otherChannel)
+    busFor(otherChannel).publish(be)
   }
 }
 
@@ -357,18 +427,14 @@ trait SubscribingRaceActor extends RaceActor {
     readFrom.foreach { channel => busFor(channel).subscribe(self,channel) }
   }
 
+  // we add new channels and (re-)subscribe to everything since old channels might now be global
   override def onReInitializeRaceActor(raceContext: RaceContext, actorConf: Config): Any = {
-    if (status == Initialized){
-      // unsubscribe all global channels, but keep channels set since we re-subscribe after setting the new context
-      readFrom.foreach { channel =>
-        if (!isLocalChannel(channel)) bus.unsubscribe(self,channel)
-      }
-    }
     super.onReInitializeRaceActor(raceContext,actorConf)
-    readFrom ++= actorConf.getOptionalStringList("read-from")
-    readFrom.foreach { channel =>
-      if (!isLocalChannel(channel)) bus.subscribe(self,channel)
-    }
+    val newChannels = actorConf.getOptionalStringList("read-from")
+    // re-subscription is benign in case we already were subscribed (bus keeps subscribers as sets)
+    readFrom ++= newChannels
+    //newChannels.foreach { channel => busFor(channel).subscribe(self,channel) }
+    readFrom.foreach { channel => busFor(channel).subscribe(self,channel) }
   }
 
   //--- dynamic subscriptions
@@ -448,7 +514,8 @@ trait ContinuousTimeRaceActor extends RaceActor {
     lastSimMillis - dt.getMillis
   }
 
-  @inline def currentWallTimeMillis = System.currentTimeMillis()
+  @inline final def currentSimTimeMillis = simClock.millis
+  @inline final def currentWallTimeMillis = System.currentTimeMillis()
 
   def elapsedSimTimeSince (dt: DateTime) = Duration(max(0,lastSimMillis - dt.getMillis), MILLISECONDS)
   def elapsedSimTimeMillisSince (dt: DateTime) = lastSimMillis - dt.getMillis

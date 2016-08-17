@@ -1,4 +1,21 @@
 /*
+ * Copyright (c) 2016, United States Government, as represented by the
+ * Administrator of the National Aeronautics and Space Administration.
+ * All rights reserved.
+ *
+ * The RACE - Runtime for Airspace Concept Evaluation platform is licensed
+ * under the Apache License, Version 2.0 (the "License"); you may not use
+ * this file except in compliance with the License. You may obtain a copy
+ * of the License at http://www.apache.org/licenses/LICENSE-2.0.
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/*
  * Copyright (c) 2016, United States Government, as represented by the 
  * Administrator of the National Aeronautics and Space Administration. 
  * All rights reserved.
@@ -31,8 +48,7 @@ import java.util.HashMap;
 /**
  * a simplified and streamlined pull parser for pre-validated XML
  *
- * This still needs more sanity checks and doesn't support entities yet, but
- * the general ideas already show their value:
+ * the main design points are:
  *
  *  - having a pull parser that keeps track of element nesting
  *  - save function calls and variables (help register alloc)
@@ -43,18 +59,25 @@ import java.util.HashMap;
  *  - push unicode conversion into (native) data init and use a simple char[] as
  *    working buffer
  *  - iterate over local vars instead of fields (save get/setfields)
+ *
+ *  TODO - this still needs more sanity checks and better support for
+ *  order independent attribute parsing
  */
 public class XmlPullParser implements XmlPullParserIfc {
 
-  class XmlSyntaxException extends RuntimeException { // malformed XML structure
+  public class XmlSyntaxException extends RuntimeException { // malformed XML structure
     XmlSyntaxException (String details, int i, int len) {
       super(details + ": " + contextAt(i, len));
     }
   }
-  class XmlContentException extends RuntimeException { // unexpected XML data
+  public class XmlContentException extends RuntimeException { // unexpected XML data
     XmlContentException (String details, int i, int len) {
       super(details + ": " + contextAt(i, len));
     }
+  }
+
+  public interface XmlAttributeProcessor {
+    void processAttribute (String attrName, String value);
   }
 
   private char[] buf;
@@ -279,6 +302,10 @@ public class XmlPullParser implements XmlPullParserIfc {
     }
   }
 
+  public final String trimmedTextOrNull() {
+    return parseTrimmedText() ? text : null;
+  }
+
   public boolean skipToText() {
     if (isStartElement){
       int i = idx;
@@ -422,6 +449,7 @@ public class XmlPullParser implements XmlPullParserIfc {
     } else throw new XmlContentException("no non-whitespace text", idx-15, 35);
   }
 
+  // TODO - this should not create Strings unless the client needs them
   public boolean parseNextAttribute() {
     if (isStartElement) {
       int i=idx;
@@ -450,6 +478,13 @@ public class XmlPullParser implements XmlPullParserIfc {
     }
   }
 
+  /** callback version */
+  public void parseAttributes (XmlAttributeProcessor client) {
+    while (parseNextAttribute()) {
+      client.processAttribute(attr, value);
+    }
+  }
+
   public boolean parseAttribute(String k) {
     if (isStartElement) {
       while (parseNextAttribute()){
@@ -474,6 +509,9 @@ public class XmlPullParser implements XmlPullParserIfc {
     if (parseAttribute(k)){
       return value;
     } else throw new XmlContentException("no attribute " + k, idx, 10);
+  }
+  public final String attributeOrNull (String k){
+    return parseAttribute(k) ? value : null;
   }
 
   // <2do> these should directly parse the numbers, i.e. we need a parse{Double,Int}Attribute

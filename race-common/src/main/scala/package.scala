@@ -1,4 +1,21 @@
 /*
+ * Copyright (c) 2016, United States Government, as represented by the
+ * Administrator of the National Aeronautics and Space Administration.
+ * All rights reserved.
+ *
+ * The RACE - Runtime for Airspace Concept Evaluation platform is licensed
+ * under the Apache License, Version 2.0 (the "License"); you may not use
+ * this file except in compliance with the License. You may obtain a copy
+ * of the License at http://www.apache.org/licenses/LICENSE-2.0.
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/*
  * Copyright (c) 2016, United States Government, as represented by the 
  * Administrator of the National Aeronautics and Space Administration. 
  * All rights reserved.
@@ -188,6 +205,14 @@ package object common {
     if (manifest[T].runtimeClass.isInstance(o)) f(o.asInstanceOf[T])
   }
 
+  def asInstanceOf[T: Manifest](o: Any): Option[T] = {
+    if (manifest[T].runtimeClass.isInstance(o)) Some(o.asInstanceOf[T]) else None
+  }
+
+  def asInstanceOfMatching[T: Manifest](o: Any, pred: (T)=>Boolean): Option[T] = {
+    asInstanceOf[T](o).flatMap( t => if (pred(t)) Some(t) else None)
+  }
+
   def containsAny[T](a: Set[T], b: Traversable[T]): Boolean = {
     b.foreach { e =>
       if (a.contains(e)) return true
@@ -218,8 +243,21 @@ package object common {
   }
 
   /** are d1 and d2 on different sides of threshold */
-  def crossedThreshold(d1: Double, d2: Double, threshold: Double): Boolean =
+  @inline def crossedThreshold(d1: Double, d2: Double, threshold: Double): Boolean =
     Math.signum(d1 - threshold) != Math.signum(d2 - threshold)
+
+  class Threshold (val threshold: Double, crossedBelow: => Unit, crossedAbove: => Unit) extends Ordered[Threshold]{
+    def this(threshold: Double, crossedAction: => Unit) = this(threshold, crossedAction, crossedAction)
+
+    def checkCrossed (dOld: Double, dNew: Double): Boolean = {
+      if (crossedThreshold(dOld,dNew,threshold)) {
+        if (dOld > dNew) crossedBelow else crossedAbove
+        true
+      } else false
+    }
+
+    def compare (other: Threshold) = if (threshold < other.threshold) -1 else if (threshold > other.threshold) 1 else 0
+  }
 
   @tailrec def repeat(nTimes: Int)(f: => Any): Unit = {
     if (nTimes > 0) {
@@ -277,6 +315,15 @@ package object common {
   def normalizedDegrees(deg: Double) = if (deg < 0) 360.0 + deg else deg
 
   //--- Java interoperability
+
+  // for order-independent processing of XmlPullParser attributes
+  trait XmlAttrProcessor {
+    this: XmlPullParser =>
+
+    def processAttributes(pf: PartialFunction[String,Unit]) = {
+      while (parseNextAttribute) pf(attr)
+    }
+  }
 
   // to use Scala lambdas as Java method arguments
   implicit def sfunc1Tojfunc1[A](f: (A) => Any) = new java.util.function.Function[A, Any]() {

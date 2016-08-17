@@ -1,4 +1,21 @@
 /*
+ * Copyright (c) 2016, United States Government, as represented by the
+ * Administrator of the National Aeronautics and Space Administration.
+ * All rights reserved.
+ *
+ * The RACE - Runtime for Airspace Concept Evaluation platform is licensed
+ * under the Apache License, Version 2.0 (the "License"); you may not use
+ * this file except in compliance with the License. You may obtain a copy
+ * of the License at http://www.apache.org/licenses/LICENSE-2.0.
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/*
  * Copyright (c) 2016, United States Government, as represented by the 
  * Administrator of the National Aeronautics and Space Administration. 
  * All rights reserved.
@@ -32,8 +49,6 @@ import scala.util.matching.Regex
   */
 trait AsdexImporter extends ChannelTopicProvider with FilteringPublisher {
 
-  val writeTo: String // provided by concrete actor
-
   // we split this into two data structures since we need efficient iteration over the regexes
   // whereas serving/unserving airports happens rarely.
   // <2do> compare runtime behavior against TrieMap, which would be less/cleaner code
@@ -66,7 +81,7 @@ trait AsdexImporter extends ChannelTopicProvider with FilteringPublisher {
       if (!servedAirports.contains(airport)){
         regexes.synchronized {
           val regEx = s"<airport>${airport.id}</airport>".r
-          info(s"$name start serving airport ${airport.id}")
+          info(s"start serving airport ${airport.id}")
           regexes += regEx
           servedAirports = servedAirports + (airport -> regEx)
         }
@@ -79,7 +94,7 @@ trait AsdexImporter extends ChannelTopicProvider with FilteringPublisher {
   def unserve (airport: Airport) = {
     ifSome(servedAirports.get(airport)) { r =>
       regexes.synchronized {
-        info(s"$name stop serving airport ${airport.id}")
+        info(s"stop serving airport ${airport.id}")
         regexes -= r
         servedAirports = servedAirports - airport
       }
@@ -93,7 +108,7 @@ trait AsdexImporter extends ChannelTopicProvider with FilteringPublisher {
   // this is a boundary actor - we get our data from outside RACE so there is nobody to request from
   override def isRequestAccepted (request: ChannelTopicRequest) = {
     val channelTopic = request.channelTopic
-    if (channelTopic.channel == writeTo){
+    if (writeTo.contains(channelTopic.channel)){
       channelTopic.topic match {
         case Some(airport:Airport) => Airport.asdexAirports.contains(airport.id)
         case Some(airportId:String) => Airport.asdexAirports.contains(airportId)

@@ -1,4 +1,21 @@
 /*
+ * Copyright (c) 2016, United States Government, as represented by the
+ * Administrator of the National Aeronautics and Space Administration.
+ * All rights reserved.
+ *
+ * The RACE - Runtime for Airspace Concept Evaluation platform is licensed
+ * under the Apache License, Version 2.0 (the "License"); you may not use
+ * this file except in compliance with the License. You may obtain a copy
+ * of the License at http://www.apache.org/licenses/LICENSE-2.0.
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/*
  * Copyright (c) 2016, United States Government, as represented by the 
  * Administrator of the National Aeronautics and Space Administration. 
  * All rights reserved.
@@ -17,13 +34,16 @@
 
 package gov.nasa.race.swing
 
+import java.awt.Color
+import javax.swing.{Icon, ImageIcon}
+
 import scala.swing._
 
 /**
   * configurable, type hierarchy aware style support for scala-swing.
   *
   * This goes beyond Swing UIManager LookAndFeel implementations because it
-  * supports not only type but also use specification by means of a 'id' symbol
+  * supports not only type but also use specification by means of an 'id' symbol
   * In that sense, it is a combination of configurable Look&Feel (which it could use/set)
   * and CSS
   */
@@ -37,6 +57,13 @@ class Stylist {
       pf.applyOrElse(id, ignoreId)
     }
   }
+
+  def getIcon (id: Symbol): Icon = Style.undefinedIcon
+
+  val defaultFont = new java.awt.Label().getFont
+  def getFont (id: Symbol): Font = defaultFont
+
+  def getColor (id: Symbol): Color = Color.black
 
   // this is the runtime dispatcher. Unfortunately we cannot dispatch with
   // target type specific implicit classes (i.e. at compile time) because the
@@ -101,6 +128,7 @@ class Stylist {
       case c:SplitPane          => style(c, id)
       case c:ScrollPane         => style(c, id)
       case c:AWTWrapper         => style(c, id)
+      case c:Filler             => style(c, id)
 
       case c:DigitalClock#ClockLabel => style(c, id)  // our own
       case c:DigitalStopWatch#StopWatchLabel => style(c, id)   // our own
@@ -116,7 +144,7 @@ class Stylist {
     }
   }
 
-  // the default implementations implement the target type hierarchy (in terms of style attributes)
+  // the default versions implement the target type hierarchy (in terms of style attributes)
   // While this should match the target hierarchy, we can introduce pseudo hierarchies such as for GBPanel
   // order should not matter
 
@@ -154,10 +182,11 @@ class Stylist {
   def style (c: BorderPanel, id: Symbol)                         : Unit = style(c.asInstanceOf[Panel], id)
   def style (c: SplitPane, id: Symbol)                           : Unit = style(c.asInstanceOf[Component], id)
   def style (c: ScrollPane, id: Symbol)                          : Unit = style(c.asInstanceOf[Component], id)
-  def style (c: Separator, id: Symbol)                           : Unit = style(c.asInstanceOf[Component], id)
 
   def style (c: DoubleOutputField, id: Symbol)                   : Unit = style(c.asInstanceOf[FlowPanel], id)
   def style (c: AWTWrapper, id: Symbol)                          : Unit = style(c.asInstanceOf[Component], id)
+  def style (c: Filler, id: Symbol)                              : Unit = style(c.asInstanceOf[Component], id)
+  def style (c: Separator, id: Symbol)                           : Unit = style(c.asInstanceOf[Component], id)
   def style (c: DigitalClock, id: Symbol)                        : Unit = style(c.asInstanceOf[Panel], id)
   def style (c: DigitalClock#ClockLabel, id: Symbol)             : Unit = style(c.asInstanceOf[Label], id)
   def style (c: DigitalStopWatch, id: Symbol)                    : Unit = style(c.asInstanceOf[Panel], id)
@@ -177,6 +206,7 @@ class Stylist {
 
 object Style {
   final val NoStyle = 'None
+  final val undefinedIcon = new ImageIcon()
 
   private var _stylist: Stylist = initStyle
   def stylist = _stylist
@@ -194,6 +224,12 @@ object Style {
       case t: Throwable => new Stylist {} // 2do - some error message would be in order
     }
   }
+
+  //--- the API
+
+  def getIcon (id: Symbol) = _stylist.getIcon(id)
+  def getFont (id: Symbol) = _stylist.getFont(id)
+  def getColor (id: Symbol) = _stylist.getColor(id)
 
   implicit class Styled[C<:UIElement] (c:C) {
     def styled (id:Symbol=NoStyle): C = { stylist.setStyle(c, id); c}

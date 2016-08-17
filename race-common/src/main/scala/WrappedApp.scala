@@ -1,4 +1,21 @@
 /*
+ * Copyright (c) 2016, United States Government, as represented by the
+ * Administrator of the National Aeronautics and Space Administration.
+ * All rights reserved.
+ *
+ * The RACE - Runtime for Airspace Concept Evaluation platform is licensed
+ * under the Apache License, Version 2.0 (the "License"); you may not use
+ * this file except in compliance with the License. You may obtain a copy
+ * of the License at http://www.apache.org/licenses/LICENSE-2.0.
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/*
  * Copyright (c) 2016, United States Government, as represented by the 
  * Administrator of the National Aeronautics and Space Administration. 
  * All rights reserved.
@@ -51,6 +68,9 @@ object WrappedApp {
      app.expectOutput(max, outputMatcher)
   def expectOutput (app: WrappedApp, max: FiniteDuration, expected: String) =
     app.expectOutput(max, expected)
+
+  private var _isWrappedApp = false
+  def isWrappedApp  = _isWrappedApp
 }
 
 class WrappedApp (action: => Any) {
@@ -99,6 +119,7 @@ class WrappedApp (action: => Any) {
   }
 
   def execute = {
+    WrappedApp._isWrappedApp = true
     try {
       System.setIn(pisIn)
       System.setOut(new PrintStream(posOut))
@@ -136,7 +157,7 @@ class WrappedApp (action: => Any) {
       case x: TimeoutException =>
         throw new AssertionError(s"timeout while waiting for '$expected'")
       case x: IOException =>
-        if (expected != null) throw new AssertionError(s"IO error while waiting for '$expected'")
+        if (expected != null) throw new AssertionError(s"IO error '$x' while waiting for '$expected'")
 
     } finally {
       if (failureAction != null){
@@ -144,8 +165,8 @@ class WrappedApp (action: => Any) {
         Thread.sleep(500)
       }
 
-      stop(appThread) // only API that /could/ work
-      posIn.close
+      //stop(appThread) // only API that /could/ work
+      //posIn.close
     }
   }
 

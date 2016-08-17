@@ -1,4 +1,21 @@
 /*
+ * Copyright (c) 2016, United States Government, as represented by the
+ * Administrator of the National Aeronautics and Space Administration.
+ * All rights reserved.
+ *
+ * The RACE - Runtime for Airspace Concept Evaluation platform is licensed
+ * under the Apache License, Version 2.0 (the "License"); you may not use
+ * this file except in compliance with the License. You may obtain a copy
+ * of the License at http://www.apache.org/licenses/LICENSE-2.0.
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/*
  * Copyright (c) 2016, United States Government, as represented by the 
  * Administrator of the National Aeronautics and Space Administration. 
  * All rights reserved.
@@ -17,12 +34,12 @@
 
 package gov.nasa.race.ww
 
-import akka.actor.ActorContext
 import gov.nasa.race.common._
 import gov.nasa.worldwind.WorldWindow
-import gov.nasa.worldwind.event.{SelectListener, SelectEvent}
+import gov.nasa.worldwind.event.{SelectEvent, SelectListener}
 import gov.nasa.worldwind.layers.Layer
 
+import scala.collection.mutable.ListBuffer
 import scala.swing.Component
 
 /**
@@ -55,6 +72,9 @@ trait RaceLayerInfo {
   var wwd: WorldWindow = _
   var wwdRedrawManager: RedrawManager = _
 
+  def redraw = if (wwdRedrawManager != null) wwdRedrawManager.redraw
+  def redrawNow = if (wwdRedrawManager != null) wwdRedrawManager.redrawNow
+
   def initializeLayer (wwd: WorldWindow, wwdRedrawManager: RedrawManager): Unit = {
     this.wwd = wwd
     this.wwdRedrawManager = wwdRedrawManager
@@ -76,25 +96,21 @@ trait RaceLayerInfo {
  * the gov.nasa.worldwind.layers.Layer setMin/MaxActiveAltitude is not enough if
  * the layer has to render altitude-aware, it is just all or nothing
  */
-trait AltitudeSensitiveRaceLayerInfo extends RaceLayerInfo with DeferredRenderingListener {
+trait AltitudeSensitiveLayerInfo extends RaceLayerInfo with DeferredRenderingListener {
   var eyeAltitude = getEyeAltitude
 
-  val thresholds: Array[Double]
-  def crossedEyeAltitudeThreshold (oldAltitude: Double, newAltitude: Double, threshold: Double)
+  val thresholds = ListBuffer.empty[Threshold]  // TODO - this should be a sorted list
 
   override def initializeLayer (wwd: WorldWindow, wwdRedrawManager: RedrawManager): Unit = {
-    this.eyeAltitude = getEyeAltitude
+    eyeAltitude = getEyeAltitude
     super.initializeLayer(wwd,wwdRedrawManager)
 
     onBeforeBufferSwap(wwd, 400) { e =>
       val oldEyeAltitude = eyeAltitude
-      eyeAltitude = getEyeAltitude
+      val newEyeAltitude = getEyeAltitude
+      eyeAltitude = newEyeAltitude
 
-      for (t <- thresholds){
-        if (crossedThreshold(oldEyeAltitude, eyeAltitude, t)){
-          crossedEyeAltitudeThreshold( oldEyeAltitude, eyeAltitude, t)
-        }
-      }
+      thresholds foreach { _.checkCrossed(oldEyeAltitude,newEyeAltitude) }
     }
   }
 

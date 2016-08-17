@@ -1,4 +1,21 @@
 /*
+ * Copyright (c) 2016, United States Government, as represented by the
+ * Administrator of the National Aeronautics and Space Administration.
+ * All rights reserved.
+ *
+ * The RACE - Runtime for Airspace Concept Evaluation platform is licensed
+ * under the Apache License, Version 2.0 (the "License"); you may not use
+ * this file except in compliance with the License. You may obtain a copy
+ * of the License at http://www.apache.org/licenses/LICENSE-2.0.
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/*
  * Copyright (c) 2016, United States Government, as represented by the 
  * Administrator of the National Aeronautics and Space Administration. 
  * All rights reserved.
@@ -31,41 +48,41 @@ import scala.swing._
 import scala.swing.event.ButtonClicked
 
 /**
-object CollapsiblePanel {
-  def main (args: Array[String]): Unit = {
-    Style.setStyle(new RaceDefaultStyle)
-
-    val top = new AppFrame {
-      title = "CollapsiblePanelDemo"
-
-      val child1 = new BoxPanel (Orientation.Vertical){
-        border = new EmptyBorder(10,10,10,10)
-        for (i <- 1 until 5) contents += new Label(s"line $i").styled()
-      }.styled()
-
-
-      val listData = for (i <- 1 until 20) yield(i.toString)
-      val list = new ListView[String](listData).styled()
-      val child2 = new ScrollPane(list)
-      child2.preferredSize = new Dimension(200,150)
-
-      val panel: CollapsiblePanel = new CollapsiblePanel().styled('layerInfo)
-      panel.add("panel 1", child1)
-      panel.add("panel 2", child2)
-
-      contents = panel
-      size = new Dimension(300,300)
-      pack()
-    }
-    top.open()
-  }
-}
+  * object CollapsiblePanel {
+  * def main (args: Array[String]): Unit = {
+  * Style.setStyle(new RaceDefaultStyle)
+  **
+  *val top = new AppFrame {
+  *title = "CollapsiblePanelDemo"
+  **
+  *val child1 = new BoxPanel (Orientation.Vertical){
+  *border = new EmptyBorder(10,10,10,10)
+  *for (i <- 1 until 5) contents += new Label(s"line $i").styled()
+  *}.styled()
+  **
+  *
+  *val listData = for (i <- 1 until 20) yield(i.toString)
+  *val list = new ListView[String](listData).styled()
+  *val child2 = new ScrollPane(list)
+  *child2.preferredSize = new Dimension(200,150)
+  **
+ *val panel: CollapsiblePanel = new CollapsiblePanel().styled('layerInfo)
+  *panel.add("panel 1", child1)
+  *panel.add("panel 2", child2)
+  **
+ *contents = panel
+  *size = new Dimension(300,300)
+  *pack()
+  *}
+  *top.open()
+  *}
+*}
   **/
 
 class CollapsiblePanel extends GBPanel {
-  val c = new Constraints( gridx=0, fill=Fill.Horizontal, anchor=Anchor.NorthWest, ipady=5, weightx=1.0)
+  val c = new Constraints( gridx=0, fill=Fill.Horizontal, anchor=Anchor.NorthWest, weightx=1.0)
   val cFiller = c.clone.weighty(1.0)
-  val filler = new Panel {}.styled()
+  val filler = new Filler().styled()
 
   // this is reasonably brain dead - since we don't have a callback for doLayout, we have to constantly remove/add a filler
   def add (title: String, child: Component, toolTip:String= "click to collapse/expand", isExpanded: Boolean=true) = {
@@ -75,17 +92,15 @@ class CollapsiblePanel extends GBPanel {
   }
 
   def set (title: String, child: Component, toolTip:String= "click to collapse/expand", isExpanded: Boolean=true):Unit = {
-    for (c <- contents) {
-      ifInstanceOf[Collapsible](c){ collapsible =>
-        if (collapsible.title == title){
-          collapsible.setContent(child)
-          child.repaint()
-          return
-        }
+    if (!contents.exists {
+      _ match {
+        case c:Collapsible if c.title == title =>
+          c.setContent(child)
+          child.repaint
+          true
+        case other => false
       }
-    }
-
-    add(title,child,toolTip,isExpanded)
+    }) add(title,child,toolTip,isExpanded)
   }
 
   def expand(title: String, setExpanded: Boolean): Unit = {
@@ -138,7 +153,7 @@ class Collapsible (val title: String, var content: Component, toolTip:String, va
 
   def setContent (newContent: Component) = {
     content = newContent
-    prefContentSize = content.preferredSize
+    prefContentSize.height = content.preferredSize.height
     contentWrapper.setContent(newContent)
   }
 
@@ -150,9 +165,9 @@ class Collapsible (val title: String, var content: Component, toolTip:String, va
   def setExpanded (newState: Boolean) = {
     if (newState != isExpanded){
       isExpanded = newState
+      if (!isExpanded) prefContentSize = contentWrapper.content.size // it might have changed
       updateTitleBar(newState)
       updateAnimated(newState)
-      //updateImmediate(newState)
     }
   }
 
@@ -161,7 +176,7 @@ class Collapsible (val title: String, var content: Component, toolTip:String, va
       val height = if (isExpanded) prefContentSize.height else 0
       content.visible = isExpanded
       contentWrapper.setPreferredSize(new Dimension(prefContentSize.width, height))
-      content.revalidate()
+      contentWrapper.revalidate()
     }
   }
 
@@ -170,7 +185,7 @@ class Collapsible (val title: String, var content: Component, toolTip:String, va
     val delay = 20 // ms
 
     if (content.peer.getWidth == 0) { // first time this is expanded, layout content
-      content.peer.setBounds(0, 0, contentWrapper.getWidth, prefContentSize.height)
+      content.peer.setBounds(0, 0, prefContentSize.width, prefContentSize.height)
       content.peer.doLayout()
     }
 
@@ -219,12 +234,12 @@ class Collapsible (val title: String, var content: Component, toolTip:String, va
         timer.stop
         y = 1.0
         if (!expand) content.visible = false
+        contentWrapper.isAnimating = false
+
       } else {
         val x = dx * n
         y = x / (0.35 + 0.85 * x)
-        if (expand && n == 1) {
-          content.visible = true   // make visible before starting animation
-        }
+        if (expand && n == 1) content.visible = true   // make visible before starting animation
       }
 
       if (!expand) y = 1.0 - y
@@ -232,9 +247,6 @@ class Collapsible (val title: String, var content: Component, toolTip:String, va
         yLast = y
         contentWrapper.setPreferredSize(w, (h * y).toInt)
         contentWrapper.revalidate()
-      }
-      if (n == nTicks) {
-        contentWrapper.isAnimating = false
       }
     }
   }

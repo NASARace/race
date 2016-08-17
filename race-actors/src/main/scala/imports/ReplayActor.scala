@@ -1,4 +1,21 @@
 /*
+ * Copyright (c) 2016, United States Government, as represented by the
+ * Administrator of the National Aeronautics and Space Administration.
+ * All rights reserved.
+ *
+ * The RACE - Runtime for Airspace Concept Evaluation platform is licensed
+ * under the Apache License, Version 2.0 (the "License"); you may not use
+ * this file except in compliance with the License. You may obtain a copy
+ * of the License at http://www.apache.org/licenses/LICENSE-2.0.
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/*
  * Copyright (c) 2016, United States Government, as represented by the 
  * Administrator of the National Aeronautics and Space Administration. 
  * All rights reserved.
@@ -45,14 +62,13 @@ class ReplayActor (val config: Config) extends ContinuousTimeRaceActor with Filt
   val bufSize = config.getIntOrElse("buffer-size", 4096)
   var compressedMode = config.getBooleanOrElse("compressed", pathName.endsWith(".gz"))
   val rebaseDates = config.getBooleanOrElse("rebase-dates", false)
-  val writeTo = config.getString("write-to")
   val breakAfter = config.getIntOrElse("break-after", 20) // reschedule after at most N published messages
 
   val iStream = openStream
   val archiveReader = newInstance[ArchiveReader](config.getString("archive-reader"), Array(classOf[InputStream]), Array(iStream)).get
   var count = 0
 
-  log.info(s"$name initializing replay of $pathName starting at $simTime")
+  info(s"initializing replay of $pathName starting at $simTime")
 
   def openStream: InputStream = {
     val fis = new FileInputStream(pathName)
@@ -85,7 +101,7 @@ class ReplayActor (val config: Config) extends ContinuousTimeRaceActor with Filt
           // negative if date not yet reached
           val dt = toWallTimeMillis(-updateElapsedSimTimeMillisSince(date))
           if (dt > SchedulerThresholdMillis) {
-            debug(f"$name scheduling in $dt milliseconds: $msg%30.30s.. ")
+            debug(f"scheduling in $dt milliseconds: $msg%30.30s.. ")
             scheduler.scheduleOnce(dt milliseconds, self, Replay(msg))
           } else {
             // <2do> we should probably check for msg expiration here
@@ -100,10 +116,10 @@ class ReplayActor (val config: Config) extends ContinuousTimeRaceActor with Filt
           }
 
         case None =>
-          warning(s"$name ignored entry from stream $pathName")
+          warning(s"ignored entry from stream $pathName")
       }
     } else {
-      log.info(s"$name reached end of replay stream $pathName")
+      info(s"reached end of replay stream $pathName")
       archiveReader.close // no need to keep it around
       iStream.close
     }
