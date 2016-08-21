@@ -12,7 +12,7 @@ building airspace simulations faster and better with actors
 * can be used as stand-in for live systems
 * distributed
 
-<img src="images/lvc-sim.svg" class="center scale75">
+<img src="../images/lvc-sim.svg" class="center scale75">
 
 ## Main Challenges
 uniform programming model for components supporting:
@@ -27,7 +27,7 @@ uniform programming model for components supporting:
 * objects that communicate only through async messages ⟹ no shared state
 * process messages one-at-a-time ⟹ sequential code
 
-<img src="images/actor.svg" class="center scale40">
+<img src="../images/actor.svg" class="center scale40">
 
 ## Actors implementation in RACE
 * using **Akka** <http://akka.io>
@@ -48,14 +48,14 @@ uniform programming model for components supporting:
 * user code mostly just (user-) message handler
 * supports local and network bus (publish subscribe)
 
-<img src="images/actor-states.svg" class="center scale60">
+<img src="../images/actor-states.svg" class="center scale60">
 
 ## Actors don't live in a vacuum - RaceActorSystems
 1. `RemoteMain` driver instantiating `RaceActorSystem` with config
 2. `RaceActorSystem` instantiating `Master` actor
 3. `Master` actor instantiating configured `RaceActors`
 
-<img src="images/race-overview-2.svg" class="center scale55">
+<img src="../images/race-overview-2.svg" class="center scale55">
 
 ## Everything is configured
  * RACE is **not** a monolythic application - needs configuration as input
@@ -81,25 +81,25 @@ configs define graphs:
 * nodes are actors
 * edges are channels through which actors communicate
 
-<img src="images/race-dataflow.svg" class="center scale90">
+<img src="../images/race-dataflow.svg" class="center scale90">
 
 ## RaceActors/Systems support Location Transparency
 * actors can be moved between processes
 * no need to change actor code - just configuration
 
-<img src="images/loc-trans.svg" class="center scale90">
+<img src="../images/loc-trans.svg" class="center scale90">
 
 ## Data on Demand - ChannelTopics
 * *ChannelTopics* are "valves" to turn on/off data flow along channel "pipes"
 * fully transitive and async protocol for provider-lookup & registration
 
-<img src="images/race-channeltopics.svg" class="center scale70">
+<img src="../images/race-channeltopics.svg" class="center scale70">
 
 ## RaceViewer Visualization - WorldWind in an Actor
 * adds thread-safe data acquisition (Layers) and UI framework (Panels)
 * supports viewer synchronization through RACE channels
 
-<img src="images/race-viewer.svg" class="center scale75">
+<img src="../images/race-viewer.svg" class="center scale75">
 
 ## Demonstration Example
 * full SWIM import (sfdps,tfmData,asde-x,itws)
@@ -111,7 +111,7 @@ configs define graphs:
 * < 10% CPU load on MacBook Pro (2.8GHz Intel i7, 16GB)
 
 ## Example Schematics
-<img src="images/swim-sbs-all-ww.svg" class="center scale65">
+<img src="../images/swim-sbs-all-ww.svg" class="center scale65">
 
 ## Lessons Learned
 * actors are a suitable programming model for this domain

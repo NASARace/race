@@ -110,9 +110,9 @@ available for JVMs. As shown in Fig. 1, Akka actors have three essential feature
     * a system managed *mailbox* that hold messages received by this actor,
     * a user provided *message handler*.
 
-
-.. figure:: actor.pdf
-   actor features 
+.. image:: ../images/actor.svg
+    :class: left scale60
+    :alt: actor features
 
 Within each actor, processing of messages takes place sequentially in the order in which messages were received. The
 Akka framework guarantees that no actor executes simultaneously in different threads. Actor references can only be used
@@ -170,8 +170,9 @@ As depicted in Fig. 2, the starting point to understanding the RACE anatomy is a
 actors participate in a RACE application, and how these actors connect to each other. Configurations are text files that
 are created outside of RACE.
 
-.. figure:: race-overview-3.pdf
-   Race overview 
+.. image:: ../images/race-overview-2.svg
+    :class: center scale60
+    :alt: RACE overview
 
 The top-level runtime component is the **RACE Driver**, which is usually the main class of a respective application and
 directly invoked by the user. There are several driver variants depending on user interface and locality, but all share
@@ -225,8 +226,10 @@ The underlying data model is a tree of key-value elements. Each element value ca
 Boolean, Int etc.), an object (set of key-value pairs ``\{..\}") or an array of element values (``[..]"). Figure 3 shows
 basic structure, elements and connections of RACE configuration files.
 
-.. figure: race-config-2.pdf
-   RACE configuration
+
+.. image:: ../images/race-config.svg
+    :class: center scale60
+    :alt: RACE configuration
 
 
 The top level element of a RACE configuration file is a `universe` object, which contains two main sub-elements: 
@@ -278,8 +281,9 @@ protocols.
 
 Figure 4 shows the basic RaceActor states and transitions.
 
-.. figure: actor-states-2.pdf
-   RaceActor states
+.. image:: ../images/actor-states.svg
+    :class: center scale60
+    :alt: RaceActor states
 
 
 Each of the RaceActor state transitions is initiated by the Master and mapped into a function that can be overridden by
@@ -421,8 +425,10 @@ whole channel. It is up to the ChannelTopicProvider to pattern match request top
 
 Figure 5 depicts how a ChannelTopic request propagates through the system
 
-.. figure: race-channeltopics-2.pdf
-   channel topics
+
+.. image:: ../images/race-channeltopics.svg
+    :class: center scale60
+    :alt: channel topics
 
 
 At each level, requests are handled in four steps:
@@ -460,8 +466,9 @@ embedded into Java applications.
 
 Fig. 6 gives a conceptual overview of how WorldWind is integrated into RACE.
 
-.. figure: race-viewer.pdf
-   WorldWind integration
+.. image:: ../images/race-viewer.svg
+    :class: center scale60
+    :alt: WorldWind integration
 
 The primary WorldWind concept in the context of RACE is the *RenderableLayer*, which represents a display relevant data
 set that can be separately controlled in terms of visibility, rendering and updates. RACE uses *RaceLayers* to map its

@@ -25,34 +25,49 @@ import sbt.Keys._
 
 object LaikaCommands {
 
-  def mkManual = Command.command("mkManual") { state =>
+  def manualCmd (state: State): State = {
     val extracted = Project extract state
     import extracted._
     runTask(site in Laika,
       append(Seq(
         sourceDirectories in Laika := Seq(new File("doc/manual")),
-        target in (Laika,site) := target.value / "doc" / "manual",
+        target in (Laika,site) := target.value / "doc",
         excludeFilter in Laika := new FileFilter {
-          override def accept(file:File): Boolean = file.getName == "attic"
+          override def accept(file:File): Boolean = Seq("attic", "slides", "articles").contains(file.getName)
         }
-      ),state))
-    state
+      ),state))._1
   }
+  def mkManual = Command.command("mkManual") { manualCmd }
 
-  def mkSlides = Command.command("mkSlides") { state =>
+  def slidesCmd (state: State): State = {
     val extracted = Project extract state
     import extracted._
     runTask(site in Laika,
       append(Seq(
         sourceDirectories in Laika := Seq(new File("doc/slides")),
-        target in (Laika,site) := target.value / "doc" / "slides",
-        siteRenderers in Laika += siteRenderer( out => {
-          case Section(hdr@Header(2,_,_),content,_) => out <<|
+        target in(Laika, site) := target.value / "doc" / "slides",
+        siteRenderers in Laika += siteRenderer(out => {
+          case Section(hdr@Header(2, _, _), content, _) => out <<|
             "</div><div class=\"slide\">" <<| hdr <<| content
         })
-      ),state))
-    state
+      ), state))._1
+  }
+  def mkSlides = Command.command("mkSlides") { slidesCmd }
+
+  def articlesCmd (state: State): State = {
+    val extracted = Project extract state
+    import extracted._
+    runTask(site in Laika,
+      append(Seq(
+        sourceDirectories in Laika := Seq(new File("doc/articles")),
+        target in (Laika,site) := target.value / "doc" / "articles"
+      ),state))._1
+  }
+  def mkArticles = Command.command("mkArticles") { articlesCmd }
+
+  def mkDoc = Command.command("mkDoc") { state =>
+    slidesCmd( manualCmd(state))
   }
 
-  val commands = Seq(mkManual,mkSlides)
+  val commands = Seq(mkDoc,mkManual,mkSlides,mkArticles)
 }

@@ -78,48 +78,7 @@ Other example configurations can be found in the `config/` directory. To shut
 down, the WorldWind demo, close the WorldWind window, then hit the `enter` key
 in the terminal window and select the `exit` option
 
-## 6. Install Gitbook
-This step is optional.
-If you want to use a browser to view RACE documentation, you can install the
-[Node.js][nodejs] based [Gitbook command line interface][gitbook-cli].
-
-Check if the node.js package manager is installed by running
-
-    > which npm
-
-If this does not yield results, install `npm` through homebrew (see above)
-
-    > brew install npm
-
-Now install Gitbook with `npm`:
-
-    > npm install gitbook-cli
-    > export PATH=$PATH:$HOME/node_modules/.bin
-
-This should give you a `gitbook` command, which can be used to either compile
-markdown into static html, pdf or epub, or to start a local webserver that lets
-you browse RACE documentation. Before doing so, Gitbook plugins used by RACE
-have to be installed. This can be either done locally by running `gitbook install doc`
-from within the RACE root, or globally through `npm` by installing all plugins
-specified in `doc/book.json`, e.g.:
-
-    > npm install gitbook-plugin-include
-    > npm install gitbook-plugin-anchors
-    > npm install gitbook-plugin-mathjax
-
-Now you can start the Gitbook server to view the live RACE documents:
-
-    > cd race
-    > gitbook serve doc
-    ...
-    Press CTRL+C to quit ...
-    Serving book on http://localhost:4000
-
-Entering the reported URL into a browser should show the HTML version of the
-RACE documentation.
-
 
 [jdk]: http://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html
 [brew]: http://brew.sh/
-[nodejs]: http://nodejs.org/
-[gitbook-cli]: http://github.com/GitbookIO/gitbook-cli
+

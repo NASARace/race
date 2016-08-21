@@ -58,7 +58,7 @@ object PluginSettings {
     includePDF in Laika := false,
     includeAPI in Laika := false, // not yet
     excludeFilter in Laika := new FileFilter {
-      override def accept(file:File): Boolean = file.getName == "attic"
+      override def accept(file:File): Boolean = Seq("attic","slides").contains(file.getName)
     },
     aggregate in Laika := false
   )

@@ -157,7 +157,9 @@ class WorldWindFrame (config: Config, raceView: RaceView) extends AppFrame {
     * set visibility of all active console panels
     */
   def showConsolePanels(setVisible: Boolean) = {
-    consolePanel.visible = setVisible
+    consoleWrapper.visible = setVisible
+    top.revalidate
+
     popupShowPanelsMI.setSelected(setVisible)
     mbShowPanelsMI.setSelected(setVisible)
   }

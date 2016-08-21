@@ -16,8 +16,10 @@ RACE includes substantial infrastructure to mitigate these challenges. Centerpie
 infrastructure is `NASA WorldWind`_ - an open sourced Java- and `OpenGL`_-based geo viewer
 that runs on all major platforms and can be embedded into various applications.
 
+Layers and Panels - RACEs Extension Points
+------------------------------------------
 The primary `WorldWind concept`_ in the context of RACE is the RenderableLayer_, which represents
-a display relevant data set that can be separately controlled in terms of visibility, rendering and
+a display relevant data set that can be separately controlled in terms of visibility, rendering details and
 updates. RACE uses ``RaceLayers`` to map its bus channels to WorldWind layers. While a ``RaceLayer``
 is a GUI object that executes within the user interface thread, it has an associated
 ``RaceLayerActor`` which is responsible for data acquisition by means of channel subscription.
@@ -57,6 +59,9 @@ be extensively configured with both ``RaceLayers`` and (less often) UI panels::
 Just as ``RaceLayerActors``, the ``RaceViewerActor`` has a UI dual in form of the ``RaceView``, which
 is both the aggregation and the mediator_ between the configured panels and the WorldWind window.
 
+
+Synchronized Viewers
+--------------------
 The data that is acquired through RACE channels does not have to represent external entities such
 as aircraft, and does not need to be displayed in ``RaceLayers``. The whole RACE viewer
 infrastructure lends itself naturally to use RACE channels on the global bus for the purpose of
@@ -71,8 +76,27 @@ to implement applications such as situation rooms because it
 - requires minimal data transfer for updates
 - is robust in terms of re-synchronization
 
-Moreover, by using different synchronization channels it is easy to create and switch between
-display groups.
+Moreover, by using different synchronization channels it is easy to create and switch between different display groups.
+
+Viewer synchronization is *not* hardwired or restricted to a fixed set of viewer parameters such as eye position.
+
+Since application specific data and rendering is provided through new ``RaceLayers``, those layers are also responsible
+for adding related synchronization commands. For instance, the generic ``FlightLayer`` implementation includes a number
+of commands for selected flight objects, such as hiding/showing flight paths. This is achieved by overriding the
+``changeObject(objectId: String, action: String)`` method of the ``RaceLayer`` class - layers are free to add their own
+object ids and action keys.
+
+The ``SyncPanel`` implementation that is distributed with RACE supports synchronization control for
+
+- eye positions
+- operation on the selected layer
+- operations on the selected layer object
+
+Synchronization resonance (bouncing back external synchronization commands) is prevented by means of blackout periods.
+Synchronization events are only sent out if they don't exceed a configurable threshold duration since the last local
+user input.
+
+If applications need more control they can provide their own panel and configure it instead of the standard sync panel.
 
 .. _NASA WorldWind: https://goworldwind.org/
 .. _WorldWind concept: https://goworldwind.org/developers-guide/concepts/

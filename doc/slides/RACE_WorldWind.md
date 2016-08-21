@@ -1,7 +1,14 @@
 # RACE & WorldWind
-actors around the globe
+**actors around the globe**
+
 
 <https://github.com/nasarace/race>
+
+~
+
+<a href="https://ti.arc.nasa.gov/profile/pcmehlitz/" rel="author">Peter.C.Mehlitz</a><br/>
+SGT Inc, NASA Ames Research Center
+
 
 ## Slides
 @:toc root="#currentDocument".
@@ -20,14 +27,14 @@ don't re-invent the wheel:
 * how to get & process data
 * how to add data-specific UI
 
-<img src="images/geo-app.svg" class="center scale70">
+<img src="../images/geo-app.svg" class="center scale70">
 
 
 ## RACE to the rescue
 * embed WorldWind into RACE application
 * RACE adds data acquisition and (WorldWind specific) UI framework
 
-<img src="images/geo-race.svg" class="center scale70">
+<img src="../images/geo-race.svg" class="center scale70">
 
 
 ## Perfect Symbiosis
@@ -51,14 +58,14 @@ RACE provides:
 * async thread-safe data import for *Layers*
 * an extensible UI framework of (Swing) *Panels*
 
-<img src="images/race-ww.svg" class="center scale60">
+<img src="../images/race-ww.svg" class="center scale60">
 
 
 ## RACE perspective: Lego box of actors
 * WorldWind as one of the building blocks
 * don't look at the details (yet)
 
-<img src="images/swim-sbs-all-ww.svg" class="center scale50">
+<img src="../images/swim-sbs-all-ww.svg" class="center scale50">
 
 
 ## Demos
@@ -68,7 +75,7 @@ RACE provides:
 
 
 ## Concrete Schematics
-<img src="images/swim-sbs-all-ww.svg" class="center scale65">
+<img src="../images/swim-sbs-all-ww.svg" class="center scale65">
 
 
 ## Abstract Schematics
@@ -77,7 +84,7 @@ RACE provides:
 * composition and interaction of actors is configured
 
 
-<img src="images/race-dataflow.svg" class="center scale80">
+<img src="../images/race-dataflow.svg" class="center scale80">
 
 
 ## So what are these actors anyway?
@@ -86,7 +93,7 @@ RACE provides:
 * objects that communicate only through async messages ⟹ no shared state
 * process messages one-at-a-time ⟹ sequential code
 
-<img src="images/actor.svg" class="center scale40">
+<img src="../images/actor.svg" class="center scale40">
 
 
 ## How are actors implemented in RACE?
@@ -108,7 +115,7 @@ RACE provides:
 * central supervision & control (master)
 * distributed - can seamlessly communicate with each other
 
-<img src="images/race-overview-2.svg" class="center scale55">
+<img src="../images/race-overview-2.svg" class="center scale55">
 
 
 ## Congratulations - you have reached the bonus part
@@ -119,15 +126,15 @@ RACE provides:
 
 ## RACE and WorldWind under the hood
 thread-safe data-import and UI model:
-<img src="images/race-viewer.svg" class="center scale85">
+<img src="../images/race-viewer.svg" class="center scale85">
 
 ## Data Integration on demand - ChannelTopics
 don't overwhelm UI threads (0.1 sec rule) ⟹ ChannelTopic "producer valves"
 
-<img src="images/race-channeltopics.svg" class="center scale75">
+<img src="../images/race-channeltopics.svg" class="center scale75">
 
 ## Synchronized Viewers
-<img src="images/raceviewer-sync.svg" class="center scale85">
+<img src="../images/raceviewer-sync.svg" class="center scale85">
 
 ## UI Framework
-<img src="images/race-panels.svg" class="center scale85">
+<img src="../images/race-panels.svg" class="center scale85">

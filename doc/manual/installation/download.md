@@ -14,4 +14,4 @@ documentation][git-doc] for more information of how to use Git.
 
 
 [git-doc]: https://git-scm.com/book/en/v2
-[github]: https://github.com/
+[github]: https://github.com/nasarace/race
