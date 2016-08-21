@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8"/>
+        <title>RACE</title>
+
+        <link href="./race-slides-html.css" rel="stylesheet"/>
+        <script src="./race-slides.js"></script>
+    </head>
+
+    <body>
+
+        <div class="slide title">
+            <!-- additional divs inserted by renderer extension -->
+            <h1 id="raceviewer-infrastructure" class="title">RaceViewer Infrastructure</h1>
+            <p>making it visible</p>
+            
+            </div><div class="slide">
+            
+            <h2 id="slides" class="section"><span class="sectionNumber">1 </span>Slides</h2>
+            <div class="toc">
+              <ul>
+                <li><span class="toc level1"><a href="#slides"><span class="sectionNumber">1 </span>Slides</a></span></li>
+                <li><span class="toc level1"><a href="#symbiosis---the-best-of-two-worlds"><span class="sectionNumber">2 </span>Symbiosis - the best of two worlds</a></span></li>
+                <li><span class="toc level1"><a href="#race---worldwind-integration"><span class="sectionNumber">3 </span>RACE - WorldWind Integration</a></span></li>
+                <li><span class="toc level1"><a href="#big-picture-configurable-extension-points"><span class="sectionNumber">4 </span>Big Picture: Configurable Extension Points</a></span></li>
+                <li><span class="toc level1"><a href="#big-picture-zoom-in-on-bridges"><span class="sectionNumber">5 </span>Big Picture: Zoom In on Bridges</a></span></li>
+                <li><span class="toc level1"><a href="#race-configuration"><span class="sectionNumber">6 </span>RACE Configuration</a></span></li>
+                <li><span class="toc level1"><a href="#data-integration"><span class="sectionNumber">7 </span>Data Integration</a></span></li>
+                <li><span class="toc level1"><a href="#data-integration-on-demand---channeltopics"><span class="sectionNumber">8 </span>Data Integration on demand - ChannelTopics</a></span></li>
+                <li><span class="toc level1"><a href="#viewer-sync"><span class="sectionNumber">9 </span>Viewer Sync</a></span></li>
+                <li><span class="toc level1"><a href="#ui-framework"><span class="sectionNumber">10 </span>UI Framework</a></span></li>
+                <li><span class="toc level1"><a href="#build-integration"><span class="sectionNumber">11 </span>Build Integration</a></span></li>
+              </ul>
+            </div>
+            
+            </div><div class="slide">
+            
+            <h2 id="symbiosis---the-best-of-two-worlds" class="section"><span class="sectionNumber">2 </span>Symbiosis - the best of two worlds</h2>
+            <ul>
+              <li>
+                <p>RACE</p>
+                <ul>
+                  <li>good at importing, routing and processing dynamic data in distributed systems</li>
+                  <li>needs (multi-display) geospatial visualization for flight data</li>
+                  <li>runs on JVM</li>
+                  <li>open sourced &amp; .gov copyrighted</li>
+                </ul>
+              </li>
+              <li>
+                <p>WorldWind</p>
+                <ul>
+                  <li>good at rendering layered information on interactive map/globe via OpenGL</li>
+                  <li>needs data acquisition interface, UI framework</li>
+                  <li>runs on JVM</li>
+                  <li>open sourced &amp; .gov copyrighted</li>
+                </ul>
+              </li>
+            </ul>
+            
+            </div><div class="slide">
+            
+            <h2 id="race---worldwind-integration" class="section"><span class="sectionNumber">3 </span>RACE - WorldWind Integration</h2>
+            <ul>
+              <li>
+                <p>RACE</p>
+                <ul>
+                  <li>async data interface for WW layers</li>
+                  <li>viewer sync</li>
+                  <li>configurable + extensible UI framework</li>
+                </ul>
+              </li>
+              <li>
+                <p>WorldWind</p>
+                <ul>
+                  <li>thread safety (thread safe use of <code>Renderable</code> objects)</li>
+                  <li>animation target viewpoint observer (viewer sync)</li>
+                </ul>
+              </li>
+            </ul>
+            
+            </div><div class="slide">
+            
+            <h2 id="big-picture-configurable-extension-points" class="section"><span class="sectionNumber">4 </span>Big Picture: Configurable Extension Points</h2>
+            <ul>
+              <li>data: RACE⟷WorldWind ⟹ Layers</li>
+              <li>interaction: UI⟷WorldWind/RACE ⟹ Panels</li>
+            </ul>
+            <img src="../images/race-ww.svg" class="center scale70">
+            
+            </div><div class="slide">
+            
+            <h2 id="big-picture-zoom-in-on-bridges" class="section"><span class="sectionNumber">5 </span>Big Picture: Zoom In on Bridges</h2>
+            <img src="../images/race-viewer.svg" class="center scale90">
+            
+            </div><div class="slide">
+            
+            <h2 id="race-configuration" class="section"><span class="sectionNumber">6 </span>RACE Configuration</h2>
+            <p>using normal RACE actor configuration:</p>
+            <pre><code>universe { ..
+  actors = [
+    { name = &quot;simPlane&quot; ..
+      write-to = &quot;/flights/sim&quot; .. },
+
+    { name = &quot;viewer&quot;
+      class = &quot;.ww.RaceViewerActor&quot;
+      layers = [
+        { name = &quot;flightPos&quot;
+          class = &quot;gov.nasa.race.ww.layers.FlightPosLayer&quot;
+          read-from = &quot;/flights/sim&quot;
+          description = &quot;flight positions&quot;
+          categories = [&quot;data&quot; ..] .. } ..
+      ]
+      layer-categories = [&quot;data&quot; ..]
+      panels = [ .. ]
+      size = [1400,1000]
+      eye { lat = 37.246822 .. }</code></pre>
+            
+            </div><div class="slide">
+            
+            <h2 id="data-integration" class="section"><span class="sectionNumber">7 </span>Data Integration</h2>
+            <img src="../images/racelayer.svg" class="center scale80">
+            
+            </div><div class="slide">
+            
+            <h2 id="data-integration-on-demand---channeltopics" class="section"><span class="sectionNumber">8 </span>Data Integration on demand - ChannelTopics</h2>
+            <p>don&#39;t overwhelm UI threads (0.1 sec rule) ⟹ ChannelTopic &quot;producer valves&quot;</p>
+            <img src="../images/race-channeltopics.svg" class="center scale75">
+            
+            </div><div class="slide">
+            
+            <h2 id="viewer-sync" class="section"><span class="sectionNumber">9 </span>Viewer Sync</h2>
+            <img src="../images/raceviewer-sync.svg" class="center scale85">
+            
+            </div><div class="slide">
+            
+            <h2 id="ui-framework" class="section"><span class="sectionNumber">10 </span>UI Framework</h2>
+            <img src="../images/race-panels.svg" class="center scale85">
+            
+            </div><div class="slide">
+            
+            <h2 id="build-integration" class="section"><span class="sectionNumber">11 </span>Build Integration</h2>
+            <ul>
+              <li>
+                <p>WorldWind does not (yet) publish build artifacts</p>
+              </li>
+              <li>
+                <p>small modifications required by RACE</p>
+                <ul>
+                  <li>rendering thread safety (concurrent Renderable modification)</li>
+                  <li>observable animation intentions (e.g. pan end-point)</li>
+                </ul>
+              </li>
+              <li>
+                <p>ultimately merge, interim solution: use SBT RootProject</p>
+              </li>
+            </ul>
+            <pre>
+  ...
+  lazy val wwjProject = RootProject( uri(
+              sys.props.getOrElse(&quot;race.wwj_uri&quot;,
+                  &quot;git://github.com/pcmehlitz/WorldWindJava.git#pcm&quot;)))
+  ...
+  lazy val raceSwing = createProject(&quot;race-swing&quot;).
+    dependsOn(raceCommon) ...
+
+  lazy val raceWW = createProject(&quot;race-ww&quot;).
+    dependsOn(wwjProject).
+    dependsOn(raceCommon,raceData,raceCore,raceSwing) ...
+</pre>
+        </div>
+    </body>
+</html>

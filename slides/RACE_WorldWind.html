@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8"/>
+        <title>RACE</title>
+
+        <link href="./race-slides-html.css" rel="stylesheet"/>
+        <script src="./race-slides.js"></script>
+    </head>
+
+    <body>
+
+        <div class="slide title">
+            <!-- additional divs inserted by renderer extension -->
+            <h1 id="race-worldwind" class="title">RACE &amp; WorldWind</h1>
+            <p><strong>actors around the globe</strong></p>
+            <p><a href="https://github.com/nasarace/race">https://github.com/nasarace/race</a></p>
+            <p>~</p>
+            <p><a href="https://ti.arc.nasa.gov/profile/pcmehlitz/" rel="author">Peter.C.Mehlitz</a><br/>
+            SGT Inc, NASA Ames Research Center</p>
+            
+            </div><div class="slide">
+            
+            <h2 id="slides" class="section"><span class="sectionNumber">1 </span>Slides</h2>
+            <div class="toc">
+              <ul>
+                <li><span class="toc level1"><a href="#slides"><span class="sectionNumber">1 </span>Slides</a></span></li>
+                <li><span class="toc level1"><a href="#outline"><span class="sectionNumber">2 </span>Outline</a></span></li>
+                <li><span class="toc level1"><a href="#worldwind-application-challenges"><span class="sectionNumber">3 </span>WorldWind Application Challenges</a></span></li>
+                <li><span class="toc level1"><a href="#race-to-the-rescue"><span class="sectionNumber">4 </span>RACE to the rescue</a></span></li>
+                <li><span class="toc level1"><a href="#perfect-symbiosis"><span class="sectionNumber">5 </span>Perfect Symbiosis</a></span></li>
+                <li><span class="toc level1"><a href="#worldwind-perspective-layers-and-panels"><span class="sectionNumber">6 </span>WorldWind perspective: Layers and Panels</a></span></li>
+                <li><span class="toc level1"><a href="#race-perspective-lego-box-of-actors"><span class="sectionNumber">7 </span>RACE perspective: Lego box of actors</a></span></li>
+                <li><span class="toc level1"><a href="#demos"><span class="sectionNumber">8 </span>Demos</a></span></li>
+                <li><span class="toc level1"><a href="#concrete-schematics"><span class="sectionNumber">9 </span>Concrete Schematics</a></span></li>
+                <li><span class="toc level1"><a href="#abstract-schematics"><span class="sectionNumber">10 </span>Abstract Schematics</a></span></li>
+                <li><span class="toc level1"><a href="#so-what-are-these-actors-anyway"><span class="sectionNumber">11 </span>So what are these actors anyway?</a></span></li>
+                <li><span class="toc level1"><a href="#how-are-actors-implemented-in-race"><span class="sectionNumber">12 </span>How are actors implemented in RACE?</a></span></li>
+                <li><span class="toc level1"><a href="#actors-don-t-live-in-a-vacuum---raceactorsystems"><span class="sectionNumber">13 </span>Actors don&#39;t live in a vacuum - RaceActorSystems</a></span></li>
+                <li><span class="toc level1"><a href="#congratulations---you-have-reached-the-bonus-part"><span class="sectionNumber">14 </span>Congratulations - you have reached the bonus part</a></span></li>
+                <li><span class="toc level1"><a href="#race-and-worldwind-under-the-hood"><span class="sectionNumber">15 </span>RACE and WorldWind under the hood</a></span></li>
+                <li><span class="toc level1"><a href="#data-integration-on-demand---channeltopics"><span class="sectionNumber">16 </span>Data Integration on demand - ChannelTopics</a></span></li>
+                <li><span class="toc level1"><a href="#synchronized-viewers"><span class="sectionNumber">17 </span>Synchronized Viewers</a></span></li>
+                <li><span class="toc level1"><a href="#ui-framework"><span class="sectionNumber">18 </span>UI Framework</a></span></li>
+              </ul>
+            </div>
+            
+            </div><div class="slide">
+            
+            <h2 id="outline" class="section"><span class="sectionNumber">2 </span>Outline</h2>
+            <p>more <em>show</em>, less <em>tell</em>:</p>
+            <ol class="arabic">
+              <li>what you will see</li>
+              <li>demo</li>
+              <li>how it works</li>
+            </ol>
+            
+            </div><div class="slide">
+            
+            <h2 id="worldwind-application-challenges" class="section"><span class="sectionNumber">3 </span>WorldWind Application Challenges</h2>
+            <p>don&#39;t re-invent the wheel:</p>
+            <ul>
+              <li>how to get &amp; process data</li>
+              <li>how to add data-specific UI</li>
+            </ul>
+            <img src="../images/geo-app.svg" class="center scale70">
+            
+            </div><div class="slide">
+            
+            <h2 id="race-to-the-rescue" class="section"><span class="sectionNumber">4 </span>RACE to the rescue</h2>
+            <ul>
+              <li>embed WorldWind into RACE application</li>
+              <li>RACE adds data acquisition and (WorldWind specific) UI framework</li>
+            </ul>
+            <img src="../images/geo-race.svg" class="center scale70">
+            
+            </div><div class="slide">
+            
+            <h2 id="perfect-symbiosis" class="section"><span class="sectionNumber">5 </span>Perfect Symbiosis</h2>
+            <ul>
+              <li>
+                <p>RACE</p>
+                <ul>
+                  <li>good at importing, routing and processing dynamic data in distributed systems</li>
+                  <li>needs multi-display geospatial visualization for (flight) data</li>
+                  <li>runs on JVM</li>
+                  <li>open sourced &amp; .gov copyrighted</li>
+                </ul>
+              </li>
+              <li>
+                <p>WorldWind</p>
+                <ul>
+                  <li>good at rendering layered information on interactive map/globe via OpenGL</li>
+                  <li>needs data acquisition interface, UI framework</li>
+                  <li>runs on JVM</li>
+                  <li>open sourced &amp; .gov copyrighted</li>
+                </ul>
+              </li>
+            </ul>
+            
+            </div><div class="slide">
+            
+            <h2 id="worldwind-perspective-layers-and-panels" class="section"><span class="sectionNumber">6 </span>WorldWind perspective: Layers and Panels</h2>
+            <p>RACE provides:</p>
+            <ul>
+              <li>async thread-safe data import for <em>Layers</em></li>
+              <li>an extensible UI framework of (Swing) <em>Panels</em></li>
+            </ul>
+            <img src="../images/race-ww.svg" class="center scale60">
+            
+            </div><div class="slide">
+            
+            <h2 id="race-perspective-lego-box-of-actors" class="section"><span class="sectionNumber">7 </span>RACE perspective: Lego box of actors</h2>
+            <ul>
+              <li>WorldWind as one of the building blocks</li>
+              <li>don&#39;t look at the details (yet)</li>
+            </ul>
+            <img src="../images/swim-sbs-all-ww.svg" class="center scale50">
+            
+            </div><div class="slide">
+            
+            <h2 id="demos" class="section"><span class="sectionNumber">8 </span>Demos</h2>
+            <ul>
+              <li>live data import (lots of!)</li>
+              <li>synchronized remote viewer</li>
+              <li>virtual reality</li>
+            </ul>
+            
+            </div><div class="slide">
+            
+            <h2 id="concrete-schematics" class="section"><span class="sectionNumber">9 </span>Concrete Schematics</h2>
+            <img src="../images/swim-sbs-all-ww.svg" class="center scale65">
+            
+            </div><div class="slide">
+            
+            <h2 id="abstract-schematics" class="section"><span class="sectionNumber">10 </span>Abstract Schematics</h2>
+            <ul>
+              <li>RACE is <strong>not</strong> a monolythic application, its a generic framework</li>
+              <li>uniform building blocks: <strong>Actors</strong></li>
+              <li>composition and interaction of actors is configured</li>
+            </ul>
+            <img src="../images/race-dataflow.svg" class="center scale80">
+            
+            </div><div class="slide">
+            
+            <h2 id="so-what-are-these-actors-anyway" class="section"><span class="sectionNumber">11 </span>So what are these actors anyway?</h2>
+            <ul>
+              <li>concurrency programming model since 1973 (Hewitt et el)</li>
+              <li>objects that communicate only through async messages ⟹ no shared state</li>
+              <li>process messages one-at-a-time ⟹ sequential code</li>
+            </ul>
+            <img src="../images/actor.svg" class="center scale40">
+            
+            </div><div class="slide">
+            
+            <h2 id="how-are-actors-implemented-in-race" class="section"><span class="sectionNumber">12 </span>How are actors implemented in RACE?</h2>
+            <ul>
+              <li>using <strong>Akka</strong> <a href="http://akka.io">http://akka.io</a></li>
+              <li>programmed in Scala (running on JVM)</li>
+              <li>extended by <code>RaceActor</code> (configuration, state, initialization, remoting)</li>
+              <li>uniform programming model for large (WWJ) <em>and</em> small components:</li>
+            </ul>
+            <pre>
+   class ProbeActor (config: Config) extends SubscribingRaceActor {
+     def handleMessage = {
+       case BusEvent(channel,msg,sender) =&gt; println(msg)
+     }
+   }
+</pre>
+            
+            </div><div class="slide">
+            
+            <h2 id="actors-don-t-live-in-a-vacuum---raceactorsystems" class="section"><span class="sectionNumber">13 </span>Actors don&#39;t live in a vacuum - RaceActorSystems</h2>
+            <ul>
+              <li>deterministic, synchronous initialization &amp; termination</li>
+              <li>central supervision &amp; control (master)</li>
+              <li>distributed - can seamlessly communicate with each other</li>
+            </ul>
+            <img src="../images/race-overview-2.svg" class="center scale55">
+            
+            </div><div class="slide">
+            
+            <h2 id="congratulations---you-have-reached-the-bonus-part" class="section"><span class="sectionNumber">14 </span>Congratulations - you have reached the bonus part</h2>
+            <ul>
+              <li>RaceLayers and AkkaSwingBridge</li>
+              <li>data-on-demand: ChannelTopics</li>
+              <li>remote viewer synchronization</li>
+              <li>UI framework - Panels</li>
+            </ul>
+            
+            </div><div class="slide">
+            
+            <h2 id="race-and-worldwind-under-the-hood" class="section"><span class="sectionNumber">15 </span>RACE and WorldWind under the hood</h2>
+            <p>thread-safe data-import and UI model:
+            <img src="../images/race-viewer.svg" class="center scale85"></p>
+            
+            </div><div class="slide">
+            
+            <h2 id="data-integration-on-demand---channeltopics" class="section"><span class="sectionNumber">16 </span>Data Integration on demand - ChannelTopics</h2>
+            <p>don&#39;t overwhelm UI threads (0.1 sec rule) ⟹ ChannelTopic &quot;producer valves&quot;</p>
+            <img src="../images/race-channeltopics.svg" class="center scale75">
+            
+            </div><div class="slide">
+            
+            <h2 id="synchronized-viewers" class="section"><span class="sectionNumber">17 </span>Synchronized Viewers</h2>
+            <img src="../images/raceviewer-sync.svg" class="center scale85">
+            
+            </div><div class="slide">
+            
+            <h2 id="ui-framework" class="section"><span class="sectionNumber">18 </span>UI Framework</h2>
+            <img src="../images/race-panels.svg" class="center scale85">
+        </div>
+    </body>
+</html>

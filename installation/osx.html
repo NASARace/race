@@ -58,6 +58,22 @@
                         <li><span class="toc level2"><a href="../design/whyscala.html">Why Scala</a></span></li>
                       </ul>
                     </li>
+                    <li>
+                      <p class="toc level1"><a href="../examples.html">RACE Examples</a></p>
+                      <ul>
+                        <li><span class="toc level2"><a href="../examples.html#basic-examples">Basic Examples</a></span></li>
+                        <li><span class="toc level2"><a href="../examples.html#distributed-operation">Distributed Operation</a></span></li>
+                        <li><span class="toc level2"><a href="../examples.html#live-data-import">Live Data Import</a></span></li>
+                        <li><span class="toc level2"><a href="../examples.html#data-replay">Data Replay</a></span></li>
+                      </ul>
+                    </li>
+                    <li>
+                      <p class="toc level1">Documentation</p>
+                      <ul>
+                        <li><span class="toc level2"><a href="../documentation/overview.html">RACE Documentation Overview</a></span></li>
+                        <li><span class="toc level2"><a href="../documentation/presentations.html">Available Slide Presentations</a></span></li>
+                      </ul>
+                    </li>
                     <li><span class="toc level1"><a href="../glossary.html">Glossary</a></span></li>
                   </ul>
                 </div>
@@ -71,7 +87,6 @@
                     <li><span class="toc level1"><a href="#3-clone-race">3. Clone RACE</a></span></li>
                     <li><span class="toc level1"><a href="#4-build-race">4. Build RACE</a></span></li>
                     <li><span class="toc level1"><a href="#5-run-race">5. Run RACE</a></span></li>
-                    <li><span class="toc level1"><a href="#6-install-gitbook">6. Install Gitbook</a></span></li>
                   </ul>
                 </div>
             </div>
@@ -79,7 +94,7 @@
                 <p class="title">Project Links</p>
                 <ul>
                     <li><span class="toc level2"><a href="https://github.com/NASARace/race.git">Repository</a></span></li>
-                    <li><span class="toc level2"><a href="https://NASARace/github.io/race">Website</a></span></li>
+                    <li><span class="toc level2"><a href="http://nasarace.github.io/race">Website</a></span></li>
                 </ul>
             </div>
         </div>
@@ -142,35 +157,6 @@
             <p>Other example configurations can be found in the <code>config/</code> directory. To shut
             down, the WorldWind demo, close the WorldWind window, then hit the <code>enter</code> key
             in the terminal window and select the <code>exit</code> option</p>
-            
-            <h2 id="6-install-gitbook" class="section">6. Install Gitbook</h2>
-            <p>This step is optional.
-            If you want to use a browser to view RACE documentation, you can install the
-            <a href="http://nodejs.org/">Node.js</a> based <a href="http://github.com/GitbookIO/gitbook-cli">Gitbook command line interface</a>.</p>
-            <p>Check if the node.js package manager is installed by running</p>
-            <pre><code>&gt; which npm</code></pre>
-            <p>If this does not yield results, install <code>npm</code> through homebrew (see above)</p>
-            <pre><code>&gt; brew install npm</code></pre>
-            <p>Now install Gitbook with <code>npm</code>:</p>
-            <pre><code>&gt; npm install gitbook-cli
-&gt; export PATH=$PATH:$HOME/node_modules/.bin</code></pre>
-            <p>This should give you a <code>gitbook</code> command, which can be used to either compile
-            markdown into static html, pdf or epub, or to start a local webserver that lets
-            you browse RACE documentation. Before doing so, Gitbook plugins used by RACE
-            have to be installed. This can be either done locally by running <code>gitbook install doc</code>
-            from within the RACE root, or globally through <code>npm</code> by installing all plugins
-            specified in <code>doc/book.json</code>, e.g.:</p>
-            <pre><code>&gt; npm install gitbook-plugin-include
-&gt; npm install gitbook-plugin-anchors
-&gt; npm install gitbook-plugin-mathjax</code></pre>
-            <p>Now you can start the Gitbook server to view the live RACE documents:</p>
-            <pre><code>&gt; cd race
-&gt; gitbook serve doc
-...
-Press CTRL+C to quit ...
-Serving book on http://localhost:4000</code></pre>
-            <p>Entering the reported URL into a browser should show the HTML version of the
-            RACE documentation.</p>
         </div>
 
     </body>

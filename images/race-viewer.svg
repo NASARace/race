@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<svg width="100%" height="100%" version="1.1" viewBox="-12333 -66 1950 1122" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape" xmlns="http://www.w3.org/2000/svg">
+<svg width="100%" height="100%" version="1.1" viewBox="-12333 -66 1950 1158" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape" xmlns="http://www.w3.org/2000/svg">
   <defs>
     <filter id="shadow1" width="150%" height="150%">
       <feGaussianBlur in="SourceAlpha" result="blur" stdDeviation="5" />
@@ -19,11 +19,11 @@
   <marker id="marker3" markerUnits="strokeWidth" orient="auto" refX="-0.4947562" refY="0" markerWidth="12.27247" markerHeight="9.229548" viewBox="-11.77247 -4.614774 12.27247 9.229548">
     <path d="M-11.27247 -4.114774 L0 0 L-11.27247 4.114773" fill="none" stroke="#000000" stroke-opacity="1" />
   </marker>
-  <linearGradient id="gradient1" x1="100%" y1="50%" x2="0%" y2="49.99999%">
+  <linearGradient id="gradient1" x1="100%" y1="50%" x2="0%" y2="50%">
     <stop offset="2%" stop-color="#969696" stop-opacity="1" />
     <stop offset="44%" stop-color="#FFFFFF" stop-opacity="1" />
   </linearGradient>
-  <linearGradient id="gradient2" x1="100%" y1="50.00058%" x2="0%" y2="49.99942%">
+  <linearGradient id="gradient2" x1="100%" y1="50.0006%" x2="0%" y2="49.9994%">
     <stop offset="1%" stop-color="#9B9B9B" stop-opacity="1" />
     <stop offset="41%" stop-color="#FFFFFF" stop-opacity="1" />
   </linearGradient>
@@ -81,9 +81,12 @@
   <marker id="marker21" markerUnits="strokeWidth" orient="auto" refX="-8.971846" refY="0" markerWidth="12.27247" markerHeight="9.229548" viewBox="-11.77247 -4.614774 12.27247 9.229548">
     <path d="M-11.27247 -4.114774 L0 0 L-11.27247 4.114773 Z " fill="#000000" fill-opacity="1" stroke="#000000" stroke-opacity="1" />
   </marker>
+  <marker id="marker22" markerUnits="strokeWidth" orient="auto" refX="-8.971846" refY="0" markerWidth="12.27247" markerHeight="9.229548" viewBox="-11.77247 -4.614774 12.27247 9.229548">
+    <path d="M-11.27247 -4.114774 L0 0 L-11.27247 4.114773 Z " fill="#000000" fill-opacity="1" stroke="#000000" stroke-opacity="1" />
+  </marker>
   <g id="layer1" inkscape:label="Layer 1" inkscape:groupmode="layer">
     <rect x="-11682" y="-45" width="1296" height="981" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" filter="url(#shadow1)" />
-    <rect x="-11340" y="54" width="918" height="846" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" filter="url(#shadow1)" />
+    <rect x="-11340" y="54" width="918" height="846" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFED3" fill-opacity="1" filter="url(#shadow1)" />
     <g>
       <path d="M-10615.92 587.1344 L-10613.79 593.9078 L-10610.35 602.9075 L-10605.44 611.6291 L-10602 617.4749 L-10597.55 622.5775 L-10593.84 626.0102 L-10592.36 628.7014 L-10593.38 629.9075 L-10594.02 631.2061 L-10591.34 638.0726 L-10588.64 640.7626 L-10586.22 645.6807 L-10582.89 651.0619 L-10578.72 658.6699 L-10577.51 665.7216 L-10577.04 676.8557 L-10576.49 678.5256 L-10576.76 681.6802 L-10579 682.887 L-10578.72 684.6497 L-10579.28 686.4128 L-10579 688.6395 L-10578.53 690.4022 L-10581.03 693.3715 L-10583.91 694.7629 L-10587.53 694.9483 L-10588.92 696.4328 L-10591.15 697.3608 L-10592.36 696.8969 L-10593.38 695.9688 L-10593.65 693.2782 L-10594.4 690.1237 L-10597.55 685.2988 L-10600.89 683.165 L-10604.51 682.887 L-10605.25 684.0928 L-10608.13 680.0103 L-10608.68 676.6703 L-10611.1 672.9589 L-10612.77 671.9385 L-10614.25 673.8864 L-10615.92 673.6084 L-10617.88 668.9691 L-10620.56 665.3505 L-10623.25 660.4331 L-10625.66 657.5565 L-10629.01 654.1239 L-10627.06 651.8966 L-10624.09 646.7939 L-10624.28 645.3093 L-10628.45 644.3813 L-10629.94 644.9385 L-10629.65 645.4952 L-10627.24 646.4228 L-10628.63 650.598 L-10629.38 651.0619 L-10631.04 647.3506 L-10632.25 642.8974 L-10632.53 640.3921 L-10631.14 636.0314 L-10631.14 627.2167 L-10633.92 623.7835 L-10635.13 620.9076 L-10639.96 619.7014 L-10641.72 619.145 L-10643.2 616.7323 L-10646.35 615.2483 L-10647.38 612.0931 L-10649.88 611.1652 L-10652.11 607.7325 L-10656.01 606.3405 L-10658.69 604.9487 L-10661.11 604.9487 L-10664.82 605.6912 L-10665 607.4539 L-10664.26 608.382 L-10664.73 609.4025 L-10667.6 609.2167 L-10671.03 612.557 L-10674.38 614.3196 L-10678 614.3196 L-10680.96 615.5262 L-10681.24 613.0209 L-10682.72 611.2579 L-10685.42 610.2374 L-10686.9 608.8456 L-10694.42 605.2269 L-10701.47 603.557 L-10705.55 604.114 L-10711.12 604.5776 L-10716.68 606.5261 L-10719.93 607.0829 L-10720.12 599.6599 L-10722.53 597.8973 L-10724.2 596.2272 L-10723.92 593.351 L-10714.46 592.1448 L-10690.8 589.454 L-10684.49 588.8971 L-10679.47 589.1758 L-10677.07 592.7941 L-10675.68 594.1858 L-10668.16 594.6498 L-10658.14 594.093 L-10638.19 592.8871 L-10633.18 592.2374 L-10628.91 592.2374 L-10628.73 594.9282 L-10625.2 595.6706 L-10624.92 591.217 L-10626.41 587.0417 L-10625.48 586.3921 L-10620.75 586.8558 L-10615.92 587.1344 Z M-10604.33 709.9794 L-10602.1 709.4226 L-10600.89 709.2368 L-10599.49 707.1027 L-10597.36 705.6188 L-10596.16 706.0828 L-10594.58 706.3607 L-10594.21 707.3813 L-10597.46 708.4947 L-10601.36 709.8867 L-10603.5 711 L-10604.33 709.9794 Z M-10591.8 705.3397 L-10590.68 706.3607 L-10588.18 704.412 L-10583.27 700.5155 L-10579.82 696.8969 L-10577.51 690.7728 L-10576.58 689.1956 L-10576.4 686.041 L-10577.04 686.505 L-10577.97 689.1029 L-10579.37 693.3709 L-10582.34 698.2888 L-10586.42 702.1854 L-10589.57 703.9481 L-10591.8 705.3397 Z " fill-rule="evenodd" opacity="1" fill="#D3D3D3" fill-opacity="0.58" />
       <path d="M-10610.54 556.8871 L-10612.21 557.8152 L-10614.62 556.6088 L-10615.18 554.6606 L-10616.39 551.3204 L-10618.52 549.3718 L-10620.93 548.8152 L-10622.42 544.3617 L-10624.92 538.7946 L-10628.81 537.0316 L-10630.76 535.2687 L-10631.97 532.8566 L-10633.92 531.0007 L-10636.06 529.7946 L-10638.19 527.1039 L-10641.07 524.9698 L-10645.24 523.2999 L-10645.7 521.9081 L-10647.94 519.2174 L-10648.39 517.8258 L-10651.55 513.0008 L-10654.7 513.1864 L-10658.42 510.9597 L-10659.63 509.7534 L-10659.9 508.0835 L-10659.16 506.3204 L-10657.02 505.3925 L-10657.3 503.4443 L-10651.64 501.032 L-10643.2 496.8567 L-10636.42 496.1144 L-10621.12 495.6505 L-10618.98 497.4134 L-10617.5 500.3825 L-10613.42 499.9186 L-10601.73 498.5269 L-10599.04 499.2691 L-10587.35 506.3204 L-10577.97 513.836 L-10582.98 518.9391 L-10585.4 524.5989 L-10585.86 530.4441 L-10587.35 531.1863 L-10588.36 533.6917 L-10590.59 534.2484 L-10592.54 537.5886 L-10595.04 540.0936 L-10597.18 543.248 L-10598.66 543.9902 L-10602 547.1451 L-10604.69 547.3305 L-10603.77 550.2999 L-10608.41 555.403 L-10610.54 556.8871 Z " opacity="1" fill="#D3D3D3" fill-opacity="0.58" />
@@ -147,21 +150,24 @@
     <rect x="-11628" y="549" width="216" height="99" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" filter="url(#shadow1)" />
     <text x="-11591.04" y="607.1906" font-size="36" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">LayerList</text>
     <rect x="-11628" y="684" width="216" height="90" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" filter="url(#shadow1)" />
-    <text x="-11585.04" y="716.6906" font-size="36" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">selected</text>
+    <text x="-11585.04" y="716.6906" font-size="36" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">selected
+</text>
     <text x="-11557.01" y="758.6906" font-size="36" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">layer</text>
     <rect x="-11628" y="810" width="216" height="90" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" filter="url(#shadow1)" />
-    <text x="-11585.04" y="842.6906" font-size="36" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">selected</text>
+    <text x="-11585.04" y="842.6906" font-size="36" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">selected
+</text>
     <text x="-11566.03" y="884.6906" font-size="36" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">object</text>
-    <line x1="-11790" y1="-45" x2="-11790" y2="1035" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="3" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="24,12,6,12" />
-    <text x="-11589.03" y="-14.25781" font-size="30" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">(collapsible)</text>
+    <line x1="-11790" y1="-45" x2="-11790" y2="1062" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="3" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="24,12,6,12" />
+    <text x="-11589.03" y="-14.25781" font-size="30" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">(collapsible)
+</text>
     <text x="-11553.2" y="19.74219" font-size="30" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">panels</text>
     <text x="-10638.19" y="107.6906" font-size="36" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">WorldWind</text>
     <text x="-10571.2" y="173.7422" font-size="30" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">OpenGL</text>
     <text x="-11365.35" y="-10.75781" font-size="30" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">Swing</text>
-    <rect x="-12222" y="-36" width="333" height="90" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" filter="url(#shadow1)" />
-    <text x="-12192.23" y="17.69062" font-size="36" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">RaceViewerActor</text>
-    <text x="-12068.56" y="1021.191" font-size="36" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">Akka threads</text>
-    <text x="-11736.04" y="1021.191" font-size="36" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">UI threads</text>
+    <rect x="-12168" y="-36" width="324" height="90" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" filter="url(#shadow1)" />
+    <text x="-12142.73" y="17.69062" font-size="36" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">RaceViewerActor</text>
+    <text x="-12050.56" y="1057.191" font-size="36" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">Akka threads</text>
+    <text x="-11754.04" y="1057.191" font-size="36" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">UI threads</text>
     <text x="-10955.21" y="-13.80937" font-size="36" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">RaceView</text>
     <g>
       <rect x="-12105" y="432" width="216" height="81" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" filter="url(#shadow1)" />
@@ -172,21 +178,21 @@
       <text x="-12118.04" y="445.1906" font-size="36" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">LayerActor</text>
     </g>
     <rect x="-11448" y="441" width="315" height="81" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" filter="url(#shadow1)" />
-    <text x="-11375.55" y="491.0988" font-size="36" fill="#000000" fill-opacity="1" font-family=".Helvetica Neue DeskInterface" font-weight="normal" font-style="normal">RaceLayer</text>
+    <text x="-11375.55" y="491.0988" font-size="36" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">RaceLayer</text>
     <rect x="-11466" y="423" width="315" height="81" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" filter="url(#shadow1)" />
-    <text x="-11393.55" y="473.0988" font-size="36" fill="#000000" fill-opacity="1" font-family=".Helvetica Neue DeskInterface" font-weight="normal" font-style="normal">RaceLayer</text>
+    <text x="-11393.55" y="473.0988" font-size="36" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">RaceLayer</text>
     <rect x="-11484" y="405" width="315" height="81" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" filter="url(#shadow1)" />
     <text x="-11411.55" y="454.1906" font-size="36" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">RaceLayer</text>
-    <line x1="-11880" y1="27" x2="-11683.99" y2="27" marker-end="url(#marker1)" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="8,8" />
+    <line x1="-11844" y1="27" x2="-11683.99" y2="27" marker-end="url(#marker1)" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="8,8" />
     <rect x="-12141" y="279" width="216" height="81" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" filter="url(#shadow1)" />
     <text x="-12113.03" y="328.1906" font-size="36" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">SyncActor</text>
     <line x1="-11628" y1="288" x2="-11923.01" y2="288" marker-end="url(#marker2)" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="8,8" />
     <line x1="-11484" y1="405" x2="-11923.01" y2="405" marker-end="url(#marker3)" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="8,8" />
     <g>
-      <rect x="-12275.97" y="237.1168" width="17.85059" height="533.9058" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="url(#gradient1)" />
-      <ellipse cx="-12267.04" cy="236.7009" rx="8.956055" ry="2.700946" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" />
-      <ellipse cx="-12266.96" cy="771.2989" rx="8.956055" ry="2.701057" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" />
-      <rect x="-12274.91" y="765.2275" width="15.80273" height="5.901237" opacity="1" fill="url(#gradient2)" />
+      <rect x="-12275.97" y="255.0129" width="17.85059" height="516.1089" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="url(#gradient1)" />
+      <ellipse cx="-12267.04" cy="254.6109" rx="8.956055" ry="2.610918" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" />
+      <ellipse cx="-12266.96" cy="771.389" rx="8.956055" ry="2.611038" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" />
+      <rect x="-12274.91" y="765.52" width="15.80273" height="5.704445" opacity="1" fill="url(#gradient2)" />
     </g>
     <line x1="-12239.06" y1="324" x2="-12159.94" y2="324" marker-start="url(#marker4)" marker-end="url(#marker5)" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
     <line x1="-12258" y1="441" x2="-12159.94" y2="441" marker-end="url(#marker6)" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
@@ -223,29 +229,50 @@
     <g>
       <path d="M-11241 693.4121 C-11241 693.4121 -11160.86 693.0364 -11159.95 693.9766 C-11158.78 695.1663 -11159.65 745.128 -11159.65 745.128 L-11194.12 745.128 L-11165.39 775.2571 L-11207.91 745.3656 L-11241 745.84 L-11241 693.4121 Z " opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="2" stroke-linecap="butt" stroke-linejoin="round" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" />
     </g>
-    <text x="-11237" y="710.8969" font-size="12" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">flight: XYZ 123</text>
-    <text x="-11237" y="724.8969" font-size="12" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">alt: 20000ft</text>
-    <text x="-11237" y="738.8969" font-size="12" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">speed: 300 kts</text>
+    <text x="-11237" y="710.8969" font-size="12" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">flight: XYZ 123
+</text>
+    <text x="-11237" y="724.8969" font-size="12" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">alt: 20000ft
+</text>
+    <text x="-11237" y="738.8969" font-size="12" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">speed: 300 kts</text>
     <g>
       <path d="M-11149 774 L-11160 785.0001 L-11149 796.0003 L-11138 785.0001 Z " opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#7F7F7F" fill-opacity="1" />
     </g>
     <line x1="-11142.41" y1="780.5909" x2="-11005.48" y2="689.0038" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
     <path d="M-11160 828.9437 L-11160 873 L-11420.06 873" marker-start="url(#marker19)" marker-end="url(#marker20)" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
-    <text x="-11021" y="210.7422" font-size="30" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">- eye position</text>
-    <text x="-11021" y="244.7422" font-size="30" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">- map projection</text>
-    <text x="-11129" y="314.2422" font-size="30" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">eye position</text>
-    <text x="-11129" y="348.2422" font-size="30" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">layer/object selection</text>
-    <text x="-11111" y="493.2422" font-size="30" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">display data</text>
-    <text x="-11274.53" y="818.2422" font-size="30" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">object</text>
+    <text x="-11021" y="210.7422" font-size="30" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">- eye position
+</text>
+    <text x="-11021" y="244.7422" font-size="30" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">- map projection</text>
+    <text x="-11129" y="314.2422" font-size="30" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">eye position
+</text>
+    <text x="-11129" y="348.2422" font-size="30" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">layer/object selection</text>
+    <text x="-11111" y="493.2422" font-size="30" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">display data</text>
+    <text x="-11274.53" y="818.2422" font-size="30" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">object </text>
     <text x="-11293.7" y="852.2422" font-size="30" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">selection</text>
-    <text x="-12227" y="512.2422" font-size="30" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">viewer</text>
-    <text x="-12227" y="546.2422" font-size="30" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">data</text>
+    <text x="-12227" y="512.2422" font-size="30" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">viewer
+</text>
+    <text x="-12227" y="546.2422" font-size="30" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal"> data</text>
     <line x1="-11659.5" y1="720" x2="-12239.06" y2="720" marker-end="url(#marker21)" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
-    <text x="-12227" y="242.2422" font-size="30" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">viewer</text>
-    <text x="-12227" y="276.2422" font-size="30" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">sync</text>
-    <text x="-12209" y="691.2422" font-size="30" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">ChannelTopic requests</text>
-    <text x="-12296.02" y="179.6906" font-size="36" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">Bus</text>
-    <text x="-11264.93" y="584.2422" font-size="30" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">layer</text>
+    <text x="-12227" y="260.2422" font-size="30" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">viewer
+</text>
+    <text x="-12227" y="294.2422" font-size="30" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal"> sync</text>
+    <text x="-12209" y="691.2422" font-size="30" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">ChannelTopic requests</text>
+    <text x="-12296.02" y="215.6906" font-size="36" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">Bus</text>
+    <text x="-11264.93" y="584.2422" font-size="30" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">layer
+</text>
     <text x="-11291.62" y="618.2422" font-size="30" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">selection</text>
+    <text x="-12129.52" y="1007.691" font-size="36" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">actors</text>
+    <text x="-11601.76" y="1007.691" font-size="36" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">Swing / Worldwind objects</text>
+    <g>
+      <g>
+        <g>
+          <path d="M-12312 -26 L-12312 34.00001 Q-12300.5 44 -12266 44 Q-12231.5 44 -12220 34.00001 L-12220 -26 Z " opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" />
+          <text x="-12300.45" y="16.48806" font-size="26" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">config</text>
+          <ellipse cx="-12266" cy="-26" rx="45.99976" ry="9.999996" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" />
+        </g>
+      </g>
+    </g>
+    <line x1="-12222" y1="0" x2="-12186.94" y2="0" marker-end="url(#marker22)" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    <text x="-12245" y="80.24219" font-size="30" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">layers, </text>
+    <text x="-12245" y="114.2422" font-size="30" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">panels</text>
   </g>
 </svg>

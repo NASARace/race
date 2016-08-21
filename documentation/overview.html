@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8"/>
+        <title>RACE</title>
+
+        <link href="../race-html.css" rel="stylesheet"/>
+    </head>
+
+    <body>
+        <div class="navbar">
+            <div class=""banner>
+                <a href="index.html" ><img class="logo" src="../images/race128.png"></a>
+                <p class="doctitle">RACE Manual</p>
+            </div>
+            <br/>
+            <div class="globaltoc">
+                <div class="toc">
+                  <p class="title">Contents</p>
+                  <ul>
+                    <li><span class="toc level1"><a href="../about.html">About RACE</a></span></li>
+                    <li>
+                      <p class="toc level1">Installing RACE</p>
+                      <ul>
+                        <li><span class="toc level2"><a href="../installation/prerequisites.html">Prerequisites</a></span></li>
+                        <li><span class="toc level2"><a href="../installation/download.html">Downloading RACE</a></span></li>
+                        <li><span class="toc level2"><a href="../installation/build.html">Building RACE</a></span></li>
+                        <li><span class="toc level2"><a href="../installation/osx.html">OS X Specifics</a></span></li>
+                      </ul>
+                    </li>
+                    <li>
+                      <p class="toc level1">Using RACE</p>
+                      <ul>
+                        <li><span class="toc level2"><a href="../usage/running.html">How to Run RACE</a></span></li>
+                        <li><span class="toc level2"><a href="../usage/configuration.html">RACE Configuration</a></span></li>
+                        <li><span class="toc level2"><a href="../usage/encryption.html">Using Encrypted Configurations</a></span></li>
+                        <li><span class="toc level2"><a href="../usage/examples.html">RACE examples</a></span></li>
+                      </ul>
+                    </li>
+                    <li>
+                      <p class="toc level1"><a href="../actors.html">Actors</a></p>
+                      <ul>
+                        <li><span class="toc level2"><a href="../actors.html#actor-components-and-properties">Actor Components and Properties</a></span></li>
+                        <li><span class="toc level2"><a href="../actors.html#actor-communication">Actor Communication</a></span></li>
+                      </ul>
+                    </li>
+                    <li>
+                      <p class="toc level1">RACE Design</p>
+                      <ul>
+                        <li><span class="toc level2"><a href="../design/overview.html">Design Overview</a></span></li>
+                        <li><span class="toc level2"><a href="../design/configuration.html">Runtime Configuration</a></span></li>
+                        <li><span class="toc level2"><a href="../design/raceactors.html">RaceActors</a></span></li>
+                        <li><span class="toc level2"><a href="../design/channeltopics.html">ChannelTopics</a></span></li>
+                        <li><span class="toc level2"><a href="../design/worldwind.html">WorldWind Viewer</a></span></li>
+                        <li><span class="toc level2"><a href="../design/remotelauncher.html">RemoteLauncher</a></span></li>
+                        <li><span class="toc level2"><a href="../design/layers-and-modules.html">Layers and Modules</a></span></li>
+                        <li><span class="toc level2"><a href="../design/directory-structure.html">Directory Structure</a></span></li>
+                        <li><span class="toc level2"><a href="../design/whyscala.html">Why Scala</a></span></li>
+                      </ul>
+                    </li>
+                    <li>
+                      <p class="toc level1"><a href="../examples.html">RACE Examples</a></p>
+                      <ul>
+                        <li><span class="toc level2"><a href="../examples.html#basic-examples">Basic Examples</a></span></li>
+                        <li><span class="toc level2"><a href="../examples.html#distributed-operation">Distributed Operation</a></span></li>
+                        <li><span class="toc level2"><a href="../examples.html#live-data-import">Live Data Import</a></span></li>
+                        <li><span class="toc level2"><a href="../examples.html#data-replay">Data Replay</a></span></li>
+                      </ul>
+                    </li>
+                    <li>
+                      <p class="toc level1">Documentation</p>
+                      <ul>
+                        <li><span class="toc level2 active">RACE Documentation Overview</span></li>
+                        <li><span class="toc level2"><a href="presentations.html">Available Slide Presentations</a></span></li>
+                      </ul>
+                    </li>
+                    <li><span class="toc level1"><a href="../glossary.html">Glossary</a></span></li>
+                  </ul>
+                </div>
+            </div>
+            <div class="pagetoc">
+                <div class="toc">
+                  <p class="title">Page</p>
+                  <ul>
+                    <li><span class="toc level1"><a href="#work--and-dataflow">Work- and Dataflow</a></span></li>
+                    <li><span class="toc level1"><a href="#translation-directives">Translation Directives</a></span></li>
+                    <li><span class="toc level1"><a href="#presentation-material">Presentation Material</a></span></li>
+                  </ul>
+                </div>
+            </div>
+            <div class="toc">
+                <p class="title">Project Links</p>
+                <ul>
+                    <li><span class="toc level2"><a href="https://github.com/NASARace/race.git">Repository</a></span></li>
+                    <li><span class="toc level2"><a href="http://nasarace.github.io/race">Website</a></span></li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="main">
+            <h1 id="race-documentation-overview" class="title">RACE Documentation Overview</h1>
+            
+            <h2 id="work--and-dataflow" class="section">Work- and Dataflow</h2>
+            <p>RACE documentation is created from text files that are distributed with this repository, and translated into
+            HTML and PDF by means of the <a href="https://planet42.github.io/Laika/">Laika</a> <a href="http://www.scala-sbt.org/">SBT</a> plugin. Once translated, all content can be viewed locally in a web browser,
+            or on the internet through <a href="http://nasarace.github.io/race">http://nasarace.github.io/race</a>.</p>
+            <p>This follows the RACE philosophy that all content should be kept under the same version control system in order to be
+            consistent, and all tools should be integrated into the build system.</p>
+            <p><img class="center scale70" src="../images/docu.svg" alt="RACE documentation"></p>
+            <p>The currently supported source formats are  <a href="https://daringfireball.net/projects/markdown/">Markdown</a> and <a href="http://docutils.sourceforge.net/rst.html">reStructuredText</a> for textual content, and <a href="https://www.w3.org/Graphics/SVG/">SVG</a> for diagrams.
+            Sources are kept under the <code>doc/</code> subdirectory, separated into:</p>
+            <pre><code>doc/
+    images/  : (shared) images and diagrams (SVG files)
+    manual/  : user manual (web site)
+    slides/  : presentations (HTML based slide shows)</code></pre>
+            <p>To generate output, the RACE build system includes the following SBT commands</p>
+            <ul>
+              <li><code>mkManual</code> - translates the manual (web site) pages</li>
+              <li><code>mkSlides</code> - translates the slides</li>
+              <li><code>mkDoc</code> - translates both manual and slides</li>
+            </ul>
+            <p>These commands can be executed either from within a interactive SBT command prompt or from a operating system shell
+            (e.g. <code>&gt; sbt mkManual</code>).</p>
+            <p>Output is generated under the <code>target/doc/</code> directory:</p>
+            <pre><code>target/
+    doc/
+        images/
+        &lt;manual-html-pages&gt;..
+        slides/
+            &lt;slide-html-pages&gt;..</code></pre>
+            <p>Note that manual (site) sources are lifted up to <code>target/doc</code>, which mostly serves the purpose of being able to
+            link to slides, and slides being able to share the same images.</p>
+            <p>To view locally, use your favorite browsers &quot;open file&quot; command and point it to the respective *.html page, e.g.
+            <code>race/target/doc/about.html</code> for the start page of the online manual. Note there is no need to commit before
+            viewing translation results, editorial changes can be kept entirely out of the commit history.
+            As of this writing, Google Chrome works best to view RACE documentation, especially for printing slides.</p>
+            <p>The translated documentation is published through <a href="https://help.github.com/articles/configuring-a-publishing-source-for-github-pages/">GitHub Pages</a>, i.e. the <code>target/doc/</code> content is copied into a
+            orphan <code>gh-pages</code> branch of the RACE repository that is automatically served by GitHub on
+            <a href="http://nasarace.github.io/race">http://nasarace.github.io/race</a>.</p>
+            
+            <h2 id="translation-directives" class="section">Translation Directives</h2>
+            <p>The translation process is controlled by three special files that are looked up within the directory hierarchy of each
+            page source</p>
+            <ul>
+              <li><code>template.html</code> - is a Laika specific HTML document with <code>{{..}}</code> delimited placeholders that are filled in
+              by Laika. While templates can be directory- (i.e. section and document type) specific, those are usually just static
+              files in the root directory of the respective document type (e.g. &quot;manual&quot;)</li>
+              <li><code>race-&lt;type&gt;.css</code> - are CSS files that can be used to control presentation aspects. Again, those are usually just
+              kept in root directories</li>
+              <li><code>directory.conf</code> - are meta-content files that define how Laika processes the contents of the directory that
+              contains the respective file. Each documentation subdirectory should have such a directory.conf file</li>
+            </ul>
+            <p>A typical <code>directory.conf</code> contains three elements</p>
+            <ul>
+              <li><code>title</code> - which defines how the directory is presented in the navigation bar</li>
+              <li><code>navigationOrder</code> - controls in which order files and subdirectories within this directory are processed</li>
+              <li><code>rootPath</code> - is a RACE specific setting which is used to resolve image (SVG) path names. This should point
+              to the root directory of the respective documentation type (e.g. <code>manual</code>)</li>
+            </ul>
+            <p>For instance, a <code>doc/manual/installation/directory.conf</code> file might look like this:</p>
+            <pre><code>title = &quot;Installing RACE&quot;
+
+navigationOrder = [
+  prerequisites.md
+  download.md
+  build.md
+]
+
+rootPath = &quot;..&quot;</code></pre>
+            <p>Please refer to the <a href="https://planet42.github.io/Laika/">Laika</a> documentation for details about the translation process, which supports extensions at
+            various different levels.</p>
+            
+            <h2 id="presentation-material" class="section">Presentation Material</h2>
+            <p>RACE also uses markup text files and <a href="https://planet42.github.io/Laika/">Laika</a> to generate slide presentations in HTML. Each presentation is kept in a
+            single source file, the level 1 header is the presentation title, each level 2 header represents a single slide:</p>
+            <pre><code># My Sample Presentation
+some sub-title
+
+## First Slide
+* talking point 1
+* talking point 2
+
+&lt;img src=&quot;images/someDiagram.svg&quot; class=&quot;center scale60&quot;&gt;
+
+## Second Slide
+...</code></pre>
+            <p>Given that slide formatting should be kept simple, markdown (*.md) is usually a more readable and compact source format
+            for slides than reStructuredText.</p>
+            <p>Slide shows are translated into single HTML pages that make use of a minimal <code>race-slides.js</code> javascript file
+            which implements slide navigation functions. Currently supported commands are</p>
+            <ul>
+              <li>&lt;enter&gt; - next slide</li>
+              <li>&lt;shift-enter&gt; - previous slide</li>
+              <li>&#39;f&#39; - enter full screen (presentation) mode (exit is browser specific, usually &lt;esc&gt;)</li>
+              <li>&lt;digit&gt; - go to page 0..9 (&#39;0&#39; being title page)</li>
+              <li>&lt;ctrl-digit&gt;&lt;digit&gt; - go to pages &gt; 10</li>
+            </ul>
+            <p>Images are best included by means of direct <code>&lt;img ..&gt;</code> HTML tags, which can make use of style classes such as
+            <code>center</code> and <code>scale60</code> (defined in <code>race-slides.css</code>) to control scaling and horizontal alignment.</p>
+            <p>RACEs presentation support favors simplicity, compact representation (single text file) and availability (view in
+            browser) over sophisticated layouts and slide transitions. Specialized themes can be implemented by providing
+            custom template and CSS files.</p>
+        </div>
+
+    </body>
+</html>

@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8"/>
+        <title>RACE</title>
+
+        <link href="./race-slides-html.css" rel="stylesheet"/>
+        <script src="./race-slides.js"></script>
+    </head>
+
+    <body>
+
+        <div class="slide title">
+            <!-- additional divs inserted by renderer extension -->
+            <h1 id="race" class="title">RACE</h1>
+            <p>building airspace simulations faster and better with actors</p>
+            <p><a href="https://github.com/nasarace/race">https://github.com/nasarace/race</a></p>
+            
+            </div><div class="slide">
+            
+            <h2 id="slides" class="section"><span class="sectionNumber">1 </span>Slides</h2>
+            <div class="toc">
+              <ul>
+                <li><span class="toc level1"><a href="#slides"><span class="sectionNumber">1 </span>Slides</a></span></li>
+                <li><span class="toc level1"><a href="#application-domain"><span class="sectionNumber">2 </span>Application Domain</a></span></li>
+                <li><span class="toc level1"><a href="#main-challenges"><span class="sectionNumber">3 </span>Main Challenges</a></span></li>
+                <li><span class="toc level1"><a href="#foundation-actor-programming-model"><span class="sectionNumber">4 </span>Foundation: Actor Programming Model</a></span></li>
+                <li><span class="toc level1"><a href="#actors-implementation-in-race"><span class="sectionNumber">5 </span>Actors implementation in RACE</a></span></li>
+                <li><span class="toc level1"><a href="#raceactors"><span class="sectionNumber">6 </span>RaceActors</a></span></li>
+                <li><span class="toc level1"><a href="#actors-don-t-live-in-a-vacuum---raceactorsystems"><span class="sectionNumber">7 </span>Actors don&#39;t live in a vacuum - RaceActorSystems</a></span></li>
+                <li><span class="toc level1"><a href="#everything-is-configured"><span class="sectionNumber">8 </span>Everything is configured</a></span></li>
+                <li><span class="toc level1"><a href="#configuration-is-declarative-dsl"><span class="sectionNumber">9 </span>Configuration is declarative DSL</a></span></li>
+                <li><span class="toc level1"><a href="#raceactors-systems-support-location-transparency"><span class="sectionNumber">10 </span>RaceActors/Systems support Location Transparency</a></span></li>
+                <li><span class="toc level1"><a href="#data-on-demand---channeltopics"><span class="sectionNumber">11 </span>Data on Demand - ChannelTopics</a></span></li>
+                <li><span class="toc level1"><a href="#raceviewer-visualization---worldwind-in-an-actor"><span class="sectionNumber">12 </span>RaceViewer Visualization - WorldWind in an Actor</a></span></li>
+                <li><span class="toc level1"><a href="#demonstration-example"><span class="sectionNumber">13 </span>Demonstration Example</a></span></li>
+                <li><span class="toc level1"><a href="#example-schematics"><span class="sectionNumber">14 </span>Example Schematics</a></span></li>
+                <li><span class="toc level1"><a href="#lessons-learned"><span class="sectionNumber">15 </span>Lessons Learned</a></span></li>
+              </ul>
+            </div>
+            
+            </div><div class="slide">
+            
+            <h2 id="application-domain" class="section"><span class="sectionNumber">2 </span>Application Domain</h2>
+            <ul>
+              <li>event driven LVC simulations</li>
+              <li>interfaces to existing systems (live and simulators)</li>
+              <li>can be used as stand-in for live systems</li>
+              <li>distributed</li>
+            </ul>
+            <img src="../images/lvc-sim.svg" class="center scale75">
+            
+            </div><div class="slide">
+            
+            <h2 id="main-challenges" class="section"><span class="sectionNumber">3 </span>Main Challenges</h2>
+            <p>uniform programming model for components supporting:</p>
+            <ul>
+              <li>scalability (&quot;single aircraft to whole NAS&quot;)</li>
+              <li>massively concurrent and distributed operation</li>
+              <li>genericity</li>
+              <li>platform independence (&quot;can build and run on a laptop&quot;)</li>
+            </ul>
+            
+            </div><div class="slide">
+            
+            <h2 id="foundation-actor-programming-model" class="section"><span class="sectionNumber">4 </span>Foundation: Actor Programming Model</h2>
+            <ul>
+              <li>well known concurrency programming model since 1973 (Hewitt et el)</li>
+              <li>objects that communicate only through async messages ⟹ no shared state</li>
+              <li>process messages one-at-a-time ⟹ sequential code</li>
+            </ul>
+            <img src="../images/actor.svg" class="center scale40">
+            
+            </div><div class="slide">
+            
+            <h2 id="actors-implementation-in-race" class="section"><span class="sectionNumber">5 </span>Actors implementation in RACE</h2>
+            <ul>
+              <li>using <strong>Akka</strong> <a href="http://akka.io">http://akka.io</a></li>
+              <li>programmed in Scala (running on JVM)</li>
+              <li>extended by <code>RaceActor</code> (configuration, state, initialization, remoting)</li>
+              <li>uniform programming model for large (WWJ) <em>and</em> small components:</li>
+            </ul>
+            <pre>
+   class ProbeActor (config: Config) extends SubscribingRaceActor {
+     def handleMessage = {
+       case BusEvent(channel,msg,sender) =&gt; println(msg)
+     }
+   }
+</pre>
+            
+            </div><div class="slide">
+            
+            <h2 id="raceactors" class="section"><span class="sectionNumber">6 </span>RaceActors</h2>
+            <ul>
+              <li>implements underlying state model in system code</li>
+              <li>user code mostly just (user-) message handler</li>
+              <li>supports local and network bus (publish subscribe)</li>
+            </ul>
+            <img src="../images/actor-states.svg" class="center scale60">
+            
+            </div><div class="slide">
+            
+            <h2 id="actors-don-t-live-in-a-vacuum---raceactorsystems" class="section"><span class="sectionNumber">7 </span>Actors don&#39;t live in a vacuum - RaceActorSystems</h2>
+            <ol class="arabic">
+              <li><code>RemoteMain</code> driver instantiating <code>RaceActorSystem</code> with config</li>
+              <li><code>RaceActorSystem</code> instantiating <code>Master</code> actor</li>
+              <li><code>Master</code> actor instantiating configured <code>RaceActors</code></li>
+            </ol>
+            <img src="../images/race-overview-2.svg" class="center scale55">
+            
+            </div><div class="slide">
+            
+            <h2 id="everything-is-configured" class="section"><span class="sectionNumber">8 </span>Everything is configured</h2>
+            <ul>
+              <li>RACE is <strong>not</strong> a monolythic application - needs configuration as input</li>
+            </ul>
+            <ul>
+              <li>
+                <p>configs are text files with formal syntax (<em>HOCON</em>)</p>
+                <pre><code>   universe {
+     name = &quot;mysimulation&quot;
+     ...
+     actors = [
+       { name = &quot;aircraft&quot;
+         class = &quot;gov.nasa.race.actors.SimpleAircraft&quot;
+         write-to = &quot;/flightpos&quot;
+         heading = 42
+         ...
+       },
+       { name = &quot;probe&quot;
+         class = ...
+         read-from = &quot;</code></pre>
+              </li>
+            </ul>
+            
+            </div><div class="slide">
+            
+            <h2 id="configuration-is-declarative-dsl" class="section"><span class="sectionNumber">9 </span>Configuration is declarative DSL</h2>
+            <p>configs define graphs:</p>
+            <ul>
+              <li>nodes are actors</li>
+              <li>edges are channels through which actors communicate</li>
+            </ul>
+            <img src="../images/race-dataflow.svg" class="center scale90">
+            
+            </div><div class="slide">
+            
+            <h2 id="raceactors-systems-support-location-transparency" class="section"><span class="sectionNumber">10 </span>RaceActors/Systems support Location Transparency</h2>
+            <ul>
+              <li>actors can be moved between processes</li>
+              <li>no need to change actor code - just configuration</li>
+            </ul>
+            <img src="../images/loc-trans.svg" class="center scale90">
+            
+            </div><div class="slide">
+            
+            <h2 id="data-on-demand---channeltopics" class="section"><span class="sectionNumber">11 </span>Data on Demand - ChannelTopics</h2>
+            <ul>
+              <li><em>ChannelTopics</em> are &quot;valves&quot; to turn on/off data flow along channel &quot;pipes&quot;</li>
+              <li>fully transitive and async protocol for provider-lookup &amp; registration</li>
+            </ul>
+            <img src="../images/race-channeltopics.svg" class="center scale70">
+            
+            </div><div class="slide">
+            
+            <h2 id="raceviewer-visualization---worldwind-in-an-actor" class="section"><span class="sectionNumber">12 </span>RaceViewer Visualization - WorldWind in an Actor</h2>
+            <ul>
+              <li>adds thread-safe data acquisition (Layers) and UI framework (Panels)</li>
+              <li>supports viewer synchronization through RACE channels</li>
+            </ul>
+            <img src="../images/race-viewer.svg" class="center scale75">
+            
+            </div><div class="slide">
+            
+            <h2 id="demonstration-example" class="section"><span class="sectionNumber">13 </span>Demonstration Example</h2>
+            <ul>
+              <li>full SWIM import (sfdps,tfmData,asde-x,itws)</li>
+              <li>live ADS-B receiver import</li>
+              <li>&gt; 4000 simultaneous flights</li>
+              <li>&gt; 130 SWIM and ADS-B msg/sec</li>
+              <li>~9000 classes (~14000 loc)</li>
+              <li>200-500 MB heap memory</li>
+              <li>&lt; 10% CPU load on MacBook Pro (2.8GHz Intel i7, 16GB)</li>
+            </ul>
+            
+            </div><div class="slide">
+            
+            <h2 id="example-schematics" class="section"><span class="sectionNumber">14 </span>Example Schematics</h2>
+            <img src="../images/swim-sbs-all-ww.svg" class="center scale65">
+            
+            </div><div class="slide">
+            
+            <h2 id="lessons-learned" class="section"><span class="sectionNumber">15 </span>Lessons Learned</h2>
+            <ul>
+              <li>actors are a suitable programming model for this domain</li>
+              <li>rich research topic (patterns, verification)</li>
+              <li>functional and object oriented programming works, but experienced users tend towards FP</li>
+              <li>actor separation can be broken (global data in constructors and messages)</li>
+              <li>location transparency offset by marshalling/unmarshalling costs</li>
+              <li>back pressure should be integrated into Master failure management policy</li>
+              <li>RACE is fun!</li>
+            </ul>
+        </div>
+    </body>
+</html>

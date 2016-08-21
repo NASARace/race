@@ -60,13 +60,19 @@
   <marker id="marker14" markerUnits="strokeWidth" orient="auto" refX="11.17254" refY="0" markerWidth="13.27247" markerHeight="10.22955" viewBox="-1 -5.114774 13.27247 10.22955">
     <path d="M11.27247 4.114773 L0 0 L11.27247 -4.114774 Z " fill="#000000" fill-opacity="1" stroke="#000000" stroke-opacity="1" />
   </marker>
+  <marker id="marker15" markerUnits="strokeWidth" orient="auto" refX="-11.17254" refY="0" markerWidth="13.27247" markerHeight="10.22955" viewBox="-12.27247 -5.114774 13.27247 10.22955">
+    <path d="M-11.27247 -4.114774 L0 0 L-11.27247 4.114773 Z " fill="#000000" fill-opacity="1" stroke="#000000" stroke-opacity="1" />
+  </marker>
+  <marker id="marker16" markerUnits="strokeWidth" orient="auto" refX="-0.8697562" refY="0" markerWidth="13.27247" markerHeight="10.22955" viewBox="-12.27247 -5.114774 13.27247 10.22955">
+    <path d="M-11.27247 -4.114774 L0 0 L-11.27247 4.114773" fill="none" stroke="#000000" stroke-opacity="1" />
+  </marker>
   <g id="layer1" inkscape:label="Layer 1" inkscape:groupmode="layer">
     <g>
-      <rect x="963" y="549" width="90" height="108" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" filter="url(#shadow1)" />
-      <rect x="969.4288" y="560.5714" width="77.14268" height="90" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" filter="url(#shadow1)" />
-      <rect x="988.7141" y="566.9999" width="38.57135" height="19.28578" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" filter="url(#shadow1)" />
-      <rect x="995.1429" y="618.4286" width="38.57121" height="19.28554" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" filter="url(#shadow1)" />
-      <rect x="988.7141" y="612" width="38.57135" height="19.2856" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" filter="url(#shadow1)" />
+      <rect x="963" y="540" width="90" height="108" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" filter="url(#shadow1)" />
+      <rect x="969.4288" y="551.5714" width="77.14268" height="90" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" filter="url(#shadow1)" />
+      <rect x="988.7141" y="557.9999" width="38.57135" height="19.28578" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" filter="url(#shadow1)" />
+      <rect x="995.1429" y="609.4286" width="38.57121" height="19.28554" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" filter="url(#shadow1)" />
+      <rect x="988.7141" y="603" width="38.57135" height="19.2856" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" filter="url(#shadow1)" />
     </g>
     <g>
       <path d="M576 637.875 L576 685.125 Q583.875 693 607.5 693 Q631.125 693 639 685.125 L639 637.875 Z " opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" filter="url(#shadow1)" />
@@ -77,13 +83,13 @@
     <rect x="1080" y="459" width="180" height="234" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" filter="url(#shadow1)" />
     <rect x="1071" y="450" width="180" height="234" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" filter="url(#shadow1)" />
     <rect x="1089" y="513" width="144" height="153" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" filter="url(#shadow1)" />
-    <rect x="1134" y="549" width="54" height="27" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" filter="url(#shadow1)" />
-    <text x="1143.135" y="567.6383" font-size="13" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">master</text>
+    <rect x="1134" y="540" width="54" height="27" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" filter="url(#shadow1)" />
+    <text x="1143.135" y="558.6383" font-size="13" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">master</text>
     <g>
-      <rect x="1143" y="630" width="54" height="27" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" filter="url(#shadow1)" />
-      <rect x="1134" y="621" width="54" height="27" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" filter="url(#shadow1)" />
-      <rect x="1125" y="612" width="54" height="27" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" filter="url(#shadow1)" />
-      <text x="1136.3" y="630.6383" font-size="13" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">actors</text>
+      <rect x="1136.25" y="630" width="60.75" height="27" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" filter="url(#shadow1)" />
+      <rect x="1126.125" y="621" width="60.75" height="27" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" filter="url(#shadow1)" />
+      <rect x="1116" y="612" width="60.75" height="27" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" filter="url(#shadow1)" />
+      <text x="1130.675" y="630.6383" font-size="13" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">actors</text>
     </g>
     <text x="1123.317" y="468.8797" font-size="14" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">RemoteMain</text>
     <line x1="855" y1="279" x2="855" y2="747" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="3" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="24,12,6,12" />
@@ -95,18 +101,25 @@
       <path d="M519 417 L524.25 435 L555.75 435 L561 417 Z " opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" />
       <text x="527.9932" y="430.8969" font-size="12" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">listen</text>
     </g>
-    <rect x="684" y="477" width="405" height="27" opacity="1" fill="#FFFFFF" fill-opacity="1" />
-    <line x1="695.2498" y1="481.5" x2="1077.749" y2="481.5" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
-    <line x1="695.2498" y1="499.5" x2="1077.749" y2="499.5" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    <g>
+      <rect x="684" y="468" width="402.3877" height="54" opacity="1" fill="#FFFFFF" fill-opacity="1" />
+      <ellipse cx="1075.115" cy="495.358" rx="4.470955" ry="17.99997" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+      <g>
+        <ellipse cx="695.6385" cy="494.6299" rx="4.470989" ry="18.00002" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+        <path d="M695.8586 476.6081 C698.2943 477.5424 700.1857 484.9918 700.1034 493.9311 C700.0197 503.0342 698.7054 511.9751 695.8586 512.6082" opacity="1" stroke="#BFBFBF" stroke-opacity="1" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+      </g>
+      <line x1="695.1772" y1="477" x2="1075.21" y2="477" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+      <line x1="695.1772" y1="512.9999" x2="1075.21" y2="512.9999" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    </g>
     <text x="900.1445" y="306.3625" font-size="16" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">untrusted</text>
     <text x="905.4883" y="324.3625" font-size="16" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">network</text>
     <text x="797.8242" y="453.3797" font-size="14" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">status</text>
-    <line x1="828" y1="468" x2="774.5338" y2="468" marker-end="url(#marker3)" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="0.7" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
-    <text x="791.9795" y="541.8797" font-size="14" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">logging/</text>
-    <text x="801.7139" y="557.8797" font-size="14" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">stdio</text>
-    <line x1="828" y1="522" x2="774.5338" y2="522" marker-end="url(#marker4)" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="0.7" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    <line x1="828" y1="459" x2="774.5338" y2="459" marker-end="url(#marker3)" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="0.7" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    <text x="791.9795" y="550.8797" font-size="14" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">logging/</text>
+    <text x="801.7139" y="566.8797" font-size="14" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">stdio</text>
+    <line x1="828" y1="531" x2="774.5338" y2="531" marker-end="url(#marker4)" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="0.7" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
     <text x="885.4897" y="453.3797" font-size="14" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">control</text>
-    <line x1="882" y1="468" x2="935.4662" y2="468" marker-end="url(#marker5)" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="0.7" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    <line x1="882" y1="459" x2="935.4662" y2="459" marker-end="url(#marker5)" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="0.7" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
     <line x1="603" y1="621" x2="603" y2="525.1725" marker-end="url(#marker6)" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
     <text x="575.6831" y="405.8797" font-size="14" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">RemoteLauncherServer</text>
     <text x="596.3003" y="464.3797" font-size="14" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">RemoteLauncher</text>
@@ -116,8 +129,8 @@
     <text x="468.7656" y="455.3919" font-size="14" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">session</text>
     <text x="473.8242" y="471.3919" font-size="14" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">status</text>
     <line x1="450.5338" y1="441" x2="504" y2="441" marker-start="url(#marker8)" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="0.7" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
-    <text x="881.9829" y="540.8797" font-size="14" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">gw data</text>
-    <line x1="882" y1="522" x2="935.4662" y2="522" marker-end="url(#marker9)" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="0.7" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    <text x="881.9829" y="549.8797" font-size="14" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">gw data</text>
+    <line x1="882" y1="531" x2="935.4662" y2="531" marker-end="url(#marker9)" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="0.7" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
     <text x="407.269" y="410.3797" font-size="14" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">SSL</text>
     <rect x="270" y="396" width="117" height="45" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" filter="url(#shadow1)" />
     <text x="276.8003" y="415.8797" font-size="14" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">RemoteLauncher</text>
@@ -130,18 +143,13 @@
     <rect x="666" y="567" width="36" height="18" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" />
     <text x="678.3301" y="580.8969" font-size="12" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">gw</text>
     <text x="405.7139" y="446.3797" font-size="14" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">Json</text>
-    <path d="M1115.565 512.8849 L1115.565 494.8849 L468 495 L468 509.8275" marker-end="url(#marker11)" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
-    <path d="M630 486 L1143 486 L1143 536.8275" marker-end="url(#marker12)" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
-    <rect x="1080" y="513" width="144" height="18" opacity="1" fill="#FFFFFF" fill-opacity="0.34" />
-    <text x="1097.983" y="527.3797" font-size="14" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">RaceActorSystem</text>
-    <text x="1153.321" y="500.3797" font-size="14" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">config</text>
-    <ellipse cx="1077.654" cy="490.679" rx="4.5" ry="9" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
-    <ellipse cx="695.7141" cy="490.3149" rx="4.5" ry="9" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+    <path d="M1143 513 L1143 495 L468 495 L468 509.8275" marker-end="url(#marker11)" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+    <path d="M630 486 L1161 486 L1161 500.8275" marker-end="url(#marker12)" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+    <rect x="1080" y="387" width="144" height="18" opacity="1" fill="#FFFFFF" fill-opacity="0.34" />
+    <text x="1097.983" y="401.3797" font-size="14" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">RaceActorSystem</text>
+    <text x="1180.321" y="500.3797" font-size="14" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">config</text>
     <rect x="597.8829" y="489.0638" width="9.829671" height="18" opacity="1" fill="#FFFFFF" fill-opacity="0.91" />
     <path d="M603 513 L603 486 L648 486" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
-    <rect x="981" y="464.4078" width="54.49899" height="48.59215" opacity="1" fill="#FFFFFF" fill-opacity="0.89" />
-    <text x="995.8564" y="486.0836" font-size="14" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">SSH</text>
-    <text x="991.1772" y="502.0836" font-size="14" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">tunnel</text>
     <g>
       <path d="M567 628.875 L567 676.125 Q574.875 684 598.5 684 Q622.125 684 630 676.125 L630 628.875 Z " opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" filter="url(#shadow1)" />
       <text x="578.8203" y="662.0586" font-size="15" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">Config</text>
@@ -153,11 +161,11 @@
       <text x="460.6587" y="565.7547" font-size="14" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">log</text>
       <ellipse cx="468" cy="528.75" rx="27" ry="6.75" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" />
     </g>
-    <g transform="rotate(90 1089 598.7308)">
-      <rect x="1084.475" y="491.9776" width="9" height="213.5625" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="url(#gradient1)" />
-      <ellipse cx="1088.978" cy="491.8113" rx="4.51552" ry="1.080437" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" />
-      <ellipse cx="1089.022" cy="705.6506" rx="4.515451" ry="1.080299" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" />
-      <rect x="1085.01" y="703.2222" width="7.967282" height="2.360481" opacity="1" fill="url(#gradient2)" />
+    <g transform="rotate(90 1089 589.7308)">
+      <rect x="1084.475" y="482.9776" width="9" height="213.5625" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="url(#gradient1)" />
+      <ellipse cx="1088.978" cy="482.8113" rx="4.51552" ry="1.080437" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" />
+      <ellipse cx="1089.022" cy="696.6506" rx="4.515451" ry="1.080299" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" />
+      <rect x="1085.01" y="694.2222" width="7.967282" height="2.360481" opacity="1" fill="url(#gradient2)" />
     </g>
     <g>
       <path d="M1129.539 728.4406 L1131.158 728.4312 L1132.756 728.4053 L1134.33 728.3628 L1135.88 728.3037 L1137.402 728.2296 L1138.894 728.1382 L1140.357 728.0331 L1141.785 727.9135 L1143.178 727.7796 L1144.535 727.6313 L1145.852 727.47 L1147.128 727.2958 L1148.363 727.1093 L1149.551 726.9099 L1150.692 726.6989 L1151.785 726.4771 L1152.827 726.2439 L1153.816 726.0005 L1154.75 725.747 L1155.627 725.485 L1156.446 725.2128 L1157.203 724.9319 L1157.897 724.6426 L1158.528 724.3445 L1159.091 724.0414 L1159.586 723.7289 L1160.011 723.4114 L1160.361 723.0866 L1160.637 722.7554 L1160.838 722.4199 L1160.96 722.0786 L1161 721.7338 C1161 718.0284 1146.913 715.0273 1129.539 715.0273 C1112.167 715.0273 1098.084 718.0284 1098.084 721.7338 C1098.084 725.4388 1112.167 728.4406 1129.539 728.4406 Z " opacity="1" fill="#9B9B9B" fill-opacity="1" />
@@ -246,5 +254,12 @@
     <text x="702.8174" y="634.3797" font-size="14" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">forwarding</text>
     <text x="720.0967" y="712.8797" font-size="14" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">external</text>
     <text x="725.5518" y="728.8797" font-size="14" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">server</text>
+    <path d="M684 513 L684 504 L1125 504 L1125 599.8274" marker-end="url(#marker15)" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+    <rect x="1099.321" y="513.8868" width="126" height="19.43269" opacity="1" fill="#FFFFFF" fill-opacity="0.89" />
+    <text x="1112.306" y="528.7415" font-size="13" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">RaceActorSystem</text>
+    <rect x="981" y="477.0124" width="54.49899" height="35.83181" opacity="1" fill="#FFFFFF" fill-opacity="0.89" />
+    <text x="995.8564" y="492.308" font-size="14" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">SSH</text>
+    <text x="991.1772" y="508.308" font-size="14" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">tunnel</text>
+    <line x1="1161" y1="567" x2="1161" y2="611.1302" marker-end="url(#marker16)" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="4,4" />
   </g>
 </svg>

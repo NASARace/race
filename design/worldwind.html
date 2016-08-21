@@ -58,6 +58,22 @@
                         <li><span class="toc level2"><a href="whyscala.html">Why Scala</a></span></li>
                       </ul>
                     </li>
+                    <li>
+                      <p class="toc level1"><a href="../examples.html">RACE Examples</a></p>
+                      <ul>
+                        <li><span class="toc level2"><a href="../examples.html#basic-examples">Basic Examples</a></span></li>
+                        <li><span class="toc level2"><a href="../examples.html#distributed-operation">Distributed Operation</a></span></li>
+                        <li><span class="toc level2"><a href="../examples.html#live-data-import">Live Data Import</a></span></li>
+                        <li><span class="toc level2"><a href="../examples.html#data-replay">Data Replay</a></span></li>
+                      </ul>
+                    </li>
+                    <li>
+                      <p class="toc level1">Documentation</p>
+                      <ul>
+                        <li><span class="toc level2"><a href="../documentation/overview.html">RACE Documentation Overview</a></span></li>
+                        <li><span class="toc level2"><a href="../documentation/presentations.html">Available Slide Presentations</a></span></li>
+                      </ul>
+                    </li>
                     <li><span class="toc level1"><a href="../glossary.html">Glossary</a></span></li>
                   </ul>
                 </div>
@@ -65,13 +81,17 @@
             <div class="pagetoc">
                 <div class="toc">
                   <p class="title">Page</p>
+                  <ul>
+                    <li><span class="toc level1"><a href="#layers-and-panels---races-extension-points">Layers and Panels - RACEs Extension Points</a></span></li>
+                    <li><span class="toc level1"><a href="#synchronized-viewers">Synchronized Viewers</a></span></li>
+                  </ul>
                 </div>
             </div>
             <div class="toc">
                 <p class="title">Project Links</p>
                 <ul>
                     <li><span class="toc level2"><a href="https://github.com/NASARace/race.git">Repository</a></span></li>
-                    <li><span class="toc level2"><a href="https://NASARace/github.io/race">Website</a></span></li>
+                    <li><span class="toc level2"><a href="http://nasarace.github.io/race">Website</a></span></li>
                 </ul>
             </div>
         </div>
@@ -92,8 +112,10 @@
             <p>RACE includes substantial infrastructure to mitigate these challenges. Centerpiece of this
             infrastructure is <a href="https://goworldwind.org/">NASA WorldWind</a> - an open sourced Java- and <a href="https://www.opengl.org/">OpenGL</a>-based geo viewer
             that runs on all major platforms and can be embedded into various applications.</p>
+            
+            <h2 id="layers-and-panels---races-extension-points" class="section">Layers and Panels - RACEs Extension Points</h2>
             <p>The primary <a href="https://goworldwind.org/developers-guide/concepts/">WorldWind concept</a> in the context of RACE is the <a href="http://builds.worldwind.arc.nasa.gov/worldwind-releases/daily/docs/api/gov/nasa/worldwind/layers/RenderableLayer.html">RenderableLayer</a>, which represents
-            a display relevant data set that can be separately controlled in terms of visibility, rendering and
+            a display relevant data set that can be separately controlled in terms of visibility, rendering details and
             updates. RACE uses <code>RaceLayers</code> to map its bus channels to WorldWind layers. While a <code>RaceLayer</code>
             is a GUI object that executes within the user interface thread, it has an associated
             <code>RaceLayerActor</code> which is responsible for data acquisition by means of channel subscription.
@@ -124,6 +146,8 @@
            ...</code></pre>
             <p>Just as <code>RaceLayerActors</code>, the <code>RaceViewerActor</code> has a UI dual in form of the <code>RaceView</code>, which
             is both the aggregation and the <a href="https://en.wikipedia.org/wiki/Mediator_pattern">mediator</a> between the configured panels and the WorldWind window.</p>
+            
+            <h2 id="synchronized-viewers" class="section">Synchronized Viewers</h2>
             <p>The data that is acquired through RACE channels does not have to represent external entities such
             as aircraft, and does not need to be displayed in <code>RaceLayers</code>. The whole RACE viewer
             infrastructure lends itself naturally to use RACE channels on the global bus for the purpose of
@@ -137,8 +161,23 @@
               <li>requires minimal data transfer for updates</li>
               <li>is robust in terms of re-synchronization</li>
             </ul>
-            <p>Moreover, by using different synchronization channels it is easy to create and switch between
-            display groups.</p>
+            <p>Moreover, by using different synchronization channels it is easy to create and switch between different display groups.</p>
+            <p>Viewer synchronization is <em>not</em> hardwired or restricted to a fixed set of viewer parameters such as eye position.</p>
+            <p>Since application specific data and rendering is provided through new <code>RaceLayers</code>, those layers are also responsible
+            for adding related synchronization commands. For instance, the generic <code>FlightLayer</code> implementation includes a number
+            of commands for selected flight objects, such as hiding/showing flight paths. This is achieved by overriding the
+            <code>changeObject(objectId: String, action: String)</code> method of the <code>RaceLayer</code> class - layers are free to add their own
+            object ids and action keys.</p>
+            <p>The <code>SyncPanel</code> implementation that is distributed with RACE supports synchronization control for</p>
+            <ul>
+              <li>eye positions</li>
+              <li>operation on the selected layer</li>
+              <li>operations on the selected layer object</li>
+            </ul>
+            <p>Synchronization resonance (bouncing back external synchronization commands) is prevented by means of blackout periods.
+            Synchronization events are only sent out if they don&#39;t exceed a configurable threshold duration since the last local
+            user input.</p>
+            <p>If applications need more control they can provide their own panel and configure it instead of the standard sync panel.</p>
         </div>
 
     </body>

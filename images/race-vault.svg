@@ -32,18 +32,29 @@
     <path d="M-11.27247 -4.114774 L0 0 L-11.27247 4.114773 Z " fill="#BFBFBF" fill-opacity="1" stroke="#BFBFBF" stroke-opacity="1" />
   </marker>
   <g id="layer1" inkscape:label="Layer 1" inkscape:groupmode="layer">
-    <text x="102" y="173.8453" font-size="14" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">universe {  …</text>
-    <text x="102" y="189.8453" font-size="14" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">˙ actors [  …</text>
-    <text x="102" y="205.8453" font-size="14" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">˙ ˙  { name = “jmsImporter”</text>
-    <text x="102" y="221.8453" font-size="14" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">˙ ˙ ˙ …</text>
-    <text x="102" y="237.8453" font-size="14" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">˙ ˙ ˙ password =  “??jms.password”</text>
-    <text x="102" y="253.8453" font-size="14" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">˙ ˙ ˙ …</text>
-    <text x="102" y="269.8453" font-size="14" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">˙ ˙ }</text>
-    <text x="102" y="285.8453" font-size="14" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">˙⁣ …</text>
-    <text x="471" y="200.8453" font-size="14" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">secret {</text>
-    <text x="471" y="216.8453" font-size="14" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">˙ …</text>
-    <text x="471" y="232.8453" font-size="14" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">˙ jms.password = “12345”</text>
-    <text x="471" y="248.8453" font-size="14" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">˙ …</text>
+    <text x="102" y="173.8453" font-size="14" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">universe {  …
+</text>
+    <text x="102" y="189.8453" font-size="14" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">  actors [  …
+</text>
+    <text x="102" y="205.8453" font-size="14" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">     {name = “jmsImporter”
+</text>
+    <text x="102" y="221.8453" font-size="14" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">      …
+</text>
+    <text x="102" y="237.8453" font-size="14" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">      password =  “??jms.password”
+</text>
+    <text x="102" y="253.8453" font-size="14" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">      …
+</text>
+    <text x="102" y="269.8453" font-size="14" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">    }
+</text>
+    <text x="102" y="285.8453" font-size="14" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">  …</text>
+    <text x="471" y="200.8453" font-size="14" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">secret { 
+</text>
+    <text x="471" y="216.8453" font-size="14" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">  …
+</text>
+    <text x="471" y="232.8453" font-size="14" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">  jms.password = “12345”
+</text>
+    <text x="471" y="248.8453" font-size="14" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">  …
+</text>
     <text x="221.8328" y="282.468" font-size="14" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">my_universe.conf</text>
     <text x="561.5052" y="282.468" font-size="14" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">my_vault.conf</text>
     <text x="318.938" y="351.8797" font-size="14" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">my-vault.crypt</text>
@@ -55,14 +66,20 @@
     <line x1="189" y1="306" x2="189" y2="329.8275" marker-end="url(#marker2)" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
     <line x1="468" y1="369" x2="399.1725" y2="369" marker-end="url(#marker3)" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
     <line x1="342" y1="369" x2="264.1725" y2="369" marker-end="url(#marker4)" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
-    <text x="13" y="418.7" font-size="14" fill="#7F007F" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">&gt; race —vault my_vault.crypt</text>
-    <text x="13" y="434.7" font-size="14" fill="#7F007F" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">˙    [ —keystore my_keystore.ks</text>
-    <text x="13" y="450.7" font-size="14" fill="#7F007F" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">˙ ˙      —alias vaultKey ]</text>
-    <text x="13" y="466.7" font-size="14" fill="#7F007F" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">˙    my_universe.conf</text>
-    <text x="463" y="418.7" font-size="14" fill="#7F007F" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">&gt; script/encryptconfig</text>
-    <text x="463" y="434.7" font-size="14" fill="#7F007F" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">˙    [ —keystore my_keystore.ks</text>
-    <text x="463" y="450.7" font-size="14" fill="#7F007F" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">˙ ˙      —alias vaultKey ]</text>
-    <text x="463" y="466.7" font-size="14" fill="#7F007F" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">˙    my_vault.conf</text>
+    <text x="13" y="418.7" font-size="14" fill="#7F007F" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">&gt; race —vault my_vault.crypt
+</text>
+    <text x="13" y="434.7" font-size="14" fill="#7F007F" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">     [ —keystore my_keystore.ks
+</text>
+    <text x="13" y="450.7" font-size="14" fill="#7F007F" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">         —alias vaultKey ]
+</text>
+    <text x="13" y="466.7" font-size="14" fill="#7F007F" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">     my_universe.conf</text>
+    <text x="463" y="418.7" font-size="14" fill="#7F007F" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">&gt; script/encryptconfig
+</text>
+    <text x="463" y="434.7" font-size="14" fill="#7F007F" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">     [ —keystore my_keystore.ks 
+</text>
+    <text x="463" y="450.7" font-size="14" fill="#7F007F" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">         —alias vaultKey ]
+</text>
+    <text x="463" y="466.7" font-size="14" fill="#7F007F" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">     my_vault.conf</text>
     <path d="M342 243 C378 288 441 252 469.0667 237.9667" marker-end="url(#marker5)" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="2,2" fill-opacity="0" />
     <text x="322.876" y="466.8797" font-size="14" fill="#7F7F7F" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">my_keystore.ks</text>
     <g>
@@ -84,8 +101,10 @@
       <ellipse cx="365.5" cy="362.2447" rx="14.5" ry="3.393608" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" />
     </g>
     <line x1="279" y1="243" x2="378" y2="243" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="2,2" />
-    <text x="256" y="498.7" font-size="14" fill="#7F007F" fill-opacity="0.7" font-family="Courier" font-weight="normal" font-style="normal">&gt; keytool -genseckey</text>
-    <text x="256" y="514.7" font-size="14" fill="#7F007F" fill-opacity="0.7" font-family="Courier" font-weight="normal" font-style="normal">˙   -keystore my_keystore.ks - storetype JCEKS</text>
-    <text x="256" y="530.7" font-size="14" fill="#7F007F" fill-opacity="0.7" font-family="Courier" font-weight="normal" font-style="normal">˙   -alias vaultKey -keyalg AES</text>
+    <text x="256" y="498.7" font-size="14" fill="#7F007F" fill-opacity="0.7" font-family="Courier" font-weight="normal" font-style="normal">&gt; keytool -genseckey 
+</text>
+    <text x="256" y="514.7" font-size="14" fill="#7F007F" fill-opacity="0.7" font-family="Courier" font-weight="normal" font-style="normal">    -keystore my_keystore.ks - storetype JCEKS
+</text>
+    <text x="256" y="530.7" font-size="14" fill="#7F007F" fill-opacity="0.7" font-family="Courier" font-weight="normal" font-style="normal">    -alias vaultKey -keyalg AES</text>
   </g>
 </svg>
