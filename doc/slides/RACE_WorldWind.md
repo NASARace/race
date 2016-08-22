@@ -27,7 +27,7 @@ don't re-invent the wheel:
 * how to get & process data
 * how to add data-specific UI
 
-<img src="../images/geo-app.svg" class="center scale70">
+<img src="../images/geo-app.svg" class="center scale60">
 
 
 ## RACE to the rescue

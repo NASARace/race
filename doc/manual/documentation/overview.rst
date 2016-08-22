@@ -126,6 +126,9 @@ RACEs presentation support favors simplicity, compact representation (single tex
 browser) over sophisticated layouts and slide transitions. Specialized themes can be implemented by providing
 custom template and CSS files.
 
+Since slide layout is based on browser *view height*, and browsers vary in terms of including
+decorations such as menubars, slides are best viewed in fullscreen mode.
+
 .. _SBT: http://www.scala-sbt.org/
 .. _Laika: https://planet42.github.io/Laika/
 .. _SVG: https://www.w3.org/Graphics/SVG/

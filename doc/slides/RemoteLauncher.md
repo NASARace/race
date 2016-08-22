@@ -26,7 +26,7 @@ Dissection:
 <img src="../images/race-overview-2.svg" class="center scale55">
 
 ## (Excursion²) Config is Everything
-* configs are text files with formal syntax (*HOCON* - `com.typesafe.config`)
+* configs are HOCON text files (`com.typesafe.config`)
 * configs use a declarative language (graph with RaceActors as nodes and channels as edges)
 
         universe {
@@ -45,7 +45,7 @@ Dissection:
            ...
 
 ## (Excursion²) Config Zoom In
-<img src="../../images/race-config.svg" class="center">
+<img src="../images/race-config.svg" class="center">
 
 
 ## (Excursion³) Secret Config Values - Vault

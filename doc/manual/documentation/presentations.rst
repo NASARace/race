@@ -10,6 +10,7 @@ in a single HTML file (linked below) that can be navigated with the following co
 - <digit> - go to page 0..9 ('0' being title page)
 - <ctrl-digit><digit> - go to pages > 10
 
+The slides are best viewed in fullscreen mode since they are based on browser view height.
 Use your browsers "print" command to create hard copies or PDF files.
 
 Presentations
