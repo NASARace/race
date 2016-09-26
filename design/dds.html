@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8"/>
+        <title>RACE</title>
+
+        <link href="../race-html.css" rel="stylesheet"/>
+    </head>
+
+    <body>
+        <div class="navbar">
+            <div class=""banner>
+                <a href="index.html" ><img class="logo" src="../images/race128.png"></a>
+                <p class="doctitle">RACE Manual</p>
+            </div>
+            <br/>
+            <div class="toc">
+                <p class="title">Project Links</p>
+                <ul>
+                    <li><span class="toc level2"><a href="https://github.com/NASARace/race.git">Repository</a></span></li>
+                    <li><span class="toc level2"><a href="http://nasarace.github.io/race">Website</a></span></li>
+                </ul>
+            </div>
+            <div class="pagetoc">
+                <div class="toc">
+                  <p class="title">Page</p>
+                  <ul>
+                    <li><span class="toc level1"><a href="#dds-payload-data">DDS Payload Data</a></span></li>
+                    <li><span class="toc level1"><a href="#ddsimport-exportactors">DDSImport/ExportActors</a></span></li>
+                    <li><span class="toc level1"><a href="#ddsreaders-writers">DDSReaders/Writers</a></span></li>
+                    <li><span class="toc level1"><a href="#test-tools">Test-Tools</a></span></li>
+                    <li><span class="toc level1"><a href="#caveats">Caveats</a></span></li>
+                  </ul>
+                </div>
+            </div>
+            <div class="globaltoc">
+                <div class="toc">
+                  <p class="title">Contents</p>
+                  <ul>
+                    <li><span class="toc level1"><a href="../about.html">About RACE</a></span></li>
+                    <li>
+                      <p class="toc level1">Installing RACE</p>
+                      <ul>
+                        <li><span class="toc level2"><a href="../installation/prerequisites.html">Prerequisites</a></span></li>
+                        <li><span class="toc level2"><a href="../installation/download.html">Downloading RACE</a></span></li>
+                        <li><span class="toc level2"><a href="../installation/build.html">Building RACE</a></span></li>
+                        <li><span class="toc level2"><a href="../installation/osx.html">OS X Specifics</a></span></li>
+                      </ul>
+                    </li>
+                    <li>
+                      <p class="toc level1">Using RACE</p>
+                      <ul>
+                        <li><span class="toc level2"><a href="../usage/running.html">How to Run RACE</a></span></li>
+                        <li><span class="toc level2"><a href="../usage/configuration.html">RACE Configuration</a></span></li>
+                        <li><span class="toc level2"><a href="../usage/encryption.html">Using Encrypted Configurations</a></span></li>
+                        <li><span class="toc level2"><a href="../usage/examples.html">RACE examples</a></span></li>
+                      </ul>
+                    </li>
+                    <li>
+                      <p class="toc level1"><a href="../actors.html">Actors</a></p>
+                      <ul>
+                        <li><span class="toc level2"><a href="../actors.html#actor-components-and-properties">Actor Components and Properties</a></span></li>
+                        <li><span class="toc level2"><a href="../actors.html#actor-communication">Actor Communication</a></span></li>
+                      </ul>
+                    </li>
+                    <li>
+                      <p class="toc level1">RACE Design</p>
+                      <ul>
+                        <li><span class="toc level2"><a href="overview.html">Design Overview</a></span></li>
+                        <li><span class="toc level2"><a href="configuration.html">Runtime Configuration</a></span></li>
+                        <li><span class="toc level2"><a href="raceactors.html">RaceActors</a></span></li>
+                        <li><span class="toc level2"><a href="channeltopics.html">ChannelTopics</a></span></li>
+                        <li><span class="toc level2"><a href="worldwind.html">WorldWind Viewer</a></span></li>
+                        <li><span class="toc level2"><a href="remotelauncher.html">RemoteLauncher</a></span></li>
+                        <li><span class="toc level2"><a href="layers-and-modules.html">Layers and Modules</a></span></li>
+                        <li><span class="toc level2"><a href="directory-structure.html">Directory Structure</a></span></li>
+                        <li><span class="toc level2"><a href="local-build.html">Local Build Configuration</a></span></li>
+                        <li><span class="toc level2 active">RACE and DDS</span></li>
+                        <li><span class="toc level2"><a href="whyscala.html">Why Scala</a></span></li>
+                      </ul>
+                    </li>
+                    <li>
+                      <p class="toc level1"><a href="../examples.html">RACE Examples</a></p>
+                      <ul>
+                        <li><span class="toc level2"><a href="../examples.html#basic-examples">Basic Examples</a></span></li>
+                        <li><span class="toc level2"><a href="../examples.html#distributed-operation">Distributed Operation</a></span></li>
+                        <li><span class="toc level2"><a href="../examples.html#live-data-import">Live Data Import</a></span></li>
+                        <li><span class="toc level2"><a href="../examples.html#data-replay">Data Replay</a></span></li>
+                      </ul>
+                    </li>
+                    <li>
+                      <p class="toc level1">Documentation</p>
+                      <ul>
+                        <li><span class="toc level2"><a href="../documentation/overview.html">RACE Documentation Overview</a></span></li>
+                        <li><span class="toc level2"><a href="../documentation/presentations.html">Available Slide Presentations</a></span></li>
+                      </ul>
+                    </li>
+                    <li>
+                      <p class="toc level1"><a href="../learning.html">Learning Resources</a></p>
+                      <ul>
+                        <li><span class="toc level2"><a href="../learning.html#scala">Scala</a></span></li>
+                        <li><span class="toc level2"><a href="../learning.html#actors-and-akka">Actors and Akka</a></span></li>
+                        <li><span class="toc level2"><a href="../learning.html#sbt">SBT</a></span></li>
+                        <li><span class="toc level2"><a href="../learning.html#interactive-scala-akka-and-sbt-learning-environment-and-examples">Interactive Scala, Akka and SBT Learning Environment and Examples</a></span></li>
+                        <li><span class="toc level2"><a href="../learning.html#git">Git</a></span></li>
+                      </ul>
+                    </li>
+                    <li><span class="toc level1"><a href="../glossary.html">Glossary</a></span></li>
+                  </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="main">
+            <h1 id="race-and-dds" class="title">RACE and DDS</h1>
+            <p><a href="http://portals.omg.org/dds/">DDS</a> is a platform independent, peer-to-peer publish/subscribe mechanism that is widely used for distributed and
+            embedded systems. As such, it is a primary candidate for interfacing external systems to RACE, which includes
+            actors to publish to and read from DDS topics.</p>
+            <p>The DDS specifications are owned by the <a href="http://www.omg.org/">OMG</a> and include</p>
+            <ul>
+              <li>a wire protocol specification which is the basis for runtime-interoperability of DDS implementation from different vendors</li>
+              <li>programming language specific APIs to create vendor independent, source compatible client applications</li>
+            </ul>
+            <p>Most notably, the OMG publishes a open sourced <a href="http://www.omg.org/spec/DDS-Java/">DDS API for Java</a>, which is the basis for RACE integration.</p>
+            
+            <h2 id="dds-payload-data" class="section">DDS Payload Data</h2>
+            <p>Since DDS is supposed to work across processes and platforms it requires marshalling and un-marshalling of data that is
+            supposed to be transmitted/received. As a programming language-neutral standard, DDS uses the <a href="http://www.omg.org/gettingstarted/omg_idl.htm">OMG CORBA IDL</a> to define
+            application specific payload data types, which resembles C structure syntax:</p>
+            <pre><code>module dds {
+    struct FlightRecord {
+        string cs;
+        double lat;
+        ...
+        long long date;
+    };
+};</code></pre>
+            <p>Such *.idl files have to be translated into *.java files, for which DDS vendors provide their own specialized tools.
+            However, this being based on CORBA IDL the <a href="https://docs.oracle.com/javase/8/docs/technotes/tools/unix/idlj.html">idlj tool</a> that is distributed with Oracle J2SE is sufficient to generate
+            the basic Java sources (without vendor specific extensions of course). Assuming the following directory structure in RACE:</p>
+            <pre><code>my-module/
+  src/
+    main/
+      scala/
+      java/
+      idl/
+         FlightRecord.idl</code></pre>
+            <p>the required Java files can be generated by executing:</p>
+            <pre><code>&gt; idlj -td my-module/src/main/java my-module/src/main/idl/*.idl</code></pre>
+            <p>which then creates the following Java sources:</p>
+            <pre><code>my-module/src/main/java/
+  dds/
+    FlightRecord.java
+    FlightRecordHelper.java
+    FlightRecordHolder.java</code></pre>
+            <p>Since the underlying data types are structs (fully mutable, no methods or supertypes), they are usually not directly
+            used in RACE and are either embedded or translated into full Java or Scala classes.</p>
+            
+            <h2 id="ddsimport-exportactors" class="section">DDSImport/ExportActors</h2>
+            <p>The primary constructs for using DDS within RACE are the <code>gov.nasa.race.actors.imports.DDSImportActor</code> and the
+            <code>gov.nasa.race.actors.exports.DDSExportActor</code>, which can be directly instantiated from RACE configuration files:</p>
+            <pre><code>...
+{ name = &quot;ddsPublisher&quot;
+  class = &quot;gov.nasa.race.actors.exports.DDSExportActor&quot;
+  read-from = &quot;fpos/out&quot;
+
+  translator.class = &quot;gov.nasa.race.data.dds.FlightPos2FlightRecord&quot; // optional
+  writer = { // mandatory
+    class = &quot;.data.dds.FlightRecordWriter&quot; // this encapsulates TypeSupport[T],Topic[T] and Writer[T]
+    topic = &quot;myTopic&quot;
+  }
+},
+...
+{ name = &quot;ddsSubscriber&quot;
+  class = &quot;gov.nasa.race..actors.imports.DDSImportActor&quot;
+  write-to = &quot;fpos/in&quot;
+
+  translator.class = &quot;gov.nasa.race.data.dds.FlightRecord2FlightPos&quot; // optional
+  reader = { // mandatory
+    class = &quot;.data.dds.FlightRecordReader&quot;
+    topic = &quot;myTopic&quot;
+  }
+} ...</code></pre>
+            <p>Note that both actor classes support a optional embedded translator (which is a normal <code>gov.nasa.race.common.ConfigurableTranslator</code>)
+            and require mandatory <code>reader</code> / <code>writer</code> specifications.</p>
+            
+            <h2 id="ddsreaders-writers" class="section">DDSReaders/Writers</h2>
+            <p>Those are the key implementation constructs for interfacing RACE with DDS. You have to write one for each DDS
+            <code>DataReader&lt;T&gt;</code> and <code>DataWriter&lt;T&gt;</code> that is used by the application, but the concrete classes only have to
+            provide abstract method implementations and can be as simple as:</p>
+            <pre><code>class FlightRecordReader (val config: Config) extends DDSReader[dds.FlightRecord](config)
+
+class FlightRecordWriter (val config: Config) extends DDSWriter[dds.FlightRecord](config) {
+  override def write (o: Any) = {
+    o match {
+      case fr: dds.FlightRecord =&gt; writer.write(fr)
+      case other =&gt; // ignored for now
+    }
+  }
+}</code></pre>
+            <p>The concrete <code>DDSReader</code> only has to specify the concrete payload type (<code>dds.FlightRecord</code> in this example).</p>
+            <p>The concrete <code>DDSWriter</code> implements the abstract <code>write(Any)</code> method, which checks for supported data types and then
+            uses the superclass-instantiated DDS <code>DataWriter&lt;T&gt;</code> instance to publish. While the <code>write</code> implementation can do
+            on-the-fly translation (e.g. <code>org.nasa.gov.race.data.FlightPos</code> to <code>dds.FightRecord</code>), it is usually better to
+            configure <code>DDSExportActors</code> with an explicit translator so that new DDS-RACE type mappings can be
+            later-on added without having to update/modify the respective <code>DDSWriter</code>.</p>
+            <p>One of the defining features of DDS is a rich set of QoS options when instantiating DataReaders/Writers. The standard RACE
+            DDSReader/DDSWriter implementations are just basic, but encapsulate respective instantiations in dedicated
+            template methods that can be overridden in concrete classes, to do more specialized initialization that can make use
+            of RACE configuration data.</p>
+            
+            <h2 id="test-tools" class="section">Test-Tools</h2>
+            <p>RACE comes with simple <code>ddsserver</code> and <code>ddsclient</code> applications, which are kept under:</p>
+            <pre><code>test-tools/
+  dds-server/
+  dds-client/</code></pre>
+            <p>Both implement stand-alone (non-RaceActor) systems that read/write <code>FlightRecord</code> instances from a configurable
+            DDS topic. They represent external systems that should be connected to RACE.</p>
+            <p>RACE comes with three test/demo configurations:</p>
+            <pre><code>config/
+  imports/
+    dds-import.conf
+    dds-roundtrip.conf
+  exports/
+    dds-export.conf</code></pre>
+            <p><code>dds-import.conf</code> can be used with the <code>ddsserver</code> and <code>dds-export.conf</code> with the <code>ddsclient</code> by executing
+            from different terminals:</p>
+            <pre><code>Terminal 1                                   Terminal 2
+&gt; script/ddsclient                           &gt; ./race config/exports/dds-export.conf</code></pre>
+            <p>or:</p>
+            <pre><code>&gt; ./race/config/imports/dds-import.conf      &gt; script/ddsserver</code></pre>
+            <p>The round trip example does not require any additional test tool.</p>
+            
+            <h2 id="caveats" class="section">Caveats</h2>
+            <p>The OMG only publishes an abstract Java interface. RACE therefore builds on machines that don&#39;t have a proprietary DDS
+            implementation, but it cannot run DDS applications unless such a implementation is configured (which usually takes
+            a commercial license). <strong>This requires machine-specific, local build configurations</strong> as described in <a href="local-build.html#local-build-configuration">Local Build Configuration</a>.</p>
+            <p>At the time of this writing, only the PrismTech Vortex implementation (Vortex Cafe) supports OMGs Java 5 PSM, and
+            only in a slightly modified version. The <code>omgDDS</code> jar dependency that is used in the standard <code>build.sbt</code> of
+            RACE therefore has to be replaced by a <code>local-build.sbt</code> like this:</p>
+            <pre><code>import RaceBuild._
+
+val raceActors = extensibleProjects(&quot;race-common&quot;).settings(
+  resolvers += &quot;Local Maven Repository&quot; at &quot;file://&quot;+Path.userHome.absolutePath+&quot;/.m2/repository&quot;,
+  libraryDependencies += &quot;com.prismtech.cafe&quot; % &quot;cafe&quot; % &quot;2.2.2&quot;
+)</code></pre>
+            <p>This assumes that Vortex Cafe is installed in the local Maven repository, which can be done with scripts that are
+            provided in the Vortex distribution.</p>
+        </div>
+
+    </body>
+</html>

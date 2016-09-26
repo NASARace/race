@@ -24,13 +24,20 @@
             <div class="pagetoc">
                 <div class="toc">
                   <p class="title">Page</p>
+                  <ul>
+                    <li><span class="toc level1"><a href="#scala">Scala</a></span></li>
+                    <li><span class="toc level1"><a href="#actors-and-akka">Actors and Akka</a></span></li>
+                    <li><span class="toc level1"><a href="#sbt">SBT</a></span></li>
+                    <li><span class="toc level1"><a href="#interactive-scala-akka-and-sbt-learning-environment-and-examples">Interactive Scala, Akka and SBT Learning Environment and Examples</a></span></li>
+                    <li><span class="toc level1"><a href="#git">Git</a></span></li>
+                  </ul>
                 </div>
             </div>
             <div class="globaltoc">
                 <div class="toc">
                   <p class="title">Contents</p>
                   <ul>
-                    <li><span class="toc level1 active">About RACE</span></li>
+                    <li><span class="toc level1"><a href="about.html">About RACE</a></span></li>
                     <li>
                       <p class="toc level1">Installing RACE</p>
                       <ul>
@@ -89,13 +96,13 @@
                       </ul>
                     </li>
                     <li>
-                      <p class="toc level1"><a href="learning.html">Learning Resources</a></p>
+                      <p class="toc level1 active">Learning Resources</p>
                       <ul>
-                        <li><span class="toc level2"><a href="learning.html#scala">Scala</a></span></li>
-                        <li><span class="toc level2"><a href="learning.html#actors-and-akka">Actors and Akka</a></span></li>
-                        <li><span class="toc level2"><a href="learning.html#sbt">SBT</a></span></li>
-                        <li><span class="toc level2"><a href="learning.html#interactive-scala-akka-and-sbt-learning-environment-and-examples">Interactive Scala, Akka and SBT Learning Environment and Examples</a></span></li>
-                        <li><span class="toc level2"><a href="learning.html#git">Git</a></span></li>
+                        <li><span class="toc level2"><a href="#scala">Scala</a></span></li>
+                        <li><span class="toc level2"><a href="#actors-and-akka">Actors and Akka</a></span></li>
+                        <li><span class="toc level2"><a href="#sbt">SBT</a></span></li>
+                        <li><span class="toc level2"><a href="#interactive-scala-akka-and-sbt-learning-environment-and-examples">Interactive Scala, Akka and SBT Learning Environment and Examples</a></span></li>
+                        <li><span class="toc level2"><a href="#git">Git</a></span></li>
                       </ul>
                     </li>
                     <li><span class="toc level1"><a href="glossary.html">Glossary</a></span></li>
@@ -105,57 +112,70 @@
         </div>
 
         <div class="main">
-            <h1 id="about-race" class="title">About RACE</h1>
-            <p>As the name <em>Runtime for Airspace Concept Evaluation</em> implies, RACE was originally created as a
-            framework to simplify building airspace simulations, but its design makes it suitable for any 
-            <strong>event based</strong>, <strong>reactive</strong> system that needs to be</p>
+            <h1 id="learning-resources" class="title">Learning Resources</h1>
+            <p>This page lista a number of resources that are helpful to learn about RACE related languages and tools</p>
+            
+            <h2 id="scala" class="section">Scala</h2>
             <ul>
-              <li>extensible - easily allows adding new components</li>
-              <li>scalable - supports concurrent and distributed components</li>
-              <li>heterogenous - can interface to external systems</li>
-              <li>portable - runs on any Java supported platform</li>
+              <li><a href="http://www.amazon.com/Scala-Impatient-Cay-S-Horstmann/dp/0321774094">&quot;Scala for the Impatient&quot; by Cay Horstmann</a>,
+              free online chapters available <a href="http://logic.cse.unt.edu/tarau/teaching/SCALA_DOCS/scala-for-the-impatient.pdf">here</a></li>
             </ul>
-            <p>RACE itself is also meant to be <strong>accessible</strong>, it is open sourced under Apache v2 license, only 
-            depends on open sourced 3rd party components, and leverages existing technologies, formats and tools
-            wherever possible.</p>
-            <p>RACE is <strong>not</strong> a monolythic system or standalone tool. Its main executable expects a configuration
-            file (readable text, normally using <a href="https://github.com/typesafehub/config/blob/master/HOCON.md">HOCON</a> syntax) that specifies which components a particular
-            RACE system consists of, and how these components interact.</p>
-            <p><img class="center scale50" src="images/race-overview-2.svg" alt="RACE overview"></p>
-            <p>Although RACE systems can be composed of components that do not interact with the outside world,
-            they typically incorporate external systems such as</p>
             <ul>
-              <li>live data feeds (servers, sensors, aircraft etc.)</li>
-              <li>hardware simulators</li>
-              <li>foreign data distribution services (bus systems)</li>
+              <li><a href="http://www.amazon.com/Scala-Cookbook-Object-Oriented-Functional-Programming/dp/1449339611">&quot;Scala Cookbook&quot; by Alvin Alexander</a>
+              free online version <a href="http://alvinalexander.com/scala/scala-programming-cookbook-recipes-faqs">here</a></li>
             </ul>
-            <p>However, each of these external systems has to be interfaced through a dedicated RACE component.</p>
-            <p>RACE supports seamless networking between different RACE instances. This allows for systems
-            in which certain components have to be synchronized (e.g. displays), and for system topologies in
-            which external systems can only be accessed at a certain physical location. RACE instances can also
-            be started and controlled remotely.</p>
-            <p>The underlying <em>application model</em> is a reactive, distributed, event based system. The computational
-            model employed by RACE to process such events is the well known <a href="https://en.wikipedia.org/wiki/Actor_model">Actor</a> programming model, which
-            uses dedicated objects (aka <em>actors</em>) that only communicate through asynchronous messages and don&#39;t
-            share internal state. This has a profound impact on how RACE can make use of massive concurrency
-            without burdening the developer with explicit synchronization, which is otherwise notoriously hard
-            to design and test. Please refer to the <a href="actors.html#actors">Actors</a> section for more details.</p>
-            <p>RACE uses the <a href="http://akka.io/">Akka</a> library as a basis for its actor infrastructure, and hence promotes the
-            use of <a href="http://www.scala-lang.org/">Scala</a> as the programming language to develop such actors (although Java can be used
-            too - please see the <a href="design/whyscala.html#why-scala">Why Scala</a> section for details).</p>
-            <p>The main aspects that RACE adds on top of plain <a href="http://akka.io/">Akka</a> are</p>
             <ul>
-              <li>runtime configuration of actors</li>
-              <li>deterministic construction, initialization, start and termination of actor systems</li>
-              <li>seamless location transparency (actors can run locally or remote without requiring code changes)</li>
-              <li>time management (simulation clock)</li>
-              <li>coexisting, seamless local and distributed publish/subscribe communication between actors</li>
+              <li><a href="http://www.amazon.com/Programming-Scala-Scalability-Functional-Objects/dp/0596155956">&quot;Programming Scala&quot; by Dean Wampler and Alex Payne</a></li>
             </ul>
-            <p>To achieve this, RACE employs its own <a href="design/raceactors.html#raceactors">RaceActors</a> classes, which are the building blocks of
-            its applications. While the standard RACE distribution comes with a number of ready-to-use
-            <code>RaceActors</code> for tasks such as importing external data, this is the major extension axis of RACE.
-            Most real world RACE applications will add specific actors, and hence RACE was designed to minimize
-            the overhead that is required for developing new <code>RaceActors</code>.</p>
+            <ul>
+              <li><a href="http://www.scala-lang.org/docu/files/ScalaTutorial.pdf">A Scala Tutorial for Java programmers</a></li>
+            </ul>
+            <ul>
+              <li><a href="https://www.manning.com/books/functional-programming-in-scala">&quot;Functional Programming in Scala&quot; by Paul Chiusano and Rúnar Bjarnason</a></li>
+            </ul>
+            
+            <h2 id="actors-and-akka" class="section">Actors and Akka</h2>
+            <ul>
+              <li><a href="http://arxiv.org/pdf/1008.1459.pdf">&quot;Actor Model of Computation: Scalable Robust Information Systems&quot; by Carl Hewitt</a></li>
+            </ul>
+            <ul>
+              <li><a href="http://akka.io/docs/">Typesafe documentation</a></li>
+            </ul>
+            <ul>
+              <li><a href="http://doc.akka.io/docs/akka/2.4-M2/scala.html?_ga=1.194984045.1750090890.1433629186">latest online Scala version</a></li>
+            </ul>
+            <ul>
+              <li><a href="http://www.manning.com/roestenburg/">&quot;Akka in Action&quot; by Raymond Roestenburg, Rob Bakker, and Rob Williams</a></li>
+            </ul>
+            <ul>
+              <li><a href="http://www.amazon.com/Effective-Akka-Jamie-Allen/dp/1449360076">&quot;Effective Akka&quot;, Jamie Allen</a></li>
+            </ul>
+            <ul>
+              <li><a href="http://manning.com/kuhn/">&quot;Reactive Design Patterns&quot; by Roland Kuhn and Jamie Allen</a></li>
+            </ul>
+            
+            <h2 id="sbt" class="section">SBT</h2>
+            <ul>
+              <li><a href="http://www.scala-sbt.org/0.13/tutorial/index.html">online tutorial</a></li>
+            </ul>
+            <ul>
+              <li><a href="http://www.scala-sbt.org/0.13/docs/index.html">reference manual</a></li>
+            </ul>
+            <ul>
+              <li><a href="http://www.manning.com/suereth2/">&quot;SBT in Action&quot; by Joshua Suereth and Matthew Farwell</a></li>
+            </ul>
+            
+            <h2 id="interactive-scala-akka-and-sbt-learning-environment-and-examples" class="section">Interactive Scala, Akka and SBT Learning Environment and Examples</h2>
+            <ul>
+              <li><a href="https://www.typesafe.com/get-started">Typesafe Activator</a>
+              (an &quot;IDE in a browser&quot; with example projects including descriptions/tutorials)</li>
+            </ul>
+            
+            <h2 id="git" class="section">Git</h2>
+            <ul>
+              <li><a href="https://progit.org/">&quot;Pro Git&quot; by by Scott Chacon and Ben Straub</a>
+              online version available <a href="https://git-scm.com/book/en/v2">here</a></li>
+            </ul>
         </div>
 
     </body>
