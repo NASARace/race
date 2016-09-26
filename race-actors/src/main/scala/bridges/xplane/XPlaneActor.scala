@@ -15,23 +15,6 @@
  * limitations under the License.
  */
 
-/*
- * Copyright (c) 2016, United States Government, as represented by the 
- * Administrator of the National Aeronautics and Space Administration. 
- * All rights reserved.
- * 
- * The RACE - Runtime for Airspace Concept Evaluation platform is licensed 
- * under the Apache License, Version 2.0 (the "License"); you may not use 
- * this file except in compliance with the License. You may obtain a copy 
- * of the License at http://www.apache.org/licenses/LICENSE-2.0.
- * 
- * Unless required by applicable law or agreed to in writing, software 
- * distributed under the License is distributed on an "AS IS" BASIS, 
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. 
- * See the License for the specific language governing permissions and 
- * limitations under the License.
- */
-
 package gov.nasa.race.actors.bridges.xplane
 
 import java.net.{DatagramPacket, DatagramSocket, InetAddress}
@@ -62,7 +45,7 @@ class XPlaneActor (val config: Config) extends PublishingRaceActor
   case object UpdateFlightPos // publish X-Plane positions on bus
   case object UpdateXPlane    // send proximity positions to X-Plane
 
-  def info (msg: String) = println(msg) // for debugging
+  //def info (msg: String) = println(msg) // for debugging
 
   //--- simulated AC
   val id = config.getString("aircraft.id")
@@ -99,7 +82,6 @@ class XPlaneActor (val config: Config) extends PublishingRaceActor
   val proximityList = new FlightsNearList (position, proximityRange, xpAircraft)
 
   val importThread = ThreadUtils.daemon(readXPlanePositions)
-
 
 
   //--- end initialization
@@ -148,16 +130,16 @@ class XPlaneActor (val config: Config) extends PublishingRaceActor
 
     //sendOwnAircraft
     sendRPOSrequest
-    importThread.start
   }
 
   override def onStartRaceActor(originator: ActorRef) = {
     super.onStartRaceActor(originator)
 
+    importThread.start
+
     if (publishInterval.length > 0) {
       info(s"starting XPlane publish scheduler $publishInterval")
       publishScheduler = Some(scheduler.schedule(0 seconds, publishInterval, self, UpdateFlightPos))
-      importThread.start
     }
 
     if (proximityInterval.length > 0){
@@ -216,12 +198,12 @@ class XPlaneActor (val config: Config) extends PublishingRaceActor
   //--- the XPlaneAircraftList callbacks, which we use to update X-Plane
 
   def onOtherShow (e: ACEntry): Unit = {
-    //info(s"proximities + ${e.idx} : $proximityList")
+    info(s"proximities + ${e.idx} : $proximityList")
     //updateXPlaneAircraft(e)
   }
 
   def onOtherPositionChanged (e: ACEntry): Unit = {
-    println(e.fpos)
+    //println(e.fpos)
     //info(s"proximities * ${e.idx} : $proximityList")
     //updateXPlaneAircraft(e)
   }
@@ -278,7 +260,7 @@ class XPlaneActor (val config: Config) extends PublishingRaceActor
       if (idx < n){
         val e = xpAircraft.entries(idx)
         if (e.isVisible) {
-          info(f"  $idx: ${e.fpos.cs} = ${e.latDeg}%.3f,${e.lonDeg}%.3f")
+          info(f"  $idx: ${e.cs} = ${e.latDeg}%.3f,${e.lonDeg}%.3f")
           codec.writeVEHAn(buf, e.idx,
             e.latDeg, e.lonDeg, e.altMeters,
             e.psiDeg, e.thetaDeg, e.phiDeg,
@@ -300,7 +282,7 @@ class XPlaneActor (val config: Config) extends PublishingRaceActor
       if (idx < n){
         val e = xpAircraft.entries(idx)
         if (e.isRelevant) {
-          info(f"sending VEH1[$idx] =  ${e.latDeg}%.4f,${e.lonDeg}%.4f at ${e.altMeters.toInt}m")
+          info(f"sending VEH1[$idx] =  ${e.cs}: ${e.latDeg}%.4f,${e.lonDeg}%.4f, ${e.psiDeg}%3.0f°, ${e.altMeters.toInt}m")
           sendPacket(codec.getVEH1packet( e.idx,
             e.latDeg, e.lonDeg, e.altMeters,
             e.psiDeg, e.thetaDeg, e.phiDeg,

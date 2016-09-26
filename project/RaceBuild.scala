@@ -15,23 +15,6 @@
  * limitations under the License.
  */
 
-/*
- * Copyright (c) 2016, United States Government, as represented by the 
- * Administrator of the National Aeronautics and Space Administration. 
- * All rights reserved.
- * 
- * The RACE - Runtime for Airspace Concept Evaluation platform is licensed 
- * under the Apache License, Version 2.0 (the "License"); you may not use 
- * this file except in compliance with the License. You may obtain a copy 
- * of the License at http://www.apache.org/licenses/LICENSE-2.0.
- * 
- * Unless required by applicable law or agreed to in writing, software 
- * distributed under the License is distributed on an "AS IS" BASIS, 
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. 
- * See the License for the specific language governing permissions and 
- * limitations under the License.
- */
-
 /**
  * build support code for RACE project
  *
@@ -46,7 +29,7 @@ import scala.collection.JavaConversions._
 import sbt._
 import sbt.Keys._
 
-object RaceBuild extends Build {
+object RaceBuild /*extends Build */ {
 
   loadProperties
 
@@ -126,6 +109,9 @@ object RaceBuild extends Build {
 
   // some syntactic sugar to make build.sbt more readable
 
+  import scala.collection._
+  val extensibleProjects = mutable.HashMap.empty[String,Project]
+
   def createRootProject(id: String): Project = Project(id, file("."))
   def createProject(id: String): Project = Project(id, file(id))
   def createProject(id: String, path:String): Project = Project(id, file(path))
@@ -150,12 +136,17 @@ object RaceBuild extends Build {
       )
     }
 
-
     def setVersion (s: String): Project = {
       p.settings(
         version := s
       )
     }
+
+    def makeExtensible: Project = {
+      extensibleProjects(p.id) = p
+      p
+    }
   }
+
 }
 

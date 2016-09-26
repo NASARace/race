@@ -21,10 +21,10 @@ import java.awt.Point
 
 import gov.nasa.race.common._
 import gov.nasa.race.data.{FlightPath, InFlightAircraft}
-import gov.nasa.race.ww._
-import gov.nasa.race.ww.InfoBalloon
+import gov.nasa.race.ww.{InfoBalloon, _}
 import gov.nasa.worldwind.avlist.AVKey
-import gov.nasa.worldwind.render.{Renderable, ScreenImage}
+import gov.nasa.worldwind.render.ScreenImage
+import com.github.nscala_time.time.Imports._
 
 /**
   * class that aggregates all Renderables that can be associated with a given InFlightAircraft
@@ -123,20 +123,26 @@ class FlightEntry[T <: InFlightAircraft](var obj: T, var flightPath: FlightPath,
   }
 
   def updateAircraft(newObj: T) = {
-    obj = newObj
-    flightPath.add(newObj)
+    if (newObj.date > obj.date) { // only update if more recent than what we already have
+      obj = newObj
+      flightPath.add(newObj)
 
-    ifSome(symbol) { sym =>
-      sym.update(newObj)
+      ifSome(symbol) { sym =>
+        sym.update(newObj)
 
-      ifSome(path) {_.addFlightPosition(newObj)}
-      ifSome(info) { balloon =>
-        balloon.setText(sym.getStringValue(AVKey.DISPLAY_NAME))
-        balloon.setScreenPoint(sym.getScreenPoint)
+        ifSome(path) {
+          _.addFlightPosition(newObj)
+        }
+        ifSome(info) { balloon =>
+          balloon.setText(sym.getStringValue(AVKey.DISPLAY_NAME))
+          balloon.setScreenPoint(sym.getScreenPoint)
+        }
+        ifSome(mark) {
+          _.setScreenOffset(sym.getScreenOffset)
+        }
+
+        if (followPosition) layer.centerOn(obj)
       }
-      ifSome(mark) {_.setScreenOffset(sym.getScreenOffset)}
-
-      if (followPosition) layer.centerOn(obj)
     }
   }
 

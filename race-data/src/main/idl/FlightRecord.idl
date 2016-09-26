@@ -1,0 +1,26 @@
+/**
+  * example idl definition
+  *
+  * Note that #pragma keylist is ignored unless the PrismTech idl2j compiler is used,
+  * which would add imports for com.prismtech.* types and hence break the build in case
+  * the build platform does not have a Vortex license
+  *
+  * Compile with the plain idlj that ships with standard Java distributions:
+  *
+  *   > idlj -td race-data/src/main/java race-data/src/main/idl/*.idl
+  *
+  * this generates corresponding src/main/java/<module>/{<name>,<name>Helper,<name>Holder}.java source files
+  */
+
+module dds {
+    struct FlightRecord {
+        string cs;
+        double lat;
+        double lon;
+        double alt;
+        double speed;
+        double heading;
+        long long date;
+    };
+    //#pragma keylist FlightRecord cs
+};

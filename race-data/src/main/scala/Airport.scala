@@ -15,43 +15,53 @@
  * limitations under the License.
  */
 
-/*
- * Copyright (c) 2016, United States Government, as represented by the 
- * Administrator of the National Aeronautics and Space Administration. 
- * All rights reserved.
- * 
- * The RACE - Runtime for Airspace Concept Evaluation platform is licensed 
- * under the Apache License, Version 2.0 (the "License"); you may not use 
- * this file except in compliance with the License. You may obtain a copy 
- * of the License at http://www.apache.org/licenses/LICENSE-2.0.
- * 
- * Unless required by applicable law or agreed to in writing, software 
- * distributed under the License is distributed on an "AS IS" BASIS, 
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. 
- * See the License for the specific language governing permissions and 
- * limitations under the License.
- */
-
 package gov.nasa.race.data
 
 import scala.collection.SortedMap
 
 
 object Airport {
-  val KLAX = new Airport("KLAX", "Los Angeles International",  "Los Angeles",  LatLonPos.fromDegrees(33.9425, -118.408056), true)       // LA
-  val KSLC = new Airport("KSLC", "Salt Lake City International", "Salt Lake City", LatLonPos.fromDegrees(40.788333, -111.977778), true)     // Salt Lake
-  val KLAS = new Airport("KLAS", "Mc Carran International", "Las Vegas",  LatLonPos.fromDegrees(36.08, -115.152222), true)         // Las Vegas
-  val KDEN = new Airport("KDEN", "Denver International", "Denver", LatLonPos.fromDegrees(39.861667, -104.673056), true)     // Denver
-  val KDFW = new Airport("KDFW", "Dallas/Fort Worth International", "Dallas/Fort Worth", LatLonPos.fromDegrees(32.896944, -97.038056), true)      // Dallas
-  val KIAD = new Airport("KIAD", "Washington Dulles International", "Washington DC", LatLonPos.fromDegrees(38.944444, -77.455833), true)      // DC
-  val KORD = new Airport("KORD", "Chicago O'Hare International", "Chicago", LatLonPos.fromDegrees(41.978611, -87.904722), true)      // Chicago
-  val KJFK = new Airport("KJFK", "John F Kennedy International", "New York", LatLonPos.fromDegrees(40.639722, -73.778889), true)      // New York JFK
-  val KSFO = new Airport("KSFO", "San Francisco International", "San Francisco",  LatLonPos.fromDegrees(37.618889, -122.375), true)        // San Francisco
-  val KATL = new Airport("KATL", "Hartsfield - Jackson Atlanta International", "Atlanta", LatLonPos.fromDegrees(33.636667, -84.428056), true)      // Atlanta
+  val KATL = new Airport("KATL", "Hartsfield - Jackson Atlanta International", "Atlanta", LatLonPos.fromDegrees(33.636667, -84.428056), true)
+  val KORD = new Airport("KORD", "Chicago O'Hare International", "Chicago", LatLonPos.fromDegrees(41.978611, -87.904722), true)
+  val KLAX = new Airport("KLAX", "Los Angeles International",  "Los Angeles",  LatLonPos.fromDegrees(33.9425, -118.408056), true)
+  val KDFW = new Airport("KDFW", "Dallas/Fort Worth International", "Dallas/Fort Worth", LatLonPos.fromDegrees(32.896944, -97.038056), true)
+  val KPHX = new Airport("KPHX", "Phoenix Sky Harbor International", "Phoenix", LatLonPos.fromDegrees(33.4373, -112.0078), true)
+  val KDEN = new Airport("KDEN", "Denver International", "Denver", LatLonPos.fromDegrees(39.861667, -104.673056), true)
+  val KLAS = new Airport("KLAS", "Mc Carran International", "Las Vegas",  LatLonPos.fromDegrees(36.08, -115.152222), true)
+  val KIAH = new Airport("KIAH", "George Bush International", "Houston", LatLonPos.fromDegrees(29.9902, -95.3368), true)
+  val KMSP = new Airport("KMSP", "Minneapolis-St Paul International", "Minneapolis", LatLonPos.fromDegrees(44.8848, -93.2223), true)
+  val KDTW = new Airport("KDTW", "Detroit Metropolitan Wayne International", "Detroit", LatLonPos.fromDegrees(42.2162, -83.3554), true)
+  val KJFK = new Airport("KJFK", "John F Kennedy International", "New York", LatLonPos.fromDegrees(40.639722, -73.778889), true)
+  val KSFO = new Airport("KSFO", "San Francisco International", "San Francisco",  LatLonPos.fromDegrees(37.618889, -122.375), true)
+  val KEWR = new Airport("KEWR", "Newark International", "Newark", LatLonPos.fromDegrees(40.6895, -74.1745), true)
+  val KMIA = new Airport("KMIA", "Miami International", "Miami", LatLonPos.fromDegrees(25.7959, -80.2870), true)
+  val KMCO = new Airport("KMCO", "Orlando International", "Orlando", LatLonPos.fromDegrees(28.4312, -81.3081), true)
+  val KSEA = new Airport("KSEA", "Seattle-Tacoma International", "Seattle", LatLonPos.fromDegrees(47.4502, -122.3088), true)
+  val KSTL = new Airport("KSTL", "Lambert-St Louis International", "St Louis", LatLonPos.fromDegrees(38.7431, -90.3651), true)
+  val KPHL = new Airport("KPHL", "Philadelphia International", "Philadelphia", LatLonPos.fromDegrees(39.8744, -75.2424), true)
+  val KCLT = new Airport("KCLT", "Charlotte Douglas International",  "Charlotte",  LatLonPos.fromDegrees(35.2144, -80.9473), true)
+  val KBOS = new Airport("KBOS", "Boston Logan International", "Boston", LatLonPos.fromDegrees(42.3656, -71.0096), true)
+  val KLGA = new Airport("KLGA", "LaGuardia", "New York", LatLonPos.fromDegrees(40.7769, -73.8740), true)
+  val KCVG = new Airport("KCVG", "Cincinnati-Northern Kentucky International", "Cincinnati", LatLonPos.fromDegrees(39.0533, -84.6630), true)
+  val KBWI = new Airport("KBWI", "Baltimore-Washington International", "Baltimore", LatLonPos.fromDegrees(39.1774, -76.6684), true)
+  val KHNL = new Airport("KHNL", "Honolulu International", "Honolulu", LatLonPos.fromDegrees(21.3178275, -157.9202631), true)
+  val KPIT = new Airport("KPIT", "Pittsburgh International", "Pittsburgh", LatLonPos.fromDegrees(40.4958, -80.2413), true)
+  val KSLC = new Airport("KSLC", "Salt Lake City International", "Salt Lake City", LatLonPos.fromDegrees(40.788333, -111.977778), true)
+  val KFLL = new Airport("KFLL", "Ft Lauderdale Hollywood International", "Ft Lauderdale", LatLonPos.fromDegrees(26.0742, -80.1506), true)
+  val KIAD = new Airport("KIAD", "Washington Dulles International", "Washington DC", LatLonPos.fromDegrees(38.944444, -77.455833), true)
+  val KMDW = new Airport("KMDW", "Chicago Midway", "Chicago", LatLonPos.fromDegrees(41.7868, -87.7522), true)
+  val KTPA = new Airport("KTPA", "Tampa International", "Tampa", LatLonPos.fromDegrees(27.9835, -82.5371), true)
+  val KSAN = new Airport("KSAN", "San Diego International Lindburgh Field", "San Diego", LatLonPos.fromDegrees(32.7338, -117.1933), true)
+  val KPDX = new Airport("KPDX", "Portland International", "Portland", LatLonPos.fromDegrees(45.5898, -122.5951), true)
+  val KDCA = new Airport("KDCA", "Washington Reagan International", "Washington D.C.", LatLonPos.fromDegrees(38.8512, -77.0402), true)
+  val KCLE = new Airport("KCLE", "Cleveland Hopkins International", "Cleveland", LatLonPos.fromDegrees(41.4124, -81.8480), true)
+  val KMEM = new Airport("KMEM", "Memphis International Airport", "Memphis", LatLonPos.fromDegrees(35.0421, -89.9792), true)
 
-  // and many more to follow: KMSP,KSAN,KMDW,KBDL,KSEA,KEWR,PHNL,KCLT,KIAH,KMEM,KPHX,KMCO,KBWI,KDTW,KHOU,KSNA,KFLL,KBWI,KSDF,KPHL,..
+  // ..and more to follow
 
-  val airportList = Seq(KATL,KDEN,KDFW,KIAD,KJFK,KLAS,KLAX,KORD,KSFO,KSLC)
+  val airportList = Seq(KATL,KORD,KLAX,KDFW,KPHX,KDEN,KLAS,KIAH,KMSP,KDTW,KJFK,KSFO,KEWR,KMIA,
+                        KMCO,KSEA,KSTL,KPHL,KCLT,KBOS,KLGA,KCVG,KBWI,KHNL,KPIT,KSLC,KFLL,KIAD,
+                        KMDW,KTPA,KSAN,KPDX,KDCA,KCLE,KMEM).sortWith( _.city < _.city)
   val asdexAirports = airportList.foldLeft(SortedMap.empty[String,Airport]) { (m, a) => m + (a.id -> a) }
   val allAirports = asdexAirports
   val airportNames = allAirports.keySet.toSeq

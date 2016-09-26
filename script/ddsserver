@@ -1,0 +1,10 @@
+#!/bin/bash
+
+DIR="$(dirname ${BASH_SOURCE[0]})"
+SCRIPT=$DIR/../test-tools/dds-server/target/universal/stage/bin/ddsserver
+
+if [ -x $SCRIPT ]; then
+  $SCRIPT $@
+else
+  echo "executable does not exist, run sbt ddsServer/stage"
+fi

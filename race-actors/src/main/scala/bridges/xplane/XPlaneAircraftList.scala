@@ -54,6 +54,8 @@ class ACEntry (val idx: Int,                   // X-Plane aircraft index
   var flaps: Float = 0
   var throttle: Float = 0
 
+  def cs = if (fpos != null) fpos.cs else "?"
+
   /**
     * called whenever we receive a new FlightPos from RACE (irregular time intervals)
     */
@@ -66,7 +68,7 @@ class ACEntry (val idx: Int,                   // X-Plane aircraft index
     altEstimator.addObservation(fpos.altitude.toMeters, simTime)
     psiEstimator.addObservation(fpos.heading.toDegrees, simTime)
 
-    if (!isVisible) isVisible = true
+    isVisible = true
   }
 
   def isRelevant: Boolean = {

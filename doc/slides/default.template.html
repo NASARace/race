@@ -5,14 +5,15 @@
         <title>RACE</title>
 
         <link href="{{config.rootPath}}/race-slides-html.css" rel="stylesheet"/>
-        <script src="{{config.rootPath}}/race-slides.js"></script>
     </head>
 
     <body>
-
+        <div class="stopwatch" id="timer">00:00</div>
         <div class="slide title">
             <!-- additional divs inserted by renderer extension -->
             {{document.content}}
         </div>
     </body>
+
+    <script src="{{config.rootPath}}/race-slides.js"></script>
 </html>

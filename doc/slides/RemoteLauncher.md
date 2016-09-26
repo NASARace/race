@@ -7,7 +7,7 @@ Run RACE Remotely
 
 
 ## RemoteLauncher - one sentence purpose
-<p class="standout">
+<p class="box">
 Start, monitor and terminate remote RACE processes in a secure way from a central location
 </p>
 

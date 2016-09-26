@@ -36,9 +36,11 @@ lazy val commonSettings =
 
 //--- root project (only for aggregation)
 lazy val root = createRootProject("race").
-  aggregate(raceCommon,raceData,raceCore,raceActors,raceTools,raceSwing,raceWW,swimServer,swimClient,kafkaServer,zkServer).
+  aggregate(raceCommon,raceData,raceCore,raceActors,raceTools,raceSwing,raceWW,
+            swimServer,swimClient,kafkaServer,zkServer,ddsServer,ddsClient).
   dependsOn(raceCommon  % "test->test;compile->compile;multi-jvm->multi-jvm",
-            raceCore,raceActors,raceTools,raceSwing,raceWW,swimServer,swimClient,kafkaServer,zkServer).
+            raceCore,raceActors,raceTools,raceSwing,raceWW,
+            swimServer,swimClient,kafkaServer,zkServer,ddsServer,ddsClient).
   configs(MultiJvm).
   enablePlugins(JavaAppPackaging,GitVersioning).  // add SiteScaladocPlugin to include scaladoc in site generation
   settings(
@@ -66,16 +68,18 @@ lazy val raceCommon = createProject("race-common").
   configs(MultiJvm).
   settings(commonSettings).
   addLibraryDependencies(typesafeConfig,nscalaTime,scalaXml,scalaReflect,jsch,scopt,scalaArm).
-  addConfigLibraryDependencies("test,multi-jvm")(defaultTestLibs,akkaActor,akkaTestkit,akkaMultiNodeTestkit)
+  addConfigLibraryDependencies("test,multi-jvm")(defaultTestLibs,akkaActor,akkaTestkit,akkaMultiNodeTestkit).
+  makeExtensible.
+  addLibraryDependencies(omgDDS) // needs to come *after* makeExtensible since vendors ship fat jars with incompatible org.omg.dds.*
 
-// common data types
+// common data types & functions
 lazy val raceData = createProject("race-data").
   dependsOn(raceCommon % "test->test;compile->compile").
   settings(commonSettings).
   addLibraryDependencies(defaultLibs,scodecAll,breeze,scalaParser).
   addTestLibraryDependencies(defaultTestLibs)
 
-// lib artifact with core components 
+// core components
 lazy val raceCore = createProject("race-core").
   dependsOn(raceCommon % "test->test;compile->compile").
   settings(commonSettings).
@@ -83,7 +87,7 @@ lazy val raceCore = createProject("race-core").
   addTestLibraryDependencies(defaultTestLibs,akkaActor,akkaTestkit)
 
 
-// RACE specific actors
+// RaceActors
 lazy val raceActors= createProject("race-actors").
   dependsOn(raceCommon % "test->test;compile->compile",
             raceCore % "test->test;compile->compile",
@@ -94,7 +98,7 @@ lazy val raceActors= createProject("race-actors").
 
 
 // although this is not really a subproject we keep it here because we might override the uri
-// locally (in local-race-buils.properties) so that it can point to a local install.
+// locally (in local-race-build.properties) so that it can point to a local install.
 // This saves us from having to do debug-related transient commits if WWJ and RACE are changed together
 // NOTE - SBT 0.13 only supports git clone/checkout, i.e. to catch remote repo changes you have to do a "reload"
 // (or delete the respective ~/.sbt/staging/<sha> before compiling/running)
@@ -167,3 +171,20 @@ lazy val kafkaServer = createProject("kafkaServer", "test-tools/kafka-server").
   ).
   addLibraryDependencies(logback,kafka,scopt,log4jOverSlf4j)
 
+lazy val ddsServer = createProject("ddsServer", "test-tools/dds-server").
+  dependsOn(raceCommon,raceData).
+  enablePlugins(JavaAppPackaging).
+  settings(
+    commonSettings,
+    mainClass in Compile := Some("gov.nasa.race.ddsserver.MainSimple")
+  ).
+  addLibraryDependencies(scopt,omgDDS)
+
+lazy val ddsClient = createProject("ddsClient", "test-tools/dds-client").
+  dependsOn(raceCommon,raceData).
+  enablePlugins(JavaAppPackaging).
+  settings(
+    commonSettings,
+    mainClass in Compile := Some("gov.nasa.race.ddsclient.MainSimple")
+  ).
+  addLibraryDependencies(scopt,omgDDS)

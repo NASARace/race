@@ -40,12 +40,20 @@ p.author {
     text-align: center;
 }
 
-p.standout {
+p.box {
     display: block;
     border: 2px solid orange;
     padding: 0.5em;
     margin: 0.5em;
     background: LightYellow;
+}
+
+p.standout {
+    display: block;
+    padding: 0.5em;
+    margin: 0.5em;
+    text-align: Center;
+    font-weight: bolder;
 }
 
 .slide ul {
@@ -84,6 +92,14 @@ pre {
 
 code {
     color: DarkBlue;
+}
+
+.stopwatch {
+    position: fixed;
+    right: 0;
+    top: 0;
+    font-size: 50%;
+    color: Blue;
 }
 
 /*---------------------------- content image classes -----------------------------*/

@@ -15,23 +15,6 @@
  * limitations under the License.
  */
 
-/*
- * Copyright (c) 2016, United States Government, as represented by the 
- * Administrator of the National Aeronautics and Space Administration. 
- * All rights reserved.
- * 
- * The RACE - Runtime for Airspace Concept Evaluation platform is licensed 
- * under the Apache License, Version 2.0 (the "License"); you may not use 
- * this file except in compliance with the License. You may obtain a copy 
- * of the License at http://www.apache.org/licenses/LICENSE-2.0.
- * 
- * Unless required by applicable law or agreed to in writing, software 
- * distributed under the License is distributed on an "AS IS" BASIS, 
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. 
- * See the License for the specific language governing permissions and 
- * limitations under the License.
- */
-
 package gov.nasa.race.data.translators
 
 import com.typesafe.config.Config
@@ -198,9 +181,12 @@ class SBS2FlightPos (val config: Config=null) extends ConfigurableTranslator {
           transType.charAt(0) match {
             case '1' => // identification & category, just update
               val acInfo = getAcInfo
-              skipNextFields(2,i0) // dateLogged , timeLogged
-              acInfo.setCS(nextFields(1,i0))  // watch out - dump1090 has trailing spaces
-              acInfo.tryToFlightPos // don't return a FlightPos until we have a position (clients might not check the timestamp)
+              skipNextFields(2,i0) // dateLogged , timeLogged - don't overwrite msg 3 time stamps
+              val cs = nextFields(1,i0)
+              if (cs != acInfo.cs) { // don't return a flight pos unless we have a changed cs
+                acInfo.setCS(cs) // watch out - dump1090 has trailing spaces
+                acInfo.tryToFlightPos
+              } else None
 
             case '3' =>  // airborne position message, report if we already got id and velocity
               val acInfo = getAcInfo

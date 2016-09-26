@@ -51,17 +51,19 @@ class SmoothingExtrapolator (ΔtAverage: FiniteDuration = 1.second,     // avera
     } else {
       val Δt = (t - tlast) / tscale
 
-      //-- update smoothing factors
-      α = α / (α + (1 - α) ** Δt)
-      γ = γ / (γ + (1 - γ) ** Δt)
-      //γ = γ / (γ + (Δtlast / Δt) * ((1 - γ) ** Δt))
+      if (Δt != 0) { // safe guard against duplicated observations that would cause infinity results
+        //-- update smoothing factors
+        α = α / (α + (1 - α) ** Δt)
+        γ = γ / (γ + (1 - γ) ** Δt)
+        //γ = γ / (γ + (Δtlast / Δt) * ((1 - γ) ** Δt))
 
-      val sʹ = (1 - α) * (s + Δt * m) + α * y
-      m = (1 - γ) * m + γ * (sʹ - s) / Δt
-      s = sʹ
+        val sʹ = (1 - α) * (s + Δt * m) + α * y
+        m = (1 - γ) * m + γ * (sʹ - s) / Δt
+        s = sʹ
 
-      tlast = t
-      Δtlast = Δt
+        tlast = t
+        Δtlast = Δt
+      }
     }
   }
 

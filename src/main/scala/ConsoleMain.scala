@@ -15,28 +15,6 @@
  * limitations under the License.
  */
 
-/*
- * Copyright (c) 2016, United States Government, as represented by the 
- * Administrator of the National Aeronautics and Space Administration. 
- * All rights reserved.
- * 
- * The RACE - Runtime for Airspace Concept Evaluation platform is licensed 
- * under the Apache License, Version 2.0 (the "License"); you may not use 
- * this file except in compliance with the License. You may obtain a copy 
- * of the License at http://www.apache.org/licenses/LICENSE-2.0.
- * 
- * Unless required by applicable law or agreed to in writing, software 
- * distributed under the License is distributed on an "AS IS" BASIS, 
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. 
- * See the License for the specific language governing permissions and 
- * limitations under the License.
- */
-
-/**
- * RACE main class which starts a actor system per configuration file `universe`
- * entry
- */
-
 package gov.nasa.race
 
 import java.io.File
@@ -48,14 +26,17 @@ import gov.nasa.race.common.FileUtils._
 import gov.nasa.race.core.RaceActorSystem
 
 /**
- * application object that runs RACE interactively from the command line,
- * parsing command line options, reading config file arguments, and instantiating
- * RaceActorSystems
- */
-object ConsoleMain extends MainBase {
+  * a RACE driver that runs RACE interactively from the command line,
+  * parsing command line options, reading config file arguments, instantiating
+  * RaceActorSystems and then giving the user a textual menu for interaction
+  *
+  * we factor this out into a trait so that client projects can easily create
+  * their own Main classes
+  */
+trait ConsoleMainBase extends MainBase {
 
   def main(args: Array[String]) {
-    ifSome(MainOpts().parse(args)) { opts =>
+    ifSome(getOptions(args)) { opts =>
       setSystemProperties(opts)
       setConsoleUserInfoFactory
       initConfigVault(opts)
@@ -66,6 +47,12 @@ object ConsoleMain extends MainBase {
       } else println("no RaceActorSystem to execute, exiting")
     }
   }
+
+  /**
+    * get initialized Option[MainOpts], return None if initialization fails
+    * override this if you have specialized MainOpts
+    */
+  def getOptions(args: Array[String]): Option[MainOpts] = new MainOpts().parse(args)
 
   //--- main control loop functions
 
@@ -193,3 +180,7 @@ object ConsoleMain extends MainBase {
   }
 }
 
+/**
+  * the standard RACE driver, which runs RACE interactively from a command line
+  */
+object ConsoleMain extends ConsoleMainBase
