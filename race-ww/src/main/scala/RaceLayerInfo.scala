@@ -85,6 +85,7 @@ trait AltitudeSensitiveLayerInfo extends RaceLayerInfo with DeferredRenderingLis
   val thresholds = ListBuffer.empty[Threshold]  // TODO - this should be a sorted list
 
   override def initializeLayer (wwd: WorldWindow, wwdRedrawManager: RedrawManager): Unit = {
+    thresholds.sortWith(_.threshold < _.threshold)
     eyeAltitude = getEyeAltitude
     super.initializeLayer(wwd,wwdRedrawManager)
 
@@ -93,7 +94,10 @@ trait AltitudeSensitiveLayerInfo extends RaceLayerInfo with DeferredRenderingLis
       val newEyeAltitude = getEyeAltitude
       eyeAltitude = newEyeAltitude
 
-      thresholds foreach { _.checkCrossed(oldEyeAltitude,newEyeAltitude) }
+      // make sure we start to iterate from the thresholds limit towards we go
+      // (we might cross several thresholds)
+      val it = if (newEyeAltitude > oldEyeAltitude) thresholds.reverseIterator else thresholds.iterator
+      while (it.hasNext && !it.next.checkCrossed(oldEyeAltitude, newEyeAltitude)){}
     }
   }
 

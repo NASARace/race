@@ -82,6 +82,7 @@ class NasFlight2FlightObject(val config: Config=null) extends XmlPullParser with
           Some( FlightPos( id, cs, LatLonPos(Degrees(lat), Degrees(lon)),
                            alt, spd, Degrees(Math.atan2(vx, vy).toDegrees), date))
         } else { // insufficient data
+          //println(s"@@ insufficient data: $cs $date $alt $lat $lon")
           None
         }
       }

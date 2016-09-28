@@ -68,9 +68,9 @@ abstract class FlightLayer[T <:InFlightAircraft](raceView: RaceView, config: Con
   var pathDetails: PathRenderLevel = getPathRenderLevel(eyeAltitude)
 
   thresholds ++= Seq(
-    new Threshold(labelThreshold,  setLabelLevel, setDotLevel),
+    new Threshold(linePosThreshold, setLinePosLevel, setLineLevel),
     new Threshold(symbolThreshold, setSymbolLevel, setLabelLevel),
-    new Threshold(linePosThreshold, setLinePosLevel, setLineLevel)
+    new Threshold(labelThreshold,  setLabelLevel, setDotLevel)
   )
 
   //--- the data we manage
