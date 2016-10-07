@@ -356,6 +356,8 @@ class RaceActorSystem(val config: Config) extends LogController with VerifiableA
     master ! SetLogLevel(logLevel)
   }
 
+  //--- message injection
+
   def publish(channel: String, msg: Any) = bus.publish(BusEvent(channel, msg, master))
 
   def send(path: String, msg: Any) = system.actorSelection(path) ! msg

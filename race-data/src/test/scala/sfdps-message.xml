@@ -1,0 +1,1971 @@
+<ns5:MessageCollection xmlns:ns2="http://www.fixm.aero/foundation/3.0" xmlns:ns3="http://www.fixm.aero/flight/3.0" xmlns:ns4="http://www.fixm.aero/base/3.0" xmlns:ns5="http://www.faa.aero/nas/3.0">
+  <message xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="ns5:FlightMessageType">
+    <flight xsi:type="ns5:NasFlightType" centre="ZKC" source="TH" system="ATL" timestamp="2016-09-27T18:59:49.365Z">
+      <arrival xsi:type="ns5:NasArrivalType" arrivalPoint="KCLT">
+        <runwayPositionAndTime>
+          <runwayTime>
+            <estimated time="2016-09-20T20:39:00Z"/>
+          </runwayTime>
+        </runwayPositionAndTime>
+      </arrival>
+      <controllingUnit xsi:type="ns4:IdentifiedUnitReferenceType" unitIdentifier="ZME" sectorIdentifier="22"/>
+      <departure xsi:type="ns5:NasDepartureType" departurePoint="KTUL">
+        <runwayPositionAndTime>
+          <runwayTime>
+            <actual time="2016-09-20T18:48:00Z"/>
+          </runwayTime>
+        </runwayPositionAndTime>
+      </departure>
+      <enRoute xsi:type="ns5:NasEnRouteType">
+        <position xsi:type="ns5:NasAircraftPositionType" targetPositionTime="2016-09-20T18:59:40Z" positionTime="2016-09-20T18:59:40Z" reportSource="SURVEILLANCE">
+          <actualSpeed>
+            <surveillance uom="KNOTS">408.0</surveillance>
+          </actualSpeed>
+          <altitude uom="FEET">22300.0</altitude>
+          <position xsi:type="ns4:LocationPointType">
+            <location srsName="urn:ogc:def:crs:EPSG::4326">
+              <pos>36.06 -94.672778</pos>
+            </location>
+          </position>
+          <targetAltitude uom="FEET">22300.0</targetAltitude>
+          <targetPosition srsName="urn:ogc:def:crs:EPSG::4326">
+            <pos>36.06 -94.673056</pos>
+          </targetPosition>
+          <trackVelocity>
+            <x uom="KNOTS">407.0</x>
+            <y uom="KNOTS">22.0</y>
+          </trackVelocity>
+        </position>
+      </enRoute>
+      <flightIdentification xsi:type="ns5:NasFlightIdentificationType" computerId="305" siteSpecificPlanId="184" aircraftIdentification="JIA5180"/>
+      <flightStatus xsi:type="ns5:NasFlightStatusType" fdpsFlightStatus="ACTIVE"/>
+      <gufi codeSpace="urn:uuid">c5787b6a-9fc6-4963-80cf-3ccce698c218</gufi>
+      <operator>
+        <operatingOrganization>
+          <organization name="JIA"/>
+        </operatingOrganization>
+      </operator>
+      <supplementalData xsi:type="ns5:NasSupplementalDataType">
+        <additionalFlightInformation>
+          <nameValue name="MSG_SEQ_NO" value="24312662"/>
+          <nameValue name="FDPS_GUFI" value="us.fdps.2016-09-27T17:41:53Z.000/10/300"/>
+          <nameValue name="FLIGHT_PLAN_SEQ_NO" value="4"/>
+        </additionalFlightInformation>
+      </supplementalData>
+      <assignedAltitude>
+        <simple uom="FEET">31000.0</simple>
+      </assignedAltitude>
+      <flightPlan identifier="KK63713300"/>
+    </flight>
+  </message>
+  <message xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="ns5:FlightMessageType">
+    <flight xsi:type="ns5:NasFlightType" centre="ZKC" source="TH" system="ATL" timestamp="2016-09-27T18:59:49.373Z">
+      <arrival xsi:type="ns5:NasArrivalType" arrivalPoint="KDEN">
+        <runwayPositionAndTime>
+          <runwayTime>
+            <estimated time="2016-09-20T19:50:00Z"/>
+          </runwayTime>
+        </runwayPositionAndTime>
+      </arrival>
+      <controllingUnit xsi:type="ns4:IdentifiedUnitReferenceType" unitIdentifier="ZDV" sectorIdentifier="17"/>
+      <departure xsi:type="ns5:NasDepartureType" departurePoint="KORD">
+        <runwayPositionAndTime>
+          <runwayTime>
+            <actual time="2016-09-20T17:38:00Z"/>
+          </runwayTime>
+        </runwayPositionAndTime>
+      </departure>
+      <enRoute xsi:type="ns5:NasEnRouteType">
+        <position xsi:type="ns5:NasAircraftPositionType" targetPositionTime="2016-09-20T18:59:44Z" positionTime="2016-09-20T18:59:44Z" reportSource="SURVEILLANCE">
+          <actualSpeed>
+            <surveillance uom="KNOTS">438.0</surveillance>
+          </actualSpeed>
+          <altitude uom="FEET">32000.0</altitude>
+          <position xsi:type="ns4:LocationPointType">
+            <location srsName="urn:ogc:def:crs:EPSG::4326">
+              <pos>39.263889 -99.835833</pos>
+            </location>
+          </position>
+          <targetAltitude uom="FEET">32000.0</targetAltitude>
+          <targetPosition srsName="urn:ogc:def:crs:EPSG::4326">
+            <pos>39.264444 -99.835</pos>
+          </targetPosition>
+          <trackVelocity>
+            <x uom="KNOTS">-424.0</x>
+            <y uom="KNOTS">-109.0</y>
+          </trackVelocity>
+        </position>
+      </enRoute>
+      <flightIdentification xsi:type="ns5:NasFlightIdentificationType" computerId="990" siteSpecificPlanId="149" aircraftIdentification="UAL775J"/>
+      <flightStatus xsi:type="ns5:NasFlightStatusType" fdpsFlightStatus="ACTIVE"/>
+      <gufi codeSpace="urn:uuid">b957e11c-14f2-475e-a559-35b634f1e18d</gufi>
+      <operator>
+        <operatingOrganization>
+          <organization name="UAL"/>
+        </operatingOrganization>
+      </operator>
+      <supplementalData xsi:type="ns5:NasSupplementalDataType">
+        <additionalFlightInformation>
+          <nameValue name="MSG_SEQ_NO" value="24312702"/>
+          <nameValue name="FDPS_GUFI" value="us.fdps.2016-09-27T14:42:39Z.000/06/300"/>
+          <nameValue name="FLIGHT_PLAN_SEQ_NO" value="13"/>
+        </additionalFlightInformation>
+      </supplementalData>
+      <assignedAltitude>
+        <simple uom="FEET">32000.0</simple>
+      </assignedAltitude>
+      <flightPlan identifier="KG52959300"/>
+    </flight>
+  </message>
+  <message xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="ns5:FlightMessageType">
+    <flight xsi:type="ns5:NasFlightType" centre="ZKC" source="TH" system="ATL" timestamp="2016-09-27T18:59:49.365Z">
+      <arrival xsi:type="ns5:NasArrivalType" arrivalPoint="KMIO">
+        <runwayPositionAndTime>
+          <runwayTime>
+            <estimated time="2016-09-20T19:40:00Z"/>
+          </runwayTime>
+        </runwayPositionAndTime>
+      </arrival>
+      <controllingUnit xsi:type="ns4:IdentifiedUnitReferenceType" unitIdentifier="ZME" sectorIdentifier="04"/>
+      <departure xsi:type="ns5:NasDepartureType" departurePoint="K4A6">
+        <runwayPositionAndTime>
+          <runwayTime>
+            <actual time="2016-09-20T17:22:00Z"/>
+          </runwayTime>
+        </runwayPositionAndTime>
+      </departure>
+      <enRoute xsi:type="ns5:NasEnRouteType">
+        <position xsi:type="ns5:NasAircraftPositionType" targetPositionTime="2016-09-20T18:59:46Z" positionTime="2016-09-20T18:59:46Z" reportSource="SURVEILLANCE">
+          <actualSpeed>
+            <surveillance uom="KNOTS">166.0</surveillance>
+          </actualSpeed>
+          <altitude uom="FEET">8200.0</altitude>
+          <position xsi:type="ns4:LocationPointType">
+            <location srsName="urn:ogc:def:crs:EPSG::4326">
+              <pos>36.196389 -91.4525</pos>
+            </location>
+          </position>
+          <targetAltitude uom="FEET">8200.0</targetAltitude>
+          <targetPosition srsName="urn:ogc:def:crs:EPSG::4326">
+            <pos>36.196944 -91.4525</pos>
+          </targetPosition>
+          <trackVelocity>
+            <x uom="KNOTS">-159.0</x>
+            <y uom="KNOTS">49.0</y>
+          </trackVelocity>
+        </position>
+      </enRoute>
+      <flightIdentification xsi:type="ns5:NasFlightIdentificationType" computerId="515" siteSpecificPlanId="504" aircraftIdentification="N5136A"/>
+      <flightStatus xsi:type="ns5:NasFlightStatusType" fdpsFlightStatus="ACTIVE"/>
+      <gufi codeSpace="urn:uuid">f2825256-d19a-430e-a8ea-6ff836f19079</gufi>
+      <supplementalData xsi:type="ns5:NasSupplementalDataType">
+        <additionalFlightInformation>
+          <nameValue name="MSG_SEQ_NO" value="24312681"/>
+          <nameValue name="FDPS_GUFI" value="us.fdps.2016-09-27T16:56:14Z.000/19/300"/>
+          <nameValue name="FLIGHT_PLAN_SEQ_NO" value="4"/>
+        </additionalFlightInformation>
+      </supplementalData>
+      <assignedAltitude>
+        <simple uom="FEET">8000.0</simple>
+      </assignedAltitude>
+      <flightPlan identifier="KT60974300"/>
+    </flight>
+  </message>
+  <message xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="ns5:FlightMessageType">
+    <flight xsi:type="ns5:NasFlightType" centre="ZKC" source="TH" system="ATL" timestamp="2016-09-27T18:59:49.384Z">
+      <arrival xsi:type="ns5:NasArrivalType" arrivalPoint="KPHX">
+        <runwayPositionAndTime>
+          <runwayTime>
+            <estimated time="2016-09-20T22:16:00Z"/>
+          </runwayTime>
+        </runwayPositionAndTime>
+      </arrival>
+      <controllingUnit xsi:type="ns4:IdentifiedUnitReferenceType" unitIdentifier="ZID" sectorIdentifier="99"/>
+      <departure xsi:type="ns5:NasDepartureType" departurePoint="KPIT">
+        <runwayPositionAndTime>
+          <runwayTime>
+            <actual time="2016-09-20T18:23:00Z"/>
+          </runwayTime>
+        </runwayPositionAndTime>
+      </departure>
+      <enRoute xsi:type="ns5:NasEnRouteType">
+        <position xsi:type="ns5:NasAircraftPositionType" targetPositionTime="2016-09-20T18:59:46Z" positionTime="2016-09-20T18:59:46Z" reportSource="SURVEILLANCE">
+          <actualSpeed>
+            <surveillance uom="KNOTS">425.0</surveillance>
+          </actualSpeed>
+          <altitude uom="FEET">36000.0</altitude>
+          <position xsi:type="ns4:LocationPointType">
+            <location srsName="urn:ogc:def:crs:EPSG::4326">
+              <pos>39.995 -85.336111</pos>
+            </location>
+          </position>
+          <targetAltitude uom="FEET">36000.0</targetAltitude>
+          <targetPosition srsName="urn:ogc:def:crs:EPSG::4326">
+            <pos>39.995278 -85.336389</pos>
+          </targetPosition>
+          <trackVelocity>
+            <x uom="KNOTS">-415.0</x>
+            <y uom="KNOTS">-91.0</y>
+          </trackVelocity>
+        </position>
+      </enRoute>
+      <flightIdentification xsi:type="ns5:NasFlightIdentificationType" computerId="892" siteSpecificPlanId="326" aircraftIdentification="SWA1649"/>
+      <flightStatus xsi:type="ns5:NasFlightStatusType" fdpsFlightStatus="ACTIVE"/>
+      <gufi codeSpace="urn:uuid">b92ae407-d7fd-4ed6-a0fa-844532b6e5ca</gufi>
+      <operator>
+        <operatingOrganization>
+          <organization name="SWA"/>
+        </operatingOrganization>
+      </operator>
+      <supplementalData xsi:type="ns5:NasSupplementalDataType">
+        <additionalFlightInformation>
+          <nameValue name="MSG_SEQ_NO" value="24312732"/>
+          <nameValue name="FDPS_GUFI" value="us.fdps.2016-09-27T17:01:29Z.000/02/300"/>
+          <nameValue name="FLIGHT_PLAN_SEQ_NO" value="4"/>
+        </additionalFlightInformation>
+      </supplementalData>
+      <assignedAltitude>
+        <simple uom="FEET">36000.0</simple>
+      </assignedAltitude>
+      <flightPlan identifier="KC61289300"/>
+    </flight>
+  </message>
+  <message xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="ns5:FlightMessageType">
+    <flight xsi:type="ns5:NasFlightType" centre="ZKC" source="TH" system="ATL" timestamp="2016-09-27T18:59:49.365Z">
+      <arrival xsi:type="ns5:NasArrivalType" arrivalPoint="KMHK">
+        <runwayPositionAndTime>
+          <runwayTime>
+            <estimated time="2016-09-20T19:59:00Z"/>
+          </runwayTime>
+        </runwayPositionAndTime>
+      </arrival>
+      <controllingUnit xsi:type="ns4:IdentifiedUnitReferenceType" unitIdentifier="ZAU" sectorIdentifier="94"/>
+      <departure xsi:type="ns5:NasDepartureType" departurePoint="KORD">
+        <runwayPositionAndTime>
+          <runwayTime>
+            <actual time="2016-09-20T18:37:00Z"/>
+          </runwayTime>
+        </runwayPositionAndTime>
+      </departure>
+      <enRoute xsi:type="ns5:NasEnRouteType">
+        <position xsi:type="ns5:NasAircraftPositionType" targetPositionTime="2016-09-20T18:59:42Z" positionTime="2016-09-20T18:59:42Z" reportSource="SURVEILLANCE">
+          <actualSpeed>
+            <surveillance uom="KNOTS">389.0</surveillance>
+          </actualSpeed>
+          <altitude uom="FEET">27100.0</altitude>
+          <position xsi:type="ns4:LocationPointType">
+            <location srsName="urn:ogc:def:crs:EPSG::4326">
+              <pos>41.422778 -90.496944</pos>
+            </location>
+          </position>
+          <targetAltitude uom="FEET">27100.0</targetAltitude>
+          <targetPosition srsName="urn:ogc:def:crs:EPSG::4326">
+            <pos>41.423333 -90.495556</pos>
+          </targetPosition>
+          <trackVelocity>
+            <x uom="KNOTS">-356.0</x>
+            <y uom="KNOTS">-156.0</y>
+          </trackVelocity>
+        </position>
+      </enRoute>
+      <flightIdentification xsi:type="ns5:NasFlightIdentificationType" computerId="233" siteSpecificPlanId="607" aircraftIdentification="ENY3501"/>
+      <flightStatus xsi:type="ns5:NasFlightStatusType" fdpsFlightStatus="ACTIVE"/>
+      <gufi codeSpace="urn:uuid">1bcdd455-1c37-411b-8a49-5d69b2504259</gufi>
+      <operator>
+        <operatingOrganization>
+          <organization name="ENY"/>
+        </operatingOrganization>
+      </operator>
+      <supplementalData xsi:type="ns5:NasSupplementalDataType">
+        <additionalFlightInformation>
+          <nameValue name="MSG_SEQ_NO" value="24312682"/>
+          <nameValue name="FDPS_GUFI" value="us.fdps.2016-09-27T17:11:00Z.000/06/301"/>
+          <nameValue name="FLIGHT_PLAN_SEQ_NO" value="3"/>
+        </additionalFlightInformation>
+      </supplementalData>
+      <assignedAltitude>
+        <simple uom="FEET">36000.0</simple>
+      </assignedAltitude>
+      <flightPlan identifier="KG61860301"/>
+    </flight>
+  </message>
+  <message xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="ns5:FlightMessageType">
+    <flight xsi:type="ns5:NasFlightType" centre="ZKC" source="TH" system="ATL" timestamp="2016-09-27T18:59:49.365Z">
+      <controllingUnit xsi:type="ns4:IdentifiedUnitReferenceType" unitIdentifier="ZKC" sectorIdentifier="96"/>
+      <enRoute xsi:type="ns5:NasEnRouteType">
+        <position xsi:type="ns5:NasAircraftPositionType" targetPositionTime="2016-09-20T18:59:39Z" positionTime="2016-09-20T18:59:39Z" reportSource="SURVEILLANCE">
+          <actualSpeed>
+            <surveillance uom="KNOTS">18.0</surveillance>
+          </actualSpeed>
+          <altitude uom="FEET">56700.0</altitude>
+          <position xsi:type="ns4:LocationPointType">
+            <location srsName="urn:ogc:def:crs:EPSG::4326">
+              <pos>34.904444 -92.485833</pos>
+            </location>
+          </position>
+          <targetAltitude uom="FEET">56700.0</targetAltitude>
+          <targetPosition srsName="urn:ogc:def:crs:EPSG::4326">
+            <pos>34.903611 -92.485278</pos>
+          </targetPosition>
+          <trackVelocity>
+            <x uom="KNOTS">14.0</x>
+            <y uom="KNOTS">-11.0</y>
+          </trackVelocity>
+        </position>
+      </enRoute>
+      <flightIdentification xsi:type="ns5:NasFlightIdentificationType" computerId="164" siteSpecificPlanId="41" aircraftIdentification="HBAL475"/>
+      <supplementalData xsi:type="ns5:NasSupplementalDataType">
+        <additionalFlightInformation>
+          <nameValue name="MSG_SEQ_NO" value="24312676"/>
+          <nameValue name="FLIGHT_PLAN_SEQ_NO" value="0"/>
+        </additionalFlightInformation>
+      </supplementalData>
+    </flight>
+  </message>
+  <message xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="ns5:FlightMessageType">
+    <flight xsi:type="ns5:NasFlightType" centre="ZKC" source="TH" system="ATL" timestamp="2016-09-27T18:59:49.365Z">
+      <arrival xsi:type="ns5:NasArrivalType" arrivalPoint="KATL">
+        <runwayPositionAndTime>
+          <runwayTime>
+            <estimated time="2016-09-20T20:28:00Z"/>
+          </runwayTime>
+        </runwayPositionAndTime>
+      </arrival>
+      <controllingUnit xsi:type="ns4:IdentifiedUnitReferenceType" unitIdentifier="ZAU" sectorIdentifier="91"/>
+      <departure xsi:type="ns5:NasDepartureType" departurePoint="KMSP">
+        <runwayPositionAndTime>
+          <runwayTime>
+            <actual time="2016-09-20T18:25:00Z"/>
+          </runwayTime>
+        </runwayPositionAndTime>
+      </departure>
+      <enRoute xsi:type="ns5:NasEnRouteType">
+        <position xsi:type="ns5:NasAircraftPositionType" targetPositionTime="2016-09-20T18:59:43Z" positionTime="2016-09-20T18:59:43Z" reportSource="SURVEILLANCE">
+          <actualSpeed>
+            <surveillance uom="KNOTS">456.0</surveillance>
+          </actualSpeed>
+          <altitude uom="FEET">35000.0</altitude>
+          <position xsi:type="ns4:LocationPointType">
+            <location srsName="urn:ogc:def:crs:EPSG::4326">
+              <pos>41.673611 -89.856389</pos>
+            </location>
+          </position>
+          <targetAltitude uom="FEET">35000.0</targetAltitude>
+          <targetPosition srsName="urn:ogc:def:crs:EPSG::4326">
+            <pos>41.675278 -89.853056</pos>
+          </targetPosition>
+          <trackVelocity>
+            <x uom="KNOTS">128.0</x>
+            <y uom="KNOTS">-437.0</y>
+          </trackVelocity>
+        </position>
+      </enRoute>
+      <flightIdentification xsi:type="ns5:NasFlightIdentificationType" computerId="303" siteSpecificPlanId="137" aircraftIdentification="DAL108"/>
+      <flightStatus xsi:type="ns5:NasFlightStatusType" fdpsFlightStatus="ACTIVE"/>
+      <gufi codeSpace="urn:uuid">31724f4b-a836-4218-a099-209d8d93bad5</gufi>
+      <operator>
+        <operatingOrganization>
+          <organization name="DAL"/>
+        </operatingOrganization>
+      </operator>
+      <supplementalData xsi:type="ns5:NasSupplementalDataType">
+        <additionalFlightInformation>
+          <nameValue name="MSG_SEQ_NO" value="24312683"/>
+          <nameValue name="FDPS_GUFI" value="us.fdps.2016-09-27T17:16:02Z.000/15/300"/>
+          <nameValue name="FLIGHT_PLAN_SEQ_NO" value="7"/>
+        </additionalFlightInformation>
+      </supplementalData>
+      <assignedAltitude>
+        <simple uom="FEET">35000.0</simple>
+      </assignedAltitude>
+      <flightPlan identifier="KP62162300"/>
+    </flight>
+  </message>
+  <message xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="ns5:FlightMessageType">
+    <flight xsi:type="ns5:NasFlightType" centre="ZKC" source="TH" system="ATL" timestamp="2016-09-27T18:59:49.373Z">
+      <arrival xsi:type="ns5:NasArrivalType" arrivalPoint="KMEZ">
+        <runwayPositionAndTime>
+          <runwayTime>
+            <estimated time="2016-09-20T20:21:00Z"/>
+          </runwayTime>
+        </runwayPositionAndTime>
+      </arrival>
+      <controllingUnit xsi:type="ns4:IdentifiedUnitReferenceType" unitIdentifier="ZDV" sectorIdentifier="19"/>
+      <departure xsi:type="ns5:NasDepartureType" departurePoint="KCPR">
+        <runwayPositionAndTime>
+          <runwayTime>
+            <actual time="2016-09-20T15:21:00Z"/>
+          </runwayTime>
+        </runwayPositionAndTime>
+      </departure>
+      <enRoute xsi:type="ns5:NasEnRouteType">
+        <position xsi:type="ns5:NasAircraftPositionType" targetPositionTime="2016-09-20T18:59:43Z" positionTime="2016-09-20T18:59:43Z" reportSource="SURVEILLANCE">
+          <actualSpeed>
+            <surveillance uom="KNOTS">166.0</surveillance>
+          </actualSpeed>
+          <altitude uom="FEET">13100.0</altitude>
+          <position xsi:type="ns4:LocationPointType">
+            <location srsName="urn:ogc:def:crs:EPSG::4326">
+              <pos>39.475278 -100.535833</pos>
+            </location>
+          </position>
+          <targetAltitude uom="FEET">13000.0</targetAltitude>
+          <targetPosition srsName="urn:ogc:def:crs:EPSG::4326">
+            <pos>39.475278 -100.536111</pos>
+          </targetPosition>
+          <trackVelocity>
+            <x uom="KNOTS">127.0</x>
+            <y uom="KNOTS">-107.0</y>
+          </trackVelocity>
+        </position>
+      </enRoute>
+      <flightIdentification xsi:type="ns5:NasFlightIdentificationType" computerId="663" siteSpecificPlanId="726" aircraftIdentification="N23551"/>
+      <flightStatus xsi:type="ns5:NasFlightStatusType" fdpsFlightStatus="PROPOSED"/>
+      <gufi codeSpace="urn:uuid">6ee397bd-c91e-47b4-b1d8-c79a7a91ac2e</gufi>
+      <supplementalData xsi:type="ns5:NasSupplementalDataType">
+        <additionalFlightInformation>
+          <nameValue name="MSG_SEQ_NO" value="24312689"/>
+          <nameValue name="FDPS_GUFI" value="us.fdps.2016-09-27T14:22:53Z.000/03/300"/>
+          <nameValue name="FLIGHT_PLAN_SEQ_NO" value="6"/>
+        </additionalFlightInformation>
+      </supplementalData>
+      <assignedAltitude>
+        <simple uom="FEET">13000.0</simple>
+      </assignedAltitude>
+      <flightPlan identifier="KD51773300"/>
+    </flight>
+  </message>
+  <message xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="ns5:FlightMessageType">
+    <flight xsi:type="ns5:NasFlightType" centre="ZKC" source="TH" system="ATL" timestamp="2016-09-27T18:59:49.384Z">
+      <arrival xsi:type="ns5:NasArrivalType" arrivalPoint="KSTL">
+        <runwayPositionAndTime>
+          <runwayTime>
+            <estimated time="2016-09-20T19:34:00Z"/>
+          </runwayTime>
+        </runwayPositionAndTime>
+      </arrival>
+      <controllingUnit xsi:type="ns4:IdentifiedUnitReferenceType" unitIdentifier="ZME" sectorIdentifier="26"/>
+      <departure xsi:type="ns5:NasDepartureType" departurePoint="KATL">
+        <runwayPositionAndTime>
+          <runwayTime>
+            <actual time="2016-09-20T18:24:00Z"/>
+          </runwayTime>
+        </runwayPositionAndTime>
+      </departure>
+      <enRoute xsi:type="ns5:NasEnRouteType">
+        <position xsi:type="ns5:NasAircraftPositionType" targetPositionTime="2016-09-20T18:59:40Z" positionTime="2016-09-20T18:59:40Z" reportSource="SURVEILLANCE">
+          <actualSpeed>
+            <surveillance uom="KNOTS">446.0</surveillance>
+          </actualSpeed>
+          <altitude uom="FEET">30000.0</altitude>
+          <position xsi:type="ns4:LocationPointType">
+            <location srsName="urn:ogc:def:crs:EPSG::4326">
+              <pos>36.258611 -87.267222</pos>
+            </location>
+          </position>
+          <targetAltitude uom="FEET">30000.0</targetAltitude>
+          <targetPosition srsName="urn:ogc:def:crs:EPSG::4326">
+            <pos>36.258889 -87.265556</pos>
+          </targetPosition>
+          <trackVelocity>
+            <x uom="KNOTS">-393.0</x>
+            <y uom="KNOTS">210.0</y>
+          </trackVelocity>
+        </position>
+      </enRoute>
+      <flightIdentification xsi:type="ns5:NasFlightIdentificationType" computerId="384" siteSpecificPlanId="26" aircraftIdentification="DAL2084"/>
+      <flightStatus xsi:type="ns5:NasFlightStatusType" fdpsFlightStatus="ACTIVE"/>
+      <gufi codeSpace="urn:uuid">7573b681-a4e9-4f44-8509-511ff2b64d79</gufi>
+      <operator>
+        <operatingOrganization>
+          <organization name="DAL"/>
+        </operatingOrganization>
+      </operator>
+      <supplementalData xsi:type="ns5:NasSupplementalDataType">
+        <additionalFlightInformation>
+          <nameValue name="MSG_SEQ_NO" value="24312734"/>
+          <nameValue name="FDPS_GUFI" value="us.fdps.2016-09-27T17:27:03Z.000/19/300"/>
+          <nameValue name="FLIGHT_PLAN_SEQ_NO" value="4"/>
+        </additionalFlightInformation>
+      </supplementalData>
+      <assignedAltitude>
+        <simple uom="FEET">30000.0</simple>
+      </assignedAltitude>
+      <flightPlan identifier="KT62823300"/>
+    </flight>
+  </message>
+  <message xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="ns5:FlightMessageType">
+    <flight xsi:type="ns5:NasFlightType" centre="ZKC" source="TH" system="ATL" timestamp="2016-09-27T18:59:49.365Z">
+      <controllingUnit xsi:type="ns4:IdentifiedUnitReferenceType" unitIdentifier="ZKC" sectorIdentifier="96"/>
+      <enRoute xsi:type="ns5:NasEnRouteType">
+        <position xsi:type="ns5:NasAircraftPositionType" targetPositionTime="2016-09-20T18:59:39Z" positionTime="2016-09-20T18:59:39Z" reportSource="SURVEILLANCE">
+          <actualSpeed>
+            <surveillance uom="KNOTS">18.0</surveillance>
+          </actualSpeed>
+          <altitude uom="FEET">56700.0</altitude>
+          <position xsi:type="ns4:LocationPointType">
+            <location srsName="urn:ogc:def:crs:EPSG::4326">
+              <pos>34.904444 -92.485833</pos>
+            </location>
+          </position>
+          <targetAltitude uom="FEET">56700.0</targetAltitude>
+          <targetPosition srsName="urn:ogc:def:crs:EPSG::4326">
+            <pos>34.903611 -92.485278</pos>
+          </targetPosition>
+          <trackVelocity>
+            <x uom="KNOTS">14.0</x>
+            <y uom="KNOTS">-11.0</y>
+          </trackVelocity>
+        </position>
+      </enRoute>
+      <flightIdentification xsi:type="ns5:NasFlightIdentificationType" computerId="164" siteSpecificPlanId="63" aircraftIdentification="HBAL475"/>
+      <supplementalData xsi:type="ns5:NasSupplementalDataType">
+        <additionalFlightInformation>
+          <nameValue name="MSG_SEQ_NO" value="24312678"/>
+          <nameValue name="FLIGHT_PLAN_SEQ_NO" value="0"/>
+        </additionalFlightInformation>
+      </supplementalData>
+    </flight>
+  </message>
+  <message xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="ns5:FlightMessageType">
+    <flight xsi:type="ns5:NasFlightType" centre="ZKC" source="TH" system="ATL" timestamp="2016-09-27T18:59:49.365Z">
+      <controllingUnit xsi:type="ns4:IdentifiedUnitReferenceType" unitIdentifier="ZKC" sectorIdentifier="96"/>
+      <enRoute xsi:type="ns5:NasEnRouteType">
+        <position xsi:type="ns5:NasAircraftPositionType" targetPositionTime="2016-09-20T18:59:43Z" positionTime="2016-09-20T18:59:43Z" reportSource="SURVEILLANCE">
+          <actualSpeed>
+            <surveillance uom="KNOTS">7.0</surveillance>
+          </actualSpeed>
+          <position xsi:type="ns4:LocationPointType">
+            <location srsName="urn:ogc:def:crs:EPSG::4326">
+              <pos>39.136111 -89.645556</pos>
+            </location>
+          </position>
+          <targetAltitude invalid="INVALID" uom="FEET">0.0</targetAltitude>
+          <targetPosition srsName="urn:ogc:def:crs:EPSG::4326">
+            <pos>39.135 -89.646667</pos>
+          </targetPosition>
+          <trackVelocity>
+            <x uom="KNOTS">7.0</x>
+            <y uom="KNOTS">-0.0</y>
+          </trackVelocity>
+        </position>
+      </enRoute>
+      <flightIdentification xsi:type="ns5:NasFlightIdentificationType" computerId="124" siteSpecificPlanId="80" aircraftIdentification="HBAL476"/>
+      <supplementalData xsi:type="ns5:NasSupplementalDataType">
+        <additionalFlightInformation>
+          <nameValue name="MSG_SEQ_NO" value="24312677"/>
+          <nameValue name="FLIGHT_PLAN_SEQ_NO" value="0"/>
+        </additionalFlightInformation>
+      </supplementalData>
+    </flight>
+  </message>
+  <message xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="ns5:FlightMessageType">
+    <flight xsi:type="ns5:NasFlightType" centre="ZKC" source="TH" system="ATL" timestamp="2016-09-27T18:59:49.401Z">
+      <arrival xsi:type="ns5:NasArrivalType" arrivalPoint="KORD">
+        <runwayPositionAndTime>
+          <runwayTime>
+            <estimated time="2016-09-20T20:28:00Z"/>
+          </runwayTime>
+        </runwayPositionAndTime>
+      </arrival>
+      <controllingUnit xsi:type="ns4:IdentifiedUnitReferenceType" unitIdentifier="ZMP" sectorIdentifier="40"/>
+      <departure xsi:type="ns5:NasDepartureType" departurePoint="KLAX">
+        <runwayPositionAndTime>
+          <runwayTime>
+            <actual time="2016-09-20T17:09:00Z"/>
+          </runwayTime>
+        </runwayPositionAndTime>
+      </departure>
+      <enRoute xsi:type="ns5:NasEnRouteType">
+        <boundaryCrossings xsi:type="ns5:NasUnitBoundaryType">
+          <handoff xsi:type="ns5:NasHandoffType">
+            <receivingUnit xsi:type="ns4:IdentifiedUnitReferenceType" unitIdentifier="ZKC" sectorIdentifier="41"/>
+          </handoff>
+        </boundaryCrossings>
+        <position xsi:type="ns5:NasAircraftPositionType" targetPositionTime="2016-09-20T18:59:43Z" positionTime="2016-09-20T18:59:43Z" reportSource="SURVEILLANCE">
+          <actualSpeed>
+            <surveillance uom="KNOTS">549.0</surveillance>
+          </actualSpeed>
+          <altitude uom="FEET">41000.0</altitude>
+          <position xsi:type="ns4:LocationPointType">
+            <location srsName="urn:ogc:def:crs:EPSG::4326">
+              <pos>39.366111 -99.901667</pos>
+            </location>
+          </position>
+          <targetAltitude uom="FEET">41000.0</targetAltitude>
+          <targetPosition srsName="urn:ogc:def:crs:EPSG::4326">
+            <pos>39.366389 -99.899167</pos>
+          </targetPosition>
+          <trackVelocity>
+            <x uom="KNOTS">541.0</x>
+            <y uom="KNOTS">96.0</y>
+          </trackVelocity>
+        </position>
+      </enRoute>
+      <flightIdentification xsi:type="ns5:NasFlightIdentificationType" computerId="707" siteSpecificPlanId="144" aircraftIdentification="AAL110"/>
+      <flightStatus xsi:type="ns5:NasFlightStatusType" fdpsFlightStatus="ACTIVE"/>
+      <gufi codeSpace="urn:uuid">e9aae811-09b2-4e17-8da4-6f6becade454</gufi>
+      <operator>
+        <operatingOrganization>
+          <organization name="AAL"/>
+        </operatingOrganization>
+      </operator>
+      <supplementalData xsi:type="ns5:NasSupplementalDataType">
+        <additionalFlightInformation>
+          <nameValue name="MSG_SEQ_NO" value="24312739"/>
+          <nameValue name="FDPS_GUFI" value="us.fdps.2016-09-27T15:31:05Z.000/11/300"/>
+          <nameValue name="FLIGHT_PLAN_SEQ_NO" value="8"/>
+        </additionalFlightInformation>
+      </supplementalData>
+      <assignedAltitude>
+        <simple uom="FEET">41000.0</simple>
+      </assignedAltitude>
+      <flightPlan identifier="KL55865300"/>
+    </flight>
+  </message>
+  <message xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="ns5:FlightMessageType">
+    <flight xsi:type="ns5:NasFlightType" centre="ZKC" source="TH" system="ATL" timestamp="2016-09-27T18:59:49.365Z">
+      <arrival xsi:type="ns5:NasArrivalType" arrivalPoint="KLIT"/>
+      <controllingUnit xsi:type="ns4:IdentifiedUnitReferenceType" unitIdentifier="ZID" sectorIdentifier="99"/>
+      <departure xsi:type="ns5:NasDepartureType" departurePoint="LFBD">
+        <runwayPositionAndTime>
+          <runwayTime>
+            <actual time="2016-09-20T18:20:00Z"/>
+          </runwayTime>
+        </runwayPositionAndTime>
+      </departure>
+      <enRoute xsi:type="ns5:NasEnRouteType">
+        <position xsi:type="ns5:NasAircraftPositionType" targetPositionTime="2016-09-20T18:59:45Z" positionTime="2016-09-20T18:59:45Z" reportSource="SURVEILLANCE">
+          <actualSpeed>
+            <surveillance uom="KNOTS">466.0</surveillance>
+          </actualSpeed>
+          <altitude uom="FEET">47000.0</altitude>
+          <position xsi:type="ns4:LocationPointType">
+            <location srsName="urn:ogc:def:crs:EPSG::4326">
+              <pos>40.246111 -86.450833</pos>
+            </location>
+          </position>
+          <targetAltitude uom="FEET">47000.0</targetAltitude>
+          <targetPosition srsName="urn:ogc:def:crs:EPSG::4326">
+            <pos>40.247778 -86.458889</pos>
+          </targetPosition>
+          <trackVelocity>
+            <x uom="KNOTS">-307.0</x>
+            <y uom="KNOTS">-350.0</y>
+          </trackVelocity>
+        </position>
+      </enRoute>
+      <flightIdentification xsi:type="ns5:NasFlightIdentificationType" computerId="419" siteSpecificPlanId="295" aircraftIdentification="FWWQP"/>
+      <flightStatus xsi:type="ns5:NasFlightStatusType" fdpsFlightStatus="ACTIVE"/>
+      <gufi codeSpace="urn:uuid">f6fc26f2-43d2-4db3-8f92-33345f4f70fc</gufi>
+      <supplementalData xsi:type="ns5:NasSupplementalDataType">
+        <additionalFlightInformation>
+          <nameValue name="MSG_SEQ_NO" value="24312680"/>
+          <nameValue name="FDPS_GUFI" value="us.fdps.2016-09-27T17:53:02Z.000/02/300"/>
+          <nameValue name="FLIGHT_PLAN_SEQ_NO" value="6"/>
+        </additionalFlightInformation>
+      </supplementalData>
+      <assignedAltitude>
+        <simple uom="FEET">47000.0</simple>
+      </assignedAltitude>
+      <flightPlan identifier="KC64382300"/>
+    </flight>
+  </message>
+  <message xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="ns5:FlightMessageType">
+    <flight xsi:type="ns5:NasFlightType" centre="ZKC" source="TH" system="ATL" timestamp="2016-09-27T18:59:49.401Z">
+      <arrival xsi:type="ns5:NasArrivalType" arrivalPoint="KDFW"/>
+      <controllingUnit xsi:type="ns4:IdentifiedUnitReferenceType" unitIdentifier="ZAU" sectorIdentifier="94"/>
+      <departure xsi:type="ns5:NasDepartureType" departurePoint="OTHH">
+        <runwayPositionAndTime>
+          <runwayTime>
+            <actual time="2016-09-20T18:15:00Z"/>
+          </runwayTime>
+        </runwayPositionAndTime>
+      </departure>
+      <enRoute xsi:type="ns5:NasEnRouteType">
+        <boundaryCrossings xsi:type="ns5:NasUnitBoundaryType">
+          <handoff xsi:type="ns5:NasHandoffType">
+            <receivingUnit xsi:type="ns4:IdentifiedUnitReferenceType" unitIdentifier="ZKC" sectorIdentifier="92"/>
+          </handoff>
+        </boundaryCrossings>
+        <position xsi:type="ns5:NasAircraftPositionType" targetPositionTime="2016-09-20T18:59:41Z" positionTime="2016-09-20T18:59:41Z" reportSource="SURVEILLANCE">
+          <actualSpeed>
+            <surveillance uom="KNOTS">473.0</surveillance>
+          </actualSpeed>
+          <altitude uom="FEET">35900.0</altitude>
+          <position xsi:type="ns4:LocationPointType">
+            <location srsName="urn:ogc:def:crs:EPSG::4326">
+              <pos>41.089167 -90.808333</pos>
+            </location>
+          </position>
+          <targetAltitude uom="FEET">35900.0</targetAltitude>
+          <targetPosition srsName="urn:ogc:def:crs:EPSG::4326">
+            <pos>41.089722 -90.808056</pos>
+          </targetPosition>
+          <trackVelocity>
+            <x uom="KNOTS">-209.0</x>
+            <y uom="KNOTS">-424.0</y>
+          </trackVelocity>
+        </position>
+      </enRoute>
+      <flightIdentification xsi:type="ns5:NasFlightIdentificationType" computerId="581" siteSpecificPlanId="209" aircraftIdentification="QTR729"/>
+      <flightStatus xsi:type="ns5:NasFlightStatusType" fdpsFlightStatus="DROPPED"/>
+      <gufi codeSpace="urn:uuid">985bad48-7ec8-4214-81f9-e1a525eb9f8e</gufi>
+      <operator>
+        <operatingOrganization>
+          <organization name="QTR"/>
+        </operatingOrganization>
+      </operator>
+      <supplementalData xsi:type="ns5:NasSupplementalDataType">
+        <additionalFlightInformation>
+          <nameValue name="MSG_SEQ_NO" value="24312741"/>
+          <nameValue name="FDPS_GUFI" value="us.fdps.2016-09-27T03:10:49Z.000/06/300"/>
+          <nameValue name="FLIGHT_PLAN_SEQ_NO" value="4"/>
+        </additionalFlightInformation>
+      </supplementalData>
+      <assignedAltitude>
+        <simple uom="FEET">36000.0</simple>
+      </assignedAltitude>
+      <flightPlan identifier="KG11449300"/>
+    </flight>
+  </message>
+  <message xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="ns5:FlightMessageType">
+    <flight xsi:type="ns5:NasFlightType" centre="ZKC" source="TH" system="ATL" timestamp="2016-09-27T18:59:49.384Z">
+      <arrival xsi:type="ns5:NasArrivalType" arrivalPoint="KCLT">
+        <runwayPositionAndTime>
+          <runwayTime>
+            <estimated time="2016-09-20T20:16:00Z"/>
+          </runwayTime>
+        </runwayPositionAndTime>
+      </arrival>
+      <controllingUnit xsi:type="ns4:IdentifiedUnitReferenceType" unitIdentifier="ZME" sectorIdentifier="35"/>
+      <departure xsi:type="ns5:NasDepartureType" departurePoint="KLAS">
+        <runwayPositionAndTime>
+          <runwayTime>
+            <actual time="2016-09-20T16:35:00Z"/>
+          </runwayTime>
+        </runwayPositionAndTime>
+      </departure>
+      <enRoute xsi:type="ns5:NasEnRouteType">
+        <position xsi:type="ns5:NasAircraftPositionType" targetPositionTime="2016-09-20T18:59:46Z" positionTime="2016-09-20T18:59:46Z" reportSource="SURVEILLANCE">
+          <actualSpeed>
+            <surveillance uom="KNOTS">477.0</surveillance>
+          </actualSpeed>
+          <altitude uom="FEET">35000.0</altitude>
+          <position xsi:type="ns4:LocationPointType">
+            <location srsName="urn:ogc:def:crs:EPSG::4326">
+              <pos>36.896944 -91.573333</pos>
+            </location>
+          </position>
+          <targetAltitude uom="FEET">35000.0</targetAltitude>
+          <targetPosition srsName="urn:ogc:def:crs:EPSG::4326">
+            <pos>36.8975 -91.573333</pos>
+          </targetPosition>
+          <trackVelocity>
+            <x uom="KNOTS">470.0</x>
+            <y uom="KNOTS">-77.0</y>
+          </trackVelocity>
+        </position>
+      </enRoute>
+      <flightIdentification xsi:type="ns5:NasFlightIdentificationType" computerId="867" siteSpecificPlanId="217" aircraftIdentification="AAL1806"/>
+      <flightStatus xsi:type="ns5:NasFlightStatusType" fdpsFlightStatus="ACTIVE"/>
+      <gufi codeSpace="urn:uuid">37db7937-15ce-4ebc-8c16-9dc67b29f278</gufi>
+      <operator>
+        <operatingOrganization>
+          <organization name="AAL"/>
+        </operatingOrganization>
+      </operator>
+      <supplementalData xsi:type="ns5:NasSupplementalDataType">
+        <additionalFlightInformation>
+          <nameValue name="MSG_SEQ_NO" value="24312717"/>
+          <nameValue name="FDPS_GUFI" value="us.fdps.2016-09-27T15:10:09Z.000/11/300"/>
+          <nameValue name="FLIGHT_PLAN_SEQ_NO" value="8"/>
+        </additionalFlightInformation>
+      </supplementalData>
+      <assignedAltitude>
+        <simple uom="FEET">35000.0</simple>
+      </assignedAltitude>
+      <flightPlan identifier="KL54609300"/>
+    </flight>
+  </message>
+  <message xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="ns5:FlightMessageType">
+    <flight xsi:type="ns5:NasFlightType" centre="ZKC" source="TH" system="ATL" timestamp="2016-09-27T18:59:49.427Z">
+      <arrival xsi:type="ns5:NasArrivalType" arrivalPoint="KTPA">
+        <runwayPositionAndTime>
+          <runwayTime>
+            <estimated time="2016-09-20T21:11:00Z"/>
+          </runwayTime>
+        </runwayPositionAndTime>
+      </arrival>
+      <controllingUnit xsi:type="ns4:IdentifiedUnitReferenceType" unitIdentifier="ZAU" sectorIdentifier="75"/>
+      <departure xsi:type="ns5:NasDepartureType" departurePoint="KMSP">
+        <runwayPositionAndTime>
+          <runwayTime>
+            <actual time="2016-09-20T18:36:00Z"/>
+          </runwayTime>
+        </runwayPositionAndTime>
+      </departure>
+      <enRoute xsi:type="ns5:NasEnRouteType">
+        <position xsi:type="ns5:NasAircraftPositionType" targetPositionTime="2016-09-20T18:59:42Z" positionTime="2016-09-20T18:59:42Z" reportSource="SURVEILLANCE">
+          <actualSpeed>
+            <surveillance uom="KNOTS">470.0</surveillance>
+          </actualSpeed>
+          <altitude uom="FEET">29000.0</altitude>
+          <position xsi:type="ns4:LocationPointType">
+            <location srsName="urn:ogc:def:crs:EPSG::4326">
+              <pos>43.0225 -90.841667</pos>
+            </location>
+          </position>
+          <targetAltitude uom="FEET">29000.0</targetAltitude>
+          <targetPosition srsName="urn:ogc:def:crs:EPSG::4326">
+            <pos>43.018611 -90.854722</pos>
+          </targetPosition>
+          <trackVelocity>
+            <x uom="KNOTS">211.0</x>
+            <y uom="KNOTS">-420.0</y>
+          </trackVelocity>
+        </position>
+      </enRoute>
+      <flightIdentification xsi:type="ns5:NasFlightIdentificationType" computerId="122" siteSpecificPlanId="463" aircraftIdentification="DAL1712"/>
+      <flightStatus xsi:type="ns5:NasFlightStatusType" fdpsFlightStatus="ACTIVE"/>
+      <gufi codeSpace="urn:uuid">857f3758-7664-4222-b304-dac1c9bfdb62</gufi>
+      <operator>
+        <operatingOrganization>
+          <organization name="DAL"/>
+        </operatingOrganization>
+      </operator>
+      <supplementalData xsi:type="ns5:NasSupplementalDataType">
+        <additionalFlightInformation>
+          <nameValue name="MSG_SEQ_NO" value="24312786"/>
+          <nameValue name="FDPS_GUFI" value="us.fdps.2016-09-27T17:36:02Z.000/15/300"/>
+          <nameValue name="FLIGHT_PLAN_SEQ_NO" value="4"/>
+        </additionalFlightInformation>
+      </supplementalData>
+      <assignedAltitude>
+        <simple uom="FEET">29000.0</simple>
+      </assignedAltitude>
+      <flightPlan identifier="KP63362300"/>
+    </flight>
+  </message>
+  <message xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="ns5:FlightMessageType">
+    <flight xsi:type="ns5:NasFlightType" centre="ZKC" source="TH" system="ATL" timestamp="2016-09-27T18:59:49.373Z">
+      <arrival xsi:type="ns5:NasArrivalType" arrivalPoint="KSLN">
+        <runwayPositionAndTime>
+          <runwayTime>
+            <estimated time="2016-09-20T19:48:00Z"/>
+          </runwayTime>
+        </runwayPositionAndTime>
+      </arrival>
+      <controllingUnit xsi:type="ns4:IdentifiedUnitReferenceType" unitIdentifier="ZFW" sectorIdentifier="50"/>
+      <departure xsi:type="ns5:NasDepartureType" departurePoint="KSGR">
+        <runwayPositionAndTime>
+          <runwayTime>
+            <actual time="2016-09-20T18:05:00Z"/>
+          </runwayTime>
+        </runwayPositionAndTime>
+      </departure>
+      <enRoute xsi:type="ns5:NasEnRouteType">
+        <position xsi:type="ns5:NasAircraftPositionType" targetPositionTime="2016-09-20T18:59:39Z" positionTime="2016-09-20T18:59:39Z" reportSource="SURVEILLANCE">
+          <actualSpeed>
+            <surveillance uom="KNOTS">325.0</surveillance>
+          </actualSpeed>
+          <altitude uom="FEET">45000.0</altitude>
+          <position xsi:type="ns4:LocationPointType">
+            <location srsName="urn:ogc:def:crs:EPSG::4326">
+              <pos>34.535833 -96.695</pos>
+            </location>
+          </position>
+          <targetAltitude uom="FEET">45000.0</targetAltitude>
+          <targetPosition srsName="urn:ogc:def:crs:EPSG::4326">
+            <pos>34.534444 -96.696667</pos>
+          </targetPosition>
+          <trackVelocity>
+            <x uom="KNOTS">-57.0</x>
+            <y uom="KNOTS">320.0</y>
+          </trackVelocity>
+        </position>
+      </enRoute>
+      <flightIdentification xsi:type="ns5:NasFlightIdentificationType" computerId="906" siteSpecificPlanId="95" aircraftIdentification="N357BE"/>
+      <flightStatus xsi:type="ns5:NasFlightStatusType" fdpsFlightStatus="ACTIVE"/>
+      <gufi codeSpace="urn:uuid">8d349b4a-1ece-4cb6-a16b-ff2703c12731</gufi>
+      <supplementalData xsi:type="ns5:NasSupplementalDataType">
+        <additionalFlightInformation>
+          <nameValue name="MSG_SEQ_NO" value="24312686"/>
+          <nameValue name="FDPS_GUFI" value="us.fdps.2016-09-27T16:42:40Z.000/07/300"/>
+          <nameValue name="FLIGHT_PLAN_SEQ_NO" value="6"/>
+        </additionalFlightInformation>
+      </supplementalData>
+      <assignedAltitude>
+        <simple uom="FEET">45000.0</simple>
+      </assignedAltitude>
+      <flightPlan identifier="KH60160300"/>
+    </flight>
+  </message>
+  <message xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="ns5:FlightMessageType">
+    <flight xsi:type="ns5:NasFlightType" centre="ZKC" source="TH" system="ATL" timestamp="2016-09-27T18:59:49.401Z">
+      <controllingUnit xsi:type="ns4:IdentifiedUnitReferenceType" unitIdentifier="AOK" sectorIdentifier="1W"/>
+      <enRoute xsi:type="ns5:NasEnRouteType">
+        <position xsi:type="ns5:NasAircraftPositionType" targetPositionTime="2016-09-20T18:59:46Z" positionTime="2016-09-20T18:59:46Z" reportSource="SURVEILLANCE">
+          <actualSpeed>
+            <surveillance uom="KNOTS">187.0</surveillance>
+          </actualSpeed>
+          <altitude uom="FEET">13300.0</altitude>
+          <position xsi:type="ns4:LocationPointType">
+            <location srsName="urn:ogc:def:crs:EPSG::4326">
+              <pos>36.0875 -97.640278</pos>
+            </location>
+          </position>
+          <targetAltitude uom="FEET">13300.0</targetAltitude>
+          <targetPosition srsName="urn:ogc:def:crs:EPSG::4326">
+            <pos>36.0875 -97.641389</pos>
+          </targetPosition>
+          <trackVelocity>
+            <x uom="KNOTS">-23.0</x>
+            <y uom="KNOTS">-185.0</y>
+          </trackVelocity>
+        </position>
+      </enRoute>
+      <flightIdentification xsi:type="ns5:NasFlightIdentificationType" computerId="568" siteSpecificPlanId="352" aircraftIdentification="N1064S"/>
+      <supplementalData xsi:type="ns5:NasSupplementalDataType">
+        <additionalFlightInformation>
+          <nameValue name="MSG_SEQ_NO" value="24312748"/>
+          <nameValue name="FLIGHT_PLAN_SEQ_NO" value="0"/>
+        </additionalFlightInformation>
+      </supplementalData>
+      <assignedAltitude>
+        <vfr/>
+      </assignedAltitude>
+    </flight>
+  </message>
+  <message xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="ns5:FlightMessageType">
+    <flight xsi:type="ns5:NasFlightType" centre="ZKC" source="TH" system="ATL" timestamp="2016-09-27T18:59:49.384Z">
+      <arrival xsi:type="ns5:NasArrivalType" arrivalPoint="KPOF">
+        <runwayPositionAndTime>
+          <runwayTime>
+            <estimated time="2016-09-20T18:34:00Z"/>
+          </runwayTime>
+        </runwayPositionAndTime>
+      </arrival>
+      <controllingUnit xsi:type="ns4:IdentifiedUnitReferenceType" unitIdentifier="ZME" sectorIdentifier="04"/>
+      <departure xsi:type="ns5:NasDepartureType" departurePoint="KICT">
+        <runwayPositionAndTime>
+          <runwayTime>
+            <actual time="2016-09-20T17:59:00Z"/>
+          </runwayTime>
+        </runwayPositionAndTime>
+      </departure>
+      <enRoute xsi:type="ns5:NasEnRouteType">
+        <position xsi:type="ns5:NasAircraftPositionType" targetPositionTime="2016-09-20T18:59:48Z" positionTime="2016-09-20T18:59:48Z" reportSource="SURVEILLANCE">
+          <actualSpeed>
+            <surveillance uom="KNOTS">346.0</surveillance>
+          </actualSpeed>
+          <altitude uom="FEET">18600.0</altitude>
+          <position xsi:type="ns4:LocationPointType">
+            <location srsName="urn:ogc:def:crs:EPSG::4326">
+              <pos>36.9325 -91.523611</pos>
+            </location>
+          </position>
+          <targetAltitude uom="FEET">18600.0</targetAltitude>
+          <targetPosition srsName="urn:ogc:def:crs:EPSG::4326">
+            <pos>36.9325 -91.523056</pos>
+          </targetPosition>
+          <trackVelocity>
+            <x uom="KNOTS">341.0</x>
+            <y uom="KNOTS">-54.0</y>
+          </trackVelocity>
+        </position>
+      </enRoute>
+      <flightIdentification xsi:type="ns5:NasFlightIdentificationType" computerId="019" siteSpecificPlanId="494" aircraftIdentification="N900FH"/>
+      <flightStatus xsi:type="ns5:NasFlightStatusType" fdpsFlightStatus="ACTIVE"/>
+      <gufi codeSpace="urn:uuid">e2aec512-4006-425c-8b43-33db9c64f9f9</gufi>
+      <supplementalData xsi:type="ns5:NasSupplementalDataType">
+        <additionalFlightInformation>
+          <nameValue name="MSG_SEQ_NO" value="24312718"/>
+          <nameValue name="FDPS_GUFI" value="us.fdps.2016-09-27T17:15:31Z.000/10/300"/>
+          <nameValue name="FLIGHT_PLAN_SEQ_NO" value="5"/>
+        </additionalFlightInformation>
+      </supplementalData>
+      <assignedAltitude>
+        <simple uom="FEET">5000.0</simple>
+      </assignedAltitude>
+      <flightPlan identifier="KK62131300"/>
+    </flight>
+  </message>
+  <message xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="ns5:FlightMessageType">
+    <flight xsi:type="ns5:NasFlightType" centre="ZKC" source="TH" system="ATL" timestamp="2016-09-27T18:59:49.384Z">
+      <arrival xsi:type="ns5:NasArrivalType" arrivalPoint="KCYS">
+        <runwayPositionAndTime>
+          <runwayTime>
+            <estimated time="2016-09-20T20:07:00Z"/>
+          </runwayTime>
+        </runwayPositionAndTime>
+      </arrival>
+      <controllingUnit xsi:type="ns4:IdentifiedUnitReferenceType" unitIdentifier="ZMP" sectorIdentifier="40"/>
+      <departure xsi:type="ns5:NasDepartureType" departurePoint="KPOB">
+        <runwayPositionAndTime>
+          <runwayTime>
+            <actual time="2016-09-20T16:26:00Z"/>
+          </runwayTime>
+        </runwayPositionAndTime>
+      </departure>
+      <enRoute xsi:type="ns5:NasEnRouteType">
+        <position xsi:type="ns5:NasAircraftPositionType" targetPositionTime="2016-09-20T18:59:45Z" positionTime="2016-09-20T18:59:45Z" reportSource="SURVEILLANCE">
+          <actualSpeed>
+            <surveillance uom="KNOTS">355.0</surveillance>
+          </actualSpeed>
+          <altitude uom="FEET">40000.0</altitude>
+          <position xsi:type="ns4:LocationPointType">
+            <location srsName="urn:ogc:def:crs:EPSG::4326">
+              <pos>40.056111 -97.053056</pos>
+            </location>
+          </position>
+          <targetAltitude uom="FEET">40000.0</targetAltitude>
+          <targetPosition srsName="urn:ogc:def:crs:EPSG::4326">
+            <pos>40.056944 -97.053333</pos>
+          </targetPosition>
+          <trackVelocity>
+            <x uom="KNOTS">-346.0</x>
+            <y uom="KNOTS">80.0</y>
+          </trackVelocity>
+        </position>
+      </enRoute>
+      <flightIdentification xsi:type="ns5:NasFlightIdentificationType" computerId="785" siteSpecificPlanId="507" aircraftIdentification="PAT009"/>
+      <flightStatus xsi:type="ns5:NasFlightStatusType" fdpsFlightStatus="ACTIVE"/>
+      <gufi codeSpace="urn:uuid">e17277b9-e741-444a-8ef1-2c4dc784a80a</gufi>
+      <operator>
+        <operatingOrganization>
+          <organization name="PAT"/>
+        </operatingOrganization>
+      </operator>
+      <supplementalData xsi:type="ns5:NasSupplementalDataType">
+        <additionalFlightInformation>
+          <nameValue name="MSG_SEQ_NO" value="24312715"/>
+          <nameValue name="FDPS_GUFI" value="us.fdps.2016-09-27T14:02:33Z.000/22/300"/>
+          <nameValue name="FLIGHT_PLAN_SEQ_NO" value="15"/>
+        </additionalFlightInformation>
+      </supplementalData>
+      <assignedAltitude>
+        <simple uom="FEET">40000.0</simple>
+      </assignedAltitude>
+      <flightPlan identifier="KW50553300"/>
+    </flight>
+  </message>
+  <message xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="ns5:FlightMessageType">
+    <flight xsi:type="ns5:NasFlightType" centre="ZKC" source="TH" system="ATL" timestamp="2016-09-27T18:59:49.401Z">
+      <arrival xsi:type="ns5:NasArrivalType" arrivalPoint="KMDW">
+        <runwayPositionAndTime>
+          <runwayTime>
+            <estimated time="2016-09-20T19:31:00Z"/>
+          </runwayTime>
+        </runwayPositionAndTime>
+      </arrival>
+      <controllingUnit xsi:type="ns4:IdentifiedUnitReferenceType" unitIdentifier="ZAU" sectorIdentifier="45"/>
+      <departure xsi:type="ns5:NasDepartureType" departurePoint="KJAN">
+        <runwayPositionAndTime>
+          <runwayTime>
+            <actual time="2016-09-20T17:57:00Z"/>
+          </runwayTime>
+        </runwayPositionAndTime>
+      </departure>
+      <enRoute xsi:type="ns5:NasEnRouteType">
+        <boundaryCrossings xsi:type="ns5:NasUnitBoundaryType">
+          <handoff xsi:type="ns5:NasHandoffType">
+            <receivingUnit xsi:type="ns4:IdentifiedUnitReferenceType" unitIdentifier="ZAU" sectorIdentifier="55"/>
+          </handoff>
+        </boundaryCrossings>
+        <position xsi:type="ns5:NasAircraftPositionType" targetPositionTime="2016-09-20T18:59:36Z" positionTime="2016-09-20T18:59:36Z" reportSource="SURVEILLANCE">
+          <actualSpeed>
+            <surveillance uom="KNOTS">492.0</surveillance>
+          </actualSpeed>
+          <altitude uom="FEET">29000.0</altitude>
+          <position xsi:type="ns4:LocationPointType">
+            <location srsName="urn:ogc:def:crs:EPSG::4326">
+              <pos>40.060833 -89.302222</pos>
+            </location>
+          </position>
+          <targetAltitude uom="FEET">29000.0</targetAltitude>
+          <targetPosition srsName="urn:ogc:def:crs:EPSG::4326">
+            <pos>40.060833 -89.301667</pos>
+          </targetPosition>
+          <trackVelocity>
+            <x uom="KNOTS">47.0</x>
+            <y uom="KNOTS">490.0</y>
+          </trackVelocity>
+        </position>
+      </enRoute>
+      <flightIdentification xsi:type="ns5:NasFlightIdentificationType" computerId="251" siteSpecificPlanId="499" aircraftIdentification="N118RK"/>
+      <flightStatus xsi:type="ns5:NasFlightStatusType" fdpsFlightStatus="ACTIVE"/>
+      <gufi codeSpace="urn:uuid">0250b0ab-1fdc-4fe8-9e10-a633f307746e</gufi>
+      <supplementalData xsi:type="ns5:NasSupplementalDataType">
+        <additionalFlightInformation>
+          <nameValue name="MSG_SEQ_NO" value="24312752"/>
+          <nameValue name="FDPS_GUFI" value="us.fdps.2016-09-27T16:03:38Z.000/12/300"/>
+          <nameValue name="FLIGHT_PLAN_SEQ_NO" value="12"/>
+        </additionalFlightInformation>
+      </supplementalData>
+      <assignedAltitude>
+        <simple uom="FEET">24000.0</simple>
+      </assignedAltitude>
+      <flightPlan identifier="KM57818300"/>
+    </flight>
+  </message>
+  <message xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="ns5:FlightMessageType">
+    <flight xsi:type="ns5:NasFlightType" centre="ZKC" source="TH" system="ATL" timestamp="2016-09-27T18:59:49.401Z">
+      <arrival xsi:type="ns5:NasArrivalType" arrivalPoint="KMCI">
+        <runwayPositionAndTime>
+          <runwayTime>
+            <estimated time="2016-09-20T19:37:00Z"/>
+          </runwayTime>
+        </runwayPositionAndTime>
+      </arrival>
+      <controllingUnit xsi:type="ns4:IdentifiedUnitReferenceType" unitIdentifier="ZAU" sectorIdentifier="94"/>
+      <departure xsi:type="ns5:NasDepartureType" departurePoint="KORD">
+        <runwayPositionAndTime>
+          <runwayTime>
+            <actual time="2016-09-20T18:38:00Z"/>
+          </runwayTime>
+        </runwayPositionAndTime>
+      </departure>
+      <enRoute xsi:type="ns5:NasEnRouteType">
+        <boundaryCrossings xsi:type="ns5:NasUnitBoundaryType">
+          <handoff xsi:type="ns5:NasHandoffType">
+            <receivingUnit xsi:type="ns4:IdentifiedUnitReferenceType" unitIdentifier="ZAU" sectorIdentifier="95"/>
+          </handoff>
+        </boundaryCrossings>
+        <position xsi:type="ns5:NasAircraftPositionType" targetPositionTime="2016-09-20T18:59:42Z" positionTime="2016-09-20T18:59:42Z" reportSource="SURVEILLANCE">
+          <actualSpeed>
+            <surveillance uom="KNOTS">406.0</surveillance>
+          </actualSpeed>
+          <altitude uom="FEET">32300.0</altitude>
+          <position xsi:type="ns4:LocationPointType">
+            <location srsName="urn:ogc:def:crs:EPSG::4326">
+              <pos>41.407778 -90.043889</pos>
+            </location>
+          </position>
+          <targetAltitude uom="FEET">32300.0</targetAltitude>
+          <targetPosition srsName="urn:ogc:def:crs:EPSG::4326">
+            <pos>41.408056 -90.042778</pos>
+          </targetPosition>
+          <trackVelocity>
+            <x uom="KNOTS">-353.0</x>
+            <y uom="KNOTS">-201.0</y>
+          </trackVelocity>
+        </position>
+      </enRoute>
+      <flightIdentification xsi:type="ns5:NasFlightIdentificationType" computerId="940" siteSpecificPlanId="441" aircraftIdentification="ENY3362"/>
+      <flightStatus xsi:type="ns5:NasFlightStatusType" fdpsFlightStatus="ACTIVE"/>
+      <gufi codeSpace="urn:uuid">8129c49c-1ac4-4136-bad0-4f0bc98d7a62</gufi>
+      <operator>
+        <operatingOrganization>
+          <organization name="ENY"/>
+        </operatingOrganization>
+      </operator>
+      <supplementalData xsi:type="ns5:NasSupplementalDataType">
+        <additionalFlightInformation>
+          <nameValue name="MSG_SEQ_NO" value="24312737"/>
+          <nameValue name="FDPS_GUFI" value="us.fdps.2016-09-27T17:04:59Z.000/06/300"/>
+          <nameValue name="FLIGHT_PLAN_SEQ_NO" value="5"/>
+        </additionalFlightInformation>
+      </supplementalData>
+      <assignedAltitude>
+        <simple uom="FEET">38000.0</simple>
+      </assignedAltitude>
+      <flightPlan identifier="KG61499300"/>
+    </flight>
+  </message>
+  <message xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="ns5:FlightMessageType">
+    <flight xsi:type="ns5:NasFlightType" centre="ZKC" source="TH" system="ATL" timestamp="2016-09-27T18:59:49.401Z">
+      <arrival xsi:type="ns5:NasArrivalType" arrivalPoint="KLAX">
+        <runwayPositionAndTime>
+          <runwayTime>
+            <estimated time="2016-09-20T22:22:00Z"/>
+          </runwayTime>
+        </runwayPositionAndTime>
+      </arrival>
+      <controllingUnit xsi:type="ns4:IdentifiedUnitReferenceType" unitIdentifier="ZME" sectorIdentifier="35"/>
+      <departure xsi:type="ns5:NasDepartureType" departurePoint="KBWI">
+        <runwayPositionAndTime>
+          <runwayTime>
+            <actual time="2016-09-20T17:28:00Z"/>
+          </runwayTime>
+        </runwayPositionAndTime>
+      </departure>
+      <enRoute xsi:type="ns5:NasEnRouteType">
+        <position xsi:type="ns5:NasAircraftPositionType" targetPositionTime="2016-09-20T18:59:47Z" positionTime="2016-09-20T18:59:47Z" reportSource="SURVEILLANCE">
+          <actualSpeed>
+            <surveillance uom="KNOTS">430.0</surveillance>
+          </actualSpeed>
+          <altitude uom="FEET">36000.0</altitude>
+          <position xsi:type="ns4:LocationPointType">
+            <location srsName="urn:ogc:def:crs:EPSG::4326">
+              <pos>36.670833 -90.064167</pos>
+            </location>
+          </position>
+          <targetAltitude uom="FEET">36000.0</targetAltitude>
+          <targetPosition srsName="urn:ogc:def:crs:EPSG::4326">
+            <pos>36.670278 -90.063611</pos>
+          </targetPosition>
+          <trackVelocity>
+            <x uom="KNOTS">-425.0</x>
+            <y uom="KNOTS">-60.0</y>
+          </trackVelocity>
+        </position>
+      </enRoute>
+      <flightIdentification xsi:type="ns5:NasFlightIdentificationType" computerId="385" siteSpecificPlanId="735" aircraftIdentification="SWA877"/>
+      <flightStatus xsi:type="ns5:NasFlightStatusType" fdpsFlightStatus="ACTIVE"/>
+      <gufi codeSpace="urn:uuid">e7bc3d6f-c752-410e-9db1-b876e79aa61a</gufi>
+      <operator>
+        <operatingOrganization>
+          <organization name="SWA"/>
+        </operatingOrganization>
+      </operator>
+      <supplementalData xsi:type="ns5:NasSupplementalDataType">
+        <additionalFlightInformation>
+          <nameValue name="MSG_SEQ_NO" value="24312735"/>
+          <nameValue name="FDPS_GUFI" value="us.fdps.2016-09-27T14:53:44Z.000/22/300"/>
+          <nameValue name="FLIGHT_PLAN_SEQ_NO" value="8"/>
+        </additionalFlightInformation>
+      </supplementalData>
+      <assignedAltitude>
+        <simple uom="FEET">36000.0</simple>
+      </assignedAltitude>
+      <flightPlan identifier="KW53624300"/>
+    </flight>
+  </message>
+  <message xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="ns5:FlightMessageType">
+    <flight xsi:type="ns5:NasFlightType" centre="ZKC" source="TH" system="ATL" timestamp="2016-09-27T18:59:49.413Z">
+      <arrival xsi:type="ns5:NasArrivalType" arrivalPoint="KSAN">
+        <runwayPositionAndTime>
+          <runwayTime>
+            <estimated time="2016-09-20T20:57:00Z"/>
+          </runwayTime>
+        </runwayPositionAndTime>
+      </arrival>
+      <controllingUnit xsi:type="ns4:IdentifiedUnitReferenceType" unitIdentifier="ZAB" sectorIdentifier="71"/>
+      <departure xsi:type="ns5:NasDepartureType" departurePoint="KORD">
+        <runwayPositionAndTime>
+          <runwayTime>
+            <actual time="2016-09-20T17:07:00Z"/>
+          </runwayTime>
+        </runwayPositionAndTime>
+      </departure>
+      <enRoute xsi:type="ns5:NasEnRouteType">
+        <position xsi:type="ns5:NasAircraftPositionType" targetPositionTime="2016-09-20T18:59:39Z" positionTime="2016-09-20T18:59:39Z" reportSource="SURVEILLANCE">
+          <actualSpeed>
+            <surveillance uom="KNOTS">408.0</surveillance>
+          </actualSpeed>
+          <altitude uom="FEET">38000.0</altitude>
+          <position xsi:type="ns4:LocationPointType">
+            <location srsName="urn:ogc:def:crs:EPSG::4326">
+              <pos>36.786111 -102.589167</pos>
+            </location>
+          </position>
+          <targetAltitude uom="FEET">38000.0</targetAltitude>
+          <targetPosition srsName="urn:ogc:def:crs:EPSG::4326">
+            <pos>36.785 -102.588611</pos>
+          </targetPosition>
+          <trackVelocity>
+            <x uom="KNOTS">-359.0</x>
+            <y uom="KNOTS">-193.0</y>
+          </trackVelocity>
+        </position>
+      </enRoute>
+      <flightIdentification xsi:type="ns5:NasFlightIdentificationType" computerId="959" siteSpecificPlanId="152" aircraftIdentification="AAL1296"/>
+      <flightStatus xsi:type="ns5:NasFlightStatusType" fdpsFlightStatus="ACTIVE"/>
+      <gufi codeSpace="urn:uuid">b160c7ca-905b-425c-93c9-fc9e46034d97</gufi>
+      <operator>
+        <operatingOrganization>
+          <organization name="AAL"/>
+        </operatingOrganization>
+      </operator>
+      <supplementalData xsi:type="ns5:NasSupplementalDataType">
+        <additionalFlightInformation>
+          <nameValue name="MSG_SEQ_NO" value="24312767"/>
+          <nameValue name="FDPS_GUFI" value="us.fdps.2016-09-27T15:46:03Z.000/06/300"/>
+          <nameValue name="FLIGHT_PLAN_SEQ_NO" value="10"/>
+        </additionalFlightInformation>
+      </supplementalData>
+      <assignedAltitude>
+        <simple uom="FEET">38000.0</simple>
+      </assignedAltitude>
+      <flightPlan identifier="KG56763300"/>
+    </flight>
+  </message>
+  <message xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="ns5:FlightMessageType">
+    <flight xsi:type="ns5:NasFlightType" centre="ZKC" source="TH" system="ATL" timestamp="2016-09-27T18:59:49.401Z">
+      <arrival xsi:type="ns5:NasArrivalType" arrivalPoint="KORD">
+        <runwayPositionAndTime>
+          <runwayTime>
+            <estimated time="2016-09-20T20:39:00Z"/>
+          </runwayTime>
+        </runwayPositionAndTime>
+      </arrival>
+      <controllingUnit xsi:type="ns4:IdentifiedUnitReferenceType" unitIdentifier="ZDV" sectorIdentifier="28"/>
+      <departure xsi:type="ns5:NasDepartureType" departurePoint="KPHX">
+        <runwayPositionAndTime>
+          <runwayTime>
+            <actual time="2016-09-20T17:49:00Z"/>
+          </runwayTime>
+        </runwayPositionAndTime>
+      </departure>
+      <enRoute xsi:type="ns5:NasEnRouteType">
+        <position xsi:type="ns5:NasAircraftPositionType" targetPositionTime="2016-09-20T18:59:40Z" positionTime="2016-09-20T18:59:40Z" reportSource="SURVEILLANCE">
+          <actualSpeed>
+            <surveillance uom="KNOTS">499.0</surveillance>
+          </actualSpeed>
+          <altitude uom="FEET">35000.0</altitude>
+          <position xsi:type="ns4:LocationPointType">
+            <location srsName="urn:ogc:def:crs:EPSG::4326">
+              <pos>38.078889 -103.096944</pos>
+            </location>
+          </position>
+          <targetAltitude uom="FEET">35000.0</targetAltitude>
+          <targetPosition srsName="urn:ogc:def:crs:EPSG::4326">
+            <pos>38.077222 -103.097778</pos>
+          </targetPosition>
+          <trackVelocity>
+            <x uom="KNOTS">468.0</x>
+            <y uom="KNOTS">174.0</y>
+          </trackVelocity>
+        </position>
+      </enRoute>
+      <flightIdentification xsi:type="ns5:NasFlightIdentificationType" computerId="580" siteSpecificPlanId="640" aircraftIdentification="AAL710"/>
+      <flightStatus xsi:type="ns5:NasFlightStatusType" fdpsFlightStatus="ACTIVE"/>
+      <gufi codeSpace="urn:uuid">a0308f7b-de72-41a0-b7ae-34d296c2ce77</gufi>
+      <operator>
+        <operatingOrganization>
+          <organization name="AAL"/>
+        </operatingOrganization>
+      </operator>
+      <supplementalData xsi:type="ns5:NasSupplementalDataType">
+        <additionalFlightInformation>
+          <nameValue name="MSG_SEQ_NO" value="24312740"/>
+          <nameValue name="FDPS_GUFI" value="us.fdps.2016-09-27T16:15:25Z.000/00/300"/>
+          <nameValue name="FLIGHT_PLAN_SEQ_NO" value="4"/>
+        </additionalFlightInformation>
+      </supplementalData>
+      <assignedAltitude>
+        <simple uom="FEET">35000.0</simple>
+      </assignedAltitude>
+      <flightPlan identifier="KA58525300"/>
+    </flight>
+  </message>
+  <message xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="ns5:FlightMessageType">
+    <flight xsi:type="ns5:NasFlightType" centre="ZKC" source="TH" system="ATL" timestamp="2016-09-27T18:59:49.427Z">
+      <arrival xsi:type="ns5:NasArrivalType" arrivalPoint="KORD">
+        <runwayPositionAndTime>
+          <runwayTime>
+            <estimated time="2016-09-20T20:58:00Z"/>
+          </runwayTime>
+        </runwayPositionAndTime>
+      </arrival>
+      <controllingUnit xsi:type="ns4:IdentifiedUnitReferenceType" unitIdentifier="ZAB" sectorIdentifier="71"/>
+      <departure xsi:type="ns5:NasDepartureType" departurePoint="KABQ">
+        <runwayPositionAndTime>
+          <runwayTime>
+            <actual time="2016-09-20T18:40:00Z"/>
+          </runwayTime>
+        </runwayPositionAndTime>
+      </departure>
+      <enRoute xsi:type="ns5:NasEnRouteType">
+        <position xsi:type="ns5:NasAircraftPositionType" targetPositionTime="2016-09-20T18:59:37Z" positionTime="2016-09-20T18:59:37Z" reportSource="SURVEILLANCE">
+          <actualSpeed>
+            <surveillance uom="KNOTS">493.0</surveillance>
+          </actualSpeed>
+          <altitude uom="FEET">36600.0</altitude>
+          <position xsi:type="ns4:LocationPointType">
+            <location srsName="urn:ogc:def:crs:EPSG::4326">
+              <pos>35.917778 -104.654167</pos>
+            </location>
+          </position>
+          <targetAltitude uom="FEET">36600.0</targetAltitude>
+          <targetPosition srsName="urn:ogc:def:crs:EPSG::4326">
+            <pos>35.917778 -104.653889</pos>
+          </targetPosition>
+          <trackVelocity>
+            <x uom="KNOTS">412.0</x>
+            <y uom="KNOTS">271.0</y>
+          </trackVelocity>
+        </position>
+      </enRoute>
+      <flightIdentification xsi:type="ns5:NasFlightIdentificationType" computerId="277" siteSpecificPlanId="210" aircraftIdentification="UAL541"/>
+      <flightStatus xsi:type="ns5:NasFlightStatusType" fdpsFlightStatus="ACTIVE"/>
+      <gufi codeSpace="urn:uuid">6a808eb0-6f3a-4470-bc6a-7dbb0b4fe053</gufi>
+      <operator>
+        <operatingOrganization>
+          <organization name="UAL"/>
+        </operatingOrganization>
+      </operator>
+      <supplementalData xsi:type="ns5:NasSupplementalDataType">
+        <additionalFlightInformation>
+          <nameValue name="MSG_SEQ_NO" value="24312788"/>
+          <nameValue name="FDPS_GUFI" value="us.fdps.2016-09-27T15:32:33Z.000/00/300"/>
+          <nameValue name="FLIGHT_PLAN_SEQ_NO" value="2"/>
+        </additionalFlightInformation>
+      </supplementalData>
+      <assignedAltitude>
+        <simple uom="FEET">39000.0</simple>
+      </assignedAltitude>
+      <flightPlan identifier="KA55953300"/>
+    </flight>
+  </message>
+  <message xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="ns5:FlightMessageType">
+    <flight xsi:type="ns5:NasFlightType" centre="ZKC" source="TH" system="ATL" timestamp="2016-09-27T18:59:49.413Z">
+      <arrival xsi:type="ns5:NasArrivalType" arrivalPoint="KLAX">
+        <runwayPositionAndTime>
+          <runwayTime>
+            <estimated time="2016-09-20T21:17:00Z"/>
+          </runwayTime>
+        </runwayPositionAndTime>
+      </arrival>
+      <controllingUnit xsi:type="ns4:IdentifiedUnitReferenceType" unitIdentifier="ZAB" sectorIdentifier="71"/>
+      <departure xsi:type="ns5:NasDepartureType" departurePoint="KBOS">
+        <runwayPositionAndTime>
+          <runwayTime>
+            <actual time="2016-09-20T15:28:00Z"/>
+          </runwayTime>
+        </runwayPositionAndTime>
+      </departure>
+      <enRoute xsi:type="ns5:NasEnRouteType">
+        <position xsi:type="ns5:NasAircraftPositionType" targetPositionTime="2016-09-20T18:59:39Z" positionTime="2016-09-20T18:59:39Z" reportSource="SURVEILLANCE">
+          <actualSpeed>
+            <surveillance uom="KNOTS">437.0</surveillance>
+          </actualSpeed>
+          <altitude uom="FEET">34000.0</altitude>
+          <position xsi:type="ns4:LocationPointType">
+            <location srsName="urn:ogc:def:crs:EPSG::4326">
+              <pos>36.432778 -102.203611</pos>
+            </location>
+          </position>
+          <targetAltitude uom="FEET">34000.0</targetAltitude>
+          <targetPosition srsName="urn:ogc:def:crs:EPSG::4326">
+            <pos>36.433056 -102.201389</pos>
+          </targetPosition>
+          <trackVelocity>
+            <x uom="KNOTS">-418.0</x>
+            <y uom="KNOTS">-128.0</y>
+          </trackVelocity>
+        </position>
+      </enRoute>
+      <flightIdentification xsi:type="ns5:NasFlightIdentificationType" computerId="051" siteSpecificPlanId="677" aircraftIdentification="VRD365"/>
+      <flightStatus xsi:type="ns5:NasFlightStatusType" fdpsFlightStatus="ACTIVE"/>
+      <gufi codeSpace="urn:uuid">b11670ea-b1fa-4b3f-b0b6-0dd7e3f00d17</gufi>
+      <operator>
+        <operatingOrganization>
+          <organization name="VRD"/>
+        </operatingOrganization>
+      </operator>
+      <supplementalData xsi:type="ns5:NasSupplementalDataType">
+        <additionalFlightInformation>
+          <nameValue name="MSG_SEQ_NO" value="24312768"/>
+          <nameValue name="FDPS_GUFI" value="us.fdps.2016-09-27T13:22:16Z.000/01/300"/>
+          <nameValue name="FLIGHT_PLAN_SEQ_NO" value="9"/>
+        </additionalFlightInformation>
+      </supplementalData>
+      <assignedAltitude>
+        <simple uom="FEET">34000.0</simple>
+      </assignedAltitude>
+      <flightPlan identifier="KB48136300"/>
+    </flight>
+  </message>
+  <message xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="ns5:FlightMessageType">
+    <flight xsi:type="ns5:NasFlightType" centre="ZKC" source="TH" system="ATL" timestamp="2016-09-27T18:59:49.438Z">
+      <arrival xsi:type="ns5:NasArrivalType" arrivalPoint="KJFK">
+        <runwayPositionAndTime>
+          <runwayTime>
+            <estimated time="2016-09-20T20:46:00Z"/>
+          </runwayTime>
+        </runwayPositionAndTime>
+      </arrival>
+      <controllingUnit xsi:type="ns4:IdentifiedUnitReferenceType" unitIdentifier="ZID" sectorIdentifier="99"/>
+      <departure xsi:type="ns5:NasDepartureType" departurePoint="KPHX">
+        <runwayPositionAndTime>
+          <runwayTime>
+            <actual time="2016-09-20T16:24:00Z"/>
+          </runwayTime>
+        </runwayPositionAndTime>
+      </departure>
+      <enRoute xsi:type="ns5:NasEnRouteType">
+        <position xsi:type="ns5:NasAircraftPositionType" targetPositionTime="2016-09-20T18:59:43Z" positionTime="2016-09-20T18:59:43Z" reportSource="SURVEILLANCE">
+          <actualSpeed>
+            <surveillance uom="KNOTS">471.0</surveillance>
+          </actualSpeed>
+          <altitude uom="FEET">37000.0</altitude>
+          <position xsi:type="ns4:LocationPointType">
+            <location srsName="urn:ogc:def:crs:EPSG::4326">
+              <pos>39.249722 -88.141111</pos>
+            </location>
+          </position>
+          <targetAltitude uom="FEET">37000.0</targetAltitude>
+          <targetPosition srsName="urn:ogc:def:crs:EPSG::4326">
+            <pos>39.250556 -88.141111</pos>
+          </targetPosition>
+          <trackVelocity>
+            <x uom="KNOTS">465.0</x>
+            <y uom="KNOTS">74.0</y>
+          </trackVelocity>
+        </position>
+      </enRoute>
+      <flightIdentification xsi:type="ns5:NasFlightIdentificationType" computerId="147" siteSpecificPlanId="678" aircraftIdentification="AAL106"/>
+      <flightStatus xsi:type="ns5:NasFlightStatusType" fdpsFlightStatus="ACTIVE"/>
+      <gufi codeSpace="urn:uuid">3dda2451-414a-41de-9b0c-2d223de11740</gufi>
+      <operator>
+        <operatingOrganization>
+          <organization name="AAL"/>
+        </operatingOrganization>
+      </operator>
+      <supplementalData xsi:type="ns5:NasSupplementalDataType">
+        <additionalFlightInformation>
+          <nameValue name="MSG_SEQ_NO" value="24312818"/>
+          <nameValue name="FDPS_GUFI" value="us.fdps.2016-09-27T14:51:04Z.000/00/300"/>
+          <nameValue name="FLIGHT_PLAN_SEQ_NO" value="7"/>
+        </additionalFlightInformation>
+      </supplementalData>
+      <assignedAltitude>
+        <simple uom="FEET">37000.0</simple>
+      </assignedAltitude>
+      <flightPlan identifier="KA53464300"/>
+    </flight>
+  </message>
+  <message xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="ns5:FlightMessageType">
+    <flight xsi:type="ns5:NasFlightType" centre="ZKC" source="TH" system="ATL" timestamp="2016-09-27T18:59:49.427Z">
+      <arrival xsi:type="ns5:NasArrivalType" arrivalPoint="KORD">
+        <runwayPositionAndTime>
+          <runwayTime>
+            <estimated time="2016-09-20T20:38:00Z"/>
+          </runwayTime>
+        </runwayPositionAndTime>
+      </arrival>
+      <controllingUnit xsi:type="ns4:IdentifiedUnitReferenceType" unitIdentifier="ZFW" sectorIdentifier="48"/>
+      <departure xsi:type="ns5:NasDepartureType" departurePoint="KDFW">
+        <runwayPositionAndTime>
+          <runwayTime>
+            <actual time="2016-09-20T18:47:00Z"/>
+          </runwayTime>
+        </runwayPositionAndTime>
+      </departure>
+      <enRoute xsi:type="ns5:NasEnRouteType">
+        <position xsi:type="ns5:NasAircraftPositionType" targetPositionTime="2016-09-20T18:59:40Z" positionTime="2016-09-20T18:59:40Z" reportSource="SURVEILLANCE">
+          <actualSpeed>
+            <surveillance uom="KNOTS">432.0</surveillance>
+          </actualSpeed>
+          <altitude uom="FEET">23600.0</altitude>
+          <position xsi:type="ns4:LocationPointType">
+            <location srsName="urn:ogc:def:crs:EPSG::4326">
+              <pos>33.621111 -96.713889</pos>
+            </location>
+          </position>
+          <targetAltitude uom="FEET">23600.0</targetAltitude>
+          <targetPosition srsName="urn:ogc:def:crs:EPSG::4326">
+            <pos>33.620833 -96.713889</pos>
+          </targetPosition>
+          <trackVelocity>
+            <x uom="KNOTS">205.0</x>
+            <y uom="KNOTS">380.0</y>
+          </trackVelocity>
+        </position>
+      </enRoute>
+      <flightIdentification xsi:type="ns5:NasFlightIdentificationType" computerId="097" siteSpecificPlanId="349" aircraftIdentification="AAL2311"/>
+      <flightStatus xsi:type="ns5:NasFlightStatusType" fdpsFlightStatus="ACTIVE"/>
+      <gufi codeSpace="urn:uuid">49d3b3e7-27d1-4932-ab6d-3b3882fe9dcc</gufi>
+      <operator>
+        <operatingOrganization>
+          <organization name="AAL"/>
+        </operatingOrganization>
+      </operator>
+      <supplementalData xsi:type="ns5:NasSupplementalDataType">
+        <additionalFlightInformation>
+          <nameValue name="MSG_SEQ_NO" value="24312785"/>
+          <nameValue name="FDPS_GUFI" value="us.fdps.2016-09-27T17:23:00Z.000/05/300"/>
+          <nameValue name="FLIGHT_PLAN_SEQ_NO" value="3"/>
+        </additionalFlightInformation>
+      </supplementalData>
+      <assignedAltitude>
+        <simple uom="FEET">35000.0</simple>
+      </assignedAltitude>
+      <flightPlan identifier="KF62580300"/>
+    </flight>
+  </message>
+  <message xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="ns5:FlightMessageType">
+    <flight xsi:type="ns5:NasFlightType" centre="ZKC" source="TH" system="ATL" timestamp="2016-09-27T18:59:49.438Z">
+      <arrival xsi:type="ns5:NasArrivalType" arrivalPoint="KBOS">
+        <runwayPositionAndTime>
+          <runwayTime>
+            <estimated time="2016-09-20T20:53:00Z"/>
+          </runwayTime>
+        </runwayPositionAndTime>
+      </arrival>
+      <controllingUnit xsi:type="ns4:IdentifiedUnitReferenceType" unitIdentifier="ZAU" sectorIdentifier="45"/>
+      <departure xsi:type="ns5:NasDepartureType" departurePoint="KMCI">
+        <runwayPositionAndTime>
+          <runwayTime>
+            <actual time="2016-09-20T18:19:00Z"/>
+          </runwayTime>
+        </runwayPositionAndTime>
+      </departure>
+      <enRoute xsi:type="ns5:NasEnRouteType">
+        <boundaryCrossings xsi:type="ns5:NasUnitBoundaryType">
+          <handoff xsi:type="ns5:NasHandoffType">
+            <receivingUnit xsi:type="ns4:IdentifiedUnitReferenceType" unitIdentifier="ZAU" sectorIdentifier="47"/>
+          </handoff>
+        </boundaryCrossings>
+        <position xsi:type="ns5:NasAircraftPositionType" targetPositionTime="2016-09-20T18:59:46Z" positionTime="2016-09-20T18:59:46Z" reportSource="SURVEILLANCE">
+          <actualSpeed>
+            <surveillance uom="KNOTS">480.0</surveillance>
+          </actualSpeed>
+          <altitude uom="FEET">39000.0</altitude>
+          <position xsi:type="ns4:LocationPointType">
+            <location srsName="urn:ogc:def:crs:EPSG::4326">
+              <pos>40.591944 -88.694444</pos>
+            </location>
+          </position>
+          <targetAltitude uom="FEET">39000.0</targetAltitude>
+          <targetPosition srsName="urn:ogc:def:crs:EPSG::4326">
+            <pos>40.590556 -88.694722</pos>
+          </targetPosition>
+          <trackVelocity>
+            <x uom="KNOTS">462.0</x>
+            <y uom="KNOTS">131.0</y>
+          </trackVelocity>
+        </position>
+      </enRoute>
+      <flightIdentification xsi:type="ns5:NasFlightIdentificationType" computerId="805" siteSpecificPlanId="242" aircraftIdentification="SWA1528"/>
+      <flightStatus xsi:type="ns5:NasFlightStatusType" fdpsFlightStatus="ACTIVE"/>
+      <gufi codeSpace="urn:uuid">2cdae366-42c3-405f-a01c-44e320e9ce0c</gufi>
+      <operator>
+        <operatingOrganization>
+          <organization name="SWA"/>
+        </operatingOrganization>
+      </operator>
+      <supplementalData xsi:type="ns5:NasSupplementalDataType">
+        <additionalFlightInformation>
+          <nameValue name="MSG_SEQ_NO" value="24312821"/>
+          <nameValue name="FDPS_GUFI" value="us.fdps.2016-09-27T16:53:29Z.000/10/300"/>
+          <nameValue name="FLIGHT_PLAN_SEQ_NO" value="5"/>
+        </additionalFlightInformation>
+      </supplementalData>
+      <assignedAltitude>
+        <simple uom="FEET">39000.0</simple>
+      </assignedAltitude>
+      <flightPlan identifier="KK60809300"/>
+    </flight>
+  </message>
+  <message xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="ns5:FlightMessageType">
+    <flight xsi:type="ns5:NasFlightType" centre="ZKC" source="TH" system="ATL" timestamp="2016-09-27T18:59:49.454Z">
+      <arrival xsi:type="ns5:NasArrivalType" arrivalPoint="KDTW">
+        <runwayPositionAndTime>
+          <runwayTime>
+            <estimated time="2016-09-20T19:35:00Z"/>
+          </runwayTime>
+        </runwayPositionAndTime>
+      </arrival>
+      <controllingUnit xsi:type="ns4:IdentifiedUnitReferenceType" unitIdentifier="ZID" sectorIdentifier="89"/>
+      <departure xsi:type="ns5:NasDepartureType" departurePoint="KSTL">
+        <runwayPositionAndTime>
+          <runwayTime>
+            <actual time="2016-09-20T18:43:00Z"/>
+          </runwayTime>
+        </runwayPositionAndTime>
+      </departure>
+      <enRoute xsi:type="ns5:NasEnRouteType">
+        <position xsi:type="ns5:NasAircraftPositionType" targetPositionTime="2016-09-20T18:59:43Z" positionTime="2016-09-20T18:59:43Z" reportSource="SURVEILLANCE">
+          <actualSpeed>
+            <surveillance uom="KNOTS">470.0</surveillance>
+          </actualSpeed>
+          <altitude uom="FEET">29500.0</altitude>
+          <position xsi:type="ns4:LocationPointType">
+            <location srsName="urn:ogc:def:crs:EPSG::4326">
+              <pos>38.915 -88.528889</pos>
+            </location>
+          </position>
+          <targetAltitude uom="FEET">29500.0</targetAltitude>
+          <targetPosition srsName="urn:ogc:def:crs:EPSG::4326">
+            <pos>38.913889 -88.528889</pos>
+          </targetPosition>
+          <trackVelocity>
+            <x uom="KNOTS">465.0</x>
+            <y uom="KNOTS">70.0</y>
+          </trackVelocity>
+        </position>
+      </enRoute>
+      <flightIdentification xsi:type="ns5:NasFlightIdentificationType" computerId="133" siteSpecificPlanId="286" aircraftIdentification="DAL1232"/>
+      <flightStatus xsi:type="ns5:NasFlightStatusType" fdpsFlightStatus="ACTIVE"/>
+      <gufi codeSpace="urn:uuid">eaed1150-f42d-4975-b694-2ba21f016d0c</gufi>
+      <operator>
+        <operatingOrganization>
+          <organization name="DAL"/>
+        </operatingOrganization>
+      </operator>
+      <supplementalData xsi:type="ns5:NasSupplementalDataType">
+        <additionalFlightInformation>
+          <nameValue name="MSG_SEQ_NO" value="24312871"/>
+          <nameValue name="FDPS_GUFI" value="us.fdps.2016-09-27T17:41:03Z.000/10/300"/>
+          <nameValue name="FLIGHT_PLAN_SEQ_NO" value="3"/>
+        </additionalFlightInformation>
+      </supplementalData>
+      <assignedAltitude>
+        <simple uom="FEET">33000.0</simple>
+      </assignedAltitude>
+      <flightPlan identifier="KK63663300"/>
+    </flight>
+  </message>
+  <message xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="ns5:FlightMessageType">
+    <flight xsi:type="ns5:NasFlightType" centre="ZKC" source="TH" system="ATL" timestamp="2016-09-27T18:59:49.427Z">
+      <arrival xsi:type="ns5:NasArrivalType" arrivalPoint="KAUS">
+        <runwayPositionAndTime>
+          <runwayTime>
+            <estimated time="2016-09-20T20:30:00Z"/>
+          </runwayTime>
+        </runwayPositionAndTime>
+      </arrival>
+      <controllingUnit xsi:type="ns4:IdentifiedUnitReferenceType" unitIdentifier="ZME" sectorIdentifier="01"/>
+      <departure xsi:type="ns5:NasDepartureType" departurePoint="KJLN">
+        <runwayPositionAndTime>
+          <runwayTime>
+            <actual time="2016-09-20T18:42:00Z"/>
+          </runwayTime>
+        </runwayPositionAndTime>
+      </departure>
+      <enRoute xsi:type="ns5:NasEnRouteType">
+        <position xsi:type="ns5:NasAircraftPositionType" targetPositionTime="2016-09-20T18:59:36Z" positionTime="2016-09-20T18:59:36Z" reportSource="SURVEILLANCE">
+          <actualSpeed>
+            <surveillance uom="KNOTS">264.0</surveillance>
+          </actualSpeed>
+          <altitude uom="FEET">20000.0</altitude>
+          <position xsi:type="ns4:LocationPointType">
+            <location srsName="urn:ogc:def:crs:EPSG::4326">
+              <pos>36.483333 -95.155</pos>
+            </location>
+          </position>
+          <targetAltitude uom="FEET">20000.0</targetAltitude>
+          <targetPosition srsName="urn:ogc:def:crs:EPSG::4326">
+            <pos>36.480278 -95.153056</pos>
+          </targetPosition>
+          <trackVelocity>
+            <x uom="KNOTS">-100.0</x>
+            <y uom="KNOTS">-244.0</y>
+          </trackVelocity>
+        </position>
+      </enRoute>
+      <flightIdentification xsi:type="ns5:NasFlightIdentificationType" computerId="978" siteSpecificPlanId="657" aircraftIdentification="FLC76"/>
+      <flightStatus xsi:type="ns5:NasFlightStatusType" fdpsFlightStatus="ACTIVE"/>
+      <gufi codeSpace="urn:uuid">13fbfc73-7c4c-40ff-99a9-3dbc4b82b863</gufi>
+      <operator>
+        <operatingOrganization>
+          <organization name="FLC"/>
+        </operatingOrganization>
+      </operator>
+      <supplementalData xsi:type="ns5:NasSupplementalDataType">
+        <additionalFlightInformation>
+          <nameValue name="MSG_SEQ_NO" value="24312801"/>
+          <nameValue name="FDPS_GUFI" value="us.fdps.2016-09-27T18:15:46Z.000/10/300"/>
+          <nameValue name="FLIGHT_PLAN_SEQ_NO" value="5"/>
+        </additionalFlightInformation>
+      </supplementalData>
+      <assignedAltitude>
+        <simple uom="FEET">20000.0</simple>
+      </assignedAltitude>
+      <flightPlan identifier="KK65746300"/>
+    </flight>
+  </message>
+  <message xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="ns5:FlightMessageType">
+    <flight xsi:type="ns5:NasFlightType" centre="ZKC" source="TH" system="ATL" timestamp="2016-09-27T18:59:49.384Z">
+      <controllingUnit xsi:type="ns4:IdentifiedUnitReferenceType" unitIdentifier="ZKC" sectorIdentifier="96"/>
+      <enRoute xsi:type="ns5:NasEnRouteType">
+        <position xsi:type="ns5:NasAircraftPositionType" targetPositionTime="2016-09-20T18:59:39Z" positionTime="2016-09-20T18:59:39Z" reportSource="SURVEILLANCE">
+          <actualSpeed>
+            <surveillance uom="KNOTS">18.0</surveillance>
+          </actualSpeed>
+          <altitude uom="FEET">56700.0</altitude>
+          <position xsi:type="ns4:LocationPointType">
+            <location srsName="urn:ogc:def:crs:EPSG::4326">
+              <pos>34.904444 -92.485833</pos>
+            </location>
+          </position>
+          <targetAltitude uom="FEET">56700.0</targetAltitude>
+          <targetPosition srsName="urn:ogc:def:crs:EPSG::4326">
+            <pos>34.903611 -92.485278</pos>
+          </targetPosition>
+          <trackVelocity>
+            <x uom="KNOTS">14.0</x>
+            <y uom="KNOTS">-11.0</y>
+          </trackVelocity>
+        </position>
+      </enRoute>
+      <flightIdentification xsi:type="ns5:NasFlightIdentificationType" computerId="164" siteSpecificPlanId="28" aircraftIdentification="HBAL475"/>
+      <supplementalData xsi:type="ns5:NasSupplementalDataType">
+        <additionalFlightInformation>
+          <nameValue name="MSG_SEQ_NO" value="24312731"/>
+          <nameValue name="FLIGHT_PLAN_SEQ_NO" value="0"/>
+        </additionalFlightInformation>
+      </supplementalData>
+    </flight>
+  </message>
+  <message xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="ns5:FlightMessageType">
+    <flight xsi:type="ns5:NasFlightType" centre="ZKC" source="TH" system="ATL" timestamp="2016-09-27T18:59:49.427Z">
+      <arrival xsi:type="ns5:NasArrivalType" arrivalPoint="KADS">
+        <runwayPositionAndTime>
+          <runwayTime>
+            <estimated time="2016-09-20T20:00:00Z"/>
+          </runwayTime>
+        </runwayPositionAndTime>
+      </arrival>
+      <controllingUnit xsi:type="ns4:IdentifiedUnitReferenceType" unitIdentifier="ZME" sectorIdentifier="35"/>
+      <departure xsi:type="ns5:NasDepartureType" departurePoint="CYYZ">
+        <runwayPositionAndTime>
+          <runwayTime>
+            <actual time="2016-09-20T17:37:00Z"/>
+          </runwayTime>
+        </runwayPositionAndTime>
+      </departure>
+      <enRoute xsi:type="ns5:NasEnRouteType">
+        <position xsi:type="ns5:NasAircraftPositionType" targetPositionTime="2016-09-20T18:59:48Z" positionTime="2016-09-20T18:59:47Z" reportSource="SURVEILLANCE">
+          <actualSpeed>
+            <surveillance uom="KNOTS">453.0</surveillance>
+          </actualSpeed>
+          <altitude uom="FEET">43000.0</altitude>
+          <position xsi:type="ns4:LocationPointType">
+            <location srsName="urn:ogc:def:crs:EPSG::4326">
+              <pos>36.897778 -91.658889</pos>
+            </location>
+          </position>
+          <targetAltitude uom="FEET">43000.0</targetAltitude>
+          <targetPosition srsName="urn:ogc:def:crs:EPSG::4326">
+            <pos>36.897222 -91.659722</pos>
+          </targetPosition>
+          <trackVelocity>
+            <x uom="KNOTS">-373.0</x>
+            <y uom="KNOTS">-257.0</y>
+          </trackVelocity>
+        </position>
+      </enRoute>
+      <flightIdentification xsi:type="ns5:NasFlightIdentificationType" computerId="444" siteSpecificPlanId="675" aircraftIdentification="N450GA"/>
+      <flightStatus xsi:type="ns5:NasFlightStatusType" fdpsFlightStatus="ACTIVE"/>
+      <gufi codeSpace="urn:uuid">2e312d93-aa42-436f-b0be-0ab9388ed958</gufi>
+      <supplementalData xsi:type="ns5:NasSupplementalDataType">
+        <additionalFlightInformation>
+          <nameValue name="MSG_SEQ_NO" value="24312802"/>
+          <nameValue name="FDPS_GUFI" value="us.fdps.2016-09-27T16:18:05Z.000/02/300"/>
+          <nameValue name="FLIGHT_PLAN_SEQ_NO" value="10"/>
+        </additionalFlightInformation>
+      </supplementalData>
+      <assignedAltitude>
+        <simple uom="FEET">43000.0</simple>
+      </assignedAltitude>
+      <flightPlan identifier="KC58685300"/>
+    </flight>
+  </message>
+  <message xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="ns5:FlightMessageType">
+    <flight xsi:type="ns5:NasFlightType" centre="ZKC" source="TH" system="ATL" timestamp="2016-09-27T18:59:49.438Z">
+      <arrival xsi:type="ns5:NasArrivalType" arrivalPoint="KSGR">
+        <runwayPositionAndTime>
+          <runwayTime>
+            <estimated time="2016-09-20T20:25:00Z"/>
+          </runwayTime>
+        </runwayPositionAndTime>
+      </arrival>
+      <controllingUnit xsi:type="ns4:IdentifiedUnitReferenceType" unitIdentifier="ZME" sectorIdentifier="35"/>
+      <departure xsi:type="ns5:NasDepartureType" departurePoint="KSUS">
+        <runwayPositionAndTime>
+          <runwayTime>
+            <actual time="2016-09-20T18:38:00Z"/>
+          </runwayTime>
+        </runwayPositionAndTime>
+      </departure>
+      <enRoute xsi:type="ns5:NasEnRouteType">
+        <position xsi:type="ns5:NasAircraftPositionType" targetPositionTime="2016-09-20T18:59:46Z" positionTime="2016-09-20T18:59:46Z" reportSource="SURVEILLANCE">
+          <actualSpeed>
+            <surveillance uom="KNOTS">396.0</surveillance>
+          </actualSpeed>
+          <altitude uom="FEET">31800.0</altitude>
+          <position xsi:type="ns4:LocationPointType">
+            <location srsName="urn:ogc:def:crs:EPSG::4326">
+              <pos>36.738056 -91.3575</pos>
+            </location>
+          </position>
+          <targetAltitude uom="FEET">31800.0</targetAltitude>
+          <targetPosition srsName="urn:ogc:def:crs:EPSG::4326">
+            <pos>36.738889 -91.356389</pos>
+          </targetPosition>
+          <trackVelocity>
+            <x uom="KNOTS">-111.0</x>
+            <y uom="KNOTS">-380.0</y>
+          </trackVelocity>
+        </position>
+      </enRoute>
+      <flightIdentification xsi:type="ns5:NasFlightIdentificationType" computerId="194" siteSpecificPlanId="619" aircraftIdentification="N226JT"/>
+      <flightStatus xsi:type="ns5:NasFlightStatusType" fdpsFlightStatus="ACTIVE"/>
+      <gufi codeSpace="urn:uuid">6422b999-d6fc-4853-885e-37ff7a638b62</gufi>
+      <supplementalData xsi:type="ns5:NasSupplementalDataType">
+        <additionalFlightInformation>
+          <nameValue name="MSG_SEQ_NO" value="24312823"/>
+          <nameValue name="FDPS_GUFI" value="us.fdps.2016-09-27T16:33:08Z.000/10/300"/>
+          <nameValue name="FLIGHT_PLAN_SEQ_NO" value="5"/>
+        </additionalFlightInformation>
+      </supplementalData>
+      <assignedAltitude>
+        <simple uom="FEET">40000.0</simple>
+      </assignedAltitude>
+      <flightPlan identifier="KK59588300"/>
+    </flight>
+  </message>
+  <message xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="ns5:FlightMessageType">
+    <flight xsi:type="ns5:NasFlightType" centre="ZKC" source="TH" system="ATL" timestamp="2016-09-27T18:59:49.438Z">
+      <arrival xsi:type="ns5:NasArrivalType" arrivalPoint="KOKC">
+        <runwayPositionAndTime>
+          <runwayTime>
+            <estimated time="2016-09-20T19:03:00Z"/>
+          </runwayTime>
+        </runwayPositionAndTime>
+      </arrival>
+      <controllingUnit xsi:type="ns4:IdentifiedUnitReferenceType" unitIdentifier="AOK" sectorIdentifier="1E"/>
+      <departure xsi:type="ns5:NasDepartureType" departurePoint="KORD">
+        <runwayPositionAndTime>
+          <runwayTime>
+            <actual time="2016-09-20T17:20:00Z"/>
+          </runwayTime>
+        </runwayPositionAndTime>
+      </departure>
+      <enRoute xsi:type="ns5:NasEnRouteType">
+        <position xsi:type="ns5:NasAircraftPositionType" targetPositionTime="2016-09-20T18:59:43Z" positionTime="2016-09-20T18:59:43Z" reportSource="SURVEILLANCE">
+          <actualSpeed>
+            <surveillance uom="KNOTS">124.0</surveillance>
+          </actualSpeed>
+          <altitude uom="FEET">1300.0</altitude>
+          <position xsi:type="ns4:LocationPointType">
+            <location srsName="urn:ogc:def:crs:EPSG::4326">
+              <pos>35.393333 -97.590833</pos>
+            </location>
+          </position>
+          <targetAltitude uom="FEET">1300.0</targetAltitude>
+          <targetPosition srsName="urn:ogc:def:crs:EPSG::4326">
+            <pos>35.393333 -97.590833</pos>
+          </targetPosition>
+          <trackVelocity>
+            <x uom="KNOTS">-41.0</x>
+            <y uom="KNOTS">-117.0</y>
+          </trackVelocity>
+        </position>
+      </enRoute>
+      <flightIdentification xsi:type="ns5:NasFlightIdentificationType" computerId="954" siteSpecificPlanId="43" aircraftIdentification="ASQ4150"/>
+      <flightStatus xsi:type="ns5:NasFlightStatusType" fdpsFlightStatus="DROPPED"/>
+      <gufi codeSpace="urn:uuid">759805ec-31f8-406d-b374-a5471cf0c7ec</gufi>
+      <operator>
+        <operatingOrganization>
+          <organization name="ASQ"/>
+        </operatingOrganization>
+      </operator>
+      <supplementalData xsi:type="ns5:NasSupplementalDataType">
+        <additionalFlightInformation>
+          <nameValue name="MSG_SEQ_NO" value="24312816"/>
+          <nameValue name="FDPS_GUFI" value="us.fdps.2016-09-27T16:09:25Z.000/06/300"/>
+          <nameValue name="FLIGHT_PLAN_SEQ_NO" value="9"/>
+        </additionalFlightInformation>
+      </supplementalData>
+      <assignedAltitude>
+        <simple uom="FEET">28000.0</simple>
+      </assignedAltitude>
+      <flightPlan identifier="KG58165300"/>
+    </flight>
+  </message>
+</ns5:MessageCollection>

@@ -36,7 +36,7 @@ import gov.nasa.worldwind.avlist.AVKey
 import gov.nasa.worldwind.geom.{Angle, Position}
 import gov.nasa.worldwind.render.{Offset, PointPlacemark, PointPlacemarkAttributes}
 import gov.nasa.worldwind.view.orbit.OrbitViewInputHandler
-import squants.space.{Length, UsMiles}
+import squants.space.{Feet, Length, UsMiles}
 
 import scala.collection.concurrent.TrieMap
 import scala.swing.event.SelectionChanged
@@ -149,10 +149,12 @@ class AirportTracksLayer (raceView: RaceView,config: Config)
   }
 
   val panel = new AirportLayerPanel().styled()
-  val activeDistance = UsMiles(config.getDoubleOrElse("view-distance", 5d))
-  val activeAltitude = config.getDoubleOrElse("view-altitude", 8000d)
-  val gotoAltitude = config.getDoubleOrElse("goto-altitude", 7000d)
-  if (getMaxActiveAltitude == Double.MaxValue) setMaxActiveAltitude(activeAltitude)
+  val activeDistance = UsMiles(config.getDoubleOrElse("view-distance", 6d)) // in US miles
+  val activeAltitude = Feet(config.getDoubleOrElse("view-altitude", 30000d)) // feet above ground
+  val gotoAltitude = Feet(config.getDoubleOrElse("goto-altitude", 20000d)) // feet above ground
+
+  // this is the WorldWind limit in MSL (we cut off data at activeAltitude above ground)
+  if (getMaxActiveAltitude == Double.MaxValue) setMaxActiveAltitude(activeAltitude.toMeters + 5000d)
 
   val color = config.getColorOrElse("color", Color.green)
   val acColor = config.getColorOrElse("aircraft-color", Color.yellow)
@@ -203,33 +205,34 @@ class AirportTracksLayer (raceView: RaceView,config: Config)
   }
 
   def checkAirportChange (eyePos: Position): Unit = {
-    val newAirport = AirportTracksLayer.lookupAirport(eyePos, activeDistance)
-    if (newAirport != airport){
-      if (airport.isDefined) reset // stop listening on the last airport
-      if (newAirport.isDefined) {
-        if (eyePos.getAltitude <= activeAltitude) {
-          requestTopic(newAirport)
-          active = true
-        }
-      } else {
-        active = false
-      }
-      airport = newAirport
+    def releaseCurrentAirport = {
+      reset
+      airport = None
+      active = false
+    }
 
-    } else { // no airport change, but check eye altitude
-      if (eyePos.getAltitude > activeAltitude) {
-        if (active) { // deactivate
-          reset
-          active = false
+    val newAirport = AirportTracksLayer.lookupAirport(eyePos, activeDistance)
+    val eyeAltitude = meters2Feet(eyePos.getAltitude)
+    if (airport.isDefined && airport == newAirport){ // no airport change, but check altitude
+      if (active){
+        if (eyeAltitude > activeAltitude.toFeet + airport.get.elev.toFeet){
+          releaseCurrentAirport
         }
-      } else {
-        if (!active) { // activate
-          requestTopic(airport)
+      }
+    } else { // possible airport change
+      if (active) releaseCurrentAirport
+      ifSome(newAirport) { a =>
+        if (eyeAltitude <= activeAltitude.toFeet + a.elev.toFeet){
+          requestTopic(newAirport)
+          airport = newAirport
           active = true
         }
       }
     }
   }
 
-  def gotoAirport (airport: Airport) = raceView.panTo(airport.pos, gotoAltitude)
+  def gotoAirport (airport: Airport) = {
+    val alt = gotoAltitude.toMeters + airport.elev.toMeters
+    raceView.panTo(airport.pos,alt)
+  }
 }

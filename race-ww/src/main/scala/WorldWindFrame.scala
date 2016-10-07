@@ -24,6 +24,7 @@ import javax.swing._
 import com.typesafe.config.Config
 import gov.nasa.race.common.ConfigUtils._
 import gov.nasa.race.common._
+import gov.nasa.race.data._
 import gov.nasa.race.swing.Style._
 import gov.nasa.race.swing._
 import gov.nasa.worldwind.avlist.AVKey
@@ -71,7 +72,8 @@ class WorldWindFrame (config: Config, raceView: RaceView) extends AppFrame {
     val wwd = new WorldWindowGLCanvas with Redrawable
 
     ifSome(config.getOptionalConfig("eye")) { e =>
-      val eyePos = Position.fromDegrees(e.getDouble("lat"), e.getDouble("lon"), e.getDouble("altitude-ft"))
+      val alt = feet2Meters(e.getDouble("altitude-ft"))
+      val eyePos = Position.fromDegrees(e.getDouble("lat"), e.getDouble("lon"), alt)
       wwd.getView.setEyePosition(eyePos)
     }
 

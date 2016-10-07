@@ -39,7 +39,12 @@ class TranslatorActor (val config: Config, var translator: ConfigurableTranslato
   }
 
   override def handleMessage = {
-    case BusEvent(_,msg,_) => translator.translate(msg) foreach(publish)
+    case BusEvent(_,msg,_) =>
+      translator.translate(msg) match {
+        case Some(list:Seq[_]) if translator.flatten => list foreach(publish)
+        case Some(m) => publish(m)
+        case None => // ignore
+      }
   }
 
   def createTranslator (config: Config): ConfigurableTranslator = {

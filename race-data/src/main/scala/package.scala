@@ -43,6 +43,14 @@ package object data {
   final val RE_FLATTENING = ( RE_E - RE_N ) / RE_E
   final val E_ECC = 2.0 * RE_FLATTENING - RE_FLATTENING * RE_FLATTENING
 
+  @inline final def meters2Feet(m: Double) = m / 0.3048
+  @inline final def feet2Meters(f: Double) = f * 0.3048
+
+  // not very idiomatic - use only in a context where Option[T] would cause too much heap pressure
+  @inline final def isDefined (d: Double) = d != Double.NaN
+  @inline final def isDefined[T <: AnyRef] (t: T) = t != null
+  val UndefinedDouble = Double.NaN
+  def Undefined[T <: AnyRef]: T = null.asInstanceOf[T]
 
   //--- squantified math funcs
   @inline final def sin(α: Angle): Double = Math.sin(α.toRadians)

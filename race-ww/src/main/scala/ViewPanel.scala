@@ -19,6 +19,7 @@ package gov.nasa.race.ww
 
 import com.typesafe.config.Config
 import gov.nasa.race.common._
+import gov.nasa.race.data._
 import gov.nasa.race.swing._
 import gov.nasa.race.swing.GBPanel.{Anchor, Fill}
 import gov.nasa.race.swing.Style._
@@ -28,7 +29,6 @@ import gov.nasa.worldwind.globes.{Earth, EarthFlat}
 import gov.nasa.worldwind.terrain.ZeroElevationModel
 
 import scala.language.postfixOps
-import scala.swing.Swing._
 import scala.swing._
 import scala.swing.event.ButtonClicked
 
@@ -53,8 +53,8 @@ class ViewPanel (raceView: RaceView, config: Option[Config]=None) extends GBPane
   implicit val doubleOutputLength = 11
   val lonField = new DoubleOutputField("lon", "%+3.5f").styled()
   val latField = new DoubleOutputField("lat", "%+3.5f").styled()
-  val altField = new DoubleOutputField("alt", "%,6.0f").styled()
-  val elevField = new DoubleOutputField("elev", "%,6.0f").styled()
+  val altField = new DoubleOutputField("alt [ft]", "%,6.0f").styled()
+  val elevField = new DoubleOutputField("elev [ft]", "%,6.0f").styled()
 
   val c = new Constraints( fill=Fill.Horizontal)
   layout(new FlowPanel(globeButton,flatButton).styled()) = c(0,0).gridwidth(2).anchor(Anchor.West)
@@ -79,13 +79,15 @@ class ViewPanel (raceView: RaceView, config: Option[Config]=None) extends GBPane
     ifNotNull(positionEvent.getPosition){ pos =>
       latField.setValue(pos.getLatitude.getDegrees)
       lonField.setValue(pos.getLongitude.getDegrees)
-      elevField.setValue(wwd.getModel.getGlobe.getElevation(pos.getLatitude, pos.getLongitude))
+      val elev = meters2Feet(wwd.getModel.getGlobe.getElevation(pos.getLatitude, pos.getLongitude))
+      elevField.setValue(elev)
     }
   }
 
   raceView.addEyePosListener(this)
 
   def eyePosChanged(eyePos:Position, animHint: String) {
-    altField.setValue(eyePos.getElevation)  // getAltitude ?
+    val alt = meters2Feet(eyePos.getAltitude)
+    altField.setValue(alt)
   }
 }

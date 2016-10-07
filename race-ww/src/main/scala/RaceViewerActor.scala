@@ -299,9 +299,9 @@ class RaceView (viewerActor: RaceViewerActor) extends DeferredEyePositionListene
     inputHandler.stopAnimators
     inputHandler.addZoomAnimator(eyePosition.getAltitude, zoom)
   }
-  def panTo (pos: Position, zoom: Double) = {
+  def panTo (pos: Position, eyeAltitude: Double) = {
     inputHandler.stopAnimators
-    inputHandler.addPanToAnimator(pos,ZeroWWAngle,ZeroWWAngle,zoom,true)
+    inputHandler.addPanToAnimator(pos,ZeroWWAngle,ZeroWWAngle,eyeAltitude,true) // always center on surface
   }
   def setEyePosition (pos: Position, animTime: Long) = {
     inputHandler.stopAnimators

@@ -285,6 +285,7 @@ package object common {
   // something that can be translated
   trait Translator[S, T] {
     def translate(src: S): Option[T]
+    def flatten = false
   }
   trait ConfigurableTranslator extends Translator[Any, Any] with NamedConfigurable
 
