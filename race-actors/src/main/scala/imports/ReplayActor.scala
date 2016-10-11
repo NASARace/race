@@ -42,7 +42,7 @@ class ReplayActor (val config: Config) extends ContinuousTimeRaceActor with Filt
   final val SchedulerThresholdMillis: Long = 30
 
   val pathName = config.getString("pathname")
-  val bufSize = config.getIntOrElse("buffer-size", 4096)
+  val bufSize = config.getIntOrElse("buffer-size", 8192)
   var compressedMode = config.getBooleanOrElse("compressed", pathName.endsWith(".gz"))
   val rebaseDates = config.getBooleanOrElse("rebase-dates", false)
   val breakAfter = config.getIntOrElse("break-after", 20) // reschedule after at most N published messages
@@ -100,6 +100,7 @@ class ReplayActor (val config: Config) extends ContinuousTimeRaceActor with Filt
 
         case None =>
           warning(s"ignored entry from stream $pathName")
+          scheduleNext
       }
     } else {
       info(s"reached end of replay stream $pathName")

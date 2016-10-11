@@ -92,4 +92,14 @@ object StringUtils {
     // TODO - should also cover '?'
     new Regex("^" + glob.replace("*", ".*") + '$').anchored
   }
+
+  def startsWith(cs: Array[Char], i0: Int, s: String): Boolean = {
+    var i = 0
+    var j = i0
+
+    while (i < s.length && j < cs.length && cs(j) == s(i)){
+      i += 1; j += 1
+    }
+    i == s.length
+  }
 }
