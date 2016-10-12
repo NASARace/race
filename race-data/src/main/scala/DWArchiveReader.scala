@@ -131,13 +131,13 @@ class AsdexDWArchiveReader (istream: InputStream) extends DWArchiveReader(istrea
   val tsDTG = new BMSearch("timestamp=")
 
   override def readDateTime (i0: Int, i1: Int) = {
-    var i = dexEpoch.indexOfFirst(buf,i0,i1)
+    var i = jmsEpoch.indexOfFirst(buf,i0,i1)
     if (i >= 0) {
-      new DateTime(readLong(i+dexEpoch.pattern.length))
+      new DateTime(readLong(i+jmsEpoch.pattern.length))
     } else {
-      i = jmsEpoch.indexOfFirst(buf,i0,i1)
+      i = dexEpoch.indexOfFirst(buf,i0,i1)
       if (i >= 0) {
-        new DateTime(readLong(i+jmsEpoch.pattern.length))
+        new DateTime(readLong(i+dexEpoch.pattern.length))
       } else  {
         i = tsDTG.indexOfFirst(buf,i0,i1)
         if (i >= 0) DateTime.parse(readString(i+tsDTG.pattern.length)) else null
@@ -146,15 +146,18 @@ class AsdexDWArchiveReader (istream: InputStream) extends DWArchiveReader(istrea
   }
 }
 
-class SfdpsDWArchiveReader (istream: InputStream) extends DWArchiveReader(istream) {
+class JmsBeaDWArchiveReader (istream: InputStream) extends DWArchiveReader(istream) {
   val jmsEpoch = new BMSearch("JMS_BEA_DeliveryTime=")
 
   override def readDateTime (i0: Int, i1: Int) = {
     val i = jmsEpoch.indexOfFirst(buf, i0, i1)
     if (i >= 0) {
       new DateTime(readLong(i + jmsEpoch.pattern.length))
-    } else {
-      null
-    }
+    } else null
   }
 }
+
+class SfdpsDWArchiveReader(istream: InputStream) extends JmsBeaDWArchiveReader(istream)
+class TfmdataDWArchiveReader(istream: InputStream) extends JmsBeaDWArchiveReader(istream)
+
+

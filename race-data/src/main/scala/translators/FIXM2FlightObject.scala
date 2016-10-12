@@ -33,53 +33,50 @@ import scala.collection.mutable.ArrayBuffer
   * the 12sec update (Solace) SFDPS translator
   */
 class FIXM2FlightObject (val config: Config=null)
-      extends XmlParser[Seq[IdentifiableAircraft]] with ConfigurableTranslator {
+  extends FIXMParser[Seq[IdentifiableAircraft]] with ConfigurableTranslator {
 
-  protected class Vars {
-    var id, cs = Undefined[String]
-    var lat, lon, vx, vy = UndefinedDouble
-    var alt = Undefined[Length]
-    var spd = Undefined[Velocity]
-    var date = Undefined[DateTime]
-    var arrivalDate = Undefined[DateTime]
-    var arrivalPoint = Undefined[String]
+  //--- our parser value cache
+  var id, cs: String = _
+  var lat, lon, vx, vy: Double = _
+  var alt: Length = _
+  var spd: Velocity = _
+  var date, arrivalDate: DateTime = _
+  var arrivalPoint: String = _
+  resetCache
 
-    def reset = {
-      id = Undefined[String]
-      cs = Undefined[String]
-      lat = UndefinedDouble
-      lon = UndefinedDouble
-      vx = UndefinedDouble
-      vy = UndefinedDouble
-      alt = Undefined[Length]
-      spd = Undefined[Velocity]
-      date = Undefined[DateTime]
-      arrivalDate = Undefined[DateTime]
-      arrivalPoint = Undefined[String]
-    }
+  def resetCache = {
+    id = Undefined[String]
+    cs = Undefined[String]
+    lat = UndefinedDouble
+    lon = UndefinedDouble
+    vx = UndefinedDouble
+    vy = UndefinedDouble
+    alt = Undefined[Length]
+    spd = Undefined[Velocity]
+    date = Undefined[DateTime]
+    arrivalDate = Undefined[DateTime]
+    arrivalPoint = Undefined[String]
+  }
 
-    // TODO - this needs error reporting
-    def addFlightObject = {
-      if (cs != null) {
-        if (isDefined(arrivalDate)) {
-          flights += FlightCompleted(id, cs, arrivalPoint, arrivalDate)
-        } else {
-          if (isDefined(lat) && isDefined(lon) &&
-              isDefined(vx) && isDefined(vy) &&
-              isDefined(spd) && isDefined(alt) && isDefined(date)) {
-            flights += FlightPos(id, cs, LatLonPos(Degrees(lat), Degrees(lon)),
-              alt, spd, Degrees(Math.atan2(vx, vy).toDegrees), date)
-          }
+  // TODO - this needs error reporting
+  def addFlightObject = {
+    if (cs != null) {
+      if (isDefined(arrivalDate)) {
+        flights += FlightCompleted(id, cs, arrivalPoint, arrivalDate)
+      } else {
+        if (isDefined(lat) && isDefined(lon) && isDefined(date) &&
+            isDefined(vx) && isDefined(vy) && isDefined(spd) && isDefined(alt)) {
+          flights += FlightPos(id, cs, LatLonPos(Degrees(lat), Degrees(lon)),
+                               alt, spd, Degrees(Math.atan2(vx, vy).toDegrees), date)
         }
       }
     }
   }
-  protected var v = new Vars
 
   protected var flights = new ArrayBuffer[IdentifiableAircraft](20)
   def resetFlights = flights.clear()
 
-  val result = Some(flights)
+  override def result = Some(flights)
   override def flatten = true
 
   //--- translation
@@ -94,59 +91,38 @@ class FIXM2FlightObject (val config: Config=null)
 
   override def onStartElement = {
     case "ns5:MessageCollection" => resetFlights  // 12sec update format (Solace)
-    case "ns5:NasFlight" => resetFlights // old (1min) update format
-    case "flight" => v.reset  // only in new (batched) format
+    case "flight" => resetCache  // only in new (batched) format
+    case "ns5:NasFlight" =>  // old (1min) update format
+      resetFlights
+      resetCache
 
     case "flightIdentification" => parseAllAttributes {
-      case "computerId" => v.id = value
-      case "aircraftIdentification" => v.cs = value
+      case "computerId" => id = value
+      case "aircraftIdentification" => cs = value
       case other => // ignored
     }
 
     //--- enRoute info
     case "position" if hasParent("enRoute") =>
-      if (parseAttribute("positionTime")) v.date = DateTime.parse(value)
+      if (parseAttribute("positionTime")) date = DateTime.parse(value)
     case "pos" if hasParent("location") =>
-      v.lat = readDouble
-      v.lon = readNextDouble
-    case "x" => v.vx = readDouble // we just need it for heading computation and assume same 'uom'
-    case "y" => v.vy = readDouble
-    case "surveillance" if hasParent("actualSpeed") => v.spd = readSpeed
-    case "altitude" => v.alt = readAltitude
+      lat = readDouble
+      lon = readNextDouble
+    case "x" => vx = readDouble // we just need it for heading computation and assume same 'uom'
+    case "y" => vy = readDouble
+    case "surveillance" if hasParent("actualSpeed") => spd = readSpeed
+    case "altitude" => alt = readAltitude
 
     //--- completed flights
-    case "arrival" => if (parseAttribute("arrivalPoint")) v.arrivalPoint = value
-    case "actual" if hasSomeParent("arrival") => v.arrivalDate = DateTime.parse(readAttribute("time"))
+    case "arrival" => if (parseAttribute("arrivalPoint")) arrivalPoint = value
+    case "actual" if hasSomeParent("arrival") => arrivalDate = DateTime.parse(readAttribute("time"))
 
     case other =>  // ignore
   }
 
   override def onEndElement = {
-    case "flight" => v.addFlightObject  // new (12sec) update format
-    case "ns5:NasFlight" => v.addFlightObject // old (1min) update format
+    case "flight" => addFlightObject  // new (12sec) update format
+    case "ns5:NasFlight" => addFlightObject // old (1min) update format
     case other =>
-  }
-
-  //--- helpers
-
-  def readSpeed: Velocity = {
-    val uom = if (parseAttribute("uom")) value else ""
-    val v = readDouble
-    uom match {
-      case "KNOTS" => Knots(v)
-      case "MPH" => UsMilesPerHour(v)
-      case "KMH" => KilometersPerHour(v)
-      case _ => Knots(v)
-    }
-  }
-
-  def readAltitude: Length = {
-    val uom = if (parseAttribute("uom")) value else ""
-    val v = readDouble
-    uom match {
-      case "FEET" => Feet(v)
-      case "METERS" => Meters(v)
-      case _ => Feet(v)
-    }
   }
 }

@@ -329,4 +329,16 @@ package object common {
     override def apply(a: A, b: B): R = f(a, b)
   }
 
+  trait Counter {
+    val counterThreshold: Int
+    protected var count = 0
+
+    def incCounter: Boolean = {
+      count += 1
+      if (count >= counterThreshold){
+        count = 0
+        true
+      } else false
+    }
+  }
 }

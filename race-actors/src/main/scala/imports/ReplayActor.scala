@@ -24,6 +24,7 @@ import akka.actor.ActorRef
 import com.typesafe.config.Config
 import gov.nasa.race.actors.FilteringPublisher
 import gov.nasa.race.common.ConfigUtils._
+import gov.nasa.race.common.Counter
 import gov.nasa.race.core.{ContinuousTimeRaceActor, _}
 import gov.nasa.race.data.{ArchiveEntry, ArchiveReader}
 
@@ -35,7 +36,7 @@ import scala.language.postfixOps
 /**
  * RACE actor that replays a channel from a file (which should be local)
  */
-class ReplayActor (val config: Config) extends ContinuousTimeRaceActor with FilteringPublisher {
+class ReplayActor (val config: Config) extends ContinuousTimeRaceActor with FilteringPublisher with Counter {
   case class Replay (msg: Any)
 
   // everything lower than that we don't bother to schedule and publish right away
@@ -45,11 +46,10 @@ class ReplayActor (val config: Config) extends ContinuousTimeRaceActor with Filt
   val bufSize = config.getIntOrElse("buffer-size", 8192)
   var compressedMode = config.getBooleanOrElse("compressed", pathName.endsWith(".gz"))
   val rebaseDates = config.getBooleanOrElse("rebase-dates", false)
-  val breakAfter = config.getIntOrElse("break-after", 20) // reschedule after at most N published messages
+  val counterThreshold = config.getIntOrElse("break-after", 20) // reschedule after at most N published messages
 
   val iStream = openStream
   val archiveReader = newInstance[ArchiveReader](config.getString("archive-reader"), Array(classOf[InputStream]), Array(iStream)).get
-  var count = 0
 
   info(s"initializing replay of $pathName starting at $simTime")
 
@@ -73,7 +73,7 @@ class ReplayActor (val config: Config) extends ContinuousTimeRaceActor with Filt
 
   override def handleMessage: Receive = {
     case Replay(msg) =>
-      publishFiltered(msg)
+      if (msg != None) publishFiltered(msg)
       scheduleNext
   }
 
@@ -88,19 +88,16 @@ class ReplayActor (val config: Config) extends ContinuousTimeRaceActor with Filt
             scheduler.scheduleOnce(dt milliseconds, self, Replay(msg))
           } else {
             // <2do> we should probably check for msg expiration here
-            count += 1
-            if (count > breakAfter){  // reschedule this actor to avoid starving others
-              count = 0
-              self ! Replay(msg)
-            } else { // send right away and loop
+            if (incCounter) {
+              debug(f"publishing now: $msg%30.30s.. ")
               publishFiltered(msg)
-              scheduleNext  // needs to be in tailrec position
-            }
+              scheduleNext
+            } else self ! Replay(msg)
           }
 
         case None =>
           warning(s"ignored entry from stream $pathName")
-          scheduleNext
+          if (incCounter) scheduleNext else self ! Replay(None)
       }
     } else {
       info(s"reached end of replay stream $pathName")

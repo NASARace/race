@@ -16,43 +16,36 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package gov.nasa.race.common
+package gov.nasa.race.data.translators
 
+import gov.nasa.race.common.XmlParser
+import squants._
+import squants.motion.{KilometersPerHour, Knots, UsMilesPerHour}
+import squants.space.Feet
 
 /**
-  * a XmlPullParser with scala specific support for the parse pattern
-  * (it needs to be a class because we extend XmlPullParser)
+  * specialized XmlParser for FIXM messages
   */
-abstract class XmlParser[T] extends XmlPullParser {
+abstract class FIXMParser[T] extends XmlParser[T] {
 
-  private var _stop = false
-  protected def stopParsing = _stop = true
-
-  //--- the subclass extension points
-  protected def onStartElement: PartialFunction[String,Unit]
-  protected def onEndElement: PartialFunction[String,Unit]
-  protected def result: Option[T]
-  protected def errorResult = None
-
-  def parse (input: String): Option[T] = {
-    initialize(input.toCharArray)
-
-    try {
-      while (!_stop && parseNextElement()){
-        if (isStartElement) onStartElement(tag) else onEndElement(tag)
-      }
-      result
-
-    } catch {
-      case t: Throwable =>
-        t.printStackTrace()
-        errorResult
+  def readSpeed: Velocity = {
+    val uom = if (parseAttribute("uom")) value else ""
+    val v = readDouble
+    uom match {
+      case "KNOTS" => Knots(v)
+      case "MPH" => UsMilesPerHour(v)
+      case "KMH" => KilometersPerHour(v)
+      case _ => Knots(v)
     }
   }
 
-  def parseAllAttributes (pf: PartialFunction[String,Unit]) = {
-    while (parseNextAttribute()){
-      pf(attr)
+  def readAltitude: Length = {
+    val uom = if (parseAttribute("uom")) value else ""
+    val v = readDouble
+    uom match {
+      case "FEET" => Feet(v)
+      case "METERS" => Meters(v)
+      case _ => Feet(v)
     }
   }
 }
