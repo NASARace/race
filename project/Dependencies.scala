@@ -46,16 +46,14 @@ object Dependencies {
   //--- nscala-time (Dates with operators): https://github.com/nscala-time/nscala-time
   val nscalaTime = "com.github.nscala-time" %% "nscala-time" %  "latest.release"
 
-  //--- Scala XML (sep. library as of 2.11.6)
-  val scalaXml =  "org.scala-lang.modules" %% "scala-xml" % "latest.release" // >= 1.0.3
-
   //--- Scala parser combinators (https://github.com/scala/scala-parser-combinators)
-  val scalaParser =  "org.scala-lang.modules" %% "scala-parser-combinators"  % "latest.release"
+  //val scalaParser =  "org.scala-lang.modules" %% "scala-parser-combinators"  % "latest.release" // not yet 2.12
+  val scalaParser = "org.scala-lang.modules" % "scala-parser-combinators_2.12" % "1.0.4"
 
   //--- new scala reflection (TypeTags etc.)
-  val scalaReflect =  "org.scala-lang" % "scala-reflect" % "2.11.7"
+  val scalaReflect =  "org.scala-lang" % "scala-reflect" % "2.12.0" //"2.11.8"
 
-  //--- scala automatic resource management (https://github.com/jsuereth/scala-arm)
+  //--- scala automatic resource management (https://github.com/jsuereth/scala-arm) - 2.12.0 not yet supported
   val scalaArm = "com.jsuereth" %% "scala-arm" % "1.4"
 
   //--- miniboxing (better form of AnyVal specialization)
@@ -70,13 +68,12 @@ object Dependencies {
   // val breezeNative = "org.scalanlp" %% "breeze-natives" % "latest.release"
 
   //--- scalaTest
-  // "latest.release" picks up snapshot, which seems to be incompatible (ShouldBeMatcher etc.)
-  val scalaTest = "org.scalatest" %% "scalatest" % "2.2.6"
+  //val scalaTest = "org.scalatest" %% "scalatest" % "2.2.6"
+  val scalaTest = "org.scalatest" % "scalatest_2.12" % "3.0.1"
   val pegDown = "org.pegdown" % "pegdown" % "latest.release"
 
   //--- scalaCheck
-  // "latest.release" (1.13.0) seems to be incompatible with scalaTest 2.2.6
-  val scalaCheck = "org.scalacheck" %% "scalacheck" % "1.12.5"
+  val scalaCheck = "org.scalacheck" % "scalacheck_2.12" % "latest.release" // 1.13.4"
 
   // scopt command line parsing https://github.com/scopt/scopt
   val scopt = "com.github.scopt" %% "scopt" % "latest.release"
@@ -84,7 +81,7 @@ object Dependencies {
   // liftJson
   val liftJson = "net.liftweb" %% "lift-json" % "latest.release"
 
-  val defaultLibs =  Seq(logback,typesafeConfig,nscalaTime,scalaXml,liftJson,squants)
+  val defaultLibs =  Seq(logback,typesafeConfig,nscalaTime,liftJson,squants)
   val defaultTestLibs = Seq(scalaTest,scalaCheck,pegDown)
 
   // scodec
@@ -155,22 +152,19 @@ object Dependencies {
   val log4j = "log4j" % "log4j" % "latest.release"
   val log4jOverSlf4j = "org.slf4j" % "log4j-over-slf4j" % "latest.release"
 
-  //--- akka-kafka
-  val akkaKafka = "com.sclasen" %% "akka-kafka" % "latest.release" excludeAll(
-    ExclusionRule(organization = "log4j", name="log4j"),
-    ExclusionRule(organization = "org.slf4j", name = "slf4j-log4j12")
-  )
-
   //--- ZooKeeper ("3.4.7" works, "latest.release" includes alphas!)
-  val zookeeper = "org.apache.zookeeper" % "zookeeper" % "3.4.7" excludeAll(
+  val zookeeper = "org.apache.zookeeper" % "zookeeper" % "3.4.8" excludeAll(
     ExclusionRule(organization = "log4j", name="log4j"),
     ExclusionRule(organization = "org.slf4j", name = "slf4j-log4j12")
   )
 
-  //--- Kafka (make sure to add log4j to kafkaServer dependencies (0.9.0.0 works)
-  val kafka = "org.apache.kafka" %% "kafka" % "latest.release" excludeAll(
+  //--- Kafka (make sure to add log4j to kafkaServer dependencies
+  //val kafka = "org.apache.kafka" %% "kafka" % "latest.release" excludeAll(  // no 2.12 version yet
+  // NOTE: as of 11/19/2016 kafka does not yet run under Scala 2.12
+  val kafka = "org.apache.kafka" % "kafka_2.11" % "0.10.1.0" excludeAll(
     ExclusionRule(organization = "log4j", name="log4j"),
-    ExclusionRule(organization = "org.slf4j", name = "slf4j-log4j12")
+    ExclusionRule(organization = "org.slf4j", name = "slf4j-log4j12"),
+    ExclusionRule(organization = "org.scala-lang.modules", name = "scala-parser-combinators_2.11") // collides with our 2.12
   )
 
   //--- DDS Java 5 PSM

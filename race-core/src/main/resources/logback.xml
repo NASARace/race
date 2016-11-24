@@ -1,0 +1,18 @@
+<!-- this is here in case we have to use the slf4j logger, e.g. if a 3rd party component (such as Kafka) uses it -->
+
+<configuration>
+
+  <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+    <!-- encoders are assigned the type
+         ch.qos.logback.classic.encoder.PatternLayoutEncoder by default
+         See http://logback.qos.ch/manual/layouts.html -->
+    <encoder>
+      <pattern>%-5level %logger{0}: %msg%n</pattern>
+      <outputPatternAsHeader>false</outputPatternAsHeader>
+    </encoder>
+  </appender>
+
+  <root level="${root-level:-WARN}">
+    <appender-ref ref="STDOUT" />
+  </root>
+</configuration>

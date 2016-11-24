@@ -1,0 +1,14 @@
+#!/bin/bash
+
+PROJECT=race-net-jms-test
+
+DIR="$(dirname ${BASH_SOURCE[0]})"
+SCRIPT=$DIR/../$PROJECT/target/universal/stage/bin/$PROJECT
+
+if [ -x $SCRIPT ]; then
+  $SCRIPT -main gov.nasa.race.jms.JMSClient $@
+else
+  echo "executable does not exist, run sbt $PROJECT/stage"
+fi
+
+

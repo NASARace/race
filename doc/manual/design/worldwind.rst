@@ -50,7 +50,7 @@ be extensively configured with both ``RaceLayers`` and (less often) UI panels::
               ...
               layers = [
                   { name = "livePos"
-                    class = "gov.nasa.race.ww.layers.FlightPosLayer"
+                    class = "gov.nasa.race.ww.air.FlightPosLayer"
                     read-from = "/live/fpos"
                     description = "SWIM sfdps flight positions" ...
                   },

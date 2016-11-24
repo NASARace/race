@@ -26,12 +26,12 @@ A typical RACE configuration file looks like this:
      name = "SimpleProbe"                                         // name of universe
      actors = [                                                   // list of actor objects
        { name = "aircraft"                                        // name of actor
-         class = "gov.nasa.race.actors.models.SimpleAircraft"     // class of actor
+         class = "gov.nasa.race.air.actor.SimpleAircraft"     // class of actor
          write-to = "/flights/positions"                          // channel this actor writes to
          ...
        },
        { name = "probe"
-         class = "gov.nasa.race.actors.viewers.ProbeActor"
+         class = "gov.nasa.race.actor.ProbeActor"
          read-from = "/flights/positions"                         // channel this actor reads from
        }
      ]

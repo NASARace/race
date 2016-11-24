@@ -28,10 +28,6 @@ addSbtPlugin("org.planet42" % "laika-sbt" % "0.6.0")
 // git commands from within sbt: https://github.com/sbt/sbt-git
 addSbtPlugin("com.typesafe.sbt" % "sbt-git" % "0.8.5")
 
-// copyright/licence headers: https://github.com/sbt/sbt-header
-// provides a createHeaders task
-addSbtPlugin("de.heikoseeberger" % "sbt-header" % "1.5.1")
-
 // static analysis: http://www.scalastyle.org/sbt.html
 addSbtPlugin("org.scalastyle" %% "scalastyle-sbt-plugin" % "0.7.0")
 
@@ -54,10 +50,8 @@ addSbtPlugin("com.typesafe.sbteclipse" % "sbteclipse-plugin" % "4.0.0")
 
 // code coverage: https://github.com/scoverage/sbt-scoverage
 resolvers += Resolver.url("scoverage-bintray", url("https://dl.bintray.com/sksamuel/sbt-plugins/"))(Resolver.ivyStylePatterns)
-addSbtPlugin("org.scoverage" %% "sbt-scoverage" % "1.3.3")
+addSbtPlugin("org.scoverage" %% "sbt-scoverage" % "1.5.0")
 
-// static analysis: https://github.com/sksamuel/sbt-scapegoat
-addSbtPlugin("com.sksamuel.scapegoat" %% "sbt-scapegoat" % "1.0.4")
 
 // create project dependency graph: https://github.com/dwijnand/sbt-project-graph
 // (run projectsGraphDot which creates a target/projects-graph.dot)
@@ -69,11 +63,6 @@ addSbtPlugin("com.sksamuel.scapegoat" %% "sbt-scapegoat" % "1.0.4")
 // note this uses org.eclipse.aether.* which has DEBUG log output
 //addSbtPlugin("com.sksamuel.sbt-versions" % "sbt-versions" % "0.2.0")
 
-// run shell commands from within SBT: https://github.com/melezov/xsbt-sh
-// (README states version "0.1.0" but there is none on the resolver)
-// it's tiny and very generic so we just add the command locally (ShellCmd.scala) to avoid another resolver
-//resolvers += "Element Releases" at "http://repo.element.hr/nexus/content/repositories/releases/"
-//addSbtPlugin("hr.element.xsbt" % "xsbt-sh" % "0.0.2")
 
 //--- not published tools
 
@@ -81,8 +70,10 @@ addSbtPlugin("com.sksamuel.scapegoat" %% "sbt-scapegoat" % "1.0.4")
 // (needs to be cloned and locally published)
 //addSbtPlugin("uk.co.josephearl" % "sbt-verify" % "0.2.0")
 
-// static analysis: https://github.com/scala/scala-abide
+// extensible static analysis: https://github.com/scala/scala-abide
 // (http://www.slideshare.net/iuliandragos/scala-abide-a-lint-tool-for-scala)
+// while this seems best for domain specific checks (e.g. passing mutable state into actors)
+// it has not been maintained for a while and - as a compiler plugin - seems vulnerable to scala updates
 /**
 val abideVersion = "latest.release"
 addSbtPlugin("com.typesafe" % "sbt-abide" % abideVersion)

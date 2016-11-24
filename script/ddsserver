@@ -1,10 +1,14 @@
 #!/bin/bash
 
+PROJECT=race-net-dds-test
+
 DIR="$(dirname ${BASH_SOURCE[0]})"
-SCRIPT=$DIR/../test-tools/dds-server/target/universal/stage/bin/ddsserver
+SCRIPT=$DIR/../$PROJECT/target/universal/stage/bin/$PROJECT
 
 if [ -x $SCRIPT ]; then
-  $SCRIPT $@
+  $SCRIPT -main gov.nasa.race.dds.DDSServer $@
 else
-  echo "executable does not exist, run sbt ddsServer/stage"
+  echo "executable does not exist, run sbt $PROJECT/stage"
 fi
+
+

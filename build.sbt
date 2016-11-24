@@ -3,188 +3,138 @@
 //--- imports from project
 import RaceBuild._
 import Dependencies._
-import PluginSettings._
-import TaskSettings._
+import CommonRaceSettings._
 
 shellPrompt in ThisBuild := { state => "[" + Project.extract(state).currentRef.project + "]> " }
 
-lazy val commonSettings =
-  pluginSettings ++
-  taskSettings ++
-  ReCov.taskSettings ++
-  Assembly.taskSettings ++
-  Seq(
-    organization := "gov.nasa",
-    version := "1.0",
-    scalaVersion := "2.11.8",
-
-    scalacOptions ++= Seq("-unchecked", "-deprecation", "-feature"),
-    resolvers ++= dependencyResolvers,
-
-    publishArtifact in (Compile, packageDoc) := false,
-    publishArtifact in (Compile, packageSrc) := false,
-
-    fork in run := true,
-    outputStrategy := Some(StdoutOutput),
-    cleanFiles += baseDirectory.value / "tmp",
-    Keys.connectInput in run := true,
-
-    //coverageEnabled := true, // this should only be enabled for generating coverage reports
-    ReCov.requirementSources ++= Seq(file("doc/specs/nonfunctional.md"))
-  )
+lazy val commonSettings = commonRaceSettings ++
+    Seq(
+      organization := "gov.nasa",
+      version := "1.3"
+    )
 
 
 //--- root project (only for aggregation)
 lazy val root = createRootProject("race").
-  aggregate(raceCommon,raceData,raceCore,raceActors,raceTools,raceSwing,raceWW,
-            swimServer,swimClient,kafkaServer,zkServer,ddsServer,ddsClient).
-  dependsOn(raceCommon  % "test->test;compile->compile;multi-jvm->multi-jvm",
-            raceCore,raceActors,raceTools,raceSwing,raceWW,
-            swimServer,swimClient,kafkaServer,zkServer,ddsServer,ddsClient).
-  configs(MultiJvm).
-  enablePlugins(JavaAppPackaging,GitVersioning).  // add SiteScaladocPlugin to include scaladoc in site generation
+  aggregate(raceCore,raceNetJMS,raceNetKafka,raceNetDDS,raceSwing,raceWW,raceAir,raceWWAir,raceLauncher,
+    raceTestKit,raceCoreTest,raceNetJMSTest,raceNetKafkaTest,raceAirTest).
+  dependsOn(raceCore,raceNetJMS,raceNetKafka,raceNetDDS,raceSwing,raceWW,raceAir,raceWWAir,raceLauncher).
+  enablePlugins(JavaAppPackaging,GitVersioning).
   settings(
     commonSettings,
     Defaults.itSettings,
-    multiJVMSettings,
     commands ++= LaikaCommands.commands,
     aggregate in MultiJvm := false,
-    mainClass in Compile := Some("gov.nasa.race.ConsoleMain")
-  ).
-  addLibraryDependencies(akkaSlf4j,akkaActor,akkaRemote,scopt,scalaArm).
-  addTestLibraryDependencies(defaultTestLibs,akkaTestkit,akkaMultiNodeTestkit)
+    mainClass in Compile := Some("gov.nasa.race.main.ConsoleMain")
+  )
 
 //--- sub projects
 
-// we split these into sub-projects so that they can depend on each other - they
-// can't depend on root since that would be cyclic. At some later point we might
-// move common, the test-tools and the WorldWind viewer into their own toplevel
-// projects, which will enable us to lift core and actors into root, but since that would
-// require versions for dependency management we wait until this has stabilized and
-// for now keep everything in one repo for convenience
-
-// functions, types and values that are used by several artifacts
-lazy val raceCommon = createProject("race-common").
-  configs(MultiJvm).
-  settings(commonSettings).
-  addLibraryDependencies(typesafeConfig,nscalaTime,scalaXml,scalaReflect,jsch,scopt,scalaArm).
-  addConfigLibraryDependencies("test,multi-jvm")(defaultTestLibs,akkaActor,akkaTestkit,akkaMultiNodeTestkit).
-  makeExtensible.
-  addLibraryDependencies(omgDDS) // needs to come *after* makeExtensible since vendors ship fat jars with incompatible org.omg.dds.*
-
-// common data types & functions
-lazy val raceData = createProject("race-data").
-  dependsOn(raceCommon % "test->test;compile->compile").
-  settings(commonSettings).
-  addLibraryDependencies(defaultLibs,scodecAll,breeze,scalaParser).
-  addTestLibraryDependencies(defaultTestLibs)
-
-// core components
-lazy val raceCore = createProject("race-core").
-  dependsOn(raceCommon % "test->test;compile->compile").
-  settings(commonSettings).
-  addLibraryDependencies(defaultLibs,akkaAll).
-  addTestLibraryDependencies(defaultTestLibs,akkaActor,akkaTestkit)
-
-
-// RaceActors
-lazy val raceActors= createProject("race-actors").
-  dependsOn(raceCommon % "test->test;compile->compile",
-            raceCore % "test->test;compile->compile",
-            raceData).
-  settings(commonSettings).
-  addLibraryDependencies(akkaAll,amqBroker,asyncHttp,kafka,akkaKafka,log4jOverSlf4j).
-  addTestLibraryDependencies(defaultTestLibs,akkaActor,akkaTestkit)
-
-
 // although this is not really a subproject we keep it here because we might override the uri
-// locally (in local-race-build.properties) so that it can point to a local install.
+// locally (in local-race-buils.properties) so that it can point to a local install.
 // This saves us from having to do debug-related transient commits if WWJ and RACE are changed together
 // NOTE - SBT 0.13 only supports git clone/checkout, i.e. to catch remote repo changes you have to do a "reload"
 // (or delete the respective ~/.sbt/staging/<sha> before compiling/running)
 lazy val wwjProject = RootProject(uri(sys.props.getOrElse("race.wwj_uri", "git://github.com/pcmehlitz/WorldWindJava.git#pcm")))
 
-// Java Swing extensions
-lazy val raceSwing = createProject("race-swing").
-  dependsOn(raceCommon).
-  settings(commonSettings).
+
+//--- those are the projects that produce build artifacts which can be used by 3rd party clients
+
+lazy val raceCore = createProject("race-core", commonSettings).
+  enablePlugins(JavaAppPackaging,GitVersioning).
+  settings(
+    mainClass in Compile := Some("gov.nasa.race.main.ConsoleMain")
+  ).
+  addLibraryDependencies(akkaActor,akkaRemote,typesafeConfig,nscalaTime,scalaReflect,jsch)
+
+lazy val raceLauncher = createProject("race-launcher", commonSettings).
+  dependsOn(raceCore).
+  enablePlugins(JavaAppPackaging,GitVersioning).
+  settings(
+    mainClass in Compile := Some("gov.nasa.race.remote.ConsoleRemoteLauncher")
+  ).
+  addLibraryDependencies(typesafeConfig)
+
+lazy val raceNetJMS = createProject("race-net-jms", commonSettings).
+  dependsOn(raceCore).
+  addLibraryDependencies(akkaAll,amqBroker)
+
+lazy val raceNetKafka = createProject("race-net-kafka", commonSettings).
+  dependsOn(raceCore).
+  addLibraryDependencies(logback,akkaSlf4j,log4jOverSlf4j,kafka)
+
+lazy val raceNetDDS = createProject("race-net-dds", commonSettings).
+  dependsOn(raceCore).
+  makeExtensible.
+  addLibraryDependencies(omgDDS)
+
+lazy val raceNetHttp = createProject("race-net-http", commonSettings).
+  dependsOn(raceCore).
+  addLibraryDependencies(asyncHttp)
+
+lazy val raceSwing = createProject("race-swing", commonSettings).
+  dependsOn(raceCore).
   addLibraryDependencies(akkaActor,scalaSwing,rsTextArea)
 
+lazy val raceAir = createProject("race-air", commonSettings).
+  dependsOn(raceCore,raceNetJMS).
+  addLibraryDependencies(akkaActor,typesafeConfig,nscalaTime,scalaParser,scodecAll)
 
-// our embedded WorldWind interface
-lazy val raceWW = createProject("race-ww").
+lazy val raceWW = createProject("race-ww", commonSettings).
   dependsOn(wwjProject).
-  dependsOn(raceCommon,raceData,raceCore,raceSwing).
-  settings(commonSettings).
-  addLibraryDependencies(akkaAll,scalaSwing,jsch)
+  dependsOn(raceCore,raceSwing).
+  addLibraryDependencies(akkaAll,scalaSwing)
 
+lazy val raceWWAir = createProject("race-ww-air", commonSettings).
+  dependsOn(raceWW,raceAir).
+  addLibraryDependencies(typesafeConfig,nscalaTime)
 
-lazy val raceTools = createProject("race-tools").
-  dependsOn(raceCommon).
-  enablePlugins(JavaAppPackaging).
+lazy val raceTestKit = createProject("race-testkit", commonSettings).
+  dependsOn(raceCore).
+  addLibraryDependencies(defaultTestLibs,nscalaTime,akkaActor,akkaTestkit,akkaMultiNodeTestkit)
+
+lazy val raceUI = createProject("race-ui", commonSettings).
+  dependsOn(raceCore,raceSwing)
+
+lazy val raceTools = createProject("race-tools", commonSettings).
+  enablePlugins(JavaAppPackaging,GitVersioning).
+  dependsOn(raceCore).
   settings(
-    commonSettings,
-    mainClass in Compile := Some("gov.nasa.race.tools.CryptConfig")
-  ).
-  addLibraryDependencies(typesafeConfig,scopt,logback)
+    mainClass in Compile := Some("gov.nasa.race.tools.CryptConfig")).
+  addLibraryDependencies(logback)
 
+//--- test projects
 
-//--- test tools
+lazy val raceTestKitTest = createTestProject("race-testkit-test", commonSettings).
+  dependsOn(raceCore,raceTestKit)
 
-lazy val swimServer = createProject("swimServer","test-tools/swim-server").
-  dependsOn(raceCommon).
-  enablePlugins(JavaAppPackaging).
+lazy val raceCoreTest = createTestProject("race-core-test", commonSettings).
+  dependsOn(raceCore,raceTestKit)
+
+lazy val raceNetJMSTest = createTestProject("race-net-jms-test", commonSettings).
+  dependsOn(raceNetJMS,raceTestKit).
+  configs(MultiJvm).
   settings(
-    commonSettings,
-    mainClass in Compile := Some("gov.nasa.race.swimserver.MainSimple"),
-    javaOptions in run += "-Xmx2G"   // because of embedded ActiveMQ broker
-  ).
-  addLibraryDependencies(logback,amqAll)
+    mainClass in Compile := Some("gov.nasa.race.jms.JMSServer")).
+  addLibraryDependencies(logback,akkaSlf4j,akkaRemote)
 
-
-lazy val swimClient = createProject("swimClient", "test-tools/swim-client").
-  dependsOn(raceCommon).
-  enablePlugins(JavaAppPackaging).
+// NOTE - as of 11/19/2016 Kafka does not yet run under Scala 2.12, the tests have been disabled
+lazy val raceNetKafkaTest = createTestProject("race-net-kafka-test", commonSettings).
+  enablePlugins(JavaAppPackaging,GitVersioning).
+  dependsOn(raceNetKafka,raceTestKit).
+  configs(MultiJvm).
   settings(
-    commonSettings,
-    mainClass in Compile := Some("gov.nasa.race.swimclient.MainSimple")
-  ).
-  addLibraryDependencies(logback,typesafeConfig,amqBroker,scopt)
+    mainClass in Compile := Some("gov.nasa.race.kafka.KafkaServer")).
+  addLibraryDependencies(logback,zookeeper).
+  addTestLibraryDependencies(logback)
 
-
-lazy val zkServer = createProject("zkServer", "test-tools/zk-server").
-  dependsOn(raceCommon).
-  enablePlugins(JavaAppPackaging).
+lazy val raceNetDDSTest = createTestProject("race-net-dds-test", commonSettings).
+  enablePlugins(JavaAppPackaging,GitVersioning).
+  dependsOn(raceNetDDS,raceTestKit,raceAir).
+  configs(MultiJvm).
   settings(
-    commonSettings,
-    mainClass in Compile := Some("gov.nasa.race.zkserver.MainSimple")
-  ).
-  addLibraryDependencies(logback,zookeeper,scopt,log4jOverSlf4j)
+    mainClass in Compile := Some("gov.nasa.race.dds.DDSServer"))
 
+lazy val raceAirTest = createTestProject("race-air-test", commonSettings).
+  dependsOn(raceAir,raceTestKit)
 
-lazy val kafkaServer = createProject("kafkaServer", "test-tools/kafka-server").
-  dependsOn(raceCommon).
-  enablePlugins(JavaAppPackaging).
-  settings(
-    commonSettings,
-    mainClass in Compile := Some("gov.nasa.race.kafka.MainSimple")
-  ).
-  addLibraryDependencies(logback,kafka,scopt,log4jOverSlf4j)
-
-lazy val ddsServer = createProject("ddsServer", "test-tools/dds-server").
-  dependsOn(raceCommon,raceData).
-  enablePlugins(JavaAppPackaging).
-  settings(
-    commonSettings,
-    mainClass in Compile := Some("gov.nasa.race.ddsserver.MainSimple")
-  ).
-  addLibraryDependencies(scopt,omgDDS)
-
-lazy val ddsClient = createProject("ddsClient", "test-tools/dds-client").
-  dependsOn(raceCommon,raceData).
-  enablePlugins(JavaAppPackaging).
-  settings(
-    commonSettings,
-    mainClass in Compile := Some("gov.nasa.race.ddsclient.MainSimple")
-  ).
-  addLibraryDependencies(scopt,omgDDS)

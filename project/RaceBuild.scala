@@ -16,15 +16,13 @@
  */
 
 /**
- * build support code for RACE project
- *
- * NOTE - this needs to be Build.scala since some of our funcs use
- * SBT macros such as '++=', which are context dependent because of
- * implicit parameters
+ * common build support code for RACE project
  */
 
-import java.io.{FileInputStream, InputStreamReader, File}
+import java.io.{File, FileInputStream, InputStreamReader}
 import java.util.Properties
+
+
 import scala.collection.JavaConversions._
 import sbt._
 import sbt.Keys._
@@ -85,8 +83,7 @@ object RaceBuild /*extends Build */ {
     Seq(xs:_*).foldRight(List[ModuleID]())(acc)
   }
 
-  // note - as of sbt 0.13.8 we don't need to flatten Setting[_] anymore, sbt
-  // does it for us
+  // note - as of sbt 0.13.8 we don't need to flatten Setting[_] anymore, sbt does it for us
 
   def rmdir (dir: File): Boolean = {
     if (dir.isDirectory) {
@@ -110,11 +107,27 @@ object RaceBuild /*extends Build */ {
   // some syntactic sugar to make build.sbt more readable
 
   import scala.collection._
+
+  // this is where we store project states for local build configs
   val extensibleProjects = mutable.HashMap.empty[String,Project]
 
   def createRootProject(id: String): Project = Project(id, file("."))
   def createProject(id: String): Project = Project(id, file(id))
-  def createProject(id: String, path:String): Project = Project(id, file(path))
+  def createProject(id: String, pathName: String): Project = Project(id, file(pathName))
+
+  def createProject(id: String, initSettings: Seq[Def.Setting[_]]): Project = {
+    Project(id, file(id)).settings(initSettings)
+  }
+
+  def createTestProject(pathName: String, initSettings: Seq[Def.Setting[_]]): Project = {
+    val path = file(pathName)
+    Project(pathName, path).settings(
+      initSettings,
+      publish := {},
+      publishLocal := {}
+      //fork in Test := true,
+    )
+  }
 
   implicit class RaceProject (val p: Project) {
 

@@ -47,17 +47,6 @@ object PluginSettings {
   )
 
   //----------------------------------------------------------------------------------
-  // sbt-header from: https://github.com/sbt/sbt-header
-  import de.heikoseeberger.sbtheader.{HeaderKey,HeaderPattern}
-  val license = IO.read(file("LICENSE.txt"))
-  val headersSettings = Seq(
-    HeaderKey.headers := Map(
-      "scala" -> (HeaderPattern.cStyleBlockComment, license),
-      "java" -> (HeaderPattern.cStyleBlockComment, license)
-    )
-  )
-
-  //----------------------------------------------------------------------------------
   // sbtstats from https://github.com/orrsella/sbt-stats
   import com.orrsella.sbtstats._
   import com.orrsella.sbtstats.StatsPlugin._
@@ -87,26 +76,22 @@ object PluginSettings {
   import com.typesafe.sbt.SbtMultiJvm.MultiJvmKeys.{MultiJvm,scalatestOptions}
 
   val multiJVMSettings = Seq(
-    compile in MultiJvm <<= (compile in MultiJvm) triggeredBy (compile in Test),
-    executeTests in Test <<= (executeTests in Test, executeTests in MultiJvm) map {
-      case (testResults, multiNodeResults)  =>
-        val overall =
-          if (testResults.overall.id < multiNodeResults.overall.id)
-            multiNodeResults.overall
-          else
-            testResults.overall
-        Tests.Output(overall,
-          testResults.events ++ multiNodeResults.events,
-          testResults.summaries ++ multiNodeResults.summaries)
+    //compile in MultiJvm <<= (compile in MultiJvm) triggeredBy (compile in Test),
+    compile in MultiJvm := {(compile in MultiJvm) triggeredBy (compile in Test)}.value,
+    executeTests in Test := {
+      val testResults = (executeTests in Test).value
+      val multiNodeResults = (executeTests in MultiJvm).value
+      val overall = (if (testResults.overall.id < multiNodeResults.overall.id) multiNodeResults else testResults).overall
+      Tests.Output(overall,
+        testResults.events ++ multiNodeResults.events,
+        testResults.summaries ++ multiNodeResults.summaries)
     },
     logBuffered in MultiJvm := true,
-    scalatestOptions in MultiJvm <++= (target in Compile)(
-      (t: File) => Seq("-u", (t.getAbsolutePath + "/test-reports"))),
-    scalatestOptions in MultiJvm <++= (target in Compile)(
-      (t: File) => Seq("-h", (t.getAbsolutePath + "/test-reports"))),
+    scalatestOptions in MultiJvm ++= {(target in Compile)((t: File) => Seq("-u", t.getAbsolutePath + "/test-reports"))}.value,
+    scalatestOptions in MultiJvm ++= {(target in Compile)((t: File) => Seq("-h", t.getAbsolutePath + "/test-reports"))}.value,
     parallelExecution in Test := false
   )
 
   // collect all settings for all active plugins. This goes into build.sbt commonSettings
-  val pluginSettings = headersSettings ++ laikaSettings ++ sbtStatsSettings ++ scalariformSettings //++ depGraphSettings
+  val pluginSettings = laikaSettings ++ sbtStatsSettings ++ scalariformSettings //++ depGraphSettings
 }
