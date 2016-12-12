@@ -433,7 +433,7 @@ trait SubscribingRaceActor extends RaceActor {
     readFrom.clear
   }
 
-  override def onTerminateRaceActor(originator: ActorRef): Unit = {
+  override def onTerminateRaceActor(originator: ActorRef): Any = {
     super.onTerminateRaceActor(originator)
     unsubscribeAll
   }
@@ -494,12 +494,19 @@ trait ContinuousTimeRaceActor extends RaceActor {
     lastSimMillis = simClock.millis
     lastSimMillis - dt.getMillis
   }
+  def updatedElapsedSimTimeMillisSinceStart: Long = {
+    lastSimMillis = simClock.millis
+    lastSimMillis - startSimTimeMillis
+  }
 
   @inline final def currentSimTimeMillis = simClock.millis
   @inline final def currentWallTimeMillis = System.currentTimeMillis()
 
   def elapsedSimTimeSince (dt: DateTime) = Duration(max(0,lastSimMillis - dt.getMillis), MILLISECONDS)
   def elapsedSimTimeMillisSince (dt: DateTime) = lastSimMillis - dt.getMillis
+
+  def elapsedSimTimeSinceStart = Duration(lastSimMillis - startSimTimeMillis, MILLISECONDS)
+  def elapsedSimTimeMillisSinceStart = lastSimMillis - startSimTimeMillis
 
   def toWallTimeMillis (d: Duration) = (d.toMillis * simClock.timeScale).toLong
   def toWallTimeMillis (ms: Long) = (ms * simClock.timeScale).toLong
@@ -516,8 +523,14 @@ trait ContinuousTimeRaceActor extends RaceActor {
   */
 trait MonitoredRaceActor extends RaceActor {
   final val CheckIntervalKey = "check-interval"
+  final val CheckDelayKey = "check-delay"
 
-  var checkInterval = config.getFiniteDurationOrElse(CheckIntervalKey, 5.seconds)
+  // override if there are different default values
+  def defaultCheckInterval = 5.seconds
+  def defaultCheckDelay = 0.seconds
+
+  var checkInterval = config.getFiniteDurationOrElse(CheckIntervalKey, defaultCheckInterval)
+  var checkDelay = config.getFiniteDurationOrElse(CheckDelayKey, defaultCheckDelay)
   var schedule: Option[Cancellable] = None
 
   override def onInitializeRaceActor(rc: RaceContext, actorConf: Config) = {
@@ -542,7 +555,7 @@ trait MonitoredRaceActor extends RaceActor {
 
   def startMonitoring = {
     if (schedule.isEmpty) {
-      schedule = Some(scheduler.schedule(0.seconds, checkInterval, self, RaceCheck))
+      schedule = Some(scheduler.schedule(checkDelay, checkInterval, self, RaceCheck))
     }
   }
 

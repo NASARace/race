@@ -23,10 +23,9 @@ import javax.net.ssl.SSLContext
 
 import gov.nasa.race._
 import gov.nasa.race.common.ManagedResource
-import gov.nasa.race.main.ConsoleIO
-import gov.nasa.race.main.ConsoleIO._
+import gov.nasa.race.util.ConsoleIO._
 import gov.nasa.race.util.FileUtils._
-import gov.nasa.race.util.{CryptUtils, NetUtils}
+import gov.nasa.race.util.{ConsoleIO, CryptUtils, NetUtils}
 
 
 /**

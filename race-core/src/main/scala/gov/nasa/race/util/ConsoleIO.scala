@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package gov.nasa.race.main
+package gov.nasa.race.util
 
 import java.io.File
 import java.util.concurrent.locks.ReentrantLock
@@ -70,6 +70,9 @@ object ConsoleIO {
   final val resetColor = scala.Console.RESET
 
   val jConsole = System.console()
+
+  // various ANSI terminal commands
+  def clearScreen = print(CLEAR_SCREEN)
 
   // shared data
   private var input: String = _

@@ -20,7 +20,7 @@ package gov.nasa.race.dds
 import gov.nasa.race.geo.{GreatCircle, LatLonPos}
 import gov.nasa.race.main.CliArgs
 import gov.nasa.race.util.ThreadUtils
-import gov.nasa.race.main.ConsoleIO._
+import gov.nasa.race.util.ConsoleIO._
 import org.omg.dds.core.ServiceEnvironment
 import org.omg.dds.domain.DomainParticipantFactory
 import org.omg.dds.pub.DataWriter

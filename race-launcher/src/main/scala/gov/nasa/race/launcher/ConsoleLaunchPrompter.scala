@@ -19,7 +19,7 @@ package gov.nasa.race.launcher
 
 import java.io.File
 import gov.nasa.race._
-import gov.nasa.race.main.ConsoleIO._
+import gov.nasa.race.util.ConsoleIO._
 
 /**
   * common console prompts for launching RACE

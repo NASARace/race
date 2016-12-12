@@ -23,6 +23,8 @@ import com.typesafe.config.{Config, ConfigFactory}
 import org.scalatest._
 import org.scalatest.prop._
 
+import scala.reflect.ClassTag
+
 
 /**
   * common base for all RACE regression tests, which mostly mixes in the
@@ -66,5 +68,13 @@ trait RaceSpec extends Suite with Matchers with OptionValues with Inside with Pr
     } catch {
       case x: Throwable => fail(s"loading resource config $rf failed: ${x.getMessage}")
     }
+  }
+
+  def expectException[T: ClassTag] (f: => Unit): Boolean = {
+    try { f } catch {
+      case t: T => return true
+      case other: Throwable => return false
+    }
+    false // if it doesn't throw the exception, it is a failure
   }
 }

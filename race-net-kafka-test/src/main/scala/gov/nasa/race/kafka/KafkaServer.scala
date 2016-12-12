@@ -31,7 +31,7 @@ import org.apache.zookeeper.server.{NIOServerCnxnFactory, ZooKeeperServer}
 import gov.nasa.race._ // NOTE - has to come *after* kafka imports or it will define a .race.kafka package that makes it
 import scala.io.StdIn
 import gov.nasa.race.main.CliArgs
-import gov.nasa.race.main.ConsoleIO._
+import gov.nasa.race.util.ConsoleIO._
 import gov.nasa.race.util.FileUtils
 /**
   * driver to run a Kafka server plus embedded Zookeeper server from the command line

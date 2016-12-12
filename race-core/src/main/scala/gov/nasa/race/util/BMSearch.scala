@@ -25,6 +25,8 @@ import scala.annotation.tailrec
 /**
   * simple ASCII Boyer Moore search using Array[Char] objects
   * Note that we only support patterns consisting of ASCII chars (<256)
+  *
+  * We provide this as a light weight alternative to Regex based search
   */
 class BMSearch (val pattern: Array[Char]) {
 

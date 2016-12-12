@@ -27,7 +27,7 @@ import com.typesafe.config.{Config, ConfigFactory}
 import org.apache.activemq.ActiveMQConnectionFactory
 import org.apache.activemq.broker.BrokerService
 import org.joda.time.DateTime
-import gov.nasa.race.main.ConsoleIO._
+import gov.nasa.race.util.ConsoleIO._
 
 object JMSServer {
 

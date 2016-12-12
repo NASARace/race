@@ -23,6 +23,9 @@ import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.nio.charset.CharsetDecoder;
 import java.nio.file.Files;
+import java.util.ArrayList;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * a simplified and streamlined pull parser for pre-validated XML
@@ -38,9 +41,9 @@ import java.nio.file.Files;
  *  - push unicode conversion into (native) data init and use a simple char[] as
  *    working buffer
  *  - iterate over local vars instead of fields (save get/setfields)
+ *  - avoid allocation during parsing
  *
- *  TODO - this still needs more sanity checks and better support for
- *  order independent attribute parsing
+ *  NOTE: XmlPullParser is NOT thread safe, it is designed for speed & memory
  */
 public class XmlPullParser implements XmlPullParserIfc {
 
@@ -145,6 +148,8 @@ public class XmlPullParser implements XmlPullParserIfc {
   private final String peekPath() {
     return (top>=0) ? path[top] : null;
   }
+
+  public int getDepth() { return top+1; }
 
   //----------------------------------------- element iteration
 
@@ -516,6 +521,10 @@ public class XmlPullParser implements XmlPullParserIfc {
 
   //--------------------------------------------------------------- path query
 
+  //--- parent queries (ascending order)
+  // all hasParent.. queries work bottom-up, i.e. parents are specified in
+  // ascending order starting with the immediate parent of the current element
+
   public boolean hasParent (String p) {
     int i = isStartElement ? top-1 : top;
     try {
@@ -552,11 +561,54 @@ public class XmlPullParser implements XmlPullParserIfc {
     }
   }
 
+  public boolean hasParents (String[] ps) {
+    int i = isStartElement ? top-1 : top;
+    try {
+      for (int j=0; j<ps.length; j++) {
+        if (!ps[j].equals(path[i])) return false;
+        i--;
+      }
+      return true;
+    } catch (ArrayIndexOutOfBoundsException aiobx){
+      return false;
+    }
+  }
+
   public boolean hasSomeParent (String p) {
     for (int i = isStartElement ? top-1 : top; i >= 0; i-- ){
       if (p.equals(path[i])) return true;
     }
     return false;
+  }
+
+  //--- path queries (descending order)
+  // hasPath.. queries work top down, i.e. matching path patterns are specified in
+  // descending order
+
+
+  protected ArrayList<PathQuery> queries = new ArrayList<PathQuery>();
+
+  // path specs are given in a glob-like notation, with "*" denoting a single level
+  // wildcard and "**" any number of levels
+  public int compileGlobPathQuery (String[] globs) {
+    int idx = queries.size();
+    queries.add(new PathQuery( PathQuery.fromGlobs(globs)));
+    return idx;
+  }
+
+  public boolean isMatchingPath (int queryId) {
+    PathQuery pq = queries.get(queryId);
+    return pq.matches(path,top+1);
+  }
+
+  // avoid this in inner loops because of allocation
+  public String getPath() {
+    StringBuilder sb = new StringBuilder();
+    for (int i=0; i<=top; i++){
+      if (i > 0)sb.append('/');
+      sb.append(path[i]);
+    }
+    return sb.toString();
   }
 
   //... and more to follow

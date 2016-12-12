@@ -30,7 +30,6 @@ import com.typesafe.config._
 import FileUtils._
 import gov.nasa.race._
 import gov.nasa.race.config.ConfigUtils
-import gov.nasa.race.main.ConsoleIO
 
 import scala.annotation.tailrec
 import scala.collection.JavaConverters._

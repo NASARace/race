@@ -24,8 +24,8 @@ import java.util
 import javax.crypto.Cipher
 
 import gov.nasa.race._
-import gov.nasa.race.main.{CliArgs, ConsoleIO}
-import gov.nasa.race.util.CryptUtils
+import gov.nasa.race.main.CliArgs
+import gov.nasa.race.util.{ConsoleIO, CryptUtils}
 
 /**
  * common base for en/decryption applications

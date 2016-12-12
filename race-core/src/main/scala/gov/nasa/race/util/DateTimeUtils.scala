@@ -19,7 +19,7 @@ package gov.nasa.race.util
 
 import com.github.nscala_time.time.Imports._
 import org.joda.time.DateTime
-import org.joda.time.format.ISOPeriodFormat
+import org.joda.time.format.{DateTimeFormatter, ISOPeriodFormat}
 
 import scala.concurrent.duration._
 import scala.language.implicitConversions
@@ -43,6 +43,34 @@ object DateTimeUtils {
   val hhmmss = DateTimeFormat.forPattern("hh:mm:ss")
 
   def toHHMMSS(d: FiniteDuration): (Int, Int, Int) = (d.toHours.toInt, (d.toMinutes % 60).toInt, (d.toSeconds % 60).toInt)
+
+  def formatDate (epoch: Long, formatter: DateTimeFormatter): String = formatter.print(epoch)
+
+  def durationMillisToHMMSS (millis: Long): String = {
+    val s = ((millis / 1000) % 60).toInt
+    val m = ((millis / 60000) % 60).toInt
+    val h = (millis / 3600000).toInt
+    hmsToHMMSS(h,m,s)
+  }
+  def durationToHMMSS (d: FiniteDuration) = {
+    hmsToHMMSS(d.toHours.toInt, (d.toMinutes % 60).toInt, (d.toSeconds % 60).toInt)
+  }
+
+  def hmsToHMMSS (h: Int, m: Int, s: Int): String = {
+    @inline def digit (d: Int): Char = (48 + d).toChar
+    @inline def setDD (c: Array[Char], idx: Int, d: Int): Unit = {
+      c(idx) = digit(d / 10)
+      c(idx+1) = digit(d % 10)
+    }
+
+    if (h > 99) f"$h%d:$m%02d:$s%02d" else {
+      val c = Array('0','0',':','0','0',':','0','0')
+      setDD(c,0, h)
+      setDD(c,3, m)
+      setDD(c,6, s)
+      new String(c)
+    }
+  }
 
   // Duration is another Java/Scala quagmire - we have them in java.time,
   // scala.concurrent.duration and org.joda.time. To make matters worse,

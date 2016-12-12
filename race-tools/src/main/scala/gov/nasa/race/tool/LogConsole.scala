@@ -23,7 +23,7 @@ import ch.qos.logback.classic.LoggerContext
 import ch.qos.logback.classic.joran.JoranConfigurator
 import ch.qos.logback.classic.net.SimpleSocketServer
 import gov.nasa.race.main.CliArgs
-import gov.nasa.race.main.ConsoleIO._
+import gov.nasa.race.util.ConsoleIO._
 import org.slf4j.LoggerFactory
 
 /**

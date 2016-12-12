@@ -27,10 +27,10 @@ import gov.nasa.race.common.{ConsoleUserInfoAdapter, UserInfoFactory}
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.config.ConfigVault
 import gov.nasa.race.core.RaceActorSystem
-import gov.nasa.race.main.ConsoleIO._
+import gov.nasa.race.util.ConsoleIO._
 import gov.nasa.race.util.FileUtils._
 import gov.nasa.race.util.NetUtils._
-import gov.nasa.race.util.{ClassLoaderUtils, CryptUtils}
+import gov.nasa.race.util.{ClassLoaderUtils, ConsoleIO, CryptUtils}
 import org.joda.time.DateTime
 
 import scala.collection.JavaConverters._

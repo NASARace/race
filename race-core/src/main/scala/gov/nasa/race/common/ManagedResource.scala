@@ -8,6 +8,9 @@ package gov.nasa.race.common
   *
   * Use as in
   * {{{
+  *    class A { .. def close(): Unit = .. }
+  *    class B { .. def close(: Unit = .. }
+  *    ...
   *       for (
   *         a <- ensureClose(new A);
   *         b <- ensureClose(new B)
@@ -16,6 +19,9 @@ package gov.nasa.race.common
   *         bar(b)
   *       }
   * }}}
+  *
+  * Exceptions can happen at any point of resource acquisition or use, and all resources
+  * that have been acquired at this point have to be released (closed).
   *
   * The underlying for-comprehension expansion is
   * {{{

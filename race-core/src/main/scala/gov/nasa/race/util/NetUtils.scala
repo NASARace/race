@@ -26,7 +26,6 @@ import javax.net.SocketFactory
 import javax.net.ssl._
 
 import gov.nasa.race._
-import gov.nasa.race.main.ConsoleIO
 
 import scala.annotation.tailrec
 

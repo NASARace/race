@@ -27,8 +27,7 @@ import com.typesafe.config.{Config, ConfigException, ConfigFactory}
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.util.ThreadUtils._
 import gov.nasa.race._
-import gov.nasa.race.main.ConsoleIO
-import gov.nasa.race.util._
+import gov.nasa.race.util.{ConsoleIO, _}
 
 /**
   * command line options for RemoteLauncherServer (scopt based parser, but mutable options)

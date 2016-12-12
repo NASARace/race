@@ -22,7 +22,7 @@ import java.net.{ServerSocket, Socket}
 
 import com.jcraft.jsch.JSch
 import gov.nasa.race._
-import gov.nasa.race.main.ConsoleIO._
+import gov.nasa.race.util.ConsoleIO._
 import gov.nasa.race.main.MainBase
 import gov.nasa.race.util.NetUtils._
 import gov.nasa.race.util.ThreadUtils._

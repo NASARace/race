@@ -22,7 +22,8 @@ import java.io.File
 import akka.event.Logging
 import gov.nasa.race._
 import gov.nasa.race.core.RaceActorSystem
-import gov.nasa.race.main.ConsoleIO._
+import gov.nasa.race.util.ConsoleIO
+import gov.nasa.race.util.ConsoleIO._
 import gov.nasa.race.util.FileUtils._
 
 /**

@@ -25,7 +25,7 @@ import javax.jms._
 import com.typesafe.config.ConfigFactory
 import gov.nasa.race.main.CliArgs
 import org.apache.activemq.ActiveMQConnectionFactory
-import gov.nasa.race.main.ConsoleIO._
+import gov.nasa.race.util.ConsoleIO._
 
 object JMSClient {
   def main (args: Array[String]): Unit = {

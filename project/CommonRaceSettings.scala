@@ -12,7 +12,7 @@ object CommonRaceSettings {
       TaskSettings.taskSettings ++
       Assembly.taskSettings ++
       Seq(
-        scalaVersion := "2.12.0",
+        scalaVersion := "2.12.1",
         scalacOptions ++= Seq("-unchecked", "-deprecation", "-feature"),
         resolvers ++= Dependencies.dependencyResolvers,
         publishArtifact in (Compile, packageDoc) := false,

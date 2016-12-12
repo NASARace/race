@@ -23,7 +23,7 @@ import java.net.SocketException
 import java.util
 import java.util.Base64
 
-import gov.nasa.race.main.ConsoleIO._
+import gov.nasa.race.util.ConsoleIO._
 import gov.nasa.race.util.CryptUtils._
 import gov.nasa.race.util.ThreadUtils._
 

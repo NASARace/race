@@ -23,7 +23,7 @@ import akka.actor.ActorRef
 import com.typesafe.config.Config
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.RaceActor
-import gov.nasa.race.main.ConsoleIO._
+import gov.nasa.race.util.ConsoleIO._
 import gov.nasa.race.util.ThreadUtils._
 
 /**

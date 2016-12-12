@@ -167,4 +167,11 @@ object FileUtils {
       throw new Exception(s"deleteRecursively ${file.getAbsolutePath} failed")
     }
   }
+
+  def sizeString (nBytes: Long) = {
+    if (nBytes > 1024*1024*1024) f"${nBytes *10.0/(1024*1024*1024)}%.1fg"
+    else if (nBytes > 1024*1024) f"${nBytes *10.0/(1024*1024)}%.1fm"
+    else if (nBytes > 1024) f"${Math.round(nBytes / 1024.0)}%dk"
+    else nBytes.toString
+  }
 }
