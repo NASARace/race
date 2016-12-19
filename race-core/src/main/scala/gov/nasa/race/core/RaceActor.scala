@@ -390,6 +390,8 @@ trait PublishingRaceActor extends RaceActor {
     val be = if (e.channel == otherChannel) e else e.copy(channel=otherChannel)
     busFor(otherChannel).publish(be)
   }
+
+  def hasPublishingChannels = writeTo.nonEmpty
 }
 
 /**
@@ -465,13 +467,14 @@ trait ContinuousTimeRaceActor extends RaceActor {
   }
 
 
-  def updateSimTime = lastSimMillis = simClock.millis
-  def simTime = new DateTime(lastSimMillis)
-  def updatedSimTime = {
+  @inline def updateSimTime = lastSimMillis = simClock.millis
+  @inline def simTime = new DateTime(lastSimMillis)
+  @inline def simTimeMillis = lastSimMillis
+  @inline def updatedSimTime = {
     lastSimMillis = simClock.millis
     new DateTime(lastSimMillis)
   }
-  def updatedSimTimeMillis = {
+  @inline def updatedSimTimeMillis = {
     lastSimMillis = simClock.millis
     lastSimMillis
   }

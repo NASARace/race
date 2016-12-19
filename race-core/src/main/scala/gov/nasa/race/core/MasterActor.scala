@@ -123,7 +123,9 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ImplicitActorLogging
   //--- failure strategy
 
   override val supervisorStrategy = OneForOneStrategy(maxNrOfRetries = 10, withinTimeRange = 1 minute) {
-    case x: Throwable => Stop
+    case x: Throwable =>
+      x.printStackTrace
+      Stop
 
     //case _: ArithmeticException      => Resume
     //case _: NullPointerException     => Restart

@@ -104,4 +104,9 @@ object StringUtils {
     }
     i == s.length
   }
+
+  def matchesAll (s: String, patterns: Seq[Regex]): Boolean = {
+    patterns.foreach( re => if (re.findFirstIn(s).isEmpty) return false )
+    true
+  }
 }

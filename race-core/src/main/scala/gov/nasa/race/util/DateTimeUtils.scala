@@ -19,7 +19,7 @@ package gov.nasa.race.util
 
 import com.github.nscala_time.time.Imports._
 import org.joda.time.DateTime
-import org.joda.time.format.{DateTimeFormatter, ISOPeriodFormat}
+import org.joda.time.format.{DateTimeFormatter, ISODateTimeFormat, ISOPeriodFormat}
 
 import scala.concurrent.duration._
 import scala.language.implicitConversions
@@ -56,13 +56,12 @@ object DateTimeUtils {
     hmsToHMMSS(d.toHours.toInt, (d.toMinutes % 60).toInt, (d.toSeconds % 60).toInt)
   }
 
-  def hmsToHMMSS (h: Int, m: Int, s: Int): String = {
-    @inline def digit (d: Int): Char = (48 + d).toChar
-    @inline def setDD (c: Array[Char], idx: Int, d: Int): Unit = {
-      c(idx) = digit(d / 10)
-      c(idx+1) = digit(d % 10)
-    }
+  @inline private def setDD (c: Array[Char], idx: Int, d: Int): Unit = {
+    c(idx) = (d / 10 + 48).toChar
+    c(idx+1) = (d % 10 + 48).toChar
+  }
 
+  def hmsToHMMSS (h: Int, m: Int, s: Int): String = {
     if (h > 99) f"$h%d:$m%02d:$s%02d" else {
       val c = Array('0','0',':','0','0',':','0','0')
       setDD(c,0, h)
@@ -71,6 +70,8 @@ object DateTimeUtils {
       new String(c)
     }
   }
+
+  def dateMillisToTTime (t: Long): String = ISODateTimeFormat.tTime.print(t)
 
   // Duration is another Java/Scala quagmire - we have them in java.time,
   // scala.concurrent.duration and org.joda.time. To make matters worse,

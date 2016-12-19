@@ -29,38 +29,18 @@ import gov.nasa.race.core._
 /**
  * actor that writes the subscribed channel to disk
  */
-class ArchiveActor (val config: Config) extends SubscribingRaceActor with ContinuousTimeRaceActor {
-  val pathName = config.getString("pathname")
+class ArchiveActor (val config: Config) extends SubscribingRaceActor
+             with ContinuousTimeRaceActor with FileWriterRaceActor {
   val writerCls = config.getString("archive-writer")
-  var compressedMode = config.getBooleanOrElse("compressed", false)
-  val appendMode = config.getBooleanOrElse("append", false)
-  val bufSize = config.getIntOrElse("buffer-size", 4096)
-
   var stopArchiving = false
-  val oStream = openStream
   val archiveWriter = newInstance[ArchiveWriter](writerCls, Array(classOf[OutputStream]), Array(oStream)).get
 
-  if (compressedMode && appendMode) {
-    warning(s"$name cannot append to compressed stream, disabling compression")
-    compressedMode = false
-  }
   log.info(s"$name archiving channels [$readFromAsString] to $pathName (compress=$compressedMode,append=$appendMode)")
 
-  def openStream: OutputStream = {
-    val pn = if (compressedMode) pathName + ".gz" else pathName
-    val file = new File(pn)
-    val dir = file.getParentFile
-    if (!dir.isDirectory) dir.mkdirs()
-
-    val fs = new FileOutputStream(file, appendMode)
-    if (compressedMode) new GZIPOutputStream(fs,bufSize) else new BufferedOutputStream( fs, bufSize)
-  }
-
   override def onTerminateRaceActor(originator: ActorRef) = {
-    super.onTerminateRaceActor(originator)
     stopArchiving = true
     archiveWriter.close
-    oStream.close
+    super.onTerminateRaceActor(originator)
   }
 
   override def handleMessage: Receive = {
@@ -68,9 +48,9 @@ class ArchiveActor (val config: Config) extends SubscribingRaceActor with Contin
       if (!stopArchiving) {
         updateSimTime
         if (archiveWriter.write(simTime, msg)) {
-          debug(s"${name} archived $msg")
+          debug(s"$name archived $msg")
         } else {
-          debug(s"${name} ignored $msg")
+          debug(s"$name ignored $msg")
         }
       }
   }

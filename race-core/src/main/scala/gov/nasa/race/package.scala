@@ -23,6 +23,7 @@ import scala.annotation.tailrec
 import scala.collection.immutable.{Map => ImmutableMap, Set => ImmutableSet}
 import scala.collection.mutable.{Map => MutableMap, Set => MutableSet}
 import scala.language.implicitConversions
+import scala.reflect.ClassTag
 import scala.util.control.Breaks
 
 /**
@@ -248,6 +249,20 @@ package object race {
   }
 
   def clear(a: Array[Char]) = java.util.Arrays.fill(a, 0.toChar)
+
+  def mapToArray[T,U:ClassTag](s:Seq[T])(f: T=>U): Array[U] = {
+    val a = new Array[U](s.size)
+    var i=0
+    s foreach { e => a(i) = f(e); i += 1}
+    a
+  }
+
+  def mapIteratorToArray[T,U:ClassTag](it: Iterator[T], len: Int)(f: T=>U): Array[U] = {
+    val a = new Array[U](len)
+    var i=0
+    it foreach { e => a(i) = f(e); i += 1 }
+    a
+  }
 
   /** helper to debug for-comprehensions */
   def checkComprehension (msg: String): Option[String] = {

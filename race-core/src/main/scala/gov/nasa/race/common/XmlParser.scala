@@ -36,7 +36,7 @@ abstract class XmlParser[T] extends XmlPullParser {
   protected def errorResult = None
 
   def parse (input: String): Option[T] = {
-    initialize(input.toCharArray)
+    initialize(input)
 
     try {
       while (!_stop && parseNextElement()){

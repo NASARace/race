@@ -68,6 +68,7 @@ object ConsoleIO {
   final val errorColor = scala.Console.RED
   final val infoColor = scala.Console.WHITE
   final val resetColor = scala.Console.RESET
+  final val reverseColor = scala.Console.REVERSED
 
   val jConsole = System.console()
 

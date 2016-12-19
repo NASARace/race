@@ -35,7 +35,8 @@ import scala.collection.mutable.ArrayBuffer
   * the 12sec update (Solace) SFDPS translator
   */
 class FIXM2FlightObject (val config: Config=null)
-  extends FIXMParser[Seq[IdentifiableAircraft]] with ConfigurableTranslator {
+                 extends FIXMParser[Seq[IdentifiableAircraft]] with ConfigurableTranslator {
+  setBuffered(4096)
 
   //--- our parser value cache
   var id, cs: String = null
@@ -71,7 +72,7 @@ class FIXM2FlightObject (val config: Config=null)
           flights += FlightPos(id, cs, LatLonPos(Degrees(lat), Degrees(lon)),
                                alt, spd, Degrees(Math.atan2(vx, vy).toDegrees), date)
         } else {
-          //println(s"@@ $lat $lon $date $vx $vy $spd $alt")
+          //println(s"@@@ $lat $lon $date $vx $vy $spd $alt")
         }
       }
     }

@@ -51,20 +51,20 @@ object Dependencies {
   val scalaParser = "org.scala-lang.modules" % "scala-parser-combinators_2.12" % "1.0.4"
 
   //--- new scala reflection (TypeTags etc.)
-  val scalaReflect =  "org.scala-lang" % "scala-reflect" % "2.12.0" //"2.11.8"
+  val scalaReflect =  "org.scala-lang" % "scala-reflect" % "2.12.1"
 
   //--- scala automatic resource management (https://github.com/jsuereth/scala-arm) - 2.12.0 not yet supported
-  val scalaArm = "com.jsuereth" %% "scala-arm" % "1.4"
+  //val scalaArm = "com.jsuereth" %% "scala-arm" % "1.4"
 
   //--- miniboxing (better form of AnyVal specialization)
   //val scalaMiniboxingRT = "org.scala-miniboxing.plugins" %% "miniboxing-runtime" % "0.4-SNAPSHOT"
   //val scalaMiniboxingCompile = "org.scala-miniboxing.plugins" %% "miniboxing-plugin" % "0.4-SNAPSHOT"
 
   //--- squants (Scala quantities): https://github.com/garyKeorkunian/squants
-  val squants = "com.squants"  %% "squants"  % "0.6.2"
+  //val squants = "com.squants"  %% "squants"  % "0.6.2"
 
   //--- scalanlp/breeze (numerical processing): https://github.com/scalanlp/breeze
-  val breeze = "org.scalanlp" %% "breeze" % "latest.release"
+  //val breeze = "org.scalanlp" %% "breeze" % "latest.release"
   // val breezeNative = "org.scalanlp" %% "breeze-natives" % "latest.release"
 
   //--- scalaTest
@@ -75,13 +75,10 @@ object Dependencies {
   //--- scalaCheck
   val scalaCheck = "org.scalacheck" % "scalacheck_2.12" % "latest.release" // 1.13.4"
 
-  // scopt command line parsing https://github.com/scopt/scopt
-  val scopt = "com.github.scopt" %% "scopt" % "latest.release"
-
   // liftJson
   val liftJson = "net.liftweb" %% "lift-json" % "latest.release"
 
-  val defaultLibs =  Seq(logback,typesafeConfig,nscalaTime,liftJson,squants)
+  val defaultLibs =  Seq(logback,typesafeConfig,nscalaTime,liftJson)
   val defaultTestLibs = Seq(scalaTest,scalaCheck,pegDown)
 
   // scodec

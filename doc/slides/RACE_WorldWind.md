@@ -53,10 +53,11 @@ don't re-invent the wheel:
 
 
 ## WorldWind perspective: Layers and Panels
-RACE provides:
 
-* async thread-safe data import for *Layers*
-* an extensible UI framework of (Swing) *Panels*
+* RACE provides
+
+    - async thread-safe data import for *Layers*
+    - extensible UI framework of (Swing) *Panels*
 
 <img src="../images/race-ww.svg" class="center scale60">
 
@@ -65,7 +66,7 @@ RACE provides:
 * WorldWind as one of the building blocks
 * don't look at the details (yet)
 
-<img src="../images/swim-sbs-all-ww.svg" class="center scale50">
+<img src="../images/swim-sbs-all-ww.svg" class="center scale65">
 
 
 ## Demos
@@ -75,7 +76,7 @@ RACE provides:
 
 
 ## Concrete Schematics
-<img src="../images/swim-sbs-all-ww.svg" class="center scale65">
+<img src="../images/swim-sbs-all-ww.svg" class="center scale85">
 
 
 ## Abstract Schematics
@@ -84,7 +85,7 @@ RACE provides:
 * composition and interaction of actors is configured
 
 
-<img src="../images/race-dataflow.svg" class="center scale80">
+<img src="../images/race-dataflow.svg" class="center scale55">
 
 
 ## So what are these actors anyway?
@@ -93,7 +94,7 @@ RACE provides:
 * objects that communicate only through async messages ⟹ no shared state
 * process messages one-at-a-time ⟹ sequential code
 
-<img src="../images/actor.svg" class="center scale40">
+<img src="../images/actor.svg" class="center scale55">
 
 
 ## How are actors implemented in RACE?
@@ -115,7 +116,7 @@ RACE provides:
 * central supervision & control (master)
 * distributed - can seamlessly communicate with each other
 
-<img src="../images/race-overview-2.svg" class="center scale55">
+<img src="../images/race-overview-2.svg" class="center scale60">
 
 
 ## Congratulations - you have reached the bonus part
@@ -126,7 +127,7 @@ RACE provides:
 
 ## RACE and WorldWind under the hood
 thread-safe data-import and UI model:
-<img src="../images/race-viewer.svg" class="center scale85">
+<img src="../images/race-viewer.svg" class="center scale80">
 
 ## Data Integration on demand - ChannelTopics
 don't overwhelm UI threads (0.1 sec rule) ⟹ ChannelTopic "producer valves"

@@ -24,6 +24,7 @@ import java.nio.charset.Charset;
 import java.nio.charset.CharsetDecoder;
 import java.nio.file.Files;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -62,6 +63,8 @@ public class XmlPullParser implements XmlPullParserIfc {
     void processAttribute (String attrName, String value);
   }
 
+  protected boolean isBuffered = false;
+
   private char[] buf;
   private int idx;  // always points to the next unprocessed char
   private int textEnd; // set if getText returned something
@@ -85,9 +88,46 @@ public class XmlPullParser implements XmlPullParserIfc {
   protected boolean isStartElement;
   protected boolean lastWasStartElement;
 
+  /** pre-allocate buffer */
+  public void setBuffer (char[] b){
+    isBuffered = true;
+    buf = b;
+  }
 
+  public void setBuffered (int size) {
+    isBuffered = true;
+    buf = new char[size];
+  }
+
+  /**
+   * initialize using persistent buffer
+   * this can be up to 5x faster than allocating a new char[] buffer per parse
+   */
+  public void initializeBuffered (String s) {
+    int slen = s.length();
+    if (buf == null || slen > buf.length) {
+      buf = new char[slen];
+    }
+    s.getChars(0,slen,buf,0);
+    Arrays.fill(buf,slen,buf.length,(char)0);
+    initFields();
+  }
+
+  /** initialize using transient buffer */
   public void initialize (char[] b) {
     buf = b;
+    initFields();
+  }
+
+  public void initialize (String s) {
+    if (isBuffered) {
+      initializeBuffered(s);
+    } else {
+      initialize(s.toCharArray());
+    }
+  }
+
+  private void initFields() {
     idx = 0;
     tag = null;
     text = null;
@@ -101,6 +141,11 @@ public class XmlPullParser implements XmlPullParserIfc {
     isStartElement = false;
     lastWasStartElement = false;
     top = -1;
+  }
+
+  /** use this to allow GC to reclaim buffer memory after parsing is done */
+  public void clearBuffer() {
+    buf = null;
   }
 
   // accessors - preferably we extend this in Scala types, so we don't
@@ -218,7 +263,9 @@ public class XmlPullParser implements XmlPullParserIfc {
       }
 
       while (true){
-        while (buf[i++] != '<');
+        while (buf[i++] != '<') {
+          if (buf[i] == 0) return false; // end marker
+        }
 
         char c = buf[i];
         if (c == '?') { // metadata (prolog, skip over)

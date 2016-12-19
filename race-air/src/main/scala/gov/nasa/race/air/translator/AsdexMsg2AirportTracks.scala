@@ -30,7 +30,9 @@ import gov.nasa.race.uom._
 /**
   * translator for SWIM ASDE-X asdexMsg messages to AirportTracks objects
   */
-class AsdexMsg2AirportTracks (val config: Config=null) extends XmlPullParser with ConfigurableTranslator {
+class AsdexMsg2AirportTracks (val config: Config=null) extends XmlPullParser
+                                                        with ConfigurableTranslator {
+  setBuffered(8192)
 
   def translate(src: Any): Option[AirportTracks] = {
     src match {

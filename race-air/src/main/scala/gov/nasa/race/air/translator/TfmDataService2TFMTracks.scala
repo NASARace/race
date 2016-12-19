@@ -33,6 +33,7 @@ import org.joda.time.DateTime
   * translator from <ds:tfmDataService> messages to TFMTracks objects
   */
 class TfmDataService2TFMTracks(val config: Config=null) extends XmlPullParser with ConfigurableTranslator {
+  setBuffered(8192)
 
   def translate(src: Any): Option[TFMTracks] = {
     src match {

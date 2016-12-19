@@ -19,7 +19,7 @@ SGT Inc, NASA Ames Research Center
 * can be used as stand-in for live systems
 * distributed (collaborative, local access to external systems)
 
-<img src="../images/lvc-sim.svg" class="center scale75">
+<img src="../images/lvc-sim.svg" class="center scale40">
 
 ## Main Design Drivers
 **uniform programming model** for components supporting:
@@ -36,7 +36,7 @@ SGT Inc, NASA Ames Research Center
 ⟹ no shared state
 * objects process messages one-at-a-time ⟹ sequential code
 
-<img src="../images/actor.svg" class="center scale40">
+<img src="../images/actor.svg" class="center scale55">
 
 ## Actor Implementation in RACE
 * using open sourced **Akka** framework (<http://akka.io>)
@@ -73,7 +73,7 @@ SGT Inc, NASA Ames Research Center
 2. `RaceActorSystem` instantiating `Master` actor
 3. `Master` actor instantiating configured `RaceActors`
 
-<img src="../images/race-overview-2.svg" class="center scale55">
+<img src="../images/race-overview-2.svg" class="center scale60">
 
 ## Everything is configured
  * RACE is **not** a monolythic application - needs configuration as input
@@ -101,12 +101,13 @@ configs define graphs:
 * nodes are actors
 * edges are channels through which actors communicate
 
-<img src="../images/race-dataflow.svg" class="center scale90">
+<img src="../images/race-dataflow.svg" class="center scale55">
 
 ## Example Schematics
-<img src="../images/swim-sbs-all-ww.svg" class="center scale65">
+<img src="../images/swim-sbs-all-ww.svg" class="center scale85">
 
 ## Example Screenshot
+live demo
 
 ## Example Numbers
 application domain:
@@ -149,7 +150,7 @@ RACE scales!
 * actors can be moved between processes
 * no need to change actor code - just configuration
 
-<img src="../images/loc-trans.svg" class="center scale90">
+<img src="../images/loc-trans.svg" class="center scale60">
 
 
 ## Data on Demand - ChannelTopics
@@ -157,12 +158,12 @@ RACE scales!
 * *ChannelTopics* are "valves" to turn on/off data flow along channel "pipes"
 * transitive, async protocol for provider-lookup & registration
 
-<img src="../images/race-channeltopics.svg" class="center scale65">
+<img src="../images/race-channeltopics.svg" class="center scale60">
 
 
 ## RaceViewer Visualization - WorldWind in an Actor
 * adds thread-safe data acquisition (Layers) and UI framework (Panels)
 * supports viewer synchronization through RACE channels
 
-<img src="../images/race-viewer.svg" class="center scale75">
+<img src="../images/race-viewer.svg" class="center scale70">
 

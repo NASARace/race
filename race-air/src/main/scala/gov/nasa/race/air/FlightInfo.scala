@@ -143,9 +143,10 @@ trait FlightInfoSource {
 
 class FlightInfoTfmParser (store: FlightInfoStore)
             extends XmlPullParser with XmlAttrProcessor with FlightInfoSource {
+  setBuffered(4096)
 
   def parse (tfmDataMsg: String) = {
-    initialize(tfmDataMsg.toCharArray)
+    initialize(tfmDataMsg)
 
     def parseTimeValueAttr (typeAttr: String, typeVal: String,
                             equalAction: (DateTime)=>Unit, notEqualAction: (DateTime)=>Unit) = {

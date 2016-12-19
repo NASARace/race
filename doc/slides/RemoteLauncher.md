@@ -23,7 +23,7 @@ Dissection:
 2. `RaceActorSystem` instantiating `Master` actor
 3. `Master` actor instantiating configured `RaceActors`
 
-<img src="../images/race-overview-2.svg" class="center scale55">
+<img src="../images/race-overview-2.svg" class="center scale60">
 
 ## (Excursion²) Config is Everything
 * configs are HOCON text files (`com.typesafe.config`)
@@ -45,18 +45,18 @@ Dissection:
            ...
 
 ## (Excursion²) Config Zoom In
-<img src="../images/race-config.svg" class="center">
+<img src="../images/race-config.svg" class="center scale65">
 
 
 ## (Excursion³) Secret Config Values - Vault
 * some config values are secret (uid, passwords)
 * "??" prefixed config values are *vault* keys
 
-<img src="../images/race-vault.svg" class="center scale80">
+<img src="../images/race-vault.svg" class="center scale70">
 
 
 ## (Excursion⁴) RaceActors Zoom In
-<img src="../images/raceactor.svg" class="center scale80">
+<img src="../images/raceactor.svg" class="center scale85">
 
 
 ## RemoteLauncher - the man in the middle
@@ -66,12 +66,12 @@ different concerns:
 * RemoteLauncher: config files, gateway, remote processes
 * RemoteMain: actors
 
-<img src="../images/remotelauncher-context.svg" class="center">
+<img src="../images/remotelauncher-context.svg" class="center scale50">
 
 
 ## RemoteLauncher Zoom In
 
-  <img src="../images/remotelauncher-2.svg" class="center">
+  <img src="../images/remotelauncher-2.svg" class="center scale70">
 
 
 ## Physical Protocol: Requirements
@@ -92,9 +92,9 @@ different concerns:
 * tunnel control socket (separated from stdio/logging/data streams)
 * tunnel data server sockets
 
-<img src="../images/reverse-portmap.svg" class="center scale80">
+<img src="../images/reverse-portmap.svg" class="center scale50">
 
 
 ## Logical Protocols
 
-  <img src="../images/remotelauncher-proto.svg" class="center scale60">
+  <img src="../images/remotelauncher-proto.svg" class="center scale75">

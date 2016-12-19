@@ -39,11 +39,11 @@ execution:
     ...
     
 If RACE was executed with the `--delay` option, you can start the simulation by entering '5'
-You can terminate RACE at any time by entering '9'. Hitting <enter> will re-display the menu
+You can terminate RACE at any time by entering '9'. Hitting the `<enter>` key will re-display the menu
 
 
 ## Remote RACE
 
 To run RACE on a remote machine, use the `gov.nasa.race.remote.ConsoleRemoteLauncher` or the 
 `gov.nasa.race.remote.RemoteLauncherServer`. This is further explained in 
-[launching RACE remotely](remotelauncher.md)
+[launching RACE remotely](../design/remotelauncher.html)

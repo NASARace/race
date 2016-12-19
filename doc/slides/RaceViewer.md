@@ -38,12 +38,12 @@ making it visible
 * data: RACE⟷WorldWind ⟹ Layers
 * interaction: UI⟷WorldWind/RACE ⟹ Panels
 
-<img src="../images/race-ww.svg" class="center scale70">
+<img src="../images/race-ww.svg" class="center scale65">
 
 
 ## Big Picture: Zoom In on Bridges
 
-<img src="../images/race-viewer.svg" class="center scale90">
+<img src="../images/race-viewer.svg" class="center scale85">
 
 
 ## RACE Configuration
@@ -70,7 +70,7 @@ using normal RACE actor configuration:
 
 
 ## Data Integration
-<img src="../images/racelayer.svg" class="center scale80">
+<img src="../images/racelayer.svg" class="center scale85">
 
 
 ## Data Integration on demand - ChannelTopics
