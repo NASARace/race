@@ -1,15 +1,12 @@
 package gov.nasa.race.air.actor
 
-import java.io.PrintStream
-
 import akka.actor.ActorRef
 import com.typesafe.config.Config
 import gov.nasa.race.air.{FlightCompleted, FlightDropped, FlightPos}
-import gov.nasa.race.common.{Stats, StatsPrinter}
+import gov.nasa.race.common.Stats
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.Messages.RaceCheck
 import gov.nasa.race.core.{BusEvent, ContinuousTimeRaceActor, MonitoredRaceActor, PublishingRaceActor, SubscribingRaceActor}
-import gov.nasa.race.util.DateTimeUtils.durationMillisToHMMSS
 
 import scala.collection.mutable.{HashMap => MHashMap}
 import scala.concurrent.duration._
@@ -19,13 +16,12 @@ import scala.concurrent.duration._
   */
 class FPosStatsCollector (val config: Config) extends SubscribingRaceActor with PublishingRaceActor
                       with ContinuousTimeRaceActor with MonitoredRaceActor {
-  class FPosUpdates (
-    var tLast: Long,
-    var count: Int=0,
-    var dtSum: Int=0,
-    var dtMin: Int=0,
-    var dtMax: Int=0
-  )
+  class FPosUpdates (var tLast: Long) {
+    var count: Int = 0
+    var dtSum: Int = 0
+    var dtMin: Int = 0
+    var dtMax: Int = 0
+  }
 
   override def defaultCheckInterval = 10.seconds
   override def defaultCheckDelay = 10.seconds
@@ -41,8 +37,6 @@ class FPosStatsCollector (val config: Config) extends SubscribingRaceActor with 
   var maxActive = 0
   var outOfOrder = 0
 
-  StatsPrinter.registerPrinter(classOf[FlightObjectStats], new FlightObjectStatsPrinter)
-
   override def onStartRaceActor(originator: ActorRef) = {
     super.onStartRaceActor(originator)
     channels = readFromAsString
@@ -50,7 +44,7 @@ class FPosStatsCollector (val config: Config) extends SubscribingRaceActor with 
   }
 
   override def handleMessage = {
-    case BusEvent(_, fpos: FlightPos, _) => updateActiveFlights(fpos)
+    case BusEvent(_, fpos: FlightPos, _) => updateActiveFlight(fpos)
 
     case BusEvent(_, fcomplete: FlightCompleted, _) =>
       activeFlights -= fcomplete.cs
@@ -65,11 +59,11 @@ class FPosStatsCollector (val config: Config) extends SubscribingRaceActor with 
     case RaceCheck => publish(snapshot)
   }
 
-  def updateActiveFlights (fpos: FlightPos) = {
+  def updateActiveFlight (fpos: FlightPos) = {
     val t = fpos.date.getMillis
     activeFlights.get(fpos.cs) match {
       case Some(fpu:FPosUpdates) =>
-        if (t > fpu.tLast) {
+        if (t >= fpu.tLast) {
           val dt = (t - fpu.tLast).toInt
           fpu.tLast = t
           fpu.count += 1
@@ -106,6 +100,7 @@ class FPosStatsCollector (val config: Config) extends SubscribingRaceActor with 
     var avgSum = 0
     var dtMin = 0
     var dtMax = 0
+
     for (fpu <- activeFlights.values) {
       if (fpu.count > 0) {
         avgSum += fpu.dtSum / fpu.count // add average update interval for this flight
@@ -116,52 +111,33 @@ class FPosStatsCollector (val config: Config) extends SubscribingRaceActor with 
         if (fpu.dtMax > dtMax) dtMax = fpu.dtMax
       }
     }
+
     val nActive = activeFlights.size
     val avgUpdate = if (nUpdated > 0) avgSum / nUpdated  else 0
 
-    Stats(title,
-      tNow,
-      elapsedSimTimeMillisSinceStart,
-      FlightObjectStats(channels,
+    new FlightObjectStats(title, tNow, elapsedSimTimeMillisSinceStart, channels,
         nActive,minActive,maxActive,
         avgUpdate,dtMin,dtMax,
         completedFlights,droppedFlights,outOfOrder)
-    )
   }
 }
 
-case class FlightObjectStats (
-  channels: String,
-  active: Int,
-  minActive: Int,
-  maxActive: Int,
-  avgUpdateMillis: Int,
-  minUpdateMillis: Int,
-  maxUpdateMillis: Int,
-  completed: Int,
-  dropped: Int,
-  outOfOrder: Int
-)
+class FlightObjectStats (val topic: String, val takeMillis: Long, val elapsedMillis: Long, val channels: String,
+                         val active: Int, val minActive: Int, val maxActive: Int,
+                         val avgUpdateMillis: Int, val minUpdateMillis: Int, val maxUpdateMillis: Int,
+                         val completed: Int, val dropped: Int, val outOfOrder: Int)  extends Stats {
+  def printToConsole = {
+    printConsoleHeader
 
-class FlightObjectStatsPrinter extends StatsPrinter {
-  def show(stats: Stats, ps: PrintStream = Console.out) = {
-    stats.data match {
-      case d: FlightObjectStats =>
-        showTopic(stats, ps)
+    println(s"observed channels: $channels")
 
-        ps.println(s"observed channels: ${d.channels}")
-        ps.println(s"observed duration: ${durationMillisToHMMSS(stats.elapsedMillis)}")
+    val dtAvg = avgUpdateMillis / 1000.0
+    val dtMin = minUpdateMillis / 1000.0
+    val dtMax = maxUpdateMillis / 1000.0
 
-        val dtAvg = d.avgUpdateMillis / 1000.0
-        val dtMin = d.minUpdateMillis / 1000.0
-        val dtMax = d.maxUpdateMillis / 1000.0
-
-        ps.println(" active     min     max    complt    drop   order   dtAvg  dtMin  dtMax")
-        ps.println("------- ------- -------   ------- ------- -------  ------ ------ ------")
-        ps.println(f"${d.active}%7d ${d.minActive}%7d ${d.maxActive}%7d   ${d.completed}%7d ${d.dropped}%7d ${d.outOfOrder}%7d  $dtAvg%6.1f $dtMin%6.1f $dtMax%6.1f")
-        ps.println
-
-      case other => // ignore
-    }
+    println(" active     min     max    complt    drop   order   dtAvg  dtMin  dtMax")
+    println("------- ------- -------   ------- ------- -------  ------ ------ ------")
+    println(f"$active%7d $minActive%7d $maxActive%7d   $completed%7d $dropped%7d $outOfOrder%7d  $dtAvg%6.1f $dtMin%6.1f $dtMax%6.1f")
+    println
   }
 }

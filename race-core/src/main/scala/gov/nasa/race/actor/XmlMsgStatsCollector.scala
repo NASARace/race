@@ -50,8 +50,6 @@ class XmlMsgStatsCollector (val config: Config) extends SubscribingRaceActor wit
   val msgStats = MSortedMap.empty[String,MsgStats]
   var channels = "" // set during start
 
-  SubscriberMsgStats.register
-
   class Parser extends XmlPullParser {
     val pathQueries = patternSpecs map( ps => compileGlobPathQuery(ps.split("/")))
     setBuffer(new Array[Char](config.getIntOrElse("buffer-size", 4096))) // pre-alloc buffer
@@ -109,12 +107,7 @@ class XmlMsgStatsCollector (val config: Config) extends SubscribingRaceActor wit
     case RaceCheck if hasPublishingChannels => publish(snapshot)
   }
 
-  def snapshot = Stats(
-    title,                           // to describe statistics item
-    updatedSimTimeMillis,            // abs time when taken
-    elapsedSimTimeMillisSinceStart,  // duration since start
-    SubscriberMsgStats(channels,
-      mapIteratorToArray(msgStats.valuesIterator,msgStats.size)(_.snapshot))
-  )
+  def snapshot = new SubscriberMsgStats(title, updatedSimTimeMillis, elapsedSimTimeMillisSinceStart,
+                                        channels, mapIteratorToArray(msgStats.valuesIterator,msgStats.size)(_.snapshot))
 }
 

@@ -50,16 +50,25 @@ object StringUtils {
     new String(cs)
   }
 
-  def padLeft (s: String, len: Int, c: Char): String = {
-    val n = len - s.length
-    if (n > 0){
-      val sb = new StringBuilder(len)
-      repeat(n) { sb.append(c) }
-      sb.append(s)
-      sb.toString()
-    } else s
+  private def pad (s: String, len: Int)(pf: => String): String = {
+    if (s.length > len) s.substring(0, len - 1) + "…"
+    else if (s.length == len) s
+    else pf
   }
 
+  def padLeft (s: String, len: Int, fill: Char): String = pad(s, len){
+    val sb = new StringBuilder(len)
+    repeat(len - s.length) { sb.append(fill) }
+    sb.append(s)
+    sb.toString
+  }
+
+  def padRight(s: String, len: Int, fill: Char): String = pad(s,len) {
+    val sb = new StringBuilder(len)
+    sb.append(s)
+    repeat(len - s.length) { sb.append(fill) }
+    sb.toString
+  }
 
   def capLength(s: String)(implicit maxStringLength: Int = 30): String = {
     if (s.length < maxStringLength) s else s.substring(0, maxStringLength-1) + "…"

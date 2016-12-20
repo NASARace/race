@@ -1,12 +1,10 @@
 package gov.nasa.race.actor
 
-import java.io.{OutputStream, PrintStream}
-
 import akka.actor.ActorRef
 import com.typesafe.config.Config
 import gov.nasa.race._
 import gov.nasa.race.config.ConfigUtils._
-import gov.nasa.race.common.{MD5Checksum, Stats, StatsPrinter}
+import gov.nasa.race.common.{MD5Checksum, Stats}
 import gov.nasa.race.core.Messages.RaceCheck
 import gov.nasa.race.core.{BusEvent, ContinuousTimeRaceActor, FileWriterRaceActor, MonitoredRaceActor, PublishingRaceActor, SubscribingRaceActor}
 import gov.nasa.race.util.DateTimeUtils._
@@ -42,8 +40,6 @@ class DuplicatedMsgDetector (val config: Config) extends SubscribingRaceActor
   val title = config.getStringOrElse("title", name)
   var channels = ""
 
-  StatsPrinter.registerPrinter(classOf[SubscriberDupStats], new SubscriberDupStatsPrinter)
-
   override def onStartRaceActor(originator: ActorRef) = {
     super.onStartRaceActor(originator)
     channels = readFromAsString
@@ -75,13 +71,8 @@ class DuplicatedMsgDetector (val config: Config) extends SubscribingRaceActor
     }
   }
 
-  def snapshot = Stats(
-    title,
-    updatedSimTimeMillis,            // abs time when taken
-    elapsedSimTimeMillisSinceStart,  // duration since start
-    SubscriberDupStats(channels,
-                       mapIteratorToArray(dupStats.valuesIterator,dupStats.size)(_.snapshot))
-  )
+  def snapshot = new SubscriberDupStats(title, updatedSimTimeMillis, elapsedSimTimeMillisSinceStart,
+                                        channels, mapIteratorToArray(dupStats.valuesIterator,dupStats.size)(_.snapshot))
 
   def purgeOldChecksums = {
     val tNow = updatedSimTimeMillis
@@ -124,26 +115,19 @@ case class DupStatsSnapshot (
   count: Int,
   dtMillis: Long
 )
-case class SubscriberDupStats (
-  channels: String,
-  messages: Array[DupStatsSnapshot]
-)
 
-class SubscriberDupStatsPrinter extends StatsPrinter {
-  def show(stats: Stats, ps: PrintStream = Console.out) = {
-    stats.data match {
-      case data: SubscriberDupStats =>
-        showTopic(stats, ps)
 
-        ps.println(s"observed channels: ${data.channels}")
-        ps.println(s"observed duration: ${durationMillisToHMMSS(stats.elapsedMillis)}")
-        ps.println("  count     avg sec   classifier")
-        ps.println("-------   ---------   -------------------------------------------")
-        for (m <- data.messages) {
-          val avgDtSecs = m.dtMillis.toDouble / (m.count * 1000.0)
-          ps.println(f"${m.count}%7d   $avgDtSecs%9.3f   ${m.classifier}")
-        }
-        ps.println
+class SubscriberDupStats (val topic: String, val takeMillis: Long, val elapsedMillis: Long, val channels: String,
+                          val messages: Array[DupStatsSnapshot]) extends Stats {
+  def printToConsole = {
+    printConsoleHeader
+    println(s"observed channels: $channels")
+    println("  count     avg sec   classifier")
+    println("-------   ---------   -------------------------------------------")
+    for (m <- messages) {
+      val avgDtSecs = m.dtMillis.toDouble / (m.count * 1000.0)
+      println(f"${m.count}%7d   $avgDtSecs%9.3f   ${m.classifier}")
     }
+    println
   }
 }

@@ -69,51 +69,37 @@ case class ElemStatsSnapshot (
   count: Int
 )
 
-object SubscriberMsgStats {
-  def register = StatsPrinter.registerPrinter(classOf[SubscriberMsgStats], new SubscriberMsgStatsPrinter)
-}
-case class SubscriberMsgStats (
-  val channels: String,
-  val messages: Array[MsgStatsSnapshot]
-)
+class SubscriberMsgStats (val topic: String, val takeMillis: Long, val elapsedMillis: Long, val channels: String,
+                          val messages: Array[MsgStatsSnapshot]) extends Stats {
+  def printToConsole = {
+    printConsoleHeader
 
+    var count = 0
+    var avgRate = 0.0
+    var peakRate = 0.0
+    var byteSize = 0L
 
-class SubscriberMsgStatsPrinter extends StatsPrinter {
-  def show (stats: Stats, ps: PrintStream = Console.out) = {
-    stats.data match {
-      case data: SubscriberMsgStats =>
-        showTopic(stats,ps)
-
-        var count = 0
-        var avgRate = 0.0
-        var peakRate = 0.0
-        var byteSize = 0L
-
-        ps.println(s"observed channels: ${data.channels}")
-        ps.println(s"observed duration: ${durationMillisToHMMSS(stats.elapsedMillis)}")
-        ps.println("  count    msg/s   peak     size    avg   msg")
-        ps.println("-------   ------ ------   ------ ------   --------------------------------------")
-        for (m <- data.messages) {
-          val memSize = FileUtils.sizeString(m.byteSize)
-          val avgMemSize = FileUtils.sizeString((m.byteSize / m.count).toInt)
-          ps.println(f"${m.count}%7d   ${m.avgMsgPerSec}%6.1f ${m.peakMsgPerSec}%6.1f   $memSize%6s $avgMemSize%6s   ${m.msgName}%s")
-          m.elements foreach { e=>
-            ps.println(f"                                           ${e.count}%7d : ${e.pattern}%s")
-          }
-          count += m.count
-          avgRate += m.avgMsgPerSec
-          peakRate += m.peakMsgPerSec
-          byteSize += m.byteSize
-        }
-
-        val memSize = FileUtils.sizeString(byteSize)
-        val avgMemSize = FileUtils.sizeString((byteSize / count).toInt)
-
-        ps.println("-------   ------ ------   ------ ------")
-        ps.println(f"${count}%7d   ${avgRate}%6.1f ${peakRate}%6.1f   $memSize%6s $avgMemSize%6s")
-        ps.println
-
-      case other => // ignore
+    println(s"observed channels: $channels")
+    println("  count    msg/s   peak     size    avg   msg")
+    println("-------   ------ ------   ------ ------   --------------------------------------")
+    for (m <- messages) {
+      val memSize = FileUtils.sizeString(m.byteSize)
+      val avgMemSize = FileUtils.sizeString((m.byteSize / m.count).toInt)
+      println(f"${m.count}%7d   ${m.avgMsgPerSec}%6.1f ${m.peakMsgPerSec}%6.1f   $memSize%6s $avgMemSize%6s   ${m.msgName}%s")
+      m.elements foreach { e=>
+        println(f"                                           ${e.count}%7d : ${e.pattern}%s")
+      }
+      count += m.count
+      avgRate += m.avgMsgPerSec
+      peakRate += m.peakMsgPerSec
+      byteSize += m.byteSize
     }
+
+    val memSize = FileUtils.sizeString(byteSize)
+    val avgMemSize = if (count > 0) FileUtils.sizeString((byteSize / count).toInt) else 0
+
+    println("-------   ------ ------   ------ ------")
+    println(f"${count}%7d   ${avgRate}%6.1f ${peakRate}%6.1f   $memSize%6s $avgMemSize%6s")
+    println
   }
 }

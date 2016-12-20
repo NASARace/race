@@ -169,8 +169,8 @@ object FileUtils {
   }
 
   def sizeString (nBytes: Long) = {
-    if (nBytes > 1024*1024*1024) f"${nBytes *10.0/(1024*1024*1024)}%.1fg"
-    else if (nBytes > 1024*1024) f"${nBytes *10.0/(1024*1024)}%.1fm"
+    if (nBytes > 1024*1024*1024) f"${nBytes.toDouble/(1024*1024*1024)}%.1fg"
+    else if (nBytes > 1024*1024) f"${nBytes.toDouble/(1024*1024)}%.1fm"
     else if (nBytes > 1024) f"${Math.round(nBytes / 1024.0)}%dk"
     else nBytes.toString
   }
