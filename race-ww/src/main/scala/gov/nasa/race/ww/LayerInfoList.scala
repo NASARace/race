@@ -59,14 +59,13 @@ object LayerInfoList {
       new WWLayerInfo("NASA Blue Marble Image", Set("map"), "", false, false, defaultPanel),
       new WWLayerInfo("Blue Marble May 2004", Set("map"), "", true, false, defaultPanel),
       new WWLayerInfo("i-cubed Landsat", Set("map"), "", true, false, defaultPanel),
-      new WWLayerInfo("USDA NAIP", Set("map"), "", false, false, defaultPanel),
-      new WWLayerInfo("USDA NAIP USGS", Set("map"), "", false, false, defaultPanel),
-      new WWLayerInfo("MS Virtual Earth Aerial", Set("map"), "", true, false, defaultPanel),
+      new WWLayerInfo("USGS NAIP Plus", Set("map"), "", false, false, defaultPanel),
       new WWLayerInfo("Bing Imagery", Set("map"),  "", true, false, defaultPanel),
-      new WWLayerInfo("USGS Topographic Maps 1:250K", Set("map"), "", false, false, defaultPanel),
-      new WWLayerInfo("USGS Topographic Maps 1:100K", Set("map"), "", false, false, defaultPanel),
-      new WWLayerInfo("USGS Topographic Maps 1:24K", Set("map"),  "", false, false, defaultPanel),
-      new WWLayerInfo("USGS Urban Area Ortho", Set("map"), "", false, false, defaultPanel),
+      new WWLayerInfo("USGS Topo Base Map", Set("map"), "", false, false, defaultPanel),
+      new WWLayerInfo("USGS Topo Base Map Large Scale", Set("map"), "", false, false, defaultPanel),
+      new WWLayerInfo("USGS Topo Scanned Maps 1:250K", Set("map"),  "", false, false, defaultPanel),
+      new WWLayerInfo("USGS Topo Scanned Maps 1:100K", Set("map"), "", false, false, defaultPanel),
+      new WWLayerInfo("USGS Topo Scanned Maps 1:24K", Set("map"), "", false, false, defaultPanel),
       new WWLayerInfo("Political Boundaries", Set("map"), "country borders", false, false, defaultPanel),
       new WWLayerInfo("Open Street Map", Set("map"), "street map", false, false, defaultPanel),
       new WWLayerInfo("Earth at Night", Set("deco"), "map with night images", false, false, defaultPanel),
@@ -136,8 +135,12 @@ class LayerInfoList (raceView: RaceView) {
   def setInitialStatus = {
     for (layer <- layerList) {
       val layerInfo = layer.layerInfo
-      if (layerInfo.enable != layer.isEnabled) layer.setEnabled(layerInfo.enable)
-      if (layerInfo.enablePick != layer.isPickEnabled) layer.setPickEnabled(layerInfo.enablePick)
+      if (layerInfo eq unknownWWLayer) {
+        raceView.log.warning(s"unknown layer: ${layer.getName}")
+      } else {
+        if (layerInfo.enable != layer.isEnabled) layer.setEnabled(layerInfo.enable)
+        if (layerInfo.enablePick != layer.isPickEnabled) layer.setPickEnabled(layerInfo.enablePick)
+      }
     }
   }
 

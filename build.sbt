@@ -31,7 +31,7 @@ lazy val root = createRootProject("race").
 //--- sub projects
 
 // although this is not really a subproject we keep it here because we might override the uri
-// locally (in local-race-buils.properties) so that it can point to a local install.
+// locally (in local-race-build.properties) so that it can point to a local install.
 // This saves us from having to do debug-related transient commits if WWJ and RACE are changed together
 // NOTE - SBT 0.13 only supports git clone/checkout, i.e. to catch remote repo changes you have to do a "reload"
 // (or delete the respective ~/.sbt/staging/<sha> before compiling/running)
