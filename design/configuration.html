@@ -32,7 +32,7 @@
             </div>
             <div class="globaltoc">
                 <div class="toc">
-                  <p class="title">Contents</p>
+                  <p class="title">Site</p>
                   <ul>
                     <li><span class="toc level1"><a href="../index.html">About RACE</a></span></li>
                     <li>
@@ -130,12 +130,12 @@ universe = {
   name = &quot;SimpleProbe&quot;                                         // name of universe
   actors = [                                                   // list of actor objects
     { name = &quot;aircraft&quot;                                        // name of actor
-      class = &quot;gov.nasa.race.actors.models.SimpleAircraft&quot;     // class of actor
+      class = &quot;gov.nasa.race.air.actor.SimpleAircraft&quot;     // class of actor
       write-to = &quot;/flights/positions&quot;                          // channel this actor writes to
       ...
     },
     { name = &quot;probe&quot;
-      class = &quot;gov.nasa.race.actors.viewers.ProbeActor&quot;
+      class = &quot;gov.nasa.race.actor.ProbeActor&quot;
       read-from = &quot;/flights/positions&quot;                         // channel this actor reads from
     }
   ]
