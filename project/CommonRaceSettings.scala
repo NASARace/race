@@ -1,3 +1,4 @@
+import com.typesafe.sbt.pgp.PgpKeys.{publishLocalSigned, publishSigned}
 import sbt.Keys._
 import sbt.{Keys, StdoutOutput, _}
 
@@ -15,8 +16,6 @@ object CommonRaceSettings {
         scalaVersion := "2.12.1",
         scalacOptions ++= Seq("-unchecked", "-deprecation", "-feature"),
         resolvers ++= Dependencies.dependencyResolvers,
-        publishArtifact in (Compile, packageDoc) := false,
-        publishArtifact in (Compile, packageSrc) := false,
 
         fork in run := true,
         outputStrategy := Some(StdoutOutput),
@@ -24,4 +23,13 @@ object CommonRaceSettings {
         Keys.connectInput in run := true
       )
 
+  lazy val noPublishSettings = Seq(
+    publishArtifact := false,
+
+    // those should not be required if publishArtifact is false, but at least publishLocalSigned still produces Ivys/ and poms/
+    publish := {},
+    publishLocal := {},
+    publishSigned := {},
+    publishLocalSigned := {} // should not be required but otherwise we get Ivys/ and poms/
+  )
 }

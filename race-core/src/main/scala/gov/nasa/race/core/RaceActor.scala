@@ -519,33 +519,34 @@ trait ContinuousTimeRaceActor extends RaceActor {
   * a RaceActor that receives periodic RaceCheck messages, which should be processed
   * by its handleMessage().
   *
-  * NOTE - it is up to the concrete actor to decide when to call startMonitoring()
+  * NOTE - it is up to the concrete actor to decide when to call startScheduler()
   * (from ctor, initializeRaceActor or startRaceActor)
-  * This honors remote config check-interval spec, which would re-start a already
+  * This honors remote config tick-interval specs, which would re-start an already
   * running scheduler
   */
-trait MonitoredRaceActor extends RaceActor {
-  final val CheckIntervalKey = "check-interval"
-  final val CheckDelayKey = "check-delay"
+trait PeriodicRaceActor extends RaceActor {
+  final val TickIntervalKey = "tick-interval"
+  final val TickDelayKey = "tick-delay"
 
   // override if there are different default values
-  def defaultCheckInterval = 5.seconds
-  def defaultCheckDelay = 0.seconds
+  def defaultTickInterval = 5.seconds
+  def defaultTickDelay = 0.seconds
+  def tickMessage = RaceTick
 
-  var checkInterval = config.getFiniteDurationOrElse(CheckIntervalKey, defaultCheckInterval)
-  var checkDelay = config.getFiniteDurationOrElse(CheckDelayKey, defaultCheckDelay)
+  var tickInterval = config.getFiniteDurationOrElse(TickIntervalKey, defaultTickInterval)
+  var tickDelay = config.getFiniteDurationOrElse(TickDelayKey, defaultTickDelay)
   var schedule: Option[Cancellable] = None
 
   override def onInitializeRaceActor(rc: RaceContext, actorConf: Config) = {
     super.onInitializeRaceActor(rc, actorConf)
 
     if (!isLocalContext(rc)) {
-      // check if we have a different remote check interval
-      if (actorConf.hasPath(CheckIntervalKey)) {
-        checkInterval = actorConf.getFiniteDuration(CheckIntervalKey)
+      // check if we have a different remote tick interval
+      if (actorConf.hasPath(TickIntervalKey)) {
+        tickInterval = actorConf.getFiniteDuration(TickIntervalKey)
         if (schedule.isDefined){
-          stopMonitoring
-          startMonitoring
+          stopScheduler
+          startScheduler
         }
       }
     }
@@ -553,16 +554,16 @@ trait MonitoredRaceActor extends RaceActor {
 
   override def onTerminateRaceActor(originator: ActorRef): Any = {
     super.onTerminateRaceActor(originator)
-    stopMonitoring
+    stopScheduler
   }
 
-  def startMonitoring = {
+  def startScheduler = {
     if (schedule.isEmpty) {
-      schedule = Some(scheduler.schedule(checkDelay, checkInterval, self, RaceCheck))
+      schedule = Some(scheduler.schedule(tickDelay, tickInterval, self, tickMessage))
     }
   }
 
-  def stopMonitoring = {
+  def stopScheduler = {
     ifSome(schedule) { sched =>
       sched.cancel()
       schedule = None
@@ -570,7 +571,7 @@ trait MonitoredRaceActor extends RaceActor {
   }
 
   override def commitSuicide (errMsg: String) = {
-    stopMonitoring
+    stopScheduler
     super.commitSuicide(errMsg)
   }
 }

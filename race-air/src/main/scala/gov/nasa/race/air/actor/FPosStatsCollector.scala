@@ -5,8 +5,8 @@ import com.typesafe.config.Config
 import gov.nasa.race.air.{FlightCompleted, FlightDropped, FlightPos}
 import gov.nasa.race.common.Stats
 import gov.nasa.race.config.ConfigUtils._
-import gov.nasa.race.core.Messages.RaceCheck
-import gov.nasa.race.core.{BusEvent, ContinuousTimeRaceActor, MonitoredRaceActor, PublishingRaceActor, SubscribingRaceActor}
+import gov.nasa.race.core.Messages.RaceTick
+import gov.nasa.race.core.{BusEvent, ContinuousTimeRaceActor, PeriodicRaceActor, PublishingRaceActor, SubscribingRaceActor}
 
 import scala.collection.mutable.{HashMap => MHashMap}
 import scala.concurrent.duration._
@@ -15,7 +15,7 @@ import scala.concurrent.duration._
   * actor that collects update statistics for FPos objects
   */
 class FPosStatsCollector (val config: Config) extends SubscribingRaceActor with PublishingRaceActor
-                      with ContinuousTimeRaceActor with MonitoredRaceActor {
+                      with ContinuousTimeRaceActor with PeriodicRaceActor {
   class FPosUpdates (var tLast: Long) {
     var count: Int = 0
     var dtSum: Int = 0
@@ -23,8 +23,8 @@ class FPosStatsCollector (val config: Config) extends SubscribingRaceActor with 
     var dtMax: Int = 0
   }
 
-  override def defaultCheckInterval = 10.seconds
-  override def defaultCheckDelay = 10.seconds
+  override def defaultTickInterval = 10.seconds
+  override def defaultTickDelay = 10.seconds
 
   val title = config.getStringOrElse("title", name)
   var channels = ""
@@ -40,7 +40,7 @@ class FPosStatsCollector (val config: Config) extends SubscribingRaceActor with 
   override def onStartRaceActor(originator: ActorRef) = {
     super.onStartRaceActor(originator)
     channels = readFromAsString
-    startMonitoring
+    startScheduler
   }
 
   override def handleMessage = {
@@ -56,7 +56,7 @@ class FPosStatsCollector (val config: Config) extends SubscribingRaceActor with 
       droppedFlights += 1
       updateMinActiveStats
 
-    case RaceCheck => publish(snapshot)
+    case RaceTick => publish(snapshot)
   }
 
   def updateActiveFlight (fpos: FlightPos) = {

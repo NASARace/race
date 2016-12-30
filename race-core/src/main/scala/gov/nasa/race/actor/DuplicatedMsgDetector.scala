@@ -5,8 +5,8 @@ import com.typesafe.config.Config
 import gov.nasa.race._
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.common.{MD5Checksum, Stats}
-import gov.nasa.race.core.Messages.RaceCheck
-import gov.nasa.race.core.{BusEvent, ContinuousTimeRaceActor, FileWriterRaceActor, MonitoredRaceActor, PublishingRaceActor, SubscribingRaceActor}
+import gov.nasa.race.core.Messages.RaceTick
+import gov.nasa.race.core.{BusEvent, ContinuousTimeRaceActor, FileWriterRaceActor, PeriodicRaceActor, PublishingRaceActor, SubscribingRaceActor}
 import gov.nasa.race.util.DateTimeUtils._
 import gov.nasa.race.util.StringUtils
 
@@ -23,14 +23,14 @@ import scala.util.matching.Regex
   */
 class DuplicatedMsgDetector (val config: Config) extends SubscribingRaceActor
                      with PublishingRaceActor with ContinuousTimeRaceActor
-                     with MonitoredRaceActor with FileWriterRaceActor {
+                     with PeriodicRaceActor with FileWriterRaceActor {
   final val unclassified = "unclassified"
   case class MsgClassifier (name: String, patterns: Seq[Regex])
 
   val checkWindow = config.getFiniteDurationOrElse("check-window", 5.minutes).toMillis
   // override the MonitoredRaceActor defaults
-  override def defaultCheckInterval = 10.seconds
-  override def defaultCheckDelay = 10.seconds
+  override def defaultTickInterval = 10.seconds
+  override def defaultTickDelay = 10.seconds
 
   val checksums = MSortedMap.empty[String,Long]
   val md5 = new MD5Checksum
@@ -43,12 +43,12 @@ class DuplicatedMsgDetector (val config: Config) extends SubscribingRaceActor
   override def onStartRaceActor(originator: ActorRef) = {
     super.onStartRaceActor(originator)
     channels = readFromAsString
-    startMonitoring
+    startScheduler
   }
 
   override def handleMessage = {
     case BusEvent(_, msg: String, _) => checkMessage(msg)
-    case RaceCheck =>
+    case RaceTick =>
       publish(snapshot)
       purgeOldChecksums
   }

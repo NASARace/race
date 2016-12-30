@@ -168,6 +168,9 @@ object Dependencies {
   // add implementation libraries and settings in local-build.sbt - this is only an abstract interface for compilation
   val omgDDS = "org.omg.dds" % "java5-psm" % "1.0"
 
+  //--- publishable WorldWindJava version
+  val worldwindPcm = "com.github.pcmehlitz" % "worldwind-pcm" % "2.1.0.+"
+
   //--- this is used from build.sbt to add dependency resolvers
   val sonatypeNexusSnapshots = "Sonatype Nexus Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots" // squants
   //val pcmSnapshots = "Local Maven Repository" at "file://"+Path.userHome.absolutePath+ "/git/pcm-mvn/snapshots"

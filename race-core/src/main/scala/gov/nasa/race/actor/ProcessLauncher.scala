@@ -25,7 +25,7 @@ import com.typesafe.config.Config
 
 import gov.nasa.race._
 import gov.nasa.race.config.ConfigUtils._
-import gov.nasa.race.core.Messages.RaceCheck
+import gov.nasa.race.core.Messages.RaceTick
 import gov.nasa.race.core._
 
 
@@ -44,7 +44,7 @@ import gov.nasa.race.core._
   *
   * TODO - failures to start/terminate process should not un-conditionally throw exceptions
   */
-class ProcessLauncher (val config: Config) extends MonitoredRaceActor {
+class ProcessLauncher (val config: Config) extends PeriodicRaceActor {
 
   // those have to come from the ctor args, i.e. from whoever creates this actor
   val procName = config.getString("process-name")
@@ -85,7 +85,7 @@ class ProcessLauncher (val config: Config) extends MonitoredRaceActor {
     ifSome(proc){ p=>
       Thread.sleep(1000)
       if (!p.isAlive) throw new IOException(s"process $procName did not start")
-      startMonitoring
+      startScheduler
     }
   }
 
@@ -149,6 +149,6 @@ class ProcessLauncher (val config: Config) extends MonitoredRaceActor {
   }
 
   override def handleMessage = {
-    case RaceCheck => checkAlive
+    case RaceTick => checkAlive
   }
 }

@@ -69,7 +69,7 @@ object Messages {
 
   case object RaceTerminateRequest  // ras internal termination request: RaceActor -> Master
   case object RaceAck // generic acknowledgement
-  case object RaceCheck // used to trigger actor specific check action
+  case object RaceTick // used to trigger periodic actions
 
   //--- RaceActorSystem control messages (RaceActorSystem <-> Master <-> remoteMaster)
   case object RaceCreate                // RAS -> Master

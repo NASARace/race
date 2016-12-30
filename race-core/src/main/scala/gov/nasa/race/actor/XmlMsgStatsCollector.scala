@@ -5,8 +5,8 @@ import com.typesafe.config.Config
 import gov.nasa.race._
 import gov.nasa.race.common.{ElemStats, MsgStats, MsgStatsSnapshot, Stats, SubscriberMsgStats}
 import gov.nasa.race.config.ConfigUtils._
-import gov.nasa.race.core.Messages.RaceCheck
-import gov.nasa.race.core.{BusEvent, ContinuousTimeRaceActor, MonitoredRaceActor, PublishingRaceActor, SubscribingRaceActor}
+import gov.nasa.race.core.Messages.RaceTick
+import gov.nasa.race.core.{BusEvent, ContinuousTimeRaceActor, PeriodicRaceActor, PublishingRaceActor, SubscribingRaceActor}
 import gov.nasa.race.util.XmlPullParser
 
 import scala.collection.mutable.{SortedMap => MSortedMap}
@@ -29,13 +29,13 @@ import scala.util.matching.Regex
   * (we don't want to allocate a new object just to increase a single Int)
   */
 class XmlMsgStatsCollector (val config: Config) extends SubscribingRaceActor with PublishingRaceActor
-         with ContinuousTimeRaceActor with MonitoredRaceActor {
+         with ContinuousTimeRaceActor with PeriodicRaceActor {
 
   final val defaultRateBaseMillis = 2000 // get peak rate over 2 sec
 
   // override the MonitoredRaceActor defaults
-  override def defaultCheckInterval = 10.seconds
-  override def defaultCheckDelay = 10.seconds
+  override def defaultTickInterval = 10.seconds
+  override def defaultTickDelay = 10.seconds
 
   val title = config.getStringOrElse("title", name)
   val patternSpecs = config.getStringArray("patterns") // optional, if none we only parse top level
@@ -99,12 +99,12 @@ class XmlMsgStatsCollector (val config: Config) extends SubscribingRaceActor wit
   override def onStartRaceActor(originator: ActorRef) = {
     super.onStartRaceActor(originator)
     channels = readFromAsString
-    startMonitoring
+    startScheduler
   }
 
   override def handleMessage = {
     case BusEvent(_,msg: String,_) => parser.parse(msg)
-    case RaceCheck if hasPublishingChannels => publish(snapshot)
+    case RaceTick if hasPublishingChannels => publish(snapshot)
   }
 
   def snapshot = new SubscriberMsgStats(title, updatedSimTimeMillis, elapsedSimTimeMillisSinceStart,

@@ -23,7 +23,7 @@ import com.typesafe.config.Config
 import gov.nasa.race._
 import gov.nasa.race.common.UserInfoFactory
 import gov.nasa.race.config.ConfigUtils._
-import gov.nasa.race.core.Messages.RaceCheck
+import gov.nasa.race.core.Messages.RaceTick
 import gov.nasa.race.core._
 import gov.nasa.race.util.NetUtils._
 
@@ -40,7 +40,7 @@ object PortForwarder {
   * Note also that interactive authentication is the reason why we can't automatically
   * reconnect (we don't want to store user credentials here)
   */
-class PortForwarder (val config: Config) extends MonitoredRaceActor {
+class PortForwarder (val config: Config) extends PeriodicRaceActor {
   implicit val client = getClass
 
   var connectTimeout = config.getIntOrElse("connect-timeout", 5000)
@@ -82,7 +82,7 @@ class PortForwarder (val config: Config) extends MonitoredRaceActor {
       ifSome(forwardL){setPortForward(_,"forward", (lp,h,rp)=> session.setPortForwardingL(lp,h,rp))}
       ifSome(forwardR){setPortForward(_,"reverse forward", (lp,h,rp)=> session.setPortForwardingR(lp,h,rp))}
 
-      startMonitoring
+      startScheduler
       info("connected and forwarding")
     } else failDuringConstruction(s"failed to connect as $user@$host")
   } else  failDuringConstruction("no forwards specified")
@@ -106,7 +106,7 @@ class PortForwarder (val config: Config) extends MonitoredRaceActor {
   }
 
   override def handleMessage = {
-    case RaceCheck => checkConnected
+    case RaceTick => checkConnected
   }
 
   def checkConnected = {
