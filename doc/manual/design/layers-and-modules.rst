@@ -1,4 +1,4 @@
-Modules and Layers
+Layers and Modules
 ==================
 The RACE distribution is divided into several sub-modules that mostly act as layers, enforcing a
 clear dependency relationship by means of a build system with separate compilation steps. Each

@@ -4,7 +4,7 @@ Using RACE from External Projects
 RACE is a system that is meant to be extended by writing new actors, but those actors do not have to reside
 within RACE. Extending RACE does not mean you have to clone and modify its directory structure.
 
-Artifacts (jars) of various RACE `Modules and Layers`_ are published on the Central_Repository_, and can be imported into external
+Artifacts (jars) of various RACE `Layers and Modules`_ are published on the Central_Repository_, and can be imported into external
 projects by declaring them as normal dependencies within their respective build configurations.
 
 A minimal example that shows how to use RACE as a library can be found on https://github.com/NASARace/race-client-example.

@@ -10,7 +10,7 @@ Project Log
     This update refactors RACE into sub-projects that minimize 3rd party dependencies based on specific
     application needs. For instance, there is no need to include Apache Kafka or ActiveMQ when the only
     data import is from ADS-B. The new structure will also be the basis for upcoming artifact publishing on
-    Maven Central. Please see the `Directory Structure`_ and `Modules and Layers`_ sections for details.
+    Maven Central. Please see the `Directory Structure`_ and `Layers and Modules`_ sections for details.
 
 **07/08/2016 - uploaded repository with example ADS-B data sets to Github**
     There is now a https://github.com/NASARace/race-data project on Github which contains several archived ADS-B
