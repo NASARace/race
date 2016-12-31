@@ -9,7 +9,7 @@ import CommonRaceSettings._
 shellPrompt in ThisBuild := { state => "[" + Project.extract(state).currentRef.project + "]> " }
 
 lazy val commonSettings = commonRaceSettings ++ Seq(
-  organization := "gov.nasa",
+  organization := "gov.nasa.race",
   version := "1.3"
 )
 

@@ -25,10 +25,10 @@ are ordinary SBT settings. The ``build.sbt`` looks like this::
        settings(
          mainClass in Compile := Some("gov.nasa.race.main.ConsoleMain"),  // we just use RACEs driver
          libraryDependencies ++= Seq(
-           "gov.nasa" %% "race-core" % "1.+",
-           "gov.nasa" %% "race-air" % "1.+",
-           "gov.nasa" %% "race-ww" % "1.+",
-           "gov.nasa" %% "race-ww-air" % "1.+",
+           "gov.nasa.race" %% "race-core" % "1.+",
+           "gov.nasa.race" %% "race-air" % "1.+",
+           "gov.nasa.race" %% "race-ww" % "1.+",
+           "gov.nasa.race" %% "race-ww-air" % "1.+",
            // ... other dependencies
          )
      )
