@@ -1,0 +1,106 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<svg width="100%" height="100%" version="1.1" viewBox="555 132 1014 447" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <filter id="shadow1" width="150%" height="150%">
+      <feGaussianBlur in="SourceAlpha" result="blur" stdDeviation="3" />
+      <feOffset dx="3" dy="3" in="blur" result="offsetBlur" />
+      <feMerge>
+        <feMergeNode in="offsetBlur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+  </defs>
+  <marker id="marker1" markerUnits="strokeWidth" orient="auto" refX="-11.17254" refY="0" markerWidth="13.27247" markerHeight="10.22955" viewBox="-12.27247 -5.114774 13.27247 10.22955">
+    <path d="M-11.27247 -4.114774 L0 0 L-11.27247 4.114773 Z " fill="#000000" fill-opacity="1" stroke="#000000" stroke-opacity="1" />
+  </marker>
+  <marker id="marker2" markerUnits="strokeWidth" orient="auto" refX="-11.17254" refY="0" markerWidth="13.27247" markerHeight="10.22955" viewBox="-12.27247 -5.114774 13.27247 10.22955">
+    <path d="M-11.27247 -4.114774 L0 0 L-11.27247 4.114773 Z " fill="#000000" fill-opacity="1" stroke="#000000" stroke-opacity="1" />
+  </marker>
+  <marker id="marker3" markerUnits="strokeWidth" orient="auto" refX="-11.17254" refY="0" markerWidth="13.27247" markerHeight="10.22955" viewBox="-12.27247 -5.114774 13.27247 10.22955">
+    <path d="M-11.27247 -4.114774 L0 0 L-11.27247 4.114773 Z " fill="#000000" fill-opacity="1" stroke="#000000" stroke-opacity="1" />
+  </marker>
+  <marker id="marker4" markerUnits="strokeWidth" orient="auto" refX="-11.17254" refY="0" markerWidth="13.27247" markerHeight="10.22955" viewBox="-12.27247 -5.114774 13.27247 10.22955">
+    <path d="M-11.27247 -4.114774 L0 0 L-11.27247 4.114773 Z " fill="#000000" fill-opacity="1" stroke="#000000" stroke-opacity="1" />
+  </marker>
+  <g id="layer1" inkscape:label="Layer 1" inkscape:groupmode="layer">
+    <rect x="720" y="180" width="360" height="396" opacity="1" stroke="#CCCCCC" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" filter="url(#shadow1)" />
+    <rect x="747" y="279" width="315" height="279" opacity="1" stroke="#CCCCCC" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" filter="url(#shadow1)" />
+    <text x="758.9999" y="305.6914" font-size="15" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">actors = [</text>
+    <text x="758.9999" y="556.8453" font-size="14" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">]</text>
+    <rect x="765" y="423" width="279" height="117" opacity="1" stroke="#CCCCCC" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" filter="url(#shadow1)" />
+    <text x="783" y="454.6914" font-size="15" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">{ name = "probe"
+</text>
+    <text x="783" y="472.6914" font-size="15" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">  class = "race.ProbeActor"
+</text>
+    <text x="783" y="490.6914" font-size="15" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">      
+</text>
+    <text x="783" y="508.6914" font-size="15" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">  read-from= “/flights”
+</text>
+    <text x="783" y="526.6914" font-size="15" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">     ... 
+</text>
+    <rect x="765" y="315" width="279" height="99" opacity="1" stroke="#CCCCCC" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" filter="url(#shadow1)" />
+    <text x="783" y="346.6914" font-size="15" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">{ name = "remotePlane"
+</text>
+    <text x="783" y="364.6914" font-size="15" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">  remote = “flightSim@host"
+</text>
+    <text x="783" y="382.6914" font-size="15" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">  
+</text>
+    <text x="783" y="400.6914" font-size="15" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">  write-to = “/flights”
+</text>
+    <text x="731.9999" y="206.6914" font-size="15" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">universe {
+</text>
+    <text x="731.9999" y="224.6914" font-size="15" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">
+</text>
+    <text x="731.9999" y="242.6914" font-size="15" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">  name = "mySimulation”
+</text>
+    <text x="733" y="573.5" font-size="15" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">}</text>
+    <rect x="1116" y="216" width="333" height="279" opacity="1" stroke="#CCCCCC" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" filter="url(#shadow1)" />
+    <rect x="1143" y="288" width="288" height="189" opacity="1" stroke="#CCCCCC" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" filter="url(#shadow1)" />
+    <text x="1155" y="314.6914" font-size="15" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">actors = [</text>
+    <text x="1155" y="467.6914" font-size="15" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">]</text>
+    <rect x="1170" y="324" width="243" height="135" opacity="1" stroke="#CCCCCC" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" filter="url(#shadow1)" />
+    <text x="1188" y="355.6914" font-size="15" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">{ name = "remotePlane"
+</text>
+    <text x="1188" y="373.6914" font-size="15" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">  class = "SimplePlane"
+</text>
+    <text x="1188" y="391.6914" font-size="15" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">      
+</text>
+    <text x="1188" y="409.6914" font-size="15" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">  heading = 84.0
+</text>
+    <text x="1188" y="427.6914" font-size="15" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">  speed = 350.0
+</text>
+    <text x="1188" y="445.6914" font-size="15" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">  ...  
+</text>
+    <text x="1128" y="242.6914" font-size="15" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">universe {
+</text>
+    <text x="1128" y="260.6914" font-size="15" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">
+</text>
+    <text x="1128" y="278.6914" font-size="15" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">  name = “flightSim”</text>
+    <text x="851.5273" y="160.3625" font-size="16" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">my_simulation.conf</text>
+    <text x="1246.816" y="196.3625" font-size="16" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">flightsim.conf</text>
+    <line x1="1026" y1="333" x2="1157.827" y2="333" marker-end="url(#marker1)" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    <path d="M999 387 L1098 387 L1098 495 L1011.173 495" marker-end="url(#marker2)" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+    <text x="587.0347" y="264.3797" font-size="14" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">mandatory id</text>
+    <text x="644.4829" y="426.3797" font-size="14" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">data flow</text>
+    <line x1="675" y1="252" x2="747" y2="234" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="2,2" />
+    <line x1="675" y1="270" x2="774" y2="324" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="2,2" />
+    <line x1="702" y1="414" x2="783" y2="378" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="2,2" />
+    <line x1="702" y1="432" x2="783" y2="477" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="2,2" />
+    <text x="1473.152" y="404.8797" font-size="14" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">actor specific
+</text>
+    <text x="1478.597" y="420.8797" font-size="14" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">parameters</text>
+    <line x1="1350" y1="414" x2="1467" y2="414" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="2,2" />
+    <line x1="558" y1="342" x2="558" y2="500.8275" marker-end="url(#marker3)" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    <text x="571" y="313.3797" font-size="14" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">sequential
+</text>
+    <text x="571" y="329.3797" font-size="14" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">  - creation
+</text>
+    <text x="571" y="345.3797" font-size="14" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">  - initialization
+</text>
+    <text x="571" y="361.3797" font-size="14" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">  - start
+</text>
+    <text x="571" y="377.3797" font-size="14" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">  - termination</text>
+    <line x1="585" y1="513" x2="585" y2="399.1725" marker-end="url(#marker4)" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    <text x="1129" y="483.5" font-size="15" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">}</text>
+  </g>
+</svg>

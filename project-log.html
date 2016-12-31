@@ -31,7 +31,7 @@
                   <p class="title">Site</p>
                   <ul>
                     <li><span class="toc level1"><a href="index.html">About RACE</a></span></li>
-                    <li><span class="toc level1"><a href="project-log.html">Project Log</a></span></li>
+                    <li><span class="toc level1 active">Project Log</span></li>
                     <li>
                       <p class="toc level1">Installing RACE</p>
                       <ul>
@@ -99,23 +99,30 @@
                         <li><span class="toc level2"><a href="learning.html#git">Git</a></span></li>
                       </ul>
                     </li>
-                    <li><span class="toc level1 active">Glossary</span></li>
+                    <li><span class="toc level1"><a href="glossary.html">Glossary</a></span></li>
                   </ul>
                 </div>
             </div>
         </div>
 
         <div class="main">
-            <h1 id="glossary" class="title">Glossary</h1>
+            <h1 id="project-log" class="title">Project Log</h1>
             <dl>
-              <dt>GUI</dt>
-              <dd>Graphical User Interface</dd>
-              <dt>NAS</dt>
-              <dd>National Airspace System</dd>
-              <dt>RACE</dt>
-              <dd>Runtime for Airspace Concept Evaluation</dd>
-              <dt>SWIM</dt>
-              <dd>System Wide Information Management</dd>
+              <dt><strong>12/31/2016 - RACE artifacts (jars) published on Maven Central</strong></dt>
+              <dd>Build artifacts (jars) for various RACE modules are now available from Maven Central servers, which
+              greatly simplifies to use RACE as a library from 3rd party projects. See <a href="design/extproject.html#using-race-from-external-projects">Using RACE from External Projects</a>
+              for details. A example project is available on <a href="https://github.com/NASARace/race-client-example">https://github.com/NASARace/race-client-example</a>.</dd>
+              <dt><strong>11/24/2016 - RACE v1.3 released</strong> <strong>12/31/2016 - RACE artifacts (jars) published on Maven Central</strong></dt>
+              <dd>This update refactors RACE into sub-projects that minimize 3rd party dependencies based on specific
+              application needs. For instance, there is no need to include Apache Kafka or ActiveMQ when the only
+              data import is from ADS-B. The new structure will also be the basis for upcoming artifact publishing on
+              Maven Central. Please see the <a href="design/directory-structure.html#directory-structure">Directory Structure</a> and <a href="design/layers-and-modules.html#layers-and-modules">Layers and Modules</a> sections for details.</dd>
+              <dt><strong>07/08/2016 - uploaded repository with example ADS-B data sets to Github</strong></dt>
+              <dd>There is now a <a href="https://github.com/NASARace/race-data">https://github.com/NASARace/race-data</a> project on Github which contains several archived ADS-B
+              data sets and respective config files to replay. Please note that the <a href="https://git-lfs.github.com/">Git Large File Extension</a> needs to be
+              installed in order to retrieve the data.</dd>
+              <dt><strong>05/22/2016 - RACE sources are published on Github</strong></dt>
+              <dd>This is the initial commit on <a href="https://github.com/NASARace/race">https://github.com/NASARace/race</a>. The RACE is on.</dd>
             </dl>
         </div>
 

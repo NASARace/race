@@ -1,0 +1,118 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<svg width="100%" height="100%" version="1.1" viewBox="77 145 772 299" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <filter id="shadow1" width="150%" height="150%">
+      <feGaussianBlur in="SourceAlpha" result="blur" stdDeviation="3" />
+      <feOffset dx="3" dy="3" in="blur" result="offsetBlur" />
+      <feMerge>
+        <feMergeNode in="offsetBlur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+  </defs>
+  <marker id="marker1" markerUnits="strokeWidth" orient="auto" refX="5.086271" refY="0" markerWidth="7.636236" markerHeight="6.114774" viewBox="-1 -3.057387 7.636236 6.114774">
+    <path d="M5.636236 2.057387 L0 0 L5.636236 -2.057387 Z " fill="#000000" fill-opacity="1" stroke="#000000" stroke-opacity="1" />
+  </marker>
+  <marker id="marker2" markerUnits="strokeWidth" orient="auto" refX="-5.086271" refY="0" markerWidth="7.636236" markerHeight="6.114774" viewBox="-6.636236 -3.057387 7.636236 6.114774">
+    <path d="M-5.636236 -2.057387 L0 0 L-5.636236 2.057387 Z " fill="#000000" fill-opacity="1" stroke="#000000" stroke-opacity="1" />
+  </marker>
+  <marker id="marker3" markerUnits="strokeWidth" orient="auto" refX="5.086271" refY="0" markerWidth="7.636236" markerHeight="6.114774" viewBox="-1 -3.057387 7.636236 6.114774">
+    <path d="M5.636236 2.057387 L0 0 L5.636236 -2.057387 Z " fill="#000000" fill-opacity="1" stroke="#000000" stroke-opacity="1" />
+  </marker>
+  <marker id="marker4" markerUnits="strokeWidth" orient="auto" refX="-5.086271" refY="0" markerWidth="7.636236" markerHeight="6.114774" viewBox="-6.636236 -3.057387 7.636236 6.114774">
+    <path d="M-5.636236 -2.057387 L0 0 L-5.636236 2.057387 Z " fill="#000000" fill-opacity="1" stroke="#000000" stroke-opacity="1" />
+  </marker>
+  <marker id="marker5" markerUnits="strokeWidth" orient="auto" refX="5.086271" refY="0" markerWidth="7.636236" markerHeight="6.114774" viewBox="-1 -3.057387 7.636236 6.114774">
+    <path d="M5.636236 2.057387 L0 0 L5.636236 -2.057387 Z " fill="#000000" fill-opacity="1" stroke="#000000" stroke-opacity="1" />
+  </marker>
+  <marker id="marker6" markerUnits="strokeWidth" orient="auto" refX="-5.086271" refY="0" markerWidth="7.636236" markerHeight="6.114774" viewBox="-6.636236 -3.057387 7.636236 6.114774">
+    <path d="M-5.636236 -2.057387 L0 0 L-5.636236 2.057387 Z " fill="#000000" fill-opacity="1" stroke="#000000" stroke-opacity="1" />
+  </marker>
+  <marker id="marker7" markerUnits="strokeWidth" orient="auto" refX="5.086271" refY="0" markerWidth="7.636236" markerHeight="6.114774" viewBox="-1 -3.057387 7.636236 6.114774">
+    <path d="M5.636236 2.057387 L0 0 L5.636236 -2.057387 Z " fill="#000000" fill-opacity="1" stroke="#000000" stroke-opacity="1" />
+  </marker>
+  <marker id="marker8" markerUnits="strokeWidth" orient="auto" refX="-5.086271" refY="0" markerWidth="7.636236" markerHeight="6.114774" viewBox="-6.636236 -3.057387 7.636236 6.114774">
+    <path d="M-5.636236 -2.057387 L0 0 L-5.636236 2.057387 Z " fill="#000000" fill-opacity="1" stroke="#000000" stroke-opacity="1" />
+  </marker>
+  <g id="layer1" inkscape:label="Layer 1" inkscape:groupmode="layer">
+    <rect x="270" y="198" width="153" height="171" rx="18" ry="18" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFED3" fill-opacity="1" />
+    <rect x="342" y="243" width="54" height="36" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" filter="url(#shadow1)" />
+    <rect x="333" y="234" width="54" height="36" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" filter="url(#shadow1)" />
+    <text x="356.0732" y="257.7994" font-size="18" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">A</text>
+    <rect x="333" y="306" width="54" height="36" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFDBD2" fill-opacity="1" filter="url(#shadow1)" />
+    <text x="355.7347" y="329.7994" font-size="18" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">B</text>
+    <line x1="297" y1="216" x2="297" y2="351" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="4" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    <line x1="326.9137" y1="252" x2="303.0863" y2="252" marker-start="url(#marker1)" marker-end="url(#marker2)" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    <line x1="326.9137" y1="324" x2="303.0863" y2="324" marker-start="url(#marker3)" marker-end="url(#marker4)" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    <rect x="513" y="189" width="153" height="99" rx="18" ry="18" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFED3" fill-opacity="1" />
+    <rect x="585" y="225" width="54" height="36" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" filter="url(#shadow1)" />
+    <rect x="576" y="216" width="54" height="36" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" filter="url(#shadow1)" />
+    <text x="599.0732" y="239.7994" font-size="18" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">A</text>
+    <line x1="569.9137" y1="234" x2="546.0863" y2="234" marker-start="url(#marker5)" marker-end="url(#marker6)" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    <rect x="513" y="324" width="144" height="81" rx="18" ry="18" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#E0FFE3" fill-opacity="1" />
+    <line x1="540" y1="378" x2="540" y2="216" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="4" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    <rect x="576" y="342" width="54" height="36" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFDBD2" fill-opacity="1" filter="url(#shadow1)" />
+    <text x="598.7347" y="365.7994" font-size="18" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">B</text>
+    <line x1="569.9137" y1="360" x2="546.0863" y2="360" marker-start="url(#marker7)" marker-end="url(#marker8)" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    <g>
+      <g>
+        <path d="M545.3325 297.4305 C543.1876 297.0802 541.017 297.4811 539.5186 298.3519 C538.7355 297.7784 537.6755 297.3358 536.4039 297.1281 C533.1315 296.5938 529.7603 297.7799 528.8834 299.7743 C528.8191 299.9208 528.802 300.0682 528.7676 300.2148 C525.8206 300.028 523.0007 301.1524 522.2097 302.9518 C521.4257 304.7347 522.9051 306.5578 525.5636 307.3074 C525.4191 307.4984 525.2844 307.6951 525.1921 307.9051 C524.3152 309.8994 526.2636 311.9496 529.5359 312.4839 C531.1388 312.7457 532.7587 312.592 534.1034 312.1357 C534.8442 313.1019 536.226 313.8795 538.0473 314.1769 C540.6462 314.6013 543.2831 313.929 544.7068 312.6406 C545.2835 312.8893 545.9246 313.0952 546.6465 313.2131 C549.9191 313.7475 553.283 312.5601 554.1599 310.5658 C554.6008 309.5629 554.3278 308.548 553.5319 307.7162 C554.3196 307.2585 554.9362 306.6786 555.2383 305.9915 C556.1152 303.9971 554.167 301.947 550.8945 301.4126 C550.55 301.3564 550.2048 301.3247 549.8614 301.3055 C550.0651 299.5541 548.218 297.9018 545.3325 297.4305 Z " opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="round" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="0.86" />
+      </g>
+    </g>
+    <g>
+      <path d="M450 286.75 L474.5 286.75 L474.5 279 L499 294.5 L474.5 310 L474.5 302.25 L450 302.25 Z " opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+    </g>
+    <text x="84" y="236.8453" font-size="14" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">universe {
+</text>
+    <text x="84" y="252.8453" font-size="14" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">  name = X
+</text>
+    <text x="84" y="268.8453" font-size="14" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">
+</text>
+    <text x="84" y="284.8453" font-size="14" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">  actors = [
+</text>
+    <text x="84" y="300.8453" font-size="14" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">    { name = A …},
+</text>
+    <text x="84" y="316.8453" font-size="14" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">    …
+</text>
+    <text x="84" y="332.8453" font-size="14" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">    { name = B
+</text>
+    <text x="84" y="348.8453" font-size="14" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">      class = …
+</text>
+    <text x="84" y="364.8453" font-size="14" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">      param = … }
+</text>
+    <text x="84" y="380.8453" font-size="14" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">  ]
+</text>
+    <text x="84" y="396.8453" font-size="14" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">}</text>
+    <text x="678" y="164.8453" font-size="14" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">universe {
+</text>
+    <text x="678" y="180.8453" font-size="14" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">  name = X
+</text>
+    <text x="678" y="196.8453" font-size="14" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">
+</text>
+    <text x="678" y="212.8453" font-size="14" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">  actors = [
+</text>
+    <text x="678" y="228.8453" font-size="14" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">    { name = A …},
+</text>
+    <text x="678" y="244.8453" font-size="14" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">    …
+</text>
+    <text x="678" y="260.8453" font-size="14" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">    { name = B
+</text>
+    <text x="678" y="276.8453" font-size="14" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">      remote = Y }
+</text>
+    <text x="678" y="292.8453" font-size="14" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">  …</text>
+    <text x="678" y="335.8453" font-size="14" fill="#7F007F" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">universe {
+</text>
+    <text x="678" y="351.8453" font-size="14" fill="#7F007F" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">  name = Y
+</text>
+    <text x="678" y="367.8453" font-size="14" fill="#7F007F" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">
+</text>
+    <text x="678" y="383.8453" font-size="14" fill="#7F007F" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">  actors = [
+</text>
+    <text x="678" y="399.8453" font-size="14" fill="#7F007F" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">    { name = B
+</text>
+    <text x="678" y="415.8453" font-size="14" fill="#7F007F" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">      class = …
+</text>
+    <text x="678" y="431.8453" font-size="14" fill="#7F007F" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">      param = … }
+</text>
+  </g>
+</svg>

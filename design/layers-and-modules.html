@@ -31,6 +31,7 @@
                   <p class="title">Site</p>
                   <ul>
                     <li><span class="toc level1"><a href="../index.html">About RACE</a></span></li>
+                    <li><span class="toc level1"><a href="../project-log.html">Project Log</a></span></li>
                     <li>
                       <p class="toc level1">Installing RACE</p>
                       <ul>
@@ -46,7 +47,6 @@
                         <li><span class="toc level2"><a href="../usage/running.html">How to Run RACE</a></span></li>
                         <li><span class="toc level2"><a href="../usage/configuration.html">RACE Configuration</a></span></li>
                         <li><span class="toc level2"><a href="../usage/encryption.html">Using Encrypted Configurations</a></span></li>
-                        <li><span class="toc level2"><a href="../usage/examples.html">RACE examples</a></span></li>
                       </ul>
                     </li>
                     <li>
@@ -69,6 +69,7 @@
                         <li><span class="toc level2"><a href="directory-structure.html">Directory Structure</a></span></li>
                         <li><span class="toc level2"><a href="local-build.html">Local Build Configuration</a></span></li>
                         <li><span class="toc level2"><a href="dds.html">RACE and DDS</a></span></li>
+                        <li><span class="toc level2"><a href="extproject.html">Using RACE from External Projects</a></span></li>
                         <li><span class="toc level2"><a href="whyscala.html">Why Scala</a></span></li>
                       </ul>
                     </li>
@@ -106,48 +107,32 @@
 
         <div class="main">
             <h1 id="layers-and-modules" class="title">Layers and Modules</h1>
-            <p>The RACE distribution is divided into several modules that mostly act as layers, enforcing a
+            <p>The RACE distribution is divided into several sub-modules that mostly act as layers, enforcing a
             clear dependency relationship by means of a build system with separate compilation steps. Each
             layer is only allowed to access lower layers.</p>
             <p>From bottom to top:</p>
-            <p><strong>common</strong> is the lowest layer that just serves the purpose of factoring out functions and data
-            types that are used by several higher layers, with the goal of avoiding redundant code. Apart from a
-            <code>gov.nasa.race.common</code> package object that especially holds general control abstractions, this
-            layer mainly consists of xUtils objects, which are in turn just function modules
-            (<code>CryptUtils</code>,<code>FileUtils</code>,<code>NetUtils</code> etc.). The common layer also contains the
-            <code>XmlPullParser</code>, which is a high performance non-validating XML pull parser that keeps track
-            of element nesting and hence is suitable for selective XML parsing.</p>
-            <p><strong>swing</strong> is a special layer for common graphical user interface functions, which are based on
-            a Scala abstraction layer on top of <code>javax.swing</code>. Apart from custom widgets this especially
-            holds support for CSS like styling of Swing components.</p>
-            <p><strong>core</strong> is the layer that implements the basic runtime structure of RACE as described in the
-            <a href="raceactors.html#raceactors">RaceActors</a> section, consisting of:</p>
-            <ul>
-              <li><code>RaceActor</code> (and derived traits such as <code>SubscribingRaceActor</code> and <code>PublishingRaceActor</code>)</li>
-              <li><code>MasterActor</code> (which instantiates and supervises configured RaceActors)</li>
-              <li><code>RaceActorSystem</code> (the aggregate object for master, bus and RaceActors)</li>
-            </ul>
-            <p>The core layer also includes the bus implementation and system message definitions.</p>
-            <p><strong>data</strong> is the first domain specific layer, which is supposed to hold common functions and types
-            for domain specific actors. It currently contains code for great circle calculations, generic
-            flight positions, and especially generic filters and translators that can be used to configure
-            generic import and translator actors.</p>
-            <p><strong>actors</strong> contains the majority of RaceActors that are distributed with RACE. This module is
-            subdivided into various categories (imports,exports,bridges,filters,routers etc.) as it is supposed
-            to grow considerably.</p>
-            <p><strong>ww</strong> is the module that provides an extensible geo-spatial viewer infrastructure based on
-            <a href="https://goworldwind.org/">NASA WorldWind</a>. This includes not only the actor that creates and interfaces to a WorldWind
-            window, but also WorldWind-layer classes with associated actors to simplify display
-            of dynamic data received via RACE channels.</p>
-            <p><strong>tools</strong> contains a number of main classes that support RACE end-users, such as encryption and
-            decryption of configuration files</p>
-            <p><strong>test-tools</strong> holds convenience wrappers around some complex 3rd party servers RACE can interface
-            to, such as a <a href="http://activemq.apache.org/">ActiveMQ</a> JMS server or a <a href="http://kafka.apache.org/">Kafka</a> server</p>
-            <p>Last not least, the top level module holds the code for the various RACE drivers, including
-            <code>gov.nasa.race.ConsoleMain</code> and the <a href="remotelauncher.html#remotelauncher">RemoteLauncher</a> infrastructure.</p>
-            <p>Code for each layer (except of the toplevel) is located in a &quot;race-&lt;layer&gt;&quot; subdirectory, and
-            belongs to a <code>gov.nasa.race.&lt;layer&gt;</code> package. Each layer is compiled separately, making sure
-            it can only depend on lower layers.</p>
+            <p><code>race-core</code> - the basic layer with packages such as <em class="title-reference">gov.nasa.race.common</em>, <em class="title-reference">.core</em>, <em class="title-reference">.util</em>, <em class="title-reference">.config</em>, <em class="title-reference">.archive</em>.
+            <em class="title-reference">.main</em> and <em class="title-reference">.actor</em>. This includes the core classes (e.g. <em class="title-reference">RaceActor</em> and <em class="title-reference">RaceActorSystem</em>) as well as most of
+            the generic, domain-independent actors such as <em class="title-reference">TranslatorActor</em>. This layer is the minimum that needs to be
+            imported in external projects that use RACE.</p>
+            <p><code>race-net-*</code> - this is a collection of layers for importing and exporting from external messaging systems such
+            as <a href="http://activemq.apache.org/">ActiveMQ</a> (JMS), <a href="http://kafka.apache.org/">Kafka</a> and <a href="http://portals.omg.org/dds/">DDS</a>. Each of the modules mainly consists of import and export actors. Those modules
+            are kept separate because each of the 3rd party libraries they depend on have a potentially large fan out and hence
+            should only be included in an application that makes use of them.</p>
+            <p><code>race-swing</code> - this is a utility layer that adds user interface support that is not available in <em class="title-reference">javax.swing.*</em> or
+            <a href="https://github.com/scala/scala-swing">scala-swing</a>, most notably configurable style support</p>
+            <p><code>race-ww</code> - is the layer which adds support for using <a href="https://goworldwind.org/">NASA WorldWind</a> to visualize geospatial data (e.g. flight
+            positions). This module contains both the <em class="title-reference">RaceViewerActor</em> that encapsulates WorldWind in RACE configs, and
+            the <em class="title-reference">RaceLayer</em> infrastructure to import and display dynamic RACE data into WorldWind layers.</p>
+            <p><code>race-air</code> - this is the first domain specific layer which includes support for airspace objects such as`FlightPos`
+            , <em class="title-reference">FlightPath</em> and <em class="title-reference">Airport</em>. This is also where the various <a href="https://www.faa.gov/nextgen/programs/swim/">SWIM</a> message translators reside.</p>
+            <p><code>race-ww-air</code> - this layer adds WorldWind visualization for most of the <em class="title-reference">race-air</em> constructs</p>
+            <p><code>race-testkit</code> - provides RACE specific infrastructure to write test modules, e.g. to test RaceActors</p>
+            <p><code>race-launcher</code> - contains classes to launch and manage remote RACE instances</p>
+            <p><code>race-ui</code> - will hold a RACE console that makes use of a graphical user interface (as an alternative to the terminal
+            based <em class="title-reference">ConsoleMain</em> that is included in <em class="title-reference">race-core</em>)</p>
+            <p><code>race-tools</code> - is a layer that contains several stand-alone applications that support RACE development, most notably the
+            <em class="title-reference">CryptConfig</em> tool that is used to en-/de-crypt RACE config files (see <a href="../usage/encryption.html#using-encrypted-configurations">Using Encrypted Configurations</a> section).</p>
         </div>
 
     </body>

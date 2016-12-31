@@ -24,9 +24,6 @@
             <div class="pagetoc">
                 <div class="toc">
                   <p class="title">Page</p>
-                  <ul>
-                    <li><span class="toc level1"><a href="#presentations">Presentations</a></span></li>
-                  </ul>
                 </div>
             </div>
             <div class="globaltoc">
@@ -62,18 +59,18 @@
                     <li>
                       <p class="toc level1">RACE Design</p>
                       <ul>
-                        <li><span class="toc level2"><a href="../design/overview.html">Design Overview</a></span></li>
-                        <li><span class="toc level2"><a href="../design/configuration.html">Runtime Configuration</a></span></li>
-                        <li><span class="toc level2"><a href="../design/raceactors.html">RaceActors</a></span></li>
-                        <li><span class="toc level2"><a href="../design/channeltopics.html">ChannelTopics</a></span></li>
-                        <li><span class="toc level2"><a href="../design/worldwind.html">WorldWind Viewer</a></span></li>
-                        <li><span class="toc level2"><a href="../design/remotelauncher.html">RemoteLauncher</a></span></li>
-                        <li><span class="toc level2"><a href="../design/layers-and-modules.html">Layers and Modules</a></span></li>
-                        <li><span class="toc level2"><a href="../design/directory-structure.html">Directory Structure</a></span></li>
-                        <li><span class="toc level2"><a href="../design/local-build.html">Local Build Configuration</a></span></li>
-                        <li><span class="toc level2"><a href="../design/dds.html">RACE and DDS</a></span></li>
-                        <li><span class="toc level2"><a href="../design/extproject.html">Using RACE from External Projects</a></span></li>
-                        <li><span class="toc level2"><a href="../design/whyscala.html">Why Scala</a></span></li>
+                        <li><span class="toc level2"><a href="overview.html">Design Overview</a></span></li>
+                        <li><span class="toc level2"><a href="configuration.html">Runtime Configuration</a></span></li>
+                        <li><span class="toc level2"><a href="raceactors.html">RaceActors</a></span></li>
+                        <li><span class="toc level2"><a href="channeltopics.html">ChannelTopics</a></span></li>
+                        <li><span class="toc level2"><a href="worldwind.html">WorldWind Viewer</a></span></li>
+                        <li><span class="toc level2"><a href="remotelauncher.html">RemoteLauncher</a></span></li>
+                        <li><span class="toc level2"><a href="layers-and-modules.html">Layers and Modules</a></span></li>
+                        <li><span class="toc level2"><a href="directory-structure.html">Directory Structure</a></span></li>
+                        <li><span class="toc level2"><a href="local-build.html">Local Build Configuration</a></span></li>
+                        <li><span class="toc level2"><a href="dds.html">RACE and DDS</a></span></li>
+                        <li><span class="toc level2 active">Using RACE from External Projects</span></li>
+                        <li><span class="toc level2"><a href="whyscala.html">Why Scala</a></span></li>
                       </ul>
                     </li>
                     <li>
@@ -88,8 +85,8 @@
                     <li>
                       <p class="toc level1">Documentation</p>
                       <ul>
-                        <li><span class="toc level2"><a href="overview.html">RACE Documentation Overview</a></span></li>
-                        <li><span class="toc level2 active">Available Slide Presentations</span></li>
+                        <li><span class="toc level2"><a href="../documentation/overview.html">RACE Documentation Overview</a></span></li>
+                        <li><span class="toc level2"><a href="../documentation/presentations.html">Available Slide Presentations</a></span></li>
                       </ul>
                     </li>
                     <li>
@@ -109,30 +106,41 @@
         </div>
 
         <div class="main">
-            <h1 id="available-slide-presentations" class="title">Available Slide Presentations</h1>
-            <p>This page contains links to RACE presentations that can be viewed online in a browser. Each presentation is contained
-            in a single HTML file (linked below) that can be navigated with the following commands</p>
-            <ul>
-              <li>&lt;enter&gt; - next slide</li>
-              <li>&lt;shift-enter&gt; - previous slide</li>
-              <li>&#39;f&#39; - enter full screen (presentation) mode (exit is browser specific, usually &lt;esc&gt;)</li>
-              <li>&lt;digit&gt; - go to page 0..9 (&#39;0&#39; being title page)</li>
-              <li>&lt;ctrl-digit&gt;&lt;digit&gt; - go to pages &gt; 10</li>
-            </ul>
-            <p>The slides are best viewed in fullscreen mode since they are based on browser view height.
-            Use your browsers &quot;print&quot; command to create hard copies or PDF files.</p>
-            
-            <h2 id="presentations" class="section">Presentations</h2>
-            <p><a href="../slides/RaceViewer.html">RACE Viewer Infrastructure</a> is a technical presentation about the <a href="https://github.com/NASAWorldWind">NASA WorldWind</a> based RACE viewer
-            infrastructure, containing relevant RACE basics and UML diagrams</p>
-            <p><a href="../slides/RemoteLauncher.html">RemoteLauncher Infrastructure</a> is a technical presentation about RACEs <code>RemoteLauncher</code> and 
-            <code>RemoteLauncherServer</code> components, which are used to start RACE on remote machines from a central
-            configuration server and gateway.</p>
-            <p><a href="../slides/RACE_WorldWind.html">RACE and WorldWind</a> is a high level presentation about the use of RACE in the context of creating
-            NASA WorldWind applications. The original version of this talk was given at the WorldWind
-            Technical Exchange Meeting 2016</p>
-            <p><a href="../slides/DASC16.html">RACE - building airspace simulations faster and better with actors</a> is a general RACE introduction,
-            to be presented at DASC 2016</p>
+            <h1 id="using-race-from-external-projects" class="title">Using RACE from External Projects</h1>
+            <p>RACE is a system that is meant to be extended by writing new actors, but those actors do not have to reside
+            within RACE. Extending RACE does not mean you have to clone and modify its directory structure.</p>
+            <p>Artifacts (jars) of various RACE <a href="layers-and-modules.html#layers-and-modules">Layers and Modules</a> are published on the <a href="http://central.sonatype.org/">Central_Repository</a>, and can be imported into external
+            projects by declaring them as normal dependencies within their respective build configurations.</p>
+            <p>A minimal example that shows how to use RACE as a library can be found on <a href="https://github.com/NASARace/race-client-example">https://github.com/NASARace/race-client-example</a>.
+            This example consists of a single <code>TLEActor</code> which is written in Scala and displays satellite orbit positions for
+            configured satellites. This <code>race-client-example</code> project uses <a href="http://www.scala-sbt.org/">SBT</a> as build system, the respective RACE dependencies
+            are ordinary SBT settings. The <code>build.sbt</code> looks like this:</p>
+            <pre><code>name := &quot;race-client-example&quot;
+scalaVersion := &quot;2.12.1&quot;
+
+// those settings are not RACE specific but recommended when running applications from within a SBT shell
+fork in run := true
+outputStrategy := Some(StdoutOutput)
+Keys.connectInput in run := true
+
+lazy val root = (project in file(&quot;.&quot;)).
+  enablePlugins(JavaAppPackaging). // provides &#39;stage&#39; task to generate stand alone scripts that can be executed outside SBT
+  settings(
+    mainClass in Compile := Some(&quot;gov.nasa.race.main.ConsoleMain&quot;),  // we just use RACEs driver
+    libraryDependencies ++= Seq(
+      &quot;gov.nasa&quot; %% &quot;race-core&quot; % &quot;1.+&quot;,
+      &quot;gov.nasa&quot; %% &quot;race-air&quot; % &quot;1.+&quot;,
+      &quot;gov.nasa&quot; %% &quot;race-ww&quot; % &quot;1.+&quot;,
+      &quot;gov.nasa&quot; %% &quot;race-ww-air&quot; % &quot;1.+&quot;,
+      // ... other dependencies
+    )
+)</code></pre>
+            <p>Note that this example project does not provide a mainClass of its own, it just re-uses the one exported by RACE
+            (<code>ConsoleMain</code>). The RACE artifacts are available on the usual <code>maven.org</code> servers and hence do not need any special
+            resolver configuration. Dependency specifications for other build systems such as Maven or Gradle can be found by visiting
+            <a href="https://search.maven.org">https://search.maven.org</a> and entering the required module (e.g. <code>race-ww-air</code>).</p>
+            <p>There are no special considerations for external actors or <code>*.conf</code> files - they follow the same rules as laid out in
+            the <a href="raceactors.html#raceactors">RaceActors</a> and <a href="configuration.html#runtime-configuration">Runtime Configuration</a> sections.</p>
         </div>
 
     </body>

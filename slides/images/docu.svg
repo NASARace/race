@@ -1,0 +1,125 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<svg width="100%" height="100%" version="1.1" viewBox="-292 -228 696.0001 392" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <filter id="shadow1" width="150%" height="150%">
+      <feGaussianBlur in="SourceAlpha" result="blur" stdDeviation="3" />
+      <feOffset dx="3" dy="3" in="blur" result="offsetBlur" />
+      <feMerge>
+        <feMergeNode in="offsetBlur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+  </defs>
+  <marker id="marker1" markerUnits="strokeWidth" orient="auto" refX="-11.17254" refY="0" markerWidth="13.27247" markerHeight="10.22955" viewBox="-12.27247 -5.114774 13.27247 10.22955">
+    <path d="M-11.27247 -4.114774 L0 0 L-11.27247 4.114773 Z " fill="#FF0000" fill-opacity="1" stroke="#FF0000" stroke-opacity="1" />
+  </marker>
+  <marker id="marker2" markerUnits="strokeWidth" orient="auto" refX="-11.17254" refY="0" markerWidth="13.27247" markerHeight="10.22955" viewBox="-12.27247 -5.114774 13.27247 10.22955">
+    <path d="M-11.27247 -4.114774 L0 0 L-11.27247 4.114773 Z " fill="#FF0000" fill-opacity="1" stroke="#FF0000" stroke-opacity="1" />
+  </marker>
+  <marker id="marker3" markerUnits="strokeWidth" orient="auto" refX="-11.17254" refY="0" markerWidth="13.27247" markerHeight="10.22955" viewBox="-12.27247 -5.114774 13.27247 10.22955">
+    <path d="M-11.27247 -4.114774 L0 0 L-11.27247 4.114773 Z " fill="#0000FF" fill-opacity="1" stroke="#0000FF" stroke-opacity="1" />
+  </marker>
+  <marker id="marker4" markerUnits="strokeWidth" orient="auto" refX="-11.17254" refY="0" markerWidth="13.27247" markerHeight="10.22955" viewBox="-12.27247 -5.114774 13.27247 10.22955">
+    <path d="M-11.27247 -4.114774 L0 0 L-11.27247 4.114773 Z " fill="#0000FF" fill-opacity="1" stroke="#0000FF" stroke-opacity="1" />
+  </marker>
+  <marker id="marker5" markerUnits="strokeWidth" orient="auto" refX="-11.17254" refY="0" markerWidth="13.27247" markerHeight="10.22955" viewBox="-12.27247 -5.114774 13.27247 10.22955">
+    <path d="M-11.27247 -4.114774 L0 0 L-11.27247 4.114773 Z " fill="#0000FF" fill-opacity="1" stroke="#0000FF" stroke-opacity="1" />
+  </marker>
+  <marker id="marker6" markerUnits="strokeWidth" orient="auto" refX="-11.17254" refY="0" markerWidth="13.27247" markerHeight="10.22955" viewBox="-12.27247 -5.114774 13.27247 10.22955">
+    <path d="M-11.27247 -4.114774 L0 0 L-11.27247 4.114773 Z " fill="#000000" fill-opacity="1" stroke="#000000" stroke-opacity="1" />
+  </marker>
+  <marker id="marker7" markerUnits="strokeWidth" orient="auto" refX="-11.17254" refY="0" markerWidth="13.27247" markerHeight="10.22955" viewBox="-12.27247 -5.114774 13.27247 10.22955">
+    <path d="M-11.27247 -4.114774 L0 0 L-11.27247 4.114773 Z " fill="#000000" fill-opacity="1" stroke="#000000" stroke-opacity="1" />
+  </marker>
+  <marker id="marker8" markerUnits="strokeWidth" orient="auto" refX="-11.17254" refY="0" markerWidth="13.27247" markerHeight="10.22955" viewBox="-12.27247 -5.114774 13.27247 10.22955">
+    <path d="M-11.27247 -4.114774 L0 0 L-11.27247 4.114773 Z " fill="#000000" fill-opacity="1" stroke="#000000" stroke-opacity="1" />
+  </marker>
+  <g id="layer1" inkscape:label="Layer 1" inkscape:groupmode="layer">
+    <text x="149.9999" y="-45.88297" font-size="12" fill="#7F007F" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">target/
+</text>
+    <text x="149.9999" y="-31.88297" font-size="12" fill="#7F007F" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">    doc/
+</text>
+    <text x="149.9999" y="-17.88298" font-size="12" fill="#7F007F" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">        images/
+</text>
+    <text x="149.9999" y="-3.88298" font-size="12" fill="#7F007F" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">        someSection/
+</text>
+    <text x="149.9999" y="10.11702" font-size="12" fill="#7F007F" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">
+</text>
+    <text x="149.9999" y="24.11702" font-size="12" fill="#7F007F" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">            myPage.html
+</text>
+    <text x="149.9999" y="38.11702" font-size="12" fill="#7F007F" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">            ..
+</text>
+    <text x="149.9999" y="52.11702" font-size="12" fill="#7F007F" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">        slides/
+</text>
+    <text x="149.9999" y="66.11702" font-size="12" fill="#7F007F" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">            somePresentation.html
+</text>
+    <text x="149.9999" y="80.11702" font-size="12" fill="#7F007F" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">            ..</text>
+    <text x="-285" y="-155.4845" font-size="12" fill="#000000" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">doc/
+</text>
+    <text x="-285" y="-141.4845" font-size="12" fill="#000000" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">    images/
+</text>
+    <text x="-285" y="-127.4845" font-size="12" fill="#000000" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">        mydiagram.svg
+</text>
+    <text x="-285" y="-113.4845" font-size="12" fill="#000000" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">        ..
+</text>
+    <text x="-285" y="-99.48448" font-size="12" fill="#000000" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">    manual/
+</text>
+    <text x="-285" y="-85.48448" font-size="12" fill="#000000" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">        template.html
+</text>
+    <text x="-285" y="-71.48448" font-size="12" fill="#000000" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">        race-html.css
+</text>
+    <text x="-285" y="-57.48448" font-size="12" fill="#000000" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">        directory.conf
+</text>
+    <text x="-285" y="-43.48448" font-size="12" fill="#000000" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">        ..
+</text>
+    <text x="-285" y="-29.48448" font-size="12" fill="#000000" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">        someSection/
+</text>
+    <text x="-285" y="-15.48448" font-size="12" fill="#000000" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">             directory.conf
+</text>
+    <text x="-285" y="-1.484482" font-size="12" fill="#000000" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">             ..
+</text>
+    <text x="-285" y="12.51551" font-size="12" fill="#000000" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">
+</text>
+    <text x="-285" y="26.51551" font-size="12" fill="#000000" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">             myPage.rst
+</text>
+    <text x="-285" y="40.51551" font-size="12" fill="#000000" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">             ..
+</text>
+    <text x="-285" y="54.51551" font-size="12" fill="#000000" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">    slides/
+</text>
+    <text x="-285" y="68.51551" font-size="12" fill="#000000" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">        template.html
+</text>
+    <text x="-285" y="82.51551" font-size="12" fill="#000000" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">        race-slides.css
+</text>
+    <text x="-285" y="96.51551" font-size="12" fill="#000000" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">        race-slides.js
+</text>
+    <text x="-285" y="110.5155" font-size="12" fill="#000000" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">        ..
+</text>
+    <text x="-285" y="124.5155" font-size="12" fill="#000000" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">        somePresentation.md
+</text>
+    <rect x="9" y="0" width="81" height="36" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" filter="url(#shadow1)" />
+    <text x="32.375" y="22.8625" font-size="16" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">Laika</text>
+    <line x1="-100.2431" y1="18" x2="-12.17254" y2="18" marker-end="url(#marker1)" opacity="1" stroke="#FF0000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    <line x1="108" y1="18" x2="203.8275" y2="18" marker-end="url(#marker2)" opacity="1" stroke="#FF0000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    <ellipse cx="-156.1086" cy="19.93671" rx="45" ry="13.5" opacity="1" stroke="#FF0000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+    <ellipse cx="273.315" cy="18.61258" rx="45" ry="13.5" opacity="1" stroke="#FF0000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+    <path d="M-117 -90 L44.0697 -90 L44.0697 -21.17254" marker-end="url(#marker3)" opacity="1" stroke="#0000FF" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+    <path d="M-72 -27 L26.0697 -27 L26.0697 -21.17254" marker-end="url(#marker4)" opacity="1" stroke="#0000FF" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+    <text x="224.7097" y="-108.8789" font-size="15" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">gh-pages branch</text>
+    <text x="-145.761" y="-167.3789" font-size="15" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">sources</text>
+    <text x="110.3129" y="-66.37898" font-size="15" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">build artifacts</text>
+    <text x="-14.99999" y="64.99922" font-size="13" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">[race]&gt; mkManual
+</text>
+    <text x="-14.99999" y="79.99922" font-size="13" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">[race]&gt; mkSlides</text>
+    <path d="M-99 -135 L62.0697 -135 L62.91013 -21.17221" marker-end="url(#marker5)" opacity="1" stroke="#0000FF" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+    <text x="82.99999" y="153.5549" font-size="13" fill="#0000FF" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">file:///.../race/target/doc/someSection/myPage.html</text>
+    <text x="53.00001" y="-209.4451" font-size="13" fill="#0000FF" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">http://nasarace.github.io/race/someSection/myPage.html</text>
+    <line x1="279" y1="-126" x2="279" y2="-167.8275" marker-end="url(#marker6)" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    <rect x="234" y="-162" width="90" height="27" opacity="1" fill="#FFFFFF" fill-opacity="0.63" />
+    <text x="224.728" y="-144.8789" font-size="15" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">[ github - server ]</text>
+    <text x="227.2256" y="-194.8789" font-size="15" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">internet browser</text>
+    <text x="233.8167" y="132.6211" font-size="15" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">local browser</text>
+    <text x="79.03661" y="-4.735445" font-size="15" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">SBT</text>
+    <line x1="278.4961" y1="-41.99999" x2="278.4961" y2="-83.82745" marker-end="url(#marker7)" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    <line x1="278.748" y1="78" x2="279.1059" y2="107.8283" marker-end="url(#marker8)" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+  </g>
+</svg>
