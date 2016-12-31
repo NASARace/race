@@ -28,7 +28,6 @@ lazy val root = createRootProject("race").
     commands ++= LaikaCommands.commands,
     aggregate in MultiJvm := false,
     mainClass in Compile := Some("gov.nasa.race.main.ConsoleMain"),
-
     noPublishSettings // root does not publish any artifacts
   )
 

@@ -1,60 +1,47 @@
-Layers and Modules
+Modules and Layers
 ==================
-The RACE distribution is divided into several modules that mostly act as layers, enforcing a
+The RACE distribution is divided into several sub-modules that mostly act as layers, enforcing a
 clear dependency relationship by means of a build system with separate compilation steps. Each
 layer is only allowed to access lower layers.
 
 From bottom to top:
 
-**common** is the lowest layer that just serves the purpose of factoring out functions and data
-types that are used by several higher layers, with the goal of avoiding redundant code. Apart from a
-``gov.nasa.race.common`` package object that especially holds general control abstractions, this
-layer mainly consists of xUtils objects, which are in turn just function modules
-(``CryptUtils``,``FileUtils``,``NetUtils`` etc.). The common layer also contains the
-``XmlPullParser``, which is a high performance non-validating XML pull parser that keeps track
-of element nesting and hence is suitable for selective XML parsing.
+``race-core`` - the basic layer with packages such as `gov.nasa.race.common`, `.core`, `.util`, `.config`, `.archive`.
+`.main` and `.actor`. This includes the core classes (e.g. `RaceActor` and `RaceActorSystem`) as well as most of
+the generic, domain-independent actors such as `TranslatorActor`. This layer is the minimum that needs to be
+imported in external projects that use RACE.
 
-**swing** is a special layer for common graphical user interface functions, which are based on
-a Scala abstraction layer on top of ``javax.swing``. Apart from custom widgets this especially
-holds support for CSS like styling of Swing components.
+``race-net-*`` - this is a collection of layers for importing and exporting from external messaging systems such
+as ActiveMQ_ (JMS), Kafka_ and DDS_. Each of the modules mainly consists of import and export actors. Those modules
+are kept separate because each of the 3rd party libraries they depend on have a potentially large fan out and hence
+should only be included in an application that makes use of them.
 
-**core** is the layer that implements the basic runtime structure of RACE as described in the
-RaceActors_ section, consisting of:
+``race-swing`` - this is a utility layer that adds user interface support that is not available in `javax.swing.*` or
+scala-swing_, most notably configurable style support
 
-- ``RaceActor`` (and derived traits such as ``SubscribingRaceActor`` and ``PublishingRaceActor``)
-- ``MasterActor`` (which instantiates and supervises configured RaceActors)
-- ``RaceActorSystem`` (the aggregate object for master, bus and RaceActors)
+``race-ww`` - is the layer which adds support for using `NASA WorldWind`_ to visualize geospatial data (e.g. flight
+positions). This module contains both the `RaceViewerActor` that encapsulates WorldWind in RACE configs, and
+the `RaceLayer` infrastructure to import and display dynamic RACE data into WorldWind layers.
 
-The core layer also includes the bus implementation and system message definitions.
+``race-air`` - this is the first domain specific layer which includes support for airspace objects such as`FlightPos`
+, `FlightPath` and `Airport`. This is also where the various SWIM_ message translators reside.
 
-**data** is the first domain specific layer, which is supposed to hold common functions and types
-for domain specific actors. It currently contains code for great circle calculations, generic
-flight positions, and especially generic filters and translators that can be used to configure
-generic import and translator actors.
+``race-ww-air`` - this layer adds WorldWind visualization for most of the `race-air` constructs
 
-**actors** contains the majority of RaceActors that are distributed with RACE. This module is
-subdivided into various categories (imports,exports,bridges,filters,routers etc.) as it is supposed
-to grow considerably.
+``race-testkit`` - provides RACE specific infrastructure to write test modules, e.g. to test RaceActors
 
-**ww** is the module that provides an extensible geo-spatial viewer infrastructure based on
-`NASA WorldWind`_. This includes not only the actor that creates and interfaces to a WorldWind
-window, but also WorldWind-layer classes with associated actors to simplify display
-of dynamic data received via RACE channels.
+``race-launcher`` - contains classes to launch and manage remote RACE instances
 
-**tools** contains a number of main classes that support RACE end-users, such as encryption and
-decryption of configuration files
+``race-ui`` - will hold a RACE console that makes use of a graphical user interface (as an alternative to the terminal
+based `ConsoleMain` that is included in `race-core`)
 
-**test-tools** holds convenience wrappers around some complex 3rd party servers RACE can interface
-to, such as a ActiveMQ_ JMS server or a Kafka_ server
-
-Last not least, the top level module holds the code for the various RACE drivers, including
-``gov.nasa.race.ConsoleMain`` and the RemoteLauncher_ infrastructure.
-
-Code for each layer (except of the toplevel) is located in a "race-<layer>" subdirectory, and
-belongs to a ``gov.nasa.race.<layer>`` package. Each layer is compiled separately, making sure
-it can only depend on lower layers.
+``race-tools`` - is a layer that contains several stand-alone applications that support RACE development, most notably the
+`CryptConfig` tool that is used to en-/de-crypt RACE config files (see `Using Encrypted Configurations`_ section).
 
 
 .. _NASA WorldWind: https://goworldwind.org/
 .. _ActiveMQ: http://activemq.apache.org/
 .. _Kafka: http://kafka.apache.org/
+.. _DDS: http://portals.omg.org/dds/
+.. _scala-swing: https://github.com/scala/scala-swing
+.. _SWIM: https://www.faa.gov/nextgen/programs/swim/
