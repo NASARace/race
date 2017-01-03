@@ -29,6 +29,7 @@
                     <li><span class="toc level1"><a href="#creation-and-initialization">Creation and Initialization</a></span></li>
                     <li><span class="toc level1"><a href="#separation-of-system-and-user-message-processing">Separation of System and User Message Processing</a></span></li>
                     <li><span class="toc level1"><a href="#publish-subscribe">Publish/Subscribe</a></span></li>
+                    <li><span class="toc level1"><a href="#example">Example</a></span></li>
                   </ul>
                 </div>
             </div>
@@ -126,23 +127,26 @@
             
             <h2 id="state-model" class="section">State Model</h2>
             <p>Based on the RACE runtime phases, RaceActors implement the following state model</p>
-            <p><img class="center scale60" src="../images/actor-states.svg" alt="RACE overview"></p>
+            <p><img class="left scale50" src="../images/actor-states.svg" alt="RACE overview"></p>
+            <ul>
+              <li><strong>Initializing</strong> - automatically set during RaceActor creation.</li>
+              <li><strong>Initialized</strong> - actor has completed its dynamic initialization, i.e. has returned from its
+              <code>onInitializeRaceActor()</code> method. This is triggered by a <code>InitializeRaceActor</code> message from the
+              master actor.</li>
+              <li><strong>Started</strong> - actor has received a <code>StartRaceActor</code> message from the master actor.</li>
+              <li><strong>Running</strong> - actor has successfully returned from its <code>onStartRaceActor()</code> method.</li>
+              <li><strong>Paused</strong> - actor has successfully returned from its <code>onPauseRaceActor()</code> method, which is called
+              automatically when receiving a <code>PauseRaceActor</code> message from the master actor.</li>
+              <li><strong>Terminating</strong> - actor has received a <code>TerminateRaceActor</code> message from the master actor.</li>
+              <li><strong>Terminated</strong> - actor has returned successfully from its <code>onTerminateRaceActor()</code> method. This
+              marks the end of a RaceActor lifecycle.</li>
+            </ul>
             <p>All state transitions are triggered by system messages (e.g. <code>InitializeRaceActor</code>) that are sent
             by the master actor. Transition response is a message indicating either success (e.g.
             <code>RaceActorInitialized</code>) or failure (e.g. <code>RaceActorInitializeFailed</code>). All state related
             system messages are sent point-to-point between the master and the respective RaceActor, and
-            are processed synchronously by the master actor. Dotted states are automatically entered.</p>
-            <p><strong>Initializing</strong> - automatically set during RaceActor creation.</p>
-            <p><strong>Initialized</strong> - actor has completed its dynamic initialization, i.e. has returned from its
-            <code>onInitializeRaceActor()</code> method. This is triggered by a <code>InitializeRaceActor</code> message from the
-            master actor.</p>
-            <p><strong>Started</strong> - actor has received a <code>StartRaceActor</code> message from the master actor.</p>
-            <p><strong>Running</strong> - actor has successfully returned from its <code>onStartRaceActor()</code> method.</p>
-            <p><strong>Paused</strong> - actor has successfully returned from its <code>onPauseRaceActor()</code> method, which is called
-            automatically when receiving a <code>PauseRaceActor</code> message from the master actor.</p>
-            <p><strong>Terminating</strong> - actor has received a <code>TerminateRaceActor</code> message from the master actor.</p>
-            <p><strong>Terminated</strong> - actor has returned successfully from its <code>onTerminateRaceActor()</code> method. This
-            marks the end of a RaceActor lifecycle.</p>
+            are processed synchronously by the master actor. Dotted states are automatically entered/exited and supposed
+            to be transient.</p>
             
             <h2 id="creation-and-initialization" class="section">Creation and Initialization</h2>
             <p>RaceActors are created by the master actor by means of normal Akka APIs, providing a
@@ -253,6 +257,61 @@ class FlightProbe (val conf: Config) extends SubscribingRaceActor {
             <p>Channels are not type constrained with respect to payload messages. Channel subscribers are
             responsible for extraction of relevant payload messages, for which Scala&#39;s pattern matching is a
             very convenient and type safe mechanism.</p>
+            
+            <h2 id="example" class="section">Example</h2>
+            <p>Here is a complete example that shows a RaceActor which periodically computes and publishes flight positions
+            for a configured aircraft:</p>
+            <pre><code>package gov.nasa.race.air.actor
+
+import akka.actor.ActorRef
+import com.typesafe.config.Config
+import gov.nasa.race.air.FlightPos
+import gov.nasa.race.core.Messages.RaceTick
+import gov.nasa.race.core.{ContinuousTimeRaceActor, PeriodicRaceActor, PublishingRaceActor, SubscribingRaceActor}
+import gov.nasa.race.geo.GreatCircle._
+import gov.nasa.race.geo.LatLonPos
+import gov.nasa.race.uom.Angle._
+import gov.nasa.race.uom.Length._
+import gov.nasa.race.uom.Speed._
+import gov.nasa.race.uom._
+
+import scala.language.postfixOps
+
+class SimpleAircraft (val config: Config) extends ContinuousTimeRaceActor
+             with SubscribingRaceActor with PublishingRaceActor with PeriodicRaceActor {
+
+  //--- initialization from configuration
+  val id = config.getString(&quot;id&quot;)
+  val cs = config.getString(&quot;cs&quot;)
+
+  // Ok to use vars here since nobody outside this actor will have access
+  var pos = LatLonPos(Degrees(config.getDouble(&quot;lat&quot;)), Degrees(config.getDouble(&quot;lon&quot;)))
+  var speed = Knots(config.getDouble(&quot;speed-kn&quot;))
+  var altitude = Feet(config.getDouble(&quot;altitude-ft&quot;))
+  var heading = Degrees(config.getDouble(&quot;heading&quot;))
+
+  //--- overridden initialization/termination callbacks
+
+  override def onStartRaceActor(originator: ActorRef) = {
+    super.onStartRaceActor(originator)
+    startScheduler
+  }
+
+  //---  user message handler
+  override def handleMessage = {
+    case RaceTick =&gt;
+      updatePos
+      debug(s&quot;publishing $pos&quot;)
+      publish(FlightPos(id, cs, pos, altitude, speed, heading, simTime))
+  }
+
+  //--- internal functions
+
+  def updatePos: Unit = {
+    val dist: Length = speed * updateElapsedSimTime
+    pos = endPos(pos, dist, heading, altitude)
+  }
+}</code></pre>
         </div>
 
     </body>

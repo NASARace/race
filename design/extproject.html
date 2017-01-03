@@ -24,6 +24,11 @@
             <div class="pagetoc">
                 <div class="toc">
                   <p class="title">Page</p>
+                  <ul>
+                    <li><span class="toc level1"><a href="#artifact-server-and-dependency-definition">Artifact Server and Dependency Definition</a></span></li>
+                    <li><span class="toc level1"><a href="#versioning-policy">Versioning Policy</a></span></li>
+                    <li><span class="toc level1"><a href="#example-client-project">Example Client Project</a></span></li>
+                  </ul>
                 </div>
             </div>
             <div class="globaltoc">
@@ -108,12 +113,48 @@
         <div class="main">
             <h1 id="using-race-from-external-projects" class="title">Using RACE from External Projects</h1>
             <p>RACE is a system that is meant to be extended by writing new actors, but those actors do not have to reside
-            within RACE. Extending RACE does not mean you have to clone and modify its directory structure.</p>
-            <p>Artifacts (jars) of various RACE <a href="layers-and-modules.html#layers-and-modules">Layers and Modules</a> are published on the <a href="http://central.sonatype.org/">Central_Repository</a>, and can be imported into external
-            projects by declaring them as normal dependencies within their respective build configurations.</p>
+            within RACE. Extending RACE does not mean you have to clone and modify it - you can use RACE as a library.</p>
+            
+            <h2 id="artifact-server-and-dependency-definition" class="section">Artifact Server and Dependency Definition</h2>
+            <p>Artifacts (jars) of various RACE <a href="layers-and-modules.html#layers-and-modules">Layers and Modules</a> are published on the <a href="http://central.sonatype.org/">Central_Repository</a> within the
+            <code>gov.nasa.race</code> group, and can be imported into external projects by declaring them as normal dependencies within
+            their respective build configurations. For <a href="http://www.scala-sbt.org/">SBT</a>, a typical dependency definition in <code>build.sbt</code> for the latest
+            major release of RACE would be:</p>
+            <pre><code>libraryDependencies += &quot;gov.nasa.race&quot; %% &quot;race-core&quot; % &quot;1.+.+&quot;</code></pre>
+            <p>Typical RACE module dependencies are</p>
+            <ul>
+              <li><code>race-core</code> - the basic RACE module containing <code>RaceActor</code>, <code>RaceActorSystem</code> and other core classes</li>
+              <li><code>race-net-jms</code> - the module providing actors to import from and export to JMS servers</li>
+              <li><code>race-ww</code> - provides the <code>RaceViewerActor</code> that encapsulates the <a href="https://worldwind.arc.nasa.gov/">NASA WorldWind</a> geospatial viewer</li>
+              <li><code>race-air</code> - airspace simulation specific actors and other classes</li>
+              <li><code>race-ww-air</code> - <a href="https://worldwind.arc.nasa.gov/">NASA WorldWind</a> based visualization for airspace objects such as flights and flight paths</li>
+            </ul>
+            <p>Note that not every RACE revision is published on the <a href="http://central.sonatype.org/">Central_Repository</a>. If you need access to development snapshots
+            of RACE, you can publish it locally to avoid any changes in the build configuration of your project:</p>
+            <pre><code>$ git clone https://github.com/NASARace/race.git
+$ cd race
+$ sbt publishLocal</code></pre>
+            <p>RACE and the client project(s) do not have to reside in the same directory tree.</p>
+            
+            <h2 id="versioning-policy" class="section">Versioning Policy</h2>
+            <p>RACE uses a simple <em>&lt;major&gt;.&lt;minor&gt;.&lt;revision&gt;</em> versioning scheme. Within the same <em>&lt;minor&gt;</em> version public API changes should
+            be backwards compatible and should not require adaptation of external clients. Note that <em>&lt;revision&gt;</em> is consecutive, i.e.
+            it is <strong>not</strong> reset between <em>&lt;major&gt;</em> or <em>&lt;minor&gt;</em> version changes.</p>
+            <p>Typical version specifications in dependencies are:</p>
+            <ul>
+              <li><code>&quot;latest.release&quot;</code> - the latest</li>
+              <li><code>&quot;1.3.+&quot;</code> - the latest version within the &quot;1.3&quot; line, to ensure API compatibility</li>
+              <li><code>&quot;1.3.25&quot;</code> - an explicit version</li>
+            </ul>
+            <p>Major release changes happen infrequently and are mostly organizational, they are not directly related to compatibility.
+            Minor release numbers are reset between major releases.</p>
+            <p>While version specifications for RACE modules could differ, it is recommended to use a single specification for all
+            modules, e.g. by defining a common <code>raceVersion</code> variable.</p>
+            
+            <h2 id="example-client-project" class="section">Example Client Project</h2>
             <p>A minimal example that shows how to use RACE as a library can be found on <a href="https://github.com/NASARace/race-client-example">https://github.com/NASARace/race-client-example</a>.
-            This example consists of a single <code>TLEActor</code> which is written in Scala and displays satellite orbit positions for
-            configured satellites. This <code>race-client-example</code> project uses <a href="http://www.scala-sbt.org/">SBT</a> as build system, the respective RACE dependencies
+            This example consists of a single <a href="https://github.com/NASARace/race-client-example/blob/master/src/main/scala/TLEActor.scala">TLEActor</a> which is written in Scala and displays satellite orbit positions for
+            configured satellites. The <a href="https://github.com/NASARace/race-client-example">race-client-example</a> project uses <a href="http://www.scala-sbt.org/">SBT</a> as build system, the respective RACE dependencies
             are ordinary SBT settings. The <code>build.sbt</code> looks like this:</p>
             <pre><code>name := &quot;race-client-example&quot;
 scalaVersion := &quot;2.12.1&quot;
@@ -123,20 +164,22 @@ fork in run := true
 outputStrategy := Some(StdoutOutput)
 Keys.connectInput in run := true
 
+val raceVersion = &quot;1.3.+&quot;  // the latest revision within the &quot;1.3&quot; line
+
 lazy val root = (project in file(&quot;.&quot;)).
   enablePlugins(JavaAppPackaging). // provides &#39;stage&#39; task to generate stand alone scripts that can be executed outside SBT
   settings(
     mainClass in Compile := Some(&quot;gov.nasa.race.main.ConsoleMain&quot;),  // we just use RACEs driver
     libraryDependencies ++= Seq(
-      &quot;gov.nasa.race&quot; %% &quot;race-core&quot; % &quot;1.+&quot;,
-      &quot;gov.nasa.race&quot; %% &quot;race-air&quot; % &quot;1.+&quot;,
-      &quot;gov.nasa.race&quot; %% &quot;race-ww&quot; % &quot;1.+&quot;,
-      &quot;gov.nasa.race&quot; %% &quot;race-ww-air&quot; % &quot;1.+&quot;,
+      &quot;gov.nasa.race&quot; %% &quot;race-core&quot; % raceVersion,
+      &quot;gov.nasa.race&quot; %% &quot;race-air&quot; % raceVersion,
+      &quot;gov.nasa.race&quot; %% &quot;race-ww&quot; % raceVersion,
+      &quot;gov.nasa.race&quot; %% &quot;race-ww-air&quot; % raceVersion,
       // ... other dependencies
     )
 )</code></pre>
-            <p>Note that this example project does not provide a mainClass of its own, it just re-uses the one exported by RACE
-            (<code>ConsoleMain</code>). The RACE artifacts are available on the usual <code>maven.org</code> servers and hence do not need any special
+            <p>Note that this example project does not provide a main class of its own, it just re-uses the <code>gov.nasa.race.main.ConsoleMain</code>
+            exported by RACE. The RACE artifacts are available on the usual <code>maven.org</code> servers and hence do not need any special
             resolver configuration. Dependency specifications for other build systems such as Maven or Gradle can be found by visiting
             <a href="https://search.maven.org">https://search.maven.org</a> and entering the required module (e.g. <code>race-ww-air</code>).</p>
             <p>There are no special considerations for external actors or <code>*.conf</code> files - they follow the same rules as laid out in

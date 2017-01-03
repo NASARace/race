@@ -123,11 +123,11 @@
             frameworks are often not thread safe, and thus need explicit, error prone and hard to test
             synchronization between asynchronous data acquisition- and user interface (event dispatcher) threads.</p>
             <p>RACE includes substantial infrastructure to mitigate these challenges. Centerpiece of this
-            infrastructure is <a href="https://goworldwind.org/">NASA WorldWind</a> - an open sourced Java- and <a href="https://www.opengl.org/">OpenGL</a>-based geo viewer
+            infrastructure is <a href="https://worldwind.arc.nasa.gov/">NASA WorldWind</a> - an open sourced Java- and <a href="https://www.opengl.org/">OpenGL</a>-based geo viewer
             that runs on all major platforms and can be embedded into various applications.</p>
             
             <h2 id="layers-and-panels---races-extension-points" class="section">Layers and Panels - RACEs Extension Points</h2>
-            <p>The primary <a href="https://goworldwind.org/developers-guide/concepts/">WorldWind concept</a> in the context of RACE is the <a href="http://builds.worldwind.arc.nasa.gov/worldwind-releases/daily/docs/api/gov/nasa/worldwind/layers/RenderableLayer.html">RenderableLayer</a>, which represents
+            <p>The primary <a href="https://worldwind.arc.nasa.gov/index.html?root=java">WorldWind concept</a> in the context of RACE is the <a href="http://builds.worldwind.arc.nasa.gov/worldwind-releases/daily/docs/api/gov/nasa/worldwind/layers/RenderableLayer.html">RenderableLayer</a>, which represents
             a display relevant data set that can be separately controlled in terms of visibility, rendering details and
             updates. RACE uses <code>RaceLayers</code> to map its bus channels to WorldWind layers. While a <code>RaceLayer</code>
             is a GUI object that executes within the user interface thread, it has an associated
