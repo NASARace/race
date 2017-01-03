@@ -9,9 +9,9 @@ Artifact Server and Dependency Definition
 Artifacts (jars) of various RACE `Layers and Modules`_ are published on the Central_Repository_ within the
 ``gov.nasa.race`` group, and can be imported into external projects by declaring them as normal dependencies within
 their respective build configurations. For SBT_, a typical dependency definition in ``build.sbt`` for the latest
-major release of RACE would be::
+1.3.x release of RACE would be::
 
-     libraryDependencies += "gov.nasa.race" %% "race-core" % "1.+.+"
+     libraryDependencies += "gov.nasa.race" %% "race-core" % "1.3.+"
 
 
 Typical RACE module dependencies are
