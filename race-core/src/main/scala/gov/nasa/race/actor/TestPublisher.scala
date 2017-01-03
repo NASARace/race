@@ -17,37 +17,26 @@
 
 package gov.nasa.race.actor
 
-import akka.actor.{ActorRef, Cancellable}
+import akka.actor.ActorRef
 import com.typesafe.config.Config
-import gov.nasa.race._
-import gov.nasa.race.core.PublishingRaceActor
 import gov.nasa.race.config.ConfigUtils._
-
-import scala.concurrent.duration._
-import scala.concurrent.ExecutionContext.Implicits.global
+import gov.nasa.race.core.Messages.RaceTick
+import gov.nasa.race.core.{PeriodicRaceActor, PublishingRaceActor}
 
 
 /**
   * a Publisher that is used for testing purposes
   */
-class TestPublisher (val config: Config) extends PublishingRaceActor {
-  case object PublishMessage
+class TestPublisher (val config: Config) extends PublishingRaceActor with PeriodicRaceActor {
 
-  val publishInterval = config.getFiniteDurationOrElse("interval", 5.seconds)
   val message = config.getStringOrElse("message", "test")
-  var schedule: Option[Cancellable] = None
 
   override def onStartRaceActor(originator: ActorRef) = {
     super.onStartRaceActor(originator)
-    schedule = Some(scheduler.schedule(0.seconds, publishInterval, self, PublishMessage))
-  }
-
-  override def onTerminateRaceActor(originator: ActorRef) = {
-    super.onTerminateRaceActor(originator)
-    ifSome(schedule){ _.cancel }
+    startScheduler
   }
 
   override def handleMessage = {
-    case PublishMessage => publish(message)
+    case RaceTick => publish(message)
   }
 }

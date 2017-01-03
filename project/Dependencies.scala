@@ -156,9 +156,7 @@ object Dependencies {
   )
 
   //--- Kafka (make sure to add log4j to kafkaServer dependencies
-  //val kafka = "org.apache.kafka" %% "kafka" % "latest.release" excludeAll(  // no 2.12 version yet
-  // NOTE: as of 11/19/2016 kafka does not yet run under Scala 2.12
-  val kafka = "org.apache.kafka" % "kafka_2.11" % "0.10.1.0" excludeAll(
+  val kafka = "org.apache.kafka" %% "kafka" % "latest.release" excludeAll(
     ExclusionRule(organization = "log4j", name="log4j"),
     ExclusionRule(organization = "org.slf4j", name = "slf4j-log4j12"),
     ExclusionRule(organization = "org.scala-lang.modules", name = "scala-parser-combinators_2.11") // collides with our 2.12

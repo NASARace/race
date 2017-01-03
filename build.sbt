@@ -5,12 +5,11 @@ import RaceBuild._
 import Dependencies._
 import CommonRaceSettings._
 
-
 shellPrompt in ThisBuild := { state => "[" + Project.extract(state).currentRef.project + "]> " }
 
 lazy val commonSettings = commonRaceSettings ++ Seq(
   organization := "gov.nasa.race",
-  version := "1.3"
+  version := "1.3." + gitRev.value
 )
 
 lazy val testSettings = commonSettings ++ noPublishSettings  // test projects don't publish artifacts

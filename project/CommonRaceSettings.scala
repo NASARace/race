@@ -8,6 +8,8 @@ import sbt.{Keys, StdoutOutput, _}
   */
 object CommonRaceSettings {
 
+  val gitRev = settingKey[String]("retrieve git rev-list count")
+
   lazy val commonRaceSettings =
       PluginSettings.pluginSettings ++
       TaskSettings.taskSettings ++
@@ -16,6 +18,8 @@ object CommonRaceSettings {
         scalaVersion := "2.12.1",
         scalacOptions ++= Seq("-unchecked", "-deprecation", "-feature"),
         resolvers ++= Dependencies.dependencyResolvers,
+
+        gitRev := Process("git rev-list --count HEAD", baseDirectory.value).lines.head,
 
         fork in run := true,
         outputStrategy := Some(StdoutOutput),

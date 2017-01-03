@@ -98,8 +98,8 @@ user input.
 
 If applications need more control they can provide their own panel and configure it instead of the standard sync panel.
 
-.. _NASA WorldWind: https://goworldwind.org/
-.. _WorldWind concept: https://goworldwind.org/developers-guide/concepts/
+.. _NASA WorldWind: https://worldwind.arc.nasa.gov/
+.. _WorldWind concept: https://worldwind.arc.nasa.gov/index.html?root=java
 .. _OpenGL: https://www.opengl.org/
 .. _RenderableLayer: http://builds.worldwind.arc.nasa.gov/worldwind-releases/daily/docs/api/gov/nasa/worldwind/layers/RenderableLayer.html
 .. _mediator: https://en.wikipedia.org/wiki/Mediator_pattern

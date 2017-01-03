@@ -31,36 +31,13 @@ import scala.swing._
 import scala.swing.event.ButtonClicked
 
 /**
-  * object CollapsiblePanel {
-  * def main (args: Array[String]): Unit = {
-  * Style.setStyle(new RaceDefaultStyle)
-  **
-  *val top = new AppFrame {
-  *title = "CollapsiblePanelDemo"
-  **
-  *val child1 = new BoxPanel (Orientation.Vertical){
-  *border = new EmptyBorder(10,10,10,10)
-  *for (i <- 1 until 5) contents += new Label(s"line $i").styled()
-  *}.styled()
-  **
-  *
-  *val listData = for (i <- 1 until 20) yield(i.toString)
-  *val list = new ListView[String](listData).styled()
-  *val child2 = new ScrollPane(list)
-  *child2.preferredSize = new Dimension(200,150)
-  **
- *val panel: CollapsiblePanel = new CollapsiblePanel().styled('layerInfo)
-  *panel.add("panel 1", child1)
-  *panel.add("panel 2", child2)
-  **
- *contents = panel
-  *size = new Dimension(300,300)
-  *pack()
-  *}
-  *top.open()
-  *}
-*}
-  **/
+  * a panel that holds a vertical list of collapsible sub-panels, each with a title and a button
+  * (small triangle) that shows and sets the expansion status.
+  * There is no restriction regarding the type of sub-panels. New sub-panes are added dynamically
+  * by calling the ``add(title,child,tooltip,isExpanded)`` method.
+  * If the combined height of the expanded sub-panels exceeds the toplevel window height, the whole
+  * CollapsiblePanel becomes scrollable.
+  */
 
 class CollapsiblePanel extends GBPanel {
   val c = new Constraints( gridx=0, fill=Fill.Horizontal, anchor=Anchor.NorthWest, weightx=1.0)

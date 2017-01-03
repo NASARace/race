@@ -93,7 +93,6 @@ class KafkaMultiNodeSpec extends RaceMultiNodeSpec(KafkaMultiNodeConfig) with Wo
   }
 }
 
-// TODO - as of 11/19/2016 Kafka does not yet run under Scala 2.12, hence we have to disable the tests
-//class KafkaMultiNodeSpecMultiJvmNode1 extends KafkaMultiNodeSpec
-//class KafkaMultiNodeSpecMultiJvmNode2 extends KafkaMultiNodeSpec
+class KafkaMultiNodeSpecMultiJvmNode1 extends KafkaMultiNodeSpec
+class KafkaMultiNodeSpecMultiJvmNode2 extends KafkaMultiNodeSpec
 
