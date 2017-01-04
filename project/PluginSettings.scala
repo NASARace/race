@@ -92,6 +92,12 @@ object PluginSettings {
     parallelExecution in Test := false
   )
 
+  import SonatypeSettings._
+
   // collect all settings for all active plugins. This goes into build.sbt commonSettings
-  val pluginSettings = laikaSettings ++ sbtStatsSettings ++ scalariformSettings //++ depGraphSettings
+  val pluginSettings = laikaSettings ++
+                       sbtStatsSettings ++
+                       scalariformSettings ++
+                       sonatypeSettings
+  //++ depGraphSettings
 }

@@ -33,18 +33,17 @@ RACE and the client project(s) do not have to reside in the same directory tree.
 
 Versioning Policy
 -----------------
-RACE uses a simple *<major>.<minor>.<revision>* versioning scheme. Within the same *<minor>* version public API changes should
-be backwards compatible and should not require adaptation of external clients. Note that *<revision>* is consecutive, i.e.
-it is **not** reset between *<major>* or *<minor>* version changes.
+RACE uses a simple 3-level *<major>.<minor>.<micro>* versioning scheme. *<major>* release changes happen infrequently
+and are mostly organizational, they are not directly related to compatibility. Within the same *<minor>* version public
+API changes should be backwards compatible and should not require adaptation of external clients. Note that each lower
+level number is reset when the parent level changes.
 
 Typical version specifications in dependencies are:
 
 * ``"latest.release"`` - the latest
 * ``"1.3.+"`` - the latest version within the "1.3" line, to ensure API compatibility
-* ``"1.3.25"`` - an explicit version
+* ``"1.3.1"`` - an explicit version
 
-Major release changes happen infrequently and are mostly organizational, they are not directly related to compatibility.
-Minor release numbers are reset between major releases.
 
 While version specifications for RACE modules could differ, it is recommended to use a single specification for all
 modules, e.g. by defining a common ``raceVersion`` variable.
