@@ -35,16 +35,16 @@ object Dependencies {
   //--- default libs
 
   //--- slf4j
-  val slf4jSimple = "org.slf4j" % "slf4j-simple" % "latest.release"
+  val slf4jSimple = "org.slf4j" % "slf4j-simple" % "1.7.16"
 
   //--- logback
-  val logback = "ch.qos.logback" % "logback-classic" % "latest.release"
+  val logback = "ch.qos.logback" % "logback-classic" % "1.1.8"
 
   //--- Typesafe config
   val typesafeConfig = "com.typesafe" % "config" % "1.3.0"
 
   //--- nscala-time (Dates with operators): https://github.com/nscala-time/nscala-time
-  val nscalaTime = "com.github.nscala-time" %% "nscala-time" %  "latest.release"
+  val nscalaTime = "com.github.nscala-time" %% "nscala-time" %  "2.16.0"
 
   //--- Scala parser combinators (https://github.com/scala/scala-parser-combinators)
   //val scalaParser =  "org.scala-lang.modules" %% "scala-parser-combinators"  % "latest.release" // not yet 2.12
@@ -60,8 +60,6 @@ object Dependencies {
   //val scalaMiniboxingRT = "org.scala-miniboxing.plugins" %% "miniboxing-runtime" % "0.4-SNAPSHOT"
   //val scalaMiniboxingCompile = "org.scala-miniboxing.plugins" %% "miniboxing-plugin" % "0.4-SNAPSHOT"
 
-  //--- squants (Scala quantities): https://github.com/garyKeorkunian/squants
-  //val squants = "com.squants"  %% "squants"  % "0.6.2"
 
   //--- scalanlp/breeze (numerical processing): https://github.com/scalanlp/breeze
   //val breeze = "org.scalanlp" %% "breeze" % "latest.release"
@@ -70,26 +68,26 @@ object Dependencies {
   //--- scalaTest
   //val scalaTest = "org.scalatest" %% "scalatest" % "2.2.6"
   val scalaTest = "org.scalatest" % "scalatest_2.12" % "3.0.1"
-  val pegDown = "org.pegdown" % "pegdown" % "latest.release"
+  val pegDown = "org.pegdown" % "pegdown" % "1.6.0"
 
   //--- scalaCheck
-  val scalaCheck = "org.scalacheck" % "scalacheck_2.12" % "latest.release" // 1.13.4"
+  val scalaCheck = "org.scalacheck" % "scalacheck_2.12" % "1.13.4" // 1.13.4"
 
   // liftJson
-  val liftJson = "net.liftweb" %% "lift-json" % "latest.release"
+  //val liftJson = "net.liftweb" %% "lift-json" % "latest.release"
 
-  val defaultLibs =  Seq(logback,typesafeConfig,nscalaTime,liftJson)
+  val defaultLibs =  Seq(logback,typesafeConfig,nscalaTime)
   val defaultTestLibs = Seq(scalaTest,scalaCheck,pegDown)
 
   // scodec
-  val scodecBits = "org.scodec" %% "scodec-bits" % "latest.release"
-  val scodecCore = "org.scodec" %% "scodec-core" % "latest.release"
+  val scodecBits = "org.scodec" %% "scodec-bits" % "1.1.4"
+  val scodecCore = "org.scodec" %% "scodec-core" % "1.10.3"
   //val scodecStream = "org.scodec" %% "scodec-stream" % "0.10.0"  // latest.release not yet on resolvers
 
   val scodecAll = Seq(scodecBits, scodecCore)
 
   //--- scala-swing
-  val scalaSwing = "org.scala-lang.modules" %% "scala-swing" % "latest.release"
+  val scalaSwing = "org.scala-lang.modules" %% "scala-swing" % "2.0.0-M2"
   //val swingx = "org.swinglabs.swingx" % "swingx-core" % "latest.release"
   //.. and possibly extensions for Tree and jfreechart
 
@@ -97,7 +95,7 @@ object Dependencies {
   val rsTextArea = "com.fifesoft" % "rsyntaxtextarea" % "2.5.8"
 
   //--- the jfreechart plot and chart lib
-  val jfreechart = "org.jfree" % "jfreechart" % "latest.release"
+  //val jfreechart = "org.jfree" % "jfreechart" % "latest.release"
 
   //--- pure Java implementation of ssh2 (http://www.jcraft.com/jsch/)
   // NOTE this has to be a known version and verified instance so that we don't
@@ -108,14 +106,8 @@ object Dependencies {
   //val worldwind = "gov.nasa" % "worldwind" % "latest.integration" // "2.0.0-986"
 
 
-  // the maven repo does not properly configure dependencies, which are jogl, gluegen and gdal
-  // (note we don't need that if we properly publish WW local)
-  val jogl = "org.jogamp.jogl" % "jogl-all-main" % "2.1.5-01"
-  val gluegen = "org.jogamp.gluegen" % "gluegen-rt-main" % "2.1.5-01"
-  val gdal = "org.gdal" % "gdal" % "1.11.2"
-
   //--- Akka
-  val akkaVersion = "latest.release"
+  val akkaVersion = "2.4.16"
   val akkaOrg = "com.typesafe.akka"
 
   val akkaActor = akkaOrg %% "akka-actor" % akkaVersion
@@ -130,7 +122,7 @@ object Dependencies {
 
 
   //--- ActiveMQ
-  val amqVersion = "latest.release"  // >= 5.11.1
+  val amqVersion = "5.14.3"
   val amqOrg = "org.apache.activemq"
   val amqBroker = amqOrg % "activemq-broker" % amqVersion
 
@@ -146,8 +138,8 @@ object Dependencies {
   // "multiple bindings" error/warning during static init, so we have to make sure we
   // replace log4j with slf4j's log4j-over-slf4j
 
-  val log4j = "log4j" % "log4j" % "latest.release"
-  val log4jOverSlf4j = "org.slf4j" % "log4j-over-slf4j" % "latest.release"
+  //val log4j = "log4j" % "log4j" % "latest.release"
+  val log4jOverSlf4j = "org.slf4j" % "log4j-over-slf4j" % "1.7.22"
 
   //--- ZooKeeper ("3.4.7" works, "latest.release" includes alphas!)
   val zookeeper = "org.apache.zookeeper" % "zookeeper" % "3.4.8" excludeAll(
@@ -156,10 +148,9 @@ object Dependencies {
   )
 
   //--- Kafka (make sure to add log4j to kafkaServer dependencies
-  val kafka = "org.apache.kafka" %% "kafka" % "latest.release" excludeAll(
+  val kafka = "org.apache.kafka" %% "kafka" % "0.10.1.1" excludeAll(
     ExclusionRule(organization = "log4j", name="log4j"),
-    ExclusionRule(organization = "org.slf4j", name = "slf4j-log4j12"),
-    ExclusionRule(organization = "org.scala-lang.modules", name = "scala-parser-combinators_2.11") // collides with our 2.12
+    ExclusionRule(organization = "org.slf4j", name = "slf4j-log4j12")
   )
 
   //--- DDS Java 5 PSM
