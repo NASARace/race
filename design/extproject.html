@@ -72,6 +72,7 @@
                         <li><span class="toc level2"><a href="remotelauncher.html">RemoteLauncher</a></span></li>
                         <li><span class="toc level2"><a href="layers-and-modules.html">Layers and Modules</a></span></li>
                         <li><span class="toc level2"><a href="directory-structure.html">Directory Structure</a></span></li>
+                        <li><span class="toc level2"><a href="repository.html">Repository Structure</a></span></li>
                         <li><span class="toc level2"><a href="local-build.html">Local Build Configuration</a></span></li>
                         <li><span class="toc level2"><a href="dds.html">RACE and DDS</a></span></li>
                         <li><span class="toc level2 active">Using RACE from External Projects</span></li>
@@ -137,17 +138,16 @@ $ sbt publishLocal</code></pre>
             <p>RACE and the client project(s) do not have to reside in the same directory tree.</p>
             
             <h2 id="versioning-policy" class="section">Versioning Policy</h2>
-            <p>RACE uses a simple <em>&lt;major&gt;.&lt;minor&gt;.&lt;revision&gt;</em> versioning scheme. Within the same <em>&lt;minor&gt;</em> version public API changes should
-            be backwards compatible and should not require adaptation of external clients. Note that <em>&lt;revision&gt;</em> is consecutive, i.e.
-            it is <strong>not</strong> reset between <em>&lt;major&gt;</em> or <em>&lt;minor&gt;</em> version changes.</p>
+            <p>RACE uses a simple 3-level <em>&lt;major&gt;.&lt;minor&gt;.&lt;micro&gt;</em> versioning scheme. <em>&lt;major&gt;</em> release changes happen infrequently
+            and are mostly organizational, they are not directly related to compatibility. Within the same <em>&lt;minor&gt;</em> version public
+            API changes should be backwards compatible and should not require adaptation of external clients. Note that each lower
+            level number is reset when the parent level changes.</p>
             <p>Typical version specifications in dependencies are:</p>
             <ul>
               <li><code>&quot;latest.release&quot;</code> - the latest</li>
               <li><code>&quot;1.3.+&quot;</code> - the latest version within the &quot;1.3&quot; line, to ensure API compatibility</li>
-              <li><code>&quot;1.3.25&quot;</code> - an explicit version</li>
+              <li><code>&quot;1.3.1&quot;</code> - an explicit version</li>
             </ul>
-            <p>Major release changes happen infrequently and are mostly organizational, they are not directly related to compatibility.
-            Minor release numbers are reset between major releases.</p>
             <p>While version specifications for RACE modules could differ, it is recommended to use a single specification for all
             modules, e.g. by defining a common <code>raceVersion</code> variable.</p>
             

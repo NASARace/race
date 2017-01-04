@@ -65,9 +65,9 @@
                         <li><span class="toc level2"><a href="channeltopics.html">ChannelTopics</a></span></li>
                         <li><span class="toc level2"><a href="worldwind.html">WorldWind Viewer</a></span></li>
                         <li><span class="toc level2"><a href="remotelauncher.html">RemoteLauncher</a></span></li>
-                        <li><span class="toc level2 active">Layers and Modules</span></li>
+                        <li><span class="toc level2"><a href="layers-and-modules.html">Layers and Modules</a></span></li>
                         <li><span class="toc level2"><a href="directory-structure.html">Directory Structure</a></span></li>
-                        <li><span class="toc level2"><a href="repository.html">Repository Structure</a></span></li>
+                        <li><span class="toc level2 active">Repository Structure</span></li>
                         <li><span class="toc level2"><a href="local-build.html">Local Build Configuration</a></span></li>
                         <li><span class="toc level2"><a href="dds.html">RACE and DDS</a></span></li>
                         <li><span class="toc level2"><a href="extproject.html">Using RACE from External Projects</a></span></li>
@@ -107,33 +107,15 @@
         </div>
 
         <div class="main">
-            <h1 id="layers-and-modules" class="title">Layers and Modules</h1>
-            <p>The RACE distribution is divided into several sub-modules that mostly act as layers, enforcing a
-            clear dependency relationship by means of a build system with separate compilation steps. Each
-            layer is only allowed to access lower layers.</p>
-            <p>From bottom to top:</p>
-            <p><code>race-core</code> - the basic layer with packages such as <em class="title-reference">gov.nasa.race.common</em>, <em class="title-reference">.core</em>, <em class="title-reference">.util</em>, <em class="title-reference">.config</em>, <em class="title-reference">.archive</em>.
-            <em class="title-reference">.main</em> and <em class="title-reference">.actor</em>. This includes the core classes (e.g. <em class="title-reference">RaceActor</em> and <em class="title-reference">RaceActorSystem</em>) as well as most of
-            the generic, domain-independent actors such as <em class="title-reference">TranslatorActor</em>. This layer is the minimum that needs to be
-            imported in external projects that use RACE.</p>
-            <p><code>race-net-*</code> - this is a collection of layers for importing and exporting from external messaging systems such
-            as <a href="http://activemq.apache.org/">ActiveMQ</a> (JMS), <a href="http://kafka.apache.org/">Kafka</a> and <a href="http://portals.omg.org/dds/">DDS</a>. Each of the modules mainly consists of import and export actors. Those modules
-            are kept separate because each of the 3rd party libraries they depend on have a potentially large fan out and hence
-            should only be included in an application that makes use of them.</p>
-            <p><code>race-swing</code> - this is a utility layer that adds user interface support that is not available in <em class="title-reference">javax.swing.*</em> or
-            <a href="https://github.com/scala/scala-swing">scala-swing</a>, most notably configurable style support</p>
-            <p><code>race-ww</code> - is the layer which adds support for using <a href="https://goworldwind.org/">NASA WorldWind</a> to visualize geospatial data (e.g. flight
-            positions). This module contains both the <em class="title-reference">RaceViewerActor</em> that encapsulates WorldWind in RACE configs, and
-            the <em class="title-reference">RaceLayer</em> infrastructure to import and display dynamic RACE data into WorldWind layers.</p>
-            <p><code>race-air</code> - this is the first domain specific layer which includes support for airspace objects such as`FlightPos`
-            , <em class="title-reference">FlightPath</em> and <em class="title-reference">Airport</em>. This is also where the various <a href="https://www.faa.gov/nextgen/programs/swim/">SWIM</a> message translators reside.</p>
-            <p><code>race-ww-air</code> - this layer adds WorldWind visualization for most of the <em class="title-reference">race-air</em> constructs</p>
-            <p><code>race-testkit</code> - provides RACE specific infrastructure to write test modules, e.g. to test RaceActors</p>
-            <p><code>race-launcher</code> - contains classes to launch and manage remote RACE instances</p>
-            <p><code>race-ui</code> - will hold a RACE console that makes use of a graphical user interface (as an alternative to the terminal
-            based <em class="title-reference">ConsoleMain</em> that is included in <em class="title-reference">race-core</em>)</p>
-            <p><code>race-tools</code> - is a layer that contains several stand-alone applications that support RACE development, most notably the
-            <em class="title-reference">CryptConfig</em> tool that is used to en-/de-crypt RACE config files (see <a href="../usage/encryption.html#using-encrypted-configurations">Using Encrypted Configurations</a> section).</p>
+            <h1 id="repository-structure" class="title">Repository Structure</h1>
+            <p>The RACE repository contains three named branches: <code>master</code>, <code>release</code> and <code>gh-pages</code>:</p>
+            <p>(1) The <code>master</code> branch of the repository is the development branch that always tries to link against the most recent
+            versions of dependencies. Although it is the development branch it should always compile and run.</p>
+            <p>(2) The <code>release</code> branch is the basis for the last published artifacts on the Central Repository. At a minimum, this
+            branch contains a modified <code>project/Dependencies.scala</code> that only uses explicit version numbers (symbolic
+            specifications such as &quot;latest.release&quot; are not supported by Maven Central).</p>
+            <p>(3) The <code>gh-pages</code> (orphan) branch contains the HTML files generated from <code>doc/</code>. This is the RACE website as published on
+            <a href="http://nasarace.github.io/race">http://nasarace.github.io/race</a>/, see <a href="../documentation/overview.html#race-documentation-overview">RACE Documentation Overview</a> for details.</p>
         </div>
 
     </body>
