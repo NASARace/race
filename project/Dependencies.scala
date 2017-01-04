@@ -60,9 +60,6 @@ object Dependencies {
   //val scalaMiniboxingRT = "org.scala-miniboxing.plugins" %% "miniboxing-runtime" % "0.4-SNAPSHOT"
   //val scalaMiniboxingCompile = "org.scala-miniboxing.plugins" %% "miniboxing-plugin" % "0.4-SNAPSHOT"
 
-  //--- squants (Scala quantities): https://github.com/garyKeorkunian/squants
-  //val squants = "com.squants"  %% "squants"  % "0.6.2"
-
   //--- scalanlp/breeze (numerical processing): https://github.com/scalanlp/breeze
   //val breeze = "org.scalanlp" %% "breeze" % "latest.release"
   // val breezeNative = "org.scalanlp" %% "breeze-natives" % "latest.release"
@@ -103,16 +100,6 @@ object Dependencies {
   // NOTE this has to be a known version and verified instance so that we don't
   // enter credentials processed by a un-verified jar
   val jsch = "com.jcraft" % "jsch" % "0.1.53"
-
-  //--- worldwind (a external sub project for now)
-  //val worldwind = "gov.nasa" % "worldwind" % "latest.integration" // "2.0.0-986"
-
-
-  // the maven repo does not properly configure dependencies, which are jogl, gluegen and gdal
-  // (note we don't need that if we properly publish WW local)
-  val jogl = "org.jogamp.jogl" % "jogl-all-main" % "2.1.5-01"
-  val gluegen = "org.jogamp.gluegen" % "gluegen-rt-main" % "2.1.5-01"
-  val gdal = "org.gdal" % "gdal" % "1.11.2"
 
   //--- Akka
   val akkaVersion = "latest.release"
@@ -158,8 +145,7 @@ object Dependencies {
   //--- Kafka (make sure to add log4j to kafkaServer dependencies
   val kafka = "org.apache.kafka" %% "kafka" % "latest.release" excludeAll(
     ExclusionRule(organization = "log4j", name="log4j"),
-    ExclusionRule(organization = "org.slf4j", name = "slf4j-log4j12"),
-    ExclusionRule(organization = "org.scala-lang.modules", name = "scala-parser-combinators_2.11") // collides with our 2.12
+    ExclusionRule(organization = "org.slf4j", name = "slf4j-log4j12")
   )
 
   //--- DDS Java 5 PSM
