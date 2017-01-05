@@ -56,7 +56,7 @@ object LayerInfoList {
   val systemLayerMap: Map[String,WWLayerInfo] = Map(
     Seq( new WWLayerInfo("Stars", Set("deco"), "star background for globe", true, false, defaultPanel),
       new WWLayerInfo("Atmosphere", Set("deco"), "atmosphere for globe", true, false, defaultPanel),
-      new WWLayerInfo("NASA Blue Marble Image", Set("map"), "", false, false, defaultPanel),
+      new WWLayerInfo("NASA Blue Marble Image", Set("map"), "", true, false, defaultPanel),
       new WWLayerInfo("Blue Marble May 2004", Set("map"), "", true, false, defaultPanel),
       new WWLayerInfo("i-cubed Landsat", Set("map"), "", true, false, defaultPanel),
       new WWLayerInfo("USGS NAIP Plus", Set("map"), "", false, false, defaultPanel),
