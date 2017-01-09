@@ -17,9 +17,9 @@ lazy val testSettings = commonSettings ++ noPublishSettings  // test projects do
 
 //--- root project (only for aggregation)
 lazy val root = createRootProject("race").
-  aggregate(raceCore,raceNetJMS,raceNetKafka,raceNetDDS,raceSwing,raceWW,raceAir,raceWWAir,raceLauncher,
+  aggregate(raceCore,raceNetJMS,raceNetKafka,raceNetDDS,raceSwing,raceWW,raceAir,raceWWAir,raceSpace,raceLauncher,
     raceTestKit,raceCoreTest,raceNetJMSTest,raceNetKafkaTest,raceAirTest).
-  dependsOn(raceCore,raceNetJMS,raceNetKafka,raceNetDDS,raceSwing,raceWW,raceAir,raceWWAir,raceLauncher).
+  dependsOn(raceCore,raceNetJMS,raceNetKafka,raceNetDDS,raceSwing,raceWW,raceAir,raceWWAir,raceSpace,raceLauncher).
   enablePlugins(JavaAppPackaging,GitVersioning).
   settings(
     commonSettings,
@@ -96,6 +96,11 @@ lazy val raceTools = createProject("race-tools", commonSettings).
     mainClass in Compile := Some("gov.nasa.race.tools.CryptConfig")).
   addLibraryDependencies(logback)
 
+lazy val raceSpace = createProject("race-space", commonSettings).
+  dependsOn(raceCore).
+  settings(
+    noPublishSettings // not yet published
+  )
 
 //--- test projects - no artifacts, only used to test this repository
 

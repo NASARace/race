@@ -34,6 +34,7 @@ package object geo {
   final val RE_E = 6378137.0000e+0
   final val RE_N = 6356752.3141e+0
   final val RE_FLATTENING = ( RE_E - RE_N ) / RE_E
+  final val INV_RE_FLATTENING = 298.257223563
   final val E_ECC = 2.0 * RE_FLATTENING - RE_FLATTENING * RE_FLATTENING
 
   //--- various abstractions of position objects

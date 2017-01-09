@@ -1,5 +1,6 @@
 package gov.nasa.race.uom
 
+import Length._
 
 /**
   * area quantities
@@ -11,6 +12,7 @@ object Area {
   //--- constructors
   def SquareMeters (d: Double) = new Area(d)
 
+  @inline def √ (a: Area): Length = Meters(Math.sqrt(a.d))
 
   implicit class AreaConstructor (val d: Double) extends AnyVal {
     @inline def squareMeters = SquareMeters(d)

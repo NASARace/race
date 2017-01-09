@@ -36,3 +36,17 @@ case class LatLonPos (val φ: Angle, val λ: Angle) {
   }
 }
 
+/**
+  * geographic position with altitude
+  *
+  * TODO - should this extend LatLonPos? If so, we have to turn the former into a trait
+  *
+  * @param φ latitude (positive north)
+  * @param λ longitude (positive east)
+  * @param altitude from center of earth
+  */
+case class LatLonAltPos (val φ: Angle, val λ: Angle, val altitude: Length) {
+  override def toString = {
+    f"LatLonPos{φ=${φ.toDegrees}%+3.3f°,λ=${λ.toDegrees}%+3.3f°,alt=${altitude.toMeters}m"
+  }
+}
