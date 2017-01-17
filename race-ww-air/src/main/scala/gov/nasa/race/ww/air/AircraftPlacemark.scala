@@ -33,7 +33,7 @@ object FlightRenderLevel extends Enumeration {
 import gov.nasa.race.ww.air.FlightRenderLevel._
 
 /**
-  * Renderable entry representing aircraft
+  * Renderable representing 2D aircraft symbol
   *
   * Note this is a pick-enabled object type and hence we need a link to the corresponding
   * FlightEntry (the FlightPos objects referenced from there change upon update and hence

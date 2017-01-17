@@ -17,11 +17,10 @@
 
 package gov.nasa.race.geo
 
-import gov.nasa.race.common._
 import gov.nasa.race.uom.Angle._
 import gov.nasa.race.uom.Length._
 import gov.nasa.race.uom._
-import math.{atan2,asin,Pi}
+import math.{atan2,asin,sqrt,Pi}
 
 /**
  * object with library functions to compute great circle trajectories using
@@ -43,7 +42,7 @@ object GreatCircle {
     val φ2 = endPos.φ
     val Δλ = endPos.λ - startPos.λ
 
-    Radians(atan2(sin(Δλ) * cos(φ2), cos(φ1) * sin(φ2) - sin(φ1) * cos(φ2) * cos(Δλ)))
+    Radians(atan2(Sin(Δλ) * Cos(φ2), Cos(φ1) * Sin(φ2) - Sin(φ1) * Cos(φ2) * Cos(Δλ)))
   }
 
   /**
@@ -55,21 +54,22 @@ object GreatCircle {
   }
 
   /**
-   * compute great circle distance given start and endpoint, using haversine equations:
-   * {{{
-   *   a = sin²(Δφ/2) + cos φ1 ⋅ cos φ2 ⋅ sin²(Δλ/2)
-   *   c = 2 ⋅ atan2( √a, √(1−a) )
-   *   d = R ⋅ c
-   * }}}
-   */
+    * compute great circle distance given start and endpoint, using haversine equations:
+    * {{{
+    *   a = sin²(Δφ/2) + cos φ1 ⋅ cos φ2 ⋅ sin²(Δλ/2)
+    *   c = 2 ⋅ atan2( √a, √(1−a) )
+    *   d = R ⋅ c
+    * }}}
+    * Note this is only an approximation since it assumes a spherical earth
+    */
   def distance(startPos: LatLonPos, endPos: LatLonPos, alt: Length = Meters(0)): Length = {
     val φ1 = startPos.φ
     val φ2 = endPos.φ
     val Δφ = φ2 - φ1
     val Δλ = endPos.λ - startPos.λ
 
-    val a = sin2(Δφ / 2) + cos(φ1) * cos(φ2) * sin2(Δλ / 2)
-    val c = 2 * atan2(√(a), √(1 - a))
+    val a = Sin2(Δφ / 2) + Cos(φ1) * Cos(φ2) * Sin2(Δλ / 2)
+    val c = 2 * atan2(sqrt(a), sqrt(1 - a))
 
     (MeanEarthRadius + alt) * c
   }
@@ -88,8 +88,8 @@ object GreatCircle {
     val θ = initialBearing
     val δ = Radians(dist / (MeanEarthRadius + alt))
 
-    val φ2 = Radians(asin(sin(φ1) * cos(δ) + cos(φ1) * sin(δ) * cos(θ)))
-    val λ2 = λ1 + Radians(atan2(sin(θ) * sin(δ) * cos(φ1), cos(δ) - sin(φ1) * sin(φ2)))
+    val φ2 = Radians(asin(Sin(φ1) * Cos(δ) + Cos(φ1) * Sin(δ) * Cos(θ)))
+    val λ2 = λ1 + Radians(atan2(Sin(θ) * Sin(δ) * Cos(φ1), Cos(δ) - Sin(φ1) * Sin(φ2)))
 
     LatLonPos(φ2, λ2)
   }

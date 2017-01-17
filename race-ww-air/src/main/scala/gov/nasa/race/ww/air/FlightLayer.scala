@@ -20,8 +20,8 @@ package gov.nasa.race.ww.air
 import java.awt.Color
 
 import com.typesafe.config.Config
-import gov.nasa.race.air.{CompactFlightPath, FlightInfo, FlightInfoUpdateRequest, InFlightAircraft}
 import gov.nasa.race._
+import gov.nasa.race.air.{CompactFlightPath, FlightInfo, FlightInfoUpdateRequest, InFlightAircraft}
 import gov.nasa.race.common.Threshold
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.BusEvent
@@ -80,7 +80,17 @@ abstract class FlightLayer[T <:InFlightAircraft](raceView: RaceView, config: Con
   var displayFilter: (FlightEntry[T])=>Boolean = noDisplayFilter
 
   override def size = flights.size
+
+  //--- end ctor
+
   def getFlight (cs: String) = flights.get(cs).map( _.obj )
+
+  def getMatchingFlights (f: (FlightEntry[T]=>Boolean)): Seq[FlightEntry[T]] = {
+    flights.foldLeft(Seq.empty[FlightEntry[T]])( (acc,e) => {
+      val flight = e._2
+      if (f(flight)) flight +: acc else acc
+    })
+  }
 
   //--- rendering detail level management
   def getFlightRenderLevel (alt: Double) = {
@@ -93,9 +103,18 @@ abstract class FlightLayer[T <:InFlightAircraft](raceView: RaceView, config: Con
     flights.foreach(e=> f(e._2))
     redrawNow
   }
+
   def setDotLevel    = setFlightRenderLevel( FlightRenderLevel.Dot, (e)=> e.setDotLevel)
   def setLabelLevel  = setFlightRenderLevel( FlightRenderLevel.Label, (e)=> e.setLabelLevel)
   def setSymbolLevel = setFlightRenderLevel( FlightRenderLevel.Symbol, (e)=> e.setSymbolLevel)
+
+  def setFlightLevel (e: FlightEntry[T]) = {
+    flightDetails match {
+      case FlightRenderLevel.Dot => e.setDotLevel
+      case FlightRenderLevel.Label => e.setLabelLevel
+      case FlightRenderLevel.Symbol => e.setSymbolLevel
+    }
+  }
 
   def getPathRenderLevel (alt: Double) = if (alt > linePosThreshold) PathRenderLevel.Line else PathRenderLevel.LinePos
   def setPathRenderLevel (level: PathRenderLevel,f: (FlightEntry[T])=>Unit): Unit = {
@@ -109,6 +128,10 @@ abstract class FlightLayer[T <:InFlightAircraft](raceView: RaceView, config: Con
   def showPathPositions = showPositions && eyeAltitude < linePosThreshold
 
   def createFlightPath (fpos: T) = new CompactFlightPath
+
+  def getSymbol (e: FlightEntry[T]): Option[AircraftPlacemark[T]] = {
+    Some(new AircraftPlacemark(e))
+  }
 
   def centerOn(pos: Position) = raceView.centerOn(pos)
 

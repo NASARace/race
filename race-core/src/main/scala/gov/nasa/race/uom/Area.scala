@@ -12,7 +12,7 @@ object Area {
   //--- constructors
   def SquareMeters (d: Double) = new Area(d)
 
-  @inline def √ (a: Area): Length = Meters(Math.sqrt(a.d))
+  @inline def √ (a: Area)(implicit r: AreaDisambiguator.type): Length = Meters(Math.sqrt(a.d))
 
   implicit class AreaConstructor (val d: Double) extends AnyVal {
     @inline def squareMeters = SquareMeters(d)
@@ -29,7 +29,7 @@ class Area protected[uom] (val d: Double) extends AnyVal {
   @inline def toSquareMeters: Double = d
 
   @inline def / (x: Double): Area = new Area(d/x)
-  @inline def / (x: Length)(implicit r: LengthDisambiguator.type): Length = new Length(d/x.d)
+  @inline def / (x: Length)(implicit r: AreaDisambiguator.type): Length = new Length(d/x.d)
   @inline def * (x: Double): Area = new Area(d * x)
 
   @inline def + (x: Area): Area = new Area(d + x.d)

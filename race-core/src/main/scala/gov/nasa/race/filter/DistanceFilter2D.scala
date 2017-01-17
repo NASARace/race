@@ -27,7 +27,7 @@ import gov.nasa.race.uom._
 /**
   * a distance based filter for Positionables
   */
-class DistanceFilter (val center: LatLonPos, val radius: Length, val config: Config=null) extends ConfigurableFilter {
+class DistanceFilter2D (val center: LatLonPos, val radius: Length, val config: Config=null) extends ConfigurableFilter {
 
   def this (conf: Config) = this(LatLonPos(Degrees(conf.getDouble("lat")),Degrees(conf.getDouble("lon"))),
                                  NauticalMiles(conf.getDouble("radius-nm")),conf)

@@ -41,6 +41,14 @@ package object race {
     opt
   }
 
+  def ifSomeOf[T](opts: Option[T]*)(f: (T) => Any): Option[T] = {
+    opts foreach( _ match {
+      case o@Some(t) => f(t); return o
+      case None =>
+    })
+    None
+  }
+
   def none[T](f: =>Any): Option[T] = { // can be used as alternative for ifSome{..}
     f
     None

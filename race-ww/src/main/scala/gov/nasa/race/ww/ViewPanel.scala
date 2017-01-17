@@ -33,8 +33,9 @@ import scala.swing._
 import scala.swing.event.ButtonClicked
 
 /**
- * WorldWind panel to set the world type (globe, flat(projection))
- */
+  * WorldWind panel to set the world type (globe, flat(projection))
+  * and show eye position
+  */
 class ViewPanel (raceView: RaceView, config: Option[Config]=None) extends GBPanel
                   with DeferredPositionListener with EyePosListener {
 

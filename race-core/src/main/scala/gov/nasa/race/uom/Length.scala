@@ -1,6 +1,7 @@
 package gov.nasa.race.uom
 
 import scala.concurrent.duration.Duration
+import Math._
 
 /**
   * length quantities
@@ -18,6 +19,8 @@ object Length {
   @inline def isDefined(x: Length): Boolean = x.d != Double.NaN
 
   final implicit val εLength = Meters(1e-9)
+
+  @inline def Abs(l: Length) = Meters(abs(l.d))
 
   //--- Length constructors (basis is meter)
   @inline def Kilometers(d: Double) = new Length(d*1000.0)
@@ -82,6 +85,7 @@ class Length protected[uom] (val d: Double) extends AnyVal {
 
   @inline def * (c: Double) = new Length(d * c)
   @inline def * (c: Length)(implicit r: LengthDisambiguator.type) = new Area(d * c.d)
+  @inline def `²`(implicit r: LengthDisambiguator.type) = new Area(d * d)
 
   @inline def / (c: Double): Length = new Length(d / c)
   @inline def / (x: Length)(implicit r: LengthDisambiguator.type): Double = d / x.d

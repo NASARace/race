@@ -19,7 +19,9 @@ package gov.nasa.race
 
 import org.joda.time.DateTime
 import gov.nasa.race.uom.Length._
+import gov.nasa.race.uom.Angle._
 import gov.nasa.race.uom._
+
 
 /**
   * package gov.nasa.race.geo contains support code for geospatial applications, including respective
@@ -28,7 +30,7 @@ import gov.nasa.race.uom._
 package object geo {
 
   final val MeanEarthRadius = Kilometers(6371)
-  final val NM = 1852.0 // length of Nautical Mile in meters
+  final val NM = Meters(1852.0) // length of Nautical Mile in meters
 
   //--- WGS84 earth axes constants
   final val RE_E = 6378137.0000e+0
@@ -36,6 +38,9 @@ package object geo {
   final val RE_FLATTENING = ( RE_E - RE_N ) / RE_E
   final val INV_RE_FLATTENING = 298.257223563
   final val E_ECC = 2.0 * RE_FLATTENING - RE_FLATTENING * RE_FLATTENING
+
+  final val NM_DEG = NM * 60.0
+  def angularDistance (l: Length) = Degrees(l / NM_DEG)
 
   //--- various abstractions of position objects
 

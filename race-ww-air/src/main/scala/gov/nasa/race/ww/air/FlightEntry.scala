@@ -34,14 +34,16 @@ class FlightEntry[T <: InFlightAircraft](var obj: T, var flightPath: FlightPath,
   override def id = obj.cs
 
   //--- the renderables that can be associated with this entry
-  protected var symbol: Option[AircraftPlacemark[T]] = Some(new AircraftPlacemark(this))
+  protected var symbol: Option[AircraftPlacemark[T]] = layer.getSymbol(this)
   protected var path: Option[AircraftPath[T]] = None
   protected var info: Option[InfoBalloon] = None
   protected var mark: Option[ScreenImage] = None
+  protected var model: Option[AircraftModel[T]] = None
 
   protected var followPosition = false // do we center the view on the current placemark position
 
   def hasAttrs = followPosition || path.isDefined || info.isDefined || mark.isDefined
+  def hasModel = model.isDefined
   def hasSymbol = symbol.isDefined
   def hasPath = path.isDefined
   def hasInfo = info.isDefined
@@ -49,8 +51,9 @@ class FlightEntry[T <: InFlightAircraft](var obj: T, var flightPath: FlightPath,
   def isCentered = followPosition
 
   def addRenderables = {
-    ifSome(symbol) {layer.addRenderable(_)}
-    ifSome(path) {layer.addRenderable(_)}
+    ifSome(symbol) { layer.addRenderable }
+    ifSome(model) { layer.addRenderable }
+    ifSome(path) { layer.addRenderable }
   }
 
   def removeRenderables = {
@@ -58,6 +61,7 @@ class FlightEntry[T <: InFlightAircraft](var obj: T, var flightPath: FlightPath,
     ifSome(path) {layer.removeRenderable}; path = None
     ifSome(info) {layer.removeRenderable}; info = None
     ifSome(mark) {layer.removeRenderable}; mark = None
+    ifSome(model) { layer.removeRenderable}; model = None
   }
 
   def setDotLevel = symbol.foreach{_.setDotAttrs}
@@ -67,9 +71,24 @@ class FlightEntry[T <: InFlightAircraft](var obj: T, var flightPath: FlightPath,
   def setLineLevel = path.foreach{_.setLineAttrs}
   def setLinePosLevel = path.foreach{_.setLinePosAttrs}
 
+  def setModel (newModel: Option[AircraftModel[T]]) = {
+    ifSome(newModel) { m =>
+      ifSome(model) { layer.removeRenderable }
+      layer.addRenderable(m)
+      ifSome(symbol) { _.setLabelAttrs }  // no use to show the symbol image
+
+    } orElse {
+      ifSome(model){ m =>
+        layer.removeRenderable(m)
+        ifSome(symbol) { sym => layer.setFlightLevel(this) }
+      }
+    }
+    model = newModel
+  }
+
   def show(showIt: Boolean) = {
     if (showIt && symbol.isEmpty) {
-      symbol = Some(new AircraftPlacemark(this))
+      symbol = layer.getSymbol(this)
       layer.addRenderable(symbol.get)
 
     } else if (!showIt && symbol.isDefined) {
@@ -143,6 +162,8 @@ class FlightEntry[T <: InFlightAircraft](var obj: T, var flightPath: FlightPath,
 
         if (followPosition) layer.centerOn(obj)
       }
+
+      ifSome(model) { _.update(newObj) }
     }
   }
 

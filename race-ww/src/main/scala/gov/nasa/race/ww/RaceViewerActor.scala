@@ -122,7 +122,6 @@ class RaceView (viewerActor: RaceViewerActor) extends DeferredEyePositionListene
   setWorldWindConfiguration // NOTE - this has to happen before we load any WorldWind classes
 
   val gotoTime = config.getIntOrElse("goto-time", 4000)
-  val layers = createLayers
 
   // we want to avoid several DeferredXListeners because of the context switch overhead
   // hence we have a secondary listener level here
@@ -137,6 +136,8 @@ class RaceView (viewerActor: RaceViewerActor) extends DeferredEyePositionListene
   var objectListener = List.empty[ObjectListener]
   def addObjectListener (newListener: ObjectListener) = objectListener = newListener :: objectListener
   def removeObjectListener (listener: ObjectListener) = objectListener = objectListener.filter(_.ne(listener))
+
+  val layers = createLayers
 
   val frame = new WorldWindFrame(viewerActor.config, this)
   val redrawManager = RedrawManager(wwd.asInstanceOf[Redrawable]) // the shared one, layers/panels can have their own

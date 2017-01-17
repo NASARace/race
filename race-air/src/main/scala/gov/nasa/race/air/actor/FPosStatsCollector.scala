@@ -70,7 +70,7 @@ class FPosStatsCollector (val config: Config) extends SubscribingRaceActor with 
           fpu.dtSum += dt
           if (dt > fpu.dtMax) fpu.dtMax = dt
           if (elapsedSimTimeMillisSinceStart > settleTime) {
-            if (dt < fpu.dtMin || fpu.dtMin == 0) fpu.dtMin = dt
+            if ((dt > 0) && (dt < fpu.dtMin || fpu.dtMin == 0)) fpu.dtMin = dt
           }
         } else {
           outOfOrder += 1
@@ -106,7 +106,9 @@ class FPosStatsCollector (val config: Config) extends SubscribingRaceActor with 
         avgSum += fpu.dtSum / fpu.count // add average update interval for this flight
         nUpdated += 1
         if (elapsedSimTimeMillisSinceStart > settleTime) {
-          if (fpu.dtMin < dtMin || dtMin == 0) dtMin = fpu.dtMin
+          if ((fpu.dtMin > 0) && ((fpu.dtMin < dtMin) || (dtMin == 0))) {
+            dtMin = fpu.dtMin
+          }
         }
         if (fpu.dtMax > dtMax) dtMax = fpu.dtMax
       }

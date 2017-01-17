@@ -18,12 +18,12 @@
 package gov.nasa.race.air
 
 import gov.nasa.race._
-import gov.nasa.race.common._
 import gov.nasa.race.geo._
 import gov.nasa.race.uom.Angle._
 import gov.nasa.race.uom.Length._
 import gov.nasa.race.uom._
 
+import Math._
 
 /**
  * functions to convert cartesian ITWS grids into lat/lon
@@ -36,8 +36,8 @@ class ITWSGridProjection (val trpPos: LatLonPos,                  // tracon refe
                           val rotation: Angle) {                  // trueN -> magN at trp
 
   // rotation constants
-  final val SinΘ = sin(rotation)
-  final val CosΘ = cos(rotation)
+  final val SinΘ = Sin(rotation)
+  final val CosΘ = Cos(rotation)
 
   /**
    * transform cartesian grid coordinates into LatLonPos(φ,λ)
@@ -59,14 +59,14 @@ class ITWSGridProjection (val trpPos: LatLonPos,                  // tracon refe
 
     repeat(4) {
       φʹ = (trpPos.φ + φ) / 2
-      val tmpECC = 1 - E_ECC * sin2(φʹ)
-      val sqrtECC = √(tmpECC)
+      val tmpECC = 1 - E_ECC * Sin2(φʹ)
+      val sqrtECC = sqrt(tmpECC)
       rTrans = Meters(RE_E / sqrtECC)
       rMerid = Meters(RE_E * (1.0 - E_ECC) / (tmpECC * sqrtECC))
       φ = trpPos.φ + Radians( yʹ / rMerid)
     }
 
-    val λ = trpPos.λ + Radians( xʹ / (rTrans * cos((trpPos.φ + φ)/2)))
+    val λ = trpPos.λ + Radians( xʹ / (rTrans * Cos((trpPos.φ + φ)/2)))
     LatLonPos(φ,λ)
   }
 
