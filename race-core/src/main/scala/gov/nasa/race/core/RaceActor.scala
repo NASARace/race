@@ -277,6 +277,8 @@ trait RaceActor extends Actor with ImplicitActorLogging {
     Some(scheduler.schedule(0.seconds, interval, self, msg))
   }
 
+  def delay (d: FiniteDuration, action: ()=>Unit): Option[Cancellable] = Some(scheduler.scheduleOnce(d,self,DelayedAction(self,action)))
+
   //--- per actor configurable logging
 
   // note that we effectively bypass the Akka LoggingAdapter here since we want to use our own configuration

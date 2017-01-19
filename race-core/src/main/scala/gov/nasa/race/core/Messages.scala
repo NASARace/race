@@ -136,4 +136,6 @@ object Messages {
   case class SetTimeout (msg: Any, duration: FiniteDuration) extends RaceSystemMessage
 
   case class ChildNodeRollCall (originator: ActorRef, parent: Option[RollCall] = None) extends RollCall
+
+  case class DelayedAction(originator: ActorRef, action: ()=>Unit)
 }

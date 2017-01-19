@@ -15,24 +15,26 @@
  * limitations under the License.
  */
 
-package gov.nasa.race.filter
+package gov.nasa.race.common
 
 import com.typesafe.config.Config
-import gov.nasa.race.config.ConfigurableFilter
 import gov.nasa.race.config.ConfigUtils._
+import gov.nasa.race.config.ConfigurableFilter
 
 
 /**
-  * a simple substring filter
-  */
-class SubstringFilter(val substrings: Seq[String], val config: Config = null) extends ConfigurableFilter {
+ * a filter that passes if the provided regexes all match
+ */
+class RegexFilter (val reSpec: Seq[String], val config: Config=null) extends ConfigurableFilter {
 
-  def this(conf: Config) = this(conf.getStringListOrElse("substrings", Seq.empty), conf)
+  def this (conf: Config) = this(conf.getStringListOrElse("regex", Seq.empty), conf)
 
-  def pass(o: Any): Boolean = {
+  val regexes = reSpec.map( _.r)
+
+  def pass (o: Any): Boolean = {
     if (o != null) {
       val txt = o.toString
-      substrings.exists(txt.contains)
+      !regexes.exists(_.findFirstIn(txt).isEmpty)
     } else false
   }
 }

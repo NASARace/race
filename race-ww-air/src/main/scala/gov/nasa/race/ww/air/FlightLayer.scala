@@ -25,6 +25,7 @@ import gov.nasa.race.air.{CompactFlightPath, FlightInfo, FlightInfoUpdateRequest
 import gov.nasa.race.common.Threshold
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.BusEvent
+import gov.nasa.race.core.Messages.DelayedAction
 import gov.nasa.race.swing.Style._
 import gov.nasa.race.ww.EventAction.EventAction
 import gov.nasa.race.ww._
@@ -37,10 +38,11 @@ import scala.collection.mutable.{Map => MutableMap}
 /**
   * abstract layer class to display aircraft in flight
   */
-abstract class FlightLayer[T <:InFlightAircraft](raceView: RaceView, config: Config)
+abstract class FlightLayer[T <:InFlightAircraft](val raceView: RaceView, config: Config)
                                   extends SubscribingRaceLayer(raceView,config)
                                      with DynamicRaceLayerInfo
-                                     with AltitudeSensitiveLayerInfo {
+                                     with AltitudeSensitiveLayerInfo
+                                     with FlightModelClient[T] {
 
   val panel = new FlightLayerInfoPanel(raceView,this).styled('consolePanel)
   val entryPanel = new FlightEntryPanel(raceView,this).styled('consolePanel)
@@ -85,12 +87,14 @@ abstract class FlightLayer[T <:InFlightAircraft](raceView: RaceView, config: Con
 
   def getFlight (cs: String) = flights.get(cs).map( _.obj )
 
-  def getMatchingFlights (f: (FlightEntry[T]=>Boolean)): Seq[FlightEntry[T]] = {
+  def matchingFlights (f: FlightEntry[T]=>Boolean): Seq[FlightEntry[T]] = {
     flights.foldLeft(Seq.empty[FlightEntry[T]])( (acc,e) => {
       val flight = e._2
       if (f(flight)) flight +: acc else acc
     })
   }
+
+  def foreachFlight (f: FlightEntry[T]=>Unit): Unit = flights.foreach( e=> f(e._2))
 
   //--- rendering detail level management
   def getFlightRenderLevel (alt: Double) = {
@@ -287,6 +291,7 @@ abstract class FlightLayer[T <:InFlightAircraft](raceView: RaceView, config: Con
 
   override def handleMessage = {
     case BusEvent(_,fInfo:FlightInfo,_) => entryPanel.setFlightInfo(fInfo)
+    case DelayedAction(_,action) => action()
     case other => warning(f"$name ignoring message $other%30.30s..")
   }
 }

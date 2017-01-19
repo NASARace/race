@@ -14,15 +14,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package gov.nasa.race.filter
+package gov.nasa.race.geo
 
 import com.typesafe.config.Config
 import gov.nasa.race.config.ConfigurableFilter
-import gov.nasa.race.geo._
-import gov.nasa.race.geo.{AltitudePositionable, Datum}
-import gov.nasa.race.uom.{Angle, Length}
 import gov.nasa.race.uom.Angle._
 import gov.nasa.race.uom.Length._
+import gov.nasa.race.uom.{Angle, Length}
 
 /**
   * a 3D distance filter with variable reference point and distance

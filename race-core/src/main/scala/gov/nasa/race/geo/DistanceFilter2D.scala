@@ -15,11 +15,10 @@
  * limitations under the License.
  */
 
-package gov.nasa.race.filter
+package gov.nasa.race.geo
 
 import com.typesafe.config.Config
 import gov.nasa.race.config.ConfigurableFilter
-import gov.nasa.race.geo.{GreatCircle, LatLonPos, Positionable}
 import gov.nasa.race.uom.Angle._
 import gov.nasa.race.uom.Length._
 import gov.nasa.race.uom._

@@ -18,12 +18,14 @@ package gov.nasa.race.ww.air
 
 import com.typesafe.config.Config
 import gov.nasa.race.air.InFlightAircraft
-import gov.nasa.race.filter.VarEuclideanDistanceFilter3D
 import gov.nasa.race.config.ConfigUtils._
+import gov.nasa.race.geo.VarEuclideanDistanceFilter3D
 import gov.nasa.race.uom.Angle._
 import gov.nasa.race.uom.Length._
 import gov.nasa.race.ww.{EyePosListener, Models, RaceView}
 import gov.nasa.worldwind.geom.Position
+
+import scala.concurrent.duration._
 
 /**
   * a trait that mixes in 3D model display
@@ -43,7 +45,7 @@ import gov.nasa.worldwind.geom.Position
   * (3) proper update of FlightEntry renderables based on visibility of respective InFlightAircraft
   * objects
   */
-trait FlightModelUser[T <:InFlightAircraft] extends EyePosListener  {
+trait FlightModelClient[T <:InFlightAircraft] extends EyePosListener  {
 
   //--- to be provided by concrete type
   val config: Config
@@ -52,13 +54,11 @@ trait FlightModelUser[T <:InFlightAircraft] extends EyePosListener  {
   // this is used to obtain our proximity list without having to know the details of how
   // the concrete type stores active FlightEntries
   def matchingFlights (f: (FlightEntry[T])=>Boolean): Seq[FlightEntry[T]]
+  def delay (t: FiniteDuration, f: ()=>Unit)
+
 
   //--- 3D models and proximities
-  var lastEyePos: Position = raceView.eyePosition
-  val eyeDistanceFilter = new VarEuclideanDistanceFilter3D(
-    Degrees(lastEyePos.latitude.degrees), Degrees(lastEyePos.longitude.degrees),
-    Meters(lastEyePos.elevation),
-    Meters(config.getDoubleOrElse("model-distance",2000.0)))
+  val eyeDistanceFilter = new VarEuclideanDistanceFilter3D(Angle0,Angle0,Length0, Meters(config.getDoubleOrElse("model-distance",2000.0)))
   var proximities = Seq.empty[FlightEntry[T]]
   val models = new Models(config.getConfigSeq("models"))
 
@@ -70,16 +70,28 @@ trait FlightModelUser[T <:InFlightAircraft] extends EyePosListener  {
     models.get(e.obj.cs).map(cr => new AircraftModel[T](e, cr))
   }
 
+  private var pendingUpdates = 0
+
   def eyePosChanged(eyePos: Position, animHint: String): Unit = {
-    lastEyePos = eyePos
-    proximities = getProximities
+    pendingUpdates += 1
+      delay(1.second, () => {
+      if (models.nonEmpty) {
+        eyeDistanceFilter.updateReference(Degrees(eyePos.latitude.degrees), Degrees(eyePos.longitude.degrees), Meters(eyePos.getAltitude))
+
+        pendingUpdates -= 1
+        if (pendingUpdates == 0) {
+          val newProximities = calculateProximities
+          proximities = newProximities
+          //println(s"@@ $proximities")
+        }
+      }
+    })
   }
 
-  def getProximities = {
+  def calculateProximities = {
     matchingFlights( e => {
       val fpos = e.obj
       val pos = fpos.position
-      println(s"@@@ $pos,${fpos.altitude} - $lastEyePos")
       eyeDistanceFilter.pass(pos.φ,pos.λ,fpos.altitude)
     })
   }
