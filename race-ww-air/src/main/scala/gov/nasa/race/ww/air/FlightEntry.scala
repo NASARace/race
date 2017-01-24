@@ -20,25 +20,24 @@ package gov.nasa.race.ww.air
 import java.awt.Point
 
 import gov.nasa.race._
-import gov.nasa.race.air.{FlightPath, InFlightAircraft}
+import gov.nasa.race.air.{AbstractFlightPath, InFlightAircraft}
 import gov.nasa.race.ww.{InfoBalloon, _}
 import gov.nasa.worldwind.avlist.AVKey
 import gov.nasa.worldwind.render.ScreenImage
-import com.github.nscala_time.time.Imports._
 
 /**
   * class that aggregates all Renderables that can be associated with a given InFlightAircraft
   */
-class FlightEntry[T <: InFlightAircraft](var obj: T, var flightPath: FlightPath, val layer: FlightLayer[T]) extends LayerObject {
+class FlightEntry[T <: InFlightAircraft](var obj: T, var flightPath: AbstractFlightPath, val layer: FlightLayer[T]) extends LayerObject {
 
   override def id = obj.cs
 
   //--- the renderables that can be associated with this entry
-  protected var symbol: Option[AircraftPlacemark[T]] = layer.getSymbol(this)
-  protected var path: Option[AircraftPath[T]] = None
+  protected var symbol: Option[FlightSymbol[T]] = layer.getSymbol(this)
+  protected var path: Option[FlightPath[T]] = None
   protected var info: Option[InfoBalloon] = None
   protected var mark: Option[ScreenImage] = None
-  protected var model: Option[AircraftModel[T]] = None
+  protected var model: Option[FlightModel[T]] = None
 
   protected var followPosition = false // do we center the view on the current placemark position
 
@@ -50,10 +49,35 @@ class FlightEntry[T <: InFlightAircraft](var obj: T, var flightPath: FlightPath,
   def hasMark = mark.isDefined
   def isCentered = followPosition
 
+  def setNewObj (newObj: T) = {
+    obj = newObj
+
+    flightPath.add(newObj)
+    ifSome(path) {_.addFlightPosition(newObj)}
+  }
+
   def addRenderables = {
     ifSome(symbol) { layer.addRenderable }
     ifSome(model) { layer.addRenderable }
     ifSome(path) { layer.addRenderable }
+  }
+
+  def updateRenderables = {
+    ifSome(symbol) { sym =>
+      sym.update(obj)
+
+      ifSome(info) { balloon =>
+        balloon.setText(sym.getStringValue(AVKey.DISPLAY_NAME))
+        balloon.setScreenPoint(sym.getScreenPoint)
+      }
+      ifSome(mark) {
+        _.setScreenOffset(sym.getScreenOffset)
+      }
+
+      if (followPosition) layer.centerOn(obj)
+    }
+
+    ifSome(model) { _.update(obj) }
   }
 
   def removeRenderables = {
@@ -64,6 +88,7 @@ class FlightEntry[T <: InFlightAircraft](var obj: T, var flightPath: FlightPath,
     ifSome(model) { layer.removeRenderable}; model = None
   }
 
+
   def setDotLevel = symbol.foreach{_.setDotAttrs}
   def setLabelLevel = symbol.foreach{_.setLabelAttrs}
   def setSymbolLevel = symbol.foreach{_.setSymbolAttrs}
@@ -71,9 +96,10 @@ class FlightEntry[T <: InFlightAircraft](var obj: T, var flightPath: FlightPath,
   def setLineLevel = path.foreach{_.setLineAttrs}
   def setLinePosLevel = path.foreach{_.setLinePosAttrs}
 
-  def setModel (newModel: Option[AircraftModel[T]]) = {
+  def setModel (newModel: Option[FlightModel[T]]) = {
     ifSome(newModel) { m =>
       ifSome(model) { layer.removeRenderable }
+      m.update(obj)
       layer.addRenderable(m)
       ifSome(symbol) { _.setLabelAttrs }  // no use to show the symbol image
 
@@ -98,7 +124,7 @@ class FlightEntry[T <: InFlightAircraft](var obj: T, var flightPath: FlightPath,
 
   def setPath(showIt: Boolean) = ifSome(symbol) { sym =>
     if (showIt && path.isEmpty) {
-      path = Some(new AircraftPath(this))
+      path = Some(new FlightPath(this))
       layer.addRenderable(path.get)
 
     } else if (!showIt && path.isDefined) {
@@ -141,31 +167,6 @@ class FlightEntry[T <: InFlightAircraft](var obj: T, var flightPath: FlightPath,
     followPosition = followIt
   }
 
-  def updateAircraft(newObj: T) = {
-    if (newObj.date > obj.date) { // only update if more recent than what we already have
-      obj = newObj
-      flightPath.add(newObj)
-
-      ifSome(symbol) { sym =>
-        sym.update(newObj)
-
-        ifSome(path) {
-          _.addFlightPosition(newObj)
-        }
-        ifSome(info) { balloon =>
-          balloon.setText(sym.getStringValue(AVKey.DISPLAY_NAME))
-          balloon.setScreenPoint(sym.getScreenPoint)
-        }
-        ifSome(mark) {
-          _.setScreenOffset(sym.getScreenOffset)
-        }
-
-        if (followPosition) layer.centerOn(obj)
-      }
-
-      ifSome(model) { _.update(newObj) }
-    }
-  }
 
   def updateRenderingAttributes = {
     ifSome(symbol){_.updateAttributes}

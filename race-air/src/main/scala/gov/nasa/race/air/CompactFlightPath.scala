@@ -25,7 +25,7 @@ import scala.annotation.tailrec
 /**
   * A FlightPath with a compact encoding
   */
-class CompactFlightPath (capacityIncrement: Int=32) extends FlightPath {
+class CompactFlightPath (capacityIncrement: Int=32) extends AbstractFlightPath {
   private var growthCycle = 0
   final val linearGrowthCycles = 5 // once that is exceeded we grow exponentially
 

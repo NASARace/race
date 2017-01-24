@@ -21,7 +21,7 @@ Store this file in the RACE root directory as `conf`
 RACE comes with a `CryptConfig` application and a respective wrapper script,
 which is executed like this:
 
-    > script/encryptconfig --delete conf
+    > script/encryptconfig conf
 
 When asked, enter a passphrase (and remember - it is not stored anywhere). This
 will create a encrypted file `conf.crypt` and delete the plain text `conf` file.

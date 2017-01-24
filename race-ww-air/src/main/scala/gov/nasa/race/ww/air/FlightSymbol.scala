@@ -39,7 +39,7 @@ import gov.nasa.race.ww.air.FlightRenderLevel._
   * FlightEntry (the FlightPos objects referenced from there change upon update and hence
   * cannot be used to do a FlightEntry lookup)
   */
-class AircraftPlacemark[T <: InFlightAircraft](val flightEntry: FlightEntry[T])
+class FlightSymbol[T <: InFlightAircraft](val flightEntry: FlightEntry[T])
                                                   extends PointPlacemark(flightEntry.obj) with RaceLayerPickable {
   // RaceLayerObject
   override def layer = flightEntry.layer

@@ -34,6 +34,8 @@ import gov.nasa.race.ww.air.PathRenderLevel.PathRenderLevel
 import gov.nasa.worldwind.geom.Position
 
 import scala.collection.mutable.{Map => MutableMap}
+import com.github.nscala_time.time.Imports._
+
 
 /**
   * abstract layer class to display aircraft in flight
@@ -41,8 +43,7 @@ import scala.collection.mutable.{Map => MutableMap}
 abstract class FlightLayer[T <:InFlightAircraft](val raceView: RaceView, config: Config)
                                   extends SubscribingRaceLayer(raceView,config)
                                      with DynamicRaceLayerInfo
-                                     with AltitudeSensitiveLayerInfo
-                                     with FlightModelClient[T] {
+                                     with AltitudeSensitiveLayerInfo {
 
   val panel = new FlightLayerInfoPanel(raceView,this).styled('consolePanel)
   val entryPanel = new FlightEntryPanel(raceView,this).styled('consolePanel)
@@ -133,8 +134,8 @@ abstract class FlightLayer[T <:InFlightAircraft](val raceView: RaceView, config:
 
   def createFlightPath (fpos: T) = new CompactFlightPath
 
-  def getSymbol (e: FlightEntry[T]): Option[AircraftPlacemark[T]] = {
-    Some(new AircraftPlacemark(e))
+  def getSymbol (e: FlightEntry[T]): Option[FlightSymbol[T]] = {
+    Some(new FlightSymbol(e))
   }
 
   def centerOn(pos: Position) = raceView.centerOn(pos)
@@ -222,26 +223,39 @@ abstract class FlightLayer[T <:InFlightAircraft](val raceView: RaceView, config:
     }
   }
 
-  def addFlightEntry (fpos: T) = {
-    val e = new FlightEntry[T](fpos,createFlightPath(fpos), this)
+  //--- create, update and remove FlightEntries
+
+  // here so that it can be overridden by subclasses, which can by useful in case the layer has to manage
+  // resources that are display relevant for FlightEntries (such as 3D models)
+  protected def createFlightEntry(fpos: T): FlightEntry[T] = new FlightEntry[T](fpos,createFlightPath(fpos), this)
+
+  def addFlightEntryAttributes(e: FlightEntry[T]): Unit = e.addRenderables
+  def updateFlightEntryAttributes (e: FlightEntry[T]): Unit = e.updateRenderables
+  def releaseFlightEntryAttributes(e: FlightEntry[T]): Unit = e.removeRenderables
+
+  protected def addFlightEntry (fpos: T) = {
+    val e = createFlightEntry(fpos)
     flights += (fpos.cs -> e)
 
     if (displayFilter(e)) {
-      e.addRenderables
+      addFlightEntryAttributes(e)
       wwdRedrawManager.redraw()
     }
     // we don't add to the panel here since it might have an active query and the new entry might not match
   }
 
-  def updateFlightEntry (e: FlightEntry[T], fpos: T) = {
-    e.updateAircraft(fpos)
-    if (e.hasSymbol) wwdRedrawManager.redraw()
-    if (entryPanel.isShowing(e)) entryPanel.update
+  protected def updateFlightEntry (e: FlightEntry[T], fpos: T) = {
+    if (e.obj.date < fpos.date) { // don't overwrite new with old data
+      e.setNewObj(fpos)
+      updateFlightEntryAttributes(e)
+      if (e.hasSymbol) wwdRedrawManager.redraw()
+      if (entryPanel.isShowing(e)) entryPanel.update
+    }
   }
 
-  def removeFlightEntry (e: FlightEntry[T]) = {
+  protected def removeFlightEntry (e: FlightEntry[T]) = {
     val wasShowing = e.hasSymbol
-    e.removeRenderables
+    releaseFlightEntryAttributes(e)
     flights -= e.obj.cs
     if (wasShowing) wwdRedrawManager.redraw()
     panel.removedEntry(e)
@@ -250,6 +264,7 @@ abstract class FlightLayer[T <:InFlightAircraft](val raceView: RaceView, config:
   }
 
   //--- flight entry centering
+
   var centeredEntry: Option[FlightEntry[T]] = None
   def centerFlightEntry (e: FlightEntry[T]) = {
     ifSome(centeredEntry){_.followPosition(false)}
