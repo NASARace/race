@@ -139,7 +139,7 @@ class RaceView (viewerActor: RaceViewerActor) extends DeferredEyePositionListene
 
   val layers = createLayers
 
-  val frame = new WorldWindFrame(viewerActor.config, this)
+  val frame = new WorldWindFrame(viewerActor.config, this) // this creates the wwd instance
   val redrawManager = RedrawManager(wwd.asInstanceOf[Redrawable]) // the shared one, layers/panels can have their own
   val inputHandler = wwdView.getViewInputHandler.asInstanceOf[RaceViewInputHandler]
   var layerController: Option[LayerController] = None
@@ -176,6 +176,7 @@ class RaceView (viewerActor: RaceViewerActor) extends DeferredEyePositionListene
 
     Configuration.setValue(AVKey.DATA_FILE_STORE_CLASS_NAME, classOf[ConfigurableWriteCache].getName)
     Configuration.setValue("gov.nasa.worldwind.avkey.ViewInputHandlerClassName", classOf[RaceViewInputHandler].getName)
+    Configuration.setValue("gov.nasa.worldwind.avkey.ViewClassName", classOf[MinClipOrbitView].getName)
   }
 
   def createLayers = {

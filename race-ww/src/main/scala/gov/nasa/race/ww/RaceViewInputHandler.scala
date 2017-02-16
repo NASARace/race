@@ -45,7 +45,7 @@ class RaceViewInputHandler extends OrbitViewInputHandler {
       case "ViewAnimPan" => RaceView.Pan
       case other => RaceView.Goto
     }
-    raceView.newTargetEyePosition(eyePos,animationHint)
+    raceView.newTargetEyePosition(eyePos, animationHint)
     lastTargetPosition = eyePos // set this after notification so that we can still see the last pos
   }
 

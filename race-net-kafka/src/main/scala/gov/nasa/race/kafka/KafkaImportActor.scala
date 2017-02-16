@@ -3,20 +3,21 @@ package gov.nasa.race.kafka
 import akka.actor.ActorRef
 import com.typesafe.config.Config
 import gov.nasa.race._
-import gov.nasa.race.core.{PublishingRaceActor, RaceContext}
+import gov.nasa.race.actor.FilteringPublisher
+import gov.nasa.race.core.RaceContext
 import gov.nasa.race.util.ThreadUtils
 
 /**
   * a RaceActor that publishes messages received from a Kafka broker
   */
-class KafkaImportActor (val config: Config) extends PublishingRaceActor {
+class KafkaImportActor (val config: Config) extends FilteringPublisher {
 
   var consumer: Option[ConfigurableKafkaConsumer] = None // defer init since Kafka topics might be from remote config
 
   val thread = ThreadUtils.daemon {
     ifSome(consumer) { c =>
       forever {
-        c.poll.foreach{publish}
+        c.poll.foreach{publishFiltered}
       }
     }
   }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, United States Government, as represented by the
+ * Copyright (c) 2017, United States Government, as represented by the
  * Administrator of the National Aeronautics and Space Administration.
  * All rights reserved.
  *
@@ -14,23 +14,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-package gov.nasa.race.actor
-
-import com.typesafe.config.Config
-import gov.nasa.race.core.SubscribingRaceActor
+package gov.nasa.race.common
 
 /**
-  * actor that publishes to either one of two channels based on configured filtering
-  *
-  * Note this ignores the plain 'write-to' channel
+  * a data item wrapper that can be used for various purposes such as
+  * recording errors.
+  * This is not a case class so that we can extend it
   */
-class EitherOrRouter (val config: Config) extends FilteringPublisher with SubscribingRaceActor {
-  val writeToPass = config.getString("write-to-pass")
-  val writeToFail = config.getString("write-to-fail")
-
-  override def action (msg: Any, isPassing: Boolean) = {
-    if (isPassing) publish(writeToPass, msg)
-    else publish(writeToFail, msg)
-  }
-}
+class AnnotatedItem (val annotation: String, val data: Any)

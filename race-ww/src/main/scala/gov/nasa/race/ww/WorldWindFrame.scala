@@ -71,10 +71,15 @@ class WorldWindFrame (config: Config, raceView: RaceView) extends AppFrame {
   def createWorldWindow (config: Config, raceView: RaceView): WorldWindowGLCanvas = {
     val wwd = new WorldWindowGLCanvas with Redrawable
 
-    ifSome(config.getOptionalConfig("eye")) { e =>
-      val alt = Length.feet2Meters(e.getDouble("altitude-ft"))
-      val eyePos = Position.fromDegrees(e.getDouble("lat"), e.getDouble("lon"), alt)
-      wwd.getView.setEyePosition(eyePos)
+    ifSome(config.getOptionalConfig("eye")) { e => // if we don't have an 'eye' config we default to WWJs
+      val alt = Length.feet2Meters(e.getDoubleOrElse("altitude-ft", 1.65e7))
+      val eyePos = Position.fromDegrees(e.getDoubleOrElse("lat",40.34), e.getDoubleOrElse("lon",-98.66), alt)
+
+      val view = wwd.getView
+      view.setEyePosition(eyePos)
+      ifSome(config.getOptionalDouble("max-flight-ft")) { d =>
+        ifInstanceOf[MinClipOrbitView](view) { v => v.ensureMaxFlightAltitude(Length.feet2Meters(d))}
+      }
     }
 
     if (config.getBooleanOrElse("offline", false)) WorldWind.setOfflineMode(true)

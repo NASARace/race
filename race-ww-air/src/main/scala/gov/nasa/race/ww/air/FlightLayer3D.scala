@@ -19,12 +19,13 @@ package gov.nasa.race.ww.air
 import java.util.concurrent.atomic.AtomicInteger
 
 import com.typesafe.config.Config
+import gov.nasa.race._
 import gov.nasa.race.air.InFlightAircraft
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.geo.VarEuclideanDistanceFilter3D
 import gov.nasa.race.uom.Angle._
 import gov.nasa.race.uom.Length._
-import gov.nasa.race.ww.{EyePosListener, Models, RaceView}
+import gov.nasa.race.ww.{MinClipOrbitView, EyePosListener, RaceView}
 import gov.nasa.worldwind.geom.Position
 
 import scala.concurrent.duration._
@@ -32,7 +33,7 @@ import scala.collection.immutable.HashSet
 
 /**
   * a FlightLayer that supports 3D models
-  * This entails three tasks:
+  * This includes three additional tasks:
   *
   * (1) loading and accessing a collection of 3D models that can be associated with flights.
   * Since 3D models are quite expensive, the association can be optional, i.e. not every flight
@@ -53,7 +54,11 @@ class FlightLayer3D[T <:InFlightAircraft](raceView: RaceView, config: Config) ex
   //--- 3D models and proximities
   val eyeDistanceFilter = new VarEuclideanDistanceFilter3D(Angle0,Angle0,Length0, Meters(config.getDoubleOrElse("model-distance",2000.0)))
   var proximities = HashSet.empty[FlightEntry[T]]
-  val models = new Models(config.getConfigSeq("models"))
+
+  val models = config.getConfigSeq("models").map { mc =>
+    new FlightModel[T](mc.getString("key"), mc.getString("source"), mc.getDoubleOrElse("size", 1.0))
+  }
+
 
   if (models.nonEmpty) {
     raceView.addEyePosListener(this)  // will update lastEyePos and proximities
@@ -61,11 +66,11 @@ class FlightLayer3D[T <:InFlightAircraft](raceView: RaceView, config: Config) ex
 
   override def initializeLayer = {
     super.initializeLayer
-    //raceView.wwdView.setNearClipDistance(10.0)
+    //ifInstanceOf[ClippableOrbitView](raceView.wwdView) { _.setNearClipDistance(10.0) }
   }
 
   def getModel (e: FlightEntry[T]): Option[FlightModel[T]] = {
-    models.get("airplane" /*e.obj.cs*/).map(cr => new FlightModel[T](e, cr))  // TODO - use generic mapping
+    Some(models.head)
   }
 
   private val pendingUpdates = new AtomicInteger
@@ -88,13 +93,13 @@ class FlightLayer3D[T <:InFlightAircraft](raceView: RaceView, config: Config) ex
     if (eyeDistanceFilter.pass(pos.φ,pos.λ,fpos.altitude)){
       if (!proximities.contains(e)){
         e.setModel(getModel(e))
-        println(s"@@ set symbol for $fpos")
+        println(s"@@ set model for $fpos")
         proximities = proximities + e
       }
     } else {
       if (proximities.contains(e)) {
         e.setModel(None)
-        println(s"@@ release symbol for $fpos")
+        println(s"@@ release model for $fpos")
         proximities = proximities - e
       }
     }

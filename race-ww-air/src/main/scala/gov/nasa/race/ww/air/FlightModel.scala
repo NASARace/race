@@ -1,21 +1,25 @@
 package gov.nasa.race.ww.air
 
+import gov.nasa.race.ww._
 import gov.nasa.race.air.InFlightAircraft
-import gov.nasa.worldwind.WorldWind
-import gov.nasa.worldwind.geom.Vec4
-import gov.nasa.worldwind.ogc.collada.ColladaRoot
-import gov.nasa.worldwind.ogc.collada.impl.ColladaController
+import gov.nasa.race.util.StringUtils
+import gov.nasa.worldwind.render.DrawContext
+import osm.map.worldwind.gl.obj.ObjRenderable
+
+import scala.util.matching.Regex
 
 /**
-  * Renderable representing 3D aircraft symbol
+  * Renderable representing 3D aircraft model
   */
-class FlightModel[T <: InFlightAircraft](val flightEntry: FlightEntry[T], val root: ColladaRoot)
-                                                                extends ColladaController(root) {
-  root.setAltitudeMode(WorldWind.ABSOLUTE)
-  root.setModelScale(new Vec4(.5,.5,.5))
+class FlightModel[T <: InFlightAircraft](pattern: String, src: String, size: Double) extends ObjRenderable(FarAway,src) {
 
+  val regex = StringUtils.globToRegex(pattern)
+  setSize(size)
+
+
+  def matches (spec: String) = StringUtils.matches(spec,regex)
 
   def update (newT: T) = {
-    root.setPosition(newT)
+    setPosition(newT)
   }
 }

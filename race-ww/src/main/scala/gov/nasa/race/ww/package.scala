@@ -53,6 +53,8 @@ package object ww {
     }
   }
 
+  val FarAway = Position.fromDegrees(0,0,Double.MaxValue) // use this for invisible positions
+
   @inline def wwPosition(pos: LatLonPos, alt: Length): Position = {
     Position.fromDegrees(pos.φ.toDegrees, pos.λ.toDegrees, alt.toMeters)
   }

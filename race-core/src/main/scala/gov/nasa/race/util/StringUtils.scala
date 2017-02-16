@@ -118,4 +118,6 @@ object StringUtils {
     patterns.foreach( re => if (re.findFirstIn(s).isEmpty) return false )
     true
   }
+
+  def matches (s: String, pattern: Regex): Boolean = pattern.findFirstIn(s).isDefined
 }

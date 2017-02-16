@@ -30,8 +30,10 @@ trait FilteringPublisher extends PublishingRaceActor {
   val config: Config // actor config to be provided by concrete actor class
 
   val passUnfiltered = letPassUnfiltered(config) // do we let pass if there is no filter set?
-  val filters = createFilters(config) // optional
-  val matchAll = config.getBooleanOrElse("match-all", false) // default is to let pass if any of the filters passes
+  var filters = createFilters(config) // optional
+  val matchAll = config.getBooleanOrElse("match-all", defaultMatchAll) // default is to let pass if any of the filters passes
+
+  def defaultMatchAll = false
 
   // override this if we have specific filters
   def createFilters (config: Config) = config.getOptionalConfigList("filters").map(createFilter)
@@ -54,5 +56,10 @@ trait FilteringPublisher extends PublishingRaceActor {
     } else {
       action(msg, if (matchAll) !filters.exists(!_.pass(msg)) else filters.exists(_.pass(msg)))
     }
+  }
+
+  // can still be overridden by concrete types
+  override def handleMessage = {
+    case BusEvent(chan,msg:Any,_) => publishFiltered(msg)
   }
 }
