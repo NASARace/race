@@ -9,6 +9,7 @@ import org.apache.kafka.clients.consumer.KafkaConsumer
 import org.apache.kafka.common.serialization.{Deserializer, StringDeserializer => KStringDeserializer}
 
 import scala.collection.JavaConverters._
+import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.duration._
 import scala.reflect._
 
@@ -32,15 +33,20 @@ abstract class ConfigurableKafkaConsumer (val config: Config) {
 
   def subscribe = consumer.subscribe(topicNames.asJava)
 
-  def poll: Seq[Any] = {
+  // we use a pre-allocated buffer object to (1) avoid per-poll allocation, and (2) to preserve the value order
+  // NOTE - this means fillValueBuffer and valueBuffer access have to happen from the same thread
+  val valueBuffer = new ArrayBuffer[Any](32)
+
+  def fillValueBuffer: Int = {
+    // NOTE - recs can apparently change asynchronously, hence we cannot allocate a value array and then
+    // iterate over recs to fill it
     val recs = consumer.poll(pollTimeoutMs)
-    if (recs.isEmpty) Seq.empty
-    else {
-      // not very scalatic, but we want to avoid temporary objects since this could be called frequently
-      val values = Array[Any](recs.count)
-      forIterator(recs.iterator.asScala) { (e,i) => values(i) = e.value }  // the iterator conversion sucks
-      values
+    valueBuffer.clear
+    if (!recs.isEmpty) {
+      val it = recs.iterator
+      while (it.hasNext) valueBuffer += it.next.value
     }
+    valueBuffer.size
   }
 
   def unsubscribe = consumer.unsubscribe

@@ -17,7 +17,7 @@ class KafkaImportActor (val config: Config) extends FilteringPublisher {
   val thread = ThreadUtils.daemon {
     ifSome(consumer) { c =>
       forever {
-        c.poll.foreach{publishFiltered}
+        if (c.fillValueBuffer > 0) c.valueBuffer.foreach(publishFiltered)
       }
     }
   }
