@@ -109,9 +109,10 @@ object Dependencies {
   val akkaRemote = akkaOrg %% "akka-remote" % akkaVersion
   val akkaSlf4j = akkaOrg %% "akka-slf4j" % akkaVersion
 
-
   val akkaTestkit = akkaOrg %% "akka-testkit" % akkaVersion
   val akkaMultiNodeTestkit = akkaOrg %% "akka-multi-node-testkit" % akkaVersion // % "test,multi-jvm"
+
+  val akkaHttp = akkaOrg %% "akka-http" % "latest.release"
 
   val akkaAll = Seq(akkaSlf4j,akkaActor)
 

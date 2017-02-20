@@ -23,6 +23,7 @@ import akka.actor.{ActorIdentity, ActorRef, Identify}
 import akka.event.LoggingAdapter
 import akka.pattern.ask
 import akka.util.Timeout
+import com.typesafe.config.Config
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
@@ -87,4 +88,7 @@ package object core {
       case _ => fail(InvalidResponse); None
     }
   }
+
+  /** basically a tuple with actorRef/config info, but we want named fields */
+  case class RaceActorEntry (actorRef: ActorRef, config: Config)
 }

@@ -209,6 +209,12 @@ trait RaceActor extends Actor with ImplicitActorLogging {
 
   //--- utilities for RaceActors with dependents (TODO - turn this into a interface)
 
+  def initDependentRaceActor (actorRef: ActorRef, rc: RaceContext, actorConf: Config): Boolean = {
+    askDependent(actorRef,InitializeRaceActor(rc,actorConf), RaceActorInitialized)
+  }
+  def startDependentRaceActor (actorRef: ActorRef) = askDependent(actorRef,StartRaceActor(self),RaceActorStarted)
+  def terminateDependentRaceActor (actorRef: ActorRef) = askDependent(actorRef,TerminateRaceActor(self),RaceActorTerminated)
+
   // this is the version that uses the same config for all dependents
   def initDependentRaceActors (actors: Seq[ActorRef], rc: RaceContext, actorConf: Config): Boolean = {
     askDependents(actors, InitializeRaceActor(rc,actorConf), RaceActorInitialized)
@@ -216,17 +222,16 @@ trait RaceActor extends Actor with ImplicitActorLogging {
   def startDependentRaceActors (actors: Seq[ActorRef]): Boolean = askDependents(actors,StartRaceActor(self),RaceActorStarted)
   def terminateDependentRaceActors (actors: Seq[ActorRef]): Boolean = askDependents(actors,TerminateRaceActor(self),RaceActorTerminated)
 
-  def askDependents (actors: Seq[ActorRef], question: Any, answer: Any): Boolean = {
-    var result = true
-    actors.foreach { actorRef =>
-      askForResult (actorRef ? question){
-        case `answer` => // all fine
-        case TimedOut =>
-          warning(s"dependent actor timed out: ${actorRef.path.name}")
-          result = false
-      }
+  def askDependent (actorRef: ActorRef, question: Any, answer: Any): Boolean = {
+    askForResult (actorRef ? question){
+      case `answer` => true
+      case TimedOut =>
+        warning(s"dependent actor timed out: ${actorRef.path.name}")
+        false
     }
-    result
+  }
+  def askDependents (actors: Seq[ActorRef], question: Any, answer: Any): Boolean = {
+    !actors.exists(!askDependent(_,question,answer))
   }
 
   def answerChildNodes (rc: ChildNodeRollCall) = {
@@ -299,6 +304,48 @@ trait RaceActor extends Actor with ImplicitActorLogging {
   @inline final def info(msg: => String): Unit = if (InfoLevel <= logLevel) system.eventStream.publish(Info(pathString,getClass,msg))
   @inline final def warning(msg: => String): Unit = if (WarningLevel <= logLevel) system.eventStream.publish(Warning(pathString,getClass,msg))
   @inline final def error(msg: => String): Unit = if (ErrorLevel <= logLevel) system.eventStream.publish(Error(pathString,getClass,msg))
+}
+
+/**
+  * a RaceActor that itself creates and manages a set of RaceActor children
+  *
+  * the main purpose of this trait is to keep a list of child actor infos (actorRef and config), and
+  * to manage the state callbacks for them (init,start,termination)
+  */
+trait ParentRaceActor extends RaceActor {
+  val childEntries: Seq[RaceActorEntry] // needs to be initialized from subtype ctor
+
+  override def onInitializeRaceActor(rc: RaceContext, actorConf: Config) = {
+    initializeChildActors(rc,actorConf)
+    super.onInitializeRaceActor(rc,actorConf)
+  }
+  override def onStartRaceActor(originator: ActorRef) = {
+    startChildActors
+    super.onStartRaceActor(originator)
+  }
+  override def onTerminateRaceActor(originator: ActorRef) = {
+    terminateChildActors
+    super.onTerminateRaceActor(originator)
+  }
+  // TODO - add onRestart and onPause forwarding
+
+  def initializeChildActors (rc: RaceContext, actorConf: Config): Boolean = {
+    !childEntries.exists { e=> !askChild(e.actorRef,InitializeRaceActor(rc,e.config),RaceActorInitialized) }
+  }
+  def startChildActors: Boolean = askChildren(StartRaceActor(self),RaceActorStarted)
+  def terminateChildActors: Boolean = askChildren(TerminateRaceActor(self),RaceActorTerminated)
+
+  def askChild (actorRef: ActorRef, question: Any, answer: Any): Boolean = {
+    askForResult (actorRef ? question){
+      case `answer` => true
+      case TimedOut =>
+        warning(s"dependent actor timed out: ${actorRef.path.name}")
+        false
+    }
+  }
+  def askChildren (question: Any, answer: Any): Boolean = {
+    !childEntries.exists( e=> !askChild(e.actorRef,question,answer))
+  }
 }
 
 /**
