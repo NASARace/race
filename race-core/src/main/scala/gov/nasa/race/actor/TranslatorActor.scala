@@ -20,7 +20,8 @@ package gov.nasa.race.actor
 import com.typesafe.config.Config
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.config.ConfigurableTranslator
-import gov.nasa.race.core.{BusEvent, PublishingRaceActor, SubscribingRaceActor}
+import gov.nasa.race.core.Messages.BusEvent
+import gov.nasa.race.core.{PublishingRaceActor, SubscribingRaceActor}
 
 /**
  * a generic actor that translates text messages into objects by means of a

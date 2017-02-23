@@ -22,7 +22,8 @@ import com.typesafe.config.Config
 import gov.nasa.race._
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.config.ConfigurableTranslator
-import gov.nasa.race.core.{BusEvent, RaceContext, SubscribingRaceActor}
+import gov.nasa.race.core.Messages.BusEvent
+import gov.nasa.race.core.{RaceContext, SubscribingRaceActor}
 
 /**
   * actor that publishes to a DDS topic

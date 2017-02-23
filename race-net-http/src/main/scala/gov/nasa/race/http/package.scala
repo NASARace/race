@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, United States Government, as represented by the
+ * Copyright (c) 2017, United States Government, as represented by the
  * Administrator of the National Aeronautics and Space Administration.
  * All rights reserved.
  *
@@ -14,21 +14,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package gov.nasa.race.actor
+package gov.nasa.race
 
+import akka.http.scaladsl.server.Route
 import com.typesafe.config.Config
-import gov.nasa.race.core.Messages.BusEvent
-import gov.nasa.race.core.{PublishingRaceActor, SubscribingRaceActor}
 
 /**
-  * a generic RaceActor that separately publishes all elements of received Iterables
+  * package gov.nasa.race.http contains actors to serve and retrieve http data
   */
-class IteratingPublisher(val config: Config) extends SubscribingRaceActor with PublishingRaceActor {
+package object http {
 
-  override def handleMessage = {
-    case BusEvent(readFrom, msg, originator) =>
-      msg match {
-        case it: Iterable[Any] => it foreach publish
-      }
+  /**
+    * base aggregate type for route infos, which consist of a akka.http Route and an optional (child) RaceActor
+    */
+  trait RaceRouteInfo {
+    val config: Config
+    def route: Route
   }
+
 }

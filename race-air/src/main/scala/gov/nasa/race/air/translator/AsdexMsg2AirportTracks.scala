@@ -88,7 +88,7 @@ class AsdexMsg2AirportTracks (val config: Config=null) extends XmlPullParser
         } else {  // end element
           tag match {
             case "positionReport" =>
-              if (display && trackId != null && lat.isDefined && lon.isDefined && date != null) {
+              if (display && (trackId != null) && lat.isDefined && lon.isDefined && (date != null)) {
                 val track = new Track(tgtType, trackId, date, LatLonPos(lat, lon), spd, hdg, drop, acId, acType, alt)
                 tracks = track +: tracks
               }

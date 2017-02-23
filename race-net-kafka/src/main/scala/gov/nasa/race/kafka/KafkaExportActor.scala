@@ -18,7 +18,8 @@
 package gov.nasa.race.kafka
 
 import com.typesafe.config.Config
-import gov.nasa.race.core.{BusEvent, SubscribingRaceActor}
+import gov.nasa.race.core.Messages.BusEvent
+import gov.nasa.race.core.SubscribingRaceActor
 
 /**
   * a RaceActor that sends received messages to a Kafka broker

@@ -16,7 +16,7 @@ object Length {
 
   final val Length0 = Meters(0)
   final val UndefinedLength = Meters(Double.NaN)
-  @inline def isDefined(x: Length): Boolean = x.d != Double.NaN
+  @inline def isDefined(x: Length): Boolean = !x.d.isNaN
 
   final implicit val εLength = Meters(1e-9)
 
@@ -102,8 +102,8 @@ class Length protected[uom] (val d: Double) extends AnyVal {
   @inline def ≡ (x: Length) = d == x.d
   // we intentionally omit ==, <=, >=
 
-  @inline def isUndefined = d == Double.NaN
-  @inline def isDefined = d != Double.NaN
+  @inline def isUndefined = d.isNaN
+  @inline def isDefined = !d.isNaN
 
   override def toString = show   // calling this would cause allocation
   def show = s"${d}m"

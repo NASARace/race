@@ -19,18 +19,16 @@ package gov.nasa.race.http
 import akka.actor.ActorRef
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.Http.ServerBinding
-import akka.http.scaladsl.model.{ContentTypes, HttpEntity}
 import akka.http.scaladsl.server.Directives._
-import akka.http.scaladsl.server.Route
 import akka.stream.ActorMaterializer
 import com.typesafe.config.Config
 import gov.nasa.race._
 import gov.nasa.race.config.ConfigUtils._
-import gov.nasa.race.core.{ParentRaceActor, RaceActorEntry}
+import gov.nasa.race.core.{ParentRaceActor,ParentContext}
 
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
-import scala.concurrent.ExecutionContext.Implicits.global
 
 /**
   * an actor that represents a configurable http server
@@ -45,10 +43,9 @@ class HttpServer (val config: Config) extends ParentRaceActor {
   implicit val materializer = ActorMaterializer()
 
   val host = config.getStringOrElse("host", "localhost")
-  val port = config.getIntOrElse("port", 8082)
+  val port = config.getIntOrElse("port", 8080)
   val serverTimeout = config.getFiniteDurationOrElse("server-timeout", 5.seconds)
   val routeInfos = createRouteInfos
-  val childEntries = routeInfos.map(_.actorEntry).flatten
 
   val route = concat(routeInfos.map(_.route):_*)
   var binding: Option[Future[ServerBinding]] = None
@@ -73,7 +70,7 @@ class HttpServer (val config: Config) extends ParentRaceActor {
       val routeName = routeConf.getString("name")
       val routeClsName = routeConf.getString("class")
       info(s"creating route '$routeName': $routeClsName")
-      newInstance[RaceRouteInfo](routeClsName,Array(classOf[Config]),Array(routeConf)) match {
+      newInstance[RaceRouteInfo](routeClsName,Array(classOf[ParentContext],classOf[Config]),Array(this,routeConf)) match {
         case Some(ri) => seq :+ ri
         case None => error(s"$route $routeName did not instantiate"); seq
       }
@@ -81,24 +78,4 @@ class HttpServer (val config: Config) extends ParentRaceActor {
   }
 }
 
-/**
-  * base aggregate type for route infos, which consist of a akka.http Route and an optional (child) RaceActor
-  */
-trait RaceRouteInfo {
-  val config: Config
 
-  def route: Route
-  def actorEntry: Option[RaceActorEntry] = None
-}
-
-class TestRouteInfo (val config: Config) extends RaceRouteInfo {
-  val response = config.getStringOrElse("response", "Hello from RACE")
-
-  def route = {
-    path("hello") {
-      get {
-        complete(HttpEntity(ContentTypes.`text/html(UTF-8)`, response))
-      }
-    }
-  }
-}

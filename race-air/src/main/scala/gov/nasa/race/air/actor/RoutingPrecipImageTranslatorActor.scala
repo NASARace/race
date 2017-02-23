@@ -21,7 +21,8 @@ import com.typesafe.config.Config
 import gov.nasa.race.actor.TranslatorActor
 import gov.nasa.race.air.PrecipImage
 import gov.nasa.race.air.translator.ITWSprecip2PrecipImage
-import gov.nasa.race.core.{BusEvent, RaceContext}
+import gov.nasa.race.core.Messages.BusEvent
+import gov.nasa.race.core.RaceContext
 
 import scala.collection.mutable
 

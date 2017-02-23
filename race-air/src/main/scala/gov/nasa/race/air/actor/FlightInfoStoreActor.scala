@@ -18,8 +18,8 @@ package gov.nasa.race.air.actor
 
 import com.typesafe.config.Config
 import gov.nasa.race.air._
-import gov.nasa.race.core.Messages.{ChannelTopicAccept, ChannelTopicRelease, ChannelTopicRequest}
-import gov.nasa.race.core.{BusEvent, ChannelTopicProvider, SubscribingRaceActor}
+import gov.nasa.race.core.Messages.{BusEvent, ChannelTopicAccept, ChannelTopicRelease, ChannelTopicRequest}
+import gov.nasa.race.core.{ChannelTopicProvider, SubscribingRaceActor}
 
 
 /**

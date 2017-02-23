@@ -17,13 +17,12 @@
 
 package gov.nasa.race.actor
 
-import java.io.{BufferedOutputStream, File, FileOutputStream, OutputStream}
-import java.util.zip.GZIPOutputStream
+import java.io.OutputStream
 
 import akka.actor.ActorRef
 import com.typesafe.config.Config
 import gov.nasa.race.archive.ArchiveWriter
-import gov.nasa.race.config.ConfigUtils._
+import gov.nasa.race.core.Messages._
 import gov.nasa.race.core._
 
 /**

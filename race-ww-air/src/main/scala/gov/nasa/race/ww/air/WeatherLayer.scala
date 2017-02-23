@@ -19,9 +19,9 @@ package gov.nasa.race.ww.air
 
 import com.typesafe.config.Config
 import gov.nasa.race.air.{ITWSGridProjection, PrecipImage}
-import gov.nasa.race.uom.Length._
-import gov.nasa.race.core.BusEvent
+import gov.nasa.race.core.Messages.BusEvent
 import gov.nasa.race.swing.Style._
+import gov.nasa.race.uom.Length._
 import gov.nasa.race.ww.Implicits._
 import gov.nasa.race.ww.{DynamicLayerInfoPanel, DynamicRaceLayerInfo, RaceView, SubscribingRaceLayer}
 import gov.nasa.worldwind.geom.LatLon

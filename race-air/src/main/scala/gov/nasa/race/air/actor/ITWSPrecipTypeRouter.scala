@@ -19,7 +19,8 @@ package gov.nasa.race.air.actor
 
 import com.typesafe.config.Config
 import gov.nasa.race.air.PrecipImage
-import gov.nasa.race.core.{BusEvent, PublishingRaceActor, RaceContext, SubscribingRaceActor}
+import gov.nasa.race.core.Messages.BusEvent
+import gov.nasa.race.core.{PublishingRaceActor, RaceContext, SubscribingRaceActor}
 
 import scala.collection.mutable
 

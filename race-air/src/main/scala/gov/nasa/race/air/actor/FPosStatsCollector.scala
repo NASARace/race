@@ -5,8 +5,8 @@ import com.typesafe.config.Config
 import gov.nasa.race.air.{FlightCompleted, FlightDropped, FlightPos}
 import gov.nasa.race.common.Stats
 import gov.nasa.race.config.ConfigUtils._
-import gov.nasa.race.core.Messages.RaceTick
-import gov.nasa.race.core.{BusEvent, ContinuousTimeRaceActor, PeriodicRaceActor, PublishingRaceActor, SubscribingRaceActor}
+import gov.nasa.race.core.Messages.{BusEvent, RaceTick}
+import gov.nasa.race.core.{ContinuousTimeRaceActor, PeriodicRaceActor, PublishingRaceActor, SubscribingRaceActor}
 
 import scala.collection.mutable.{HashMap => MHashMap}
 import scala.concurrent.duration._

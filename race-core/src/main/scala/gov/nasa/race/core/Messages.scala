@@ -29,7 +29,20 @@ import scala.concurrent.duration.FiniteDuration
  */
 object Messages {
 
-  trait RaceSystemMessage // a message type that is processed by RaceActor.handleSystemMessage
+  /** a message type that is processed by RaceActor.handleSystemMessage */
+  trait RaceSystemMessage
+
+  /** a message type that can be published on a Bus */
+  trait ChannelMessage {
+    val channel: String
+    val sender: ActorRef
+  }
+
+  /** a user ChannelMessage */
+  case class BusEvent (channel: String, msg: Any, sender: ActorRef) extends ChannelMessage
+
+  /** a system ChannelMessage */
+  case class BusSysEvent (channel: String, msg: Any, sender: ActorRef) extends ChannelMessage with RaceSystemMessage
 
   //--- RaceActor system messages (processed by core RaceActor traits)
   // each of the system messages has an associated callback function of the same (lowercase)
@@ -98,37 +111,44 @@ object Messages {
   //--- messages to support remote bus subscribers/publishers, processed by BusConnector
   case class RemoteSubscribe (actorRef: ActorRef, channel: Channel) extends RaceSystemMessage // -> master
   case class RemoteUnsubscribe (actorRef: ActorRef, channel: Channel)  extends RaceSystemMessage // -> master
-  case class RemotePublish (event: BusEvent) extends RaceSystemMessage
+  case class RemotePublish (msg: ChannelMessage) extends RaceSystemMessage
+
 
   //--- dynamic channel provider lookup & response
+  trait ChannelTopicMessage extends RaceSystemMessage
+
   // note it is still the responsibility of the client to subscribe
   /**
     *  look up channel providers:  c->{p}
+    *  sent through system channels and hence have to be wrapped into BusSysEvents
     */
-  case class ChannelTopicRequest (channelTopic: ChannelTopic, requester: ActorRef)  extends RaceSystemMessage {
+  case class ChannelTopicRequest (channelTopic: ChannelTopic, requester: ActorRef)  extends ChannelTopicMessage {
     def toAccept = ChannelTopicAccept(channelTopic,requester)
     def toResponse(provider: ActorRef) = ChannelTopicResponse(channelTopic, provider)
   }
 
   /**
     *  response from potential provider: {p}->c
+    *  sent point-to-point
     */
-  case class ChannelTopicResponse (channelTopic: ChannelTopic, provider: ActorRef)  extends RaceSystemMessage {
+  case class ChannelTopicResponse (channelTopic: ChannelTopic, provider: ActorRef)  extends ChannelTopicMessage {
     def toAccept(client: ActorRef) = ChannelTopicAccept(channelTopic,client)
     def toRelease(client: ActorRef) = ChannelTopicRelease(channelTopic,client)
   }
 
   /**
     * client accepts (registers with one) provider: c->p
+    * sent point-to-point
     */
-  case class ChannelTopicAccept (channelTopic: ChannelTopic, client: ActorRef)  extends RaceSystemMessage {
+  case class ChannelTopicAccept (channelTopic: ChannelTopic, client: ActorRef)  extends ChannelTopicMessage {
     def toRelease = ChannelTopicRelease(channelTopic,client)
   }
 
   /**
     * client releases registered provider
+    * send point-to-point
     */
-  case class ChannelTopicRelease (channelTopic: ChannelTopic, client: ActorRef)  extends RaceSystemMessage
+  case class ChannelTopicRelease (channelTopic: ChannelTopic, client: ActorRef)  extends ChannelTopicMessage
 
   // <2do> we also need a message to indicate that a provider with live subscribers is terminated
 

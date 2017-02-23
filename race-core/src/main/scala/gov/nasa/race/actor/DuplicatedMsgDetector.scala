@@ -3,10 +3,10 @@ package gov.nasa.race.actor
 import akka.actor.ActorRef
 import com.typesafe.config.Config
 import gov.nasa.race._
-import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.common.{MD5Checksum, Stats}
-import gov.nasa.race.core.Messages.RaceTick
-import gov.nasa.race.core.{BusEvent, ContinuousTimeRaceActor, FileWriterRaceActor, PeriodicRaceActor, PublishingRaceActor, SubscribingRaceActor}
+import gov.nasa.race.config.ConfigUtils._
+import gov.nasa.race.core.Messages.{BusEvent, RaceTick}
+import gov.nasa.race.core.{ContinuousTimeRaceActor, FileWriterRaceActor, PeriodicRaceActor, PublishingRaceActor, SubscribingRaceActor}
 import gov.nasa.race.util.DateTimeUtils._
 import gov.nasa.race.util.StringUtils
 

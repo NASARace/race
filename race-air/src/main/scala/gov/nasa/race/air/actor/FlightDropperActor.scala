@@ -22,7 +22,8 @@ import com.typesafe.config.Config
 import gov.nasa.race._
 import gov.nasa.race.air.{FlightCompleted, FlightCsChanged, FlightDropped, FlightPos}
 import gov.nasa.race.config.ConfigUtils._
-import gov.nasa.race.core.{BusEvent, ContinuousTimeRaceActor, PublishingRaceActor, SubscribingRaceActor}
+import gov.nasa.race.core.Messages.BusEvent
+import gov.nasa.race.core.{ContinuousTimeRaceActor, PublishingRaceActor, SubscribingRaceActor}
 
 import scala.collection.mutable.{HashMap => MHashMap}
 import scala.concurrent.duration._

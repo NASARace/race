@@ -16,7 +16,7 @@ object Angle {
   final val DegreesInRadian = π / 180.0
   final val Angle0 = new Angle(0)
   final val UndefinedAngle = new Angle(Double.NaN)
-  @inline def isDefined(x: Angle): Boolean  = x.d != Double.NaN
+  @inline def isDefined(x: Angle): Boolean  = !x.d.isNaN
 
   final implicit val εAngle = Degrees(1.0e-10)  // provide your own if application specific
 
@@ -96,8 +96,8 @@ class Angle protected[uom] (val d: Double) extends AnyVal {
   @inline def ≡ (x: Angle) = d == x.d
   // we intentionally omit ==, <=, >=
 
-  @inline def isUndefined = d == Double.NaN
-  @inline def isDefined = d != Double.NaN
+  @inline def isUndefined = d.isNaN
+  @inline def isDefined = !d.isNaN
 
   //--- string converters
   override def toString = show // NOTE - calling this will cause allocation, use 'show'

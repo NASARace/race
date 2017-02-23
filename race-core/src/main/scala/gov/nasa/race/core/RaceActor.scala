@@ -19,6 +19,7 @@ package gov.nasa.race.core
 
 import akka.actor._
 import akka.pattern.ask
+import akka.util.Timeout
 import com.typesafe.config.Config
 import gov.nasa.race.{common, _}
 import gov.nasa.race.common.Status._
@@ -27,7 +28,7 @@ import gov.nasa.race.core.Messages.{InitializeRaceActor, StartRaceActor, _}
 import gov.nasa.race.util.ClassLoaderUtils
 import org.joda.time.DateTime
 
-import scala.collection.mutable.{Set => MutableSet}
+import scala.collection.mutable.{ArrayBuffer, Set => MutableSet}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 import scala.math._
@@ -78,6 +79,7 @@ trait RaceActor extends Actor with ImplicitActorLogging {
     case msg => info(f"ignored in pre-init mode: $msg%30.30s..")
   }
 
+  // this switches the message handler to 'receiveLive'
   def handleInitializeRaceActor (rctx: RaceContext, actorConf: Config) = {
     info("got InitializeRaceActor")
     try {
@@ -312,40 +314,66 @@ trait RaceActor extends Actor with ImplicitActorLogging {
   * the main purpose of this trait is to keep a list of child actor infos (actorRef and config), and
   * to manage the state callbacks for them (init,start,termination)
   */
-trait ParentRaceActor extends RaceActor {
-  val childEntries: Seq[RaceActorEntry] // needs to be initialized from subtype ctor
+trait ParentRaceActor extends RaceActor with ParentContext {
+  val children: ArrayBuffer[RaceActorRec] = new ArrayBuffer[RaceActorRec]
 
   override def onInitializeRaceActor(rc: RaceContext, actorConf: Config) = {
-    initializeChildActors(rc,actorConf)
-    super.onInitializeRaceActor(rc,actorConf)
+    // TODO - shouldn't we delegate to super before forwarding to children?
+    if (initializeChildActors(rc,actorConf)) {
+      super.onInitializeRaceActor(rc, actorConf)
+    }
   }
   override def onStartRaceActor(originator: ActorRef) = {
-    startChildActors
-    super.onStartRaceActor(originator)
+    if (startChildActors) {
+      super.onStartRaceActor(originator)
+    }
   }
   override def onTerminateRaceActor(originator: ActorRef) = {
-    terminateChildActors
-    super.onTerminateRaceActor(originator)
+    if (terminateChildActors) {
+      super.onTerminateRaceActor(originator)
+    }
   }
   // TODO - add onRestart and onPause forwarding
 
   def initializeChildActors (rc: RaceContext, actorConf: Config): Boolean = {
-    !childEntries.exists { e=> !askChild(e.actorRef,InitializeRaceActor(rc,e.config),RaceActorInitialized) }
+    // we can't use askChildren because we need a different message object for each of them
+    !children.exists { e=> !askChild(e,InitializeRaceActor(rc,e.config),RaceActorInitialized) }
   }
+
   def startChildActors: Boolean = askChildren(StartRaceActor(self),RaceActorStarted)
+
   def terminateChildActors: Boolean = askChildren(TerminateRaceActor(self),RaceActorTerminated)
 
   def askChild (actorRef: ActorRef, question: Any, answer: Any): Boolean = {
     askForResult (actorRef ? question){
-      case `answer` => true
+      case `answer` =>
+        true
       case TimedOut =>
         warning(s"dependent actor timed out: ${actorRef.path.name}")
         false
     }
   }
-  def askChildren (question: Any, answer: Any): Boolean = {
-    !childEntries.exists( e=> !askChild(e.actorRef,question,answer))
-  }
+  def askChildren (question: Any, answer: Any): Boolean = !children.exists(!askChild(_,question,answer))
+
+  def actorOf(props: Props, name: String): ActorRef = context.actorOf(props,name)
+
+  def addChild (raRec: RaceActorRec): Unit = children += raRec
+}
+
+/**
+  * pure interface that hides parent actor details from child actor creation context
+  */
+trait ParentContext {
+  def name: String
+  def system: ActorSystem
+  def self: ActorRef
+
+  //--- actor instantiation
+  def instantiateActor (actorName: String, actorConfig: Config): ActorRef
+  def actorOf(props: Props, name: String): ActorRef
+  // and probably some more..
+
+  def addChild (raRec: RaceActorRec): Unit
 }
 
 /**

@@ -22,6 +22,7 @@ import javax.jms.{Connection, MessageProducer, Session}
 import akka.actor.ActorRef
 import com.typesafe.config.{Config, ConfigFactory}
 import gov.nasa.race.config.ConfigUtils._
+import gov.nasa.race.core.Messages.BusEvent
 import gov.nasa.race.core._
 import org.apache.activemq.ActiveMQConnectionFactory
 import org.apache.activemq.broker.BrokerService

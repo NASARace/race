@@ -20,7 +20,8 @@ package gov.nasa.race.actor
 import akka.actor.ActorRef
 import com.typesafe.config.{Config, ConfigValueFactory}
 import gov.nasa.race.config.ConfigUtils._
-import gov.nasa.race.core.{BusEvent, RaceContext, SubscribingRaceActor}
+import gov.nasa.race.core.Messages.BusEvent
+import gov.nasa.race.core.{RaceContext, SubscribingRaceActor}
 
 /**
   * an actor that does round-robin dispatch to a number of child actors it creates
@@ -54,7 +55,7 @@ class Dispatcher (val config: Config) extends SubscribingRaceActor {
 
   override def handleMessage = {
     case e: BusEvent =>
-      info(s"dispatching to ${workers(next).path.name}")
+      debug(s"dispatching to ${workers(next).path.name}")
       workers(next) ! e
       next = (next + 1) % replication
   }

@@ -3,10 +3,10 @@ package gov.nasa.race.actor
 import akka.actor.ActorRef
 import com.typesafe.config.Config
 import gov.nasa.race._
-import gov.nasa.race.common.{ElemStats, MsgStats, MsgStatsSnapshot, Stats, SubscriberMsgStats}
+import gov.nasa.race.common.{ElemStats, MsgStats, SubscriberMsgStats}
 import gov.nasa.race.config.ConfigUtils._
-import gov.nasa.race.core.Messages.RaceTick
-import gov.nasa.race.core.{BusEvent, ContinuousTimeRaceActor, PeriodicRaceActor, PublishingRaceActor, SubscribingRaceActor}
+import gov.nasa.race.core.Messages.{BusEvent, RaceTick}
+import gov.nasa.race.core.{ContinuousTimeRaceActor, PeriodicRaceActor, PublishingRaceActor, SubscribingRaceActor}
 import gov.nasa.race.util.XmlPullParser
 
 import scala.collection.mutable.{SortedMap => MSortedMap}

@@ -28,6 +28,7 @@ import com.typesafe.config.Config
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
 import scala.language.postfixOps
+import scala.language.implicitConversions
 
 /**
   * package gov.nasa.race.core is the location for all system types that implement RaceActorSystems and RaceActors,
@@ -54,7 +55,7 @@ package object core {
   // <2do> we should move the messages here
 
   // <2do> should include type and location
-  case class ChildNode(val actorRef: ActorRef, val children: Set[ChildNode])
+  case class ChildNode(actorRef: ActorRef, children: Set[ChildNode])
 
   //--- logging utilities - use this to avoid superfluous string interpolation
   def debug(msg: => String)(implicit log: LoggingAdapter): Unit = if (log.isDebugEnabled) log.debug(msg)
@@ -62,7 +63,7 @@ package object core {
   def warning(msg: => String)(implicit log: LoggingAdapter): Unit = if (log.isWarningEnabled) log.warning(msg)
   def error(msg: => String)(implicit log: LoggingAdapter): Unit = if (log.isErrorEnabled) log.error(msg)
 
-  implicit val timeout = Timeout(System.getProperty("race.timeout", "20").toInt seconds)
+  implicit val timeout = Timeout(System.getProperty("race.timeout", "10").toInt seconds)
 
   trait AskFailure
   case object TimedOut extends AskFailure
@@ -89,6 +90,7 @@ package object core {
     }
   }
 
-  /** basically a tuple with actorRef/config info, but we want named fields */
-  case class RaceActorEntry (actorRef: ActorRef, config: Config)
+  /** basically a tuple with actorRef/config info which can act as a stand-in for a plain ActorRef */
+  case class RaceActorRec(actorRef: ActorRef, config: Config)
+  implicit def raRec2Ref (raRec: RaceActorRec): ActorRef = raRec.actorRef
 }

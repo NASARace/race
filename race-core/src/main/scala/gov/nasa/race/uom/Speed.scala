@@ -15,8 +15,7 @@ object Speed {
 
   final val Speed0 = new Speed(0)
   final val UndefinedSpeed = new Speed(Double.NaN)
-  @inline def isDefined(x: Speed): Boolean = x.d != Double.NaN
-
+  @inline def isDefined(x: Speed): Boolean = !x.d.isNaN
   final implicit val εSpeed = MetersPerSecond(1e-10)
 
   //--- constructors
@@ -62,8 +61,8 @@ class Speed protected[uom] (val d: Double) extends AnyVal {
   @inline def ≡ (x: Speed) = d == x.d
   // we intentionally omit ==, <=, >=
 
-  @inline def isUndefined = d == Double.NaN
-  @inline def isDefined = d != Double.NaN
+  @inline def isUndefined = d.isNaN
+  @inline def isDefined = !d.isNaN
 
   override def toString = show
   def show = s"${d}m/s"

@@ -20,6 +20,7 @@ package gov.nasa.race.actor
 import com.typesafe.config.Config
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.config.ConfigurableFilter
+import gov.nasa.race.core.Messages.BusEvent
 import gov.nasa.race.core._
 
 /**
@@ -58,8 +59,9 @@ trait FilteringPublisher extends PublishingRaceActor {
     }
   }
 
-  // can still be overridden by concrete types
+  // can still be overridden by concrete types (it has to if we only want to publish some message types)
   override def handleMessage = {
+    // NOTE - don't match ChannelMessage because that would break system channels/messages (e.g. ChannelTopics)
     case BusEvent(chan,msg:Any,_) => publishFiltered(msg)
   }
 }

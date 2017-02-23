@@ -9,7 +9,7 @@ shellPrompt in ThisBuild := { state => "[" + Project.extract(state).currentRef.p
 
 lazy val commonSettings = commonRaceSettings ++ Seq(
   organization := "gov.nasa.race",
-  version := "1.3.2"
+  version := "1.4.0"
 )
 
 lazy val testSettings = commonSettings ++ noPublishSettings  // test projects don't publish artifacts
@@ -64,7 +64,7 @@ lazy val raceNetDDS = createProject("race-net-dds", commonSettings).
 
 lazy val raceNetHttp = createProject("race-net-http", commonSettings).
   dependsOn(raceCore).
-  addLibraryDependencies(akkaHttp,asyncHttp)
+  addLibraryDependencies(akkaHttp,scalaTags,asyncHttp)
 
 lazy val raceSwing = createProject("race-swing", commonSettings).
   dependsOn(raceCore).

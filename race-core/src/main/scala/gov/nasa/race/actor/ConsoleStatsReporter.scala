@@ -2,7 +2,8 @@ package gov.nasa.race.actor
 
 import com.typesafe.config.Config
 import gov.nasa.race.common.Stats
-import gov.nasa.race.core.{BusEvent, SubscribingRaceActor}
+import gov.nasa.race.core.Messages._
+import gov.nasa.race.core.SubscribingRaceActor
 import gov.nasa.race.util.ConsoleIO._
 
 import scala.collection.mutable.{SortedMap => MSortedMap}

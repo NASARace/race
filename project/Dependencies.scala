@@ -53,6 +53,9 @@ object Dependencies {
   //--- new scala reflection (TypeTags etc.)
   val scalaReflect =  "org.scala-lang" % "scala-reflect" % "2.12.1"
 
+  //--- scalaTags HTML generator
+  val scalaTags = "com.lihaoyi" %% "scalatags" % "latest.release"
+
   //--- scala automatic resource management (https://github.com/jsuereth/scala-arm) - 2.12.0 not yet supported
   //val scalaArm = "com.jsuereth" %% "scala-arm" % "1.4"
 

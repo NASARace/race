@@ -21,17 +21,18 @@ import java.net.{DatagramPacket, DatagramSocket, InetAddress}
 
 import akka.actor.{ActorRef, Cancellable}
 import com.typesafe.config.Config
-import gov.nasa.race.air.{FlightDropped, FlightPos}
-import gov.nasa.race.air.xplane.XPlaneCodec.RPOS
 import gov.nasa.race._
+import gov.nasa.race.air.xplane.XPlaneCodec.RPOS
+import gov.nasa.race.air.{FlightDropped, FlightPos}
 import gov.nasa.race.common.Status
 import gov.nasa.race.config.ConfigUtils._
+import gov.nasa.race.core.Messages.BusEvent
 import gov.nasa.race.core.{PublishingRaceActor, SubscribingRaceActor, _}
 import gov.nasa.race.geo.{LatLonPos, Positionable}
-import gov.nasa.race.util.ThreadUtils
-import gov.nasa.race.uom.Length._
 import gov.nasa.race.uom.Angle._
+import gov.nasa.race.uom.Length._
 import gov.nasa.race.uom.Speed._
+import gov.nasa.race.util.ThreadUtils
 
 import scala.annotation.tailrec
 import scala.concurrent.ExecutionContext.Implicits.global

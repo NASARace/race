@@ -19,7 +19,8 @@ package gov.nasa.race.actor
 
 import com.typesafe.config.Config
 import gov.nasa.race.config.ConfigurableTimeTranslator
-import gov.nasa.race.core.{BusEvent, ContinuousTimeRaceActor, PublishingRaceActor, SubscribingRaceActor}
+import gov.nasa.race.core.Messages.BusEvent
+import gov.nasa.race.core.{ContinuousTimeRaceActor, PublishingRaceActor, SubscribingRaceActor}
 
 
 /**

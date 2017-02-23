@@ -21,10 +21,11 @@ import com.typesafe.config.Config
 import gov.nasa.race.air.{FlightCompleted, FlightCsChanged, FlightDropped, FlightPos}
 import gov.nasa.race.common.WeightedArray
 import gov.nasa.race.config.ConfigUtils._
-import gov.nasa.race.core.{BusEvent, SubscribingRaceActor}
+import gov.nasa.race.core.Messages.BusEvent
+import gov.nasa.race.core.SubscribingRaceActor
 import gov.nasa.race.geo.{LatLonPos, ProximityList}
-import gov.nasa.race.uom.Length._
 import gov.nasa.race.uom.Angle._
+import gov.nasa.race.uom.Length._
 
 object ProximityActor {
   class FlightPosEntry(var obj: FlightPos, var weight: Double)
