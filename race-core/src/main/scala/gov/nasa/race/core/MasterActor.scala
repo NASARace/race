@@ -335,6 +335,19 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ImplicitActorLogging
           error(s"invalid initialization response from $actorName: $other")
           throw new RaceInitializeException("invalid InitializeRaceActor response")
       }
+      checkLiveness(actorRef)
+    }
+  }
+
+  def checkLiveness (actorRef: ActorRef) = {
+    askForResult( actorRef ? PingRaceActor()) {
+      case PingRaceActor(tSent,tReceived) => // all Ok
+      case TimedOut =>
+        error(s"no PingRaceActor response from ${actorRef.path}, check handleMessage() for match-all clause")
+        throw new RaceInitializeException(s"initialized ${actorRef.path} is unresponsive")
+      case other =>
+        error(s"invalid PingRaceActor response from ${actorRef.path}")
+        throw new RaceInitializeException("invalid PingRaceActor response")
     }
   }
 

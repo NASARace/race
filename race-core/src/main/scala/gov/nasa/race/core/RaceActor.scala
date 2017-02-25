@@ -74,7 +74,7 @@ trait RaceActor extends Actor with ImplicitActorLogging {
   override def receive = {
     case InitializeRaceActor(raceContext,actorConf) => handleInitializeRaceActor(raceContext,actorConf)
     case TerminateRaceActor(originator) => handleTerminateRaceActor(originator)
-    case msg: PingRaceActor => sender ! msg.copy(tReceivedNanos=System.nanoTime())
+    //case msg: PingRaceActor => sender ! msg.copy(tReceivedNanos=System.nanoTime())
 
     case msg => info(f"ignored in pre-init mode: $msg%30.30s..")
   }
@@ -112,16 +112,15 @@ trait RaceActor extends Actor with ImplicitActorLogging {
     case TerminateRaceActor(originator) => handleTerminateRaceActor(originator)
 
     case ProcessRaceActor => sender ! RaceActorProcessed
-    case msg@ PingRaceActor(tSent,_) =>
-      sender ! msg.copy(tReceivedNanos=System.nanoTime())
+    case msg:PingRaceActor => sender ! msg.copy(tReceivedNanos=System.nanoTime())
 
     case rc: ChildNodeRollCall => answerChildNodes(rc)
     case rc: RollCall => rc.answer(self) // generic response
 
     case SetLogLevel(newLevel) => logLevel = newLevel
 
-    case SetTimeout(msg,duration) =>
-      context.system.scheduler.scheduleOnce(duration, self, msg)
+    case SetTimeout(msg,duration) => context.system.scheduler.scheduleOnce(duration, self, msg)
+    case other => println(s"UGGHHH $other")
   }
 
   def handleLiveInitializeRaceActor (rc: RaceContext, actorConf: Config) = {

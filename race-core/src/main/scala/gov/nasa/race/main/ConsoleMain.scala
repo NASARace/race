@@ -45,7 +45,9 @@ trait ConsoleMainBase extends MainBase {
       val universes = instantiateRaceActorSystems(opts.configFiles, opts.logLevel)
       if (universes.nonEmpty) {
         runUniverses(universes, opts.delayStart)
-      } else println("no RaceActorSystem to execute, exiting")
+      } else {
+        println("no RaceActorSystem to execute, exiting")
+      }
     }
   }
 

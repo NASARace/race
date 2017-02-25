@@ -72,8 +72,12 @@ trait MainBase {
   //--- Config and RaceActorSystem instantiation
 
   def instantiateRaceActorSystems(configFiles: Seq[File], logLevel: Option[String]): Seq[RaceActorSystem] = {
-    tryCatchAllWith(Seq.empty[RaceActorSystem]) {
+    try {
       getUniverseConfigs(configFiles, logLevel).map(new RaceActorSystem(_))
+    } catch {
+      case t:Throwable =>
+        ConsoleIO.printlnErr(t.getMessage)
+        Seq.empty[RaceActorSystem]
     }
   }
 

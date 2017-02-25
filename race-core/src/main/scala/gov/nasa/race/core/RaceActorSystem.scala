@@ -250,9 +250,16 @@ class RaceActorSystem(val config: Config) extends LogController with VerifiableA
       case RaceInitialized =>
         status = Initialized
         info(s"universe $name initialized")
-      case TimedOut => error(s"initializing universe $name timed out")
-      case e => error(s"invalid response initializing universe $name: $e")
+      case TimedOut =>
+        abort(s"initializing universe $name timed out")
+      case e =>
+        error(s"invalid response initializing universe $name: $e")
     }
+  }
+
+  def abort (msg: String): Unit = {
+    error(msg)
+    terminate
   }
 
   // called by RACE driver (TODO enforce or verify)
