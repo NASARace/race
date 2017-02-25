@@ -17,6 +17,7 @@
 
 package gov.nasa.race.core
 
+import Messages._
 import akka.event.Logging
 import com.typesafe.config.Config
 import gov.nasa.race.test.RaceActorSpec
@@ -29,12 +30,12 @@ import scala.language.postfixOps
 
 object BusSpec {
   // test messages
-  case class Publish (msg: Any)
+  case class PublishTest (msg: Any)
   case class TestMessage (payload: Int)
 
   class TestPublisher (val config: Config) extends PublishingRaceActor {
     override def handleMessage = {
-      case Publish(msg) =>
+      case PublishTest(msg) =>
         println(s"$name publishing $msg to channel $writeTo")
         publish(msg)
     }
@@ -67,7 +68,7 @@ class BusSpec extends RaceActorSpec with WordSpecLike {
         initializeTestActors
         startTestActors(DateTime.now)
 
-        expectBusMsg(testChannel, 5 seconds, publisher ! Publish(TestMessage(42))) {
+        expectBusMsg(testChannel, 5 seconds, publisher ! PublishTest(TestMessage(42))) {
           case e @ BusEvent(channel,TestMessage(payload),originator) =>
             println(s"probe got message $e")
             assert(channel == testChannel)
@@ -91,7 +92,7 @@ class BusSpec extends RaceActorSpec with WordSpecLike {
         initializeTestActors
         startTestActors(DateTime.now)
 
-        publisher ! Publish(TestMessage(42))
+        publisher ! PublishTest(TestMessage(42))
 
         sleep(1 second)
         terminateTestActors
