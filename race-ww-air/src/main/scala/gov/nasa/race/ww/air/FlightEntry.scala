@@ -22,8 +22,9 @@ import java.awt.Point
 import gov.nasa.race._
 import gov.nasa.race.air.{AbstractFlightPath, InFlightAircraft}
 import gov.nasa.race.ww.{InfoBalloon, _}
+import gov.nasa.worldwind.WorldWind
 import gov.nasa.worldwind.avlist.AVKey
-import gov.nasa.worldwind.render.ScreenImage
+import gov.nasa.worldwind.render.{Offset, PointPlacemark, PointPlacemarkAttributes, ScreenImage}
 
 /**
   * class that aggregates all Renderables that can be associated with a given InFlightAircraft
@@ -36,7 +37,7 @@ class FlightEntry[T <: InFlightAircraft](var obj: T, var flightPath: AbstractFli
   protected var symbol: Option[FlightSymbol[T]] = layer.getSymbol(this)
   protected var path: Option[FlightPath[T]] = None
   protected var info: Option[InfoBalloon] = None
-  protected var mark: Option[ScreenImage] = None
+  protected var mark: Option[PointPlacemark] = None
   protected var model: Option[FlightModel[T]] = None
 
   protected var followPosition = false // do we center the view on the current placemark position
@@ -71,7 +72,7 @@ class FlightEntry[T <: InFlightAircraft](var obj: T, var flightPath: AbstractFli
         balloon.setScreenPoint(sym.getScreenPoint)
       }
       ifSome(mark) {
-        _.setScreenOffset(sym.getScreenOffset)
+        _.setPosition(obj)
       }
 
       if (followPosition) layer.centerOn(obj)
@@ -135,16 +136,21 @@ class FlightEntry[T <: InFlightAircraft](var obj: T, var flightPath: AbstractFli
 
   def setMark(showIt: Boolean) = ifSome(symbol) { sym =>
     if (showIt && mark.isEmpty) {
-      val img = new ScreenImage
-      img.setImageSource(layer.markImage(obj))
-      img.setScreenOffset(sym.getScreenOffset)
-      mark = Some(img)
-      layer.addRenderable(img)
+      mark = Some(createMark)
+      mark.foreach(layer.addRenderable)
 
     } else if (!showIt && mark.isDefined) {
       layer.removeRenderable(mark.get)
       mark = None
     }
+  }
+
+  def createMark: PointPlacemark = withDo(new PointPlacemark(obj)) { m =>
+    m.setAltitudeMode(WorldWind.ABSOLUTE)
+    val attrs = new PointPlacemarkAttributes
+    attrs.setImage(layer.markImage(obj))
+    attrs.setImageOffset(Offset.CENTER)
+    m.setAttributes(attrs)
   }
 
   def setInfo(showIt: Boolean) = ifSome(symbol) { sym =>

@@ -306,7 +306,6 @@ abstract class FlightLayer[T <:InFlightAircraft](val raceView: RaceView, config:
   override def handleMessage = {
     case BusEvent(_,fInfo:FlightInfo,_) => entryPanel.setFlightInfo(fInfo)
     case DelayedAction(_,action) => action()
-    case other => warning(f"$name ignoring message $other%30.30s..")
   }
 }
 
