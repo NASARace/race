@@ -16,19 +16,26 @@
  */
 package gov.nasa.race.common
 
+import scala.annotation.tailrec
+
 /**
   * a trait for basic on-the-fly sample statistics calculation
   */
 trait SampleStats {
   var nSamples: Int = 0
-  var mean: Double = 0.0
-  var variance: Double = 0.0    // incrementally computed
+  var min: Double = Double.PositiveInfinity
+  var max: Double = Double.NegativeInfinity
+  var mean: Double = Double.NaN
+  var variance: Double = 0    // incrementally computed
 
   private var sum: Double = 0.0  // more efficient than incremental mean calculation
 
   def add (v: Double): Unit = {
     sum += v
     nSamples += 1
+
+    if (v < min) min = v
+    if (v > max) max = v
 
     val n = nSamples
     if (n > 1){
@@ -50,31 +57,53 @@ trait SampleStats {
   *
   * Note that instances of BucketCounter are not thread safe
   */
-class BucketCounter (val low: Double, val high: Double, val nBuckets: Int) extends SampleStats {
+class BucketCounter (val low: Double, val high: Double, val nBuckets: Int, val useOutliers: Boolean = false)
+                                                          extends SampleStats with Cloneable {
   var lower: Int = 0     // low outliers
   var higher: Int = 0    // high outliers
-  val buckets = new Array[Int](nBuckets)
   val bucketSize = (high - low) / nBuckets
+  private var buckets = new Array[Int](nBuckets)
 
   @inline def bucketIndex (v: Double): Int = ((v - low) / bucketSize).toInt
 
   override def add (v: Double): Unit = {
-    if (v < low) lower += 1
-    else if (v > high) higher += 1
-    else buckets(bucketIndex(v)) += 1
+    if (v < low) {
+      lower += 1
+      if (useOutliers) super.add(v)
+    } else if (v > high) {
+      higher += 1
+      if (useOutliers) super.add(v)
+    } else {
+      buckets(bucketIndex(v)) += 1
+      super.add(v)
+    }
+  }
 
-    super.add(v)
+  def processBuckets (f: (Int,Int)=>Unit): Unit = {
+    // avoid iterator
+    @tailrec @inline def _proc (i: Int): Unit = {
+      if (i<nBuckets) {
+        f(i,buckets(i))
+        _proc(i+1)
+      }
+    }
+    _proc(0)
   }
 
   def showBuckets: String = {
     val sb = new StringBuffer
-    sb.append(s"[<$low]:$lower,")
+    sb.append(s"$lower |")
     for (i <- 0 until nBuckets){
       val bl = low + (i*bucketSize)
-      val bh = bl + bucketSize
-      sb.append(s"[$bl..$bh[:${buckets(i)},")
+      sb.append(s"$bl: ${buckets(i)} |")
     }
-    sb.append(s"[>$high]:$higher")
+    sb.append(s" $higher")
     sb.toString
+  }
+
+  override def clone: BucketCounter = {
+    val bc = super.clone.asInstanceOf[BucketCounter]
+    bc.buckets = buckets.clone
+    bc
   }
 }

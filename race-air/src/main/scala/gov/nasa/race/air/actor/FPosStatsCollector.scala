@@ -3,7 +3,7 @@ package gov.nasa.race.air.actor
 import akka.actor.ActorRef
 import com.typesafe.config.Config
 import gov.nasa.race.air.{FlightCompleted, FlightDropped, FlightPos}
-import gov.nasa.race.common.Stats
+import gov.nasa.race.common.{BucketCounter, Stats}
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.Messages.{BusEvent, RaceTick}
 import gov.nasa.race.core.{ContinuousTimeRaceActor, PeriodicRaceActor, PublishingRaceActor, SubscribingRaceActor}
@@ -36,6 +36,12 @@ class FPosStatsCollector (val config: Config) extends SubscribingRaceActor with 
   var minActive = 0
   var maxActive = 0
   var outOfOrder = 0
+
+  val updateStats = new BucketCounter(
+    config.getFiniteDurationOrElse("dt-min",0.seconds).toMillis,
+    config.getFiniteDurationOrElse("dt-max",180.seconds).toMillis,
+    config.getIntOrElse("dts",18)
+  )
 
   override def onStartRaceActor(originator: ActorRef) = {
     super.onStartRaceActor(originator)
@@ -70,6 +76,7 @@ class FPosStatsCollector (val config: Config) extends SubscribingRaceActor with 
           fpu.dtSum += dt
           if (dt > fpu.dtMax) fpu.dtMax = dt
           if (elapsedSimTimeMillisSinceStart > settleTime) {
+            updateStats.add(dt)
             if ((dt > 0) && (dt < fpu.dtMin || fpu.dtMin == 0)) fpu.dtMin = dt
           }
         } else {
@@ -119,27 +126,44 @@ class FPosStatsCollector (val config: Config) extends SubscribingRaceActor with 
 
     new FlightObjectStats(title, tNow, elapsedSimTimeMillisSinceStart, channels,
         nActive,minActive,maxActive,
-        avgUpdate,dtMin,dtMax,
+        updateStats.clone,
         completedFlights,droppedFlights,outOfOrder)
   }
 }
 
 class FlightObjectStats (val topic: String, val takeMillis: Long, val elapsedMillis: Long, val channels: String,
                          val active: Int, val minActive: Int, val maxActive: Int,
-                         val avgUpdateMillis: Int, val minUpdateMillis: Int, val maxUpdateMillis: Int,
+                         val bc: BucketCounter,
                          val completed: Int, val dropped: Int, val outOfOrder: Int)  extends Stats {
+  def time (millis: Double): String = {
+    if (millis.isInfinity || millis.isNaN) {
+      "     "
+    } else {
+      if (millis < 120000) f"${millis / 1000}%5.0fs"
+      else if (millis < 360000) f"${millis / 60000}%5.1fm"
+      else f"${millis / 360000}%5.1fh"
+    }
+  }
+
   def printToConsole = {
     printConsoleHeader
 
     println(s"observed channels: $channels")
 
-    val dtAvg = avgUpdateMillis / 1000.0
-    val dtMin = minUpdateMillis / 1000.0
-    val dtMax = maxUpdateMillis / 1000.0
+    val dtAvg = time(bc.mean)
+    val dtMin = time(bc.min)
+    val dtMax = time(bc.max)
 
-    println(" active     min     max    complt    drop   order   dtAvg  dtMin  dtMax")
-    println("------- ------- -------   ------- ------- -------  ------ ------ ------")
-    println(f"$active%7d $minActive%7d $maxActive%7d   $completed%7d $dropped%7d $outOfOrder%7d  $dtAvg%6.1f $dtMin%6.1f $dtMax%6.1f")
-    println
+    println("active    min    max   complt   drop  order         n  dtMin  dtMax  dtAvg   sigma")
+    println("------ ------ ------   ------ ------ ------   ------- ------ ------ ------ -------")
+    print(f"$active%6d $minActive%6d $maxActive%6d   $completed%6d $dropped%6d $outOfOrder%6d    ")
+    if (bc.nSamples > 0) {
+      println(f"${bc.nSamples}%6d ${time(bc.min)} ${time(bc.max)} ${time(bc.mean)} ${bc.sigma}%7.2f")
+      bc.processBuckets( (i,c) => {
+        if (i%6 == 0) println  // 6 buckets per line
+        print(f"${Math.round(i*bc.bucketSize/1000)}%3ds: $c%6d | ")
+      })
+      println
+    } else println
   }
 }

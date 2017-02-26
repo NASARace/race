@@ -29,7 +29,7 @@ class BucketCounterSpec extends FlatSpec with RaceSpec {
 
   "static input set" should "produce right mean and variance" in {
     val population: Array[Int] = Array(1,2,3,3,2,3,4)
-    val sampleSet = new BucketCounter(0,5,5)
+    val sampleSet = new BucketCounter(0,5,5,useOutliers=true)
 
     var n: Int = 0
     var sum: Double = 0
@@ -45,7 +45,7 @@ class BucketCounterSpec extends FlatSpec with RaceSpec {
 
       sampleSet.add(v)
       print(f"v=$v, n=${sampleSet.nSamples}, m=${sampleSet.mean}%5.3f, s2=${sampleSet.variance}%5.3f")
-      println(s"   buckets=${sampleSet.showBuckets}")
+      println(s"   buckets= ${sampleSet.showBuckets}")
 
       sampleSet.mean shouldBe mean+-eps
       sampleSet.variance shouldBe variance+-eps

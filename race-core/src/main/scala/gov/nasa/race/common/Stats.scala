@@ -19,7 +19,7 @@ trait Stats {
   def printToFile (fw: FileWriter): Unit = {}
 
   def printConsoleHeader = {
-    val title = StringUtils.padRight(topic,50, ' ')
+    val title = StringUtils.padRight(topic,60, ' ')
     val elapsed = StringUtils.padLeft(durationMillisToHMMSS(elapsedMillis), 20, ' ')
     println(s"$reverseColor$title          $elapsed$resetColor")
   }
