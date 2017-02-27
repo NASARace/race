@@ -24,7 +24,7 @@ import javax.xml.validation.SchemaFactory
 
 import com.typesafe.config.Config
 import gov.nasa.race.config.ConfigurableFilter
-import org.xml.sax.SAXParseException
+import org.xml.sax.{ErrorHandler, SAXParseException}
 
 /**
   * a filter that passes messages which are validated against a configured schema
@@ -36,7 +36,15 @@ class XmlValidationFilter (val schemaFile: File, val config: Config = null) exte
   protected val schema = schemaFactory.newSchema(schemaFile)
   protected val validator = schema.newValidator
 
-  var lastError: String = ""
+  // TODO - the standard Stax validator always prints this annoying ERROR to System.err, and the
+  // only workaround seems to be to set our own ErrorHandler that does not re-throw exceptions
+  var lastError: Option[String] = None
+  protected val xh = new ErrorHandler {
+    def error (x: SAXParseException) = lastError = Some(x.getMessage)
+    def fatalError (x: SAXParseException) = lastError = Some(x.getMessage)
+    def warning  (x: SAXParseException) = {}
+  }
+  validator.setErrorHandler(xh)
 
   def this(schemaPath: String) = this(new File(schemaPath),null)
   def this(conf: Config) = this(new File(conf.getString("schema")), conf)
@@ -51,20 +59,21 @@ class XmlValidationFilter (val schemaFile: File, val config: Config = null) exte
       case Some(cs:Array[Char]) => validate(new CharArrayReader(cs))
       case None => false
       case _ =>
-        lastError = s"unknown message type: ${o.getClass}"
+        lastError = Some(s"unsupported message type: ${o.getClass}")
         false
     }
   }
 
   def validate (dataReader: Reader): Boolean = {
     try {
+      lastError = None
       validator.validate(new StAXSource(inputFactory.createXMLStreamReader(dataReader)))
-      true
+      lastError.isEmpty
     } catch {
-      case x: SAXParseException =>
-        lastError = x.getMessage
+      // we shouldn't get any with our error handler
+      case t: Throwable =>
+        lastError = Some(t.getMessage)
         false
-      case t: Throwable => false
     }
   }
 }

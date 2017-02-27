@@ -49,11 +49,13 @@ class XmlValidator (config: Config) extends EitherOrRouter(config) {
         publish(writeToPass, msg) // it validates, pass it on as-is
 
       } else {
+        val lastErr = validationFilter.lastError.getOrElse("?")
+        info(s"XML validation failed: $lastErr")
         publish(writeToFail, msg)
 
         ifSome(writeToLog) { chan =>
           // we need to wrap this into a AnnotatedItem to preserve the validation error
-          publish(chan, new AnnotatedItem(validationFilter.lastError, msg))
+          publish(chan, new AnnotatedItem(lastErr, msg))
         }
       }
     }

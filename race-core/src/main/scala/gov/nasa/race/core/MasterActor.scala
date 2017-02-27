@@ -20,6 +20,7 @@ package gov.nasa.race.core
 import akka.actor.SupervisorStrategy.Stop
 import akka.actor._
 import akka.pattern.AskSupport
+import akka.util.Timeout
 import com.typesafe.config.Config
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.Messages._
@@ -295,7 +296,11 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ImplicitActorLogging
       case other:AskFailure =>
         error(s"failed actor instantiation: $other")
         throw new RaceInitializeException(s"failed to create actor $actorName")
-    }
+    }(getTimeout(actorConfig,"create-timeout"))
+  }
+
+  def getTimeout(conf: Config, key: String): Timeout = {
+    if (conf.hasPath(key)) Timeout(conf.getFiniteDuration(key)) else timeout
   }
 
   //--- actor initialization

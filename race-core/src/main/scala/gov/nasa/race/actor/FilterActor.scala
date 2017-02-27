@@ -26,4 +26,4 @@ import gov.nasa.race.core._
   * this actor only publishes messages that pass. If we also need to publish the
   * ones that fail, use a EitherOrRouter
   */
-class FilterActor (val config: Config) extends FilteringPublisher
+class FilterActor (val config: Config) extends FilteringPublisher with SubscribingRaceActor

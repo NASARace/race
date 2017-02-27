@@ -1,0 +1,25 @@
+<configuration>
+    <appender name="CONSOLE" class="ch.qos.logback.classic.net.SocketAppender">
+        <!-- encoders are assigned the type
+             ch.qos.logback.classic.encoder.PatternLayoutEncoder by default
+             See http://logback.qos.ch/manual/layouts.html -->
+        <remoteHost>${log.console.host}</remoteHost>
+        <port>${log.console.port}</port>
+
+        <reconnectionDelay>0</reconnectionDelay>
+        <includeCallerData>false</includeCallerData>
+        <queueSize>1024</queueSize>
+        <eventDelayLimit>5 seconds</eventDelayLimit>
+
+        <encoder>
+            <pattern>%-5level %logger{0}: %msg%n</pattern>
+            <outputPatternAsHeader>false</outputPatternAsHeader>
+        </encoder>
+
+        <!-- encoder is configured in console -->
+    </appender>
+
+    <root level="${root-level:-WARN}">
+        <appender-ref ref="CONSOLE" />
+    </root>
+</configuration>

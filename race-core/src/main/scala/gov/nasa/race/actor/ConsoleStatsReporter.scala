@@ -25,6 +25,7 @@ class ConsoleStatsReporter (val config: Config) extends SubscribingRaceActor {
     if (topics.nonEmpty) {
       clearScreen
       topics.valuesIterator foreach(_.printToConsole)
+      println
     }
   }
 }

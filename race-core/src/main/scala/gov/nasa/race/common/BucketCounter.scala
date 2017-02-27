@@ -64,7 +64,7 @@ class BucketCounter (val low: Double, val high: Double, val nBuckets: Int, val u
   val bucketSize = (high - low) / nBuckets
   private var buckets = new Array[Int](nBuckets)
 
-  @inline def bucketIndex (v: Double): Int = ((v - low) / bucketSize).toInt
+  @inline def bucketIndex (v: Double): Int = (Math.round((v - low) / bucketSize)).toInt
 
   override def add (v: Double): Unit = {
     if (v < low) {

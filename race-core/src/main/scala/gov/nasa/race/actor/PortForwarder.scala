@@ -34,8 +34,9 @@ object PortForwarder {
   * an actor that forwards ports ala "ssh -L", i.e. can map ports on remote machines
   * (gateways) into local ports
   *
-  * Note that this requires sync user authentication during init if we don't
-  * provide credentials via (encrypted) config (which is normally not a good idea)
+  * Note this requires sync user authentication during init if we don't
+  * provide credentials via (encrypted) config (which is normally not a good idea). In order to
+  * avoid running into a timeout the actor config should have a timeout set
   *
   * Note also that interactive authentication is the reason why we can't automatically
   * reconnect (we don't want to store user credentials here)
