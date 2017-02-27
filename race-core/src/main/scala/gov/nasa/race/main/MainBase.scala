@@ -110,16 +110,11 @@ trait MainBase {
   }
 
   def setSystemProperties(o: MainOpts): Unit = {
-    setSystemProperties(o.propertyFile, o.setHost.flatMap(getInetAddress), o.logLevel, o.logConsoleURI)
-  }
-
-  def setSystemProperties(propertyFile: Option[File], inetAddress: Option[InetAddress],
-                          optLogLevel: Option[String], logConsoleURI: Option[String]): Unit = {
-    ifSome(propertyFile) { propFile =>
+    ifSome(o.propertyFile) { propFile =>
       using(new FileInputStream(propFile)) { fis => System.getProperties.load(fis) }
     }
 
-    ifSome(inetAddress) { iaddr =>
+    ifSome(o.setHost.flatMap(getInetAddress)) { iaddr =>
       System.setProperty("race.host", iaddr.getHostAddress)
     }
 
@@ -128,9 +123,9 @@ trait MainBase {
     }
 
     // logging related system properties (logback)
-    ifSome(optLogLevel) { level => System.setProperty("root-level", level.toString) }
+    ifSome(o.logLevel) { level => System.setProperty("root-level", level.toString) }
 
-    ifSome(logConsoleURI) { uri =>
+    ifSome(o.logConsoleURI) { uri =>
       val (host, port) = HostPortRE.findFirstIn(uri) match {
         case Some(HostPortRE(host, p)) => (host, if (p == null) DefaultLogConsolePort else p)
         case None => (DefaultLogConsoleHost, DefaultLogConsolePort)

@@ -95,11 +95,13 @@ class SubscriberMsgStats (val topic: String, val takeMillis: Long, val elapsedMi
       byteSize += m.byteSize
     }
 
-    val memSize = FileUtils.sizeString(byteSize)
-    val avgMemSize = if (count > 0) FileUtils.sizeString((byteSize / count).toInt) else 0
+    if (messages.length > 1) { // otherwise there is no point printing summaries
+      val memSize = FileUtils.sizeString(byteSize)
+      val avgMemSize = if (count > 0) FileUtils.sizeString((byteSize / count).toInt) else 0
 
-    println("-------   ------ ------   ------ ------")
-    println(f"${count}%7d   ${avgRate}%6.1f ${peakRate}%6.1f   $memSize%6s $avgMemSize%6s")
+      println("-------   ------ ------   ------ ------")
+      println(f"${count}%7d   ${avgRate}%6.1f ${peakRate}%6.1f   $memSize%6s $avgMemSize%6s")
+    }
     println
   }
 }
