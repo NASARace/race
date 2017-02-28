@@ -40,13 +40,16 @@ trait ConsoleMainBase extends MainBase {
     ifSome(getOptions(args)) { opts =>
       setSystemProperties(opts)
       setConsoleUserInfoFactory
-      initConfigVault(opts)
 
-      val universes = instantiateRaceActorSystems(opts.configFiles, opts.logLevel)
-      if (universes.nonEmpty) {
-        runUniverses(universes, opts.delayStart)
+      if (initConfigVault(opts)) {
+        val universes = instantiateRaceActorSystems(opts.configFiles, opts.logLevel)
+        if (universes.nonEmpty) {
+          runUniverses(universes, opts.delayStart)
+        } else {
+          println("no RaceActorSystem to execute, exiting")
+        }
       } else {
-        println("no RaceActorSystem to execute, exiting")
+        println("config vault not initialized, exiting")
       }
     }
   }

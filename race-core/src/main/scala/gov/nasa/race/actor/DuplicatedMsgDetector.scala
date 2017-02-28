@@ -122,11 +122,14 @@ class SubscriberDupStats (val topic: String, val takeMillis: Long, val elapsedMi
   def printToConsole = {
     printConsoleHeader
     println(s"observed channels: $channels")
-    println("  count     avg sec   classifier")
-    println("-------   ---------   -------------------------------------------")
-    for (m <- messages) {
-      val avgDtSecs = m.dtMillis.toDouble / (m.count * 1000.0)
-      println(f"${m.count}%7d   $avgDtSecs%9.3f   ${m.classifier}")
+
+    if (messages.nonEmpty) {
+      println("  count     avg sec   classifier")
+      println("-------   ---------   -------------------------------------------")
+      for (m <- messages) {
+        val avgDtSecs = m.dtMillis.toDouble / (m.count * 1000.0)
+        println(f"${m.count}%7d   $avgDtSecs%9.3f   ${m.classifier}")
+      }
     }
     println
   }

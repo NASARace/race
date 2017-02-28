@@ -143,7 +143,8 @@ trait MainBase {
 
   //--- vault initialization
 
-  def initConfigVault (opts: MainOpts): Unit = {
+  def initConfigVault (opts: MainOpts): Boolean = {
+    var success: Boolean = false
     ifSome(opts.vault) { vaultFile =>
       if (opts.keyStore.isDefined) { // use the provided keystore to get the vault key
         for (
@@ -153,15 +154,20 @@ trait MainBase {
           alias <- opts.alias;
           key <- withSubsequent(CryptUtils.getKey(ks,alias,pw)){ JArrays.fill(pw,' ') };
           cipher <- CryptUtils.getDecryptionCipher(key)
-        ) ConfigVault.initialize(vaultFile,cipher)
+        ) success = ConfigVault.initialize(vaultFile,cipher)
 
       } else { // ask for the vault key
         ifSome(ConsoleIO.promptPassword(s"enter password for config vault $vaultFile: ")) { pw=>
-          try {ConfigVault.initialize(vaultFile,pw)} finally { JArrays.fill(pw,' ') }
+          try {
+            success = ConfigVault.initialize(vaultFile,pw)
+          } finally { JArrays.fill(pw,' ') }
         }
       }
+    } orElse {
+      success = true // no vault to initialize
+      None
     }
-    // if there is no vault option set we don't have anything to do
+    success
   }
 
   //--- config manipulation

@@ -74,33 +74,36 @@ class SubscriberMsgStats (val topic: String, val takeMillis: Long, val elapsedMi
   def printToConsole = {
     printConsoleHeader
 
-    var count = 0
-    var avgRate = 0.0
-    var peakRate = 0.0
-    var byteSize = 0L
-
     println(s"observed channels: $channels")
-    println("  count    msg/s   peak     size    avg   msg")
-    println("-------   ------ ------   ------ ------   --------------------------------------")
-    for (m <- messages) {
-      val memSize = FileUtils.sizeString(m.byteSize)
-      val avgMemSize = FileUtils.sizeString((m.byteSize / m.count).toInt)
-      println(f"${m.count}%7d   ${m.avgMsgPerSec}%6.1f ${m.peakMsgPerSec}%6.1f   $memSize%6s $avgMemSize%6s   ${m.msgName}%s")
-      m.elements foreach { e=>
-        println(f"                                           ${e.count}%7d : ${e.pattern}%s")
+    if (messages.nonEmpty) {
+      var count = 0
+      var avgRate = 0.0
+      var peakRate = 0.0
+      var byteSize = 0L
+
+      println("  count    msg/s   peak     size    avg   msg")
+      println("-------   ------ ------   ------ ------   --------------------------------------")
+      for (m <- messages) {
+        val memSize = FileUtils.sizeString(m.byteSize)
+        val avgMemSize = FileUtils.sizeString((m.byteSize / m.count).toInt)
+        println(f"${m.count}%7d   ${m.avgMsgPerSec}%6.1f ${m.peakMsgPerSec}%6.1f   $memSize%6s $avgMemSize%6s   ${m.msgName}%s")
+        m.elements foreach { e =>
+          println(f"                                           ${e.count}%7d : ${e.pattern}%s")
+        }
+        count += m.count
+        avgRate += m.avgMsgPerSec
+        peakRate += m.peakMsgPerSec
+        byteSize += m.byteSize
       }
-      count += m.count
-      avgRate += m.avgMsgPerSec
-      peakRate += m.peakMsgPerSec
-      byteSize += m.byteSize
-    }
 
-    if (messages.length > 1) { // otherwise there is no point printing summaries
-      val memSize = FileUtils.sizeString(byteSize)
-      val avgMemSize = if (count > 0) FileUtils.sizeString((byteSize / count).toInt) else 0
+      if (messages.length > 1) {
+        // otherwise there is no point printing summaries
+        val memSize = FileUtils.sizeString(byteSize)
+        val avgMemSize = if (count > 0) FileUtils.sizeString((byteSize / count).toInt) else 0
 
-      println("-------   ------ ------   ------ ------")
-      println(f"${count}%7d   ${avgRate}%6.1f ${peakRate}%6.1f   $memSize%6s $avgMemSize%6s")
+        println("-------   ------ ------   ------ ------")
+        println(f"${count}%7d   ${avgRate}%6.1f ${peakRate}%6.1f   $memSize%6s $avgMemSize%6s")
+      }
     }
     println
   }

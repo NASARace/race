@@ -39,7 +39,8 @@ class XmlValidator (config: Config) extends EitherOrRouter(config) {
 
   val schemaFile = new File(config.getString("schema"))
   val validationFilter = new XmlValidationFilter(schemaFile)
-  val writeToLog = config.getOptionalString("write-to-log")
+  val failurePrefix = config.getOptionalString("failure-prefix")
+  val failurePostfix = config.getOptionalString("failure-postfix")
 
   override def defaultMatchAll = true // the first filter that doesn't pass shortcuts
 
@@ -51,12 +52,12 @@ class XmlValidator (config: Config) extends EitherOrRouter(config) {
       } else {
         val lastErr = validationFilter.lastError.getOrElse("?")
         info(s"XML validation failed: $lastErr")
-        publish(writeToFail, msg)
 
-        ifSome(writeToLog) { chan =>
-          // we need to wrap this into a AnnotatedItem to preserve the validation error
-          publish(chan, new AnnotatedItem(lastErr, msg))
-        }
+        var failMsg: String = null
+        ifSome(failurePrefix){ p=> failMsg = p + lastErr }
+        ifSome(failurePostfix){ failMsg += _ }
+
+        publish(writeToFail, if (failMsg != null) failMsg+msg else msg)
       }
     }
   }

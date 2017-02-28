@@ -21,10 +21,11 @@ import akka.actor._
 import akka.pattern.ask
 import akka.util.Timeout
 import com.typesafe.config.Config
+import gov.nasa.race.common.Clock
 import gov.nasa.race.{common, _}
 import gov.nasa.race.common.Status._
 import gov.nasa.race.config.ConfigUtils._
-import gov.nasa.race.core.Messages.{InitializeRaceActor, StartRaceActor, _}
+import gov.nasa.race.core.Messages.{InitializeRaceActor, SimClockReset, StartRaceActor, _}
 import gov.nasa.race.util.ClassLoaderUtils
 import org.joda.time.DateTime
 
@@ -119,8 +120,10 @@ trait RaceActor extends Actor with ImplicitActorLogging {
 
     case SetLogLevel(newLevel) => logLevel = newLevel
 
+    case ResetSimClock => handleResetSimClock
     case SetTimeout(msg,duration) => context.system.scheduler.scheduleOnce(duration, self, msg)
-    case other => println(s"UGGHHH $other")
+
+    case other => warning(s"unhandled system message $other")
   }
 
   def handleLiveInitializeRaceActor (rc: RaceContext, actorConf: Config) = {
@@ -186,6 +189,11 @@ trait RaceActor extends Actor with ImplicitActorLogging {
     }
   }
 
+  def handleResetSimClock = {
+    onSimClockReset
+    sender ! SimClockReset
+  }
+
   //--- the general system message callbacks
 
   // note that RaceActor itself does not depend on overrides properly calling super.onXX(), all the
@@ -207,6 +215,8 @@ trait RaceActor extends Actor with ImplicitActorLogging {
   def onResumeRaceActor(originator: ActorRef): Any = {}
 
   def onTerminateRaceActor(originator: ActorRef): Any = {}
+
+  def onSimClockReset: Any = {}
 
   //--- utilities for RaceActors with dependents (TODO - turn this into a interface)
 
@@ -530,7 +540,9 @@ trait SubscribingRaceActor extends RaceActor {
   * we are running in
  */
 trait ContinuousTimeRaceActor extends RaceActor {
-  val simClock = RaceActorSystem(context.system).simClock
+  private val ras = RaceActorSystem(context.system)
+  val simClock: Clock = ras.simClock
+  final val canResetClock = config.getBooleanOrElse("can-reset-clock", false)
 
   var lastSimMillis: Long = simClock.baseMillis
   var startSimTimeMillis: Long = 0
@@ -542,6 +554,10 @@ trait ContinuousTimeRaceActor extends RaceActor {
     super.onStartRaceActor(originator)
   }
 
+  override def onSimClockReset = {
+    startSimTimeMillis = simClock.millis
+    lastSimMillis = startSimTimeMillis
+  }
 
   @inline def updateSimTime = lastSimMillis = simClock.millis
   @inline def simTime = new DateTime(lastSimMillis)
@@ -589,6 +605,15 @@ trait ContinuousTimeRaceActor extends RaceActor {
 
   def toWallTimeMillis (d: Duration) = (d.toMillis * simClock.timeScale).toLong
   def toWallTimeMillis (ms: Long) = (ms * simClock.timeScale).toLong
+
+  final def resetSimClockRequest (d: DateTime, timeScale: Double = 1.0) = {
+    if (canResetClock) {
+      info(s"request to reset clock to: $d")
+      ras.resetSimClockRequest(d,timeScale)
+    } else {
+      error(s"illegal attempt to reset clock")
+    }
+  }
 }
 
 /**

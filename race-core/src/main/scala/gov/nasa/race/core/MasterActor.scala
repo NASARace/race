@@ -109,6 +109,8 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ImplicitActorLogging
       info(s"master $name got RaceTerminateRequest")
       ras.terminationRequest(sender)
 
+    case RaceResetClock => onRaceResetClock // RAS changed simClock, inform actors
+
     //--- time management
     case SyncSimClock(dateTime: DateTime, timeScale: Double) =>
       simClock.reset(dateTime,timeScale)
@@ -496,6 +498,24 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ImplicitActorLogging
         case TimedOut =>
           warning(s"satellite ${remoteMaster.path} termination timeout")
       }
+    }
+  }
+  def onRaceResetClock = {
+    val requester = sender
+    var nAck = 0
+    ras.actors.foreach { e =>
+      val (actorRef, actorConfig) = e
+      info(s"sending ResetSimClock to ${actorRef.path.name}")
+      askForResult(actorRef ? ResetSimClock) {
+        case SimClockReset =>
+          info(s"got SimClockReset from ${actorRef.path.name}")
+          nAck += 1
+        case TimedOut =>
+          warning(s"no SimClockReset response from ${actorRef.path.name}")
+      }
+    }
+    if (nAck == ras.actors.size) { // all actors accounted for
+      requester ! RaceClockReset
     }
   }
 }

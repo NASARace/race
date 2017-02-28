@@ -95,13 +95,18 @@ object Messages {
   case object RaceTerminate             // RAS -> Master
   case class RemoteRaceTerminate (remoteMaster: ActorRef) // Master -> RemoteMaster
   case object RaceTerminated            // Master -> RAS, remote Master -> Master
+  case object RaceResetClock            // RAS -> Master
+  case object RaceClockReset            // Master -> RAS
 
   case class SetLogLevel (newLevel: LogLevel) extends RaceSystemMessage
 
   // time keeping between actor systems
-  case class SyncSimClock (date: DateTime, timeScale: Double)
-  case object StopSimClock
-  case object ResumeSimClock
+  trait ClockMessage extends RaceSystemMessage
+  case class SyncSimClock (date: DateTime, timeScale: Double) extends ClockMessage
+  case object ResetSimClock extends ClockMessage // master -> actors
+  case object SimClockReset extends ClockMessage // actor -> master
+  case object StopSimClock extends ClockMessage
+  case object ResumeSimClock extends ClockMessage
 
   // dynamic subscriptions
   case class Subscribe (channel: String)
