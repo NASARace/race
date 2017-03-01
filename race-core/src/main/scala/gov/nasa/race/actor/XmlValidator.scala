@@ -53,11 +53,11 @@ class XmlValidator (config: Config) extends EitherOrRouter(config) {
         val lastErr = validationFilter.lastError.getOrElse("?")
         info(s"XML validation failed: $lastErr")
 
-        var failMsg: String = null
-        ifSome(failurePrefix){ p=> failMsg = p + lastErr }
-        ifSome(failurePostfix){ failMsg += _ }
+        val failMsg = if (failurePrefix.isDefined || failurePostfix.isDefined) {
+          failurePrefix.getOrElse("") + lastErr + failurePostfix.getOrElse("") + msg
+        } else msg // don't allocate if you don't have to, msg might be large
 
-        publish(writeToFail, if (failMsg != null) failMsg+msg else msg)
+        publish(writeToFail, failMsg)
       }
     }
   }
