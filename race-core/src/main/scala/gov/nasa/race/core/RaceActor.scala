@@ -218,33 +218,6 @@ trait RaceActor extends Actor with ImplicitActorLogging {
 
   def onSimClockReset: Any = {}
 
-  //--- utilities for RaceActors with dependents (TODO - turn this into a interface)
-
-  def initDependentRaceActor (actorRef: ActorRef, rc: RaceContext, actorConf: Config): Boolean = {
-    askDependent(actorRef,InitializeRaceActor(rc,actorConf), RaceActorInitialized)
-  }
-  def startDependentRaceActor (actorRef: ActorRef) = askDependent(actorRef,StartRaceActor(self),RaceActorStarted)
-  def terminateDependentRaceActor (actorRef: ActorRef) = askDependent(actorRef,TerminateRaceActor(self),RaceActorTerminated)
-
-  // this is the version that uses the same config for all dependents
-  def initDependentRaceActors (actors: Seq[ActorRef], rc: RaceContext, actorConf: Config): Boolean = {
-    askDependents(actors, InitializeRaceActor(rc,actorConf), RaceActorInitialized)
-  }
-  def startDependentRaceActors (actors: Seq[ActorRef]): Boolean = askDependents(actors,StartRaceActor(self),RaceActorStarted)
-  def terminateDependentRaceActors (actors: Seq[ActorRef]): Boolean = askDependents(actors,TerminateRaceActor(self),RaceActorTerminated)
-
-  def askDependent (actorRef: ActorRef, question: Any, answer: Any): Boolean = {
-    askForResult (actorRef ? question){
-      case `answer` => true
-      case TimedOut =>
-        warning(s"dependent actor timed out: ${actorRef.path.name}")
-        false
-    }
-  }
-  def askDependents (actors: Seq[ActorRef], question: Any, answer: Any): Boolean = {
-    !actors.exists(!askDependent(_,question,answer))
-  }
-
   def answerChildNodes (rc: ChildNodeRollCall) = {
     rc.answer(self -> ChildNode(self,Set.empty))
   }
@@ -351,22 +324,28 @@ trait ParentRaceActor extends RaceActor with ParentContext {
 
   def startChildActors: Boolean = askChildren(StartRaceActor(self),RaceActorStarted)
 
-  def terminateChildActors: Boolean = askChildren(TerminateRaceActor(self),RaceActorTerminated)
+  def terminateChildActors: Boolean = askChildrenReverse(TerminateRaceActor(self),RaceActorTerminated)
 
   def askChild (actorRef: ActorRef, question: Any, answer: Any): Boolean = {
     askForResult (actorRef ? question){
-      case `answer` =>
-        true
-      case TimedOut =>
-        warning(s"dependent actor timed out: ${actorRef.path.name}")
-        false
+      case `answer` => true
+      case TimedOut => warning(s"dependent actor timed out: ${actorRef.path.name}"); false
     }
   }
   def askChildren (question: Any, answer: Any): Boolean = !children.exists(!askChild(_,question,answer))
 
+  def askChildrenReverse (question: Any, answer: Any): Boolean = {
+    for ( cr <- children.reverseIterator ){
+      if (!askChild(cr,question,answer)) return false
+    }
+    true
+  }
+
   def actorOf(props: Props, name: String): ActorRef = context.actorOf(props,name)
 
   def addChild (raRec: RaceActorRec): Unit = children += raRec
+
+  @inline def childActorRef (i: Int) = children(i).actorRef
 }
 
 /**

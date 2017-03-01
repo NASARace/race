@@ -55,7 +55,7 @@ class RoutingPrecipImageTranslatorActor (config: Config) extends TranslatorActor
         case Some(precipImage:PrecipImage) =>
           routes.get(precipImage.product) match {
             case Some(channels) => channels.foreach(publish(_, precipImage))
-            case None => info(s"not routing precip type ${precipImage.product}")
+            case None => debug(s"not routing precip type ${precipImage.product}")
           }
         case None => warning("precip image translation failed")
         case other => warning(s"unsupported translation type: ${other.getClass}")

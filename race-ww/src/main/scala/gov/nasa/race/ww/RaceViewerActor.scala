@@ -47,32 +47,14 @@ import scala.swing.Component
   * instance
   */
 class RaceViewerActor(val config: Config) extends ContinuousTimeRaceActor
-                                   with SubscribingRaceActor with PublishingRaceActor {
-  var actors = List.empty[ActorRef] // to be populated during view construction
+               with SubscribingRaceActor with PublishingRaceActor with ParentRaceActor {
+
   val view = new RaceView(this) // our abstract interface towards the layers and the UI side
 
   //--- RaceActor callbacks
 
-  override def onInitializeRaceActor(rc: RaceContext, actorConf: Config): Unit = {
-    super.onInitializeRaceActor(rc, actorConf)
-    initDependentRaceActors(actors, rc, actorConf)
-  }
-
-  override def onReInitializeRaceActor(rc: RaceContext, actorConf: Config): Any = {
-    super.onReInitializeRaceActor(rc,actorConf)
-    initDependentRaceActors(actors, rc, actorConf)
-  }
-
-  override def onStartRaceActor(originator: ActorRef) = {
-    super.onStartRaceActor(originator)
-    startDependentRaceActors(actors)
-  }
-
   override def onTerminateRaceActor(originator: ActorRef) = {
     super.onTerminateRaceActor(originator)
-
-    info(s"${name} terminating")
-    terminateDependentRaceActors(actors)
 
     if (view.displayable) {
       info(s"${name} closing WorldWind window..")
@@ -82,10 +64,6 @@ class RaceViewerActor(val config: Config) extends ContinuousTimeRaceActor
       info(s"${name} WorldWind window already closed")
     }
   }
-
-  //--- supporting functions
-
-  def addActor (actorRef: ActorRef) = actors = actorRef :: actors
 }
 
 
@@ -218,8 +196,8 @@ class RaceView (viewerActor: RaceViewerActor) extends DeferredEyePositionListene
       actor
     }
     val actorRef = viewerActor.context.actorOf(Props(instantiateActor),name)
-    viewerActor.addActor(actorRef)
     semaphore.acquire()    // block until (1) got executed
+    viewerActor.addChild(RaceActorRec(actorRef,actor.config))
     actor
   }
 
