@@ -19,6 +19,7 @@ package gov.nasa.race
 
 import scala.language.implicitConversions
 import scala.math._
+import scala.util.matching.Regex
 
 /**
   * package gov.nasa.race.common holds common RACE specific types that can be instantiated from

@@ -77,6 +77,8 @@ object Dependencies {
 
   // liftJson
   val liftJson = "net.liftweb" %% "lift-json" % "latest.release"
+  val liftJsonExt = "net.liftweb" %% "lift-json-ext" % "latest.release"
+  val liftJsonAll = Seq(liftJson,liftJsonExt)
 
   val defaultLibs =  Seq(logback,typesafeConfig,nscalaTime,liftJson)
   val defaultTestLibs = Seq(scalaTest,scalaCheck,pegDown)
@@ -85,7 +87,6 @@ object Dependencies {
   val scodecBits = "org.scodec" %% "scodec-bits" % "latest.release"
   val scodecCore = "org.scodec" %% "scodec-core" % "latest.release"
   //val scodecStream = "org.scodec" %% "scodec-stream" % "0.10.0"  // latest.release not yet on resolvers
-
   val scodecAll = Seq(scodecBits, scodecCore)
 
   //--- scala-swing

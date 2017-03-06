@@ -24,12 +24,4 @@ import com.typesafe.config.Config
   */
 package object http {
 
-  /**
-    * base aggregate type for route infos, which consist of a akka.http Route and an optional (child) RaceActor
-    */
-  trait RaceRouteInfo {
-    val config: Config
-    def route: Route
-  }
-
 }

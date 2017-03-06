@@ -40,6 +40,16 @@ object FileUtils {
     }
   }
 
+  def resourceContentsAsUTF8String(cls: Class[_],fileName: String): Option[String] = {
+    val is = cls.getResourceAsStream(fileName)
+    if (is != null){
+      val n = is.available()
+      val bytes = new Array[Byte](n)
+      is.read(bytes)
+      Some(new String(bytes,StandardCharsets.UTF_8))
+    } else None
+  }
+
   def fileContentsAsChars(file: File): Option[Array[Char]] = {
     if (file.isFile) {
       val decoder: CharsetDecoder = StandardCharsets.UTF_8.newDecoder

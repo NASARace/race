@@ -18,10 +18,9 @@ package gov.nasa.race.actor
 
 import java.io.File
 
-import gov.nasa.race._
-import gov.nasa.race.config.ConfigUtils._
 import com.typesafe.config.Config
-import gov.nasa.race.common.{AnnotatedItem, XmlValidationFilter}
+import gov.nasa.race.common.XmlValidationFilter
+import gov.nasa.race.config.ConfigUtils._
 
 /**
   * an actor that validates XML messages with a configured schema
@@ -51,7 +50,7 @@ class XmlValidator (config: Config) extends EitherOrRouter(config) {
 
       } else {
         val lastErr = validationFilter.lastError.getOrElse("?")
-        info(s"XML validation failed: $lastErr")
+        //info(s"XML validation failed: $lastErr")
 
         val failMsg = if (failurePrefix.isDefined || failurePostfix.isDefined) {
           failurePrefix.getOrElse("") + lastErr + failurePostfix.getOrElse("") + msg

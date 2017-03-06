@@ -1,10 +1,28 @@
+/*
+ * Copyright (c) 2017, United States Government, as represented by the
+ * Administrator of the National Aeronautics and Space Administration.
+ * All rights reserved.
+ *
+ * The RACE - Runtime for Airspace Concept Evaluation platform is licensed
+ * under the Apache License, Version 2.0 (the "License"); you may not use
+ * this file except in compliance with the License. You may obtain a copy
+ * of the License at http://www.apache.org/licenses/LICENSE-2.0.
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package gov.nasa.race.air.actor
 
-import akka.actor.{ActorRef, Cancellable}
+import java.io.PrintWriter
+
+import akka.actor.ActorRef
 import com.typesafe.config.Config
 import gov.nasa.race._
-import gov.nasa.race.air.{FlightCompleted, FlightDropped, FlightPos}
-import gov.nasa.race.common.{BucketCounter, Stats}
+import gov.nasa.race.air.{FlightCompleted, FlightPos}
+import gov.nasa.race.common.{BucketCounter, ConsoleStats, Stats}
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.Messages.{BusEvent, RaceTick}
 import gov.nasa.race.core.{ContinuousTimeRaceActor, PeriodicRaceActor, PublishingRaceActor, SubscribingRaceActor}
@@ -196,7 +214,7 @@ class FlightObjectStats (val topic: String, val takeMillis: Long, val elapsedMil
                          val active: Int, val minActive: Int, val maxActive: Int,
                          val bc: BucketCounter,
                          val completed: Int, val stale: Int, val dropped: Int,
-                         val outOfOrder: Int, duplicate: Int, ambiguous: Int)  extends Stats {
+                         val outOfOrder: Int, duplicate: Int, ambiguous: Int)  extends Stats with ConsoleStats {
   def time (millis: Double): String = {
     if (millis.isInfinity || millis.isNaN) {
       "     "
@@ -207,25 +225,25 @@ class FlightObjectStats (val topic: String, val takeMillis: Long, val elapsedMil
     }
   }
 
-  def printToConsole = {
-    printConsoleHeader
+  def writeToConsole(pw:PrintWriter) = {
+    pw.println(consoleHeader)
 
-    println(s"observed channels: $channels")
+    pw.println(s"observed channels: $channels")
 
     val dtAvg = time(bc.mean)
     val dtMin = time(bc.min)
     val dtMax = time(bc.max)
 
-    println("active    min    max   cmplt stale  drop order   dup ambig        n dtMin dtMax dtAvg")
-    println("------ ------ ------   ----- ----- ----- ----- ----- -----  ------- ----- ----- -----")
-    print(f"$active%6d $minActive%6d $maxActive%6d   $completed%5d $stale%5d $dropped%5d $outOfOrder%5d $duplicate%5d $ambiguous%5d ")
+    pw.println("active    min    max   cmplt stale  drop order   dup ambig        n dtMin dtMax dtAvg")
+    pw.println("------ ------ ------   ----- ----- ----- ----- ----- -----  ------- ----- ----- -----")
+    pw.print(f"$active%6d $minActive%6d $maxActive%6d   $completed%5d $stale%5d $dropped%5d $outOfOrder%5d $duplicate%5d $ambiguous%5d ")
     if (bc.nSamples > 0) {
-      println(f"  ${bc.nSamples}%6d ${time(bc.min)} ${time(bc.max)} ${time(bc.mean)}")
+      pw.println(f"  ${bc.nSamples}%6d ${time(bc.min)} ${time(bc.max)} ${time(bc.mean)}")
       bc.processBuckets( (i,c) => {
-        if (i%6 == 0) println  // 6 buckets per line
-        print(f"${Math.round(i*bc.bucketSize/1000)}%3ds: $c%6d | ")
+        if (i%6 == 0) pw.println  // 6 buckets per line
+        pw.print(f"${Math.round(i*bc.bucketSize/1000)}%3ds: $c%6d | ")
       })
-      println
-    } else println
+    }
+    pw.println
   }
 }

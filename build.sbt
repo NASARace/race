@@ -39,7 +39,7 @@ lazy val raceCore = createProject("race-core", commonSettings).
   settings(
     mainClass in Compile := Some("gov.nasa.race.main.ConsoleMain")
   ).
-  addLibraryDependencies(akkaActor,akkaRemote,typesafeConfig,nscalaTime,scalaReflect,jsch)
+  addLibraryDependencies(akkaActor,akkaRemote,typesafeConfig,nscalaTime,scalaReflect,jsch,scalaTags)
 
 lazy val raceLauncher = createProject("race-launcher", commonSettings).
   dependsOn(raceCore).
