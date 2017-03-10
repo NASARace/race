@@ -57,8 +57,8 @@ class DDSImportActor (val config: Config) extends PublishingRaceActor {
   }
 
   override def onStartRaceActor(originator: ActorRef) = {
-    super.onStartRaceActor(originator)
     if (ddsReader.isDefined) thread.start
+    super.onTerminateRaceActor(originator)
   }
 
   override def onTerminateRaceActor (originator: ActorRef) = {

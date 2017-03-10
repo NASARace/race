@@ -325,15 +325,18 @@ class RaceActorSystem(val config: Config) extends LogController with VerifiableA
     }
   }
 
-  def resetSimClockRequest (d: DateTime, tscale: Double): Boolean = {
-    simClock.reset(d,tscale)
+  /**
+    * some actor asked for a simClock reset
+    * TODO - this does not yet handle remote RAS
+    */
+  def resetSimClockRequest (d: DateTime, tScale: Double): Boolean = {
     if (isLive) {
-      askVerifiableForResult(master, RaceResetClock) {
+      askVerifiableForResult(master, RaceResetClock(ActorRef.noSender,d,tScale)) {
         case RaceClockReset =>
           info(s"universe $name clock reset")
           true
-        case TimedOut =>
-          warning(s"universe $name reset clock timeout")
+        case RaceClockResetFailed =>
+          warning(s"universe $name reset clock failed")
           false
       }
     } else false // nothing to reset

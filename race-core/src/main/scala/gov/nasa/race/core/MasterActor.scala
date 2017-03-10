@@ -22,6 +22,7 @@ import akka.actor._
 import akka.pattern.AskSupport
 import akka.util.Timeout
 import com.typesafe.config.Config
+import gov.nasa.race.common.Clock
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.Messages._
 import gov.nasa.race.util.NetUtils._
@@ -109,9 +110,11 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ImplicitActorLogging
       info(s"master $name got RaceTerminateRequest")
       ras.terminationRequest(sender)
 
-    case RaceResetClock => onRaceResetClock // RAS changed simClock, inform actors
+    case RaceResetClock(originator: ActorRef,d:DateTime,tScale:Double) =>
+      onRaceResetClock(originator,d,tScale) // RAS changed simClock, inform actors
 
-    //--- time management
+    //--- inter RAS time management
+      // TODO - this needs to be unified with SyncWithRaceClock
     case SyncSimClock(dateTime: DateTime, timeScale: Double) =>
       simClock.reset(dateTime,timeScale)
       sender ! RaceAck
@@ -500,21 +503,44 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ImplicitActorLogging
       }
     }
   }
-  def onRaceResetClock = {
-    val requester = sender
+
+  // TODO - this does not yet handle remote RAS
+  // NOTE - clock value changes have to occur here since we might have to reset if
+  // one of the actors does not respond
+  def onRaceResetClock (originator: ActorRef, date: DateTime, tScale: Double) = {
+    val requester = sender // might be different than originator
+    val saved = ras.simClock.save // we might have to restore
+    var changed = List.empty[ActorRef] // actors that so far have acknowledged
     var nAck = 0
-    ras.actors.foreach { e =>
-      val (actorRef, actorConfig) = e
-      info(s"sending ResetSimClock to ${actorRef.path.name}")
-      askForResult(actorRef ? ResetSimClock) {
-        case SimClockReset =>
-          info(s"got SimClockReset from ${actorRef.path.name}")
-          nAck += 1
-        case TimedOut =>
-          warning(s"no SimClockReset response from ${actorRef.path.name}")
-      }
+
+    def restoreClock (c: Clock) = {
+      ras.simClock.reset(c)
+      // since those did previously respond we don't wait for ack
+      changed.reverse.foreach( aRef => aRef ! SyncWithRaceClock)
+      requester ! RaceClockResetFailed
     }
-    if (nAck == ras.actors.size) { // all actors accounted for
+
+    ras.simClock.reset(date, tScale)
+    ras.actors.foreach { e =>
+      val (actorRef, _) = e
+      if (actorRef != originator) {
+        info(s"sending SyncWithRaceClock to ${actorRef.path.name}")
+        askForResult(actorRef ? SyncWithRaceClock) {
+          case RaceClockSynced =>
+            info(s"got RaceClockSynced from ${actorRef.path.name}")
+            changed = actorRef :: changed
+            nAck += 1
+          case RaceClockSyncFailed(reason) =>
+            info(s"SyncWithRaceClock rejected by ${actorRef.path.name}: $reason")
+            restoreClock(saved)
+          case TimedOut =>
+            warning(s"no SyncWithRaceClock response from ${actorRef.path.name}")
+            restoreClock(saved)
+        }
+      } else nAck += 1 // we take a request as an ack
+    }
+    if (nAck == ras.actors.size) {
+      // all actors accounted for
       requester ! RaceClockReset
     }
   }

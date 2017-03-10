@@ -19,12 +19,14 @@ package gov.nasa.race.http
 import java.io.File
 
 import akka.actor.Props
+import akka.http.scaladsl.marshalling.ToResponseMarshallable
+import akka.http.scaladsl.model.StatusCodes._
 import akka.http.scaladsl.model.{ContentTypes, HttpEntity}
 import akka.http.scaladsl.server.Directives.{complete, _}
 import akka.http.scaladsl.server.Route
-import akka.http.scaladsl.model.StatusCodes._
 import com.typesafe.config.Config
-import gov.nasa.race.common.{HtmlStats, Stats}
+import gov.nasa.race._
+import gov.nasa.race.common.Stats
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.Messages.BusEvent
 import gov.nasa.race.core.{ParentContext, RaceActorRec, SubscribingRaceActor}
@@ -34,6 +36,7 @@ import scala.collection.mutable.{SortedMap => MSortedMap}
 import scala.concurrent.duration._
 import scalatags.Text.all.{head => htmlHead, _}
 
+import HtmlStats._
 
 /**
   * server routes to display statistics
@@ -42,20 +45,23 @@ class HttpStatsReporter (val parent: ParentContext, val config: Config) extends 
 
   val refreshRate = config.getFiniteDurationOrElse("refresh", 5.seconds)
   val cssClass = config.getStringOrElse("css-class", "race")
-
   val cssPath = config.getStringOrElse("css","race.css")
   val cssContent: Option[String] = FileUtils.fileContentsAsUTF8String(new File(cssPath)) orElse {
     FileUtils.resourceContentsAsUTF8String(getClass,cssPath)
   }
 
-  var statsPage = html(
-    htmlHeader,
-    body(cls := cssClass)(
-      p("no statistics yet..")
-    )
-  ).toString()
+  var httpContent = HttpContent(blankPage,noResources)
 
   parent.addChild(RaceActorRec(parent.actorOf(Props(new RouteActor(config)),"statsRoute"),config))
+
+  def blankPage = {
+    html(
+      htmlHeader,
+      body(cls := cssClass)(
+        p("no statistics yet..")
+      )
+    ).toString()
+  }
 
   def htmlHeader =  htmlHead(
     meta(httpEquiv := "refresh", content := s"${refreshRate.toSeconds}"),
@@ -63,25 +69,45 @@ class HttpStatsReporter (val parent: ParentContext, val config: Config) extends 
   )
 
   class RouteActor (val config: Config) extends SubscribingRaceActor {
-    val topics = MSortedMap.empty[String, HtmlStats]
+    val title = config.getStringOrElse("title", "Statistics")
+    val formatters: Seq[HtmlStatsFormatter] = config.getConfigSeq("formatters").flatMap ( conf =>
+      parent.newInstance[HtmlStatsFormatter](conf.getString("class"),Array(classOf[Config]),Array(conf))
+    )
+    val topics = MSortedMap.empty[String, Stats]
 
     info("$name created")
 
     override def handleMessage = {
-      case BusEvent(_, stats: HtmlStats, _) =>
+      case BusEvent(_, stats: Stats, _) =>
         topics += stats.topic -> stats
-        statsPage = renderPage
-      case BusEvent(_,other: Stats, _) => info(s"unhandled stats type ignored: ${other.getClass}")
+        httpContent = renderPage
     }
 
-    def renderPage: String = {
-      html(
+    def renderPage: HttpContent = {
+      val topicArtifacts = getTopicArtifacts
+
+      val page = html(
         htmlHeader,
         body(cls := cssClass)(
-          h1("Statistics"),
-          topics.values.toSeq.map(_.toHtml)
+          h1(title),
+          topicArtifacts.map(_.html)
         )
       ).toString
+
+      val resources = topicArtifacts.foldLeft(noResources)( (acc,t) => acc ++ t.resources )
+
+      HttpContent(page,resources)
+    }
+
+    def getTopicArtifacts: Seq[HtmlArtifacts] = topics.values.toSeq.flatMap(getHtml)
+
+    def getHtml (stats: Stats): Option[HtmlArtifacts] = {
+      firstFlatMapped(formatters)(_.toHtml(stats)).orElse {
+        stats match {
+          case htmlStats: HtmlStats => Some(htmlStats.toHtml)
+          case _ => None // give up, we don't know how to turn this into HTML
+        }
+      }
     }
   }
 
@@ -89,11 +115,18 @@ class HttpStatsReporter (val parent: ParentContext, val config: Config) extends 
     get {
       pathPrefix("race") {
         path("statistics") {
-          complete(HttpEntity(ContentTypes.`text/html(UTF-8)`, statsPage))
+          complete(HttpEntity(ContentTypes.`text/html(UTF-8)`, httpContent.htmlPage))
         } ~ path("race.css"){
           cssContent match {
             case Some(s) => complete(HttpEntity(ContentTypes.`text/html(UTF-8)`, s))
-            case None => complete((NotFound, "Not here!"))
+            case None => complete((NotFound, "race.css"))
+          }
+        } ~ extractUnmatchedPath { remainingPath =>
+          val key = remainingPath.tail.toString
+          val content = httpContent
+          content.htmlResources.get(key) match {
+            case Some(resource) => complete(resource)
+            case None => complete((NotFound, s"not found: $remainingPath"))
           }
         }
       }

@@ -115,9 +115,9 @@ class XmlMsgStatsCollector (val config: Config) extends SubscribingRaceActor wit
   }
 
   override def onStartRaceActor(originator: ActorRef) = {
-    super.onStartRaceActor(originator)
     channels = readFromAsString
     startScheduler
+    super.onStartRaceActor(originator)
   }
 
   override def handleMessage = {

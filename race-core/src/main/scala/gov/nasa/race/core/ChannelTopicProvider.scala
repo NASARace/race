@@ -159,14 +159,14 @@ trait ChannelTopicProvider extends PublishingRaceActor {
     })
   }
 
-  override def onInitializeRaceActor(raceContext: RaceContext, actorConf: Config): Any = {
-    super.onInitializeRaceActor(raceContext, actorConf)
+  override def onInitializeRaceActor(raceContext: RaceContext, actorConf: Config)= {
     bus.subscribe(self, PROVIDER_CHANNEL) // this is where we get requests from
+    super.onInitializeRaceActor(raceContext, actorConf)
   }
 
-  override def onTerminateRaceActor(originator: ActorRef): Any = {
-    super.onTerminateRaceActor(originator)
+  override def onTerminateRaceActor(originator: ActorRef) = {
     bus.unsubscribe(self, PROVIDER_CHANNEL)
+    super.onTerminateRaceActor(originator)
   }
 
   def handleCTProviderMessage: Receive = {

@@ -34,8 +34,8 @@ class TestPublisher (val config: Config) extends PublishingRaceActor with Period
   var n = 0
 
   override def onStartRaceActor(originator: ActorRef) = {
-    super.onStartRaceActor(originator)
     startScheduler
+    super.onStartRaceActor(originator)
   }
 
   override def handleMessage = {

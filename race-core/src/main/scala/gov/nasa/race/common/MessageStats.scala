@@ -17,15 +17,9 @@
 package gov.nasa.race.common
 
 import java.io.PrintWriter
-
 import gov.nasa.race.mapIteratorToArray
 import gov.nasa.race.util.{FileUtils, StringUtils}
-
 import scala.collection.mutable.{SortedMap => MSortedMap}
-
-import scalatags.Text.all._
-import scalatags.generic.TypedTag
-import scalatags.text.{Builder => STBuilder}
 
 /**
   * XML message statistics
@@ -92,8 +86,7 @@ case class PatternStatsSnapshot(
 )
 
 class SubscriberMsgStats (val topic: String, val takeMillis: Long, val elapsedMillis: Long, val channels: String,
-                          val messages: Array[MsgStatsSnapshot]) extends Stats
-                                    with ConsoleStats with HtmlStats {
+                          val messages: Array[MsgStatsSnapshot]) extends Stats with ConsoleStats {
   def writeToConsole(pw: PrintWriter) = {
     pw.println(consoleHeader)
 
@@ -128,57 +121,5 @@ class SubscriberMsgStats (val topic: String, val takeMillis: Long, val elapsedMi
       }
     }
     pw.println
-  }
-
-
-  def toHtml: TypedTag[STBuilder,String,String] = {
-    def patternStats(s:PatternStatsSnapshot) = tr(
-      td(cls:="right")(s.count),
-      td(cls:="left")(s.pattern)
-    )
-
-    div(
-      htmlTopicHeader(channels),
-      table(
-        tr(
-          th("count"), th("msg/sec"), th("peak"), th("size"), th("avgSize"), th(cls:="left")("msg")
-        ),
-        for (m <- messages) yield tr(cls:="value top")(
-          td(m.count),
-          td(f"${m.avgMsgPerSec}%.1f"),
-          td(f"${m.peakMsgPerSec}%.1f"),
-          td(FileUtils.sizeString(m.byteSize)),
-          td(FileUtils.sizeString((m.byteSize / m.count).toInt)),
-          td(cls:="left")(
-            m.msgName,
-            table(cls:="noBorder")(
-              for (s <- m.paths) yield patternStats(s),
-              for (s <- m.patterns) yield patternStats(s)
-            )
-          )
-        ),
-        if (messages.size > 1) {
-          var count = 0
-          var avgRate = 0.0
-          var peakRate = 0.0
-          var byteSize = 0L
-
-          for (m <- messages) {
-            count += m.count
-            avgRate += m.avgMsgPerSec
-            peakRate += m.peakMsgPerSec
-            byteSize += m.byteSize
-          }
-
-          tr(
-            td(count),
-            td(f"$avgRate%.1f"),
-            td(f"$peakRate%.1f"),
-            td(FileUtils.sizeString(byteSize)),
-            td(if (count > 0) FileUtils.sizeString((byteSize/count).toInt) else "")
-          )
-        } else p()
-      )
-    )
   }
 }

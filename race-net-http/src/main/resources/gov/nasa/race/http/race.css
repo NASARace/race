@@ -1,13 +1,11 @@
-span.red {
-  color: red;
-}
+
 .label {
   padding-left: 2em;
   color: black;
   align: right;
 }
 .value {
-  color: green;
+  color: blue;
   font-family: monospace;
 }
 h2 {
@@ -20,6 +18,7 @@ h2 span {
 }
 
 table {
+  align: left;
   text-align: right;
   vertical-align: top;
   border-collapse: collapse;
@@ -32,12 +31,15 @@ table td, table th {
   padding-top: 2px;
   border: 1px solid lightgray;
 }
-table.noBorder td {
+table.noBorder th, table.noBorder td {
   border: 0px none lightgray;
+  border-style: none;
 }
 
 table td {
   vertical-align: top;
+  color: blue;
+  font-family: monospace;
 }
 th.left, td.left {
   text-align: left;

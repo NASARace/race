@@ -98,12 +98,11 @@ class PortForwarder (val config: Config) extends PeriodicRaceActor {
   }
 
   override def onTerminateRaceActor(originator: ActorRef) = {
-    super.onTerminateRaceActor(originator)
-
     if (session.isConnected) {
       session.disconnect()
       info(s"stopped port forwarding to $host")
     }
+    super.onTerminateRaceActor(originator)
   }
 
   override def handleMessage = {

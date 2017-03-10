@@ -30,6 +30,8 @@ import scala.language.postfixOps
 
 /**
   * import actor that publishes responses for configured, periodic http requests
+  *
+  * TODO - move this to akka-http client
   */
 class HttpImportActor (val config: Config) extends PublishingRaceActor with SubscribingRaceActor {
 
@@ -62,18 +64,17 @@ class HttpImportActor (val config: Config) extends PublishingRaceActor with Subs
 
   //--- system message callbacks
   override def onStartRaceActor(originator: ActorRef) = {
-    super.onStartRaceActor(originator)
-
     if (requestInterval.length > 0) {
       optSchedule = scheduleNow(requestInterval,SendRequest)
     } else {
       self ! SendRequest
     }
+    super.onStartRaceActor(originator)
   }
 
   override def onTerminateRaceActor(originator: ActorRef) = {
-    super.onTerminateRaceActor(originator)
     ifSome(optSchedule){ _.cancel }
     client.close
+    super.onTerminateRaceActor(originator)
   }
 }

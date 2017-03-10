@@ -54,8 +54,6 @@ class RaceViewerActor(val config: Config) extends ContinuousTimeRaceActor
   //--- RaceActor callbacks
 
   override def onTerminateRaceActor(originator: ActorRef) = {
-    super.onTerminateRaceActor(originator)
-
     if (view.displayable) {
       info(s"${name} closing WorldWind window..")
       view.close
@@ -63,6 +61,7 @@ class RaceViewerActor(val config: Config) extends ContinuousTimeRaceActor
     } else {
       info(s"${name} WorldWind window already closed")
     }
+    super.onTerminateRaceActor(originator)
   }
 }
 

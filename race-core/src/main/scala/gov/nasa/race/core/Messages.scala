@@ -53,32 +53,37 @@ object Messages {
   /** set RaceContext and do runtime initialization of RaceActors */
   case class InitializeRaceActor (raceContext: RaceContext, actorConfig: Config) extends RaceSystemMessage
   case object RaceActorInitialized extends RaceSystemMessage
-  case class RaceActorInitializeFailed (reason: String) extends RaceSystemMessage
+  case class RaceActorInitializeFailed (reason: String="unknown") extends RaceSystemMessage
 
   /** inform RaceActor of simulation start */
   case class StartRaceActor (originator: ActorRef) extends RaceSystemMessage
   case object RaceActorStarted extends RaceSystemMessage
-  case class RaceActorStartFailed (reason: String) extends RaceSystemMessage
+  case class RaceActorStartFailed (reason: String="unknown") extends RaceSystemMessage
 
   /** pause/resume of RaceActors */
   case class PauseRaceActor (originator: ActorRef) extends RaceSystemMessage
   case object RaceActorPaused extends RaceSystemMessage
-  case class RaceActorPauseFailed (reason: String) extends RaceSystemMessage
+  case class RaceActorPauseFailed (reason: String="unknown") extends RaceSystemMessage
 
   case class ResumeRaceActor (originator: ActorRef) extends RaceSystemMessage
   case object RaceActorResumed extends RaceSystemMessage
-  case class RaceActorResumeFailed (reason: String) extends RaceSystemMessage
+  case class RaceActorResumeFailed (reason: String="unknown") extends RaceSystemMessage
 
   /** liveness check */
   case object ProcessRaceActor extends RaceSystemMessage
   case object RaceActorProcessed extends RaceSystemMessage
   case class PingRaceActor (tSentNanos: Long=System.nanoTime(), tReceivedNanos: Long=0) extends RaceSystemMessage
 
+  /** sim clock change notifications */
+  case object SyncWithRaceClock extends RaceSystemMessage // master -> actors
+  case object RaceClockSynced extends RaceSystemMessage // actor -> master
+  case class RaceClockSyncFailed(reason: String="unknown") extends RaceSystemMessage
+
   /** inform RaceActor of termination */
   case class TerminateRaceActor (originator: ActorRef) extends RaceSystemMessage
   case object RaceActorTerminated extends RaceSystemMessage
   case object RaceActorTerminateIgnored extends RaceSystemMessage
-  case class RaceActorTerminateFailed (reason: String) extends RaceSystemMessage
+  case class RaceActorTerminateFailed (reason: String="unknown") extends RaceSystemMessage
 
   case object RaceTerminateRequest  // ras internal termination request: RaceActor -> Master
   case object RaceAck // generic acknowledgement
@@ -95,16 +100,16 @@ object Messages {
   case object RaceTerminate             // RAS -> Master
   case class RemoteRaceTerminate (remoteMaster: ActorRef) // Master -> RemoteMaster
   case object RaceTerminated            // Master -> RAS, remote Master -> Master
-  case object RaceResetClock            // RAS -> Master
-  case object RaceClockReset            // Master -> RAS
+
+  case class RaceResetClock (originator: ActorRef,d: DateTime,tScale: Double) // originator -> Master
+  case object RaceClockReset            // Master -> originator
+  case object RaceClockResetFailed      // Master -> originator
 
   case class SetLogLevel (newLevel: LogLevel) extends RaceSystemMessage
 
   // time keeping between actor systems
   trait ClockMessage extends RaceSystemMessage
   case class SyncSimClock (date: DateTime, timeScale: Double) extends ClockMessage
-  case object ResetSimClock extends ClockMessage // master -> actors
-  case object SimClockReset extends ClockMessage // actor -> master
   case object StopSimClock extends ClockMessage
   case object ResumeSimClock extends ClockMessage
 

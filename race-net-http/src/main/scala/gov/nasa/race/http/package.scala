@@ -16,12 +16,15 @@
  */
 package gov.nasa.race
 
-import akka.http.scaladsl.server.Route
-import com.typesafe.config.Config
+import akka.http.scaladsl.marshalling.ToResponseMarshallable
+
+import scalatags.generic.TypedTag
+import scalatags.text.{Builder => STBuilder}
 
 /**
   * package gov.nasa.race.http contains actors to serve and retrieve http data
   */
 package object http {
-
+  type HtmlElement = TypedTag[STBuilder,String,String]
+  type HtmlResources = Map[String,ToResponseMarshallable]
 }

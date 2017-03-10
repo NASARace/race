@@ -110,7 +110,7 @@ abstract class SubscribingRaceLayer (raceView: RaceView, config: Config)
 class RaceLayerActor (val config: Config, val layer: SubscribingRaceLayer) extends ChannelTopicSubscriber {
   info(s"created RaceLayerActor '${layer.name}'")
 
-  override def onInitializeRaceActor(rc: RaceContext, actorConf: Config): Unit = {
+  override def onInitializeRaceActor(rc: RaceContext, actorConf: Config) = {
     info(s"initializing RaceLayerActor '${layer.name}'")
     super.onInitializeRaceActor(rc, layer.config)
   }

@@ -39,7 +39,7 @@ lazy val raceCore = createProject("race-core", commonSettings).
   settings(
     mainClass in Compile := Some("gov.nasa.race.main.ConsoleMain")
   ).
-  addLibraryDependencies(akkaActor,akkaRemote,typesafeConfig,nscalaTime,scalaReflect,jsch,scalaTags)
+  addLibraryDependencies(akkaActor,akkaRemote,typesafeConfig,nscalaTime,scalaReflect,jsch)
 
 lazy val raceLauncher = createProject("race-launcher", commonSettings).
   dependsOn(raceCore).
@@ -64,15 +64,15 @@ lazy val raceNetDDS = createProject("race-net-dds", commonSettings).
 
 lazy val raceNetHttp = createProject("race-net-http", commonSettings).
   dependsOn(raceCore).
-  addLibraryDependencies(akkaHttp,scalaTags,asyncHttp)
+  addLibraryDependencies(akkaHttp,scalaTags,asyncHttp,scalaTags)
 
 lazy val raceSwing = createProject("race-swing", commonSettings).
   dependsOn(raceCore).
   addLibraryDependencies(akkaActor,scalaSwing,rsTextArea)
 
 lazy val raceAir = createProject("race-air", commonSettings).
-  dependsOn(raceCore,raceNetJMS).
-  addLibraryDependencies(akkaActor,typesafeConfig,nscalaTime,scalaParser,scodecAll)
+  dependsOn(raceCore,raceNetJMS,raceNetHttp).
+  addLibraryDependencies(akkaActor,typesafeConfig,nscalaTime,scalaParser,scodecAll,scalaTags,jfreeChart)
 
 lazy val raceWW = createProject("race-ww", commonSettings).
   dependsOn(raceCore,raceSwing).

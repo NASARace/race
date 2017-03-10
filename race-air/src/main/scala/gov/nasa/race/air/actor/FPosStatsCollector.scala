@@ -16,9 +16,11 @@
  */
 package gov.nasa.race.air.actor
 
-import java.io.PrintWriter
+import java.awt.{Color, Font}
+import java.io.{ByteArrayOutputStream, PrintWriter}
 
 import akka.actor.ActorRef
+import akka.http.scaladsl.model.{HttpEntity, MediaTypes}
 import com.typesafe.config.Config
 import gov.nasa.race._
 import gov.nasa.race.air.{FlightCompleted, FlightPos}
@@ -27,10 +29,16 @@ import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.Messages.{BusEvent, RaceTick}
 import gov.nasa.race.core.{ContinuousTimeRaceActor, PeriodicRaceActor, PublishingRaceActor, SubscribingRaceActor}
 import gov.nasa.race.geo.GreatCircle
+import gov.nasa.race.http.{HtmlArtifacts, HtmlStats}
+import org.jfree.chart.{ChartFactory, ChartUtilities}
+import org.jfree.chart.plot.{PlotOrientation, XYPlot}
+import org.jfree.data.xy.{XYBarDataset, XYSeries, XYSeriesCollection}
 import org.joda.time.DateTime
 
 import scala.collection.mutable.{HashMap => MHashMap}
 import scala.concurrent.duration._
+import scalatags.Text.all._
+
 
 /**
   * actor that collects update statistics for FPos objects
@@ -55,7 +63,7 @@ class FPosStatsCollector (val config: Config) extends SubscribingRaceActor with 
   val resetClockDiff = config.getOptionalFiniteDuration("reset-clock-diff") // sim time
 
   val dropAfter = config.getFiniteDurationOrElse("drop-after", 5.minutes).toMillis // this is sim time
-  val settleTime = config.getFiniteDurationOrElse("settle-time", 2.minutes).toMillis
+  val settleTime = config.getFiniteDurationOrElse("settle-time", 1.minute).toMillis
 
   val activeFlights = MHashMap.empty[String,FPosUpdates]
 
@@ -77,9 +85,9 @@ class FPosStatsCollector (val config: Config) extends SubscribingRaceActor with 
   )
 
   override def onStartRaceActor(originator: ActorRef) = {
-    super.onStartRaceActor(originator)
     channels = readFromAsString
     startScheduler
+    super.onStartRaceActor(originator)
   }
 
   override def handleMessage = {
@@ -202,7 +210,7 @@ class FPosStatsCollector (val config: Config) extends SubscribingRaceActor with 
       }
     }
 
-    new FlightObjectStats(title, tNow, elapsedSimTimeMillisSinceStart, channels,
+    new FPosStats(title, tNow, elapsedSimTimeMillisSinceStart, channels,
                           activeFlights.size,minActive,maxActive,
                           updateStats.clone,
                           completedFlights,staleFlights,droppedFlights,
@@ -210,11 +218,12 @@ class FPosStatsCollector (val config: Config) extends SubscribingRaceActor with 
   }
 }
 
-class FlightObjectStats (val topic: String, val takeMillis: Long, val elapsedMillis: Long, val channels: String,
-                         val active: Int, val minActive: Int, val maxActive: Int,
-                         val bc: BucketCounter,
-                         val completed: Int, val stale: Int, val dropped: Int,
-                         val outOfOrder: Int, duplicate: Int, ambiguous: Int)  extends Stats with ConsoleStats {
+class FPosStats(val topic: String, val takeMillis: Long, val elapsedMillis: Long, val channels: String,
+                val active: Int, val minActive: Int, val maxActive: Int,
+                val bc: BucketCounter,
+                val completed: Int, val stale: Int, val dropped: Int,
+                val outOfOrder: Int, duplicate: Int, ambiguous: Int)  extends Stats
+                      with ConsoleStats with HtmlStats {
   def time (millis: Double): String = {
     if (millis.isInfinity || millis.isNaN) {
       "     "
@@ -227,12 +236,7 @@ class FlightObjectStats (val topic: String, val takeMillis: Long, val elapsedMil
 
   def writeToConsole(pw:PrintWriter) = {
     pw.println(consoleHeader)
-
     pw.println(s"observed channels: $channels")
-
-    val dtAvg = time(bc.mean)
-    val dtMin = time(bc.min)
-    val dtMax = time(bc.max)
 
     pw.println("active    min    max   cmplt stale  drop order   dup ambig        n dtMin dtMax dtAvg")
     pw.println("------ ------ ------   ----- ----- ----- ----- ----- -----  ------- ----- ----- -----")
@@ -245,5 +249,76 @@ class FlightObjectStats (val topic: String, val takeMillis: Long, val elapsedMil
       })
     }
     pw.println
+  }
+
+  def hasSamples = bc.nSamples > 0
+
+  def toHtml = {
+    val res = diagramArtifacts
+
+    val html =
+      div(
+        HtmlStats.htmlTopicHeader(topic,channels,elapsedMillis),
+        table(cls:="noBorder")(
+          tr(
+            th("active"),th("min"),th("max"),th("cmplt"),th(""),
+            th("n"),th("Δt min"),th("Δt max"),th("Δt avg"),th(""),
+            th("stale"),th("drop"),th("order"),th("dup"),th("amb")
+          ),
+          tr(
+            td(active),td(minActive),td(maxActive),td(completed),td(""),
+            if (bc.nSamples > 0){
+              Seq( td(bc.nSamples),td(time(bc.min)),td(time(bc.max)),td(time(bc.mean)))
+            } else {
+              Seq( td("-"),td("-"),td("-"),td("-"))
+            },
+            td(""), td(stale),td(dropped),td(outOfOrder),td(duplicate),td(ambiguous)
+          )
+        ),
+        res.html
+      )
+
+    HtmlArtifacts(html,res.resources)
+  }
+
+  def diagramArtifacts = {
+    if (hasSamples) {
+      def dataset = {
+        val ds = new XYSeries("updates")
+        bc.processBuckets { (i, count) => ds.add(Math.round(i * bc.bucketSize / 1000), count) }
+        val sc = new XYSeriesCollection
+        sc.addSeries(ds)
+        new XYBarDataset(sc, 10.0)
+      }
+
+      val chart = ChartFactory.createXYBarChart(null, "sec", false, "updates", dataset,
+        PlotOrientation.HORIZONTAL, false, false, false)
+      val plot = chart.getPlot.asInstanceOf[XYPlot]
+      plot.setBackgroundAlpha(0)
+      plot.setDomainGridlinePaint(Color.lightGray)
+      plot.setRangeGridlinePaint(Color.lightGray)
+
+      val labelFont = new Font("Serif", Font.PLAIN, 30)
+      val domainAxis = plot.getDomainAxis
+      domainAxis.setInverted(true)
+      domainAxis.setLabelFont(labelFont)
+      val rangeAxis = plot.getRangeAxis
+      rangeAxis.setLabelFont(labelFont)
+
+      val w = 800
+      val h = 300
+      val out = new ByteArrayOutputStream
+      ChartUtilities.writeChartAsPNG(out, chart, w, h, true, 6)
+      val ba = out.toByteArray
+
+      val path = "fpos-update-histogram.png"
+      val html = p(img(src:=path, width:=s"${w/2}", height:=s"${h/2}"))// down sample to increase sharpness
+      val imgContent = HttpEntity(MediaTypes.`image/png`, ba)
+
+      HtmlArtifacts(html, Map(path -> imgContent))
+
+    } else {
+      HtmlArtifacts(p(""), HtmlStats.noResources)
+    }
   }
 }

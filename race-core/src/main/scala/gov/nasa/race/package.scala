@@ -122,6 +122,14 @@ package object race {
     for (a <- oa; b <- ob) yield f(a, b).get
   }
 
+  def firstFlatMapped[A,B](seq: Seq[A])(f: (A)=>Option[B]): Option[B] = {
+    seq.foreach { a =>
+      val ob = f(a)
+      if (ob.isDefined) return ob // shortcut
+    }
+    None
+  }
+
   //--- nullables
 
   def ifNotNull[T](t: T)(f: (T) => Any): T = {

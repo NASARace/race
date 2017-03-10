@@ -55,9 +55,9 @@ class DuplicatedMsgDetector (val config: Config) extends SubscribingRaceActor
   var channels = ""
 
   override def onStartRaceActor(originator: ActorRef) = {
-    super.onStartRaceActor(originator)
     channels = readFromAsString
     startScheduler
+    super.onStartRaceActor(originator)
   }
 
   override def handleMessage = {

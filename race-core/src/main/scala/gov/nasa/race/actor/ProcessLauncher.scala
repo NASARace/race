@@ -65,7 +65,6 @@ class ProcessLauncher (val config: Config) extends PeriodicRaceActor {
 
 
   override def onInitializeRaceActor(rc: RaceContext, actorConf: Config) = {
-    super.onInitializeRaceActor(rc,actorConf)
 
     def checkIgnored (path: String) = {
       if (actorConf.hasPath(path)){
@@ -83,33 +82,33 @@ class ProcessLauncher (val config: Config) extends PeriodicRaceActor {
 
     if (initLaunch) proc = startProcess
     ifSome(proc){ p=>
-      Thread.sleep(1000)
+      Thread.sleep(500) // not good
       if (!p.isAlive) throw new IOException(s"process $procName did not start")
       startScheduler
     }
+
+    super.onInitializeRaceActor(rc,actorConf)
   }
 
   override def onStartRaceActor(originator: ActorRef) = {
-    super.onStartRaceActor(originator)
-
     if (!proc.isDefined) proc = startProcess
     ifSome(proc){ p=>
       if (!p.isAlive) throw new IOException(s"process $procName did not start")
     }
+    super.onStartRaceActor(originator)
   }
 
   override def onTerminateRaceActor(originator: ActorRef) = {
-    super.onTerminateRaceActor(originator)
-
     ifSome(proc) { p=>
       p.destroy()
       if (ensureKill & p.isAlive){ // try harder
         Thread.sleep(500)
         if (p.isAlive) p.destroyForcibly()
         Thread.sleep(500)
-        if (p.isAlive) throw new RaceException(s"ProcessLauncher termintation failed: $procName")
+        if (p.isAlive) throw new RaceException(s"ProcessLauncher termination failed: $procName")
       }
     }
+    super.onTerminateRaceActor(originator)
   }
 
   def procSpec: String = (procName +: procArgs).mkString(" ")

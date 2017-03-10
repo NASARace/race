@@ -46,13 +46,13 @@ class FlightDropperActor(val config: Config) extends PublishingRaceActor
   //--- end init
 
   override def onStartRaceActor(originator: ActorRef) = {
-    super.onStartRaceActor(originator)
     schedule = scheduleNow(interval,CheckFlightPos)
+    super.onStartRaceActor(originator)
   }
 
   override def onTerminateRaceActor(originator: ActorRef) = {
-    super.onTerminateRaceActor(originator)
     ifSome(schedule){ _.cancel }
+    super.onTerminateRaceActor(originator)
   }
 
   override def handleMessage = {

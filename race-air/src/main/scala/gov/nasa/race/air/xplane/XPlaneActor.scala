@@ -125,18 +125,15 @@ class XPlaneActor (val config: Config) extends PublishingRaceActor
   }
 
   override def onInitializeRaceActor(rc: RaceContext, actorConf: Config) = {
-
-    super.onInitializeRaceActor(rc, actorConf)
     //sendAirport
     sendOtherAircraft
-
     //sendOwnAircraft
     sendRPOSrequest
+
+    super.onInitializeRaceActor(rc, actorConf)
   }
 
   override def onStartRaceActor(originator: ActorRef) = {
-    super.onStartRaceActor(originator)
-
     importThread.start
 
     if (publishInterval.length > 0) {
@@ -148,13 +145,16 @@ class XPlaneActor (val config: Config) extends PublishingRaceActor
       info(s"starting XPlane proximity scheduler $proximityInterval")
       proximityScheduler = Some(scheduler.schedule(0 seconds, proximityInterval, self, UpdateXPlane))
     }
+
+    super.onStartRaceActor(originator)
   }
 
   override def onTerminateRaceActor(originator: ActorRef) = {
-    super.onTerminateRaceActor(originator)
     ifSome(publishScheduler){ _.cancel }
     ifSome(proximityScheduler){ _.cancel }
     socket.close()
+
+    super.onTerminateRaceActor(originator)
   }
 
   override def handleMessage = {

@@ -47,9 +47,9 @@ class ScheduledFileImportActor (val config: Config)  extends PublishingRaceActor
   }
 
   override def onStartRaceActor(originator: ActorRef) = {
-    super.onStartRaceActor(originator)  // <2do> - this has to translate simTime to wallTime
     fileScheduler.setTimeBase(DateTime.now)
     scheduleNext
+    super.onStartRaceActor(originator)  // <2do> - this has to translate simTime to wallTime
   }
 
   override def handleMessage: Receive = {

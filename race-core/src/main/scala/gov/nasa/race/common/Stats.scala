@@ -22,9 +22,6 @@ import gov.nasa.race.util.ConsoleIO.{resetColor, reverseColor}
 import gov.nasa.race.util.DateTimeUtils.durationMillisToHMMSS
 import gov.nasa.race.util.StringUtils
 
-import scalatags.generic.TypedTag
-import scalatags.text.{Builder=>STBuilder}
-import scalatags.Text.all._
 
 /**
   * the generic container for statistics. This can be sent as a message, as long as
@@ -52,26 +49,4 @@ trait FileStats extends Stats {
 
 trait JsonStats extends Stats {
   def writeToJson(pw: PrintWriter): Unit
-}
-
-/**
-  * a Stats type that knows how to produce HTML.
-  *
-  * We use a scalaTags specific TypedTag here because this ensures the generator
-  * will produce HTML, and it avoids premature string allocation for fragments that
-  * serve no other purpose than to be aggregated into complete HTML documents. The downside
-  * is that we add a race-common dependency
-  */
-trait HtmlStats extends Stats {
-  def toHtml: TypedTag[STBuilder,String,String]
-
-  def htmlTopicHeader(channels: String) = h2(
-    topic,
-    span(style:="float:right;")(
-      span(cls:="label")("channels:"),
-      span(cls:="value")(channels),
-      span(cls:="label")("elapsed:"),
-      span(cls:="value")(durationMillisToHMMSS(elapsedMillis))
-    )
-  )
 }

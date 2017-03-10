@@ -98,7 +98,7 @@ object Dependencies {
   val rsTextArea = "com.fifesoft" % "rsyntaxtextarea" % "2.5.8"
 
   //--- the jfreechart plot and chart lib
-  val jfreechart = "org.jfree" % "jfreechart" % "latest.release"
+  val jfreeChart = "org.jfree" % "jfreechart" % "latest.release"
 
   //--- pure Java implementation of ssh2 (http://www.jcraft.com/jsch/)
   // NOTE this has to be a known version and verified instance so that we don't

@@ -28,30 +28,33 @@ import scala.concurrent.duration._
   * Note that we don't use vals since derived classes can change the values, and we don't use
   * public vars since each change should go through such a derived class
   */
-class Clock (initTime: DateTime = DateTime.now, initTimeScale: Double = 1, isStopped: Boolean=false) {
+class Clock (initTime: DateTime = DateTime.now, initTimeScale: Double = 1, isStopped: Boolean=false)
+         extends Cloneable {
 
   protected var _timeScale = initTimeScale
   protected var _base = initTime // sim time
-  protected var initMillis = System.currentTimeMillis  // wall time
-  protected var stoppedAt: Long = if (isStopped) initMillis else 0 // wall time
+  protected var _initMillis = System.currentTimeMillis  // wall time
+  protected var _stoppedAt: Long = if (isStopped) _initMillis else 0 // wall time
 
-  def currentMillis = if (stoppedAt > 0) stoppedAt else System.currentTimeMillis
+  def currentMillis = if (_stoppedAt > 0) _stoppedAt else System.currentTimeMillis
 
   def timeScale: Double = _timeScale
   def base = _base
+  def initMillis = _initMillis
+  def stoppedAt = _stoppedAt
   def baseMillis = _base.getMillis
 
   /** simulation time milliseconds */
-  def millis: Long = _base.getMillis + ((currentMillis - initMillis) * _timeScale).toLong
+  def millis: Long = _base.getMillis + ((currentMillis - _initMillis) * _timeScale).toLong
 
   /** simulation time DateTime */
-  def dateTime: DateTime = _base + ((currentMillis - initMillis) * _timeScale).toLong
+  def dateTime: DateTime = _base + ((currentMillis - _initMillis) * _timeScale).toLong
 
   /** simulation time duration since initTime */
-  def elapsed: FiniteDuration = ((currentMillis - initMillis) * _timeScale).toLong.milliseconds
+  def elapsed: FiniteDuration = ((currentMillis - _initMillis) * _timeScale).toLong.milliseconds
 
   /** wallclock time duration since initTime */
-  def elapsedWall: FiniteDuration = (currentMillis - initMillis).milliseconds
+  def elapsedWall: FiniteDuration = (currentMillis - _initMillis).milliseconds
 
   /** wallclock time for given sim time */
   def wallTime (simTime: DateTime): DateTime = {
@@ -62,6 +65,8 @@ class Clock (initTime: DateTime = DateTime.now, initTimeScale: Double = 1, isSto
   def wallTimeIn (simDuration: FiniteDuration): DateTime = {
     DateTime.now.plusMillis((simDuration.toMillis/_timeScale).toInt)
   }
+
+  def save = clone.asInstanceOf[Clock]
 }
 
 /**
@@ -74,11 +79,19 @@ class SettableClock (initTime: DateTime = DateTime.now,
   def reset (initTime: DateTime, initTimeScale: Double = 1): SettableClock = {
     _timeScale = initTimeScale
     _base = initTime
-    initMillis = System.currentTimeMillis
-    if (stoppedAt > 0) stoppedAt = initMillis
+    _initMillis = System.currentTimeMillis
+    if (_stoppedAt > 0) _stoppedAt = _initMillis
     this
   }
 
-  def stop = stoppedAt = System.currentTimeMillis
-  def resume = stoppedAt = 0
+  def reset (saved: Clock): SettableClock = {
+    _timeScale = saved.timeScale
+    _base = saved.base
+    _initMillis = saved.initMillis
+    _stoppedAt = saved.stoppedAt
+    this
+  }
+
+  def stop = _stoppedAt = System.currentTimeMillis
+  def resume = _stoppedAt = 0
 }
