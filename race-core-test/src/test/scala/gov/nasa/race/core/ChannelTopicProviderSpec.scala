@@ -43,14 +43,14 @@ object ChannelTopicProviderSpec {
     var msg: String = "??"
 
     override def onStartRaceActor(originator: ActorRef) = {
-      super.onStartRaceActor(originator)
       println(s"$name scheduling ticks")
       timer = scheduler.schedule(1.second,1.second,self,Tick)
+      super.onStartRaceActor(originator)
     }
 
     override def onTerminateRaceActor(originator: ActorRef) = {
-      super.onTerminateRaceActor(originator)
       timer.cancel()
+      super.onTerminateRaceActor(originator)
     }
 
     override def handleMessage: Receive = {
@@ -91,9 +91,9 @@ object ChannelTopicProviderSpec {
     var n = 0
 
     override def onStartRaceActor(originator: ActorRef) = {
-      super.onStartRaceActor(originator)
       println(s"$name requesting $TOPIC")
       requestTopic(TOPIC)
+      super.onStartRaceActor(originator)
     }
 
     override def handleMessage = {
