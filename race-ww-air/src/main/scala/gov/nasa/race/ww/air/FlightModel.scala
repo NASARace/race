@@ -16,26 +16,117 @@
  */
 package gov.nasa.race.ww.air
 
-import gov.nasa.race.ww._
+import com.typesafe.config.Config
 import gov.nasa.race.air.InFlightAircraft
 import gov.nasa.race.util.StringUtils
+import gov.nasa.race.config.ConfigUtils._
+import gov.nasa.race.ww._
 import gov.nasa.worldwind.render.DrawContext
-import osm.map.worldwind.gl.obj.ObjRenderable
+import osm.map.worldwind.gl.obj.{ObjLoader, ObjRenderable}
 
-import scala.util.matching.Regex
+case class ModelSpec (src: String, size0: Double, pitch0: Double, yaw0: Double, roll0: Double)
+
+object FlightModel {
+  val defaultSpec = ModelSpec("/gov/nasa/race/ww/GlobalHawk.obj.gz", 8, 180,0,0)
+  var map = Map("default" -> defaultSpec)
+
+  def getModelSpec (key: String): Option[ModelSpec] = map.get(key)
+
+  def addDefaultModel( key: String, spec: ModelSpec) = map = map + (key -> spec)
+
+  // this can be overridden by concrete FlightLayers to add generic models
+  def loadModel[T <: InFlightAircraft] (mc: Config): FlightModel[T] = {
+    var src = mc.getString("source")
+    var size0 = 1.0
+    var pitch0,yaw0,roll0 = 0.0
+
+    map.get(src) match {
+      case Some(spec) =>
+        src = spec.src
+        size0 = mc.getDoubleOrElse("size", spec.size0)
+        pitch0 = mc.getDoubleOrElse("pitch", spec.pitch0)
+        yaw0 = mc.getDoubleOrElse("yaw", spec.yaw0)
+        roll0 = mc.getDoubleOrElse("yaw", spec.roll0)
+      case None =>
+        size0 = mc.getDoubleOrElse("size", size0)
+        pitch0 = mc.getDoubleOrElse("pitch", pitch0)
+        yaw0 = mc.getDoubleOrElse("yaw", yaw0)
+        roll0 = mc.getDoubleOrElse("yaw", roll0)
+    }
+
+    new FlightModel[T](mc.getString("key"),src,size0,pitch0,yaw0,roll0)
+  }
+}
 
 /**
-  * Renderable representing 3D aircraft model
+  * Renderable representing a 3D model
+  *
+  * Note this is from a WorldWindJava extension (see this thread:
+  * https://forum.worldwindcentral.com/forum/world-wind-java-forums/development-help/17605-collada-models-with-lighting/page2)
+  *
+  * Note also that the ObjRenderable does not load the model data before it is rendered, and it does
+  * prioritize class resources over files. This means we don't know if the object will render
+  * correctly at the time it is constructed, hence we have to fall back to a default placeholder.
+  * This might be changed at some point in WorldWindJava-pcm (which includes the ObjRenderable)
   */
-class FlightModel[T <: InFlightAircraft](pattern: String, src: String, size: Double) extends ObjRenderable(FarAway,src) {
+class FlightModel[T <: InFlightAircraft](pattern: String, src: String,
+                                         var size0: Double,
+                                         var yaw0: Double, var pitch0: Double, var roll0: Double)
+                        extends ObjRenderable(FarAway,src) {
 
   val regex = StringUtils.globToRegex(pattern)
-  setSize(size)
+  var assignedEntry: Option[FlightEntry[T]] = None
+  var disable = false
 
+  setSize(size0)
+  setAttitude(pitch0,yaw0,roll0)
 
-  def matches (spec: String) = StringUtils.matches(spec,regex)
+  //--- initial transformations
+  def setAttitude(pitch: Double, yaw: Double, roll: Double) = {
+    setElevation(pitch0)
+    setAzimuth(yaw0)
+    setRoll(roll0)
+  }
 
-  def update (newT: T) = {
-    setPosition(newT)
+  def matches(fpos: T): Boolean = !assignedEntry.isDefined && StringUtils.matches(fpos.cs,regex)
+
+  def assign (e: FlightEntry[T]) = assignedEntry = Some(e)
+  def unAssign = assignedEntry = None
+
+  def update (fpos: T) = {
+    setAzimuth(yaw0 + fpos.heading.toDegrees)
+    setPosition(fpos)
+  }
+
+  protected override def getModel(dc: DrawContext): ObjLoader = {
+    try {
+      super.getModel(dc)
+    } catch {
+      case t: Throwable =>
+        if (src == modelSource) {
+          // retry with default model parameters
+          val spec = FlightModel.defaultSpec
+          modelSource = spec.src
+          size0 = spec.size0
+          pitch0 = spec.pitch0
+          yaw0 = spec.yaw0
+          roll0 = spec.roll0
+
+          setSize(size0)
+          setElevation(pitch0 + getElevation)
+          setAzimuth(yaw0 + getAzimuth)
+          setRoll(roll0 + getRoll)
+
+          super.getModel(dc) // try again
+
+        } else {
+          disable = true
+          throw new RuntimeException("Error loading FlightModel", t);
+        }
+    }
+  }
+
+  protected override def drawGL(dc: DrawContext): Unit = {
+    if (!disable) super.drawGL(dc)
   }
 }

@@ -48,6 +48,9 @@ import scala.collection.immutable.HashSet
   *
   * (3) proper update of FlightEntry renderables based on visibility of respective InFlightAircraft
   * objects
+  *
+  * NOTE - if no model is configured, this should not incur any performance penalties.
+  * In particular, eye position and proximity updates should only happen if we have configured models
   */
 class FlightLayer3D[T <:InFlightAircraft](raceView: RaceView, config: Config) extends FlightLayer[T](raceView,config) with EyePosListener  {
 
@@ -55,31 +58,31 @@ class FlightLayer3D[T <:InFlightAircraft](raceView: RaceView, config: Config) ex
   val eyeDistanceFilter = new VarEuclideanDistanceFilter3D(Angle0,Angle0,Length0, Meters(config.getDoubleOrElse("model-distance",2000.0)))
   var proximities = HashSet.empty[FlightEntry[T]]
 
-  val models = config.getConfigSeq("models").map { mc =>
-    new FlightModel[T](mc.getString("key"), mc.getString("source"), mc.getDoubleOrElse("size", 1.0))
-  }
-
+  addLayerModels
+  val models = config.getConfigSeq("models").map(FlightModel.loadModel[T])
 
   if (models.nonEmpty) {
     raceView.addEyePosListener(this)  // will update lastEyePos and proximities
   }
 
-  override def initializeLayer = {
-    super.initializeLayer
-    //ifInstanceOf[ClippableOrbitView](raceView.wwdView) { _.setNearClipDistance(10.0) }
+  private val pendingUpdates = new AtomicInteger
+
+  // this can be overridden by layers to add their own generic models
+  def addLayerModels: Unit = {
+    FlightModel.addDefaultModel("defaultAirplane", FlightModel.defaultSpec)
   }
 
   def getModel (e: FlightEntry[T]): Option[FlightModel[T]] = {
-    Some(models.head)
+    models.find( _.matches(e.obj) )
   }
 
-  private val pendingUpdates = new AtomicInteger
-
+  // we only get these callbacks if there were configured models
   def eyePosChanged(eyePos: Position, animHint: String): Unit = {
     if (models.nonEmpty) {
       pendingUpdates.getAndIncrement
       delay(1.second, () => {
-        eyeDistanceFilter.updateReference(Degrees(eyePos.latitude.degrees), Degrees(eyePos.longitude.degrees), Meters(eyePos.getAltitude))
+        val ep = raceView.eyePosition
+        eyeDistanceFilter.updateReference(Degrees(ep.latitude.degrees), Degrees(ep.longitude.degrees), Meters(ep.getAltitude))
         if (pendingUpdates.decrementAndGet == 0) recalculateProximities
       })
     }
@@ -92,14 +95,23 @@ class FlightLayer3D[T <:InFlightAircraft](raceView: RaceView, config: Config) ex
     val pos = fpos.position
     if (eyeDistanceFilter.pass(pos.φ,pos.λ,fpos.altitude)){
       if (!proximities.contains(e)){
-        e.setModel(getModel(e))
-        println(s"@@ set model for $fpos")
+        val m = getModel(e)
+        if (m.isDefined) {
+          e.setModel(m)
+          info(s"set 3D model for $fpos")
+          redraw
+        } else {
+          info (s"no matching/available 3D model for $fpos")
+        }
         proximities = proximities + e
       }
     } else {
       if (proximities.contains(e)) {
-        e.setModel(None)
-        println(s"@@ release model for $fpos")
+        if (e.hasModel) {
+          e.setModel(None)
+          info(s"release model for $fpos")
+          redraw
+        }
         proximities = proximities - e
       }
     }

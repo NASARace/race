@@ -40,7 +40,7 @@ class MinClipOrbitView extends BasicOrbitView {
   protected final val MaxSeaDepth: Double = 1.1e5 // we don't want to clip out the Mariana trench
   protected final val DefaultMaxFlightAltitude = 4.0e5  // highest altitude in meters we display
   protected lazy val MaxDepthBufferDist = computeMaxDepthBufferDist  // has to be lazy since we need a dc
-  protected final val MinNearClipDistance = 20.0 // MINIMUM_NEAR_DISTANCE causes flicker and artifacts (numeric?)
+  protected final val MinNearClipDistance = 10.0 // MINIMUM_NEAR_DISTANCE causes flicker and artifacts (numeric?)
 
   protected var α: Double = computeFov2 // FOV/2 in radians
   protected var cos_α: Double = cos(α)
@@ -85,7 +85,7 @@ class MinClipOrbitView extends BasicOrbitView {
   override def computeFarDistance(eyePos: Position): Double = {
     val eyeElev: Double = eyePos.getElevation  // in m, above RE
 
-    if (eyeElev > hmax || getPitch != ZeroWWAngle) {
+    if (eyeElev > hmax  /* || getPitch != ZeroWWAngle */) {
       super.computeFarDistance(eyePos)
     } else {
       val h = RE + eyeElev

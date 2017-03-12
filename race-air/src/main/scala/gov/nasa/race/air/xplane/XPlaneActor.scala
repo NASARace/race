@@ -194,7 +194,7 @@ class XPlaneActor (val config: Config) extends PublishingRaceActor
 
   def dropProximity (fdrop: FlightDropped) = {
     val cs = fdrop.cs
-    if (proximityList.removeFirst { e => e.obj.cs == cs }) println(s"@@ ! $cs : $proximityList")
+    proximityList.removeFirst { e => e.obj.cs == cs }
   }
 
   //--- the XPlaneAircraftList callbacks, which we use to update X-Plane

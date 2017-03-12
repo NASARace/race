@@ -100,12 +100,14 @@ class FlightEntry[T <: InFlightAircraft](var obj: T, var flightPath: AbstractFli
   def setModel (newModel: Option[FlightModel[T]]) = {
     ifSome(newModel) { m =>
       ifSome(model) { layer.removeRenderable }
+      m.assign(this)
       m.update(obj)
       layer.addRenderable(m)
       ifSome(symbol) { _.setLabelAttrs }  // no use to show the symbol image
 
     } orElse {
       ifSome(model){ m =>
+        m.unAssign
         layer.removeRenderable(m)
         ifSome(symbol) { sym => layer.setFlightLevel(this) }
       }
