@@ -46,12 +46,12 @@ object FlightModel {
         size0 = mc.getDoubleOrElse("size", spec.size0)
         pitch0 = mc.getDoubleOrElse("pitch", spec.pitch0)
         yaw0 = mc.getDoubleOrElse("yaw", spec.yaw0)
-        roll0 = mc.getDoubleOrElse("yaw", spec.roll0)
+        roll0 = mc.getDoubleOrElse("roll", spec.roll0)
       case None =>
         size0 = mc.getDoubleOrElse("size", size0)
         pitch0 = mc.getDoubleOrElse("pitch", pitch0)
         yaw0 = mc.getDoubleOrElse("yaw", yaw0)
-        roll0 = mc.getDoubleOrElse("yaw", roll0)
+        roll0 = mc.getDoubleOrElse("roll", roll0)
     }
 
     new FlightModel[T](mc.getString("key"),src,size0,pitch0,yaw0,roll0)
