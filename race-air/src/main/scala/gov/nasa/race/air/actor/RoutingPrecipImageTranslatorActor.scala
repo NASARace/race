@@ -43,11 +43,13 @@ class RoutingPrecipImageTranslatorActor (config: Config) extends TranslatorActor
   val routes = mutable.Map.empty[Int,mutable.Set[String]]
 
   override def onInitializeRaceActor (raceContext: RaceContext, actorConf: Config) = {
-    routes += 9849 -> writeTo.map(_ + "/9849")
-    routes += 9850 -> writeTo.map(_ + "/9850")
-    routes += 9905 -> writeTo.map(_ + "/9905")
-
-    super.onInitializeRaceActor(raceContext,actorConf)
+    if (super.onInitializeRaceActor(raceContext,actorConf)) {
+      routes += 9848 -> writeTo.map(_ + "/9848")
+      routes += 9849 -> writeTo.map(_ + "/9849")
+      routes += 9850 -> writeTo.map(_ + "/9850")
+      routes += 9905 -> writeTo.map(_ + "/9905")
+      true
+    } else false
   }
 
   override def handleMessage = {
