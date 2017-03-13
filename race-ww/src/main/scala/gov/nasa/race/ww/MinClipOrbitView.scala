@@ -37,7 +37,7 @@ import gov.nasa.worldwind.view.orbit.BasicOrbitView
 class MinClipOrbitView extends BasicOrbitView {
   protected final val RE: Double = 6.371e6 // mean earth radius in m
   protected final val REsquared = RE**2
-  protected final val MaxSeaDepth: Double = 1.1e5 // we don't want to clip out the Mariana trench
+  protected final val MaxSeaDepth: Double = 1.2e5 // we don't want to clip out the Mariana trench
   protected final val DefaultMaxFlightAltitude = 4.0e5  // highest altitude in meters we display
   protected lazy val MaxDepthBufferDist = computeMaxDepthBufferDist  // has to be lazy since we need a dc
   protected final val MinNearClipDistance = 10.0 // MINIMUM_NEAR_DISTANCE causes flicker and artifacts (numeric?)
@@ -73,12 +73,7 @@ class MinClipOrbitView extends BasicOrbitView {
   override def computeNearDistance(eyePos: Position): Double = {
     val eyeElev: Double = eyePos.getElevation  // in m, above RE
 
-    if (farClipDistance.toLong < MaxDepthBufferDist) {
-      if (eyeElev > maxFlightAltitude) eyeElev - maxFlightAltitude
-      else MinNearClipDistance
-    } else {
-      super.computeNearDistance(eyePos)
-    }
+    if (farClipDistance.toLong < MaxDepthBufferDist) MinNearClipDistance else super.computeNearDistance(eyePos)
   }
 
   // this gets called first

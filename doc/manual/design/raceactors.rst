@@ -114,6 +114,17 @@ The rationale for this dynamic runtime behavior change is that concrete actor fi
 initial values from ``InitializeRaceActor`` configuration data, and hence should not be referenced
 from message handlers before the ``Initialized`` state is reached.
 
+***CAVEAT*** - unless this is really intended in order to completely replace all system message
+processing, overridden ``handleMessage`` methods should **not** have a match-all clause, such as::
+
+    override def handleMessage = {
+      .. // user message clauses
+      case other => ..
+
+This would effectively cut off all RACE system message processing in core RaceActor traits.
+RACE automatically checks during initialization of a RaceActorSystem that actors which are
+initialized properly respond to system messages and automatically shuts down otherwise.
+
 
 Publish/Subscribe
 -----------------

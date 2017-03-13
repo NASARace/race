@@ -18,6 +18,7 @@
 package gov.nasa.race.air.actor
 
 import com.typesafe.config.Config
+import gov.nasa.race._
 import gov.nasa.race.actor.TranslatorActor
 import gov.nasa.race.air.PrecipImage
 import gov.nasa.race.air.translator.ITWSprecip2PrecipImage
@@ -43,11 +44,12 @@ class RoutingPrecipImageTranslatorActor (config: Config) extends TranslatorActor
   val routes = mutable.Map.empty[Int,mutable.Set[String]]
 
   override def onInitializeRaceActor (raceContext: RaceContext, actorConf: Config) = {
-    routes += 9849 -> writeTo.map(_ + "/9849")
-    routes += 9850 -> writeTo.map(_ + "/9850")
-    routes += 9905 -> writeTo.map(_ + "/9905")
-
-    super.onInitializeRaceActor(raceContext,actorConf)
+    ifTrue (super.onInitializeRaceActor(raceContext,actorConf)) {
+      routes += 9848 -> writeTo.map(_ + "/9848")
+      routes += 9849 -> writeTo.map(_ + "/9849")
+      routes += 9850 -> writeTo.map(_ + "/9850")
+      routes += 9905 -> writeTo.map(_ + "/9905")
+    }
   }
 
   override def handleMessage = {
