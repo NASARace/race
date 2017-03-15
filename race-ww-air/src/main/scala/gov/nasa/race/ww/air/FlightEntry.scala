@@ -24,7 +24,7 @@ import gov.nasa.race.air.{AbstractFlightPath, InFlightAircraft}
 import gov.nasa.race.ww.{InfoBalloon, _}
 import gov.nasa.worldwind.WorldWind
 import gov.nasa.worldwind.avlist.AVKey
-import gov.nasa.worldwind.render.{Offset, PointPlacemark, PointPlacemarkAttributes, ScreenImage}
+import gov.nasa.worldwind.render.{Offset, PointPlacemark, PointPlacemarkAttributes}
 
 /**
   * class that aggregates all Renderables that can be associated with a given InFlightAircraft
@@ -75,7 +75,7 @@ class FlightEntry[T <: InFlightAircraft](var obj: T, var flightPath: AbstractFli
         _.setPosition(obj)
       }
 
-      if (followPosition) layer.centerOn(obj)
+      if (followPosition) layer.centerEntry(this)
     }
 
     ifSome(model) { _.update(obj) }

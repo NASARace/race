@@ -270,10 +270,19 @@ class RaceView (viewerActor: RaceViewerActor) extends DeferredEyePositionListene
   }
 
   //--- view (eye position) transitions
+
+  // this one does not animate. Use for objects that have to stay at the same screen coordinates,
+  // but the map is going to be updated discontinuously
   def centerOn (pos: Position) = {
     inputHandler.stopAnimators
     //inputHandler.addCenterAnimator(eyePosition, pos, true) // ?bug - this just causes weird zoom-out animation
-    inputHandler.addEyePositionAnimator(800,eyePosition,new Position(pos,eyePosition.getElevation))
+    wwdView.setEyePosition(new Position(pos,eyePosition.getElevation))
+  }
+  // this one does a smooth transition to a new center, i.e. the map will update smoothly, but
+  // objects at the center positions will jump
+  def panToCenter (pos: Position, transitionTime: Long=500) = {
+    inputHandler.stopAnimators
+    inputHandler.addEyePositionAnimator(transitionTime,eyePosition,new Position(pos,eyePosition.getElevation))
   }
   def zoomTo (zoom: Double) = {
     inputHandler.stopAnimators

@@ -19,6 +19,7 @@ package gov.nasa.race.ww.air
 
 import java.awt.Color
 
+import com.github.nscala_time.time.Imports._
 import com.typesafe.config.Config
 import gov.nasa.race._
 import gov.nasa.race.air.{CompactFlightPath, FlightInfo, FlightInfoUpdateRequest, InFlightAircraft}
@@ -30,10 +31,8 @@ import gov.nasa.race.ww.EventAction.EventAction
 import gov.nasa.race.ww._
 import gov.nasa.race.ww.air.FlightRenderLevel.FlightRenderLevel
 import gov.nasa.race.ww.air.PathRenderLevel.PathRenderLevel
-import gov.nasa.worldwind.geom.Position
 
 import scala.collection.mutable.{Map => MutableMap}
-import com.github.nscala_time.time.Imports._
 
 
 /**
@@ -136,8 +135,6 @@ abstract class FlightLayer[T <:InFlightAircraft](val raceView: RaceView, config:
   def getSymbol (e: FlightEntry[T]): Option[FlightSymbol[T]] = {
     Some(new FlightSymbol(e))
   }
-
-  def centerOn(pos: Position) = raceView.centerOn(pos)
 
   def dismissEntryPanel (e: FlightEntry[T]) = {
     if (entryPanel.isShowing(e)) {
@@ -265,10 +262,16 @@ abstract class FlightLayer[T <:InFlightAircraft](val raceView: RaceView, config:
   //--- flight entry centering
 
   var centeredEntry: Option[FlightEntry[T]] = None
+
+  def centerEntry (e: FlightEntry[T]) = {
+    if (e.hasModel) raceView.centerOn(e.obj)
+    else raceView.panToCenter(e.obj)
+  }
+
   def centerFlightEntry (e: FlightEntry[T]) = {
     ifSome(centeredEntry){_.followPosition(false)}
     e.followPosition(true)
-    centerOn(e.obj)
+    raceView.panToCenter(e.obj)
     centeredEntry = Some(e)
     changedFlightEntryOptions(e,StartCenter)
   }
