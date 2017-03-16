@@ -92,6 +92,7 @@ class FlightModel[T <: InFlightAircraft](pattern: String, src: String,
 
   def assign (e: FlightEntry[T]) = assignedEntry = Some(e)
   def unAssign = assignedEntry = None
+  def isAssigned = assignedEntry.isDefined
 
   def update (fpos: T) = {
     setAzimuth(yaw0 + fpos.heading.toDegrees)

@@ -55,7 +55,8 @@ import scala.collection.immutable.HashSet
 class FlightLayer3D[T <:InFlightAircraft](raceView: RaceView, config: Config) extends FlightLayer[T](raceView,config) with EyePosListener  {
 
   //--- 3D models and proximities
-  val eyeDistanceFilter = new VarEuclideanDistanceFilter3D(Angle0,Angle0,Length0, Meters(config.getDoubleOrElse("model-distance",2000.0)))
+  val modelDistance = Meters(config.getDoubleOrElse("model-distance",2000.0))
+  val eyeDistanceFilter = new VarEuclideanDistanceFilter3D(Angle0,Angle0,Length0, modelDistance)
   var proximities = HashSet.empty[FlightEntry[T]]
 
   addLayerModels
@@ -80,7 +81,7 @@ class FlightLayer3D[T <:InFlightAircraft](raceView: RaceView, config: Config) ex
   def eyePosChanged(eyePos: Position, animHint: String): Unit = {
     if (models.nonEmpty) {
       pendingUpdates.getAndIncrement
-      delay(1.second, () => {
+      delay(500.milliseconds, () => {
         val ep = raceView.eyePosition
         eyeDistanceFilter.updateReference(Degrees(ep.latitude.degrees), Degrees(ep.longitude.degrees), Meters(ep.getAltitude))
         if (pendingUpdates.decrementAndGet == 0) recalculateProximities
@@ -90,28 +91,42 @@ class FlightLayer3D[T <:InFlightAircraft](raceView: RaceView, config: Config) ex
 
   def recalculateProximities = foreachFlight(updateProximity)
 
-  def updateProximity (e: FlightEntry[T]) = {
+  def setModel (e: FlightEntry[T]) = {
     val fpos = e.obj
-    val pos = fpos.position
-    if (eyeDistanceFilter.pass(pos.φ,pos.λ,fpos.altitude)){
+    val m = getModel(e)
+    if (m.isDefined) {
+      e.setModel(m)
+      info(s"set 3D model for $fpos")
+      redraw
+    } else {
+      info (s"no matching/available 3D model for $fpos")
+    }
+  }
+
+  def unsetModel (e: FlightEntry[T]) = {
+    if (e.hasModel) {
+      val fpos = e.obj
+      e.setModel(None)
+      info(s"drop model for $fpos")
+      redraw
+    }
+  }
+
+  def isProximity (e: FlightEntry[T]): Boolean = {
+    val fpos = e.obj
+    (e.isCentered && (Meters(eyeAltitude) - fpos.altitude < modelDistance)) ||
+      eyeDistanceFilter.pass(fpos)
+  }
+
+  def updateProximity (e: FlightEntry[T]) = {
+    if (isProximity(e)) {
       if (!proximities.contains(e)){
-        val m = getModel(e)
-        if (m.isDefined) {
-          e.setModel(m)
-          info(s"set 3D model for $fpos")
-          redraw
-        } else {
-          info (s"no matching/available 3D model for $fpos")
-        }
+        setModel(e)
         proximities = proximities + e
       }
     } else {
       if (proximities.contains(e)) {
-        if (e.hasModel) {
-          e.setModel(None)
-          info(s"release model for $fpos")
-          redraw
-        }
+        unsetModel(e)
         proximities = proximities - e
       }
     }

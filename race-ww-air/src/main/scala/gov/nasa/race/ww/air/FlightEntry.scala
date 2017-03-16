@@ -44,6 +44,7 @@ class FlightEntry[T <: InFlightAircraft](var obj: T, var flightPath: AbstractFli
 
   def hasAttrs = followPosition || path.isDefined || info.isDefined || mark.isDefined
   def hasModel = model.isDefined
+  def hasAssignedModel = model.isDefined && model.get.isAssigned
   def hasSymbol = symbol.isDefined
   def hasPath = path.isDefined
   def hasInfo = info.isDefined
@@ -74,11 +75,11 @@ class FlightEntry[T <: InFlightAircraft](var obj: T, var flightPath: AbstractFli
       ifSome(mark) {
         _.setPosition(obj)
       }
-
-      if (followPosition) layer.centerEntry(this)
     }
 
     ifSome(model) { _.update(obj) }
+
+    if (followPosition) layer.centerEntry(this)
   }
 
   def removeRenderables = {
@@ -112,6 +113,7 @@ class FlightEntry[T <: InFlightAircraft](var obj: T, var flightPath: AbstractFli
         ifSome(symbol) { sym => layer.setFlightLevel(this) }
       }
     }
+
     model = newModel
   }
 

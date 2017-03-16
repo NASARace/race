@@ -177,7 +177,7 @@ abstract class FlightLayer[T <:InFlightAircraft](val raceView: RaceView, config:
         case `ShowPanel`    => setFlightEntryPanel(e)
         case `DismissPanel` => dismissEntryPanel(e)
           //--- our own ones
-        case `StartCenter` => centerFlightEntry(e)
+        case `StartCenter` => startCenteringFlightEntry(e)
         case `StopCenter` => ifSome(centeredEntry) { ce=> if (ce eq e) stopCenteringFlightEntry }
         case `ShowPath`   => changeObjectAttr(e, e.setPath(true), action)
         case `HidePath`   => changeObjectAttr(e, e.setPath(false), action)
@@ -264,11 +264,14 @@ abstract class FlightLayer[T <:InFlightAircraft](val raceView: RaceView, config:
   var centeredEntry: Option[FlightEntry[T]] = None
 
   def centerEntry (e: FlightEntry[T]) = {
-    if (e.hasModel) raceView.centerOn(e.obj)
-    else raceView.panToCenter(e.obj)
+    if (e.hasAssignedModel) {
+      raceView.centerOn(e.obj)
+    } else {
+      raceView.panToCenter(e.obj)
+    }
   }
 
-  def centerFlightEntry (e: FlightEntry[T]) = {
+  def startCenteringFlightEntry(e: FlightEntry[T]) = {
     ifSome(centeredEntry){_.followPosition(false)}
     e.followPosition(true)
     raceView.panToCenter(e.obj)
