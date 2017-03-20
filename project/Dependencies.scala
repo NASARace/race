@@ -128,9 +128,6 @@ object Dependencies {
 
   val amqAll = Seq(amqBroker)
 
-  //--- AsyncHttpClient
-  val asyncHttp = "com.ning" % "async-http-client" % "1.9.27"
-
   // here it gets ugly - kafka/zookeeper have hard log4j dependencies, although those
   // might be just misconfigurations since it also appeared under the slf4j dep
   // and hence might be only a runtime resolved backend.

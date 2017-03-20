@@ -17,6 +17,8 @@
 package gov.nasa.race
 
 import akka.http.scaladsl.marshalling.ToResponseMarshallable
+import akka.http.scaladsl.model.HttpRequest
+import akka.http.scaladsl.model.Uri.Path
 
 import scalatags.generic.TypedTag
 import scalatags.text.{Builder => STBuilder}
@@ -27,4 +29,9 @@ import scalatags.text.{Builder => STBuilder}
 package object http {
   type HtmlElement = TypedTag[STBuilder,String,String]
   type HtmlResources = Map[String,ToResponseMarshallable]
+
+  final val RootPath = Path("/")
+
+  case object SendHttpRequest
+  case class SendNewHttpRequest(request: HttpRequest)
 }

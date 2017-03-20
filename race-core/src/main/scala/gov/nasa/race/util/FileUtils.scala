@@ -184,4 +184,13 @@ object FileUtils {
     else if (nBytes > 1024) f"${Math.round(nBytes / 1024.0)}%dk"
     else nBytes.toString
   }
+
+  def processPathUpwards (path: String)(f: String=>Unit) = {
+    var p = path
+    while (p.nonEmpty) {
+      f(p)
+      p = p.substring(0,Math.max(p.lastIndexOf('/'),0))
+    }
+    if (path.startsWith("/")) f("/")
+  }
 }

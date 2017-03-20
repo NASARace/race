@@ -174,8 +174,6 @@ abstract class RaceActorSpec (tras: TestRaceActorSystem) extends TestKit(tras.sy
 
   def reset = tras.reset
 
-  def createConfig(s: String) = ConfigFactory.parseString(s)
-
   def addTestActor[T <: RaceActor: ClassTag] (actorCls: Class[T], name: String, ctorConf: Config): TestActorRef[T] = {
     val ctorConfig = ctorConf.withValue("name", ConfigValueFactory.fromAnyRef(name))
     addTestActor(actorCls, name, ctorConfig, ctorConfig)
