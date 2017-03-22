@@ -20,14 +20,15 @@ package gov.nasa.race.core
 import akka.actor._
 import akka.pattern.ask
 import com.typesafe.config.Config
-import gov.nasa.race.{common, _}
+import gov.nasa.race.common.Clock
 import gov.nasa.race.common.Status._
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.Messages.{InitializeRaceActor, StartRaceActor, _}
 import gov.nasa.race.util.ClassLoaderUtils
+import gov.nasa.race.{common, _}
 import org.joda.time.DateTime
 
-import scala.collection.mutable.{Set => MutableSet}
+import scala.collection.mutable.{ArrayBuffer, Set => MutableSet}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 import scala.math._
@@ -73,20 +74,25 @@ trait RaceActor extends Actor with ImplicitActorLogging {
   override def receive = {
     case InitializeRaceActor(raceContext,actorConf) => handleInitializeRaceActor(raceContext,actorConf)
     case TerminateRaceActor(originator) => handleTerminateRaceActor(originator)
-    case msg: PingRaceActor => sender ! msg.copy(tReceivedNanos=System.nanoTime())
+    //case msg: PingRaceActor => sender ! msg.copy(tReceivedNanos=System.nanoTime())
 
     case msg => info(f"ignored in pre-init mode: $msg%30.30s..")
   }
 
+  // this switches the message handler to 'receiveLive'
   def handleInitializeRaceActor (rctx: RaceContext, actorConf: Config) = {
     info("got InitializeRaceActor")
     try {
       raceContext = rctx
       context.become(receiveLive)
-      onInitializeRaceActor(rctx, actorConf)
-      status = Initialized
-      sender ! RaceActorInitialized
-      info("initialized")
+      if (onInitializeRaceActor(rctx, actorConf)) {
+        info("initialized")
+        status = Initialized
+        sender ! RaceActorInitialized
+      } else {
+        warning("initialize rejected")
+        sender ! RaceActorInitializeFailed("rejected")
+      }
     } catch {
       case ex: Throwable => sender ! RaceActorInitializeFailed(ex.getMessage)
     }
@@ -110,16 +116,17 @@ trait RaceActor extends Actor with ImplicitActorLogging {
     case TerminateRaceActor(originator) => handleTerminateRaceActor(originator)
 
     case ProcessRaceActor => sender ! RaceActorProcessed
-    case msg@ PingRaceActor(tSent,_) =>
-      sender ! msg.copy(tReceivedNanos=System.nanoTime())
+    case msg:PingRaceActor => sender ! msg.copy(tReceivedNanos=System.nanoTime())
 
     case rc: ChildNodeRollCall => answerChildNodes(rc)
     case rc: RollCall => rc.answer(self) // generic response
 
     case SetLogLevel(newLevel) => logLevel = newLevel
 
-    case SetTimeout(msg,duration) =>
-      context.system.scheduler.scheduleOnce(duration, self, msg)
+    case SyncWithRaceClock => handleSyncWithRaceClock
+    case SetTimeout(msg,duration) => context.system.scheduler.scheduleOnce(duration, self, msg)
+
+    case other => warning(s"unhandled system message $other")
   }
 
   def handleLiveInitializeRaceActor (rc: RaceContext, actorConf: Config) = {
@@ -127,9 +134,13 @@ trait RaceActor extends Actor with ImplicitActorLogging {
       info(s"got remote InitializeRaceActor from: ${rc.masterRef.path}")
       try {
         raceContext = rc
-        onReInitializeRaceActor(rc, actorConf)
-        sender ! RaceActorInitialized
-        info("reinitialized")
+        if (onReInitializeRaceActor(rc, actorConf)){
+          info("reinitialized")
+          sender ! RaceActorInitialized
+        } else {
+          warning("initialize rejected")
+          sender ! RaceActorInitializeFailed("rejected")
+        }
       } catch {
         case ex: Throwable => sender ! RaceActorInitializeFailed(ex.getMessage)
       }
@@ -143,15 +154,15 @@ trait RaceActor extends Actor with ImplicitActorLogging {
   def handleStartRaceActor  (originator: ActorRef) = {
     info(s"got StartRaceActor from: ${originator.path}")
     try {
-      if (status == Running) {
-        onReStartRaceActor(originator)
-        info("restarted")
-      } else {
-        onStartRaceActor(originator)
+      val success = if (status == Running) onReStartRaceActor(originator) else onStartRaceActor(originator)
+      if (success){
         status = Running
         info("started")
+        sender ! RaceActorStarted
+      } else {
+        warning("start rejected")
+        sender ! RaceActorStartFailed("rejected")
       }
-      sender ! RaceActorStarted
     } catch {
       case ex: Throwable => sender ! RaceActorStartFailed(ex.getMessage)
     }
@@ -171,11 +182,15 @@ trait RaceActor extends Actor with ImplicitActorLogging {
     if (isMandatoryTermination(originator)){
       try {
         status = Terminating
-        onTerminateRaceActor(originator)
-        status = common.Status.Terminated
-        // note that we don't stop this actor - that is the responsibility of the master/ras
-        sender ! RaceActorTerminated
-        info("terminated")
+        if (onTerminateRaceActor(originator)) {
+          info("terminated")
+          status = common.Status.Terminated
+          // note that we don't stop this actor - that is the responsibility of the master/ras
+          sender ! RaceActorTerminated
+        } else {
+          warning("terminate rejected")
+          sender ! RaceActorTerminateFailed("rejected")
+        }
       } catch {
         case ex: Throwable => sender ! RaceActorTerminateFailed(ex.getMessage)
       }
@@ -185,49 +200,39 @@ trait RaceActor extends Actor with ImplicitActorLogging {
     }
   }
 
+  def handleSyncWithRaceClock = {
+    if (onSyncWithRaceClock) {
+      info("clock synced")
+      sender ! RaceClockSynced
+    } else {
+      warning("clock sync rejected")
+      sender ! RaceClockSyncFailed("rejected")
+    }
+  }
+
   //--- the general system message callbacks
 
   // note that RaceActor itself does not depend on overrides properly calling super.onXX(), all the
   // critical system processing we do in the non-overridden handleXX() that call the overridable onXX()
 
-  // we allow non-Unit returns because FSMRaceActors need them for state transitions. However, there is no
-  // return value processing in plain RaceActors
+  // the return value determines if the corresponding handleXMessage send an acknowledge or
+  // a rejection
 
   // Note alse that there are no separate ReXX messages, calling onReXX() is just done on the basis of the current
   // RaceActor state (we might support re-initialization in local RAS in the future)
 
-  def onInitializeRaceActor(rc: RaceContext, actorConf: Config): Any = {}
-  def onReInitializeRaceActor(rc: RaceContext, actorConf: Config): Any = {}
+  def onInitializeRaceActor(rc: RaceContext, actorConf: Config): Boolean = true
+  def onReInitializeRaceActor(rc: RaceContext, actorConf: Config): Boolean = true
 
-  def onStartRaceActor(originator: ActorRef): Any = {}
-  def onReStartRaceActor(originator: ActorRef): Any = {}
+  def onStartRaceActor(originator: ActorRef): Boolean = true
+  def onReStartRaceActor(originator: ActorRef): Boolean = true
 
-  def onPauseRaceActor(originator: ActorRef): Any = {}
-  def onResumeRaceActor(originator: ActorRef): Any = {}
+  def onPauseRaceActor(originator: ActorRef): Boolean = true
+  def onResumeRaceActor(originator: ActorRef): Boolean = true
 
-  def onTerminateRaceActor(originator: ActorRef): Any = {}
+  def onTerminateRaceActor(originator: ActorRef): Boolean = true
 
-  //--- utilities for RaceActors with dependents (TODO - turn this into a interface)
-
-  // this is the version that uses the same config for all dependents
-  def initDependentRaceActors (actors: Seq[ActorRef], rc: RaceContext, actorConf: Config): Boolean = {
-    askDependents(actors, InitializeRaceActor(rc,actorConf), RaceActorInitialized)
-  }
-  def startDependentRaceActors (actors: Seq[ActorRef]): Boolean = askDependents(actors,StartRaceActor(self),RaceActorStarted)
-  def terminateDependentRaceActors (actors: Seq[ActorRef]): Boolean = askDependents(actors,TerminateRaceActor(self),RaceActorTerminated)
-
-  def askDependents (actors: Seq[ActorRef], question: Any, answer: Any): Boolean = {
-    var result = true
-    actors.foreach { actorRef =>
-      askForResult (actorRef ? question){
-        case `answer` => // all fine
-        case TimedOut =>
-          warning(s"dependent actor timed out: ${actorRef.path.name}")
-          result = false
-      }
-    }
-    result
-  }
+  def onSyncWithRaceClock: Boolean = true
 
   def answerChildNodes (rc: ChildNodeRollCall) = {
     rc.answer(self -> ChildNode(self,Set.empty))
@@ -277,6 +282,8 @@ trait RaceActor extends Actor with ImplicitActorLogging {
     Some(scheduler.schedule(0.seconds, interval, self, msg))
   }
 
+  def delay (d: FiniteDuration, action: ()=>Unit): Option[Cancellable] = Some(scheduler.scheduleOnce(d,self,DelayedAction(self,action)))
+
   //--- per actor configurable logging
 
   // note that we effectively bypass the Akka LoggingAdapter here since we want to use our own configuration
@@ -300,59 +307,81 @@ trait RaceActor extends Actor with ImplicitActorLogging {
 }
 
 /**
- * FSMRaceActor is used to interface the standard Akka FSM actor type with RaceActor specifics.
- * Since FSM has its own receive() definition that we should not override, we have to make sure
- * the system messages are still properly called in case concrete FSMRaceActors don't process them
- * explicitly (we should not override receive() to implement a chain, like RaceActor does). We also
- * have to make sure that system message callbacks are properly invoked regardless of FSM state,
- * which is why we provide a respective whenUnhandled block
- */
-trait FSMRaceActor[S,D] extends FSM[S,D] with  RaceActor {
+  * a RaceActor that itself creates and manages a set of RaceActor children
+  *
+  * the main purpose of this trait is to keep a list of child actor infos (actorRef and config), and
+  * to manage the state callbacks for them (init,start,termination)
+  */
+trait ParentRaceActor extends RaceActor with ParentContext {
+  val children: ArrayBuffer[RaceActorRec] = new ArrayBuffer[RaceActorRec]
 
-  // make sure we use the FSM handler no matter in what trait order FSMRaceActor is specified
-  override final def receive = super[FSM].receive
-  override final def handleMessage = super[FSM].receive
+  override def onInitializeRaceActor(rc: RaceContext, actorConf: Config) = {
+    // TODO - shouldn't we delegate to super before forwarding to children?
+    if (initializeChildActors(rc,actorConf)) {
+      super.onInitializeRaceActor(rc, actorConf)
+    } else false
+  }
+  override def onStartRaceActor(originator: ActorRef) = {
+    if (startChildActors) {
+      super.onStartRaceActor(originator)
+    } else false
+  }
+  override def onTerminateRaceActor(originator: ActorRef) = {
+    if (terminateChildActors) {
+      super.onTerminateRaceActor(originator)
+    } else false
+  }
+  // TODO - add onRestart and onPause forwarding
 
-  // this takes the role of handleSystemMessage since we can't bypass FSM.receive
-  whenUnhandled {
-    case Event(InitializeRaceActor(rc: RaceContext,conf: Config), _) =>
-      val nextState = onInitializeRaceActor(rc, conf) match {
-        case newState: State => newState
-        case _ => stay
-      }
-      sender ! RaceActorInitialized
-      nextState
-
-    case Event(StartRaceActor(originator), _) =>
-      onStartRaceActor(originator) match {
-        case newState: State => newState
-        case _ => stay
-      }
-
-    case Event(TerminateRaceActor(originator), _) =>
-      val nextState = onTerminateRaceActor(originator) match {
-        case newState: State => newState
-        case _ => stay
-      }
-      sender ! RaceActorTerminated
-      nextState
-
-    case Event(rc: ChildNodeRollCall, _) =>
-      answerChildNodes(rc)
-      stay
+  def initializeChildActors (rc: RaceContext, actorConf: Config): Boolean = {
+    // we can't use askChildren because we need a different message object for each of them
+    !children.exists { e=> !askChild(e,InitializeRaceActor(rc,e.config),RaceActorInitialized) }
   }
 
-  onTransition {
-    case s1 -> s2 =>
-      log.info(s"${name} switching from state '$s1' to '$s2'")
-  }
+  def startChildActors: Boolean = askChildren(StartRaceActor(self),RaceActorStarted)
 
-  // make sure we don't handle system messages
-  def nothingWhen(s: S) = {
-    when(s) {
-      case null => stay
+  def terminateChildActors: Boolean = askChildrenReverse(TerminateRaceActor(self),RaceActorTerminated)
+
+  def askChild (actorRef: ActorRef, question: Any, answer: Any): Boolean = {
+    askForResult (actorRef ? question){
+      case `answer` => true
+      case TimedOut => warning(s"dependent actor timed out: ${actorRef.path.name}"); false
     }
   }
+  def askChildren (question: Any, answer: Any): Boolean = !children.exists(!askChild(_,question,answer))
+
+  def askChildrenReverse (question: Any, answer: Any): Boolean = {
+    for ( cr <- children.reverseIterator ){
+      if (!askChild(cr,question,answer)) return false
+    }
+    true
+  }
+
+  def actorOf(props: Props, name: String): ActorRef = context.actorOf(props,name)
+
+  def addChild (raRec: RaceActorRec): Unit = children += raRec
+
+  @inline def childActorRef (i: Int) = children(i).actorRef
+}
+
+/**
+  * pure interface that hides parent actor details from child actor creation context
+  */
+trait ParentContext {
+  def name: String
+  def system: ActorSystem
+  def self: ActorRef
+
+  //--- actor instantiation
+  def instantiateActor (actorName: String, actorConfig: Config): ActorRef
+  def actorOf(props: Props, name: String): ActorRef
+
+  // general instantiation
+  def newInstance[T: ClassTag](clsName: String,
+                               argTypes: Array[Class[_]]=null, args: Array[Object]=null): Option[T]
+  // and probably some more..
+
+  def addChild (raRec: RaceActorRec): Unit
 }
 
 /**
@@ -361,15 +390,15 @@ trait FSMRaceActor[S,D] extends FSM[S,D] with  RaceActor {
 trait PublishingRaceActor extends RaceActor {
   var writeTo = MutableSet.empty[String]
 
-  override def onInitializeRaceActor(raceContext: RaceContext, actorConf: Config): Any = {
-    super.onInitializeRaceActor(raceContext, actorConf)
+  override def onInitializeRaceActor(raceContext: RaceContext, actorConf: Config) = {
     writeTo ++= actorConf.getOptionalStringList("write-to")
+    super.onInitializeRaceActor(raceContext, actorConf)
   }
 
   // we just add the new channels
-  override def onReInitializeRaceActor(raceContext: RaceContext, actorConf: Config): Any = {
-    super.onReInitializeRaceActor(raceContext, actorConf)
+  override def onReInitializeRaceActor(raceContext: RaceContext, actorConf: Config) = {
     writeTo ++= actorConf.getOptionalStringList("write-to")
+    super.onReInitializeRaceActor(raceContext, actorConf)
   }
 
   // publish on all configured channels
@@ -404,20 +433,20 @@ trait SubscribingRaceActor extends RaceActor {
   def addSubscription (channel: String*) = readFrom ++= channel
   def addSubscriptions (channels: Seq[String]) = readFrom ++= channels
 
-  override def onInitializeRaceActor(raceContext: RaceContext, actorConf: Config): Any = {
-    super.onInitializeRaceActor(raceContext,actorConf)
+  override def onInitializeRaceActor(raceContext: RaceContext, actorConf: Config) = {
     readFrom ++= actorConf.getOptionalStringList("read-from")
     readFrom.foreach { channel => busFor(channel).subscribe(self,channel) }
+    super.onInitializeRaceActor(raceContext,actorConf)
   }
 
   // we add new channels and (re-)subscribe to everything since old channels might now be global
-  override def onReInitializeRaceActor(raceContext: RaceContext, actorConf: Config): Any = {
-    super.onReInitializeRaceActor(raceContext,actorConf)
+  override def onReInitializeRaceActor(raceContext: RaceContext, actorConf: Config) = {
     val newChannels = actorConf.getOptionalStringList("read-from")
     // re-subscription is benign in case we already were subscribed (bus keeps subscribers as sets)
     readFrom ++= newChannels
     //newChannels.foreach { channel => busFor(channel).subscribe(self,channel) }
     readFrom.foreach { channel => busFor(channel).subscribe(self,channel) }
+    super.onReInitializeRaceActor(raceContext,actorConf)
   }
 
   //--- dynamic subscriptions
@@ -435,9 +464,9 @@ trait SubscribingRaceActor extends RaceActor {
     readFrom.clear
   }
 
-  override def onTerminateRaceActor(originator: ActorRef): Any = {
-    super.onTerminateRaceActor(originator)
+  override def onTerminateRaceActor(originator: ActorRef) = {
     unsubscribeAll
+    super.onTerminateRaceActor(originator)
   }
 
   def readFromAsString = readFrom.mkString(",")
@@ -454,18 +483,25 @@ trait SubscribingRaceActor extends RaceActor {
   * we are running in
  */
 trait ContinuousTimeRaceActor extends RaceActor {
-  val simClock = RaceActorSystem(context.system).simClock
+  private val ras = RaceActorSystem(context.system)
+  val simClock: Clock = ras.simClock
+  final val canResetClock = config.getBooleanOrElse("can-reset-clock", false)
 
   var lastSimMillis: Long = simClock.baseMillis
   var startSimTimeMillis: Long = 0
   var startWallTimeMillis: Long = 0
 
-  override def onStartRaceActor(originator: ActorRef): Any = {
+  override def onStartRaceActor(originator: ActorRef) = {
     startSimTimeMillis = updatedSimTimeMillis
     startWallTimeMillis = System.currentTimeMillis()
     super.onStartRaceActor(originator)
   }
 
+  override def onSyncWithRaceClock = {
+    startSimTimeMillis = simClock.millis
+    lastSimMillis = startSimTimeMillis
+    super.onSyncWithRaceClock
+  }
 
   @inline def updateSimTime = lastSimMillis = simClock.millis
   @inline def simTime = new DateTime(lastSimMillis)
@@ -513,6 +549,21 @@ trait ContinuousTimeRaceActor extends RaceActor {
 
   def toWallTimeMillis (d: Duration) = (d.toMillis * simClock.timeScale).toLong
   def toWallTimeMillis (ms: Long) = (ms * simClock.timeScale).toLong
+
+  final def resetSimClockRequest (d: DateTime, timeScale: Double = 1.0): Boolean = {
+    if (canResetClock) {
+      info(s"request to reset clock to: $d")
+      askForResult(master ? RaceResetClock(self,d,timeScale)){
+        case RaceClockReset =>
+          onSyncWithRaceClock // we don't get a SimClockReset from the master since that would block
+          true
+        case RaceClockResetFailed => false
+      }
+    } else {
+      error(s"illegal attempt to reset clock")
+      false
+    }
+  }
 }
 
 /**
@@ -538,8 +589,6 @@ trait PeriodicRaceActor extends RaceActor {
   var schedule: Option[Cancellable] = None
 
   override def onInitializeRaceActor(rc: RaceContext, actorConf: Config) = {
-    super.onInitializeRaceActor(rc, actorConf)
-
     if (!isLocalContext(rc)) {
       // check if we have a different remote tick interval
       if (actorConf.hasPath(TickIntervalKey)) {
@@ -550,11 +599,13 @@ trait PeriodicRaceActor extends RaceActor {
         }
       }
     }
+
+    super.onInitializeRaceActor(rc, actorConf)
   }
 
-  override def onTerminateRaceActor(originator: ActorRef): Any = {
-    super.onTerminateRaceActor(originator)
+  override def onTerminateRaceActor(originator: ActorRef) = {
     stopScheduler
+    super.onTerminateRaceActor(originator)
   }
 
   def startScheduler = {

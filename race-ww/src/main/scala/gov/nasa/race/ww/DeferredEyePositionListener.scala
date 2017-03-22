@@ -76,7 +76,6 @@ trait DeferredEyePositionListener {
   }
 
   def onEyePositionChange (wwd: WorldWindow, delay: Int=500, updateTicks: Int=2)(action: (Position)=>Any) = {
-    println("@@ add listener")
     wwd.addRenderingListener( new Listener(wwd, RenderingEvent.AFTER_BUFFER_SWAP, delay, updateTicks, action))
   }
 }

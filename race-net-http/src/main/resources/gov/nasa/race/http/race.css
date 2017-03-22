@@ -1,0 +1,49 @@
+
+.label {
+  padding-left: 2em;
+  color: black;
+  align: right;
+}
+.value {
+  color: blue;
+  font-family: monospace;
+}
+h2 {
+  width: 100%;
+  border-bottom: 1px solid black;
+}
+h2 span {
+  font-size: medium;
+  font-weight: normal;
+}
+
+table {
+  align: left;
+  text-align: right;
+  vertical-align: top;
+  border-collapse: collapse;
+  border-style: hidden;
+}
+
+table td, table th {
+  padding-left: 2em;
+  padding-right: 4px;
+  padding-top: 2px;
+  border: 1px solid lightgray;
+}
+table.noBorder th, table.noBorder td {
+  border: 0px none lightgray;
+  border-style: none;
+}
+
+table td {
+  vertical-align: top;
+  color: blue;
+  font-family: monospace;
+}
+th.left, td.left {
+  text-align: left;
+}
+th.right, td.right {
+  text-align: right;
+}

@@ -30,13 +30,21 @@ import gov.nasa.race.core.{PeriodicRaceActor, PublishingRaceActor}
 class TestPublisher (val config: Config) extends PublishingRaceActor with PeriodicRaceActor {
 
   val message = config.getStringOrElse("message", "test")
+  val count = config.getBooleanOrElse("count", true)
+  var n = 0
 
   override def onStartRaceActor(originator: ActorRef) = {
-    super.onStartRaceActor(originator)
     startScheduler
+    super.onStartRaceActor(originator)
   }
 
   override def handleMessage = {
-    case RaceTick => publish(message)
+    case RaceTick =>
+      val msg = if (count) {
+        n += 1
+        s"$message-$n"
+      } else message
+
+      publish(msg)
   }
 }

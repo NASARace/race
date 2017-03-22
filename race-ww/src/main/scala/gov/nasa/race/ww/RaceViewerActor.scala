@@ -47,33 +47,13 @@ import scala.swing.Component
   * instance
   */
 class RaceViewerActor(val config: Config) extends ContinuousTimeRaceActor
-                                   with SubscribingRaceActor with PublishingRaceActor {
-  var actors = List.empty[ActorRef] // to be populated during view construction
+               with SubscribingRaceActor with PublishingRaceActor with ParentRaceActor {
+
   val view = new RaceView(this) // our abstract interface towards the layers and the UI side
 
   //--- RaceActor callbacks
 
-  override def onInitializeRaceActor(rc: RaceContext, actorConf: Config): Unit = {
-    super.onInitializeRaceActor(rc, actorConf)
-    initDependentRaceActors(actors, rc, actorConf)
-  }
-
-  override def onReInitializeRaceActor(rc: RaceContext, actorConf: Config): Any = {
-    super.onReInitializeRaceActor(rc,actorConf)
-    initDependentRaceActors(actors, rc, actorConf)
-  }
-
-  override def onStartRaceActor(originator: ActorRef) = {
-    super.onStartRaceActor(originator)
-    startDependentRaceActors(actors)
-  }
-
   override def onTerminateRaceActor(originator: ActorRef) = {
-    super.onTerminateRaceActor(originator)
-
-    info(s"${name} terminating")
-    terminateDependentRaceActors(actors)
-
     if (view.displayable) {
       info(s"${name} closing WorldWind window..")
       view.close
@@ -81,11 +61,8 @@ class RaceViewerActor(val config: Config) extends ContinuousTimeRaceActor
     } else {
       info(s"${name} WorldWind window already closed")
     }
+    super.onTerminateRaceActor(originator)
   }
-
-  //--- supporting functions
-
-  def addActor (actorRef: ActorRef) = actors = actorRef :: actors
 }
 
 
@@ -122,7 +99,6 @@ class RaceView (viewerActor: RaceViewerActor) extends DeferredEyePositionListene
   setWorldWindConfiguration // NOTE - this has to happen before we load any WorldWind classes
 
   val gotoTime = config.getIntOrElse("goto-time", 4000)
-  val layers = createLayers
 
   // we want to avoid several DeferredXListeners because of the context switch overhead
   // hence we have a secondary listener level here
@@ -138,7 +114,9 @@ class RaceView (viewerActor: RaceViewerActor) extends DeferredEyePositionListene
   def addObjectListener (newListener: ObjectListener) = objectListener = newListener :: objectListener
   def removeObjectListener (listener: ObjectListener) = objectListener = objectListener.filter(_.ne(listener))
 
-  val frame = new WorldWindFrame(viewerActor.config, this)
+  val layers = createLayers
+
+  val frame = new WorldWindFrame(viewerActor.config, this) // this creates the wwd instance
   val redrawManager = RedrawManager(wwd.asInstanceOf[Redrawable]) // the shared one, layers/panels can have their own
   val inputHandler = wwdView.getViewInputHandler.asInstanceOf[RaceViewInputHandler]
   var layerController: Option[LayerController] = None
@@ -175,6 +153,7 @@ class RaceView (viewerActor: RaceViewerActor) extends DeferredEyePositionListene
 
     Configuration.setValue(AVKey.DATA_FILE_STORE_CLASS_NAME, classOf[ConfigurableWriteCache].getName)
     Configuration.setValue("gov.nasa.worldwind.avkey.ViewInputHandlerClassName", classOf[RaceViewInputHandler].getName)
+    Configuration.setValue("gov.nasa.worldwind.avkey.ViewClassName", classOf[MinClipOrbitView].getName)
   }
 
   def createLayers = {
@@ -216,8 +195,8 @@ class RaceView (viewerActor: RaceViewerActor) extends DeferredEyePositionListene
       actor
     }
     val actorRef = viewerActor.context.actorOf(Props(instantiateActor),name)
-    viewerActor.addActor(actorRef)
     semaphore.acquire()    // block until (1) got executed
+    viewerActor.addChild(RaceActorRec(actorRef,actor.config))
     actor
   }
 
@@ -291,10 +270,19 @@ class RaceView (viewerActor: RaceViewerActor) extends DeferredEyePositionListene
   }
 
   //--- view (eye position) transitions
+
+  // this one does not animate. Use for objects that have to stay at the same screen coordinates,
+  // but the map is going to be updated discontinuously
   def centerOn (pos: Position) = {
     inputHandler.stopAnimators
     //inputHandler.addCenterAnimator(eyePosition, pos, true) // ?bug - this just causes weird zoom-out animation
-    inputHandler.addEyePositionAnimator(800,eyePosition,new Position(pos,eyePosition.getElevation))
+    wwdView.setEyePosition(new Position(pos,eyePosition.getElevation))
+  }
+  // this one does a smooth transition to a new center, i.e. the map will update smoothly, but
+  // objects at the center positions will jump
+  def panToCenter (pos: Position, transitionTime: Long=500) = {
+    inputHandler.stopAnimators
+    inputHandler.addEyePositionAnimator(transitionTime,eyePosition,new Position(pos,eyePosition.getElevation))
   }
   def zoomTo (zoom: Double) = {
     inputHandler.stopAnimators

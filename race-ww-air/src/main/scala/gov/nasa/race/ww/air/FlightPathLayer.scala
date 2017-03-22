@@ -25,7 +25,7 @@ import gov.nasa.race._
 import gov.nasa.race.air.{FlightCompleted, FlightDropped, FlightPos}
 import gov.nasa.race.common.Threshold
 import gov.nasa.race.config.ConfigUtils._
-import gov.nasa.race.core._
+import gov.nasa.race.core.Messages.BusEvent
 import gov.nasa.race.swing.Style._
 import gov.nasa.race.ww.{DynamicLayerInfoPanel, DynamicRaceLayerInfo, _}
 import gov.nasa.worldwind.WorldWind

@@ -250,9 +250,16 @@ class RaceActorSystem(val config: Config) extends LogController with VerifiableA
       case RaceInitialized =>
         status = Initialized
         info(s"universe $name initialized")
-      case TimedOut => error(s"initializing universe $name timed out")
-      case e => error(s"invalid response initializing universe $name: $e")
+      case TimedOut =>
+        abort(s"initializing universe $name timed out")
+      case e =>
+        error(s"invalid response initializing universe $name: $e")
     }
+  }
+
+  def abort (msg: String): Unit = {
+    error(msg)
+    terminate
   }
 
   // called by RACE driver (TODO enforce or verify)
@@ -316,6 +323,23 @@ class RaceActorSystem(val config: Config) extends LogController with VerifiableA
         (allowRemoteTermination && isRemoteActor(actorRef))) terminate
       else warning(s"universe ignoring termination request from ${actorRef.path}")
     }
+  }
+
+  /**
+    * some actor asked for a simClock reset
+    * TODO - this does not yet handle remote RAS
+    */
+  def resetSimClockRequest (d: DateTime, tScale: Double): Boolean = {
+    if (isLive) {
+      askVerifiableForResult(master, RaceResetClock(ActorRef.noSender,d,tScale)) {
+        case RaceClockReset =>
+          info(s"universe $name clock reset")
+          true
+        case RaceClockResetFailed =>
+          warning(s"universe $name reset clock failed")
+          false
+      }
+    } else false // nothing to reset
   }
 
   /**

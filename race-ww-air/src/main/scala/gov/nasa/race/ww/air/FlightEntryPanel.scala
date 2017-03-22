@@ -120,7 +120,7 @@ class FlightEntryPanel[T <: InFlightAircraft] (raceView: RaceView, layer: Flight
   }
 
   def centerFlightEntry(centerIt: Boolean) = {
-    if (centerIt) layer.centerFlightEntry(flightEntry)
+    if (centerIt) layer.startCenteringFlightEntry(flightEntry)
     else layer.stopCenteringFlightEntry
   }
 

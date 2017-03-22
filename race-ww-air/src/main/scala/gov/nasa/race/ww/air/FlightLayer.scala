@@ -19,25 +19,26 @@ package gov.nasa.race.ww.air
 
 import java.awt.Color
 
+import com.github.nscala_time.time.Imports._
 import com.typesafe.config.Config
-import gov.nasa.race.air.{CompactFlightPath, FlightInfo, FlightInfoUpdateRequest, InFlightAircraft}
 import gov.nasa.race._
+import gov.nasa.race.air.{CompactFlightPath, FlightInfo, FlightInfoUpdateRequest, InFlightAircraft}
 import gov.nasa.race.common.Threshold
 import gov.nasa.race.config.ConfigUtils._
-import gov.nasa.race.core.BusEvent
+import gov.nasa.race.core.Messages._
 import gov.nasa.race.swing.Style._
 import gov.nasa.race.ww.EventAction.EventAction
 import gov.nasa.race.ww._
 import gov.nasa.race.ww.air.FlightRenderLevel.FlightRenderLevel
 import gov.nasa.race.ww.air.PathRenderLevel.PathRenderLevel
-import gov.nasa.worldwind.geom.Position
 
 import scala.collection.mutable.{Map => MutableMap}
+
 
 /**
   * abstract layer class to display aircraft in flight
   */
-abstract class FlightLayer[T <:InFlightAircraft](raceView: RaceView, config: Config)
+abstract class FlightLayer[T <:InFlightAircraft](val raceView: RaceView, config: Config)
                                   extends SubscribingRaceLayer(raceView,config)
                                      with DynamicRaceLayerInfo
                                      with AltitudeSensitiveLayerInfo {
@@ -80,7 +81,19 @@ abstract class FlightLayer[T <:InFlightAircraft](raceView: RaceView, config: Con
   var displayFilter: (FlightEntry[T])=>Boolean = noDisplayFilter
 
   override def size = flights.size
+
+  //--- end ctor
+
   def getFlight (cs: String) = flights.get(cs).map( _.obj )
+
+  def matchingFlights (f: FlightEntry[T]=>Boolean): Seq[FlightEntry[T]] = {
+    flights.foldLeft(Seq.empty[FlightEntry[T]])( (acc,e) => {
+      val flight = e._2
+      if (f(flight)) flight +: acc else acc
+    })
+  }
+
+  def foreachFlight (f: FlightEntry[T]=>Unit): Unit = flights.foreach( e=> f(e._2))
 
   //--- rendering detail level management
   def getFlightRenderLevel (alt: Double) = {
@@ -93,9 +106,18 @@ abstract class FlightLayer[T <:InFlightAircraft](raceView: RaceView, config: Con
     flights.foreach(e=> f(e._2))
     redrawNow
   }
+
   def setDotLevel    = setFlightRenderLevel( FlightRenderLevel.Dot, (e)=> e.setDotLevel)
   def setLabelLevel  = setFlightRenderLevel( FlightRenderLevel.Label, (e)=> e.setLabelLevel)
   def setSymbolLevel = setFlightRenderLevel( FlightRenderLevel.Symbol, (e)=> e.setSymbolLevel)
+
+  def setFlightLevel (e: FlightEntry[T]) = {
+    flightDetails match {
+      case FlightRenderLevel.Dot => e.setDotLevel
+      case FlightRenderLevel.Label => e.setLabelLevel
+      case FlightRenderLevel.Symbol => e.setSymbolLevel
+    }
+  }
 
   def getPathRenderLevel (alt: Double) = if (alt > linePosThreshold) PathRenderLevel.Line else PathRenderLevel.LinePos
   def setPathRenderLevel (level: PathRenderLevel,f: (FlightEntry[T])=>Unit): Unit = {
@@ -110,7 +132,9 @@ abstract class FlightLayer[T <:InFlightAircraft](raceView: RaceView, config: Con
 
   def createFlightPath (fpos: T) = new CompactFlightPath
 
-  def centerOn(pos: Position) = raceView.centerOn(pos)
+  def getSymbol (e: FlightEntry[T]): Option[FlightSymbol[T]] = {
+    Some(new FlightSymbol(e))
+  }
 
   def dismissEntryPanel (e: FlightEntry[T]) = {
     if (entryPanel.isShowing(e)) {
@@ -153,7 +177,7 @@ abstract class FlightLayer[T <:InFlightAircraft](raceView: RaceView, config: Con
         case `ShowPanel`    => setFlightEntryPanel(e)
         case `DismissPanel` => dismissEntryPanel(e)
           //--- our own ones
-        case `StartCenter` => centerFlightEntry(e)
+        case `StartCenter` => startCenteringFlightEntry(e)
         case `StopCenter` => ifSome(centeredEntry) { ce=> if (ce eq e) stopCenteringFlightEntry }
         case `ShowPath`   => changeObjectAttr(e, e.setPath(true), action)
         case `HidePath`   => changeObjectAttr(e, e.setPath(false), action)
@@ -195,26 +219,39 @@ abstract class FlightLayer[T <:InFlightAircraft](raceView: RaceView, config: Con
     }
   }
 
-  def addFlightEntry (fpos: T) = {
-    val e = new FlightEntry[T](fpos,createFlightPath(fpos), this)
+  //--- create, update and remove FlightEntries
+
+  // here so that it can be overridden by subclasses, which can by useful in case the layer has to manage
+  // resources that are display relevant for FlightEntries (such as 3D models)
+  protected def createFlightEntry(fpos: T): FlightEntry[T] = new FlightEntry[T](fpos,createFlightPath(fpos), this)
+
+  def addFlightEntryAttributes(e: FlightEntry[T]): Unit = e.addRenderables
+  def updateFlightEntryAttributes (e: FlightEntry[T]): Unit = e.updateRenderables
+  def releaseFlightEntryAttributes(e: FlightEntry[T]): Unit = e.removeRenderables
+
+  protected def addFlightEntry (fpos: T) = {
+    val e = createFlightEntry(fpos)
     flights += (fpos.cs -> e)
 
     if (displayFilter(e)) {
-      e.addRenderables
+      addFlightEntryAttributes(e)
       wwdRedrawManager.redraw()
     }
     // we don't add to the panel here since it might have an active query and the new entry might not match
   }
 
-  def updateFlightEntry (e: FlightEntry[T], fpos: T) = {
-    e.updateAircraft(fpos)
-    if (e.hasSymbol) wwdRedrawManager.redraw()
-    if (entryPanel.isShowing(e)) entryPanel.update
+  protected def updateFlightEntry (e: FlightEntry[T], fpos: T) = {
+    if (e.obj.date < fpos.date) { // don't overwrite new with old data
+      e.setNewObj(fpos)
+      updateFlightEntryAttributes(e)
+      if (e.hasSymbol) wwdRedrawManager.redraw()
+      if (entryPanel.isShowing(e)) entryPanel.update
+    }
   }
 
-  def removeFlightEntry (e: FlightEntry[T]) = {
+  protected def removeFlightEntry (e: FlightEntry[T]) = {
     val wasShowing = e.hasSymbol
-    e.removeRenderables
+    releaseFlightEntryAttributes(e)
     flights -= e.obj.cs
     if (wasShowing) wwdRedrawManager.redraw()
     panel.removedEntry(e)
@@ -223,11 +260,21 @@ abstract class FlightLayer[T <:InFlightAircraft](raceView: RaceView, config: Con
   }
 
   //--- flight entry centering
+
   var centeredEntry: Option[FlightEntry[T]] = None
-  def centerFlightEntry (e: FlightEntry[T]) = {
+
+  def centerEntry (e: FlightEntry[T]) = {
+    if (e.hasAssignedModel) {
+      raceView.centerOn(e.obj)
+    } else {
+      raceView.panToCenter(e.obj)
+    }
+  }
+
+  def startCenteringFlightEntry(e: FlightEntry[T]) = {
     ifSome(centeredEntry){_.followPosition(false)}
     e.followPosition(true)
-    centerOn(e.obj)
+    raceView.panToCenter(e.obj)
     centeredEntry = Some(e)
     changedFlightEntryOptions(e,StartCenter)
   }
@@ -264,7 +311,7 @@ abstract class FlightLayer[T <:InFlightAircraft](raceView: RaceView, config: Con
 
   override def handleMessage = {
     case BusEvent(_,fInfo:FlightInfo,_) => entryPanel.setFlightInfo(fInfo)
-    case other => warning(f"$name ignoring message $other%30.30s..")
+    case DelayedAction(_,action) => action()
   }
 }
 

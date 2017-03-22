@@ -22,12 +22,14 @@ import gov.nasa.race.test.RaceActorSpec
 import org.joda.time.DateTime
 import org.scalatest.WordSpecLike
 
+import scala.util.Properties
+
 /**
   * unit test for ProcessLauncher actor
   *
   * NOTE - this test needs to execute a Java process for which we have to set up the classpath explicitly,
   * so that it can find our ExternalProc.java test class
-  * THIS MAKES THIS TEST BRITTLE WITH RESPECT TO MOVING ExternalProc
+  * THIS MAKES THIS TEST BRITTLE WITH RESPECT TO MOVING ExternalProc OR UPDATING SCALA
   */
 class ProcessLauncherSpec  extends RaceActorSpec with WordSpecLike {
   mkTestOutputDir
@@ -39,9 +41,10 @@ class ProcessLauncherSpec  extends RaceActorSpec with WordSpecLike {
         val logFile = testOutputFile("ExternalProc.log")
         logFile.delete // make sure a previous one is gone
 
+        val scalaVer = Properties.versionNumberString.substring(0,4)
         val launcher = addTestActor( classOf[ProcessLauncher], "launcher", createConfig(
           s"""process-name = "java"
-            |process-args = ["-XshowSettings", "-classpath", "race-core-test/target/scala-2.11/test-classes", "ExternalProc"]
+            |process-args = ["-XshowSettings", "-classpath", "race-core-test/target/scala-${scalaVer}/test-classes", "ExternalProc"]
             |logfile = ${logFile.getPath}
             |ensureKill = true
           """.stripMargin

@@ -154,7 +154,7 @@ class FlightInfoTfmParser (store: FlightInfoStore)
       var date: DateTime = null
       processAttributes {
         case `typeAttr` => tv = value
-        case "timeValue" => date = DateTime.parse(value)
+        case "timeValue" => if (value != null) date = DateTime.parse(value)
       }
       if (tv == typeVal) equalAction(date) else notEqualAction(date)
     }

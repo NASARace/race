@@ -42,11 +42,11 @@ trait CryptApp {
     var file: Option[File] = None
 
     opt0("-e","--encrypt")("encrypt file (default = true)") {encrypt = true}
-    opt0("-d","-decrypt")("decrypt file") {encrypt = false}
-    opt0("--delete")("delete input file after encryption") {deleteWhenDone = true}
+    opt0("-d","--decrypt")("decrypt file") {encrypt = false}
+    opt0("--keep")("keep input file after encryption (default = false)") {deleteWhenDone = false}
     opt1("-k","--keystore")("<pathname>","optional keystore file") {a=> optKeyStore = parseExistingFileOption(a)}
     opt1("-a","--alias")("<aliasName>","keystore alias") {a=> optKeyAlias = Some(a)}
-    requiredArg1("<pathName>","file to encrypt/decrypt") {a=> parseExistingFileOption(a)}
+    requiredArg1("<pathName>","file to encrypt/decrypt") {a=> file = parseExistingFileOption(a)}
   }
 
   //--- those are the high level abstract methods provided by subtypes
@@ -54,7 +54,7 @@ trait CryptApp {
   def decrypt (f: File, cipher: Cipher): Unit
 
   def main (args: Array[String]): Unit = {
-    val opts = CliArgs(args){new Opts}.getOrElse(return)
+    val opts = CliArgs(args){new Opts}.getOrElse{return}
 
     ifSome(opts.optKeyStore){ ks =>
       for (

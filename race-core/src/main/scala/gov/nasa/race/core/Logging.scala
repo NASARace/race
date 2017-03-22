@@ -17,10 +17,14 @@
 
 package gov.nasa.race.core
 
+import java.io.PrintWriter
+import java.net.Socket
+
 import akka.actor.{Actor, ActorRef, ActorSystem}
 import akka.dispatch.RequiresMessageQueue
 import akka.event.LoggerMessageQueueSemantics
 import akka.event.Logging._
+import gov.nasa.race.util.ConsoleIO
 
 /**
   * trait to format Akka log events (as defined in akka.event.Logging.{Error,Warning,Info,Debug}
@@ -78,7 +82,7 @@ class PseudoLogController extends LogController {
   */
 object RaceLogger {
   /**  the producer -> output interface, can be set prior to starting a RaceActorSystem */
-  var logAppender: LogAppender = new StdioAppender
+  var logAppender: LogAppender = createDefaultLogAppender
 
   /** the output -> producer interface (used by RACE drivers that want to set log levels programmatically */
   var logController: LogController = new PseudoLogController
@@ -91,6 +95,26 @@ object RaceLogger {
    * TODO - this is way too much Akka bypassing
    */
   private var logActor: ActorRef = _
+
+  private var logSocket: Socket = null
+  private var logWriter: PrintWriter = null
+
+  def createDefaultLogAppender: LogAppender = {
+    val host = System.getProperty("log.console.host")
+    val portSpec = System.getProperty("log.console.port")
+    if (host != null && portSpec != null){
+      try {
+        val port = Integer.parseInt(portSpec)
+        logSocket = new Socket(host, port)
+        logWriter = new PrintWriter(logSocket.getOutputStream, true)
+        System.clearProperty("logback.configurationFile") // otherwise we might get logback output from 3rd party code
+        return new PrintWriterAppender(logWriter)
+      } catch {
+        case t: Throwable => ConsoleIO.printlnErr(s"[ERROR] failed to open log socket: ${t.getMessage}")
+      }
+    }
+    new StdioAppender
+  }
 
   def getConfigLogLevel (sys: ActorSystem, optLevel: Option[String]): Option[LogLevel] = {
     val logBus = sys.eventStream
@@ -134,6 +158,9 @@ object RaceLogger {
       logBus.unsubscribe(logActor,classOf[Debug])
       logAppender.appendInfo("RACE logging terminated")
     }
+
+    if (logWriter != null) logWriter.close
+    if (logSocket != null) logSocket.close
   }
 }
 import gov.nasa.race.core.RaceLogger._
@@ -178,4 +205,11 @@ class StdioAppender extends LogAppender {
   override def appendWarning (s: String) = System.err.println(s)
   override def appendInfo (s: String) = System.out.println(s)
   override def appendDebug (s: String) = System.out.println(s)
+}
+
+class PrintWriterAppender (out: PrintWriter) extends LogAppender {
+  override def appendError (s: String) = out.println(s)
+  override def appendWarning (s: String) = out.println(s)
+  override def appendInfo (s: String) = out.println(s)
+  override def appendDebug (s: String) = out.println(s)
 }

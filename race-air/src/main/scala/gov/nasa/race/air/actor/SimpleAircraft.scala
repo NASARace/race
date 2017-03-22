@@ -47,8 +47,8 @@ class SimpleAircraft (val config: Config) extends ContinuousTimeRaceActor
   //--- overridden initialization/termination callbacks
 
   override def onStartRaceActor(originator: ActorRef) = {
-    super.onStartRaceActor(originator)
     startScheduler
+    super.onStartRaceActor(originator)
   }
 
   //---  user message handler

@@ -18,11 +18,14 @@
 package gov.nasa.race.actor
 
 import com.typesafe.config.Config
+import gov.nasa.race.core.SubscribingRaceActor
 
 /**
   * actor that publishes to either one of two channels based on configured filtering
+  *
+  * Note this ignores the plain 'write-to' channel
   */
-class EitherOrRouter (val config: Config) extends FilteringPublisher {
+class EitherOrRouter (val config: Config) extends FilteringPublisher with SubscribingRaceActor {
   val writeToPass = config.getString("write-to-pass")
   val writeToFail = config.getString("write-to-fail")
 

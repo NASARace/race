@@ -18,7 +18,7 @@
 package gov.nasa.race.swing
 
 import gov.nasa.race.util.DateTimeUtils._
-import gov.nasa.race.common.SettableClock
+import gov.nasa.race.common.{Clock, SettableClock}
 import gov.nasa.race.swing.Style._
 
 import scala.concurrent.duration._
@@ -27,11 +27,11 @@ import scala.swing.{GridPanel, Label}
 /**
  * a stopwatch, i.e. a clock that can be paused/resumed/stopped
  */
-class DigitalStopWatch (val clock: SettableClock)  extends GridPanel(1,1) {
+class DigitalStopWatch (val clock: Clock)  extends GridPanel(1,1) {
 
-  class StopWatchLabel (txt: String=null) extends Label(txt) {
+  class StopWatchLabel(txt: String = null) extends Label(txt) {
     def update = {
-      val (h,m,s) = toHHMMSS(clock.elapsed)
+      val (h, m, s) = toHHMMSS(clock.elapsed)
       text = f" $h%02d:$m%02d:$s%02d "
     }
   }
@@ -46,14 +46,19 @@ class DigitalStopWatch (val clock: SettableClock)  extends GridPanel(1,1) {
     if (!showing) timer.stop
     else clockTime.update
   }
+}
+
+class SettableDigitalStopWatch (settableClock: SettableClock) extends DigitalStopWatch(settableClock) {
 
   def pause = stop
+
   def resume = {
-    clock.resume
+    settableClock.resume
     timer.restart
   }
   def stop = {
-    clock.stop
+    settableClock.stop
     timer.stop
   }
+
 }

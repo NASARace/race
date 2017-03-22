@@ -1,12 +1,28 @@
+/*
+ * Copyright (c) 2017, United States Government, as represented by the
+ * Administrator of the National Aeronautics and Space Administration.
+ * All rights reserved.
+ *
+ * The RACE - Runtime for Airspace Concept Evaluation platform is licensed
+ * under the Apache License, Version 2.0 (the "License"); you may not use
+ * this file except in compliance with the License. You may obtain a copy
+ * of the License at http://www.apache.org/licenses/LICENSE-2.0.
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package gov.nasa.race.actor
 
 import akka.actor.ActorRef
 import com.typesafe.config.Config
 import gov.nasa.race._
-import gov.nasa.race.common.{ElemStats, MsgStats, MsgStatsSnapshot, Stats, SubscriberMsgStats}
+import gov.nasa.race.common.{MsgClassifier, MsgStats, PatternStats, SubscriberMsgStats}
 import gov.nasa.race.config.ConfigUtils._
-import gov.nasa.race.core.Messages.RaceTick
-import gov.nasa.race.core.{BusEvent, ContinuousTimeRaceActor, PeriodicRaceActor, PublishingRaceActor, SubscribingRaceActor}
+import gov.nasa.race.core.Messages.{BusEvent, RaceTick}
+import gov.nasa.race.core.{ContinuousTimeRaceActor, PeriodicRaceActor, PublishingRaceActor, SubscribingRaceActor}
 import gov.nasa.race.util.XmlPullParser
 
 import scala.collection.mutable.{SortedMap => MSortedMap}
@@ -38,7 +54,8 @@ class XmlMsgStatsCollector (val config: Config) extends SubscribingRaceActor wit
   override def defaultTickDelay = 10.seconds
 
   val title = config.getStringOrElse("title", name)
-  val patternSpecs = config.getStringArray("patterns") // optional, if none we only parse top level
+  val pathSpecs = config.getStringArray("paths") // optional, if none we only parse top level
+  val patterns = MsgClassifier.getClassifiers(config)
   val ignoreMessages = config.getStringArray("ignore").map(new Regex(_))
 
   // the time base we use for msg peak rate calculation
@@ -51,10 +68,10 @@ class XmlMsgStatsCollector (val config: Config) extends SubscribingRaceActor wit
   var channels = "" // set during start
 
   class Parser extends XmlPullParser {
-    val pathQueries = patternSpecs map( ps => compileGlobPathQuery(ps.split("/")))
+    val pathQueries = pathSpecs map(ps => compileGlobPathQuery(ps.split("/")))
     setBuffer(new Array[Char](config.getIntOrElse("buffer-size", 4096))) // pre-alloc buffer
 
-    def parse(input: String) = {
+    def parse(input: String): MsgStats = {
       initializeBuffered(input)
 
       var isFirstElement = true
@@ -77,15 +94,16 @@ class XmlMsgStatsCollector (val config: Config) extends SubscribingRaceActor wit
             var idx = 0
             pathQueries foreach { pqId =>
               if (isMatchingPath(pqId)) {
-                val pattern = patternSpecs(idx)
-                val elemStat = msgStat.elems.getOrElseUpdate(pattern,new ElemStats(pattern))
-                elemStat.count += 1
+                val pattern = pathSpecs(idx)
+                val patternStat = msgStat.pathMatches.getOrElseUpdate(pattern,new PatternStats(pattern))
+                patternStat.count += 1
               }
               idx += 1
             }
           }
         }
       }
+      msgStat
     }
   }
 
@@ -97,14 +115,23 @@ class XmlMsgStatsCollector (val config: Config) extends SubscribingRaceActor wit
   }
 
   override def onStartRaceActor(originator: ActorRef) = {
-    super.onStartRaceActor(originator)
     channels = readFromAsString
     startScheduler
+    super.onStartRaceActor(originator)
   }
 
   override def handleMessage = {
-    case BusEvent(_,msg: String,_) => parser.parse(msg)
+    case BusEvent(_,msg: String,_) =>
+      val msgStat = parser.parse(msg)
+      if (msgStat != null && patterns.nonEmpty) checkMatches(msgStat,msg)
+
     case RaceTick if hasPublishingChannels => publish(snapshot)
+  }
+
+  def checkMatches (msgStat: MsgStats, msg: String) = {
+    MsgClassifier.classify(msg,patterns) foreach { mc =>
+      msgStat.regexMatches.getOrElseUpdate(mc.name,new PatternStats(mc.name)).count += 1
+    }
   }
 
   def snapshot = new SubscriberMsgStats(title, updatedSimTimeMillis, elapsedSimTimeMillisSinceStart,

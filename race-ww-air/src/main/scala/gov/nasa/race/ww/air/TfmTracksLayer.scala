@@ -21,7 +21,7 @@ import java.awt.Color
 
 import com.typesafe.config.Config
 import gov.nasa.race.air.{TFMTrack, TFMTracks}
-import gov.nasa.race.core._
+import gov.nasa.race.core.Messages.BusEvent
 import gov.nasa.race.ww.RaceView
 
 /**

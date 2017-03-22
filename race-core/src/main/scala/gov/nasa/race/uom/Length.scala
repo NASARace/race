@@ -1,6 +1,23 @@
+/*
+ * Copyright (c) 2016, United States Government, as represented by the
+ * Administrator of the National Aeronautics and Space Administration.
+ * All rights reserved.
+ *
+ * The RACE - Runtime for Airspace Concept Evaluation platform is licensed
+ * under the Apache License, Version 2.0 (the "License"); you may not use
+ * this file except in compliance with the License. You may obtain a copy
+ * of the License at http://www.apache.org/licenses/LICENSE-2.0.
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package gov.nasa.race.uom
 
 import scala.concurrent.duration.Duration
+import Math._
 
 /**
   * length quantities
@@ -15,9 +32,11 @@ object Length {
 
   final val Length0 = Meters(0)
   final val UndefinedLength = Meters(Double.NaN)
-  @inline def isDefined(x: Length): Boolean = x.d != Double.NaN
+  @inline def isDefined(x: Length): Boolean = !x.d.isNaN
 
   final implicit val εLength = Meters(1e-9)
+
+  @inline def Abs(l: Length) = Meters(abs(l.d))
 
   //--- Length constructors (basis is meter)
   @inline def Kilometers(d: Double) = new Length(d*1000.0)
@@ -82,6 +101,7 @@ class Length protected[uom] (val d: Double) extends AnyVal {
 
   @inline def * (c: Double) = new Length(d * c)
   @inline def * (c: Length)(implicit r: LengthDisambiguator.type) = new Area(d * c.d)
+  @inline def `²`(implicit r: LengthDisambiguator.type) = new Area(d * d)
 
   @inline def / (c: Double): Length = new Length(d / c)
   @inline def / (x: Length)(implicit r: LengthDisambiguator.type): Double = d / x.d
@@ -98,8 +118,8 @@ class Length protected[uom] (val d: Double) extends AnyVal {
   @inline def ≡ (x: Length) = d == x.d
   // we intentionally omit ==, <=, >=
 
-  @inline def isUndefined = d == Double.NaN
-  @inline def isDefined = d != Double.NaN
+  @inline def isUndefined = d.isNaN
+  @inline def isDefined = !d.isNaN
 
   override def toString = show   // calling this would cause allocation
   def show = s"${d}m"

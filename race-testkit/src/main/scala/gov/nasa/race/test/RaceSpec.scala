@@ -59,6 +59,8 @@ trait RaceSpec extends Suite with Matchers with OptionValues with Inside with Pr
     if (rf.exists) rf else fail(s"resource file not found: $rf")
   }
 
+  def createConfig(s: String) = ConfigFactory.parseString(s)
+
   def baseResourceConfig (fileName: String): Config = resourceConfig(baseResourceFile(fileName))
   def qualifiedResourceConfig (fileName: String): Config = resourceConfig(qualifiedResourceFile(fileName))
 

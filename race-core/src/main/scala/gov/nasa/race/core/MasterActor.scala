@@ -20,7 +20,9 @@ package gov.nasa.race.core
 import akka.actor.SupervisorStrategy.Stop
 import akka.actor._
 import akka.pattern.AskSupport
+import akka.util.Timeout
 import com.typesafe.config.Config
+import gov.nasa.race.common.Clock
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.Messages._
 import gov.nasa.race.util.NetUtils._
@@ -108,7 +110,11 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ImplicitActorLogging
       info(s"master $name got RaceTerminateRequest")
       ras.terminationRequest(sender)
 
-    //--- time management
+    case RaceResetClock(originator: ActorRef,d:DateTime,tScale:Double) =>
+      onRaceResetClock(originator,d,tScale) // RAS changed simClock, inform actors
+
+    //--- inter RAS time management
+      // TODO - this needs to be unified with SyncWithRaceClock
     case SyncSimClock(dateTime: DateTime, timeScale: Double) =>
       simClock.reset(dateTime,timeScale)
       sender ! RaceAck
@@ -295,7 +301,11 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ImplicitActorLogging
       case other:AskFailure =>
         error(s"failed actor instantiation: $other")
         throw new RaceInitializeException(s"failed to create actor $actorName")
-    }
+    }(getTimeout(actorConfig,"create-timeout"))
+  }
+
+  def getTimeout(conf: Config, key: String): Timeout = {
+    if (conf.hasPath(key)) Timeout(conf.getFiniteDuration(key)) else timeout
   }
 
   //--- actor initialization
@@ -335,6 +345,19 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ImplicitActorLogging
           error(s"invalid initialization response from $actorName: $other")
           throw new RaceInitializeException("invalid InitializeRaceActor response")
       }
+      checkLiveness(actorRef)
+    }
+  }
+
+  def checkLiveness (actorRef: ActorRef) = {
+    askForResult( actorRef ? PingRaceActor()) {
+      case PingRaceActor(tSent,tReceived) => // all Ok
+      case TimedOut =>
+        error(s"no PingRaceActor response from ${actorRef.path}, check handleMessage() for match-all clause")
+        throw new RaceInitializeException(s"initialized ${actorRef.path} is unresponsive")
+      case other =>
+        error(s"invalid PingRaceActor response from ${actorRef.path}")
+        throw new RaceInitializeException("invalid PingRaceActor response")
     }
   }
 
@@ -478,6 +501,47 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ImplicitActorLogging
         case TimedOut =>
           warning(s"satellite ${remoteMaster.path} termination timeout")
       }
+    }
+  }
+
+  // TODO - this does not yet handle remote RAS
+  // NOTE - clock value changes have to occur here since we might have to reset if
+  // one of the actors does not respond
+  def onRaceResetClock (originator: ActorRef, date: DateTime, tScale: Double) = {
+    val requester = sender // might be different than originator
+    val saved = ras.simClock.save // we might have to restore
+    var changed = List.empty[ActorRef] // actors that so far have acknowledged
+    var nAck = 0
+
+    def restoreClock (c: Clock) = {
+      ras.simClock.reset(c)
+      // since those did previously respond we don't wait for ack
+      changed.reverse.foreach( aRef => aRef ! SyncWithRaceClock)
+      requester ! RaceClockResetFailed
+    }
+
+    ras.simClock.reset(date, tScale)
+    ras.actors.foreach { e =>
+      val (actorRef, _) = e
+      if (actorRef != originator) {
+        info(s"sending SyncWithRaceClock to ${actorRef.path.name}")
+        askForResult(actorRef ? SyncWithRaceClock) {
+          case RaceClockSynced =>
+            info(s"got RaceClockSynced from ${actorRef.path.name}")
+            changed = actorRef :: changed
+            nAck += 1
+          case RaceClockSyncFailed(reason) =>
+            info(s"SyncWithRaceClock rejected by ${actorRef.path.name}: $reason")
+            restoreClock(saved)
+          case TimedOut =>
+            warning(s"no SyncWithRaceClock response from ${actorRef.path.name}")
+            restoreClock(saved)
+        }
+      } else nAck += 1 // we take a request as an ack
+    }
+    if (nAck == ras.actors.size) {
+      // all actors accounted for
+      requester ! RaceClockReset
     }
   }
 }

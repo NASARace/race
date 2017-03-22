@@ -139,7 +139,14 @@ object ThreadUtils {
    */
   def stop(thread: Thread) = {
     if (thread.isAlive) {
-      thread.stop() // YES, WE KNOW IT IS DEPRECATED. Used only in user selected exception actions
+      // unbelievable what we have to do to avoid deprecated warnings for thread.stop()
+      // WE KNOW IT IS NOT RELIABLE
+      try {
+        val stopMth = thread.getClass.getMethod("stop")
+        stopMth.invoke(thread)
+      } catch {
+        case _: Throwable => // ignore, nothing else we can do
+      }
     }
   }
 }

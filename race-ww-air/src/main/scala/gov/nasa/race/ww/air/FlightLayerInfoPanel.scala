@@ -298,7 +298,7 @@ class FlightLayerInfoPanel[T <: InFlightAircraft](raceView: RaceView, flightLaye
 
   def centerSelectedEntry (centerIt: Boolean) = {
     listView.selection.items.headOption.foreach { e =>
-      if (centerIt) flightLayer.centerFlightEntry(e)
+      if (centerIt) flightLayer.startCenteringFlightEntry(e)
       else flightLayer.stopCenteringFlightEntry
     }
   }

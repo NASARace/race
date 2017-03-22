@@ -24,8 +24,6 @@ import gov.nasa.race.core.Messages._
 
 import scala.collection.concurrent.{TrieMap, Map => CMap}
 
-case class BusEvent (val channel: String, val msg: Any, val sender: ActorRef)
-
 /**
  * the abstract bus interface used by RaceActor.
  * This is required to transparently access the bus from remote RaceActors
@@ -33,7 +31,7 @@ case class BusEvent (val channel: String, val msg: Any, val sender: ActorRef)
 trait BusInterface {
   def subscribe (subscriber: ActorRef, to: String): Boolean
   def unsubscribe (subscriber: ActorRef, from: String): Boolean
-  def publish (event: BusEvent): Unit
+  def publish (msg: ChannelMessage): Unit
 }
 
 /**
@@ -51,23 +49,23 @@ case class RemoteBusInterface (val masterRef: ActorRef, val connectorRef: ActorR
     connectorRef ! RemoteSubscribe(subscriber, toChannel)
     true
   }
+
   def unsubscribe (subscriber: ActorRef, fromChannel: String): Boolean = {
     connectorRef ! RemoteUnsubscribe(subscriber,fromChannel)
     true
   }
-  def publish (event: BusEvent) = {
-    connectorRef ! RemotePublish(event)
-  }
+
+  def publish (msg: ChannelMessage) = connectorRef ! RemotePublish(msg)
 }
 
 /**
  * the bus implementation of a live universe (master) system
  *
  * <2do> SubchannelClassification doesn't have a query mechanism for subscriptions (private),
- * so we might have to either create our own cache here  or extend the trait
+ * so we might have to either create our own cache here or extend the trait
  */
 class Bus (val system: ActorSystem) extends ActorEventBus with SubchannelClassification with BusInterface {
-  type Event = BusEvent // (selector,payload,sender) - <2do> do we need a common event payload type?
+  type Event = ChannelMessage // (selector,payload,sender) - <2do> do we need a common event payload type?
   type Classifier = String
 
   implicit val log = Logging(system, this.getClass)

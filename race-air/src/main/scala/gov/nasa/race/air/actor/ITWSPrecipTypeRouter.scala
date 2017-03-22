@@ -19,7 +19,8 @@ package gov.nasa.race.air.actor
 
 import com.typesafe.config.Config
 import gov.nasa.race.air.PrecipImage
-import gov.nasa.race.core.{BusEvent, PublishingRaceActor, RaceContext, SubscribingRaceActor}
+import gov.nasa.race.core.Messages.BusEvent
+import gov.nasa.race.core.{PublishingRaceActor, RaceContext, SubscribingRaceActor}
 
 import scala.collection.mutable
 
@@ -32,10 +33,11 @@ class ITWSPrecipTypeRouter (val config: Config) extends SubscribingRaceActor wit
   val routes = mutable.Map.empty[Int,mutable.Set[String]]
 
   override def onInitializeRaceActor (raceContext: RaceContext, actorConf: Config) = {
-    super.onInitializeRaceActor(raceContext, actorConf)
     routes += 9849 -> writeTo.map(_ + "/9849")
     routes += 9850 -> writeTo.map(_ + "/9850")
     routes += 9905 -> writeTo.map(_ + "/9905")
+
+    super.onInitializeRaceActor(raceContext, actorConf)
   }
 
   override def handleMessage = {

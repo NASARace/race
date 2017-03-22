@@ -19,6 +19,7 @@ package gov.nasa.race
 
 import scala.language.implicitConversions
 import scala.math._
+import scala.util.matching.Regex
 
 /**
   * package gov.nasa.race.common holds common RACE specific types that can be instantiated from
@@ -33,13 +34,14 @@ package object common {
 
   final val Epsilon = 1.0e-10
 
-  @inline def √ (d: Double) = Math.sqrt(d)
+  // all functions here have to start with lower case so that we can use upper case
+  // in value classes such as .uom.Length (overriding does not work there because of type erasure)
   @inline def squared (d: Double) = d*d
   @inline def cubed (d: Double) = d*d*d
 
   implicit class RichDouble (val d: Double) extends AnyVal {
     @inline def ** (e: Double) = Math.pow(d,e)
-    @inline def `²` = d*d
+    @inline def `²` = d*d  // sub/superscript chars are not valid identifiers so we have to quote
     @inline def `³` = d*d*d
 
     @inline def within (x: Double, tolerance: Double) = Math.abs(d - x.d) <= tolerance

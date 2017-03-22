@@ -21,17 +21,18 @@ import java.net.{DatagramPacket, DatagramSocket, InetAddress}
 
 import akka.actor.{ActorRef, Cancellable}
 import com.typesafe.config.Config
-import gov.nasa.race.air.{FlightDropped, FlightPos}
-import gov.nasa.race.air.xplane.XPlaneCodec.RPOS
 import gov.nasa.race._
+import gov.nasa.race.air.xplane.XPlaneCodec.RPOS
+import gov.nasa.race.air.{FlightDropped, FlightPos}
 import gov.nasa.race.common.Status
 import gov.nasa.race.config.ConfigUtils._
+import gov.nasa.race.core.Messages.BusEvent
 import gov.nasa.race.core.{PublishingRaceActor, SubscribingRaceActor, _}
 import gov.nasa.race.geo.{LatLonPos, Positionable}
-import gov.nasa.race.util.ThreadUtils
-import gov.nasa.race.uom.Length._
 import gov.nasa.race.uom.Angle._
+import gov.nasa.race.uom.Length._
 import gov.nasa.race.uom.Speed._
+import gov.nasa.race.util.ThreadUtils
 
 import scala.annotation.tailrec
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -124,18 +125,15 @@ class XPlaneActor (val config: Config) extends PublishingRaceActor
   }
 
   override def onInitializeRaceActor(rc: RaceContext, actorConf: Config) = {
-
-    super.onInitializeRaceActor(rc, actorConf)
     //sendAirport
     sendOtherAircraft
-
     //sendOwnAircraft
     sendRPOSrequest
+
+    super.onInitializeRaceActor(rc, actorConf)
   }
 
   override def onStartRaceActor(originator: ActorRef) = {
-    super.onStartRaceActor(originator)
-
     importThread.start
 
     if (publishInterval.length > 0) {
@@ -147,13 +145,16 @@ class XPlaneActor (val config: Config) extends PublishingRaceActor
       info(s"starting XPlane proximity scheduler $proximityInterval")
       proximityScheduler = Some(scheduler.schedule(0 seconds, proximityInterval, self, UpdateXPlane))
     }
+
+    super.onStartRaceActor(originator)
   }
 
   override def onTerminateRaceActor(originator: ActorRef) = {
-    super.onTerminateRaceActor(originator)
     ifSome(publishScheduler){ _.cancel }
     ifSome(proximityScheduler){ _.cancel }
     socket.close()
+
+    super.onTerminateRaceActor(originator)
   }
 
   override def handleMessage = {
@@ -193,7 +194,7 @@ class XPlaneActor (val config: Config) extends PublishingRaceActor
 
   def dropProximity (fdrop: FlightDropped) = {
     val cs = fdrop.cs
-    if (proximityList.removeFirst { e => e.obj.cs == cs }) println(s"@@ ! $cs : $proximityList")
+    proximityList.removeFirst { e => e.obj.cs == cs }
   }
 
   //--- the XPlaneAircraftList callbacks, which we use to update X-Plane

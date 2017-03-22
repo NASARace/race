@@ -40,6 +40,16 @@ object FileUtils {
     }
   }
 
+  def resourceContentsAsUTF8String(cls: Class[_],fileName: String): Option[String] = {
+    val is = cls.getResourceAsStream(fileName)
+    if (is != null){
+      val n = is.available()
+      val bytes = new Array[Byte](n)
+      is.read(bytes)
+      Some(new String(bytes,StandardCharsets.UTF_8))
+    } else None
+  }
+
   def fileContentsAsChars(file: File): Option[Array[Char]] = {
     if (file.isFile) {
       val decoder: CharsetDecoder = StandardCharsets.UTF_8.newDecoder
@@ -173,5 +183,14 @@ object FileUtils {
     else if (nBytes > 1024*1024) f"${nBytes.toDouble/(1024*1024)}%.1fm"
     else if (nBytes > 1024) f"${Math.round(nBytes / 1024.0)}%dk"
     else nBytes.toString
+  }
+
+  def processPathUpwards (path: String)(f: String=>Unit) = {
+    var p = path
+    while (p.nonEmpty) {
+      f(p)
+      p = p.substring(0,Math.max(p.lastIndexOf('/'),0))
+    }
+    if (path.startsWith("/")) f("/")
   }
 }

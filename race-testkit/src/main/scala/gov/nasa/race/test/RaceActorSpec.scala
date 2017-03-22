@@ -26,7 +26,7 @@ import akka.util.Timeout
 import com.typesafe.config.{Config, ConfigFactory, ConfigValueFactory}
 import gov.nasa.race.common.Status._
 import gov.nasa.race.core.Messages._
-import gov.nasa.race.core.{Bus, BusEvent, MasterActor, RaceActor, RaceActorSystem, TimedOut, _}
+import gov.nasa.race.core.{Bus, MasterActor, RaceActor, RaceActorSystem, TimedOut, _}
 import org.joda.time.DateTime
 import org.scalatest.BeforeAndAfterAll
 
@@ -173,8 +173,6 @@ abstract class RaceActorSpec (tras: TestRaceActorSystem) extends TestKit(tras.sy
   }
 
   def reset = tras.reset
-
-  def createConfig(s: String) = ConfigFactory.parseString(s)
 
   def addTestActor[T <: RaceActor: ClassTag] (actorCls: Class[T], name: String, ctorConf: Config): TestActorRef[T] = {
     val ctorConfig = ctorConf.withValue("name", ConfigValueFactory.fromAnyRef(name))

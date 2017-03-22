@@ -29,6 +29,8 @@ object StringUtils {
 
   def stringTail(s: String, c: Char) = s.substring(Math.max(s.indexOf(c),0))
 
+  def upToLast (s: String, c: Char) = s.substring(0,s.lastIndexOf(c))
+
   def trimmedSplit(s: String): Seq[String] = s.split("[ ,;]+").map(_.trim)
 
   final val hexChar = Array('0','1','2','3','4','5','6','7','8','9','a','b','c','d','e','f')
@@ -118,4 +120,6 @@ object StringUtils {
     patterns.foreach( re => if (re.findFirstIn(s).isEmpty) return false )
     true
   }
+
+  def matches (s: String, pattern: Regex): Boolean = pattern.findFirstIn(s).isDefined
 }

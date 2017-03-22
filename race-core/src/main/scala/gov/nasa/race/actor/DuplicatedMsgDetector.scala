@@ -1,19 +1,34 @@
+/*
+ * Copyright (c) 2017, United States Government, as represented by the
+ * Administrator of the National Aeronautics and Space Administration.
+ * All rights reserved.
+ *
+ * The RACE - Runtime for Airspace Concept Evaluation platform is licensed
+ * under the Apache License, Version 2.0 (the "License"); you may not use
+ * this file except in compliance with the License. You may obtain a copy
+ * of the License at http://www.apache.org/licenses/LICENSE-2.0.
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package gov.nasa.race.actor
+
+import java.io.PrintWriter
 
 import akka.actor.ActorRef
 import com.typesafe.config.Config
 import gov.nasa.race._
+import gov.nasa.race.common.{ConsoleStats, MD5Checksum, MsgClassifier, Stats}
 import gov.nasa.race.config.ConfigUtils._
-import gov.nasa.race.common.{MD5Checksum, Stats}
-import gov.nasa.race.core.Messages.RaceTick
-import gov.nasa.race.core.{BusEvent, ContinuousTimeRaceActor, FileWriterRaceActor, PeriodicRaceActor, PublishingRaceActor, SubscribingRaceActor}
+import gov.nasa.race.core.Messages.{BusEvent, RaceTick}
+import gov.nasa.race.core.{ContinuousTimeRaceActor, FileWriterRaceActor, PeriodicRaceActor, PublishingRaceActor, SubscribingRaceActor}
 import gov.nasa.race.util.DateTimeUtils._
-import gov.nasa.race.util.StringUtils
 
-import scala.collection.JavaConverters._
 import scala.collection.mutable.{SortedMap => MSortedMap}
 import scala.concurrent.duration._
-import scala.util.matching.Regex
 
 /**
   * a RaceActor that detects and reports duplicated messages
@@ -25,7 +40,6 @@ class DuplicatedMsgDetector (val config: Config) extends SubscribingRaceActor
                      with PublishingRaceActor with ContinuousTimeRaceActor
                      with PeriodicRaceActor with FileWriterRaceActor {
   final val unclassified = "unclassified"
-  case class MsgClassifier (name: String, patterns: Seq[Regex])
 
   val checkWindow = config.getFiniteDurationOrElse("check-window", 5.minutes).toMillis
   // override the MonitoredRaceActor defaults
@@ -35,15 +49,15 @@ class DuplicatedMsgDetector (val config: Config) extends SubscribingRaceActor
   val checksums = MSortedMap.empty[String,Long]
   val md5 = new MD5Checksum
 
-  val classifiers = getClassifiers
+  val classifiers = MsgClassifier.getClassifiers(config)
   val dupStats = MSortedMap.empty[String,DupStats]
   val title = config.getStringOrElse("title", name)
   var channels = ""
 
   override def onStartRaceActor(originator: ActorRef) = {
-    super.onStartRaceActor(originator)
     channels = readFromAsString
     startScheduler
+    super.onStartRaceActor(originator)
   }
 
   override def handleMessage = {
@@ -59,7 +73,7 @@ class DuplicatedMsgDetector (val config: Config) extends SubscribingRaceActor
 
     checksums.get(cs) match {
       case Some(tLast) =>
-        ifSome(classify(msg)) { c =>
+        ifSome(MsgClassifier.classify(msg,classifiers)) { c =>
           val ds = dupStats.getOrElseUpdate(c.name, new DupStats(c.name))
           ds.count += 1
           ds.dtMillis += tNow - tLast
@@ -83,21 +97,6 @@ class DuplicatedMsgDetector (val config: Config) extends SubscribingRaceActor
     }
   }
 
-  def getClassifiers: Seq[MsgClassifier] = {
-    val catchAll = List(MsgClassifier("unclassified",Seq(".*".r)))
-
-    config.getOptionalConfigList("classifiers").reverse.foldLeft(catchAll) { (list, conf) =>
-      val name = conf.getString("name")
-      val patterns = conf.getStringList("patterns").asScala.map(new Regex(_))
-      MsgClassifier(name, patterns) :: list
-    }
-  }
-
-  def classify (msg: String): Option[MsgClassifier] = {
-    classifiers.foreach(c => if (StringUtils.matchesAll(msg,c.patterns)) return Some(c) )
-    None
-  }
-
   def logDuplicate (msg: String, tNow: Long, tLast: Long) = {
     write(s"\n<!-- BEGIN DUPLICATED ${dateMillisToTTime(tLast)} ${dateMillisToTTime(tNow)} -->\n")
     write(msg)
@@ -118,16 +117,19 @@ case class DupStatsSnapshot (
 
 
 class SubscriberDupStats (val topic: String, val takeMillis: Long, val elapsedMillis: Long, val channels: String,
-                          val messages: Array[DupStatsSnapshot]) extends Stats {
-  def printToConsole = {
-    printConsoleHeader
-    println(s"observed channels: $channels")
-    println("  count     avg sec   classifier")
-    println("-------   ---------   -------------------------------------------")
-    for (m <- messages) {
-      val avgDtSecs = m.dtMillis.toDouble / (m.count * 1000.0)
-      println(f"${m.count}%7d   $avgDtSecs%9.3f   ${m.classifier}")
+                          val messages: Array[DupStatsSnapshot]) extends Stats with ConsoleStats {
+  def writeToConsole (pw:PrintWriter) = {
+    pw.println(consoleHeader)
+    pw.println(s"observed channels: $channels")
+
+    if (messages.nonEmpty) {
+      pw.println("  count     avg sec   classifier")
+      pw.println("-------   ---------   -------------------------------------------")
+      for (m <- messages) {
+        val avgDtSecs = m.dtMillis.toDouble / (m.count * 1000.0)
+        pw.println(f"${m.count}%7d   $avgDtSecs%9.3f   ${m.classifier}")
+      }
     }
-    println
+    pw.println
   }
 }

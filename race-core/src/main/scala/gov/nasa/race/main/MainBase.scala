@@ -72,8 +72,12 @@ trait MainBase {
   //--- Config and RaceActorSystem instantiation
 
   def instantiateRaceActorSystems(configFiles: Seq[File], logLevel: Option[String]): Seq[RaceActorSystem] = {
-    tryCatchAllWith(Seq.empty[RaceActorSystem]) {
+    try {
       getUniverseConfigs(configFiles, logLevel).map(new RaceActorSystem(_))
+    } catch {
+      case t:Throwable =>
+        ConsoleIO.printlnErr(t.getMessage)
+        Seq.empty[RaceActorSystem]
     }
   }
 
@@ -106,16 +110,11 @@ trait MainBase {
   }
 
   def setSystemProperties(o: MainOpts): Unit = {
-    setSystemProperties(o.propertyFile, o.setHost.flatMap(getInetAddress), o.logLevel, o.logConsoleURI)
-  }
-
-  def setSystemProperties(propertyFile: Option[File], inetAddress: Option[InetAddress],
-                          optLogLevel: Option[String], logConsoleURI: Option[String]): Unit = {
-    ifSome(propertyFile) { propFile =>
+    ifSome(o.propertyFile) { propFile =>
       using(new FileInputStream(propFile)) { fis => System.getProperties.load(fis) }
     }
 
-    ifSome(inetAddress) { iaddr =>
+    ifSome(o.setHost.flatMap(getInetAddress)) { iaddr =>
       System.setProperty("race.host", iaddr.getHostAddress)
     }
 
@@ -124,9 +123,9 @@ trait MainBase {
     }
 
     // logging related system properties (logback)
-    ifSome(optLogLevel) { level => System.setProperty("root-level", level.toString) }
+    ifSome(o.logLevel) { level => System.setProperty("root-level", level.toString) }
 
-    ifSome(logConsoleURI) { uri =>
+    ifSome(o.logConsoleURI) { uri =>
       val (host, port) = HostPortRE.findFirstIn(uri) match {
         case Some(HostPortRE(host, p)) => (host, if (p == null) DefaultLogConsolePort else p)
         case None => (DefaultLogConsoleHost, DefaultLogConsolePort)
@@ -144,7 +143,8 @@ trait MainBase {
 
   //--- vault initialization
 
-  def initConfigVault (opts: MainOpts): Unit = {
+  def initConfigVault (opts: MainOpts): Boolean = {
+    var success: Boolean = false
     ifSome(opts.vault) { vaultFile =>
       if (opts.keyStore.isDefined) { // use the provided keystore to get the vault key
         for (
@@ -154,15 +154,20 @@ trait MainBase {
           alias <- opts.alias;
           key <- withSubsequent(CryptUtils.getKey(ks,alias,pw)){ JArrays.fill(pw,' ') };
           cipher <- CryptUtils.getDecryptionCipher(key)
-        ) ConfigVault.initialize(vaultFile,cipher)
+        ) success = ConfigVault.initialize(vaultFile,cipher)
 
       } else { // ask for the vault key
         ifSome(ConsoleIO.promptPassword(s"enter password for config vault $vaultFile: ")) { pw=>
-          try {ConfigVault.initialize(vaultFile,pw)} finally { JArrays.fill(pw,' ') }
+          try {
+            success = ConfigVault.initialize(vaultFile,pw)
+          } finally { JArrays.fill(pw,' ') }
         }
       }
+    } orElse {
+      success = true // no vault to initialize
+      None
     }
-    // if there is no vault option set we don't have anything to do
+    success
   }
 
   //--- config manipulation

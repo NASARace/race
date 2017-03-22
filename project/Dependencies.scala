@@ -35,23 +35,25 @@ object Dependencies {
   //--- default libs
 
   //--- slf4j
-  val slf4jSimple = "org.slf4j" % "slf4j-simple" % "1.7.16"
+  val slf4jSimple = "org.slf4j" % "slf4j-simple" % "1.7.23"
 
   //--- logback
-  val logback = "ch.qos.logback" % "logback-classic" % "1.1.8"
+  val logback = "ch.qos.logback" % "logback-classic" % "1.2.2"
 
   //--- Typesafe config
-  val typesafeConfig = "com.typesafe" % "config" % "1.3.0"
+  val typesafeConfig = "com.typesafe" % "config" % "1.3.1"
 
   //--- nscala-time (Dates with operators): https://github.com/nscala-time/nscala-time
   val nscalaTime = "com.github.nscala-time" %% "nscala-time" %  "2.16.0"
 
   //--- Scala parser combinators (https://github.com/scala/scala-parser-combinators)
-  //val scalaParser =  "org.scala-lang.modules" %% "scala-parser-combinators"  % "latest.release" // not yet 2.12
   val scalaParser = "org.scala-lang.modules" % "scala-parser-combinators_2.12" % "1.0.4"
 
   //--- new scala reflection (TypeTags etc.)
   val scalaReflect =  "org.scala-lang" % "scala-reflect" % "2.12.1"
+
+  //--- scalaTags HTML generator
+  val scalaTags = "com.lihaoyi" %% "scalatags" % "0.6.3"
 
   //--- scala automatic resource management (https://github.com/jsuereth/scala-arm) - 2.12.0 not yet supported
   //val scalaArm = "com.jsuereth" %% "scala-arm" % "1.4"
@@ -66,15 +68,16 @@ object Dependencies {
   // val breezeNative = "org.scalanlp" %% "breeze-natives" % "latest.release"
 
   //--- scalaTest
-  //val scalaTest = "org.scalatest" %% "scalatest" % "2.2.6"
   val scalaTest = "org.scalatest" % "scalatest_2.12" % "3.0.1"
   val pegDown = "org.pegdown" % "pegdown" % "1.6.0"
 
   //--- scalaCheck
-  val scalaCheck = "org.scalacheck" % "scalacheck_2.12" % "1.13.4" // 1.13.4"
+  val scalaCheck = "org.scalacheck" % "scalacheck_2.12" % "1.13.5"
 
   // liftJson
   //val liftJson = "net.liftweb" %% "lift-json" % "latest.release"
+  //val liftJsonExt = "net.liftweb" %% "lift-json-ext" % "latest.release"
+  //val liftJsonAll = Seq(liftJson,liftJsonExt)
 
   val defaultLibs =  Seq(logback,typesafeConfig,nscalaTime)
   val defaultTestLibs = Seq(scalaTest,scalaCheck,pegDown)
@@ -83,11 +86,10 @@ object Dependencies {
   val scodecBits = "org.scodec" %% "scodec-bits" % "1.1.4"
   val scodecCore = "org.scodec" %% "scodec-core" % "1.10.3"
   //val scodecStream = "org.scodec" %% "scodec-stream" % "0.10.0"  // latest.release not yet on resolvers
-
   val scodecAll = Seq(scodecBits, scodecCore)
 
   //--- scala-swing
-  val scalaSwing = "org.scala-lang.modules" %% "scala-swing" % "2.0.0-M2"
+  val scalaSwing = "org.scala-lang.modules" %% "scala-swing" % "2.0.0"
   //val swingx = "org.swinglabs.swingx" % "swingx-core" % "latest.release"
   //.. and possibly extensions for Tree and jfreechart
 
@@ -95,41 +97,36 @@ object Dependencies {
   val rsTextArea = "com.fifesoft" % "rsyntaxtextarea" % "2.5.8"
 
   //--- the jfreechart plot and chart lib
-  //val jfreechart = "org.jfree" % "jfreechart" % "latest.release"
+  val jfreeChart = "org.jfree" % "jfreechart" % "1.0.19"
 
   //--- pure Java implementation of ssh2 (http://www.jcraft.com/jsch/)
   // NOTE this has to be a known version and verified instance so that we don't
   // enter credentials processed by a un-verified jar
   val jsch = "com.jcraft" % "jsch" % "0.1.53"
 
-  //--- worldwind (a external sub project for now)
-  //val worldwind = "gov.nasa" % "worldwind" % "latest.integration" // "2.0.0-986"
-
 
   //--- Akka
-  val akkaVersion = "2.4.16"
+  val akkaVersion = "2.4.17"
   val akkaOrg = "com.typesafe.akka"
 
   val akkaActor = akkaOrg %% "akka-actor" % akkaVersion
   val akkaRemote = akkaOrg %% "akka-remote" % akkaVersion
   val akkaSlf4j = akkaOrg %% "akka-slf4j" % akkaVersion
 
-
   val akkaTestkit = akkaOrg %% "akka-testkit" % akkaVersion
   val akkaMultiNodeTestkit = akkaOrg %% "akka-multi-node-testkit" % akkaVersion // % "test,multi-jvm"
+
+  val akkaHttp = akkaOrg %% "akka-http" % "10.0.5"
 
   val akkaAll = Seq(akkaSlf4j,akkaActor)
 
 
   //--- ActiveMQ
-  val amqVersion = "5.14.3"
+  val amqVersion = "5.14.4"
   val amqOrg = "org.apache.activemq"
   val amqBroker = amqOrg % "activemq-broker" % amqVersion
 
   val amqAll = Seq(amqBroker)
-
-  //--- AsyncHttpClient
-  val asyncHttp = "com.ning" % "async-http-client" % "1.9.27"
 
   // here it gets ugly - kafka/zookeeper have hard log4j dependencies, although those
   // might be just misconfigurations since it also appeared under the slf4j dep
@@ -139,16 +136,16 @@ object Dependencies {
   // replace log4j with slf4j's log4j-over-slf4j
 
   //val log4j = "log4j" % "log4j" % "latest.release"
-  val log4jOverSlf4j = "org.slf4j" % "log4j-over-slf4j" % "1.7.22"
+  val log4jOverSlf4j = "org.slf4j" % "log4j-over-slf4j" % "1.7.25"
 
   //--- ZooKeeper ("3.4.7" works, "latest.release" includes alphas!)
-  val zookeeper = "org.apache.zookeeper" % "zookeeper" % "3.4.8" excludeAll(
+  val zookeeper = "org.apache.zookeeper" % "zookeeper" % "3.4.9" excludeAll(
     ExclusionRule(organization = "log4j", name="log4j"),
     ExclusionRule(organization = "org.slf4j", name = "slf4j-log4j12")
   )
 
   //--- Kafka (make sure to add log4j to kafkaServer dependencies
-  val kafka = "org.apache.kafka" %% "kafka" % "0.10.1.1" excludeAll(
+  val kafka = "org.apache.kafka" %% "kafka" % "0.10.2.0" excludeAll(
     ExclusionRule(organization = "log4j", name="log4j"),
     ExclusionRule(organization = "org.slf4j", name = "slf4j-log4j12")
   )
@@ -161,10 +158,12 @@ object Dependencies {
   val worldwindPcm = "com.github.pcmehlitz" % "worldwind-pcm" % "2.1.0.+"
 
   //--- this is used from build.sbt to add dependency resolvers
-  val sonatypeNexusSnapshots = "Sonatype Nexus Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots" // squants
-  //val pcmSnapshots = "Local Maven Repository" at "file://"+Path.userHome.absolutePath+ "/git/pcm-mvn/snapshots"
 
-  val dependencyResolvers: Seq[Resolver] = Seq(
-    sonatypeNexusSnapshots
-  )
+  val dependencyResolvers: Seq[Resolver] = Nil
+
+  //val sonatypeNexusSnapshots = "Sonatype Nexus Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots" // squants
+  //val pcmSnapshots = "Local Maven Repository" at "file://"+Path.userHome.absolutePath+ "/git/pcm-mvn/snapshots"
+  //val dependencyResolvers: Seq[Resolver] = Seq(
+  //  sonatypeNexusSnapshots
+  //)
 }

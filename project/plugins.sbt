@@ -27,7 +27,7 @@ addSbtPlugin("org.xerial.sbt" % "sbt-sonatype" % "1.1")
 addSbtPlugin("org.planet42" % "laika-sbt" % "0.6.0")
 
 // git commands from within sbt: https://github.com/sbt/sbt-git
-addSbtPlugin("com.typesafe.sbt" % "sbt-git" % "0.8.5")
+//addSbtPlugin("com.typesafe.sbt" % "sbt-git" % "0.8.5")
 
 // static analysis: http://www.scalastyle.org/sbt.html
 addSbtPlugin("org.scalastyle" %% "scalastyle-sbt-plugin" % "0.7.0")

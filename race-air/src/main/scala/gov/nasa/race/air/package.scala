@@ -48,7 +48,7 @@ package object air {
     * abstraction for trajectories that does not imply underlying representation, allowing for memory
     * optimized implementations
     */
-  trait FlightPath {
+  trait AbstractFlightPath {
     def capacity: Int
     def add (pos: DatedAltitudePositionable)
 

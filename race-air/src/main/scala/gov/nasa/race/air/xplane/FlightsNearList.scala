@@ -53,6 +53,6 @@ class FlightsNearList (center: LatLonPos, maxDistance: Length, xpAircraft: XPlan
   override def isSame (a: FlightPos, b: FlightPos) = a.cs == b.cs
 
   override def toString: String = StringUtils.mkString[FPosEntry](this, "FlightsNear [", ",", "]") { e =>
-    f"${e.obj.cs}:${e.weight/NM}%.2f"
+    f"${e.obj.cs}:${e.weight/NM.toMeters}%.2f"
   }
 }

@@ -21,11 +21,9 @@ import com.typesafe.config.Config
 import gov.nasa.race.core._
 
 /**
- * actor that filters messages using a set of configurable filters
- */
-class FilterActor (val config: Config) extends FilteringPublisher {
-
-  override def handleMessage = {
-    case BusEvent(_,msg:Any,_) => publishFiltered(msg)
-  }
-}
+  * actor that filters messages using a set of configurable filters
+  *
+  * this actor only publishes messages that pass. If we also need to publish the
+  * ones that fail, use a EitherOrRouter
+  */
+class FilterActor (val config: Config) extends FilteringPublisher with SubscribingRaceActor

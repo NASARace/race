@@ -20,54 +20,46 @@ package gov.nasa.race.actor
 import akka.actor.ActorRef
 import com.typesafe.config.{Config, ConfigValueFactory}
 import gov.nasa.race.config.ConfigUtils._
-import gov.nasa.race.core.{BusEvent, RaceContext, SubscribingRaceActor}
+import gov.nasa.race.core.Messages.BusEvent
+import gov.nasa.race.core.{ParentRaceActor, RaceActorRec, RaceContext, SubscribingRaceActor}
 
 /**
   * an actor that does round-robin dispatch to a number of child actors it creates
   * this is a helper actor to avoid bottlenecks (e.g. for message translation)
   *
-  * TODO this doesn't support remote workers or timeouts yet
+  * NOTE this doesn't support remote workers, and it is not clear if we really want to
+  * since it is a optimization mechanism for which marshalling/un-marshalling would be
+  * detrimental
+  *
+  * TODO - we should add a 'nextAvailable' strategy though, but this would require
+  * to wrap the BusEvent so that the feedback could be done outside of the
+  * concrete handleEvent
   */
-class Dispatcher (val config: Config) extends SubscribingRaceActor {
+class Dispatcher (val config: Config) extends SubscribingRaceActor with ParentRaceActor {
 
   val replication = config.getIntOrElse("replication",3)
   val workerConfig = config.getConfig("worker")
-  val workers: Array[ActorRef] = createWorkers(workerConfig,replication)
   var next = 0
 
+  createWorkers(workerConfig,replication)
   info(s"created $replication workers")
-
-  override def onInitializeRaceActor(rc: RaceContext, actorConf: Config): Unit = {
-    super.onInitializeRaceActor(rc, actorConf)
-    initDependentRaceActors(workers, rc, workerConfig)
-  }
-
-  override def onStartRaceActor(originator: ActorRef) = {
-    super.onStartRaceActor(originator)
-    startDependentRaceActors(workers)
-  }
-
-  override def onTerminateRaceActor(originator: ActorRef) = {
-    super.onTerminateRaceActor(originator)
-    terminateDependentRaceActors(workers)
-  }
 
   override def handleMessage = {
     case e: BusEvent =>
-      info(s"dispatching to ${workers(next).path.name}")
-      workers(next) ! e
+      debug(s"dispatching to ${children(next).path.name}")
+      childActorRef(next) ! e
       next = (next + 1) % replication
   }
 
-  def createWorkers (config: Config, replication: Int): Array[ActorRef] = {
+  def createWorkers (config: Config, replication: Int) = {
     val actorBaseName = config.getString("name")
 
-    (for (i <- 1 to replication) yield {
+    for (i <- 1 to replication) yield {
       val actorName = s"$actorBaseName-$i"
       val actorConf = config.withValue("name", ConfigValueFactory.fromAnyRef(actorName))
       info(s"instantiating worker actor $actorName")
-      instantiateActor(actorName, actorConf)
-    }).toArray
+      val actorRef = instantiateActor(actorName, actorConf)
+      addChild(RaceActorRec(actorRef, actorConf))
+    }
   }
-
 }

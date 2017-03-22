@@ -23,19 +23,19 @@ import com.typesafe.config.Config
 import gov.nasa.race._
 import gov.nasa.race.air.{Airport, AirportTracks, Track}
 import gov.nasa.race.config.ConfigUtils._
-import gov.nasa.race.core.BusEvent
+import gov.nasa.race.core.Messages._
 import gov.nasa.race.geo.{GreatCircle, LatLonPos}
 import gov.nasa.race.swing.GBPanel.{Anchor, Fill}
 import gov.nasa.race.swing.Style._
 import gov.nasa.race.swing.{GBPanel, _}
+import gov.nasa.race.uom.Angle._
+import gov.nasa.race.uom.Length._
+import gov.nasa.race.uom._
 import gov.nasa.race.ww.Implicits._
 import gov.nasa.race.ww.{DynamicLayerInfoPanel, DynamicRaceLayerInfo, EyePosListener, RaceView, SubscribingRaceLayer, _}
 import gov.nasa.worldwind.avlist.AVKey
 import gov.nasa.worldwind.geom.Position
 import gov.nasa.worldwind.render.{Offset, PointPlacemark, PointPlacemarkAttributes}
-import gov.nasa.race.uom.Length._
-import gov.nasa.race.uom.Angle._
-import gov.nasa.race.uom._
 
 import scala.collection.concurrent.TrieMap
 import scala.swing._
@@ -186,7 +186,9 @@ class AirportTracksLayer (raceView: RaceView,config: Config)
           if (t.drop) {
             removeRenderable(te)
             tracks -= t.id
-          } else te.update(t)
+          } else {
+            te.update(t)
+          }
         case None =>
           if (!t.drop) {
             val te = new TrackEntry(t)

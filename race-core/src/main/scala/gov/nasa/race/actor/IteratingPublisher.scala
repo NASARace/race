@@ -17,7 +17,8 @@
 package gov.nasa.race.actor
 
 import com.typesafe.config.Config
-import gov.nasa.race.core.{BusEvent, PublishingRaceActor, SubscribingRaceActor}
+import gov.nasa.race.core.Messages.BusEvent
+import gov.nasa.race.core.{PublishingRaceActor, SubscribingRaceActor}
 
 /**
   * a generic RaceActor that separately publishes all elements of received Iterables

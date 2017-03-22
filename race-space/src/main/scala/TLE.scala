@@ -15,11 +15,11 @@
  * limitations under the License.
  */
 
-package gov.nasa.race
-
 /**
-  * package gov.nasa.race.filter includes generic ConfigurableFilter instances and support classes
+  * class that represents Two Line Element (TLE) orbit specifications as defined in
+  * Vallado, David; Crawford, Paul; Hujsak, Richard; Kelso, T.S. (2006). "Revisiting Spacetrack Report #3" Appendix B
+  * http://celestrak.com/publications/AIAA/2006-6753/AIAA-2006-6753.pdf
   */
-package object filter {
+class TLE {
 
 }

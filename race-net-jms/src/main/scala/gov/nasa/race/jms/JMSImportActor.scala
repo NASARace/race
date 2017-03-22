@@ -133,29 +133,29 @@ class JMSImportActor(val config: Config) extends FilteringPublisher {
 
   //--- end initialization
 
-  // note that we return the next state here
-  override def onInitializeRaceActor(raceContext: RaceContext, actorConf: Config) = {
-    super.onInitializeRaceActor(raceContext,actorConf)
+  // TODO - maybe we should reject if JMS connection or session/consumer init fails
 
+  override def onInitializeRaceActor(raceContext: RaceContext, actorConf: Config) = {
     try {
       connection = requestConnection(this)
       info(s"connected to $brokerURI")
-
     } catch {
       case ex: Throwable =>
         warning(s"failed to open connection: $ex")
     }
+
+    super.onInitializeRaceActor(raceContext,actorConf)
   }
 
   override def onStartRaceActor(originator: ActorRef) = {
-    super.onStartRaceActor(originator)
-
     session = createSession(connection)
     if (session.isDefined){
       consumer = createConsumer(session)
       if (consumer.isDefined) info(s"opened session on jms topic '$jmsTopic'")
       else warning(s"failed to create JMS consumer for jms topic '$jmsTopic'")
     } else warning(s"failed to create JMS session for connection '$brokerURI'")
+
+    super.onStartRaceActor(originator)
   }
 
   def createSession (connection: Option[Connection]) = {
@@ -175,8 +175,6 @@ class JMSImportActor(val config: Config) extends FilteringPublisher {
   }
 
   override def onTerminateRaceActor(originator: ActorRef) = {
-    super.onTerminateRaceActor(originator)
-
     info(s"closing session")
     try {
       session.foreach(_.close())
@@ -184,5 +182,7 @@ class JMSImportActor(val config: Config) extends FilteringPublisher {
     } catch {
       case ex: Throwable => warning(s"failed to close session: $ex")
     }
+
+    super.onTerminateRaceActor(originator)
   }
 }

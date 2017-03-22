@@ -35,7 +35,7 @@ object PathRenderLevel extends Enumeration {
 /**
   * WWJ Path to display aircraft flight paths
   */
-class AircraftPath[T <: InFlightAircraft] (val flightEntry: FlightEntry[T]) extends Path {
+class FlightPath[T <: InFlightAircraft](val flightEntry: FlightEntry[T]) extends Path {
   val layer = flightEntry.layer
   val flightPath = flightEntry.flightPath
 

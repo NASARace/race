@@ -18,12 +18,15 @@
 package gov.nasa.race.ww
 
 import com.typesafe.config.Config
-import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race._
+import gov.nasa.race.config.ConfigUtils._
+import gov.nasa.race.core.Messages.{BusEvent, DelayedAction}
 import gov.nasa.race.core._
 import gov.nasa.race.swing.AkkaSwingBridge
 import gov.nasa.race.ww.EventAction.EventAction
 import gov.nasa.worldwind.layers.RenderableLayer
+
+import scala.concurrent.duration.FiniteDuration
 
 /**
   * a RenderableLayer with RaceLayerInfo fields
@@ -95,6 +98,8 @@ abstract class SubscribingRaceLayer (raceView: RaceView, config: Config)
   def info(f: => String) = gov.nasa.race.core.info(f)(actor.log)
   def warning(f: => String) = gov.nasa.race.core.warning(f)(actor.log)
   def error(f: => String) = gov.nasa.race.core.error(f)(actor.log)
+
+  def delay (t: FiniteDuration, f: ()=>Unit): Unit = actor.delay(t,f)
 }
 
 /**
@@ -105,13 +110,14 @@ abstract class SubscribingRaceLayer (raceView: RaceView, config: Config)
 class RaceLayerActor (val config: Config, val layer: SubscribingRaceLayer) extends ChannelTopicSubscriber {
   info(s"created RaceLayerActor '${layer.name}'")
 
-  override def onInitializeRaceActor(rc: RaceContext, actorConf: Config): Unit = {
+  override def onInitializeRaceActor(rc: RaceContext, actorConf: Config) = {
     info(s"initializing RaceLayerActor '${layer.name}'")
     super.onInitializeRaceActor(rc, layer.config)
   }
 
   override def handleMessage: Receive = {
     case msg: BusEvent => layer.queueMessage(msg)
+    case msg: DelayedAction => layer.queueMessage(msg)
   }
 }
 

@@ -18,10 +18,12 @@
 package gov.nasa.race.air.actor
 
 import com.typesafe.config.Config
+import gov.nasa.race._
 import gov.nasa.race.actor.TranslatorActor
 import gov.nasa.race.air.PrecipImage
 import gov.nasa.race.air.translator.ITWSprecip2PrecipImage
-import gov.nasa.race.core.{BusEvent, RaceContext}
+import gov.nasa.race.core.Messages.BusEvent
+import gov.nasa.race.core.RaceContext
 
 import scala.collection.mutable
 
@@ -42,10 +44,12 @@ class RoutingPrecipImageTranslatorActor (config: Config) extends TranslatorActor
   val routes = mutable.Map.empty[Int,mutable.Set[String]]
 
   override def onInitializeRaceActor (raceContext: RaceContext, actorConf: Config) = {
-    super.onInitializeRaceActor(raceContext, actorConf)
-    routes += 9849 -> writeTo.map(_ + "/9849")
-    routes += 9850 -> writeTo.map(_ + "/9850")
-    routes += 9905 -> writeTo.map(_ + "/9905")
+    ifTrue (super.onInitializeRaceActor(raceContext,actorConf)) {
+      routes += 9848 -> writeTo.map(_ + "/9848")
+      routes += 9849 -> writeTo.map(_ + "/9849")
+      routes += 9850 -> writeTo.map(_ + "/9850")
+      routes += 9905 -> writeTo.map(_ + "/9905")
+    }
   }
 
   override def handleMessage = {
@@ -54,7 +58,7 @@ class RoutingPrecipImageTranslatorActor (config: Config) extends TranslatorActor
         case Some(precipImage:PrecipImage) =>
           routes.get(precipImage.product) match {
             case Some(channels) => channels.foreach(publish(_, precipImage))
-            case None => info(s"not routing precip type ${precipImage.product}")
+            case None => debug(s"not routing precip type ${precipImage.product}")
           }
         case None => warning("precip image translation failed")
         case other => warning(s"unsupported translation type: ${other.getClass}")

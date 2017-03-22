@@ -18,11 +18,12 @@
 package gov.nasa.race.actor
 
 import com.typesafe.config.{Config, ConfigValue}
-
 import gov.nasa.race._
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.config.ConfigValueMapper
-import gov.nasa.race.core.{BusEvent, PublishingRaceActor, SubscribingRaceActor}
+import gov.nasa.race.core.Messages.BusEvent
+import gov.nasa.race.core.{PublishingRaceActor, SubscribingRaceActor}
+
 
 /**
   * a generic, configurable content based router

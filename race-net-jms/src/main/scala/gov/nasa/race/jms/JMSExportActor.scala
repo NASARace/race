@@ -22,6 +22,7 @@ import javax.jms.{Connection, MessageProducer, Session}
 import akka.actor.ActorRef
 import com.typesafe.config.{Config, ConfigFactory}
 import gov.nasa.race.config.ConfigUtils._
+import gov.nasa.race.core.Messages.BusEvent
 import gov.nasa.race.core._
 import org.apache.activemq.ActiveMQConnectionFactory
 import org.apache.activemq.broker.BrokerService
@@ -78,7 +79,6 @@ class JMSExportActor(val config: Config) extends SubscribingRaceActor {
   var conn: Option[LiveConnection] = None
 
   override def onInitializeRaceActor(raceContext: RaceContext, actorConf: Config) = {
-    super.onInitializeRaceActor(raceContext, actorConf)
     info(s"initializing $name")
 
     // this is from a try context that would catch and report exceptions
@@ -91,10 +91,11 @@ class JMSExportActor(val config: Config) extends SubscribingRaceActor {
 
     connection.start()
     conn = Some(LiveConnection(connection,session,producer))
+
+    super.onInitializeRaceActor(raceContext, actorConf)
   }
 
   override def onTerminateRaceActor(originator: ActorRef) = {
-    super.onTerminateRaceActor(originator)
     info(s"terminating $name")
 
     conn = conn match {
@@ -105,6 +106,8 @@ class JMSExportActor(val config: Config) extends SubscribingRaceActor {
         None
       case None => None // ignore
     }
+
+    super.onTerminateRaceActor(originator)
   }
 
   override def handleMessage = {

@@ -19,6 +19,7 @@ package gov.nasa.race.ww
 
 import com.typesafe.config.{Config, ConfigFactory}
 import gov.nasa.race.config.ConfigUtils._
+import gov.nasa.race.core.Messages.BusEvent
 import gov.nasa.race.core.{PublishingRaceActor, SubscribingRaceActor, _}
 import gov.nasa.race.swing.GBPanel.{Anchor, Fill}
 import gov.nasa.race.swing.Style._

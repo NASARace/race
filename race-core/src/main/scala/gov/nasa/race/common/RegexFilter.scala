@@ -15,27 +15,26 @@
  * limitations under the License.
  */
 
-import sbt.Keys._
-import sbtassembly.AssemblyPlugin.autoImport._
-import sbtassembly.PathList
+package gov.nasa.race.common
+
+import com.typesafe.config.Config
+import gov.nasa.race.config.ConfigUtils._
+import gov.nasa.race.config.ConfigurableFilter
+
 
 /**
-  * settings related to sbt-assembly (executable jar distribution)
-  *
-  * NOTE - this does not work yet for WorldWind because of native libs
-  */
+ * a filter that passes if the provided regexes all match
+ */
+class RegexFilter (val reSpec: Seq[String], val config: Config=null) extends ConfigurableFilter {
 
-object Assembly {
-  lazy val taskSettings = Seq(
+  def this (conf: Config) = this(conf.getStringListOrElse("regex", Seq.empty), conf)
 
-    test in assembly := {},
-    mainClass in assembly := Some("gov.nasa.race.ConsoleMain"),
-    assemblyMergeStrategy in assembly := {
-      // skip all Windows,Unix shared libs from WorldWind
-      case PathList(ps @ _*) if ps.last endsWith ".dll" => MergeStrategy.discard
-      case PathList(ps @ _*) if ps.last endsWith ".so" => MergeStrategy.discard
-      case PathList("META-INF","MANIFEST.MF") => MergeStrategy.rename
-      case other => MergeStrategy.first
-    }
-  )
+  val regexes = reSpec.map( _.r)
+
+  def pass (o: Any): Boolean = {
+    if (o != null) {
+      val txt = o.toString
+      !regexes.exists(_.findFirstIn(txt).isEmpty)
+    } else false
+  }
 }

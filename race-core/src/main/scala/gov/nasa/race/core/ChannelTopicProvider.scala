@@ -19,7 +19,7 @@ package gov.nasa.race.core
 
 import akka.actor.{ActorRef, Terminated}
 import com.typesafe.config.Config
-import gov.nasa.race.core.Messages.{ChannelTopicAccept, ChannelTopicRelease, ChannelTopicRequest, ChannelTopicResponse}
+import gov.nasa.race.core.Messages._
 
 import scala.collection.mutable.{Map => MutableMap, Set => MutableSet}
 
@@ -39,7 +39,8 @@ trait ChannelTopicSubscriber extends SubscribingRaceActor {
   def requestChannelTopic(channelTopic: ChannelTopic):Unit = {
     pendingRequests += channelTopic
     info(s"$name sending request for $channelTopic")
-    busFor(channelTopic.channel).publish( BusEvent(PROVIDER_CHANNEL,ChannelTopicRequest(channelTopic,self), self))
+    // this needs to publish a BusSysEvent to prevent user handlers from interfering
+    busFor(channelTopic.channel).publish( BusSysEvent(PROVIDER_CHANNEL,ChannelTopicRequest(channelTopic,self), self))
   }
 
   def request(channel: Channel, topic: Topic):Unit = requestChannelTopic(ChannelTopic(channel,topic))
@@ -158,18 +159,18 @@ trait ChannelTopicProvider extends PublishingRaceActor {
     })
   }
 
-  override def onInitializeRaceActor(raceContext: RaceContext, actorConf: Config): Any = {
-    super.onInitializeRaceActor(raceContext, actorConf)
+  override def onInitializeRaceActor(raceContext: RaceContext, actorConf: Config)= {
     bus.subscribe(self, PROVIDER_CHANNEL) // this is where we get requests from
+    super.onInitializeRaceActor(raceContext, actorConf)
   }
 
-  override def onTerminateRaceActor(originator: ActorRef): Any = {
-    super.onTerminateRaceActor(originator)
+  override def onTerminateRaceActor(originator: ActorRef) = {
     bus.unsubscribe(self, PROVIDER_CHANNEL)
+    super.onTerminateRaceActor(originator)
   }
 
   def handleCTProviderMessage: Receive = {
-    case BusEvent(PROVIDER_CHANNEL,request: ChannelTopicRequest,_) => processRequest(request)
+    case BusSysEvent(PROVIDER_CHANNEL,request: ChannelTopicRequest,_) => processRequest(request)
     case accept: ChannelTopicAccept => processAccept(accept)
     case release: ChannelTopicRelease => processRelease(release)
     case Terminated(client) => clients.retain( release => release.client != client)
@@ -182,7 +183,9 @@ trait ChannelTopicProvider extends PublishingRaceActor {
     * start to serve before we get an accept
     */
   def processRequest(request: ChannelTopicRequest) = {
+    info(s"$name got $request")
     if (isRequestAccepted(request)) {
+      info(s"$name accepts $request")
       request.requester ! request.toResponse(self)
     }
   }
@@ -227,7 +230,7 @@ trait TransitiveChannelTopicProvider extends ChannelTopicProvider with ChannelTo
   val acceptForwards = MutableMap.empty[ChannelTopic,ChannelTopicResponse]    // requester.accept -> provider.accept
 
   def handleTransitiveCTProviderMessage: Receive = {
-    case BusEvent(PROVIDER_CHANNEL, request: ChannelTopicRequest, _) => processRequest(request)
+    case BusSysEvent(PROVIDER_CHANNEL, request: ChannelTopicRequest, _) => processRequest(request)
     case response: ChannelTopicResponse => processResponse(response)
     case accept: ChannelTopicAccept => processAccept(accept)
     case release: ChannelTopicRelease => processRelease(release)
@@ -240,6 +243,7 @@ trait TransitiveChannelTopicProvider extends ChannelTopicProvider with ChannelTo
     *  andotherwise reaching out to providers for that topic ourselves
     */
   override def processRequest(req: ChannelTopicRequest) = {
+    info(s"$name got $req")
     if (isRequestAccepted(req)) {
       val reqChannelTopic = req.channelTopic
       if (clients.find(_.channelTopic == reqChannelTopic).isDefined) { // we already serve it

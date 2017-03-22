@@ -22,7 +22,8 @@ import com.typesafe.config.Config
 import gov.nasa.race._
 import gov.nasa.race.air.{FlightCompleted, FlightCsChanged, FlightDropped, FlightPos}
 import gov.nasa.race.config.ConfigUtils._
-import gov.nasa.race.core.{BusEvent, ContinuousTimeRaceActor, PublishingRaceActor, SubscribingRaceActor}
+import gov.nasa.race.core.Messages.BusEvent
+import gov.nasa.race.core.{ContinuousTimeRaceActor, PublishingRaceActor, SubscribingRaceActor}
 
 import scala.collection.mutable.{HashMap => MHashMap}
 import scala.concurrent.duration._
@@ -45,13 +46,13 @@ class FlightDropperActor(val config: Config) extends PublishingRaceActor
   //--- end init
 
   override def onStartRaceActor(originator: ActorRef) = {
-    super.onStartRaceActor(originator)
     schedule = scheduleNow(interval,CheckFlightPos)
+    super.onStartRaceActor(originator)
   }
 
   override def onTerminateRaceActor(originator: ActorRef) = {
-    super.onTerminateRaceActor(originator)
     ifSome(schedule){ _.cancel }
+    super.onTerminateRaceActor(originator)
   }
 
   override def handleMessage = {

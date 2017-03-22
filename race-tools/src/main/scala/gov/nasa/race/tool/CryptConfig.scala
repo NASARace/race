@@ -26,7 +26,7 @@ import com.typesafe.config._
 import gov.nasa.race.config.ConfigUtils
 import gov.nasa.race.util.CryptUtils._
 
-import scala.collection.JavaConversions._
+import scala.collection.JavaConverters._
 
 
 /**
@@ -53,7 +53,7 @@ object CryptConfig extends CryptApp {
       val conf = ConfigFactory.parseFile(file)
       var econf = conf
 
-      for (e <- conf.entrySet) {
+      for (e <- conf.entrySet.asScala) {
         val k = e.getKey
         val v = e.getValue
         v.unwrapped match {

@@ -41,6 +41,14 @@ package object race {
     opt
   }
 
+  def ifSomeOf[T](opts: Option[T]*)(f: (T) => Any): Option[T] = {
+    opts foreach( _ match {
+      case o@Some(t) => f(t); return o
+      case None =>
+    })
+    None
+  }
+
   def none[T](f: =>Any): Option[T] = { // can be used as alternative for ifSome{..}
     f
     None
@@ -112,6 +120,14 @@ package object race {
 
   def flatLift2[A, B, C](oa: Option[A], ob: Option[B])(f: (A, B) => Option[C]): Option[C] = {
     for (a <- oa; b <- ob) yield f(a, b).get
+  }
+
+  def firstFlatMapped[A,B](seq: Seq[A])(f: (A)=>Option[B]): Option[B] = {
+    seq.foreach { a =>
+      val ob = f(a)
+      if (ob.isDefined) return ob // shortcut
+    }
+    None
   }
 
   //--- nullables

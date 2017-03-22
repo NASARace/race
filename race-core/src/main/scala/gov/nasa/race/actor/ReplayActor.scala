@@ -57,17 +57,16 @@ class ReplayActor (val config: Config) extends ContinuousTimeRaceActor with Filt
     if (compressedMode) new GZIPInputStream(fis,bufSize) else new BufferedInputStream(fis,bufSize)
   }
 
-  override def onStartRaceActor(originator: ActorRef): Any = {
-    super.onStartRaceActor(originator)
+  override def onStartRaceActor(originator: ActorRef) = {
     if (rebaseDates) archiveReader.setBaseDate(simClock.dateTime)
-
     scheduleNext
+    super.onStartRaceActor(originator)
   }
 
-  override def onTerminateRaceActor(originator: ActorRef): Any = {
-    super.onTerminateRaceActor(originator)
+  override def onTerminateRaceActor(originator: ActorRef) = {
     archiveReader.close
     iStream.close
+    super.onTerminateRaceActor(originator)
   }
 
   override def handleMessage: Receive = {

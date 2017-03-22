@@ -41,7 +41,7 @@ object LogConsole {
     arg1("<configFile>","console configuration file"){a=> configFile=parseExistingFileOption(a)}
   }
 
-  def main (args: Array[String]) = {
+  def main (args: Array[String]): Unit = {
     val opts = CliArgs(args)(new Opts).getOrElse(return)
 
     val is = opts.configFile match {

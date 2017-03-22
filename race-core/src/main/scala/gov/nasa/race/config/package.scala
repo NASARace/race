@@ -29,7 +29,10 @@ package object config {
   trait NamedConfigurable {
     val config: Config
     // we can't use ConfigConversions, this is toplevel
-    val name = try { config.getString("name") } catch { case _: Throwable => getClass.getName }
+    val name = try { config.getString("name") } catch { case _: Throwable => getDefaultName }
+
+    // override if there is a more specific default name
+    def getDefaultName = getClass.getName
   }
 
   trait ConfigurableTranslator extends Translator[Any, Any] with NamedConfigurable

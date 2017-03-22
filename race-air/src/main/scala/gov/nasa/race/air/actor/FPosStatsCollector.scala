@@ -1,22 +1,52 @@
+/*
+ * Copyright (c) 2017, United States Government, as represented by the
+ * Administrator of the National Aeronautics and Space Administration.
+ * All rights reserved.
+ *
+ * The RACE - Runtime for Airspace Concept Evaluation platform is licensed
+ * under the Apache License, Version 2.0 (the "License"); you may not use
+ * this file except in compliance with the License. You may obtain a copy
+ * of the License at http://www.apache.org/licenses/LICENSE-2.0.
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package gov.nasa.race.air.actor
 
+import java.awt.{Color, Font}
+import java.io.{ByteArrayOutputStream, PrintWriter}
+
 import akka.actor.ActorRef
+import akka.http.scaladsl.model.{HttpEntity, MediaTypes}
 import com.typesafe.config.Config
-import gov.nasa.race.air.{FlightCompleted, FlightDropped, FlightPos}
-import gov.nasa.race.common.Stats
+import gov.nasa.race._
+import gov.nasa.race.air.{FlightCompleted, FlightPos}
+import gov.nasa.race.common.{BucketCounter, ConsoleStats, Stats}
 import gov.nasa.race.config.ConfigUtils._
-import gov.nasa.race.core.Messages.RaceTick
-import gov.nasa.race.core.{BusEvent, ContinuousTimeRaceActor, PeriodicRaceActor, PublishingRaceActor, SubscribingRaceActor}
+import gov.nasa.race.core.Messages.{BusEvent, RaceTick}
+import gov.nasa.race.core.{ContinuousTimeRaceActor, PeriodicRaceActor, PublishingRaceActor, SubscribingRaceActor}
+import gov.nasa.race.geo.GreatCircle
+import gov.nasa.race.http.{HtmlArtifacts, HtmlStats}
+import org.jfree.chart.{ChartFactory, ChartUtilities}
+import org.jfree.chart.plot.{PlotOrientation, XYPlot}
+import org.jfree.data.xy.{XYBarDataset, XYSeries, XYSeriesCollection}
+import org.joda.time.DateTime
 
 import scala.collection.mutable.{HashMap => MHashMap}
 import scala.concurrent.duration._
+import scalatags.Text.all._
+
 
 /**
   * actor that collects update statistics for FPos objects
   */
 class FPosStatsCollector (val config: Config) extends SubscribingRaceActor with PublishingRaceActor
                       with ContinuousTimeRaceActor with PeriodicRaceActor {
-  class FPosUpdates (var tLast: Long) {
+
+  class FPosUpdates (var tLast: Long, var lastFpos: FlightPos) {
     var count: Int = 0
     var dtSum: Int = 0
     var dtMin: Int = 0
@@ -28,57 +58,107 @@ class FPosStatsCollector (val config: Config) extends SubscribingRaceActor with 
 
   val title = config.getStringOrElse("title", name)
   var channels = ""
-  val settleTime = config.getFiniteDurationOrElse("settle-time", 2.minutes).toMillis
+
+  var firstPos = true
+  val resetClockDiff = config.getOptionalFiniteDuration("reset-clock-diff") // sim time
+
+  val dropAfter = config.getFiniteDurationOrElse("drop-after", 5.minutes).toMillis // this is sim time
+  val settleTime = config.getFiniteDurationOrElse("settle-time", 1.minute).toMillis
 
   val activeFlights = MHashMap.empty[String,FPosUpdates]
-  var droppedFlights = 0
-  var completedFlights = 0
+
+  var completedFlights = 0  // regularly completed flights
+  var staleFlights = 0      // flights with a old position time
+  var droppedFlights = 0    // flights that didn't get updated
+
   var minActive = 0
   var maxActive = 0
-  var outOfOrder = 0
+
+  var outOfOrder = 0  // older FlightPos objects received later
+  var duplicate = 0  // FlightPos objects with identical time stamps and positions
+  var ambiguous = 0   // FlightPos objects with identical time stamps but different positions
+
+  val updateStats = new BucketCounter(
+    config.getFiniteDurationOrElse("dt-min",0.seconds).toMillis,
+    config.getFiniteDurationOrElse("dt-max",180.seconds).toMillis,
+    config.getIntOrElse("dts",18)
+  )
 
   override def onStartRaceActor(originator: ActorRef) = {
-    super.onStartRaceActor(originator)
     channels = readFromAsString
     startScheduler
+    super.onStartRaceActor(originator)
   }
 
   override def handleMessage = {
-    case BusEvent(_, fpos: FlightPos, _) => updateActiveFlight(fpos)
+    case BusEvent(_, fpos: FlightPos, _) =>
+      checkClockReset(fpos.date)
+      updateActiveFlight(fpos)
 
     case BusEvent(_, fcomplete: FlightCompleted, _) =>
+      checkClockReset(fcomplete.date)
       activeFlights -= fcomplete.cs
       completedFlights += 1
       updateMinActiveStats
 
-    case BusEvent(_, fdropped: FlightDropped, _) =>
-      activeFlights -= fdropped.cs
-      droppedFlights += 1
-      updateMinActiveStats
+    // we do our own flight dropped handling since we also check upon first report
 
-    case RaceTick => publish(snapshot)
+    case RaceTick =>
+      checkDropped
+      publish(snapshot)
+  }
+
+  def checkClockReset (d: DateTime) = {
+    if (firstPos) {
+      ifSome(resetClockDiff) { dur =>
+        if (elapsedSimTimeSince(d) > dur){
+          resetSimClockRequest(d)
+        }
+      }
+      firstPos = false
+    }
   }
 
   def updateActiveFlight (fpos: FlightPos) = {
     val t = fpos.date.getMillis
     activeFlights.get(fpos.cs) match {
       case Some(fpu:FPosUpdates) =>
-        if (t >= fpu.tLast) {
+        if (t > fpu.tLast) {
           val dt = (t - fpu.tLast).toInt
           fpu.tLast = t
+          fpu.lastFpos = fpos
           fpu.count += 1
           fpu.dtSum += dt
           if (dt > fpu.dtMax) fpu.dtMax = dt
           if (elapsedSimTimeMillisSinceStart > settleTime) {
-            if (dt < fpu.dtMin || fpu.dtMin == 0) fpu.dtMin = dt
+            updateStats.add(dt)
+            if ((dt > 0) && (dt < fpu.dtMin || fpu.dtMin == 0)) fpu.dtMin = dt
           }
-        } else {
+        } else if (t == fpu.tLast) { // same time is either duplicate or ambiguous
+          if (fpos.position =:= fpu.lastFpos.position && fpos.altitude =:= fpu.lastFpos.altitude) {
+            info(s"duplicate flight pos: $fpos")
+            duplicate += 1
+          } else {
+            val lastFpos = fpu.lastFpos
+            val dist = GreatCircle.distance(fpos.position,lastFpos.position,
+                                            (fpos.altitude + lastFpos.altitude) / 2)
+            info(s"ambiguous flight pos: $fpos - ${lastFpos} = ${dist.toMeters.toInt}m")
+            ambiguous += 1
+          }
+        } else { // out-of-order message - we already had a more recent position
+          info(s"out of order flight pos: $fpos - ${fpu.lastFpos.date} = ${(t-fpu.tLast)/1000}s")
           outOfOrder += 1
         }
 
-      case None =>
-        activeFlights += fpos.cs -> new FPosUpdates(t)
-        updateMaxActiveStats
+      case None => // new flight
+        val tNow = updatedSimTimeMillis
+        if ((tNow - t) > dropAfter) {
+          info(s"stale flight pos: $fpos")
+          staleFlights += 1
+        } else {
+          activeFlights += fpos.cs -> new FPosUpdates(t,fpos)
+          updateMaxActiveStats
+        }
     }
   }
 
@@ -94,6 +174,22 @@ class FPosStatsCollector (val config: Config) extends SubscribingRaceActor with 
     if (nActive > maxActive) maxActive = nActive
   }
 
+  def checkDropped = {
+    val t = updatedSimTimeMillis
+    val cut = dropAfter
+    val n = activeFlights.size
+
+    activeFlights.foreach { e => // make sure we don't allocate per entry
+      val tLast = e._2.tLast
+      if ((t - tLast) > cut) {
+        droppedFlights += 1
+        activeFlights -= e._1
+      }
+    }
+
+    if (activeFlights.size < n) updateMinActiveStats
+  }
+
   def snapshot: Stats = {
     val tNow = updatedSimTimeMillis
     var nUpdated = 0
@@ -106,38 +202,123 @@ class FPosStatsCollector (val config: Config) extends SubscribingRaceActor with 
         avgSum += fpu.dtSum / fpu.count // add average update interval for this flight
         nUpdated += 1
         if (elapsedSimTimeMillisSinceStart > settleTime) {
-          if (fpu.dtMin < dtMin || dtMin == 0) dtMin = fpu.dtMin
+          if ((fpu.dtMin > 0) && ((fpu.dtMin < dtMin) || (dtMin == 0))) {
+            dtMin = fpu.dtMin
+          }
         }
         if (fpu.dtMax > dtMax) dtMax = fpu.dtMax
       }
     }
 
-    val nActive = activeFlights.size
-    val avgUpdate = if (nUpdated > 0) avgSum / nUpdated  else 0
-
-    new FlightObjectStats(title, tNow, elapsedSimTimeMillisSinceStart, channels,
-        nActive,minActive,maxActive,
-        avgUpdate,dtMin,dtMax,
-        completedFlights,droppedFlights,outOfOrder)
+    new FPosStats(title, tNow, elapsedSimTimeMillisSinceStart, channels,
+                          activeFlights.size,minActive,maxActive,
+                          updateStats.clone,
+                          completedFlights,staleFlights,droppedFlights,
+                          outOfOrder,duplicate,ambiguous)
   }
 }
 
-class FlightObjectStats (val topic: String, val takeMillis: Long, val elapsedMillis: Long, val channels: String,
-                         val active: Int, val minActive: Int, val maxActive: Int,
-                         val avgUpdateMillis: Int, val minUpdateMillis: Int, val maxUpdateMillis: Int,
-                         val completed: Int, val dropped: Int, val outOfOrder: Int)  extends Stats {
-  def printToConsole = {
-    printConsoleHeader
+class FPosStats(val topic: String, val takeMillis: Long, val elapsedMillis: Long, val channels: String,
+                val active: Int, val minActive: Int, val maxActive: Int,
+                val bc: BucketCounter,
+                val completed: Int, val stale: Int, val dropped: Int,
+                val outOfOrder: Int, duplicate: Int, ambiguous: Int)  extends Stats
+                      with ConsoleStats with HtmlStats {
+  def time (millis: Double): String = {
+    if (millis.isInfinity || millis.isNaN) {
+      "     "
+    } else {
+      if (millis < 120000) f"${millis / 1000}%4.0fs"
+      else if (millis < 360000) f"${millis / 60000}%4.1fm"
+      else f"${millis / 360000}%4.1fh"
+    }
+  }
 
-    println(s"observed channels: $channels")
+  def writeToConsole(pw:PrintWriter) = {
+    pw.println(consoleHeader)
+    pw.println(s"observed channels: $channels")
 
-    val dtAvg = avgUpdateMillis / 1000.0
-    val dtMin = minUpdateMillis / 1000.0
-    val dtMax = maxUpdateMillis / 1000.0
+    pw.println("active    min    max   cmplt stale  drop order   dup ambig        n dtMin dtMax dtAvg")
+    pw.println("------ ------ ------   ----- ----- ----- ----- ----- -----  ------- ----- ----- -----")
+    pw.print(f"$active%6d $minActive%6d $maxActive%6d   $completed%5d $stale%5d $dropped%5d $outOfOrder%5d $duplicate%5d $ambiguous%5d ")
+    if (bc.nSamples > 0) {
+      pw.println(f"  ${bc.nSamples}%6d ${time(bc.min)} ${time(bc.max)} ${time(bc.mean)}")
+      bc.processBuckets( (i,c) => {
+        if (i%6 == 0) pw.println  // 6 buckets per line
+        pw.print(f"${Math.round(i*bc.bucketSize/1000)}%3ds: $c%6d | ")
+      })
+    }
+    pw.println
+  }
 
-    println(" active     min     max    complt    drop   order   dtAvg  dtMin  dtMax")
-    println("------- ------- -------   ------- ------- -------  ------ ------ ------")
-    println(f"$active%7d $minActive%7d $maxActive%7d   $completed%7d $dropped%7d $outOfOrder%7d  $dtAvg%6.1f $dtMin%6.1f $dtMax%6.1f")
-    println
+  def hasSamples = bc.nSamples > 0
+
+  def toHtml = {
+    val res = diagramArtifacts
+
+    val html =
+      div(
+        HtmlStats.htmlTopicHeader(topic,channels,elapsedMillis),
+        table(cls:="noBorder")(
+          tr(
+            th("active"),th("min"),th("max"),th("cmplt"),th(""),
+            th("n"),th("Δt min"),th("Δt max"),th("Δt avg"),th(""),
+            th("stale"),th("drop"),th("order"),th("dup"),th("amb")
+          ),
+          tr(
+            td(active),td(minActive),td(maxActive),td(completed),td(""),
+            if (bc.nSamples > 0){
+              Seq( td(bc.nSamples),td(time(bc.min)),td(time(bc.max)),td(time(bc.mean)))
+            } else {
+              Seq( td("-"),td("-"),td("-"),td("-"))
+            },
+            td(""), td(stale),td(dropped),td(outOfOrder),td(duplicate),td(ambiguous)
+          )
+        ),
+        res.html
+      )
+
+    HtmlArtifacts(html,res.resources)
+  }
+
+  def diagramArtifacts = {
+    if (hasSamples) {
+      def dataset = {
+        val ds = new XYSeries("updates")
+        bc.processBuckets { (i, count) => ds.add(Math.round(i * bc.bucketSize / 1000), count) }
+        val sc = new XYSeriesCollection
+        sc.addSeries(ds)
+        new XYBarDataset(sc, 10.0)
+      }
+
+      val chart = ChartFactory.createXYBarChart(null, "sec", false, "updates", dataset,
+        PlotOrientation.HORIZONTAL, false, false, false)
+      val plot = chart.getPlot.asInstanceOf[XYPlot]
+      plot.setBackgroundAlpha(0)
+      plot.setDomainGridlinePaint(Color.lightGray)
+      plot.setRangeGridlinePaint(Color.lightGray)
+
+      val labelFont = new Font("Serif", Font.PLAIN, 30)
+      val domainAxis = plot.getDomainAxis
+      domainAxis.setInverted(true)
+      domainAxis.setLabelFont(labelFont)
+      val rangeAxis = plot.getRangeAxis
+      rangeAxis.setLabelFont(labelFont)
+
+      val w = 800
+      val h = 300
+      val out = new ByteArrayOutputStream
+      ChartUtilities.writeChartAsPNG(out, chart, w, h, true, 6)
+      val ba = out.toByteArray
+
+      val path = "fpos-update-histogram.png"
+      val html = p(img(src:=path, width:=s"${w/2}", height:=s"${h/2}"))// down sample to increase sharpness
+      val imgContent = HttpEntity(MediaTypes.`image/png`, ba)
+
+      HtmlArtifacts(html, Map(path -> imgContent))
+
+    } else {
+      HtmlArtifacts(p(""), HtmlStats.noResources)
+    }
   }
 }

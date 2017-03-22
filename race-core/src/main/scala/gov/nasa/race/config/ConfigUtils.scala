@@ -33,6 +33,8 @@ import gov.nasa.race.util._
  */
 object ConfigUtils {
 
+  final val NoConfig = ConfigFactory.empty
+
   def emptyConfig = ConfigFactory.empty
 
   def showConfig( config: Config) = {

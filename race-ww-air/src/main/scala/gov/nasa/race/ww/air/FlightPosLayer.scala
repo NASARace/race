@@ -18,15 +18,15 @@
 package gov.nasa.race.ww.air
 
 import com.typesafe.config.Config
-import gov.nasa.race.air.{FlightPos, FlightTerminationMessage}
 import gov.nasa.race._
-import gov.nasa.race.core.BusEvent
+import gov.nasa.race.air.{FlightPos, FlightTerminationMessage}
+import gov.nasa.race.core.Messages.BusEvent
 import gov.nasa.race.ww._
 
 /**
  * a WorldWind layer to display FlightPos objects
  */
-class FlightPosLayer (raceView: RaceView,config: Config) extends FlightLayer[FlightPos](raceView,config) {
+class FlightPosLayer (raceView: RaceView,config: Config) extends FlightLayer3D[FlightPos](raceView,config) {
 
   override def handleMessage = {
     case BusEvent(_,fpos:FlightPos,_) =>

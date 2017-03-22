@@ -17,11 +17,14 @@
 
 package gov.nasa.race.ww
 
+import java.awt.Point
+import java.awt.event.InputEvent._
 import java.awt.event.{InputEvent, KeyEvent, MouseEvent, MouseWheelEvent}
 
 import gov.nasa.worldwind.animation.AnimationController
-import gov.nasa.worldwind.geom.Position
-import gov.nasa.worldwind.view.orbit.OrbitViewInputHandler
+import gov.nasa.worldwind.geom.{LatLon, Position, Vec4}
+import gov.nasa.worldwind.view.orbit.{OrbitView, OrbitViewInputHandler}
+
 
 /**
   * a WorldWind ViewInputHandler that lets us query animation target positions and identify
@@ -45,7 +48,8 @@ class RaceViewInputHandler extends OrbitViewInputHandler {
       case "ViewAnimPan" => RaceView.Pan
       case other => RaceView.Goto
     }
-    raceView.newTargetEyePosition(eyePos,animationHint)
+
+    raceView.newTargetEyePosition(eyePos, animationHint)
     lastTargetPosition = eyePos // set this after notification so that we can still see the last pos
   }
 
@@ -88,106 +92,45 @@ class RaceViewInputHandler extends OrbitViewInputHandler {
   def lastUserInputWasDrag = lastInputEvent != null && lastInputEvent.getID == MouseEvent.MOUSE_DRAGGED
   def lastUserInputWasWheel = lastInputEvent != null && lastInputEvent.getID == MouseEvent.MOUSE_WHEEL
 
-  /***
-  protected var _targetPosition: Position = null // we can't yet call getView.getEyePosition
-
-  def targetPosition = {
-    if (_targetPosition == null) getView.getEyePosition else _targetPosition
-  }
-
-  //--- eye position modifiers that can cause animations
-
-  override def goTo (lookAtPos: Position, distance: Double): Unit = {
-    _targetPosition = lookAtPos
-    println(s"@@ goTo: $lookAtPos")
-    super.goTo(lookAtPos, distance)
-  }
-
-  override def addZoomAnimator(zoomStart: Double, zoomEnd: Double): Unit = {
-    println(s"@@ addZoomAnimator: $zoomStart $zoomEnd")
-    super.addZoomAnimator(zoomStart,zoomEnd)
-  }
-
-  override def addFlyToZoomAnimator(heading: Angle, pitch: Angle, zoom: Double): Unit = {
-    println(s"@@ addFlyToZoomAnimator")
-    super.addFlyToZoomAnimator(heading,pitch,zoom)
-  }
-
-
-  override def changeZoom(view: BasicOrbitView, animControl: AnimationController,
-                          change: Double, attrib: ViewInputAttributes.ActionAttributes): Unit = {
-    super.changeZoom(view,animControl,change,attrib)
-
-    val zoomAnimator = animControl.get(OrbitViewInputHandler.VIEW_ANIM_ZOOM).asInstanceOf[OrbitViewMoveToZoomAnimator]
-    if (zoomAnimator != null) {
-      val endZoom = zoomAnimator.getEnd
-      println(s"@@ changeZoom: ${endZoom.toInt}")
+  override def computeNewZoom(view: OrbitView, curZoom: Double, change: Double): Double = {
+    val newZoom = if (isMeta) { // adapt zoom factor independent of current level
+      curZoom + scale(Math.signum(change)*10)
+    } else { // adapt zoom factor based on current level
+      val logCurZoom = if (curZoom != 0) Math.log(curZoom) else 0
+      Math.exp(logCurZoom + scale(change))
     }
+
+    view.getOrbitViewLimits.limitZoom(view, newZoom)
   }
 
-  override def addCenterAnimator (begin: Position, end: Position, lengthMillis: Long, smoothed: Boolean): Unit = {
-    _targetPosition = end
-    println(s"@@ addCenterAnimator: $end")
-    super.addCenterAnimator(begin, end, lengthMillis, smoothed)
+  override def getChangeInLocation(point1: Point, point2: Point, vec1: Vec4, vec2: Vec4): LatLon = {
+    // Modify the distance we'll actually travel based on the slope of world distance travelled to screen
+    // distance travelled . A large slope means the user made a small change in screen space which resulted
+    // in a large change in world space. We want to reduce the impact of that change to something reasonable.
+    val dragSlope = computeDragSlope(point1, point2, vec1, vec2)
+    val dragSlopeFactor = getDragSlopeFactor
+
+    var scale = 1.0 / (1.0 + dragSlopeFactor * dragSlope * dragSlope)
+    val globe = wwd.getModel.getGlobe
+    val pos1 = globe.computePositionFromPoint(vec1)
+    val pos2 = globe.computePositionFromPoint(vec2)
+
+    val alt = wwd.getView.getEyePosition.elevation
+    if (isAlt)  scale /= (alt/1000)
+
+    val adjustedLocation = LatLon.interpolateGreatCircle(scale, pos1, pos2)
+    // Return the distance to travel in angular degrees.
+    pos1.subtract(adjustedLocation)
   }
 
-  override def addEyePositionAnimator(timeToIterate: Long, beginPosition: Position, endPosition: Position): Unit = {
-    _targetPosition = endPosition
-    println(s"@@ addEyePositionAnimator: $endPosition")
-    super.addEyePositionAnimator(timeToIterate,beginPosition,endPosition)
+  def scale (d: Double): Double = {
+    if (isAlt) {
+      if (isShift) d * 10 else d / 10
+    } else d
   }
 
-  override def addPanToAnimator(centerPos: Position, heading: Angle, pitch: Angle, zoom: Double): Unit = {
-    _targetPosition = centerPos
-    println(s"@@ addPanToAnimator1: $centerPos")
-    super.addPanToAnimator(centerPos,heading,pitch,zoom)
-  }
-
-  override def addPanToAnimator(beginCenterPos: Position, endCenterPos: Position,
-                                beginHeading: Angle, endHeading: Angle,
-                                beginPitch: Angle, endPitch: Angle,
-                                beginZoom: Double, endZoom: Double,
-                                endCenterOnSurface: Boolean): Unit = {
-    _targetPosition = endCenterPos
-    println(s"@@ addPanToAnimator2: $endCenterPos")
-    super.addPanToAnimator(beginCenterPos,endCenterPos,
-      beginHeading,endHeading,beginPitch,endPitch,beginZoom,endZoom,endCenterOnSurface)
-  }
-
-  override def addPanToAnimator(beginCenterPos: Position, endCenterPos: Position,
-                                beginHeading: Angle, endHeading: Angle,
-                                beginPitch: Angle, endPitch: Angle,
-                                beginZoom: Double, endZoom: Double,
-                                timeToMove: Long, endCenterOnSurface: Boolean): Unit = {
-    _targetPosition = endCenterPos
-    println(s"@@ addPanToAnimator3: $endCenterPos")
-    super.addPanToAnimator(beginCenterPos,endCenterPos,
-      beginHeading,endHeading,beginPitch,endPitch,beginZoom,endZoom,timeToMove,endCenterOnSurface)
-  }
-
-  override def setCenterPosition(view: BasicOrbitView, animControl: AnimationController,
-                                 position: Position, attrib: ViewInputAttributes.ActionAttributes): Unit = {
-    _targetPosition = position
-    println(s"@@ setCenterPosition: $position")
-    super.setCenterPosition(view,animControl,position,attrib)
-  }
-
-  //--- stopping animators has to set the endPos to the current value
-
-  override def stopGoToAnimators: Unit = {
-    _targetPosition = getView.getEyePosition
-    super.stopGoToAnimators
-  }
-
-  override def stopAllAnimators: Unit = {
-    _targetPosition = getView.getEyePosition
-    super.stopAllAnimators
-  }
-
-  override def stopUserInputAnimators(names: AnyRef*) = {
-    _targetPosition = getView.getEyePosition
-    super.stopUserInputAnimators(names:_*)
-  }
-
-    ***/
+  def isAlt = (lastInputEvent != null) && ((lastInputEvent.getModifiers & ALT_MASK) != 0)
+  def isShift = (lastInputEvent != null) && ((lastInputEvent.getModifiers & SHIFT_MASK) != 0)
+  def isMeta = (lastInputEvent != null) && ((lastInputEvent.getModifiers & META_MASK) != 0)
+  def isCtrl = (lastInputEvent != null) && ((lastInputEvent.getModifiers & CTRL_MASK) != 0)
 }

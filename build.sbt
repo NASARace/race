@@ -9,18 +9,17 @@ shellPrompt in ThisBuild := { state => "[" + Project.extract(state).currentRef.p
 
 lazy val commonSettings = commonRaceSettings ++ Seq(
   organization := "gov.nasa.race",
-  version := "1.3.1"
+  version := "1.4.1"
 )
 
 lazy val testSettings = commonSettings ++ noPublishSettings  // test projects don't publish artifacts
 
-
 //--- root project (only for aggregation)
 lazy val root = createRootProject("race").
-  aggregate(raceCore,raceNetJMS,raceNetKafka,raceNetDDS,raceSwing,raceWW,raceAir,raceWWAir,raceLauncher,
-    raceTestKit,raceCoreTest,raceNetJMSTest,raceNetKafkaTest,raceAirTest).
-  dependsOn(raceCore,raceNetJMS,raceNetKafka,raceNetDDS,raceSwing,raceWW,raceAir,raceWWAir,raceLauncher).
-  enablePlugins(JavaAppPackaging,GitVersioning).
+  aggregate(raceCore,raceNetJMS,raceNetKafka,raceNetDDS,raceNetHttp,raceSwing,raceWW,raceAir,raceWWAir,raceSpace,raceLauncher,
+    raceTools,raceTestKit,raceCoreTest,raceNetJMSTest,raceNetHttpTest,raceNetKafkaTest,raceAirTest).
+  dependsOn(raceCore,raceNetJMS,raceNetKafka,raceNetDDS,raceNetHttp,raceSwing,raceWW,raceAir,raceWWAir,raceSpace,raceLauncher).
+  enablePlugins(JavaAppPackaging,LauncherJarPlugin).
   settings(
     commonSettings,
     Defaults.itSettings,
@@ -35,7 +34,7 @@ lazy val root = createRootProject("race").
 //--- those are the projects that produce build artifacts which can be used by 3rd party clients
 
 lazy val raceCore = createProject("race-core", commonSettings).
-  enablePlugins(JavaAppPackaging,GitVersioning).
+  enablePlugins(JavaAppPackaging,LauncherJarPlugin).
   settings(
     mainClass in Compile := Some("gov.nasa.race.main.ConsoleMain")
   ).
@@ -43,7 +42,7 @@ lazy val raceCore = createProject("race-core", commonSettings).
 
 lazy val raceLauncher = createProject("race-launcher", commonSettings).
   dependsOn(raceCore).
-  enablePlugins(JavaAppPackaging,GitVersioning).
+  enablePlugins(JavaAppPackaging,LauncherJarPlugin).
   settings(
     mainClass in Compile := Some("gov.nasa.race.remote.ConsoleRemoteLauncher")
   ).
@@ -64,15 +63,15 @@ lazy val raceNetDDS = createProject("race-net-dds", commonSettings).
 
 lazy val raceNetHttp = createProject("race-net-http", commonSettings).
   dependsOn(raceCore).
-  addLibraryDependencies(asyncHttp)
+  addLibraryDependencies(akkaHttp,scalaTags,scalaTags)
 
 lazy val raceSwing = createProject("race-swing", commonSettings).
   dependsOn(raceCore).
   addLibraryDependencies(akkaActor,scalaSwing,rsTextArea)
 
 lazy val raceAir = createProject("race-air", commonSettings).
-  dependsOn(raceCore,raceNetJMS).
-  addLibraryDependencies(akkaActor,typesafeConfig,nscalaTime,scalaParser,scodecAll)
+  dependsOn(raceCore,raceNetJMS,raceNetHttp).
+  addLibraryDependencies(akkaActor,typesafeConfig,nscalaTime,scalaParser,scodecAll,scalaTags,jfreeChart)
 
 lazy val raceWW = createProject("race-ww", commonSettings).
   dependsOn(raceCore,raceSwing).
@@ -90,12 +89,17 @@ lazy val raceUI = createProject("race-ui", commonSettings).
   dependsOn(raceCore,raceSwing)
 
 lazy val raceTools = createProject("race-tools", commonSettings).
-  enablePlugins(JavaAppPackaging,GitVersioning).
+  enablePlugins(JavaAppPackaging,ClasspathJarPlugin).
   dependsOn(raceCore).
   settings(
-    mainClass in Compile := Some("gov.nasa.race.tools.CryptConfig")).
+    mainClass in Compile := Some("gov.nasa.race.tool.CryptConfig")).
   addLibraryDependencies(logback)
 
+lazy val raceSpace = createProject("race-space", commonSettings).
+  dependsOn(raceCore).
+  settings(
+    noPublishSettings // not yet published
+  )
 
 //--- test projects - no artifacts, only used to test this repository
 
@@ -113,9 +117,11 @@ lazy val raceNetJMSTest = createTestProject("race-net-jms-test", testSettings).
   ).
   addLibraryDependencies(logback,akkaSlf4j,akkaRemote)
 
-// NOTE - as of 11/19/2016 Kafka does not yet run under Scala 2.12, the tests have been disabled
+lazy val raceNetHttpTest = createTestProject("race-net-http-test", testSettings).
+  dependsOn(raceNetHttp,raceTestKit)
+
 lazy val raceNetKafkaTest = createTestProject("race-net-kafka-test", testSettings).
-  enablePlugins(JavaAppPackaging,GitVersioning).
+  enablePlugins(JavaAppPackaging).
   dependsOn(raceNetKafka,raceTestKit).
   configs(MultiJvm).
   settings(
@@ -125,7 +131,7 @@ lazy val raceNetKafkaTest = createTestProject("race-net-kafka-test", testSetting
   addTestLibraryDependencies(logback)
 
 lazy val raceNetDDSTest = createTestProject("race-net-dds-test", testSettings).
-  enablePlugins(JavaAppPackaging,GitVersioning).
+  enablePlugins(JavaAppPackaging).
   dependsOn(raceNetDDS,raceTestKit,raceAir).
   configs(MultiJvm).
   settings(

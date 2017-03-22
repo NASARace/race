@@ -15,24 +15,11 @@
  * limitations under the License.
  */
 
-package gov.nasa.race.filter
-
-import com.typesafe.config.Config
-import gov.nasa.race.config.ConfigurableFilter
-import gov.nasa.race.config.ConfigUtils._
-
+package gov.nasa.race
 
 /**
-  * a simple substring filter
+  * package gov.nasa.race.space contains classes to model spacecraft
   */
-class SubstringFilter(val substrings: Seq[String], val config: Config = null) extends ConfigurableFilter {
+package object space {
 
-  def this(conf: Config) = this(conf.getStringListOrElse("substrings", Seq.empty), conf)
-
-  def pass(o: Any): Boolean = {
-    if (o != null) {
-      val txt = o.toString
-      substrings.exists(txt.contains)
-    } else false
-  }
 }

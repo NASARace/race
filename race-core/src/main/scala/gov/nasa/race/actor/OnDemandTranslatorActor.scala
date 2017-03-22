@@ -19,8 +19,8 @@ package gov.nasa.race.actor
 
 import com.typesafe.config.Config
 import gov.nasa.race._
-import gov.nasa.race.core.Messages.ChannelTopicRequest
-import gov.nasa.race.core.{BusEvent, _}
+import gov.nasa.race.core.Messages.{BusEvent, ChannelTopicRequest}
+import gov.nasa.race.core._
 
 /**
   * a generic actor that translates text messages into objects by means of

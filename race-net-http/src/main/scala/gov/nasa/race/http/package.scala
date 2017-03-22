@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, United States Government, as represented by the
+ * Copyright (c) 2017, United States Government, as represented by the
  * Administrator of the National Aeronautics and Space Administration.
  * All rights reserved.
  *
@@ -14,27 +14,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package gov.nasa.race
 
-package gov.nasa.race.filter
+import akka.http.scaladsl.marshalling.ToResponseMarshallable
+import akka.http.scaladsl.model.HttpRequest
+import akka.http.scaladsl.model.Uri.Path
 
-import com.typesafe.config.Config
-import gov.nasa.race.config.ConfigurableFilter
-import gov.nasa.race.config.ConfigUtils._
-
+import scalatags.generic.TypedTag
+import scalatags.text.{Builder => STBuilder}
 
 /**
- * a filter that passes if the provided regexes all match
- */
-class RegexFilter (val reSpec: Seq[String], val config: Config=null) extends ConfigurableFilter {
+  * package gov.nasa.race.http contains actors to serve and retrieve http data
+  */
+package object http {
+  type HtmlElement = TypedTag[STBuilder,String,String]
+  type HtmlResources = Map[String,ToResponseMarshallable]
 
-  def this (conf: Config) = this(conf.getStringListOrElse("regex", Seq.empty), conf)
+  final val RootPath = Path("/")
 
-  val regexes = reSpec.map( _.r)
-
-  def pass (o: Any): Boolean = {
-    if (o != null) {
-      val txt = o.toString
-      !regexes.exists(_.findFirstIn(txt).isEmpty)
-    } else false
-  }
+  case object SendHttpRequest
+  case class SendNewHttpRequest(request: HttpRequest)
 }
