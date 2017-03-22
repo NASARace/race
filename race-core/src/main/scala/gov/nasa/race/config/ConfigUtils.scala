@@ -58,6 +58,11 @@ object ConfigUtils {
       true
     }
 
+    //--- these are just convenience forwarders so that we don't have to import ConfigVault everywhere
+    def getVaultString (key: String): String = ConfigVault.getString(key)
+    def getVaultStringOrElse (key: String, defaultValue: String): String = ConfigVault.getStringOrElse(key,defaultValue)
+    def getOptionalVaultString (key: String): Option[String] = ConfigVault.getOptionalString(key)
+
     def getVaultableString(key: String): String = {
       val s = conf.getString(key)
       if (s.startsWith(CRYPT_MARKER)) {
