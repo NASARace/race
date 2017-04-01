@@ -30,6 +30,10 @@ public class SubstringParser {
   }
 
   public SubstringParser (char[] buf) {
+    initialize(buf);
+  }
+
+  public void initialize (char[] buf) {
     this.buf = buf;
     this.len = buf.length;
     this.eIdx = len-1;
@@ -130,6 +134,58 @@ public class SubstringParser {
     }
 
     return sign * (double)acc;
+  }
+
+  // this is a somewhat esoteric format: a double fraction with optional exponent
+  // that starts with a sign instead of 'e', such as "-11606-4" = -0.11606e-4
+  // (e.g. used in TLEs - reminiscent to punch cards)
+  public double parseDoubleFraction (int startIdx, int endIdx) {
+    int i = startIdx;
+    int sign = 1;
+    int d = 0;
+    int n = 1;
+    char c = buf[i];
+
+    for (; c == ' ' || c == '\t' || c == '\n' || c == '\r'; c = buf[++i]);
+
+    if (c == '+'){
+      c = buf[++i];
+    } else if (c == '-'){
+      c = buf[++i];
+      sign = -1;
+    }
+
+    for (;c >= '0' && c <= '9'; c = buf[++i]) {
+      d = d * 10 + (c - '0');
+      n = n*10;
+      if (i == endIdx) break;
+    }
+
+    if (i < endIdx) {
+      if (c == '-' || c == '+') {
+        int esign = 1;
+        int exp = 0;
+
+        if (c == '+'){
+          c = buf[++i];
+        } else {
+          c = buf[++i];
+          esign = -1;
+        }
+
+        for (;c >= '0' && c <= '9'; c = buf[++i]) {
+          exp = exp * 10 + (c - '0');
+          if (i == endIdx) break;
+        }
+        if (esign > 0) {
+          return sign * (((double)d/n) * decPow(exp));
+        } else {
+          return sign * (((double)d/n) / decPow(exp));
+        }
+      }
+    }
+
+    return sign * (double)d/n;
   }
 
   public double parseDouble (int startIdx) {

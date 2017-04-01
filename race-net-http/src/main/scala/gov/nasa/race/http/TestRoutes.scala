@@ -42,8 +42,21 @@ class TestRouteInfo (val parent: ParentContext, val config: Config) extends Race
   }
 }
 
+class TestAuthorized (val parent: ParentContext, val config: Config) extends AuthorizedRaceRoute {
+  val request = config.getStringOrElse("request", "secret")
+  val response = config.getStringOrElse("response", "This is super secret")
+
+  def route = {
+    path(request) {
+      get {
+        completeAuthorized(User.UserRole, HttpEntity(ContentTypes.`text/html(UTF-8)`, response))
+      }
+    }
+  }
+}
+
 /**
-  * a test route that uses a web socket for data exchange
+  * a test route that uses a script for dynamic data update
   */
 class TestRefresh (val parent: ParentContext, val config: Config) extends RaceRouteInfo {
 

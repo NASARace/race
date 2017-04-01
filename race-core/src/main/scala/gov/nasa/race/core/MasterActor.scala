@@ -17,11 +17,11 @@
 
 package gov.nasa.race.core
 
-import akka.actor.SupervisorStrategy.Stop
+import akka.actor.SupervisorStrategy.{Escalate, Stop}
 import akka.actor._
 import akka.pattern.AskSupport
 import akka.util.Timeout
-import com.typesafe.config.Config
+import com.typesafe.config.{Config, ConfigException}
 import gov.nasa.race.common.Clock
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.Messages._
@@ -31,6 +31,7 @@ import org.joda.time.DateTime
 
 import scala.collection.immutable.ListMap
 import scala.collection.{Seq, mutable}
+import scala.concurrent.SyncVar
 import scala.concurrent.duration._
 import scala.language.postfixOps
 
@@ -80,6 +81,8 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ImplicitActorLogging
   def actorRefs = ras.actors.keys
   def localContext = ras.localRaceContext
 
+  //context.system.eventStream.subscribe(self, classOf[DeadLetter])
+
   def executeProtected (f: => Unit): Unit = {
     try f catch {
       case x: Throwable => error(s"master caught exception in receive(): $x")
@@ -124,13 +127,20 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ImplicitActorLogging
     case ResumeSimClock =>
       simClock.resume
       sender ! RaceAck
+
+    case Terminated(aref) => // TODO - how to react to death watch notification?
+
+    case deadLetter: DeadLetter => // TODO - do we need to react to DeadLetters?
   }
 
   //--- failure strategy
 
   override val supervisorStrategy = OneForOneStrategy(maxNrOfRetries = 10, withinTimeRange = 1 minute) {
+    case aix: ActorInitializationException =>
+      error(aix.getMessage)
+      Stop
     case x: Throwable =>
-      x.printStackTrace
+      error(x.getMessage)
       Stop
 
     //case _: ArithmeticException      => Resume
@@ -152,36 +162,35 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ImplicitActorLogging
     }
   }
 
-
-
   //--- creation of RaceActors
 
   def onRaceCreate = executeProtected {
     if (ras.isVerifiedSenderOf(RaceCreate)) {
-      createRaceActors
-      sender ! RaceCreated
-    } else warning(s"RaceCreate request from $sender ignored")
+      try {
+        createRaceActors
+        sender ! RaceCreated // only gets sent out if there was no exception
+      } catch {
+        case x: Throwable => sender ! RaceCreateFailed(x)
+      }
+    } else {
+      warning(s"RaceCreate request from $sender ignored")
+    }
   }
 
   def createRaceActors = {
-    try {
-      ras.actors = ras.getActorConfigs.foldLeft(ras.actors) { (map, actorConfig) =>
-        getActor(actorConfig) match {
-          case Some(actorRef) => map + (actorRef -> actorConfig)
-          case None => map
-        }
+    ras.actors = ras.getActorConfigs.foldLeft(ras.actors) { (map, actorConfig) =>
+      getActor(actorConfig) match {
+        case Some(actorRef) => map + (actorRef -> actorConfig)
+        case None => map
       }
-    } catch {
-      case x: ClassNotFoundException =>
-        log.error(s"master could not find class: ${x.getMessage}")
-        throw new RaceInitializeException(x.getMessage)
     }
   }
 
   def getActor (actorConfig: Config): Option[ActorRef] = {
     val actorName = actorConfig.getString("name")
+
     actorConfig.getOptionalString("remote") match {
-      case Some(remoteUri) =>
+      case Some(remoteUri) => // remote actor
         val isOptional = actorConfig.getBooleanOrElse("optional", false)
         val remoteUniverseName = userInUrl(remoteUri).get
         if (usedRemoteMasters.get(remoteUri).isEmpty) {
@@ -200,6 +209,7 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ImplicitActorLogging
           }
         }
         getRemoteActor(actorName,remoteUniverseName,remoteUri,actorConfig)
+
       case None => // local actor
         instantiateActor(actorConfig)
     }
@@ -273,35 +283,110 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ImplicitActorLogging
 
   def isOptionalActor (actorConfig: Config) = actorConfig.getBooleanOrElse("optional", false)
 
-  // NOTE - the constructor of the actor to instantiate executes in another thread
-  // in order to stay synchronous, we have to wait for the constructor to return
-  def instantiateActor (actorConfig: Config): Option[ActorRef] = {
-    val actorName = actorConfig.getString("name")
-    val clsName = actorConfig.getClassName("class")
-    val actorCls = ras.classLoader.loadClass(clsName)
-
-    info(s"creating $actorName ..")
-    val aref = try {
-      actorCls.getConstructor(classOf[Config])
-      context.actorOf(Props(actorCls, actorConfig), actorName)
+  /**
+    * find a suitable actor constructor, which is either taking a Config argument or
+    * no arguments at all. Raise a RaceInitializeException if none is found
+    */
+  protected def getActorCtor (actorCls: Class[_], actorConfig: Config): () => Actor = {
+    try {
+      val confCtor = actorCls.getConstructor(classOf[Config])
+      () => { confCtor.newInstance(actorConfig).asInstanceOf[Actor] }
     } catch {
-      case _: java.lang.NoSuchMethodException =>
-        actorCls.getConstructor()
-        context.actorOf(Props(actorCls), actorName)
-    }
-
-    waitForActor(aref) {
-      case NotFound =>
-        if (isOptionalActor(actorConfig)) {
-          warning(s"optional actor did not instantiate $actorName")
-        } else {
-          error(s"non-optional actor did not instantiate $actorName")
-          throw new RaceInitializeException(s"failed to create actor $actorName")
+      case _: NoSuchMethodException =>
+        try {
+          val defCtor = actorCls.getConstructor()
+          () => { defCtor.newInstance().asInstanceOf[Actor] }
+        } catch {
+          case _: NoSuchMethodException =>
+            throw new RaceInitializeException(s"no suitable constructor in ${actorCls.getName}")
         }
-      case other:AskFailure =>
-        error(s"failed actor instantiation: $other")
-        throw new RaceInitializeException(s"failed to create actor $actorName")
-    }(getTimeout(actorConfig,"create-timeout"))
+    }
+  }
+
+  /**
+    * create Props to construct an actor. Note that we need to use the Props constructor that
+    * takes a creator function argument so that we can sync on the actor construction and
+    * know if there was an exception in the respective ctor
+    */
+  protected def getActorProps (ctor: ()=>Actor, sync: SyncVar[Boolean]) = {
+    Props( creator = {
+      try {
+        val a = ctor()
+        sync.put(true)
+        a
+      } catch {
+        case t: Throwable =>
+          sync.put(false)
+          throw t
+      }
+    })
+  }
+
+  /**
+    * this is the workhorse for actor construction
+    * Note that it does NOT follow normal Akka convention because it has to construct
+    * actors synchronously and tell us right away if there was an exception during construction.
+    * We still need to be able to specify a supervisorStrategy though, i.e. we need to
+    * instantiate through Props and from another thread.
+    * @param actorConfig the Config object that specifies the actor
+    * @return Some(ActorRef) in case instantiation has succeeded, None otherwise
+    */
+  protected def instantiateActor (actorConfig: Config): Option[ActorRef] = {
+    try {
+      val actorName = actorConfig.getString("name")
+      val clsName = actorConfig.getClassName("class")
+      val actorCls = ras.classLoader.loadClass(clsName)
+      val createActor = getActorCtor(actorCls, actorConfig)
+
+      info(s"creating $actorName ..")
+      val sync = new SyncVar[Boolean]
+      val props = getActorProps(createActor,sync)
+
+      val aref = context.actorOf(props,actorName) // note this executes the ctor in another thread
+
+      // here we have to run counter to normal actor wisdom and block until we
+      // either know the actor construction has succeeded, failed with an exception, or
+      // failed with a timeout. In case of exceptions we want to return right away
+      // All failure handling has to consider if the actor is optional or not
+      sync.get(getTimeout(actorConfig, "create-timeout").duration.toMillis) match {
+        case Some(success) =>  // actor construction returned, but might have failed in ctor
+          if (success) { // ctor success
+            info(s"actor $actorName created")
+            context.watch(aref) // start death watch
+            Some(aref)
+
+          } else { // ctor exception
+            if (isOptionalActor(actorConfig)) {
+              warning(s"optional actor construction caused exception $actorName")
+              None
+            } else {
+              error(s"non-optional actor construction caused exception $actorName, escalating")
+              throw new RaceInitializeException(s"failed to create actor $actorName")
+            }
+          }
+        case None => // ctor timeout
+          if (isOptionalActor(actorConfig)) {
+            warning(s"optional actor construction timed out $actorName")
+            None
+          } else {
+            error(s"non-optional actor construction timed out $actorName, escalating")
+            throw new RaceInitializeException(s"failed to create actor $actorName")
+          }
+      }
+
+    } catch { // those are exceptions that happened in this thread
+      case cnfx: ClassNotFoundException =>
+        if (isOptionalActor(actorConfig)) {
+          warning(s"optional actor class not found: ${cnfx.getMessage}")
+          None
+        } else {
+          error(s"unknown actor class: ${cnfx.getMessage}, escalating")
+          throw new RaceInitializeException(s"no actor class: ${cnfx.getMessage}")
+        }
+      case cx: ConfigException =>
+        error(s"invalid actor config: ${cx.getMessage}, escalating")
+        throw new RaceInitializeException(s"missing actor config: ${cx.getMessage}")
+    }
   }
 
   def getTimeout(conf: Config, key: String): Timeout = {
@@ -312,8 +397,12 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ImplicitActorLogging
 
   def onRaceInitialize = executeProtected {
     if (ras.isVerifiedSenderOf(RaceInitialize)) {
-      initializeRaceActors
-      sender ! RaceInitialized
+      try {
+        initializeRaceActors
+        sender ! RaceInitialized
+      } catch {
+        case x: Throwable => sender ! RaceInitializeFailed(x)
+      }
     } else warning(s"RaceInitialize request from $sender ignored")
   }
 

@@ -92,11 +92,14 @@ object Messages {
   //--- RaceActorSystem control messages (RaceActorSystem <-> Master <-> remoteMaster)
   case object RaceCreate                // RAS -> Master
   case object RaceCreated               // Master -> RAS
+  case class  RaceCreateFailed (reason: Any) // Master -> RAS
   case object RaceInitialize            // RAS -> Master
   case object RaceInitialized           // Master -> RAS
+  case class RaceInitializeFailed (reason: Any)  // Master -> RAS
   case object RaceStart                 // RAS -> Master
   case class RemoteRaceStart (remoteMaster: ActorRef, simTime: DateTime, timeScale: Double) // Master -> remote Master
   case object RaceStarted               // Master -> RAS, remote Master -> Master
+  case class RaceStartFailed (reason: Any) // Master -> RAS
   case object RaceTerminate             // RAS -> Master
   case class RemoteRaceTerminate (remoteMaster: ActorRef) // Master -> RemoteMaster
   case object RaceTerminated            // Master -> RAS, remote Master -> Master

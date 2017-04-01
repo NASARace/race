@@ -24,5 +24,7 @@ bin/
 conf
 *.crypt
 keystore
-race.ks
-
+*.ks
+*.jks
+*.p12
+.passwd

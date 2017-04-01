@@ -1,0 +1,88 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<svg width="100%" height="100%" version="1.1" viewBox="411 377.008 85.88413 72.47459" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape" xmlns="http://www.w3.org/2000/svg">
+  <defs />
+  <radialGradient id="gradient1" gradientUnits="objectBoundingBox" cx="50%" cy="50%" r="105.0683%">
+    <stop offset="0%" stop-color="#000000" stop-opacity="1" />
+    <stop offset="100%" stop-color="#000000" stop-opacity="0" />
+  </radialGradient>
+  <radialGradient id="gradient2" gradientUnits="objectBoundingBox" cx="49.99995%" cy="49.99993%" r="89.85203%">
+    <stop offset="0%" stop-color="#F12E2A" stop-opacity="1" />
+    <stop offset="100%" stop-color="#650C1B" stop-opacity="1" />
+  </radialGradient>
+  <radialGradient id="gradient3" gradientUnits="objectBoundingBox" cx="50%" cy="50%" r="70.65563%">
+    <stop offset="0%" stop-color="#000000" stop-opacity="1" />
+    <stop offset="100%" stop-color="#000000" stop-opacity="0" />
+  </radialGradient>
+  <radialGradient id="gradient4" gradientUnits="objectBoundingBox" cx="50%" cy="50%" r="70.65548%">
+    <stop offset="0%" stop-color="#E9B15E" stop-opacity="1" />
+    <stop offset="100%" stop-color="#966416" stop-opacity="1" />
+  </radialGradient>
+  <linearGradient id="gradient5" x1="50%" y1="0%" x2="50%" y2="100%">
+    <stop offset="0%" stop-color="#FFFFFF" stop-opacity="1" />
+    <stop offset="100%" stop-color="#C9C9C9" stop-opacity="1" />
+  </linearGradient>
+  <linearGradient id="gradient6" x1="100%" y1="39.82857%" x2="0%" y2="60.17143%">
+    <stop offset="0%" stop-color="#000000" stop-opacity="1" />
+    <stop offset="100%" stop-color="#000000" stop-opacity="0" />
+  </linearGradient>
+  <linearGradient id="gradient7" x1="0%" y1="75.45423%" x2="100%" y2="24.54577%">
+    <stop offset="0%" stop-color="#000000" stop-opacity="1" />
+    <stop offset="100%" stop-color="#000000" stop-opacity="0" />
+  </linearGradient>
+  <radialGradient id="gradient8" gradientUnits="objectBoundingBox" cx="50%" cy="49.99988%" r="159.8033%">
+    <stop offset="0%" stop-color="#000000" stop-opacity="1" />
+    <stop offset="100%" stop-color="#000000" stop-opacity="0" />
+  </radialGradient>
+  <radialGradient id="gradient9" gradientUnits="objectBoundingBox" cx="50%" cy="50%" r="89.85245%">
+    <stop offset="0%" stop-color="#5969D4" stop-opacity="1" />
+    <stop offset="100%" stop-color="#050056" stop-opacity="1" />
+  </radialGradient>
+  <linearGradient id="gradient10" x1="50%" y1="0%" x2="50%" y2="100%">
+    <stop offset="0%" stop-color="#FFFFFF" stop-opacity="1" />
+    <stop offset="100%" stop-color="#C9C9C9" stop-opacity="1" />
+  </linearGradient>
+  <radialGradient id="gradient11" gradientUnits="objectBoundingBox" cx="50%" cy="50.00007%" r="70.65553%">
+    <stop offset="0%" stop-color="#000000" stop-opacity="1" />
+    <stop offset="100%" stop-color="#000000" stop-opacity="0" />
+  </radialGradient>
+  <radialGradient id="gradient12" gradientUnits="objectBoundingBox" cx="50%" cy="50%" r="70.65539%">
+    <stop offset="0%" stop-color="#F4D9B1" stop-opacity="1" />
+    <stop offset="100%" stop-color="#DF9725" stop-opacity="1" />
+  </radialGradient>
+  <linearGradient id="gradient13" x1="100%" y1="39.82846%" x2="0%" y2="60.17154%">
+    <stop offset="0%" stop-color="#000000" stop-opacity="1" />
+    <stop offset="100%" stop-color="#000000" stop-opacity="0" />
+  </linearGradient>
+  <linearGradient id="gradient14" x1="0%" y1="75.45415%" x2="100%" y2="24.54584%">
+    <stop offset="0%" stop-color="#000000" stop-opacity="1" />
+    <stop offset="100%" stop-color="#000000" stop-opacity="0" />
+  </linearGradient>
+  <g id="layer1" inkscape:label="Layer 1" inkscape:groupmode="layer">
+    <g>
+      <path d="M457.3756 434.7478 Q457.3778 438.5555 453.236 441.6364 Q449.0941 444.7173 442.3911 445.8941 Q435.6878 447.071 428.9847 445.8941 Q422.2815 444.7173 418.1397 441.6364 Q413.9978 438.5555 414 434.7478 Q413.9978 430.9401 418.1397 427.8592 Q422.2815 424.7784 428.9847 423.6015 Q435.6878 422.4247 442.3911 423.6015 Q449.0941 424.7784 453.236 427.8592 Q457.3778 430.9401 457.3756 434.7478 Z " opacity="1" fill="url(#gradient1)" />
+      <path d="M428.6349 441.2794 L443.592 441.2794 C447.8299 441.2794 452.0255 439.7255 453.5634 435.2965 C455.0239 431.0907 453.8127 423.0815 444.3398 416.6001 L426.6406 416.6001 C417.1677 422.583 415.9839 430.7651 418.1649 435.5458 C420.3868 440.4162 424.1478 441.2794 428.6349 441.2794 Z " opacity="1" stroke="#404604" stroke-opacity="1" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="none" fill="url(#gradient2)" />
+      <path d="M435.7861 420.3394 C435.7861 420.3394 432.7523 422.6808 433.0138 425.5014 C430.1353 422.9619 430.0526 418.0959 430.0526 418.0959 L435.7861 420.3394 Z " opacity="1" fill="#9DB029" fill-opacity="1" />
+      <path d="M428.7835 439.7787 L443.3318 439.7787 C447.0543 439.7787 450.7397 438.4138 452.0906 434.5235 C453.3734 430.8291 451.957 423.794 443.6362 418.1007 L427.3844 418.1007 C419.0635 423.356 417.6712 430.5431 419.5869 434.7424 C421.5385 439.0205 424.8422 439.7787 428.7835 439.7787 Z " opacity="0.2151898" stroke="#FFFFFF" stroke-opacity="1" stroke-width="0.9999998" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="none" fill-opacity="0" />
+      <path d="M437.1658 420.3394 C437.1658 420.3394 440.1996 422.6808 439.9382 425.5014 C442.8167 422.9619 442.8994 418.0959 442.8994 418.0959 L437.1658 420.3394 Z " opacity="1" fill="#9DB029" fill-opacity="1" />
+      <path d="M447.9028 414.3064 Q447.904 418.2762 445.5713 421.4882 Q443.2386 424.7001 439.4631 425.927 Q435.6878 427.154 431.9125 425.927 Q428.1372 424.7001 425.8044 421.4882 Q423.4716 418.2762 423.4728 414.3064 Q423.4716 410.3367 425.8044 407.1247 Q428.1372 403.9127 431.9125 402.6858 Q435.6878 401.4589 439.4631 402.6858 Q443.2386 403.9127 445.5713 407.1247 Q447.904 410.3367 447.9028 414.3064 Z " opacity="1" fill="url(#gradient3)" />
+      <path d="M448.0791 409.3708 Q448.0804 413.3405 445.7475 416.5526 Q443.4148 419.7645 439.6395 420.9915 Q435.8641 422.2184 432.0888 420.9915 Q428.3134 419.7645 425.9807 416.5526 Q423.6479 413.3405 423.6492 409.3708 Q423.6479 405.4011 425.9807 402.1891 Q428.3134 398.9772 432.0888 397.7502 Q435.8641 396.5233 439.6395 397.7502 Q443.4148 398.9772 445.7475 402.1891 Q448.0804 405.4011 448.0791 409.3708 Z " opacity="1" stroke="#6F4709" stroke-opacity="1" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="none" fill="url(#gradient4)" />
+      <path d="M446.5778 409.3709 Q446.5789 412.8527 444.5328 415.6698 Q442.4868 418.4871 439.1754 419.5633 Q435.8641 420.6394 432.5528 419.5633 Q429.2415 418.4871 427.1954 415.6698 Q425.1494 412.8527 425.1505 409.3709 Q425.1494 405.8891 427.1954 403.0718 Q429.2415 400.2546 432.5528 399.1785 Q435.8641 398.1023 439.1754 399.1785 Q442.4868 400.2546 444.5328 403.0718 Q446.5789 405.8891 446.5778 409.3709 Z " opacity="0.1265823" stroke="#FFFFFF" stroke-opacity="1" stroke-width="1.140128" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="none" fill-opacity="0" />
+      <path d="M442.3456 430.5601 L448.3284 430.5601 L444.8384 427.3194 L444.0905 428.3166 L443.3427 427.5687 L442.3456 430.5601 Z " opacity="1" fill="url(#gradient5)" />
+      <path d="M422.5525 439.8209 C420.7931 439.0524 420.0057 437.2003 420.0057 437.2003 C421.1921 431.4622 425.2514 427.2639 425.2514 427.2639 C425.2514 427.2639 422.0372 436.3054 422.5525 439.8209 Z " opacity="0.2278481" fill="url(#gradient6)" />
+      <path d="M449.2128 438.6105 C450.949 437.7911 451.7572 435.7869 451.7572 435.7869 C450.4047 430.0855 446.1501 426.1372 446.1501 426.1372 C446.1501 426.1372 449.6257 435.0815 449.2128 438.6105 Z " opacity="0.2278481" fill="url(#gradient7)" />
+    </g>
+    <g>
+      <path d="M493.8841 420.9682 Q493.8863 423.2865 489.7444 425.1621 Q485.6026 427.0379 478.8995 427.7544 Q472.1963 428.4709 465.4932 427.7544 Q458.79 427.0379 454.6483 425.1621 Q450.5064 423.2865 450.5085 420.9682 Q450.5064 418.6499 454.6483 416.7741 Q458.79 414.8984 465.4932 414.1819 Q472.1963 413.4654 478.8995 414.1819 Q485.6026 414.8984 489.7444 416.7741 Q493.8863 418.6499 493.8841 420.9682 Z " opacity="1" fill="url(#gradient8)" />
+      <path d="M465.1433 424.1505 L480.1005 424.1505 C484.3383 424.1505 488.534 422.5967 490.0719 418.1677 C491.5323 413.9619 490.3212 405.9528 480.8483 399.4713 L463.149 399.4713 C453.6762 405.4542 452.4923 413.6363 454.6734 418.417 C456.8952 423.2874 460.6562 424.1505 465.1433 424.1505 Z " opacity="1" stroke="#204A87" stroke-opacity="1" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="none" fill="url(#gradient9)" />
+      <path d="M466.1405 401.7148 C470.6276 405.7034 472.6219 420.162 472.6219 420.162 C472.6219 420.162 474.6161 405.7034 478.1061 401.4657 L466.1405 401.7148 Z " opacity="1" fill="url(#gradient10)" />
+      <path d="M469.3549 403.2106 C469.3549 403.2106 466.3212 405.552 466.5825 408.3726 C463.704 405.8332 463.6213 400.967 463.6213 400.967 L469.3549 403.2106 Z " opacity="1" fill="#729FCF" fill-opacity="1" />
+      <path d="M465.0428 422.6811 L479.8403 422.65 C483.5628 422.65 487.2482 421.285 488.5991 417.3946 C489.882 413.7003 488.4655 406.6652 480.1447 400.972 L463.8929 400.6292 C455.5721 405.8844 453.9616 413.0715 455.9084 417.6136 C457.8553 422.1557 460.6963 422.65 465.0428 422.6811 Z " opacity="0.2151898" stroke="#FFFFFF" stroke-opacity="1" stroke-width="0.9999998" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="none" fill-opacity="0" />
+      <path d="M475.6133 403.2106 C475.6133 403.2106 478.6471 405.552 478.3857 408.3726 C481.2642 405.8332 481.3469 400.967 481.3469 400.967 L475.6133 403.2106 Z " opacity="1" fill="#729FCF" fill-opacity="1" />
+      <path d="M484.4113 397.1776 Q484.4125 401.1473 482.0797 404.3594 Q479.7471 407.5714 475.9717 408.7982 Q472.1963 410.0252 468.421 408.7982 Q464.6457 407.5714 462.3129 404.3594 Q459.9802 401.1473 459.9814 397.1776 Q459.9802 393.208 462.3129 389.9959 Q464.6457 386.7839 468.421 385.557 Q472.1963 384.3301 475.9717 385.557 Q479.7471 386.7839 482.0797 389.9959 Q484.4125 393.208 484.4113 397.1776 Z " opacity="1" fill="url(#gradient11)" />
+      <path d="M484.5876 392.242 Q484.5888 396.2118 482.256 399.4238 Q479.9234 402.6357 476.1479 403.8627 Q472.3726 405.0896 468.5973 403.8627 Q464.822 402.6357 462.4891 399.4238 Q460.1564 396.2118 460.1576 392.242 Q460.1564 388.2724 462.4891 385.0604 Q464.822 381.8484 468.5973 380.6214 Q472.3726 379.3945 476.1479 380.6214 Q479.9234 381.8484 482.256 385.0604 Q484.5888 388.2724 484.5876 392.242 Z " opacity="1" stroke="#C17D11" stroke-opacity="1" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="none" fill="url(#gradient12)" />
+      <path d="M483.0864 392.2421 Q483.0875 395.7239 481.0414 398.5411 Q478.9953 401.3583 475.684 402.4344 Q472.3726 403.5105 469.0613 402.4344 Q465.75 401.3583 463.704 398.5411 Q461.6579 395.7239 461.659 392.2421 Q461.6579 388.7602 463.704 385.9431 Q465.75 383.1257 469.0613 382.0497 Q472.3726 380.9735 475.684 382.0497 Q478.9953 383.1257 481.0414 385.9431 Q483.0875 388.7602 483.0864 392.2421 Z " opacity="0.1962025" stroke="#FFFFFF" stroke-opacity="1" stroke-width="1.140128" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="none" fill-opacity="0" />
+      <path d="M459.3132 422.9366 C457.5538 422.1682 456.7664 420.3161 456.7664 420.3161 C457.9528 414.578 462.0121 410.3798 462.0121 410.3798 C462.0121 410.3798 458.7979 419.4211 459.3132 422.9366 Z " opacity="0.2278481" fill="url(#gradient13)" />
+      <path d="M485.9734 421.7262 C487.7097 420.907 488.5179 418.9026 488.5179 418.9026 C487.1654 413.2013 482.9109 409.2531 482.9109 409.2531 C482.9109 409.2531 486.3864 418.1972 485.9734 421.7262 Z " opacity="0.2278481" fill="url(#gradient14)" />
+    </g>
+  </g>
+</svg>

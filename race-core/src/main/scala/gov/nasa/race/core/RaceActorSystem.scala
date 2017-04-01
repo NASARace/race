@@ -143,7 +143,8 @@ class RaceActorSystem(val config: Config) extends LogController with VerifiableA
   val localRaceContext = createRaceContext(master, bus)
 
   createActors
-  initializeActors
+  if (status == Created) initializeActors
+
   if (status != Initialized) {
     system.terminate()
     throw new RaceInitializeException("race actor system did not initialize")
@@ -238,7 +239,10 @@ class RaceActorSystem(val config: Config) extends LogController with VerifiableA
   def createActors = {
     info(s"creating actors of universe $name ..")
     askVerifiableForResult(master, RaceCreate) {
-      case RaceCreated => info(s"universe $name created")
+      case RaceCreated =>
+        status = Created
+        info(s"universe $name created")
+      case RaceCreateFailed(reason) => error(s"creating universe $name failed with: $reason")
       case TimedOut => error(s"creating universe $name timed out")
       case e => error(s"invalid response creating universe $name: $e")
     }
@@ -250,10 +254,9 @@ class RaceActorSystem(val config: Config) extends LogController with VerifiableA
       case RaceInitialized =>
         status = Initialized
         info(s"universe $name initialized")
-      case TimedOut =>
-        abort(s"initializing universe $name timed out")
-      case e =>
-        error(s"invalid response initializing universe $name: $e")
+      case RaceInitializeFailed(reason) => error(s"initializing universe $name failed with: $reason")
+      case TimedOut => error(s"initializing universe $name timed out")
+      case e => error(s"invalid response initializing universe $name: $e")
     }
   }
 

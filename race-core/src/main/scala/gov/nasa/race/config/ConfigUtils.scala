@@ -305,6 +305,13 @@ object ConfigUtils {
       }
     }
 
+    def getNonEmptyFile (key: String): File = {
+      val file = new File(conf.getString(key))
+      if (file.isFile && file.length() > 0) {
+        file
+      } else throw new ConfigException.Generic(s"invalid server keystore path")
+    }
+
     def getOptionalFile (key: String): Option[File] = {
       try {
         Some(new File(conf.getString(key)))

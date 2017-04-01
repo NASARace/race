@@ -16,19 +16,25 @@
  */
 package gov.nasa.race.http
 
+import java.io.FileInputStream
+import java.security.{KeyStore, SecureRandom}
+import javax.net.ssl.{KeyManagerFactory, SSLContext, TrustManagerFactory}
+
 import akka.actor.ActorRef
-import akka.http.scaladsl.Http
 import akka.http.scaladsl.Http.ServerBinding
 import akka.http.scaladsl.server.Directives._
+import akka.http.scaladsl.{ConnectionContext, Http}
 import akka.stream.ActorMaterializer
-import com.typesafe.config.Config
+import com.typesafe.config.{Config, ConfigException}
 import gov.nasa.race._
 import gov.nasa.race.config.ConfigUtils._
-import gov.nasa.race.core.{ParentRaceActor,ParentContext}
+import gov.nasa.race.core.{ParentContext, ParentRaceActor, RaceInitializeException}
+import gov.nasa.race.util.{CryptUtils, FileUtils}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
+
 
 /**
   * an actor that represents a configurable http server
@@ -47,11 +53,49 @@ class HttpServer (val config: Config) extends ParentRaceActor {
   val serverTimeout = config.getFiniteDurationOrElse("server-timeout", 5.seconds)
   val routeInfos = createRouteInfos
 
-  val route = concat(routeInfos.map(_.route):_*)
+  val route = concat(routeInfos.map(_.internalRoute):_*)
   var binding: Option[Future[ServerBinding]] = None
 
+  val httpExt = Http()(system)
+  val connectionContext: ConnectionContext = getConnectionContext
+
+  def getConnectionContext: ConnectionContext = {
+    if (config.getBooleanOrElse("use-https", false)) {
+      ConnectionContext.https(getSSLContext)
+    } else {
+      httpExt.defaultServerHttpContext
+    }
+  }
+
+  def getSSLContext: SSLContext = {
+    val ksPathName = config.getVaultableStringOrElse("server-keystore", "server.ks")
+    FileUtils.existingNonEmptyFile(ksPathName) match {
+      case Some(ksFile) =>
+        val pw: Array[Char] = config.getVaultableString("server-keystore-pw").toCharArray
+
+        val ksType = config.getStringOrElse("server-keystore-type", CryptUtils.keyStoreType(ksPathName))
+        val ks: KeyStore = KeyStore.getInstance(ksType)
+        ks.load(new FileInputStream(ksFile),pw)
+
+        val keyManagerFactory: KeyManagerFactory = KeyManagerFactory.getInstance("SunX509")
+        keyManagerFactory.init(ks, pw)
+        CryptUtils.erase(pw, ' ')
+
+        val tmf: TrustManagerFactory = TrustManagerFactory.getInstance("SunX509")
+        tmf.init(ks)
+
+        val sslContext: SSLContext = SSLContext.getInstance("TLS")
+        sslContext.init(keyManagerFactory.getKeyManagers, tmf.getTrustManagers, new SecureRandom)
+
+        sslContext
+
+      case None =>
+        throw new ConfigException.Generic("invalid server keystore")
+    }
+  }
+
   override def onStartRaceActor(originator: ActorRef) = {
-    binding = Some(Http()(system).bindAndHandle(route, host, port))
+    binding = Some(httpExt.bindAndHandle(route, host, port, connectionContext))
     info(s"$name serving on http://$host:$port")
     super.onStartRaceActor(originator)
   }
@@ -71,8 +115,13 @@ class HttpServer (val config: Config) extends ParentRaceActor {
       val routeClsName = routeConf.getString("class")
       info(s"creating route '$routeName': $routeClsName")
       newInstance[RaceRouteInfo](routeClsName,Array(classOf[ParentContext],classOf[Config]),Array(this,routeConf)) match {
-        case Some(ri) => seq :+ ri
-        case None => error(s"$route $routeName did not instantiate"); seq
+        case Some(ri) =>
+          info(s"adding route '$routeName'")
+          seq :+ ri
+
+        case None =>
+          error(s"route '$routeName' did not instantiate")
+          throw new RuntimeException(s"error instantiating route $routeName")
       }
     }
   }

@@ -53,6 +53,11 @@ object CryptUtils {
     }
   }
 
+  def keyStoreType (pathName: String): String = {
+    if (pathName.endsWith(".jks")) "JKS"
+    else  "PKCS12"  // every keystore has to support PKCS12 so we assume that as default
+  }
+
   private def printlnErr (msg:String) = ConsoleIO.printlnErr(msg)
 
   //--- interactive cipher construction

@@ -92,9 +92,7 @@ object ClassLoaderUtils {
         Some(ctor.newInstance(args: _*).asInstanceOf[T])
       }
     } catch {
-      case t: Throwable =>
-        t.printStackTrace()
-        None
+      case t: Throwable => None
     }
   }
 

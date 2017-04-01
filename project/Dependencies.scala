@@ -105,6 +105,9 @@ object Dependencies {
   // enter credentials processed by a un-verified jar
   val jsch = "com.jcraft" % "jsch" % "0.1.53"
 
+  //--- argon2 based password hashes ()
+  val argon2 = "de.mkammerer" % "argon2-jvm" % "latest.release"
+
   //--- Akka
   val akkaVersion = "latest.release"
   val akkaOrg = "com.typesafe.akka"

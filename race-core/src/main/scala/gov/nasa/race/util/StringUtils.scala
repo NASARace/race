@@ -17,6 +17,8 @@
 
 package gov.nasa.race.util
 
+import java.io.ByteArrayOutputStream
+
 import gov.nasa.race._
 
 import scala.annotation.tailrec

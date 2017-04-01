@@ -81,12 +81,17 @@ package object core {
 
   def waitForActor(aref: ActorRef)(fail: PartialFunction[AskFailure, Unit])(implicit timeout: Timeout): Option[ActorRef] = {
     askForResult(aref ? Identify(aref.path)) {
-      case ActorIdentity(_, Some(`aref`)) => Some(aref)
+      case ActorIdentity(_, Some(`aref`)) =>
+        Some(aref)
       case ActorIdentity(path: String, None) =>
-        fail(NotFound); None
+        fail(NotFound)
+        None
       case TimedOut =>
-        fail(TimedOut); None
-      case _ => fail(InvalidResponse); None
+        fail(TimedOut)
+        None
+      case other =>
+        fail(InvalidResponse)
+        None
     }
   }
 

@@ -17,7 +17,7 @@ lazy val testSettings = commonSettings ++ noPublishSettings  // test projects do
 //--- root project (only for aggregation)
 lazy val root = createRootProject("race").
   aggregate(raceCore,raceNetJMS,raceNetKafka,raceNetDDS,raceNetHttp,raceSwing,raceWW,raceAir,raceWWAir,raceSpace,raceLauncher,
-    raceTools,raceTestKit,raceCoreTest,raceNetJMSTest,raceNetHttpTest,raceNetKafkaTest,raceAirTest).
+    raceTools,raceTestKit,raceCoreTest,raceNetJMSTest,raceNetHttpTest,raceNetKafkaTest,raceAirTest,raceSpaceTest).
   dependsOn(raceCore,raceNetJMS,raceNetKafka,raceNetDDS,raceNetHttp,raceSwing,raceWW,raceAir,raceWWAir,raceSpace,raceLauncher).
   enablePlugins(JavaAppPackaging,LauncherJarPlugin).
   settings(
@@ -63,7 +63,7 @@ lazy val raceNetDDS = createProject("race-net-dds", commonSettings).
 
 lazy val raceNetHttp = createProject("race-net-http", commonSettings).
   dependsOn(raceCore).
-  addLibraryDependencies(akkaHttp,scalaTags,scalaTags)
+  addLibraryDependencies(akkaHttp,scalaTags,scalaTags,argon2)
 
 lazy val raceSwing = createProject("race-swing", commonSettings).
   dependsOn(raceCore).
@@ -90,7 +90,7 @@ lazy val raceUI = createProject("race-ui", commonSettings).
 
 lazy val raceTools = createProject("race-tools", commonSettings).
   enablePlugins(JavaAppPackaging,ClasspathJarPlugin).
-  dependsOn(raceCore).
+  dependsOn(raceCore,raceNetHttp).
   settings(
     mainClass in Compile := Some("gov.nasa.race.tool.CryptConfig")).
   addLibraryDependencies(logback)
@@ -141,3 +141,5 @@ lazy val raceNetDDSTest = createTestProject("race-net-dds-test", testSettings).
 lazy val raceAirTest = createTestProject("race-air-test", testSettings).
   dependsOn(raceAir,raceTestKit)
 
+lazy val raceSpaceTest = createTestProject("race-space-test", testSettings).
+  dependsOn(raceSpace,raceTestKit)

@@ -35,6 +35,8 @@ import scala.collection.immutable.Queue
   * the server state and hence we do not turn this into a RaceActor that could be reset etc.
   *
   * This actorRef is only used point-to-point from IStarsClients
+  *
+  * See http://www.icao.int/safety/iStars/Pages/API-Data-Service.aspx for available APIs
   */
 class IStarRequester extends Actor {
   import IStarsClient._

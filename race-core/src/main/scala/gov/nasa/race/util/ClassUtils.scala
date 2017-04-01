@@ -14,15 +14,33 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package gov.nasa.race.http
+package gov.nasa.race.util
 
-import akka.http.scaladsl.server.Route
-import com.typesafe.config.Config
+import java.io.ByteArrayOutputStream
 
 /**
-  * base aggregate type for route infos, which consist of a akka.http Route and an optional (child) RaceActor
+  * java.lang.Class related utility functions
   */
-trait RaceRouteInfo {
-  val config: Config
-  def route: Route
+object ClassUtils {
+
+  def getResourceAs[T] (cls: Class[_], name: String)(f: (ByteArrayOutputStream) => T): Option[T] = {
+    val is = cls.getResourceAsStream(name)
+    if (is != null) {
+      val len = is.available()
+      val buf = new Array[Byte](len)
+      val bao = new ByteArrayOutputStream
+      is.read(buf)
+      bao.write(buf)
+      is.close
+      Some(f(bao))
+    } else None
+  }
+
+  def getResourceAsString(cls: Class[_], name: String): Option[String] = {
+    getResourceAs(cls,name){ _.toString("UTF-8") }
+  }
+
+  def getResourceAsBytes(cls: Class[_], name: String): Option[Array[Byte]] = {
+    getResourceAs(cls,name){ _.toByteArray }
+  }
 }

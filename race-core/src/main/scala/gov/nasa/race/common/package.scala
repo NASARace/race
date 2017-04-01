@@ -17,6 +17,7 @@
 
 package gov.nasa.race
 
+import scala.annotation.tailrec
 import scala.language.implicitConversions
 import scala.math._
 import scala.util.matching.Regex
@@ -91,5 +92,10 @@ package object common {
         true
       } else false
     }
+  }
+
+  def pow10 (e: Int): Long = {
+    @tailrec def p (e: Int, acc: Long): Long = if (e == 0) acc else p(e-1, acc*10)
+    p(e,1L)
   }
 }
