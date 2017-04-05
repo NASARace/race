@@ -18,15 +18,15 @@ package gov.nasa.race.http
 
 import java.io.File
 
-import gov.nasa.race.config.ConfigUtils._
-import akka.http.scaladsl.model.headers.{HttpCookie, `Set-Cookie`}
 import akka.http.scaladsl.model._
-import akka.http.scaladsl.server.Directives.{entity, extractUnmatchedPath, _}
-import akka.http.scaladsl.server.{Directive0, Route}
+import akka.http.scaladsl.model.headers.{HttpCookie, `Set-Cookie`}
+import akka.http.scaladsl.server.Directives.{entity, _}
+import akka.http.scaladsl.server.Route
 import com.typesafe.config.Config
-import gov.nasa.race.util.{ClassUtils, StringUtils}
+import gov.nasa.race.config.ConfigUtils._
+import gov.nasa.race.util.ClassUtils
 
-import scalatags.Text.all.{span, _}
+import scalatags.Text.all.{span, head=>htmlHead, _}
 import scalatags.Text.attrs.{name => nameAttr}
 
 /**
@@ -39,6 +39,8 @@ trait RaceRouteInfo {
 
   val name = config.getStringOrElse("name", getClass.getSimpleName)
   def internalRoute = route
+
+  def shouldUseHttps = false
 }
 
 /**
@@ -51,12 +53,21 @@ trait RaceRouteInfo {
 trait AuthorizedRaceRoute extends RaceRouteInfo {
   // this will throw an exception if user-auth file does not exist
   val userAuth: UserAuth = UserAuth(new File(config.getVaultableStringOrElse("user-auth", ".passwd")))
+
   val loginPath = name + "-login"
+  val logoutPath = name + "-logout"
+
+  val cssPath = loginPath + ".css"
+  val cssData = loginCSS
   val avatarPath = "login-users.svg"
   val avatarData = avatarImage
 
+  val sessionCookieName = "oatmeal"
+
+  override final def shouldUseHttps = true
+
   override def internalRoute = {
-    route ~ loginRoute ~ resourceRoute
+    route ~ loginRoute ~ resourceRoute ~ logoutRoute
   }
 
   def loginRoute: Route = {
@@ -76,7 +87,7 @@ trait AuthorizedRaceRoute extends RaceRouteInfo {
                     a(href:=requestUri)("this link to get back")
                   )
                 )
-                respondWithHeader(new `Set-Cookie`(new HttpCookie("oatmeal", newToken))) {
+                respondWithHeader(new `Set-Cookie`(new HttpCookie(sessionCookieName, newToken))) {
                   complete(HttpEntity(ContentTypes.`text/html(UTF-8)`, response.render))
                 }
 
@@ -98,28 +109,35 @@ trait AuthorizedRaceRoute extends RaceRouteInfo {
     }
   }
 
+  def logoutRoute: Route = {
+    path(logoutPath) {
+      respondWithHeader(new `Set-Cookie`(new HttpCookie(sessionCookieName, "", Some(DateTime.now - 10)))) {
+        completeLogout
+      }
+    }
+  }
+
   def resourceRoute: Route = {
     get {
-      path(avatarPath) {
-        println(s"@@ sending avatar image: ${avatarData.length}")
+      path(cssPath) {
+        complete(HttpEntity(ContentType(MediaTypes.`text/css`,HttpCharsets.`UTF-8`), cssData))
+      } ~ path(avatarPath) {
         complete(HttpEntity(MediaTypes.`image/svg+xml`, avatarData))
       }
     }
   }
 
   def completeAuthorized(requiredRole: String, m: => HttpEntity.Strict): Route = {
-    cookie("oatmeal") { namedCookie =>
-      userAuth.crs.replaceExistingEntry(namedCookie.value,requiredRole) match {
-        case Some(newToken) =>
-          respondWithHeader(new `Set-Cookie`(new HttpCookie("oatmeal",newToken))) {
-            complete(m)
-          }
-
-        case None =>
-          complete(StatusCodes.Forbidden, "You are out of your depth!")
-      }
-    } ~ extractMatchedPath { requestUri => // show the login dialog
-      completeLogin(requestUri.toString)
+    extractMatchedPath { requestUri =>
+      cookie(sessionCookieName) { namedCookie =>
+        userAuth.crs.replaceExistingEntry(namedCookie.value, requiredRole) match {
+          case Right(newToken) =>
+            respondWithHeader(new `Set-Cookie`(new HttpCookie(sessionCookieName, newToken))) {
+              complete(m)
+            }
+          case Left(rejection) => completeLogin(requestUri.toString, Some(rejection))
+        }
+      } ~ completeLogin(requestUri.toString)
     }
   }
 
@@ -128,13 +146,22 @@ trait AuthorizedRaceRoute extends RaceRouteInfo {
     complete(StatusCodes.Unauthorized, HttpEntity(ContentTypes.`text/html(UTF-8)`, page))
   }
 
+  def completeLogout: Route = {
+    cookie(sessionCookieName) { namedCookie =>
+      if (userAuth.crs.removeEntry(namedCookie.value)) {
+        complete("user logged out")
+      } else {
+        complete("no active session")
+      }
+    }
+  }
 
-  // this returns a HTML page with a form for user authentication, i.e. we get this back
-  // as a POST with a "u=⟨uid⟩&p=⟨password⟩" body
+  //--- HTML artifacts
+
   def loginPage (postUri: String, requestUri: String, alert: Option[String]) = html(
-    raw("<style>"),
-    raw(loginCSS),
-    raw("</style>"),
+    htmlHead(
+      link(rel:="stylesheet", tpe:="text/css", href:=cssPath)
+    ),
     body(onload:="document.getElementById('id01').style.display='block'")(
       p("you need to be logged in to access this page"),
       div(id:="id01",cls:="modal")(
@@ -149,13 +176,23 @@ trait AuthorizedRaceRoute extends RaceRouteInfo {
               case Some(msg) => p(span(cls:="alert")(msg))
               case None => ""
             },
-            label(b("User")),
-            input(tpe:="text",nameAttr:="u",placeholder:="Enter Username",required:="true", autofocus:="true"),
-            label(b("Password")),
-            input(tpe:="password",nameAttr:="p",placeholder:="Enter Password",required:="true"),
+            table(cls:="noBorder")(
+              tr(
+                td(cls:="labelCell")(b("User")),
+                td(style:="width: 99%;")(
+                  input(tpe:="text",nameAttr:="u",placeholder:="Enter Username",required:="true",autofocus:="true")
+                )
+              ),
+              tr(
+                td(cls:="labelCell")(b("Password")),
+                td(
+                  input(tpe:="password",nameAttr:="p",placeholder:="Enter Password",
+                    required:="true",autocomplete:="on")
+                )
+              )
+            ),
             input(tpe:="hidden", nameAttr:="r", value:=requestUri),
             button(tpe:="submit",formmethod:="post")("Login"),
-            input(tpe:="checkbox",checked:="checked")("remember me"),
             span(cls:="psw")(
               "Forgot ",
               a(href:="#")("password?")
@@ -165,6 +202,10 @@ trait AuthorizedRaceRoute extends RaceRouteInfo {
       )
     )
   )
+
+  def logoutLink = a(href:=logoutPath)("logout")
+
+  //--- resources
 
   def loginCSS: String = {
     ClassUtils.getResourceAsString(getClass,"login.css") match {

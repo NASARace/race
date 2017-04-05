@@ -25,30 +25,44 @@ import java.util.Base64
   *
   * Used e.g. for user auth in RESTful APIs (to obtain Cookie values)
   */
-class ChallengeResponseSequence {
-  final val byteLength = 64
-
-  var map: Map[String,User] = Map.empty
+class ChallengeResponseSequence (val byteLength: Int = 64, val expiresAfterMillis: Long=1000*300) {
+  private var map: Map[String,(User,Long)] = Map.empty
 
   val encoder = Base64.getEncoder
   val random = new SecureRandom
-  val buf = new Array[Byte](byteLength)
+  private val buf = new Array[Byte](byteLength)
 
   def addNewEntry (user: User): String = synchronized {
     random.nextBytes(buf)
     val newToken = new String(encoder.encode(buf))
-    map = map + (newToken -> user)
+    map = map + (newToken -> (user,System.currentTimeMillis))
     newToken
   }
 
-  def replaceExistingEntry(oldToken: String, role: String = User.AnyRole): Option[String] = synchronized {
+  def removeUser (user: User): Boolean = synchronized {
+    val n = map.size
+    map = map.filter(e => e._2._1 != user)
+    map.size < n
+  }
+
+  def removeEntry (oldToken: String): Boolean = synchronized {
+    val n = map.size
+    map = map - oldToken
+    map.size < n
+  }
+
+  private def isExpired(t: Long): Boolean = (System.currentTimeMillis - t) > expiresAfterMillis
+
+  def replaceExistingEntry(oldToken: String, role: String = User.AnyRole): Either[String,String] = synchronized {
     map.get(oldToken) match {
-      case Some(user) =>
-        if (user.hasRole(role)) {
-          map = map - oldToken
-          Some(addNewEntry(user))
-        } else None
-      case None => None
+      case Some((user,t)) =>
+        if (!isExpired(t)) {
+          if (user.hasRole(role)) {
+            map = map - oldToken
+            Right(addNewEntry(user))
+          } else Left("insufficient user role") // insufficient role
+        } else Left("expired session") // expired
+      case None => Left("unknown user") // not a known oldToken
     }
   }
 }

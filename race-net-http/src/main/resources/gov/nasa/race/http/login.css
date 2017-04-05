@@ -1,7 +1,7 @@
 /* Full-width input fields */
 input[type=text], input[type=password] {
     width: 100%;
-    padding: 12px 20px;
+    padding: 4px 4px;
     margin: 8px 0;
     display: inline-block;
     border: 1px solid #ccc;
@@ -35,7 +35,7 @@ button:hover {
 /* Center the image and position the close button */
 .imgcontainer {
     text-align: center;
-    margin: 24px 0 12px 0;
+    margin: 10px 40px 5px 40px;
     position: relative;
 }
 
@@ -121,4 +121,14 @@ span.psw {
     .cancelbtn {
        width: 100%;
     }
+}
+
+.noBorder {
+    border-style: none;
+}
+
+.labelCell {
+    text-align: right;
+    padding-right: 10px;
+    nowrap;
 }

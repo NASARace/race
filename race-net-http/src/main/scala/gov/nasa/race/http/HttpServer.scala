@@ -23,6 +23,7 @@ import javax.net.ssl.{KeyManagerFactory, SSLContext, TrustManagerFactory}
 import akka.actor.ActorRef
 import akka.http.scaladsl.Http.ServerBinding
 import akka.http.scaladsl.server.Directives._
+import akka.http.scaladsl.server.Route
 import akka.http.scaladsl.{ConnectionContext, Http}
 import akka.stream.ActorMaterializer
 import com.typesafe.config.{Config, ConfigException}
@@ -51,13 +52,28 @@ class HttpServer (val config: Config) extends ParentRaceActor {
   val host = config.getStringOrElse("host", "localhost")
   val port = config.getIntOrElse("port", 8080)
   val serverTimeout = config.getFiniteDurationOrElse("server-timeout", 5.seconds)
-  val routeInfos = createRouteInfos
-
-  val route = concat(routeInfos.map(_.internalRoute):_*)
-  var binding: Option[Future[ServerBinding]] = None
 
   val httpExt = Http()(system)
   val connectionContext: ConnectionContext = getConnectionContext
+
+  val routeInfos = createRouteInfos
+
+  val route = createRoutes
+  var binding: Option[Future[ServerBinding]] = None
+
+  def createRoutes = {
+    val route = concat(routeInfos.map(_.internalRoute):_*)
+    if (config.getBooleanOrElse("log-incoming", false)) logRoute(route) else route
+  }
+
+  def logRoute (contentRoute: Route): Route = {
+    extractRequest { request =>
+      extractHost { hn =>
+        info(s"${request.method.name} ${request.uri.path} from $hn")
+        contentRoute
+      }
+    }
+  }
 
   def getConnectionContext: ConnectionContext = {
     if (config.getBooleanOrElse("use-https", false)) {
@@ -117,6 +133,9 @@ class HttpServer (val config: Config) extends ParentRaceActor {
       newInstance[RaceRouteInfo](routeClsName,Array(classOf[ParentContext],classOf[Config]),Array(this,routeConf)) match {
         case Some(ri) =>
           info(s"adding route '$routeName'")
+          if (ri.shouldUseHttps && !connectionContext.isSecure){
+            warning(s"use of AuthorizedRaceRoute '$routeName' without secure connectionContext (set 'use-https=true')")
+          }
           seq :+ ri
 
         case None =>

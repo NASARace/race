@@ -44,12 +44,21 @@ class TestRouteInfo (val parent: ParentContext, val config: Config) extends Race
 
 class TestAuthorized (val parent: ParentContext, val config: Config) extends AuthorizedRaceRoute {
   val request = config.getStringOrElse("request", "secret")
-  val response = config.getStringOrElse("response", "This is super secret")
+  var count = 0
+  def page = html(
+    body(
+      p(s"the supersecret answer #$count to the ultimate question of life, the universe and everything is:"),
+      p(b("42")),
+      p("(I always knew there was something wrong with the universe)"),
+      logoutLink
+    )
+  )
 
   def route = {
     path(request) {
       get {
-        completeAuthorized(User.UserRole, HttpEntity(ContentTypes.`text/html(UTF-8)`, response))
+        count += 1
+        completeAuthorized(User.UserRole, HttpEntity(ContentTypes.`text/html(UTF-8)`, page.render))
       }
     }
   }
