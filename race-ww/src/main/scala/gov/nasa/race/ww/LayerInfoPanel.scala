@@ -26,6 +26,7 @@ import gov.nasa.worldwind.layers.Layer
 
 import scala.collection.mutable.ListBuffer
 import scala.swing._
+import scala.swing.event.{UIElementHidden, UIElementShown}
 
 trait LayerInfoPanel extends Container { // bad - this has to be a trait, but therefore its not a Component
   def setLayer (li: Layer): Unit
@@ -90,7 +91,7 @@ class DefaultLayerInfoPanel extends GenericLayerInfoPanel {
 
 import scala.concurrent.duration._
 
-class DynamicLayerInfoPanel extends GenericLayerInfoPanel {
+class DynamicLayerInfoPanel extends GenericLayerInfoPanel with AncestorObservable {
 
   var layer: DynamicRaceLayerInfo = _  // panel instance can be re-used for different layers
 
@@ -106,6 +107,9 @@ class DynamicLayerInfoPanel extends GenericLayerInfoPanel {
 
   contents += fields
 
+  // we could add AncestorAdded/Removed reactions here in order to dynamically
+  // start/stop the timer, but the timer events might also be used to update renderables
+
   override def setLayer (l: Layer): Unit = {
     super.setLayer(l)
     l match {
@@ -120,9 +124,10 @@ class DynamicLayerInfoPanel extends GenericLayerInfoPanel {
 
   timer.whenExpired(processTimerEvent)
   def processTimerEvent = {
-    if (!showing) {
-      timer.stop
-    } else {
+    // we don't turn off timer events since some layers might use them to update renderables
+    // (e.g. for showing flight paths).
+    // No use to update the fields though if we are not showing
+    if (showing) {
       ifNotNull(layer) { l =>
         val rate = (l.count-startCount).toDouble / ((System.currentTimeMillis-startTime)/1000)
         fields.itemsLabel.text  = itemsText(l)

@@ -191,8 +191,9 @@ class FlightLayerInfoPanel[T <: InFlightAircraft](raceView: RaceView, flightLaye
   override def error (msg: String) = flightLayer.error(msg)
 
   def getFlightQuery (queryString: String): Option[FlightFilter] = {
-    if (queryString == null || queryString.isEmpty) None
-    else {
+    if (queryString == null || queryString.isEmpty) {
+      None
+    } else {
       queryParser.parseQuery(queryString) match {
         case queryParser.Success(filter, _) => Some(filter)
         case failure: queryParser.NoSuccess => error(failure.msg); None

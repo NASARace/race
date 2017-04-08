@@ -20,6 +20,7 @@ package gov.nasa.race.ww.air
 import java.util.Vector
 
 import gov.nasa.race.air.InFlightAircraft
+import gov.nasa.race.common.BasicTimeSeries
 import gov.nasa.race.geo.DatedAltitudePositionable
 import gov.nasa.worldwind.WorldWind
 import gov.nasa.worldwind.avlist.AVKey
@@ -31,22 +32,22 @@ object PathRenderLevel extends Enumeration {
   val None, Line, LinePos = Value
 }
 
-
 /**
   * WWJ Path to display aircraft flight paths
   */
-class FlightPath[T <: InFlightAircraft](val flightEntry: FlightEntry[T]) extends Path {
+class FlightPath[T <: InFlightAircraft](val flightEntry: FlightEntry[T]) extends Path with BasicTimeSeries {
   val layer = flightEntry.layer
   val flightPath = flightEntry.flightPath
 
-  var tLast: Long = System.currentTimeMillis
-  var isHighUpdateRate = false
-
+  val material = new Material(layer.pathColor)
   val attrs = new BasicShapeAttributes
   attrs.setOutlineWidth(1)
-  attrs.setOutlineMaterial(new Material(layer.pathColor))
+  attrs.setOutlineMaterial(material)
+  attrs.isDrawInterior
+  attrs.setInteriorOpacity(1.0)
+  attrs.setInteriorMaterial(material)
   attrs.setEnableAntialiasing(true)
-  setShowPositionsScale(6.0)
+  setShowPositionsScale(4.0)
   setAttributes(attrs)
 
   updateAttributes
@@ -63,14 +64,11 @@ class FlightPath[T <: InFlightAircraft](val flightEntry: FlightEntry[T]) extends
 
 
   def setLineAttrs = setShowPositions(false)
-  def setLinePosAttrs = setShowPositions(!isHighUpdateRate)
+  def setLinePosAttrs = setShowPositions(averageUpdateFrequency > 1) // no point showing points for high frequency updates
   def updateAttributes = if (layer.pathDetails == PathRenderLevel.LinePos) setLinePosAttrs else setLineAttrs
 
   def addFlightPosition (fpos: DatedAltitudePositionable) = {
-    val t = System.currentTimeMillis
-    isHighUpdateRate = (t - tLast) < 1000 // update rate > 1Hz
-    tLast = t
-
+    addSample
     posList.add(fpos)
     setPositions(posList)
   }

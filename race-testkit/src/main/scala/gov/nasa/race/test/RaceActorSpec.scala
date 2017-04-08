@@ -66,7 +66,7 @@ object TestRaceActorSystem {
     var waiterForTerminated: Option[ActorRef] = None
 
     override def receive = {
-      super.receive.orElse(testReceive)
+      testReceive.orElse(super.receive)
     }
 
     // we don't supervise the test actors, but we still start them

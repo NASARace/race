@@ -26,6 +26,7 @@ import gov.nasa.race.air.{CompactFlightPath, FlightInfo, FlightInfoUpdateRequest
 import gov.nasa.race.common.Threshold
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.Messages._
+import gov.nasa.race.uom.Length._
 import gov.nasa.race.swing.Style._
 import gov.nasa.race.ww.EventAction.EventAction
 import gov.nasa.race.ww._
@@ -55,8 +56,8 @@ abstract class FlightLayer[T <:InFlightAircraft](val raceView: RaceView, config:
   val markImg = Images.defaultMarkImg
   val labelColor = toABGRString(color)
   val lineColor = labelColor
-  var labelThreshold = config.getDoubleOrElse("label-altitude", 1400000.0)
-  var symbolThreshold = config.getDoubleOrElse("symbol-altitude", 1000000.0)
+  var labelThreshold = config.getDoubleOrElse("label-altitude", Meters(1400000.0).toMeters)
+  var symbolThreshold = config.getDoubleOrElse("symbol-altitude", Meters(1000000.0).toMeters)
   var flightDetails: FlightRenderLevel = getFlightRenderLevel(eyeAltitude)
 
   def image (t: T) = planeImg
@@ -65,7 +66,7 @@ abstract class FlightLayer[T <:InFlightAircraft](val raceView: RaceView, config:
   //--- AircraftPath attributes
   val pathColor = color
   val showPositions = config.getBooleanOrElse("show-positions", true)
-  val linePosThreshold = config.getDoubleOrElse("position-altitude", 40000.0)
+  val linePosThreshold = config.getDoubleOrElse("position-altitude", Meters(30000.0).toMeters)
   var pathDetails: PathRenderLevel = getPathRenderLevel(eyeAltitude)
 
   thresholds ++= Seq(
