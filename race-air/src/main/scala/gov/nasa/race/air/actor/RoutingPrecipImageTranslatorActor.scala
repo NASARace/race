@@ -39,9 +39,11 @@ import scala.collection.mutable
   * This is just a convenience actor that saves some configuration for
   * filter and content based routing
   */
-class RoutingPrecipImageTranslatorActor (config: Config) extends TranslatorActor(config, new ITWSprecip2PrecipImage) {
+class RoutingPrecipImageTranslatorActor (config: Config) extends TranslatorActor(config) {
 
   val routes = mutable.Map.empty[Int,mutable.Set[String]]
+
+  override def createTranslator = new ITWSprecip2PrecipImage
 
   override def onInitializeRaceActor (raceContext: RaceContext, actorConf: Config) = {
     ifTrue (super.onInitializeRaceActor(raceContext,actorConf)) {

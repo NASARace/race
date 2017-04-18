@@ -19,6 +19,7 @@ package gov.nasa.race.air.translator
 
 import com.typesafe.config.Config
 import gov.nasa.race.air.FlightPos
+import gov.nasa.race.air.FlightPos.ChangedCS
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.config.ConfigurableTranslator
 import gov.nasa.race.geo.LatLonPos
@@ -27,7 +28,6 @@ import gov.nasa.race.uom.Angle._
 import gov.nasa.race.uom.Speed._
 import org.joda.time.DateTime
 import org.joda.time.format.DateTimeFormat
-
 
 import scala.annotation.tailrec
 import scala.collection.concurrent.TrieMap
@@ -49,7 +49,12 @@ object SBS2FlightPos {
                       var alt: String=null,
                       var speed: String=null,
                       var track: String=null) {
-    @inline def setCS (s: String) = if (s != null) cs = s
+    var oldCS: String = null
+
+    @inline def setCS (s: String) = if (s != null) {
+      oldCS = if (cs == s) null else cs
+      cs = s
+    }
     @inline def setDtg (s: String) = if (s != null) dtg = s
     @inline def setPosDtg = posDtg = dtg
     @inline def setLat (s: String) = if (s != null) lat = s
@@ -60,12 +65,14 @@ object SBS2FlightPos {
 
     def tryToFlightPos : Option[FlightPos] = {
       if (cs !=null && posDtg !=null && lat !=null && lon !=null && speed !=null && alt !=null && track !=null) {
-        Some(FlightPos(icao24, cs,
+        val fpos = FlightPos(icao24, cs,
           LatLonPos.fromDegrees(lat.toDouble, lon.toDouble),
           Feet(alt.toDouble),
           Knots(speed.toDouble),
           Degrees(track.toDouble),
-          DateTime.parse(posDtg, dtf)))
+          DateTime.parse(posDtg, dtf))
+        if (oldCS != null) fpos.amend(ChangedCS(oldCS))
+        Some(fpos)
       } else None
     }
   }

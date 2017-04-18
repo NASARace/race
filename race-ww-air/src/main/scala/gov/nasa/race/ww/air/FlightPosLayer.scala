@@ -17,6 +17,7 @@
 
 package gov.nasa.race.ww.air
 
+import akka.actor.Actor.Receive
 import com.typesafe.config.Config
 import gov.nasa.race._
 import gov.nasa.race.air.{FlightPos, FlightTerminationMessage}
@@ -28,7 +29,7 @@ import gov.nasa.race.ww._
  */
 class FlightPosLayer (raceView: RaceView,config: Config) extends FlightLayer3D[FlightPos](raceView,config) {
 
-  override def handleMessage = {
+  def handleFlightPosLayerMessage: Receive = {
     case BusEvent(_,fpos:FlightPos,_) =>
       count = count + 1
       flights.get(fpos.cs) match {
@@ -39,7 +40,7 @@ class FlightPosLayer (raceView: RaceView,config: Config) extends FlightLayer3D[F
     case BusEvent(_,msg: FlightTerminationMessage,_)  =>
       count = count + 1
       ifSome(flights.get(msg.cs)) {removeFlightEntry}
-
-    case other => super.handleMessage(other)
   }
+
+  override def handleMessage = handleFlightPosLayerMessage orElse super.handleMessage
 }

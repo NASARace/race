@@ -27,30 +27,24 @@ import gov.nasa.race.core.{PublishingRaceActor, SubscribingRaceActor}
  * a generic actor that translates text messages into objects by means of a
  * configured Translator instance
  */
-class TranslatorActor (val config: Config, var translator: ConfigurableTranslator) extends SubscribingRaceActor with PublishingRaceActor {
-  def this(config: Config) = this(config, null)
+class TranslatorActor (val config: Config) extends SubscribingRaceActor with FilteringPublisher {
 
-  translator = if (translator == null) { // we need one or init fails
-    createTranslator(config.getConfig("translator"))
-  } else { // can be optionally overridden from config
-    config.getOptionalConfig("translator") match {
-      case Some(tConf) => createTranslator(tConf)
-      case None => translator
-    }
-  }
+  var translator: ConfigurableTranslator = createTranslator
 
-  override def handleMessage = {
+  /** override this if this to use a hardwired translator */
+  def createTranslator: ConfigurableTranslator = getConfigurable[ConfigurableTranslator]("translator")
+
+  def handleTranslatorMessage: Receive = {
     case BusEvent(_,msg,_) =>
       translator.translate(msg) match {
-        case Some(list:Seq[_]) if translator.flatten => list foreach(publish)
-        case Some(m) => publish(m)
+        case Some(list:Seq[_]) if translator.flatten => list foreach(processTranslationProduct)
+        case Some(m) => processTranslationProduct(m)
         case None => // ignore
       }
   }
 
-  def createTranslator (config: Config): ConfigurableTranslator = {
-    val translator = newInstance[ConfigurableTranslator](config.getString("class"), Array(classOf[Config]), Array(config)).get
-    info(s"instantiated translator ${translator.getClass.getName}")
-    translator
-  }
+  override def handleMessage = handleTranslatorMessage orElse super.handleMessage
+
+  /** can be overridden by specialized translator actors */
+  def processTranslationProduct(o: Any) = publishFiltered(o)
 }

@@ -17,72 +17,27 @@
 
 package gov.nasa.race.air.actor
 
-import akka.actor.{ActorRef, Cancellable}
 import com.typesafe.config.Config
-import gov.nasa.race._
-import gov.nasa.race.air.{FlightCompleted, FlightCsChanged, FlightDropped, FlightPos}
-import gov.nasa.race.config.ConfigUtils._
+import gov.nasa.race.air.{FlightCompleted, FlightPos}
 import gov.nasa.race.core.Messages.BusEvent
-import gov.nasa.race.core.{ContinuousTimeRaceActor, PublishingRaceActor, SubscribingRaceActor}
+import gov.nasa.race.core.SubscribingRaceActor
 
-import scala.collection.mutable.{HashMap => MHashMap}
-import scala.concurrent.duration._
+import scala.collection.mutable
 
 /**
   * actor that publishes FlightDropped messages for FlightPos objects which haven't been
   * updated for a configurable amount of (sim-)time
+  *
+  * nothing we have to add here, it's all in FPosDropper, but we might move the flights map
+  * into the concrete class at some point
   */
-class FlightDropperActor(val config: Config) extends PublishingRaceActor
-                                             with SubscribingRaceActor with ContinuousTimeRaceActor {
-  case object CheckFlightPos
+class FlightDropperActor(val config: Config) extends SubscribingRaceActor with FPosDropper {
+  val flights = mutable.HashMap.empty[String,FlightPos]
 
-  val map = MHashMap.empty[String,FlightPos]  // only updated/accessed from handleMessage
-
-  val dropAfterMillis = config.getFiniteDurationOrElse("drop-after", 60.seconds).toMillis // this is sim time
-  val interval = config.getFiniteDurationOrElse("interval", 30.seconds) // this is wall time
-
-  var schedule: Option[Cancellable] = None
-
-  //--- end init
-
-  override def onStartRaceActor(originator: ActorRef) = {
-    schedule = scheduleNow(interval,CheckFlightPos)
-    super.onStartRaceActor(originator)
-  }
-
-  override def onTerminateRaceActor(originator: ActorRef) = {
-    ifSome(schedule){ _.cancel }
-    super.onTerminateRaceActor(originator)
-  }
+  override def removeStaleFlight(fpos: FlightPos) = flights -= fpos.cs
 
   override def handleMessage = {
-    case BusEvent(_,csChanged:FlightCsChanged,_) => changeCS(csChanged.oldCS, csChanged.cs)
-    case BusEvent(_,fpos: FlightPos,_) => map.update(fpos.cs, fpos)
-    case BusEvent(_,fcompleted: FlightCompleted,_) => map -= fcompleted.cs
-    case BusEvent(_,fdropped: FlightDropped,_) => // we could check if we were the originator
-    case CheckFlightPos => checkMap
-  }
-
-  def changeCS (oldCS: String, newCS: String) = {
-    ifSome(map.get(oldCS)) { fpos =>
-      map.remove(oldCS)
-      map.update(newCS, fpos.copy(cs=newCS))
-    }
-  }
-
-  def checkMap = {
-    val now = updatedSimTime
-    val cut = dropAfterMillis
-
-    map foreach { e =>    // make sure we don't allocate per entry
-      val cs = e._1
-      val fpos = e._2
-      val dt = elapsedSimTimeMillisSince(fpos.date)
-      if (dt > cut){
-        map -= cs
-        publish(FlightDropped(fpos.flightId, fpos.cs, now))
-        info(s"dropping $cs after $dt msec")
-      }
-    }
+    case BusEvent(_,fpos: FlightPos,_) => flights += fpos.cs -> fpos
+    case BusEvent(_,fcompleted: FlightCompleted,_) => flights -= fcompleted.cs
   }
 }

@@ -36,6 +36,10 @@ import gov.nasa.race.uom._
 object FlightPos {
   def tempCS (flightId: String) = "?" + flightId
   def isTempCS (cs: String) = cs.charAt(0) == '?'
+
+  // c/s changes only happen rarely, and if they do we want to preserve the changed value
+  // for all downstream actors so we don't use a fixed field for it
+  case class ChangedCS(oldCS: String)
 }
 
 /**
@@ -56,15 +60,19 @@ case class FlightPos (flightId: String,
                       speed: Speed,
                       heading: Angle,
                       date: DateTime) extends Dated with InFlightAircraft with FlightMessage {
-  var amendments = List.empty[Any] // <2do> not sure yet this is the right extension
 
   def this (id:String, pos: LatLonPos, alt: Length,spd: Speed,hdg: Angle, dtg: DateTime) =
     this(id, FlightPos.tempCS(id), pos,alt,spd,hdg,dtg)
 
   def hasTempCS = FlightPos.isTempCS(cs)
-  def tempCS = FlightPos.tempCS(flightId)
+  def tempCS = if (hasTempCS) cs else FlightPos.tempCS(flightId)
 
-  def amend (a: Any) = amendments = a +: amendments
+  // generic mechanism to dynamically attach per-event data to FlightPos objects
+  var amendments = List.empty[Any]
+  def amend (a: Any): FlightPos = { amendments = a +: amendments; this }
+  def amendAll (as: Any*) = { as.foreach(amend); this }
+  def getAmendment (f: (Any)=> Boolean): Option[Any] = amendments.find(f)
+  def getOldCS: Option[String] = amendments.find(_.isInstanceOf[FlightPos.ChangedCS]).map(_.asInstanceOf[FlightPos.ChangedCS].oldCS)
 
   override def toString = f"FlightPos($flightId,$cs,$position,${altitude.toFeet.toInt}ft,${speed.toKnots.toInt}kn,${heading.toNormalizedDegrees.toInt}°,$date)"
 }
@@ -208,3 +216,13 @@ class BinaryFlightPosArchiveReader (val istream: InputStream) extends FramedArch
     }
   }
 }
+
+case class FlightPosProblem(fpos: FlightPos, lastFpos: FlightPos, problem: String)
+
+trait FlightPosChecker {
+  // overide the ones you need
+  def check (fpos: FlightPos): Option[FlightPosProblem] = None
+  def checkPair (fpos: FlightPos, lastFPos: FlightPos): Option[FlightPosProblem] = None
+}
+
+object EmptyFlightPosChecker extends FlightPosChecker

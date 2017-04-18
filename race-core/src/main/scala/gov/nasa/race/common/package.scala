@@ -40,6 +40,8 @@ package object common {
   @inline def squared (d: Double) = d*d
   @inline def cubed (d: Double) = d*d*d
 
+  // unfortunately we can't def √ for both Double and uom (AnyVal) arguments without ambiguity
+
   implicit class RichDouble (val d: Double) extends AnyVal {
     @inline def ** (e: Double) = Math.pow(d,e)
     @inline def `²` = d*d  // sub/superscript chars are not valid identifiers so we have to quote

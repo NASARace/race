@@ -316,6 +316,7 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ImplicitActorLogging
         a
       } catch {
         case t: Throwable =>
+          //t.printStackTrace
           sync.put(false)
           throw t
       }

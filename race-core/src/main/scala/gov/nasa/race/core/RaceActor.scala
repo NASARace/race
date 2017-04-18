@@ -246,6 +246,26 @@ trait RaceActor extends Actor with ImplicitActorLogging {
     ClassLoaderUtils.newInstance( context.system, clsName, argTypes, args)
   }
 
+  // NOTE: apparently Scala 2.12.1 does widen the type if the generic type parameter is
+  // inferred, which can lead to runtime exceptions. Specify the generic type explicitly!
+
+  def getConfigurable[T: ClassTag](conf: Config): T = {
+    val clsName = conf.getString("class")
+    info(s"instantiating $clsName")
+    newInstance[T](clsName, Array(classOf[Config]), Array(conf)).get
+  }
+
+  def getConfigurable[T: ClassTag](key: String): T = getConfigurable(config.getConfig(key))
+
+  def getConfigurableOrElse[T: ClassTag](key: String, f: => T): T = {
+    config.getOptionalConfig(key) match {
+      case Some(conf) =>
+        val clsName = conf.getString("class")
+        newInstance[T](clsName, Array(classOf[Config]), Array(conf)).get
+      case None => f
+    }
+  }
+
   def instantiateActor (actorName: String, actorConfig: Config): ActorRef = {
     val clsName = actorConfig.getClassName("class")
     val actorCls = loadClass(clsName, classOf[RaceActor])

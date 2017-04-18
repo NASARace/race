@@ -19,6 +19,7 @@ package gov.nasa.race.ww.air
 
 import java.awt.Color
 
+import akka.actor.Actor.Receive
 import com.typesafe.config.Config
 import gov.nasa.race.air.{TFMTrack, TFMTracks}
 import gov.nasa.race.core.Messages.BusEvent
@@ -31,7 +32,7 @@ class TfmTracksLayer (raceView: RaceView,config: Config) extends FlightLayer[TFM
 
   override def defaultSymbolColor = Color.magenta
 
-  override def handleMessage = {
+  def handleTfmTracksLayerMessage: Receive = {
     case BusEvent(_,msg: TFMTracks,_) =>
       count = count + 1
       msg.tracks foreach { tfmTrack =>
@@ -44,7 +45,7 @@ class TfmTracksLayer (raceView: RaceView,config: Config) extends FlightLayer[TFM
             if (!tfmTrack.nextPos.isEmpty) addFlightEntry(tfmTrack) // only add if this wasn't the completed message
         }
       }
-
-    case other => super.handleMessage(other)
   }
+
+  override def handleMessage = handleTfmTracksLayerMessage orElse super.handleMessage
 }

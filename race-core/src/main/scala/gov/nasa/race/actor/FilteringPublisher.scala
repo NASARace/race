@@ -25,43 +25,41 @@ import gov.nasa.race.core._
 
 /**
   * trait for PublishingRaceActors that support filters
+  * note that filters are static, this versions does not support dynamic addition/removal
   */
 trait FilteringPublisher extends PublishingRaceActor {
 
   val config: Config // actor config to be provided by concrete actor class
 
-  val passUnfiltered = letPassUnfiltered(config) // do we let pass if there is no filter set?
-  var filters = createFilters(config) // optional
+  val passUnfiltered = passUnfliteredDefault // do we let pass if there is no filter set?
+  var filters = createFilters // optional
   val matchAll = config.getBooleanOrElse("match-all", defaultMatchAll) // default is to let pass if any of the filters passes
+
+  val publishFiltered: (Any=>Unit) = filters.length match {
+    case 0 => (msg) => { action(msg, passUnfiltered) }
+    case 1 => (msg) => { action(msg, filters(0).pass(msg)) }
+    case _ => (msg) => { action(msg, if (matchAll) !filters.exists(!_.pass(msg)) else filters.exists(_.pass(msg))) }
+  }
 
   def defaultMatchAll = false
 
   // override this if we have specific filters
-  def createFilters (config: Config) = config.getOptionalConfigList("filters").map(createFilter)
+  def createFilters: Array[ConfigurableFilter] = config.getConfigArray("filters").map(getConfigurable[ConfigurableFilter])
 
   // override this if we only want to let messages pass if we have filters set
-  def letPassUnfiltered (config: Config) = config.getBooleanOrElse("pass-unfiltered", true)
+  def passUnfliteredDefault = config.getBooleanOrElse("pass-unfiltered", true)
 
-  def createFilter (config: Config): ConfigurableFilter = {
-    val filter = newInstance[ConfigurableFilter](config.getString("class"), Array(classOf[Config]), Array(config)).get
-    info(s"instantiated filter ${filter.name}")
-    filter
-  }
-
-  // overridable extension point
+  /** override if there is selective publishing or additional action */
   def action (msg: Any, isPassing: Boolean) = if (isPassing) publish(msg)
 
-  def publishFiltered (msg: Any): Unit= {
-    if (filters.isEmpty) {
-      action(msg, passUnfiltered)
-    } else {
-      action(msg, if (matchAll) !filters.exists(!_.pass(msg)) else filters.exists(_.pass(msg)))
-    }
-  }
-
   // can still be overridden by concrete types (it has to if we only want to publish some message types)
-  override def handleMessage = {
+  def handleFilteringPublisherMessage: Receive = {
     // NOTE - don't match ChannelMessage because that would break system channels/messages (e.g. ChannelTopics)
     case BusEvent(chan,msg:Any,_) => publishFiltered(msg)
   }
+
+  // note that we can't chain inside our own PartialFunction without explicit guard like this:
+  //      case o if super.handleMessage.isDefinedAt(o) => super.handleMessage(o)
+  // which is less readable and composable
+  override def handleMessage = handleFilteringPublisherMessage orElse super.handleMessage
 }

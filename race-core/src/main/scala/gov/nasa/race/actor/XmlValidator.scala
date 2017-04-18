@@ -36,8 +36,8 @@ import gov.nasa.race.config.ConfigUtils._
   */
 class XmlValidator (config: Config) extends EitherOrRouter(config) {
 
-  val schemaFile = new File(config.getString("schema"))
-  val validationFilter = new XmlValidationFilter(schemaFile)
+  val schemaPaths = config.getStringArray("schemas")
+  val validationFilter = new XmlValidationFilter(schemaPaths)
   val failurePrefix = config.getOptionalString("failure-prefix")
   val failurePostfix = config.getOptionalString("failure-postfix")
 
