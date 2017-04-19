@@ -121,7 +121,7 @@ object Dependencies {
 
   val akkaHttp = akkaOrg %% "akka-http" % "latest.release"
 
-  val akkaAll = Seq(akkaSlf4j,akkaActor)
+  val akkaAll = Seq(akkaActor)
 
 
   //--- ActiveMQ

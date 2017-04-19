@@ -9,7 +9,7 @@ shellPrompt in ThisBuild := { state => "[" + Project.extract(state).currentRef.p
 
 lazy val commonSettings = commonRaceSettings ++ Seq(
   organization := "gov.nasa.race",
-  version := "1.4.1"
+  version := "1.4.2"
 )
 
 lazy val testSettings = commonSettings ++ noPublishSettings  // test projects don't publish artifacts
@@ -27,7 +27,8 @@ lazy val root = createRootProject("race").
     aggregate in MultiJvm := false,
     mainClass in Compile := Some("gov.nasa.race.main.ConsoleMain"),
     noPublishSettings // root does not publish any artifacts
-  )
+  ).
+  addLibraryDependencies(logback,akkaSlf4j)  // in case somebody wants to use SLF4J logging
 
 //--- sub projects
 
@@ -54,7 +55,7 @@ lazy val raceNetJMS = createProject("race-net-jms", commonSettings).
 
 lazy val raceNetKafka = createProject("race-net-kafka", commonSettings).
   dependsOn(raceCore).
-  addLibraryDependencies(logback,akkaSlf4j,log4jOverSlf4j,kafka)
+  addLibraryDependencies(kafka)
 
 lazy val raceNetDDS = createProject("race-net-dds", commonSettings).
   dependsOn(raceCore).
