@@ -12,7 +12,7 @@ object CommonRaceSettings {
       PluginSettings.pluginSettings ++
       TaskSettings.taskSettings ++
       Seq(
-        scalaVersion := "2.12.1",
+        scalaVersion := "2.12.2",
         scalacOptions ++= Seq("-unchecked", "-deprecation", "-feature"),
         resolvers ++= Dependencies.dependencyResolvers,
 

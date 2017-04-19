@@ -282,7 +282,7 @@ class RaceActorSystem(val config: Config) extends LogController with VerifiableA
 
   def stoppedRaceActor(actorRef: ActorRef): Unit = {
     info(s"unregister stopped ${actorRef.path}")
-    actors = actors.filter(_ != actorRef)
+    actors = actors - actorRef
   }
 
   /**

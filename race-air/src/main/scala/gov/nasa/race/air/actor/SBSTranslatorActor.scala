@@ -21,6 +21,7 @@ import scala.collection.mutable.{HashMap => MHashMap}
   */
 class SBSTranslatorActor (config: Config) extends TranslatorActor(config) with FPosDropper {
 
+  val timeCut = config.getIntOrElse("time-cut-ms", 0) // in millis, non-ambiguous positions with lower dt are ignored
   val passSanityViolations = config.getBooleanOrElse ("pass-failed", true)
   val writeToFail = config.getOptionalString("write-to-fail")
   val sanityChecker = getConfigurableOrElse[FlightPosChecker]("checker", EmptyFlightPosChecker)
@@ -53,19 +54,22 @@ class SBSTranslatorActor (config: Config) extends TranslatorActor(config) with F
   }
 
   def checkAndAdd (fpos: FlightPos) = {
-    processCheckResult(fpos, sanityChecker.check(fpos))
+    processCheckResult(fpos, sanityChecker.check(fpos),Long.MaxValue)
   }
 
   def checkAndUpdate (fpos: FlightPos, lastFPos: FlightPos) = {
-    processCheckResult(fpos, sanityChecker.checkPair(fpos,lastFPos))
+    processCheckResult(fpos, sanityChecker.checkPair(fpos,lastFPos),dtMillis(fpos,lastFPos))
   }
 
-  def processCheckResult(fpos: FlightPos, checkResult: Option[FlightPosProblem]) = {
+  @inline def dtMillis(fpos: FlightPos, lastFPos: FlightPos) = fpos.date.getMillis - lastFPos.date.getMillis
+
+  def processCheckResult(fpos: FlightPos, checkResult: Option[FlightPosProblem], dt: Long) = {
     checkResult match {
       case Some(problem) =>
         reportProblem(problem)
         if (passSanityViolations) updateAndPublish(fpos)
-      case None => updateAndPublish(fpos)
+      case None => // no problem, but might be considered redundant noise
+        if (dt > timeCut) updateAndPublish(fpos)
     }
   }
 

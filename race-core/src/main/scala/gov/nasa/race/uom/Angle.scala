@@ -104,7 +104,10 @@ class Angle protected[uom] (val d: Double) extends AnyVal {
 
   @inline def ≈ (x: Angle)(implicit εAngle: Angle) = Math.abs(d - x.d) <= εAngle.d
   @inline def ~= (x: Angle)(implicit εAngle: Angle) = Math.abs(d - x.d) <= εAngle.d
-  @inline def within (x: Angle, tolerance: Angle) = Math.abs(d - x.d) <= tolerance.d
+  @inline def within (x: Angle, tolerance: Angle) = {
+    Math.abs(normalizeRadians(normalizeRadians(d) - normalizeRadians(x.d))) <= tolerance.d
+  }
+
 
   @inline def < (x: Angle) = d < x.d
   @inline def > (x: Angle) = d > x.d

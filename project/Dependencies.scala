@@ -51,7 +51,7 @@ object Dependencies {
   val scalaParser = "org.scala-lang.modules" % "scala-parser-combinators_2.12" % "1.0.4"
 
   //--- new scala reflection (TypeTags etc.)
-  val scalaReflect =  "org.scala-lang" % "scala-reflect" % "2.12.1"
+  val scalaReflect =  "org.scala-lang" % "scala-reflect" % "2.12.2"
 
   //--- scalaTags HTML generator
   val scalaTags = "com.lihaoyi" %% "scalatags" % "latest.release"
