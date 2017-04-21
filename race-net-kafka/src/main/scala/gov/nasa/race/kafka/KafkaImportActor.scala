@@ -25,6 +25,8 @@ import gov.nasa.race.util.ThreadUtils
 
 /**
   * a RaceActor that publishes messages received from a Kafka broker
+  *
+  * TODO - shutdown does not work yet if server is terminated (somewhat artificial case that happens in reg tests)
   */
 class KafkaImportActor (val config: Config) extends FilteringPublisher {
 
@@ -32,8 +34,13 @@ class KafkaImportActor (val config: Config) extends FilteringPublisher {
 
   val thread = ThreadUtils.daemon {
     ifSome(consumer) { c =>
-      forever {
-        if (c.fillValueBuffer > 0) c.valueBuffer.foreach(publishFiltered)
+      while (c.isSubscribed) {
+        try {
+          if (c.fillValueBuffer > 0) c.valueBuffer.foreach(publishFiltered)
+        } catch {
+          case x:Throwable =>
+            if (!c.isClosed) error(s"exception during Kafka read: ${x.getMessage}")
+        }
       }
     }
   }
@@ -46,14 +53,17 @@ class KafkaImportActor (val config: Config) extends FilteringPublisher {
 
   override def onStartRaceActor(originator: ActorRef) = {
     ifSome(consumer) { c =>
-      c.subscribe
-      thread.start
+      if (c.subscribe) {
+        thread.start
+      } else {
+        warning("Kafka topic subscription failed")
+      }
     }
     super.onStartRaceActor(originator)
   }
 
   override def onTerminateRaceActor(originator: ActorRef) = {
-    ifSome(consumer) { _.unsubscribe }
+    ifSome(consumer) { _.close }
     super.onTerminateRaceActor(originator)
   }
 

@@ -21,6 +21,7 @@ import java.util.Properties
 import com.typesafe.config.Config
 import gov.nasa.race._
 import gov.nasa.race.config.ConfigUtils._
+import gov.nasa.race.util.ClassUtils
 import org.apache.kafka.clients.consumer.KafkaConsumer
 import org.apache.kafka.common.serialization.{Deserializer, StringDeserializer => KStringDeserializer}
 
@@ -29,11 +30,24 @@ import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.duration._
 import scala.reflect._
 
+object ConsumerState extends Enumeration {
+  type Status = Value
+  val Created,Subscribed,Closed = Value
+}
+
 /**
   * base type of RACE configurable KafkaConsumers, which we need to encapsulate the
   * parameterized key/value types (we can't specify generic types in configs).
   *
   * this is analogous to ConfigurableTranslators / TranslatorActors
+  *
+  * NOTE - kafka-clients are not downward compatible with respect to the server, i.e. a new client does not
+  * work with an old server, but newer servers support older clients. For that reason race-net-kafka defaults to
+  * a 0.9 kafka-clients lib
+  *
+  * Note also that client APIs have changed signatures and running a 0.10+ client against 0.9 client libs will cause
+  * runtime errors. Since we want to leave it to the race-net-kafka client to override the kafka-clients lib we have to
+  * resort to reflection calls. This is very sub-optimal
   */
 abstract class ConfigurableKafkaConsumer (val config: Config) {
   type KeyType
@@ -42,12 +56,30 @@ abstract class ConfigurableKafkaConsumer (val config: Config) {
   def keyDeserializer: ClassTag[_ <: Deserializer[KeyType]]
   def valueDeserializer: ClassTag[_ <: Deserializer[ValueType]]
 
-  val topicNames = config.getStringListOrElse("kafka-topics", Seq.empty[String]) // there can be many
+  val topicNames = config.getStringList("kafka-topics") // keep as java List
   val pollTimeoutMs = config.getFiniteDurationOrElse("poll-timeout", 1.hour).toMillis
 
   val consumer: KafkaConsumer[KeyType,ValueType] = createConsumer
+  var state = ConsumerState.Created
 
-  def subscribe = consumer.subscribe(topicNames.asJava)
+  def subscribe: Boolean = {
+    // consumer.subscribe(topicNames)  // would be as simple as that if Kafka would be more concerned about not breaking APIs
+
+    val consumerCls = consumer.getClass
+    var mth = ClassUtils.getMethod(consumerCls,"subscribe",classOf[java.util.List[String]]) orElse  // kafka-clients 0.9.*
+              ClassUtils.getMethod(consumerCls,"subscribe",classOf[java.util.Collection[String]])  // kafka-clients 0.10.*
+    mth match {
+      case Some(m) =>
+        try {
+          m.invoke(consumer, topicNames)
+          state = ConsumerState.Subscribed
+          true
+        } catch {
+          case _: Throwable => false
+        }
+      case None => false
+    }
+  }
 
   // we use a pre-allocated buffer object to (1) avoid per-poll allocation, and (2) to preserve the value order
   // NOTE - this means fillValueBuffer and valueBuffer access have to happen from the same thread
@@ -65,7 +97,14 @@ abstract class ConfigurableKafkaConsumer (val config: Config) {
     valueBuffer.size
   }
 
-  def unsubscribe = consumer.unsubscribe
+  def close = {
+    consumer.unsubscribe
+    consumer.close
+    state = ConsumerState.Closed
+  }
+
+  def isSubscribed = state == ConsumerState.Subscribed
+  def isClosed = state == ConsumerState.Closed
 
   def createConsumer: KafkaConsumer[KeyType,ValueType] = {
     val p = new Properties

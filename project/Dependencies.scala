@@ -41,7 +41,7 @@ object Dependencies {
   val logback = "ch.qos.logback" % "logback-classic" % "latest.release"
 
   //--- Typesafe config
-  val typesafeConfig = "com.typesafe" % "config" % "1.3.0"
+  val typesafeConfig = "com.typesafe" % "config" % "latest.release"
 
   //--- nscala-time (Dates with operators): https://github.com/nscala-time/nscala-time
   val nscalaTime = "com.github.nscala-time" %% "nscala-time" %  "latest.release"
@@ -141,11 +141,18 @@ object Dependencies {
   val log4j = "log4j" % "log4j" % "latest.release"
   val log4jOverSlf4j = "org.slf4j" % "log4j-over-slf4j" % "latest.release"
 
-  //--- ZooKeeper ("3.4.7" works, "latest.release" includes alphas!)
-  val zookeeper = "org.apache.zookeeper" % "zookeeper" % "3.4.8" excludeAll(
+  //--- ZooKeeper
+  val zookeeper = "org.apache.zookeeper" % "zookeeper" % "latest.release" excludeAll(
     ExclusionRule(organization = "log4j", name="log4j"),
     ExclusionRule(organization = "org.slf4j", name = "slf4j-log4j12")
   )
+
+  //--- Kafka client (this is all we need for importing/exporting)
+  // note that clients are not upward compatible, i.e. a new client doesn't work with an old server
+  // (the new server with old client is supposedly fine). Since there are many old servers out there, we can't
+  // use the latest client yet
+  val kafkaClients = "org.apache.kafka" % "kafka-clients" % "0.9.0.0"
+  val newKafkaClients = "org.apache.kafka" % "kafka-clients" % "latest.release"
 
   //--- Kafka (make sure to add log4j to kafkaServer dependencies
   val kafka = "org.apache.kafka" %% "kafka" % "latest.release" excludeAll(

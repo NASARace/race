@@ -17,6 +17,7 @@
 package gov.nasa.race.util
 
 import java.io.ByteArrayOutputStream
+import java.lang.reflect.Method
 
 /**
   * java.lang.Class related utility functions
@@ -42,5 +43,13 @@ object ClassUtils {
 
   def getResourceAsBytes(cls: Class[_], name: String): Option[Array[Byte]] = {
     getResourceAs(cls,name){ _.toByteArray }
+  }
+
+  def getMethod(cls: Class[_], name: String, argTypes: Class[_]*): Option[Method] = {
+    try {
+      Some(cls.getMethod(name,argTypes:_*))
+    } catch {
+      case x:NoSuchMethodException => None
+    }
   }
 }

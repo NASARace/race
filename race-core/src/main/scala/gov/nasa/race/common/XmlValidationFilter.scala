@@ -31,7 +31,7 @@ import org.xml.sax.{ErrorHandler, SAXParseException}
 /**
   * a filter that passes messages which are validated against a configured schema
   */
-class XmlValidationFilter (val schemaSources: Array[Source], val config: Config = null) extends ConfigurableFilter {
+class XmlValidationFilter (val schemaSources: Array[Source], val config: Config) extends ConfigurableFilter {
 
   protected val inputFactory = XMLInputFactory.newInstance
   protected val schemaFactory = SchemaFactory.newInstance(XMLConstants.W3C_XML_SCHEMA_NS_URI)
@@ -48,7 +48,8 @@ class XmlValidationFilter (val schemaSources: Array[Source], val config: Config 
   }
   validator.setErrorHandler(xh)
 
-  def this(schemaPath: String) = this(Array[Source](new StreamSource(new File(schemaPath)),null))
+  def this(schemaFile: File) = this(Array[Source](new StreamSource(schemaFile)),null)
+  def this(schemaPath: String) = this(Array[Source](new StreamSource(new File(schemaPath))),null)
   def this(schemaPaths: Array[String]) = this(schemaPaths.map(p=>new StreamSource(new File(p))),null)
   def this(conf: Config) = this(Array[Source](new StreamSource(new File(conf.getString("schemas")))),conf)
 

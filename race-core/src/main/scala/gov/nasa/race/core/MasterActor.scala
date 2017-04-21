@@ -140,6 +140,7 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ImplicitActorLogging
       error(aix.getMessage)
       Stop
     case x: Throwable =>
+      //x.printStackTrace
       error(x.getMessage)
       Stop
 

@@ -28,7 +28,7 @@ lazy val root = createRootProject("race").
     mainClass in Compile := Some("gov.nasa.race.main.ConsoleMain"),
     noPublishSettings // root does not publish any artifacts
   ).
-  addLibraryDependencies(logback,akkaSlf4j)  // in case somebody wants to use SLF4J logging
+  addLibraryDependencies(logback,akkaSlf4j)  // in case somebody wants to configure SLF4J logging
 
 //--- sub projects
 
@@ -55,7 +55,7 @@ lazy val raceNetJMS = createProject("race-net-jms", commonSettings).
 
 lazy val raceNetKafka = createProject("race-net-kafka", commonSettings).
   dependsOn(raceCore).
-  addLibraryDependencies(kafka)
+  addLibraryDependencies(kafkaClients)
 
 lazy val raceNetDDS = createProject("race-net-dds", commonSettings).
   dependsOn(raceCore).
@@ -126,10 +126,11 @@ lazy val raceNetKafkaTest = createTestProject("race-net-kafka-test", testSetting
   dependsOn(raceNetKafka,raceTestKit).
   configs(MultiJvm).
   settings(
-    mainClass in Compile := Some("gov.nasa.race.kafka.KafkaServer")
+    mainClass in Compile := Some("gov.nasa.race.kafka.KafkaServer"),
+    dependencyOverrides += newKafkaClients
   ).
-  addLibraryDependencies(logback,zookeeper).
-  addTestLibraryDependencies(logback)
+  addLibraryDependencies(logback,zookeeper,newKafkaClients,kafka).
+  addTestLibraryDependencies(log4j,akkaSlf4j)
 
 lazy val raceNetDDSTest = createTestProject("race-net-dds-test", testSettings).
   enablePlugins(JavaAppPackaging).
