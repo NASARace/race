@@ -1,0 +1,15 @@
+RACE logging initialized
+@@ schema None
+@@ validator None
+
+[36menter command [1:show universes, 2:show actors, 3:show channels, 4:send message, 5:set loglevel, 7: pause/resume, 8:start, 9:exit]
+[0m[36minvalid input: ''', please try again[0m
+
+[36menter command [1:show universes, 2:show actors, 3:show channels, 4:send message, 5:set loglevel, 7: pause/resume, 8:start, 9:exit]
+[0m
+[36menter command [1:show universes, 2:show actors, 3:show channels, 4:send message, 5:set loglevel, 7: pause/resume, 8:start, 9:exit]
+[0m
+[36menter command [1:show universes, 2:show actors, 3:show channels, 4:send message, 5:set loglevel, 7: pause/resume, 8:start, 9:exit]
+[0mRACE logging terminated
+last actor system did shut down, exiting RACE
+

@@ -16,6 +16,8 @@
  */
 package gov.nasa.race.common
 
+import java.io.File
+
 import gov.nasa.race.test.RaceSpec
 import gov.nasa.race.util.FileUtils
 import org.scalatest.FlatSpec
@@ -27,21 +29,31 @@ class XmlValidationFilterSpec extends FlatSpec with RaceSpec {
 
   "a XmlValidationFilter" should "reject a message that does not conform to a schema" in {
     val schemaFile = baseResourceFile("schema.xsd")
-    val validationFilter = new XmlValidationFilter(schemaFile)
-    val invalidMessage = FileUtils.fileContentsAsUTF8String(baseResourceFile("invalid.xml"))
+    val validationFilter = XmlValidationFilter(schemaFile)
 
+    val invalidMessage = FileUtils.fileContentsAsUTF8String(baseResourceFile("invalid.xml"))
     println("invalid.xml should be rejected...")
     validationFilter.pass(invalidMessage) shouldBe false
     println("Ok")
   }
 
   "a XmlValidationFilter" should "let pass a message that does conform to a schema" in {
-    val schemaFile = baseResourceFile("schema.xsd")
-    val validationFilter = new XmlValidationFilter(schemaFile)
-    val validMessage = FileUtils.fileContentsAsUTF8String(baseResourceFile("valid.xml"))
+    val schemaFiles = Array[File](baseResourceFile("schema1.xsd"), baseResourceFile("schema.xsd"))
+    val validationFilter = XmlValidationFilter(schemaFiles)
+    var res = false
 
+    val validMessage = FileUtils.fileContentsAsUTF8String(baseResourceFile("valid.xml"))
     print("valid.xml should pass...")
-    validationFilter.pass(validMessage) shouldBe true
+    res = validationFilter.pass(validMessage)
+    if (!res) println(s"validation error: ${validationFilter.lastError}")
+    res shouldBe true
+    println("Ok")
+
+    val anotherValidMessage = FileUtils.fileContentsAsUTF8String(baseResourceFile("valid1.xml"))
+    print("valid1.xml should also pass (different schema)...")
+    res = validationFilter.pass(anotherValidMessage)
+    if (!res) println(s"validation error: ${validationFilter.lastError}")
+    res shouldBe true
     println("Ok")
   }
 }

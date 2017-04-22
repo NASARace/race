@@ -19,6 +19,7 @@ package gov.nasa.race.actor
 import java.io.File
 
 import com.typesafe.config.Config
+import gov.nasa.race._
 import gov.nasa.race.common.XmlValidationFilter
 import gov.nasa.race.config.ConfigUtils._
 
@@ -37,7 +38,12 @@ import gov.nasa.race.config.ConfigUtils._
 class XmlValidator (config: Config) extends EitherOrRouter(config) {
 
   val schemaPaths = config.getStringArray("schemas")
-  val validationFilter = new XmlValidationFilter(schemaPaths)
+  val validationFilter = XmlValidationFilter(schemaPaths.map(new File(_)))
+
+  ifSome(validationFilter.lastError){ err=>
+    error(s"schema did not parse: $err")
+  }
+
   val failurePrefix = config.getOptionalString("failure-prefix")
   val failurePostfix = config.getOptionalString("failure-postfix")
 

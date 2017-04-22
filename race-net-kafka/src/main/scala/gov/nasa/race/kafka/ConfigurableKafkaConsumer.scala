@@ -57,6 +57,8 @@ abstract class ConfigurableKafkaConsumer (val config: Config) {
   def valueDeserializer: ClassTag[_ <: Deserializer[ValueType]]
 
   val topicNames = config.getStringList("kafka-topics") // keep as java List
+  val groupId = config.getOptionalString("group-id")
+  val clientId = config.getOptionalString("client-id")
   val pollTimeoutMs = config.getFiniteDurationOrElse("poll-timeout", 1.hour).toMillis
 
   val consumer: KafkaConsumer[KeyType,ValueType] = createConsumer
@@ -111,7 +113,12 @@ abstract class ConfigurableKafkaConsumer (val config: Config) {
     p.put("bootstrap.servers", config.getStringOrElse("bootstrap-servers", "127.0.0.1:9092"))
     p.put("key.deserializer", keyDeserializer.runtimeClass.getName)
     p.put("value.deserializer", valueDeserializer.runtimeClass.getName)
-    p.put("group.id", config.getStringOrElse("kafka-group", "race"))
+
+    ifSome(groupId){ p.put("group.id",_)}
+    ifSome(clientId){ p.put("client.id",_)}
+
+    // Note - Kafka version dependent: new: {earliest,latest,none} old: {smallest,largest}
+    ifSome(config.getOptionalString("offset-reset")){ p.put("auto.offset.reset",_)}
 
     // TODO - we should also be able to configure other commit policies (e.g. each message)
     p.put("enable.auto.commit", "true")

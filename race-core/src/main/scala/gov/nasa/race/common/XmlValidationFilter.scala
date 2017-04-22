@@ -16,7 +16,7 @@
  */
 package gov.nasa.race.common
 
-import java.io.{CharArrayReader, File, Reader, StringReader}
+import java.io._
 import javax.xml.XMLConstants
 import javax.xml.stream.XMLInputFactory
 import javax.xml.transform.Source
@@ -25,33 +25,71 @@ import javax.xml.transform.stream.StreamSource
 import javax.xml.validation.SchemaFactory
 
 import com.typesafe.config.Config
+import gov.nasa.race._
 import gov.nasa.race.config.ConfigurableFilter
+import gov.nasa.race.util.{FileUtils, StringUtils}
 import org.xml.sax.{ErrorHandler, SAXParseException}
+
+/**
+  * the companion mostly provides builders for different argument types.
+  *
+  * Note that while SchemaFactory has a newSchema(Array[Source]) builder, it apparently does not work if the aggregated
+  * schemas are for the same namespace (there was an old Xerces bug report about using the namespace as a hash). To
+  * avoid this problem we synthesize a wrapper schema and instantiate the validatior with it.
+  * To make things more complicated, if the aggregated schemas have targetNamespace attributes, those have to be
+  * the same, which also applies to the wrapper. Violations are reported as errors by the SchemaFactory
+  */
+object XmlValidationFilter {
+  def apply (file: File) = new XmlValidationFilter( new StreamSource(file))
+  def apply (src: String) = new XmlValidationFilter( new StreamSource(new StringReader(src)))
+  def apply (files: Seq[File]) = new XmlValidationFilter( combineSchemas(files))
+
+  def combineSchemas (files: Seq[File]): Source = {
+    val sb = new StringBuilder
+    sb.append("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>")
+    sb.append("<xs:schema xmlns:xs=\"http://www.w3.org/2001/XMLSchema\" elementFormDefault=\"qualified\" ")
+    ifSome(getTargetNamespace(files.head)) { sb.append }
+    sb.append('>')
+    files foreach { f=>
+      sb.append("<xs:include schemaLocation=\"")
+      sb.append(f.getAbsolutePath)
+      sb.append("\"/>")
+    }
+    sb.append("</xs:schema>")
+    new StreamSource(new StringReader(sb.toString))
+  }
+
+  def getTargetNamespace (file: File): Option[String] = {
+    for (
+      schemaText <- FileUtils.fileContentsAsUTF8String(file);
+      tns <- "targetNamespace=\".+\"".r.findFirstIn(schemaText)
+    ) yield tns
+  }
+}
 
 /**
   * a filter that passes messages which are validated against a configured schema
   */
-class XmlValidationFilter (val schemaSources: Array[Source], val config: Config) extends ConfigurableFilter {
+class XmlValidationFilter (val schemaSource: Source, val config: Config= null) extends ConfigurableFilter {
 
-  protected val inputFactory = XMLInputFactory.newInstance
-  protected val schemaFactory = SchemaFactory.newInstance(XMLConstants.W3C_XML_SCHEMA_NS_URI)
-  protected val schema = schemaFactory.newSchema(schemaSources)
-  protected val validator = schema.newValidator
-
-  // TODO - the standard Stax validator always prints this annoying ERROR to System.err, and the
-  // only workaround seems to be to set our own ErrorHandler that does not re-throw exceptions
   var lastError: Option[String] = None
+
   protected val xh = new ErrorHandler {
     def error (x: SAXParseException) = lastError = Some(x.getMessage)
     def fatalError (x: SAXParseException) = lastError = Some(x.getMessage)
     def warning  (x: SAXParseException) = {}
   }
+
+  protected val inputFactory = XMLInputFactory.newInstance
+  protected val schemaFactory = SchemaFactory.newInstance(XMLConstants.W3C_XML_SCHEMA_NS_URI)
+  schemaFactory.setErrorHandler(xh) // set this before we create the schema, to catch schema errors
+
+  protected val schema = schemaFactory.newSchema(schemaSource)
+  protected val validator = schema.newValidator
+  // Note - the standard Stax validator always prints this annoying ERROR to System.err, and the
+  // only workaround seems to be to set our own ErrorHandler that does not re-throw exceptions
   validator.setErrorHandler(xh)
 
-  def this(schemaFile: File) = this(Array[Source](new StreamSource(schemaFile)),null)
-  def this(schemaPath: String) = this(Array[Source](new StreamSource(new File(schemaPath))),null)
-  def this(schemaPaths: Array[String]) = this(schemaPaths.map(p=>new StreamSource(new File(p))),null)
-  def this(conf: Config) = this(Array[Source](new StreamSource(new File(conf.getString("schemas")))),conf)
 
   def pass(o: Any): Boolean = {
     o match {
