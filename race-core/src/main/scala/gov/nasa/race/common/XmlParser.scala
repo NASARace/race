@@ -28,16 +28,25 @@ abstract class XmlParser[T] extends XmlPullParser {
 
   private var _stop = false
   protected def stopParsing = _stop = true
+  protected var result: Option[T] = None
 
-  //--- the subclass extension points
-  protected def onStartElement: PartialFunction[String,Unit]
-  protected def onEndElement: PartialFunction[String,Unit]
-  protected def result: Option[T]
+  //--- the (optional) subclass extension points (we need at least either onStartElement or onEndElement)
+  protected def onStartElement: PartialFunction[String,Unit] = PartialFunction.empty
+  protected def onEndElement: PartialFunction[String,Unit] = PartialFunction.empty
   protected def errorResult = None
 
   def parse (input: String): Option[T] = {
     initialize(input)
+    parseLoop
+  }
+  def parse (input: Array[Char]): Option[T] = {
+    initialize(input)
+    parseLoop
+  }
 
+  def parseLoop: Option[T] = {
+    _stop = false
+    result = None
     try {
       while (!_stop && parseNextElement()){
         if (isStartElement) onStartElement(tag) else onEndElement(tag)
@@ -46,7 +55,7 @@ abstract class XmlParser[T] extends XmlPullParser {
 
     } catch {
       case t: Throwable =>
-        t.printStackTrace()
+        //t.printStackTrace() // TODO store last error
         errorResult
     }
   }
@@ -55,5 +64,15 @@ abstract class XmlParser[T] extends XmlPullParser {
     while (parseNextAttribute()){
       pf(attr)
     }
+  }
+}
+
+class XmlAttrExtractor (attrName: String, elemMatcher: String=>Boolean) extends XmlParser[String] {
+  override def onStartElement = {
+    case e =>
+      if (elemMatcher(e)) {
+        if (parseAttribute(attrName)) result = Some(value)
+        stopParsing
+      }
   }
 }

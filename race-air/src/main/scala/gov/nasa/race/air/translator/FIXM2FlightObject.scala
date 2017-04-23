@@ -81,7 +81,7 @@ class FIXM2FlightObject (val config: Config=null)
   protected var flights = new ArrayBuffer[IdentifiableAircraft](20)
   def resetFlights = flights.clear()
 
-  override def result = Some(flights)
+  result = Some(flights)
   override def flatten = true
 
   //--- translation

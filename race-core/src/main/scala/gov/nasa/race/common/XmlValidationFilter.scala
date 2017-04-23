@@ -22,55 +22,28 @@ import javax.xml.stream.XMLInputFactory
 import javax.xml.transform.Source
 import javax.xml.transform.stax.StAXSource
 import javax.xml.transform.stream.StreamSource
-import javax.xml.validation.SchemaFactory
+import javax.xml.validation.{SchemaFactory, Validator}
 
 import com.typesafe.config.Config
-import gov.nasa.race._
 import gov.nasa.race.config.ConfigurableFilter
-import gov.nasa.race.util.{FileUtils, StringUtils}
+import gov.nasa.race.util.FileUtils
 import org.xml.sax.{ErrorHandler, SAXParseException}
 
-/**
-  * the companion mostly provides builders for different argument types.
-  *
-  * Note that while SchemaFactory has a newSchema(Array[Source]) builder, it apparently does not work if the aggregated
-  * schemas are for the same namespace (there was an old Xerces bug report about using the namespace as a hash). To
-  * avoid this problem we synthesize a wrapper schema and instantiate the validatior with it.
-  * To make things more complicated, if the aggregated schemas have targetNamespace attributes, those have to be
-  * the same, which also applies to the wrapper. Violations are reported as errors by the SchemaFactory
-  */
-object XmlValidationFilter {
-  def apply (file: File) = new XmlValidationFilter( new StreamSource(file))
-  def apply (src: String) = new XmlValidationFilter( new StreamSource(new StringReader(src)))
-  def apply (files: Seq[File]) = new XmlValidationFilter( combineSchemas(files))
-
-  def combineSchemas (files: Seq[File]): Source = {
-    val sb = new StringBuilder
-    sb.append("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>")
-    sb.append("<xs:schema xmlns:xs=\"http://www.w3.org/2001/XMLSchema\" elementFormDefault=\"qualified\" ")
-    ifSome(getTargetNamespace(files.head)) { sb.append }
-    sb.append('>')
-    files foreach { f=>
-      sb.append("<xs:include schemaLocation=\"")
-      sb.append(f.getAbsolutePath)
-      sb.append("\"/>")
-    }
-    sb.append("</xs:schema>")
-    new StreamSource(new StringReader(sb.toString))
-  }
-
-  def getTargetNamespace (file: File): Option[String] = {
-    for (
-      schemaText <- FileUtils.fileContentsAsUTF8String(file);
-      tns <- "targetNamespace=\".+\"".r.findFirstIn(schemaText)
-    ) yield tns
-  }
-}
+import scala.collection.Map
+import scala.collection.mutable.{HashMap, ListBuffer}
 
 /**
-  * a filter that passes messages which are validated against a configured schema
+  * a XML validation filter that supports lookup of schemas based on the message 'xmlns' attribute value
+  * For each namespace we can have multiple schema files which are all combined
   */
-class XmlValidationFilter (val schemaSource: Source, val config: Config= null) extends ConfigurableFilter {
+class XmlValidationFilter(val schemaFiles: Seq[File], val config: Config= null) extends ConfigurableFilter {
+
+  def this (schemaFile: File) = this(Array(schemaFile),null)
+
+  final val NoNamespace = ""
+  val tnsExtractor = new XmlAttrExtractor("targetNamespace", e => {e == "xs:schema"} ) // for schemas
+  val xmlnsExtractor = new XmlAttrExtractor("xmlns", e => true) // for messages, 'xmlns' attr of top element
+  val inputFactory = XMLInputFactory.newInstance
 
   var lastError: Option[String] = None
 
@@ -80,23 +53,14 @@ class XmlValidationFilter (val schemaSource: Source, val config: Config= null) e
     def warning  (x: SAXParseException) = {}
   }
 
-  protected val inputFactory = XMLInputFactory.newInstance
-  protected val schemaFactory = SchemaFactory.newInstance(XMLConstants.W3C_XML_SCHEMA_NS_URI)
-  schemaFactory.setErrorHandler(xh) // set this before we create the schema, to catch schema errors
+  val validators: Map[String,Validator] = createValidators
 
-  protected val schema = schemaFactory.newSchema(schemaSource)
-  protected val validator = schema.newValidator
-  // Note - the standard Stax validator always prints this annoying ERROR to System.err, and the
-  // only workaround seems to be to set our own ErrorHandler that does not re-throw exceptions
-  validator.setErrorHandler(xh)
-
+  //--- the message filtering
 
   def pass(o: Any): Boolean = {
     o match {
-      case txt: String => validate(new StringReader(txt))
-      case Some(txt:String) => validate(new StringReader(txt))
-      case cs: Array[Char] => validate(new CharArrayReader(cs))
-      case Some(cs:Array[Char]) => validate(new CharArrayReader(cs))
+      case msg: String => validate(msg)
+      case Some(msg:String) => validate(msg)
       case None => false
       case _ =>
         lastError = Some(s"unsupported message type: ${o.getClass}")
@@ -104,16 +68,69 @@ class XmlValidationFilter (val schemaSource: Source, val config: Config= null) e
     }
   }
 
-  def validate (dataReader: Reader): Boolean = {
+  def validate (msg: String): Boolean = {
     try {
       lastError = None
-      validator.validate(new StAXSource(inputFactory.createXMLStreamReader(dataReader)))
+      val msgSrc = new StAXSource(inputFactory.createXMLStreamReader(new StringReader(msg)))
+      val ns = xmlnsExtractor.parse(msg).getOrElse(NoNamespace)
+      validators.get(ns) match {
+        case Some(validator) => validator.validate(msgSrc)
+        case None => error(s"no schema for namespace '$ns'")
+      }
       lastError.isEmpty
     } catch {
       // we shouldn't get any with our error handler
       case t: Throwable =>
         lastError = Some(t.getMessage)
         false
+    }
+  }
+
+  //--- initialization
+
+  def createValidators: Map[String,Validator] = {
+    val schemaFactory = SchemaFactory.newInstance(XMLConstants.W3C_XML_SCHEMA_NS_URI)
+    schemaFactory.setErrorHandler(xh) // set this before we create the schema, to catch schema errors
+
+    schemaFiles.foldLeft(HashMap.empty[String,ListBuffer[File]]) { (m,f) =>
+      FileUtils.fileContentsAsUTF8String(f) match {
+        case Some(s) =>
+          val tns = tnsExtractor.parse(s).getOrElse(NoNamespace)
+          m.getOrElseUpdate(tns,ListBuffer.empty) += f
+        case None => appendError( s"schema file not found: $f")
+      }
+      m
+    }.map { e=>
+      val (tns,files) = e
+      val schemaSource = combineSchemas(files,tns)
+      val schema = schemaFactory.newSchema(schemaSource)
+      val validator = schema.newValidator
+      validator.setErrorHandler(xh)
+      tns -> validator
+    }
+  }
+
+  def combineSchemas (files: Seq[File], tns: String): Source = {
+    if (files.length == 1) {
+      new StreamSource(new FileInputStream(files(0)))
+    } else {
+      val sb = new StringBuilder
+      sb.append("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>")
+      sb.append("<xs:schema xmlns:xs=\"http://www.w3.org/2001/XMLSchema\" elementFormDefault=\"qualified\" ")
+      if (tns.nonEmpty) sb.append( s"""targetNamespace="$tns" """)
+      sb.append('>')
+      files foreach { f => sb.append(s"""<xs:include schemaLocation="${f.getAbsolutePath}" />""") }
+      sb.append("</xs:schema>")
+      new StreamSource(new StringReader(sb.toString))
+    }
+  }
+
+  def error (msg: String) = lastError = Some(msg)
+
+  def appendError (msg: String) = {
+    lastError = lastError match {
+      case Some(text) => Some( text + ',' + msg)
+      case None => Some(msg)
     }
   }
 }

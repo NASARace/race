@@ -29,7 +29,7 @@ class XmlValidationFilterSpec extends FlatSpec with RaceSpec {
 
   "a XmlValidationFilter" should "reject a message that does not conform to a schema" in {
     val schemaFile = baseResourceFile("schema.xsd")
-    val validationFilter = XmlValidationFilter(schemaFile)
+    val validationFilter = new XmlValidationFilter(schemaFile)
 
     val invalidMessage = FileUtils.fileContentsAsUTF8String(baseResourceFile("invalid.xml"))
     println("invalid.xml should be rejected...")
@@ -39,7 +39,7 @@ class XmlValidationFilterSpec extends FlatSpec with RaceSpec {
 
   "a XmlValidationFilter" should "let pass a message that does conform to a schema" in {
     val schemaFiles = Array[File](baseResourceFile("schema1.xsd"), baseResourceFile("schema.xsd"))
-    val validationFilter = XmlValidationFilter(schemaFiles)
+    val validationFilter = new XmlValidationFilter(schemaFiles)
     var res = false
 
     val validMessage = FileUtils.fileContentsAsUTF8String(baseResourceFile("valid.xml"))

@@ -38,7 +38,7 @@ import gov.nasa.race.config.ConfigUtils._
 class XmlValidator (config: Config) extends EitherOrRouter(config) {
 
   val schemaPaths = config.getStringArray("schemas")
-  val validationFilter = XmlValidationFilter(schemaPaths.map(new File(_)))
+  val validationFilter = new XmlValidationFilter(schemaPaths.map(new File(_)))
 
   ifSome(validationFilter.lastError){ err=>
     error(s"schema did not parse: $err")
