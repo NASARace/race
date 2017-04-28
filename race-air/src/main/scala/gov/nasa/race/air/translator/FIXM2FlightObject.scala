@@ -69,8 +69,8 @@ class FIXM2FlightObject (val config: Config=null)
       } else {
         if (lat.isDefined && lon.isDefined && date != null &&
             vx.isDefined && vy.isDefined && spd.isDefined && alt.isDefined) {
-          flights += FlightPos(id, cs, LatLonPos(Degrees(lat), Degrees(lon)),
-                               alt, spd, Degrees(Math.atan2(vx, vy).toDegrees), date)
+          flights += new FlightPos(id, cs, LatLonPos(Degrees(lat), Degrees(lon)),
+                                   alt, spd, Degrees(Math.atan2(vx, vy).toDegrees), date)
         } else {
           //println(s"@@@ $lat $lon $date $vx $vy $spd $alt")
         }
@@ -81,7 +81,7 @@ class FIXM2FlightObject (val config: Config=null)
   protected var flights = new ArrayBuffer[IdentifiableAircraft](20)
   def resetFlights = flights.clear()
 
-  result = Some(flights)
+  override def result = if (flights.nonEmpty) Some(flights) else None
   override def flatten = true
 
   //--- translation

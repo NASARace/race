@@ -36,7 +36,7 @@ class FlightDropperActor(val config: Config) extends SubscribingRaceActor with F
 
   override def removeStaleFlight(fpos: FlightPos) = flights -= fpos.cs
 
-  override def handleMessage = {
+  override def handleMessage = handleFPosDropperMessage orElse {
     case BusEvent(_,fpos: FlightPos,_) => flights += fpos.cs -> fpos
     case BusEvent(_,fcompleted: FlightCompleted,_) => flights -= fcompleted.cs
   }

@@ -83,8 +83,8 @@ class NasFlight2FlightObject(val config: Config=null) extends XmlPullParser with
 
       } else {
         if (cs.nonEmpty && date != null && alt.isDefined && spd.isDefined) { // valid enroute  ?? do we need spd ??
-          Some( FlightPos( id, cs, LatLonPos(Degrees(lat), Degrees(lon)),
-                           alt, spd, Degrees(Math.atan2(vx, vy).toDegrees), date))
+          Some( new FlightPos( id, cs, LatLonPos(Degrees(lat), Degrees(lon)),
+                               alt, spd, Degrees(Math.atan2(vx, vy).toDegrees), date))
         } else { // insufficient data
           //println(s"@@ insufficient data: $cs $date $alt $lat $lon")
           None

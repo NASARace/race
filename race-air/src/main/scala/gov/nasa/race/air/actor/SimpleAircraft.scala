@@ -56,7 +56,7 @@ class SimpleAircraft (val config: Config) extends ContinuousTimeRaceActor
     case RaceTick =>
       updatePos
       debug(s"publishing $pos")
-      publish(FlightPos(id, cs, pos, altitude, speed, heading, simTime))
+      publish(new FlightPos(id, cs, pos, altitude, speed, heading, simTime))
   }
 
   //--- internal functions

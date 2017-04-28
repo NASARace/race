@@ -51,15 +51,17 @@ trait FlightMessage {
 
 /**
   * in-flight state consisting of geographic position, altitude, speed and bearing
-  * <2do> this is more than just pos - how can we extend this (dynamically/statically)?
+  *
+  * Note that we don't use a case class here because extensibility is more important
+  * than matching (we normally just match based on cs or flightId)
   */
-case class FlightPos (flightId: String,
-                      cs: String,
-                      position: LatLonPos,
-                      altitude: Length,
-                      speed: Speed,
-                      heading: Angle,
-                      date: DateTime) extends Dated with InFlightAircraft with FlightMessage {
+class FlightPos (val flightId: String,
+                 val cs: String,
+                 val position: LatLonPos,
+                 val altitude: Length,
+                 val speed: Speed,
+                 val heading: Angle,
+                 val date: DateTime) extends Dated with InFlightAircraft with FlightMessage {
 
   def this (id:String, pos: LatLonPos, alt: Length,spd: Speed,hdg: Angle, dtg: DateTime) =
     this(id, FlightPos.tempCS(id), pos,alt,spd,hdg,dtg)
@@ -73,6 +75,8 @@ case class FlightPos (flightId: String,
   def amendAll (as: Any*) = { as.foreach(amend); this }
   def getAmendment (f: (Any)=> Boolean): Option[Any] = amendments.find(f)
   def getOldCS: Option[String] = amendments.find(_.isInstanceOf[FlightPos.ChangedCS]).map(_.asInstanceOf[FlightPos.ChangedCS].oldCS)
+
+  def copyWithCS (newCS: String) = new FlightPos(flightId, newCS, position, altitude,speed,heading,date)
 
   override def toString = f"FlightPos($flightId,$cs,$position,${altitude.toFeet.toInt}ft,${speed.toKnots.toInt}kn,${heading.toNormalizedDegrees.toInt}°,$date)"
 }
@@ -138,9 +142,9 @@ class FlightPosArchiveReader (val istream: InputStream) extends ArchiveReader
         val dt = fs.head.toLong
 
         Some(ArchiveEntry(getDate(recDt),
-          FlightPos(flightId, cs, LatLonPos(Degrees(phi), Degrees(lambda)),
-            Feet(alt), UsMilesPerHour(speed), Degrees(heading),
-            getDate(dt))))
+          new FlightPos(flightId, cs, LatLonPos(Degrees(phi), Degrees(lambda)),
+                        Feet(alt), UsMilesPerHour(speed), Degrees(heading),
+                        getDate(dt))))
       } catch {
         case x: Throwable => None
       }
@@ -208,9 +212,9 @@ class BinaryFlightPosArchiveReader (val istream: InputStream) extends FramedArch
       val (recDt ~ flightId ~ cs ~ phi ~ lambda ~ alt ~ speed ~ heading ~ dt) =
         BinaryFlightPos.fposCodec.decode(bitvec).require.value
       Some(ArchiveEntry( getDate(recDt),
-        FlightPos(flightId, cs, LatLonPos(Degrees(phi), Degrees(lambda)),
-          Feet(alt), UsMilesPerHour(speed), Degrees(heading),
-          getDate(dt))))
+        new FlightPos(flightId, cs, LatLonPos(Degrees(phi), Degrees(lambda)),
+                      Feet(alt), UsMilesPerHour(speed), Degrees(heading),
+                      getDate(dt))))
     } catch {
       case x: Throwable => None
     }

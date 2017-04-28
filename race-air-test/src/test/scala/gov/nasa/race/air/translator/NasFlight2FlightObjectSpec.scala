@@ -34,7 +34,7 @@ class NasFlight2FlightObjectSpec extends FlatSpec with RaceSpec {
 
   final val EPS = 0.000001
   val xmlMsg = fileContentsAsUTF8String(baseResourceFile("sfdps-nasflight.xml"))
-  val expected = FlightPos(
+  val expected = new FlightPos(
     "647",
     "UAL1634",
     LatLonPos.fromDegrees(37.898333, -79.169722),

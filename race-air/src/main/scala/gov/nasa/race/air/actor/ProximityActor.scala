@@ -63,7 +63,7 @@ class ProximityActor (val config: Config) extends SubscribingRaceActor {
   }
 
   def changeCs (oldCS: String, newCS: String) = {
-    if (proximities.updateObjects(e => if (e.obj.cs == oldCS) e.obj.copy(cs=newCS) else e.obj)){
+    if (proximities.updateObjects(e => if (e.obj.cs == oldCS) e.obj.copyWithCS(newCS) else e.obj)){
       info(s"change: $proximities")
     }
   }

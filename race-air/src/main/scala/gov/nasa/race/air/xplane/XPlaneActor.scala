@@ -121,7 +121,7 @@ class XPlaneActor (val config: Config) extends PublishingRaceActor
     val altitude = Feet(0)
     val speed = Knots(0)
     val heading = Degrees(0)
-    FlightPos(id, cs, pos, altitude, speed, heading, simTime)
+    new FlightPos(id, cs, pos, altitude, speed, heading, simTime)
   }
 
   override def onInitializeRaceActor(rc: RaceContext, actorConf: Config) = {
@@ -172,7 +172,7 @@ class XPlaneActor (val config: Config) extends PublishingRaceActor
       val altitude = Meters(rpos.elevationMslm)
       val speed = MetersPerSecond(rpos.speedMsec)
       val heading = Degrees(rpos.headingDeg)
-      flightPos = FlightPos(id, cs, pos, altitude, speed, heading, simTime)
+      flightPos = new FlightPos(id, cs, pos, altitude, speed, heading, simTime)
 
       publish(flightPos)
       publishedFrame = codec.readFrame
