@@ -397,6 +397,16 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ImplicitActorLogging
 
   //--- actor initialization
 
+  protected def initFailed(msg: String, isOptionalActor: Boolean, cause: Option[Throwable]=None) = {
+    if (!isOptionalActor) {
+      error(msg)
+      shutdown
+      // throw new RaceInitializeException(msg)
+    } else {
+      warning(msg)
+    }
+  }
+
   def onRaceInitialize = executeProtected {
     if (ras.isVerifiedSenderOf(RaceInitialize)) {
       try {
@@ -415,6 +425,7 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ImplicitActorLogging
     ras.actors.foreach { e =>
       val (actorRef, actorConfig) = e
       val actorName = actorConfig.getString("name")
+      val isOptional = isOptionalActor(actorConfig)
 
       val raceContext = actorConfig.getOptionalString("remote") match {
         case Some(remoteUri) => remoteContexts.getOrElse(remoteUri, createRemoteRaceContext(remoteUri))
@@ -423,18 +434,10 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ImplicitActorLogging
 
       info(s"sending InitializeRaceActor to $actorName")
       askForResult(actorRef ? InitializeRaceActor(raceContext, actorConfig)) {
-        case RaceActorInitialized => // Ok, this one is ready
-          info(s"received RaceInitialized from $actorName")
-        case RaceActorInitializeFailed(reason) =>
-          error(s"initialization of $actorName failed: $reason")
-          // <2do> should use configurable policy here
-          throw new RaceInitializeException("InitializeRaceActor failed")
-        case TimedOut =>
-          error(s"initialization timeout for $actorName")
-          throw new RaceInitializeException("InitializeRaceActor response timeout")
-        case other =>
-          error(s"invalid initialization response from $actorName: $other")
-          throw new RaceInitializeException("invalid InitializeRaceActor response")
+        case RaceActorInitialized => info(s"received RaceInitialized from $actorName")
+        case RaceActorInitializeFailed(reason) => initFailed(s"initialization of $actorName failed: $reason", isOptional)
+        case TimedOut => initFailed(s"initialization timeout for $actorName", isOptional)
+        case other => initFailed(s"invalid initialization response from $actorName: $other", isOptional)
       }
       checkLiveness(actorRef)
     }
@@ -524,11 +527,15 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ImplicitActorLogging
 
   //--- actor termination
 
+  private def shutdown = {
+    terminateRaceActors
+    terminateSatellites
+  }
+
   def onRaceTerminate = executeProtected {
     if (ras.isVerifiedSenderOf(RaceTerminate)) {
       info(s"master $name got RaceTerminate, shutting down")
-      terminateRaceActors
-      terminateSatellites
+      shutdown
       sender ! RaceTerminated
     } else warning(s"RaceTerminate request from $sender ignored")
   }
@@ -537,8 +544,7 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ImplicitActorLogging
     if (ras.isKnownRemoteMaster(remoteMaster)) {
       if (ras.allowRemoteTermination) {
         info(s"master $name got RemoteRaceTerminate, shutting down")
-        terminateRaceActors
-        terminateSatellites
+        shutdown
       } else {
         warning(s"RemoteRaceTerminate from $remoteMaster ignored")
       }

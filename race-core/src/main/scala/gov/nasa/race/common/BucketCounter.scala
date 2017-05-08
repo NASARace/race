@@ -48,6 +48,10 @@ trait SampleStats {
   @inline def sigma: Double = Math.sqrt(variance)
 }
 
+object BucketCounter {
+  def singleBucketCounter = new BucketCounter(Double.MinValue,Double.MaxValue,1)
+}
+
 /**
   * a simple counter for samples.
   *

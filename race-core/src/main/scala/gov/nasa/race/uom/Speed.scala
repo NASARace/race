@@ -16,6 +16,8 @@
  */
 package gov.nasa.race.uom
 
+import gov.nasa.race.common._
+import Angle._
 import scala.concurrent.duration.FiniteDuration
 
 
@@ -28,14 +30,18 @@ object Speed {
   final val MetersPerSecInKnot = 1852.0 / 3600
   final val MetersPerSecInKmh = 1000.0 / 3600
   final val MetersPerSecInMph = 1609.344 / 3600
+  final val MetersPerSecInFps = 0.3048
 
   final val Speed0 = new Speed(0)
   final val UndefinedSpeed = new Speed(Double.NaN)
   @inline def isDefined(x: Speed): Boolean = !x.d.isNaN
   final implicit val εSpeed = MetersPerSecond(1e-10)
 
+  def fromVxVy(vx: Speed, vy: Speed) = new Speed(Math.sqrt(squared(vx.d) + squared(vy.d)))
+
   //--- constructors
   @inline def MetersPerSecond(d: Double) = new Speed(d)
+  @inline def FeetPerSecond(d: Double) = new Speed(d * MetersPerSecInFps)
   @inline def Knots(d: Double) = new Speed(d * MetersPerSecInKnot)
   @inline def KilometersPerHour(d: Double) = new Speed(d * MetersPerSecInKmh)
   @inline def UsMilesPerHour(d: Double) = new Speed(d * MetersPerSecInMph)

@@ -44,6 +44,8 @@ package object geo {
 
   //--- various abstractions of position objects
 
+  case class XYPos (x: Length, y: Length)
+
   trait Positionable {
     def position: LatLonPos
   }

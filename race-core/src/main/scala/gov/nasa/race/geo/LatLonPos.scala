@@ -32,7 +32,7 @@ object LatLonPos {
  */
 case class LatLonPos (val φ: Angle, val λ: Angle) {
   override def toString = {
-    f"LatLonPos{φ=${φ.toDegrees}%+3.3f°,λ=${λ.toDegrees}%+3.3f°}"
+    f"LatLonPos{φ=${φ.toDegrees}%+3.5f°,λ=${λ.toDegrees}%+3.5f°}"
   }
 
   def =:= (other: LatLonPos): Boolean = (φ =:= other.φ) && (λ =:= other.λ)

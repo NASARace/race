@@ -37,6 +37,15 @@ object FlightPos {
   def tempCS (flightId: String) = "?" + flightId
   def isTempCS (cs: String) = cs.charAt(0) == '?'
 
+  // we don't use a case class so that we can have a class hierarchy, but we still want to be able to pattern match
+  def apply (flightId: String, cs: String, position: LatLonPos, altitude: Length, speed: Speed, heading: Angle, date: DateTime) = {
+    new FlightPos(flightId,cs,position,altitude,speed,heading,date)
+  }
+  def unapply (flightId: String, cs: String, position: LatLonPos, altitude: Length, speed: Speed, heading: Angle, date: DateTime) = {
+    (flightId,cs,position,altitude,speed,heading,date)
+  }
+  def unapply (fpos: FlightPos) = true
+
   // c/s changes only happen rarely, and if they do we want to preserve the changed value
   // for all downstream actors so we don't use a fixed field for it
   case class ChangedCS(oldCS: String)
@@ -53,7 +62,7 @@ trait FlightMessage {
   * in-flight state consisting of geographic position, altitude, speed and bearing
   *
   * Note that we don't use a case class here because extensibility is more important
-  * than matching (we normally just match based on cs or flightId)
+  * than getting a free unapply() for matching (we normally just match based on cs or flightId)
   */
 class FlightPos (val flightId: String,
                  val cs: String,
@@ -78,7 +87,7 @@ class FlightPos (val flightId: String,
 
   def copyWithCS (newCS: String) = new FlightPos(flightId, newCS, position, altitude,speed,heading,date)
 
-  override def toString = f"FlightPos($flightId,$cs,$position,${altitude.toFeet.toInt}ft,${speed.toKnots.toInt}kn,${heading.toNormalizedDegrees.toInt}°,$date)"
+  override def toString = s"FlightPos($flightId,$cs,$position,${altitude.toFeet.toInt}ft,${speed.toKnots.toInt}kn,${heading.toNormalizedDegrees.toInt}°,$date)"
 }
 
 trait FlightTerminationMessage extends FlightMessage

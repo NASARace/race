@@ -136,15 +136,18 @@ class JMSImportActor(val config: Config) extends FilteringPublisher {
   // TODO - maybe we should reject if JMS connection or session/consumer init fails
 
   override def onInitializeRaceActor(raceContext: RaceContext, actorConf: Config) = {
-    try {
-      connection = requestConnection(this)
-      info(s"connected to $brokerURI")
-    } catch {
-      case ex: Throwable =>
-        warning(s"failed to open connection: $ex")
-    }
+    if (super.onInitializeRaceActor(raceContext,actorConf)) {
+      try {
+        connection = requestConnection(this)
+        info(s"connected to $brokerURI")
+        true
 
-    super.onInitializeRaceActor(raceContext,actorConf)
+      } catch {
+        case ex: Throwable =>
+          warning(s"failed to open connection: $ex")
+          false
+      }
+    } else false
   }
 
   override def onStartRaceActor(originator: ActorRef) = {
