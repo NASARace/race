@@ -20,8 +20,8 @@ package gov.nasa.race.core
 /**
   * standard RACE exception types
   */
-class RaceException (details: String = "") extends RuntimeException(details)
+class RaceException (details: String = "", cause: Throwable=null) extends RuntimeException(details,cause)
 
-class RaceInitializeException (details: String) extends RaceException(details)
-class RaceStartException (details: String) extends RaceException(details)
-class RaceTerminateException (details: String) extends RaceException(details)
+class RaceInitializeException (details: String, cause: Throwable=null) extends RaceException(details,cause)
+class RaceStartException (details: String, cause: Throwable=null) extends RaceException(details,cause)
+class RaceTerminateException (details: String, cause: Throwable=null) extends RaceException(details,cause)

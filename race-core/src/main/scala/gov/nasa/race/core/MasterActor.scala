@@ -398,22 +398,24 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ImplicitActorLogging
   //--- actor initialization
 
   protected def initFailed(msg: String, isOptionalActor: Boolean, cause: Option[Throwable]=None) = {
-    if (!isOptionalActor) {
-      error(msg)
-      shutdown
-      // throw new RaceInitializeException(msg)
-    } else {
+    if (isOptionalActor) {
       warning(msg)
+    } else {
+      error(msg)
+      throw new RaceInitializeException(msg, cause.getOrElse(null))
     }
   }
 
   def onRaceInitialize = executeProtected {
     if (ras.isVerifiedSenderOf(RaceInitialize)) {
+      val requester = sender // store before we send out / receive new messages
       try {
         initializeRaceActors
         sender ! RaceInitialized
       } catch {
-        case x: Throwable => sender ! RaceInitializeFailed(x)
+        case x: Throwable =>
+          requester ! RaceInitializeFailed(x)
+          // shutdown is initiated by the sender
       }
     } else warning(s"RaceInitialize request from $sender ignored")
   }
@@ -422,8 +424,7 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ImplicitActorLogging
   protected val remoteContexts = mutable.Map.empty[UrlString,RaceContext]
 
   def initializeRaceActors = {
-    ras.actors.foreach { e =>
-      val (actorRef, actorConfig) = e
+    for ((actorRef,actorConfig) <- actors){
       val actorName = actorConfig.getString("name")
       val isOptional = isOptionalActor(actorConfig)
 
@@ -472,15 +473,31 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ImplicitActorLogging
 
   //--- actor start
 
+  protected def startFailed(msg: String, isOptionalActor: Boolean, cause: Option[Throwable]=None) = {
+    if (isOptionalActor) {
+      warning(msg)
+    } else {
+      error(msg)
+      throw new RaceStartException(msg, cause.getOrElse(null))
+    }
+  }
+
   /**
     * this is called from receive and is not allowed to let exceptions pass
     */
   def onRaceStart = executeProtected {
     if (ras.isVerifiedSenderOf(RaceStart)) {
-      simClock.resume
-      startSatellites
-      startRaceActors
-      sender ! RaceStarted
+      val requester = sender
+      try {
+        simClock.resume
+        startSatellites
+        startRaceActors
+        requester ! RaceStarted
+      } catch {
+        case t: Throwable =>
+          requester ! RaceStartFailed(t)
+          // shutdown is initiated by requester
+      }
     } else warning(s"RaceStart request from $sender ignored")
   }
 
@@ -498,18 +515,18 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ImplicitActorLogging
   def startRaceActors = {
     for ((actorRef,actorConfig) <- actors){
       if (isSupervised(actorRef)) { // this does not include remote lookups
+        val isOptional = isOptionalActor(actorConfig)
+
         info(s"sending StartRaceActor to ${actorRef.path.name}..")
         askForResult(actorRef ? StartRaceActor(self)) {
           case RaceActorStarted =>
             info(s"${actorRef.path.name} is running")
           case RaceActorStartFailed(reason) =>
-            error(s"start of ${actorRef.path.name} failed: $reason")
-            throw new RaceStartException("StartRaceActor failed")
+            startFailed(s"start of ${actorRef.path.name} failed: $reason", isOptional)
           case TimedOut =>
-            // <2do> this should escalate based on if actor is optional, local/remote
-            warning(s"starting ${actorRef.path} timed out")
+            startFailed(s"starting ${actorRef.path} timed out", isOptional)
           case other => // illegal response
-            warning(s"got unknown StartRaceActor response from ${actorRef.path.name}")
+            startFailed(s"got unknown StartRaceActor response from ${actorRef.path.name}", isOptional)
         }
       }
     }

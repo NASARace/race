@@ -254,9 +254,9 @@ class RaceActorSystem(val config: Config) extends LogController with VerifiableA
       case RaceInitialized =>
         status = Initialized
         info(s"universe $name initialized")
-      case RaceInitializeFailed(reason) => error(s"initializing universe $name failed with: $reason")
-      case TimedOut => error(s"initializing universe $name timed out")
-      case e => error(s"invalid response initializing universe $name: $e")
+      case RaceInitializeFailed(reason) => abort(s"initializing universe $name failed with: $reason")
+      case TimedOut => abort(s"initializing universe $name timed out")
+      case e => abort(s"invalid response initializing universe $name: $e")
     }
   }
 
@@ -274,8 +274,9 @@ class RaceActorSystem(val config: Config) extends LogController with VerifiableA
         case RaceStarted =>
           status = Running
           info(s"universe $name running")
-        case TimedOut => warning(s"starting universe $name timed out")
-        case e => error(s"invalid response starting universe $name: $e")
+        case RaceStartFailed(reason) => abort(s"starting universe $name failed: $reason")
+        case TimedOut => abort(s"starting universe $name timed out")
+        case e => abort(s"invalid response starting universe $name: $e")
       }
     } else warning(s"universe $name cannot be started in state $status")
   }
