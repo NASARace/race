@@ -64,4 +64,6 @@ class TATrack (val src: String,
   override def toString = {
     f"TATrack($src,$trackNum,$xyPos,$status, $position,$altitude,$heading,$speed, $date)"
   }
+
+  def isDrop = status == TATrack.Status.Drop
 }

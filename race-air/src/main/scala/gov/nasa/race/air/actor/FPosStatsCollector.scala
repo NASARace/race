@@ -21,17 +21,15 @@ import java.io.{ByteArrayOutputStream, PrintWriter}
 
 import akka.http.scaladsl.model.{HttpEntity, MediaTypes}
 import com.typesafe.config.Config
-import gov.nasa.race._
 import gov.nasa.race.actor.StatsCollector
 import gov.nasa.race.air.{FlightCompleted, FlightPos}
 import gov.nasa.race.common.{ConfigurableUpdateTimeSeries, ConsoleStats, Stats, TimeSeriesUpdateContext, UpdateStats}
-import gov.nasa.race.config.ConfigUtils._
+import gov.nasa.race.core.ClockAdjuster
 import gov.nasa.race.core.Messages.{BusEvent, RaceTick}
 import gov.nasa.race.http.{HtmlArtifacts, HtmlStats}
 import org.jfree.chart.plot.{PlotOrientation, XYPlot}
 import org.jfree.chart.{ChartFactory, ChartUtilities}
 import org.jfree.data.xy.{XYBarDataset, XYSeries, XYSeriesCollection}
-import org.joda.time.DateTime
 
 import scalatags.Text.all._
 
@@ -39,12 +37,10 @@ import scalatags.Text.all._
 /**
   * actor that collects update statistics for FPos objects
   */
-class FPosStatsCollector (val config: Config) extends StatsCollector with TimeSeriesUpdateContext[FlightPos] {
+class FPosStatsCollector (val config: Config) extends StatsCollector
+                            with ClockAdjuster with TimeSeriesUpdateContext[FlightPos] {
 
-  val fposUpdates = new ConfigurableUpdateTimeSeries[FlightPos](config,this)
-
-  var firstPos = true
-  val resetClockDiff = config.getOptionalFiniteDuration("reset-clock-diff") // sim time
+  val fposUpdates = new ConfigurableUpdateTimeSeries[String,FlightPos](config,this)
 
   override def handleMessage = {
     case BusEvent(_, fpos: FlightPos, _) =>
@@ -60,17 +56,6 @@ class FPosStatsCollector (val config: Config) extends StatsCollector with TimeSe
     case RaceTick =>
       fposUpdates.checkDropped
       publish(snapshot)
-  }
-
-  def checkClockReset (d: DateTime) = {
-    if (firstPos) {
-      ifSome(resetClockDiff) { dur =>
-        if (elapsedSimTimeSince(d) > dur){
-          resetSimClockRequest(d)
-        }
-      }
-      firstPos = false
-    }
   }
 
   def snapshot: Stats = {

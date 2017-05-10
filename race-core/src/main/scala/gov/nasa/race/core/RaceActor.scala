@@ -646,3 +646,31 @@ trait PeriodicRaceActor extends RaceActor {
     super.commitSuicide(errMsg)
   }
 }
+
+/**
+  * a trait that processes events that have a stored timestamp, conditionally
+  * adjusting the simClock if the timestamp of the first checked events differs
+  * for more than a configured duration.
+  *
+  * This is useful for replay if we don't a priori know the sim start time
+  */
+trait ClockAdjuster extends ContinuousTimeRaceActor {
+
+  val maxSimClockDiff = config.getOptionalFiniteDuration("max-clock-diff") // in sim time
+  private var firstCheck = true
+
+  /**
+    * this is the checker function that has to be called by the type that mixes in ClockAdjuster,
+    * on all events that might potentially have to adjust the global clock
+    */
+  def checkClockReset (d: DateTime) = {
+    if (firstCheck) {
+      ifSome(maxSimClockDiff) { dur =>
+        if (elapsedSimTimeSince(d) > dur){
+          resetSimClockRequest(d)
+        }
+      }
+      firstCheck = false
+    }
+  }
+}

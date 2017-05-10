@@ -19,7 +19,6 @@
 package gov.nasa.race.common
 
 import com.typesafe.config.Config
-import gov.nasa.race._
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.{Dated, ifSome}
 
@@ -39,6 +38,7 @@ trait TimeSeriesUpdateContext[T] {
   def info (msg: => String): Unit
 
   // abstract data interface to detect common update series problems
+  // NOTE - these are only called on objects that have the same timestamps, i.e. time does not have to be compared
   def isDuplicate (current: T, last: T): Boolean
   def isAmbiguous (current: T, last: T) = !isDuplicate(current,last)
 }
@@ -82,7 +82,7 @@ class UpdateStats (var buckets: Option[BucketCounter]) extends Cloneable {
   *
   * Note this is agnostic as to how updates are received
   */
-class ConfigurableUpdateTimeSeries[T <: Dated] (val config: Config, val updateContext: TimeSeriesUpdateContext[T]) extends Cloneable {
+class ConfigurableUpdateTimeSeries[K,T <: Dated] (val config: Config, val updateContext: TimeSeriesUpdateContext[T]) extends Cloneable {
   class UpdateEntry (var tLast: Long, var lastObj: T) {
     var count: Int = 0
     var dtSum: Int = 0
@@ -103,11 +103,11 @@ class ConfigurableUpdateTimeSeries[T <: Dated] (val config: Config, val updateCo
   val stats = new UpdateStats(bucketCounter)
   import stats._
 
-  val activeEntries = MHashMap.empty[String,UpdateEntry]
+  val activeEntries = MHashMap.empty[K,UpdateEntry]
 
   def snapshot = stats.snapshot
 
-  def updateActive (key: String, obj: T) = {
+  def updateActive (key: K, obj: T) = {
     nUpdates += 1
     val t = obj.date.getMillis
     activeEntries.get(key) match {
@@ -156,12 +156,13 @@ class ConfigurableUpdateTimeSeries[T <: Dated] (val config: Config, val updateCo
     }
   }
 
-  def removeActive (key: String) = {
-    // we can't check for non-active removes since we might get them as first messages on live streams
+  def removeActive (key: K) = {
     activeEntries -= key
-    completed += 1
-    updateMinActiveStats
-    nActive = activeEntries.size
+    if (activeEntries.size < nActive){
+      completed += 1
+      updateMinActiveStats
+      nActive -= 1
+    }
   }
 
   def updateMinActiveStats = {
