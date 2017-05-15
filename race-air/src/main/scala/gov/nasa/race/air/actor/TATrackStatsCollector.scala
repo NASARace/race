@@ -21,9 +21,9 @@ package gov.nasa.race.air.actor
 import java.io.PrintWriter
 
 import com.typesafe.config.Config
-import gov.nasa.race.actor.StatsCollector
+import gov.nasa.race.actor.StatsCollectorActor
 import gov.nasa.race.air.TATrack
-import gov.nasa.race.common.{ConfigurableUpdateTimeSeries, ConsoleStats, Stats, TimeSeriesUpdateContext, UpdateStats}
+import gov.nasa.race.common.{ConsoleStats, Stats, TimeSeriesStats}
 import gov.nasa.race.core.ClockAdjuster
 import gov.nasa.race.core.Messages.{BusEvent, RaceTick}
 
@@ -31,18 +31,18 @@ import scala.collection.mutable.{HashMap => MHashMap}
 
 /**
   * actor that collects statistics for TATrack objects
-  */
-class TATrackStatsCollector (val config: Config) extends StatsCollector
+  *
+class TATrackStatsCollector (val config: Config) extends StatsCollectorActor
                                   with ClockAdjuster with TimeSeriesUpdateContext[TATrack] {
 
-  val tracons = MHashMap.empty[String,ConfigurableUpdateTimeSeries[Int,TATrack]]
+  val tracons = MHashMap.empty[String,ConfigurableTimeSeriesStats[Int,TATrack]]
 
   override def handleMessage = {
     case BusEvent(_, track: TATrack, _) =>
       try {
         if (track.date != null) {
           checkClockReset(track.date)
-          val tracon = tracons.getOrElseUpdate(track.src, new ConfigurableUpdateTimeSeries[Int, TATrack](config, this))
+          val tracon = tracons.getOrElseUpdate(track.src, new ConfigurableTimeSeriesStats[Int, TATrack](config, this))
           if (track.isDrop) tracon.removeActive(track.trackNum) else tracon.updateActive(track.trackNum, track)
         }
       } catch {
@@ -72,7 +72,7 @@ class TATrackStatsCollector (val config: Config) extends StatsCollector
   }
 }
 
-class TraconStats (val src: String, val updateStats: UpdateStats)
+class TraconStats (val src: String, val updateStats: TimeSeriesStats)
 
 class TATrackStats(val topic: String, val takeMillis: Long, val elapsedMillis: Long, val channels: String,
                    val traconStats: Seq[TraconStats]) extends Stats with ConsoleStats {
@@ -92,3 +92,5 @@ class TATrackStats(val topic: String, val takeMillis: Long, val elapsedMillis: L
     }
   }
 }
+
+  */

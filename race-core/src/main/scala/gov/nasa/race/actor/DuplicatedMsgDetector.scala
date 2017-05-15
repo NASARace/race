@@ -85,8 +85,8 @@ class DuplicatedMsgDetector (val config: Config) extends SubscribingRaceActor
     }
   }
 
-  def snapshot = new SubscriberDupStats(title, updatedSimTimeMillis, elapsedSimTimeMillisSinceStart,
-                                        channels, mapIteratorToArray(dupStats.valuesIterator,dupStats.size)(_.snapshot))
+  def snapshot = new SubscriberDupStats(title, channels, updatedSimTimeMillis, elapsedSimTimeMillisSinceStart,
+                                        mapIteratorToArray(dupStats.valuesIterator,dupStats.size)(_.snapshot))
 
   def purgeOldChecksums = {
     val tNow = updatedSimTimeMillis
@@ -116,11 +116,12 @@ case class DupStatsSnapshot (
 )
 
 
-class SubscriberDupStats (val topic: String, val takeMillis: Long, val elapsedMillis: Long, val channels: String,
-                          val messages: Array[DupStatsSnapshot]) extends Stats with ConsoleStats {
+class SubscriberDupStats (val topic: String,  val source: String, val takeMillis: Long, val elapsedMillis: Long,
+                          val messages: Array[DupStatsSnapshot]) extends ConsoleStats {
+
   def writeToConsole (pw:PrintWriter) = {
     pw.println(consoleHeader)
-    pw.println(s"observed channels: $channels")
+    pw.println(s"source: $source")
 
     if (messages.nonEmpty) {
       pw.println("  count     avg sec   classifier")

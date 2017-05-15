@@ -52,6 +52,17 @@ object DateTimeUtils {
     val h = (millis / 3600000).toInt
     hmsToHMMSS(h,m,s)
   }
+
+  def durationMillisToCompactTime (millis: Double): String = {
+    if (millis.isInfinity || millis.isNaN) {
+      ""
+    } else {
+      if (millis < 120000) f"${millis / 1000}%4.0fs"
+      else if (millis < 360000) f"${millis / 60000}%4.1fm"
+      else f"${millis / 360000}%4.1fh"
+    }
+  }
+
   def durationToHMMSS (d: FiniteDuration) = {
     hmsToHMMSS(d.toHours.toInt, (d.toMinutes % 60).toInt, (d.toSeconds % 60).toInt)
   }

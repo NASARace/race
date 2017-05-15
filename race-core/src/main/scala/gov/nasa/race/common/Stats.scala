@@ -27,10 +27,11 @@ import gov.nasa.race.util.StringUtils
   * the generic container for statistics. This can be sent as a message, as long as
   * the snapshot element type is serializable
   */
-trait Stats {
-  val topic: String
-  val takeMillis: Long       // absolute time value when stats snapshot was taken
-  val elapsedMillis: Long    // duration covered by the snapshot
+trait Stats extends Cloneable {
+  val topic: String         // what we measure
+  val source: String        // where we measure it from
+  val takeMillis: Long      // absolute time value when stats snapshot was taken
+  val elapsedMillis: Long   // duration covered by the snapshot
 }
 
 trait ConsoleStats extends Stats {

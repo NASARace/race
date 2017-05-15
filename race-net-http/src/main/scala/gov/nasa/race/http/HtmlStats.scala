@@ -26,11 +26,11 @@ import scalatags.Text.all.{cls, h2, span, style, _}
 object HtmlStats {
   val noResources = Map.empty[String,ToResponseMarshallable]
 
-  def htmlTopicHeader(topic: String, channels: String, elapsedMillis: Long) = h2(
+  def htmlTopicHeader(topic: String, source: String, elapsedMillis: Long) = h2(
     topic,
     span(style:="float:right;")(
-      span(cls:="label")("channels:"),
-      span(cls:="value")(channels),
+      span(cls:="label")("source:"),
+      span(cls:="value")(source),
       span(cls:="label")("elapsed:"),
       span(cls:="value")(durationMillisToHMMSS(elapsedMillis))
     )

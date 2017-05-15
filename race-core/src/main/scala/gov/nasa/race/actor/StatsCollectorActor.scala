@@ -20,14 +20,17 @@ package gov.nasa.race.actor
 
 import akka.actor.ActorRef
 import com.typesafe.config.Config
-import gov.nasa.race.core.{ContinuousTimeRaceActor, PeriodicRaceActor, PublishingRaceActor, SubscribingRaceActor}
+import gov.nasa.race.Dated
+import gov.nasa.race.common.{ConfiguredTSStatsCollector, TSEntryData, TSStatsData}
 import gov.nasa.race.config.ConfigUtils._
+import gov.nasa.race.core.{ContinuousTimeRaceActor, PeriodicRaceActor, PublishingRaceActor, SubscribingRaceActor}
+
 import scala.concurrent.duration._
 
 /**
   * a trait for actors that collect and report statistics
   */
-trait StatsCollector extends SubscribingRaceActor with PublishingRaceActor with ContinuousTimeRaceActor with PeriodicRaceActor {
+trait StatsCollectorActor extends SubscribingRaceActor with PublishingRaceActor with ContinuousTimeRaceActor with PeriodicRaceActor {
   val config: Config
 
   val title = config.getStringOrElse("title", name)
@@ -43,3 +46,16 @@ trait StatsCollector extends SubscribingRaceActor with PublishingRaceActor with 
   }
 }
 
+
+/**
+  * a StatsCollectorActor for time series data
+  */
+trait TSStatsCollectorActor[K,O <: Dated,E <: TSEntryData[O],S <: TSStatsData[O,E]]
+            extends ConfiguredTSStatsCollector[K,O,E,S] with StatsCollectorActor {
+  val statsData = createTSStatsData
+
+  // those have to be provided by the concrete actor
+  def createTSStatsData: S
+
+  def statsSnapshot = snapshot(title,channels,updatedSimTimeMillis,elapsedSimTimeMillisSinceStart)
+}

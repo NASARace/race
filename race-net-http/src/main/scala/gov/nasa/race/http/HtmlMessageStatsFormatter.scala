@@ -43,7 +43,7 @@ class HtmlMessageStatsFormatter (config: Config) extends HtmlStatsFormatter {
 
   def msgStatsToHtml(ms: SubscriberMsgStats) = {
     div(
-      HtmlStats.htmlTopicHeader(ms.topic,ms.channels,ms.elapsedMillis),
+      HtmlStats.htmlTopicHeader(ms.topic,ms.source,ms.elapsedMillis),
       table(
         tr(
           th("count"), th("msg/sec"), th("peak"), th("size"), th("avgSize"), th(cls:="left")("msg")

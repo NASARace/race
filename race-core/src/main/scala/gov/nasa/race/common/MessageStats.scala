@@ -85,12 +85,13 @@ case class PatternStatsSnapshot(
   count: Int
 )
 
-class SubscriberMsgStats (val topic: String, val takeMillis: Long, val elapsedMillis: Long, val channels: String,
-                          val messages: Array[MsgStatsSnapshot]) extends Stats with ConsoleStats {
+class SubscriberMsgStats (val topic: String, val source: String, val takeMillis: Long, val elapsedMillis: Long,
+                          val messages: Array[MsgStatsSnapshot]) extends ConsoleStats {
+
   def writeToConsole(pw: PrintWriter) = {
     pw.println(consoleHeader)
 
-    pw.println(s"observed channels: $channels")
+    pw.println(s"source: $source")
     if (messages.nonEmpty) {
       var count = 0
       var avgRate = 0.0

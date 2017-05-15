@@ -64,7 +64,7 @@ lazy val raceNetDDS = createProject("race-net-dds", commonSettings).
 
 lazy val raceNetHttp = createProject("race-net-http", commonSettings).
   dependsOn(raceCore).
-  addLibraryDependencies(akkaHttp,scalaTags,scalaTags,argon2)
+  addLibraryDependencies(akkaHttp,scalaTags,scalaTags,argon2,jfreeChart)
 
 lazy val raceSwing = createProject("race-swing", commonSettings).
   dependsOn(raceCore).
@@ -72,7 +72,7 @@ lazy val raceSwing = createProject("race-swing", commonSettings).
 
 lazy val raceAir = createProject("race-air", commonSettings).
   dependsOn(raceCore,raceNetJMS,raceNetHttp).
-  addLibraryDependencies(akkaActor,typesafeConfig,nscalaTime,scalaParser,scodecAll,scalaTags,jfreeChart)
+  addLibraryDependencies(akkaActor,typesafeConfig,nscalaTime,scalaParser,scodecAll)
 
 lazy val raceWW = createProject("race-ww", commonSettings).
   dependsOn(raceCore,raceSwing).

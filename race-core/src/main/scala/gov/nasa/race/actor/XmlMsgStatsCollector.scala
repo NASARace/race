@@ -134,7 +134,7 @@ class XmlMsgStatsCollector (val config: Config) extends SubscribingRaceActor wit
     }
   }
 
-  def snapshot = new SubscriberMsgStats(title, updatedSimTimeMillis, elapsedSimTimeMillisSinceStart,
-                                        channels, mapIteratorToArray(msgStats.valuesIterator,msgStats.size)(_.snapshot))
+  def snapshot = new SubscriberMsgStats(title, channels, updatedSimTimeMillis, elapsedSimTimeMillisSinceStart,
+                                        mapIteratorToArray(msgStats.valuesIterator,msgStats.size)(_.snapshot))
 }
 

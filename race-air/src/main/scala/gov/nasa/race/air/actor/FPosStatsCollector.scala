@@ -16,158 +16,41 @@
  */
 package gov.nasa.race.air.actor
 
-import java.awt.{Color, Font}
-import java.io.{ByteArrayOutputStream, PrintWriter}
-
-import akka.http.scaladsl.model.{HttpEntity, MediaTypes}
 import com.typesafe.config.Config
-import gov.nasa.race.actor.StatsCollector
+import gov.nasa.race.actor.TSStatsCollectorActor
 import gov.nasa.race.air.{FlightCompleted, FlightPos}
-import gov.nasa.race.common.{ConfigurableUpdateTimeSeries, ConsoleStats, Stats, TimeSeriesUpdateContext, UpdateStats}
+import gov.nasa.race.common.{TSEntryData, TSStatsData}
 import gov.nasa.race.core.ClockAdjuster
 import gov.nasa.race.core.Messages.{BusEvent, RaceTick}
-import gov.nasa.race.http.{HtmlArtifacts, HtmlStats}
-import org.jfree.chart.plot.{PlotOrientation, XYPlot}
-import org.jfree.chart.{ChartFactory, ChartUtilities}
-import org.jfree.data.xy.{XYBarDataset, XYSeries, XYSeriesCollection}
-
-import scalatags.Text.all._
-
 
 /**
-  * actor that collects update statistics for FPos objects
+  * actor that collects update statistics for FlightPos objects
   */
-class FPosStatsCollector (val config: Config) extends StatsCollector
-                            with ClockAdjuster with TimeSeriesUpdateContext[FlightPos] {
+class FPosStatsCollector (val config: Config)
+   extends TSStatsCollectorActor[String,FlightPos,TSEntryData[FlightPos],FlightPosStatsData] with ClockAdjuster {
 
-  val fposUpdates = new ConfigurableUpdateTimeSeries[String,FlightPos](config,this)
+  override def createTSStatsData = new FlightPosStatsData
+  override def createTSEntryData (t: Long, fpos: FlightPos) = new TSEntryData(t,fpos)
 
   override def handleMessage = {
     case BusEvent(_, fpos: FlightPos, _) =>
       checkClockReset(fpos.date)
-      fposUpdates.updateActive(fpos.cs,fpos)
+      updateActive(fpos.cs,fpos)
 
     case BusEvent(_, fcomplete: FlightCompleted, _) =>
       checkClockReset(fcomplete.date)
-      fposUpdates.removeActive(fcomplete.cs)
+      removeActive(fcomplete.cs)
 
     // we do our own flight dropped handling since we also check upon first report
 
     case RaceTick =>
-      fposUpdates.checkDropped
-      publish(snapshot)
+      checkDropped
+      publish(statsSnapshot)
   }
-
-  def snapshot: Stats = {
-    new FPosStats(title, updatedSimTimeMillis, elapsedSimTimeMillisSinceStart, channels, fposUpdates.snapshot)
-  }
-
-  //--- TimeSeriesUpdateContext (timestamps are checked by the caller)
-  override def isDuplicate(fpos: FlightPos, last: FlightPos) = {
-    fpos.position =:= last.position && fpos.altitude =:= last.altitude
-  }
-
 }
 
-class FPosStats(val topic: String, val takeMillis: Long, val elapsedMillis: Long, val channels: String,
-                val updateStats: UpdateStats) extends Stats with ConsoleStats with HtmlStats {
-  import updateStats._
-
-  def time (millis: Double): String = {
-    if (millis.isInfinity || millis.isNaN) {
-      "     "
-    } else {
-      if (millis < 120000) f"${millis / 1000}%4.0fs"
-      else if (millis < 360000) f"${millis / 60000}%4.1fm"
-      else f"${millis / 360000}%4.1fh"
-    }
-  }
-
-  def writeToConsole(pw:PrintWriter) = {
-    pw.println(consoleHeader)
-    pw.println(s"observed channels: $channels")
-
-    pw.println("active    min    max   cmplt stale  drop order   dup ambig        n dtMin dtMax dtAvg")
-    pw.println("------ ------ ------   ----- ----- ----- ----- ----- -----  ------- ----- ----- -----")
-    pw.print(f"$nActive%6d $minActive%6d $maxActive%6d   $completed%5d $stale%5d $dropped%5d $outOfOrder%5d $duplicate%5d $ambiguous%5d ")
-
-    buckets match {
-      case Some(bc) if bc.nSamples > 0 =>
-        pw.println(f"  ${bc.nSamples}%6d ${time(bc.min)} ${time(bc.max)} ${time(bc.mean)}")
-        bc.processBuckets((i, c) => {
-          if (i % 6 == 0) pw.println // 6 buckets per line
-          pw.print(f"${Math.round(i * bc.bucketSize / 1000)}%3ds: $c%6d | ")
-        })
-      case _ => // no buckets to report
-    }
-    pw.println
-  }
-
-  def toHtml = {
-    val res = diagramArtifacts
-
-    val html =
-      div(
-        HtmlStats.htmlTopicHeader(topic,channels,elapsedMillis),
-        table(cls:="noBorder")(
-          tr(
-            th("active"),th("min"),th("max"),th("cmplt"),th(""),
-            th("n"),th("Δt min"),th("Δt max"),th("Δt avg"),th(""),
-            th("stale"),th("drop"),th("order"),th("dup"),th("amb")
-          ),
-          tr(
-            td(nActive),td(minActive),td(maxActive),td(completed),td(""),
-            buckets match {
-              case Some(bc) if bc.nSamples > 0 => Seq( td(bc.nSamples),td(time(bc.min)),td(time(bc.max)),td(time(bc.mean)))
-              case _ => Seq( td("-"),td("-"),td("-"),td("-"))
-            },
-            td(""), td(stale),td(dropped),td(outOfOrder),td(duplicate),td(ambiguous)
-          )
-        ),
-        res.html
-      )
-
-    HtmlArtifacts(html,res.resources)
-  }
-
-  def diagramArtifacts = {
-    buckets match {
-      case Some(bc) if bc.nSamples > 0 =>
-          def dataset = {
-            val ds = new XYSeries("updates")
-            bc.processBuckets { (i, count) => ds.add(Math.round(i * bc.bucketSize / 1000), count) }
-            val sc = new XYSeriesCollection
-            sc.addSeries(ds)
-            new XYBarDataset(sc, 10.0)
-          }
-
-          val chart = ChartFactory.createXYBarChart(null, "sec", false, "updates", dataset,
-            PlotOrientation.HORIZONTAL, false, false, false)
-          val plot = chart.getPlot.asInstanceOf[XYPlot]
-          plot.setBackgroundAlpha(0)
-          plot.setDomainGridlinePaint(Color.lightGray)
-          plot.setRangeGridlinePaint(Color.lightGray)
-
-          val labelFont = new Font("Serif", Font.PLAIN, 30)
-          val domainAxis = plot.getDomainAxis
-          domainAxis.setInverted(true)
-          domainAxis.setLabelFont(labelFont)
-          val rangeAxis = plot.getRangeAxis
-          rangeAxis.setLabelFont(labelFont)
-
-          val w = 800
-          val h = 300
-          val out = new ByteArrayOutputStream
-          ChartUtilities.writeChartAsPNG(out, chart, w, h, true, 6)
-          val ba = out.toByteArray
-
-          val path = "fpos-update-histogram.png"
-          val html = p(img(src:=path, width:=s"${w/2}", height:=s"${h/2}"))// down sample to increase sharpness
-          val imgContent = HttpEntity(MediaTypes.`image/png`, ba)
-
-          HtmlArtifacts(html, Map(path -> imgContent))
-
-      case _ => HtmlArtifacts(p(""), HtmlStats.noResources)
-    }
+class FlightPosStatsData extends TSStatsData[FlightPos,TSEntryData[FlightPos]] {
+  override def isDuplicate(fpos: FlightPos, last: FlightPos) = {
+    fpos.position =:= last.position && fpos.altitude =:= last.altitude
   }
 }
