@@ -19,7 +19,7 @@ package gov.nasa.race.actor
 import akka.actor.ActorRef
 import com.typesafe.config.Config
 import gov.nasa.race._
-import gov.nasa.race.common.{MsgClassifier, MsgStats, PatternStats, SubscriberMsgStats}
+import gov.nasa.race.common.{MsgClassifier, MsgStatsData, PatternStatsData, SubscriberMsgStats}
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.Messages.{BusEvent, RaceTick}
 import gov.nasa.race.core.{ContinuousTimeRaceActor, PeriodicRaceActor, PublishingRaceActor, SubscribingRaceActor}
@@ -64,18 +64,18 @@ class XmlMsgStatsCollector (val config: Config) extends SubscribingRaceActor wit
   // and hence an infinite peak rate
   implicit val rateBaseMillis = config.getIntOrElse("rate-base", defaultRateBaseMillis)
 
-  val msgStats = MSortedMap.empty[String,MsgStats]
+  val msgStats = MSortedMap.empty[String,MsgStatsData]
   var channels = "" // set during start
 
   class Parser extends XmlPullParser {
     val pathQueries = pathSpecs map(ps => compileGlobPathQuery(ps.split("/")))
     setBuffer(new Array[Char](config.getIntOrElse("buffer-size", 4096))) // pre-alloc buffer
 
-    def parse(input: String): MsgStats = {
+    def parse(input: String): MsgStatsData = {
       initializeBuffered(input)
 
       var isFirstElement = true
-      var msgStat: MsgStats = null
+      var msgStat: MsgStatsData = null
       var done = false
 
       while (!done && parseNextElement) {
@@ -85,7 +85,7 @@ class XmlMsgStatsCollector (val config: Config) extends SubscribingRaceActor wit
               done = true
             } else {
               isFirstElement = false
-              msgStat = msgStats.getOrElseUpdate(tag, new MsgStats(tag))
+              msgStat = msgStats.getOrElseUpdate(tag, new MsgStatsData(tag))
               msgStat.update(updatedSimTimeMillis, elapsedSimTimeMillisSinceStart, input.length)
               if (pathQueries.isEmpty) done = true // no need to parse elements
             }
@@ -95,7 +95,7 @@ class XmlMsgStatsCollector (val config: Config) extends SubscribingRaceActor wit
             pathQueries foreach { pqId =>
               if (isMatchingPath(pqId)) {
                 val pattern = pathSpecs(idx)
-                val patternStat = msgStat.pathMatches.getOrElseUpdate(pattern,new PatternStats(pattern))
+                val patternStat = msgStat.pathMatches.getOrElseUpdate(pattern,new PatternStatsData(pattern))
                 patternStat.count += 1
               }
               idx += 1
@@ -128,9 +128,9 @@ class XmlMsgStatsCollector (val config: Config) extends SubscribingRaceActor wit
     case RaceTick if hasPublishingChannels => publish(snapshot)
   }
 
-  def checkMatches (msgStat: MsgStats, msg: String) = {
+  def checkMatches (msgStat: MsgStatsData, msg: String) = {
     MsgClassifier.classify(msg,patterns) foreach { mc =>
-      msgStat.regexMatches.getOrElseUpdate(mc.name,new PatternStats(mc.name)).count += 1
+      msgStat.regexMatches.getOrElseUpdate(mc.name,new PatternStatsData(mc.name)).count += 1
     }
   }
 

@@ -32,7 +32,8 @@ import scala.concurrent.duration._
   * such as flights, radar tracks etc.
   *
   * This is the data that needs to be cloned for a snapshot, it should not contain any fields which are just
-  * used to collect the data.
+  * used to collect the data. For that reason, it is not a good idea to mix this into the TSStatsCollector, which
+  * usually is an actor.
   *
   * TimeSeriesStats are created by TimeSeriesStatsCollectors, which are in turn  parameterized with the concrete
   * TimeSeriesStats type, which is also where we get the TSEntry type and objects from.
@@ -40,7 +41,7 @@ import scala.concurrent.duration._
   * The basic implementation only keeps track of general active/min/max/total update interval counts, and of some
   * generic error conditions such as out-of-order updates (update message with older timestamp arriving later)
   */
-trait TSStatsData[O <: Dated,E <: TSEntryData[O]] {
+trait TSStatsData[O <: Dated,E <: TSEntryData[O]] extends Cloneable {
 
   //--- global stats over all entries
   var nUpdates = 0 // number of update calls
@@ -63,6 +64,8 @@ trait TSStatsData[O <: Dated,E <: TSEntryData[O]] {
 
   //--- override for specialized actions (make sure not to introduce fields that should not be part of the snapshot)
 
+  // ideally we would like to return our concrete type, but that would require another rather non-intuitive
+  // (recursive) type parameter plus a self type, and clones are probably just obtained through TSStatsCollector APIs
   override def clone: TSStatsData[O,E] = {
     // we need to deep-copy in case we have a bucket counter
     val clon = super.clone.asInstanceOf[TSStatsData[O,E]]
@@ -93,8 +96,10 @@ trait TSStatsData[O <: Dated,E <: TSEntryData[O]] {
     val dt = (obj.date.getMillis - e.tLast).toInt
     if (dt > 0){
       if (dt > dtMax) dtMax = dt
-      if (isSettled && (dt < dtMin || dtMin == 0)) dtMin = dt
-      buckets.foreach(_.add(dt))
+      if (isSettled) {
+        if (dt < dtMin || dtMin == 0) dtMin = dt
+        buckets.foreach(_.add(dt))
+      }
 
     } else if (dt == 0) {  // duplicate or ambiguous
       if (isDuplicate(obj,e.lastObj)) duplicate += 1
@@ -106,14 +111,14 @@ trait TSStatsData[O <: Dated,E <: TSEntryData[O]] {
   }
 
   // explicitly terminated (obj state might still have new info)
-  def remove (e: TSEntryData[O], isSettled: Boolean): Unit = {
+  def remove (e: E, isSettled: Boolean): Unit = {
     completed += 1
     nActive -= 1
     updateMinActive(isSettled)
   }
 
   // removed during check for entries that did not receive updates in time
-  def drop (e: TSEntryData[O], isSettled: Boolean): Unit = {
+  def drop (e: E, isSettled: Boolean): Unit = {
     dropped += 1
     nActive -= 1
     updateMinActive(isSettled)
@@ -168,7 +173,7 @@ trait BasicTimeSeriesStats[O <: Dated] extends TimeSeriesStats[O,TSEntryData[O]]
   * Note these are not per-se part of the Stats snapshots, we only store data on-the-fly here which is used to compute
   * persistent statistics. It is therefore less likely but still possible to provide a customized entry stats type
   */
-class TSEntryData[O <: Dated](var tLast: Long, var lastObj: O) {
+class TSEntryData[O <: Dated](var tLast: Long, var lastObj: O) extends Cloneable {
   def update (obj: O, isSettled: Boolean) = {
     val t = obj.date.getMillis
     val dt = (t - tLast).toInt
@@ -218,8 +223,8 @@ class BasicTimeSeriesEntryStats[O <: Dated] (t: Long, o: O) extends TSEntryData[
   * usually mixed in through the convenience trait ConfiguredTSStatsCollector
   *
   * concrete types have to be parameterized with the respective dated update object type, a key type that
-  * identifies object instances, the entry type we use to store the last update, and the stats type we will
-  * provide upon snapshot request.
+  * identifies object instances, the entry type we use to store the last update, and the stats data type
+  * which is then used to create the Stats object from
   */
 trait TSStatsCollector[K,O <: Dated,E <: TSEntryData[O],S <: TSStatsData[O,E]] {
 
@@ -229,12 +234,16 @@ trait TSStatsCollector[K,O <: Dated,E <: TSEntryData[O],S <: TSStatsData[O,E]] {
   val statsData: S
   val activeEntries = MHashMap.empty[K,E]  // to keep track of last entry updates
 
+  //-- to be provided by concrete type
   def elapsedSimTimeMillisSinceStart: Long
   def currentSimTimeMillis: Long
   def createTSEntryData(t: Long, o: O): E
 
-  def snapshot (topic: String, source: String, takeMillis: Long, elapsedMillis: Long): Stats =
-    new TimeSeriesStats[O,E](topic,source,takeMillis,elapsedMillis,statsData.clone)
+  def snapshot (topic: String, source: String): TimeSeriesStats[O,E] = {
+    new TimeSeriesStats[O, E](topic, source, currentSimTimeMillis, elapsedSimTimeMillisSinceStart, statsData.clone)
+  }
+
+  def dataSnapshot: S = statsData.clone.asInstanceOf[S]  // bad, but we don't want to add another type param to TSStatsData
 
   def updateActive (key: K, obj: O) = {
     statsData.nUpdates += 1

@@ -51,11 +51,11 @@ trait StatsCollectorActor extends SubscribingRaceActor with PublishingRaceActor 
   * a StatsCollectorActor for time series data
   */
 trait TSStatsCollectorActor[K,O <: Dated,E <: TSEntryData[O],S <: TSStatsData[O,E]]
-            extends ConfiguredTSStatsCollector[K,O,E,S] with StatsCollectorActor {
+            extends StatsCollectorActor with ConfiguredTSStatsCollector[K,O,E,S]  {
   val statsData = createTSStatsData
 
   // those have to be provided by the concrete actor
   def createTSStatsData: S
 
-  def statsSnapshot = snapshot(title,channels,updatedSimTimeMillis,elapsedSimTimeMillisSinceStart)
+  def statsSnapshot = snapshot(title,channels)
 }

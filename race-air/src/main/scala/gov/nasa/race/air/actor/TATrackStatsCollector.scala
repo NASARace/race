@@ -23,7 +23,7 @@ import java.io.PrintWriter
 import com.typesafe.config.Config
 import gov.nasa.race.actor.StatsCollectorActor
 import gov.nasa.race.air.TATrack
-import gov.nasa.race.common.{ConsoleStats, Stats, TimeSeriesStats}
+import gov.nasa.race.common.{ConfiguredTSStatsCollector, ConsoleStats, Stats, TSEntryData, TSStatsData}
 import gov.nasa.race.core.ClockAdjuster
 import gov.nasa.race.core.Messages.{BusEvent, RaceTick}
 
@@ -31,18 +31,26 @@ import scala.collection.mutable.{HashMap => MHashMap}
 
 /**
   * actor that collects statistics for TATrack objects
-  *
-class TATrackStatsCollector (val config: Config) extends StatsCollectorActor
-                                  with ClockAdjuster with TimeSeriesUpdateContext[TATrack] {
+  * We keep stats per tracon, hence this is not directly a TSStatsCollectorActor
+  */
+class TATrackStatsCollector (val config: Config) extends StatsCollectorActor with ClockAdjuster {
 
-  val tracons = MHashMap.empty[String,ConfigurableTimeSeriesStats[Int,TATrack]]
+  class TACollector (val config: Config, val src: String) extends ConfiguredTSStatsCollector[Int,TATrack,TATrackEntryData,TATrackStatsData] {
+    val statsData = new TATrackStatsData(src)
+
+    def createTSEntryData (t: Long, track: TATrack) = new TATrackEntryData(t,track)
+    def elapsedSimTimeMillisSinceStart = TATrackStatsCollector.this.elapsedSimTimeMillisSinceStart
+    def currentSimTimeMillis = TATrackStatsCollector.this.updatedSimTimeMillis
+  }
+
+  val tracons = MHashMap.empty[String, TACollector]
 
   override def handleMessage = {
     case BusEvent(_, track: TATrack, _) =>
       try {
         if (track.date != null) {
           checkClockReset(track.date)
-          val tracon = tracons.getOrElseUpdate(track.src, new ConfigurableTimeSeriesStats[Int, TATrack](config, this))
+          val tracon = tracons.getOrElseUpdate(track.src, new TACollector(config, track.src))
           if (track.isDrop) tracon.removeActive(track.trackNum) else tracon.updateActive(track.trackNum, track)
         }
       } catch {
@@ -55,12 +63,18 @@ class TATrackStatsCollector (val config: Config) extends StatsCollectorActor
   }
 
   def snapshot: Stats = {
-    val traconStats = tracons.toSeq.sortBy(_._1).map( e=> new TraconStats(e._1,e._2.snapshot))
-    new TATrackStats(title, updatedSimTimeMillis, elapsedSimTimeMillisSinceStart, channels, traconStats)
+    val traconStats = tracons.toSeq.sortBy(_._1).map( e => e._2.dataSnapshot)
+    new TATrackStats(title, channels, updatedSimTimeMillis, elapsedSimTimeMillisSinceStart, traconStats)
   }
+}
 
-  // TimeSeriesUpdateContext interface (note that if this returns false, the objects are considered to be ambiguous
-  override def isDuplicate(t1: TATrack, t2: TATrack): Boolean = {
+class TATrackEntryData (tLast: Long, track: TATrack) extends TSEntryData[TATrack](tLast,track) {
+  // add revision and consistency status
+}
+
+class TATrackStatsData  (val src: String) extends TSStatsData[TATrack,TATrackEntryData] {
+
+  override def isDuplicate (t1: TATrack, t2: TATrack) = {
     t1.src == t2.src &&
       t1.trackNum == t2.trackNum &&
       t1.xyPos == t2.xyPos &&
@@ -72,25 +86,20 @@ class TATrackStatsCollector (val config: Config) extends StatsCollectorActor
   }
 }
 
-class TraconStats (val src: String, val updateStats: TimeSeriesStats)
-
-class TATrackStats(val topic: String, val takeMillis: Long, val elapsedMillis: Long, val channels: String,
-                   val traconStats: Seq[TraconStats]) extends Stats with ConsoleStats {
+class TATrackStats(val topic: String, val source: String, val takeMillis: Long, val elapsedMillis: Long,
+                   val traconStats: Seq[TATrackStatsData]) extends Stats with ConsoleStats {
 
   override def writeToConsole(pw: PrintWriter): Unit = {
     pw.println(consoleHeader)
-    pw.println(s"observed channels: $channels")
+    pw.println(s"source: $source")
 
     pw.println("src    active    min    max   cmplt stale  drop order   dup ambig        n dtMin dtMax dtAvg")
     pw.println("------ ------ ------ ------   ----- ----- ----- ----- ----- -----  ------- ----- ----- -----")
 
     traconStats.foreach { ts =>
+      import ts._
       pw.print(f"${ts.src}%6.6s ")
-      val ups = ts.updateStats
-      import ups._
       pw.println(f"$nActive%6d $minActive%6d $maxActive%6d   $completed%5d $stale%5d $dropped%5d $outOfOrder%5d $duplicate%5d $ambiguous%5d ")
     }
   }
 }
-
-  */

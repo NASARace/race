@@ -26,7 +26,7 @@ import scala.collection.mutable.{SortedMap => MSortedMap}
   * this is the object that is used during collection, it is NOT threadsafe so don't pass
   * it around to other actors or threads
   */
-class MsgStats (val msgName: String) {
+class MsgStatsData(val msgName: String) {
   var tLast: Long = 0     // timestamp of last rate base
   var lastCount: Int = 0  // msg count of last rate base
 
@@ -35,8 +35,8 @@ class MsgStats (val msgName: String) {
   var avgMsgPerSec: Double = 0.0
   var peakMsgPerSec: Double = 0.0
 
-  val pathMatches = MSortedMap.empty[String,PatternStats]
-  val regexMatches = MSortedMap.empty[String,PatternStats]
+  val pathMatches = MSortedMap.empty[String,PatternStatsData]
+  val regexMatches = MSortedMap.empty[String,PatternStatsData]
 
   def update (tNow: Long, tElapsed: Long, lenBytes: Int)(implicit rateBaseMillis: Int) = {
     count += 1
@@ -61,7 +61,7 @@ class MsgStats (val msgName: String) {
   * XML element statistics.
   * Those are recorded per message type
   */
-class PatternStats(val pattern: String) {
+class PatternStatsData(val pattern: String) {
   var count: Int = 0
   def snapshot = new PatternStatsSnapshot(pattern,count)
 }

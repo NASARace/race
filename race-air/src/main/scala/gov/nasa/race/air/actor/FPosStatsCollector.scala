@@ -29,7 +29,11 @@ import gov.nasa.race.core.Messages.{BusEvent, RaceTick}
 class FPosStatsCollector (val config: Config)
    extends TSStatsCollectorActor[String,FlightPos,TSEntryData[FlightPos],FlightPosStatsData] with ClockAdjuster {
 
-  override def createTSStatsData = new FlightPosStatsData
+  override def createTSStatsData = {
+    new FlightPosStatsData {
+      buckets = createBuckets
+    }
+  }
   override def createTSEntryData (t: Long, fpos: FlightPos) = new TSEntryData(t,fpos)
 
   override def handleMessage = {
