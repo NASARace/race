@@ -52,7 +52,7 @@ object PluginSettings {
   import com.orrsella.sbtstats.StatsPlugin._
   val sbtStatsSettings = Seq(
     StatsPlugin.statsAnalyzers := Seq(new FilesAnalyzer,new LinesAnalyzer),
-    aggregate in statsProject := false  // it can't handle RootProjects and we want a per project breakdown anyways
+    aggregate in statsProject := true
   )
 
   //----------------------------------------------------------------------------------
