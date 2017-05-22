@@ -17,7 +17,7 @@
 
 package gov.nasa.race.util
 
-import java.io.{File, FileInputStream, IOException, InputStream}
+import java.io._
 import java.nio.ByteBuffer
 import java.nio.charset.{CharsetDecoder, StandardCharsets}
 import java.nio.file._
@@ -192,5 +192,13 @@ object FileUtils {
       p = p.substring(0,Math.max(p.lastIndexOf('/'),0))
     }
     if (path.startsWith("/")) f("/")
+  }
+}
+
+class BufferedFileWriter (val file: File, val bufferSize: Int, val append: Boolean) extends CharArrayWriter(bufferSize) {
+  def writeFile = {
+    val fw = new FileWriter(file,append)
+    fw.write(buf,0,count)
+    fw.close
   }
 }

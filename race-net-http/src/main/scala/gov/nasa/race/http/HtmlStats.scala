@@ -47,7 +47,8 @@ case class HtmlArtifacts (html: HtmlElement, resources: HtmlResources)
   * We use a scalaTags specific TypedTag here because this ensures the generator
   * will produce HTML, and it avoids premature string allocation for fragments that
   * serve no other purpose than to be aggregated into complete HTML documents. The downside
-  * is that we add a race-common dependency
+  * is that we add a 3rd party library dependency to HtmlStats although it is not really
+  * using it (which is why HtmlStats reside in race-net-http instead of race-core)
   */
 trait HtmlStats extends Stats {
   def toHtml: HtmlArtifacts

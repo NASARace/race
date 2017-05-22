@@ -21,7 +21,7 @@ import java.io.PrintWriter
 import akka.actor.ActorRef
 import com.typesafe.config.Config
 import gov.nasa.race._
-import gov.nasa.race.common.{ConsoleStats, MD5Checksum, MsgClassifier, Stats}
+import gov.nasa.race.common.{ConsoleStats, FileStats, MD5Checksum, MsgClassifier, Stats}
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.Messages.{BusEvent, RaceTick}
 import gov.nasa.race.core.{ContinuousTimeRaceActor, FileWriterRaceActor, PeriodicRaceActor, PublishingRaceActor, SubscribingRaceActor}
@@ -33,37 +33,28 @@ import scala.concurrent.duration._
 /**
   * a RaceActor that detects and reports duplicated messages
   *
-  * Note this is a generic version that only compares String hashes, we don't parse XML here.
-  * This means semantically identical messages with different formatting would not be detected
+  * Note this is a generic version that only compares MD5 String hashes, we don't parse XML or
+  * even store the raw message text here. This means semantically identical messages with different
+  * formatting would not be detected.
+  *
+  * To avoid memory leaks, this implementation only considers messages within a configurable
+  * time window for each message hash
   */
-class DuplicatedMsgDetector (val config: Config) extends SubscribingRaceActor
-                     with PublishingRaceActor with ContinuousTimeRaceActor
-                     with PeriodicRaceActor with FileWriterRaceActor {
+class DuplicatedMsgDetector (val config: Config) extends StatsCollectorActor with FileWriterRaceActor {
   final val unclassified = "unclassified"
 
   val checkWindow = config.getFiniteDurationOrElse("check-window", 5.minutes).toMillis
-  // override the MonitoredRaceActor defaults
-  override def defaultTickInterval = 10.seconds
-  override def defaultTickDelay = 10.seconds
 
   val checksums = MSortedMap.empty[String,Long]
   val md5 = new MD5Checksum
 
   val classifiers = MsgClassifier.getClassifiers(config)
   val dupStats = MSortedMap.empty[String,DupStats]
-  val title = config.getStringOrElse("title", name)
-  var channels = ""
-
-  override def onStartRaceActor(originator: ActorRef) = {
-    channels = readFromAsString
-    startScheduler
-    super.onStartRaceActor(originator)
-  }
 
   override def handleMessage = {
     case BusEvent(_, msg: String, _) => checkMessage(msg)
     case RaceTick =>
-      publish(snapshot)
+      if (reportEmptyStats || dupStats.nonEmpty) publish(snapshot)
       purgeOldChecksums
   }
 
@@ -117,12 +108,9 @@ case class DupStatsSnapshot (
 
 
 class SubscriberDupStats (val topic: String,  val source: String, val takeMillis: Long, val elapsedMillis: Long,
-                          val messages: Array[DupStatsSnapshot]) extends ConsoleStats {
+                          val messages: Array[DupStatsSnapshot]) extends ConsoleStats with FileStats {
 
-  def writeToConsole (pw:PrintWriter) = {
-    pw.println(consoleHeader)
-    pw.println(s"source: $source")
-
+  def writeDupStatsData (pw:PrintWriter) = {
     if (messages.nonEmpty) {
       pw.println("  count     avg sec   classifier")
       pw.println("-------   ---------   -------------------------------------------")
@@ -131,6 +119,18 @@ class SubscriberDupStats (val topic: String,  val source: String, val takeMillis
         pw.println(f"${m.count}%7d   $avgDtSecs%9.3f   ${m.classifier}")
       }
     }
+    pw.println
+  }
+
+  def writeToConsole (pw: PrintWriter) = {
+    writeHeaderToConsole(pw)
+    writeDupStatsData(pw)
+    pw.println
+  }
+
+  def writeToFile (pw: PrintWriter) = {
+    writeHeaderToFile(pw)
+    writeDupStatsData(pw)
     pw.println
   }
 }

@@ -16,35 +16,37 @@
  */
 package gov.nasa.race.actor
 
-import java.io.PrintWriter
+import java.io._
 
+import gov.nasa.race.config.ConfigUtils._
 import com.typesafe.config.Config
-import gov.nasa.race.common.ConsoleStats
-import gov.nasa.race.util.ConsoleIO._
+import gov.nasa.race.common.FileStats
+import gov.nasa.race.util.BufferedFileWriter
 
 /**
-  * an actor that prints Stats objects on the (ANSI) console
+  * a StatsReporter that writes to a file
   */
-class ConsoleStatsReporter (val config: Config) extends PrintStatsReporterActor {
+class FileStatsReporter (val config: Config) extends PrintStatsReporterActor {
 
-  val pw = new PrintWriter(System.out)
+  def defaultPathName = s"tmp/$name" // override in concrete class
+  val reportFile = new File(config.getStringOrElse("pathname", defaultPathName))
 
-  // no need to close if this is the console, but at some point we might want
-  // to support configured output streams
+  val writer = new BufferedFileWriter(reportFile, config.getIntOrElse("buffer-size",16384), false)
+  val pw = new PrintWriter(writer)
 
-  def report = {
-    if (topics.nonEmpty) {
-      clearScreen
-      topics.valuesIterator foreach { s =>
-        if (!handledByFormatter(s)) {
-          s match {
-            case cs: ConsoleStats => cs.writeToConsole(pw)
-            case _ => // ignore
-          }
+  override def report = {
+    writer.reset
+
+    topics.valuesIterator foreach { s =>
+      if (!handledByFormatter(s)) {
+        s match {
+          case fs: FileStats => fs.writeToFile(pw)
+          case _ => // ignore
         }
       }
-      println
-      pw.flush
     }
+
+    pw.flush
+    writer.writeFile
   }
 }

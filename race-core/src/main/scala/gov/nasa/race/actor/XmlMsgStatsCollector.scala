@@ -44,16 +44,10 @@ import scala.util.matching.Regex
   * frequently than statistics update, hence we cannot afford a immutable type during updates
   * (we don't want to allocate a new object just to increase a single Int)
   */
-class XmlMsgStatsCollector (val config: Config) extends SubscribingRaceActor with PublishingRaceActor
-         with ContinuousTimeRaceActor with PeriodicRaceActor {
+class XmlMsgStatsCollector (val config: Config) extends StatsCollectorActor {
 
   final val defaultRateBaseMillis = 2000 // get peak rate over 2 sec
 
-  // override the MonitoredRaceActor defaults
-  override def defaultTickInterval = 10.seconds
-  override def defaultTickDelay = 10.seconds
-
-  val title = config.getStringOrElse("title", name)
   val pathSpecs = config.getStringArray("paths") // optional, if none we only parse top level
   val patterns = MsgClassifier.getClassifiers(config)
   val ignoreMessages = config.getStringArray("ignore").map(new Regex(_))
@@ -65,7 +59,6 @@ class XmlMsgStatsCollector (val config: Config) extends SubscribingRaceActor wit
   implicit val rateBaseMillis = config.getIntOrElse("rate-base", defaultRateBaseMillis)
 
   val msgStats = MSortedMap.empty[String,MsgStatsData]
-  var channels = "" // set during start
 
   class Parser extends XmlPullParser {
     val pathQueries = pathSpecs map(ps => compileGlobPathQuery(ps.split("/")))
@@ -114,18 +107,13 @@ class XmlMsgStatsCollector (val config: Config) extends SubscribingRaceActor wit
     false
   }
 
-  override def onStartRaceActor(originator: ActorRef) = {
-    channels = readFromAsString
-    startScheduler
-    super.onStartRaceActor(originator)
-  }
-
   override def handleMessage = {
     case BusEvent(_,msg: String,_) =>
       val msgStat = parser.parse(msg)
       if (msgStat != null && patterns.nonEmpty) checkMatches(msgStat,msg)
 
-    case RaceTick if hasPublishingChannels => publish(snapshot)
+    case RaceTick =>
+      if (reportEmptyStats || msgStats.nonEmpty) publish(snapshot)
   }
 
   def checkMatches (msgStat: MsgStatsData, msg: String) = {

@@ -39,7 +39,7 @@ class TATrackStatsCollector (val config: Config) extends StatsCollectorActor wit
     val statsData = new TATrackStatsData(src)
 
     def createTSEntryData (t: Long, track: TATrack) = new TATrackEntryData(t,track)
-    def elapsedSimTimeMillisSinceStart = TATrackStatsCollector.this.elapsedSimTimeMillisSinceStart
+    def currentSimTimeMillisSinceStart = TATrackStatsCollector.this.currentSimTimeMillisSinceStart
     def currentSimTimeMillis = TATrackStatsCollector.this.updatedSimTimeMillis
   }
 

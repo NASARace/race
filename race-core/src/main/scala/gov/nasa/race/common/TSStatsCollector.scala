@@ -132,10 +132,10 @@ class TimeSeriesStats[O <: Dated,E <: TSEntryData[O]](val topic: String,
                                                       val takeMillis: Long,
                                                       val elapsedMillis: Long,
                                                       val data: TSStatsData[O,E]
-                                                     ) extends ConsoleStats {
+                                                     ) extends ConsoleStats with FileStats {
   import data._
 
-  def writeToConsole(pw:PrintWriter) = {
+  def writeStatsData(pw:PrintWriter) = {
     def dur (millis: Double): String = {
       if (millis.isInfinity || millis.isNaN) {
         "    "
@@ -145,9 +145,6 @@ class TimeSeriesStats[O <: Dated,E <: TSEntryData[O]](val topic: String,
         else f"${millis / 360000}%4.1fh"
       }
     }
-
-    pw.println(consoleHeader)
-    pw.println(s"source: $source")
 
     pw.println("active    min    max   cmplt stale  drop order   dup ambig        n dtMin dtMax dtAvg")
     pw.println("------ ------ ------   ----- ----- ----- ----- ----- -----  ------- ----- ----- -----")
@@ -162,6 +159,18 @@ class TimeSeriesStats[O <: Dated,E <: TSEntryData[O]](val topic: String,
         })
       case _ => // no buckets to report
     }
+    pw.println
+  }
+
+  def writeToConsole (pw: PrintWriter) = {
+    writeHeaderToConsole(pw)
+    writeStatsData(pw)
+    pw.println
+  }
+
+  def writeToFile (pw: PrintWriter) = {
+    writeHeaderToFile(pw)
+    writeStatsData(pw)
     pw.println
   }
 }
@@ -235,12 +244,12 @@ trait TSStatsCollector[K,O <: Dated,E <: TSEntryData[O],S <: TSStatsData[O,E]] {
   val activeEntries = MHashMap.empty[K,E]  // to keep track of last entry updates
 
   //-- to be provided by concrete type
-  def elapsedSimTimeMillisSinceStart: Long
+  def currentSimTimeMillisSinceStart: Long
   def currentSimTimeMillis: Long
   def createTSEntryData(t: Long, o: O): E
 
   def snapshot (topic: String, source: String): TimeSeriesStats[O,E] = {
-    new TimeSeriesStats[O, E](topic, source, currentSimTimeMillis, elapsedSimTimeMillisSinceStart, statsData.clone)
+    new TimeSeriesStats[O, E](topic, source, currentSimTimeMillis, currentSimTimeMillisSinceStart, statsData.clone)
   }
 
   def dataSnapshot: S = statsData.clone.asInstanceOf[S]  // bad, but we don't want to add another type param to TSStatsData
@@ -248,7 +257,7 @@ trait TSStatsCollector[K,O <: Dated,E <: TSEntryData[O],S <: TSStatsData[O,E]] {
   def updateActive (key: K, obj: O) = {
     statsData.nUpdates += 1
     val t = obj.date.getMillis
-    val isSettled = elapsedSimTimeMillisSinceStart > settleTimeMillis
+    val isSettled = currentSimTimeMillisSinceStart > settleTimeMillis
 
     activeEntries.get(key) match {
       case Some(e) =>
@@ -266,7 +275,7 @@ trait TSStatsCollector[K,O <: Dated,E <: TSEntryData[O],S <: TSStatsData[O,E]] {
   def removeActive (key: K) = {
     activeEntries.remove(key) match {
       case Some(e) =>
-        val isSettled = elapsedSimTimeMillisSinceStart > settleTimeMillis
+        val isSettled = currentSimTimeMillisSinceStart > settleTimeMillis
         statsData.remove(e, isSettled)
       case None => // no stats to update
     }
@@ -274,7 +283,7 @@ trait TSStatsCollector[K,O <: Dated,E <: TSEntryData[O],S <: TSStatsData[O,E]] {
 
   def checkDropped = {
     val t = currentSimTimeMillis
-    val isSettled = elapsedSimTimeMillisSinceStart > settleTimeMillis
+    val isSettled = currentSimTimeMillisSinceStart > settleTimeMillis
 
     activeEntries.foreach { e => // make sure we don't allocate per entry
       if ((t - e._2.tLast) > dropAfterMillis) {

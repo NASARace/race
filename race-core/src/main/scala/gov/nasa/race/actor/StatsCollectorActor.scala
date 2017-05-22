@@ -33,6 +33,7 @@ import scala.concurrent.duration._
 trait StatsCollectorActor extends SubscribingRaceActor with PublishingRaceActor with ContinuousTimeRaceActor with PeriodicRaceActor {
   val config: Config
 
+  val reportEmptyStats = config.getBooleanOrElse("report-empty", true)
   val title = config.getStringOrElse("title", name)
   var channels = ""
 

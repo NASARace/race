@@ -561,14 +561,18 @@ trait ContinuousTimeRaceActor extends RaceActor {
   @inline final def currentSimTimeMillis = simClock.millis
   @inline final def currentWallTimeMillis = System.currentTimeMillis()
 
+  @inline def currentSimTimeMillisSinceStart = currentSimTimeMillis - startSimTimeMillis
+  @inline def currentWallTimeMillisSinceStart = currentWallTimeMillis - startWallTimeMillis
+
+  // those are based on the last update
   def elapsedSimTimeSince (dt: DateTime) = Duration(max(0,lastSimMillis - dt.getMillis), MILLISECONDS)
   def elapsedSimTimeMillisSince (dt: DateTime) = lastSimMillis - dt.getMillis
 
   def elapsedSimTimeSinceStart = Duration(lastSimMillis - startSimTimeMillis, MILLISECONDS)
-  def elapsedSimTimeMillisSinceStart = lastSimMillis - startSimTimeMillis
+  @inline def elapsedSimTimeMillisSinceStart = lastSimMillis - startSimTimeMillis
 
-  def toWallTimeMillis (d: Duration) = (d.toMillis * simClock.timeScale).toLong
-  def toWallTimeMillis (ms: Long) = (ms * simClock.timeScale).toLong
+  @inline def toWallTimeMillis (d: Duration) = (d.toMillis * simClock.timeScale).toLong
+  @inline def toWallTimeMillis (ms: Long) = (ms * simClock.timeScale).toLong
 
   final def resetSimClockRequest (d: DateTime, timeScale: Double = 1.0): Boolean = {
     if (canResetClock) {

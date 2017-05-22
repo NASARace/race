@@ -34,8 +34,21 @@ trait Stats extends Cloneable {
   val elapsedMillis: Long   // duration covered by the snapshot
 }
 
+// we don't use polymorphism for the 
+
 trait ConsoleStats extends Stats {
   def writeToConsole(pw: PrintWriter): Unit
+
+  def writeHeaderToConsole (pw: PrintWriter) = {
+    val title = StringUtils.padRight(s"$topic [$source]",60, ' ')
+    val elapsed = StringUtils.padLeft(durationMillisToHMMSS(elapsedMillis), 20, ' ')
+
+    pw.print(reverseColor)
+    pw.print(title)
+    pw.print("         ")
+    pw.print(elapsed)
+    pw.println(resetColor)
+  }
 
   def consoleHeader: String = {
     val title = StringUtils.padRight(topic,60, ' ')
@@ -46,8 +59,23 @@ trait ConsoleStats extends Stats {
 
 trait FileStats extends Stats {
   def writeToFile(pw: PrintWriter): Unit
+
+  def writeHeaderToFile (pw: PrintWriter) = {
+    pw.println(topic)
+    pw.println("========================================================================================")
+    pw.print("elapsed: ")
+    pw.println(durationMillisToHMMSS(elapsedMillis))
+    pw.print("source:  ")
+    pw.println(source)
+    pw.println
+  }
 }
 
 trait JsonStats extends Stats {
   def writeToJson(pw: PrintWriter): Unit
 }
+
+trait PrintStatsFormatter {
+  def write (pw: PrintWriter, stats: Stats): Boolean // return true if stats were written
+}
+
