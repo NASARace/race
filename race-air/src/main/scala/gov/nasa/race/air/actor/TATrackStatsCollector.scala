@@ -23,7 +23,7 @@ import java.io.PrintWriter
 import com.typesafe.config.Config
 import gov.nasa.race.actor.StatsCollectorActor
 import gov.nasa.race.air.TATrack
-import gov.nasa.race.common.{ConfiguredTSStatsCollector, ConsoleStats, Stats, TSEntryData, TSStatsData}
+import gov.nasa.race.common.{ConfiguredTSStatsCollector, PrintStats, Stats, TSEntryData, TSStatsData}
 import gov.nasa.race.core.ClockAdjuster
 import gov.nasa.race.core.Messages.{BusEvent, RaceTick}
 
@@ -87,10 +87,9 @@ class TATrackStatsData  (val src: String) extends TSStatsData[TATrack,TATrackEnt
 }
 
 class TATrackStats(val topic: String, val source: String, val takeMillis: Long, val elapsedMillis: Long,
-                   val traconStats: Seq[TATrackStatsData]) extends Stats with ConsoleStats {
+                   val traconStats: Seq[TATrackStatsData]) extends PrintStats {
 
-  override def writeToConsole(pw: PrintWriter): Unit = {
-    pw.println(consoleHeader)
+  override def printWith (pw: PrintWriter): Unit = {
     pw.println(s"source: $source")
 
     pw.println("src    active    min    max   cmplt stale  drop order   dup ambig        n dtMin dtMax dtAvg")

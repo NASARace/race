@@ -132,13 +132,13 @@ class TimeSeriesStats[O <: Dated,E <: TSEntryData[O]](val topic: String,
                                                       val takeMillis: Long,
                                                       val elapsedMillis: Long,
                                                       val data: TSStatsData[O,E]
-                                                     ) extends ConsoleStats with FileStats {
+                                                     ) extends PrintStats {
   import data._
 
-  def writeStatsData(pw:PrintWriter) = {
+  def printWith (pw:PrintWriter) = {
     def dur (millis: Double): String = {
       if (millis.isInfinity || millis.isNaN) {
-        "    "
+        "-"
       } else {
         if (millis < 120000) f"${millis / 1000}%4.0fs"
         else if (millis < 360000) f"${millis / 60000}%4.1fm"
@@ -146,31 +146,19 @@ class TimeSeriesStats[O <: Dated,E <: TSEntryData[O]](val topic: String,
       }
     }
 
-    pw.println("active    min    max   cmplt stale  drop order   dup ambig        n dtMin dtMax dtAvg")
-    pw.println("------ ------ ------   ----- ----- ----- ----- ----- -----  ------- ----- ----- -----")
+    pw.println("active    min    max   cmplt stale  drop order   dup ambig         n dtMin dtMax dtAvg")
+    pw.println("------ ------ ------   ----- ----- ----- ----- ----- -----   ------- ----- ----- -----")
     pw.print(f"$nActive%6d $minActive%6d $maxActive%6d   $completed%5d $stale%5d $dropped%5d $outOfOrder%5d $duplicate%5d $ambiguous%5d ")
 
     buckets match {
       case Some(bc) if bc.nSamples > 0 =>
-        pw.println(f"  ${bc.nSamples}%6d ${dur(bc.min)} ${dur(bc.max)} ${dur(bc.mean)}")
+        pw.println(f"   ${bc.nSamples}%6d ${dur(bc.min)}%4s ${dur(bc.max)}%4s ${dur(bc.mean)}%4s")
         bc.processBuckets((i, c) => {
           if (i % 6 == 0) pw.println // 6 buckets per line
           pw.print(f"${Math.round(i * bc.bucketSize / 1000)}%3ds: $c%6d | ")
         })
       case _ => // no buckets to report
     }
-    pw.println
-  }
-
-  def writeToConsole (pw: PrintWriter) = {
-    writeHeaderToConsole(pw)
-    writeStatsData(pw)
-    pw.println
-  }
-
-  def writeToFile (pw: PrintWriter) = {
-    writeHeaderToFile(pw)
-    writeStatsData(pw)
     pw.println
   }
 }
@@ -305,7 +293,7 @@ trait ConfiguredTSStatsCollector[K,O <: Dated,E <: TSEntryData[O],S <: TSStatsDa
   val dropAfterMillis = dropAfter.toMillis
   val settleTimeMillis = config.getFiniteDurationOrElse("settle-time", 1.minute).toMillis
 
-  def bucketCount: Int = config.getIntOrElse("bucket-number",0) // default is we don't collect sample distributions
+  def bucketCount: Int = config.getIntOrElse("bucket-count",0) // default is we don't collect sample distributions
 
   def createBuckets: Option[BucketCounter] =  if (bucketCount > 0) {
     val dtMin = config.getFiniteDurationOrElse("dt-min",0.seconds).toMillis

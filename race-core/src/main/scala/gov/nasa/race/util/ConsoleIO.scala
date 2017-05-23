@@ -60,7 +60,8 @@ object ConsoleIO {
 
   class MenuCall (val prompt: String, val cmds: MenuFunc, val thread: Thread)
 
-  final val CLEAR_SCREEN = "\u001b[2J\u001b[;H"
+  final val ClearScreen = "\u001b[2J\u001b[;H"
+  final val EraseScreen = "\u001b[3J\u001b[;H"
 
   // constants
   final val repeatMenu = "REPEAT_MENU"
@@ -73,7 +74,8 @@ object ConsoleIO {
   val jConsole = System.console()
 
   // various ANSI terminal commands
-  def clearScreen = print(CLEAR_SCREEN)
+  def clearScreen = print(ClearScreen)
+  def eraseScreen = print(EraseScreen)
 
   // shared data
   private var input: String = _

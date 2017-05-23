@@ -16,14 +16,17 @@
  */
 package gov.nasa.race.actor
 
-import java.io.PrintWriter
+import java.io.{File, PrintWriter}
 
 import akka.actor.ActorRef
 import com.typesafe.config.Config
-import gov.nasa.race.common.{PrintStatsFormatter, Stats}
+import gov.nasa.race.common.{PrintStats, PrintStatsFormatter, Stats}
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.Messages.{BusEvent, RaceTick}
 import gov.nasa.race.core.{PeriodicRaceActor, SubscribingRaceActor}
+import gov.nasa.race.util.ConsoleIO.{resetColor, reverseColor}
+import gov.nasa.race.util.{BufferedFileWriter, ConsoleIO, StringUtils}
+import gov.nasa.race.util.DateTimeUtils.durationMillisToHMMSS
 
 import scala.collection.mutable.{SortedMap => MSortedMap}
 import scala.concurrent.duration._
@@ -87,13 +90,85 @@ trait StatsReporterActor extends SubscribingRaceActor with PeriodicRaceActor {
 
 /**
   * a StatsReporterActor that produces print output and can be configured with formatters
+  *
+  * If we have a configured PrintFormatter that handles the respective Stats type, it will
+  * take precedence over printing that is in the Stats
   */
 trait PrintStatsReporterActor extends StatsReporterActor {
   val pw: PrintWriter // to be provided by concrete class
+
+  def reportProlog: Unit = {}
+  def reportEpilog: Unit = {}
+
+  // a default header, override to conserve space
+  def printHeader (stats: Stats): Unit = {
+    pw.println(stats.topic)
+    pw.println("========================================================================================")
+    pw.print("elapsed: ")
+    pw.println(durationMillisToHMMSS(stats.elapsedMillis))
+    pw.print("source:  ")
+    pw.println(stats.source)
+    pw.println
+  }
 
   val formatters: Seq[PrintStatsFormatter] = config.getConfigSeq("formatters").flatMap ( conf =>
     newInstance[PrintStatsFormatter](conf.getString("class"),Array(classOf[Config]),Array(conf))
   )
 
-  def handledByFormatter (s: Stats): Boolean = formatters.exists( _.write(pw,s) )
+  override def report = {
+    reportProlog
+
+    topics.valuesIterator foreach { s =>
+      printHeader(s)
+
+      if (!printedWithFormatter(s)) {
+        s match {
+          case ps: PrintStats => ps.printWith(pw)
+          case other => info(s"don't know how to print ${other.getClass.getName}")
+        }
+      }
+
+      pw.println
+    }
+
+    pw.flush
+    reportEpilog
+  }
+
+  def printedWithFormatter(s: Stats): Boolean = formatters.exists( _.printWith(pw,s) )
+}
+
+/**
+  * a StatsReporter that prints on a ANSI console
+  */
+class ConsoleStatsReporter (val config: Config) extends PrintStatsReporterActor {
+  val prolog = if (config.getBooleanOrElse("erase", false)) ConsoleIO.EraseScreen else ConsoleIO.ClearScreen
+  val pw = new PrintWriter(System.out)
+
+  override def printHeader (stats: Stats) = {
+    val title = StringUtils.padRight(s"${stats.topic} [${stats.source}]",60, ' ')
+    val elapsed = StringUtils.padLeft(durationMillisToHMMSS(stats.elapsedMillis), 20, ' ')
+    pw.print(ConsoleIO.reverseColor)
+    pw.print(title)
+    pw.print("        ")
+    pw.print(elapsed)
+    pw.println(ConsoleIO.resetColor)
+  }
+
+  override def reportProlog = pw.print(prolog)
+}
+
+/**
+  * a StatsReporter that writes to a file
+  */
+class FileStatsReporter (val config: Config) extends PrintStatsReporterActor {
+
+  def defaultPathName = s"tmp/$name" // override in concrete class
+  val reportFile = new File(config.getStringOrElse("pathname", defaultPathName))
+
+  val writer = new BufferedFileWriter(reportFile, config.getIntOrElse("buffer-size",16384), false)
+  val pw = new PrintWriter(writer)
+
+  override def reportProlog = writer.reset
+  override def reportEpilog = writer.writeFile
 }

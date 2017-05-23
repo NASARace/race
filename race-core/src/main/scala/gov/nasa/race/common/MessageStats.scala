@@ -86,9 +86,9 @@ case class PatternStatsSnapshot(
 )
 
 class SubscriberMsgStats (val topic: String, val source: String, val takeMillis: Long, val elapsedMillis: Long,
-                          val messages: Array[MsgStatsSnapshot]) extends ConsoleStats with FileStats {
+                          val messages: Array[MsgStatsSnapshot]) extends PrintStats {
 
-  def writeMsgStatsData (pw: PrintWriter) = {
+  override def printWith (pw: PrintWriter) = {
     if (messages.nonEmpty) {
       var count = 0
       var avgRate = 0.0
@@ -118,17 +118,5 @@ class SubscriberMsgStats (val topic: String, val source: String, val takeMillis:
         pw.println(f"${count}%7d   ${avgRate}%6.1f ${peakRate}%6.1f   $memSize%6s $avgMemSize%6s")
       }
     }
-  }
-
-  def writeToConsole (pw: PrintWriter) = {
-    writeHeaderToConsole(pw)
-    writeMsgStatsData(pw)
-    pw.println
-  }
-
-  def writeToFile (pw: PrintWriter) = {
-    writeHeaderToFile(pw)
-    writeMsgStatsData(pw)
-    pw.println
   }
 }

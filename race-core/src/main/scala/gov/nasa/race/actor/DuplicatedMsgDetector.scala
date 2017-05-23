@@ -18,13 +18,12 @@ package gov.nasa.race.actor
 
 import java.io.PrintWriter
 
-import akka.actor.ActorRef
 import com.typesafe.config.Config
 import gov.nasa.race._
-import gov.nasa.race.common.{ConsoleStats, FileStats, MD5Checksum, MsgClassifier, Stats}
+import gov.nasa.race.common.{MD5Checksum, MsgClassifier, PrintStats}
 import gov.nasa.race.config.ConfigUtils._
+import gov.nasa.race.core.FileWriterRaceActor
 import gov.nasa.race.core.Messages.{BusEvent, RaceTick}
-import gov.nasa.race.core.{ContinuousTimeRaceActor, FileWriterRaceActor, PeriodicRaceActor, PublishingRaceActor, SubscribingRaceActor}
 import gov.nasa.race.util.DateTimeUtils._
 
 import scala.collection.mutable.{SortedMap => MSortedMap}
@@ -108,9 +107,9 @@ case class DupStatsSnapshot (
 
 
 class SubscriberDupStats (val topic: String,  val source: String, val takeMillis: Long, val elapsedMillis: Long,
-                          val messages: Array[DupStatsSnapshot]) extends ConsoleStats with FileStats {
+                          val messages: Array[DupStatsSnapshot]) extends PrintStats {
 
-  def writeDupStatsData (pw:PrintWriter) = {
+  def printWith (pw:PrintWriter) = {
     if (messages.nonEmpty) {
       pw.println("  count     avg sec   classifier")
       pw.println("-------   ---------   -------------------------------------------")
@@ -119,18 +118,6 @@ class SubscriberDupStats (val topic: String,  val source: String, val takeMillis
         pw.println(f"${m.count}%7d   $avgDtSecs%9.3f   ${m.classifier}")
       }
     }
-    pw.println
-  }
-
-  def writeToConsole (pw: PrintWriter) = {
-    writeHeaderToConsole(pw)
-    writeDupStatsData(pw)
-    pw.println
-  }
-
-  def writeToFile (pw: PrintWriter) = {
-    writeHeaderToFile(pw)
-    writeDupStatsData(pw)
     pw.println
   }
 }
