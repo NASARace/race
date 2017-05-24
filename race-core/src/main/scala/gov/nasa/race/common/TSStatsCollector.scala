@@ -151,12 +151,15 @@ class TimeSeriesStats[O <: Dated,E <: TSEntryData[O]](val topic: String,
     pw.print(f"$nActive%6d $minActive%6d $maxActive%6d   $completed%5d $stale%5d $dropped%5d $outOfOrder%5d $duplicate%5d $ambiguous%5d ")
 
     buckets match {
-      case Some(bc) if bc.nSamples > 0 =>
-        pw.println(f"   ${bc.nSamples}%6d ${dur(bc.min)}%4s ${dur(bc.max)}%4s ${dur(bc.mean)}%4s")
-        bc.processBuckets((i, c) => {
-          if (i % 6 == 0) pw.println // 6 buckets per line
-          pw.print(f"${Math.round(i * bc.bucketSize / 1000)}%3ds: $c%6d | ")
-        })
+      case Some(bc)  =>
+        pw.println(f"  ${bc.nSamples}%7d ${dur(bc.min)}%5s ${dur(bc.max)}%5s ${dur(bc.mean)}%5s")
+
+        if (bc.nSamples > 0) {
+          bc.processBuckets((i, c) => {
+            if (i % 6 == 0) pw.println // 6 buckets per line
+            pw.print(f"${Math.round(i * bc.bucketSize / 1000)}%3ds: $c%6d | ")
+          })
+        }
       case _ => // no buckets to report
     }
     pw.println

@@ -35,7 +35,8 @@ import scala.collection.mutable.{HashMap => MHashMap}
   */
 class TATrackStatsCollector (val config: Config) extends StatsCollectorActor with ClockAdjuster {
 
-  class TACollector (val config: Config, val src: String) extends ConfiguredTSStatsCollector[Int,TATrack,TATrackEntryData,TATrackStatsData] {
+  class TACollector (val config: Config, val src: String)
+         extends ConfiguredTSStatsCollector[Int,TATrack,TATrackEntryData,TATrackStatsData] {
     val statsData = new TATrackStatsData(src)
 
     def createTSEntryData (t: Long, track: TATrack) = new TATrackEntryData(t,track)
@@ -69,10 +70,37 @@ class TATrackStatsCollector (val config: Config) extends StatsCollectorActor wit
 }
 
 class TATrackEntryData (tLast: Long, track: TATrack) extends TSEntryData[TATrack](tLast,track) {
-  // add revision and consistency status
+  var nFlightPlan = if (track.hasFlightPlan) 1 else 0 // messages with flight plan
+
+  override def update (obj: TATrack, isSettled: Boolean) = {
+    super.update(obj,isSettled)
+    if (obj.hasFlightPlan) nFlightPlan += 1
+  }
+  // add consistency status
 }
 
 class TATrackStatsData  (val src: String) extends TSStatsData[TATrack,TATrackEntryData] {
+  var nTimeless = 0 // number of track positions without time stamps
+  var stddsV2 = 0
+  var stddsV3 = 0
+
+  def updateTATrackStats (obj: TATrack) = {
+    obj.stddsRev match {
+      case 2 => stddsV2 += 1
+      case 3 => stddsV3 += 1
+    }
+    if (obj.date == null) nTimeless += 1
+  }
+
+  override def update (obj: TATrack, e: TATrackEntryData, isSettled: Boolean): Unit = {
+    super.update(obj,e,isSettled) // standard TSStatsData collection
+    updateTATrackStats(obj)
+  }
+
+  override def add (obj: TATrack, isStale: Boolean, isSettled: Boolean) = {
+    super.add(obj,isStale,isSettled)
+    updateTATrackStats(obj)
+  }
 
   override def isDuplicate (t1: TATrack, t2: TATrack) = {
     t1.src == t2.src &&
@@ -89,16 +117,31 @@ class TATrackStatsData  (val src: String) extends TSStatsData[TATrack,TATrackEnt
 class TATrackStats(val topic: String, val source: String, val takeMillis: Long, val elapsedMillis: Long,
                    val traconStats: Seq[TATrackStatsData]) extends PrintStats {
 
+  val nTracons = traconStats.size
+  var nActive = 0
+  var nDropped = 0
+  var nOutOfOrder = 0
+  var nAmbiguous = 0
+  var stddsV2 = 0
+  var stddsV3 = 0
+  var nNoTime = 0
+  var nNoPlan = 0
+
+  traconStats.foreach { ts =>
+    nActive += ts.nActive
+    nDropped += ts.dropped
+    nOutOfOrder += ts.outOfOrder
+    nAmbiguous += ts.ambiguous
+    if (ts.stddsV2 > 0) stddsV2 += 1
+    if (ts.stddsV3 > 0) stddsV3 += 1
+    nNoTime += ts.nTimeless
+  }
+
+    // the default is to print only stats for all centers
   override def printWith (pw: PrintWriter): Unit = {
-    pw.println(s"source: $source")
-
-    pw.println("src    active    min    max   cmplt stale  drop order   dup ambig        n dtMin dtMax dtAvg")
-    pw.println("------ ------ ------ ------   ----- ----- ----- ----- ----- -----  ------- ----- ----- -----")
-
-    traconStats.foreach { ts =>
-      import ts._
-      pw.print(f"${ts.src}%6.6s ")
-      pw.println(f"$nActive%6d $minActive%6d $maxActive%6d   $completed%5d $stale%5d $dropped%5d $outOfOrder%5d $duplicate%5d $ambiguous%5d ")
-    }
+    pw.println("  tracons  v2  v3  tracks   dropped   order   ambig   no-time   no-fp")
+    pw.println("  ------- --- --- -------   ------- ------- -------   ------- -------")
+    pw.print(f"  $nTracons%7d $stddsV2%3d $stddsV3%3d $nActive%7d")
+    pw.print(f"   $nDropped%7d $nOutOfOrder%7d $nAmbiguous%7d   $nNoTime%7d $nNoPlan%7d")
   }
 }

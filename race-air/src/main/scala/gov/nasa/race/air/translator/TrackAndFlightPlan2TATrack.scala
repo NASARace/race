@@ -47,6 +47,7 @@ class TrackAndFlightPlan2TATrack (val config: Config=null) extends XmlParser[Seq
 
   //--- parse cache
   var src: String = _
+  var stddsRev: Int = -1
   var trackNum: Int = -1
   var acAddress: String = _
   var beaconCode: String = _
@@ -57,8 +58,11 @@ class TrackAndFlightPlan2TATrack (val config: Config=null) extends XmlParser[Seq
   var vx,vy,vVert: Speed = UndefinedSpeed
   var isFrozen,isNew,isPseudo,isAdsb: Boolean = false
   var reportedAltitude: Length = UndefinedLength
+  var hasFlightPlan = false
 
   def resetTrackCache = {
+    src = null
+    stddsRev = -1
     trackNum = -1
     acAddress = null
     beaconCode = null
@@ -69,6 +73,7 @@ class TrackAndFlightPlan2TATrack (val config: Config=null) extends XmlParser[Seq
     vx = UndefinedSpeed; vy = UndefinedSpeed; vVert = UndefinedSpeed
     isFrozen = false; isNew = false; isPseudo = false; isAdsb = false
     reportedAltitude = UndefinedLength
+    hasFlightPlan = false
   }
 
   def addTrack = {
@@ -78,6 +83,7 @@ class TrackAndFlightPlan2TATrack (val config: Config=null) extends XmlParser[Seq
         val spd = Speed.fromVxVy(vx,vy)
         val hdg = Angle.fromVxVy(vx,vy)
         val track = new TATrack(src,trackNum,XYPos(xPos,yPos),vVert,status,isFrozen,isNew,isPseudo,isAdsb,beaconCode,
+          stddsRev,hasFlightPlan,
           trackNum.toString,acAddress,LatLonPos(lat,lon),reportedAltitude,spd,hdg,mrtTime)
 
         tracks += track
@@ -96,7 +102,13 @@ class TrackAndFlightPlan2TATrack (val config: Config=null) extends XmlParser[Seq
   }
 
   override def onStartElement = {
-    case "TATrackAndFlightPlan" => tracks.clear
+    case "TATrackAndFlightPlan" =>
+      tracks.clear
+      if (parseAttribute("xmlns")) {
+        if (value.contains("v3")) stddsRev = 3
+        else if (value.contains("v2")) stddsRev = 2
+      }
+
     case "src" => src = readText
     case "track" => resetTrackCache
     case "trackNum" => trackNum = readInt
@@ -115,7 +127,7 @@ class TrackAndFlightPlan2TATrack (val config: Config=null) extends XmlParser[Seq
     case "adsb" => isAdsb = readBoolean
     case "reportedBeaconCode" => beaconCode = readText
     case "reportedAltitude" => reportedAltitude = Feet(readInt)
-
+    case "flightPlan" => hasFlightPlan = true
     case other => // ignore
   }
 

@@ -30,14 +30,17 @@ object TATrack {
   // we don't use a case class so that we can have a class hierarchy, but we still want to be able to pattern match
   def apply (src: String, trackNum: Int, xyPos: XYPos, vVert: Speed, status: Status,
              isFrozen: Boolean, isNew: Boolean, isPseudo: Boolean, isAdsb: Boolean, beaconCode: String,
+             stddsRev: Int, hasFlightPlan: Boolean,
              flightId: String, cs: String, position: LatLonPos, altitude: Length, speed: Speed, heading: Angle, date: DateTime) = {
     new TATrack(src,trackNum,xyPos,vVert,status,isFrozen,isNew,isPseudo,isAdsb,beaconCode,
+                stddsRev,hasFlightPlan,
                 flightId,cs,position,altitude,speed,heading,date)
   }
   def unapply (src: String, trackNum: Int, xyPos: XYPos, vVert: Speed, status: Status,
                isFrozen: Boolean, isNew: Boolean, isPseudo: Boolean, isAdsb: Boolean, beaconCode: String,
+               stddsRev: Int, hasFlightPlan: Boolean,
                flightId: String, cs: String, position: LatLonPos, altitude: Length, speed: Speed, heading: Angle, date: DateTime) = {
-    (src,trackNum,xyPos,vVert,status,isFrozen,isNew,isPseudo,isAdsb,beaconCode,flightId,cs,position,altitude,speed,heading,date)
+    (src,trackNum,xyPos,vVert,status,isFrozen,isNew,isPseudo,isAdsb,beaconCode,stddsRev,hasFlightPlan,flightId,cs,position,altitude,speed,heading,date)
   }
   def unapply (track: TATrack) = true
 }
@@ -57,6 +60,10 @@ class TATrack (val src: String,
                val isPseudo: Boolean,
                val isAdsb: Boolean,
                val beaconCode: String,
+
+               val stddsRev: Int,  // 2 or 3  TODO - not sure we want to keep this in a track object
+               val hasFlightPlan: Boolean,  // TODO - should be replaced by FlightPlan reference
+
                //--- the FlightPos fields
                flightId: String, cs: String, position: LatLonPos, altitude: Length, speed: Speed, heading: Angle, date: DateTime
               ) extends FlightPos(flightId,cs,position,altitude,speed,heading,date) {
