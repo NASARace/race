@@ -105,7 +105,7 @@ trait TSStatsData[O <: Dated,E <: TSEntryData[O]] extends Cloneable {
       if (isDuplicate(obj,e.lastObj)) duplicate += 1
       else ambiguous += 1
 
-    } else {  // out of order
+    } else {  // out of order (dt < 0)
       outOfOrder += 1
     }
   }
@@ -125,6 +125,10 @@ trait TSStatsData[O <: Dated,E <: TSEntryData[O]] extends Cloneable {
   }
 
   def updateMinActive(isSettled: Boolean) = if (isSettled && (minActive == 0 || nActive < minActive)) minActive = nActive
+
+  // can be overridden to collect entry specific data upon snapshot
+  def resetEntryData: Unit = {}
+  def processEntryData (e: E): Unit = {} // default is to do nothing
 }
 
 class TimeSeriesStats[O <: Dated,E <: TSEntryData[O]](val topic: String,
@@ -133,18 +137,9 @@ class TimeSeriesStats[O <: Dated,E <: TSEntryData[O]](val topic: String,
                                                       val elapsedMillis: Long,
                                                       val data: TSStatsData[O,E]
                                                      ) extends PrintStats {
-  import data._
-
   def printWith (pw:PrintWriter) = {
-    def dur (millis: Double): String = {
-      if (millis.isInfinity || millis.isNaN) {
-        "-"
-      } else {
-        if (millis < 120000) f"${millis / 1000}%4.0fs"
-        else if (millis < 360000) f"${millis / 60000}%4.1fm"
-        else f"${millis / 360000}%4.1fh"
-      }
-    }
+    import data._
+    import gov.nasa.race.util.DateTimeUtils.{durationMillisToCompactTime => dur}
 
     pw.println("active    min    max   cmplt stale  drop order   dup ambig         n dtMin dtMax dtAvg")
     pw.println("------ ------ ------   ----- ----- ----- ----- ----- -----   ------- ----- ----- -----")
@@ -238,6 +233,11 @@ trait TSStatsCollector[K,O <: Dated,E <: TSEntryData[O],S <: TSStatsData[O,E]] {
   def currentSimTimeMillisSinceStart: Long
   def currentSimTimeMillis: Long
   def createTSEntryData(t: Long, o: O): E
+
+  def processEntryData = {
+    statsData.resetEntryData
+    activeEntries.foreach { e=> statsData.processEntryData(e._2) }
+  }
 
   def snapshot (topic: String, source: String): TimeSeriesStats[O,E] = {
     new TimeSeriesStats[O, E](topic, source, currentSimTimeMillis, currentSimTimeMillisSinceStart, statsData.clone)

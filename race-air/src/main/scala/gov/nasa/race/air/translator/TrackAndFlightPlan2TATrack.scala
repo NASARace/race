@@ -56,13 +56,12 @@ class TrackAndFlightPlan2TATrack (val config: Config=null) extends XmlParser[Seq
   var lat,lon: Angle = UndefinedAngle
   var xPos,yPos: Length = UndefinedLength
   var vx,vy,vVert: Speed = UndefinedSpeed
-  var isFrozen,isNew,isPseudo,isAdsb: Boolean = false
+  var attrs: Int = 0
   var reportedAltitude: Length = UndefinedLength
-  var hasFlightPlan = false
 
   def resetTrackCache = {
-    src = null
-    stddsRev = -1
+    //src = null
+    //stddsRev = -1
     trackNum = -1
     acAddress = null
     beaconCode = null
@@ -71,9 +70,8 @@ class TrackAndFlightPlan2TATrack (val config: Config=null) extends XmlParser[Seq
     lat = UndefinedAngle; lon = UndefinedAngle
     xPos = UndefinedLength; yPos = UndefinedLength
     vx = UndefinedSpeed; vy = UndefinedSpeed; vVert = UndefinedSpeed
-    isFrozen = false; isNew = false; isPseudo = false; isAdsb = false
+    attrs = 0
     reportedAltitude = UndefinedLength
-    hasFlightPlan = false
   }
 
   def addTrack = {
@@ -82,10 +80,8 @@ class TrackAndFlightPlan2TATrack (val config: Config=null) extends XmlParser[Seq
       if (allowIncompleteTrack || (mrtTime != null && vx.isDefined && vy.isDefined && reportedAltitude.isDefined)) {
         val spd = Speed.fromVxVy(vx,vy)
         val hdg = Angle.fromVxVy(vx,vy)
-        val track = new TATrack(src,trackNum,XYPos(xPos,yPos),vVert,status,isFrozen,isNew,isPseudo,isAdsb,beaconCode,
-          stddsRev,hasFlightPlan,
-          trackNum.toString,acAddress,LatLonPos(lat,lon),reportedAltitude,spd,hdg,mrtTime)
-
+        val track = new TATrack(src,trackNum,XYPos(xPos,yPos),vVert,status,attrs,beaconCode,stddsRev,
+                                trackNum.toString,acAddress,LatLonPos(lat,lon),reportedAltitude,spd,hdg,mrtTime)
         tracks += track
       }
     }
@@ -104,13 +100,15 @@ class TrackAndFlightPlan2TATrack (val config: Config=null) extends XmlParser[Seq
   override def onStartElement = {
     case "TATrackAndFlightPlan" =>
       tracks.clear
+      src = null
       if (parseAttribute("xmlns")) {
         if (value.contains("v3")) stddsRev = 3
         else if (value.contains("v2")) stddsRev = 2
+        else stddsRev = -1
       }
 
     case "src" => src = readText
-    case "track" => resetTrackCache
+    case "record" => resetTrackCache  // TODO - should we check for multiple track/flightPlan elements?
     case "trackNum" => trackNum = readInt
     case "mrtTime" => mrtTime = DateTime.parse(readText)
     case "status" => status = readStatus
@@ -121,19 +119,18 @@ class TrackAndFlightPlan2TATrack (val config: Config=null) extends XmlParser[Seq
     case "vVert" => vVert = FeetPerSecond(readInt / 60.0)
     case "vx" => vx = Knots(readInt)
     case "vy" => vy = Knots(readInt)
-    case "frozen" => isFrozen = readBoolean
-    case "new" => isNew = readBoolean
-    case "pseudo" => isPseudo = readBoolean
-    case "adsb" => isAdsb = readBoolean
+    case "frozen" => if (readBoolean) attrs |= TATrack.FrozenFlag
+    case "new" => if (readBoolean) attrs |= TATrack.NewFlag
+    case "pseudo" => if (readBoolean) attrs |= TATrack.PseudoFlag
+    case "adsb" => if (readBoolean) attrs |= TATrack.AdsbFlag
     case "reportedBeaconCode" => beaconCode = readText
     case "reportedAltitude" => reportedAltitude = Feet(readInt)
-    case "flightPlan" => hasFlightPlan = true
+    case "flightPlan" => attrs |= TATrack.FlightPlanFlag
     case other => // ignore
   }
 
   override def onEndElement = {
-    case "track" => addTrack
-
+    case "record" => addTrack
     case other => // ignore
   }
 

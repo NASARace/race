@@ -18,10 +18,6 @@ package gov.nasa.race.common
 
 import java.io.PrintWriter
 
-import gov.nasa.race.util.ConsoleIO.{resetColor, reverseColor}
-import gov.nasa.race.util.DateTimeUtils.durationMillisToHMMSS
-import gov.nasa.race.util.StringUtils
-
 /**
   * the generic container for statistics. This can be sent as a message, as long as
   * the snapshot element type is serializable

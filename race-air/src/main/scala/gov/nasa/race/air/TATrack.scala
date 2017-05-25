@@ -22,6 +22,13 @@ import gov.nasa.race.uom.{Angle, Length, Speed}
 import org.joda.time.DateTime
 
 object TATrack {
+  // various bit flags for TATrack attrs
+  final val FrozenFlag = 1
+  final val NewFlag = 2
+  final val PseudoFlag = 4
+  final val AdsbFlag = 8
+  final val FlightPlanFlag = 16
+
   object Status extends Enumeration {
     type Status = Value
     val Active,Coasting,Drop,Undefined = Value
@@ -29,18 +36,15 @@ object TATrack {
 
   // we don't use a case class so that we can have a class hierarchy, but we still want to be able to pattern match
   def apply (src: String, trackNum: Int, xyPos: XYPos, vVert: Speed, status: Status,
-             isFrozen: Boolean, isNew: Boolean, isPseudo: Boolean, isAdsb: Boolean, beaconCode: String,
-             stddsRev: Int, hasFlightPlan: Boolean,
+             attrs: Int, beaconCode: String, stddsRev: Int,
              flightId: String, cs: String, position: LatLonPos, altitude: Length, speed: Speed, heading: Angle, date: DateTime) = {
-    new TATrack(src,trackNum,xyPos,vVert,status,isFrozen,isNew,isPseudo,isAdsb,beaconCode,
-                stddsRev,hasFlightPlan,
+    new TATrack(src,trackNum,xyPos,vVert,status,attrs,beaconCode,stddsRev,
                 flightId,cs,position,altitude,speed,heading,date)
   }
   def unapply (src: String, trackNum: Int, xyPos: XYPos, vVert: Speed, status: Status,
-               isFrozen: Boolean, isNew: Boolean, isPseudo: Boolean, isAdsb: Boolean, beaconCode: String,
-               stddsRev: Int, hasFlightPlan: Boolean,
+               attrs: Int, beaconCode: String, stddsRev: Int,
                flightId: String, cs: String, position: LatLonPos, altitude: Length, speed: Speed, heading: Angle, date: DateTime) = {
-    (src,trackNum,xyPos,vVert,status,isFrozen,isNew,isPseudo,isAdsb,beaconCode,stddsRev,hasFlightPlan,flightId,cs,position,altitude,speed,heading,date)
+    (src,trackNum,xyPos,vVert,status,attrs,beaconCode,stddsRev,flightId,cs,position,altitude,speed,heading,date)
   }
   def unapply (track: TATrack) = true
 }
@@ -55,14 +59,9 @@ class TATrack (val src: String,
                val xyPos: XYPos,
                val vVert: Speed,
                val status: Status,
-               val isFrozen: Boolean,
-               val isNew: Boolean,
-               val isPseudo: Boolean,
-               val isAdsb: Boolean,
+               val attrs: Int,
                val beaconCode: String,
-
                val stddsRev: Int,  // 2 or 3  TODO - not sure we want to keep this in a track object
-               val hasFlightPlan: Boolean,  // TODO - should be replaced by FlightPlan reference
 
                //--- the FlightPos fields
                flightId: String, cs: String, position: LatLonPos, altitude: Length, speed: Speed, heading: Angle, date: DateTime
@@ -73,4 +72,9 @@ class TATrack (val src: String,
   }
 
   def isDrop = status == TATrack.Status.Drop
+  def isFrozen = (attrs & TATrack.FrozenFlag) > 0
+  def isNew = (attrs & TATrack.NewFlag) > 0
+  def isPseudo = (attrs & TATrack.PseudoFlag) > 0
+  def isAdsb = (attrs & TATrack.AdsbFlag) > 0
+  def hasFlightPlan = (attrs & TATrack.FlightPlanFlag) > 0
 }

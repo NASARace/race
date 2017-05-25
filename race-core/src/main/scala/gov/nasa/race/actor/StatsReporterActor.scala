@@ -58,8 +58,8 @@ trait StatsReporterActor extends SubscribingRaceActor with PeriodicRaceActor {
   def report: Unit  // to be provided by concrete actor
 
   // our default ticks, which should be finer granularity than StatsCollectors
-  override def defaultTickInterval = 5.seconds
-  override def defaultTickDelay = 5.seconds
+  override def defaultTickInterval = 2300.milliseconds
+  override def defaultTickDelay = 2300.milliseconds
 
   override def onStartRaceActor(originator: ActorRef) = {
     startScheduler
@@ -97,6 +97,10 @@ trait StatsReporterActor extends SubscribingRaceActor with PeriodicRaceActor {
 trait PrintStatsReporterActor extends StatsReporterActor {
   val pw: PrintWriter // to be provided by concrete class
 
+  val formatters: Seq[PrintStatsFormatter] = config.getConfigSeq("formatters").flatMap ( conf =>
+    newInstance[PrintStatsFormatter](conf.getString("class"),Array(classOf[Config]),Array(conf))
+  )
+
   def reportProlog: Unit = {}
   def reportEpilog: Unit = {}
 
@@ -110,10 +114,6 @@ trait PrintStatsReporterActor extends StatsReporterActor {
     pw.println(stats.source)
     pw.println
   }
-
-  val formatters: Seq[PrintStatsFormatter] = config.getConfigSeq("formatters").flatMap ( conf =>
-    newInstance[PrintStatsFormatter](conf.getString("class"),Array(classOf[Config]),Array(conf))
-  )
 
   override def report = {
     reportProlog
