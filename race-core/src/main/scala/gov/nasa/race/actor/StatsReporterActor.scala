@@ -16,20 +16,21 @@
  */
 package gov.nasa.race.actor
 
-import java.io.{File, PrintWriter}
+import java.io.{File, FileWriter, PrintWriter}
 
 import akka.actor.ActorRef
 import com.typesafe.config.Config
+import gov.nasa.race._
 import gov.nasa.race.common.{PrintStats, PrintStatsFormatter, Stats}
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.Messages.{BusEvent, RaceTick}
-import gov.nasa.race.core.{PeriodicRaceActor, SubscribingRaceActor}
-import gov.nasa.race.util.ConsoleIO.{resetColor, reverseColor}
-import gov.nasa.race.util.{BufferedFileWriter, ConsoleIO, StringUtils}
+import gov.nasa.race.core.{PeriodicRaceActor, PublishingRaceActor, SubscribingRaceActor}
 import gov.nasa.race.util.DateTimeUtils.durationMillisToHMMSS
+import gov.nasa.race.util.{BufferedFileWriter, ConsoleIO, StringUtils}
 
 import scala.collection.mutable.{SortedMap => MSortedMap}
 import scala.concurrent.duration._
+import scala.xml.PrettyPrinter
 
 /**
   * a mix-in for Stats reporter actors
@@ -171,4 +172,35 @@ class FileStatsReporter (val config: Config) extends PrintStatsReporterActor {
 
   override def reportProlog = writer.reset
   override def reportEpilog = writer.writeFile
+}
+
+/**
+  * a StatsReporter that creates, publishes and optionally saves XML reports
+  *
+  * TODO - add docType and xmlDecl
+  */
+class XMLStatsReporter (val config: Config) extends StatsReporterActor with PublishingRaceActor {
+  val pathName = config.getOptionalString("pathname")
+
+  val pretty = if (config.getBooleanOrElse("prettify",false)) {
+    Some(new PrettyPrinter(config.getIntOrElse("pretty-columns",140), config.getIntOrElse("pretty-indent",2)))
+  } else None
+
+  def save (msg: String) = {
+    ifSome(pathName) { pn =>
+      val writer = new FileWriter(pn,false)
+      writer.write(msg,0,msg.length)
+      writer.close
+    }
+  }
+
+  override def report = {
+    val xml = <statisticsReport>{topics.values.map(_.toXML)}</statisticsReport>
+    val msg = pretty match {
+      case Some(pp) => pp.format(xml)
+      case None => xml.toString
+    }
+    save(msg)
+    publish(msg)
+  }
 }

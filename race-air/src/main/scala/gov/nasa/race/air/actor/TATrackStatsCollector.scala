@@ -24,11 +24,12 @@ import com.typesafe.config.Config
 import gov.nasa.race._
 import gov.nasa.race.actor.StatsCollectorActor
 import gov.nasa.race.air.TATrack
-import gov.nasa.race.common.{ConfiguredTSStatsCollector, PrintStats, PrintStatsFormatter, Stats, TSEntryData, TSStatsData}
+import gov.nasa.race.common.{BucketCounter, ConfiguredTSStatsCollector, PrintStats, PrintStatsFormatter, Stats, TSEntryData, TSStatsData}
 import gov.nasa.race.core.ClockAdjuster
 import gov.nasa.race.core.Messages.{BusEvent, RaceTick}
 
 import scala.collection.mutable.{HashMap => MHashMap}
+import scala.xml.PrettyPrinter
 
 /**
   * actor that collects statistics for TATrack objects
@@ -139,6 +140,8 @@ class TATrackStatsData  (val src: String) extends TSStatsData[TATrack,TATrackEnt
       if (stddsV3 > 0) "3" else "?"
     }
   }
+
+  override def toXML = <center src={src}>{xmlBasicTSStatsData ++ xmlBasicTSStatsProblems ++ xmlSamples}</center>
 }
 
 class TATrackStats(val topic: String, val source: String, val takeMillis: Long, val elapsedMillis: Long,
@@ -177,6 +180,8 @@ class TATrackStats(val topic: String, val source: String, val takeMillis: Long, 
     pw.print(f"$nTracons%7d $stddsV2%3d $stddsV3%3d   $nActive%7d $nFlightPlans%7d $nCompleted%7d")
     pw.print(f"   $nDropped%7d $nOutOfOrder%7d $nDuplicates%7d $nAmbiguous%7d   $nNoTime%7d")
   }
+
+  override def xmlData = <taTrackStats>{traconStats.map( _.toXML)}</taTrackStats>
 }
 
 class TATrackStatsFormatter (conf: Config) extends PrintStatsFormatter {

@@ -47,8 +47,10 @@ object Dependencies {
   val nscalaTime = "com.github.nscala-time" %% "nscala-time" %  "latest.release"
 
   //--- Scala parser combinators (https://github.com/scala/scala-parser-combinators)
-  //val scalaParser =  "org.scala-lang.modules" %% "scala-parser-combinators"  % "latest.release" // not yet 2.12
-  val scalaParser = "org.scala-lang.modules" % "scala-parser-combinators_2.12" % "1.0.4"
+  val scalaParser = "org.scala-lang.modules" % "scala-parser-combinators_2.12" % "latest.release"
+
+  //--- scala-xml
+  val scalaXml = "org.scala-lang.modules" % "scala-xml_2.12" % "latest.release"
 
   //--- new scala reflection (TypeTags etc.)
   val scalaReflect =  "org.scala-lang" % "scala-reflect" % "2.12.2"

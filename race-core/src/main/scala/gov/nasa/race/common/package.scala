@@ -100,4 +100,9 @@ package object common {
     @tailrec def p (e: Int, acc: Long): Long = if (e == 0) acc else p(e-1, acc*10)
     p(e,1L)
   }
+
+  // something that can be turned into XML
+  trait XmlSource {
+    def toXML: xml.Node
+  }
 }

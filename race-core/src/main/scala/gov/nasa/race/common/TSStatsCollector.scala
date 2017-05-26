@@ -26,6 +26,7 @@ import gov.nasa.race.config.ConfigUtils._
 
 import scala.collection.mutable.{HashMap => MHashMap}
 import scala.concurrent.duration._
+import scala.xml.{Node, NodeBuffer, NodeSeq}
 
 /**
   * statistics data for a generic, irregular time series, i.e. sequences of update events for dated objects
@@ -41,7 +42,7 @@ import scala.concurrent.duration._
   * The basic implementation only keeps track of general active/min/max/total update interval counts, and of some
   * generic error conditions such as out-of-order updates (update message with older timestamp arriving later)
   */
-trait TSStatsData[O <: Dated,E <: TSEntryData[O]] extends Cloneable {
+trait TSStatsData[O <: Dated,E <: TSEntryData[O]] extends Cloneable with XmlSource {
 
   //--- global stats over all entries
   var nUpdates = 0 // number of update calls
@@ -52,7 +53,7 @@ trait TSStatsData[O <: Dated,E <: TSEntryData[O]] extends Cloneable {
   var maxActive = 0 // high water mark for activeEntries
   var completed = 0 // entries that were explicitly removed (to see if there is re-organization in case of dropped entries)
 
-  //--- standard problem statistics
+  //--- basic problem statistics
   var stale = 0  // entries that are outdated when they are first reported (dead on arrival)
   var dropped = 0 // entries that are dropped because they didn't get updated within a certain time
 
@@ -61,6 +62,7 @@ trait TSStatsData[O <: Dated,E <: TSEntryData[O]] extends Cloneable {
   var ambiguous = 0 // updates that have the same time stamp but are otherwise not the same as the previous update
 
   var buckets: Option[BucketCounter] = None  // has to be var so that we can clone
+
 
   //--- override for specialized actions (make sure not to introduce fields that should not be part of the snapshot)
 
@@ -129,6 +131,34 @@ trait TSStatsData[O <: Dated,E <: TSEntryData[O]] extends Cloneable {
   // can be overridden to collect entry specific data upon snapshot
   def resetEntryData: Unit = {}
   def processEntryData (e: E): Unit = {} // default is to do nothing
+
+
+  //--- XML representation
+  def xmlBasicTSStatsData = {
+    <updates>{nUpdates}</updates>
+      <active>{nActive}</active>
+      <minActive>{minActive}</minActive>
+      <maxActive>{maxActive}</maxActive>
+      <completed>{completed}</completed>
+      <dtMin>{dtMin}</dtMin>
+      <dtMax>{dtMax}</dtMax>
+  }
+
+  def xmlBasicTSStatsProblems = {
+    <stale>{stale}</stale>
+      <dropped>{dropped}</dropped>
+      <outOfOrder>{outOfOrder}</outOfOrder>
+      <duplicates>{duplicate}</duplicates>
+      <ambiguous>{ambiguous}</ambiguous>
+  }
+
+  def xmlSamples = buckets match {
+    case Some(bc) => bc.toXML
+    case None => NodeSeq.Empty
+  }
+
+  // override if there are additional fields
+  def toXML = <series>{ xmlBasicTSStatsData ++ xmlBasicTSStatsProblems ++ xmlSamples}</series>
 }
 
 class TimeSeriesStats[O <: Dated,E <: TSEntryData[O]](val topic: String,
@@ -159,6 +189,8 @@ class TimeSeriesStats[O <: Dated,E <: TSEntryData[O]](val topic: String,
     }
     pw.println
   }
+
+  override def xmlData = data.toXML
 }
 
 trait BasicTimeSeriesStats[O <: Dated] extends TimeSeriesStats[O,TSEntryData[O]]

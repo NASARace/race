@@ -18,15 +18,26 @@ package gov.nasa.race.common
 
 import java.io.PrintWriter
 
+import scala.xml.NodeSeq
+
 /**
   * the generic container for statistics. This can be sent as a message, as long as
   * the snapshot element type is serializable
   */
-trait Stats extends Cloneable {
+trait Stats extends Cloneable with XmlSource {
   val topic: String         // what we measure
   val source: String        // where we measure it from
   val takeMillis: Long      // absolute time value when stats snapshot was taken
   val elapsedMillis: Long   // duration covered by the snapshot
+
+  //--- XML generation interface
+  def toXML = {
+    <stats topic={topic} source={source} takeMillis={takeMillis.toString} elapsedMillis={elapsedMillis.toString}>
+      {xmlData}
+    </stats>
+  }
+  // override for stats child elements
+  def xmlData: xml.NodeSeq = NodeSeq.Empty
 }
 
 trait PrintStats extends Stats {
@@ -36,4 +47,3 @@ trait PrintStats extends Stats {
 trait PrintStatsFormatter {
   def printWith(pw: PrintWriter, stats: Stats): Boolean // return true if stats were written
 }
-

@@ -21,7 +21,7 @@ import scala.annotation.tailrec
 /**
   * a trait for basic on-the-fly sample statistics calculation
   */
-trait SampleStats {
+trait SampleStats extends XmlSource {
   var nSamples: Int = 0
   var min: Double = Double.PositiveInfinity
   var max: Double = Double.NegativeInfinity
@@ -46,6 +46,14 @@ trait SampleStats {
 
 
   @inline def sigma: Double = Math.sqrt(variance)
+
+  def toXML = <samples>
+    <count>{nSamples}</count>
+    <min>{min}</min>
+    <max>{max}</max>
+    <mean>{mean}</mean>
+    <variance>{variance}</variance>
+  </samples>
 }
 
 object BucketCounter {
