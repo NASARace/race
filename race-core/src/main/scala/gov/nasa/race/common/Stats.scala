@@ -40,10 +40,33 @@ trait Stats extends Cloneable with XmlSource {
   def xmlData: xml.NodeSeq = NodeSeq.Empty
 }
 
+/**
+  * Stats that can be printed
+  */
 trait PrintStats extends Stats {
   def printWith(pw: PrintWriter)
 }
 
+/**
+  * a formatter that prints Stats (for configurable reporters)
+  */
 trait PrintStatsFormatter {
   def printWith(pw: PrintWriter, stats: Stats): Boolean // return true if stats were written
+}
+
+
+/**
+  * generic pattern match statistics
+  */
+class PatternStatsData(val pattern: String) extends XmlSource with Cloneable {
+  var count: Int = 0
+
+  def snapshot = super.clone.asInstanceOf[PatternStatsData]
+
+  override def toXML = {
+    <match>
+      <pattern>{pattern}</pattern>
+      <count>{count}</count>
+    </match>
+  }
 }

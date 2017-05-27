@@ -20,7 +20,7 @@ import java.io.PrintWriter
 
 import com.typesafe.config.Config
 import gov.nasa.race._
-import gov.nasa.race.common.{MD5Checksum, MsgClassifier, PrintStats}
+import gov.nasa.race.common.{MD5Checksum, MsgClassifier, PrintStats, XmlSource}
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.FileWriterRaceActor
 import gov.nasa.race.core.Messages.{BusEvent, RaceTick}
@@ -48,7 +48,7 @@ class DuplicatedMsgDetector (val config: Config) extends StatsCollectorActor wit
   val md5 = new MD5Checksum
 
   val classifiers = MsgClassifier.getClassifiers(config)
-  val dupStats = MSortedMap.empty[String,DupStats]
+  val dupStats = MSortedMap.empty[String,DupStatsData]
 
   override def handleMessage = {
     case BusEvent(_, msg: String, _) => checkMessage(msg)
@@ -64,7 +64,7 @@ class DuplicatedMsgDetector (val config: Config) extends StatsCollectorActor wit
     checksums.get(cs) match {
       case Some(tLast) =>
         ifSome(MsgClassifier.classify(msg,classifiers)) { c =>
-          val ds = dupStats.getOrElseUpdate(c.name, new DupStats(c.name))
+          val ds = dupStats.getOrElseUpdate(c.name, new DupStatsData(c.name))
           ds.count += 1
           ds.dtMillis += tNow - tLast
           logDuplicate(msg, tNow, tLast)
@@ -94,20 +94,23 @@ class DuplicatedMsgDetector (val config: Config) extends StatsCollectorActor wit
   }
 }
 
-class DupStats (val classifier: String) {
+class DupStatsData(val classifier: String) extends XmlSource with Cloneable {
   var count = 0
   var dtMillis = 0L
-  def snapshot: DupStatsSnapshot = DupStatsSnapshot(classifier,count,dtMillis)
+
+  def snapshot = super.clone.asInstanceOf[DupStatsData]
+
+  override def toXML = {
+    <dup classifier={classifier}>
+      <count>{count}</count>
+      <rate>{dtMillis}</rate>
+    </dup>
+  }
 }
-case class DupStatsSnapshot (
-  classifier: String,
-  count: Int,
-  dtMillis: Long
-)
 
 
 class SubscriberDupStats (val topic: String,  val source: String, val takeMillis: Long, val elapsedMillis: Long,
-                          val messages: Array[DupStatsSnapshot]) extends PrintStats {
+                          val messages: Array[DupStatsData]) extends PrintStats {
 
   def printWith (pw:PrintWriter) = {
     if (messages.nonEmpty) {
@@ -120,4 +123,6 @@ class SubscriberDupStats (val topic: String,  val source: String, val takeMillis
     }
     pw.println
   }
+
+  override def xmlData = <dupStats>{messages.map(_.toXML)}</dupStats>
 }

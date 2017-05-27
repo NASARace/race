@@ -50,43 +50,41 @@ class MsgStatsData(val msgName: String) {
     }
   }
 
-  def snapshot: MsgStatsSnapshot = MsgStatsSnapshot(
-    msgName,byteSize,count,avgMsgPerSec,peakMsgPerSec,
+  def snapshot: MsgStatsDataSnapshot = MsgStatsDataSnapshot(
+    msgName,count,byteSize,avgMsgPerSec,peakMsgPerSec,
     mapIteratorToArray(pathMatches.valuesIterator,pathMatches.size)(_.snapshot),
     mapIteratorToArray(regexMatches.valuesIterator,regexMatches.size)(_.snapshot)
   )
 }
 
 /**
-  * XML element statistics.
-  * Those are recorded per message type
+  * this is the invariant version of MsgStats that can be processed asynchronously
   */
-class PatternStatsData(val pattern: String) {
-  var count: Int = 0
-  def snapshot = new PatternStatsSnapshot(pattern,count)
+case class MsgStatsDataSnapshot(
+  msgName: String,
+  count: Int,
+  byteSize: Long,
+  avgMsgPerSec: Double,
+  peakMsgPerSec: Double,
+  paths: Array[PatternStatsData],  // element paths
+  patterns: Array[PatternStatsData] // regex pattern matches
+) extends XmlSource {
+
+  override def toXML = {
+    <msg name={msgName}>
+      <count>{count}</count>
+      <bytes>{byteSize}</bytes>
+      <avgMsgPerSec>{f"$avgMsgPerSec%.1f"}</avgMsgPerSec>
+      <peakMsgPerSec>{f"$peakMsgPerSec%.1f"}</peakMsgPerSec>
+      <paths>{paths.map(_.toXML)}</paths>
+      <patterns>{patterns.map(_.toXML)}</patterns>
+    </msg>
+  }
 }
 
 
-/**
-  * this is the invariant version of MsgStats that can be processed asynchronously
-  */
-case class MsgStatsSnapshot (
-  msgName: String,
-  byteSize: Long,
-  count: Int,
-  avgMsgPerSec: Double,
-  peakMsgPerSec: Double,
-  paths: Array[PatternStatsSnapshot],  // element paths
-  patterns: Array[PatternStatsSnapshot] // regex pattern matches
-)
-
-case class PatternStatsSnapshot(
-  pattern: String,
-  count: Int
-)
-
 class SubscriberMsgStats (val topic: String, val source: String, val takeMillis: Long, val elapsedMillis: Long,
-                          val messages: Array[MsgStatsSnapshot]) extends PrintStats {
+                          val messages: Array[MsgStatsDataSnapshot]) extends PrintStats {
 
   override def printWith (pw: PrintWriter) = {
     if (messages.nonEmpty) {
@@ -119,4 +117,6 @@ class SubscriberMsgStats (val topic: String, val source: String, val takeMillis:
       }
     }
   }
+
+  override def xmlData = <msgStats>{messages.map(_.toXML)}</msgStats>
 }

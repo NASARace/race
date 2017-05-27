@@ -24,12 +24,13 @@ import com.typesafe.config.Config
 import gov.nasa.race._
 import gov.nasa.race.actor.StatsCollectorActor
 import gov.nasa.race.air.TATrack
-import gov.nasa.race.common.{BucketCounter, ConfiguredTSStatsCollector, PrintStats, PrintStatsFormatter, Stats, TSEntryData, TSStatsData}
+import gov.nasa.race.common.{ConfiguredTSStatsCollector, PrintStats, PrintStatsFormatter, Stats, TSEntryData, TSStatsData}
 import gov.nasa.race.core.ClockAdjuster
 import gov.nasa.race.core.Messages.{BusEvent, RaceTick}
+import gov.nasa.race.http.{HtmlArtifacts, HtmlStats, HtmlStatsFormatter}
 
 import scala.collection.mutable.{HashMap => MHashMap}
-import scala.xml.PrettyPrinter
+import scalatags.Text.all._
 
 /**
   * actor that collects statistics for TATrack objects
@@ -151,6 +152,7 @@ class TATrackStats(val topic: String, val source: String, val takeMillis: Long, 
   var nActive = 0
   var nCompleted = 0
   var nFlightPlans = 0
+  var nStale = 0
   var nDropped = 0
   var nOutOfOrder = 0
   var nDuplicates = 0
@@ -164,6 +166,7 @@ class TATrackStats(val topic: String, val source: String, val takeMillis: Long, 
     nFlightPlans += ts.nFlightPlans
     nCompleted += ts.completed
 
+    nStale += ts.stale
     nDropped += ts.dropped
     nOutOfOrder += ts.outOfOrder
     nDuplicates += ts.duplicate
@@ -214,5 +217,48 @@ class TATrackStatsFormatter (conf: Config) extends PrintStatsFormatter {
     }
 
     true
+  }
+}
+
+class HtmlTATrackStatsFormatter (config: Config) extends HtmlStatsFormatter {
+
+  override def toHtml(stats: Stats): Option[HtmlArtifacts] = {
+    stats match {
+      case stats: TATrackStats => Some(HtmlArtifacts(statsToHtml(stats), HtmlStats.noResources))
+      case _ => None
+    }
+  }
+
+  def statsToHtml (s: TATrackStats) = {
+    import gov.nasa.race.util.DateTimeUtils.{durationMillisToCompactTime => dur}
+    import s._
+
+    div(
+      HtmlStats.htmlTopicHeader(topic,source,elapsedMillis),
+      table(cls:="noBorder")(
+        tr(cls:="border")(
+          th("src"),th("v2"),th("v3"),th("tracks"),th("fPlan"),th("min"),th("max"),th("cmplt"),th(""),
+          th("n"),th("Δt min"),th("Δt max"),th("Δt avg"),th(""),
+          th("stale"),th("drop"),th("order"),th("dup"),th("amb"),th("no-t")
+        ),
+
+        //--- sum row
+        tr(cls:="border")(
+          td(nTracons),td(stddsV2),td(stddsV3),td(nActive),td(nFlightPlans),td(""),td(""),td(""),td(""),
+          td(""),td(""),td(""),td(""),td(""),
+          td(nStale),td(nDropped),td(nOutOfOrder),td(nDuplicates),td(nAmbiguous),td(nNoTime)
+        ),
+
+        //--- tracon rows
+        for (t <- traconStats) yield tr(cls:="value top")(
+          td(t.src),td(t.stddsV2),td(t.stddsV3),td(t.nActive),td(t.nFlightPlans),td(t.minActive),td(t.maxActive),td(t.completed),td(""),
+          t.buckets match {
+            case Some(bc) if bc.nSamples > 0 => Seq( td(bc.nSamples),td(dur(bc.min)),td(dur(bc.max)),td(dur(bc.mean)))
+            case _ => Seq( td("-"),td("-"),td("-"),td("-"))
+          },td(""),
+          td(t.stale),td(t.dropped),td(t.outOfOrder),td(t.duplicate),td(t.ambiguous),td(t.nNoTime)
+        )
+      )
+    )
   }
 }

@@ -55,6 +55,9 @@ class FPosStatsCollector (val config: Config)
 
 class FlightPosStatsData extends TSStatsData[FlightPos,TSEntryData[FlightPos]] {
   override def isDuplicate(fpos: FlightPos, last: FlightPos) = {
-    fpos.position =:= last.position && fpos.altitude =:= last.altitude
+    fpos.position == last.position &&
+      fpos.altitude == last.altitude
   }
+
+  override def toXML = <flightPositions>{xmlFields}</flightPositions>
 }

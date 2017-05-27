@@ -36,6 +36,10 @@ table.noBorder th, table.noBorder td {
   border-style: none;
 }
 
+tr.border th, tr.border td {
+  border-bottom: 1px solid lightgray;
+}
+
 table td {
   vertical-align: top;
   color: blue;

@@ -134,6 +134,7 @@ trait TSStatsData[O <: Dated,E <: TSEntryData[O]] extends Cloneable with XmlSour
 
 
   //--- XML representation
+
   def xmlBasicTSStatsData = {
     <updates>{nUpdates}</updates>
       <active>{nActive}</active>
@@ -157,8 +158,10 @@ trait TSStatsData[O <: Dated,E <: TSEntryData[O]] extends Cloneable with XmlSour
     case None => NodeSeq.Empty
   }
 
+  def xmlFields = xmlBasicTSStatsData ++ xmlBasicTSStatsProblems ++ xmlSamples
+
   // override if there are additional fields
-  def toXML = <series>{ xmlBasicTSStatsData ++ xmlBasicTSStatsProblems ++ xmlSamples}</series>
+  def toXML = <series>{xmlFields}</series>
 }
 
 class TimeSeriesStats[O <: Dated,E <: TSEntryData[O]](val topic: String,

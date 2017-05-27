@@ -18,7 +18,7 @@
 package gov.nasa.race.http
 
 import com.typesafe.config.Config
-import gov.nasa.race.common.{PatternStatsSnapshot, Stats, SubscriberMsgStats}
+import gov.nasa.race.common.{PatternStatsData, Stats, SubscriberMsgStats}
 import gov.nasa.race.util.FileUtils
 
 import scalatags.Text.all.{cls, div, p, table, td, th, tr, _}
@@ -36,19 +36,19 @@ class HtmlMessageStatsFormatter (config: Config) extends HtmlStatsFormatter {
     }
   }
 
-  def patternStats(s:PatternStatsSnapshot) = tr(
+  def patternStats(s:PatternStatsData) = tr(
     td(cls:="right")(s.count),
     td(cls:="left")(s.pattern)
   )
 
-  def msgStatsToHtml(ms: SubscriberMsgStats) = {
+  def msgStatsToHtml(s: SubscriberMsgStats) = {
     div(
-      HtmlStats.htmlTopicHeader(ms.topic,ms.source,ms.elapsedMillis),
+      HtmlStats.htmlTopicHeader(s.topic,s.source,s.elapsedMillis),
       table(
         tr(
           th("count"), th("msg/sec"), th("peak"), th("size"), th("avgSize"), th(cls:="left")("msg")
         ),
-        for (m <- ms.messages) yield tr(cls:="value top")(
+        for (m <- s.messages) yield tr(cls:="value top")(
           td(m.count),
           td(f"${m.avgMsgPerSec}%.1f"),
           td(f"${m.peakMsgPerSec}%.1f"),
@@ -62,13 +62,13 @@ class HtmlMessageStatsFormatter (config: Config) extends HtmlStatsFormatter {
             )
           )
         ),
-        if (ms.messages.size > 1) {
+        if (s.messages.size > 1) {
           var count = 0
           var avgRate = 0.0
           var peakRate = 0.0
           var byteSize = 0L
 
-          for (m <- ms.messages) {
+          for (m <- s.messages) {
             count += m.count
             avgRate += m.avgMsgPerSec
             peakRate += m.peakMsgPerSec

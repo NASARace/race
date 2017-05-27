@@ -32,7 +32,7 @@ import scala.collection.immutable.ListMap
 
 object RemoteLauncher {
    val codeSourceEntries = Seq(
-    "com.jcraft.jsch.JSch" -> JarSpec("/com.jcraft.jsch-0.1.53.jar", "658b682d5c817b27ae795637dfec047c63d29935")
+    "com.jcraft.jsch.JSch" -> JarSpec("/com.jcraft.jsch-0.1.54.jar", "da3584329a263616e277e15462b387addd1b208d")
     // <2do> once we have a ueber-jar for RACE, we should add UserInterfaceFactory and respective classes
   )
 }

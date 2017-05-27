@@ -34,18 +34,10 @@ import scalatags.Text.all._
   * TimeSeriesStats mix-in to report as HTML
   */
 trait HtmlTimeSeriesStats[O <: Dated,E <: TSEntryData[O]] extends TimeSeriesStats[O,E] with HtmlStats {
-  import data._
 
   def toHtml = {
-    def dur (millis: Double): String = {
-      if (millis.isInfinity || millis.isNaN) {
-        ""
-      } else {
-        if (millis < 120000) f"${millis / 1000}%4.0fs"
-        else if (millis < 360000) f"${millis / 60000}%4.1fm"
-        else f"${millis / 360000}%4.1fh"
-      }
-    }
+    import data._
+    import gov.nasa.race.util.DateTimeUtils.{durationMillisToCompactTime => dur}
 
     val res = diagramArtifacts
 
@@ -74,7 +66,7 @@ trait HtmlTimeSeriesStats[O <: Dated,E <: TSEntryData[O]] extends TimeSeriesStat
   }
 
   def diagramArtifacts = {
-    buckets match {
+    data.buckets match {
       case Some(bc) if bc.nSamples > 0 =>
         def dataset = {
           val ds = new XYSeries("updates")
