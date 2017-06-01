@@ -121,7 +121,6 @@ class SubscriberDupStats (val topic: String,  val source: String, val takeMillis
         pw.println(f"${m.count}%7d   $avgDtSecs%9.3f   ${m.classifier}")
       }
     }
-    pw.println
   }
 
   override def xmlData = <dupStats>{messages.map(_.toXML)}</dupStats>

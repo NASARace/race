@@ -31,13 +31,16 @@ class TranslatorActor (val config: Config) extends SubscribingRaceActor with Fil
 
   var translator: ConfigurableTranslator = createTranslator
 
-  /** override this if this to use a hardwired translator */
+  /** override this to use a hardwired translator */
   def createTranslator: ConfigurableTranslator = getConfigurable[ConfigurableTranslator]("translator")
 
   def handleTranslatorMessage: Receive = {
     case BusEvent(_,msg,_) =>
       translator.translate(msg) match {
-        case Some(list:Seq[_]) if translator.flatten => list foreach(processTranslationProduct)
+        case Some(list:Seq[_]) if translator.flatten =>
+          list.foreach{ m =>
+            processTranslationProduct(m)
+          }
         case Some(m) => processTranslationProduct(m)
         case None => // ignore
       }

@@ -29,11 +29,14 @@ import scala.collection.mutable.{SortedMap => MSortedMap}
 class MsgStatsData(val msgName: String) {
   var tLast: Long = 0     // timestamp of last rate base
   var lastCount: Int = 0  // msg count of last rate base
+  var lastByteSize: Long = 0  // byte size of last rate base
 
   var byteSize: Long = 0
   var count: Int = 0
   var avgMsgPerSec: Double = 0.0
   var peakMsgPerSec: Double = 0.0
+  var avgBytesPerSec: Double = 0.0
+  var peakBytesPerSec: Double = 0.0
 
   val pathMatches = MSortedMap.empty[String,PatternStatsData]
   val regexMatches = MSortedMap.empty[String,PatternStatsData]
@@ -41,17 +44,26 @@ class MsgStatsData(val msgName: String) {
   def update (tNow: Long, tElapsed: Long, lenBytes: Int)(implicit rateBaseMillis: Int) = {
     count += 1
     byteSize += lenBytes
-    avgMsgPerSec = count * 1000.0 / tElapsed
+
+    val t = 1000.0 / tElapsed
+    avgMsgPerSec = count * t
+    avgBytesPerSec = byteSize * t
 
     if (tNow - tLast >= rateBaseMillis) {
-      peakMsgPerSec = Math.max(peakMsgPerSec, (count - lastCount) * 1000.0 / (tNow - tLast))
-      tLast = tNow
+      val dt = 1000.0 / (tNow - tLast)
+
+      peakMsgPerSec = Math.max(peakMsgPerSec, (count - lastCount) * dt)
       lastCount = count
+
+      peakBytesPerSec = Math.max(peakBytesPerSec, (byteSize - lastByteSize) * dt)
+      lastByteSize = byteSize
+
+      tLast = tNow
     }
   }
 
   def snapshot: MsgStatsDataSnapshot = MsgStatsDataSnapshot(
-    msgName,count,byteSize,avgMsgPerSec,peakMsgPerSec,
+    msgName,count,byteSize,avgMsgPerSec,peakMsgPerSec,avgBytesPerSec,peakBytesPerSec,
     mapIteratorToArray(pathMatches.valuesIterator,pathMatches.size)(_.snapshot),
     mapIteratorToArray(regexMatches.valuesIterator,regexMatches.size)(_.snapshot)
   )
@@ -66,6 +78,8 @@ case class MsgStatsDataSnapshot(
   byteSize: Long,
   avgMsgPerSec: Double,
   peakMsgPerSec: Double,
+  avgBytesPerSec: Double,
+  peakBytesPerSec: Double,
   paths: Array[PatternStatsData],  // element paths
   patterns: Array[PatternStatsData] // regex pattern matches
 ) extends XmlSource {
@@ -76,6 +90,8 @@ case class MsgStatsDataSnapshot(
       <bytes>{byteSize}</bytes>
       <avgMsgPerSec>{f"$avgMsgPerSec%.1f"}</avgMsgPerSec>
       <peakMsgPerSec>{f"$peakMsgPerSec%.1f"}</peakMsgPerSec>
+      <avgBytesPerSec>{f"$avgBytesPerSec%.0f"}</avgBytesPerSec>
+      <peakBytesPerSec>{f"$peakBytesPerSec%.0f"}</peakBytesPerSec>
       <paths>{paths.map(_.toXML)}</paths>
       <patterns>{patterns.map(_.toXML)}</patterns>
     </msg>
@@ -89,31 +105,38 @@ class SubscriberMsgStats (val topic: String, val source: String, val takeMillis:
   override def printWith (pw: PrintWriter) = {
     if (messages.nonEmpty) {
       var count = 0
-      var avgRate = 0.0
-      var peakRate = 0.0
+      var avgMps = 0.0
+      var peakMps = 0.0
+      var avgBps = 0.0
+      var peakBps = 0.0
       var byteSize = 0L
 
-      pw.println("  count    msg/s   peak     size    avg   msg")
-      pw.println("-------   ------ ------   ------ ------   --------------------------------------")
+      pw.println("     count    msg/s   peak   byte/s   peak     size    avg   msg")
+      pw.println("----------   ------ ------   ------ ------   ------ ------   --------------------------------------")
       for (m <- messages) {
+        val bps = FileUtils.sizeString(Math.round(m.avgBytesPerSec))
+        val bpsPeak = FileUtils.sizeString(Math.round(m.peakBytesPerSec))
         val memSize = FileUtils.sizeString(m.byteSize)
         val avgMemSize = FileUtils.sizeString((m.byteSize / m.count).toInt)
-        pw.println(f"${m.count}%7d   ${m.avgMsgPerSec}%6.1f ${m.peakMsgPerSec}%6.1f   $memSize%6s $avgMemSize%6s   ${m.msgName}%s")
-        m.paths.foreach( e => pw.println(f"${e.count}%46d ${StringUtils.capLength(e.pattern)(40)}%s"))
-        m.patterns.foreach( e => pw.println(f"${e.count}%46d ${StringUtils.capLength(e.pattern)(40)}%s"))
+        pw.println(f"${m.count}%10d   ${m.avgMsgPerSec}%6.0f ${m.peakMsgPerSec}%6.0f   $bps%6s $bpsPeak%6s   $memSize%6s $avgMemSize%6s   ${m.msgName}%s")
+        m.paths.foreach( e => pw.println(f"${e.count}%68d ${StringUtils.capLength(e.pattern)(40)}%s"))
+        m.patterns.foreach( e => pw.println(f"${e.count}%68d ${StringUtils.capLength(e.pattern)(40)}%s"))
         count += m.count
-        avgRate += m.avgMsgPerSec
-        peakRate += m.peakMsgPerSec
+        avgMps += m.avgMsgPerSec
+        peakMps += m.peakMsgPerSec
+        avgBps += m.avgBytesPerSec
+        peakBps += m.peakBytesPerSec
         byteSize += m.byteSize
       }
 
       if (messages.length > 1) {
-        // otherwise there is no point printing summaries
+        val bps = FileUtils.sizeString(Math.round(avgBps))
+        val bpsPeak = FileUtils.sizeString(Math.round(peakBps))
         val memSize = FileUtils.sizeString(byteSize)
         val avgMemSize = if (count > 0) FileUtils.sizeString((byteSize / count).toInt) else 0
 
-        pw.println("-------   ------ ------   ------ ------")
-        pw.println(f"${count}%7d   ${avgRate}%6.1f ${peakRate}%6.1f   $memSize%6s $avgMemSize%6s")
+        pw.println("----------   ------ ------   ------ ------   ------ ------")
+        pw.println(f"${count}%10d   ${avgMps}%6.0f ${peakMps}%6.0f   $bps%6s $bpsPeak%6s   $memSize%6s $avgMemSize%6s")
       }
     }
   }

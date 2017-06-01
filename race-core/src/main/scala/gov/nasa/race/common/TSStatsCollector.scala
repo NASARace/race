@@ -28,6 +28,7 @@ import scala.collection.mutable.{HashMap => MHashMap}
 import scala.concurrent.duration._
 import scala.xml.{Node, NodeBuffer, NodeSeq}
 
+
 /**
   * statistics data for a generic, irregular time series, i.e. sequences of update events for dated objects
   * such as flights, radar tracks etc.
@@ -43,6 +44,8 @@ import scala.xml.{Node, NodeBuffer, NodeSeq}
   * generic error conditions such as out-of-order updates (update message with older timestamp arriving later)
   */
 trait TSStatsData[O <: Dated,E <: TSEntryData[O]] extends Cloneable with XmlSource {
+  type OAction = (O)=>Unit
+  type OOAction = (O,O)=>Unit
 
   //--- global stats over all entries
   var nUpdates = 0 // number of update calls
@@ -56,11 +59,18 @@ trait TSStatsData[O <: Dated,E <: TSEntryData[O]] extends Cloneable with XmlSour
   //--- basic problem statistics
   var stale = 0  // entries that are outdated when they are first reported (dead on arrival)
   var dropped = 0 // entries that are dropped because they didn't get updated within a certain time
-
   var outOfOrder = 0 // updates that have a time stamp that is older than the previous update
   var duplicate = 0 // updates that are semantically the same as the previous update
   var ambiguous = 0 // updates that have the same time stamp but are otherwise not the same as the previous update
 
+  //--- optional actions to further analyze or archive problems, to be set by owner
+  var staleAction: Option[OAction] = None
+  var dropAction: Option[OAction] = None
+  var outOfOrderAction: Option[OOAction] = None
+  var duplicateAction: Option[OOAction] = None
+  var ambiguousAction: Option[OOAction] = None
+
+  //--- can be set by client/owner to get basic update distriution data
   var buckets: Option[BucketCounter] = None  // has to be var so that we can clone
 
 
@@ -89,6 +99,7 @@ trait TSStatsData[O <: Dated,E <: TSEntryData[O]] extends Cloneable with XmlSour
       if (nActive > maxActive) maxActive = nActive
     } else {
       stale += 1
+      ifSome(staleAction){ _(obj) }
     }
   }
 
@@ -104,11 +115,17 @@ trait TSStatsData[O <: Dated,E <: TSEntryData[O]] extends Cloneable with XmlSour
       }
 
     } else if (dt == 0) {  // duplicate or ambiguous
-      if (isDuplicate(obj,e.lastObj)) duplicate += 1
-      else ambiguous += 1
+      if (isDuplicate(obj,e.lastObj)) {
+        duplicate += 1
+        ifSome(duplicateAction){ _(obj,e.lastObj) }
+      } else {
+        ambiguous += 1
+        ifSome(ambiguousAction){ _(obj,e.lastObj) }
+      }
 
     } else {  // out of order (dt < 0)
       outOfOrder += 1
+      ifSome(outOfOrderAction){ _(obj,e.lastObj) }
     }
   }
 
@@ -124,6 +141,7 @@ trait TSStatsData[O <: Dated,E <: TSEntryData[O]] extends Cloneable with XmlSour
     dropped += 1
     nActive -= 1
     updateMinActive(isSettled)
+    ifSome(dropAction){ _(e.lastObj) }
   }
 
   def updateMinActive(isSettled: Boolean) = if (isSettled && (minActive == 0 || nActive < minActive)) minActive = nActive

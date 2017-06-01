@@ -22,7 +22,7 @@ import com.typesafe.config.Config
 import gov.nasa.race.air.TATrack
 import gov.nasa.race.air.TATrack.Status
 import gov.nasa.race.air.TATrack.Status.Status
-import gov.nasa.race.common.XmlParser
+import gov.nasa.race.common.{Src, XmlParser}
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.config.ConfigurableTranslator
 import gov.nasa.race.geo.{LatLonPos, XYPos}
@@ -40,6 +40,9 @@ import scala.collection.mutable.ArrayBuffer
 class TrackAndFlightPlan2TATrack (val config: Config=null) extends XmlParser[Seq[TATrack]] with ConfigurableTranslator {
 
   val allowIncompleteTrack: Boolean = if (config != null) config.getBooleanOrElse("allow-incomplete", false) else false
+  val attachMsg = config.getBooleanOrElse("attach-msg", false)
+
+  var msg: String = _
   var tracks = new ArrayBuffer[TATrack](16)
 
   override def result = if (tracks.nonEmpty) Some(tracks) else None
@@ -82,6 +85,7 @@ class TrackAndFlightPlan2TATrack (val config: Config=null) extends XmlParser[Seq
         val hdg = Angle.fromVxVy(vx,vy)
         val track = new TATrack(src,trackNum,XYPos(xPos,yPos),vVert,status,attrs,beaconCode,stddsRev,
                                 trackNum.toString,acAddress,LatLonPos(lat,lon),reportedAltitude,spd,hdg,mrtTime)
+        if (attachMsg) track.amend(Src(msg))
         tracks += track
       }
     }
@@ -136,8 +140,8 @@ class TrackAndFlightPlan2TATrack (val config: Config=null) extends XmlParser[Seq
 
   def translate (src: Any): Option[Seq[TATrack]] = {
     src match {
-      case xml: String if xml.nonEmpty => parse(xml)
-      case Some(xml: String) if xml.nonEmpty => parse(xml)
+      case xml: String if xml.nonEmpty => msg = xml; parse(xml)
+      case Some(xml: String) if xml.nonEmpty => msg = xml; parse(xml)
       case other => None // nothing else supported yet
     }
   }

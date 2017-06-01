@@ -42,18 +42,26 @@ class HtmlMessageStatsFormatter (config: Config) extends HtmlStatsFormatter {
   )
 
   def msgStatsToHtml(s: SubscriberMsgStats) = {
+    import gov.nasa.race.util.FileUtils.sizeString
+
     div(
       HtmlStats.htmlTopicHeader(s.topic,s.source,s.elapsedMillis),
       table(
         tr(
-          th("count"), th("msg/sec"), th("peak"), th("size"), th("avgSize"), th(cls:="left")("msg")
+          th("count"), th(" "), th("msg/s"), th("peak"), th(" "), th("bytes/s"), th("peak"), th(" "), th("size"), th("avgSize"), th(" "), th(cls:="left")("msg")
         ),
         for (m <- s.messages) yield tr(cls:="value top")(
           td(m.count),
-          td(f"${m.avgMsgPerSec}%.1f"),
-          td(f"${m.peakMsgPerSec}%.1f"),
-          td(FileUtils.sizeString(m.byteSize)),
-          td(FileUtils.sizeString((m.byteSize / m.count).toInt)),
+          td(""),
+          td(f"${m.avgMsgPerSec}%.0f"),
+          td(f"${m.peakMsgPerSec}%.0f"),
+          td(""),
+          td(sizeString(Math.round(m.avgBytesPerSec))),
+          td(sizeString(Math.round(m.peakBytesPerSec))),
+          td(""),
+          td(sizeString(m.byteSize)),
+          td(sizeString((m.byteSize / m.count).toInt)),
+          td(""),
           td(cls:="left")(
             m.msgName,
             table(cls:="noBorder")(
@@ -64,21 +72,30 @@ class HtmlMessageStatsFormatter (config: Config) extends HtmlStatsFormatter {
         ),
         if (s.messages.size > 1) {
           var count = 0
-          var avgRate = 0.0
-          var peakRate = 0.0
+          var avgMps = 0.0
+          var peakMps = 0.0
+          var avgBps = 0.0
+          var peakBps = 0.0
           var byteSize = 0L
 
           for (m <- s.messages) {
             count += m.count
-            avgRate += m.avgMsgPerSec
-            peakRate += m.peakMsgPerSec
+            avgMps += m.avgMsgPerSec
+            peakMps += m.peakMsgPerSec
+            avgBps += m.avgBytesPerSec
+            peakBps += m.peakBytesPerSec
             byteSize += m.byteSize
           }
 
           tr(
             td(count),
-            td(f"$avgRate%.1f"),
-            td(f"$peakRate%.1f"),
+            td(""),
+            td(f"$avgMps%.0f"),
+            td(f"$peakMps%.0f"),
+            td(""),
+            td(sizeString(Math.round(avgBps))),
+            td(sizeString(Math.round(peakBps))),
+            td(""),
             td(FileUtils.sizeString(byteSize)),
             td(if (count > 0) FileUtils.sizeString((byteSize/count).toInt) else "")
           )

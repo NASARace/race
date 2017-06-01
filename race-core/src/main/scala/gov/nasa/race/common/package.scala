@@ -105,4 +105,7 @@ package object common {
   trait XmlSource {
     def toXML: xml.Node
   }
+
+  // a wrapper for generic sources (abbreviated because there are already a gazillion of Source types)
+  case class Src[S] (src: S)
 }

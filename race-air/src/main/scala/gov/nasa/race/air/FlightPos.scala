@@ -26,12 +26,12 @@ import gov.nasa.race.geo.LatLonPos
 import gov.nasa.race.util.InputStreamLineTokenizer
 import scodec.bits.BitVector
 import scodec.codecs._
-
-
 import gov.nasa.race.uom.Angle._
 import gov.nasa.race.uom.Length._
 import gov.nasa.race.uom.Speed._
 import gov.nasa.race.uom._
+
+import scala.reflect._
 
 object FlightPos {
   def tempCS (flightId: String) = "?" + flightId
@@ -83,6 +83,11 @@ class FlightPos (val flightId: String,
   def amend (a: Any): FlightPos = { amendments = a +: amendments; this }
   def amendAll (as: Any*) = { as.foreach(amend); this }
   def getAmendment (f: (Any)=> Boolean): Option[Any] = amendments.find(f)
+  def getFirstAmendmentOfType[T: ClassTag]: Option[T] = {
+    val tgtCls = classTag[T].runtimeClass
+    amendments.find( a=> tgtCls.isAssignableFrom(a.getClass)).map( _.asInstanceOf[T])
+  }
+
   def getOldCS: Option[String] = amendments.find(_.isInstanceOf[FlightPos.ChangedCS]).map(_.asInstanceOf[FlightPos.ChangedCS].oldCS)
 
   def copyWithCS (newCS: String) = new FlightPos(flightId, newCS, position, altitude,speed,heading,date)

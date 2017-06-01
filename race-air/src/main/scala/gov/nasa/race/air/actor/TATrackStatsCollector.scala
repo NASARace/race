@@ -24,7 +24,8 @@ import com.typesafe.config.Config
 import gov.nasa.race._
 import gov.nasa.race.actor.StatsCollectorActor
 import gov.nasa.race.air.TATrack
-import gov.nasa.race.common.{ConfiguredTSStatsCollector, PrintStats, PrintStatsFormatter, Stats, TSEntryData, TSStatsData}
+import gov.nasa.race.common.{ConfiguredTSStatsCollector, PrintStats, PrintStatsFormatter, Src, Stats, TSEntryData, TSStatsData}
+import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.ClockAdjuster
 import gov.nasa.race.core.Messages.{BusEvent, RaceTick}
 import gov.nasa.race.http.{HtmlArtifacts, HtmlStats, HtmlStatsFormatter}
@@ -38,10 +39,21 @@ import scalatags.Text.all._
   */
 class TATrackStatsCollector (val config: Config) extends StatsCollectorActor with ClockAdjuster {
 
+  // optional channel to log TATrack updates that should be checked
+  val writeToLog = config.getOptionalString("write-to-log")
+
+  // maxiumum number of logged updates
+  val maxLog = config.getIntOrElse("max-log",100)
+  var nLog = 0
+
   class TACollector (val config: Config, val src: String)
          extends ConfiguredTSStatsCollector[Int,TATrack,TATrackEntryData,TATrackStatsData] {
     val statsData = new TATrackStatsData(src)
     statsData.buckets = createBuckets
+
+    ifSome(writeToLog) { chan =>
+      statsData.duplicateAction = Some(logDuplicate)
+    }
 
     def createTSEntryData (t: Long, track: TATrack) = new TATrackEntryData(t,track)
     def currentSimTimeMillisSinceStart = TATrackStatsCollector.this.currentSimTimeMillisSinceStart
@@ -61,7 +73,11 @@ class TATrackStatsCollector (val config: Config) extends StatsCollectorActor wit
         if (track.date != null) {
           checkClockReset(track.date)
           val tracon = tracons.getOrElseUpdate(track.src, new TACollector(config, track.src))
-          if (track.isDrop) tracon.removeActive(track.trackNum) else tracon.updateActive(track.trackNum, track)
+          if (track.isDrop) {
+            tracon.removeActive(track.trackNum)
+          } else {
+            tracon.updateActive(track.trackNum, track)
+          }
         }
       } catch {
         case t: Throwable => t.printStackTrace
@@ -75,6 +91,28 @@ class TATrackStatsCollector (val config: Config) extends StatsCollectorActor wit
   def snapshot: Stats = {
     val traconStats = tracons.toSeq.sortBy(_._1).map( e=> e._2.dataSnapshot)
     new TATrackStats(title, channels, updatedSimTimeMillis, elapsedSimTimeMillisSinceStart, traconStats)
+  }
+
+  def logDuplicate (t1: TATrack, t2: TATrack): Unit = {
+    def appendTrack (n: Int, t: TATrack, sb: StringBuilder) = {
+      sb.append("track " ); sb.append(n); sb.append(": "); sb.append(t1); sb.append('\n')
+      ifSome(t1.getFirstAmendmentOfType[Src[String]]) { s =>
+        sb.append( "source "); sb.append(n); sb.append(": "); sb.append(s.src); sb.append('\n')
+      }
+    }
+
+    ifSome(writeToLog) { chan =>
+      nLog += 1
+      if (nLog < maxLog) {
+        val sb = new StringBuilder
+        sb.append("================ duplicate\n")
+        appendTrack(1, t1, sb)
+        sb.append("----------\n")
+        appendTrack(2, t2, sb)
+
+        publish(chan,sb.toString)
+      }
+    }
   }
 }
 
