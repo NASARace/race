@@ -52,4 +52,23 @@ class MD5Checksum (bufSize: Int=1024) {
     md.digest(hb,0,hb.length)
     StringUtils.toHexString(hb)
   }
+
+  def getHexChecksum(cs: Array[Char]): String = {
+    val n = cs.length
+    var i = 0
+
+    md.reset
+    while (i < n) {
+      val c= cs(i)
+      if (c > 255){
+        md.update(((c >> 8) & 0xff).toByte)
+        md.update((c & 0xff).toByte)
+      } else {
+        md.update(c.toByte)
+      }
+      i += 1
+    }
+    md.digest(hb,0,hb.length)
+    StringUtils.toHexString(hb)
+  }
 }

@@ -106,6 +106,16 @@ package object common {
     def toXML: xml.Node
   }
 
-  // a wrapper for generic sources (abbreviated because there are already a gazillion of Source types)
+  // a wrapper for generic sources (abbreviated because there are already a gazillion of 'Source' types in other packages)
   case class Src[S] (src: S)
+
+  def measureNanos(nRounds: Int=1)(f: =>Unit): Long = {
+    var i = 0
+    val t1 = System.nanoTime
+    while (i < nRounds) {
+      f
+      i += 1
+    }
+    System.nanoTime - t1
+  }
 }

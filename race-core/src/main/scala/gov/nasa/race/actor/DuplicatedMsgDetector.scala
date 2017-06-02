@@ -20,11 +20,12 @@ import java.io.PrintWriter
 
 import com.typesafe.config.Config
 import gov.nasa.race._
-import gov.nasa.race.common.{MD5Checksum, MsgClassifier, PrintStats, XmlSource}
+import gov.nasa.race.common.{MD5Checksum, MsgMatcher, PrintStats, XmlSource}
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.FileWriterRaceActor
 import gov.nasa.race.core.Messages.{BusEvent, RaceTick}
 import gov.nasa.race.util.DateTimeUtils._
+import gov.nasa.race.util.StringUtils
 
 import scala.collection.mutable.{SortedMap => MSortedMap}
 import scala.concurrent.duration._
@@ -40,43 +41,54 @@ import scala.concurrent.duration._
   * time window for each message hash
   */
 class DuplicatedMsgDetector (val config: Config) extends StatsCollectorActor with FileWriterRaceActor {
-  final val unclassified = "unclassified"
-
   val checkWindow = config.getFiniteDurationOrElse("check-window", 5.minutes).toMillis
+  val classifiers = MsgMatcher.getMsgMatchers(config)
 
   val checksums = MSortedMap.empty[String,Long]
   val md5 = new MD5Checksum
 
-  val classifiers = MsgClassifier.getClassifiers(config)
-  val dupStats = MSortedMap.empty[String,DupStatsData]
+  val msgStatsData = MSortedMap.empty[String,DupStatsData]  // per message (automatic)
+  val catStatsData = MSortedMap.empty[String,DupStatsData]  // per configured categories
 
   override def handleMessage = {
-    case BusEvent(_, msg: String, _) => checkMessage(msg)
+    case BusEvent(_, msg: String, _) =>
+      checkMessage(msg)
+
     case RaceTick =>
-      if (reportEmptyStats || dupStats.nonEmpty) publish(snapshot)
+      if (reportEmptyStats || catStatsData.nonEmpty || msgStatsData.nonEmpty) publish(snapshot)
       purgeOldChecksums
   }
 
   def checkMessage (msg: String) = {
+    def incStats (map: MSortedMap[String,DupStatsData], key: String, count: Int, dt: Long) = {
+      val ds = map.getOrElseUpdate(key, new DupStatsData(key))
+      ds.count += count
+      ds.dtMillis += dt
+    }
+
     val cs = md5.getHexChecksum(msg)
     val tNow = updatedSimTimeMillis
 
     checksums.get(cs) match {
       case Some(tLast) =>
-        ifSome(MsgClassifier.classify(msg,classifiers)) { c =>
-          val ds = dupStats.getOrElseUpdate(c.name, new DupStatsData(c.name))
-          ds.count += 1
-          ds.dtMillis += tNow - tLast
-          logDuplicate(msg, tNow, tLast)
+        val dt = tNow - tLast
+
+        incStats(msgStatsData,getMessageType(msg),1,dt)
+        classifiers.foreach{ c=>
+          val matchCount = c.matchCount(msg)
+          if (matchCount > 0) incStats(catStatsData,c.name,matchCount,dt)
         }
+
+        logDuplicate(msg, tNow, tLast)
         checksums += cs -> tNow // update time
 
       case None => checksums += cs -> tNow
     }
   }
 
-  def snapshot = new SubscriberDupStats(title, channels, updatedSimTimeMillis, elapsedSimTimeMillisSinceStart,
-                                        mapIteratorToArray(dupStats.valuesIterator,dupStats.size)(_.snapshot))
+  def snapshot = new DuplicateMsgStats(title, channels, updatedSimTimeMillis, elapsedSimTimeMillisSinceStart,
+                                       mapIteratorToArray(msgStatsData.valuesIterator,msgStatsData.size)(_.snapshot),
+                                       mapIteratorToArray(catStatsData.valuesIterator,catStatsData.size)(_.snapshot))
 
   def purgeOldChecksums = {
     val tNow = updatedSimTimeMillis
@@ -84,6 +96,14 @@ class DuplicatedMsgDetector (val config: Config) extends StatsCollectorActor wit
       if (tNow - e._2 > checkWindow) {
         checksums -= e._1
       }
+    }
+  }
+
+  // override this if the message is not XML
+  def getMessageType (msg: String): String = {
+    StringUtils.getXmlMsgName(msg) match {
+      case Some(msgName) => msgName
+      case None => "[unspecified]"
     }
   }
 
@@ -109,19 +129,36 @@ class DupStatsData(val classifier: String) extends XmlSource with Cloneable {
 }
 
 
-class SubscriberDupStats (val topic: String,  val source: String, val takeMillis: Long, val elapsedMillis: Long,
-                          val messages: Array[DupStatsData]) extends PrintStats {
+class DuplicateMsgStats(val topic: String, val source: String, val takeMillis: Long, val elapsedMillis: Long,
+                        val msgStats: Array[DupStatsData], val matchStats: Array[DupStatsData]) extends PrintStats {
 
-  def printWith (pw:PrintWriter) = {
-    if (messages.nonEmpty) {
-      pw.println("  count     avg sec   classifier")
-      pw.println("-------   ---------   -------------------------------------------")
-      for (m <- messages) {
+  def printStats(pw: PrintWriter, category: String, sd: Array[DupStatsData]) = {
+    if (sd.nonEmpty) {
+      pw.print(  "     count     dup/sec   "); pw.println(category)
+      pw.println("----------   ---------   -------------------------------------------")
+      var nCount = 0
+      for (m <- sd) {
         val avgDtSecs = m.dtMillis.toDouble / (m.count * 1000.0)
-        pw.println(f"${m.count}%7d   $avgDtSecs%9.3f   ${m.classifier}")
+        pw.println(f"${m.count}%10d   $avgDtSecs%9.3f   ${m.classifier}")
+        nCount += m.count
+      }
+      if (sd.length > 1){
+        pw.println("----------   ---------   -------------------------------------------")
+        pw.println(f"$nCount%10d")
       }
     }
   }
 
-  override def xmlData = <dupStats>{messages.map(_.toXML)}</dupStats>
+  def printWith (pw:PrintWriter) = {
+    printStats(pw,"message",msgStats)
+    if (matchStats.nonEmpty) pw.println
+    printStats(pw,"match category",matchStats)
+  }
+
+  override def xmlData = {
+    <dupStats>
+      <msgs>{msgStats.map(_.toXML)}</msgs>
+      <matches>{matchStats.map(_.toXML)}</matches>
+    </dupStats>
+  }
 }

@@ -55,6 +55,8 @@ trait AsdexImporter extends ChannelTopicProvider with FilteringPublisher {
     }
   }
 
+  override def handleMessage = handleFilteringPublisherMessage
+
   //--- the FilteringPublisher interface
   override def createFilters =  Array[ConfigurableFilter](new AirportFilter(ConfigFactory.empty))
   override def passUnfliteredDefault = false // no filter, no publishing

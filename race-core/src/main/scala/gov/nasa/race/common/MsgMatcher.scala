@@ -26,20 +26,27 @@ import scala.collection.JavaConverters._
 
 /**
   * a list of (name, regexes) pairs to classify text messages
+  *
+  * can be used to categorize text messages according to regular expression matches, and configured like this:
+  *  ...
+  *  classifiers = [
+  *    { name = "invalid position value (no separator space)"
+  *      patterns = ["<!-- cvc-.*: The value '[0-9.\\-]+' of element 'pos' is not valid. -->"] }, ...
   */
-object MsgClassifier {
-  def getClassifiers (config: Config): Seq[MsgClassifier] = {
-    config.getOptionalConfigList("classifiers").reverse.foldLeft(List.empty[MsgClassifier]) { (list, conf) =>
+object MsgMatcher {
+  def getMsgMatchers(config: Config): Seq[MsgMatcher] = {
+    config.getOptionalConfigList("matchers").reverse.foldLeft(List.empty[MsgMatcher]) { (list, conf) =>
       val name = conf.getString("name")
       val patterns = conf.getStringList("patterns").asScala.map(new Regex(_))
-      MsgClassifier(name, patterns) :: list
+      MsgMatcher(name, patterns) :: list
     }
   }
 
-  def classify (msg: String, classifiers: Seq[MsgClassifier]): Option[MsgClassifier] = {
-    classifiers.foreach(c => if (StringUtils.matchesAll(msg,c.patterns)) return Some(c) )
-    None
+  def findFirstMsgMatcher(msg: String, matchers: Seq[MsgMatcher]): Option[MsgMatcher] = {
+    matchers.find(c=> StringUtils.matchesAll(msg,c.patterns))
   }
 }
 
-case class MsgClassifier (name: String, patterns: Seq[Regex])
+case class MsgMatcher(name: String, patterns: Seq[Regex]) {
+  def matchCount (msg: String): Int = patterns.foldLeft(0)((acc,p) => acc + p.findAllIn(msg).size )
+}

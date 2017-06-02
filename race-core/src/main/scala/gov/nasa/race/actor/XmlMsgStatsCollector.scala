@@ -19,7 +19,7 @@ package gov.nasa.race.actor
 import akka.actor.ActorRef
 import com.typesafe.config.Config
 import gov.nasa.race._
-import gov.nasa.race.common.{MsgClassifier, MsgStatsData, PatternStatsData, SubscriberMsgStats}
+import gov.nasa.race.common.{MsgMatcher, MsgStatsData, PatternStatsData, SubscriberMsgStats}
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.Messages.{BusEvent, RaceTick}
 import gov.nasa.race.core.{ContinuousTimeRaceActor, PeriodicRaceActor, PublishingRaceActor, SubscribingRaceActor}
@@ -49,7 +49,7 @@ class XmlMsgStatsCollector (val config: Config) extends StatsCollectorActor {
   final val defaultRateBaseMillis = 2000 // get peak rate over 2 sec
 
   val pathSpecs = config.getStringArray("paths") // optional, if none we only parse top level
-  val patterns = MsgClassifier.getClassifiers(config)
+  val patterns = MsgMatcher.getMsgMatchers(config)
   val ignoreMessages = config.getStringArray("ignore").map(new Regex(_))
 
   // the time base we use for msg peak rate calculation
@@ -117,7 +117,7 @@ class XmlMsgStatsCollector (val config: Config) extends StatsCollectorActor {
   }
 
   def checkMatches (msgStat: MsgStatsData, msg: String) = {
-    MsgClassifier.classify(msg,patterns) foreach { mc =>
+    MsgMatcher.findFirstMsgMatcher(msg,patterns) foreach { mc =>
       msgStat.regexMatches.getOrElseUpdate(mc.name,new PatternStatsData(mc.name)).count += 1
     }
   }

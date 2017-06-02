@@ -161,6 +161,8 @@ class JMSImportActor(val config: Config) extends FilteringPublisher {
     super.onStartRaceActor(originator)
   }
 
+  override def handleMessage = handleFilteringPublisherMessage
+
   def createSession (connection: Option[Connection]) = {
     tryWithSome(connection)( _.createSession(false, Session.AUTO_ACKNOWLEDGE))
   }

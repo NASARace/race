@@ -81,7 +81,6 @@ class FIXM2FlightObject (val config: Config=null)
   protected var flights = new ArrayBuffer[IdentifiableAircraft](20)
   def resetFlights = flights.clear()
 
-  override def result = if (flights.nonEmpty) Some(flights) else None
   override def flatten = true
 
   //--- translation
@@ -126,8 +125,11 @@ class FIXM2FlightObject (val config: Config=null)
   }
 
   override def onEndElement = {
+    case "ns5:MessageCollection" => if (flights.nonEmpty) setResult(flights)
     case "flight" => addFlightObject  // new (12sec) update format
-    case "ns5:NasFlight" => addFlightObject // old (1min) update format
+    case "ns5:NasFlight" => // old (1min) update format - one flight per message
+      addFlightObject
+      if (flights.nonEmpty) setResult(flights)
     case other =>
   }
 }

@@ -52,14 +52,11 @@ trait FilteringPublisher extends PublishingRaceActor {
   /** override if there is selective publishing or additional action */
   def action (msg: Any, isPassing: Boolean) = if (isPassing) publish(msg)
 
-  // can still be overridden by concrete types (it has to if we only want to publish some message types)
+  /**
+    * this is what concrete actor handleMessage implementations can use to generically publish filtered
+    */
   def handleFilteringPublisherMessage: Receive = {
     // NOTE - don't match ChannelMessage because that would break system channels/messages (e.g. ChannelTopics)
     case BusEvent(chan,msg:Any,_) => publishFiltered(msg)
   }
-
-  // note that we can't chain inside our own PartialFunction without explicit guard like this:
-  //      case o if super.handleMessage.isDefinedAt(o) => super.handleMessage(o)
-  // which is less readable and composable
-  override def handleMessage = handleFilteringPublisherMessage orElse super.handleMessage
 }

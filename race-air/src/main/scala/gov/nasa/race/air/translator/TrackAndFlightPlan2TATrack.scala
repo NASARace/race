@@ -45,7 +45,6 @@ class TrackAndFlightPlan2TATrack (val config: Config=null) extends XmlParser[Seq
   var msg: String = _
   var tracks = new ArrayBuffer[TATrack](16)
 
-  override def result = if (tracks.nonEmpty) Some(tracks) else None
   override def flatten = true
 
   //--- parse cache
@@ -134,6 +133,7 @@ class TrackAndFlightPlan2TATrack (val config: Config=null) extends XmlParser[Seq
   }
 
   override def onEndElement = {
+    case "TATrackAndFlightPlan" => if (tracks.nonEmpty) setResult(tracks)
     case "record" => addTrack
     case other => // ignore
   }

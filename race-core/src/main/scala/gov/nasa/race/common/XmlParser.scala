@@ -29,8 +29,10 @@ abstract class XmlParser[T] extends XmlPullParser {
   private var _stop = false
   protected def stopParsing = _stop = true
 
-  protected var _result: Option[T] = None
-  protected def result: Option[T] = _result
+  //--- result management
+  protected var _result: Option[T] = None // this is reset before starting to parse and can be set directly by subclasses
+  protected def result: Option[T] = _result // NOTE - if this is overridden, make sure to handle result reset
+  protected def setResult(res: T) = _result = Some(res) // usually called from concrete onEndElement
 
   //--- the (optional) subclass extension points (we need at least either onStartElement or onEndElement)
   protected def onStartElement: PartialFunction[String,Unit] = PartialFunction.empty
@@ -48,6 +50,7 @@ abstract class XmlParser[T] extends XmlPullParser {
 
   def parseLoop: Option[T] = {
     _stop = false
+    _result = None
 
     try {
       while (!_stop && parseNextElement()){
@@ -69,13 +72,21 @@ abstract class XmlParser[T] extends XmlPullParser {
   }
 }
 
+// returns the top level element name
+class XmlMsgExtractor extends XmlParser[String] {
+  override def onStartElement = {
+    case e: String =>
+      setResult(e)
+      stopParsing
+  }
+}
+
+// returns the value of a given attribute name for elements that match the provided function
 class XmlAttrExtractor (attrName: String, elemMatcher: String=>Boolean) extends XmlParser[String] {
-
-
   override def onStartElement = {
     case e =>
       if (elemMatcher(e)) {
-        if (parseAttribute(attrName)) _result = Some(value)
+        if (parseAttribute(attrName)) setResult(value)
         stopParsing
       }
   }

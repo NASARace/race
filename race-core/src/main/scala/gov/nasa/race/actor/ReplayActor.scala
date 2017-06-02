@@ -69,7 +69,9 @@ class ReplayActor (val config: Config) extends ContinuousTimeRaceActor with Filt
     super.onTerminateRaceActor(originator)
   }
 
-  override def handleMessage: Receive = {
+  override def handleMessage = handleReplayMessage
+
+  def handleReplayMessage: Receive = {
     case Replay(msg) =>
       if (msg != None) publishFiltered(msg)
       scheduleNext

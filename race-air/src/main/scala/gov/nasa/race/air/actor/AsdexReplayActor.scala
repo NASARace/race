@@ -26,4 +26,6 @@ import gov.nasa.race.actor.ReplayActor
   * (those messages are big and come at 1Hz, so we don't want to publish unless there
   * is a client)
   */
-class AsdexReplayActor (conf: Config) extends ReplayActor(conf) with AsdexImporter
+class AsdexReplayActor (conf: Config) extends ReplayActor(conf) with AsdexImporter {
+  override def handleMessage = handleReplayMessage orElse handleFilteringPublisherMessage
+}

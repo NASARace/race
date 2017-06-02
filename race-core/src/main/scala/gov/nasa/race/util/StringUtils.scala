@@ -124,4 +124,8 @@ object StringUtils {
   }
 
   def matches (s: String, pattern: Regex): Boolean = pattern.findFirstIn(s).isDefined
+
+
+  val xmlMsgNameRE = """<([^\s?!][\w:-]*?)[\s>]""".r // NOTE - REs cannot skip over comments
+  def getXmlMsgName (msg: String): Option[String] = xmlMsgNameRE.findFirstMatchIn(msg).map(_.group(1))
 }

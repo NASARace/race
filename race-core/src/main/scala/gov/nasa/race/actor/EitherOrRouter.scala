@@ -33,4 +33,6 @@ class EitherOrRouter (val config: Config) extends FilteringPublisher with Subscr
     if (isPassing) publish(writeToPass, msg)
     else publish(writeToFail, msg)
   }
+
+  override def handleMessage = handleFilteringPublisherMessage
 }

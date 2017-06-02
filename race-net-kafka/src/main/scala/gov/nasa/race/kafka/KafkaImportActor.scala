@@ -67,6 +67,8 @@ class KafkaImportActor (val config: Config) extends FilteringPublisher {
     super.onTerminateRaceActor(originator)
   }
 
+  override def handleMessage = handleFilteringPublisherMessage
+
   def createConsumer(conf: Config) = {
     newInstance[ConfigurableKafkaConsumer](conf.getString("class"), Array(classOf[Config]), Array(conf))
   }
