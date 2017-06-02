@@ -16,6 +16,8 @@
  */
 package gov.nasa.race.kafka
 
+import java.nio.channels.ClosedByInterruptException
+
 import akka.actor.ActorRef
 import com.typesafe.config.Config
 import gov.nasa.race._
@@ -31,6 +33,7 @@ import gov.nasa.race.util.ThreadUtils
 class KafkaImportActor (val config: Config) extends FilteringPublisher {
 
   var consumer: Option[ConfigurableKafkaConsumer] = None // defer init since Kafka topics might be from remote config
+  var terminate = false
 
   val thread = ThreadUtils.daemon {
     ifSome(consumer) { c =>
@@ -38,8 +41,9 @@ class KafkaImportActor (val config: Config) extends FilteringPublisher {
         try {
           if (c.fillValueBuffer > 0) c.valueBuffer.foreach(publishFiltered)
         } catch {
-          case x:Throwable =>
-            if (!c.isClosed) error(s"exception during Kafka read: ${x.getMessage}")
+          case x:Throwable if !terminate =>
+            c.close
+            error(s"exception during Kafka read: ${x.getMessage}")
         }
       }
     }
@@ -63,7 +67,8 @@ class KafkaImportActor (val config: Config) extends FilteringPublisher {
   }
 
   override def onTerminateRaceActor(originator: ActorRef) = {
-    ifSome(consumer) { _.close }
+    terminate = true
+    if (thread.isAlive) thread.interrupt()
     super.onTerminateRaceActor(originator)
   }
 
