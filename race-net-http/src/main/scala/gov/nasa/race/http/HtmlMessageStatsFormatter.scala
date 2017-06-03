@@ -18,7 +18,7 @@
 package gov.nasa.race.http
 
 import com.typesafe.config.Config
-import gov.nasa.race.common.{PatternStatsData, Stats, SubscriberMsgStats}
+import gov.nasa.race.common.{PatternStatsData, Stats, MsgStats}
 import gov.nasa.race.util.FileUtils
 
 import scalatags.Text.all.{cls, div, p, table, td, th, tr, _}
@@ -30,7 +30,7 @@ class HtmlMessageStatsFormatter (config: Config) extends HtmlStatsFormatter {
 
   override def toHtml(stats: Stats): Option[HtmlArtifacts] = {
     stats match {
-      case msgStats: SubscriberMsgStats =>
+      case msgStats: MsgStats =>
         Some(HtmlArtifacts(msgStatsToHtml(msgStats),HtmlStats.noResources))
       case _ => None
     }
@@ -41,7 +41,7 @@ class HtmlMessageStatsFormatter (config: Config) extends HtmlStatsFormatter {
     td(cls:="left")(s.pattern)
   )
 
-  def msgStatsToHtml(s: SubscriberMsgStats) = {
+  def msgStatsToHtml(s: MsgStats) = {
     import gov.nasa.race.util.FileUtils.sizeString
 
     div(

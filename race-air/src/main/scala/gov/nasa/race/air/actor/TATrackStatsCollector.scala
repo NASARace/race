@@ -22,10 +22,9 @@ import java.io.PrintWriter
 
 import com.typesafe.config.Config
 import gov.nasa.race._
-import gov.nasa.race.actor.StatsCollectorActor
+import gov.nasa.race.actor.{OptionalLogger, StatsCollectorActor}
 import gov.nasa.race.air.TATrack
-import gov.nasa.race.common.{ConfiguredTSStatsCollector, PrintStats, PrintStatsFormatter, Src, Stats, TSEntryData, TSStatsData}
-import gov.nasa.race.config.ConfigUtils._
+import gov.nasa.race.common._
 import gov.nasa.race.core.ClockAdjuster
 import gov.nasa.race.core.Messages.{BusEvent, RaceTick}
 import gov.nasa.race.http.{HtmlArtifacts, HtmlStats, HtmlStatsFormatter}
@@ -37,22 +36,16 @@ import scalatags.Text.all._
   * actor that collects statistics for TATrack objects
   * We keep stats per tracon, hence this is not directly a TSStatsCollectorActor
   */
-class TATrackStatsCollector (val config: Config) extends StatsCollectorActor with ClockAdjuster {
-
-  // optional channel to log TATrack updates that should be checked
-  val writeToLog = config.getOptionalString("write-to-log")
-
-  // maxiumum number of logged updates
-  val maxLog = config.getIntOrElse("max-log",100)
-  var nLog = 0
+class TATrackStatsCollector (val config: Config) extends StatsCollectorActor with ClockAdjuster with OptionalLogger {
 
   class TACollector (val config: Config, val src: String)
          extends ConfiguredTSStatsCollector[Int,TATrack,TATrackEntryData,TATrackStatsData] {
     val statsData = new TATrackStatsData(src)
     statsData.buckets = createBuckets
 
-    ifSome(writeToLog) { chan =>
+    if (hasLogChannel){
       statsData.duplicateAction = Some(logDuplicate)
+      //... and other log actions such as ambiguous etc.
     }
 
     def createTSEntryData (t: Long, track: TATrack) = new TATrackEntryData(t,track)
@@ -93,26 +86,25 @@ class TATrackStatsCollector (val config: Config) extends StatsCollectorActor wit
     new TATrackStats(title, channels, updatedSimTimeMillis, elapsedSimTimeMillisSinceStart, traconStats)
   }
 
+  //--- problem logging (only called if there is a log channel)
+
   def logDuplicate (t1: TATrack, t2: TATrack): Unit = {
     def appendTrack (n: Int, t: TATrack, sb: StringBuilder) = {
-      sb.append("track " ); sb.append(n); sb.append(": "); sb.append(t1); sb.append('\n')
-      ifSome(t1.getFirstAmendmentOfType[Src[String]]) { s =>
-        sb.append( "source "); sb.append(n); sb.append(": "); sb.append(s.src); sb.append('\n')
+      sb.append("track " ); sb.append(n); sb.append(" ["); sb.append(objRef(t)); sb.append("]: ");
+      sb.append(t); sb.append('\n')
+      ifSome(t.getFirstAmendmentOfType[Src[String]]) { s =>
+        sb.append( "source "); sb.append(n); sb.append(" ["); sb.append(objRef(s.src)); sb.append("]: ");
+        sb.append(s.src); sb.append('\n')
       }
     }
 
-    ifSome(writeToLog) { chan =>
-      nLog += 1
-      if (nLog < maxLog) {
-        val sb = new StringBuilder
-        sb.append("================ duplicate\n")
-        appendTrack(1, t1, sb)
-        sb.append("----------\n")
-        appendTrack(2, t2, sb)
+    val sb = new StringBuilder
+    sb.append("================ duplicate\n")
+    appendTrack(1, t1, sb)
+    sb.append("----------\n")
+    appendTrack(2, t2, sb)
 
-        publish(chan,sb.toString)
-      }
-    }
+    publishToLogChannel(sb.toString)
   }
 }
 

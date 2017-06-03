@@ -16,8 +16,6 @@
  */
 package gov.nasa.race.kafka
 
-import java.nio.channels.ClosedByInterruptException
-
 import akka.actor.ActorRef
 import com.typesafe.config.Config
 import gov.nasa.race._
@@ -37,15 +35,14 @@ class KafkaImportActor (val config: Config) extends FilteringPublisher {
 
   val thread = ThreadUtils.daemon {
     ifSome(consumer) { c =>
-      while (c.isSubscribed) {
+      while (!terminate) {
         try {
           if (c.fillValueBuffer > 0) c.valueBuffer.foreach(publishFiltered)
         } catch {
-          case x:Throwable if !terminate =>
-            c.close
-            error(s"exception during Kafka read: ${x.getMessage}")
+          case x:Throwable if !terminate => error(s"exception during Kafka read: ${x.getMessage}")
         }
       }
+      c.close
     }
   }
 

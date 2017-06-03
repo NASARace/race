@@ -40,7 +40,7 @@ import scala.concurrent.duration._
   * To avoid memory leaks, this implementation only considers messages within a configurable
   * time window for each message hash
   */
-class DuplicatedMsgDetector (val config: Config) extends StatsCollectorActor with FileWriterRaceActor {
+class DuplicatedMsgDetector (val config: Config) extends StatsCollectorActor with OptionalLogger {
   val checkWindow = config.getFiniteDurationOrElse("check-window", 5.minutes).toMillis
   val classifiers = MsgMatcher.getMsgMatchers(config)
 
@@ -49,6 +49,7 @@ class DuplicatedMsgDetector (val config: Config) extends StatsCollectorActor wit
 
   val msgStatsData = MSortedMap.empty[String,DupStatsData]  // per message (automatic)
   val catStatsData = MSortedMap.empty[String,DupStatsData]  // per configured categories
+
 
   override def handleMessage = {
     case BusEvent(_, msg: String, _) =>
@@ -79,7 +80,7 @@ class DuplicatedMsgDetector (val config: Config) extends StatsCollectorActor wit
           if (matchCount > 0) incStats(catStatsData,c.name,matchCount,dt)
         }
 
-        logDuplicate(msg, tNow, tLast)
+        publishToLogChannel(msg)
         checksums += cs -> tNow // update time
 
       case None => checksums += cs -> tNow
@@ -105,12 +106,6 @@ class DuplicatedMsgDetector (val config: Config) extends StatsCollectorActor wit
       case Some(msgName) => msgName
       case None => "[unspecified]"
     }
-  }
-
-  def logDuplicate (msg: String, tNow: Long, tLast: Long) = {
-    write(s"\n<!-- BEGIN DUPLICATED ${dateMillisToTTime(tLast)} ${dateMillisToTTime(tNow)} -->\n")
-    write(msg)
-    write("\n<!-- END DUPLICATED -->\n")
   }
 }
 
@@ -143,7 +138,7 @@ class DuplicateMsgStats(val topic: String, val source: String, val takeMillis: L
         nCount += m.count
       }
       if (sd.length > 1){
-        pw.println("----------   ---------   -------------------------------------------")
+        pw.println("----------")
         pw.println(f"$nCount%10d")
       }
     }

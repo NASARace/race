@@ -19,7 +19,7 @@ package gov.nasa.race.actor
 import akka.actor.ActorRef
 import com.typesafe.config.Config
 import gov.nasa.race._
-import gov.nasa.race.common.{MsgMatcher, MsgStatsData, PatternStatsData, SubscriberMsgStats}
+import gov.nasa.race.common.{MsgMatcher, MsgStatsData, PatternStatsData, MsgStats}
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.Messages.{BusEvent, RaceTick}
 import gov.nasa.race.core.{ContinuousTimeRaceActor, PeriodicRaceActor, PublishingRaceActor, SubscribingRaceActor}
@@ -122,7 +122,7 @@ class XmlMsgStatsCollector (val config: Config) extends StatsCollectorActor {
     }
   }
 
-  def snapshot = new SubscriberMsgStats(title, channels, updatedSimTimeMillis, elapsedSimTimeMillisSinceStart,
+  def snapshot = new MsgStats(title, channels, updatedSimTimeMillis, elapsedSimTimeMillisSinceStart,
                                         mapIteratorToArray(msgStats.valuesIterator,msgStats.size)(_.snapshot))
 }
 

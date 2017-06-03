@@ -99,8 +99,8 @@ case class MsgStatsDataSnapshot(
 }
 
 
-class SubscriberMsgStats (val topic: String, val source: String, val takeMillis: Long, val elapsedMillis: Long,
-                          val messages: Array[MsgStatsDataSnapshot]) extends PrintStats {
+class MsgStats(val topic: String, val source: String, val takeMillis: Long, val elapsedMillis: Long,
+               val messages: Array[MsgStatsDataSnapshot]) extends PrintStats {
 
   override def printWith (pw: PrintWriter) = {
     if (messages.nonEmpty) {

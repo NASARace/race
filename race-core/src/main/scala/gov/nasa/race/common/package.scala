@@ -118,4 +118,6 @@ package object common {
     }
     System.nanoTime - t1
   }
+
+  def objRef (o: AnyRef): String = Integer.toHexString(System.identityHashCode(o))
 }
