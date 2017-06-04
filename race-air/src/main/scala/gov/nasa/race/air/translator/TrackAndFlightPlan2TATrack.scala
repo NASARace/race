@@ -19,7 +19,7 @@
 package gov.nasa.race.air.translator
 
 import com.typesafe.config.Config
-import gov.nasa.race.air.TATrack
+import gov.nasa.race.air.{FlightPlan, TATrack}
 import gov.nasa.race.air.TATrack.Status
 import gov.nasa.race.air.TATrack.Status.Status
 import gov.nasa.race.common.{Src, XmlParser}
@@ -60,6 +60,7 @@ class TrackAndFlightPlan2TATrack (val config: Config=null) extends XmlParser[Seq
   var vx,vy,vVert: Speed = UndefinedSpeed
   var attrs: Int = 0
   var reportedAltitude: Length = UndefinedLength
+  var flightPlan: Option[FlightPlan] = None
 
   def resetTrackCache = {
     //src = null
@@ -74,6 +75,7 @@ class TrackAndFlightPlan2TATrack (val config: Config=null) extends XmlParser[Seq
     vx = UndefinedSpeed; vy = UndefinedSpeed; vVert = UndefinedSpeed
     attrs = 0
     reportedAltitude = UndefinedLength
+    flightPlan = None
   }
 
   def addTrack = {
@@ -82,7 +84,7 @@ class TrackAndFlightPlan2TATrack (val config: Config=null) extends XmlParser[Seq
       if (allowIncompleteTrack || (mrtTime != null && vx.isDefined && vy.isDefined && reportedAltitude.isDefined)) {
         val spd = Speed.fromVxVy(vx,vy)
         val hdg = Angle.fromVxVy(vx,vy)
-        val track = new TATrack(src,trackNum,XYPos(xPos,yPos),vVert,status,attrs,beaconCode,stddsRev,
+        val track = new TATrack(src,trackNum,XYPos(xPos,yPos),vVert,status,attrs,beaconCode,stddsRev,flightPlan,
                                 trackNum.toString,acAddress,LatLonPos(lat,lon),reportedAltitude,spd,hdg,mrtTime)
         if (attachMsg) track.amend(Src(msg))
         tracks += track
@@ -128,7 +130,7 @@ class TrackAndFlightPlan2TATrack (val config: Config=null) extends XmlParser[Seq
     case "adsb" => if (readBoolean) attrs |= TATrack.AdsbFlag
     case "reportedBeaconCode" => beaconCode = readText
     case "reportedAltitude" => reportedAltitude = Feet(readInt)
-    case "flightPlan" => attrs |= TATrack.FlightPlanFlag
+    case "flightPlan" => flightPlan = Some(new FlightPlan) // just a placeholder for now
     case other => // ignore
   }
 

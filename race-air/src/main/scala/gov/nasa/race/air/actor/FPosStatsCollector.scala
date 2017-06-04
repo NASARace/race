@@ -19,6 +19,7 @@ package gov.nasa.race.air.actor
 import com.typesafe.config.Config
 import gov.nasa.race.actor.TSStatsCollectorActor
 import gov.nasa.race.air.{FlightCompleted, FlightPos}
+import gov.nasa.race.common.TSStatsData.{Ambiguous, Duplicate, Sameness}
 import gov.nasa.race.common.{TSEntryData, TSStatsData}
 import gov.nasa.race.core.ClockAdjuster
 import gov.nasa.race.core.Messages.{BusEvent, RaceTick}
@@ -54,9 +55,11 @@ class FPosStatsCollector (val config: Config)
 }
 
 class FlightPosStatsData extends TSStatsData[FlightPos,TSEntryData[FlightPos]] {
-  override def isDuplicate(fpos: FlightPos, last: FlightPos) = {
-    fpos.position == last.position &&
-      fpos.altitude == last.altitude
+
+  override def rateSameness (fpos: FlightPos, last: FlightPos): Sameness = {
+    if (fpos.position != last.position) Ambiguous(Some("position"))
+    else if (fpos.altitude != last.altitude) Ambiguous(Some("altitude"))
+    else Duplicate
   }
 
   override def toXML = <flightPositions>{xmlFields}</flightPositions>

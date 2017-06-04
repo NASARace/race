@@ -21,13 +21,26 @@ package gov.nasa.race.common
 import java.io.PrintWriter
 
 import com.typesafe.config.Config
-import gov.nasa.race.{Dated, _}
 import gov.nasa.race.config.ConfigUtils._
+import gov.nasa.race.{Dated, _}
 
 import scala.collection.mutable.{HashMap => MHashMap}
 import scala.concurrent.duration._
-import scala.xml.{Node, NodeBuffer, NodeSeq}
+import scala.xml.NodeSeq
 
+object TSStatsData {
+
+  /** algebraic type to assess same-timestamp updates */
+  sealed abstract class Sameness
+  case object Extension extends Sameness // something got added
+  case object Duplicate extends Sameness  // semantics of update objects are the same (not necessarily all their fields)
+  case class Ambiguous (reason: Option[String]=None) extends Sameness // conflicting semantics (e.g. different positions)
+
+  /** algebraic type to assess increasing timestamp updates */
+  sealed abstract class Change
+  case object Plausible extends Change
+  case class Implausible (reason: Option[String]=None) extends Change
+}
 
 /**
   * statistics data for a generic, irregular time series, i.e. sequences of update events for dated objects
@@ -44,8 +57,11 @@ import scala.xml.{Node, NodeBuffer, NodeSeq}
   * generic error conditions such as out-of-order updates (update message with older timestamp arriving later)
   */
 trait TSStatsData[O <: Dated,E <: TSEntryData[O]] extends Cloneable with XmlSource {
-  type OAction = (O)=>Unit
-  type OOAction = (O,O)=>Unit
+  import TSStatsData._
+
+  type OAction = (O)=>Unit    // function to process single update object finding
+  type OOAction = (O,O)=>Unit // function to process current/previous update object finding
+  type OORAction = (O,O,Option[String])=>Unit // function to process current/previous update object finding with optional reason
 
   //--- global stats over all entries
   var nUpdates = 0 // number of update calls
@@ -56,19 +72,21 @@ trait TSStatsData[O <: Dated,E <: TSEntryData[O]] extends Cloneable with XmlSour
   var maxActive = 0 // high water mark for activeEntries
   var completed = 0 // entries that were explicitly removed (to see if there is re-organization in case of dropped entries)
 
-  //--- basic problem statistics
+  //--- basic findings statistics
   var stale = 0  // entries that are outdated when they are first reported (dead on arrival)
   var dropped = 0 // entries that are dropped because they didn't get updated within a certain time
   var outOfOrder = 0 // updates that have a time stamp that is older than the previous update
   var duplicate = 0 // updates that are semantically the same as the previous update
   var ambiguous = 0 // updates that have the same time stamp but are otherwise not the same as the previous update
+  var implausible = 0 // updates that don't seem plausible regardless of positive time difference
 
   //--- optional actions to further analyze or archive problems, to be set by owner
   var staleAction: Option[OAction] = None
   var dropAction: Option[OAction] = None
   var outOfOrderAction: Option[OOAction] = None
   var duplicateAction: Option[OOAction] = None
-  var ambiguousAction: Option[OOAction] = None
+  var ambiguousAction: Option[OORAction] = None
+  var implausibleAction: Option[OORAction] = None
 
   //--- can be set by client/owner to get basic update distriution data
   var buckets: Option[BucketCounter] = None  // has to be var so that we can clone
@@ -85,10 +103,15 @@ trait TSStatsData[O <: Dated,E <: TSEntryData[O]] extends Cloneable with XmlSour
     clon
   }
 
-  //--- standard properties support
-  // NOTE - these are only called on objects that have the same timestamps, i.e. time does not have to be compared
-  def isDuplicate (current: O, last: O): Boolean = current == last  // override - in most cases this is too narrow
-  def isAmbiguous (current: O, last: O): Boolean = !isDuplicate(current,last)
+  //--- standard update categorization support
+
+  // override this if fields/values for ambiguity are a subset of duplication
+  def rateSameness (current: O, last: O): Sameness = {
+    if (current == last) Duplicate else Ambiguous()
+  }
+
+  // override this if we evaluate change plausibility
+  def rateChange (current: O, last: O): Change = Plausible
 
   //--- update interface
 
@@ -103,29 +126,52 @@ trait TSStatsData[O <: Dated,E <: TSEntryData[O]] extends Cloneable with XmlSour
     }
   }
 
+  //--- updates
+
+  def updatePositiveTimeDelta (dt: Int, obj: O, e: E, isSettled: Boolean): Unit = {
+    rateChange(obj,e.lastObj) match {
+      case Plausible =>
+        if (dt > dtMax) dtMax = dt
+        if (isSettled) {
+          if (dt < dtMin || dtMin == 0) dtMin = dt
+          buckets.foreach(_.add(dt))
+        }
+      case Implausible(reason) =>
+        implausible += 1
+        ifSome(implausibleAction){ _(obj,e.lastObj,reason) }
+    }
+  }
+
+  def updateSameTime (obj: O, e: E): Unit = {
+    rateSameness(obj,e.lastObj) match {
+      case Duplicate =>
+        duplicate += 1
+        ifSome(duplicateAction){ _(obj,e.lastObj) }
+
+      case Ambiguous(reason) =>
+        ambiguous += 1
+        ifSome(ambiguousAction){ _(obj,e.lastObj,reason) }
+
+      case Extension =>
+        // let pass
+    }
+  }
+
+  def updateNegativeTimeDelta (dt: Int, obj: O, e: E): Unit = {
+    outOfOrder += 1
+    ifSome(outOfOrderAction){ _(obj,e.lastObj) }
+  }
+
   // on-the-fly update of entry
-  // note that the entryStats are not updated yet so that we can detect state changes
+  // note that the entryStats are not updated yet so that we can assess the changes
   def update (obj: O, e: E, isSettled: Boolean): Unit = {
     val dt = (obj.date.getMillis - e.tLast).toInt
     if (dt > 0){
-      if (dt > dtMax) dtMax = dt
-      if (isSettled) {
-        if (dt < dtMin || dtMin == 0) dtMin = dt
-        buckets.foreach(_.add(dt))
-      }
-
-    } else if (dt == 0) {  // duplicate or ambiguous
-      if (isDuplicate(obj,e.lastObj)) {
-        duplicate += 1
-        ifSome(duplicateAction){ _(obj,e.lastObj) }
-      } else {
-        ambiguous += 1
-        ifSome(ambiguousAction){ _(obj,e.lastObj) }
-      }
-
-    } else {  // out of order (dt < 0)
-      outOfOrder += 1
-      ifSome(outOfOrderAction){ _(obj,e.lastObj) }
+      updatePositiveTimeDelta(dt,obj,e,isSettled) // plausible/implausible
+    } else if (dt == 0) {
+      updateSameTime(obj,e) // duplicate/ambiguous
+    } else {
+      updateNegativeTimeDelta(dt,obj,e) // outOfOrder
     }
   }
 

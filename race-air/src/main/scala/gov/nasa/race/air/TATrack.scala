@@ -36,23 +36,21 @@ object TATrack {
 
   // we don't use a case class so that we can have a class hierarchy, but we still want to be able to pattern match
   def apply (src: String, trackNum: Int, xyPos: XYPos, vVert: Speed, status: Status,
-             attrs: Int, beaconCode: String, stddsRev: Int,
+             attrs: Int, beaconCode: String, stddsRev: Int, flightPlan: Option[FlightPlan],
              flightId: String, cs: String, position: LatLonPos, altitude: Length, speed: Speed, heading: Angle, date: DateTime) = {
-    new TATrack(src,trackNum,xyPos,vVert,status,attrs,beaconCode,stddsRev,
+    new TATrack(src,trackNum,xyPos,vVert,status,attrs,beaconCode,stddsRev,flightPlan,
                 flightId,cs,position,altitude,speed,heading,date)
   }
   def unapply (src: String, trackNum: Int, xyPos: XYPos, vVert: Speed, status: Status,
-               attrs: Int, beaconCode: String, stddsRev: Int,
+               attrs: Int, beaconCode: String, stddsRev: Int, flightPlan: Option[FlightPlan],
                flightId: String, cs: String, position: LatLonPos, altitude: Length, speed: Speed, heading: Angle, date: DateTime) = {
-    (src,trackNum,xyPos,vVert,status,attrs,beaconCode,stddsRev,flightId,cs,position,altitude,speed,heading,date)
+    (src,trackNum,xyPos,vVert,status,attrs,beaconCode,stddsRev,flightPlan,flightId,cs,position,altitude,speed,heading,date)
   }
   def unapply (track: TATrack) = true
 }
 
 /**
   * a specialized FlightPos that represents tracks from TAIS/STARS messages
-  *
-  * we could roll the flags into a bit set, but keeping them as separate fields is better for pattern matching
   */
 class TATrack (val src: String,
                val trackNum: Int,
@@ -61,7 +59,8 @@ class TATrack (val src: String,
                val status: Status,
                val attrs: Int,
                val beaconCode: String,
-               val stddsRev: Int,  // 2 or 3  TODO - not sure we want to keep this in a track object
+               val stddsRev: Int,  // 2 or 3  TODO - turn into amendment
+               val flightPlan: Option[FlightPlan],
 
                //--- the FlightPos fields
                flightId: String, cs: String, position: LatLonPos, altitude: Length, speed: Speed, heading: Angle, date: DateTime
@@ -76,5 +75,6 @@ class TATrack (val src: String,
   def isNew = (attrs & TATrack.NewFlag) > 0
   def isPseudo = (attrs & TATrack.PseudoFlag) > 0
   def isAdsb = (attrs & TATrack.AdsbFlag) > 0
-  def hasFlightPlan = (attrs & TATrack.FlightPlanFlag) > 0
+
+  def hasFlightPlan = flightPlan.isDefined
 }

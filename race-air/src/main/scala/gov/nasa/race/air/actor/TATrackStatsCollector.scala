@@ -24,6 +24,7 @@ import com.typesafe.config.Config
 import gov.nasa.race._
 import gov.nasa.race.actor.{OptionalLogger, StatsCollectorActor}
 import gov.nasa.race.air.TATrack
+import gov.nasa.race.common.TSStatsData.{Ambiguous, Duplicate, Extension, Sameness}
 import gov.nasa.race.common._
 import gov.nasa.race.core.ClockAdjuster
 import gov.nasa.race.core.Messages.{BusEvent, RaceTick}
@@ -44,8 +45,9 @@ class TATrackStatsCollector (val config: Config) extends StatsCollectorActor wit
     statsData.buckets = createBuckets
 
     if (hasLogChannel){
-      statsData.duplicateAction = Some(logDuplicate)
-      //... and other log actions such as ambiguous etc.
+      //statsData.duplicateAction = Some(logDuplicate)
+      statsData.ambiguousAction = Some(logAmbiguous)
+      statsData.outOfOrderAction = Some(logOutOfOrder)
     }
 
     def createTSEntryData (t: Long, track: TATrack) = new TATrackEntryData(t,track)
@@ -88,24 +90,35 @@ class TATrackStatsCollector (val config: Config) extends StatsCollectorActor wit
 
   //--- problem logging (only called if there is a log channel)
 
-  def logDuplicate (t1: TATrack, t2: TATrack): Unit = {
-    def appendTrack (n: Int, t: TATrack, sb: StringBuilder) = {
-      sb.append("track " ); sb.append(n); sb.append(" ["); sb.append(objRef(t)); sb.append("]: ");
-      sb.append(t); sb.append('\n')
-      ifSome(t.getFirstAmendmentOfType[Src[String]]) { s =>
-        sb.append( "source "); sb.append(n); sb.append(" ["); sb.append(objRef(s.src)); sb.append("]: ");
-        sb.append(s.src); sb.append('\n')
-      }
+  def appendTrack (n: Int, t: TATrack, sb: StringBuilder) = {
+    sb.append("track " ); sb.append(n); sb.append(" ["); sb.append(objRef(t)); sb.append("]: ");
+    sb.append(t); sb.append('\n')
+    ifSome(t.getFirstAmendmentOfType[Src[String]]) { s =>
+      sb.append( "source "); sb.append(n); sb.append(" ["); sb.append(objRef(s.src)); sb.append("]: ");
+      sb.append(s.src); sb.append('\n')
     }
+  }
 
+  def logTracks (t1: TATrack, t2: TATrack, problem: String): Unit = {
     val sb = new StringBuilder
-    sb.append("================ duplicate\n")
+    sb.append("================ "); sb.append(problem); sb.append('\n')
+
     appendTrack(1, t1, sb)
-    sb.append("----------\n")
+    sb.append("----------------\n")
     appendTrack(2, t2, sb)
 
     publishToLogChannel(sb.toString)
   }
+
+  def logDuplicate (t1: TATrack, t2: TATrack): Unit = logTracks(t1,t2,"duplicate")
+  def logAmbiguous (t1: TATrack, t2: TATrack, reason: Option[String]): Unit = {
+    val problem = reason match {
+      case Some(r) => s"ambiguous ($r)"
+      case None => "ambiguous"
+    }
+    logTracks(t1,t2,problem)
+  }
+  def logOutOfOrder (t1: TATrack, t2: TATrack): Unit = logTracks(t1,t2,"out of order")
 }
 
 class TATrackEntryData (tLast: Long, track: TATrack) extends TSEntryData[TATrack](tLast,track) {
@@ -142,18 +155,18 @@ class TATrackStatsData  (val src: String) extends TSStatsData[TATrack,TATrackEnt
     updateTATrackStats(obj)
   }
 
-  override def isDuplicate (t1: TATrack, t2: TATrack) = {
-    t1.src == t2.src
-      t1.status == t2.status &&
-      t1.trackNum == t2.trackNum &&
-      t1.xyPos == t2.xyPos &&
-      t1.altitude == t2.altitude &&
-      t1.speed == t2.speed &&
-      t1.heading == t2.heading &&
-      t1.vVert == t2.vVert &&
-      t1.beaconCode == t2.beaconCode &&
-      t1.attrs == t2.attrs
+  override def rateSameness (t1: TATrack, t2: TATrack): Sameness = {
+    // we don't need to compare src and trackNum since those are used to look up the respective entries
+    if (t1.xyPos != t2.xyPos) Ambiguous(Some("xyPos"))
+    else if (t1.altitude != t2.altitude) Ambiguous(Some("altitude"))
+    else if (t1.speed != t2.speed) Ambiguous(Some("speed"))
+    else if (t1.heading != t2.heading) Ambiguous(Some("heading"))
+    else if (t1.vVert != t2.vVert) Ambiguous(Some("vVert"))
+    else if (t1.beaconCode != t2.beaconCode) Ambiguous(Some("beaconCode"))
+    else if (t1.hasFlightPlan != t2.hasFlightPlan) Extension  // we treat flight plans as accumulating
+    else Duplicate
   }
+
 
   override def resetEntryData = {
     nFlightPlans = 0
