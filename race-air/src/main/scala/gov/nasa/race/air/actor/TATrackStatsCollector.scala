@@ -134,13 +134,17 @@ class TATrackEntryData (tLast: Long, track: TATrack) extends TSEntryData[TATrack
 class TATrackStatsData  (val src: String) extends TSStatsData[TATrack,TATrackEntryData] {
   var nNoTime = 0 // number of track positions without time stamps
   var nFlightPlans = 0 // number of active entries with flight plan
-  var stddsV2 = 0
-  var stddsV3 = 0
+  val stddsRevs = new Array[Int](4)
 
   def updateTATrackStats (obj: TATrack) = {
-    obj.stddsRev match {
-      case 2 => stddsV2 += 1
-      case 3 => stddsV3 += 1
+    obj.getFirstAmendmentOfType[Rev] match {
+      case Some(rev) =>
+        rev.level1 match {
+          case 2 => stddsRevs(2) += 1
+          case 3 => stddsRevs(3) += 1
+          case other => // ignore, that would cause a schema violation
+        }
+      case None => // ignore
     }
     if (obj.date == null) nNoTime += 1
   }
@@ -178,14 +182,14 @@ class TATrackStatsData  (val src: String) extends TSStatsData[TATrack,TATrackEnt
   }
 
   def stddsRev = {
-    if (stddsV2 > 0){
-      if (stddsV3 > 0) "2/3" else "2"
+    if (stddsRevs(2) > 0){
+      if (stddsRevs(3) > 0) "2/3" else "2"
     } else {
-      if (stddsV3 > 0) "3" else "?"
+      if (stddsRevs(3) > 0) "3" else "?"
     }
   }
 
-  override def toXML = <center src={src}>{xmlBasicTSStatsData ++ xmlBasicTSStatsProblems ++ xmlSamples}</center>
+  override def toXML = <center src={src}>{xmlBasicTSStatsData ++ xmlBasicTSStatsFindings ++ xmlSamples}</center>
 }
 
 class TATrackStats(val topic: String, val source: String, val takeMillis: Long, val elapsedMillis: Long,
@@ -200,8 +204,7 @@ class TATrackStats(val topic: String, val source: String, val takeMillis: Long, 
   var nOutOfOrder = 0
   var nDuplicates = 0
   var nAmbiguous = 0
-  var stddsV2 = 0
-  var stddsV3 = 0
+  val stddsRevs = new Array[Int](4)
   var nNoTime = 0
 
   traconStats.foreach { ts =>
@@ -214,8 +217,8 @@ class TATrackStats(val topic: String, val source: String, val takeMillis: Long, 
     nOutOfOrder += ts.outOfOrder
     nDuplicates += ts.duplicate
     nAmbiguous += ts.ambiguous
-    if (ts.stddsV2 > 0) stddsV2 += 1
-    if (ts.stddsV3 > 0) stddsV3 += 1
+    foreachCorrespondingIndex(stddsRevs,ts.stddsRevs){ i=> stddsRevs(i) += ts.stddsRevs(i) }
+    if (ts.stddsRevs(3) > 0) stddsRevs(3) += 1
     nNoTime += ts.nNoTime
   }
 
@@ -223,7 +226,7 @@ class TATrackStats(val topic: String, val source: String, val takeMillis: Long, 
   override def printWith (pw: PrintWriter): Unit = {
     pw.println("tracons  v2  v3    tracks   fplan   cmplt   dropped   order     dup   ambig   no-time")
     pw.println("------- --- ---   ------- ------- -------   ------- ------- ------- -------   -------")
-    pw.print(f"$nTracons%7d $stddsV2%3d $stddsV3%3d   $nActive%7d $nFlightPlans%7d $nCompleted%7d")
+    pw.print(f"$nTracons%7d ${stddsRevs(2)}%3d ${stddsRevs(3)}%3d   $nActive%7d $nFlightPlans%7d $nCompleted%7d")
     pw.print(f"   $nDropped%7d $nOutOfOrder%7d $nDuplicates%7d $nAmbiguous%7d   $nNoTime%7d")
   }
 
@@ -287,14 +290,14 @@ class HtmlTATrackStatsFormatter (config: Config) extends HtmlStatsFormatter {
 
         //--- sum row
         tr(cls:="border")(
-          td(nTracons),td(stddsV2),td(stddsV3),td(nActive),td(nFlightPlans),td(""),td(""),td(""),td(""),
+          td(nTracons),td(stddsRevs(2)),td(stddsRevs(3)),td(nActive),td(nFlightPlans),td(""),td(""),td(""),td(""),
           td(""),td(""),td(""),td(""),td(""),
           td(nStale),td(nDropped),td(nOutOfOrder),td(nDuplicates),td(nAmbiguous),td(nNoTime)
         ),
 
         //--- tracon rows
         for (t <- traconStats) yield tr(cls:="value top")(
-          td(t.src),td(t.stddsV2),td(t.stddsV3),td(t.nActive),td(t.nFlightPlans),td(t.minActive),td(t.maxActive),td(t.completed),td(""),
+          td(t.src),td(t.stddsRevs(2)),td(t.stddsRevs(3)),td(t.nActive),td(t.nFlightPlans),td(t.minActive),td(t.maxActive),td(t.completed),td(""),
           t.buckets match {
             case Some(bc) if bc.nSamples > 0 => Seq( td(bc.nSamples),td(dur(bc.min)),td(dur(bc.max)),td(dur(bc.mean)))
             case _ => Seq( td("-"),td("-"),td("-"),td("-"))

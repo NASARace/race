@@ -280,6 +280,14 @@ package object race {
     a
   }
 
+  def foreachCorrespondingIndex[T] (a: Array[T], b: Array[T])(f: (Int)=>Unit) = {
+    var i = 0
+    while (i < a.length && i < b.length) {
+      f(i)
+      i += 1
+    }
+  }
+
   /** helper to debug for-comprehensions */
   def checkComprehension (msg: String): Option[String] = {
     println(msg)

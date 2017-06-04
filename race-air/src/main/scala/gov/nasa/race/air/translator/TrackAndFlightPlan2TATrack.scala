@@ -22,7 +22,7 @@ import com.typesafe.config.Config
 import gov.nasa.race.air.{FlightPlan, TATrack}
 import gov.nasa.race.air.TATrack.Status
 import gov.nasa.race.air.TATrack.Status.Status
-import gov.nasa.race.common.{Src, XmlParser}
+import gov.nasa.race.common.{Rev, Src, XmlParser}
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.config.ConfigurableTranslator
 import gov.nasa.race.geo.{LatLonPos, XYPos}
@@ -40,6 +40,7 @@ import scala.collection.mutable.ArrayBuffer
 class TrackAndFlightPlan2TATrack (val config: Config=null) extends XmlParser[Seq[TATrack]] with ConfigurableTranslator {
 
   val allowIncompleteTrack: Boolean = if (config != null) config.getBooleanOrElse("allow-incomplete", false) else false
+  val attachRev = config.getBooleanOrElse("attach-rev", false)
   val attachMsg = config.getBooleanOrElse("attach-msg", false)
 
   var msg: String = _
@@ -84,8 +85,9 @@ class TrackAndFlightPlan2TATrack (val config: Config=null) extends XmlParser[Seq
       if (allowIncompleteTrack || (mrtTime != null && vx.isDefined && vy.isDefined && reportedAltitude.isDefined)) {
         val spd = Speed.fromVxVy(vx,vy)
         val hdg = Angle.fromVxVy(vx,vy)
-        val track = new TATrack(src,trackNum,XYPos(xPos,yPos),vVert,status,attrs,beaconCode,stddsRev,flightPlan,
+        val track = new TATrack(src,trackNum,XYPos(xPos,yPos),vVert,status,attrs,beaconCode,flightPlan,
                                 trackNum.toString,acAddress,LatLonPos(lat,lon),reportedAltitude,spd,hdg,mrtTime)
+        if (attachRev && stddsRev >= 0) track.amend(Rev(3,stddsRev.toShort))
         if (attachMsg) track.amend(Src(msg))
         tracks += track
       }
@@ -106,7 +108,7 @@ class TrackAndFlightPlan2TATrack (val config: Config=null) extends XmlParser[Seq
     case "TATrackAndFlightPlan" =>
       tracks.clear
       src = null
-      if (parseAttribute("xmlns")) {
+      if (attachRev && parseAttribute("xmlns")) {
         if (value.contains("v3")) stddsRev = 3
         else if (value.contains("v2")) stddsRev = 2
         else stddsRev = -1

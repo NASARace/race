@@ -36,15 +36,15 @@ object TATrack {
 
   // we don't use a case class so that we can have a class hierarchy, but we still want to be able to pattern match
   def apply (src: String, trackNum: Int, xyPos: XYPos, vVert: Speed, status: Status,
-             attrs: Int, beaconCode: String, stddsRev: Int, flightPlan: Option[FlightPlan],
+             attrs: Int, beaconCode: String, flightPlan: Option[FlightPlan],
              flightId: String, cs: String, position: LatLonPos, altitude: Length, speed: Speed, heading: Angle, date: DateTime) = {
-    new TATrack(src,trackNum,xyPos,vVert,status,attrs,beaconCode,stddsRev,flightPlan,
+    new TATrack(src,trackNum,xyPos,vVert,status,attrs,beaconCode,flightPlan,
                 flightId,cs,position,altitude,speed,heading,date)
   }
   def unapply (src: String, trackNum: Int, xyPos: XYPos, vVert: Speed, status: Status,
-               attrs: Int, beaconCode: String, stddsRev: Int, flightPlan: Option[FlightPlan],
+               attrs: Int, beaconCode: String, flightPlan: Option[FlightPlan],
                flightId: String, cs: String, position: LatLonPos, altitude: Length, speed: Speed, heading: Angle, date: DateTime) = {
-    (src,trackNum,xyPos,vVert,status,attrs,beaconCode,stddsRev,flightPlan,flightId,cs,position,altitude,speed,heading,date)
+    (src,trackNum,xyPos,vVert,status,attrs,beaconCode,flightPlan,flightId,cs,position,altitude,speed,heading,date)
   }
   def unapply (track: TATrack) = true
 }
@@ -59,7 +59,6 @@ class TATrack (val src: String,
                val status: Status,
                val attrs: Int,
                val beaconCode: String,
-               val stddsRev: Int,  // 2 or 3  TODO - turn into amendment
                val flightPlan: Option[FlightPlan],
 
                //--- the FlightPos fields

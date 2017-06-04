@@ -209,7 +209,7 @@ trait TSStatsData[O <: Dated,E <: TSEntryData[O]] extends Cloneable with XmlSour
       <dtMax>{dtMax}</dtMax>
   }
 
-  def xmlBasicTSStatsProblems = {
+  def xmlBasicTSStatsFindings = {
     <stale>{stale}</stale>
       <dropped>{dropped}</dropped>
       <outOfOrder>{outOfOrder}</outOfOrder>
@@ -222,7 +222,7 @@ trait TSStatsData[O <: Dated,E <: TSEntryData[O]] extends Cloneable with XmlSour
     case None => NodeSeq.Empty
   }
 
-  def xmlFields = xmlBasicTSStatsData ++ xmlBasicTSStatsProblems ++ xmlSamples
+  def xmlFields = xmlBasicTSStatsData ++ xmlBasicTSStatsFindings ++ xmlSamples
 
   // override if there are additional fields
   def toXML = <series>{xmlFields}</series>
