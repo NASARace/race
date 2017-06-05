@@ -40,7 +40,10 @@ case class ArchiveEntry (date: DateTime, obj: Any) extends Dated
 trait ArchiveWriter {
   val ostream: OutputStream
 
-  def close = ostream.close
+  def close = {
+    ostream.flush
+    ostream.close
+  }
   def write (date: DateTime, obj: Any): Boolean
 }
 

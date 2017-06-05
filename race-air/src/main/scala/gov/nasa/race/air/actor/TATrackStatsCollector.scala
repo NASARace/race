@@ -22,7 +22,7 @@ import java.io.PrintWriter
 
 import com.typesafe.config.Config
 import gov.nasa.race._
-import gov.nasa.race.actor.{ChannelChoicePublisher, StatsCollectorActor}
+import gov.nasa.race.actor.{ChannelOptionPublisher, StatsCollectorActor}
 import gov.nasa.race.air.TATrack
 import gov.nasa.race.common.TSStatsData.{Ambiguous, Duplicate, Extension, Sameness}
 import gov.nasa.race.common._
@@ -37,15 +37,15 @@ import scalatags.Text.all._
   * actor that collects statistics for TATrack objects
   * We keep stats per tracon, hence this is not directly a TSStatsCollectorActor
   */
-class TATrackStatsCollector (val config: Config) extends StatsCollectorActor with ClockAdjuster with ChannelChoicePublisher {
+class TATrackStatsCollector (val config: Config) extends StatsCollectorActor with ClockAdjuster with ChannelOptionPublisher {
 
   class TACollector (val config: Config, val src: String)
          extends ConfiguredTSStatsCollector[Int,TATrack,TATrackEntryData,TATrackStatsData] {
     val statsData = new TATrackStatsData(src)
     statsData.buckets = createBuckets
 
-    if (hasChannelChoices){
-      //statsData.duplicateAction = Some(logDuplicate)
+    if (hasChannelOptions){
+      statsData.duplicateAction = Some(logDuplicate)
       statsData.ambiguousAction = Some(logAmbiguous)
       statsData.outOfOrderAction = Some(logOutOfOrder)
     }
@@ -120,7 +120,7 @@ class TATrackStatsCollector (val config: Config) extends StatsCollectorActor wit
 
     sb.append("============= ");
     sb.append(channel)
-    details.foreach( sb.append)
+    details.foreach( s=> sb.append(" "); sb.append(s))
     sb.append('\n')
 
     appendTrack("current track:  ", t1)
@@ -129,12 +129,12 @@ class TATrackStatsCollector (val config: Config) extends StatsCollectorActor wit
     ifSome(t1.getFirstAmendmentOfType[Src[String]]){ appendSrc("-----------\ncurrent src:  ",_)}
     ifSome(t2.getFirstAmendmentOfType[Src[String]]){ appendSrc("-----------\nprevious src: ",_)}
 
-    publishToChannelChoice(channel,sb.toString)
+    publishToChannelOption(channel,sb.toString)
   }
 
-  def logDuplicate (t1: TATrack, t2: TATrack): Unit = logUpdate("duplicate",t1,t2)
-  def logAmbiguous (t1: TATrack, t2: TATrack, reason: Option[String]) = logUpdate("ambiguous",t1,t2,reason)
-  def logOutOfOrder (t1: TATrack, t2: TATrack, amount: Option[String]): Unit = logUpdate("out-of-order", t1,t2, amount)
+  def logDuplicate (t1: TATrack, t2: TATrack): Unit = logUpdate("duplicatedTrack",t1,t2)
+  def logAmbiguous (t1: TATrack, t2: TATrack, reason: Option[String]) = logUpdate("ambiguousTrack",t1,t2,reason)
+  def logOutOfOrder (t1: TATrack, t2: TATrack, amount: Option[String]): Unit = logUpdate("outOfOrderTrack", t1,t2, amount)
 }
 
 class TATrackEntryData (tLast: Long, track: TATrack) extends TSEntryData[TATrack](tLast,track) {
@@ -233,7 +233,7 @@ class TATrackStats(val topic: String, val source: String, val takeMillis: Long, 
     nOutOfOrder += ts.outOfOrder
     nDuplicates += ts.duplicate
     nAmbiguous += ts.ambiguous
-    foreachCorrespondingIndex(stddsRevs,ts.stddsRevs){ i=> stddsRevs(i) += ts.stddsRevs(i) }
+    if (ts.stddsRevs(2) > 0) stddsRevs(2) += 1
     if (ts.stddsRevs(3) > 0) stddsRevs(3) += 1
     nNoTime += ts.nNoTime
   }

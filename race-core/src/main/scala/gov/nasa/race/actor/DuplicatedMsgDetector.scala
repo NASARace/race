@@ -40,7 +40,7 @@ import scala.concurrent.duration._
   * To avoid memory leaks, this implementation only considers messages within a configurable
   * time window for each message hash
   */
-class DuplicatedMsgDetector (val config: Config) extends StatsCollectorActor with ChannelChoicePublisher {
+class DuplicatedMsgDetector (val config: Config) extends StatsCollectorActor with ChannelOptionPublisher {
   val checkWindow = config.getFiniteDurationOrElse("check-window", 5.minutes).toMillis
   val classifiers = MsgMatcher.getMsgMatchers(config)
 
@@ -80,7 +80,7 @@ class DuplicatedMsgDetector (val config: Config) extends StatsCollectorActor wit
           if (matchCount > 0) incStats(catStatsData,c.name,matchCount,dt)
         }
 
-        publishToChannelChoice("duplicate-msg",msg)
+        publishToChannelOption("duplicatedMsg",msg)
         checksums += cs -> tNow // update time
 
       case None => checksums += cs -> tNow
