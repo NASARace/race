@@ -120,9 +120,10 @@ class TATrackStatsCollector (val config: Config) extends StatsCollectorActor wit
 
     sb.append("============= ");
     sb.append(channel)
-    details.foreach( s=> sb.append(" "); sb.append(s))
-    sb.append('\n')
-
+    details.foreach { s=>
+      sb.append(" ")
+      sb.append(s)
+    } 
     appendTrack("current track:  ", t1)
     appendTrack("previous track: ", t2)
 
