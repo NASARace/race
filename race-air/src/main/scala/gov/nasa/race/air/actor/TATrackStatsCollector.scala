@@ -90,15 +90,6 @@ class TATrackStatsCollector (val config: Config) extends StatsCollectorActor wit
 
   //--- problem logging (only called if there is a log channel)
 
-  def appendTrack (n: Int, t: TATrack, sb: StringBuilder) = {
-    sb.append("track " ); sb.append(n); sb.append(" ["); sb.append(objRef(t)); sb.append("]: ");
-    sb.append(t); sb.append('\n')
-    ifSome(t.getFirstAmendmentOfType[Src[String]]) { s =>
-      sb.append( "source "); sb.append(n); sb.append(" ["); sb.append(objRef(s.src)); sb.append("]: ");
-      sb.append(s.src); sb.append('\n')
-    }
-  }
-
   def logUpdate (channel: String, t1: TATrack, t2: TATrack, details: Option[String]=None): Unit = {
     val sb = new StringBuilder
 
@@ -111,6 +102,7 @@ class TATrackStatsCollector (val config: Config) extends StatsCollectorActor wit
       sb.append('\n')
     }
     def appendSrc (prefix: String, s: Src[String]) = {
+      sb.append(prefix)
       sb.append(" [")
       sb.append(objRef(s.src))
       sb.append("]: ")
@@ -123,7 +115,8 @@ class TATrackStatsCollector (val config: Config) extends StatsCollectorActor wit
     details.foreach { s=>
       sb.append(" ")
       sb.append(s)
-    } 
+    }
+    sb.append('\n')
     appendTrack("current track:  ", t1)
     appendTrack("previous track: ", t2)
 
