@@ -16,27 +16,35 @@
  */
 package gov.nasa.race.actor
 
-import gov.nasa.race._
 import gov.nasa.race.core.PublishingRaceActor
 import gov.nasa.race.config.ConfigUtils._
 
 /**
-  * a PublishingRaceActor that can write to a optional log channel
+  * a PublishingRaceActor that can write to a alternative channels that can be bounded
   */
-trait OptionalLogger extends PublishingRaceActor {
+trait ChannelChoicePublisher extends PublishingRaceActor {
 
-  val writeToLog = config.getOptionalString("write-to-log")
-  val maxLog = config.getIntOrElse("max-log",100)
-  var nLog = 0
-
-  def publishToLogChannel (msg: Any) = {
-    ifSome(writeToLog) { chan =>
-      if (nLog < maxLog) {
-        nLog += 1
-        publish(chan, msg)
+  class ChannelEntry (val name: String, val max: Int, var n: Int) {
+    def publish (msg: Any): Unit = {
+      if (max < 0 || (n < max)){
+        n += 1
+        publish(name,msg)
       }
     }
   }
 
-  def hasLogChannel = writeToLog.isDefined
+  val channelChoices = config.getConfigArray("write-to-choices").foldLeft(Map.empty[String,ChannelEntry]){ (m, conf) =>
+    val ce = new ChannelEntry(conf.getString("name"), conf.getIntOrElse("max-write",-1),0)
+    m + (ce.name -> ce)
+  }
+
+  def publishToChannelChoice (channelName: String, msg: Any) = {
+    channelChoices.get(channelName) match {
+      case Some(ce) => ce.publish(msg)
+      case None => info(s"unknown channel choice $channelName")
+    }
+  }
+
+  def hasChannelChoices = channelChoices.nonEmpty
+  def hasChannelChoice (channelName: String) = channelChoices.get(channelName).isDefined
 }

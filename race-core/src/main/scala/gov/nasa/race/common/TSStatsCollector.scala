@@ -83,7 +83,7 @@ trait TSStatsData[O <: Dated,E <: TSEntryData[O]] extends Cloneable with XmlSour
   //--- optional actions to further analyze or archive problems, to be set by owner
   var staleAction: Option[OAction] = None
   var dropAction: Option[OAction] = None
-  var outOfOrderAction: Option[OOAction] = None
+  var outOfOrderAction: Option[OORAction] = None
   var duplicateAction: Option[OOAction] = None
   var ambiguousAction: Option[OORAction] = None
   var implausibleAction: Option[OORAction] = None
@@ -157,9 +157,9 @@ trait TSStatsData[O <: Dated,E <: TSEntryData[O]] extends Cloneable with XmlSour
     }
   }
 
-  def updateNegativeTimeDelta (dt: Int, obj: O, e: E): Unit = {
+  def updateNegativeTimeDelta (dtMillis: Int, obj: O, e: E): Unit = {
     outOfOrder += 1
-    ifSome(outOfOrderAction){ _(obj,e.lastObj) }
+    ifSome(outOfOrderAction){ _(obj,e.lastObj,Some(s"$dtMillis msec")) }
   }
 
   // on-the-fly update of entry

@@ -22,7 +22,7 @@ import java.io.PrintWriter
 
 import com.typesafe.config.Config
 import gov.nasa.race._
-import gov.nasa.race.actor.{OptionalLogger, StatsCollectorActor}
+import gov.nasa.race.actor.{ChannelChoicePublisher, StatsCollectorActor}
 import gov.nasa.race.air.TATrack
 import gov.nasa.race.common.TSStatsData.{Ambiguous, Duplicate, Extension, Sameness}
 import gov.nasa.race.common._
@@ -37,14 +37,14 @@ import scalatags.Text.all._
   * actor that collects statistics for TATrack objects
   * We keep stats per tracon, hence this is not directly a TSStatsCollectorActor
   */
-class TATrackStatsCollector (val config: Config) extends StatsCollectorActor with ClockAdjuster with OptionalLogger {
+class TATrackStatsCollector (val config: Config) extends StatsCollectorActor with ClockAdjuster with ChannelChoicePublisher {
 
   class TACollector (val config: Config, val src: String)
          extends ConfiguredTSStatsCollector[Int,TATrack,TATrackEntryData,TATrackStatsData] {
     val statsData = new TATrackStatsData(src)
     statsData.buckets = createBuckets
 
-    if (hasLogChannel){
+    if (hasChannelChoices){
       //statsData.duplicateAction = Some(logDuplicate)
       statsData.ambiguousAction = Some(logAmbiguous)
       statsData.outOfOrderAction = Some(logOutOfOrder)
@@ -99,26 +99,42 @@ class TATrackStatsCollector (val config: Config) extends StatsCollectorActor wit
     }
   }
 
-  def logTracks (t1: TATrack, t2: TATrack, problem: String): Unit = {
+  def logUpdate (channel: String, t1: TATrack, t2: TATrack, details: Option[String]=None): Unit = {
     val sb = new StringBuilder
-    sb.append("================ "); sb.append(problem); sb.append('\n')
 
-    appendTrack(1, t1, sb)
-    sb.append("----------------\n")
-    appendTrack(2, t2, sb)
-
-    publishToLogChannel(sb.toString)
-  }
-
-  def logDuplicate (t1: TATrack, t2: TATrack): Unit = logTracks(t1,t2,"duplicate")
-  def logAmbiguous (t1: TATrack, t2: TATrack, reason: Option[String]): Unit = {
-    val problem = reason match {
-      case Some(r) => s"ambiguous ($r)"
-      case None => "ambiguous"
+    def appendTrack (prefix: String, t: TATrack) = {
+      sb.append(prefix)
+      sb.append(" [")
+      sb.append(objRef(t))
+      sb.append("]: ")
+      sb.append(t)
+      sb.append('\n')
     }
-    logTracks(t1,t2,problem)
+    def appendSrc (prefix: String, s: Src[String]) = {
+      sb.append(" [")
+      sb.append(objRef(s.src))
+      sb.append("]: ")
+      sb.append(s.src)
+      sb.append('\n')
+    }
+
+    sb.append("============= ");
+    sb.append(channel)
+    details.foreach( sb.append)
+    sb.append('\n')
+
+    appendTrack("current track:  ", t1)
+    appendTrack("previous track: ", t2)
+
+    ifSome(t1.getFirstAmendmentOfType[Src[String]]){ appendSrc("-----------\ncurrent src:  ",_)}
+    ifSome(t2.getFirstAmendmentOfType[Src[String]]){ appendSrc("-----------\nprevious src: ",_)}
+
+    publishToChannelChoice(channel,sb.toString)
   }
-  def logOutOfOrder (t1: TATrack, t2: TATrack): Unit = logTracks(t1,t2,"out of order")
+
+  def logDuplicate (t1: TATrack, t2: TATrack): Unit = logUpdate("duplicate",t1,t2)
+  def logAmbiguous (t1: TATrack, t2: TATrack, reason: Option[String]) = logUpdate("ambiguous",t1,t2,reason)
+  def logOutOfOrder (t1: TATrack, t2: TATrack, amount: Option[String]): Unit = logUpdate("out-of-order", t1,t2, amount)
 }
 
 class TATrackEntryData (tLast: Long, track: TATrack) extends TSEntryData[TATrack](tLast,track) {
