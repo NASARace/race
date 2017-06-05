@@ -48,7 +48,7 @@ trait ChannelOptionPublisher extends PublishingRaceActor {
   def publishToChannelOption(name: String, msg: Any) = {
     channelChoices.get(name) match {
       case Some(ce) => ce.publishOptional(msg)
-      case None => warning(s"unknown channel choice $name")
+      case None => debug(s"unknown channel choice $name")
     }
   }
 
