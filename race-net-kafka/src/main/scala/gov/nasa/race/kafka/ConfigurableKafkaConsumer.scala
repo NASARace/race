@@ -22,10 +22,10 @@ import com.typesafe.config.Config
 import gov.nasa.race._
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.util.ClassUtils
+import gov.nasa.race.util._
 import org.apache.kafka.clients.consumer.KafkaConsumer
 import org.apache.kafka.common.serialization.{Deserializer, StringDeserializer => KStringDeserializer}
 
-import scala.collection.JavaConverters._
 import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.duration._
 import scala.reflect._
@@ -86,6 +86,9 @@ abstract class ConfigurableKafkaConsumer (val config: Config) {
   // we use a pre-allocated buffer object to (1) avoid per-poll allocation, and (2) to preserve the value order
   // NOTE - this means fillValueBuffer and valueBuffer access have to happen from the same thread
   val valueBuffer = new ArrayBuffer[Any](32)
+
+  // skip over every message on that topic which hasn't been delivered at this point
+  def seekToEnd = foreachInJavaIterable(consumer.assignment())( consumer.seekToEnd(_))
 
   def fillValueBuffer: Int = {
     // NOTE - recs can apparently change asynchronously, hence we cannot allocate a value array and then

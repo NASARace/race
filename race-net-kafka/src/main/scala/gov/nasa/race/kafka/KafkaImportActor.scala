@@ -22,6 +22,7 @@ import gov.nasa.race._
 import gov.nasa.race.actor.FilteringPublisher
 import gov.nasa.race.core.RaceContext
 import gov.nasa.race.util.ThreadUtils
+import gov.nasa.race.config.ConfigUtils._
 
 /**
   * a RaceActor that publishes messages received from a Kafka broker
@@ -30,11 +31,23 @@ import gov.nasa.race.util.ThreadUtils
   */
 class KafkaImportActor (val config: Config) extends FilteringPublisher {
 
+  val flushOnStart = config.getBooleanOrElse("flush-on-start", true)
+
   var consumer: Option[ConfigurableKafkaConsumer] = None // defer init since Kafka topics might be from remote config
   var terminate = false
 
   val thread = ThreadUtils.daemon {
     ifSome(consumer) { c =>
+      if (flushOnStart) {
+        // drop anything that might have been queued up to this point. The intention is to
+        // avoid back pressure for high volume topics. We already registered during initialization
+        // so there might be accumulated messages. At the same time, initial processing of them
+        // will take more time/resources since classes are not loaded and methods are not JITed.
+        // The start time is non-deterministic anyways, but we still do want to keep the
+        // consistency guarantee, i.e. once we start to process messages we don't drop any of them
+        c.seekToEnd
+      }
+
       while (!terminate) {
         try {
           if (c.fillValueBuffer > 0) c.valueBuffer.foreach(publishFiltered)

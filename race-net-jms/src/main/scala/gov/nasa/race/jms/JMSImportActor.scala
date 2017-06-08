@@ -121,6 +121,7 @@ class JMSImportActor(val config: Config) extends FilteringPublisher {
     }
   }
 
+  val flushOnStart = config.getBooleanOrElse("flush-on-start", true)
   val brokerURI = config.getVaultableStringOrElse("broker-uri", "tcp://localhost:61616")
   val jmsId = config.getStringOrElse("jms-id", self.path.name + System.currentTimeMillis.toHexString)
   val jmsTopic = config.getString("jms-topic")
@@ -172,6 +173,13 @@ class JMSImportActor(val config: Config) extends FilteringPublisher {
       if (topic != null) {
         val c = s.createConsumer(topic)
         if (c != null) {
+          if (flushOnStart) {
+            // the idea is that we always see peak flow at start, which is probably due
+            // to a combination of server backlog and slower initial processing because of
+            // extra class loading & JIT effort. Here we try to eliminate server backlog
+            while (c.receiveNoWait() != null){}
+          }
+
           c.setMessageListener(new Listener(topic))
           c
         } else null // no consumer

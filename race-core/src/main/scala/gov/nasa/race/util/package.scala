@@ -54,4 +54,9 @@ package object util {
   }
 
   @inline def toArray[T <:Object : ClassTag, U <: T] (list: java.util.List[U]) = list.toArray(new Array[T](list.size))
+
+  @inline def foreachInJavaIterable[T](jiterable: java.lang.Iterable[T])(f: T=>Unit) = {
+    val it = jiterable.iterator()
+    while (it.hasNext) f(it.next())
+  }
 }
