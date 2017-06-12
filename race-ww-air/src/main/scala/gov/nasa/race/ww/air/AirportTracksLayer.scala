@@ -25,46 +25,18 @@ import gov.nasa.race.air.{Airport, AirportTracks, Track}
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.Messages._
 import gov.nasa.race.geo.{GreatCircle, LatLonPos}
-import gov.nasa.race.swing.GBPanel.{Anchor, Fill}
-import gov.nasa.race.swing.Style._
-import gov.nasa.race.swing.{GBPanel, _}
 import gov.nasa.race.uom.Angle._
 import gov.nasa.race.uom.Length._
 import gov.nasa.race.uom._
 import gov.nasa.race.ww.Implicits._
-import gov.nasa.race.ww.{DynamicLayerInfoPanel, DynamicRaceLayerInfo, EyePosListener, RaceView, SubscribingRaceLayer, _}
+import gov.nasa.race.ww.{DynamicRaceLayerInfo, EyePosListener, RaceView, SubscribingRaceLayer, _}
 import gov.nasa.worldwind.avlist.AVKey
 import gov.nasa.worldwind.geom.Position
 import gov.nasa.worldwind.render.{Offset, PointPlacemark, PointPlacemarkAttributes}
 
 import scala.collection.concurrent.TrieMap
-import scala.swing._
-import scala.swing.event.SelectionChanged
 
-object AirportTracksLayer {
 
-  def lookupAirport (pos: LatLonPos, dist: Length): Option[Airport] = {
-    for ((id,ap) <- Airport.asdexAirports) {
-      if (GreatCircle.distance(pos, ap.pos) < dist) return Some(ap)
-    }
-    None
-  }
-}
-
-class AirportListRenderer extends GBPanel {
-  val idLabel = new Label()
-  idLabel.horizontalTextPosition = Alignment.Left
-  val nameLabel = new Label()
-
-  val c = new Constraints(fill=Fill.Horizontal, anchor=Anchor.West, ipadx=10)
-  layout(idLabel) = c(0,0)
-  layout(nameLabel) = c(1,0).weightx(0.5)
-
-  def setAirport (airport: Airport) = {
-    idLabel.text = airport.id
-    nameLabel.text = airport.city
-  }
-}
 
 /**
   * WorldWind layer to display ASDE-X airport track layers
@@ -72,30 +44,6 @@ class AirportListRenderer extends GBPanel {
 class AirportTracksLayer (raceView: RaceView,config: Config)
                                            extends SubscribingRaceLayer(raceView,config)
                                               with DynamicRaceLayerInfo with EyePosListener {
-
-  class AirportLayerPanel extends DynamicLayerInfoPanel {
-    val airportCombo = new ComboBox(Airport.airportList) {
-      maximumRowCount = 20
-      renderer = new ListView.AbstractRenderer[Airport,AirportListRenderer](new AirportListRenderer) {
-        override def configure(list: ListView[_], isSelected: Boolean, focused: Boolean, a: Airport, index: Int): Unit = {
-          component.setAirport(a)
-        }
-      }
-    }
-
-    val airportSelectorPanel = new GBPanel {
-      val c = new Constraints( fill=Fill.Horizontal, anchor=Anchor.West, insets=(8,2,0,2))
-      layout(new Label("goto airport:").styled('labelFor)) = c(0,0).weightx(0.5)
-      layout(airportCombo) = c(1,0).weightx(0)
-    } styled()
-
-    contents += airportSelectorPanel
-
-    listenTo(airportCombo.selection)
-    reactions += {
-      case SelectionChanged(`airportCombo`) => raceView.trackUserAction { gotoAirport(airportCombo.selection.item) }
-    }
-  }
 
   class TrackEntry(var track: Track) extends PointPlacemark(track) {
     var isAircraft = track.isAircraft // apparently it changes, so we need to store
@@ -147,7 +95,9 @@ class AirportTracksLayer (raceView: RaceView,config: Config)
     }
   }
 
-  val panel = new AirportLayerPanel().styled()
+  //val panel = new AirportLayerPanel().styled()
+  val panel = new LocationLayerInfoPanel[Airport](Airport.airportList,_.id,_.city, a=>raceView.trackUserAction(gotoAirport(a)))
+
   val activeDistance = UsMiles(config.getDoubleOrElse("view-distance", 6d)) // in US miles
   val activeAltitude = Feet(config.getDoubleOrElse("view-altitude", 30000d)) // feet above ground
   val gotoAltitude = Feet(config.getDoubleOrElse("goto-altitude", 20000d)) // feet above ground
@@ -205,6 +155,10 @@ class AirportTracksLayer (raceView: RaceView,config: Config)
     releaseAll
   }
 
+  def lookupAirport (pos: LatLonPos, dist: Length): Option[Airport] = {
+    Airport.asdexAirports.find( e=> GreatCircle.distance(pos, e._2.pos) < dist).map(_._2)
+  }
+
   def checkAirportChange (eyePos: Position): Unit = {
     def releaseCurrentAirport = {
       reset
@@ -212,7 +166,7 @@ class AirportTracksLayer (raceView: RaceView,config: Config)
       active = false
     }
 
-    val newAirport = AirportTracksLayer.lookupAirport(eyePos, activeDistance)
+    val newAirport = lookupAirport(eyePos, activeDistance)
     val eyeAltitude = meters2Feet(eyePos.getAltitude)
     if (airport.isDefined && airport == newAirport){ // no airport change, but check altitude
       if (active){

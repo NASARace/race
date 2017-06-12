@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, United States Government, as represented by the
+ * Copyright (c) 2017, United States Government, as represented by the
  * Administrator of the National Aeronautics and Space Administration.
  * All rights reserved.
  *
@@ -14,23 +14,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package gov.nasa.race.swing
 
-package gov.nasa.race.air.actor
-
-import gov.nasa.race.air.Airport
-import scala.util.matching.Regex
+import gov.nasa.race.swing.GBPanel.{Anchor, Fill}
+import scala.swing.{Alignment, Label}
 
 /**
-  * trait to handle conditional ASDE-X imports, filtered by requested airports
+  * a generic ListRenderer for items that have an id and a name
   */
-trait AsdexImporter extends SubjectImporter[Airport] {
+class IdAndNameListRenderer[T](id: T=>String, name: T=>String) extends GBPanel {
+  val idLabel = new Label()
+  idLabel.horizontalTextPosition = Alignment.Left
+  val nameLabel = new Label()
 
-  override def topicSubject (topic: Any): Option[Airport] = {
-    topic match {
-      case Some(airport:Airport) => Airport.asdexAirports.get(airport.id)
-      case Some(airportId: String) => Airport.asdexAirports.get(airportId)
-      case _ => None
-    }
+  val c = new Constraints(fill=Fill.Horizontal, anchor=Anchor.West, ipadx=10)
+  layout(idLabel) = c(0,0)
+  layout(nameLabel) = c(1,0).weightx(0.5)
+
+  def setItem (item: T) = {
+    idLabel.text = id(item)
+    nameLabel.text = name(item)
   }
-  override def subjectRegex(airport: Airport): Option[Regex] = Some(s"<airport>${airport.id}</airport>".r)
 }

@@ -18,7 +18,7 @@
 package gov.nasa.race.air.actor
 
 import com.typesafe.config.Config
-import gov.nasa.race.air.{FlightCompleted, FlightPos}
+import gov.nasa.race.air.{FlightCompleted, FlightDropped, FlightPos}
 import gov.nasa.race.core.Messages.BusEvent
 import gov.nasa.race.core.SubscribingRaceActor
 
@@ -39,5 +39,6 @@ class FlightDropperActor(val config: Config) extends SubscribingRaceActor with F
   override def handleMessage = handleFPosDropperMessage orElse {
     case BusEvent(_,fpos: FlightPos,_) => flights += fpos.cs -> fpos
     case BusEvent(_,fcompleted: FlightCompleted,_) => flights -= fcompleted.cs
+    case BusEvent(_,_:FlightDropped,_) => // ignore - we are generating these
   }
 }

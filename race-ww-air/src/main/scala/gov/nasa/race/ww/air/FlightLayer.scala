@@ -44,8 +44,8 @@ abstract class FlightLayer[T <:InFlightAircraft](val raceView: RaceView, config:
                                      with DynamicRaceLayerInfo
                                      with AltitudeSensitiveLayerInfo {
 
-  val panel = new FlightLayerInfoPanel(raceView,this).styled('consolePanel)
-  val entryPanel = new FlightEntryPanel(raceView,this).styled('consolePanel)
+  val panel = createLayerInfoPanel
+  val entryPanel = createEntryPanel
 
   val flightInfoBase = config.getOptionalString("flightinfo-base")
 
@@ -84,6 +84,10 @@ abstract class FlightLayer[T <:InFlightAircraft](val raceView: RaceView, config:
   override def size = flights.size
 
   //--- end ctor
+
+  // override for specialized LayerInfoPanel
+  def createLayerInfoPanel = new FlightLayerInfoPanel(raceView,this).styled('consolePanel)
+  def createEntryPanel = new FlightEntryPanel(raceView,this).styled('consolePanel)
 
   def getFlight (cs: String) = flights.get(cs).map( _.obj )
 

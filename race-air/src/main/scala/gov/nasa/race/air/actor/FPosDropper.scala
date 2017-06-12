@@ -58,8 +58,6 @@ trait FPosDropper extends PublishingRaceActor with ContinuousTimeRaceActor with 
     case CheckStaleFlightPos => removeStaleFlights  // on demand
   }
 
-  override def handleMessage = handleFPosDropperMessage orElse super.handleMessage
-
   def removeStaleFlights = {
     val now = updatedSimTime
     val cut = dropAfterMillis

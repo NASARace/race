@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, United States Government, as represented by the
+ * Copyright (c) 2017, United States Government, as represented by the
  * Administrator of the National Aeronautics and Space Administration.
  * All rights reserved.
  *
@@ -14,23 +14,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package gov.nasa.race.air.actor
 
-import gov.nasa.race.air.Airport
+import gov.nasa.race.air.Tracon
+
 import scala.util.matching.Regex
 
 /**
-  * trait to handle conditional ASDE-X imports, filtered by requested airports
+  * trait to handle conditional TAIS imports, filtered by requested tracons
   */
-trait AsdexImporter extends SubjectImporter[Airport] {
-
-  override def topicSubject (topic: Any): Option[Airport] = {
+trait TAISImporter extends SubjectImporter[Tracon]{
+  override def topicSubject (topic: Any): Option[Tracon] = {
     topic match {
-      case Some(airport:Airport) => Airport.asdexAirports.get(airport.id)
-      case Some(airportId: String) => Airport.asdexAirports.get(airportId)
+      case Some(tracon:Tracon) => Tracon.tracons.get(tracon.id)
+      case Some(traconId: String) => Tracon.tracons.get(traconId)
       case _ => None
     }
   }
-  override def subjectRegex(airport: Airport): Option[Regex] = Some(s"<airport>${airport.id}</airport>".r)
+  override def subjectRegex(tracon:Tracon): Option[Regex] = Some(s"<src>${tracon.id}</src>".r)
 }
