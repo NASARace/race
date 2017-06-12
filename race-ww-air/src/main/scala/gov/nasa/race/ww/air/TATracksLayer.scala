@@ -18,15 +18,21 @@ package gov.nasa.race.ww.air
 
 import akka.actor.Actor.Receive
 import com.typesafe.config.Config
-import gov.nasa.race.air.TATrack
+import gov.nasa.race.air.{Airport, FlightPos, TATrack, Tracon}
 import gov.nasa.race.core.Messages.BusEvent
-import gov.nasa.race.ww.{DynamicRaceLayerInfo, LayerInfoPanel, RaceView, SubscribingRaceLayer}
+import gov.nasa.race.ww.{DynamicRaceLayerInfo, LayerInfoPanel, LocationLayerInfoPanel, RaceView, SubscribingRaceLayer}
 
 
 /**
   * a layer to display TRACONs and related TATracks
   */
-class TATracksLayer (raceView: RaceView,config: Config) extends SubscribingRaceLayer(raceView,config) with DynamicRaceLayerInfo{
+class TATracksLayer (raceView: RaceView,config: Config) extends FlightLayer3D[TATrack](raceView,config){
+
+  override def createLayerInfoPanel = {
+    null // TBD
+  }
+
+
   override def size: Int = 0
 
   /**
@@ -37,5 +43,6 @@ class TATracksLayer (raceView: RaceView,config: Config) extends SubscribingRaceL
     case BusEvent(_, track: TATrack, _) =>
   }
 
-  override val panel: LayerInfoPanel = null
+
+  def gotoTracon (tracon: Tracon) = {}
 }

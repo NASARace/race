@@ -150,7 +150,7 @@ class LocationLayerInfoPanel[T] (locations: Seq[T], locId: T=>String, locName: T
   type ListRenderer = IdAndNameListRenderer[T]
 
   val locationCombo = new ComboBox[T](locations) {
-    maximumRowCount = 20
+    maximumRowCount = 40
     renderer = new ListView.AbstractRenderer[T,ListRenderer](new ListRenderer(locId,locName)) {
       override def configure(list: ListView[_], isSelected: Boolean, focused: Boolean, a: T, index: Int): Unit = {
         component.setItem(a)

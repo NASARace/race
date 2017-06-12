@@ -98,4 +98,8 @@ package object swing {
       renderer.configure(list,isSelected,focused,item,index)
     }
   }
+
+  trait ListItemRenderPanel[A] extends ItemRenderPanel[A] {
+    def setItem (item: A)
+  }
 }
