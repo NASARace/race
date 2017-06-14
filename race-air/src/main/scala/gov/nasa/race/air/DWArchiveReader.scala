@@ -30,7 +30,6 @@ object DWArchiveReader {
   final val StartPattern = "\n<properties>"
   final val EndPattern = "</properties>"
 }
-import gov.nasa.race.air.DWArchiveReader._
 
 /**
   * a specialized ArchiveReader for DataWarehouse formats, which all use
@@ -38,7 +37,7 @@ import gov.nasa.race.air.DWArchiveReader._
   * prefixe elements that only contain CDATA and start on newlines (no leading spaces). The data is assumed to be
   * stored compressed.
   *
-  * DWArchiveReaders do differ in terms of how the timestamp is retrieved from the properties CDATA, and if/how
+  * DWArchiveReaders do differ in terms of how the timestamp is retrieved from the properties text, and if/how
   * newlines are used in the XML message payload, which is specific to the respective topic (sfdps,asdex,tfmdata etc.).
   *
   * This implementation tries to avoid extra String allocation, to minimize heap pressure for formats that do
@@ -50,6 +49,8 @@ import gov.nasa.race.air.DWArchiveReader._
   * NOTE ALSO that we assume the <properties> header is smaller than DWArchiveReader.BufferLength
   */
 abstract class DWArchiveReader (val istream: InputStream) extends ArchiveReader {
+  import gov.nasa.race.air.DWArchiveReader._
+
 
   protected var buf = new Array[Char](BufferLength)
   protected val reader = new BufferedReader(new InputStreamReader(istream),BufferLength)
@@ -73,6 +74,7 @@ abstract class DWArchiveReader (val istream: InputStream) extends ArchiveReader 
     n
   }
 
+  // read all up to the next white space
   def readString(i: Int): String = {
     val cs = buf
     var c = cs(i)
@@ -146,18 +148,31 @@ class AsdexDWArchiveReader (istream: InputStream) extends DWArchiveReader(istrea
   }
 }
 
-class JmsBeaDWArchiveReader (istream: InputStream) extends DWArchiveReader(istream) {
-  val jmsEpoch = new BMSearch("JMS_BEA_DeliveryTime=")
+
+class LongDWArchiveReader(istream: InputStream, key: String) extends DWArchiveReader(istream) {
+  val keySearch = new BMSearch(key)
 
   override def readDateTime (i0: Int, i1: Int) = {
-    val i = jmsEpoch.indexOfFirst(buf, i0, i1)
+    val i = keySearch.indexOfFirst(buf, i0, i1)
     if (i >= 0) {
-      new DateTime(readLong(i + jmsEpoch.pattern.length))
+      new DateTime(readLong(i+key.length))
     } else null
   }
 }
 
-class SfdpsDWArchiveReader(istream: InputStream) extends JmsBeaDWArchiveReader(istream)
-class TfmdataDWArchiveReader(istream: InputStream) extends JmsBeaDWArchiveReader(istream)
+class TextDWArchiveReader(istream: InputStream, key: String) extends DWArchiveReader(istream) {
+  val keySearch = new BMSearch(key)
+
+  override def readDateTime (i0: Int, i1: Int) = {
+    val i = keySearch.indexOfFirst(buf, i0, i1)
+    if (i >= 0) {
+      DateTime.parse(readString(i+key.length))
+    } else null
+  }
+}
+
+class SfdpsDWArchiveReader (istream: InputStream) extends TextDWArchiveReader(istream, "FDPS_SentTime=")
+
+class TfmdataDWArchiveReader(istream: InputStream) extends TextDWArchiveReader(istream, "TimeStamp=")
 
 
