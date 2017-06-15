@@ -27,7 +27,6 @@ object TATrack {
   final val NewFlag = 2
   final val PseudoFlag = 4
   final val AdsbFlag = 8
-  final val FlightPlanFlag = 16
 
   object Status extends Enumeration {
     type Status = Value
@@ -66,7 +65,21 @@ class TATrack (val src: String,
               ) extends FlightPos(flightId,cs,position,altitude,speed,heading,date) {
 
   override def toString = {
-    f"TATrack($src,$trackNum,$xyPos,$status, $position,$altitude,$heading,$speed, $date)"
+    f"TATrack($src,$trackNum,$xyPos,$status, $position,$altitude,$heading,$speed, $date, $flightPlan)"
+  }
+
+  override def equals (other: Any): Boolean = {
+    super.equals(other) && (other match {
+      case o:TATrack =>
+        src == o.src &&
+        trackNum == o.trackNum &&
+        xyPos == o.xyPos &&
+        vVert == o.vVert &&
+        status == o.status &&
+        attrs == o.attrs &&
+        beaconCode == o.beaconCode
+      case somethingElse => false
+    })
   }
 
   def isDrop = status == TATrack.Status.Drop

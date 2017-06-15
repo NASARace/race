@@ -85,15 +85,7 @@ class FIXM2FlightObject (val config: Config=null)
 
   //--- translation
 
-  def translate(src: Any): Option[Seq[IdentifiableAircraft]] = {
-    src match {
-      case xml: String if xml.nonEmpty => parse(xml)
-      case Some(xml: String) if xml.nonEmpty => parse(xml)
-      case other => None // nothing else supported yet
-    }
-  }
-
-  override def onStartElement = {
+  onStartElement = {
     case "ns5:MessageCollection" => resetFlights  // 12sec update format (Solace)
     case "flight" => resetCache  // only in new (batched) format
     case "ns5:NasFlight" =>  // old (1min) update format
@@ -124,7 +116,7 @@ class FIXM2FlightObject (val config: Config=null)
     case other =>  // ignore
   }
 
-  override def onEndElement = {
+  onEndElement = {
     case "ns5:MessageCollection" => if (flights.nonEmpty) setResult(flights)
     case "flight" => addFlightObject  // new (12sec) update format
     case "ns5:NasFlight" => // old (1min) update format - one flight per message

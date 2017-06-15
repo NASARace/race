@@ -43,7 +43,6 @@ class TrackAndFlightPlan2TATrack (val config: Config=null) extends XmlParser[Seq
   val attachRev = config.getBooleanOrElse("attach-rev", false)
   val attachMsg = config.getBooleanOrElse("attach-msg", false)
 
-  var msg: String = _
   var tracks = new ArrayBuffer[TATrack](16)
 
   override def flatten = true
@@ -104,7 +103,7 @@ class TrackAndFlightPlan2TATrack (val config: Config=null) extends XmlParser[Seq
     }
   }
 
-  override def onStartElement = {
+  onStartElement = {
     case "TATrackAndFlightPlan" =>
       tracks.clear
       src = null
@@ -136,17 +135,9 @@ class TrackAndFlightPlan2TATrack (val config: Config=null) extends XmlParser[Seq
     case other => // ignore
   }
 
-  override def onEndElement = {
+  onEndElement = {
     case "TATrackAndFlightPlan" => if (tracks.nonEmpty) setResult(tracks)
     case "record" => addTrack
     case other => // ignore
-  }
-
-  def translate (src: Any): Option[Seq[TATrack]] = {
-    src match {
-      case xml: String if xml.nonEmpty => msg = xml; parse(xml)
-      case Some(xml: String) if xml.nonEmpty => msg = xml; parse(xml)
-      case other => None // nothing else supported yet
-    }
   }
 }

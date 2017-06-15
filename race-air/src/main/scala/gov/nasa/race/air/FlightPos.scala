@@ -93,6 +93,20 @@ class FlightPos (val flightId: String,
   def copyWithCS (newCS: String) = new FlightPos(flightId, newCS, position, altitude,speed,heading,date)
 
   override def toString = s"FlightPos($flightId,$cs,$position,${altitude.toFeet.toInt}ft,${speed.toKnots.toInt}kn,${heading.toNormalizedDegrees.toInt}°,$date)"
+
+  override def equals (other: Any): Boolean = {
+    other match {
+      case o: FlightPos =>
+        flightId == o.flightId &&
+        cs == o.cs &&
+        position == o.position &&
+        altitude == o.altitude &&
+        speed == o.speed &&
+        heading == o.heading &&
+        date == o.date
+      case somethingElse => false
+    }
+  }
 }
 
 trait FlightTerminationMessage extends FlightMessage

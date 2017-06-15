@@ -30,6 +30,8 @@ class SBSTranslatorActor (config: Config) extends TranslatorActor(config) with F
 
   override def createTranslator = new SBS2FlightPos(config)  // for TranslatorActor
 
+  override def handleMessage = handleTranslatorMessage orElse handleFPosDropperMessage
+
   override def removeStaleFlight (fpos: FlightPos) = flights -= fpos.cs // for FPosDropper
 
   // specialized translation processing, called from TranslatorActor
