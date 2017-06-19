@@ -143,31 +143,3 @@ class DynamicLayerInfoPanel extends GenericLayerInfoPanel with AncestorObservabl
   def wwd = layer.wwd
 }
 
-/**
-  * a LayerInfoPanel that has a combo box with id/name items to select from
-  */
-class LocationLayerInfoPanel[T] (locations: Seq[T], locId: T=>String, locName: T=>String, selectAction: T=>Unit) extends DynamicLayerInfoPanel {
-  type ListRenderer = IdAndNameListRenderer[T]
-
-  val locationCombo = new ComboBox[T](locations) {
-    maximumRowCount = 40
-    renderer = new ListView.AbstractRenderer[T,ListRenderer](new ListRenderer(locId,locName)) {
-      override def configure(list: ListView[_], isSelected: Boolean, focused: Boolean, a: T, index: Int): Unit = {
-        component.setItem(a)
-      }
-    }
-  }
-
-  val locationSelectorPanel = new GBPanel {
-    val c = new Constraints( fill=Fill.Horizontal, anchor=Anchor.West, insets=(8,2,0,2))
-    layout(new Label("goto airport:").styled('labelFor)) = c(0,0).weightx(0.5)
-    layout(locationCombo) = c(1,0).weightx(0)
-  } styled()
-
-  contents += locationSelectorPanel
-
-  listenTo(locationCombo.selection)
-  reactions += {
-    case SelectionChanged(`locationCombo`) => selectAction(locationCombo.selection.item)
-  }
-}

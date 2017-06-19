@@ -39,11 +39,11 @@ class FPosStatsCollector (val config: Config)
 
   override def handleMessage = {
     case BusEvent(_, fpos: FlightPos, _) =>
-      checkClockReset(fpos.date)
+      checkInitialClockReset(fpos.date)
       updateActive(fpos.cs,fpos)
 
     case BusEvent(_, fcomplete: FlightCompleted, _) =>
-      checkClockReset(fcomplete.date)
+      checkInitialClockReset(fcomplete.date)
       removeActive(fcomplete.cs)
 
     // we do our own flight dropped handling since we also check upon first report

@@ -125,6 +125,7 @@ class TATrackAndFlightPlan2TATrack (val config: Config=null) extends XmlParser[S
           if (allowIncompleteTrack || (mrtTime != null && vx.isDefined && vy.isDefined && reportedAltitude.isDefined)) {
             val spd = Speed.fromVxVy(vx, vy)
             val hdg = Angle.fromVxVy(vx, vy)
+            acAddress = trackNum.toString
             val track = new TATrack(src, trackNum, XYPos(xPos, yPos), vVert, status, attrs, beaconCode, flightPlan,
               trackNum.toString, acAddress, LatLonPos(lat, lon), reportedAltitude, spd, hdg, mrtTime)
             if (attachRev && stddsRev >= 0) track.amend(Rev(3, stddsRev.toShort))

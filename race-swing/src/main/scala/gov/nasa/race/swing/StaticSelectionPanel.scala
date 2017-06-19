@@ -16,17 +16,28 @@
  */
 package gov.nasa.race.swing
 
-import scala.swing.{ComboBox, ListView}
+import gov.nasa.race.swing.GBPanel.{Anchor, Fill}
+import gov.nasa.race.swing.Style._
+
+import scala.swing.event.SelectionChanged
+import scala.swing.{ComboBox, Label}
 
 /**
   * a parameterized selection panel for a static list of entries using a ComboBox
   */
-class StaticSelectionPanel[T,L <:ListItemRenderPanel[T]](items: Seq[T],listItemRenderer: L) extends GBPanel {
-
+class StaticSelectionPanel[T,L <:ItemRenderPanel[T]](label: String, items: Seq[T], maxRows: Int,
+                                                     itemRenderPanel: L, selectAction: T=>Unit) extends GBPanel {
   val combo = new ComboBox[T](items) {
-    maximumRowCount = Math.min(items.size, 40)
-    renderer = new ListView.AbstractRenderer[T,L](listItemRenderer){
-      override def configure(list: ListView[_], isSelected: Boolean, focused: Boolean, a: T, index: Int): Unit = {}
-    }
+    maximumRowCount = maxRows
+    renderer = new ListItemRenderer[T,ItemRenderPanel[T]](itemRenderPanel)
+  } styled()
+
+  val c = new Constraints( fill=Fill.Horizontal, anchor=Anchor.West, insets=(8,2,0,2))
+  layout(new Label(label).styled('labelFor)) = c(0,0).weightx(0.5)
+  layout(combo) = c(1,0).weightx(0)
+
+  listenTo(combo.selection)
+  reactions += {
+    case SelectionChanged(`combo`) => selectAction(combo.selection.item)
   }
 }

@@ -121,12 +121,13 @@ class RaceActorSystem(val config: Config) extends LogController with VerifiableA
   RaceLogger.logController = this
   debug(s"initializing RaceActorSystem for config:\n${showConfig(config)})")
 
-  // those are set during master initialization
-  // Note that master init involves round-trips, i.e. can cause exceptions in other threads
-  // that can go unnoticed here, hence we have to turn this into explicit state
-  // NOTE - only use threadsafe types here (e.g. immutable collections)
+  // updated by RaceActor ctor during creation - use only typesafe values here
+  // TODO - consolidate
 
-  var actors = ListMap.empty[ActorRef, Config] // our configured actors (including remotes)
+  var actorCapabilities = Map.empty[ActorRef,RaceActorCapabilities]
+  var commonCapabilities = RaceActorCapabilities.AllCapabilities  // to quickly check if operations such as clock reset are permitted
+
+  var actors = ListMap.empty[ActorRef, Config]
 
   // remote RAS book keeping
   var usedRemoteMasters = Map.empty[UrlString, ActorRef] // the remote masters we use (via our remote actors)
@@ -151,6 +152,14 @@ class RaceActorSystem(val config: Config) extends LogController with VerifiableA
   }
 
   // done with initialization
+
+  // called by actor ctors during instantiation
+  def registerActor (actorRef: ActorRef, actorConf: Config, actorCaps: RaceActorCapabilities) = {
+    info(s"register actor ${actorRef.path.name}")
+    actors = actors + (actorRef -> actorConf)
+    actorCapabilities = actorCapabilities + (actorRef -> actorCaps)
+    commonCapabilities = commonCapabilities.intersection(actorCaps)
+  }
 
   //--- those can be overridden by subclasses
 
@@ -234,7 +243,6 @@ class RaceActorSystem(val config: Config) extends LogController with VerifiableA
   def createRaceContext(master: ActorRef, bus: Bus): RaceContext = RaceContext(master, bus)
 
   def getActorConfigs = config.getOptionalConfigList("actors")
-
 
   def createActors = {
     info(s"creating actors of universe $name ..")
@@ -333,15 +341,16 @@ class RaceActorSystem(val config: Config) extends LogController with VerifiableA
     * some actor asked for a simClock reset
     * TODO - this does not yet handle remote RAS
     */
-  def resetSimClockRequest (d: DateTime, tScale: Double): Boolean = {
+  def resetSimClockRequest (requester: ActorRef, date: DateTime, tScale: Double): Boolean = {
     if (isLive) {
-      askVerifiableForResult(master, RaceResetClock(ActorRef.noSender,d,tScale)) {
-        case RaceClockReset =>
-          info(s"universe $name clock reset")
-          true
-        case RaceClockResetFailed =>
-          warning(s"universe $name reset clock failed")
-          false
+      if (commonCapabilities.supportsSimTimeReset) {
+        info(s"sim clock reset on behalf of ${requester.path.name} to ($date,$tScale)")
+        simClock.reset(date, tScale)
+        master ! RaceResetClock(requester,date,tScale)
+        true
+      } else {
+        warning(s"universe $name rejected sim clock reset (insufficient actor capabilities)")
+        false
       }
     } else false // nothing to reset
   }

@@ -18,9 +18,15 @@ package gov.nasa.race.ww.air
 
 import akka.actor.Actor.Receive
 import com.typesafe.config.Config
-import gov.nasa.race.air.{Airport, FlightPos, TATrack, Tracon}
+import gov.nasa.race.air.TATrack.Status
+import gov.nasa.race.air.{TATrack, Tracon}
 import gov.nasa.race.core.Messages.BusEvent
-import gov.nasa.race.ww.{DynamicRaceLayerInfo, LayerInfoPanel, LocationLayerInfoPanel, RaceView, SubscribingRaceLayer}
+import gov.nasa.race.config.ConfigUtils._
+import gov.nasa.race.ifSome
+import gov.nasa.race.swing.Style._
+import gov.nasa.race.swing.{IdAndNamePanel, StaticSelectionPanel}
+import gov.nasa.race.uom.Length.Feet
+import gov.nasa.race.ww.RaceView
 
 
 /**
@@ -28,12 +34,16 @@ import gov.nasa.race.ww.{DynamicRaceLayerInfo, LayerInfoPanel, LocationLayerInfo
   */
 class TATracksLayer (raceView: RaceView,config: Config) extends FlightLayer3D[TATrack](raceView,config){
 
+  val gotoAltitude = Feet(config.getDoubleOrElse("goto-altitude", 1250000d)) // feet above ground
+  var selTracon: Option[Tracon] = None
+
   override def createLayerInfoPanel = {
-    null // TBD
+    new FlightLayerInfoPanel(raceView,this){
+      // insert tracon selection panel after generic layer info
+      contents.insert(1, new StaticSelectionPanel[Tracon,IdAndNamePanel[Tracon]]("select TRACON", Tracon.traconList, 40,
+                                            new IdAndNamePanel[Tracon]( _.id, _.name), selectTracon).styled())
+    }.styled('consolePanel)
   }
-
-
-  override def size: Int = 0
 
   /**
     * this has to be implemented in the concrete RaceLayer. It is executed in the
@@ -41,8 +51,46 @@ class TATracksLayer (raceView: RaceView,config: Config) extends FlightLayer3D[TA
     */
   override def handleMessage: Receive = {
     case BusEvent(_, track: TATrack, _) =>
+      selTracon match {
+        case Some(tracon) =>
+          if (track.src == tracon.id) {
+            count = count + 1
+            if (track.status != Status.Drop) {
+              flights.get(track.cs) match {
+                case Some(acEntry) => updateFlightEntry(acEntry, track)
+                case None => addFlightEntry(track)
+              }
+            } else {
+              ifSome(flights.get(track.cs)) {
+                removeFlightEntry
+              }
+            }
+          }
+        case None => // nothing selected, ignore
+      }
   }
 
+  def selectTracon(tracon: Tracon) = raceView.trackUserAction(gotoTracon(tracon))
 
-  def gotoTracon (tracon: Tracon) = {}
+  def reset(): Unit = {
+    removeAllRenderables()
+    flights.clear()
+    releaseAll
+  }
+
+  def gotoTracon(tracon: Tracon) = {
+    selTracon match {
+      case Some(`tracon`) => // nothing, we already show it
+      case Some(lastTracon) =>
+        reset
+        selTracon = Some(tracon)
+        requestTopic(selTracon)
+      case None =>
+        selTracon = Some(tracon)
+        requestTopic(selTracon)
+    }
+    val alt = gotoAltitude.toMeters
+    raceView.panTo(tracon.pos,alt)
+  }
+
 }

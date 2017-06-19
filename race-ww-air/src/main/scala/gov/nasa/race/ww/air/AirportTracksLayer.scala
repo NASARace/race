@@ -25,6 +25,8 @@ import gov.nasa.race.air.{Airport, AirportTracks, Track}
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.Messages._
 import gov.nasa.race.geo.{GreatCircle, LatLonPos}
+import gov.nasa.race.swing.{IdAndNamePanel, StaticSelectionPanel}
+import gov.nasa.race.swing.Style._
 import gov.nasa.race.uom.Angle._
 import gov.nasa.race.uom.Length._
 import gov.nasa.race.uom._
@@ -96,7 +98,10 @@ class AirportTracksLayer (raceView: RaceView,config: Config)
   }
 
   //val panel = new AirportLayerPanel().styled()
-  val panel = new LocationLayerInfoPanel[Airport](Airport.airportList,_.id,_.city, a=>raceView.trackUserAction(gotoAirport(a)))
+  val panel = new DynamicLayerInfoPanel {
+    contents += new StaticSelectionPanel[Airport,IdAndNamePanel[Airport]]("select airport",Airport.airportList, 40,
+      new IdAndNamePanel[Airport]( _.id, _.city), selectAirport).styled()
+  }.styled('consolePanel)
 
   val activeDistance = UsMiles(config.getDoubleOrElse("view-distance", 6d)) // in US miles
   val activeAltitude = Feet(config.getDoubleOrElse("view-altitude", 30000d)) // feet above ground
@@ -116,6 +121,8 @@ class AirportTracksLayer (raceView: RaceView,config: Config)
 
   override def initializeLayer() = raceView.addEyePosListener(this)
   override def eyePosChanged(eyePos: Position, animationHint: String): Unit = checkAirportChange(eyePos)
+
+  def selectAirport (a: Airport) = raceView.trackUserAction(gotoAirport(a))
 
   override def handleMessage = {
     case BusEvent(_, at: AirportTracks, _) =>

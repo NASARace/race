@@ -76,8 +76,6 @@ object Messages {
 
   /** sim clock change notifications */
   case object SyncWithRaceClock extends RaceSystemMessage // master -> actors
-  case object RaceClockSynced extends RaceSystemMessage // actor -> master
-  case class RaceClockSyncFailed(reason: String="unknown") extends RaceSystemMessage
 
   /** inform RaceActor of termination */
   case class TerminateRaceActor (originator: ActorRef) extends RaceSystemMessage

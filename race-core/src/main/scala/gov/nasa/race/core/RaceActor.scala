@@ -47,7 +47,9 @@ trait RaceActor extends Actor with ImplicitActorLogging {
 
   var status = Initializing
   val localRaceContext: RaceContext = RaceActorSystem(system).localRaceContext
-  var raceContext: RaceContext = null
+  var raceContext: RaceContext = null  // set during InitializeRaceActor
+
+  raceActorSystem.registerActor(self,config,getCapabilities)
 
   //--- convenience aliases
   @inline final def name = self.path.name
@@ -65,6 +67,15 @@ trait RaceActor extends Actor with ImplicitActorLogging {
 
   @inline final def busFor(channel: String) = if (channel.startsWith(LOCAL_CHANNEL)) localBus else bus
   @inline final def isLocalChannel (channel: String) = channel.startsWith(LOCAL_CHANNEL)
+
+  @inline final def raceActorSystem = RaceActorSystem(system)
+
+  // override if different
+  def getCapabilities: RaceActorCapabilities = {
+    import RaceActorCapabilities._
+    val caps = if (config.getBooleanOrElse("optional", false)) IsOptional else NoCapabilities
+    caps + IsAutomatic + SupportsSimTime + SupportsSimTimeReset
+  }
 
   override def postStop = RaceActorSystem(context.system).stoppedRaceActor(self)
 
@@ -104,7 +115,11 @@ trait RaceActor extends Actor with ImplicitActorLogging {
 
   /**
     * this is the main extension point - override for processing any messages other
-    * than Race system messages
+    * than Race system messages.
+    *
+    * NOTE - overrides should *only* handle the messages that have to be processed/ignored. A default
+    * ignore clause such as ".. case other => // ignore" will cut off system message processing and
+    * cause RACE to automatically terminate upon initialization
     */
   def handleMessage: Receive = {
     case null => // ignore
@@ -203,10 +218,8 @@ trait RaceActor extends Actor with ImplicitActorLogging {
   def handleSyncWithRaceClock = {
     if (onSyncWithRaceClock) {
       info("clock synced")
-      sender ! RaceClockSynced
     } else {
       warning("clock sync rejected")
-      sender ! RaceClockSyncFailed("rejected")
     }
   }
 
@@ -576,15 +589,15 @@ trait ContinuousTimeRaceActor extends RaceActor {
 
   final def resetSimClockRequest (d: DateTime, timeScale: Double = 1.0): Boolean = {
     if (canResetClock) {
-      info(s"request to reset clock to: $d")
-      askForResult(master ? RaceResetClock(self,d,timeScale)){
-        case RaceClockReset =>
-          onSyncWithRaceClock // we don't get a SimClockReset from the master since that would block
-          true
-        case RaceClockResetFailed => false
+      if (raceActorSystem.resetSimClockRequest(self,d,timeScale)){
+        onSyncWithRaceClock
+        true
+      } else {
+        warning("RAS rejected sim clock reset")
+        false
       }
     } else {
-      error(s"illegal attempt to reset clock")
+      warning("ignored clock reset request (set 'can-reset-clock')")
       false
     }
   }
@@ -660,21 +673,32 @@ trait PeriodicRaceActor extends RaceActor {
   */
 trait ClockAdjuster extends ContinuousTimeRaceActor {
 
-  val maxSimClockDiff = config.getOptionalFiniteDuration("max-clock-diff") // in sim time
-  private var firstCheck = true
+  val allowFutureReset = config.getBooleanOrElse("allow-future-reset", false)
+  val maxSimClockDiff: Long = config.getOptionalFiniteDuration("max-clock-diff") match {  // optional, in sim time
+    case Some(dur) => dur.toMillis
+    case None => -1
+  }
+
+  private var isFirstClockCheck = true
+
+  // overridable in subtypes
+  protected def checkClockReset(d: DateTime): Unit = {
+    onSyncWithRaceClock // make sure there are no pending resets we haven't processed yet
+    val elapsedMillis = elapsedSimTimeMillisSince(d)
+    val dt = if (allowFutureReset) Math.abs(elapsedMillis) else elapsedMillis
+    if (dt > maxSimClockDiff) {
+      resetSimClockRequest(d)
+    }
+  }
 
   /**
     * this is the checker function that has to be called by the type that mixes in ClockAdjuster,
-    * on all events that might potentially have to adjust the global clock
+    * on each event that might potentially be the first one to trigger adjustment of the global clock
     */
-  def checkClockReset (d: DateTime) = {
-    if (firstCheck) {
-      ifSome(maxSimClockDiff) { dur =>
-        if (elapsedSimTimeSince(d) > dur){
-          resetSimClockRequest(d)
-        }
-      }
-      firstCheck = false
+  @inline final def checkInitialClockReset(d: DateTime) = {
+    if (isFirstClockCheck) {
+      checkClockReset(d)
+      isFirstClockCheck = false
     }
   }
 }

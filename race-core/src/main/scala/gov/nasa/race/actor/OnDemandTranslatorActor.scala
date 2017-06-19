@@ -29,10 +29,7 @@ import gov.nasa.race.core._
 class OnDemandTranslatorActor (config: Config) extends TranslatorActor(config)
                                                with TransitiveChannelTopicProvider {
   override def handleMessage: Receive = {
-    case BusEvent(_, s: String, _) if s.nonEmpty && hasClients =>
-      ifSome(translator.translate(s)) {
-        obj => publish(obj)
-      }
+    case BusEvent(_, msg: Any, _) if hasClients => translateAndPublish(msg)
   }
 
   override def isRequestAccepted (request: ChannelTopicRequest) = {

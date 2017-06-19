@@ -17,12 +17,11 @@
 package gov.nasa.race.swing
 
 import gov.nasa.race.swing.GBPanel.{Anchor, Fill}
-import scala.swing.{Alignment, Label}
+import scala.swing.{Alignment, Label, ListView}
 
-/**
-  * a generic ListRenderer for items that have an id and a name
-  */
-class IdAndNameListRenderer[T](id: T=>String, name: T=>String) extends GBPanel {
+
+// the rendering componnet
+class IdAndNamePanel[T](id: T=>String, name: T=>String) extends ItemRenderPanel[T] {
   val idLabel = new Label()
   idLabel.horizontalTextPosition = Alignment.Left
   val nameLabel = new Label()
@@ -31,8 +30,15 @@ class IdAndNameListRenderer[T](id: T=>String, name: T=>String) extends GBPanel {
   layout(idLabel) = c(0,0)
   layout(nameLabel) = c(1,0).weightx(0.5)
 
-  def setItem (item: T) = {
+  def configure (list: ListView[_], isSelected: Boolean, focused: Boolean, item: T, index: Int): Unit ={
     idLabel.text = id(item)
     nameLabel.text = name(item)
   }
 }
+
+/**
+  * a generic ListRenderer for items that have an id and a name
+  */
+class IdAndNameListItemRenderer[T](id: T=>String, name: T=>String)
+  extends ListItemRenderer[T,IdAndNamePanel[T]](new IdAndNamePanel[T](id,name))
+

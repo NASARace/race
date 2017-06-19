@@ -40,7 +40,7 @@ import TextArchiver._
 
 
 /**
-  * Created by pcmehlitz on 10/15/16.
+  * an archive reader that assumes text with begin and end marker lines
   */
 class TextArchiveReader(val istream: InputStream) extends ArchiveReader {
 
@@ -84,7 +84,7 @@ class TextArchiveReader(val istream: InputStream) extends ArchiveReader {
 }
 
 /**
-  * Created by pcmehlitz on 10/15/16.
+  * an ArchiveWriter that stores text wrapped into begin and end marker lines
   */
 class TextArchiveWriter(val ostream: OutputStream) extends ArchiveWriter {
   override def write(date: DateTime, obj: Any): Boolean = {

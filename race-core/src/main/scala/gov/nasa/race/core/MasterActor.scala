@@ -179,12 +179,7 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ImplicitActorLogging
   }
 
   def createRaceActors = {
-    ras.actors = ras.getActorConfigs.foldLeft(ras.actors) { (map, actorConfig) =>
-      getActor(actorConfig) match {
-        case Some(actorRef) => map + (actorRef -> actorConfig)
-        case None => map
-      }
-    }
+    ras.getActorConfigs.foreach(getActor)
   }
 
   def getActor (actorConfig: Config): Option[ActorRef] = {
@@ -414,6 +409,7 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ImplicitActorLogging
         sender ! RaceInitialized
       } catch {
         case x: Throwable =>
+          x.printStackTrace // TODO - exceptions should be loggable to a file
           requester ! RaceInitializeFailed(x)
           // shutdown is initiated by the sender
       }
@@ -425,7 +421,7 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ImplicitActorLogging
 
   def initializeRaceActors = {
     for ((actorRef,actorConfig) <- actors){
-      val actorName = actorConfig.getString("name")
+      val actorName = actorRef.path.name
       val isOptional = isOptionalActor(actorConfig)
 
       val raceContext = actorConfig.getOptionalString("remote") match {
@@ -618,44 +614,7 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ImplicitActorLogging
     }
   }
 
-  // TODO - this does not yet handle remote RAS
-  // NOTE - clock value changes have to occur here since we might have to reset if
-  // one of the actors does not respond
   def onRaceResetClock (originator: ActorRef, date: DateTime, tScale: Double) = {
-    val requester = sender // might be different than originator
-    val saved = ras.simClock.save // we might have to restore
-    var changed = List.empty[ActorRef] // actors that so far have acknowledged
-    var nAck = 0
-
-    def restoreClock (c: Clock) = {
-      ras.simClock.reset(c)
-      // since those did previously respond we don't wait for ack
-      changed.reverse.foreach( aRef => aRef ! SyncWithRaceClock)
-      requester ! RaceClockResetFailed
-    }
-
-    ras.simClock.reset(date, tScale)
-    ras.actors.foreach { e =>
-      val (actorRef, _) = e
-      if (actorRef != originator) {
-        info(s"sending SyncWithRaceClock to ${actorRef.path.name}")
-        askForResult(actorRef ? SyncWithRaceClock) {
-          case RaceClockSynced =>
-            info(s"got RaceClockSynced from ${actorRef.path.name}")
-            changed = actorRef :: changed
-            nAck += 1
-          case RaceClockSyncFailed(reason) =>
-            info(s"SyncWithRaceClock rejected by ${actorRef.path.name}: $reason")
-            restoreClock(saved)
-          case TimedOut =>
-            warning(s"no SyncWithRaceClock response from ${actorRef.path.name}")
-            restoreClock(saved)
-        }
-      } else nAck += 1 // we take a request as an ack
-    }
-    if (nAck == ras.actors.size) {
-      // all actors accounted for
-      requester ! RaceClockReset
-    }
+    actors.foreach( _._1 ! SyncWithRaceClock)
   }
 }

@@ -71,6 +71,7 @@ package object core {
   case object InvalidResponse extends AskFailure
 
   // NOTE - the ask pattern uses temporary actors, i.e. the receiver cannot query the originator via sender
+  // NOTE ALSO - the ask pattern does not support recursion, use only in a context that does not require round trips
   def askForResult[T](question: => Future[Any])(checkResponse: PartialFunction[Any, T])(implicit timeout: Timeout): T = {
     try {
       checkResponse(Await.result(question, timeout.duration))

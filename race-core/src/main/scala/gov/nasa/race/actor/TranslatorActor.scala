@@ -36,15 +36,18 @@ class TranslatorActor (val config: Config) extends SubscribingRaceActor with Fil
 
   /** we provide our own PF so that derived classes can delegate from their handleMessage */
   def handleTranslatorMessage: Receive = {
-    case BusEvent(_,msg,_) =>
-      translator.translate(msg) match {
-        case Some(list:Seq[_]) if translator.flatten => list.foreach(processTranslationProduct)
-        case Some(m) => processTranslationProduct(m)
-        case None => // ignore
-      }
+    case BusEvent(_,msg,_) => translateAndPublish(msg)
   }
 
   override def handleMessage = handleTranslatorMessage
+
+  def translateAndPublish (msg: Any) = {
+    translator.translate(msg) match {
+      case Some(list:Seq[_]) if translator.flatten => list.foreach(processTranslationProduct)
+      case Some(m) => processTranslationProduct(m)
+      case None => // ignore
+    }
+  }
 
   /** can be overridden by specialized translator actors */
   def processTranslationProduct(o: Any) = publishFiltered(o)

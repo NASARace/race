@@ -76,7 +76,7 @@ class SettableClock (initTime: DateTime = DateTime.now,
                      initTimeScale: Double = 1,
                      isStopped: Boolean = false) extends Clock (initTime,initTimeScale,isStopped) {
 
-  def reset (initTime: DateTime, initTimeScale: Double = 1): SettableClock = {
+  def reset (initTime: DateTime, initTimeScale: Double = 1): SettableClock = synchronized {
     _timeScale = initTimeScale
     _base = initTime
     _initMillis = System.currentTimeMillis
@@ -84,7 +84,7 @@ class SettableClock (initTime: DateTime = DateTime.now,
     this
   }
 
-  def reset (saved: Clock): SettableClock = {
+  def reset (saved: Clock): SettableClock = synchronized {
     _timeScale = saved.timeScale
     _base = saved.base
     _initMillis = saved.initMillis
@@ -92,6 +92,6 @@ class SettableClock (initTime: DateTime = DateTime.now,
     this
   }
 
-  def stop = _stoppedAt = System.currentTimeMillis
-  def resume = _stoppedAt = 0
+  def stop = synchronized { _stoppedAt = System.currentTimeMillis }
+  def resume = synchronized { _stoppedAt = 0 }
 }

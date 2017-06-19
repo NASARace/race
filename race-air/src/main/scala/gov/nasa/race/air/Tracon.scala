@@ -27,19 +27,19 @@ object Tracon {
     new Tracon(id,name, LatLonPos.fromDegrees(lat,lon), ContactInfo(street,city,state,zip,phone))
   }
 
-  val A80 = Tracon("A80", "Atlanta TRACON", 33.3517888,-84.5525863,
+  val A80 = Tracon("A80", "Atlanta", 33.3517888,-84.5525863,
                    "784 S. Hwy. 74", "Peachtree City", "GA", "30269",  "(678) 364-6000")
-  val A90 = Tracon("A90", "Boston TRACON", 42.816896,-71.4954427,
+  val A90 = Tracon("A90", "Boston", 42.816896,-71.4954427,
                    "25 Robert Milligan Pkwy", "Merrimack", "NH", "03054",  "(603) 594-5501")
-  val D01 = Tracon("D01", "Denver TRACON", 39.8216227,-104.6750039,
+  val D01 = Tracon("D01", "Denver", 39.8216227,-104.6750039,
                    "26805 E 68th Ave", "Denver", "CO", "80249",  "(303) 342-1080")
-  val NCT = Tracon("NCT", "Northern California TRACON",  38.5607985,-121.2566981,
+  val NCT = Tracon("NCT", "Northern California",  38.5607985,-121.2566981,
                    "11375 Douglas Rd", "Sacramento", "CA", "95655", "(916) 366-4280")
-  val PCT = Tracon("PCT", "Potomac TRACON",  38.747488,-77.670573,
+  val PCT = Tracon("PCT", "Potomac",  38.747488,-77.670573,
                    "3699 MacIntosh Dr", "Warrenton", "VA", "20187",  "(540) 349-7600")
-  val SCT = Tracon("SCT", "Southern California TRACON",  32.89109,-117.11726,
+  val SCT = Tracon("SCT", "Southern California",  32.89109,-117.11726,
                    "9175 Kearny Villa Rd", "San Diego", "CA", "92126", "(858) 537-5800")
-  val Y90 = Tracon("Y90", "Yankee TRACON",  41.9456489,-72.6910157,
+  val Y90 = Tracon("Y90", "Yankee",  41.9456489,-72.6910157,
                    "35 Perimeter Rd", "Windsor Locks", "CT", "06096", "(860) 386-3500")
   //... and many more to follow ...
 

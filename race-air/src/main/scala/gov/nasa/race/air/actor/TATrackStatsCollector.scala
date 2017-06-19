@@ -66,7 +66,7 @@ class TATrackStatsCollector (val config: Config) extends StatsCollectorActor wit
     case BusEvent(_, track: TATrack, _) =>
       try {
         if (track.date != null) {
-          checkClockReset(track.date)
+          checkInitialClockReset(track.date)
           val tracon = tracons.getOrElseUpdate(track.src, new TACollector(config, track.src))
           if (track.isDrop) {
             tracon.removeActive(track.trackNum)
