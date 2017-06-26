@@ -85,7 +85,7 @@ object ThreadUtils {
     override def run(): Unit = f
   }
 
-  def daemon (f: =>Unit): Thread = withDo(new Thread(asRunnable(f))){_.setDaemon(true)}
+  def daemon (f: =>Unit): Thread = yieldInitialized(new Thread(asRunnable(f))){_.setDaemon(true)}
 
   /**
     * a daemon thread that loops until explicitly terminated, executing an action as long as a

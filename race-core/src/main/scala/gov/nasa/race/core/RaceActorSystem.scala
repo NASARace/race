@@ -198,9 +198,12 @@ class RaceActorSystem(val config: Config) extends LogController with VerifiableA
   def getMasterClass: Class[_ <: Actor] = classOf[MasterActor]
 
   def createSimClock: SettableClock = {
-    val date = config.getDateTimeOrElse("start-time", DateTime.now)
+    val startTime = config.getDateTimeOrElse("start-time", DateTime.now) // in sim time
     val timeScale = config.getDoubleOrElse("time-scale", 1.0)
-    new SettableClock(date, timeScale, isStopped = true)
+    val endTime = config.getOptionalDateTime("end-time") orElse { // both in sim time
+      config.getOptionalFiniteDuration("run-for") map (d=> startTime.plus(d.toMillis))
+    }
+    new SettableClock(startTime, timeScale, endTime, isStopped = true)
   }
 
   def wallClockStartTime (isLaunched: Boolean): Option[DateTime] = {
@@ -212,22 +215,11 @@ class RaceActorSystem(val config: Config) extends LogController with VerifiableA
     }
   }
 
-  def wallClockEndTime: Option[DateTime] = {
-    ifSome(config.getOptionalDateTime("end-time")) { date => // value is sim time
-      return Some(simClock.wallTime(date))
-    }
-    ifSome(config.getOptionalFiniteDuration("run-for")) { dur => // again, in sim time
-      return Some(simClock.wallTime(simClock.base.plus(dur.toMillis)))
-    }
-    None
-  }
-
   def scheduleStart(date: DateTime) = {
     info(s"scheduling start of universe $name at $date")
     val dur = FiniteDuration(date.getMillis - System.currentTimeMillis(), MILLISECONDS)
     system.scheduler.scheduleOnce(dur, new Runnable {
       override def run: Unit = {
-        ifSome(wallClockEndTime) { scheduleTermination }
         startActors
       }
     })
@@ -276,6 +268,8 @@ class RaceActorSystem(val config: Config) extends LogController with VerifiableA
   // called by RACE driver (TODO enforce or verify)
   def startActors = {
     if (status == Initialized) {
+      ifSome(simClock.wallEndTime) { scheduleTermination }
+
       info(s"starting actors of universe $name ..")
       status = Started
       askVerifiableForResult(master, RaceStart) {

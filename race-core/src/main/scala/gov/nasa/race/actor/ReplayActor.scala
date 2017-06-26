@@ -60,7 +60,7 @@ class ReplayActor (val config: Config) extends ContinuousTimeRaceActor
   val rebaseDates = config.getBooleanOrElse("rebase-dates", false)
   val counterThreshold = config.getIntOrElse("break-after", 20) // reschedule after at most N published messages
   val skipThresholdMillis = config.getIntOrElse("skip-millis", 1000) // skip until current sim time - replay time is within limit
-  val maxSkip = config.getIntOrElse("max-skip", 1000) // stop replay if we hit more than max-skip consecutive ignores
+  val maxSkip = config.getIntOrElse("max-skip", 1000) // stop replay if we hit more than max-skip consecutive malformed entries
 
   val iStream = openStream
   val archiveReader = newInstance[ArchiveReader](config.getString("archive-reader"), Array(classOf[InputStream]), Array(iStream)).get
@@ -88,7 +88,7 @@ class ReplayActor (val config: Config) extends ContinuousTimeRaceActor
   def handleReplayMessage: Receive = {
     case Replay(msg) =>
       if (msg != None) publishFiltered(msg)
-      scheduleNext
+      scheduleNext(0)
   }
 
   def replayMessageLater(msg: Any, dtMillis: Long) = {
@@ -100,7 +100,7 @@ class ReplayActor (val config: Config) extends ContinuousTimeRaceActor
     if (incCounter) {
       debug(f"publishing now: $msg%30.30s.. ")
       publishFiltered(msg)
-      scheduleNext
+      scheduleNext(0)
     } else {
       self ! Replay(msg)
     }
@@ -113,31 +113,38 @@ class ReplayActor (val config: Config) extends ContinuousTimeRaceActor
   }
 
   @tailrec final def scheduleFirst (skipped: Int): Boolean = {
-    def maxSkipExceeded = {
-      warning(s"maximum number of skipped messages exceeded")
-      false
-    }
-
     if (archiveReader.hasMoreData) {
       archiveReader.read match {
         case Some(ArchiveEntry(date, msg)) =>
           checkInitialClockReset(date) // if enabled this might reset the clock on the initial check
 
-          val dt = toWallTimeMillis(-updateElapsedSimTimeMillisSince(date))
-          if (dt > SchedulerThresholdMillis) { // far enough in the future to be scheduled
-            replayMessageLater(msg,dt)
-            true
+          if (exceedsEndTime(date)){
+            info(s"first message exceeds configured end-time")
+            false
 
-          } else { // now, or has already passed
-            if (-dt > skipThresholdMillis) {  // outside replay time window
-              if (skipped < maxSkip) scheduleFirst(skipped + 1) else maxSkipExceeded
-            } else {
-              replayMessageNow(msg)
+          } else {
+            val dt = toWallTimeMillis(-updateElapsedSimTimeMillisSince(date))
+            if (dt > SchedulerThresholdMillis) { // far enough in the future to be scheduled
+              replayMessageLater(msg, dt)
               true
+
+            } else { // now, or has already passed
+              if (-dt > skipThresholdMillis) { // outside replay time window
+                scheduleFirst(skipped + 1)
+              } else {
+                info(s"skipping first $skipped messages")
+                replayMessageNow(msg)
+                true
+              }
             }
           }
-        case None =>
-          if (skipped < maxSkip) scheduleFirst(skipped + 1) else maxSkipExceeded
+        case None => // not a valid entry - this is a safeguard against very large files with broken content
+          if (skipped < maxSkip) {
+            scheduleFirst(skipped + 1)
+          } else {
+            warning(s"maximum number of malformed entries exceeded")
+            false
+          }
       }
     } else {  // nothing to replay left
       reachedEndOfArchive
@@ -145,20 +152,26 @@ class ReplayActor (val config: Config) extends ContinuousTimeRaceActor
     }
   }
 
-  @tailrec final def scheduleNext: Unit = {
+  @tailrec final def scheduleNext (skipped: Int=0): Unit = {
     if (archiveReader.hasMoreData) {
       archiveReader.read match {
         case Some(ArchiveEntry(date,msg)) =>
-          val dt = toWallTimeMillis(-updateElapsedSimTimeMillisSince(date))
-          if (dt > SchedulerThresholdMillis) { // schedule - message date is far enough in future
-            replayMessageLater(msg,dt)
-          } else { // message date is too close or has already passed (note we don't skip messages here)
-            replayMessageNow(msg)
+          if (!exceedsEndTime(date)) {
+            val dt = toWallTimeMillis(-updateElapsedSimTimeMillisSince(date))
+            if (dt > SchedulerThresholdMillis) { // schedule - message date is far enough in future
+              replayMessageLater(msg, dt)
+            } else { // message date is too close or has already passed (note we don't skip messages here)
+              replayMessageNow(msg)
+            }
           }
 
         case None =>
-          warning(s"ignored entry from stream $pathName")
-          if (incCounter) scheduleNext else self ! Replay(None)
+          if (skipped < maxSkip) {
+            warning(s"ignored entry from stream $pathName")
+            if (incCounter) scheduleNext(skipped + 1) else self ! Replay(None)
+          } else {
+            warning(s"maximum number of consecutive malformed entries exceeded during replay")
+          }
       }
     } else reachedEndOfArchive
   }

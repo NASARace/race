@@ -51,6 +51,7 @@ class FlightSymbol[T <: InFlightAircraft](val flightEntry: FlightEntry[T])
   //--- those are invariant
   attrs.setLabelColor(layer.labelColor)
   attrs.setLineColor(layer.lineColor)
+  //attrs.setImageColor(layer.color) // does not seem to work
 
   setAltitudeMode(WorldWind.ABSOLUTE)
   //updateDisplayName

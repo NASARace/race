@@ -46,6 +46,7 @@ class TATrackStatsCollector (val config: Config) extends StatsCollectorActor wit
 
     if (hasChannelOptions){
       statsData.duplicateAction = Some(logDuplicate)
+      statsData.blackoutAction = Some(logBlackout)
       statsData.ambiguousAction = Some(logAmbiguous)
       statsData.outOfOrderAction = Some(logOutOfOrder)
     }
@@ -69,7 +70,7 @@ class TATrackStatsCollector (val config: Config) extends StatsCollectorActor wit
           checkInitialClockReset(track.date)
           val tracon = tracons.getOrElseUpdate(track.src, new TACollector(config, track.src))
           if (track.isDrop) {
-            tracon.removeActive(track.trackNum)
+            tracon.removeActive(track.trackNum, track)
           } else {
             tracon.updateActive(track.trackNum, track)
           }
@@ -127,6 +128,7 @@ class TATrackStatsCollector (val config: Config) extends StatsCollectorActor wit
   }
 
   def logDuplicate (t1: TATrack, t2: TATrack): Unit = logUpdate("duplicatedTrack",t1,t2)
+  def logBlackout (t1: TATrack, t2: TATrack): Unit = logUpdate("blackoutTrack", t1,t2)
   def logAmbiguous (t1: TATrack, t2: TATrack, reason: Option[String]) = logUpdate("ambiguousTrack",t1,t2,reason)
   def logOutOfOrder (t1: TATrack, t2: TATrack, amount: Option[String]): Unit = logUpdate("outOfOrderTrack", t1,t2, amount)
 }
@@ -211,6 +213,7 @@ class TATrackStats(val topic: String, val source: String, val takeMillis: Long, 
   var nFlightPlans = 0
   var nStale = 0
   var nDropped = 0
+  var nBlackout = 0
   var nOutOfOrder = 0
   var nDuplicates = 0
   var nAmbiguous = 0
@@ -224,6 +227,7 @@ class TATrackStats(val topic: String, val source: String, val takeMillis: Long, 
 
     nStale += ts.stale
     nDropped += ts.dropped
+    nBlackout += ts.blackout
     nOutOfOrder += ts.outOfOrder
     nDuplicates += ts.duplicate
     nAmbiguous += ts.ambiguous
@@ -234,10 +238,10 @@ class TATrackStats(val topic: String, val source: String, val takeMillis: Long, 
 
   // the default is to print only stats for all centers
   override def printWith (pw: PrintWriter): Unit = {
-    pw.println("tracons  v2  v3    tracks   fplan   cmplt   dropped   order     dup   ambig   no-time")
-    pw.println("------- --- ---   ------- ------- -------   ------- ------- ------- -------   -------")
+    pw.println("tracons  v2  v3    tracks   fplan   cmplt   dropped    blck   order     dup   ambig   no-time")
+    pw.println("------- --- ---   ------- ------- -------   ------- ------- ------- ------- -------   -------")
     pw.print(f"$nTracons%7d ${stddsRevs(2)}%3d ${stddsRevs(3)}%3d   $nActive%7d $nFlightPlans%7d $nCompleted%7d")
-    pw.print(f"   $nDropped%7d $nOutOfOrder%7d $nDuplicates%7d $nAmbiguous%7d   $nNoTime%7d")
+    pw.print(f"   $nDropped%7d $nBlackout%7d $nOutOfOrder%7d $nDuplicates%7d $nAmbiguous%7d   $nNoTime%7d")
   }
 
   override def xmlData = <taTrackStats>{traconStats.map( _.toXML)}</taTrackStats>
@@ -261,11 +265,11 @@ class TATrackStatsFormatter (conf: Config) extends PrintStatsFormatter {
     pw.print("\n\n")
 
     //--- per tracon data
-    pw.println(" tracon     rev    tracks   fplan   cmplt   dropped   order     dup   ambig   no-time         n dtMin dtMax dtAvg")
-    pw.println("------- -------   ------- ------- -------   ------- ------- ------- -------   -------   ------- ----- ----- -----")
+    pw.println(" tracon     rev    tracks   fplan   cmplt   dropped     blck   order     dup   ambig   no-time         n dtMin dtMax dtAvg")
+    pw.println("------- -------   ------- ------- -------   -------  ------- ------- ------- -------   -------   ------- ----- ----- -----")
     traconStats.foreach { ts =>
       pw.print(f"${ts.src}%7s ${ts.stddsRev}%7s   ${ts.nActive}%7d ${ts.nFlightPlans}%7d ${ts.completed}%7d   ")
-      pw.print(f"${ts.dropped}%7d ${ts.outOfOrder}%7d ${ts.duplicate}%7d ${ts.ambiguous}%7d   ${ts.nNoTime}%7d")
+      pw.print(f"${ts.dropped}%7d ${ts.blackout}%7d ${ts.outOfOrder}%7d ${ts.duplicate}%7d ${ts.ambiguous}%7d   ${ts.nNoTime}%7d")
       ifSome(ts.buckets) { bc =>
         pw.print(f"   ${bc.nSamples}%7d ${dur(bc.min)}%5s ${dur(bc.max)}%5s ${dur(bc.mean)}%5s")
       }
@@ -295,14 +299,14 @@ class HtmlTATrackStatsFormatter (config: Config) extends HtmlStatsFormatter {
         tr(cls:="border")(
           th("src"),th("v2"),th("v3"),th("tracks"),th("fPlan"),th("min"),th("max"),th("cmplt"),th(""),
           th("n"),th("Δt min"),th("Δt max"),th("Δt avg"),th(""),
-          th("stale"),th("drop"),th("order"),th("dup"),th("amb"),th("no-t")
+          th("stale"),th("drop"),th("blck"),th("order"),th("dup"),th("amb"),th("no-t")
         ),
 
         //--- sum row
         tr(cls:="border")(
           td(nTracons),td(stddsRevs(2)),td(stddsRevs(3)),td(nActive),td(nFlightPlans),td(""),td(""),td(""),td(""),
           td(""),td(""),td(""),td(""),td(""),
-          td(nStale),td(nDropped),td(nOutOfOrder),td(nDuplicates),td(nAmbiguous),td(nNoTime)
+          td(nStale),td(nDropped),td(nBlackout),td(nOutOfOrder),td(nDuplicates),td(nAmbiguous),td(nNoTime)
         ),
 
         //--- tracon rows
@@ -312,7 +316,7 @@ class HtmlTATrackStatsFormatter (config: Config) extends HtmlStatsFormatter {
             case Some(bc) if bc.nSamples > 0 => Seq( td(bc.nSamples),td(dur(bc.min)),td(dur(bc.max)),td(dur(bc.mean)))
             case _ => Seq( td("-"),td("-"),td("-"),td("-"))
           },td(""),
-          td(t.stale),td(t.dropped),td(t.outOfOrder),td(t.duplicate),td(t.ambiguous),td(t.nNoTime)
+          td(t.stale),td(t.dropped),td(t.blackout),td(t.outOfOrder),td(t.duplicate),td(t.ambiguous),td(t.nNoTime)
         )
       )
     )

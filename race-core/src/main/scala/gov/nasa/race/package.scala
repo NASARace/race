@@ -101,11 +101,10 @@ package object race {
     res
   }
 
-  /** return the result of the first function, after executing the second function with the result as argument */
-  def withDo[A](f: =>A)(g: A=>Any): A = {
-    val res = f
-    g(res)
-    res
+  /** return object after calling an initialize functions on it */
+  def yieldInitialized[A](a: A)(init: A=>Any): A = {
+    init(a)
+    a
   }
 
   def lift[A, B](f: A => B): Option[A] => Option[B] = _ map f

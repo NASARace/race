@@ -154,6 +154,8 @@ class RaceView (viewerActor: RaceViewerActor) extends DeferredEyePositionListene
     Configuration.setValue(AVKey.DATA_FILE_STORE_CLASS_NAME, classOf[ConfigurableWriteCache].getName)
     Configuration.setValue("gov.nasa.worldwind.avkey.ViewInputHandlerClassName", classOf[RaceViewInputHandler].getName)
     Configuration.setValue("gov.nasa.worldwind.avkey.ViewClassName", classOf[MinClipOrbitView].getName)
+
+    Configuration.setValue(AVKey.URL_READ_TIMEOUT, 10000) // to avoid the annoying SocketTimeoutExceptions for https://worldwind26.arc.nasa.gov
   }
 
   def createLayers = {

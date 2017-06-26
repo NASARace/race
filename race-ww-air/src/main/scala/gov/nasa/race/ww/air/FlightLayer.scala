@@ -52,7 +52,10 @@ abstract class FlightLayer[T <:InFlightAircraft](val raceView: RaceView, config:
   //--- AircraftPlacemark attributes
   def defaultSymbolColor = Color.yellow
   val color = config.getColorOrElse("color", defaultSymbolColor)
-  val planeImg = Images.getPlaneImage(color)
+
+  def defaultPlaneImg = Images.getPlaneImage(color)
+  val planeImg = defaultPlaneImg
+
   val markImg = Images.defaultMarkImg
   val labelColor = toABGRString(color)
   val lineColor = labelColor

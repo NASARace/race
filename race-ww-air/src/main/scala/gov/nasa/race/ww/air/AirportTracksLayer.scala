@@ -99,7 +99,7 @@ class AirportTracksLayer (raceView: RaceView,config: Config)
 
   //val panel = new AirportLayerPanel().styled()
   val panel = new DynamicLayerInfoPanel {
-    contents += new StaticSelectionPanel[Airport,IdAndNamePanel[Airport]]("select airport",Airport.airportList, 40,
+    contents += new StaticSelectionPanel[Airport,IdAndNamePanel[Airport]]("select airport",Airport.NoAirport +: Airport.airportList, 40,
       new IdAndNamePanel[Airport]( _.id, _.city), selectAirport).styled()
   }.styled('consolePanel)
 
@@ -114,7 +114,7 @@ class AirportTracksLayer (raceView: RaceView,config: Config)
   val acColor = config.getColorOrElse("aircraft-color", Color.yellow)
   val planeImg = Images.getPlaneImage(acColor)
 
-  var airport: Option[Airport] = None
+  var selAirport: Option[Airport] = None // selected airport
   var active = false
   val tracks = TrieMap[String,TrackEntry]()
   override def size = tracks.size
@@ -126,7 +126,7 @@ class AirportTracksLayer (raceView: RaceView,config: Config)
 
   override def handleMessage = {
     case BusEvent(_, at: AirportTracks, _) =>
-      ifSome(airport){ ap =>
+      ifSome(selAirport){ ap =>
         if (active && ap.id == at.airport) {
           count = count + 1
           updateTracks(at.tracks)
@@ -166,18 +166,18 @@ class AirportTracksLayer (raceView: RaceView,config: Config)
     Airport.asdexAirports.find( e=> GreatCircle.distance(pos, e._2.pos) < dist).map(_._2)
   }
 
-  def checkAirportChange (eyePos: Position): Unit = {
-    def releaseCurrentAirport = {
-      reset
-      airport = None
-      active = false
-    }
+  def releaseCurrentAirport = {
+    reset
+    selAirport = None
+    active = false
+  }
 
+  def checkAirportChange (eyePos: Position): Unit = {
     val newAirport = lookupAirport(eyePos, activeDistance)
     val eyeAltitude = meters2Feet(eyePos.getAltitude)
-    if (airport.isDefined && airport == newAirport){ // no airport change, but check altitude
+    if (selAirport.isDefined && selAirport == newAirport){ // no airport change, but check altitude
       if (active){
-        if (eyeAltitude > activeAltitude.toFeet + airport.get.elev.toFeet){
+        if (eyeAltitude > activeAltitude.toFeet + selAirport.get.elev.toFeet){
           releaseCurrentAirport
         }
       }
@@ -186,7 +186,7 @@ class AirportTracksLayer (raceView: RaceView,config: Config)
       ifSome(newAirport) { a =>
         if (eyeAltitude <= activeAltitude.toFeet + a.elev.toFeet){
           requestTopic(newAirport)
-          airport = newAirport
+          selAirport = newAirport
           active = true
         }
       }
@@ -194,7 +194,11 @@ class AirportTracksLayer (raceView: RaceView,config: Config)
   }
 
   def gotoAirport (airport: Airport) = {
-    val alt = gotoAltitude.toMeters + airport.elev.toMeters
-    raceView.panTo(airport.pos,alt)
+    if (airport eq Airport.NoAirport) { // just unset
+      if (selAirport.isDefined) releaseCurrentAirport
+    } else {
+      val alt = gotoAltitude.toMeters + airport.elev.toMeters
+      raceView.panTo(airport.pos, alt)
+    }
   }
 }

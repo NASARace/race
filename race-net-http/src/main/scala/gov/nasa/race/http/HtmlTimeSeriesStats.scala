@@ -48,7 +48,7 @@ trait HtmlTimeSeriesStats[O <: Dated,E <: TSEntryData[O]] extends TimeSeriesStat
           tr(
             th("active"),th("min"),th("max"),th("cmplt"),th(""),
             th("n"),th("Δt min"),th("Δt max"),th("Δt avg"),th(""),
-            th("stale"),th("drop"),th("order"),th("dup"),th("amb")
+            th("stale"),th("drop"),th("blck"),th("order"),th("dup"),th("amb")
           ),
           tr(
             td(nActive),td(minActive),td(maxActive),td(completed),td(""),
@@ -56,7 +56,7 @@ trait HtmlTimeSeriesStats[O <: Dated,E <: TSEntryData[O]] extends TimeSeriesStat
               case Some(bc) if bc.nSamples > 0 => Seq( td(bc.nSamples),td(dur(bc.min)),td(dur(bc.max)),td(dur(bc.mean)))
               case _ => Seq( td("-"),td("-"),td("-"),td("-"))
             },
-            td(""), td(stale),td(dropped),td(outOfOrder),td(duplicate),td(ambiguous)
+            td(""), td(stale),td(dropped),td(blackout),td(outOfOrder),td(duplicate),td(ambiguous)
           )
         ),
         res.html

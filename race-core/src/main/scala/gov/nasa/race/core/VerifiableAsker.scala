@@ -25,7 +25,9 @@ import akka.util.Timeout
   * a trait that lets non-actor objects use the ask pattern in a way that the
   * recipient can verify the message came from this entity.
   * The recipient cannot just check the sender since the ask pattern makes use
-  * of temporary actors
+  * of temporary actors.
+  *
+  * NOTE - this is not recursive, we can only ask one result at a time
   */
 trait VerifiableAsker {
   // private store for what we have asked

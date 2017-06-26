@@ -28,11 +28,15 @@ import scala.concurrent.duration._
   * Note that we don't use vals since derived classes can change the values, and we don't use
   * public vars since each change should go through such a derived class
   */
-class Clock (initTime: DateTime = DateTime.now, initTimeScale: Double = 1, isStopped: Boolean=false)
+class Clock (initTime: DateTime = DateTime.now,
+             initTimeScale: Double = 1,
+             endTime: Option[DateTime] = None,
+             isStopped: Boolean=false)
          extends Cloneable {
 
   protected var _timeScale = initTimeScale
   protected var _base = initTime // sim time
+  protected var _end = endTime
   protected var _initMillis = System.currentTimeMillis  // wall time
   protected var _stoppedAt: Long = if (isStopped) _initMillis else 0 // wall time
 
@@ -40,9 +44,11 @@ class Clock (initTime: DateTime = DateTime.now, initTimeScale: Double = 1, isSto
 
   def timeScale: Double = _timeScale
   def base = _base
+  def end = _end
   def initMillis = _initMillis
   def stoppedAt = _stoppedAt
   def baseMillis = _base.getMillis
+  def endMillis = endTimeMillis
 
   /** simulation time milliseconds */
   def millis: Long = _base.getMillis + ((currentMillis - _initMillis) * _timeScale).toLong
@@ -66,6 +72,15 @@ class Clock (initTime: DateTime = DateTime.now, initTimeScale: Double = 1, isSto
     DateTime.now.plusMillis((simDuration.toMillis/_timeScale).toInt)
   }
 
+  def wallEndTime: Option[DateTime] = _end.map(wallTime)
+
+  def endTimeMillis: Long = _end match {
+    case Some(date) => date.getMillis
+    case None => Long.MaxValue
+  }
+
+  def exceedsEndTime (d: DateTime): Boolean = d.getMillis > endTimeMillis
+
   def save = clone.asInstanceOf[Clock]
 }
 
@@ -74,11 +89,13 @@ class Clock (initTime: DateTime = DateTime.now, initTimeScale: Double = 1, isSto
   */
 class SettableClock (initTime: DateTime = DateTime.now,
                      initTimeScale: Double = 1,
-                     isStopped: Boolean = false) extends Clock (initTime,initTimeScale,isStopped) {
+                     endTime: Option[DateTime] = None,
+                     isStopped: Boolean = false) extends Clock (initTime,initTimeScale,endTime,isStopped) {
 
-  def reset (initTime: DateTime, initTimeScale: Double = 1): SettableClock = synchronized {
+  def reset (initTime: DateTime, initTimeScale: Double = 1, endTime: Option[DateTime] = None): SettableClock = synchronized {
     _timeScale = initTimeScale
     _base = initTime
+    _end = endTime
     _initMillis = System.currentTimeMillis
     if (_stoppedAt > 0) _stoppedAt = _initMillis
     this
@@ -87,6 +104,7 @@ class SettableClock (initTime: DateTime = DateTime.now,
   def reset (saved: Clock): SettableClock = synchronized {
     _timeScale = saved.timeScale
     _base = saved.base
+    _end = saved.end
     _initMillis = saved.initMillis
     _stoppedAt = saved.stoppedAt
     this

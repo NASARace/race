@@ -16,17 +16,44 @@
  */
 package gov.nasa.race.ww.air
 
+import java.awt.{Color, Point}
+
 import akka.actor.Actor.Receive
 import com.typesafe.config.Config
 import gov.nasa.race.air.TATrack.Status
 import gov.nasa.race.air.{TATrack, Tracon}
 import gov.nasa.race.core.Messages.BusEvent
 import gov.nasa.race.config.ConfigUtils._
+import gov.nasa.race.geo.GreatCircle
 import gov.nasa.race.ifSome
 import gov.nasa.race.swing.Style._
 import gov.nasa.race.swing.{IdAndNamePanel, StaticSelectionPanel}
-import gov.nasa.race.uom.Length.Feet
-import gov.nasa.race.ww.RaceView
+import gov.nasa.race.uom.Angle
+import gov.nasa.race.uom.Length._
+import gov.nasa.race.uom.Angle._
+import gov.nasa.race.ww.{RaceLayerPickable, RaceView}
+import gov.nasa.worldwind.WorldWind
+import gov.nasa.worldwind.render._
+import gov.nasa.race.ww._
+import gov.nasa.worldwind.avlist.AVKey
+
+
+class TraconSymbol(val tracon: Tracon, val layer: TATracksLayer) extends PointPlacemark(tracon.pos) with RaceLayerPickable {
+  var showDisplayName = false
+  var attrs = new PointPlacemarkAttributes
+
+  //setValue( AVKey.DISPLAY_NAME, tracon.id)
+  setLabelText(tracon.id)
+  setAltitudeMode(WorldWind.RELATIVE_TO_GROUND)
+  attrs.setImage(null)
+  attrs.setLabelColor(layer.traconLabelColor)
+  attrs.setLineColor(layer.traconLabelColor)
+  attrs.setUsePointAsDefaultImage(true)
+  attrs.setScale(7d)
+  setAttributes(attrs)
+
+  override def layerItem: AnyRef = tracon
+}
 
 
 /**
@@ -34,13 +61,37 @@ import gov.nasa.race.ww.RaceView
   */
 class TATracksLayer (raceView: RaceView,config: Config) extends FlightLayer3D[TATrack](raceView,config){
 
-  val gotoAltitude = Feet(config.getDoubleOrElse("goto-altitude", 1250000d)) // feet above ground
+  //--- configured values
+
+  val traconLabelColor = toABGRString(config.getColorOrElse("tracon-color", Color.white))
+  var traconLabelThreshold = config.getDoubleOrElse("tracon-label-altitude", Meters(2200000.0).toMeters)
+  val gotoAltitude = Feet(config.getDoubleOrElse("goto-altitude", 5000000d)) // feet above ground
+
+  val traconGrid =  createGrid
+
   var selTracon: Option[Tracon] = None
+
+  showTraconSymbols
+
+  override def defaultPlaneImg = Images.getArrowImage(color)
+
+  def createGrid = {
+    val gridRings = config.getIntOrElse("tracon-rings", 5)
+    val gridRingDist = NauticalMiles(config.getIntOrElse("tracon-ring-inc", 50)) // in nm
+    val gridLineColor = config.getColorOrElse("tracon-grid-color", Color.white)
+    val gridLineAlpha = config.getFloatOrElse("tracon-grid-alpha", 0.5f)
+    val gridFillColor = config.getColorOrElse("tracon-bg-color", Color.black)
+    val gridFillAlpha = config.getFloatOrElse("tracon-bg-alpha", 0.4f)
+
+    new PolarGrid(Tracon.NoTracon.pos, Angle.Angle0, gridRingDist, gridRings,
+      this, gridLineColor, gridLineAlpha, gridFillColor, gridFillAlpha)
+  }
 
   override def createLayerInfoPanel = {
     new FlightLayerInfoPanel(raceView,this){
       // insert tracon selection panel after generic layer info
-      contents.insert(1, new StaticSelectionPanel[Tracon,IdAndNamePanel[Tracon]]("select TRACON", Tracon.traconList, 40,
+      contents.insert(1, new StaticSelectionPanel[Tracon,IdAndNamePanel[Tracon]]("select TRACON",
+                                            Tracon.NoTracon +: Tracon.traconList, 40,
                                             new IdAndNamePanel[Tracon]( _.id, _.name), selectTracon).styled())
     }.styled('consolePanel)
   }
@@ -70,27 +121,44 @@ class TATracksLayer (raceView: RaceView,config: Config) extends FlightLayer3D[TA
       }
   }
 
+  def showTraconSymbol (tracon: Tracon) = {
+    addRenderable(new TraconSymbol(tracon,this))
+  }
+
+  def showTraconSymbols = Tracon.traconList.foreach(showTraconSymbol)
+
   def selectTracon(tracon: Tracon) = raceView.trackUserAction(gotoTracon(tracon))
 
   def reset(): Unit = {
     removeAllRenderables()
     flights.clear()
     releaseAll
+    traconGrid.hide
+    showTraconSymbols
+  }
+
+  def setTracon(tracon: Tracon) = {
+    raceView.panTo(tracon.pos, gotoAltitude.toMeters)
+
+    selTracon = Some(tracon)
+    traconGrid.setCenter(tracon.pos)
+    traconGrid.show
+    requestTopic(selTracon)
   }
 
   def gotoTracon(tracon: Tracon) = {
-    selTracon match {
-      case Some(`tracon`) => // nothing, we already show it
-      case Some(lastTracon) =>
-        reset
-        selTracon = Some(tracon)
-        requestTopic(selTracon)
-      case None =>
-        selTracon = Some(tracon)
-        requestTopic(selTracon)
+    if (tracon eq Tracon.NoTracon) {
+      reset
+    } else {
+      selTracon match {
+        case Some(`tracon`) => // nothing, we already show it
+        case Some(lastTracon) =>
+          reset
+          setTracon(tracon)
+        case None =>
+          setTracon(tracon)
+      }
     }
-    val alt = gotoAltitude.toMeters
-    raceView.panTo(tracon.pos,alt)
   }
 
 }

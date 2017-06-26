@@ -79,6 +79,9 @@ object Airport {
   val asdexAirports = airportList.foldLeft(SortedMap.empty[String,Airport]) { (m, a) => m + (a.id -> a) }
   val allAirports = asdexAirports
   val airportNames = allAirports.keySet.toSeq
+
+  // can be used for airport selection lists, to reset the selection
+  final val NoAirport = new Airport("<none>","","",LatLonPos.fromDegrees(0,0),Length0,false)
 }
 
 /**

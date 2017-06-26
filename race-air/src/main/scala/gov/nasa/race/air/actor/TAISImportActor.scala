@@ -14,21 +14,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package gov.nasa.race.common
+package gov.nasa.race.air.actor
 
-case class PhoneNumber (number: String, description: String="")
-
-
-object ContactInfo {
-  final val NoContactInfo = new ContactInfo("","","","",Seq.empty[PhoneNumber])
-
-  def apply(street: String, city: String, state: String, zip: String, phone: String=null) = {
-    if (phone != null) new ContactInfo(street,city,state,zip,Seq(PhoneNumber(phone)))
-    else new ContactInfo(street,city,state,zip,Seq.empty[PhoneNumber])
-  }
-}
+import com.typesafe.config.Config
+import gov.nasa.race.jms.JMSImportActor
 
 /**
-  * address and related data
+  * a JMS import actor for SWIM TAIS (STDDS) messages.
+  * This is a on-demand provider that only publishes messages for requested TRACONs.
+  * Filtering tracons without clients has to be efficient since this stream can have a very high rate (>900msg/sec)
   */
-case class ContactInfo (street: String, city: String, state: String, zip: String, phones: Seq[PhoneNumber])
+class TAISImportActor(config: Config) extends JMSImportActor(config) with TAISImporter

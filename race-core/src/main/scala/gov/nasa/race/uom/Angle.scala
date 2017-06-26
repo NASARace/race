@@ -35,7 +35,7 @@ object Angle {
   @inline def isDefined(x: Angle): Boolean  = !x.d.isNaN
 
   final implicit val εAngle = Degrees(1.0e-10)  // provide your own if application specific
-  def fromVxVy (vx: Speed, vy: Speed) = Radians(Math.atan2(vx.d, vy.d))
+  def fromVxVy (vx: Speed, vy: Speed) = Radians(normalizeRadians2Pi(Math.atan2(vx.d, vy.d)))
 
   //--- utilities
   @inline def normalizeRadians (d: Double) = d - π*2 * Math.floor((d + π) / (π*2)) // -π..π

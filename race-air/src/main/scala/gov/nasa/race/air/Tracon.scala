@@ -54,6 +54,9 @@ object Tracon {
   ).sortWith( _.id < _.id )
 
   val tracons = traconList.foldLeft(SortedMap.empty[String,Tracon]) { (m, a) => m + (a.id -> a) }
+
+  // can be used for selection lists to reset selection
+  final val NoTracon = new Tracon("<none>", "", LatLonPos.fromDegrees(0,0),ContactInfo.NoContactInfo)
 }
 
 /**

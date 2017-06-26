@@ -107,6 +107,21 @@ object ConfigUtils {
       }
     }
 
+    def getFloatOrElse(key: String, fallbackValue: Float) = {
+      try {
+        conf.getDouble(key).toFloat
+      } catch {
+        case _: ConfigException.Missing => fallbackValue
+      }
+    }
+    def getOptionalFloat(key: String): Option[Float] = {
+      try {
+        Some(conf.getDouble(key).toFloat)
+      } catch {
+        case _: ConfigException.Missing => None
+      }
+    }
+
     def getDoubleOrElse(key: String, fallbackValue: Double) = {
       try {
         conf.getDouble(key)

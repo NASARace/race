@@ -149,7 +149,7 @@ class FlightEntry[T <: InFlightAircraft](var obj: T, var flightPath: AbstractFli
     }
   }
 
-  def createMark: PointPlacemark = withDo(new PointPlacemark(obj)) { m =>
+  def createMark: PointPlacemark = yieldInitialized(new PointPlacemark(obj)) { m =>
     m.setAltitudeMode(WorldWind.ABSOLUTE)
     val attrs = new PointPlacemarkAttributes
     attrs.setImage(layer.markImage(obj))

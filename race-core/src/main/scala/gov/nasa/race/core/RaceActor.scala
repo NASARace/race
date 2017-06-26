@@ -48,8 +48,13 @@ trait RaceActor extends Actor with ImplicitActorLogging {
   var status = Initializing
   val localRaceContext: RaceContext = RaceActorSystem(system).localRaceContext
   var raceContext: RaceContext = null  // set during InitializeRaceActor
-
-  raceActorSystem.registerActor(self,config,getCapabilities)
+  
+  if (supervisor == localMaster) { // means we are a toplevel RaceActor
+    info(s"registering toplevel actor $self")
+    raceActorSystem.registerActor(self, config, getCapabilities)
+  } else {
+    info(s"created second tier actor $self")
+  }
 
   //--- convenience aliases
   @inline final def name = self.path.name
@@ -587,6 +592,8 @@ trait ContinuousTimeRaceActor extends RaceActor {
   @inline def toWallTimeMillis (d: Duration) = (d.toMillis * simClock.timeScale).toLong
   @inline def toWallTimeMillis (ms: Long) = (ms * simClock.timeScale).toLong
 
+  @inline def exceedsEndTime (d: DateTime) = simClock.exceedsEndTime(d)
+
   final def resetSimClockRequest (d: DateTime, timeScale: Double = 1.0): Boolean = {
     if (canResetClock) {
       if (raceActorSystem.resetSimClockRequest(self,d,timeScale)){
@@ -696,7 +703,7 @@ trait ClockAdjuster extends ContinuousTimeRaceActor {
     * on each event that might potentially be the first one to trigger adjustment of the global clock
     */
   @inline final def checkInitialClockReset(d: DateTime) = {
-    if (isFirstClockCheck) {
+    if (canResetClock && isFirstClockCheck) {
       checkClockReset(d)
       isFirstClockCheck = false
     }

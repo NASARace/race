@@ -75,6 +75,7 @@ trait TSStatsData[O <: Dated,E <: TSEntryData[O]] extends Cloneable with XmlSour
   //--- basic findings statistics
   var stale = 0  // entries that are outdated when they are first reported (dead on arrival)
   var dropped = 0 // entries that are dropped because they didn't get updated within a certain time
+  var blackout = 0 // entries that are re-entered before blackout time
   var outOfOrder = 0 // updates that have a time stamp that is older than the previous update
   var duplicate = 0 // updates that are semantically the same as the previous update
   var ambiguous = 0 // updates that have the same time stamp but are otherwise not the same as the previous update
@@ -83,6 +84,7 @@ trait TSStatsData[O <: Dated,E <: TSEntryData[O]] extends Cloneable with XmlSour
   //--- optional actions to further analyze or archive problems, to be set by owner
   var staleAction: Option[OAction] = None
   var dropAction: Option[OAction] = None
+  var blackoutAction: Option[OOAction] = None
   var outOfOrderAction: Option[OORAction] = None
   var duplicateAction: Option[OOAction] = None
   var ambiguousAction: Option[OORAction] = None
@@ -175,6 +177,11 @@ trait TSStatsData[O <: Dated,E <: TSEntryData[O]] extends Cloneable with XmlSour
     }
   }
 
+  def blackedOut (obj: O, e: E, isSettled: Boolean): Unit = {
+    blackout += 1
+    ifSome(blackoutAction){ _(obj,e.lastObj) }
+  }
+
   // explicitly terminated (obj state might still have new info)
   def remove (e: E, isSettled: Boolean): Unit = {
     completed += 1
@@ -212,6 +219,7 @@ trait TSStatsData[O <: Dated,E <: TSEntryData[O]] extends Cloneable with XmlSour
   def xmlBasicTSStatsFindings = {
     <stale>{stale}</stale>
       <dropped>{dropped}</dropped>
+      <blackout>{blackout}</blackout>
       <outOfOrder>{outOfOrder}</outOfOrder>
       <duplicates>{duplicate}</duplicates>
       <ambiguous>{ambiguous}</ambiguous>
@@ -238,9 +246,9 @@ class TimeSeriesStats[O <: Dated,E <: TSEntryData[O]](val topic: String,
     import data._
     import gov.nasa.race.util.DateTimeUtils.{durationMillisToCompactTime => dur}
 
-    pw.println("active    min    max   cmplt stale  drop order   dup ambig         n dtMin dtMax dtAvg")
-    pw.println("------ ------ ------   ----- ----- ----- ----- ----- -----   ------- ----- ----- -----")
-    pw.print(f"$nActive%6d $minActive%6d $maxActive%6d   $completed%5d $stale%5d $dropped%5d $outOfOrder%5d $duplicate%5d $ambiguous%5d ")
+    pw.println("active    min    max   cmplt stale  drop  blck  order   dup ambig         n dtMin dtMax dtAvg")
+    pw.println("------ ------ ------   ----- ----- ----- -----  ----- ----- -----   ------- ----- ----- -----")
+    pw.print(f"$nActive%6d $minActive%6d $maxActive%6d   $completed%5d $stale%5d $dropped%5d $blackout%5d $outOfOrder%5d $duplicate%5d $ambiguous%5d ")
 
     buckets match {
       case Some(bc)  =>
@@ -268,6 +276,8 @@ trait BasicTimeSeriesStats[O <: Dated] extends TimeSeriesStats[O,TSEntryData[O]]
   * persistent statistics. It is therefore less likely but still possible to provide a customized entry stats type
   */
 class TSEntryData[O <: Dated](var tLast: Long, var lastObj: O) extends Cloneable {
+  var removed: Boolean = false // set to true after receiving a completed event
+
   def update (obj: O, isSettled: Boolean) = {
     val t = obj.date.getMillis
     val dt = (t - tLast).toInt
@@ -326,7 +336,7 @@ trait TSStatsCollector[K,O <: Dated,E <: TSEntryData[O],S <: TSStatsData[O,E]] {
   val settleTimeMillis: Long // after which time (since sim start) do we consider updates to be at a stable rate
 
   val statsData: S
-  val activeEntries = MHashMap.empty[K,E]  // to keep track of last entry updates
+  val entries = MHashMap.empty[K,E]  // to keep track of last entry updates
 
   //-- to be provided by concrete type
   def currentSimTimeMillisSinceStart: Long
@@ -335,7 +345,7 @@ trait TSStatsCollector[K,O <: Dated,E <: TSEntryData[O],S <: TSStatsData[O,E]] {
 
   def processEntryData = {
     statsData.resetEntryData
-    activeEntries.foreach { e=> statsData.processEntryData(e._2) }
+    entries.foreach { e=> statsData.processEntryData(e._2) }
   }
 
   def snapshot (topic: String, source: String): TimeSeriesStats[O,E] = {
@@ -349,25 +359,68 @@ trait TSStatsCollector[K,O <: Dated,E <: TSEntryData[O],S <: TSStatsData[O,E]] {
     val t = obj.date.getMillis
     val isSettled = currentSimTimeMillisSinceStart > settleTimeMillis
 
-    activeEntries.get(key) match {
+    def _add = {
+      val isStale = (currentSimTimeMillis - t) > dropAfterMillis
+      statsData.add(obj,isStale,isSettled)
+      if (!isStale) entries += key -> createTSEntryData(t,obj)
+    }
+
+    entries.get(key) match {
       case Some(e) =>
-        statsData.update(obj,e,isSettled)
-        e.update(obj,isSettled)
+        if (!e.removed) { // regular update
+          statsData.update(obj, e, isSettled)
+          e.update(obj, isSettled)
+        } else { // this one is a blackout, record and (maybe) re-enter
+          statsData.blackedOut(obj,e, isSettled)
+          _add // re-enter
+        }
 
-      case None => // new flight
-        val isStale = (currentSimTimeMillis - t) > dropAfterMillis
-        statsData.add(obj,isStale,isSettled)
-
-        if (!isStale) activeEntries += key -> createTSEntryData(t,obj)
+      case None => _add // wasn't there yet, new entry
     }
   }
 
+  /**
+    *   this is the variant to use if removal is triggered by events that don't
+    *   have update-relevant object data attached
+    */
   def removeActive (key: K) = {
-    activeEntries.remove(key) match {
+    entries.get(key) match {
       case Some(e) =>
         val isSettled = currentSimTimeMillisSinceStart > settleTimeMillis
         statsData.remove(e, isSettled)
-      case None => // no stats to update
+        // note we don't remove it from entries yet, we only mark the entry to
+        // be removed during the next checkDropped so that we can detect blackouts
+        e.removed = true
+
+      case None => // since there was no object provided we can't enter as removed
+    }
+  }
+
+  /**
+    * this is the variant to use if removal is just a status attribute of events
+    * that have update-relevant object data attached (e.g. if update and removal are triggered
+    * by same event type)
+    */
+  def removeActive (key: K, obj: O) = {
+    val isSettled = currentSimTimeMillisSinceStart > settleTimeMillis
+    val t = obj.date.getMillis
+
+    entries.get(key) match {
+      case Some(e) =>
+        // mark as removed but leave in entries so that we can detect blackouts
+        statsData.remove(e, isSettled)
+        e.update(obj, isSettled)
+        e.removed = true
+
+      case None =>
+        // this is a new entry - add and mark as removed to be able to detect blackouts
+        val isStale = (currentSimTimeMillis - t) > dropAfterMillis
+        val newEntry = createTSEntryData(t,obj)
+        newEntry.removed = true
+
+        statsData.add(obj,isStale,isSettled)
+        statsData.remove(newEntry, isSettled)
+        if (!isStale) entries += key -> newEntry
     }
   }
 
@@ -375,10 +428,11 @@ trait TSStatsCollector[K,O <: Dated,E <: TSEntryData[O],S <: TSStatsData[O,E]] {
     val t = currentSimTimeMillis
     val isSettled = currentSimTimeMillisSinceStart > settleTimeMillis
 
-    activeEntries.foreach { e => // make sure we don't allocate per entry
-      if ((t - e._2.tLast) > dropAfterMillis) {
-        activeEntries -= e._1
-        statsData.drop(e._2, isSettled)
+    entries.foreach { e => // make sure we don't allocate per entry
+      val entry = e._2
+      if ((t - entry.tLast) > dropAfterMillis) {
+        entries -= e._1
+        if (!entry.removed) statsData.drop(entry, isSettled)
       }
     }
   }

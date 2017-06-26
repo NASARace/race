@@ -40,6 +40,19 @@ object Images {
   val defaultPlaneImg = defaultPlaneImgs(Color.red)
   def getPlaneImage(color: Color) = defaultPlaneImgs.getOrElse(color, defaultPlaneImg)
 
+  val defaultArrowImgs = Map[Color, BufferedImage](
+    Color.red -> ImageIO.read(getClass.getResourceAsStream("arrow-red-64x64.png")),
+    Color.yellow -> ImageIO.read(getClass.getResourceAsStream("arrow-yellow-64x64.png")),
+    Color.cyan -> ImageIO.read(getClass.getResourceAsStream("arrow-cyan-64x64.png")),
+    Color.green -> ImageIO.read(getClass.getResourceAsStream("arrow-green-64x64.png")),
+    Color.blue -> ImageIO.read(getClass.getResourceAsStream("arrow-blue-64x64.png")),
+    Color.magenta -> ImageIO.read(getClass.getResourceAsStream("arrow-magenta-64x64.png")),
+    Color.white -> ImageIO.read(getClass.getResourceAsStream("arrow-white-64x64.png")),
+    Color.black -> ImageIO.read(getClass.getResourceAsStream("arrow-64x64.png"))
+  )
+  val defaultArrowImg = defaultArrowImgs(Color.green)
+  def getArrowImage(color: Color) = defaultArrowImgs.getOrElse(color,defaultArrowImg)
+
 
   val defaultMarkImgs = Map[Color,BufferedImage](
     Color.red -> ImageIO.read(getClass.getResourceAsStream("mark-red-32x32.png")),
