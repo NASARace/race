@@ -16,7 +16,7 @@
  */
 package gov.nasa.race.ww.air
 
-import java.awt.{Color, Point}
+import java.awt.{Color, Font, Point}
 
 import akka.actor.Actor.Receive
 import com.typesafe.config.Config
@@ -67,13 +67,36 @@ class TATracksLayer (raceView: RaceView,config: Config) extends FlightLayer3D[TA
   var traconLabelThreshold = config.getDoubleOrElse("tracon-label-altitude", Meters(2200000.0).toMeters)
   val gotoAltitude = Feet(config.getDoubleOrElse("goto-altitude", 5000000d)) // feet above ground
 
+  override def defaultSymbolColor = Color.green
+  override def defaultSubLabelFont = Some(new Font(Font.MONOSPACED,Font.PLAIN,12))
+  override def defaultPlaneImg = Images.getArrowImage(color)
+  override def defaultLabelThreshold = Meters(1200000.0).toMeters
+  override def defaultSymbolThreshold = Meters(600000.0).toMeters
+
   val traconGrid =  createGrid
 
   var selTracon: Option[Tracon] = None
 
   showTraconSymbols
 
-  override def defaultPlaneImg = Images.getArrowImage(color)
+  override def setLabel (sym: FlightSymbol[TATrack]) = {
+    val track = sym.flightEntry.obj
+
+    flightDetails match {
+      case FlightRenderLevel.Dot =>
+        sym.removeAllLabels
+
+      case FlightRenderLevel.Label =>
+        sym.setLabelText(track.cs)
+        sym.removeSubLabels
+
+      case FlightRenderLevel.Symbol =>
+        sym.setLabelText(track.cs)
+        sym.removeSubLabels
+        sym.addSubLabelText(track.stateString)
+    }
+  }
+  override def updateLabel (sym: FlightSymbol[TATrack]) = setLabel(sym)
 
   def createGrid = {
     val gridRings = config.getIntOrElse("tracon-rings", 5)

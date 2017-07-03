@@ -17,7 +17,7 @@
 
 package gov.nasa.race.config
 
-import java.awt.Color
+import java.awt.{Color, Font}
 import java.io.File
 
 import com.github.nscala_time.time.Imports._
@@ -39,6 +39,21 @@ object ConfigUtils {
 
   def showConfig( config: Config) = {
     config.root.render( ConfigRenderOptions.defaults().setComments(false).setOriginComments(false))
+  }
+
+  def getWithFallback[T] (key: String, fallback: T)(f: =>T) = {
+    try {
+      f
+    } catch {
+      case _: ConfigException.Missing => fallback
+    }
+  }
+  def getOptional[T] (key: String)(f: => T): Option[T] = {
+    try {
+      Some(f)
+    } catch {
+      case _: ConfigException.Missing => None
+    }
   }
 
   def render(conf: Config): String = {
@@ -92,95 +107,23 @@ object ConfigUtils {
       }
     }
 
-    def getStringOrElse(key: String, defaultValue: String) = {
-      try {
-        conf.getString(key)
-      } catch {
-        case _: ConfigException.Missing => defaultValue
-      }
-    }
-    def getOptionalString(key: String): Option[String] = {
-      try {
-        Some(conf.getString(key))
-      } catch {
-        case _: ConfigException.Missing => None
-      }
-    }
+    def getStringOrElse(key: String, fallback: String) = getWithFallback(key,fallback)(conf.getString(key))
+    def getOptionalString(key: String): Option[String] = getOptional(key)(conf.getString(key))
 
-    def getFloatOrElse(key: String, fallbackValue: Float) = {
-      try {
-        conf.getDouble(key).toFloat
-      } catch {
-        case _: ConfigException.Missing => fallbackValue
-      }
-    }
-    def getOptionalFloat(key: String): Option[Float] = {
-      try {
-        Some(conf.getDouble(key).toFloat)
-      } catch {
-        case _: ConfigException.Missing => None
-      }
-    }
+    def getFloatOrElse(key: String, fallback: Float) = getWithFallback(key,fallback)( conf.getDouble(key).toFloat )
+    def getOptionalFloat(key: String): Option[Float] = getOptional(key)( conf.getDouble(key).toFloat )
 
-    def getDoubleOrElse(key: String, fallbackValue: Double) = {
-      try {
-        conf.getDouble(key)
-      } catch {
-        case _: ConfigException.Missing => fallbackValue
-      }
-    }
-    def getOptionalDouble(key: String): Option[Double] = {
-      try {
-        Some(conf.getDouble(key))
-      } catch {
-        case _: ConfigException.Missing => None
-      }
-    }
+    def getDoubleOrElse(key: String, fallback: Double) = getWithFallback(key,fallback)( conf.getDouble(key) )
+    def getOptionalDouble(key: String): Option[Double] = getOptional(key)( conf.getDouble(key) )
 
-    def getDateTimeOrElse(key: String, fallbackValue: DateTime) = {
-      try {
-        DateTime.parse(conf.getString(key))
-      } catch {
-        case _: ConfigException.Missing => fallbackValue
-      }
-    }
-    def getOptionalDateTime(key: String): Option[DateTime] = {
-      try {
-        Some(DateTime.parse(conf.getString(key)))
-      } catch {
-        case _: ConfigException.Missing => None
-      }
-    }
+    def getDateTimeOrElse(key: String, fallback: DateTime) = getWithFallback(key,fallback)( DateTime.parse(conf.getString(key)) )
+    def getOptionalDateTime(key: String): Option[DateTime] = getOptional(key)( DateTime.parse(conf.getString(key)) )
 
-    def getBooleanOrElse(key: String, fallbackValue: Boolean) = {
-      try {
-        conf.getBoolean(key)
-      } catch {
-        case _: ConfigException.Missing => fallbackValue
-      }
-    }
-    def getOptionalBoolean(key: String): Option[Boolean] = {
-      try {
-        Some(conf.getBoolean(key))
-      } catch {
-        case _: ConfigException.Missing => None
-      }
-    }
+    def getBooleanOrElse(key: String, fallback: Boolean) = getWithFallback(key,fallback)(conf.getBoolean(key))
+    def getOptionalBoolean(key: String): Option[Boolean] = getOptional(key)( conf.getBoolean(key) )
 
-    def getIntOrElse(key: String, fallbackValue: Int) = {
-      try {
-        conf.getInt(key)
-      } catch {
-        case _: ConfigException.Missing => fallbackValue
-      }
-    }
-    def getOptionalInt(key: String): Option[Int] = {
-      try {
-        Some(conf.getInt(key))
-      } catch {
-        case _: ConfigException.Missing => None
-      }
-    }
+    def getIntOrElse(key: String, fallback: Int) = getWithFallback(key,fallback)(conf.getInt(key))
+    def getOptionalInt(key: String): Option[Int] = getOptional(key)( conf.getInt(key) )
 
     def getStringArray (key: String): Array[String] = {
       try {
@@ -210,20 +153,9 @@ object ConfigUtils {
       }
     }
 
-    def getConfigOrElse(key: String, fallBack: Config): Config = {
-      try {
-        conf.getConfig(key)
-      } catch {
-        case _: ConfigException.Missing => fallBack
-      }
-    }
-    def getOptionalConfig(key: String): Option[Config] = {
-      try {
-        Some(conf.getConfig(key))
-      } catch {
-        case _: ConfigException.Missing => None
-      }
-    }
+    def getConfigOrElse(key: String, fallback: Config): Config = getWithFallback(key,fallback)(conf.getConfig(key))
+    def getOptionalConfig(key: String): Option[Config] = getOptional(key)( conf.getConfig(key) )
+
     def getOptionalConfigList(key: String): Seq[Config] = {
       try {
         conf.getConfigList(key).asScala
@@ -257,23 +189,40 @@ object ConfigUtils {
       }
     }
 
-    def getColorOrElse(key: String, fallBack: Color): Color = {
-      try {
-        conf.getString(key).toLowerCase() match {
-          case "red" => Color.red
-          case "blue" => Color.blue
-          case "green" => Color.green
-          case "yellow" => Color.yellow
-          case "cyan" => Color.cyan
-          case "magenta" => Color.magenta
-          case "white" => Color.white
-          case "black" => Color.black
-          case s => Color.decode(s)
-        }
-      } catch {
-        case t: Throwable => fallBack
+    def getColor(key: String): Color = {
+      conf.getString(key).toLowerCase() match {
+        case "red" => Color.red
+        case "blue" => Color.blue
+        case "green" => Color.green
+        case "yellow" => Color.yellow
+        case "cyan" => Color.cyan
+        case "magenta" => Color.magenta
+        case "white" => Color.white
+        case "black" => Color.black
+        case s => decodeColor(s) // unfortunately Color.decode does not support transparency
       }
     }
+
+    // we need our own to support transparency
+    def decodeColor (s: String): Color = {
+      // all orders assumed [a,]r,g,b
+      if (s.contains(',')) { // list of ints
+        val vs = s.split("\\s*,\\s*").map(Integer.parseInt)
+        if (vs.length == 4) new Color(vs(1),vs(2),vs(3),vs(0))
+        else if (vs.length == 3) new Color(vs(0),vs(1),vs(2))
+        else throw new RuntimeException(s"unknown color format $s")
+      } else {
+        new Color(Integer.parseInt(s,16), s.length == 8)
+      }
+    }
+
+    def getColorOrElse(key: String, fallback: Color): Color = getWithFallback(key,fallback)(getColor(key))
+    def getOptionalColor(key: String): Option[Color] = getOptional(key)( getColor(key) )
+
+    def getFont (key: String): Font = Font.decode(conf.getString(key))
+
+    def getFontOrElse (key: String, fallback: Font): Font = getWithFallback(key,fallback)(getFont(key))
+    def getOptionalFont(key: String): Option[Font] = getOptional(key)( getFont(key) )
 
     def getClassName (key: String): String = {
       val clsName = conf.getString("class")
@@ -294,22 +243,8 @@ object ConfigUtils {
     }
 
     def getFiniteDuration (key: String): FiniteDuration = conf.getDuration(key).toMillis.milliseconds
-    def getFiniteDurationOrElse (key: String, fallbackValue: FiniteDuration): FiniteDuration = {
-      try {
-        val jDuration = conf.getDuration(key)
-        jDuration.toMillis.milliseconds
-      } catch {
-        case _: ConfigException.Missing => fallbackValue
-      }
-    }
-    def getOptionalFiniteDuration (key: String): Option[FiniteDuration] = {
-      try {
-        val jDuration = conf.getDuration(key)
-        Some(jDuration.toMillis.milliseconds)
-      } catch {
-        case _: ConfigException.Missing => None
-      }
-    }
+    def getFiniteDurationOrElse (key: String, fallback: FiniteDuration) = getWithFallback(key,fallback)(getFiniteDuration(key))
+    def getOptionalFiniteDuration (key: String): Option[FiniteDuration] = getOptional(key)( getFiniteDuration(key) )
 
     def getExistingDirOrElse (key: String, fallbackAction: =>File): File = {
       try {

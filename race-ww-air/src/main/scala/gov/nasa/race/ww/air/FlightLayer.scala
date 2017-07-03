@@ -17,7 +17,7 @@
 
 package gov.nasa.race.ww.air
 
-import java.awt.Color
+import java.awt.{Color, Font}
 
 import com.github.nscala_time.time.Imports._
 import com.typesafe.config.Config
@@ -50,17 +50,25 @@ abstract class FlightLayer[T <:InFlightAircraft](val raceView: RaceView, config:
   val flightInfoBase = config.getOptionalString("flightinfo-base")
 
   //--- AircraftPlacemark attributes
-  def defaultSymbolColor = Color.yellow
+  def defaultSymbolColor = Color.cyan
   val color = config.getColorOrElse("color", defaultSymbolColor)
 
   def defaultPlaneImg = Images.getPlaneImage(color)
   val planeImg = defaultPlaneImg
 
   val markImg = Images.defaultMarkImg
-  val labelColor = toABGRString(color)
-  val lineColor = labelColor
-  var labelThreshold = config.getDoubleOrElse("label-altitude", Meters(1400000.0).toMeters)
-  var symbolThreshold = config.getDoubleOrElse("symbol-altitude", Meters(1000000.0).toMeters)
+  val labelColor = config.getColorOrElse("label-color",color)
+  val labelColorString = toABGRString(labelColor)
+
+  def defaultLabelFont = raceView.defaultLabelFont
+  val labelFont = config.getFontOrElse("label-font", defaultLabelFont)
+  def defaultSubLabelFont = raceView.defaultSubLabelFont
+  val subLabelFont = config.getOptionalFont("sublabel-font").orElse(defaultSubLabelFont)
+  val lineColor = toABGRString(config.getColorOrElse("line-color",color))
+  def defaultLabelThreshold = Meters(1400000.0).toMeters
+  var labelThreshold = config.getDoubleOrElse("label-altitude", defaultLabelThreshold)
+  def defaultSymbolThreshold = Meters(1000000.0).toMeters
+  var symbolThreshold = config.getDoubleOrElse("symbol-altitude", defaultSymbolThreshold)
   var flightDetails: FlightRenderLevel = getFlightRenderLevel(eyeAltitude)
 
   def image (t: T) = planeImg
@@ -104,6 +112,7 @@ abstract class FlightLayer[T <:InFlightAircraft](val raceView: RaceView, config:
   def foreachFlight (f: FlightEntry[T]=>Unit): Unit = flights.foreach( e=> f(e._2))
 
   //--- rendering detail level management
+
   def getFlightRenderLevel (alt: Double) = {
     if (alt > labelThreshold) FlightRenderLevel.Dot
     else if (alt > symbolThreshold) FlightRenderLevel.Label
@@ -143,6 +152,10 @@ abstract class FlightLayer[T <:InFlightAircraft](val raceView: RaceView, config:
   def getSymbol (e: FlightEntry[T]): Option[FlightSymbol[T]] = {
     Some(new FlightSymbol(e))
   }
+
+  // this is here so that specialized FlightLayers can set multiple lines
+  def setLabel (sym: FlightSymbol[T]) = sym.setLabelText(sym.flightEntry.obj.cs)
+  def updateLabel (sym: FlightSymbol[T]) = {} // override if label text is dynamic
 
   def dismissEntryPanel (e: FlightEntry[T]) = {
     if (entryPanel.isShowing(e)) {

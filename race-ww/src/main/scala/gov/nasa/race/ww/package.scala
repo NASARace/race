@@ -111,4 +111,15 @@ package object ww {
     else if (a.eq(SelectEvent.ROLLOVER)) EventAction.Rollover
     else EventAction.Unknown
   }
+
+  // this is a WW specific problem - make colored label text more visible against a multi-colored globe background
+  // labels will be drawn with a black shadow so we want to increase the contrast for "dark" colors such as blue or "red"
+  // (Color.brighter will only multiply, i.e. does not change the color if components are max or 0)
+  def lighter (color: Color): Color = {
+    val shift = 64
+    val r = Math.min(255,color.getRed + shift)
+    val g = Math.min(255,color.getGreen + shift)
+    val b = Math.min(255,color.getBlue + shift)
+    new Color(r,g,b)
+  }
 }

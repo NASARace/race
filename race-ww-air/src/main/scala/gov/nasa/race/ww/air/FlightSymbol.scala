@@ -17,14 +17,15 @@
 
 package gov.nasa.race.ww.air
 
-import java.awt.Point
+import java.awt.{Color, Point}
 
+import gov.nasa.race._
 import gov.nasa.race.air.InFlightAircraft
 import gov.nasa.race.util.DateTimeUtils._
 import gov.nasa.race.ww._
 import gov.nasa.worldwind.WorldWind
 import gov.nasa.worldwind.avlist.AVKey
-import gov.nasa.worldwind.render.{Offset, PointPlacemark, PointPlacemarkAttributes}
+import gov.nasa.worldwind.render.{MultiLabelPointPlacemark, Offset, PointPlacemarkAttributes}
 
 object FlightRenderLevel extends Enumeration {
   type FlightRenderLevel = Value
@@ -40,7 +41,7 @@ import gov.nasa.race.ww.air.FlightRenderLevel._
   * cannot be used to do a FlightEntry lookup)
   */
 class FlightSymbol[T <: InFlightAircraft](val flightEntry: FlightEntry[T])
-                                                  extends PointPlacemark(flightEntry.obj) with RaceLayerPickable {
+                                                  extends MultiLabelPointPlacemark(flightEntry.obj) with RaceLayerPickable {
   // RaceLayerObject
   override def layer = flightEntry.layer
   override def layerItem = flightEntry
@@ -49,9 +50,12 @@ class FlightSymbol[T <: InFlightAircraft](val flightEntry: FlightEntry[T])
   var attrs = new PointPlacemarkAttributes
 
   //--- those are invariant
-  attrs.setLabelColor(layer.labelColor)
+  attrs.setLabelColor(layer.labelColorString)
+  attrs.setLabelFont( layer.labelFont)
   attrs.setLineColor(layer.lineColor)
-  //attrs.setImageColor(layer.color) // does not seem to work
+  //attrs.setImageColor(layer.color) // does not seem to work, and if so would probably require monochrome images
+
+  ifSome(layer.subLabelFont) { f=> setSubLabelFont(f) }
 
   setAltitudeMode(WorldWind.ABSOLUTE)
   //updateDisplayName
@@ -74,12 +78,13 @@ class FlightSymbol[T <: InFlightAircraft](val flightEntry: FlightEntry[T])
     setPosition(newT)
     attrs.setHeading(newT.heading.toDegrees)
 
+    if (hasLabel) layer.updateLabel(this)
     if (showDisplayName) updateDisplayName
     //updateAttributes
   }
 
   def setDotAttrs = {
-    setLabelText(null)
+    removeAllLabels()
     attrs.setScale(5d)
     attrs.setImage(null)
     attrs.setUsePointAsDefaultImage(true)
@@ -87,7 +92,7 @@ class FlightSymbol[T <: InFlightAircraft](val flightEntry: FlightEntry[T])
   }
 
   def setLabelAttrs = {
-    setLabelText(flightEntry.obj.cs)
+    layer.setLabel(this)
     attrs.setScale(5d)
     attrs.setImage(null)
     attrs.setUsePointAsDefaultImage(true)
@@ -97,7 +102,7 @@ class FlightSymbol[T <: InFlightAircraft](val flightEntry: FlightEntry[T])
   def setSymbolAttrs = {
     val obj = flightEntry.obj
 
-    setLabelText(obj.cs)
+    layer.setLabel(this)
     attrs.setImage(layer.image(obj))
     attrs.setScale(0.35)
     attrs.setImageOffset(Offset.CENTER)

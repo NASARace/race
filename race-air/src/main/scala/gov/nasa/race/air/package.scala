@@ -42,6 +42,12 @@ package object air {
       val id = StringUtils.capLength(cs)(8)
       f"$id%-7s $hh%02d:$mm%02d:$ss%02d ${altitude.toFeet.toInt}%6dft ${heading.toNormalizedDegrees.toInt}%3d° ${speed.toKnots.toInt}%4dkn"
     }
+
+    def flightLevel: Int = ((altitude.toFeet)/500).toInt * 5
+
+    def stateString = {
+      f"FL${flightLevel}%d ${heading.toDegrees.toInt}%03d° ${speed.toKnots.toInt}%dkn"
+    }
   }
 
   /**

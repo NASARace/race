@@ -17,6 +17,7 @@
 
 package gov.nasa.race.ww
 
+import java.awt.Font
 import java.util.concurrent.Semaphore
 
 import akka.actor.{ActorRef, Props}
@@ -99,6 +100,8 @@ class RaceView (viewerActor: RaceViewerActor) extends DeferredEyePositionListene
   setWorldWindConfiguration // NOTE - this has to happen before we load any WorldWind classes
 
   val gotoTime = config.getIntOrElse("goto-time", 4000)
+  val defaultLabelFont = config.getFontOrElse("label-font",  new Font(null,Font.PLAIN,14))
+  val defaultSubLabelFont = config.getOptionalFont("sublabel-font") // none if not explicitly set
 
   // we want to avoid several DeferredXListeners because of the context switch overhead
   // hence we have a secondary listener level here
