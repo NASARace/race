@@ -147,7 +147,7 @@ class ConsoleStatsReporter (val config: Config) extends PrintStatsReporterActor 
   val pw = new PrintWriter(System.out)
 
   override def printHeader (stats: Stats) = {
-    val title = StringUtils.padRight(s"${stats.topic} [${stats.source}]",60, ' ')
+    val title = StringUtils.padRight(s"${stats.topic} [${stats.source}]",80, ' ')
     val elapsed = StringUtils.padLeft(durationMillisToHMMSS(stats.elapsedMillis), 20, ' ')
     pw.print(ConsoleIO.reverseColor)
     pw.print(title)

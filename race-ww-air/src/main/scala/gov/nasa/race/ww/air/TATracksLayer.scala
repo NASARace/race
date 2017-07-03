@@ -68,10 +68,10 @@ class TATracksLayer (raceView: RaceView,config: Config) extends FlightLayer3D[TA
   val gotoAltitude = Feet(config.getDoubleOrElse("goto-altitude", 5000000d)) // feet above ground
 
   override def defaultSymbolColor = Color.green
-  override def defaultSubLabelFont = Some(new Font(Font.MONOSPACED,Font.PLAIN,12))
+  override def defaultSubLabelFont = Some(new Font(Font.MONOSPACED,Font.PLAIN,11))
   override def defaultPlaneImg = Images.getArrowImage(color)
-  override def defaultLabelThreshold = Meters(1200000.0).toMeters
-  override def defaultSymbolThreshold = Meters(600000.0).toMeters
+  override def defaultLabelThreshold = Meters(600000.0).toMeters
+  override def defaultSymbolThreshold = Meters(200000.0).toMeters
 
   val traconGrid =  createGrid
 
@@ -83,9 +83,6 @@ class TATracksLayer (raceView: RaceView,config: Config) extends FlightLayer3D[TA
     val track = sym.flightEntry.obj
 
     flightDetails match {
-      case FlightRenderLevel.Dot =>
-        sym.removeAllLabels
-
       case FlightRenderLevel.Label =>
         sym.setLabelText(track.cs)
         sym.removeSubLabels
@@ -94,6 +91,8 @@ class TATracksLayer (raceView: RaceView,config: Config) extends FlightLayer3D[TA
         sym.setLabelText(track.cs)
         sym.removeSubLabels
         sym.addSubLabelText(track.stateString)
+
+      case other => // no labels to set
     }
   }
   override def updateLabel (sym: FlightSymbol[TATrack]) = setLabel(sym)

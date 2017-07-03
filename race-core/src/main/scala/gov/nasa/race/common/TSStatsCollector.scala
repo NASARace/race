@@ -252,7 +252,7 @@ class TimeSeriesStats[O <: Dated,E <: TSEntryData[O]](val topic: String,
 
     buckets match {
       case Some(bc)  =>
-        pw.println(f"  ${bc.nSamples}%7d ${dur(bc.min)}%5s ${dur(bc.max)}%5s ${dur(bc.mean)}%5s")
+        pw.println(f"   ${bc.nSamples}%7d ${dur(bc.min)}%5s ${dur(bc.max)}%5s ${dur(bc.mean)}%5s")
 
         if (bc.nSamples > 0) {
           bc.processBuckets((i, c) => {
@@ -333,6 +333,7 @@ class BasicTimeSeriesEntryStats[O <: Dated] (t: Long, o: O) extends TSEntryData[
 trait TSStatsCollector[K,O <: Dated,E <: TSEntryData[O],S <: TSStatsData[O,E]] {
 
   val dropAfterMillis: Long // after which time do we remove entries that have not been updated
+  val blackoutForMillis: Long // duration for which dropped tracks should not be re-entered
   val settleTimeMillis: Long // after which time (since sim start) do we consider updates to be at a stable rate
 
   val statsData: S
@@ -370,8 +371,8 @@ trait TSStatsCollector[K,O <: Dated,E <: TSEntryData[O],S <: TSStatsData[O,E]] {
         if (!e.removed) { // regular update
           statsData.update(obj, e, isSettled)
           e.update(obj, isSettled)
-        } else { // this one is a blackout, record and (maybe) re-enter
-          statsData.blackedOut(obj,e, isSettled)
+        } else { // this one might be a blackout, record and (maybe) re-enter
+          if (t - e.tLast > blackoutForMillis) statsData.blackedOut(obj,e, isSettled)
           _add // re-enter
         }
 
@@ -445,8 +446,10 @@ trait ConfiguredTSStatsCollector[K,O <: Dated,E <: TSEntryData[O],S <: TSStatsDa
                                                                      extends TSStatsCollector[K,O,E,S] {
   val config: Config
 
-  val dropAfter = config.getFiniteDurationOrElse("drop-after", 5.minutes)
+  val dropAfter = config.getFiniteDurationOrElse("drop-after", 3.minutes)
   val dropAfterMillis = dropAfter.toMillis
+  val blackoutFor = config.getFiniteDurationOrElse("blackout_for", 2.minutes)
+  val blackoutForMillis = blackoutFor.toMillis
   val settleTimeMillis = config.getFiniteDurationOrElse("settle-time", 1.minute).toMillis
 
   def bucketCount: Int = config.getIntOrElse("bucket-count",0) // default is we don't collect sample distributions
