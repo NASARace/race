@@ -67,6 +67,13 @@ abstract class XmlParser[T] extends XmlPullParser {
     }
   }
 
+  def whileNextStartElement (onStartElem: ElementMatcher) = {
+    while (getNextElement){
+      if (isStartElement) onStartElem(tag)
+      // ignore end elements
+    }
+  }
+
   def parse (input: String): Option[T] = {
     msg = input
     initialize(input)

@@ -74,6 +74,7 @@ trait RaceActor extends Actor with ImplicitActorLogging {
   @inline final def isLocalChannel (channel: String) = channel.startsWith(LOCAL_CHANNEL)
 
   @inline final def raceActorSystem = RaceActorSystem(system)
+  @inline final def isOptional = config.getBooleanOrElse("optional", false)
 
   // override if different
   def getCapabilities: RaceActorCapabilities = {

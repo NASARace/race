@@ -22,10 +22,12 @@ import gov.nasa.race.util.DateTimeUtils._
 import org.joda.time.DateTime
 import gov.nasa.race.uom._
 
+import scala.collection.mutable.ArrayBuffer
+
 /**
   * track report for airports (e.g. generated from SWIM asdexMsg messages)
   */
-class AirportTracks (val airport: String, val tracks: Seq[Track]) {
+class AsdexTracks(val airport: String, val tracks: Seq[AsdexTrack]) {
   override def toString = {
     val d = if (!tracks.isEmpty) hhmmssZ.print(tracks.head.date) else "?"
     s"AirportTracks{$airport,date=$d,nTracks=${tracks.size}}"
@@ -33,28 +35,29 @@ class AirportTracks (val airport: String, val tracks: Seq[Track]) {
 }
 
 
-object TrackType extends Enumeration {
+object AsdexTrackType extends Enumeration {
   type TrackType = Value
   val AIRCRAFT, VEHICLE, UNKNOWN = Value
 }
 
-case class Track (trackType: TrackType.Value,
-                  id: String,
-                  date: DateTime,
-                  pos: LatLonPos,
-                  speed: Option[Speed],
-                  heading: Option[Angle],
-                  drop: Boolean,
-                  // optional fields for aircraft
-                  acId: Option[String],
-                  acType: Option[String],
-                  altitude: Option[Length]) {
+case class AsdexTrack(trackType: AsdexTrackType.Value,
+                      id: String,
+                      date: DateTime,
+                      pos: LatLonPos,
+                      speed: Option[Speed],
+                      heading: Option[Angle],
+                      drop: Boolean,
+                      // optional fields for aircraft
+                      acId: Option[String],
+                      acType: Option[String],
+                      altitude: Option[Length]) {
 
-  def isAircraft = trackType == TrackType.AIRCRAFT
-  def isGroundAircraft = trackType == TrackType.AIRCRAFT && !altitude.isDefined
+  def isAircraft = trackType == AsdexTrackType.AIRCRAFT
+  def isGroundAircraft = trackType == AsdexTrackType.AIRCRAFT && !altitude.isDefined
+  def isAirborne = altitude.isDefined
   def isMovingGroundAircraft = isGroundAircraft && heading.isDefined
-  def isAirborneAircraft = trackType == TrackType.AIRCRAFT && altitude.isDefined
-  def isVehicle = trackType == TrackType.VEHICLE
+  def isAirborneAircraft = trackType == AsdexTrackType.AIRCRAFT && altitude.isDefined
+  def isVehicle = trackType == AsdexTrackType.VEHICLE
 
   override def toString = s"Track{$id,$trackType,$pos,$date}"
 }

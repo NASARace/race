@@ -35,7 +35,8 @@ import org.joda.time.DateTime
 import scala.collection.mutable.ArrayBuffer
 
 /**
-  * experimental translator that uses stack frames to avoid the cache reset problem
+  * STDDS TATrackAndFlightPlan to TATrack translator that uses stack frames to avoid the
+  * cache reset problem
   */
 class TATrackAndFlightPlan2TATrack (val config: Config=null) extends XmlParser[Seq[TATrack]] with ConfigurableTranslator {
 
@@ -46,6 +47,8 @@ class TATrackAndFlightPlan2TATrack (val config: Config=null) extends XmlParser[S
 
   //--- our result data
   var tracks = new ArrayBuffer[TATrack](16)
+
+  setBuffered(8192) // we will get a lot of these
 
   override def flatten = true // report as single tracks
 

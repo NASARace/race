@@ -91,8 +91,8 @@ package object common {
       count += 1
       if (count >= counterThreshold){
         count = 0
-        true
-      } else false
+        false
+      } else true
     }
   }
 

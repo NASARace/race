@@ -25,7 +25,10 @@ import org.scalatest.FlatSpec
 
 class FIXM2FlightObjectSpec extends FlatSpec with RaceSpec {
   final val EPS = 0.000001
-  val xmlMsg = fileContentsAsUTF8String(baseResourceFile("fixm.xml"))
+  val xmlMsg = fileContentsAsUTF8String(baseResourceFile("fixm.xml")).get
+
+  val flightRE = "<flight ".r
+  val nFlights = flightRE.findAllIn(xmlMsg).size
 
 
   behavior of "FIXM3Message2FlightObject translator"
@@ -36,7 +39,9 @@ class FIXM2FlightObjectSpec extends FlatSpec with RaceSpec {
     res match {
       case Some(list:Seq[IdentifiableAircraft]) =>
         list.foreach { println }
-      case other => fail("failed to parse messages")
+        assert(list.size == nFlights)
+        println(s"all $nFlights FlightObjects accounted for")
+      case other => fail(s"failed to parse messages, result=$other")
     }
   }
 }

@@ -17,7 +17,7 @@
 
 package gov.nasa.race.ww
 
-import gov.nasa.race.air.{FlightPos, InFlightAircraft, Track}
+import gov.nasa.race.air.{FlightPos, InFlightAircraft, AsdexTrack}
 import gov.nasa.race.uom.Length._
 import gov.nasa.race.geo.{DatedAltitudePositionable, LatLonPos}
 import gov.nasa.worldwind.geom.Position
@@ -35,5 +35,5 @@ package object air {
   implicit def toWWPosition (e: FlightPos): Position = wwPosition(e.position, e.altitude)
   implicit def toWWPosition (e: InFlightAircraft): Position = wwPosition(e.position, e.altitude)
   implicit def toWWPosition (e: DatedAltitudePositionable): Position = wwPosition(e.position, e.altitude)
-  implicit def toWWPosition (t: Track): Position = wwPosition(t.pos, t.altitude.getOrElse(Length0))
+  implicit def toWWPosition (t: AsdexTrack): Position = wwPosition(t.pos, t.altitude.getOrElse(Length0))
 }

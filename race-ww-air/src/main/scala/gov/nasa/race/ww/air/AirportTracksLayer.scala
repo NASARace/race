@@ -21,7 +21,7 @@ import java.awt.Color
 
 import com.typesafe.config.Config
 import gov.nasa.race._
-import gov.nasa.race.air.{Airport, AirportTracks, Track}
+import gov.nasa.race.air.{Airport, AsdexTracks, AsdexTrack}
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.Messages._
 import gov.nasa.race.geo.{GreatCircle, LatLonPos}
@@ -47,7 +47,7 @@ class AirportTracksLayer (raceView: RaceView,config: Config)
                                            extends SubscribingRaceLayer(raceView,config)
                                               with DynamicRaceLayerInfo with EyePosListener {
 
-  class TrackEntry(var track: Track) extends PointPlacemark(track) {
+  class TrackEntry(var track: AsdexTrack) extends PointPlacemark(track) {
     var isAircraft = track.isAircraft // apparently it changes, so we need to store
     val attrs = new PointPlacemarkAttributes
     var id = getId(track)
@@ -57,7 +57,7 @@ class AirportTracksLayer (raceView: RaceView,config: Config)
     initAttrs(track)
     setAttributes(attrs)
 
-    def update (t: Track) = {
+    def update (t: AsdexTrack) = {
       setPosition(t)
       if (isAircraft) { // we don't change back from an aircraft into a unknown type
         attrs.setHeading(t.heading.getOrElse(Angle0).toDegrees)
@@ -72,13 +72,13 @@ class AirportTracksLayer (raceView: RaceView,config: Config)
       setAttributes(attrs) // indicates to WW that we have changed attr values
     }
 
-    def getId (t: Track) = t.acId match {
+    def getId (t: AsdexTrack) = t.acId match {
       case Some("UNKN") => t.id
       case Some(cs) => cs
       case None => t.id
     }
 
-    def initAttrs (t: Track) = {
+    def initAttrs (t: AsdexTrack) = {
       if (t.isAircraft /*&& track.heading.isDefined*/){
         attrs.setImage(planeImg)
         attrs.setScale(0.3)
@@ -125,7 +125,7 @@ class AirportTracksLayer (raceView: RaceView,config: Config)
   def selectAirport (a: Airport) = raceView.trackUserAction(gotoAirport(a))
 
   override def handleMessage = {
-    case BusEvent(_, at: AirportTracks, _) =>
+    case BusEvent(_, at: AsdexTracks, _) =>
       ifSome(selAirport){ ap =>
         if (active && ap.id == at.airport) {
           count = count + 1
@@ -136,7 +136,7 @@ class AirportTracksLayer (raceView: RaceView,config: Config)
     case other => warning(f"$name ignoring message $other%30.30s..")
   }
 
-  def updateTracks(newTracks: Seq[Track]) = {
+  def updateTracks(newTracks: Seq[AsdexTrack]) = {
     for (t <- newTracks){
       tracks.get(t.id) match {
         case Some(te) =>

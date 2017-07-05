@@ -26,11 +26,9 @@ import gov.nasa.race.uom.Angle._
 import gov.nasa.race.uom._
 
 /**
-  * filter for NasFlight messages with positions within a given area
-  *
-  * TODO - this needs to check for <enroute> elements, not just the first <pos>
+  * filter for XML messages with <pos>lat lon</pos> elements
  */
-class NasFlightPositionFilter (val center: LatLonPos, val radius: Length, val config: Config=null) extends ConfigurableFilter {
+class XmlPosFilter(val center: LatLonPos, val radius: Length, val config: Config=null) extends ConfigurableFilter {
   final val posRE =  "<pos>([-+.\\d]+) ([-+.\\d]+)</pos>".r
 
   def this (conf: Config) = this(LatLonPos(Degrees(conf.getDoubleOrElse("lat",0)),
@@ -40,15 +38,14 @@ class NasFlightPositionFilter (val center: LatLonPos, val radius: Length, val co
   override def pass (o: Any): Boolean = {
     o match {
       case txt: String =>
-        if (txt.indexOf("<ns5:NasFlight")>0) {
-          posRE.findFirstIn(txt) match {
-            case Some(posRE(msgLat,msgLon)) =>
-              val msgPos = LatLonPos( Degrees(msgLat.toDouble), Degrees(msgLon.toDouble))
-              val dist = GreatCircle.distance(center, msgPos)
-              dist < radius
-            case _ => false
-          }
-        } else false
+        posRE.findAllMatchIn(txt).exists( m => {
+          val msgLat = m.group(1)
+          val msgLon = m.group(2)
+          val msgPos = LatLonPos(Degrees(msgLat.toDouble), Degrees(msgLon.toDouble))
+          val dist = GreatCircle.distance(center, msgPos)
+          dist < radius
+        })
+
       case _ => false
     }
   }

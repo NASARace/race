@@ -27,14 +27,14 @@ import org.scalatest.FlatSpec
 /**
   * unit test for AsdexMsg2AirportTracks translator
   */
-class AsdexMsg2AirportTracksSpec extends FlatSpec with RaceSpec {
+class AsdexMsg2AsdexTracksSpec extends FlatSpec with RaceSpec {
 
   val xmlMsg = fileContentsAsUTF8String(baseResourceFile("asdex.xml"))
 
   behavior of "AsdexMsg2AirportTracks translator"
 
   "translator" should "reproduce known values" in {
-    val translator = new AsdexMsg2AirportTracks
+    val translator = new AsdexMsg2AsdexTracks
     val res = translator.translate(xmlMsg)
     println(res)
     ifSome(res) { a => a.tracks.foreach(println) }

@@ -32,96 +32,89 @@ import gov.nasa.race.uom._
 import scala.collection.mutable.ArrayBuffer
 
 /**
-  * the 12sec update (Solace) SFDPS translator
+  * FIXM MessageCollection/NasFlight to FlightPos to translator
+  *
+  * This translator has to handle both pre-Solace ns5:NasFlight and new (12 sec update)
+  * ns5:MessageCollection messages so that we can use it for current data and old archives
+  * without reconfiguration
   */
 class FIXM2FlightObject (val config: Config=null)
                  extends FIXMParser[Seq[IdentifiableAircraft]] with ConfigurableTranslator {
   setBuffered(4096)
 
-  //--- our parser value cache
-  var id, cs: String = null
-  var lat, lon, vx, vy: Double = UndefinedDouble
-  var alt: Length = UndefinedLength
-  var spd: Speed = UndefinedSpeed
-  var date, arrivalDate: DateTime = null
-  var arrivalPoint: String = null
-  resetCache
-
-  def resetCache = {
-    id = null
-    cs = null
-    lat = UndefinedDouble
-    lon = UndefinedDouble
-    vx = UndefinedDouble
-    vy = UndefinedDouble
-    alt = UndefinedLength
-    spd = UndefinedSpeed
-    date = null
-    arrivalDate = null
-    arrivalPoint = null
-  }
-
-  // TODO - this needs error reporting
-  def addFlightObject = {
-    if (cs != null) {
-      if (arrivalDate != null) {
-        flights += FlightCompleted(id, cs, arrivalPoint, arrivalDate)
-      } else {
-        if (lat.isDefined && lon.isDefined && date != null &&
-            vx.isDefined && vy.isDefined && spd.isDefined && alt.isDefined) {
-          flights += new FlightPos(id, cs, LatLonPos(Degrees(lat), Degrees(lon)),
-                                   alt, spd, Degrees(Math.atan2(vx, vy).toDegrees), date)
-        } else {
-          //println(s"@@@ $lat $lon $date $vx $vy $spd $alt")
-        }
-      }
-    }
-  }
-
   protected var flights = new ArrayBuffer[IdentifiableAircraft](20)
-  def resetFlights = flights.clear()
 
-  override def flatten = true
-
-  //--- translation
+  override def flatten = true // report as single flight objects
 
   onStartElement = {
-    case "ns5:MessageCollection" => resetFlights  // 12sec update format (Solace)
-    case "flight" => resetCache  // only in new (batched) format
-    case "ns5:NasFlight" =>  // old (1min) update format
-      resetFlights
-      resetCache
-
-    case "flightIdentification" => parseAllAttributes {
-      case "computerId" => id = value
-      case "aircraftIdentification" => cs = value
-      case other => // ignored
-    }
-
-    //--- enRoute info
-    case "position" if hasParent("enRoute") =>
-      if (parseAttribute("positionTime")) date = DateTime.parse(value)
-    case "pos" if hasParent("location") =>
-      lat = readDouble
-      lon = readNextDouble
-    case "x" => vx = readDouble // we just need it for heading computation and assume same 'uom'
-    case "y" => vy = readDouble
-    case "surveillance" if hasParent("actualSpeed") => spd = readSpeed
-    case "altitude" => alt = readAltitude
-
-    //--- completed flights
-    case "arrival" => if (parseAttribute("arrivalPoint")) arrivalPoint = value
-    case "actual" if hasSomeParent("arrival") => arrivalDate = DateTime.parse(readAttribute("time"))
-
-    case other =>  // ignore
+    case "ns5:MessageCollection" => messageCollection // new format (Solace 12sec)
+    case "ns5:NasFlight" => nasFlight // old format (one flight per msg)
+    case other => stopParsing
   }
 
-  onEndElement = {
-    case "ns5:MessageCollection" => if (flights.nonEmpty) setResult(flights)
-    case "flight" => addFlightObject  // new (12sec) update format
-    case "ns5:NasFlight" => // old (1min) update format - one flight per message
-      addFlightObject
-      if (flights.nonEmpty) setResult(flights)
-    case other =>
+  def messageCollection = {
+    flights.clear
+    whileNextStartElement {
+      case "flight" => flight
+      case _ => // ignore (<message> does not hold any info)
+    }
+    if (flights.nonEmpty) setResult(flights)
+  }
+
+  def nasFlight = {
+    flights.clear
+    flight
+    if (flights.nonEmpty) setResult(flights)
+  }
+
+  def flight = {
+    var id, cs: String = null
+    var lat, lon, vx, vy: Double = UndefinedDouble
+    var alt: Length = UndefinedLength
+    var spd: Speed = UndefinedSpeed
+    var date, arrivalDate: DateTime = null
+    var arrivalPoint: String = null
+
+    whileNextElement { // start elements
+      case "flightIdentification" => parseAllAttributes {
+        case "computerId" => id = value
+        case "aircraftIdentification" => cs = value
+        case _ => // ignored
+      }
+
+      //--- enRoute info
+      case "position" if hasParent("enRoute") =>
+        if (parseAttribute("positionTime")) date = DateTime.parse(value)
+      case "pos" if hasParent("location") =>
+        lat = readDouble
+        lon = readNextDouble
+      case "x" => vx = readDouble // we just need it for heading computation and assume same 'uom'
+      case "y" => vy = readDouble
+      case "surveillance" if hasParent("actualSpeed") => spd = readSpeed
+      case "altitude" => alt = readAltitude
+
+      //--- completed flights
+      case "arrival" => if (parseAttribute("arrivalPoint")) arrivalPoint = value
+      case "actual" if hasSomeParent("arrival") => arrivalDate = DateTime.parse(readAttribute("time"))
+
+      case _ =>  // ignore
+
+    } { // end elements
+      case "flight" | "ns5:NasFlight" =>
+        if (cs != null) {
+          if (arrivalDate != null) {
+            flights += FlightCompleted(id, cs, arrivalPoint, arrivalDate)
+          } else {
+            if (lat.isDefined && lon.isDefined && date != null &&
+              vx.isDefined && vy.isDefined && spd.isDefined && alt.isDefined) {
+              flights += new FlightPos(id, cs, LatLonPos(Degrees(lat), Degrees(lon)),
+                                       alt, spd, Degrees(Math.atan2(vx, vy).toDegrees), date)
+            } else {
+              //println(s"@@@ rejected flight: $cs $lat $lon $date $vx $vy $spd $alt")
+            }
+          }
+        }
+      case _ =>  // ignore
+    }
   }
 }
