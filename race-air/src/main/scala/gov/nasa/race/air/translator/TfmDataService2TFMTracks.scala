@@ -19,7 +19,7 @@ package gov.nasa.race.air.translator
 
 import com.typesafe.config.Config
 import gov.nasa.race.air.{TFMTrack, TFMTracks}
-import gov.nasa.race.config.ConfigurableTranslator
+import gov.nasa.race.config._
 import gov.nasa.race.geo.LatLonPos
 import gov.nasa.race.util.XmlPullParser
 import gov.nasa.race.uom.Length._
@@ -32,7 +32,7 @@ import org.joda.time.DateTime
 /**
   * translator from <ds:tfmDataService> messages to TFMTracks objects
   */
-class TfmDataService2TFMTracks(val config: Config=null) extends XmlPullParser with ConfigurableTranslator {
+class TfmDataService2TFMTracks(val config: Config=NoConfig) extends XmlPullParser with ConfigurableTranslator {
   setBuffered(8192)
 
   def translate(src: Any): Option[TFMTracks] = {

@@ -40,7 +40,7 @@ import scala.concurrent.duration.FiniteDuration
 abstract class RaceLayer (val config: Config) extends RenderableLayer with RaceLayerInfo {
 
   val name = config.getString("name")
-  val readFrom = config.getString("read-from")
+  val readFrom = config.getOptionalStringList("read-from")
   val categories = Set(config.getStringListOrElse("categories", Seq("data")): _*)
   val description = config.getStringOrElse("description", "RACE layer")
 

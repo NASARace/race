@@ -20,7 +20,7 @@ package gov.nasa.race.air.translator
 import com.github.nscala_time.time.Imports._
 import com.typesafe.config.Config
 import gov.nasa.race.air.{FlightCompleted, FlightPos, IdentifiableAircraft}
-import gov.nasa.race.config.ConfigurableTranslator
+import gov.nasa.race.config._
 import gov.nasa.race.geo.LatLonPos
 import gov.nasa.race.util.XmlPullParser
 import gov.nasa.race.uom.Length._
@@ -31,7 +31,7 @@ import gov.nasa.race.uom._
 /**
  * translator from sfdps NasFlight XML messages (FIXM) to FlightPos objects
  */
-class NasFlight2FlightObject(val config: Config=null) extends XmlPullParser with ConfigurableTranslator {
+class NasFlight2FlightObject(val config: Config=NoConfig) extends XmlPullParser with ConfigurableTranslator {
 
   def translate (src: Any): Option[IdentifiableAircraft] = {
     src match {

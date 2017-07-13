@@ -113,10 +113,12 @@ class Length protected[uom] (val d: Double) extends AnyVal {
   @inline def within (x: Length, distance: Length) = Math.abs(d - x.d) <= distance.d
 
   @inline def < (x: Length) = d < x.d
+  @inline def <= (x: Length) = d <= x.d
   @inline def > (x: Length) = d > x.d
+  @inline def >= (x: Length) = d >= x.d
   @inline def =:= (x: Length) = d == x.d
   @inline def ≡ (x: Length) = d == x.d
-  // we intentionally omit ==, <=, >=
+  // we intentionally omit ==
 
   @inline def isUndefined = d.isNaN
   @inline def isDefined = !d.isNaN

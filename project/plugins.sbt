@@ -8,10 +8,10 @@
 //--- essential test&build
 
 // application / library packaging: https://github.com/sbt/sbt-native-packager
-addSbtPlugin("com.typesafe.sbt" % "sbt-native-packager" % "1.0.6")
+addSbtPlugin("com.typesafe.sbt" % "sbt-native-packager" % "1.2.0")
 
 // single executable (uber) jar assembly: https://github.com/sbt/sbt-assembly
-addSbtPlugin("com.eed3si9n" % "sbt-assembly" % "0.14.3")
+addSbtPlugin("com.eed3si9n" % "sbt-assembly" % "0.14.5")
 
 // multi-jvm testing: https://github.com/sbt/sbt-multi-jvm
 addSbtPlugin("com.typesafe.sbt" % "sbt-multi-jvm" % "0.3.11")
@@ -24,7 +24,7 @@ addSbtPlugin("org.xerial.sbt" % "sbt-sonatype" % "1.1")
 //--- (optional) tools
 
 // document site generation with Laika: https://github.com/planet42/Laika
-addSbtPlugin("org.planet42" % "laika-sbt" % "0.6.0")
+addSbtPlugin("org.planet42" % "laika-sbt" % "0.7.0")
 
 // git commands from within sbt: https://github.com/sbt/sbt-git
 //addSbtPlugin("com.typesafe.sbt" % "sbt-git" % "0.8.5")

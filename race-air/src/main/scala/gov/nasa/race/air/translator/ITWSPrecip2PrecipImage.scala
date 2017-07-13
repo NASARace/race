@@ -21,7 +21,7 @@ import java.awt.image.{BufferedImage, DataBuffer, IndexColorModel}
 
 import com.typesafe.config.Config
 import gov.nasa.race.air.{PrecipImage, PrecipImageStore, RLEByteImageParser}
-import gov.nasa.race.config.ConfigurableTranslator
+import gov.nasa.race.config._
 import gov.nasa.race.geo.LatLonPos
 import gov.nasa.race.util.XmlPullParser
 import org.joda.time.DateTime
@@ -68,7 +68,7 @@ import gov.nasa.race.air.translator.ITWSprecip2PrecipImage._
  * Note - unfortunately the maxPrecipLevel comes *after* the data, i.e. we cannot
  * upfront detect if we should parse at all
  */
-class ITWSprecip2PrecipImage (val config: Config=null) extends XmlPullParser
+class ITWSprecip2PrecipImage (val config: Config=NoConfig) extends XmlPullParser
                             with RLEByteImageParser with ConfigurableTranslator {
   private var scanLine = new Array[Byte](2056)
   def getScanLine (w: Int) = {

@@ -20,7 +20,7 @@ package gov.nasa.race.air.translator
 
 import com.typesafe.config.Config
 import gov.nasa.race.air.{FlightCompleted, FlightPos, IdentifiableAircraft}
-import gov.nasa.race.config.ConfigurableTranslator
+import gov.nasa.race.config._
 import gov.nasa.race.geo.LatLonPos
 import gov.nasa.race.common._
 import org.joda.time.DateTime
@@ -38,7 +38,7 @@ import scala.collection.mutable.ArrayBuffer
   * ns5:MessageCollection messages so that we can use it for current data and old archives
   * without reconfiguration
   */
-class FIXM2FlightObject (val config: Config=null)
+class FIXM2FlightObject (val config: Config=NoConfig)
                  extends FIXMParser[Seq[IdentifiableAircraft]] with ConfigurableTranslator {
   setBuffered(4096)
 

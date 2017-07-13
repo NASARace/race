@@ -21,7 +21,7 @@ import java.awt.Color
 
 import com.typesafe.config.Config
 import gov.nasa.race._
-import gov.nasa.race.air.{Airport, AsdexTracks, AsdexTrack}
+import gov.nasa.race.air.{Airport, AsdexTrack, AsdexTracks}
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.Messages._
 import gov.nasa.race.geo.{GreatCircle, LatLonPos}
@@ -32,6 +32,7 @@ import gov.nasa.race.uom.Length._
 import gov.nasa.race.uom._
 import gov.nasa.race.ww.Implicits._
 import gov.nasa.race.ww.{DynamicRaceLayerInfo, EyePosListener, RaceView, SubscribingRaceLayer, _}
+import gov.nasa.worldwind.WorldWind
 import gov.nasa.worldwind.avlist.AVKey
 import gov.nasa.worldwind.geom.Position
 import gov.nasa.worldwind.render.{Offset, PointPlacemark, PointPlacemarkAttributes}
@@ -52,6 +53,7 @@ class AirportTracksLayer (raceView: RaceView,config: Config)
     val attrs = new PointPlacemarkAttributes
     var id = getId(track)
 
+    setAltitudeMode(WorldWind.ABSOLUTE)
     setPosition(track)
     setLabelText(id)
     initAttrs(track)
@@ -59,6 +61,7 @@ class AirportTracksLayer (raceView: RaceView,config: Config)
 
     def update (t: AsdexTrack) = {
       setPosition(t)
+
       if (isAircraft) { // we don't change back from an aircraft into a unknown type
         attrs.setHeading(t.heading.getOrElse(Angle0).toDegrees)
       } else {
@@ -177,14 +180,14 @@ class AirportTracksLayer (raceView: RaceView,config: Config)
     val eyeAltitude = meters2Feet(eyePos.getAltitude)
     if (selAirport.isDefined && selAirport == newAirport){ // no airport change, but check altitude
       if (active){
-        if (eyeAltitude > activeAltitude.toFeet + selAirport.get.elev.toFeet){
+        if (eyeAltitude > activeAltitude.toFeet + selAirport.get.elevation.toFeet){
           releaseCurrentAirport
         }
       }
     } else { // possible airport change
       if (active) releaseCurrentAirport
       ifSome(newAirport) { a =>
-        if (eyeAltitude <= activeAltitude.toFeet + a.elev.toFeet){
+        if (eyeAltitude <= activeAltitude.toFeet + a.elevation.toFeet){
           requestTopic(newAirport)
           selAirport = newAirport
           active = true
@@ -197,7 +200,7 @@ class AirportTracksLayer (raceView: RaceView,config: Config)
     if (airport eq Airport.NoAirport) { // just unset
       if (selAirport.isDefined) releaseCurrentAirport
     } else {
-      val alt = gotoAltitude.toMeters + airport.elev.toMeters
+      val alt = gotoAltitude.toMeters + airport.elevation.toMeters
       raceView.panTo(airport.pos, alt)
     }
   }

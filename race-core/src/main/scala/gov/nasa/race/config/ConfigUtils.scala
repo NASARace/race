@@ -33,10 +33,6 @@ import gov.nasa.race.util._
  */
 object ConfigUtils {
 
-  final val NoConfig = ConfigFactory.empty
-
-  def emptyConfig = ConfigFactory.empty
-
   def showConfig( config: Config) = {
     config.root.render( ConfigRenderOptions.defaults().setComments(false).setOriginComments(false))
   }
@@ -60,7 +56,6 @@ object ConfigUtils {
     val renderOpts = ConfigRenderOptions.defaults().setOriginComments(false).setJson(false)
     conf.root.render(renderOpts)
   }
-
 
   /**
     * implicit class to give the (Java) Config a more Scala Map like API

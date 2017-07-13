@@ -20,12 +20,14 @@ package gov.nasa.race.dds
 import com.typesafe.config.Config
 import gov.nasa.race.Show
 import gov.nasa.race.air.FlightPos
-import gov.nasa.race.config.ConfigurableTranslator
+import gov.nasa.race.config._
+import gov.nasa.race.uom.Length._
+import gov.nasa.race.uom.Speed._
+import gov.nasa.race.uom.Angle._
 import gov.nasa.race.geo.LatLonPos
 import gov.nasa.race.util.DateTimeUtils._
 import org.joda.time.DateTime
-import squants.motion.Knots
-import squants.space.{Degrees, Feet}
+
 
 import scala.language.implicitConversions
 
@@ -79,7 +81,7 @@ class FlightRecordWriter (val config: Config) extends DDSWriter[dds.FlightRecord
 
 //--- translation to/from DDS types (which are just structs)
 
-class FlightPos2FlightRecord (val config: Config=null) extends ConfigurableTranslator {
+class FlightPos2FlightRecord (val config: Config=NoConfig) extends ConfigurableTranslator {
   override def translate(src: Any): Option[Any] = {
     src match {
       case fpos: FlightPos => Some(FlightRecord.fpos2Fr(fpos))
@@ -88,7 +90,7 @@ class FlightPos2FlightRecord (val config: Config=null) extends ConfigurableTrans
   }
 }
 
-class FlightRecord2FlightPos (val config: Config=null) extends ConfigurableTranslator {
+class FlightRecord2FlightPos (val config: Config=NoConfig) extends ConfigurableTranslator {
   override def translate(src: Any): Option[Any] = {
     src match {
       case fr: dds.FlightRecord => Some(FlightRecord.fr2Fpos(fr))

@@ -59,5 +59,5 @@ case class AsdexTrack(trackType: AsdexTrackType.Value,
   def isAirborneAircraft = trackType == AsdexTrackType.AIRCRAFT && altitude.isDefined
   def isVehicle = trackType == AsdexTrackType.VEHICLE
 
-  override def toString = s"Track{$id,$trackType,$pos,$date}"
+  def toShortString = s"Track{$id,$trackType,$pos,$date}"
 }

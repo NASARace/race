@@ -20,8 +20,8 @@ package gov.nasa.race.air.translator
 import com.typesafe.config.Config
 import gov.nasa.race.air.FlightPos
 import gov.nasa.race.air.FlightPos.ChangedCS
+import gov.nasa.race.config._
 import gov.nasa.race.config.ConfigUtils._
-import gov.nasa.race.config.ConfigurableTranslator
 import gov.nasa.race.geo.LatLonPos
 import gov.nasa.race.uom.Length._
 import gov.nasa.race.uom.Angle._
@@ -127,7 +127,7 @@ object SBS2FlightPos {
   *  21: spi (flag, transponder ident activated)
   *  22: on ground (flag)
   */
-class SBS2FlightPos (val config: Config=null) extends ConfigurableTranslator {
+class SBS2FlightPos (val config: Config=NoConfig) extends ConfigurableTranslator {
   import SBS2FlightPos._
 
   var useTempCS = if (config != null) config.getBooleanOrElse("temp-cs",true) else true

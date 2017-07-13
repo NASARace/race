@@ -22,6 +22,7 @@ import akka.http.scaladsl.model.headers._
 import akka.http.scaladsl.model.{HttpEntity, _}
 import akka.util.ByteString
 import com.typesafe.config.Config
+import gov.nasa.race.config._
 import gov.nasa.race.config.ConfigUtils._
 
 import scala.collection.immutable.{Seq => ISeq}

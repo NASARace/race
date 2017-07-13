@@ -20,7 +20,7 @@ package gov.nasa.race.air.translator
 import com.typesafe.config.Config
 import gov.nasa.race.air.{AsdexTrack, AsdexTrackType, AsdexTracks}
 import gov.nasa.race.common.XmlParser
-import gov.nasa.race.config.ConfigurableTranslator
+import gov.nasa.race.config._
 import gov.nasa.race.geo.LatLonPos
 import gov.nasa.race.uom.Angle._
 import gov.nasa.race.uom.Length._
@@ -32,7 +32,7 @@ import scala.collection.mutable.ArrayBuffer
 /**
   * translator for SWIM ASDE-X asdexMsg messages to AirportTracks objects
   */
-class AsdexMsg2AsdexTracks(val config: Config=null) extends XmlParser[AsdexTracks]
+class AsdexMsg2AsdexTracks(val config: Config=NoConfig) extends XmlParser[AsdexTracks]
                                                         with ConfigurableTranslator {
   setBuffered(8192)
 

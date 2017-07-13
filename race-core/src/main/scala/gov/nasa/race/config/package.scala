@@ -17,13 +17,17 @@
 
 package gov.nasa.race
 
-import com.typesafe.config.{Config, ConfigValue}
+import com.typesafe.config.{Config, ConfigFactory, ConfigValue}
 
 /**
   * package gov.nasa.race.config contains classes that are used for RACE configuration, based on
   * the strategic com.typesafe.config library
   */
 package object config {
+
+  final val NoConfig = ConfigFactory.empty
+
+  def emptyConfig = ConfigFactory.empty
 
   // something that has a 'config' object with a 'name' entry
   trait NamedConfigurable {

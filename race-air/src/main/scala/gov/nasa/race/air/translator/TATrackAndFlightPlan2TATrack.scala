@@ -23,7 +23,7 @@ import gov.nasa.race.air.{FlightPlan, TATrack}
 import gov.nasa.race.air.TATrack.Status
 import gov.nasa.race.air.TATrack.Status.Status
 import gov.nasa.race.common.{Rev, Src, XmlParser}
-import gov.nasa.race.config.ConfigurableTranslator
+import gov.nasa.race.config._
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.geo.{LatLonPos, XYPos}
 import gov.nasa.race.uom.Angle.{Degrees, UndefinedAngle}
@@ -38,7 +38,7 @@ import scala.collection.mutable.ArrayBuffer
   * STDDS TATrackAndFlightPlan to TATrack translator that uses stack frames to avoid the
   * cache reset problem
   */
-class TATrackAndFlightPlan2TATrack (val config: Config=null) extends XmlParser[Seq[TATrack]] with ConfigurableTranslator {
+class TATrackAndFlightPlan2TATrack (val config: Config=NoConfig) extends XmlParser[Seq[TATrack]] with ConfigurableTranslator {
 
   //--- configuration
   val allowIncompleteTrack: Boolean = if (config != null) config.getBooleanOrElse("allow-incomplete", false) else false

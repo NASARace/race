@@ -87,4 +87,4 @@ object Airport {
 /**
   * represents and locates airports
   */
-case class Airport (id: String, name: String, city: String, pos: LatLonPos, elev: Length, hasAsdex: Boolean)
+case class Airport (id: String, name: String, city: String, pos: LatLonPos, elevation: Length, hasAsdex: Boolean)
