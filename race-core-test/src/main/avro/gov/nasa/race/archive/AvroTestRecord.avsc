@@ -1,0 +1,11 @@
+{
+  "type": "record",
+  "namespace": "gov.nasa.race.archive",
+  "name": "AvroTestRecord",
+  "fields": [
+    {
+      "name": "str",
+      "type": "string"
+    }
+  ]
+}

@@ -341,11 +341,13 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ImplicitActorLogging
 
       val aref = context.actorOf(props,actorName) // note this executes the ctor in another thread
 
-      // here we have to run counter to normal actor wisdom and block until we
+      // here we have to run counter to normal Akka best practices and block until we
       // either know the actor construction has succeeded, failed with an exception, or
       // failed with a timeout. In case of exceptions we want to return right away
       // All failure handling has to consider if the actor is optional or not
-      sync.get(getTimeout(actorConfig, "create-timeout").duration.toMillis) match {
+      val createTimeout = actorConfig.getFiniteDurationOrElse("create-timeout",ras.defaultActorTimeout)
+
+      sync.get(createTimeout.toMillis) match {
         case Some(success) =>  // actor construction returned, but might have failed in ctor
           if (success) { // ctor success
             info(s"actor $actorName created")
@@ -423,6 +425,7 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ImplicitActorLogging
     for ((actorRef,actorConfig) <- actors){
       val actorName = actorRef.path.name
       val isOptional = isOptionalActor(actorConfig)
+      val initTimeout = Timeout(actorConfig.getFiniteDurationOrElse("init-timeout",ras.defaultActorTimeout))
 
       val raceContext = actorConfig.getOptionalString("remote") match {
         case Some(remoteUri) => remoteContexts.getOrElse(remoteUri, createRemoteRaceContext(remoteUri))
@@ -435,7 +438,7 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ImplicitActorLogging
         case RaceActorInitializeFailed(reason) => initFailed(s"initialization of $actorName failed: $reason", isOptional)
         case TimedOut => initFailed(s"initialization timeout for $actorName", isOptional)
         case other => initFailed(s"invalid initialization response from $actorName: $other", isOptional)
-      }
+      }(initTimeout)
       checkLiveness(actorRef)
     }
   }
@@ -512,6 +515,7 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ImplicitActorLogging
     for ((actorRef,actorConfig) <- actors){
       if (isSupervised(actorRef)) { // this does not include remote lookups
         val isOptional = isOptionalActor(actorConfig)
+        val startTimeout = Timeout(actorConfig.getFiniteDurationOrElse("start-timeout",ras.defaultActorTimeout))
 
         info(s"sending StartRaceActor to ${actorRef.path.name}..")
         askForResult(actorRef ? StartRaceActor(self)) {
@@ -523,7 +527,7 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ImplicitActorLogging
             startFailed(s"starting ${actorRef.path} timed out", isOptional)
           case other => // illegal response
             startFailed(s"got unknown StartRaceActor response from ${actorRef.path.name}", isOptional)
-        }
+        }(startTimeout)
       }
     }
   }

@@ -70,7 +70,7 @@ object LayerInfoList {
       new WWLayerInfo("Open Street Map", Set("map"), "street map", false, false, defaultPanel),
       new WWLayerInfo("Earth at Night", Set("deco"), "map with night images", false, false, defaultPanel),
       new WWLayerInfo("Place Names", Set("map"), "placemarks for cities etc.", true, false, defaultPanel),
-      new WWLayerInfo("World Map", Set("widget"), "navigation control", true, false, defaultPanel),
+      new WWLayerInfo("World Map", Set("widget"), "navigation control", false, false, defaultPanel),
       new WWLayerInfo("Scale bar", Set("widget"), "", true, false, defaultPanel),
       new WWLayerInfo("View Controls", Set("widget"), "navigation control buttons", true, false, defaultPanel),
       new WWLayerInfo("Compass", Set("widget"), "", true, false, defaultPanel)

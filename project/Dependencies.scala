@@ -85,6 +85,9 @@ object Dependencies {
   val defaultLibs =  Seq(logback,typesafeConfig,nscalaTime,liftJson)
   val defaultTestLibs = Seq(scalaTest,scalaCheck,pegDown)
 
+  // Apache Avro serialization (for archiving/unarchiving)
+  val avro = "org.apache.avro" % "avro" % "latest.release" // "1.8.2"
+
   // scodec
   val scodecBits = "org.scodec" %% "scodec-bits" % "latest.release"
   val scodecCore = "org.scodec" %% "scodec-core" % "latest.release"

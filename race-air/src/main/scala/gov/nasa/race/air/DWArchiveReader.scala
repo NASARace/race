@@ -175,4 +175,6 @@ class SfdpsDWArchiveReader (istream: InputStream) extends TextDWArchiveReader(is
 
 class TfmdataDWArchiveReader(istream: InputStream) extends TextDWArchiveReader(istream, "TimeStamp=")
 
+class TaisDWArchiveReader (istream: InputStream) extends TextDWArchiveReader(istream, "timestamp=")
+
 

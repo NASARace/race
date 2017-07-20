@@ -63,6 +63,7 @@ package object core {
   def warning(msg: => String)(implicit log: LoggingAdapter): Unit = if (log.isWarningEnabled) log.warning(msg)
   def error(msg: => String)(implicit log: LoggingAdapter): Unit = if (log.isErrorEnabled) log.error(msg)
 
+  // this is only the fallback
   implicit val timeout = Timeout(System.getProperty("race.timeout", "15").toInt seconds)
 
   trait AskFailure

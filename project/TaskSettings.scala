@@ -34,6 +34,11 @@ object TaskSettings {
   lazy val mkSite = taskKey[Unit]("compile manual website")
   lazy val mkSlides = taskKey[Unit]("compile slides")
 
+  lazy val avroCompileSchemaCmd = settingKey[String]("command to compile avro schema")
+  lazy val avroSourceDirectory = settingKey[String]("source root for Avro files")
+  lazy val avroTargetDirectory = settingKey[String]("target root for Avro generated files")
+  lazy val avroCompileSchemas = taskKey[Unit]("compile avro schemas")
+
   lazy val taskSettings = Seq(
     //--- unix tree command (listing what is under current src/)
     tree := TreeTask(sourceDirectory.value),
@@ -52,6 +57,14 @@ object TaskSettings {
     //--- execute shell cmds from within SBT
     sh := ShTask(spaceDelimited("<arg>").parsed),
     aggregate in sh := false,
+
+    //--- compile Avro schemas
+    avroCompileSchemaCmd := AvroTask.defaultCompileCmd,
+    avroSourceDirectory := AvroTask.defaultSourceDirectory,
+    avroTargetDirectory := AvroTask.defaultTargetDirectory,
+    avroCompileSchemas := AvroTask.compileSchemas(avroCompileSchemaCmd.value,
+                                                  baseDirectory.value / avroSourceDirectory.value,
+                                                  baseDirectory.value / avroTargetDirectory.value),
 
     //--- Laika wrappers
 

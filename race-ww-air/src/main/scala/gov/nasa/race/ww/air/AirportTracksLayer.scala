@@ -106,7 +106,7 @@ class AirportTracksLayer (raceView: RaceView,config: Config)
       new IdAndNamePanel[Airport]( _.id, _.city), selectAirport).styled()
   }.styled('consolePanel)
 
-  val activeDistance = UsMiles(config.getDoubleOrElse("view-distance", 6d)) // in US miles
+  val activeDistance = UsMiles(config.getDoubleOrElse("view-distance", 8d)) // in US miles
   val activeAltitude = Feet(config.getDoubleOrElse("view-altitude", 30000d)) // feet above ground
   val gotoAltitude = Feet(config.getDoubleOrElse("goto-altitude", 20000d)) // feet above ground
 

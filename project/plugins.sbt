@@ -53,7 +53,6 @@ addSbtPlugin("com.typesafe.sbteclipse" % "sbteclipse-plugin" % "4.0.0")
 resolvers += Resolver.url("scoverage-bintray", url("https://dl.bintray.com/sksamuel/sbt-plugins/"))(Resolver.ivyStylePatterns)
 addSbtPlugin("org.scoverage" %% "sbt-scoverage" % "1.5.0")
 
-
 // create project dependency graph: https://github.com/dwijnand/sbt-project-graph
 // (run projectsGraphDot which creates a target/projects-graph.dot)
 // does not work with root projects ('wwjRoot' from build.sbt of 'wwjProject')

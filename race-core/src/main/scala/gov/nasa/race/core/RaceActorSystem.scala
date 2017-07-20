@@ -23,6 +23,7 @@ import akka.actor._
 import akka.event.Logging.LogLevel
 import akka.event.LoggingAdapter
 import akka.pattern.ask
+import akka.util.Timeout
 import com.typesafe.config.Config
 import gov.nasa.race._
 import gov.nasa.race.common.SettableClock
@@ -103,10 +104,18 @@ class RaceActorSystem(val config: Config) extends LogController with VerifiableA
   implicit val log = getLoggingAdapter(system)
   val classLoader = ClassLoaderUtils.setRaceClassloader(system, config.getOptionalString("classpath"))
   val bus = createBus(system)
-  val simClock = createSimClock
 
+  //--- clock initialization and delays
+  val simClock = createSimClock
   var wallStartTime = wallClockStartTime(false) // will be re-evaluated during launch
   val delayLaunch = config.getBooleanOrElse("delay-launch", false)
+
+  //--- specific timeouts
+  val defaultSystemTimeout: FiniteDuration = config.getFiniteDurationOrElse("system-timeout",20.seconds)
+  val defaultActorTimeout: FiniteDuration = config.getFiniteDurationOrElse("actor-timeout",15.seconds)
+  val createTimeout = Timeout(config.getFiniteDurationOrElse("create-timeout", defaultSystemTimeout))
+  val initTimeout = Timeout(config.getFiniteDurationOrElse("init-timeout", defaultSystemTimeout))
+  val startTimeout = Timeout(config.getFiniteDurationOrElse("start-timeout", defaultSystemTimeout))
 
   // do we allow external (remote) termination
   val allowRemoteTermination = config.getBooleanOrElse("remote-termination", false)
@@ -245,7 +254,7 @@ class RaceActorSystem(val config: Config) extends LogController with VerifiableA
       case RaceCreateFailed(reason) => error(s"creating universe $name failed with: $reason")
       case TimedOut => error(s"creating universe $name timed out")
       case e => error(s"invalid response creating universe $name: $e")
-    }
+    }(createTimeout)
   }
 
   def initializeActors = {
@@ -257,7 +266,7 @@ class RaceActorSystem(val config: Config) extends LogController with VerifiableA
       case RaceInitializeFailed(reason) => abort(s"initializing universe $name failed with: $reason")
       case TimedOut => abort(s"initializing universe $name timed out")
       case e => abort(s"invalid response initializing universe $name: $e")
-    }
+    }(initTimeout)
   }
 
   def abort (msg: String): Unit = {
@@ -279,7 +288,7 @@ class RaceActorSystem(val config: Config) extends LogController with VerifiableA
         case RaceStartFailed(reason) => abort(s"starting universe $name failed: $reason")
         case TimedOut => abort(s"starting universe $name timed out")
         case e => abort(s"invalid response starting universe $name: $e")
-      }
+      }(startTimeout)
     } else warning(s"universe $name cannot be started in state $status")
   }
 

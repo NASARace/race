@@ -35,7 +35,10 @@ trait RaceSpec extends Suite with Matchers with OptionValues with Inside with Pr
 
   def mkTestOutputDir = testOutputDir.mkdir
 
-  def testOutputFile(filename: String): File = new File(testOutputDir, filename)
+  def testOutputFile(filename: String): File = {
+    if (!testOutputDir.isFile) mkTestOutputDir
+    new File(testOutputDir, filename)
+  }
 
   def qualifiedResourceFile(filename: String): File = {
     val url = getClass.getResource(filename)
