@@ -19,7 +19,7 @@
 package gov.nasa.race.air.translator
 
 import com.typesafe.config.Config
-import gov.nasa.race.air.{FlightCompleted, FlightPos, IdentifiableAircraft}
+import gov.nasa.race.air.{FlightCompleted, FlightPos, IdentifiablePositionable}
 import gov.nasa.race.config._
 import gov.nasa.race.geo.LatLonPos
 import gov.nasa.race.common._
@@ -39,10 +39,10 @@ import scala.collection.mutable.ArrayBuffer
   * without reconfiguration
   */
 class FIXM2FlightObject (val config: Config=NoConfig)
-                 extends FIXMParser[Seq[IdentifiableAircraft]] with ConfigurableTranslator {
+                 extends FIXMParser[Seq[IdentifiablePositionable]] with ConfigurableTranslator {
   setBuffered(4096)
 
-  protected var flights = new ArrayBuffer[IdentifiableAircraft](20)
+  protected var flights = new ArrayBuffer[IdentifiablePositionable](20)
 
   override def flatten = true // report as single flight objects
 

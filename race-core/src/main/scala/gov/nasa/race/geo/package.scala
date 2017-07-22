@@ -52,9 +52,9 @@ package object geo {
   trait AltitudePositionable extends Positionable {
     def altitude: Length
   }
-  trait DatedAltitudePositionable extends AltitudePositionable {
-    def date: DateTime
-  }
+
+  trait DatedAltitudePositionable extends AltitudePositionable with Dated
+
   trait MovingPositionable extends AltitudePositionable {
     def heading: Angle
     def speed: Speed

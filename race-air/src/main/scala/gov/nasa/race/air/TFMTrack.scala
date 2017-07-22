@@ -42,7 +42,7 @@ case class TFMTracks (tracks: Seq[TFMTrack]) {
   *
   * <2do> this should not try to encode completed flights into values, separate into different object
   */
-case class TFMTrack(flightId: String,
+case class TFMTrack(id: String,
                     cs: String,
                     position: LatLonPos,
                     altitude: Length,
@@ -51,7 +51,7 @@ case class TFMTrack(flightId: String,
                     date: DateTime,
                     nextPos: Option[LatLonPos],
                     nextDate: Option[DateTime]
-                   ) extends Dated with InFlightAircraft {
+                   ) extends InFlightAircraft {
 
   val heading = if (nextPos.isDefined) GreatCircle.initialBearing(position,nextPos.get) else Degrees(0)
 }

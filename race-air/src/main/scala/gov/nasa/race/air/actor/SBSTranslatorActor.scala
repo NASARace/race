@@ -51,7 +51,7 @@ class SBSTranslatorActor (config: Config) extends TranslatorActor(config) with F
   } yield {
     flights -= oldCS
     info(s"changing c/s of $oldCS to ${fpos.cs}")
-    publish(FlightCsChanged(fpos.flightId,fpos.cs, oldCS, fpos.date))
+    publish(FlightCsChanged(fpos.id,fpos.cs, oldCS, fpos.date))
     lastFPos
   }
 

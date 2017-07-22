@@ -36,8 +36,13 @@ class AsdexTracks(val airport: String, val tracks: Seq[AsdexTrack]) {
 
 
 object AsdexTrackType extends Enumeration {
-  type TrackType = Value
-  val AIRCRAFT, VEHICLE, UNKNOWN = Value
+  type AsdexTrackType = Value
+  val Aircraft, Vehicle, Unknown = Value
+}
+
+object VerticalDirection extends Enumeration {
+  type VerticalDirection = Value
+  val Up, Down, Unknown = Value
 }
 
 case class AsdexTrack(trackType: AsdexTrackType.Value,
@@ -52,12 +57,12 @@ case class AsdexTrack(trackType: AsdexTrackType.Value,
                       acType: Option[String],
                       altitude: Option[Length]) {
 
-  def isAircraft = trackType == AsdexTrackType.AIRCRAFT
-  def isGroundAircraft = trackType == AsdexTrackType.AIRCRAFT && !altitude.isDefined
+  def isAircraft = trackType == AsdexTrackType.Aircraft
+  def isGroundAircraft = trackType == AsdexTrackType.Aircraft && !altitude.isDefined
   def isAirborne = altitude.isDefined
   def isMovingGroundAircraft = isGroundAircraft && heading.isDefined
-  def isAirborneAircraft = trackType == AsdexTrackType.AIRCRAFT && altitude.isDefined
-  def isVehicle = trackType == AsdexTrackType.VEHICLE
+  def isAirborneAircraft = trackType == AsdexTrackType.Aircraft && altitude.isDefined
+  def isVehicle = trackType == AsdexTrackType.Vehicle
 
   def toShortString = s"Track{$id,$trackType,$pos,$date}"
 }

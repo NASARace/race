@@ -53,7 +53,7 @@ class NasFlight2FlightObjectSpec extends FlatSpec with RaceSpec {
     res match {
       case Some(fpos: FlightPos) =>
         fpos.cs should be( expected.cs)
-        fpos.flightId should be (expected.flightId)
+        fpos.id should be (expected.id)
         fpos.altitude.toFeet should be (expected.altitude.toFeet +- EPS)
         fpos.speed.toKnots should be (expected.speed.toKnots +- EPS)
         fpos.position.λ.toDegrees should be (expected.position.λ.toDegrees +- EPS)

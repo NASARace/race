@@ -341,10 +341,10 @@ class RaceActorSystem(val config: Config) extends LogController with VerifiableA
   }
 
   /**
-    * some actor asked for a simClock reset
+    * some actor asks for a simClock reset
     * TODO - this does not yet handle remote RAS
     */
-  def resetSimClockRequest (requester: ActorRef, date: DateTime, tScale: Double): Boolean = {
+  def requestSimClockReset(requester: ActorRef, date: DateTime, tScale: Double): Boolean = {
     if (isLive) {
       if (commonCapabilities.supportsSimTimeReset) {
         info(s"sim clock reset on behalf of ${requester.path.name} to ($date,$tScale)")

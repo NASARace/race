@@ -19,7 +19,7 @@ package gov.nasa.race.air.filter
 
 import com.typesafe.config.Config
 import gov.nasa.race.config.ConfigUtils._
-import gov.nasa.race.air.IdentifiableAircraft
+import gov.nasa.race.air.IdentifiablePositionable
 import gov.nasa.race.config.ConfigurableFilter
 
 /**
@@ -34,7 +34,7 @@ class IdentifiableAircraftFilter (val reSpec: Seq[String], val config: Config=nu
   override def pass (o: Any): Boolean = {
     if (o != null) {
       o match {
-        case obj: IdentifiableAircraft =>
+        case obj: IdentifiablePositionable =>
           val cs = obj.cs
           regexes.exists(_.findFirstIn(cs).isDefined)
         case other => false // don't know

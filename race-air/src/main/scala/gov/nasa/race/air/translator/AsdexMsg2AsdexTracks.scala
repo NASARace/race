@@ -18,7 +18,7 @@
 package gov.nasa.race.air.translator
 
 import com.typesafe.config.Config
-import gov.nasa.race.air.{AsdexTrack, AsdexTrackType, AsdexTracks}
+import gov.nasa.race.air.{AsdexTrack, AsdexTrackType, VerticalDirection, AsdexTracks}
 import gov.nasa.race.common.XmlParser
 import gov.nasa.race.config._
 import gov.nasa.race.geo.LatLonPos
@@ -63,26 +63,34 @@ class AsdexMsg2AsdexTracks(val config: Config=NoConfig) extends XmlParser[AsdexT
     var hdg: Option[Angle] = None
     var spd: Option[Speed] = None
     var drop: Boolean = false
-    var tgtType = AsdexTrackType.UNKNOWN
+    var tgtType = AsdexTrackType.Unknown
+    var ud = VerticalDirection.Unknown
     var acId: Option[String] = None
     var acType: Option[String] = None
+    var gbs: Boolean = false
+
+    val fullReport = parseAttribute("full") && value == "true"
 
     whileNextElement {
+      //--- start elements
       case "time" => date = DateTime.parse(readText())
       case "latitude" => lat = Degrees(readDouble())
       case "longitude" => lon = Degrees(readDouble())
       case "track" => trackId = readText()
       // apparently some messages have malformed elements such as <aircraftId r="1"/>
       case "aircraftId" => if (parseTrimmedText()) acId = Some(text)
-      case "tgtType" => if (parseTrimmedText() && text == "aircraft") tgtType = AsdexTrackType.AIRCRAFT
+      case "tgtType" => tgtType = readTgtType
       case "acType" => if (parseTrimmedText()) acType = Some(text)
-      case "tse" => drop = readInt() == 1
-      case "di" => display = readInt() != 0
+      case "tse" => drop = readInt() == 1  // track service ends
+      case "di" => display = readInt() != 0  // display
+      case "ud" => ud = readVerticalDirection   // up/down
+      case "gbs" => gbs = readInt() == 1 // ground bit (default false)
       case "altitude" => alt = Some(Feet(readDouble()))
       case "heading" => hdg = Some(Degrees(readDouble()))
       case "speed" => spd = Some(UsMilesPerHour(readDouble()))
       case _ => // ignored
     } {
+      //--- end elements
       case "positionReport" =>
         if (display && (trackId != null) && lat.isDefined && lon.isDefined && (date != null)) {
           val track = new AsdexTrack(tgtType, trackId, date, LatLonPos(lat, lon), spd, hdg, drop, acId, acType, alt)
@@ -91,5 +99,25 @@ class AsdexMsg2AsdexTracks(val config: Config=NoConfig) extends XmlParser[AsdexT
         return
       case _ => // ignore
     }
+  }
+
+  def readTgtType: AsdexTrackType.Value = {
+    if (parseTrimmedText){
+      text match {
+        case "aircraft" => AsdexTrackType.Aircraft
+        case "vehicle" => AsdexTrackType.Vehicle
+        case _ => AsdexTrackType.Unknown
+      }
+    } else AsdexTrackType.Unknown
+  }
+
+  def readVerticalDirection: VerticalDirection.Value = {
+    if (parseTrimmedText){
+      text match {
+        case "up" => VerticalDirection.Up
+        case "down" => VerticalDirection.Down
+        case _ => VerticalDirection.Unknown
+      }
+    } else VerticalDirection.Unknown
   }
 }

@@ -49,4 +49,13 @@ class AvroDeserializer[T <: SpecificRecord : ClassTag] (val cls: Class[T], val f
   def toSeq: Seq[T] = contents.toList
 
   def toArray: Array[T] = contents.toArray
+
+  def map[A](f: T=>A): Seq[A] = {
+    val t = cls.newInstance()
+    val l = new ListBuffer[A]
+    while (dataFileReader.hasNext) {
+      l += f(dataFileReader.next(t))
+    }
+    l
+  }
 }

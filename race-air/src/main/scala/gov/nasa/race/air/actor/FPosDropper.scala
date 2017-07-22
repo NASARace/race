@@ -68,7 +68,7 @@ trait FPosDropper extends PublishingRaceActor with ContinuousTimeRaceActor with 
       val dt = elapsedSimTimeMillisSince(fpos.date)
       if (dt > cut){
         removeStaleFlight(fpos)  // provided by concrete class
-        if (publishDropped) publish(FlightDropped(fpos.flightId, fpos.cs, now))
+        if (publishDropped) publish(FlightDropped(fpos.id, fpos.cs, now))
         info(s"dropping $cs after $dt msec")
       }
     }

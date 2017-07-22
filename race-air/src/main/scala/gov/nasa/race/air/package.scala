@@ -29,11 +29,11 @@ import gov.nasa.race.util.StringUtils
   */
 package object air {
 
-  trait IdentifiableAircraft {
-    def flightId: String
-    def cs: String
+  trait IdentifiablePositionable {
+    def id: String // channel specific (track number, tail number etc.)
+    def cs: String // call sign (cross-channel ID)
   }
-  trait InFlightAircraft extends IdentifiableAircraft with DatedAltitudePositionable with MovingPositionable {
+  trait InFlightAircraft extends IdentifiablePositionable with DatedAltitudePositionable with MovingPositionable {
     def toShortString = {
       val d = date
       val hh = d.getHourOfDay

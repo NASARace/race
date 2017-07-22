@@ -64,19 +64,19 @@ trait FlightMessage {
   * Note that we don't use a case class here because extensibility is more important
   * than getting a free unapply() for matching (we normally just match based on cs or flightId)
   */
-class FlightPos (val flightId: String,
+class FlightPos (val id: String,
                  val cs: String,
                  val position: LatLonPos,
                  val altitude: Length,
                  val speed: Speed,
                  val heading: Angle,
-                 val date: DateTime) extends Dated with InFlightAircraft with FlightMessage {
+                 val date: DateTime) extends InFlightAircraft with FlightMessage {
 
   def this (id:String, pos: LatLonPos, alt: Length,spd: Speed,hdg: Angle, dtg: DateTime) =
     this(id, FlightPos.tempCS(id), pos,alt,spd,hdg,dtg)
 
   def hasTempCS = FlightPos.isTempCS(cs)
-  def tempCS = if (hasTempCS) cs else FlightPos.tempCS(flightId)
+  def tempCS = if (hasTempCS) cs else FlightPos.tempCS(id)
 
   // generic mechanism to dynamically attach per-event data to FlightPos objects
   var amendments = List.empty[Any]
@@ -90,14 +90,14 @@ class FlightPos (val flightId: String,
 
   def getOldCS: Option[String] = amendments.find(_.isInstanceOf[FlightPos.ChangedCS]).map(_.asInstanceOf[FlightPos.ChangedCS].oldCS)
 
-  def copyWithCS (newCS: String) = new FlightPos(flightId, newCS, position, altitude,speed,heading,date)
+  def copyWithCS (newCS: String) = new FlightPos(id, newCS, position, altitude,speed,heading,date)
 
-  override def toString = s"FlightPos($flightId,$cs,$position,${altitude.toFeet.toInt}ft,${speed.toKnots.toInt}kn,${heading.toNormalizedDegrees.toInt}°,$date)"
+  override def toString = s"FlightPos($id,$cs,$position,${altitude.toFeet.toInt}ft,${speed.toKnots.toInt}kn,${heading.toNormalizedDegrees.toInt}°,$date)"
 
   override def equals (other: Any): Boolean = {
     other match {
       case o: FlightPos =>
-        flightId == o.flightId &&
+        id == o.id &&
         cs == o.cs &&
         position == o.position &&
         altitude == o.altitude &&
@@ -111,19 +111,19 @@ class FlightPos (val flightId: String,
 
 trait FlightTerminationMessage extends FlightMessage
 
-case class FlightCompleted (flightId: String,
+case class FlightCompleted (id: String,
                             cs: String,
                             arrivalPoint: String,
-                            date: DateTime) extends Dated with IdentifiableAircraft with FlightTerminationMessage
+                            date: DateTime) extends Dated with IdentifiablePositionable with FlightTerminationMessage
 
-case class FlightDropped (flightId: String,
+case class FlightDropped (id: String,
                           cs: String,
-                          date: DateTime) extends Dated with IdentifiableAircraft with FlightTerminationMessage
+                          date: DateTime) extends Dated with IdentifiablePositionable with FlightTerminationMessage
 
-case class FlightCsChanged (flightId: String,
+case class FlightCsChanged (id: String,
                             cs: String,
                             oldCS: String,
-                            date: DateTime) extends Dated with IdentifiableAircraft
+                            date: DateTime) extends Dated with IdentifiablePositionable
 
 //-------------------------------------- supporting codecs
 /**
@@ -138,7 +138,7 @@ class FlightPosArchiveWriter (val ostream: OutputStream) extends ArchiveWriter {
     obj match {
       case fpos: FlightPos =>
         ps.print(date.getMillis); ps.print(',')
-        ps.print(fpos.flightId); ps.print(',')
+        ps.print(fpos.id); ps.print(',')
         ps.print(fpos.cs); ps.print(',')
         ps.print(fpos.position.φ.toDegrees); ps.print(',')
         ps.print(fpos.position.λ.toDegrees); ps.print(',')
@@ -212,7 +212,7 @@ class BinaryFlightPosArchiveWriter (val ostream: OutputStream) extends FramedArc
       case fpos: FlightPos =>
         val bytes = BinaryFlightPos.fposCodec.encode(
           date.getMillis ~
-            fpos.flightId ~
+            fpos.id ~
             fpos.cs ~
             fpos.position.φ.toDegrees ~ fpos.position.λ.toDegrees ~
             fpos.altitude.toFeet ~

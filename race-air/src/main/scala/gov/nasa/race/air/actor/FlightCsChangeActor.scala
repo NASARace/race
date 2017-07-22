@@ -42,7 +42,7 @@ class FlightCsChangeActor(val config: Config) extends PublishingRaceActor with S
 
   override def handleMessage = {
     case e@BusEvent(_,fpos: FlightPos,originator) if originator != self =>
-      val flightId = fpos.flightId
+      val flightId = fpos.id
       val cs = fpos.cs
 
       val oldCS = idMap.getOrElseUpdate(flightId, cs) // get+check atomic through actor

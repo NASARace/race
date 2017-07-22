@@ -19,7 +19,7 @@ package gov.nasa.race.air.translator
 
 import java.io.File
 import gov.nasa.race.util.FileUtils._
-import gov.nasa.race.air.IdentifiableAircraft
+import gov.nasa.race.air.IdentifiablePositionable
 import gov.nasa.race.test.RaceSpec
 import org.scalatest.FlatSpec
 
@@ -37,7 +37,7 @@ class FIXM2FlightObjectSpec extends FlatSpec with RaceSpec {
     val translator = new FIXM2FlightObject()
     val res = translator.translate(xmlMsg)
     res match {
-      case Some(list:Seq[IdentifiableAircraft]) =>
+      case Some(list:Seq[IdentifiablePositionable]) =>
         list.foreach { println }
         assert(list.size == nFlights)
         println(s"all $nFlights FlightObjects accounted for")

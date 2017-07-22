@@ -19,7 +19,7 @@ package gov.nasa.race.air.translator
 
 import com.github.nscala_time.time.Imports._
 import com.typesafe.config.Config
-import gov.nasa.race.air.{FlightCompleted, FlightPos, IdentifiableAircraft}
+import gov.nasa.race.air.{FlightCompleted, FlightPos, IdentifiablePositionable}
 import gov.nasa.race.config._
 import gov.nasa.race.geo.LatLonPos
 import gov.nasa.race.util.XmlPullParser
@@ -33,7 +33,7 @@ import gov.nasa.race.uom._
  */
 class NasFlight2FlightObject(val config: Config=NoConfig) extends XmlPullParser with ConfigurableTranslator {
 
-  def translate (src: Any): Option[IdentifiableAircraft] = {
+  def translate (src: Any): Option[IdentifiablePositionable] = {
     src match {
       case xml: String if xml.nonEmpty => translateText(xml)
       case Some(xml: String) if xml.nonEmpty => translateText(xml)
@@ -41,7 +41,7 @@ class NasFlight2FlightObject(val config: Config=NoConfig) extends XmlPullParser 
     }
   }
 
-  def translateText (s: String): Option[IdentifiableAircraft] = {
+  def translateText (s: String): Option[IdentifiablePositionable] = {
     initialize(s.toCharArray)
     var id = ""; var cs = "";
     var vx = 0d; var vy = 0d;

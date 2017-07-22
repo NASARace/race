@@ -45,13 +45,14 @@ trait RaceActor extends Actor with ImplicitActorLogging {
   // this is the constructor config that has to be provided by the concrete RaceActor
   val config: Config
 
-  var status = Initializing
+  val capabilities: RaceActorCapabilities = getCapabilities
   val localRaceContext: RaceContext = RaceActorSystem(system).localRaceContext
+  var status = Initializing
   var raceContext: RaceContext = null  // set during InitializeRaceActor
   
   if (supervisor == localMaster) { // means we are a toplevel RaceActor
     info(s"registering toplevel actor $self")
-    raceActorSystem.registerActor(self, config, getCapabilities)
+    raceActorSystem.registerActor(self, config, capabilities)
   } else {
     info(s"created second tier actor $self")
   }
@@ -524,7 +525,6 @@ trait SubscribingRaceActor extends RaceActor {
 trait ContinuousTimeRaceActor extends RaceActor {
   private val ras = RaceActorSystem(context.system)
   val simClock: Clock = ras.simClock
-  final val canResetClock = config.getBooleanOrElse("can-reset-clock", false)
 
   var lastSimMillis: Long = simClock.baseMillis
   var startSimTimeMillis: Long = 0
@@ -594,21 +594,6 @@ trait ContinuousTimeRaceActor extends RaceActor {
   @inline def toWallTimeMillis (ms: Long) = (ms * simClock.timeScale).toLong
 
   @inline def exceedsEndTime (d: DateTime) = simClock.exceedsEndTime(d)
-
-  final def resetSimClockRequest (d: DateTime, timeScale: Double = 1.0): Boolean = {
-    if (canResetClock) {
-      if (raceActorSystem.resetSimClockRequest(self,d,timeScale)){
-        onSyncWithRaceClock
-        true
-      } else {
-        warning("RAS rejected sim clock reset")
-        false
-      }
-    } else {
-      warning("ignored clock reset request (set 'can-reset-clock')")
-      false
-    }
-  }
 }
 
 /**
@@ -678,10 +663,17 @@ trait PeriodicRaceActor extends RaceActor {
   * for more than a configured duration.
   *
   * This is useful for replay if we don't a priori know the sim start time
+  *
+  * Note this only adjusts the clock if 'can-reset-clock' is set for this actor
   */
 trait ClockAdjuster extends ContinuousTimeRaceActor {
 
+  // clock adjustment has to be explicitly enabled in the config
+  val canResetClock = config.getBooleanOrElse("can-reset-clock", false)
+
+  // do we allow to set the clock forward (this is otherwise probably just bad data)
   val allowFutureReset = config.getBooleanOrElse("allow-future-reset", false)
+
   val maxSimClockDiff: Long = config.getOptionalFiniteDuration("max-clock-diff") match {  // optional, in sim time
     case Some(dur) => dur.toMillis
     case None => -1
@@ -689,24 +681,39 @@ trait ClockAdjuster extends ContinuousTimeRaceActor {
 
   private var isFirstClockCheck = true
 
+  /**
+    * this is the checker function that has to be called by the type that mixes in ClockAdjuster,
+    * on each event that might potentially be the first one to trigger adjustment of the global clock
+    */
+  @inline final def checkInitialClockReset(d: DateTime) = {
+    if (isFirstClockCheck) {
+      if (canResetClock) checkClockReset(d)
+      isFirstClockCheck = false
+    }
+  }
+
   // overridable in subtypes
   protected def checkClockReset(d: DateTime): Unit = {
     onSyncWithRaceClock // make sure there are no pending resets we haven't processed yet
     val elapsedMillis = elapsedSimTimeMillisSince(d)
     val dt = if (allowFutureReset) Math.abs(elapsedMillis) else elapsedMillis
     if (dt > maxSimClockDiff) {
-      resetSimClockRequest(d)
+      requestSimClockReset(d)
     }
   }
 
-  /**
-    * this is the checker function that has to be called by the type that mixes in ClockAdjuster,
-    * on each event that might potentially be the first one to trigger adjustment of the global clock
-    */
-  @inline final def checkInitialClockReset(d: DateTime) = {
-    if (canResetClock && isFirstClockCheck) {
-      checkClockReset(d)
-      isFirstClockCheck = false
+  final def requestSimClockReset(d: DateTime, timeScale: Double = 1.0): Boolean = {
+    if (canResetClock) {
+      if (raceActorSystem.requestSimClockReset(self,d,timeScale)){
+        onSyncWithRaceClock
+        true
+      } else {
+        warning("RAS rejected sim clock reset")
+        false
+      }
+    } else {
+      warning("ignored clock reset request (set 'can-reset-clock')")
+      false
     }
   }
 }

@@ -41,8 +41,8 @@ class FlightPosHeadingChecker (config: Config) extends FlightPosChecker {
   val maxHeadingChange = Degrees(config.getDoubleOrElse("max-heading-change", 45.0))
 
   override def checkPair (fpos: FlightPos, lastFPos: FlightPos): Option[FlightPosProblem] = {
-    if (fpos.flightId != lastFPos.flightId) { // Ouch - same c/s for different flights
-      Some(FlightPosProblem(fpos, lastFPos, s"callsign collision ${fpos.cs} (id1=${fpos.flightId},id2=${lastFPos.flightId})"))
+    if (fpos.id != lastFPos.id) { // Ouch - same c/s for different flights
+      Some(FlightPosProblem(fpos, lastFPos, s"callsign collision ${fpos.cs} (id1=${fpos.id},id2=${lastFPos.id})"))
 
     } else {
       val dt = (fpos.date.getMillis - lastFPos.date.getMillis) / 1000.0 // fractional seconds
