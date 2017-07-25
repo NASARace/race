@@ -40,6 +40,25 @@ trait RaceSpec extends Suite with Matchers with OptionValues with Inside with Pr
     new File(testOutputDir, filename)
   }
 
+  def emptyTestOutputFile(filename: String): File = {
+    val f = testOutputFile(filename)
+    if (f.isFile) f.delete
+    f
+  }
+
+  /**
+    * NOTE - do not use the same filename in concurrent tests, which would result in race conditions that make them fail
+    */
+  def withEmptyTestOutputFile(filename: String)(test: File=>Unit) = {
+    val file = testOutputFile(filename)
+    try {
+      if (file.isFile) file.delete // reset
+      test(file)
+    } finally {
+      if (file.isFile) file.delete
+    }
+  }
+
   def qualifiedResourceFile(filename: String): File = {
     val url = getClass.getResource(filename)
     if (url != null) {

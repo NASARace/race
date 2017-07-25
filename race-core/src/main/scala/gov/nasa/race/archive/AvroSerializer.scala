@@ -33,14 +33,19 @@ class AvroSerializer[T <: SpecificRecord] (val cls: Class[T], val file: File) {
   val datumWriter = new SpecificDatumWriter[T](cls)
   val dataFileWriter = new DataFileWriter[T](datumWriter)
 
-  def serialize (ts: Seq[T]) = {
+  private def serialize (f: => Any): Unit = {
     try {
       create
-      append(ts)
+      f
     } finally {
       close
     }
   }
+
+  def serialize (ts: Seq[T]): Unit = serialize(append(ts))
+  def serializeMapped[A](as: Seq[A])(f: A=>T): Unit = serialize( appendMapped(as)(f))
+  def serializeMappedCache[A](as: Seq[A])(f: (A,T)=>Unit): Unit = serialize( appendMappedCache(as,cls.newInstance)(f))
+
 
   def create: Unit = {
     val schema = cls.getMethod("getClassSchema").invoke(null).asInstanceOf[Schema]
@@ -59,6 +64,19 @@ class AvroSerializer[T <: SpecificRecord] (val cls: Class[T], val file: File) {
 
   def append(ts: Array[T]): AvroSerializer[T] = {
     ts.foreach(dataFileWriter.append)
+    this
+  }
+
+  def appendMapped[A](as: Seq[A])(f: A=>T): AvroSerializer[T] = {
+    as.foreach( a=> dataFileWriter.append(f(a)))
+    this
+  }
+
+  def appendMappedCache[A](as: Seq[A], t: T = cls.newInstance)(f: (A,T)=>Unit): AvroSerializer[T] = {
+    as.foreach( a=> {
+      f(a,t)
+      dataFileWriter.append(t)
+    })
     this
   }
 
