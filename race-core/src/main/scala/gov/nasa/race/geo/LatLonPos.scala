@@ -35,7 +35,9 @@ case class LatLonPos (val φ: Angle, val λ: Angle) {
     f"LatLonPos{φ=${φ.toDegrees}%+3.5f°,λ=${λ.toDegrees}%+3.5f°}"
   }
 
-  def =:= (other: LatLonPos): Boolean = (φ =:= other.φ) && (λ =:= other.λ)
+  @inline def =:= (other: LatLonPos): Boolean = (φ =:= other.φ) && (λ =:= other.λ)
+
+  @inline def isDefined = φ.isDefined && λ.isDefined
 }
 
 /**
@@ -52,5 +54,7 @@ case class LatLonAltPos (val φ: Angle, val λ: Angle, val altitude: Length) {
     f"LatLonPos{φ=${φ.toDegrees}%+3.3f°,λ=${λ.toDegrees}%+3.3f°,alt=${altitude.toMeters}m"
   }
 
-  def =:= (other: LatLonAltPos): Boolean = (φ =:= other.φ) && (λ =:= other.λ) && (altitude =:= other.altitude)
+  @inline def =:= (other: LatLonAltPos): Boolean = (φ =:= other.φ) && (λ =:= other.λ) && (altitude =:= other.altitude)
+
+  @inline def isDefined = φ.isDefined && λ.isDefined && altitude.isDefined
 }

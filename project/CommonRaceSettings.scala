@@ -8,12 +8,14 @@ import sbt.{Keys, StdoutOutput, _}
   */
 object CommonRaceSettings {
 
+  val scalaVer = "2.12.3" // keep it as a ordinary var for libs that are Scala version dependent (e.g. scala-reflect)
+
   lazy val commonRaceSettings =
       PluginSettings.pluginSettings ++
       TaskSettings.taskSettings ++
       Seq(
-        scalaVersion := "2.12.2",
-        scalacOptions ++= Seq("-unchecked", "-deprecation", "-feature"),
+        scalaVersion := "2.12.3",
+        scalacOptions ++= Seq("-unchecked", "-deprecation", "-feature", "-opt-inline-from:<sources>"),
         resolvers ++= Dependencies.dependencyResolvers,
 
         fork in run := true,

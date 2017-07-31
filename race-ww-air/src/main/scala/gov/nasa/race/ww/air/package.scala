@@ -35,5 +35,5 @@ package object air {
   implicit def toWWPosition (e: FlightPos): Position = wwPosition(e.position, e.altitude)
   implicit def toWWPosition (e: InFlightAircraft): Position = wwPosition(e.position, e.altitude)
   implicit def toWWPosition (e: DatedAltitudePositionable): Position = wwPosition(e.position, e.altitude)
-  implicit def toWWPosition (t: AsdexTrack): Position = wwPosition(t.pos, t.altitude.getOrElse(Length0))
+  implicit def toWWPosition (t: AsdexTrack): Position = wwPosition(t.pos, t.altitude.orElse(Length0))
 }

@@ -17,24 +17,30 @@
 
 package gov.nasa.race.air.translator
 
+import java.lang.Double.isFinite
+
 import com.typesafe.config.Config
-import gov.nasa.race.air.{AsdexTrack, AsdexTrackType, VerticalDirection, AsdexTracks}
+import gov.nasa.race.air.{AsdexTrack, AsdexTrackType, AsdexTracks, VerticalDirection}
 import gov.nasa.race.common.XmlParser
 import gov.nasa.race.config._
 import gov.nasa.race.geo.LatLonPos
+import gov.nasa.race.ifNotNull
 import gov.nasa.race.uom.Angle._
 import gov.nasa.race.uom.Length._
 import gov.nasa.race.uom.Speed._
-import gov.nasa.race.uom._
 import org.joda.time.DateTime
+
+import scala.Double.NaN
 import scala.collection.mutable.ArrayBuffer
 
 /**
-  * translator for SWIM ASDE-X asdexMsg messages to AirportTracks objects
+  * translator for SWIM ASDE-X asdexMsg messages to raw AsdexTracks (with incomplete delta info)
   */
 class AsdexMsg2AsdexTracks(val config: Config=NoConfig) extends XmlParser[AsdexTracks]
                                                         with ConfigurableTranslator {
   setBuffered(8192)
+
+  //-- the XML messages we handle
 
   onStartElement = {
     case "asdexMsg" => asdexMsg
@@ -46,7 +52,7 @@ class AsdexMsg2AsdexTracks(val config: Config=NoConfig) extends XmlParser[AsdexT
     val tracks = new ArrayBuffer[AsdexTrack]
 
     whileNextElement {
-      case "airport" => airport = readText
+      case "airport" => airport = setAirport(readText)
       case "positionReport" => positionReport(tracks)
     } {
       case "asdexMsg" => setResult(new AsdexTracks(airport,tracks))
@@ -55,69 +61,100 @@ class AsdexMsg2AsdexTracks(val config: Config=NoConfig) extends XmlParser[AsdexT
   }
 
   def positionReport (tracks: ArrayBuffer[AsdexTrack]): Unit = {
+    // note that we have to use different values for optionals that might not be in a delta update so that
+    // we can distinguish from cached values
     var display = true
     var trackId: String = null
     var date: DateTime = null
-    var lat, lon: Angle = UndefinedAngle
-    var alt: Option[Length] = None
-    var hdg: Option[Angle] = None
-    var spd: Option[Speed] = None
+    var latDeg, lonDeg: Double = NaN
+    var altFt: Double = NaN
+    var hdgDeg: Double = NaN
+    var spdMph: Double = NaN
     var drop: Boolean = false
-    var tgtType = AsdexTrackType.Unknown
-    var ud = VerticalDirection.Unknown
-    var acId: Option[String] = None
-    var acType: Option[String] = None
+    var tgtType: String = null
+    var ud: String = null
+    var acId: String = null
+    var acType: String = null
     var gbs: Boolean = false
 
     val fullReport = parseAttribute("full") && value == "true"
 
     whileNextElement {
       //--- start elements
-      case "time" => date = DateTime.parse(readText())
-      case "latitude" => lat = Degrees(readDouble())
-      case "longitude" => lon = Degrees(readDouble())
       case "track" => trackId = readText()
+      case "time" => date = DateTime.parse(readText())
+      case "latitude" => latDeg = readDouble
+      case "longitude" => lonDeg = readDouble
       // apparently some messages have malformed elements such as <aircraftId r="1"/>
-      case "aircraftId" => if (parseTrimmedText()) acId = Some(text)
-      case "tgtType" => tgtType = readTgtType
-      case "acType" => if (parseTrimmedText()) acType = Some(text)
+
       case "tse" => drop = readInt() == 1  // track service ends
       case "di" => display = readInt() != 0  // display
-      case "ud" => ud = readVerticalDirection   // up/down
+      case "ud" => ud = readText   // up/down
       case "gbs" => gbs = readInt() == 1 // ground bit (default false)
-      case "altitude" => alt = Some(Feet(readDouble()))
-      case "heading" => hdg = Some(Degrees(readDouble()))
-      case "speed" => spd = Some(UsMilesPerHour(readDouble()))
+
+      case "aircraftId" => acId = readText
+      case "tgtType" => tgtType = readText
+      case "acType" => acType = readText
+      case "altitude" => altFt = readDouble
+      case "heading" => hdgDeg = readDouble
+      case "speed" => spdMph = readDouble
       case _ => // ignored
     } {
       //--- end elements
       case "positionReport" =>
-        if (display && (trackId != null) && lat.isDefined && lon.isDefined && (date != null)) {
-          val track = new AsdexTrack(tgtType, trackId, date, LatLonPos(lat, lon), spd, hdg, drop, acId, acType, alt)
-          tracks += track
+        // our minimal requirements are a dated lat/lon position and a trackId
+        if (trackId != null && (date != null)) {
+          ifNotNull(createTrack(trackId, date, display, latDeg, lonDeg, altFt, hdgDeg, spdMph,
+            drop, tgtType, ud, acId, acType, gbs))( tracks += _)
         }
-        return
+        return // done
       case _ => // ignore
     }
   }
 
-  def readTgtType: AsdexTrackType.Value = {
-    if (parseTrimmedText){
-      text match {
-        case "aircraft" => AsdexTrackType.Aircraft
-        case "vehicle" => AsdexTrackType.Vehicle
-        case _ => AsdexTrackType.Unknown
-      }
-    } else AsdexTrackType.Unknown
+  //-- override these if we report full tracks (as opposed to deltas)
+  protected def setAirport (ap: String) = ap
+
+  protected def createTrack (trackId: String, date: DateTime, display: Boolean,
+                   latDeg: Double, lonDeg: Double,
+                   altFt: Double, hdgDeg: Double, spdMph: Double,
+                   drop: Boolean, tgtType: String, ud: String,
+                   acId: String, acType: String, gbs: Boolean): AsdexTrack = {
+
+    // if input values are defined, use those. Otherwise use the last value or the fallback if there was none
+    val lat = if (isFinite(latDeg)) Degrees(latDeg) else UndefinedAngle
+    val lon = if (isFinite(lonDeg)) Degrees(lonDeg) else UndefinedAngle
+
+    if (lat.isDefined && lon.isDefined) {
+      val alt = if (isFinite(altFt)) Feet(altFt) else UndefinedLength
+      val hdg = if (isFinite(hdgDeg)) Degrees(hdgDeg) else UndefinedAngle
+      val spd = if (isFinite(spdMph)) UsMilesPerHour(spdMph) else UndefinedSpeed
+      val cs = if (acId != null) getCallsign(acId,trackId) else trackId
+      val act = if (acType != null) Some(acType) else None
+      val tt = if (tgtType != null) getTrackType(tgtType) else AsdexTrackType.Unknown
+      val vert = if (ud != null) getVerticalDirection(ud) else VerticalDirection.Unknown
+      new AsdexTrack(trackId, cs, date, LatLonPos(lat, lon), spd, hdg, alt, tt, display, drop, vert, gbs, act)
+
+    } else null
   }
 
-  def readVerticalDirection: VerticalDirection.Value = {
-    if (parseTrimmedText){
-      text match {
-        case "up" => VerticalDirection.Up
-        case "down" => VerticalDirection.Down
-        case _ => VerticalDirection.Unknown
-      }
-    } else VerticalDirection.Unknown
+  //--- specific text transformers
+
+  def getTrackType (tt: String) = {
+    tt match {
+      case "aircraft" => AsdexTrackType.Aircraft
+      case "vehicle" => AsdexTrackType.Vehicle
+      case _ => AsdexTrackType.Unknown
+    }
   }
+
+  def getVerticalDirection (ud: String) = {
+    ud match {
+      case "up" => VerticalDirection.Up
+      case "down" => VerticalDirection.Down
+      case _ => VerticalDirection.Unknown
+    }
+  }
+
+  def getCallsign (s: String, trackId: String) = if (s == "UNKN") trackId else s
 }

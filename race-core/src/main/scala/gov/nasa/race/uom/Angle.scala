@@ -108,15 +108,16 @@ class Angle protected[uom] (val d: Double) extends AnyVal {
     Math.abs(normalizeRadians(normalizeRadians(d) - normalizeRadians(x.d))) <= tolerance.d
   }
 
-
   @inline def < (x: Angle) = d < x.d
   @inline def > (x: Angle) = d > x.d
-  @inline def =:= (x: Angle) = d == x.d
+  @inline def =:= (x: Angle) = d == x.d // use this if you really mean equality
   @inline def ≡ (x: Angle) = d == x.d
   // we intentionally omit ==, <=, >=
 
+  //-- undefined value handling (value based alternative for finite cases that would otherwise require Option)
   @inline def isUndefined = d.isNaN
   @inline def isDefined = !d.isNaN
+  @inline def orElse(fallback: Angle) = if (isDefined) this else fallback
 
   //--- string converters
   override def toString = show // NOTE - calling this will cause allocation, use 'show'

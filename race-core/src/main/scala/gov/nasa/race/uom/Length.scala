@@ -116,12 +116,15 @@ class Length protected[uom] (val d: Double) extends AnyVal {
   @inline def <= (x: Length) = d <= x.d
   @inline def > (x: Length) = d > x.d
   @inline def >= (x: Length) = d >= x.d
-  @inline def =:= (x: Length) = d == x.d
+  @inline def =:= (x: Length) = d == x.d  // use this if you really mean equality
   @inline def ≡ (x: Length) = d == x.d
-  // we intentionally omit ==
 
+  // we intentionally omit == since this is based on Double
+
+  //-- undefined value handling (value based alternative for finite cases that would otherwise require Option)
   @inline def isUndefined = d.isNaN
   @inline def isDefined = !d.isNaN
+  @inline def orElse(fallback: Length) = if (isDefined) this else fallback
 
   override def toString = show   // calling this would cause allocation
   def show = s"${d}m"

@@ -39,6 +39,7 @@ import scala.concurrent.duration._
   * different airports
   *
   * TODO - we should periodically purge old tracks from the 'lastTracks' cache
+  * TODO - this is going away once AsdexTrack and FlightPos are merged
   */
 class AsdexTrack2FlightPos (val config: Config=NoConfig) extends ConfigurableTranslator {
 
@@ -79,27 +80,23 @@ class AsdexTrack2FlightPos (val config: Config=NoConfig) extends ConfigurableTra
   }
 
   def translateTrack (track: AsdexTrack): Option[FlightPos] = {
-    track.altitude match {
-      case Some(alt) =>
-        if (alt >= airborneAltitude) {
-          val spd = track.speed match {
-            case Some(v) =>
-              lastTracks -= track.id
-              v
-            case None => estimateSpeed(track)
-          }
+    val alt = track.altitude
+    if (alt.isDefined) {
+      if (alt >= airborneAltitude) {
+        var spd = track.speed
+        if (spd.isDefined) {
+          lastTracks -= track.id
+        } else {
+          spd = estimateSpeed(track)
+        }
 
-          track.heading match {
-            case Some(hdg) =>
-              val cs = track.acId.getOrElse(track.id)
-              Some(FlightPos(track.id,cs,track.pos,alt,spd,hdg,track.date))
+        val hdg = track.heading
+        if (hdg.isDefined) {
+          Some(FlightPos(track.id, track.cs, track.pos, alt, spd, hdg, track.date))
+        } else None
 
-            case None => None
-          }
-        } else None // too low
-
-      case None => None // no altitude, we don't know if it is airborne
-    }
+      } else None // too low
+    } else None // no defined altitude
   }
 
   def estimateSpeed (track: AsdexTrack): Speed = {

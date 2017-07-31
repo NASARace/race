@@ -79,12 +79,14 @@ class Speed protected[uom] (val d: Double) extends AnyVal {
 
   @inline def < (x: Speed) = d < x.d
   @inline def > (x: Speed) = d > x.d
-  @inline def =:= (x: Speed) = d == x.d
+  @inline def =:= (x: Speed) = d == x.d  // use this if you really mean equality
   @inline def ≡ (x: Speed) = d == x.d
   // we intentionally omit ==, <=, >=
 
+  //-- undefined value handling (value based alternative for finite cases that would otherwise require Option)
   @inline def isUndefined = d.isNaN
   @inline def isDefined = !d.isNaN
+  @inline def orElse(fallback: Speed) = if (isDefined) this else fallback
 
   override def toString = show
   def show = s"${d}m/s"

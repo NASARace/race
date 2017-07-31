@@ -53,7 +53,7 @@ object Dependencies {
   val scalaXml = "org.scala-lang.modules" % "scala-xml_2.12" % "latest.release"
 
   //--- new scala reflection (TypeTags etc.)
-  val scalaReflect =  "org.scala-lang" % "scala-reflect" % "2.12.2"
+  val scalaReflect =  "org.scala-lang" % "scala-reflect" % CommonRaceSettings.scalaVer // "2.12.3"
 
   //--- scalaTags HTML generator
   val scalaTags = "com.lihaoyi" %% "scalatags" % "latest.release"

@@ -45,17 +45,23 @@ object VerticalDirection extends Enumeration {
   val Up, Down, Unknown = Value
 }
 
-case class AsdexTrack(trackType: AsdexTrackType.Value,
-                      id: String,
+case class AsdexTrack(id: String,
+                      cs: String,
                       date: DateTime,
                       pos: LatLonPos,
-                      speed: Option[Speed],
-                      heading: Option[Angle],
+
+                      // note - these can have undefined values (we don't use Option to be abe to merge with FlightPos)
+                      speed: Speed,
+                      heading: Angle,
+                      altitude: Length,
+
+                      // asde-x specifics
+                      trackType: AsdexTrackType.Value,
+                      display: Boolean,
                       drop: Boolean,
-                      // optional fields for aircraft
-                      acId: Option[String],
-                      acType: Option[String],
-                      altitude: Option[Length]) {
+                      vertical: VerticalDirection.Value,  // up/down
+                      onGround: Boolean,  // ground bit set
+                      acType: Option[String]) {
 
   def isAircraft = trackType == AsdexTrackType.Aircraft
   def isGroundAircraft = trackType == AsdexTrackType.Aircraft && !altitude.isDefined

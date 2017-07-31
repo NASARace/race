@@ -17,23 +17,22 @@
 
 package gov.nasa.race.air.translator
 
+import java.lang.Double.isFinite
+
 import com.typesafe.config.Config
 import gov.nasa.race._
-import gov.nasa.race.air.{AsdexTrack, AsdexTrackType, VerticalDirection, AsdexTracks}
-import gov.nasa.race.common.XmlParser
+import gov.nasa.race.air.{AsdexTrack, AsdexTrackType, VerticalDirection}
 import gov.nasa.race.config._
 import gov.nasa.race.geo.LatLonPos
 import gov.nasa.race.uom.Angle._
 import gov.nasa.race.uom.Length._
 import gov.nasa.race.uom.Speed._
-import gov.nasa.race.uom._
-import scala.Double.{NaN}
-import java.lang.Double.{isFinite}
 import org.joda.time.DateTime
-import scala.collection.mutable.{ArrayBuffer,HashMap}
+
+import scala.collection.mutable.HashMap
 
 /**
-  * translator for SWIM ASDE-X asdexMsg messages to AirportTracks objects
+  * translator for SWIM ASDE-X asdexMsg messages to full AsdexTracks
   *
   * NOTE - asde-x track updates come in full- and delta- positionReports. This is the stateful translator version
   * that caches records in order to make sure we don't loose AsdexTrack values for delta-reports
@@ -45,126 +44,51 @@ import scala.collection.mutable.{ArrayBuffer,HashMap}
   * This implementation makes heavy use of special values (null, NaN) for optional fields and hence is not very
   * scalatic in order to avoid heap pressure (this is a high volume data stream)
   */
-class AsdexMsg2FullAsdexTracks(val config: Config=NoConfig) extends XmlParser[AsdexTracks] with ConfigurableTranslator {
-  setBuffered(8192)
+class AsdexMsg2FullAsdexTracks(config: Config=NoConfig) extends AsdexMsg2AsdexTracks(config) {
 
   //--- our cache to accumulate track infos over full/delta reports
   var lastAirport: String = null // currently cached airport
   var lastUpdate: Long = 0 // wall time epoch of last update
   val lastTracks = new HashMap[String,AsdexTrack]
 
-
-  //-- the XML messages we handle
-  onStartElement = {
-    case "asdexMsg" => asdexMsg
-    case other => stopParsing
+  override protected def setAirport (airportId: String) = {
+    if (airportId != lastAirport) {
+      lastAirport = airportId
+      lastTracks.clear
+    }
+    airportId
   }
 
-  def asdexMsg = {
-    var airport: String = null
-    val tracks = new ArrayBuffer[AsdexTrack]
 
-    whileNextElement {
-      case "airport" =>
-        airport = readText
-        if (airport != lastAirport) {
-          lastAirport = airport
-          lastTracks.clear
-        }
-      case "positionReport" => positionReport(tracks)
-    } {
-      case "asdexMsg" => setResult(new AsdexTracks(airport,tracks))
-      case _ => // ignore
-    }
+  @inline def fromDouble[A](d: Double, f: Double=>A, g: AsdexTrack=>A, fallback: A)(implicit last: Option[AsdexTrack]): A = {
+    if (isFinite(d)) f(d) else withSomeOrElse(last,fallback)(g)
+  }
+  @inline def fromString[A](s: String, f: String=>A, g: AsdexTrack=>A, fallback: A)(implicit last: Option[AsdexTrack]): A = {
+    if (s != null) f(s) else withSomeOrElse(last, fallback)(g)
   }
 
-  def positionReport (tracks: ArrayBuffer[AsdexTrack]): Unit = {
-    // note that we have to use different values for optionals that might not be in a delta update so that
-    // we can distinguish from cached values
-    var display = true
-    var trackId: String = null
-    var date: DateTime = null
-    var latDeg, lonDeg: Double = NaN
-    var altFt: Double = NaN
-    var hdgDeg: Double = NaN
-    var spdMph: Double = NaN
-    var drop: Boolean = false
-    var tgtType: String = null
-    var ud: String = null
-    var acId: String = null
-    var acType: String = null
-    var gbs: Boolean = false
+  // here we use the previously accumulated info to turn delta reports into full reports
+  override protected def createTrack (trackId: String, date: DateTime, display: Boolean,
+                                      latDeg: Double, lonDeg: Double,
+                                      altFt: Double, hdgDeg: Double, spdMph: Double,
+                                      drop: Boolean, tgtType: String, ud: String,
+                                      acId: String, acType: String, gbs: Boolean): AsdexTrack = {
+    implicit val last = lastTracks.get(trackId)
 
-    val fullReport = parseAttribute("full") && value == "true"
+    // if input values are defined, use those. Otherwise use the last value or the fallback if there was none
+    val lat = fromDouble(latDeg, Degrees, _.pos.φ, UndefinedAngle)
+    val lon = fromDouble(lonDeg, Degrees, _.pos.λ, UndefinedAngle)
+    val alt = fromDouble(altFt, Feet, _.altitude, UndefinedLength)
+    val hdg = fromDouble(hdgDeg, Degrees, _.heading, UndefinedAngle)
+    val spd = fromDouble(spdMph, UsMilesPerHour, _.speed, UndefinedSpeed)
+    val cs = fromString(acId, getCallsign(_,trackId), _.cs, trackId)
+    val act = fromString(acType, Some(_), _.acType, None)
+    val tt = fromString(tgtType, getTrackType, _.trackType, AsdexTrackType.Unknown)
+    val vert = fromString(ud, getVerticalDirection, _.vertical, VerticalDirection.Unknown)
 
-    whileNextElement {
-      //--- start elements
-      case "track" => trackId = readText()
-      case "time" => date = DateTime.parse(readText())
-      case "latitude" => latDeg = readDouble
-      case "longitude" => lonDeg = readDouble
-      // apparently some messages have malformed elements such as <aircraftId r="1"/>
+    val track = new AsdexTrack(trackId,cs,date,LatLonPos(lat,lon),spd,hdg,alt,tt,display,drop,vert,gbs,act)
+    lastTracks += trackId -> track
 
-      case "tse" => drop = readInt() == 1  // track service ends
-      case "di" => display = readInt() != 0  // display
-      case "ud" => ud = readText   // up/down
-      case "gbs" => gbs = readInt() == 1 // ground bit (default false)
-
-      case "aircraftId" => acId = readText
-      case "tgtType" => tgtType = readText
-      case "acType" => acType = readText
-      case "altitude" => altFt = readDouble
-      case "heading" => hdgDeg = readDouble
-      case "speed" => spdMph = readDouble
-      case _ => // ignored
-    } {
-      //--- end elements
-      case "positionReport" =>
-        // our minimal requirements are a dated lat/lon position and a trackId
-        if (display && trackId != null && (date != null)) {
-          val last = lastTracks.get(trackId)
-          val track = if (last.isDefined) {
-            val lastTrack = last.get
-            if (latDeg.isNaN) latDeg = lastTrack.pos.φ.toDegrees // sometimes we get only one coordinate
-            if (lonDeg.isNaN) lonDeg = lastTrack.pos.λ.toDegrees
-            val cs = if (acId == null) lastTrack.acId.orElse(Some(trackId)) else Some(acId)
-            val tt = if (tgtType == null) lastTrack.trackType else getTrackType(tgtType)
-            val alt = if (altFt.isNaN) lastTrack.altitude else Some(Feet(altFt))
-            val spd = if (spdMph.isNaN) lastTrack.speed else Some(UsMilesPerHour(spdMph))
-            val hdg = if (hdgDeg.isNaN) lastTrack.heading else Some(Degrees(hdgDeg))
-            val act = if (acType == null) lastTrack.acType else Some(acType)
-            new AsdexTrack(tt, trackId, date, LatLonPos.fromDegrees(latDeg,lonDeg), spd, hdg, drop, cs, act, alt)
-          } else {
-            val cs = if (acId == null) Some(trackId) else Some(acId)
-            val tt = if (tgtType == null) AsdexTrackType.Unknown else getTrackType(tgtType)
-            val alt = if (altFt.isNaN) None else Some(Feet(altFt))
-            val spd = if (spdMph.isNaN) None else Some(UsMilesPerHour(spdMph))
-            val hdg = if (hdgDeg.isNaN) None else Some(Degrees(hdgDeg))
-            val act = if (acType == null) None else Some(acType)
-            new AsdexTrack(tt, trackId, date, LatLonPos.fromDegrees(latDeg,lonDeg), spd, hdg, drop, cs, act, alt)
-          }
-
-          tracks += track
-          lastTracks += trackId -> track
-        }
-        return // done
-      case _ => // ignore
-    }
-  }
-
-  def getTrackType (tt: String) = {
-    tt match {
-      case "aircraft" => AsdexTrackType.Aircraft
-      case "vehicle" => AsdexTrackType.Vehicle
-      case _ => AsdexTrackType.Unknown
-    }
-  }
-
-  def getVerticalDirection (ud: String) = {
-    ud match {
-      case "up" => VerticalDirection.Up
-      case "down" => VerticalDirection.Down
-      case _ => VerticalDirection.Unknown
-    }
+    if (track.pos.isDefined) track else null
   }
 }

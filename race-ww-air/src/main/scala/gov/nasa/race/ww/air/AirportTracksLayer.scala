@@ -51,7 +51,7 @@ class AirportTracksLayer (raceView: RaceView,config: Config)
   class TrackEntry(var track: AsdexTrack) extends PointPlacemark(track) {
     var isAircraft = track.isAircraft // apparently it changes, so we need to store
     val attrs = new PointPlacemarkAttributes
-    var id = getId(track)
+    var id = track.cs
 
     setAltitudeMode(WorldWind.ABSOLUTE)
     setPosition(track)
@@ -63,10 +63,10 @@ class AirportTracksLayer (raceView: RaceView,config: Config)
       setPosition(t)
 
       if (isAircraft) { // we don't change back from an aircraft into a unknown type
-        attrs.setHeading(t.heading.getOrElse(Angle0).toDegrees)
+        attrs.setHeading(t.heading.orElse(Angle0).toDegrees)
       } else {
         if (t.isAircraft) { // we just changed into an aircraft
-          id = getId(t)
+          id = t.cs
           isAircraft = true
           initAttrs(t)
           setLabelText(id)
@@ -75,11 +75,6 @@ class AirportTracksLayer (raceView: RaceView,config: Config)
       setAttributes(attrs) // indicates to WW that we have changed attr values
     }
 
-    def getId (t: AsdexTrack) = t.acId match {
-      case Some("UNKN") => t.id
-      case Some(cs) => cs
-      case None => t.id
-    }
 
     def initAttrs (t: AsdexTrack) = {
       if (t.isAircraft /*&& track.heading.isDefined*/){
@@ -87,7 +82,7 @@ class AirportTracksLayer (raceView: RaceView,config: Config)
         attrs.setScale(0.3)
         attrs.setImageOffset(Offset.CENTER)
         attrs.setHeadingReference(AVKey.RELATIVE_TO_GLOBE)
-        attrs.setHeading(t.heading.getOrElse(Angle0).toDegrees)
+        attrs.setHeading(t.heading.orElse(Angle0).toDegrees)
         attrs.setLabelColor(toABGRString(acColor))
         attrs.setLineColor(toABGRString(acColor))
       } else {
@@ -106,8 +101,8 @@ class AirportTracksLayer (raceView: RaceView,config: Config)
       new IdAndNamePanel[Airport]( _.id, _.city), selectAirport).styled()
   }.styled('consolePanel)
 
-  val activeDistance = UsMiles(config.getDoubleOrElse("view-distance", 8d)) // in US miles
-  val activeAltitude = Feet(config.getDoubleOrElse("view-altitude", 30000d)) // feet above ground
+  val activeDistance = UsMiles(config.getDoubleOrElse("view-distance", 10d)) // in US miles
+  val activeAltitude = Feet(config.getDoubleOrElse("view-altitude", 60000d)) // feet above ground
   val gotoAltitude = Feet(config.getDoubleOrElse("goto-altitude", 20000d)) // feet above ground
 
   // this is the WorldWind limit in MSL (we cut off data at activeAltitude above ground)
