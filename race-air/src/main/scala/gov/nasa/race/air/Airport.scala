@@ -17,7 +17,7 @@
 
 package gov.nasa.race.air
 
-import gov.nasa.race.geo.LatLonPos
+import gov.nasa.race.geo.{GeoPosition3D, LatLonPos}
 import gov.nasa.race.uom.Length._
 import gov.nasa.race.uom._
 
@@ -87,4 +87,11 @@ object Airport {
 /**
   * represents and locates airports
   */
-case class Airport (id: String, name: String, city: String, pos: LatLonPos, elevation: Length, hasAsdex: Boolean)
+case class Airport (id: String,
+                    name: String,
+                    city: String,
+                    position: LatLonPos,
+                    elevation: Length,
+                    hasAsdex: Boolean) extends GeoPosition3D {
+  def altitude = elevation
+}

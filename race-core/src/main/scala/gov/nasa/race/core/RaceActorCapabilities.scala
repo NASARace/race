@@ -35,7 +35,7 @@ object RaceActorCapabilities {
 /**
   * a bit set that contains capabilities of a RaceActor
   */
-class RaceActorCapabilities (val caps: Int) extends AnyVal {
+case class RaceActorCapabilities (val caps: Int) extends AnyVal {
   import RaceActorCapabilities._
 
   def has(rac: RaceActorCapabilities) = (caps & rac.caps) != 0

@@ -14,19 +14,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package gov.nasa.race.ww.air
+package gov.nasa.race.ww.track
 
 import com.typesafe.config.Config
-import gov.nasa.race.air.InFlightAircraft
-import gov.nasa.race.util.StringUtils
 import gov.nasa.race.config.ConfigUtils._
+import gov.nasa.race.track.TrackedObject
+import gov.nasa.race.util.StringUtils
+import gov.nasa.race.ww.Implicits._
 import gov.nasa.race.ww._
 import gov.nasa.worldwind.render.DrawContext
 import osm.map.worldwind.gl.obj.{ObjLoader, ObjRenderable}
 
 case class ModelSpec (src: String, size0: Double, pitch0: Double, yaw0: Double, roll0: Double)
 
-object FlightModel {
+object TrackModel {
   val defaultSpec = ModelSpec("/gov/nasa/race/ww/GlobalHawk.obj.gz", 8, 180,0,0)
   var map = Map("default" -> defaultSpec)
 
@@ -35,7 +36,7 @@ object FlightModel {
   def addDefaultModel( key: String, spec: ModelSpec) = map = map + (key -> spec)
 
   // this can be overridden by concrete FlightLayers to add generic models
-  def loadModel[T <: InFlightAircraft] (mc: Config): FlightModel[T] = {
+  def loadModel[T <: TrackedObject](mc: Config): TrackModel[T] = {
     var src = mc.getString("source")
     var size0 = 1.0
     var pitch0,yaw0,roll0 = 0.0
@@ -54,7 +55,7 @@ object FlightModel {
         roll0 = mc.getDoubleOrElse("roll", roll0)
     }
 
-    new FlightModel[T](mc.getString("key"),src,size0,pitch0,yaw0,roll0)
+    new TrackModel[T](mc.getString("key"),src,size0,pitch0,yaw0,roll0)
   }
 }
 
@@ -69,13 +70,13 @@ object FlightModel {
   * correctly at the time it is constructed, hence we have to fall back to a default placeholder.
   * This might be changed at some point in WorldWindJava-pcm (which includes the ObjRenderable)
   */
-class FlightModel[T <: InFlightAircraft](pattern: String, src: String,
-                                         var size0: Double,
-                                         var yaw0: Double, var pitch0: Double, var roll0: Double)
+class TrackModel[T <: TrackedObject](pattern: String, src: String,
+                                     var size0: Double,
+                                     var yaw0: Double, var pitch0: Double, var roll0: Double)
                         extends ObjRenderable(FarAway,src) {
 
   val regex = StringUtils.globToRegex(pattern)
-  var assignedEntry: Option[FlightEntry[T]] = None
+  var assignedEntry: Option[TrackEntry[T]] = None
   var disable = false
 
   setSize(size0)
@@ -90,7 +91,7 @@ class FlightModel[T <: InFlightAircraft](pattern: String, src: String,
 
   def matches(fpos: T): Boolean = !assignedEntry.isDefined && StringUtils.matches(fpos.cs,regex)
 
-  def assign (e: FlightEntry[T]) = assignedEntry = Some(e)
+  def assign (e: TrackEntry[T]) = assignedEntry = Some(e)
   def unAssign = assignedEntry = None
   def isAssigned = assignedEntry.isDefined
 
@@ -106,7 +107,7 @@ class FlightModel[T <: InFlightAircraft](pattern: String, src: String,
       case t: Throwable =>
         if (src == modelSource) {
           // retry with default model parameters
-          val spec = FlightModel.defaultSpec
+          val spec = TrackModel.defaultSpec
           modelSource = spec.src
           size0 = spec.size0
           pitch0 = spec.pitch0

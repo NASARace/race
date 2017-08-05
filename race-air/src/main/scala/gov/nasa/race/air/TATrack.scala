@@ -32,54 +32,31 @@ object TATrack {
     type Status = Value
     val Active,Coasting,Drop,Undefined = Value
   }
-
-  // we don't use a case class so that we can have a class hierarchy, but we still want to be able to pattern match
-  def apply (src: String, trackNum: Int, xyPos: XYPos, vVert: Speed, status: Status,
-             attrs: Int, beaconCode: String, flightPlan: Option[FlightPlan],
-             flightId: String, cs: String, position: LatLonPos, altitude: Length, speed: Speed, heading: Angle, date: DateTime) = {
-    new TATrack(src,trackNum,xyPos,vVert,status,attrs,beaconCode,flightPlan,
-                flightId,cs,position,altitude,speed,heading,date)
-  }
-  def unapply (src: String, trackNum: Int, xyPos: XYPos, vVert: Speed, status: Status,
-               attrs: Int, beaconCode: String, flightPlan: Option[FlightPlan],
-               flightId: String, cs: String, position: LatLonPos, altitude: Length, speed: Speed, heading: Angle, date: DateTime) = {
-    (src,trackNum,xyPos,vVert,status,attrs,beaconCode,flightPlan,flightId,cs,position,altitude,speed,heading,date)
-  }
-  def unapply (track: TATrack) = true
 }
 
 /**
   * a specialized FlightPos that represents tracks from TAIS/STARS messages
   */
-class TATrack (val src: String,
-               val trackNum: Int,
-               val xyPos: XYPos,
-               val vVert: Speed,
-               val status: Status,
-               val attrs: Int,
-               val beaconCode: String,
-               val flightPlan: Option[FlightPlan],
+case class TATrack (val src: String,
 
-               //--- the FlightPos fields
-               flightId: String, cs: String, position: LatLonPos, altitude: Length, speed: Speed, heading: Angle, date: DateTime
-              ) extends FlightPos(flightId,cs,position,altitude,speed,heading,date) {
+                    val id: String,
+                    val cs: String,
+                    val position: LatLonPos,
+                    val altitude: Length,
+                    val speed: Speed,
+                    val heading: Angle,
+                    val date: DateTime,
+
+                    val xyPos: XYPos,
+                    val vVert: Speed,
+                    val status: Status,
+                    val attrs: Int,
+                    val beaconCode: String,
+                    val flightPlan: Option[FlightPlan]
+                  ) extends TrackedAircraft {
 
   override def toString = {
-    f"TATrack($src,$trackNum,$xyPos,$status, $position,$altitude,$heading,$speed, $date, $flightPlan)"
-  }
-
-  override def equals (other: Any): Boolean = {
-    super.equals(other) && (other match {
-      case o:TATrack =>
-        src == o.src &&
-        trackNum == o.trackNum &&
-        xyPos == o.xyPos &&
-        vVert == o.vVert &&
-        status == o.status &&
-        attrs == o.attrs &&
-        beaconCode == o.beaconCode
-      case somethingElse => false
-    })
+    f"TATrack($src,$id,$xyPos,$status, $position,$altitude,$heading,$speed, $date, $flightPlan)"
   }
 
   def isDrop = status == TATrack.Status.Drop

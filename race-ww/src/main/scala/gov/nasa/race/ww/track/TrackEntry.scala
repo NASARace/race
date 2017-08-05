@@ -15,30 +15,33 @@
  * limitations under the License.
  */
 
-package gov.nasa.race.ww.air
+package gov.nasa.race.ww.track
 
 import java.awt.Point
 
 import gov.nasa.race._
-import gov.nasa.race.air.{AbstractFlightPath, InFlightAircraft}
-import gov.nasa.race.ww.{InfoBalloon, _}
+import gov.nasa.race.track.{AbstractTrajectory, TrackedObject}
+import gov.nasa.race.ww._
+import gov.nasa.race.ww.Implicits._
 import gov.nasa.worldwind.WorldWind
 import gov.nasa.worldwind.avlist.AVKey
 import gov.nasa.worldwind.render.{Offset, PointPlacemark, PointPlacemarkAttributes}
 
 /**
-  * class that aggregates all Renderables that can be associated with a given InFlightAircraft
+  * the WorldWind specific representation of a renderable TrackObject
+  * this aggregates all Renderables that can be associated with a given TrackObject based on viewer
+  * state (eye position and selected options)
   */
-class FlightEntry[T <: InFlightAircraft](var obj: T, var flightPath: AbstractFlightPath, val layer: FlightLayer[T]) extends LayerObject {
+class TrackEntry[T <: TrackedObject](var obj: T, var flightPath: AbstractTrajectory, val layer: TrackLayer[T]) extends LayerObject {
 
   override def id = obj.cs
 
   //--- the renderables that can be associated with this entry
-  protected var symbol: Option[FlightSymbol[T]] = layer.getSymbol(this)
-  protected var path: Option[FlightPath[T]] = None
+  protected var symbol: Option[TrackSymbol[T]] = layer.getSymbol(this)
+  protected var path: Option[TrackPath[T]] = None
   protected var info: Option[InfoBalloon] = None
   protected var mark: Option[PointPlacemark] = None
-  protected var model: Option[FlightModel[T]] = None
+  protected var model: Option[TrackModel[T]] = None
 
   protected var followPosition = false // do we center the view on the current placemark position
 
@@ -55,7 +58,7 @@ class FlightEntry[T <: InFlightAircraft](var obj: T, var flightPath: AbstractFli
     obj = newObj
 
     flightPath.add(newObj)
-    ifSome(path) {_.addFlightPosition(newObj)}
+    ifSome(path) {_.addTrackPosition(newObj)}
   }
 
   def addRenderables = {
@@ -98,7 +101,7 @@ class FlightEntry[T <: InFlightAircraft](var obj: T, var flightPath: AbstractFli
   def setLineLevel = path.foreach{_.setLineAttrs}
   def setLinePosLevel = path.foreach{_.setLinePosAttrs}
 
-  def setModel (newModel: Option[FlightModel[T]]) = {
+  def setModel (newModel: Option[TrackModel[T]]) = {
     ifSome(newModel) { m =>
       ifSome(model) { layer.removeRenderable }
       m.assign(this)
@@ -110,7 +113,7 @@ class FlightEntry[T <: InFlightAircraft](var obj: T, var flightPath: AbstractFli
       ifSome(model){ m =>
         m.unAssign
         layer.removeRenderable(m)
-        ifSome(symbol) { sym => layer.setFlightLevel(this) }
+        ifSome(symbol) { sym => layer.setTrackLevel(this) }
       }
     }
 
@@ -129,7 +132,7 @@ class FlightEntry[T <: InFlightAircraft](var obj: T, var flightPath: AbstractFli
 
   def setPath(showIt: Boolean) = ifSome(symbol) { sym =>
     if (showIt && path.isEmpty) {
-      path = Some(new FlightPath(this))
+      path = Some(new TrackPath(this))
       layer.addRenderable(path.get)
 
     } else if (!showIt && path.isDefined) {

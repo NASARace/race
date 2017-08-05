@@ -76,8 +76,8 @@ class AsdexMsg2FullAsdexTracks(config: Config=NoConfig) extends AsdexMsg2AsdexTr
     implicit val last = lastTracks.get(trackId)
 
     // if input values are defined, use those. Otherwise use the last value or the fallback if there was none
-    val lat = fromDouble(latDeg, Degrees, _.pos.φ, UndefinedAngle)
-    val lon = fromDouble(lonDeg, Degrees, _.pos.λ, UndefinedAngle)
+    val lat = fromDouble(latDeg, Degrees, _.position.φ, UndefinedAngle)
+    val lon = fromDouble(lonDeg, Degrees, _.position.λ, UndefinedAngle)
     val alt = fromDouble(altFt, Feet, _.altitude, UndefinedLength)
     val hdg = fromDouble(hdgDeg, Degrees, _.heading, UndefinedAngle)
     val spd = fromDouble(spdMph, UsMilesPerHour, _.speed, UndefinedSpeed)
@@ -89,6 +89,6 @@ class AsdexMsg2FullAsdexTracks(config: Config=NoConfig) extends AsdexMsg2AsdexTr
     val track = new AsdexTrack(trackId,cs,date,LatLonPos(lat,lon),spd,hdg,alt,tt,display,drop,vert,gbs,act)
     lastTracks += trackId -> track
 
-    if (track.pos.isDefined) track else null
+    if (track.position.isDefined) track else null
   }
 }

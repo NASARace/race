@@ -40,7 +40,7 @@ import scalatags.Text.all._
 class TATrackStatsCollector (val config: Config) extends StatsCollectorActor with ClockAdjuster with ChannelOptionPublisher {
 
   class TACollector (val config: Config, val src: String)
-         extends ConfiguredTSStatsCollector[Int,TATrack,TATrackEntryData,TATrackStatsData] {
+         extends ConfiguredTSStatsCollector[String,TATrack,TATrackEntryData,TATrackStatsData] {
     val statsData = new TATrackStatsData(src)
     statsData.buckets = createBuckets
 
@@ -70,9 +70,9 @@ class TATrackStatsCollector (val config: Config) extends StatsCollectorActor wit
           checkInitialClockReset(track.date)
           val tracon = tracons.getOrElseUpdate(track.src, new TACollector(config, track.src))
           if (track.isDrop) {
-            tracon.removeActive(track.trackNum, track)
+            tracon.removeActive(track.id, track)
           } else {
-            tracon.updateActive(track.trackNum, track)
+            tracon.updateActive(track.id, track)
           }
         }
       } catch {

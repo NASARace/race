@@ -15,125 +15,117 @@
  * limitations under the License.
  */
 
-package gov.nasa.race.air
+package gov.nasa.race.track
 
-import gov.nasa.race.geo.{GreatCircle, LatLonPos}
-import gov.nasa.race.util.StringUtils
-import org.joda.time.DateTime
+import gov.nasa.race.geo.{GeoPosition, GreatCircle, LatLonPos}
 import gov.nasa.race.uom.Length._
 import gov.nasa.race.uom._
+import gov.nasa.race.util.StringUtils
+import org.joda.time.DateTime
 
 import scala.concurrent.duration.Duration
 import scala.util.matching.Regex
 import scala.util.parsing.combinator.RegexParsers
 
-trait FlightQueryContext {
+trait TrackQueryContext {
   def now: DateTime
-  def flight (cs: String): Option[InFlightAircraft]
-  def airport (id: String): Option[Airport]
+  def track(cs: String): Option[TrackedObject]
+  def location(id: String): Option[GeoPosition]
   def error (msg: String): Unit
 }
 
-object StaticFlightQueryContext extends FlightQueryContext {
-  def now = DateTime.now() // we don't model time
-  def flight (cs: String) = None // we don't have a source for flights
-  def airport (id: String) = Airport.allAirports.get(id)
-  def error (msg: String) = scala.sys.error(msg)
-}
-
-
 //--- data model
-trait FlightFilter {
-  def pass (f: InFlightAircraft)(implicit ctx: FlightQueryContext): Boolean
+trait TrackFilter {
+  def pass(f: TrackedObject)(implicit ctx: TrackQueryContext): Boolean
 }
 
 /**
-  * scriptable flight queries - this is the data structure that represents an AST
-  * which can be used in a Interpreter-like pattern to determine if flights match
+  * scriptable track queries - this is the data structure that represents an AST
+  * which can be used in a Interpreter-like pattern to determine if tracks match
   * certain criteria.
   */
-object FlightQuery {
+object TrackQuery {
 
-  // note that this is not sealed, subclasses can add additional filters
+  // note this is not sealed, subclasses can add additional filters
 
   //--- pseudo filters
-  object AllFilter extends FlightFilter {
-    override def pass (f: InFlightAircraft)(implicit ctx:FlightQueryContext) = true
+  object AllFilter extends TrackFilter {
+    override def pass(f: TrackedObject)(implicit ctx:TrackQueryContext) = true
     override def toString = "All"
   }
-  object NoneFilter extends FlightFilter {
-    override def pass (f: InFlightAircraft)(implicit ctx:FlightQueryContext) = false
+  object NoneFilter extends TrackFilter {
+    override def pass(f: TrackedObject)(implicit ctx:TrackQueryContext) = false
     override def toString = "None"
   }
 
   //--- id filters
-  class CsFilter (regex: Regex) extends FlightFilter {
-    override def pass (f: InFlightAircraft)(implicit ctx:FlightQueryContext) = {
+  class CsFilter (regex: Regex) extends TrackFilter {
+    override def pass(f: TrackedObject)(implicit ctx:TrackQueryContext) = {
       regex.findFirstIn(f.cs).isDefined
     }
     override def toString = s"Cs($regex)"
   }
 
   //--- position filters
-  class WithinRadiusFilter (pos: LatLonPos, dist: Length) extends FlightFilter {
-    override def pass (f: InFlightAircraft)(implicit ctx:FlightQueryContext) = {
+  class WithinRadiusFilter (pos: LatLonPos, dist: Length) extends TrackFilter {
+    override def pass(f: TrackedObject)(implicit ctx:TrackQueryContext) = {
       GreatCircle.distance(f.position,pos) < dist
     }
     override def toString = s"WithinRadius($pos,$dist)"
   }
-  class OutsideRadiusFilter (pos: LatLonPos, dist: Length) extends FlightFilter {
-    override def pass (f: InFlightAircraft)(implicit ctx:FlightQueryContext) = {
+  class OutsideRadiusFilter (pos: LatLonPos, dist: Length) extends TrackFilter {
+    override def pass(f: TrackedObject)(implicit ctx:TrackQueryContext) = {
       GreatCircle.distance(f.position,pos) > dist
     }
     override def toString = s"OutsideRadius($pos,$dist)"
   }
-  class FlightProximityFilter (cs: String, dist: Length) extends FlightFilter {
-    override def pass (f: InFlightAircraft)(implicit ctx:FlightQueryContext) = {
-      ctx.flight(cs) match {
+  class ProximityFilter(cs: String, dist: Length) extends TrackFilter {
+    override def pass(f: TrackedObject)(implicit ctx:TrackQueryContext) = {
+      ctx.track(cs) match {
         case Some(otherFlight) => GreatCircle.distance(f.position,otherFlight.position) < dist
         case None => false
       }
     }
-    override def toString = s"FlightProximity($cs,$dist)"
+    override def toString = s"Proximity($cs,$dist)"
   }
 
   //--- time filters
-  class OlderDateFilter (d: DateTime) extends FlightFilter {
-    override def pass (f: InFlightAircraft)(implicit ctx:FlightQueryContext) = d.isAfter(f.date)
+  class OlderDateFilter (d: DateTime) extends TrackFilter {
+    override def pass(f: TrackedObject)(implicit ctx:TrackQueryContext) = d.isAfter(f.date)
     override def toString = s"Older($d)"
   }
-  class YoungerDateFilter (d: DateTime) extends FlightFilter {
-    override def pass (f: InFlightAircraft)(implicit ctx:FlightQueryContext) = d.isBefore(f.date)
+  class YoungerDateFilter (d: DateTime) extends TrackFilter {
+    override def pass(f: TrackedObject)(implicit ctx:TrackQueryContext) = d.isBefore(f.date)
     override def toString = s"Younger($d)"
   }
-  class WithinDurationFilter (dur: Duration) extends FlightFilter {
-    override def pass (f: InFlightAircraft)(implicit ctx:FlightQueryContext) = {
+  class WithinDurationFilter (dur: Duration) extends TrackFilter {
+    override def pass(f: TrackedObject)(implicit ctx:TrackQueryContext) = {
       ctx.now.getMillis - f.date.getMillis < dur.toMillis
     }
     override def toString = s"DateWithin($dur)"
   }
-  class OutsideDurationFilter (dur: Duration) extends FlightFilter {
-    override def pass (f: InFlightAircraft)(implicit ctx:FlightQueryContext) = {
+  class OutsideDurationFilter (dur: Duration) extends TrackFilter {
+    override def pass(f: TrackedObject)(implicit ctx:TrackQueryContext) = {
       ctx.now.getMillis - f.date.getMillis > dur.toMillis
     }
     override def toString = s"DateOutside($dur)"
   }
 
   //--- composed filters
-  class And (a: FlightFilter, b: FlightFilter) extends FlightFilter {
-    override def pass (f: InFlightAircraft)(implicit ctx:FlightQueryContext) = a.pass(f) && b.pass(f)
+  class And (a: TrackFilter, b: TrackFilter) extends TrackFilter {
+    override def pass(f: TrackedObject)(implicit ctx:TrackQueryContext) = a.pass(f) && b.pass(f)
     override def toString = s"And($a,$b)"
   }
-  class Or (a: FlightFilter, b: FlightFilter) extends FlightFilter {
-    override def pass (f: InFlightAircraft)(implicit ctx:FlightQueryContext) = a.pass(f) || b.pass(f)
+  class Or (a: TrackFilter, b: TrackFilter) extends TrackFilter {
+    override def pass(f: TrackedObject)(implicit ctx:TrackQueryContext) = a.pass(f) || b.pass(f)
     override def toString = s"Or($a,$b)"
   }
 }
 
-class FlightQueryParser (val ctx: FlightQueryContext)  extends RegexParsers {
-  import FlightQuery._
+class TrackQueryParser(val ctx: TrackQueryContext)  extends RegexParsers {
+  import TrackQuery._
 
-  type Query = FlightFilter
+  type Query = TrackFilter
 
   //--- terminal symbols
   def GLOB: Parser[String] ="""[a-zA-Z0-9\*]+""".r ^^ { _.toString }
@@ -166,9 +158,9 @@ class FlightQueryParser (val ctx: FlightQueryContext)  extends RegexParsers {
   def posSpec: Parser[Query] = "pos" ~ "<" ~ ID ~ "+" ~ NUM ^^ {
     case _ ~ _ ~ id ~ _ ~ num =>
       val radius = NauticalMiles(num)
-      ctx.airport(id) match {
-        case Some(airport) => new WithinRadiusFilter(airport.pos, radius)
-        case None => new FlightProximityFilter(id, radius) // TODO - sectors etc.
+      ctx.location(id) match {
+        case Some(loc) => new WithinRadiusFilter(loc.position, radius)
+        case None => new ProximityFilter(id, radius) // TODO - sectors etc.
       }
   }
 
@@ -179,7 +171,7 @@ class FlightQueryParser (val ctx: FlightQueryContext)  extends RegexParsers {
 
   //... TODO - and more to follow
 
-  def parseQuery (input: String): ParseResult[FlightFilter] = parseAll(expr, input)
+  def parseQuery (input: String): ParseResult[TrackFilter] = parseAll(expr, input)
 
   def apply(input: String): Query = parseAll(expr, input) match {
     case Success(result, _) => result

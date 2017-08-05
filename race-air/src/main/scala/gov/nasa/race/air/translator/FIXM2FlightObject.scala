@@ -19,15 +19,16 @@
 package gov.nasa.race.air.translator
 
 import com.typesafe.config.Config
-import gov.nasa.race.air.{FlightCompleted, FlightPos, IdentifiablePositionable}
+import gov.nasa.race.IdentifiableObject
+import gov.nasa.race.air.{FlightCompleted, FlightPos}
+import gov.nasa.race.common._
 import gov.nasa.race.config._
 import gov.nasa.race.geo.LatLonPos
-import gov.nasa.race.common._
-import org.joda.time.DateTime
 import gov.nasa.race.uom.Angle._
 import gov.nasa.race.uom.Length._
 import gov.nasa.race.uom.Speed._
 import gov.nasa.race.uom._
+import org.joda.time.DateTime
 
 import scala.collection.mutable.ArrayBuffer
 
@@ -39,10 +40,10 @@ import scala.collection.mutable.ArrayBuffer
   * without reconfiguration
   */
 class FIXM2FlightObject (val config: Config=NoConfig)
-                 extends FIXMParser[Seq[IdentifiablePositionable]] with ConfigurableTranslator {
+                 extends FIXMParser[Seq[IdentifiableObject]] with ConfigurableTranslator {
   setBuffered(4096)
 
-  protected var flights = new ArrayBuffer[IdentifiablePositionable](20)
+  protected var flights = new ArrayBuffer[IdentifiableObject](20)
 
   override def flatten = true // report as single flight objects
 

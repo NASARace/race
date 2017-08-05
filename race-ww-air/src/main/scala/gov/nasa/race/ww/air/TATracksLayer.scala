@@ -16,29 +16,27 @@
  */
 package gov.nasa.race.ww.air
 
-import java.awt.{Color, Font, Point}
+import java.awt.{Color, Font}
 
 import akka.actor.Actor.Receive
 import com.typesafe.config.Config
 import gov.nasa.race.air.TATrack.Status
-import gov.nasa.race.air.{TATrack, Tracon}
-import gov.nasa.race.core.Messages.BusEvent
+import gov.nasa.race.air.{AirLocator, TATrack, Tracon}
 import gov.nasa.race.config.ConfigUtils._
-import gov.nasa.race.geo.GreatCircle
+import gov.nasa.race.core.Messages.BusEvent
 import gov.nasa.race.ifSome
 import gov.nasa.race.swing.Style._
 import gov.nasa.race.swing.{IdAndNamePanel, StaticSelectionPanel}
 import gov.nasa.race.uom.Angle
 import gov.nasa.race.uom.Length._
-import gov.nasa.race.uom.Angle._
-import gov.nasa.race.ww.{RaceLayerPickable, RaceView}
+import gov.nasa.race.ww.Implicits._
+import gov.nasa.race.ww._
+import gov.nasa.race.ww.track.{ModelTrackLayer, TrackLayerInfoPanel, TrackRenderLevel, TrackSymbol}
 import gov.nasa.worldwind.WorldWind
 import gov.nasa.worldwind.render._
-import gov.nasa.race.ww._
-import gov.nasa.worldwind.avlist.AVKey
 
 
-class TraconSymbol(val tracon: Tracon, val layer: TATracksLayer) extends PointPlacemark(tracon.pos) with RaceLayerPickable {
+class TraconSymbol(val tracon: Tracon, val layer: TATracksLayer) extends PointPlacemark(tracon.position) with RaceLayerPickable {
   var showDisplayName = false
   var attrs = new PointPlacemarkAttributes
 
@@ -59,7 +57,8 @@ class TraconSymbol(val tracon: Tracon, val layer: TATracksLayer) extends PointPl
 /**
   * a layer to display TRACONs and related TATracks
   */
-class TATracksLayer (raceView: RaceView,config: Config) extends FlightLayer3D[TATrack](raceView,config){
+class TATracksLayer (raceView: RaceView,config: Config)
+           extends ModelTrackLayer[TATrack](raceView,config) with AirLocator {
 
   //--- configured values
 
@@ -79,15 +78,15 @@ class TATracksLayer (raceView: RaceView,config: Config) extends FlightLayer3D[TA
 
   showTraconSymbols
 
-  override def setLabel (sym: FlightSymbol[TATrack]) = {
-    val track = sym.flightEntry.obj
+  override def setLabel (sym: TrackSymbol[TATrack]) = {
+    val track = sym.trackEntry.obj
 
-    flightDetails match {
-      case FlightRenderLevel.Label =>
+    trackDetails match {
+      case TrackRenderLevel.Label =>
         sym.setLabelText(track.cs)
         sym.removeSubLabels
 
-      case FlightRenderLevel.Symbol =>
+      case TrackRenderLevel.Symbol =>
         sym.setLabelText(track.cs)
         sym.removeSubLabels
         sym.addSubLabelText(track.stateString)
@@ -95,7 +94,7 @@ class TATracksLayer (raceView: RaceView,config: Config) extends FlightLayer3D[TA
       case other => // no labels to set
     }
   }
-  override def updateLabel (sym: FlightSymbol[TATrack]) = setLabel(sym)
+  override def updateLabel (sym: TrackSymbol[TATrack]) = setLabel(sym)
 
   def createGrid = {
     val gridRings = config.getIntOrElse("tracon-rings", 5)
@@ -105,12 +104,12 @@ class TATracksLayer (raceView: RaceView,config: Config) extends FlightLayer3D[TA
     val gridFillColor = config.getColorOrElse("tracon-bg-color", Color.black)
     val gridFillAlpha = config.getFloatOrElse("tracon-bg-alpha", 0.4f)
 
-    new PolarGrid(Tracon.NoTracon.pos, Angle.Angle0, gridRingDist, gridRings,
+    new PolarGrid(Tracon.NoTracon.position, Angle.Angle0, gridRingDist, gridRings,
       this, gridLineColor, gridLineAlpha, gridFillColor, gridFillAlpha)
   }
 
   override def createLayerInfoPanel = {
-    new FlightLayerInfoPanel(raceView,this){
+    new TrackLayerInfoPanel(raceView,this){
       // insert tracon selection panel after generic layer info
       contents.insert(1, new StaticSelectionPanel[Tracon,IdAndNamePanel[Tracon]]("select TRACON",
                                             Tracon.NoTracon +: Tracon.traconList, 40,
@@ -129,13 +128,13 @@ class TATracksLayer (raceView: RaceView,config: Config) extends FlightLayer3D[TA
           if (track.src == tracon.id) {
             count = count + 1
             if (track.status != Status.Drop) {
-              flights.get(track.cs) match {
-                case Some(acEntry) => updateFlightEntry(acEntry, track)
-                case None => addFlightEntry(track)
+              tracks.get(track.cs) match {
+                case Some(acEntry) => updateTrackEntry(acEntry, track)
+                case None => addTrackEntry(track)
               }
             } else {
-              ifSome(flights.get(track.cs)) {
-                removeFlightEntry
+              ifSome(tracks.get(track.cs)) {
+                removeTrackEntry
               }
             }
           }
@@ -153,17 +152,17 @@ class TATracksLayer (raceView: RaceView,config: Config) extends FlightLayer3D[TA
 
   def reset(): Unit = {
     removeAllRenderables()
-    flights.clear()
+    tracks.clear()
     releaseAll
     traconGrid.hide
     showTraconSymbols
   }
 
   def setTracon(tracon: Tracon) = {
-    raceView.panTo(tracon.pos, gotoAltitude.toMeters)
+    raceView.panTo(tracon.position, gotoAltitude.toMeters)
 
     selTracon = Some(tracon)
-    traconGrid.setCenter(tracon.pos)
+    traconGrid.setCenter(tracon.position)
     traconGrid.show
     requestTopic(selTracon)
   }

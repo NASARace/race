@@ -15,23 +15,24 @@
  * limitations under the License.
  */
 
-package gov.nasa.race.ww.air
+package gov.nasa.race.ww.track
 
-import java.awt.{Color, Point}
+import java.awt.Point
 
 import gov.nasa.race._
-import gov.nasa.race.air.InFlightAircraft
+import gov.nasa.race.track.TrackedObject
 import gov.nasa.race.util.DateTimeUtils._
 import gov.nasa.race.ww._
+import gov.nasa.race.ww.Implicits._
 import gov.nasa.worldwind.WorldWind
 import gov.nasa.worldwind.avlist.AVKey
 import gov.nasa.worldwind.render.{MultiLabelPointPlacemark, Offset, PointPlacemarkAttributes}
 
-object FlightRenderLevel extends Enumeration {
-  type FlightRenderLevel = Value
+object TrackRenderLevel extends Enumeration {
+  type TrackRenderLevel = Value
   val Symbol, Label, Dot = Value
 }
-import gov.nasa.race.ww.air.FlightRenderLevel._
+import gov.nasa.race.ww.track.TrackRenderLevel._
 
 /**
   * Renderable representing 2D aircraft symbol
@@ -40,11 +41,11 @@ import gov.nasa.race.ww.air.FlightRenderLevel._
   * FlightEntry (the FlightPos objects referenced from there change upon update and hence
   * cannot be used to do a FlightEntry lookup)
   */
-class FlightSymbol[T <: InFlightAircraft](val flightEntry: FlightEntry[T])
-                                                  extends MultiLabelPointPlacemark(flightEntry.obj) with RaceLayerPickable {
+class TrackSymbol[T <: TrackedObject](val trackEntry: TrackEntry[T])
+                                                  extends MultiLabelPointPlacemark(trackEntry.obj) with RaceLayerPickable {
   // RaceLayerObject
-  override def layer = flightEntry.layer
-  override def layerItem = flightEntry
+  override def layer = trackEntry.layer
+  override def layerItem = trackEntry
 
   var showDisplayName = false
   var attrs = new PointPlacemarkAttributes
@@ -69,7 +70,7 @@ class FlightSymbol[T <: InFlightAircraft](val flightEntry: FlightEntry[T])
   }
 
   def updateDisplayName = {
-    val obj = flightEntry.obj
+    val obj = trackEntry.obj
     val s = s"${obj.cs}\n${hhmmss.print(obj.date)}\n${obj.altitude.toFeet.toInt} ft\n${obj.heading.toDegrees.toInt}°\n${obj.speed.toKnots.toInt} kn"
     setValue( AVKey.DISPLAY_NAME, s.toString)
   }
@@ -100,7 +101,7 @@ class FlightSymbol[T <: InFlightAircraft](val flightEntry: FlightEntry[T])
   }
 
   def setSymbolAttrs = {
-    val obj = flightEntry.obj
+    val obj = trackEntry.obj
 
     layer.setLabel(this)
     attrs.setImage(layer.image(obj))
@@ -112,7 +113,7 @@ class FlightSymbol[T <: InFlightAircraft](val flightEntry: FlightEntry[T])
   }
 
   def updateAttributes = {
-    layer.flightDetails match {
+    layer.trackDetails match {
       case Dot => setDotAttrs
       case Label => setLabelAttrs
       case Symbol => setSymbolAttrs

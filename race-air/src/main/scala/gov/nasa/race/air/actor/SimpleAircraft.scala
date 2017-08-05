@@ -55,7 +55,6 @@ class SimpleAircraft (val config: Config) extends ContinuousTimeRaceActor
   override def handleMessage = {
     case RaceTick =>
       updatePos
-      debug(s"publishing $pos")
       publish(new FlightPos(id, cs, pos, altitude, speed, heading, simTime))
   }
 

@@ -92,7 +92,7 @@ class AsdexTrack2FlightPos (val config: Config=NoConfig) extends ConfigurableTra
 
         val hdg = track.heading
         if (hdg.isDefined) {
-          Some(FlightPos(track.id, track.cs, track.pos, alt, spd, hdg, track.date))
+          Some(FlightPos(track.id, track.cs, track.position, alt, spd, hdg, track.date))
         } else None
 
       } else None // too low
@@ -107,8 +107,8 @@ class AsdexTrack2FlightPos (val config: Config=NoConfig) extends ConfigurableTra
       case Some(lastTrack) =>
         val dt = track.date.getMillis - lastTrack.date.getMillis
         if (dt < dropAfter) {
-          val d = GreatCircle.distance(lastTrack.pos, track.pos)
-          GreatCircle.distance(lastTrack.pos, track.pos) / Duration(dt,MILLISECONDS)
+          val d = GreatCircle.distance(lastTrack.position, track.position)
+          GreatCircle.distance(lastTrack.position, track.position) / Duration(dt,MILLISECONDS)
         } else {
           Knots(100) // assumed to be a new track
         }

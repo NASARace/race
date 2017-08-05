@@ -96,7 +96,7 @@ class PolarGrid (var center: LatLonPos, val heading: Angle, val ringInc: Length,
   }
 
   def gridLatLon(r: Length, phi: Angle) = latLonPos2LatLon(GreatCircle.endPos(center, r, phi))
-  def gridPos(r: Length, phi: Angle) = toWWPosition(GreatCircle.endPos(center, r, phi))
+  def gridPos(r: Length, phi: Angle) = latLonPos2Position(GreatCircle.endPos(center, r, phi))
 
   def createGridLines: Array[util.ArrayList[LatLon]] = {
     val line0 = new util.ArrayList[LatLon](2)

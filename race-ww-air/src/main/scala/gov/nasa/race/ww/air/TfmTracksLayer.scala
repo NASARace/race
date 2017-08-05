@@ -21,14 +21,16 @@ import java.awt.Color
 
 import akka.actor.Actor.Receive
 import com.typesafe.config.Config
-import gov.nasa.race.air.{TFMTrack, TFMTracks}
+import gov.nasa.race.air.{AirLocator, TFMTrack, TFMTracks}
 import gov.nasa.race.core.Messages.BusEvent
 import gov.nasa.race.ww.RaceView
+import gov.nasa.race.ww.track.TrackLayer
 
 /**
   * a RaceViewerActor WWJ layer to display TFM track data
   */
-class TfmTracksLayer (raceView: RaceView,config: Config) extends FlightLayer[TFMTrack](raceView,config) {
+class TfmTracksLayer (raceView: RaceView,config: Config)
+           extends TrackLayer[TFMTrack](raceView,config) with AirLocator {
 
   override def defaultSymbolColor = Color.magenta
 
@@ -36,13 +38,13 @@ class TfmTracksLayer (raceView: RaceView,config: Config) extends FlightLayer[TFM
     case BusEvent(_,msg: TFMTracks,_) =>
       count = count + 1
       msg.tracks foreach { tfmTrack =>
-        flights.get(tfmTrack.cs) match {
+        tracks.get(tfmTrack.cs) match {
           case Some(trackEntry) =>
-            if (tfmTrack.nextPos.isEmpty) removeFlightEntry(trackEntry)  // completed
-            else updateFlightEntry(trackEntry,tfmTrack)
+            if (tfmTrack.nextPos.isEmpty) removeTrackEntry(trackEntry)  // completed
+            else updateTrackEntry(trackEntry,tfmTrack)
 
           case None =>
-            if (!tfmTrack.nextPos.isEmpty) addFlightEntry(tfmTrack) // only add if this wasn't the completed message
+            if (!tfmTrack.nextPos.isEmpty) addTrackEntry(tfmTrack) // only add if this wasn't the completed message
         }
       }
   }

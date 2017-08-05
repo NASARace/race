@@ -38,7 +38,7 @@ class DistanceFilter2D (val center: LatLonPos, val radius: Length, val config: C
   override def pass (o: Any): Boolean = {
     if (o != null) {
       o match {
-        case obj: Positionable =>
+        case obj: GeoPosition =>
           val pos = obj.position
           val dlat = Math.abs(latDeg - pos.φ.toDegrees)
           val dlon = Math.abs(lonDeg - pos.λ.toDegrees)

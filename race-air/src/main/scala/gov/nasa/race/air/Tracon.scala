@@ -17,7 +17,7 @@
 package gov.nasa.race.air
 
 import gov.nasa.race.common.ContactInfo
-import gov.nasa.race.geo.LatLonPos
+import gov.nasa.race.geo.{GeoPosition, LatLonPos}
 
 import scala.collection.SortedMap
 
@@ -62,6 +62,6 @@ object Tracon {
 /**
   * represents TRACONs (Terminal Radar Approach Control facilities)
   */
-case class Tracon (id: String, name: String, pos: LatLonPos, contact: ContactInfo) {
+case class Tracon (id: String, name: String, position: LatLonPos, contact: ContactInfo) extends GeoPosition {
   def toShortString = s"$id - $name"
 }

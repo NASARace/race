@@ -14,22 +14,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package gov.nasa.race.ww.air
+package gov.nasa.race.ww.track
 
 import java.util.concurrent.atomic.AtomicInteger
 
 import com.typesafe.config.Config
-import gov.nasa.race._
-import gov.nasa.race.air.InFlightAircraft
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.geo.VarEuclideanDistanceFilter3D
+import gov.nasa.race.track.TrackedObject
 import gov.nasa.race.uom.Angle._
 import gov.nasa.race.uom.Length._
-import gov.nasa.race.ww.{MinClipOrbitView, EyePosListener, RaceView}
+import gov.nasa.race.ww.{EyePosListener, RaceView}
 import gov.nasa.worldwind.geom.Position
 
-import scala.concurrent.duration._
 import scala.collection.immutable.HashSet
+import scala.concurrent.duration._
 
 /**
   * a FlightLayer that supports 3D models
@@ -52,15 +51,15 @@ import scala.collection.immutable.HashSet
   * NOTE - if no model is configured, this should not incur any performance penalties.
   * In particular, eye position and proximity updates should only happen if we have configured models
   */
-class FlightLayer3D[T <:InFlightAircraft](raceView: RaceView, config: Config) extends FlightLayer[T](raceView,config) with EyePosListener  {
+abstract class ModelTrackLayer[T <:TrackedObject](raceView: RaceView, config: Config) extends TrackLayer[T](raceView,config) with EyePosListener  {
 
   //--- 3D models and proximities
   val modelDistance = Meters(config.getDoubleOrElse("model-distance",2000.0))
   val eyeDistanceFilter = new VarEuclideanDistanceFilter3D(Angle0,Angle0,Length0, modelDistance)
-  var proximities = HashSet.empty[FlightEntry[T]]
+  var proximities = HashSet.empty[TrackEntry[T]]
 
   addLayerModels
-  val models = config.getConfigSeq("models").map(FlightModel.loadModel[T])
+  val models = config.getConfigSeq("models").map(TrackModel.loadModel[T])
 
   if (models.nonEmpty) {
     raceView.addEyePosListener(this)  // will update lastEyePos and proximities
@@ -70,10 +69,10 @@ class FlightLayer3D[T <:InFlightAircraft](raceView: RaceView, config: Config) ex
 
   // this can be overridden by layers to add their own generic models
   def addLayerModels: Unit = {
-    FlightModel.addDefaultModel("defaultAirplane", FlightModel.defaultSpec)
+    TrackModel.addDefaultModel("defaultAirplane", TrackModel.defaultSpec)
   }
 
-  def getModel (e: FlightEntry[T]): Option[FlightModel[T]] = {
+  def getModel (e: TrackEntry[T]): Option[TrackModel[T]] = {
     models.find( _.matches(e.obj) )
   }
 
@@ -89,9 +88,9 @@ class FlightLayer3D[T <:InFlightAircraft](raceView: RaceView, config: Config) ex
     }
   }
 
-  def recalculateProximities = foreachFlight(updateProximity)
+  def recalculateProximities = foreachTrack(updateProximity)
 
-  def setModel (e: FlightEntry[T]) = {
+  def setModel (e: TrackEntry[T]) = {
     val fpos = e.obj
     val m = getModel(e)
     if (m.isDefined) {
@@ -103,7 +102,7 @@ class FlightLayer3D[T <:InFlightAircraft](raceView: RaceView, config: Config) ex
     }
   }
 
-  def unsetModel (e: FlightEntry[T]) = {
+  def unsetModel (e: TrackEntry[T]) = {
     if (e.hasModel) {
       val fpos = e.obj
       e.setModel(None)
@@ -112,13 +111,13 @@ class FlightLayer3D[T <:InFlightAircraft](raceView: RaceView, config: Config) ex
     }
   }
 
-  def isProximity (e: FlightEntry[T]): Boolean = {
+  def isProximity (e: TrackEntry[T]): Boolean = {
     val fpos = e.obj
     (e.isCentered && (Meters(eyeAltitude) - fpos.altitude < modelDistance)) ||
       eyeDistanceFilter.pass(fpos)
   }
 
-  def updateProximity (e: FlightEntry[T]) = {
+  def updateProximity (e: TrackEntry[T]) = {
     if (isProximity(e)) {
       if (!proximities.contains(e)){
         setModel(e)
@@ -132,15 +131,15 @@ class FlightLayer3D[T <:InFlightAircraft](raceView: RaceView, config: Config) ex
     }
   }
 
-  override def addFlightEntryAttributes(e: FlightEntry[T]): Unit = {
+  override def addTrackEntryAttributes(e: TrackEntry[T]): Unit = {
     if (models.nonEmpty) updateProximity(e)
     e.addRenderables
   }
-  override def updateFlightEntryAttributes (e: FlightEntry[T]): Unit = {
+  override def updateTrackEntryAttributes(e: TrackEntry[T]): Unit = {
     if (models.nonEmpty) updateProximity(e)
     e.updateRenderables
   }
-  override  def releaseFlightEntryAttributes(e: FlightEntry[T]): Unit = {
+  override  def releaseTrackEntryAttributes(e: TrackEntry[T]): Unit = {
     e.removeRenderables
   }
 }

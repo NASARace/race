@@ -73,6 +73,7 @@ object Messages {
   case object ProcessRaceActor extends RaceSystemMessage
   case object RaceActorProcessed extends RaceSystemMessage
   case class PingRaceActor (tSentNanos: Long=System.nanoTime(), tReceivedNanos: Long=0) extends RaceSystemMessage
+  case object RequestRaceActorCapabilities extends RaceSystemMessage
 
   /** sim clock change notifications */
   case object SyncWithRaceClock extends RaceSystemMessage // master -> actors

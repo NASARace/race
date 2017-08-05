@@ -15,23 +15,25 @@
  * limitations under the License.
  */
 
-package gov.nasa.race.ww.air
+package gov.nasa.race.ww.track
 
-import java.awt.{Color, Font}
+import java.awt.Color
 
 import com.github.nscala_time.time.Imports._
 import com.typesafe.config.Config
 import gov.nasa.race._
-import gov.nasa.race.air.{CompactFlightPath, FlightInfo, FlightInfoUpdateRequest, InFlightAircraft}
 import gov.nasa.race.common.Threshold
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.Messages._
+import gov.nasa.race.geo.GeoPosition
+import gov.nasa.race.track.{CompactTrajectory, TrackInfo, TrackInfoUpdateRequest, TrackedObject}
 import gov.nasa.race.uom.Length._
-import gov.nasa.race.swing.Style._
 import gov.nasa.race.ww.EventAction.EventAction
+import gov.nasa.race.ww.Implicits._
+import gov.nasa.race.ww.track.TrackPathRenderLevel.TrackPathRenderLevel
+import gov.nasa.race.ww.track.TrackRenderLevel.TrackRenderLevel
+import gov.nasa.race.swing.Style._
 import gov.nasa.race.ww._
-import gov.nasa.race.ww.air.FlightRenderLevel.FlightRenderLevel
-import gov.nasa.race.ww.air.PathRenderLevel.PathRenderLevel
 
 import scala.collection.mutable.{Map => MutableMap}
 
@@ -39,7 +41,7 @@ import scala.collection.mutable.{Map => MutableMap}
 /**
   * abstract layer class to display aircraft in flight
   */
-abstract class FlightLayer[T <:InFlightAircraft](val raceView: RaceView, config: Config)
+abstract class TrackLayer[T <:TrackedObject](val raceView: RaceView, config: Config)
                                   extends SubscribingRaceLayer(raceView,config)
                                      with DynamicRaceLayerInfo
                                      with AltitudeSensitiveLayerInfo {
@@ -47,7 +49,7 @@ abstract class FlightLayer[T <:InFlightAircraft](val raceView: RaceView, config:
   val panel = createLayerInfoPanel
   val entryPanel = createEntryPanel
 
-  val flightInfoBase = config.getOptionalString("flightinfo-base")
+  val trackInfoBase = config.getOptionalString("trackinfo-base")
 
   //--- AircraftPlacemark attributes
   def defaultSymbolColor = Color.cyan
@@ -69,7 +71,7 @@ abstract class FlightLayer[T <:InFlightAircraft](val raceView: RaceView, config:
   var labelThreshold = config.getDoubleOrElse("label-altitude", defaultLabelThreshold)
   def defaultSymbolThreshold = Meters(1000000.0).toMeters
   var symbolThreshold = config.getDoubleOrElse("symbol-altitude", defaultSymbolThreshold)
-  var flightDetails: FlightRenderLevel = getFlightRenderLevel(eyeAltitude)
+  var trackDetails: TrackRenderLevel = getTrackRenderLevel(eyeAltitude)
 
   def image (t: T) = planeImg
   def markImage (t: T) = markImg
@@ -78,7 +80,7 @@ abstract class FlightLayer[T <:InFlightAircraft](val raceView: RaceView, config:
   val pathColor = color
   val showPositions = config.getBooleanOrElse("show-positions", true)
   val linePosThreshold = config.getDoubleOrElse("position-altitude", Meters(30000.0).toMeters)
-  var pathDetails: PathRenderLevel = getPathRenderLevel(eyeAltitude)
+  var pathDetails: TrackPathRenderLevel = getPathRenderLevel(eyeAltitude)
 
   thresholds ++= Seq(
     new Threshold(linePosThreshold, setLinePosLevel, setLineLevel),
@@ -87,96 +89,94 @@ abstract class FlightLayer[T <:InFlightAircraft](val raceView: RaceView, config:
   )
 
   //--- the data we manage
-  val flights = MutableMap[String,FlightEntry[T]]()
+  val tracks = MutableMap[String,TrackEntry[T]]()
 
-  val noDisplayFilter: (FlightEntry[T])=>Boolean = (f) => true
-  var displayFilter: (FlightEntry[T])=>Boolean = noDisplayFilter
+  val noDisplayFilter: (TrackEntry[T])=>Boolean = (f) => true
+  var displayFilter: (TrackEntry[T])=>Boolean = noDisplayFilter
 
-  override def size = flights.size
+  override def size = tracks.size
 
   //--- end ctor
 
   // override for specialized LayerInfoPanel
-  def createLayerInfoPanel = new FlightLayerInfoPanel(raceView,this).styled('consolePanel)
-  def createEntryPanel = new FlightEntryPanel(raceView,this).styled('consolePanel)
+  def createLayerInfoPanel = new TrackLayerInfoPanel(raceView,this).styled('consolePanel)
+  def createEntryPanel = new TrackEntryPanel(raceView,this).styled('consolePanel)
 
-  def getFlight (cs: String) = flights.get(cs).map( _.obj )
-
-  def matchingFlights (f: FlightEntry[T]=>Boolean): Seq[FlightEntry[T]] = {
-    flights.foldLeft(Seq.empty[FlightEntry[T]])( (acc,e) => {
+  def matchingTracks(f: TrackEntry[T]=>Boolean): Seq[TrackEntry[T]] = {
+    tracks.foldLeft(Seq.empty[TrackEntry[T]])((acc, e) => {
       val flight = e._2
       if (f(flight)) flight +: acc else acc
     })
   }
 
-  def foreachFlight (f: FlightEntry[T]=>Unit): Unit = flights.foreach( e=> f(e._2))
+  def foreachTrack(f: TrackEntry[T]=>Unit): Unit = tracks.foreach(e=> f(e._2))
 
   //--- rendering detail level management
 
-  def getFlightRenderLevel (alt: Double) = {
-    if (alt > labelThreshold) FlightRenderLevel.Dot
-    else if (alt > symbolThreshold) FlightRenderLevel.Label
-    else FlightRenderLevel.Symbol
+  def getTrackRenderLevel(alt: Double) = {
+    if (alt > labelThreshold) TrackRenderLevel.Dot
+    else if (alt > symbolThreshold) TrackRenderLevel.Label
+    else TrackRenderLevel.Symbol
   }
-  def setFlightRenderLevel (level: FlightRenderLevel,f: (FlightEntry[T])=>Unit): Unit = {
-    flightDetails = level
-    flights.foreach(e=> f(e._2))
+  def setTrackRenderLevel(level: TrackRenderLevel, f: (TrackEntry[T])=>Unit): Unit = {
+    trackDetails = level
+    tracks.foreach(e=> f(e._2))
     redrawNow
   }
 
-  def setDotLevel    = setFlightRenderLevel( FlightRenderLevel.Dot, (e)=> e.setDotLevel)
-  def setLabelLevel  = setFlightRenderLevel( FlightRenderLevel.Label, (e)=> e.setLabelLevel)
-  def setSymbolLevel = setFlightRenderLevel( FlightRenderLevel.Symbol, (e)=> e.setSymbolLevel)
+  def setDotLevel    = setTrackRenderLevel( TrackRenderLevel.Dot, (e)=> e.setDotLevel)
+  def setLabelLevel  = setTrackRenderLevel( TrackRenderLevel.Label, (e)=> e.setLabelLevel)
+  def setSymbolLevel = setTrackRenderLevel( TrackRenderLevel.Symbol, (e)=> e.setSymbolLevel)
 
-  def setFlightLevel (e: FlightEntry[T]) = {
-    flightDetails match {
-      case FlightRenderLevel.Dot => e.setDotLevel
-      case FlightRenderLevel.Label => e.setLabelLevel
-      case FlightRenderLevel.Symbol => e.setSymbolLevel
+  def setTrackLevel(e: TrackEntry[T]) = {
+    trackDetails match {
+      case TrackRenderLevel.Dot => e.setDotLevel
+      case TrackRenderLevel.Label => e.setLabelLevel
+      case TrackRenderLevel.Symbol => e.setSymbolLevel
     }
   }
 
-  def getPathRenderLevel (alt: Double) = if (alt > linePosThreshold) PathRenderLevel.Line else PathRenderLevel.LinePos
-  def setPathRenderLevel (level: PathRenderLevel,f: (FlightEntry[T])=>Unit): Unit = {
+  def getPathRenderLevel (alt: Double) = if (alt > linePosThreshold) TrackPathRenderLevel.Line else TrackPathRenderLevel.LinePos
+  def setPathRenderLevel (level: TrackPathRenderLevel,f: (TrackEntry[T])=>Unit): Unit = {
     pathDetails = level
-    flights.foreach(e=> f(e._2))
+    tracks.foreach(e=> f(e._2))
     redrawNow
   }
-  def setLineLevel   = setPathRenderLevel( PathRenderLevel.Line, (e)=> e.setLineLevel)
-  def setLinePosLevel   = setPathRenderLevel( PathRenderLevel.LinePos, (e)=> e.setLinePosLevel)
+  def setLineLevel   = setPathRenderLevel( TrackPathRenderLevel.Line, (e)=> e.setLineLevel)
+  def setLinePosLevel   = setPathRenderLevel( TrackPathRenderLevel.LinePos, (e)=> e.setLinePosLevel)
 
   def showPathPositions = showPositions && eyeAltitude < linePosThreshold
 
-  def createFlightPath (fpos: T) = new CompactFlightPath
+  def createFlightPath (fpos: T) = new CompactTrajectory
 
-  def getSymbol (e: FlightEntry[T]): Option[FlightSymbol[T]] = {
-    Some(new FlightSymbol(e))
+  def getSymbol (e: TrackEntry[T]): Option[TrackSymbol[T]] = {
+    Some(new TrackSymbol(e))
   }
 
   // this is here so that specialized FlightLayers can set multiple lines
-  def setLabel (sym: FlightSymbol[T]) = sym.setLabelText(sym.flightEntry.obj.cs)
-  def updateLabel (sym: FlightSymbol[T]) = {} // override if label text is dynamic
+  def setLabel (sym: TrackSymbol[T]) = sym.setLabelText(sym.trackEntry.obj.cs)
+  def updateLabel (sym: TrackSymbol[T]) = {} // override if label text is dynamic
 
-  def dismissEntryPanel (e: FlightEntry[T]) = {
+  def dismissEntryPanel (e: TrackEntry[T]) = {
     if (entryPanel.isShowing(e)) {
       raceView.dismissObjectPanel
       raceView.objectChanged(e, DismissPanel)
     }
   }
 
-  def setDisplayFilter(filter: (FlightEntry[T])=>Boolean) = {
+  def setDisplayFilter(filter: (TrackEntry[T])=>Boolean) = {
     displayFilter = filter
     if (filter eq noDisplayFilter) {
-      flights.foreach(_._2.show(true))
+      tracks.foreach(_._2.show(true))
     } else {
-      flights.foreach { e => e._2.show(filter(e._2)) }
+      tracks.foreach { e => e._2.show(filter(e._2)) }
     }
     redraw
   }
 
-  def changeObjectAttr(e: FlightEntry[T], f: =>Unit, action: String) = {
+  def changeObjectAttr(e: TrackEntry[T], f: =>Unit, action: String) = {
     f
-    changedFlightEntryOptions(e,action)
+    changedTrackEntryOptions(e,action)
     redraw
   }
 
@@ -191,15 +191,15 @@ abstract class FlightLayer[T <:InFlightAircraft](val raceView: RaceView, config:
   final val HideMark = "HideMark"
 
   override def changeObject(objectId: String, action: String) = {
-    ifSome(flights.get(objectId)) { e =>
+    ifSome(tracks.get(objectId)) { e =>
       action match {
           //--- generic ones
-        case `Select`       => selectFlightEntry(e)
-        case `ShowPanel`    => setFlightEntryPanel(e)
+        case `Select`       => selectTrackEntry(e)
+        case `ShowPanel`    => setTrackEntryPanel(e)
         case `DismissPanel` => dismissEntryPanel(e)
           //--- our own ones
-        case `StartCenter` => startCenteringFlightEntry(e)
-        case `StopCenter` => ifSome(centeredEntry) { ce=> if (ce eq e) stopCenteringFlightEntry }
+        case `StartCenter` => startCenteringTrackEntry(e)
+        case `StopCenter` => ifSome(centeredEntry) { ce=> if (ce eq e) stopCenteringTrackEntry }
         case `ShowPath`   => changeObjectAttr(e, e.setPath(true), action)
         case `HidePath`   => changeObjectAttr(e, e.setPath(false), action)
         case `ShowInfo`   => changeObjectAttr(e, e.setInfo(true), action)
@@ -217,74 +217,74 @@ abstract class FlightLayer[T <:InFlightAircraft](val raceView: RaceView, config:
     */
   override def selectObject(o: RaceLayerPickable, a: EventAction) = {
     o.layerItem match {
-      case e: FlightEntry[T] =>
+      case e: TrackEntry[T] =>
         a match {
-          case EventAction.LeftClick => selectFlightEntry(e)
-          case EventAction.LeftDoubleClick => setFlightEntryPanel(e)
+          case EventAction.LeftClick => selectTrackEntry(e)
+          case EventAction.LeftDoubleClick => setTrackEntryPanel(e)
           case other => // ignored
         }
       case other => // ignored
     }
   }
 
-  def selectFlightEntry (e: FlightEntry[T]) = {
+  def selectTrackEntry(e: TrackEntry[T]) = {
     panel.trySelectFlightEntry(e)
     raceView.objectChanged(e,Select)
   }
 
-  def setFlightEntryPanel(e: FlightEntry[T]) = {
+  def setTrackEntryPanel(e: TrackEntry[T]) = {
     if (!entryPanel.isShowing(e)) {
-      entryPanel.setFlightEntry(e)
+      entryPanel.setTrackEntry(e)
       raceView.setObjectPanel(entryPanel)
       raceView.objectChanged(e,ShowPanel)
     }
   }
 
-  //--- create, update and remove FlightEntries
+  //--- create, update and remove TrackEntries
 
   // here so that it can be overridden by subclasses, which can by useful in case the layer has to manage
   // resources that are display relevant for FlightEntries (such as 3D models)
-  protected def createFlightEntry(fpos: T): FlightEntry[T] = new FlightEntry[T](fpos,createFlightPath(fpos), this)
+  protected def createTrackEntry(fpos: T): TrackEntry[T] = new TrackEntry[T](fpos,createFlightPath(fpos), this)
 
-  def addFlightEntryAttributes(e: FlightEntry[T]): Unit = e.addRenderables
-  def updateFlightEntryAttributes (e: FlightEntry[T]): Unit = e.updateRenderables
-  def releaseFlightEntryAttributes(e: FlightEntry[T]): Unit = e.removeRenderables
+  def addTrackEntryAttributes(e: TrackEntry[T]): Unit = e.addRenderables
+  def updateTrackEntryAttributes(e: TrackEntry[T]): Unit = e.updateRenderables
+  def releaseTrackEntryAttributes(e: TrackEntry[T]): Unit = e.removeRenderables
 
-  protected def addFlightEntry (fpos: T) = {
-    val e = createFlightEntry(fpos)
-    flights += (fpos.cs -> e)
+  protected def addTrackEntry(fpos: T) = {
+    val e = createTrackEntry(fpos)
+    tracks += (fpos.cs -> e)
 
     if (displayFilter(e)) {
-      addFlightEntryAttributes(e)
+      addTrackEntryAttributes(e)
       wwdRedrawManager.redraw()
     }
     // we don't add to the panel here since it might have an active query and the new entry might not match
   }
 
-  protected def updateFlightEntry (e: FlightEntry[T], fpos: T) = {
+  protected def updateTrackEntry(e: TrackEntry[T], fpos: T) = {
     if (e.obj.date < fpos.date) { // don't overwrite new with old data
       e.setNewObj(fpos)
-      updateFlightEntryAttributes(e)
+      updateTrackEntryAttributes(e)
       if (e.hasSymbol) wwdRedrawManager.redraw()
       if (entryPanel.isShowing(e)) entryPanel.update
     }
   }
 
-  protected def removeFlightEntry (e: FlightEntry[T]) = {
+  protected def removeTrackEntry(e: TrackEntry[T]) = {
     val wasShowing = e.hasSymbol
-    releaseFlightEntryAttributes(e)
-    flights -= e.obj.cs
+    releaseTrackEntryAttributes(e)
+    tracks -= e.obj.cs
     if (wasShowing) wwdRedrawManager.redraw()
     panel.removedEntry(e)
 
     if (entryPanel.isShowing(e)) entryPanel.update
   }
 
-  //--- flight entry centering
+  //--- track entry centering
 
-  var centeredEntry: Option[FlightEntry[T]] = None
+  var centeredEntry: Option[TrackEntry[T]] = None
 
-  def centerEntry (e: FlightEntry[T]) = {
+  def centerEntry (e: TrackEntry[T]) = {
     if (e.hasAssignedModel) {
       raceView.centerOn(e.obj)
     } else {
@@ -292,48 +292,56 @@ abstract class FlightLayer[T <:InFlightAircraft](val raceView: RaceView, config:
     }
   }
 
-  def startCenteringFlightEntry(e: FlightEntry[T]) = {
+  def startCenteringTrackEntry(e: TrackEntry[T]) = {
     ifSome(centeredEntry){_.followPosition(false)}
     e.followPosition(true)
     raceView.panToCenter(e.obj)
     centeredEntry = Some(e)
-    changedFlightEntryOptions(e,StartCenter)
+    changedTrackEntryOptions(e,StartCenter)
   }
-  def stopCenteringFlightEntry = {
+  def stopCenteringTrackEntry = {
     ifSome(centeredEntry) { e =>
       e.followPosition(false)
       centeredEntry = None
-      changedFlightEntryOptions(e,StopCenter)
+      changedTrackEntryOptions(e,StopCenter)
     }
   }
 
-  def changedFlightEntryOptions (e: FlightEntry[T], action: String) = {
+  def changedTrackEntryOptions(e: TrackEntry[T], action: String) = {
     panel.changedFlightEntryOptions
-    entryPanel.changedFlightEntryOptions
+    entryPanel.changedTrackEntryOptions
     raceView.objectChanged(e,action)
   }
 
-  def requestFlightInfoUpdates (e: FlightEntry[T]) = {
-    ifSome(flightInfoBase) { baseChannel =>
+  def requestTrackInfoUpdates (e: TrackEntry[T]) = {
+    ifSome(trackInfoBase) { baseChannel =>
       val cs = e.obj.cs
       val channel = s"$baseChannel/$cs"
       actor.subscribe(channel)
-      request(channel, Some(FlightInfoUpdateRequest(cs)))
+      request(channel, Some(TrackInfoUpdateRequest(cs)))
     }
   }
-  def releaseFlightInfoUpdates (e: FlightEntry[T]) = {
-    ifSome(flightInfoBase) { baseChannel =>
+  def releaseTrackInfoUpdates (e: TrackEntry[T]) = {
+    ifSome(trackInfoBase) { baseChannel =>
       val cs = e.obj.cs
       val channel = s"$baseChannel/$cs"
       actor.unsubscribe(channel)
-      release(channel, Some(FlightInfoUpdateRequest(cs)))
+      release(channel, Some(TrackInfoUpdateRequest(cs)))
     }
   }
 
   override def handleMessage = {
-    case BusEvent(_,fInfo:FlightInfo,_) => entryPanel.setFlightInfo(fInfo)
+    case BusEvent(_,fInfo:TrackInfo,_) => entryPanel.setTrackInfo(fInfo)
     case DelayedAction(_,action) => action()
   }
+
+
+  //--- track query interface
+
+  def track(cs: String): Option[TrackedObject] = tracks.get(cs).map( _.obj )
+
+  // layer specific positions (cities, airports, ports etc.)
+  def location (id: String): Option[GeoPosition]
 }
 
 

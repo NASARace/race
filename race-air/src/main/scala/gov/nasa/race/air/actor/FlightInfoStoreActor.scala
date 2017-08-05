@@ -20,6 +20,7 @@ import com.typesafe.config.Config
 import gov.nasa.race.air._
 import gov.nasa.race.core.Messages.{BusEvent, ChannelTopicAccept, ChannelTopicRelease, ChannelTopicRequest}
 import gov.nasa.race.core.{ChannelTopicProvider, SubscribingRaceActor}
+import gov.nasa.race.track._
 
 
 /**
@@ -30,37 +31,37 @@ class FlightInfoStoreActor (val config: Config) extends ChannelTopicProvider wit
 
   var activeUpdates = Set.empty[String] // the cs'es we publish updates for
 
-  def publish (fInfo: FlightInfo): Unit =  writeTo.foreach { baseChannel => publish( s"$baseChannel/${fInfo.cs}", fInfo) }
+  def publish (fInfo: TrackInfo): Unit =  writeTo.foreach { baseChannel => publish( s"$baseChannel/${fInfo.cs}", fInfo) }
 
-  val store = new FlightInfoStore {
-    override protected def update (key: String, fInfo: FlightInfo): Unit ={
+  val store = new TrackInfoStore {
+    override protected def update (key: String, fInfo: TrackInfo): Unit ={
       super.update(key,fInfo)
       if (activeUpdates.contains(key)) publish(fInfo)
     }
   }
-  val parser = new FlightInfoTfmParser(store)
+  val parser = new TrackInfoTFMParser(store)
 
   override def handleMessage = {
     case BusEvent(_, xmlMsg: String, _) => parser.parse(xmlMsg)
 
-    case RequestFlightInfo(cs) =>
+    case RequestTrackInfo(cs) =>
       store.get(cs) match {
         case Some(fi) => sender ! fi
-        case None => sender ! NoSuchFlightInfo(cs)
+        case None => sender ! NoSuchTrackInfo(cs)
       }
   }
 
   //--- the ChannelTopicProvider part
   override def isRequestAccepted (request: ChannelTopicRequest) = {
     request.channelTopic.topic match {
-      case Some(FlightInfoUpdateRequest(cs)) => true
+      case Some(TrackInfoUpdateRequest(cs)) => true
       case other => false
     }
   }
 
   override def gotAccept (accept: ChannelTopicAccept) = {
     accept.channelTopic.topic match {
-      case Some(FlightInfoUpdateRequest(cs)) =>
+      case Some(TrackInfoUpdateRequest(cs)) =>
         activeUpdates = activeUpdates + cs
         store.get(cs).foreach(publish)
       case other => // ignore
@@ -69,7 +70,7 @@ class FlightInfoStoreActor (val config: Config) extends ChannelTopicProvider wit
 
   override def gotRelease (release: ChannelTopicRelease) = {
     release.channelTopic.topic match {
-      case rel@Some(FlightInfoUpdateRequest(cs)) =>
+      case rel@Some(TrackInfoUpdateRequest(cs)) =>
         if(!hasClientsForTopic(rel)) activeUpdates = activeUpdates - cs
       case other => // ignore
     }

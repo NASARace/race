@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, United States Government, as represented by the
+ * Copyright (c) 2017, United States Government, as represented by the
  * Administrator of the National Aeronautics and Space Administration.
  * All rights reserved.
  *
@@ -14,19 +14,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package gov.nasa.race
 
-package gov.nasa.race.ww
-
-import gov.nasa.race.air.AsdexTrack
-import gov.nasa.race.uom.Length._
-import gov.nasa.worldwind.geom.Position
-
-import scala.language.implicitConversions
-
+import gov.nasa.race.geo.GeoPosition3D
+import gov.nasa.race.uom.{Angle, Speed}
 
 /**
-  * package `gov.nasa.race.ww.air` contains WorldWind specific airspace visualization
+  * common types for track objects
+  *
+  * this package relies on gov.nasa.race.geo for spatial information and adds time and identification
+  * or generic tracks
   */
-package object air {
-  implicit def positionFromAsdexTrack(t: AsdexTrack): Position = wwPosition(t.position, t.altitude.orElse(Length0))
+package object track {
+
+  /** a GeoPosition3D that is associated with a date */
+  trait TrackPoint3D extends GeoPosition3D with Dated
+
+  trait MovingObject {
+    def heading: Angle
+    def speed: Speed
+  }
+
 }

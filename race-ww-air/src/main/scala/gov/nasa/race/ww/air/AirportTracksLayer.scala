@@ -30,8 +30,8 @@ import gov.nasa.race.swing.Style._
 import gov.nasa.race.uom.Angle._
 import gov.nasa.race.uom.Length._
 import gov.nasa.race.uom._
+import gov.nasa.race.ww._
 import gov.nasa.race.ww.Implicits._
-import gov.nasa.race.ww.{DynamicRaceLayerInfo, EyePosListener, RaceView, SubscribingRaceLayer, _}
 import gov.nasa.worldwind.WorldWind
 import gov.nasa.worldwind.avlist.AVKey
 import gov.nasa.worldwind.geom.Position
@@ -43,6 +43,8 @@ import scala.collection.concurrent.TrieMap
 
 /**
   * WorldWind layer to display ASDE-X airport track layers
+  *
+  * TODO - will be replaced with regular AsdexTrackLayer
   */
 class AirportTracksLayer (raceView: RaceView,config: Config)
                                            extends SubscribingRaceLayer(raceView,config)
@@ -161,7 +163,7 @@ class AirportTracksLayer (raceView: RaceView,config: Config)
   }
 
   def lookupAirport (pos: LatLonPos, dist: Length): Option[Airport] = {
-    Airport.asdexAirports.find( e=> GreatCircle.distance(pos, e._2.pos) < dist).map(_._2)
+    Airport.asdexAirports.find( e=> GreatCircle.distance(pos, e._2.position) < dist).map(_._2)
   }
 
   def releaseCurrentAirport = {
@@ -196,7 +198,7 @@ class AirportTracksLayer (raceView: RaceView,config: Config)
       if (selAirport.isDefined) releaseCurrentAirport
     } else {
       val alt = gotoAltitude.toMeters + airport.elevation.toMeters
-      raceView.panTo(airport.pos, alt)
+      raceView.panTo(airport.position, alt)
     }
   }
 }

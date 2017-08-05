@@ -18,8 +18,8 @@
 package gov.nasa.race.air
 
 import com.github.nscala_time.time.Imports._
-import gov.nasa.race.Dated
 import gov.nasa.race.geo.{GreatCircle, LatLonPos}
+import gov.nasa.race.track.TrackedObject
 import gov.nasa.race.uom.Angle._
 import gov.nasa.race.uom._
 
@@ -37,10 +37,7 @@ case class TFMTracks (tracks: Seq[TFMTrack]) {
   * object representing a Traffic Flow Management (TFM) track
   * This represents flights that are tracked from ground stations (radar)
   *
-  * While this is (currently) largely redundant with FlightPos (which is ADS-B/FIXM based), we
-  * keep it as a separate type that is not coupled through a common base class
-  *
-  * <2do> this should not try to encode completed flights into values, separate into different object
+  * while this is largely redundant to FlightPos we might extend it in the future with TFM specific fields
   */
 case class TFMTrack(id: String,
                     cs: String,
@@ -51,7 +48,7 @@ case class TFMTrack(id: String,
                     date: DateTime,
                     nextPos: Option[LatLonPos],
                     nextDate: Option[DateTime]
-                   ) extends InFlightAircraft {
+                   ) extends TrackedObject {
 
   val heading = if (nextPos.isDefined) GreatCircle.initialBearing(position,nextPos.get) else Degrees(0)
 }

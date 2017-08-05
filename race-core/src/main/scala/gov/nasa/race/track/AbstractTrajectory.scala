@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, United States Government, as represented by the
+ * Copyright (c) 2017, United States Government, as represented by the
  * Administrator of the National Aeronautics and Space Administration.
  * All rights reserved.
  *
@@ -14,19 +14,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-package gov.nasa.race.ww
-
-import gov.nasa.race.air.AsdexTrack
-import gov.nasa.race.uom.Length._
-import gov.nasa.worldwind.geom.Position
-
-import scala.language.implicitConversions
-
+package gov.nasa.race.track
 
 /**
-  * package `gov.nasa.race.ww.air` contains WorldWind specific airspace visualization
+  * abstraction for trajectories that does not imply underlying representation, allowing for memory
+  * optimized implementations
   */
-package object air {
-  implicit def positionFromAsdexTrack(t: AsdexTrack): Position = wwPosition(t.position, t.altitude.orElse(Length0))
+trait AbstractTrajectory {
+  def capacity: Int
+  def add (pos: TrackPoint3D)
+
+  /** low level iteration support that does not require temporary objects for FlightPath elements
+    * The provided function takes 5 arguments:
+    *   Int - path element index
+    *   Double,Double - lat,lon in Degrees
+    *   Double - alt in meters
+    *   Long - epoch millis
+    */
+  def foreach(f: (Int,Double,Double,Double,Long) => Unit)
 }

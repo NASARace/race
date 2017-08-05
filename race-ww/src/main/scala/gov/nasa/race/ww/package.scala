@@ -22,6 +22,7 @@ import java.awt.event._
 import javax.swing._
 
 import gov.nasa.race.geo.LatLonPos
+import gov.nasa.race.track.TrackPoint3D
 import gov.nasa.worldwind._
 import gov.nasa.worldwind.event.SelectEvent
 import gov.nasa.worldwind.geom.{Position, Angle => WWAngle}

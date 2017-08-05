@@ -18,11 +18,10 @@
 package gov.nasa.race.air
 
 import gov.nasa.race.geo.LatLonPos
+import gov.nasa.race.track.TrackedObject
+import gov.nasa.race.uom._
 import gov.nasa.race.util.DateTimeUtils._
 import org.joda.time.DateTime
-import gov.nasa.race.uom._
-
-import scala.collection.mutable.ArrayBuffer
 
 /**
   * track report for airports (e.g. generated from SWIM asdexMsg messages)
@@ -48,7 +47,7 @@ object VerticalDirection extends Enumeration {
 case class AsdexTrack(id: String,
                       cs: String,
                       date: DateTime,
-                      pos: LatLonPos,
+                      position: LatLonPos,
 
                       // note - these can have undefined values (we don't use Option to be abe to merge with FlightPos)
                       speed: Speed,
@@ -59,9 +58,10 @@ case class AsdexTrack(id: String,
                       trackType: AsdexTrackType.Value,
                       display: Boolean,
                       drop: Boolean,
-                      vertical: VerticalDirection.Value,  // up/down
-                      onGround: Boolean,  // ground bit set
-                      acType: Option[String]) {
+                      vertical: VerticalDirection.Value, // up/down
+                      onGround: Boolean, // ground bit set
+                      acType: Option[String]
+                     ) extends TrackedObject {
 
   def isAircraft = trackType == AsdexTrackType.Aircraft
   def isGroundAircraft = trackType == AsdexTrackType.Aircraft && !altitude.isDefined
@@ -70,5 +70,5 @@ case class AsdexTrack(id: String,
   def isAirborneAircraft = trackType == AsdexTrackType.Aircraft && altitude.isDefined
   def isVehicle = trackType == AsdexTrackType.Vehicle
 
-  def toShortString = s"Track{$id,$trackType,$pos,$date}"
+  override def toShortString = s"Track{$id,$trackType,$position,$date}"
 }

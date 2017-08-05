@@ -90,7 +90,7 @@ class TATrackAndFlightPlan2TATrack (val config: Config=NoConfig) extends XmlPars
   }
 
   def record (src: String, stddsRev: Int): Unit = {
-    var trackNum: Int = -1
+    var trackId: String = null
     var acAddress: String = null
     var beaconCode: String = null
     var mrtTime: DateTime = null
@@ -103,7 +103,7 @@ class TATrackAndFlightPlan2TATrack (val config: Config=NoConfig) extends XmlPars
     var flightPlan: Option[FlightPlan] = None
 
     whileNextElement {
-      case "trackNum" => trackNum = readInt
+      case "trackNum" => trackId = readText
       case "mrtTime" => mrtTime = DateTime.parse(readText)
       case "status" => status = readStatus
       case "xPos" => xPos = NauticalMiles(readInt / 256.0)
@@ -124,13 +124,14 @@ class TATrackAndFlightPlan2TATrack (val config: Config=NoConfig) extends XmlPars
     } {
       case "record" =>
         // src, trackNum, x/yPos are all required by the schema
-        if (src != null && trackNum != -1 && xPos.isDefined && yPos.isDefined) {
+        if (src != null && trackId != null && xPos.isDefined && yPos.isDefined) {
           if (allowIncompleteTrack || (mrtTime != null && vx.isDefined && vy.isDefined && reportedAltitude.isDefined)) {
             val spd = Speed.fromVxVy(vx, vy)
             val hdg = Angle.fromVxVy(vx, vy)
-            acAddress = trackNum.toString
-            val track = new TATrack(src, trackNum, XYPos(xPos, yPos), vVert, status, attrs, beaconCode, flightPlan,
-              trackNum.toString, acAddress, LatLonPos(lat, lon), reportedAltitude, spd, hdg, mrtTime)
+            acAddress = trackId.toString
+            val track = new TATrack(src, trackId, acAddress,
+              LatLonPos(lat, lon), reportedAltitude, spd, hdg, mrtTime,
+              XYPos(xPos, yPos), vVert, status, attrs, beaconCode, flightPlan)
             if (attachRev && stddsRev >= 0) track.amend(Rev(3, stddsRev.toShort))
             if (attachMsg) track.amend(Src(msg))
             tracks += track

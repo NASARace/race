@@ -14,28 +14,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-package gov.nasa.race.ww.air
+package gov.nasa.race.ww.track
 
 import java.util.Vector
 
-import gov.nasa.race.air.InFlightAircraft
 import gov.nasa.race.common.BasicTimeSeries
-import gov.nasa.race.geo.DatedAltitudePositionable
+import gov.nasa.race.track.{TrackPoint3D, TrackedObject}
+import gov.nasa.race.ww.Implicits._
 import gov.nasa.worldwind.WorldWind
 import gov.nasa.worldwind.avlist.AVKey
 import gov.nasa.worldwind.geom.Position
 import gov.nasa.worldwind.render.{BasicShapeAttributes, Material, Path}
 
-object PathRenderLevel extends Enumeration {
-  type PathRenderLevel = Value
+object TrackPathRenderLevel extends Enumeration {
+  type TrackPathRenderLevel = Value
   val None, Line, LinePos = Value
 }
 
 /**
   * WWJ Path to display aircraft flight paths
   */
-class FlightPath[T <: InFlightAircraft](val flightEntry: FlightEntry[T]) extends Path with BasicTimeSeries {
+class TrackPath[T <: TrackedObject](val flightEntry: TrackEntry[T]) extends Path with BasicTimeSeries {
   val layer = flightEntry.layer
   val flightPath = flightEntry.flightPath
 
@@ -65,9 +64,9 @@ class FlightPath[T <: InFlightAircraft](val flightEntry: FlightEntry[T]) extends
 
   def setLineAttrs = setShowPositions(false)
   def setLinePosAttrs = setShowPositions(averageUpdateFrequency > 1) // no point showing points for high frequency updates
-  def updateAttributes = if (layer.pathDetails == PathRenderLevel.LinePos) setLinePosAttrs else setLineAttrs
+  def updateAttributes = if (layer.pathDetails == TrackPathRenderLevel.LinePos) setLinePosAttrs else setLineAttrs
 
-  def addFlightPosition (fpos: DatedAltitudePositionable) = {
+  def addTrackPosition(fpos: TrackPoint3D) = {
     addSample
     posList.add(fpos)
     setPositions(posList)

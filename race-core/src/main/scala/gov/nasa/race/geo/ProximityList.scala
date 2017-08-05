@@ -27,7 +27,7 @@ import gov.nasa.race.uom._
   *
   * the weight basis is meters
   */
-abstract class ProximityList[T<:Positionable, E<:WeightedArray.Entry[T]]
+abstract class ProximityList[T<:GeoPosition, E<:WeightedArray.Entry[T]]
                (var _center: LatLonPos,
                 var _maxDistance: Length,
                 val ignoreDistance: Length)  extends WeightedArray[T,E] {

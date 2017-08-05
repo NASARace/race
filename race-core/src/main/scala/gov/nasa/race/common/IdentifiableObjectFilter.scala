@@ -15,17 +15,17 @@
  * limitations under the License.
  */
 
-package gov.nasa.race.air.filter
+package gov.nasa.race.common
 
 import com.typesafe.config.Config
+import gov.nasa.race.IdentifiableObject
 import gov.nasa.race.config.ConfigUtils._
-import gov.nasa.race.air.IdentifiablePositionable
 import gov.nasa.race.config.ConfigurableFilter
 
 /**
   * a filter that checks if an IdentifiableAircraft callsign matches any of a given set of regexes
   */
-class IdentifiableAircraftFilter (val reSpec: Seq[String], val config: Config=null) extends ConfigurableFilter {
+class IdentifiableObjectFilter(val reSpec: Seq[String], val config: Config=null) extends ConfigurableFilter {
 
   def this (conf: Config) = this(conf.getStringListOrElse("callsigns", Seq.empty), conf)
 
@@ -34,7 +34,7 @@ class IdentifiableAircraftFilter (val reSpec: Seq[String], val config: Config=nu
   override def pass (o: Any): Boolean = {
     if (o != null) {
       o match {
-        case obj: IdentifiablePositionable =>
+        case obj: IdentifiableObject =>
           val cs = obj.cs
           regexes.exists(_.findFirstIn(cs).isDefined)
         case other => false // don't know

@@ -300,9 +300,15 @@ package object race {
 
   //--- common functional and feature types
 
-  // something that has a 'date' field
+  // something that has a date
   trait Dated {
-    val date: DateTime
+    def date: DateTime
+  }
+
+  // something that can be identified across channels
+  trait IdentifiableObject {
+    def id: String // channel specific (track number, tail number etc.)
+    def cs: String // call sign (cross-channel ID)
   }
 
   // something that can translate between two types

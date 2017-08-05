@@ -20,26 +20,28 @@ package gov.nasa.race.ww.air
 import akka.actor.Actor.Receive
 import com.typesafe.config.Config
 import gov.nasa.race._
-import gov.nasa.race.air.{FlightPos, FlightTerminationMessage}
+import gov.nasa.race.air.{AirLocator, FlightPos, FlightTerminationMessage}
 import gov.nasa.race.core.Messages.BusEvent
 import gov.nasa.race.ww._
+import gov.nasa.race.ww.track.ModelTrackLayer
 
 /**
  * a WorldWind layer to display FlightPos objects
  */
-class FlightPosLayer (raceView: RaceView,config: Config) extends FlightLayer3D[FlightPos](raceView,config) {
+class FlightPosLayer (raceView: RaceView,config: Config)
+                       extends ModelTrackLayer[FlightPos](raceView,config) with AirLocator {
 
   def handleFlightPosLayerMessage: Receive = {
     case BusEvent(_,fpos:FlightPos,_) =>
       count = count + 1
-      flights.get(fpos.cs) match {
-        case Some(acEntry) => updateFlightEntry(acEntry,fpos)
-        case None => addFlightEntry(fpos)
+      tracks.get(fpos.cs) match {
+        case Some(acEntry) => updateTrackEntry(acEntry,fpos)
+        case None => addTrackEntry(fpos)
       }
 
     case BusEvent(_,msg: FlightTerminationMessage,_)  =>
       count = count + 1
-      ifSome(flights.get(msg.cs)) {removeFlightEntry}
+      ifSome(tracks.get(msg.cs)) {removeTrackEntry}
   }
 
   override def handleMessage = handleFlightPosLayerMessage orElse super.handleMessage

@@ -21,22 +21,33 @@ import com.typesafe.config.Config
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.air._
 import gov.nasa.race.config.ConfigurableFilter
+import gov.nasa.race.track._
+import org.joda.time.DateTime
+
+object StaticFlightQueryContext extends TrackQueryContext {
+  def now = DateTime.now() // we don't model time
+  def track(cs: String) = None // we don't have a source for flights
+  def location(id: String) = Airport.allAirports.get(id)
+  def error (msg: String) = scala.sys.error(msg)
+}
 
 /**
-  * a filter for scriptable queries of InFlightAircraft objects
+  * a filter for scriptable queries of track objects representing flights
+  *
+  * TODO - this should handle sim time
   */
-class FlightQueryFilter(val queryString: String, val ctx: FlightQueryContext, val config: Config=null) extends ConfigurableFilter {
+class FlightQueryFilter(val queryString: String, val ctx: TrackQueryContext, val config: Config=null) extends ConfigurableFilter {
 
   def this (conf: Config) = this(conf.getStringOrElse("query", ""), StaticFlightQueryContext, conf)
-  def this (ctx: FlightQueryContext, conf: Config) = this(conf.getStringOrElse("query", "all"), ctx, conf)
+  def this (ctx: TrackQueryContext, conf: Config) = this(conf.getStringOrElse("query", "all"), ctx, conf)
 
-  val parser = new FlightQueryParser(ctx)
-  val query: Option[FlightFilter] = parser.parseQuery(queryString) match {
-    case parser.Success(result,_) => Some(result)
+  val parser = new TrackQueryParser(ctx)
+  val query: Option[TrackFilter] = parser.parseQuery(queryString) match {
+    case parser.Success(result:TrackFilter,_) => Some(result)
     case failure: parser.NoSuccess => ctx.error(failure.msg); None
   }
 
-  def passAircraft (ac: InFlightAircraft): Boolean = {
+  def passAircraft (ac: TrackedObject): Boolean = {
     query match {
       case Some(filter) => filter.pass(ac)(ctx)
       case None => false
@@ -46,7 +57,7 @@ class FlightQueryFilter(val queryString: String, val ctx: FlightQueryContext, va
   override def pass (o: Any): Boolean = {
     if (o != null) {
       o match {
-        case obj: InFlightAircraft => passAircraft(obj)
+        case obj: TrackedObject => passAircraft(obj)
         case other => false
       }
     } else false

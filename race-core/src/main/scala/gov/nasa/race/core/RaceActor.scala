@@ -90,6 +90,7 @@ trait RaceActor extends Actor with ImplicitActorLogging {
   // do the initialization. This guarantees that concrete actor code cannot access
   // un-initialized fields
   override def receive = {
+    case RequestRaceActorCapabilities => sender ! capabilities
     case InitializeRaceActor(raceContext,actorConf) => handleInitializeRaceActor(raceContext,actorConf)
     case TerminateRaceActor(originator) => handleTerminateRaceActor(originator)
     //case msg: PingRaceActor => sender ! msg.copy(tReceivedNanos=System.nanoTime())
@@ -139,6 +140,7 @@ trait RaceActor extends Actor with ImplicitActorLogging {
 
     case ProcessRaceActor => sender ! RaceActorProcessed
     case msg:PingRaceActor => sender ! msg.copy(tReceivedNanos=System.nanoTime())
+    case RequestRaceActorCapabilities => sender ! capabilities
 
     case rc: ChildNodeRollCall => answerChildNodes(rc)
     case rc: RollCall => rc.answer(self) // generic response

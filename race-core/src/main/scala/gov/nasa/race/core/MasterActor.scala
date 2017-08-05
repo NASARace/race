@@ -68,6 +68,8 @@ case object RemoteConnectionReject
   *
   * Shutdown/termination is also synchronous, in reverse order of actor specification to guarantee
   * symmetric behavior
+  *
+  * TODO - streamline local/remote instantiation and registration
   */
 class MasterActor (ras: RaceActorSystem) extends Actor with ImplicitActorLogging with AskSupport {
 
@@ -204,10 +206,21 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ImplicitActorLogging
             }
           }
         }
-        getRemoteActor(actorName,remoteUniverseName,remoteUri,actorConfig)
+        getRemoteActor(actorName,remoteUniverseName,remoteUri,actorConfig).map(registerRemoteActor(_,actorConfig))
 
       case None => // local actor
-        instantiateActor(actorConfig)
+        instantiateLocalActor(actorConfig)
+    }
+  }
+
+  def registerRemoteActor (aRef: ActorRef, actorConfig: Config): ActorRef = {
+    askForResult( aRef ? RequestRaceActorCapabilities ) {
+      case caps: RaceActorCapabilities =>
+        ras.registerActor(aRef, actorConfig, caps)
+        aRef
+      case TimedOut =>
+        error(s"request for remote actor capabilities timed out: $aRef")
+        throw new RaceException("no actor capabilities")
     }
   }
 
@@ -262,9 +275,10 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ImplicitActorLogging
         info(s"response from remote $path")
         context.watch(actorRef) // we can't supervise it anymore, but we can deathwatch
         r
-      case ActorIdentity(path: String, None) =>
+      case ActorIdentity(path: String, None) => None
         if (actorConfig.hasPath("class")) {
-          instantiateActor(actorConfig) // create it
+          instantiateRemoteActor(actorConfig)
+
         } else { // if there is no class, we can't instantiate
           if (actorConfig.getBooleanOrElse("optional", false)) {
             warning(s"ignoring optional remote $path")
@@ -273,6 +287,27 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ImplicitActorLogging
             error(s"cannot instantiate remote because of missing class $path")
             throw new RaceException("missing remote actor ")
           }
+        }
+    }
+  }
+
+  def instantiateRemoteActor (actorConfig: Config): Option[ActorRef] = {
+    val actorName = actorConfig.getString("name")
+    try {
+      val clsName = actorConfig.getClassName("class")
+      val actorCls = ras.classLoader.loadClass(clsName)
+
+      info(s"creating remote $actorName")
+      val aRef = context.actorOf(Props(actorCls, actorConfig), actorName)
+      Some(aRef)
+
+    } catch {
+      case t: Throwable =>
+        if (isOptionalActor(actorConfig)) {
+          warning(s"optional remote $actorName did not instantiate: $t")
+          None
+        } else {
+          throw new RaceInitializeException(s"non-optional remote $actorName failed with: $t")
         }
     }
   }
@@ -325,10 +360,13 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ImplicitActorLogging
     * actors synchronously and tell us right away if there was an exception during construction.
     * We still need to be able to specify a supervisorStrategy though, i.e. we need to
     * instantiate through Props and from another thread.
+    *
+    * NOTE - since we use a SyncVar this does not work for remote actor creation
+    *
     * @param actorConfig the Config object that specifies the actor
     * @return Some(ActorRef) in case instantiation has succeeded, None otherwise
     */
-  protected def instantiateActor (actorConfig: Config): Option[ActorRef] = {
+  protected def instantiateLocalActor(actorConfig: Config): Option[ActorRef] = {
     try {
       val actorName = actorConfig.getString("name")
       val clsName = actorConfig.getClassName("class")

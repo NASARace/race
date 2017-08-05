@@ -14,18 +14,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package gov.nasa.race.track
 
-
-package gov.nasa.race.air
-
-import gov.nasa.race.geo.{DatedAltitudePositionable, WGS84Codec}
+import gov.nasa.race.geo.WGS84Codec
 
 import scala.annotation.tailrec
 
 /**
   * A FlightPath with a compact encoding
   */
-class CompactFlightPath (capacityIncrement: Int=32) extends AbstractFlightPath {
+class CompactTrajectory(capacityIncrement: Int=32) extends AbstractTrajectory {
   private var growthCycle = 0
   final val linearGrowthCycles = 5 // once that is exceeded we grow exponentially
 
@@ -46,7 +44,7 @@ class CompactFlightPath (capacityIncrement: Int=32) extends AbstractFlightPath {
 
   override def capacity = if (data != null) data.length / 2 else capacityIncrement
 
-  override def add (e: DatedAltitudePositionable): Unit = {
+  override def add (e: TrackPoint3D): Unit = {
     val i = _size*2
 
     val t = e.date.getMillis

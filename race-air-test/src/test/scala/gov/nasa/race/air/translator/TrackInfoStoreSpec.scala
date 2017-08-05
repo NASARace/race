@@ -18,7 +18,7 @@ package gov.nasa.race.air.translator
 
 import java.io.File
 
-import gov.nasa.race.air.{FlightInfoStore, FlightInfoTfmParser}
+import gov.nasa.race.air.{TrackInfoStore, TrackInfoTFMParser}
 import gov.nasa.race.util.FileUtils._
 import gov.nasa.race.test.RaceSpec
 import org.scalatest.FlatSpec
@@ -28,17 +28,17 @@ import org.scalatest.FlatSpec
   *
   * TODO - this still needs assertions
   */
-class FlightInfoStoreSpec extends FlatSpec with RaceSpec {
+class TrackInfoStoreSpec extends FlatSpec with RaceSpec {
   val xmlMsg = fileContentsAsUTF8String(baseResourceFile("tfmdata.xml")).get
 
   behavior of "FlightInfoStore"
 
   "FlightInfoTfmParser" should "populate known store" in {
-    val store = new FlightInfoStore
-    val parser = new FlightInfoTfmParser(store)
+    val store = new TrackInfoStore
+    val parser = new TrackInfoTFMParser(store)
 
     parser.parse(xmlMsg)
 
-    store.flightInfos.values.foreach { fi => println(fi) }
+    store.trackInfos.values.foreach { fi => println(fi) }
   }
 }

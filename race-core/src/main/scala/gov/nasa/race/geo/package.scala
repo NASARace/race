@@ -17,9 +17,8 @@
 
 package gov.nasa.race
 
-import org.joda.time.DateTime
-import gov.nasa.race.uom.Length._
 import gov.nasa.race.uom.Angle._
+import gov.nasa.race.uom.Length._
 import gov.nasa.race.uom._
 
 
@@ -44,20 +43,14 @@ package object geo {
 
   //--- various abstractions of position objects
 
+  // we use a function interface here to allow concrete types to use their own storage formats
+
   case class XYPos (x: Length, y: Length)
 
-  trait Positionable {
+  trait GeoPosition {
     def position: LatLonPos
   }
-  trait AltitudePositionable extends Positionable {
+  trait GeoPosition3D extends GeoPosition {
     def altitude: Length
   }
-
-  trait DatedAltitudePositionable extends AltitudePositionable with Dated
-
-  trait MovingPositionable extends AltitudePositionable {
-    def heading: Angle
-    def speed: Speed
-  }
-
 }
