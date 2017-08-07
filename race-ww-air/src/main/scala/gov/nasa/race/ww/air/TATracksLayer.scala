@@ -68,7 +68,6 @@ class TATracksLayer (raceView: RaceView,config: Config)
 
   override def defaultSymbolColor = Color.green
   override def defaultSubLabelFont = Some(new Font(Font.MONOSPACED,Font.PLAIN,11))
-  override def defaultPlaneImg = Images.getArrowImage(color)
   override def defaultLabelThreshold = Meters(600000.0).toMeters
   override def defaultSymbolThreshold = Meters(200000.0).toMeters
 
@@ -126,16 +125,12 @@ class TATracksLayer (raceView: RaceView,config: Config)
       selTracon match {
         case Some(tracon) =>
           if (track.src == tracon.id) {
-            count = count + 1
-            if (track.status != Status.Drop) {
-              tracks.get(track.cs) match {
-                case Some(acEntry) => updateTrackEntry(acEntry, track)
-                case None => addTrackEntry(track)
-              }
-            } else {
-              ifSome(tracks.get(track.cs)) {
-                removeTrackEntry
-              }
+            incUpdateCount
+            getTrackEntry(track) match {
+              case Some(acEntry) =>
+                if (track.status != Status.Drop) updateTrackEntry(acEntry, track)
+                else (removeTrackEntry(acEntry))
+              case None => addTrackEntry(track)
             }
           }
         case None => // nothing selected, ignore
@@ -151,8 +146,7 @@ class TATracksLayer (raceView: RaceView,config: Config)
   def selectTracon(tracon: Tracon) = raceView.trackUserAction(gotoTracon(tracon))
 
   def reset(): Unit = {
-    removeAllRenderables()
-    tracks.clear()
+    clearTrackEntries
     releaseAll
     traconGrid.hide
     showTraconSymbols

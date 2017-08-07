@@ -28,10 +28,10 @@ import scala.util.matching.Regex
 import scala.util.parsing.combinator.RegexParsers
 
 trait TrackQueryContext {
-  def now: DateTime
-  def track(cs: String): Option[TrackedObject]
-  def location(id: String): Option[GeoPosition]
-  def error (msg: String): Unit
+  def queryDate: DateTime
+  def queryTrack(id: String): Option[TrackedObject]
+  def queryLocation(id: String): Option[GeoPosition]
+  def reportQueryError(msg: String): Unit
 }
 
 //--- data model
@@ -81,7 +81,7 @@ object TrackQuery {
   }
   class ProximityFilter(cs: String, dist: Length) extends TrackFilter {
     override def pass(f: TrackedObject)(implicit ctx:TrackQueryContext) = {
-      ctx.track(cs) match {
+      ctx.queryTrack(cs) match {
         case Some(otherFlight) => GreatCircle.distance(f.position,otherFlight.position) < dist
         case None => false
       }
@@ -100,13 +100,13 @@ object TrackQuery {
   }
   class WithinDurationFilter (dur: Duration) extends TrackFilter {
     override def pass(f: TrackedObject)(implicit ctx:TrackQueryContext) = {
-      ctx.now.getMillis - f.date.getMillis < dur.toMillis
+      ctx.queryDate.getMillis - f.date.getMillis < dur.toMillis
     }
     override def toString = s"DateWithin($dur)"
   }
   class OutsideDurationFilter (dur: Duration) extends TrackFilter {
     override def pass(f: TrackedObject)(implicit ctx:TrackQueryContext) = {
-      ctx.now.getMillis - f.date.getMillis > dur.toMillis
+      ctx.queryDate.getMillis - f.date.getMillis > dur.toMillis
     }
     override def toString = s"DateOutside($dur)"
   }
@@ -158,7 +158,7 @@ class TrackQueryParser(val ctx: TrackQueryContext)  extends RegexParsers {
   def posSpec: Parser[Query] = "pos" ~ "<" ~ ID ~ "+" ~ NUM ^^ {
     case _ ~ _ ~ id ~ _ ~ num =>
       val radius = NauticalMiles(num)
-      ctx.location(id) match {
+      ctx.queryLocation(id) match {
         case Some(loc) => new WithinRadiusFilter(loc.position, radius)
         case None => new ProximityFilter(id, radius) // TODO - sectors etc.
       }

@@ -26,7 +26,7 @@ import gov.nasa.race.common.Threshold
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.Messages._
 import gov.nasa.race.geo.GeoPosition
-import gov.nasa.race.track.{CompactTrajectory, TrackInfo, TrackInfoUpdateRequest, TrackedObject}
+import gov.nasa.race.track._
 import gov.nasa.race.uom.Length._
 import gov.nasa.race.ww.EventAction.EventAction
 import gov.nasa.race.ww.Implicits._
@@ -43,8 +43,7 @@ import scala.collection.mutable.{Map => MutableMap}
   */
 abstract class TrackLayer[T <:TrackedObject](val raceView: RaceView, config: Config)
                                   extends SubscribingRaceLayer(raceView,config)
-                                     with DynamicRaceLayerInfo
-                                     with AltitudeSensitiveLayerInfo {
+                                     with DynamicRaceLayerInfo with AltitudeSensitiveLayerInfo with TrackQueryContext {
 
   val panel = createLayerInfoPanel
   val entryPanel = createEntryPanel
@@ -55,8 +54,8 @@ abstract class TrackLayer[T <:TrackedObject](val raceView: RaceView, config: Con
   def defaultSymbolColor = Color.cyan
   val color = config.getColorOrElse("color", defaultSymbolColor)
 
-  def defaultPlaneImg = Images.getPlaneImage(color)
-  val planeImg = defaultPlaneImg
+  def defaultSymbolImage = Images.getArrowImage(color)
+  val symbolImg = defaultSymbolImage
 
   val markImg = Images.defaultMarkImg
   val labelColor = config.getColorOrElse("label-color",color)
@@ -73,7 +72,7 @@ abstract class TrackLayer[T <:TrackedObject](val raceView: RaceView, config: Con
   var symbolThreshold = config.getDoubleOrElse("symbol-altitude", defaultSymbolThreshold)
   var trackDetails: TrackRenderLevel = getTrackRenderLevel(eyeAltitude)
 
-  def image (t: T) = planeImg
+  def image (t: T) = symbolImg
   def markImage (t: T) = markImg
 
   //--- AircraftPath attributes
@@ -89,27 +88,45 @@ abstract class TrackLayer[T <:TrackedObject](val raceView: RaceView, config: Con
   )
 
   //--- the data we manage
-  val tracks = MutableMap[String,TrackEntry[T]]()
+  val trackEntries = MutableMap[String,TrackEntry[T]]()
 
   val noDisplayFilter: (TrackEntry[T])=>Boolean = (f) => true
   var displayFilter: (TrackEntry[T])=>Boolean = noDisplayFilter
 
-  override def size = tracks.size
+  override def size = trackEntries.size
 
   //--- end ctor
 
   // override for specialized LayerInfoPanel
-  def createLayerInfoPanel = new TrackLayerInfoPanel(raceView,this).styled('consolePanel)
-  def createEntryPanel = new TrackEntryPanel(raceView,this).styled('consolePanel)
+  protected def createLayerInfoPanel: TrackLayerInfoPanel[T] = new TrackLayerInfoPanel(raceView,this).styled('consolePanel)
+  protected def createEntryPanel: TrackEntryPanel[T] = new TrackEntryPanel(raceView,this).styled('consolePanel)
 
   def matchingTracks(f: TrackEntry[T]=>Boolean): Seq[TrackEntry[T]] = {
-    tracks.foldLeft(Seq.empty[TrackEntry[T]])((acc, e) => {
+    trackEntries.foldLeft(Seq.empty[TrackEntry[T]])((acc, e) => {
       val flight = e._2
       if (f(flight)) flight +: acc else acc
     })
   }
 
-  def foreachTrack(f: TrackEntry[T]=>Unit): Unit = tracks.foreach(e=> f(e._2))
+  def foreachTrack(f: TrackEntry[T]=>Unit): Unit = trackEntries.foreach(e=> f(e._2))
+
+  //--- override if tracks are stored under a different key
+  //    (make sure to keep getTrack and queryTrack consistent)
+
+  def getTrackKey(track: T): String = track.id
+
+  def getTrackEntry(track: T): Option[TrackEntry[T]] = trackEntries.get(getTrackKey(track))
+
+  override def queryTrack(key: String): Option[TrackedObject] = {
+    trackEntries.get(key).orElse(trackEntries.valuesIterator.find(e => e.obj.cs == key)).map( _.obj )
+  }
+
+  override def queryDate = raceView.updatedSimTime
+
+  override def reportQueryError (msg: String) = error(msg)
+
+  // layer specific positions (cities, airports, ports etc.) - TODO - should default at least to cities and airports here
+  override def queryLocation (id: String): Option[GeoPosition]
 
   //--- rendering detail level management
 
@@ -120,7 +137,7 @@ abstract class TrackLayer[T <:TrackedObject](val raceView: RaceView, config: Con
   }
   def setTrackRenderLevel(level: TrackRenderLevel, f: (TrackEntry[T])=>Unit): Unit = {
     trackDetails = level
-    tracks.foreach(e=> f(e._2))
+    trackEntries.foreach(e=> f(e._2))
     redrawNow
   }
 
@@ -139,22 +156,29 @@ abstract class TrackLayer[T <:TrackedObject](val raceView: RaceView, config: Con
   def getPathRenderLevel (alt: Double) = if (alt > linePosThreshold) TrackPathRenderLevel.Line else TrackPathRenderLevel.LinePos
   def setPathRenderLevel (level: TrackPathRenderLevel,f: (TrackEntry[T])=>Unit): Unit = {
     pathDetails = level
-    tracks.foreach(e=> f(e._2))
+    trackEntries.foreach(e=> f(e._2))
     redrawNow
   }
-  def setLineLevel   = setPathRenderLevel( TrackPathRenderLevel.Line, (e)=> e.setLineLevel)
-  def setLinePosLevel   = setPathRenderLevel( TrackPathRenderLevel.LinePos, (e)=> e.setLinePosLevel)
+  def setLineLevel = {
+    setSymbolLevel
+    setPathRenderLevel( TrackPathRenderLevel.Line, (e)=> e.setLineLevel)
+  }
+  def setLinePosLevel = {
+    setSymbolLevel
+    setPathRenderLevel( TrackPathRenderLevel.LinePos, (e)=> e.setLinePosLevel)
+  }
 
   def showPathPositions = showPositions && eyeAltitude < linePosThreshold
 
   def createFlightPath (fpos: T) = new CompactTrajectory
 
-  def getSymbol (e: TrackEntry[T]): Option[TrackSymbol[T]] = {
-    Some(new TrackSymbol(e))
-  }
+  def getSymbol (e: TrackEntry[T]): Option[TrackSymbol[T]] = Some(new TrackSymbol(e))
 
-  // this is here so that specialized FlightLayers can set multiple lines
-  def setLabel (sym: TrackSymbol[T]) = sym.setLabelText(sym.trackEntry.obj.cs)
+  // this is here so that specialized FlightLayers can select the label text and set sublabels
+  def setLabel (sym: TrackSymbol[T]) = {
+    val track = sym.trackEntry.obj
+    sym.setLabelText( if (track.cs != track.id) track.cs else track.id)
+  }
   def updateLabel (sym: TrackSymbol[T]) = {} // override if label text is dynamic
 
   def dismissEntryPanel (e: TrackEntry[T]) = {
@@ -167,9 +191,9 @@ abstract class TrackLayer[T <:TrackedObject](val raceView: RaceView, config: Con
   def setDisplayFilter(filter: (TrackEntry[T])=>Boolean) = {
     displayFilter = filter
     if (filter eq noDisplayFilter) {
-      tracks.foreach(_._2.show(true))
+      trackEntries.foreach(_._2.show(true))
     } else {
-      tracks.foreach { e => e._2.show(filter(e._2)) }
+      trackEntries.foreach { e => e._2.show(filter(e._2)) }
     }
     redraw
   }
@@ -191,7 +215,7 @@ abstract class TrackLayer[T <:TrackedObject](val raceView: RaceView, config: Con
   final val HideMark = "HideMark"
 
   override def changeObject(objectId: String, action: String) = {
-    ifSome(tracks.get(objectId)) { e =>
+    ifSome(trackEntries.get(objectId)) { e =>
       action match {
           //--- generic ones
         case `Select`       => selectTrackEntry(e)
@@ -250,9 +274,10 @@ abstract class TrackLayer[T <:TrackedObject](val raceView: RaceView, config: Con
   def updateTrackEntryAttributes(e: TrackEntry[T]): Unit = e.updateRenderables
   def releaseTrackEntryAttributes(e: TrackEntry[T]): Unit = e.removeRenderables
 
-  protected def addTrackEntry(fpos: T) = {
-    val e = createTrackEntry(fpos)
-    tracks += (fpos.cs -> e)
+  protected def addTrackEntry(track: T) = {
+    val e = createTrackEntry(track)
+    trackEntries += (getTrackKey(track) -> e)
+    // ?? should we also add the entry under the cross-channel 'cs' key ??
 
     if (displayFilter(e)) {
       addTrackEntryAttributes(e)
@@ -273,11 +298,17 @@ abstract class TrackLayer[T <:TrackedObject](val raceView: RaceView, config: Con
   protected def removeTrackEntry(e: TrackEntry[T]) = {
     val wasShowing = e.hasSymbol
     releaseTrackEntryAttributes(e)
-    tracks -= e.obj.cs
+    trackEntries -= getTrackKey(e.obj)
     if (wasShowing) wwdRedrawManager.redraw()
     panel.removedEntry(e)
 
     if (entryPanel.isShowing(e)) entryPanel.update
+  }
+
+  protected def clearTrackEntries = {
+    trackEntries.clear
+    removeAllRenderables()
+    wwdRedrawManager.redraw()
   }
 
   //--- track entry centering
@@ -338,10 +369,7 @@ abstract class TrackLayer[T <:TrackedObject](val raceView: RaceView, config: Con
 
   //--- track query interface
 
-  def track(cs: String): Option[TrackedObject] = tracks.get(cs).map( _.obj )
 
-  // layer specific positions (cities, airports, ports etc.)
-  def location (id: String): Option[GeoPosition]
 }
 
 

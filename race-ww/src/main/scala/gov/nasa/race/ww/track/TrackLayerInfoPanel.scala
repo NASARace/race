@@ -184,11 +184,11 @@ class TrackLayerInfoPanel[T <: TrackedObject](raceView: RaceView, trackLayer: Tr
   var trackQuery: Option[TrackFilter] = None
   val queryParser = new TrackQueryParser(this)
 
-  //--- TrackQueryContext implementation
-  override def now = raceView.updatedSimTime
-  override def track (cs: String) = trackLayer.track(cs)
-  override def location (id: String) = trackLayer.location(id)
-  override def error (msg: String) = trackLayer.error(msg)
+  //--- TrackQueryContext implementation (we just forward to our layer)
+  override def queryDate = trackLayer.queryDate
+  override def queryTrack(cs: String) = trackLayer.queryTrack(cs)
+  override def queryLocation(id: String) = trackLayer.queryLocation(id)
+  override def reportQueryError(msg: String) = trackLayer.reportQueryError(msg)
 
   def getTrackQuery(queryString: String): Option[TrackFilter] = {
     if (queryString == null || queryString.isEmpty) {
@@ -196,7 +196,7 @@ class TrackLayerInfoPanel[T <: TrackedObject](raceView: RaceView, trackLayer: Tr
     } else {
       queryParser.parseQuery(queryString) match {
         case queryParser.Success(filter:TrackFilter, _) => Some(filter)
-        case failure: queryParser.NoSuccess => error(failure.msg); None
+        case failure: queryParser.NoSuccess => reportQueryError(failure.msg); None
       }
     }
   }
@@ -210,11 +210,11 @@ class TrackLayerInfoPanel[T <: TrackedObject](raceView: RaceView, trackLayer: Tr
         }
         if (inViewMatchCb.selected) {
           val inViewChecker = raceView.getInViewChecker
-          trackLayer.tracks.foldLeft(Seq.empty[TrackEntry[T]]) { (acc, e) =>
+          trackLayer.trackEntries.foldLeft(Seq.empty[TrackEntry[T]]) { (acc, e) =>
             if (!inViewChecker.isInView(e._2.obj)) acc else _filter(filter, e._2, acc)
           }
         } else {
-          trackLayer.tracks.foldLeft(Seq.empty[TrackEntry[T]]) { (acc, e) => _filter(filter, e._2, acc) }
+          trackLayer.trackEntries.foldLeft(Seq.empty[TrackEntry[T]]) { (acc, e) => _filter(filter, e._2, acc) }
         }.sortWith(_.obj.cs < _.obj.cs)
     }
   }

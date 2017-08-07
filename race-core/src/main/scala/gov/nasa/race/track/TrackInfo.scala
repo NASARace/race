@@ -6,7 +6,9 @@ import org.joda.time.DateTime
 import scala.collection.concurrent.TrieMap
 
 /**
-  * non-positional (plan) info for tracks, such as departure and arrival location and times
+  * non-positional info for tracks, such as departure and arrival location and times, flight plans etc.
+  * This is supposed to be an accumulator that is updated from different channels to collect all information
+  * about a certain track, hence it depends on inter-channel ids ('cs')
   *
   * note we don't keep this as a case class since we want to be able to extend it
   * but the identifiers are optional since they can trickle in over time. This is supposed to
@@ -102,10 +104,8 @@ case class NoSuchTrackInfo(cs: String)
 case class TrackInfoUpdateRequest(cs: String)
 
 /**
-  * a store for TrackInfos that are updated from tfmDataService (SWIM) messages
-  * this abstracts the actual storage type and update method
-  *
-  * TODO -
+  * a (possibly global) store for TrackInfos that are updated from (potentially)
+  * multiple sources
   */
 class TrackInfoStore {
 

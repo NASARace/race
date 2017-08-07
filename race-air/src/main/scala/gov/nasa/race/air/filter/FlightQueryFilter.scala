@@ -25,10 +25,10 @@ import gov.nasa.race.track._
 import org.joda.time.DateTime
 
 object StaticFlightQueryContext extends TrackQueryContext {
-  def now = DateTime.now() // we don't model time
-  def track(cs: String) = None // we don't have a source for flights
-  def location(id: String) = Airport.allAirports.get(id)
-  def error (msg: String) = scala.sys.error(msg)
+  def queryDate = DateTime.now() // we don't model time
+  def queryTrack(cs: String) = None // we don't have a source for flights
+  def queryLocation(id: String) = Airport.allAirports.get(id)
+  def reportQueryError(msg: String) = scala.sys.error(msg)
 }
 
 /**
@@ -44,7 +44,7 @@ class FlightQueryFilter(val queryString: String, val ctx: TrackQueryContext, val
   val parser = new TrackQueryParser(ctx)
   val query: Option[TrackFilter] = parser.parseQuery(queryString) match {
     case parser.Success(result:TrackFilter,_) => Some(result)
-    case failure: parser.NoSuccess => ctx.error(failure.msg); None
+    case failure: parser.NoSuccess => ctx.reportQueryError(failure.msg); None
   }
 
   def passAircraft (ac: TrackedObject): Boolean = {

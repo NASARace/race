@@ -118,4 +118,6 @@ trait DynamicRaceLayerInfo extends RaceLayerInfo {
   var count = 0// to keep track of changes
 
   def size: Int // answer number of items in layer
+
+  def incUpdateCount = count += 1
 }

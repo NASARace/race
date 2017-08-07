@@ -17,6 +17,8 @@
 
 package gov.nasa.race.ww.air
 
+import java.awt.Color
+
 import akka.actor.Actor.Receive
 import com.typesafe.config.Config
 import gov.nasa.race._
@@ -31,17 +33,24 @@ import gov.nasa.race.ww.track.ModelTrackLayer
 class FlightPosLayer (raceView: RaceView,config: Config)
                        extends ModelTrackLayer[FlightPos](raceView,config) with AirLocator {
 
+  override def defaultSymbolColor = Color.red
+  override def defaultSymbolImage = Images.getPlaneImage(color)
+
+  override def getTrackKey(track: FlightPos): String = track.cs
+
+
   def handleFlightPosLayerMessage: Receive = {
     case BusEvent(_,fpos:FlightPos,_) =>
-      count = count + 1
-      tracks.get(fpos.cs) match {
+      incUpdateCount
+      getTrackEntry(fpos) match {
         case Some(acEntry) => updateTrackEntry(acEntry,fpos)
         case None => addTrackEntry(fpos)
       }
 
     case BusEvent(_,msg: FlightTerminationMessage,_)  =>
-      count = count + 1
-      ifSome(tracks.get(msg.cs)) {removeTrackEntry}
+      incUpdateCount
+      // TODO - this should be handled by FlightPos updates to avoid bypassing the TrackLayer abstractions
+      ifSome(trackEntries.get(msg.cs)) {removeTrackEntry}
   }
 
   override def handleMessage = handleFlightPosLayerMessage orElse super.handleMessage

@@ -23,7 +23,7 @@ import akka.actor.Actor.Receive
 import com.typesafe.config.Config
 import gov.nasa.race.air.{AirLocator, TFMTrack, TFMTracks}
 import gov.nasa.race.core.Messages.BusEvent
-import gov.nasa.race.ww.RaceView
+import gov.nasa.race.ww.{Images, RaceView}
 import gov.nasa.race.ww.track.TrackLayer
 
 /**
@@ -33,12 +33,13 @@ class TfmTracksLayer (raceView: RaceView,config: Config)
            extends TrackLayer[TFMTrack](raceView,config) with AirLocator {
 
   override def defaultSymbolColor = Color.magenta
+  override def defaultSymbolImage = Images.getPlaneImage(color)
 
   def handleTfmTracksLayerMessage: Receive = {
     case BusEvent(_,msg: TFMTracks,_) =>
-      count = count + 1
+      incUpdateCount
       msg.tracks foreach { tfmTrack =>
-        tracks.get(tfmTrack.cs) match {
+        getTrackEntry(tfmTrack) match {
           case Some(trackEntry) =>
             if (tfmTrack.nextPos.isEmpty) removeTrackEntry(trackEntry)  // completed
             else updateTrackEntry(trackEntry,tfmTrack)
