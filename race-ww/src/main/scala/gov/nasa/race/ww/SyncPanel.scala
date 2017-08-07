@@ -212,6 +212,5 @@ class SyncActor (panel: SyncPanel, val config: Config)
         info(s"$name received $msg from $originator")
         panel.queueMessage(msg)
       }
-
   }
 }
