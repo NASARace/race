@@ -55,7 +55,9 @@ case class RemoteBusInterface (val masterRef: ActorRef, val connectorRef: ActorR
     true
   }
 
-  def publish (msg: ChannelMessage) = connectorRef ! RemotePublish(msg)
+  def publish (msg: ChannelMessage) = {
+    connectorRef ! RemotePublish(msg)
+  }
 }
 
 /**

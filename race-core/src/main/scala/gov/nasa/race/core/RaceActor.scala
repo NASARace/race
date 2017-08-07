@@ -240,7 +240,7 @@ trait RaceActor extends Actor with ImplicitActorLogging {
   // the return value determines if the corresponding handleXMessage send an acknowledge or
   // a rejection
 
-  // Note alse that there are no separate ReXX messages, calling onReXX() is just done on the basis of the current
+  // Note also that there are no separate ReXX messages, calling onReXX() is just done on the basis of the current
   // RaceActor state (we might support re-initialization in local RAS in the future)
 
   def onInitializeRaceActor(rc: RaceContext, actorConf: Config): Boolean = true
@@ -363,11 +363,19 @@ trait ParentRaceActor extends RaceActor with ParentContext {
       super.onInitializeRaceActor(rc, actorConf)
     } else false
   }
+
+  override def onReInitializeRaceActor(rc: RaceContext, actorConf: Config) = {
+    if (initializeChildActors(rc,actorConf)) {
+      super.onReInitializeRaceActor(rc, actorConf)
+    } else false
+  }
+
   override def onStartRaceActor(originator: ActorRef) = {
     if (startChildActors) {
       super.onStartRaceActor(originator)
     } else false
   }
+
   override def onTerminateRaceActor(originator: ActorRef) = {
     if (terminateChildActors) {
       super.onTerminateRaceActor(originator)
