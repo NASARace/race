@@ -60,7 +60,6 @@ trait ConsoleMainBase extends MainBase {
     */
   def getOptions(args: Array[String]): Option[MainOpts] = CliArgs(args)(new MainOpts("race"))
 
-
   //--- main control loop functions
 
   /**

@@ -43,6 +43,8 @@ trait MainBase {
 
   //var logLevel: Option[String] = None
 
+  def message(msg: String) = println(msg) // override if this is mixed into a GUI main
+
   // here so that it can be overridden in contexts that run embedded, i.e. are not allowed to kill the process
   def systemExit() = System.exit(0)
 
@@ -115,7 +117,9 @@ trait MainBase {
     }
 
     ifSome(o.setHost.flatMap(getInetAddress)) { iaddr =>
-      System.setProperty("race.host", iaddr.getHostAddress)
+      val hostAddr = iaddr.getHostAddress
+      System.setProperty("race.host", hostAddr)
+      message(s"race.host: $hostAddr")
     }
 
     if (System.getProperty("race.date") == null) {

@@ -41,6 +41,8 @@ class AsdexTrackSymbol (trackEntry: TrackEntry[AsdexTrack]) extends TrackSymbol[
   override def update (t: AsdexTrack) = {
     setPosition(t)
     attrs.setHeading(t.heading.toDegrees)
+    if (hasLabel) layer.updateLabel(this)
+    if (showDisplayName) updateDisplayName
     updateAttributes
   }
 
@@ -63,7 +65,7 @@ class AsdexTracksLayer (raceView: RaceView,config: Config)
 
   override def defaultSymbolColor = Color.yellow
   override def defaultSymbolImage = Images.getPlaneImage(color)
-  override def defaultLabelThreshold = Meters(20000.0).toMeters
+  override def defaultLabelThreshold = Meters(12000.0).toMeters
   override def defaultSymbolThreshold = Meters(8000.0).toMeters
 
   override def getSymbol(e: TrackEntry[AsdexTrack]) = Some(new AsdexTrackSymbol(e))
