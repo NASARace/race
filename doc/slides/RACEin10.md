@@ -1,5 +1,6 @@
 # RACE
-scaling the world with actors
+scaling the world with actors<br/>
+in 10 minutes
 
 <https://github.com/nasarace/race>
 
@@ -11,39 +12,49 @@ SGT Inc, NASA Ames Research Center
 ## Slides
 @:toc root="#currentDocument".
 
-## What is RACE for?
-* event driven applications that connect to external systems
-* processing of high data rate and volume
-* distributed operation (local system interfacing, synchronized viewers, ...)
+## What is RACE?
+framework to build event driven applications that
 
+* can import/export from/to external systems - **connectivity**
+* can process high event rate and data volume - **scalability**
+* have extensible set of concurrent, low overhead components
+* support distributed and massively concurrent operation
+
+example: 
 <img src="../images/lvc-sim.svg" class="center scale40">
 
-## Show Me
-* full NextGen SWIM (System Wide Information Management) import
-  (200+ msg/sec)
+## Example - Live NAS
+* full NextGen SWIM (System Wide Information Management) import (500+ msg/sec)
 * real time ADS-B import from local antenna
 * visualization with NASA WorldWind
 
 <img src="../images/swim-sbs-all-ww.svg" class="center scale60">
  
-## How does it work 1 - Actors
+## Actors - Basic RACE Components
 * well known concurrency programming model since 1973 (Hewitt et al)
 * _Actors_ are objects that communicate only through async messages  
 ⟹ no shared state
 * objects process messages one-at-a-time ⟹ sequential code
-* _Actors_ are the (extensible) components of RACE
 
 <img src="../images/actor.svg" class="center scale55">
 
-## How does it work 2 - Configuration
-* actors are configured with JSON, not hardwired
-* nodes are actors
-* edges are channels through which actors communicate
+## Actor Systems - Configuration
+* RACE actor systems are JSON configured graphs
 
-<img src="../images/race-dataflow.svg" class="center scale55">
+    + nodes are actors
+    + edges are pub/sub (bus) channels through which actors communicate
 
-## How does it work 3 - RACE
+<img src="../images/race-dataflow.svg" class="center scale50">
+
+## RACE - Implementation
+* _Master_ actor: initialization, supervision and termination of configured actors
+* can model time
+* local and global (network) bus
 
 <img src="../images/race-overview-2.svg" class="center scale60">
 
-## Who is using RACE 
+## Example - SWIM Analysis
+* used inside FAA network to analyze SWIM channels (SFDPS, ASDE-X, TAIS, ..)
+* statistics (msg rate, volume, peaks)
+* XML validation
+* checks for track update anomalies (duplicated, ambiguous, out-of-order, blackout, stale,..)
