@@ -28,8 +28,10 @@ import gov.nasa.race.archive.{ArchiveEntry, ArchiveReader}
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.{ClockAdjuster, ContinuousTimeRaceActor}
 import gov.nasa.race.util.FileUtils
+import org.joda.time.DateTime
 
 import scala.annotation.tailrec
+import scala.collection.mutable.ListBuffer
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 import scala.language.postfixOps
@@ -51,7 +53,8 @@ import scala.language.postfixOps
   */
 class ReplayActor (val config: Config) extends ContinuousTimeRaceActor
                                        with FilteringPublisher with Counter with ClockAdjuster {
-  case class Replay (msg: Any)
+  case class Replay (msg: Any, date: DateTime)
+  case object ScheduleNext
 
   // everything lower than that we don't bother to schedule and publish right away
   final val SchedulerThresholdMillis: Long = 30
@@ -68,6 +71,7 @@ class ReplayActor (val config: Config) extends ContinuousTimeRaceActor
                                                  Array(classOf[InputStream]),
                                                  Array(is)).get)
   var noMoreData = !archiveReader.isDefined
+  val pendingMsgs = new ListBuffer[Replay]
 
   if (noMoreData) {
     warning(s"no data for $pathName")
@@ -97,26 +101,60 @@ class ReplayActor (val config: Config) extends ContinuousTimeRaceActor
     super.onTerminateRaceActor(originator)
   }
 
+  override def onSyncWithRaceClock = {
+    if (!isStopped) {
+      var didSchedule = false
+      if (pendingMsgs.nonEmpty) {
+        pendingMsgs.foreach { r =>
+          val dtMillis = r.date.getMillis - updatedSimTimeMillis
+          if (dtMillis < SchedulerThresholdMillis) {
+            publishFiltered(r.msg)
+          } else {
+            scheduler.scheduleOnce(dtMillis milliseconds, self, r)
+            didSchedule = true
+          }
+        }
+        pendingMsgs.clear
+      }
+      if (!didSchedule) scheduleNext(0)
+    }
+    super.onSyncWithRaceClock
+  }
+
   override def handleMessage = handleReplayMessage
 
   def handleReplayMessage: Receive = {
-    case Replay(msg) =>
-      if (msg != None) publishFiltered(msg)
-      scheduleNext(0)
+    case r@Replay(msg,date) =>
+      val dtMillis = date.getMillis - updatedSimTimeMillis
+      if (dtMillis < SchedulerThresholdMillis) { // this includes times that already have passed
+        debug(f"publishing scheduled: $msg%30.30s.. ")
+        publishFiltered(msg)
+        scheduleNext(0)
+      } else { // we were paused or scaled down since schedule
+        if (!isStopped) {
+          debug(f"re-scheduling in $dtMillis milliseconds: $msg%30.30s.. ")
+          scheduler.scheduleOnce(dtMillis milliseconds, self, r)
+        } else {
+          debug(f"queue pending $msg%30.30s.. ")
+          pendingMsgs += r
+        }
+      }
+
+    case ScheduleNext => if (!isStopped) scheduleNext(0)
   }
 
-  def replayMessageLater(msg: Any, dtMillis: Long) = {
+  def replayMessageLater(msg: Any, dtMillis: Long, date: DateTime) = {
     debug(f"scheduling in $dtMillis milliseconds: $msg%30.30s.. ")
-    scheduler.scheduleOnce(dtMillis milliseconds, self, Replay(msg))
+    scheduler.scheduleOnce(dtMillis milliseconds, self, Replay(msg,date))
   }
 
-  def replayMessageNow(msg: Any) = {
+  def replayMessageNow(msg: Any, date: DateTime) = {
     if (incCounter) {
       debug(f"publishing now: $msg%30.30s.. ")
       publishFiltered(msg)
       scheduleNext(0)
     } else {
-      self ! Replay(msg)
+      self ! Replay(msg,date)
     }
   }
 
@@ -140,7 +178,7 @@ class ReplayActor (val config: Config) extends ContinuousTimeRaceActor
           } else {
             val dt = toWallTimeMillis(-updateElapsedSimTimeMillisSince(date))
             if (dt > SchedulerThresholdMillis) { // far enough in the future to be scheduled
-              replayMessageLater(msg, dt)
+              replayMessageLater(msg, dt, date)
               true
 
             } else { // now, or has already passed
@@ -148,7 +186,7 @@ class ReplayActor (val config: Config) extends ContinuousTimeRaceActor
                 scheduleFirst(skipped + 1)
               } else {
                 info(s"skipping first $skipped messages")
-                replayMessageNow(msg)
+                replayMessageNow(msg,date)
                 true
               }
             }
@@ -176,16 +214,16 @@ class ReplayActor (val config: Config) extends ContinuousTimeRaceActor
             if (!exceedsEndTime(date)) {
               val dt = toWallTimeMillis(-updateElapsedSimTimeMillisSince(date))
               if (dt > SchedulerThresholdMillis) { // schedule - message date is far enough in future
-                replayMessageLater(msg, dt)
+                replayMessageLater(msg, dt, date)
               } else { // message date is too close or has already passed (note we don't skip messages here)
-                replayMessageNow(msg)
+                replayMessageNow(msg,date)
               }
             }
 
           case None =>
             if (skipped < maxSkip) {
               warning(s"ignored entry from stream $pathName")
-              if (incCounter) scheduleNext(skipped + 1) else self ! Replay(None)
+              if (incCounter) scheduleNext(skipped + 1) else self ! ScheduleNext
             } else {
               warning(s"maximum number of consecutive malformed entries exceeded during replay")
             }

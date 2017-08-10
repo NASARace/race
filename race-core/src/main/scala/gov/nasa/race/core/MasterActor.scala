@@ -115,7 +115,8 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ImplicitActorLogging
       info(s"master $name got RaceTerminateRequest")
       ras.terminationRequest(sender)
 
-    case RaceResetClock(originator: ActorRef,d:DateTime,tScale:Double) =>
+    case rrc@RaceResetClock(originator,d,tScale) =>
+      info(s"master $name got $rrc")
       onRaceResetClock(originator,d,tScale) // RAS changed simClock, inform actors
 
     //--- inter RAS time management

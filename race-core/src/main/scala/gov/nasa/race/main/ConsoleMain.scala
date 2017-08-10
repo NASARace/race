@@ -87,7 +87,7 @@ trait ConsoleMainBase extends MainBase {
       case "5" | "log" => runOnSelectedUniverse(universes) { setLogLevel }
         repeatMenu
 
-      case "7" | "pause" | "resume" => // not yet
+      case "7" | "pause" | "resume" => runOnSelectedUniverse(universes) { pauseResume }
         repeatMenu
 
       case "8" | "start" => universes.foreach(launch)
@@ -156,6 +156,14 @@ trait ConsoleMainBase extends MainBase {
           ras.setLogLevel(logLevel)
         case None => println("invalid log level")
       }
+    }
+  }
+
+  def pauseResume(ras: RaceActorSystem): Unit = {
+    if (ras.pauseResume) {
+      if (ras.isStopped) println(s"universe ${ras.name} paused") else println(s"universe ${ras.name} resumed")
+    } else {
+      println(s"pauseResume not supported by universe ${ras.name}")
     }
   }
 

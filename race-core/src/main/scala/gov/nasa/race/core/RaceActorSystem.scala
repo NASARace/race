@@ -212,7 +212,7 @@ class RaceActorSystem(val config: Config) extends LogController with VerifiableA
     val endTime = config.getOptionalDateTime("end-time") orElse { // both in sim time
       config.getOptionalFiniteDuration("run-for") map (d=> startTime.plus(d.toMillis))
     }
-    new SettableClock(startTime, timeScale, endTime, isStopped = true)
+    new SettableClock(startTime, timeScale, endTime, stopped = true)
   }
 
   def wallClockStartTime (isLaunched: Boolean): Option[DateTime] = {
@@ -357,6 +357,48 @@ class RaceActorSystem(val config: Config) extends LogController with VerifiableA
       }
     } else false // nothing to reset
   }
+
+  def setTimescale (tScale: Double): Boolean = {
+    if (isLive) {
+      if (commonCapabilities.supportsSimTimeReset) {
+        info(s"set sim clock timescale to: $tScale")
+        val date = simClock.dateTime
+        simClock.reset(date,tScale)
+        master ! RaceResetClock(ActorRef.noSender, date, tScale)
+        true
+      } else {
+        warning("setting time scale ignored (insufficient actor capabilities)")
+        false
+      }
+    } else {
+      warning(s"universe $name is not live")
+      false
+    }
+  }
+
+  def pauseResume: Boolean = {
+    if (isLive) {
+      if (commonCapabilities.supportsSimTimeReset) {
+        if (simClock.isStopped) {
+          info("resuming sim clock")
+          simClock.resume
+        } else {
+          info("stopping sim clock")
+          simClock.stop
+        }
+        master ! RaceResetClock(ActorRef.noSender, simClock.dateTime, simClock.timeScale)
+        true
+      } else {
+        warning("pause/resume ignored (insufficient actor capabilities)")
+        false
+      }
+    } else {
+      warning(s"universe $name is not live")
+      false
+    }
+  }
+
+  def isStopped = simClock.isStopped
 
   /**
     * check if we accept connection requests from this remote master, i.e. some of our local actors are used

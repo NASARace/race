@@ -604,6 +604,8 @@ trait ContinuousTimeRaceActor extends RaceActor {
   @inline def toWallTimeMillis (ms: Long) = (ms * simClock.timeScale).toLong
 
   @inline def exceedsEndTime (d: DateTime) = simClock.exceedsEndTime(d)
+
+  @inline def isStopped = simClock.isStopped
 }
 
 /**

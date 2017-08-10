@@ -31,27 +31,30 @@ import scala.concurrent.duration._
 class Clock (initTime: DateTime = DateTime.now,
              initTimeScale: Double = 1,
              endTime: Option[DateTime] = None,
-             isStopped: Boolean=false)
+             stopped: Boolean=false)
          extends Cloneable {
 
   protected var _timeScale = initTimeScale
   protected var _base = initTime // sim time
   protected var _end = endTime
   protected var _initMillis = System.currentTimeMillis  // wall time
-  protected var _stoppedAt: Long = if (isStopped) _initMillis else 0 // wall time
+  protected var _stoppedAt: Long = if (stopped) _initMillis else 0 // wall time
 
   def currentMillis = if (_stoppedAt > 0) _stoppedAt else System.currentTimeMillis
 
-  def timeScale: Double = _timeScale
+  @inline def timeScale: Double = _timeScale
   def base = _base
   def end = _end
   def initMillis = _initMillis
-  def stoppedAt = _stoppedAt
+  @inline def stoppedAt = _stoppedAt
   def baseMillis = _base.getMillis
   def endMillis = endTimeMillis
 
+  @inline def isStopped = _stoppedAt != 0
+
+
   /** simulation time milliseconds */
-  def millis: Long = _base.getMillis + ((currentMillis - _initMillis) * _timeScale).toLong
+  @inline def millis: Long = _base.getMillis + ((currentMillis - _initMillis) * _timeScale).toLong
 
   /** simulation time DateTime */
   def dateTime: DateTime = _base + ((currentMillis - _initMillis) * _timeScale).toLong
@@ -60,7 +63,7 @@ class Clock (initTime: DateTime = DateTime.now,
   def elapsed: FiniteDuration = ((currentMillis - _initMillis) * _timeScale).toLong.milliseconds
 
   /** wallclock time duration since initTime */
-  def elapsedWall: FiniteDuration = (currentMillis - _initMillis).milliseconds
+  @inline def elapsedWall: FiniteDuration = (currentMillis - _initMillis).milliseconds
 
   /** wallclock time for given sim time */
   def wallTime (simTime: DateTime): DateTime = {
@@ -90,7 +93,7 @@ class Clock (initTime: DateTime = DateTime.now,
 class SettableClock (initTime: DateTime = DateTime.now,
                      initTimeScale: Double = 1,
                      endTime: Option[DateTime] = None,
-                     isStopped: Boolean = false) extends Clock (initTime,initTimeScale,endTime,isStopped) {
+                     stopped: Boolean = false) extends Clock (initTime,initTimeScale,endTime,stopped) {
 
   def reset (initTime: DateTime, initTimeScale: Double = 1, endTime: Option[DateTime] = None): SettableClock = synchronized {
     _timeScale = initTimeScale

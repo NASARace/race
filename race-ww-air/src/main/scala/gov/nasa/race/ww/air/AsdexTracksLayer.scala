@@ -37,22 +37,11 @@ import gov.nasa.worldwind.geom.Position
 
 // we need a special symbol because we have different attributes for different track categories (unknown/vehicle/aircraft)
 class AsdexTrackSymbol (trackEntry: TrackEntry[AsdexTrack]) extends TrackSymbol[AsdexTrack](trackEntry) {
-
-  override def update (t: AsdexTrack) = {
-    setPosition(t)
-    attrs.setHeading(t.heading.toDegrees)
-    if (hasLabel) layer.updateLabel(this)
-    if (showDisplayName) updateDisplayName
-    updateAttributes
+  override def update (newTrack: AsdexTrack) = {
+    if (newTrack.isAircraft && attrs.getImage == null) updateAttributes
+    else super.update(newTrack)
   }
-
-  override def updateAttributes = {
-    layer.trackDetails match {
-      case Dot => setDotAttrs
-      case Label => setLabelAttrs
-      case Symbol => if (trackEntry.obj.isAircraft) setSymbolAttrs else setLabelAttrs
-    }
-  }
+  override def setSymbolAttrs = if (trackEntry.obj.isAircraft) super.setSymbolAttrs else setLabelAttrs
 }
 
 class AsdexTracksLayer (raceView: RaceView,config: Config)
