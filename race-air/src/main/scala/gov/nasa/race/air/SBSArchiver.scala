@@ -19,7 +19,7 @@ package gov.nasa.race.air
 
 import java.io.{InputStream, OutputStream}
 
-import gov.nasa.race.archive.{ArchiveEntry, TextLineArchiveReader, TimedTextLineArchiver}
+import gov.nasa.race.archive.{TextLineArchiveReader, TimedTextLineArchiver}
 import org.joda.time.DateTime
 import org.joda.time.format.DateTimeFormat
 
@@ -65,13 +65,10 @@ class SBSArchiveReader (val istream: InputStream)  extends TextLineArchiveReader
     if (i0 > 0) DateTime.parse(line.substring(i0,i0+dtgPatternLength-1),dtgPattern) else null
   }
 
-  override def read: Option[ArchiveEntry] = {
+  override def readNextEntry: Option[ArchiveEntry] = {
     try {
       val line = reader.readLine()
-      if (line != null) {
-        val date = readDate(line)
-        if (date != null) Some(ArchiveEntry(date,line)) else None
-      } else None
+      if (line != null) someEntry( readDate(line), line) else None
     } catch {
       case _:Throwable => None
     }

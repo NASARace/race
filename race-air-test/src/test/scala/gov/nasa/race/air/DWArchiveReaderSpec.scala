@@ -14,30 +14,34 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package gov.nasa.race.air.translator
+package gov.nasa.race.air
 
-import gov.nasa.race.air.TrackInfoTFMParser
-import gov.nasa.race.util.FileUtils._
+import java.io.FileInputStream
+
+import gov.nasa.race.archive.ArchiveEntry
 import gov.nasa.race.test.RaceSpec
-import gov.nasa.race.track.TrackInfoStore
 import org.scalatest.FlatSpec
 
-/**
-  * unit test for FlightInfo, FlightInfoStore and FlightInfoTfmParser
-  *
-  * TODO - this still needs assertions
-  */
-class TrackInfoStoreSpec extends FlatSpec with RaceSpec {
-  val xmlMsg = fileContentsAsUTF8String(baseResourceFile("tfmdata.xml")).get
+class DWArchiveReaderSpec extends FlatSpec with RaceSpec {
 
-  behavior of "FlightInfoStore"
+  behavior of "DWArchiveReader subclasses"
 
-  "FlightInfoTfmParser" should "populate known store" in {
-    val store = new TrackInfoStore
-    val parser = new TrackInfoTFMParser(store)
+  "AsdexDWArchiveReader" should "parse messages" in {
+    val msg = baseResourceFile("dw-asdex.xml")
+    val is = new FileInputStream(msg)
+    val ar = new AsdexDWArchiveReader(is)
 
-    parser.parse(xmlMsg)
+    var n = 0
+    while (ar.hasMoreData){
+      ar.readNextEntry match {
+        case Some(e) =>
+          println(s"$n: ${e.date}")
+          n += 1
+        case None =>
+      }
+    }
 
-    store.trackInfos.values.foreach { fi => println(fi) }
+    ar.close
+    assert(n == 2)
   }
 }

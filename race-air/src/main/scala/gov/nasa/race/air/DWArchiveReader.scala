@@ -18,26 +18,25 @@
 package gov.nasa.race.air
 
 import java.io._
-import java.lang.{StringBuilder => JStringBuilder}
 
-import gov.nasa.race.archive.{ArchiveEntry, ArchiveReader}
-import gov.nasa.race.util.{BMSearch, StringUtils}
+import gov.nasa.race._
+import gov.nasa.race.archive.ArchiveReader
+import gov.nasa.race.common.{BMSearch, SearchStream}
 import org.joda.time.DateTime
 
 object DWArchiveReader {
   final val BufferLength = 8192
-  final val FirstStartPattern = "<properties>"
-  final val StartPattern = "\n<properties>"
-  final val EndPattern = "</properties>"
+  final val headerEnd = new BMSearch("</properties>")
 }
 
 /**
   * a specialized ArchiveReader for DataWarehouse formats, which all use
   *    "<properties>... timestamp ...</properties>"
-  * prefixe elements that only contain CDATA and start on newlines (no leading spaces). The data is assumed to be
-  * stored compressed.
+  * prefixe elements that only contain text and start on newlines (no leading spaces). The data is assumed to be
+  * stored compressed. Unfortunately payload messages do also contain <properties> elements, which is why we can't
+  * just search for the element start and have to pass in the respective start pattern from the channel specific reader.
   *
-  * DWArchiveReaders do differ in terms of how the timestamp is retrieved from the properties text, and if/how
+  * DWArchiveReaders also differ in terms of how the timestamp is retrieved from the properties text, and if/how
   * newlines are used in the XML message payload, which is specific to the respective topic (sfdps,asdex,tfmdata etc.).
   *
   * This implementation tries to avoid extra String allocation, to minimize heap pressure for formats that do
@@ -45,28 +44,43 @@ object DWArchiveReader {
   *
   * Note that we can't use memory mapped files here since the external (disk) data can be compressed. This unfortunately
   * means the data will be copied.
-  *
-  * NOTE ALSO that we assume the <properties> header is smaller than DWArchiveReader.BufferLength
   */
-abstract class DWArchiveReader (val istream: InputStream) extends ArchiveReader {
-  import gov.nasa.race.air.DWArchiveReader._
+abstract class DWArchiveReader (val istream: InputStream, val headerStart: BMSearch) extends ArchiveReader {
+  import DWArchiveReader._
 
+  protected val ss = new SearchStream(istream,BufferLength)
+  protected var res = ss.readResult
 
-  protected var buf = new Array[Char](BufferLength)
-  protected val reader = new BufferedReader(new InputStreamReader(istream),BufferLength)
-  protected var nRead = 0
+  if (!ss.skipTo(headerStart)) throw new RuntimeException(s"not a valid DW archive")
 
-  protected val propStart = new BMSearch(StartPattern)
-  protected val propEnd = new BMSearch(EndPattern)
+  override def hasMoreData = ss.hasMoreData
 
-  protected var isFirstMsg = true
+  override def readNextEntry: Option[ArchiveEntry] = {
+    // we are at a headerStart
+    if (ss.readTo(headerEnd,headerStart.length)) {
+      val date = readDateTime(res.cs,res.startIdx,res.endIdx)
+      if (date != null) {
+        if (ss.readTo(headerStart,headerEnd.length)){
+          val msg = res.asString(headerEnd.length)
+          someEntry(date,msg)
+        } else None // did not find next headerStart, nothing we can do
 
-  def readLong(i:Int): Long = {
-    val cs = buf
-    var c = cs(i)
-    var j = i
+      } else {  // did not find date in header, skip to next chunk
+        ss.skipTo(headerStart, headerEnd.length)
+        None
+      }
+    } else None // did not find headerEnd, nothing we can do
+  }
+
+  //--- to be provided by concrete subclasses
+  protected def readDateTime(cs: Array[Char], startIdx: Int, endIdx: Int) : DateTime
+
+  //--- those can be used by the type specific readDateTime
+  protected def readLong(cs: Array[Char], startIdx:Int, endIdx: Int): Long = {
+    var c = cs(startIdx)
+    var j = startIdx
     var n = 0L
-    while (j < cs.length && Character.isDigit(c)){
+    while (j < endIdx && Character.isDigit(c)){
       n = n * 10 + (c - '0')
       j += 1
       c = cs(j)
@@ -75,106 +89,41 @@ abstract class DWArchiveReader (val istream: InputStream) extends ArchiveReader 
   }
 
   // read all up to the next white space
-  def readString(i: Int): String = {
-    val cs = buf
-    var c = cs(i)
-    var j = i
-    while (j < cs.length && !Character.isWhitespace(c)){
+  protected def readWord(cs: Array[Char], startIdx: Int, endIdx: Int): String = {
+    var c = cs(startIdx)
+    var j = startIdx
+    while (j < endIdx && !Character.isWhitespace(c)){
       j += 1
       c = cs(j)
     }
-    if (j > i) new String(buf,i,j-i) else ""
-  }
-
-  def readDateTime(i0: Int, i1: Int) : DateTime // to be provided by concrete subclasses
-
-  override def read: Option[ArchiveEntry] = {
-    //--- if this is the first call, fill the buffer and check if it begins with a startPattern
-    if (isFirstMsg){
-      nRead = reader.read(buf, 0, buf.length)
-      if (nRead < 0 || !StringUtils.startsWith(buf,0,FirstStartPattern)) return None
-      isFirstMsg = false
-    }
-
-    //--- the buffer starts with a startPattern - get the end pattern and then look for the datePattern within this range
-    // we assume the header will fit completely into the buffer
-    var i1 = propEnd.indexOfFirst(buf, StartPattern.length)
-    if (i1 < 0) throw new RuntimeException("no end pattern") // return None // error - no end pattern found in buffer
-
-    val date = readDateTime(StartPattern.length, i1)
-
-    //--- now copy all between end pattern and next start pattern into msg
-    val msg = new JStringBuilder // to collect msg payload
-
-    i1 += EndPattern.length
-    var i0 = propStart.indexOfFirst(buf,i1)
-    while (i0 < 0){
-      msg.append(buf,i1,nRead - i1)
-      nRead = reader.read(buf, 0, buf.length)
-      if (nRead < 0) { // done
-        if (msg.length > 0 && date != null) return Some(ArchiveEntry(date,msg.toString)) else return None
-      }
-      i0 = propStart.indexOfFirst(buf)
-      i1 = 0
-    }
-    msg.append(buf,i1,i0- i1)
-
-    nRead -= i0
-    System.arraycopy(buf,i0,buf,0,nRead)  // shift buffer left so that it begins with unread start pattern
-    val nRead1 = reader.read(buf,nRead,buf.length-nRead) // fill up buffer
-    if (nRead1 > 0) nRead += nRead1
-    if (date != null) Some(ArchiveEntry(date,msg.toString)) else None
+    if (j > startIdx) new String(cs,startIdx,j-startIdx) else ""
   }
 }
 
-class AsdexDWArchiveReader (istream: InputStream) extends DWArchiveReader(istream) {
-  val dexEpoch = new BMSearch("DEX_TIMESTAMP=")
-  val jmsEpoch = new BMSearch("JMS_BEA_DeliveryTime=")
-  val tsDTG = new BMSearch("timestamp=")
+abstract class FirstEpochDWArchiveReader(istream: InputStream, hdrStart: String)
+                                  extends DWArchiveReader(istream, new BMSearch(hdrStart)) {
+  // we just use the x_TIMESTAMP, which is an epoch value directly following our headerStart
+  override def readDateTime(cs: Array[Char], i0: Int, i1: Int) = {
+    tryNull { new DateTime(readLong(cs, i0+hdrStart.length, i1)) }
+  }
+}
 
-  override def readDateTime (i0: Int, i1: Int) = {
-    var i = jmsEpoch.indexOfFirst(buf,i0,i1)
-    if (i >= 0) {
-      new DateTime(readLong(i+jmsEpoch.pattern.length))
-    } else {
-      i = dexEpoch.indexOfFirst(buf,i0,i1)
-      if (i >= 0) {
-        new DateTime(readLong(i+dexEpoch.pattern.length))
-      } else  {
-        i = tsDTG.indexOfFirst(buf,i0,i1)
-        if (i >= 0) DateTime.parse(readString(i+tsDTG.pattern.length)) else null
-      }
+abstract class DateFieldDWArchiveReader (istream: InputStream, hdrStart: String, field: String)
+                                  extends DWArchiveReader(istream, new BMSearch(hdrStart)) {
+  val fieldPattern = new BMSearch(field)
+
+  override def readDateTime(cs: Array[Char], i0: Int, i1: Int) = {
+    tryNull {
+      val i = fieldPattern.indexOfFirst(cs, i0 + hdrStart.length, i1)
+      if (i >= 0) DateTime.parse(readWord(cs,i+fieldPattern.length,i1)) else null
     }
   }
 }
 
+class AsdexDWArchiveReader (is: InputStream) extends FirstEpochDWArchiveReader(is, "<properties> DEX_TIMESTAMP=")
+class SfdpsDWArchiveReader (is: InputStream) extends FirstEpochDWArchiveReader(is, "<properties> DEX_TIMESTAMP=")
 
-class LongDWArchiveReader(istream: InputStream, key: String) extends DWArchiveReader(istream) {
-  val keySearch = new BMSearch(key)
-
-  override def readDateTime (i0: Int, i1: Int) = {
-    val i = keySearch.indexOfFirst(buf, i0, i1)
-    if (i >= 0) {
-      new DateTime(readLong(i+key.length))
-    } else null
-  }
-}
-
-class TextDWArchiveReader(istream: InputStream, key: String) extends DWArchiveReader(istream) {
-  val keySearch = new BMSearch(key)
-
-  override def readDateTime (i0: Int, i1: Int) = {
-    val i = keySearch.indexOfFirst(buf, i0, i1)
-    if (i >= 0) {
-      DateTime.parse(readString(i+key.length))
-    } else null
-  }
-}
-
-class SfdpsDWArchiveReader (istream: InputStream) extends TextDWArchiveReader(istream, "FDPS_SentTime=")
-
-class TfmdataDWArchiveReader(istream: InputStream) extends TextDWArchiveReader(istream, "TimeStamp=")
-
-class TaisDWArchiveReader (istream: InputStream) extends TextDWArchiveReader(istream, "timestamp=")
-
+//...hopefully DW will convert those to DEX_TIMESTAMP in the future
+class TaisDWArchiveReader (is: InputStream) extends DateFieldDWArchiveReader(is, "<properties> queueID=", "timestamp=")
+class TfmdataDWArchiveReader(is: InputStream) extends DateFieldDWArchiveReader(is, "<properties> PacketCount=", "TimeStamp=")
 

@@ -87,7 +87,11 @@ class AsdexMsg2FullAsdexTracks(config: Config=NoConfig) extends AsdexMsg2AsdexTr
     val vert = fromString(ud, getVerticalDirection, _.vertical, VerticalDirection.Unknown)
 
     val track = new AsdexTrack(trackId,cs,date,LatLonPos(lat,lon),spd,hdg,alt,tt,display,drop,vert,gbs,act)
-    lastTracks += trackId -> track
+    if (drop) {
+      lastTracks -= trackId
+    } else {
+      lastTracks += trackId -> track
+    }
 
     if (track.position.isDefined) track else null
   }

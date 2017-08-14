@@ -94,6 +94,14 @@ package object race {
     }
   }
 
+  def tryNull[A <:AnyRef](f: => A): A = {
+    try {
+      f
+    } catch {
+      case _: Throwable => null.asInstanceOf[A]
+    }
+  }
+
   /** execute two functions and return the result of the first one */
   def withSubsequent[T] (f: =>T)(g: =>Any): T = {
     val res = f

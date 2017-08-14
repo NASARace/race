@@ -17,7 +17,7 @@
 package gov.nasa.race.archive
 
 import java.io._
-
+import java.lang.StringBuilder
 import org.joda.time.DateTime
 
 import scala.annotation.tailrec
@@ -41,45 +41,38 @@ import TextArchiver._
 
 /**
   * an archive reader that assumes text with begin and end marker lines
+  *
+  * NOTE - this class is not thread-safe, its instances should not be used concurrently. The reason is that
+  * we use a per-instance buffer to avoid heap pressure due to a large number of archive entries
   */
 class TextArchiveReader(val istream: InputStream) extends ArchiveReader {
 
-  val br = new BufferedReader(new InputStreamReader(istream))
-
-  @tailrec private def skipToBegin: Option[DateTime] = {
-    br.readLine match {
-      case null => None
-      case beginMarkerRE(dtg) => Some(getDate(DateTime.parse(dtg)))
-      case other => skipToBegin
-    }
-  }
-
-  @tailrec private def readToEnd(sb: StringBuilder): Option[String] = {
-    br.readLine match {
-      case null | END_MARKER =>
-        if (sb.isEmpty) None else Some(sb.toString)
-      case line =>
-        if (sb.size > 0) sb.append('\n')
-        sb.append(line)
-        readToEnd(sb)
-    }
-  }
+  private val br = new BufferedReader(new InputStreamReader(istream))
+  private val buf: StringBuilder = new StringBuilder(4096)
 
   override def hasMoreData = br.ready
 
-  override def read: Option[ArchiveEntry] = {
-    try {
-      skipToBegin match {
-        case Some(date) =>
-          readToEnd(new StringBuilder) match {
-            case Some(text) => Some(ArchiveEntry(date, text))
-            case None => None
+  override def readNextEntry: Option[ArchiveEntry] = {
+    while (true){
+      br.readLine match {
+        case null => return None
+
+        case beginMarkerRE(dtg) =>
+          val date = getDate(DateTime.parse(dtg))
+          buf.setLength(0)
+          while (true) {
+            br.readLine match {
+              case null | END_MARKER => someEntry(date, buf.toString)
+              case line: String =>
+                if (buf.length > 0) buf.append('\n')
+                buf.append(line)
+            }
           }
-        case None => None
+
+        case _ => // go on - extra stuff between entries
       }
-    } catch {
-      case t: IOException => None
     }
+    None
   }
 }
 

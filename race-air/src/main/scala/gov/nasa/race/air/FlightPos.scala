@@ -116,7 +116,8 @@ class FlightPosArchiveWriter (val ostream: OutputStream) extends ArchiveWriter {
 
 class FlightPosArchiveReader (val istream: InputStream) extends ArchiveReader
   with InputStreamLineTokenizer {
-  override def read: Option[ArchiveEntry] = {
+
+  override def readNextEntry: Option[ArchiveEntry] = {
     var fs = getLineFields(istream)
 
     if (fs.size == 9) {
@@ -131,16 +132,13 @@ class FlightPosArchiveReader (val istream: InputStream) extends ArchiveReader
         val heading = fs.head.toDouble; fs = fs.tail
         val dt = fs.head.toLong
 
-        Some(ArchiveEntry(getDate(recDt),
-          new FlightPos(flightId, cs, LatLonPos(Degrees(phi), Degrees(lambda)),
-                        Feet(alt), UsMilesPerHour(speed), Degrees(heading),
-                        getDate(dt))))
+        val date = getDate(dt)  // we might adjust it on-the-fly
+        someEntry(date, new FlightPos(flightId, cs, LatLonPos(Degrees(phi), Degrees(lambda)),
+                                          Feet(alt), UsMilesPerHour(speed), Degrees(heading), date))
       } catch {
         case x: Throwable => None
       }
-    } else {
-      None
-    }
+    } else None
   }
 }
 
@@ -193,7 +191,7 @@ class BinaryFlightPosArchiveWriter (val ostream: OutputStream) extends FramedArc
 
 class BinaryFlightPosArchiveReader (val istream: InputStream) extends FramedArchiveReader {
 
-  override def read: Option[ArchiveEntry] = {
+  override def readNextEntry: Option[ArchiveEntry] = {
     try {
       val nBytes = readFrameSize
       val bytes = readFrame(nBytes)
@@ -201,10 +199,10 @@ class BinaryFlightPosArchiveReader (val istream: InputStream) extends FramedArch
       val bitvec = BitVector(bytes)
       val (recDt ~ flightId ~ cs ~ phi ~ lambda ~ alt ~ speed ~ heading ~ dt) =
         BinaryFlightPos.fposCodec.decode(bitvec).require.value
-      Some(ArchiveEntry( getDate(recDt),
-        new FlightPos(flightId, cs, LatLonPos(Degrees(phi), Degrees(lambda)),
-                      Feet(alt), UsMilesPerHour(speed), Degrees(heading),
-                      getDate(dt))))
+
+      val date = getDate(recDt)
+      someEntry( date, new FlightPos(flightId, cs, LatLonPos(Degrees(phi), Degrees(lambda)),
+                                         Feet(alt), UsMilesPerHour(speed), Degrees(heading), date))
     } catch {
       case x: Throwable => None
     }

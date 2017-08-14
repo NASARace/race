@@ -22,11 +22,10 @@ import java.util.zip.GZIPInputStream
 
 import akka.actor.ActorRef
 import com.typesafe.config.Config
-import gov.nasa.race._
+import gov.nasa.race.archive.{ArchiveReader, DummyReader}
 import gov.nasa.race.common.Counter
-import gov.nasa.race.archive.{ArchiveEntry, ArchiveReader}
 import gov.nasa.race.config.ConfigUtils._
-import gov.nasa.race.core.{ClockAdjuster, ContinuousTimeRaceActor}
+import gov.nasa.race.core.{ClockAdjuster, ContinuousTimeRaceActor, RaceException}
 import gov.nasa.race.util.FileUtils
 import org.joda.time.DateTime
 
@@ -67,10 +66,8 @@ class ReplayActor (val config: Config) extends ContinuousTimeRaceActor
   val skipThresholdMillis = config.getIntOrElse("skip-millis", 1000) // skip until current sim time - replay time is within limit
   val maxSkip = config.getIntOrElse("max-skip", 1000) // stop replay if we hit more than max-skip consecutive malformed entries
 
-  val archiveReader = openStream map(is => newInstance[ArchiveReader](config.getString("archive-reader"),
-                                                 Array(classOf[InputStream]),
-                                                 Array(is)).get)
-  var noMoreData = !archiveReader.isDefined
+  val archiveReader = createReader
+  var noMoreData = !archiveReader.hasMoreData
   val pendingMsgs = new ListBuffer[Replay]
 
   if (noMoreData) {
@@ -79,24 +76,34 @@ class ReplayActor (val config: Config) extends ContinuousTimeRaceActor
     info(s"initializing replay of $pathName starting at $simTime")
   }
 
-  def openStream: Option[InputStream] = {
-    FileUtils.existingNonEmptyFile(pathName).map { f=>
-      val fis = new FileInputStream(f)
-      if (compressedMode) new GZIPInputStream(fis,bufSize) else new BufferedInputStream(fis,bufSize)
+  def createReader: ArchiveReader = {
+    def fail (msg: String): ArchiveReader = {
+      if (isOptional) {
+        warning(msg)
+        new DummyReader
+      } else throw new RaceException(msg)
+    }
+
+    FileUtils.existingFile(pathName) match {
+      case Some(file) =>
+        val fis = new FileInputStream(file)
+        val is = if (compressedMode) new GZIPInputStream(fis,bufSize) else new BufferedInputStream(fis,bufSize)
+        newInstance[ArchiveReader](config.getString("archive-reader"), Array(classOf[InputStream]), Array(is)) match {
+          case Some(ar) => ar
+          case None =>fail(s"failed to instantiate archive reader for $pathName")
+        }
+
+      case None => fail(s"archive $pathName not found")
     }
   }
 
   override def onStartRaceActor(originator: ActorRef) = {
-    archiveReader match {
-      case Some(ar) =>
-        if (rebaseDates) ar.setBaseDate(simClock.dateTime)
-        super.onStartRaceActor(originator) && scheduleFirst(0)
-      case None => isOptional
-    }
+    if (rebaseDates) archiveReader.setBaseDate(simClock.dateTime)
+    super.onStartRaceActor(originator) && scheduleFirst(0)
   }
 
   override def onTerminateRaceActor(originator: ActorRef) = {
-    ifSome(archiveReader)(_.close)
+    archiveReader.close
     noMoreData = true
     super.onTerminateRaceActor(originator)
   }
@@ -160,75 +167,61 @@ class ReplayActor (val config: Config) extends ContinuousTimeRaceActor
 
   def reachedEndOfArchive = {
     info(s"reached end of replay stream $pathName")
-    ifSome(archiveReader){_.close}  // no need to keep it around
+    archiveReader.close  // no need to keep it around
     noMoreData = true
   }
 
   @tailrec final def scheduleFirst (skipped: Int): Boolean = {
-    val ar = archiveReader.get // we never get here if there is none
-    if (ar.hasMoreData) {
-      ar.read match {
-        case Some(ArchiveEntry(date, msg)) =>
-          checkInitialClockReset(date) // if enabled this might reset the clock on the initial check
 
-          if (exceedsEndTime(date)) {
-            info(s"first message exceeds configured end-time")
-            false
+    archiveReader.readNextEntry match {
+      case Some(e) =>
+        val date = e.date
+        val msg = e.msg
+        checkInitialClockReset(date)
 
-          } else {
-            val dt = toWallTimeMillis(-updateElapsedSimTimeMillisSince(date))
-            if (dt > SchedulerThresholdMillis) { // far enough in the future to be scheduled
-              replayMessageLater(msg, dt, date)
+        if (exceedsEndTime(date)) {
+          info(s"first message exceeds configured end-time")
+          false
+
+        } else {
+          val dt = toWallTimeMillis(-updateElapsedSimTimeMillisSince(date))
+          if (dt > SchedulerThresholdMillis) { // far enough in the future to be scheduled
+            replayMessageLater(msg, dt, date)
+            true
+
+          } else { // now, or has already passed
+            if (-dt > skipThresholdMillis) { // outside replay time window
+              scheduleFirst(skipped + 1)
+            } else {
+              info(s"skipping first $skipped messages")
+              replayMessageNow(msg, date)
               true
-
-            } else { // now, or has already passed
-              if (-dt > skipThresholdMillis) { // outside replay time window
-                scheduleFirst(skipped + 1)
-              } else {
-                info(s"skipping first $skipped messages")
-                replayMessageNow(msg,date)
-                true
-              }
             }
           }
-        case None => // not a valid entry - this is a safeguard against very large files with broken content
-          if (skipped < maxSkip) {
-            scheduleFirst(skipped + 1)
-          } else {
-            warning(s"maximum number of malformed entries exceeded")
-            false
-          }
-      }
-    } else { // nothing left to replay
-      reachedEndOfArchive
-      false
+        }
+
+      case None => // no more archived messages
+        reachedEndOfArchive
+        false
     }
   }
 
-  @tailrec final def scheduleNext (skipped: Int=0): Unit = {
+  def scheduleNext (skipped: Int=0): Unit = {
     if (!noMoreData) {
-      val ar = archiveReader.get // we never get here if there is none
-      if (ar.hasMoreData) {
-        ar.read match {
-          case Some(ArchiveEntry(date, msg)) =>
-            if (!exceedsEndTime(date)) {
-              val dt = toWallTimeMillis(-updateElapsedSimTimeMillisSince(date))
-              if (dt > SchedulerThresholdMillis) { // schedule - message date is far enough in future
-                replayMessageLater(msg, dt, date)
-              } else { // message date is too close or has already passed (note we don't skip messages here)
-                replayMessageNow(msg,date)
-              }
+      archiveReader.readNextEntry match {
+        case Some(e) =>
+          val date = e.date
+          val msg = e.msg
+          if (!exceedsEndTime(date)) {
+            val dt = toWallTimeMillis(-updateElapsedSimTimeMillisSince(date))
+            if (dt > SchedulerThresholdMillis) { // schedule - message date is far enough in future
+              replayMessageLater(msg, dt, date)
+            } else { // message date is too close or has already passed (note we don't skip messages here)
+              replayMessageNow(msg, date)
             }
-
-          case None =>
-            if (skipped < maxSkip) {
-              warning(s"ignored entry from stream $pathName")
-              if (incCounter) scheduleNext(skipped + 1) else self ! ScheduleNext
-            } else {
-              warning(s"maximum number of consecutive malformed entries exceeded during replay")
-            }
-        }
-      } else reachedEndOfArchive
+          }
+        case None => reachedEndOfArchive
+      }
     }
   }
 }

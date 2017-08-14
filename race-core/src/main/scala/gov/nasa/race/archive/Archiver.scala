@@ -35,7 +35,6 @@ import org.joda.time.DateTime
  * these are properly flushed
  */
 
-case class ArchiveEntry (date: DateTime, obj: Any) extends Dated
 
 trait ArchiveWriter {
   val ostream: OutputStream
@@ -48,14 +47,34 @@ trait ArchiveWriter {
 }
 
 trait ArchiveReader extends DateAdjuster {
-  val istream: InputStream
+  class ArchiveEntry (var date: DateTime, var msg: Any) extends Dated
+
+  protected val istream: InputStream
+  protected val nextEntry = new ArchiveEntry(null,null)
+  protected val someEntry = Some(nextEntry) // avoid gazillions of short living options
+
+  protected def someEntry(d: DateTime, m: Any): Option[ArchiveEntry] = {
+    nextEntry.date = d
+    nextEntry.msg = m
+    someEntry
+  }
 
   def close = istream.close
-  def hasMoreData = istream.available() > 0
+  def hasMoreData = istream.available() > 0 // override if the reader does its own buffering
 
-  def read: Option[ArchiveEntry]
+  /**
+    * obtain the next archived message/time
+    */
+  def readNextEntry: Option[ArchiveEntry]
 }
 
+class DummyReader extends ArchiveReader {
+  val istream: InputStream = null
+
+  override def close = {}
+  override def hasMoreData = false
+  override def readNextEntry = None
+}
 
 /**
   * archiver to be used for messages that don't need boundary markers and

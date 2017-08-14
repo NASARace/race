@@ -105,13 +105,10 @@ class HexEpochLineArchiveReader (val istream: InputStream) extends TextLineArchi
     _readHexChar(line,0,0)
   }
 
-  override def read: Option[ArchiveEntry] = {
+  override def readNextEntry: Option[ArchiveEntry] = {
     try {
       val line = reader.readLine()
-      if (line != null) {
-        val epochMillis = hexCharsToLong(line)
-        Some(ArchiveEntry(new DateTime(epochMillis), line.substring(17)))
-      } else None
+      if (line != null) someEntry(new DateTime(hexCharsToLong(line)), line.substring(17)) else None
     } catch {
       case _:Throwable => None
     }

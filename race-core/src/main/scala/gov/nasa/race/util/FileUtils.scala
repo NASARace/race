@@ -23,6 +23,7 @@ import java.nio.charset.{CharsetDecoder, StandardCharsets}
 import java.nio.file._
 import java.nio.file.attribute.BasicFileAttributes
 import java.security.MessageDigest
+import java.util.zip.GZIPInputStream
 
 import StringUtils._
 import gov.nasa.race._
@@ -62,6 +63,8 @@ object FileUtils {
     if (file.isFile) Some(Files.readAllBytes(file.toPath)) else None
   }
 
+  def existingFile(pathName: String): Option[File] = existingFile(new File(pathName))
+
   def existingFile(file: File, ext: String = null): Option[File] = {
     if (file.isFile) {
       return Some(file)
@@ -85,6 +88,17 @@ object FileUtils {
   }
 
   def existingNonEmptyFile(s: String): Option[File] = existingNonEmptyFile(new File(s))
+
+  def inputStreamFor (f: File, bufLen: Int): Option[InputStream] = {
+    if (f.isFile) {
+      if (f.getName.endsWith(".gz")){
+        Some( new GZIPInputStream( new FileInputStream(f)))
+      } else {
+        Some( new FileInputStream(f))
+      }
+    } else None
+  }
+  def inputStreamFor (pathName: String, bufLen: Int): Option[InputStream] = inputStreamFor(new File(pathName),bufLen)
 
   def ensureDir (pathname: String): Option[File] = {
     val dir = new File(pathname)
