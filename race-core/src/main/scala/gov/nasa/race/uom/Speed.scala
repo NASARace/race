@@ -17,7 +17,6 @@
 package gov.nasa.race.uom
 
 import gov.nasa.race.common._
-import Angle._
 import scala.concurrent.duration.FiniteDuration
 
 
@@ -31,6 +30,7 @@ object Speed {
   final val MetersPerSecInKmh = 1000.0 / 3600
   final val MetersPerSecInMph = 1609.344 / 3600
   final val MetersPerSecInFps = 0.3048
+  final val MetersPerSecInFpm = 0.3048 * 60
 
   final val Speed0 = new Speed(0)
   final val UndefinedSpeed = new Speed(Double.NaN)
@@ -42,6 +42,7 @@ object Speed {
   //--- constructors
   @inline def MetersPerSecond(d: Double) = new Speed(d)
   @inline def FeetPerSecond(d: Double) = new Speed(d * MetersPerSecInFps)
+  @inline def FeetPerMinute(d: Double) = new Speed(d * MetersPerSecInFpm)
   @inline def Knots(d: Double) = new Speed(d * MetersPerSecInKnot)
   @inline def KilometersPerHour(d: Double) = new Speed(d * MetersPerSecInKmh)
   @inline def UsMilesPerHour(d: Double) = new Speed(d * MetersPerSecInMph)
@@ -53,6 +54,8 @@ object Speed {
     def mph = UsMilesPerHour(d)
     def knots = Knots(d)
     def kn = Knots(d)
+    def fps = FeetPerSecond(d)
+    def fpm = FeetPerMinute(d)
   }
 }
 
@@ -64,14 +67,18 @@ class Speed protected[uom] (val d: Double) extends AnyVal {
   @inline def toKilometersPerHour: Double = d / MetersPerSecInKmh
   @inline def toKmh = toKilometersPerHour
   @inline def toUsMilesPerHour: Double = d / MetersPerSecInMph
+  @inline def toFeetPerSecond: Double = d / MetersPerSecInFps
+  @inline def toFeetPerMinute: Double = d / MetersPerSecInFpm
   @inline def toMph = toUsMilesPerHour
 
   @inline def + (x: Speed): Speed = new Speed(d + x.d)
   @inline def - (x: Speed): Speed = new Speed(d - x.d)
 
   @inline def * (x: Double): Speed = new Speed(d * x)
-  @inline def * (t: FiniteDuration) = new Length((d * t.toMicros)/1e6)
   @inline def / (x: Double): Speed = new Speed(d / x)
+
+  @inline def * (t: FiniteDuration) = new Length((d * t.toMicros)/1e6)
+  @inline def / (t: FiniteDuration) = new Acceleration((d / t.toMicros)*1e6)
 
   @inline def ≈ (x: Speed)(implicit εSpeed: Speed) = Math.abs(d - x.d) <= εSpeed.d
   @inline def ~= (x: Speed)(implicit εSpeed: Speed) = Math.abs(d - x.d) <= εSpeed.d

@@ -1,0 +1,30 @@
+{
+  "type" : "record",
+  "name" : "TrackPoint",
+  "namespace" : "gov.nasa.race.track.avro",
+  "doc" : "represents the (minimal) state of a track at a given time",
+  "fields" : [
+     {
+       "name" : "id", "type" : "string",
+       "doc"  : "identifier for this track"
+     }, {
+       "name" : "date",  "type" : "long",
+       "doc"  : "unix epoch for this track point", "units" : "milliseconds"
+     }, {
+       "name" : "latitude",  "type" : "double",
+       "doc"  : "WGS84 latitude of track point",  "units" : "degrees"
+     }, {
+       "name" : "longitude",  "type" : "double",
+       "doc"  : "WGS84 longitude of track point",  "units" : "degrees"
+     }, {
+       "name" : "altitude",  "type" : "double",
+       "doc"  : "(barometric) altitude of track point", "units" : "meters"
+     }, {
+       "name" : "speed", "type" : "double",
+       "doc"  : "ground speed at track point",  "units" : "meters per second"
+     }, {
+       "name" : "heading", "type" : "double",
+       "doc"  : "heading at track point", "units" : "degrees"
+     }
+  ]
+}

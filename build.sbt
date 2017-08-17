@@ -94,7 +94,7 @@ lazy val raceTools = createProject("race-tools", commonSettings).
   dependsOn(raceCore,raceNetHttp).
   settings(
     mainClass in Compile := Some("gov.nasa.race.tool.CryptConfig")).
-  addLibraryDependencies(logback)
+  addLibraryDependencies(logback,nscalaTime,avro)
 
 lazy val raceSpace = createProject("race-space", commonSettings).
   dependsOn(raceCore).

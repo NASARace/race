@@ -1,0 +1,42 @@
+{
+  "type" : "record",
+  "name" : "FullTrackPoint",
+  "namespace" : "gov.nasa.race.track.avro",
+  "doc" : "represents the state of a track at a given time",
+  "fields" : [
+     {
+       "name" : "id", "type" : "string",
+       "doc"  : "identifier for this track"
+     }, {
+       "name" : "date",  "type" : "long",
+       "doc"  : "unix epoch for this track point", "units" : "milliseconds"
+     }, {
+       "name" : "latitude",  "type" : "double",
+       "doc"  : "WGS84 latitude of track point",  "units" : "degrees"
+     }, {
+       "name" : "longitude",  "type" : "double",
+       "doc"  : "WGS84 longitude of track point",  "units" : "degrees"
+     }, {
+       "name" : "altitude",  "type" : "double",
+       "doc"  : "(barometric) altitude of track point", "units" : "feet"
+     }, {
+       "name" : "speed", "type" : "double",
+       "doc"  : "ground speed at track point",  "units" : "knots"
+     }, {
+       "name" : "heading", "type" : "double",
+       "doc"  : "heading at track point", "units" : "degrees"
+     }, {
+       "name" : "distance", "type" : "double",
+       "doc"  : "traveled distance at track point",  "units" : "NM"
+     }, {
+        "name" : "climbRate",  "type" : "double",
+        "doc"  : "rate of climb at track point",  "units" : "feet/min"
+     }, {
+        "name" : "acceleration",  "type" : "double",
+        "doc"  : "ground speed acceleration at track point",   "units" : "knots/min"
+     }, {
+        "name" : "amendment", "type" : ["null","string"],
+        "doc"  : "optional amendment text for track point"
+     }
+  ]
+}

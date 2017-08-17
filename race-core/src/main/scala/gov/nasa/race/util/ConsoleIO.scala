@@ -62,6 +62,7 @@ object ConsoleIO {
 
   final val ClearScreen = "\u001b[2J\u001b[;H"
   final val EraseScreen = "\u001b[3J\u001b[;H"
+  final val ClearLine   = "\u001b[1K\u001b[0G"
 
   // constants
   final val repeatMenu = "REPEAT_MENU"
@@ -74,8 +75,14 @@ object ConsoleIO {
   val jConsole = System.console()
 
   // various ANSI terminal commands
-  def clearScreen = print(ClearScreen)
-  def eraseScreen = print(EraseScreen)
+  @inline def clearScreen = print(ClearScreen)
+  @inline def eraseScreen = print(EraseScreen)
+  @inline def clearLine = print(ClearLine)
+
+  @inline def line(msg: String) = {
+    print(ClearLine)
+    print(msg)
+  }
 
   // shared data
   private var input: String = _

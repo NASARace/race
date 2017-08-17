@@ -192,10 +192,17 @@ object FileUtils {
     }
   }
 
+  final val kB: Long = 1024
+  final val MB: Long = kB * 1024
+  final val GB: Long = MB * 1024
+  final val TB: Long = GB * 1024
+
   def sizeString (nBytes: Long) = {
-    if (nBytes > 1024*1024*1024) f"${nBytes.toDouble/(1024*1024*1024)}%.1fg"
-    else if (nBytes > 1024*1024) f"${nBytes.toDouble/(1024*1024)}%.1fm"
-    else if (nBytes > 1024) f"${Math.round(nBytes / 1024.0)}%dk"
+    // string formatting automatically does rounding according to specified decimals
+    if (nBytes >= TB) f"${nBytes.toDouble/TB}%.1f TB"
+    else if (nBytes >= GB) f"${nBytes.toDouble/GB}%.1f GB"
+    else if (nBytes > MB) f"${nBytes.toDouble/MB}%.1f MB"
+    else if (nBytes > kB) f"${nBytes.toDouble / kB}%.0f kB"
     else nBytes.toString
   }
 

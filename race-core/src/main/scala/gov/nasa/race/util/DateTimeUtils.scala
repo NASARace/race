@@ -103,4 +103,21 @@ object DateTimeUtils {
   def fromNow (dur: FiniteDuration): DateTime = DateTime.now.plusMillis(dur.toMillis.toInt)
 
   def timeTag(d: FiniteDuration): Long = System.currentTimeMillis() / (d.toMillis)
+
+
+  //--- epoch dissection
+
+  final val MsecPerDay = 1000*60*60*24
+  final val MsecPerHour = 1000*60*60
+
+  @inline def hourOfDay(t: Long): Int = (t % MsecPerDay).toInt / MsecPerHour
+  @inline def hours (d: Long): Double = d.toDouble / MsecPerHour
+  @inline def toISODateString(t:Long): String = ISODateTimeFormat.basicDateTime.print(t)
+  @inline def toFullDateTimeString(t: Long): String = DateTimeFormat.fullDateTime.print(t)
+
+  val ISODHMSZ = ISODateTimeFormat.dateHourMinuteSecond.withZone(DateTimeZone.UTC)
+  val SimpleDHMSZ = DateTimeFormat.forPattern( "yyyy-MM-dd HH:mm:ss z").withZone(DateTimeZone.UTC)
+
+  @inline def toDhmsStringUTC (t: Long): String = ISODHMSZ.print(t)
+  @inline def toSimpleDhmsStringZ (t: Long): String = SimpleDHMSZ.print(t)
 }
