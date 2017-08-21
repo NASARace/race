@@ -25,6 +25,12 @@
      }, {
        "name" : "heading", "type" : "double",
        "doc"  : "heading at track point", "units" : "degrees"
+     }, {
+       "name" : "completed", "type" : "boolean",
+       "doc"  : "is last track point for this id"
+     }, {
+       "name" : "pointnum", "type" : "int",
+       "doc"  : "running number of track point for this track"
      }
   ]
 }

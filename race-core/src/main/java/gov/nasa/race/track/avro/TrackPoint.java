@@ -6,52 +6,14 @@
 package gov.nasa.race.track.avro;
 
 import org.apache.avro.specific.SpecificData;
-import org.apache.avro.message.BinaryMessageEncoder;
-import org.apache.avro.message.BinaryMessageDecoder;
-import org.apache.avro.message.SchemaStore;
 
 @SuppressWarnings("all")
 /** represents the (minimal) state of a track at a given time */
 @org.apache.avro.specific.AvroGenerated
 public class TrackPoint extends org.apache.avro.specific.SpecificRecordBase implements org.apache.avro.specific.SpecificRecord {
-  private static final long serialVersionUID = -5836908785529956677L;
-  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"TrackPoint\",\"namespace\":\"gov.nasa.race.track.avro\",\"doc\":\"represents the (minimal) state of a track at a given time\",\"fields\":[{\"name\":\"id\",\"type\":\"string\",\"doc\":\"identifier for this track\"},{\"name\":\"date\",\"type\":\"long\",\"doc\":\"unix epoch for this track point\",\"units\":\"milliseconds\"},{\"name\":\"latitude\",\"type\":\"double\",\"doc\":\"WGS84 latitude of track point\",\"units\":\"degrees\"},{\"name\":\"longitude\",\"type\":\"double\",\"doc\":\"WGS84 longitude of track point\",\"units\":\"degrees\"},{\"name\":\"altitude\",\"type\":\"double\",\"doc\":\"(barometric) altitude of track point\",\"units\":\"meters\"},{\"name\":\"speed\",\"type\":\"double\",\"doc\":\"ground speed at track point\",\"units\":\"meters per second\"},{\"name\":\"heading\",\"type\":\"double\",\"doc\":\"heading at track point\",\"units\":\"degrees\"}]}");
+  private static final long serialVersionUID = -1193659587964851858L;
+  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"TrackPoint\",\"namespace\":\"gov.nasa.race.track.avro\",\"doc\":\"represents the (minimal) state of a track at a given time\",\"fields\":[{\"name\":\"id\",\"type\":\"string\",\"doc\":\"identifier for this track\"},{\"name\":\"date\",\"type\":\"long\",\"doc\":\"unix epoch for this track point\",\"units\":\"milliseconds\"},{\"name\":\"latitude\",\"type\":\"double\",\"doc\":\"WGS84 latitude of track point\",\"units\":\"degrees\"},{\"name\":\"longitude\",\"type\":\"double\",\"doc\":\"WGS84 longitude of track point\",\"units\":\"degrees\"},{\"name\":\"altitude\",\"type\":\"double\",\"doc\":\"(barometric) altitude of track point\",\"units\":\"meters\"},{\"name\":\"speed\",\"type\":\"double\",\"doc\":\"ground speed at track point\",\"units\":\"meters per second\"},{\"name\":\"heading\",\"type\":\"double\",\"doc\":\"heading at track point\",\"units\":\"degrees\"},{\"name\":\"completed\",\"type\":\"boolean\",\"doc\":\"is last track point for this id\"},{\"name\":\"pointnum\",\"type\":\"int\",\"doc\":\"running number of track point for this track\"}]}");
   public static org.apache.avro.Schema getClassSchema() { return SCHEMA$; }
-
-  private static SpecificData MODEL$ = new SpecificData();
-
-  private static final BinaryMessageEncoder<TrackPoint> ENCODER =
-      new BinaryMessageEncoder<TrackPoint>(MODEL$, SCHEMA$);
-
-  private static final BinaryMessageDecoder<TrackPoint> DECODER =
-      new BinaryMessageDecoder<TrackPoint>(MODEL$, SCHEMA$);
-
-  /**
-   * Return the BinaryMessageDecoder instance used by this class.
-   */
-  public static BinaryMessageDecoder<TrackPoint> getDecoder() {
-    return DECODER;
-  }
-
-  /**
-   * Create a new BinaryMessageDecoder instance for this class that uses the specified {@link SchemaStore}.
-   * @param resolver a {@link SchemaStore} used to find schemas by fingerprint
-   */
-  public static BinaryMessageDecoder<TrackPoint> createDecoder(SchemaStore resolver) {
-    return new BinaryMessageDecoder<TrackPoint>(MODEL$, SCHEMA$, resolver);
-  }
-
-  /** Serializes this TrackPoint to a ByteBuffer. */
-  public java.nio.ByteBuffer toByteBuffer() throws java.io.IOException {
-    return ENCODER.encode(this);
-  }
-
-  /** Deserializes a TrackPoint from a ByteBuffer. */
-  public static TrackPoint fromByteBuffer(
-      java.nio.ByteBuffer b) throws java.io.IOException {
-    return DECODER.decode(b);
-  }
-
   /** identifier for this track */
   @Deprecated public java.lang.CharSequence id;
   /** unix epoch for this track point */
@@ -66,6 +28,10 @@ public class TrackPoint extends org.apache.avro.specific.SpecificRecordBase impl
   @Deprecated public double speed;
   /** heading at track point */
   @Deprecated public double heading;
+  /** is last track point for this id */
+  @Deprecated public boolean completed;
+  /** running number of track point for this track */
+  @Deprecated public int pointnum;
 
   /**
    * Default constructor.  Note that this does not initialize fields
@@ -83,8 +49,10 @@ public class TrackPoint extends org.apache.avro.specific.SpecificRecordBase impl
    * @param altitude (barometric) altitude of track point
    * @param speed ground speed at track point
    * @param heading heading at track point
+   * @param completed is last track point for this id
+   * @param pointnum running number of track point for this track
    */
-  public TrackPoint(java.lang.CharSequence id, java.lang.Long date, java.lang.Double latitude, java.lang.Double longitude, java.lang.Double altitude, java.lang.Double speed, java.lang.Double heading) {
+  public TrackPoint(java.lang.CharSequence id, java.lang.Long date, java.lang.Double latitude, java.lang.Double longitude, java.lang.Double altitude, java.lang.Double speed, java.lang.Double heading, java.lang.Boolean completed, java.lang.Integer pointnum) {
     this.id = id;
     this.date = date;
     this.latitude = latitude;
@@ -92,6 +60,8 @@ public class TrackPoint extends org.apache.avro.specific.SpecificRecordBase impl
     this.altitude = altitude;
     this.speed = speed;
     this.heading = heading;
+    this.completed = completed;
+    this.pointnum = pointnum;
   }
 
   public org.apache.avro.Schema getSchema() { return SCHEMA$; }
@@ -105,6 +75,8 @@ public class TrackPoint extends org.apache.avro.specific.SpecificRecordBase impl
     case 4: return altitude;
     case 5: return speed;
     case 6: return heading;
+    case 7: return completed;
+    case 8: return pointnum;
     default: throw new org.apache.avro.AvroRuntimeException("Bad index");
     }
   }
@@ -120,6 +92,8 @@ public class TrackPoint extends org.apache.avro.specific.SpecificRecordBase impl
     case 4: altitude = (java.lang.Double)value$; break;
     case 5: speed = (java.lang.Double)value$; break;
     case 6: heading = (java.lang.Double)value$; break;
+    case 7: completed = (java.lang.Boolean)value$; break;
+    case 8: pointnum = (java.lang.Integer)value$; break;
     default: throw new org.apache.avro.AvroRuntimeException("Bad index");
     }
   }
@@ -244,6 +218,40 @@ public class TrackPoint extends org.apache.avro.specific.SpecificRecordBase impl
   }
 
   /**
+   * Gets the value of the 'completed' field.
+   * @return is last track point for this id
+   */
+  public java.lang.Boolean getCompleted() {
+    return completed;
+  }
+
+  /**
+   * Sets the value of the 'completed' field.
+   * is last track point for this id
+   * @param value the value to set.
+   */
+  public void setCompleted(java.lang.Boolean value) {
+    this.completed = value;
+  }
+
+  /**
+   * Gets the value of the 'pointnum' field.
+   * @return running number of track point for this track
+   */
+  public java.lang.Integer getPointnum() {
+    return pointnum;
+  }
+
+  /**
+   * Sets the value of the 'pointnum' field.
+   * running number of track point for this track
+   * @param value the value to set.
+   */
+  public void setPointnum(java.lang.Integer value) {
+    this.pointnum = value;
+  }
+
+  /**
    * Creates a new TrackPoint RecordBuilder.
    * @return A new TrackPoint RecordBuilder
    */
@@ -289,6 +297,10 @@ public class TrackPoint extends org.apache.avro.specific.SpecificRecordBase impl
     private double speed;
     /** heading at track point */
     private double heading;
+    /** is last track point for this id */
+    private boolean completed;
+    /** running number of track point for this track */
+    private int pointnum;
 
     /** Creates a new Builder */
     private Builder() {
@@ -329,6 +341,14 @@ public class TrackPoint extends org.apache.avro.specific.SpecificRecordBase impl
         this.heading = data().deepCopy(fields()[6].schema(), other.heading);
         fieldSetFlags()[6] = true;
       }
+      if (isValidValue(fields()[7], other.completed)) {
+        this.completed = data().deepCopy(fields()[7].schema(), other.completed);
+        fieldSetFlags()[7] = true;
+      }
+      if (isValidValue(fields()[8], other.pointnum)) {
+        this.pointnum = data().deepCopy(fields()[8].schema(), other.pointnum);
+        fieldSetFlags()[8] = true;
+      }
     }
 
     /**
@@ -364,6 +384,14 @@ public class TrackPoint extends org.apache.avro.specific.SpecificRecordBase impl
       if (isValidValue(fields()[6], other.heading)) {
         this.heading = data().deepCopy(fields()[6].schema(), other.heading);
         fieldSetFlags()[6] = true;
+      }
+      if (isValidValue(fields()[7], other.completed)) {
+        this.completed = data().deepCopy(fields()[7].schema(), other.completed);
+        fieldSetFlags()[7] = true;
+      }
+      if (isValidValue(fields()[8], other.pointnum)) {
+        this.pointnum = data().deepCopy(fields()[8].schema(), other.pointnum);
+        fieldSetFlags()[8] = true;
       }
     }
 
@@ -662,8 +690,91 @@ public class TrackPoint extends org.apache.avro.specific.SpecificRecordBase impl
       return this;
     }
 
+    /**
+      * Gets the value of the 'completed' field.
+      * is last track point for this id
+      * @return The value.
+      */
+    public java.lang.Boolean getCompleted() {
+      return completed;
+    }
+
+    /**
+      * Sets the value of the 'completed' field.
+      * is last track point for this id
+      * @param value The value of 'completed'.
+      * @return This builder.
+      */
+    public gov.nasa.race.track.avro.TrackPoint.Builder setCompleted(boolean value) {
+      validate(fields()[7], value);
+      this.completed = value;
+      fieldSetFlags()[7] = true;
+      return this;
+    }
+
+    /**
+      * Checks whether the 'completed' field has been set.
+      * is last track point for this id
+      * @return True if the 'completed' field has been set, false otherwise.
+      */
+    public boolean hasCompleted() {
+      return fieldSetFlags()[7];
+    }
+
+
+    /**
+      * Clears the value of the 'completed' field.
+      * is last track point for this id
+      * @return This builder.
+      */
+    public gov.nasa.race.track.avro.TrackPoint.Builder clearCompleted() {
+      fieldSetFlags()[7] = false;
+      return this;
+    }
+
+    /**
+      * Gets the value of the 'pointnum' field.
+      * running number of track point for this track
+      * @return The value.
+      */
+    public java.lang.Integer getPointnum() {
+      return pointnum;
+    }
+
+    /**
+      * Sets the value of the 'pointnum' field.
+      * running number of track point for this track
+      * @param value The value of 'pointnum'.
+      * @return This builder.
+      */
+    public gov.nasa.race.track.avro.TrackPoint.Builder setPointnum(int value) {
+      validate(fields()[8], value);
+      this.pointnum = value;
+      fieldSetFlags()[8] = true;
+      return this;
+    }
+
+    /**
+      * Checks whether the 'pointnum' field has been set.
+      * running number of track point for this track
+      * @return True if the 'pointnum' field has been set, false otherwise.
+      */
+    public boolean hasPointnum() {
+      return fieldSetFlags()[8];
+    }
+
+
+    /**
+      * Clears the value of the 'pointnum' field.
+      * running number of track point for this track
+      * @return This builder.
+      */
+    public gov.nasa.race.track.avro.TrackPoint.Builder clearPointnum() {
+      fieldSetFlags()[8] = false;
+      return this;
+    }
+
     @Override
-    @SuppressWarnings("unchecked")
     public TrackPoint build() {
       try {
         TrackPoint record = new TrackPoint();
@@ -674,25 +785,25 @@ public class TrackPoint extends org.apache.avro.specific.SpecificRecordBase impl
         record.altitude = fieldSetFlags()[4] ? this.altitude : (java.lang.Double) defaultValue(fields()[4]);
         record.speed = fieldSetFlags()[5] ? this.speed : (java.lang.Double) defaultValue(fields()[5]);
         record.heading = fieldSetFlags()[6] ? this.heading : (java.lang.Double) defaultValue(fields()[6]);
+        record.completed = fieldSetFlags()[7] ? this.completed : (java.lang.Boolean) defaultValue(fields()[7]);
+        record.pointnum = fieldSetFlags()[8] ? this.pointnum : (java.lang.Integer) defaultValue(fields()[8]);
         return record;
-      } catch (java.lang.Exception e) {
+      } catch (Exception e) {
         throw new org.apache.avro.AvroRuntimeException(e);
       }
     }
   }
 
-  @SuppressWarnings("unchecked")
-  private static final org.apache.avro.io.DatumWriter<TrackPoint>
-    WRITER$ = (org.apache.avro.io.DatumWriter<TrackPoint>)MODEL$.createDatumWriter(SCHEMA$);
+  private static final org.apache.avro.io.DatumWriter
+    WRITER$ = new org.apache.avro.specific.SpecificDatumWriter(SCHEMA$);
 
   @Override public void writeExternal(java.io.ObjectOutput out)
     throws java.io.IOException {
     WRITER$.write(this, SpecificData.getEncoder(out));
   }
 
-  @SuppressWarnings("unchecked")
-  private static final org.apache.avro.io.DatumReader<TrackPoint>
-    READER$ = (org.apache.avro.io.DatumReader<TrackPoint>)MODEL$.createDatumReader(SCHEMA$);
+  private static final org.apache.avro.io.DatumReader
+    READER$ = new org.apache.avro.specific.SpecificDatumReader(SCHEMA$);
 
   @Override public void readExternal(java.io.ObjectInput in)
     throws java.io.IOException {

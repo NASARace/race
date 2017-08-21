@@ -6,52 +6,14 @@
 package gov.nasa.race.track.avro;
 
 import org.apache.avro.specific.SpecificData;
-import org.apache.avro.message.BinaryMessageEncoder;
-import org.apache.avro.message.BinaryMessageDecoder;
-import org.apache.avro.message.SchemaStore;
 
 @SuppressWarnings("all")
 /** represents the state of a track at a given time */
 @org.apache.avro.specific.AvroGenerated
 public class FullTrackPoint extends org.apache.avro.specific.SpecificRecordBase implements org.apache.avro.specific.SpecificRecord {
-  private static final long serialVersionUID = -8486815662844661056L;
-  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"FullTrackPoint\",\"namespace\":\"gov.nasa.race.track.avro\",\"doc\":\"represents the state of a track at a given time\",\"fields\":[{\"name\":\"id\",\"type\":\"string\",\"doc\":\"identifier for this track\"},{\"name\":\"date\",\"type\":\"long\",\"doc\":\"unix epoch for this track point\",\"units\":\"milliseconds\"},{\"name\":\"latitude\",\"type\":\"double\",\"doc\":\"WGS84 latitude of track point\",\"units\":\"degrees\"},{\"name\":\"longitude\",\"type\":\"double\",\"doc\":\"WGS84 longitude of track point\",\"units\":\"degrees\"},{\"name\":\"altitude\",\"type\":\"double\",\"doc\":\"(barometric) altitude of track point\",\"units\":\"feet\"},{\"name\":\"speed\",\"type\":\"double\",\"doc\":\"ground speed at track point\",\"units\":\"knots\"},{\"name\":\"heading\",\"type\":\"double\",\"doc\":\"heading at track point\",\"units\":\"degrees\"},{\"name\":\"distance\",\"type\":\"double\",\"doc\":\"traveled distance at track point\",\"units\":\"NM\"},{\"name\":\"climbRate\",\"type\":\"double\",\"doc\":\"rate of climb at track point\",\"units\":\"feet/min\"},{\"name\":\"acceleration\",\"type\":\"double\",\"doc\":\"ground speed acceleration at track point\",\"units\":\"knots/min\"},{\"name\":\"amendment\",\"type\":[\"null\",\"string\"],\"doc\":\"optional amendment text for track point\"}]}");
+  private static final long serialVersionUID = 8642017513678908697L;
+  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"FullTrackPoint\",\"namespace\":\"gov.nasa.race.track.avro\",\"doc\":\"represents the state of a track at a given time\",\"fields\":[{\"name\":\"id\",\"type\":\"string\",\"doc\":\"identifier for this track\"},{\"name\":\"date\",\"type\":\"long\",\"doc\":\"unix epoch for this track point\",\"units\":\"milliseconds\"},{\"name\":\"latitude\",\"type\":\"double\",\"doc\":\"WGS84 latitude of track point\",\"units\":\"degrees\"},{\"name\":\"longitude\",\"type\":\"double\",\"doc\":\"WGS84 longitude of track point\",\"units\":\"degrees\"},{\"name\":\"altitude\",\"type\":\"double\",\"doc\":\"(barometric) altitude of track point\",\"units\":\"meters\"},{\"name\":\"speed\",\"type\":\"double\",\"doc\":\"ground speed at track point\",\"units\":\"m/s\"},{\"name\":\"heading\",\"type\":\"double\",\"doc\":\"heading at track point\",\"units\":\"degrees\"},{\"name\":\"distance\",\"type\":\"double\",\"doc\":\"traveled distance at track point\",\"units\":\"NM\"},{\"name\":\"climbRate\",\"type\":\"double\",\"doc\":\"rate of climb at track point\",\"units\":\"m/s\"},{\"name\":\"acceleration\",\"type\":\"double\",\"doc\":\"ground speed acceleration at track point\",\"units\":\"m/s?\"},{\"name\":\"completed\",\"type\":\"boolean\",\"doc\":\"is last track point for this id\"},{\"name\":\"pointnum\",\"type\":\"int\",\"doc\":\"running number of track point for this track\"},{\"name\":\"amendment\",\"type\":[\"null\",\"string\"],\"doc\":\"optional amendment text for track point\"}]}");
   public static org.apache.avro.Schema getClassSchema() { return SCHEMA$; }
-
-  private static SpecificData MODEL$ = new SpecificData();
-
-  private static final BinaryMessageEncoder<FullTrackPoint> ENCODER =
-      new BinaryMessageEncoder<FullTrackPoint>(MODEL$, SCHEMA$);
-
-  private static final BinaryMessageDecoder<FullTrackPoint> DECODER =
-      new BinaryMessageDecoder<FullTrackPoint>(MODEL$, SCHEMA$);
-
-  /**
-   * Return the BinaryMessageDecoder instance used by this class.
-   */
-  public static BinaryMessageDecoder<FullTrackPoint> getDecoder() {
-    return DECODER;
-  }
-
-  /**
-   * Create a new BinaryMessageDecoder instance for this class that uses the specified {@link SchemaStore}.
-   * @param resolver a {@link SchemaStore} used to find schemas by fingerprint
-   */
-  public static BinaryMessageDecoder<FullTrackPoint> createDecoder(SchemaStore resolver) {
-    return new BinaryMessageDecoder<FullTrackPoint>(MODEL$, SCHEMA$, resolver);
-  }
-
-  /** Serializes this FullTrackPoint to a ByteBuffer. */
-  public java.nio.ByteBuffer toByteBuffer() throws java.io.IOException {
-    return ENCODER.encode(this);
-  }
-
-  /** Deserializes a FullTrackPoint from a ByteBuffer. */
-  public static FullTrackPoint fromByteBuffer(
-      java.nio.ByteBuffer b) throws java.io.IOException {
-    return DECODER.decode(b);
-  }
-
   /** identifier for this track */
   @Deprecated public java.lang.CharSequence id;
   /** unix epoch for this track point */
@@ -72,6 +34,10 @@ public class FullTrackPoint extends org.apache.avro.specific.SpecificRecordBase 
   @Deprecated public double climbRate;
   /** ground speed acceleration at track point */
   @Deprecated public double acceleration;
+  /** is last track point for this id */
+  @Deprecated public boolean completed;
+  /** running number of track point for this track */
+  @Deprecated public int pointnum;
   /** optional amendment text for track point */
   @Deprecated public java.lang.CharSequence amendment;
 
@@ -94,9 +60,11 @@ public class FullTrackPoint extends org.apache.avro.specific.SpecificRecordBase 
    * @param distance traveled distance at track point
    * @param climbRate rate of climb at track point
    * @param acceleration ground speed acceleration at track point
+   * @param completed is last track point for this id
+   * @param pointnum running number of track point for this track
    * @param amendment optional amendment text for track point
    */
-  public FullTrackPoint(java.lang.CharSequence id, java.lang.Long date, java.lang.Double latitude, java.lang.Double longitude, java.lang.Double altitude, java.lang.Double speed, java.lang.Double heading, java.lang.Double distance, java.lang.Double climbRate, java.lang.Double acceleration, java.lang.CharSequence amendment) {
+  public FullTrackPoint(java.lang.CharSequence id, java.lang.Long date, java.lang.Double latitude, java.lang.Double longitude, java.lang.Double altitude, java.lang.Double speed, java.lang.Double heading, java.lang.Double distance, java.lang.Double climbRate, java.lang.Double acceleration, java.lang.Boolean completed, java.lang.Integer pointnum, java.lang.CharSequence amendment) {
     this.id = id;
     this.date = date;
     this.latitude = latitude;
@@ -107,6 +75,8 @@ public class FullTrackPoint extends org.apache.avro.specific.SpecificRecordBase 
     this.distance = distance;
     this.climbRate = climbRate;
     this.acceleration = acceleration;
+    this.completed = completed;
+    this.pointnum = pointnum;
     this.amendment = amendment;
   }
 
@@ -124,7 +94,9 @@ public class FullTrackPoint extends org.apache.avro.specific.SpecificRecordBase 
     case 7: return distance;
     case 8: return climbRate;
     case 9: return acceleration;
-    case 10: return amendment;
+    case 10: return completed;
+    case 11: return pointnum;
+    case 12: return amendment;
     default: throw new org.apache.avro.AvroRuntimeException("Bad index");
     }
   }
@@ -143,7 +115,9 @@ public class FullTrackPoint extends org.apache.avro.specific.SpecificRecordBase 
     case 7: distance = (java.lang.Double)value$; break;
     case 8: climbRate = (java.lang.Double)value$; break;
     case 9: acceleration = (java.lang.Double)value$; break;
-    case 10: amendment = (java.lang.CharSequence)value$; break;
+    case 10: completed = (java.lang.Boolean)value$; break;
+    case 11: pointnum = (java.lang.Integer)value$; break;
+    case 12: amendment = (java.lang.CharSequence)value$; break;
     default: throw new org.apache.avro.AvroRuntimeException("Bad index");
     }
   }
@@ -319,6 +293,40 @@ public class FullTrackPoint extends org.apache.avro.specific.SpecificRecordBase 
   }
 
   /**
+   * Gets the value of the 'completed' field.
+   * @return is last track point for this id
+   */
+  public java.lang.Boolean getCompleted() {
+    return completed;
+  }
+
+  /**
+   * Sets the value of the 'completed' field.
+   * is last track point for this id
+   * @param value the value to set.
+   */
+  public void setCompleted(java.lang.Boolean value) {
+    this.completed = value;
+  }
+
+  /**
+   * Gets the value of the 'pointnum' field.
+   * @return running number of track point for this track
+   */
+  public java.lang.Integer getPointnum() {
+    return pointnum;
+  }
+
+  /**
+   * Sets the value of the 'pointnum' field.
+   * running number of track point for this track
+   * @param value the value to set.
+   */
+  public void setPointnum(java.lang.Integer value) {
+    this.pointnum = value;
+  }
+
+  /**
    * Gets the value of the 'amendment' field.
    * @return optional amendment text for track point
    */
@@ -387,6 +395,10 @@ public class FullTrackPoint extends org.apache.avro.specific.SpecificRecordBase 
     private double climbRate;
     /** ground speed acceleration at track point */
     private double acceleration;
+    /** is last track point for this id */
+    private boolean completed;
+    /** running number of track point for this track */
+    private int pointnum;
     /** optional amendment text for track point */
     private java.lang.CharSequence amendment;
 
@@ -441,9 +453,17 @@ public class FullTrackPoint extends org.apache.avro.specific.SpecificRecordBase 
         this.acceleration = data().deepCopy(fields()[9].schema(), other.acceleration);
         fieldSetFlags()[9] = true;
       }
-      if (isValidValue(fields()[10], other.amendment)) {
-        this.amendment = data().deepCopy(fields()[10].schema(), other.amendment);
+      if (isValidValue(fields()[10], other.completed)) {
+        this.completed = data().deepCopy(fields()[10].schema(), other.completed);
         fieldSetFlags()[10] = true;
+      }
+      if (isValidValue(fields()[11], other.pointnum)) {
+        this.pointnum = data().deepCopy(fields()[11].schema(), other.pointnum);
+        fieldSetFlags()[11] = true;
+      }
+      if (isValidValue(fields()[12], other.amendment)) {
+        this.amendment = data().deepCopy(fields()[12].schema(), other.amendment);
+        fieldSetFlags()[12] = true;
       }
     }
 
@@ -493,9 +513,17 @@ public class FullTrackPoint extends org.apache.avro.specific.SpecificRecordBase 
         this.acceleration = data().deepCopy(fields()[9].schema(), other.acceleration);
         fieldSetFlags()[9] = true;
       }
-      if (isValidValue(fields()[10], other.amendment)) {
-        this.amendment = data().deepCopy(fields()[10].schema(), other.amendment);
+      if (isValidValue(fields()[10], other.completed)) {
+        this.completed = data().deepCopy(fields()[10].schema(), other.completed);
         fieldSetFlags()[10] = true;
+      }
+      if (isValidValue(fields()[11], other.pointnum)) {
+        this.pointnum = data().deepCopy(fields()[11].schema(), other.pointnum);
+        fieldSetFlags()[11] = true;
+      }
+      if (isValidValue(fields()[12], other.amendment)) {
+        this.amendment = data().deepCopy(fields()[12].schema(), other.amendment);
+        fieldSetFlags()[12] = true;
       }
     }
 
@@ -921,6 +949,90 @@ public class FullTrackPoint extends org.apache.avro.specific.SpecificRecordBase 
     }
 
     /**
+      * Gets the value of the 'completed' field.
+      * is last track point for this id
+      * @return The value.
+      */
+    public java.lang.Boolean getCompleted() {
+      return completed;
+    }
+
+    /**
+      * Sets the value of the 'completed' field.
+      * is last track point for this id
+      * @param value The value of 'completed'.
+      * @return This builder.
+      */
+    public gov.nasa.race.track.avro.FullTrackPoint.Builder setCompleted(boolean value) {
+      validate(fields()[10], value);
+      this.completed = value;
+      fieldSetFlags()[10] = true;
+      return this;
+    }
+
+    /**
+      * Checks whether the 'completed' field has been set.
+      * is last track point for this id
+      * @return True if the 'completed' field has been set, false otherwise.
+      */
+    public boolean hasCompleted() {
+      return fieldSetFlags()[10];
+    }
+
+
+    /**
+      * Clears the value of the 'completed' field.
+      * is last track point for this id
+      * @return This builder.
+      */
+    public gov.nasa.race.track.avro.FullTrackPoint.Builder clearCompleted() {
+      fieldSetFlags()[10] = false;
+      return this;
+    }
+
+    /**
+      * Gets the value of the 'pointnum' field.
+      * running number of track point for this track
+      * @return The value.
+      */
+    public java.lang.Integer getPointnum() {
+      return pointnum;
+    }
+
+    /**
+      * Sets the value of the 'pointnum' field.
+      * running number of track point for this track
+      * @param value The value of 'pointnum'.
+      * @return This builder.
+      */
+    public gov.nasa.race.track.avro.FullTrackPoint.Builder setPointnum(int value) {
+      validate(fields()[11], value);
+      this.pointnum = value;
+      fieldSetFlags()[11] = true;
+      return this;
+    }
+
+    /**
+      * Checks whether the 'pointnum' field has been set.
+      * running number of track point for this track
+      * @return True if the 'pointnum' field has been set, false otherwise.
+      */
+    public boolean hasPointnum() {
+      return fieldSetFlags()[11];
+    }
+
+
+    /**
+      * Clears the value of the 'pointnum' field.
+      * running number of track point for this track
+      * @return This builder.
+      */
+    public gov.nasa.race.track.avro.FullTrackPoint.Builder clearPointnum() {
+      fieldSetFlags()[11] = false;
+      return this;
+    }
+
+    /**
       * Gets the value of the 'amendment' field.
       * optional amendment text for track point
       * @return The value.
@@ -936,9 +1048,9 @@ public class FullTrackPoint extends org.apache.avro.specific.SpecificRecordBase 
       * @return This builder.
       */
     public gov.nasa.race.track.avro.FullTrackPoint.Builder setAmendment(java.lang.CharSequence value) {
-      validate(fields()[10], value);
+      validate(fields()[12], value);
       this.amendment = value;
-      fieldSetFlags()[10] = true;
+      fieldSetFlags()[12] = true;
       return this;
     }
 
@@ -948,7 +1060,7 @@ public class FullTrackPoint extends org.apache.avro.specific.SpecificRecordBase 
       * @return True if the 'amendment' field has been set, false otherwise.
       */
     public boolean hasAmendment() {
-      return fieldSetFlags()[10];
+      return fieldSetFlags()[12];
     }
 
 
@@ -959,12 +1071,11 @@ public class FullTrackPoint extends org.apache.avro.specific.SpecificRecordBase 
       */
     public gov.nasa.race.track.avro.FullTrackPoint.Builder clearAmendment() {
       amendment = null;
-      fieldSetFlags()[10] = false;
+      fieldSetFlags()[12] = false;
       return this;
     }
 
     @Override
-    @SuppressWarnings("unchecked")
     public FullTrackPoint build() {
       try {
         FullTrackPoint record = new FullTrackPoint();
@@ -978,26 +1089,26 @@ public class FullTrackPoint extends org.apache.avro.specific.SpecificRecordBase 
         record.distance = fieldSetFlags()[7] ? this.distance : (java.lang.Double) defaultValue(fields()[7]);
         record.climbRate = fieldSetFlags()[8] ? this.climbRate : (java.lang.Double) defaultValue(fields()[8]);
         record.acceleration = fieldSetFlags()[9] ? this.acceleration : (java.lang.Double) defaultValue(fields()[9]);
-        record.amendment = fieldSetFlags()[10] ? this.amendment : (java.lang.CharSequence) defaultValue(fields()[10]);
+        record.completed = fieldSetFlags()[10] ? this.completed : (java.lang.Boolean) defaultValue(fields()[10]);
+        record.pointnum = fieldSetFlags()[11] ? this.pointnum : (java.lang.Integer) defaultValue(fields()[11]);
+        record.amendment = fieldSetFlags()[12] ? this.amendment : (java.lang.CharSequence) defaultValue(fields()[12]);
         return record;
-      } catch (java.lang.Exception e) {
+      } catch (Exception e) {
         throw new org.apache.avro.AvroRuntimeException(e);
       }
     }
   }
 
-  @SuppressWarnings("unchecked")
-  private static final org.apache.avro.io.DatumWriter<FullTrackPoint>
-    WRITER$ = (org.apache.avro.io.DatumWriter<FullTrackPoint>)MODEL$.createDatumWriter(SCHEMA$);
+  private static final org.apache.avro.io.DatumWriter
+    WRITER$ = new org.apache.avro.specific.SpecificDatumWriter(SCHEMA$);
 
   @Override public void writeExternal(java.io.ObjectOutput out)
     throws java.io.IOException {
     WRITER$.write(this, SpecificData.getEncoder(out));
   }
 
-  @SuppressWarnings("unchecked")
-  private static final org.apache.avro.io.DatumReader<FullTrackPoint>
-    READER$ = (org.apache.avro.io.DatumReader<FullTrackPoint>)MODEL$.createDatumReader(SCHEMA$);
+  private static final org.apache.avro.io.DatumReader
+    READER$ = new org.apache.avro.specific.SpecificDatumReader(SCHEMA$);
 
   @Override public void readExternal(java.io.ObjectInput in)
     throws java.io.IOException {

@@ -18,10 +18,10 @@
        "doc"  : "WGS84 longitude of track point",  "units" : "degrees"
      }, {
        "name" : "altitude",  "type" : "double",
-       "doc"  : "(barometric) altitude of track point", "units" : "feet"
+       "doc"  : "(barometric) altitude of track point", "units" : "meters"
      }, {
        "name" : "speed", "type" : "double",
-       "doc"  : "ground speed at track point",  "units" : "knots"
+       "doc"  : "ground speed at track point",  "units" : "m/s"
      }, {
        "name" : "heading", "type" : "double",
        "doc"  : "heading at track point", "units" : "degrees"
@@ -30,10 +30,16 @@
        "doc"  : "traveled distance at track point",  "units" : "NM"
      }, {
         "name" : "climbRate",  "type" : "double",
-        "doc"  : "rate of climb at track point",  "units" : "feet/min"
+        "doc"  : "rate of climb at track point",  "units" : "m/s"
      }, {
         "name" : "acceleration",  "type" : "double",
-        "doc"  : "ground speed acceleration at track point",   "units" : "knots/min"
+        "doc"  : "ground speed acceleration at track point",   "units" : "m/s?"
+     }, {
+        "name" : "completed", "type" : "boolean",
+        "doc"  : "is last track point for this id"
+     }, {
+        "name" : "pointnum", "type" : "int",
+        "doc"  : "running number of track point for this track"
      }, {
         "name" : "amendment", "type" : ["null","string"],
         "doc"  : "optional amendment text for track point"
