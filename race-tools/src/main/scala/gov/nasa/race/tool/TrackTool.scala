@@ -40,6 +40,14 @@ import scala.util.matching.Regex
 
 /**
   * tool to analyze and transform Apache Avro archives with Threaded Track or TrackPoint data
+  *
+  * TrackTool supports four major operations:
+  *   - flatten Threaded Track archives into TrackPoint archives (which can be replayed in constant heap space)
+  *   - analyze existing Threaded Track and TrackPoint archives (statistics and generic anomalies)
+  *   - create filtered Threaded Track and TrackPoint archives
+  *   - list contents of archives
+  *
+  * All functions support filtering of input (id and/or time at this point)
   */
 object TrackTool {
 
@@ -233,6 +241,10 @@ object TrackTool {
     dfr.close
   }
 
+  def getOutFile (defaultName: String): File = opts.outFile.getOrElse(new File(opts.outDir, defaultName))
+
+  def ensureEmptyOutFile (defaultName: String): Option[File] = FileUtils.ensureEmptyWritable(getOutFile(defaultName))
+
   //--- Check operation - analyze archive contents
 
   def analyzeArchive(file: File) = {
@@ -260,7 +272,7 @@ object TrackTool {
     case class TrackEntry(var date: Long, var completed: Boolean, var nTP: Int, var lat: Double, var lon: Double, var alt: Double)
     val trackMap = mutable.HashMap.empty[String, TrackEntry]
 
-    println("collecting TrackPoint archive statistics..")
+    println("analyze TrackPoint archive ..")
     while (dfr.hasNext) {
       rec = dfr.next(rec)
       nRecords += 1
@@ -329,7 +341,7 @@ object TrackTool {
     val duplicatedTPs = MSortedSet.empty[String] // track ids wirh duplicated track points
     val ambiguousTPs = MSortedSet.empty[String] // track ids wirh ambiguous track points
 
-    println("collecting ThreadedTrack archive statistics..")
+    println("analyze ThreadedTrack archive ..")
     while (dfr.hasNext) {
       rec = dfr.next(rec)
 
@@ -394,15 +406,17 @@ object TrackTool {
     reportAnomaly("records with ambiguous TPs:    ", ambiguousTPs, "ambiguous-tp-ids")
   }
 
-  def reportAnomaly(msg: String, ids: Iterable[String], pathName: String) = {
+  def reportAnomaly(msg: String, ids: Iterable[String], fileName: String) = {
     if (ids.nonEmpty) {
-      val idFile = new File(opts.outDir, pathName)
-      val ps = new PrintStream(new FileOutputStream(idFile))
-      ids.foreach(ps.println)
-      ps.close
+      ifSome(FileUtils.ensureDir(opts.outDir)) { outDir =>
+        val idFile = new File(outDir, fileName)
+        val ps = new PrintStream(new FileOutputStream(idFile))
+        ids.foreach(ps.println)
+        ps.close
 
-      print(msg)
-      println(s" ${ids.size} (ids saved to $idFile)")
+        print(msg)
+        println(s" ${ids.size} (ids saved to $idFile)")
+      } orElse { none(s"[WARNING] could not write $fileName") }
     }
   }
 
@@ -420,21 +434,24 @@ object TrackTool {
   //--- Flatten operation - support for flattening of ThreadedTrack archives
 
   def flattenArchive (inFile: File) = {
-    if (!opts.outDir.isDirectory) opts.outDir.mkdir
-    val outFile = getOutFile("trackpoints.avro")
+    ifSome(ensureEmptyOutFile("trackpoints.avro")) { outFile =>
+      val tmpDir = outFile.getParentFile
 
-    if (opts.fullTP) {
-      val schema = AvroFullTrackPoint.getClassSchema
-      val partitions = createPartitions(inFile, opts.maxPartEntries, schema, createFullTrackPoint, AvroFullTrackPointOrdering)
-      mergePartitions(partitions, outFile, schema)
-    } else {
-      val schema = AvroTrackPoint.getClassSchema
-      val partitions = createPartitions(inFile, opts.maxPartEntries, schema, createTrackPoint, AvroTrackPointOrdering)
-      mergePartitions(partitions, outFile, schema)
+      if (opts.fullTP) {
+        val schema = AvroFullTrackPoint.getClassSchema
+        val partitions = createPartitions(inFile, tmpDir, opts.maxPartEntries, schema, createFullTrackPoint, AvroFullTrackPointOrdering)
+        mergePartitions(partitions, outFile, schema)
+      } else {
+        val schema = AvroTrackPoint.getClassSchema
+        val partitions = createPartitions(inFile, tmpDir, opts.maxPartEntries, schema, createTrackPoint, AvroTrackPointOrdering)
+        mergePartitions(partitions, outFile, schema)
+      }
+    } orElse {
+      none("could not create target archive")
     }
   }
 
-  def createPartitions[T <: SpecificRecord](file: File, maxPartEntries: Int, schema: Schema,
+  def createPartitions[T <: SpecificRecord](file: File, tmpDir: File, maxPartEntries: Int, schema: Schema,
                                             createTP: (String, GenericRecord, Boolean, Int) => T,
                                             ordering: Ordering[T]): MSortedSet[Partition[T]] = {
     println("creating temporary partitions...")
@@ -471,7 +488,7 @@ object TrackTool {
               n += 1
               nTP += 1
               if (tps.size >= maxPartEntries) {
-                partitions.add(writePartition(partitions.size, schema, tps))
+                partitions.add(writePartition(partFile(tmpDir,partitions.size), schema, tps))
                 tps.clear
               }
             }
@@ -479,11 +496,22 @@ object TrackTool {
         }
       }
     }
-    if (tps.nonEmpty) partitions.add(writePartition(partitions.size, schema, tps))
+    if (tps.nonEmpty) partitions.add(writePartition(partFile(tmpDir,partitions.size), schema, tps))
 
     ConsoleIO.clearLine
     println(s"number of partitions: ${partitions.size} / $nTP track points")
     partitions
+  }
+
+  def partFile(tmpDir: File, num: Int) = new File(tmpDir, s"part_$num.avro")
+
+  def writePartition[T <: SpecificRecord](partFile: File, schema: Schema, tps: MSortedSet[T]): Partition[T] = {
+    val dfw = new DataFileWriter[T](new SpecificDatumWriter(schema))
+    dfw.create(schema, partFile)
+    tps.foreach(dfw.append)
+    dfw.close
+
+    new Partition(partFile)
   }
 
   def mergePartitions[T <: SpecificRecord](partitions: MSortedSet[Partition[T]], outFile: File, schema: Schema) = {
@@ -616,16 +644,6 @@ object TrackTool {
     }
   }
 
-  def writePartition[T <: SpecificRecord](nPart: Int, schema: Schema, tps: MSortedSet[T]): Partition[T] = {
-    val partFile = new File(opts.outDir, s"p_$nPart.avro")
-    val dfw = new DataFileWriter[T](new SpecificDatumWriter(schema))
-    dfw.create(schema, partFile)
-    tps.foreach(dfw.append)
-    dfw.close
-
-    new Partition(partFile)
-  }
-
   var numberOfGeneratedTracks: Int = 0
 
   def getTTPId(rec: GenericRecord): String = {
@@ -638,32 +656,28 @@ object TrackTool {
     numberOfGeneratedTracks.toString
   }
 
-
-
   //--- filter function
-
-  def getOutFile (defaultName: String): File = {
-    val file = opts.outFile.getOrElse(new File(opts.outDir, defaultName))
-    if (file.isFile) file.delete
-    file
-  }
 
   def filterArchive(inFile: File) = {
     for (dfr <- ensureClose(new DataFileReader(inFile, new GenericDatumReader[GenericRecord]));
          dfw <- ensureClose(new DataFileWriter(new GenericDatumWriter[GenericRecord]))) {
-      if (!opts.outDir.isDirectory) opts.outDir.mkdir
       val schema = dfr.getSchema
 
       schema.getName match {
         case ThreadedTrackName =>
-          val outFile = getOutFile("threaded-tracks.avro")
-          println(s"generating ThreadedTrack archive $outFile...")
-          dfw.create(schema, outFile)
-          filterTTArchive(dfr, dfw)
+          ifSome(ensureEmptyOutFile("threaded-tracks.avro")){ outFile =>
+            println(s"generating ThreadedTrack archive $outFile...")
+            dfw.create(schema, outFile)
+            filterTTArchive(dfr, dfw)
+          }
+
         case TrackPointName | FullTrackPointName =>
-          val outFile = getOutFile("trackpoints.avro")
-          println(s"generating TrackPoint archive $outFile...")
-          dfw.create(schema, outFile)
+          ifSome(ensureEmptyOutFile("trackpoints.avro")) { outFile =>
+            println(s"generating TrackPoint archive $outFile...")
+            dfw.create(schema, outFile)
+            filterFlatArchive(dfr,dfw)
+          }
+
         case other => println(s"unknown archive type: $other")
       }
     }

@@ -101,11 +101,35 @@ object FileUtils {
   }
   def inputStreamFor (pathName: String, bufLen: Int): Option[InputStream] = inputStreamFor(new File(pathName),bufLen)
 
-  def ensureDir (pathname: String): Option[File] = {
-    val dir = new File(pathname)
+  def ensureDir (pathName: String): Option[File] = ensureDir(new File(pathName))
+
+  def ensureDir (dir: File): Option[File] = {
     if (!dir.isDirectory) {
       if (dir.mkdirs) Some(dir) else None
     } else Some(dir)
+  }
+
+  def ensureWritableDir(dir: File): Option[File] = {
+    ensureDir(dir) match {
+      case o@Some(dir) => if (dir.canWrite) o else None
+      case None => None
+    }
+  }
+
+  def ensureWriteable (file: File): Option[File] = {
+    if (ensureWritableDir(file.getParentFile).isDefined){
+      if (file.canWrite) Some(file) else None
+    } else None
+  }
+
+  def ensureEmptyWritable (file: File): Option[File] = {
+    if (ensureWritableDir(file.getParentFile).isDefined){
+      if (file.isFile) {
+        if (file.delete) Some(file) else None
+      } else {
+        Some(file) // nothing there yet but we know dir is writable
+      }
+    } else None
   }
 
   def using[T](is: InputStream)(f: (InputStream) => T): T = {

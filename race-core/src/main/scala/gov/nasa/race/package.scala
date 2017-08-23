@@ -53,6 +53,10 @@ package object race {
     f
     None
   }
+  def none[T](msg: String): Option[T] = {
+    println(msg)
+    None
+  }
 
   def withSomeOrElse[T,R](opt: Option[T], defaultValue: R)(f: (T) => R): R = {
     if (opt.isDefined) f(opt.get) else defaultValue
