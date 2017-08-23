@@ -20,7 +20,7 @@ package gov.nasa.race.air
 import java.io._
 
 import gov.nasa.race._
-import gov.nasa.race.archive.ArchiveReader
+import gov.nasa.race.archive.{ArchiveReader, StreamArchiveReader}
 import gov.nasa.race.common.{BMSearch, SearchStream}
 import org.joda.time.DateTime
 
@@ -45,7 +45,7 @@ object DWArchiveReader {
   * Note that we can't use memory mapped files here since the external (disk) data can be compressed. This unfortunately
   * means the data will be copied.
   */
-abstract class DWArchiveReader (val istream: InputStream, val headerStart: BMSearch) extends ArchiveReader {
+abstract class DWArchiveReader (val istream: InputStream, val headerStart: BMSearch) extends StreamArchiveReader {
   import DWArchiveReader._
 
   protected val ss = new SearchStream(istream,BufferLength)

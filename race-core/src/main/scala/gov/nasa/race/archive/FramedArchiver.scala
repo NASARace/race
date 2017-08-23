@@ -39,7 +39,7 @@ trait FramedArchiveWriter extends ArchiveWriter {
   def writeFrame (bytes: Array[Byte]) = ostream.write(bytes)
 }
 
-trait FramedArchiveReader extends ArchiveReader {
+trait FramedArchiveReader extends StreamArchiveReader {
   final val MAX_FRAMESIZE = 1024*1024 // just as a safeguard
 
   private var buf: Array[Byte] = new Array[Byte](1024)

@@ -45,7 +45,7 @@ import TextArchiver._
   * NOTE - this class is not thread-safe, its instances should not be used concurrently. The reason is that
   * we use a per-instance buffer to avoid heap pressure due to a large number of archive entries
   */
-class TextArchiveReader(val istream: InputStream) extends ArchiveReader {
+class TextArchiveReader(val istream: InputStream) extends StreamArchiveReader {
 
   private val br = new BufferedReader(new InputStreamReader(istream))
   private val buf: StringBuilder = new StringBuilder(4096)

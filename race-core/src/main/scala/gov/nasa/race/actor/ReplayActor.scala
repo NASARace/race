@@ -77,24 +77,29 @@ class ReplayActor (val config: Config) extends ContinuousTimeRaceActor
   }
 
   def createReader: ArchiveReader = {
-    def fail (msg: String): ArchiveReader = {
-      if (isOptional) {
-        warning(msg)
-        new DummyReader
-      } else throw new RaceException(msg)
-    }
-
     FileUtils.existingFile(pathName) match {
       case Some(file) =>
         val fis = new FileInputStream(file)
         val is = if (compressedMode) new GZIPInputStream(fis,bufSize) else new BufferedInputStream(fis,bufSize)
-        newInstance[ArchiveReader](config.getString("archive-reader"), Array(classOf[InputStream]), Array(is)) match {
+        instantiateReader(is) match {
           case Some(ar) => ar
-          case None =>fail(s"failed to instantiate archive reader for $pathName")
+          case None =>createReaderFailed(s"failed to instantiate archive reader for $pathName")
         }
 
-      case None => fail(s"archive $pathName not found")
+      case None => createReaderFailed(s"archive $pathName not found")
     }
+  }
+
+  // override if we have a hard-wired ArchiveReader
+  protected def instantiateReader (is: InputStream): Option[ArchiveReader] = {
+    newInstance[ArchiveReader](config.getString("archive-reader"), Array(classOf[InputStream]), Array(is))
+  }
+
+  def createReaderFailed (msg: String): ArchiveReader = {
+    if (isOptional) {
+      warning(msg)
+      new DummyReader
+    } else throw new RaceException(msg)
   }
 
   override def onStartRaceActor(originator: ActorRef) = {

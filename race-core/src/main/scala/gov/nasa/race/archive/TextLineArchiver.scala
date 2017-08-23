@@ -43,7 +43,7 @@ class TimedTextLineArchiver (val ostream: OutputStream) extends ArchiveWriter {
   }
 }
 
-abstract class TextLineArchiveReader (istream: InputStream) extends ArchiveReader {
+abstract class TextLineArchiveReader (istream: InputStream) extends StreamArchiveReader {
   protected val reader = new BufferedReader(new InputStreamReader(istream))
   override def hasMoreData = reader.ready
 }

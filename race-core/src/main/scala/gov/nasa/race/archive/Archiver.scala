@@ -49,7 +49,6 @@ trait ArchiveWriter {
 trait ArchiveReader extends DateAdjuster {
   class ArchiveEntry (var date: DateTime, var msg: Any) extends Dated
 
-  protected val istream: InputStream
   protected val nextEntry = new ArchiveEntry(null,null)
   protected val someEntry = Some(nextEntry) // avoid gazillions of short living options
 
@@ -59,18 +58,23 @@ trait ArchiveReader extends DateAdjuster {
     someEntry
   }
 
-  def close = istream.close
-  def hasMoreData = istream.available() > 0 // override if the reader does its own buffering
-
-  /**
-    * obtain the next archived message/time
-    */
+  // to be provided by subtypes
+  def close: Unit
+  def hasMoreData: Boolean
   def readNextEntry: Option[ArchiveEntry]
 }
 
-class DummyReader extends ArchiveReader {
-  val istream: InputStream = null
+/**
+  * a InputStream based ArchiveReader
+  */
+trait StreamArchiveReader extends ArchiveReader {
+  protected val istream: InputStream
 
+  override def close = istream.close
+  override def hasMoreData = istream.available() > 0 // override if the reader does its own buffering
+}
+
+class DummyReader extends ArchiveReader {
   override def close = {}
   override def hasMoreData = false
   override def readNextEntry = None

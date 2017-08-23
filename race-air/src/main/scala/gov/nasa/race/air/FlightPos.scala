@@ -114,7 +114,7 @@ class FlightPosArchiveWriter (val ostream: OutputStream) extends ArchiveWriter {
   }
 }
 
-class FlightPosArchiveReader (val istream: InputStream) extends ArchiveReader
+class FlightPosArchiveReader (val istream: InputStream) extends StreamArchiveReader
   with InputStreamLineTokenizer {
 
   override def readNextEntry: Option[ArchiveEntry] = {

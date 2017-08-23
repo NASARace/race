@@ -551,7 +551,7 @@ object TrackTool {
     val t = getLong(rec, "time")
     val lat = getDouble(rec, "latitude")
     val lon = getDouble(rec, "longitude")
-    val altFt = getDouble(rec, "altitude")
+    val altFt = getDouble(rec, "pressure_altitude")
     val hdg = getDouble(rec, "track_heading")
     val spdKn = getDouble(rec, "ground_speed")
 
