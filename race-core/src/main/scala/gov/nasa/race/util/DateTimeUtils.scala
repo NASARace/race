@@ -116,7 +116,7 @@ object DateTimeUtils {
   @inline def toFullDateTimeString(t: Long): String = DateTimeFormat.fullDateTime.print(t)
 
   val ISODHMSZ = ISODateTimeFormat.dateHourMinuteSecond.withZone(DateTimeZone.UTC)
-  val SimpleDHMSZ = DateTimeFormat.forPattern( "yyyy-MM-dd HH:mm:ss z").withZone(DateTimeZone.UTC)
+  val SimpleDHMSZ = DateTimeFormat.forPattern( "yyyy-MM-dd'T'HH:mm:ss'Z'").withZone(DateTimeZone.UTC)
 
   @inline def toDhmsStringUTC (t: Long): String = ISODHMSZ.print(t)
   @inline def toSimpleDhmsStringZ (t: Long): String = SimpleDHMSZ.print(t)

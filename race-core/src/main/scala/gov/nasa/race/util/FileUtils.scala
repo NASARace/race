@@ -24,6 +24,7 @@ import java.nio.file._
 import java.nio.file.attribute.BasicFileAttributes
 import java.security.MessageDigest
 import java.util.zip.GZIPInputStream
+import scala.io.BufferedSource
 
 import StringUtils._
 import gov.nasa.race._
@@ -112,6 +113,13 @@ object FileUtils {
       f(is)
     } finally {
       is.close()
+    }
+  }
+
+  def getLines(pathName: String): Iterator[String] = {
+    inputStreamFor(pathName,4096) match {
+      case Some(is) => new BufferedSource(is).getLines
+      case None => Iterator.empty
     }
   }
 

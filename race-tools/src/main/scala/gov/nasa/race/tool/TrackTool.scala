@@ -23,16 +23,18 @@ import gov.nasa.race.main.CliArgs
 import gov.nasa.race.util.{ConsoleIO, DateTimeUtils, FileUtils}
 import gov.nasa.race.uom.Length._
 import gov.nasa.race.uom.Speed._
+import gov.nasa.race.uom.Acceleration._
 import gov.nasa.race.common.ManagedResource._
-import gov.nasa.race.track.avro.{TrackPoint => AvroTrackPoint}
+import gov.nasa.race.track.avro.{TrackPoint => AvroTrackPoint, FullTrackPoint => AvroFullTrackPoint}
 
 import org.apache.avro.file.{DataFileReader, DataFileWriter}
-import org.apache.avro.generic.{GenericData, GenericDatumReader, GenericRecord}
+import org.apache.avro.generic.{GenericData, GenericDatumReader, GenericDatumWriter, GenericRecord}
 import org.apache.avro.Schema
 import org.apache.avro.specific.{SpecificDatumReader, SpecificDatumWriter, SpecificRecord}
 
 import scala.collection.mutable
 import scala.collection.mutable.{SortedSet => MSortedSet}
+import scala.collection.JavaConverters._
 import scala.util.matching.Regex
 
 
@@ -47,7 +49,7 @@ object TrackTool {
 
   /** supported operations (set by command line options) */
   object Op extends Enumeration {
-    val Analyze, Filter, Flatten = Value
+    val Analyze, Filter, Flatten, List = Value
   }
 
   /** command line options and arguments */
@@ -55,7 +57,8 @@ object TrackTool {
     var op: Op.Value = Op.Analyze
 
     var maxPartEntries: Int = 100000
-    var idPatterns: Seq[Regex] = Seq.empty  // option for Extract/Drop
+    var excludePatterns: Seq[Regex] = Seq.empty // option for Filter
+    var includePatterns: Seq[Regex] = Seq.empty
     var startTime: Long = Long.MinValue // option for Extract/Drop
     var endTime: Long = Long.MaxValue // option for Extract/Drop
     var fullTP: Boolean = false
@@ -63,34 +66,46 @@ object TrackTool {
 
     var inFile: Option[File] = None
     var outDir: File = new File("tmp")
-    var outFile: File = new File(outDir,"trackpoints.avro")
+    var outFile: Option[File] = None
 
     //--- the basic operation options
     opt0("-a", "--analyze")("analyze contents of archive (default)") {
       op = Op.Analyze
     }
-    opt0("-f", "--filter")("extract records from archive (needs '--id' or '--period' option)") {
+    opt0("--filter")("extract records from archive (needs '--id' or '--period' option)") {
       op = Op.Filter
     }
     opt0("-f", "--flatten")("translate into time sorted, flat list of all track points") {
       op = Op.Flatten
     }
-
-    opt1("--id")("<regex>", "regular expression for track ids to extract or drop") { s =>
-      idPatterns = idPatterns :+ new Regex(s)
+    opt0("-l", "--list")("list (optionally filtered) contents of archive") {
+      op = Op.List
     }
-    opt1("--start-time")("<timespec>","start time for track points to extract or drop") { s=>
+
+    opt1("--exclude")("<regex>[,...]", "regular expression(s) for track ids to exclude") { s =>
+      excludePatterns = s.split(',').map(new Regex(_)) ++: excludePatterns
+    }
+    opt1("--exclude-from")("<pathName>", "file with regular expression(s) for track ids to exclude") { s =>
+      excludePatterns = FileUtils.getLines(s).map(new Regex(_)) ++: excludePatterns
+    }
+    opt1("--include")("<regex>[,...]", "regular expression(s) for track ids to include") { s =>
+      includePatterns = s.split(',').map(new Regex(_)) ++: includePatterns
+    }
+    opt1("--include-from")("<pathName>", "file with regular expression(s) for track ids to include") { s =>
+      includePatterns = FileUtils.getLines(s).map(new Regex(_)) ++: includePatterns
+    }
+    opt1("--start-time")("<timespec>", "start time for track points to extract or drop") { s =>
       startTime = parseTimeMillis(s)
     }
-    opt1("--end-time")("<timespec>","end time for track points to extract or drop") { s=>
+    opt1("--end-time")("<timespec>", "end time for track points to extract or drop") { s =>
       endTime = parseTimeMillis(s)
     }
 
-    opt1("--dir")("<pathName>", s"directory for output files (default = $outDir)") { pn=>
+    opt1("--dir")("<pathName>", s"directory for output files (default = $outDir)") { pn =>
       outDir = new File(pn)
     }
-    opt1("-o", "--out")("<pathName>", s"pathname of flat archive to create (default = $outFile)") { pn=>
-      outFile = new File(pn)
+    opt1("-o", "--out")("<pathName>", s"pathname of flat archive to create (default = $outFile)") { pn =>
+      outFile = Some(new File(pn))
     }
     opt0("--generate-id")(s"generate track id (default = $generateId)") {
       generateId = true
@@ -100,7 +115,7 @@ object TrackTool {
     }
     opt1("--partition")("<maxEntries>",
       s"max number of entries for temporary translation partitions (default = $maxPartEntries)") { a =>
-      maxPartEntries = parseInt (a)
+      maxPartEntries = parseInt(a)
     }
 
     requiredArg1("<pathName>", "ThreadedTrack Avro archive to read") { a =>
@@ -122,7 +137,6 @@ object TrackTool {
   var nTPavg = 0 // average number of track points per track
   var tMin: Long = Long.MaxValue // earliest trackpoint time
   var tMax: Long = Long.MinValue // latest trackpoint time
-  var maxDur: Long = 0 // maximum flight duration
 
 
   def main(args: Array[String]): Unit = {
@@ -130,19 +144,21 @@ object TrackTool {
       ifSome(opts.inFile) { file =>
         opts.op match {
           case Op.Analyze => analyzeArchive(file)
-          case Op.Flatten => flattenArchive(file, opts.maxPartEntries, opts.fullTP,
-            opts.outDir, opts.outFile)
+          case Op.Flatten => flattenArchive(file)
+          case Op.Filter => filterArchive(file)
+          case Op.List => listArchive(file)
         }
       }
     }
   }
 
-  def checkTime (rec: GenericRecord, fieldName: String): Long = {
-    val t = rec.get(fieldName).asInstanceOf[Long]
+  @inline def checkTime(t: Long): Long = {
     if (t < tMin) tMin = t
     if (t > tMax) tMax = t
     t
   }
+
+  @inline def getCheckedTime(rec: GenericRecord, fieldName: String): Long = checkTime(getLong(rec,fieldName))
 
   @inline def getString(rec: GenericRecord, field: String): String = rec.get(field).toString
 
@@ -154,12 +170,75 @@ object TrackTool {
 
   @inline def getDouble(rec: GenericRecord, field: String): Double = rec.get(field).asInstanceOf[Double]
 
+  def getOptionalDouble(rec: GenericRecord, field: String): Double = {
+    val v = rec.get(field)
+    if (v == null) Double.NaN else v.asInstanceOf[Double]
+  }
+
+  def isRelevantId(id: String): Boolean = {
+    val isNotExcluded = !opts.excludePatterns.exists(_.findFirstIn(id).isDefined)
+    val isIncluded = opts.includePatterns.isEmpty || opts.includePatterns.exists(_.findFirstIn(id).isDefined)
+
+    isIncluded && isNotExcluded
+  }
+
+  def timeFilteredTTPs(ttps: GenericData.Array[GenericRecord]): GenericData.Array[GenericRecord] = {
+    val startTime = opts.startTime
+    val endTime = opts.endTime
+
+    val t0 = getCheckedTime(ttps.get(0), "time")
+    val t1 = getCheckedTime(ttps.get(ttps.size - 1), "time")
+
+    if (t0 > endTime || t1 < startTime) { // no overlap, completely outside time window
+      new GenericData.Array[GenericRecord](0, ttps.getSchema)
+    } else {
+      if (t0 >= startTime && t1 <= endTime) { // completely included, no need for new array
+        ttps
+      } else { // we need to filter
+        val newTTPS = new GenericData.Array[GenericRecord](0, ttps.getSchema)
+        val it = ttps.iterator
+        while (it.hasNext) {
+          val rec = it.next()
+          val t = getLong(rec, "time")
+          if (t >= startTime && t <= endTime) newTTPS.add(rec)
+        }
+        newTTPS
+      }
+    }
+  }
+
+  @inline final def isRelevantTime(t: Long) = t >= opts.startTime && t <= opts.endTime
+
+  @inline final def isRelevantTPtime(rec: GenericRecord): Boolean = isRelevantTime(getLong(rec,"date"))
+
+  def isRelevantFlatRec(rec: GenericRecord): Boolean = {
+    isRelevantId(rec.get("id").toString) && isRelevantTPtime(rec)
+  }
+
+  def processFilteredFlatArchive (dfr: DataFileReader[GenericRecord])(f: GenericRecord=>Unit) = {
+    var rec: GenericRecord = null
+    var nRecRead = 0
+
+    while (dfr.hasNext) {
+      rec = dfr.next(rec)
+      nRecRead += 1
+
+      if (isRelevantFlatRec(rec)){
+        nRecords += 1
+        nTrackPoints += 1
+
+        f(rec)
+      }
+    }
+    dfr.close
+  }
+
   //--- Check operation - analyze archive contents
 
   def analyzeArchive(file: File) = {
     println(s"size of archive: ${FileUtils.sizeString(file.length)}")
 
-    for ( dfr <- ensureClose(new DataFileReader(file, new GenericDatumReader[GenericRecord]))){
+    for (dfr <- ensureClose(new DataFileReader(file, new GenericDatumReader[GenericRecord]))) {
       dfr.getSchema.getName match {
         case ThreadedTrackName => analyzeTTArchive(dfr)
         case TrackPointName | FullTrackPointName => analyzeFlatArchive(dfr)
@@ -176,61 +255,66 @@ object TrackTool {
     var reusedIDs = MSortedSet.empty[String] //  multiple tracks using the same id
     var outOfOrderTPs = MSortedSet.empty[String] // track ids with out-of-order track points
     var duplicatedTPs = MSortedSet.empty[String] // track ids wirh duplicated track points
-    var ambiguousTPs =  MSortedSet.empty[String] // track ids wirh ambiguous track points
+    var ambiguousTPs = MSortedSet.empty[String] // track ids wirh ambiguous track points
 
-    case class TrackEntry (var date: Long, var completed: Boolean, var nTP: Int, var lat: Double, var lon: Double, var alt: Double)
-    val trackMap = mutable.HashMap.empty[String,TrackEntry]
+    case class TrackEntry(var date: Long, var completed: Boolean, var nTP: Int, var lat: Double, var lon: Double, var alt: Double)
+    val trackMap = mutable.HashMap.empty[String, TrackEntry]
 
     println("collecting TrackPoint archive statistics..")
     while (dfr.hasNext) {
       rec = dfr.next(rec)
       nRecords += 1
-
       if (nRecords % 100 == 0) ConsoleIO.line(s"reading record: $nRecords")
-      val id = getString(rec,"id")
-      val date = checkTime(rec,"date")
-      val nTP = getInt(rec,"pointnum")
-      val completed = getBoolean(rec,"completed")
-      val lat = getDouble(rec,"latitude")
-      val lon = getDouble(rec,"longitude")
-      val alt = getDouble(rec,"altitude")
 
-      trackMap.get(id) match {
-        case Some(e) =>
-          if (e.completed && !completed) reusedIDs.add(id) // re-used track ID
-          if (date < e.date) { // cannot happen if TrackTool generated archive out of ThreadedTracks
-            outOfOrderTPs.add(id)
-          } else {
-            if (date == e.date) { // duplicate or ambiguous
-              if (lat == e.lat && lon == e.lon && alt == e.alt) duplicatedTPs.add(id) else ambiguousTPs.add(id)
-            }
+      val id = getString(rec, "id")
+      if (isRelevantId(id)) {
+        val date = getLong(rec,"date")
+        if (isRelevantTime(date)) {
+          checkTime(date)
+          val nTP = getInt(rec, "pointnum")
+          val completed = getBoolean(rec, "completed")
+          val lat = getDouble(rec, "latitude")
+          val lon = getDouble(rec, "longitude")
+          val alt = getDouble(rec, "altitude")
 
-            e.date = date
-            e.completed = completed
-            e.nTP = nTP
-            e.lat = lat
-            e.lon = lon
-            e.alt = alt
+          trackMap.get(id) match {
+            case Some(e) =>
+              if (e.completed && !completed) reusedIDs.add(id) // re-used track ID
+              if (date < e.date) { // cannot happen if TrackTool generated archive from ThreadedTracks
+                outOfOrderTPs.add(id)
+              } else {
+                if (date == e.date) { // duplicate or ambiguous
+                  if (lat == e.lat && lon == e.lon && alt == e.alt) duplicatedTPs.add(id) else ambiguousTPs.add(id)
+                }
+
+                e.date = date
+                e.completed = completed
+                e.nTP = nTP
+                e.lat = lat
+                e.lon = lon
+                e.alt = alt
+              }
+
+            case None => trackMap += id -> TrackEntry(date, completed, nTP, lat, lon, alt)
           }
-
-        case None => trackMap += id -> TrackEntry(date,completed,nTP,lat,lon,alt)
+        }
       }
     }
 
     var nmax = 0
-    for (track <-trackMap.valuesIterator) {
+    for (track <- trackMap.valuesIterator) {
       if (track.nTP > nmax) nmax = track.nTP
     }
-    nTPmax = nmax+1 // nTP is 0 based
+    nTPmax = nmax + 1 // nTP is 0 based
     nTPavg = nRecords / trackMap.size
     nTrackPoints = nRecords // no difference here
 
     ConsoleIO.clearLine
-    reportNominals
-    reportAnomaly("reused record ids:             ", reusedIDs,"reused-ids")
-    reportAnomaly("records with duplicated TPs:   ", duplicatedTPs,"duplicate-tp-ids")
-    reportAnomaly("records with out-of-order TPs: ", outOfOrderTPs,"order-tp-ids")
-    reportAnomaly("records with ambiguous TPs:    ", ambiguousTPs,"ambiguous-tp-ids")
+    reportNominals(true)
+    reportAnomaly("reused record ids:             ", reusedIDs, "reused-ids")
+    reportAnomaly("records with duplicated TPs:   ", duplicatedTPs, "duplicate-tp-ids")
+    reportAnomaly("records with out-of-order TPs: ", outOfOrderTPs, "order-tp-ids")
+    reportAnomaly("records with ambiguous TPs:    ", ambiguousTPs, "ambiguous-tp-ids")
   }
 
   /** check ThreadedTrack (non-flat) archive */
@@ -243,7 +327,7 @@ object TrackTool {
 
     val outOfOrderTPs = MSortedSet.empty[String] // track ids with out-of-order track points
     val duplicatedTPs = MSortedSet.empty[String] // track ids wirh duplicated track points
-    val ambiguousTPs =  MSortedSet.empty[String] // track ids wirh ambiguous track points
+    val ambiguousTPs = MSortedSet.empty[String] // track ids wirh ambiguous track points
 
     println("collecting ThreadedTrack archive statistics..")
     while (dfr.hasNext) {
@@ -252,65 +336,65 @@ object TrackTool {
       nRecords += 1
       if (nRecords % 10 == 0) ConsoleIO.line(s"reading record: $nRecords")
 
-      val id = rec.get("tt_id").toString
-      if (!idSet.add(id)) reusedIDs.add(id)
+      val id = getString(rec,"tt_id")
+      if (isRelevantId(id)) {
+        if (!idSet.add(id)) reusedIDs.add(id)
 
-      val ttps = rec.get("threaded_track").asInstanceOf[GenericData.Array[GenericRecord]]
-      val nTP = ttps.size
-      nTrackPoints += nTP
-      if (nTP > nTPmax) nTPmax = nTP
+        val ttps = rec.get("threaded_track").asInstanceOf[GenericData.Array[GenericRecord]]
+        val nTP = ttps.size
 
-      val t0 = checkTime(ttps.get(0),"time")
-      val t1 = checkTime(ttps.get(ttps.size - 1), "time")
-      val td = t1 - t0
-      if (td > maxDur) maxDur = td
+        if (nTP > 0) {
+          var nDupTP = 0 // duplicated track points
+          var nAmbigTP = 0 // ambiguous track points
+          var nOrderTP = 0 // out of order track points
 
-      if (nTP > 0) {
-        var nDupTP = 0 // duplicated track points
-        var nAmbigTP = 0 // ambiguous track points
-        var nOrderTP = 0 // out of order track points
+          val it = ttps.iterator
+          var tLast: Long = 0
+          var hcLast = 0
+          var n = 0
 
-        val it = ttps.iterator
-        var tpLast = it.next
-        var tLast = t0
-        var hcLast = tpLast.hashCode
+          while (it.hasNext) {
+            val tp = it.next
+            val t = getLong(tp, "time")
+            if (isRelevantTime(t)) {
+              checkTime(t)
+              n += 1
+              nTrackPoints += 1
+              val hc = tp.hashCode
 
-        while (it.hasNext) {
-          val tp = it.next
-          val t = tp.get("time").asInstanceOf[Long]
-          val hc = tp.hashCode
+              if (t < tLast) {
+                nOrderTP += 1
+              } else if (t == tLast) {
+                if (hc == hcLast) nDupTP += 1 else nAmbigTP += 1 // should be either-or if hashCode() is correct
+              }
 
-          if (t < tLast) {
-            nOrderTP += 1
-          } else if (t == tLast) {
-            if (hc == hcLast) nDupTP += 1 else nAmbigTP += 1 // should be either-or if hashCode() is correct
+              tLast = t
+              hcLast = hc
+            }
           }
+          if (n > nTPmax) nTPmax = n
 
-          tpLast = tp
-          tLast = t
-          hcLast = hc
+          if (nDupTP > 0) duplicatedTPs.add(id)
+          if (nAmbigTP > 0) ambiguousTPs.add(id)
+          if (nOrderTP > 0) outOfOrderTPs.add(id)
+        } else {
+          emptyIDs.add(id)
         }
-
-        if (nDupTP > 0) duplicatedTPs.add(id)
-        if (nAmbigTP > 0) ambiguousTPs.add(id)
-        if (nOrderTP > 0) outOfOrderTPs.add(id)
-      } else {
-        emptyIDs.add(id)
       }
     }
 
     nTPavg = nTrackPoints / nRecords
 
     ConsoleIO.clearLine
-    reportNominals
-    reportAnomaly("empty records:                 ", emptyIDs,"empty-ids")
-    reportAnomaly("reused record ids:             ", reusedIDs,"reused-ids")
-    reportAnomaly("records with duplicated TPs:   ", duplicatedTPs,"duplicate-tp-ids")
-    reportAnomaly("records with out-of-order TPs: ", outOfOrderTPs,"order-tp-ids")
-    reportAnomaly("records with ambiguous TPs:    ", ambiguousTPs,"ambiguous-tp-ids")
+    reportNominals(false)
+    reportAnomaly("empty records:                 ", emptyIDs, "empty-ids")
+    reportAnomaly("reused record ids:             ", reusedIDs, "reused-ids")
+    reportAnomaly("records with duplicated TPs:   ", duplicatedTPs, "duplicate-tp-ids")
+    reportAnomaly("records with out-of-order TPs: ", outOfOrderTPs, "order-tp-ids")
+    reportAnomaly("records with ambiguous TPs:    ", ambiguousTPs, "ambiguous-tp-ids")
   }
 
-  def reportAnomaly (msg: String, ids: Iterable[String], pathName: String) = {
+  def reportAnomaly(msg: String, ids: Iterable[String], pathName: String) = {
     if (ids.nonEmpty) {
       val idFile = new File(opts.outDir, pathName)
       val ps = new PrintStream(new FileOutputStream(idFile))
@@ -322,106 +406,36 @@ object TrackTool {
     }
   }
 
-  // this applies to both TT and TrackPoint archives
-  def reportNominals = {
-    println(s"number of records:      $nRecords")
+  def reportNominals(isFlatArchive: Boolean) = {
+    if (!isFlatArchive) println(s"number of records:      $nRecords")
     println(s"number of track points: $nTrackPoints")
     println(s"max TP per flight:      $nTPmax")
     println(s"avg TP per flight:      $nTPavg")
     println(s"start date:             ${DateTimeUtils.toSimpleDhmsStringZ(tMin)}")
     println(s"end date:               ${DateTimeUtils.toSimpleDhmsStringZ(tMax)}")
     println(f"duration:               ${DateTimeUtils.hours(tMax - tMin)}%.1fh")
-    println(f"max flight duration:    ${DateTimeUtils.hours(maxDur)}%.1fh")
   }
 
 
   //--- Flatten operation - support for flattening of ThreadedTrack archives
 
+  def flattenArchive (inFile: File) = {
+    if (!opts.outDir.isDirectory) opts.outDir.mkdir
+    val outFile = getOutFile("trackpoints.avro")
 
-  //--- minimal TrackPoint support (only has part of the TT record information)
-
-  def createAvroTrackPoint(id: String, rec: GenericRecord, isCompleted: Boolean, pointNum: Int): AvroTrackPoint = {
-    val t = getLong(rec, "time")
-    val lat = getDouble(rec, "latitude")
-    val lon = getDouble(rec, "longitude")
-    val altFt = getDouble(rec, "altitude")
-    val hdg = getDouble(rec, "track_heading")
-    val spdKn = getDouble(rec, "ground_speed")
-
-    // do some on-the-fly statistics
-    if (t < tMin) tMin = t
-    if (t > tMax) tMax = t
-
-    new AvroTrackPoint(id, t, lat, lon,
-                       Feet(altFt).toMeters, Knots(spdKn).toMetersPerSecond, hdg,
-                       isCompleted,pointNum)
-  }
-
-  object AvroTrackPointOrdering extends Ordering[AvroTrackPoint] {
-    def compare(a: AvroTrackPoint, b: AvroTrackPoint): Int = {
-      val dt = a.getDate - b.getDate
-      if (dt != 0) dt.toInt
-      else {
-        val idOrd = a.getId.toString.compareTo(b.getId.toString)
-        if (idOrd != 0) idOrd
-        else { // dis-ambiguate ambiguities and duplicates, which we want to preserve
-          System.identityHashCode(a) - System.identityHashCode(b)
-        }
-      }
+    if (opts.fullTP) {
+      val schema = AvroFullTrackPoint.getClassSchema
+      val partitions = createPartitions(inFile, opts.maxPartEntries, schema, createFullTrackPoint, AvroFullTrackPointOrdering)
+      mergePartitions(partitions, outFile, schema)
+    } else {
+      val schema = AvroTrackPoint.getClassSchema
+      val partitions = createPartitions(inFile, opts.maxPartEntries, schema, createTrackPoint, AvroTrackPointOrdering)
+      mergePartitions(partitions, outFile, schema)
     }
   }
-
-  //--- full TrackPoint (preserving most of the TT record info) - TBD
-
-
-  class PartitionOrdering[T <: SpecificRecord] (val recOrdering: Ordering[T]) extends Ordering[Partition[T]] {
-    def compare (a: Partition[T], b: Partition[T]) = recOrdering.compare(a.rec, b.rec)
-  }
-
-  class Partition[T <: SpecificRecord] (val file: File) {
-
-    var dfr: DataFileReader[T] = new DataFileReader(file,new SpecificDatumReader[T])
-    var rec: T = dfr.next
-    assert(rec!= null)
-
-    def readNext: Boolean = {
-      if (dfr.hasNext) {
-        rec = dfr.next(rec)
-        true
-      } else {
-        dfr.close
-        rec = null.asInstanceOf[T]
-        file.delete() // no need to keep partition archive on disk
-        false
-      }
-    }
-  }
-
-  def writePartition[T <: SpecificRecord](tmpDir: File, nPart: Int, schema: Schema, tps: MSortedSet[T]): Partition[T] = {
-    val partFile = new File(tmpDir, s"p_$nPart.avro")
-    val dfw = new DataFileWriter[T](new SpecificDatumWriter(schema))
-    dfw.create(schema,partFile)
-    tps.foreach(dfw.append)
-    dfw.close
-
-    new Partition(partFile)
-  }
-
-  var numberOfGeneratedTracks: Int = 0
-
-  def getTTPId (rec: GenericRecord): String = {
-    numberOfGeneratedTracks += 1
-    rec.get("tt_id").asInstanceOf[CharSequence].subSequence(8,16).toString
-  }
-
-  def getGeneratedId (rec: GenericRecord): String = {
-    numberOfGeneratedTracks += 1
-    numberOfGeneratedTracks.toString
-  }
-
 
   def createPartitions[T <: SpecificRecord](file: File, maxPartEntries: Int, schema: Schema,
-                                            createTP: (String,GenericRecord,Boolean,Int)=>T,
+                                            createTP: (String, GenericRecord, Boolean, Int) => T,
                                             ordering: Ordering[T]): MSortedSet[Partition[T]] = {
     println("creating temporary partitions...")
     val partitions = MSortedSet[Partition[T]]()(new PartitionOrdering(ordering))
@@ -429,9 +443,9 @@ object TrackTool {
     val tps = MSortedSet[T]()(ordering)
     var rec: GenericRecord = null
     var nTracks = 0
-    var nTP: Long = 0
+    var nTP = 0
 
-    val getId: (GenericRecord)=>String = if (opts.generateId) getGeneratedId else getTTPId
+    val getId: (GenericRecord) => String = if (opts.generateId) getGeneratedId else getTTPId
 
     while (dfr.hasNext) {
       rec = dfr.next(rec)
@@ -439,35 +453,42 @@ object TrackTool {
       if (nTracks % 10 == 0) ConsoleIO.line(s"processing track: $nTracks, partition: ${partitions.size}")
 
       val id = getId(rec)
-      val ttps = rec.get("threaded_track").asInstanceOf[GenericData.Array[GenericRecord]]
-      nTP += ttps.size()
+      if (isRelevantId(id)) {
+        val ttps = rec.get("threaded_track").asInstanceOf[GenericData.Array[GenericRecord]]
 
-      var i = 0 // running point number (we could use both TTP or TP)
-      val it = ttps.iterator
-      while (it.hasNext) {
-        val tp = createTP(id, it.next, it.hasNext, i)
-        if (!tps.add(tp)) {
-          // should not happen since we store the running tp number to disambiguate / keep duplicates
-          println(s"[WARNING] duplicated track point entry $i ignored: $tp")
-        } else {
-          i += 1
-          if (tps.size >= maxPartEntries) {
-            partitions.add(writePartition(opts.outDir, partitions.size, schema, tps))
-            tps.clear
+        var n = 0
+        val it = ttps.iterator
+        while (it.hasNext) {
+          val ttp = it.next
+          val t = getLong(ttp,"time")
+
+          if (isRelevantTime(t)) {
+            val tp = createTP(id, ttp, !it.hasNext, n)
+            if (!tps.add(tp)) {
+              // should not happen since we store the running tp number to disambiguate / keep duplicates
+              println(s"[WARNING] duplicated track point entry ignored: $tp")
+            } else {
+              n += 1
+              nTP += 1
+              if (tps.size >= maxPartEntries) {
+                partitions.add(writePartition(partitions.size, schema, tps))
+                tps.clear
+              }
+            }
           }
         }
       }
     }
-    if (tps.nonEmpty) partitions.add(writePartition(opts.outDir,partitions.size, schema, tps))
+    if (tps.nonEmpty) partitions.add(writePartition(partitions.size, schema, tps))
 
     ConsoleIO.clearLine
     println(s"number of partitions: ${partitions.size} / $nTP track points")
     partitions
   }
 
-  def mergePartitions[T <: SpecificRecord] (partitions: MSortedSet[Partition[T]], outFile: File, schema: Schema) = {
+  def mergePartitions[T <: SpecificRecord](partitions: MSortedSet[Partition[T]], outFile: File, schema: Schema) = {
     val dfw = new DataFileWriter[T](new SpecificDatumWriter(schema))
-    dfw.create(schema,outFile)
+    dfw.create(schema, outFile)
 
     var rec: T = null.asInstanceOf[T]
     var nTP: Long = 0
@@ -495,16 +516,242 @@ object TrackTool {
     println(f"duration:               ${DateTimeUtils.hours(tMax - tMin)}%.1fh")
   }
 
-  def flattenArchive(inFile: File, maxPartEntries: Int, useFullTP: Boolean, tmpDir: File, outFile: File) = {
-    if (!tmpDir.isDirectory) tmpDir.mkdir
-    if (outFile.isFile) outFile.delete
 
-    if (useFullTP) {
-      // not yet
-    } else {
-      val schema = AvroTrackPoint.getClassSchema
-      val partitions = createPartitions(inFile, maxPartEntries,schema,createAvroTrackPoint,AvroTrackPointOrdering)
-      mergePartitions(partitions,outFile,schema)
+  //--- minimal TrackPoint support (only has part of the TT record information)
+
+  def createTrackPoint(id: String, rec: GenericRecord, isCompleted: Boolean, pointNum: Int): AvroTrackPoint = {
+    val t = getLong(rec, "time")
+    val lat = getDouble(rec, "latitude")
+    val lon = getDouble(rec, "longitude")
+    val altFt = getDouble(rec, "altitude")
+    val hdg = getDouble(rec, "track_heading")
+    val spdKn = getDouble(rec, "ground_speed")
+
+    // do some on-the-fly statistics
+    if (t < tMin) tMin = t
+    if (t > tMax) tMax = t
+
+    new AvroTrackPoint(id, t, lat, lon,
+      Feet(altFt).toMeters, Knots(spdKn).toMetersPerSecond, hdg,
+      isCompleted, pointNum)
+  }
+
+  object AvroTrackPointOrdering extends Ordering[AvroTrackPoint] {
+    def compare(a: AvroTrackPoint, b: AvroTrackPoint): Int = {
+      val dt = a.getDate - b.getDate
+      if (dt != 0) dt.toInt
+      else {
+        val idOrd = a.getId.toString.compareTo(b.getId.toString)
+        if (idOrd != 0) idOrd
+        else { // dis-ambiguate ambiguities and duplicates, which we want to preserve
+          System.identityHashCode(a) - System.identityHashCode(b)
+        }
+      }
+    }
+  }
+
+  //--- full TrackPoint - unfortunately Avro generated types are not related so we have to duplicate
+
+  def createFullTrackPoint(id: String, rec: GenericRecord, isCompleted: Boolean, pointNum: Int): AvroFullTrackPoint = {
+    val t = getLong(rec, "time")
+    val lat = getDouble(rec, "latitude")
+    val lon = getDouble(rec, "longitude")
+    val altFt = getDouble(rec, "altitude")
+    val hdg = getDouble(rec, "track_heading")
+    val spdKn = getDouble(rec, "ground_speed")
+    val distNm = getDouble(rec,"along_track_distance")
+    val accelKnPerMin = getOptionalDouble(rec,"ground_acceleration")
+    val climbRateFtPerMin = getOptionalDouble(rec,"climb_rate")
+    val amendments: String = null
+    // TODO - maybe add residuals
+
+    // do some on-the-fly statistics
+    if (t < tMin) tMin = t
+    if (t > tMax) tMax = t
+
+    new AvroFullTrackPoint(id, t, lat, lon,
+      Feet(altFt).toMeters, Knots(spdKn).toMetersPerSecond, hdg,
+      NauticalMiles(distNm).toMeters,
+      KnotsPerMinute(accelKnPerMin).toMetersPerSecond2,
+      FeetPerMinute(climbRateFtPerMin).toMetersPerSecond,
+      isCompleted, pointNum, amendments)
+  }
+
+  object AvroFullTrackPointOrdering extends Ordering[AvroFullTrackPoint] {
+    def compare(a: AvroFullTrackPoint, b: AvroFullTrackPoint): Int = {
+      val dt = a.getDate - b.getDate
+      if (dt != 0) dt.toInt
+      else {
+        val idOrd = a.getId.toString.compareTo(b.getId.toString)
+        if (idOrd != 0) idOrd
+        else { // dis-ambiguate ambiguities and duplicates, which we want to preserve
+          System.identityHashCode(a) - System.identityHashCode(b)
+        }
+      }
+    }
+  }
+
+  //--- flatten helper functions
+
+  class PartitionOrdering[T <: SpecificRecord](val recOrdering: Ordering[T]) extends Ordering[Partition[T]] {
+    def compare(a: Partition[T], b: Partition[T]) = recOrdering.compare(a.rec, b.rec)
+  }
+
+  class Partition[T <: SpecificRecord](val file: File) {
+
+    var dfr: DataFileReader[T] = new DataFileReader(file, new SpecificDatumReader[T])
+    var rec: T = dfr.next
+    assert(rec != null)
+
+    def readNext: Boolean = {
+      if (dfr.hasNext) {
+        rec = dfr.next(rec)
+        true
+      } else {
+        dfr.close
+        rec = null.asInstanceOf[T]
+        file.delete() // no need to keep partition archive on disk
+        false
+      }
+    }
+  }
+
+  def writePartition[T <: SpecificRecord](nPart: Int, schema: Schema, tps: MSortedSet[T]): Partition[T] = {
+    val partFile = new File(opts.outDir, s"p_$nPart.avro")
+    val dfw = new DataFileWriter[T](new SpecificDatumWriter(schema))
+    dfw.create(schema, partFile)
+    tps.foreach(dfw.append)
+    dfw.close
+
+    new Partition(partFile)
+  }
+
+  var numberOfGeneratedTracks: Int = 0
+
+  def getTTPId(rec: GenericRecord): String = {
+    numberOfGeneratedTracks += 1
+    rec.get("tt_id").asInstanceOf[CharSequence].subSequence(8, 16).toString
+  }
+
+  def getGeneratedId(rec: GenericRecord): String = {
+    numberOfGeneratedTracks += 1
+    numberOfGeneratedTracks.toString
+  }
+
+
+
+  //--- filter function
+
+  def getOutFile (defaultName: String): File = {
+    val file = opts.outFile.getOrElse(new File(opts.outDir, defaultName))
+    if (file.isFile) file.delete
+    file
+  }
+
+  def filterArchive(inFile: File) = {
+    for (dfr <- ensureClose(new DataFileReader(inFile, new GenericDatumReader[GenericRecord]));
+         dfw <- ensureClose(new DataFileWriter(new GenericDatumWriter[GenericRecord]))) {
+      if (!opts.outDir.isDirectory) opts.outDir.mkdir
+      val schema = dfr.getSchema
+
+      schema.getName match {
+        case ThreadedTrackName =>
+          val outFile = getOutFile("threaded-tracks.avro")
+          println(s"generating ThreadedTrack archive $outFile...")
+          dfw.create(schema, outFile)
+          filterTTArchive(dfr, dfw)
+        case TrackPointName | FullTrackPointName =>
+          val outFile = getOutFile("trackpoints.avro")
+          println(s"generating TrackPoint archive $outFile...")
+          dfw.create(schema, outFile)
+        case other => println(s"unknown archive type: $other")
+      }
+    }
+  }
+
+  def filterFlatArchive (dfr: DataFileReader[GenericRecord], dfw: DataFileWriter[GenericRecord]) = {
+    processFilteredFlatArchive(dfr){ rec=>
+      dfw.append(rec)
+    }
+  }
+
+  def filterTTArchive(dfr: DataFileReader[GenericRecord], dfw: DataFileWriter[GenericRecord]) = {
+    var rec: GenericRecord = null
+    var nRecRead = 0
+    var nTTPSRead = 0
+
+    while (dfr.hasNext) {
+      rec = dfr.next(rec)
+
+      nRecRead += 1
+      if (nRecRead % 10 == 0) ConsoleIO.line(s"reading record: $nRecRead")
+
+      val id = rec.get("tt_id").toString
+      if (isRelevantId(id)) {
+        val ttps = rec.get("threaded_track").asInstanceOf[GenericData.Array[GenericRecord]]
+        nTTPSRead += ttps.size
+
+        val ttpsOut = timeFilteredTTPs(ttps)
+        if (!ttpsOut.isEmpty) {
+          // TODO - add geographic filtering here
+          if (ttpsOut.ne(ttps)) rec.put("threaded_track", ttpsOut)
+          nRecords += 1
+          nTrackPoints += ttpsOut.size
+          dfw.append(rec)
+        }
+      }
+    }
+
+    ConsoleIO.clearLine
+    println(s"number of records read:         $nRecRead")
+    println(s"number of track points read:    $nTTPSRead")
+    println(s"number of records written:      $nRecords")
+    println(s"number of track points written: $nTrackPoints")
+  }
+
+  //--- archive listing
+
+  def listArchive(inFile: File) = {
+    for (dfr <- ensureClose(new DataFileReader(inFile, new GenericDatumReader[GenericRecord]))) {
+      dfr.getSchema.getName match {
+        case ThreadedTrackName => listTTArchive(dfr)
+        case TrackPointName | FullTrackPointName => listFlatArchive(dfr)
+        case other => println(s"unknown archive type: $other")
+      }
+    }
+  }
+
+  def listTTArchive(dfr: DataFileReader[GenericRecord]) = {
+    var rec: GenericRecord = null
+    var nRecRead = 0
+    var nTTPSRead = 0
+
+    while (dfr.hasNext) {
+      rec = dfr.next(rec)
+      nRecRead += 1
+
+      val id = rec.get("tt_id").toString
+      if (isRelevantId(id)) {
+        val ttps = rec.get("threaded_track").asInstanceOf[GenericData.Array[GenericRecord]]
+        nTTPSRead += ttps.size
+
+        val ttpsOut = timeFilteredTTPs(ttps)
+        if (!ttpsOut.isEmpty) {
+          // TODO - add geographic filtering here
+          nRecords += 1
+          nTrackPoints += ttpsOut.size
+
+          println(s"record $nRecRead: $id")
+          for ((tp,i) <- ttpsOut.asScala.zipWithIndex) println(f"$i%5d: $tp")
+        }
+      }
+    }
+    dfr.close
+  }
+
+  def listFlatArchive (dfr: DataFileReader[GenericRecord]) = {
+    processFilteredFlatArchive (dfr){ rec=>
+      println(f"$nRecords%9d: $rec")
     }
   }
 }
