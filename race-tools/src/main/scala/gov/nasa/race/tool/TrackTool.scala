@@ -80,10 +80,10 @@ object TrackTool {
     opt0("-a", "--analyze")("analyze contents of archive (default)") {
       op = Op.Analyze
     }
-    opt0("--filter")("extract records from archive (needs '--id' or '--period' option)") {
+    opt0("--filter")("extract records from archive (needs include/exclude and/or start-/end-time options)") {
       op = Op.Filter
     }
-    opt0("-f", "--flatten")("translate into time sorted, flat list of all track points") {
+    opt0("-f", "--flatten")("translate ThreadedTracks into time sorted, flat list of TrackPoints") {
       op = Op.Flatten
     }
     opt0("-l", "--list")("list (optionally filtered) contents of archive") {
@@ -102,17 +102,17 @@ object TrackTool {
     opt1("--include-from")("<pathName>", "file with regular expression(s) for track ids to include") { s =>
       includePatterns = FileUtils.getLines(s).map(new Regex(_)) ++: includePatterns
     }
-    opt1("--start-time")("<timespec>", "start time for track points to extract or drop") { s =>
+    opt1("--start-time")("<timespec>", "start time for track points to extract") { s =>
       startTime = parseTimeMillis(s)
     }
-    opt1("--end-time")("<timespec>", "end time for track points to extract or drop") { s =>
+    opt1("--end-time")("<timespec>", "end time for track points to extract") { s =>
       endTime = parseTimeMillis(s)
     }
 
     opt1("--dir")("<pathName>", s"directory for output files (default = $outDir)") { pn =>
       outDir = new File(pn)
     }
-    opt1("-o", "--out")("<pathName>", s"pathname of flat archive to create (default = $outFile)") { pn =>
+    opt1("-o", "--out")("<pathName>", s"optional pathname of flat archive to create (default = $outFile)") { pn =>
       outFile = Some(new File(pn))
     }
     opt0("--generate-id")(s"generate track id (default = $generateId)") {
@@ -122,11 +122,11 @@ object TrackTool {
       fullTP = true
     }
     opt1("--partition")("<maxEntries>",
-      s"max number of entries for temporary translation partitions (default = $maxPartEntries)") { a =>
+      s"max number of entries for temporary flatten partitions (default = $maxPartEntries)") { a =>
       maxPartEntries = parseInt(a)
     }
 
-    requiredArg1("<pathName>", "ThreadedTrack Avro archive to read") { a =>
+    requiredArg1("<pathName>", "Avro archive to read (either ThreadedTracks or flat TrackPoints)") { a =>
       inFile = parseExistingFileOption(a)
     }
   }
