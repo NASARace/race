@@ -25,15 +25,14 @@ import gov.nasa.race.uom.Length._
 import gov.nasa.race.uom.Speed._
 import gov.nasa.race.uom.Acceleration._
 import gov.nasa.race.common.ManagedResource._
-import gov.nasa.race.track.avro.{TrackPoint => AvroTrackPoint, FullTrackPoint => AvroFullTrackPoint}
+import gov.nasa.race.track.avro.{TrackPoint => AvroTrackPoint, TrackRoutePoint => AvroTrackRoutePoint, FullTrackPoint => AvroFullTrackPoint, TrackInfo => AvroTrackInfo }
 
 import org.apache.avro.file.{DataFileReader, DataFileWriter}
 import org.apache.avro.generic.{GenericData, GenericDatumReader, GenericDatumWriter, GenericRecord}
 import org.apache.avro.Schema
 import org.apache.avro.specific.{SpecificDatumReader, SpecificDatumWriter, SpecificRecord}
 
-import scala.collection.mutable
-import scala.collection.mutable.{SortedSet => MSortedSet}
+import scala.collection.mutable.{SortedSet => MSortedSet, HashMap => MHashMap, HashSet => MHashSet}
 import scala.collection.JavaConverters._
 import scala.util.matching.Regex
 
@@ -52,7 +51,7 @@ import scala.util.matching.Regex
 object TrackTool {
 
   object ArchType extends Enumeration {
-    val ThreadedTrack, TrackPoint, Unknown = Value
+    val ThreadedTrack, TrackPoint, ThreadedFlight, TrackInfo, Unknown = Value
   }
 
   /** supported operations (set by command line options) */
@@ -134,6 +133,8 @@ object TrackTool {
   var opts = new Opts
 
   //--- names of known schemas
+  final val ThreadedFlightName = "ThreadedFlight"
+  final val TrackInfoName = "TrackInfo"
   final val ThreadedTrackName = "ThreadedTrack"
   final val TrackPointName = "TrackPoint"
   final val FullTrackPointName = "FullTrackPoint"
@@ -145,7 +146,6 @@ object TrackTool {
   var nTPavg = 0 // average number of track points per track
   var tMin: Long = Long.MaxValue // earliest trackpoint time
   var tMax: Long = Long.MinValue // latest trackpoint time
-
 
   def main(args: Array[String]): Unit = {
     if (opts.parse(args)) {
@@ -169,6 +169,11 @@ object TrackTool {
   @inline def getCheckedTime(rec: GenericRecord, fieldName: String): Long = checkTime(getLong(rec,fieldName))
 
   @inline def getString(rec: GenericRecord, field: String): String = rec.get(field).toString
+
+  def getStringOrElse(rec: GenericRecord, field: String, defaultValue: String): String = {
+    val v = rec.get(field)
+    if (v != null) v.toString else defaultValue
+  }
 
   @inline def getBoolean(rec: GenericRecord, field: String): Boolean = rec.get(field).asInstanceOf[Boolean]
 
@@ -241,7 +246,12 @@ object TrackTool {
     dfr.close
   }
 
-  def getOutFile (defaultName: String): File = opts.outFile.getOrElse(new File(opts.outDir, defaultName))
+  def getOutFile (defaultName: String): File = {
+    opts.outFile.getOrElse {
+      val f = new File(defaultName)
+      if (f.getParent == null) new File(opts.outDir,defaultName) else f
+    }
+  }
 
   def ensureEmptyOutFile (defaultName: String): Option[File] = FileUtils.ensureEmptyWritable(getOutFile(defaultName))
 
@@ -270,7 +280,7 @@ object TrackTool {
     var ambiguousTPs = MSortedSet.empty[String] // track ids wirh ambiguous track points
 
     case class TrackEntry(var date: Long, var completed: Boolean, var nTP: Int, var lat: Double, var lon: Double, var alt: Double)
-    val trackMap = mutable.HashMap.empty[String, TrackEntry]
+    val trackMap = MHashMap.empty[String, TrackEntry]
 
     println("analyze TrackPoint archive ..")
     while (dfr.hasNext) {
@@ -332,7 +342,7 @@ object TrackTool {
   /** check ThreadedTrack (non-flat) archive */
   def analyzeTTArchive(dfr: DataFileReader[GenericRecord]) = {
     var rec: GenericRecord = null
-    val idSet = new mutable.HashSet[String]()
+    val idSet = new MHashSet[String]()
 
     val reusedIDs = MSortedSet.empty[String] //  multiple ThreadedTracks using the same tt_id
     val emptyIDs = MSortedSet.empty[String] // Threaded Tracks without track points
@@ -430,20 +440,69 @@ object TrackTool {
     println(f"duration:               ${DateTimeUtils.hours(tMax - tMin)}%.1fh")
   }
 
+  def initFlightInfoStore (file: File) = {
+    if (file.getName.endsWith(".avro")) {
+      val dfr = new DataFileReader(file, new GenericDatumReader[GenericRecord])
+      val schema = dfr.getSchema
+
+    }
+  }
 
   //--- Flatten operation - support for flattening of ThreadedTrack archives
 
   def flattenArchive (inFile: File) = {
+    for (dfr <- ensureClose(new DataFileReader(inFile, new GenericDatumReader[GenericRecord]))) {
+      dfr.getSchema.getName match {
+        case ThreadedTrackName => flattenThreadedTracks(dfr)
+        case ThreadedFlightName => flattenThreadedFlights(dfr)
+        case other => println(s"unknown input archive schema: $other")
+      }
+    }
+  }
+
+  def flattenThreadedFlights (dfr: DataFileReader[GenericRecord]) = {
+    val emptyRoute = new java.util.ArrayList[AvroTrackRoutePoint](0)
+
+    ifSome(ensureEmptyOutFile("trackinfos.avro")) { outFile =>
+      val schema = AvroTrackInfo.getClassSchema
+      for (dfw <- ensureClose(new DataFileWriter[AvroTrackInfo](new SpecificDatumWriter(schema)))) {
+        dfw.create(schema, outFile)
+        var tfRec: GenericRecord = null
+        while (dfr.hasNext) {
+          tfRec = dfr.next(tfRec)
+          val tfDataRec = tfRec.get("threaded_metadata").asInstanceOf[GenericRecord]
+
+          val id = getString(tfRec,"tt_id")
+          val cs = getString(tfDataRec, "aircraft_id")
+          val acType = getStringOrElse(tfDataRec, "aircraft_type", "?")
+          val departureAirport = getStringOrElse(tfDataRec, "departure_airport", "?")
+          val tDep = getLong(tfDataRec, "start_time")
+          val arrivalAirport = getStringOrElse(tfDataRec, "arrival_airport", "?")
+          val tArr =  getLong(tfDataRec, "end_time")
+          val dist = getDouble(tfDataRec, "end_distance")
+          // we don't care for the rest, which is also in the ThreadedTrack data
+
+          val tiRec = new AvroTrackInfo(id,cs,"aircraft",acType,
+            departureAirport, tDep, arrivalAirport, tArr, emptyRoute)
+          dfw.append(tiRec)
+        }
+      }
+    } orElse {
+      none("could not create target archive")
+    }
+  }
+
+  def flattenThreadedTracks (dfr: DataFileReader[GenericRecord]) = {
     ifSome(ensureEmptyOutFile("trackpoints.avro")) { outFile =>
       val tmpDir = outFile.getParentFile
 
       if (opts.fullTP) {
         val schema = AvroFullTrackPoint.getClassSchema
-        val partitions = createPartitions(inFile, tmpDir, opts.maxPartEntries, schema, createFullTrackPoint, AvroFullTrackPointOrdering)
+        val partitions = createPartitions(dfr, tmpDir, opts.maxPartEntries, schema, createFullTrackPoint, AvroFullTrackPointOrdering)
         mergePartitions(partitions, outFile, schema)
       } else {
         val schema = AvroTrackPoint.getClassSchema
-        val partitions = createPartitions(inFile, tmpDir, opts.maxPartEntries, schema, createTrackPoint, AvroTrackPointOrdering)
+        val partitions = createPartitions(dfr, tmpDir, opts.maxPartEntries, schema, createTrackPoint, AvroTrackPointOrdering)
         mergePartitions(partitions, outFile, schema)
       }
     } orElse {
@@ -451,12 +510,11 @@ object TrackTool {
     }
   }
 
-  def createPartitions[T <: SpecificRecord](file: File, tmpDir: File, maxPartEntries: Int, schema: Schema,
+  def createPartitions[T <: SpecificRecord](dfr: DataFileReader[GenericRecord], tmpDir: File, maxPartEntries: Int, schema: Schema,
                                             createTP: (String, GenericRecord, Boolean, Int) => T,
                                             ordering: Ordering[T]): MSortedSet[Partition[T]] = {
     println("creating temporary partitions...")
     val partitions = MSortedSet[Partition[T]]()(new PartitionOrdering(ordering))
-    val dfr = new DataFileReader(file, new GenericDatumReader[GenericRecord])
     val tps = MSortedSet[T]()(ordering)
     var rec: GenericRecord = null
     var nTracks = 0

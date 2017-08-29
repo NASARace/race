@@ -1,0 +1,67 @@
+{
+  "type" : "record",
+  "name" : "TrackInfo",
+  "namespace" : "gov.nasa.race.track.avro",
+  "doc" : "planned (meta) information about tracks",
+  "fields" : [
+    {
+      "name" : "id", "type" : "string",
+      "doc"  : "identifier for this track"
+    },
+    {
+      "name" : "cs", "type" : "string",
+      "doc"  : "call sign (global ID) for this track"
+    },
+    {
+      "name" : "category", "type" : "string",
+      "doc"  : "track category, such as aircraft,ship,vehicle etc."
+    },
+    {
+      "name" : "vehicle_type", "type": ["null","string"],
+      "doc"  : "optional type of track (e.g. aircraft type)"
+    },
+    {
+      "name" : "departure_point", "type": "string",
+      "doc"  : "name/id of departure location"
+    },
+    {
+      "name" : "etd", "type": "long",
+      "doc"  : "epoch value of estimated time of departure"
+    },
+    {
+      "name" : "arrival_point", "type": "string",
+      "doc"  : "name/id of arrival location"
+    },
+    {
+      "name" : "eta", "type": "long",
+      "doc"  : "epoch value of estimated time of arrival"
+    },
+    {
+      "name" : "planned_route",
+      "doc"  : "optional planned route for track",
+      "type" : {
+        "type" : "array",
+        "items" : {
+          "type" : "record",
+          "name" : "TrackRoutePoint",
+          "namespace" : "gov.nasa.race.track.avro",
+          "fields" : [
+            {
+               "name" : "date",  "type" : "long",
+               "doc"  : "unix epoch for this track point", "units" : "milliseconds"
+            }, {
+              "name" : "latitude",  "type" : "double",
+              "doc"  : "WGS84 latitude of track point",  "units" : "degrees"
+            }, {
+              "name" : "longitude",  "type" : "double",
+              "doc"  : "WGS84 longitude of track point",  "units" : "degrees"
+            }, {
+              "name" : "altitude",  "type" : "double",
+              "doc"  : "(barometric) altitude of track point", "units" : "meters"
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

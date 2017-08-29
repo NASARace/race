@@ -56,13 +56,17 @@ addSbtPlugin("org.scoverage" %% "sbt-scoverage" % "1.5.0")
 // create project dependency graph: https://github.com/dwijnand/sbt-project-graph
 // (run projectsGraphDot which creates a target/projects-graph.dot)
 // does not work with root projects ('wwjRoot' from build.sbt of 'wwjProject')
-//addSbtPlugin("com.dwijnand.sbtprojectgraph" % "sbt-project-graph" % "0.1.0")
+addSbtPlugin("com.dwijnand" % "sbt-project-graph" % "0.2.2")
 
 // check for upgraded dependencies: https://github.com/sksamuel/sbt-versions
 // run 'checkVersions' from within SBT
 // note this uses org.eclipse.aether.* which has DEBUG log output
 //addSbtPlugin("com.sksamuel.sbt-versions" % "sbt-versions" % "0.2.0")
 
+// create lock.sbt file with concrete dependency versions: https://github.com/tkawachi/sbt-lock
+// provides 'lock' and 'unlock' tasks which create a *.sbt with dependencyOverrides
+// this is supposed to be used when publishing artifacts to SonaType
+addSbtPlugin("com.github.tkawachi" % "sbt-lock" % "0.3.0")
 
 //--- not published tools
 
