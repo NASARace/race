@@ -23,7 +23,7 @@ import scala.annotation.tailrec
 /**
   * A FlightPath with a compact encoding
   */
-class CompactTrajectory(capacityIncrement: Int=32) extends AbstractTrajectory {
+class CompactTrajectory(capacityIncrement: Int=32) extends Trajectory {
   private var growthCycle = 0
   final val linearGrowthCycles = 5 // once that is exceeded we grow exponentially
 
@@ -44,10 +44,23 @@ class CompactTrajectory(capacityIncrement: Int=32) extends AbstractTrajectory {
 
   override def capacity = if (data != null) data.length / 2 else capacityIncrement
 
-  override def add (e: TrackPoint3D): Unit = {
+  override def add (e: TrackPoint3D): Trajectory = {
+    val pos = e.position
+    add(pos.φ.toDegrees,pos.λ.toDegrees,e.altitude.toMeters,e.date.getMillis)
+  }
+
+  /**
+    * low level add that avoids temporary objects
+    * NOTE - caller has to ensure proper units of measure
+    *
+    * @param lat latitude in degrees
+    * @param lon longitude in degrees
+    * @param alt altitude in meters (or NaN if undefined)
+    * @param t epoch value (or 0 if undefined)
+    */
+  override def add (lat: Double, lon: Double, alt: Double, t: Long): Trajectory = {
     val i = _size*2
 
-    val t = e.date.getMillis
     if (i == 0) {
       data = new Array[Long](capacityIncrement*2)
       t0Millis = t
@@ -55,16 +68,17 @@ class CompactTrajectory(capacityIncrement: Int=32) extends AbstractTrajectory {
       growDataCapacity
     }
 
-    val pos = e.position
-    val latlon = posCodec.encode(pos.φ.toDegrees,pos.λ.toDegrees)
-    val alt = Math.round(e.altitude.toMeters * 100.0).toInt  // cm
-    val dtMillis = t - t0Millis // ms
+    val dtMillis = t - t0Millis
+    val latlon = posCodec.encode(lat,lon)
+    val altCm = Math.round(alt * 100.0).toInt
 
     data(i) = latlon
-    data(i+1) = (dtMillis << 32) | alt
+    data(i+1) = (dtMillis << 32) | altCm
 
     _size += 1
+    this
   }
+
 
   override def foreach(f: (Int,Double,Double,Double,Long)=>Unit): Unit = {
     @tailrec def _processEntry (i: Int, f: (Int,Double,Double,Double,Long)=>Unit): Unit = {

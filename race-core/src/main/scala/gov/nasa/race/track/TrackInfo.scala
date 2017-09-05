@@ -1,14 +1,16 @@
 package gov.nasa.race.track
 
-import gov.nasa.race.ifSome
-import org.joda.time.DateTime
+import gov.nasa.race._
+import gov.nasa.race.config.{NamedConfigurable,NoConfig}
 
+import com.typesafe.config.Config
+import org.joda.time.DateTime
 import scala.collection.concurrent.TrieMap
 
 /**
-  * non-positional info for tracks, such as departure and arrival location and times, flight plans etc.
-  * This is supposed to be an accumulator that is updated from different channels to collect all information
-  * about a certain track, hence it depends on inter-channel ids ('cs')
+  * meta info for tracks, such as departure and arrival location and times, flight plans etc.
+  * This is supposed to be an accumulator that can be updated from different sources to collect all
+  * information about a certain track, hence it depends on global ids ('cs')
   *
   * note we don't keep this as a case class since we want to be able to extend it
   * but the identifiers are optional since they can trickle in over time. This is supposed to
@@ -26,7 +28,10 @@ class TrackInfo(val trackRef: String,
                 val etd: Option[DateTime],
                 val atd: Option[DateTime],
                 val eta: Option[DateTime],
-                val ata: Option[DateTime]) {
+                val ata: Option[DateTime],
+
+                val route: Option[Trajectory]
+               ) {
 
   override def toString = { // compact version
     val sb = new StringBuilder
@@ -34,65 +39,31 @@ class TrackInfo(val trackRef: String,
     ifSome(trackType){ s=> sb.append(s",type:$s")}
     ifSome(departurePoint){ s=> sb.append(s",from:$s")}
     ifSome(arrivalPoint){ s=> sb.append(s",to:$s")}
-    if (atd.isDefined) sb.append(s",atd:${atd.get}")
-    else if (etd.isDefined) sb.append(s",etd:${etd.get}")
-    if (ata.isDefined) sb.append(s",ata:${ata.get}")
-    else if (eta.isDefined) sb.append(s",eta:${eta.get}")
+    if (atd.isDefined) sb.append(s",atd:${atd.get}") else if (etd.isDefined) sb.append(s",etd:${etd.get}")
+    if (ata.isDefined) sb.append(s",ata:${ata.get}") else if (eta.isDefined) sb.append(s",eta:${eta.get}")
     sb.append('}')
     sb.toString
   }
-}
 
-
-/**
-  * a generic source for TrackInfo updates
-  */
-trait TrackInfoSource {
-
-  var trackRef: String = null
-  var cs: String = null
-  var trackCat, trackType: String = null
-  var departurePoint, arrivalPoint: String = null
-  var etd, atd, eta, ata: DateTime = null
-
-  def resetVars = {
-    trackRef = null;
-    cs = null;
-    trackCat = null;
-    trackType = null
-    departurePoint = null;
-    arrivalPoint = null
-    etd = null;
-    atd = null;
-    eta = null;
-    ata = null
+  def accumulate (prev: TrackInfo): TrackInfo = {
+    new TrackInfo( trackRef, cs,
+      trackCategory.orElse(prev.trackCategory),
+      trackType.orElse(prev.trackType),
+      departurePoint.orElse(prev.departurePoint),
+      arrivalPoint.orElse(prev.arrivalPoint),
+      etd.orElse(prev.etd),
+      atd.orElse(prev.atd),
+      eta.orElse(prev.eta),
+      ata.orElse(prev.ata),
+      route.orElse(prev.route)
+    )
   }
 
-  def createTrackInfo = new TrackInfo(
-    trackRef, cs,
-    Option(trackCat), Option(trackType),
-    Option(departurePoint), Option(arrivalPoint),
-    Option(etd), Option(atd), Option(eta), Option(ata)
-  )
-
-  /** only create a new object if there are changes */
-  def amendTrackInfo(fi: TrackInfo): TrackInfo = {
-    if ((trackCat != fi.trackCategory.orNull) || (trackType != fi.trackType.orNull) ||
-      (departurePoint != fi.departurePoint.orNull) || (arrivalPoint != fi.arrivalPoint.orNull) ||
-      (etd != fi.etd.orNull) || (atd != fi.atd.orNull) ||
-      (eta != fi.eta.orNull) || (ata != fi.ata.orNull)) {
-      new TrackInfo(
-        fi.trackRef, fi.cs,
-        if (trackCat != null) Some(trackCat) else fi.trackCategory,
-        if (trackType != null) Some(trackType) else fi.trackType,
-        if (departurePoint != null) Some(departurePoint) else fi.departurePoint,
-        if (arrivalPoint != null) Some(arrivalPoint) else fi.arrivalPoint,
-        if (etd != null) Some(etd) else fi.etd,
-        if (atd != null) Some(atd) else fi.atd,
-        if (eta != null) Some(eta) else fi.eta,
-        if (ata != null) Some(ata) else fi.ata
-      )
-    } else fi // no change
+  def accumulate (maybePref: Option[TrackInfo]): TrackInfo = {
+    maybePref match {
+      case Some(prev) => accumulate(prev)
+      case None => this
+    }
   }
 }
 
@@ -104,24 +75,21 @@ case class NoSuchTrackInfo(cs: String)
 case class TrackInfoUpdateRequest(cs: String)
 
 /**
-  * a (possibly global) store for TrackInfos that are updated from (potentially)
-  * multiple sources
+  * a threadsafe store for TrackInfos
   */
-class TrackInfoStore {
+trait TrackInfoStore {
 
-  val trackInfos = TrieMap.empty[String,TrackInfo]
+  protected val trackInfos = TrieMap.empty[String,TrackInfo]
 
-  def updateFrom (src: TrackInfoSource) = {
-    trackInfos.get(src.cs) match {
-      case Some(info) => // don't change if you don't have to
-        val newInfo = src.amendTrackInfo(info)
-        if (newInfo ne info) update(info.cs,  newInfo)
-      case None => update(src.cs, src.createTrackInfo)
-    }
-  }
+  def get (id: String): Option[TrackInfo] = trackInfos.get(id)
+  def add (id: String, ti: TrackInfo) = trackInfos += (id -> ti)
 
-  // can be overridden to inform listeners etc.
-  protected def update (key: String, fInfo: TrackInfo): Unit = trackInfos += (key -> fInfo)
-
-  def get (cs: String) = trackInfos.get(cs)
+  /**
+    * to be provided by concrete store type if it supports dynamic updates
+    *
+    * @return true if input message was handled
+    */
+  def handleMessage(msg: Any): Boolean = false
 }
+
+trait ConfigurableTrackInfoStore extends TrackInfoStore with NamedConfigurable

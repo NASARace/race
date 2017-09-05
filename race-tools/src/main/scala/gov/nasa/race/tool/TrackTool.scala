@@ -25,7 +25,7 @@ import gov.nasa.race.uom.Length._
 import gov.nasa.race.uom.Speed._
 import gov.nasa.race.uom.Acceleration._
 import gov.nasa.race.common.ManagedResource._
-import gov.nasa.race.track.avro.{TrackPoint => AvroTrackPoint, TrackRoutePoint => AvroTrackRoutePoint, FullTrackPoint => AvroFullTrackPoint, TrackInfo => AvroTrackInfo }
+import gov.nasa.race.track.avro.{TrackPoint => AvroTrackPoint, TrackRoutePoint => AvroTrackRoutePoint, FullTrackPoint => AvroFullTrackPoint, TrackInfoRecord => AvroTrackInfo }
 
 import org.apache.avro.file.{DataFileReader, DataFileWriter}
 import org.apache.avro.generic.{GenericData, GenericDatumReader, GenericDatumWriter, GenericRecord}
@@ -134,7 +134,7 @@ object TrackTool {
 
   //--- names of known schemas
   final val ThreadedFlightName = "ThreadedFlight"
-  final val TrackInfoName = "TrackInfo"
+  final val TrackInfoName = "TrackInfoRecord"
   final val ThreadedTrackName = "ThreadedTrack"
   final val TrackPointName = "TrackPoint"
   final val FullTrackPointName = "FullTrackPoint"

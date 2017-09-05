@@ -566,6 +566,10 @@ public class XmlPullParser implements XmlPullParserIfc {
     } else throw new XmlContentException("no int attribute " + k, idx, 10);
   }
 
+  public double doubleValue(){
+    return Double.parseDouble(value);
+  }
+
   //--------------------------------------------------------------- path query
 
   //--- parent queries (ascending order)

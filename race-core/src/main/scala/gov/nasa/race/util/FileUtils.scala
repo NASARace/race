@@ -34,6 +34,8 @@ import gov.nasa.race._
  */
 object FileUtils {
 
+  @inline def file (pathName: String): File = new File(pathName)
+
   def fileContentsAsUTF8String(file: File): Option[String] = {
     if (file.isFile) {
       Some(new String(Files.readAllBytes(file.toPath), StandardCharsets.UTF_8))
@@ -41,6 +43,8 @@ object FileUtils {
       None
     }
   }
+
+  def fileContentsAsUTF8String(pathName: String): Option[String] = fileContentsAsUTF8String(new File(pathName))
 
   def resourceContentsAsUTF8String(cls: Class[_],fileName: String): Option[String] = {
     val is = cls.getResourceAsStream(fileName)
@@ -59,6 +63,8 @@ object FileUtils {
       Some(decoder.decode(in).array)
     } else None
   }
+
+  def fileContentsAsChars(pathName: String): Option[Array[Char]] = fileContentsAsChars(new File(pathName))
 
   def fileContentsAsBytes(file: File): Option[Array[Byte]] = {
     if (file.isFile) Some(Files.readAllBytes(file.toPath)) else None

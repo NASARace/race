@@ -31,6 +31,10 @@ import scala.reflect.ClassTag
   */
 package object util {
 
+  def acceptAll: PartialFunction[String,Unit] = {
+    case _ =>
+  }
+
   /**
     * order-independent, iterator free processing of XmlPullParser attributes
     */
@@ -38,7 +42,10 @@ package object util {
     this: XmlPullParser =>
 
     def processAttributes(pf: PartialFunction[String,Unit]) = {
-      while (parseNextAttribute) pf(attr)
+      val attrPf = pf.orElse(acceptAll)
+      while (parseNextAttribute) {
+        attrPf(attr)
+      }
     }
   }
 

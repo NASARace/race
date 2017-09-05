@@ -20,7 +20,7 @@ package gov.nasa.race.ww.track
 import java.awt.Point
 
 import gov.nasa.race._
-import gov.nasa.race.track.{AbstractTrajectory, TrackedObject}
+import gov.nasa.race.track.{Trajectory, TrackedObject}
 import gov.nasa.race.ww._
 import gov.nasa.race.ww.Implicits._
 import gov.nasa.worldwind.WorldWind
@@ -32,7 +32,7 @@ import gov.nasa.worldwind.render.{Offset, PointPlacemark, PointPlacemarkAttribut
   * this aggregates all Renderables that can be associated with a given TrackObject based on viewer
   * state (eye position and selected options)
   */
-class TrackEntry[T <: TrackedObject](var obj: T, var flightPath: AbstractTrajectory, val layer: TrackLayer[T]) extends LayerObject {
+class TrackEntry[T <: TrackedObject](var obj: T, var flightPath: Trajectory, val layer: TrackLayer[T]) extends LayerObject {
 
   override def id = obj.cs
 

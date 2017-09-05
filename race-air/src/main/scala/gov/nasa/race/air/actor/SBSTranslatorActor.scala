@@ -24,7 +24,7 @@ class SBSTranslatorActor (config: Config) extends TranslatorActor(config) with F
   val timeCut = config.getIntOrElse("time-cut-ms", 0) // in millis, non-ambiguous positions with lower dt are ignored
   val passSanityViolations = config.getBooleanOrElse ("pass-failed", true)
   val writeToFail = config.getOptionalString("write-to-fail")
-  val sanityChecker = getConfigurableOrElse[FlightPosChecker]("checker", EmptyFlightPosChecker)
+  val sanityChecker = getConfigurableOrElse[FlightPosChecker]("checker"){ EmptyFlightPosChecker }
 
   val flights = MHashMap.empty[String,FlightPos]
 

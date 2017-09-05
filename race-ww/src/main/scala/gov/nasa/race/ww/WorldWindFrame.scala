@@ -159,8 +159,15 @@ class WorldWindFrame (config: Config, raceView: RaceView) extends AppFrame {
   override def closeOperation() = { // this is executed in response to close() within the EDT
     visible = false
 
+    /*
     WorldWind.shutDown()
     Thread.sleep(500) // <2do> we should wait for the WW "AWT-AppKit" to terminate
     flushEventQueue() // make sure we don't have any pending timer or WW events
+    */
+  }
+
+  override def close() = {
+    visible = false
+    super.close
   }
 }

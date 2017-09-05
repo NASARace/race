@@ -152,6 +152,8 @@ package object race {
   def nonNullOrElse[T](t: T, f: => T) = if (t != null) t else f // slightly different version with 'orElse' syntax
   def ifNullOrEmpty(s: String)(f: => Any) = if (s == null || s.isEmpty) f
 
+  def optional[T <: AnyRef] (v: T): Option[T] = if (v != null) Some(v) else None
+
   /** loop while a condition expression does not return null */
   def whileNotNull[T <: AnyRef](next: => T)(p: T => Any): Unit = {
     var o = next

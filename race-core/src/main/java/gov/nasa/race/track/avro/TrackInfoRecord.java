@@ -10,9 +10,9 @@ import org.apache.avro.specific.SpecificData;
 @SuppressWarnings("all")
 /** planned (meta) information about tracks */
 @org.apache.avro.specific.AvroGenerated
-public class TrackInfo extends org.apache.avro.specific.SpecificRecordBase implements org.apache.avro.specific.SpecificRecord {
-  private static final long serialVersionUID = 7444494421033320571L;
-  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"TrackInfo\",\"namespace\":\"gov.nasa.race.track.avro\",\"doc\":\"planned (meta) information about tracks\",\"fields\":[{\"name\":\"id\",\"type\":\"string\",\"doc\":\"identifier for this track\"},{\"name\":\"cs\",\"type\":\"string\",\"doc\":\"call sign (global ID) for this track\"},{\"name\":\"category\",\"type\":\"string\",\"doc\":\"track category, such as aircraft,ship,vehicle etc.\"},{\"name\":\"vehicle_type\",\"type\":[\"null\",\"string\"],\"doc\":\"optional type of track (e.g. aircraft type)\"},{\"name\":\"departure_point\",\"type\":\"string\",\"doc\":\"name/id of departure location\"},{\"name\":\"etd\",\"type\":\"long\",\"doc\":\"epoch value of estimated time of departure\"},{\"name\":\"arrival_point\",\"type\":\"string\",\"doc\":\"name/id of arrival location\"},{\"name\":\"eta\",\"type\":\"long\",\"doc\":\"epoch value of estimated time of arrival\"},{\"name\":\"planned_route\",\"type\":{\"type\":\"array\",\"items\":{\"type\":\"record\",\"name\":\"TrackRoutePoint\",\"fields\":[{\"name\":\"date\",\"type\":\"long\",\"doc\":\"unix epoch for this track point\",\"units\":\"milliseconds\"},{\"name\":\"latitude\",\"type\":\"double\",\"doc\":\"WGS84 latitude of track point\",\"units\":\"degrees\"},{\"name\":\"longitude\",\"type\":\"double\",\"doc\":\"WGS84 longitude of track point\",\"units\":\"degrees\"},{\"name\":\"altitude\",\"type\":\"double\",\"doc\":\"(barometric) altitude of track point\",\"units\":\"meters\"}]}},\"doc\":\"optional planned route for track\"}]}");
+public class TrackInfoRecord extends org.apache.avro.specific.SpecificRecordBase implements org.apache.avro.specific.SpecificRecord {
+  private static final long serialVersionUID = -7708730607689882575L;
+  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"TrackInfoRecord\",\"namespace\":\"gov.nasa.race.track.avro\",\"doc\":\"planned (meta) information about tracks\",\"fields\":[{\"name\":\"id\",\"type\":\"string\",\"doc\":\"identifier for this track\"},{\"name\":\"cs\",\"type\":\"string\",\"doc\":\"call sign (global ID) for this track\"},{\"name\":\"category\",\"type\":\"string\",\"doc\":\"track category, such as aircraft,ship,vehicle etc.\"},{\"name\":\"vehicle_type\",\"type\":[\"null\",\"string\"],\"doc\":\"optional type of track (e.g. aircraft type)\"},{\"name\":\"departure_point\",\"type\":\"string\",\"doc\":\"name/id of departure location\"},{\"name\":\"etd\",\"type\":\"long\",\"doc\":\"epoch value of estimated time of departure\"},{\"name\":\"arrival_point\",\"type\":\"string\",\"doc\":\"name/id of arrival location\"},{\"name\":\"eta\",\"type\":\"long\",\"doc\":\"epoch value of estimated time of arrival\"},{\"name\":\"planned_route\",\"type\":{\"type\":\"array\",\"items\":{\"type\":\"record\",\"name\":\"TrackRoutePoint\",\"fields\":[{\"name\":\"date\",\"type\":\"long\",\"doc\":\"unix epoch for this track point\",\"units\":\"milliseconds\"},{\"name\":\"latitude\",\"type\":\"double\",\"doc\":\"WGS84 latitude of track point\",\"units\":\"degrees\"},{\"name\":\"longitude\",\"type\":\"double\",\"doc\":\"WGS84 longitude of track point\",\"units\":\"degrees\"},{\"name\":\"altitude\",\"type\":\"double\",\"doc\":\"(barometric) altitude of track point\",\"units\":\"meters\"}]}},\"doc\":\"optional planned route for track\"}]}");
   public static org.apache.avro.Schema getClassSchema() { return SCHEMA$; }
   /** identifier for this track */
   @Deprecated public java.lang.CharSequence id;
@@ -38,7 +38,7 @@ public class TrackInfo extends org.apache.avro.specific.SpecificRecordBase imple
    * to their default values from the schema.  If that is desired then
    * one should use <code>newBuilder()</code>.
    */
-  public TrackInfo() {}
+  public TrackInfoRecord() {}
 
   /**
    * All-args constructor.
@@ -52,7 +52,7 @@ public class TrackInfo extends org.apache.avro.specific.SpecificRecordBase imple
    * @param eta epoch value of estimated time of arrival
    * @param planned_route optional planned route for track
    */
-  public TrackInfo(java.lang.CharSequence id, java.lang.CharSequence cs, java.lang.CharSequence category, java.lang.CharSequence vehicle_type, java.lang.CharSequence departure_point, java.lang.Long etd, java.lang.CharSequence arrival_point, java.lang.Long eta, java.util.List<gov.nasa.race.track.avro.TrackRoutePoint> planned_route) {
+  public TrackInfoRecord(java.lang.CharSequence id, java.lang.CharSequence cs, java.lang.CharSequence category, java.lang.CharSequence vehicle_type, java.lang.CharSequence departure_point, java.lang.Long etd, java.lang.CharSequence arrival_point, java.lang.Long eta, java.util.List<gov.nasa.race.track.avro.TrackRoutePoint> planned_route) {
     this.id = id;
     this.cs = cs;
     this.category = category;
@@ -252,36 +252,36 @@ public class TrackInfo extends org.apache.avro.specific.SpecificRecordBase imple
   }
 
   /**
-   * Creates a new TrackInfo RecordBuilder.
-   * @return A new TrackInfo RecordBuilder
+   * Creates a new TrackInfoRecord RecordBuilder.
+   * @return A new TrackInfoRecord RecordBuilder
    */
-  public static gov.nasa.race.track.avro.TrackInfo.Builder newBuilder() {
-    return new gov.nasa.race.track.avro.TrackInfo.Builder();
+  public static gov.nasa.race.track.avro.TrackInfoRecord.Builder newBuilder() {
+    return new gov.nasa.race.track.avro.TrackInfoRecord.Builder();
   }
 
   /**
-   * Creates a new TrackInfo RecordBuilder by copying an existing Builder.
+   * Creates a new TrackInfoRecord RecordBuilder by copying an existing Builder.
    * @param other The existing builder to copy.
-   * @return A new TrackInfo RecordBuilder
+   * @return A new TrackInfoRecord RecordBuilder
    */
-  public static gov.nasa.race.track.avro.TrackInfo.Builder newBuilder(gov.nasa.race.track.avro.TrackInfo.Builder other) {
-    return new gov.nasa.race.track.avro.TrackInfo.Builder(other);
+  public static gov.nasa.race.track.avro.TrackInfoRecord.Builder newBuilder(gov.nasa.race.track.avro.TrackInfoRecord.Builder other) {
+    return new gov.nasa.race.track.avro.TrackInfoRecord.Builder(other);
   }
 
   /**
-   * Creates a new TrackInfo RecordBuilder by copying an existing TrackInfo instance.
+   * Creates a new TrackInfoRecord RecordBuilder by copying an existing TrackInfoRecord instance.
    * @param other The existing instance to copy.
-   * @return A new TrackInfo RecordBuilder
+   * @return A new TrackInfoRecord RecordBuilder
    */
-  public static gov.nasa.race.track.avro.TrackInfo.Builder newBuilder(gov.nasa.race.track.avro.TrackInfo other) {
-    return new gov.nasa.race.track.avro.TrackInfo.Builder(other);
+  public static gov.nasa.race.track.avro.TrackInfoRecord.Builder newBuilder(gov.nasa.race.track.avro.TrackInfoRecord other) {
+    return new gov.nasa.race.track.avro.TrackInfoRecord.Builder(other);
   }
 
   /**
-   * RecordBuilder for TrackInfo instances.
+   * RecordBuilder for TrackInfoRecord instances.
    */
-  public static class Builder extends org.apache.avro.specific.SpecificRecordBuilderBase<TrackInfo>
-    implements org.apache.avro.data.RecordBuilder<TrackInfo> {
+  public static class Builder extends org.apache.avro.specific.SpecificRecordBuilderBase<TrackInfoRecord>
+    implements org.apache.avro.data.RecordBuilder<TrackInfoRecord> {
 
     /** identifier for this track */
     private java.lang.CharSequence id;
@@ -311,7 +311,7 @@ public class TrackInfo extends org.apache.avro.specific.SpecificRecordBase imple
      * Creates a Builder by copying an existing Builder.
      * @param other The existing Builder to copy.
      */
-    private Builder(gov.nasa.race.track.avro.TrackInfo.Builder other) {
+    private Builder(gov.nasa.race.track.avro.TrackInfoRecord.Builder other) {
       super(other);
       if (isValidValue(fields()[0], other.id)) {
         this.id = data().deepCopy(fields()[0].schema(), other.id);
@@ -352,10 +352,10 @@ public class TrackInfo extends org.apache.avro.specific.SpecificRecordBase imple
     }
 
     /**
-     * Creates a Builder by copying an existing TrackInfo instance
+     * Creates a Builder by copying an existing TrackInfoRecord instance
      * @param other The existing instance to copy.
      */
-    private Builder(gov.nasa.race.track.avro.TrackInfo other) {
+    private Builder(gov.nasa.race.track.avro.TrackInfoRecord other) {
             super(SCHEMA$);
       if (isValidValue(fields()[0], other.id)) {
         this.id = data().deepCopy(fields()[0].schema(), other.id);
@@ -410,7 +410,7 @@ public class TrackInfo extends org.apache.avro.specific.SpecificRecordBase imple
       * @param value The value of 'id'.
       * @return This builder.
       */
-    public gov.nasa.race.track.avro.TrackInfo.Builder setId(java.lang.CharSequence value) {
+    public gov.nasa.race.track.avro.TrackInfoRecord.Builder setId(java.lang.CharSequence value) {
       validate(fields()[0], value);
       this.id = value;
       fieldSetFlags()[0] = true;
@@ -432,7 +432,7 @@ public class TrackInfo extends org.apache.avro.specific.SpecificRecordBase imple
       * identifier for this track
       * @return This builder.
       */
-    public gov.nasa.race.track.avro.TrackInfo.Builder clearId() {
+    public gov.nasa.race.track.avro.TrackInfoRecord.Builder clearId() {
       id = null;
       fieldSetFlags()[0] = false;
       return this;
@@ -453,7 +453,7 @@ public class TrackInfo extends org.apache.avro.specific.SpecificRecordBase imple
       * @param value The value of 'cs'.
       * @return This builder.
       */
-    public gov.nasa.race.track.avro.TrackInfo.Builder setCs(java.lang.CharSequence value) {
+    public gov.nasa.race.track.avro.TrackInfoRecord.Builder setCs(java.lang.CharSequence value) {
       validate(fields()[1], value);
       this.cs = value;
       fieldSetFlags()[1] = true;
@@ -475,7 +475,7 @@ public class TrackInfo extends org.apache.avro.specific.SpecificRecordBase imple
       * call sign (global ID) for this track
       * @return This builder.
       */
-    public gov.nasa.race.track.avro.TrackInfo.Builder clearCs() {
+    public gov.nasa.race.track.avro.TrackInfoRecord.Builder clearCs() {
       cs = null;
       fieldSetFlags()[1] = false;
       return this;
@@ -496,7 +496,7 @@ public class TrackInfo extends org.apache.avro.specific.SpecificRecordBase imple
       * @param value The value of 'category'.
       * @return This builder.
       */
-    public gov.nasa.race.track.avro.TrackInfo.Builder setCategory(java.lang.CharSequence value) {
+    public gov.nasa.race.track.avro.TrackInfoRecord.Builder setCategory(java.lang.CharSequence value) {
       validate(fields()[2], value);
       this.category = value;
       fieldSetFlags()[2] = true;
@@ -518,7 +518,7 @@ public class TrackInfo extends org.apache.avro.specific.SpecificRecordBase imple
       * track category, such as aircraft,ship,vehicle etc.
       * @return This builder.
       */
-    public gov.nasa.race.track.avro.TrackInfo.Builder clearCategory() {
+    public gov.nasa.race.track.avro.TrackInfoRecord.Builder clearCategory() {
       category = null;
       fieldSetFlags()[2] = false;
       return this;
@@ -539,7 +539,7 @@ public class TrackInfo extends org.apache.avro.specific.SpecificRecordBase imple
       * @param value The value of 'vehicle_type'.
       * @return This builder.
       */
-    public gov.nasa.race.track.avro.TrackInfo.Builder setVehicleType(java.lang.CharSequence value) {
+    public gov.nasa.race.track.avro.TrackInfoRecord.Builder setVehicleType(java.lang.CharSequence value) {
       validate(fields()[3], value);
       this.vehicle_type = value;
       fieldSetFlags()[3] = true;
@@ -561,7 +561,7 @@ public class TrackInfo extends org.apache.avro.specific.SpecificRecordBase imple
       * optional type of track (e.g. aircraft type)
       * @return This builder.
       */
-    public gov.nasa.race.track.avro.TrackInfo.Builder clearVehicleType() {
+    public gov.nasa.race.track.avro.TrackInfoRecord.Builder clearVehicleType() {
       vehicle_type = null;
       fieldSetFlags()[3] = false;
       return this;
@@ -582,7 +582,7 @@ public class TrackInfo extends org.apache.avro.specific.SpecificRecordBase imple
       * @param value The value of 'departure_point'.
       * @return This builder.
       */
-    public gov.nasa.race.track.avro.TrackInfo.Builder setDeparturePoint(java.lang.CharSequence value) {
+    public gov.nasa.race.track.avro.TrackInfoRecord.Builder setDeparturePoint(java.lang.CharSequence value) {
       validate(fields()[4], value);
       this.departure_point = value;
       fieldSetFlags()[4] = true;
@@ -604,7 +604,7 @@ public class TrackInfo extends org.apache.avro.specific.SpecificRecordBase imple
       * name/id of departure location
       * @return This builder.
       */
-    public gov.nasa.race.track.avro.TrackInfo.Builder clearDeparturePoint() {
+    public gov.nasa.race.track.avro.TrackInfoRecord.Builder clearDeparturePoint() {
       departure_point = null;
       fieldSetFlags()[4] = false;
       return this;
@@ -625,7 +625,7 @@ public class TrackInfo extends org.apache.avro.specific.SpecificRecordBase imple
       * @param value The value of 'etd'.
       * @return This builder.
       */
-    public gov.nasa.race.track.avro.TrackInfo.Builder setEtd(long value) {
+    public gov.nasa.race.track.avro.TrackInfoRecord.Builder setEtd(long value) {
       validate(fields()[5], value);
       this.etd = value;
       fieldSetFlags()[5] = true;
@@ -647,7 +647,7 @@ public class TrackInfo extends org.apache.avro.specific.SpecificRecordBase imple
       * epoch value of estimated time of departure
       * @return This builder.
       */
-    public gov.nasa.race.track.avro.TrackInfo.Builder clearEtd() {
+    public gov.nasa.race.track.avro.TrackInfoRecord.Builder clearEtd() {
       fieldSetFlags()[5] = false;
       return this;
     }
@@ -667,7 +667,7 @@ public class TrackInfo extends org.apache.avro.specific.SpecificRecordBase imple
       * @param value The value of 'arrival_point'.
       * @return This builder.
       */
-    public gov.nasa.race.track.avro.TrackInfo.Builder setArrivalPoint(java.lang.CharSequence value) {
+    public gov.nasa.race.track.avro.TrackInfoRecord.Builder setArrivalPoint(java.lang.CharSequence value) {
       validate(fields()[6], value);
       this.arrival_point = value;
       fieldSetFlags()[6] = true;
@@ -689,7 +689,7 @@ public class TrackInfo extends org.apache.avro.specific.SpecificRecordBase imple
       * name/id of arrival location
       * @return This builder.
       */
-    public gov.nasa.race.track.avro.TrackInfo.Builder clearArrivalPoint() {
+    public gov.nasa.race.track.avro.TrackInfoRecord.Builder clearArrivalPoint() {
       arrival_point = null;
       fieldSetFlags()[6] = false;
       return this;
@@ -710,7 +710,7 @@ public class TrackInfo extends org.apache.avro.specific.SpecificRecordBase imple
       * @param value The value of 'eta'.
       * @return This builder.
       */
-    public gov.nasa.race.track.avro.TrackInfo.Builder setEta(long value) {
+    public gov.nasa.race.track.avro.TrackInfoRecord.Builder setEta(long value) {
       validate(fields()[7], value);
       this.eta = value;
       fieldSetFlags()[7] = true;
@@ -732,7 +732,7 @@ public class TrackInfo extends org.apache.avro.specific.SpecificRecordBase imple
       * epoch value of estimated time of arrival
       * @return This builder.
       */
-    public gov.nasa.race.track.avro.TrackInfo.Builder clearEta() {
+    public gov.nasa.race.track.avro.TrackInfoRecord.Builder clearEta() {
       fieldSetFlags()[7] = false;
       return this;
     }
@@ -752,7 +752,7 @@ public class TrackInfo extends org.apache.avro.specific.SpecificRecordBase imple
       * @param value The value of 'planned_route'.
       * @return This builder.
       */
-    public gov.nasa.race.track.avro.TrackInfo.Builder setPlannedRoute(java.util.List<gov.nasa.race.track.avro.TrackRoutePoint> value) {
+    public gov.nasa.race.track.avro.TrackInfoRecord.Builder setPlannedRoute(java.util.List<gov.nasa.race.track.avro.TrackRoutePoint> value) {
       validate(fields()[8], value);
       this.planned_route = value;
       fieldSetFlags()[8] = true;
@@ -774,16 +774,16 @@ public class TrackInfo extends org.apache.avro.specific.SpecificRecordBase imple
       * optional planned route for track
       * @return This builder.
       */
-    public gov.nasa.race.track.avro.TrackInfo.Builder clearPlannedRoute() {
+    public gov.nasa.race.track.avro.TrackInfoRecord.Builder clearPlannedRoute() {
       planned_route = null;
       fieldSetFlags()[8] = false;
       return this;
     }
 
     @Override
-    public TrackInfo build() {
+    public TrackInfoRecord build() {
       try {
-        TrackInfo record = new TrackInfo();
+        TrackInfoRecord record = new TrackInfoRecord();
         record.id = fieldSetFlags()[0] ? this.id : (java.lang.CharSequence) defaultValue(fields()[0]);
         record.cs = fieldSetFlags()[1] ? this.cs : (java.lang.CharSequence) defaultValue(fields()[1]);
         record.category = fieldSetFlags()[2] ? this.category : (java.lang.CharSequence) defaultValue(fields()[2]);

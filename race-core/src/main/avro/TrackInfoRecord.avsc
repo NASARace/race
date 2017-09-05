@@ -1,6 +1,6 @@
 {
   "type" : "record",
-  "name" : "TrackInfo",
+  "name" : "TrackInfoRecord",
   "namespace" : "gov.nasa.race.track.avro",
   "doc" : "planned (meta) information about tracks",
   "fields" : [

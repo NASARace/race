@@ -19,6 +19,7 @@ package gov.nasa.race.ww
 
 import java.awt.Font
 import java.util.concurrent.Semaphore
+import javax.swing.SwingUtilities
 
 import akka.actor.{ActorRef, Props}
 import com.typesafe.config.Config
@@ -28,6 +29,7 @@ import gov.nasa.race.core.{ContinuousTimeRaceActor, RaceContext, _}
 import gov.nasa.race.swing.Redrawable
 import gov.nasa.race.swing.Style._
 import gov.nasa.race.util.FileUtils
+import gov.nasa.race.swing._
 import gov.nasa.worldwind.Configuration
 import gov.nasa.worldwind.avlist.AVKey
 import gov.nasa.worldwind.geom.Position
@@ -36,7 +38,7 @@ import gov.nasa.worldwind.layers.Layer
 import scala.collection.JavaConverters._
 import scala.collection.immutable.ListMap
 import scala.reflect.ClassTag
-import scala.swing.Component
+import scala.swing._
 
 
 /**
@@ -50,18 +52,29 @@ import scala.swing.Component
 class RaceViewerActor(val config: Config) extends ContinuousTimeRaceActor
                with SubscribingRaceActor with PublishingRaceActor with ParentRaceActor {
 
-  val view = new RaceView(this) // our abstract interface towards the layers and the UI side
+  var view: Option[RaceView] = None // we can't create this from a Akka thread since it does UI transcations
+
+  override def onInitializeRaceActor(rc: RaceContext, actorConf: Config): Boolean = {
+    invokeAndWait {
+      view = Some(new RaceView(RaceViewerActor.this))
+    }
+    view.isDefined && super.onInitializeRaceActor(rc, actorConf)
+  }
+
 
   //--- RaceActor callbacks
 
   override def onTerminateRaceActor(originator: ActorRef) = {
-    if (view.displayable) {
-      info(s"${name} closing WorldWind window..")
-      view.close
-      info(s"${name} WorldWind window closed")
-    } else {
-      info(s"${name} WorldWind window already closed")
+    ifSome(view) { v =>
+      if (v.displayable) {
+        info(s"${name} closing WorldWind window..")
+        v.close
+        info(s"${name} WorldWind window closed")
+      } else {
+        info(s"${name} WorldWind window already closed")
+      }
     }
+
     super.onTerminateRaceActor(originator)
   }
 }
@@ -83,7 +96,7 @@ import gov.nasa.race.ww.RaceView._
 
 /**
   * this is a viewer state facade we pass down into our components, which
-  * are (mostly) executing in the UI thread(s) and hence should not be able
+  * are executing in the UI thread(s) and hence should not be able
   * to directly access our actor internals.
   *
   * This follows the same approach as RaceLayer/RaceLayerActor to map thread
@@ -91,8 +104,8 @@ import gov.nasa.race.ww.RaceView._
   *
   * NOTE this class has to be thread-aware, don't introduce race conditions
   * by exposing objects.
-  * The ctor still executes in the actor thread, the other methods (mostly)
-  * from the EDT
+  *
+  * Both ctor and methods are supposed to be executed from the UI thread
   */
 class RaceView (viewerActor: RaceViewerActor) extends DeferredEyePositionListener {
   implicit val log = viewerActor.log

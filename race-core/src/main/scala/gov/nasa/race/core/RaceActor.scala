@@ -279,7 +279,7 @@ trait RaceActor extends Actor with ImplicitActorLogging {
 
   def getConfigurable[T: ClassTag](key: String): T = getConfigurable(config.getConfig(key))
 
-  def getConfigurableOrElse[T: ClassTag](key: String, f: => T): T = {
+  def getConfigurableOrElse[T: ClassTag](key: String)(f: => T): T = {
     config.getOptionalConfig(key) match {
       case Some(conf) =>
         val clsName = conf.getString("class")

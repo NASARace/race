@@ -62,14 +62,18 @@ abstract class XmlParser[T] extends XmlPullParser {
 
   // can be used by subclasses to parse recursively
   def whileNextElement (onStartElem: ElementMatcher)(onEndElem: ElementMatcher) = {
+    // make sure we don't get MatchExceptions
+    val startPf = onStartElem.orElse(acceptAll)
+    val endPf = onEndElem.orElse(acceptAll)
+
     while (getNextElement){
-      if (isStartElement) onStartElem(tag) else onEndElem(tag)
+      if (isStartElement) startPf(tag) else endPf(tag)
     }
   }
 
   def whileNextStartElement (onStartElem: ElementMatcher) = {
     while (getNextElement){
-      if (isStartElement) onStartElem(tag)
+      if (isStartElement) onStartElem.orElse(acceptAll)(tag)
       // ignore end elements
     }
   }

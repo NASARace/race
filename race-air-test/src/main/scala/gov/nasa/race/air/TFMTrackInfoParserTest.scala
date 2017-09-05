@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, United States Government, as represented by the
+ * Copyright (c) 2016, United States Government, as represented by the
  * Administrator of the National Aeronautics and Space Administration.
  * All rights reserved.
  *
@@ -14,22 +14,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package gov.nasa.race.track
+package gov.nasa.race.air
+
+import gov.nasa.race.util.FileUtils
 
 /**
-  * abstraction for trajectories that does not imply underlying representation, allowing for memory
-  * optimized implementations
+  * manual TFMTrackInfoParser test
   */
-trait AbstractTrajectory {
-  def capacity: Int
-  def add (pos: TrackPoint3D)
+object TFMTrackInfoParserTest {
+  def main (args: Array[String]) = {
+    val parser = new TFMTrackInfoParser
 
-  /** low level iteration support that does not require temporary objects for FlightPath elements
-    * The provided function takes 5 arguments:
-    *   Int - path element index
-    *   Double,Double - lat,lon in Degrees
-    *   Double - alt in meters
-    *   Long - epoch millis
-    */
-  def foreach(f: (Int,Double,Double,Double,Long) => Unit)
+    FileUtils.fileContentsAsUTF8String(args(0)) match {
+      case Some(xmlMsg) =>
+        val res = parser.parse(xmlMsg)
+        res match {
+          case Some(list) => list.foreach(println)
+          case None => println("no TrackInfos parsed")
+        }
+      case None => println(s"file not found: ${args(0)}")
+    }
+  }
 }

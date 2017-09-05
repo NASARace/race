@@ -18,7 +18,6 @@ package gov.nasa.race.air
 
 import java.io.FileInputStream
 
-import gov.nasa.race.archive.ArchiveEntry
 import gov.nasa.race.test.RaceSpec
 import org.scalatest.FlatSpec
 

@@ -35,7 +35,7 @@ object TATrack {
 }
 
 /**
-  * a specialized FlightPos that represents tracks from TAIS/STARS messages
+  * a specialized TrackedAircraft that represents tracks from TAIS/STARS messages
   */
 case class TATrack (val src: String,
 
