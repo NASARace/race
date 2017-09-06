@@ -13,7 +13,7 @@ class TFMTrackInfoStore (val config: Config) extends ConfigurableTrackInfoStore 
         parser.parse(txt) match {
           case Some(tInfos) =>
             tInfos foreach { ti =>
-              trackInfos += ti.cs ->ti.accumulate(trackInfos.get(ti.cs))
+              trackInfos += ti.cs -> ti.accumulate(trackInfos.get(ti.cs))
             }
             true
           case None => false

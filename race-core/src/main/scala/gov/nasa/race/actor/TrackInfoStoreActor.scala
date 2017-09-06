@@ -30,7 +30,7 @@ class TrackInfoStoreActor (val config: Config) extends ChannelTopicProvider with
   override def isRequestAccepted (request: ChannelTopicRequest) = {
     request.channelTopic.topic match {
       case Some(TrackInfoUpdateRequest(cs)) => true
-      case other => false
+      case _ => false
     }
   }
 
@@ -39,7 +39,7 @@ class TrackInfoStoreActor (val config: Config) extends ChannelTopicProvider with
       case Some(TrackInfoUpdateRequest(cs)) =>
         activeUpdates = activeUpdates + cs
         store.get(cs).foreach(publish)
-      case other => // ignore
+      case _ => // ignore
     }
   }
 
@@ -47,7 +47,7 @@ class TrackInfoStoreActor (val config: Config) extends ChannelTopicProvider with
     release.channelTopic.topic match {
       case rel@Some(TrackInfoUpdateRequest(cs)) =>
         if(!hasClientsForTopic(rel)) activeUpdates = activeUpdates - cs
-      case other => // ignore
+      case _ => // ignore
     }
   }
 }
