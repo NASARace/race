@@ -17,7 +17,7 @@
       "doc"  : "track category, such as aircraft,ship,vehicle etc."
     },
     {
-      "name" : "vehicle_type", "type": ["null","string"],
+      "name" : "vehicle_type", "type": [ "string", "null" ],
       "doc"  : "optional type of track (e.g. aircraft type)"
     },
     {

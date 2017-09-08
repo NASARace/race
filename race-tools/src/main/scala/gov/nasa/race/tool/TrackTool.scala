@@ -25,8 +25,9 @@ import gov.nasa.race.uom.Length._
 import gov.nasa.race.uom.Speed._
 import gov.nasa.race.uom.Acceleration._
 import gov.nasa.race.common.ManagedResource._
-import gov.nasa.race.track.avro.{TrackPoint => AvroTrackPoint, TrackRoutePoint => AvroTrackRoutePoint, FullTrackPoint => AvroFullTrackPoint, TrackInfoRecord => AvroTrackInfo }
-
+import gov.nasa.race.track.avro.{TrackPoint => AvroTrackPoint, TrackRoutePoint => AvroTrackRoutePoint,
+                                 FullTrackPoint => AvroFullTrackPoint, TrackInfoRecord => AvroTrackInfo,
+                                 TrackIdRecord => AvroTrackIdRecord}
 import org.apache.avro.file.{DataFileReader, DataFileWriter}
 import org.apache.avro.generic.{GenericData, GenericDatumReader, GenericDatumWriter, GenericRecord}
 import org.apache.avro.Schema
@@ -68,7 +69,7 @@ object TrackTool {
     var includePatterns: Seq[Regex] = Seq.empty
     var startTime: Long = Long.MinValue // option for Extract/Drop
     var endTime: Long = Long.MaxValue // option for Extract/Drop
-    var fullTP: Boolean = false
+    var full: Boolean = false // create long TrackPoint / TrackInfo records
     var generateId: Boolean = false
 
     var inFile: Option[File] = None
@@ -117,8 +118,8 @@ object TrackTool {
     opt0("--generate-id")(s"generate track id (default = $generateId)") {
       generateId = true
     }
-    opt0("--full")(s"create FullTrackPoints, including derivates (default = $fullTP)") {
-      fullTP = true
+    opt0("--full")(s"create long TrackPoint or FlightInfo records (default = $full)") {
+      full = true
     }
     opt1("--partition")("<maxEntries>",
       s"max number of entries for temporary flatten partitions (default = $maxPartEntries)") { a =>
@@ -454,13 +455,33 @@ object TrackTool {
     for (dfr <- ensureClose(new DataFileReader(inFile, new GenericDatumReader[GenericRecord]))) {
       dfr.getSchema.getName match {
         case ThreadedTrackName => flattenThreadedTracks(dfr)
-        case ThreadedFlightName => flattenThreadedFlights(dfr)
+        case ThreadedFlightName => if (opts.full) createFullTrackInfo(dfr) else createTrackIdMap(dfr)
         case other => println(s"unknown input archive schema: $other")
       }
     }
   }
 
-  def flattenThreadedFlights (dfr: DataFileReader[GenericRecord]) = {
+  def createTrackIdMap (dfr: DataFileReader[GenericRecord]) = {
+    ifSome(ensureEmptyOutFile("trackinfos.avro")) { outFile =>
+      val schema = AvroTrackIdRecord.getClassSchema
+      for (dfw <- ensureClose(new DataFileWriter[AvroTrackIdRecord](new SpecificDatumWriter(schema)))) {
+        dfw.create(schema, outFile)
+        var tfRec: GenericRecord = null
+        while (dfr.hasNext) {
+          tfRec = dfr.next(tfRec)
+          val tfDataRec = tfRec.get("threaded_metadata").asInstanceOf[GenericRecord]
+          val id = getTTPId(tfRec)
+          val cs = getString(tfDataRec, "aircraft_id")
+          val tiRec = new AvroTrackIdRecord(id,cs)
+          dfw.append(tiRec)
+        }
+      }
+    } orElse {
+      none("could not create target archive")
+    }
+  }
+
+  def createFullTrackInfo(dfr: DataFileReader[GenericRecord]) = {
     val emptyRoute = new java.util.ArrayList[AvroTrackRoutePoint](0)
 
     ifSome(ensureEmptyOutFile("trackinfos.avro")) { outFile =>
@@ -472,7 +493,7 @@ object TrackTool {
           tfRec = dfr.next(tfRec)
           val tfDataRec = tfRec.get("threaded_metadata").asInstanceOf[GenericRecord]
 
-          val id = getString(tfRec,"tt_id")
+          val id = getTTPId(tfRec)
           val cs = getString(tfDataRec, "aircraft_id")
           val acType = getStringOrElse(tfDataRec, "aircraft_type", "?")
           val departureAirport = getStringOrElse(tfDataRec, "departure_airport", "?")
@@ -496,7 +517,7 @@ object TrackTool {
     ifSome(ensureEmptyOutFile("trackpoints.avro")) { outFile =>
       val tmpDir = outFile.getParentFile
 
-      if (opts.fullTP) {
+      if (opts.full) {
         val schema = AvroFullTrackPoint.getClassSchema
         val partitions = createPartitions(dfr, tmpDir, opts.maxPartEntries, schema, createFullTrackPoint, AvroFullTrackPointOrdering)
         mergePartitions(partitions, outFile, schema)

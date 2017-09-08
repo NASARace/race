@@ -1,0 +1,16 @@
+{
+  "type" : "record",
+  "name" : "TrackIdRecord",
+  "namespace" : "gov.nasa.race.track.avro",
+  "doc" : "ThreadedFlight id-to-callsign association",
+  "fields" : [
+    {
+      "name" : "id", "type" : "string",
+      "doc"  : "identifier for this track"
+    },
+    {
+      "name" : "cs", "type" : "string",
+      "doc"  : "call sign (global ID) for this track"
+    }
+  ]
+}

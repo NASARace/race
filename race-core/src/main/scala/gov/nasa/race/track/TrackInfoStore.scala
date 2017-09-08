@@ -1,0 +1,60 @@
+/*
+ * Copyright (c) 2017, United States Government, as represented by the
+ * Administrator of the National Aeronautics and Space Administration.
+ * All rights reserved.
+ *
+ * The RACE - Runtime for Airspace Concept Evaluation platform is licensed
+ * under the Apache License, Version 2.0 (the "License"); you may not use
+ * this file except in compliance with the License. You may obtain a copy
+ * of the License at http://www.apache.org/licenses/LICENSE-2.0.
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package gov.nasa.race.track
+import com.typesafe.config.Config
+import gov.nasa.race.config.NamedConfigurable
+
+import scala.collection.concurrent.TrieMap
+import scala.collection.mutable
+
+/**
+  * an abstract store for TrackInfos
+  */
+trait TrackInfoStore {
+  def get (id: String): Option[TrackInfo]
+  def add (id: String, ti: TrackInfo)
+}
+
+/**
+  * a non-threadsafe store
+  */
+class DefaultTrackInfoStore extends TrackInfoStore {
+  val trackInfos = mutable.HashMap.empty[String,TrackInfo]
+
+  def get (id: String): Option[TrackInfo] = trackInfos.get(id)
+  def add (id: String, ti: TrackInfo) = trackInfos += (id -> ti)
+}
+
+/**
+  * a threadsafe store that can be used for shared (local) objects
+  */
+class ConcurrentTrackInfoStore extends TrackInfoStore {
+  val trackInfos = TrieMap.empty[String,TrackInfo]
+
+  def get (id: String): Option[TrackInfo] = trackInfos.get(id)
+  def add (id: String, ti: TrackInfo) = trackInfos += (id -> ti)
+}
+
+
+/**
+  * a configurable object used to initialize and update TrackInfoStores
+  */
+trait TrackInfoReader extends NamedConfigurable {
+  def initialize: Seq[TrackInfo] = Seq.empty
+  def readMessage (msg: Any): Seq[TrackInfo] = Seq.empty
+}

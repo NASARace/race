@@ -21,13 +21,14 @@ import java.io.InputStream
 import com.typesafe.config.Config
 import gov.nasa.race.actor.ReplayActor
 import gov.nasa.race.air.{FlightCompleted, FlightPos}
-import gov.nasa.race.archive.{ArchiveReader, StreamArchiveReader}
+import gov.nasa.race.archive.StreamArchiveReader
+import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.geo.LatLonPos
-import gov.nasa.race.track.avro.TrackPoint
+import gov.nasa.race.track.avro.{TrackIdRecord, TrackPoint}
 import gov.nasa.race.uom.Angle._
 import gov.nasa.race.uom.Length._
 import gov.nasa.race.uom.Speed._
-import org.apache.avro.file.DataFileStream
+import org.apache.avro.file.{DataFileReader, DataFileStream}
 import org.apache.avro.specific.SpecificDatumReader
 import org.joda.time.DateTime
 
@@ -40,6 +41,23 @@ import org.joda.time.DateTime
   * TODO - we might extend FlightPos with a 'completed' state, in which case the 'completed' cache can be dropped
   */
 class TrackPointReplayActor (config: Config) extends ReplayActor(config) {
+
+  val idMap: Map[String,String] = initIdMap
+
+  def initIdMap: Map[String,String] = {
+    config.getOptionalFile("id-map") match {
+      case Some(file) =>
+        val dfr = new DataFileReader[TrackIdRecord](file,new SpecificDatumReader[TrackIdRecord])
+        var rec = new TrackIdRecord
+        var map = Map.empty[String,String]
+        while (dfr.hasNext){
+          val r = dfr.next(rec)
+          map = map + (r.getId.toString -> r.getCs.toString)
+        }
+        map
+      case None => Map.empty[String,String]
+    }
+  }
 
   class TPReader (val istream: InputStream) extends StreamArchiveReader {
     val dfr = new DataFileStream(istream, new SpecificDatumReader[TrackPoint])
@@ -59,7 +77,7 @@ class TrackPointReplayActor (config: Config) extends ReplayActor(config) {
         val tp = dfr.next(recCache)
         val date = new DateTime(tp.getDate)
         val id = tp.getId.toString.intern  // we intern because there are likely a lot of points per track
-        val cs = id // we could map this here
+        val cs = idMap.getOrElse(id,id) // we could map this here
 
         val fpos = FlightPos(
           id,
