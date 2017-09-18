@@ -17,7 +17,6 @@
 package gov.nasa.race.actor
 
 import com.typesafe.config.Config
-import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.Messages.{BusEvent, ChannelTopicAccept, ChannelTopicRelease, ChannelTopicRequest}
 import gov.nasa.race.track._
 import gov.nasa.race.core.{ChannelTopicProvider, RaceContext, SubscribingRaceActor}
@@ -34,7 +33,7 @@ class TrackInfoStoreActor (val config: Config) extends ChannelTopicProvider with
   var activeUpdates = Set.empty[String] // the on-demand track ids we publish updates for
 
   def createStore = new DefaultTrackInfoStore
-  def createReaders: Array[TrackInfoReader] = config.getConfigArray("readers").map(getConfigurable[TrackInfoReader])
+  def createReaders: Array[TrackInfoReader] = getConfigurables("readers")
 
   def publish (tInfo: TrackInfo): Unit =  writeTo.foreach { baseChannel => publish( s"$baseChannel/${tInfo.cs}", tInfo) }
 

@@ -18,9 +18,10 @@ package gov.nasa.race.archive
 
 import java.io._
 import java.lang.StringBuilder
-import org.joda.time.DateTime
 
-import scala.annotation.tailrec
+import com.typesafe.config.Config
+import gov.nasa.race.common.ConfigurableStreamCreator._
+import org.joda.time.DateTime
 
 
 /**
@@ -35,9 +36,6 @@ object TextArchiver {
   final val beginMarkerRE = """<!-- BEGIN ARCHIVED (.+) -->""".r
   final val END_MARKER = "<!-- END ARCHIVED -->"
 }
-import TextArchiver._
-
-
 
 /**
   * an archive reader that assumes text with begin and end marker lines
@@ -45,12 +43,16 @@ import TextArchiver._
   * NOTE - this class is not thread-safe, its instances should not be used concurrently. The reason is that
   * we use a per-instance buffer to avoid heap pressure due to a large number of archive entries
   */
-class TextArchiveReader(val istream: InputStream) extends StreamArchiveReader {
+class TextArchiveReader(val iStream: InputStream, val pathName:String="<unknown>") extends ArchiveReader {
+  import TextArchiver._
 
-  private val br = new BufferedReader(new InputStreamReader(istream))
+  def this (conf: Config) = this(createInputStream(conf),configuredPathName(conf))
+
+  private val br = new BufferedReader(new InputStreamReader(iStream))
   private val buf: StringBuilder = new StringBuilder(4096)
 
   override def hasMoreData = br.ready
+  override def close = br.close
 
   override def readNextEntry: Option[ArchiveEntry] = {
     while (true){
@@ -79,11 +81,23 @@ class TextArchiveReader(val istream: InputStream) extends StreamArchiveReader {
 /**
   * an ArchiveWriter that stores text wrapped into begin and end marker lines
   */
-class TextArchiveWriter(val ostream: OutputStream) extends ArchiveWriter {
-  override def write(date: DateTime, obj: Any): Boolean = {
-    ostream.write(s"\n<!-- BEGIN ARCHIVED $date -->\n".getBytes)
-    ostream.write(obj.toString.getBytes)
-    ostream.write(s"\n$END_MARKER\n".getBytes)
+class TextArchiveWriter(val oStream: OutputStream, val pathName:String="<unknown>") extends ArchiveWriter {
+
+  def this (conf: Config) = this(createOutputStream(conf), configuredPathName(conf))
+
+  private val out = new PrintStream(oStream)
+
+  override def close = out.close
+
+  override def write (date: DateTime, obj: Any): Boolean = {
+    // make sure this matches the TextArchiveReader regexes!
+    out.print("\n<!-- BEGIN ARCHIVED ")
+    out.print(date)
+    out.println(" -->")
+
+    out.println(obj)
+
+    out.println("<!-- END ARCHIVED -->")
     true
   }
 }

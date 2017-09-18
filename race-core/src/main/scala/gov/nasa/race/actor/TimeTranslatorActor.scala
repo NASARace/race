@@ -18,7 +18,7 @@
 package gov.nasa.race.actor
 
 import com.typesafe.config.Config
-import gov.nasa.race.config.ConfigurableTimeTranslator
+import gov.nasa.race.TimeTranslator
 import gov.nasa.race.core.Messages.BusEvent
 import gov.nasa.race.core.{ContinuousTimeRaceActor, PublishingRaceActor, SubscribingRaceActor}
 
@@ -28,17 +28,14 @@ import gov.nasa.race.core.{ContinuousTimeRaceActor, PublishingRaceActor, Subscri
  */
 class TimeTranslatorActor (val config: Config) extends SubscribingRaceActor with PublishingRaceActor with ContinuousTimeRaceActor {
 
-  val translator = createTranslator( config.getConfig("translator"))
+  val translator: TimeTranslator[Any] = createTranslator
+
+  /** override for hard-wired time translator */
+  def createTranslator = getConfigurable[TimeTranslator[Any]]("translator")
 
   override def handleMessage = {
     case BusEvent(_, obj: Any, _)  =>
       val objʹ = translator.translate(obj, simTime)
       publish(objʹ)
-  }
-
-  def createTranslator (config: Config): ConfigurableTimeTranslator = {
-    val translator = newInstance[ConfigurableTimeTranslator]( config.getString("class"), Array(classOf[Config]), Array(config)).get
-    info(s"instantiated time translator ${translator.name}")
-    translator
   }
 }

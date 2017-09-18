@@ -19,8 +19,9 @@ package gov.nasa.race.air
 
 import java.io._
 
+import com.typesafe.config.Config
 import gov.nasa.race._
-import gov.nasa.race.archive.{ArchiveReader, StreamArchiveReader}
+import gov.nasa.race.archive.ArchiveReader
 import gov.nasa.race.common.{BMSearch, SearchStream}
 import org.joda.time.DateTime
 
@@ -45,15 +46,16 @@ object DWArchiveReader {
   * Note that we can't use memory mapped files here since the external (disk) data can be compressed. This unfortunately
   * means the data will be copied.
   */
-abstract class DWArchiveReader (val istream: InputStream, val headerStart: BMSearch) extends StreamArchiveReader {
+abstract class DWArchiveReader (iStream: InputStream, val headerStart: BMSearch) extends ArchiveReader {
   import DWArchiveReader._
 
-  protected val ss = new SearchStream(istream,BufferLength)
+  protected val ss = new SearchStream(iStream,BufferLength)
   protected var res = ss.readResult
 
   if (!ss.skipTo(headerStart)) throw new RuntimeException(s"not a valid DW archive")
 
   override def hasMoreData = ss.hasMoreData
+  override def close = ss.close
 
   override def readNextEntry: Option[ArchiveEntry] = {
     // we are at a headerStart
@@ -100,16 +102,16 @@ abstract class DWArchiveReader (val istream: InputStream, val headerStart: BMSea
   }
 }
 
-abstract class FirstEpochDWArchiveReader(istream: InputStream, hdrStart: String)
-                                  extends DWArchiveReader(istream, new BMSearch(hdrStart)) {
+abstract class FirstEpochDWArchiveReader(iStream: InputStream, hdrStart: String)
+                                       extends DWArchiveReader(iStream, new BMSearch(hdrStart)) {
   // we just use the x_TIMESTAMP, which is an epoch value directly following our headerStart
   override def readDateTime(cs: Array[Char], i0: Int, i1: Int) = {
     tryNull { new DateTime(readLong(cs, i0+hdrStart.length, i1)) }
   }
 }
 
-abstract class DateFieldDWArchiveReader (istream: InputStream, hdrStart: String, field: String)
-                                  extends DWArchiveReader(istream, new BMSearch(hdrStart)) {
+abstract class DateFieldDWArchiveReader (iStream: InputStream, hdrStart: String, field: String)
+                                        extends DWArchiveReader(iStream, new BMSearch(hdrStart)) {
   val fieldPattern = new BMSearch(field)
 
   override def readDateTime(cs: Array[Char], i0: Int, i1: Int) = {
@@ -120,10 +122,35 @@ abstract class DateFieldDWArchiveReader (istream: InputStream, hdrStart: String,
   }
 }
 
-class AsdexDWArchiveReader (is: InputStream) extends FirstEpochDWArchiveReader(is, "<properties> DEX_TIMESTAMP=")
-class SfdpsDWArchiveReader (is: InputStream) extends FirstEpochDWArchiveReader(is, "<properties> DEX_TIMESTAMP=")
 
-//...hopefully DW will convert those to DEX_TIMESTAMP in the future
-class TaisDWArchiveReader (is: InputStream) extends DateFieldDWArchiveReader(is, "<properties> queueID=", "timestamp=")
-class TfmdataDWArchiveReader(is: InputStream) extends DateFieldDWArchiveReader(is, "<properties> PacketCount=", "TimeStamp=")
+import gov.nasa.race.common.ConfigurableStreamCreator._
+
+// the DW <properties> headers are a ever changing mess. It would be nice if all would start with a DEX_TIMESTAMP epoch
+// which would kill two birds with one stone - disambiguate the element and avoid having to parse its content for
+// a suitable message injection time stamp
+
+// unfortunately not all airports have a DEX_TIMESTAMP so we still have to use the old 'timestamp' parser.
+// At least that also covers olf archives
+class AsdexDWArchiveReader (val iStream: InputStream, val pathName: String="<unknown>")
+                                           extends DateFieldDWArchiveReader(iStream, "<properties> ", "timestamp=") {
+  def this(conf: Config) = this(createInputStream(conf),configuredPathName(conf))
+}
+
+// SFDPS also has FDPSMsg messages that have payload properties elements
+class SfdpsDWArchiveReader (val iStream: InputStream, val pathName: String="<unknown>")
+                                           extends FirstEpochDWArchiveReader(iStream, "<properties> DEX_TIMESTAMP=") {
+  def this(conf: Config) = this(createInputStream(conf),configuredPathName(conf))
+}
+
+// no DEX_TIMESTAMP yet for TAIS and TFMData
+
+class TaisDWArchiveReader (val iStream: InputStream, val pathName: String="<unknown>")
+                                           extends DateFieldDWArchiveReader(iStream, "<properties> queueID=", "timestamp=") {
+  def this(conf: Config) = this(createInputStream(conf),configuredPathName(conf))
+}
+
+class TfmdataDWArchiveReader(val iStream: InputStream, val pathName: String="<unknown>")
+                                           extends DateFieldDWArchiveReader(iStream, "<properties> PacketCount=", "TimeStamp=") {
+  def this(conf: Config) = this(createInputStream(conf),configuredPathName(conf))
+}
 

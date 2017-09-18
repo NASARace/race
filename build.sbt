@@ -129,8 +129,8 @@ lazy val raceNetKafkaTest = createTestProject("race-net-kafka-test", testSetting
     mainClass in Compile := Some("gov.nasa.race.kafka.KafkaServer"),
     dependencyOverrides += newKafkaClients
   ).
-  addLibraryDependencies(logback,zookeeper,newKafkaClients,kafka).
-  addTestLibraryDependencies(log4j,akkaSlf4j)
+  addLibraryDependencies(slf4jSimple,log4jOverSlf4j,zookeeper,newKafkaClients,kafka).
+  addTestLibraryDependencies(akkaSlf4j)
 
 lazy val raceNetDDSTest = createTestProject("race-net-dds-test", testSettings).
   enablePlugins(JavaAppPackaging).

@@ -27,8 +27,10 @@ import javax.xml.validation.{SchemaFactory, Validator}
 import com.typesafe.config.Config
 import gov.nasa.race.config.ConfigurableFilter
 import gov.nasa.race.util.FileUtils
+import org.w3c.dom.ls.{LSInput, LSResourceResolver}
 import org.xml.sax.{ErrorHandler, SAXParseException}
 
+import scala.beans.BeanProperty
 import scala.collection.Map
 import scala.collection.mutable.{HashMap, ListBuffer}
 
@@ -90,6 +92,7 @@ class XmlValidationFilter(val schemaFiles: Seq[File], val config: Config= null) 
 
   def createValidators: Map[String,Validator] = {
     val schemaFactory = SchemaFactory.newInstance(XMLConstants.W3C_XML_SCHEMA_NS_URI)
+    //schemaFactory.setResourceResolver(new ClasspathResourceResolver)
     schemaFactory.setErrorHandler(xh) // set this before we create the schema, to catch schema errors
 
     schemaFiles.foldLeft(HashMap.empty[String,ListBuffer[File]]) { (m,f) =>
@@ -132,5 +135,25 @@ class XmlValidationFilter(val schemaFiles: Seq[File], val config: Config= null) 
       case Some(text) => Some( text + ',' + msg)
       case None => Some(msg)
     }
+  }
+}
+
+// this should not be required anymore, and would have to be extended to support other resolver sources than classpath
+
+class LSInputImpl (@BeanProperty var characterStream: Reader,
+                   @BeanProperty var byteStream: InputStream,
+                   @BeanProperty var stringData: String,
+                   @BeanProperty var systemId: String,
+                   @BeanProperty var publicId: String,
+                   @BeanProperty var baseURI: String,
+                   @BeanProperty var encoding: String,
+                   @BeanProperty var certifiedText: Boolean
+                  ) extends LSInput
+
+class ClasspathResourceResolver extends LSResourceResolver {
+  override def resolveResource (typ: String, nsURI: String, publicId: String, systemId: String, baseURI: String): LSInput = {
+    val is = getClass.getClassLoader.getResourceAsStream(systemId)
+    val reader = new InputStreamReader(is)
+    new LSInputImpl(reader,null,null,systemId,publicId,baseURI,null,true)
   }
 }

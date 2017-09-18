@@ -34,6 +34,7 @@ import scala.collection.concurrent.TrieMap
 
 object SBS2FlightPos {
   // SBS date-time group, e.g. ...,2016/03/11,13:07:18.054,...", parse with DateTime.parse(s,dtf)
+  // NOTE - sbs reports without time zone (assuming local), hence we need this parser
   val dtf = DateTimeFormat.forPattern("yyyy/MM/dd,HH:mm:ss.SSS")
 
   // this is sub-optimal - translators should not have state. Unfortunately, the alternative

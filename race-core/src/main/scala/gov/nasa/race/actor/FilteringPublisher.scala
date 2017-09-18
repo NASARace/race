@@ -32,7 +32,7 @@ trait FilteringPublisher extends PublishingRaceActor {
   val config: Config // actor config to be provided by concrete actor class
 
   val passUnfiltered = passUnfliteredDefault // do we let pass if there is no filter set?
-  var filters = createFilters // optional
+  var filters: Array[ConfigurableFilter] = createFilters
   val matchAll = config.getBooleanOrElse("match-all", defaultMatchAll) // default is to let pass if any of the filters passes
 
   val publishFiltered: (Any=>Unit) = filters.length match {
@@ -44,7 +44,7 @@ trait FilteringPublisher extends PublishingRaceActor {
   def defaultMatchAll = false
 
   // override this if we have specific filters
-  def createFilters: Array[ConfigurableFilter] = config.getConfigArray("filters").map(getConfigurable[ConfigurableFilter])
+  def createFilters: Array[ConfigurableFilter] = getConfigurables("filters")
 
   // override this if we only want to let messages pass if we have filters set
   def passUnfliteredDefault = config.getBooleanOrElse("pass-unfiltered", true)

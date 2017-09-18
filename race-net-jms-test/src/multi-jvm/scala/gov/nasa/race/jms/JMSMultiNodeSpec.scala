@@ -49,8 +49,7 @@ case object RaceDone
  * This uses the RACE agnostic swimServer and swimClient, which are generic
  * JMS applications.
  */
-class JMSMultiNodeSpec extends RaceMultiNodeSpec(JMSMultiNodeConfig)
-                       with WordSpecLike {
+class JMSMultiNodeSpec extends RaceMultiNodeSpec(JMSMultiNodeConfig) with WordSpecLike {
 
   "A MultiNodeJMSSpec test" must {
 

@@ -38,7 +38,7 @@ class XmlValidatorSpec extends RaceActorSpec with FlatSpecLike {
 
       val conf = s"""
               name = "validator"
-              schema = "${schemaFile.getPath}"
+              schemas = [ "${schemaFile.getPath}" ]
               read-from = "/input"
               write-to-pass = "/accepted"
               write-to-fail = "/rejected"

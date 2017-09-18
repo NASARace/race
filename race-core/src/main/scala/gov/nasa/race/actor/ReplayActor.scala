@@ -17,16 +17,12 @@
 
 package gov.nasa.race.actor
 
-import java.io.{BufferedInputStream, FileInputStream, InputStream}
-import java.util.zip.GZIPInputStream
-
 import akka.actor.ActorRef
 import com.typesafe.config.Config
-import gov.nasa.race.archive.{ArchiveReader, DummyReader}
+import gov.nasa.race.archive.ArchiveReader
 import gov.nasa.race.common.Counter
 import gov.nasa.race.config.ConfigUtils._
-import gov.nasa.race.core.{ClockAdjuster, ContinuousTimeRaceActor, RaceException}
-import gov.nasa.race.util.FileUtils
+import gov.nasa.race.core.{ClockAdjuster, ContinuousTimeRaceActor}
 import org.joda.time.DateTime
 
 import scala.annotation.tailrec
@@ -58,57 +54,31 @@ class ReplayActor (val config: Config) extends ContinuousTimeRaceActor
   // everything lower than that we don't bother to schedule and publish right away
   final val SchedulerThresholdMillis: Long = 30
 
-  val pathName = config.getString("pathname")
-  val bufSize = config.getIntOrElse("buffer-size", 8192)
-  var compressedMode = config.getBooleanOrElse("compressed", pathName.endsWith(".gz"))
   val rebaseDates = config.getBooleanOrElse("rebase-dates", false)
   val counterThreshold = config.getIntOrElse("break-after", 20) // reschedule after at most N published messages
   val skipThresholdMillis = config.getIntOrElse("skip-millis", 1000) // skip until current sim time - replay time is within limit
   val maxSkip = config.getIntOrElse("max-skip", 1000) // stop replay if we hit more than max-skip consecutive malformed entries
 
-  val archiveReader = createReader
-  var noMoreData = !archiveReader.hasMoreData
+  val reader: ArchiveReader = createReader
+  var noMoreData = !reader.hasMoreData
   val pendingMsgs = new ListBuffer[Replay]
 
+  /** override for hardwired readers */
+  def createReader: ArchiveReader = getConfigurable[ArchiveReader]("reader") // note 2.12.3 can't infer type arg
+
   if (noMoreData) {
-    warning(s"no data for $pathName")
+    warning(s"no data for ${reader.pathName}")
   } else {
-    info(s"initializing replay of $pathName starting at $simTime")
+    info(s"initializing replay of ${reader.pathName} starting at $simTime")
   }
 
-  def createReader: ArchiveReader = {
-    FileUtils.existingFile(pathName) match {
-      case Some(file) =>
-        val fis = new FileInputStream(file)
-        val is = if (compressedMode) new GZIPInputStream(fis,bufSize) else new BufferedInputStream(fis,bufSize)
-        instantiateReader(is) match {
-          case Some(ar) => ar
-          case None =>createReaderFailed(s"failed to instantiate archive reader for $pathName")
-        }
-
-      case None => createReaderFailed(s"archive $pathName not found")
-    }
-  }
-
-  // override if we have a hard-wired ArchiveReader
-  protected def instantiateReader (is: InputStream): Option[ArchiveReader] = {
-    newInstance[ArchiveReader](config.getString("archive-reader"), Array(classOf[InputStream]), Array(is))
-  }
-
-  def createReaderFailed (msg: String): ArchiveReader = {
-    if (isOptional) {
-      warning(msg)
-      new DummyReader
-    } else throw new RaceException(msg)
-  }
-
-  override def onStartRaceActor(originator: ActorRef) = {
-    if (rebaseDates) archiveReader.setBaseDate(simClock.dateTime)
+  override def onStartRaceActor(originator: ActorRef): Boolean = {
+    if (rebaseDates) reader.setBaseDate(simClock.dateTime)
     super.onStartRaceActor(originator) && scheduleFirst(0)
   }
 
   override def onTerminateRaceActor(originator: ActorRef) = {
-    archiveReader.close
+    reader.close
     noMoreData = true
     super.onTerminateRaceActor(originator)
   }
@@ -171,16 +141,17 @@ class ReplayActor (val config: Config) extends ContinuousTimeRaceActor
   }
 
   def reachedEndOfArchive = {
-    info(s"reached end of replay stream $pathName")
-    archiveReader.close  // no need to keep it around
+    info(s"reached end of replay stream ${reader.pathName}")
+    reader.close  // no need to keep it around
     noMoreData = true
   }
 
   @tailrec final def scheduleFirst (skipped: Int): Boolean = {
 
-    archiveReader.readNextEntry match {
+    reader.readNextEntry match {
       case Some(e) =>
         val date = e.date
+
         val msg = e.msg
         checkInitialClockReset(date)
 
@@ -213,7 +184,7 @@ class ReplayActor (val config: Config) extends ContinuousTimeRaceActor
 
   def scheduleNext (skipped: Int=0): Unit = {
     if (!noMoreData) {
-      archiveReader.readNextEntry match {
+      reader.readNextEntry match {
         case Some(e) =>
           val date = e.date
           val msg = e.msg

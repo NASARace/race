@@ -57,6 +57,12 @@ object ConfigUtils {
     conf.root.render(renderOpts)
   }
 
+  def createConfig (es: (String,Any)*): Config = {
+    es.foldLeft(ConfigFactory.empty)( (conf,e) => conf.withValue(e._1, ConfigValueFactory.fromAnyRef(e._2)))
+  }
+
+  def createConfig (s: String): Config = ConfigFactory.parseString(s)
+
   /**
     * implicit class to give the (Java) Config a more Scala Map like API
     */

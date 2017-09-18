@@ -16,6 +16,7 @@
  */
 package gov.nasa.race.air
 
+import gov.nasa.race.config.ConfigUtils
 import gov.nasa.race.util.FileUtils
 
 /**
@@ -32,17 +33,22 @@ object DWArchiveReaderTest {
       return
     }
 
-    FileUtils.inputStreamFor(args(1),8192) match {
-      case Some(stream) =>
-        args(0) match {
-          case "asdex" => test(new AsdexDWArchiveReader(stream))
-          case "sfdps" => test(new SfdpsDWArchiveReader(stream))
-          case "tais" => test(new TaisDWArchiveReader(stream))
-          case "tfmdata" => test(new TfmdataDWArchiveReader(stream))
-          case other => println(s"unknown archive type $other")
-        }
+    val dataType = args(0)
+    val pathName = args(1)
 
-      case None => println(s"archive file ${args(1)} not found or empty")
+    if (FileUtils.existingNonEmptyFile(pathName).isEmpty) {
+      println("no such input file: " + pathName)
+      return
+    }
+
+    val conf = ConfigUtils.createConfig( "pathname" -> pathName, "buffer-size" -> 8192)
+
+    dataType match {
+      case "asdex" => test(new AsdexDWArchiveReader(conf))
+      case "sfdps" => test(new SfdpsDWArchiveReader(conf))
+      case "tais" => test(new TaisDWArchiveReader(conf))
+      case "tfmdata" => test(new TfmdataDWArchiveReader(conf))
+      case other => println(s"unknown archive type $other")
     }
   }
 

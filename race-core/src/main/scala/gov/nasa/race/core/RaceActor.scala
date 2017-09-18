@@ -19,9 +19,10 @@ package gov.nasa.race.core
 
 import akka.actor._
 import akka.pattern.ask
-import com.typesafe.config.Config
+import com.typesafe.config.{Config, ConfigException}
 import gov.nasa.race.common.Clock
 import gov.nasa.race.common.Status._
+import gov.nasa.race.config._
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.Messages.{InitializeRaceActor, StartRaceActor, _}
 import gov.nasa.race.util.ClassLoaderUtils
@@ -32,7 +33,7 @@ import scala.collection.mutable.{ArrayBuffer, Set => MutableSet}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 import scala.math._
-import scala.reflect.ClassTag
+import scala.reflect.{ClassTag, classTag}
 
 /**
  * abstract base type for RACE specific actors.
@@ -268,24 +269,47 @@ trait RaceActor extends Actor with ImplicitActorLogging {
     ClassLoaderUtils.newInstance( context.system, clsName, argTypes, args)
   }
 
-  // NOTE: apparently Scala 2.12.1 does widen the type if the generic type parameter is
-  // inferred, which can lead to runtime exceptions. Specify the generic type explicitly!
+  // NOTE: apparently Scala 2.12.x does not infer the type parameter from the call context, which can lead
+  // to runtime exceptions. Specify the generic type explicitly!
 
-  def getConfigurable[T: ClassTag](conf: Config): T = {
+  def configurable[T: ClassTag](conf: Config): Option[T] = {
     val clsName = conf.getString("class")
     info(s"instantiating $clsName")
-    newInstance[T](clsName, Array(classOf[Config]), Array(conf)).get
+    newInstance[T](clsName, Array(classOf[Config]), Array(conf))
   }
 
-  def getConfigurable[T: ClassTag](key: String): T = getConfigurable(config.getConfig(key))
+  /**
+    * try to instantiate the requested type from a sub-config that includes a 'class' setting
+    * if there is no sub-config but a string, use that as class name
+    * if there is no sub-config or string, fallback to arg-less instantiation of the requested type
+    *
+    * note - see above comments reg. inferred type parameter
+    */
+  def configurable[T: ClassTag](key: String): Option[T] = {
+    try {
+      config.getOptionalConfig(key) match {
+        case Some(conf) =>
+          newInstance(conf.getString("class"),Array(classOf[Config]),Array(conf))
 
-  def getConfigurableOrElse[T: ClassTag](key: String)(f: => T): T = {
-    config.getOptionalConfig(key) match {
-      case Some(conf) =>
-        val clsName = conf.getString("class")
-        newInstance[T](clsName, Array(classOf[Config]), Array(conf)).get
-      case None => f
+        case None => // no entry for this key
+          // arg-less ctor is just a fallback - this will fail if the requested type is abstract
+          Some(classTag[T].runtimeClass.newInstance.asInstanceOf[T])
+      }
+    } catch {
+      case _: ConfigException.WrongType => // we have an entry but it is not a Config
+        // try if the entry is a string and use it as class name to instantiate, pass in actor config as arg
+        // (this supports old-style, non-sub-config format)
+        newInstance(config.getString(key), Array(classOf[Config]), Array(config))
+
+      case _: Throwable => None
     }
+  }
+  /** use this if the instantiation is mandatory */
+  def getConfigurable[T: ClassTag](key: String): T = configurable(key).get
+  def getConfigurableOrElse[T: ClassTag](key: String)(f: => T): T = configurable(key).getOrElse(f)
+
+  def getConfigurables[T: ClassTag](key: String): Array[T] = {
+    config.getConfigArray(key).map( conf=> newInstance(conf.getString("class"),Array(classOf[Config]),Array(conf)).get)
   }
 
   def instantiateActor (actorName: String, actorConfig: Config): ActorRef = {

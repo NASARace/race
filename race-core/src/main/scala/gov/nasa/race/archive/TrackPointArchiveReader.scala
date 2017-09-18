@@ -18,6 +18,8 @@ package gov.nasa.race.archive
 
 import java.io.InputStream
 
+import com.typesafe.config.Config
+import gov.nasa.race.common.ConfigurableStreamCreator._
 import gov.nasa.race.track.avro.TrackPoint
 import org.apache.avro.file.DataFileStream
 import org.apache.avro.specific.SpecificDatumReader
@@ -34,8 +36,11 @@ import org.joda.time.DateTime
   * but the TrackPoint API is too wide and permissive for most of our purposes (all fields are mutable and there is
   * no support for units-of-measure or any other of our basic types such as LatLonPos or DateTime)
   */
-class TrackPointArchiveReader (val istream: InputStream) extends StreamArchiveReader {
-  val dfs = new DataFileStream(istream,new SpecificDatumReader[TrackPoint])
+class TrackPointArchiveReader (val iStream: InputStream, val pathName:String="<unknown>") extends ArchiveReader {
+
+  def this (conf: Config) = this(createInputStream(conf),configuredPathName(conf))
+
+  val dfs = new DataFileStream(iStream,new SpecificDatumReader[TrackPoint])
   val recCache = new TrackPoint
 
   override def hasMoreData = dfs.hasNext

@@ -80,16 +80,22 @@ object ClassLoaderUtils {
     cl.loadClass(clsName).asSubclass(clsType)
   }
 
-  // <2do> should we try to match on argument supertypes?
+  // <2do> should we try to match on argument supertypes and/or subsets?
   def newInstance[T: ClassTag](key: Any, clsName: String,
                                argTypes: Array[Class[_]], args: Array[_ <:AnyRef]): Option[T] = {
     try {
       val cls = loadClass(key,clsName,classTag[T].runtimeClass)
       if (args == null || args.isEmpty){
+        // if no extra args, fall back to default ctor
         Some(cls.newInstance.asInstanceOf[T])
       } else {
-        val ctor = cls.getConstructor(argTypes: _*)
-        Some(ctor.newInstance(args: _*).asInstanceOf[T])
+        try {
+          val ctor = cls.getConstructor(argTypes: _*)
+          Some(ctor.newInstance(args: _*).asInstanceOf[T])
+        } catch {
+          // if no ctor for args is found, fall back to default ctor
+          case _: NoSuchMethodException => Some(cls.newInstance.asInstanceOf[T])
+        }
       }
     } catch {
       case t: Throwable =>

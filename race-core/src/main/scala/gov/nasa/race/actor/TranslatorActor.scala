@@ -18,10 +18,9 @@
 package gov.nasa.race.actor
 
 import com.typesafe.config.Config
-import gov.nasa.race.config.ConfigUtils._
-import gov.nasa.race.config.ConfigurableTranslator
+import gov.nasa.race.Translator
 import gov.nasa.race.core.Messages.BusEvent
-import gov.nasa.race.core.{PublishingRaceActor, SubscribingRaceActor}
+import gov.nasa.race.core.SubscribingRaceActor
 
 /**
  * a generic actor that translates text messages into objects by means of a
@@ -29,10 +28,10 @@ import gov.nasa.race.core.{PublishingRaceActor, SubscribingRaceActor}
  */
 class TranslatorActor (val config: Config) extends SubscribingRaceActor with FilteringPublisher {
 
-  var translator: ConfigurableTranslator = createTranslator
+  var translator: Translator[Any,Any] = createTranslator
 
   /** override this to use a hardwired translator */
-  def createTranslator: ConfigurableTranslator = getConfigurable[ConfigurableTranslator]("translator")
+  def createTranslator: Translator[Any,Any] = getConfigurable[Translator[Any,Any]]("translator")
 
   /** we provide our own PF so that derived classes can delegate from their handleMessage */
   def handleTranslatorMessage: Receive = {

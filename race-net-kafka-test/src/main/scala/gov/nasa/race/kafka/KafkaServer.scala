@@ -20,15 +20,16 @@ package gov.nasa.race.kafka
 import java.io.{File, FileInputStream}
 import java.net.InetSocketAddress
 import java.util.Properties
+import java.util.concurrent.CountDownLatch
 
 import kafka.admin.TopicCommand
 import kafka.admin.TopicCommand.TopicCommandOptions
 import kafka.metrics.KafkaMetricsReporter
-import kafka.server.{KafkaConfig,KafkaServerStartable}
+import kafka.server.{KafkaConfig, KafkaServerStartable}
 import kafka.utils.{VerifiableProperties, ZkUtils}
 import org.apache.zookeeper.server.{NIOServerCnxnFactory, ZooKeeperServer}
+import gov.nasa.race._
 
-import gov.nasa.race._ // NOTE - has to come *after* kafka imports or it will define a .race.kafka package that makes it
 import scala.io.StdIn
 import gov.nasa.race.main.CliArgs
 import gov.nasa.race.util.ConsoleIO._
@@ -128,7 +129,9 @@ object KafkaServer {
   }
 
   def main (args: Array[String]): Unit = {
-    System.setProperty("logback.configurationFile", "logback-kafka.xml") // need our own to not collide with race
+    //System.setProperty("logback.configurationFile", "logback-kafka.xml") // need our own to not collide with race
+    System.setProperty("org.slf4j.simpleLogger.defaultLogLevel","WARN")
+
     val cliOpts = CliArgs(args)(new Opts).getOrElse(return)
 
     val props = getKafkaProperties(cliOpts)
@@ -142,6 +145,8 @@ object KafkaServer {
     val zkServer = new ZooKeeperServer(zkDir,zkDir,2000)
     val zkFactory = new NIOServerCnxnFactory()
     zkFactory.configure(new InetSocketAddress(2181),5000)
+    // unfortunately we can't set a ZKShutdownHandler because the class is not public, hence we will get an error on startup
+
     zkFactory.startup(zkServer)
     val zkUtils = ZkUtils(props.get("zookeeper.connect").toString, 30000, 30000, false)
 

@@ -156,7 +156,8 @@ class WorldWindFrame (config: Config, raceView: RaceView) extends AppFrame {
 
   def showConsolePanel (name: String, setVisible: Boolean) = consolePanel.expand(name, setVisible)
 
-  override def closeOperation() = { // this is executed in response to close() within the EDT
+  // this is executed in response to clicking the close button on the window frame, prior to disposing the frame itself
+  override def closeOperation() = {
     visible = false
 
     /*
@@ -166,8 +167,4 @@ class WorldWindFrame (config: Config, raceView: RaceView) extends AppFrame {
     */
   }
 
-  override def close() = {
-    visible = false
-    super.close
-  }
 }

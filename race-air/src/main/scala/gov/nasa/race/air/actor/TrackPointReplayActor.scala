@@ -16,12 +16,13 @@
  */
 package gov.nasa.race.air.actor
 
-import java.io.InputStream
+import java.io.{File, InputStream}
 
 import com.typesafe.config.Config
 import gov.nasa.race.actor.ReplayActor
 import gov.nasa.race.air.{FlightCompleted, FlightPos}
-import gov.nasa.race.archive.StreamArchiveReader
+import gov.nasa.race.archive.ArchiveReader
+import gov.nasa.race.common.ConfigurableStreamCreator.{configuredPathName, createInputStream}
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.geo.LatLonPos
 import gov.nasa.race.track.avro.{TrackIdRecord, TrackPoint}
@@ -34,18 +35,32 @@ import org.joda.time.DateTime
 
 /**
   * a ReplayActor that reads Avro TrackPoint archives and emits them as FlightMessage objects
+  */
+class TrackPointReplayActor (config: Config) extends ReplayActor(config) {
+
+  override def createReader = new TrackPointReader(config.getConfig("reader")) // hardwired reader, we ignore class
+}
+
+/**
+  * a ConfigurableArchiveReader for TrackPoint records from Avro archives
   *
-  * we use a specialized StreamArchiveReader here because that way we also support compressed
+  * we use a stream based reader because that way we also support compressed
   * Avro archives (up to 30% compression for TrackPoint archives)
   *
   * TODO - we might extend FlightPos with a 'completed' state, in which case the 'completed' cache can be dropped
   */
-class TrackPointReplayActor (config: Config) extends ReplayActor(config) {
+class TrackPointReader (val iStream: InputStream, val pathName: String="<unknown>", val idMapFile: Option[File] = None)
+                                                                                                extends ArchiveReader {
+  def this(conf: Config) = this(createInputStream(conf), configuredPathName(conf), conf.getOptionalFile("id-map"))
+
+  val dfr = new DataFileStream(iStream, new SpecificDatumReader[TrackPoint])
+  val recCache = new TrackPoint
+  var pendingComplete: FlightCompleted = null // to be set if we encounter a completed TrackPoint
 
   val idMap: Map[String,String] = initIdMap
 
   def initIdMap: Map[String,String] = {
-    config.getOptionalFile("id-map") match {
+    idMapFile match {
       case Some(file) =>
         val dfr = new DataFileReader[TrackIdRecord](file,new SpecificDatumReader[TrackIdRecord])
         var rec = new TrackIdRecord
@@ -59,42 +74,34 @@ class TrackPointReplayActor (config: Config) extends ReplayActor(config) {
     }
   }
 
-  class TPReader (val istream: InputStream) extends StreamArchiveReader {
-    val dfr = new DataFileStream(istream, new SpecificDatumReader[TrackPoint])
-    val recCache = new TrackPoint
-    var pendingComplete: FlightCompleted = null // to be set if we encounter a completed TrackPoint
+  override def hasMoreData = (pendingComplete != null) || dfr.hasNext
+  override def close = dfr.close
 
-    override def hasMoreData = (pendingComplete != null) || dfr.hasNext
-    override def close = dfr.close
+  override def readNextEntry = {
+    if (pendingComplete != null) {
+      val msg = pendingComplete
+      pendingComplete = null
+      someEntry(msg.date,msg)
 
-    override def readNextEntry = {
-      if (pendingComplete != null) {
-        val msg = pendingComplete
-        pendingComplete = null
-        someEntry(msg.date,msg)
+    } else {
+      val tp = dfr.next(recCache)
+      val date = new DateTime(tp.getDate)
+      val id = tp.getId.toString.intern  // we intern because there are likely a lot of points per track
+      val cs = idMap.getOrElse(id,id) // we could map this here
 
-      } else {
-        val tp = dfr.next(recCache)
-        val date = new DateTime(tp.getDate)
-        val id = tp.getId.toString.intern  // we intern because there are likely a lot of points per track
-        val cs = idMap.getOrElse(id,id) // we could map this here
+      val fpos = FlightPos(
+        id,
+        cs, // no CS
+        LatLonPos.fromDegrees(tp.getLatitude, tp.getLongitude),
+        Meters(tp.getAltitude),
+        MetersPerSecond(tp.getSpeed),
+        Degrees(tp.getHeading),
+        date
+      )
 
-        val fpos = FlightPos(
-          id,
-          cs, // no CS
-          LatLonPos.fromDegrees(tp.getLatitude, tp.getLongitude),
-          Meters(tp.getAltitude),
-          MetersPerSecond(tp.getSpeed),
-          Degrees(tp.getHeading),
-          date
-        )
+      if (tp.getCompleted) pendingComplete = FlightCompleted(id,cs,"?",date)
 
-        if (tp.getCompleted) pendingComplete = FlightCompleted(id,cs,"?",date)
-
-        someEntry(date, fpos)
-      }
+      someEntry(date, fpos)
     }
   }
-
-  override protected def instantiateReader (is: InputStream) = Some(new TPReader(is))
 }

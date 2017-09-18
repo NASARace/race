@@ -17,8 +17,6 @@
 
 package gov.nasa.race.actor
 
-import java.io.OutputStream
-
 import akka.actor.ActorRef
 import com.typesafe.config.Config
 import gov.nasa.race.archive.ArchiveWriter
@@ -26,19 +24,22 @@ import gov.nasa.race.core.Messages._
 import gov.nasa.race.core._
 
 /**
- * actor that writes the subscribed channel to disk
- */
-class ArchiveActor (val config: Config) extends SubscribingRaceActor
-             with ContinuousTimeRaceActor with FileWriterRaceActor {
-  val writerCls = config.getString("archive-writer")
+  * actor that writes the subscribed channel to disk
+  * using a configurable ArchiveWriter object for stream/file management and formatting
+  */
+class ArchiveActor (val config: Config) extends SubscribingRaceActor with ContinuousTimeRaceActor {
   var stopArchiving = false
-  val archiveWriter = newInstance[ArchiveWriter](writerCls, Array(classOf[OutputStream]), Array(oStream)).get
+  val writer: ArchiveWriter = createWriter
 
-  log.info(s"$name archiving channels [$readFromAsString] to $pathName (compress=$compressedMode,append=$appendMode)")
+  log.info(s"$name archiving channels [$readFromAsString] to ${writer.pathName}")
+
+  // override for hardwired writers
+  // note - scala 2.12.3 can't infer getConfigurable type arg
+  protected def createWriter: ArchiveWriter = getConfigurable[ArchiveWriter]("writer")
 
   override def onTerminateRaceActor(originator: ActorRef) = {
     stopArchiving = true
-    archiveWriter.close
+    writer.close
     super.onTerminateRaceActor(originator)
   }
 
@@ -46,10 +47,10 @@ class ArchiveActor (val config: Config) extends SubscribingRaceActor
     case BusEvent(_,msg,_) =>
       if (!stopArchiving) {
         updateSimTime
-        if (archiveWriter.write(simTime, msg)) {
-          debug(s"$name archived $msg")
+        if (writer.write(simTime, msg)) {
+          debug(f"$name archived $msg%40.40s")
         } else {
-          debug(s"$name ignored $msg")
+          debug(f"$name ignored $msg%40.40s")
         }
       }
   }

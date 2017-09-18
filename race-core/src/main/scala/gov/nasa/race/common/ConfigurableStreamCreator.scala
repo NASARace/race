@@ -16,30 +16,36 @@
  */
 package gov.nasa.race.common
 
-import gov.nasa.race.config.ConfigUtils._
-import java.io.{BufferedOutputStream, File, FileOutputStream, OutputStream}
-import java.util.zip.GZIPOutputStream
+import java.io._
+import java.util.zip.{GZIPInputStream, GZIPOutputStream}
 
-import akka.actor.ActorRef
 import com.typesafe.config.Config
+import gov.nasa.race.config.ConfigUtils._
 
-/**
-  * something that can write to a configurable file
-  */
-trait ConfigurableFileWriter {
-  val config: Config
+object ConfigurableStreamCreator {
+  final val PathNameKey = "pathname"
+  final val DefaultPathName = "<unknown"
+  final val BufSizeKey = "buffer-size"
+  final val CompressedKey = "compressed"
 
-  def defaultPathName = "tmp/" +  config.getStringOrElse("name",getClass.getSimpleName) // override in concrete class
-  val pathName = config.getStringOrElse("pathname", defaultPathName)
-  val oStream: OutputStream = open // TODO - maybe the file should be opened on demand, not on construction
+  def createInputStream (conf: Config, defaultPathName:String = DefaultPathName): InputStream = {
+    val pathName = conf.getStringOrElse(PathNameKey,defaultPathName)
+    val bufSize = conf.getIntOrElse(BufSizeKey, 4096)
+    val compressedMode = conf.getBooleanOrElse(CompressedKey, pathName.endsWith(".gz"))
 
-  def open: OutputStream = {
-    val appendMode = config.getBooleanOrElse("append", false)
-    val bufSize = config.getIntOrElse("buffer-size", 4096)
-    val compressedMode = if (appendMode) false else config.getBooleanOrElse("compressed", pathName.endsWith(".gz"))
+    val fs = new FileInputStream(pathName)
+    if (compressedMode) new GZIPInputStream(fs,bufSize) else new BufferedInputStream( fs, bufSize)
+  }
 
-    val pn = if (compressedMode && !pathName.endsWith(".gz")) pathName + ".gz" else pathName
-    val file = new File(pn)
+  def createOutputStream (conf: Config, defaultPathName:String = DefaultPathName): OutputStream = {
+    var pathName = conf.getStringOrElse(PathNameKey,defaultPathName)
+    val appendMode = conf.getBooleanOrElse("append", false)
+    val bufSize = conf.getIntOrElse(BufSizeKey, 4096)
+    val compressedMode = if (appendMode) false else conf.getBooleanOrElse(CompressedKey, pathName.endsWith(".gz"))
+
+    if (compressedMode && !pathName.endsWith(".gz")) pathName += ".gz"
+
+    val file = new File(pathName)
     val dir = file.getParentFile
     if (!dir.isDirectory) dir.mkdirs()
 
@@ -47,17 +53,6 @@ trait ConfigurableFileWriter {
     if (compressedMode) new GZIPOutputStream(fs,bufSize) else new BufferedOutputStream( fs, bufSize)
   }
 
-  //--- forwards
-  def close = {
-    oStream.flush()
-    oStream.close()
-  }
-
-  def flush: Unit = oStream.flush
-  def write (b: Int): Unit = oStream.write(b)
-  def write (ba: Array[Byte]): Unit = oStream.write(ba)
-  def write (ba: Array[Byte], off: Int, len: Int): Unit = oStream.write(ba, off,len)
-
-  @inline final def write (s: String): Unit = oStream.write(s.getBytes)
-  @inline final def writeln = oStream.write('\n')
+  // this is here to keep keys consistent
+  def configuredPathName(conf: Config, defaultPathName:String = DefaultPathName) = conf.getStringOrElse(PathNameKey,defaultPathName)
 }

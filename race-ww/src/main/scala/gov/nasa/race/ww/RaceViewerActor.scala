@@ -55,9 +55,7 @@ class RaceViewerActor(val config: Config) extends ContinuousTimeRaceActor
   var view: Option[RaceView] = None // we can't create this from a Akka thread since it does UI transcations
 
   override def onInitializeRaceActor(rc: RaceContext, actorConf: Config): Boolean = {
-    invokeAndWait {
-      view = Some(new RaceView(RaceViewerActor.this))
-    }
+    invokeAndWait { view = Some(new RaceView(RaceViewerActor.this)) }
     view.isDefined && super.onInitializeRaceActor(rc, actorConf)
   }
 

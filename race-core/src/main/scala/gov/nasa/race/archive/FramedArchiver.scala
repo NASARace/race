@@ -17,38 +17,41 @@
 
 package gov.nasa.race.archive
 
-import java.io.IOException
+import java.io.{IOException, InputStream, OutputStream}
 
 /**
- * support for binary ArchiveWriters/Readers that use byte frames
- */
-object FramedArchiver {
-
-}
-
-
+  * an ArchiveWriter that stores entries as big endian 32 bit frame size followed by the
+  * respective number of payload bytes
+  */
 trait FramedArchiveWriter extends ArchiveWriter {
+  val oStream: OutputStream
 
   def writeFrameSize (nBytes: Int) = {
-    ostream.write((nBytes >> 24) & 0xff)
-    ostream.write((nBytes >> 16) & 0xff)
-    ostream.write((nBytes >> 8) & 0xff)
-    ostream.write(nBytes & 0xff)
+    oStream.write((nBytes >> 24) & 0xff)
+    oStream.write((nBytes >> 16) & 0xff)
+    oStream.write((nBytes >> 8) & 0xff)
+    oStream.write(nBytes & 0xff)
   }
 
-  def writeFrame (bytes: Array[Byte]) = ostream.write(bytes)
+  def writeFrame (bytes: Array[Byte]) = oStream.write(bytes)
 }
 
-trait FramedArchiveReader extends StreamArchiveReader {
+/**
+  * an ArchiveReader that reads entries as big endian 32 bit frame size followed by
+  * the respective number of payload bytes
+  * To safeguard against corrupted archives we limit the frame size to 1MB
+  */
+trait FramedArchiveReader extends ArchiveReader {
   final val MAX_FRAMESIZE = 1024*1024 // just as a safeguard
 
+  val iStream: InputStream
   private var buf: Array[Byte] = new Array[Byte](1024)
 
   def readFrameSize: Int = {
-    ((istream.read() & 0xff) << 24) +
-    ((istream.read() & 0xff) << 16) +
-    ((istream.read() & 0xff) << 8) +
-    ((istream.read() & 0xff))
+    ((iStream.read & 0xff) << 24) +
+    ((iStream.read & 0xff) << 16) +
+    ((iStream.read & 0xff) << 8) +
+    ((iStream.read & 0xff))
   }
 
   def readFrame (nBytes: Int): Array[Byte] = {
@@ -59,10 +62,10 @@ trait FramedArchiveReader extends StreamArchiveReader {
       buf = new Array[Byte](nBytes)
     }
 
-    if (istream.read(buf, 0, nBytes) == nBytes) {
+    if (iStream.read(buf, 0, nBytes) == nBytes) {
       buf
     } else {
-      throw new IOException(s"error reading $nBytes from archive stream $istream")
+      throw new IOException(s"error reading $nBytes from frame archive stream")
     }
   }
 }

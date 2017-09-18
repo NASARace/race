@@ -20,7 +20,9 @@ package gov.nasa.race.air
 import java.io.{InputStream, OutputStream, PrintStream}
 
 import com.github.nscala_time.time.Imports._
+import com.typesafe.config.Config
 import gov.nasa.race.archive._
+import gov.nasa.race.common.ConfigurableStreamCreator._
 import gov.nasa.race.geo.LatLonPos
 import gov.nasa.race.uom.Angle._
 import gov.nasa.race.uom.Length._
@@ -91,9 +93,10 @@ case class FlightCsChanged (id: String,
 /**
   * a FlightPos archiver that writes/parses FlightPos objects to/from text lines
   */
-class FlightPosArchiveWriter (val ostream: OutputStream) extends ArchiveWriter {
-  val ps = new PrintStream (ostream)
+class FlightPosArchiveWriter (val oStream: OutputStream, val pathName: String="<unknown>") extends ArchiveWriter {
+  def this(conf: Config) = this(createOutputStream(conf), configuredPathName(conf))
 
+  val ps = new PrintStream (oStream)
   override def close = ps.close
 
   override def write(date: DateTime, obj: Any): Boolean = {
@@ -114,11 +117,15 @@ class FlightPosArchiveWriter (val ostream: OutputStream) extends ArchiveWriter {
   }
 }
 
-class FlightPosArchiveReader (val istream: InputStream) extends StreamArchiveReader
-  with InputStreamLineTokenizer {
+class FlightPosArchiveReader (val iStream: InputStream, val pathName: String="<unknown>")
+                                                 extends ArchiveReader with InputStreamLineTokenizer {
+  def this(conf: Config) = this(createInputStream(conf), configuredPathName(conf))
+
+  def hasMoreData = iStream.available > 0
+  def close = iStream.close
 
   override def readNextEntry: Option[ArchiveEntry] = {
-    var fs = getLineFields(istream)
+    var fs = getLineFields(iStream)
 
     if (fs.size == 9) {
       try {
@@ -165,7 +172,11 @@ object BinaryFlightPos {
 /**
   * example for a binary FightPos archive reader/writer using scodec
   */
-class BinaryFlightPosArchiveWriter (val ostream: OutputStream) extends FramedArchiveWriter {
+class BinaryFlightPosArchiveWriter (val oStream: OutputStream, val pathName: String="<unknown>") extends FramedArchiveWriter {
+
+  def this(conf: Config) = this(createOutputStream(conf), configuredPathName(conf))
+
+  override def close = oStream.close
 
   override def write(date: DateTime, obj: Any): Boolean = {
     obj match {
@@ -189,7 +200,12 @@ class BinaryFlightPosArchiveWriter (val ostream: OutputStream) extends FramedArc
   }
 }
 
-class BinaryFlightPosArchiveReader (val istream: InputStream) extends FramedArchiveReader {
+class BinaryFlightPosArchiveReader (val iStream: InputStream, val pathName: String="<unknown>") extends FramedArchiveReader {
+
+  def this(conf: Config) = this(createInputStream(conf), configuredPathName(conf))
+
+  def hasMoreData = iStream.available > 0
+  def close = iStream.close
 
   override def readNextEntry: Option[ArchiveEntry] = {
     try {

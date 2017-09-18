@@ -67,16 +67,21 @@ class FIXM2FlightObjectSpec extends FlatSpec with RaceSpec {
     println(res)
 
     res match {
-      case Some(fpos: FlightPos) =>
-        fpos.cs should be( expected.cs)
-        fpos.id should be (expected.id)
-        fpos.altitude.toFeet should be (expected.altitude.toFeet +- EPS)
-        fpos.speed.toKnots should be (expected.speed.toKnots +- EPS)
-        fpos.position.λ.toDegrees should be (expected.position.λ.toDegrees +- EPS)
-        fpos.position.φ.toDegrees should be (expected.position.φ.toDegrees +- EPS)
-        fpos.heading.toDegrees should be (expected.heading.toDegrees +- EPS)
-        fpos.date.getMillis should be (expected.date.getMillis)
-        println("matches expected values")
+      case Some(list:Seq[IdentifiableObject]) =>
+        assert(list.size == 1)
+        list.head match {
+          case fpos: FlightPos =>
+            fpos.cs should be(expected.cs)
+            fpos.id should be(expected.id)
+            fpos.altitude.toFeet should be(expected.altitude.toFeet +- EPS)
+            fpos.speed.toKnots should be(expected.speed.toKnots +- EPS)
+            fpos.position.λ.toDegrees should be(expected.position.λ.toDegrees +- EPS)
+            fpos.position.φ.toDegrees should be(expected.position.φ.toDegrees +- EPS)
+            fpos.heading.toDegrees should be(expected.heading.toDegrees +- EPS)
+            fpos.date.getMillis should be(expected.date.getMillis)
+            println("matches expected values")
+          case _ => fail("result list does not contain FlightPos")
+        }
       case _ => fail(s"result not a FlightPos: $res")
     }
   }

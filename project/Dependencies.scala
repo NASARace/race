@@ -143,6 +143,8 @@ object Dependencies {
   // "multiple bindings" error/warning during static init, so we have to make sure we
   // replace log4j with slf4j's log4j-over-slf4j
 
+  // note - kafka still uses the old log4j
+
   val log4j = "log4j" % "log4j" % "latest.release"
   val log4jOverSlf4j = "org.slf4j" % "log4j-over-slf4j" % "latest.release"
 

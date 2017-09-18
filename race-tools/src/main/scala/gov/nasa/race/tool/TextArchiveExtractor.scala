@@ -65,7 +65,7 @@ object TextArchiveExtractor {
     if (opts.parse(args)) {
       for (file <- opts.inFile;
            is <- FileUtils.inputStreamFor(file,8192)){
-        processArchiveEntries(new TextArchiveReader(is))
+        processArchiveEntries(new TextArchiveReader(is, file.getPath))
         is.close
       }
     }

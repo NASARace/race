@@ -19,7 +19,9 @@ package gov.nasa.race.air
 
 import java.io.{InputStream, OutputStream}
 
-import gov.nasa.race.archive.{TextLineArchiveReader, TimedTextLineArchiver}
+import com.typesafe.config.Config
+import gov.nasa.race.archive.{TextLineArchiveReader, TimedTextLineArchiveWriter}
+import gov.nasa.race.common.ConfigurableStreamCreator.{configuredPathName, createInputStream, createOutputStream}
 import org.joda.time.DateTime
 import org.joda.time.format.DateTimeFormat
 
@@ -44,10 +46,17 @@ object SBSArchiver {
   final val dtgPatternLength = 23
 }
 
-class SBSArchiverWriter (ostream: OutputStream) extends TimedTextLineArchiver(ostream)
+class SBSArchiveWriter (val oStream: OutputStream, val pathName: String = "<unknown>") extends TimedTextLineArchiveWriter {
+  def this(conf: Config) = this(createOutputStream(conf), configuredPathName(conf))
+  override def close = oStream.close
+}
 
-class SBSArchiveReader (val istream: InputStream)  extends TextLineArchiveReader(istream) {
+class SBSArchiveReader (val iStream: InputStream, val pathName: String="<unknown>")  extends TextLineArchiveReader {
   import SBSArchiver._
+
+  def this(conf: Config) = this(createInputStream(conf), configuredPathName(conf))
+
+  override def close = iStream.close
 
   def readDate (line: String) = {
     @tailrec def _skipToField (s: String, n: Int, sep: Char, i: Int): Int = {

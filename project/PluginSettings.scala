@@ -49,17 +49,17 @@ object PluginSettings {
   //----------------------------------------------------------------------------------
   // sbtstats from https://github.com/orrsella/sbt-stats
   import com.orrsella.sbtstats._
-  import com.orrsella.sbtstats.StatsPlugin._
+  import com.orrsella.sbtstats.StatsPlugin.autoImport._
   val sbtStatsSettings = Seq(
-    StatsPlugin.statsAnalyzers := Seq(new FilesAnalyzer,new LinesAnalyzer),
+    statsAnalyzers := Seq(new FilesAnalyzer,new LinesAnalyzer),
     aggregate in statsProject := true
   )
 
   //----------------------------------------------------------------------------------
   // sbt-scalariform: https://github.com/daniel-trinh/sbt-scalariform
 
-  import com.typesafe.sbt.{SbtScalariform => SSF}
-  val scalariformSettings = SSF.defaultScalariformSettings
+  // import com.typesafe.sbt.{SbtScalariform => SSF}
+  // val scalariformSettings = SSF.defaultScalariformSettings
   // SSF.scalariformSettings would automatically reformat on each compile
 
   //----------------------------------------------------------------------------------
@@ -97,7 +97,7 @@ object PluginSettings {
   // collect all settings for all active plugins. This goes into build.sbt commonSettings
   val pluginSettings = laikaSettings ++
                        sbtStatsSettings ++
-                       scalariformSettings ++
                        sonatypeSettings
-  //++ depGraphSettings
+  // ++ scalariformSettings
+  // ++ depGraphSettings
 }

@@ -17,40 +17,47 @@
 
 package gov.nasa.race.archive
 
-import java.io._
-
 import gov.nasa.race.Dated
 import org.joda.time.DateTime
 
-/**
+/*
  * support for archiving and replay of data
  *
  * unfortunately we can't do this typed since the Archive/ReplayActors are untyped
  * (instantiates ArchiveWriter/Reader via reflection) and its message handlers
  * would need the types. Besides, the archiver might actually accept different input formats
- * (text, objects). This pushed type checks into the archiver implemtation
+ * (text, objects). Type checks have to happen in the archiver implementation
  *
- * note that we close the streams from here since esp. the concrete ArchiveWriters
- * might use additional decorators such as BufferedOutputStream and have to make sure
- * these are properly flushed
+ * note that we DO NOT refer to any stream based implementation here and require
+ * the concrete types to do so (e.g. by means of ConfigurableStreamCreator mixins). One of the
+ * reasons is that most concrete classes use their specialized stream decorators which require
+ * proper initialization and closing (e.g. to flush content)
  */
 
-
+/**
+  * type that archives time-stamped objects
+  */
 trait ArchiveWriter {
-  val ostream: OutputStream
-
-  def close = {
-    ostream.flush
-    ostream.close
-  }
   def write (date: DateTime, obj: Any): Boolean
+  def close: Unit
+
+  val pathName: String
 }
 
+
+/**
+  * type that reads time-stamped ArchiveEntry objects from archives
+  */
 trait ArchiveReader extends DateAdjuster {
   class ArchiveEntry (var date: DateTime, var msg: Any) extends Dated
 
+  //--- optimization to reduce heap pressure by avoiding a ton of short living Option objects
+
+  // NOTE - this breaks immutability of the return value. Use only in a single threaded context
+  // that does not store ArchiveEntries
+
   protected val nextEntry = new ArchiveEntry(null,null)
-  protected val someEntry = Some(nextEntry) // avoid gazillions of short living options
+  protected val someEntry = Some(nextEntry)
 
   protected def someEntry(d: DateTime, m: Any): Option[ArchiveEntry] = {
     nextEntry.date = d
@@ -58,38 +65,10 @@ trait ArchiveReader extends DateAdjuster {
     someEntry
   }
 
-  // to be provided by subtypes
-  def close: Unit
+  //--- to be provided by subtypes
   def hasMoreData: Boolean
   def readNextEntry: Option[ArchiveEntry]
-}
+  def close: Unit
 
-/**
-  * a InputStream based ArchiveReader
-  */
-trait StreamArchiveReader extends ArchiveReader {
-  protected val istream: InputStream
-
-  override def close = istream.close
-  override def hasMoreData = istream.available() > 0 // override if the reader does its own buffering
-}
-
-class DummyReader extends ArchiveReader {
-  override def close = {}
-  override def hasMoreData = false
-  override def readNextEntry = None
-}
-
-/**
-  * archiver to be used for messages that don't need boundary markers and
-  * carry their own time stamps, i.e. don't need to record the message time separately.
-  *
-  * Note this always requires a specialized ArchiveReader to replay, since extracting
-  * the date is message type specific
-  */
-class RawTimedMessageArchiver (val ostream: OutputStream) extends ArchiveWriter {
-  override def write(date: DateTime, obj: Any): Boolean = {
-    ostream.write(obj.toString.getBytes)
-    true
-  }
+  val pathName: String
 }

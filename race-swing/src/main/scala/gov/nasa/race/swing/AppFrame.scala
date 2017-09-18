@@ -56,9 +56,11 @@ class AppFrame extends Frame {
 
   override def close = {
     invokeAndWait {
+      visible = false
       appFrames.remove(peer)
-      Toolkit.getDefaultToolkit.getSystemEventQueue.postEvent(new WindowEvent(peer, WindowEvent.WINDOW_CLOSING))
+      //Toolkit.getDefaultToolkit.getSystemEventQueue.postEvent(new WindowEvent(peer, WindowEvent.WINDOW_CLOSING))
       //peer.dispatchEvent(new WindowEvent(peer, WindowEvent.WINDOW_CLOSING))
+      dispose
     }
   }
 
