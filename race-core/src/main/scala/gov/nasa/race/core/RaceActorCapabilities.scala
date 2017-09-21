@@ -25,6 +25,7 @@ object RaceActorCapabilities {
   final val SupportsSimTime = new RaceActorCapabilities(0x0100)       // does not have to run in real time
   final val SupportsSimTimeReset = new RaceActorCapabilities(0x0200)  // can adjust actor local time on-the-fly
   final val SupportsPauseResume = new RaceActorCapabilities(0x0400)   // can be paused/resumed
+  final val SupportsDiscreteTime = new RaceActorCapabilities(0x0800)  // supports non-linear time advance
 
   //... and more to follow
 
@@ -54,7 +55,7 @@ case class RaceActorCapabilities (val caps: Int) extends AnyVal {
   @inline def supportsSimTime = (caps & SupportsSimTime.caps) != 0
   @inline def supportsSimTimeReset = (caps & SupportsSimTimeReset.caps) != 0
   @inline def supportsPauseResume = (caps & SupportsPauseResume.caps) != 0
-
+  @inline def supportsDiscreteTime = (caps & SupportsDiscreteTime.caps) != 0
 
   override def toString = {
     val sb = new StringBuffer("{")
@@ -68,6 +69,7 @@ case class RaceActorCapabilities (val caps: Int) extends AnyVal {
     if (supportsSimTime) append("SupportsSimTime")
     if (supportsSimTimeReset) append("SupportsSimTimeReset")
     if (supportsPauseResume) append("SupportsPauseResume")
+    if (supportsDiscreteTime) append("SupportsDiscreteTime")
     sb.append('}')
     sb.toString
   }

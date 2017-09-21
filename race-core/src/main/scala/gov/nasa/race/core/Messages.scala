@@ -75,6 +75,12 @@ object Messages {
   case class PingRaceActor (tSentNanos: Long=System.nanoTime(), tReceivedNanos: Long=0) extends RaceSystemMessage
   case object RequestRaceActorCapabilities extends RaceSystemMessage
 
+  /** discrete time mode (note this does support actor local time) */
+  case object PollStepTime extends RaceSystemMessage  // master -> actors
+  case class NextStepTime (tSendMillis: Long) extends RaceSystemMessage // active actors -> master (use primitive to simplify serialization)
+  case object NoStepTime extends RaceSystemMessage // passive actors -> master
+  case class SetStepTime (tSendMillis: Long) extends RaceSystemMessage // master -> selected actor
+
   /** sim clock change notifications */
   case object SyncWithRaceClock extends RaceSystemMessage // master -> actors
 
