@@ -138,8 +138,8 @@ class FlightPosArchiveReader (val iStream: InputStream, val pathName: String="<u
         val speed = fs.head.toDouble; fs = fs.tail
         val heading = fs.head.toDouble; fs = fs.tail
         val dt = fs.head.toLong
-
         val date = getDate(dt)  // we might adjust it on-the-fly
+
         someEntry(date, new FlightPos(flightId, cs, LatLonPos(Degrees(phi), Degrees(lambda)),
                                           Feet(alt), UsMilesPerHour(speed), Degrees(heading), date))
       } catch {

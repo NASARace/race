@@ -61,7 +61,9 @@ class ReplayActor (val config: Config) extends ContinuousTimeRaceActor
 
   val reader: ArchiveReader = createReader
   var noMoreData = !reader.hasMoreData
-  val pendingMsgs = new ListBuffer[Replay]
+
+  var isFirst = true // we haven't scheduled or replayed anything yet
+  val pendingMsgs = new ListBuffer[Replay]  // replay messages received in stopped state  that have to be re-scheduled
 
   /** override for hardwired readers */
   def createReader: ArchiveReader = getConfigurable[ArchiveReader]("reader") // note 2.12.3 can't infer type arg
@@ -84,7 +86,7 @@ class ReplayActor (val config: Config) extends ContinuousTimeRaceActor
   }
 
   override def onSyncWithRaceClock = {
-    if (!isStopped) {
+    if (!isStopped && !isFirst) {
       var didSchedule = false
       if (pendingMsgs.nonEmpty) {
         pendingMsgs.foreach { r =>
@@ -98,8 +100,12 @@ class ReplayActor (val config: Config) extends ContinuousTimeRaceActor
         }
         pendingMsgs.clear
       }
-      if (!didSchedule) scheduleNext(0)
+      if (!didSchedule) {
+        // we didn't re-schedule a sent message - schedule the next one
+        scheduleNext(0)
+      }
     }
+
     super.onSyncWithRaceClock
   }
 
@@ -112,11 +118,13 @@ class ReplayActor (val config: Config) extends ContinuousTimeRaceActor
         debug(f"publishing scheduled: $msg%30.30s.. ")
         publishFiltered(msg)
         scheduleNext(0)
+
       } else { // we were paused or scaled down since schedule
         if (!isStopped) {
           debug(f"re-scheduling in $dtMillis milliseconds: $msg%30.30s.. ")
           scheduler.scheduleOnce(dtMillis milliseconds, self, r)
         } else {
+          // we are stopped - make sure we schedule this again once we resume
           debug(f"queue pending $msg%30.30s.. ")
           pendingMsgs += r
         }
@@ -126,13 +134,13 @@ class ReplayActor (val config: Config) extends ContinuousTimeRaceActor
   }
 
   def replayMessageLater(msg: Any, dtMillis: Long, date: DateTime) = {
-    debug(f"scheduling in $dtMillis milliseconds: $msg%30.30s.. ")
+    debug(f"scheduling in $dtMillis milliseconds: $msg%50.50s.. ")
     scheduler.scheduleOnce(dtMillis milliseconds, self, Replay(msg,date))
   }
 
   def replayMessageNow(msg: Any, date: DateTime) = {
     if (incCounter) {
-      debug(f"publishing now: $msg%30.30s.. ")
+      debug(f"publishing now: $msg%50.50s.. ")
       publishFiltered(msg)
       scheduleNext(0)
     } else {
@@ -151,7 +159,6 @@ class ReplayActor (val config: Config) extends ContinuousTimeRaceActor
     reader.readNextEntry match {
       case Some(e) =>
         val date = e.date
-
         val msg = e.msg
         checkInitialClockReset(date)
 
@@ -162,14 +169,16 @@ class ReplayActor (val config: Config) extends ContinuousTimeRaceActor
         } else {
           val dt = toWallTimeMillis(-updateElapsedSimTimeMillisSince(date))
           if (dt > SchedulerThresholdMillis) { // far enough in the future to be scheduled
+            isFirst = false
             replayMessageLater(msg, dt, date)
             true
 
           } else { // now, or has already passed
             if (-dt > skipThresholdMillis) { // outside replay time window
-              scheduleFirst(skipped + 1)
+              scheduleFirst(skipped + 1) // skip this message
             } else {
               info(s"skipping first $skipped messages")
+              isFirst = false
               replayMessageNow(msg, date)
               true
             }
