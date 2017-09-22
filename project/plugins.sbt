@@ -19,19 +19,21 @@ addSbtPlugin("com.typesafe.sbt" % "sbt-multi-jvm" % "0.4.0")
 addSbtPlugin("org.planet42" % "laika-sbt" % "0.7.0")
 
 
-//--- publishing support (needs to be only on machines that publish to Sonatype)
+//--- publishing support
+// although these plugins are only required on machines that publish to Sonatype, we need
+// to load them because there is per-project configuration (e.g. noPublishSettings in build.sbt)
 
 // jar signing: https://github.com/sbt/sbt-pgp
-//addSbtPlugin("com.jsuereth" % "sbt-pgp" % "1.1.0")
+addSbtPlugin("com.jsuereth" % "sbt-pgp" % "1.1.0")
 
 // publish artifacts to sonatype: https://github.com/xerial/sbt-sonatype
-//addSbtPlugin("org.xerial.sbt" % "sbt-sonatype" % "2.0")
+addSbtPlugin("org.xerial.sbt" % "sbt-sonatype" % "2.0")
 
 // create lock.sbt file with concrete dependency versions: https://github.com/tkawachi/sbt-lock
 // provides 'lock' and 'unlock' tasks which create a *.sbt with dependencyOverrides
 // this is supposed to be used when publishing artifacts to SonaType
 // (no SBT 1.0 version as of 09/08/17)
-//addSbtPlugin("com.github.tkawachi" % "sbt-lock" % "0.4.0")
+addSbtPlugin("com.github.tkawachi" % "sbt-lock" % "0.4.0")
 
 
 //--- optional documentation (should be global)

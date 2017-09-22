@@ -1,4 +1,4 @@
-import com.typesafe.sbt.pgp.PgpKeys.{publishLocalSigned, publishSigned}
+import com.typesafe.sbt.pgp.PgpKeys.{publishLocalSigned, publishSigned}  // requires sbt-pgp plugin
 import sbt.Keys._
 import sbt.{Keys, StdoutOutput, _}
 
