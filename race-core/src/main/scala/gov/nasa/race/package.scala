@@ -286,14 +286,24 @@ package object race {
     } else map
   }
 
-
-
   @tailrec def repeat(nTimes: Int)(f: => Any): Unit = {
     if (nTimes > 0) {
       f
       repeat(nTimes - 1)(f)
     }
   }
+
+  @tailrec def repeatUpTo(nTimes: Int)(cond: => Boolean)(f: => Any): Boolean = {
+    if (nTimes == 0) {
+      false
+    } else {
+      if (cond) {
+        f
+        repeatUpTo(nTimes-1)(cond)(f)
+      } else true
+    }
+  }
+
 
   def clear(a: Array[Char]) = java.util.Arrays.fill(a, 0.toChar)
 

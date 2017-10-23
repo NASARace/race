@@ -83,7 +83,7 @@ class SettableDOStream(baos: SettableBAOStream) extends DataOutputStream(baos) {
   def getBuffer = baos.getBuffer
   def getCapacity = baos.getCapacity
 
-  def reset = {
+  def clear = {
     written = 0
     baos.setPosition(0)
   }
@@ -178,6 +178,8 @@ class SettableDIStream(bais: SettableBAIStream) extends DataInputStream(bais) {
 
   def getBuffer = bais.getBuffer
   def getCapacity = bais.getCapacity
+
+  def clear = setPosition(0)
 
   def peekByte (pos: Int): Byte = {
     val pos0 = bais.position

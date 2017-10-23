@@ -3,6 +3,7 @@ target/
 local-race-build.properties
 local-build.sbt
 .idea/
+.vscode/
 tmp/
 _book/
 **/local.conf
