@@ -39,6 +39,11 @@ object TaskSettings {
   lazy val avroTargetDirectory = settingKey[String]("target root for Avro generated files")
   lazy val avroCompileSchemas = taskKey[Unit]("compile avro schemas")
 
+  lazy val make = taskKey[Unit]("run make to build native components")
+  lazy val makeClean = taskKey[Unit]("run make to cleanup native components")
+  lazy val makeCmd = settingKey[String]("command to run make")
+  lazy val makefile = settingKey[String]("name of Makefile")
+
   lazy val taskSettings = Seq(
     //--- unix tree command (listing what is under current src/)
     tree := TreeTask(sourceDirectory.value),
@@ -65,6 +70,12 @@ object TaskSettings {
     avroCompileSchemas := AvroTask.compileSchemas(avroCompileSchemaCmd.value,
                                                   baseDirectory.value / avroSourceDirectory.value,
                                                   baseDirectory.value / avroTargetDirectory.value),
+
+    //--- Make task (native code compilation/build)
+    makeCmd := MakeTask.defaultMakeCmd,
+    makefile := MakeTask.defaultMakefile,
+    make := MakeTask.makeAll(makeCmd.value,baseDirectory.value,makefile.value),
+    makeClean := MakeTask.makeClean(makeCmd.value,baseDirectory.value,makefile.value),
 
     //--- Laika wrappers
 

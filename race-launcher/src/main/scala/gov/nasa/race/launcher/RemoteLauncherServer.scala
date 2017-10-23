@@ -124,7 +124,7 @@ class RemoteLauncherServer extends RemoteLauncher {
 
   def listen (serverSocket: ServerSocket, pool: ExecutorService): Unit = {
     println(s"server listening on port ${serverSocket.getLocalPort}, terminate with Ctrl-C ...")
-    loopWithExceptionLimit(5) {
+    loopForeverWithExceptionLimit(5) {
       val socket = serverSocket.accept // this blocks until we have an incoming request
       pool.execute(asRunnable { processRequest(socket) }) // process it outside this thread so that we stay responsive
     }

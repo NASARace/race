@@ -17,6 +17,8 @@
 
 package gov.nasa
 
+import java.io.{DataInputStream, DataOutputStream}
+
 import com.github.nscala_time.time.Imports._
 
 import scala.annotation.tailrec
@@ -195,20 +197,36 @@ package object race {
   }
 
   /** loop forever unless more than `maxException` consecutive exceptions occur */
-  def loopWithExceptionLimit (maxExceptions: Int=5)(f: =>Unit): Unit = {
-    var terminate = false
-    var exceptionCount = 0
+  def loopForeverWithExceptionLimit(maxFailure: Int=5)(f: =>Unit): Boolean = {
+    var failures = 0
 
-    while (!terminate) {
+    while (true) {
       try {
-        while(true) f
-        exceptionCount = 0
+        f
+        failures = 0
       } catch {
-        case t: Throwable =>
-          exceptionCount += 1
-          if (exceptionCount > maxExceptions) terminate = true
+        case _: Throwable =>
+          failures += 1
+          if (failures > maxFailure) return false
       }
     }
+    true
+  }
+
+  def loopWithExceptionLimit (maxFailure: Int)(cond: =>Boolean)(f: =>Unit): Boolean = {
+    var failures = 0
+
+    while (cond) {
+      try {
+        f
+        failures = 0 // reset after successful cycle
+      } catch {
+        case _: Throwable =>
+          failures += 1
+          if (failures >= maxFailure) return false
+      }
+    }
+    true
   }
 
   /** loop with index over all elements returned by an iterator */
@@ -352,4 +370,15 @@ package object race {
     override def show = o.toString
   }
 
+  // something that can read records from a DataInputStream
+  trait DataStreamReader {
+    val schema: String // this is a symbolic name, not necessarily a Scala type name
+    def read (dis: DataInputStream, nRecords: Int): Seq[Any]
+  }
+
+  // something that can write records to a DataOutputStream
+  trait DataStreamWriter {
+    val schema: String
+    def write (dos: DataOutputStream, data: Any): Boolean
+  }
 }

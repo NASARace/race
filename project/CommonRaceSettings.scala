@@ -8,7 +8,7 @@ import sbt.{Keys, StdoutOutput, _}
   */
 object CommonRaceSettings {
 
-  val scalaVer = "2.12.3" // keep it as a ordinary var for libs that are Scala version dependent (e.g. scala-reflect)
+  val scalaVer = "2.12.4" // keep it as a ordinary var for libs that are Scala version dependent (e.g. scala-reflect)
 
   lazy val commonRaceSettings =
       PluginSettings.pluginSettings ++

@@ -16,7 +16,7 @@ lazy val testSettings = commonSettings ++ noPublishSettings  // test projects do
 
 //--- root project (only for aggregation)
 lazy val root = createRootProject("race").
-  aggregate(raceCore,raceNetJMS,raceNetKafka,raceNetDDS,raceNetHttp,raceSwing,raceWW,raceAir,raceWWAir,raceSpace,raceLauncher,
+  aggregate(raceCore,raceNetJMS,raceNetKafka,raceNetDDS,raceNetHttp,raceSwing,raceWW,raceAir,raceWWAir,raceSpace,raceLauncher,raceAdapter,
     raceTools,raceTestKit,raceCoreTest,raceNetJMSTest,raceNetHttpTest,raceNetKafkaTest,raceAirTest,raceSpaceTest).
   dependsOn(raceCore,raceNetJMS,raceNetKafka,raceNetDDS,raceNetHttp,raceSwing,raceWW,raceAir,raceWWAir,raceSpace,raceLauncher).
   enablePlugins(JavaAppPackaging,LauncherJarPlugin).
@@ -100,6 +100,12 @@ lazy val raceSpace = createProject("race-space", commonSettings).
   dependsOn(raceCore).
   settings(
     noPublishSettings // not yet published
+  )
+
+lazy val raceAdapter = createProject("race-adapter", commonSettings).
+  // no dependencies - this is code supposed to be imported into external projects
+  settings(
+    noPublishSettings // not yet published (and only will publish Java)
   )
 
 //--- test projects - no artifacts, only used to test this repository
