@@ -355,7 +355,7 @@ int race_read_strncpy(databuf_t *db, int pos, char *dest, int max_len) {
   }
 }
 
-void hex_dump(databuf_t *db) {
+void race_hex_dump(databuf_t *db) {
   unsigned char *b = db->buf;
   int n = db->pos;
   int pos = 0;

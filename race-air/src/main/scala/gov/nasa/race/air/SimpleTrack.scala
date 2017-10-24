@@ -83,7 +83,7 @@ class SimpleTrackWriter extends DataStreamWriter {
 
   val schema = "simple_track"  // the supported schema
 
-  def write (dos: DataOutputStream, data: Any): Boolean = {
+  def write (dos: DataOutputStream, data: Any): Int = {
     data match {
       case t: TrackedObject =>
         val pos = t.position
@@ -95,10 +95,9 @@ class SimpleTrackWriter extends DataStreamWriter {
         dos.writeDouble(t.altitude.toMeters)
         dos.writeDouble(t.heading.toDegrees)
         dos.writeDouble(t.speed.toMetersPerSecond)
+        1 // we wrote one record
 
-        true
-
-      case _ => false // all others we don't know about
+      case _ => 0 // all others we don't know about
     }
   }
 }

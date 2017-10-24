@@ -389,6 +389,6 @@ package object race {
   // something that can write records to a DataOutputStream
   trait DataStreamWriter {
     val schema: String
-    def write (dos: DataOutputStream, data: Any): Boolean
+    def write (dos: DataOutputStream, data: Any): Int
   }
 }

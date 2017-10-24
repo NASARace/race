@@ -176,7 +176,7 @@ class ClientAdapterActor(val config: Config) extends AdapterActor {
       case AcceptMsg =>
         id = readAccept(dis,header)
         serverId = header.senderId
-        info(s"received accept from $senderIp:$senderPort")
+        info(s"received accept from $senderIp:$senderPort (serverId = $serverId")
 
       case RejectMsg =>
         val reason = readReject(dis,header)
@@ -221,8 +221,21 @@ class ClientAdapterActor(val config: Config) extends AdapterActor {
 
   override def handleMessage = {
     case BusEvent(_, msg: Any, _) =>
-      ifSome(writer) { w=>
-        if (w.write(dos,msg)) sendPacket(dos.position)
+      if (serverId != NoId) {   // are we connected
+        ifSome(writer) { w =>   // do we have a writer
+          dos.clear
+          dos.setPosition(HeaderLen+2) // we fill in the header once we know the writer handled this message
+          val nRecords = w.write(dos, msg)
+          if (nRecords > 0) {
+            info(s"sending $nRecords data records")
+            val len = dos.position
+            dos.setPosition(0)
+            writeHeader(dos, DataMsg, len.toShort, id)
+            dos.writeShort(nRecords)
+            dos.setPosition(len)
+            sendPacket(len)
+          }
+        }
       }
   }
 

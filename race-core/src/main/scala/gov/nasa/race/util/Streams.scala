@@ -65,6 +65,19 @@ class SettableBAOStream (size: Int) extends ByteArrayOutputStream(size) {
 
   def getBuffer = buf
   def getCapacity = buf.length
+
+  def hexDump: Unit = {
+    var i = 0;
+    while (i < count) {
+      var j = 0
+      while (i < count && j < 16){
+        print(f"${buf(i)}%02x ")
+        i += 1
+        j += 1
+      }
+      println
+    }
+  }
 }
 
 /**
@@ -77,7 +90,10 @@ class SettableDOStream(baos: SettableBAOStream) extends DataOutputStream(baos) {
 
   def this (size: Int) = this(new SettableBAOStream(size))
 
-  def setPosition(newPos: Int): Int = baos.setPosition(newPos)
+  def setPosition(newPos: Int): Int = {
+    written = newPos
+    baos.setPosition(newPos)
+  }
   def position = baos.position
 
   def getBuffer = baos.getBuffer
@@ -87,6 +103,8 @@ class SettableDOStream(baos: SettableBAOStream) extends DataOutputStream(baos) {
     written = 0
     baos.setPosition(0)
   }
+
+  def hexDump =  baos.hexDump
 
   def setByte (pos: Int, v: Byte) = {
     val pos0 = baos.position

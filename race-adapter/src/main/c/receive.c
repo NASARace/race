@@ -19,6 +19,7 @@
 #include <pthread.h>
 #include <string.h>
 #include <pthread.h>
+#include <stdio.h>
 
 #include "race_internal.h"
 
