@@ -86,46 +86,39 @@ int check_request (char* host, char* service, int cli_flags, char* cli_in_type, 
     return ret;
 }
 
-int begin_send_data() {
-    return 1; // number of tracks we send
-}
-
-int race_write_send_data(databuf_t* db, int pos, int track_index) {
+int write_data(databuf_t* db, int pos) {
     update_position(&track);
+
+    pos = race_write_short(db,pos,1);  // we only send one track (for now)
     pos = race_write_simple_track(db, pos,
                              track.id, track.time_msec, track.lat_deg, track.lon_deg, 
                              track.alt_m, track.heading_deg, track.speed_m_sec);
     return pos;
 }
 
-void end_send_data (int n_written) {
-    // nothing to do
-}
-
-void begin_receive_data (int n_read) {
-    printf("received %d tracks from client:\n", n_read);
-}
-
-int race_read_receive_data (databuf_t* db, int pos, int track_index) {
+int read_data (databuf_t* db, int pos) {
     char id[MAX_ID_LEN];
     long time_msec;
     double lat_deg, lon_deg, alt_m, heading_deg, speed_m_sec;
+    short n_tracks = 0;
 
-    pos = race_read_simple_track(db, pos, 
-                            id, sizeof(id), &time_msec, &lat_deg, &lon_deg, 
-                            &alt_m, &heading_deg, &speed_m_sec);
-    if (pos <= 0){
-        fprintf(stderr, "error reading track: %d\n", track_index);                        
-    } else {
-        printf("   %d: %s, t=%ld, lat=%f°, lon=%f°, alt=%f m, hdg=%f°, spd=%f m/sec\n", 
-            track_index, id, time_msec, lat_deg, lon_deg, alt_m, heading_deg, speed_m_sec);
+    pos = race_read_short(db,pos,&n_tracks); // the number of tracks we received in this message
+    printf("received %d tracks from client:\n", n_tracks);    
+
+    for (int i=0; i<n_tracks; i++) {
+        pos = race_read_simple_track(db, pos, 
+                                id, sizeof(id), &time_msec, &lat_deg, &lon_deg, 
+                                &alt_m, &heading_deg, &speed_m_sec);
+        if (pos <= 0){
+            fprintf(stderr, "error reading track: %d\n", i);                        
+        } else {
+            printf("   %d: %s, t=%ld, lat=%f°, lon=%f°, alt=%f m, hdg=%f°, spd=%f m/sec\n", 
+                i, id, time_msec, lat_deg, lon_deg, alt_m, heading_deg, speed_m_sec);
+        }
     }
     return pos;
 }
 
-void end_receive_data (int n_read) {
-    // nothing to do
-}
 
 //--- the test driver
 
@@ -136,13 +129,8 @@ local_context_t context = {
 
     .check_request = check_request,
 
-    .begin_send_data = begin_send_data,
-    .write_send_data = race_write_send_data,
-    .end_send_data = end_send_data,
-
-    .begin_receive_data = begin_receive_data,
-    .read_receive_data = race_read_receive_data,
-    .end_receive_data = end_receive_data,
+    .write_data = write_data,
+    .read_data = read_data,
 
     .info = info,
     .warning = warning,

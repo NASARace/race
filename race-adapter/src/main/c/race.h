@@ -150,14 +150,17 @@ int race_write_stop (databuf_t* db, int sender);
 int race_is_stop (databuf_t* db);
 int race_read_stop (databuf_t* db, int* sender, long* time_msec, const char** err_msg);
 
+
+//--- application messages
+
 //--- data msg API (can go both ways)
 int race_begin_write_data (databuf_t* db, int sender_id);
-// writing outbound data records is done in the context layer (we don't know the concrete type here)
-int race_end_write_data (databuf_t* db, int pos, short n_tracks);
+// writing outbound data payload is done in the context layer (we don't know the concrete type here)
+int race_end_write_data (databuf_t* db, int pos);
 
 int race_is_data (databuf_t* db);
-int race_read_data_header (databuf_t* db, int* sender, long* time_msec, short* n_tracks, const char** err_msg);
-// reading inbound data records is done in the context layer (we don't know the concrete type here)
+int race_read_data_header (databuf_t* db, int* sender, long* time_msec, const char** err_msg);
+// reading inbound data payload is done in the context layer (we don't know the concrete type here)
 
 
 /*************************************************************************************************
@@ -210,13 +213,9 @@ typedef struct {
 
     int (*check_request)(char* host, char* service, int req_flags, char* req_in_type, char* req_out_type, int* data_interval);
 
-    int (*begin_send_data)(); // how many track records do we send (can vary in each cycle)
-    int (*write_send_data)(databuf_t* db, int pos, int track_index); // called to set data of track n in db
-    void (*end_send_data)(int n_written);
-
-    void (*begin_receive_data)(int n_received); // how many track records did we receive
-    int (*read_receive_data)(databuf_t* db, int pos, int track_index); // called after db has been filled
-    void (*end_receive_data)(int n_read);
+    // handle application specific data messages (only the payload, race-adapter takes care of the header)
+    int (*write_data)(databuf_t* db, int pos);
+    int (*read_data)(databuf_t* db, int pos);
 
     //--- reporting callbacks
     void (*error)(const char* fmt,...);

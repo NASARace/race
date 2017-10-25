@@ -50,26 +50,20 @@ static bool send_data(local_context_t *context, local_endpoint_t *local,
     const char *err_msg;
     databuf_t *db = local->db;
 
-    int n_tracks = context->begin_send_data();
-    if (n_tracks > 0) {
-        int pos = race_begin_write_data(db, SERVER_ID);
-        int n = 0;
-        for (; n < n_tracks; n++) {
-            pos = context->write_send_data(db, pos, n);
-            if (pos <= 0) {
-                context->warning("too many outbound tracks %d\n", n);
-                break;
-            }
-        }
-        race_end_write_data(db, pos, n);
-        context->end_send_data(n);
-        if (n > 0) {
-            if (sendto(local->fd, db->buf, db->pos, 0, remote->addr, remote->addrlen) < 0) {
+    int pos = race_begin_write_data(db, SERVER_ID);
+    pos = context->write_data(db,pos);
+    if (pos >= 0) {
+        pos = race_end_write_data(db,pos);
+        if (pos > 0) {
+            if (sendto(local->fd, db->buf, pos, 0, remote->addr, remote->addrlen) < 0) {
                 context->error("sending track data failed (%s)", strerror(errno));
                 return false;
             }
         }
+    } else {
+        context->warning("no data payload written");  // ? should this be a warning ?
     }
+
     return true;
 }
 
@@ -178,7 +172,7 @@ bool race_interval_threaded(local_context_t *context) {
                     send_stop(context, local, remote);
                 }
 
-                pthread_cancel(receiver);
+                pthread_cancel(receiver);  // TODO - shall we use less harsh measures to terminate?
                 pthread_join(receiver,NULL);
                 free(remote);
             }

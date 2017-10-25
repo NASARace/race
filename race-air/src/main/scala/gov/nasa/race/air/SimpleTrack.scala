@@ -42,7 +42,7 @@ import scala.collection.mutable.ArrayBuffer
   *     double speed_m_sec;
   *   }
   *
-  *   Note - instances are not thread safe to save memory allocations. The read() method can be called at a high rate
+  *   NOTE - instances are not thread safe to save memory allocations. The read() method can be called at a high rate
   *   Do not store the result value
   */
 class SimpleTrackReader extends DataStreamReader {
@@ -50,11 +50,12 @@ class SimpleTrackReader extends DataStreamReader {
 
   val schema = "simple_track"  // the supported schema
 
-  def read (dis: DataInputStream, nRecords: Int): Seq[Any] = {
+  def read (dis: DataInputStream): Option[Any] = {
     list.clear
     try {
-      var nRead = 0
-      while (dis.available > 0 && nRead < nRecords) {
+      var nTracks = dis.readShort
+
+      while (dis.available > 0 && list.size < nTracks) {
         val id = dis.readUTF
         val timeMsec = dis.readLong
         val latDeg = dis.readDouble
@@ -68,13 +69,12 @@ class SimpleTrackReader extends DataStreamReader {
                              MetersPerSecond(speedMS),Degrees(headingDeg),
                              new DateTime(timeMsec))
         list += fpos
-        nRead += 1
       }
 
     } catch {
       case x: Throwable => // ignore the rest
     }
-    list
+    if (list.isEmpty) None else Some(list)
   }
 }
 
@@ -83,19 +83,34 @@ class SimpleTrackWriter extends DataStreamWriter {
 
   val schema = "simple_track"  // the supported schema
 
+  def writeTrack (dos: DataOutputStream, t: TrackedObject) = {
+    val latLonPos = t.position
+
+    dos.writeUTF(t.cs)
+    dos.writeLong(t.date.getMillis)
+    dos.writeDouble(latLonPos.φ.toDegrees)
+    dos.writeDouble(latLonPos.λ.toDegrees)
+    dos.writeDouble(t.altitude.toMeters)
+    dos.writeDouble(t.heading.toDegrees)
+    dos.writeDouble(t.speed.toMetersPerSecond)
+  }
+
   def write (dos: DataOutputStream, data: Any): Int = {
     data match {
       case t: TrackedObject =>
-        val pos = t.position
+        dos.writeShort(1)  // one track
+        writeTrack(dos,t)
+        dos.size // we wrote one record
 
-        dos.writeUTF(t.cs)
-        dos.writeLong(t.date.getMillis)
-        dos.writeDouble(pos.φ.toDegrees)
-        dos.writeDouble(pos.λ.toDegrees)
-        dos.writeDouble(t.altitude.toMeters)
-        dos.writeDouble(t.heading.toDegrees)
-        dos.writeDouble(t.speed.toMetersPerSecond)
-        1 // we wrote one record
+      case list: Seq[_] =>
+        if (list.nonEmpty) {
+          dos.writeShort(list.size.toShort)
+          list foreach {
+            case t: TrackedObject => writeTrack(dos, t)
+            case _ => // ignore
+          }
+          dos.size
+        } else 0
 
       case _ => 0 // all others we don't know about
     }

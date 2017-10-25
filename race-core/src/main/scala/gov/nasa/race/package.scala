@@ -383,7 +383,7 @@ package object race {
   // something that can read records from a DataInputStream
   trait DataStreamReader {
     val schema: String // this is a symbolic name, not necessarily a Scala type name
-    def read (dis: DataInputStream, nRecords: Int): Seq[Any]
+    def read (dis: DataInputStream): Option[Any]
   }
 
   // something that can write records to a DataOutputStream

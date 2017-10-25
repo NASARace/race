@@ -233,41 +233,36 @@ int race_read_stop (databuf_t* db, int *sender_id, long* time_msec, const char**
 
 /*
     can be sent both ways
-    this is a variable length message with a generic payload. The API supports sending
-    multiple data records of identical format with the same message. The concrete
-    implementation is responsible for writing (single) records. The library makes sure that the
-    number of records is added to the message
+    this is a variable length message with a generic, application specific payload that is written/read
+    by context callbacks
 
     struct {
         struct msg_header;
-        short n_records;
-        <data-record>...
+        void* payload // app specific
     }
 */
-
-int race_begin_write_data (databuf_t* db, int sender_id) {
-    int pos = write_header(db, DATA_MSG, 0, sender_id); // length will be set by race_end_write_data
-    return pos + 2; // we need room for n_records, which will also be set by race_end_write_data
-}
-
-// writing track data is done in the context (we don't know the type)
-
-int race_end_write_data (databuf_t* db, int pos, short n_records) {
-    race_set_short(db, 2, (short)pos); // complete message length
-    race_set_short(db, HEADER_LEN, n_records); // complete number of tracks
-    return pos;
-}
 
 int race_is_data (databuf_t* db) {
     return is_msg(db, DATA_MSG, 0);    
 }
 
-int race_read_data_header (databuf_t* db, int *sender_id, long* time_msec, short* n_records, const char** err_msg) {
-    int pos = read_header(db, DATA_MSG, NO_FIXED_MSG_LEN, sender_id, time_msec, err_msg);
+
+int race_begin_write_data (databuf_t* db, int sender_id) {
+    return write_header(db, DATA_MSG, 0, sender_id); // length will be set by race_end_write_data
+}
+
+// writing track data is done in the context (we don't know the type)
+
+int race_end_write_data (databuf_t* db, int pos) {
     if (pos > 0){
-        pos = race_read_short(db, pos, n_records);
+        race_set_short(db, 2, (short)pos); // fill in message length
     }
     return pos;
+}
+
+
+int race_read_data_header (databuf_t* db, int *sender_id, long* time_msec, const char** err_msg) {
+    return read_header(db, DATA_MSG, NO_FIXED_MSG_LEN, sender_id, time_msec, err_msg);
 }
 
 // reading track data is done in the context (we don't know the type)

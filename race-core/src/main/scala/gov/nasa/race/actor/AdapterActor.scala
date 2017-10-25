@@ -66,6 +66,8 @@ trait AdapterActor extends PublishingRaceActor with SubscribingRaceActor with Co
   val ownPort = config.getIntOrElse("own-port", 50036)
   var socket = new DatagramSocket(ownPort, ownIpAddress)
 
+  val flatten = config.getBooleanOrElse("flatten", true) // do we flatten reader data when publishing
+
   val dos = new SettableDOStream(MaxMsgLen)
   val packet = new DatagramPacket(dos.getBuffer, dos.getCapacity)
   var id = NoId
@@ -188,15 +190,15 @@ class ClientAdapterActor(val config: Config) extends AdapterActor {
         if (checkSender(senderIp,header.senderId)) stop
 
       case DataMsg => ifSome(reader) { r =>
-        // make sure we don't allocate memory here for processing data messages - they might come at high frequency
+        // make sure we don't allocate memory here for processing data messages - they might come at a high rate
         readHeader(dis,header)
         if (checkSender(senderIp,header.senderId)) {
           if (header.epochMillis > tLastData) {
             tLastData = header.epochMillis
-            val nDataRecords = dis.readShort
-            if (nDataRecords > 0) {
-              val list = r.read(dis, nDataRecords)
-              list foreach publish
+            r.read(dis) match {
+              case None =>
+              case Some(list: Seq[_]) => if (flatten) list.foreach(publish) else publish(list)
+              case Some(data) => publish(data)
             }
           } else {
             // ignore out-of-order packets
@@ -224,14 +226,12 @@ class ClientAdapterActor(val config: Config) extends AdapterActor {
       if (serverId != NoId) {   // are we connected
         ifSome(writer) { w =>   // do we have a writer
           dos.clear
-          dos.setPosition(HeaderLen+2) // we fill in the header once we know the writer handled this message
-          val nRecords = w.write(dos, msg)
-          if (nRecords > 0) {
-            info(s"sending $nRecords data records")
-            val len = dos.position
+          dos.setPosition(HeaderLen) // we fill in the header once we know the writer handled this message
+          val len = w.write(dos, msg)
+          if (len > 0) {
+            info(s"sending data message with $len bytes")
             dos.setPosition(0)
             writeHeader(dos, DataMsg, len.toShort, id)
-            dos.writeShort(nRecords)
             dos.setPosition(len)
             sendPacket(len)
           }

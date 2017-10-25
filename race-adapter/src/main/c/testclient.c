@@ -116,12 +116,13 @@ int main( int argc, char** argv ){
                 break;
 
             } else if (race_is_data(db)) {
-                short n_tracks;
                 int sender_id;
-                int pos = race_read_data_header(db, &sender_id, &time, &n_tracks, &err_msg);
+                int pos = race_read_data_header(db, &sender_id, &time, &err_msg);
                 if ( pos <= 0) {
                     fprintf(stderr, "error reading tracks header: %s\n", err_msg);
                 } else {
+                    short n_tracks;
+                    pos = race_read_short(db,pos,&n_tracks);
                     printf("received %d tracks\n", n_tracks);
                     for (int i=0; i<n_tracks; i++) {
                         char id[MAX_ID_LEN];

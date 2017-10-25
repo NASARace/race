@@ -40,18 +40,10 @@ void receive_message(local_context_t *context, local_endpoint_t *local, remote_e
 
         } else if (race_is_data(&db)) {
             if (context->flags & DATA_RECEIVER) {
-                short n_tracks;
-                int pos = race_read_data_header(&db, &remote_id, &send_time, &n_tracks, &err_msg);
+                int pos = race_read_data_header(&db, &remote_id, &send_time, &err_msg);
                 if (pos && remote_id == remote->id && send_time > remote->time_last) {
                     remote->time_last = send_time;
-                    context->begin_receive_data(n_tracks);
-                    int n = 0;
-                    for (; n < n_tracks; n++) {
-                        pos = context->read_receive_data(&db, pos, n);
-                        if (pos <= 0)
-                            break;
-                    }
-                    context->end_receive_data(n);
+                    context->read_data(&db,pos);
                 } else {
                     context->warning("ignoring tracks message from remote %x (%s)\n", remote_id, err_msg);
                 }
