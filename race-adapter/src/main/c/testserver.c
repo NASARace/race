@@ -60,10 +60,6 @@ void error (const char*fmt, ...) {
     vfprintf(stderr,fmt,ap);
 }
 
-int track_interval (int requested_interval) {
-    return requested_interval;
-}
-
 int check_request (char* host, char* service, int cli_flags, char* cli_in_type, char* cli_out_type, int* track_interval){
     printf("client request from %s:%s\n", host,service);
     printf("    flags:    %x\n", cli_flags);
