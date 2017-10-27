@@ -17,6 +17,7 @@
 
 #include <time.h>
 #include <math.h>
+#include "race.h"
 
 int race_sleep_msec (int millis) {
     int sec = millis / 1000;
@@ -29,11 +30,15 @@ int race_sleep_msec (int millis) {
     return nanosleep(&ts,NULL);
 }
 
-long race_epoch_msec () {
-    long ms;
+epoch_msec_t race_epoch_msec () {
+    epoch_msec_t ms;
     struct timespec spec;
   
     clock_gettime( CLOCK_REALTIME, &spec);
-    ms = spec.tv_sec * 1000 + round(spec.tv_nsec / 1.0e6);
+    ms = spec.tv_sec * 1000LL + lround(spec.tv_nsec / 1e6);
     return ms;
+}
+
+epoch_msec_t race_epoch_msec_from_fsec(double sec) {
+    return (epoch_msec_t)((sec + 0.0005) * 1000);
 }

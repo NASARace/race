@@ -45,7 +45,7 @@ remote_endpoint_t* wait_for_remote (local_context_t* context, local_endpoint_t* 
         
         int req_flags = 0;
         int req_interval_msec = 0;
-        long time_sent = 0;
+        epoch_msec_t time_sent = 0;
         char req_out_type[MAX_TYPE_LEN];
         char req_in_type[MAX_TYPE_LEN];
 

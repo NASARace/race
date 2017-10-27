@@ -24,7 +24,7 @@ void update_position(track_t* track) {
         track->time_msec = race_epoch_msec();
 
     } else {
-        long t_now = race_epoch_msec();
+        epoch_msec_t t_now = race_epoch_msec();
         double dist = ((t_now - track->time_msec) / 1000.0) * track->speed_m_sec;
         double delta = dist / (R + track->alt_m);
         double lat = RAD(track->lat_deg);

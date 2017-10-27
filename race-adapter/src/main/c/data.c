@@ -33,7 +33,7 @@
 */
 
 int race_write_simple_track (databuf_t* db, int pos,
-                        char* id, long time_msec, double lat_deg, double lon_deg, double alt_m, 
+                        char* id, epoch_msec_t time_msec, double lat_deg, double lon_deg, double alt_m, 
                         double heading_deg, double speed_m_sec) {
     int id_len = strlen(id);
     int track_len = id_len + 2 + 48;
@@ -52,7 +52,7 @@ int race_write_simple_track (databuf_t* db, int pos,
 
 int race_read_simple_track (databuf_t* db, int pos,
                        char id[], int max_len, 
-                       long* time_msec, double* lat_deg, double* lon_deg, double* alt_m, 
+                       epoch_msec_t* time_msec, double* lat_deg, double* lon_deg, double* alt_m, 
                        double* heading_deg, double* speed_m_sec) {
     int p = pos;
     p = race_read_strncpy(db, p,id,max_len);

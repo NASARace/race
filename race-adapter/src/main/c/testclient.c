@@ -73,7 +73,7 @@ int main( int argc, char** argv ){
         return 1;
     }
 
-    long time;
+    epoch_msec_t time;
     int client_id;
     int server_flags;
     int server_interval;
@@ -126,14 +126,14 @@ int main( int argc, char** argv ){
                     printf("received %d tracks\n", n_tracks);
                     for (int i=0; i<n_tracks; i++) {
                         char id[MAX_ID_LEN];
-                        long time_msec;
+                        epoch_msec_t time_msec;
                         double lat_deg, lon_deg, alt_m, heading_deg, speed_m_sec;
 
                         pos = race_read_simple_track(db, pos, id, sizeof(id), &time_msec, &lat_deg, &lon_deg, &alt_m, &heading_deg, &speed_m_sec);
                         if (pos <= 0){
                             fprintf(stderr, "error reading track: %s\n", err_msg);                        
                         } else {
-                            printf("   %d: %s, t=%ld, lat=%f°, lon=%f°, alt=%f m, hdg=%f°, spd=%f m/sec\n", 
+                            printf("   %d: %s, t=%lld, lat=%f°, lon=%f°, alt=%f m, hdg=%f°, spd=%f m/sec\n", 
                                 i, id, time_msec, lat_deg, lon_deg, alt_m, heading_deg, speed_m_sec);
                         }
                     }

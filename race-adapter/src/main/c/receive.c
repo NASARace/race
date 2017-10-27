@@ -27,7 +27,7 @@ void receive_message(local_context_t *context, local_endpoint_t *local, remote_e
     databuf_t db = DATABUF(MAX_MSG_LEN);
     const char *err_msg;
     int remote_id;
-    long send_time;
+    epoch_msec_t send_time;
 
     int n_read = recvfrom(local->fd, db.buf, db.capacity, 0, remote->addr, &remote->addrlen);
     if (n_read > 0) {

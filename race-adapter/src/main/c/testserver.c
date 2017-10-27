@@ -94,7 +94,7 @@ int write_data(databuf_t* db, int pos) {
 
 int read_data (databuf_t* db, int pos) {
     char id[MAX_ID_LEN];
-    long time_msec;
+    epoch_msec_t time_msec;
     double lat_deg, lon_deg, alt_m, heading_deg, speed_m_sec;
     short n_tracks = 0;
 
@@ -108,7 +108,7 @@ int read_data (databuf_t* db, int pos) {
         if (pos <= 0){
             fprintf(stderr, "error reading track: %d\n", i);                        
         } else {
-            printf("   %d: %s, t=%ld, lat=%f°, lon=%f°, alt=%f m, hdg=%f°, spd=%f m/sec\n", 
+            printf("   %d: %s, t=%lld, lat=%f°, lon=%f°, alt=%f m, hdg=%f°, spd=%f m/sec\n", 
                 i, id, time_msec, lat_deg, lon_deg, alt_m, heading_deg, speed_m_sec);
         }
     }

@@ -5,12 +5,17 @@ OBJDIR=target/c/obj
 BINDIR=target/c/bin
 LIBDIR=target/c/lib
 
+os := $(shell uname -s)
+arch := $(shell uname -p)
+
+LIBNAME=lib$(NAME)-$(os)-$(arch)
+
 .PHONY: clean splash init_dirs
 
 $(OBJDIR)/%.o: $(SRCDIR)/%.c
 	$(CC) $(CFLAGS) $(CPPFLAGS) -c -o $@ $<
 
-all: splash init_dirs $(BINDIR)/testserver $(BINDIR)/testclient
+all: splash init_dirs $(BINDIR)/testserver $(BINDIR)/testclient $(BINDIR)/test
 
 splash:
 	@echo "==== running $(MAKE_COMMAND) in $(PWD)"
@@ -28,14 +33,17 @@ clean:
 
 ########################################################################
 
-$(BINDIR)/testserver : $(OBJDIR)/testserver.o $(OBJDIR)/testtrack.o $(LIBDIR)/lib$(NAME).a
-	$(CC) -o $@ $^ -lm -pthread
+$(BINDIR)/testserver : $(OBJDIR)/testserver.o $(OBJDIR)/testtrack.o $(LIBDIR)/$(LIBNAME).a
+	$(CC) $(LFLAGS) -o $@ $^ -lm -pthread
 
-$(BINDIR)/testclient : $(OBJDIR)/testclient.o $(OBJDIR)/testtrack.o $(LIBDIR)/lib$(NAME).a
-	$(CC) -o $@ $^ -lm
+$(BINDIR)/testclient : $(OBJDIR)/testclient.o $(OBJDIR)/testtrack.o $(LIBDIR)/$(LIBNAME).a
+	$(CC) $(LFLAGS) -o $@ $^ -lm
+
+$(BINDIR)/test : $(OBJDIR)/test.o $(LIBDIR)/$(LIBNAME).a
+	$(CC) $(LFLAGS) -o $@ $^ -lm
 
 
-$(LIBDIR)/lib$(NAME).a : $(addprefix $(OBJDIR)/, local.o connect.o receive.o messages.o databuf.o netutils.o timeutils.o data.o)
+$(LIBDIR)/$(LIBNAME).a : $(addprefix $(OBJDIR)/, local.o connect.o receive.o messages.o databuf.o netutils.o timeutils.o data.o)
 	$(AR) -rcs $@ $^ 
 
 
@@ -71,4 +79,7 @@ $(OBJDIR)/netutils.o : $(addprefix $(SRCDIR)/, netutils.c)
 	$(CC) $(CFLAGS) -c -o $@ $<
 
 $(OBJDIR)/data.o : $(addprefix $(SRCDIR)/, data.c race.h)
+	$(CC) $(CFLAGS) -c -o $@ $<
+
+$(OBJDIR)/test.o : $(addprefix $(SRCDIR)/, test.c race.h)
 	$(CC) $(CFLAGS) -c -o $@ $<

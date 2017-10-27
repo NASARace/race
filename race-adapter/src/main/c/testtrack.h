@@ -22,7 +22,7 @@
 
 typedef struct {
     char   *id;
-    long   time_msec;
+    epoch_msec_t   time_msec;
     double lat_deg;
     double lon_deg;
     double alt_m;

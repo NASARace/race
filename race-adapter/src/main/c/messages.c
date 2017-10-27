@@ -60,7 +60,7 @@ static void set_msg_len (databuf_t* db, short msg_len) {
 }
 
 static int read_header (databuf_t* db, short id, int check_len, 
-                        int* sender, long* time_msec, const char** err_msg) {
+                        int* sender, epoch_msec_t* time_msec, const char** err_msg) {
     short msg_id;
     int read_len = db->pos;
 
@@ -122,7 +122,7 @@ int race_is_request (databuf_t* db) {
 
 int race_read_request (databuf_t* db, int* cli_flags, 
                          char* in_track_type, char* out_track_type, int max_type_len,
-                         int* interval_msec, long* time_msec, const char** err_msg) {
+                         int* interval_msec, epoch_msec_t* time_msec, const char** err_msg) {
     int pos = read_header(db, REQUEST_MSG, NO_FIXED_MSG_LEN, NULL, time_msec, err_msg);
     if (pos > 0){
         pos = race_read_int(db,pos,cli_flags);
@@ -161,7 +161,7 @@ int race_is_accept (databuf_t* db) {
     return is_msg(db, ACCEPT_MSG, ACCEPT_LEN);
 }
 
-int race_read_accept (databuf_t* db, long* time_msec, int* flags, int* interval_msec, int* client_id, const char** err_msg) {
+int race_read_accept (databuf_t* db, epoch_msec_t* time_msec, int* flags, int* interval_msec, int* client_id, const char** err_msg) {
     int pos = read_header(db, ACCEPT_MSG, ACCEPT_LEN, NULL, time_msec, err_msg);
     if (pos > 0){
         pos = race_read_int(db,pos, flags);
@@ -224,7 +224,7 @@ int race_is_stop (databuf_t* db) {
     return is_msg(db, STOP_MSG, STOP_MSG_LEN);
 }
 
-int race_read_stop (databuf_t* db, int *sender_id, long* time_msec, const char** err_msg) {
+int race_read_stop (databuf_t* db, int *sender_id, epoch_msec_t* time_msec, const char** err_msg) {
     return read_header(db, STOP_MSG, STOP_MSG_LEN, sender_id, time_msec, err_msg);
 }
 
@@ -261,7 +261,7 @@ int race_end_write_data (databuf_t* db, int pos) {
 }
 
 
-int race_read_data_header (databuf_t* db, int *sender_id, long* time_msec, const char** err_msg) {
+int race_read_data_header (databuf_t* db, int *sender_id, epoch_msec_t* time_msec, const char** err_msg) {
     return read_header(db, DATA_MSG, NO_FIXED_MSG_LEN, sender_id, time_msec, err_msg);
 }
 

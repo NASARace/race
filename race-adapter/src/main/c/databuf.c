@@ -100,9 +100,9 @@ int race_write_int(databuf_t *db, int pos, int v) {
     }
 }
 
-int race_write_long(databuf_t *db, int pos, long v) {
-    if (race_check_pos(db, pos + 8)) {
-        long n = _htonll(v);
+int race_write_long(databuf_t *db, int pos, int64_t v) {
+    if (race_check_pos(db, pos + 7)) {
+        int64_t n = htonll(v);
         unsigned char *b = (unsigned char *)&n;
 
         unsigned char *buf = db->buf;
@@ -122,9 +122,9 @@ int race_write_long(databuf_t *db, int pos, long v) {
 }
 
 int race_write_double(databuf_t *db, int pos, double v) {
-    if (IS_D64 && race_check_pos(db, pos + 8)) { // we assume IEEE-754 here
-        long *p = (long *)&v;
-        long n = _htonll(*p);
+    if (IS_D64 && race_check_pos(db, pos + 7)) { // we assume IEEE-754 here
+        int64_t *p = (int64_t *)&v;
+        int64_t n = htonll(*p);
         unsigned char *b = (unsigned char *)&n;
 
         unsigned char *buf = db->buf;
@@ -236,11 +236,11 @@ int race_read_int(databuf_t *db, int pos, int *v) {
     }
 }
 
-int race_peek_long(databuf_t *db, int pos, long *v) {
+int race_peek_long(databuf_t *db, int pos, int64_t *v) {
     if (race_check_pos(db, pos + 7)) {
         if (v) {
-            long *p = (long *)(db->buf + pos);
-            *v = _ntohll(*p);
+            int64_t *p = (int64_t *)(db->buf + pos);
+            *v = ntohll(*p);
         }
         return pos + 8;
     } else {
@@ -248,11 +248,11 @@ int race_peek_long(databuf_t *db, int pos, long *v) {
     }
 }
 
-int race_read_long(databuf_t *db, int pos, long *v) {
+int race_read_long(databuf_t *db, int pos, int64_t *v) {
     if (race_check_pos(db, pos + 7)) {
         if (v) {
-            long *p = (long *)(db->buf + pos);
-            *v = _ntohll(*p);
+            int64_t *p = (int64_t *)(db->buf + pos);
+            *v = ntohll(*p);
         }
         db->pos = pos + 8;
         return db->pos;
@@ -264,8 +264,8 @@ int race_read_long(databuf_t *db, int pos, long *v) {
 int race_peek_double(databuf_t *db, int pos, double *v) {
     if (race_check_pos(db, pos + 7)) {
         if (v) {
-            long *p = (long *)(db->buf + pos);
-            long l = _ntohll(*p);
+            uint64_t *p = (uint64_t *)(db->buf + pos);
+            uint64_t l = ntohll(*p);
             *v = *(double *)&l;
         }
         return pos + 8;
@@ -277,8 +277,8 @@ int race_peek_double(databuf_t *db, int pos, double *v) {
 int race_read_double(databuf_t *db, int pos, double *v) {
     if (race_check_pos(db, pos + 7)) {
         if (v) {
-            long *p = (long *)(db->buf + pos);
-            long l = _ntohll(*p);
+            uint64_t *p = (uint64_t *)(db->buf + pos);
+            uint64_t l = ntohll(*p);
             *v = *(double *)&l;
         }
         db->pos = pos + 8;
@@ -375,31 +375,3 @@ void race_hex_dump(databuf_t *db) {
     }
 }
 
-#ifdef TEST
-
-int main(int argc, char **argv) {
-    unsigned char buf[100];
-    databuf_t db;
-
-    int pos = race_init_databuf(&db, buf, sizeof(buf));
-    pos = race_write_long(&db, pos, 42);
-    pos = race_write_double(&db, pos, 1.2345);
-    pos = race_write_string(&db, pos, "blahh", 5);
-
-    hex_dump(&db);
-
-    long l;
-    double d;
-    char s[128];
-
-    pos = race_reset_databuf(&db);
-    pos = race_read_long(&db, pos, &l);
-    pos = race_read_double(&db, pos, &d);
-    pos = race_read_string(&db, pos, s, sizeof(s));
-
-    printf("l=%ld, d=%f s=\"%s\"\n", l, d, s);
-
-    return 1;
-}
-
-#endif /* TEST */
