@@ -20,6 +20,7 @@
 #include <stdarg.h>
 #include <signal.h>
 #include <math.h>
+#include <inttypes.h>
 
 #include "race.h"
 
@@ -108,7 +109,7 @@ int read_data (databuf_t* db, int pos) {
         if (pos <= 0){
             fprintf(stderr, "error reading track: %d\n", i);                        
         } else {
-            printf("   %d: %s, t=%lld, lat=%f°, lon=%f°, alt=%f m, hdg=%f°, spd=%f m/sec\n", 
+            printf("   %d: %s, t=%"PRId64", lat=%f°, lon=%f°, alt=%f m, hdg=%f°, spd=%f m/sec\n", 
                 i, id, time_msec, lat_deg, lon_deg, alt_m, heading_deg, speed_m_sec);
         }
     }

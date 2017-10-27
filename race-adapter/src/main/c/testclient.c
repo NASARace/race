@@ -24,6 +24,7 @@
 #include <stdbool.h>
 #include <signal.h>
 #include <errno.h>
+#include <inttypes.h>
 
 #include "race.h"
 #include "testtrack.h"
@@ -133,7 +134,7 @@ int main( int argc, char** argv ){
                         if (pos <= 0){
                             fprintf(stderr, "error reading track: %s\n", err_msg);                        
                         } else {
-                            printf("   %d: %s, t=%lld, lat=%f°, lon=%f°, alt=%f m, hdg=%f°, spd=%f m/sec\n", 
+                            printf("   %d: %s, t=%"PRId64", lat=%f°, lon=%f°, alt=%f m, hdg=%f°, spd=%f m/sec\n", 
                                 i, id, time_msec, lat_deg, lon_deg, alt_m, heading_deg, speed_m_sec);
                         }
                     }
