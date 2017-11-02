@@ -43,6 +43,8 @@ class SmoothingExtrapolator (ΔtAverage: FiniteDuration = 1.second,     // avera
   private var s: Double = 0 // level estimate
   private var m: Double = 0 // trend estimate
 
+  def lastObservationMillis = tlast
+
   def addObservation (y: Double, t: Long): Unit = {
     if (tlast < 0) { // first observation, nothing to smooth yet
       s = y
@@ -79,3 +81,70 @@ class SmoothingExtrapolator (ΔtAverage: FiniteDuration = 1.second,     // avera
   }
 }
 
+class SmoothingVectorExtrapolator (dim: Int,                                 // dimension
+                                   ΔtAverage: FiniteDuration = 1.second,     // average observation interval
+                                   α0: Double = 0.3,                         // level smoothing factor seed [0..1]
+                                   γ0: Double = 0.1                          // trend smoothing factor seed [0..1]
+                                  ) {
+  private var tlast: Long = -1 // previous observation time in msec
+  private var Δtlast: Double = 0 // in sec
+
+  private final val tscale = 10.0 ** Math.round(Math.log10(ΔtAverage.toMillis))
+
+  private var α: Array[Double] = Array.fill(dim)(α0)  // level smoothing factor [0..1]
+  private var γ: Array[Double] = Array.fill(dim)(γ0)  // trend smoothing factor [0..1]
+
+  private var s: Array[Double] = new Array(dim) // level estimate
+  private var m: Array[Double] = new Array(dim) // trend estimate
+
+  def lastObservationMillis = tlast
+
+  final def addObservation (o: Array[Double], t: Long): Unit = {
+    if (tlast < 0) { // first observation, nothing to smooth yet
+      Array.copy(o, 0, s, 0, dim)
+      tlast = t
+
+    } else {
+      val Δt = (t - tlast) / tscale
+
+      if (Δt != 0) { // safe guard against duplicated observations that would cause infinity results
+        var i = 0
+        while (i < dim) {
+          var oi = o(i)
+          var αi = α(i)
+          var γi = γ(i)
+          var si = s(i)
+          var mi = m(i)
+
+          //-- update smoothing factors
+          αi = αi / (αi + (1 - αi) ** Δt)
+          γi = γi / (γi + (1 - γi) ** Δt)
+          //γi = γi / (γi + (Δtlast / Δt) * ((1 - γi) ** Δt))
+
+          val sʹ = (1 - αi) * (si + Δt * mi) + αi * oi
+          mi = (1 - γi) * mi + γi * (sʹ - si) / Δt
+          si = sʹ
+
+          α(i) = αi
+          γ(i) = γi
+          s(i) = si
+          m(i) = mi
+
+          i += 1
+        }
+
+        tlast = t
+        Δtlast = Δt
+      }
+    }
+  }
+
+  final def extrapolate (t: Long, v: Array[Double]): Unit = {
+    val dt = t - tlast
+    var i = 0
+    while (i < dim) {
+      v(i) = s(i) + dt * m(i) / tscale
+      i += 1
+    }
+  }
+}

@@ -18,6 +18,7 @@
 package gov.nasa.race.air.xplane
 
 import com.typesafe.config.Config
+import gov.nasa.race._
 import gov.nasa.race.air.FlightPos
 import gov.nasa.race.common.SmoothingExtrapolator
 
@@ -163,13 +164,5 @@ class XPlaneAircraftList(acConfigs: Seq[Config],
   }
 
   // note this can be called frequently, avoid allocation
-  def updateEstimates (simTimeMillis: Long) = {
-    @tailrec def _updateEstimates (i: Int): Unit = {
-      if (i < length) {
-        entries(i).updateEstimates(simTimeMillis)
-        _updateEstimates(i+1)
-      }
-    }
-    _updateEstimates(0)
-  }
+  def updateEstimates (simTimeMillis: Long) = loopFromTo(0,length) { entries(_).updateEstimates(simTimeMillis) }
 }

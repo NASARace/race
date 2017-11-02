@@ -304,6 +304,12 @@ package object race {
     }
   }
 
+  @tailrec def loopFromTo(i: Int, i1: Int) (f: Int=>Any): Unit = {
+    if (i < i1) {
+      f(i)
+      loopFromTo(i+1,i1)
+    }
+  }
 
   def clear(a: Array[Char]) = java.util.Arrays.fill(a, 0.toChar)
 
