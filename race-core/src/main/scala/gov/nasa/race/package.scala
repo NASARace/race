@@ -307,7 +307,7 @@ package object race {
   @tailrec def loopFromTo(i: Int, i1: Int) (f: Int=>Any): Unit = {
     if (i < i1) {
       f(i)
-      loopFromTo(i+1,i1)
+      loopFromTo(i+1,i1)(f)
     }
   }
 
