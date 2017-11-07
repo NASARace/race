@@ -25,7 +25,7 @@ import akka.http.scaladsl.model.{HttpEntity, MediaTypes}
 import gov.nasa.race.Dated
 import gov.nasa.race.common.{TSEntryData, TimeSeriesStats}
 import org.jfree.chart.plot.{PlotOrientation, XYPlot}
-import org.jfree.chart.{ChartFactory, ChartUtilities}
+import org.jfree.chart.{ChartFactory,ChartUtils}
 import org.jfree.data.xy.{XYBarDataset, XYSeries, XYSeriesCollection}
 
 import scalatags.Text.all._
@@ -93,7 +93,7 @@ trait HtmlTimeSeriesStats[O <: Dated,E <: TSEntryData[O]] extends TimeSeriesStat
         val w = 800
         val h = 300
         val out = new ByteArrayOutputStream
-        ChartUtilities.writeChartAsPNG(out, chart, w, h, true, 6)
+        ChartUtils.writeChartAsPNG(out, chart, w, h, true, 6)
         val ba = out.toByteArray
 
         val path = "fpos-update-histogram.png"
