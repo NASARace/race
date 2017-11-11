@@ -169,22 +169,34 @@ int race_read_data_header (databuf_t* db, int* sender, epoch_msec_t* time_msec, 
 
 
 /*************************************************************************************************
- * off-the-shelf data support
+ * off-the-shelf data support - tracks and proximities
  */
 
 // simple_track is a virtual type with minimal track state info
 
-#define SIMPLE_TRACK_TYPE "simple_track"
+#define SIMPLE_TRACK_PROTOCOL "gov.nasa.race.SimpleTrackProtocol"
 
-int race_write_simple_track(databuf_t *db, int pos, char *id, epoch_msec_t time_msec,
-                       double lat_deg, double lon_deg, double alt_m,
-                       double heading_deg, double speed_m_sec);
+// data message types
+#define TRACK_MSG 1
+#define PROXIMITY_MSG 2
 
-int race_read_simple_track(databuf_t *db, int pos, char id[], int max_len,
-                      epoch_msec_t *time_msec, double *lat_deg, double *lon_deg,
-                      double *alt_m, double *heading_deg, double *speed_m_sec);
+int race_write_track_data(databuf_t *db, int pos, char *id, epoch_msec_t time_msec, double lat_deg,
+                          double lon_deg, double alt_m, double heading_deg, double speed_m_sec);
 
+int race_read_track_data(databuf_t *db, int pos, char id[], int max_len, epoch_msec_t *time_msec,
+                         double *lat_deg, double *lon_deg, double *alt_m, double *heading_deg,
+                         double *speed_m_sec);
 
+int race_write_proximity_data(databuf_t *db, int pos, char *ref_id, double ref_lat_deg,
+                              double ref_lon_deg, double ref_alt_m, double dist_m, int flags,
+                              char *prox_id, epoch_msec_t time_msec, double lat_deg, double lon_deg,
+                              double alt_m, double heading_deg, double speed_m_sec);
+
+int race_read_proximity_data(databuf_t *db, int pos, char ref_id[], int max_ref_len,
+                             double *ref_lat_deg, double *ref_lon_deg, double *ref_alt_m,
+                             double *dist_m, int *flags, char prox_id[], int max_prox_len,
+                             epoch_msec_t *time_msec, double *lat_deg, double *lon_deg,
+                             double *alt_m, double *heading_deg, double *speed_m_sec);
 
 /*************************************************************************************************
  * the top level server interface, which mostly consists of a structure that defines the

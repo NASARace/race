@@ -30,6 +30,7 @@ object Angle {
   final val π = Math.PI
   final val TwoPi = π * 2.0
   final val DegreesInRadian = π / 180.0
+  final val MinutesInRadian = DegreesInRadian * 60.0
   final val Angle0 = new Angle(0)
   final val UndefinedAngle = new Angle(Double.NaN)
   @inline def isDefined(x: Angle): Boolean  = !x.d.isNaN

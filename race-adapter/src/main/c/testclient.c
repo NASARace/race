@@ -68,7 +68,7 @@ int main( int argc, char** argv ){
 
     //--- send client request
     printf("sending request to server\n");
-    race_write_request(db, DATA_RECEIVER, SIMPLE_TRACK_TYPE, NULL, interval);
+    race_write_request(db, DATA_RECEIVER, SIMPLE_TRACK_PROTOCOL, NULL, interval);
     if (sendto(fd, db->buf, db->pos, 0, serveraddr, addrlen) < 0){
         fprintf(stderr,"sending CLIENT_REQUEST failed (%s)\n", strerror(errno));
         return 1;
@@ -122,21 +122,29 @@ int main( int argc, char** argv ){
                 if ( pos <= 0) {
                     fprintf(stderr, "error reading tracks header: %s\n", err_msg);
                 } else {
-                    short n_tracks;
-                    pos = race_read_short(db,pos,&n_tracks);
-                    printf("received %d tracks\n", n_tracks);
-                    for (int i=0; i<n_tracks; i++) {
-                        char id[MAX_ID_LEN];
-                        epoch_msec_t time_msec;
-                        double lat_deg, lon_deg, alt_m, heading_deg, speed_m_sec;
+                    short data_msg_type;
+                    pos = race_read_short(db,pos,&data_msg_type);
+                    if (data_msg_type == TRACK_MSG) {
+                        short n_tracks;
+                        pos = race_read_short(db,pos,&n_tracks);
+                        printf("received %d tracks\n", n_tracks);
+                        for (int i=0; i<n_tracks; i++) {
+                            char id[MAX_ID_LEN];
+                            epoch_msec_t time_msec;
+                            double lat_deg, lon_deg, alt_m, heading_deg, speed_m_sec;
 
-                        pos = race_read_simple_track(db, pos, id, sizeof(id), &time_msec, &lat_deg, &lon_deg, &alt_m, &heading_deg, &speed_m_sec);
-                        if (pos <= 0){
-                            fprintf(stderr, "error reading track: %s\n", err_msg);                        
-                        } else {
-                            printf("   %d: %s, t=%"PRId64", lat=%f°, lon=%f°, alt=%f m, hdg=%f°, spd=%f m/sec\n", 
-                                i, id, time_msec, lat_deg, lon_deg, alt_m, heading_deg, speed_m_sec);
+                            pos = race_read_track_data(db, pos, id, sizeof(id), &time_msec, &lat_deg, &lon_deg, &alt_m, &heading_deg, &speed_m_sec);
+                            if (pos <= 0){
+                                fprintf(stderr, "error reading track: %s\n", err_msg);                        
+                            } else {
+                                printf("   %d: %s, t=%"PRId64", lat=%f°, lon=%f°, alt=%f m, hdg=%f°, spd=%f m/sec\n", 
+                                    i, id, time_msec, lat_deg, lon_deg, alt_m, heading_deg, speed_m_sec);
+                            }
                         }
+                    } else if (data_msg_type == PROXIMITY_MSG) {
+                        printf("ignoring proximity data message\n");
+                    } else {
+                        fprintf(stderr, "unknown data message type: %d\n", data_msg_type);
                     }
                 }
             }

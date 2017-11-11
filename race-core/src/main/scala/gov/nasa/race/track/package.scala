@@ -30,6 +30,8 @@ package object track {
   /** a GeoPosition3D that is associated with a date */
   trait TrackPoint3D extends GeoPosition3D with Dated
 
+  trait IdentifiableTrackPoint3D extends TrackPoint3D with IdentifiableObject
+
   trait MovingObject {
     def heading: Angle
     def speed: Speed

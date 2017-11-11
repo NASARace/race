@@ -17,10 +17,11 @@
 
 package gov.nasa.race.geo
 
+import gov.nasa.race.common._
 import gov.nasa.race.uom.Angle._
 import gov.nasa.race.uom.Length._
 import gov.nasa.race.uom._
-import math.{atan2,asin,sqrt,Pi}
+import math.{atan2,asin,sqrt,cos,Pi}
 
 /**
  * object with library functions to compute great circle trajectories using
@@ -62,7 +63,7 @@ object GreatCircle {
     * }}}
     * Note this is only an approximation since it assumes a spherical earth
     */
-  def distance(startPos: LatLonPos, endPos: LatLonPos, alt: Length = Meters(0)): Length = {
+  def distance(startPos: LatLonPos, endPos: LatLonPos, alt: Length = Length0): Length = {
     val φ1 = startPos.φ
     val φ2 = endPos.φ
     val Δφ = φ2 - φ1
@@ -72,6 +73,54 @@ object GreatCircle {
     val c = 2 * atan2(sqrt(a), sqrt(1 - a))
 
     (MeanEarthRadius + alt) * c
+  }
+
+  def distance2D (φ1: Angle, λ1: Angle, φ2: Angle, λ2: Angle): Length = {
+    val Δφ = φ2 - φ1
+    val Δλ = λ2 - λ1
+
+    val a = Sin2(Δφ / 2) + Cos(φ1) * Cos(φ2) * Sin2(Δλ / 2)
+    val c = 2 * atan2(sqrt(a), sqrt(1 - a))
+
+    MeanEarthRadius * c
+  }
+  @inline def distance2D (startPos: LatLonPos, endPos: LatLonPos): Length = {
+    distance2D(startPos.φ, startPos.λ, endPos.φ, endPos.λ)
+  }
+
+  /**
+    * approximation for small distances, which is about 2-3 times faster than full haversine with errors ~1%
+    */
+  def euclidianDistance2D (φ1: Angle, λ1: Angle, φ2: Angle, λ2: Angle): Length = {
+    val Δφ = φ2 - φ1
+    val Δλ = λ2 - λ1
+
+    val x = Δφ.toDegrees
+    val y = Δλ.toDegrees * Cos(φ1)
+    Meters(111320.0 * sqrt(x*x + y*y))  // 110250.0 ?
+  }
+  @inline def euclidianDistance2D (startPos: LatLonPos, endPos: LatLonPos): Length = {
+    euclidianDistance2D(startPos.φ, startPos.λ, endPos.φ, endPos.λ)
+  }
+
+
+  def generateArcLonDeg = {
+    println("val ArcLonDeg = Array[Double](")
+    print("  ")
+    for (deg <- 0 to 89) {
+      val phi = deg*Pi / 180.0
+      val arc = (Pi * RE_E * cos(phi)) / (180.0 * sqrt(1 - E2*sin2(phi)))
+
+      print(arc)
+
+      print(", ")
+      if (deg > 0 && ((deg+1) % 5 == 0)) {
+        println
+        print("  ")
+      }
+    }
+    println("0.0")  // 90 deg
+    println(")")
   }
 
   /**

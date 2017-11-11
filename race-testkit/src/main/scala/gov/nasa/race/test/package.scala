@@ -18,7 +18,18 @@
 package gov.nasa.race
 
 /**
-  * package `gov.nasa.race.test` contains types that are used to create RACE specific tests
+  * package `gov.nasa.race.test` contains types and utilities that are used to create RACE specific tests
   */
 package object test {
+
+  def elapsedMillis(n: Int)(f: => Any): Long = {
+    val t1 = System.currentTimeMillis
+    var i = 0
+    while (i < n) {
+      f
+      i += 1
+    }
+    val t2 = System.currentTimeMillis
+    t2 - t1
+  }
 }

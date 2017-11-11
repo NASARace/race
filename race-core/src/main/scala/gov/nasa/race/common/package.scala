@@ -39,6 +39,10 @@ package object common {
   // in value classes such as .uom.Length (overriding does not work there because of type erasure)
   @inline def squared (d: Double) = d*d
   @inline def cubed (d: Double) = d*d*d
+  @inline def sin2 (d: Double) = {
+    val x = sin(d)
+    x*x
+  }
 
   // unfortunately we can't def √ for both Double and uom (AnyVal) arguments without ambiguity
 

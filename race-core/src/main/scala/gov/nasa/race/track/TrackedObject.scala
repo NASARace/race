@@ -51,3 +51,8 @@ trait TrackedObject extends IdentifiableObject with TrackPoint3D with MovingObje
     f"$id%-7s $hh%02d:$mm%02d:$ss%02d ${altitude.toFeet.toInt}%6dft ${heading.toNormalizedDegrees.toInt}%3d° ${speed.toKnots.toInt}%4dkn"
   }
 }
+
+trait TrackedObjectEnumerator {
+  def numberOfTrackedObjects: Int
+  def foreachTrackedObject (f: TrackedObject=>Unit)
+}

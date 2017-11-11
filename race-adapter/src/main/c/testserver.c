@@ -29,13 +29,13 @@
 #include "testtrack.h"
 
 track_t track = {
-    .id = "XYZ333",
+    .id = "A",
     .time_msec = 0,
-    .speed_m_sec = 205.7,  // (~400 kn)
-    .heading_deg = 84.0,
-    .alt_m = 10000.0,
-    .lat_deg = 37.4161389,  // KNUQ
-    .lon_deg = -122.0491389
+    .speed_m_sec = 154.33,  // (~300 kn)
+    .heading_deg = 90.0,
+    .alt_m = 1600.0,
+    .lat_deg = 37.424,
+    .lon_deg = -122.098
 };
 
 //--- the server callbacks
@@ -70,7 +70,7 @@ int check_request (char* host, char* service, int cli_flags, char* cli_in_type, 
 
     int ret = 0;
 
-    if (cli_in_type && strcmp(cli_in_type, SIMPLE_TRACK_TYPE) != 0){
+    if (cli_in_type && strcmp(cli_in_type, SIMPLE_TRACK_PROTOCOL) != 0){
         printf("unknown outbound track type: %s\n", cli_in_type);
         ret |= UNKNOWN_DATA;
     }
@@ -86,14 +86,17 @@ int check_request (char* host, char* service, int cli_flags, char* cli_in_type, 
 int write_data(databuf_t* db, int pos) {
     update_position(&track);
 
+    pos = race_write_short(db,pos,TRACK_MSG);
     pos = race_write_short(db,pos,1);  // we only send one track (for now)
-    pos = race_write_simple_track(db, pos,
+    pos = race_write_track_data(db, pos,
                              track.id, track.time_msec, track.lat_deg, track.lon_deg, 
                              track.alt_m, track.heading_deg, track.speed_m_sec);
     return pos;
 }
 
-int read_data (databuf_t* db, int pos) {
+
+
+int read_track_data (databuf_t* db, int pos) {
     char id[MAX_ID_LEN];
     epoch_msec_t time_msec;
     double lat_deg, lon_deg, alt_m, heading_deg, speed_m_sec;
@@ -103,11 +106,12 @@ int read_data (databuf_t* db, int pos) {
     printf("received %d tracks from client:\n", n_tracks);    
 
     for (int i=0; i<n_tracks; i++) {
-        pos = race_read_simple_track(db, pos, 
+        pos = race_read_track_data(db, pos, 
                                 id, sizeof(id), &time_msec, &lat_deg, &lon_deg, 
                                 &alt_m, &heading_deg, &speed_m_sec);
         if (pos <= 0){
-            fprintf(stderr, "error reading track: %d\n", i);                        
+            fprintf(stderr, "error reading track: %d\n", i);
+            return 0;                        
         } else {
             printf("   %d: %s, t=%"PRId64", lat=%f°, lon=%f°, alt=%f m, hdg=%f°, spd=%f m/sec\n", 
                 i, id, time_msec, lat_deg, lon_deg, alt_m, heading_deg, speed_m_sec);
@@ -116,6 +120,54 @@ int read_data (databuf_t* db, int pos) {
     return pos;
 }
 
+int read_proximity_data (databuf_t* db, int pos) {
+    short n_proximities = 0;
+
+    // the (estimated) reference data (at the time of the proximity detection)
+    char ref_id[MAX_ID_LEN];
+    double ref_lat_deg, ref_lon_deg, ref_alt_m;
+
+    // type and distance of proximity
+    double dist_m;
+    int flags;
+
+    // the proximity track itself
+    char prox_id[MAX_ID_LEN];
+    epoch_msec_t time_msec;
+    double lat_deg, lon_deg, alt_m, heading_deg, speed_m_sec;
+
+    pos = race_read_short(db,pos,&n_proximities); // the number of proximities we received in this message
+    printf("received %d proximities from client:\n", n_proximities);
+    
+    for (int i=0; i<n_proximities; i++){
+        pos = race_read_proximity_data(db,pos,
+                                       ref_id, MAX_ID_LEN, &ref_lat_deg, &ref_lon_deg, &ref_alt_m,
+                                       &dist_m, &flags,
+                                       prox_id, MAX_ID_LEN, &time_msec, &lat_deg, &lon_deg, &alt_m, &heading_deg, &speed_m_sec);
+        if (pos <= 0){
+            fprintf(stderr, "error reading proximity: %d\n", i);
+            return 0;                        
+        } else {
+            printf("  %2d: ref  = %s, dist=%.0f m, flags=%d\n", i, ref_id, dist_m, flags);
+            printf("      prox = %s, t=%"PRId64", lat=%.5f°, lon=%.5f°, alt=%.0f m, hdg=%.0f°, spd=%.1f m/sec\n", 
+                prox_id, time_msec, lat_deg, lon_deg, alt_m, heading_deg, speed_m_sec);
+        }
+    }
+    return pos;
+}
+
+int read_data (databuf_t* db, int pos) {
+    short msg_type = 0;
+    pos = race_read_short(db,pos, &msg_type);
+
+    switch (msg_type) {
+        case TRACK_MSG:
+          return read_track_data(db,pos);
+        case PROXIMITY_MSG:
+          return read_proximity_data(db,pos);
+        default: printf("received unknown data message of type: %d\n", msg_type);
+    }
+}
 
 //--- the test driver
 

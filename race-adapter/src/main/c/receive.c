@@ -41,11 +41,11 @@ void receive_message(local_context_t *context, local_endpoint_t *local, remote_e
         } else if (race_is_data(&db)) {
             if (context->flags & DATA_RECEIVER) {
                 int pos = race_read_data_header(&db, &remote_id, &send_time, &err_msg);
-                if (pos && remote_id == remote->id && send_time > remote->time_last) {
+                if (pos && remote_id == remote->id && send_time >= remote->time_last) {
                     remote->time_last = send_time;
                     context->read_data(&db,pos);
                 } else {
-                    context->warning("ignoring tracks message from remote %x (%s)\n", remote_id, err_msg);
+                    context->warning("ignoring out-of-order message from remote %x (%s)\n", remote_id, err_msg);
                 }
             } else {
                 context->warning("local is ignoring track messages\n");

@@ -25,7 +25,7 @@ import akka.http.scaladsl.model.{HttpEntity, MediaTypes}
 import gov.nasa.race.Dated
 import gov.nasa.race.common.{TSEntryData, TimeSeriesStats}
 import org.jfree.chart.plot.{PlotOrientation, XYPlot}
-import org.jfree.chart.{ChartFactory,ChartUtils}
+import org.jfree.chart.{ChartFactory, ChartUtils}
 import org.jfree.data.xy.{XYBarDataset, XYSeries, XYSeriesCollection}
 
 import scalatags.Text.all._

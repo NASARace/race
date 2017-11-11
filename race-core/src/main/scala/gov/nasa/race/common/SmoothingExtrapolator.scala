@@ -81,6 +81,10 @@ class SmoothingExtrapolator (ΔtAverage: FiniteDuration = 1.second,     // avera
   }
 }
 
+/**
+  * a double exponential smoothing extrapolator which works on state vectors, thus avoiding
+  * redundant time storage and computation
+  */
 class SmoothingVectorExtrapolator (dim: Int,                                 // dimension
                                    ΔtAverage: FiniteDuration = 1.second,     // average observation interval
                                    α0: Double = 0.3,                         // level smoothing factor seed [0..1]
@@ -140,10 +144,10 @@ class SmoothingVectorExtrapolator (dim: Int,                                 // 
   }
 
   final def extrapolate (t: Long, v: Array[Double]): Unit = {
-    val dt = t - tlast
+    val Δt = t - tlast
     var i = 0
     while (i < dim) {
-      v(i) = s(i) + dt * m(i) / tscale
+      v(i) = s(i) + Δt * m(i) / tscale
       i += 1
     }
   }
