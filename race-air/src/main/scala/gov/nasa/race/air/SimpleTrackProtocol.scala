@@ -22,7 +22,7 @@ import java.io.{DataInputStream, DataOutputStream}
 import gov.nasa.race._
 import gov.nasa.race.{DataStreamReader, DataStreamWriter}
 import gov.nasa.race.geo.LatLonPos
-import gov.nasa.race.track.{ProximityChange, ProximityReference, TrackedObject, TrackedObjectEnumerator}
+import gov.nasa.race.track.{ProximityEvent, ProximityReference, TrackedObject, TrackedObjectEnumerator}
 import gov.nasa.race.uom.Length._
 import gov.nasa.race.uom.Angle._
 import gov.nasa.race.uom.Speed._
@@ -125,7 +125,7 @@ class SimpleTrackReader extends DataStreamReader {
     while (list.size < nProximities) list += readProximity(dis)
   }
 
-  def readProximity (dis: DataInputStream): ProximityChange = {
+  def readProximity (dis: DataInputStream): ProximityEvent = {
     val refId = dis.readUTF
     val latDeg = dis.readDouble
     val lonDeg = dis.readDouble
@@ -134,7 +134,7 @@ class SimpleTrackReader extends DataStreamReader {
     val flags = dis.readInt
 
     val track = readTrack(dis)
-    ProximityChange(ProximityReference(refId, track.date, LatLonPos.fromDegrees(latDeg,lonDeg), Meters(altM)),
+    ProximityEvent(ProximityReference(refId, track.date, LatLonPos.fromDegrees(latDeg,lonDeg), Meters(altM)),
                     Meters(distM), flags, track)
   }
 }
@@ -157,7 +157,7 @@ class SimpleTrackWriter extends DataStreamWriter {
     dos.writeDouble(t.speed.toMetersPerSecond)
   }
 
-  def writeProximity (dos: DataOutputStream, p: ProximityChange) = {
+  def writeProximity (dos: DataOutputStream, p: ProximityEvent) = {
     val ref = p.ref
     val latLonPos = ref.position
 
@@ -189,7 +189,7 @@ class SimpleTrackWriter extends DataStreamWriter {
           dos.size
         } else 0
 
-      case p: ProximityChange =>
+      case p: ProximityEvent =>
         dos.writeShort(ProximityMsg)
         dos.writeShort(1) // one proximity record
         writeProximity(dos,p)

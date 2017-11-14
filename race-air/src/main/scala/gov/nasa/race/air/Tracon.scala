@@ -33,6 +33,12 @@ object Tracon {
                    "25 Robert Milligan Pkwy", "Merrimack", "NH", "03054",  "(603) 594-5501")
   val D01 = Tracon("D01", "Denver", 39.8216227,-104.6750039,
                    "26805 E 68th Ave", "Denver", "CO", "80249",  "(303) 342-1080")
+  val IND = Tracon("IND", "Indianapolis Tower", 39.7018315,-86.3099555,
+                   "4210 Midfield Service Rd", "Indianapolis", "IN", "46241", "(317) 227-5780")
+  val L30 = Tracon("L30", "Las Vegas", 36.0828087,-115.1472187,
+                   "699 Wright Brothers La.", "Las Vegas", "NV", "89119", "(702) 262-5900")
+  val M03 = Tracon("M03", "Memphis", 35.0521946,-89.9824915,
+                   "2515 Winchester Rd", "Memphis", "TN", "38116", "901-322-3350")
   val NCT = Tracon("NCT", "Northern California",  38.5607985,-121.2566981,
                    "11375 Douglas Rd", "Sacramento", "CA", "95655", "(916) 366-4280")
   val PCT = Tracon("PCT", "Potomac",  38.747488,-77.670573,
@@ -47,6 +53,9 @@ object Tracon {
   val traconList = Seq(
     A80,A90,
     D01,
+    IND,
+    L30,
+    M03,
     NCT,
     PCT,
     SCT,

@@ -22,6 +22,7 @@ import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.config.ConfigurableTranslator
 import gov.nasa.race.core.Messages.BusEvent
 import gov.nasa.race.core.SubscribingRaceActor
+import gov.nasa.race.util.{ConsoleIO, SoundUtils}
 
 
 /**
@@ -31,6 +32,7 @@ import gov.nasa.race.core.SubscribingRaceActor
 class ProbeActor (val config: Config) extends SubscribingRaceActor {
   val prefix = config.getOptionalString("prefix")
   val translator: Option[ConfigurableTranslator] = config.getOptionalConfig("translator") flatMap createTranslator
+  val alert: Boolean = config.getBooleanOrElse("alert", false)
 
   override def handleMessage = {
     case BusEvent(sel,msg,_) => report(sel,msg)
@@ -41,6 +43,7 @@ class ProbeActor (val config: Config) extends SubscribingRaceActor {
   }
 
   def report (channel: String, msg: Any): Unit = {
+
     val o = if (translator.isDefined){
       translator.get.translate(msg) match {
         case Some(x) => x
@@ -48,10 +51,19 @@ class ProbeActor (val config: Config) extends SubscribingRaceActor {
       }
     } else msg
 
-    if (prefix.isDefined){
-      println(s"${prefix.get}$o")
-    } else {
-      println(s"got on channel: '$channel' message: '$o'")
+    ConsoleIO.synchronized {
+      if (alert) {
+        print(scala.Console.RED)
+        SoundUtils.tone(500, 700, 0.6)
+      }
+
+      if (prefix.isDefined) {
+        println(s"${prefix.get}$o")
+      } else {
+        println(s"got on channel: '$channel' message: '$o'")
+      }
+
+      if (alert) print(scala.Console.RESET)
     }
   }
 }

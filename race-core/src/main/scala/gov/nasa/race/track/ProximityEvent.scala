@@ -21,17 +21,30 @@ import gov.nasa.race.uom.Length
 import org.joda.time.DateTime
 
 
-object ProximityChange {
+object ProximityEvent {
   final val ProxNew  = 0x1
   final val ProxChange  = 0x2
   final val ProxDrop = 0x4
+  final val ProxCollision = 0x8
   // ..and potentially more to follow (threat level etc.)
 
   def flagDescription(flags: Int): String = {
     val sb = new StringBuilder('{')
-    if ((flags & ProxNew) != 0) sb.append("new")
-    if ((flags & ProxChange) != 0) sb.append( if (sb.length > 1) ",change" else "change")
-    if ((flags & ProxDrop) != 0) sb.append( if (sb.length > 1) ",drop" else "drop")
+    if ((flags & ProxNew) != 0){
+      sb.append("new")
+    }
+    if ((flags & ProxChange) != 0) {
+      if (sb.length > 1) sb.append(',')
+      sb.append("change")
+    }
+    if ((flags & ProxDrop) != 0){
+      if (sb.length > 1) sb.append(',')
+      sb.append("drop")
+    }
+    if ((flags & ProxCollision) != 0){
+      if (sb.length > 1) sb.append(',')
+      sb.append("collision")
+    }
     sb.append('}')
     sb.toString
   }
@@ -50,10 +63,16 @@ case class ProximityReference (id: String,
 /**
   * the object to report proximity changes
   */
-case class ProximityChange(ref: ProximityReference,
-                           distance: Length,
-                           flags: Int,
-                           track: TrackedObject) {
-  import ProximityChange._
-  override def toString = f"ProximityUpdate(ref=${ref.id},track=${track.cs},dist=${distance.toNauticalMiles}%.1f,flags=${flagDescription(flags)}"
+case class ProximityEvent(ref: ProximityReference,
+                          distance: Length,
+                          flags: Int,
+                          track: TrackedObject) {
+  import ProximityEvent._
+
+  override def toString = f"ProximityEvent(ref=${ref.id},track=${track.cs},dist=${distance.toMeters}%.0f m,flags=${flagDescription(flags)}"
+
+  def isNew = (flags & ProxNew) != 0
+  def isChange = (flags & ProxChange) != 0
+  def isDrop = (flags & ProxDrop) != 0
+  def isCollision = (flags & ProxCollision) != 0
 }

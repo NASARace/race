@@ -73,7 +73,14 @@ remote_endpoint_t* wait_for_remote (local_context_t* context, local_endpoint_t* 
         }
 
         // remote is accepted, set local state accordingly 
-        local->interval_msec = req_interval_msec; 
+        local->interval_msec = req_interval_msec;
+
+        // check if we have to apply a time difference
+        long time_diff = race_epoch_msec() - time_sent;
+        if (labs(time_diff) > MAX_TIME_DIFF) {
+            context->info("adapting simulation time by %d sec\n", time_diff / 1000);
+            context->time_diff = time_diff;
+        }
 
         int remote_id = ++n_remote;
         race_write_accept(db, context->flags, local->interval_msec, remote_id);

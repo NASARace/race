@@ -127,7 +127,7 @@ int race_read_request (databuf_t* db, int* cli_flags,
     if (pos > 0){
         pos = race_read_int(db,pos,cli_flags);
         pos = race_read_strncpy(db,pos, in_track_type, max_type_len);
-        pos = race_read_strncpy(db,pos, out_track_type, max_type_len);        
+        pos = race_read_strncpy(db,pos, out_track_type, max_type_len);    
         return race_read_int(db, pos, interval_msec);
     } else {
         return 0;

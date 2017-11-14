@@ -137,11 +137,14 @@ void race_hex_dump(databuf_t* db); // for debugging purposes
 
 #define NO_FIXED_MSG_LEN 0
 
-#define MAX_MSG_LEN      1024 // including header, should be <= MTU to avoid IP fragmentation  
+#define MAX_MSG_LEN      2048 // including header, should be <= MTU to avoid IP fragmentation  
+
+#define MAX_TIME_DIFF    1000 // in msec, if exceeded we adapt event times
 
 int race_write_request (databuf_t* db, int flags, char* in_type, char* out_type, int interval_msec);
 int race_is_request (databuf_t* db);
-int race_read_request (databuf_t* db, int* flags, char* in_type, char* out_type, int max_type_len, int* interval_msec, epoch_msec_t* time_msec, const char** err_msg);
+int race_read_request (databuf_t* db, int* flags, char* in_type, char* out_type, int max_type_len, int* interval_msec, 
+                       epoch_msec_t* time_msec, const char** err_msg);
 
 int race_write_accept (databuf_t* db, int flags, int interval_msec, int client_id);
 int race_is_accept (databuf_t* db);
@@ -179,6 +182,10 @@ int race_read_data_header (databuf_t* db, int* sender, epoch_msec_t* time_msec, 
 // data message types
 #define TRACK_MSG 1
 #define PROXIMITY_MSG 2
+
+#define PROX_NEW    0x1
+#define PROX_CHANGE 0x2
+#define PROX_DROP   0x4
 
 int race_write_track_data(databuf_t *db, int pos, char *id, epoch_msec_t time_msec, double lat_deg,
                           double lon_deg, double alt_m, double heading_deg, double speed_m_sec);
@@ -224,6 +231,8 @@ typedef struct {
     char* port; // port to serve on
     int flags; // server capabilities
     int interval_msec; // interval at which we send track data to the client if the client has no preference
+
+    long time_diff; // time difference to client
     
     //--- server state data
     bool stop_local; // set by context to indicate we should terminate

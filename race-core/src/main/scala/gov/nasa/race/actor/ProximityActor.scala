@@ -28,11 +28,11 @@ import gov.nasa.race.uom.Length._
 
 import scala.collection.mutable.{HashMap => MHashMap, Set => MSet}
 
-
 /**
   * base type for actors that detect and report proximity tracks
   */
 trait ProximityActor extends SubscribingRaceActor with PublishingRaceActor {
+
   abstract class RefEntry {
     val proximities: MHashMap[String,TrackedObject] = MHashMap.empty
 
@@ -41,7 +41,8 @@ trait ProximityActor extends SubscribingRaceActor with PublishingRaceActor {
   }
 
   // the distance we consider as proximity
-  val distanceInMeters = NauticalMiles(config.getDoubleOrElse("distance-nm", 5)).toMeters
+  def defaultDistance: Length = NauticalMiles(5)
+  val distanceInMeters = NauticalMiles(config.getDoubleOrElse("distance-nm", defaultDistance.toNauticalMiles)).toMeters
 
   val refs: MHashMap[String,RefEntry] = MHashMap.empty
 
@@ -53,7 +54,7 @@ trait ProximityActor extends SubscribingRaceActor with PublishingRaceActor {
   * a ProximityActor with configured, static references
   */
 class StaticProximityActor (val config: Config) extends ProximityActor {
-  import ProximityChange._
+  import ProximityEvent._
 
   class StaticRefEntry (val id: String, pos: LatLonPos, altitude: Length) extends RefEntry {
     override def checkProximity (track: TrackedObject) = {
@@ -65,11 +66,11 @@ class StaticProximityActor (val config: Config) extends ProximityActor {
       if (dist <= distanceInMeters) {
         val flags = if (proximities.contains(tId)) ProxChange else ProxNew
         proximities += (tId -> track)
-        publish(ProximityChange(new ProximityReference(id,track.date,pos,altitude), Meters(dist), flags, track))
+        publish(ProximityEvent(new ProximityReference(id,track.date,pos,altitude), Meters(dist), flags, track))
       } else {
         if (proximities.contains(tId)) {
           proximities -= tId
-          publish(ProximityChange(new ProximityReference(id,track.date,pos,altitude), Meters(dist), ProxDrop, track))
+          publish(ProximityEvent(new ProximityReference(id,track.date,pos,altitude), Meters(dist), ProxDrop, track))
         }
       }
     }
@@ -103,10 +104,19 @@ class StaticProximityActor (val config: Config) extends ProximityActor {
   * that is within a configured distance of one of the managed references
   */
 class DynamicProximityActor (val config: Config) extends ProximityActor {
-  import ProximityChange._
+  import ProximityEvent._
 
   class DynamicRefEntry (val refEstimator: TrackedObjectEstimator) extends RefEntry {
     override def updateRef (track: TrackedObject) = refEstimator.addObservation(track)
+
+    protected def getDistanceInMeters (track: TrackedObject): Double = {
+      val re = refEstimator
+
+      val tLat = track.position.φ.toRadians
+      val tLon = track.position.λ.toRadians
+
+      GeoUtils.euclideanDistanceRad(re.lat.toRadians, re.lon.toRadians, tLat, tLon, re.altitude.toMeters)
+    }
 
     override def checkProximity (track: TrackedObject) = {
       val re = refEstimator
@@ -114,18 +124,16 @@ class DynamicProximityActor (val config: Config) extends ProximityActor {
 
       if (tId != re.track.cs) {  // don't try to be a proximity to yourself
         if (re.estimateState(track.date.getMillis)) {
-          val tLat = track.position.φ.toRadians
-          val tLon = track.position.λ.toRadians
-          val dist = GeoUtils.euclideanDistanceRad(re.lat.toRadians, re.lon.toRadians, tLat, tLon, re.altitude.toMeters)
+          val dist = getDistanceInMeters(track)
 
           if (dist <= distanceInMeters) {
             val flags = if (proximities.contains(tId)) ProxChange else ProxNew
             proximities += (tId -> track)
-            publish(ProximityChange(new ProximityReference(re, track.date), Meters(dist), flags, track))
+            publish(ProximityEvent(new ProximityReference(re, track.date), Meters(dist), flags, track))
           } else {
             if (proximities.contains(tId)) {
               proximities -= tId
-              publish(ProximityChange(new ProximityReference(re, track.date), Meters(dist), ProxDrop, track))
+              publish(ProximityEvent(new ProximityReference(re, track.date), Meters(dist), ProxDrop, track))
             }
           }
         }
@@ -141,6 +149,7 @@ class DynamicProximityActor (val config: Config) extends ProximityActor {
 
 
   override def onInitializeRaceActor(raceContext: RaceContext, actorConf: Config): Boolean = {
+    // we could check for readFrom channel identity, but the underlying subscription storage uses sets anyways
     readRefFrom ++= actorConf.getOptionalStringList("read-ref-from")
     readRefFrom.foreach { channel => busFor(channel).subscribe(self,channel) }
     super.onInitializeRaceActor(raceContext, actorConf)
@@ -148,11 +157,55 @@ class DynamicProximityActor (val config: Config) extends ProximityActor {
 
   override def handleMessage = {
     case BusEvent(chan:String,track:TrackedObject,_) =>
-      if (readRefFrom.contains(chan)) updateRef(track) else updateProximities(track)
+      // note that both refs and proximities might be on the same channel
+      if (readRefFrom.contains(chan)) updateRef(track)
+      if (readFrom.contains(chan)) updateProximities(track)
   }
 
   def updateRef(track: TrackedObject): Unit = {
     val e = refs.getOrElseUpdate(track.id, new DynamicRefEntry(refEstimatorPrototype.clone))
+    e.updateRef(track)
+  }
+}
+
+/**
+  * this is essentially a DynamicProximityActor that does not have to know if something is a new or dropped
+  * proximity, hence it does not have to maintain a proximities collection
+  *
+  * note this implementation allows for multiple collisions to occur, even with the same track as long as there
+  * is at least one separation event between the collisions. Only the entry of a track into the collision radius
+  * is reported, i.e. we should not get consecutive collision events while the track is within this radius
+  */
+class CollisionDetector (config: Config) extends DynamicProximityActor(config) {
+  import ProximityEvent._
+
+  override def defaultDistance = Feet(500) // NMAC distance
+
+  class CollisionRefEntry(refEstimator: TrackedObjectEstimator) extends DynamicRefEntry(refEstimator) {
+    var collisions = Set.empty[String] // keep track of reported/ongoing collisions
+
+    override def checkProximity (track: TrackedObject) = {
+      val re = refEstimator
+      val tcs = track.cs
+
+      if (tcs != re.track.cs) { // don't try to be a proximity to yourself
+        if (re.estimateState(track.date.getMillis)) {
+          val dist = getDistanceInMeters(track)
+          if (dist <= distanceInMeters) {
+            if (!collisions.contains(tcs)) {
+              collisions = collisions + tcs
+              publish(ProximityEvent(new ProximityReference(re, track.date), Meters(dist), ProxCollision, track))
+            }
+          } else {
+            if (collisions.nonEmpty) collisions = collisions - tcs
+          }
+        }
+      }
+    }
+  }
+
+  override def updateRef(track: TrackedObject): Unit = {
+    val e = refs.getOrElseUpdate(track.id, new CollisionRefEntry(refEstimatorPrototype.clone))
     e.updateRef(track)
   }
 }
