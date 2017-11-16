@@ -45,11 +45,12 @@ remote_endpoint_t* wait_for_remote (local_context_t* context, local_endpoint_t* 
         
         int req_flags = 0;
         int req_interval_msec = 0;
+        epoch_msec_t sim_msec = 0;
         epoch_msec_t time_sent = 0;
         char req_out_type[MAX_TYPE_LEN];
         char req_in_type[MAX_TYPE_LEN];
 
-        if (!race_read_request(local->db, &req_flags, req_in_type, req_out_type, MAX_TYPE_LEN, &req_interval_msec, &time_sent, &err_msg)){
+        if (!race_read_request(local->db, &time_sent, &req_flags, req_in_type, req_out_type, MAX_TYPE_LEN, &sim_msec, &req_interval_msec, &err_msg)){
             context->error("error reading remote request (%s)\n", err_msg);
             free(src_addr);
             return NULL;
@@ -61,7 +62,8 @@ remote_endpoint_t* wait_for_remote (local_context_t* context, local_endpoint_t* 
         getnameinfo(src_addr,addrlen, client_host,sizeof(client_host), client_service,sizeof(client_service),NI_NUMERICHOST);
         
         // check possible reasons for rejection
-        int reject = context->check_request(client_host, client_service, req_flags, req_in_type, req_out_type, &req_interval_msec);
+        int reject = context->check_request(client_host, client_service, req_flags, req_in_type, req_out_type,
+                                            sim_msec, &req_interval_msec);
         if (reject) {
             context->info("remote rejected for reason %x\n", reject);
             race_write_reject(db, reject);
@@ -76,7 +78,7 @@ remote_endpoint_t* wait_for_remote (local_context_t* context, local_endpoint_t* 
         local->interval_msec = req_interval_msec;
 
         // check if we have to apply a time difference
-        long time_diff = race_epoch_msec() - time_sent;
+        long time_diff = race_epoch_msec() - sim_msec;  // TODO - this should acquire sim time from the context
         if (labs(time_diff) > MAX_TIME_DIFF) {
             context->info("adapting simulation time by %d sec\n", time_diff / 1000);
             context->time_diff = time_diff;

@@ -141,10 +141,11 @@ void race_hex_dump(databuf_t* db); // for debugging purposes
 
 #define MAX_TIME_DIFF    1000 // in msec, if exceeded we adapt event times
 
-int race_write_request (databuf_t* db, int flags, char* in_type, char* out_type, int interval_msec);
+int race_write_request (databuf_t* db, int flags, char* in_type, char* out_type, epoch_msec_t sim_msec, int interval_msec);
 int race_is_request (databuf_t* db);
-int race_read_request (databuf_t* db, int* flags, char* in_type, char* out_type, int max_type_len, int* interval_msec, 
-                       epoch_msec_t* time_msec, const char** err_msg);
+int race_read_request (databuf_t* db, epoch_msec_t* time_sent, int* flags, char* in_type, char* out_type, int max_type_len, 
+                       epoch_msec_t* sim_msec, int* interval_msec, 
+                       const char** err_msg);
 
 int race_write_accept (databuf_t* db, int flags, int interval_msec, int client_id);
 int race_is_accept (databuf_t* db);
@@ -237,7 +238,8 @@ typedef struct {
     //--- server state data
     bool stop_local; // set by context to indicate we should terminate
 
-    int (*check_request)(char* host, char* service, int req_flags, char* req_in_type, char* req_out_type, int* data_interval);
+    int (*check_request)(char* host, char* service, int req_flags, char* req_in_type, char* req_out_type, 
+                         epoch_msec_t sim_msec, int* data_interval);
 
     // handle application specific data messages (only the payload, race-adapter takes care of the header)
     int (*write_data)(databuf_t* db, int pos);

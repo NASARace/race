@@ -61,11 +61,13 @@ void error (const char*fmt, ...) {
     vfprintf(stderr,fmt,ap);
 }
 
-int check_request (char* host, char* service, int cli_flags, char* cli_in_type, char* cli_out_type, int* track_interval){
+int check_request (char* host, char* service, int cli_flags, char* cli_in_type, char* cli_out_type, 
+                   epoch_msec_t sim_msec, int* track_interval){
     printf("client request from %s:%s\n", host,service);
     printf("    flags:    %x\n", cli_flags);
     printf("    in:       %s\n", cli_in_type);
     printf("    out:      %s\n", cli_out_type);
+    printf("    sim time: %lld\n", sim_msec);
     printf("    interval: %d\n", *track_interval);
 
     int ret = 0;
@@ -165,7 +167,9 @@ int read_data (databuf_t* db, int pos) {
           return read_track_data(db,pos);
         case PROXIMITY_MSG:
           return read_proximity_data(db,pos);
-        default: printf("received unknown data message of type: %d\n", msg_type);
+        default: 
+          printf("received unknown data message of type: %d\n", msg_type);
+          return 0;
     }
 }
 

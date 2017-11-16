@@ -107,6 +107,7 @@ trait AdapterActor extends PublishingRaceActor with SubscribingRaceActor with Co
     os.writeInt(flags)
     os.writeUTF(inType)
     os.writeUTF(outType)
+    os.writeLong(currentSimTimeMillis)
     os.writeInt(interval)
     val len = os.size
     setMsgLen(os,len.toShort)

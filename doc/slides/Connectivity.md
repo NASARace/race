@@ -1,4 +1,19 @@
 # Connecting RACE
+there is life on the outside!
+
+~
+
+<a href="https://ti.arc.nasa.gov/profile/pcmehlitz/" rel="author">Peter.C.Mehlitz</a><br/>
+SGT Inc, NASA Ames Research Center
+
+## RACE Design
+* everything is an actor
+* (almost) every actor is configured
+* actors communicate internally through (configured) bus channels
+* **but how do they talk to the outside world?**
+
+<img src="../images/race-overview-2.svg" class="center scale55">
+
 
 ## Import/ExportActors
 * dedicated import/export actors
