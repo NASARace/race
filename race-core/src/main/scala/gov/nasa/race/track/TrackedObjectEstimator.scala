@@ -65,7 +65,8 @@ class HoldEstimator extends TrackedObjectEstimator {
   }
 
   override def estimateState (simTimeMillis: Long) = {
-    simTimeMillis >= _track.date.getMillis
+    //simTimeMillis >= _track.date.getMillis  // FIXME - when raceadapter get sim time right
+    true
   }
 
   override def lat = _track.position.φ

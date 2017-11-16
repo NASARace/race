@@ -160,6 +160,8 @@ class DynamicProximityActor (val config: Config) extends ProximityActor {
       // note that both refs and proximities might be on the same channel
       if (readRefFrom.contains(chan)) updateRef(track)
       if (readFrom.contains(chan)) updateProximities(track)
+
+    case BusEvent(_,msg:Any,_) =>  // all other BusEvents are ignored
   }
 
   def updateRef(track: TrackedObject): Unit = {
