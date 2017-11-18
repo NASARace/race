@@ -102,7 +102,8 @@ class LayerInfoList (raceView: RaceView) {
   val wwd = raceView.wwd
   val applicationLayers = raceView.layers
 
-  val layerList: Buffer[Layer] = wwd.getModel.getLayers.asScala
+  val layerList: Buffer[Layer] = wwd.getModel.getLayers.asScala // these are WorldWind's configured system layers
+
   val tooltipAnnotationLayer = new TTAnnotations()
   def redrawManager = raceView.redrawManager
 
@@ -181,9 +182,9 @@ class LayerInfoList (raceView: RaceView) {
   }
 
   def getLowestCategoryIndex (cat: String): Int = {
-    for (i <- 1 to layerList.size) {
+    for (i <- 1 until layerList.size) {
       if (layerList(i).layerInfo.categories.contains(cat)) return i
     }
-    -1
+    layerList.size
   }
 }

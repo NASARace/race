@@ -55,7 +55,13 @@ class RaceViewerActor(val config: Config) extends ContinuousTimeRaceActor
   var view: Option[RaceView] = None // we can't create this from a Akka thread since it does UI transcations
 
   override def onInitializeRaceActor(rc: RaceContext, actorConf: Config): Boolean = {
-    invokeAndWait { view = Some(new RaceView(RaceViewerActor.this)) }
+    invokeAndWait {
+      try {
+        view = Some(new RaceView(RaceViewerActor.this))
+      } catch {
+        case x: Throwable => x.printStackTrace
+      }
+    }
     view.isDefined && super.onInitializeRaceActor(rc, actorConf)
   }
 
@@ -159,17 +165,15 @@ class RaceView (viewerActor: RaceViewerActor) extends DeferredEyePositionListene
   def wwdView = frame.wwd.getView
   def eyePosition = frame.wwd.getView.getEyePosition
 
+  for (
+    cachePath <- config.getOptionalString("cache-dir");
+    dir <- FileUtils.ensureDir(cachePath)
+  ) ConfigurableWriteCache.setRoot(dir)
+
   def setWorldWindConfiguration = {
-    for (
-      cachePath <- config.getOptionalString("cache-dir");
-      dir <- FileUtils.ensureDir(cachePath)
-    ) ConfigurableWriteCache.setRoot(dir)
-
-    Configuration.setValue(AVKey.DATA_FILE_STORE_CLASS_NAME, classOf[ConfigurableWriteCache].getName)
-    Configuration.setValue("gov.nasa.worldwind.avkey.ViewInputHandlerClassName", classOf[RaceViewInputHandler].getName)
-    Configuration.setValue("gov.nasa.worldwind.avkey.ViewClassName", classOf[MinClipOrbitView].getName)
-
-    Configuration.setValue(AVKey.URL_READ_TIMEOUT, 15000) // to avoid the annoying SocketTimeoutExceptions for https://worldwind26.arc.nasa.gov
+    // we use our own app config document which takes precedence over Worldwind's config/worldwind.xml
+    // note that we also provide a separate config/worldwind.layers.xml (which is referenced from worldwind.xml)
+    System.setProperty("gov.nasa.worldwind.app.config.document", "config/race-worldwind.xml")
   }
 
   def createLayers = {
