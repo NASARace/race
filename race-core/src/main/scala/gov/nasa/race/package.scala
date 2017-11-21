@@ -386,15 +386,18 @@ package object race {
     override def show = o.toString
   }
 
+  trait SchemaImplementor {
+    val schema: String
+    def compliesWith (s: String):Boolean = schema == s
+  }
+
   // something that can read records from a DataInputStream
-  trait DataStreamReader {
-    val schema: String // this is a symbolic name, not necessarily a Scala type name
+  trait DataStreamReader extends SchemaImplementor {
     def read (dis: DataInputStream): Option[Any]
   }
 
   // something that can write records to a DataOutputStream
-  trait DataStreamWriter {
-    val schema: String
+  trait DataStreamWriter extends SchemaImplementor {
     def write (dos: DataOutputStream, data: Any): Int
   }
 }

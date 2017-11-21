@@ -19,6 +19,10 @@ import sbt._
 
 /**
   * task to run make on projects that have a Makefile
+  *
+  * Note that we only execute makefiles in project base dirs, not recursively down, since
+  * Makefiles in project source dirs might only be intended for use in external projects
+  * that copy sources
   */
 object MakeTask {
   val defaultMakeCmd = "make"

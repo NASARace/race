@@ -16,7 +16,7 @@
  */
 
 #include <math.h>
-#include "race.h"
+#include "../race.h"
 #include "testtrack.h"
 
 void update_position(track_t* track) {

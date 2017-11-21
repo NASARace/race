@@ -16,7 +16,7 @@
  */
 
 /*
- * network utility functions
+ * RACE adapter network utility functions
  */
 
 #include <sys/types.h>

@@ -15,10 +15,17 @@
  * limitations under the License.
  */
 
+/*
+ * RACE adapter time utility functions
+ */
+
 #include <time.h>
 #include <math.h>
 #include "race.h"
 
+/*
+ * send thread to sleep for specified number of milliseconds
+ */
 int race_sleep_msec (int millis) {
     int sec = millis / 1000;
     int nsec = (millis - (sec * 1000)) * 1e6;
@@ -30,6 +37,9 @@ int race_sleep_msec (int millis) {
     return nanosleep(&ts,NULL);
 }
 
+/*
+ * get wallclock epoch in milliseconds
+ */
 epoch_msec_t race_epoch_msec () {
     epoch_msec_t ms;
     struct timespec spec;
@@ -39,6 +49,9 @@ epoch_msec_t race_epoch_msec () {
     return ms;
 }
 
+/*
+ * get epoch in milliseconds from fractional epoch
+ */
 epoch_msec_t race_epoch_msec_from_fsec(double sec) {
     return (epoch_msec_t)((sec + 0.0005) * 1000);
 }

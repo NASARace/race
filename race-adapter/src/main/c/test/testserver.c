@@ -22,7 +22,7 @@
 #include <math.h>
 #include <inttypes.h>
 
-#include "race.h"
+#include "../race.h"
 
 //--- very simple simulation
 
@@ -61,24 +61,19 @@ void error (const char*fmt, ...) {
     vfprintf(stderr,fmt,ap);
 }
 
-int check_request (char* host, char* service, int cli_flags, char* cli_in_type, char* cli_out_type, 
+int check_request (char* host, char* service, int cli_flags, char* schema, 
                    epoch_msec_t sim_msec, int* track_interval){
     printf("client request from %s:%s\n", host,service);
     printf("    flags:    %x\n", cli_flags);
-    printf("    in:       %s\n", cli_in_type);
-    printf("    out:      %s\n", cli_out_type);
+    printf("    schema:   %s\n", schema);
     printf("    sim time: %lld\n", sim_msec);
     printf("    interval: %d\n", *track_interval);
 
     int ret = 0;
 
-    if (cli_in_type && strcmp(cli_in_type, SIMPLE_TRACK_PROTOCOL) != 0){
-        printf("unknown outbound track type: %s\n", cli_in_type);
+    if (schema && strcmp(schema, SIMPLE_TRACK_PROTOCOL) != 0){
+        printf("unknown schema: %s\n", schema);
         ret |= UNKNOWN_DATA;
-    }
-    if (*track_interval < 500 || *track_interval > 60000) {
-        printf("requested interval %d msec out of range\n", *track_interval);
-        ret |= UNSUPPORTED_INTERVAL;
     }
     
     printf( (ret == 0) ? "accepted.\n" : "rejected.\n");

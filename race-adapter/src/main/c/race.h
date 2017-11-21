@@ -18,7 +18,7 @@
 /*
  * race.h - header with exported values, types and functions to let native programs communicate with RACE
  * 
- * Although this conceptually is partitioned into several layers we keep everything in a single header
+ * Although this is conceptually partitioned into several layers we keep everything in a single header
  * file to reduce the number of files that have to be accessible from the 3rd party project
  */
 
@@ -138,12 +138,12 @@ void race_hex_dump(databuf_t* db); // for debugging purposes
 #define NO_FIXED_MSG_LEN 0
 
 #define MAX_MSG_LEN      2048 // including header, should be <= MTU to avoid IP fragmentation  
-
 #define MAX_TIME_DIFF    1000 // in msec, if exceeded we adapt event times
+#define MAX_SCHEMA_LEN    128 // we only use schema names for now
 
-int race_write_request (databuf_t* db, int flags, char* in_type, char* out_type, epoch_msec_t sim_msec, int interval_msec);
+int race_write_request (databuf_t* db, int flags, char* schema, epoch_msec_t sim_msec, int interval_msec);
 int race_is_request (databuf_t* db);
-int race_read_request (databuf_t* db, epoch_msec_t* time_sent, int* flags, char* in_type, char* out_type, int max_type_len, 
+int race_read_request (databuf_t* db, epoch_msec_t* time_sent, int* flags, char* schema, int max_schema_len, 
                        epoch_msec_t* sim_msec, int* interval_msec, 
                        const char** err_msg);
 
@@ -178,7 +178,7 @@ int race_read_data_header (databuf_t* db, int* sender, epoch_msec_t* time_msec, 
 
 // simple_track is a virtual type with minimal track state info
 
-#define SIMPLE_TRACK_PROTOCOL "gov.nasa.race.SimpleTrackProtocol"
+#define SIMPLE_TRACK_PROTOCOL "gov.nasa.race.air.SimpleTrackProtocol"
 
 // data message types
 #define TRACK_MSG 1
@@ -238,7 +238,7 @@ typedef struct {
     //--- server state data
     bool stop_local; // set by context to indicate we should terminate
 
-    int (*check_request)(char* host, char* service, int req_flags, char* req_in_type, char* req_out_type, 
+    int (*check_request)(char* host, char* service, int req_flags, char* schema, 
                          epoch_msec_t sim_msec, int* data_interval);
 
     // handle application specific data messages (only the payload, race-adapter takes care of the header)

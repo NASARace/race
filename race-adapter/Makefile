@@ -33,37 +33,14 @@ clean:
 
 ########################################################################
 
-$(BINDIR)/testserver : $(OBJDIR)/testserver.o $(OBJDIR)/testtrack.o $(LIBDIR)/$(LIBNAME).a
-	$(CC) $(LFLAGS) -o $@ $^ -lm -pthread
 
-$(BINDIR)/testclient : $(OBJDIR)/testclient.o $(OBJDIR)/testtrack.o $(LIBDIR)/$(LIBNAME).a
-	$(CC) $(LFLAGS) -o $@ $^ -lm
+# librace
 
-$(BINDIR)/test : $(OBJDIR)/test.o $(LIBDIR)/$(LIBNAME).a
-	$(CC) $(LFLAGS) -o $@ $^ -lm
-
-
-$(LIBDIR)/$(LIBNAME).a : $(addprefix $(OBJDIR)/, local.o connect.o receive.o messages.o databuf.o netutils.o timeutils.o data.o)
+$(LIBDIR)/$(LIBNAME).a : $(addprefix $(OBJDIR)/, race.o messages.o databuf.o netutils.o timeutils.o simpletrack.o)
 	$(AR) -rcs $@ $^ 
 
 
-$(OBJDIR)/testclient.o : $(addprefix $(SRCDIR)/, testclient.c race.h)
-	$(CC) $(CFLAGS) -c -o $@ $<
-
-$(OBJDIR)/testserver.o : $(addprefix $(SRCDIR)/, testserver.c race.h)
-	$(CC) $(CFLAGS) -c -o $@ $<
-
-$(OBJDIR)/testtrack.o : $(addprefix $(SRCDIR)/, testtrack.c race.h)
-	$(CC) $(CFLAGS) -c -o $@ $<
-
-
-$(OBJDIR)/local.o : $(addprefix $(SRCDIR)/, local.c race.h race_internal.h)
-	$(CC) $(CFLAGS) -c -o $@ $<
-
-$(OBJDIR)/connect.o : $(addprefix $(SRCDIR)/, connect.c race.h race_internal.h)
-	$(CC) $(CFLAGS) -c -o $@ $<
-
-$(OBJDIR)/receive.o : $(addprefix $(SRCDIR)/, receive.c race.h race_internal.h)
+$(OBJDIR)/race.o : $(addprefix $(SRCDIR)/, race.c race.h race_internal.h)
 	$(CC) $(CFLAGS) -c -o $@ $<
 
 $(OBJDIR)/messages.o : $(addprefix $(SRCDIR)/, messages.c race.h)
@@ -78,8 +55,30 @@ $(OBJDIR)/timeutils.o : $(addprefix $(SRCDIR)/, timeutils.c)
 $(OBJDIR)/netutils.o : $(addprefix $(SRCDIR)/, netutils.c)
 	$(CC) $(CFLAGS) -c -o $@ $<
 
-$(OBJDIR)/data.o : $(addprefix $(SRCDIR)/, data.c race.h)
+$(OBJDIR)/simpletrack.o : $(addprefix $(SRCDIR)/, simpletrack.c race.h)
 	$(CC) $(CFLAGS) -c -o $@ $<
 
-$(OBJDIR)/test.o : $(addprefix $(SRCDIR)/, test.c race.h)
+
+# tools and tests
+
+$(BINDIR)/testserver : $(OBJDIR)/testserver.o $(OBJDIR)/testtrack.o $(LIBDIR)/$(LIBNAME).a
+	$(CC) $(LFLAGS) -o $@ $^ -lm -pthread
+
+$(BINDIR)/testclient : $(OBJDIR)/testclient.o $(OBJDIR)/testtrack.o $(LIBDIR)/$(LIBNAME).a
+	$(CC) $(LFLAGS) -o $@ $^ -lm
+
+$(BINDIR)/test : $(OBJDIR)/test.o $(LIBDIR)/$(LIBNAME).a
+	$(CC) $(LFLAGS) -o $@ $^ -lm
+
+
+$(OBJDIR)/testclient.o : $(addprefix $(SRCDIR)/, test/testclient.c race.h)
+	$(CC) $(CFLAGS) -c -o $@ $<
+
+$(OBJDIR)/testserver.o : $(addprefix $(SRCDIR)/, test/testserver.c race.h)
+	$(CC) $(CFLAGS) -c -o $@ $<
+
+$(OBJDIR)/testtrack.o : $(addprefix $(SRCDIR)/, test/testtrack.c race.h)
+	$(CC) $(CFLAGS) -c -o $@ $<
+
+$(OBJDIR)/test.o : $(addprefix $(SRCDIR)/, test/test.c race.h)
 	$(CC) $(CFLAGS) -c -o $@ $<

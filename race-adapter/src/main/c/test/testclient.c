@@ -26,7 +26,7 @@
 #include <errno.h>
 #include <inttypes.h>
 
-#include "race.h"
+#include "../race.h"
 #include "testtrack.h"
 
 static bool stop = false;
@@ -68,7 +68,7 @@ int main( int argc, char** argv ){
 
     //--- send client request
     printf("sending request to server\n");
-    race_write_request(db, DATA_RECEIVER, SIMPLE_TRACK_PROTOCOL, NULL, race_epoch_msec(), interval);
+    race_write_request(db, DATA_RECEIVER, SIMPLE_TRACK_PROTOCOL, race_epoch_msec(), interval);
     if (sendto(fd, db->buf, db->pos, 0, serveraddr, addrlen) < 0){
         fprintf(stderr,"sending CLIENT_REQUEST failed (%s)\n", strerror(errno));
         return 1;

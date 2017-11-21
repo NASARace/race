@@ -15,6 +15,10 @@
  * limitations under the License.
  */
 
+/*
+ * internal types and function prototypes which are normally not exposed to application code
+ */
+
 #ifndef RACE_INTERNAL_INCLUDED
 #define RACE_INTERNAL_INCLUDED
 
@@ -48,10 +52,5 @@ typedef struct {
     remote_endpoint_t *remote;
 } threadargs_t;
 
-
-remote_endpoint_t* wait_for_remote (local_context_t* context, local_endpoint_t* local);
-void receive_message (local_context_t* context, local_endpoint_t* local, remote_endpoint_t* remote);
-void poll_messages (local_context_t* context, local_endpoint_t* local, remote_endpoint_t* remote);
-void* receive_messages_thread (void* args);
 
 #endif /* RACE_INTERNAL_INCLUDED */

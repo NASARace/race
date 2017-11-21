@@ -15,6 +15,10 @@
  * limitations under the License.
  */
 
+/*
+ * RACE system message read/write support
+ */
+
 #include <string.h>
 #include <stdio.h>
 
@@ -100,18 +104,16 @@ static int read_header (databuf_t* db, short id, int check_len,
     struct {
         struct msg_header;
         int client_flags;            // client capabilities
-        string in_type;
-        string out_type;
+        string schema;               // schema that defines exchanged data
         epoch_msec_t* sim_msec;      // requested simulation time
         int request_interval_msec;   // requested track update interval in msec
     }
 */
 
-int race_write_request (databuf_t* db, int flags, char* in_type, char* out_type, epoch_msec_t sim_msec, int interval_msec) {
+int race_write_request (databuf_t* db, int flags, char* schema, epoch_msec_t sim_msec, int interval_msec) {
     int pos =  write_header(db, REQUEST_MSG, NO_FIXED_MSG_LEN, NO_ID);
     pos = race_write_int(db, pos, flags);
-    pos = (in_type) ? race_write_string(db, pos, in_type, strlen(in_type)) : race_write_empty_string(db,pos);
-    pos = (out_type) ? race_write_string(db, pos, out_type, strlen(out_type)) : race_write_empty_string(db,pos);
+    pos = race_write_string(db, pos, schema, strlen(schema));
     pos = race_write_long(db,pos,sim_msec);
     pos = race_write_int(db,pos,interval_msec);
     set_msg_len(db,pos);
@@ -124,13 +126,12 @@ int race_is_request (databuf_t* db) {
 
 int race_read_request (databuf_t* db, epoch_msec_t* time_msec, 
                          int* cli_flags, 
-                         char* in_track_type, char* out_track_type, int max_type_len,
+                         char* schema, int max_schema_len,
                          epoch_msec_t* sim_msec, int* interval_msec, const char** err_msg) {
     int pos = read_header(db, REQUEST_MSG, NO_FIXED_MSG_LEN, NULL, time_msec, err_msg);
     if (pos > 0){
         pos = race_read_int(db,pos,cli_flags);
-        pos = race_read_strncpy(db,pos, in_track_type, max_type_len);
-        pos = race_read_strncpy(db,pos, out_track_type, max_type_len);
+        pos = race_read_strncpy(db,pos, schema, max_schema_len);
         pos = race_read_long(db,pos, sim_msec);    
         return race_read_int(db, pos, interval_msec);
     } else {

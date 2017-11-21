@@ -25,7 +25,7 @@ import com.typesafe.config.Config
 import gov.nasa.race._
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.Messages.BusEvent
-import gov.nasa.race.core.{ContinuousTimeRaceActor, PublishingRaceActor, SubscribingRaceActor}
+import gov.nasa.race.core.{ContinuousTimeRaceActor, PublishingRaceActor, RaceException, SubscribingRaceActor}
 import gov.nasa.race.util.{SettableDIStream, SettableDOStream, ThreadUtils}
 
 import scala.concurrent.duration._
@@ -58,6 +58,7 @@ object AdapterActor {
 trait AdapterActor extends PublishingRaceActor with SubscribingRaceActor with ContinuousTimeRaceActor {
   import AdapterActor._
 
+  val schema = config.getString("schema")
   val reader: Option[DataStreamReader] = createReader
   val writer: Option[DataStreamWriter] = createWriter
   val flags: Int = 0 // not yet
@@ -72,10 +73,16 @@ trait AdapterActor extends PublishingRaceActor with SubscribingRaceActor with Co
   val packet = new DatagramPacket(dos.getBuffer, dos.getCapacity)
   var id = NoId
 
+  ifSome(reader) { checkSchemaCompliance }
+  ifSome(writer) { checkSchemaCompliance }
 
   // those are protected methods so that we can have hardwired reader/writer instances in subclasses
   protected def createReader: Option[DataStreamReader] = configurable[DataStreamReader]("reader")
   protected def createWriter: Option[DataStreamWriter] = configurable[DataStreamWriter]("writer")
+
+  protected def checkSchemaCompliance (si: SchemaImplementor): Unit = {
+    if (!si.compliesWith(schema)) throw new RaceException(s"${si.getClass.getName} does not implement $schema")
+  }
 
   def sendPacketTo (packet: DatagramPacket, length: Int, ipAddress: InetAddress, port: Int): Boolean = {
     try {
@@ -101,12 +108,11 @@ trait AdapterActor extends PublishingRaceActor with SubscribingRaceActor with Co
 
   def setMsgLen (os: SettableDOStream, msgLen: Short) = os.setShort(2,msgLen)
 
-  def writeRequest (os: SettableDOStream, flags: Int, inType: String, outType: String, interval: Int): Int = {
+  def writeRequest (os: SettableDOStream, flags: Int, schema: String, interval: Int): Int = {
     os.clear
     writeHeader(os, RequestMsg, NoFixedMsgLen, id)
     os.writeInt(flags)
-    os.writeUTF(inType)
-    os.writeUTF(outType)
+    os.writeUTF(schema)
     os.writeLong(currentSimTimeMillis)
     os.writeInt(interval)
     val len = os.size
@@ -261,9 +267,7 @@ class ClientAdapterActor(val config: Config) extends AdapterActor {
   def sendPacket(len: Int): Boolean = sendPacketTo(packet,len,remoteIpAddress,remotePort)
 
   def sendRequest: Boolean = {
-    val inType = withSomeOrElse(reader,""){_.schema }
-    val outType = withSomeOrElse(writer, ""){_.schema}
-    val len = writeRequest(dos,flags,inType,outType,dataInterval.toMillis.toInt)
+    val len = writeRequest(dos,flags,schema,dataInterval.toMillis.toInt)
     sendPacket(len)
   }
 

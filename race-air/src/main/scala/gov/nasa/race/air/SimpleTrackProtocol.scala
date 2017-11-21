@@ -19,19 +19,18 @@ package gov.nasa.race.air
 
 import java.io.{DataInputStream, DataOutputStream}
 
-import gov.nasa.race._
-import gov.nasa.race.{DataStreamReader, DataStreamWriter}
 import gov.nasa.race.geo.LatLonPos
-import gov.nasa.race.track.{ProximityEvent, ProximityReference, TrackedObject, TrackedObjectEnumerator}
-import gov.nasa.race.uom.Length._
+import gov.nasa.race.track._
 import gov.nasa.race.uom.Angle._
+import gov.nasa.race.uom.Length._
 import gov.nasa.race.uom.Speed._
+import gov.nasa.race.{DataStreamReader, DataStreamWriter}
 import org.joda.time.DateTime
 
 import scala.collection.mutable.ArrayBuffer
 
 object SimpleTrackProtocol {
-  final val schema = "gov.nasa.race.SimpleTrackProtocol" // TODO - should be a schema definition
+  final val schema = "gov.nasa.race.air.SimpleTrackProtocol" // TODO - should be a schema definition
 
     /**
     protocol SimpleTrackProtocol {

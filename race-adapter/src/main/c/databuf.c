@@ -20,8 +20,7 @@
  * format follows the java.io.DataStream implementation and uses big-endian
  * (network) byte order
  * Note there are no type tags, only values are stored. It is therefore
- * imperative that writers/readers
- * share the same message definitions
+ * imperative that writers/readers use the same message definitions
  */
 
 #include <stdio.h>

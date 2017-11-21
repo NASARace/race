@@ -21,7 +21,7 @@
 
 #include <stdio.h>
 #include <inttypes.h>
-#include "race.h"
+#include "../race.h"
 
 void test_basic() {
     unsigned char buf[100];

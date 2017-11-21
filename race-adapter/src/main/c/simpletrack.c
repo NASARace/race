@@ -15,22 +15,50 @@
  * limitations under the License.
  */
 
+/*
+ * functions to read/write gov.nasa.race.track.SimpleTrackProtocol data messages
+ * 
+ * TODO - this should handle protocol versions
+ */
+
 #include <string.h>
 #include "race.h"
 
-/*
-  simple positional track model
+    /**
+    protocol SimpleTrackProtocol {
+        record SimpleTrack {
+            string id;
+            timestamp_ms time_msec;
+            double lat_deg;
+            double lon_deg;
+            double alt_m;
+            double heading_deg;
+            double speed_m_sec;
+        }
 
-  struct {
-    string id;
-    long   time_msec;
-    double lat_deg;
-    double lon_deg;
-    double alt_m;
-    double heading_deg;
-    double speed_m_sec;
-  }
-*/
+        record TrackMsg {
+            int msg_type = 1;
+            short n_records;
+            array<SimpleTrack> tracks;
+        }
+
+        record ProximityChange {
+            string ref_id;
+            double lat_deg;
+            double lon_deg;
+            double alt_m;
+            double dist_m;
+            int    flags;
+            SimpleTrack proximity;
+        }
+
+        record ProximityMsg {
+            int msg_type = 2;
+            short n_records;
+            array<ProximityChange> proximities;
+        }
+    }
+    **/
 
 int race_write_track_data (databuf_t* db, int pos,
                         char* id, epoch_msec_t time_msec, double lat_deg, double lon_deg, double alt_m, 
