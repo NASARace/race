@@ -22,6 +22,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <assert.h>
+#include <time.h>
+
 #include "../hmap.h"
 
 struct test_entry {
@@ -39,7 +41,7 @@ void basicTestCycle () {
     {"YPP453", "ypp453"}
   };
 
-  puts("-------------- basicTestCycle");
+  puts("\n-------------- basicTestCycle");
 
   puts("-- create map");
   hmap_t* map = hmap_create(32);
@@ -83,7 +85,7 @@ void basicTestCycle () {
 }
 
 void growMap () {
-  puts("-------------- growMap");
+  puts("\n-------------- growMap");
   const int N = 64;
 
   puts("-- hmap_create(8)");
@@ -111,8 +113,60 @@ void growMap () {
   hmap_dump(map);
 }
 
+void randomOp () {
+  const int M = 300;  // number of keys/entries we generate
+  const long N = 1000000; // rounds
+  const char* clear_line = "\e[1K\e[0G";
+  int n_rehash = 0;
+
+  hmap_entry_t* e = NULL;
+  //srand(time(NULL));
+  srand(0);
+
+  puts("\n-------------- random op");
+  hmap_t* map = hmap_create(8);
+  
+  char* keys[M];
+  for (int i=0; i<M; i++){
+    char *key = malloc(8);
+    snprintf(key, 8, "FZ%d", i);
+    keys[i] = key;
+  }
+
+  printf("-- performing %ld random ops..\n", N);
+  for (long i=0; i<N; i++){
+    if (i % 1000 == 0) {
+      printf("%sround %ld", clear_line, i);
+    }
+    int r = rand();
+    int idx = r % M;
+
+    char* key = keys[idx]; 
+    void* a = map->entries;
+    uint32_t n_rem = map->n_removed;
+
+    if (i < 1000 || (i & 1)) { // fill up to 1000 entries, the alternate between add/remove
+      hmap_add_entry(map, key, (void*)i);
+      e = hmap_get_entry(map,key);
+      assert(e != NULL && (long)e->data == i);
+      //assert(check_duplicates(map));
+
+    } else { // remove
+      hmap_remove_entry(map, key);
+      e = hmap_get_entry(map,key);
+      assert(e == NULL);
+    }
+
+    if (map->entries != a) {
+      //printf("  rehash %d in round %ld (n_rem=%d) to size %d\n", ++n_rehash, i, n_rem, map->consts.size);
+    }
+  }
+  printf("%sdone.\n", clear_line);
+}
+
 int main (int argc, char** argv) {
   basicTestCycle();
   growMap();
+  randomOp();
   return 0;
 }

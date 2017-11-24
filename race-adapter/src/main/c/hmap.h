@@ -33,9 +33,10 @@
 #include <stdbool.h>
 
 typedef struct {
-  uint32_t max_entries;
-  uint32_t size;
-  uint32_t rehash;
+  uint32_t max_entries;  // if n_entries above we grow and rehash
+  uint32_t max_removed;  // if n_removed above we rehash without growth
+  uint32_t size;         // number of allocated slots in entries
+  uint32_t rehash;       // double hash const
 } hmap_const_t;
 
 typedef struct {
@@ -45,9 +46,10 @@ typedef struct {
 } hmap_entry_t;
 
 typedef struct {
-  hmap_const_t consts;  // we copy the values to avoid page faults at runtime - most maps will fit into a page
+  hmap_const_t consts;   // we copy the values to avoid page faults at runtime - most maps will fit into a page
   int const_idx;
-  uint32_t n_entries;
+  uint32_t n_entries;    // number of active entries
+  uint32_t n_removed;    // number of removed entries (we can't just recycle them because it might break double hashing)
   hmap_entry_t* entries;
 } hmap_t;
 
@@ -74,6 +76,8 @@ bool hmap_remove_entry (hmap_t* map, const char* key);
 hmap_entry_t* hmap_next_entry (hmap_t* map, hmap_entry_t* prev_entry);
 void hmap_free (hmap_t* map);
 
-void hmap_dump (hmap_t* map); // for debugging purposes
+// for testing/debugging purposes
+void hmap_dump (hmap_t* map);
+bool check_duplicates (hmap_t* map);
 
 #endif /* MAP_INCLUDED */
