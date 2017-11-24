@@ -15,7 +15,7 @@ LIBNAME=lib$(NAME)-$(os)-$(arch)
 $(OBJDIR)/%.o: $(SRCDIR)/%.c
 	$(CC) $(CFLAGS) $(CPPFLAGS) -c -o $@ $<
 
-all: splash init_dirs $(BINDIR)/testserver $(BINDIR)/testclient $(BINDIR)/test
+all: splash init_dirs $(BINDIR)/testserver $(BINDIR)/testclient $(BINDIR)/test $(BINDIR)/test_hmap
 
 splash:
 	@echo "==== running $(MAKE_COMMAND) in $(PWD)"
@@ -36,7 +36,7 @@ clean:
 
 # librace
 
-$(LIBDIR)/$(LIBNAME).a : $(addprefix $(OBJDIR)/, race.o messages.o databuf.o netutils.o timeutils.o simpletrack.o)
+$(LIBDIR)/$(LIBNAME).a : $(addprefix $(OBJDIR)/, race.o messages.o databuf.o netutils.o timeutils.o simpletrack.o hmap.o)
 	$(AR) -rcs $@ $^ 
 
 
@@ -58,6 +58,8 @@ $(OBJDIR)/netutils.o : $(addprefix $(SRCDIR)/, netutils.c)
 $(OBJDIR)/simpletrack.o : $(addprefix $(SRCDIR)/, simpletrack.c race.h)
 	$(CC) $(CFLAGS) -c -o $@ $<
 
+$(OBJDIR)/hmap.o : $(addprefix $(SRCDIR)/, hmap.c)
+	$(CC) $(CFLAGS) -c -o $@ $<
 
 # tools and tests
 
@@ -70,6 +72,8 @@ $(BINDIR)/testclient : $(OBJDIR)/testclient.o $(OBJDIR)/testtrack.o $(LIBDIR)/$(
 $(BINDIR)/test : $(OBJDIR)/test.o $(LIBDIR)/$(LIBNAME).a
 	$(CC) $(LFLAGS) -o $@ $^ -lm
 
+$(BINDIR)/test_hmap : $(OBJDIR)/test_hmap.o $(LIBDIR)/$(LIBNAME).a
+	$(CC) $(LFLAGS) -o $@ $^ -lm
 
 $(OBJDIR)/testclient.o : $(addprefix $(SRCDIR)/, test/testclient.c race.h)
 	$(CC) $(CFLAGS) -c -o $@ $<
@@ -81,4 +85,7 @@ $(OBJDIR)/testtrack.o : $(addprefix $(SRCDIR)/, test/testtrack.c race.h)
 	$(CC) $(CFLAGS) -c -o $@ $<
 
 $(OBJDIR)/test.o : $(addprefix $(SRCDIR)/, test/test.c race.h)
+	$(CC) $(CFLAGS) -c -o $@ $<
+
+$(OBJDIR)/test_hmap.o : $(addprefix $(SRCDIR)/, test/test_hmap.c hmap.h)
 	$(CC) $(CFLAGS) -c -o $@ $<
