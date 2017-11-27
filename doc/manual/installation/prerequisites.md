@@ -18,8 +18,7 @@ and setting `JAVA_HOME` in your `~/.profile` accordingly.
 ## SBT
 The [Scala Build Tool][sbt] >=13.8 is used to build and run RACE. Please refer
 to the [SBT documentation][sbt-install] for details of how to install SBT on
-various platforms
-
+various platforms.
 
 ## Git
 To obtain and update RACE sources, we use [Git][git] as the distributed version

@@ -10,6 +10,8 @@ cloned to, then execute [SBT][sbt] from inside of this directory:
     [info] Set current project to race ...
     [race]>
 
+## Compile RACE
+
 The first time SBT is started, it will download a number of external dependencies (plugins, libraries)
 that are used by SBT itself. Subsequent starts should be much faster.
 
@@ -46,6 +48,21 @@ SBT by executing the `stage` command
 The script is created in the `target/universal/stage/bin` directory. The main executable is linked
 to `./race`, which is located in the RACE root directory. Please make sure the link has the right
 file permissions to be executable.
+
+
+## Build Documentation
+Optionally, SBT can also be used to create RACE documentation (such as this page) in HTML format.
+After executing
+
+    [race]> mkDoc
+    [info] Reading files from doc/manual
+    [info] Parsing 30 markup documents, 1 template, 5 configurations ...
+    [info] Rendering 30 HTML documents, copying 35 static files ...
+    ...
+    
+the HTML pages are available under `<racedir>/target/doc` and can be viewed with any browser. This
+also creates HTML presentation slides which are kept in `<racedir>/target/doc/slides`.    
+
 
 
 [sbt]: http://www.scala-sbt.org/0.13/tutorial/index.html
