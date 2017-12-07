@@ -18,25 +18,23 @@
 package gov.nasa.race.ww
 
 import java.awt.Font
+import java.util.{Timer, TimerTask}
 import java.util.concurrent.Semaphore
-import javax.swing.SwingUtilities
 
 import akka.actor.{ActorRef, Props}
 import com.typesafe.config.Config
 import gov.nasa.race._
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.{ContinuousTimeRaceActor, RaceContext, _}
-import gov.nasa.race.swing.Redrawable
 import gov.nasa.race.swing.Style._
+import gov.nasa.race.swing.{Redrawable, _}
 import gov.nasa.race.util.FileUtils
-import gov.nasa.race.swing._
-import gov.nasa.worldwind.Configuration
-import gov.nasa.worldwind.avlist.AVKey
 import gov.nasa.worldwind.geom.Position
 import gov.nasa.worldwind.layers.Layer
 
 import scala.collection.JavaConverters._
 import scala.collection.immutable.ListMap
+import scala.concurrent.duration._
 import scala.reflect.ClassTag
 import scala.swing._
 
@@ -54,19 +52,27 @@ class RaceViewerActor(val config: Config) extends ContinuousTimeRaceActor
 
   var view: Option[RaceView] = None // we can't create this from a Akka thread since it does UI transcations
 
+  var initTimedOut = false // WorldWind initialization might do network IO - we have to check for timeouts
+
+  //--- RaceActor callbacks
+
   override def onInitializeRaceActor(rc: RaceContext, actorConf: Config): Boolean = {
-    invokeAndWait {
+    scheduleOnce(initTimeout - 100.millisecond){
+      if (!view.isDefined){
+        warning("timeout during view initialization")
+        initTimedOut = true
+      }
+    }
+
+    invokeAndWait { // this is executed in the AWT event dispatch thread
       try {
         view = Some(new RaceView(RaceViewerActor.this))
       } catch {
         case x: Throwable => x.printStackTrace
       }
     }
-    view.isDefined && super.onInitializeRaceActor(rc, actorConf)
+    view.isDefined && !initTimedOut && super.onInitializeRaceActor(rc, actorConf)
   }
-
-
-  //--- RaceActor callbacks
 
   override def onTerminateRaceActor(originator: ActorRef) = {
     ifSome(view) { v =>
@@ -113,6 +119,7 @@ import gov.nasa.race.ww.RaceView._
   */
 class RaceView (viewerActor: RaceViewerActor) extends DeferredEyePositionListener {
   implicit val log = viewerActor.log
+  def initTimedOut = viewerActor.initTimedOut
 
   setWorldWindConfiguration // NOTE - this has to happen before we load any WorldWind classes
 
@@ -135,8 +142,8 @@ class RaceView (viewerActor: RaceViewerActor) extends DeferredEyePositionListene
   def removeObjectListener (listener: ObjectListener) = objectListener = objectListener.filter(_.ne(listener))
 
   val layers = createLayers
-
   val frame = new WorldWindFrame(viewerActor.config, this) // this creates the wwd instance
+
   val redrawManager = RedrawManager(wwd.asInstanceOf[Redrawable]) // the shared one, layers/panels can have their own
   val inputHandler = wwdView.getViewInputHandler.asInstanceOf[RaceViewInputHandler]
   var layerController: Option[LayerController] = None
@@ -150,7 +157,11 @@ class RaceView (viewerActor: RaceViewerActor) extends DeferredEyePositionListene
   // this has to be deferred because WWJs setViewInputHandler() does not initialize properly
   ifInstanceOf[RaceViewInputHandler](wwd.getView.getViewInputHandler) {_.attachToRaceView(this)}
 
-  frame.open
+  if (!initTimedOut){
+    frame.open
+  } else {
+    frame.dispose
+  }
 
   //---- end initialization, from here on we need to be thread safe
 

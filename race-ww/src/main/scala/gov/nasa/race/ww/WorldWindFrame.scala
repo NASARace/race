@@ -50,7 +50,9 @@ class WorldWindFrame (config: Config, raceView: RaceView) extends AppFrame {
   private var popupShowPanelsMI: JMenuItem = _
   private var mbShowPanelsMI: JMenuItem = _
 
+  // this is the potential blocking point, which might run into timeouts
   val wwd = createWorldWindow(config, raceView)
+
   val worldPanel = new AWTWrapper(wwd).styled('world)
   val consolePanel = new CollapsiblePanel().styled('console)
   val consoleWrapper = new ScrollPane(consolePanel).styled('verticalAsNeeded)

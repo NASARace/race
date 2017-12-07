@@ -450,7 +450,7 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ImplicitActorLogging
         sender ! RaceInitialized
       } catch {
         case x: Throwable =>
-          x.printStackTrace // TODO - exceptions should be loggable to a file
+          //x.printStackTrace // TODO - exceptions should be loggable to a file
           requester ! RaceInitializeFailed(x)
           // shutdown is initiated by the sender
       }

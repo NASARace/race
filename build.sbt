@@ -5,6 +5,9 @@ import RaceBuild._
 import Dependencies._
 import CommonRaceSettings._
 
+import com.typesafe.sbt.SbtMultiJvm.MultiJvmKeys._
+
+
 shellPrompt in ThisBuild := { state => "[" + Project.extract(state).currentRef.project + "]> " }
 
 lazy val commonSettings = commonRaceSettings ++ Seq(
@@ -117,6 +120,7 @@ lazy val raceCoreTest = createTestProject("race-core-test", testSettings).
   dependsOn(raceCore,raceTestKit)
 
 lazy val raceNetJMSTest = createTestProject("race-net-jms-test", testSettings).
+  enablePlugins(MultiJvmPlugin).
   dependsOn(raceNetJMS,raceTestKit).
   configs(MultiJvm).
   settings(
@@ -128,7 +132,7 @@ lazy val raceNetHttpTest = createTestProject("race-net-http-test", testSettings)
   dependsOn(raceNetHttp,raceTestKit)
 
 lazy val raceNetKafkaTest = createTestProject("race-net-kafka-test", testSettings).
-  enablePlugins(JavaAppPackaging).
+  enablePlugins(JavaAppPackaging,MultiJvmPlugin).
   dependsOn(raceNetKafka,raceTestKit).
   configs(MultiJvm).
   settings(
@@ -139,7 +143,7 @@ lazy val raceNetKafkaTest = createTestProject("race-net-kafka-test", testSetting
   addTestLibraryDependencies(akkaSlf4j)
 
 lazy val raceNetDDSTest = createTestProject("race-net-dds-test", testSettings).
-  enablePlugins(JavaAppPackaging).
+  enablePlugins(JavaAppPackaging,MultiJvmPlugin).
   dependsOn(raceNetDDS,raceTestKit,raceAir).
   configs(MultiJvm).
   settings(

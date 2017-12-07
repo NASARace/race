@@ -18,6 +18,7 @@
 package gov.nasa.race.core
 
 import akka.actor._
+import akka.util.Timeout
 import com.typesafe.config.{Config, ConfigException}
 import gov.nasa.race.common
 import gov.nasa.race.common.Status._
@@ -342,7 +343,15 @@ trait RaceActor extends Actor with ImplicitActorLogging {
     Some(scheduler.schedule(0.seconds, interval, self, msg))
   }
 
+  def scheduleOnce (dur: FiniteDuration)(f: =>Unit) = scheduler.scheduleOnce(dur)(f)
+
   def delay (d: FiniteDuration, action: ()=>Unit): Option[Cancellable] = Some(scheduler.scheduleOnce(d,self,DelayedAction(self,action)))
+
+  //--- timeout values we might need during actor initialization in order to clean up
+  protected def _getTimeout(key: String) = config.getFiniteDurationOrElse(key,raceActorSystem.defaultActorTimeout)
+  def createTimeout = _getTimeout("create-timeout")
+  def initTimeout = _getTimeout("init-timeout")
+  def startTimeout = _getTimeout("start-timeout")
 
   //--- per actor configurable logging
 

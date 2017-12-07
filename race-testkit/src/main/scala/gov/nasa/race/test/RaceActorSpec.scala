@@ -98,6 +98,8 @@ object TestRaceActorSystem {
 import gov.nasa.race.test.TestRaceActorSystem._
 
 class TestRaceActorSystem (name: String) extends RaceActorSystem(createTestConfig(name)) {
+  RaceActorSystem.runEmbedded
+
   override def createBus (sys: ActorSystem) = new TestBus(sys)
   override def getMasterClass = classOf[TestMaster]
   override def raceTerminated = {} // we don't terminate before all tests are done

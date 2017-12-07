@@ -64,7 +64,8 @@ object RaceActorSystem { // aka RAS
       // we need to do this sync since the logging might not show anymore
       println("last actor system did shut down, exiting RACE\n")
       terminationListeners.foreach(_())
-      // don't do a System.exit() here because it would break multi-jvm tests
+
+      if (!isRunningEmbedded) System.exit(0)
     }
   }
 
@@ -111,8 +112,8 @@ class RaceActorSystem(val config: Config) extends LogController with VerifiableA
   val delayLaunch = config.getBooleanOrElse("delay-launch", false)
 
   //--- specific timeouts
-  val defaultSystemTimeout: FiniteDuration = config.getFiniteDurationOrElse("system-timeout",20.seconds)
-  val defaultActorTimeout: FiniteDuration = config.getFiniteDurationOrElse("actor-timeout",15.seconds)
+  val defaultSystemTimeout: FiniteDuration = config.getFiniteDurationOrElse("system-timeout",timeout.duration*2)
+  val defaultActorTimeout: FiniteDuration = config.getFiniteDurationOrElse("actor-timeout",timeout.duration)
   val createTimeout = Timeout(config.getFiniteDurationOrElse("create-timeout", defaultSystemTimeout))
   val initTimeout = Timeout(config.getFiniteDurationOrElse("init-timeout", defaultSystemTimeout))
   val startTimeout = Timeout(config.getFiniteDurationOrElse("start-timeout", defaultSystemTimeout))
