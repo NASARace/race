@@ -33,7 +33,7 @@ class TestRouteInfo (val parent: ParentContext, val config: Config) extends Race
   val request = config.getStringOrElse("request", "test")
   val response = config.getStringOrElse("response", "Hello from RACE")
 
-  def route = {
+  override def route = {
     path(request) {
       get {
         complete(HttpEntity(ContentTypes.`text/html(UTF-8)`, response))
@@ -54,7 +54,7 @@ class TestAuthorized (val parent: ParentContext, val config: Config) extends Aut
     )
   )
 
-  def route = {
+  override def route = {
     path(request) {
       get {
         count += 1

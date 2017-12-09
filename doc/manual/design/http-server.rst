@@ -41,6 +41,46 @@ very close to the created HTML structure.
 ``HttpServer`` includes a powerful, per-request cookie based user authentication mechanism to
 support content that should not be publicly accessible.
 
+The ``gov.nasa.race.http.Test{RouteInfo,Authorized,Refresh}`` examples show how define routes and
+(self refreshing) HTML content.::
+
+    //--- basic RaceRouteInfo example
+    class TestRouteInfo (val parent: ParentContext, val config: Config) extends RaceRouteInfo {
+      val request = config.getStringOrElse("request", "test")
+      val response = config.getStringOrElse("response", "Hello from RACE")
+
+      override def route = {
+        path(request) {
+          get {
+            complete(HttpEntity(ContentTypes.`text/html(UTF-8)`, response))
+          }
+        }
+      }
+    }
+
+    //--- example of how to implement authorized content for configured paths
+    class TestAuthorized (val parent: ParentContext, val config: Config) extends AuthorizedRaceRoute {
+      val request = config.getStringOrElse("request", "secret")
+      var count = 0
+      def page = html(
+        body(
+          p(s"the supersecret answer #$count to the ultimate question of life, the universe and everything is:"),
+          p(b("42")),
+          p("(I always knew there was something wrong with the universe)"),
+          logoutLink
+        )
+      )
+
+      override def route = {
+        path(request) {
+          get {
+            count += 1
+            completeAuthorized(User.UserRole, HttpEntity(ContentTypes.`text/html(UTF-8)`, page.render))
+          }
+        }
+      }
+    }
+
 
 .. _HTTP: https://tools.ietf.org/html/rfc2616
 .. _AkkaHttp: https://doc.akka.io/docs/akka-http/current/scala/http/
