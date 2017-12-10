@@ -12,7 +12,7 @@ shellPrompt in ThisBuild := { state => "[" + Project.extract(state).currentRef.p
 
 lazy val commonSettings = commonRaceSettings ++ Seq(
   organization := "gov.nasa.race",
-  version := "1.5.1"
+  version := "1.5.2"
 )
 
 lazy val testSettings = commonSettings ++ noPublishSettings  // test projects don't publish artifacts
@@ -31,7 +31,7 @@ lazy val root = createRootProject("race").
     mainClass in Compile := Some("gov.nasa.race.main.ConsoleMain"),
     noPublishSettings // root does not publish any artifacts
   ).
-  addLibraryDependencies(logback,akkaSlf4j)  // in case somebody wants to configure SLF4J logging
+  addLibraryDependencies(slf4jSimple,akkaSlf4j)  // in case somebody wants to configure SLF4J logging
 
 //--- sub projects
 

@@ -31,7 +31,7 @@ class TranslatorActor (val config: Config) extends SubscribingRaceActor with Fil
   var translator: Translator[Any,Any] = createTranslator
 
   /** override this to use a hardwired translator */
-  protected def createTranslator: Translator[Any,Any] = getConfigurable("translator")
+  protected def createTranslator: Translator[Any,Any] = getConfigurable[Translator[Any,Any]]("translator")
 
   /** we provide our own PF so that derived classes can delegate from their handleMessage */
   def handleTranslatorMessage: Receive = {

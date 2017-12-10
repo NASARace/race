@@ -35,6 +35,7 @@ object Dependencies {
   //--- default libs
 
   //--- slf4j
+  // NOTE - slf4j 1.8 now uses ServiceProvider and logback has not caught up as of 12/01/17
   val slf4jSimple = "org.slf4j" % "slf4j-simple" % "latest.release"
 
   //--- logback

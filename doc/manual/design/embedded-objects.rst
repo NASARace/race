@@ -65,7 +65,7 @@ instance ``gov.nasa.race.actor.TranslatorActor`` and ``gov.nasa.race.air.actor.S
       var translator: Translator[Any,Any] = createTranslator
 
      // override this to use a hardwired translator
-     protected def createTranslator: Translator[Any,Any] = getConfigurable("translator")
+     protected def createTranslator: Translator[Any,Any] = getConfigurable[Translator[Any,Any]]("translator")
 
 
 .. _HOCON: https://github.com/typesafehub/config/blob/master/HOCON.md
