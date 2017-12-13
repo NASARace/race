@@ -80,8 +80,8 @@ class KafkaMultiNodeSpec extends RaceMultiNodeSpec(KafkaMultiNodeConfig) with Wo
     runOn(raceNode) {
       val race = WrappedApp {
         RaceActorSystem.runEmbedded
-        val jmsConfigPath = baseResourceFile("kafka.conf")
-        ConsoleMain.main(Array(jmsConfigPath.getAbsolutePath))
+        val configPath = baseResourceFile("kafka.conf")
+        ConsoleMain.main(Array(configPath.getAbsolutePath))
       }
 
       race beforeExecuting {
@@ -89,6 +89,7 @@ class KafkaMultiNodeSpec extends RaceMultiNodeSpec(KafkaMultiNodeConfig) with Wo
 
       } whileExecuting {
         expectOutput(race, 10 seconds, "^enter command".r)
+        delay(race, 2 seconds) // otherwise Kafka might not be up yet and the message is lost
         sendInput(race, "4") // send test message
         expectOutput(race, 15 seconds, "enter channel".r)
         sendInput(race, "|kafka-out") // send message to channel

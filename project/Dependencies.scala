@@ -36,75 +36,71 @@ object Dependencies {
 
   //--- slf4j
   // NOTE - slf4j 1.8 now uses ServiceProvider and logback has not caught up as of 12/01/17
-  val slf4jSimple = "org.slf4j" % "slf4j-simple" % "latest.release"
+  val slf4jSimple = "org.slf4j" % "slf4j-simple" % "1.8.0-beta0"
 
   //--- logback
-  val logback = "ch.qos.logback" % "logback-classic" % "latest.release"
+  // does not support slf4j 1.8 (provider) yet
+  val logback = "ch.qos.logback" % "logback-classic" % "1.2.3"
 
   //--- Typesafe config
-  val typesafeConfig = "com.typesafe" % "config" % "latest.release"
+  val typesafeConfig = "com.typesafe" % "config" % "1.3.2"
 
   //--- nscala-time (Dates with operators): https://github.com/nscala-time/nscala-time
-  val nscalaTime = "com.github.nscala-time" %% "nscala-time" %  "latest.release"
+  val nscalaTime = "com.github.nscala-time" %% "nscala-time" %  "2.18.0"
 
   //--- Scala parser combinators (https://github.com/scala/scala-parser-combinators)
-  val scalaParser = "org.scala-lang.modules" % "scala-parser-combinators_2.12" % "latest.release"
+  val scalaParser = "org.scala-lang.modules" % "scala-parser-combinators_2.12" % "1.0.6"
 
   //--- scala-xml
-  val scalaXml = "org.scala-lang.modules" % "scala-xml_2.12" % "latest.release"
+  val scalaXml = "org.scala-lang.modules" % "scala-xml_2.12" % "1.0.6"
 
   //--- new scala reflection (TypeTags etc.)
-  val scalaReflect =  "org.scala-lang" % "scala-reflect" % CommonRaceSettings.scalaVer // "2.12.3"
+  val scalaReflect =  "org.scala-lang" % "scala-reflect" % CommonRaceSettings.scalaVer
 
   //--- scalaTags HTML generator
-  val scalaTags = "com.lihaoyi" %% "scalatags" % "latest.release"
+  val scalaTags = "com.lihaoyi" %% "scalatags" % "0.6.7"
 
-  //--- scala automatic resource management (https://github.com/jsuereth/scala-arm) - 2.12.0 not yet supported
-  //val scalaArm = "com.jsuereth" %% "scala-arm" % "1.4"
-
-  //--- miniboxing (better form of AnyVal specialization)
-  //val scalaMiniboxingRT = "org.scala-miniboxing.plugins" %% "miniboxing-runtime" % "0.4-SNAPSHOT"
-  //val scalaMiniboxingCompile = "org.scala-miniboxing.plugins" %% "miniboxing-plugin" % "0.4-SNAPSHOT"
+  //--- scala automatic resource management (https://github.com/jsuereth/scala-arm)
+  //val scalaArm = "com.jsuereth" %% "scala-arm" % "2.0"
 
   //--- scalanlp/breeze (numerical processing): https://github.com/scalanlp/breeze
-  //val breeze = "org.scalanlp" %% "breeze" % "latest.release"
-  // val breezeNative = "org.scalanlp" %% "breeze-natives" % "latest.release"
+  //val breeze = "org.scalanlp" %% "breeze" % "0.13.2"
+  // val breezeNative = "org.scalanlp" %% "breeze-natives" % "0.13.2"
 
   //--- scalaTest
-  //val scalaTest = "org.scalatest" %% "scalatest" % "2.2.6"
-  val scalaTest = "org.scalatest" % "scalatest_2.12" % "3.0.1"
-  val pegDown = "org.pegdown" % "pegdown" % "latest.release"
+  val scalaTest = "org.scalatest" % "scalatest_2.12" % "3.0.4"
+  val pegDown = "org.pegdown" % "pegdown" % "1.6.0"
 
   //--- scalaCheck
-  val scalaCheck = "org.scalacheck" % "scalacheck_2.12" % "latest.release" // 1.13.4"
+  val scalaCheck = "org.scalacheck" % "scalacheck_2.12" % "1.13.5"
 
   // liftJson
-  val liftJson = "net.liftweb" %% "lift-json" % "latest.release"
-  val liftJsonExt = "net.liftweb" %% "lift-json-ext" % "latest.release"
+  val liftJson = "net.liftweb" %% "lift-json" % "3.2.0-M3"
+  val liftJsonExt = "net.liftweb" %% "lift-json-ext" % "3.2.0-M3"
   val liftJsonAll = Seq(liftJson,liftJsonExt)
 
   val defaultLibs =  Seq(logback,typesafeConfig,nscalaTime,liftJson)
   val defaultTestLibs = Seq(scalaTest,scalaCheck,pegDown)
 
   // Apache Avro serialization (for archiving/unarchiving)
-  val avro = "org.apache.avro" % "avro" % "latest.release" // "1.8.2"
+  val avro = "org.apache.avro" % "avro" % "1.8.2"
 
   // scodec
-  val scodecBits = "org.scodec" %% "scodec-bits" % "latest.release"
-  val scodecCore = "org.scodec" %% "scodec-core" % "latest.release"
-  //val scodecStream = "org.scodec" %% "scodec-stream" % "0.10.0"  // latest.release not yet on resolvers
+  val scodecBits = "org.scodec" %% "scodec-bits" % "1.1.5"
+  val scodecCore = "org.scodec" %% "scodec-core" % "1.10.3"
+  //val scodecStream = "org.scodec" %% "scodec-stream" % "1.1.0-M9"
   val scodecAll = Seq(scodecBits, scodecCore)
 
   //--- scala-swing
-  val scalaSwing = "org.scala-lang.modules" %% "scala-swing" % "latest.release"
-  //val swingx = "org.swinglabs.swingx" % "swingx-core" % "latest.release"
+  val scalaSwing = "org.scala-lang.modules" %% "scala-swing" % "2.0.1"
+  //val swingx = "org.swinglabs.swingx" % "swingx-core" % "1.6.5-1"
   //.. and possibly extensions for Tree and jfreechart
 
   //--- RSyntaxTextArea (TextEditor with syntax support)
-  val rsTextArea = "com.fifesoft" % "rsyntaxtextarea" % "2.5.8"
+  val rsTextArea = "com.fifesoft" % "rsyntaxtextarea" % "2.6.1"
 
   //--- the jfreechart plot and chart lib
-  val jfreeChart = "org.jfree" % "jfreechart" % "latest.release"
+  val jfreeChart = "org.jfree" % "jfreechart" % "1.5.0"
 
   //--- pure Java implementation of ssh2 (http://www.jcraft.com/jsch/)
   // NOTE this has to be a known version and verified instance so that we don't
@@ -112,10 +108,10 @@ object Dependencies {
   val jsch = "com.jcraft" % "jsch" % "0.1.54"
 
   //--- argon2 based password hashes ()
-  val argon2 = "de.mkammerer" % "argon2-jvm" % "latest.release"
+  val argon2 = "de.mkammerer" % "argon2-jvm" % "2.2"
 
   //--- Akka
-  val akkaVersion = "latest.release"
+  val akkaVersion = "2.5.8"
   val akkaOrg = "com.typesafe.akka"
 
   val akkaActor = akkaOrg %% "akka-actor" % akkaVersion
@@ -125,13 +121,13 @@ object Dependencies {
   val akkaTestkit = akkaOrg %% "akka-testkit" % akkaVersion
   val akkaMultiNodeTestkit = akkaOrg %% "akka-multi-node-testkit" % akkaVersion // % "test,multi-jvm"
 
-  val akkaHttp = akkaOrg %% "akka-http" % "latest.release"
+  val akkaHttp = akkaOrg %% "akka-http" % "10.0.11"
 
   val akkaAll = Seq(akkaActor)
 
 
   //--- ActiveMQ
-  val amqVersion = "latest.release"  // >= 5.11.1
+  val amqVersion = "5.15.2"  // >= 5.11.1
   val amqOrg = "org.apache.activemq"
   val amqBroker = amqOrg % "activemq-broker" % amqVersion
 
@@ -146,24 +142,24 @@ object Dependencies {
 
   // note - kafka still uses the old log4j
 
-  val log4j = "log4j" % "log4j" % "latest.release"
-  val log4jOverSlf4j = "org.slf4j" % "log4j-over-slf4j" % "latest.release"
+  val log4j = "org.apache.logging.log4j" % "log4j" % "2.10.0"
+  val log4jOverSlf4j = "org.slf4j" % "log4j-over-slf4j" % "1.8.0-beta0"
 
   //--- ZooKeeper
-  val zookeeper = "org.apache.zookeeper" % "zookeeper" % "latest.release" excludeAll(
+  val zookeeper = "org.apache.zookeeper" % "zookeeper" % "3.5.3-beta" excludeAll(
     ExclusionRule(organization = "log4j", name="log4j"),
     ExclusionRule(organization = "org.slf4j", name = "slf4j-log4j12")
   )
 
   //--- Kafka client (this is all we need for importing/exporting)
-  // note that clients are not upward compatible, i.e. a new client doesn't work with an old server
+  // note that clients are NOT upward compatible, i.e. a new client doesn't work with an old server
   // (the new server with old client is supposedly fine). Since there are many old servers out there, we can't
   // use the latest client yet
   val kafkaClients = "org.apache.kafka" % "kafka-clients" % "0.9.0.0"
-  val newKafkaClients = "org.apache.kafka" % "kafka-clients" % "latest.release"
+  val newKafkaClients = "org.apache.kafka" % "kafka-clients" % "1.0.0"
 
   //--- Kafka (make sure to add log4j to kafkaServer dependencies
-  val kafka = "org.apache.kafka" %% "kafka" % "latest.release" excludeAll(
+  val kafka = "org.apache.kafka" %% "kafka" % "1.0.0" excludeAll(
     ExclusionRule(organization = "log4j", name="log4j"),
     ExclusionRule(organization = "org.slf4j", name = "slf4j-log4j12")
   )

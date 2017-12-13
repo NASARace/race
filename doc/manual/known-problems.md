@@ -21,6 +21,4 @@ Running configurations that use the RaceViewerActor (which encapsulates NASA Wor
 log output during RACE startup. This is due to ongoing updates of the WorldWind server infrastructure and not RACE
 related
 
-### cross-hair cursor not showing on Windows (09/08/17)
-Due to size constraints for cursor icons the RaceViewerActor cross-hair cursor inside of the globe panel is hard to
-see
+### kafka-clients

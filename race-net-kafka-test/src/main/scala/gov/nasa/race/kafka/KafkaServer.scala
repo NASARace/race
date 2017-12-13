@@ -148,6 +148,7 @@ object KafkaServer {
     // unfortunately we can't set a ZKShutdownHandler because the class is not public, hence we will get an error on startup
 
     zkFactory.startup(zkServer)
+    Thread.sleep(500)
     val zkUtils = ZkUtils(props.get("zookeeper.connect").toString, 30000, 30000, false)
 
     //--- Kafka
@@ -173,7 +174,7 @@ object KafkaServer {
       }
     }
     thread.start()
-    Thread.sleep(500)
+    Thread.sleep(1000)
 
     ifSome(cliOpts.topic){ topicName => createTopic(zkUtils,topicName,"1","1")}
 

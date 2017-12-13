@@ -45,7 +45,9 @@ class KafkaImportActor (val config: Config) extends FilteringPublisher {
         // will take more time/resources since classes are not loaded and methods are not JITed.
         // The start time is non-deterministic anyways, but we still do want to keep the
         // consistency guarantee, i.e. once we start to process messages we don't drop any of them
-        c.seekToEnd
+
+        // NOTE - ths should not be necessary if "auto.offset.reset" is set to "latest" (but beware of the version incompatibility there)
+        //c.seekToEnd
       }
 
       while (!terminate) {

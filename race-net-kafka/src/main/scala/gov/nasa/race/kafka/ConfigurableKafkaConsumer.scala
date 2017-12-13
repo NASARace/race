@@ -57,12 +57,16 @@ abstract class ConfigurableKafkaConsumer (val config: Config) {
   def valueDeserializer: ClassTag[_ <: Deserializer[ValueType]]
 
   val topicNames = config.getStringList("kafka-topics") // keep as java List
-  val groupId = config.getOptionalString("group-id")
-  val clientId = config.getOptionalString("client-id")
+  val groupId = config.getStringOrElse("group-id", "race")
+  val clientId = config.getStringOrElse("client-id", defaultClientId)
   val pollTimeoutMs = config.getFiniteDurationOrElse("poll-timeout", 1.hour).toMillis
 
   val consumer: KafkaConsumer[KeyType,ValueType] = createConsumer
   var state = ConsumerState.Created
+
+  def defaultClientId = {
+    config.getStringOrElse("name", getClass.getSimpleName + hashCode())
+  }
 
   def subscribe: Boolean = {
     // consumer.subscribe(topicNames)  // would be as simple as that if Kafka would be more concerned about not breaking APIs
@@ -88,7 +92,9 @@ abstract class ConfigurableKafkaConsumer (val config: Config) {
   val valueBuffer = new ArrayBuffer[Any](32)
 
   // skip over every message on that topic which hasn't been delivered at this point
-  def seekToEnd = foreachInJavaIterable(consumer.assignment())( consumer.seekToEnd(_))
+  // NOTE - this makes things source incompatible between the 0.9 and the 1.0 kafka-client
+  // (the old one was an ellipsis method whereas the new one takes a Collection<TopicPartition> arg)
+  //def seekToEnd = foreachInJavaIterable(consumer.assignment())( consumer.seekToEnd(_))
 
   def fillValueBuffer: Int = {
     // NOTE - recs can apparently change asynchronously, hence we cannot allocate a value array and then
@@ -117,8 +123,8 @@ abstract class ConfigurableKafkaConsumer (val config: Config) {
     p.put("key.deserializer", keyDeserializer.runtimeClass.getName)
     p.put("value.deserializer", valueDeserializer.runtimeClass.getName)
 
-    ifSome(groupId){ p.put("group.id",_)}
-    ifSome(clientId){ p.put("client.id",_)}
+    p.put("group.id",groupId)
+    p.put("client.id",clientId)
 
     // Note - Kafka version dependent: new: {earliest,latest,none} old: {smallest,largest}
     ifSome(config.getOptionalString("offset-reset")){ p.put("auto.offset.reset",_)}

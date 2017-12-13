@@ -21,6 +21,7 @@ import java.io.File
 
 import com.typesafe.config._
 import gov.nasa.race._
+import gov.nasa.race.config._
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.RaceActorSystem
 import gov.nasa.race.main.MainBase

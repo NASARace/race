@@ -14,7 +14,7 @@ object CommonRaceSettings {
       PluginSettings.pluginSettings ++
       TaskSettings.taskSettings ++
       Seq(
-        scalaVersion := "2.12.3",
+        scalaVersion := scalaVer,
         scalacOptions ++= Seq("-unchecked", "-deprecation", "-feature", "-opt-inline-from:**"), // alternatively use -opt-inline-from:<source> for compilation scope
         resolvers ++= Dependencies.dependencyResolvers,
 

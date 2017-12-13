@@ -19,6 +19,7 @@ package gov.nasa.race.ww
 
 import java.awt.event._
 import java.awt.{Cursor, Toolkit}
+import java.net.URL
 import javax.swing._
 
 import com.typesafe.config.Config
@@ -94,7 +95,11 @@ class WorldWindFrame (config: Config, raceView: RaceView) extends AppFrame {
   }
 
   def loadMapCursor: Cursor = {
-    val icon = Swing.Icon(getClass.getResource("mapcursor-33.png"))
+    val defaultMapCursor = "mapcursor-black-white-32x32.png"
+    val mapCursor = config.getStringOrElse("mapcursor", defaultMapCursor)
+    val url: URL = ifNull(getClass.getResource(mapCursor))(getClass.getResource(defaultMapCursor))
+
+    val icon = Swing.Icon(url)
     Toolkit.getDefaultToolkit.createCustomCursor(icon.getImage,new Point(16,16),"map cursor")
   }
 

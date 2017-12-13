@@ -21,13 +21,16 @@ import gov.nasa.race.geo.{GreatCircle, LatLonPos}
 import gov.nasa.race.main.CliArgs
 import gov.nasa.race.util.ThreadUtils
 import gov.nasa.race.util.ConsoleIO._
+import gov.nasa.race.uom._
+import gov.nasa.race.uom.Length._
+import gov.nasa.race.uom.Angle._
+import gov.nasa.race.uom.Speed._
+import scala.concurrent.duration._
+
 import org.omg.dds.core.ServiceEnvironment
 import org.omg.dds.domain.DomainParticipantFactory
 import org.omg.dds.pub.DataWriter
 import org.omg.dds.topic.Topic
-import squants.motion.Knots
-import squants.space.{Degrees, Feet, Length}
-import squants.time.Seconds
 
 
 /**
@@ -104,7 +107,7 @@ object DDSServer {
   def update (fr: dds.FlightRecord, t: Long, tLast: Long): Unit = {
     import fr._
     val pos = LatLonPos.fromDegrees(lat,lon)
-    val dist: Length = Knots(speed) * Seconds((t - tLast)/1000.0)
+    val dist: Length = Knots(speed) * ((t - tLast)/1000.0).seconds
     val pos1 = GreatCircle.endPos(pos, dist, Degrees(heading), Feet(alt))
 
     lat = pos1.φ.toDegrees

@@ -12,7 +12,7 @@ shellPrompt in ThisBuild := { state => "[" + Project.extract(state).currentRef.p
 
 lazy val commonSettings = commonRaceSettings ++ Seq(
   organization := "gov.nasa.race",
-  version := "1.5.2"
+  version := "1.5.3"
 )
 
 lazy val testSettings = commonSettings ++ noPublishSettings  // test projects don't publish artifacts
@@ -56,9 +56,10 @@ lazy val raceNetJMS = createProject("race-net-jms", commonSettings).
   dependsOn(raceCore).
   addLibraryDependencies(akkaAll,amqBroker)
 
+// unfortunately the 1.0 kafka clients are not source compatible
 lazy val raceNetKafka = createProject("race-net-kafka", commonSettings).
   dependsOn(raceCore).
-  addLibraryDependencies(kafkaClients)
+  addLibraryDependencies(kafkaClients) // per default we still build with the 0.9 kafka-client
 
 lazy val raceNetDDS = createProject("race-net-dds", commonSettings).
   dependsOn(raceCore).

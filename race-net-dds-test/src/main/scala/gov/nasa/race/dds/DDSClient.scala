@@ -25,7 +25,7 @@ import org.omg.dds.domain.DomainParticipantFactory
 import org.omg.dds.sub.{DataReader, SampleState}
 import org.omg.dds.topic.Topic
 
-import scala.collection.JavaConversions._
+import scala.collection.JavaConverters._
 
 /**
   * simple test client that reads FlightRecord instances from a DDS topic
@@ -67,7 +67,7 @@ object DDSClient {
         while (!terminate) {
           waitSet.waitForConditions
           val it = reader.take
-          it.foreach { sample => println(FlightRecord.show(sample.getData)) }
+          it.asScala.foreach { sample => println(FlightRecord.show(sample.getData)) }
           it.close
         }
       } catch {

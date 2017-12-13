@@ -52,6 +52,8 @@ object WrappedApp {
   def expectOutput (app: WrappedApp, max: FiniteDuration, expected: String) =
     app.expectOutput(max, expected)
 
+  def delay (app: WrappedApp, dur: FiniteDuration) = app.delay(dur)
+
   private var _isWrappedApp = false
   def isWrappedApp  = _isWrappedApp
 }
@@ -204,6 +206,11 @@ class WrappedApp (action: => Any) {
   def sendInput (input: String) = {
     sysOut0.println(s"[wrapper] sending: '$input'")
     sysIn.println(input)
+  }
+
+  def delay (dur: FiniteDuration) = {
+    sysOut0.println(s"[wrapper] delay $dur")
+    Thread.sleep(dur.toMillis)
   }
 
   final val termCtlPattern = """\033\[\d+m""".r

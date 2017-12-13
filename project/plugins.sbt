@@ -24,30 +24,26 @@ addSbtPlugin("org.planet42" % "laika-sbt" % "0.7.0")
 // to load them because there is per-project configuration (e.g. noPublishSettings in build.sbt)
 
 // jar signing: https://github.com/sbt/sbt-pgp
-addSbtPlugin("com.jsuereth" % "sbt-pgp" % "1.1.0")
+//addSbtPlugin("com.jsuereth" % "sbt-pgp" % "1.1.0")
 
 // publish artifacts to sonatype: https://github.com/xerial/sbt-sonatype
-addSbtPlugin("org.xerial.sbt" % "sbt-sonatype" % "2.0")
+//addSbtPlugin("org.xerial.sbt" % "sbt-sonatype" % "2.0")
 
-// create lock.sbt file with concrete dependency versions: https://github.com/tkawachi/sbt-lock
-// provides 'lock' and 'unlock' tasks which create a *.sbt with dependencyOverrides
-// this is supposed to be used when publishing artifacts to SonaType
-// (no SBT 1.0 version as of 09/08/17)
-addSbtPlugin("com.github.tkawachi" % "sbt-lock" % "0.4.0")
-
+// find latest versions of dependencies
+//addSbtPlugin("com.timushev.sbt" % "sbt-updates" % "0.3.3")
 
 //--- optional documentation (should be global)
 
 // dependency analysis : https://github.com/jrudolph/sbt-dependency-graph
 // (no SBT 1.0 version as of 09/08/17)
-//addSbtPlugin("net.virtual-void" % "sbt-dependency-graph" % "0.8.2")
+//addSbtPlugin("net.virtual-void" % "sbt-dependency-graph" % "0.9.0")
 
 // license reporter: https://github.com/sbt/sbt-license-report
 // (no SBT 1.0 version as of 09/08/17)
 //addSbtPlugin("com.typesafe.sbt" % "sbt-license-report" % "1.2.0")
 
 // simple source statistics: https://github.com/orrsella/sbt-stats
-//addSbtPlugin("com.orrsella" % "sbt-stats" % "1.0.7")
+addSbtPlugin("com.orrsella" % "sbt-stats" % "1.0.7")
 
 // create project dependency graph: https://github.com/dwijnand/sbt-project-graph
 // (run projectsGraphDot which creates a target/projects-graph.dot)
