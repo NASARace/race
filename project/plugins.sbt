@@ -1,7 +1,13 @@
-// plugins used by RACE - note the strategy here is to use explicit versions
-// as opposed to "latest.release" since we might need some of these to debug
-// the build (e.g. dependencyTree), and if there are incompatible plugin changes or
-// a plugin is no longer available SBT would not even load
+// plugins used by RACE - note the strategy here is to use explicit versions as opposed to
+// "latest.release" since we might need some of these to debug the build (e.g. dependencyTree), and
+// if there are incompatible plugin changes or a plugin is no longer available SBT would not even
+// load
+
+// as a general rule we want to minimize the number of build-required plugins to minimize potential
+// SBT upgrade problems on user/developer machines. This means we move plugins that are used for
+// publishing and/or analyzing to the project global ~/.sbt. The pitfall with this approach is that
+// we can't change settings of such plugins in RACE configuration. For this reason we still
+// list those plugins here but comment them out
 
 //--- essential test&build
 
@@ -48,7 +54,7 @@ addSbtPlugin("org.planet42" % "laika-sbt" % "0.7.0")
 //addSbtPlugin("com.dwijnand" % "sbt-project-graph" % "0.2.2")
 
 
-//--- (optional) tools
+//--- (optional) misc tools
 
 // git commands from within sbt: https://github.com/sbt/sbt-git
 //addSbtPlugin("com.typesafe.sbt" % "sbt-git" % "0.8.5")
@@ -75,24 +81,3 @@ addSbtPlugin("org.planet42" % "laika-sbt" % "0.7.0")
 //addSbtPlugin("com.sksamuel.sbt-versions" % "sbt-versions" % "0.2.0")
 
 
-//--- not published tools
-
-// verify downloaded dependencies: https://github.com/JosephEarl/sbt-verify
-// (needs to be cloned and locally published)
-//addSbtPlugin("uk.co.josephearl" % "sbt-verify" % "0.2.0")
-
-// extensible static analysis: https://github.com/scala/scala-abide
-// (http://www.slideshare.net/iuliandragos/scala-abide-a-lint-tool-for-scala)
-// while this seems best for domain specific checks (e.g. passing mutable state into actors)
-// it has not been maintained for a while and - as a compiler plugin - seems vulnerable to scala updates
-/**
-val abideVersion = "latest.release"
-addSbtPlugin("com.typesafe" % "sbt-abide" % abideVersion)
-libraryDependencies ++= Seq(
-  "com.typesafe" %% "abide-core" % abideVersion,
-  "com.typesafe" %% "abide-extra" % abideVersion,
-  "com.typesafe" %% "abide-akka" % abideVersion
-)
-**/
-
-libraryDependencies += "ch.qos.logback" % "logback-classic" % "latest.release"

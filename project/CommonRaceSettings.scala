@@ -1,4 +1,3 @@
-import com.typesafe.sbt.pgp.PgpKeys.{publishLocalSigned, publishSigned}  // requires sbt-pgp plugin
 import sbt.Keys._
 import sbt.{Keys, StdoutOutput, _}
 
@@ -24,13 +23,19 @@ object CommonRaceSettings {
         Keys.connectInput in run := true
       )
 
+  //import com.typesafe.sbt.pgp.PgpKeys.{publishLocalSigned, publishSigned}  // requires sbt-pgp plugin
+
   lazy val noPublishSettings = Seq(
     publishArtifact := false,
 
-    // those should not be required if publishArtifact is false, but at least publishLocalSigned still produces Ivys/ and poms/
+    // those should not be required if publishArtifact is false,
+    // but without it we still get Ivys/ and poms/ during publishing
     publish := {},
-    publishLocal := {}
+    publishLocal := {},
 
-    // we can't add publishSigned and publishLocalSigned here since sbt-pgp is only installed on publishing machines
+
+    // we can't add publishSigned and publishLocalSigned here to avoid created Ivys/ and poms/
+    // files since this would require sgt-pgp to be imported, which is only the case on publishing machines
+    skip in publish := true
   )
 }
