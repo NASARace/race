@@ -6,10 +6,10 @@
 //--- essential test&build
 
 // application / library packaging: https://github.com/sbt/sbt-native-packager
-addSbtPlugin("com.typesafe.sbt" % "sbt-native-packager" % "1.2.2")
+addSbtPlugin("com.typesafe.sbt" % "sbt-native-packager" % "1.3.2")
 
 // single executable (uber) jar assembly: https://github.com/sbt/sbt-assembly
-addSbtPlugin("com.eed3si9n" % "sbt-assembly" % "0.14.5")
+//addSbtPlugin("com.eed3si9n" % "sbt-assembly" % "0.14.6")
 
 // multi-jvm testing: https://github.com/sbt/sbt-multi-jvm
 // this is current;y broken as 0.4.0 does not seem to work with scalatest (no tests found)
@@ -19,9 +19,7 @@ addSbtPlugin("com.typesafe.sbt" % "sbt-multi-jvm" % "0.4.0")
 addSbtPlugin("org.planet42" % "laika-sbt" % "0.7.0")
 
 
-//--- publishing support
-// although these plugins are only required on machines that publish to Sonatype, we need
-// to load them because there is per-project configuration (e.g. noPublishSettings in build.sbt)
+//--- publishing support (needs to be in global on publishing machine)
 
 // jar signing: https://github.com/sbt/sbt-pgp
 //addSbtPlugin("com.jsuereth" % "sbt-pgp" % "1.1.0")
@@ -32,10 +30,10 @@ addSbtPlugin("org.planet42" % "laika-sbt" % "0.7.0")
 // find latest versions of dependencies
 //addSbtPlugin("com.timushev.sbt" % "sbt-updates" % "0.3.3")
 
-//--- optional documentation (should be global)
+
+//--- optional documentation (add to global SBT config at will)
 
 // dependency analysis : https://github.com/jrudolph/sbt-dependency-graph
-// (no SBT 1.0 version as of 09/08/17)
 //addSbtPlugin("net.virtual-void" % "sbt-dependency-graph" % "0.9.0")
 
 // license reporter: https://github.com/sbt/sbt-license-report
@@ -43,7 +41,7 @@ addSbtPlugin("org.planet42" % "laika-sbt" % "0.7.0")
 //addSbtPlugin("com.typesafe.sbt" % "sbt-license-report" % "1.2.0")
 
 // simple source statistics: https://github.com/orrsella/sbt-stats
-addSbtPlugin("com.orrsella" % "sbt-stats" % "1.0.7")
+//addSbtPlugin("com.orrsella" % "sbt-stats" % "1.0.7")
 
 // create project dependency graph: https://github.com/dwijnand/sbt-project-graph
 // (run projectsGraphDot which creates a target/projects-graph.dot)

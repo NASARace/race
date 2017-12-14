@@ -29,8 +29,8 @@ object CommonRaceSettings {
 
     // those should not be required if publishArtifact is false, but at least publishLocalSigned still produces Ivys/ and poms/
     publish := {},
-    publishLocal := {},
-    publishSigned := {},
-    publishLocalSigned := {} // should not be required but otherwise we get Ivys/ and poms/
+    publishLocal := {}
+
+    // we can't add publishSigned and publishLocalSigned here since sbt-pgp is only installed on publishing machines
   )
 }
