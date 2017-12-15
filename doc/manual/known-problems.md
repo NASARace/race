@@ -43,3 +43,13 @@ The standard Windows 10 console (command prompt) does not enable ANSI terminal s
 and control), which is used by RACEs `ConsoleMain` driver (menus). As a workaround, use the
 open sourced [ansicon](https://github.com/adoxa/ansicon) to enable ANSI sequences.
 
+### RACE not starting because of RaceViewerActor timeout
+On machines with slow graphics and network configurations that use a RaceViewerActor (WorldWind)
+might not start because the actor does run into initialization timeout, especially if the map
+cache is not populated. As a quick fix, start RACE with
+
+    ./race -Drace.timeout=30 ...
+    
+If this succeeds, you can specifically set a `create-timeout` in the actor config of the
+RaceActorViewer (each actor can be parameterized with `create-timeout`, `init-timeout` and
+`start-timeout`, referring to respective actor lifetime phases)

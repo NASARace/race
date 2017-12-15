@@ -1,7 +1,7 @@
 # Changes
 
-## 1.5.3
-
+**1.5.3**
+---------
 Introducing a change log (this file) to keep track of major changes. Entry basis is the RACE
 version as specified in build.sbt.
 
@@ -17,3 +17,7 @@ A new `race-adapter` sub-project has been added to support connecting to externa
 that do not have a network interface. See [Connecting External Systems](design/connectivity.html)
 for details.
 
+Other additions since 1.4.1 include the `StatsCollector` and `StatsReporter` infrastructure
+(see [Time Series Analysis](design/timeseries.html)), the `TrackTool` and Apache Avro based
+readers and writers. A new `track` package in `race-core` was introduced to unify and replace
+various different track types (such as the old `IdentifiableInFlightAircraft` and others).
