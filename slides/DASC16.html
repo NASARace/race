@@ -8,6 +8,7 @@
     </head>
 
     <body>
+        <div class="slidecounter" id="counter">0 / 0</div>
         <div class="stopwatch" id="timer">00:00</div>
         <div class="slide title">
             <!-- additional divs inserted by renderer extension -->
@@ -20,32 +21,32 @@
             
             </div><div class="slide">
             
-            <h2 id="slides" class="section"><span class="sectionNumber">1 </span>Slides</h2>
+            <h2 id="slides" class="section">Slides</h2>
             <div class="toc">
               <ul>
-                <li><span class="toc level1"><a href="#slides"><span class="sectionNumber">1 </span>Slides</a></span></li>
-                <li><span class="toc level1"><a href="#targeted-application-domain"><span class="sectionNumber">2 </span>Targeted Application Domain</a></span></li>
-                <li><span class="toc level1"><a href="#main-design-drivers"><span class="sectionNumber">3 </span>Main Design Drivers</a></span></li>
-                <li><span class="toc level1"><a href="#foundation-actor-programming-model"><span class="sectionNumber">4 </span>Foundation: Actor Programming Model</a></span></li>
-                <li><span class="toc level1"><a href="#actor-implementation-in-race"><span class="sectionNumber">5 </span>Actor Implementation in RACE</a></span></li>
-                <li><span class="toc level1"><a href="#raceactors"><span class="sectionNumber">6 </span>RaceActors</a></span></li>
-                <li><span class="toc level1"><a href="#actors-don-t-live-in-a-vacuum---raceactorsystems"><span class="sectionNumber">7 </span>Actors don&#39;t live in a vacuum - RaceActorSystems</a></span></li>
-                <li><span class="toc level1"><a href="#everything-is-configured"><span class="sectionNumber">8 </span>Everything is configured</a></span></li>
-                <li><span class="toc level1"><a href="#configuration-is-declarative-dsl"><span class="sectionNumber">9 </span>Configuration is declarative DSL</a></span></li>
-                <li><span class="toc level1"><a href="#example-schematics"><span class="sectionNumber">10 </span>Example Schematics</a></span></li>
-                <li><span class="toc level1"><a href="#example-screenshot"><span class="sectionNumber">11 </span>Example Screenshot</a></span></li>
-                <li><span class="toc level1"><a href="#example-numbers"><span class="sectionNumber">12 </span>Example Numbers</a></span></li>
-                <li><span class="toc level1"><a href="#lessons-learned"><span class="sectionNumber">13 </span>Lessons Learned</a></span></li>
-                <li><span class="toc level1"><a href="#extra-topics"><span class="sectionNumber">14 </span>Extra Topics</a></span></li>
-                <li><span class="toc level1"><a href="#raceactors-systems-support-location-transparency"><span class="sectionNumber">15 </span>RaceActors/Systems support Location Transparency</a></span></li>
-                <li><span class="toc level1"><a href="#data-on-demand---channeltopics"><span class="sectionNumber">16 </span>Data on Demand - ChannelTopics</a></span></li>
-                <li><span class="toc level1"><a href="#raceviewer-visualization---worldwind-in-an-actor"><span class="sectionNumber">17 </span>RaceViewer Visualization - WorldWind in an Actor</a></span></li>
+                <li><span class="toc level1"><a href="#slides">Slides</a></span></li>
+                <li><span class="toc level1"><a href="#targeted-application-domain">Targeted Application Domain</a></span></li>
+                <li><span class="toc level1"><a href="#main-design-drivers">Main Design Drivers</a></span></li>
+                <li><span class="toc level1"><a href="#foundation-actor-programming-model">Foundation: Actor Programming Model</a></span></li>
+                <li><span class="toc level1"><a href="#actor-implementation-in-race">Actor Implementation in RACE</a></span></li>
+                <li><span class="toc level1"><a href="#raceactors">RaceActors</a></span></li>
+                <li><span class="toc level1"><a href="#actors-don-t-live-in-a-vacuum---raceactorsystems">Actors don&#39;t live in a vacuum - RaceActorSystems</a></span></li>
+                <li><span class="toc level1"><a href="#everything-is-configured">Everything is configured</a></span></li>
+                <li><span class="toc level1"><a href="#configuration-is-declarative-dsl">Configuration is declarative DSL</a></span></li>
+                <li><span class="toc level1"><a href="#example-schematics">Example Schematics</a></span></li>
+                <li><span class="toc level1"><a href="#example-screenshot">Example Screenshot</a></span></li>
+                <li><span class="toc level1"><a href="#example-numbers">Example Numbers</a></span></li>
+                <li><span class="toc level1"><a href="#lessons-learned">Lessons Learned</a></span></li>
+                <li><span class="toc level1"><a href="#extra-topics">Extra Topics</a></span></li>
+                <li><span class="toc level1"><a href="#raceactors-systems-support-location-transparency">RaceActors/Systems support Location Transparency</a></span></li>
+                <li><span class="toc level1"><a href="#data-on-demand---channeltopics">Data on Demand - ChannelTopics</a></span></li>
+                <li><span class="toc level1"><a href="#raceviewer-visualization---worldwind-in-an-actor">RaceViewer Visualization - WorldWind in an Actor</a></span></li>
               </ul>
             </div>
             
             </div><div class="slide">
             
-            <h2 id="targeted-application-domain" class="section"><span class="sectionNumber">2 </span>Targeted Application Domain</h2>
+            <h2 id="targeted-application-domain" class="section">Targeted Application Domain</h2>
             <ul>
               <li>event driven (originally LVC simulations)</li>
               <li>extensible event processors (generic + domain specific)</li>
@@ -58,7 +59,7 @@
             
             </div><div class="slide">
             
-            <h2 id="main-design-drivers" class="section"><span class="sectionNumber">3 </span>Main Design Drivers</h2>
+            <h2 id="main-design-drivers" class="section">Main Design Drivers</h2>
             <p><strong>uniform programming model</strong> for components supporting:</p>
             <ul>
               <li>scalability (&quot;single aircraft to whole NAS&quot;)</li>
@@ -70,7 +71,7 @@
             
             </div><div class="slide">
             
-            <h2 id="foundation-actor-programming-model" class="section"><span class="sectionNumber">4 </span>Foundation: Actor Programming Model</h2>
+            <h2 id="foundation-actor-programming-model" class="section">Foundation: Actor Programming Model</h2>
             <ul>
               <li>well known concurrency programming model since 1973 (Hewitt et al)</li>
               <li><em>Actors</em> are objects that communicate only through async messages<br>
@@ -81,7 +82,7 @@
             
             </div><div class="slide">
             
-            <h2 id="actor-implementation-in-race" class="section"><span class="sectionNumber">5 </span>Actor Implementation in RACE</h2>
+            <h2 id="actor-implementation-in-race" class="section">Actor Implementation in RACE</h2>
             <ul>
               <li>using open sourced <strong>Akka</strong> framework (<a href="http://akka.io">http://akka.io</a>)</li>
               <li>programmed in Scala (running on standard Java 8+ platform)</li>
@@ -98,7 +99,7 @@
             
             </div><div class="slide">
             
-            <h2 id="raceactors" class="section"><span class="sectionNumber">6 </span>RaceActors</h2>
+            <h2 id="raceactors" class="section">RaceActors</h2>
             <img src="../images/actor-states.svg" class="right scale50">
             <ul>
               <li>specialized Akka actors</li>
@@ -119,7 +120,7 @@
             
             </div><div class="slide">
             
-            <h2 id="actors-don-t-live-in-a-vacuum---raceactorsystems" class="section"><span class="sectionNumber">7 </span>Actors don&#39;t live in a vacuum - RaceActorSystems</h2>
+            <h2 id="actors-don-t-live-in-a-vacuum---raceactorsystems" class="section">Actors don&#39;t live in a vacuum - RaceActorSystems</h2>
             <ol class="arabic">
               <li><code>RemoteMain</code> driver instantiating <code>RaceActorSystem</code> with config</li>
               <li><code>RaceActorSystem</code> instantiating <code>Master</code> actor</li>
@@ -129,7 +130,7 @@
             
             </div><div class="slide">
             
-            <h2 id="everything-is-configured" class="section"><span class="sectionNumber">8 </span>Everything is configured</h2>
+            <h2 id="everything-is-configured" class="section">Everything is configured</h2>
             <ul>
               <li>RACE is <strong>not</strong> a monolythic application - needs configuration as input</li>
             </ul>
@@ -156,7 +157,7 @@
             
             </div><div class="slide">
             
-            <h2 id="configuration-is-declarative-dsl" class="section"><span class="sectionNumber">9 </span>Configuration is declarative DSL</h2>
+            <h2 id="configuration-is-declarative-dsl" class="section">Configuration is declarative DSL</h2>
             <p>configs define graphs:</p>
             <ul>
               <li>nodes are actors</li>
@@ -166,17 +167,17 @@
             
             </div><div class="slide">
             
-            <h2 id="example-schematics" class="section"><span class="sectionNumber">10 </span>Example Schematics</h2>
+            <h2 id="example-schematics" class="section">Example Schematics</h2>
             <img src="../images/swim-sbs-all-ww.svg" class="center scale85">
             
             </div><div class="slide">
             
-            <h2 id="example-screenshot" class="section"><span class="sectionNumber">11 </span>Example Screenshot</h2>
+            <h2 id="example-screenshot" class="section">Example Screenshot</h2>
             <p>live demo</p>
             
             </div><div class="slide">
             
-            <h2 id="example-numbers" class="section"><span class="sectionNumber">12 </span>Example Numbers</h2>
+            <h2 id="example-numbers" class="section">Example Numbers</h2>
             <p>application domain:</p>
             <ul>
               <li>full SWIM import (sfdps,tfmdata,asde-x,itws)</li>
@@ -194,7 +195,7 @@
             
             </div><div class="slide">
             
-            <h2 id="lessons-learned" class="section"><span class="sectionNumber">13 </span>Lessons Learned</h2>
+            <h2 id="lessons-learned" class="section">Lessons Learned</h2>
             <ul>
               <li>actors are a suitable programming model for this domain</li>
               <li>rich research topic (<strong>patterns</strong>, monitoring, partitioning)</li>
@@ -213,7 +214,7 @@
             
             </div><div class="slide">
             
-            <h2 id="extra-topics" class="section"><span class="sectionNumber">14 </span>Extra Topics</h2>
+            <h2 id="extra-topics" class="section">Extra Topics</h2>
             <ul>
               <li>location transparency (distributed RACE)</li>
               <li>ChannelTopics (on-demand data)</li>
@@ -222,7 +223,7 @@
             
             </div><div class="slide">
             
-            <h2 id="raceactors-systems-support-location-transparency" class="section"><span class="sectionNumber">15 </span>RaceActors/Systems support Location Transparency</h2>
+            <h2 id="raceactors-systems-support-location-transparency" class="section">RaceActors/Systems support Location Transparency</h2>
             <ul>
               <li>actors can be moved between processes</li>
               <li>no need to change actor code - just configuration</li>
@@ -231,7 +232,7 @@
             
             </div><div class="slide">
             
-            <h2 id="data-on-demand---channeltopics" class="section"><span class="sectionNumber">16 </span>Data on Demand - ChannelTopics</h2>
+            <h2 id="data-on-demand---channeltopics" class="section">Data on Demand - ChannelTopics</h2>
             <ul>
               <li>RaceActors only know the channels they read from and write to</li>
               <li><em>ChannelTopics</em> are &quot;valves&quot; to turn on/off data flow along channel &quot;pipes&quot;</li>
@@ -241,7 +242,7 @@
             
             </div><div class="slide">
             
-            <h2 id="raceviewer-visualization---worldwind-in-an-actor" class="section"><span class="sectionNumber">17 </span>RaceViewer Visualization - WorldWind in an Actor</h2>
+            <h2 id="raceviewer-visualization---worldwind-in-an-actor" class="section">RaceViewer Visualization - WorldWind in an Actor</h2>
             <ul>
               <li>adds thread-safe data acquisition (Layers) and UI framework (Panels)</li>
               <li>supports viewer synchronization through RACE channels</li>

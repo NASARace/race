@@ -30,6 +30,7 @@
                     <li><span class="toc level1"><a href="#3-use-encryption-keys-in-universe-satellite-config-values">(3) use encryption keys in universe/satellite config values</a></span></li>
                     <li><span class="toc level1"><a href="#4-run-race">(4) run RACE</a></span></li>
                     <li><span class="toc level1"><a href="#using-keystores">using keystores</a></span></li>
+                    <li><span class="toc level1"><a href="#typical-example">typical example</a></span></li>
                   </ul>
                 </div>
             </div>
@@ -45,6 +46,7 @@
                         <li><span class="toc level2"><a href="../installation/prerequisites.html">Prerequisites</a></span></li>
                         <li><span class="toc level2"><a href="../installation/download.html">Downloading RACE</a></span></li>
                         <li><span class="toc level2"><a href="../installation/build.html">Building RACE</a></span></li>
+                        <li><span class="toc level2"><a href="../installation/pitfalls.html">Installation Pitfalls</a></span></li>
                         <li><span class="toc level2"><a href="../installation/osx.html">OS X Specifics</a></span></li>
                       </ul>
                     </li>
@@ -70,7 +72,12 @@
                         <li><span class="toc level2"><a href="../design/configuration.html">Runtime Configuration</a></span></li>
                         <li><span class="toc level2"><a href="../design/raceactors.html">RaceActors</a></span></li>
                         <li><span class="toc level2"><a href="../design/channeltopics.html">ChannelTopics</a></span></li>
+                        <li><span class="toc level2"><a href="../design/embedded-objects.html">Embedded Objects</a></span></li>
+                        <li><span class="toc level2"><a href="../design/connectivity.html">Connecting External Systems</a></span></li>
+                        <li><span class="toc level2"><a href="../design/archive-replay.html">Archive and Replay</a></span></li>
                         <li><span class="toc level2"><a href="../design/worldwind.html">WorldWind Viewer</a></span></li>
+                        <li><span class="toc level2"><a href="../design/http-server.html">HttpServer</a></span></li>
+                        <li><span class="toc level2"><a href="../design/timeseries.html">Time Series Analysis</a></span></li>
                         <li><span class="toc level2"><a href="../design/remotelauncher.html">RemoteLauncher</a></span></li>
                         <li><span class="toc level2"><a href="../design/layers-and-modules.html">Layers and Modules</a></span></li>
                         <li><span class="toc level2"><a href="../design/directory-structure.html">Directory Structure</a></span></li>
@@ -97,6 +104,15 @@
                         <li><span class="toc level2"><a href="../documentation/presentations.html">Available Slide Presentations</a></span></li>
                       </ul>
                     </li>
+                    <li>
+                      <p class="toc level1"><a href="../known-problems.html">Known Problems</a></p>
+                      <ul>
+                        <li><span class="toc level2"><a href="../known-problems.html#build">Build</a></span></li>
+                        <li><span class="toc level2"><a href="../known-problems.html#runtime">Runtime</a></span></li>
+                      </ul>
+                    </li>
+                    <li><span class="toc level1"><a href="../changes.html">Changes</a></span></li>
+                    <li><span class="toc level1"><a href="../todo.html">TODO List</a></span></li>
                     <li>
                       <p class="toc level1"><a href="../learning.html">Learning Resources</a></p>
                       <ul>
@@ -133,9 +149,11 @@ secret {
             <h4 id="2-encrypt-file" class="section">(2) encrypt file</h4>
             <p>RACE comes with a <code>CryptConfig</code> application and a respective wrapper script,
             which is executed like this:</p>
-            <pre><code>&gt; script/encryptconfig --delete conf</code></pre>
+            <pre><code>&gt; script/encryptconfig conf</code></pre>
             <p>When asked, enter a passphrase (and remember - it is not stored anywhere). This
             will create a encrypted file <code>conf.crypt</code> and delete the plain text <code>conf</code> file.</p>
+            <p>The <code>encryptconfig</code> tool also supports a <code>--keep</code> command line option to keep the
+            input file. If the option is <em>not</em> specified, the un-encrypted input file will be deleted.</p>
             <p>Values in the encrypted file will be double-encrypted and are never stored as
             plain text during RACE execution</p>
             
@@ -152,7 +170,7 @@ secret {
             <p>When executing RACE, use the <code>--vault &lt;path&gt;</code> option to specify which encrypted config file to use</p>
             <pre><code>&gt; ./race --vault conf.crypt config/myuniverse.conf</code></pre>
             <p>The system will prompt you for the same pass phrase that was entered in step (1). If the user enters 
-            a wrong pass phrase, RACE will terminate immediately.</p>
+            a wrong pass phrase, or takes too long to enter it, RACE will terminate immediately.</p>
             <p><strong>NOTE</strong> <code>*.crypt</code> files are not kept in the repository, they are filtered by <code>.gitignore</code></p>
             
             <h2 id="using-keystores" class="section">using keystores</h2>
@@ -166,6 +184,43 @@ secret {
             <pre><code>&gt; keytool -genseckey -alias mykeyname -keystore race-ks -storetype jceks -keyalg AES -keysize 256
 </code></pre>
             <p>If a keystore is specified, RACE will ask for the keystore password instead of the vault password</p>
+            
+            <h2 id="typical-example" class="section">typical example</h2>
+            <p>Encrypted configuration is typically used by the <code>PortForwarder</code> and <code>JMSImportActor</code> actors in order
+            to specify access to gateways and JMS servers. This generally works by first establishing a ssh
+            session to a gateway through which respective ports for JMS servers are forwarded. Both URLs and
+            credentials for the gateway and JMS server should be protected. As the highest value asset, the 
+            <code>PortForwarder</code> interactively queries the password for the gateway which is never stored in 
+            the configuration file:</p>
+            <pre><code>...
+{ name = &quot;portMapper&quot;
+  class = &quot;.actor.PortForwarder&quot;
+  user = &quot;??gw.user&quot;
+  host = &quot;??gw.host&quot;
+  forward = &quot;??gw.forward&quot;
+}, ...
+{ name = &quot;sfdps-jmsImporter&quot;
+  class = &quot;.jms.JMSImportActor&quot;
+  broker-uri = &quot;??swim.uri.sfdps&quot;
+  user = &quot;??swim.user&quot;
+  pw = &quot;??swim.pw&quot;
+  write-to = &quot;/swim/sfdps&quot;
+  jms-topic = &quot;&lt;jms-topic&gt;&quot;
+},...</code></pre>
+            <p>The respective vault file in clear text looks like this:</p>
+            <pre><code>gw {
+  forward=&quot;&lt;source-port&gt;:&lt;destination-host&gt;:&lt;destination-port&gt;,...&quot;
+  host=&quot;&lt;gateway-hostname&gt;&quot;
+  user=&quot;&lt;gateway-userid&gt;&quot;
+}...
+swim {
+    pw=&quot;&lt;jms-password&gt;&quot;
+    uri {
+        sfdps=&quot;tcp://localhost:&lt;source-port&gt;&quot;  // via port forwarding from gateway
+        ...
+    }
+    user=&quot;&lt;jms-userid&gt;&quot;
+}...</code></pre>
         </div>
 
     </body>

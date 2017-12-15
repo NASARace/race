@@ -1,0 +1,168 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<svg width="100%" height="100%" version="1.1" viewBox="251.3307 131.6457 750.8821 430.6518" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <filter id="shadow1" width="150%" height="150%">
+      <feGaussianBlur in="SourceAlpha" result="blur" stdDeviation="2" />
+      <feOffset dx="2" dy="2" in="blur" result="offsetBlur" />
+      <feMerge>
+        <feMergeNode in="offsetBlur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+  </defs>
+  <marker id="marker1" markerUnits="strokeWidth" orient="auto" refX="8.738033" refY="0" markerWidth="11.01798" markerHeight="8.583638" viewBox="-1 -4.29182 11.01798 8.583638">
+    <path d="M9.017978 3.291819 L0 0 L9.017978 -3.29182 Z " fill="#000000" fill-opacity="1" stroke="#000000" stroke-opacity="1" />
+  </marker>
+  <marker id="marker2" markerUnits="strokeWidth" orient="auto" refX="8.738033" refY="0" markerWidth="11.01798" markerHeight="8.583638" viewBox="-1 -4.29182 11.01798 8.583638">
+    <path d="M9.017978 3.291819 L0 0 L9.017978 -3.29182 Z " fill="#000000" fill-opacity="1" stroke="#000000" stroke-opacity="1" />
+  </marker>
+  <marker id="marker3" markerUnits="strokeWidth" orient="auto" refX="8.738033" refY="0" markerWidth="11.01798" markerHeight="8.583638" viewBox="-1 -4.29182 11.01798 8.583638">
+    <path d="M9.017978 3.291819 L0 0 L9.017978 -3.29182 Z " fill="#000000" fill-opacity="1" stroke="#000000" stroke-opacity="1" />
+  </marker>
+  <marker id="marker4" markerUnits="strokeWidth" orient="auto" refX="-13.60705" refY="0" markerWidth="15.52697" markerHeight="11.87546" viewBox="-14.52697 -5.937729 15.52697 11.87546">
+    <path d="M-13.52697 -4.937729 L0 0 L-13.52697 4.937728 Z " fill="none" stroke="#7F7F7F" stroke-opacity="1" />
+  </marker>
+  <marker id="marker5" markerUnits="strokeWidth" orient="auto" refX="-13.60705" refY="0" markerWidth="15.52697" markerHeight="11.87546" viewBox="-14.52697 -5.937729 15.52697 11.87546">
+    <path d="M-13.52697 -4.937729 L0 0 L-13.52697 4.937728 Z " fill="none" stroke="#7F7F7F" stroke-opacity="1" />
+  </marker>
+  <marker id="marker6" markerUnits="strokeWidth" orient="auto" refX="6.303525" refY="0" markerWidth="8.763483" markerHeight="6.937729" viewBox="-1 -3.468865 8.763483 6.937729">
+    <path d="M6.763484 2.468864 L0 0 L6.763484 -2.468865 Z " fill="#000000" fill-opacity="1" stroke="#000000" stroke-opacity="1" />
+  </marker>
+  <marker id="marker7" markerUnits="strokeWidth" orient="auto" refX="-4.321854" refY="0" markerWidth="8.763483" markerHeight="6.937729" viewBox="-7.763484 -3.468865 8.763483 6.937729">
+    <path d="M-6.763484 -2.468865 L0 0 L-6.763484 2.468864 L-4.8 -2.098147E-07 Z " fill="#0000FF" fill-opacity="1" stroke="#0000FF" stroke-opacity="1" />
+  </marker>
+  <marker id="marker8" markerUnits="strokeWidth" orient="auto" refX="-4.321854" refY="0" markerWidth="8.763483" markerHeight="6.937729" viewBox="-7.763484 -3.468865 8.763483 6.937729">
+    <path d="M-6.763484 -2.468865 L0 0 L-6.763484 2.468864 L-4.8 -2.098147E-07 Z " fill="#0000FF" fill-opacity="1" stroke="#0000FF" stroke-opacity="1" />
+  </marker>
+  <marker id="marker9" markerUnits="strokeWidth" orient="auto" refX="-4.321854" refY="0" markerWidth="8.763483" markerHeight="6.937729" viewBox="-7.763484 -3.468865 8.763483 6.937729">
+    <path d="M-6.763484 -2.468865 L0 0 L-6.763484 2.468864 L-4.8 -2.098147E-07 Z " fill="#0000FF" fill-opacity="1" stroke="#0000FF" stroke-opacity="1" />
+  </marker>
+  <marker id="marker10" markerUnits="strokeWidth" orient="auto" refX="-4.321854" refY="0" markerWidth="8.763483" markerHeight="6.937729" viewBox="-7.763484 -3.468865 8.763483 6.937729">
+    <path d="M-6.763484 -2.468865 L0 0 L-6.763484 2.468864 L-4.8 -2.098147E-07 Z " fill="#0000FF" fill-opacity="1" stroke="#0000FF" stroke-opacity="1" />
+  </marker>
+  <marker id="marker11" markerUnits="strokeWidth" orient="auto" refX="-4.321854" refY="0" markerWidth="8.763483" markerHeight="6.937729" viewBox="-7.763484 -3.468865 8.763483 6.937729">
+    <path d="M-6.763484 -2.468865 L0 0 L-6.763484 2.468864 L-4.8 -2.098147E-07 Z " fill="#0000FF" fill-opacity="1" stroke="#0000FF" stroke-opacity="1" />
+  </marker>
+  <marker id="marker12" markerUnits="strokeWidth" orient="auto" refX="-4.321854" refY="0" markerWidth="8.763483" markerHeight="6.937729" viewBox="-7.763484 -3.468865 8.763483 6.937729">
+    <path d="M-6.763484 -2.468865 L0 0 L-6.763484 2.468864 L-4.8 -2.098147E-07 Z " fill="#0000FF" fill-opacity="1" stroke="#0000FF" stroke-opacity="1" />
+  </marker>
+  <marker id="marker13" markerUnits="strokeWidth" orient="auto" refX="-6.303525" refY="0" markerWidth="8.763483" markerHeight="6.937729" viewBox="-7.763484 -3.468865 8.763483 6.937729">
+    <path d="M-6.763484 -2.468865 L0 0 L-6.763484 2.468864 Z " fill="#7F7F7F" fill-opacity="1" stroke="#7F7F7F" stroke-opacity="1" />
+  </marker>
+  <g id="layer1" inkscape:label="Layer 1" inkscape:groupmode="layer">
+    <rect x="708.6615" y="283.4646" width="77.95277" height="42.51969" opacity="1" stroke="#7F7F7F" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" filter="url(#shadow1)" />
+    <text x="715.6271" y="299.4244" font-size="12" fill="#7F7F7F" fill-opacity="1" font-family="Helvetica" font-weight="normal" font-style="normal">ArchiveEntry</text>
+    <rect x="467.7166" y="226.7717" width="191.3386" height="177.1654" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FAFDE1" fill-opacity="1" filter="url(#shadow1)" />
+    <text x="530.0421" y="242.7315" font-size="12" fill="#000000" fill-opacity="1" font-family="Helvetica" font-weight="bold" font-style="normal">ReplayActor</text>
+    <line x1="467.7166" y1="248.0315" x2="659.0552" y2="248.0315" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    <rect x="531.4962" y="297.6378" width="106.2992" height="56.69292" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FCDBDE" fill-opacity="1" filter="url(#shadow1)" />
+    <text x="544.2913" y="313.5976" font-size="12" fill="#000000" fill-opacity="1" font-family="Helvetica" font-weight="bold" font-style="normal">ArchiveReader</text>
+    <line x1="531.4962" y1="318.8977" x2="637.7953" y2="318.8977" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    <text x="542.5828" y="334.6289" font-size="12" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">hasMoreData()
+</text>
+    <text x="542.5828" y="349.6289" font-size="12" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">readNextEntry(</text>
+    <g>
+      <g>
+        <g>
+          <path d="M793.7009 311.1812 L793.7009 349.9212 Q801.7286 356.3779 825.8112 356.3779 Q849.8938 356.3779 857.9215 349.9212 L857.9215 311.1812 Z " opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" />
+          <text x="806.5944" y="339.3132" font-size="12" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">Archive</text>
+          <ellipse cx="825.8112" cy="311.1811" rx="32.11025" ry="6.456686" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" />
+        </g>
+      </g>
+    </g>
+    <line x1="403.9371" y1="276.378" x2="403.9371" y2="411.0237" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="3" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    <line x1="413.6751" y1="389.7638" x2="481.8898" y2="389.7638" marker-start="url(#marker1)" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    <line x1="647.5334" y1="333.0709" x2="793.7009" y2="333.0709" marker-start="url(#marker2)" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    <rect x="290.5512" y="333.0709" width="70.86615" height="21.25985" opacity="1" stroke="#7F7F7F" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" filter="url(#shadow1)" />
+    <text x="322.9833" y="349.0307" font-size="12" fill="#7F7F7F" fill-opacity="1" font-family="Helvetica" font-weight="bold" font-style="normal">...</text>
+    <line x1="371.1554" y1="347.2441" x2="403.9371" y2="347.2441" marker-start="url(#marker3)" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    <text x="492.9764" y="292.1093" font-size="12" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">createReader()</text>
+    <g>
+      <ellipse cx="687.4017" cy="191.3386" rx="14.17323" ry="14.17323" opacity="1" stroke="#7F7F7F" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" />
+      <line x1="687.4017" y1="191.3386" x2="694.4883" y2="184.252" opacity="1" stroke="#7F7F7F" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+      <line x1="687.4017" y1="191.3386" x2="687.4017" y2="198.4252" opacity="1" stroke="#7F7F7F" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    </g>
+    <text x="258.3307" y="432.1775" font-size="10" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">def onStartRaceActor(..) = {
+</text>
+    <text x="258.3307" y="444.1775" font-size="10" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">    scheduleFirst() ..</text>
+    <text x="428.4095" y="453.4373" font-size="10" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">def scheduleFirst(..) = {
+</text>
+    <text x="428.4095" y="465.4373" font-size="10" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">  while (reader.hasMoreData){
+</text>
+    <text x="428.4095" y="477.4373" font-size="10" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">    e = reader.readNextEntry
+</text>
+    <text x="428.4095" y="489.4373" font-size="10" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">    if (e.date == simTime) {
+</text>
+    <text x="428.4095" y="501.4373" font-size="10" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">      replayMsgNow(e.msg)
+</text>
+    <text x="428.4095" y="513.4374" font-size="10" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">    } else if (e.date &gt; simTime) {
+</text>
+    <text x="428.4095" y="525.4374" font-size="10" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">      dt = wallClockDuration(e.date-simTime)
+</text>
+    <text x="428.4095" y="537.4374" font-size="10" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">      replayMsgLater(e.msg,dt,e.date)
+</text>
+    <text x="428.4095" y="549.4374" font-size="10" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">    else // skip</text>
+    <text x="492.9764" y="263.7628" font-size="12" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">reader, </text>
+    <text x="711.874" y="524.3035" font-size="10" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">def replayMsgLater(msg,dt,date) = {
+</text>
+    <text x="711.874" y="536.3035" font-size="10" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">    scheduler.schedule(dt,Replay(msg,date))</text>
+    <line x1="708.6615" y1="304.7245" x2="786.6143" y2="304.7245" opacity="1" stroke="#7F7F7F" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    <text x="719.7481" y="320.6842" font-size="12" fill="#7F7F7F" fill-opacity="1" font-family="Helvetica" font-weight="normal" font-style="normal">date, msg</text>
+    <text x="683.5276" y="453.4373" font-size="10" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">def handleMessage = { ..
+</text>
+    <text x="683.5276" y="465.4373" font-size="10" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">    case Replay(msg,date) =&gt; 
+</text>
+    <text x="683.5276" y="477.4373" font-size="10" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">        replayMsgNow(msg)</text>
+    <text x="676.441" y="382.5712" font-size="10" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">def replayMsgNow(msg) = {
+</text>
+    <text x="676.441" y="394.5712" font-size="10" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">    publishFiltered(msg)
+</text>
+    <text x="676.441" y="406.5712" font-size="10" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">    scheduleNext()</text>
+    <rect x="510.2363" y="141.7323" width="127.5591" height="63.77954" opacity="1" stroke="#7F7F7F" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" filter="url(#shadow1)" />
+    <text x="529.6624" y="157.6921" font-size="12" fill="#7F7F7F" fill-opacity="1" font-family="Helvetica" font-weight="normal" font-style="normal">FilteringPublisher</text>
+    <line x1="510.2363" y1="162.9921" x2="637.7953" y2="162.9921" opacity="1" stroke="#7F7F7F" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    <text x="514.2363" y="200.2118" font-size="12" fill="#7F7F7F" fill-opacity="1" font-family="Helvetica" font-weight="normal" font-style="normal">publishFiltered(msg)</text>
+    <text x="514.2363" y="178.9519" font-size="12" fill="#7F7F7F" fill-opacity="1" font-family="Helvetica" font-weight="normal" font-style="normal">filters</text>
+    <line x1="510.2363" y1="184.252" x2="637.7953" y2="184.252" opacity="1" stroke="#7F7F7F" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    <line x1="574.0158" y1="226.7717" x2="574.0158" y2="220.1189" marker-end="url(#marker4)" opacity="1" stroke="#7F7F7F" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    <rect x="347.2441" y="134.6457" width="127.5591" height="21.25985" opacity="1" stroke="#7F7F7F" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" filter="url(#shadow1)" />
+    <text x="357.3274" y="151.8756" font-size="12" fill="#7F7F7F" fill-opacity="1" font-family="Helvetica" font-weight="normal" font-style="normal">PublishingRaceActor</text>
+    <line x1="510.2363" y1="148.8189" x2="489.4103" y2="148.8189" marker-end="url(#marker5)" opacity="1" stroke="#7F7F7F" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    <text x="369.8568" y="272.545" font-size="12" fill="#000000" fill-opacity="1" font-family="Helvetica" font-weight="normal" font-style="normal">message bus</text>
+    <text x="279.4395" y="322.1512" font-size="12" fill="#7F7F7F" fill-opacity="1" font-family="Helvetica" font-weight="normal" font-style="normal">translator, viewer, ..</text>
+    <line x1="467.7166" y1="276.378" x2="659.0552" y2="276.378" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    <text x="492.9764" y="398.4085" font-size="12" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">handleMessage(</text>
+    <text x="492.9764" y="377.1486" font-size="12" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">scheduleNext()</text>
+    <line x1="602.3623" y1="375.3737" x2="602.3623" y2="354.3307" marker-start="url(#marker6)" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    <path d="M325.9843 453.5434 Q368.504 481.8898 413.2187 462.7263" marker-end="url(#marker7)" opacity="1" stroke="#0000FF" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="2,2" fill-opacity="0" />
+    <path d="M552.756 545.6694 Q637.7953 581.1024 718.4067 527.3616" marker-end="url(#marker8)" opacity="1" stroke="#0000FF" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="2,2" fill-opacity="0" />
+    <path d="M701.5749 361.4174 Q659.0552 269.2914 732.0065 242.7636" marker-end="url(#marker9)" opacity="1" stroke="#0000FF" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="2,2" fill-opacity="0" />
+    <text x="726.0472" y="169.9727" font-size="10" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">def scheduleNext(..) = {
+</text>
+    <text x="726.0472" y="181.9727" font-size="10" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">  if (reader.hasMoreData){
+</text>
+    <text x="726.0472" y="193.9727" font-size="10" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">    e = reader.readNextEntry
+</text>
+    <text x="726.0472" y="205.9727" font-size="10" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">    if (e.date &lt;= simTime) {
+</text>
+    <text x="726.0472" y="217.9727" font-size="10" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">      replayMsgNow(e.msg)
+</text>
+    <text x="726.0472" y="229.9727" font-size="10" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">    } else if (e.date &gt; simTime) {
+</text>
+    <text x="726.0472" y="241.9727" font-size="10" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">      dt = wallClockDuration(e.date-simTime)
+</text>
+    <text x="726.0472" y="253.9727" font-size="10" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">      replayMsgLater(e.msg,dt,e.date)
+</text>
+    <path d="M914.1733 262.2048 Q970.8663 389.7638 902.8207 498.6367" marker-end="url(#marker10)" opacity="1" stroke="#0000FF" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="2,2" fill-opacity="0" />
+    <path d="M836.2206 510.2363 Q814.9608 503.1497 797.4641 485.653" marker-end="url(#marker11)" opacity="1" stroke="#0000FF" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="2,2" fill-opacity="0" />
+    <path d="M751.1812 439.3701 Q744.0946 432.2835 732.8734 415.4517" marker-end="url(#marker12)" opacity="1" stroke="#0000FF" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="2,2" fill-opacity="0" />
+    <text x="393.7654" y="222.9386" font-size="12" fill="#FF0000" fill-opacity="1" font-family="Helvetica" font-weight="normal" font-style="normal">time, msg publishing</text>
+    <text x="493.472" y="321.541" font-size="12" fill="#FF0000" fill-opacity="1" font-family="Helvetica" font-weight="normal" font-style="normal">data
+</text>
+    <text x="488.1458" y="336.541" font-size="12" fill="#FF0000" fill-opacity="1" font-family="Helvetica" font-weight="normal" font-style="normal">format</text>
+    <path d="M687.4017 205.5118 L687.4017 248.0315 L666.3587 248.0315" marker-end="url(#marker13)" opacity="1" stroke="#7F7F7F" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+    <text x="666.4006" y="222.3284" font-size="12" fill="#7F7F7F" fill-opacity="1" font-family="Helvetica" font-weight="normal" font-style="normal">sim, wall
+</text>
+    <text x="678.0667" y="237.3284" font-size="12" fill="#7F7F7F" fill-opacity="1" font-family="Helvetica" font-weight="normal" font-style="normal">time</text>
+  </g>
+</svg>

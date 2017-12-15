@@ -45,6 +45,7 @@
                         <li><span class="toc level2"><a href="../installation/prerequisites.html">Prerequisites</a></span></li>
                         <li><span class="toc level2"><a href="../installation/download.html">Downloading RACE</a></span></li>
                         <li><span class="toc level2"><a href="../installation/build.html">Building RACE</a></span></li>
+                        <li><span class="toc level2"><a href="../installation/pitfalls.html">Installation Pitfalls</a></span></li>
                         <li><span class="toc level2"><a href="../installation/osx.html">OS X Specifics</a></span></li>
                       </ul>
                     </li>
@@ -70,7 +71,12 @@
                         <li><span class="toc level2"><a href="configuration.html">Runtime Configuration</a></span></li>
                         <li><span class="toc level2 active">RaceActors</span></li>
                         <li><span class="toc level2"><a href="channeltopics.html">ChannelTopics</a></span></li>
+                        <li><span class="toc level2"><a href="embedded-objects.html">Embedded Objects</a></span></li>
+                        <li><span class="toc level2"><a href="connectivity.html">Connecting External Systems</a></span></li>
+                        <li><span class="toc level2"><a href="archive-replay.html">Archive and Replay</a></span></li>
                         <li><span class="toc level2"><a href="worldwind.html">WorldWind Viewer</a></span></li>
+                        <li><span class="toc level2"><a href="http-server.html">HttpServer</a></span></li>
+                        <li><span class="toc level2"><a href="timeseries.html">Time Series Analysis</a></span></li>
                         <li><span class="toc level2"><a href="remotelauncher.html">RemoteLauncher</a></span></li>
                         <li><span class="toc level2"><a href="layers-and-modules.html">Layers and Modules</a></span></li>
                         <li><span class="toc level2"><a href="directory-structure.html">Directory Structure</a></span></li>
@@ -97,6 +103,15 @@
                         <li><span class="toc level2"><a href="../documentation/presentations.html">Available Slide Presentations</a></span></li>
                       </ul>
                     </li>
+                    <li>
+                      <p class="toc level1"><a href="../known-problems.html">Known Problems</a></p>
+                      <ul>
+                        <li><span class="toc level2"><a href="../known-problems.html#build">Build</a></span></li>
+                        <li><span class="toc level2"><a href="../known-problems.html#runtime">Runtime</a></span></li>
+                      </ul>
+                    </li>
+                    <li><span class="toc level1"><a href="../changes.html">Changes</a></span></li>
+                    <li><span class="toc level1"><a href="../todo.html">TODO List</a></span></li>
                     <li>
                       <p class="toc level1"><a href="../learning.html">Learning Resources</a></p>
                       <ul>
@@ -205,6 +220,14 @@ actorConfig)</code> method that can be overridden by concrete RaceActor classes.
             <p>The rationale for this dynamic runtime behavior change is that concrete actor fields might get their
             initial values from <code>InitializeRaceActor</code> configuration data, and hence should not be referenced
             from message handlers before the <code>Initialized</code> state is reached.</p>
+            <p><strong>*CAVEAT</strong>* - unless this is really intended in order to completely replace all system message
+            processing, overridden <code>handleMessage</code> methods should <strong>not</strong> have a match-all clause, such as:</p>
+            <pre><code>override def handleMessage = {
+  .. // user message clauses
+  case other =&gt; ..</code></pre>
+            <p>This would effectively cut off all RACE system message processing in core RaceActor traits.
+            RACE automatically checks during initialization of a RaceActorSystem that actors which are
+            initialized properly respond to system messages and automatically shuts down otherwise.</p>
             
             <h2 id="publish-subscribe" class="section">Publish/Subscribe</h2>
             <p>Although RaceActors can use normal Akka point-to-point messaging (e.g. for system messages), the

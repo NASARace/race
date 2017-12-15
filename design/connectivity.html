@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8"/>
+        <title>RACE</title>
+
+        <link href="../race-html.css" rel="stylesheet"/>
+    </head>
+
+    <body>
+        <div class="navbar">
+            <div class=""banner>
+                <a href="index.html" ><img class="logo" src="../images/race128.png"></a>
+                <p class="doctitle">RACE Manual</p>
+            </div>
+            <br/>
+            <div class="toc">
+                <p class="title">Project Links</p>
+                <ul>
+                    <li><span class="toc level2"><a href="https://github.com/NASARace/race.git">Repository</a></span></li>
+                    <li><span class="toc level2"><a href="http://nasarace.github.io/race">Website</a></span></li>
+                </ul>
+            </div>
+            <div class="pagetoc">
+                <div class="toc">
+                  <p class="title">Page</p>
+                  <ul>
+                    <li><span class="toc level1"><a href="#import-export-actors">Import/Export Actors</a></span></li>
+                    <li><span class="toc level1"><a href="#readers-writers">Readers / Writers</a></span></li>
+                    <li><span class="toc level1"><a href="#adapteractor-and-the-race-adapter-module">AdapterActor and the race-adapter module</a></span></li>
+                  </ul>
+                </div>
+            </div>
+            <div class="globaltoc">
+                <div class="toc">
+                  <p class="title">Site</p>
+                  <ul>
+                    <li><span class="toc level1"><a href="../index.html">About RACE</a></span></li>
+                    <li><span class="toc level1"><a href="../project-log.html">Project Log</a></span></li>
+                    <li>
+                      <p class="toc level1">Installing RACE</p>
+                      <ul>
+                        <li><span class="toc level2"><a href="../installation/prerequisites.html">Prerequisites</a></span></li>
+                        <li><span class="toc level2"><a href="../installation/download.html">Downloading RACE</a></span></li>
+                        <li><span class="toc level2"><a href="../installation/build.html">Building RACE</a></span></li>
+                        <li><span class="toc level2"><a href="../installation/pitfalls.html">Installation Pitfalls</a></span></li>
+                        <li><span class="toc level2"><a href="../installation/osx.html">OS X Specifics</a></span></li>
+                      </ul>
+                    </li>
+                    <li>
+                      <p class="toc level1">Using RACE</p>
+                      <ul>
+                        <li><span class="toc level2"><a href="../usage/running.html">How to Run RACE</a></span></li>
+                        <li><span class="toc level2"><a href="../usage/configuration.html">RACE Configuration</a></span></li>
+                        <li><span class="toc level2"><a href="../usage/encryption.html">Using Encrypted Configurations</a></span></li>
+                      </ul>
+                    </li>
+                    <li>
+                      <p class="toc level1"><a href="../actors.html">Actors</a></p>
+                      <ul>
+                        <li><span class="toc level2"><a href="../actors.html#actor-components-and-properties">Actor Components and Properties</a></span></li>
+                        <li><span class="toc level2"><a href="../actors.html#actor-communication">Actor Communication</a></span></li>
+                      </ul>
+                    </li>
+                    <li>
+                      <p class="toc level1">RACE Design</p>
+                      <ul>
+                        <li><span class="toc level2"><a href="overview.html">Design Overview</a></span></li>
+                        <li><span class="toc level2"><a href="configuration.html">Runtime Configuration</a></span></li>
+                        <li><span class="toc level2"><a href="raceactors.html">RaceActors</a></span></li>
+                        <li><span class="toc level2"><a href="channeltopics.html">ChannelTopics</a></span></li>
+                        <li><span class="toc level2"><a href="embedded-objects.html">Embedded Objects</a></span></li>
+                        <li><span class="toc level2 active">Connecting External Systems</span></li>
+                        <li><span class="toc level2"><a href="archive-replay.html">Archive and Replay</a></span></li>
+                        <li><span class="toc level2"><a href="worldwind.html">WorldWind Viewer</a></span></li>
+                        <li><span class="toc level2"><a href="http-server.html">HttpServer</a></span></li>
+                        <li><span class="toc level2"><a href="timeseries.html">Time Series Analysis</a></span></li>
+                        <li><span class="toc level2"><a href="remotelauncher.html">RemoteLauncher</a></span></li>
+                        <li><span class="toc level2"><a href="layers-and-modules.html">Layers and Modules</a></span></li>
+                        <li><span class="toc level2"><a href="directory-structure.html">Directory Structure</a></span></li>
+                        <li><span class="toc level2"><a href="repository.html">Repository Structure</a></span></li>
+                        <li><span class="toc level2"><a href="local-build.html">Local Build Configuration</a></span></li>
+                        <li><span class="toc level2"><a href="dds.html">RACE and DDS</a></span></li>
+                        <li><span class="toc level2"><a href="extproject.html">Using RACE from External Projects</a></span></li>
+                        <li><span class="toc level2"><a href="whyscala.html">Why Scala</a></span></li>
+                      </ul>
+                    </li>
+                    <li>
+                      <p class="toc level1"><a href="../examples.html">RACE Examples</a></p>
+                      <ul>
+                        <li><span class="toc level2"><a href="../examples.html#basic-examples">Basic Examples</a></span></li>
+                        <li><span class="toc level2"><a href="../examples.html#distributed-operation">Distributed Operation</a></span></li>
+                        <li><span class="toc level2"><a href="../examples.html#live-data-import">Live Data Import</a></span></li>
+                        <li><span class="toc level2"><a href="../examples.html#data-replay">Data Replay</a></span></li>
+                      </ul>
+                    </li>
+                    <li>
+                      <p class="toc level1">Documentation</p>
+                      <ul>
+                        <li><span class="toc level2"><a href="../documentation/overview.html">RACE Documentation Overview</a></span></li>
+                        <li><span class="toc level2"><a href="../documentation/presentations.html">Available Slide Presentations</a></span></li>
+                      </ul>
+                    </li>
+                    <li>
+                      <p class="toc level1"><a href="../known-problems.html">Known Problems</a></p>
+                      <ul>
+                        <li><span class="toc level2"><a href="../known-problems.html#build">Build</a></span></li>
+                        <li><span class="toc level2"><a href="../known-problems.html#runtime">Runtime</a></span></li>
+                      </ul>
+                    </li>
+                    <li><span class="toc level1"><a href="../changes.html">Changes</a></span></li>
+                    <li><span class="toc level1"><a href="../todo.html">TODO List</a></span></li>
+                    <li>
+                      <p class="toc level1"><a href="../learning.html">Learning Resources</a></p>
+                      <ul>
+                        <li><span class="toc level2"><a href="../learning.html#scala">Scala</a></span></li>
+                        <li><span class="toc level2"><a href="../learning.html#actors-and-akka">Actors and Akka</a></span></li>
+                        <li><span class="toc level2"><a href="../learning.html#sbt">SBT</a></span></li>
+                        <li><span class="toc level2"><a href="../learning.html#interactive-scala-akka-and-sbt-learning-environment-and-examples">Interactive Scala, Akka and SBT Learning Environment and Examples</a></span></li>
+                        <li><span class="toc level2"><a href="../learning.html#git">Git</a></span></li>
+                      </ul>
+                    </li>
+                    <li><span class="toc level1"><a href="../glossary.html">Glossary</a></span></li>
+                  </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="main">
+            <h1 id="connecting-external-systems" class="title">Connecting External Systems</h1>
+            <p>Most RACE applications depend on external input from systems such as FAA&#39;s <a href="https://www.faa.gov/nextgen/programs/swim/">SWIM</a> servers,
+            and/or produce data to be used in external systems such as flight simulators.</p>
+            <p>Since virtually everything in RACE is done by means of actors it comes at no surprise that such
+            communication takes place from dedicated <strong>Import/ExportActors</strong>, which constitute the outside
+            interface of RACE.</p>
+            <p><img class="center scale60" src="../images/import-export.svg" alt="Import/Export Actors"></p>
+            <p>RACE employs a two layer approach for such interfacing. In most cases the import/export actors only
+            handle the underlying high level communication mechanism (e.g. messaging systems such as JMS or
+            Kafka), and leave payload data processing such as filtering or translation to embedded <em>reader</em> and
+            <em>writer</em> objects that can be configured within the respective import/export actor.</p>
+            <p>Import and export actors are conceptually very close to Archive/ReplayActors (see <a href="archive-replay.html#archive-and-replay">Archive and Replay</a>).
+            In fact, they should be exchangeable so that the only difference between live and
+            archive/replay processing is the specification of respective actors.</p>
+            
+            <h2 id="import-export-actors" class="section">Import/Export Actors</h2>
+            <p>The main concern of the actors is to establish a connection or session with the external system,
+            and to exchange data with it by means of a connection specific API (e.g. JMS) which typically does
+            not care about the nature and format of the exchanged (payload) data. Consequently, the essential
+            configuration of import/export actors is a specification of the external application to communicate
+            with, which might involve hostname/ip-address, port, topics and user credentials (see
+            <a href="../usage/encryption.html#using-encrypted-configurations">Using Encrypted Configurations</a> if this is sensitive data):</p>
+            <pre><code>actors = [ ...
+  { name = &quot;ZZimporter&quot;
+    class = &quot;x.y.ZZImportActor&quot;
+    write-to = &quot;/zz/in&quot;
+
+    remote-host = ...
+    remote-user = &quot;??ZZuser&quot;
+
+    reader = { ... }
+  }
+  ...</code></pre>
+            <p>Receiving data from the external system normally involves blocking IO and is therefore done by a
+            dedicated data acquisition thread that is spawned by the actor upon initialization or start. This
+            thread is only visible to the actor instance, but care has to be taken to avoid data races between
+            the data acquisition thread and the rest of the actor code, which is executed within a Akka thread
+            (the <code>handleMessage()</code> method being its main entry). Publishing received data to RACE channels can
+            be done directly from the input acquisition thread since Akka&#39;s messaging API is thread safe.</p>
+            <p>Import actors typically mix in <code>gov.nasa.race.core.PublishingRaceActor</code>. Received data is
+            filtered/translated by the configured <em>reader</em> object and then published to the respective
+            <code>write-to</code> RACE channels. Since some external systems provide high volume data streams which might
+            imply high runtime costs within RACE (e.g. for translation), some import actors use the RACE
+            <a href="channeltopics.html#channeltopics">ChannelTopics</a> mechanism to make sure received data is only published on RACE channels if there is a
+            client requesting it. This can also make use of the <code>gov.nasa.race.actor.FilteringPublisher</code>
+            trait.</p>
+            <p>Export actors mix in <code>gov.nasa.race.core.SubscribingRaceActor</code>, pass received RACE messages
+            through their writer* objects and then use the connection API to send the data, which is normally
+            non-blocking and therefore can happen from a Akka thread.</p>
+            <p>Import and export are roles which can be fulfilled by the same actor instance. This is particularly
+            the case for actors that interface to external simulators, which usually involves bi-directional
+            data exchange that needs to be synchronized.</p>
+            <p>Most import/export actor (basic) types can be found in the <code>race-net-*</code> modules (jms, kafka,
+            http, dds at this point). Most of the concrete import and export actors reside in the
+            <code>gov.nasa.race.air.actor</code> package.</p>
+            
+            <h2 id="readers-writers" class="section">Readers / Writers</h2>
+            <p>Those are the objects that understand both RACE objects (such as <code>gov.nasa.race.track.TrackedObject</code>)
+            and external system data formats (protocol specific <em>records</em> and serialization formats).
+            Readers/Writers do not need to know about networking or other IPC mechanisms used to transmit
+            the data they process, nor should they (normally) know about the actor that creates/uses them.</p>
+            <p>Not all import/export actors need translation of payload data - some of the mechanism specific APIs
+            (e.g. JMS and Kafka) do the wire format translation for us, and the incoming data might be just
+            structured text such as XML messages. For this reason there is no uniform interface or type for
+            readers and writers, just a number of very generic functional interfaces such as</p>
+            <ul>
+              <li><code>gov.nasa.race.DataStreamReader</code> and <code>DataStreamWriter</code></li>
+              <li><code>gov.nasa.race.Filter</code></li>
+              <li><code>gov.nasa.race.Translator</code></li>
+            </ul>
+            <p>Readers and writers are nested objects. If the respective import/export actor is not single-purpose
+            (such as connecting to one specific simulator), they are specified within the actor configuration:</p>
+            <pre><code>actors = [ ...
+  { name = &quot;SomeImportActor&quot;
+    ...
+    reader = {
+      class = &quot;x.y.MyReader&quot;
+      ...
+    }</code></pre>
+            <p>Normally readers and writers do not need to be named and the only mandatory configuration is their
+            respective <code>class</code>. However, they can be fully parameterized as the actor passes the whole
+            sub-configuration object down into the reader/writer constructor, i.e. the reader/writer class is
+            the only type that has to know about such parameters.</p>
+            
+            <h2 id="adapteractor-and-the-race-adapter-module" class="section">AdapterActor and the race-adapter module</h2>
+            <p>Most external systems that are used with RACE provide a networking interface, and make use of
+            common APIs such as <a href="https://docs.oracle.com/javaee/6/tutorial/doc/bncdq.html">JMS</a> to establish sessions and exchange data. In this case, all that is needed
+            to connect RACE is a suitable set of import/export actors for the respective API (such as JMS, Kafka,
+            DDS and Http).</p>
+            <p>For cases in which there is no external network interface RACE provides the generic <code>AdapterActor</code>,
+            together with corresponding native libraries that can be used to implement a network interface
+            within the external system. The C based incarnation of this library is <code>librace.a</code>.</p>
+            <p><img class="center scale60" src="../images/race-adapter.svg" alt="AdapterActor and librace.a"></p>
+            <p><code>AdapterActor</code> uses UDP sockets to communicate with the external system.</p>
+            <p>The underlying wire format is compaatible with <code>java.io.DataInput/OutputStream</code>, i.e. does not
+            require any translation on the JVM side, but only supports basic Java types (boolean, short,
+            int, long, float, double and String - no references).</p>
+            <p>The protocol distinguishes between a <em>server</em> (which has to be started first) and a <em>client</em> (which
+            requests a connection), but supports bi-directional data transfer.</p>
+            <p>The client initiates the session by sending a <code>Request</code> message, together with parameters such as
+            the requested schema name and update interval.</p>
+            <p>If the server can send/receive the requested data at the requested rate it send back a <code>Accept</code>
+            message with a client id, which the client henceforth uses to identify itself. Otherwise, a
+            <code>Reject</code> with a explaining error code is sent.</p>
+            <p>The server now enters a loop in which it periodically send <code>Data</code> messages at the requested rate,
+            and either synchronously or asynchronously reads (optional) <code>Data</code> messages from the client.</p>
+            <p>Data messages have a generic payload - neither <code>AdapterActor</code> nor <code>librace</code> care about what data
+            is sent, except of that both client and server have to agree on the schema (name) that defines the
+            exchanged payload data. RACE comes with a <code>gov.nasa.race.air.SimpleTrackProtocol</code> that implements
+            <code>Track</code> and <code>Proximity</code> data messages.</p>
+            <p>A session can be terminated at any time by sending a <code>Stop</code> message from either client or server.</p>
+            <p>On the RACE side the application specific payload data is handled by configured reader and writer
+            objects of the <code>AdapterActor</code>.</p>
+            <p>On the external side, <code>librace</code> requires the user to specify respective callback functions (such
+            as <code>check_request()</code> or <code>write_data()</code>) within a <code>local_context_t</code> structure, and then call
+            one of the toplevel functions such as <code>race_interval_threaded(local_context_t* context)</code>.</p>
+            <p><code>librace</code> also provides a number of convenience functions (e.g. to read/write data in <code>DataOutputStream</code>
+            format) that can be used to implement the required callbacks. Please refer to <code>race.h</code> for details,
+            which is the only required header.</p>
+        </div>
+
+    </body>
+</html>

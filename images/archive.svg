@@ -1,0 +1,97 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<svg width="100%" height="100%" version="1.1" viewBox="209.5984 358.0236 601.7167 304.0316" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <filter id="shadow1" width="150%" height="150%">
+      <feGaussianBlur in="SourceAlpha" result="blur" stdDeviation="2" />
+      <feOffset dx="2" dy="2" in="blur" result="offsetBlur" />
+      <feMerge>
+        <feMergeNode in="offsetBlur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+  </defs>
+  <marker id="marker1" markerUnits="strokeWidth" orient="auto" refX="-11.17254" refY="0" markerWidth="13.27247" markerHeight="10.22955" viewBox="-12.27247 -5.114774 13.27247 10.22955">
+    <path d="M-11.27247 -4.114774 L0 0 L-11.27247 4.114773 Z " fill="#000000" fill-opacity="1" stroke="#000000" stroke-opacity="1" />
+  </marker>
+  <marker id="marker2" markerUnits="strokeWidth" orient="auto" refX="-11.17254" refY="0" markerWidth="13.27247" markerHeight="10.22955" viewBox="-12.27247 -5.114774 13.27247 10.22955">
+    <path d="M-11.27247 -4.114774 L0 0 L-11.27247 4.114773 Z " fill="#000000" fill-opacity="1" stroke="#000000" stroke-opacity="1" />
+  </marker>
+  <marker id="marker3" markerUnits="strokeWidth" orient="auto" refX="-11.17254" refY="0" markerWidth="13.27247" markerHeight="10.22955" viewBox="-12.27247 -5.114774 13.27247 10.22955">
+    <path d="M-11.27247 -4.114774 L0 0 L-11.27247 4.114773 Z " fill="#000000" fill-opacity="1" stroke="#000000" stroke-opacity="1" />
+  </marker>
+  <marker id="marker4" markerUnits="strokeWidth" orient="auto" refX="-13.60705" refY="0" markerWidth="15.52697" markerHeight="11.87546" viewBox="-14.52697 -5.937729 15.52697 11.87546">
+    <path d="M-13.52697 -4.937729 L0 0 L-13.52697 4.937728 Z " fill="none" stroke="#7F7F7F" stroke-opacity="1" />
+  </marker>
+  <marker id="marker5" markerUnits="strokeWidth" orient="auto" refX="-6.303525" refY="0" markerWidth="8.763483" markerHeight="6.937729" viewBox="-7.763484 -3.468865 8.763483 6.937729">
+    <path d="M-6.763484 -2.468865 L0 0 L-6.763484 2.468864 Z " fill="#000000" fill-opacity="1" stroke="#000000" stroke-opacity="1" />
+  </marker>
+  <marker id="marker6" markerUnits="strokeWidth" orient="auto" refX="-6.303525" refY="0" markerWidth="8.763483" markerHeight="6.937729" viewBox="-7.763484 -3.468865 8.763483 6.937729">
+    <path d="M-6.763484 -2.468865 L0 0 L-6.763484 2.468864 Z " fill="#7F7F7F" fill-opacity="1" stroke="#7F7F7F" stroke-opacity="1" />
+  </marker>
+  <g id="layer1" inkscape:label="Layer 1" inkscape:groupmode="layer">
+    <line x1="418.1103" y1="545.6694" x2="448.4574" y2="545.6694" marker-end="url(#marker1)" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    <rect x="496.063" y="453.5434" width="162.9921" height="134.6457" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FAFDE1" fill-opacity="1" filter="url(#shadow1)" />
+    <text x="541.8804" y="469.5031" font-size="12" fill="#000000" fill-opacity="1" font-family="Helvetica" font-weight="bold" font-style="normal">ArchiveActor</text>
+    <line x1="496.063" y1="474.8032" x2="659.0552" y2="474.8032" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    <rect x="538.5828" y="503.1497" width="106.2992" height="42.51969" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FCDBDE" fill-opacity="1" filter="url(#shadow1)" />
+    <text x="554.4921" y="519.1094" font-size="12" fill="#000000" fill-opacity="1" font-family="Helvetica" font-weight="bold" font-style="normal">ArchiveWriter</text>
+    <line x1="538.5828" y1="524.4095" x2="644.882" y2="524.4095" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    <text x="549.6694" y="540.1407" font-size="12" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">write(date,msg)</text>
+    <line x1="460.63" y1="488.9764" x2="460.63" y2="581.1024" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="3" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    <rect x="347.2441" y="531.4962" width="70.86615" height="21.25985" opacity="1" stroke="#7F7F7F" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" filter="url(#shadow1)" />
+    <text x="379.6762" y="547.4559" font-size="12" fill="#7F7F7F" fill-opacity="1" font-family="Helvetica" font-weight="bold" font-style="normal">...</text>
+    <text x="521.3229" y="575.5738" font-size="12" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">handleMessage(</text>
+    <text x="521.3229" y="490.5345" font-size="12" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">createWriter()</text>
+    <line x1="460.63" y1="566.9292" x2="505.1504" y2="566.9292" marker-end="url(#marker2)" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    <g>
+      <g>
+        <g>
+          <path d="M744.0946 509.6064 L744.0946 548.3464 Q752.1223 554.8032 776.2049 554.8032 Q800.2875 554.8032 808.3152 548.3464 L808.3152 509.6064 Z " opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" />
+          <text x="756.9881" y="537.7384" font-size="12" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">Archive</text>
+          <ellipse cx="776.2048" cy="509.6064" rx="32.11025" ry="6.456686" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" />
+        </g>
+      </g>
+    </g>
+    <line x1="637.7953" y1="531.4962" x2="731.9221" y2="531.4962" marker-end="url(#marker3)" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    <text x="412.3765" y="485.1434" font-size="12" fill="#000000" fill-opacity="1" font-family="Helvetica" font-weight="normal" font-style="normal">message bus</text>
+    <text x="349.0783" y="527.6631" font-size="12" fill="#7F7F7F" fill-opacity="1" font-family="Helvetica" font-weight="normal" font-style="normal">importer, filter, ..</text>
+    <text x="507.6452" y="527.0529" font-size="12" fill="#FF0000" fill-opacity="1" font-family="Helvetica" font-weight="normal" font-style="normal">data
+</text>
+    <text x="502.319" y="542.0529" font-size="12" fill="#FF0000" fill-opacity="1" font-family="Helvetica" font-weight="normal" font-style="normal">format</text>
+    <g>
+      <ellipse cx="701.5749" cy="425.1969" rx="14.17323" ry="14.17323" opacity="1" stroke="#7F7F7F" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" />
+      <line x1="701.5749" y1="425.1969" x2="708.6615" y2="418.1103" opacity="1" stroke="#7F7F7F" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+      <line x1="701.5749" y1="425.1969" x2="701.5749" y2="432.2835" opacity="1" stroke="#7F7F7F" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    </g>
+    <text x="452.5497" y="449.5134" font-size="12" fill="#FF0000" fill-opacity="1" font-family="Helvetica" font-weight="normal" font-style="normal">time, msg subscription</text>
+    <line x1="581.1024" y1="453.5434" x2="581.1024" y2="439.804" marker-end="url(#marker4)" opacity="1" stroke="#7F7F7F" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    <rect x="517.3229" y="403.9371" width="127.5591" height="21.25985" opacity="1" stroke="#7F7F7F" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" filter="url(#shadow1)" />
+    <text x="523.7411" y="421.167" font-size="12" fill="#7F7F7F" fill-opacity="1" font-family="Helvetica" font-weight="normal" font-style="normal">SubscribingRaceActor</text>
+    <path d="M616.5355 566.9292 L630.7087 566.9292 L630.7087 560.0595" marker-end="url(#marker5)" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+    <text x="570.1417" y="616.4295" font-size="10" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">def handleMessage = { ..
+</text>
+    <text x="570.1417" y="628.4295" font-size="10" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">    case BusEvent(msg) =&gt;
+</text>
+    <text x="570.1417" y="640.4295" font-size="10" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">      writer.write(simTime,msg)</text>
+    <text x="216.5984" y="375.4846" font-size="10" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">actors = [
+</text>
+    <text x="216.5984" y="387.4846" font-size="10" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">  { name = “myArchiver”
+</text>
+    <text x="216.5984" y="399.4846" font-size="10" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">     class = “ArchiverActor”
+</text>
+    <text x="216.5984" y="411.4846" font-size="10" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">     read-from = “/some/channel”
+</text>
+    <text x="216.5984" y="423.4846" font-size="10" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">     ..
+</text>
+    <text x="216.5984" y="435.4846" font-size="10" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">     writer = {
+</text>
+    <text x="216.5984" y="447.4846" font-size="10" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">         class = “XWriter”
+</text>
+    <text x="216.5984" y="459.4846" font-size="10" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">         pathname = “my-archive.dat”
+</text>
+    <text x="216.5984" y="471.4846" font-size="10" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">         ..
+</text>
+    <path d="M701.5749 439.3701 L701.5749 474.8032 L666.3587 474.8032" marker-end="url(#marker6)" opacity="1" stroke="#7F7F7F" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+    <text x="709.5884" y="463.8835" font-size="12" fill="#7F7F7F" fill-opacity="1" font-family="Helvetica" font-weight="normal" font-style="normal">sim time</text>
+  </g>
+</svg>

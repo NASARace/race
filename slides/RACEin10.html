@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8"/>
+        <title>RACE</title>
+
+        <link href="./race-slides-html.css" rel="stylesheet"/>
+    </head>
+
+    <body>
+        <div class="slidecounter" id="counter">0 / 0</div>
+        <div class="stopwatch" id="timer">00:00</div>
+        <div class="slide title">
+            <!-- additional divs inserted by renderer extension -->
+            <h1 id="race" class="title">RACE</h1>
+            <p>scaling the world with actors (in 10min)<br/></p>
+            <p>website: <a href="http://nasarace.github.io/race">http://nasarace.github.io/race</a><br/>
+            external repo: <a href="https://github.com/nasarace/race">https://github.com/nasarace/race</a><br/>
+            internal repo: <a href="https://babelfish.arc.nasa.gov/git/race">https://babelfish.arc.nasa.gov/git/race</a></p>
+            <p>~</p>
+            <p><a href="https://ti.arc.nasa.gov/profile/pcmehlitz/" rel="author">Peter.C.Mehlitz</a><br/>
+            SGT Inc, NASA Ames Research Center</p>
+            
+            </div><div class="slide">
+            
+            <h2 id="what-is-race" class="section">What is RACE?</h2>
+            <p>framework to build event driven applications that</p>
+            <ul>
+              <li>can import/export from/to external systems - <strong>connectivity</strong></li>
+              <li>can process high event rate and data volume - <strong>scalability</strong></li>
+              <li>have extensible set of concurrent, low overhead components</li>
+              <li>support distributed and massively concurrent operation</li>
+            </ul>
+            <img src="../images/lvc-sim.svg" class="center scale40">
+            
+            </div><div class="slide">
+            
+            <h2 id="example---live-nas" class="section">Example - Live NAS</h2>
+            <ul>
+              <li>full NextGen SWIM (System Wide Information Management) import</li>
+              <li>500+ incoming  network msg/sec (mostly JMS)</li>
+              <li>real time ADS-B import from local antenna</li>
+              <li>visualization with NASA WorldWind</li>
+            </ul>
+            <p><img src="../images/swim-sbs-all-ww.svg" class="left scale50">
+            <img src="../images/race-viewer.svg" class="right scale45"></img></p>
+            
+            </div><div class="slide">
+            
+            <h2 id="actors---basic-race-components" class="section">Actors - Basic RACE Components</h2>
+            <ul>
+              <li>well known concurrency programming model since 1973 (Hewitt et al)</li>
+              <li><em>Actors</em> are objects that communicate only through async messages<br>
+              ⟹ no shared state</li>
+              <li>objects process messages one-at-a-time ⟹ sequential code</li>
+            </ul>
+            <img src="../images/actor.svg" class="center scale50">
+            
+            </div><div class="slide">
+            
+            <h2 id="actor-systems---configuration" class="section">Actor Systems - Configuration</h2>
+            <ul>
+              <li>
+                <p>RACE actor systems are JSON configured graphs</p>
+                <ul>
+                  <li>nodes are actors</li>
+                  <li>edges are pub/sub (bus) channels through which actors communicate</li>
+                </ul>
+              </li>
+            </ul>
+            <img src="../images/race-dataflow.svg" class="center scale40">
+            
+            </div><div class="slide">
+            
+            <h2 id="race---implementation" class="section">RACE - Implementation</h2>
+            <ul>
+              <li><em>Master</em> actor: initialization, supervision and termination of configured actors</li>
+              <li>can model time</li>
+              <li>local and global (network) bus</li>
+            </ul>
+            <img src="../images/race-overview-2.svg" class="center scale60">
+            
+            </div><div class="slide">
+            
+            <h2 id="example---swim-analysis" class="section">Example - SWIM Analysis</h2>
+            <ul>
+              <li>
+                <p>used inside FAA network to analyze SWIM channels:</p>
+                <ul>
+                  <li>statistics (msg rate, volume, peaks)</li>
+                  <li>XML validation</li>
+                  <li>checks for track update anomalies:</li>
+                </ul>
+              </li>
+            </ul>
+            <p><img src="../images/ts-anomaly-content.svg" class="left scale40">
+            <img src="../images/ts-anomaly-temp.svg" class="right scale40"></img></p>
+            
+            </div><div class="slide">
+            
+            <h2 id="tl-dr" class="section">TL;DR</h2>
+            <ul>
+              <li>RACE is a actor based application framework</li>
+              <li>used for runtime monitoring, trajectory analysis, simulation, web-serving dynamic data,...</li>
+              <li>open sourced under Apache v2</li>
+              <li>written in Scala, heavily based on Akka library</li>
+              <li>~300 files, ~21000 ncloc</li>
+              <li>developed since 2015</li>
+              <li>can be used as a library (from external projects)</li>
+            </ul>
+        </div>
+    </body>
+
+    <script src="./race-slides.js"></script>
+</html>
