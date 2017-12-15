@@ -26,6 +26,10 @@ configuration server and gateway.
 NASA WorldWind applications. The original version of this talk was given at the WorldWind
 Technical Exchange Meeting 2016
 
+`Connecting RACE`_ is a short introduction for connecting RACE to external applications
+
+`RACE in 10`_ is a high level 10 minute RACE introduction
+
 `RACE - building airspace simulations faster and better with actors`_ is a general RACE introduction,
 to be presented at DASC 2016
 
@@ -35,3 +39,5 @@ to be presented at DASC 2016
 .. _RACE and WorldWind: ../slides/RACE_WorldWind.html
 .. _RACE - building airspace simulations faster and better with actors: ../slides/DASC16.html
 .. _NASA WorldWind: https://github.com/NASAWorldWind
+.. _Connecting RACE: ../slides/Connectivity.html
+.. _RACE in 10: ../slides/RACEin10.html
