@@ -27,8 +27,8 @@ framework to build event driven applications that
 * real time ADS-B import from local antenna
 * visualization with NASA WorldWind
 
-<img src="../images/swim-sbs-all-ww.svg" class="left scale40">
-<img src="../images/race-viewer.svg" class="right scale30">
+<img src="../images/swim-sbs-all-ww.svg" class="left scale50">
+<img src="../images/race-viewer.svg" class="right scale45">
  
 ## Actors - Basic RACE Components
 * well known concurrency programming model since 1973 (Hewitt et al)
@@ -60,8 +60,8 @@ framework to build event driven applications that
     + XML validation
     + checks for track update anomalies:
 
-<img src="../images/ts-anomaly-content.svg" class="left scale30">
-<img src="../images/ts-anomaly-temp.svg" class="right scale30">
+<img src="../images/ts-anomaly-content.svg" class="left scale40">
+<img src="../images/ts-anomaly-temp.svg" class="right scale40">
 
 ## TL;DR
 * RACE is a actor based application framework
