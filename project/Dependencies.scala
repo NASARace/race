@@ -108,7 +108,7 @@ object Dependencies {
   val jsch = "com.jcraft" % "jsch" % "0.1.54"
 
   //--- argon2 based password hashes ()
-  val argon2 = "de.mkammerer" % "argon2-jvm" % "2.2"
+  val argon2 = "de.mkammerer" % "argon2-jvm" % "2.3"
 
   //--- Akka
   val akkaVersion = "2.5.8"
