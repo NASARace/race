@@ -108,6 +108,14 @@ package object race {
     }
   }
 
+  def tryWithResource[T,R <:AutoCloseable] (r: R)(f: (R)=>T): T = {
+    try {
+      f(r)
+    } finally {
+      if (r != null) r.close
+    }
+  }
+
   /** execute two functions and return the result of the first one */
   def withSubsequent[T] (f: =>T)(g: =>Any): T = {
     val res = f
@@ -339,6 +347,11 @@ package object race {
   def checkComprehension (msg: String): Option[String] = {
     println(msg)
     Some(msg)
+  }
+
+  def applyTo[T](t: T)(f: (T)=>Unit) = {
+    f(t)
+    t
   }
 
   //--- system properties

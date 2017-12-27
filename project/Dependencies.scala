@@ -168,8 +168,24 @@ object Dependencies {
   // add implementation libraries and settings in local-build.sbt - this is only an abstract interface for compilation
   val omgDDS = "org.omg.dds" % "java5-psm" % "1.0"
 
+
+  //--- LWJGL Java wrapper for OpenGL,Vulkan,,OpenCL,OpenAL and others
+  val lwjglVersion = "3.1.5"
+  lazy val lwjglNativeClassifier = OS.build match {
+    case _:Linux => "natives-linux"
+    case _:OSX => "natives-macos"
+    case _:Windows => "natives-windows"
+    case os:Unknown => throw new RuntimeException(s"OS ${os.name} not supported by LWJGL")
+  }
+
+  lazy val lwjglBase = "org.lwjgl" % "lwjgl" % lwjglVersion
+  lazy val lwjglOpenCL = "org.lwjgl" % "lwjgl-opencl" % lwjglVersion
+  lazy val lwjglNative = "org.lwjgl" % "lwjgl" % lwjglVersion classifier lwjglNativeClassifier
+
+
   //--- publishable WorldWindJava version
   val worldwindPcm = "com.github.pcmehlitz" % "worldwind-pcm" % "2.1.0.+"
+
 
   //--- this is used from build.sbt to add dependency resolvers
 

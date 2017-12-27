@@ -20,7 +20,7 @@ lazy val testSettings = commonSettings ++ noPublishSettings  // test projects do
 //--- root project (only for aggregation)
 lazy val root = createRootProject("race").
   aggregate(raceCore,raceNetJMS,raceNetKafka,raceNetDDS,raceNetHttp,raceSwing,raceWW,raceAir,raceWWAir,raceSpace,raceLauncher,raceAdapter,
-    raceTools,raceTestKit,raceCoreTest,raceNetJMSTest,raceNetHttpTest,raceNetKafkaTest,raceAirTest,raceSpaceTest).
+    raceCL,raceTools,raceTestKit,raceCoreTest,raceNetJMSTest,raceNetHttpTest,raceNetKafkaTest,raceAirTest,raceSpaceTest).
   dependsOn(raceCore,raceNetJMS,raceNetKafka,raceNetDDS,raceNetHttp,raceSwing,raceWW,raceAir,raceWWAir,raceSpace,raceLauncher).
   enablePlugins(JavaAppPackaging,LauncherJarPlugin).
   settings(
@@ -85,6 +85,11 @@ lazy val raceWW = createProject("race-ww", commonSettings).
 lazy val raceWWAir = createProject("race-ww-air", commonSettings).
   dependsOn(raceWW,raceAir).
   addLibraryDependencies(typesafeConfig,nscalaTime)
+
+lazy val raceCL = createProject("race-cl", commonSettings).
+  enablePlugins(JavaAppPackaging,ClasspathJarPlugin).
+  dependsOn(raceCore).
+  addLibraryDependencies(lwjglBase,lwjglOpenCL,lwjglNative)
 
 lazy val raceTestKit = createProject("race-testkit", commonSettings).
   dependsOn(raceCore).
