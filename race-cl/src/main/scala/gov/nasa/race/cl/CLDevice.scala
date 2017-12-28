@@ -17,9 +17,11 @@
 package gov.nasa.race.cl
 
 import CLUtils._
+import gov.nasa.race.tryWithResource
 import org.lwjgl.opencl.CL._
 import org.lwjgl.opencl.CL10._
 import org.lwjgl.opencl.CL11.CL_DEVICE_OPENCL_C_VERSION
+import org.lwjgl.system.MemoryStack
 
 import scala.collection.immutable.HashSet
 
@@ -40,7 +42,7 @@ case class Accelerator (override val flags: Long) extends CLDeviceType(flags)
 case class UnknownDeviceType (override val flags: Long) extends CLDeviceType(flags)
 
 /**
-  * OpenCL device representation
+  * wrapper for OpenCL device object
   */
 class CLDevice (val index: Int, val id: Long, val platform: CLPlatform) {
   val capabilities = createDeviceCapabilities(id, platform.capabilities)
@@ -74,4 +76,18 @@ class CLDevice (val index: Int, val id: Long, val platform: CLPlatform) {
 
   val extensions: HashSet[String] = HashSet[String](getDeviceInfoStringUTF8(id,CL_DEVICE_EXTENSIONS).split(" "): _*)
   val supportsDouble: Boolean = extensions.contains("cl_khr_fp64")
+
+  lazy val inOrderQueue = createCommandQueue(false)
+  lazy val outOfOrderQueue = createCommandQueue(true)
+
+  def createCommandQueue (outOfOrder: Boolean): CLCommandQueue = {
+    tryWithResource(MemoryStack.stackPush) { stack =>
+      val err = stack.allocInt
+      val context = platform.context
+      val properties = if (outOfOrder) CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE else 0
+      val qid = clCreateCommandQueue(context.id, id, properties, err)
+      checkCLError(err.toInt)
+      new CLCommandQueue(qid,this,context,false)
+    }
+  }
 }
