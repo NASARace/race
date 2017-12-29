@@ -17,8 +17,6 @@
 package gov.nasa.race.cl
 
 import CLUtils._
-import gov.nasa.race._
-import org.lwjgl.system.MemoryStack
 import org.lwjgl.opencl.CL10._
 
 /**
@@ -26,9 +24,7 @@ import org.lwjgl.opencl.CL10._
   */
 class CLProgram (id: Long) {
 
-  val kernels = createKernels
-
-  def createKernels: Array[CLKernel] = tryWithResource(MemoryStack.stackPush) { stack =>
+  val kernels: Array[CLKernel] = withMemoryStack { stack =>
     val kbuf = stack.getCLPointerBuffer((pn,pk) => clCreateKernelsInProgram(id,pk,pn))
     kbuf.mapToArray( new CLKernel(_))
   }

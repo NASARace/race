@@ -42,7 +42,8 @@ import scala.reflect.ClassTag
 object CLUtils {
 
   //--- generic return value error checker for cl.. functions
-  @inline def checkCLError(ec: Int) = if (ec != CL_SUCCESS) throw new RuntimeException(f"OpenCL error [0x$ec%X]")
+  @inline def checkCLError(ec: Int): Unit = if (ec != CL_SUCCESS) throw new RuntimeException(f"OpenCL error [0x$ec%X]")
+  @inline def checkCLError(eb: IntBuffer): Unit = checkCLError(eb.get(0))
 
   implicit class CLErrCheck (val ec: Int) extends AnyVal {
     @inline def ?(): Unit = checkCLError(ec)
@@ -106,6 +107,8 @@ object CLUtils {
 
   //--- syntactic sugar for stack based memory allocation
 
+  def withMemoryStack[T] (f: (MemoryStack)=>T): T = tryWithResource(stackPush)(f(_))
+
   implicit class MemStack (val stack: MemoryStack) extends AnyVal {
     @inline def allocInt = stack.callocInt(1)
     @inline def allocLong = stack.callocLong(1)
@@ -142,12 +145,10 @@ object CLUtils {
 
   //--- getters for platform and device infos
 
-  def getInfoInt (id: Long, param_name: Int)(f: (Long,Int,IntBuffer,PointerBuffer)=>Int): Int = {
-    tryWithResource(stackPush) { stack =>
-      val pd = stack.allocInt
-      f(id,param_name,pd,null).?
-      pd.toInt
-    }
+  def getInfoInt (id: Long, param_name: Int)(f: (Long,Int,IntBuffer,PointerBuffer)=>Int): Int = withMemoryStack { stack =>
+    val pd = stack.allocInt
+    f(id,param_name,pd,null).?
+    pd.toInt
   }
 
   def getDeviceInfoInt(cl_device_id: Long, param_name: Int): Int = {
@@ -159,40 +160,34 @@ object CLUtils {
   }
 
 
-  def getInfoLong (id: Long, param_name: Int)(f: (Long,Int,LongBuffer,PointerBuffer)=>Int): Long = {
-    tryWithResource(stackPush) { stack =>
-      val pd = stack.allocLong
-      f(id,param_name,pd,null).?
-      pd.toLong
-    }
+  def getInfoLong (id: Long, param_name: Int)(f: (Long,Int,LongBuffer,PointerBuffer)=>Int): Long = withMemoryStack { stack =>
+    val pd = stack.allocLong
+    f(id,param_name,pd,null).?
+    pd.toLong
   }
 
   def getDeviceInfoLong(cl_device_id: Long, param_name: Int): Long = {
     getInfoLong(cl_device_id,param_name)(clGetDeviceInfo)
   }
 
-  def getInfoPointer (id: Long, param_name: Int)(f: (Long,Int,PointerBuffer,PointerBuffer)=>Int): Long = {
-    tryWithResource(stackPush) { stack =>
-      val pd = stack.allocPointer
-      f(id,param_name,pd,null).?
-      pd(0)
-    }
+  def getInfoPointer (id: Long, param_name: Int)(f: (Long,Int,PointerBuffer,PointerBuffer)=>Int): Long = withMemoryStack { stack =>
+    val pd = stack.allocPointer
+    f(id,param_name,pd,null).?
+    pd(0)
   }
 
   def getDeviceInfoPointer(cl_device_id: Long, param_name: Int): Long = {
     getInfoPointer(cl_device_id,param_name)(clGetDeviceInfo)
   }
 
-  def getInfoStringUTF8 (id: Long, param_name: Int)(f: (Long,Int,ByteBuffer,PointerBuffer)=>Int): String = {
-    tryWithResource(stackPush) { stack =>
-      val pp = stack.allocPointer
-      f(id, param_name, NullByteBuffer, pp).?
-      val bytes = pp(0).toInt
+  def getInfoStringUTF8 (id: Long, param_name: Int)(f: (Long,Int,ByteBuffer,PointerBuffer)=>Int): String = withMemoryStack { stack =>
+    val pp = stack.allocPointer
+    f(id, param_name, NullByteBuffer, pp).?
+    val bytes = pp(0).toInt
 
-      val buffer = stack.malloc(bytes)
-      f(id, param_name, buffer, null).?
-      memUTF8(buffer, bytes -1)
-    }
+    val buffer = stack.malloc(bytes)
+    f(id, param_name, buffer, null).?
+    memUTF8(buffer, bytes -1)
   }
 
   def getPlatformInfoStringUTF8 (cl_platform_id: Long, param_name: Int): String = {

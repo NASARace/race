@@ -17,8 +17,6 @@
 package gov.nasa.race.cl
 
 import CLUtils._
-import gov.nasa.race._
-import org.lwjgl.system.MemoryStack
 import org.lwjgl.opencl.CL10._
 
 /**
@@ -29,10 +27,10 @@ import org.lwjgl.opencl.CL10._
   */
 class CLContext (val id: Long) {
 
-  def createProgram (src: String): CLProgram = tryWithResource(MemoryStack.stackPush) { stack =>
+  def createProgram (src: String): CLProgram = withMemoryStack { stack =>
     val err = stack.allocInt
     val pid = clCreateProgramWithSource(id,src,err)
-    checkCLError(err.toInt)
+    checkCLError(err)
     new CLProgram(pid)
   }
 }

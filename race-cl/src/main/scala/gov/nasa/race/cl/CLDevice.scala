@@ -21,7 +21,8 @@ import gov.nasa.race.tryWithResource
 import org.lwjgl.opencl.CL._
 import org.lwjgl.opencl.CL10._
 import org.lwjgl.opencl.CL11.CL_DEVICE_OPENCL_C_VERSION
-import org.lwjgl.system.MemoryStack
+import org.lwjgl.opencl.CLContextCallbackI
+import org.lwjgl.system.{MemoryStack, MemoryUtil}
 
 import scala.collection.immutable.HashSet
 
@@ -77,17 +78,28 @@ class CLDevice (val index: Int, val id: Long, val platform: CLPlatform) {
   val extensions: HashSet[String] = HashSet[String](getDeviceInfoStringUTF8(id,CL_DEVICE_EXTENSIONS).split(" "): _*)
   val supportsDouble: Boolean = extensions.contains("cl_khr_fp64")
 
-  lazy val inOrderQueue = createCommandQueue(false)
-  lazy val outOfOrderQueue = createCommandQueue(true)
-
-  def createCommandQueue (outOfOrder: Boolean): CLCommandQueue = {
-    tryWithResource(MemoryStack.stackPush) { stack =>
-      val err = stack.allocInt
-      val context = platform.context
-      val properties = if (outOfOrder) CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE else 0
-      val qid = clCreateCommandQueue(context.id, id, properties, err)
-      checkCLError(err.toInt)
-      new CLCommandQueue(qid,this,context,false)
+  /** on demand created device context */
+  lazy val context: CLContext = withMemoryStack { stack =>
+    val err = stack.allocInt
+    val ctxProps = stack.allocPointerBuffer(0)
+    val errCb = new CLContextCallbackI {
+      override def invoke(err_info: Long, private_info: Long, cb: Long, user_data: Long): Unit = {
+        System.err.println(s"device context error in $name: ${MemoryUtil.memUTF8(err_info)}")
+      }
     }
+    val ctxId = clCreateContext(ctxProps,id,errCb,0,err)
+    checkCLError(err)
+    new CLContext(ctxId)
+  }
+
+  /** the on-demand default queue, which uses the device context */
+  lazy val queue: CLCommandQueue = createCommandQueue(context)
+
+  def createCommandQueue (context: CLContext, outOfOrder: Boolean=false): CLCommandQueue = withMemoryStack { stack =>
+    val err = stack.allocInt
+    val properties = if (outOfOrder) CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE else 0
+    val qid = clCreateCommandQueue(context.id, id, properties, err)
+    checkCLError(err)
+    new CLCommandQueue(qid,this,context,outOfOrder)
   }
 }
