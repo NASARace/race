@@ -32,14 +32,14 @@ object PluginSettings {
   //----------------------------------------------------------------------------------
   // laika from https://github.com/planet42/Laika
   // adds laika:site and laika:clean to generate web site and/pr PDFs
-  import laika.sbt.LaikaSbtPlugin.LaikaPlugin
-  import laika.sbt.LaikaSbtPlugin.LaikaKeys._
-  val laikaSettings = LaikaPlugin.defaults ++ Seq(
+  import laika.sbt.LaikaPlugin
+  import laika.sbt.LaikaPlugin.autoImport._
+  val laikaSettings = LaikaPlugin.projectSettings ++ Seq(
     sourceDirectories in Laika := Seq(file("doc/manual")),
     target in Laika := target.value / "doc",
-    rawContent in Laika := true,
-    includePDF in Laika := false,
-    includeAPI in Laika := false, // not yet
+    laikaRawContent := true,
+    laikaIncludePDF := false,
+    laikaIncludeAPI := false, // not yet
     excludeFilter in Laika := new FileFilter {
       override def accept(file:File): Boolean = Seq("attic","slides").contains(file.getName)
     },
@@ -67,30 +67,6 @@ object PluginSettings {
   //val depGraphSettings = net.virtualvoid.sbt.graph.Plugin.graphSettings
 
 
-  //----------------------------------------------------------------------------------
-  // multi-jvm test support: https://github.com/sbt/sbt-multi-jvm
-  // (has to be added explicitly for respective programs)
-
-  import sbt.{Test,Tests,Compile}
-  import sbt.Keys._
-  import com.typesafe.sbt.SbtMultiJvm.MultiJvmKeys.{MultiJvm,scalatestOptions}
-
-  val multiJVMSettings = Seq(
-    //compile in MultiJvm <<= (compile in MultiJvm) triggeredBy (compile in Test),
-    compile in MultiJvm := {(compile in MultiJvm) triggeredBy (compile in Test)}.value,
-    executeTests in Test := {
-      val testResults = (executeTests in Test).value
-      val multiNodeResults = (executeTests in MultiJvm).value
-      val overall = (if (testResults.overall.id < multiNodeResults.overall.id) multiNodeResults else testResults).overall
-      Tests.Output(overall,
-        testResults.events ++ multiNodeResults.events,
-        testResults.summaries ++ multiNodeResults.summaries)
-    },
-    logBuffered in MultiJvm := true,
-    scalatestOptions in MultiJvm ++= {(target in Compile)((t: File) => Seq("-u", t.getAbsolutePath + "/test-reports"))}.value,
-    scalatestOptions in MultiJvm ++= {(target in Compile)((t: File) => Seq("-h", t.getAbsolutePath + "/test-reports"))}.value,
-    parallelExecution in Test := false
-  )
 
   import SonatypeSettings._
 

@@ -12,7 +12,7 @@ shellPrompt in ThisBuild := { state => "[" + Project.extract(state).currentRef.p
 
 lazy val commonSettings = commonRaceSettings ++ Seq(
   organization := "gov.nasa.race",
-  version := "1.5.3"
+  version := "1.5.4"
 )
 
 lazy val testSettings = commonSettings ++ noPublishSettings  // test projects don't publish artifacts
@@ -154,6 +154,12 @@ lazy val raceNetDDSTest = createTestProject("race-net-dds-test", testSettings).
   configs(MultiJvm).
   settings(
     mainClass in Compile := Some("gov.nasa.race.dds.DDSServer")
+  )
+
+lazy val raceCLTest = createTestProject("race-cl-test", testSettings).
+  dependsOn(raceCL,raceTestKit).
+  settings(
+    fork := true
   )
 
 lazy val raceAirTest = createTestProject("race-air-test", testSettings).

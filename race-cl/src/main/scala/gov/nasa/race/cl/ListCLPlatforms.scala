@@ -50,7 +50,8 @@ object ListCLPlatforms {
         println(s"  max workgrp size:  ${device.maxWorkGroupSize}")
         println(s"  address bits:      ${device.addressBits}")
         println(s"  max clock freq:    ${device.maxClockFrequency}")
-        println(s"  double support:    ${device.supportsDouble}")
+        println(s"  fp64 support:      ${device.isFp64}")
+        println(s"  little endian:     ${device.isLittleEndian}")
         println("  extensions: ")
         device.extensions.foreach{ e=> println(s"                     $e")}
         println

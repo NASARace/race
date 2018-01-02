@@ -17,6 +17,7 @@
 
 import sbt._
 import java.util.Locale
+import scala.sys.process._
 
 /**
   * simple "sh ..." task that executes something in the underlying shell from within SBT

@@ -20,8 +20,6 @@ import Keys._
 import complete.DefaultParsers._
 import RaceBuild._
 
-import laika.sbt.LaikaSbtPlugin.LaikaPlugin
-import laika.sbt.LaikaSbtPlugin.LaikaKeys._
 
 object TaskSettings {
   

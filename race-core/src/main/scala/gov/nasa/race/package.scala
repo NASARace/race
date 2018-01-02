@@ -343,6 +343,23 @@ package object race {
     }
   }
 
+  def findLastIn[T] (ts: Array[T])(p: (T)=>Boolean): Option[T] = {
+    @tailrec def _findReverse (i: Int): Option[T] = {
+      if (i >= 0){
+        val t = ts(i)
+        if (p(t)) Some(t) else _findReverse(i-1)
+      } else None
+    }
+    _findReverse(ts.length-1)
+  }
+  def findFirstIn[T] (ts: Array[T])(p: (T)=>Boolean): Option[T] = ts.find(p) // just to keep it consistent
+
+  def findLastIn[T] (ts: Seq[T])(p: (T)=>Boolean): Option[T] = {
+    for (t <- ts.reverseIterator) if (p(t)) return Some(t)
+    None
+  }
+  def findFirstIn[T] (ts: Seq[T])(p: (T)=>Boolean): Option[T] = ts.find(p) // just to keep it consistent
+
   /** helper to debug for-comprehensions */
   def checkComprehension (msg: String): Option[String] = {
     println(msg)

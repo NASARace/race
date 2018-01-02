@@ -25,4 +25,29 @@ import org.lwjgl.opencl.CL10._
 class CLKernel (id: Long) {
   val name = getKernelInfoStringUTF8(id,CL_KERNEL_FUNCTION_NAME)
   val numArgs = getKernelInfoInt(id,CL_KERNEL_NUM_ARGS)
+
+  def release = clReleaseKernel(id).?
+
+  def enqueueTask (queue: CLCommandQueue) = clEnqueueTask(queue.id,id,null,null).?
+
+  // <2do> ?? should we set arguments here, to make sure they are set
+  def enqueue1DRange (queue: CLCommandQueue, globalWorkSize: Long ) = withMemoryStack { stack =>
+    val globWS = stack.allocPointer
+    globWS(0) = globalWorkSize
+    clEnqueueNDRangeKernel(queue.id,id,1,null,globWS,null,null,null)
+  }
+
+  def setArgs (args: CLBuffer*): Unit = {
+    assert(args.size == numArgs)
+    var idx = 0
+    args.foreach { a =>
+      a match {
+        case buf:IntArrayBuffer => clSetKernelArg1p(id,idx,buf.id).?
+          // ... and many more
+        case _ => throw new RuntimeException(s"unknown argument type for kernel $name: $a")
+      }
+      idx += 1
+    }
+  }
+
 }

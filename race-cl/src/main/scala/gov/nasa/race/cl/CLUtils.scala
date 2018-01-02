@@ -27,6 +27,8 @@ import org.lwjgl.system.{MemoryStack, MemoryUtil}
 
 import scala.reflect.ClassTag
 
+import org.lwjgl.opencl.CL11._
+import org.lwjgl.opencl.CL12._
 
 /**
   * general OpenCL utilities for LWJGL
@@ -42,7 +44,7 @@ import scala.reflect.ClassTag
 object CLUtils {
 
   //--- generic return value error checker for cl.. functions
-  @inline def checkCLError(ec: Int): Unit = if (ec != CL_SUCCESS) throw new RuntimeException(f"OpenCL error [0x$ec%X]")
+  @inline def checkCLError(ec: Int): Unit = if (ec != CL_SUCCESS) throw new RuntimeException(f"OpenCL error ${errorMsg(ec)}")
   @inline def checkCLError(eb: IntBuffer): Unit = checkCLError(eb.get(0))
 
   implicit class CLErrCheck (val ec: Int) extends AnyVal {
@@ -200,5 +202,74 @@ object CLUtils {
 
   def getKernelInfoStringUTF8 (cl_kernel_id: Long, param_name: Int): String = {
     getInfoStringUTF8(cl_kernel_id,param_name)(clGetKernelInfo)
+  }
+
+  def errorMsg (ec: Int): String = {
+    ec match {
+        //--- CL10
+      case CL_SUCCESS                            => "CL_SUCCESS"
+      case CL_DEVICE_NOT_FOUND                   => "CL_DEVICE_NOT_FOUND"
+      case CL_DEVICE_NOT_AVAILABLE               => "CL_DEVICE_NOT_AVAILABLE"
+      case CL_COMPILER_NOT_AVAILABLE             => "CL_COMPILER_NOT_AVAILABLE"
+      case CL_MEM_OBJECT_ALLOCATION_FAILURE      => "CL_MEM_OBJECT_ALLOCATION_FAILURE"
+      case CL_OUT_OF_RESOURCES                   => "CL_OUT_OF_RESOURCES"
+      case CL_OUT_OF_HOST_MEMORY                 => "CL_OUT_OF_HOST_MEMORY"
+      case CL_PROFILING_INFO_NOT_AVAILABLE       => "CL_PROFILING_INFO_NOT_AVAILABLE"
+      case CL_MEM_COPY_OVERLAP                   => "CL_MEM_COPY_OVERLAP"
+      case CL_IMAGE_FORMAT_MISMATCH              => "CL_IMAGE_FORMAT_MISMATCH"
+      case CL_IMAGE_FORMAT_NOT_SUPPORTED         => "CL_IMAGE_FORMAT_NOT_SUPPORTED"
+      case CL_BUILD_PROGRAM_FAILURE              => "CL_BUILD_PROGRAM_FAILURE"
+      case CL_MAP_FAILURE                        => "CL_MAP_FAILURE"
+      case CL_INVALID_VALUE                      => "CL_INVALID_VALUE"
+      case CL_INVALID_DEVICE_TYPE                => "CL_INVALID_DEVICE_TYPE"
+      case CL_INVALID_PLATFORM                   => "CL_INVALID_PLATFORM"
+      case CL_INVALID_DEVICE                     => "CL_INVALID_DEVICE"
+      case CL_INVALID_CONTEXT                    => "CL_INVALID_CONTEXT"
+      case CL_INVALID_QUEUE_PROPERTIES           => "CL_INVALID_QUEUE_PROPERTIES"
+      case CL_INVALID_COMMAND_QUEUE              => "CL_INVALID_COMMAND_QUEUE"
+      case CL_INVALID_HOST_PTR                   => "CL_INVALID_HOST_PTR"
+      case CL_INVALID_MEM_OBJECT                 => "CL_INVALID_MEM_OBJECT"
+      case CL_INVALID_IMAGE_FORMAT_DESCRIPTOR    => "CL_INVALID_IMAGE_FORMAT_DESCRIPTOR"
+      case CL_INVALID_IMAGE_SIZE                 => "CL_INVALID_IMAGE_SIZE"
+      case CL_INVALID_SAMPLER                    => "CL_INVALID_SAMPLER"
+      case CL_INVALID_BINARY                     => "CL_INVALID_BINARY"
+      case CL_INVALID_BUILD_OPTIONS              => "CL_INVALID_BUILD_OPTIONS"
+      case CL_INVALID_PROGRAM                    => "CL_INVALID_PROGRAM"
+      case CL_INVALID_PROGRAM_EXECUTABLE         => "CL_INVALID_PROGRAM_EXECUTABLE"
+      case CL_INVALID_KERNEL_NAME                => "CL_INVALID_KERNEL_NAME"
+      case CL_INVALID_KERNEL_DEFINITION          => "CL_INVALID_KERNEL_DEFINITION"
+      case CL_INVALID_KERNEL                     => "CL_INVALID_KERNEL"
+      case CL_INVALID_ARG_INDEX                  => "CL_INVALID_ARG_INDEX"
+      case CL_INVALID_ARG_VALUE                  => "CL_INVALID_ARG_VALUE"
+      case CL_INVALID_ARG_SIZE                   => "CL_INVALID_ARG_SIZE"
+      case CL_INVALID_KERNEL_ARGS                => "CL_INVALID_KERNEL_ARGS"
+      case CL_INVALID_WORK_DIMENSION             => "CL_INVALID_WORK_DIMENSION"
+      case CL_INVALID_WORK_GROUP_SIZE            => "CL_INVALID_WORK_GROUP_SIZE"
+      case CL_INVALID_WORK_ITEM_SIZE             => "CL_INVALID_WORK_ITEM_SIZE"
+      case CL_INVALID_GLOBAL_OFFSET              => "CL_INVALID_GLOBAL_OFFSET"
+      case CL_INVALID_EVENT_WAIT_LIST            => "CL_INVALID_EVENT_WAIT_LIST"
+      case CL_INVALID_EVENT                      => "CL_INVALID_EVENT"
+      case CL_INVALID_OPERATION                  => "CL_INVALID_OPERATION"
+      case CL_INVALID_BUFFER_SIZE                => "CL_INVALID_BUFFER_SIZE"
+      case CL_INVALID_GLOBAL_WORK_SIZE           => "CL_INVALID_GLOBAL_WORK_SIZE"
+
+        //--- CL11
+      case CL_MISALIGNED_SUB_BUFFER_OFFSET              => "CL_MISALIGNED_SUB_BUFFER_OFFSET"
+      case CL_EXEC_STATUS_ERROR_FOR_EVENTS_IN_WAIT_LIST => "CL_EXEC_STATUS_ERROR_FOR_EVENTS_IN_WAIT_LIST"
+      case CL_INVALID_PROPERTY                          => "CL_INVALID_PROPERTY"
+
+        //--- CL12
+      case CL_COMPILE_PROGRAM_FAILURE             => "CL_COMPILE_PROGRAM_FAILURE"
+      case CL_LINKER_NOT_AVAILABLE                => "CL_LINKER_NOT_AVAILABLE"
+      case CL_LINK_PROGRAM_FAILURE                => "CL_LINK_PROGRAM_FAILURE"
+      case CL_DEVICE_PARTITION_FAILED             => "CL_DEVICE_PARTITION_FAILED"
+      case CL_KERNEL_ARG_INFO_NOT_AVAILABLE       => "CL_KERNEL_ARG_INFO_NOT_AVAILABLE"
+      case CL_INVALID_IMAGE_DESCRIPTOR            => "CL_INVALID_IMAGE_DESCRIPTOR"
+      case CL_INVALID_COMPILER_OPTIONS            => "CL_INVALID_COMPILER_OPTIONS"
+      case CL_INVALID_LINKER_OPTIONS              => "CL_INVALID_LINKER_OPTIONS"
+      case CL_INVALID_DEVICE_PARTITION_COUNT      => "CL_INVALID_DEVICE_PARTITION_COUNT"
+
+      case _ => s"$ec"
+    }
   }
 }

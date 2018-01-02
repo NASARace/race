@@ -23,7 +23,7 @@ import java.io.{File, FileInputStream, InputStreamReader}
 import java.util.Properties
 
 
-import scala.collection.JavaConversions._
+import scala.collection.JavaConverters._
 import sbt._
 import sbt.Keys._
 
@@ -40,7 +40,7 @@ object RaceBuild /*extends Build */ {
         val isr = new InputStreamReader(new FileInputStream(f), "UTF-8")
         raceProps.load(isr)
         isr.close
-        sys.props ++ raceProps
+        sys.props ++ raceProps.asScala
       }
     }
   }

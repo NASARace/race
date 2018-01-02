@@ -16,19 +16,25 @@
  */
 package gov.nasa.race.cl
 
+import gov.nasa.race._
 import gov.nasa.race.cl.CLUtils._
+import gov.nasa.race.util.StringUtils
 import org.lwjgl.opencl.CL._
 import org.lwjgl.opencl.CL10._
 import org.lwjgl.opencl.CLContextCallbackI
 import org.lwjgl.system.MemoryUtil
 
 import scala.collection.immutable.HashSet
+import scala.util.matching.Regex
 
 object CLPlatform {
   val platforms = withMemoryStack { stack =>
     val platformIDs = stack.getCLPointerBuffer((pn, pid) => clGetPlatformIDs( pid, pn))
     platformIDs.mapToArrayWithIndex{ (idx,id) => new CLPlatform(idx,id) }
   }
+
+  def firstPlatform: CLPlatform = if (platforms.length > 0) platforms(0) else throw new RuntimeException("no OpenCL platform")
+  def preferredDevice: CLDevice = firstPlatform.preferredDevice
 }
 
 /**
@@ -50,23 +56,31 @@ class CLPlatform (val index: Int, val id: Long) {
     deviceIDs.mapToArrayWithIndex{ (idx,id) => new CLDevice(idx,id,this) }
   }
 
-  /** on-demand context for all devices of this platform */
-  lazy val context: CLContext = createDeviceTypeContext(CL_DEVICE_TYPE_ALL)
 
-  /** on-demand context for all GPU devices of this platform */
-  lazy val gpuContext: CLContext = createDeviceTypeContext(CL_DEVICE_TYPE_GPU)
-  // ..and possible more for accelerator, custom etc.
+  def firstCPUDevice: Option[CLDevice] = devices.find(_.isCPU) // shouldn't need to be an option
+  def firstGPUDevice: Option[CLDevice] = devices.find(_.isGPU)
+  def lastGPUDevice: Option[CLDevice] = findLastIn(devices)(_.isGPU)
+  def lastDiscreteGPUDevice: Option[CLDevice] = findLastIn(devices)(_.isDiscreteGPU)
+  def firstIntegratedGPUDevice: Option[CLDevice] = findFirstIn(devices)(_.isIntegratedGPU)
 
-  def createDeviceTypeContext(deviceType: Long): CLContext = withMemoryStack { stack =>
-    val err = stack.allocInt
-    val ctxProps = stack.allocPointerBuffer(CL_CONTEXT_PLATFORM,id,0)
-    val errCb = new CLContextCallbackI {
-      override def invoke(err_info: Long, private_info: Long, cb: Long, user_data: Long): Unit = {
-        System.err.println(s"platform context error in $name: ${MemoryUtil.memUTF8(err_info)}")
-      }
+  def lastFp64Device: Option[CLDevice] = findLastIn(devices)(_.isFp64)
+  def lastFp64GPUDevice: Option[CLDevice] = findLastIn(devices)((d) => d.isGPU && d.isFp64)
+
+  def matchingNameGPUDevices (pattern: Regex): Array[CLDevice] = devices.filter(d=>StringUtils.matches(d.name,pattern))
+  def matchingVendorGPUDevices (pattern: Regex): Array[CLDevice] = devices.filter(d=>StringUtils.matches(d.vendor,pattern))
+
+
+  /**
+    * prefer GPUs over CPUs, prefer discrete GPUs over internal ones
+    * throw exception if there is no device
+    */
+  def preferredDevice: CLDevice = {
+    lastDiscreteGPUDevice.orElse(firstIntegratedGPUDevice).orElse(firstCPUDevice).getOrElse {
+      throw new RuntimeException(s"no device found in platform $name")
     }
-    val ctxId = clCreateContextFromType(ctxProps,deviceType,errCb,0,err)
-    checkCLError(err)
-    new CLContext(ctxId)
+  }
+
+  def preferredF64Device: CLDevice = lastFp64Device.getOrElse {
+    throw new RuntimeException(s"no fp64 device found in platform $name")
   }
 }

@@ -22,11 +22,14 @@ import org.lwjgl.opencl.CL10._
 /**
   * wrapper for OpenCL Program object
   */
-class CLProgram (id: Long) {
+class CLProgram (val id: Long, val context: CLContext) {
 
-  val kernels: Array[CLKernel] = withMemoryStack { stack =>
-    val kbuf = stack.getCLPointerBuffer((pn,pk) => clCreateKernelsInProgram(id,pk,pn))
-    kbuf.mapToArray( new CLKernel(_))
+  def release = clReleaseProgram(id).?
+
+  def createKernel(name: String): CLKernel = withMemoryStack { stack =>
+    val err = stack.allocInt
+    val kid = clCreateKernel(id,name,err)
+    checkCLError(err)
+    new CLKernel(kid)
   }
-
 }

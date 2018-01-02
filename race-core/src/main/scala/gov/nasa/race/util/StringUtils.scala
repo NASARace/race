@@ -124,7 +124,12 @@ object StringUtils {
   }
 
   def matches (s: String, pattern: Regex): Boolean = pattern.findFirstIn(s).isDefined
+  def matchesIgnoreCase (s: String, regex: String): Boolean = new Regex("(?i)" + regex).findFirstIn(s).isDefined
 
+  def caseInsensitiveRegex(pattern: Regex): Regex = new Regex("(?i)" + pattern.regex)
+  def caseInsensitiveRegex(regex: String): Regex = {
+    if (!regex.startsWith("(?i)")) new Regex("(?i)"+regex) else new Regex(regex)
+  }
 
   val xmlMsgNameRE = """<([^\s?!][\w:-]*?)[\s>]""".r // NOTE - REs cannot skip over comments
   def getXmlMsgName (msg: String): Option[String] = xmlMsgNameRE.findFirstMatchIn(msg).map(_.group(1))

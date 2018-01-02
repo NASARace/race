@@ -22,7 +22,7 @@ addSbtPlugin("com.typesafe.sbt" % "sbt-native-packager" % "1.3.2")
 addSbtPlugin("com.typesafe.sbt" % "sbt-multi-jvm" % "0.4.0")
 
 // document site generation with Laika: https://github.com/planet42/Laika
-addSbtPlugin("org.planet42" % "laika-sbt" % "0.7.0")
+addSbtPlugin("org.planet42" % "laika-sbt" % "0.7.5")
 
 
 //--- publishing support (needs to be in global on publishing machine)

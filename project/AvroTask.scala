@@ -16,6 +16,7 @@
  */
 
 import sbt._
+import scala.sys.process._
 
 /**
   * Apache Avro tool support

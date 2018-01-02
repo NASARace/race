@@ -16,6 +16,7 @@
  */
 
 import sbt._
+import scala.sys.process._
 
 /**
   * task to run make on projects that have a Makefile
