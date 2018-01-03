@@ -22,20 +22,11 @@ import org.lwjgl.opencl.CL10._
 /**
   * wrapper for OpenCL kernel object
   */
-class CLKernel (id: Long) {
+class CLKernel (val id: Long) extends AutoCloseable {
   val name = getKernelInfoStringUTF8(id,CL_KERNEL_FUNCTION_NAME)
   val numArgs = getKernelInfoInt(id,CL_KERNEL_NUM_ARGS)
 
-  def release = clReleaseKernel(id).?
-
-  def enqueueTask (queue: CLCommandQueue) = clEnqueueTask(queue.id,id,null,null).?
-
-  // <2do> ?? should we set arguments here, to make sure they are set
-  def enqueue1DRange (queue: CLCommandQueue, globalWorkSize: Long ) = withMemoryStack { stack =>
-    val globWS = stack.allocPointer
-    globWS(0) = globalWorkSize
-    clEnqueueNDRangeKernel(queue.id,id,1,null,globWS,null,null,null)
-  }
+  override def close = clReleaseKernel(id).?
 
   def setArgs (args: CLBuffer*): Unit = {
     assert(args.size == numArgs)

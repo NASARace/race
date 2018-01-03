@@ -22,8 +22,22 @@ import org.lwjgl.opencl.CL10._
 /**
   * wrapper for OpenCL command queue objects
   */
-class CLCommandQueue (val id: Long, val device: CLDevice, val context: CLContext, val outOfOrderExec: Boolean) {
+class CLCommandQueue (val id: Long, val device: CLDevice, val context: CLContext, val outOfOrderExec: Boolean) extends AutoCloseable {
 
   def flush = clFlush(id).?
   def finish = clFinish(id).?
+
+  override def close = clReleaseCommandQueue(id).?
+
+  def enqueueTask(kernel: CLKernel) = clEnqueueTask(id,kernel.id,null,null).?
+
+  def enqueue1DRange (kernel: CLKernel, globalWorkSize: Long ) = withMemoryStack { stack =>
+    val globWS = stack.allocPointer(globalWorkSize)
+    clEnqueueNDRangeKernel(id,kernel.id,1,null,globWS,null,null,null).?
+  }
+
+  def enqueueRead (buffer: IntArrayCWBuffer): Unit = buffer.enqueueRead(this)
+  def enqueueRead (buffer: IntArrayCRWBuffer): Unit = buffer.enqueueRead(this)
+  def enqueueWrite (buffer: IntArrayCRBuffer): Unit = buffer.enqueueWrite(this)
+  def enqueueWrite (buffer: IntArrayCRWBuffer): Unit = buffer.enqueueWrite(this)
 }

@@ -17,6 +17,7 @@
 package gov.nasa.race.cl
 
 import CLUtils._
+import gov.nasa.race.common.CloseStack
 import gov.nasa.race.tryWithResource
 import org.lwjgl.opencl.CL._
 import org.lwjgl.opencl.CL10._
@@ -101,72 +102,20 @@ class CLDevice (val index: Int, val id: Long, val platform: CLPlatform) {
 
   override def toString: String = s"${deviceType}(name=$name)"
 
-  /** on-demand created device context */
-  lazy val context: CLContext = withMemoryStack { stack =>
-    val err = stack.allocInt
-    val ctxProps = stack.allocPointerBuffer(0)
-    val errCb = new CLContextCallbackI {
-      override def invoke(err_info: Long, private_info: Long, cb: Long, user_data: Long): Unit = {
-        System.err.println(s"device context error in $name: ${MemoryUtil.memUTF8(err_info)}")
-      }
-    }
-    val ctxId = clCreateContext(ctxProps,id,errCb,0,err)
-    checkCLError(err)
-    new CLContext(ctxId,Array(this))
-  }
 
-  /** the on-demand default queue, which uses the device context */
-  lazy val queue: CLCommandQueue = createCommandQueue(context)
-
-  def createCommandQueue (context: CLContext, outOfOrder: Boolean=false): CLCommandQueue = withMemoryStack { stack =>
+  def createCommandQueue (context: CLContext, outOfOrder: Boolean=false)
+                         (implicit resources: CloseStack): CLCommandQueue = withMemoryStack { stack =>
     if (!context.includesDevice(this)) throw new RuntimeException("context does not support device $name")
 
     val err = stack.allocInt
     val properties = if (outOfOrder) CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE else 0
     val qid = clCreateCommandQueue(context.id, id, properties, err)
     checkCLError(err)
-    new CLCommandQueue(qid,this,context,outOfOrder)
+    resources.add( new CLCommandQueue(qid,this,context,outOfOrder) )
   }
-
-  def flush = queue.flush
-  def finish = queue.finish
-
-  def release = {
-    clReleaseCommandQueue(queue.id)
-    clReleaseContext(context.id)
-  }
-
-  //--- program load and build
 
   def buildProgram (program: CLProgram, options: String = ""): Unit = {
     clBuildProgram(program.id,id,options,null,0).?
   }
-
-  def createAndBuildProgram (src: String, options: String = ""): CLProgram = {
-    val program = context.createProgram(src)
-    buildProgram(program,options)
-    program
-  }
-
-  //--- kernel execution
-
-  def enqueueTask (kernel: CLKernel): Unit = kernel.enqueueTask(queue)
-  def enqueue1DRange (kernel: CLKernel, globalWorkSize: Long): Unit = kernel.enqueue1DRange(queue,globalWorkSize)
-
-  //--- IntBuffers
-
-  def createIntArrayCWBuffer (data: Array[Int]): IntArrayCWBuffer = CLBuffer.createIntArrayCW(data,context)
-  def createIntArrayCWBuffer (length: Int): IntArrayCWBuffer = CLBuffer.createIntArrayCW(length,context)
-
-  def createIntArrayCRBuffer (data: Array[Int]): IntArrayCRBuffer = CLBuffer.createIntArrayCR(data,context)
-  def createIntArrayCRBuffer (length: Int): IntArrayCRBuffer = CLBuffer.createIntArrayCR(length,context)
-
-  def createIntArrayCRWBuffer (data: Array[Int]): IntArrayCRWBuffer = CLBuffer.createIntArrayCRW(data,context)
-  def createIntArrayCRWBuffer (length: Int): IntArrayCRWBuffer = CLBuffer.createIntArrayCRW(length,context)
-
-  def enqueueRead (buffer: IntArrayCWBuffer): Unit = buffer.enqueueRead(queue)
-  def enqueueRead (buffer: IntArrayCRWBuffer): Unit = buffer.enqueueRead(queue)
-  def enqueueWrite (buffer: IntArrayCRBuffer): Unit = buffer.enqueueWrite(queue)
-  def enqueueWrite (buffer: IntArrayCRWBuffer): Unit = buffer.enqueueWrite(queue)
 
 }

@@ -86,12 +86,12 @@ object CLBuffer {
   *  - initialization (copy, map)
   */
 
-trait CLBuffer {
+trait CLBuffer extends AutoCloseable {
   val id: Long
   val size: Long
   val context: CLContext
 
-  def release = clReleaseMemObject(id).?
+  override def close = clReleaseMemObject(id).?
 }
 
 abstract class CLArrayBuffer[T](val data: Array[T], val tSize: Int) extends CLBuffer {

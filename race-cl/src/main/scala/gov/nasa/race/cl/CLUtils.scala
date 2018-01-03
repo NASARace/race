@@ -114,7 +114,13 @@ object CLUtils {
   implicit class MemStack (val stack: MemoryStack) extends AnyVal {
     @inline def allocInt = stack.callocInt(1)
     @inline def allocLong = stack.callocLong(1)
+
     @inline def allocPointer = stack.callocPointer(1)
+    @inline def allocPointer (p: Long) = {
+      val pb = stack.mallocPointer(1)
+      pb(0) = p
+      pb
+    }
 
     @inline def allocPointerBuffer(ps: Long*) = applyTo(stack.mallocPointer(ps.size)) { pb =>
       for ((p, i) <- ps.zipWithIndex) pb(i) = p

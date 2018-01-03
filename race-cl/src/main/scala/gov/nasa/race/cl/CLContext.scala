@@ -17,26 +17,32 @@
 package gov.nasa.race.cl
 
 import CLUtils._
+import gov.nasa.race.common.CloseStack
 import gov.nasa.race.util.StringUtils
 import org.lwjgl.opencl.CL10._
 import org.lwjgl.opencl.CLContextCallbackI
 import org.lwjgl.system.MemoryUtil
 
 object CLContext {
-  def apply (devices: CLDevice*): CLContext = withMemoryStack { stack =>
+
+  def apply (devices: CLDevice*)
+            (implicit resources: CloseStack): CLContext = withMemoryStack { stack =>
     val err = stack.allocInt
     val ctxProps = stack.allocPointerBuffer(0)
     val ctxDevs = stack.allocPointerBuffer(devices)(_.id)
-    val name = StringUtils.mkString(devices,"[",",","]"){ _.name}
+
     val errCb = new CLContextCallbackI {
       override def invoke(err_info: Long, private_info: Long, cb: Long, user_data: Long): Unit = {
+        val name = StringUtils.mkString(devices,"[",",","]"){ _.name}
         System.err.println(s"device context error in $name: ${MemoryUtil.memUTF8(err_info)}")
       }
     }
+
     val ctxId = clCreateContext(ctxProps,ctxDevs,errCb,0,err)
     checkCLError(err)
-    new CLContext(ctxId,Array(devices:_*))
+    resources.add( new CLContext(ctxId,Array(devices:_*)) )
   }
+
 }
 
 
@@ -46,15 +52,32 @@ object CLContext {
   * note that OpenCL only allows to put devices of the same platform into the same context, hence we
   * keep context objects in our CLPlatform objects
   */
-class CLContext (val id: Long, val devices: Array[CLDevice]) {
+class CLContext (val id: Long, val devices: Array[CLDevice]) extends AutoCloseable {
 
-  def includesDevice (device: CLDevice): Boolean = devices.find(_.id == device.id).isDefined
+  @inline def includesDevice (device: CLDevice): Boolean = devices.find(_.id == device.id).isDefined
 
-  def createProgram (src: String): CLProgram = withMemoryStack { stack =>
+  override def close = clReleaseContext(id).?
+
+  def createProgram (src: String)
+                    (implicit resources: CloseStack): CLProgram = withMemoryStack { stack =>
     val err = stack.allocInt
     val pid = clCreateProgramWithSource(id,src,err)
     checkCLError(err)
-    new CLProgram(pid,this)
+    resources.add( new CLProgram(pid,this) )
   }
 
+  @inline def createIntArrayCWBuffer (data: Array[Int])
+                                     (implicit res: CloseStack): IntArrayCWBuffer = res + CLBuffer.createIntArrayCW(data,this)
+  @inline def createIntArrayCWBuffer (length: Int)
+                                     (implicit res: CloseStack): IntArrayCWBuffer = res + CLBuffer.createIntArrayCW(length,this)
+
+  @inline def createIntArrayCRBuffer (data: Array[Int])
+                                     (implicit res: CloseStack): IntArrayCRBuffer = res + CLBuffer.createIntArrayCR(data,this)
+  @inline def createIntArrayCRBuffer (length: Int)
+                                     (implicit res: CloseStack): IntArrayCRBuffer = res + CLBuffer.createIntArrayCR(length,this)
+
+  @inline def createIntArrayCRWBuffer (data: Array[Int])
+                                      (implicit res: CloseStack): IntArrayCRWBuffer = res + CLBuffer.createIntArrayCRW(data,this)
+  @inline def createIntArrayCRWBuffer (length: Int)
+                                      (implicit res: CloseStack): IntArrayCRWBuffer = res + CLBuffer.createIntArrayCRW(length,this)
 }

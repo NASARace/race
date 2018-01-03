@@ -1,8 +1,29 @@
+/*
+ * Copyright (c) 2017, United States Government, as represented by the
+ * Administrator of the National Aeronautics and Space Administration.
+ * All rights reserved.
+ *
+ * The RACE - Runtime for Airspace Concept Evaluation platform is licensed
+ * under the Apache License, Version 2.0 (the "License"); you may not use
+ * this file except in compliance with the License. You may obtain a copy
+ * of the License at http://www.apache.org/licenses/LICENSE-2.0.
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package gov.nasa.race.cl
 
+import gov.nasa.race._
+import gov.nasa.race.common.CloseStack
 import gov.nasa.race.test.RaceSpec
 import org.scalatest.{BeforeAndAfterAll, FlatSpec}
 
+/**
+  * unit tests for basic gov.nasa.race.cl constructs
+  */
 class CLDeviceSpec extends FlatSpec with RaceSpec with BeforeAndAfterAll {
 
   "a GPU CLDevice" should "execute a 1D kernel to add array elements" in {
@@ -15,37 +36,27 @@ class CLDeviceSpec extends FlatSpec with RaceSpec with BeforeAndAfterAll {
          }
       """
 
-    val device = CLPlatform.preferredDevice
-    println(s"got $device")
+    tryWithResource(new CloseStack) { implicit resources =>
+      val device = CLPlatform.preferredDevice
+      println(s"got $device")
 
-    val context =CLContext(device)
-    val queue = device.createCommandQueue(context)
+      val context = CLContext(device)
+      val queue = device.createCommandQueue(context)
 
-    //--- change
-    val a = Array[Int](1, 2, 3, 4, 5)
-    val aBuf = device.createIntArrayCRBuffer(a)
+      val aBuf = context.createIntArrayCRBuffer(Array[Int](1, 2, 3, 4, 5))
+      val bBuf = context.createIntArrayCRBuffer(Array[Int](5, 4, 3, 2, 1))
+      val cBuf = context.createIntArrayCWBuffer(aBuf.length)
 
-    val b = Array[Int](5, 4, 3, 2, 1)
-    val bBuf = device.createIntArrayCRBuffer(b)
+      val prog = context.createProgram(src)
+      device.buildProgram(prog)
 
-    val cBuf = device.createIntArrayCWBuffer(a.length)
+      val kernel = prog.createKernel("add")
+      kernel.setArgs(aBuf, bBuf, cBuf)
 
-    val prog = device.createAndBuildProgram(src)
-    val kernel = prog.createKernel("add")
+      queue.enqueue1DRange(kernel, aBuf.length)
+      queue.enqueueRead(cBuf)
 
-    kernel.setArgs(aBuf, bBuf, cBuf)
-    device.enqueue1DRange(kernel, a.length)
-    device.enqueueRead(cBuf)
-    //device.finish
-
-    println(s"result: ${cBuf.data.mkString(",")}")
-
-
-    kernel.release
-    prog.release
-    aBuf.release
-    bBuf.release
-    cBuf.release
-    device.release
+      println(s"result: ${cBuf.data.mkString(",")}")
+    }
   }
 }
