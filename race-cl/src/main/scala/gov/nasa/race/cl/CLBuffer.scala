@@ -16,10 +16,22 @@
  */
 package gov.nasa.race.cl
 
-import java.nio.IntBuffer
+import java.nio.{ByteBuffer, IntBuffer}
 
 import gov.nasa.race.cl.CLUtils._
+import gov.nasa.race.common.BufferRecord
 import org.lwjgl.opencl.CL10._
+import org.lwjgl.system.MemoryUtil
+
+/**
+  * we need this extra type to break the hen-and-egg problem that the BufferRecord needs a ByteBuffer arg, but we
+  * can't allocate the buffer before we have the record size
+  *
+  * @param recordSize size of single record in bytes (including alignment)
+  * @param nRecords number of records to allocate
+  */
+abstract class MappedRecord (recordSize: Int, val nRecords: Int)
+  extends BufferRecord(MemoryUtil.memAlloc(recordSize*nRecords),recordSize)
 
 /**
   * note - while the various buffer creation methods can be used explicitly, they are normally called via
@@ -33,9 +45,23 @@ object CLBuffer {
   final val COPY_READ_WRITE: Long = CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR
 
 
+  //--- generic ByteBuffer buffers
+
+
+
+  def createMappedRecordBuffer (rec: MappedRecord, context: CLContext): MappedRecordBuffer = {
+    withMemoryStack { stack =>
+      val err = stack.allocInt
+      val bid = clCreateBuffer(context.id,CL_MEM_READ_WRITE,rec.buffer,err)
+      checkCLError(err(0))
+      new MappedRecordBuffer(bid,rec,context)
+    }
+  }
+
+
   //--- ArrayBuffer creation
-  private def createArrayBuffer[T<:CLArrayBuffer[_]] (context: CLContext, flags: Long,
-                                                      f: (Long,IntBuffer)=>Long, g: (Long)=>T): T = {
+  private def createArrayBuffer[T<:ArrayBuffer[_]](context: CLContext, flags: Long,
+                                                   f: (Long,IntBuffer)=>Long, g: (Long)=>T): T = {
     withMemoryStack { stack =>
       val err = stack.allocInt
       val bid = f(flags, err)
@@ -44,8 +70,8 @@ object CLBuffer {
     }
   }
 
-  private def createAndInitArrayBuffer[T<:CLArrayBuffer[_]] (context: CLContext, flags: Long,
-                                                     f: (Long,Array[Int])=>Long, g: (Long)=>T): T = {
+  private def createAndInitArrayBuffer[T<:ArrayBuffer[_]](context: CLContext, flags: Long,
+                                                          f: (Long,Array[Int])=>Long, g: (Long)=>T): T = {
     val err = new Array[Int](1)
     val bid = f(flags,err)
     checkCLError(err(0))
@@ -94,11 +120,32 @@ trait CLBuffer extends AutoCloseable {
   override def close = clReleaseMemObject(id).?
 }
 
-abstract class CLArrayBuffer[T](val data: Array[T], val tSize: Int) extends CLBuffer {
+/**
+  * base of all mapped buffers
+  * note that LWJGL only supports ByteBuffers as the underlying type
+  * NOTE ALSO - the underlying ByteBuffer has to be MemoryUtil allocated
+  */
+abstract class MappedBuffer(var data: ByteBuffer) extends CLBuffer {
+  val size = data.capacity
+
+  // NOTE - this could swap the underlying ByteBuffer
+  def enqueueMap(queue: CLCommandQueue): Unit = withMemoryStack { stack =>
+    val err = stack.allocInt
+    data = clEnqueueMapBuffer(queue.id, id, true, 0, 0, size, null, null, err, data)
+    checkCLError(err)
+  }
+
+  def enqueueUnmap(queue: CLCommandQueue): Unit = clEnqueueUnmapMemObject(queue.id,id,data,null,null).?
+}
+
+class MappedRecordBuffer (val id: Long, val rec: MappedRecord, val context: CLContext) extends MappedBuffer(rec.buffer)
+
+
+abstract class ArrayBuffer[T](val data: Array[T], val tSize: Int) extends CLBuffer {
   val size: Long = data.length * tSize
   def length = data.length
 }
-abstract class IntArrayBuffer (data: Array[Int]) extends CLArrayBuffer[Int](data,4)
+abstract class IntArrayBuffer (data: Array[Int]) extends ArrayBuffer[Int](data,4)
 
 //--- the concrete buffer classes
 
