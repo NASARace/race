@@ -17,6 +17,7 @@
 package gov.nasa.race.common
 
 import java.nio.ByteBuffer
+import scala.language.implicitConversions
 
 /**
   * accessor for java.nio.ByteBuffers that hold an array of 'records' with scalar fields for which we need to
@@ -25,52 +26,120 @@ import java.nio.ByteBuffer
   * we keep the recordOffset variable but compute it from the checked recordIndex so that we can slide
   * the BufferRecord over the whole data buffer
   *
-  * note this automatically adjusts to the endian-ness of the underlying buffer
-  *
-  * use concrete records to define fields like this:
-  * {{{
-  *   class MyRecord (buffer: ByteBuffer) extends BufferRecord(buffer,8) {
-  *     // read-write field 'a'
-  *     def a = getInt(0)
-  *     def a_= (v: Int) = putInt(0,v)
-  *
-  *     // read-only field 'b'
-  *     def b = getDouble(4)
-  *   }
-  * }}}
-  *
-  * while the requirement to explicitly define field getters and setters seems to add some boiler plate, we
-  * actually want to be able to control which fields are read/write since a primary use case is to define the
-  * interface structures for native code such as OpenCL kernel arguments, which would otherwise not be
-  * supported by more abstract (and expensive) approaches such as scodec codecs
+  * note that we do allow a null buffer argument so that we can compute buffer sizes from the record number and type
   */
-abstract class BufferRecord (val buffer: ByteBuffer, val size: Int) {
+
+abstract class BufferRecord (val size: Int, val buffer: ByteBuffer) {
+  import BufferRecord._
+
+  protected var maxRecordIndex = getMaxRecordIndex
   protected var recordOffset: Int = 0
 
-  def setRecordIndex (idx: Int) = {
-    val max = (buffer.capacity / size) - 1
-    val i = idx * size
-    if (i < 0 || i > max) throw new RuntimeException(s"record index out of bounds: $idx (0..$max)")
-    recordOffset = i
+  protected def getMaxRecordIndex = if (buffer != null) (buffer.capacity/size)-1 else -1
+
+  def setRecordIndex (idx: Int): Unit = {
+    if (idx < 0 || idx > maxRecordIndex) throw new RuntimeException(s"record index out of bounds: $idx (0..$maxRecordIndex)")
+    recordOffset = idx * size
   }
 
-  def getByte (fieldOffset: Int): Byte = buffer.get(recordOffset + fieldOffset)
-  def putByte (fieldOffset: Int, v: Byte): BufferRecord = { buffer.put(recordOffset + fieldOffset, v); this }
+  def index = recordOffset / size
 
-  def getShort (fieldOffset: Short): Short = buffer.getShort(recordOffset + fieldOffset)
-  def putShort (fieldOffset: Int, v: Short): BufferRecord = { buffer.putShort(recordOffset + fieldOffset, v); this }
+  def apply (idx: Int): this.type = {
+    setRecordIndex(idx)
+    this
+  }
 
-  def getInt (fieldOffset: Int): Int = buffer.getInt(recordOffset + fieldOffset)
-  def putInt (fieldOffset: Int, v: Int): BufferRecord = { buffer.putInt(recordOffset + fieldOffset, v); this }
+  def foreach( f: =>Unit ): Unit= {
+    for (i <- 0 to maxRecordIndex) {
+      setRecordIndex(i)
+      f
+    }
+  }
 
-  def getLong (fieldOffset: Int): Long = buffer.getLong(recordOffset + fieldOffset)
-  def putLong (fieldOffset: Int, v: Long): BufferRecord = { buffer.putLong(recordOffset + fieldOffset, v); this }
+  def getSlicedBuffer: ByteBuffer = ByteBuffer.wrap(buffer.array, recordOffset, size)
 
-  def getFloat (fieldOffset: Int): Float = buffer.getFloat(recordOffset + fieldOffset)
-  def putFloat (fieldOffset: Int, v: Float): BufferRecord = { buffer.putFloat(recordOffset + fieldOffset, v); this }
+  //--- the field types
 
-  def getDouble (fieldOffset: Int): Double = buffer.getDouble(recordOffset + fieldOffset)
-  def putDouble (fieldOffset: Int, v: Double): BufferRecord = { buffer.putDouble(recordOffset + fieldOffset, v); this }
+  // we use a packed byte as the underlying storage type since this is the smallest ByteBuffer unit
+  class BooleanField (val fieldOffset: Int) extends BooleanConvertible {
+    def := (v: Boolean): Unit = buffer.put(recordOffset + fieldOffset, if (v) 1 else 0)
+    def toBoolean = buffer.get(recordOffset + fieldOffset) == 1
+  }
+  def boolean (fieldOffset: Int) = new BooleanField(fieldOffset)
 
-  // ..maybe we should add vector types (double3 and the like)
+  class ByteField (val fieldOffset: Int) extends ByteConvertible {
+    def := (v: Byte): Unit = buffer.put(recordOffset + fieldOffset, v)
+    def := (v: Int): Unit = buffer.put(recordOffset + fieldOffset, v.toByte)
+    def toByte = buffer.get(recordOffset + fieldOffset)
+  }
+  def byte (fieldOffset: Int) = new ByteField(fieldOffset)
+
+  class ShortField (val fieldOffset: Int) extends ShortConvertible {
+    def := (v: Short): Unit = buffer.putShort(recordOffset + fieldOffset, v)
+    def toShort = buffer.getShort(recordOffset + fieldOffset)
+  }
+  def short (fieldOffset: Int) = new ShortField(fieldOffset)
+
+  class IntField (val fieldOffset: Int) extends IntConvertible {
+    def := (v: Int): Unit = buffer.putInt(recordOffset + fieldOffset, v)
+    def toInt = buffer.getInt(recordOffset + fieldOffset)
+  }
+  def int (fieldOffset: Int) = new IntField(fieldOffset)
+
+  class LongField (val fieldOffset: Int) extends LongConvertible {
+    def := (v: Long): Unit = buffer.putLong(recordOffset + fieldOffset, v)
+    def toLong = buffer.getLong(recordOffset + fieldOffset)
+  }
+  def long (fieldOffset: Int) = new LongField(fieldOffset)
+
+  class FloatField (val fieldOffset: Int) extends FloatConvertible {
+    def := (v: Float): Unit = buffer.putFloat(recordOffset + fieldOffset, v)
+    def := (v: Int): Unit = buffer.putFloat(recordOffset + fieldOffset, v.toFloat)
+    def toFloat = buffer.getFloat(recordOffset + fieldOffset)
+  }
+  def float (fieldOffset: Int) = new FloatField(fieldOffset)
+
+  class DoubleField (val fieldOffset: Int) extends DoubleConvertible {
+    def := (v: Double): Unit = buffer.putDouble(recordOffset + fieldOffset, v)
+    def := (v: Int): Unit = buffer.putDouble(recordOffset + fieldOffset, v.toDouble)
+    def toDouble = buffer.getDouble(recordOffset + fieldOffset)
+  }
+  def double (fieldOffset: Int) = new DoubleField(fieldOffset)
+}
+
+object BufferRecord {
+  trait DoubleConvertible {
+    def toDouble: Double
+  }
+  implicit def toDouble (o: DoubleConvertible) = o.toDouble
+
+  trait IntConvertible {
+    def toInt: Int
+  }
+  implicit def toInt (o: IntConvertible) = o.toInt
+
+  trait LongConvertible {
+    def toLong: Long
+  }
+  implicit def toLong (o: LongConvertible) = o.toLong
+
+  trait FloatConvertible {
+    def toFloat: Float
+  }
+  implicit def toFloat (o: FloatConvertible) = o.toFloat
+
+  trait ShortConvertible {
+    def toShort: Short
+  }
+  implicit def toShort (o: ShortConvertible) = o.toShort
+
+  trait ByteConvertible {
+    def toByte: Byte
+  }
+  implicit def toByte (o: ByteConvertible) = o.toByte
+
+  trait BooleanConvertible {
+    def toBoolean: Boolean
+  }
+  implicit def toBoolean (o: BooleanConvertible) = o.toBoolean
 }

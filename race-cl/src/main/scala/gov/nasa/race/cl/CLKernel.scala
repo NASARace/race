@@ -34,7 +34,9 @@ class CLKernel (val id: Long) extends AutoCloseable {
     args.foreach { a =>
       a match {
         case buf:IntArrayBuffer => clSetKernelArg1p(id,idx,buf.id).?
+        case buf:MappedByteBuffer => clSetKernelArg1p(id,idx,buf.id).?
           // ... and many more
+
         case _ => throw new RuntimeException(s"unknown argument type for kernel $name: $a")
       }
       idx += 1

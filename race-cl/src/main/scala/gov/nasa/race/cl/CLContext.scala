@@ -16,8 +16,10 @@
  */
 package gov.nasa.race.cl
 
+import java.nio.ByteBuffer
+
 import CLUtils._
-import gov.nasa.race.common.CloseStack
+import gov.nasa.race.common.{BufferRecord, CloseStack}
 import gov.nasa.race.util.StringUtils
 import org.lwjgl.opencl.CL10._
 import org.lwjgl.opencl.CLContextCallbackI
@@ -66,21 +68,25 @@ class CLContext (val id: Long, val devices: Array[CLDevice]) extends AutoCloseab
     resources.add( new CLProgram(pid,this) )
   }
 
-  def createIntArrayCWBuffer (data: Array[Int])
-                             (implicit res: CloseStack): IntArrayCWBuffer = res.add( CLBuffer.createIntArrayCW(data,this) )
-  def createIntArrayCWBuffer (length: Int)
-                             (implicit res: CloseStack): IntArrayCWBuffer = res.add( CLBuffer.createIntArrayCW(length,this) )
+  def createIntArrayWBuffer (data: Array[Int])
+                             (implicit res: CloseStack): IntArrayWBuffer = res.add( CLBuffer.createIntArrayW(data,this) )
+  def createIntArrayWBuffer (length: Int)
+                             (implicit res: CloseStack): IntArrayWBuffer = res.add( CLBuffer.createIntArrayW(length,this) )
 
   def createIntArrayCRBuffer (data: Array[Int])
-                             (implicit res: CloseStack): IntArrayCRBuffer = res.add( CLBuffer.createIntArrayCR(data,this) )
+                             (implicit res: CloseStack): IntArrayRBuffer = res.add( CLBuffer.createIntArrayR(data,this) )
   def createIntArrayCRBuffer (length: Int)
-                             (implicit res: CloseStack): IntArrayCRBuffer = res.add( CLBuffer.createIntArrayCR(length,this) )
+                             (implicit res: CloseStack): IntArrayRBuffer = res.add( CLBuffer.createIntArrayR(length,this) )
 
   def createIntArrayCRWBuffer (data: Array[Int])
-                              (implicit res: CloseStack): IntArrayCRWBuffer = res.add( CLBuffer.createIntArrayCRW(data,this) )
+                              (implicit res: CloseStack): IntArrayRWBuffer = res.add( CLBuffer.createIntArrayRW(data,this) )
   def createIntArrayCRWBuffer (length: Int)
-                              (implicit res: CloseStack): IntArrayCRWBuffer = res.add( CLBuffer.createIntArrayCRW(length,this) )
+                              (implicit res: CloseStack): IntArrayRWBuffer = res.add( CLBuffer.createIntArrayRW(length,this) )
 
-  def createMappedRecordBuffer (rec: MappedRecord)
-                              (implicit res: CloseStack): MappedRecordBuffer = res.add( CLBuffer.createMappedRecordBuffer(rec,this) )
+  def createMappedByteBuffer (size: Long)
+                              (implicit res: CloseStack): MappedByteBuffer = res.add( CLBuffer.createMappedByteBuffer(size,this) )
+  def createMappedRecordBuffer[R <: BufferRecord] (length: Int, createRecord: (ByteBuffer)=>R)
+                                                  (implicit res: CloseStack): MappedRecordBuffer[R] = {
+    res.add( CLBuffer.createMappedRecordBuffer(length,createRecord,this))
+  }
 }

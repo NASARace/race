@@ -16,41 +16,41 @@
  */
 package gov.nasa.race.cl
 
+import java.nio.ByteBuffer
+
 import gov.nasa.race._
-import gov.nasa.race.common.CloseStack
+import gov.nasa.race.common.{BufferRecord, CloseStack}
 import gov.nasa.race.test.RaceSpec
 import org.scalatest.FlatSpec
 
-object MappedRecordBufferSpec {
+class TestRecord (buffer: ByteBuffer) extends BufferRecord(20,buffer) {
+  var a = double(0)
+  var b = int(8)
+  var c = double(12)
 
-  class ExtrapolatorRecord (nRecords: Int) extends MappedRecord(32,nRecords) {
-
-    // kernel input
-    def s_= (v: Double)   = putDouble(0,v)
-    def m_= (v: Double)   = putDouble(8,v)
-    def tlast_= (v: Long) = putLong(16,v)
-
-    //kernel output
-    def estimate          = getDouble(24)
-  }
-
-  class ExtrapolatorHostData {
-
-  }
+  // just some syntactic sugar
+  def set (_a: Double, _b: Int, _c: Double): Unit = { a := _a; b := _b; c := _c }
 }
 
 /**
   * unit tests for MappedRecordBuffer
   */
 class MappedRecordBufferSpec extends FlatSpec with RaceSpec {
-  import MappedRecordBufferSpec._
 
   "a MappedRecordBuffer" should "be directly accessible from both host and device" in {
-    val src =
-      """
-         __kernel void extrapolate (__global int* a, __global int* b, __global int* c) {
+
+      val src = """
+         typedef struct __attribute__ ((packed)) _test_record {
+           double a;
+           int b;
+           double c;
+         } test_record;
+
+         __kernel void compute_c (__global test_record* rec) {
            unsigned int i = get_global_id(0);
 
+           rec[i].c = rec[i].a + rec[i].b;
+           //printf("### [%d]: %f + %d = %f\n", i, rec[i].a, rec[i].b, rec[i].c);
          }
       """
 
@@ -61,16 +61,35 @@ class MappedRecordBufferSpec extends FlatSpec with RaceSpec {
       val context = CLContext(device)
       val queue = device.createCommandQueue(context)
 
-      val rec = new ExtrapolatorRecord(10)
-      val data = context.createMappedRecordBuffer(rec)
+      val data = context.createMappedRecordBuffer(2, new TestRecord(_))
+
+      queue.executeMapped(data) { buf =>
+        val rec = new TestRecord(buf)
+        rec(0).set( 41.0, 1, 0.0 )
+        rec(1).set( 40.0, 2, 0.0 )
+      }
 
       val prog = context.createProgram(src)
       device.buildProgram(prog)
 
-      val kernel = prog.createKernel("extrapolate")
+      val kernel = prog.createKernel("compute_c")
       kernel.setArgs(data)
 
-      queue.enqueue1DRange(kernel, rec.nRecords)
+      queue.enqueue1DRange(kernel, data.length)
+      queue.finish
+
+      val res = queue.executeMappedWithRecord(data) { rec =>
+        var sum = 0.0
+        rec.foreach {
+          val a: Double = rec.a
+          val b: Int = rec.b
+          val c: Double = rec.c
+          println(s"[${rec.index}] $a + $b = $c")
+          sum += c
+        }
+        sum
+      }
+      println(s"sum is: $res")
     }
   }
 }

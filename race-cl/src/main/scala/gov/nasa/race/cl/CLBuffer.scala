@@ -23,15 +23,6 @@ import gov.nasa.race.common.BufferRecord
 import org.lwjgl.opencl.CL10._
 import org.lwjgl.system.MemoryUtil
 
-/**
-  * we need this extra type to break the hen-and-egg problem that the BufferRecord needs a ByteBuffer arg, but we
-  * can't allocate the buffer before we have the record size
-  *
-  * @param recordSize size of single record in bytes (including alignment)
-  * @param nRecords number of records to allocate
-  */
-abstract class MappedRecord (recordSize: Int, val nRecords: Int)
-  extends BufferRecord(MemoryUtil.memAlloc(recordSize*nRecords),recordSize)
 
 /**
   * note - while the various buffer creation methods can be used explicitly, they are normally called via
@@ -40,40 +31,42 @@ abstract class MappedRecord (recordSize: Int, val nRecords: Int)
   * note that read/write are from the device perspective, i.e. the host needs a enqueueWrite for a read buffer
   */
 object CLBuffer {
-  final val COPY_WRITE: Long = CL_MEM_WRITE_ONLY | CL_MEM_COPY_HOST_PTR
   final val COPY_READ: Long = CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR
   final val COPY_READ_WRITE: Long = CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR
 
 
-  //--- generic ByteBuffer buffers
-
-
-
-  def createMappedRecordBuffer (rec: MappedRecord, context: CLContext): MappedRecordBuffer = {
+  def createMappedByteBuffer(size: Long, context: CLContext): MappedByteBuffer = {
     withMemoryStack { stack =>
       val err = stack.allocInt
-      val bid = clCreateBuffer(context.id,CL_MEM_READ_WRITE,rec.buffer,err)
+      val bid = clCreateBuffer(context.id, CL_MEM_READ_WRITE, size, err)
       checkCLError(err(0))
-      new MappedRecordBuffer(bid,rec,context)
+      new MappedByteBuffer(bid, size, context)
+    }
+  }
+  def createMappedRecordBuffer[R<:BufferRecord](length: Int, createRecord: (ByteBuffer)=>R, context: CLContext): MappedRecordBuffer[R] = {
+    withMemoryStack { stack =>
+      val err = stack.allocInt
+      val size = createRecord(null).size*length
+      val bid = clCreateBuffer(context.id, CL_MEM_READ_WRITE, size, err)
+      checkCLError(err(0))
+      new MappedRecordBuffer[R](bid, length, size, createRecord, context)
     }
   }
 
 
   //--- ArrayBuffer creation
-  private def createArrayBuffer[T<:ArrayBuffer[_]](context: CLContext, flags: Long,
-                                                   f: (Long,IntBuffer)=>Long, g: (Long)=>T): T = {
+  private def createArrayBuffer[T<:ArrayBuffer[_]](context: CLContext, f: (IntBuffer)=>Long, g: (Long)=>T): T = {
     withMemoryStack { stack =>
       val err = stack.allocInt
-      val bid = f(flags, err)
+      val bid = f(err)
       checkCLError(err(0))
       g(bid)
     }
   }
 
-  private def createAndInitArrayBuffer[T<:ArrayBuffer[_]](context: CLContext, flags: Long,
-                                                          f: (Long,Array[Int])=>Long, g: (Long)=>T): T = {
+  private def createAndInitArrayBuffer[T<:ArrayBuffer[_]](context: CLContext, f: (Array[Int])=>Long, g: (Long)=>T): T = {
     val err = new Array[Int](1)
-    val bid = f(flags,err)
+    val bid = f(err)
     checkCLError(err(0))
     g(bid)
   }
@@ -81,25 +74,37 @@ object CLBuffer {
 
 
   //--- IntArrayBuffers
-  def createIntArrayCW (length: Int, context: CLContext): IntArrayCWBuffer = withMemoryStack { stack =>
-    createArrayBuffer(context,CL_MEM_WRITE_ONLY, clCreateBuffer(context.id,_,length*4L,_), new IntArrayCWBuffer(_,new Array[Int](length),context))
+  def createIntArrayW (length: Int, context: CLContext): IntArrayWBuffer = withMemoryStack { stack =>
+    createArrayBuffer(context,
+      clCreateBuffer(context.id,CL_MEM_WRITE_ONLY,length*4L,_),
+      new IntArrayWBuffer(_,new Array[Int](length),context))
   }
-  def createIntArrayCW (data: Array[Int],context: CLContext): IntArrayCWBuffer = {
-    createAndInitArrayBuffer(context,COPY_WRITE, clCreateBuffer(context.id,_,data,_), new IntArrayCWBuffer(_,data,context))
-  }
-
-  def createIntArrayCR (length: Int,context: CLContext): IntArrayCRBuffer = {
-    createArrayBuffer(context,COPY_READ, clCreateBuffer(context.id,_,length*4L,_), new IntArrayCRBuffer(_,new Array[Int](length),context))
-  }
-  def createIntArrayCR (data: Array[Int],context: CLContext): IntArrayCRBuffer = {
-    createAndInitArrayBuffer(context,COPY_READ, clCreateBuffer(context.id,_,data,_), new IntArrayCRBuffer(_,data,context))
+  def createIntArrayW (data: Array[Int],context: CLContext): IntArrayWBuffer = {
+    createAndInitArrayBuffer(context,
+      clCreateBuffer(context.id,CL_MEM_WRITE_ONLY,data,_),
+      new IntArrayWBuffer(_,data,context))
   }
 
-  def createIntArrayCRW (length: Int,context: CLContext): IntArrayCRWBuffer = {
-    createArrayBuffer(context,COPY_READ_WRITE, clCreateBuffer(context.id,_,length*4L,_), new IntArrayCRWBuffer(_,new Array[Int](length),context))
+  def createIntArrayR(length: Int, context: CLContext): IntArrayRBuffer = {
+    createArrayBuffer(context,
+      clCreateBuffer(context.id,CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,length*4L,_),
+      new IntArrayRBuffer(_,new Array[Int](length),context))
   }
-  def createIntArrayCRW (data: Array[Int],context: CLContext): IntArrayCRWBuffer = {
-    createAndInitArrayBuffer(context,COPY_READ_WRITE, clCreateBuffer(context.id,_,data,_), new IntArrayCRWBuffer(_,data,context))
+  def createIntArrayR(data: Array[Int], context: CLContext): IntArrayRBuffer = {
+    createAndInitArrayBuffer(context,
+      clCreateBuffer(context.id,CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,data,_),
+      new IntArrayRBuffer(_,data,context))
+  }
+
+  def createIntArrayRW(length: Int, context: CLContext): IntArrayRWBuffer = {
+    createArrayBuffer(context,
+      clCreateBuffer(context.id,CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR,length*4L,_),
+      new IntArrayRWBuffer(_,new Array[Int](length),context))
+  }
+  def createIntArrayRW(data: Array[Int], context: CLContext): IntArrayRWBuffer = {
+    createAndInitArrayBuffer(context,
+      clCreateBuffer(context.id,CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR,data,_),
+      new IntArrayRWBuffer(_,data,context))
   }
 }
 
@@ -121,24 +126,48 @@ trait CLBuffer extends AutoCloseable {
 }
 
 /**
-  * base of all mapped buffers
-  * note that LWJGL only supports ByteBuffers as the underlying type
-  * NOTE ALSO - the underlying ByteBuffer has to be MemoryUtil allocated
+  * a ByteBuffer based buffer that is mapped into the host
+  * NOTE - the host can only access the buffer after it has been mapped, the device only will see the host data
+  * after it has been unmapped. Hence there is no point of pre-allocating a ByteBuffer and we should only have one
+  * available inside of a executeMapped{} block
   */
-abstract class MappedBuffer(var data: ByteBuffer) extends CLBuffer {
-  val size = data.capacity
+class MappedByteBuffer(val id: Long, val size: Long, val context: CLContext) extends CLBuffer {
+  var data: ByteBuffer = null
 
-  // NOTE - this could swap the underlying ByteBuffer
-  def enqueueMap(queue: CLCommandQueue): Unit = withMemoryStack { stack =>
-    val err = stack.allocInt
-    data = clEnqueueMapBuffer(queue.id, id, true, 0, 0, size, null, null, err, data)
-    checkCLError(err)
+  def enqueueMap(queue: CLCommandQueue): Unit = synchronized {
+    if (data == null) {
+      withMemoryStack { stack =>
+        val err = stack.allocInt
+        data = clEnqueueMapBuffer(queue.id, id, true, CL_MAP_READ | CL_MAP_WRITE, 0, size, null, null, err, null)
+        checkCLError(err)
+      }
+    }
   }
 
-  def enqueueUnmap(queue: CLCommandQueue): Unit = clEnqueueUnmapMemObject(queue.id,id,data,null,null).?
+  def enqueueUnmap(queue: CLCommandQueue): Unit = synchronized {
+    if (data != null) {
+      clEnqueueUnmapMemObject(queue.id, id, data, null, null).?
+      data = null
+    }
+  }
+
+  def executeMapped[T] (queue: CLCommandQueue)(f: (ByteBuffer)=>T): T = synchronized {
+    enqueueMap(queue)
+    val res = f(data)
+    enqueueUnmap(queue)
+    res
+  }
 }
 
-class MappedRecordBuffer (val id: Long, val rec: MappedRecord, val context: CLContext) extends MappedBuffer(rec.buffer)
+class MappedRecordBuffer[R<:BufferRecord] (id: Long, val length: Int, size: Long, createRecord: (ByteBuffer)=>R, context: CLContext)
+                                                     extends MappedByteBuffer(id, size, context) {
+  def executeMappedWithRecord[T] (queue: CLCommandQueue)(f: (R)=>T): T = synchronized {
+    enqueueMap(queue)
+    val res = f(createRecord(data))
+    enqueueUnmap(queue)
+    res
+  }
+}
 
 
 abstract class ArrayBuffer[T](val data: Array[T], val tSize: Int) extends CLBuffer {
@@ -147,16 +176,15 @@ abstract class ArrayBuffer[T](val data: Array[T], val tSize: Int) extends CLBuff
 }
 abstract class IntArrayBuffer (data: Array[Int]) extends ArrayBuffer[Int](data,4)
 
-//--- the concrete buffer classes
 
 //--- IntArray copy buffers
-class IntArrayCRBuffer (val id: Long, data: Array[Int], val context: CLContext) extends IntArrayBuffer(data) {
-  def enqueueWrite(queue: CLCommandQueue): Unit = clEnqueueWriteBuffer(queue.id,id,true,0,data,null,null).?
+class IntArrayRBuffer(val id: Long, data: Array[Int], val context: CLContext) extends IntArrayBuffer(data) {
+  def enqueueWrite(queue: CLCommandQueue): Unit = clEnqueueWriteBuffer(queue.id,id,false,0,data,null,null).?
 }
-class IntArrayCWBuffer (val id: Long, data: Array[Int], val context: CLContext) extends IntArrayBuffer(data) {
+class IntArrayWBuffer (val id: Long, data: Array[Int], val context: CLContext) extends IntArrayBuffer(data) {
   def enqueueRead(queue: CLCommandQueue): Unit = clEnqueueReadBuffer(queue.id,id,true,0,data,null,null).?
 }
-class IntArrayCRWBuffer (val id: Long, data: Array[Int], val context: CLContext) extends IntArrayBuffer(data) {
+class IntArrayRWBuffer(val id: Long, data: Array[Int], val context: CLContext) extends IntArrayBuffer(data) {
   def enqueueRead(queue: CLCommandQueue): Unit = clEnqueueReadBuffer(queue.id,id,true,0,data,null,null).?
   def enqueueWrite(queue: CLCommandQueue): Unit = clEnqueueWriteBuffer(queue.id,id,true,0,data,null,null).?
 }

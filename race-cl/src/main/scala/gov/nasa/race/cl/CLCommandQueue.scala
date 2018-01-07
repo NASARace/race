@@ -16,7 +16,10 @@
  */
 package gov.nasa.race.cl
 
+import java.nio.ByteBuffer
+
 import CLUtils._
+import gov.nasa.race.common.BufferRecord
 import org.lwjgl.opencl.CL10._
 
 /**
@@ -26,6 +29,7 @@ class CLCommandQueue (val id: Long, val device: CLDevice, val context: CLContext
 
   def flush = clFlush(id).?
   def finish = clFinish(id).?
+  def enqueueBarrier = clEnqueueBarrier(id).?
 
   override def close = clReleaseCommandQueue(id).?
 
@@ -36,8 +40,13 @@ class CLCommandQueue (val id: Long, val device: CLDevice, val context: CLContext
     clEnqueueNDRangeKernel(id,kernel.id,1,null,globWS,null,null,null).?
   }
 
-  def enqueueRead (buffer: IntArrayCWBuffer): Unit = buffer.enqueueRead(this)
-  def enqueueRead (buffer: IntArrayCRWBuffer): Unit = buffer.enqueueRead(this)
-  def enqueueWrite (buffer: IntArrayCRBuffer): Unit = buffer.enqueueWrite(this)
-  def enqueueWrite (buffer: IntArrayCRWBuffer): Unit = buffer.enqueueWrite(this)
+  def enqueueRead (buffer: IntArrayWBuffer): Unit = buffer.enqueueRead(this)
+  def enqueueRead (buffer: IntArrayRWBuffer): Unit = buffer.enqueueRead(this)
+  def enqueueWrite (buffer: IntArrayRBuffer): Unit = buffer.enqueueWrite(this)
+  def enqueueWrite (buffer: IntArrayRWBuffer): Unit = buffer.enqueueWrite(this)
+
+  def enqueueMap (buffer: MappedByteBuffer): Unit = buffer.enqueueMap(this) // use executeMapped
+  def enqueueUnmap (buffer: MappedByteBuffer): Unit = buffer.enqueueUnmap(this) // use executeMapped
+  def executeMapped[T](buffer: MappedByteBuffer)(f: (ByteBuffer)=>T): T = buffer.executeMapped(this)(f)
+  def executeMappedWithRecord[R<:BufferRecord,T](buffer: MappedRecordBuffer[R])(f: (R)=>T): T = buffer.executeMappedWithRecord(this)(f)
 }
