@@ -9,9 +9,9 @@ Artifact Server and Dependency Definition
 Artifacts (jars) of various RACE `Layers and Modules`_ are published on the Central_Repository_ within the
 ``gov.nasa.race`` group, and can be imported into external projects by declaring them as normal dependencies within
 their respective build configurations. For SBT_, a typical dependency definition in ``build.sbt`` for the latest
-1.3.x release of RACE would be::
+1.5.x release of RACE would be::
 
-     libraryDependencies += "gov.nasa.race" %% "race-core" % "1.3.+"
+     libraryDependencies += "gov.nasa.race" %% "race-core" % "1.5.+"
 
 
 Typical RACE module dependencies are
@@ -41,8 +41,8 @@ level number is reset when the parent level changes.
 Typical version specifications in dependencies are:
 
 * ``"latest.release"`` - the latest
-* ``"1.3.+"`` - the latest version within the "1.3" line, to ensure API compatibility
-* ``"1.3.1"`` - an explicit version
+* ``"1.5.+"`` - the latest version within the "1.5" line, to ensure API compatibility
+* ``"1.5.3"`` - an explicit version
 
 
 While version specifications for RACE modules could differ, it is recommended to use a single specification for all
@@ -64,7 +64,7 @@ are ordinary SBT settings. The ``build.sbt`` looks like this::
      outputStrategy := Some(StdoutOutput)
      Keys.connectInput in run := true
 
-     val raceVersion = "1.3.+"  // the latest revision within the "1.3" line
+     val raceVersion = "1.5.+"  // the latest revision within the "1.5" line
 
      lazy val root = (project in file(".")).
        enablePlugins(JavaAppPackaging). // provides 'stage' task to generate stand alone scripts that can be executed outside SBT

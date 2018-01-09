@@ -43,8 +43,8 @@ class CLxSpec extends FlatSpec with RaceSpec {
       val context = CLContext(device)
       val queue = device.createCommandQueue(context)
 
-      val aBuf = context.createIntArrayCRBuffer(Array[Int](1, 2, 3, 4, 5))
-      val bBuf = context.createIntArrayCRBuffer(Array[Int](5, 4, 3, 2, 1))
+      val aBuf = context.createIntArrayRBuffer(Array[Int](1, 2, 3, 4, 5))
+      val bBuf = context.createIntArrayRBuffer(Array[Int](5, 4, 3, 2, 1))
       val cBuf = context.createIntArrayWBuffer(aBuf.length)
 
       val prog = context.createProgram(src)

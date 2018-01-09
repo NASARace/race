@@ -25,13 +25,13 @@ import org.lwjgl.opencl.CL10._
 /**
   * wrapper for OpenCL command queue objects
   */
-class CLCommandQueue (val id: Long, val device: CLDevice, val context: CLContext, val outOfOrderExec: Boolean) extends AutoCloseable {
+class CLCommandQueue (val id: Long, val device: CLDevice, val context: CLContext, val outOfOrderExec: Boolean) extends CLResource {
 
   def flush = clFlush(id).?
   def finish = clFinish(id).?
   def enqueueBarrier = clEnqueueBarrier(id).?
 
-  override def close = clReleaseCommandQueue(id).?
+  override def release = clReleaseCommandQueue(id).?
 
   def enqueueTask(kernel: CLKernel) = clEnqueueTask(id,kernel.id,null,null).?
 
@@ -45,8 +45,20 @@ class CLCommandQueue (val id: Long, val device: CLDevice, val context: CLContext
   def enqueueWrite (buffer: IntArrayRBuffer): Unit = buffer.enqueueWrite(this)
   def enqueueWrite (buffer: IntArrayRWBuffer): Unit = buffer.enqueueWrite(this)
 
-  def enqueueMap (buffer: MappedByteBuffer): Unit = buffer.enqueueMap(this) // use executeMapped
-  def enqueueUnmap (buffer: MappedByteBuffer): Unit = buffer.enqueueUnmap(this) // use executeMapped
+  def enqueueMap (buffer: MappedByteBuffer): Unit = buffer.enqueueMap(this) // low level, use executeMapped
+  def enqueueUnmap (buffer: MappedByteBuffer): Unit = buffer.enqueueUnmap(this) // low level, use executeMapped
   def executeMapped[T](buffer: MappedByteBuffer)(f: (ByteBuffer)=>T): T = buffer.executeMapped(this)(f)
   def executeMappedWithRecord[R<:BufferRecord,T](buffer: MappedRecordBuffer[R])(f: (R)=>T): T = buffer.executeMappedWithRecord(this)(f)
+
+  def enqueueWaitForEvent (eid: Long): Unit = clEnqueueWaitForEvents(id, eid).? // deprecated as of OpenCL 1.1
+}
+
+class SyncCommandQueue (id: Long, device: CLDevice, context: CLContext, outOfOrderExec: Boolean)
+                                                          extends CLCommandQueue(id,device,context,false) {
+  protected val syncBuffer = CLBuffer.createIntArrayR(1,context)
+
+  override def release = {
+    syncBuffer.close
+    super.release
+  }
 }

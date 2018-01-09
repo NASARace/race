@@ -14,26 +14,26 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package gov.nasa.race.cl
 
-package gov.nasa.race
-
-import java.util.concurrent.atomic.AtomicBoolean
-
+import CLUtils._
+import org.lwjgl.opencl.CL10._
+import org.lwjgl.opencl.{CL11, CLEventCallbackI}
 
 /**
-  * this package contains generic support for using OpenCL inside of RaceActors
+  * wrapper for OpenCL event object
   */
-package object cl {
+class CLEvent (val id: Long, val context: CLContext) extends CLResource {
 
-  trait CLResource extends AutoCloseable {
-    private var closed = new AtomicBoolean(false)
+  protected def release: Unit = clReleaseEvent(id).? // required for CLResources
 
-    protected def release: Unit
-
-    override def close = {
-      if (closed.compareAndSet(false, true)) {
-        release
+  def setCompletionAction (action: =>Unit): Unit = {
+    val cb = new CLEventCallbackI {
+      def invoke (eid: Long, exec_status: Int, user_data: Long): Unit = {
+        action
+        close
       }
     }
+    CL11.clSetEventCallback(id, CL_COMPLETE,cb, 0).?
   }
 }

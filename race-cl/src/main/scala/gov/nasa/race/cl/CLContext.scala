@@ -19,10 +19,11 @@ package gov.nasa.race.cl
 import java.nio.ByteBuffer
 
 import CLUtils._
+import gov.nasa.race._
 import gov.nasa.race.common.{BufferRecord, CloseStack}
 import gov.nasa.race.util.StringUtils
 import org.lwjgl.opencl.CL10._
-import org.lwjgl.opencl.CLContextCallbackI
+import org.lwjgl.opencl.{CL11, CLContextCallbackI, CLEventCallbackI}
 import org.lwjgl.system.MemoryUtil
 
 object CLContext {
@@ -60,6 +61,8 @@ class CLContext (val id: Long, val devices: Array[CLDevice]) extends AutoCloseab
 
   override def close = clReleaseContext(id).?
 
+  //--- programs
+
   def createProgram (src: String)
                     (implicit resources: CloseStack): CLProgram = withMemoryStack { stack =>
     val err = stack.allocInt
@@ -68,25 +71,36 @@ class CLContext (val id: Long, val devices: Array[CLDevice]) extends AutoCloseab
     resources.add( new CLProgram(pid,this) )
   }
 
+  //--- buffers
+
   def createIntArrayWBuffer (data: Array[Int])
                              (implicit res: CloseStack): IntArrayWBuffer = res.add( CLBuffer.createIntArrayW(data,this) )
   def createIntArrayWBuffer (length: Int)
                              (implicit res: CloseStack): IntArrayWBuffer = res.add( CLBuffer.createIntArrayW(length,this) )
 
-  def createIntArrayCRBuffer (data: Array[Int])
-                             (implicit res: CloseStack): IntArrayRBuffer = res.add( CLBuffer.createIntArrayR(data,this) )
-  def createIntArrayCRBuffer (length: Int)
-                             (implicit res: CloseStack): IntArrayRBuffer = res.add( CLBuffer.createIntArrayR(length,this) )
+  def createIntArrayRBuffer(data: Array[Int])
+                           (implicit res: CloseStack): IntArrayRBuffer = res.add( CLBuffer.createIntArrayR(data,this) )
+  def createIntArrayRBuffer(length: Int)
+                           (implicit res: CloseStack): IntArrayRBuffer = res.add( CLBuffer.createIntArrayR(length,this) )
 
-  def createIntArrayCRWBuffer (data: Array[Int])
-                              (implicit res: CloseStack): IntArrayRWBuffer = res.add( CLBuffer.createIntArrayRW(data,this) )
-  def createIntArrayCRWBuffer (length: Int)
-                              (implicit res: CloseStack): IntArrayRWBuffer = res.add( CLBuffer.createIntArrayRW(length,this) )
+  def createIntArrayRWBuffer(data: Array[Int])
+                            (implicit res: CloseStack): IntArrayRWBuffer = res.add( CLBuffer.createIntArrayRW(data,this) )
+  def createIntArrayRWBuffer(length: Int)
+                            (implicit res: CloseStack): IntArrayRWBuffer = res.add( CLBuffer.createIntArrayRW(length,this) )
 
   def createMappedByteBuffer (size: Long)
                               (implicit res: CloseStack): MappedByteBuffer = res.add( CLBuffer.createMappedByteBuffer(size,this) )
   def createMappedRecordBuffer[R <: BufferRecord] (length: Int, createRecord: (ByteBuffer)=>R)
                                                   (implicit res: CloseStack): MappedRecordBuffer[R] = {
     res.add( CLBuffer.createMappedRecordBuffer(length,createRecord,this))
+  }
+
+  //--- events
+
+  def createUserEvent: CLEvent = withMemoryStack { stack =>
+    val err = stack.allocInt
+    val eid = CL11.clCreateUserEvent(id,err)
+    checkCLError(err)
+    new CLEvent(eid,this)
   }
 }

@@ -64,48 +64,86 @@ object CLBuffer {
     }
   }
 
-  private def createAndInitArrayBuffer[T<:ArrayBuffer[_]](context: CLContext, f: (Array[Int])=>Long, g: (Long)=>T): T = {
+  //--- IntArrayBuffers
+  def createIntArrayW (length: Int, context: CLContext): IntArrayWBuffer = {
+    createArrayBuffer(context,
+      clCreateBuffer(context.id,CL_MEM_WRITE_ONLY,length*4L,_),
+      new IntArrayWBuffer(_,new Array[Int](length),context))
+  }
+  def createIntArrayR(length: Int, context: CLContext): IntArrayRBuffer = {
+    createArrayBuffer(context,
+      clCreateBuffer(context.id,CL_MEM_READ_ONLY,length*4L,_),
+      new IntArrayRBuffer(_,new Array[Int](length),context))
+  }
+  def createIntArrayRW(length: Int, context: CLContext): IntArrayRWBuffer = {
+    createArrayBuffer(context,
+      clCreateBuffer(context.id,CL_MEM_READ_WRITE,length*4L,_),
+      new IntArrayRWBuffer(_,new Array[Int](length),context))
+  }
+
+
+  /* TODO get rid of these */
+  private def createAndInitArrayBuffer[T <: ArrayBuffer[_]](context: CLContext, f: (Array[Int]) => Long, g: (Long) => T): T = {
     val err = new Array[Int](1)
     val bid = f(err)
     checkCLError(err(0))
     g(bid)
   }
 
-
-
-  //--- IntArrayBuffers
-  def createIntArrayW (length: Int, context: CLContext): IntArrayWBuffer = withMemoryStack { stack =>
-    createArrayBuffer(context,
-      clCreateBuffer(context.id,CL_MEM_WRITE_ONLY,length*4L,_),
-      new IntArrayWBuffer(_,new Array[Int](length),context))
-  }
-  def createIntArrayW (data: Array[Int],context: CLContext): IntArrayWBuffer = {
+  def createIntArrayW(data: Array[Int], context: CLContext): IntArrayWBuffer = {
     createAndInitArrayBuffer(context,
-      clCreateBuffer(context.id,CL_MEM_WRITE_ONLY,data,_),
-      new IntArrayWBuffer(_,data,context))
+      clCreateBuffer(context.id, CL_MEM_WRITE_ONLY, data, _),
+      new IntArrayWBuffer(_, data, context))
   }
 
-  def createIntArrayR(length: Int, context: CLContext): IntArrayRBuffer = {
-    createArrayBuffer(context,
-      clCreateBuffer(context.id,CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,length*4L,_),
-      new IntArrayRBuffer(_,new Array[Int](length),context))
-  }
   def createIntArrayR(data: Array[Int], context: CLContext): IntArrayRBuffer = {
     createAndInitArrayBuffer(context,
-      clCreateBuffer(context.id,CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,data,_),
-      new IntArrayRBuffer(_,data,context))
+      clCreateBuffer(context.id, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, data, _),
+      new IntArrayRBuffer(_, data, context))
   }
 
-  def createIntArrayRW(length: Int, context: CLContext): IntArrayRWBuffer = {
-    createArrayBuffer(context,
-      clCreateBuffer(context.id,CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR,length*4L,_),
-      new IntArrayRWBuffer(_,new Array[Int](length),context))
-  }
   def createIntArrayRW(data: Array[Int], context: CLContext): IntArrayRWBuffer = {
     createAndInitArrayBuffer(context,
-      clCreateBuffer(context.id,CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR,data,_),
-      new IntArrayRWBuffer(_,data,context))
+      clCreateBuffer(context.id, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, data, _),
+      new IntArrayRWBuffer(_, data, context))
   }
+
+  def createFloatArrayW(data: Array[Float], context: CLContext): FloatArrayWBuffer = {
+    createAndInitArrayBuffer(context,
+      clCreateBuffer(context.id, CL_MEM_WRITE_ONLY, data, _),
+      new FloatArrayWBuffer(_, data, context))
+  }
+
+  def createFloatArrayR(data: Array[Float], context: CLContext): FloatArrayRBuffer = {
+    createAndInitArrayBuffer(context,
+      clCreateBuffer(context.id, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, data, _),
+      new FloatArrayRBuffer(_, data, context))
+  }
+
+  def createFloatArrayRW(data: Array[Float], context: CLContext): FloatArrayRWBuffer = {
+    createAndInitArrayBuffer(context,
+      clCreateBuffer(context.id, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, data, _),
+      new FloatArrayRWBuffer(_, data, context))
+  }
+   /**/
+
+  //--- float
+  def createFloatArrayW (length: Int, context: CLContext): FloatArrayWBuffer = {
+    createArrayBuffer(context,
+      clCreateBuffer(context.id,CL_MEM_WRITE_ONLY,length*4L,_),
+      new FloatArrayWBuffer(_,new Array[Float](length),context))
+  }
+  def createFloatArrayR(length: Int, context: CLContext): FloatArrayRBuffer = {
+    createArrayBuffer(context,
+      clCreateBuffer(context.id,CL_MEM_READ_ONLY,length*4L,_),
+      new FloatArrayRBuffer(_,new Array[Float](length),context))
+  }
+  def createFloatArrayRW(length: Int, context: CLContext): FloatArrayRWBuffer = {
+    createArrayBuffer(context,
+      clCreateBuffer(context.id,CL_MEM_READ_WRITE,length*4L,_),
+      new FloatArrayRWBuffer(_,new Array[Float](length),context))
+  }
+
 }
 
 /**
@@ -170,21 +208,3 @@ class MappedRecordBuffer[R<:BufferRecord] (id: Long, val length: Int, size: Long
 }
 
 
-abstract class ArrayBuffer[T](val data: Array[T], val tSize: Int) extends CLBuffer {
-  val size: Long = data.length * tSize
-  def length = data.length
-}
-abstract class IntArrayBuffer (data: Array[Int]) extends ArrayBuffer[Int](data,4)
-
-
-//--- IntArray copy buffers
-class IntArrayRBuffer(val id: Long, data: Array[Int], val context: CLContext) extends IntArrayBuffer(data) {
-  def enqueueWrite(queue: CLCommandQueue): Unit = clEnqueueWriteBuffer(queue.id,id,false,0,data,null,null).?
-}
-class IntArrayWBuffer (val id: Long, data: Array[Int], val context: CLContext) extends IntArrayBuffer(data) {
-  def enqueueRead(queue: CLCommandQueue): Unit = clEnqueueReadBuffer(queue.id,id,true,0,data,null,null).?
-}
-class IntArrayRWBuffer(val id: Long, data: Array[Int], val context: CLContext) extends IntArrayBuffer(data) {
-  def enqueueRead(queue: CLCommandQueue): Unit = clEnqueueReadBuffer(queue.id,id,true,0,data,null,null).?
-  def enqueueWrite(queue: CLCommandQueue): Unit = clEnqueueWriteBuffer(queue.id,id,true,0,data,null,null).?
-}
