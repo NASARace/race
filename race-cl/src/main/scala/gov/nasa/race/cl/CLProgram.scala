@@ -17,21 +17,24 @@
 package gov.nasa.race.cl
 
 import CLUtils._
-import gov.nasa.race.common.CloseStack
 import org.lwjgl.opencl.CL10._
+
+object CLProgram {
+
+  def createProgram (context: CLContext, src: String): CLProgram = withMemoryStack { stack =>
+    val err = stack.allocInt
+    val pid = clCreateProgramWithSource(context.id, src, err)
+    checkCLError(err)
+    new CLProgram(pid,context)
+  }
+}
 
 /**
   * wrapper for OpenCL Program object
   */
-class CLProgram (val id: Long, val context: CLContext) extends AutoCloseable {
+class CLProgram (val id: Long, val context: CLContext) extends CLResource {
 
-  override def close = clReleaseProgram(id).?
+  override def release = clReleaseProgram(id).?
 
-  def createKernel(name: String)
-                  (implicit resources: CloseStack): CLKernel = withMemoryStack { stack =>
-    val err = stack.allocInt
-    val kid = clCreateKernel(id,name,err)
-    checkCLError(err)
-    resources.add( new CLKernel(kid) )
-  }
+  def createKernel(name: String): CLKernel = CLKernel.createKernel(this,name)
 }

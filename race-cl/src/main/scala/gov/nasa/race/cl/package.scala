@@ -19,6 +19,8 @@ package gov.nasa.race
 
 import java.util.concurrent.atomic.AtomicBoolean
 
+import gov.nasa.race.common.CloseStack
+
 
 /**
   * this package contains generic support for using OpenCL inside of RaceActors
@@ -34,6 +36,11 @@ package object cl {
       if (closed.compareAndSet(false, true)) {
         release
       }
+    }
+
+    def >> (resources: CloseStack): this.type = {
+      resources.add(this)
+      this
     }
   }
 }

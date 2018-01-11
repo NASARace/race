@@ -35,7 +35,7 @@ class TestRecord (buffer: ByteBuffer) extends BufferRecord(20,buffer) {
 /**
   * unit tests for MappedRecordBuffer
   */
-class MappedRecordBufferSpec extends FlatSpec with RaceSpec {
+class CLMappedRecordBufferSpec extends FlatSpec with RaceSpec {
 
   "a MappedRecordBuffer" should "be directly accessible from both host and device" in {
 
@@ -54,14 +54,14 @@ class MappedRecordBufferSpec extends FlatSpec with RaceSpec {
          }
       """
 
-    tryWithResource(new CloseStack) { implicit resources =>
+    tryWithResource(new CloseStack) { resources =>
       val device = CLPlatform.preferredDevice
       println(s"got $device")
 
-      val context = CLContext(device)
-      val queue = device.createCommandQueue(context)
+      val context = device.createContext                                     >> resources
+      val queue = device.createCommandQueue(context)                         >> resources
 
-      val data = context.createMappedRecordBuffer(2, new TestRecord(_))
+      val data = context.createMappedRecordBuffer(2, new TestRecord(_))      >> resources
 
       queue.executeMapped(data) { buf =>
         val rec = new TestRecord(buf)
@@ -69,10 +69,8 @@ class MappedRecordBufferSpec extends FlatSpec with RaceSpec {
         rec(1).set( 40.0, 2, 0.0 )
       }
 
-      val prog = context.createProgram(src)
-      device.buildProgram(prog)
-
-      val kernel = prog.createKernel("compute_c")
+      val prog = context.createAndBuildProgram(src)                          >> resources
+      val kernel = prog.createKernel("compute_c")                            >> resources
       kernel.setArgs(data)
 
       queue.enqueue1DRange(kernel, data.length)

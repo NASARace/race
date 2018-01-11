@@ -22,7 +22,7 @@ import gov.nasa.race.tryWithResource
 import org.lwjgl.opencl.CL._
 import org.lwjgl.opencl.CL10._
 import org.lwjgl.opencl.CL11.CL_DEVICE_OPENCL_C_VERSION
-import org.lwjgl.opencl.{CLContextCallbackI, CLProgramCallbackI}
+import org.lwjgl.opencl.{CL12, CLContextCallbackI, CLProgramCallbackI}
 import org.lwjgl.system.{MemoryStack, MemoryUtil}
 
 import scala.collection.immutable.HashSet
@@ -56,7 +56,7 @@ object CLDevice {
   * like multiple buffer allocations etc. We still provide methods to explicitly specify context objects and/or
   * create queues and programs, but the single device/context/queue is our reference model
   */
-class CLDevice (val index: Int, val id: Long, val platform: CLPlatform) {
+class CLDevice (val index: Int, val id: Long, val platform: CLPlatform) extends CLResource {
   import CLDevice._
 
   val capabilities = createDeviceCapabilities(id, platform.capabilities)
@@ -100,18 +100,15 @@ class CLDevice (val index: Int, val id: Long, val platform: CLPlatform) {
   val isFp64: Boolean = extensions.contains("cl_khr_fp64")
   val isLittleEndian: Boolean = getDeviceInfoInt(id, CL_DEVICE_ENDIAN_LITTLE) == 1
 
+  override def release = CL12.clReleaseDevice(id)
+
   override def toString: String = s"${deviceType}(name=$name)"
 
+  // a single device context
+  def createContext: CLSingleDeviceContext = CLContext.createSingleDeviceContext(this)
 
-  def createCommandQueue (context: CLContext, outOfOrder: Boolean=false)
-                         (implicit resources: CloseStack): CLCommandQueue = withMemoryStack { stack =>
-    if (!context.includesDevice(this)) throw new RuntimeException("context does not support device $name")
-
-    val err = stack.allocInt
-    val properties = if (outOfOrder) CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE else 0
-    val qid = clCreateCommandQueue(context.id, id, properties, err)
-    checkCLError(err)
-    resources.add( new CLCommandQueue(qid,this,context,outOfOrder) )
+  def createCommandQueue(context: CLContext, outOfOrder: Boolean=false): CLCommandQueue = {
+    CLCommandQueue.createCommandQueue(context,this,outOfOrder)
   }
 
   def buildProgram (program: CLProgram, options: String = ""): Unit = {

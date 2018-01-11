@@ -36,25 +36,23 @@ class CLxSpec extends FlatSpec with RaceSpec {
          }
       """
 
-    tryWithResource(new CloseStack) { implicit resources =>
-      val device = CLPlatform.preferredDevice
+    tryWithResource(new CloseStack) { resources =>
+      val device = CLPlatform.preferredDevice                                >> resources
       println(s"got $device")
 
-      val context = CLContext(device)
-      val queue = device.createCommandQueue(context)
+      val context = device.createContext                                     >> resources
+      val queue = device.createCommandQueue(context)                         >> resources
 
-      val aBuf = context.createIntArrayRBuffer(Array[Int](1, 2, 3, 4, 5))
-      val bBuf = context.createIntArrayRBuffer(Array[Int](5, 4, 3, 2, 1))
-      val cBuf = context.createIntArrayWBuffer(aBuf.length)
+      val aBuf = context.createArrayRBuffer(Array[Int](38, 39, 40, 41, 42))  >> resources
+      val bBuf = context.createArrayRBuffer(Array[Int](4, 3, 2, 1, 0))       >> resources
+      val cBuf = context.createArrayWBuffer[Int](aBuf.length)                >> resources
 
-      val prog = context.createProgram(src)
-      device.buildProgram(prog)
-
-      val kernel = prog.createKernel("add")
+      val prog = context.createAndBuildProgram(src)                          >> resources
+      val kernel = prog.createKernel("add")                                  >> resources
       kernel.setArgs(aBuf, bBuf, cBuf)
 
       queue.enqueue1DRange(kernel, aBuf.length)
-      queue.enqueueRead(cBuf)
+      queue.enqueueRead(cBuf,true)
 
       println(s"result: ${cBuf.data.mkString(",")}")
     }

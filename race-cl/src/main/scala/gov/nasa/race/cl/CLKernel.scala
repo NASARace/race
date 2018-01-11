@@ -19,22 +19,32 @@ package gov.nasa.race.cl
 import CLUtils._
 import org.lwjgl.opencl.CL10._
 
+object CLKernel {
+
+  def createKernel (program: CLProgram, kernelName: String): CLKernel = withMemoryStack { stack =>
+    val err = stack.allocInt
+    val kid = clCreateKernel(program.id,kernelName,err)
+    checkCLError(err)
+    new CLKernel(kid,kernelName,program)
+  }
+}
+
 /**
   * wrapper for OpenCL kernel object
   */
-class CLKernel (val id: Long) extends AutoCloseable {
-  val name = getKernelInfoStringUTF8(id,CL_KERNEL_FUNCTION_NAME)
+class CLKernel (val id: Long, val name: String, val program: CLProgram) extends CLResource {
+  //val name = getKernelInfoStringUTF8(id,CL_KERNEL_FUNCTION_NAME)
   val numArgs = getKernelInfoInt(id,CL_KERNEL_NUM_ARGS)
 
-  override def close = clReleaseKernel(id).?
+  override def release = clReleaseKernel(id).?
 
   def setArgs (args: CLBuffer*): Unit = {
     assert(args.size == numArgs)
     var idx = 0
     args.foreach { a =>
       a match {
-        case buf:IntArrayBuffer => clSetKernelArg1p(id,idx,buf.id).?
-        case buf:MappedByteBuffer => clSetKernelArg1p(id,idx,buf.id).?
+        case buf:CLArrayBuffer[_] => clSetKernelArg1p(id,idx,buf.id).?
+        case buf:CLMappedByteBuffer => clSetKernelArg1p(id,idx,buf.id).?
           // ... and many more
 
         case _ => throw new RuntimeException(s"unknown argument type for kernel $name: $a")

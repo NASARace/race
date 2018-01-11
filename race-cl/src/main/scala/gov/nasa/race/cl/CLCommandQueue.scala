@@ -22,11 +22,25 @@ import CLUtils._
 import gov.nasa.race.common.BufferRecord
 import org.lwjgl.opencl.CL10._
 
+object CLCommandQueue {
+
+  def createCommandQueue (context: CLContext, device: CLDevice, outOfOrder: Boolean = false): CLCommandQueue = {
+    withMemoryStack { stack =>
+      if (!context.includesDevice(device)) throw new RuntimeException(s"context does not support device ${device.name}")
+      val err = stack.allocInt
+      val properties = if (outOfOrder) CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE else 0
+      val qid = clCreateCommandQueue(context.id, device.id, properties, err)
+      checkCLError(err)
+      new CLCommandQueue(qid,context,device,outOfOrder)
+    }
+  }
+}
+
 /**
   * wrapper for OpenCL command queue objects
   */
-class CLCommandQueue (val id: Long, val device: CLDevice, val context: CLContext, val outOfOrderExec: Boolean) extends CLResource {
-
+class CLCommandQueue (val id: Long,  val context: CLContext, val device: CLDevice, val outOfOrderExec: Boolean)
+                                                                                                 extends CLResource {
   def flush = clFlush(id).?
   def finish = clFinish(id).?
   def enqueueBarrier = clEnqueueBarrier(id).?
@@ -40,25 +54,25 @@ class CLCommandQueue (val id: Long, val device: CLDevice, val context: CLContext
     clEnqueueNDRangeKernel(id,kernel.id,1,null,globWS,null,null,null).?
   }
 
-  def enqueueRead (buffer: IntArrayWBuffer): Unit = buffer.enqueueRead(this)
-  def enqueueRead (buffer: IntArrayRWBuffer): Unit = buffer.enqueueRead(this)
-  def enqueueWrite (buffer: IntArrayRBuffer): Unit = buffer.enqueueWrite(this)
-  def enqueueWrite (buffer: IntArrayRWBuffer): Unit = buffer.enqueueWrite(this)
+  def enqueueRead[T<:AnyVal] (buffer: AWriteBuf[T],isBlocking: Boolean=false): Unit = buffer.enqueueRead(this,isBlocking)
+  def enqueueWrite[T<:AnyVal] (buffer: AReadBuf[T]): Unit = buffer.enqueueWrite(this)
 
-  def enqueueMap (buffer: MappedByteBuffer): Unit = buffer.enqueueMap(this) // low level, use executeMapped
-  def enqueueUnmap (buffer: MappedByteBuffer): Unit = buffer.enqueueUnmap(this) // low level, use executeMapped
-  def executeMapped[T](buffer: MappedByteBuffer)(f: (ByteBuffer)=>T): T = buffer.executeMapped(this)(f)
-  def executeMappedWithRecord[R<:BufferRecord,T](buffer: MappedRecordBuffer[R])(f: (R)=>T): T = buffer.executeMappedWithRecord(this)(f)
+  def enqueueMap (buffer: CLMappedByteBuffer): Unit = buffer.enqueueMap(this) // low level, use executeMapped
+  def enqueueUnmap (buffer: CLMappedByteBuffer): Unit = buffer.enqueueUnmap(this) // low level, use executeMapped
+  def executeMapped[T](buffer: CLMappedByteBuffer)(f: (ByteBuffer)=>T): T = buffer.executeMapped(this)(f)
+  def executeMappedWithRecord[R<:BufferRecord,T](buffer: CLMappedRecordBuffer[R])(f: (R)=>T): T = buffer.executeMappedWithRecord(this)(f)
 
   def enqueueWaitForEvent (eid: Long): Unit = clEnqueueWaitForEvents(id, eid).? // deprecated as of OpenCL 1.1
 }
 
-class SyncCommandQueue (id: Long, device: CLDevice, context: CLContext, outOfOrderExec: Boolean)
-                                                          extends CLCommandQueue(id,device,context,false) {
-  protected val syncBuffer = CLBuffer.createIntArrayR(1,context)
+class CLSyncCommandQueue(id: Long, device: CLDevice, context: CLContext, outOfOrderExec: Boolean)
+                                                          extends CLCommandQueue(id,context,device,false) {
+  protected val syncBuffer = context.createArrayRBuffer[Int](1)
 
   override def release = {
-    syncBuffer.close
+    syncBuffer.release
     super.release
   }
+
+
 }

@@ -46,7 +46,7 @@ class CloseStack extends AutoCloseable {
     closeables = t +: closeables
     t
   }
-  def +[T <: AutoCloseable] (t: T): T = add(t)
+  def +=[T <: AutoCloseable] (t: T): T = add(t)
 
   def remove(c: AutoCloseable): Unit = {
     closeables = closeables.filter( _ != c)
