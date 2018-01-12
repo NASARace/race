@@ -41,7 +41,7 @@ class CLxSpec extends FlatSpec with RaceSpec {
       println(s"got $device")
 
       val context = device.createContext                                     >> resources
-      val queue = device.createCommandQueue(context)                         >> resources
+      val queue = device.createJobCommandQueue(context)                      >> resources
 
       val aBuf = context.createArrayRBuffer(Array[Int](38, 39, 40, 41, 42))  >> resources
       val bBuf = context.createArrayRBuffer(Array[Int](4, 3, 2, 1, 0))       >> resources
@@ -51,10 +51,14 @@ class CLxSpec extends FlatSpec with RaceSpec {
       val kernel = prog.createKernel("add")                                  >> resources
       kernel.setArgs(aBuf, bBuf, cBuf)
 
-      queue.enqueue1DRange(kernel, aBuf.length)
-      queue.enqueueRead(cBuf,true)
+      val job = queue.submitJob {
+        queue.enqueue1DRange(kernel, aBuf.length)
+        queue.enqueueRead(cBuf)
+      }
 
-      println(s"result: ${cBuf.data.mkString(",")}")
+      queue.waitForJob(job) {
+        println(s"result: ${cBuf.data.mkString(",")}")
+      }
     }
   }
 }

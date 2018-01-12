@@ -110,6 +110,9 @@ class CLDevice (val index: Int, val id: Long, val platform: CLPlatform) extends 
   def createCommandQueue(context: CLContext, outOfOrder: Boolean=false): CLCommandQueue = {
     CLCommandQueue.createCommandQueue(context,this,outOfOrder)
   }
+  def createJobCommandQueue(context: CLContext): CLJobCommandQueue = {
+    CLCommandQueue.createJobCommandQueue(context,this)
+  }
 
   def buildProgram (program: CLProgram, options: String = ""): Unit = {
     clBuildProgram(program.id,id,options,null,0).?

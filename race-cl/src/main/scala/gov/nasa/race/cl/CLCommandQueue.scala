@@ -24,15 +24,24 @@ import org.lwjgl.opencl.CL10._
 
 object CLCommandQueue {
 
+  private def _cmdQueue(context: CLContext, device: CLDevice, outOfOrder: Boolean): Long = withMemoryStack { stack =>
+    if (!context.includesDevice(device)) throw new RuntimeException(s"context does not support device ${device.name}")
+
+    val err = stack.allocInt
+    val properties = if (outOfOrder) CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE else 0
+    val qid = clCreateCommandQueue(context.id, device.id, properties, err)
+    checkCLError(err)
+    qid
+  }
+
   def createCommandQueue (context: CLContext, device: CLDevice, outOfOrder: Boolean = false): CLCommandQueue = {
-    withMemoryStack { stack =>
-      if (!context.includesDevice(device)) throw new RuntimeException(s"context does not support device ${device.name}")
-      val err = stack.allocInt
-      val properties = if (outOfOrder) CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE else 0
-      val qid = clCreateCommandQueue(context.id, device.id, properties, err)
-      checkCLError(err)
-      new CLCommandQueue(qid,context,device,outOfOrder)
-    }
+    val qid = _cmdQueue(context,device,outOfOrder)
+    new CLCommandQueue(qid, context,device,outOfOrder)
+  }
+
+  def createJobCommandQueue (context: CLContext, device: CLDevice): CLJobCommandQueue = {
+    val qid = _cmdQueue(context,device,false)
+    new CLJobCommandQueue(qid, context,device)
   }
 }
 
@@ -65,8 +74,13 @@ class CLCommandQueue (val id: Long,  val context: CLContext, val device: CLDevic
   def enqueueWaitForEvent (eid: Long): Unit = clEnqueueWaitForEvents(id, eid).? // deprecated as of OpenCL 1.1
 }
 
-class CLSyncCommandQueue(id: Long, device: CLDevice, context: CLContext, outOfOrderExec: Boolean)
+object CommandStatus extends Enumeration {
+  val Queued, Submitted, Running, Complete = Value
+}
+
+class CLJobCommandQueue(id: Long, context: CLContext, device: CLDevice)
                                                           extends CLCommandQueue(id,context,device,false) {
+  protected var jobcount: Int = 0
   protected val syncBuffer = context.createArrayRBuffer[Int](1)
 
   override def release = {
@@ -74,5 +88,31 @@ class CLSyncCommandQueue(id: Long, device: CLDevice, context: CLContext, outOfOr
     super.release
   }
 
+  /**
+    * this is normally called from a producer thread, after queueing commands
+    */
+  def submitJob(action: =>Unit = ()=>{}): Long = {
+    action
 
+    jobcount += 1
+    //syncBuffer.data(0) = jobcount
+    syncBuffer.enqueueWriteEv(this) // this answers the native event for this write
+  }
+
+  /**
+    * this is called from a consumer thread with the event argument obtained from a submitJob() call
+    */
+  def waitForJob (ev: Long)(action: =>Unit = ()=>{}) = {
+    clWaitForEvents(ev).?
+    clReleaseEvent(ev).?
+
+    action
+  }
+
+  def isJobCompleted(ev: Long): Boolean = withMemoryStack { stack =>
+    val pv = stack.allocInt
+    val pvSize = stack.allocPointer
+    clGetEventInfo(ev,CL_EVENT_COMMAND_EXECUTION_STATUS,pv,pvSize).?
+    pv.toInt == CL_COMPLETE
+  }
 }
