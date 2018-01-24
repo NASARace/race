@@ -20,10 +20,11 @@ package gov.nasa.race.air.translator
 
 import com.typesafe.config.Config
 import gov.nasa.race.IdentifiableObject
-import gov.nasa.race.air.{FlightCompleted, FlightPos}
+import gov.nasa.race.air.FlightPos
 import gov.nasa.race.common._
 import gov.nasa.race.config._
 import gov.nasa.race.geo.LatLonPos
+import gov.nasa.race.track.TrackCompleted
 import gov.nasa.race.uom.Angle._
 import gov.nasa.race.uom.Length._
 import gov.nasa.race.uom.Speed._
@@ -104,7 +105,7 @@ class FIXM2FlightObject (val config: Config=NoConfig)
       case "flight" | "ns5:NasFlight" =>
         if (cs != null) {
           if (arrivalDate != null) {
-            flights += FlightCompleted(id, cs, arrivalPoint, arrivalDate)
+            flights += TrackCompleted(id, cs, arrivalPoint, arrivalDate)
           } else {
             if (lat.isDefined && lon.isDefined && date != null &&
               vx.isDefined && vy.isDefined && spd.isDefined && alt.isDefined) {

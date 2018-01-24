@@ -22,8 +22,9 @@ import java.awt.Color
 import akka.actor.Actor.Receive
 import com.typesafe.config.Config
 import gov.nasa.race._
-import gov.nasa.race.air.{AirLocator, FlightPos, FlightTerminationMessage}
+import gov.nasa.race.air.{AirLocator, FlightPos}
 import gov.nasa.race.core.Messages.BusEvent
+import gov.nasa.race.track.TrackTerminationMessage
 import gov.nasa.race.ww._
 import gov.nasa.race.ww.track.ModelTrackLayer
 
@@ -47,7 +48,7 @@ class FlightPosLayer (raceView: RaceView,config: Config)
         case None => addTrackEntry(fpos)
       }
 
-    case BusEvent(_,msg: FlightTerminationMessage,_)  =>
+    case BusEvent(_,msg: TrackTerminationMessage,_)  =>
       incUpdateCount
       // TODO - this should be handled by FlightPos updates to avoid bypassing the TrackLayer abstractions
       ifSome(trackEntries.get(msg.cs)) {removeTrackEntry}

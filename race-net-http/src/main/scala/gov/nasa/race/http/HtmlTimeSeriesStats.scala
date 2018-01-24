@@ -96,9 +96,9 @@ trait HtmlTimeSeriesStats[O <: Dated,E <: TSEntryData[O]] extends TimeSeriesStat
         ChartUtils.writeChartAsPNG(out, chart, w, h, true, 6)
         val ba = out.toByteArray
 
-        val path = "fpos-update-histogram.png"
+        val path = "ts-update-histogram.png"
         val html = p(img(src:=path, width:=s"${w/2}", height:=s"${h/2}"))// down sample to increase sharpness
-      val imgContent = HttpEntity(MediaTypes.`image/png`, ba)
+        val imgContent = HttpEntity(MediaTypes.`image/png`, ba)
 
         HtmlArtifacts(html, Map(path -> imgContent))
 

@@ -18,11 +18,12 @@ package gov.nasa.race.air.actor
 
 import akka.actor.ActorRef
 import com.typesafe.config.Config
-import gov.nasa.race.air.{FlightDropped, FlightPos}
+import gov.nasa.race.air.FlightPos
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.Messages.RaceTick
 import gov.nasa.race.core.{ContinuousTimeRaceActor, PeriodicRaceActor, PublishingRaceActor}
 import gov.nasa.race.ifTrue
+import gov.nasa.race.track.TrackDropped
 
 import scala.collection.Map
 import scala.concurrent.duration._
@@ -68,7 +69,7 @@ trait FPosDropper extends PublishingRaceActor with ContinuousTimeRaceActor with 
       val dt = elapsedSimTimeMillisSince(fpos.date)
       if (dt > cut){
         removeStaleFlight(fpos)  // provided by concrete class
-        if (publishDropped) publish(FlightDropped(fpos.id, fpos.cs, now))
+        if (publishDropped) publish(TrackDropped(fpos.id, fpos.cs, now))
         info(s"dropping $cs after $dt msec")
       }
     }

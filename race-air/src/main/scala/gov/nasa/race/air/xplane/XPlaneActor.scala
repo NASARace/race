@@ -23,12 +23,13 @@ import akka.actor.{ActorRef, Cancellable}
 import com.typesafe.config.Config
 import gov.nasa.race._
 import gov.nasa.race.air.xplane.XPlaneCodec.RPOS
-import gov.nasa.race.air.{FlightDropped, FlightPos}
+import gov.nasa.race.air.FlightPos
 import gov.nasa.race.common.Status
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.Messages.BusEvent
 import gov.nasa.race.core.{PublishingRaceActor, SubscribingRaceActor, _}
-import gov.nasa.race.geo.{LatLonPos, GeoPosition}
+import gov.nasa.race.geo.{GeoPosition, LatLonPos}
+import gov.nasa.race.track.TrackDropped
 import gov.nasa.race.uom.Angle._
 import gov.nasa.race.uom.Length._
 import gov.nasa.race.uom.Speed._
@@ -161,7 +162,7 @@ class XPlaneActor (val config: Config) extends PublishingRaceActor
     case UpdateFlightPos => publishFPos(rpos)
     case UpdateXPlane => sendProximities
     case BusEvent(_,fpos:FlightPos,_) => updateProximities(fpos)
-    case BusEvent(_,fdrop: FlightDropped,_) => dropProximity(fdrop)
+    case BusEvent(_,fdrop: TrackDropped,_) => dropProximity(fdrop)
   }
 
   def publishFPos (rpos: RPOS) = {
@@ -192,7 +193,7 @@ class XPlaneActor (val config: Config) extends PublishingRaceActor
     proximityList.updateWith(fpos)
   }
 
-  def dropProximity (fdrop: FlightDropped) = {
+  def dropProximity (fdrop: TrackDropped) = {
     val cs = fdrop.cs
     proximityList.removeFirst { e => e.obj.cs == cs }
   }

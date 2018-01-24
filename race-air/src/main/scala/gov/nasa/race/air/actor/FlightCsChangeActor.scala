@@ -18,9 +18,10 @@
 package gov.nasa.race.air.actor
 
 import com.typesafe.config.Config
-import gov.nasa.race.air.{FlightCsChanged, FlightPos}
+import gov.nasa.race.air.FlightPos
 import gov.nasa.race.core.Messages.BusEvent
 import gov.nasa.race.core.{PublishingRaceActor, SubscribingRaceActor}
+import gov.nasa.race.track.TrackCsChanged
 
 import scala.collection.mutable.{HashMap => MHashMap}
 
@@ -49,7 +50,7 @@ class FlightCsChangeActor(val config: Config) extends PublishingRaceActor with S
       if (oldCS != cs) {
         idMap.update(flightId,cs)
         info(s"detected FlightCsChange: $oldCS to $cs")
-        publish(FlightCsChanged(flightId,cs, oldCS, fpos.date))
+        publish(TrackCsChanged(flightId,cs, oldCS, fpos.date))
       }
       publishBusEvent(e) // pass through FlightPos message, preserving originator
 

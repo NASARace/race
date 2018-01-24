@@ -20,11 +20,12 @@ import java.io.{File, InputStream}
 
 import com.typesafe.config.Config
 import gov.nasa.race.actor.ReplayActor
-import gov.nasa.race.air.{FlightCompleted, FlightPos}
+import gov.nasa.race.air.FlightPos
 import gov.nasa.race.archive.ArchiveReader
 import gov.nasa.race.common.ConfigurableStreamCreator.{configuredPathName, createInputStream}
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.geo.LatLonPos
+import gov.nasa.race.track.TrackCompleted
 import gov.nasa.race.track.avro.{TrackIdRecord, TrackPoint}
 import gov.nasa.race.uom.Angle._
 import gov.nasa.race.uom.Length._
@@ -55,7 +56,7 @@ class TrackPointReader (val iStream: InputStream, val pathName: String="<unknown
 
   val dfr = new DataFileStream(iStream, new SpecificDatumReader[TrackPoint])
   val recCache = new TrackPoint
-  var pendingComplete: FlightCompleted = null // to be set if we encounter a completed TrackPoint
+  var pendingComplete: TrackCompleted = null // to be set if we encounter a completed TrackPoint
 
   val idMap: Map[String,String] = initIdMap
 
@@ -99,7 +100,7 @@ class TrackPointReader (val iStream: InputStream, val pathName: String="<unknown
         date
       )
 
-      if (tp.getCompleted) pendingComplete = FlightCompleted(id,cs,"?",date)
+      if (tp.getCompleted) pendingComplete = TrackCompleted(id,cs,"?",date)
 
       someEntry(date, fpos)
     }

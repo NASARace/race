@@ -24,6 +24,7 @@ import com.typesafe.config.Config
 import gov.nasa.race.archive._
 import gov.nasa.race.common.ConfigurableStreamCreator._
 import gov.nasa.race.geo.LatLonPos
+import gov.nasa.race.track.{TrackMessage, TrackTerminationMessage}
 import gov.nasa.race.uom.Angle._
 import gov.nasa.race.uom.Length._
 import gov.nasa.race.uom.Speed._
@@ -43,12 +44,7 @@ object FlightPos {
   case class ChangedCS(oldCS: String)
 }
 
-/**
-  * base type for in-flight related messages
-  */
-trait FlightMessage {
-  def cs: String
-}
+
 
 /**
   * in-flight state consisting of geographic position, altitude, speed and bearing
@@ -59,7 +55,7 @@ case class FlightPos (val id: String,
                  val altitude: Length,
                  val speed: Speed,
                  val heading: Angle,
-                 val date: DateTime) extends TrackedAircraft with FlightMessage {
+                 val date: DateTime) extends TrackedAircraft with TrackMessage {
 
   def this (id:String, pos: LatLonPos, alt: Length,spd: Speed,hdg: Angle, dtg: DateTime) =
     this(id, FlightPos.tempCS(id), pos,alt,spd,hdg,dtg)
@@ -73,21 +69,6 @@ case class FlightPos (val id: String,
 
 }
 
-trait FlightTerminationMessage extends FlightMessage
-
-case class FlightCompleted (id: String,
-                            cs: String,
-                            arrivalPoint: String,
-                            date: DateTime) extends Dated with IdentifiableObject with FlightTerminationMessage
-
-case class FlightDropped (id: String,
-                          cs: String,
-                          date: DateTime) extends Dated with IdentifiableObject with FlightTerminationMessage
-
-case class FlightCsChanged (id: String,
-                            cs: String,
-                            oldCS: String,
-                            date: DateTime) extends Dated with IdentifiableObject
 
 //-------------------------------------- supporting codecs
 /**

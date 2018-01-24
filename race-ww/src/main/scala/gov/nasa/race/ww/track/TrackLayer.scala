@@ -363,6 +363,7 @@ abstract class TrackLayer[T <:TrackedObject](val raceView: RaceView, config: Con
 
   override def handleMessage = {
     case BusEvent(_,fInfo:TrackInfo,_) => entryPanel.setTrackInfo(fInfo)
+    case BusEvent(_,csChange:TrackCsChanged,_) => // todo
     case DelayedAction(_,action) => action()
   }
 

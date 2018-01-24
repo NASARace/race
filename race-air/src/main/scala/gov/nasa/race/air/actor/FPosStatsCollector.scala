@@ -18,11 +18,12 @@ package gov.nasa.race.air.actor
 
 import com.typesafe.config.Config
 import gov.nasa.race.actor.TSStatsCollectorActor
-import gov.nasa.race.air.{FlightCompleted, FlightPos}
+import gov.nasa.race.air.FlightPos
 import gov.nasa.race.common.TSStatsData.{Ambiguous, Duplicate, Sameness}
 import gov.nasa.race.common.{TSEntryData, TSStatsData}
 import gov.nasa.race.core.ClockAdjuster
 import gov.nasa.race.core.Messages.{BusEvent, RaceTick}
+import gov.nasa.race.track.TrackCompleted
 
 /**
   * actor that collects update statistics for FlightPos objects
@@ -42,7 +43,7 @@ class FPosStatsCollector (val config: Config)
       checkInitialClockReset(fpos.date)
       updateActive(fpos.cs,fpos)
 
-    case BusEvent(_, fcomplete: FlightCompleted, _) =>
+    case BusEvent(_, fcomplete: TrackCompleted, _) =>
       checkInitialClockReset(fcomplete.date)
       removeActive(fcomplete.cs)
 

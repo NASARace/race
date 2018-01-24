@@ -6,6 +6,7 @@ import gov.nasa.race.actor.TranslatorActor
 import gov.nasa.race.air.translator.SBS2FlightPos
 import gov.nasa.race.air._
 import gov.nasa.race.config.ConfigUtils._
+import gov.nasa.race.track.TrackCsChanged
 
 import scala.collection.mutable.{HashMap => MHashMap}
 
@@ -51,7 +52,7 @@ class SBSTranslatorActor (config: Config) extends TranslatorActor(config) with F
   } yield {
     flights -= oldCS
     info(s"changing c/s of $oldCS to ${fpos.cs}")
-    publish(FlightCsChanged(fpos.id,fpos.cs, oldCS, fpos.date))
+    publish(TrackCsChanged(fpos.id,fpos.cs, oldCS, fpos.date))
     lastFPos
   }
 
