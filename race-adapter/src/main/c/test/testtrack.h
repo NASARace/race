@@ -22,6 +22,9 @@
 
 typedef struct {
     char   *id;
+    int msg_ord;
+    int flags;
+
     epoch_msec_t   time_msec;
     double lat_deg;
     double lon_deg;

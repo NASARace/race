@@ -36,6 +36,9 @@ object SimpleTrackProtocol {
     protocol SimpleTrackProtocol {
         record SimpleTrack {
             string id;
+            int msg_ordinal; // starting with 1
+            int flags;       // completion etc
+
             timestamp_ms time_msec;
             double lat_deg;
             double lon_deg;
@@ -106,6 +109,8 @@ class SimpleTrackReader extends DataStreamReader {
 
   def readTrack (dis: DataInputStream): TrackedObject = {
     val id = dis.readUTF
+    val msgOrd = dis.readInt  // can be used to check consistency
+    val flags = dis.readInt   // TODO - use to flag completion
     val timeMsec = dis.readLong
     val latDeg = dis.readDouble
     val lonDeg = dis.readDouble
@@ -147,7 +152,12 @@ class SimpleTrackWriter extends DataStreamWriter {
   def writeTrack (dos: DataOutputStream, t: TrackedObject) = {
     val latLonPos = t.position
 
+    val msgOrd = 0 // TODO - needs to be passed in or added to TrackedObject
+    val flags = 0  // ditto
+
     dos.writeUTF(t.cs)
+    dos.writeInt(msgOrd)
+    dos.writeInt(flags)
     dos.writeLong(t.date.getMillis)
     dos.writeDouble(latLonPos.φ.toDegrees)
     dos.writeDouble(latLonPos.λ.toDegrees)

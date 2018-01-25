@@ -188,12 +188,13 @@ int race_read_data_header (databuf_t* db, int* sender, epoch_msec_t* time_msec, 
 #define PROX_CHANGE 0x2
 #define PROX_DROP   0x4
 
-int race_write_track_data(databuf_t *db, int pos, char *id, epoch_msec_t time_msec, double lat_deg,
-                          double lon_deg, double alt_m, double heading_deg, double speed_m_sec);
+int race_write_track_data(databuf_t *db, int pos, char *id, int msg_ordinal, int flags, 
+                          epoch_msec_t time_msec, 
+                          double lat_deg, double lon_deg, double alt_m, double heading_deg, double speed_m_sec);
 
-int race_read_track_data(databuf_t *db, int pos, char id[], int max_len, epoch_msec_t *time_msec,
-                         double *lat_deg, double *lon_deg, double *alt_m, double *heading_deg,
-                         double *speed_m_sec);
+int race_read_track_data(databuf_t *db, int pos, char id[], int max_len, int *msg_ordinal, int *flags, 
+                         epoch_msec_t *time_msec,
+                         double *lat_deg, double *lon_deg, double *alt_m, double *heading_deg, double *speed_m_sec);
 
 int race_write_proximity_data(databuf_t *db, int pos, char *ref_id, double ref_lat_deg,
                               double ref_lon_deg, double ref_alt_m, double dist_m, int flags,

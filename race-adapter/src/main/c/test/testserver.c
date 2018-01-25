@@ -30,6 +30,8 @@
 
 track_t track = {
     .id = "A",
+    .msg_ord = 0,
+    .flags = 0,
     .time_msec = 0,
     .speed_m_sec = 154.33,  // (~300 kn)
     .heading_deg = 90.0,
@@ -86,7 +88,8 @@ int write_data(databuf_t* db, int pos) {
     pos = race_write_short(db,pos,TRACK_MSG);
     pos = race_write_short(db,pos,1);  // we only send one track (for now)
     pos = race_write_track_data(db, pos,
-                             track.id, track.time_msec, track.lat_deg, track.lon_deg, 
+                             track.id, track.msg_ord, track.flags,
+                             track.time_msec, track.lat_deg, track.lon_deg,
                              track.alt_m, track.heading_deg, track.speed_m_sec);
     return pos;
 }
@@ -95,6 +98,8 @@ int write_data(databuf_t* db, int pos) {
 
 int read_track_data (databuf_t* db, int pos) {
     char id[MAX_ID_LEN];
+    int msg_ord;
+    int flags;
     epoch_msec_t time_msec;
     double lat_deg, lon_deg, alt_m, heading_deg, speed_m_sec;
     short n_tracks = 0;
@@ -104,14 +109,14 @@ int read_track_data (databuf_t* db, int pos) {
 
     for (int i=0; i<n_tracks; i++) {
         pos = race_read_track_data(db, pos, 
-                                id, sizeof(id), &time_msec, &lat_deg, &lon_deg, 
+                                id, sizeof(id), &msg_ord, &flags, &time_msec, &lat_deg, &lon_deg,
                                 &alt_m, &heading_deg, &speed_m_sec);
         if (pos <= 0){
             fprintf(stderr, "error reading track: %d\n", i);
             return 0;                        
         } else {
-            printf("   %d: %s, t=%"PRId64", lat=%f°, lon=%f°, alt=%f m, hdg=%f°, spd=%f m/sec\n", 
-                i, id, time_msec, lat_deg, lon_deg, alt_m, heading_deg, speed_m_sec);
+            printf("   %d: %s, ord=%d, flags=0x%X, t=%"PRId64", lat=%f°, lon=%f°, alt=%f m, hdg=%f°, spd=%f m/sec\n",
+                i, id, msg_ord, flags, time_msec, lat_deg, lon_deg, alt_m, heading_deg, speed_m_sec);
         }
     }
     return pos;

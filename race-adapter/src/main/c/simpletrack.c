@@ -28,6 +28,9 @@
     protocol SimpleTrackProtocol {
         record SimpleTrack {
             string id;
+            int msg_ordinal; // consecutive, starting with 1 
+            int flags;
+
             timestamp_ms time_msec;
             double lat_deg;
             double lon_deg;
@@ -43,13 +46,21 @@
         }
 
         record ProximityChange {
-            string ref_id;
+            string ref_id; // of track this is a proximity for
             double lat_deg;
             double lon_deg;
             double alt_m;
             double dist_m;
             int    flags;
-            SimpleTrack proximity;
+
+            string id; // of proximity
+            // there is no msg ordinal, this might be a extrapolated position
+            timestamp_ms time_msec;
+            double lat_deg;
+            double lon_deg;
+            double alt_m;
+            double heading_deg;
+            double speed_m_sec;
         }
 
         record ProximityMsg {
@@ -61,7 +72,8 @@
     **/
 
 int race_write_track_data (databuf_t* db, int pos,
-                        char* id, epoch_msec_t time_msec, double lat_deg, double lon_deg, double alt_m, 
+                        char* id, int msg_ordinal, int flags, 
+                        epoch_msec_t time_msec, double lat_deg, double lon_deg, double alt_m, 
                         double heading_deg, double speed_m_sec) {
     int id_len = strlen(id);
     int track_len = id_len + 2 + 48;
@@ -69,6 +81,8 @@ int race_write_track_data (databuf_t* db, int pos,
 
     int p = pos; 
     p = race_write_string(db, p, id, id_len);
+    p = race_write_int(db, p, msg_ordinal);
+    p = race_write_int(db,p,flags);
     p = race_write_long(db, p, time_msec);
     p = race_write_double(db, p, lat_deg);
     p = race_write_double(db, p, lon_deg);
@@ -79,17 +93,20 @@ int race_write_track_data (databuf_t* db, int pos,
 }
 
 int race_read_track_data (databuf_t* db, int pos,
-                       char id[], int max_len, 
+                       char id[], int max_len, int* msg_ordinal, int* flags,
                        epoch_msec_t* time_msec, double* lat_deg, double* lon_deg, double* alt_m, 
                        double* heading_deg, double* speed_m_sec) {
     int p = pos;
     p = race_read_strncpy(db, p,id,max_len);
+    p = race_read_int(db,p, msg_ordinal);
+    p = race_read_int(db,p, flags);
     p = race_read_long(db, p, time_msec);
     p = race_read_double(db, p, lat_deg);
     p = race_read_double(db, p, lon_deg);
     p = race_read_double(db, p, alt_m);
     p = race_read_double(db, p, heading_deg);
     p = race_read_double(db, p, speed_m_sec);
+
     return p;
 }
 
@@ -110,7 +127,14 @@ int race_write_proximity_data(databuf_t *db, int pos,
     p = race_write_double(db, p, dist_m);
     p = race_write_int(db, p, flags);
 
-    p = race_write_track_data(db,p, prox_id, time_msec, lat_deg, lon_deg, alt_m, heading_deg, speed_m_sec);
+    p = race_write_string(db, p, prox_id, strlen(prox_id));
+    p = race_write_long(db, p, time_msec);
+    p = race_write_double(db, p, lat_deg);
+    p = race_write_double(db, p, lon_deg);
+    p = race_write_double(db, p, alt_m);
+    p = race_write_double(db, p, heading_deg);
+    p = race_write_double(db, p, speed_m_sec);
+
     return p;
 }
 
@@ -123,12 +147,19 @@ int race_read_proximity_data(databuf_t *db, int pos,
                              double *heading_deg, double *speed_m_sec) {
     int p = pos;
     p = race_read_strncpy(db, p, ref_id, max_ref_len);
-    p = race_read_double(db, p, lat_deg);
-    p = race_read_double(db, p, lon_deg);
-    p = race_read_double(db, p, alt_m);
+    p = race_read_double(db, p, ref_lat_deg);
+    p = race_read_double(db, p, ref_lon_deg);
+    p = race_read_double(db, p, ref_alt_m);
     p = race_read_double(db, p, dist_m);
     p = race_read_int(db, p, flags);
 
-    p = race_read_track_data(db,p, prox_id, max_prox_len, time_msec, lat_deg, lon_deg, alt_m, heading_deg, speed_m_sec);
+    p = race_read_strncpy(db, p, prox_id, max_prox_len);
+    p = race_read_long(db, p, time_msec);
+    p = race_read_double(db, p, lat_deg);
+    p = race_read_double(db, p, lon_deg);
+    p = race_read_double(db, p, alt_m);
+    p = race_read_double(db, p, heading_deg);
+    p = race_read_double(db, p, speed_m_sec);
+
     return p;
 }

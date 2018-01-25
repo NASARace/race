@@ -130,15 +130,17 @@ int main( int argc, char** argv ){
                         printf("received %d tracks\n", n_tracks);
                         for (int i=0; i<n_tracks; i++) {
                             char id[MAX_ID_LEN];
+                            int msg_ord;
+                            int flags;
                             epoch_msec_t time_msec;
                             double lat_deg, lon_deg, alt_m, heading_deg, speed_m_sec;
 
-                            pos = race_read_track_data(db, pos, id, sizeof(id), &time_msec, &lat_deg, &lon_deg, &alt_m, &heading_deg, &speed_m_sec);
+                            pos = race_read_track_data(db, pos, id, sizeof(id), &msg_ord, &flags, &time_msec, &lat_deg, &lon_deg, &alt_m, &heading_deg, &speed_m_sec);
                             if (pos <= 0){
                                 fprintf(stderr, "error reading track: %s\n", err_msg);                        
                             } else {
-                                printf("   %d: %s, t=%"PRId64", lat=%f°, lon=%f°, alt=%f m, hdg=%f°, spd=%f m/sec\n", 
-                                    i, id, time_msec, lat_deg, lon_deg, alt_m, heading_deg, speed_m_sec);
+                                printf("   %d: %s, ord=%d, flags=0x%X, t=%"PRId64", lat=%f°, lon=%f°, alt=%f m, hdg=%f°, spd=%f m/sec\n",
+                                    i, id, msg_ord, flags, time_msec, lat_deg, lon_deg, alt_m, heading_deg, speed_m_sec);
                             }
                         }
                     } else if (data_msg_type == PROXIMITY_MSG) {

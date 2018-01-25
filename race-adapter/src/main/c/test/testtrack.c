@@ -20,6 +20,8 @@
 #include "testtrack.h"
 
 void update_position(track_t* track) {
+    track->msg_ord++;
+
     if (track->time_msec == 0) {
         track->time_msec = race_epoch_msec();
 
