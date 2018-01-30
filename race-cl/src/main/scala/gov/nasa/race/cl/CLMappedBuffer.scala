@@ -53,6 +53,8 @@ object CLMappedBuffer {
 class CLMappedByteBuffer(val id: Long, val size: Long, val context: CLContext) extends CLBuffer {
   var data: ByteBuffer = null
 
+  def isMapped = data != null
+
   def enqueueMap(queue: CLCommandQueue): Unit = synchronized {
     if (data == null) {
       withMemoryStack { stack =>

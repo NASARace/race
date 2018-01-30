@@ -40,9 +40,6 @@ class SmoothingExtrapolatorSpec extends FlatSpec with RaceSpec {
 
     var j=0 // next data index
     for (i <- 0 to 25) {
-      //val y = ex.extrapolate(i)
-      //print(f"$i%2d : $y%.1f")
-
       val y = ex.extrapolate(i)
       println(f"$i%2d : $y%.1f")
 

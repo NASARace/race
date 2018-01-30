@@ -16,7 +16,10 @@
  */
 package gov.nasa.race.common
 
+import java.nio.ByteBuffer
+
 import gov.nasa.race._
+
 import scala.concurrent.duration.{FiniteDuration, _}
 
 /**
@@ -80,6 +83,7 @@ class SmoothingExtrapolator (ΔtAverage: FiniteDuration = 1.second,     // avera
     m = 0
   }
 }
+
 
 /**
   * a double exponential smoothing extrapolator which works on state vectors, thus avoiding

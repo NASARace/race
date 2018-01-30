@@ -75,18 +75,27 @@ class CLContext (val id: Long, val devices: Array[CLDevice]) extends CLResource 
   def createProgram(src: String): CLProgram = CLProgram.createProgram(this,src)
 
   //--- buffers
+/*
+  def createByteRBuffer (length: Int)
+  def createByteRBuffer (bb: ByteBuffer)
+  def createByteWBuffer (length: Int)
+*/
 
   def createArrayRBuffer[T<:AnyVal :ClassTag](data: Array[T]): CLArrayRBuffer[T] = CLArrayBuffer.createArrayRBuffer(this,data)
   def createArrayRWBuffer[T<:AnyVal :ClassTag](data: Array[T]): CLArrayRWBuffer[T] = CLArrayBuffer.createArrayRWBuffer(this,data)
+  // no point having a WBuffer ctor with a raw data argument since there would be nothing to write on the host side
 
   def createArrayWBuffer[T<:AnyVal :ClassTag](length: Int): CLArrayWBuffer[T] = CLArrayBuffer.createArrayWBuffer(this,length)
   def createArrayRBuffer[T<:AnyVal :ClassTag](length: Int): CLArrayRBuffer[T] = CLArrayBuffer.createArrayRBuffer(this,length)
   def createArrayRWBuffer[T<:AnyVal :ClassTag](length: Int): CLArrayRWBuffer[T] = CLArrayBuffer.createArrayRWBuffer(this,length)
 
+  def createRecordRBuffer[R <: BufferRecord](length: Int, createRecord: (ByteBuffer)=>R): CLRecordRBuffer[R] = CLRecordBuffer.createRecordRBuffer(this,length,createRecord)
+  def createRecordWBuffer[R <: BufferRecord](length: Int, createRecord: (ByteBuffer)=>R): CLRecordWBuffer[R] = CLRecordBuffer.createRecordWBuffer(this,length,createRecord)
+  def createRecordRWBuffer[R <: BufferRecord](length: Int, createRecord: (ByteBuffer)=>R): CLRecordRWBuffer[R] = CLRecordBuffer.createRecordRWBuffer(this,length,createRecord)
+
+  // we keep mapped buffers RW since we couldn't enforce access restriction through the type system
   def createMappedByteBuffer(size: Long): CLMappedByteBuffer = CLMappedBuffer.createMappedByteBuffer(this,size)
-  def createMappedRecordBuffer[R <: BufferRecord](length: Int, createRecord: (ByteBuffer)=>R): CLMappedRecordBuffer[R] = {
-    CLMappedBuffer.createMappedRecordBuffer(this,length,createRecord)
-  }
+  def createMappedRecordBuffer[R <: BufferRecord](length: Int, createRecord: (ByteBuffer)=>R): CLMappedRecordBuffer[R] = CLMappedBuffer.createMappedRecordBuffer(this,length,createRecord)
 
   //--- events
 
