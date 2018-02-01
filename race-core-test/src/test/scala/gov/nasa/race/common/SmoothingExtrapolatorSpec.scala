@@ -52,7 +52,7 @@ class SmoothingExtrapolatorSpec extends FlatSpec with RaceSpec {
     }
   }
 
-  "extrapolator" should "produce stricly decreasing values with limited delta" in {
+  "extrapolator" should "produce strictly decreasing values with limited delta" in {
     val ex = new SmoothingExtrapolator(500.milliseconds, 0.3,0.1)
     val dmMax = 0.06
 
