@@ -16,6 +16,8 @@
  */
 package gov.nasa.race.cl
 
+import java.nio.ByteBuffer
+
 import gov.nasa.race.cl.CLUtils._
 import org.lwjgl.opencl.CL10._
 
@@ -37,6 +39,37 @@ trait CLBuffer extends CLResource {
   override def release = clReleaseMemObject(id).?
 }
 
+//--- generic ByteBuffer support
 
+trait ByteBuf extends CLBuffer {
+  val buf: ByteBuffer
+  val size = buf.capacity
+}
 
+trait ByteWBuf extends ByteBuf {
+  def enqueueRead(queue: CLCommandQueue, isBlocking: Boolean=false): Unit = {
+    clEnqueueReadBuffer(queue.id,id,isBlocking,0,buf,null,null).?
+  }
+  def enqueueBlockingRead(queue: CLCommandQueue) = enqueueRead(queue,true)
+
+}
+
+trait ByteRBuf extends ByteBuf {
+  def enqueueWrite(queue: CLCommandQueue, isBlocking: Boolean=false): Unit = {
+    clEnqueueWriteBuffer(queue.id,id,isBlocking,0,buf,null,null).?
+  }
+  def enqueueBlockingWrite(queue: CLCommandQueue) = enqueueWrite(queue,true)
+
+  def enqueueWriteEv (queue: CLCommandQueue): Long = withMemoryStack { stack =>
+    val pev = stack.allocPointer
+    clEnqueueWriteBuffer(queue.id,id,false,0,buf,null,pev).?
+    pev(0)
+  }
+
+  def enqueueWriteEvent (queue: CLCommandQueue): CLEvent = new CLEvent(enqueueWriteEv(queue),context)
+}
+
+class CLByteRBuffer (val id: Long, val buf: ByteBuffer, val context: CLContext) extends ByteRBuf
+class CLByteWBuffer (val id: Long, val buf: ByteBuffer, val context: CLContext) extends ByteWBuf
+class CLByteRWBuffer (val id: Long, val buf: ByteBuffer, val context: CLContext) extends ByteRBuf with ByteWBuf
 
