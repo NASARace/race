@@ -41,12 +41,42 @@ trait CLBuffer extends CLResource {
 
 //--- generic ByteBuffer support
 
-trait ByteBuf extends CLBuffer {
+object CLByteBuffer {
+  private def _createBuffer(context: CLContext, size: Long, flags: Int): Long = {
+    withMemoryStack { stack =>
+      val err = stack.allocInt
+      val bid = clCreateBuffer(context.id, flags, size, err)
+      checkCLError(err)
+      bid
+    }
+  }
+
+  def createByteRBuffer (context: CLContext, buf: ByteBuffer): CLByteRBuffer = {
+    buf.order(context.byteOrder)
+    val id = _createBuffer(context, buf.capacity, CL_MEM_READ_ONLY)
+    new CLByteRBuffer(id, buf, context)
+  }
+
+  def createByteWBuffer (context: CLContext, buf: ByteBuffer): CLByteWBuffer = {
+    buf.order(context.byteOrder)
+    val id = _createBuffer(context, buf.capacity, CL_MEM_WRITE_ONLY)
+    new CLByteWBuffer(id, buf, context)
+  }
+
+  def createByteRWBuffer (context: CLContext, buf: ByteBuffer): CLByteRWBuffer = {
+    buf.order(context.byteOrder)
+    val id = _createBuffer(context, buf.capacity, CL_MEM_READ_WRITE)
+    new CLByteRWBuffer(id, buf, context)
+  }
+}
+
+
+trait CLByteBuffer extends CLBuffer {
   val buf: ByteBuffer
   val size = buf.capacity
 }
 
-trait ByteWBuf extends ByteBuf {
+trait ByteWBuf extends CLByteBuffer {
   def enqueueRead(queue: CLCommandQueue, isBlocking: Boolean=false): Unit = {
     clEnqueueReadBuffer(queue.id,id,isBlocking,0,buf,null,null).?
   }
@@ -54,7 +84,7 @@ trait ByteWBuf extends ByteBuf {
 
 }
 
-trait ByteRBuf extends ByteBuf {
+trait ByteRBuf extends CLByteBuffer {
   def enqueueWrite(queue: CLCommandQueue, isBlocking: Boolean=false): Unit = {
     clEnqueueWriteBuffer(queue.id,id,isBlocking,0,buf,null,null).?
   }

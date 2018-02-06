@@ -18,8 +18,9 @@ package gov.nasa.race.cl
 
 import java.nio.ByteBuffer
 
+import gov.nasa.race._
 import gov.nasa.race.cl.CLUtils._
-import gov.nasa.race.common.{BufferRecord, CloseStack}
+import gov.nasa.race.common.BufferRecord
 import gov.nasa.race.util.StringUtils
 import org.lwjgl.opencl.CL10._
 import org.lwjgl.opencl.{CL11, CLContextCallbackI}
@@ -61,10 +62,16 @@ object CLContext {
   * note that OpenCL only allows to put devices of the same platform into the same context, hence we
   * keep context objects in our CLPlatform objects
   *
+  * note also that we don't support a context with devices of different byte order
+  *
   * NOTE - we don't do resource tracking here. If the client does not release objects itself, created objects have to be
   * explicitly added to a CloseableStack by the caller
   */
 class CLContext (val id: Long, val devices: Array[CLDevice]) extends CLResource {
+
+  val byteOrder = applyTo(devices.head.byteOrder){ bo=>
+    if (devices.exists( _.byteOrder != bo)) throw new RuntimeException(s"heterogenous byte order not supported for CLContext")
+  }
 
   @inline def includesDevice (device: CLDevice): Boolean = devices.find(_.id == device.id).isDefined
 
@@ -75,11 +82,9 @@ class CLContext (val id: Long, val devices: Array[CLDevice]) extends CLResource 
   def createProgram(src: String): CLProgram = CLProgram.createProgram(this,src)
 
   //--- buffers
-/*
-  def createByteRBuffer (length: Int)
-  def createByteRBuffer (bb: ByteBuffer)
-  def createByteWBuffer (length: Int)
-*/
+  def createByteRBuffer(data: ByteBuffer) = CLByteBuffer.createByteRBuffer(this,data)
+  def createByteWBuffer(data: ByteBuffer) = CLByteBuffer.createByteWBuffer(this,data)
+  def createByteRWBuffer(data: ByteBuffer) = CLByteBuffer.createByteRWBuffer(this,data)
 
   def createArrayRBuffer[T<:AnyVal :ClassTag](data: Array[T]): CLArrayRBuffer[T] = CLArrayBuffer.createArrayRBuffer(this,data)
   def createArrayRWBuffer[T<:AnyVal :ClassTag](data: Array[T]): CLArrayRWBuffer[T] = CLArrayBuffer.createArrayRWBuffer(this,data)

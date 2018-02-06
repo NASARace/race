@@ -17,16 +17,16 @@
 package gov.nasa.race.cl
 
 import CLUtils._
-import java.nio.ByteBuffer
+import java.nio.{ByteBuffer, ByteOrder}
 
 import gov.nasa.race.common.BufferRecord
 import org.lwjgl.opencl.CL10._
 
 object CLRecordBuffer {
-  private def _createBuffer(context: CLContext, size: Long, flags: Int): Long = {
+  private def _createBuffer(context: CLContext, buf: ByteBuffer, flags: Int): Long = {
     withMemoryStack { stack =>
       val err = stack.allocInt
-      val bid = clCreateBuffer(context.id, flags, size, err)
+      val bid = clCreateBuffer(context.id, flags, buf, err)
       checkCLError(err)
       bid
     }
@@ -34,20 +34,23 @@ object CLRecordBuffer {
 
   def createRecordRBuffer[R<:BufferRecord](context: CLContext, length: Int, createRecord: (ByteBuffer)=>R): CLRecordRBuffer[R] = {
     val size = createRecord(null).size * length
-    val bid = _createBuffer(context, size, CL_MEM_READ_ONLY)
-    new CLRecordRBuffer[R](bid, length, size, createRecord, context)
+    val buf = ByteBuffer.allocateDirect(size.toInt).order(context.byteOrder)
+    val bid = _createBuffer(context, buf, CL_MEM_READ_ONLY)
+    new CLRecordRBuffer[R](bid, length, buf, createRecord, context)
   }
 
   def createRecordWBuffer[R<:BufferRecord](context: CLContext, length: Int, createRecord: (ByteBuffer)=>R): CLRecordWBuffer[R] = {
     val size = createRecord(null).size * length
-    val bid = _createBuffer(context, size, CL_MEM_WRITE_ONLY)
-    new CLRecordWBuffer[R](bid, length, size, createRecord, context)
+    val buf = ByteBuffer.allocateDirect(size.toInt).order(context.byteOrder)
+    val bid = _createBuffer(context, buf, CL_MEM_WRITE_ONLY)
+    new CLRecordWBuffer[R](bid, length, buf, createRecord, context)
   }
 
   def createRecordRWBuffer[R<:BufferRecord](context: CLContext, length: Int, createRecord: (ByteBuffer)=>R): CLRecordRWBuffer[R] = {
     val size = createRecord(null).size * length
-    val bid = _createBuffer(context, size, CL_MEM_READ_WRITE)
-    new CLRecordRWBuffer[R](bid, length, size, createRecord, context)
+    val buf = ByteBuffer.allocateDirect(size.toInt).order(context.byteOrder)
+    val bid = _createBuffer(context, buf, CL_MEM_READ_WRITE)
+    new CLRecordRWBuffer[R](bid, length, buf, createRecord, context)
   }
 }
 
@@ -60,8 +63,24 @@ object CLRecordBuffer {
   * not have APIs that work on Array[Byte] data
   */
 trait CLRecordBuffer extends CLBuffer {
-  val buf = ByteBuffer.allocate(size.toInt)
-  val data = buf.array
+  val buf: ByteBuffer
+  val size = buf.capacity
+
+  def dump (n: Int=16): Unit = {
+    for (i <- 0 until buf.limit) {
+      if (i > 0) {
+        if (i % n == 0) println else  print(' ')
+      }
+      print(f"${buf.get(i)}%02x")
+    }
+    println
+  }
+}
+
+// unfortunately traits cannot have type constraints on type parameters so we need another type
+abstract class RecBuf[R<:BufferRecord] extends CLRecordBuffer {
+  val createRecord: (ByteBuffer)=>R
+  def foreachRecord(f: (R)=>Unit) = createRecord(buf).foreachRecord(f)
 }
 
 trait RecWBuf extends CLRecordBuffer {
@@ -87,12 +106,15 @@ trait RecRBuf extends CLRecordBuffer {
   def enqueueWriteEvent (queue: CLCommandQueue): CLEvent = new CLEvent(enqueueWriteEv(queue),context)
 }
 
+// unfortunately we have to do
 
-class CLRecordRBuffer[R<:BufferRecord](val id: Long, val length: Int, val size: Long, val createRecord: (ByteBuffer)=>R,
-                                       val context: CLContext) extends RecRBuf
+class CLRecordRBuffer[R<:BufferRecord](val id: Long, val length: Int, val buf: ByteBuffer, val createRecord: (ByteBuffer)=>R,
+                                       val context: CLContext) extends RecBuf[R] with RecRBuf
 
-class CLRecordWBuffer[R<:BufferRecord](val id: Long, val length: Int, val size: Long, val createRecord: (ByteBuffer)=>R,
-                                       val context: CLContext) extends RecWBuf
+class CLRecordWBuffer[R<:BufferRecord](val id: Long, val length: Int, val buf: ByteBuffer, val createRecord: (ByteBuffer)=>R,
+                                       val context: CLContext) extends RecBuf[R] with RecWBuf {
 
-class CLRecordRWBuffer[R<:BufferRecord](val id: Long, val length: Int, val size: Long, val createRecord: (ByteBuffer)=>R,
-                                        val context: CLContext) extends RecRBuf with RecWBuf
+}
+
+class CLRecordRWBuffer[R<:BufferRecord](val id: Long, val length: Int, val buf: ByteBuffer, val createRecord: (ByteBuffer)=>R,
+                                        val context: CLContext) extends RecBuf[R] with RecRBuf with RecWBuf

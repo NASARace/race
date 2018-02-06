@@ -154,7 +154,7 @@ trait AWriteBuf[T] extends  ABuf[T] {
 
 }
 
-abstract class CLArrayBuffer [T<:AnyVal :ClassTag] {
+abstract class CLArrayBuffer [T<:AnyVal :ClassTag] extends CLBuffer {
   val data: Array[T]
 
   val elementClass: Class[_] = classTag[T].runtimeClass

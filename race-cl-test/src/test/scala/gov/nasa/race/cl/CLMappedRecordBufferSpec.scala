@@ -44,9 +44,9 @@ class CLMappedRecordBufferSpec extends FlatSpec with RaceSpec {
            double a;
            int b;
            double c;
-         } test_record;
+         } test_record_t;
 
-         __kernel void compute_c (__global test_record* rec) {
+         __kernel void compute_c (__global test_record_t* rec) {
            unsigned int i = get_global_id(0);
 
            rec[i].c = rec[i].a + rec[i].b;

@@ -27,7 +27,7 @@ object CLMappedBuffer {
   def createMappedByteBuffer(context: CLContext,size: Long): CLMappedByteBuffer = {
     withMemoryStack { stack =>
       val err = stack.allocInt
-      val bid = clCreateBuffer(context.id, CL_MEM_READ_WRITE, size, err)
+      val bid = clCreateBuffer(context.id, CL_MEM_READ_WRITE | CL_MEM_ALLOC_HOST_PTR, size, err)
       checkCLError(err(0))
       new CLMappedByteBuffer(bid, size, context)
     }
@@ -37,7 +37,7 @@ object CLMappedBuffer {
     withMemoryStack { stack =>
       val err = stack.allocInt
       val size = createRecord(null).size*length
-      val bid = clCreateBuffer(context.id, CL_MEM_READ_WRITE, size, err)
+      val bid = clCreateBuffer(context.id, CL_MEM_READ_WRITE | CL_MEM_ALLOC_HOST_PTR, size, err)
       checkCLError(err(0))
       new CLMappedRecordBuffer[R](bid, length, size, createRecord, context)
     }

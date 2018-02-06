@@ -16,6 +16,8 @@
  */
 package gov.nasa.race.cl
 
+import java.nio.ByteOrder
+
 import CLUtils._
 import gov.nasa.race.common.CloseStack
 import gov.nasa.race.tryWithResource
@@ -98,7 +100,9 @@ class CLDevice (val index: Int, val id: Long, val platform: CLPlatform) extends 
 
   val extensions: HashSet[String] = HashSet[String](getDeviceInfoStringUTF8(id,CL_DEVICE_EXTENSIONS).split(" "): _*)
   val isFp64: Boolean = extensions.contains("cl_khr_fp64")
+
   val isLittleEndian: Boolean = getDeviceInfoInt(id, CL_DEVICE_ENDIAN_LITTLE) == 1
+  def byteOrder = if (isLittleEndian) ByteOrder.LITTLE_ENDIAN else ByteOrder.BIG_ENDIAN
 
   override def release = CL12.clReleaseDevice(id)
 

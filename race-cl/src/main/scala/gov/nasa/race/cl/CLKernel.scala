@@ -38,13 +38,19 @@ class CLKernel (val id: Long, val name: String, val program: CLProgram) extends 
 
   override def release = clReleaseKernel(id).?
 
-  def setArgs (args: CLBuffer*): Unit = {
+  def setArgs (args: Any*): Unit = {
     assert(args.size == numArgs)
     var idx = 0
     args.foreach { a =>
       a match {
+        case v:Int => clSetKernelArg1i(id,idx,v).?
+        case v:Long => clSetKernelArg1l(id,idx,v).?
+        case v:Float => clSetKernelArg1f(id,idx,v).?
+        case v:Double => clSetKernelArg1d(id,idx,v).?
         case buf:CLArrayBuffer[_] => clSetKernelArg1p(id,idx,buf.id).?
         case buf:CLMappedByteBuffer => clSetKernelArg1p(id,idx,buf.id).?
+        case buf:CLByteBuffer => clSetKernelArg1p(id,idx,buf.id).?
+        case buf:CLRecordBuffer => clSetKernelArg1p(id,idx,buf.id).?
           // ... and many more
 
         case _ => throw new RuntimeException(s"unknown argument type for kernel $name: $a")

@@ -63,8 +63,14 @@ class CLCommandQueue (val id: Long,  val context: CLContext, val device: CLDevic
     clEnqueueNDRangeKernel(id,kernel.id,1,null,globWS,null,null,null).?
   }
 
-  def enqueueRead[T<:AnyVal] (buffer: AWriteBuf[T],isBlocking: Boolean=false): Unit = buffer.enqueueRead(this,isBlocking)
-  def enqueueWrite[T<:AnyVal] (buffer: AReadBuf[T]): Unit = buffer.enqueueWrite(this)
+  def enqueueByteBufferRead(buffer: ByteWBuf, isBlocking: Boolean = false): Unit = buffer.enqueueRead(this,isBlocking)
+  def enqueueByteBufferWrite(buffer: ByteRBuf, isBlocking: Boolean = false): Unit = buffer.enqueueWrite(this,isBlocking)
+
+  def enqueueRecordBufferRead(buffer: RecWBuf, isBlocking: Boolean = false): Unit = buffer.enqueueRead(this,isBlocking)
+  def enqueueRecordBufferWrite(buffer: RecRBuf, isBlocking: Boolean = false): Unit = buffer.enqueueWrite(this,isBlocking)
+
+  def enqueueArrayBufferRead[T<:AnyVal](buffer: AWriteBuf[T], isBlocking: Boolean=false): Unit = buffer.enqueueRead(this,isBlocking)
+  def enqueueArrayBufferWrite[T<:AnyVal](buffer: AReadBuf[T]): Unit = buffer.enqueueWrite(this)
 
   def enqueueMap (buffer: CLMappedByteBuffer): Unit = buffer.enqueueMap(this) // low level, use executeMapped
   def enqueueUnmap (buffer: CLMappedByteBuffer): Unit = buffer.enqueueUnmap(this) // low level, use executeMapped

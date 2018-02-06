@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, United States Government, as represented by the
+ * Copyright (c) 2018, United States Government, as represented by the
  * Administrator of the National Aeronautics and Space Administration.
  * All rights reserved.
  *
@@ -54,19 +54,19 @@ class BlockExtrapolator (val maxEntries: Int,             // maximum number of e
 
   final val nStates = initValues.length
 
-  // all values are doubles
-  final val outRecordLength = 8 * 16*nStates  // tLast + nStates*(s,m)
-  final val inRecordLength = 8 * nStates     // state estimates
+  // all values are doubles or longs
+  final val outRecordLength = 8 + 16*nStates  // tLast + (s,m)*nStates
+  final val inRecordLength = 8*nStates     // state estimates
 
-  final val tscale = 10.0 ** Math.round(Math.log10(ΔtAverage.toMillis))
+  final val tScale = 10.0 ** Math.round(Math.log10(ΔtAverage.toMillis))
 
   var topIndex = -1 // highest used index
   var freeList = List.empty[Int]
 
   val entryMap: MHashMap[String,Entry] = MHashMap.empty // the host-only data per entry
 
-  val outBuffer  = ByteBuffer.allocate(maxEntries * outRecordLength)   // host -> device
-  val inBuffer = ByteBuffer.allocate(maxEntries * inRecordLength)  // device -> host
+  val outBuffer  = ByteBuffer.allocateDirect(maxEntries * outRecordLength)   // host -> device
+  val inBuffer = ByteBuffer.allocateDirect(maxEntries * inRecordLength)  // device -> host
 
   //--- init outBuffer
   for (i <- 0 until maxEntries) {
@@ -79,6 +79,7 @@ class BlockExtrapolator (val maxEntries: Int,             // maximum number of e
   }
 
   def size = entryMap.size
+  def workItems = topIndex+1
 
   private def getNewEntry (id: String): Entry = {
     val idx = if (freeList.isEmpty) {
@@ -99,24 +100,23 @@ class BlockExtrapolator (val maxEntries: Int,             // maximum number of e
 
   def addObservation (id: String, x: Array[Double], t: Long): Unit = {
     val e = entryMap.getOrElseUpdate(id,getNewEntry(id))
-    val i0 = e.index * outRecordLength
+    var iOut = e.index * outRecordLength
 
     val nObservations = e.nObservations
     val tLast = e.tLast
     e.tLast = t
     e.nObservations += 1
-    outBuffer.putLong(i0,t)
+
+    outBuffer.putLong(iOut,t); iOut += 8
 
     if (nObservations == 0) { // first observation
       for (j <- 0 until nStates) {
-        val is = i0 + 8 + (j*8)
-        val im = is + 8
-        outBuffer.putDouble(is,x(j))
-        outBuffer.putDouble(im,0)
+        outBuffer.putDouble(iOut,x(j)); iOut += 8
+        outBuffer.putDouble(iOut,0); iOut += 8
       }
 
     } else {
-      val Δt = (t - tLast) / tscale
+      val Δt = (t - tLast) / tScale
       if (Δt != 0) { // safe guard against duplicated observations that would cause infinity results
         for (j <- 0 until nStates) {
 
@@ -129,14 +129,13 @@ class BlockExtrapolator (val maxEntries: Int,             // maximum number of e
           e.γ(j) = γ
 
           //--- update outBuffer
-          val is = i0 + 8 + (j*8)
+          val is = iOut; iOut += 16
           val im = is + 8
           var s = outBuffer.getDouble(is)
           var m = outBuffer.getDouble(im)
           val sʹ = (1 - α) * (s + Δt * m) + α * x(j)
           m = (1 - γ) * m + γ * (sʹ - s) / Δt
           s = sʹ
-          outBuffer.putDouble(i0,t)
           outBuffer.putDouble(is,s)
           outBuffer.putDouble(im,m)
         }
@@ -167,32 +166,31 @@ class BlockExtrapolator (val maxEntries: Int,             // maximum number of e
   def extrapolate (t: Long): Unit = {
     for (e: Entry <- entryMap.values) {
       val idx = e.index
-      val i0 = idx * outRecordLength + 8
-      val r0 = idx * inRecordLength
+      var iOut = idx * outRecordLength + 8 // skip t
+      var iIn = idx * inRecordLength
 
       for (j <- 0 until nStates) {
-        val is = i0 + (j * 8)
-        var s = outBuffer.getDouble(is)
-        var m = outBuffer.getDouble(is+8)
+        var s = outBuffer.getDouble(iOut); iOut += 8
+        var m = outBuffer.getDouble(iOut); iOut += 8
 
-        val v = s + (t - e.tLast) * m / tscale
-        inBuffer.putDouble(r0 + (j*8),v)
+        val v = s + (t - e.tLast) * m / tScale
+        inBuffer.putDouble(iIn, v); iIn += 8
       }
     }
   }
 
-  def foreach (f: (Array[Double]=>Unit)): Unit = {
+  def foreach (f: (String,Array[Double])=>Unit): Unit = {
     val v = new Array[Double](nStates)
 
     for (e: Entry <- entryMap.values) {
       val idx = e.index
-      val r0 = idx * inRecordLength
+      var iIn = idx * inRecordLength
 
       for (j <- 0 until nStates) {
-        v(j) = inBuffer.getDouble(r0 + (j*8))
+        v(j) = inBuffer.getDouble(iIn); iIn += 8
       }
 
-      f(v)
+      f(e.id,v)
     }
   }
 }
