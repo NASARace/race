@@ -33,7 +33,7 @@ object Benchmarks {
     val z = double(36)
   }
 
-  val nEntries = 5000 // number of items in buffers
+  val nEntries = 10000 // number of items in buffers
   val nRounds = 10000  // number of computations
 
   val twoBufferKernelSrc =
@@ -82,10 +82,28 @@ object Benchmarks {
       |  }
     """.stripMargin
 
+  val arrayKernelSrc =
+    """
+      |  __kernel void array_kernel (__global double* a, __global double* b, __global int* c,
+      |                              __global double* x, __global double* y, __global double* z) {
+      |    unsigned int i = get_global_id(0);
+      |
+      |    x[i] = a[i] * c[i];
+      |    y[i] = b[i] * c[i];
+      |    z[i] = a[i] + b[i];
+      |  }
+    """.stripMargin
+
   //--------------------------------- explicit objects, CPU only
 
   class InObj (val a: Double, val b: Double, val c: Int)
   class OutObj (var x: Double, var y: Double, var z: Double)
+
+  def compute (in: InObj, out: OutObj): Unit = {
+    out.x = in.a * in.c
+    out.y = in.b * in.c
+    out.z = in.a + in.b
+  }
 
   def testBaseline: Unit = {
     val aIn = new Array[InObj](nEntries)
@@ -95,16 +113,53 @@ object Benchmarks {
     for (i <- 0 until nEntries) aOut(i) = new OutObj(0,0,0)
 
     val nanos = measureNanos(nRounds) {
-      for (i <- 0 until nEntries) {
-        val in = aIn(i)
-        val out = aOut(i)
-        out.x = in.a * in.c
-        out.y = in.b * in.c
-        out.z = in.a + in.b
-      }
+      for (i <- 0 until nEntries) { compute( aIn(i), aOut(i)) }
     }
     println(f"testBaseline $nRounds rounds on $nEntries items: ${(nanos/1000000).toInt}msec")
 
+  }
+
+  //-------------------------------------- arrays
+
+  def testArrays: Unit = {
+    tryWithResource(new CloseStack) { resources =>
+      val device = CLPlatform.preferredDevice >> resources
+      //println(s"got $device")
+
+      val context = device.createContext >> resources
+      val queue = device.createJobCommandQueue(context) >> resources
+
+      val a = context.createArrayRBuffer[Double](nEntries) >> resources
+      val b = context.createArrayRBuffer[Double](nEntries) >> resources
+      val c = context.createArrayRBuffer[Int](nEntries) >> resources
+
+      val x = context.createArrayWBuffer[Double](nEntries) >> resources
+      val y = context.createArrayWBuffer[Double](nEntries) >> resources
+      val z = context.createArrayWBuffer[Double](nEntries) >> resources
+
+      for (i <- 0 until nEntries) {
+        a.data(i) = 2
+        b.data(i) = 3
+        c.data(i) = 2
+      }
+
+      val prog = context.createAndBuildProgram(arrayKernelSrc) >> resources
+      val kernel = prog.createKernel("array_kernel") >> resources
+      kernel.setArgs(a,b,c,x,y,z)
+
+      val nanos = measureNanos(nRounds) {
+        queue.enqueueArrayBufferWrite(a)
+        queue.enqueueArrayBufferWrite(b)
+        queue.enqueueArrayBufferWrite(c)
+
+        queue.enqueue1DRange(kernel, nEntries)
+
+        queue.enqueueArrayBufferRead(x)
+        queue.enqueueArrayBufferRead(y)
+        queue.enqueueArrayBufferRead(z, true)
+      }
+      println(f"testArrays $nRounds rounds on $nEntries items: ${(nanos/1000000).toInt}msec")
+    }
   }
 
   //-------------------------------------- two buffers, copy
@@ -196,12 +251,15 @@ object Benchmarks {
         queue.enqueue1DRange(kernel, nEntries)
         queue.executeMapped(inoutBuf) { _.capacity }
       }
-      println(f"testOneMapped $nRounds rounds on $nEntries items: ${(nanos / 1000000).toInt}msec")
+      println(f"testOneMapped $nRounds rounds on $nEntries items: ${(nanos/1000000).toInt}msec")
     }
   }
 
 
   def main (args: Array[String]) = {
+    System.gc
+    testArrays
+
     System.gc
     testTwoBufferCopy
 

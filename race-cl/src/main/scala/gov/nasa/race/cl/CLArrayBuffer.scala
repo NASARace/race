@@ -39,6 +39,7 @@ object CLArrayBuffer {
   final val ClassOfByte: Class[_] = classOf[Byte]
   final val ClassOfShort: Class[_] = classOf[Short]
   final val ClassOfInt: Class[_] = classOf[Int]
+  final val ClassOfLong: Class[_] = classOf[Long]
   final val ClassOfFloat: Class[_] = classOf[Float]
   final val ClassOfDouble: Class[_] = classOf[Double]
 
@@ -46,6 +47,7 @@ object CLArrayBuffer {
     case ClassOfByte => 1
     case ClassOfShort => 2
     case ClassOfInt => 4
+    case ClassOfLong => 8
     case ClassOfFloat => 4
     case ClassOfDouble => 8
   }
@@ -109,7 +111,7 @@ trait AReadBuf[T] extends  ABuf[T] {
   private def _enqueueWriteShort(q: CLCommandQueue,isBlocking: Boolean,pe: PointerBuffer): Unit = clEnqueueWriteBuffer(q.id,id,isBlocking,0,data.asInstanceOf[Array[Short]],null,pe).?
   private def _enqueueWriteInt(q: CLCommandQueue,isBlocking: Boolean,pe: PointerBuffer): Unit = clEnqueueWriteBuffer(q.id,id,isBlocking,0,data.asInstanceOf[Array[Int]],null,pe).?
   private def _enqueueWriteFloat(q: CLCommandQueue,isBlocking: Boolean,pe: PointerBuffer): Unit = clEnqueueWriteBuffer(q.id,id,isBlocking,0,data.asInstanceOf[Array[Float]],null,pe).?
-  private def _enqueueWriteDouble(q: CLCommandQueue,isBlocking: Boolean,pe: PointerBuffer): Unit = clEnqueueWriteBuffer(q.id,id,isBlocking,0,data.asInstanceOf[Array[Float]],null,pe).?
+  private def _enqueueWriteDouble(q: CLCommandQueue,isBlocking: Boolean,pe: PointerBuffer): Unit = clEnqueueWriteBuffer(q.id,id,isBlocking,0,data.asInstanceOf[Array[Double]],null,pe).?
 
   val _enqueueWrite: (CLCommandQueue,Boolean,PointerBuffer)=>Unit = elementClass match {
     case ClassOfByte => _enqueueWriteByte
