@@ -35,21 +35,21 @@ object CLRecordBuffer {
   def createRecordRBuffer[R<:BufferRecord](context: CLContext, length: Int, createRecord: (ByteBuffer)=>R): CLRecordRBuffer[R] = {
     val size = createRecord(null).size * length
     val buf = ByteBuffer.allocateDirect(size.toInt).order(context.byteOrder)
-    val bid = _createBuffer(context, buf, CL_MEM_READ_ONLY)
+    val bid = _createBuffer(context, buf, CL_MEM_READ_ONLY | CL_MEM_USE_HOST_PTR)
     new CLRecordRBuffer[R](bid, length, buf, createRecord, context)
   }
 
   def createRecordWBuffer[R<:BufferRecord](context: CLContext, length: Int, createRecord: (ByteBuffer)=>R): CLRecordWBuffer[R] = {
     val size = createRecord(null).size * length
     val buf = ByteBuffer.allocateDirect(size.toInt).order(context.byteOrder)
-    val bid = _createBuffer(context, buf, CL_MEM_WRITE_ONLY)
+    val bid = _createBuffer(context, buf, CL_MEM_WRITE_ONLY | CL_MEM_USE_HOST_PTR)
     new CLRecordWBuffer[R](bid, length, buf, createRecord, context)
   }
 
   def createRecordRWBuffer[R<:BufferRecord](context: CLContext, length: Int, createRecord: (ByteBuffer)=>R): CLRecordRWBuffer[R] = {
     val size = createRecord(null).size * length
     val buf = ByteBuffer.allocateDirect(size.toInt).order(context.byteOrder)
-    val bid = _createBuffer(context, buf, CL_MEM_READ_WRITE)
+    val bid = _createBuffer(context, buf, CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR)
     new CLRecordRWBuffer[R](bid, length, buf, createRecord, context)
   }
 }

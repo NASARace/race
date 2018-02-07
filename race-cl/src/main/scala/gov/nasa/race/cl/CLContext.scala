@@ -16,7 +16,7 @@
  */
 package gov.nasa.race.cl
 
-import java.nio.ByteBuffer
+import java.nio.{ByteBuffer, ByteOrder}
 
 import gov.nasa.race._
 import gov.nasa.race.cl.CLUtils._
@@ -32,7 +32,11 @@ object CLContext {
 
   private def _allocContext (devices: CLDevice*): Long = withMemoryStack { stack =>
     val err = stack.allocInt
-    val ctxProps = stack.allocPointerBuffer(0)
+
+    // at least on OS X we can't do a "val ctxProps = stack.allocPointerBuffer(0)" as this will
+    // always fail with CL_INVALID_VALUE - we have to explicitly set the CONTEXT_PLATFORM
+    val ctxProps = stack.allocPointerBuffer(CL_CONTEXT_PLATFORM, devices.head.platform.id, 0)
+
     val ctxDevs = stack.allocPointerBuffer(devices)(_.id)
 
     val errCb = new CLContextCallbackI {
@@ -49,7 +53,9 @@ object CLContext {
     ctxId
   }
 
-  def createContext (devices: CLDevice*): CLContext = new CLContext(_allocContext(devices:_*),Array(devices:_*))
+  def createContext (devices: CLDevice*): CLContext = {
+    new CLContext(_allocContext(devices:_*),Array(devices:_*))
+  }
   def createSingleDeviceContext (device: CLDevice): CLSingleDeviceContext = new CLSingleDeviceContext(_allocContext(device),device)
 }
 
@@ -69,8 +75,12 @@ object CLContext {
   */
 class CLContext (val id: Long, val devices: Array[CLDevice]) extends CLResource {
 
-  val byteOrder = applyTo(devices.head.byteOrder){ bo=>
-    if (devices.exists( _.byteOrder != bo)) throw new RuntimeException(s"heterogenous byte order not supported for CLContext")
+  val platform = getHomogenous[CLDevice,CLPlatform](devices, _.platform, _.id == _.id).getOrElse {
+    throw new RuntimeException(s"heterogenous platform devices not supported for CLContext")
+  }
+
+  val byteOrder = getHomogenous[CLDevice,ByteOrder](devices, _.byteOrder, _ eq _).getOrElse {
+    throw new RuntimeException(s"heterogenous byte order not supported for CLContext")
   }
 
   @inline def includesDevice (device: CLDevice): Boolean = devices.find(_.id == device.id).isDefined

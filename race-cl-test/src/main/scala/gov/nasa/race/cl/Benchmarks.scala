@@ -123,8 +123,8 @@ object Benchmarks {
 
   def testArrays: Unit = {
     tryWithResource(new CloseStack) { resources =>
-      val device = CLPlatform.preferredDevice >> resources
-      //println(s"got $device")
+      val device = getDevice >> resources
+      println(s"got $device")
 
       val context = device.createContext >> resources
       val queue = device.createJobCommandQueue(context) >> resources
@@ -166,7 +166,7 @@ object Benchmarks {
 
   def testTwoBufferCopy: Unit = {
     tryWithResource(new CloseStack) { resources =>
-      val device = CLPlatform.preferredDevice >> resources
+      val device = getDevice >> resources
       //println(s"got $device")
 
       val context = device.createContext >> resources
@@ -198,7 +198,7 @@ object Benchmarks {
 
   def testTwoBufferMapped: Unit = {
     tryWithResource(new CloseStack) { resources =>
-      val device = CLPlatform.preferredDevice >> resources
+      val device = getDevice >> resources
       //println(s"got $device")
 
       val context = device.createContext >> resources
@@ -229,7 +229,7 @@ object Benchmarks {
 
   def testOneBufferMapped: Unit = {
     tryWithResource(new CloseStack) { resources =>
-      val device = CLPlatform.preferredDevice >> resources
+      val device = getDevice >> resources
       //println(s"got $device")
 
       val context = device.createContext >> resources
@@ -255,6 +255,10 @@ object Benchmarks {
     }
   }
 
+  def getDevice: CLDevice = {
+    //CLPlatform.preferredDevice
+    CLPlatform.firstPlatform.firstGPUDevice.get
+  }
 
   def main (args: Array[String]) = {
     System.gc

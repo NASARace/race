@@ -371,6 +371,13 @@ package object race {
     t
   }
 
+  def getHomogenous[T,R](items:Array[T], f: (T)=>R, comp: (R,R)=>Boolean): Option[R] = {
+    if (items.isEmpty) return None
+
+    val z = f(items.head)
+    if (items.exists( i => !comp(z,f(i)))) None else Some(z)
+  }
+
   //--- system properties
   val userHome = System.getProperty("user.home")
   val userDir = System.getProperty("user.dir")
