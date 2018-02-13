@@ -1,0 +1,10 @@
+#!/bin/bash
+
+DIR="$(dirname ${BASH_SOURCE[0]})"
+SCRIPT=$DIR/../race-cl-test/target/universal/stage/bin/benchmarks
+
+if [ -x $SCRIPT ]; then
+  $SCRIPT -main gov.nasa.race.cl.Benchmarks $@
+else
+  echo "script $SCRIPT does not exist, run sbt race-cl-test/stage"
+fi

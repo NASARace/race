@@ -33,9 +33,11 @@ import gov.nasa.race.ww.Implicits._
 import gov.nasa.race.ww.track.TrackPathRenderLevel.TrackPathRenderLevel
 import gov.nasa.race.ww.track.TrackRenderLevel.TrackRenderLevel
 import gov.nasa.race.swing.Style._
+import gov.nasa.race.util.StringUtils
 import gov.nasa.race.ww._
 
 import scala.collection.mutable.{Map => MutableMap}
+import scala.util.matching.Regex
 
 
 /**
@@ -86,6 +88,11 @@ abstract class TrackLayer[T <:TrackedObject](val raceView: RaceView, config: Con
     new Threshold(symbolThreshold, setSymbolLevel, setLabelLevel),
     new Threshold(labelThreshold,  setLabelLevel, setDotLevel)
   )
+
+  //--- track-specific rendering
+  val showPaths = config.getStringArray("show-paths").map(new Regex(_)).toSeq
+  val showInfos = config.getStringArray("show-infos").map(new Regex(_)).toSeq
+  val centerTrack = config.getStringArray("center").map(new Regex(_)).toSeq
 
   //--- the data we manage
   val trackEntries = MutableMap[String,TrackEntry[T]]()
@@ -280,6 +287,11 @@ abstract class TrackLayer[T <:TrackedObject](val raceView: RaceView, config: Con
     // ?? should we also add the entry under the cross-channel 'cs' key ??
 
     if (displayFilter(e)) {
+      // ad hoc track display
+      if (StringUtils.matchesAny(track.cs, showPaths)) e.setPath(true)
+      if (StringUtils.matchesAny(track.cs, showInfos)) e.setInfo(true)
+      if (StringUtils.matchesAny(track.cs, centerTrack)) startCenteringTrackEntry(e)
+
       addTrackEntryAttributes(e)
       wwdRedrawManager.redraw()
     }

@@ -21,7 +21,6 @@ import java.io.{DataInputStream, DataOutputStream}
 import java.net.{DatagramPacket, DatagramSocket, InetAddress}
 
 import akka.actor.ActorRef
-import com.typesafe.config.Config
 import gov.nasa.race._
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.Messages.BusEvent
@@ -43,6 +42,7 @@ object AdapterActor {
   final val StopMsg: Short    = 5
 
   final val NoId: Int = -1
+  final val ServerId: Int = 0
 
   final val NoFixedMsgLen: Short = 0
   final val HeaderLen: Short = 16
@@ -63,15 +63,29 @@ trait AdapterActor extends PublishingRaceActor with SubscribingRaceActor with Co
   val writer: Option[DataStreamWriter] = createWriter
   val flags: Int = 0 // not yet
 
+  // this is the interval at which we want the remote to send us data
+  val dataInterval = config.getFiniteDurationOrElse("data-interval", 2000.milliseconds)
+
   val ownIpAddress = InetAddress.getByName(config.getStringOrElse("own-ip-address", "localhost"))
   val ownPort = config.getIntOrElse("own-port", 50036)
+
+  val remoteIpAddress = InetAddress.getByName(config.getStringOrElse("remote-ip-address", "localhost"))
+  val remotePort = config.getIntOrElse("remote-port", 50037)
+
   var socket = new DatagramSocket(ownPort, ownIpAddress)
+
+  val importThread = ThreadUtils.daemon(readRemoteMsg)
+  var terminate = false // terminate the socket thread
 
   val flatten = config.getBooleanOrElse("flatten", true) // do we flatten reader data when publishing
 
   val dos = new SettableDOStream(MaxMsgLen)
   val packet = new DatagramPacket(dos.getBuffer, dos.getCapacity)
+
+  var tLastData: Long = 0 // timestamp of last processed data message, to detect out-of-order messages
+
   var id = NoId
+  var remoteId = NoId
 
   ifSome(reader) { checkSchemaCompliance }
   ifSome(writer) { checkSchemaCompliance }
@@ -98,6 +112,8 @@ trait AdapterActor extends PublishingRaceActor with SubscribingRaceActor with Co
     }
   }
 
+  def sendPacket(len: Int): Boolean = sendPacketTo(packet,len,remoteIpAddress,remotePort)
+
   def writeHeader (os: DataOutputStream, msgType: Short, msgLen: Short, senderId: Int): Int = {
     os.writeShort(msgType)
     os.writeShort(msgLen)
@@ -107,18 +123,6 @@ trait AdapterActor extends PublishingRaceActor with SubscribingRaceActor with Co
   }
 
   def setMsgLen (os: SettableDOStream, msgLen: Short) = os.setShort(2,msgLen)
-
-  def writeRequest (os: SettableDOStream, flags: Int, schema: String, interval: Int): Int = {
-    os.clear
-    writeHeader(os, RequestMsg, NoFixedMsgLen, id)
-    os.writeInt(flags)
-    os.writeUTF(schema)
-    os.writeLong(currentSimTimeMillis)
-    os.writeInt(interval)
-    val len = os.size
-    setMsgLen(os,len.toShort)
-    len
-  }
 
   def writeStop (os: SettableDOStream): Int = {
     os.clear
@@ -138,99 +142,60 @@ trait AdapterActor extends PublishingRaceActor with SubscribingRaceActor with Co
     readHeader(is, hdr)
     hdr.senderId
   }
-}
 
-/**
-  * AdapterActor that requests connections, i.e. requires a running external process which implements the
-  * RACE adapter protocol
-  */
-class ClientAdapterActor(val config: Config) extends AdapterActor {
-  import AdapterActor._
-
-  // this is the interval at which we want the remote to send us data
-  val dataInterval = config.getFiniteDurationOrElse("data-interval", 2000.milliseconds)
-
-  // remote address and port we communicate with
-  val remoteIpAddress = InetAddress.getByName(config.getStringOrElse("remote-ip-address", "localhost"))
-  val remotePort = config.getIntOrElse("remote-port", 50037)
-  var serverId = NoId
-  val importThread = ThreadUtils.daemon(readRemoteData)
-  var terminate = false
-  var tLastData: Long = 0 // timestamp of last processed data message, to detect out-of-order messages
+  // to be provided by concrete clqss
+  def processIncomingMsg (msgType: Short, packet: DatagramPacket, dis: SettableDIStream, header: MsgHeader): Unit
 
   /**
-    * msg acquisition thread function
-    * this is executed concurrently to the rest of the code - beware of race conditions
-    */
-  def readRemoteData: Unit = {
+  * msg acquisition thread function
+  * NOTE this is executed concurrently to the rest of the code - beware of race conditions
+  */
+  def readRemoteMsg: Unit = {
     val maxFailures = config.getIntOrElse("max-failures", 5) // if we exceed, we stop reading
     val dis = new SettableDIStream(MaxMsgLen)
     val readPacket = new DatagramPacket(dis.getBuffer, dis.getCapacity)
     val header = new MsgHeader(0,0,0,0)
 
-    val ret = loopWithExceptionLimit(maxFailures) (!terminate) {
+    if (loopWithExceptionLimit(maxFailures) (!terminate) {
       socket.receive(readPacket)  // this blocks
       dis.reset
       processIncomingMsg(peekMsgType(dis),readPacket,dis,header)
-    }
-    if (!ret) error("max failure threshold reached, terminating adapter read thread")
-    else info("import thread terminated normally")
+    }) info("import thread terminated normally")
+    else error("max failure threshold reached, terminating adapter read thread")
   }
 
-  def processIncomingMsg (msgType: Short, packet: DatagramPacket, dis: SettableDIStream, header: MsgHeader) = {
-    val senderIp = packet.getAddress
-    val senderPort = packet.getPort
-
-    msgType match {
-      case AcceptMsg =>
-        id = readAccept(dis,header)
-        serverId = header.senderId
-        info(s"received accept from $senderIp:$senderPort (serverId = $serverId")
-
-      case RejectMsg =>
-        val reason = readReject(dis,header)
-        info(s"received reject from $senderIp:$senderPort ($reason)")
-
-      case StopMsg =>
-        warning(s"received stop from $senderIp:$senderPort")
-        readStop(dis,header)
-        if (checkSender(senderIp,header.senderId)) stop
-
-      case DataMsg => ifSome(reader) { r =>
-        // make sure we don't allocate memory here for processing data messages - they might come at a high rate
-        readHeader(dis,header)
-        if (checkSender(senderIp,header.senderId)) {
-          if (header.epochMillis > tLastData) {
-            tLastData = header.epochMillis
-            r.read(dis) match {
-              case None =>
-              case Some(list: Seq[_]) => if (flatten) list.foreach(publish) else publish(list)
-              case Some(data) => publish(data)
-            }
-          } else {
-            // ignore out-of-order packets
-          }
-        }
-      }
-      case x => warning(s"received unknown message type $msgType")
-    }
+  def checkSender (addr: InetAddress, id: Int) = {
+    id == remoteId && addr.equals(remoteIpAddress)
   }
 
-  override def onStartRaceActor(originator: ActorRef) = {
-    importThread.start // start before we send the request
-    sendRequest
-    super.onStartRaceActor(originator)
+  def checkRemote (addr: InetAddress, port: Int): Boolean = (addr == remoteIpAddress) && (port == remotePort)
+
+  def sendStop = {
+    val len = writeStop(dos)
+    sendPacket(len)
+  }
+
+  def stop = {
+    terminate = true
+    remoteId = NoId
+
+    repeatUpTo(5)(importThread.isAlive){
+      importThread.interrupt
+      Thread.`yield`
+    }
+    socket.close
+    info("stopped")
   }
 
   override def onTerminateRaceActor(originator: ActorRef) = {
-    if (serverId != NoId) sendStop
+    if (remoteId != NoId) sendStop
     stop
     super.onTerminateRaceActor(originator)
   }
 
   override def handleMessage = {
     case BusEvent(_, msg: Any, _) =>
-      if (serverId != NoId) {   // are we connected
+      if (remoteId != NoId) {   // are we connected
         ifSome(writer) { w =>   // do we have a writer
           dos.clear
           dos.setPosition(HeaderLen) // we fill in the header once we know the writer handled this message
@@ -244,50 +209,5 @@ class ClientAdapterActor(val config: Config) extends AdapterActor {
           }
         }
       }
-  }
-
-  //--- utility functions
-
-  def checkSender (addr: InetAddress, id: Int) = {
-    id == serverId && addr.equals(remoteIpAddress)
-  }
-
-  def stop = {
-    terminate = true
-    serverId = NoId
-
-    repeatUpTo(5)(importThread.isAlive){
-      importThread.interrupt
-      Thread.`yield`
-    }
-    socket.close
-    info("stopped")
-  }
-
-  def sendPacket(len: Int): Boolean = sendPacketTo(packet,len,remoteIpAddress,remotePort)
-
-  def sendRequest: Boolean = {
-    val len = writeRequest(dos,flags,schema,dataInterval.toMillis.toInt)
-    sendPacket(len)
-  }
-
-  // answer id
-  def readAccept (is: DataInputStream, hdr: MsgHeader): Int = {
-    readHeader(is, hdr)
-    val remoteFlags = is.readInt
-    val remoteInterval = is.readInt
-    val id = is.readInt
-    id
-  }
-
-  // answer reject reason
-  def readReject (is: DataInputStream, hdr: MsgHeader): Int = {
-    readHeader(is, hdr)
-    is.readInt  // the reject reason
-  }
-
-  def sendStop = {
-    val len = writeStop(dos)
-    sendPacket(len)
   }
 }

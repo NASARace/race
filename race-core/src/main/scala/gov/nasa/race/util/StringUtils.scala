@@ -119,8 +119,10 @@ object StringUtils {
   }
 
   def matchesAll (s: String, patterns: Seq[Regex]): Boolean = {
-    patterns.foreach( re => if (re.findFirstIn(s).isEmpty) return false )
-    true
+    patterns.isEmpty || !patterns.exists( _.findFirstIn(s).isEmpty)
+  }
+  def matchesAny (s: String, patterns: Seq[Regex]): Boolean = {
+    patterns.nonEmpty && patterns.exists( _.findFirstIn(s).nonEmpty)
   }
 
   def matches (s: String, pattern: Regex): Boolean = pattern.findFirstIn(s).isDefined

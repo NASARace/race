@@ -137,7 +137,17 @@ class SimpleTrackReader extends DataStreamReader {
     val distM = dis.readDouble
     val flags = dis.readInt
 
-    val track = readTrack(dis)
+    val trackId = dis.readUTF
+    val tmsec = dis.readLong
+    val trackLatDeg = dis.readDouble
+    val trackLonDeg = dis.readDouble
+    val trackAltM = dis.readDouble
+    val trackHdgDeg = dis.readDouble
+    val trackSpdMS = dis.readDouble
+
+    val track = FlightPos(trackId,trackId,LatLonPos.fromDegrees(trackLatDeg,trackLonDeg),
+                          Meters(trackAltM),MetersPerSecond(trackSpdMS),Degrees(trackHdgDeg),new DateTime(tmsec))
+
     ProximityEvent(ProximityReference(refId, track.date, LatLonPos.fromDegrees(latDeg,lonDeg), Meters(altM)),
                     Meters(distM), flags, track)
   }
@@ -178,7 +188,14 @@ class SimpleTrackWriter extends DataStreamWriter {
     dos.writeDouble(p.distance.toMeters)
     dos.writeInt(p.flags)
 
-    writeTrack(dos,p.track)
+    val prox = p.track
+    dos.writeUTF(prox.cs)
+    dos.writeLong(prox.date.getMillis)
+    dos.writeDouble(prox.position.φ.toDegrees)
+    dos.writeDouble(prox.position.λ.toDegrees)
+    dos.writeDouble(prox.altitude.toMeters)
+    dos.writeDouble(prox.heading.toDegrees)
+    dos.writeDouble(prox.speed.toMetersPerSecond)
   }
 
   def write (dos: DataOutputStream, data: Any): Int = {
