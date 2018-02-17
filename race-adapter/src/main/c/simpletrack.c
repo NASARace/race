@@ -31,7 +31,7 @@
             int msg_ordinal; // consecutive, starting with 1 
             int flags;
 
-            timestamp_ms time_msec;
+            timestamp_ms time_millis;
             double lat_deg;
             double lon_deg;
             double alt_m;
@@ -55,7 +55,7 @@
 
             string id; // of proximity
             // there is no msg ordinal, this might be a extrapolated position
-            timestamp_ms time_msec;
+            timestamp_ms time_millis;
             double lat_deg;
             double lon_deg;
             double alt_m;
@@ -73,7 +73,7 @@
 
 int race_write_track_data (databuf_t* db, int pos,
                         char* id, int msg_ordinal, int flags, 
-                        epoch_msec_t time_msec, double lat_deg, double lon_deg, double alt_m, 
+                        epoch_millis_t time_millis, double lat_deg, double lon_deg, double alt_m, 
                         double heading_deg, double speed_m_sec) {
     int id_len = strlen(id);
     int track_len = id_len + 2 + 48;
@@ -83,7 +83,7 @@ int race_write_track_data (databuf_t* db, int pos,
     p = race_write_string(db, p, id, id_len);
     p = race_write_int(db, p, msg_ordinal);
     p = race_write_int(db,p,flags);
-    p = race_write_long(db, p, time_msec);
+    p = race_write_long(db, p, time_millis);
     p = race_write_double(db, p, lat_deg);
     p = race_write_double(db, p, lon_deg);
     p = race_write_double(db, p, alt_m);
@@ -94,13 +94,13 @@ int race_write_track_data (databuf_t* db, int pos,
 
 int race_read_track_data (databuf_t* db, int pos,
                        char id[], int max_len, int* msg_ordinal, int* flags,
-                       epoch_msec_t* time_msec, double* lat_deg, double* lon_deg, double* alt_m, 
+                       epoch_millis_t* time_millis, double* lat_deg, double* lon_deg, double* alt_m, 
                        double* heading_deg, double* speed_m_sec) {
     int p = pos;
     p = race_read_strncpy(db, p,id,max_len);
     p = race_read_int(db,p, msg_ordinal);
     p = race_read_int(db,p, flags);
-    p = race_read_long(db, p, time_msec);
+    p = race_read_long(db, p, time_millis);
     p = race_read_double(db, p, lat_deg);
     p = race_read_double(db, p, lon_deg);
     p = race_read_double(db, p, alt_m);
@@ -113,7 +113,7 @@ int race_read_track_data (databuf_t* db, int pos,
 int race_write_proximity_data(databuf_t *db, int pos, 
                              char *ref_id, double ref_lat_deg, double ref_lon_deg, double ref_alt_m,
                              double dist_m, int flags, 
-                             char *prox_id, epoch_msec_t time_msec, double lat_deg, double lon_deg, double alt_m, 
+                             char *prox_id, epoch_millis_t time_millis, double lat_deg, double lon_deg, double alt_m, 
                              double heading_deg, double speed_m_sec) {
     int ref_id_len = strlen(ref_id);
     int prox_len = ref_id_len + 2 + 36;
@@ -128,7 +128,7 @@ int race_write_proximity_data(databuf_t *db, int pos,
     p = race_write_int(db, p, flags);
 
     p = race_write_string(db, p, prox_id, strlen(prox_id));
-    p = race_write_long(db, p, time_msec);
+    p = race_write_long(db, p, time_millis);
     p = race_write_double(db, p, lat_deg);
     p = race_write_double(db, p, lon_deg);
     p = race_write_double(db, p, alt_m);
@@ -143,7 +143,7 @@ int race_read_proximity_data(databuf_t *db, int pos,
                              double *ref_lat_deg, double *ref_lon_deg, double *ref_alt_m,
                              double *dist_m, int *flags, 
                              char prox_id[], int max_prox_len,
-                             epoch_msec_t *time_msec, double *lat_deg, double *lon_deg, double *alt_m, 
+                             epoch_millis_t *time_millis, double *lat_deg, double *lon_deg, double *alt_m, 
                              double *heading_deg, double *speed_m_sec) {
     int p = pos;
     p = race_read_strncpy(db, p, ref_id, max_ref_len);
@@ -154,7 +154,7 @@ int race_read_proximity_data(databuf_t *db, int pos,
     p = race_read_int(db, p, flags);
 
     p = race_read_strncpy(db, p, prox_id, max_prox_len);
-    p = race_read_long(db, p, time_msec);
+    p = race_read_long(db, p, time_millis);
     p = race_read_double(db, p, lat_deg);
     p = race_read_double(db, p, lon_deg);
     p = race_read_double(db, p, alt_m);

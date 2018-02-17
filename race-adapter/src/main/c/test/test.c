@@ -21,6 +21,7 @@
 
 #include <stdio.h>
 #include <inttypes.h>
+#include <time.h>
 #include "../race.h"
 
 void test_basic() {
@@ -47,8 +48,14 @@ void test_basic() {
 }
 
 void test_time() {
-    epoch_msec_t t = race_epoch_msec();
-    printf("current_time_millis = %"PRId64"\n", t);
+    epoch_millis_t millis = race_epoch_millis();
+    printf("current_time_millis = %"PRId64"\n", millis);
+    struct tm t;
+    race_set_tm_from_epoch_millis(millis, &t);
+
+    char buf[128];
+    asctime_r(&t,buf);
+    printf("%s\n", buf);
 }
 
 int main (int argc, char **argv) {

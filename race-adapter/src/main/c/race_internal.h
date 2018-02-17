@@ -27,12 +27,13 @@
 // the local process
 typedef struct {
     int fd;  // socket descriptor
-    int interval_msec;  // interval at which we serve
+    int interval_millis;  // interval at which we serve
     bool is_non_blocking;
     bool is_stopped;
     databuf_t *db;
     int id;
 } local_endpoint_t;
+
 
 // the external process (RACE actor)
 typedef struct {

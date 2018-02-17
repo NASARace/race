@@ -27,6 +27,7 @@
 
 #include <stdbool.h>
 #include <stdlib.h>
+#include <time.h>
 #include <netdb.h>
 
 /*************************************************************************************************
@@ -45,11 +46,12 @@ int race_check_available (int fd, const char** err_msg);
  * time helpers
  */
 
-typedef int64_t epoch_msec_t;
+typedef int64_t epoch_millis_t;
 
-int race_sleep_msec (int millis);
-epoch_msec_t race_epoch_msec();
-epoch_msec_t race_epoch_msec_from_fsec(double epoch_sec);
+int race_sleep_millis (int millis);
+epoch_millis_t race_epoch_millis();
+epoch_millis_t race_epoch_millis_from_fsec(double epoch_sec);
+bool race_set_tm_from_epoch_millis (epoch_millis_t epoch_millis, struct tm* result);
 
 
 /*************************************************************************************************
@@ -141,15 +143,15 @@ void race_hex_dump(databuf_t* db); // for debugging purposes
 #define MAX_TIME_DIFF    1000 // in msec, if exceeded we adapt event times
 #define MAX_SCHEMA_LEN    128 // we only use schema names for now
 
-int race_write_request (databuf_t* db, int flags, char* schema, epoch_msec_t sim_msec, int interval_msec);
+int race_write_request (databuf_t* db, int flags, char* schema, epoch_millis_t sim_millis, int interval_millis);
 int race_is_request (databuf_t* db);
-int race_read_request (databuf_t* db, epoch_msec_t* time_sent, int* flags, char* schema, int max_schema_len, 
-                       epoch_msec_t* sim_msec, int* interval_msec, 
+int race_read_request (databuf_t* db, epoch_millis_t* time_sent, int* flags, char* schema, int max_schema_len, 
+                       epoch_millis_t* sim_millis, int* interval_millis, 
                        const char** err_msg);
 
-int race_write_accept (databuf_t* db, int flags, int interval_msec, int client_id);
+int race_write_accept (databuf_t* db, int flags, epoch_millis_t sim_millis, int interval_millis, int client_id);
 int race_is_accept (databuf_t* db);
-int race_read_accept (databuf_t* db, epoch_msec_t* time_msec, int* flags, int* interval_msec, int* client_id, const char** err_msg);
+int race_read_accept (databuf_t* db, int* flags, epoch_millis_t *sim_millis, int* interval_millis, int* client_id, const char** err_msg);
 
 int race_write_reject  (databuf_t* db, int reason);
 int race_is_reject (databuf_t* db);
@@ -157,7 +159,7 @@ int race_read_reject (databuf_t* db, int* reason, const char** err_msg);
 
 int race_write_stop (databuf_t* db, int sender);
 int race_is_stop (databuf_t* db);
-int race_read_stop (databuf_t* db, int* sender, epoch_msec_t* time_msec, const char** err_msg);
+int race_read_stop (databuf_t* db, int* sender, epoch_millis_t* time_millis, const char** err_msg);
 
 
 //--- application messages
@@ -168,7 +170,7 @@ int race_begin_write_data (databuf_t* db, int sender_id);
 int race_end_write_data (databuf_t* db, int pos);
 
 int race_is_data (databuf_t* db);
-int race_read_data_header (databuf_t* db, int* sender, epoch_msec_t* time_msec, const char** err_msg);
+int race_read_data_header (databuf_t* db, int* sender, epoch_millis_t* time_millis, const char** err_msg);
 // reading inbound data payload is done in the context layer (we don't know the concrete type here)
 
 
@@ -189,22 +191,22 @@ int race_read_data_header (databuf_t* db, int* sender, epoch_msec_t* time_msec, 
 #define PROX_DROP   0x4
 
 int race_write_track_data(databuf_t *db, int pos, char *id, int msg_ordinal, int flags, 
-                          epoch_msec_t time_msec, 
+                          epoch_millis_t time_millis, 
                           double lat_deg, double lon_deg, double alt_m, double heading_deg, double speed_m_sec);
 
 int race_read_track_data(databuf_t *db, int pos, char id[], int max_len, int *msg_ordinal, int *flags, 
-                         epoch_msec_t *time_msec,
+                         epoch_millis_t *time_millis,
                          double *lat_deg, double *lon_deg, double *alt_m, double *heading_deg, double *speed_m_sec);
 
 int race_write_proximity_data(databuf_t *db, int pos, char *ref_id, double ref_lat_deg,
                               double ref_lon_deg, double ref_alt_m, double dist_m, int flags,
-                              char *prox_id, epoch_msec_t time_msec, double lat_deg, double lon_deg,
+                              char *prox_id, epoch_millis_t time_millis, double lat_deg, double lon_deg,
                               double alt_m, double heading_deg, double speed_m_sec);
 
 int race_read_proximity_data(databuf_t *db, int pos, char ref_id[], int max_ref_len,
                              double *ref_lat_deg, double *ref_lon_deg, double *ref_alt_m,
                              double *dist_m, int *flags, char prox_id[], int max_prox_len,
-                             epoch_msec_t *time_msec, double *lat_deg, double *lon_deg,
+                             epoch_millis_t *time_millis, double *lat_deg, double *lon_deg,
                              double *alt_m, double *heading_deg, double *speed_m_sec);
 
 /*************************************************************************************************
@@ -212,7 +214,9 @@ int race_read_proximity_data(databuf_t *db, int pos, char ref_id[], int max_ref_
  * context with respective initial values and callbacks
  */
 
-#define DEFAULT_PORT "50037"
+#define DEFAULT_HOST "127.0.0.1"
+#define DEFAULT_SERVER_PORT "50036"
+#define DEFAULT_CLIENT_PORT "50037"
 #define NO_INTERVAL_PREFERENCE -1
 
 //--- flags (used during client request)
@@ -230,17 +234,20 @@ int race_read_proximity_data(databuf_t *db, int pos, char ref_id[], int max_ref_
 
 typedef struct {
     //--- static init data
-    char* port; // port to serve on
-    int flags; // server capabilities
-    int interval_msec; // interval at which we send track data to the client if the client has no preference
+    char* host; // host/ip to connect to (client mode) or serve on (server mode)
+    char* port; // port to connect to (client mode) or serve on (server mode)
 
-    long time_diff; // time difference to client
+    int flags; // server capabilities
+    int interval_millis; // interval at which we send track data to the client if the client has no preference
+
+    long time_diff; // time difference to remote
     
     //--- server state data
     bool stop_local; // set by context to indicate we should terminate
 
+    int (*write_request)(databuf_t* db, int pos);
     int (*check_request)(char* host, char* service, int req_flags, char* schema, 
-                         epoch_msec_t sim_msec, int* data_interval);
+                         epoch_millis_t* sim_millis, int* data_interval);
 
     // handle application specific data messages (only the payload, race-adapter takes care of the header)
     int (*write_data)(databuf_t* db, int pos);
@@ -260,7 +267,9 @@ typedef struct {
  */
 bool race_interval_poll(local_context_t* ctx);
 
-bool race_interval_threaded(local_context_t *context);
+bool race_server_interval_threaded(local_context_t *context);
+
+bool race_client_interval_threaded(local_context_t *context);
 
 
 #endif /* RACE_INCLUDED */

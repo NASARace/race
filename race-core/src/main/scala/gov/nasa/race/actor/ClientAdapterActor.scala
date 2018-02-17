@@ -22,7 +22,10 @@ import java.net.DatagramPacket
 import akka.actor.ActorRef
 import com.typesafe.config.Config
 import gov.nasa.race._
+import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.util.{SettableDIStream, SettableDOStream}
+
+import scala.concurrent.duration._
 
 /**
   * AdapterActor that requests connections, i.e. requires a running external process which implements the
@@ -31,61 +34,108 @@ import gov.nasa.race.util.{SettableDIStream, SettableDOStream}
 class ClientAdapterActor(val config: Config) extends AdapterActor {
   import AdapterActor._
 
-  override def processIncomingMsg (msgType: Short, packet: DatagramPacket, dis: SettableDIStream, header: MsgHeader) = {
-    val senderIp = packet.getAddress
-    val senderPort = packet.getPort
+  override def defaultOwnPort = DefaultClientPort
+  override def defaultRemotePort = DefaultServerPort
 
-    if (checkRemote(senderIp,senderPort)) {
-      msgType match {
-        case AcceptMsg =>
-          id = readAccept(dis, header)
-          remoteId = header.senderId
-          info(s"received accept from $senderIp:$senderPort (serverId = $remoteId")
+  /**
+    * this is the data acquisition thread function - beware of race conditions
+    *
+    * note - connection request is done sync from the actor before we start this thread
+    */
+  override def processRemoteMessages: Unit = {
+    info(s"import thread running")
 
-        case RejectMsg =>
-          val reason = readReject(dis, header)
-          info(s"received reject from $senderIp:$senderPort ($reason)")
+    val dis = new SettableDIStream(MaxMsgLen)
+    val readPacket = new DatagramPacket(dis.getBuffer, dis.getCapacity)
+    val header = new MsgHeader(0,0,0,0)
 
-        case StopMsg =>
-          warning(s"received stop from $senderIp:$senderPort")
-          readStop(dis, header)
-          if (checkSender(senderIp, header.senderId)) stop
+    if (!loopWithExceptionLimit(maxFailures)(!terminate) { // connection loop
+      waitForConnectedMessage(readPacket,dis,header)
+    }) error(s"max failure threshold reached, terminating connection to server $remoteIpAddress:$remotePort")
 
-        case DataMsg => ifSome(reader) { r =>
-          // make sure we don't allocate memory here for processing data messages - they might come at a high rate
-          readHeader(dis, header)
-          if (checkSender(senderIp, header.senderId)) {
-            if (header.epochMillis > tLastData) {
-              tLastData = header.epochMillis
-              r.read(dis) match {
-                case None =>
-                case Some(list: Seq[_]) => if (flatten) list.foreach(publish) else publish(list)
-                case Some(data) => publish(data)
-              }
+    info("import thread terminated")
+  }
+
+  def waitForRequestResponse (timout: FiniteDuration): Boolean = {
+    val dis = new SettableDIStream(MaxMsgLen)
+    val packet = new DatagramPacket(dis.getBuffer, dis.getCapacity)
+    val header = new MsgHeader(0,0,0,0)
+    info(s"waiting for request response from $remoteIpAddress:$remotePort")
+
+    socket.setSoTimeout(soTimeout.toMillis.toInt)
+    try {
+      socket.receive(packet) // this blocks
+      socket.setSoTimeout(0) // disable timeout for connection
+
+      val senderIp = packet.getAddress
+      val senderPort = packet.getPort
+
+      if (senderIp == remoteIpAddress || sender() == remotePort) {
+        peekMsgType(dis) match {
+          case AcceptMsg =>
+            if (processAcceptMsg(dis, header)){
+              isConnected = true
+              remoteId = header.senderId
+              true
             } else {
-              // ignore out-of-order packets
+              error(s"accept from $remoteIpAddress:$remotePort failed")
+              false
             }
-          }
+
+          case RejectMsg =>
+            val reason = readReject(dis, header)
+            warning(s"got reject from $senderIp:$senderPort : ($reason)")
+            false
+
+          case msgType =>
+            warning(s"ignoring non-request response $msgType from $senderIp:$senderPort")
+            false
         }
-        case _ => warning(s"received unknown message type $msgType")
+
+      } else {
+        warning(s"ignoring message from unknown $senderIp:$senderPort")
+        false
       }
-    } else warning(s"ignoring message $msgType from unknown sender $senderIp:$senderPort")
+    } catch {
+      case x: Throwable =>
+        error(s"exception waiting for response from server $remoteIpAddress:$remotePort: $x")
+        false
+    }
+  }
+
+  /**
+    * process payload of accept message
+    */
+  def processAcceptMsg (dis: SettableDIStream, header: MsgHeader): Boolean = {
+    id = readAccept(dis, header)
+    info(s"got accept from $remoteIpAddress:$remotePort (serverId = $remoteId, ownId = $id)")
+    true
   }
 
   override def onStartRaceActor(originator: ActorRef) = {
-    importThread.start // start before we send the request
     sendRequest
-    super.onStartRaceActor(originator)
+    if (waitForRequestResponse(startTimeout)) {
+      importThread.start
+      super.onStartRaceActor(originator)
+
+    } else {
+      isOptional && super.onStartRaceActor(originator)
+    }
   }
 
   //--- utility functions
+
+  override def terminateConnection = {
+    isConnected = false
+    terminate = true  // we don't try to reconnect
+  }
 
   def writeRequest (os: SettableDOStream, flags: Int, schema: String, interval: Int): Int = {
     os.clear
     writeHeader(os, RequestMsg, NoFixedMsgLen, id)
     os.writeInt(flags)
     os.writeUTF(schema)
-    os.writeLong(currentSimTimeMillis)
+    os.writeLong(currentSimTimeMillis) // tell the native side what our sim time is
     os.writeInt(interval)
     val len = os.size
     setMsgLen(os,len.toShort)
@@ -101,6 +151,7 @@ class ClientAdapterActor(val config: Config) extends AdapterActor {
   def readAccept (is: DataInputStream, hdr: MsgHeader): Int = {
     readHeader(is, hdr)
     val remoteFlags = is.readInt
+    val remoteSimTimeMillis = is.readLong // TODO check if this is the time we requested
     val remoteInterval = is.readInt
     val id = is.readInt
     id

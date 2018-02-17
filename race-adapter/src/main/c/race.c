@@ -30,21 +30,44 @@
 #include <time.h>
 #include <unistd.h>
 #include <pthread.h>
+#include <inttypes.h>
 
 #include "race_internal.h"
 
 //--- internal functions
 
-static local_endpoint_t *initialize_local(local_context_t *context) {
+static local_endpoint_t *initialize_local_server (local_context_t *context) {
     const char *err_msg;
 
     int fd = race_server_socket(context->port, &err_msg);
     if (fd < 0) {
-        context->error("failed to open socket (%s)\n", err_msg);
+        context->error("failed to open server socket (%s)\n", err_msg);
         return NULL;
     }
 
-    local_endpoint_t *local = malloc(sizeof(local_endpoint_t));
+    local_endpoint_t *local = calloc(1,sizeof(local_endpoint_t));
+    local->fd = fd;
+    local->is_non_blocking = false;
+    local->db = race_create_databuf(MAX_MSG_LEN);
+
+    return local;
+}
+
+static local_endpoint_t *initialize_local_client (local_context_t *context, remote_endpoint_t *remote) {
+    const char *err_msg;
+    struct sockaddr* serveraddr;
+    socklen_t addrlen;
+
+    int fd = race_client_socket(context->host, context->port, &serveraddr,&addrlen, &err_msg);
+    if (fd < 0) {
+        context->error("failed to open client socket to %s:%s (%s)\n", context->host, context->port, err_msg);
+        return NULL;
+    }
+    
+    remote->addr = serveraddr;
+    remote->addrlen = addrlen;
+
+    local_endpoint_t *local = calloc(1,sizeof(local_endpoint_t));
     local->fd = fd;
     local->is_non_blocking = false;
     local->db = race_create_databuf(MAX_MSG_LEN);
@@ -53,11 +76,25 @@ static local_endpoint_t *initialize_local(local_context_t *context) {
 }
 
 /*
+ * assemble and send a REQUEST message
+ */
+static bool send_request (local_context_t *context, local_endpoint_t *local, remote_endpoint_t* remote) {
+    databuf_t *db = local->db;
+
+    context->write_request(db,0);
+    if (sendto(local->fd, db->buf, db->pos, 0, remote->addr, remote->addrlen) < 0) {
+        context->error("sending request message failed (%s)", strerror(errno));
+        return false;
+    } else {
+        return true;
+    }
+}
+
+/*
  * assemble and send a DATA message
  */
 static bool send_data(local_context_t *context, local_endpoint_t *local,
                       remote_endpoint_t *remote) {
-    const char *err_msg;
     databuf_t *db = local->db;
 
     int pos = race_begin_write_data(db, SERVER_ID);
@@ -82,7 +119,6 @@ static bool send_data(local_context_t *context, local_endpoint_t *local,
  */
 static void send_stop(local_context_t *context, local_endpoint_t *local,
                       remote_endpoint_t *remote) {
-    const char *err_msg;
     databuf_t *db = local->db;
 
     race_write_stop(db, local->id);
@@ -100,6 +136,14 @@ static void local_terminated(local_context_t *context, local_endpoint_t *local) 
 }
 
 static int n_remote = 0; // number of remote clients we are connected to
+
+static void set_time_diff (local_context_t* context, epoch_millis_t sim_millis) {
+    long time_diff = race_epoch_millis() - sim_millis;  // TODO - this should acquire sim time from the context
+    if (labs(time_diff) > MAX_TIME_DIFF) {
+        context->info("adapting simulation time by %d sec\n", time_diff / 1000);
+        context->time_diff = time_diff;
+    }
+}
 
 /*
  * block until we get a REQEUST message, then use context callbacks to determine if
@@ -121,18 +165,18 @@ static remote_endpoint_t* wait_for_request (local_context_t* context, local_endp
     socklen_t addrlen;
     struct sockaddr* src_addr = race_create_sockaddr(&addrlen);
 
-    context->info("waiting for request..\n");
+    context->info("waiting for request on %s:%s\n", context->host,context->port);
     int nread = recvfrom( local->fd, db->buf, db->capacity, 0, src_addr, &addrlen);
     if (nread > 0) {
         db->pos = nread;
         
         int req_flags = 0;
-        int req_interval_msec = 0;
-        epoch_msec_t sim_msec = 0;
-        epoch_msec_t time_sent = 0;
+        int interval_millis = 0;
+        epoch_millis_t sim_millis = 0;
+        epoch_millis_t time_sent = 0;
         char req_schema[MAX_SCHEMA_LEN];
 
-        if (!race_read_request(local->db, &time_sent, &req_flags, req_schema, MAX_SCHEMA_LEN, &sim_msec, &req_interval_msec, &err_msg)){
+        if (!race_read_request(local->db, &time_sent, &req_flags, req_schema, MAX_SCHEMA_LEN, &sim_millis, &interval_millis, &err_msg)){
             context->error("error reading remote request (%s)\n", err_msg);
             free(src_addr);
             return NULL;
@@ -143,9 +187,9 @@ static remote_endpoint_t* wait_for_request (local_context_t* context, local_endp
         char client_service[NI_MAXSERV];
         getnameinfo(src_addr,addrlen, client_host,sizeof(client_host), client_service,sizeof(client_service),NI_NUMERICHOST);
         
-        // check possible reasons for rejection
+        // check possible reasons for rejection (note this could also change sim_millis and interval_millis)
         int reject = context->check_request(client_host, client_service, req_flags, req_schema,
-                                            sim_msec, &req_interval_msec);
+                                            &sim_millis, &interval_millis);
         if (reject) {
             context->info("remote rejected for reason %x\n", reject);
             race_write_reject(db, reject);
@@ -157,17 +201,13 @@ static remote_endpoint_t* wait_for_request (local_context_t* context, local_endp
         }
 
         // remote is accepted, set local state accordingly 
-        local->interval_msec = req_interval_msec;
-
+        local->interval_millis = interval_millis;
+        
         // check if we have to apply a time difference
-        long time_diff = race_epoch_msec() - sim_msec;  // TODO - this should acquire sim time from the context
-        if (labs(time_diff) > MAX_TIME_DIFF) {
-            context->info("adapting simulation time by %d sec\n", time_diff / 1000);
-            context->time_diff = time_diff;
-        }
+        set_time_diff(context, sim_millis);
 
         int remote_id = ++n_remote;
-        race_write_accept(db, context->flags, local->interval_msec, remote_id);
+        race_write_accept(db, context->flags, sim_millis, local->interval_millis, remote_id);
         if (sendto(local->fd, db->buf, db->pos, 0, src_addr, addrlen) < 0) {
             context->error("sending local accept failed (%s)", strerror(errno));
             free(src_addr);
@@ -190,6 +230,45 @@ static remote_endpoint_t* wait_for_request (local_context_t* context, local_endp
     }
 }
 
+static bool wait_for_response (local_context_t *context, local_endpoint_t *local, remote_endpoint_t* remote){
+    const char* err_msg;
+    databuf_t *db = local->db;
+    epoch_millis_t sim_millis;
+    int client_id;
+    int server_flags;
+    int interval_millis;
+
+    db->pos = recvfrom( local->fd, db->buf, db->capacity, 0, remote->addr, &remote->addrlen);
+    if (db->pos <= 0) {
+        context->error("failed to receive server response: %s\n", strerror(errno));
+        return false;
+    }
+    if (race_is_accept(db)) {
+        if (race_read_accept (db, &server_flags, &sim_millis, &interval_millis, &client_id, &err_msg) <= 0){
+            context->error("error reading SERVER_RESPONSE: %s\n", err_msg);
+            return false;
+
+        } else { // accepted
+            context->info("server accept: client_id=%x, sim_millis=%"PRId64", interval=%d msec\n", client_id, sim_millis, interval_millis);
+            set_time_diff(context, sim_millis);
+            local->interval_millis = interval_millis;
+            return true;
+        }    
+    } else if (race_is_reject(db)) {
+        int reason;
+        if (race_read_reject(db, &reason, &err_msg) <= 0){
+            context->error("error reading SERVER_REJECT (%s)\n", err_msg);
+            return false;
+        } else {
+            context->info("server reject, reason: %x\n", reason);
+            return false;
+        }
+    } else {
+        context->error("no valid server response\n");
+        return false;
+    }
+}
+
 /*
  * wait blocking until we receive a message from the remote endpoint, process system messages
  * and pass data messages to the application specific context callback
@@ -198,7 +277,7 @@ static void receive_message(local_context_t *context, local_endpoint_t *local, r
     databuf_t db = DATABUF(MAX_MSG_LEN);
     const char *err_msg;
     int remote_id;
-    epoch_msec_t send_time;
+    epoch_millis_t send_time;
 
     int n_read = recvfrom(local->fd, db.buf, db.capacity, 0, remote->addr, &remote->addrlen);
     if (n_read > 0) {
@@ -212,11 +291,15 @@ static void receive_message(local_context_t *context, local_endpoint_t *local, r
         } else if (race_is_data(&db)) {
             if (context->flags & DATA_RECEIVER) {
                 int pos = race_read_data_header(&db, &remote_id, &send_time, &err_msg);
-                if (pos && remote_id == remote->id && send_time >= remote->time_last) {
+                if (pos == 0) {
+                  context->error("received malformed message from remote %x (%s)\n", remote_id, err_msg);
+                } else if (remote_id != remote->id) {
+                  context->warning("ignoring message from unknown remote %x (expected %x)\n", remote_id, remote->id);
+                } else if (send_time < remote->time_last) {
+                  context->warning("ignoring out-of-order message from remote %x (%"PRId64" < %"PRId64")\n", remote_id, send_time, remote->time_last);
+                } else {
                     remote->time_last = send_time;
                     context->read_data(&db,pos);
-                } else {
-                    context->warning("ignoring out-of-order message from remote %x (%s)\n", remote_id, err_msg);
                 }
             } else {
                 context->warning("local is ignoring track messages\n");
@@ -280,7 +363,7 @@ bool race_interval_poll(local_context_t *context) {
         return false;
     }
 
-    local_endpoint_t *local = initialize_local(context);
+    local_endpoint_t *local = initialize_local_server (context);
     if (local != NULL) {
         while (!context->stop_local) { // outer loop - remote connection
             remote_endpoint_t *remote = wait_for_request(context, local); 
@@ -299,7 +382,7 @@ bool race_interval_poll(local_context_t *context) {
                         if (!send_data(context, local, remote)) {
                             break;
                         }
-                        race_sleep_msec(context->interval_msec);
+                        race_sleep_millis(context->interval_millis);
                     }
                 }
 
@@ -316,51 +399,77 @@ bool race_interval_poll(local_context_t *context) {
     return true;
 }
 
+static bool run_threaded (local_context_t *context, local_endpoint_t* local, remote_endpoint_t *remote) {
+    pthread_t receiver;
+    threadargs_t args = { context,local,remote };
+    int rc = pthread_create( &receiver, NULL, receive_messages_thread, &args);
+    if (rc) {
+        context->error("failed to create receiver thread (%s)\n", strerror(rc));
+        return false;
+    }
+
+    while (!remote->is_stopped && !context->stop_local) {  // inner loop - remote data exchange
+        if (!remote->is_stopped) {
+            if (!send_data(context, local, remote)) {
+                break;
+            }
+            race_sleep_millis(local->interval_millis);
+        }
+    }
+
+    if (context->stop_local && !remote->is_stopped) {
+        send_stop(context, local, remote);
+    }
+
+    pthread_cancel(receiver);  // TODO - shall we use less harsh measures to terminate?
+    pthread_join(receiver,NULL);  // this blocks until the thread is finished
+
+    return true;
+}
+
 /*
  * send data at a fixed interval and receive remote endpoint data asynchronously from a separate thread
  */
-bool race_interval_threaded(local_context_t *context) {
-    const char *err_msg;
-
+bool race_server_interval_threaded(local_context_t *context) {
     if (context == NULL) {
         perror("no local context");
         return false;
     }
 
-    local_endpoint_t *local = initialize_local(context);
+    local_endpoint_t *local = initialize_local_server (context);
     if (local != NULL) {
         while (!context->stop_local) { // outer loop - remote connection
             remote_endpoint_t *remote = wait_for_request(context, local);
             if (remote != NULL) {
-                pthread_t receiver;
-                threadargs_t args = { context,local,remote };
-                int rc = pthread_create( &receiver, NULL, receive_messages_thread, &args);
-                if (rc) {
-                    context->error("failed to create receiver thread (%s)\n", strerror(rc));
-                    break;
-                }
-
-                while (!remote->is_stopped && !context->stop_local) {  // inner loop - remote data exchange
-                    if (!remote->is_stopped) {
-                        if (!send_data(context, local, remote)) {
-                            break;
-                        }
-                        race_sleep_msec(local->interval_msec);
-                    }
-                }
-
-                if (context->stop_local && !remote->is_stopped) {
-                    send_stop(context, local, remote);
-                }
-
-                pthread_cancel(receiver);  // TODO - shall we use less harsh measures to terminate?
-                pthread_join(receiver,NULL);
-                free(remote);
+                if (!run_threaded(context,local,remote)) break;
             }
+            free(remote);
         }
+        local_terminated(context, local);
+        free(local);
     }
 
-    local_terminated(context, local);
-    free(local);
     return true;
+}
+
+bool race_client_interval_threaded(local_context_t *context) {
+    if (context == NULL) {
+        perror("no local context");
+        return false;
+    }
+
+    bool ret = false;
+    remote_endpoint_t *remote = (remote_endpoint_t*)calloc(1,sizeof(remote_endpoint_t));
+    local_endpoint_t *local = initialize_local_client (context, remote);
+    if (local != NULL) {
+        if (send_request(context,local,remote)) {
+            if (wait_for_response(context, local, remote)){
+                ret = run_threaded(context,local,remote);
+                local_terminated(context, local);
+            }
+        }
+        free(local);
+    }
+    free(remote);
+    return ret;
 }

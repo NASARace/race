@@ -45,7 +45,7 @@ void sig_handler (int sig){
 
 int main( int argc, char** argv ){
     char* host = (argc > 1) ? argv[1] : "127.0.0.1";
-    char* port = (argc > 2) ? argv[2] : DEFAULT_PORT;
+    char* port = (argc > 2) ? argv[2] : DEFAULT_SERVER_PORT;
     int interval = (argc > 3) ? atoi(argv[3]) : 2000;  // in msec
 
     // set SIGINT handler without retry
@@ -67,14 +67,14 @@ int main( int argc, char** argv ){
     databuf_t* db = race_create_databuf(MAX_MSG_LEN);
 
     //--- send client request
-    printf("sending request to server\n");
-    race_write_request(db, DATA_RECEIVER, SIMPLE_TRACK_PROTOCOL, race_epoch_msec(), interval);
+    printf("sending request to server %s:%s\n", host,port);
+    race_write_request(db, DATA_RECEIVER, SIMPLE_TRACK_PROTOCOL, race_epoch_millis(), interval);
     if (sendto(fd, db->buf, db->pos, 0, serveraddr, addrlen) < 0){
         fprintf(stderr,"sending CLIENT_REQUEST failed (%s)\n", strerror(errno));
         return 1;
     }
 
-    epoch_msec_t time;
+    epoch_millis_t sim_millis;
     int client_id;
     int server_flags;
     int server_interval;
@@ -87,11 +87,11 @@ int main( int argc, char** argv ){
         exit(EXIT_FAILURE);
     }
     if (race_is_accept(db)) {
-        if (race_read_accept (db, &time, &server_flags, &server_interval, &client_id, &err_msg) <= 0){
+        if (race_read_accept (db, &server_flags, &sim_millis, &server_interval, &client_id, &err_msg) <= 0){
             fprintf(stderr, "error reading SERVER_RESPONSE: %s\n", err_msg);
             exit(EXIT_FAILURE);
         } else {
-            printf("server response: client_id=%x, interval=%d msec\n", client_id, server_interval);
+            printf("server response: client_id=%x, sim_millis=%"PRId64", interval=%d msec\n", client_id, sim_millis, server_interval);
         }    
     } else if (race_is_reject(db)) {
         int reason;
@@ -118,7 +118,8 @@ int main( int argc, char** argv ){
 
             } else if (race_is_data(db)) {
                 int sender_id;
-                int pos = race_read_data_header(db, &sender_id, &time, &err_msg);
+                epoch_millis_t send_time;
+                int pos = race_read_data_header(db, &sender_id, &send_time, &err_msg);
                 if ( pos <= 0) {
                     fprintf(stderr, "error reading tracks header: %s\n", err_msg);
                 } else {
@@ -132,15 +133,15 @@ int main( int argc, char** argv ){
                             char id[MAX_ID_LEN];
                             int msg_ord;
                             int flags;
-                            epoch_msec_t time_msec;
+                            epoch_millis_t track_millis;
                             double lat_deg, lon_deg, alt_m, heading_deg, speed_m_sec;
 
-                            pos = race_read_track_data(db, pos, id, sizeof(id), &msg_ord, &flags, &time_msec, &lat_deg, &lon_deg, &alt_m, &heading_deg, &speed_m_sec);
+                            pos = race_read_track_data(db, pos, id, sizeof(id), &msg_ord, &flags, &track_millis, &lat_deg, &lon_deg, &alt_m, &heading_deg, &speed_m_sec);
                             if (pos <= 0){
                                 fprintf(stderr, "error reading track: %s\n", err_msg);                        
                             } else {
                                 printf("   %d: %s, ord=%d, flags=0x%X, t=%"PRId64", lat=%f°, lon=%f°, alt=%f m, hdg=%f°, spd=%f m/sec\n",
-                                    i, id, msg_ord, flags, time_msec, lat_deg, lon_deg, alt_m, heading_deg, speed_m_sec);
+                                    i, id, msg_ord, flags, track_millis, lat_deg, lon_deg, alt_m, heading_deg, speed_m_sec);
                             }
                         }
                     } else if (data_msg_type == PROXIMITY_MSG) {

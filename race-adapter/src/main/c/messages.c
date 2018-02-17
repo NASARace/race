@@ -29,7 +29,7 @@
          short msg_type;      // numeric id for message type (see messages.h)
          short msg_length; // header and data - must equal read size
          int sender_id;       // 0 for server
-         long  time_msec;     // send epoch in msec
+         long  time_millis;     // send epoch in msec
      }
  */
 
@@ -55,7 +55,7 @@ static int write_header (databuf_t* db, short msg_id, int msg_len, int sender) {
     pos = race_write_short(db, pos, msg_id);  // msg type
     pos = race_write_short(db, pos, msg_len);  // length of message in bytes
     pos = race_write_int(db, pos, sender);
-    pos = race_write_long(db, pos, race_epoch_msec());
+    pos = race_write_long(db, pos, race_epoch_millis());
     return pos;
 }
 
@@ -64,7 +64,7 @@ static void set_msg_len (databuf_t* db, short msg_len) {
 }
 
 static int read_header (databuf_t* db, short id, int check_len, 
-                        int* sender, epoch_msec_t* time_msec, const char** err_msg) {
+                        int* sender, epoch_millis_t* time_millis, const char** err_msg) {
     short msg_id;
     int read_len = db->pos;
 
@@ -77,7 +77,7 @@ static int read_header (databuf_t* db, short id, int check_len,
             pos = race_read_short(db, pos, &msg_len);
             if (msg_len == read_len) { // check stored msg length against read length
                 pos = race_read_int(db,pos,sender);
-                pos = race_read_long(db,pos,time_msec);  // save timestamp (if requested)
+                pos = race_read_long(db,pos,time_millis);  // save timestamp (if requested)
                 return pos;
 
             } else {
@@ -105,17 +105,17 @@ static int read_header (databuf_t* db, short id, int check_len,
         struct msg_header;
         int client_flags;            // client capabilities
         string schema;               // schema that defines exchanged data
-        epoch_msec_t* sim_msec;      // requested simulation time
-        int request_interval_msec;   // requested track update interval in msec
+        epoch_millis_t* sim_millis;      // requested simulation time
+        int request_interval_millis;   // requested track update interval in msec
     }
 */
 
-int race_write_request (databuf_t* db, int flags, char* schema, epoch_msec_t sim_msec, int interval_msec) {
+int race_write_request (databuf_t* db, int flags, char* schema, epoch_millis_t sim_millis, int interval_millis) {
     int pos =  write_header(db, REQUEST_MSG, NO_FIXED_MSG_LEN, NO_ID);
     pos = race_write_int(db, pos, flags);
     pos = race_write_string(db, pos, schema, strlen(schema));
-    pos = race_write_long(db,pos,sim_msec);
-    pos = race_write_int(db,pos,interval_msec);
+    pos = race_write_long(db,pos,sim_millis);
+    pos = race_write_int(db,pos,interval_millis);
     set_msg_len(db,pos);
     return pos;
 }
@@ -124,16 +124,16 @@ int race_is_request (databuf_t* db) {
     return is_msg(db, REQUEST_MSG, NO_FIXED_MSG_LEN);
 }
 
-int race_read_request (databuf_t* db, epoch_msec_t* time_msec, 
+int race_read_request (databuf_t* db, epoch_millis_t* time_millis, 
                          int* cli_flags, 
                          char* schema, int max_schema_len,
-                         epoch_msec_t* sim_msec, int* interval_msec, const char** err_msg) {
-    int pos = read_header(db, REQUEST_MSG, NO_FIXED_MSG_LEN, NULL, time_msec, err_msg);
+                         epoch_millis_t* sim_millis, int* interval_millis, const char** err_msg) {
+    int pos = read_header(db, REQUEST_MSG, NO_FIXED_MSG_LEN, NULL, time_millis, err_msg);
     if (pos > 0){
         pos = race_read_int(db,pos,cli_flags);
         pos = race_read_strncpy(db,pos, schema, max_schema_len);
-        pos = race_read_long(db,pos, sim_msec);    
-        return race_read_int(db, pos, interval_msec);
+        pos = race_read_long(db,pos, sim_millis);    
+        return race_read_int(db, pos, interval_millis);
     } else {
         return 0;
     }
@@ -147,18 +147,20 @@ int race_read_request (databuf_t* db, epoch_msec_t* time_msec,
     struct {
         struct msg_header;
         int server_flags;          // server capabilities
-        int server_interval_msec;  // this can differ from the requested interval
+        epoch_millis_t* sim_millis;    // server simulation time (can differ from request)
+        int server_interval_millis;  // server update interval (this can differ from request)
         int client_id;             // assigned by server
     }
 
 */
 
-#define ACCEPT_LEN HEADER_LEN + 12
+#define ACCEPT_LEN HEADER_LEN + 20
 
-int race_write_accept (databuf_t* db, int flags, int interval_msec, int client_id) {
+int race_write_accept (databuf_t* db, int flags, epoch_millis_t sim_millis, int interval_millis, int client_id) {
     int pos =  write_header(db, ACCEPT_MSG, ACCEPT_LEN, SERVER_ID);
     pos = race_write_int(db,pos,flags);
-    pos = race_write_int(db,pos,interval_msec);
+    pos = race_write_long(db,pos,sim_millis);
+    pos = race_write_int(db,pos,interval_millis);
     return race_write_int(db, pos, client_id);
 }
 
@@ -166,11 +168,12 @@ int race_is_accept (databuf_t* db) {
     return is_msg(db, ACCEPT_MSG, ACCEPT_LEN);
 }
 
-int race_read_accept (databuf_t* db, epoch_msec_t* time_msec, int* flags, int* interval_msec, int* client_id, const char** err_msg) {
-    int pos = read_header(db, ACCEPT_MSG, ACCEPT_LEN, NULL, time_msec, err_msg);
+int race_read_accept (databuf_t* db, int* flags, epoch_millis_t* sim_millis, int* interval_millis, int* client_id, const char** err_msg) {
+    int pos = read_header(db, ACCEPT_MSG, ACCEPT_LEN, NULL, NULL, err_msg);
     if (pos > 0){
         pos = race_read_int(db,pos, flags);
-        pos = race_read_int(db,pos, interval_msec);
+        pos = race_read_long(db,pos, sim_millis);
+        pos = race_read_int(db,pos, interval_millis);
         return race_read_int(db, pos, client_id);
     } else {
         return 0;
@@ -229,8 +232,8 @@ int race_is_stop (databuf_t* db) {
     return is_msg(db, STOP_MSG, STOP_MSG_LEN);
 }
 
-int race_read_stop (databuf_t* db, int *sender_id, epoch_msec_t* time_msec, const char** err_msg) {
-    return read_header(db, STOP_MSG, STOP_MSG_LEN, sender_id, time_msec, err_msg);
+int race_read_stop (databuf_t* db, int *sender_id, epoch_millis_t* time_millis, const char** err_msg) {
+    return read_header(db, STOP_MSG, STOP_MSG_LEN, sender_id, time_millis, err_msg);
 }
 
 
@@ -266,8 +269,8 @@ int race_end_write_data (databuf_t* db, int pos) {
 }
 
 
-int race_read_data_header (databuf_t* db, int *sender_id, epoch_msec_t* time_msec, const char** err_msg) {
-    return read_header(db, DATA_MSG, NO_FIXED_MSG_LEN, sender_id, time_msec, err_msg);
+int race_read_data_header (databuf_t* db, int *sender_id, epoch_millis_t* time_millis, const char** err_msg) {
+    return read_header(db, DATA_MSG, NO_FIXED_MSG_LEN, sender_id, time_millis, err_msg);
 }
 
 // reading track data is done in the context (we don't know the type)

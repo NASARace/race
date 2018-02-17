@@ -25,7 +25,7 @@ typedef struct {
     int msg_ord;
     int flags;
 
-    epoch_msec_t   time_msec;
+    epoch_millis_t   time_millis;
     double lat_deg;
     double lon_deg;
     double alt_m;

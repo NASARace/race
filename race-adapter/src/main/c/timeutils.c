@@ -26,7 +26,7 @@
 /*
  * send thread to sleep for specified number of milliseconds
  */
-int race_sleep_msec (int millis) {
+int race_sleep_millis (int millis) {
     int sec = millis / 1000;
     int nsec = (millis - (sec * 1000)) * 1e6;
 
@@ -40,8 +40,8 @@ int race_sleep_msec (int millis) {
 /*
  * get wallclock epoch in milliseconds
  */
-epoch_msec_t race_epoch_msec () {
-    epoch_msec_t ms;
+epoch_millis_t race_epoch_millis () {
+    epoch_millis_t ms;
     struct timespec spec;
   
     clock_gettime( CLOCK_REALTIME, &spec);
@@ -52,6 +52,12 @@ epoch_msec_t race_epoch_msec () {
 /*
  * get epoch in milliseconds from fractional epoch
  */
-epoch_msec_t race_epoch_msec_from_fsec(double sec) {
-    return (epoch_msec_t)((sec + 0.0005) * 1000);
+epoch_millis_t race_epoch_millis_from_fsec(double sec) {
+    return (epoch_millis_t)((sec + 0.0005) * 1000);
+}
+
+bool race_set_tm_from_epoch_millis (epoch_millis_t epoch_millis, struct tm* result) {
+    // TODO - handle exceeding epoch_millis_t values
+    time_t seconds = (time_t)(epoch_millis/1000);
+    return localtime_r(&seconds,result) != NULL;
 }

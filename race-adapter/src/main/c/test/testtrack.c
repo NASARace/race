@@ -22,12 +22,12 @@
 void update_position(track_t* track) {
     track->msg_ord++;
 
-    if (track->time_msec == 0) {
-        track->time_msec = race_epoch_msec();
+    if (track->time_millis == 0) {
+        track->time_millis = race_epoch_millis();
 
     } else {
-        epoch_msec_t t_now = race_epoch_msec();
-        double dist = ((t_now - track->time_msec) / 1000.0) * track->speed_m_sec;
+        epoch_millis_t t_now = race_epoch_millis();
+        double dist = ((t_now - track->time_millis) / 1000.0) * track->speed_m_sec;
         double delta = dist / (R + track->alt_m);
         double lat = RAD(track->lat_deg);
         double lon = RAD(track->lon_deg);
@@ -36,7 +36,7 @@ void update_position(track_t* track) {
         double lat1 = asin(sin(lat) * cos(delta) + cos(lat) * sin(delta) * cos(hdg));
         double lon1 = lon + atan2(sin(hdg) * sin(delta) * cos(lat), cos(delta) - sin(lat) * sin(lat1));
 
-        track->time_msec = t_now;
+        track->time_millis = t_now;
         track->lat_deg = DEG(lat1);
         track->lon_deg = DEG(lon1);
     }

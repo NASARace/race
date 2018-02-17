@@ -21,7 +21,7 @@ import java.net.DatagramPacket
 
 import akka.actor.ActorRef
 import com.typesafe.config.Config
-import gov.nasa.race.ifSome
+import gov.nasa.race.loopWithExceptionLimit
 import gov.nasa.race.util.{SettableDIStream, SettableDOStream}
 
 /**
@@ -40,73 +40,87 @@ class ServerAdapterActor (val config: Config) extends AdapterActor {
   import AdapterActor._
 
   id = ServerId
-  info(s"waiting for request from $remoteIpAddress:$remotePort")
 
-  override def processIncomingMsg (msgType: Short, packet: DatagramPacket, dis: SettableDIStream, header: MsgHeader) = {
+  override def defaultOwnPort = DefaultServerPort
+  override def defaultRemotePort = NoPort
+
+  /**
+    * msg acquisition thread function
+    * NOTE this is executed concurrently to the rest of the code - beware of race conditions
+    */
+  override def processRemoteMessages: Unit = {
+    info(s"import thread running")
+
+    val dis = new SettableDIStream(MaxMsgLen)
+    val readPacket = new DatagramPacket(dis.getBuffer, dis.getCapacity)
+    val header = new MsgHeader(0,0,0,0)
+
+    if (!loopWithExceptionLimit(maxFailures) (!terminate) { // request loop
+      isConnected = false
+      remotePort = NoPort
+      remoteId = NoId
+
+      if (waitForRequestMessage(readPacket,dis,header)) {
+        remotePort = readPacket.getPort
+        remoteId += 1
+        isConnected = true
+
+        sendAccept
+
+        if (!loopWithExceptionLimit(maxFailures)(isConnected && !terminate) { // connection loop
+          waitForConnectedMessage(readPacket,dis,header)
+        }) error(s"max failure threshold reached, terminating connection to client $remoteIpAddress:$remotePort")
+      }
+    }) error("max failure threshold reached, terminating import thread")
+
+    info("import thread terminated")
+  }
+
+  def waitForRequestMessage(packet: DatagramPacket, dis: SettableDIStream, header: MsgHeader): Boolean = {
+    dis.reset
+    info(s"waiting for request from $remoteIpAddress on $ownIpAddress:$ownPort")
+
+    socket.receive(packet)
+
+    val msgType = peekMsgType(dis)
     val senderIp = packet.getAddress
     val senderPort = packet.getPort
 
-    if (checkRemote(senderIp, senderPort)) {
-      msgType match {
-        case RequestMsg =>
-          if (!hasClient) {
-            if (processRequest(dis, header)) {
-              remoteId += 1
-              sendAccept
-            }
-          } else warning(s"ignoring request, client $senderIp:$senderPort already connected")
+    if (senderIp == remoteIpAddress) {
+      if (msgType == RequestMsg) {
+        if (processRequest(dis,header)) { // this does the payload content check
+          isConnected = true
+          remoteId += 1
+          true // accept
 
-        case _ =>
-          if (hasClient) {
-            processConnectedMsg(msgType, packet, dis, header)
-          } else warning(s"ignoring message $msgType, client not connected")
-      }
-    } else warning(s"ignoring message $msgType from unknown sender: $senderIp:$senderPort")
-  }
-
-  def processConnectedMsg (msgType: Short, packet: DatagramPacket, dis: SettableDIStream, header: MsgHeader) = {
-    msgType match {
-      case StopMsg =>
-        warning(s"received stop from $remoteIpAddress:$remotePort")
-        readStop(dis, header)
-        stop
-
-      case DataMsg => ifSome(reader) { r =>
-        // make sure we don't allocate memory here for processing data messages - they might come at a high rate
-        readHeader(dis, header)
-        if (header.epochMillis > tLastData) {
-          tLastData = header.epochMillis
-          r.read(dis) match {
-            case None =>
-            case Some(list: Seq[_]) => if (flatten) list.foreach(publish) else publish(list)
-            case Some(data) => publish(data)
-          }
         } else {
-          // ignore out-of-order packets
+          warning(s"rejected request from $senderIp:$senderPort")
+          false
         }
+      } else {
+        warning(s"ignoring non-request msg $msgType from ")
+        false
       }
-      case _ => warning(s"received unknown message type $msgType")
+    } else {
+      warning(s"ignoring msg from unknown client $senderIp:$senderPort")
+      false
     }
   }
 
-  def hasClient = remoteId != NoId
-
-  override def onStartRaceActor(originator: ActorRef) = {
-    importThread.start // start before we send the request
-    super.onStartRaceActor(originator)
-  }
-
+  /**
+    * check connection request data from known remote
+    */
   def processRequest (is: DataInputStream, hdr: MsgHeader): Boolean = {
     readHeader(is, hdr)
 
     val clientFlags = is.readInt
     val requestSchema = is.readUTF
-    val requestTime = is.readLong
+    val requestTime = is.readLong // ? should we support setting the SimClock here?
     val requestInterval = is.readInt
 
     // for now we just check the schema
     if (requestSchema == schema){
-      info(s"accepting request ($clientFlags.toHexString,$requestSchema,$requestInterval msec)")
+      info(s"accepting request (${clientFlags.toHexString},$requestSchema,$requestInterval msec)")
       true
     } else {
       warning(s"request for unknown schema ignored: $requestSchema")
@@ -114,17 +128,28 @@ class ServerAdapterActor (val config: Config) extends AdapterActor {
     }
   }
 
-  def writeAccept (os: SettableDOStream, serverFlags: Int, interval: Int, clientId: Int): Int = {
+  override def terminateConnection = {
+    isConnected = false
+  }
+
+  override def onStartRaceActor(originator: ActorRef) = {
+    importThread.start
+    super.onStartRaceActor(originator)
+  }
+
+  def writeAccept (os: SettableDOStream, serverFlags: Int, simMillis: Long, interval: Int, clientId: Int): Int = {
     os.clear
     writeHeader(os, AcceptMsg, AcceptLen, id)
     os.writeInt(serverFlags)
+    os.writeLong(simMillis)
     os.writeInt(interval)
     os.writeInt(clientId)
     os.size
   }
 
   def sendAccept: Boolean = {
-    val len = writeAccept(dos,flags,dataInterval.toMillis.toInt,1)
+    info(s"sending accept to client $remoteId at $remoteIpAddress:$remotePort")
+    val len = writeAccept(dos,flags,currentSimTimeMillis,dataInterval.toMillis.toInt,remoteId)
     sendPacket(len)
   }
 }
