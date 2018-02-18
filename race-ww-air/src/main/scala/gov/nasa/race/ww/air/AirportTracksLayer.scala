@@ -140,14 +140,14 @@ class AirportTracksLayer (raceView: RaceView,config: Config)
     for (t <- newTracks){
       tracks.get(t.id) match {
         case Some(te) =>
-          if (t.drop) {
+          if (t.isDropped) {
             removeRenderable(te)
             tracks -= t.id
           } else {
             te.update(t)
           }
         case None =>
-          if (!t.drop) {
+          if (!t.isDropped) {
             val te = new TrackEntry(t)
             tracks += t.id -> te
             addRenderable(te)

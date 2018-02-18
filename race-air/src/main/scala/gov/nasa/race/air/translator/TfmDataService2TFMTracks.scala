@@ -26,6 +26,7 @@ import gov.nasa.race.uom.Length._
 import gov.nasa.race.uom.Angle._
 import gov.nasa.race.uom.Speed._
 import gov.nasa.race.uom._
+import gov.nasa.race.track.TrackedObject
 import org.joda.time.DateTime
 
 
@@ -133,10 +134,13 @@ class TfmDataService2TFMTracks(val config: Config=NoConfig) extends XmlPullParse
             case "fdm:trackInformation" => isTrackInfo = false
             case "fdm:fltdMessage" =>
               if (checkVars) {
+                val status = if (completed) TrackedObject.CompletedFlag else TrackedObject.TrackNoStatus
                 val track = if (completed) {
-                  TFMTrack(flightRef,cs,LatLonPos(lat,lon),alt,speed,source,date,None,None)
+                  TFMTrack(flightRef,cs,LatLonPos(lat,lon),alt,speed,date,status,
+                           source,None,None)
                 } else {
-                  TFMTrack(flightRef,cs,LatLonPos(lat,lon),alt,speed,source,date,Some(nextWP),Some(nextWPDate))
+                  TFMTrack(flightRef,cs,LatLonPos(lat,lon),alt,speed,date,status,
+                           source,Some(nextWP),Some(nextWPDate))
                 }
                 tracks = track  +: tracks
                 resetVars

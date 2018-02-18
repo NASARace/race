@@ -128,10 +128,10 @@ class AsdexTracksLayer (raceView: RaceView,config: Config)
     newTracks.foreach{ t=>
       getTrackEntry(t) match {
         case Some(te) =>
-          if (t.drop) removeTrackEntry(te) else updateTrackEntry(te, t)
+          if (t.isDropped) removeTrackEntry(te) else updateTrackEntry(te, t)
 
         case None =>
-          if (!t.drop) addTrackEntry(t)
+          if (!t.isDropped) addTrackEntry(t)
       }
     }
   }

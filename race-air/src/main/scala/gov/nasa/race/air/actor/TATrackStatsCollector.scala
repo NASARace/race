@@ -69,7 +69,7 @@ class TATrackStatsCollector (val config: Config) extends StatsCollectorActor wit
         if (track.date != null) {
           checkInitialClockReset(track.date)
           val tracon = tracons.getOrElseUpdate(track.src, new TACollector(config, track.src))
-          if (track.isDrop) {
+          if (track.isDropped) {
             tracon.removeActive(track.id, track)
           } else {
             tracon.updateActive(track.id, track)

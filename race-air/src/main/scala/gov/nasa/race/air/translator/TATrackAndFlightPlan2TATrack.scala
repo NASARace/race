@@ -30,6 +30,7 @@ import gov.nasa.race.uom.Angle.{Degrees, UndefinedAngle}
 import gov.nasa.race.uom.Length.{Feet, NauticalMiles, UndefinedLength}
 import gov.nasa.race.uom.{Angle, Length, Speed}
 import gov.nasa.race.uom.Speed.{FeetPerSecond, Knots, UndefinedSpeed}
+import gov.nasa.race.track.TrackedObject
 import org.joda.time.DateTime
 
 import scala.collection.mutable.ArrayBuffer
@@ -59,11 +60,12 @@ class TATrackAndFlightPlan2TATrack (val config: Config=NoConfig) extends XmlPars
 
   def readBoolean = readInt == 1
 
-  def readStatus = {
+  def readStatusFlag = {
     readText match { // note that XSD requires lower case
-      case "active" => Status.Active
-      case "coasting" => Status.Coasting
-      case "drop" => Status.Drop
+      case "active" => 0
+      case "coasting" => TATrack.CoastingFlag
+      case "drop" => TrackedObject.DroppedFlag
+      case _ => 0
     }
   }
 
@@ -94,18 +96,16 @@ class TATrackAndFlightPlan2TATrack (val config: Config=NoConfig) extends XmlPars
     var acAddress: String = null
     var beaconCode: String = null
     var mrtTime: DateTime = null
-    var status: Status = Status.Undefined
     var lat,lon: Angle = UndefinedAngle
     var xPos,yPos: Length = UndefinedLength
     var vx,vy,vVert: Speed = UndefinedSpeed
-    var attrs: Int = 0
+    var status: Int = 0
     var reportedAltitude: Length = UndefinedLength
     var flightPlan: Option[FlightPlan] = None
 
     whileNextElement {
       case "trackNum" => trackId = readText
       case "mrtTime" => mrtTime = DateTime.parse(readText)
-      case "status" => status = readStatus
       case "xPos" => xPos = NauticalMiles(readInt / 256.0)
       case "yPos" => yPos = NauticalMiles(readInt / 256.0)
       case "lat" => lat = Degrees(readDouble)
@@ -113,10 +113,13 @@ class TATrackAndFlightPlan2TATrack (val config: Config=NoConfig) extends XmlPars
       case "vVert" => vVert = FeetPerSecond(readInt / 60.0)
       case "vx" => vx = Knots(readInt)
       case "vy" => vy = Knots(readInt)
-      case "frozen" => if (readBoolean) attrs |= TATrack.FrozenFlag
-      case "new" => if (readBoolean) attrs |= TATrack.NewFlag
-      case "pseudo" => if (readBoolean) attrs |= TATrack.PseudoFlag
-      case "adsb" => if (readBoolean) attrs |= TATrack.AdsbFlag
+
+      case "status" => status |= readStatusFlag
+      case "frozen" => if (readBoolean) status |= TrackedObject.FrozenFlag
+      case "new" => if (readBoolean) status |= TrackedObject.NewFlag
+      case "pseudo" => if (readBoolean) status |= TATrack.PseudoFlag
+      case "adsb" => if (readBoolean) status |= TATrack.AdsbFlag
+
       case "reportedBeaconCode" => beaconCode = readText
       case "reportedAltitude" => reportedAltitude = Feet(readInt)
       case "flightPlan" => flightPlan = Some(new FlightPlan) // just a placeholder for now
@@ -129,11 +132,13 @@ class TATrackAndFlightPlan2TATrack (val config: Config=NoConfig) extends XmlPars
             val spd = Speed.fromVxVy(vx, vy)
             val hdg = Angle.fromVxVy(vx, vy)
             acAddress = trackId.toString
-            val track = new TATrack(src, trackId, acAddress,
-              LatLonPos(lat, lon), reportedAltitude, spd, hdg, mrtTime,
-              XYPos(xPos, yPos), vVert, status, attrs, beaconCode, flightPlan)
+
+            val track = new TATrack(trackId,acAddress,LatLonPos(lat,lon),reportedAltitude,spd,hdg,mrtTime,status,
+                                    src, XYPos(xPos, yPos), vVert, beaconCode, flightPlan)
+
             if (attachRev && stddsRev >= 0) track.amend(Rev(3, stddsRev.toShort))
             if (attachMsg) track.amend(Src(msg))
+
             tracks += track
           }
         }

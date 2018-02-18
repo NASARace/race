@@ -22,11 +22,11 @@ import gov.nasa.race.uom.{Angle, Length, Speed}
 import org.joda.time.DateTime
 
 object TATrack {
-  // various bit flags for TATrack attrs
-  final val FrozenFlag = 1
-  final val NewFlag = 2
-  final val PseudoFlag = 4
-  final val AdsbFlag = 8
+  // status bit flags for TATrack attrs (should be >0xffff)
+
+  final val PseudoFlag     = 0x10000
+  final val AdsbFlag       = 0x20000
+  final val CoastingFlag   = 0x40000
 
   object Status extends Enumeration {
     type Status = Value
@@ -37,33 +37,29 @@ object TATrack {
 /**
   * a specialized TrackedAircraft that represents tracks from TAIS/STARS messages
   */
-case class TATrack (val src: String,
-
-                    val id: String,
+case class TATrack (val id: String,
                     val cs: String,
                     val position: LatLonPos,
                     val altitude: Length,
                     val speed: Speed,
                     val heading: Angle,
                     val date: DateTime,
+                    val status: Int,
 
+                    val src: String,
                     val xyPos: XYPos,
                     val vVert: Speed,
-                    val status: Status,
-                    val attrs: Int,
                     val beaconCode: String,
                     val flightPlan: Option[FlightPlan]
                   ) extends TrackedAircraft {
+  import TATrack._
 
   override def toString = {
-    f"TATrack($src,$id,$xyPos,$status, $position,$altitude,$heading,$speed, $date, $flightPlan)"
+    f"TATrack($src,$id,$xyPos,0x${status.toHexString}, $position,$altitude,$heading,$speed, $date, $flightPlan)"
   }
 
-  def isDrop = status == TATrack.Status.Drop
-  def isFrozen = (attrs & TATrack.FrozenFlag) > 0
-  def isNew = (attrs & TATrack.NewFlag) > 0
-  def isPseudo = (attrs & TATrack.PseudoFlag) > 0
-  def isAdsb = (attrs & TATrack.AdsbFlag) > 0
+  def isPseudo = (status & PseudoFlag) != 0
+  def isAdsb = (status & AdsbFlag) != 0
 
   def hasFlightPlan = flightPlan.isDefined
 }

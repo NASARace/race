@@ -21,6 +21,20 @@ import gov.nasa.race.util.StringUtils
 
 import scala.reflect.{ClassTag, classTag}
 
+object TrackedObject {
+
+  //--- track status flags
+  // note the lower 2 bytes are reserved for general flags defined here,
+  // channel specific flags should use the upper two
+
+  final val TrackNoStatus: Int  = 0x00
+  final val NewFlag: Int        = 0x01
+  final val ChangedFlag: Int    = 0x02
+  final val DroppedFlag: Int    = 0x04
+  final val CompletedFlag: Int  = 0x08
+  final val FrozenFlag: Int     = 0x10
+}
+
 /**
   * this is the abstract type used for sea, land, air and space objects we can track
   *
@@ -30,9 +44,18 @@ import scala.reflect.{ClassTag, classTag}
   * are set too rarely to waste storage on all TrackObject instances
   */
 trait TrackedObject extends IdentifiableObject with TrackPoint3D with MovingObject {
+  import TrackedObject._
 
   // generic mechanism to dynamically attach per-event data to FlightPos objects
   var amendments = List.empty[Any]
+
+  def status: Int // flag field, can be channel specific (hence no enum)
+
+  def isNew = (status & NewFlag) != 0
+  def isChanged = (status & ChangedFlag) != 0
+  def isDropped = (status & DroppedFlag) != 0
+  def isCompleted = (status & CompletedFlag) != 0
+  def isFrozen = (status & FrozenFlag) != 0
 
   def amend (a: Any): TrackedObject = { amendments = a +: amendments; this }
   def amendAll (as: Any*) = { as.foreach(amend); this }

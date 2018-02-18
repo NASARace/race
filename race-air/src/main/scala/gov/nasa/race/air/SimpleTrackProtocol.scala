@@ -71,9 +71,16 @@ object SimpleTrackProtocol {
     }
       **/
 
-
+  //--- data message types
   final val TrackMsg: Short = 1
   final val ProximityMsg: Short = 2
+
+  //--- track msg flags see TrackedObject
+
+  //--- proximity flags
+  final val ProxNew: Int        = 0x01
+  final val ProxChange: Int     = 0x02
+  final val ProxDrop: Int       = 0x04
 }
 
 

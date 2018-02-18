@@ -33,42 +33,37 @@ class AsdexTracks(val airport: String, val tracks: Seq[AsdexTrack]) {
   }
 }
 
-
-object AsdexTrackType extends Enumeration {
-  type AsdexTrackType = Value
-  val Aircraft, Vehicle, Unknown = Value
-}
-
-object VerticalDirection extends Enumeration {
-  type VerticalDirection = Value
-  val Up, Down, Unknown = Value
+object AsdexTrack {
+  // AsdexTrack specific status flags (>0xffff)
+  final val DisplayFlag  =  0x10000
+  final val OnGroundFlag =  0x20000
+  final val VehicleFlag  =  0x40000
+  final val AircraftFlag =  0x80000
+  final val UpFlag       = 0x100000
+  final val DownFlag     = 0x200000
 }
 
 case class AsdexTrack(id: String,
                       cs: String,
-                      date: DateTime,
                       position: LatLonPos,
-
-                      // note - these can have undefined values (we don't use Option to be abe to merge with FlightPos)
+                      altitude: Length,
                       speed: Speed,
                       heading: Angle,
-                      altitude: Length,
+                      date: DateTime,
+                      status: Int,
 
-                      // asde-x specifics
-                      trackType: AsdexTrackType.Value,
-                      display: Boolean,
-                      drop: Boolean,
-                      vertical: VerticalDirection.Value, // up/down
-                      onGround: Boolean, // ground bit set
                       acType: Option[String]
                      ) extends TrackedObject {
+  import AsdexTrack._
 
-  def isAircraft = trackType == AsdexTrackType.Aircraft
-  def isGroundAircraft = trackType == AsdexTrackType.Aircraft && !altitude.isDefined
+  def isAircraft = (status & AircraftFlag) != 0
+  def isGroundAircraft = ((status & OnGroundFlag) != 0) && !altitude.isDefined
   def isAirborne = altitude.isDefined
   def isMovingGroundAircraft = isGroundAircraft && heading.isDefined
-  def isAirborneAircraft = trackType == AsdexTrackType.Aircraft && altitude.isDefined
-  def isVehicle = trackType == AsdexTrackType.Vehicle
+  def isAirborneAircraft = isAircraft && altitude.isDefined
+  def isVehicle = (status & VehicleFlag) != 0
+  def isUp = (status & UpFlag) != 0
+  def isDown = (status & DownFlag) != 0
 
-  override def toShortString = s"Track{$id,$trackType,$position,$date}"
+  override def toShortString = s"Track{$id,0x${status.toHexString},$position,$date}"
 }

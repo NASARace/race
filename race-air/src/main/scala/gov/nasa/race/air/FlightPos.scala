@@ -50,12 +50,14 @@ object FlightPos {
   * in-flight state consisting of geographic position, altitude, speed and bearing
   */
 case class FlightPos (val id: String,
-                 val cs: String,
-                 val position: LatLonPos,
-                 val altitude: Length,
-                 val speed: Speed,
-                 val heading: Angle,
-                 val date: DateTime) extends TrackedAircraft with TrackMessage {
+                      val cs: String,
+                      val position: LatLonPos,
+                      val altitude: Length,
+                      val speed: Speed,
+                      val heading: Angle,
+                      val date: DateTime,
+                      val status: Int = 0
+                     ) extends TrackedAircraft with TrackMessage {
 
   def this (id:String, pos: LatLonPos, alt: Length,spd: Speed,hdg: Angle, dtg: DateTime) =
     this(id, FlightPos.tempCS(id), pos,alt,spd,hdg,dtg)

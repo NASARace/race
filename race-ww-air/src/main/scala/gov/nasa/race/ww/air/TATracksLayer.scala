@@ -128,7 +128,7 @@ class TATracksLayer (raceView: RaceView,config: Config)
             incUpdateCount
             getTrackEntry(track) match {
               case Some(acEntry) =>
-                if (track.status != Status.Drop) updateTrackEntry(acEntry, track)
+                if (!track.isDropped) updateTrackEntry(acEntry, track)
                 else (removeTrackEntry(acEntry))
               case None => addTrackEntry(track)
             }

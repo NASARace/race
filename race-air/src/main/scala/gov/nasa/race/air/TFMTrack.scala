@@ -34,18 +34,17 @@ case class TFMTracks (tracks: Seq[TFMTrack]) {
 }
 
 /**
-  * object representing a Traffic Flow Management (TFM) track
-  * This represents flights that are tracked from ground stations (radar)
-  *
-  * while this is largely redundant to FlightPos we might extend it in the future with TFM specific fields
+  * object representing a Traffic Flow Management (TFM) track update
   */
 case class TFMTrack(id: String,
                     cs: String,
                     position: LatLonPos,
                     altitude: Length,
                     speed: Speed,
-                    source: String,
                     date: DateTime,
+                    status: Int,
+
+                    source: String,
                     nextPos: Option[LatLonPos],
                     nextDate: Option[DateTime]
                    ) extends TrackedObject {

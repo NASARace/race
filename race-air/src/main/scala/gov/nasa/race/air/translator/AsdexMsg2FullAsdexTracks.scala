@@ -21,7 +21,7 @@ import java.lang.Double.isFinite
 
 import com.typesafe.config.Config
 import gov.nasa.race._
-import gov.nasa.race.air.{AsdexTrack, AsdexTrackType, VerticalDirection}
+import gov.nasa.race.air.AsdexTrack
 import gov.nasa.race.config._
 import gov.nasa.race.geo.LatLonPos
 import gov.nasa.race.uom.Angle._
@@ -68,11 +68,10 @@ class AsdexMsg2FullAsdexTracks(config: Config=NoConfig) extends AsdexMsg2AsdexTr
   }
 
   // here we use the previously accumulated info to turn delta reports into full reports
-  override protected def createTrack (trackId: String, date: DateTime, display: Boolean,
+  override protected def createTrack (trackId: String, acId: String,
                                       latDeg: Double, lonDeg: Double,
                                       altFt: Double, hdgDeg: Double, spdMph: Double,
-                                      drop: Boolean, tgtType: String, ud: String,
-                                      acId: String, acType: String, gbs: Boolean): AsdexTrack = {
+                                      date: DateTime, status: Int, acType: String): AsdexTrack = {
     implicit val last = lastTracks.get(trackId)
 
     // if input values are defined, use those. Otherwise use the last value or the fallback if there was none
@@ -83,11 +82,9 @@ class AsdexMsg2FullAsdexTracks(config: Config=NoConfig) extends AsdexMsg2AsdexTr
     val spd = fromDouble(spdMph, UsMilesPerHour, _.speed, UndefinedSpeed)
     val cs = fromString(acId, getCallsign(_,trackId), _.cs, trackId)
     val act = fromString(acType, Some(_), _.acType, None)
-    val tt = fromString(tgtType, getTrackType, _.trackType, AsdexTrackType.Unknown)
-    val vert = fromString(ud, getVerticalDirection, _.vertical, VerticalDirection.Unknown)
 
-    val track = new AsdexTrack(trackId,cs,date,LatLonPos(lat,lon),spd,hdg,alt,tt,display,drop,vert,gbs,act)
-    if (drop) {
+    val track = new AsdexTrack(trackId,cs,LatLonPos(lat,lon),alt,spd,hdg,date,status,act)
+    if (track.isDropped) {
       lastTracks -= trackId
     } else {
       lastTracks += trackId -> track
