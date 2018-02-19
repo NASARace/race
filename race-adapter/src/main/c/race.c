@@ -419,7 +419,7 @@ static bool run_threaded (local_context_t *context, local_endpoint_t* local, rem
 
     if (context->stop_local && !remote->is_stopped) {
         send_data(context,local,remote); // send last track update with dropped status
-        context->terminate();
+        if (context->terminate) context->terminate();
         send_stop(context, local, remote);
     }
 
