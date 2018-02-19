@@ -55,6 +55,7 @@ trait TrackedObject extends IdentifiableObject with TrackPoint3D with MovingObje
   def isChanged = (status & ChangedFlag) != 0
   def isDropped = (status & DroppedFlag) != 0
   def isCompleted = (status & CompletedFlag) != 0
+  def isDroppedOrCompleted = (status & (DroppedFlag|CompletedFlag)) != 0
   def isFrozen = (status & FrozenFlag) != 0
 
   def amend (a: Any): TrackedObject = { amendments = a +: amendments; this }

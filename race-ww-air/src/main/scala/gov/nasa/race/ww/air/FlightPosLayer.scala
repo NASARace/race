@@ -43,14 +43,16 @@ class FlightPosLayer (raceView: RaceView,config: Config)
   def handleFlightPosLayerMessage: Receive = {
     case BusEvent(_,fpos:FlightPos,_) =>
       incUpdateCount
+
       getTrackEntry(fpos) match {
-        case Some(acEntry) => updateTrackEntry(acEntry,fpos)
+        case Some(acEntry) =>
+          if (fpos.isDroppedOrCompleted) removeTrackEntry(acEntry) else updateTrackEntry(acEntry, fpos)
+
         case None => addTrackEntry(fpos)
       }
 
     case BusEvent(_,msg: TrackTerminationMessage,_)  =>
       incUpdateCount
-      // TODO - this should be handled by FlightPos updates to avoid bypassing the TrackLayer abstractions
       ifSome(trackEntries.get(msg.cs)) {removeTrackEntry}
   }
 

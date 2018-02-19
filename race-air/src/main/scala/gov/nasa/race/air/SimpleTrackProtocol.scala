@@ -117,7 +117,7 @@ class SimpleTrackReader extends DataStreamReader {
   def readTrack (dis: DataInputStream): TrackedObject = {
     val id = dis.readUTF
     val msgOrd = dis.readInt  // can be used to check consistency
-    val flags = dis.readInt   // TODO - use to flag completion
+    val flags = dis.readInt
     val timeMsec = dis.readLong
     val latDeg = dis.readDouble
     val lonDeg = dis.readDouble
@@ -128,7 +128,7 @@ class SimpleTrackReader extends DataStreamReader {
     FlightPos(id, id,
       LatLonPos.fromDegrees(latDeg, lonDeg), Meters(altM),
       MetersPerSecond(speedMS), Degrees(headingDeg),
-      new DateTime(timeMsec))
+      new DateTime(timeMsec),flags)
   }
 
   def readProximityMsg (dis: DataInputStream, list: ArrayBuffer[Any]) = {

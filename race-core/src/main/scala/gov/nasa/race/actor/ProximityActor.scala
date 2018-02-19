@@ -165,8 +165,12 @@ class DynamicProximityActor (val config: Config) extends ProximityActor {
   }
 
   def updateRef(track: TrackedObject): Unit = {
-    val e = refs.getOrElseUpdate(track.id, new DynamicRefEntry(refEstimatorPrototype.clone))
-    e.updateRef(track)
+    if (track.isDroppedOrCompleted) {
+      refs -= track.id
+    } else {
+      val e = refs.getOrElseUpdate(track.id, new DynamicRefEntry(refEstimatorPrototype.clone))
+      e.updateRef(track)
+    }
   }
 }
 

@@ -109,6 +109,7 @@ trait AdapterActor extends PublishingRaceActor with SubscribingRaceActor with Co
   protected def createReader: Option[DataStreamReader] = configurable[DataStreamReader]("reader")
   protected def createWriter: Option[DataStreamWriter] = configurable[DataStreamWriter]("writer")
 
+
   protected def checkSchemaCompliance (si: SchemaImplementor): Unit = {
     if (!si.compliesWith(schema)) throw new RaceException(s"${si.getClass.getName} does not implement $schema")
   }
