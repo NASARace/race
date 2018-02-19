@@ -186,6 +186,15 @@ int race_read_data_header (databuf_t* db, int* sender, epoch_millis_t* time_mill
 #define TRACK_MSG 1
 #define PROXIMITY_MSG 2
 
+// track flags
+#define TRACK_NO_REPORT 0
+#define TRACK_NEW    0x1
+#define TRACK_CHANGE 0x2
+#define TRACK_DROP   0x4     // drop track for unspecified reasons (might be simulator shutdown)
+#define TRACK_COMPLETED 0x8  // track was completed as part of simulation (e.g. aircraft landed)
+#define TRACK_FROZEN 0x10
+
+// proximity flags
 #define PROX_NEW    0x1
 #define PROX_CHANGE 0x2
 #define PROX_DROP   0x4
@@ -252,6 +261,8 @@ typedef struct {
     // handle application specific data messages (only the payload, race-adapter takes care of the header)
     int (*write_data)(databuf_t* db, int pos);
     int (*read_data)(databuf_t* db, int pos);
+
+    void (*terminate)();
 
     //--- reporting callbacks
     void (*error)(const char* fmt,...);
