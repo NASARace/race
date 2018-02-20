@@ -18,6 +18,7 @@
 package gov.nasa.race.actor
 
 import com.typesafe.config.Config
+import gov.nasa.race._
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.Messages.BusEvent
 import gov.nasa.race.core.{PublishingRaceActor, RaceContext, SubscribingRaceActor}
@@ -25,6 +26,7 @@ import gov.nasa.race.geo.{GeoUtils, LatLonPos}
 import gov.nasa.race.track._
 import gov.nasa.race.uom.Length
 import gov.nasa.race.uom.Length._
+import org.joda.time.DateTime
 
 import scala.collection.mutable.{HashMap => MHashMap, Set => MSet}
 
@@ -32,12 +34,12 @@ import scala.collection.mutable.{HashMap => MHashMap, Set => MSet}
   * base type for actors that detect and report proximity tracks
   */
 trait ProximityActor extends SubscribingRaceActor with PublishingRaceActor {
-
   abstract class RefEntry {
     val proximities: MHashMap[String,TrackedObject] = MHashMap.empty
 
     def updateRef (t: TrackedObject): Unit = {}
     def checkProximity (t: TrackedObject): Unit
+    def dropProximity(tId: String, date: DateTime): Unit
   }
 
   // the distance we consider as proximity
@@ -46,8 +48,11 @@ trait ProximityActor extends SubscribingRaceActor with PublishingRaceActor {
 
   val refs: MHashMap[String,RefEntry] = MHashMap.empty
 
-
   def updateProximities(track: TrackedObject): Unit = refs.foreach( _._2.checkProximity(track))
+
+  def dropRef (ttm: TrackTerminationMessage) = refs -= ttm.cs
+
+  def dropProximities (ttm: TrackTerminationMessage) = refs.foreach( _._2.dropProximity(ttm.cs,ttm.date))
 }
 
 /**
@@ -57,13 +62,18 @@ class StaticProximityActor (val config: Config) extends ProximityActor {
   import ProximityEvent._
 
   class StaticRefEntry (val id: String, pos: LatLonPos, altitude: Length) extends RefEntry {
-    override def checkProximity (track: TrackedObject) = {
-      val tId = track.cs
+
+    def getDistanceInMeters (track: TrackedObject): Double = {
       val tLat = track.position.φ.toRadians
       val tLon = track.position.λ.toRadians
-      val dist = GeoUtils.euclideanDistanceRad(pos.φ.toRadians,pos.λ.toRadians,tLat,tLon,altitude.toMeters)
+      GeoUtils.euclideanDistanceRad(pos.φ.toRadians,pos.λ.toRadians,tLat,tLon,altitude.toMeters)
+    }
 
-      if (dist <= distanceInMeters) {
+    override def checkProximity (track: TrackedObject) = {
+      val tId = track.cs
+      val dist = getDistanceInMeters(track)
+
+      if ((dist <= distanceInMeters) && !track.isDroppedOrCompleted) {
         val flags = if (proximities.contains(tId)) ProxChange else ProxNew
         proximities += (tId -> track)
         publish(ProximityEvent(new ProximityReference(id,track.date,pos,altitude), Meters(dist), flags, track))
@@ -72,6 +82,14 @@ class StaticProximityActor (val config: Config) extends ProximityActor {
           proximities -= tId
           publish(ProximityEvent(new ProximityReference(id,track.date,pos,altitude), Meters(dist), ProxDrop, track))
         }
+      }
+    }
+
+    override def dropProximity (tId: String, date: DateTime) = {
+      ifSome(proximities.get(tId)) { track =>
+        val dist = getDistanceInMeters(track)
+        proximities -= tId
+        publish(ProximityEvent(new ProximityReference(id,date,pos,altitude), Meters(dist), ProxDrop, track))
       }
     }
   }
@@ -111,11 +129,10 @@ class DynamicProximityActor (val config: Config) extends ProximityActor {
 
     protected def getDistanceInMeters (track: TrackedObject): Double = {
       val re = refEstimator
-
       val tLat = track.position.φ.toRadians
       val tLon = track.position.λ.toRadians
 
-      GeoUtils.euclideanDistanceRad(re.lat.toRadians, re.lon.toRadians, tLat, tLon, re.altitude.toMeters)
+      GeoUtils.euclideanDistanceRad(re.lat.toRadians,re.lon.toRadians, tLat,tLon, re.altitude.toMeters)
     }
 
     override def checkProximity (track: TrackedObject) = {
@@ -126,7 +143,7 @@ class DynamicProximityActor (val config: Config) extends ProximityActor {
         if (re.estimateState(track.date.getMillis)) {
           val dist = getDistanceInMeters(track)
 
-          if (dist <= distanceInMeters) {
+          if ((dist <= distanceInMeters) && !track.isDroppedOrCompleted) {
             val flags = if (proximities.contains(tId)) ProxChange else ProxNew
             proximities += (tId -> track)
             publish(ProximityEvent(new ProximityReference(re, track.date), Meters(dist), flags, track))
@@ -136,6 +153,16 @@ class DynamicProximityActor (val config: Config) extends ProximityActor {
               publish(ProximityEvent(new ProximityReference(re, track.date), Meters(dist), ProxDrop, track))
             }
           }
+        }
+      }
+    }
+
+    override def dropProximity (tId: String, date: DateTime) = {
+      ifSome(proximities.get(tId)) { track =>
+        if (refEstimator.estimateState(date.getMillis)) {
+          val dist = getDistanceInMeters(track)
+          proximities -= tId
+          publish(ProximityEvent(new ProximityReference(refEstimator, date), Meters(dist), ProxDrop, track))
         }
       }
     }
@@ -160,6 +187,10 @@ class DynamicProximityActor (val config: Config) extends ProximityActor {
       // note that both refs and proximities might be on the same channel
       if (readRefFrom.contains(chan)) updateRef(track)
       if (readFrom.contains(chan)) updateProximities(track)
+
+    case BusEvent(chan:String,te:TrackTerminationMessage,_) =>
+      if (readRefFrom.contains(chan)) dropRef(te)
+      if (readFrom.contains(chan)) dropProximities(te)
 
     case BusEvent(_,msg:Any,_) =>  // all other BusEvents are ignored
   }

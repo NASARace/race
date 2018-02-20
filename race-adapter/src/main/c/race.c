@@ -335,17 +335,13 @@ static void* receive_messages_thread(void* args) {
  * poll remote messages (non-blocking)
  */
 static void poll_messages (local_context_t* context, local_endpoint_t* local, remote_endpoint_t* remote) {
-    const char* err_msg;
-    int n_msgs = 0;
-    
-    local->is_non_blocking = race_set_nonblocking(local->fd, &err_msg); // so that we can poll remote messages
-    if (!local->is_non_blocking && (context->flags & DATA_RECEIVER)) {
-        context->warning("cannot receive data from remote, socket is blocking (%s)\n", err_msg);
-    }
-
     if (local->is_non_blocking){
-        while (race_check_available(local->fd, &err_msg) > 0 && n_msgs < 42) {
+        const char* err_msg;
+        int n_msgs = 0;
+
+        while (race_check_available(local->fd, &err_msg) > 0 && n_msgs < MAX_POLLED_MSGS) {
             receive_message(context, local, remote);
+            n_msgs++;
         }
     }
 }
@@ -355,51 +351,37 @@ static void poll_messages (local_context_t* context, local_endpoint_t* local, re
 /*
  * send data at a fixed interval and poll the remote endpoint synchronously before each send
  */
-bool race_interval_poll(local_context_t *context) {
+static bool run_connection_polling (local_context_t *context, local_endpoint_t* local, remote_endpoint_t *remote) {
     const char *err_msg;
 
-    if (context == NULL) {
-        perror("no local context");
-        return false;
+    if (context->connection_started) context->connection_started();
+
+    local->is_non_blocking = race_set_nonblocking(local->fd, &err_msg); // so that we can poll remote messages
+    if (!local->is_non_blocking && (context->flags & DATA_RECEIVER)) {
+        context->warning("cannot receive data from remote, socket is blocking (%s)\n",err_msg);
     }
 
-    local_endpoint_t *local = initialize_local_server (context);
-    if (local != NULL) {
-        while (!context->stop_local) { // outer loop - remote connection
-            remote_endpoint_t *remote = wait_for_request(context, local); 
-            if (remote != NULL) {
-                local->is_non_blocking = race_set_nonblocking(
-                    local->fd, &err_msg); // so that we can poll remote messages
-                if (!local->is_non_blocking && (context->flags & DATA_RECEIVER)) {
-                    context->warning("cannot receive data from remote, socket is blocking (%s)\n",
-                                     err_msg);
-                }
+    while (!remote->is_stopped && !context->stop_local) { // inner loop - remote data exchange
+        poll_messages(context, local, remote); // this might change remote state
 
-                while (!remote->is_stopped && !context->stop_local) { // inner loop - remote data exchange
-                    poll_messages(context, local, remote); // this might change remote state
-
-                    if (!remote->is_stopped) {
-                        if (!send_data(context, local, remote)) {
-                            break;
-                        }
-                        race_sleep_millis(context->interval_millis);
-                    }
-                }
-
-                if (context->stop_local && !remote->is_stopped) {
-                    send_stop(context, local, remote);
-                }
-                free(remote);
+        if (!remote->is_stopped) {
+            if (!send_data(context, local, remote)) {
+                break;
             }
+            race_sleep_millis(context->interval_millis);
         }
     }
 
-    local_terminated(context, local);
-    free(local);
+    if (context->stop_local && !remote->is_stopped) {
+        send_data(context,local,remote);
+        send_stop(context, local, remote);
+    }
+    if (context->connection_terminated) context->connection_terminated();
+
     return true;
 }
 
-static bool run_threaded (local_context_t *context, local_endpoint_t* local, remote_endpoint_t *remote) {
+static bool run_connection_threaded (local_context_t *context, local_endpoint_t* local, remote_endpoint_t *remote) {
     pthread_t receiver;
     threadargs_t args = { context,local,remote };
     int rc = pthread_create( &receiver, NULL, receive_messages_thread, &args);
@@ -407,6 +389,8 @@ static bool run_threaded (local_context_t *context, local_endpoint_t* local, rem
         context->error("failed to create receiver thread (%s)\n", strerror(rc));
         return false;
     }
+
+    if (context->connection_started) context->connection_started();
 
     while (!remote->is_stopped && !context->stop_local) {  // inner loop - remote data exchange
         if (!remote->is_stopped) {
@@ -419,20 +403,26 @@ static bool run_threaded (local_context_t *context, local_endpoint_t* local, rem
 
     if (context->stop_local && !remote->is_stopped) {
         send_data(context,local,remote); // send last track update with dropped status
-        if (context->terminate) context->terminate();
         send_stop(context, local, remote);
     }
 
     pthread_cancel(receiver);  // TODO - shall we use less harsh measures to terminate?
     pthread_join(receiver,NULL);  // this blocks until the thread is finished
 
+    if (context->connection_terminated) context->connection_terminated();
     return true;
 }
 
+
 /*
- * send data at a fixed interval and receive remote endpoint data asynchronously from a separate thread
+ * high level librace adapter functions
+ * 
+ * send data at a fixed interval and receive remote data async (when it is received),
+ * both without explicit synchronization/trigger from host program
  */
-bool race_server_interval_threaded(local_context_t *context) {
+
+// local is started before remote, local waits for and accepts/rejects remote request
+bool race_server (local_context_t *context) {
     if (context == NULL) {
         perror("no local context");
         return false;
@@ -443,7 +433,7 @@ bool race_server_interval_threaded(local_context_t *context) {
         while (!context->stop_local) { // outer loop - remote connection
             remote_endpoint_t *remote = wait_for_request(context, local);
             if (remote != NULL) {
-                if (!run_threaded(context,local,remote)) break;
+                if (!run_connection_threaded(context,local,remote)) break;
             }
             free(remote);
         }
@@ -454,7 +444,8 @@ bool race_server_interval_threaded(local_context_t *context) {
     return true;
 }
 
-bool race_client_interval_threaded(local_context_t *context) {
+// remote is started before local, local sends request and waits for accept/reject
+bool race_client (local_context_t *context) {
     if (context == NULL) {
         perror("no local context");
         return false;
@@ -466,7 +457,7 @@ bool race_client_interval_threaded(local_context_t *context) {
     if (local != NULL) {
         if (send_request(context,local,remote)) {
             if (wait_for_response(context, local, remote)){
-                ret = run_threaded(context,local,remote);
+                ret = run_connection_threaded(context,local,remote);
                 local_terminated(context, local);
             }
         }

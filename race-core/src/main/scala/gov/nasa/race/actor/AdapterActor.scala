@@ -177,7 +177,7 @@ trait AdapterActor extends PublishingRaceActor with SubscribingRaceActor with Co
 
     peekMsgType(dis) match {
       case StopMsg =>
-        warning(s"received stop from $remoteIpAddress:$remotePort")
+        info(s"received stop from $remoteIpAddress:$remotePort")
         readStop(dis, header)
         terminateConnection
 

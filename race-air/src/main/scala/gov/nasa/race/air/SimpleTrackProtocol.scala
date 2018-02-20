@@ -46,7 +46,6 @@ object SimpleTrackProtocol {
             double heading_deg;
             double speed_m_sec;
         }
-
         record TrackMsg {
             int msg_type = 1;
             short n_records;
@@ -62,11 +61,21 @@ object SimpleTrackProtocol {
             int    flags;
             SimpleTrack proximity;
         }
-
         record ProximityMsg {
             int msg_type = 2;
             short n_records;
             array<ProximityChange> proximities;
+        }
+
+        record DroppedTrack {
+            string id;
+            int flags;
+            timestamp_ms time_millis;
+        }
+        record DropMsg {
+            int msg_type = 3;
+            short n_records;
+            array<DroppedTrack> drops;
         }
     }
       **/
@@ -74,6 +83,7 @@ object SimpleTrackProtocol {
   //--- data message types
   final val TrackMsg: Short = 1
   final val ProximityMsg: Short = 2
+  final val DropMsg: Short = 3
 
   //--- track msg flags see TrackedObject
 
@@ -158,6 +168,18 @@ class SimpleTrackReader extends DataStreamReader {
     ProximityEvent(ProximityReference(refId, track.date, LatLonPos.fromDegrees(latDeg,lonDeg), Meters(altM)),
                     Meters(distM), flags, track)
   }
+
+  def readDropMsg (dis: DataInputStream, list: ArrayBuffer[Any]) = {
+    val nDrops = dis.readShort
+    while (list.size < nDrops) list += readDrop(dis)
+  }
+
+  def readDrop (dis: DataInputStream): TrackTerminationMessage = {
+    val id = dis.readUTF
+    val flags = dis.readInt // TODO - we should use this to determine the type of drop
+    val timeMsec = dis.readLong
+    TrackDropped(id,id,new DateTime(timeMsec))
+  }
 }
 
 
@@ -170,11 +192,10 @@ class SimpleTrackWriter extends DataStreamWriter {
     val latLonPos = t.position
 
     val msgOrd = 0 // TODO - needs to be passed in or added to TrackedObject
-    val flags = 0  // ditto
 
     dos.writeUTF(t.cs)
     dos.writeInt(msgOrd)
-    dos.writeInt(flags)
+    dos.writeInt(t.status)
     dos.writeLong(t.date.getMillis)
     dos.writeDouble(latLonPos.φ.toDegrees)
     dos.writeDouble(latLonPos.λ.toDegrees)
@@ -205,6 +226,14 @@ class SimpleTrackWriter extends DataStreamWriter {
     dos.writeDouble(prox.speed.toMetersPerSecond)
   }
 
+  def writeDrop (dos: DataOutputStream, drop: TrackTerminationMessage) = {
+    val flags = 0 // TODO - we should determine this based on the concrete TrackTermination type
+
+    dos.writeUTF(drop.cs)
+    dos.writeInt(flags)
+    dos.writeLong(drop.date.getMillis)
+  }
+
   def write (dos: DataOutputStream, data: Any): Int = {
     data match {
       case t: TrackedObject =>
@@ -227,6 +256,14 @@ class SimpleTrackWriter extends DataStreamWriter {
         dos.writeShort(1) // one proximity record
         writeProximity(dos,p)
         dos.size
+
+      case drop: TrackTerminationMessage =>
+        dos.writeShort(DropMsg)
+        dos.writeShort(1)
+        writeDrop(dos,drop)
+        dos.size
+
+        // TODO - we probably also need a DropEventEnumerator
 
       case _ => 0 // all others we don't know about
     }

@@ -7,7 +7,9 @@ import gov.nasa.race.{Dated, IdentifiableObject}
   * base type for in-flight related messages
   */
 trait TrackMessage {
+  def id: String
   def cs: String
+  def date: DateTime
 }
 
 trait TrackTerminationMessage extends TrackMessage

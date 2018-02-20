@@ -185,6 +185,7 @@ int race_read_data_header (databuf_t* db, int* sender, epoch_millis_t* time_mill
 // data message types
 #define TRACK_MSG 1
 #define PROXIMITY_MSG 2
+#define DROP_MSG 3
 
 // track flags
 #define TRACK_NO_REPORT 0
@@ -218,6 +219,10 @@ int race_read_proximity_data(databuf_t *db, int pos, char ref_id[], int max_ref_
                              epoch_millis_t *time_millis, double *lat_deg, double *lon_deg,
                              double *alt_m, double *heading_deg, double *speed_m_sec);
 
+int race_write_drop_data (databuf_t* db, int pos, char* id, int flags, epoch_millis_t time_millis);
+
+int race_read_drop_data (databuf_t* db, int pos, char id[], int max_len, int* flags, epoch_millis_t* time_millis);
+
 /*************************************************************************************************
  * the top level server interface, which mostly consists of a structure that defines the
  * context with respective initial values and callbacks
@@ -227,6 +232,7 @@ int race_read_proximity_data(databuf_t *db, int pos, char ref_id[], int max_ref_
 #define DEFAULT_SERVER_PORT "50036"
 #define DEFAULT_CLIENT_PORT "50037"
 #define NO_INTERVAL_PREFERENCE -1
+#define MAX_POLLED_MSGS 42
 
 //--- flags (used during client request)
 
@@ -249,20 +255,26 @@ typedef struct {
     int flags; // server capabilities
     int interval_millis; // interval at which we send track data to the client if the client has no preference
 
-    long time_diff; // time difference to remote
+    long time_diff; // time difference to remote (set after connection is established)
     
     //--- server state data
     bool stop_local; // set by context to indicate we should terminate
 
-    int (*write_request)(databuf_t* db, int pos);
+    //--- application specific callbacks
+
+    void (*connection_started)(); // optional callback after connection has been established
+
+    int (*write_request)(databuf_t* db, int pos); // client callback to set up request
+
+    // server callback to accept/reject request
     int (*check_request)(char* host, char* service, int req_flags, char* schema, 
                          epoch_millis_t* sim_millis, int* data_interval);
 
     // handle application specific data messages (only the payload, race-adapter takes care of the header)
-    int (*write_data)(databuf_t* db, int pos);
-    int (*read_data)(databuf_t* db, int pos);
+    int (*write_data)(databuf_t* db, int pos); // set up data message (both client and server)
+    int (*read_data)(databuf_t* db, int pos);  // read data message (both client and server)
 
-    void (*terminate)();
+    void (*connection_terminated)(); // optional callback after connection is terminated
 
     //--- reporting callbacks
     void (*error)(const char* fmt,...);
@@ -270,17 +282,14 @@ typedef struct {
     void (*info)(const char* fmt,...);
 } local_context_t;
 
+
 /*
- * run a server that periodically sends data to RACE, checking for messages received from RACE before each cycle
- * 
- * @param ctx pointer to context object holding server config including callbacks
- * @return true if server completed normally
+ * high level server/client functions to be called from main
+ * these versions periodically send data from the current thread and use a background thread
+ * to receive data asynchronously from the remote side
  */
-bool race_interval_poll(local_context_t* ctx);
-
-bool race_server_interval_threaded(local_context_t *context);
-
-bool race_client_interval_threaded(local_context_t *context);
+bool race_server(local_context_t *context);
+bool race_client(local_context_t *context);
 
 
 #endif /* RACE_INCLUDED */
