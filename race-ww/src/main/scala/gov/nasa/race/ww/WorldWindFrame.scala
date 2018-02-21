@@ -18,10 +18,10 @@
 package gov.nasa.race.ww
 
 import java.awt.event._
-import java.awt.{Cursor, Toolkit}
+import java.awt.{Color, Cursor, Toolkit}
 import java.net.URL
-import javax.swing._
 
+import javax.swing._
 import com.typesafe.config.Config
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.uom.Length
@@ -152,13 +152,17 @@ class WorldWindFrame (config: Config, raceView: RaceView) extends AppFrame {
 
   /**
     * set visibility of all active console panels
+    *
+    * TODO - GlCanvas does not resize properly on OS X
     */
   def showConsolePanels(setVisible: Boolean) = {
-    consoleWrapper.visible = setVisible
-    top.revalidate
+    if (consoleWrapper.visible != setVisible) {
+      consoleWrapper.visible = setVisible
+      top.revalidate
 
-    popupShowPanelsMI.setSelected(setVisible)
-    mbShowPanelsMI.setSelected(setVisible)
+      popupShowPanelsMI.setSelected(setVisible)
+      mbShowPanelsMI.setSelected(setVisible)
+    }
   }
 
   def showConsolePanel (name: String, setVisible: Boolean) = consolePanel.expand(name, setVisible)

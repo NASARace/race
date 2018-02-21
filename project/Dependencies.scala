@@ -36,7 +36,7 @@ object Dependencies {
 
   //--- slf4j
   // NOTE - slf4j 1.8 now uses ServiceProvider and logback has not caught up as of 12/01/17
-  val slf4jSimple = "org.slf4j" % "slf4j-simple" % "1.8.0-beta0"
+  val slf4jSimple = "org.slf4j" % "slf4j-simple" % "1.8.0-beta1"
 
   //--- logback
   // does not support slf4j 1.8 (provider) yet
@@ -49,10 +49,10 @@ object Dependencies {
   val nscalaTime = "com.github.nscala-time" %% "nscala-time" %  "2.18.0"
 
   //--- Scala parser combinators (https://github.com/scala/scala-parser-combinators)
-  val scalaParser = "org.scala-lang.modules" % "scala-parser-combinators_2.12" % "1.0.6"
+  val scalaParser = "org.scala-lang.modules" % "scala-parser-combinators_2.12" % "1.1.0"
 
   //--- scala-xml
-  val scalaXml = "org.scala-lang.modules" % "scala-xml_2.12" % "1.0.6"
+  val scalaXml = "org.scala-lang.modules" % "scala-xml_2.12" % "1.1.0"
 
   //--- new scala reflection (TypeTags etc.)
   val scalaReflect =  "org.scala-lang" % "scala-reflect" % CommonRaceSettings.scalaVer
@@ -68,7 +68,7 @@ object Dependencies {
   // val breezeNative = "org.scalanlp" %% "breeze-natives" % "0.13.2"
 
   //--- scalaTest
-  val scalaTest = "org.scalatest" % "scalatest_2.12" % "3.0.4"
+  val scalaTest = "org.scalatest" % "scalatest_2.12" % "3.0.5"
   val pegDown = "org.pegdown" % "pegdown" % "1.6.0"
 
   //--- scalaCheck
@@ -92,7 +92,7 @@ object Dependencies {
   val scodecAll = Seq(scodecBits, scodecCore)
 
   //--- scala-swing
-  val scalaSwing = "org.scala-lang.modules" %% "scala-swing" % "2.0.1"
+  val scalaSwing = "org.scala-lang.modules" %% "scala-swing" % "2.0.2"
   //val swingx = "org.swinglabs.swingx" % "swingx-core" % "1.6.5-1"
   //.. and possibly extensions for Tree and jfreechart
 
@@ -111,7 +111,7 @@ object Dependencies {
   val argon2 = "de.mkammerer" % "argon2-jvm" % "2.3"
 
   //--- Akka
-  val akkaVersion = "2.5.8"
+  val akkaVersion = "2.5.9"
   val akkaOrg = "com.typesafe.akka"
 
   val akkaActor = akkaOrg %% "akka-actor" % akkaVersion
@@ -121,13 +121,13 @@ object Dependencies {
   val akkaTestkit = akkaOrg %% "akka-testkit" % akkaVersion
   val akkaMultiNodeTestkit = akkaOrg %% "akka-multi-node-testkit" % akkaVersion // % "test,multi-jvm"
 
-  val akkaHttp = akkaOrg %% "akka-http" % "10.0.11"
+  val akkaHttp = akkaOrg %% "akka-http" % "10.1.0-RC2" //"10.0.11"
 
   val akkaAll = Seq(akkaActor)
 
 
   //--- ActiveMQ
-  val amqVersion = "5.15.2"  // >= 5.11.1
+  val amqVersion = "5.15.3"  // >= 5.11.1
   val amqOrg = "org.apache.activemq"
   val amqBroker = amqOrg % "activemq-broker" % amqVersion
 
@@ -143,7 +143,7 @@ object Dependencies {
   // note - kafka still uses the old log4j
 
   val log4j = "org.apache.logging.log4j" % "log4j" % "2.10.0"
-  val log4jOverSlf4j = "org.slf4j" % "log4j-over-slf4j" % "1.8.0-beta0"
+  val log4jOverSlf4j = "org.slf4j" % "log4j-over-slf4j" % "1.8.0-beta1"
 
   //--- ZooKeeper
   val zookeeper = "org.apache.zookeeper" % "zookeeper" % "3.5.3-beta" excludeAll(
@@ -170,7 +170,7 @@ object Dependencies {
 
 
   //--- LWJGL Java wrapper for OpenGL,Vulkan,,OpenCL,OpenAL and others
-  val lwjglVersion = "3.1.5"
+  val lwjglVersion = "3.1.6"
   lazy val lwjglNativeClassifier = OS.build match {
     case _:Linux => "natives-linux"
     case _:OSX => "natives-macos"

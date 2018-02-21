@@ -29,7 +29,7 @@ object LaikaCommands {
     val extracted = Project extract state
     import extracted._
     runTask(laikaSite in Laika,
-      append(Seq(
+      appendWithoutSession(Seq(
         sourceDirectories in Laika := Seq(new File("doc/manual")),
         target in laikaSite := target.value / "doc",
         laikaRawContent := true,
@@ -44,7 +44,7 @@ object LaikaCommands {
     val extracted = Project extract state
     import extracted._
     runTask(laikaSite in Laika,
-      append(Seq(
+      appendWithoutSession(Seq(
         sourceDirectories in Laika := Seq(new File("doc/slides")),
         target in laikaSite := target.value / "doc" / "slides",
         laikaRawContent := true,
@@ -59,7 +59,7 @@ object LaikaCommands {
     val extracted = Project extract state
     import extracted._
     runTask(laikaSite in Laika,
-      append(Seq(
+      appendWithoutSession(Seq(
         sourceDirectories in Laika := Seq(new File("doc/articles")),
         target in laikaSite := target.value / "doc" / "articles"
       ),state))._1
