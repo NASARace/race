@@ -20,8 +20,9 @@ package gov.nasa.race.ww
 import java.awt.event._
 import java.awt.{Color, Cursor, Toolkit}
 import java.net.URL
-
+import java.util.concurrent.CountDownLatch
 import javax.swing._
+
 import com.typesafe.config.Config
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.uom.Length
@@ -34,7 +35,6 @@ import gov.nasa.worldwind.geom.Position
 import gov.nasa.worldwind.{Model, WorldWind}
 
 import scala.swing._
-
 
 /**
   * a toplevel frame with a WorldWindGLCanvas
@@ -54,7 +54,7 @@ class WorldWindFrame (config: Config, raceView: RaceView) extends AppFrame {
   // this is the potential blocking point, which might run into timeouts
   val wwd = createWorldWindow(config, raceView)
 
-  val worldPanel = new AWTWrapper(wwd).styled('world)
+  val worldPanel =  new AWTWrapper(wwd).styled('world)
   val consolePanel = new CollapsiblePanel().styled('console)
   val consoleWrapper = new ScrollPane(consolePanel).styled('verticalAsNeeded)
 
@@ -159,6 +159,8 @@ class WorldWindFrame (config: Config, raceView: RaceView) extends AppFrame {
     if (consoleWrapper.visible != setVisible) {
       consoleWrapper.visible = setVisible
       top.revalidate
+
+      worldPanel.reInit // required for OS X to adapt the GLCanvas size & position
 
       popupShowPanelsMI.setSelected(setVisible)
       mbShowPanelsMI.setSelected(setVisible)

@@ -246,15 +246,15 @@ class TimeSeriesStats[O <: Dated,E <: TSEntryData[O]](val topic: String,
     import data._
     import gov.nasa.race.util.DateTimeUtils.{durationMillisToCompactTime => dur}
 
-    pw.println("active    min    max   cmplt stale  drop  blck  order   dup ambig         n dtMin dtMax dtAvg")
-    pw.println("------ ------ ------   ----- ----- ----- -----  ----- ----- -----   ------- ----- ----- -----")
-    pw.print(f"$nActive%6d $minActive%6d $maxActive%6d   $completed%5d $stale%5d $dropped%5d $blackout%5d $outOfOrder%5d $duplicate%5d $ambiguous%5d ")
+    pw.println("active    min    max cmplt   stale  drop  blck order   dup ambig         n dtMin dtMax dtAvg")
+    pw.println("------ ------ ------ -----   ----- ----- ----- ----- ----- -----   ------- ----- ----- -----")
+    pw.print(f"$nActive%6d $minActive%6d $maxActive%6d $completed%5d   $stale%5d $dropped%5d $blackout%5d $outOfOrder%5d $duplicate%5d $ambiguous%5d")
 
     buckets match {
       case Some(bc)  =>
         pw.println(f"   ${bc.nSamples}%7d ${dur(bc.min)}%5s ${dur(bc.max)}%5s ${dur(bc.mean)}%5s")
 
-        if (bc.nSamples > 0) {
+        if (bc.nBuckets > 1 && bc.nSamples > 0) {
           bc.processBuckets((i, c) => {
             if (i % 6 == 0) pw.println // 6 buckets per line
             pw.print(f"${Math.round(i * bc.bucketSize / 1000)}%3ds: $c%6d | ")

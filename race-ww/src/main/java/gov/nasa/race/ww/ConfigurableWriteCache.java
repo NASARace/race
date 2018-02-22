@@ -19,6 +19,8 @@ package gov.nasa.race.ww;
 
 import gov.nasa.worldwind.cache.BasicDataFileStore;
 import java.io.File;
+import java.net.URL;
+
 import org.w3c.dom.Node;
 
 /**
@@ -57,4 +59,11 @@ public class ConfigurableWriteCache extends BasicDataFileStore {
         writeLocation = new StoreLocation(getWriteLocation());
         readLocations.add(0, writeLocation);
     }
+
+    /**
+    @Override
+    protected void updateEntry(String address, URL localFileUrl, long expiration) {
+        super.updateEntry(address,localFileUrl,0);
+    }
+    **/
 }

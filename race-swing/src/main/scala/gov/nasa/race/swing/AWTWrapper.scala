@@ -53,4 +53,9 @@ class AWTWrapper (awtComponent: AWTComponent) extends Component {
       mouse.wheel.publish(MouseWheelMoved(AWTWrapper.this,e.getPoint, e.getModifiers,e.getWheelRotation)(e))
     }
   })
+
+  def reInit = {
+    peer.remove(awtComponent)
+    peer.add(awtComponent, BorderLayout.CENTER)
+  }
 }
