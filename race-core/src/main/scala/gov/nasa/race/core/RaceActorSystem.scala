@@ -18,6 +18,7 @@
 package gov.nasa.race.core
 
 import java.io.FileInputStream
+import java.lang.reflect.InvocationTargetException
 
 import akka.actor._
 import akka.event.Logging.LogLevel
@@ -122,6 +123,8 @@ class RaceActorSystem(val config: Config) extends LogController with VerifiableA
   val allowRemoteTermination = config.getBooleanOrElse("remote-termination", false)
   // do we allow our own actors to trigger termination
   val allowSelfTermination = config.getBooleanOrElse("self-termination", false)
+
+  val showExceptions = config.getBooleanOrElse("show-exceptions",false)
 
   loadSystemProperties
 
@@ -467,4 +470,16 @@ class RaceActorSystem(val config: Config) extends LogController with VerifiableA
     println(bus.showChannelSubscriptions)
   }
 
+  // TODO - we should probably support logging to a file here
+  def reportException (t: Throwable) = {
+    if (showExceptions) {
+      t match {
+        case x: InvocationTargetException =>
+          val cause = x.getCause
+          if (cause != null) cause.printStackTrace else x.printStackTrace
+
+        case _ => t.printStackTrace
+      }
+    }
+  }
 }

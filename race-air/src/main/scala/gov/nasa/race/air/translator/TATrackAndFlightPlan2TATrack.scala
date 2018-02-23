@@ -93,7 +93,7 @@ class TATrackAndFlightPlan2TATrack (val config: Config=NoConfig) extends XmlPars
 
   def record (src: String, stddsRev: Int): Unit = {
     var trackId: String = null
-    var acAddress: String = null
+    var acId: String  = null
     var beaconCode: String = null
     var mrtTime: DateTime = null
     var lat,lon: Angle = UndefinedAngle
@@ -123,6 +123,8 @@ class TATrackAndFlightPlan2TATrack (val config: Config=NoConfig) extends XmlPars
       case "reportedBeaconCode" => beaconCode = readText
       case "reportedAltitude" => reportedAltitude = Feet(readInt)
       case "flightPlan" => flightPlan = Some(new FlightPlan) // just a placeholder for now
+      case "acid" => acId = readText // part of the flight plan but we extract it no matter what
+
       case other => // ignore
     } {
       case "record" =>
@@ -131,9 +133,9 @@ class TATrackAndFlightPlan2TATrack (val config: Config=NoConfig) extends XmlPars
           if (allowIncompleteTrack || (mrtTime != null && vx.isDefined && vy.isDefined && reportedAltitude.isDefined)) {
             val spd = Speed.fromVxVy(vx, vy)
             val hdg = Angle.fromVxVy(vx, vy)
-            acAddress = trackId.toString
+            if (acId == null) acId = trackId
 
-            val track = new TATrack(trackId,acAddress,LatLonPos(lat,lon),reportedAltitude,spd,hdg,mrtTime,status,
+            val track = new TATrack(trackId,acId,LatLonPos(lat,lon),reportedAltitude,spd,hdg,mrtTime,status,
                                     src, XYPos(xPos, yPos), vVert, beaconCode, flightPlan)
 
             if (attachRev && stddsRev >= 0) track.amend(Rev(3, stddsRev.toShort))

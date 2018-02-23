@@ -17,12 +17,13 @@
 
 package gov.nasa.race.core
 
-import akka.actor.SupervisorStrategy.{Escalate, Stop}
+import java.lang.reflect.InvocationTargetException
+
+import akka.actor.SupervisorStrategy.Stop
 import akka.actor._
 import akka.pattern.AskSupport
 import akka.util.Timeout
 import com.typesafe.config.{Config, ConfigException}
-import gov.nasa.race.common.Clock
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.Messages._
 import gov.nasa.race.util.NetUtils._
@@ -143,7 +144,7 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ImplicitActorLogging
       error(aix.getMessage)
       Stop
     case x: Throwable =>
-      //x.printStackTrace
+      ras.reportException(x)
       error(x.getMessage)
       Stop
 
@@ -348,7 +349,7 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ImplicitActorLogging
         a
       } catch {
         case t: Throwable =>
-          //t.printStackTrace
+          ras.reportException(t)
           sync.put(false)
           throw t
       }
