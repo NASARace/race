@@ -18,6 +18,7 @@
 package gov.nasa.race.ww
 
 import java.awt.Font
+import java.io.File
 import java.util.{Timer, TimerTask}
 import java.util.concurrent.Semaphore
 
@@ -122,6 +123,7 @@ class RaceView (viewerActor: RaceViewerActor) extends DeferredEyePositionListene
   def initTimedOut = viewerActor.initTimedOut
 
   setWorldWindConfiguration // NOTE - this has to happen before we load any WorldWind classes
+  ifSome(config.getOptionalString("cache-dir")){ d => ConfigurableWriteCache.setRoot(new File(d)) }
 
   val gotoTime = config.getIntOrElse("goto-time", 4000)
   val defaultLabelFont = config.getFontOrElse("label-font",  new Font(null,Font.PLAIN,13))
@@ -175,11 +177,6 @@ class RaceView (viewerActor: RaceViewerActor) extends DeferredEyePositionListene
   def wwd = frame.wwd
   def wwdView = frame.wwd.getView
   def eyePosition = frame.wwd.getView.getEyePosition
-
-  for (
-    cachePath <- config.getOptionalString("cache-dir");
-    dir <- FileUtils.ensureDir(cachePath)
-  ) ConfigurableWriteCache.setRoot(dir)
 
   def setWorldWindConfiguration = {
     // we use our own app config document which takes precedence over Worldwind's config/worldwind.xml

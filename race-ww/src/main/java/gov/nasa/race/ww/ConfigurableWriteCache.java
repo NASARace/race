@@ -30,7 +30,18 @@ import org.w3c.dom.Node;
  */
 public class ConfigurableWriteCache extends BasicDataFileStore {
 
-    private static File cacheRoot;
+    private static File cacheRoot = new File(System.getProperty("user.home") + "/.WorldWindData");
+
+    public static File ensureDir (File dir) {
+        if (dir.isFile()){
+            throw new IllegalArgumentException("cache root not a directory: " + dir);
+        }
+
+        if (!dir.isDirectory()){
+            dir.mkdirs();
+        }
+        return dir;
+    }
 
     public static void setRoot (File rootDir) {
         cacheRoot = rootDir;
@@ -43,22 +54,23 @@ public class ConfigurableWriteCache extends BasicDataFileStore {
 
     @Override
     public File getWriteLocation() {
-        if (cacheRoot == null) {
-            cacheRoot = new BasicDataFileStore().getWriteLocation();
-        }
         return cacheRoot;
     }
 
+    @Override
+    protected void buildWritePaths(Node arg0) {
+        ensureDir(cacheRoot);
+
+        writeLocation = new StoreLocation(cacheRoot);
+        readLocations.add(0, writeLocation);
+    }
+
+    // this is called after buildWritePaths, i.e. writeLocation is already set
     @Override
     protected void buildReadPaths(Node arg0) {
         readLocations.add(0, writeLocation);
     }
 
-    @Override
-    protected void buildWritePaths(Node arg0) {
-        writeLocation = new StoreLocation(getWriteLocation());
-        readLocations.add(0, writeLocation);
-    }
 
     /**
     @Override
