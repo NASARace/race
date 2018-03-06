@@ -48,8 +48,10 @@ object SBS2FlightPos {
                       var lat: String=null,
                       var lon: String=null,
                       var alt: String=null,
-                      var speed: String=null,
-                      var track: String=null) {
+                      var speed: String=null, // ground speed (not IAS)
+                      var track: String=null,
+                      var vr: String= null  // vertical rate (ft/min)
+                     ) {
     var oldCS: String = null
 
     @inline def setCS (s: String) = if (s != null) {
@@ -63,6 +65,7 @@ object SBS2FlightPos {
     @inline def setAlt (s: String) = if (s != null) alt = s
     @inline def setSpeed (s: String) = if (s != null) speed = s
     @inline def setTrack (s: String) = if (s != null) track = s
+    @inline def setVr (s: String) = if (s != null) vr = s
 
     def tryToFlightPos : Option[FlightPos] = {
       if (cs !=null && posDtg !=null && lat !=null && lon !=null && speed !=null && alt !=null && track !=null) {
@@ -121,12 +124,14 @@ object SBS2FlightPos {
   *  14: track (from vx,vy, *not* heading)
   *  15: latitude
   *  16: longitude
-  *  17: vertical rate (64ft resolution)
+  *  17: vertical rate (ft/min - 64ft resolution)
   *  18: squawk (mode-A squawk code)
   *  19: alert (flag indicating squawk has changed)
   *  20: emergency (flag)
   *  21: spi (flag, transponder ident activated)
   *  22: on ground (flag)
+  *
+  *  see also http://mode-s.org/decode/
   */
 class SBS2FlightPos (val config: Config=NoConfig) extends ConfigurableTranslator {
   import SBS2FlightPos._

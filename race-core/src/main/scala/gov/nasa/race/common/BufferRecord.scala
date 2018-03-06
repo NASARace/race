@@ -36,21 +36,21 @@ import scala.language.implicitConversions
   * simulate C unions and
   */
 
-abstract class BufferRecord (val size: Int, val buffer: ByteBuffer) {
+abstract class BufferRecord (val size: Int, val buffer: ByteBuffer, val recStart: Int = 0) {
   import BufferRecord._
 
   protected var maxRecordIndex = getMaxRecordIndex
-  protected var recordOffset: Int = 0
+  protected var recordOffset: Int = recStart
   protected var recordIndex: Int = 0
 
   protected var fields: Array[Field] = null // on demand, but since it is static we keep it once computed
 
-  protected def getMaxRecordIndex = if (buffer != null) (buffer.capacity/size)-1 else -1
+  protected def getMaxRecordIndex = if (buffer != null) ((buffer.capacity - recStart)/size)-1 else -1
 
   def setRecordIndex (idx: Int): Unit = {
     if (idx < 0 || idx > maxRecordIndex) throw new RuntimeException(s"record index out of bounds: $idx (0..$maxRecordIndex)")
     recordIndex = idx
-    recordOffset = idx * size
+    recordOffset = recStart + idx * size
   }
 
   def index = recordIndex
