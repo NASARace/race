@@ -18,6 +18,7 @@
 package gov.nasa.race.util
 
 import java.io.ByteArrayOutputStream
+import java.nio.ByteBuffer
 
 import gov.nasa.race._
 
@@ -53,6 +54,7 @@ object StringUtils {
     _byteToHex(0)
     new String(cs)
   }
+
 
   private def pad (s: String, len: Int)(pf: => String): String = {
     if (s.length > len) s.substring(0, len - 1) + "…"
@@ -135,4 +137,37 @@ object StringUtils {
 
   val xmlMsgNameRE = """<([^\s?!][\w:-]*?)[\s>]""".r // NOTE - REs cannot skip over comments
   def getXmlMsgName (msg: String): Option[String] = xmlMsgNameRE.findFirstMatchIn(msg).map(_.group(1))
+
+  //--- C-like String handling (0-terminated if byte buffer is larger than string requires)
+
+  def cStringLength (bs: Array[Byte]): Int = {
+    var i=0
+    while (i < bs.length) {
+      if (bs(i) == 0) return i+1
+      i += 1
+    }
+    bs.length
+  }
+
+  def getCString (bs: Array[Byte]) = new String(bs, 0, cStringLength(bs))
+
+  def getCString (buffer: ByteBuffer, pos: Int, length: Int) = {
+    val bs = new Array[Byte](length)
+    buffer.get(bs,pos,length)
+    new String(bs,0,cStringLength(bs))
+  }
+
+  def putCString (s: String, bs: Array[Byte]): Unit = {
+    val b = s.getBytes
+    val len = Math.min(s.length, b.length)
+    System.arraycopy(b,0,bs,0,len)
+    if (len < bs.length) bs(len) = 0
+  }
+
+  def putCString (s: String, buffer: ByteBuffer, pos: Int, length: Int): Unit = {
+    val bs = s.getBytes
+    val len = Math.min(length,bs.length)
+    buffer.put(bs,pos,len)
+    if (len < length) buffer.put(pos + len, 0)
+  }
 }

@@ -347,6 +347,7 @@ trait RaceActor extends Actor with ImplicitActorLogging {
 
   def delay (d: FiniteDuration, action: ()=>Unit): Option[Cancellable] = Some(scheduler.scheduleOnce(d,self,DelayedAction(self,action)))
 
+
   //--- timeout values we might need during actor initialization in order to clean up
   protected def _getTimeout(key: String) = config.getFiniteDurationOrElse(key,raceActorSystem.defaultActorTimeout)
   def createTimeout = _getTimeout("create-timeout")

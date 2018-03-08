@@ -20,6 +20,8 @@ import java.lang.reflect.Field
 import java.nio.ByteBuffer
 import java.util
 
+import gov.nasa.race.util.StringUtils
+
 import scala.language.implicitConversions
 
 /**
@@ -30,11 +32,47 @@ import scala.language.implicitConversions
   * we keep the recordOffset variable but compute it from the checked recordIndex so that we can slide
   * the BufferRecord over the whole data buffer
   *
-  * note that we do allow a null buffer argument so that we can compute buffer sizes from the record number and type
-  *
-  * we could support computing the record size and field offsets via reflection but this would not allow to
-  * simulate C unions and
+  * note that we do allow a null buffer argument so that we can compute buffer sizes from the record number and type.
+  * Alternatively we support creating the buffer via a supplied client function that takes the record size as a
+  * single argument
   */
+
+object BufferRecord {
+  trait DoubleConvertible {
+    def toDouble: Double
+  }
+  implicit def toDouble (o: DoubleConvertible) = o.toDouble
+
+  trait IntConvertible {
+    def toInt: Int
+  }
+  implicit def toInt (o: IntConvertible) = o.toInt
+
+  trait LongConvertible {
+    def toLong: Long
+  }
+  implicit def toLong (o: LongConvertible) = o.toLong
+
+  trait FloatConvertible {
+    def toFloat: Float
+  }
+  implicit def toFloat (o: FloatConvertible) = o.toFloat
+
+  trait ShortConvertible {
+    def toShort: Short
+  }
+  implicit def toShort (o: ShortConvertible) = o.toShort
+
+  trait ByteConvertible {
+    def toByte: Byte
+  }
+  implicit def toByte (o: ByteConvertible) = o.toByte
+
+  trait BooleanConvertible {
+    def toBoolean: Boolean
+  }
+  implicit def toBoolean (o: BooleanConvertible) = o.toBoolean
+}
 
 abstract class BufferRecord (val size: Int, val buffer: ByteBuffer, val recStart: Int = 0) {
   import BufferRecord._
@@ -46,6 +84,8 @@ abstract class BufferRecord (val size: Int, val buffer: ByteBuffer, val recStart
   protected var fields: Array[Field] = null // on demand, but since it is static we keep it once computed
 
   protected def getMaxRecordIndex = if (buffer != null) ((buffer.capacity - recStart)/size)-1 else -1
+
+  def this (size: Int, createBuffer: (Int)=>ByteBuffer, recStart: Int)  = this(size,createBuffer(size),recStart)
 
   def setRecordIndex (idx: Int): Unit = {
     if (idx < 0 || idx > maxRecordIndex) throw new RuntimeException(s"record index out of bounds: $idx (0..$maxRecordIndex)")
@@ -115,6 +155,14 @@ abstract class BufferRecord (val size: Int, val buffer: ByteBuffer, val recStart
     def valueToString: String
   }
 
+  class CharArrayField (val fieldOffset: Int, val length: Int) extends RecordField {
+    def := (v: String): Unit = StringUtils.putCString(v,buffer,recordOffset+fieldOffset,length)
+
+    override def toString = StringUtils.getCString(buffer,recordOffset + fieldOffset,length)
+    def valueToString = toString
+  }
+  def char (fieldOffset: Int, length: Int) = new CharArrayField(fieldOffset,length)
+
   // we use a packed byte as the underlying storage type since this is the smallest ByteBuffer unit
   class BooleanField (val fieldOffset: Int) extends RecordField with BooleanConvertible {
     def := (v: Boolean): Unit = buffer.put(recordOffset + fieldOffset, if (v) 1 else 0)
@@ -169,39 +217,10 @@ abstract class BufferRecord (val size: Int, val buffer: ByteBuffer, val recStart
   def double (fieldOffset: Int) = new DoubleField(fieldOffset)
 }
 
-object BufferRecord {
-  trait DoubleConvertible {
-    def toDouble: Double
-  }
-  implicit def toDouble (o: DoubleConvertible) = o.toDouble
-
-  trait IntConvertible {
-    def toInt: Int
-  }
-  implicit def toInt (o: IntConvertible) = o.toInt
-
-  trait LongConvertible {
-    def toLong: Long
-  }
-  implicit def toLong (o: LongConvertible) = o.toLong
-
-  trait FloatConvertible {
-    def toFloat: Float
-  }
-  implicit def toFloat (o: FloatConvertible) = o.toFloat
-
-  trait ShortConvertible {
-    def toShort: Short
-  }
-  implicit def toShort (o: ShortConvertible) = o.toShort
-
-  trait ByteConvertible {
-    def toByte: Byte
-  }
-  implicit def toByte (o: ByteConvertible) = o.toByte
-
-  trait BooleanConvertible {
-    def toBoolean: Boolean
-  }
-  implicit def toBoolean (o: BooleanConvertible) = o.toBoolean
+trait RecordWriter {
+  def maxRecords: Int
+  def set (recIndex: Int, o: Any): Boolean
+  def move (fromIndex: Int, toIndex: Int): Boolean
+  def remove (recIndex: Int): Boolean
+  def store: Boolean
 }

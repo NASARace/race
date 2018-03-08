@@ -16,16 +16,14 @@
  */
 package gov.nasa.race.actor
 
-import java.io.RandomAccessFile
-import java.nio.channels.FileChannel
-
 import com.typesafe.config.Config
+import gov.nasa.race.common.RecordWriter
+import gov.nasa.race.core.Messages.{BusEvent, RaceTick}
 import gov.nasa.race.core.{ContinuousTimeRaceActor, PeriodicRaceActor, SubscribingRaceActor}
-import gov.nasa.race.config.ConfigUtils._
-import gov.nasa.race.core.Messages.BusEvent
-import gov.nasa.race.track.TrackedObject
+import gov.nasa.race.track.{TrackTerminationMessage, TrackedObject}
 
 import scala.collection.mutable.{HashMap => MHashMap}
+
 
 /**
   * actor that periodically stores sets of tracks as arrays of binary records in a memory mapped file.
@@ -35,15 +33,55 @@ import scala.collection.mutable.{HashMap => MHashMap}
   */
 class TrackStoreActor (val config: Config) extends SubscribingRaceActor with ContinuousTimeRaceActor with PeriodicRaceActor {
 
-  val maxTracks = config.getIntOrElse("max-tracks",5000)
-  val pathName = config.getString("pathname")
-
   val indexMap = MHashMap.empty[String,Int]
-  val length = maxTracks * 44 + 8 + 4 // FIXME - this should be computed by a configurable BufferRecord
-  val bbuf = new RandomAccessFile("howtodoinjava.dat", "rw").getChannel().map(FileChannel.MapMode.READ_WRITE, 0, length)
+  val writer: RecordWriter = createWriter
+
+  var changed = false // anything to store on the next snapshot?
+
+  protected def createWriter: RecordWriter = getConfigurable[RecordWriter]("writer")
 
   override def handleMessage = {
-    case BusEvent(_,track:TrackedObject,_) =>
+    case BusEvent(_,track:TrackedObject,_) => updateTrack(track)
+    case BusEvent(_,tm:TrackTerminationMessage,_) => removeTrack(tm)
+    case RaceTick => storeSnapshot
   }
 
+  def updateTrack (track: TrackedObject) = {
+    val cs = track.cs
+    indexMap.get(cs) match {
+      case Some(idx) =>
+        if (track.isDroppedOrCompleted) {
+          val lastIdx = indexMap.size-1
+          changed |= (if (lastIdx == idx) writer.remove(idx) else writer.move(lastIdx,idx))
+        } else {
+          changed |= writer.set(idx, track)
+        }
+
+      case None => // new one
+        if (!track.isDroppedOrCompleted) {
+          val idx = indexMap.size
+          indexMap += cs -> idx
+          changed |= writer.set(idx, track)
+        }
+    }
+  }
+
+  def removeTrack (tm: TrackTerminationMessage) = {
+    indexMap.get(tm.cs) match {
+      case Some(idx) => changed |= writer.remove(idx)
+      case None =>
+    }
+
+  }
+
+  def storeSnapshot = {
+    if (changed){
+      changed = false
+      writer.store
+    }
+  }
 }
+
+
+
+

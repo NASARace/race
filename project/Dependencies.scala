@@ -43,7 +43,7 @@ object Dependencies {
   val logback = "ch.qos.logback" % "logback-classic" % "1.2.3"
 
   //--- Typesafe config
-  val typesafeConfig = "com.typesafe" % "config" % "1.3.2"
+  val typesafeConfig = "com.typesafe" % "config" % "1.3.3"
 
   //--- nscala-time (Dates with operators): https://github.com/nscala-time/nscala-time
   val nscalaTime = "com.github.nscala-time" %% "nscala-time" %  "2.18.0"
@@ -108,10 +108,10 @@ object Dependencies {
   val jsch = "com.jcraft" % "jsch" % "0.1.54"
 
   //--- argon2 based password hashes ()
-  val argon2 = "de.mkammerer" % "argon2-jvm" % "2.3"
+  val argon2 = "de.mkammerer" % "argon2-jvm" % "2.4"
 
   //--- Akka
-  val akkaVersion = "2.5.9"
+  val akkaVersion = "2.5.11"
   val akkaOrg = "com.typesafe.akka"
 
   val akkaActor = akkaOrg %% "akka-actor" % akkaVersion
@@ -156,10 +156,10 @@ object Dependencies {
   // (the new server with old client is supposedly fine). Since there are many old servers out there, we can't
   // use the latest client yet
   val kafkaClients = "org.apache.kafka" % "kafka-clients" % "0.9.0.0"
-  val newKafkaClients = "org.apache.kafka" % "kafka-clients" % "1.0.0"
+  val newKafkaClients = "org.apache.kafka" % "kafka-clients" % "1.0.1"
 
   //--- Kafka (make sure to add log4j to kafkaServer dependencies
-  val kafka = "org.apache.kafka" %% "kafka" % "1.0.0" excludeAll(
+  val kafka = "org.apache.kafka" %% "kafka" % "1.0.1" excludeAll(
     ExclusionRule(organization = "log4j", name="log4j"),
     ExclusionRule(organization = "org.slf4j", name = "slf4j-log4j12")
   )
