@@ -167,7 +167,8 @@ object StringUtils {
   def putCString (s: String, buffer: ByteBuffer, pos: Int, length: Int): Unit = {
     val bs = s.getBytes
     val len = Math.min(length,bs.length)
-    buffer.put(bs,pos,len)
+    buffer.position(pos)
+    buffer.put(bs,0,len)
     if (len < length) buffer.put(pos + len, 0)
   }
 }

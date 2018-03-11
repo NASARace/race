@@ -17,7 +17,8 @@
 package gov.nasa.race.track
 
 import java.nio.ByteBuffer
-import gov.nasa.race.common.BufferRecord
+
+import gov.nasa.race.common.{BufferRecord, LockableRecord}
 
 object FloatTrackRecord {
   final val size = 44
@@ -26,7 +27,10 @@ object FloatTrackRecord {
 /**
   * a generic BufferRecord for tracks that uses floats for floating point values
   */
-class FloatTrackRecord (bbuf: ByteBuffer, off: Int=0) extends BufferRecord (FloatTrackRecord.size,bbuf,off) {
+class FloatTrackRecord (bbuf: ByteBuffer, recSize: Int, recOffset: Int) extends BufferRecord (recSize,bbuf,recOffset) {
+
+  def this (bbuf: ByteBuffer) = this(bbuf,FloatTrackRecord.size,0)
+  def this (bbuf: ByteBuffer, recOff: Int) = this(bbuf,FloatTrackRecord.size,recOff)
 
   val id   = char(0, 8)   // call sign or id (max 8 char)
   val date = long(8)      // epoch in millis
@@ -40,4 +44,14 @@ class FloatTrackRecord (bbuf: ByteBuffer, off: Int=0) extends BufferRecord (Floa
   val vr   = float(36)    // vertical rate in m/s
 
   val stat = int(40)      // status bit field
+}
+
+
+object LockableFloatTrackRecord {
+  final val size = FloatTrackRecord.size + 4
+}
+
+class LockableFloatTrackRecord (bbuf: ByteBuffer, recOffset: Int)
+                        extends FloatTrackRecord(bbuf,LockableFloatTrackRecord.size, recOffset) with LockableRecord {
+  protected val lock = int(FloatTrackRecord.size)     // add lock field
 }

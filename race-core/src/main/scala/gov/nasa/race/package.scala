@@ -437,4 +437,24 @@ package object race {
   trait DataStreamWriter extends SchemaImplementor {
     def write (dos: DataOutputStream, data: Any): Int
   }
+
+  // a more specialized form of scala.util.Try that only needs to discriminate between success or failure (with explanation)
+  // assuming that operations succeed more often than fail and hence not require object allocation on success
+  sealed abstract class Result {
+    def failed: Boolean
+    @inline final def succeeded: Boolean = !failed
+
+    def ifSuccess(f: => Unit): Result
+    def ifFailure(f: => Unit): Result
+  }
+  object Success extends Result {
+    override def failed = false
+    override def ifSuccess(f: => Unit) =  { f; this }
+    override def ifFailure(f: => Unit) = this
+  }
+  case class Failure(reason: String) extends Result {
+    override def failed = true
+    override def ifSuccess(f: => Unit) = this // do nothing
+    override def ifFailure(f: => Unit) = { f; this }
+  }
 }

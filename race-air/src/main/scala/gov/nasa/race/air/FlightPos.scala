@@ -57,7 +57,7 @@ case class FlightPos (val id: String,
                       val heading: Angle,
                       val date: DateTime,
                       val status: Int = 0
-                     ) extends TrackedAircraft with TrackMessage {
+                     ) extends TrackedAircraft {
 
   def this (id:String, pos: LatLonPos, alt: Length,spd: Speed,hdg: Angle, dtg: DateTime) =
     this(id, FlightPos.tempCS(id), pos,alt,spd,hdg,dtg)

@@ -20,8 +20,10 @@ import java.lang.reflect.Field
 import java.nio.ByteBuffer
 import java.util
 
-import gov.nasa.race.util.StringUtils
+import gov.nasa.race.util.{StringUtils, UnsafeUtils}
 
+import scala.annotation.tailrec
+import scala.concurrent.duration.FiniteDuration
 import scala.language.implicitConversions
 
 /**
@@ -114,10 +116,16 @@ abstract class BufferRecord (val size: Int, val buffer: ByteBuffer, val recStart
     }
   }
 
-  def getSlicedBuffer: ByteBuffer = ByteBuffer.wrap(buffer.array, recordOffset, size)
+  def clear: Unit = {
+    for ( i <- recordOffset until recordOffset + size) buffer.put(i,0) // it sucks there is no memset for buffers
+  }
 
-  def clear: Unit = util.Arrays.fill(buffer.array, recordOffset, recordOffset + size, 0.toByte)
-  def copyTo (idx: Int): Unit = System.arraycopy(buffer.array,recordOffset,buffer.array, (idx*size), size)
+  def copyTo (idx: Int): Unit = {
+    val src = buffer.duplicate  // very convoluted way of saying memcpy
+    src.limit(recordOffset + size)
+    buffer.position(recStart + idx*size)
+    buffer.put(src)
+  }
   def moveTo (idx: Int): Unit = {
     copyTo(idx)
     clear
@@ -217,10 +225,35 @@ abstract class BufferRecord (val size: Int, val buffer: ByteBuffer, val recStart
   def double (fieldOffset: Int) = new DoubleField(fieldOffset)
 }
 
-trait RecordWriter {
-  def maxRecords: Int
-  def set (recIndex: Int, o: Any): Boolean
-  def move (fromIndex: Int, toIndex: Int): Boolean
-  def remove (recIndex: Int): Boolean
-  def store: Boolean
+
+trait LockableRecord {
+  val buffer: ByteBuffer
+  protected var recordOffset: Int
+
+  protected val lock: BufferRecord#IntField // has to be defined in concrete class
+
+  private val acc = UnsafeUtils.getAccessor(buffer)
+
+  /**
+    * try nTimes to acquire the record lock, waiting for delay in between attempts
+    * NOTE - the protected function f should execute in short,bounded time since this is a semi-busy wait
+    * NOTE - the lock is not reentrant
+    */
+  @tailrec final def tryLockedFor (nTimes: Int, delay: FiniteDuration)(f: =>Unit): Boolean = {
+    val addr = recordOffset + lock.fieldOffset
+    if (acc.compareAndSwapInt(addr, 0, 1)) {  // this is atomic
+      f
+      acc.putIntVolatile(addr,0)
+      true
+
+    } else {
+      if (nTimes > 0) {
+        Thread.sleep(delay.toMillis)  // alternatively we could just loop
+        tryLockedFor(nTimes-1, delay)(f)
+      } else {
+        false
+      }
+    }
+  }
 }
+

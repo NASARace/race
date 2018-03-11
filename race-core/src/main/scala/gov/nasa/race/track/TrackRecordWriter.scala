@@ -17,11 +17,14 @@
 package gov.nasa.race.track
 
 import java.io.RandomAccessFile
+import java.nio.ByteOrder
 import java.nio.channels.FileChannel
 
 import com.typesafe.config.Config
+import gov.nasa.race.{Failure, Result, Success}
+import gov.nasa.race.common.DenseRecordWriter
 import gov.nasa.race.config.ConfigUtils._
-import gov.nasa.race.common.RecordWriter
+import org.joda.time.DateTime
 
 import scala.annotation.tailrec
 import scala.concurrent.duration.FiniteDuration
@@ -29,15 +32,20 @@ import scala.concurrent.duration.FiniteDuration
 /**
   * a configurable RecordWriter that uses a mapped byte buffer as store for FloatTrackRecords
   */
-class MappedTrackRecordWriter (val config: Config) extends RecordWriter {
+class TrackRecordWriter(val config: Config) extends DenseRecordWriter[FloatTrackRecord] {
 
   val maxRecords: Int = config.getIntOrElse("max-records",5000)
   val pathName = config.getString("pathname")
+
+  val dateOffset: Int = 0
+  val recCountOffset: Int = 8
   val headerLength = 12 // 8 bytes for date, 4 bytes for number of set records
 
   val channel = new RandomAccessFile(pathName, "rw").getChannel
   val buffer = channel.map(FileChannel.MapMode.READ_WRITE, 0, maxRecords * FloatTrackRecord.size + headerLength)
   val rec = new FloatTrackRecord(buffer,headerLength)
+
+  buffer.order(ByteOrder.nativeOrder)
 
   @tailrec
   final def tryLockedFor (nTimes: Int, delay: FiniteDuration)(action: =>Unit): Boolean = {
@@ -57,35 +65,32 @@ class MappedTrackRecordWriter (val config: Config) extends RecordWriter {
     }
   }
 
-  override def set(recIndex: Int, o: Any): Boolean = {
-    o match {
-      case track: TrackedObject =>
-        rec.setRecordIndex(recIndex)
-        rec.id := track.cs
-        rec.date := track.date.getMillis
-        rec.lat := track.position.latDeg.toFloat
-        rec.lon := track.position.lonDeg.toFloat
-        rec.alt := track.altitude.toMeters.toFloat
-        rec.hdg := track.heading.toDegrees.toFloat
-        rec.spd := track.speed.toMetersPerSecond.toFloat
-        rec.stat := track.status
-        true
-      case _ => false
-    }
+  override def set(recIndex: Int, msg: Any, isNew: Boolean): Result = {
+      msg match {
+        case track: TrackedObject =>
+          rec.setRecordIndex(recIndex)
+          rec.id := track.cs
+          rec.date := track.date.getMillis
+          rec.lat := track.position.latDeg.toFloat
+          rec.lon := track.position.lonDeg.toFloat
+          rec.alt := track.altitude.toMeters.toFloat
+          rec.hdg := track.heading.toDegrees.toFloat
+          rec.spd := track.speed.toMetersPerSecond.toFloat
+          rec.stat := track.status
+
+          Success
+
+        case _ => Failure("not a TrackedObject")
+      }
   }
 
-  override def move(fromIndex: Int, toIndex: Int): Boolean = {
-    rec(fromIndex).moveTo(toIndex)
-    true
-  }
+  override def updateDate(date: DateTime) = buffer.putLong(dateOffset,date.getMillis)
 
-  override def remove(recIndex: Int): Boolean = {
-    rec(recIndex).clear
-    true
-  }
+  override def updateRecCount = buffer.putInt(recCountOffset, recCount)
 
-  override def store: Boolean = {
+
+  override def store: Result = {
     buffer.force
-    true
+    Success
   }
 }
