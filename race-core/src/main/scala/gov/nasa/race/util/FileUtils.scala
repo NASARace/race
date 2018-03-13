@@ -19,15 +19,21 @@ package gov.nasa.race.util
 
 import java.io._
 import java.nio.ByteBuffer
+import java.nio.channels.FileChannel
 import java.nio.charset.{CharsetDecoder, StandardCharsets}
 import java.nio.file._
 import java.nio.file.attribute.BasicFileAttributes
 import java.security.MessageDigest
 import java.util.zip.GZIPInputStream
-import scala.io.BufferedSource
 
+import scala.io.BufferedSource
 import StringUtils._
 import gov.nasa.race._
+
+import scala.annotation.tailrec
+import scala.collection.immutable.HashSet
+import scala.collection.mutable
+import scala.concurrent.duration.FiniteDuration
 
 /**
  * common file related functions
@@ -252,6 +258,52 @@ object FileUtils {
     }
     if (path.startsWith("/")) f("/")
   }
+
+  //--- file lock support
+
+  // FileChannel does not have timeout support
+  // TODO - add region and r/w lock support
+  @tailrec
+  final def tryLockedFor (channel: FileChannel, nTimes: Int, delay: FiniteDuration)(action: =>Unit): Boolean = {
+    val lock = channel.tryLock
+    if (lock != null) {
+      try {
+        action
+        true
+
+      } finally {
+        lock.release
+      }
+
+    } else { // could not acquire lock, wait
+      if (nTimes > 0) {
+        Thread.sleep(delay.toMillis)  // note this is semi-busy and less efficient than channel.lock()
+        tryLockedFor(channel, nTimes-1, delay)(action)
+      } else {
+        false
+      }
+    }
+  }
+
+  def getOpenOptionsOrElse(opts: Array[String], defaults: Set[OpenOption]): Set[OpenOption] = {
+    if (opts.nonEmpty) {
+      import StandardOpenOption._
+      HashSet(opts.map {
+        case "append" => APPEND
+        case "create" => CREATE
+        case "create_new" => CREATE_NEW
+        case "truncate" => TRUNCATE_EXISTING
+        case "read" => READ
+        case "write" => WRITE
+        case "sparse" => SPARSE
+        case "delete_on_close" => DELETE_ON_CLOSE
+        case "dsync" => DSYNC
+        case "sync" => SYNC
+      }: _*)
+    } else defaults
+  }
+
+  val DefaultOpenWrite: Set[OpenOption] = HashSet(StandardOpenOption.WRITE,StandardOpenOption.CREATE,StandardOpenOption.TRUNCATE_EXISTING)
 }
 
 class BufferedFileWriter (val file: File, val bufferSize: Int, val append: Boolean) extends CharArrayWriter(bufferSize) {
@@ -261,3 +313,4 @@ class BufferedFileWriter (val file: File, val bufferSize: Int, val append: Boole
     fw.close
   }
 }
+

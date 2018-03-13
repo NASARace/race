@@ -22,7 +22,11 @@ import org.joda.time.DateTime
 import scala.collection.mutable
 
 /**
-  * something that can write buffer records of type R from objects of type T
+  * something that can write buffer records of type R
+  *
+  * Note that we don't restrict the input object type since the concrete implementation has to
+  * perform matching anyways and could not rely on a covariant type parameter as it appears
+  * in contravariant position (update)
   */
 trait RecordWriter[+R <: BufferRecord] {
   val rec: R

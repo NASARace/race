@@ -47,23 +47,6 @@ class TrackRecordWriter(val config: Config) extends DenseRecordWriter[FloatTrack
 
   buffer.order(ByteOrder.nativeOrder)
 
-  @tailrec
-  final def tryLockedFor (nTimes: Int, delay: FiniteDuration)(action: =>Unit): Boolean = {
-    val lock = channel.tryLock
-    if (lock != null) {
-      action
-      lock.release
-      true
-
-    } else {
-      if (nTimes > 0) {
-        Thread.sleep(delay.toMillis)  // not very actor idiomatic but still less overhead than resend or longer busy wait
-        tryLockedFor(nTimes-1, delay)(action)
-      } else {
-        false
-      }
-    }
-  }
 
   override def set(recIndex: Int, msg: Any, isNew: Boolean): Result = {
       msg match {

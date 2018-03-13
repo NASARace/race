@@ -76,8 +76,21 @@ object BufferRecord {
   implicit def toBoolean (o: BooleanConvertible) = o.toBoolean
 }
 
+/**
+  * field based accessor for ByteBuffers
+  *
+  * note that we keep the ByteBuffer instance invariant so that we don't have to check boundaries
+  * on each field access. The downside is that buffer allocation that depends on the record size
+  * becomes more difficult since we can't use the record instance to obtain it
+  *
+  * @param size of the record in bytes
+  * @param buffer we read from/write to
+  * @param recStart buffer offset where record data starts
+  */
 abstract class BufferRecord (val size: Int, val buffer: ByteBuffer, val recStart: Int = 0) {
   import BufferRecord._
+
+  def this (size: Int, createBuffer: (Int)=>ByteBuffer, recStart: Int)  = this(size,createBuffer(size),recStart)
 
   protected var maxRecordIndex = getMaxRecordIndex
   protected var recordOffset: Int = recStart
@@ -87,7 +100,6 @@ abstract class BufferRecord (val size: Int, val buffer: ByteBuffer, val recStart
 
   protected def getMaxRecordIndex = if (buffer != null) ((buffer.capacity - recStart)/size)-1 else -1
 
-  def this (size: Int, createBuffer: (Int)=>ByteBuffer, recStart: Int)  = this(size,createBuffer(size),recStart)
 
   def setRecordIndex (idx: Int): Unit = {
     if (idx < 0 || idx > maxRecordIndex) throw new RuntimeException(s"record index out of bounds: $idx (0..$maxRecordIndex)")

@@ -93,7 +93,8 @@ class FlightPosArchiveWriter (val oStream: OutputStream, val pathName: String="<
         ps.print(fpos.altitude.toFeet); ps.print(',')
         ps.print(fpos.speed.toUsMilesPerHour); ps.print(',')
         ps.print(fpos.heading.toDegrees); ps.print(',')
-        ps.print(fpos.date.getMillis); ps.println()
+        ps.print(fpos.date.getMillis);  ps.print(',')
+        ps.print(fpos.status); ps.println()
         true
       case _ => false
     }
@@ -110,7 +111,7 @@ class FlightPosArchiveReader (val iStream: InputStream, val pathName: String="<u
   override def readNextEntry: Option[ArchiveEntry] = {
     var fs = getLineFields(iStream)
 
-    if (fs.size == 9) {
+    if (fs.size == 10) {
       try {
         val recDt = fs.head.toLong; fs = fs.tail
         val flightId = fs.head; fs = fs.tail
@@ -120,11 +121,12 @@ class FlightPosArchiveReader (val iStream: InputStream, val pathName: String="<u
         val alt = fs.head.toDouble; fs = fs.tail
         val speed = fs.head.toDouble; fs = fs.tail
         val heading = fs.head.toDouble; fs = fs.tail
-        val dt = fs.head.toLong
-        val date = getDate(dt)  // we might adjust it on-the-fly
+        val date = getDate(fs.head.toLong); fs = fs.tail  // we might adjust it on-the-fly
+        val status = fs.head.toInt
 
         someEntry(date, new FlightPos(flightId, cs, LatLonPos(Degrees(phi), Degrees(lambda)),
-                                          Feet(alt), UsMilesPerHour(speed), Degrees(heading), date))
+                                      Feet(alt), UsMilesPerHour(speed), Degrees(heading),
+                                      date,status))
       } catch {
         case x: Throwable => None
       }

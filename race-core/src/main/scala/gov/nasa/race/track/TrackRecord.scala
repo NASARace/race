@@ -16,17 +16,58 @@
  */
 package gov.nasa.race.track
 
-import java.nio.ByteBuffer
+import java.nio.{ByteBuffer, ByteOrder}
 
 import gov.nasa.race.common.{BufferRecord, LockableRecord}
 
-object FloatTrackRecord {
-  final val size = 44
-}
 
 /**
-  * a generic BufferRecord for tracks that uses floats for floating point values
+  * a BufferRecord for tracks that uses double precision for floating point values
   */
+object TrackRecord {
+  final val size = 68
+
+  def apply(bbuf: ByteBuffer, recOffset: Int) = new TrackRecord(bbuf,size,recOffset)
+  def apply(recOffset: Int, createBuffer: Int=>ByteBuffer) = new TrackRecord(createBuffer(size),size,recOffset)
+  def apply(recOffset: Int, nRecords: Int) = {
+    new TrackRecord(ByteBuffer.allocate(recOffset + (nRecords*size)).order(ByteOrder.nativeOrder), size,recOffset)
+  }
+}
+
+class TrackRecord (bbuf: ByteBuffer, recSize: Int, recOffset: Int) extends BufferRecord (recSize,bbuf,recOffset) {
+
+  def this (bbuf: ByteBuffer) = this(bbuf,TrackRecord.size,0)
+  def this (bbuf: ByteBuffer, recOff: Int) = this(bbuf,TrackRecord.size,recOff)
+
+  val id   = char(0, 8)    // call sign or id (max 8 char)
+  val date = long(8)       // epoch in millis
+  val stat = int(16)       // status bit field
+
+  val lat  = double(20)    // degrees
+  val lon  = double(28)    // degrees
+  val alt  = double(36)    // meters
+
+  val hdg  = double(44)    // heading in degrees
+  val spd  = double(52)    // ground speed in m/s
+  val vr   = double(60)    // vertical rate in m/s
+}
+
+
+/**
+  * a BufferRecord for tracks that uses floats for floating point values, which significantly
+  * reduces storage requirements for large number of tracks while still providing <1m positional
+  * accuracy
+  */
+object FloatTrackRecord {
+  final val size = 44
+
+  def apply(bbuf: ByteBuffer, recOffset: Int) = new FloatTrackRecord(bbuf,size,recOffset)
+  def apply(recOffset: Int, createBuffer: Int=>ByteBuffer) = new FloatTrackRecord(createBuffer(size),size,recOffset)
+  def apply(recOffset: Int, nRecords: Int) = {
+    new FloatTrackRecord(ByteBuffer.allocate(recOffset + (nRecords*size)).order(ByteOrder.nativeOrder), size,recOffset)
+  }
+}
+
 class FloatTrackRecord (bbuf: ByteBuffer, recSize: Int, recOffset: Int) extends BufferRecord (recSize,bbuf,recOffset) {
 
   def this (bbuf: ByteBuffer) = this(bbuf,FloatTrackRecord.size,0)
@@ -34,16 +75,15 @@ class FloatTrackRecord (bbuf: ByteBuffer, recSize: Int, recOffset: Int) extends 
 
   val id   = char(0, 8)   // call sign or id (max 8 char)
   val date = long(8)      // epoch in millis
+  val stat = int(16)      // status bit field
 
-  val lat  = float(16)    // degrees
-  val lon  = float(20)    // degrees
-  val alt  = float(24)    // meters
+  val lat  = float(20)    // degrees
+  val lon  = float(24)    // degrees
+  val alt  = float(28)    // meters
 
-  val hdg  = float(28)    // heading in degrees
-  val spd  = float(32)    // ground speed in m/s
-  val vr   = float(36)    // vertical rate in m/s
-
-  val stat = int(40)      // status bit field
+  val hdg  = float(32)    // heading in degrees
+  val spd  = float(36)    // ground speed in m/s
+  val vr   = float(40)    // vertical rate in m/s
 }
 
 
