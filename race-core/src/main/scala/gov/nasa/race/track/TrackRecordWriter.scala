@@ -21,13 +21,11 @@ import java.nio.ByteOrder
 import java.nio.channels.FileChannel
 
 import com.typesafe.config.Config
-import gov.nasa.race.{Failure, Result, Success}
 import gov.nasa.race.common.DenseRecordWriter
 import gov.nasa.race.config.ConfigUtils._
+import gov.nasa.race.{Failure, Result, Success}
 import org.joda.time.DateTime
 
-import scala.annotation.tailrec
-import scala.concurrent.duration.FiniteDuration
 
 /**
   * a configurable RecordWriter that uses a mapped byte buffer as store for FloatTrackRecords
@@ -37,16 +35,18 @@ class TrackRecordWriter(val config: Config) extends DenseRecordWriter[FloatTrack
   val maxRecords: Int = config.getIntOrElse("max-records",5000)
   val pathName = config.getString("pathname")
 
-  val dateOffset: Int = 0
-  val recCountOffset: Int = 8
-  val headerLength = 12 // 8 bytes for date, 4 bytes for number of set records
+  val storeSizeOffset: Int = 0  // 2GB should be enough (>30M double records)
+  val recCountOffset: Int = 4
+  val dateOffset: Int = 8
+  val headerLength = 16 // 8 bytes for date, 4 bytes for number of set records, 4 bytes for store size
 
   val channel = new RandomAccessFile(pathName, "rw").getChannel
-  val buffer = channel.map(FileChannel.MapMode.READ_WRITE, 0, maxRecords * FloatTrackRecord.size + headerLength)
+  val bufferSize = maxRecords * FloatTrackRecord.size + headerLength
+  val buffer = channel.map(FileChannel.MapMode.READ_WRITE, 0, bufferSize)
   val rec = new FloatTrackRecord(buffer,headerLength)
 
   buffer.order(ByteOrder.nativeOrder)
-
+  buffer.putInt(storeSizeOffset,bufferSize) // this is static
 
   override def set(recIndex: Int, msg: Any, isNew: Boolean): Result = {
       msg match {
