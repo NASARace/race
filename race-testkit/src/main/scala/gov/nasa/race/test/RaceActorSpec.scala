@@ -32,7 +32,7 @@ import org.scalatest.BeforeAndAfterAll
 
 import scala.collection.immutable.ListMap
 import scala.collection.{Map, Seq}
-import scala.concurrent.Await
+import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
 import scala.reflect.ClassTag
 
@@ -141,7 +141,7 @@ object RaceActorSpec {
         if (assertion.isDefinedAt(msg)){
           assertion(msg) match {
             case Continue => // msg was accepted but go on - we expect more
-            case other => // we count that as "expectation met"
+            case _ => // we count that as "expectation met"
               waiterForExpect.map( _ ! Success)
           }
         }
@@ -238,6 +238,15 @@ abstract class RaceActorSpec (tras: TestRaceActorSystem) extends TestKit(tras.sy
     }
     bus.unsubscribe(probe)
     system.stop(probe) // clean it up
+  }
+
+  def expectResponse (aRef: ActorRef, msg: Any, timeout: FiniteDuration) (assertion: PartialFunction[Any,Any]) = {
+    val future = aRef.ask(msg)(Timeout(timeout))
+    assertion.apply(Await.result(future, timeout))
+  }
+
+  def expectResponse (future: Future[Any],timeout: FiniteDuration) (assertion: PartialFunction[Any,Any]) = {
+    assertion.apply(Await.result(future, timeout))
   }
 
   def publish(channel: String, msg: Any, originator: ActorRef=testActor) = {

@@ -17,15 +17,21 @@
 package gov.nasa.race.core
 
 import akka.event.Logging
+import akka.pattern._
 import com.typesafe.config.Config
 import gov.nasa.race.test.RaceActorSpec
 import gov.nasa.race.config._
 import org.joda.time.DateTime
 import org.scalatest.WordSpecLike
+import scala.concurrent.duration._
+import scala.collection.immutable.List
 
 object RetryRaceActorSpec {
   case class TestMessage (id: Int)
   case object Done
+
+  val N = 5 // number of retry attempts
+  val M = 3 // number of messages sent
 
   var processingOrder: List[Int] = List.empty
 }
@@ -38,13 +44,16 @@ class TestRetryActor1 (val config: Config) extends RetryRaceActor {
   override def handleMessage = handleRetryMessage orElse {
     case msg@TestMessage(id) =>
       counter += 1
-      if (counter < 3) {
+      if (counter < N) {
         println(s"retry $id")
         retry(msg)
       } else {
         println(s"process $id")
         processingOrder = id +: processingOrder
       }
+
+    case Done =>
+      if (processingOrder.size == M) sender ! Done
   }
 }
 
@@ -53,23 +62,29 @@ class TestRetryActor1 (val config: Config) extends RetryRaceActor {
   */
 class RetryRaceActorSpec extends RaceActorSpec with WordSpecLike {
 
-  "a provider-subscriber chain" must {
-    "start and stop publishing messages on demand" in {
+  "a RetryRaceActor" must {
+    "process messages in the order in which they were received, regardless of retries" in {
       runRaceActorSystem(Logging.WarningLevel) {
-        val aRef = addTestActor(classOf[TestRetryActor1], "retrier", NoConfig)
+        val aRef = addTestActor(classOf[TestRetryActor1], "retryActor", NoConfig)
 
         printTestActors
         initializeTestActors
         //printBusSubscriptions
         startTestActors(DateTime.now)
 
-        aRef ! TestMessage(1)
-        aRef ! TestMessage(2)
-        aRef ! TestMessage(3)
+        for (i <- 1 to M) {
+          aRef ! TestMessage(i)
+          //Thread.sleep(100)
+        }
 
-        Thread.sleep(2000)
+        expectResponse(aRef ? Done, 1.second){
+          case Done => println("done.")
+          case other => fail(s"expected Done response, got $other")
+        }
 
         terminateTestActors
+
+        assert(processingOrder.reverse == List(1,2,3))
       }
     }
   }
