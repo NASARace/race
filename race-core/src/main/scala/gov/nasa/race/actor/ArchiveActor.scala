@@ -27,7 +27,7 @@ import gov.nasa.race.core._
   * actor that writes the subscribed channel to disk
   * using a configurable ArchiveWriter object for stream/file management and formatting
   */
-class ArchiveActor (val config: Config) extends SubscribingRaceActor with ContinuousTimeRaceActor {
+class ArchiveActor (val config: Config) extends ChannelTopicSubscriber with ContinuousTimeRaceActor {
   var stopArchiving = false
   val writer: ArchiveWriter = createWriter
 

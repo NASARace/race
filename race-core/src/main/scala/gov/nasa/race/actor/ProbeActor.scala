@@ -21,7 +21,7 @@ import com.typesafe.config.Config
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.config.ConfigurableTranslator
 import gov.nasa.race.core.Messages.BusEvent
-import gov.nasa.race.core.SubscribingRaceActor
+import gov.nasa.race.core.{ChannelTopicSubscriber, SubscribingRaceActor}
 import gov.nasa.race.util.{ConsoleIO, SoundUtils}
 
 
@@ -29,7 +29,7 @@ import gov.nasa.race.util.{ConsoleIO, SoundUtils}
  * utility actor that prints messages received on its configured 'read-from' channels to stdout
  * (i.e. it prints in the terminal the process is running in, which might be a satellite)
  */
-class ProbeActor (val config: Config) extends SubscribingRaceActor {
+class ProbeActor (val config: Config) extends ChannelTopicSubscriber {
   val prefix = config.getOptionalString("prefix")
   val translator: Option[ConfigurableTranslator] = config.getOptionalConfig("translator") flatMap createTranslator
   val alert: Boolean = config.getBooleanOrElse("alert", false)

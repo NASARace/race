@@ -27,8 +27,7 @@ import com.typesafe.config.Config
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
-import scala.language.postfixOps
-import scala.language.implicitConversions
+import scala.language.{implicitConversions, postfixOps}
 
 /**
   * package gov.nasa.race.core is the location for all system types that implement RaceActorSystems and RaceActors,
@@ -49,8 +48,6 @@ package object core {
   type Topic = Option[Any]
   type Client = ActorRef
   type Provider = ActorRef
-
-  case class ChannelTopic(channel: Channel, topic: Topic = None)
 
   // <2do> we should move the messages here
 

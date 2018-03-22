@@ -128,11 +128,13 @@ object FileUtils {
     }
   }
 
-  def ensureWriteable (file: File): Option[File] = {
+  def ensureWritable(file: File): Option[File] = {
     if (ensureWritableDir(file.getParentFile).isDefined){
-      if (file.canWrite) Some(file) else None
+      if (!file.exists || file.canWrite) Some(file) else None
     } else None
   }
+
+  def ensureWritable(pathName: String): Option[File] = ensureWritable(new File(pathName))
 
   def ensureEmptyWritable (file: File): Option[File] = {
     if (ensureWritableDir(file.getParentFile).isDefined){

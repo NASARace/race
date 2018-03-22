@@ -17,7 +17,10 @@
 
 package gov.nasa.race.archive
 
+import java.io.File
+
 import gov.nasa.race.Dated
+import gov.nasa.race.util.FileUtils
 import org.joda.time.DateTime
 
 /*
@@ -42,6 +45,8 @@ trait ArchiveWriter {
   def close: Unit
 
   val pathName: String
+
+  def checkWritablePathName: Boolean = FileUtils.ensureWritable(pathName).isDefined
 }
 
 

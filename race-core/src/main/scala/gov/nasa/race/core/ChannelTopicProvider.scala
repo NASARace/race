@@ -20,8 +20,30 @@ package gov.nasa.race.core
 import akka.actor.{ActorRef, Terminated}
 import com.typesafe.config.Config
 import gov.nasa.race.core.Messages._
+import gov.nasa.race.config.ConfigUtils._
+import gov.nasa.race.util.StringUtils
 
 import scala.collection.mutable.{Map => MutableMap, Set => MutableSet}
+import scala.util.matching.Regex
+
+object ChannelTopic {
+
+  /**
+    * we support strings formatted as <topicName>[":"<channelGlob>]
+    */
+  def parse(spec: String): (Topic,Option[Regex]) = {
+    val idx = spec.indexOf(":")
+    if (idx < 0) { // no channel pattern, only topic
+      (Some(spec),None)
+    } else {
+      val topic = spec.substring(0,idx)
+      val channelPattern = StringUtils.globToRegex(spec.substring(idx+1))
+      (Some(topic),Some(channelPattern))
+    }
+  }
+}
+
+case class ChannelTopic(channel: Channel, topic: Topic = None)
 
 /**
   * a SubscribingRaceActor that dynamically requests (channel,topic) pairs
@@ -48,6 +70,32 @@ trait ChannelTopicSubscriber extends SubscribingRaceActor {
   def requestTopic(topic: Topic):Unit = {
     isAllChannelRequest = true
     for (channel <- readFrom) request(channel,topic)
+  }
+
+  def requestConfiguredTopics: Unit = {
+    config.getStringArray("request-topics").foreach { ctSpec =>
+      ChannelTopic.parse(ctSpec) match {
+        case (topic@Some(topicName), channelSpec) =>
+          channelSpec match {
+            case Some(regex) =>
+              readFrom.foreach { chan =>
+                regex.findFirstIn(chan).foreach { _ =>
+                  info(s"requesting configured topic $topicName on channel: $chan")
+                  request(chan, topic)
+                }
+              }
+            case None =>
+              info(s"requesting configured topic on all channels: $topicName")
+              requestTopic(topic) // request on all channels
+          }
+        case _ => warning(s"invalid channel topic spec: $ctSpec")
+      }
+    }
+  }
+
+  override def onStartRaceActor (originator: ActorRef) = {
+    requestConfiguredTopics
+    super.onStartRaceActor(originator)
   }
 
   def handleCTSubscriberMessage: Receive = {
@@ -155,7 +203,7 @@ trait ChannelTopicProvider extends PublishingRaceActor {
   def hasClientsForTopic[T] (topic: T): Boolean = {
     clients.exists(_ match {
       case ChannelTopicRelease(ChannelTopic(_, Some(`topic`)), _) => true
-      case other => false
+      case _ => false
     })
   }
 
