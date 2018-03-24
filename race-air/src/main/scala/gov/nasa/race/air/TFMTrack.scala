@@ -50,4 +50,5 @@ case class TFMTrack(id: String,
                    ) extends TrackedObject {
 
   val heading = if (nextPos.isDefined) GreatCircle.initialBearing(position,nextPos.get) else Degrees(0)
+  def vr = Speed.UndefinedSpeed // not in current data model
 }

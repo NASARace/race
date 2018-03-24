@@ -30,7 +30,7 @@ object Speed {
   final val MetersPerSecInKmh = 1000.0 / 3600
   final val MetersPerSecInMph = 1609.344 / 3600
   final val MetersPerSecInFps = 0.3048
-  final val MetersPerSecInFpm = 0.3048 * 60
+  final val MetersPerSecInFpm = 0.3048 / 60
 
   final val Speed0 = new Speed(0)
   final val UndefinedSpeed = new Speed(Double.NaN)

@@ -49,6 +49,7 @@ case class AsdexTrack(id: String,
                       altitude: Length,
                       speed: Speed,
                       heading: Angle,
+                      vr: Speed,
                       date: DateTime,
                       status: Int,
 

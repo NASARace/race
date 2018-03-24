@@ -74,6 +74,7 @@ class FIXM2FlightObject (val config: Config=NoConfig)
     var lat, lon, vx, vy: Double = UndefinedDouble
     var alt: Length = UndefinedLength
     var spd: Speed = UndefinedSpeed
+    var vr: Speed = UndefinedSpeed // there is no vertical rate in FIXM_v3_2
     var date, arrivalDate: DateTime = null
     var arrivalPoint: String = null
 
@@ -110,7 +111,7 @@ class FIXM2FlightObject (val config: Config=NoConfig)
             if (lat.isDefined && lon.isDefined && date != null &&
               vx.isDefined && vy.isDefined && spd.isDefined && alt.isDefined) {
               flights += new FlightPos(id, cs, LatLonPos(Degrees(lat), Degrees(lon)),
-                                       alt, spd, Degrees(Math.atan2(vx, vy).toDegrees), date)
+                                       alt, spd, Degrees(Math.atan2(vx, vy).toDegrees), vr, date)
             } else {
               //println(s"@@@ rejected flight: $cs $lat $lon $date $vx $vy $spd $alt")
             }

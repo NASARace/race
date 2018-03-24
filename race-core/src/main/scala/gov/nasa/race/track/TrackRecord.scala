@@ -25,7 +25,7 @@ import gov.nasa.race.common.{BufferRecord, LockableRecord}
   * a BufferRecord for tracks that uses double precision for floating point values
   */
 object TrackRecord {
-  final val size = 68
+  final val size = 76
 
   def apply(bbuf: ByteBuffer, recOffset: Int) = new TrackRecord(bbuf,size,recOffset)
   def apply(recOffset: Int, createBuffer: Int=>ByteBuffer) = new TrackRecord(createBuffer(size),size,recOffset)
@@ -39,17 +39,18 @@ class TrackRecord (bbuf: ByteBuffer, recSize: Int, recOffset: Int) extends Buffe
   def this (bbuf: ByteBuffer) = this(bbuf,TrackRecord.size,0)
   def this (bbuf: ByteBuffer, recOff: Int) = this(bbuf,TrackRecord.size,recOff)
 
-  val id   = char(0, 8)    // call sign or id (max 8 char)
-  val date = long(8)       // epoch in millis
-  val stat = int(16)       // status bit field
+  val id   = char(0, 8)    // id (max 8 char) - channel specific (usually externally assigned track number)
+  val cs   = char(8, 8)    // call sign (max 8 char) - might be assigned later
+  val date = long(16)      // epoch in millis
+  val stat = int(24)       // status bit field
 
-  val lat  = double(20)    // degrees
-  val lon  = double(28)    // degrees
-  val alt  = double(36)    // meters
+  val lat  = double(28)    // degrees
+  val lon  = double(36)    // degrees
+  val alt  = double(44)    // meters
 
-  val hdg  = double(44)    // heading in degrees
-  val spd  = double(52)    // ground speed in m/s
-  val vr   = double(60)    // vertical rate in m/s
+  val hdg  = double(52)    // heading in degrees
+  val spd  = double(60)    // ground speed in m/s
+  val vr   = double(68)    // vertical rate in m/s
 }
 
 
@@ -59,7 +60,7 @@ class TrackRecord (bbuf: ByteBuffer, recSize: Int, recOffset: Int) extends Buffe
   * accuracy
   */
 object FloatTrackRecord {
-  final val size = 44
+  final val size = 52
 
   def apply(bbuf: ByteBuffer, recOffset: Int) = new FloatTrackRecord(bbuf,size,recOffset)
   def apply(recOffset: Int, createBuffer: Int=>ByteBuffer) = new FloatTrackRecord(createBuffer(size),size,recOffset)
@@ -73,17 +74,18 @@ class FloatTrackRecord (bbuf: ByteBuffer, recSize: Int, recOffset: Int) extends 
   def this (bbuf: ByteBuffer) = this(bbuf,FloatTrackRecord.size,0)
   def this (bbuf: ByteBuffer, recOff: Int) = this(bbuf,FloatTrackRecord.size,recOff)
 
-  val id   = char(0, 8)   // call sign or id (max 8 char)
-  val date = long(8)      // epoch in millis
-  val stat = int(16)      // status bit field
+  val id   = char(0, 8)    // id (max 8 char) - channel specific (usually externally assigned track number)
+  val cs   = char(8, 8)    // call sign (max 8 char) - might be assigned later
+  val date = long(16)      // epoch in millis
+  val stat = int(24)       // status bit field
 
-  val lat  = float(20)    // degrees
-  val lon  = float(24)    // degrees
-  val alt  = float(28)    // meters
+  val lat  = float(28)     // degrees
+  val lon  = float(32)     // degrees
+  val alt  = float(36)     // meters
 
-  val hdg  = float(32)    // heading in degrees
-  val spd  = float(36)    // ground speed in m/s
-  val vr   = float(40)    // vertical rate in m/s
+  val hdg  = float(40)     // heading in degrees
+  val spd  = float(44)     // ground speed in m/s
+  val vr   = float(48)     // vertical rate in m/s
 }
 
 

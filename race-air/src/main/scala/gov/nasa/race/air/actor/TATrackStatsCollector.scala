@@ -177,7 +177,7 @@ class TATrackStatsData  (val src: String) extends TSStatsData[TATrack,TATrackEnt
     else if (t1.altitude != t2.altitude) Ambiguous(Some("altitude"))
     else if (t1.speed != t2.speed) Ambiguous(Some("speed"))
     else if (t1.heading != t2.heading) Ambiguous(Some("heading"))
-    else if (t1.vVert != t2.vVert) Ambiguous(Some("vVert"))
+    else if (t1.vr != t2.vr) Ambiguous(Some("vr"))
     else if (t1.beaconCode != t2.beaconCode) Ambiguous(Some("beaconCode"))
     else if (t1.hasFlightPlan != t2.hasFlightPlan) Extension  // we treat flight plans as accumulating
     else Duplicate

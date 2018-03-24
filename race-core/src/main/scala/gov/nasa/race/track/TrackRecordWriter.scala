@@ -52,13 +52,15 @@ class TrackRecordWriter(val config: Config) extends DenseRecordWriter[FloatTrack
       msg match {
         case track: TrackedObject =>
           rec.setRecordIndex(recIndex)
-          rec.id := track.cs
+          rec.id := track.id
+          rec.cs := track.cs
           rec.date := track.date.getMillis
           rec.lat := track.position.latDeg.toFloat
           rec.lon := track.position.lonDeg.toFloat
           rec.alt := track.altitude.toMeters.toFloat
           rec.hdg := track.heading.toDegrees.toFloat
           rec.spd := track.speed.toMetersPerSecond.toFloat
+          rec.vr := track.vr.toMetersPerSecond.toFloat
           rec.stat := track.status
 
           Success

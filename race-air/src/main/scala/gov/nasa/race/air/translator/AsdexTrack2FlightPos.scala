@@ -92,7 +92,7 @@ class AsdexTrack2FlightPos (val config: Config=NoConfig) extends ConfigurableTra
 
         val hdg = track.heading
         if (hdg.isDefined) {
-          Some(FlightPos(track.id, track.cs, track.position, alt, spd, hdg, track.date))
+          Some(FlightPos(track.id, track.cs, track.position, alt, spd, hdg, track.vr, track.date))
         } else None
 
       } else None // too low

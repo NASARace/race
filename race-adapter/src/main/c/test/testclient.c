@@ -134,14 +134,16 @@ int main( int argc, char** argv ){
                             int msg_ord;
                             int flags;
                             epoch_millis_t track_millis;
-                            double lat_deg, lon_deg, alt_m, heading_deg, speed_m_sec;
+                            double lat_deg, lon_deg, alt_m, heading_deg, speed_m_sec, vr_m_sec;
 
-                            pos = race_read_track_data(db, pos, id, sizeof(id), &msg_ord, &flags, &track_millis, &lat_deg, &lon_deg, &alt_m, &heading_deg, &speed_m_sec);
+                            pos = race_read_track_data(db, pos, id, sizeof(id), &msg_ord, &flags, &track_millis,
+                                                       &lat_deg, &lon_deg, &alt_m,
+                                                       &heading_deg, &speed_m_sec, &vr_m_sec);
                             if (pos <= 0){
                                 fprintf(stderr, "error reading track: %s\n", err_msg);                        
                             } else {
-                                printf("   %d: %s, ord=%d, flags=0x%X, t=%"PRId64", lat=%f°, lon=%f°, alt=%f m, hdg=%f°, spd=%f m/sec\n",
-                                    i, id, msg_ord, flags, track_millis, lat_deg, lon_deg, alt_m, heading_deg, speed_m_sec);
+                                printf("   %d: %s, ord=%d, flags=0x%X, t=%"PRId64", lat=%f°, lon=%f°, alt=%f m, hdg=%f°, spd=%f m/sec, vr=%f m/sec\n",
+                                    i, id, msg_ord, flags, track_millis, lat_deg, lon_deg, alt_m, heading_deg, speed_m_sec, vr_m_sec);
                             }
                         }
                     } else if (data_msg_type == PROXIMITY_MSG) {

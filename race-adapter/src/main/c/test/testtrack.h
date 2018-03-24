@@ -29,8 +29,9 @@ typedef struct {
     double lat_deg;
     double lon_deg;
     double alt_m;
-    double heading_deg;
     double speed_m_sec;
+    double heading_deg;
+    double vr_m_sec;
 } track_t;
 
 #define R  6371000.0 // m 

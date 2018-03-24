@@ -74,6 +74,7 @@ object SBS2FlightPos {
           Feet(alt.toDouble),
           Knots(speed.toDouble),
           Degrees(track.toDouble),
+          FeetPerMinute(vr.toDouble),
           DateTime.parse(posDtg, dtf))
         if (oldCS != null) fpos.amend(ChangedCS(oldCS))
         Some(fpos)
@@ -223,6 +224,8 @@ class SBS2FlightPos (val config: Config=NoConfig) extends ConfigurableTranslator
               skipNextFields(4,i0)
               acInfo.setSpeed(nextFields(1,i0))
               acInfo.setTrack(nextFields(1,i0))
+              skipNextFields(2,i0)
+              acInfo.setVr(nextFields(1,i0))
               None // don't return a FlightPos until we have a position (clients might not check the timestamp)
 
             case _ => None

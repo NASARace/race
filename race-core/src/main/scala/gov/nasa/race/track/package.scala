@@ -35,6 +35,7 @@ package object track {
   trait MovingObject {
     def heading: Angle
     def speed: Speed
+    def vr: Speed   // vertical rate
   }
 
 }

@@ -153,7 +153,13 @@ object StringUtils {
 
   def getCString (buffer: ByteBuffer, pos: Int, length: Int) = {
     val bs = new Array[Byte](length)
-    buffer.get(bs,pos,length)
+    var i=0
+    var j= pos
+    while (i<length){
+      bs(i) = buffer.get(j)
+      i += 1
+      j += 1
+    }
     new String(bs,0,cStringLength(bs))
   }
 

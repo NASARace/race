@@ -32,6 +32,7 @@ import gov.nasa.race.geo.{GeoPosition, LatLonPos}
 import gov.nasa.race.track.TrackDropped
 import gov.nasa.race.uom.Angle._
 import gov.nasa.race.uom.Length._
+import gov.nasa.race.uom.Speed
 import gov.nasa.race.uom.Speed._
 import gov.nasa.race.util.ThreadUtils
 
@@ -122,7 +123,8 @@ class XPlaneActor (val config: Config) extends PublishingRaceActor
     val altitude = Feet(0)
     val speed = Knots(0)
     val heading = Degrees(0)
-    new FlightPos(id, cs, pos, altitude, speed, heading, simTime)
+    val vr = Speed.Speed0
+    new FlightPos(id, cs, pos, altitude, speed, heading, vr, simTime)
   }
 
   override def onInitializeRaceActor(rc: RaceContext, actorConf: Config) = {
@@ -165,6 +167,10 @@ class XPlaneActor (val config: Config) extends PublishingRaceActor
     case BusEvent(_,fdrop: TrackDropped,_) => dropProximity(fdrop)
   }
 
+  def computeVr (rpos: RPOS) = {
+    Speed.UndefinedSpeed  // TODO - compute from vx,vy,vz
+  }
+
   def publishFPos (rpos: RPOS) = {
     if (codec.readFrame > publishedFrame && rpos != null) {  // we might not have gotten the rpos yet
       updatedSimTime
@@ -173,7 +179,8 @@ class XPlaneActor (val config: Config) extends PublishingRaceActor
       val altitude = Meters(rpos.elevationMslm)
       val speed = MetersPerSecond(rpos.speedMsec)
       val heading = Degrees(rpos.headingDeg)
-      flightPos = new FlightPos(id, cs, pos, altitude, speed, heading, simTime)
+      val vr = computeVr(rpos)
+      flightPos = new FlightPos(id, cs, pos, altitude, speed, heading, vr, simTime)
 
       publish(flightPos)
       publishedFrame = codec.readFrame

@@ -86,10 +86,10 @@ object Dependencies {
   val avro = "org.apache.avro" % "avro" % "1.8.2"
 
   // scodec
-  val scodecBits = "org.scodec" %% "scodec-bits" % "1.1.5"
-  val scodecCore = "org.scodec" %% "scodec-core" % "1.10.3"
+  //val scodecBits = "org.scodec" %% "scodec-bits" % "1.1.5"
+  //val scodecCore = "org.scodec" %% "scodec-core" % "1.10.3"
   //val scodecStream = "org.scodec" %% "scodec-stream" % "1.1.0-M9"
-  val scodecAll = Seq(scodecBits, scodecCore)
+  //val scodecAll = Seq(scodecBits, scodecCore)
 
   //--- scala-swing
   val scalaSwing = "org.scala-lang.modules" %% "scala-swing" % "2.0.2"

@@ -41,12 +41,15 @@ import org.joda.time.DateTime
   * type that archives time-stamped objects
   */
 trait ArchiveWriter {
+  val pathName: String
+
+  if (!checkPathName) handlePathNameFailure // no point instantiating if we can't write
+
   def write (date: DateTime, obj: Any): Boolean
   def close: Unit
 
-  val pathName: String
-
-  def checkWritablePathName: Boolean = FileUtils.ensureWritable(pathName).isDefined
+  def checkPathName: Boolean = FileUtils.ensureWritable(pathName).isDefined
+  def handlePathNameFailure = throw new RuntimeException(s"not a writable pathname: $pathName")
 }
 
 

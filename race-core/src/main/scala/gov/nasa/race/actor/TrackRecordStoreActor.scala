@@ -45,8 +45,12 @@ class TrackRecordStoreActor (val config: Config) extends SubscribingRaceActor wi
   }
 
   override def handleMessage: Receive = {
-    case BusEvent(_,track: TrackedObject,_) => writer.update(track.cs,track.date,track)
-    case BusEvent(_,m: TrackTerminationMessage,_) => writer.remove(m.cs,m.date)
+    case BusEvent(_,track: TrackedObject,_) =>
+      if (track.isDroppedOrCompleted) writer.remove(track.id,track.date) else writer.update(track.id,track.date,track)
+
+    case BusEvent(_,m: TrackTerminationMessage,_) =>
+      writer.remove(m.id,m.date)
+
     case RaceTick => writer.store
   }
 }

@@ -33,8 +33,9 @@ track_t track = {
     .msg_ord = 0,
     .flags = 0,
     .time_millis = 0,
-    .speed_m_sec = 154.33,  // (~300 kn)
     .heading_deg = 90.0,
+    .speed_m_sec = 154.33,  // (~300 kn)
+    .vr_m_sec = 0,
     .alt_m = 1600.0,
     .lat_deg = 37.424,
     .lon_deg = -122.098
@@ -68,7 +69,7 @@ int check_request (char* host, char* service, int cli_flags, char* schema,
     printf("client request from %s:%s\n", host,service);
     printf("    flags:    %x\n", cli_flags);
     printf("    schema:   %s\n", schema);
-    printf("    sim time: %lld\n", *sim_millis);
+    printf("    sim time: %ld\n", *sim_millis);
     printf("    interval: %d\n", *track_interval);
 
     int ret = 0;
@@ -90,7 +91,7 @@ int write_data(databuf_t* db, int pos) {
     pos = race_write_track_data(db, pos,
                              track.id, track.msg_ord, track.flags,
                              track.time_millis, track.lat_deg, track.lon_deg,
-                             track.alt_m, track.heading_deg, track.speed_m_sec);
+                             track.alt_m, track.heading_deg, track.speed_m_sec, track.vr_m_sec);
     return pos;
 }
 
@@ -101,7 +102,7 @@ int read_track_data (databuf_t* db, int pos) {
     int msg_ord;
     int flags;
     epoch_millis_t time_millis;
-    double lat_deg, lon_deg, alt_m, heading_deg, speed_m_sec;
+    double lat_deg, lon_deg, alt_m, heading_deg, speed_m_sec, vr_m_sec;
     short n_tracks = 0;
 
     pos = race_read_short(db,pos,&n_tracks); // the number of tracks we received in this message
@@ -110,13 +111,13 @@ int read_track_data (databuf_t* db, int pos) {
     for (int i=0; i<n_tracks; i++) {
         pos = race_read_track_data(db, pos, 
                                 id, sizeof(id), &msg_ord, &flags, &time_millis, &lat_deg, &lon_deg,
-                                &alt_m, &heading_deg, &speed_m_sec);
+                                &alt_m, &heading_deg, &speed_m_sec, &vr_m_sec);
         if (pos <= 0){
             fprintf(stderr, "error reading track: %d\n", i);
             return 0;                        
         } else {
-            printf("   %d: %s, ord=%d, flags=0x%X, t=%"PRId64", lat=%f°, lon=%f°, alt=%f m, hdg=%f°, spd=%f m/sec\n",
-                i, id, msg_ord, flags, time_millis, lat_deg, lon_deg, alt_m, heading_deg, speed_m_sec);
+            printf("   %d: %s, ord=%d, flags=0x%X, t=%"PRId64", lat=%f°, lon=%f°, alt=%f m, hdg=%f°, spd=%f m/sec vr=%f m/sec\n",
+                i, id, msg_ord, flags, time_millis, lat_deg, lon_deg, alt_m, heading_deg, speed_m_sec, vr_m_sec);
         }
     }
     return pos;
@@ -136,7 +137,7 @@ int read_proximity_data (databuf_t* db, int pos) {
     // the proximity track itself
     char prox_id[MAX_ID_LEN];
     epoch_millis_t time_millis;
-    double lat_deg, lon_deg, alt_m, heading_deg, speed_m_sec;
+    double lat_deg, lon_deg, alt_m, heading_deg, speed_m_sec, vr_m_sec;
 
     pos = race_read_short(db,pos,&n_proximities); // the number of proximities we received in this message
     printf("received %d proximities from client:\n", n_proximities);
@@ -145,14 +146,15 @@ int read_proximity_data (databuf_t* db, int pos) {
         pos = race_read_proximity_data(db,pos,
                                        ref_id, MAX_ID_LEN, &ref_lat_deg, &ref_lon_deg, &ref_alt_m,
                                        &dist_m, &flags,
-                                       prox_id, MAX_ID_LEN, &time_millis, &lat_deg, &lon_deg, &alt_m, &heading_deg, &speed_m_sec);
+                                       prox_id, MAX_ID_LEN, &time_millis, &lat_deg, &lon_deg, &alt_m,
+                                       &heading_deg, &speed_m_sec,&vr_m_sec);
         if (pos <= 0){
             fprintf(stderr, "error reading proximity: %d\n", i);
             return 0;                        
         } else {
             printf("  %2d: ref  = %s, dist=%.0f m, flags=%d\n", i, ref_id, dist_m, flags);
-            printf("      prox = %s, t=%"PRId64", lat=%.5f°, lon=%.5f°, alt=%.0f m, hdg=%.0f°, spd=%.1f m/sec\n", 
-                prox_id, time_millis, lat_deg, lon_deg, alt_m, heading_deg, speed_m_sec);
+            printf("      prox = %s, t=%"PRId64", lat=%.5f°, lon=%.5f°, alt=%.0f m, hdg=%.0f°, spd=%.1f m/sec, vr=%.1f m/sec\n",
+                prox_id, time_millis, lat_deg, lon_deg, alt_m, heading_deg, speed_m_sec, vr_m_sec);
         }
     }
     return pos;
@@ -207,5 +209,5 @@ int main (int argc, char* argv[]) {
     sigaction(SIGINT, &sa, NULL);
 
     printf("running test server, terminate with ctrl-c\n");
-    return !race_server_interval_threaded(&context);
+    return !race_server(&context);
 }

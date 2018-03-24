@@ -43,6 +43,7 @@ class SimpleAircraft (val config: Config) extends ContinuousTimeRaceActor
   var speed = Knots(config.getDouble("speed-kn"))
   var altitude = Feet(config.getDouble("altitude-ft"))
   var heading = Degrees(config.getDouble("heading"))
+  var vr = Speed.Speed0
 
   //--- overridden initialization/termination callbacks
 
@@ -55,7 +56,7 @@ class SimpleAircraft (val config: Config) extends ContinuousTimeRaceActor
   override def handleMessage = {
     case RaceTick =>
       updatePos
-      publish(new FlightPos(id, cs, pos, altitude, speed, heading, simTime))
+      publish(new FlightPos(id, cs, pos, altitude, speed, heading, vr, simTime))
   }
 
   //--- internal functions

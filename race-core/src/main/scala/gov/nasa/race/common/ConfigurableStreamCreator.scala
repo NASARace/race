@@ -24,7 +24,7 @@ import gov.nasa.race.config.ConfigUtils._
 
 object ConfigurableStreamCreator {
   final val PathNameKey = "pathname"
-  final val DefaultPathName = "<unknown"
+  final val DefaultPathName = "<unknown>"
   final val BufSizeKey = "buffer-size"
   final val CompressedKey = "compressed"
 

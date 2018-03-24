@@ -52,7 +52,7 @@ public class XPlaneCodec {
     float  p,q,r;            // deg/sec
 
     public double speedMsec() {
-      return Math.sqrt( vx*vx + vy*vy + vz*vz);
+      return Math.sqrt( vx*vx + vy*vy + vz*vz );
     }
   }
 

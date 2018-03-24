@@ -43,8 +43,9 @@ object SimpleTrackProtocol {
             double lat_deg;
             double lon_deg;
             double alt_m;
-            double heading_deg;
             double speed_m_sec;
+            double heading_deg;
+            double vr_m_sec;    // vertical rate
         }
         record TrackMsg {
             int msg_type = 1;
@@ -132,12 +133,13 @@ class SimpleTrackReader extends DataStreamReader {
     val latDeg = dis.readDouble
     val lonDeg = dis.readDouble
     val altM = dis.readDouble
-    val headingDeg = dis.readDouble
     val speedMS = dis.readDouble
+    val headingDeg = dis.readDouble
+    val vrMS = dis.readDouble
 
     FlightPos(id, id,
       LatLonPos.fromDegrees(latDeg, lonDeg), Meters(altM),
-      MetersPerSecond(speedMS), Degrees(headingDeg),
+      MetersPerSecond(speedMS), Degrees(headingDeg), MetersPerSecond(vrMS),
       new DateTime(timeMsec),flags)
   }
 
@@ -159,11 +161,14 @@ class SimpleTrackReader extends DataStreamReader {
     val trackLatDeg = dis.readDouble
     val trackLonDeg = dis.readDouble
     val trackAltM = dis.readDouble
-    val trackHdgDeg = dis.readDouble
     val trackSpdMS = dis.readDouble
+    val trackHdgDeg = dis.readDouble
+    val trackVrMS = dis.readDouble
+
 
     val track = FlightPos(trackId,trackId,LatLonPos.fromDegrees(trackLatDeg,trackLonDeg),
-                          Meters(trackAltM),MetersPerSecond(trackSpdMS),Degrees(trackHdgDeg),new DateTime(tmsec))
+                          Meters(trackAltM),MetersPerSecond(trackSpdMS),Degrees(trackHdgDeg),MetersPerSecond(trackVrMS),
+                          new DateTime(tmsec))
 
     ProximityEvent(ProximityReference(refId, track.date, LatLonPos.fromDegrees(latDeg,lonDeg), Meters(altM)),
                     Meters(distM), flags, track)
@@ -200,8 +205,9 @@ class SimpleTrackWriter extends DataStreamWriter {
     dos.writeDouble(latLonPos.φ.toDegrees)
     dos.writeDouble(latLonPos.λ.toDegrees)
     dos.writeDouble(t.altitude.toMeters)
-    dos.writeDouble(t.heading.toDegrees)
     dos.writeDouble(t.speed.toMetersPerSecond)
+    dos.writeDouble(t.heading.toDegrees)
+    dos.writeDouble(t.vr.toMetersPerSecond)
   }
 
   def writeProximity (dos: DataOutputStream, p: ProximityEvent) = {
@@ -222,8 +228,9 @@ class SimpleTrackWriter extends DataStreamWriter {
     dos.writeDouble(prox.position.φ.toDegrees)
     dos.writeDouble(prox.position.λ.toDegrees)
     dos.writeDouble(prox.altitude.toMeters)
-    dos.writeDouble(prox.heading.toDegrees)
     dos.writeDouble(prox.speed.toMetersPerSecond)
+    dos.writeDouble(prox.heading.toDegrees)
+    dos.writeDouble(prox.vr.toMetersPerSecond)
   }
 
   def writeDrop (dos: DataOutputStream, drop: TrackTerminationMessage) = {

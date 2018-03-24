@@ -133,7 +133,18 @@ abstract class BufferRecord (val size: Int, val buffer: ByteBuffer, val recStart
   }
 
   def copyTo (idx: Int): Unit = {
+    /**
+    var i = recordOffset
+    val i1 = i + size
+    var j = recStart + idx*size
+    while (i < i1){
+      buffer.put(j, buffer.get(i))
+      i += 1
+      j += 1
+    }
+      **/
     val src = buffer.duplicate  // very convoluted way of saying memcpy
+    src.position(recordOffset)  // NOTE - contrary to what javadoc says the position is at least for DirectByteBuffers NOT copied
     src.limit(recordOffset + size)
     buffer.position(recStart + idx*size)
     buffer.put(src)

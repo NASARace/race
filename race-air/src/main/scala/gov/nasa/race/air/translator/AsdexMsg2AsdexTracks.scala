@@ -75,6 +75,11 @@ class AsdexMsg2AsdexTracks(val config: Config=NoConfig) extends XmlParser[AsdexT
     case _ => 0
   }
 
+  def readVertRate(isUp: Boolean) = readText match {
+    case "unavailable" => NaN
+    case s => if (isUp) s.toDouble else -s.toDouble
+  }
+
   def positionReport (tracks: ArrayBuffer[AsdexTrack]): Unit = {
     // note that we have to use different values for optionals that might not be in a delta update so that
     // we can distinguish from cached values
@@ -84,6 +89,7 @@ class AsdexMsg2AsdexTracks(val config: Config=NoConfig) extends XmlParser[AsdexT
     var altFt: Double = NaN
     var hdgDeg: Double = NaN
     var spdMph: Double = NaN
+    var vertRate: Double = NaN
     var status: Int = 0
     var acId: String = null
     var acType: String = null
@@ -109,13 +115,14 @@ class AsdexMsg2AsdexTracks(val config: Config=NoConfig) extends XmlParser[AsdexT
       case "altitude" => altFt = readDouble
       case "heading" => hdgDeg = readDouble
       case "speed" => spdMph = readDouble
+      case "vertRate" => vertRate = readVertRate((status & UpFlag) != 0)
       case _ => // ignored
     } {
       //--- end elements
       case "positionReport" =>
         // our minimal requirements are a dated lat/lon position and a trackId
         if (trackId != null && (date != null)) {
-          ifNotNull(createTrack(trackId,acId,latDeg,lonDeg,altFt,hdgDeg,spdMph,date,status,acType))( tracks += _)
+          ifNotNull(createTrack(trackId,acId,latDeg,lonDeg,altFt,spdMph,hdgDeg,vertRate,date,status,acType))( tracks += _)
         }
         return // done
       case _ => // ignore
@@ -127,7 +134,7 @@ class AsdexMsg2AsdexTracks(val config: Config=NoConfig) extends XmlParser[AsdexT
 
   protected def createTrack (trackId: String, acId: String,
                              latDeg: Double, lonDeg: Double,
-                             altFt: Double, hdgDeg: Double, spdMph: Double,
+                             altFt: Double, spdMph: Double, hdgDeg: Double, vertRate: Double,
                              date: DateTime, status: Int, acType: String): AsdexTrack = {
 
     // if input values are defined, use those. Otherwise use the last value or the fallback if there was none
@@ -138,10 +145,11 @@ class AsdexMsg2AsdexTracks(val config: Config=NoConfig) extends XmlParser[AsdexT
       val alt = if (isFinite(altFt)) Feet(altFt) else UndefinedLength
       val hdg = if (isFinite(hdgDeg)) Degrees(hdgDeg) else UndefinedAngle
       val spd = if (isFinite(spdMph)) UsMilesPerHour(spdMph) else UndefinedSpeed
+      val vr = if (isFinite(vertRate)) FeetPerMinute(vertRate) else UndefinedSpeed
       val cs = if (acId != null) getCallsign(acId,trackId) else trackId
       val act = if (acType != null) Some(acType) else None
 
-      new AsdexTrack(trackId, cs, LatLonPos(lat, lon), alt, spd, hdg, date, status, act)
+      new AsdexTrack(trackId, cs, LatLonPos(lat, lon), alt, spd, hdg, vr, date, status, act)
 
     } else null
   }

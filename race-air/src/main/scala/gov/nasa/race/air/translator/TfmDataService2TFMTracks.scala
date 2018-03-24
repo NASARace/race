@@ -55,6 +55,7 @@ class TfmDataService2TFMTracks(val config: Config=NoConfig) extends XmlPullParse
     var lon: Angle = UndefinedAngle
     var speed: Speed = UndefinedSpeed
     var alt: Length = UndefinedLength
+    var vr: Speed = UndefinedSpeed // no vertical rate in current schema
     var nextWP: LatLonPos = null
     var nextWPDate: DateTime = null
     var completed: Boolean = false
@@ -64,7 +65,8 @@ class TfmDataService2TFMTracks(val config: Config=NoConfig) extends XmlPullParse
 
     def resetVars = {
       flightRef="?"; cs=null; source="?"; completed = false
-      date=null; lat=UndefinedAngle; lon=UndefinedAngle; speed=UndefinedSpeed; alt=UndefinedLength; nextWP=null; nextWPDate=null
+      date=null; lat=UndefinedAngle; lon=UndefinedAngle; speed=UndefinedSpeed; alt=UndefinedLength; vr=UndefinedSpeed;
+      nextWP=null; nextWPDate=null
     }
 
     // <2do> this probably can be relaxed - we have useful info even without nextWP

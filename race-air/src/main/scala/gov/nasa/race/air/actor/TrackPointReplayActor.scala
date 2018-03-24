@@ -29,6 +29,7 @@ import gov.nasa.race.track.TrackCompleted
 import gov.nasa.race.track.avro.{TrackIdRecord, TrackPoint}
 import gov.nasa.race.uom.Angle._
 import gov.nasa.race.uom.Length._
+import gov.nasa.race.uom.Speed
 import gov.nasa.race.uom.Speed._
 import org.apache.avro.file.{DataFileReader, DataFileStream}
 import org.apache.avro.specific.SpecificDatumReader
@@ -97,6 +98,7 @@ class TrackPointReader (val iStream: InputStream, val pathName: String="<unknown
         Meters(tp.getAltitude),
         MetersPerSecond(tp.getSpeed),
         Degrees(tp.getHeading),
+        Speed.UndefinedSpeed,       // TODO - we only store this in FullTrackPoints
         date
       )
 

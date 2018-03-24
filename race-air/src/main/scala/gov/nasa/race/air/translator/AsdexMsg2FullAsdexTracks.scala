@@ -70,7 +70,7 @@ class AsdexMsg2FullAsdexTracks(config: Config=NoConfig) extends AsdexMsg2AsdexTr
   // here we use the previously accumulated info to turn delta reports into full reports
   override protected def createTrack (trackId: String, acId: String,
                                       latDeg: Double, lonDeg: Double,
-                                      altFt: Double, hdgDeg: Double, spdMph: Double,
+                                      altFt: Double, spdMph: Double, hdgDeg: Double, vertRate: Double,
                                       date: DateTime, status: Int, acType: String): AsdexTrack = {
     implicit val last = lastTracks.get(trackId)
 
@@ -80,10 +80,11 @@ class AsdexMsg2FullAsdexTracks(config: Config=NoConfig) extends AsdexMsg2AsdexTr
     val alt = fromDouble(altFt, Feet, _.altitude, UndefinedLength)
     val hdg = fromDouble(hdgDeg, Degrees, _.heading, UndefinedAngle)
     val spd = fromDouble(spdMph, UsMilesPerHour, _.speed, UndefinedSpeed)
+    val vr = fromDouble(vertRate, FeetPerMinute, _.vr, UndefinedSpeed)
     val cs = fromString(acId, getCallsign(_,trackId), _.cs, trackId)
     val act = fromString(acType, Some(_), _.acType, None)
 
-    val track = new AsdexTrack(trackId,cs,LatLonPos(lat,lon),alt,spd,hdg,date,status,act)
+    val track = new AsdexTrack(trackId,cs,LatLonPos(lat,lon),alt,spd,hdg,vr,date,status,act)
     if (track.isDropped) {
       lastTracks -= trackId
     } else {

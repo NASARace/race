@@ -24,15 +24,11 @@ import com.typesafe.config.Config
 import gov.nasa.race.archive._
 import gov.nasa.race.common.ConfigurableStreamCreator._
 import gov.nasa.race.geo.LatLonPos
-import gov.nasa.race.track.{TrackMessage, TrackTerminationMessage}
 import gov.nasa.race.uom.Angle._
 import gov.nasa.race.uom.Length._
 import gov.nasa.race.uom.Speed._
 import gov.nasa.race.uom._
 import gov.nasa.race.util.InputStreamLineTokenizer
-import gov.nasa.race.{Dated, IdentifiableObject}
-import scodec.bits.BitVector
-import scodec.codecs._
 
 
 object FlightPos {
@@ -44,28 +40,27 @@ object FlightPos {
   case class ChangedCS(oldCS: String)
 }
 
-
-
 /**
   * in-flight state consisting of geographic position, altitude, speed and bearing
   */
-case class FlightPos (val id: String,
-                      val cs: String,
-                      val position: LatLonPos,
-                      val altitude: Length,
-                      val speed: Speed,
-                      val heading: Angle,
-                      val date: DateTime,
-                      val status: Int = 0
+case class FlightPos (id: String,
+                      cs: String,
+                      position: LatLonPos,
+                      altitude: Length,
+                      speed: Speed,
+                      heading: Angle,
+                      vr: Speed,
+                      date: DateTime,
+                      status: Int = 0
                      ) extends TrackedAircraft {
 
-  def this (id:String, pos: LatLonPos, alt: Length,spd: Speed,hdg: Angle, dtg: DateTime) =
-    this(id, FlightPos.tempCS(id), pos,alt,spd,hdg,dtg)
+  def this (id:String, pos: LatLonPos, alt: Length,spd: Speed,hdg: Angle, vr: Speed, dtg: DateTime) =
+    this(id, FlightPos.tempCS(id), pos,alt,spd,hdg,vr,dtg)
 
   def hasTempCS = FlightPos.isTempCS(cs)
   def tempCS = if (hasTempCS) cs else FlightPos.tempCS(id)
   def getOldCS: Option[String] = amendments.find(_.isInstanceOf[FlightPos.ChangedCS]).map(_.asInstanceOf[FlightPos.ChangedCS].oldCS)
-  def copyWithCS (newCS: String) = new FlightPos(id, newCS, position, altitude,speed,heading,date)
+  def copyWithCS (newCS: String) = new FlightPos(id, newCS, position, altitude,speed,heading,vr,date,status)
 
   override def toString = s"FlightPos($id,$cs,$position,${altitude.toFeet.toInt}ft,${speed.toKnots.toInt}kn,${heading.toNormalizedDegrees.toInt}°,0x${status.toHexString},$date)"
 
@@ -93,6 +88,7 @@ class FlightPosArchiveWriter (val oStream: OutputStream, val pathName: String="<
         ps.print(fpos.altitude.toFeet); ps.print(',')
         ps.print(fpos.speed.toUsMilesPerHour); ps.print(',')
         ps.print(fpos.heading.toDegrees); ps.print(',')
+        ps.print(fpos.vr.toFeetPerMinute); ps.print(',')
         ps.print(fpos.date.getMillis);  ps.print(',')
         ps.print(fpos.status); ps.println()
         true
@@ -121,92 +117,18 @@ class FlightPosArchiveReader (val iStream: InputStream, val pathName: String="<u
         val alt = fs.head.toDouble; fs = fs.tail
         val speed = fs.head.toDouble; fs = fs.tail
         val heading = fs.head.toDouble; fs = fs.tail
+        val vr = fs.head.toDouble; fs = fs.tail
+
         val date = getDate(fs.head.toLong); fs = fs.tail  // we might adjust it on-the-fly
         val status = fs.head.toInt
 
         someEntry(date, new FlightPos(flightId, cs, LatLonPos(Degrees(phi), Degrees(lambda)),
-                                      Feet(alt), UsMilesPerHour(speed), Degrees(heading),
+                                      Feet(alt), UsMilesPerHour(speed), Degrees(heading), FeetPerMinute(vr),
                                       date,status))
       } catch {
         case x: Throwable => None
       }
     } else None
-  }
-}
-
-object BinaryFlightPos {
-  // we could also use scodecs HList-based codec generator, but the purpose
-  // here is to show explicit construction of binary codecs. This still assumes big endian though
-
-  // of course this could also be done directly with a java.nio.ByteBuffer, but that wouldn't
-  // have the potential for automatic codec generation and would be much more code
-
-  // <2do> this should use scodec streams instead of Input/OutputStreams
-
-  val fposCodec =
-    int64 ~ // recording date in millis
-      utf8_32 ~ // flightId
-      utf8_32 ~ // cs
-      double ~ double ~ // pos phi/lambda in degrees
-      double ~ // altitude in feet
-      double ~ // speed in UsMilesPerHour
-      double ~ // heading in degrees
-      int64 // fpos DateTime in millis
-}
-
-/**
-  * example for a binary FightPos archive reader/writer using scodec
-  */
-class BinaryFlightPosArchiveWriter (val oStream: OutputStream, val pathName: String="<unknown>") extends FramedArchiveWriter {
-
-  def this(conf: Config) = this(createOutputStream(conf), configuredPathName(conf))
-
-  override def close = oStream.close
-
-  override def write(date: DateTime, obj: Any): Boolean = {
-    obj match {
-      case fpos: FlightPos =>
-        val bytes = BinaryFlightPos.fposCodec.encode(
-          date.getMillis ~
-            fpos.id ~
-            fpos.cs ~
-            fpos.position.φ.toDegrees ~ fpos.position.λ.toDegrees ~
-            fpos.altitude.toFeet ~
-            fpos.speed.toUsMilesPerHour ~
-            fpos.heading.toDegrees ~
-            fpos.date.getMillis
-        ).require.toByteArray
-
-        writeFrameSize(bytes.length)
-        writeFrame(bytes)
-        true
-      case _ => false
-    }
-  }
-}
-
-class BinaryFlightPosArchiveReader (val iStream: InputStream, val pathName: String="<unknown>") extends FramedArchiveReader {
-
-  def this(conf: Config) = this(createInputStream(conf), configuredPathName(conf))
-
-  def hasMoreData = iStream.available > 0
-  def close = iStream.close
-
-  override def readNextEntry: Option[ArchiveEntry] = {
-    try {
-      val nBytes = readFrameSize
-      val bytes = readFrame(nBytes)
-
-      val bitvec = BitVector(bytes)
-      val (recDt ~ flightId ~ cs ~ phi ~ lambda ~ alt ~ speed ~ heading ~ dt) =
-        BinaryFlightPos.fposCodec.decode(bitvec).require.value
-
-      val date = getDate(recDt)
-      someEntry( date, new FlightPos(flightId, cs, LatLonPos(Degrees(phi), Degrees(lambda)),
-                                         Feet(alt), UsMilesPerHour(speed), Degrees(heading), date))
-    } catch {
-      case x: Throwable => None
-    }
   }
 }
 

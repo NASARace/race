@@ -20,17 +20,15 @@ package gov.nasa.race.air.translator
 
 import com.typesafe.config.Config
 import gov.nasa.race.air.{FlightPlan, TATrack}
-import gov.nasa.race.air.TATrack.Status
-import gov.nasa.race.air.TATrack.Status.Status
 import gov.nasa.race.common.{Rev, Src, XmlParser}
-import gov.nasa.race.config._
 import gov.nasa.race.config.ConfigUtils._
+import gov.nasa.race.config._
 import gov.nasa.race.geo.{LatLonPos, XYPos}
+import gov.nasa.race.track.TrackedObject
 import gov.nasa.race.uom.Angle.{Degrees, UndefinedAngle}
 import gov.nasa.race.uom.Length.{Feet, NauticalMiles, UndefinedLength}
+import gov.nasa.race.uom.Speed.{FeetPerMinute, Knots, UndefinedSpeed}
 import gov.nasa.race.uom.{Angle, Length, Speed}
-import gov.nasa.race.uom.Speed.{FeetPerSecond, Knots, UndefinedSpeed}
-import gov.nasa.race.track.TrackedObject
 import org.joda.time.DateTime
 
 import scala.collection.mutable.ArrayBuffer
@@ -84,10 +82,10 @@ class TATrackAndFlightPlan2TATrack (val config: Config=NoConfig) extends XmlPars
     whileNextElement {
       case "src" => src = readText
       case "record" => record(src, stddsRev)
-      case other => // ignore
+      case _ => // ignore
     }{
       case "TATrackAndFlightPlan" => if (tracks.nonEmpty) setResult(tracks)
-      case other => // ignore
+      case _ => // ignore
     }
   }
 
@@ -110,7 +108,7 @@ class TATrackAndFlightPlan2TATrack (val config: Config=NoConfig) extends XmlPars
       case "yPos" => yPos = NauticalMiles(readInt / 256.0)
       case "lat" => lat = Degrees(readDouble)
       case "lon" => lon = Degrees(readDouble)
-      case "vVert" => vVert = FeetPerSecond(readInt / 60.0)
+      case "vVert" => vVert = FeetPerMinute(readInt)
       case "vx" => vx = Knots(readInt)
       case "vy" => vy = Knots(readInt)
 
@@ -125,7 +123,7 @@ class TATrackAndFlightPlan2TATrack (val config: Config=NoConfig) extends XmlPars
       case "flightPlan" => flightPlan = Some(new FlightPlan) // just a placeholder for now
       case "acid" => acId = readText // part of the flight plan but we extract it no matter what
 
-      case other => // ignore
+      case _ => // ignore
     } {
       case "record" =>
         // src, trackNum, x/yPos are all required by the schema
@@ -135,8 +133,8 @@ class TATrackAndFlightPlan2TATrack (val config: Config=NoConfig) extends XmlPars
             val hdg = Angle.fromVxVy(vx, vy)
             if (acId == null) acId = trackId
 
-            val track = new TATrack(trackId,acId,LatLonPos(lat,lon),reportedAltitude,spd,hdg,mrtTime,status,
-                                    src, XYPos(xPos, yPos), vVert, beaconCode, flightPlan)
+            val track = new TATrack(trackId,acId,LatLonPos(lat,lon),reportedAltitude,hdg,spd,vVert,mrtTime,status,
+                                    src, XYPos(xPos, yPos), beaconCode, flightPlan)
 
             if (attachRev && stddsRev >= 0) track.amend(Rev(3, stddsRev.toShort))
             if (attachMsg) track.amend(Src(msg))
@@ -145,7 +143,7 @@ class TATrackAndFlightPlan2TATrack (val config: Config=NoConfig) extends XmlPars
           }
         }
         return
-      case other => // ignore
+      case _ => // ignore
     }
   }
 }

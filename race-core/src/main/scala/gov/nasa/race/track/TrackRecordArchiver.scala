@@ -44,7 +44,8 @@ class TrackRecordArchiveWriter(pathName: String, openOptions: Set[OpenOption])
   override protected def set(obj: Any): Boolean = {
     obj match {
       case track: TrackedObject =>
-        rec.id := track.cs
+        rec.id := track.id
+        rec.cs := track.cs
         rec.date := track.date.getMillis
         rec.stat := track.status
 
@@ -53,6 +54,7 @@ class TrackRecordArchiveWriter(pathName: String, openOptions: Set[OpenOption])
         rec.alt := track.altitude.toMeters
         rec.hdg := track.heading.toDegrees
         rec.spd := track.speed.toMetersPerSecond
+        rec.vr  := track.vr.toMetersPerSecond
 
         true
 
@@ -71,7 +73,8 @@ class FloatTrackRecordArchiveWriter(pathName: String, openOptions: Set[OpenOptio
   override protected def set(obj: Any): Boolean = {
     obj match {
       case track: TrackedObject =>
-        rec.id := track.cs
+        rec.id := track.id
+        rec.cs := track.cs
         rec.date := track.date.getMillis
         rec.stat := track.status
 
@@ -80,6 +83,7 @@ class FloatTrackRecordArchiveWriter(pathName: String, openOptions: Set[OpenOptio
         rec.alt := track.altitude.toMeters.toFloat
         rec.hdg := track.heading.toDegrees.toFloat
         rec.spd := track.speed.toMetersPerSecond.toFloat
+        rec.vr  := track.vr.toMetersPerSecond.toFloat
 
         true
 

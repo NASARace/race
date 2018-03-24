@@ -21,7 +21,6 @@ import java.nio.channels.FileChannel
 import java.nio.file.{FileSystems, OpenOption}
 
 import gov.nasa.race.common.BufferRecord
-import gov.nasa.race.util.FileUtils
 import org.joda.time.DateTime
 
 import scala.collection.JavaConverters._
@@ -36,11 +35,7 @@ abstract class BufferRecordArchiveWriter[R <: BufferRecord](val pathName: String
   val recStart = 8 // 8 byte header for archive time stamp
 
   val rec: R
-  val channel = {
-    if (checkWritablePathName) {
-      FileChannel.open(FileSystems.getDefault.getPath(pathName),openOptions.asJava)
-    } else throw new RuntimeException(s"archive not writeable: $pathName")
-  }
+  val channel = FileChannel.open(FileSystems.getDefault.getPath(pathName),openOptions.asJava)
 
   protected def allocBuffer(recSize: Int) = {
     ByteBuffer.allocate(recStart + recSize).order(ByteOrder.nativeOrder)

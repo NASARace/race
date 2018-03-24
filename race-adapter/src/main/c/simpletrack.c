@@ -37,6 +37,7 @@
             double alt_m;
             double heading_deg;
             double speed_m_sec;
+            double vr_m_sec;
         }
         record TrackMsg {
             int msg_type = 1;
@@ -85,7 +86,7 @@
 int race_write_track_data (databuf_t* db, int pos,
                         char* id, int msg_ordinal, int flags, 
                         epoch_millis_t time_millis, double lat_deg, double lon_deg, double alt_m, 
-                        double heading_deg, double speed_m_sec) {
+                        double heading_deg, double speed_m_sec, double vr_m_sec) {
     int id_len = strlen(id);
     int track_len = id_len + 2 + 48;
     if (pos + track_len > db->capacity) return 0; // not enough space left
@@ -100,13 +101,14 @@ int race_write_track_data (databuf_t* db, int pos,
     p = race_write_double(db, p, alt_m);
     p = race_write_double(db, p, heading_deg);
     p = race_write_double(db, p, speed_m_sec);
+    p = race_write_double(db, p, vr_m_sec);
     return p;
 }
 
 int race_read_track_data (databuf_t* db, int pos,
                        char id[], int max_len, int* msg_ordinal, int* flags,
                        epoch_millis_t* time_millis, double* lat_deg, double* lon_deg, double* alt_m, 
-                       double* heading_deg, double* speed_m_sec) {
+                       double* heading_deg, double* speed_m_sec, double* vr_m_sec) {
     int p = pos;
     p = race_read_strncpy(db, p,id,max_len);
     p = race_read_int(db,p, msg_ordinal);
@@ -117,6 +119,7 @@ int race_read_track_data (databuf_t* db, int pos,
     p = race_read_double(db, p, alt_m);
     p = race_read_double(db, p, heading_deg);
     p = race_read_double(db, p, speed_m_sec);
+    p = race_read_double(db, p, vr_m_sec);
     return p;
 }
 
@@ -124,7 +127,7 @@ int race_write_proximity_data(databuf_t *db, int pos,
                              char *ref_id, double ref_lat_deg, double ref_lon_deg, double ref_alt_m,
                              double dist_m, int flags, 
                              char *prox_id, epoch_millis_t time_millis, double lat_deg, double lon_deg, double alt_m, 
-                             double heading_deg, double speed_m_sec) {
+                             double heading_deg, double speed_m_sec, double vr_m_sec) {
     int ref_id_len = strlen(ref_id);
     int prox_len = ref_id_len + 2 + 36;
     if (pos + prox_len > db->capacity) return 0; // not enough space left
@@ -144,6 +147,7 @@ int race_write_proximity_data(databuf_t *db, int pos,
     p = race_write_double(db, p, alt_m);
     p = race_write_double(db, p, heading_deg);
     p = race_write_double(db, p, speed_m_sec);
+    p = race_write_double(db, p, vr_m_sec);
 
     return p;
 }
@@ -154,7 +158,7 @@ int race_read_proximity_data(databuf_t *db, int pos,
                              double *dist_m, int *flags, 
                              char prox_id[], int max_prox_len,
                              epoch_millis_t *time_millis, double *lat_deg, double *lon_deg, double *alt_m, 
-                             double *heading_deg, double *speed_m_sec) {
+                             double *heading_deg, double *speed_m_sec, double *vr_m_sec) {
     int p = pos;
     p = race_read_strncpy(db, p, ref_id, max_ref_len);
     p = race_read_double(db, p, ref_lat_deg);
@@ -170,6 +174,7 @@ int race_read_proximity_data(databuf_t *db, int pos,
     p = race_read_double(db, p, alt_m);
     p = race_read_double(db, p, heading_deg);
     p = race_read_double(db, p, speed_m_sec);
+    p = race_read_double(db, p, vr_m_sec);
 
     return p;
 }

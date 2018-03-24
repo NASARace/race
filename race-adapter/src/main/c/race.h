@@ -202,22 +202,22 @@ int race_read_data_header (databuf_t* db, int* sender, epoch_millis_t* time_mill
 
 int race_write_track_data(databuf_t *db, int pos, char *id, int msg_ordinal, int flags, 
                           epoch_millis_t time_millis, 
-                          double lat_deg, double lon_deg, double alt_m, double heading_deg, double speed_m_sec);
+                          double lat_deg, double lon_deg, double alt_m, double heading_deg, double speed_m_sec, double vr_m_sec);
 
 int race_read_track_data(databuf_t *db, int pos, char id[], int max_len, int *msg_ordinal, int *flags, 
                          epoch_millis_t *time_millis,
-                         double *lat_deg, double *lon_deg, double *alt_m, double *heading_deg, double *speed_m_sec);
+                         double *lat_deg, double *lon_deg, double *alt_m, double *heading_deg, double *speed_m_sec, double *vr_m_sec);
 
 int race_write_proximity_data(databuf_t *db, int pos, char *ref_id, double ref_lat_deg,
                               double ref_lon_deg, double ref_alt_m, double dist_m, int flags,
                               char *prox_id, epoch_millis_t time_millis, double lat_deg, double lon_deg,
-                              double alt_m, double heading_deg, double speed_m_sec);
+                              double alt_m, double heading_deg, double speed_m_sec, double vr_m_sec);
 
 int race_read_proximity_data(databuf_t *db, int pos, char ref_id[], int max_ref_len,
                              double *ref_lat_deg, double *ref_lon_deg, double *ref_alt_m,
                              double *dist_m, int *flags, char prox_id[], int max_prox_len,
                              epoch_millis_t *time_millis, double *lat_deg, double *lon_deg,
-                             double *alt_m, double *heading_deg, double *speed_m_sec);
+                             double *alt_m, double *heading_deg, double *speed_m_sec, double *vr_m_sec);
 
 int race_write_drop_data (databuf_t* db, int pos, char* id, int flags, epoch_millis_t time_millis);
 
