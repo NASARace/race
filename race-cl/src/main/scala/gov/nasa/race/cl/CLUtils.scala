@@ -98,14 +98,16 @@ object CLUtils {
     }
   }
 
+  // NOTE - at least with the NVidia 390.48 ICD we get exceptions when allocating 0-byte buffers
+
   final val NullByteBuffer = null.asInstanceOf[ByteBuffer]
-  final val EmptyByteBuffer = MemoryUtil.memAlloc(0)
+  final val EmptyByteBuffer = MemoryUtil.memAlloc(1)
 
   final val NullIntBuffer = null.asInstanceOf[IntBuffer]
-  final val EmptyIntBuffer = MemoryUtil.memAllocInt(0)
+  final val EmptyIntBuffer = MemoryUtil.memAllocInt(1)
 
   final val NullPointerBuffer = null.asInstanceOf[PointerBuffer]
-  final val EmptyPointerBuffer = MemoryUtil.memAllocPointer(0)
+  final val EmptyPointerBuffer = MemoryUtil.memAllocPointer(1)
 
   //--- syntactic sugar for stack based memory allocation
 

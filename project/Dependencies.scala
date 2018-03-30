@@ -36,7 +36,7 @@ object Dependencies {
 
   //--- slf4j
   // NOTE - slf4j 1.8 now uses ServiceProvider and logback has not caught up as of 12/01/17
-  val slf4jSimple = "org.slf4j" % "slf4j-simple" % "1.8.0-beta1"
+  val slf4jSimple = "org.slf4j" % "slf4j-simple" % "1.8.0-beta2"
 
   //--- logback
   // does not support slf4j 1.8 (provider) yet
@@ -92,7 +92,7 @@ object Dependencies {
   //val scodecAll = Seq(scodecBits, scodecCore)
 
   //--- scala-swing
-  val scalaSwing = "org.scala-lang.modules" %% "scala-swing" % "2.0.2"
+  val scalaSwing = "org.scala-lang.modules" %% "scala-swing" % "2.0.3"
   //val swingx = "org.swinglabs.swingx" % "swingx-core" % "1.6.5-1"
   //.. and possibly extensions for Tree and jfreechart
 
@@ -143,7 +143,7 @@ object Dependencies {
   // note - kafka still uses the old log4j
 
   val log4j = "org.apache.logging.log4j" % "log4j" % "2.10.0"
-  val log4jOverSlf4j = "org.slf4j" % "log4j-over-slf4j" % "1.8.0-beta1"
+  val log4jOverSlf4j = "org.slf4j" % "log4j-over-slf4j" % "1.8.0-beta2"
 
   //--- ZooKeeper
   val zookeeper = "org.apache.zookeeper" % "zookeeper" % "3.5.3-beta" excludeAll(
@@ -184,7 +184,7 @@ object Dependencies {
 
 
   //--- publishable WorldWindJava version
-  val worldwindPcm = "com.github.pcmehlitz" % "worldwind-pcm" % "2.1.0.+"
+  val worldwindPcm = "com.github.pcmehlitz" % "worldwind-pcm" % "2.1.0.187"
 
 
   //--- this is used from build.sbt to add dependency resolvers

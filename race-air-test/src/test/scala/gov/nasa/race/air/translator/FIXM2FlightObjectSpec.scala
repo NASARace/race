@@ -23,7 +23,7 @@ import gov.nasa.race.geo.LatLonPos
 import gov.nasa.race.test.RaceSpec
 import gov.nasa.race.uom.Angle.Degrees
 import gov.nasa.race.uom.Length.Feet
-import gov.nasa.race.uom.Speed.Knots
+import gov.nasa.race.uom.Speed._
 import gov.nasa.race.util.FileUtils._
 import org.joda.time.DateTime
 import org.scalatest.FlatSpec
@@ -59,6 +59,7 @@ class FIXM2FlightObjectSpec extends FlatSpec with RaceSpec {
       Feet(35000.0),
       Knots(488.0),
       Degrees(86.47494027976148),
+      UndefinedSpeed,
       new DateTime("2015-09-11T17:59:30Z")
     )
 
