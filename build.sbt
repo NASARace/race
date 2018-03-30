@@ -12,7 +12,7 @@ shellPrompt in ThisBuild := { state => "[" + Project.extract(state).currentRef.p
 
 lazy val commonSettings = commonRaceSettings ++ Seq(
   organization := "gov.nasa.race",
-  version := "1.5.4"
+  version := "1.5.5"
 )
 
 lazy val testSettings = commonSettings ++ noPublishSettings  // test projects don't publish artifacts
