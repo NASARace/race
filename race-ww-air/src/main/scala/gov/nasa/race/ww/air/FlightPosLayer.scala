@@ -17,8 +17,6 @@
 
 package gov.nasa.race.ww.air
 
-import java.awt.Color
-
 import akka.actor.Actor.Receive
 import com.typesafe.config.Config
 import gov.nasa.race._
@@ -31,11 +29,9 @@ import gov.nasa.race.ww.track.ModelTrackLayer
 /**
  * a WorldWind layer to display FlightPos objects
  */
-class FlightPosLayer (raceView: RaceView,config: Config)
-                       extends ModelTrackLayer[FlightPos](raceView,config) with AirLocator {
+class FlightPosLayer (val raceView: RaceView, val config: Config) extends ModelTrackLayer[FlightPos] with AirLocator {
 
-  override def defaultSymbolColor = Color.red
-  override def defaultSymbolImage = Images.getPlaneImage(color)
+  override def defaultSymbolImg = Images.getPlaneImage(color)
 
   override def getTrackKey(track: FlightPos): String = track.cs
 

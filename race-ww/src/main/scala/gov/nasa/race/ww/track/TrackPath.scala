@@ -24,32 +24,24 @@ import gov.nasa.race.ww.Implicits._
 import gov.nasa.worldwind.WorldWind
 import gov.nasa.worldwind.avlist.AVKey
 import gov.nasa.worldwind.geom.Position
-import gov.nasa.worldwind.render.{BasicShapeAttributes, Material, Path}
+import gov.nasa.worldwind.render.{BasicShapeAttributes, Path}
 
-object TrackPathRenderLevel extends Enumeration {
-  type TrackPathRenderLevel = Value
-  val None, Line, LinePos = Value
-}
 
 /**
   * WWJ Path to display aircraft flight paths
   */
-class TrackPath[T <: TrackedObject](val flightEntry: TrackEntry[T]) extends Path with BasicTimeSeries {
-  val layer = flightEntry.layer
-  val flightPath = flightEntry.flightPath
+class TrackPath[T <: TrackedObject](val entry: TrackEntry[T]) extends Path with BasicTimeSeries {
+  val flightPath = entry.trajectory
 
-  val material = new Material(layer.pathColor)
   val attrs = new BasicShapeAttributes
   attrs.setOutlineWidth(1)
-  attrs.setOutlineMaterial(material)
+  attrs.setOutlineMaterial(entry.lineMaterial)
   attrs.isDrawInterior
   attrs.setInteriorOpacity(1.0)
-  attrs.setInteriorMaterial(material)
+  attrs.setInteriorMaterial(entry.lineMaterial)
   attrs.setEnableAntialiasing(true)
   setShowPositionsScale(4.0)
   setAttributes(attrs)
-
-  updateAttributes
 
   // we don't use setShowPositionsThreshold because it is based on eye distance to position, not altitude
   setPathType(AVKey.LINEAR)
@@ -61,14 +53,12 @@ class TrackPath[T <: TrackedObject](val flightEntry: TrackEntry[T]) extends Path
   }
   setPositions(posList)
 
-
   def setLineAttrs = setShowPositions(false)
   def setLinePosAttrs = setShowPositions(averageUpdateFrequency > 1) // no point showing points for high frequency updates
-  def updateAttributes = if (layer.pathDetails == TrackPathRenderLevel.LinePos) setLinePosAttrs else setLineAttrs
 
-  def addTrackPosition(fpos: TrackPoint3D) = {
+  def addTrackPosition(tp: TrackPoint3D) = {
     addSample
-    posList.add(fpos)
+    posList.add(tp)
     setPositions(posList)
   }
 

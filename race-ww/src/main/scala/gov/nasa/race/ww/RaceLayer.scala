@@ -17,6 +17,8 @@
 
 package gov.nasa.race.ww
 
+import java.awt.{Color, Font}
+
 import com.typesafe.config.Config
 import gov.nasa.race._
 import gov.nasa.race.config.ConfigUtils._
@@ -25,6 +27,7 @@ import gov.nasa.race.core._
 import gov.nasa.race.swing.AkkaSwingBridge
 import gov.nasa.race.ww.EventAction.EventAction
 import gov.nasa.worldwind.layers.RenderableLayer
+import gov.nasa.worldwind.render.Material
 
 import scala.concurrent.duration.FiniteDuration
 
@@ -37,7 +40,9 @@ import scala.concurrent.duration.FiniteDuration
   * Note - this class provides the abstract members of the
   * RaceLayerInfo trait that can be initialized from the ctor Config argument
   */
-abstract class RaceLayer (val config: Config) extends RenderableLayer with RaceLayerInfo {
+trait RaceLayer extends RenderableLayer with RaceLayerInfo {
+  val raceView: RaceView
+  val config: Config
 
   val name = config.getString("name")
   val readFrom = config.getOptionalStringList("read-from")
@@ -52,7 +57,7 @@ abstract class RaceLayer (val config: Config) extends RenderableLayer with RaceL
   ifSome(config.getOptionalDouble("max-altitude")){setMaxActiveAltitude}
 
   // this is called once we have a wwd and redrawManager
-  override def initializeLayer() = {
+  override def initializeLayer: Unit = {
     // set a select handler
     onSelected { e =>
       e.getTopObject match {
@@ -69,6 +74,31 @@ abstract class RaceLayer (val config: Config) extends RenderableLayer with RaceL
 }
 
 /**
+  * a RaceLayer with configurable rendering attributes.
+  * Override the respective val if the raceView defaults don't fit
+  */
+trait ConfigurableRenderingLayer extends RaceLayer {
+
+  def defaultColor: Color = raceView.defaultColor
+  val color = config.getColorOrElse("color", defaultColor)
+
+  def defaultLabelColor: Color = color
+  val labelColor = config.getColorOrElse("label-color", defaultLabelColor)
+
+  def defaultLineColor: Color = color
+  val lineColor = config.getColorOrElse("line-color", defaultLineColor)
+
+  val labelMaterial = new Material(labelColor)
+  val lineMaterial = new Material(lineColor)
+
+  def defaultLabelFont: Font = raceView.defaultLabelFont
+  val labelFont = config.getFontOrElse("label-font", defaultLabelFont)
+
+  def defaultSubLabelFont: Font = labelFont
+  val subLabelFont = config.getFontOrElse("sublabel-font", defaultSubLabelFont)
+}
+
+/**
   * a RaceLayer that processes messages received from the bus and hence has
   * an actor it is associated with.
   * Note that we don't extend RaceActorLayer directly since that would break the
@@ -77,9 +107,13 @@ abstract class RaceLayer (val config: Config) extends RenderableLayer with RaceL
   * AWT EventDispatchThread. The context switch boundaries should be explicitly
   * visible in the associated types
   */
-abstract class SubscribingRaceLayer (raceView: RaceView, config: Config)
-                                               extends RaceLayer(config) with AkkaSwingBridge {
+trait SubscribingRaceLayer extends RaceLayer with AkkaSwingBridge {
   val actor: RaceLayerActor = raceView.createActor(name){ createLayerActor }
+
+  var updateCount = 0// to keep track of number of changes
+  def incUpdateCount: Unit = updateCount += 1
+  def size: Int // answer number of items in layer
+
   /**
     * override if we need a layer specific actor (e.g. for actor<->layer communication)
     * NOTE while this allows to use nested class actors, care must be taken to avoid
@@ -101,6 +135,7 @@ abstract class SubscribingRaceLayer (raceView: RaceView, config: Config)
 
   def delay (t: FiniteDuration, f: ()=>Unit): Unit = actor.delay(t,f)
 }
+
 
 /**
   * a RaceActor that is associated with a SubscribingRaceLayer.

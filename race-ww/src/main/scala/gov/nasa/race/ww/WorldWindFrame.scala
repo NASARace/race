@@ -173,11 +173,7 @@ class WorldWindFrame (config: Config, raceView: RaceView) extends AppFrame {
   override def closeOperation() = {
     visible = false
 
-    /*
-    WorldWind.shutDown()
-    Thread.sleep(500) // <2do> we should wait for the WW "AWT-AppKit" to terminate
-    flushEventQueue() // make sure we don't have any pending timer or WW events
-    */
+    //raceView.requestRaceTermination // FIXME - causes termination hang
   }
 
 }

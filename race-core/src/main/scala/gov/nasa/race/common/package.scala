@@ -67,26 +67,7 @@ package object common {
   @inline def isDefined (d: Double) = d != Double.NaN
 
   def Null[T <: AnyRef]: T = null.asInstanceOf[T]
-
-
-  /** are d1 and d2 on different sides of threshold */
-  @inline def crossedThreshold(d1: Double, d2: Double, threshold: Double): Boolean = {
-    Math.signum(d1 - threshold) != Math.signum(d2 - threshold)
-  }
-
-  class Threshold (val threshold: Double, crossedBelow: => Unit, crossedAbove: => Unit) extends Ordered[Threshold]{
-    def this(threshold: Double, crossedAction: => Unit) = this(threshold, crossedAction, crossedAction)
-
-    def checkCrossed (dOld: Double, dNew: Double): Boolean = {
-      if (crossedThreshold(dOld,dNew,threshold)) {
-        if (dOld > dNew) crossedBelow else crossedAbove
-        true
-      } else false
-    }
-
-    def compare (other: Threshold) = if (threshold < other.threshold) -1 else if (threshold > other.threshold) 1 else 0
-  }
-
+  
   trait Counter {
     val counterThreshold: Int
     protected var count = 0

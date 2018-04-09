@@ -29,11 +29,10 @@ import gov.nasa.race.ww.track.TrackLayer
 /**
   * a RaceViewerActor WWJ layer to display TFM track data
   */
-class TfmTracksLayer (raceView: RaceView,config: Config)
-           extends TrackLayer[TFMTrack](raceView,config) with AirLocator {
+class TfmTracksLayer (val raceView: RaceView, val config: Config) extends TrackLayer[TFMTrack] with AirLocator {
 
-  override def defaultSymbolColor = Color.magenta
-  override def defaultSymbolImage = Images.getPlaneImage(color)
+  override def defaultColor = Color.magenta
+  override def defaultSymbolImg = Images.getPlaneImage(color)
 
   def handleTfmTracksLayerMessage: Receive = {
     case BusEvent(_,msg: TFMTracks,_) =>

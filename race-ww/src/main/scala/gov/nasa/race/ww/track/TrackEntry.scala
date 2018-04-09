@@ -17,47 +17,88 @@
 
 package gov.nasa.race.ww.track
 
-import java.awt.Point
+import java.awt.{Font, Point}
+import java.awt.image.BufferedImage
 
 import gov.nasa.race._
-import gov.nasa.race.track.{Trajectory, TrackedObject}
-import gov.nasa.race.ww._
+import gov.nasa.race.track.{TrackedObject, Trajectory}
+import gov.nasa.race.util.DateTimeUtils.hhmmss
 import gov.nasa.race.ww.Implicits._
+import gov.nasa.race.ww._
 import gov.nasa.worldwind.WorldWind
 import gov.nasa.worldwind.avlist.AVKey
-import gov.nasa.worldwind.render.{Offset, PointPlacemark, PointPlacemarkAttributes}
+import gov.nasa.worldwind.render.{Material, Offset, PointPlacemark, PointPlacemarkAttributes}
 
 /**
-  * the WorldWind specific representation of a renderable TrackObject
-  * this aggregates all Renderables that can be associated with a given TrackObject based on viewer
+  * the link between rendering agnostic TrackObjects and (WW specific) rendering objects
+  *
+  * This aggregates all Renderables that can be associated with a given TrackObject based on viewer
   * state (eye position and selected options)
   */
-class TrackEntry[T <: TrackedObject](var obj: T, var flightPath: Trajectory, val layer: TrackLayer[T]) extends LayerObject {
-
-  override def id = obj.cs
+class TrackEntry[T <: TrackedObject](var obj: T, var trajectory: Trajectory, val layer: TrackLayer[T]) extends LayerObject {
 
   //--- the renderables that can be associated with this entry
-  protected var symbol: Option[TrackSymbol[T]] = layer.getSymbol(this)
+  protected var symbol: Option[TrackSymbol[T]] = Some(createSymbol)
   protected var path: Option[TrackPath[T]] = None
   protected var info: Option[InfoBalloon] = None
   protected var mark: Option[PointPlacemark] = None
   protected var model: Option[TrackModel[T]] = None
 
-  protected var followPosition = false // do we center the view on the current placemark position
+  var isCentered = false // do we center the view on the current placemark position
 
-  def hasAttrs = followPosition || path.isDefined || info.isDefined || mark.isDefined
+  //--- per-layer rendering resources
+  def labelMaterial: Material = layer.labelMaterial
+  def lineMaterial: Material = layer.lineMaterial
+  def symbolImg: BufferedImage = layer.symbolImg
+  def markImg: BufferedImage = layer.markImg
+  def labelFont: Font = layer.labelFont
+  def subLabelFont: Font = layer.subLabelFont
+
+  //--- label and info text creation
+  def labelText: String = if (obj.cs != obj.id) obj.cs else obj.id
+
+  def infoText: String = {
+    s"${obj.cs}\n${hhmmss.print(obj.date)}\n${obj.altitude.toFeet.toInt} ft\n${obj.heading.toDegrees.toInt}°\n${obj.speed.toKnots.toInt} kn"
+  }
+
+  //--- override creators in subclasses for more specialized types
+
+  def createSymbol: TrackSymbol[T] = new TrackSymbol(this)
+
+  def createPath: TrackPath[T] = new TrackPath(this)
+
+  def createMark: PointPlacemark = {
+    val m = new PointPlacemark(obj)
+    m.setAltitudeMode(WorldWind.ABSOLUTE)
+    val attrs = new PointPlacemarkAttributes
+    attrs.setImage(markImg)
+    attrs.setImageOffset(Offset.CENTER)
+    m.setAttributes(attrs)
+    m
+  }
+
+  def createInfo (screenPoint: Point): InfoBalloon = {
+    val balloon = new InfoBalloon(infoText)
+    balloon.setScreenPoint(screenPoint)
+    balloon.setDrawOffset(new Point(-50, 10)) // FIXME should be computed
+    balloon
+  }
+
+
+  override def id = obj.cs // required for pick support
+
+  def hasAttrs = isCentered || path.isDefined || info.isDefined || mark.isDefined
   def hasModel = model.isDefined
   def hasAssignedModel = model.isDefined && model.get.isAssigned
   def hasSymbol = symbol.isDefined
   def hasPath = path.isDefined
   def hasInfo = info.isDefined
   def hasMark = mark.isDefined
-  def isCentered = followPosition
 
   def setNewObj (newObj: T) = {
     obj = newObj
 
-    flightPath.add(newObj)
+    trajectory.add(newObj)
     ifSome(path) {_.addTrackPosition(newObj)}
   }
 
@@ -72,7 +113,7 @@ class TrackEntry[T <: TrackedObject](var obj: T, var flightPath: Trajectory, val
       sym.update(obj)
 
       ifSome(info) { balloon =>
-        balloon.setText(sym.getStringValue(AVKey.DISPLAY_NAME))
+        balloon.setText(infoText)
         balloon.setScreenPoint(sym.getScreenPoint)
       }
       ifSome(mark) {
@@ -82,7 +123,7 @@ class TrackEntry[T <: TrackedObject](var obj: T, var flightPath: Trajectory, val
 
     ifSome(model) { _.update(obj) }
 
-    if (followPosition) layer.centerEntry(this)
+    if (isCentered) layer.centerEntry(this)
   }
 
   def removeRenderables = {
@@ -93,13 +134,14 @@ class TrackEntry[T <: TrackedObject](var obj: T, var flightPath: Trajectory, val
     ifSome(model) { layer.removeRenderable}; model = None
   }
 
+  def setIconLevel = symbol.foreach(_.setIconAttrs)
+  def setLabelLevel = symbol.foreach(_.setLabelAttrs)
+  def setDotLevel = symbol.foreach(_.setDotAttrs)
 
-  def setDotLevel = symbol.foreach{_.setDotAttrs}
-  def setLabelLevel = symbol.foreach{_.setLabelAttrs}
-  def setSymbolLevel = symbol.foreach{_.setSymbolAttrs}
 
-  def setLineLevel = path.foreach{_.setLineAttrs}
-  def setLinePosLevel = path.foreach{_.setLinePosAttrs}
+  def setLinePosLevel = path.foreach(_.setLinePosAttrs)
+  def setLineLevel = path.foreach(_.setLineAttrs)
+  def setNoLineLevel = {} // FIXME - don't show but keep data
 
   def setModel (newModel: Option[TrackModel[T]]) = {
     ifSome(newModel) { m =>
@@ -113,7 +155,7 @@ class TrackEntry[T <: TrackedObject](var obj: T, var flightPath: Trajectory, val
       ifSome(model){ m =>
         m.unAssign
         layer.removeRenderable(m)
-        ifSome(symbol) { sym => layer.setTrackLevel(this) }
+        //ifSome(symbol) { sym => layer.setTrackLevel(this) }  // FIXME - restore to previous attr level
       }
     }
 
@@ -122,7 +164,7 @@ class TrackEntry[T <: TrackedObject](var obj: T, var flightPath: Trajectory, val
 
   def show(showIt: Boolean) = {
     if (showIt && symbol.isEmpty) {
-      symbol = layer.getSymbol(this)
+      symbol = Some(createSymbol)
       layer.addRenderable(symbol.get)
 
     } else if (!showIt && symbol.isDefined) {
@@ -132,7 +174,7 @@ class TrackEntry[T <: TrackedObject](var obj: T, var flightPath: Trajectory, val
 
   def setPath(showIt: Boolean) = ifSome(symbol) { sym =>
     if (showIt && path.isEmpty) {
-      path = Some(new TrackPath(this))
+      path = Some(createPath)
       layer.addRenderable(path.get)
 
     } else if (!showIt && path.isDefined) {
@@ -152,36 +194,18 @@ class TrackEntry[T <: TrackedObject](var obj: T, var flightPath: Trajectory, val
     }
   }
 
-  def createMark: PointPlacemark = yieldInitialized(new PointPlacemark(obj)) { m =>
-    m.setAltitudeMode(WorldWind.ABSOLUTE)
-    val attrs = new PointPlacemarkAttributes
-    attrs.setImage(layer.markImage(obj))
-    attrs.setImageOffset(Offset.CENTER)
-    m.setAttributes(attrs)
-  }
-
   def setInfo(showIt: Boolean) = ifSome(symbol) { sym =>
     if (showIt && info.isEmpty) {
-      sym.setDisplayName(true)
-      val balloon = new InfoBalloon(sym.getStringValue(AVKey.DISPLAY_NAME))
-      balloon.setScreenPoint(sym.getScreenPoint)
-      balloon.setDrawOffset(new Point(-50, 10)) // FIXME should be computed
+      val balloon = createInfo(sym.getScreenPoint)
       info = Some(balloon)
       layer.addRenderable(balloon)
 
     } else if (!showIt && info.isDefined) {
-      sym.setDisplayName(false)
       layer.removeRenderable(info.get)
       info = None
     }
   }
 
-  def followPosition(followIt: Boolean): Unit = {
-    followPosition = followIt
-  }
+  def setCentered (centerIt: Boolean) = isCentered = centerIt
 
-
-  def updateRenderingAttributes = {
-    ifSome(symbol){_.updateAttributes}
-  }
 }

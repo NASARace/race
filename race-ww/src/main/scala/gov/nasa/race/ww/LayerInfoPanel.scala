@@ -17,17 +17,15 @@
 
 package gov.nasa.race.ww
 
-import gov.nasa.race.util.StringUtils._
 import gov.nasa.race._
-import gov.nasa.race.swing.GBPanel.{Anchor, Fill}
-import gov.nasa.race.swing._
 import gov.nasa.race.swing.Style._
+import gov.nasa.race.swing._
+import gov.nasa.race.util.StringUtils._
 import gov.nasa.race.ww.LayerInfoList._
 import gov.nasa.worldwind.layers.Layer
 
 import scala.collection.mutable.ListBuffer
 import scala.swing._
-import scala.swing.event.{SelectionChanged, UIElementHidden, UIElementShown}
 
 trait LayerInfoPanel extends Container { // bad - this has to be a trait, but therefore its not a Component
   def setLayer (li: Layer): Unit
@@ -94,7 +92,7 @@ import scala.concurrent.duration._
 
 class DynamicLayerInfoPanel extends GenericLayerInfoPanel with AncestorObservable {
 
-  var layer: DynamicRaceLayerInfo = _  // panel instance can be re-used for different layers
+  var layer: SubscribingRaceLayer = _  // panel instance can be re-used for different layers
 
   val fields = new LayerInfoFields {
     val itemsLabel  = addField("num items:", "…")
@@ -114,11 +112,11 @@ class DynamicLayerInfoPanel extends GenericLayerInfoPanel with AncestorObservabl
   override def setLayer (l: Layer): Unit = {
     super.setLayer(l)
     l match {
-      case l: DynamicRaceLayerInfo =>
+      case l: SubscribingRaceLayer =>
         layer = l
         timer.start
         startTime = System.currentTimeMillis
-        startCount = l.count
+        startCount = l.updateCount
       case _ =>
     }
   }
@@ -130,14 +128,14 @@ class DynamicLayerInfoPanel extends GenericLayerInfoPanel with AncestorObservabl
     // No use to update the fields though if we are not showing
     if (showing) {
       ifNotNull(layer) { l =>
-        val rate = (l.count-startCount).toDouble / ((System.currentTimeMillis-startTime)/1000)
+        val rate = (l.updateCount-startCount).toDouble / ((System.currentTimeMillis-startTime)/1000)
         fields.itemsLabel.text  = itemsText(l)
         fields.updateLabel.text = updateText(rate)
       }
     }
   }
 
-  def itemsText (l: DynamicRaceLayerInfo) = s"${l.size}"
+  def itemsText (l: SubscribingRaceLayer) = s"${l.size}"
   def updateText (rate: Double) = f"$rate%.1f"
 
   def wwd = layer.wwd

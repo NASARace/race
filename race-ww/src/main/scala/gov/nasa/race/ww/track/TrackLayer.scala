@@ -17,24 +17,21 @@
 
 package gov.nasa.race.ww.track
 
-import java.awt.Color
+import java.awt.image.BufferedImage
 
 import com.github.nscala_time.time.Imports._
-import com.typesafe.config.Config
 import gov.nasa.race._
-import gov.nasa.race.common.Threshold
+import gov.nasa.race.common.{ThresholdLevel, ThresholdLevelList}
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.Messages._
 import gov.nasa.race.geo.GeoPosition
+import gov.nasa.race.swing.Style._
 import gov.nasa.race.track._
-import gov.nasa.race.uom.Length._
+import gov.nasa.race.util.StringUtils
 import gov.nasa.race.ww.EventAction.EventAction
 import gov.nasa.race.ww.Implicits._
-import gov.nasa.race.ww.track.TrackPathRenderLevel.TrackPathRenderLevel
-import gov.nasa.race.ww.track.TrackRenderLevel.TrackRenderLevel
-import gov.nasa.race.swing.Style._
-import gov.nasa.race.util.StringUtils
-import gov.nasa.race.ww._
+import gov.nasa.race.ww.{AltitudeSensitiveRaceLayer, _}
+import gov.nasa.worldwind.render.Material
 
 import scala.collection.mutable.{Map => MutableMap}
 import scala.util.matching.Regex
@@ -43,56 +40,54 @@ import scala.util.matching.Regex
 /**
   * abstract layer class to display aircraft in flight
   */
-abstract class TrackLayer[T <:TrackedObject](val raceView: RaceView, config: Config)
-                                  extends SubscribingRaceLayer(raceView,config)
-                                     with DynamicRaceLayerInfo with AltitudeSensitiveLayerInfo with TrackQueryContext {
-
+trait TrackLayer[T <:TrackedObject] extends SubscribingRaceLayer with ConfigurableRenderingLayer with AltitudeSensitiveRaceLayer
+                                                             with TrackQueryContext {
   val panel = createLayerInfoPanel
   val entryPanel = createEntryPanel
 
   val trackInfoBase = config.getOptionalString("trackinfo-base")
 
-  //--- AircraftPlacemark attributes
-  def defaultSymbolColor = Color.cyan
-  val color = config.getColorOrElse("color", defaultSymbolColor)
+  //--- rendering attributes
 
-  def defaultSymbolImage = Images.getArrowImage(color)
-  val symbolImg = defaultSymbolImage
+  // layer global rendering resources
+  def defaultSymbolImg: BufferedImage = Images.getArrowImage(color)
+  val symbolImg = defaultSymbolImg
 
-  val markImg = Images.defaultMarkImg
-  val labelColor = config.getColorOrElse("label-color",color)
-  val labelColorString = toABGRString(labelColor)
+  def defaultMarkImg: BufferedImage = Images.defaultMarkImg
+  val markImg = defaultMarkImg
 
-  def defaultLabelFont = raceView.defaultLabelFont
-  val labelFont = config.getFontOrElse("label-font", defaultLabelFont)
-  def defaultSubLabelFont = raceView.defaultSubLabelFont
-  val subLabelFont = config.getOptionalFont("sublabel-font").orElse(defaultSubLabelFont)
-  val lineColor = toABGRString(config.getColorOrElse("line-color",color))
-  def defaultLabelThreshold = Meters(1400000.0).toMeters
-  var labelThreshold = config.getDoubleOrElse("label-altitude", defaultLabelThreshold)
-  def defaultSymbolThreshold = Meters(1000000.0).toMeters
-  var symbolThreshold = config.getDoubleOrElse("symbol-altitude", defaultSymbolThreshold)
-  var trackDetails: TrackRenderLevel = getTrackRenderLevel(eyeAltitude)
 
-  def image (t: T) = symbolImg
-  def markImage (t: T) = markImg
+  //--- symbol levels
+  val iconLevel = new ThresholdLevel[TrackEntry[T]](iconThresholdLevel)(setIconLevel)
+  val labelLevel = new ThresholdLevel[TrackEntry[T]](labelThresholdLevel)(setLabelLevel)
+  val symbolLevels = new ThresholdLevelList(setDotLevel).sortIn(labelLevel,iconLevel)
 
-  //--- AircraftPath attributes
-  val pathColor = color
+  def setDotLevel(e: TrackEntry[T]) = e.setDotLevel
+  def setLabelLevel(e: TrackEntry[T]) = e.setLabelLevel
+  def setIconLevel(e: TrackEntry[T]) = e.setIconLevel
+
+  //--- path levels
+  val lineLevel = new ThresholdLevel[TrackEntry[T]](lineThresholdLevel)(setLineLevel)
+  val linePosLevel = new ThresholdLevel[TrackEntry[T]](linePosThresholdLevel)(setLinePosLevel)
+  val pathLevels = new ThresholdLevelList(setNoLineLevel).sortIn(lineLevel,linePosLevel)
+
+  def setLineLevel(e: TrackEntry[T]) = e.setLineLevel
+  def setLinePosLevel(e: TrackEntry[T]) = e.setLinePosLevel
+  def setNoLineLevel(e: TrackEntry[T]) = e.setNoLineLevel
+
+  override def initEyeAltitude = symbolLevels.setCurrentLevel(eyeAltitude)
+
+  override def checkNewEyeAltitude = {
+    symbolLevels.triggerForEachValue(eyeAltitude,trackEntries)
+    pathLevels.triggerForEachValue(eyeAltitude,trackEntries)
+  }
+
   val showPositions = config.getBooleanOrElse("show-positions", true)
-  val linePosThreshold = config.getDoubleOrElse("position-altitude", Meters(30000.0).toMeters)
-  var pathDetails: TrackPathRenderLevel = getPathRenderLevel(eyeAltitude)
 
-  thresholds ++= Seq(
-    new Threshold(linePosThreshold, setLinePosLevel, setLineLevel),
-    new Threshold(symbolThreshold, setSymbolLevel, setLabelLevel),
-    new Threshold(labelThreshold,  setLabelLevel, setDotLevel)
-  )
-
-  //--- track-specific rendering
-  val showPaths = config.getStringArray("show-paths").map(new Regex(_)).toSeq
-  val showInfos = config.getStringArray("show-infos").map(new Regex(_)).toSeq
-  val centerTrack = config.getStringArray("center").map(new Regex(_)).toSeq
+  //--- optionally configured track id filters for which we automatically set rendering details
+  val pathTrackFilter = config.getStringArray("show-paths").map(new Regex(_)).toSeq
+  val infoTrackFilter = config.getStringArray("show-infos").map(new Regex(_)).toSeq
+  val centerTrackFilter = config.getStringArray("center").map(new Regex(_)).toSeq
 
   //--- the data we manage
   val trackEntries = MutableMap[String,TrackEntry[T]]()
@@ -104,9 +99,12 @@ abstract class TrackLayer[T <:TrackedObject](val raceView: RaceView, config: Con
 
   //--- end ctor
 
-  // override for specialized LayerInfoPanel
+  // override in subclasses for more specialized types
   protected def createLayerInfoPanel: TrackLayerInfoPanel[T] = new TrackLayerInfoPanel(raceView,this).styled('consolePanel)
   protected def createEntryPanel: TrackEntryPanel[T] = new TrackEntryPanel(raceView,this).styled('consolePanel)
+  protected def createTrajectory(track: T) = new CompactTrajectory
+  protected def createTrackEntry(track: T): TrackEntry[T] = new TrackEntry[T](track,createTrajectory(track), this)
+
 
   def matchingTracks(f: TrackEntry[T]=>Boolean): Seq[TrackEntry[T]] = {
     trackEntries.foldLeft(Seq.empty[TrackEntry[T]])((acc, e) => {
@@ -137,56 +135,9 @@ abstract class TrackLayer[T <:TrackedObject](val raceView: RaceView, config: Con
 
   //--- rendering detail level management
 
-  def getTrackRenderLevel(alt: Double) = {
-    if (alt > labelThreshold) TrackRenderLevel.Dot
-    else if (alt > symbolThreshold) TrackRenderLevel.Label
-    else TrackRenderLevel.Symbol
-  }
-  def setTrackRenderLevel(level: TrackRenderLevel, f: (TrackEntry[T])=>Unit): Unit = {
-    trackDetails = level
-    trackEntries.foreach(e=> f(e._2))
-    redrawNow
-  }
 
-  def setDotLevel    = setTrackRenderLevel( TrackRenderLevel.Dot, (e)=> e.setDotLevel)
-  def setLabelLevel  = setTrackRenderLevel( TrackRenderLevel.Label, (e)=> e.setLabelLevel)
-  def setSymbolLevel = setTrackRenderLevel( TrackRenderLevel.Symbol, (e)=> e.setSymbolLevel)
+  def showPathPositions = showPositions && eyeAltitude < linePosLevel.upperBoundary
 
-  def setTrackLevel(e: TrackEntry[T]) = {
-    trackDetails match {
-      case TrackRenderLevel.Dot => e.setDotLevel
-      case TrackRenderLevel.Label => e.setLabelLevel
-      case TrackRenderLevel.Symbol => e.setSymbolLevel
-    }
-  }
-
-  def getPathRenderLevel (alt: Double) = if (alt > linePosThreshold) TrackPathRenderLevel.Line else TrackPathRenderLevel.LinePos
-  def setPathRenderLevel (level: TrackPathRenderLevel,f: (TrackEntry[T])=>Unit): Unit = {
-    pathDetails = level
-    trackEntries.foreach(e=> f(e._2))
-    redrawNow
-  }
-  def setLineLevel = {
-    setSymbolLevel
-    setPathRenderLevel( TrackPathRenderLevel.Line, (e)=> e.setLineLevel)
-  }
-  def setLinePosLevel = {
-    setSymbolLevel
-    setPathRenderLevel( TrackPathRenderLevel.LinePos, (e)=> e.setLinePosLevel)
-  }
-
-  def showPathPositions = showPositions && eyeAltitude < linePosThreshold
-
-  def createFlightPath (fpos: T) = new CompactTrajectory
-
-  def getSymbol (e: TrackEntry[T]): Option[TrackSymbol[T]] = Some(new TrackSymbol(e))
-
-  // this is here so that specialized FlightLayers can select the label text and set sublabels
-  def setLabel (sym: TrackSymbol[T]) = {
-    val track = sym.trackEntry.obj
-    sym.setLabelText( if (track.cs != track.id) track.cs else track.id)
-  }
-  def updateLabel (sym: TrackSymbol[T]) = {} // override if label text is dynamic
 
   def dismissEntryPanel (e: TrackEntry[T]) = {
     if (entryPanel.isShowing(e)) {
@@ -273,24 +224,22 @@ abstract class TrackLayer[T <:TrackedObject](val raceView: RaceView, config: Con
 
   //--- create, update and remove TrackEntries
 
-  // here so that it can be overridden by subclasses, which can by useful in case the layer has to manage
-  // resources that are display relevant for FlightEntries (such as 3D models)
-  protected def createTrackEntry(fpos: T): TrackEntry[T] = new TrackEntry[T](fpos,createFlightPath(fpos), this)
-
   def addTrackEntryAttributes(e: TrackEntry[T]): Unit = e.addRenderables
   def updateTrackEntryAttributes(e: TrackEntry[T]): Unit = e.updateRenderables
   def releaseTrackEntryAttributes(e: TrackEntry[T]): Unit = e.removeRenderables
 
   protected def addTrackEntry(track: T) = {
     val e = createTrackEntry(track)
+    symbolLevels.triggerInCurrentLevel(e)
+
     trackEntries += (getTrackKey(track) -> e)
     // ?? should we also add the entry under the cross-channel 'cs' key ??
 
     if (displayFilter(e)) {
       // ad hoc track display
-      if (StringUtils.matchesAny(track.cs, showPaths)) e.setPath(true)
-      if (StringUtils.matchesAny(track.cs, showInfos)) e.setInfo(true)
-      if (StringUtils.matchesAny(track.cs, centerTrack)) startCenteringTrackEntry(e)
+      if (StringUtils.matchesAny(track.cs, pathTrackFilter)) e.setPath(true)
+      if (StringUtils.matchesAny(track.cs, infoTrackFilter)) e.setInfo(true)
+      if (StringUtils.matchesAny(track.cs, centerTrackFilter)) startCenteringTrackEntry(e)
 
       addTrackEntryAttributes(e)
       wwdRedrawManager.redraw()
@@ -336,15 +285,15 @@ abstract class TrackLayer[T <:TrackedObject](val raceView: RaceView, config: Con
   }
 
   def startCenteringTrackEntry(e: TrackEntry[T]) = {
-    ifSome(centeredEntry){_.followPosition(false)}
-    e.followPosition(true)
+    ifSome(centeredEntry){_.setCentered(false)}
+    e.setCentered(true)
     raceView.panToCenter(e.obj)
     centeredEntry = Some(e)
     changedTrackEntryOptions(e,StartCenter)
   }
   def stopCenteringTrackEntry = {
     ifSome(centeredEntry) { e =>
-      e.followPosition(false)
+      e.setCentered(false)
       centeredEntry = None
       changedTrackEntryOptions(e,StopCenter)
     }

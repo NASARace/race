@@ -51,7 +51,7 @@ import scala.concurrent.duration._
   * NOTE - if no model is configured, this should not incur any performance penalties.
   * In particular, eye position and proximity updates should only happen if we have configured models
   */
-abstract class ModelTrackLayer[T <:TrackedObject](raceView: RaceView, config: Config) extends TrackLayer[T](raceView,config) with EyePosListener  {
+trait ModelTrackLayer[T <:TrackedObject] extends TrackLayer[T] with EyePosListener  {
 
   //--- 3D models and proximities
   val modelDistance = Meters(config.getDoubleOrElse("model-distance",2000.0))

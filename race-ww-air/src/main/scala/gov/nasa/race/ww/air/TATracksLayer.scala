@@ -27,11 +27,12 @@ import gov.nasa.race.core.Messages.BusEvent
 import gov.nasa.race.ifSome
 import gov.nasa.race.swing.Style._
 import gov.nasa.race.swing.{IdAndNamePanel, StaticSelectionPanel}
+import gov.nasa.race.track.Trajectory
 import gov.nasa.race.uom.Angle
 import gov.nasa.race.uom.Length._
 import gov.nasa.race.ww.Implicits._
 import gov.nasa.race.ww._
-import gov.nasa.race.ww.track.{ModelTrackLayer, TrackLayerInfoPanel, TrackRenderLevel, TrackSymbol}
+import gov.nasa.race.ww.track._
 import gov.nasa.worldwind.WorldWind
 import gov.nasa.worldwind.render._
 
@@ -53,12 +54,23 @@ class TraconSymbol(val tracon: Tracon, val layer: TATracksLayer) extends PointPl
   override def layerItem: AnyRef = tracon
 }
 
+class TATrackEntry (obj: TATrack, trajectory: Trajectory, layer: TATracksLayer) extends TrackEntry[TATrack](obj,trajectory,layer) {
+
+  override def setLabelLevel = symbol.foreach { sym =>
+    sym.removeSubLabels
+    sym.setLabelAttrs
+  }
+
+  override def setIconLevel = symbol.foreach { sym =>
+    sym.setLabelAttrs
+    sym.addSubLabelText(obj.stateString)
+  }
+}
 
 /**
   * a layer to display TRACONs and related TATracks
   */
-class TATracksLayer (raceView: RaceView,config: Config)
-           extends ModelTrackLayer[TATrack](raceView,config) with AirLocator {
+class TATracksLayer (val raceView: RaceView, val config: Config) extends ModelTrackLayer[TATrack] with AirLocator {
 
   //--- configured values
 
@@ -66,10 +78,11 @@ class TATracksLayer (raceView: RaceView,config: Config)
   var traconLabelThreshold = config.getDoubleOrElse("tracon-label-altitude", Meters(2200000.0).toMeters)
   val gotoAltitude = Feet(config.getDoubleOrElse("goto-altitude", 5000000d)) // feet above ground
 
-  override def defaultSymbolColor = Color.green
-  override def defaultSubLabelFont = Some(new Font(Font.MONOSPACED,Font.PLAIN,11))
-  override def defaultLabelThreshold = Meters(600000.0).toMeters
-  override def defaultSymbolThreshold = Meters(200000.0).toMeters
+  override def defaultColor = Color.green
+  override def defaultSubLabelFont = new Font(Font.MONOSPACED,Font.PLAIN,11)
+
+  override def defaultLabelThreshold = Meters(600000.0)
+  override def defaultIconThreshold = Meters(200000.0)
 
   val traconGrid =  createGrid
 
@@ -77,23 +90,7 @@ class TATracksLayer (raceView: RaceView,config: Config)
 
   showTraconSymbols
 
-  override def setLabel (sym: TrackSymbol[TATrack]) = {
-    val track = sym.trackEntry.obj
-
-    trackDetails match {
-      case TrackRenderLevel.Label =>
-        sym.setLabelText(track.cs)
-        sym.removeSubLabels
-
-      case TrackRenderLevel.Symbol =>
-        sym.setLabelText(track.cs)
-        sym.removeSubLabels
-        sym.addSubLabelText(track.stateString)
-
-      case other => // no labels to set
-    }
-  }
-  override def updateLabel (sym: TrackSymbol[TATrack]) = setLabel(sym)
+  override def createTrackEntry(track: TATrack) = new TATrackEntry(track,createTrajectory(track),this)
 
   def createGrid = {
     val gridRings = config.getIntOrElse("tracon-rings", 5)

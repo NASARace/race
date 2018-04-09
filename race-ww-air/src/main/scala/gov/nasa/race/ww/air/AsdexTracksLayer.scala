@@ -16,8 +16,6 @@
  */
 package gov.nasa.race.ww.air
 
-import java.awt.Color
-
 import akka.actor.Actor.Receive
 import com.typesafe.config.Config
 import gov.nasa.race.air.{AirLocator, Airport, AsdexTrack, AsdexTracks}
@@ -27,37 +25,34 @@ import gov.nasa.race.geo.{GreatCircle, LatLonPos}
 import gov.nasa.race.ifSome
 import gov.nasa.race.swing.Style._
 import gov.nasa.race.swing.{IdAndNamePanel, StaticSelectionPanel}
+import gov.nasa.race.track.Trajectory
 import gov.nasa.race.uom.Length
 import gov.nasa.race.uom.Length.{Feet, Meters, UsMiles, meters2Feet}
 import gov.nasa.race.ww.Implicits._
-import gov.nasa.race.ww.track.TrackRenderLevel.{Dot, Label, Symbol}
-import gov.nasa.race.ww.track.{TrackEntry, TrackLayer, TrackLayerInfoPanel, TrackSymbol}
+import gov.nasa.race.ww.track.{TrackEntry, TrackLayer, TrackLayerInfoPanel}
 import gov.nasa.race.ww.{EyePosListener, Images, RaceView}
 import gov.nasa.worldwind.geom.Position
 
-// we need a special symbol because we have different attributes for different track categories (unknown/vehicle/aircraft)
-class AsdexTrackSymbol (trackEntry: TrackEntry[AsdexTrack]) extends TrackSymbol[AsdexTrack](trackEntry) {
-  override def update (newTrack: AsdexTrack) = {
-    super.update(newTrack)
-    if (newTrack.isAircraft && attrs.getImage == null) updateAttributes
-  }
-  override def setSymbolAttrs = if (trackEntry.obj.isAircraft) super.setSymbolAttrs else setLabelAttrs
+
+class AsdexTrackEntry (obj: AsdexTrack, trajectory: Trajectory, layer: TrackLayer[AsdexTrack])
+                                                                       extends TrackEntry[AsdexTrack](obj,trajectory,layer) {
+  override def symbolImg = if (obj.isAircraft) layer.symbolImg else null
+  override def setIconLevel = if (obj.isAircraft) super.setIconLevel else setLabelLevel
 }
 
-class AsdexTracksLayer (raceView: RaceView,config: Config)
-                           extends TrackLayer[AsdexTrack](raceView,config) with AirLocator with EyePosListener {
+class AsdexTracksLayer (val raceView: RaceView, val config: Config)
+                           extends TrackLayer[AsdexTrack] with AirLocator with EyePosListener {
 
   override protected def createLayerInfoPanel = new TrackLayerInfoPanel[AsdexTrack](raceView,this) {
     contents += new StaticSelectionPanel[Airport,IdAndNamePanel[Airport]]("select airport",Airport.NoAirport +: Airport.airportList, 40,
       new IdAndNamePanel[Airport]( _.id, _.city), selectAirport).styled()
   }.styled('consolePanel)
 
-  override def defaultSymbolColor = Color.yellow
-  override def defaultSymbolImage = Images.getPlaneImage(color)
-  override def defaultLabelThreshold = Meters(12000.0).toMeters
-  override def defaultSymbolThreshold = Meters(8000.0).toMeters
+  override def createTrackEntry(track: AsdexTrack)= new AsdexTrackEntry(track,createTrajectory(track),this)
 
-  override def getSymbol(e: TrackEntry[AsdexTrack]) = Some(new AsdexTrackSymbol(e))
+  override def defaultSymbolImg = Images.getPlaneImage(color)
+  override def defaultLabelThreshold = Meters(12000.0)
+  override def defaultIconThreshold = Meters(8000.0)
 
   // these are used to turn on/off the data, relative to the airport
   val activeDistance = UsMiles(config.getDoubleOrElse("view-distance", 10d)) // in US miles

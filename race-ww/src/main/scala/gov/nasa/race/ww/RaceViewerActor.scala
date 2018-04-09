@@ -17,19 +17,18 @@
 
 package gov.nasa.race.ww
 
-import java.awt.Font
+import java.awt.{Color, Font}
 import java.io.File
-import java.util.{Timer, TimerTask}
 import java.util.concurrent.Semaphore
 
 import akka.actor.{ActorRef, Props}
 import com.typesafe.config.Config
 import gov.nasa.race._
 import gov.nasa.race.config.ConfigUtils._
+import gov.nasa.race.core.Messages.RaceTerminateRequest
 import gov.nasa.race.core.{ContinuousTimeRaceActor, RaceContext, _}
 import gov.nasa.race.swing.Style._
 import gov.nasa.race.swing.{Redrawable, _}
-import gov.nasa.race.util.FileUtils
 import gov.nasa.worldwind.geom.Position
 import gov.nasa.worldwind.layers.Layer
 
@@ -88,6 +87,10 @@ class RaceViewerActor(val config: Config) extends ContinuousTimeRaceActor
 
     super.onTerminateRaceActor(originator)
   }
+
+  override def handleMessage: Receive = {
+    case RaceTerminateRequest => if (!raceActorSystem.isTerminating) master ! RaceTerminateRequest
+  }
 }
 
 
@@ -125,9 +128,15 @@ class RaceView (viewerActor: RaceViewerActor) extends DeferredEyePositionListene
   setWorldWindConfiguration // NOTE - this has to happen before we load any WorldWind classes
   ifSome(config.getOptionalString("cache-dir")){ d => ConfigurableWriteCache.setRoot(new File(d)) }
 
+  //--- animation parameters
   val gotoTime = config.getIntOrElse("goto-time", 4000)
+
+  //--- defaults for configurable render attributes
+  val defaultColor = config.getColorOrElse("color", Color.yellow)
+  val defaultLabelColor = config.getColorOrElse("label-color", defaultColor)
+  val defaultLineColor = config.getColorOrElse("line-color", defaultColor)
   val defaultLabelFont = config.getFontOrElse("label-font",  new Font(null,Font.PLAIN,13))
-  val defaultSubLabelFont = config.getOptionalFont("sublabel-font") // none if not explicitly set
+  val defaultSubLabelFont = config.getFontOrElse("sublabel-font", defaultLabelFont)
 
   // we want to avoid several DeferredXListeners because of the context switch overhead
   // hence we have a secondary listener level here
@@ -344,4 +353,6 @@ class RaceView (viewerActor: RaceViewerActor) extends DeferredEyePositionListene
   def redrawNow = redrawManager.redrawNow()
 
   def getInViewChecker = InViewChecker(wwd)
+
+  def requestRaceTermination = viewerActor.self ! RaceTerminateRequest
 }

@@ -122,7 +122,7 @@ class RaceActorSystem(val config: Config) extends LogController with VerifiableA
   // do we allow external (remote) termination
   val allowRemoteTermination = config.getBooleanOrElse("remote-termination", false)
   // do we allow our own actors to trigger termination
-  val allowSelfTermination = config.getBooleanOrElse("self-termination", false)
+  val allowSelfTermination = config.getBooleanOrElse("self-termination", true)
 
   val showExceptions = config.getBooleanOrElse("show-exceptions",false)
 

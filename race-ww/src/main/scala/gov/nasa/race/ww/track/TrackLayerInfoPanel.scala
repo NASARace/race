@@ -39,7 +39,7 @@ import scala.swing.{Action, BoxPanel, Button, ButtonGroup, CheckBox, Label, List
 class TrackLayerInfoPanel[T <: TrackedObject](raceView: RaceView, trackLayer: TrackLayer[T])
           extends DynamicLayerInfoPanel with TrackQueryContext {
 
-  override def itemsText (l: DynamicRaceLayerInfo) = s"${l.size} / ${matchList.size}"  // we display both total and matching number of items
+  override def itemsText (l: SubscribingRaceLayer) = s"${l.size} / ${matchList.size}"  // we display both total and matching number of items
 
   val displayAllRb = new RadioButton("all").styled()
   val displayMatchesRb = new RadioButton("match").styled()
