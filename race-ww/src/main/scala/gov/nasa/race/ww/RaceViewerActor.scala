@@ -88,8 +88,8 @@ class RaceViewerActor(val config: Config) extends ContinuousTimeRaceActor
     super.onTerminateRaceActor(originator)
   }
 
-  override def handleMessage: Receive = {
-    case RaceTerminateRequest => if (!raceActorSystem.isTerminating) master ! RaceTerminateRequest
+  def sendTerminationRequest: Unit = {
+    if (!raceActorSystem.isTerminating) master ! RaceTerminateRequest
   }
 }
 
@@ -354,5 +354,5 @@ class RaceView (viewerActor: RaceViewerActor) extends DeferredEyePositionListene
 
   def getInViewChecker = InViewChecker(wwd)
 
-  def requestRaceTermination = viewerActor.self ! RaceTerminateRequest
+  def requestRaceTermination = viewerActor.sendTerminationRequest
 }

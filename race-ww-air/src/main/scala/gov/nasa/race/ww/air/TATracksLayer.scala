@@ -62,8 +62,10 @@ class TATrackEntry (obj: TATrack, trajectory: Trajectory, layer: TATracksLayer) 
   }
 
   override def setIconLevel = symbol.foreach { sym =>
-    sym.setLabelAttrs
+    //sym.setSubLabelText(0,obj.stateString) // bug in MultiLabelPointPlacemark - it doesn't update the subLabel size
+    sym.removeSubLabels
     sym.addSubLabelText(obj.stateString)
+    sym.setIconAttrs
   }
 }
 

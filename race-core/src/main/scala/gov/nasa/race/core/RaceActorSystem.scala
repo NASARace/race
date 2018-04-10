@@ -55,6 +55,7 @@ object RaceActorSystem { // aka RAS
   def addTerminationListener(listener: () => Unit) = terminationListeners = terminationListeners + listener
   def addTerminationAction(action: => Unit) = terminationListeners = terminationListeners + (() => action)
   def removeTerminationListener(listener: () => Unit) = terminationListeners = terminationListeners - listener
+  def removeAllTerminationListeners = terminationListeners = Set.empty[() => Unit]
 
   def hasLiveSystems = liveSystems.nonEmpty
   def numberOfLiveSystems = liveSystems.size
@@ -309,6 +310,7 @@ class RaceActorSystem(val config: Config) extends LogController with VerifiableA
     if (isLive) {
       info(s"universe $name terminating..")
       status = Terminating
+
       askVerifiableForResult(master, RaceTerminate) {
         case RaceTerminated =>
           raceTerminated
@@ -333,13 +335,16 @@ class RaceActorSystem(val config: Config) extends LogController with VerifiableA
     status = common.Status.Terminated
     RaceLogger.terminate(system)
 
-    if (!isRunningEmbedded) system.terminate  // don't terminate if running in a MultiJvm test
+    if (!isRunningEmbedded) {
+      system.terminate  // don't terminate if running in a MultiJvm test
+    }
   }
   // some actor asked for termination
   def terminationRequest(actorRef: ActorRef) = {
     if (!isTerminating) { // avoid recursive termination
-      if ((allowSelfTermination && isManagedActor(actorRef)) ||
-        (allowRemoteTermination && isRemoteActor(actorRef))) terminate
+      if ((allowSelfTermination && isManagedActor(actorRef)) || (allowRemoteTermination && isRemoteActor(actorRef))) {
+        master ! RaceTerminate
+      }
       else warning(s"universe ignoring termination request from ${actorRef.path}")
     }
   }

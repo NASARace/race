@@ -173,7 +173,7 @@ class WorldWindFrame (config: Config, raceView: RaceView) extends AppFrame {
   override def closeOperation() = {
     visible = false
 
-    //raceView.requestRaceTermination // FIXME - causes termination hang
+    raceView.requestRaceTermination // FIXME - causes termination hang
   }
 
 }
