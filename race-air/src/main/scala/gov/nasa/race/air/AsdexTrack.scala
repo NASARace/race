@@ -35,12 +35,14 @@ class AsdexTracks(val airport: String, val tracks: Seq[AsdexTrack]) {
 
 object AsdexTrack {
   // AsdexTrack specific status flags (>0xffff)
-  final val DisplayFlag  =  0x10000
-  final val OnGroundFlag =  0x20000
-  final val VehicleFlag  =  0x40000
-  final val AircraftFlag =  0x80000
-  final val UpFlag       = 0x100000
-  final val DownFlag     = 0x200000
+  final val DisplayFlag: Int  =  0x10000
+  final val OnGroundFlag: Int =  0x20000
+  final val VehicleFlag: Int  =  0x40000
+  final val AircraftFlag: Int =  0x80000
+  final val UpFlag: Int       = 0x100000
+  final val DownFlag: Int     = 0x200000
+
+  final val noVehicleFlags = AircraftFlag | UpFlag | DownFlag
 }
 
 case class AsdexTrack(id: String,
@@ -65,6 +67,9 @@ case class AsdexTrack(id: String,
   def isVehicle = (status & VehicleFlag) != 0
   def isUp = (status & UpFlag) != 0
   def isDown = (status & DownFlag) != 0
+
+  // some airports are not setting flags appropriately
+  def guessAircraft: Boolean = (status & noVehicleFlags) != 0 || vr.isDefined || acType.isDefined
 
   override def toShortString = s"Track{$id,0x${status.toHexString},$position,$date}"
 }

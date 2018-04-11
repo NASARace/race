@@ -171,9 +171,9 @@ class WorldWindFrame (config: Config, raceView: RaceView) extends AppFrame {
 
   // this is executed in response to clicking the close button on the window frame, prior to disposing the frame itself
   override def closeOperation() = {
-    visible = false
-
-    raceView.requestRaceTermination // FIXME - causes termination hang
+    if (!closing) {
+      visible = false
+      raceView.requestRaceTermination // FIXME - causes termination hang
+    }
   }
-
 }

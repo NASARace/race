@@ -36,11 +36,19 @@ class TrackPath[T <: TrackedObject](val entry: TrackEntry[T]) extends Path with 
   val attrs = new BasicShapeAttributes
   attrs.setOutlineWidth(1)
   attrs.setOutlineMaterial(entry.lineMaterial)
-  attrs.isDrawInterior
-  attrs.setInteriorOpacity(1.0)
-  attrs.setInteriorMaterial(entry.lineMaterial)
   attrs.setEnableAntialiasing(true)
   setShowPositionsScale(4.0)
+
+  if (entry.drawPathContour) {
+    attrs.setDrawInterior(true)
+    attrs.setInteriorOpacity(0.3)
+    attrs.setInteriorMaterial(entry.lineMaterial)
+    setExtrude(true)
+    //setDrawVerticals(true) // should be configurable
+  } else {
+    attrs.setDrawInterior(false)
+  }
+
   setAttributes(attrs)
 
   // we don't use setShowPositionsThreshold because it is based on eye distance to position, not altitude
@@ -54,7 +62,7 @@ class TrackPath[T <: TrackedObject](val entry: TrackEntry[T]) extends Path with 
   setPositions(posList)
 
   def setLineAttrs = setShowPositions(false)
-  def setLinePosAttrs = setShowPositions(averageUpdateFrequency > 1) // no point showing points for high frequency updates
+  def setLinePosAttrs = setShowPositions(averageUpdateFrequency < 2) // no point showing points for high frequency updates
 
   def addTrackPosition(tp: TrackPoint3D) = {
     addSample

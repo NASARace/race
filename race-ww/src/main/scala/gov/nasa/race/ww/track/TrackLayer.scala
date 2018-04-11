@@ -62,9 +62,9 @@ trait TrackLayer[T <:TrackedObject] extends SubscribingRaceLayer with Configurab
   val labelLevel = new ThresholdLevel[TrackEntry[T]](labelThresholdLevel)(setLabelLevel)
   val symbolLevels = new ThresholdLevelList(setDotLevel).sortIn(labelLevel,iconLevel)
 
-  def setDotLevel(e: TrackEntry[T]) = e.setDotLevel
-  def setLabelLevel(e: TrackEntry[T]) = e.setLabelLevel
-  def setIconLevel(e: TrackEntry[T]) = e.setIconLevel
+  def setDotLevel(e: TrackEntry[T]): Unit = e.setDotLevel
+  def setLabelLevel(e: TrackEntry[T]): Unit = e.setLabelLevel
+  def setIconLevel(e: TrackEntry[T]): Unit = e.setIconLevel
 
   //--- path levels
   val lineLevel = new ThresholdLevel[TrackEntry[T]](lineThresholdLevel)(setLineLevel)

@@ -102,6 +102,8 @@ class TrackSymbol[T <: TrackedObject](val trackEntry: TrackEntry[T])
     attrs.setImageOffset(Offset.CENTER)
     attrs.setHeading(obj.heading.toDegrees)
     attrs.setHeadingReference(AVKey.RELATIVE_TO_GLOBE)
+
+    // TODO check view pitch and adjust symbol accordingly
     setAttributes(attrs)
   }
 

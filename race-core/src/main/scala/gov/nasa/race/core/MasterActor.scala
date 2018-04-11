@@ -107,14 +107,15 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ImplicitActorLogging
     case RaceInitialize => onRaceInitialize
     case RaceStart => onRaceStart
     case RemoteRaceStart (remoteMaster: ActorRef, simTime: DateTime, timeScale: Double) => onRemoteRaceStart(remoteMaster,simTime,timeScale)
-    case RaceTerminate => onRaceTerminate
-    case RemoteRaceTerminate (remoteMaster: ActorRef) => onRemoteRaceTerminate(remoteMaster)
 
     case msg:SetLogLevel => actorRefs.foreach(_ ! msg) // just forward
 
     case RaceTerminateRequest => // from some actor, let the RAS decide
       info(s"master $name got RaceTerminateRequest")
-      ras.terminationRequest(sender)
+      ras.requestTermination(sender)
+
+    case RaceTerminate => onRaceTerminate
+    case RemoteRaceTerminate (remoteMaster: ActorRef) => onRemoteRaceTerminate(remoteMaster)
 
     case rrc@RaceResetClock(originator,d,tScale) =>
       info(s"master $name got $rrc")

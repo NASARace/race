@@ -47,6 +47,8 @@ import AppFrame._
  * (see https://docs.oracle.com/javase/8/docs/api/java/awt/doc-files/AWTThreadIssues.html)
  */
 class AppFrame extends Frame {
+  protected var closing = false
+
   appFrames.put(peer,new WeakReference(this))
 
   // this disposes AFTER notifying the listeners - this is important
@@ -55,12 +57,15 @@ class AppFrame extends Frame {
   peer.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE)
 
   override def close = {
-    invokeAndWait {
-      visible = false
-      appFrames.remove(peer)
-      //Toolkit.getDefaultToolkit.getSystemEventQueue.postEvent(new WindowEvent(peer, WindowEvent.WINDOW_CLOSING))
-      //peer.dispatchEvent(new WindowEvent(peer, WindowEvent.WINDOW_CLOSING))
-      dispose
+    if (!closing) {
+      invokeAndWait {
+        closing = true
+        visible = false
+        appFrames.remove(peer)
+        //Toolkit.getDefaultToolkit.getSystemEventQueue.postEvent(new WindowEvent(peer, WindowEvent.WINDOW_CLOSING))
+        //peer.dispatchEvent(new WindowEvent(peer, WindowEvent.WINDOW_CLOSING))
+        dispose
+      }
     }
   }
 

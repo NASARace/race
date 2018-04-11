@@ -56,8 +56,13 @@ trait RaceLayer extends RenderableLayer with RaceLayerInfo {
   ifSome(config.getOptionalDouble("min-altitude")){setMinActiveAltitude}
   ifSome(config.getOptionalDouble("max-altitude")){setMaxActiveAltitude}
 
-  // this is called once we have a wwd and redrawManager
+  /**
+    * lazy init once we have a wwd and redrawManager
+    * NOTE - don't forget to call super.initializeLayer when overriding
+    */
   override def initializeLayer: Unit = {
+    super.initializeLayer
+
     // set a select handler
     onSelected { e =>
       e.getTopObject match {

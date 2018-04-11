@@ -87,6 +87,10 @@ object ThreadUtils {
 
   def daemon (f: =>Unit): Thread = yieldInitialized(new Thread(asRunnable(f))){_.setDaemon(true)}
 
+  def execAsync (f: => Unit): Unit = {
+    new Thread(asRunnable(f)).start
+  }
+
   /**
     * a daemon thread that loops until explicitly terminated, executing an action as long as a
     * dynamically evaluated condition is met, and then waiting (with configurable timeout)

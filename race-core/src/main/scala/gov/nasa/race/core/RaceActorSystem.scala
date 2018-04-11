@@ -33,7 +33,7 @@ import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.Messages._
 import gov.nasa.race.util.FileUtils._
 import gov.nasa.race.util.NetUtils._
-import gov.nasa.race.util.{ClassLoaderUtils, DateTimeUtils}
+import gov.nasa.race.util.{ClassLoaderUtils, DateTimeUtils, ThreadUtils}
 import org.joda.time.DateTime
 
 import scala.collection.JavaConverters._
@@ -305,6 +305,7 @@ class RaceActorSystem(val config: Config) extends LogController with VerifiableA
   /**
     * graceful shutdown that synchronously processes terminateRaceActor() actions
     * called by RACE driver (TODO enforce or verify)
+    * NOTE - this can't be called from a receive method of an actor since it would hang
     */
   def terminate: Boolean = {
     if (isLive) {
@@ -340,10 +341,11 @@ class RaceActorSystem(val config: Config) extends LogController with VerifiableA
     }
   }
   // some actor asked for termination
-  def terminationRequest(actorRef: ActorRef) = {
+  def requestTermination(actorRef: ActorRef) = {
     if (!isTerminating) { // avoid recursive termination
       if ((allowSelfTermination && isManagedActor(actorRef)) || (allowRemoteTermination && isRemoteActor(actorRef))) {
-        master ! RaceTerminate
+        // make sure we don't hang if this is called from a receive method
+        ThreadUtils.execAsync(terminate)
       }
       else warning(s"universe ignoring termination request from ${actorRef.path}")
     }

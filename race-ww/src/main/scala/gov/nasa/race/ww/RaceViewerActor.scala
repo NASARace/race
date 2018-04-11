@@ -184,8 +184,10 @@ class RaceView (viewerActor: RaceViewerActor) extends DeferredEyePositionListene
 
   // WWD accessors
   def wwd = frame.wwd
-  def wwdView = frame.wwd.getView
-  def eyePosition = frame.wwd.getView.getEyePosition
+  def wwdView = wwd.getView
+  def eyePosition = wwdView.getEyePosition
+  def viewPitch = wwdView.getPitch.degrees
+  def viewRoll = wwdView.getRoll.degrees
 
   def setWorldWindConfiguration = {
     // we use our own app config document which takes precedence over Worldwind's config/worldwind.xml

@@ -61,9 +61,11 @@ trait RaceLayerInfo {
   def initializeLayer (wwd: WorldWindow, wwdRedrawManager: RedrawManager): Unit = {
     this.wwd = wwd
     this.wwdRedrawManager = wwdRedrawManager
-    initializeLayer()
+    initializeLayer
   }
-  protected def initializeLayer(): Unit = {}
+
+  // lazy init once we have the WW objects - make sure to call super when overriding
+  protected def initializeLayer: Unit = {}
 
   // to be called from overridden initializeLayer
   protected def onSelected (f: (SelectEvent) => Any) = {

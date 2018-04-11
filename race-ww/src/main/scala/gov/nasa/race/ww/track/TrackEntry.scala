@@ -45,6 +45,10 @@ class TrackEntry[T <: TrackedObject](var obj: T, var trajectory: Trajectory, val
   protected var model: Option[TrackModel[T]] = None
 
   var isCentered = false // do we center the view on the current placemark position
+  var drawPathContour = false // do we draw a path contour for this track
+
+  def viewPitch = layer.raceView.viewPitch
+  def viewRoll = layer.raceView.viewRoll
 
   //--- per-layer rendering resources
   def labelMaterial: Material = layer.labelMaterial
@@ -95,7 +99,7 @@ class TrackEntry[T <: TrackedObject](var obj: T, var trajectory: Trajectory, val
   def hasInfo = info.isDefined
   def hasMark = mark.isDefined
 
-  def setNewObj (newObj: T) = {
+  def setNewObj (newObj: T): Unit = {
     obj = newObj
 
     trajectory.add(newObj)
@@ -134,14 +138,15 @@ class TrackEntry[T <: TrackedObject](var obj: T, var trajectory: Trajectory, val
     ifSome(model) { layer.removeRenderable}; model = None
   }
 
-  def setIconLevel = symbol.foreach(_.setIconAttrs)
-  def setLabelLevel = symbol.foreach(_.setLabelAttrs)
-  def setDotLevel = symbol.foreach(_.setDotAttrs)
+  def setIconLevel: Unit = symbol.foreach(_.setIconAttrs)
+  def setLabelLevel: Unit = symbol.foreach(_.setLabelAttrs)
+  def setDotLevel: Unit = symbol.foreach(_.setDotAttrs)
+  def setSymbolLevelAttrs = layer.symbolLevels.triggerInCurrentLevel(this)
 
-
-  def setLinePosLevel = path.foreach(_.setLinePosAttrs)
-  def setLineLevel = path.foreach(_.setLineAttrs)
-  def setNoLineLevel = {} // FIXME - don't show but keep data
+  def setLinePosLevel: Unit = path.foreach(_.setLinePosAttrs)
+  def setLineLevel: Unit = path.foreach(_.setLineAttrs)
+  def setNoLineLevel: Unit = {} // FIXME - don't show but keep data
+  def setPathLevelAttrs = layer.pathLevels.triggerInCurrentLevel(this)
 
   def setModel (newModel: Option[TrackModel[T]]) = {
     ifSome(newModel) { m =>

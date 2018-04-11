@@ -34,10 +34,24 @@ import gov.nasa.race.ww.{EyePosListener, Images, RaceView}
 import gov.nasa.worldwind.geom.Position
 
 
-class AsdexTrackEntry (obj: AsdexTrack, trajectory: Trajectory, layer: TrackLayer[AsdexTrack])
-                                                                       extends TrackEntry[AsdexTrack](obj,trajectory,layer) {
-  override def symbolImg = if (obj.isAircraft) layer.symbolImg else null
-  override def setIconLevel = if (obj.isAircraft) super.setIconLevel else setLabelLevel
+// NOTE - 'obj' is a var and might change (don't mask in ctor args)
+class AsdexTrackEntry (o: AsdexTrack, trajectory: Trajectory, layer: AsdexTracksLayer)
+                                            extends TrackEntry[AsdexTrack](o,trajectory,layer) {
+  var wasAircraft = o.guessAircraft // we remember if it was an aircraft
+
+  override def setIconLevel = ifSome(symbol) { sym =>
+    if (wasAircraft) sym.setIconAttrs else sym.setLabelAttrs
+  }
+
+  override def setNewObj (newObj: AsdexTrack): Unit = {
+    if (!wasAircraft) {
+      if (newObj.guessAircraft){
+        wasAircraft = true
+        if (symbol.isDefined) setSymbolLevelAttrs
+      }
+    }
+    super.setNewObj(newObj)
+  }
 }
 
 class AsdexTracksLayer (val raceView: RaceView, val config: Config)
@@ -62,7 +76,10 @@ class AsdexTracksLayer (val raceView: RaceView, val config: Config)
   var selAirport: Option[Airport] = None // selected airport
   var active = false
 
-  override def initializeLayer() = raceView.addEyePosListener(this)
+  override def initializeLayer: Unit = {
+    super.initializeLayer
+    raceView.addEyePosListener(this)
+  }
   override def eyePosChanged(eyePos: Position, animationHint: String): Unit = checkAirportChange(eyePos)
 
   def selectAirport (a: Airport) = raceView.trackUserAction(gotoAirport(a))
