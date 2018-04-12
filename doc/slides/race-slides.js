@@ -11,6 +11,7 @@ var minutes = 0;
 var seconds = 0;
 var t = 0;
 var timed = false
+var slideshow = false
 
 var slideCounter = document.getElementById('counter');
 showCounter();
@@ -63,6 +64,26 @@ function toggleTimer() {
   }
 }
 
+function scheduleNextSlide() {
+  if (slideshow){
+    var idx = curIdx + 1;
+    if (idx >= slides.length) idx = 0;
+    scrollToSlide(idx);
+    setTimeout(scheduleNextSlide, timerInterval*1000*3);
+  }
+}
+
+function toggleSlideshow() {
+  if (slideshow) {
+    slideshow = false;
+    toggleTimer();
+  } else {
+    slideshow = true;
+    if (!timed) toggleTimer();
+    setTimeout(scheduleNextSlide, timerInterval*1000*3);
+  }
+}
+
 function showCounter() {
   slideCounter.textContent = curIdx + " / " + (slides.length-1);
 }
@@ -90,6 +111,9 @@ document.onkeypress = function (e) {
   }
   else if (kc == 116){  // 't' toggles timer
     toggleTimer();
+  }
+  else if (kc == 115) { // 's' toggles show
+    toggleSlideshow();
   }
   else if (kc >=48 && kc <= 57){ // jump to slide 0..9
     var idx = kc - 48;
