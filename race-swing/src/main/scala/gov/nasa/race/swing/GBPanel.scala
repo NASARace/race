@@ -59,7 +59,7 @@ object GBPanel {
 import GBPanel._
 
 /**
-  * a dropin replacement for scala.swing.GridBagPanel with a more friendly constraints syntax
+  * a drop in replacement for scala.swing.GridBagPanel with a more friendly constraints syntax
   * that supports a builder pattern so that we can reuse the same constraint object.
   * We also provide the standard default values when creating Constraints objects
   */

@@ -240,42 +240,83 @@ class RaceView (viewerActor: RaceViewerActor) extends DeferredEyePositionListene
   }
 
   def createPanels: ListMap[String,PanelEntry] = {
-    if (config.hasPath("panels")) createPanels( config.getOptionalConfigList("panels"))
-    else createDefaultPanels
+    val collapsed = config.getOptionalStringList("collapse-panels").toSet
+
+    if (config.hasPath("panels")) createPanels( config.getOptionalConfigList("panels"),collapsed)
+    else createDefaultPanels(collapsed)
   }
 
-  def createPanels (panelConfigs: Seq[Config]): ListMap[String,PanelEntry] = {
+  def createPanels (panelConfigs: Seq[Config], collapsed: Set[String]): ListMap[String,PanelEntry] = {
     panelConfigs.foldLeft(ListMap.empty[String,PanelEntry]) { (map,panelConfig) =>
       try {
-        val name = panelConfig.getString("name")
-        val tooltip = panelConfig.getStringOrElse("tooltip", "click to hide/show panel")
-        val expand = panelConfig.getBooleanOrElse("expand", true)
-
-        info(s"creating console panel $name")
-        val panel = newInstance[Component](panelConfig.getString("class"),
-          Array(classOf[RaceView], classOf[Option[Config]]),
-          Array(this, Some(panelConfig))).get
-        panel.styled('consolePanel)
-        map + (name -> PanelEntry(name, panel, tooltip, expand))
+        val panelEntry = createPanelEntry(panelConfig)
+        if (collapsed.contains(panelEntry.name)) panelEntry.expand = false
+        map + (panelEntry.name -> panelEntry)
       } catch {
         case t: Throwable => error(s"exception creating panel: $t"); map
       }
     }
   }
 
-  def createDefaultPanels: ListMap[String,PanelEntry] = {
-    val collapsed = config.getOptionalStringList("collapse-panels").toSet
-    def panelEntry(name: String, c: Component, tt: String) = name -> PanelEntry(name,c,tt,!collapsed.contains(name))
+  def createPanelEntry (panelConfig: Config): PanelEntry = {
+    val name = panelConfig.getString("name")
+    val tooltip = panelConfig.getStringOrElse("tooltip", "click to hide/show panel")
+    val expand = panelConfig.getBooleanOrElse("expand", true)
+
+    info(s"creating console panel $name")
+    val panel = newInstance[Component](panelConfig.getString("class"),
+      Array(classOf[RaceView], classOf[Option[Config]]),
+      Array(this, Some(panelConfig))).get
+    panel.styled('consolePanel)
+
+    PanelEntry(name, panel, tooltip, expand)
+  }
+
+  def createClockPanel: Option[PanelEntry] = {
+    config.getOptionalConfig("clock-panel") match {
+      case Some(pconf) => if (pconf.isEmpty) None else Some(createPanelEntry(pconf))
+      case None => Some(PanelEntry("clock", new ControlClockPanel(this).styled('consolePanel)))
+    }
+  }
+
+  def createViewPanel: Option[PanelEntry] = {
+    config.getOptionalConfig("view-panel") match {
+      case Some(pconf) => if (pconf.isEmpty) None else Some(createPanelEntry(pconf))
+      case None => Some(PanelEntry("view", new ViewPanel(this).styled('consolePanel)))
+    }
+  }
+
+  def createSyncPanel: Option[PanelEntry] = {
+    config.getOptionalConfig("sync-panel") match {
+      case Some(pconf) => if (pconf.isEmpty) None else Some(createPanelEntry(pconf))
+      case None => Some(PanelEntry("sync", new SyncPanel(this).styled('consolePanel)))
+    }
+  }
+
+  def createLayersPanel: Option[PanelEntry] = {
+    config.getOptionalConfig("layers-panel") match {
+      case Some(pconf) => if (pconf.isEmpty) None else Some(createPanelEntry(pconf))
+      case None => Some(PanelEntry("layers", new LayerListPanel(this).styled('consolePanel)))
+    }
+  }
+
+
+  def createDefaultPanels(collapsed: Set[String]): ListMap[String,PanelEntry] = {
+    def panelEntry(name: String, c: Component, tt: String=null) = name -> PanelEntry(name,c,tt,!collapsed.contains(name))
     def styled (c: Component) = c.styled('consolePanel)
 
-    ListMap(
-      panelEntry("clock", styled(new BasicClockPanel(this)), "click to hide/show clocks"),
-      panelEntry("view", styled(new ViewPanel(this)), "click to hide/show viewing parameters"),
-      panelEntry("sync", styled(new SyncPanel(this)), "click to hide/show view synchronization"),
-      panelEntry("layers", styled(new LayerListPanel(this)), "click to hide/show layer list"),
-      panelEntry(SelectedLayer, styled(emptyLayerInfoPanel), "click to hide/show selected layer"),
-      panelEntry(SelectedObject, styled(emptyObjectPanel), "click to hide/show selected object")
-    )
+    var panels = new ListMap[String,PanelEntry]
+    Seq(createClockPanel, createViewPanel, createSyncPanel, createLayersPanel).foreach { o=>
+      ifSome(o) { e=>
+        if (collapsed.contains(e.name)) e.expand = false
+        panels = panels + (e.name -> e)
+      } 
+    }
+
+    panels = panels + (SelectedLayer -> PanelEntry(SelectedLayer,styled(emptyLayerInfoPanel)))
+    panels = panels + (SelectedObject -> PanelEntry(SelectedObject,styled(emptyObjectPanel)))
+
+    panels
   }
 
   def showConsolePanels(setVisible: Boolean) = frame.showConsolePanels(setVisible)
@@ -356,5 +397,8 @@ class RaceView (viewerActor: RaceViewerActor) extends DeferredEyePositionListene
 
   def getInViewChecker = InViewChecker(wwd)
 
+  //--- race control ops
   def requestRaceTermination = viewerActor.sendTerminationRequest
+  def isStopped = viewerActor.raceActorSystem.isStopped
+  def requestPauseResume = viewerActor.raceActorSystem.pauseResume
 }

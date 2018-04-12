@@ -22,7 +22,7 @@ import gov.nasa.race.swing.{DigitalClock, DigitalStopWatch, GBPanel, _}
 import gov.nasa.race.swing.GBPanel.{Anchor, Fill}
 import gov.nasa.race.swing.Style._
 
-import scala.swing.{Button, Label}
+import scala.swing.{Action, BoxPanel, Button, Label, Orientation}
 import scala.swing.event.ButtonClicked
 
 /**
@@ -36,6 +36,36 @@ class BasicClockPanel(raceView: RaceView, config: Option[Config]=None) extends G
 
   val c = new Constraints( fill=Fill.Horizontal, anchor=Anchor.West, insets=(8,2,0,2))
   layout(simClockPanel)                               = c(0,0).weightx(0)
-  layout(new Label("elapsed:").styled('labelFor))     = c(1,0).weightx(0.5)
+  layout(new Label("elapsed:").styled('labelFor)) = c(1,0).weightx(0.5)
   layout(simStopWatchPanel)                           = c(2,0).weightx(0)
+
+}
+
+class ControlClockPanel (raceView: RaceView, config: Option[Config]=None) extends BasicClockPanel(raceView,config) {
+
+  val stopButton = new Button( Action("exit"){ raceView.requestRaceTermination }).styled() // should be confirmed
+  val pauseResumeButton = new Button( Action(" pause "){ pauseResume }).styled()
+
+  val controls = new BoxPanel(Orientation.Horizontal) {
+    contents ++= Seq(stopButton,pauseResumeButton)
+  } styled()
+
+  layout(controls) = c(2,1).weightx(0)
+
+  def pauseResume: Unit = {
+    raceView.requestPauseResume
+    pauseResumeButton.text = if (raceView.isStopped) "resume" else " pause "
+  }
+}
+
+class CtrlClockPanel (raceView: RaceView, config: Option[Config]=None) extends BasicClockPanel(raceView,config) {
+
+  val runControls = new RunControlPanel {
+    onStart { true }
+    onStop { raceView.requestRaceTermination; true }
+    onPause { true }
+    onResume { true }
+  } styled()
+
+  layout(runControls) = c(0,1).gridwidth(3)
 }

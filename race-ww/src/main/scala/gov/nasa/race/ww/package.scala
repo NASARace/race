@@ -97,7 +97,7 @@ package object ww {
   final val ShowPanel = "ShowPanel"
   final val DismissPanel = "DismissPanel"
 
-  case class PanelEntry (name: String, component: Component, tooltip: String="click to expand/shrink", expand: Boolean=true)
+  case class PanelEntry (name: String, component: Component, tooltip: String="click to hide/show panel", var expand: Boolean=true)
 
   object EventAction extends Enumeration {
     type EventAction = Value
