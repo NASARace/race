@@ -37,7 +37,7 @@ trait AltitudeSensitiveRaceLayer extends RaceLayer with DeferredRenderingListene
   def defaultLineThreshold: Length = Meters(1500000)
   val lineThresholdLevel = config.getDoubleOrElse("line-altitude", defaultLineThreshold.toMeters)
 
-  def defaultLinePosThreshold: Length = Meters(30000)
+  def defaultLinePosThreshold: Length = Meters(5000)
   val linePosThresholdLevel = config.getDoubleOrElse("linepos-altitude", defaultLinePosThreshold.toMeters)
 
   var eyeAltitude: Double = getEyeAltitude
