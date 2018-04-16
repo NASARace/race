@@ -55,8 +55,10 @@ class SimpleAircraft (val config: Config) extends ContinuousTimeRaceActor
   //---  user message handler
   override def handleMessage = {
     case RaceTick =>
-      updatePos
-      publish(new FlightPos(id, cs, pos, altitude, speed, heading, vr, simTime))
+      if (!simClock.isStopped) {  // TODO - should be in base type
+        updatePos
+        publish(new FlightPos(id, cs, pos, altitude, speed, heading, vr, simTime))
+      }
   }
 
   //--- internal functions

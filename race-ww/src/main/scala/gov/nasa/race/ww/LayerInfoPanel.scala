@@ -27,7 +27,7 @@ import gov.nasa.worldwind.layers.Layer
 import scala.collection.mutable.ListBuffer
 import scala.swing._
 
-trait LayerInfoPanel extends Container { // bad - this has to be a trait, but therefore its not a Component
+trait LayerInfoPanel extends RacePanel { // bad - this has to be a trait, but therefore its not a Component
   def setLayer (li: Layer): Unit
 }
 

@@ -23,19 +23,24 @@ import gov.nasa.race.swing.Style._
 import gov.nasa.race.swing.{FieldPanel, Filler, GBPanel}
 import gov.nasa.race.track.{TrackInfo, TrackedObject}
 import gov.nasa.race.util.DateTimeUtils._
-import gov.nasa.race.ww.RaceView
+import gov.nasa.race.ww.{Images, RacePanel, RaceView}
 import org.joda.time.DateTime
 
 import scala.swing.event.ButtonClicked
 import scala.swing.{Action, BoxPanel, Button, CheckBox, Orientation}
 
+object TrackEntryPanel {
+  val ejectIcon = Images.getIcon("eject-blue-16x16.png")
+}
+
 
 /**
   * RaceLayer item panel for FlightEntry objects
   */
-class TrackEntryPanel[T <: TrackedObject](raceView: RaceView, layer: TrackLayer[T]) extends BoxPanel(Orientation.Vertical) {
+class TrackEntryPanel[T <: TrackedObject](raceView: RaceView, layer: TrackLayer[T])
+                extends BoxPanel(Orientation.Vertical) with RacePanel {
 
-  class FlightEntryFields extends FieldPanel { // we need a named type or field access will use reflection
+  class TrackEntryFields extends FieldPanel { // we need a named type or field access will use reflection
     val cs   = addField("cs:")
     val date = addField("date:")
     val pos  = addField("position:")
@@ -48,7 +53,7 @@ class TrackEntryPanel[T <: TrackedObject](raceView: RaceView, layer: TrackLayer[
     val acType = addField("aircraft:", "…")
     setContents
   }
-  val fields = new FlightEntryFields().styled()
+  val fields = new TrackEntryFields().styled()
 
   val pathCb = new CheckBox("path").styled()
   val infoCb = new CheckBox("info").styled()
@@ -56,13 +61,16 @@ class TrackEntryPanel[T <: TrackedObject](raceView: RaceView, layer: TrackLayer[
   val centerCb = new CheckBox("center").styled()
 
   val buttonPanel = new GBPanel {
-    val dismissBtn = new Button(Action("⏏"){
-      raceView.trackUserAction {
-        layer.releaseTrackInfoUpdates(trackEntry)
-        layer.dismissEntryPanel(trackEntry)
-        trackEntry = null
+    val dismissBtn = new Button() {
+      action = Action("") {
+        raceView.trackUserAction {
+          layer.releaseTrackInfoUpdates(trackEntry)
+          layer.dismissEntryPanel(trackEntry)
+          trackEntry = null
+        }
       }
-    }).styled()
+      icon = TrackEntryPanel.ejectIcon
+    }.styled()
 
     val c = new Constraints(insets = new Insets(5, 0, 0, 0), anchor = Anchor.West)
     layout(pathCb)   = c(0,0)

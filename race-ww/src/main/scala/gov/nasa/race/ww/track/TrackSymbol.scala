@@ -46,6 +46,7 @@ class TrackSymbol[T <: TrackedObject](val trackEntry: TrackEntry[T])
   attrs.setLabelFont(trackEntry.labelFont)
   attrs.setLineMaterial(trackEntry.labelMaterial)
   //attrs.setImageColor(layer.color) // does not seem to work, and if so would probably require monochrome images
+  setAttributes(attrs)
 
   setSubLabelFont(trackEntry.subLabelFont)
 
@@ -82,7 +83,7 @@ class TrackSymbol[T <: TrackedObject](val trackEntry: TrackEntry[T])
     attrs.setScale(5d)
     attrs.setImage(null)
     attrs.setUsePointAsDefaultImage(true)
-    setAttributes(attrs)
+    //setAttributes(attrs)
   }
 
   def setLabelAttrs = {
@@ -90,21 +91,20 @@ class TrackSymbol[T <: TrackedObject](val trackEntry: TrackEntry[T])
     attrs.setScale(5d)
     attrs.setImage(null)
     attrs.setUsePointAsDefaultImage(true)
-    setAttributes(attrs)
+    //setAttributes(attrs)
   }
 
   def setIconAttrs = {
     val obj = trackEntry.obj
-
     setLabelText(trackEntry.labelText)
     attrs.setImage(trackEntry.symbolImg)
-    attrs.setScale(0.35)
+    attrs.setScale(trackEntry.symbolImgScale)
     attrs.setImageOffset(Offset.CENTER)
-    attrs.setHeading(obj.heading.toDegrees)
+    attrs.setHeading(trackEntry.symbolHeading)
     attrs.setHeadingReference(AVKey.RELATIVE_TO_GLOBE)
 
     // TODO check view pitch and adjust symbol accordingly
-    setAttributes(attrs)
+    //setAttributes(attrs)
   }
 
   // cache so that we don't create gazillions of Points and Offsets

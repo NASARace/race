@@ -220,7 +220,7 @@ class SimpleTrackWriter extends DataStreamWriter {
     dos.writeDouble(ref.altitude.toMeters)
 
     dos.writeDouble(p.distance.toMeters)
-    dos.writeInt(p.flags)
+    dos.writeInt(p.status)
 
     val prox = p.track
     dos.writeUTF(prox.cs)
@@ -243,6 +243,13 @@ class SimpleTrackWriter extends DataStreamWriter {
 
   def write (dos: DataOutputStream, data: Any): Int = {
     data match {
+
+      case p: ProximityEvent =>  // watch out - this is also a TrackedObject
+        dos.writeShort(ProximityMsg)
+        dos.writeShort(1) // one proximity record
+        writeProximity(dos,p)
+        dos.size
+
       case t: TrackedObject =>
         dos.writeShort(TrackMsg)
         dos.writeShort(1)  // one track record
@@ -257,12 +264,6 @@ class SimpleTrackWriter extends DataStreamWriter {
           tracks.foreachTrackedObject(writeTrack(dos,_))
           dos.size
         } else 0
-
-      case p: ProximityEvent =>
-        dos.writeShort(ProximityMsg)
-        dos.writeShort(1) // one proximity record
-        writeProximity(dos,p)
-        dos.size
 
       case drop: TrackTerminationMessage =>
         dos.writeShort(DropMsg)

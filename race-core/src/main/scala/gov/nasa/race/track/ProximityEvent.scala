@@ -17,15 +17,15 @@
 package gov.nasa.race.track
 
 import gov.nasa.race.geo.LatLonPos
-import gov.nasa.race.uom.Length
+import gov.nasa.race.uom.{Angle, Length, Speed}
 import org.joda.time.DateTime
 
 
 object ProximityEvent {
-  final val ProxNew  = 0x1
-  final val ProxChange  = 0x2
-  final val ProxDrop = 0x4
-  final val ProxCollision = 0x8
+  final val ProxNew  = TrackedObject.NewFlag
+  final val ProxChange  = TrackedObject.ChangedFlag
+  final val ProxDrop = TrackedObject.DroppedFlag
+  final val ProxCollision = 0x10000
   // ..and potentially more to follow (threat level etc.)
 
   def flagDescription(flags: Int): String = {
@@ -62,17 +62,28 @@ case class ProximityReference (id: String,
 
 /**
   * the object to report proximity changes
+  *
+  * note that ProximityEvents are also implementing TrackedObject themselves
   */
 case class ProximityEvent(ref: ProximityReference,
                           distance: Length,
-                          flags: Int,
-                          track: TrackedObject) {
+                          status: Int,
+                          track: TrackedObject) extends TrackedObject {
   import ProximityEvent._
 
-  override def toString = f"ProximityEvent(ref=${ref.id},track=${track.cs},dist=${distance.toMeters}%.0f m,flags=${flagDescription(flags)}"
+  override def toString = f"ProximityEvent(ref=${ref.id},track=${track.cs},dist=${distance.toMeters}%.0f m,flags=${flagDescription(status)}"
 
-  def isNew = (flags & ProxNew) != 0
-  def isChange = (flags & ProxChange) != 0
-  def isDrop = (flags & ProxDrop) != 0
-  def isCollision = (flags & ProxCollision) != 0
+  def isCollision = (status & ProxCollision) != 0
+
+  //--- TrackedObject interface
+  val id = s"${ref.id}-${track.id}"
+  def cs = id
+  def position = ref.position
+  def altitude = ref.altitude
+  def date = ref.date
+
+  // those are not defined
+  def heading = Angle.UndefinedAngle
+  def speed = Speed.UndefinedSpeed
+  def vr = Speed.UndefinedSpeed
 }

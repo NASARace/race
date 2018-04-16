@@ -54,6 +54,8 @@ class TrackEntry[T <: TrackedObject](var obj: T, var trajectory: Trajectory, val
   def labelMaterial: Material = layer.labelMaterial
   def lineMaterial: Material = layer.lineMaterial
   def symbolImg: BufferedImage = layer.symbolImg
+  def symbolImgScale: Double = 0.35
+  def symbolHeading: Double = obj.heading.toDegrees
   def markImg: BufferedImage = layer.markImg
   def labelFont: Font = layer.labelFont
   def subLabelFont: Font = layer.subLabelFont
@@ -138,7 +140,9 @@ class TrackEntry[T <: TrackedObject](var obj: T, var trajectory: Trajectory, val
     ifSome(model) { layer.removeRenderable}; model = None
   }
 
-  def setIconLevel: Unit = symbol.foreach(_.setIconAttrs)
+  def setIconLevel: Unit = symbol.foreach { sym =>
+    if (model.isDefined) sym.setLabelAttrs else sym.setIconAttrs
+  }
   def setLabelLevel: Unit = symbol.foreach(_.setLabelAttrs)
   def setDotLevel: Unit = symbol.foreach(_.setDotAttrs)
   def setSymbolLevelAttrs = layer.symbolLevels.triggerInCurrentLevel(this)
@@ -160,7 +164,7 @@ class TrackEntry[T <: TrackedObject](var obj: T, var trajectory: Trajectory, val
       ifSome(model){ m =>
         m.unAssign
         layer.removeRenderable(m)
-        //ifSome(symbol) { sym => layer.setTrackLevel(this) }  // FIXME - restore to previous attr level
+        setSymbolLevelAttrs
       }
     }
 

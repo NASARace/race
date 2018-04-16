@@ -25,7 +25,7 @@ import akka.actor.{ActorRef, Props}
 import com.typesafe.config.Config
 import gov.nasa.race._
 import gov.nasa.race.config.ConfigUtils._
-import gov.nasa.race.core.Messages.RaceTerminateRequest
+import gov.nasa.race.core.Messages.{RacePauseRequest, RaceResumeRequest, RaceTerminateRequest}
 import gov.nasa.race.core.{ContinuousTimeRaceActor, RaceContext, _}
 import gov.nasa.race.swing.Style._
 import gov.nasa.race.swing.{Redrawable, _}
@@ -74,11 +74,26 @@ class RaceViewerActor(val config: Config) extends ContinuousTimeRaceActor
     view.isDefined && !initTimedOut && super.onInitializeRaceActor(rc, actorConf)
   }
 
+  override def onStartRaceActor(originator: ActorRef) = {
+    ifSome(view) { v => invokeAndWait(v.onRaceStarted) }
+    super.onStartRaceActor(originator)
+  }
+
+  override def onPauseRaceActor(originator: ActorRef) = {
+    ifSome(view) { v => invokeAndWait(v.onRacePaused) }
+    super.onPauseRaceActor(originator)
+  }
+
+  override def onResumeRaceActor(originator: ActorRef) = {
+    ifSome(view) { v => invokeAndWait(v.onRaceResumed) }
+    super.onResumeRaceActor(originator)
+  }
+
   override def onTerminateRaceActor(originator: ActorRef) = {
     ifSome(view) { v =>
       if (v.displayable) {
         info(s"${name} closing WorldWind window..")
-        v.close
+        invokeAndWait(v.onRaceTerminated)
         info(s"${name} WorldWind window closed")
       } else {
         info(s"${name} WorldWind window already closed")
@@ -88,9 +103,11 @@ class RaceViewerActor(val config: Config) extends ContinuousTimeRaceActor
     super.onTerminateRaceActor(originator)
   }
 
-  def sendTerminationRequest: Unit = {
-    if (!raceActorSystem.isTerminating) master ! RaceTerminateRequest
-  }
+  def sendTerminationRequest: Unit = if (!raceActorSystem.isTerminating) master ! RaceTerminateRequest
+
+  def sendPauseRequest: Unit = if (raceActorSystem.isRunning) master ! RacePauseRequest
+
+  def sendResumeRequest: Unit = if (raceActorSystem.isPaused) master ! RaceResumeRequest
 }
 
 
@@ -264,7 +281,7 @@ class RaceView (viewerActor: RaceViewerActor) extends DeferredEyePositionListene
     val expand = panelConfig.getBooleanOrElse("expand", true)
 
     info(s"creating console panel $name")
-    val panel = newInstance[Component](panelConfig.getString("class"),
+    val panel = newInstance[RacePanel](panelConfig.getString("class"),
       Array(classOf[RaceView], classOf[Option[Config]]),
       Array(this, Some(panelConfig))).get
     panel.styled('consolePanel)
@@ -302,15 +319,15 @@ class RaceView (viewerActor: RaceViewerActor) extends DeferredEyePositionListene
 
 
   def createDefaultPanels(collapsed: Set[String]): ListMap[String,PanelEntry] = {
-    def panelEntry(name: String, c: Component, tt: String=null) = name -> PanelEntry(name,c,tt,!collapsed.contains(name))
-    def styled (c: Component) = c.styled('consolePanel)
+    def panelEntry(name: String, c: RacePanel, tt: String=null) = name -> PanelEntry(name,c,tt,!collapsed.contains(name))
+    def styled (c: RacePanel) = c.styled('consolePanel)
 
     var panels = new ListMap[String,PanelEntry]
     Seq(createClockPanel, createViewPanel, createSyncPanel, createLayersPanel).foreach { o=>
       ifSome(o) { e=>
         if (collapsed.contains(e.name)) e.expand = false
         panels = panels + (e.name -> e)
-      } 
+      }
     }
 
     panels = panels + (SelectedLayer -> PanelEntry(SelectedLayer,styled(emptyLayerInfoPanel)))
@@ -318,6 +335,8 @@ class RaceView (viewerActor: RaceViewerActor) extends DeferredEyePositionListene
 
     panels
   }
+
+  def foreachPanel (f: (RacePanel)=>Unit): Unit = panels.foreach( e=> f(e._2.panel))
 
   def showConsolePanels(setVisible: Boolean) = frame.showConsolePanels(setVisible)
   def showConsolePanel(name: String, setVisible: Boolean) = frame.showConsolePanel(name, setVisible)
@@ -398,7 +417,22 @@ class RaceView (viewerActor: RaceViewerActor) extends DeferredEyePositionListene
   def getInViewChecker = InViewChecker(wwd)
 
   //--- race control ops
-  def requestRaceTermination = viewerActor.sendTerminationRequest
   def isStopped = viewerActor.raceActorSystem.isStopped
-  def requestPauseResume = viewerActor.raceActorSystem.pauseResume
+
+  def requestRacePause = viewerActor.sendPauseRequest
+  def requestRaceResume = viewerActor.sendResumeRequest
+  def requestRaceTermination = viewerActor.sendTerminationRequest
+
+  def requestPauseResume = if (isStopped) requestRaceResume else requestRacePause
+
+  // the callback notifications
+  def onRaceStarted: Unit = foreachPanel(_.onRaceStarted)
+  def onRacePaused: Unit = foreachPanel(_.onRacePaused)
+  def onRaceResumed: Unit = foreachPanel(_.onRaceResumed)
+  def onRaceTerminated: Unit = {
+    if (displayable) {
+      foreachPanel(_.onRaceTerminated)
+      close
+    }
+  }
 }

@@ -24,4 +24,6 @@ class RaceException (details: String = "", cause: Throwable=null) extends Runtim
 
 class RaceInitializeException (details: String, cause: Throwable=null) extends RaceException(details,cause)
 class RaceStartException (details: String, cause: Throwable=null) extends RaceException(details,cause)
+class RacePauseException (details: String, cause: Throwable=null) extends RaceException(details,cause)
+class RaceResumeException (details: String, cause: Throwable=null) extends RaceException(details,cause)
 class RaceTerminateException (details: String, cause: Throwable=null) extends RaceException(details,cause)

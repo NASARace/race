@@ -77,7 +77,7 @@ trait RaceActor extends Actor with ImplicitActorLogging {
   def getCapabilities: RaceActorCapabilities = {
     import RaceActorCapabilities._
     val caps = if (config.getBooleanOrElse("optional", false)) IsOptional else NoCapabilities
-    caps + IsAutomatic + SupportsSimTime + SupportsSimTimeReset
+    caps + IsAutomatic + SupportsSimTime + SupportsSimTimeReset + SupportsPauseResume
   }
 
   override def postStop = RaceActorSystem(context.system).stoppedRaceActor(self)
@@ -132,6 +132,8 @@ trait RaceActor extends Actor with ImplicitActorLogging {
   def handleSystemMessage: Receive = {
     case InitializeRaceActor(rc,actorConf) => handleLiveInitializeRaceActor(rc, actorConf)
     case StartRaceActor(originator) => handleStartRaceActor(originator)
+    case PauseRaceActor(originator) => handlePauseRaceActor(originator)
+    case ResumeRaceActor(originator) => handleResumeRaceActor(originator)
     case TerminateRaceActor(originator) => handleTerminateRaceActor(originator)
 
     case ProcessRaceActor => sender ! RaceActorProcessed
@@ -188,6 +190,40 @@ trait RaceActor extends Actor with ImplicitActorLogging {
     }
   }
 
+  def handlePauseRaceActor  (originator: ActorRef) = {
+    info(s"got PauseRaceActor from: ${originator.path}")
+    try {
+      val success = onPauseRaceActor(originator)
+      if (success){
+        status = Paused
+        info("paused")
+        sender ! RaceActorPaused
+      } else {
+        warning("pause rejected")
+        sender ! RaceActorPauseFailed("rejected")
+      }
+    } catch {
+      case ex: Throwable => sender ! RaceActorPauseFailed(ex.getMessage)
+    }
+  }
+
+  def handleResumeRaceActor  (originator: ActorRef) = {
+    info(s"got ResumeRaceActor from: ${originator.path}")
+    try {
+      val success = onResumeRaceActor(originator)
+      if (success){
+        status = Running
+        info("resumed")
+        sender ! RaceActorResumed
+      } else {
+        warning("resume rejected")
+        sender ! RaceActorResumeFailed("rejected")
+      }
+    } catch {
+      case ex: Throwable => sender ! RaceActorResumeFailed(ex.getMessage)
+    }
+  }
+
   def isMandatoryTermination (originator: ActorRef): Boolean = {
     context.parent == originator ||  // parent is always imperative
     RaceActorSystem(system).isTerminating || // whole system is going down
@@ -212,7 +248,9 @@ trait RaceActor extends Actor with ImplicitActorLogging {
           sender ! RaceActorTerminateFailed("rejected")
         }
       } catch {
-        case ex: Throwable => sender ! RaceActorTerminateFailed(ex.getMessage)
+        case x: Throwable =>
+          x.printStackTrace()
+          sender ! RaceActorTerminateFailed(x.toString)
       }
     } else {
       info("ignored remote TerminateRaceActor")

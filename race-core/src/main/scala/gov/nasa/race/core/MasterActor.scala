@@ -110,8 +110,19 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ImplicitActorLogging
 
     case msg:SetLogLevel => actorRefs.foreach(_ ! msg) // just forward
 
+    case RacePause => onRacePause
+    case RaceResume => onRaceResume
+
+    case RacePauseRequest =>
+      info(s"master $name got RacePauseRequest from $sender")
+      ras.requestPause(sender)
+
+    case RaceResumeRequest =>
+      info(s"master $name got RaceResumeRequest from $sender")
+      ras.requestResume(sender)
+
     case RaceTerminateRequest => // from some actor, let the RAS decide
-      info(s"master $name got RaceTerminateRequest")
+      info(s"master $name got RaceTerminateRequest from $sender")
       ras.requestTermination(sender)
 
     case RaceTerminate => onRaceTerminate
@@ -580,6 +591,82 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ImplicitActorLogging
         case RaceStarted => info(s"satellite started: ${remoteMaster.path}")
         case TimedOut => throw new RuntimeException(s"failed to start satellite ${remoteMaster.path}")
       }
+    }
+  }
+
+  //--- actor pause
+
+  def onRacePause = executeProtected {
+    if (ras.isVerifiedSenderOf(RacePause)) {
+      info(s"master $name got RacePause, halting actors")
+      pauseRaceActors
+      sender ! RacePaused
+    } else warning(s"RacePause request from $sender ignored")
+  }
+
+  def pauseRaceActors = {
+    for ((actorRef,actorConfig) <- actors){
+      val isOptional = isOptionalActor(actorConfig)
+      val pauseTimeout = Timeout(actorConfig.getFiniteDurationOrElse("pause-timeout",ras.defaultActorTimeout))
+
+      info(s"sending PauseRaceActor to ${actorRef.path.name}..")
+      askForResult(actorRef ? PauseRaceActor(self)) {
+        case RaceActorPaused =>
+          info(s"${actorRef.path.name} is paused")
+        case RaceActorPauseFailed(reason) =>
+          startFailed(s"pause of ${actorRef.path.name} failed: $reason", isOptional)
+        case TimedOut =>
+          startFailed(s"pausing ${actorRef.path} timed out", isOptional)
+        case other => // illegal response
+          startFailed(s"got unknown PauseRaceActor response from ${actorRef.path.name}",isOptional)
+      }(pauseTimeout)
+    }
+  }
+
+  protected def pauseFailed(msg: String, isOptionalActor: Boolean, cause: Option[Throwable]=None) = {
+    if (isOptionalActor) {
+      warning(msg)
+    } else {
+      error(msg)
+      throw new RacePauseException(msg, cause.getOrElse(null))
+    }
+  }
+
+  //--- actor resume
+
+  def onRaceResume = executeProtected {
+    if (ras.isVerifiedSenderOf(RaceResume)) {
+      info(s"master $name got RaceResume, resuming actors")
+      resumeRaceActors
+      sender ! RaceResumed
+    } else warning(s"RaceResume request from $sender ignored")
+  }
+
+  def resumeRaceActors = {
+    for ((actorRef,actorConfig) <- actors){
+      val isOptional = isOptionalActor(actorConfig)
+      val resumeTimeout = Timeout(actorConfig.getFiniteDurationOrElse("resume-timeout",ras.defaultActorTimeout))
+
+      info(s"sending ResumeRaceActor to ${actorRef.path.name}..")
+      askForResult(actorRef ? ResumeRaceActor(self)) {
+        case RaceActorResumed =>
+          info(s"${actorRef.path.name} is resumed")
+        case RaceActorResumeFailed(reason) =>
+          startFailed(s"resuming ${actorRef.path.name} failed: $reason", isOptional)
+        case TimedOut =>
+          startFailed(s"resuming ${actorRef.path} timed out", isOptional)
+        case other => // illegal response
+          startFailed(s"got unknown ResumeRaceActor response from ${actorRef.path.name}",isOptional)
+      }(resumeTimeout)
+    }
+  }
+
+  protected def resumeFailed(msg: String, isOptionalActor: Boolean, cause: Option[Throwable]=None) = {
+    if (isOptionalActor) {
+      warning(msg)
+    } else {
+      error(msg)
+      throw new RaceResumeException(msg, cause.getOrElse(null))
     }
   }
 

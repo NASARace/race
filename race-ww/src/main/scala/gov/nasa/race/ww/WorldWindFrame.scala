@@ -143,7 +143,7 @@ class WorldWindFrame (config: Config, raceView: RaceView) extends AppFrame {
     mbShowPanelsMI.addItemListener( showConsoleListener)
   }
 
-  def initializePanel (e: PanelEntry) = consolePanel.add( e.name, e.component, e.tooltip, e.expand)
+  def initializePanel (e: PanelEntry) = consolePanel.add( e.name, e.panel, e.tooltip, e.expand)
 
   /**
     * dynamic view modifications during runtime
@@ -173,7 +173,7 @@ class WorldWindFrame (config: Config, raceView: RaceView) extends AppFrame {
   override def closeOperation() = {
     if (!closing) {
       visible = false
-      raceView.requestRaceTermination // FIXME - causes termination hang
+      raceView.requestRaceTermination
     }
   }
 }

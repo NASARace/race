@@ -55,7 +55,7 @@ object TrackModel {
         roll0 = mc.getDoubleOrElse("roll", roll0)
     }
 
-    new TrackModel[T](mc.getString("key"),src,size0,pitch0,yaw0,roll0)
+    new TrackModel[T](mc.getString("key"), src, size0, pitch0, yaw0, roll0)
   }
 }
 

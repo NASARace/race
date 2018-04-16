@@ -160,11 +160,13 @@ trait ConsoleMainBase extends MainBase {
   }
 
   def pauseResume(ras: RaceActorSystem): Unit = {
-    if (ras.pauseResume) {
-      if (ras.isStopped) println(s"universe ${ras.name} paused") else println(s"universe ${ras.name} resumed")
-    } else {
-      println(s"pauseResume not supported by universe ${ras.name}")
-    }
+    if (ras.isRunning) {
+      if (ras.pause) println(s"universe ${ras.name} paused")
+      else println(s"universe ${ras.name} pause failed")
+    } else if (ras.isPaused) {
+      if (ras.resume) println(s"universe ${ras.name} resumed")
+      else println(s"universe ${ras.name} resume failed")
+    } else println(s"universe ${ras.name} not in state to pause/resume")
   }
 
   /**

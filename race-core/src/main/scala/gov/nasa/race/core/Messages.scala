@@ -90,7 +90,10 @@ object Messages {
   case object RaceActorTerminateIgnored extends RaceSystemMessage
   case class RaceActorTerminateFailed (reason: String="unknown") extends RaceSystemMessage
 
+  case object RacePauseRequest
+  case object RaceResumeRequest
   case object RaceTerminateRequest  // ras internal termination request: RaceActor -> Master
+
   case object RaceAck // generic acknowledgement
   case object RaceTick // used to trigger periodic actions
   case class RaceRetry(e:Any) // to-reprocess a message
@@ -99,13 +102,24 @@ object Messages {
   case object RaceCreate                // RAS -> Master
   case object RaceCreated               // Master -> RAS
   case class  RaceCreateFailed (reason: Any) // Master -> RAS
+
   case object RaceInitialize            // RAS -> Master
   case object RaceInitialized           // Master -> RAS
   case class RaceInitializeFailed (reason: Any)  // Master -> RAS
+
   case object RaceStart                 // RAS -> Master
   case class RemoteRaceStart (remoteMaster: ActorRef, simTime: DateTime, timeScale: Double) // Master -> remote Master
   case object RaceStarted               // Master -> RAS, remote Master -> Master
   case class RaceStartFailed (reason: Any) // Master -> RAS
+
+  case object RacePause
+  case object RacePaused
+  case class RacePauseFailed (reason: Any)
+
+  case object RaceResume
+  case object RaceResumed
+  case class RaceResumeFailed (reason: Any)
+
   case object RaceTerminate             // RAS -> Master
   case class RemoteRaceTerminate (remoteMaster: ActorRef) // Master -> RemoteMaster
   case object RaceTerminated            // Master -> RAS, remote Master -> Master

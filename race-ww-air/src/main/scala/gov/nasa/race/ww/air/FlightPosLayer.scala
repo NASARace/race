@@ -35,7 +35,6 @@ class FlightPosLayer (val raceView: RaceView, val config: Config) extends ModelT
 
   override def getTrackKey(track: FlightPos): String = track.cs
 
-
   def handleFlightPosLayerMessage: Receive = {
     case BusEvent(_,fpos:FlightPos,_) =>
       incUpdateCount

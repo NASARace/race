@@ -29,6 +29,7 @@ import scala.swing._
 object Images {
   val defaultPlaneImgs = Map[Color, BufferedImage](
     Color.red -> ImageIO.read(getClass.getResourceAsStream("plane-red-64x64.png")),
+    Color.orange -> ImageIO.read(getClass.getResourceAsStream("plane-orange-64x64.png")),
     Color.yellow -> ImageIO.read(getClass.getResourceAsStream("plane-yellow-64x64.png")),
     Color.cyan -> ImageIO.read(getClass.getResourceAsStream("plane-cyan-64x64.png")),
     Color.green -> ImageIO.read(getClass.getResourceAsStream("plane-green-64x64.png")),
@@ -42,6 +43,7 @@ object Images {
 
   val defaultArrowImgs = Map[Color, BufferedImage](
     Color.red -> ImageIO.read(getClass.getResourceAsStream("arrow-red-64x64.png")),
+    Color.orange -> ImageIO.read(getClass.getResourceAsStream("arrow-orange-64x64.png")),
     Color.yellow -> ImageIO.read(getClass.getResourceAsStream("arrow-yellow-64x64.png")),
     Color.cyan -> ImageIO.read(getClass.getResourceAsStream("arrow-cyan-64x64.png")),
     Color.green -> ImageIO.read(getClass.getResourceAsStream("arrow-green-64x64.png")),
@@ -56,6 +58,7 @@ object Images {
 
   val defaultMarkImgs = Map[Color,BufferedImage](
     Color.red -> ImageIO.read(getClass.getResourceAsStream("mark-red-32x32.png")),
+    Color.orange -> ImageIO.read(getClass.getResourceAsStream("mark-orange-32x32.png")),
     Color.yellow -> ImageIO.read(getClass.getResourceAsStream("mark-yellow-32x32.png")),
     Color.cyan -> ImageIO.read(getClass.getResourceAsStream("mark-cyan-32x32.png")),
     Color.green -> ImageIO.read(getClass.getResourceAsStream("mark-green-32x32.png")),
@@ -66,6 +69,21 @@ object Images {
   )
   val defaultMarkImg = ImageIO.read(getClass.getResourceAsStream("mark-32x32.png"))
   def getMarkImage(color: Color) = defaultMarkImgs.getOrElse(color, defaultMarkImg)
+
+
+  val defaultEventImgs = Map[Color,BufferedImage](
+    Color.red -> ImageIO.read(getClass.getResourceAsStream("event-red-32x32.png")),
+    Color.orange -> ImageIO.read(getClass.getResourceAsStream("event-orange-32x32.png")),
+    Color.yellow -> ImageIO.read(getClass.getResourceAsStream("event-yellow-32x32.png")),
+    Color.cyan -> ImageIO.read(getClass.getResourceAsStream("event-cyan-32x32.png")),
+    Color.green -> ImageIO.read(getClass.getResourceAsStream("event-green-32x32.png")),
+    Color.blue -> ImageIO.read(getClass.getResourceAsStream("event-blue-32x32.png")),
+    Color.magenta -> ImageIO.read(getClass.getResourceAsStream("event-magenta-32x32.png")),
+    Color.white -> ImageIO.read(getClass.getResourceAsStream("event-white-32x32.png")),
+    Color.black -> ImageIO.read(getClass.getResourceAsStream("event-32x32.png"))
+  )
+  val defaultEventImg = defaultEventImgs(Color.red)
+  def getEventImage(color: Color) = defaultEventImgs.getOrElse(color,defaultEventImg)
 
 
   //--- flight entry attribute symbols (only one color so far - we might create others programmatically)
@@ -85,4 +103,6 @@ object Images {
 
   val defaultFlightMarkIcon = Swing.Icon(getClass.getResource("flight-mark-white-7x16.png"))
   def getFlightMarkIcon(color: Color) = defaultFlightMarkIcon
+
+  def getIcon(fname: String) = Swing.Icon(getClass.getResource(fname))
 }

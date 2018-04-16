@@ -326,6 +326,8 @@ class RaceActorSystem(val config: Config) extends LogController with VerifiableA
   }
 
   def isTerminating = status == Terminating
+  def isPaused = status == Paused
+  def isRunning = isLive && status != Paused
   def isLive = status != Terminating && status != gov.nasa.race.common.Status.Terminated
 
   def currentStatus = status
@@ -340,7 +342,67 @@ class RaceActorSystem(val config: Config) extends LogController with VerifiableA
       system.terminate  // don't terminate if running in a MultiJvm test
     }
   }
-  // some actor asked for termination
+
+  //--- actor requests affecting the whole RAS
+
+  def pause: Boolean = {
+    info(s"universe $name pausing..")
+
+    askVerifiableForResult(master, RacePause) {
+      case RacePaused =>
+        info(s"universe $name paused")
+        status = Paused
+        simClock.stop
+        true
+      case RacePauseFailed(reason) =>
+        warning(s"universe $name pause failed: $reason")
+        false
+      case TimedOut =>
+        warning(s"universe $name pause timeout")
+        false
+      case other =>
+        warning(s"universe $name got unexpected RacePause reply: $other")
+        false
+    }
+  }
+
+  def requestPause (actorRef: ActorRef) = {
+    if (isRunning){
+      if (isManagedActor(actorRef)) {
+        if (commonCapabilities.supportsPauseResume){
+          ThreadUtils.execAsync(pause)
+        } else warning("ignoring pause request: universe does not support pause/resume")
+      } else warning(s"ignoring pause request: unknown actor ${actorRef.path}")
+    } else warning("ignoring pause request: universe not running")
+  }
+
+  def resume: Boolean = {
+    info(s"universe $name resuming..")
+
+    askVerifiableForResult(master, RaceResume) {
+      case RaceResumed =>
+        info(s"universe $name resumed")
+        status = Running
+        simClock.resume
+        true
+      case RaceResumeFailed(reason) =>
+        warning(s"universe $name resume failed: $reason")
+        false
+      case TimedOut =>
+        warning(s"universe $name resume timeout")
+        false
+      case other =>
+        warning(s"universe $name got unexpected RaceResume reply: $other")
+        false
+    }
+  }
+
+  def requestResume (actorRef: ActorRef) = {
+    if (isStopped && isManagedActor(actorRef) && commonCapabilities.supportsPauseResume) {
+      ThreadUtils.execAsync(resume)
+    } else warning(s"universe ignoring resume request from ${actorRef.path}")
+  }
+
   def requestTermination(actorRef: ActorRef) = {
     if (!isTerminating) { // avoid recursive termination
       if ((allowSelfTermination && isManagedActor(actorRef)) || (allowRemoteTermination && isRemoteActor(actorRef))) {
@@ -389,7 +451,7 @@ class RaceActorSystem(val config: Config) extends LogController with VerifiableA
 
   def pauseResume: Boolean = {
     if (isLive) {
-      if (commonCapabilities.supportsSimTimeReset) {
+      if (commonCapabilities.supportsPauseResume) {
         if (simClock.isStopped) {
           info("resuming sim clock")
           simClock.resume

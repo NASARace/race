@@ -131,7 +131,7 @@ trait TrackLayer[T <:TrackedObject] extends SubscribingRaceLayer with Configurab
   override def reportQueryError (msg: String) = error(msg)
 
   // layer specific positions (cities, airports, ports etc.) - TODO - should default at least to cities and airports here
-  override def queryLocation (id: String): Option[GeoPosition]
+  def queryLocation (id: String): Option[GeoPosition]
 
   //--- rendering detail level management
 

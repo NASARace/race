@@ -25,5 +25,5 @@ package gov.nasa.race.common
   */
 object Status extends Enumeration {
   type Status = Value
-  val Initializing, Created, Initialized, Started, Running, Terminating, Terminated = Value
+  val Initializing, Created, Initialized, Started, Running, Paused, Terminating, Terminated = Value
 }

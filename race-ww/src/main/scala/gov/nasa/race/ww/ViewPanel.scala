@@ -37,7 +37,7 @@ import scala.swing.event.ButtonClicked
   * and show eye position
   */
 class ViewPanel (raceView: RaceView, config: Option[Config]=None) extends GBPanel
-                  with DeferredPositionListener with EyePosListener {
+                  with RacePanel with DeferredPositionListener with EyePosListener {
 
   val wwd = raceView.wwd
   val earthGlobe = new Earth

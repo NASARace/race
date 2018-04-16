@@ -91,13 +91,24 @@ class ButtonUI extends BasicButtonUI with MouseListener with KeyListener {
     }
     border.paintBorder(b, g, 0, 0, d.width, d.height)
 
-    g.setFont(b.getFont)
-    val fm = g.getFontMetrics
+    val icon = b.getIcon
+    if (icon != null) {
+      val w = icon.getIconWidth
+      val h = icon.getIconHeight
+      val x = (d.width - w) / 2
+      val y = (d.height - h) / 2
+      icon.paintIcon(c,g,x,y)
+    }
+
     val text = b.getText
-    val x = (d.width - fm.stringWidth(text)) / 2
-    val y = (d.height + fm.getAscent()) / 2
-    g.setColor(fg)
-    g.drawString(text, x, y)
+    if (text.length > 0) {
+      g.setFont(b.getFont)
+      val fm = g.getFontMetrics
+      val x = (d.width - fm.stringWidth(text)) / 2
+      val y = (d.height + fm.getAscent()) / 2
+      g.setColor(fg)
+      g.drawString(text, x, y)
+    }
   }
 
 

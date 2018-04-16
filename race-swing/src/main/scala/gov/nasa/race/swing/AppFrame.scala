@@ -17,9 +17,9 @@
 
 package gov.nasa.race.swing
 
-import java.awt.Toolkit
+import java.awt.{EventQueue, Toolkit, Window => AWTWindow}
 import java.awt.event.WindowEvent
-import java.awt.{Window => AWTWindow}
+
 import javax.swing.WindowConstants
 
 import scala.collection.mutable
@@ -57,14 +57,20 @@ class AppFrame extends Frame {
   peer.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE)
 
   override def close = {
+    def _closing = {
+      closing = true
+      visible = false
+      appFrames.remove(peer)
+      //Toolkit.getDefaultToolkit.getSystemEventQueue.postEvent(new WindowEvent(peer, WindowEvent.WINDOW_CLOSING))
+      //peer.dispatchEvent(new WindowEvent(peer, WindowEvent.WINDOW_CLOSING))
+      dispose
+    }
+
     if (!closing) {
-      invokeAndWait {
-        closing = true
-        visible = false
-        appFrames.remove(peer)
-        //Toolkit.getDefaultToolkit.getSystemEventQueue.postEvent(new WindowEvent(peer, WindowEvent.WINDOW_CLOSING))
-        //peer.dispatchEvent(new WindowEvent(peer, WindowEvent.WINDOW_CLOSING))
-        dispose
+      if (EventQueue.isDispatchThread) {
+        _closing
+      } else {
+        invokeAndWait(_closing)
       }
     }
   }

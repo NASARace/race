@@ -19,8 +19,9 @@ package gov.nasa.race
 
 import java.awt.Color
 import java.awt.event._
-import javax.swing._
 
+import com.typesafe.config.Config
+import javax.swing._
 import gov.nasa.race.geo.LatLonPos
 import gov.nasa.race.track.TrackPoint3D
 import gov.nasa.worldwind._
@@ -30,7 +31,7 @@ import gov.nasa.worldwind.layers.Layer
 import gov.nasa.race.uom._
 
 import scala.language.{implicitConversions, reflectiveCalls}
-import scala.swing.{Component, Panel}
+import scala.swing.{BorderPanel, Component, Panel, UIElement}
 
 
 package object ww {
@@ -97,7 +98,7 @@ package object ww {
   final val ShowPanel = "ShowPanel"
   final val DismissPanel = "DismissPanel"
 
-  case class PanelEntry (name: String, component: Component, tooltip: String="click to hide/show panel", var expand: Boolean=true)
+  case class PanelEntry (name: String, panel: RacePanel, tooltip: String="click to hide/show panel", var expand: Boolean=true)
 
   object EventAction extends Enumeration {
     type EventAction = Value
@@ -123,4 +124,21 @@ package object ww {
     val b = Math.min(255,color.getBlue + shift)
     new Color(r,g,b)
   }
+
+  /**
+    * abstract RACE panel type that provides default notification callbacks
+    */
+  trait RacePanel extends Component {
+    def onRaceInitialized: Unit = {}
+    def onRaceStarted: Unit = {}
+    def onRacePaused: Unit = {}
+    def onRaceResumed: Unit = {}
+    def onRaceTerminated: Unit = {}
+  }
+
+  /**
+    * just a placeholder for no content
+    */
+  class EmptyPanel (raceView: RaceView, config: Option[Config]=None) extends BorderPanel with RacePanel
+
 }

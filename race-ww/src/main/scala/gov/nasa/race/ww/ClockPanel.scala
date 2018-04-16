@@ -17,55 +17,55 @@
 
 package gov.nasa.race.ww
 
+import java.awt.Color
+
 import com.typesafe.config.Config
-import gov.nasa.race.swing.{DigitalClock, DigitalStopWatch, GBPanel, _}
 import gov.nasa.race.swing.GBPanel.{Anchor, Fill}
 import gov.nasa.race.swing.Style._
+import gov.nasa.race.swing.{DigitalClock, DigitalStopWatch, GBPanel, _}
+import javax.swing.Box
 
-import scala.swing.{Action, BoxPanel, Button, Label, Orientation}
-import scala.swing.event.ButtonClicked
+import scala.swing.{Action, BoxPanel, Button, FlowPanel, Label, Orientation}
 
 /**
  * basic clock panel with simulation and elapsed time
  */
-class BasicClockPanel(raceView: RaceView, config: Option[Config]=None) extends GBPanel {
+class BasicClockPanel(raceView: RaceView, config: Option[Config]=None) extends GBPanel with RacePanel {
 
   val simClock = raceView.simClock
   val simClockPanel = new DigitalClock(Some(simClock)).styled()
   val simStopWatchPanel = new DigitalStopWatch(simClock).styled()
 
   val c = new Constraints( fill=Fill.Horizontal, anchor=Anchor.West, insets=(8,2,0,2))
-  layout(simClockPanel)                               = c(0,0).weightx(0)
+  layout(simClockPanel)                           = c(0,0).weightx(0)
   layout(new Label("elapsed:").styled('labelFor)) = c(1,0).weightx(0.5)
-  layout(simStopWatchPanel)                           = c(2,0).weightx(0)
+  layout(simStopWatchPanel)                       = c(2,0).weightx(0)
 
 }
 
 class ControlClockPanel (raceView: RaceView, config: Option[Config]=None) extends BasicClockPanel(raceView,config) {
 
-  val stopButton = new Button( Action("exit"){ raceView.requestRaceTermination }).styled() // should be confirmed
-  val pauseResumeButton = new Button( Action(" pause "){ pauseResume }).styled()
+  val stopIcon = Images.getIcon("stop-red-16x16.png")
+  val playIcon = Images.getIcon("play-green-16x16.png")
+  val pauseIcon = Images.getIcon("pause-yellow-16x16.png")
+  def pauseResumeIcon = if (raceView.isStopped) playIcon else pauseIcon
 
-  val controls = new BoxPanel(Orientation.Horizontal) {
-    contents ++= Seq(stopButton,pauseResumeButton)
-  } styled()
+  val stopButton = new Button(){
+    action = Action(""){ raceView.requestRaceTermination }
+    icon = stopIcon
+  } .styled() // should be confirmed
+
+  val pauseResumeButton = new Button(){
+    action = Action(""){ raceView.requestPauseResume }
+    icon = playIcon
+  } .styled()
+
+  val controls = new FlowPanel(FlowPanel.Alignment.Right)(stopButton,pauseResumeButton).styled()
+  controls.vGap = 0
 
   layout(controls) = c(2,1).weightx(0)
 
-  def pauseResume: Unit = {
-    raceView.requestPauseResume
-    pauseResumeButton.text = if (raceView.isStopped) "resume" else " pause "
-  }
-}
-
-class CtrlClockPanel (raceView: RaceView, config: Option[Config]=None) extends BasicClockPanel(raceView,config) {
-
-  val runControls = new RunControlPanel {
-    onStart { true }
-    onStop { raceView.requestRaceTermination; true }
-    onPause { true }
-    onResume { true }
-  } styled()
-
-  layout(runControls) = c(0,1).gridwidth(3)
+  override def onRaceStarted = pauseResumeButton.icon = pauseIcon
+  override def onRacePaused = pauseResumeButton.icon = playIcon
+  override def onRaceResumed = pauseResumeButton.icon = pauseIcon
 }
