@@ -25,6 +25,7 @@ import gov.nasa.race._
 import gov.nasa.race.actor.FilteringPublisher
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.RaceContext
+import gov.nasa.race.core.RaceActorCapabilities._
 import org.apache.activemq.ActiveMQConnectionFactory
 
 import scala.language.postfixOps
@@ -106,6 +107,8 @@ import JMSImportActor._
   */
 class JMSImportActor(val config: Config) extends FilteringPublisher {
 
+  override def getCapabilities = super.getCapabilities - SupportsPauseResume - SupportsSimTimeReset
+
   // NOTE - the listener executes in non-Akka threads (multiple!)
   private[this] class Listener(val topic: JMSTopic) extends MessageListener {
     override def onMessage(message: Message): Unit = {
@@ -130,7 +133,6 @@ class JMSImportActor(val config: Config) extends FilteringPublisher {
   var connection: Option[Connection] = None
   var session: Option[Session] = None
   var consumer: Option[MessageConsumer] = None
-
 
   //--- end initialization
 

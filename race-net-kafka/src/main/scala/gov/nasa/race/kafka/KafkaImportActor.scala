@@ -21,6 +21,7 @@ import com.typesafe.config.Config
 import gov.nasa.race._
 import gov.nasa.race.actor.FilteringPublisher
 import gov.nasa.race.core.RaceContext
+import gov.nasa.race.core.RaceActorCapabilities._
 import gov.nasa.race.util.ThreadUtils
 import gov.nasa.race.config.ConfigUtils._
 
@@ -30,6 +31,8 @@ import gov.nasa.race.config.ConfigUtils._
   * TODO - shutdown does not work yet if server is terminated (somewhat artificial case that happens in reg tests)
   */
 class KafkaImportActor (val config: Config) extends FilteringPublisher {
+
+  override def getCapabilities = super.getCapabilities - SupportsPauseResume - SupportsSimTimeReset
 
   val flushOnStart = config.getBooleanOrElse("flush-on-start", true)
 

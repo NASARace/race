@@ -23,6 +23,7 @@ import gov.nasa.race._
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.config.ConfigurableTranslator
 import gov.nasa.race.core.{PublishingRaceActor, RaceContext}
+import gov.nasa.race.core.RaceActorCapabilities._
 import gov.nasa.race.util.ThreadUtils
 
 /**
@@ -32,6 +33,8 @@ import gov.nasa.race.util.ThreadUtils
   * in case we do not directly work with the (IDL generated) DDS types
   */
 class DDSImportActor (val config: Config) extends PublishingRaceActor {
+
+  override def getCapabilities = super.getCapabilities - SupportsPauseResume - SupportsSimTimeReset
 
   var ddsReader: Option[DDSReader[_]] = None // defer init, topic might be from remote config
   val translator: Option[ConfigurableTranslator] = config.getOptionalConfig("translator") flatMap createTranslator

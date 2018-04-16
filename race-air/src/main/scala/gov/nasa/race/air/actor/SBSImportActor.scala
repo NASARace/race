@@ -25,6 +25,7 @@ import com.typesafe.config.Config
 import gov.nasa.race._
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.{PublishingRaceActor, RaceContext}
+import gov.nasa.race.core.RaceActorCapabilities._
 import gov.nasa.race.util.ThreadUtils
 
 /**
@@ -36,6 +37,8 @@ import gov.nasa.race.util.ThreadUtils
   *
   */
 class SBSImportActor(val config: Config) extends PublishingRaceActor {
+
+  override def getCapabilities = super.getCapabilities - SupportsPauseResume - SupportsSimTimeReset
 
   val host = config.getStringOrElse("host", "localhost")
   val port = config.getIntOrElse("port", 30003)
