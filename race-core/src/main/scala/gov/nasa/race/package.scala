@@ -393,7 +393,8 @@ package object race {
   // something that can be identified across channels
   trait IdentifiableObject {
     def id: String // channel specific (track number, tail number etc.)
-    def cs: String // call sign (cross-channel ID)
+    def cs: String // call sign (cross-channel id)
+    def gid: String = cs // cross channel (global) id
   }
 
   // something that can translate between two types

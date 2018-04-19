@@ -173,7 +173,7 @@ class WorldWindFrame (config: Config, raceView: RaceView) extends AppFrame {
   override def closeOperation() = {
     if (!closing) {
       visible = false
-      raceView.requestRaceTermination
+      if (raceView.config.getBooleanOrElse("run-control",false)) raceView.requestRaceTermination
     }
   }
 }

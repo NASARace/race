@@ -65,10 +65,11 @@ case class ProximityReference (id: String,
   *
   * note that ProximityEvents are also implementing TrackedObject themselves
   */
-case class ProximityEvent(ref: ProximityReference,
-                          distance: Length,
-                          status: Int,
-                          track: TrackedObject) extends TrackedObject {
+case class ProximityEvent (id: String,
+                           ref: ProximityReference,
+                           distance: Length,
+                           status: Int,
+                           track: TrackedObject) extends TrackedObject {
   import ProximityEvent._
 
   override def toString = f"ProximityEvent(ref=${ref.id},track=${track.cs},dist=${distance.toMeters}%.0f m,flags=${flagDescription(status)}"
@@ -76,8 +77,7 @@ case class ProximityEvent(ref: ProximityReference,
   def isCollision = (status & ProxCollision) != 0
 
   //--- TrackedObject interface
-  val id = s"${ref.id}-${track.id}"
-  def cs = id
+  def cs = id  // should be named 'gid'
   def position = ref.position
   def altitude = ref.altitude
   def date = ref.date

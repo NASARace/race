@@ -292,7 +292,13 @@ class RaceView (viewerActor: RaceViewerActor) extends DeferredEyePositionListene
   def createClockPanel: Option[PanelEntry] = {
     config.getOptionalConfig("clock-panel") match {
       case Some(pconf) => if (pconf.isEmpty) None else Some(createPanelEntry(pconf))
-      case None => Some(PanelEntry("clock", new ControlClockPanel(this).styled('consolePanel)))
+      case None =>
+        val clockPanel = (if (config.getBooleanOrElse("run-control", false)) {
+          new ControlClockPanel(this)
+        } else {
+          new BasicClockPanel(this)
+        }).styled('consolePanel)
+        Some(PanelEntry("clock", clockPanel))
     }
   }
 

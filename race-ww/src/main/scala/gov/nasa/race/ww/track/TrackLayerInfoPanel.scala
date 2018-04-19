@@ -19,18 +19,16 @@ package gov.nasa.race.ww.track
 
 import java.awt.Insets
 
-import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.swing.GBPanel._
 import gov.nasa.race.swing.Style._
-import gov.nasa.race.swing.{Filler, GBPanel, ItemRenderPanel, ListItemRenderer, SelectionPreserving, Style, VisibilityBounding}
+import gov.nasa.race.swing.{Filler, GBPanel}
 import gov.nasa.race.track.{TrackFilter, TrackQueryContext, TrackQueryParser, TrackedObject}
-import gov.nasa.race.util.{DateTimeUtils, StringUtils}
-import gov.nasa.race.ww._
 import gov.nasa.race.ww.Implicits._
+import gov.nasa.race.ww._
 
 import scala.swing.Swing._
 import scala.swing.event._
-import scala.swing.{Action, BoxPanel, Button, ButtonGroup, CheckBox, Label, ListView, MenuItem, Orientation, PopupMenu, RadioButton, ScrollPane, TextField}
+import scala.swing.{Action, BoxPanel, Button, ButtonGroup, CheckBox, MenuItem, Orientation, PopupMenu, RadioButton, ScrollPane, TextField}
 
 /**
   * LayerInfoPanel for track layers, which adds a panel to query items of
@@ -64,69 +62,11 @@ class TrackLayerInfoPanel[T <: TrackedObject](raceView: RaceView, trackLayer: Tr
     updateMatchList(queryEntry.text)
   }) styled()
 
-  //-- the match list render panel (needs to be a named class to avoid reflection calls when accessing vals)
-  class MatchRenderer extends ItemRenderPanel[TrackEntry[T]] {
-    val blankIcon = Style.getIcon('flightNone)
-    val centerIcon = Style.getIcon('flightCentered)
-    val hiddenIcon = Style.getIcon('flightHidden)
-    val pathIcon = Style.getIcon('flightPath)
-    val infoIcon = Style.getIcon('flightInfo)
-    val markIcon = Style.getIcon('flightMark)
 
-    //--- the icon labels
-    val displayLabel = new Label styled()
-    val pathLabel = new Label styled()
-    val infoLabel = new Label styled()
-    val markLabel = new Label styled()
+  val listView = createTrackEntryListView.styled('itemList)
 
-    //--- the text labels
-    val csLabel = new Label styled('fixedFieldValue)
-    val dateLabel = new Label styled('fixedFieldValue)
-    val dataLabel = new Label styled('fixedFieldValue)
-
-    val c = new Constraints(fill=Fill.Horizontal,anchor=Anchor.West)
-    layout(displayLabel) = c(0,0)
-    layout(pathLabel)    = c(1,0)
-    layout(infoLabel)    = c(2,0)
-    layout(markLabel)    = c(3,0)
-    layout(csLabel)      = c(4,0).weightx(0.5)
-    layout(dateLabel)    = c(5,0).weightx(0).anchor(Anchor.East)
-    layout(dataLabel)    = c(6,0)
-
-    def configure(list: ListView[_], isSelected: Boolean, focused: Boolean, e: TrackEntry[T], index: Int) = {
-      displayLabel.icon = if (e.isCentered) centerIcon else if (!e.hasSymbol) hiddenIcon else blankIcon
-      pathLabel.icon = if (e.hasPath) pathIcon else blankIcon
-      infoLabel.icon = if (e.hasInfo) infoIcon else blankIcon
-      markLabel.icon = if (e.hasMark) markIcon else blankIcon
-
-      val obj = e.obj
-      val alt = obj.altitude.toFeet.toInt
-      val hdg = obj.heading.toNormalizedDegrees.toInt
-      val spd = obj.speed.toKnots.toInt
-      csLabel.text = f" ${StringUtils.capLength(obj.cs)(8)}%-8s"
-      dateLabel.text = DateTimeUtils.hhmmss.print(obj.date)
-      dataLabel.text = f" $alt%6d $hdg%3d° $spd%4d"
-    }
-  }
-  val matchRenderer = new MatchRenderer().styled('fieldGrid)
-
-  val listView = new ListView[TrackEntry[T]]
-                       with VisibilityBounding[TrackEntry[T]]
-                       with SelectionPreserving[TrackEntry[T]].styled('itemList)
-  listView.maxVisibleRows = trackLayer.config.getIntOrElse("max-rows", 10)
-  listView.renderer = new ListItemRenderer(matchRenderer)
   val listViewScroller = new ScrollPane(listView).styled('verticalIfNeeded)
-  listViewScroller.columnHeaderView = new GBPanel {
-    val c = new Constraints(fill=Fill.Horizontal)
-    //layout(new Label("show  ").styled('fixedHeader)) = c(0,0).anchor(Anchor.West)
-    layout(new Label("     c/s").styled('fixedHeader)) = c(0,0).anchor(Anchor.West).weightx(0.5).gridwidth(2)
-    layout(new Label("t-pos   [ft]  hdg [kn]").styled('fixedHeader)) = c(2,0).weightx(0).anchor(Anchor.East)
-  }.styled()
-
-  val listPopup = new PopupMenu {
-    contents += new MenuItem(Action("select all"){listView.peer.setSelectionInterval(0,matchList.size-1)})
-    contents += new MenuItem(Action("clear selection"){listView.peer.clearSelection})
-  }
+  listViewScroller.columnHeaderView = listView.createColumnHeaderView
 
   val pathCb = new CheckBox("path").styled()
   val infoCb = new CheckBox("info").styled()
@@ -147,17 +87,19 @@ class TrackLayerInfoPanel[T <: TrackedObject](raceView: RaceView, trackLayer: Tr
     visible = false
   } styled()
 
-  listenTo(queryEntry.keys, listView.mouse.clicks, listView.selection,
+  val popUpMenu = createPopupMenu
+
+  listenTo(queryEntry.keys, listView.selection, listView.mouse.clicks,
            pathCb, infoCb, markCb, displayAllRb, displayMatchesRb, displaySelectedRb)
   reactions += {
     // note that EditDone would also be triggererd by a FocusLost, running the query again if we select a listView item
     case KeyReleased(`queryEntry`, Key.Enter, _,_) => updateMatchList(queryEntry.text)
     case ListSelectionChanged(`listView`,range,live) => updateMatchOptions
-    case MousePressed(`listView`,p,_,_,true) => listPopup.show(listView,p.x,p.y)
     case ButtonClicked(`displayAllRb`) => trackLayer.setDisplayFilter(trackLayer.noDisplayFilter)
     case ButtonClicked(`displayMatchesRb`) => trackLayer.setDisplayFilter(matchDisplayFilter)
     case ButtonClicked(`displaySelectedRb`) => trackLayer.setDisplayFilter(selectionDisplayFilter)
 
+    case MousePressed(`listView`,p,_,_,true) => popUpMenu.show(listView,p.x,p.y)
     case MouseClicked(`listView`,_,_,2,false) => raceView.trackUserAction {
       trackLayer.setTrackEntryPanel(lastSelectedMatch)
     }
@@ -183,6 +125,18 @@ class TrackLayerInfoPanel[T <: TrackedObject](raceView: RaceView, trackLayer: Tr
   var matchList: Seq[TrackEntry[T]] = Seq.empty
   var trackQuery: Option[TrackFilter] = None
   val queryParser = new TrackQueryParser(this)
+
+  //--- override these for specialized item rendering and popup menus
+
+  def createTrackEntryListView: TrackEntryListView[T] = new TrackEntryListView[T](trackLayer.config)
+
+  def createPopupMenu: PopupMenu = {
+    val listPeer = listView.peer
+    new PopupMenu {
+      contents += new MenuItem(Action("select all"){listPeer.setSelectionInterval(0,listPeer.getModel.getSize-1)})
+      contents += new MenuItem(Action("clear selection"){listPeer.clearSelection})
+    }
+  }
 
   //--- TrackQueryContext implementation (we just forward to our layer)
   override def queryDate = trackLayer.queryDate

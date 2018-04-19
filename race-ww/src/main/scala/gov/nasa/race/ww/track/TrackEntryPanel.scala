@@ -33,6 +33,10 @@ object TrackEntryPanel {
   val ejectIcon = Images.getIcon("eject-blue-16x16.png")
 }
 
+trait TrackEntryFields[T <: TrackedObject] extends FieldPanel { // we need a named type or field access will use reflection
+  def update (obj: T): Unit
+  def setTrackInfo (ti: TrackInfo): Unit = {} // not all TrackedObjects have them
+}
 
 /**
   * RaceLayer item panel for FlightEntry objects
@@ -40,7 +44,7 @@ object TrackEntryPanel {
 class TrackEntryPanel[T <: TrackedObject](raceView: RaceView, layer: TrackLayer[T])
                 extends BoxPanel(Orientation.Vertical) with RacePanel {
 
-  class TrackEntryFields extends FieldPanel { // we need a named type or field access will use reflection
+  class TrackFields extends TrackEntryFields[T] {
     val cs   = addField("cs:")
     val date = addField("date:")
     val pos  = addField("position:")
@@ -52,10 +56,32 @@ class TrackEntryPanel[T <: TrackedObject](raceView: RaceView, layer: TrackLayer[
     val arr  = addField("arrival:", "…")
     val acType = addField("aircraft:", "…")
     setContents
+
+    override def update (obj: T): Unit = {
+      cs.text = obj.cs
+      date.text = hhmmss.print(obj.date)
+      pos.text = f"${obj.position.φ.toDegrees}%.6f° , ${obj.position.λ.toDegrees}%.6f°"
+      alt.text = f"${obj.altitude.toFeet.toInt}%d ft"
+      hdg.text = f"${obj.heading.toDegrees.toInt}%d°"
+      spd.text = f"${obj.speed.toKnots.toInt}%d kn"
+    }
+
+    override def setTrackInfo (ti: TrackInfo): Unit = {
+      def optString(opt: Option[String]): String = if (opt.isDefined) opt.get else "…"
+      def optDate(opt: Option[DateTime]): String = if (opt.isDefined) hhmmss.print(opt.get) else "…"
+
+      if (ti.cs == trackEntry.obj.cs) {
+        dep.text = s"${optString(ti.departurePoint)}  ${optDate(ti.etd)} / ${optDate(ti.atd)}"
+        arr.text = s"${optString(ti.arrivalPoint)}  ${optDate(ti.eta)} / ${optDate(ti.ata)}"
+        acType.text = s"${optString(ti.trackCategory)} ${optString(ti.trackType)}"
+      }
+    }
   }
-  val fields = new TrackEntryFields().styled()
+
+  val fields = createFieldPanel.styled()
 
   val pathCb = new CheckBox("path").styled()
+  val path3dCb = new CheckBox("3d").styled()
   val infoCb = new CheckBox("info").styled()
   val markCb = new CheckBox("mark").styled()
   val centerCb = new CheckBox("center").styled()
@@ -74,11 +100,12 @@ class TrackEntryPanel[T <: TrackedObject](raceView: RaceView, layer: TrackLayer[
 
     val c = new Constraints(insets = new Insets(5, 0, 0, 0), anchor = Anchor.West)
     layout(pathCb)   = c(0,0)
-    layout(infoCb)   = c(1,0)
-    layout(markCb)   = c(2,0)
-    layout(centerCb) = c(3,0)
-    layout(new Filler().styled()) = c(4,0).weightx(0.5)
-    layout(dismissBtn) = c(5,0).weightx(0)
+    layout(path3dCb) = c(1,0)
+    layout(infoCb)   = c(2,0)
+    layout(markCb)   = c(3,0)
+    layout(centerCb) = c(4,0)
+    layout(new Filler().styled()) = c(5,0).weightx(0.5)
+    layout(dismissBtn) = c(6,0).weightx(0)
   }.styled()
 
   contents += fields
@@ -88,11 +115,14 @@ class TrackEntryPanel[T <: TrackedObject](raceView: RaceView, layer: TrackLayer[
   reactions += {
     case ButtonClicked(`centerCb`) => raceView.trackUserAction { centerFlightEntry(centerCb.selected) }
     case ButtonClicked(`pathCb`)   => raceView.trackUserAction { setPath(pathCb.selected) }
+    case ButtonClicked(`path3dCb`) => // show path vertices
     case ButtonClicked(`infoCb`)   => raceView.trackUserAction { setInfo(infoCb.selected) }
     case ButtonClicked(`markCb`)   => raceView.trackUserAction { setMark(markCb.selected) }
   }
 
   var trackEntry: TrackEntry[T] = _
+
+  protected def createFieldPanel: TrackEntryFields[T] = new TrackFields
 
   def isShowing(e: TrackEntry[T]) = showing && trackEntry == e
 
@@ -106,26 +136,9 @@ class TrackEntryPanel[T <: TrackedObject](raceView: RaceView, layer: TrackLayer[
     }
   }
 
-  def update = {
-    val obj = trackEntry.obj
-    fields.cs.text = obj.cs
-    fields.date.text = hhmmss.print(obj.date)
-    fields.pos.text = f"${obj.position.φ.toDegrees}%.6f° , ${obj.position.λ.toDegrees}%.6f°"
-    fields.alt.text = f"${obj.altitude.toFeet.toInt}%d ft"
-    fields.hdg.text = f"${obj.heading.toDegrees.toInt}%d°"
-    fields.spd.text = f"${obj.speed.toKnots.toInt}%d kn"
-  }
+  def update = fields.update(trackEntry.obj)
 
-  def setTrackInfo(fInfo: TrackInfo) = {
-    def optString(opt: Option[String]): String = if (opt.isDefined) opt.get else "…"
-    def optDate(opt: Option[DateTime]): String = if (opt.isDefined) hhmmss.print(opt.get) else "…"
-
-    if (fInfo.cs == trackEntry.obj.cs) {
-      fields.dep.text = s"${optString(fInfo.departurePoint)}  ${optDate(fInfo.etd)} / ${optDate(fInfo.atd)}"
-      fields.arr.text = s"${optString(fInfo.arrivalPoint)}  ${optDate(fInfo.eta)} / ${optDate(fInfo.ata)}"
-      fields.acType.text = s"${optString(fInfo.trackCategory)} ${optString(fInfo.trackType)}"
-    }
-  }
+  def setTrackInfo(ti: TrackInfo) = fields.setTrackInfo(ti)
 
   def centerFlightEntry(centerIt: Boolean) = {
     if (centerIt) layer.startCenteringTrackEntry(trackEntry)

@@ -19,6 +19,7 @@ package gov.nasa.race.actor
 
 import com.typesafe.config.Config
 import gov.nasa.race._
+import gov.nasa.race.config._
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.Messages.BusEvent
 import gov.nasa.race.core.{PublishingRaceActor, RaceContext, SubscribingRaceActor}
@@ -29,6 +30,51 @@ import gov.nasa.race.uom.Length._
 import org.joda.time.DateTime
 
 import scala.collection.mutable.{HashMap => MHashMap, Set => MSet}
+
+/**
+  * policy object to identify proximity events
+  */
+trait ProximityIdentifier {
+  val config: Config
+  def getId(pr: ProximityReference, track: TrackedObject, status: Int): String
+}
+
+trait PrefixedProximityIdentifier extends ProximityIdentifier {
+  val prefix = config.getStringOrElse("event-prefix", "Proximity")
+}
+
+trait NumberedProximityIdentifier extends ProximityIdentifier {
+  var n = 0
+
+  def appendNumber (s: String) = {
+    n += 1
+    s"$s-$n"
+  }
+}
+
+class StaticProximityId (val config: Config) extends PrefixedProximityIdentifier {
+  override def getId(pr: ProximityReference, track: TrackedObject, status: Int) = prefix
+}
+
+class NumberedStaticProximityId  (val config: Config) extends PrefixedProximityIdentifier with NumberedProximityIdentifier {
+  override def getId(pr: ProximityReference, track: TrackedObject, status: Int) = appendNumber(prefix)
+}
+
+class ProximityRefId  (val config: Config) extends ProximityIdentifier {
+  override def getId(pr: ProximityReference, track: TrackedObject, status: Int) = pr.id
+}
+
+class NumberedProximityRefId (val config: Config) extends NumberedProximityIdentifier {
+  override def getId(pr: ProximityReference, track: TrackedObject, status: Int) = appendNumber(pr.id)
+}
+
+class ProximityCombinationId (val config: Config) extends ProximityIdentifier {
+  override def getId(pr: ProximityReference, track: TrackedObject, status: Int) = {
+    val refId = pr.id
+    val trackId = track.gid
+    if (refId > trackId) s"$trackId-$refId" else s"$refId-$trackId"
+  }
+}
 
 /**
   * base type for actors that detect and report proximity tracks
@@ -42,6 +88,8 @@ trait ProximityActor extends SubscribingRaceActor with PublishingRaceActor {
     def dropProximity(tId: String, date: DateTime): Unit
   }
 
+  val proximityIdentifier = getConfigurableOrElse[ProximityIdentifier]("identifier")(new NumberedProximityRefId(NoConfig))
+  
   // the distance we consider as proximity
   def defaultDistance: Length = NauticalMiles(5)
   val distanceInMeters = NauticalMiles(config.getDoubleOrElse("distance-nm", defaultDistance.toNauticalMiles)).toMeters
@@ -53,6 +101,11 @@ trait ProximityActor extends SubscribingRaceActor with PublishingRaceActor {
   def dropRef (ttm: TrackTerminationMessage) = refs -= ttm.cs
 
   def dropProximities (ttm: TrackTerminationMessage) = refs.foreach( _._2.dropProximity(ttm.cs,ttm.date))
+
+  protected def createProximityEvent (pr: ProximityReference, dist: Length, status: Int, track: TrackedObject): ProximityEvent = {
+    val id = proximityIdentifier.getId(pr,track,status)
+    new ProximityEvent(id,pr,dist,status,track)
+  }
 }
 
 /**
@@ -76,11 +129,11 @@ class StaticProximityActor (val config: Config) extends ProximityActor {
       if ((dist <= distanceInMeters) && !track.isDroppedOrCompleted) {
         val flags = if (proximities.contains(tId)) ProxChange else ProxNew
         proximities += (tId -> track)
-        publish(ProximityEvent(new ProximityReference(id,track.date,pos,altitude), Meters(dist), flags, track))
+        publish(createProximityEvent(new ProximityReference(id,track.date,pos,altitude), Meters(dist), flags, track))
       } else {
         if (proximities.contains(tId)) {
           proximities -= tId
-          publish(ProximityEvent(new ProximityReference(id,track.date,pos,altitude), Meters(dist), ProxDrop, track))
+          publish(createProximityEvent(new ProximityReference(id,track.date,pos,altitude), Meters(dist), ProxDrop, track))
         }
       }
     }
@@ -89,7 +142,7 @@ class StaticProximityActor (val config: Config) extends ProximityActor {
       ifSome(proximities.get(tId)) { track =>
         val dist = getDistanceInMeters(track)
         proximities -= tId
-        publish(ProximityEvent(new ProximityReference(id,date,pos,altitude), Meters(dist), ProxDrop, track))
+        publish(createProximityEvent(new ProximityReference(id,date,pos,altitude), Meters(dist), ProxDrop, track))
       }
     }
   }
@@ -146,11 +199,11 @@ class DynamicProximityActor (val config: Config) extends ProximityActor {
           if ((dist <= distanceInMeters) && !track.isDroppedOrCompleted) {
             val flags = if (proximities.contains(tId)) ProxChange else ProxNew
             proximities += (tId -> track)
-            publish(ProximityEvent(new ProximityReference(re, track.date), Meters(dist), flags, track))
+            publish(createProximityEvent(new ProximityReference(re, track.date), Meters(dist), flags, track))
           } else {
             if (proximities.contains(tId)) {
               proximities -= tId
-              publish(ProximityEvent(new ProximityReference(re, track.date), Meters(dist), ProxDrop, track))
+              publish(createProximityEvent(new ProximityReference(re, track.date), Meters(dist), ProxDrop, track))
             }
           }
         }
@@ -162,7 +215,7 @@ class DynamicProximityActor (val config: Config) extends ProximityActor {
         if (refEstimator.estimateState(date.getMillis)) {
           val dist = getDistanceInMeters(track)
           proximities -= tId
-          publish(ProximityEvent(new ProximityReference(refEstimator, date), Meters(dist), ProxDrop, track))
+          publish(createProximityEvent(new ProximityReference(refEstimator, date), Meters(dist), ProxDrop, track))
         }
       }
     }
@@ -231,7 +284,7 @@ class CollisionDetector (config: Config) extends DynamicProximityActor(config) {
           if (dist <= distanceInMeters) {
             if (!collisions.contains(tcs)) {
               collisions = collisions + tcs
-              publish(ProximityEvent(new ProximityReference(re, track.date), Meters(dist), ProxCollision, track))
+              publish(createProximityEvent(new ProximityReference(re, track.date), Meters(dist), ProxCollision, track))
             }
           } else {
             if (collisions.nonEmpty) collisions = collisions - tcs

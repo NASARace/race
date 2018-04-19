@@ -111,7 +111,7 @@ object Dependencies {
   val argon2 = "de.mkammerer" % "argon2-jvm" % "2.4"
 
   //--- Akka
-  val akkaVersion = "2.5.11"
+  val akkaVersion = "2.5.12"
   val akkaOrg = "com.typesafe.akka"
 
   val akkaActor = akkaOrg %% "akka-actor" % akkaVersion
