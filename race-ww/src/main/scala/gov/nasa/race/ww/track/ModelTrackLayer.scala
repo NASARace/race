@@ -73,7 +73,7 @@ trait ModelTrackLayer[T <:TrackedObject] extends TrackLayer[T] with EyePosListen
   }
 
   def getModel (e: TrackEntry[T]): Option[TrackModel[T]] = {
-    models.find( _.matches(e.obj) )
+    models.find( _.matches(e.obj) ).orElse(Some(TrackModel.loadDefaultModel))
   }
 
   // we only get these callbacks if there were configured models
@@ -141,5 +141,12 @@ trait ModelTrackLayer[T <:TrackedObject] extends TrackLayer[T] with EyePosListen
   }
   override  def releaseTrackEntryAttributes(e: TrackEntry[T]): Unit = {
     e.removeRenderables
+  }
+
+  override def changedTrackEntryOptions(e: TrackEntry[T], action: String) = {
+    if (action eq ShowContour) setModel(e)
+    else if (action eq HideContour) unsetModel(e)
+
+    super.changedTrackEntryOptions(e,action)
   }
 }

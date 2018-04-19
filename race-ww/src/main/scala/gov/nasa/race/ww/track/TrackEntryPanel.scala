@@ -111,11 +111,11 @@ class TrackEntryPanel[T <: TrackedObject](raceView: RaceView, layer: TrackLayer[
   contents += fields
   contents += buttonPanel
 
-  listenTo(centerCb,pathCb,infoCb,markCb)
+  listenTo(centerCb,pathCb,path3dCb,infoCb,markCb)
   reactions += {
     case ButtonClicked(`centerCb`) => raceView.trackUserAction { centerFlightEntry(centerCb.selected) }
     case ButtonClicked(`pathCb`)   => raceView.trackUserAction { setPath(pathCb.selected) }
-    case ButtonClicked(`path3dCb`) => // show path vertices
+    case ButtonClicked(`path3dCb`) => raceView.trackUserAction { setPathContour(path3dCb.selected) }
     case ButtonClicked(`infoCb`)   => raceView.trackUserAction { setInfo(infoCb.selected) }
     case ButtonClicked(`markCb`)   => raceView.trackUserAction { setMark(markCb.selected) }
   }
@@ -150,6 +150,12 @@ class TrackEntryPanel[T <: TrackedObject](raceView: RaceView, layer: TrackLayer[
     layer.changedTrackEntryOptions(trackEntry, if (showIt) layer.ShowPath else layer.HidePath)
     layer.redraw
   }
+  def setPathContour (showIt: Boolean) = {
+    trackEntry.setPathContour(showIt)
+    layer.changedTrackEntryOptions(trackEntry, if (showIt) layer.ShowContour else layer.HideContour)
+    layer.redraw
+  }
+
   def setInfo(showIt: Boolean) = {
     trackEntry.setInfo(showIt)
     layer.changedTrackEntryOptions(trackEntry, if (showIt) layer.ShowInfo else layer.HideInfo)

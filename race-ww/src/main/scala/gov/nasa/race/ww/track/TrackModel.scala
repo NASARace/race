@@ -28,7 +28,7 @@ import osm.map.worldwind.gl.obj.{ObjLoader, ObjRenderable}
 case class ModelSpec (src: String, size0: Double, pitch0: Double, yaw0: Double, roll0: Double)
 
 object TrackModel {
-  val defaultSpec = ModelSpec("/gov/nasa/race/ww/GlobalHawk.obj.gz", 8, 180,0,0)
+  val defaultSpec = ModelSpec("/gov/nasa/race/ww/GlobalHawk.obj.gz", 100, 180,0,0)
   var map = Map("default" -> defaultSpec)
 
   def getModelSpec (key: String): Option[ModelSpec] = map.get(key)
@@ -57,6 +57,8 @@ object TrackModel {
 
     new TrackModel[T](mc.getString("key"), src, size0, pitch0, yaw0, roll0)
   }
+
+  def loadDefaultModel[T <: TrackedObject]: TrackModel[T] = new TrackModel[T](defaultSpec)
 }
 
 /**
@@ -74,6 +76,8 @@ class TrackModel[T <: TrackedObject](pattern: String, src: String,
                                      var size0: Double,
                                      var yaw0: Double, var pitch0: Double, var roll0: Double)
                         extends ObjRenderable(FarAway,src) {
+
+  def this (ms: ModelSpec) = this("", ms.src, ms.size0, ms.pitch0, ms.yaw0, ms.roll0)
 
   val regex = StringUtils.globToRegex(pattern)
   var assignedEntry: Option[TrackEntry[T]] = None

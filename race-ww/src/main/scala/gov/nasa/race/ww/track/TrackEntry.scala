@@ -17,8 +17,8 @@
 
 package gov.nasa.race.ww.track
 
-import java.awt.{Font, Point}
 import java.awt.image.BufferedImage
+import java.awt.{Font, Point}
 
 import gov.nasa.race._
 import gov.nasa.race.track.{TrackedObject, Trajectory}
@@ -26,7 +26,6 @@ import gov.nasa.race.util.DateTimeUtils.hhmmss
 import gov.nasa.race.ww.Implicits._
 import gov.nasa.race.ww._
 import gov.nasa.worldwind.WorldWind
-import gov.nasa.worldwind.avlist.AVKey
 import gov.nasa.worldwind.render.{Material, Offset, PointPlacemark, PointPlacemarkAttributes}
 
 /**
@@ -189,6 +188,13 @@ class TrackEntry[T <: TrackedObject](var obj: T, var trajectory: Trajectory, val
     } else if (!showIt && path.isDefined) {
       layer.removeRenderable(path.get)
       path = None
+    }
+  }
+
+  def setPathContour (showIt: Boolean) = {
+    if (showIt != drawPathContour) {
+      drawPathContour = showIt
+      ifSome(path) { p=> p.setContourAttrs(showIt) }
     }
   }
 

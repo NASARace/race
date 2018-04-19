@@ -167,6 +167,8 @@ trait TrackLayer[T <:TrackedObject] extends SubscribingRaceLayer with Configurab
   final val StopCenter = "StopCenter"
   final val ShowPath = "ShowPath"
   final val HidePath = "HidePath"
+  final val ShowContour = "ShowContour"
+  final val HideContour = "HideContour"
   final val ShowInfo = "ShowInfo"
   final val HideInfo = "HideInfo"
   final val ShowMark = "ShowMark"
@@ -184,6 +186,8 @@ trait TrackLayer[T <:TrackedObject] extends SubscribingRaceLayer with Configurab
         case `StopCenter` => ifSome(centeredEntry) { ce=> if (ce eq e) stopCenteringTrackEntry }
         case `ShowPath`   => changeObjectAttr(e, e.setPath(true), action)
         case `HidePath`   => changeObjectAttr(e, e.setPath(false), action)
+        case `ShowContour` => changeObjectAttr(e, e.setPathContour(true), action)
+        case `HideContour` => changeObjectAttr(e, e.setPathContour(false), action)
         case `ShowInfo`   => changeObjectAttr(e, e.setInfo(true), action)
         case `HideInfo`   => changeObjectAttr(e, e.setInfo(false), action)
         case `ShowMark`   => changeObjectAttr(e, e.setMark(true), action)

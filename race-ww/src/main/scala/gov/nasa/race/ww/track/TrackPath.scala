@@ -37,18 +37,13 @@ class TrackPath[T <: TrackedObject](val entry: TrackEntry[T]) extends Path with 
   attrs.setOutlineWidth(1)
   attrs.setOutlineMaterial(entry.lineMaterial)
   attrs.setEnableAntialiasing(true)
+  attrs.setDrawInterior(false)
+
+  // those we set in preparation if there is a request to draw contours
+  attrs.setInteriorOpacity(0.3)
+  attrs.setInteriorMaterial(entry.lineMaterial)
+
   setShowPositionsScale(4.0)
-
-  if (entry.drawPathContour) {
-    attrs.setDrawInterior(true)
-    attrs.setInteriorOpacity(0.3)
-    attrs.setInteriorMaterial(entry.lineMaterial)
-    setExtrude(true)
-    //setDrawVerticals(true) // should be configurable
-  } else {
-    attrs.setDrawInterior(false)
-  }
-
   setAttributes(attrs)
 
   // we don't use setShowPositionsThreshold because it is based on eye distance to position, not altitude
@@ -68,6 +63,12 @@ class TrackPath[T <: TrackedObject](val entry: TrackEntry[T]) extends Path with 
     addSample
     posList.add(tp)
     setPositions(posList)
+  }
+
+  def setContourAttrs (showContour: Boolean) = {
+    attrs.setDrawInterior(showContour)
+    setExtrude(showContour)
+    setDrawVerticals(showContour)
   }
 
   override def computePositionCount = numPositions = posList.size
