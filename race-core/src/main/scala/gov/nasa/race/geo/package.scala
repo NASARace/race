@@ -32,8 +32,11 @@ package object geo {
   final val NM = Meters(1852.0) // length of Nautical Mile in meters
 
   //--- WGS84 earth axes constants
-  final val RE_E = 6378137.0000e+0
-  final val RE_N = 6356752.3141e+0
+  final val RE_E = 6378137.0000e+0  // semi-major (equatorial) earth radius in [m]
+  final val RE_E2 = RE_E * RE_E
+  final val RE_N = 6356752.3141e+0  // semi-minor (polar) earth radius in [m]
+  final val RE_N2 = RE_N * RE_N
+
   final val RE_FLATTENING = ( RE_E - RE_N ) / RE_E
   final val INV_RE_FLATTENING = 298.257223563
   final val E_ECC = 2.0 * RE_FLATTENING - RE_FLATTENING * RE_FLATTENING

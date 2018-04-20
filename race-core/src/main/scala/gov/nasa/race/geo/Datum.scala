@@ -40,7 +40,7 @@ object Datum {
     *
     * from Astronomical Almanac pg. K12
     */
-  def eciToWGS84 (xLen: Length, yLen: Length, zLen: Length): LatLonAltPos = {
+  def ecefToWGS84(xLen: Length, yLen: Length, zLen: Length): LatLonAltPos = {
     val x = xLen.toMeters
     val y = yLen.toMeters
     val z = zLen.toMeters
@@ -62,14 +62,14 @@ object Datum {
 
     LatLonAltPos(Radians(φ),Radians(λ),Meters(h))
   }
-  @inline def eciToWGS84 (pos: Tuple3[Length,Length,Length]): LatLonAltPos = eciToWGS84(pos._1,pos._2,pos._3)
+  @inline def ecefToWGS84(pos: (Length,Length,Length)): LatLonAltPos = ecefToWGS84(pos._1,pos._2,pos._3)
 
   /**
     * convert geodetic (lat,lon,alt) WGS84 coordinates into geocentric ECI (x,y,z) coordinates
     *
     * from Astronomical Almanac pg. K12
     */
-  def wgs84ToECI (φ: Angle, λ: Angle, alt: Length): Tuple3[Length,Length,Length] = {
+  def wgs84ToECEF(φ: Angle, λ: Angle, alt: Length): (Length,Length,Length) = {
     val h = alt.toMeters
     val cos_φ = Cos(φ)
     val sin_φ = Sin(φ)
@@ -85,7 +85,7 @@ object Datum {
 
     (Meters(x),Meters(y),(Meters(z)))
   }
-  @inline def wgs84ToECI (pos: LatLonAltPos): Tuple3[Length,Length,Length] = wgs84ToECI(pos.φ,pos.λ,pos.altitude)
+  @inline def wgs84ToECEF(pos: LatLonAltPos): (Length,Length,Length) = wgs84ToECEF(pos.φ,pos.λ,pos.altitude)
 
 
   /**
@@ -108,14 +108,21 @@ object Datum {
     √((x1-x2).`²` + (y1-y2).`²` + (z1-z2).`²` )
   }
 
+  def earthRadius (φ: Angle): Length = {
+    val cos_φ = Cos(φ)
+    val sin_φ = Sin(φ)
+
+    Meters(sqrt(((RE_E2 * cos_φ).`²` + (RE_N2 * sin_φ).`²`)/(RE_E * cos_φ).`²` + (RE_N * sin_φ).`²`))
+  }
+
   def main (args: Array[String]): Unit = {
     //val pos = LatLonAltPos(Degrees(37.415),Degrees(-122.048333),Meters(10000))
     val pos = LatLonAltPos(Degrees(-48.654090194270736),Degrees(321.67482079047466),Kilometers(425.1322400365634))
 
     println(s"start with $pos")
-    val v = wgs84ToECI(pos)
+    val v = wgs84ToECEF(pos)
     println(v)
-    val p = eciToWGS84(v)
+    val p = ecefToWGS84(v)
     println(p)
   }
 }

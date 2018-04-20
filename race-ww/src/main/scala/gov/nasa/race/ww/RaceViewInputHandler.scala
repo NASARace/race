@@ -37,6 +37,7 @@ class RaceViewInputHandler extends OrbitViewInputHandler {
   var lastUserInputTime: Long = 0
   var lastTargetPosition: Position = _
   var lastInputEvent: InputEvent = _
+  var pressedKey: Int = 0
 
   def attachToRaceView(rv: RaceView) = raceView = rv
 
@@ -51,6 +52,19 @@ class RaceViewInputHandler extends OrbitViewInputHandler {
 
     raceView.newTargetEyePosition(eyePos, animationHint)
     lastTargetPosition = eyePos // set this after notification so that we can still see the last pos
+  }
+
+  def processKeyPressed (e: KeyEvent): Boolean = {
+    pressedKey = e.getKeyCode
+    false
+  }
+
+  def processKeyReleased (e: KeyEvent): Boolean = {
+    pressedKey = KeyEvent.VK_UNDEFINED
+    e.getKeyCode match {
+      case KeyEvent.VK_0 => raceView.pitchTo(ZeroWWAngle); true
+      case _ => false
+    }
   }
 
   //--- keep track of last user input time
@@ -80,7 +94,12 @@ class RaceViewInputHandler extends OrbitViewInputHandler {
     lastUserInputTime = System.currentTimeMillis
   }
   override protected def handleKeyPressed(e: KeyEvent): Unit = {
-    super.handleKeyPressed(e)
+    if (!processKeyPressed(e)) super.handleKeyPressed(e)
+    lastInputEvent = e
+    lastUserInputTime = System.currentTimeMillis
+  }
+  override protected def handleKeyReleased(e: KeyEvent): Unit = {
+    if (!processKeyReleased(e)) super.handleKeyReleased(e)
     lastInputEvent = e
     lastUserInputTime = System.currentTimeMillis
   }
@@ -92,6 +111,11 @@ class RaceViewInputHandler extends OrbitViewInputHandler {
   def lastUserInputWasDrag = lastInputEvent != null && lastInputEvent.getID == MouseEvent.MOUSE_DRAGGED
   def lastUserInputWasWheel = lastInputEvent != null && lastInputEvent.getID == MouseEvent.MOUSE_WHEEL
 
+  /**
+    * WW per default uses the eye altitude to compute the zoom level (same input at higher alt
+    * causes more zoom). We extend this with scaled linear (meta) and logarithmic zoom when
+    * the meta or alt [+shift] key is pressed so that we can navigate in proximity of high objects
+    */
   override def computeNewZoom(view: OrbitView, curZoom: Double, change: Double): Double = {
     val newZoom = if (isMeta) { // adapt zoom factor independent of current level
       curZoom + scale(Math.signum(change)*10)

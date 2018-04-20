@@ -29,7 +29,7 @@ import gov.nasa.race.core.Messages.{RacePauseRequest, RaceResumeRequest, RaceTer
 import gov.nasa.race.core.{ContinuousTimeRaceActor, RaceContext, _}
 import gov.nasa.race.swing.Style._
 import gov.nasa.race.swing.{Redrawable, _}
-import gov.nasa.worldwind.geom.Position
+import gov.nasa.worldwind.geom.{Angle, Position}
 import gov.nasa.worldwind.layers.Layer
 
 import scala.collection.JavaConverters._
@@ -400,6 +400,10 @@ class RaceView (viewerActor: RaceViewerActor) extends DeferredEyePositionListene
   def setEyePosition (pos: Position, animTime: Long) = {
     inputHandler.stopAnimators
     inputHandler.addEyePositionAnimator(animTime,eyePosition,pos)
+  }
+  def pitchTo (endAngle: Angle) = {
+    inputHandler.stopAnimators
+    inputHandler.addPitchAnimator(wwd.getView.getPitch,endAngle)
   }
 
   //--- layer change management
