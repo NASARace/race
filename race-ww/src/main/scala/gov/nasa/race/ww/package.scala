@@ -22,7 +22,7 @@ import java.awt.event._
 
 import com.typesafe.config.Config
 import javax.swing._
-import gov.nasa.race.geo.LatLonPos
+import gov.nasa.race.geo.{GeoPosition3D, LatLonPos}
 import gov.nasa.race.track.TrackPoint3D
 import gov.nasa.worldwind._
 import gov.nasa.worldwind.event.SelectEvent
@@ -87,6 +87,7 @@ package object ww {
   trait LayerObject {
     def id: String
     def layer: Layer
+    def pos: GeoPosition3D
   }
 
   trait ObjectListener {

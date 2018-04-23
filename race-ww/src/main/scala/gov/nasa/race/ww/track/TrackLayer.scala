@@ -290,6 +290,7 @@ trait TrackLayer[T <:TrackedObject] extends SubscribingRaceLayer with Configurab
 
   def startCenteringTrackEntry(e: TrackEntry[T]) = {
     ifSome(centeredEntry){_.setCentered(false)}
+    raceView.setFocusObject(e)
     e.setCentered(true)
     raceView.panToCenter(e.obj)
     centeredEntry = Some(e)
@@ -298,6 +299,7 @@ trait TrackLayer[T <:TrackedObject] extends SubscribingRaceLayer with Configurab
   def stopCenteringTrackEntry = {
     ifSome(centeredEntry) { e =>
       e.setCentered(false)
+      raceView.resetFocusObject(e)
       centeredEntry = None
       changedTrackEntryOptions(e,StopCenter)
     }

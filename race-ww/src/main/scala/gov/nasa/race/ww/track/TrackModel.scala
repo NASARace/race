@@ -28,7 +28,8 @@ import osm.map.worldwind.gl.obj.{ObjLoader, ObjRenderable}
 case class ModelSpec (src: String, size0: Double, pitch0: Double, yaw0: Double, roll0: Double)
 
 object TrackModel {
-  val defaultSpec = ModelSpec("/gov/nasa/race/ww/GlobalHawk.obj.gz", 100, 180,0,0)
+  //val defaultSpec = ModelSpec("/gov/nasa/race/ww/GlobalHawk.obj.gz", 100, 180,0,0)
+  val defaultSpec = ModelSpec("/gov/nasa/race/ww/airplane1.obj", 100, -90,0,0)
   var map = Map("default" -> defaultSpec)
 
   def getModelSpec (key: String): Option[ModelSpec] = map.get(key)

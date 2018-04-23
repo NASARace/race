@@ -21,6 +21,10 @@ import java.awt.Point
 import java.awt.event.InputEvent._
 import java.awt.event.{InputEvent, KeyEvent, MouseEvent, MouseWheelEvent}
 
+import gov.nasa.race._
+import Implicits._
+
+import gov.nasa.worldwind.View
 import gov.nasa.worldwind.animation.AnimationController
 import gov.nasa.worldwind.geom.{LatLon, Position, Vec4}
 import gov.nasa.worldwind.view.orbit.{OrbitView, OrbitViewInputHandler}
@@ -34,12 +38,16 @@ class RaceViewInputHandler extends OrbitViewInputHandler {
   // we have to init this deferred because of WWJ initialization (setViewInputHandler() does
   // not properly unregister/register listeners)
   var raceView: RaceView = null
+  var wwdView: View = null
   var lastUserInputTime: Long = 0
   var lastTargetPosition: Position = _
   var lastInputEvent: InputEvent = _
   var pressedKey: Int = 0
 
-  def attachToRaceView(rv: RaceView) = raceView = rv
+  def attachToRaceView(rv: RaceView) = {
+    raceView = rv
+    wwdView = wwd.getView
+  }
 
   override protected def setTargetEyePosition (eyePos: Position, animController: AnimationController, actionKey: String): Unit = {
     super.setTargetEyePosition(eyePos, animController, actionKey)
@@ -54,6 +62,9 @@ class RaceViewInputHandler extends OrbitViewInputHandler {
     lastTargetPosition = eyePos // set this after notification so that we can still see the last pos
   }
 
+  // we try to keep hotkeys global to avoid implicit modes but at some point we might have
+  // layers that are key listeners
+
   def processKeyPressed (e: KeyEvent): Boolean = {
     pressedKey = e.getKeyCode
     false
@@ -62,14 +73,52 @@ class RaceViewInputHandler extends OrbitViewInputHandler {
   def processKeyReleased (e: KeyEvent): Boolean = {
     pressedKey = KeyEvent.VK_UNDEFINED
     e.getKeyCode match {
-      case KeyEvent.VK_0 => raceView.pitchTo(ZeroWWAngle); true
+      case KeyEvent.VK_0 =>
+        raceView.resetView; true
+      case KeyEvent.VK_C => centerOnMouse; false
+      case KeyEvent.VK_Z =>
+        println("@@ center focus")
+        val cp = raceView.focusObject.get.pos
+        wwdView.asInstanceOf[OrbitView].setCenterPosition(cp)
+        //wwdView.setOrientation(wwdView.getEyePosition,cp)
+        raceView.redrawNow
+        false
       case _ => false
     }
   }
 
+  def centerOnMouse: Unit = {
+    val screenPoint = getMousePoint
+    val pos = raceView.wwdView.computePositionFromScreenPoint(screenPoint.x, screenPoint.y)
+    raceView.panToCenter(pos)
+  }
+
+  def processMouseWheelMoved (e: MouseWheelEvent): Boolean = {
+    if (isCtrl) {
+      val dPitch = if (e.getWheelRotation > 0) 2 else -2
+      val pitch = wwdView.getPitch.addDegrees(dPitch)
+      //raceView.pitchTo(pitch)
+      wwdView.setPitch(pitch)
+      //val cp = raceView.focusObject.get.pos
+      //wwdView.asInstanceOf[OrbitView].setCenterPosition(cp)
+      raceView.redrawNow
+      true
+    } else if (isAlt) {
+      val dHdg = if (e.getWheelRotation > 0) 2 else -2
+      val hdg = wwdView.getHeading.addDegrees(dHdg)
+      wwdView.setHeading(hdg)
+      raceView.redrawNow
+      true
+    } else false
+  }
+
   //--- keep track of last user input time
   override protected def handleMouseWheelMoved (e: MouseWheelEvent): Unit = {
-    super.handleMouseWheelMoved(e)
+    if (!processMouseWheelMoved(e)) {
+      //ifSome(raceView.focusPoint) {wwdView.asInstanceOf[OrbitView].setCenterPosition(_)}
+      super.handleMouseWheelMoved(e)
+    }
+
     lastInputEvent = e
     lastUserInputTime = System.currentTimeMillis
   }
@@ -79,7 +128,8 @@ class RaceViewInputHandler extends OrbitViewInputHandler {
     lastUserInputTime = System.currentTimeMillis
   }
   override protected def handleMouseClicked(e: MouseEvent): Unit = {
-    super.handleMouseClicked(e)
+    // we don't want the WW pan-to-center behavior in case we didn't hit a pick object (this is confusing implicit mode)
+    //super.handleMouseClicked(e)
     lastInputEvent = e
     lastUserInputTime = System.currentTimeMillis
   }

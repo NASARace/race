@@ -29,8 +29,10 @@ import gov.nasa.race.core.Messages.{RacePauseRequest, RaceResumeRequest, RaceTer
 import gov.nasa.race.core.{ContinuousTimeRaceActor, RaceContext, _}
 import gov.nasa.race.swing.Style._
 import gov.nasa.race.swing.{Redrawable, _}
+import gov.nasa.worldwind.avlist.AVKey
 import gov.nasa.worldwind.geom.{Angle, Position}
 import gov.nasa.worldwind.layers.Layer
+import gov.nasa.worldwind.view.ViewUtil
 
 import scala.collection.JavaConverters._
 import scala.collection.immutable.ListMap
@@ -133,6 +135,8 @@ import gov.nasa.race.ww.RaceView._
   * This follows the same approach as RaceLayer/RaceLayerActor to map thread
   * boundaries to types. It also acts as a mediator/broker
   *
+  * This is *not* a WW View
+  *
   * NOTE this class has to be thread-aware, don't introduce race conditions
   * by exposing objects.
   *
@@ -178,6 +182,8 @@ class RaceView (viewerActor: RaceViewerActor) extends DeferredEyePositionListene
 
   val emptyLayerInfoPanel = new EmptyPanel(this)
   val emptyObjectPanel = new EmptyPanel(this)
+
+  var focusObject: Option[LayerObject] = None
 
   val panels: ListMap[String,PanelEntry] = createPanels
   panels.foreach{ e => frame.initializePanel(e._2) }
@@ -404,6 +410,23 @@ class RaceView (viewerActor: RaceViewerActor) extends DeferredEyePositionListene
   def pitchTo (endAngle: Angle) = {
     inputHandler.stopAnimators
     inputHandler.addPitchAnimator(wwd.getView.getPitch,endAngle)
+  }
+  def resetView = {
+    val v = wwdView
+    inputHandler.stopAnimators
+    val anim = ViewUtil.createHeadingPitchRollAnimator(v,v.getHeading,ZeroWWAngle,v.getPitch,ZeroWWAngle,v.getRoll,ZeroWWAngle)
+    inputHandler.addAnimator(anim)
+    v.firePropertyChange(AVKey.VIEW, null, v)
+  }
+
+  def setFocusObject(p: LayerObject): Unit = {
+    focusObject = Some(p)
+  }
+
+  def resetFocusObject(p: LayerObject): Unit = {
+    ifSome(focusObject) { fp=>
+      if (fp eq p) focusObject = None
+    }
   }
 
   //--- layer change management

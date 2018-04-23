@@ -32,6 +32,10 @@ object Implicits {
 
   implicit def latLonPos2Position(pos: LatLonPos): Position = Position.fromDegrees(pos.φ.toDegrees, pos.λ.toDegrees)
 
+  implicit def geoPosition3d2Position (pos: GeoPosition3D): Position = {
+    Position.fromDegrees(pos.position.φ.toDegrees, pos.position.λ.toDegrees, pos.altitude.toMeters)
+  }
+
   implicit def trackPoint3D2Position(e: TrackPoint3D): Position = wwPosition(e.position, e.altitude)
 
   implicit def angle2WWAngle(angle: Angle): WWAngle = WWAngle.fromDegrees(angle.toDegrees)

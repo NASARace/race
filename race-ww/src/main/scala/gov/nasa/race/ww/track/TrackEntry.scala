@@ -49,6 +49,8 @@ class TrackEntry[T <: TrackedObject](var obj: T, var trajectory: Trajectory, val
   def viewPitch = layer.raceView.viewPitch
   def viewRoll = layer.raceView.viewRoll
 
+  override def pos = obj
+
   //--- per-layer rendering resources
   def labelMaterial: Material = layer.labelMaterial
   def lineMaterial: Material = layer.lineMaterial
