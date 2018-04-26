@@ -21,22 +21,23 @@ import java.awt.Color
 import java.awt.event._
 
 import com.typesafe.config.Config
-import javax.swing._
 import gov.nasa.race.geo.{GeoPosition3D, LatLonPos}
-import gov.nasa.race.track.TrackPoint3D
+import gov.nasa.race.uom._
 import gov.nasa.worldwind._
 import gov.nasa.worldwind.event.SelectEvent
-import gov.nasa.worldwind.geom.{Position, Angle => WWAngle}
+import gov.nasa.worldwind.geom.Position
 import gov.nasa.worldwind.layers.Layer
-import gov.nasa.race.uom._
+import javax.swing._
 
 import scala.language.{implicitConversions, reflectiveCalls}
-import scala.swing.{BorderPanel, Component, Panel, UIElement}
+import scala.swing.{BorderPanel, Component, Panel}
 
 
 package object ww {
 
   type AppPanelCreator = (WorldWindow) => Panel
+  type WWAngle = gov.nasa.worldwind.geom.Angle
+  type WWPosition = gov.nasa.worldwind.geom.Position
 
   implicit class FrameWrapper[T <: JFrame] (frame: T) {
     def launch: T = {
@@ -61,7 +62,7 @@ package object ww {
     Position.fromDegrees(pos.φ.toDegrees, pos.λ.toDegrees, alt.toMeters)
   }
 
-  val ZeroWWAngle = WWAngle.fromDegrees(0)
+  val ZeroWWAngle = gov.nasa.worldwind.geom.Angle.ZERO
 
   def redrawAsync (wwd: WorldWindow) = {
     SwingUtilities.invokeLater( new Runnable(){
@@ -74,9 +75,11 @@ package object ww {
   def toABGRString (clr: Color): String =
     f"0x${clr.getAlpha}%02x${clr.getBlue}%02x${clr.getGreen}%02x${clr.getRed}%02x"
 
-  trait EyePosListener {
-    def eyePosChanged(pos: Position, animationHint: String)
+  trait ViewListener {
+    // if animationHint is set this is the target view state of an animation
+    def viewChanged (pos: Position, heading: WWAngle, pitch: WWAngle, roll: WWAngle, animationHint: String): Unit
   }
+
   trait LayerListener {
     def layerChanged(layer: Layer)
   }

@@ -6,7 +6,7 @@
 <WorldWindConfiguration version="1">
 
     <Property name="gov.nasa.worldwind.avkey.ViewClassName"
-              value="gov.nasa.race.ww.MinClipOrbitView"/>
+              value="gov.nasa.race.ww.RaceOrbitView"/>
 
     <Property name="gov.nasa.worldwind.avkey.ViewInputHandlerClassName"
               value="gov.nasa.race.ww.RaceViewInputHandler"/>

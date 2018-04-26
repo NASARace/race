@@ -23,7 +23,7 @@ import gov.nasa.race.uom.Length
 import gov.nasa.race.swing.GBPanel.{Anchor, Fill}
 import gov.nasa.race.swing.Style._
 import gov.nasa.race.swing._
-import gov.nasa.worldwind.geom.Position
+import gov.nasa.worldwind.geom.{Angle, Position}
 import gov.nasa.worldwind.globes.projections.ProjectionMercator
 import gov.nasa.worldwind.globes.{Earth, EarthFlat}
 import gov.nasa.worldwind.terrain.ZeroElevationModel
@@ -37,7 +37,7 @@ import scala.swing.event.ButtonClicked
   * and show eye position
   */
 class ViewPanel (raceView: RaceView, config: Option[Config]=None) extends GBPanel
-                  with RacePanel with DeferredPositionListener with EyePosListener {
+                  with RacePanel with DeferredPositionListener with ViewListener {
 
   val wwd = raceView.wwd
   val earthGlobe = new Earth
@@ -50,6 +50,9 @@ class ViewPanel (raceView: RaceView, config: Option[Config]=None) extends GBPane
   val flatButton = new RadioButton("flat map").styled()
   val group = new ButtonGroup( globeButton,flatButton)
 
+  val followIndicator = new OnOffIndicator("  follow", false).styled()
+  followIndicator.horizontalTextPosition = Alignment.Left
+
   //--- fields to display attitude information
   implicit val doubleOutputLength = 11
   val lonField = new DoubleOutputField("lon", "%+3.5f").styled()
@@ -58,7 +61,7 @@ class ViewPanel (raceView: RaceView, config: Option[Config]=None) extends GBPane
   val elevField = new DoubleOutputField("elev [ft]", "%,6.0f").styled()
 
   val c = new Constraints( fill=Fill.Horizontal)
-  layout(new FlowPanel(globeButton,flatButton).styled()) = c(0,0).gridwidth(2).anchor(Anchor.West)
+  layout(new FlowPanel(globeButton,flatButton,followIndicator).styled()) = c(0,0).gridwidth(2).anchor(Anchor.West)
   layout(latField)  = c(0,1).weightx(0.5).anchor(Anchor.East).gridwidth(1)
   layout(lonField)  = c(1,1)
   layout(altField)  = c(0,2)
@@ -85,10 +88,10 @@ class ViewPanel (raceView: RaceView, config: Option[Config]=None) extends GBPane
     }
   }
 
-  raceView.addEyePosListener(this)
+  raceView.addViewListener(this)
 
-  def eyePosChanged(eyePos:Position, animHint: String) {
-    val alt = Length.meters2Feet(eyePos.getAltitude)
+  override def viewChanged (pos: Position, heading: Angle, pitch: Angle, roll: Angle, animationHint: String)= {
+    val alt = Length.meters2Feet(pos.getAltitude)
     altField.setValue(alt)
   }
 }

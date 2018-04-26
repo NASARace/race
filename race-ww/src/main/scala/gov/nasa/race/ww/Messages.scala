@@ -25,9 +25,7 @@ import gov.nasa.worldwind.geom.Position
 
 //--- sync messages - note these are likely to go to remote actors and hence have to serialize
 
-case class EyePositionChanged (lat:Double, lon:Double, alt: Double, hint: String){
-  def this(pos: Position, hint: String) = this(pos.latitude.getDegrees, pos.longitude.getDegrees, pos.elevation, hint)
-}
+case class ViewChanged (lat: Double, lon: Double, alt: Double, heading: Double, pitch: Double, roll: Double, hint: String)
 
 case class LayerChanged (name: String, enabled: Boolean)
 

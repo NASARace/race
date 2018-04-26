@@ -30,7 +30,7 @@ import gov.nasa.race.uom.Length
 import gov.nasa.race.uom.Length.{Feet, Meters, UsMiles, meters2Feet}
 import gov.nasa.race.ww.Implicits._
 import gov.nasa.race.ww.track.{TrackEntry, TrackLayer, TrackLayerInfoPanel}
-import gov.nasa.race.ww.{EyePosListener, Images, RaceView}
+import gov.nasa.race.ww.{Images, RaceView, ViewListener, WWAngle}
 import gov.nasa.worldwind.geom.Position
 
 
@@ -55,7 +55,7 @@ class AsdexTrackEntry (o: AsdexTrack, trajectory: Trajectory, layer: AsdexTracks
 }
 
 class AsdexTracksLayer (val raceView: RaceView, val config: Config)
-                           extends TrackLayer[AsdexTrack] with AirLocator with EyePosListener {
+                           extends TrackLayer[AsdexTrack] with AirLocator with ViewListener {
 
   override protected def createLayerInfoPanel = new TrackLayerInfoPanel[AsdexTrack](raceView,this) {
     contents += new StaticSelectionPanel[Airport,IdAndNamePanel[Airport]]("select airport",Airport.NoAirport +: Airport.airportList, 40,
@@ -78,9 +78,11 @@ class AsdexTracksLayer (val raceView: RaceView, val config: Config)
 
   override def initializeLayer: Unit = {
     super.initializeLayer
-    raceView.addEyePosListener(this)
+    raceView.addViewListener(this)
   }
-  override def eyePosChanged(eyePos: Position, animationHint: String): Unit = checkAirportChange(eyePos)
+  override def viewChanged(eyePos: Position,
+                           heading: WWAngle, pitch: WWAngle, roll: WWAngle,
+                           animationHint: String): Unit = checkAirportChange(eyePos)
 
   def selectAirport (a: Airport) = raceView.trackUserAction(gotoAirport(a))
 

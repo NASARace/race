@@ -37,7 +37,7 @@ import scala.swing.event.{ButtonClicked, SelectionChanged}
   */
 class SyncPanel (raceView: RaceView, config: Option[Config]=None)
                                       extends BoxPanel(Orientation.Vertical)
-                                        with RacePanel with EyePosListener with LayerListener
+                                        with RacePanel with ViewListener with LayerListener
                                         with ObjectListener with AkkaSwingBridge {
   val actor: SyncActor = raceView.createActor("viewerSync") {
     new SyncActor(this,config.getOrElse(ConfigFactory.empty))
@@ -99,7 +99,7 @@ class SyncPanel (raceView: RaceView, config: Option[Config]=None)
     if (syncChannel.isDefined) readyLED.on
   }
 
-  raceView.addEyePosListener(this)
+  raceView.addViewListener(this)
   raceView.addLayerListener(this)
   raceView.addObjectListener(this)
 
@@ -115,11 +115,12 @@ class SyncPanel (raceView: RaceView, config: Option[Config]=None)
   //--- EyePosListener
   // this is called when our view has a changed eyePos. Only send it out
   // if there was recent user input (i.e. the user initiated the change)
-  override def eyePosChanged (eyePos: Position, animationHint: String) = {
+  override def viewChanged (eyePos: Position, heading: WWAngle, pitch: WWAngle, roll: WWAngle, animationHint: String) = {
     if (sendEyePos && isLocalChange) {
       syncChannel.foreach { channel =>
         info(s"outbound eyepos: $eyePos")
-        publish(new EyePositionChanged(eyePos,animationHint))
+        publish(ViewChanged(eyePos.latitude.degrees,eyePos.longitude.degrees,eyePos.elevation,
+                            heading.degrees,pitch.degrees,roll.degrees,animationHint))
       }
     }
   }
@@ -141,14 +142,15 @@ class SyncPanel (raceView: RaceView, config: Option[Config]=None)
   }
 
   def handleMessage = {
-    case EyePositionChanged(lat,lon,alt,hint) => handleEyePosChanged(lat,lon,alt,hint)
+    case ViewChanged(lat,lon,alt,pitch,heading,roll,hint) => handleViewChanged(lat,lon,alt,pitch,heading,roll,hint)
     case LayerChanged(name,isEnabled) => handleLayerChanged(name,isEnabled)
     case ObjectChanged(id,layerName,action) => handleObjectChanged(id,layerName,action)
   }
 
   // this is called when we receive an external EyePositionChanged message. Only
   // change the view eyePos if there was no recent user input
-  def handleEyePosChanged (lat: Double, lon: Double, alt: Double, animationHint: String) = {
+  def handleViewChanged (lat: Double, lon: Double, alt: Double,
+                           pitch: Double, heading: Double, roll: Double, animationHint: String) = {
     if (receiveEyePos && raceView.millisSinceLastUserAction > inboundBlackout) { // otherwise user input has priority
       val pos = new Position(Angle.fromDegreesLatitude(lat), Angle.fromDegreesLongitude(lon), alt)
       info(s"inbound eyepos: $pos")
@@ -161,6 +163,11 @@ class SyncPanel (raceView: RaceView, config: Option[Config]=None)
         case RaceView.Pan => raceView.panTo(pos,alt)
         case other => raceView.setEyePosition(pos, syncGotoTime)
       }
+
+      if (pitch != raceView.viewPitch || heading != raceView.viewHeading) {
+        raceView.headingPitchTo(Angle.fromDegrees(heading),Angle.fromDegrees(roll))
+      }
+
       readyLED.off
       readyTimer.start
     }

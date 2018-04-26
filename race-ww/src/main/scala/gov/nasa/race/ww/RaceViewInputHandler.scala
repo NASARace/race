@@ -23,11 +23,11 @@ import java.awt.event.{InputEvent, KeyEvent, MouseEvent, MouseWheelEvent}
 
 import gov.nasa.race._
 import Implicits._
-
 import gov.nasa.worldwind.View
 import gov.nasa.worldwind.animation.AnimationController
-import gov.nasa.worldwind.geom.{LatLon, Position, Vec4}
-import gov.nasa.worldwind.view.orbit.{OrbitView, OrbitViewInputHandler}
+import gov.nasa.worldwind.awt.ViewInputAttributes
+import gov.nasa.worldwind.geom.{Angle, LatLon, Position, Vec4}
+import gov.nasa.worldwind.view.orbit.{BasicOrbitView, OrbitView, OrbitViewInputHandler}
 
 
 /**
@@ -38,7 +38,7 @@ class RaceViewInputHandler extends OrbitViewInputHandler {
   // we have to init this deferred because of WWJ initialization (setViewInputHandler() does
   // not properly unregister/register listeners)
   var raceView: RaceView = null
-  var wwdView: View = null
+  var wwdView: RaceOrbitView = null
   var lastUserInputTime: Long = 0
   var lastTargetPosition: Position = _
   var lastInputEvent: InputEvent = _
@@ -46,7 +46,7 @@ class RaceViewInputHandler extends OrbitViewInputHandler {
 
   def attachToRaceView(rv: RaceView) = {
     raceView = rv
-    wwdView = wwd.getView
+    wwdView = rv.wwdView
   }
 
   override protected def setTargetEyePosition (eyePos: Position, animController: AnimationController, actionKey: String): Unit = {
@@ -58,7 +58,12 @@ class RaceViewInputHandler extends OrbitViewInputHandler {
       case other => RaceView.Goto
     }
 
-    raceView.newTargetEyePosition(eyePos, animationHint)
+    // TODO - we should get these either from arguments or the animations
+    val pitch = wwdView.getPitch
+    val heading = wwdView.getHeading
+    val roll = wwdView.getRoll
+
+    raceView.viewChanged(eyePos, heading,pitch,roll, animationHint)
     lastTargetPosition = eyePos // set this after notification so that we can still see the last pos
   }
 
@@ -74,12 +79,14 @@ class RaceViewInputHandler extends OrbitViewInputHandler {
     pressedKey = KeyEvent.VK_UNDEFINED
     e.getKeyCode match {
       case KeyEvent.VK_0 =>
-        raceView.resetView; true
-      case KeyEvent.VK_C => centerOnMouse; false
+        raceView.resetView
+        true
+      case KeyEvent.VK_C =>
+        centerOnMouse
+        false
       case KeyEvent.VK_Z =>
-        println("@@ center focus")
         val cp = raceView.focusObject.get.pos
-        wwdView.asInstanceOf[OrbitView].setCenterPosition(cp)
+        wwdView.setCenterPosition(cp)
         //wwdView.setOrientation(wwdView.getEyePosition,cp)
         raceView.redrawNow
         false
@@ -163,7 +170,7 @@ class RaceViewInputHandler extends OrbitViewInputHandler {
 
   /**
     * WW per default uses the eye altitude to compute the zoom level (same input at higher alt
-    * causes more zoom). We extend this with scaled linear (meta) and logarithmic zoom when
+    * causes larger zoom increment/decrement). We extend this with scaled linear (meta) and logarithmic zoom when
     * the meta or alt [+shift] key is pressed so that we can navigate in proximity of high objects
     */
   override def computeNewZoom(view: OrbitView, curZoom: Double, change: Double): Double = {
@@ -207,4 +214,5 @@ class RaceViewInputHandler extends OrbitViewInputHandler {
   def isShift = (lastInputEvent != null) && ((lastInputEvent.getModifiers & SHIFT_MASK) != 0)
   def isMeta = (lastInputEvent != null) && ((lastInputEvent.getModifiers & META_MASK) != 0)
   def isCtrl = (lastInputEvent != null) && ((lastInputEvent.getModifiers & CTRL_MASK) != 0)
+
 }

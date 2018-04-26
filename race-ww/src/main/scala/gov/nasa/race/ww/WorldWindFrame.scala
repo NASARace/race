@@ -81,7 +81,7 @@ class WorldWindFrame (config: Config, raceView: RaceView) extends AppFrame {
       val view = wwd.getView
       view.setEyePosition(eyePos)
       ifSome(config.getOptionalDouble("max-flight-ft")) { d =>
-        ifInstanceOf[MinClipOrbitView](view) { v => v.ensureMaxFlightAltitude(Length.feet2Meters(d))}
+        ifInstanceOf[RaceOrbitView](view) { v => v.ensureMaxFlightAltitude(Length.feet2Meters(d))}
       }
     }
 

@@ -18,13 +18,12 @@ package gov.nasa.race.ww.track
 
 import java.util.concurrent.atomic.AtomicInteger
 
-import com.typesafe.config.Config
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.geo.VarEuclideanDistanceFilter3D
 import gov.nasa.race.track.TrackedObject
 import gov.nasa.race.uom.Angle._
 import gov.nasa.race.uom.Length._
-import gov.nasa.race.ww.{EyePosListener, RaceView}
+import gov.nasa.race.ww.{ViewListener, WWAngle}
 import gov.nasa.worldwind.geom.Position
 
 import scala.collection.immutable.HashSet
@@ -51,7 +50,7 @@ import scala.concurrent.duration._
   * NOTE - if no model is configured, this should not incur any performance penalties.
   * In particular, eye position and proximity updates should only happen if we have configured models
   */
-trait ModelTrackLayer[T <:TrackedObject] extends TrackLayer[T] with EyePosListener  {
+trait ModelTrackLayer[T <:TrackedObject] extends TrackLayer[T] with ViewListener  {
 
   //--- 3D models and proximities
   val modelDistance = Meters(config.getDoubleOrElse("model-distance",2000.0))
@@ -62,7 +61,7 @@ trait ModelTrackLayer[T <:TrackedObject] extends TrackLayer[T] with EyePosListen
   val models = config.getConfigSeq("models").map(TrackModel.loadModel[T])
 
   if (models.nonEmpty) {
-    raceView.addEyePosListener(this)  // will update lastEyePos and proximities
+    raceView.addViewListener(this)  // will update lastEyePos and proximities
   }
 
   private val pendingUpdates = new AtomicInteger
@@ -77,7 +76,7 @@ trait ModelTrackLayer[T <:TrackedObject] extends TrackLayer[T] with EyePosListen
   }
 
   // we only get these callbacks if there were configured models
-  def eyePosChanged(eyePos: Position, animHint: String): Unit = {
+  def viewChanged(eyePos: Position, heading: WWAngle, pitch: WWAngle, roll: WWAngle, animHint: String): Unit = {
     if (models.nonEmpty) {
       pendingUpdates.getAndIncrement
       delay(500.milliseconds, () => {

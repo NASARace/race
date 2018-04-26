@@ -115,12 +115,13 @@ class RaceViewerActor(val config: Config) extends ContinuousTimeRaceActor
 
 object RaceView {
 
-  //--- eye position animation hints
+  //--- view animation hints
   final val CenterClick = "CenterClick"
   final val CenterDrag = "CenterDrag"
   final val Zoom = "Zoom"
   final val Pan = "Pan"
   final val Goto = "Goto"  // the catch all
+  final val NoAnimation = "NoAnimation" // no animation
 
   final val SelectedLayer = "selected layer"
   final val SelectedObject = "selected object"
@@ -161,9 +162,9 @@ class RaceView (viewerActor: RaceViewerActor) extends DeferredEyePositionListene
 
   // we want to avoid several DeferredXListeners because of the context switch overhead
   // hence we have a secondary listener level here
-  var eyePosListeners = List.empty[EyePosListener]
-  def addEyePosListener (newListener: EyePosListener) = eyePosListeners = newListener :: eyePosListeners
-  def removeEyePosListener(listener: EyePosListener) = eyePosListeners = eyePosListeners.filter(_.ne(listener))
+  var viewListeners = List.empty[ViewListener]
+  def addViewListener (newListener: ViewListener) = viewListeners = newListener :: viewListeners
+  def removeViewListener(listener: ViewListener) = viewListeners = viewListeners.filter(_.ne(listener))
 
   var layerListeners = List.empty[LayerListener]
   def addLayerListener (newListener: LayerListener) = layerListeners = newListener :: layerListeners
@@ -175,6 +176,9 @@ class RaceView (viewerActor: RaceViewerActor) extends DeferredEyePositionListene
 
   val layers = createLayers
   val frame = new WorldWindFrame(viewerActor.config, this) // this creates the wwd instance
+
+  val wwd = frame.wwd
+  val wwdView = wwd.getView.asInstanceOf[RaceOrbitView]
 
   val redrawManager = RedrawManager(wwd.asInstanceOf[Redrawable]) // the shared one, layers/panels can have their own
   val inputHandler = wwdView.getViewInputHandler.asInstanceOf[RaceViewInputHandler]
@@ -188,8 +192,9 @@ class RaceView (viewerActor: RaceViewerActor) extends DeferredEyePositionListene
   val panels: ListMap[String,PanelEntry] = createPanels
   panels.foreach{ e => frame.initializePanel(e._2) }
 
-  // this has to be deferred because WWJs setViewInputHandler() does not initialize properly
-  ifInstanceOf[RaceViewInputHandler](wwd.getView.getViewInputHandler) {_.attachToRaceView(this)}
+  // link configured WW objects to this RaceView
+  ifInstanceOf[RaceOrbitView](wwdView){ _.attachToRaceView(this)}
+  ifInstanceOf[RaceViewInputHandler](wwdView.getViewInputHandler){_.attachToRaceView(this)}
 
   if (!initTimedOut){
     frame.open
@@ -206,10 +211,9 @@ class RaceView (viewerActor: RaceViewerActor) extends DeferredEyePositionListene
   def close = frame.close
 
   // WWD accessors
-  def wwd = frame.wwd
-  def wwdView = wwd.getView
   def eyePosition = wwdView.getEyePosition
   def viewPitch = wwdView.getPitch.degrees
+  def viewHeading = wwdView.getHeading.degrees
   def viewRoll = wwdView.getRoll.degrees
 
   def setWorldWindConfiguration = {
@@ -367,8 +371,10 @@ class RaceView (viewerActor: RaceViewerActor) extends DeferredEyePositionListene
     viewerActor.newInstance(clsName,argTypes,args)
   }
 
-  // called by RaceViewInputHandler
-  def newTargetEyePosition (eyePos: Position, animationHint: String) = eyePosListeners.foreach(_.eyePosChanged(eyePos,animationHint))
+  // called by RaceViewInputHandler and RaceOrbitView
+  def viewChanged (eyePos: Position, heading: Angle, pitch: Angle, roll: Angle, animationHint: String) = {
+    viewListeners.foreach(_.viewChanged(eyePos,heading,pitch,roll,animationHint))
+  }
 
   //--- track local (panel) user actions, used to avoid sync resonance
   var lastUserAction: Long = 0
@@ -408,19 +414,31 @@ class RaceView (viewerActor: RaceViewerActor) extends DeferredEyePositionListene
     inputHandler.addEyePositionAnimator(animTime,eyePosition,pos)
   }
   def pitchTo (endAngle: Angle) = {
-    inputHandler.stopAnimators
-    inputHandler.addPitchAnimator(wwd.getView.getPitch,endAngle)
+    //inputHandler.stopAnimators
+    inputHandler.addPitchAnimator(wwdView.getPitch,endAngle)
   }
+  def headingTo (endAngle: Angle) = {
+    inputHandler.addHeadingAnimator(wwdView.getHeading, endAngle)
+  }
+  def headingPitchTo (endHeading: Angle, endPitch: Angle) = {
+    val roll = wwdView.getRoll
+    inputHandler.addHeadingPitchRollAnimator(wwdView.getHeading,endHeading,wwdView.getPitch,endPitch,roll,roll)
+  }
+
+  /**
+    * keep eye position but reset view angles and center position to earth center
+    */
   def resetView = {
-    val v = wwdView
     inputHandler.stopAnimators
-    val anim = ViewUtil.createHeadingPitchRollAnimator(v,v.getHeading,ZeroWWAngle,v.getPitch,ZeroWWAngle,v.getRoll,ZeroWWAngle)
-    inputHandler.addAnimator(anim)
-    v.firePropertyChange(AVKey.VIEW, null, v)
+    wwdView.resetView
   }
 
   def setFocusObject(p: LayerObject): Unit = {
     focusObject = Some(p)
+  }
+
+  def updateFocusObject(p: LayerObject): Unit = {
+
   }
 
   def resetFocusObject(p: LayerObject): Unit = {

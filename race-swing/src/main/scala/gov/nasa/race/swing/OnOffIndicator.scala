@@ -17,7 +17,7 @@
 
 package gov.nasa.race.swing
 
-import scala.swing.{Swing, Label}
+import scala.swing.{Alignment, Label, Swing}
 
 object OnOffIndicator {
   val onIcon = Swing.Icon(getClass.getResource("led-green.png"))
@@ -28,9 +28,14 @@ import OnOffIndicator._
 /**
   * an icon label that indicates on/off state
   */
-class OnOffIndicator (var isOn: Boolean=false) extends Label {
+class OnOffIndicator (txt: String, align: Alignment.Value, var isOn: Boolean) extends Label {
+
+  def this() = this("",Alignment.Center, false)
+  def this(isOn: Boolean) = this("",Alignment.Center, isOn)
+  def this(txt: String, isOn: Boolean) = this(txt,Alignment.Center,isOn)
 
   icon = if (isOn) onIcon else offIcon
+  text = txt
 
   def on = icon = onIcon
   def off = icon = offIcon

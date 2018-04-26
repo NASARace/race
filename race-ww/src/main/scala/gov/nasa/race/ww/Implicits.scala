@@ -19,7 +19,7 @@ package gov.nasa.race.ww
 
 import gov.nasa.race.geo.{GeoPosition3D, LatLonPos}
 import gov.nasa.race.track.TrackPoint3D
-import gov.nasa.worldwind.geom.{LatLon, Position, Angle => WWAngle}
+import gov.nasa.worldwind.geom.{LatLon, Position}
 import gov.nasa.race.uom._
 
 import scala.language.implicitConversions
@@ -38,7 +38,7 @@ object Implicits {
 
   implicit def trackPoint3D2Position(e: TrackPoint3D): Position = wwPosition(e.position, e.altitude)
 
-  implicit def angle2WWAngle(angle: Angle): WWAngle = WWAngle.fromDegrees(angle.toDegrees)
+  implicit def angle2WWAngle(angle: Angle): WWAngle = gov.nasa.worldwind.geom.Angle.fromDegrees(angle.toDegrees)
 
   implicit def latLonPos2LatLon (pos: LatLonPos): LatLon = LatLon.fromDegrees(pos.φ.toDegrees, pos.λ.toDegrees)
 

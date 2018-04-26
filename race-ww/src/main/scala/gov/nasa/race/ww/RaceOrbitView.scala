@@ -23,8 +23,13 @@ import gov.nasa.worldwind.geom.Position
 import gov.nasa.worldwind.view.orbit.BasicOrbitView
 
 /**
-  * a BasicOrbitView that tries to minimize clip distance
-  * The approach is to compute the lowest far clip distance from the eye altitude, and then use the OpenGL depth
+  * a BasicOrbitView that adds two features:
+  *
+  * (1) minimizing clip distance - this is required to show high flying objects (satellites) on a globe backdrop
+  * (2) add view change notifications to raceView (RACE specific)
+  *
+  *
+  * The clip approach is to compute the lowest far clip distance from the eye altitude, and then use the OpenGL depth
   * buffer resolution to get the closest near clip distance that is numerically stable
   *
   * In general, we get less artifacts (flicker actually) with larger near clip distance, hence we also maintain
@@ -34,7 +39,7 @@ import gov.nasa.worldwind.view.orbit.BasicOrbitView
   * Note that we just default to standard OrbitView behavior if the view is tilted, since in this case we would
   * have to show flights that are beyond the earth horizon
   */
-class MinClipOrbitView extends BasicOrbitView {
+class RaceOrbitView extends BasicOrbitView {
   protected final val RE: Double = 6.371e6 // mean earth radius in m
   protected final val REsquared = RE**2
   protected final val MaxSeaDepth: Double = 1.2e5 // we don't want to clip out the Mariana trench
@@ -42,10 +47,29 @@ class MinClipOrbitView extends BasicOrbitView {
   protected lazy val MaxDepthBufferDist = computeMaxDepthBufferDist  // has to be lazy since we need a dc
   protected final val MinNearClipDistance = 10.0 // MINIMUM_NEAR_DISTANCE causes flicker and artifacts (numeric?)
 
+  var raceView: RaceView = null
+
   protected var α: Double = computeFov2 // FOV/2 in radians
   protected var cos_α: Double = cos(α)
   protected var hmax: Double = computeBoundaryElevation // eye altitude in [m] until which horizon is not visible in center view
   protected var maxFlightAltitude: Double = DefaultMaxFlightAltitude // max flight altitude in [m]
+
+  protected var isTransient = false
+
+  def attachToRaceView(rv: RaceView) = {
+    raceView = rv
+  }
+
+  def resetView: Unit = {
+    isTransient = true
+    setCenterPosition(Position.ZERO)
+    setEyePosition(eyePosition) // this also zeros heading and pitch but not roll
+    //setHeading(ZeroWWAngle)
+    //setPitch(ZeroWWAngle)
+    setRoll(ZeroWWAngle)
+    isTransient = false
+    raceView.viewChanged(eyePosition,heading,pitch,roll,RaceView.NoAnimation)
+  }
 
   def computeFov2: Double = {
     // TODO - compute from perspective matrix. 'fov' is set to 45deg, which seems off (measured is ~60deg)
@@ -88,5 +112,28 @@ class MinClipOrbitView extends BasicOrbitView {
       val d = h_cos_α - sqrt(h_cos_α**2 - (h**2 - REsquared))
       d * cos_α + MaxSeaDepth  // we could further reduce this over land
     }
+  }
+
+  //--- overridden non-animated view changes for which we need raceView notifications
+
+  protected def notifyViewChanged (animHint: String): Unit = {
+    if (raceView != null && !isTransient) raceView.viewChanged(eyePosition,heading,pitch,roll,animHint)
+  }
+
+  override def setEyePosition (newEyePos: Position): Unit = {
+    super.setEyePosition(newEyePos)
+    notifyViewChanged(RaceView.NoAnimation)
+  }
+  override def setCenterPosition (newCenter: Position): Unit = {
+    super.setCenterPosition(newCenter)
+    notifyViewChanged(RaceView.NoAnimation)
+  }
+  override def setPitch (angle: WWAngle): Unit = {
+    super.setPitch(angle)
+    notifyViewChanged(RaceView.NoAnimation)
+  }
+  override def setHeading (angle: WWAngle): Unit = {
+    super.setHeading(angle)
+    notifyViewChanged(RaceView.NoAnimation)
   }
 }
