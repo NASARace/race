@@ -84,7 +84,7 @@ class TrackEntryPanel[T <: TrackedObject](raceView: RaceView, layer: TrackLayer[
   val path3dCb = new CheckBox("3d").styled()
   val infoCb = new CheckBox("info").styled()
   val markCb = new CheckBox("mark").styled()
-  val centerCb = new CheckBox("center").styled()
+  val focusCb = new CheckBox("focus").styled()
 
   val buttonPanel = new GBPanel {
     val dismissBtn = new Button() {
@@ -103,7 +103,7 @@ class TrackEntryPanel[T <: TrackedObject](raceView: RaceView, layer: TrackLayer[
     layout(path3dCb) = c(1,0)
     layout(infoCb)   = c(2,0)
     layout(markCb)   = c(3,0)
-    layout(centerCb) = c(4,0)
+    layout(focusCb) = c(4,0)
     layout(new Filler().styled()) = c(5,0).weightx(0.5)
     layout(dismissBtn) = c(6,0).weightx(0)
   }.styled()
@@ -111,9 +111,9 @@ class TrackEntryPanel[T <: TrackedObject](raceView: RaceView, layer: TrackLayer[
   contents += fields
   contents += buttonPanel
 
-  listenTo(centerCb,pathCb,path3dCb,infoCb,markCb)
+  listenTo(focusCb,pathCb,path3dCb,infoCb,markCb)
   reactions += {
-    case ButtonClicked(`centerCb`) => raceView.trackUserAction { centerFlightEntry(centerCb.selected) }
+    case ButtonClicked(`focusCb`)  => raceView.trackUserAction { setFocused(focusCb.selected) }
     case ButtonClicked(`pathCb`)   => raceView.trackUserAction { setPath(pathCb.selected) }
     case ButtonClicked(`path3dCb`) => raceView.trackUserAction { setPathContour(path3dCb.selected) }
     case ButtonClicked(`infoCb`)   => raceView.trackUserAction { setInfo(infoCb.selected) }
@@ -130,7 +130,7 @@ class TrackEntryPanel[T <: TrackedObject](raceView: RaceView, layer: TrackLayer[
     if (e != trackEntry) {
       if (trackEntry != null) layer.releaseTrackInfoUpdates(trackEntry)
       trackEntry = e
-      changedTrackEntryOptions
+      updateTrackEntryAttributes
       update
       layer.requestTrackInfoUpdates(trackEntry)
     }
@@ -140,36 +140,20 @@ class TrackEntryPanel[T <: TrackedObject](raceView: RaceView, layer: TrackLayer[
 
   def setTrackInfo(ti: TrackInfo) = fields.setTrackInfo(ti)
 
-  def centerFlightEntry(centerIt: Boolean) = {
-    if (centerIt) layer.startCenteringTrackEntry(trackEntry)
-    else layer.stopCenteringTrackEntry
-  }
+  def setFocused(focusIt: Boolean) = layer.setFocused(trackEntry,focusIt)
 
-  def setPath(showIt: Boolean) = {
-    trackEntry.setPath(showIt)
-    layer.changedTrackEntryOptions(trackEntry, if (showIt) layer.ShowPath else layer.HidePath)
-    layer.redraw
-  }
-  def setPathContour (showIt: Boolean) = {
-    trackEntry.setPathContour(showIt)
-    layer.changedTrackEntryOptions(trackEntry, if (showIt) layer.ShowContour else layer.HideContour)
-    layer.redraw
-  }
+  def setPath(showIt: Boolean) = layer.setPath(trackEntry,showIt)
 
-  def setInfo(showIt: Boolean) = {
-    trackEntry.setInfo(showIt)
-    layer.changedTrackEntryOptions(trackEntry, if (showIt) layer.ShowInfo else layer.HideInfo)
-    layer.redraw
-  }
-  def setMark(showIt: Boolean) = {
-    trackEntry.setMark(showIt)
-    layer.changedTrackEntryOptions(trackEntry, if (showIt) layer.ShowMark else layer.HideMark)
-    layer.redraw
-  }
+  def setPathContour (showIt: Boolean) = layer.setPathContour(trackEntry,showIt)
 
-  def changedTrackEntryOptions = {
+  def setInfo(showIt: Boolean) = layer.setInfo(trackEntry,showIt)
+
+  def setMark(showIt: Boolean) = layer.setMark(trackEntry,showIt)
+
+  // this is just a notification that attributes have changed externally
+  def updateTrackEntryAttributes = {
     if (trackEntry != null) {
-      centerCb.selected = trackEntry.isCentered
+      focusCb.selected = trackEntry.isFocused
       pathCb.selected = trackEntry.hasPath
       infoCb.selected = trackEntry.hasInfo
       markCb.selected = trackEntry.hasMark

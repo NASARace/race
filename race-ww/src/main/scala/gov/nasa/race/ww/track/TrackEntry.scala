@@ -43,7 +43,7 @@ class TrackEntry[T <: TrackedObject](var obj: T, var trajectory: Trajectory, val
   protected var mark: Option[PointPlacemark] = None
   protected var model: Option[TrackModel[T]] = None
 
-  var isCentered = false // do we center the view on the current placemark position
+  var isFocused = false // do we follow and center the track position (note this can come from any level: raceView, layer, panel)
   var drawPathContour = false // do we draw a path contour for this track
 
   def viewPitch = layer.raceView.viewPitch
@@ -94,7 +94,7 @@ class TrackEntry[T <: TrackedObject](var obj: T, var trajectory: Trajectory, val
 
   override def id = obj.cs // required for pick support
 
-  def hasAttrs = isCentered || path.isDefined || info.isDefined || mark.isDefined
+  def hasAttrs = isFocused || path.isDefined || info.isDefined || mark.isDefined
   def hasModel = model.isDefined
   def hasAssignedModel = model.isDefined && model.get.isAssigned
   def hasSymbol = symbol.isDefined
@@ -129,8 +129,6 @@ class TrackEntry[T <: TrackedObject](var obj: T, var trajectory: Trajectory, val
     }
 
     ifSome(model) { _.update(obj) }
-
-    if (isCentered) layer.centerEntry(this)
   }
 
   def removeRenderables = {
@@ -223,6 +221,7 @@ class TrackEntry[T <: TrackedObject](var obj: T, var trajectory: Trajectory, val
     }
   }
 
-  def setCentered (centerIt: Boolean) = isCentered = centerIt
-
+  override def setFocused(focusIt: Boolean) = {
+    isFocused = focusIt
+  }
 }

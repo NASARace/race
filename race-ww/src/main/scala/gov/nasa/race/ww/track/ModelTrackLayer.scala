@@ -23,7 +23,7 @@ import gov.nasa.race.geo.VarEuclideanDistanceFilter3D
 import gov.nasa.race.track.TrackedObject
 import gov.nasa.race.uom.Angle._
 import gov.nasa.race.uom.Length._
-import gov.nasa.race.ww.{ViewListener, WWAngle}
+import gov.nasa.race.ww.{LayerObject, ViewListener, WWAngle}
 import gov.nasa.worldwind.geom.Position
 
 import scala.collection.immutable.HashSet
@@ -51,6 +51,7 @@ import scala.concurrent.duration._
   * In particular, eye position and proximity updates should only happen if we have configured models
   */
 trait ModelTrackLayer[T <:TrackedObject] extends TrackLayer[T] with ViewListener  {
+  import TrackLayer._
 
   //--- 3D models and proximities
   val modelDistance = Meters(config.getDoubleOrElse("model-distance",2000.0))
@@ -112,7 +113,7 @@ trait ModelTrackLayer[T <:TrackedObject] extends TrackLayer[T] with ViewListener
 
   def isProximity (e: TrackEntry[T]): Boolean = {
     val fpos = e.obj
-    (e.isCentered && (Meters(eyeAltitude) - fpos.altitude < modelDistance)) ||
+    (e.isFocused && (Meters(eyeAltitude) - fpos.altitude < modelDistance)) ||
       eyeDistanceFilter.pass(fpos)
   }
 
@@ -142,10 +143,9 @@ trait ModelTrackLayer[T <:TrackedObject] extends TrackLayer[T] with ViewListener
     e.removeRenderables
   }
 
-  override def changedTrackEntryOptions(e: TrackEntry[T], action: String) = {
-    if (action eq ShowContour) setModel(e)
-    else if (action eq HideContour) unsetModel(e)
-
-    super.changedTrackEntryOptions(e,action)
+  override def setPathContour(lo: LayerObject, cond: Boolean): Unit = {
+    setLayerObjectAttribute(lo, _.drawPathContour != cond) { e=>
+      if (cond) setModel(e) else unsetModel(e)
+      e.setPathContour(cond) }
   }
 }

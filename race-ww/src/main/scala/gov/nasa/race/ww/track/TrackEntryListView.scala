@@ -58,7 +58,7 @@ class TrackEntryRenderer[T <: TrackedObject](config: Config)  extends ItemRender
   layout(dataLabel)    = c(6,0)
 
   def configure(list: ListView[_], isSelected: Boolean, focused: Boolean, e: TrackEntry[T], index: Int) = {
-    displayLabel.icon = if (e.isCentered) centerIcon else if (!e.hasSymbol) hiddenIcon else blankIcon
+    displayLabel.icon = if (e.isFocused) centerIcon else if (!e.hasSymbol) hiddenIcon else blankIcon
     pathLabel.icon = if (e.hasPath) pathIcon else blankIcon
     infoLabel.icon = if (e.hasInfo) infoIcon else blankIcon
     markLabel.icon = if (e.hasMark) markIcon else blankIcon

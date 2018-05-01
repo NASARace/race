@@ -85,6 +85,7 @@ class ViewPanel (raceView: RaceView, config: Option[Config]=None) extends GBPane
       lonField.setValue(pos.getLongitude.getDegrees)
       val elev = Length.meters2Feet(wwd.getModel.getGlobe.getElevation(pos.getLatitude, pos.getLongitude))
       elevField.setValue(elev)
+      // this shows the cursor location, not the eye pos, hence no altitude update
     }
   }
 

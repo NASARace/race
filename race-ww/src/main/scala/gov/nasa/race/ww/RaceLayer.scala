@@ -72,10 +72,16 @@ trait RaceLayer extends RenderableLayer with RaceLayerInfo {
     }
   }
 
+  //--- object attribute change
+
   def changeObject(objectId: String, action: String) = {}
 
+  // called in response to a WW SelectHandler notification if object is interactively picked
   // NOTE this is only called for the layer that owns the picked renderable
   def selectObject(o:RaceLayerPickable, a:EventAction): Unit = {} // default is do nothing
+
+  // called by RaceViewer if a focus object is reset
+  def setFocused (e: LayerObject, isFocused: Boolean, report: Boolean): Unit = {} // default is no focus objects
 }
 
 /**

@@ -63,8 +63,8 @@ class RaceViewInputHandler extends OrbitViewInputHandler {
     val heading = wwdView.getHeading
     val roll = wwdView.getRoll
 
-    raceView.viewChanged(eyePos, heading,pitch,roll, animationHint)
-    lastTargetPosition = eyePos // set this after notification so that we can still see the last pos
+    raceView.viewChanged(eyePos, heading,pitch,roll, animationHint) // notify with the intended position
+    lastTargetPosition = eyePos // but set this after notification so that listeners can still see the last pos and compute deltas
   }
 
   // we try to keep hotkeys global to avoid implicit modes but at some point we might have
@@ -85,10 +85,9 @@ class RaceViewInputHandler extends OrbitViewInputHandler {
         centerOnMouse
         false
       case KeyEvent.VK_Z =>
-        val cp = raceView.focusObject.get.pos
-        wwdView.setCenterPosition(cp)
-        //wwdView.setOrientation(wwdView.getEyePosition,cp)
-        raceView.redrawNow
+        ifSome(raceView.focusObject) { o =>
+          raceView.zoomInOn(o.pos)
+        }
         false
       case _ => false
     }

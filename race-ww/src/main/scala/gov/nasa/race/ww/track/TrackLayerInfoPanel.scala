@@ -224,26 +224,20 @@ class TrackLayerInfoPanel[T <: TrackedObject](raceView: RaceView, trackLayer: Tr
     }
   }
 
-  def setSelected (f: (TrackEntry[T])=>Any, action: String): Unit = {
-    listView.selection.items.foreach { e =>
-      f(e)
-      trackLayer.changedTrackEntryOptions(e,action)
-    }
+  protected def setSelected (f: (TrackEntry[T])=>Unit): Unit = {
+    listView.selection.items.foreach { f }
     listView.repaint
     trackLayer.redraw
   }
 
-  def setPath(showIt: Boolean) = {
-    setSelected(_.setPath(showIt), if (showIt) trackLayer.ShowPath else trackLayer.HidePath)
-  }
-  def setInfo(showIt: Boolean) = {
-    setSelected(_.setInfo(showIt), if (showIt) trackLayer.ShowInfo else trackLayer.HideInfo)
-  }
-  def setMark(showIt: Boolean) = {
-    setSelected(_.setMark(showIt), if (showIt) trackLayer.ShowMark else trackLayer.HideMark)
-  }
+  def setPath(showIt: Boolean) = setSelected { e => trackLayer.setPath(e,showIt) }
+  def setInfo(showIt: Boolean) = setSelected { e => trackLayer.setInfo(e,showIt) }
+  def setMark(showIt: Boolean) = setSelected { e => trackLayer.setMark(e,showIt) }
 
-  def trySelectFlightEntry (e: TrackEntry[T]) = {
+  // we don't allow to set/unset focus objects here because this is a global setting
+  // that can only be applied to one object at a time
+
+  def trySelectTrackEntry(e: TrackEntry[T]) = {
     val idx = matchList.indexOf(e)
     if (idx >= 0){
       listView.selectIndices(idx)
@@ -251,14 +245,8 @@ class TrackLayerInfoPanel[T <: TrackedObject](raceView: RaceView, trackLayer: Tr
     }
   }
 
-  def centerSelectedEntry (centerIt: Boolean) = {
-    listView.selection.items.headOption.foreach { e =>
-      if (centerIt) trackLayer.startCenteringTrackEntry(e)
-      else trackLayer.stopCenteringTrackEntry
-    }
-  }
-
-  def changedFlightEntryOptions = {
+  // notification that track entry attributes have been changed externally
+  def updateTrackEntryAttributes = {
     listView.repaint
     updateMatchOptions
   }

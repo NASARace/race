@@ -29,10 +29,9 @@ import gov.nasa.race.core.Messages.{RacePauseRequest, RaceResumeRequest, RaceTer
 import gov.nasa.race.core.{ContinuousTimeRaceActor, RaceContext, _}
 import gov.nasa.race.swing.Style._
 import gov.nasa.race.swing.{Redrawable, _}
-import gov.nasa.worldwind.avlist.AVKey
+import gov.nasa.race.ww.Implicits._
 import gov.nasa.worldwind.geom.{Angle, Position}
 import gov.nasa.worldwind.layers.Layer
-import gov.nasa.worldwind.view.ViewUtil
 
 import scala.collection.JavaConverters._
 import scala.collection.immutable.ListMap
@@ -150,8 +149,10 @@ class RaceView (viewerActor: RaceViewerActor) extends DeferredEyePositionListene
   setWorldWindConfiguration // NOTE - this has to happen before we load any WorldWind classes
   ifSome(config.getOptionalString("cache-dir")){ d => ConfigurableWriteCache.setRoot(new File(d)) }
 
+  val zoomDistance = config.getIntOrElse("zoom-distance", 1000) // in [m]
+
   //--- animation parameters
-  val gotoTime = config.getIntOrElse("goto-time", 4000)
+  val gotoTime = config.getIntOrElse("goto-time", 2500)
 
   //--- defaults for configurable render attributes
   val defaultColor = config.getColorOrElse("color", Color.yellow)
@@ -187,6 +188,7 @@ class RaceView (viewerActor: RaceViewerActor) extends DeferredEyePositionListene
   val emptyLayerInfoPanel = new EmptyPanel(this)
   val emptyObjectPanel = new EmptyPanel(this)
 
+  // a global, optional reference to single "focus object" which is set from/shared between layers
   var focusObject: Option[LayerObject] = None
 
   val panels: ListMap[String,PanelEntry] = createPanels
@@ -371,7 +373,12 @@ class RaceView (viewerActor: RaceViewerActor) extends DeferredEyePositionListene
     viewerActor.newInstance(clsName,argTypes,args)
   }
 
-  // called by RaceViewInputHandler and RaceOrbitView
+  /**
+    * notify ViewListeners of a changed eyepoint/view direction
+    * this is usually called by RaceViewInputHandler or RaceOrbitView
+    * note that we don't query the current eyePosition here because the input handler might call this on
+    * targeted views (we don't want to get notifications for temporary animation views)
+    */
   def viewChanged (eyePos: Position, heading: Angle, pitch: Angle, roll: Angle, animationHint: String) = {
     viewListeners.foreach(_.viewChanged(eyePos,heading,pitch,roll,animationHint))
   }
@@ -388,29 +395,32 @@ class RaceView (viewerActor: RaceViewerActor) extends DeferredEyePositionListene
 
   //--- view (eye position) transitions
 
-  // this one does not animate. Use for objects that have to stay at the same screen coordinates,
-  // but the map is going to be updated discontinuously
-  def centerOn (pos: Position) = {
+  // this do not animate and hence is the fast way to change the eye. Use for objects that have to stay at the
+  // same screen coordinates, but the map is going to be updated discontinuously
+  // NOTE - this short-circuits any ongoing animation
+
+  def setEyePosition(pos: Position) = {
     inputHandler.stopAnimators
-    //inputHandler.addCenterAnimator(eyePosition, pos, true) // ?bug - this just causes weird zoom-out animation
     wwdView.setEyePosition(new Position(pos,eyePosition.getElevation))
+    viewChanged(eyePosition,wwdView.getHeading,wwdView.getPitch,wwdView.getRoll,NoAnimation)
   }
-  // this one does a smooth transition to a new center, i.e. the map will update smoothly, but
-  // objects at the center positions will jump
+
+  // these use animation sequences, i.e. it first completes whatever animations are already scheduled
+
   def panToCenter (pos: Position, transitionTime: Long=500) = {
-    inputHandler.stopAnimators
+    //inputHandler.stopAnimators
     inputHandler.addEyePositionAnimator(transitionTime,eyePosition,new Position(pos,eyePosition.getElevation))
   }
   def zoomTo (zoom: Double) = {
-    inputHandler.stopAnimators
+    //inputHandler.stopAnimators
     inputHandler.addZoomAnimator(eyePosition.getAltitude, zoom)
   }
   def panTo (pos: Position, eyeAltitude: Double) = {
-    inputHandler.stopAnimators
+    //inputHandler.stopAnimators
     inputHandler.addPanToAnimator(pos,ZeroWWAngle,ZeroWWAngle,eyeAltitude,true) // always center on surface
   }
-  def setEyePosition (pos: Position, animTime: Long) = {
-    inputHandler.stopAnimators
+  def eyePositionTo(pos: Position, animTime: Long) = {
+    //inputHandler.stopAnimators
     inputHandler.addEyePositionAnimator(animTime,eyePosition,pos)
   }
   def pitchTo (endAngle: Angle) = {
@@ -424,6 +434,11 @@ class RaceView (viewerActor: RaceViewerActor) extends DeferredEyePositionListene
     val roll = wwdView.getRoll
     inputHandler.addHeadingPitchRollAnimator(wwdView.getHeading,endHeading,wwdView.getPitch,endPitch,roll,roll)
   }
+  def zoomInOn (pos: Position) = {
+    val zoom = pos.elevation + zoomDistance
+    inputHandler.addPanToAnimator(pos, ZeroWWAngle, ZeroWWAngle,zoom, 2000, false)
+  }
+
 
   /**
     * keep eye position but reset view angles and center position to earth center
@@ -433,19 +448,26 @@ class RaceView (viewerActor: RaceViewerActor) extends DeferredEyePositionListene
     wwdView.resetView
   }
 
-  def setFocusObject(p: LayerObject): Unit = {
-    focusObject = Some(p)
-  }
-
-  def updateFocusObject(p: LayerObject): Unit = {
-
-  }
-
-  def resetFocusObject(p: LayerObject): Unit = {
-    ifSome(focusObject) { fp=>
-      if (fp eq p) focusObject = None
+  /**
+    * global focus object management
+    *
+    * We only make sure there is at most a single focus object here. Any layer/object specific actions (including
+    * rendering and view transition) have to be done by the initiating layer itself since we don't know anything
+    * about the LayerObject here (other than it's layer and if it is focused)
+    */
+  def setFocused(obj: LayerObject, isFocused: Boolean): Unit = {
+    if (isFocused) {
+      ifSome(focusObject) { oldObj =>
+        if (oldObj != obj) { // reset previous focus
+          oldObj.layer.setFocused(oldObj,false, false) // no need to report back to us
+        }
+      }
+      focusObject = Some(obj)
+    } else {
+      focusObject = None
     }
   }
+
 
   //--- layer change management
   def setLayerController (controller: LayerController) = layerController = Some(controller)

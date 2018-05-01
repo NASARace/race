@@ -157,11 +157,11 @@ class SyncPanel (raceView: RaceView, config: Option[Config]=None)
       // Note that we can't use the specific remote (source) animation because we might have changed the
       // eye position locally, so we have to do a generic setEyePosition/panTo
       animationHint match {
-        case RaceView.Zoom => raceView.setEyePosition(pos, syncZoomTime)
-        case RaceView.CenterClick => raceView.setEyePosition(pos, syncCenterClickTime)
-        case RaceView.CenterDrag => raceView.setEyePosition(pos, syncCenterDragTime)
+        case RaceView.Zoom => raceView.eyePositionTo(pos, syncZoomTime)
+        case RaceView.CenterClick => raceView.eyePositionTo(pos, syncCenterClickTime)
+        case RaceView.CenterDrag => raceView.eyePositionTo(pos, syncCenterDragTime)
         case RaceView.Pan => raceView.panTo(pos,alt)
-        case other => raceView.setEyePosition(pos, syncGotoTime)
+        case other => raceView.eyePositionTo(pos, syncGotoTime)
       }
 
       if (pitch != raceView.viewPitch || heading != raceView.viewHeading) {

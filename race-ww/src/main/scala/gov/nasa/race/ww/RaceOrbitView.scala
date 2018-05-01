@@ -62,7 +62,7 @@ class RaceOrbitView extends BasicOrbitView {
 
   def resetView: Unit = {
     isTransient = true
-    setCenterPosition(Position.ZERO)
+    //setCenterPosition(Position.ZERO)
     setEyePosition(eyePosition) // this also zeros heading and pitch but not roll
     //setHeading(ZeroWWAngle)
     //setPitch(ZeroWWAngle)
@@ -114,20 +114,32 @@ class RaceOrbitView extends BasicOrbitView {
     }
   }
 
+  /**
+
   //--- overridden non-animated view changes for which we need raceView notifications
 
   protected def notifyViewChanged (animHint: String): Unit = {
-    if (raceView != null && !isTransient) raceView.viewChanged(eyePosition,heading,pitch,roll,animHint)
+    if (eyePosition != Position.ZERO) {
+      if (raceView != null && !isTransient) raceView.viewChanged(eyePosition, heading, pitch, roll, animHint)
+    }
+  }
+
+  override def setZoom (alt: Double): Unit = {
+    super.setZoom(alt)
+    notifyViewChanged(RaceView.NoAnimation)
   }
 
   override def setEyePosition (newEyePos: Position): Unit = {
+    eyePosition = newEyePos // ?? BasicOrbitView does not set it ??
     super.setEyePosition(newEyePos)
     notifyViewChanged(RaceView.NoAnimation)
   }
+
   override def setCenterPosition (newCenter: Position): Unit = {
     super.setCenterPosition(newCenter)
     notifyViewChanged(RaceView.NoAnimation)
   }
+
   override def setPitch (angle: WWAngle): Unit = {
     super.setPitch(angle)
     notifyViewChanged(RaceView.NoAnimation)
@@ -136,4 +148,5 @@ class RaceOrbitView extends BasicOrbitView {
     super.setHeading(angle)
     notifyViewChanged(RaceView.NoAnimation)
   }
+    **/
 }
