@@ -38,7 +38,7 @@ import scala.swing.event.{ButtonClicked, SelectionChanged}
 class SyncPanel (raceView: RaceView, config: Option[Config]=None)
                                       extends BoxPanel(Orientation.Vertical)
                                         with RacePanel with ViewListener with LayerListener
-                                        with ObjectListener with AkkaSwingBridge {
+                                        with LayerObjectListener with AkkaSwingBridge {
   val actor: SyncActor = raceView.createActor("viewerSync") {
     new SyncActor(this,config.getOrElse(ConfigFactory.empty))
   }

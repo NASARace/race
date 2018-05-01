@@ -171,9 +171,9 @@ class RaceView (viewerActor: RaceViewerActor) extends DeferredEyePositionListene
   def addLayerListener (newListener: LayerListener) = layerListeners = newListener :: layerListeners
   def removeLayerListener (listener: LayerListener) = layerListeners = layerListeners.filter(_.ne(listener))
 
-  var objectListener = List.empty[ObjectListener]
-  def addObjectListener (newListener: ObjectListener) = objectListener = newListener :: objectListener
-  def removeObjectListener (listener: ObjectListener) = objectListener = objectListener.filter(_.ne(listener))
+  var objectListener = List.empty[LayerObjectListener]
+  def addObjectListener (newListener: LayerObjectListener) = objectListener = newListener :: objectListener
+  def removeObjectListener (listener: LayerObjectListener) = objectListener = objectListener.filter(_.ne(listener))
 
   val layers = createLayers
   val frame = new WorldWindFrame(viewerActor.config, this) // this creates the wwd instance
@@ -400,8 +400,19 @@ class RaceView (viewerActor: RaceViewerActor) extends DeferredEyePositionListene
   // NOTE - this short-circuits any ongoing animation
 
   def setEyePosition(pos: Position) = {
-    inputHandler.stopAnimators
-    wwdView.setEyePosition(new Position(pos,eyePosition.getElevation))
+    if (inputHandler.hasActiveAnimation){
+      /**
+      val tgtPos = inputHandler.lastTargetPosition
+      val hdg = wwdView.getHeading
+      val pitch = wwdView.getPitch
+      inputHandler.addPanToAnimator(tgtPos,pos,hdg,hdg,pitch,pitch,tgtPos.getAltitude,tgtPos.getAltitude,500,false)
+        **/
+      val tgtPos = inputHandler.lastTargetPosition
+      inputHandler.stopAnimators
+      wwdView.setEyePosition(new Position(pos,tgtPos.getElevation))
+    } else {
+      wwdView.setEyePosition(new Position(pos,eyePosition.getElevation))
+    }
     viewChanged(eyePosition,wwdView.getHeading,wwdView.getPitch,wwdView.getRoll,NoAnimation)
   }
 

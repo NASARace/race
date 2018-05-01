@@ -105,7 +105,10 @@ package object ww {
   final val ShowPanel = "ShowPanel"
   final val DismissPanel = "DismissPanel"
 
-  trait ObjectListener {
+  final val StartFocus = "StartFocus"
+  final val StopFocus = "StopFocus"
+
+  trait LayerObjectListener {
     def objectChanged(obj: LayerObject, action: String)
   }
 

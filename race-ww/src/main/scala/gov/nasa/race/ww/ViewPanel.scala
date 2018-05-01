@@ -37,7 +37,7 @@ import scala.swing.event.ButtonClicked
   * and show eye position
   */
 class ViewPanel (raceView: RaceView, config: Option[Config]=None) extends GBPanel
-                  with RacePanel with DeferredPositionListener with ViewListener {
+                  with RacePanel with DeferredPositionListener with ViewListener with LayerObjectListener {
 
   val wwd = raceView.wwd
   val earthGlobe = new Earth
@@ -90,9 +90,15 @@ class ViewPanel (raceView: RaceView, config: Option[Config]=None) extends GBPane
   }
 
   raceView.addViewListener(this)
+  raceView.addObjectListener(this)
 
   override def viewChanged (pos: Position, heading: Angle, pitch: Angle, roll: Angle, animationHint: String)= {
     val alt = Length.meters2Feet(pos.getAltitude)
     altField.setValue(alt)
+  }
+
+  override def objectChanged (obj: LayerObject, action: String) = {
+    if (action eq StopFocus) followIndicator.off
+    else if (action eq StartFocus) followIndicator.on
   }
 }

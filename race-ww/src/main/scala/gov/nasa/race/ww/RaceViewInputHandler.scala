@@ -67,6 +67,8 @@ class RaceViewInputHandler extends OrbitViewInputHandler {
     lastTargetPosition = eyePos // but set this after notification so that listeners can still see the last pos and compute deltas
   }
 
+  def hasActiveAnimation: Boolean = gotoAnimControl.hasActiveAnimation
+
   // we try to keep hotkeys global to avoid implicit modes but at some point we might have
   // layers that are key listeners
 

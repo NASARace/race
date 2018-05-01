@@ -38,8 +38,7 @@ import scala.util.matching.Regex
 object TrackLayer {
 
   //--- predefined actions (used for reference conparison - don't use literals instead)
-  final val StartFocus = "StartFocus"
-  final val StopFocus = "StopFocus"
+
   final val ShowPath = "ShowPath"
   final val HidePath = "HidePath"
   final val ShowContour = "ShowContour"
@@ -286,7 +285,12 @@ trait TrackLayer[T <:TrackedObject] extends SubscribingRaceLayer
     setLayerObjectAttribute(lo, _.isFocused != cond){ e=>
       e.setFocused(cond)
       if (report) raceView.setFocused(e, cond) // report upwards in the chain
-      if (cond) raceView.panToCenter(lo.pos)
+      if (cond) {
+        raceView.panToCenter(lo.pos)
+        raceView.objectChanged(lo,StartFocus)
+      } else {
+        raceView.objectChanged(lo,StopFocus)
+      }
     }
   }
 
