@@ -23,12 +23,50 @@ import java.awt.event.{InputEvent, KeyEvent, MouseEvent, MouseWheelEvent}
 
 import gov.nasa.race._
 import Implicits._
-import gov.nasa.worldwind.View
-import gov.nasa.worldwind.animation.AnimationController
-import gov.nasa.worldwind.awt.ViewInputAttributes
+import gov.nasa.race.geo.LatLonPos
 import gov.nasa.worldwind.geom.{Angle, LatLon, Position, Vec4}
-import gov.nasa.worldwind.view.orbit.{BasicOrbitView, OrbitView, OrbitViewInputHandler}
+import gov.nasa.worldwind.view.orbit.{OrbitView, OrbitViewInputHandler}
+import gov.nasa.race.uom.Angle._
+import gov.nasa.race.uom.Length
+import gov.nasa.race.uom.Length._
 
+/**
+  * helper to keep track of view states, e.g. to store animation targets
+  */
+class ViewState {
+  var lat: Double     = 0   // in [deg]
+  var lon: Double     = 0
+  var zoom: Double    = 0  // in [m]
+  var heading: Double = 0 // in [deg]
+  var pitch: Double   = 0
+  var roll: Double    = 0
+
+  def toPosition: Position = Position.fromDegrees(lat,lon,zoom)
+  def toLatLonPos: LatLonPos = LatLonPos(Degrees(lat),Degrees(lon))
+  def altitude: Length = Meters(zoom)
+
+
+  def set (pos: Position): Unit = {
+    lat = pos.latitude.degrees
+    lon = pos.longitude.degrees
+  }
+
+  def set (pos: Position, _zoom: Double): Unit = {
+    set(pos)
+    zoom = _zoom
+  }
+
+  def set (pos: Position, _zoom: Double, _heading: Angle, _pitch: Angle): Unit = {
+    set(pos,_zoom)
+    heading = _heading.degrees
+    pitch = _pitch.degrees
+  }
+
+  def set (pos: Position, _zoom: Double, _heading: Angle, _pitch: Angle, _roll: Angle): Unit = {
+    set(pos,_zoom,_heading,_pitch)
+    roll = _roll.degrees
+  }
+}
 
 /**
   * a WorldWind ViewInputHandler that lets us query animation target positions and identify
@@ -40,15 +78,19 @@ class RaceWWViewInputHandler extends OrbitViewInputHandler {
   var raceViewer: RaceViewer = null
   var wwdView: RaceWWView = null
   var lastUserInputTime: Long = 0
-  var lastTargetPosition: Position = _
   var lastInputEvent: InputEvent = _
   var pressedKey: Int = 0
+
+  var lastTargetPosition: Position = _
+  val targetView = new ViewState // end state of last scheduled animation
 
   def attachToRaceView(rv: RaceViewer) = {
     raceViewer = rv
     wwdView = rv.wwdView
   }
 
+  // PHASE OUT
+  /**
   override protected def setTargetEyePosition (eyePos: Position, animController: AnimationController, actionKey: String): Unit = {
     super.setTargetEyePosition(eyePos, animController, actionKey)
     val animationHint = actionKey match {
@@ -66,6 +108,65 @@ class RaceWWViewInputHandler extends OrbitViewInputHandler {
     raceViewer.viewChanged(eyePos, heading,pitch,roll, animationHint) // notify with the intended position
     lastTargetPosition = eyePos // but set this after notification so that listeners can still see the last pos and compute deltas
   }
+    **/
+
+  //--- overridden animator scheduling to keep track of the last target view state (we should get this from the animationController)
+
+  override def addPanToAnimator (beginCenterPos: Position, endCenterPos: Position,
+                                 beginHeading: Angle, endHeading: Angle,
+                                 beginPitch: Angle, endPitch: Angle,
+                                 beginZoom: Double, endZoom:
+                                 Double, timeToMove: Long, endCenterOnSurface: Boolean): Unit = {
+    targetView.set(endCenterPos,endZoom,endHeading,endPitch)
+    super.addPanToAnimator(beginCenterPos,endCenterPos,beginHeading,endHeading,beginPitch,endPitch,beginZoom,endZoom,timeToMove,endCenterOnSurface)
+  }
+
+  override def addPanToAnimator (beginCenterPos: Position, endCenterPos: Position,
+                                 beginHeading: Angle, endHeading: Angle,
+                                 beginPitch: Angle, endPitch: Angle,
+                                 beginZoom: Double, endZoom: Double,
+                                 endCenterOnSurface: Boolean): Unit = {
+    targetView.set(endCenterPos,endZoom,endHeading,endPitch)
+    super.addPanToAnimator(beginCenterPos,endCenterPos,beginHeading,endHeading,beginPitch,endPitch,beginZoom,endZoom,endCenterOnSurface)
+  }
+
+  override def addEyePositionAnimator (timeToIterate: Long, beginPosition: Position, endPosition: Position): Unit = {
+    targetView.set(endPosition)
+    super.addEyePositionAnimator(timeToIterate,beginPosition,endPosition)
+  }
+
+  override def addHeadingAnimator(begin: Angle, end: Angle): Unit = {
+    targetView.heading = end.degrees
+    super.addHeadingAnimator(begin,end)
+  }
+
+  override def addPitchAnimator(begin: Angle, end: Angle): Unit = {
+    targetView.pitch = end.degrees
+    super.addPitchAnimator(begin,end)
+  }
+
+  override def addRollAnimator(begin: Angle, end: Angle): Unit = {
+    targetView.roll = end.degrees
+    super.addRollAnimator(begin,end)
+  }
+
+  override def addZoomAnimator (zoomStart: Double, zoomEnd: Double): Unit = {
+    targetView.zoom = zoomEnd
+    super.addZoomAnimator(zoomStart,zoomEnd)
+  }
+
+  override def addFlyToZoomAnimator(heading: Angle, pitch: Angle, zoom: Double): Unit = {
+    targetView.heading = heading.degrees
+    targetView.pitch = pitch.degrees
+    targetView.zoom = zoom
+    super.addFlyToZoomAnimator(heading,pitch,zoom)
+  }
+
+  override def addCenterAnimator(begin: Position, end: Position, lengthMillis: Long, smoothed: Boolean): Unit = {
+    targetView.set(end)
+    super.addCenterAnimator(begin,end,lengthMillis,smoothed)
+  }
+
 
   def hasActiveAnimation: Boolean = gotoAnimControl.hasActiveAnimation
 

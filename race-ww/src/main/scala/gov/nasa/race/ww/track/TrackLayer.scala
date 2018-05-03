@@ -237,11 +237,11 @@ trait TrackLayer[T <:TrackedObject] extends SubscribingRaceLayer
       if (e.isFocused) {
         val ep = if (raceViewer.isOrthgonalView) obj.position else {
           // keep eye altitude, view pitch and heading, translate eye position
-          GreatCircle.translate(raceViewer.eyeLatLonPos, lastObj.position,obj.position)
+          GreatCircle.translate(raceViewer.tgtEyePos, lastObj.position,obj.position)
         }
-        val dAlt = obj.altitude - lastObj.altitude
-        //raceViewer.eyePositionTo(new Position(ep,(raceViewer.eyeAltitude + dAlt).toMeters), 750)
-        raceViewer.setEyePosition(new Position(ep,(raceViewer.eyeAltitude + dAlt).toMeters))
+        val dAlt = (obj.altitude - lastObj.altitude).toMeters
+        //raceViewer.eyePositionTo(new Position(ep,(raceViewer.eyeAltitude + dAlt).toMeters), 1000)
+        raceViewer.setEyePosition(new Position(ep,raceViewer.tgtZoom + dAlt))
       }
       updateTrackEntryAttributes(e)
       if (e.hasSymbol) wwdRedrawManager.redraw()
