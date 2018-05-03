@@ -72,7 +72,7 @@ object Dependencies {
   val pegDown = "org.pegdown" % "pegdown" % "1.6.0"
 
   //--- scalaCheck
-  val scalaCheck = "org.scalacheck" % "scalacheck_2.12" % "1.13.5"
+  val scalaCheck = "org.scalacheck" % "scalacheck_2.12" % "1.14.0"
 
   // liftJson
   val liftJson = "net.liftweb" %% "lift-json" % "3.2.0-M3"
@@ -121,7 +121,7 @@ object Dependencies {
   val akkaTestkit = akkaOrg %% "akka-testkit" % akkaVersion
   val akkaMultiNodeTestkit = akkaOrg %% "akka-multi-node-testkit" % akkaVersion // % "test,multi-jvm"
 
-  val akkaHttp = akkaOrg %% "akka-http" % "10.1.0"
+  val akkaHttp = akkaOrg %% "akka-http" % "10.1.1"
 
   val akkaAll = Seq(akkaActor)
 
@@ -155,6 +155,8 @@ object Dependencies {
   // note that clients are NOT upward compatible, i.e. a new client doesn't work with an old server
   // (the new server with old client is supposedly fine). Since there are many old servers out there, we can't
   // use the latest client yet
+
+  // note - we can't move to 1.1.0 yet since it breaks KafkaServer (again)
   val kafkaClients = "org.apache.kafka" % "kafka-clients" % "0.9.0.0"
   val newKafkaClients = "org.apache.kafka" % "kafka-clients" % "1.0.1"
 

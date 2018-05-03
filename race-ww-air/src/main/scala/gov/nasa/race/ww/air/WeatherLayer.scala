@@ -23,7 +23,7 @@ import gov.nasa.race.core.Messages.BusEvent
 import gov.nasa.race.swing.Style._
 import gov.nasa.race.uom.Length._
 import gov.nasa.race.ww.Implicits._
-import gov.nasa.race.ww.{DynamicLayerInfoPanel, RaceView, SubscribingRaceLayer}
+import gov.nasa.race.ww.{DynamicLayerInfoPanel, RaceViewer, SubscribingRaceLayer}
 import gov.nasa.worldwind.geom.LatLon
 import gov.nasa.worldwind.render.SurfaceImage
 
@@ -51,7 +51,7 @@ import gov.nasa.race.ww.air.WeatherLayer._
 /**
  * a WorldWind layer to display weather data
  */
-class WeatherLayer (val raceView: RaceView, val config: Config) extends SubscribingRaceLayer {
+class WeatherLayer (val raceViewer: RaceViewer, val config: Config) extends SubscribingRaceLayer {
 
   val precipMap = MutableMap[String,PrecipEntry]()
   val panel = weatherLayerPanel

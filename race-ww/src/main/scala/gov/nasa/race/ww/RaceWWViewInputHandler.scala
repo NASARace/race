@@ -34,28 +34,28 @@ import gov.nasa.worldwind.view.orbit.{BasicOrbitView, OrbitView, OrbitViewInputH
   * a WorldWind ViewInputHandler that lets us query animation target positions and identify
   * user input related view changes
   */
-class RaceViewInputHandler extends OrbitViewInputHandler {
+class RaceWWViewInputHandler extends OrbitViewInputHandler {
   // we have to init this deferred because of WWJ initialization (setViewInputHandler() does
   // not properly unregister/register listeners)
-  var raceView: RaceView = null
-  var wwdView: RaceOrbitView = null
+  var raceViewer: RaceViewer = null
+  var wwdView: RaceWWView = null
   var lastUserInputTime: Long = 0
   var lastTargetPosition: Position = _
   var lastInputEvent: InputEvent = _
   var pressedKey: Int = 0
 
-  def attachToRaceView(rv: RaceView) = {
-    raceView = rv
+  def attachToRaceView(rv: RaceViewer) = {
+    raceViewer = rv
     wwdView = rv.wwdView
   }
 
   override protected def setTargetEyePosition (eyePos: Position, animController: AnimationController, actionKey: String): Unit = {
     super.setTargetEyePosition(eyePos, animController, actionKey)
     val animationHint = actionKey match {
-      case "ViewAnimZoom" => RaceView.Zoom
-      case "ViewAnimCenter" =>  if (lastUserInputWasDrag) RaceView.CenterDrag else RaceView.CenterClick
-      case "ViewAnimPan" => RaceView.Pan
-      case other => RaceView.Goto
+      case "ViewAnimZoom" => RaceViewer.Zoom
+      case "ViewAnimCenter" =>  if (lastUserInputWasDrag) RaceViewer.CenterDrag else RaceViewer.CenterClick
+      case "ViewAnimPan" => RaceViewer.Pan
+      case other => RaceViewer.Goto
     }
 
     // TODO - we should get these either from arguments or the animations
@@ -63,7 +63,7 @@ class RaceViewInputHandler extends OrbitViewInputHandler {
     val heading = wwdView.getHeading
     val roll = wwdView.getRoll
 
-    raceView.viewChanged(eyePos, heading,pitch,roll, animationHint) // notify with the intended position
+    raceViewer.viewChanged(eyePos, heading,pitch,roll, animationHint) // notify with the intended position
     lastTargetPosition = eyePos // but set this after notification so that listeners can still see the last pos and compute deltas
   }
 
@@ -81,14 +81,14 @@ class RaceViewInputHandler extends OrbitViewInputHandler {
     pressedKey = KeyEvent.VK_UNDEFINED
     e.getKeyCode match {
       case KeyEvent.VK_0 =>
-        raceView.resetView
+        raceViewer.resetView
         true
       case KeyEvent.VK_C =>
         centerOnMouse
         false
       case KeyEvent.VK_Z =>
-        ifSome(raceView.focusObject) { o =>
-          raceView.zoomInOn(o.pos)
+        ifSome(raceViewer.focusObject) { o =>
+          raceViewer.zoomInOn(o.pos)
         }
         false
       case _ => false
@@ -97,8 +97,8 @@ class RaceViewInputHandler extends OrbitViewInputHandler {
 
   def centerOnMouse: Unit = {
     val screenPoint = getMousePoint
-    val pos = raceView.wwdView.computePositionFromScreenPoint(screenPoint.x, screenPoint.y)
-    raceView.panToCenter(pos)
+    val pos = raceViewer.wwdView.computePositionFromScreenPoint(screenPoint.x, screenPoint.y)
+    raceViewer.panToCenter(pos)
   }
 
   def processMouseWheelMoved (e: MouseWheelEvent): Boolean = {
@@ -109,13 +109,13 @@ class RaceViewInputHandler extends OrbitViewInputHandler {
       wwdView.setPitch(pitch)
       //val cp = raceView.focusObject.get.pos
       //wwdView.asInstanceOf[OrbitView].setCenterPosition(cp)
-      raceView.redrawNow
+      raceViewer.redrawNow
       true
     } else if (isAlt) {
       val dHdg = if (e.getWheelRotation > 0) 2 else -2
       val hdg = wwdView.getHeading.addDegrees(dHdg)
       wwdView.setHeading(hdg)
-      raceView.redrawNow
+      raceViewer.redrawNow
       true
     } else false
   }

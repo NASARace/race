@@ -32,7 +32,7 @@ import scala.swing.event.{ButtonClicked, ListSelectionChanged, MouseClicked}
 /**
  * default panel to display and manipulate WorldWind layers
  */
-class LayerListPanel (raceView: RaceView, config: Option[Config]=None)
+class LayerListPanel (raceView: RaceViewer, config: Option[Config]=None)
                                                      extends BoxPanel(Orientation.Vertical)
                                                        with RacePanel with LayerController {
 

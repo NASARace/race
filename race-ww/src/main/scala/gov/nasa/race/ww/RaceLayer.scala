@@ -41,7 +41,7 @@ import scala.concurrent.duration.FiniteDuration
   * RaceLayerInfo trait that can be initialized from the ctor Config argument
   */
 trait RaceLayer extends RenderableLayer with RaceLayerInfo {
-  val raceView: RaceView
+  val raceViewer: RaceViewer
   val config: Config
 
   val name = config.getString("name")
@@ -90,7 +90,7 @@ trait RaceLayer extends RenderableLayer with RaceLayerInfo {
   */
 trait ConfigurableRenderingLayer extends RaceLayer {
 
-  def defaultColor: Color = raceView.defaultColor
+  def defaultColor: Color = raceViewer.defaultColor
   val color = config.getColorOrElse("color", defaultColor)
 
   def defaultLabelColor: Color = color
@@ -102,7 +102,7 @@ trait ConfigurableRenderingLayer extends RaceLayer {
   val labelMaterial = new Material(labelColor)
   val lineMaterial = new Material(lineColor)
 
-  def defaultLabelFont: Font = raceView.defaultLabelFont
+  def defaultLabelFont: Font = raceViewer.defaultLabelFont
   val labelFont = config.getFontOrElse("label-font", defaultLabelFont)
 
   def defaultSubLabelFont: Font = labelFont
@@ -119,7 +119,7 @@ trait ConfigurableRenderingLayer extends RaceLayer {
   * visible in the associated types
   */
 trait SubscribingRaceLayer extends RaceLayer with AkkaSwingBridge {
-  val actor: RaceLayerActor = raceView.createActor(name){ createLayerActor }
+  val actor: RaceLayerActor = raceViewer.createActor(name){ createLayerActor }
 
   var updateCount = 0// to keep track of number of changes
   def incUpdateCount: Unit = updateCount += 1

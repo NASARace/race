@@ -39,7 +39,7 @@ import scala.swing._
 /**
   * a toplevel frame with a WorldWindGLCanvas
   */
-class WorldWindFrame (config: Config, raceView: RaceView) extends AppFrame {
+class WorldWindFrame (config: Config, raceView: RaceViewer) extends AppFrame {
 
   Platform.useScreenMenuBar
   Platform.enableNativePopups
@@ -71,7 +71,7 @@ class WorldWindFrame (config: Config, raceView: RaceView) extends AppFrame {
     Platform.requestFullScreen(this)
   }
 
-  def createWorldWindow (config: Config, raceView: RaceView): WorldWindowGLCanvas = {
+  def createWorldWindow (config: Config, raceView: RaceViewer): WorldWindowGLCanvas = {
     val wwd = new WorldWindowGLCanvas with Redrawable
 
     ifSome(config.getOptionalConfig("eye")) { e => // if we don't have an 'eye' config we default to WWJs
@@ -81,7 +81,7 @@ class WorldWindFrame (config: Config, raceView: RaceView) extends AppFrame {
       val view = wwd.getView
       view.setEyePosition(eyePos)
       ifSome(config.getOptionalDouble("max-flight-ft")) { d =>
-        ifInstanceOf[RaceOrbitView](view) { v => v.ensureMaxFlightAltitude(Length.feet2Meters(d))}
+        ifInstanceOf[RaceWWView](view) { v => v.ensureMaxFlightAltitude(Length.feet2Meters(d))}
       }
     }
 
@@ -103,7 +103,7 @@ class WorldWindFrame (config: Config, raceView: RaceView) extends AppFrame {
     Toolkit.getDefaultToolkit.createCustomCursor(icon.getImage,new Point(16,16),"map cursor")
   }
 
-  def setWwdMenu(config: Config, raceView: RaceView, wwd: WorldWindowGLCanvas) = {
+  def setWwdMenu(config: Config, raceView: RaceViewer, wwd: WorldWindowGLCanvas) = {
     val showConsole = config.getBooleanOrElse("show-console", true)
 
     // we can't use scala-swing for menus since wwd is either a native window or a JPanel

@@ -30,7 +30,6 @@ import scala.language.implicitConversions
   */
 object Implicits {
 
-  implicit def latLonPos2Position(pos: LatLonPos): Position = Position.fromDegrees(pos.φ.toDegrees, pos.λ.toDegrees)
 
   implicit def geoPosition3d2Position (pos: GeoPosition3D): Position = {
     Position.fromDegrees(pos.position.φ.toDegrees, pos.position.λ.toDegrees, pos.altitude.toMeters)
@@ -42,6 +41,6 @@ object Implicits {
 
   implicit def latLonPos2LatLon (pos: LatLonPos): LatLon = LatLon.fromDegrees(pos.φ.toDegrees, pos.λ.toDegrees)
 
-  implicit def LatLon2LatLonPos (latLon: LatLon): LatLonPos = LatLonPos.fromDegrees( latLon.latitude.degrees, latLon.longitude.degrees)
+  implicit def latLon2LatLonPos(latLon: LatLon): LatLonPos = LatLonPos.fromDegrees( latLon.latitude.degrees, latLon.longitude.degrees)
 
 }

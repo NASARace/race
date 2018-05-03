@@ -46,8 +46,8 @@ class TrackEntry[T <: TrackedObject](var obj: T, var trajectory: Trajectory, val
   var isFocused = false // do we follow and center the track position (note this can come from any level: raceView, layer, panel)
   var drawPathContour = false // do we draw a path contour for this track
 
-  def viewPitch = layer.raceView.viewPitch
-  def viewRoll = layer.raceView.viewRoll
+  def viewPitch = layer.raceViewer.viewPitch
+  def viewRoll = layer.raceViewer.viewRoll
 
   override def pos = obj
 

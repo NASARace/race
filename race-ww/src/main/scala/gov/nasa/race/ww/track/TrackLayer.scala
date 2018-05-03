@@ -24,13 +24,14 @@ import gov.nasa.race._
 import gov.nasa.race.common.{ThresholdLevel, ThresholdLevelList}
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.Messages._
-import gov.nasa.race.geo.GeoPosition
+import gov.nasa.race.geo.{GeoPosition, GreatCircle}
 import gov.nasa.race.swing.Style._
 import gov.nasa.race.track._
 import gov.nasa.race.util.StringUtils
 import gov.nasa.race.ww.Implicits._
 import gov.nasa.race.ww.EventAction.EventAction
 import gov.nasa.race.ww.{AltitudeSensitiveRaceLayer, _}
+import gov.nasa.worldwind.geom.Position
 
 import scala.collection.mutable.{Map => MutableMap}
 import scala.util.matching.Regex
@@ -118,8 +119,8 @@ trait TrackLayer[T <:TrackedObject] extends SubscribingRaceLayer
   //--- end ctor
 
   // override in subclasses for more specialized types
-  protected def createLayerInfoPanel: TrackLayerInfoPanel[T] = new TrackLayerInfoPanel(raceView,this).styled('consolePanel)
-  protected def createEntryPanel: TrackEntryPanel[T] = new TrackEntryPanel(raceView,this).styled('consolePanel)
+  protected def createLayerInfoPanel: TrackLayerInfoPanel[T] = new TrackLayerInfoPanel(raceViewer,this).styled('consolePanel)
+  protected def createEntryPanel: TrackEntryPanel[T] = new TrackEntryPanel(raceViewer,this).styled('consolePanel)
   protected def createTrajectory(track: T) = new CompactTrajectory
   protected def createTrackEntry(track: T): TrackEntry[T] = new TrackEntry[T](track,createTrajectory(track), this)
 
@@ -144,7 +145,7 @@ trait TrackLayer[T <:TrackedObject] extends SubscribingRaceLayer
     trackEntries.get(key).orElse(trackEntries.valuesIterator.find(e => e.obj.cs == key)).map( _.obj )
   }
 
-  override def queryDate = raceView.updatedSimTime
+  override def queryDate = raceViewer.updatedSimTime
 
   override def reportQueryError (msg: String) = error(msg)
 
@@ -159,8 +160,8 @@ trait TrackLayer[T <:TrackedObject] extends SubscribingRaceLayer
 
   def dismissEntryPanel (e: TrackEntry[T]) = {
     if (entryPanel.isShowing(e)) {
-      raceView.dismissObjectPanel
-      raceView.objectChanged(e, DismissPanel)
+      raceViewer.dismissObjectPanel
+      raceViewer.objectChanged(e, DismissPanel)
     }
   }
 
@@ -193,14 +194,14 @@ trait TrackLayer[T <:TrackedObject] extends SubscribingRaceLayer
 
   def selectTrackEntry(e: TrackEntry[T]) = {
     panel.trySelectTrackEntry(e)
-    raceView.objectChanged(e,Select)
+    raceViewer.objectChanged(e,Select)
   }
 
   def setTrackEntryPanel(e: TrackEntry[T]) = {
     if (!entryPanel.isShowing(e)) {
       entryPanel.setTrackEntry(e)
-      raceView.setObjectPanel(entryPanel)
-      raceView.objectChanged(e,ShowPanel)
+      raceViewer.setObjectPanel(entryPanel)
+      raceViewer.objectChanged(e,ShowPanel)
     }
   }
 
@@ -230,9 +231,18 @@ trait TrackLayer[T <:TrackedObject] extends SubscribingRaceLayer
   }
 
   protected def updateTrackEntry(e: TrackEntry[T], obj: T) = {
-    if (e.obj.date < obj.date) { // don't overwrite new with old data
+    val lastObj = e.obj
+    if (lastObj.date < obj.date) { // don't overwrite new with old data
       e.setNewObj(obj)
-      if (e.isFocused) raceView.setEyePosition(obj.position)
+      if (e.isFocused) {
+        val ep = if (raceViewer.isOrthgonalView) obj.position else {
+          // keep eye altitude, view pitch and heading, translate eye position
+          GreatCircle.translate(raceViewer.eyeLatLonPos, lastObj.position,obj.position)
+        }
+        val dAlt = obj.altitude - lastObj.altitude
+        //raceViewer.eyePositionTo(new Position(ep,(raceViewer.eyeAltitude + dAlt).toMeters), 750)
+        raceViewer.setEyePosition(new Position(ep,(raceViewer.eyeAltitude + dAlt).toMeters))
+      }
       updateTrackEntryAttributes(e)
       if (e.hasSymbol) wwdRedrawManager.redraw()
       // the layerInfo panel does update periodically on its own
@@ -284,12 +294,12 @@ trait TrackLayer[T <:TrackedObject] extends SubscribingRaceLayer
   override def setFocused (lo: LayerObject, cond: Boolean, report: Boolean = true): Unit = {
     setLayerObjectAttribute(lo, _.isFocused != cond){ e=>
       e.setFocused(cond)
-      if (report) raceView.setFocused(e, cond) // report upwards in the chain
+      if (report) raceViewer.setFocused(e, cond) // report upwards in the chain
       if (cond) {
-        raceView.panToCenter(lo.pos)
-        raceView.objectChanged(lo,StartFocus)
+        raceViewer.panToCenter(lo.pos)
+        raceViewer.objectChanged(lo,StartFocus)
       } else {
-        raceView.objectChanged(lo,StopFocus)
+        raceViewer.objectChanged(lo,StopFocus)
       }
     }
   }

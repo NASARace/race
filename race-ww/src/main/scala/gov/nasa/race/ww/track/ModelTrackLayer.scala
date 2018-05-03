@@ -62,7 +62,7 @@ trait ModelTrackLayer[T <:TrackedObject] extends TrackLayer[T] with ViewListener
   val models = config.getConfigSeq("models").map(TrackModel.loadModel[T])
 
   if (models.nonEmpty) {
-    raceView.addViewListener(this)  // will update lastEyePos and proximities
+    raceViewer.addViewListener(this)  // will update lastEyePos and proximities
   }
 
   private val pendingUpdates = new AtomicInteger
@@ -81,7 +81,7 @@ trait ModelTrackLayer[T <:TrackedObject] extends TrackLayer[T] with ViewListener
     if (models.nonEmpty) {
       pendingUpdates.getAndIncrement
       delay(500.milliseconds, () => {
-        val ep = raceView.eyePosition
+        val ep = raceViewer.eyePosition
         eyeDistanceFilter.updateReference(Degrees(ep.latitude.degrees), Degrees(ep.longitude.degrees), Meters(ep.getAltitude))
         if (pendingUpdates.decrementAndGet == 0) recalculateProximities
       })

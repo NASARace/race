@@ -142,5 +142,11 @@ object GreatCircle {
 
     LatLonPos(φ2, λ2)
   }
+
+  def translate (pos: LatLonPos, startPos: LatLonPos, endPos: LatLonPos): LatLonPos = {
+    val Δφ = endPos.φ - startPos.φ
+    val Δλ = endPos.λ - startPos.λ
+    LatLonPos(pos.φ + Δφ, pos.λ + Δλ)
+  }
 }
 

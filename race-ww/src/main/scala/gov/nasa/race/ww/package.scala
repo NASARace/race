@@ -23,6 +23,7 @@ import java.awt.event._
 import com.typesafe.config.Config
 import gov.nasa.race.geo.{GeoPosition3D, LatLonPos}
 import gov.nasa.race.uom._
+import gov.nasa.race.uom.Length._
 import gov.nasa.worldwind._
 import gov.nasa.worldwind.event.SelectEvent
 import gov.nasa.worldwind.geom.Position
@@ -58,7 +59,7 @@ package object ww {
 
   val FarAway = Position.fromDegrees(0,0,Double.MaxValue) // use this for invisible positions
 
-  @inline def wwPosition(pos: LatLonPos, alt: Length): Position = {
+  @inline def wwPosition(pos: LatLonPos, alt: Length= Length0): Position = {
     Position.fromDegrees(pos.φ.toDegrees, pos.λ.toDegrees, alt.toMeters)
   }
 
@@ -153,6 +154,6 @@ package object ww {
   /**
     * just a placeholder for no content
     */
-  class EmptyPanel (raceView: RaceView, config: Option[Config]=None) extends BorderPanel with RacePanel
+  class EmptyPanel (raceView: RaceViewer, config: Option[Config]=None) extends BorderPanel with RacePanel
 
 }

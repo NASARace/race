@@ -20,13 +20,18 @@ package gov.nasa.race.kafka
 import java.io.{File, FileInputStream}
 import java.net.InetSocketAddress
 import java.util.Properties
-import java.util.concurrent.CountDownLatch
 
 import kafka.admin.TopicCommand
 import kafka.admin.TopicCommand.TopicCommandOptions
 import kafka.metrics.KafkaMetricsReporter
 import kafka.server.{KafkaConfig, KafkaServerStartable}
-import kafka.utils.{VerifiableProperties, ZkUtils}
+import kafka.utils.VerifiableProperties
+import kafka.utils.ZkUtils
+/** 1.1.x
+import kafka.zk.KafkaZkClient
+import kafka.zookeeper.ZooKeeperClient
+import org.apache.kafka.common.utils.Time
+**/
 import org.apache.zookeeper.server.{NIOServerCnxnFactory, ZooKeeperServer}
 import gov.nasa.race._
 
@@ -149,10 +154,21 @@ object KafkaServer {
 
     zkFactory.startup(zkServer)
     Thread.sleep(500)
-    val zkUtils = ZkUtils(props.get("zookeeper.connect").toString, 30000, 30000, false)
+
+    val zkClient = ZkUtils(props.get("zookeeper.connect").toString, 30000, 30000, false) // 1.0.1
+
+    /** 1.1.x
+    val time = Time.SYSTEM
+    val zooKeeperClient: ZooKeeperClient = new ZooKeeperClient(props.get("zookeeper.connect").toString,
+                                                               30000, 30000, Int.MaxValue, time,"","")
+    val zkClient: KafkaZkClient = { // KafkaZkClient is not public
+      //new KafkaZkClient(zooKeeperClient,false,time)
+      val ctor = Class.forName("kafka.zk.KafkaZkClient").getConstructor(classOf[ZooKeeperClient],classOf[Boolean],classOf[Time])
+      ctor.newInstance(zooKeeperClient,java.lang.Boolean.FALSE,time).asInstanceOf[KafkaZkClient]
+    **/
 
     //--- Kafka
-    val serverConfig = new KafkaConfig(props)
+    val serverConfig = new KafkaConfig(props) // ?? fails under 1.1.0: can't find org/apache/kafka/common/Reconfigurable ??
     KafkaMetricsReporter.startReporters(new VerifiableProperties(props))
     val kafkaServerStartable = new KafkaServerStartable(serverConfig)
 
@@ -176,12 +192,12 @@ object KafkaServer {
     thread.start()
     Thread.sleep(1000)
 
-    ifSome(cliOpts.topic){ topicName => createTopic(zkUtils,topicName,"1","1")}
+    ifSome(cliOpts.topic){ topicName => createTopic(zkClient,topicName,"1","1")}
 
     menu("enter command [1:listTopics, 2:createTopic, 9:exit]:\n") {
       case "1" =>
         //TopicCommand.main(Array("--list", "--zookeeper", props.get("zookeeper.connect").toString))
-        TopicCommand.listTopics(zkUtils,new TopicCommandOptions(Array[String]()))
+        TopicCommand.listTopics(zkClient,new TopicCommandOptions(Array[String]()))
         repeatMenu
 
       case "2" =>
@@ -191,7 +207,7 @@ object KafkaServer {
           if (partitions == "") partitions = "1"
           var replicationFactor = StdIn.readLine("  enter replication factor (default=1):\n")
           if (replicationFactor == "") replicationFactor = "1"
-          createTopic(zkUtils, topic, partitions, replicationFactor)
+          createTopic(zkClient, topic, partitions, replicationFactor)
         }
         repeatMenu
       case "9" =>
@@ -201,10 +217,10 @@ object KafkaServer {
     }
   }
 
-  def createTopic (zkUtils: ZkUtils, topic: String, partitions: String, replicationFactor: String) = {
+  def createTopic (zkClient: ZkUtils /* KafkaZkClient */, topic: String, partitions: String, replicationFactor: String) = {
     val args = Array("--replication-factor", replicationFactor,
       "--partitions", partitions,
       "--topic", topic)
-    TopicCommand.createTopic(zkUtils, new TopicCommandOptions(args))
+    TopicCommand.createTopic(zkClient, new TopicCommandOptions(args))
   }
 }

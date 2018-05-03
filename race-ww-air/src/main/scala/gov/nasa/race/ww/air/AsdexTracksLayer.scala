@@ -28,9 +28,10 @@ import gov.nasa.race.swing.{IdAndNamePanel, StaticSelectionPanel}
 import gov.nasa.race.track.Trajectory
 import gov.nasa.race.uom.Length
 import gov.nasa.race.uom.Length.{Feet, Meters, UsMiles, meters2Feet}
+import gov.nasa.race.ww._
 import gov.nasa.race.ww.Implicits._
 import gov.nasa.race.ww.track.{TrackEntry, TrackLayer, TrackLayerInfoPanel}
-import gov.nasa.race.ww.{Images, RaceView, ViewListener, WWAngle}
+import gov.nasa.race.ww.{Images, RaceViewer, ViewListener, WWAngle}
 import gov.nasa.worldwind.geom.Position
 
 
@@ -54,10 +55,10 @@ class AsdexTrackEntry (o: AsdexTrack, trajectory: Trajectory, layer: AsdexTracks
   }
 }
 
-class AsdexTracksLayer (val raceView: RaceView, val config: Config)
+class AsdexTracksLayer (val raceViewer: RaceViewer, val config: Config)
                            extends TrackLayer[AsdexTrack] with AirLocator with ViewListener {
 
-  override protected def createLayerInfoPanel = new TrackLayerInfoPanel[AsdexTrack](raceView,this) {
+  override protected def createLayerInfoPanel = new TrackLayerInfoPanel[AsdexTrack](raceViewer,this) {
     contents += new StaticSelectionPanel[Airport,IdAndNamePanel[Airport]]("select airport",Airport.NoAirport +: Airport.airportList, 40,
       new IdAndNamePanel[Airport]( _.id, _.city), selectAirport).styled()
   }.styled('consolePanel)
@@ -78,13 +79,13 @@ class AsdexTracksLayer (val raceView: RaceView, val config: Config)
 
   override def initializeLayer: Unit = {
     super.initializeLayer
-    raceView.addViewListener(this)
+    raceViewer.addViewListener(this)
   }
   override def viewChanged(eyePos: Position,
                            heading: WWAngle, pitch: WWAngle, roll: WWAngle,
                            animationHint: String): Unit = checkAirportChange(eyePos)
 
-  def selectAirport (a: Airport) = raceView.trackUserAction(gotoAirport(a))
+  def selectAirport (a: Airport) = raceViewer.trackUserAction(gotoAirport(a))
 
   def lookupAirport (pos: LatLonPos, dist: Length): Option[Airport] = {
     Airport.asdexAirports.find( e=> GreatCircle.distance(pos, e._2.position) < dist).map(_._2)
@@ -122,8 +123,8 @@ class AsdexTracksLayer (val raceView: RaceView, val config: Config)
     if (airport eq Airport.NoAirport) { // just unset
       if (selAirport.isDefined) releaseCurrentAirport
     } else {
-      val alt = gotoAltitude.toMeters + airport.elevation.toMeters
-      raceView.panTo(airport.position, alt)
+      val alt = gotoAltitude + airport.elevation
+      raceViewer.panTo(wwPosition(airport.position, alt))
     }
   }
 

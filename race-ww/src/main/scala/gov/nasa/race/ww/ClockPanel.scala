@@ -30,7 +30,7 @@ import scala.swing.{Action, BoxPanel, Button, FlowPanel, Label, Orientation}
 /**
  * basic clock panel with simulation and elapsed time
  */
-class BasicClockPanel(raceView: RaceView, config: Option[Config]=None) extends GBPanel with RacePanel {
+class BasicClockPanel(raceView: RaceViewer, config: Option[Config]=None) extends GBPanel with RacePanel {
 
   val simClock = raceView.simClock
   val simClockPanel = new DigitalClock(Some(simClock)).styled()
@@ -43,7 +43,7 @@ class BasicClockPanel(raceView: RaceView, config: Option[Config]=None) extends G
 
 }
 
-class ControlClockPanel (raceView: RaceView, config: Option[Config]=None) extends BasicClockPanel(raceView,config) {
+class ControlClockPanel (raceView: RaceViewer, config: Option[Config]=None) extends BasicClockPanel(raceView,config) {
 
   val stopIcon = Images.getIcon("stop-red-16x16.png")
   val playIcon = Images.getIcon("play-green-16x16.png")

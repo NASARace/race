@@ -34,7 +34,7 @@ import scala.swing.{Action, BoxPanel, Button, ButtonGroup, CheckBox, MenuItem, O
   * LayerInfoPanel for track layers, which adds a panel to query items of
   * this layer and set displayed items accordingly
   */
-class TrackLayerInfoPanel[T <: TrackedObject](raceView: RaceView, trackLayer: TrackLayer[T])
+class TrackLayerInfoPanel[T <: TrackedObject](raceView: RaceViewer, trackLayer: TrackLayer[T])
           extends DynamicLayerInfoPanel with TrackQueryContext {
 
   override def itemsText (l: SubscribingRaceLayer) = s"${l.size} / ${matchList.size}"  // we display both total and matching number of items

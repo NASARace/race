@@ -37,7 +37,7 @@ import gov.nasa.worldwind.WorldWind
 import gov.nasa.worldwind.render._
 
 
-class TraconSymbol(val tracon: Tracon, val layer: TATracksLayer) extends PointPlacemark(tracon.position) with RaceLayerPickable {
+class TraconSymbol(val tracon: Tracon, val layer: TATracksLayer) extends PointPlacemark(wwPosition(tracon.position)) with RaceLayerPickable {
   var showDisplayName = false
   var attrs = new PointPlacemarkAttributes
 
@@ -72,7 +72,7 @@ class TATrackEntry (obj: TATrack, trajectory: Trajectory, layer: TATracksLayer) 
 /**
   * a layer to display TRACONs and related TATracks
   */
-class TATracksLayer (val raceView: RaceView, val config: Config) extends ModelTrackLayer[TATrack] with AirLocator {
+class TATracksLayer (val raceViewer: RaceViewer, val config: Config) extends ModelTrackLayer[TATrack] with AirLocator {
 
   //--- configured values
 
@@ -107,7 +107,7 @@ class TATracksLayer (val raceView: RaceView, val config: Config) extends ModelTr
   }
 
   override def createLayerInfoPanel = {
-    new TrackLayerInfoPanel(raceView,this){
+    new TrackLayerInfoPanel(raceViewer,this){
       // insert tracon selection panel after generic layer info
       contents.insert(1, new StaticSelectionPanel[Tracon,IdAndNamePanel[Tracon]]("select TRACON",
                                             Tracon.NoTracon +: Tracon.traconList, 40,
@@ -142,7 +142,7 @@ class TATracksLayer (val raceView: RaceView, val config: Config) extends ModelTr
 
   def showTraconSymbols = Tracon.traconList.foreach(showTraconSymbol)
 
-  def selectTracon(tracon: Tracon) = raceView.trackUserAction(gotoTracon(tracon))
+  def selectTracon(tracon: Tracon) = raceViewer.trackUserAction(gotoTracon(tracon))
 
   def reset(): Unit = {
     clearTrackEntries
@@ -152,7 +152,7 @@ class TATracksLayer (val raceView: RaceView, val config: Config) extends ModelTr
   }
 
   def setTracon(tracon: Tracon) = {
-    raceView.panTo(tracon.position, gotoAltitude.toMeters)
+    raceViewer.panTo(wwPosition(tracon.position, gotoAltitude))
 
     selTracon = Some(tracon)
     traconGrid.setCenter(tracon.position)

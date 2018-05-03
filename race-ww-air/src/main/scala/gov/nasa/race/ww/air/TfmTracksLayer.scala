@@ -23,13 +23,13 @@ import akka.actor.Actor.Receive
 import com.typesafe.config.Config
 import gov.nasa.race.air.{AirLocator, TFMTrack, TFMTracks}
 import gov.nasa.race.core.Messages.BusEvent
-import gov.nasa.race.ww.{Images, RaceView}
+import gov.nasa.race.ww.{Images, RaceViewer}
 import gov.nasa.race.ww.track.TrackLayer
 
 /**
   * a RaceViewerActor WWJ layer to display TFM track data
   */
-class TfmTracksLayer (val raceView: RaceView, val config: Config) extends TrackLayer[TFMTrack] with AirLocator {
+class TfmTracksLayer (val raceViewer: RaceViewer, val config: Config) extends TrackLayer[TFMTrack] with AirLocator {
 
   override def defaultColor = Color.magenta
   override def defaultSymbolImg = Images.getPlaneImage(color)

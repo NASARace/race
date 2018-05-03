@@ -27,6 +27,7 @@ import gov.nasa.race._
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.Messages.{RacePauseRequest, RaceResumeRequest, RaceTerminateRequest}
 import gov.nasa.race.core.{ContinuousTimeRaceActor, RaceContext, _}
+import gov.nasa.race.uom.Length._
 import gov.nasa.race.swing.Style._
 import gov.nasa.race.swing.{Redrawable, _}
 import gov.nasa.race.ww.Implicits._
@@ -51,7 +52,7 @@ import scala.swing._
 class RaceViewerActor(val config: Config) extends ContinuousTimeRaceActor
                with SubscribingRaceActor with PublishingRaceActor with ParentRaceActor {
 
-  var view: Option[RaceView] = None // we can't create this from a Akka thread since it does UI transcations
+  var view: Option[RaceViewer] = None // we can't create this from a Akka thread since it does UI transcations
 
   var initTimedOut = false // WorldWind initialization might do network IO - we have to check for timeouts
 
@@ -67,7 +68,7 @@ class RaceViewerActor(val config: Config) extends ContinuousTimeRaceActor
 
     invokeAndWait { // this is executed in the AWT event dispatch thread
       try {
-        view = Some(new RaceView(RaceViewerActor.this))
+        view = Some(new RaceViewer(RaceViewerActor.this))
       } catch {
         case x: Throwable => x.printStackTrace
       }
@@ -112,7 +113,7 @@ class RaceViewerActor(val config: Config) extends ContinuousTimeRaceActor
 }
 
 
-object RaceView {
+object RaceViewer {
 
   //--- view animation hints
   final val CenterClick = "CenterClick"
@@ -125,7 +126,7 @@ object RaceView {
   final val SelectedLayer = "selected layer"
   final val SelectedObject = "selected object"
 }
-import gov.nasa.race.ww.RaceView._
+import gov.nasa.race.ww.RaceViewer._
 
 /**
   * this is a viewer state facade we pass down into our components, which
@@ -142,7 +143,7 @@ import gov.nasa.race.ww.RaceView._
   *
   * Both ctor and methods are supposed to be executed from the UI thread
   */
-class RaceView (viewerActor: RaceViewerActor) extends DeferredEyePositionListener {
+class RaceViewer(viewerActor: RaceViewerActor) extends DeferredEyePositionListener {
   implicit val log = viewerActor.log
   def initTimedOut = viewerActor.initTimedOut
 
@@ -179,10 +180,10 @@ class RaceView (viewerActor: RaceViewerActor) extends DeferredEyePositionListene
   val frame = new WorldWindFrame(viewerActor.config, this) // this creates the wwd instance
 
   val wwd = frame.wwd
-  val wwdView = wwd.getView.asInstanceOf[RaceOrbitView]
+  val wwdView = wwd.getView.asInstanceOf[RaceWWView]
 
   val redrawManager = RedrawManager(wwd.asInstanceOf[Redrawable]) // the shared one, layers/panels can have their own
-  val inputHandler = wwdView.getViewInputHandler.asInstanceOf[RaceViewInputHandler]
+  val inputHandler = wwdView.getViewInputHandler.asInstanceOf[RaceWWViewInputHandler]
   var layerController: Option[LayerController] = None
 
   val emptyLayerInfoPanel = new EmptyPanel(this)
@@ -195,8 +196,8 @@ class RaceView (viewerActor: RaceViewerActor) extends DeferredEyePositionListene
   panels.foreach{ e => frame.initializePanel(e._2) }
 
   // link configured WW objects to this RaceView
-  ifInstanceOf[RaceOrbitView](wwdView){ _.attachToRaceView(this)}
-  ifInstanceOf[RaceViewInputHandler](wwdView.getViewInputHandler){_.attachToRaceView(this)}
+  ifInstanceOf[RaceWWView](wwdView){ _.attachToRaceView(this)}
+  ifInstanceOf[RaceWWViewInputHandler](wwdView.getViewInputHandler){_.attachToRaceView(this)}
 
   if (!initTimedOut){
     frame.open
@@ -214,9 +215,13 @@ class RaceView (viewerActor: RaceViewerActor) extends DeferredEyePositionListene
 
   // WWD accessors
   def eyePosition = wwdView.getEyePosition
-  def viewPitch = wwdView.getPitch.degrees
-  def viewHeading = wwdView.getHeading.degrees
-  def viewRoll = wwdView.getRoll.degrees
+  def eyeLatLonPos = latLon2LatLonPos(wwdView.getEyePosition)
+  def eyeAltitude = Meters(wwdView.getZoom)
+
+  def viewPitch = wwdView.getPitch
+  def viewHeading = wwdView.getHeading
+  def viewRoll = wwdView.getRoll
+  def isOrthgonalView = wwdView.isOrthgonalView
 
   def setWorldWindConfiguration = {
     // we use our own app config document which takes precedence over Worldwind's config/worldwind.xml
@@ -229,7 +234,7 @@ class RaceView (viewerActor: RaceViewerActor) extends DeferredEyePositionListene
       val layerName = layerConfig.getString("name")
       val layerClsName = layerConfig.getString("class")
       info(s"creating layer '$layerName': $layerClsName")
-      val layer = newInstance[RaceLayer](layerClsName, Array(classOf[RaceView], classOf[Config]), Array(this, layerConfig))
+      val layer = newInstance[RaceLayer](layerClsName, Array(classOf[RaceViewer], classOf[Config]), Array(this, layerConfig))
       if (layer.isDefined){
         seq :+ layer.get
       } else {
@@ -294,7 +299,7 @@ class RaceView (viewerActor: RaceViewerActor) extends DeferredEyePositionListene
 
     info(s"creating console panel $name")
     val panel = newInstance[RacePanel](panelConfig.getString("class"),
-      Array(classOf[RaceView], classOf[Option[Config]]),
+      Array(classOf[RaceViewer], classOf[Option[Config]]),
       Array(this, Some(panelConfig))).get
     panel.styled('consolePanel)
 
@@ -409,45 +414,45 @@ class RaceView (viewerActor: RaceViewerActor) extends DeferredEyePositionListene
         **/
       val tgtPos = inputHandler.lastTargetPosition
       inputHandler.stopAnimators
-      wwdView.setEyePosition(new Position(pos,tgtPos.getElevation))
+      wwdView.moveEyePosition(new Position(pos,tgtPos.getAltitude))
     } else {
-      wwdView.setEyePosition(new Position(pos,eyePosition.getElevation))
+      wwdView.moveEyePosition(new Position(pos,eyeAltitude.toMeters))
     }
     viewChanged(eyePosition,wwdView.getHeading,wwdView.getPitch,wwdView.getRoll,NoAnimation)
   }
 
   // these use animation sequences, i.e. it first completes whatever animations are already scheduled
+  def tgtEyePos = if (inputHandler.hasActiveAnimation) inputHandler.lastTargetPosition else eyePosition
+  def tgtZoom = if (inputHandler.hasActiveAnimation) inputHandler.lastTargetPosition.getAltitude else wwdView.getZoom
 
   def panToCenter (pos: Position, transitionTime: Long=500) = {
-    //inputHandler.stopAnimators
-    inputHandler.addEyePositionAnimator(transitionTime,eyePosition,new Position(pos,eyePosition.getElevation))
+    inputHandler.addEyePositionAnimator(transitionTime,tgtEyePos,new Position(pos,tgtZoom))
   }
   def zoomTo (zoom: Double) = {
-    //inputHandler.stopAnimators
-    inputHandler.addZoomAnimator(eyePosition.getAltitude, zoom)
+    inputHandler.addZoomAnimator(tgtZoom, zoom)
+  }
+  def panTo (pos: Position) = {
+    inputHandler.addPanToAnimator(pos,viewHeading,viewPitch,pos.getAltitude,true)
   }
   def panTo (pos: Position, eyeAltitude: Double) = {
-    //inputHandler.stopAnimators
-    inputHandler.addPanToAnimator(pos,ZeroWWAngle,ZeroWWAngle,eyeAltitude,true) // always center on surface
+    inputHandler.addPanToAnimator(pos,viewHeading,viewPitch,tgtZoom,true) // always center on surface
   }
   def eyePositionTo(pos: Position, animTime: Long) = {
-    //inputHandler.stopAnimators
-    inputHandler.addEyePositionAnimator(animTime,eyePosition,pos)
+    inputHandler.addEyePositionAnimator(animTime,tgtEyePos,pos)
   }
   def pitchTo (endAngle: Angle) = {
-    //inputHandler.stopAnimators
     inputHandler.addPitchAnimator(wwdView.getPitch,endAngle)
   }
   def headingTo (endAngle: Angle) = {
     inputHandler.addHeadingAnimator(wwdView.getHeading, endAngle)
   }
   def headingPitchTo (endHeading: Angle, endPitch: Angle) = {
-    val roll = wwdView.getRoll
-    inputHandler.addHeadingPitchRollAnimator(wwdView.getHeading,endHeading,wwdView.getPitch,endPitch,roll,roll)
+    val roll = viewRoll
+    inputHandler.addHeadingPitchRollAnimator(viewHeading,endHeading,viewPitch,endPitch,roll,roll)
   }
   def zoomInOn (pos: Position) = {
     val zoom = pos.elevation + zoomDistance
-    inputHandler.addPanToAnimator(pos, ZeroWWAngle, ZeroWWAngle,zoom, 2000, false)
+    inputHandler.addPanToAnimator(pos, ZeroWWAngle, ZeroWWAngle,zoom, 1000, false)
   }
 
 
@@ -455,8 +460,8 @@ class RaceView (viewerActor: RaceViewerActor) extends DeferredEyePositionListene
     * keep eye position but reset view angles and center position to earth center
     */
   def resetView = {
-    inputHandler.stopAnimators
-    wwdView.resetView
+    val pos: Position = if (focusObject.isDefined) focusObject.get.pos else tgtEyePos
+    inputHandler.addPanToAnimator(pos,ZeroWWAngle,ZeroWWAngle,tgtZoom,1000,true)
   }
 
   /**

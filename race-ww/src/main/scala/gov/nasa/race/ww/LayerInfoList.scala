@@ -98,7 +98,7 @@ import gov.nasa.race.ww.LayerInfoList._
  * of layers
  * Note that we therefore need to preserve the order
  */
-class LayerInfoList (raceView: RaceView) {
+class LayerInfoList (raceView: RaceViewer) {
   val wwd = raceView.wwd
   val applicationLayers = raceView.layers
 

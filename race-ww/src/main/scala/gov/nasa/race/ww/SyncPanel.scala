@@ -35,7 +35,7 @@ import scala.swing.event.{ButtonClicked, SelectionChanged}
 /**
   * panel to control remote viewer synchronization
   */
-class SyncPanel (raceView: RaceView, config: Option[Config]=None)
+class SyncPanel (raceView: RaceViewer, config: Option[Config]=None)
                                       extends BoxPanel(Orientation.Vertical)
                                         with RacePanel with ViewListener with LayerListener
                                         with LayerObjectListener with AkkaSwingBridge {
@@ -157,14 +157,14 @@ class SyncPanel (raceView: RaceView, config: Option[Config]=None)
       // Note that we can't use the specific remote (source) animation because we might have changed the
       // eye position locally, so we have to do a generic setEyePosition/panTo
       animationHint match {
-        case RaceView.Zoom => raceView.eyePositionTo(pos, syncZoomTime)
-        case RaceView.CenterClick => raceView.eyePositionTo(pos, syncCenterClickTime)
-        case RaceView.CenterDrag => raceView.eyePositionTo(pos, syncCenterDragTime)
-        case RaceView.Pan => raceView.panTo(pos,alt)
+        case RaceViewer.Zoom => raceView.eyePositionTo(pos, syncZoomTime)
+        case RaceViewer.CenterClick => raceView.eyePositionTo(pos, syncCenterClickTime)
+        case RaceViewer.CenterDrag => raceView.eyePositionTo(pos, syncCenterDragTime)
+        case RaceViewer.Pan => raceView.panTo(pos,alt)
         case other => raceView.eyePositionTo(pos, syncGotoTime)
       }
 
-      if (pitch != raceView.viewPitch || heading != raceView.viewHeading) {
+      if (pitch != raceView.viewPitch.degrees || heading != raceView.viewHeading.degrees) {
         raceView.headingPitchTo(Angle.fromDegrees(heading),Angle.fromDegrees(roll))
       }
 

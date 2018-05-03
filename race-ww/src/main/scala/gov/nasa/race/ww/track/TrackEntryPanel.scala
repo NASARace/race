@@ -23,7 +23,7 @@ import gov.nasa.race.swing.Style._
 import gov.nasa.race.swing.{FieldPanel, Filler, GBPanel}
 import gov.nasa.race.track.{TrackInfo, TrackedObject}
 import gov.nasa.race.util.DateTimeUtils._
-import gov.nasa.race.ww.{Images, RacePanel, RaceView}
+import gov.nasa.race.ww.{Images, RacePanel, RaceViewer}
 import org.joda.time.DateTime
 
 import scala.swing.event.ButtonClicked
@@ -41,7 +41,7 @@ trait TrackEntryFields[T <: TrackedObject] extends FieldPanel { // we need a nam
 /**
   * RaceLayer item panel for FlightEntry objects
   */
-class TrackEntryPanel[T <: TrackedObject](raceView: RaceView, layer: TrackLayer[T])
+class TrackEntryPanel[T <: TrackedObject](raceView: RaceViewer, layer: TrackLayer[T])
                 extends BoxPanel(Orientation.Vertical) with RacePanel {
 
   class TrackFields extends TrackEntryFields[T] {

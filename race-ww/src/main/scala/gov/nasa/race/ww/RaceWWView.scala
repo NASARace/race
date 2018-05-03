@@ -39,7 +39,7 @@ import gov.nasa.worldwind.view.orbit.BasicOrbitView
   * Note that we just default to standard OrbitView behavior if the view is tilted, since in this case we would
   * have to show flights that are beyond the earth horizon
   */
-class RaceOrbitView extends BasicOrbitView {
+class RaceWWView extends BasicOrbitView {
   protected final val RE: Double = 6.371e6 // mean earth radius in m
   protected final val REsquared = RE**2
   protected final val MaxSeaDepth: Double = 1.2e5 // we don't want to clip out the Mariana trench
@@ -47,7 +47,7 @@ class RaceOrbitView extends BasicOrbitView {
   protected lazy val MaxDepthBufferDist = computeMaxDepthBufferDist  // has to be lazy since we need a dc
   protected final val MinNearClipDistance = 10.0 // MINIMUM_NEAR_DISTANCE causes flicker and artifacts (numeric?)
 
-  var raceView: RaceView = null
+  var raceViewer: RaceViewer = null
 
   protected var α: Double = computeFov2 // FOV/2 in radians
   protected var cos_α: Double = cos(α)
@@ -56,9 +56,12 @@ class RaceOrbitView extends BasicOrbitView {
 
   protected var isTransient = false
 
-  def attachToRaceView(rv: RaceView) = {
-    raceView = rv
+  def attachToRaceView(rv: RaceViewer) = {
+    raceViewer = rv
   }
+
+  // is the view direction normal, i.e. towards center of earth
+  def isOrthgonalView = pitch != ZeroWWAngle
 
   def resetView: Unit = {
     isTransient = true
@@ -68,7 +71,17 @@ class RaceOrbitView extends BasicOrbitView {
     //setPitch(ZeroWWAngle)
     setRoll(ZeroWWAngle)
     isTransient = false
-    raceView.viewChanged(eyePosition,heading,pitch,roll,RaceView.NoAnimation)
+    raceViewer.viewChanged(eyePosition,heading,pitch,roll,RaceViewer.NoAnimation)
+  }
+
+  /**
+    * translate+zoom eyePosition but keep view pitch, heading and roll
+    */
+  def moveEyePosition (newPos: Position): Unit = {
+    center = new Position(newPos,0)
+    zoom = newPos.getAltitude
+    resolveCollisionsWithCenterPosition
+    updateModelViewStateID
   }
 
   def computeFov2: Double = {

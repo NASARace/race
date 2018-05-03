@@ -13,7 +13,7 @@ import gov.nasa.race.track.{ProximityEvent, TrackTerminationMessage, Trajectory}
 import gov.nasa.race.uom.Length
 import gov.nasa.race.uom.Length._
 import gov.nasa.race.util.{DateTimeUtils, StringUtils}
-import gov.nasa.race.ww.{Images, RaceView}
+import gov.nasa.race.ww.{Images, RaceViewer}
 import gov.nasa.race.swing.Style._
 import gov.nasa.race.util.DateTimeUtils.hhmmss
 
@@ -47,12 +47,12 @@ class ProximityEntryListView (config: Config) extends TrackEntryListView[Proximi
   }
 }
 
-class ProximityEventLayerInfoPanel (raceView: RaceView, trackLayer: TrackLayer[ProximityEvent])
+class ProximityEventLayerInfoPanel (raceView: RaceViewer, trackLayer: TrackLayer[ProximityEvent])
                                   extends TrackLayerInfoPanel[ProximityEvent](raceView,trackLayer) {
   override def createTrackEntryListView = new ProximityEntryListView(raceView.config)
 }
 
-class ProximityEventEntryPanel (raceView: RaceView, trackLayer: TrackLayer[ProximityEvent])
+class ProximityEventEntryPanel (raceView: RaceViewer, trackLayer: TrackLayer[ProximityEvent])
                                             extends TrackEntryPanel[ProximityEvent](raceView,trackLayer) {
   class ProximityEntryFields extends TrackEntryFields[ProximityEvent] {
     val id   = addField("id:")
@@ -79,7 +79,7 @@ class ProximityEventEntryPanel (raceView: RaceView, trackLayer: TrackLayer[Proxi
   override def createFieldPanel = new ProximityEntryFields
 }
 
-class ProximityEventLayer (val raceView: RaceView, val config: Config) extends TrackLayer[ProximityEvent]{
+class ProximityEventLayer (val raceViewer: RaceViewer, val config: Config) extends TrackLayer[ProximityEvent]{
 
   override def defaultColor = Color.red
   override def defaultSymbolImg = Images.getEventImage(color)
@@ -91,8 +91,8 @@ class ProximityEventLayer (val raceView: RaceView, val config: Config) extends T
   override def queryLocation(id: String): Option[GeoPosition] = None
 
   override def createTrackEntry(ev: ProximityEvent) = new ProximityEntry(ev,createTrajectory(ev),this)
-  override def createLayerInfoPanel = new ProximityEventLayerInfoPanel(raceView,this)
-  override def createEntryPanel = new ProximityEventEntryPanel(raceView,this)
+  override def createLayerInfoPanel = new ProximityEventLayerInfoPanel(raceViewer,this)
+  override def createEntryPanel = new ProximityEventEntryPanel(raceViewer,this)
 
   def handleProximityEventLayerMessage: Receive = {
     case BusEvent(_,ev: ProximityEvent,_) =>

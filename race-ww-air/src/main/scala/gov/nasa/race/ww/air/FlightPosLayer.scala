@@ -29,7 +29,7 @@ import gov.nasa.race.ww.track.ModelTrackLayer
 /**
  * a WorldWind layer to display FlightPos objects
  */
-class FlightPosLayer (val raceView: RaceView, val config: Config) extends ModelTrackLayer[FlightPos] with AirLocator {
+class FlightPosLayer (val raceViewer: RaceViewer, val config: Config) extends ModelTrackLayer[FlightPos] with AirLocator {
 
   override def defaultSymbolImg = Images.getPlaneImage(color)
 
