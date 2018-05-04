@@ -20,7 +20,7 @@ import com.typesafe.config.Config
 import gov.nasa.race.config.NamedConfigurable
 
 import scala.collection.concurrent.TrieMap
-import scala.collection.mutable
+import scala.collection.mutable.{Map => MMap,HashMap => MHashMap}
 
 /**
   * an abstract store for TrackInfos
@@ -34,7 +34,7 @@ trait TrackInfoStore {
   * a non-threadsafe store
   */
 class DefaultTrackInfoStore extends TrackInfoStore {
-  val trackInfos = mutable.HashMap.empty[String,TrackInfo]
+  val trackInfos = MHashMap.empty[String,TrackInfo]
 
   def get (id: String): Option[TrackInfo] = trackInfos.get(id)
   def add (id: String, ti: TrackInfo) = trackInfos += (id -> ti)
@@ -55,6 +55,17 @@ class ConcurrentTrackInfoStore extends TrackInfoStore {
   * a configurable object used to initialize and update TrackInfoStores
   */
 trait TrackInfoReader extends NamedConfigurable {
-  def initialize: Seq[TrackInfo] = Seq.empty
+  /**
+    * initialize reader, providing a optional map for filtering
+    * return optional set of TrackInfos we know about (e.g. from config)
+    * Called during init.
+    * NOTE - the optional map is not thread safe
+    */
+  def initialize (filterMap: Option[MMap[String,TrackedObject]]): Seq[TrackInfo] = Seq.empty
+
+  /**
+    * the workhorse, which parses messages for TrackInfo relevant information
+    */
   def readMessage (msg: Any): Seq[TrackInfo] = Seq.empty
+
 }

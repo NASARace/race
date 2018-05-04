@@ -24,6 +24,7 @@ import gov.nasa.race.util.FileUtils
 import org.apache.avro.file.DataFileReader
 import org.apache.avro.specific.SpecificDatumReader
 import org.joda.time.DateTime
+import scala.collection.mutable.{Map=>MMap}
 
 /**
   * a TrackInfoReader that initializes from a Avro TrackInfoRecord archive
@@ -32,7 +33,7 @@ class TrackInfoRecordReader  (val config: Config) extends TrackInfoReader {
 
   val pathName = config.getString("pathname")
 
-  override def initialize: Seq[TrackInfo] = {
+  override def initialize (filterMap: Option[MMap[String,TrackedObject]]): Seq[TrackInfo] = {
     FileUtils.existingNonEmptyFile(pathName) match {
       case Some(file) => read(file)
       case None => Seq.empty
