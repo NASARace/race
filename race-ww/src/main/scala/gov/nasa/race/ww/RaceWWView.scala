@@ -63,23 +63,12 @@ class RaceWWView extends BasicOrbitView {
   // is the view direction normal, i.e. towards center of earth
   def isOrthgonalView = pitch != ZeroWWAngle
 
-  def resetView: Unit = {
-    isTransient = true
-    //setCenterPosition(Position.ZERO)
-    setEyePosition(eyePosition) // this also zeros heading and pitch but not roll
-    //setHeading(ZeroWWAngle)
-    //setPitch(ZeroWWAngle)
-    setRoll(ZeroWWAngle)
-    isTransient = false
-    raceViewer.viewChanged(eyePosition,heading,pitch,roll,RaceViewer.NoAnimation)
-  }
-
   /**
     * translate+zoom eyePosition but keep view pitch, heading and roll
     */
-  def moveEyePosition (newPos: Position): Unit = {
+  def moveEyePosition (newPos: Position, newZoom: Double): Unit = {
     center = new Position(newPos,0)
-    zoom = newPos.getAltitude
+    zoom = newZoom
     resolveCollisionsWithCenterPosition
     updateModelViewStateID
   }

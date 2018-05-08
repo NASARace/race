@@ -23,7 +23,7 @@ import gov.nasa.race.geo.VarEuclideanDistanceFilter3D
 import gov.nasa.race.track.TrackedObject
 import gov.nasa.race.uom.Angle._
 import gov.nasa.race.uom.Length._
-import gov.nasa.race.ww.{LayerObject, ViewListener, WWAngle}
+import gov.nasa.race.ww.{LayerObject, ViewListener, WWAngle, ViewGoal}
 import gov.nasa.worldwind.geom.Position
 
 import scala.collection.immutable.HashSet
@@ -77,12 +77,13 @@ trait ModelTrackLayer[T <:TrackedObject] extends TrackLayer[T] with ViewListener
   }
 
   // we only get these callbacks if there were configured models
-  def viewChanged(eyePos: Position, heading: WWAngle, pitch: WWAngle, roll: WWAngle, animHint: String): Unit = {
+  def viewChanged(viewGoal: ViewGoal): Unit = {
     if (models.nonEmpty) {
       pendingUpdates.getAndIncrement
       delay(500.milliseconds, () => {
-        val ep = raceViewer.eyePosition
-        eyeDistanceFilter.updateReference(Degrees(ep.latitude.degrees), Degrees(ep.longitude.degrees), Meters(ep.getAltitude))
+        val pos = viewGoal.pos
+        val alt = viewGoal.zoom
+        eyeDistanceFilter.updateReference(Degrees(pos.latitude.degrees), Degrees(pos.longitude.degrees), Meters(alt))
         if (pendingUpdates.decrementAndGet == 0) recalculateProximities
       })
     }

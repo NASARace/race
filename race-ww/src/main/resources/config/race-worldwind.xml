@@ -9,7 +9,7 @@
               value="gov.nasa.race.ww.RaceWWView"/>
 
     <Property name="gov.nasa.worldwind.avkey.ViewInputHandlerClassName"
-              value="gov.nasa.race.ww.RaceWWViewInputHandler"/>
+              value="gov.nasa.race.ww.RaceWWViewController"/>
 
     <Property name="gov.nasa.worldwind.avkey.DataFileStoreClassName"
               value="gov.nasa.race.ww.ConfigurableWriteCache"/>

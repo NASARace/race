@@ -123,6 +123,13 @@ package object race {
     res
   }
 
+  /** set new field value and return previous one */
+  def updateField[T](newValue: T, get: =>T, set: (T)=>Unit): T = {
+    val oldValue = get
+    set(newValue)
+    oldValue
+  }
+
   /** return object after calling an initialize functions on it */
   def yieldInitialized[A](a: A)(init: A=>Any): A = {
     init(a)

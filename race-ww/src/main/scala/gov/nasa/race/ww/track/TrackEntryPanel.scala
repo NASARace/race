@@ -26,8 +26,8 @@ import gov.nasa.race.util.DateTimeUtils._
 import gov.nasa.race.ww.{Images, RacePanel, RaceViewer}
 import org.joda.time.DateTime
 
-import scala.swing.event.ButtonClicked
-import scala.swing.{Action, BoxPanel, Button, CheckBox, Orientation}
+import scala.swing.event.{ButtonClicked,MouseClicked}
+import scala.swing.{Action, BoxPanel, Button, CheckBox, Orientation, Label, Alignment}
 
 object TrackEntryPanel {
   val ejectIcon = Images.getIcon("eject-blue-16x16.png")
@@ -85,8 +85,10 @@ class TrackEntryPanel[T <: TrackedObject](raceView: RaceViewer, layer: TrackLaye
   val infoCb = new CheckBox("info").styled()
   val markCb = new CheckBox("mark").styled()
   val focusCb = new CheckBox("focus").styled()
+  val dismissBtn = new Label("",TrackEntryPanel.ejectIcon,Alignment.Center).styled()
 
   val buttonPanel = new GBPanel {
+    /**
     val dismissBtn = new Button() {
       action = Action("") {
         raceView.trackUserAction {
@@ -97,6 +99,7 @@ class TrackEntryPanel[T <: TrackedObject](raceView: RaceViewer, layer: TrackLaye
       }
       icon = TrackEntryPanel.ejectIcon
     }.styled()
+      **/
 
     val c = new Constraints(insets = new Insets(5, 0, 0, 0), anchor = Anchor.West)
     layout(pathCb)   = c(0,0)
@@ -104,25 +107,32 @@ class TrackEntryPanel[T <: TrackedObject](raceView: RaceViewer, layer: TrackLaye
     layout(infoCb)   = c(2,0)
     layout(markCb)   = c(3,0)
     layout(focusCb) = c(4,0)
-    layout(new Filler().styled()) = c(5,0).weightx(0.5)
-    layout(dismissBtn) = c(6,0).weightx(0)
+    //layout(new Filler().styled()) = c(5,0).weightx(0.5)
+    layout(dismissBtn) = c(5,0).weightx(0)
   }.styled()
 
   contents += fields
   contents += buttonPanel
 
-  listenTo(focusCb,pathCb,path3dCb,infoCb,markCb)
+  listenTo(focusCb,pathCb,path3dCb,infoCb,markCb,dismissBtn.mouse.clicks)
   reactions += {
     case ButtonClicked(`focusCb`)  => raceView.trackUserAction { setFocused(focusCb.selected) }
     case ButtonClicked(`pathCb`)   => raceView.trackUserAction { setPath(pathCb.selected) }
     case ButtonClicked(`path3dCb`) => raceView.trackUserAction { setPathContour(path3dCb.selected) }
     case ButtonClicked(`infoCb`)   => raceView.trackUserAction { setInfo(infoCb.selected) }
     case ButtonClicked(`markCb`)   => raceView.trackUserAction { setMark(markCb.selected) }
+    case MouseClicked(`dismissBtn`,_,_,_,_) => raceView.trackUserAction { dismissPanel }
   }
 
   var trackEntry: TrackEntry[T] = _
 
   protected def createFieldPanel: TrackEntryFields[T] = new TrackFields
+
+  def dismissPanel: Unit = {
+    layer.releaseTrackInfoUpdates(trackEntry)
+    layer.dismissEntryPanel(trackEntry)
+    trackEntry = null
+  }
 
   def isShowing(e: TrackEntry[T]) = showing && trackEntry == e
 

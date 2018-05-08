@@ -23,56 +23,22 @@ import java.awt.event.{InputEvent, KeyEvent, MouseEvent, MouseWheelEvent}
 
 import gov.nasa.race._
 import Implicits._
+import gov.nasa.race.common._
 import gov.nasa.race.geo.LatLonPos
-import gov.nasa.worldwind.geom.{Angle, LatLon, Position, Vec4}
-import gov.nasa.worldwind.view.orbit.{OrbitView, OrbitViewInputHandler}
+import gov.nasa.race.swing.DeferredEDTAction
 import gov.nasa.race.uom.Angle._
 import gov.nasa.race.uom.Length
 import gov.nasa.race.uom.Length._
-
-/**
-  * helper to keep track of view states, e.g. to store animation targets
-  */
-class ViewState {
-  var lat: Double     = 0   // in [deg]
-  var lon: Double     = 0
-  var zoom: Double    = 0  // in [m]
-  var heading: Double = 0 // in [deg]
-  var pitch: Double   = 0
-  var roll: Double    = 0
-
-  def toPosition: Position = Position.fromDegrees(lat,lon,zoom)
-  def toLatLonPos: LatLonPos = LatLonPos(Degrees(lat),Degrees(lon))
-  def altitude: Length = Meters(zoom)
-
-
-  def set (pos: Position): Unit = {
-    lat = pos.latitude.degrees
-    lon = pos.longitude.degrees
-  }
-
-  def set (pos: Position, _zoom: Double): Unit = {
-    set(pos)
-    zoom = _zoom
-  }
-
-  def set (pos: Position, _zoom: Double, _heading: Angle, _pitch: Angle): Unit = {
-    set(pos,_zoom)
-    heading = _heading.degrees
-    pitch = _pitch.degrees
-  }
-
-  def set (pos: Position, _zoom: Double, _heading: Angle, _pitch: Angle, _roll: Angle): Unit = {
-    set(pos,_zoom,_heading,_pitch)
-    roll = _roll.degrees
-  }
-}
+import gov.nasa.worldwind.animation.AnimationController
+import gov.nasa.worldwind.geom.{Angle, LatLon, Position, Vec4}
+import gov.nasa.worldwind.view.orbit.{BasicOrbitView, OrbitView, OrbitViewInputHandler}
+import gov.nasa.worldwind.awt.ViewInputAttributes
 
 /**
   * a WorldWind ViewInputHandler that lets us query animation target positions and identify
   * user input related view changes
   */
-class RaceWWViewInputHandler extends OrbitViewInputHandler {
+class RaceWWViewController extends OrbitViewInputHandler {
   // we have to init this deferred because of WWJ initialization (setViewInputHandler() does
   // not properly unregister/register listeners)
   var raceViewer: RaceViewer = null
@@ -81,44 +47,92 @@ class RaceWWViewInputHandler extends OrbitViewInputHandler {
   var lastInputEvent: InputEvent = _
   var pressedKey: Int = 0
 
-  var lastTargetPosition: Position = _
-  val targetView = new ViewState // end state of last scheduled animation
+  val viewGoal = new ViewGoal // the goal of a view transition
+
+  val viewChangeNotifier = DeferredEDTAction(300,900) {
+    //println(s"@@ view change: $viewGoal")
+    raceViewer.notifyViewChanged
+  }
 
   def attachToRaceView(rv: RaceViewer) = {
     raceViewer = rv
     wwdView = rv.wwdView
   }
 
-  // PHASE OUT
-  /**
-  override protected def setTargetEyePosition (eyePos: Position, animController: AnimationController, actionKey: String): Unit = {
-    super.setTargetEyePosition(eyePos, animController, actionKey)
-    val animationHint = actionKey match {
-      case "ViewAnimZoom" => RaceViewer.Zoom
-      case "ViewAnimCenter" =>  if (lastUserInputWasDrag) RaceViewer.CenterDrag else RaceViewer.CenterClick
-      case "ViewAnimPan" => RaceViewer.Pan
-      case other => RaceViewer.Goto
-    }
-
-    // TODO - we should get these either from arguments or the animations
-    val pitch = wwdView.getPitch
-    val heading = wwdView.getHeading
-    val roll = wwdView.getRoll
-
-    raceViewer.viewChanged(eyePos, heading,pitch,roll, animationHint) // notify with the intended position
-    lastTargetPosition = eyePos // but set this after notification so that listeners can still see the last pos and compute deltas
+  // this is called by RaceViewer after the wwdView is realized and the window is visible
+  def initialize: Unit = {
+    viewGoal.setFromView(wwdView)
   }
-    **/
 
-  //--- overridden animator scheduling to keep track of the last target view state (we should get this from the animationController)
+  def targetViewPos = viewGoal.pos
+  def targetViewZoom = viewGoal.zoom
+
+  //--- non-animated
+
+  def moveEyePosition (pos: Position): Unit = {
+    cancelAnimators
+    viewGoal.pos = pos
+    wwdView.moveEyePosition(pos,viewGoal.zoom)
+    viewChangeNotifier.schedule
+  }
+
+  def moveEyePosition (pos: Position, zoom: Double): Unit = {
+    cancelAnimators
+    viewGoal.pos = pos
+    viewGoal.zoom = zoom
+    wwdView.moveEyePosition(pos,zoom)
+    viewChangeNotifier.schedule
+  }
+
+  //--- animators
+
+  def centerTo(pos: Position, transitionTime: Long): Unit = {
+    //addEyePositionAnimator(transitionTime,viewGoal.setPos(pos),pos)
+    addCenterAnimator(viewGoal.pos, pos, transitionTime, true)
+  }
+  def zoomTo (zoom: Double) = {
+    addZoomAnimator(viewGoal.setZoom(zoom), zoom)
+  }
+  def panTo (pos: Position, zoom: Double) = {
+    addPanToAnimator(viewGoal.pos,pos,
+                     viewGoal.heading,viewGoal.heading,
+                     viewGoal.pitch,viewGoal.pitch,
+                     viewGoal.zoom, zoom,
+                     1500,false)
+  }
+  def pitchTo (angle: Angle) = {
+    addPitchAnimator(viewGoal.setPitch(angle),angle)
+  }
+  def headingTo (angle: Angle) = {
+    addHeadingAnimator(viewGoal.setHeading(angle), angle)
+  }
+  def headingPitchTo (heading: Angle, pitch: Angle) = {
+    val roll = viewGoal.roll
+    addHeadingPitchRollAnimator(viewGoal.setHeading(heading),heading,viewGoal.setPitch(pitch),pitch,roll,roll)
+  }
+
+  override def stopAnimators: Unit = {
+    super.stopAnimators
+    viewGoal.setFromView(wwdView)
+  }
+  def cancelAnimators: Unit = {
+    super.stopAnimators
+  }
+
+  //--- overridden animator management (make sure we always start from last viewGoal)
 
   override def addPanToAnimator (beginCenterPos: Position, endCenterPos: Position,
                                  beginHeading: Angle, endHeading: Angle,
                                  beginPitch: Angle, endPitch: Angle,
-                                 beginZoom: Double, endZoom:
-                                 Double, timeToMove: Long, endCenterOnSurface: Boolean): Unit = {
-    targetView.set(endCenterPos,endZoom,endHeading,endPitch)
-    super.addPanToAnimator(beginCenterPos,endCenterPos,beginHeading,endHeading,beginPitch,endPitch,beginZoom,endZoom,timeToMove,endCenterOnSurface)
+                                 beginZoom: Double, endZoom: Double,
+                                 timeToMove: Long, endCenterOnSurface: Boolean): Unit = {
+    val center0 = viewGoal.setPos(endCenterPos)
+    val zoom0 = viewGoal.setZoom(endZoom)
+    val heading0 = viewGoal.setHeading(endHeading)
+    val pitch0 = viewGoal.setPitch(endPitch)
+
+    //println(s"@@ pan $viewGoal $timeToMove")
+    super.addPanToAnimator(center0,endCenterPos,heading0,endHeading,pitch0,endPitch,zoom0,endZoom,timeToMove,endCenterOnSurface)
   }
 
   override def addPanToAnimator (beginCenterPos: Position, endCenterPos: Position,
@@ -126,47 +140,52 @@ class RaceWWViewInputHandler extends OrbitViewInputHandler {
                                  beginPitch: Angle, endPitch: Angle,
                                  beginZoom: Double, endZoom: Double,
                                  endCenterOnSurface: Boolean): Unit = {
-    targetView.set(endCenterPos,endZoom,endHeading,endPitch)
-    super.addPanToAnimator(beginCenterPos,endCenterPos,beginHeading,endHeading,beginPitch,endPitch,beginZoom,endZoom,endCenterOnSurface)
+    addPanToAnimator(beginCenterPos,endCenterPos,beginHeading,endHeading,beginPitch,endPitch,beginZoom,endZoom,
+                     2000, endCenterOnSurface)
   }
 
   override def addEyePositionAnimator (timeToIterate: Long, beginPosition: Position, endPosition: Position): Unit = {
-    targetView.set(endPosition)
-    super.addEyePositionAnimator(timeToIterate,beginPosition,endPosition)
+    val pos0 = viewGoal.setPos(endPosition)
+    //println(s"@@ eye $viewGoal")
+    super.addEyePositionAnimator(timeToIterate,pos0,endPosition)
   }
 
   override def addHeadingAnimator(begin: Angle, end: Angle): Unit = {
-    targetView.heading = end.degrees
-    super.addHeadingAnimator(begin,end)
+    val heading0 = viewGoal.setHeading(end)
+    //println(s"@@ heading $viewGoal")
+    super.addHeadingAnimator(heading0,end)
   }
 
   override def addPitchAnimator(begin: Angle, end: Angle): Unit = {
-    targetView.pitch = end.degrees
-    super.addPitchAnimator(begin,end)
+    val pitch0 = viewGoal.setPitch(end)
+    //println(s"@@ pitch $viewGoal")
+    super.addPitchAnimator(pitch0,end)
   }
 
   override def addRollAnimator(begin: Angle, end: Angle): Unit = {
-    targetView.roll = end.degrees
-    super.addRollAnimator(begin,end)
+    val roll0 = viewGoal.setRoll(end)
+    super.addRollAnimator(roll0,end)
   }
 
   override def addZoomAnimator (zoomStart: Double, zoomEnd: Double): Unit = {
-    targetView.zoom = zoomEnd
-    super.addZoomAnimator(zoomStart,zoomEnd)
+    val zoom0 = viewGoal.setZoom(zoomEnd)
+    //println(s"@@ zoom $viewGoal")
+    super.addZoomAnimator(zoom0,zoomEnd)
   }
 
   override def addFlyToZoomAnimator(heading: Angle, pitch: Angle, zoom: Double): Unit = {
-    targetView.heading = heading.degrees
-    targetView.pitch = pitch.degrees
-    targetView.zoom = zoom
+    viewGoal.heading = heading
+    viewGoal.pitch = pitch
+    viewGoal.zoom = zoom
+    //println(s"@@ fly $viewGoal")
     super.addFlyToZoomAnimator(heading,pitch,zoom)
   }
 
   override def addCenterAnimator(begin: Position, end: Position, lengthMillis: Long, smoothed: Boolean): Unit = {
-    targetView.set(end)
-    super.addCenterAnimator(begin,end,lengthMillis,smoothed)
+    val pos0 = viewGoal.setPos(end)
+    //println(s"@@ center $viewGoal")
+    super.addCenterAnimator(pos0,end,lengthMillis,smoothed)
   }
-
 
   def hasActiveAnimation: Boolean = gotoAnimControl.hasActiveAnimation
 
@@ -198,69 +217,86 @@ class RaceWWViewInputHandler extends OrbitViewInputHandler {
 
   def centerOnMouse: Unit = {
     val screenPoint = getMousePoint
-    val pos = raceViewer.wwdView.computePositionFromScreenPoint(screenPoint.x, screenPoint.y)
-    raceViewer.panToCenter(pos)
+    val sp = wwdView.computePositionFromScreenPoint(screenPoint.x, screenPoint.y)
+    val pos = new Position(sp, 0)
+    centerTo(pos, 1000)
   }
 
-  def processMouseWheelMoved (e: MouseWheelEvent): Boolean = {
-    if (isCtrl) {
-      val dPitch = if (e.getWheelRotation > 0) 2 else -2
-      val pitch = wwdView.getPitch.addDegrees(dPitch)
-      //raceView.pitchTo(pitch)
-      wwdView.setPitch(pitch)
-      //val cp = raceView.focusObject.get.pos
-      //wwdView.asInstanceOf[OrbitView].setCenterPosition(cp)
-      raceViewer.redrawNow
-      true
-    } else if (isAlt) {
-      val dHdg = if (e.getWheelRotation > 0) 2 else -2
-      val hdg = wwdView.getHeading.addDegrees(dHdg)
-      wwdView.setHeading(hdg)
-      raceViewer.redrawNow
+  def processMousePressed (e: MouseEvent): Boolean = {
+    // we don't want the standard WW behavior of centering on single clicks
+    if (e.getClickCount == 1) {
+      if (isShift) {
+        centerOnMouse
+      }
       true
     } else false
   }
 
-  //--- keep track of last user input time
-  override protected def handleMouseWheelMoved (e: MouseWheelEvent): Unit = {
-    if (!processMouseWheelMoved(e)) {
-      //ifSome(raceView.focusPoint) {wwdView.asInstanceOf[OrbitView].setCenterPosition(_)}
-      super.handleMouseWheelMoved(e)
-    }
+  def processMouseWheelMoved (e: MouseWheelEvent): Boolean = {
+    val rot = e.getWheelRotation
+    if (rot != 0) {
+      val delta = if (rot < 0) 1 else if (rot > 0) -1 else 0
 
+      if (isCtrl) {
+        val a = viewGoal.pitch.degrees + delta
+        ifWithin(a, 0, 90) {
+          // TODO - this doesn't move the eye on a sphere around focused objects
+          val newPitch = Angle.fromDegrees(a)
+          viewGoal.setPitch(newPitch)
+          wwdView.setPitch(newPitch)
+          raceViewer.redrawNow
+          viewChangeNotifier.schedule
+        }
+        true
+
+      } else if (isAlt) {
+        var a = viewGoal.heading.degrees + delta
+        a = if (a > 360) a - 360 else if (a < 0) a + 360 else a
+        val newHeading = Angle.fromDegrees(a)
+        viewGoal.setHeading(newHeading)
+        wwdView.setHeading(newHeading)
+        raceViewer.redrawNow
+        viewChangeNotifier.schedule
+        true
+      } else false // process normally
+
+    } else true // no rotation
+  }
+
+  //--- keep track of last user input time
+  def recordInputEvent (e: InputEvent): Unit = {
     lastInputEvent = e
     lastUserInputTime = System.currentTimeMillis
+  }
+
+  override protected def handleMouseWheelMoved (e: MouseWheelEvent): Unit = {
+    recordInputEvent(e)
+    if (!processMouseWheelMoved(e)) super.handleMouseWheelMoved(e)
   }
   override protected def handleMouseDragged(e: MouseEvent): Unit = {
+    recordInputEvent(e)
     super.handleMouseDragged(e)
-    lastInputEvent = e
-    lastUserInputTime = System.currentTimeMillis
+    viewGoal.pos = wwdView.getCenterPosition // WW does drag-to-rotate-globe
   }
   override protected def handleMouseClicked(e: MouseEvent): Unit = {
-    // we don't want the WW pan-to-center behavior in case we didn't hit a pick object (this is confusing implicit mode)
+    recordInputEvent(e)
     //super.handleMouseClicked(e)
-    lastInputEvent = e
-    lastUserInputTime = System.currentTimeMillis
   }
   override protected def handleMousePressed(e: MouseEvent): Unit = {
-    super.handleMousePressed(e)
-    lastInputEvent = e
-    lastUserInputTime = System.currentTimeMillis
+    recordInputEvent(e)
+    if (!processMousePressed(e)) super.handleMousePressed(e)
   }
   override protected def handleMouseReleased(e: MouseEvent): Unit = {
-    super.handleMouseReleased(e)
-    lastInputEvent = e
-    lastUserInputTime = System.currentTimeMillis
+    recordInputEvent(e)
+    //super.handleMouseReleased(e)
   }
   override protected def handleKeyPressed(e: KeyEvent): Unit = {
+    recordInputEvent(e)
     if (!processKeyPressed(e)) super.handleKeyPressed(e)
-    lastInputEvent = e
-    lastUserInputTime = System.currentTimeMillis
   }
   override protected def handleKeyReleased(e: KeyEvent): Unit = {
+    recordInputEvent(e)
     if (!processKeyReleased(e)) super.handleKeyReleased(e)
-    lastInputEvent = e
-    lastUserInputTime = System.currentTimeMillis
   }
 
   def setLastUserInput = lastUserInputTime = System.currentTimeMillis()
@@ -270,20 +306,31 @@ class RaceWWViewInputHandler extends OrbitViewInputHandler {
   def lastUserInputWasDrag = lastInputEvent != null && lastInputEvent.getID == MouseEvent.MOUSE_DRAGGED
   def lastUserInputWasWheel = lastInputEvent != null && lastInputEvent.getID == MouseEvent.MOUSE_WHEEL
 
+  // the super method directly registers and starts a OrbitViewMoveToZoomAnimator
+  override protected def changeZoom(view: BasicOrbitView, animControl: AnimationController, change: Double, attrib: ViewInputAttributes.ActionAttributes): Unit = {
+    super.changeZoom(view,animControl,change,attrib)
+
+    // the animators end zoom is dynamically extended, hence we have to increase initial latency
+    viewChangeNotifier.schedule(1000)
+  }
+
   /**
     * WW per default uses the eye altitude to compute the zoom level (same input at higher alt
     * causes larger zoom increment/decrement). We extend this with scaled linear (meta) and logarithmic zoom when
     * the meta or alt [+shift] key is pressed so that we can navigate in proximity of high objects
     */
-  override def computeNewZoom(view: OrbitView, curZoom: Double, change: Double): Double = {
-    val newZoom = if (isMeta) { // adapt zoom factor independent of current level
+  override protected def computeNewZoom(view: OrbitView, curZoom: Double, change: Double): Double = {
+    var newZoom = if (isMeta) { // adapt zoom factor independent of current level
       curZoom + scale(Math.signum(change)*10)
     } else { // adapt zoom factor based on current level
       val logCurZoom = if (curZoom != 0) Math.log(curZoom) else 0
       Math.exp(logCurZoom + scale(change))
     }
 
-    view.getOrbitViewLimits.limitZoom(view, newZoom)
+    newZoom = view.getOrbitViewLimits.limitZoom(view, newZoom)
+    viewGoal.zoom = newZoom
+
+    newZoom
   }
 
   override def getChangeInLocation(point1: Point, point2: Point, vec1: Vec4, vec2: Vec4): LatLon = {

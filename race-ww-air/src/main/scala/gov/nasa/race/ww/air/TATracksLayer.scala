@@ -152,7 +152,7 @@ class TATracksLayer (val raceViewer: RaceViewer, val config: Config) extends Mod
   }
 
   def setTracon(tracon: Tracon) = {
-    raceViewer.panTo(wwPosition(tracon.position, gotoAltitude))
+    raceViewer.panTo(wwPosition(tracon.position), gotoAltitude.toMeters)
 
     selTracon = Some(tracon)
     traconGrid.setCenter(tracon.position)

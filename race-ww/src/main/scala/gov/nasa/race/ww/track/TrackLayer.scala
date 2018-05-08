@@ -28,6 +28,7 @@ import gov.nasa.race.geo.{GeoPosition, GreatCircle}
 import gov.nasa.race.swing.Style._
 import gov.nasa.race.track._
 import gov.nasa.race.util.StringUtils
+import gov.nasa.race.uom.Length._
 import gov.nasa.race.ww.Implicits._
 import gov.nasa.race.ww.EventAction.EventAction
 import gov.nasa.race.ww.{AltitudeSensitiveRaceLayer, _}
@@ -240,8 +241,8 @@ trait TrackLayer[T <:TrackedObject] extends SubscribingRaceLayer
           GreatCircle.translate(raceViewer.tgtEyePos, lastObj.position,obj.position)
         }
         val dAlt = (obj.altitude - lastObj.altitude).toMeters
-        //raceViewer.eyePositionTo(new Position(ep,(raceViewer.eyeAltitude + dAlt).toMeters), 1000)
-        raceViewer.setEyePosition(new Position(ep,raceViewer.tgtZoom + dAlt))
+        raceViewer.jumpToEyePosition(new Position(ep,raceViewer.tgtZoom + dAlt))
+        //raceViewer.panToCenter(wwPosition(ep, Meters(raceViewer.tgtZoom + dAlt)),500) // FIXME
       }
       updateTrackEntryAttributes(e)
       if (e.hasSymbol) wwdRedrawManager.redraw()
@@ -296,7 +297,7 @@ trait TrackLayer[T <:TrackedObject] extends SubscribingRaceLayer
       e.setFocused(cond)
       if (report) raceViewer.setFocused(e, cond) // report upwards in the chain
       if (cond) {
-        raceViewer.panToCenter(lo.pos)
+        raceViewer.panToCenter(wwPosition(lo.pos.position, Meters(raceViewer.tgtZoom)))  // FIXME
         raceViewer.objectChanged(lo,StartFocus)
       } else {
         raceViewer.objectChanged(lo,StopFocus)

@@ -21,6 +21,7 @@ import java.awt.Color
 import java.awt.event._
 
 import com.typesafe.config.Config
+import gov.nasa.race.geo._
 import gov.nasa.race.geo.{GeoPosition3D, LatLonPos}
 import gov.nasa.race.uom._
 import gov.nasa.race.uom.Length._
@@ -77,8 +78,7 @@ package object ww {
     f"0x${clr.getAlpha}%02x${clr.getBlue}%02x${clr.getGreen}%02x${clr.getRed}%02x"
 
   trait ViewListener {
-    // if animationHint is set this is the target view state of an animation
-    def viewChanged (pos: Position, heading: WWAngle, pitch: WWAngle, roll: WWAngle, animationHint: String): Unit
+    def viewChanged (targetView: ViewGoal): Unit
   }
 
   trait LayerListener {
@@ -156,4 +156,15 @@ package object ww {
     */
   class EmptyPanel (raceView: RaceViewer, config: Option[Config]=None) extends BorderPanel with RacePanel
 
+  // animation and selection hints. Note these are used for identity comparison (use refs and eq)
+
+  final val CenterClick = "CenterClick"
+  final val CenterDrag = "CenterDrag"
+  final val Zoom = "Zoom"
+  final val Pan = "Pan"
+  final val Goto = "Goto"  // the catch all
+  final val NoAnimation = "NoAnimation" // no animation
+
+  final val SelectedLayer = "selected layer"
+  final val SelectedObject = "selected object"
 }

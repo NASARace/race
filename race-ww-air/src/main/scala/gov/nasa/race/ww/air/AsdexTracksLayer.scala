@@ -81,9 +81,7 @@ class AsdexTracksLayer (val raceViewer: RaceViewer, val config: Config)
     super.initializeLayer
     raceViewer.addViewListener(this)
   }
-  override def viewChanged(eyePos: Position,
-                           heading: WWAngle, pitch: WWAngle, roll: WWAngle,
-                           animationHint: String): Unit = checkAirportChange(eyePos)
+  override def viewChanged(targetView: ViewGoal): Unit = checkAirportChange(targetView)
 
   def selectAirport (a: Airport) = raceViewer.trackUserAction(gotoAirport(a))
 
@@ -98,9 +96,11 @@ class AsdexTracksLayer (val raceViewer: RaceViewer, val config: Config)
     active = false
   }
 
-  def checkAirportChange (eyePos: Position): Unit = {
+  def checkAirportChange (targetView: ViewGoal): Unit = {
+    val eyePos = targetView.pos
+    val eyeAltitude = meters2Feet(targetView.zoom)
+
     val newAirport = lookupAirport(eyePos, activeDistance)
-    val eyeAltitude = meters2Feet(eyePos.getAltitude)
     if (selAirport.isDefined && selAirport == newAirport){ // no airport change, but check altitude
       if (active){
         if (eyeAltitude > activeAltitude.toFeet + selAirport.get.elevation.toFeet){
@@ -124,7 +124,7 @@ class AsdexTracksLayer (val raceViewer: RaceViewer, val config: Config)
       if (selAirport.isDefined) releaseCurrentAirport
     } else {
       val alt = gotoAltitude + airport.elevation
-      raceViewer.panTo(wwPosition(airport.position, alt))
+      raceViewer.panTo(wwPosition(airport.position), alt.toMeters)
     }
   }
 

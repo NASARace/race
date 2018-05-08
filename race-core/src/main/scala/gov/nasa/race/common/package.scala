@@ -86,6 +86,16 @@ package object common {
     p(e,1L)
   }
 
+  @inline def constrainTo (d: Double, dMin: Double, dMax: Double): Double = {
+    if (d < dMin) dMin
+    else if (d > dMax) dMax
+    else d
+  }
+
+  @inline def ifWithin (d: Double, dMin: Double, dMax: Double)(f: =>Unit) = {
+    if (!(d < dMin || d > dMax)) f
+  }
+
   // something that can be turned into XML
   trait XmlSource {
     def toXML: xml.Node

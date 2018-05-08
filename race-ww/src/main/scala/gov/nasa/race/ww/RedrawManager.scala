@@ -31,7 +31,7 @@ object RedrawManager {
 
 /**
  * abstract class to handle redraw requests of WorldWind layers, since WW only
- * provides a undiscriminating redraw() that can cause frequent repaint operations
+ * provides a indiscriminating redraw() that can cause frequent repaint operations
  * for backlogged layer updates.
  *
  * [R-100.4.1] concrete implementation has to prevent starvation of non-rendering threads

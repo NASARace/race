@@ -115,12 +115,11 @@ class SyncPanel (raceView: RaceViewer, config: Option[Config]=None)
   //--- EyePosListener
   // this is called when our view has a changed eyePos. Only send it out
   // if there was recent user input (i.e. the user initiated the change)
-  override def viewChanged (eyePos: Position, heading: WWAngle, pitch: WWAngle, roll: WWAngle, animationHint: String) = {
+  override def viewChanged (viewGoal: ViewGoal) = {
     if (sendEyePos && isLocalChange) {
       syncChannel.foreach { channel =>
-        info(s"outbound eyepos: $eyePos")
-        publish(ViewChanged(eyePos.latitude.degrees,eyePos.longitude.degrees,eyePos.elevation,
-                            heading.degrees,pitch.degrees,roll.degrees,animationHint))
+        info(s"outbound view change: $viewGoal")
+        publish(new ViewChanged(viewGoal))
       }
     }
   }
@@ -157,11 +156,11 @@ class SyncPanel (raceView: RaceViewer, config: Option[Config]=None)
       // Note that we can't use the specific remote (source) animation because we might have changed the
       // eye position locally, so we have to do a generic setEyePosition/panTo
       animationHint match {
-        case RaceViewer.Zoom => raceView.eyePositionTo(pos, syncZoomTime)
-        case RaceViewer.CenterClick => raceView.eyePositionTo(pos, syncCenterClickTime)
-        case RaceViewer.CenterDrag => raceView.eyePositionTo(pos, syncCenterDragTime)
-        case RaceViewer.Pan => raceView.panTo(pos,alt)
-        case other => raceView.eyePositionTo(pos, syncGotoTime)
+        case `Zoom` => raceView.panToCenter(pos, syncZoomTime)
+        case `CenterClick` => raceView.panToCenter(pos, syncCenterClickTime)
+        case `CenterDrag` => raceView.panToCenter(pos, syncCenterDragTime)
+        case `Pan` => raceView.panTo(pos,alt)
+        case other => raceView.panToCenter(pos, syncGotoTime)
       }
 
       if (pitch != raceView.viewPitch.degrees || heading != raceView.viewHeading.degrees) {

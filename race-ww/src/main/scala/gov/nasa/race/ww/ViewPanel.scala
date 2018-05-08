@@ -36,22 +36,22 @@ import scala.swing.event.ButtonClicked
   * WorldWind panel to set the world type (globe, flat(projection))
   * and show eye position
   */
-class ViewPanel (raceView: RaceViewer, config: Option[Config]=None) extends GBPanel
+class ViewPanel (raceViewer: RaceViewer, config: Option[Config]=None) extends GBPanel
                   with RacePanel with DeferredPositionListener with ViewListener with LayerObjectListener {
 
-  val wwd = raceView.wwd
+  val wwd = raceViewer.wwd
   val earthGlobe = new Earth
   val earthFlat = new EarthFlat
   earthFlat.setElevationModel(new ZeroElevationModel)
   earthFlat.setProjection(new ProjectionMercator)
 
   //--- buttons to switch between globe displays
-  val globeButton = new RadioButton("globe") {selected = true} styled()
-  val flatButton = new RadioButton("flat map").styled()
-  val group = new ButtonGroup( globeButton,flatButton)
+  val globeBtn = new RadioButton("globe") {selected = true} styled()
+  val flatBtn = new RadioButton("flat map").styled()
+  val group = new ButtonGroup( globeBtn,flatBtn)
 
-  val followIndicator = new OnOffIndicator("  follow", false).styled()
-  followIndicator.horizontalTextPosition = Alignment.Left
+  val focusBtn = new CheckBox("focus").styled()
+  focusBtn.enabled = false
 
   //--- fields to display attitude information
   implicit val doubleOutputLength = 11
@@ -61,22 +61,25 @@ class ViewPanel (raceView: RaceViewer, config: Option[Config]=None) extends GBPa
   val elevField = new DoubleOutputField("elev [ft]", "%,6.0f").styled()
 
   val c = new Constraints( fill=Fill.Horizontal)
-  layout(new FlowPanel(globeButton,flatButton,followIndicator).styled()) = c(0,0).gridwidth(2).anchor(Anchor.West)
+  layout(new FlowPanel(globeBtn,flatBtn,focusBtn).styled()) = c(0,0).gridwidth(2).anchor(Anchor.West)
   layout(latField)  = c(0,1).weightx(0.5).anchor(Anchor.East).gridwidth(1)
   layout(lonField)  = c(1,1)
   layout(altField)  = c(0,2)
   layout(elevField) = c(1,2)
 
   //--- reactions
-  listenTo(globeButton, flatButton)
+  listenTo(globeBtn, flatBtn, focusBtn)
   reactions += {
-    case ButtonClicked(`globeButton`) =>
+    case ButtonClicked(`globeBtn`) =>
       wwd.getModel.setGlobe(earthGlobe)
       wwd.getView.stopMovement()
 
-    case ButtonClicked(`flatButton`) =>
+    case ButtonClicked(`flatBtn`) =>
       wwd.getModel.setGlobe(earthFlat)
       wwd.getView.stopMovement()
+
+    case ButtonClicked(`focusBtn`) =>
+      raceViewer.resetFocused
   }
 
   onMoved(wwd){ positionEvent =>
@@ -89,16 +92,21 @@ class ViewPanel (raceView: RaceViewer, config: Option[Config]=None) extends GBPa
     }
   }
 
-  raceView.addViewListener(this)
-  raceView.addObjectListener(this)
+  raceViewer.addViewListener(this)
+  raceViewer.addObjectListener(this)
 
-  override def viewChanged (pos: Position, heading: Angle, pitch: Angle, roll: Angle, animationHint: String)= {
-    val alt = Length.meters2Feet(pos.getAltitude)
+  override def viewChanged (viewGoal: ViewGoal)= {
+    val alt = Length.meters2Feet(viewGoal.zoom)
     altField.setValue(alt)
   }
 
   override def objectChanged (obj: LayerObject, action: String) = {
-    if (action eq StopFocus) followIndicator.off
-    else if (action eq StartFocus) followIndicator.on
+    if (action eq StopFocus) {
+      focusBtn.selected = false
+      focusBtn.enabled = false
+    } else if (action eq StartFocus) {
+      focusBtn.selected = true
+      focusBtn.enabled = true
+    }
   }
 }
