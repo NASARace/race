@@ -88,26 +88,12 @@ class TrackEntryPanel[T <: TrackedObject](raceView: RaceViewer, layer: TrackLaye
   val dismissBtn = new Label("",TrackEntryPanel.ejectIcon,Alignment.Center).styled()
 
   val buttonPanel = new GBPanel {
-    /**
-    val dismissBtn = new Button() {
-      action = Action("") {
-        raceView.trackUserAction {
-          layer.releaseTrackInfoUpdates(trackEntry)
-          layer.dismissEntryPanel(trackEntry)
-          trackEntry = null
-        }
-      }
-      icon = TrackEntryPanel.ejectIcon
-    }.styled()
-      **/
-
     val c = new Constraints(insets = new Insets(5, 0, 0, 0), anchor = Anchor.West)
     layout(pathCb)   = c(0,0)
     layout(path3dCb) = c(1,0)
     layout(infoCb)   = c(2,0)
     layout(markCb)   = c(3,0)
     layout(focusCb) = c(4,0)
-    //layout(new Filler().styled()) = c(5,0).weightx(0.5)
     layout(dismissBtn) = c(5,0).weightx(0)
   }.styled()
 
