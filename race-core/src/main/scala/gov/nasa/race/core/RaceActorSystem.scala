@@ -350,7 +350,7 @@ class RaceActorSystem(val config: Config) extends LogController with VerifiableA
 
     askVerifiableForResult(master, RacePause) {
       case RacePaused =>
-        info(s"universe $name paused")
+        info(s"universe $name paused at ${simClock.dateTime}")
         status = Paused
         simClock.stop
         true
@@ -381,7 +381,7 @@ class RaceActorSystem(val config: Config) extends LogController with VerifiableA
 
     askVerifiableForResult(master, RaceResume) {
       case RaceResumed =>
-        info(s"universe $name resumed")
+        info(s"universe $name resumed at ${simClock.dateTime}")
         status = Running
         simClock.resume
         true

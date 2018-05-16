@@ -54,7 +54,7 @@ lazy val raceLauncher = createProject("race-launcher", commonSettings).
 
 lazy val raceNetJMS = createProject("race-net-jms", commonSettings).
   dependsOn(raceCore).
-  addLibraryDependencies(akkaAll,amqBroker)
+  addLibraryDependencies(akkaAll,amqBroker,slf4jSimple,akkaSlf4j)
 
 // unfortunately the 1.0 kafka clients are not source compatible
 lazy val raceNetKafka = createProject("race-net-kafka", commonSettings).

@@ -74,8 +74,16 @@ class AsdexTracksLayer (val raceViewer: RaceViewer, val config: Config)
   val activeAltitude = Feet(config.getDoubleOrElse("view-altitude", 60000d)) // feet above ground
   val gotoAltitude = Feet(config.getDoubleOrElse("goto-altitude", 20000d)) // feet above ground
 
-  var selAirport: Option[Airport] = None // selected airport
-  var active = false
+  // note that we don't move the view here - if the configured view does not show the airport
+  // we waste CPU but it would be equally confusing to move the initial view, which might focus
+  // on a particular point around the airport
+  var selAirport: Option[Airport] = configuredAirport
+  var active = selAirport.isDefined
+
+  def configuredAirport: Option[Airport] = {
+    val topics = config.getOptionalStringList("request-topics")
+    if (topics.nonEmpty) Airport.asdexAirports.get(topics.head) else None
+  }
 
   override def initializeLayer: Unit = {
     super.initializeLayer
@@ -99,8 +107,8 @@ class AsdexTracksLayer (val raceViewer: RaceViewer, val config: Config)
   def checkAirportChange (targetView: ViewGoal): Unit = {
     val eyePos = targetView.pos
     val eyeAltitude = meters2Feet(targetView.zoom)
-
     val newAirport = lookupAirport(eyePos, activeDistance)
+
     if (selAirport.isDefined && selAirport == newAirport){ // no airport change, but check altitude
       if (active){
         if (eyeAltitude > activeAltitude.toFeet + selAirport.get.elevation.toFeet){

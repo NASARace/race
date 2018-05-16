@@ -113,6 +113,12 @@ class SettableClock (initTime: DateTime = DateTime.now,
     this
   }
 
-  def stop = synchronized { _stoppedAt = System.currentTimeMillis }
-  def resume = synchronized { _stoppedAt = 0 }
+  def stop = synchronized {
+    _stoppedAt = System.currentTimeMillis
+  }
+
+  def resume = synchronized {
+    _initMillis += System.currentTimeMillis - _stoppedAt
+    _stoppedAt = 0
+  }
 }

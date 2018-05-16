@@ -86,27 +86,20 @@ class ReplayActor (val config: Config) extends ContinuousTimeRaceActor
   }
 
   override def onSyncWithRaceClock = {
-    if (!isStopped && !isFirst) {
-      var didSchedule = false
-      if (pendingMsgs.nonEmpty) {
-        pendingMsgs.foreach { r =>
-          val dtMillis = r.date.getMillis - updatedSimTimeMillis
-          if (dtMillis < SchedulerThresholdMillis) {
-            publishFiltered(r.msg)
-          } else {
-            scheduler.scheduleOnce(dtMillis milliseconds, self, r)
-            didSchedule = true
-          }
-        }
-        pendingMsgs.clear
-      }
-      if (!didSchedule) {
-        // we didn't re-schedule a sent message - schedule the next one
-        scheduleNext(0)
-      }
-    }
-
+    checkResume(isStopped)
     super.onSyncWithRaceClock
+  }
+
+  override def onPauseRaceActor (originator: ActorRef) = {
+    info(s"pausing..")
+    super.onPauseRaceActor(originator)
+  }
+
+  override def onResumeRaceActor (originator: ActorRef) = {
+    info(s"replay resuming with ${pendingMsgs.size} pending messages..")
+    // note the clock is still stopped when we get this
+    checkResume(false)
+    super.onResumeRaceActor(originator)
   }
 
   override def handleMessage = handleReplayMessage
@@ -206,6 +199,28 @@ class ReplayActor (val config: Config) extends ContinuousTimeRaceActor
             }
           }
         case None => reachedEndOfArchive
+      }
+    }
+  }
+
+  def checkResume (clockStopped: Boolean): Unit = {
+    if (!clockStopped && !isFirst) {
+      var didSchedule = false
+      if (pendingMsgs.nonEmpty) {
+        pendingMsgs.foreach { r =>
+          val dtMillis = r.date.getMillis - updatedSimTimeMillis
+          if (dtMillis < SchedulerThresholdMillis) {
+            publishFiltered(r.msg)
+          } else {
+            scheduler.scheduleOnce(dtMillis milliseconds, self, r)
+            didSchedule = true
+          }
+        }
+        pendingMsgs.clear
+      }
+      if (!didSchedule) {
+        // we didn't re-schedule a sent message - schedule the next one
+        scheduleNext(0)
       }
     }
   }

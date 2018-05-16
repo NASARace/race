@@ -133,6 +133,7 @@ class RaceWWViewController extends OrbitViewInputHandler {
 
     //println(s"@@ pan $viewGoal $timeToMove")
     super.addPanToAnimator(center0,endCenterPos,heading0,endHeading,pitch0,endPitch,zoom0,endZoom,timeToMove,endCenterOnSurface)
+    raceViewer.notifyViewChanged
   }
 
   override def addPanToAnimator (beginCenterPos: Position, endCenterPos: Position,
@@ -146,31 +147,35 @@ class RaceWWViewController extends OrbitViewInputHandler {
 
   override def addEyePositionAnimator (timeToIterate: Long, beginPosition: Position, endPosition: Position): Unit = {
     val pos0 = viewGoal.setPos(endPosition)
-    //println(s"@@ eye $viewGoal")
     super.addEyePositionAnimator(timeToIterate,pos0,endPosition)
+    raceViewer.notifyViewChanged
   }
 
   override def addHeadingAnimator(begin: Angle, end: Angle): Unit = {
     val heading0 = viewGoal.setHeading(end)
     //println(s"@@ heading $viewGoal")
     super.addHeadingAnimator(heading0,end)
+    raceViewer.notifyViewChanged
   }
 
   override def addPitchAnimator(begin: Angle, end: Angle): Unit = {
     val pitch0 = viewGoal.setPitch(end)
     //println(s"@@ pitch $viewGoal")
     super.addPitchAnimator(pitch0,end)
+    raceViewer.notifyViewChanged
   }
 
   override def addRollAnimator(begin: Angle, end: Angle): Unit = {
     val roll0 = viewGoal.setRoll(end)
     super.addRollAnimator(roll0,end)
+    raceViewer.notifyViewChanged
   }
 
   override def addZoomAnimator (zoomStart: Double, zoomEnd: Double): Unit = {
     val zoom0 = viewGoal.setZoom(zoomEnd)
     //println(s"@@ zoom $viewGoal")
     super.addZoomAnimator(zoom0,zoomEnd)
+    raceViewer.notifyViewChanged
   }
 
   override def addFlyToZoomAnimator(heading: Angle, pitch: Angle, zoom: Double): Unit = {
@@ -179,12 +184,14 @@ class RaceWWViewController extends OrbitViewInputHandler {
     viewGoal.zoom = zoom
     //println(s"@@ fly $viewGoal")
     super.addFlyToZoomAnimator(heading,pitch,zoom)
+    raceViewer.notifyViewChanged
   }
 
   override def addCenterAnimator(begin: Position, end: Position, lengthMillis: Long, smoothed: Boolean): Unit = {
     val pos0 = viewGoal.setPos(end)
     //println(s"@@ center $viewGoal")
     super.addCenterAnimator(pos0,end,lengthMillis,smoothed)
+    raceViewer.notifyViewChanged
   }
 
   def hasActiveAnimation: Boolean = gotoAnimControl.hasActiveAnimation

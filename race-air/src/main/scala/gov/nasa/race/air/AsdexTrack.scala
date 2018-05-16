@@ -29,7 +29,7 @@ import org.joda.time.DateTime
 class AsdexTracks(val airport: String, val tracks: Seq[AsdexTrack]) {
   override def toString = {
     val d = if (!tracks.isEmpty) hhmmssZ.print(tracks.head.date) else "?"
-    s"AirportTracks{$airport,date=$d,nTracks=${tracks.size}}"
+    s"AsdexTracks{$airport,date=$d,nTracks=${tracks.size}}"
   }
 }
 

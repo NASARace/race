@@ -54,11 +54,12 @@ class AsdexMsg2AsdexTracks(val config: Config=NoConfig) extends XmlParser[AsdexT
     var airport: String = null
     val tracks = new ArrayBuffer[AsdexTrack]
 
-    whileNextElement {
+    whileNextElement { // start elements
       case "airport" => airport = setAirport(readText)
       case "positionReport" => positionReport(tracks)
-    } {
-      case "asdexMsg" => setResult(new AsdexTracks(airport,tracks))
+    } { // end elements
+      case "asdexMsg" =>
+        if (tracks.nonEmpty) setResult(new AsdexTracks(airport,tracks))
       case _ => // ignore
     }
   }
