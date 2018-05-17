@@ -77,7 +77,6 @@ class DeferredEDTAction (minDelay: Int, maxDelay: Int, action: => Unit) extends 
     if (isReady && ((now - scheduleTime > maxDelay) || (now - lastRunTime > minDelay))){
       timer.stop
       scheduleTime = 0
-
       action
 
     } else {
@@ -85,4 +84,6 @@ class DeferredEDTAction (minDelay: Int, maxDelay: Int, action: => Unit) extends 
       // this is a repetitive timer, no need to reschedule
     }
   }
+
+  def run: Unit = action
 }

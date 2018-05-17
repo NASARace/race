@@ -297,7 +297,7 @@ trait TrackLayer[T <:TrackedObject] extends SubscribingRaceLayer
       e.setFocused(cond)
       if (report) raceViewer.setFocused(e, cond) // report upwards in the chain
       if (cond) {
-        raceViewer.panToCenter(wwPosition(lo.pos.position, Meters(raceViewer.tgtZoom)))  // FIXME
+        raceViewer.centerTo(wwPosition(lo.pos.position, Meters(raceViewer.tgtZoom)))  // FIXME
         raceViewer.objectChanged(lo,StartFocus)
       } else {
         raceViewer.objectChanged(lo,StopFocus)

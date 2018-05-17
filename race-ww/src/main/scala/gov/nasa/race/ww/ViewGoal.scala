@@ -44,7 +44,7 @@ class ViewGoal {
     roll = wwdView.getRoll
   }
 
-  override def toString: String = s"View(pos:$pos,zoom:$zoom,hdg:$heading,pitch:$pitch)"
+  override def toString: String = s"View(pos:$pos,zoom:$zoom,hdg:$heading,pitch:$pitch,hint:$animationHint)"
 
   //--- convenience setters
 
@@ -53,4 +53,8 @@ class ViewGoal {
   def setHeading (v: Angle) = updateField(v,heading,heading_=)
   def setPitch (v: Angle) = updateField(v,pitch,pitch_=)
   def setRoll (v: Angle) = updateField(v,roll,roll_=)
+
+  def setAnimationHint (hint: String): Unit = {
+    animationHint = hint // TODO - we should probably accumulate here
+  }
 }

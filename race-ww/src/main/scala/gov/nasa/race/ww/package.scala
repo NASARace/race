@@ -158,12 +158,16 @@ package object ww {
 
   // animation and selection hints. Note these are used for identity comparison (use refs and eq)
 
-  final val CenterClick = "CenterClick"
-  final val CenterDrag = "CenterDrag"
+  final val NoAnimation = "NoAnimation"
+  final val Center = "Center"
   final val Zoom = "Zoom"
   final val Pan = "Pan"
+  final val EyePos = "EyePos"
+  final val FlyTo = "FlyTo"
+  final val Heading = "Heading"
+  final val Pitch = "Pitch"
+  final val Roll = "Roll"
   final val Goto = "Goto"  // the catch all
-  final val NoAnimation = "NoAnimation" // no animation
 
   final val SelectedLayer = "selected layer"
   final val SelectedObject = "selected object"

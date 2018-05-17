@@ -34,7 +34,7 @@ case class ViewChanged (lat: Double,
                         hint: String) {
   def this(v: ViewGoal) = this(v.pos.getLatitude.degrees, v.pos.getLongitude.degrees,
                                   v.zoom, v.heading.degrees, v.pitch.degrees, v.roll.degrees,
-                                  v.animationHint)
+                                  v.animationHint )
 }
 
 case class LayerChanged (name: String, enabled: Boolean)

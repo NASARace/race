@@ -29,9 +29,12 @@ import gov.nasa.race.swing.DeferredEDTAction
 import gov.nasa.race.uom.Angle._
 import gov.nasa.race.uom.Length
 import gov.nasa.race.uom.Length._
-import gov.nasa.worldwind.animation.AnimationController
+import gov.nasa.race.ww._
+
+import gov.nasa.worldwind.avlist.AVKey
+import gov.nasa.worldwind.animation.{AnimationController, DoubleAnimator, ScheduledInterpolator}
 import gov.nasa.worldwind.geom.{Angle, LatLon, Position, Vec4}
-import gov.nasa.worldwind.view.orbit.{BasicOrbitView, OrbitView, OrbitViewInputHandler}
+import gov.nasa.worldwind.view.orbit.{BasicOrbitView, OrbitView, OrbitViewInputHandler, OrbitViewPropertyAccessor}
 import gov.nasa.worldwind.awt.ViewInputAttributes
 
 /**
@@ -46,11 +49,12 @@ class RaceWWViewController extends OrbitViewInputHandler {
   var lastUserInputTime: Long = 0
   var lastInputEvent: InputEvent = _
   var pressedKey: Int = 0
+  var mousePressed: Boolean = false
+  var mouseDragged: Boolean = false
 
   val viewGoal = new ViewGoal // the goal of a view transition
 
   val viewChangeNotifier = DeferredEDTAction(300,900) {
-    //println(s"@@ view change: $viewGoal")
     raceViewer.notifyViewChanged
   }
 
@@ -69,29 +73,24 @@ class RaceWWViewController extends OrbitViewInputHandler {
 
   //--- non-animated
 
-  def moveEyePosition (pos: Position): Unit = {
-    cancelAnimators
-    viewGoal.pos = pos
-    wwdView.moveEyePosition(pos,viewGoal.zoom)
-    viewChangeNotifier.schedule
-  }
+  def moveEyePosition (pos: Position): Unit = moveEyePosition(pos,viewGoal.zoom)
 
   def moveEyePosition (pos: Position, zoom: Double): Unit = {
     cancelAnimators
     viewGoal.pos = pos
     viewGoal.zoom = zoom
+    viewGoal.setAnimationHint(Goto)
     wwdView.moveEyePosition(pos,zoom)
-    viewChangeNotifier.schedule
+    raceViewer.notifyViewChanged // no point deferring
   }
 
   //--- animators
 
   def centerTo(pos: Position, transitionTime: Long): Unit = {
-    //addEyePositionAnimator(transitionTime,viewGoal.setPos(pos),pos)
     addCenterAnimator(viewGoal.pos, pos, transitionTime, true)
   }
   def zoomTo (zoom: Double) = {
-    addZoomAnimator(viewGoal.setZoom(zoom), zoom)
+    addZoomAnimator(viewGoal.zoom, zoom)
   }
   def panTo (pos: Position, zoom: Double) = {
     addPanToAnimator(viewGoal.pos,pos,
@@ -101,14 +100,17 @@ class RaceWWViewController extends OrbitViewInputHandler {
                      1500,false)
   }
   def pitchTo (angle: Angle) = {
-    addPitchAnimator(viewGoal.setPitch(angle),angle)
+    addPitchAnimator(viewGoal.pitch,angle)
   }
   def headingTo (angle: Angle) = {
-    addHeadingAnimator(viewGoal.setHeading(angle), angle)
+    addHeadingAnimator(viewGoal.heading, angle)
   }
   def headingPitchTo (heading: Angle, pitch: Angle) = {
     val roll = viewGoal.roll
-    addHeadingPitchRollAnimator(viewGoal.setHeading(heading),heading,viewGoal.setPitch(pitch),pitch,roll,roll)
+    addHeadingPitchRollAnimator(viewGoal.heading,heading,viewGoal.pitch,pitch,roll,roll)
+  }
+  def rollTo (angle: Angle) = {
+    addRollAnimator(viewGoal.roll,angle)
   }
 
   override def stopAnimators: Unit = {
@@ -130,10 +132,10 @@ class RaceWWViewController extends OrbitViewInputHandler {
     val zoom0 = viewGoal.setZoom(endZoom)
     val heading0 = viewGoal.setHeading(endHeading)
     val pitch0 = viewGoal.setPitch(endPitch)
+    viewGoal.setAnimationHint(Pan)
 
-    //println(s"@@ pan $viewGoal $timeToMove")
     super.addPanToAnimator(center0,endCenterPos,heading0,endHeading,pitch0,endPitch,zoom0,endZoom,timeToMove,endCenterOnSurface)
-    raceViewer.notifyViewChanged
+    viewChangeNotifier.run
   }
 
   override def addPanToAnimator (beginCenterPos: Position, endCenterPos: Position,
@@ -142,56 +144,67 @@ class RaceWWViewController extends OrbitViewInputHandler {
                                  beginZoom: Double, endZoom: Double,
                                  endCenterOnSurface: Boolean): Unit = {
     addPanToAnimator(beginCenterPos,endCenterPos,beginHeading,endHeading,beginPitch,endPitch,beginZoom,endZoom,
-                     2000, endCenterOnSurface)
+      1500, endCenterOnSurface)
   }
 
   override def addEyePositionAnimator (timeToIterate: Long, beginPosition: Position, endPosition: Position): Unit = {
     val pos0 = viewGoal.setPos(endPosition)
+    viewGoal.setAnimationHint(EyePos)
     super.addEyePositionAnimator(timeToIterate,pos0,endPosition)
-    raceViewer.notifyViewChanged
+    viewChangeNotifier.run
   }
 
   override def addHeadingAnimator(begin: Angle, end: Angle): Unit = {
     val heading0 = viewGoal.setHeading(end)
-    //println(s"@@ heading $viewGoal")
+    viewGoal.setAnimationHint(Heading)
     super.addHeadingAnimator(heading0,end)
-    raceViewer.notifyViewChanged
+    viewChangeNotifier.run
   }
 
   override def addPitchAnimator(begin: Angle, end: Angle): Unit = {
     val pitch0 = viewGoal.setPitch(end)
-    //println(s"@@ pitch $viewGoal")
+    viewGoal.setAnimationHint(Pitch)
+    viewChangeNotifier.run
+
     super.addPitchAnimator(pitch0,end)
-    raceViewer.notifyViewChanged
   }
 
   override def addRollAnimator(begin: Angle, end: Angle): Unit = {
     val roll0 = viewGoal.setRoll(end)
+    viewGoal.setAnimationHint(Roll)
+    viewChangeNotifier.run
+
     super.addRollAnimator(roll0,end)
-    raceViewer.notifyViewChanged
   }
 
   override def addZoomAnimator (zoomStart: Double, zoomEnd: Double): Unit = {
     val zoom0 = viewGoal.setZoom(zoomEnd)
-    //println(s"@@ zoom $viewGoal")
-    super.addZoomAnimator(zoom0,zoomEnd)
-    raceViewer.notifyViewChanged
+    viewGoal.setAnimationHint(Zoom)
+    viewChangeNotifier.run
+
+    //super.addZoomAnimator(zoom0,zoomEnd) // does not give us control over animation time
+    val zoomAnimator = new DoubleAnimator(new ScheduledInterpolator(1000), zoomStart, zoomEnd,
+                                          OrbitViewPropertyAccessor.createZoomAccessor(wwdView))
+    gotoAnimControl.put(OrbitViewInputHandler.VIEW_ANIM_ZOOM, zoomAnimator)
+    wwdView.firePropertyChange(AVKey.VIEW, null, wwdView)
   }
 
   override def addFlyToZoomAnimator(heading: Angle, pitch: Angle, zoom: Double): Unit = {
     viewGoal.heading = heading
     viewGoal.pitch = pitch
     viewGoal.zoom = zoom
-    //println(s"@@ fly $viewGoal")
+    viewGoal.setAnimationHint(FlyTo)
+    viewChangeNotifier.run
+
     super.addFlyToZoomAnimator(heading,pitch,zoom)
-    raceViewer.notifyViewChanged
   }
 
   override def addCenterAnimator(begin: Position, end: Position, lengthMillis: Long, smoothed: Boolean): Unit = {
     val pos0 = viewGoal.setPos(end)
-    //println(s"@@ center $viewGoal")
+    viewGoal.setAnimationHint(Center)
+    viewChangeNotifier.run
+
     super.addCenterAnimator(pos0,end,lengthMillis,smoothed)
-    raceViewer.notifyViewChanged
   }
 
   def hasActiveAnimation: Boolean = gotoAnimControl.hasActiveAnimation
@@ -282,8 +295,8 @@ class RaceWWViewController extends OrbitViewInputHandler {
   }
   override protected def handleMouseDragged(e: MouseEvent): Unit = {
     recordInputEvent(e)
+    mouseDragged = true
     super.handleMouseDragged(e)
-    viewGoal.pos = wwdView.getCenterPosition // WW does drag-to-rotate-globe
   }
   override protected def handleMouseClicked(e: MouseEvent): Unit = {
     recordInputEvent(e)
@@ -291,10 +304,19 @@ class RaceWWViewController extends OrbitViewInputHandler {
   }
   override protected def handleMousePressed(e: MouseEvent): Unit = {
     recordInputEvent(e)
+    mousePressed = true
     if (!processMousePressed(e)) super.handleMousePressed(e)
   }
   override protected def handleMouseReleased(e: MouseEvent): Unit = {
     recordInputEvent(e)
+    mousePressed = false
+    if (mouseDragged) {
+      // WW does drag-to-rotate-globe
+      viewGoal.pos = wwdView.getCenterPosition
+      viewGoal.setAnimationHint(Center)
+      viewChangeNotifier.run
+      mouseDragged = false
+    }
     //super.handleMouseReleased(e)
   }
   override protected def handleKeyPressed(e: KeyEvent): Unit = {
@@ -316,7 +338,7 @@ class RaceWWViewController extends OrbitViewInputHandler {
   // the super method directly registers and starts a OrbitViewMoveToZoomAnimator
   override protected def changeZoom(view: BasicOrbitView, animControl: AnimationController, change: Double, attrib: ViewInputAttributes.ActionAttributes): Unit = {
     super.changeZoom(view,animControl,change,attrib)
-
+    viewGoal.setAnimationHint(Zoom)
     // the animators end zoom is dynamically extended, hence we have to increase initial latency
     viewChangeNotifier.schedule(1000)
   }

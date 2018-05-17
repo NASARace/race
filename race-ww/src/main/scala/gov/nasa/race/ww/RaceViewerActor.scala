@@ -392,20 +392,20 @@ class RaceViewer(viewerActor: RaceViewerActor) extends DeferredEyePositionListen
 
   def jumpToEyePosition(pos: Position): Unit = {
     viewController.moveEyePosition(pos)
-    notifyViewChanged
   }
 
   def tgtEyePos = viewController.targetViewPos
   def tgtZoom = viewController.targetViewZoom
 
   //--- view animations
-  def panToCenter (pos: Position, transitionTime: Long=500) = {
+  def centerTo(pos: Position, transitionTime: Long=500) = {
     // FIXME - this uses the pos altitude, which should not be changed
     viewController.centerTo(pos,transitionTime)
   }
   def zoomTo (zoom: Double) = viewController.zoomTo(zoom)
   def panTo (pos: Position, zoom: Double) = viewController.panTo(pos,zoom)
   def pitchTo (endAngle: Angle) = viewController.pitchTo(endAngle)
+  def rollTo (endAngle: Angle) = viewController.rollTo(endAngle)
   def headingTo (endAngle: Angle) = viewController.headingTo(endAngle)
   def headingPitchTo (endHeading: Angle, endPitch: Angle) = viewController.headingPitchTo(endHeading,endPitch)
 

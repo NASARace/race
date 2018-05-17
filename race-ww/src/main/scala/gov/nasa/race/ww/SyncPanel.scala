@@ -24,6 +24,8 @@ import gov.nasa.race.core.{PublishingRaceActor, SubscribingRaceActor, _}
 import gov.nasa.race.swing.GBPanel.{Anchor, Fill}
 import gov.nasa.race.swing.Style._
 import gov.nasa.race.swing.{AkkaSwingBridge, Filler, GBPanel, OnOffIndicator, SwingTimer, Separator => RSeparator}
+import gov.nasa.race.ww._
+
 import gov.nasa.worldwind.geom.{Angle, Position}
 import gov.nasa.worldwind.layers.Layer
 
@@ -151,16 +153,19 @@ class SyncPanel (raceView: RaceViewer, config: Option[Config]=None)
   def handleViewChanged (lat: Double, lon: Double, alt: Double,
                            pitch: Double, heading: Double, roll: Double, animationHint: String) = {
     if (receiveEyePos && raceView.millisSinceLastUserAction > inboundBlackout) { // otherwise user input has priority
-      val pos = new Position(Angle.fromDegreesLatitude(lat), Angle.fromDegreesLongitude(lon), alt)
+      val pos = new Position(Angle.fromDegreesLatitude(lat), Angle.fromDegreesLongitude(lon), 0)
       info(s"inbound eyepos: $pos")
       // Note that we can't use the specific remote (source) animation because we might have changed the
       // eye position locally, so we have to do a generic setEyePosition/panTo
       animationHint match {
-        case `Zoom` => raceView.panToCenter(pos, syncZoomTime)
-        case `CenterClick` => raceView.panToCenter(pos, syncCenterClickTime)
-        case `CenterDrag` => raceView.panToCenter(pos, syncCenterDragTime)
+        case `Zoom` => raceView.zoomTo(alt)
         case `Pan` => raceView.panTo(pos,alt)
-        case other => raceView.panToCenter(pos, syncGotoTime)
+        case `Center` => raceView.centerTo(pos, syncCenterClickTime)
+        case `Heading` => raceView.headingTo(Angle.fromDegrees(heading))
+        case `Pitch` => raceView.pitchTo(Angle.fromDegrees(pitch))
+        case `Roll` => raceView.rollTo(Angle.fromDegrees(roll))
+
+        case other => raceView.panTo(pos,alt) // we should probably break this down further
       }
 
       if (pitch != raceView.viewPitch.degrees || heading != raceView.viewHeading.degrees) {
