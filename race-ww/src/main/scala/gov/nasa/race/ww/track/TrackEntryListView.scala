@@ -106,5 +106,9 @@ class TrackEntryListView[T <: TrackedObject](val config: Config) extends ListVie
   def createTrackEntryRenderer: TrackEntryRenderer[T] = new TrackEntryRenderer[T](config).styled('fieldGrid)
 
   def createColumnHeaderView: Component = itemRenderPanel.createColumnHeaderView
+
+  def selectAll: Unit = peer.setSelectionInterval(0,peer.getModel.getSize-1)
+
+  def clearSelection: Unit = peer.clearSelection()
 }
 

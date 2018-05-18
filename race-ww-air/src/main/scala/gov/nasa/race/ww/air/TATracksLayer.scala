@@ -86,7 +86,7 @@ class TATracksLayer (val raceViewer: RaceViewer, val config: Config) extends Mod
   override def defaultLabelThreshold = Meters(600000.0)
   override def defaultIconThreshold = Meters(200000.0)
 
-  val traconGrid =  createGrid
+  val traconGrid: Option[PolarGrid] =  createGrid
 
   var selTracon: Option[Tracon] = None
 
@@ -94,16 +94,18 @@ class TATracksLayer (val raceViewer: RaceViewer, val config: Config) extends Mod
 
   override def createTrackEntry(track: TATrack) = new TATrackEntry(track,createTrajectory(track),this)
 
-  def createGrid = {
-    val gridRings = config.getIntOrElse("tracon-rings", 5)
-    val gridRingDist = NauticalMiles(config.getIntOrElse("tracon-ring-inc", 50)) // in nm
-    val gridLineColor = config.getColorOrElse("tracon-grid-color", Color.white)
-    val gridLineAlpha = config.getFloatOrElse("tracon-grid-alpha", 0.5f)
-    val gridFillColor = config.getColorOrElse("tracon-bg-color", Color.black)
-    val gridFillAlpha = config.getFloatOrElse("tracon-bg-alpha", 0.4f)
+  def createGrid: Option[PolarGrid] = {
+    if (config.getBooleanOrElse("show-tracon-grid", false)) {
+      val gridRings = config.getIntOrElse("tracon-rings", 5)
+      val gridRingDist = NauticalMiles(config.getIntOrElse("tracon-ring-inc", 50)) // in nm
+      val gridLineColor = config.getColorOrElse("tracon-grid-color", Color.white)
+      val gridLineAlpha = config.getFloatOrElse("tracon-grid-alpha", 0.5f)
+      val gridFillColor = config.getColorOrElse("tracon-bg-color", Color.black)
+      val gridFillAlpha = config.getFloatOrElse("tracon-bg-alpha", 0.4f)
 
-    new PolarGrid(Tracon.NoTracon.position, Angle.Angle0, gridRingDist, gridRings,
-      this, gridLineColor, gridLineAlpha, gridFillColor, gridFillAlpha)
+      Some(new PolarGrid(Tracon.NoTracon.position, Angle.Angle0, gridRingDist, gridRings,
+        this, gridLineColor, gridLineAlpha, gridFillColor, gridFillAlpha))
+    } else None
   }
 
   override def createLayerInfoPanel = {
@@ -147,7 +149,7 @@ class TATracksLayer (val raceViewer: RaceViewer, val config: Config) extends Mod
   def reset(): Unit = {
     clearTrackEntries
     releaseAll
-    traconGrid.hide
+    ifSome(traconGrid){ _.hide}
     showTraconSymbols
   }
 
@@ -155,8 +157,10 @@ class TATracksLayer (val raceViewer: RaceViewer, val config: Config) extends Mod
     raceViewer.panTo(wwPosition(tracon.position), gotoAltitude.toMeters)
 
     selTracon = Some(tracon)
-    traconGrid.setCenter(tracon.position)
-    traconGrid.show
+    ifSome(traconGrid) { grid =>
+      grid.setCenter(tracon.position)
+      grid.show
+    }
     requestTopic(selTracon)
   }
 
@@ -174,5 +178,4 @@ class TATracksLayer (val raceViewer: RaceViewer, val config: Config) extends Mod
       }
     }
   }
-
 }

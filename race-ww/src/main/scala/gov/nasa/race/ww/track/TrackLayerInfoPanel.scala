@@ -131,10 +131,9 @@ class TrackLayerInfoPanel[T <: TrackedObject](raceView: RaceViewer, trackLayer: 
   def createTrackEntryListView: TrackEntryListView[T] = new TrackEntryListView[T](trackLayer.config)
 
   def createPopupMenu: PopupMenu = {
-    val listPeer = listView.peer
     new PopupMenu {
-      contents += new MenuItem(Action("select all"){listPeer.setSelectionInterval(0,listPeer.getModel.getSize-1)})
-      contents += new MenuItem(Action("clear selection"){listPeer.clearSelection})
+      contents += new MenuItem(Action("select all"){listView.selectAll})
+      contents += new MenuItem(Action("clear selection"){listView.clearSelection})
     }
   }
 
@@ -190,6 +189,11 @@ class TrackLayerInfoPanel[T <: TrackedObject](raceView: RaceViewer, trackLayer: 
   }
 
   def lastSelectedMatch = matchList(listView.selection.leadIndex)
+
+  def removedAllEntries = {
+    listView.listData = Seq.empty[TrackEntry[T]]
+    matchList = Seq.empty[TrackEntry[T]]
+  }
 
   def removedEntry(e: TrackEntry[T]) = {
     if (matchList.contains(e)){

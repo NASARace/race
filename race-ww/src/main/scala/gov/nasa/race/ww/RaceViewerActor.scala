@@ -364,6 +364,8 @@ class RaceViewer(viewerActor: RaceViewerActor) extends DeferredEyePositionListen
     viewerActor.newInstance(clsName,argTypes,args)
   }
 
+  def configurable[T: ClassTag](conf: Config): Option[T] = viewerActor.configurable(conf)
+
   /**
     * notify ViewListeners of a changed eyepoint/view direction
     * this is usually called by RaceViewInputHandler or RaceOrbitView

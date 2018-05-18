@@ -25,6 +25,9 @@ import com.typesafe.config._
 
 import scala.collection.JavaConverters._
 import scala.concurrent.duration._
+
+import gov.nasa.race.uom.Length
+import gov.nasa.race.uom.Length._
 import gov.nasa.race.util._
 
 /**
@@ -190,6 +193,8 @@ object ConfigUtils {
       }
     }
 
+    //--- value type extensions
+
     def getColor(key: String): Color = {
       conf.getString(key).toLowerCase() match {
         case "red" => Color.red
@@ -198,11 +203,18 @@ object ConfigUtils {
         case "yellow" => Color.yellow
         case "cyan" => Color.cyan
         case "magenta" => Color.magenta
+        case "pink" => Color.pink
+        case "orange" => Color.orange
+        case "lightgray" => Color.lightGray
+        case "darkgray" => Color.darkGray
+        case "gray" => Color.gray
         case "white" => Color.white
         case "black" => Color.black
         case s => decodeColor(s) // unfortunately Color.decode does not support transparency
       }
     }
+
+    val rgbaRE = """^(?:#|0x)?([0-9A-Fa-f][0-9A-Fa-f])([0-9A-Fa-f][0-9A-Fa-f])([0-9A-Fa-f][0-9A-Fa-f])([0-9A-Fa-f][0-9A-Fa-f])?$""".r
 
     // we need our own to support transparency
     def decodeColor (s: String): Color = {
@@ -213,7 +225,12 @@ object ConfigUtils {
         else if (vs.length == 3) new Color(vs(0),vs(1),vs(2))
         else throw new RuntimeException(s"unknown color format $s")
       } else {
-        new Color(Integer.parseInt(s,16), s.length == 8)
+        s match {
+          case rgbaRE(r,g,b,a) =>
+            val alpha = if (a != null) Integer.parseInt(a,16) else 255
+            new Color(Integer.parseInt(r,16),Integer.parseInt(g,16),Integer.parseInt(b,16),alpha)
+          case _ => throw new ConfigException.Generic(s"illegal color format $s")
+        }
       }
     }
 
@@ -271,15 +288,44 @@ object ConfigUtils {
       }
     }
 
-    def withConfigForPath(key: String)(f: Config=> Any) = if (conf.hasPath(key)) f(conf.getConfig(key))
+    final val unitNumberRE = """^([-+]?\d*\.?\d+(?:[eE][-+]?\d+)?)([a-zA-Z]+)?$""".r
 
-    def addIfAbsent (key: String, f: => Any): Config = {
-      if (!conf.hasPath(key)) conf.withValue(key, ConfigValueFactory.fromAnyRef(f)) else conf
+    def getLength (key: String): Length = {
+      val v = conf.getValue(key)
+      v.unwrapped match {
+        case s: String =>
+          s match {
+            case unitNumberRE(n,u) =>
+              val d = java.lang.Double.parseDouble(n)
+              u match {
+                case null => Meters(d)
+                case "m" => Meters(d)
+                case "ft" => Feet(d)
+                case "km" => Kilometers(d)
+                case "nm" => NauticalMiles(d)
+                  //... and more
+                case other => throw new ConfigException.Generic(s"unknown length unit: $other")
+              }
+            case _ =>  throw new ConfigException.Generic(s"invalid length format: $s")
+          }
+        case n: Number => Meters(n.doubleValue)
+        case other => throw new ConfigException.Generic(s"wrong length type: $other")
+      }
     }
+
+    //--- scope operations
+
+    def withConfigForPath(key: String)(f: Config=> Any) = if (conf.hasPath(key)) f(conf.getConfig(key))
 
     def withStringValue (k: String, s: String) = conf.withValue(k, ConfigValueFactory.fromAnyRef(s))
     def withIntValue (k: String, n: Int) = conf.withValue(k, ConfigValueFactory.fromAnyRef(n))
     def withDoubleValue (k: String, d:Double) = conf.withValue(k, ConfigValueFactory.fromAnyRef(d))
     def withBooleanValue (k: String, b:Boolean) = conf.withValue(k, ConfigValueFactory.fromAnyRef(b))
+
+    //--- misc
+
+    def addIfAbsent (key: String, f: => Any): Config = {
+      if (!conf.hasPath(key)) conf.withValue(key, ConfigValueFactory.fromAnyRef(f)) else conf
+    }
   }
 }

@@ -257,7 +257,6 @@ trait TrackLayer[T <:TrackedObject] extends SubscribingRaceLayer
     trackEntries -= getTrackKey(e.obj)
     if (wasShowing) wwdRedrawManager.redraw()
     panel.removedEntry(e)
-
     if (entryPanel.isShowing(e)) entryPanel.update
   }
 
@@ -265,6 +264,7 @@ trait TrackLayer[T <:TrackedObject] extends SubscribingRaceLayer
     trackEntries.clear
     removeAllRenderables()
     wwdRedrawManager.redraw()
+    panel.removedAllEntries
   }
 
 

@@ -5,6 +5,9 @@
 
 <WorldWindConfiguration version="1">
 
+    <Property name="gov.nasa.worldwind.avkey.InputHandlerClassName"
+              value="gov.nasa.race.ww.RaceAWTInputHandler"/>
+
     <Property name="gov.nasa.worldwind.avkey.ViewClassName"
               value="gov.nasa.race.ww.RaceWWView"/>
 

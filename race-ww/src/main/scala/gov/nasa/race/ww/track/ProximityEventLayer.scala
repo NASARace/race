@@ -17,7 +17,7 @@ import gov.nasa.race.ww.{Images, RaceViewer}
 import gov.nasa.race.swing.Style._
 import gov.nasa.race.util.DateTimeUtils.hhmmss
 
-import scala.swing.Label
+import scala.swing.{Action, Label, MenuItem, PopupMenu, Separator}
 
 class ProximityEntry (o: ProximityEvent, trajectory: Trajectory, layer: ProximityEventLayer)
                                        extends TrackEntry[ProximityEvent](o,trajectory,layer) {
@@ -47,13 +47,25 @@ class ProximityEntryListView (config: Config) extends TrackEntryListView[Proximi
   }
 }
 
-class ProximityEventLayerInfoPanel (raceView: RaceViewer, trackLayer: TrackLayer[ProximityEvent])
-                                  extends TrackLayerInfoPanel[ProximityEvent](raceView,trackLayer) {
+class ProximityEventLayerInfoPanel (raceView: RaceViewer, eventLayer: ProximityEventLayer)
+                                  extends TrackLayerInfoPanel[ProximityEvent](raceView,eventLayer) {
   override def createTrackEntryListView = new ProximityEntryListView(raceView.config)
+
+  override def createPopupMenu: PopupMenu = {
+    new PopupMenu {
+      contents += new MenuItem(Action("select all"){listView.selectAll})
+      contents += new MenuItem(Action("clear selection"){listView.clearSelection})
+      contents += new Separator
+      contents += new MenuItem(Action("delete all"){ eventLayer.clearEntries })
+      contents += new MenuItem(Action("delete selected"){
+        listView.selection.items.foreach{eventLayer.removeEntry}
+      })
+    }
+  }
 }
 
-class ProximityEventEntryPanel (raceView: RaceViewer, trackLayer: TrackLayer[ProximityEvent])
-                                            extends TrackEntryPanel[ProximityEvent](raceView,trackLayer) {
+class ProximityEventEntryPanel (raceView: RaceViewer, eventLayer: ProximityEventLayer)
+                                            extends TrackEntryPanel[ProximityEvent](raceView,eventLayer) {
   class ProximityEntryFields extends TrackEntryFields[ProximityEvent] {
     val id   = addField("id:")
     val date = addField("date:")
@@ -111,4 +123,7 @@ class ProximityEventLayer (val raceViewer: RaceViewer, val config: Config) exten
   }
 
   override def handleMessage = handleProximityEventLayerMessage orElse super.handleMessage
+
+  def removeEntry (e: TrackEntry[ProximityEvent]): Unit = removeTrackEntry(e)
+  def clearEntries: Unit = clearTrackEntries
 }
