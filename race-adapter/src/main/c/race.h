@@ -40,6 +40,7 @@ int race_server_socket (char* port, const char** err_msg);
 struct sockaddr* race_create_sockaddr(socklen_t* socklen);
 bool race_set_nonblocking (int fd, const char** err_msg);
 bool race_set_blocking (int fd, const char** err_msg);
+bool race_set_rcv_timeout (int fd, int millis, const char** err_msg);
 int race_check_available (int fd, const char** err_msg);
 
 /*************************************************************************************************
@@ -132,6 +133,8 @@ void race_hex_dump(databuf_t* db); // for debugging purposes
 #define REJECT_MSG   3
 #define DATA_MSG     4
 #define STOP_MSG     5
+#define PAUSE_MSG    6
+#define RESUME_MSG   7
 
 #define SERVER_ID 0 // the endpoint ansering requests
 #define NO_ID -1
@@ -161,6 +164,13 @@ int race_write_stop (databuf_t* db, int sender);
 int race_is_stop (databuf_t* db);
 int race_read_stop (databuf_t* db, int* sender, epoch_millis_t* time_millis, const char** err_msg);
 
+int race_write_pause (databuf_t* db, int sender_id);
+int race_is_pause (databuf_t* db);
+int race_read_pause (databuf_t* db, int* sender, epoch_millis_t* time_millis, const char** err_msg);
+
+int race_write_resume (databuf_t* db, int sender_id);
+int race_is_resume (databuf_t* db);
+int race_read_resume (databuf_t* db, int* sender, epoch_millis_t* time_millis, const char** err_msg);
 
 //--- application messages
 
@@ -234,6 +244,8 @@ int race_read_drop_data (databuf_t* db, int pos, char id[], int max_len, int* fl
 #define NO_INTERVAL_PREFERENCE -1
 #define MAX_POLLED_MSGS 42
 
+#define RECV_TIMEOUT_MILLIS 300 // millis to wait for a server response
+
 //--- flags (used during client request)
 
 #define DATA_SENDER   0x1
@@ -257,8 +269,9 @@ typedef struct {
 
     long time_diff; // time difference to remote (set after connection is established)
     
-    //--- server state data
+    //--- local state data
     bool stop_local; // set by context to indicate we should terminate
+    int connect_interval_millis; // interval in which we try to reconnect
 
     //--- application specific callbacks
 
@@ -273,6 +286,10 @@ typedef struct {
     // handle application specific data messages (only the payload, race-adapter takes care of the header)
     int (*write_data)(databuf_t* db, int pos); // set up data message (both client and server)
     int (*read_data)(databuf_t* db, int pos);  // read data message (both client and server)
+
+    void (*connection_paused)(); // optional callback after connection was paused
+
+    void (*connection_resumed)(); // optional callback after connection was resumed
 
     void (*connection_terminated)(); // optional callback after connection is terminated
 

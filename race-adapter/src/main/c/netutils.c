@@ -152,6 +152,18 @@ bool race_set_blocking (int fd, const char** err_msg) {
     }
 }
 
+bool race_set_rcv_timeout (int fd, int millis, const char** err_msg) {
+    struct timeval tv;
+    tv.tv_sec = 0;
+    tv.tv_usec = millis * 1000;
+    if (setsockopt(fd,SOL_SOCKET,SO_RCVTIMEO,&tv,sizeof(tv)) < 0){
+        *err_msg = strerror(errno);
+        return 0;
+    } else {
+        return 1;
+    }
+}
+
 int race_check_available (int fd, const char** err_msg) {
     struct timeval tv;
     tv.tv_sec = 0;

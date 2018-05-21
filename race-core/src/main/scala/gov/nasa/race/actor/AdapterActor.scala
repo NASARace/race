@@ -23,7 +23,7 @@ import java.net.{DatagramPacket, DatagramSocket, InetAddress}
 import akka.actor.ActorRef
 import gov.nasa.race._
 import gov.nasa.race.config.ConfigUtils._
-import gov.nasa.race.core.Messages.BusEvent
+import gov.nasa.race.core.Messages.{BusEvent, RacePauseRequest, RaceResumeRequest}
 import gov.nasa.race.core.{ContinuousTimeRaceActor, PublishingRaceActor, RaceException, SubscribingRaceActor}
 import gov.nasa.race.util.{SettableDIStream, SettableDOStream, ThreadUtils}
 
@@ -40,6 +40,8 @@ object AdapterActor {
   final val RejectMsg: Short  = 3
   final val DataMsg: Short    = 4
   final val StopMsg: Short    = 5
+  final val PauseMsg: Short   = 6
+  final val ResumeMsg: Short  = 7
 
   final val NoId: Int = -1
   final val ServerId: Int = 0
@@ -53,6 +55,8 @@ object AdapterActor {
   final val AcceptLen: Short = 36 // HeaderLen + 20
   final val RejectLen: Short = 20 // HeaderLen + 4
   final val StopLen: Short   = HeaderLen
+  final val PauseLen: Short  = HeaderLen
+  final val ResumeLen: Short = HeaderLen
   // both Data and Request are variable length
 }
 
@@ -142,10 +146,16 @@ trait AdapterActor extends PublishingRaceActor with SubscribingRaceActor with Co
 
   def setMsgLen (os: SettableDOStream, msgLen: Short) = os.setShort(2,msgLen)
 
-  def writeStop (os: SettableDOStream): Int = {
+  def writeHeaderOnlyMsg(os: SettableDOStream, msgType: Short): Int = {
     os.clear
-    writeHeader(os, StopMsg, StopLen, id)
+    writeHeader(os, msgType, HeaderLen, id)
   }
+
+  def writeStop (os: SettableDOStream): Int = writeHeaderOnlyMsg(os,StopMsg)
+
+  def writePause (os: SettableDOStream): Int = writeHeaderOnlyMsg(os,PauseMsg)
+
+  def writeResume (os: SettableDOStream): Int = writeHeaderOnlyMsg(os,ResumeMsg)
 
   def peekMsgType (is: SettableDIStream) = is.peekShort(0)
 
@@ -181,19 +191,30 @@ trait AdapterActor extends PublishingRaceActor with SubscribingRaceActor with Co
         readStop(dis, header)
         terminateConnection
 
+      case PauseMsg =>
+        info(s"received pause from $remoteIpAddress:$remotePort")
+        if (raceActorSystem.isRunning) master ! RacePauseRequest
+
+      case ResumeMsg =>
+        info(s"received resume from $remoteIpAddress:$remotePort")
+        if (raceActorSystem.isPaused) master ! RaceResumeRequest
+
       case DataMsg => ifSome(reader) { r =>
-        // make sure we don't allocate memory here for processing data messages - they might come at a high rate
-        readHeader(dis, header)
-        val tHeader = header.epochMillis
-        if ( tHeader >= tLastData) {
-          tLastData = tHeader
-          r.read(dis) match {
-            case None =>
-            case Some(list: Seq[_]) => if (flatten) list.foreach(publish) else publish(list)
-            case Some(data) => publish(data)
+        if (raceActorSystem.isRunning) {
+          // make sure we don't allocate memory here for processing data messages - they might come at a high rate
+          readHeader(dis, header)
+          val tHeader = header.epochMillis
+          if (tHeader >= tLastData) {
+            tLastData = tHeader
+            r.read(dis) match {
+              case None =>
+              case Some(list: Seq[_]) =>
+                if (flatten) list.foreach(publish) else publish(list)
+              case Some(data) => publish(data)
+            }
+          } else {
+            warning(s"received out-of-order data message (dt=${tHeader - tLastData} msec)")
           }
-        } else {
-          warning(s"received out-of-order data message (dt=${tHeader - tLastData} msec)")
         }
       }
 
@@ -207,10 +228,11 @@ trait AdapterActor extends PublishingRaceActor with SubscribingRaceActor with Co
 
   def checkRemote (addr: InetAddress, port: Int): Boolean = (addr == remoteIpAddress) && (port == remotePort)
 
-  def sendStop = {
-    val len = writeStop(dos)
-    sendPacket(len)
-  }
+  def sendStop = sendPacket(writeStop(dos))
+
+  def sendPause = sendPacket(writePause(dos))
+
+  def sendResume = sendPacket(writeResume(dos))
 
   def terminateConnection
 
@@ -229,6 +251,19 @@ trait AdapterActor extends PublishingRaceActor with SubscribingRaceActor with Co
 
     super.onTerminateRaceActor(originator)
   }
+
+  override def onPauseRaceActor (originator: ActorRef): Boolean = {
+    info("sending pause message")
+    sendPause
+    super.onPauseRaceActor(originator)
+  }
+
+  override def onResumeRaceActor (originator: ActorRef): Boolean = {
+    info("sending resume message")
+    sendResume
+    super.onResumeRaceActor(originator)
+  }
+
 
   override def handleMessage = {
     case BusEvent(_, msg: Any, _) =>

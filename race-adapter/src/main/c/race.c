@@ -57,11 +57,20 @@ static local_endpoint_t *initialize_local_client (local_context_t *context, remo
     const char *err_msg;
     struct sockaddr* serveraddr;
     socklen_t addrlen;
-
-    int fd = race_client_socket(context->host, context->port, &serveraddr,&addrlen, &err_msg);
-    if (fd < 0) {
-        context->error("failed to open client socket to %s:%s (%s)\n", context->host, context->port, err_msg);
-        return NULL;
+    int fd = -1;
+    
+    while (fd < 0 && !context->stop_local){
+        fd = race_client_socket(context->host, context->port, &serveraddr,&addrlen, &err_msg);
+        // NOTE - this is a UDP socket - getting a fd does not mean somebody is listening, only that the server was found
+        if (fd < 0) {
+            if (context->connect_interval_millis == 0) {
+                context->error("failed to open client socket to %s:%s (%s)\n", context->host, context->port, err_msg);
+                return NULL;
+            } else {
+                // TODO - we could check the fd / errno value here
+                race_sleep_millis(context->connect_interval_millis);
+            }
+        }
     }
     
     remote->addr = serveraddr;
@@ -76,18 +85,21 @@ static local_endpoint_t *initialize_local_client (local_context_t *context, remo
 }
 
 /*
- * assemble and send a REQUEST message
+ * send a already assembled message
  */
-static bool send_request (local_context_t *context, local_endpoint_t *local, remote_endpoint_t* remote) {
+static bool send_assembled_message (local_context_t *context, local_endpoint_t *local, remote_endpoint_t* remote) {
     databuf_t *db = local->db;
-
-    context->write_request(db,0);
     if (sendto(local->fd, db->buf, db->pos, 0, remote->addr, remote->addrlen) < 0) {
-        context->error("sending request message failed (%s)", strerror(errno));
+        context->error("sending message failed (%s)", strerror(errno));
         return false;
     } else {
         return true;
     }
+}
+
+static bool send_request (local_context_t *context, local_endpoint_t *local, remote_endpoint_t* remote) {
+    context->write_request(local->db,0);
+    return send_assembled_message(context,local,remote);
 }
 
 /*
@@ -238,11 +250,16 @@ static bool wait_for_response (local_context_t *context, local_endpoint_t *local
     int server_flags;
     int interval_millis;
 
-    db->pos = recvfrom( local->fd, db->buf, db->capacity, 0, remote->addr, &remote->addrlen);
-    if (db->pos <= 0) {
-        context->error("failed to receive server response: %s\n", strerror(errno));
+    int n_read = recvfrom( local->fd, db->buf, db->capacity, 0, remote->addr, &remote->addrlen);
+
+    if (n_read <= 0) {
+        if (context->connect_interval_millis == 0) {
+            context->error("failed to receive server response: %s\n", strerror(errno));
+        }
         return false;
     }
+
+    db->pos = n_read;
     if (race_is_accept(db)) {
         if (race_read_accept (db, &server_flags, &sim_millis, &interval_millis, &client_id, &err_msg) <= 0){
             context->error("error reading SERVER_RESPONSE: %s\n", err_msg);
@@ -304,6 +321,17 @@ static void receive_message(local_context_t *context, local_endpoint_t *local, r
             } else {
                 context->warning("local is ignoring track messages\n");
             }
+
+        } else if (race_is_pause(&db)) {
+            if (race_read_pause(&db, &remote_id, NULL, &err_msg) && remote_id == remote->id) {
+                if (context->connection_paused) context->connection_paused();
+            }
+
+        } else if (race_is_resume(&db)) {
+            if (race_read_resume(&db, &remote_id, NULL, &err_msg) && remote_id == remote->id) {
+                if (context->connection_resumed) context->connection_resumed();
+            }
+            
         } else {
             context->warning("received unknown message\n");
         }
@@ -444,7 +472,39 @@ bool race_server (local_context_t *context) {
     return true;
 }
 
+static bool establish_connection (local_context_t *context, local_endpoint_t *local, remote_endpoint_t* remote) {
+    const char *err_msg;
+    databuf_t *db = local->db;
+
+    if (!race_set_rcv_timeout(local->fd,RECV_TIMEOUT_MILLIS,&err_msg)){
+        context->error("failed to set response timeout: %s\n", err_msg);
+        return false;
+    }
+
+    context->write_request(db,0);
+
+    while (!context->stop_local){
+        if (!send_assembled_message(context,local,remote)) {
+            return false;
+        } else {
+            if (!wait_for_response(context,local,remote)) {
+                if (context->connect_interval_millis > 0) {
+                    race_sleep_millis(context->connect_interval_millis);
+                } else {
+                    return false;
+                }
+            } else {
+                break;
+            }
+        }
+    }
+    race_set_rcv_timeout(local->fd,0,&err_msg); // reset read timeout
+    return !context->stop_local;
+}
+
 // remote is started before local, local sends request and waits for accept/reject
+// note that if context->connect_interval_millis > 0 this does not return until
+// context->stop_local is set or a connection has been terminated
 bool race_client (local_context_t *context) {
     if (context == NULL) {
         perror("no local context");
@@ -453,13 +513,11 @@ bool race_client (local_context_t *context) {
 
     bool ret = false;
     remote_endpoint_t *remote = (remote_endpoint_t*)calloc(1,sizeof(remote_endpoint_t));
-    local_endpoint_t *local = initialize_local_client (context, remote);
+    local_endpoint_t *local = initialize_local_client (context, remote); // blocking until we find host
     if (local != NULL) {
-        if (send_request(context,local,remote)) {
-            if (wait_for_response(context, local, remote)){
-                ret = run_connection_threaded(context,local,remote);
-                local_terminated(context, local);
-            }
+        if (establish_connection(context,local,remote)) {  // blocking until we get response from host
+            ret = run_connection_threaded(context,local,remote);
+            local_terminated(context, local);
         }
         free(local);
     }

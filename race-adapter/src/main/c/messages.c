@@ -236,6 +236,44 @@ int race_read_stop (databuf_t* db, int *sender_id, epoch_millis_t* time_millis, 
     return read_header(db, STOP_MSG, STOP_MSG_LEN, sender_id, time_millis, err_msg);
 }
 
+//--- PAUSE / RESUME
+
+/*
+    can be sent by server at any time to pause and resume execution
+
+    struct {
+        struct msg_header;
+    }
+*/
+
+
+#define PAUSE_MSG_LEN HEADER_LEN
+
+int race_write_pause (databuf_t* db, int sender_id) {
+    return write_header(db, PAUSE_MSG, PAUSE_MSG_LEN, sender_id);
+}
+
+int race_is_pause (databuf_t* db) {
+    return is_msg(db, PAUSE_MSG, PAUSE_MSG_LEN);
+}
+
+int race_read_pause (databuf_t* db, int *sender_id, epoch_millis_t* time_millis, const char** err_msg) {
+    return read_header(db, PAUSE_MSG, PAUSE_MSG_LEN, sender_id, time_millis, err_msg);
+}
+
+#define RESUME_MSG_LEN HEADER_LEN
+
+int race_write_resume (databuf_t* db, int sender_id) {
+    return write_header(db, RESUME_MSG, RESUME_MSG_LEN, sender_id);
+}
+
+int race_is_resume (databuf_t* db) {
+    return is_msg(db, RESUME_MSG, RESUME_MSG_LEN);
+}
+
+int race_read_resume (databuf_t* db, int *sender_id, epoch_millis_t* time_millis, const char** err_msg) {
+    return read_header(db, RESUME_MSG, RESUME_MSG_LEN, sender_id, time_millis, err_msg);
+}
 
 //--- DATA
 
