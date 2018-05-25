@@ -36,19 +36,8 @@ class FlightPosLayer (val raceViewer: RaceViewer, val config: Config) extends Mo
   override def getTrackKey(track: FlightPos): String = track.cs
 
   def handleFlightPosLayerMessage: Receive = {
-    case BusEvent(_,fpos:FlightPos,_) =>
-      incUpdateCount
-
-      getTrackEntry(fpos) match {
-        case Some(acEntry) =>
-          if (fpos.isDroppedOrCompleted) removeTrackEntry(acEntry) else updateTrackEntry(acEntry, fpos)
-
-        case None => addTrackEntry(fpos)
-      }
-
-    case BusEvent(_,msg: TrackTerminationMessage,_)  =>
-      incUpdateCount
-      ifSome(trackEntries.get(msg.cs)) {removeTrackEntry}
+    case BusEvent(_,fpos:FlightPos,_) => handleTrack(fpos)
+    case BusEvent(_,msg: TrackTerminationMessage,_)  => handleTermination(msg)
   }
 
   override def handleMessage = handleFlightPosLayerMessage orElse super.handleMessage

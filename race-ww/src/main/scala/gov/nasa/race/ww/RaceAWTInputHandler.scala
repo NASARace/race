@@ -42,6 +42,10 @@ class RaceAWTInputHandler extends AWTInputHandler {
     callMouseMovedListeners(e)
 
     if (!e.isConsumed) wwd.getView.getViewInputHandler.mouseMoved(e)
-    if (wwd.getSceneController != null) wwd.getSceneController.setPickPoint(mousePoint)
+
+    val sc = wwd.getSceneController
+    if (sc != null) {
+      sc.setPickPoint(mousePoint)
+    }
   }
 }

@@ -19,6 +19,7 @@ package gov.nasa.race.ww
 
 import java.awt.{Color, Font}
 
+import akka.actor.ActorRef
 import com.typesafe.config.Config
 import gov.nasa.race._
 import gov.nasa.race.config.ConfigUtils._
@@ -128,9 +129,13 @@ trait SubscribingRaceLayer extends RaceLayer with AkkaSwingBridge {
   /**
     * override if we need a layer specific actor (e.g. for actor<->layer communication)
     * NOTE while this allows to use nested class actors, care must be taken to avoid
-    * race conditions between the actor and their encapsulating layer
+    * race conditions between the actor and their encapsulating layer. Also note this
+    * gets executed before the concrete layer ctor hence layer fields are not available yet
     */
   def createLayerActor: RaceLayerActor =  new RaceLayerActor(config,this)
+
+  // override this if the layer actor should subscribe to more than the "read-from" channels
+  def extraReadChannels: Seq[String] = Seq.empty[String]
 
   // forwards (?? thread safety)
   def request (channel: String, topic: Topic) = actor.request(channel, topic)
@@ -155,10 +160,17 @@ trait SubscribingRaceLayer extends RaceLayer with AkkaSwingBridge {
   */
 class RaceLayerActor (val config: Config, val layer: SubscribingRaceLayer) extends ChannelTopicSubscriber {
   info(s"created RaceLayerActor '${layer.name}'")
+  val extraChannels = layer.extraReadChannels
 
   override def onInitializeRaceActor(rc: RaceContext, actorConf: Config) = {
     info(s"initializing RaceLayerActor '${layer.name}'")
+    extraChannels.foreach { channel => busFor(channel).subscribe(self,channel) }
     super.onInitializeRaceActor(rc, layer.config)
+  }
+
+  override def onTerminateRaceActor(originator: ActorRef) = {
+    extraChannels.foreach { channel => busFor(channel).unsubscribe(self,channel)}
+    super.onTerminateRaceActor(originator)
   }
 
   override def handleMessage: Receive = {

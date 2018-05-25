@@ -26,7 +26,7 @@ import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.Messages._
 import gov.nasa.race.geo.{GeoPosition, GreatCircle}
 import gov.nasa.race.swing.Style._
-import gov.nasa.race.track._
+import gov.nasa.race.track.{TrackTerminationMessage, _}
 import gov.nasa.race.util.StringUtils
 import gov.nasa.race.uom.Length._
 import gov.nasa.race.ww.Implicits._
@@ -207,6 +207,22 @@ trait TrackLayer[T <:TrackedObject] extends SubscribingRaceLayer
   }
 
   //--- create, update and remove TrackEntries
+
+  def handleTrack (obj: T): Unit = {
+    incUpdateCount
+
+    getTrackEntry(obj) match {
+      case Some(acEntry) =>
+        if (obj.isDroppedOrCompleted) removeTrackEntry(acEntry) else updateTrackEntry(acEntry, obj)
+
+      case None => addTrackEntry(obj)
+    }
+  }
+
+  def handleTermination (msg: TrackTerminationMessage): Unit  = {
+    incUpdateCount
+    ifSome(trackEntries.get(msg.cs)) { removeTrackEntry }
+  }
 
   def addTrackEntryAttributes(e: TrackEntry[T]): Unit = e.addRenderables
   def updateTrackEntryAttributes(e: TrackEntry[T]): Unit = e.updateRenderables

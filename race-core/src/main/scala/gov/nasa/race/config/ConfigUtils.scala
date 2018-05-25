@@ -22,10 +22,10 @@ import java.io.File
 
 import com.github.nscala_time.time.Imports._
 import com.typesafe.config._
+import gov.nasa.race.geo.LatLonPos
 
 import scala.collection.JavaConverters._
 import scala.concurrent.duration._
-
 import gov.nasa.race.uom.Length
 import gov.nasa.race.uom.Length._
 import gov.nasa.race.util._
@@ -260,6 +260,18 @@ object ConfigUtils {
       }
     }
 
+    def getLatLonPos(key: String): LatLonPos = {
+      val pos = conf.getConfig(key)
+      try {
+        val lat = pos.getDouble("lat")
+        val lon = pos.getDouble("lon")
+        LatLonPos.fromDegrees(lat,lon)
+      } catch {
+        case _ : Throwable => throw new ConfigException.Generic("illegal LatLonPos format (expect {lat=<double>,lon=<double>})")
+      }
+    }
+    def getOptionalLatLonPos (key: String): Option[LatLonPos] = getOptional(key)(getLatLonPos(key))
+
     def getFiniteDuration (key: String): FiniteDuration = conf.getDuration(key).toMillis.milliseconds
     def getFiniteDurationOrElse (key: String, fallback: FiniteDuration) = getWithFallback(key,fallback)(getFiniteDuration(key))
     def getOptionalFiniteDuration (key: String): Option[FiniteDuration] = getOptional(key)( getFiniteDuration(key) )
@@ -312,6 +324,8 @@ object ConfigUtils {
         case other => throw new ConfigException.Generic(s"wrong length type: $other")
       }
     }
+
+    def getLengthOrElse (key: String, fallbackAction: =>Length): Length = getWithFallback(key,fallbackAction)(getLength(key))
 
     //--- scope operations
 

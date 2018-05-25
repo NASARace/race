@@ -139,7 +139,7 @@ trait ChannelTopicSubscriber extends SubscribingRaceActor {
     subscriptions.get(channelTopic) match {
       case Some((provider,n)) =>
         if (n == 1) {
-          info(s"$name releasing $channelTopic")
+          info(s"releasing $channelTopic")
           provider ! ChannelTopicRelease(channelTopic, self)
           subscriptions -= channelTopic
           return true
@@ -158,8 +158,9 @@ trait ChannelTopicSubscriber extends SubscribingRaceActor {
       e._1 match {
         case ct@ChannelTopic(_,`topic`) =>
           val provider = e._2._1
-          info(s"$name releasing $ct")
+          info(s"releasing $ct")
           provider ! ChannelTopicRelease(ct, self)
+          subscriptions -= ct
         case other =>
       }
     }
@@ -172,7 +173,7 @@ trait ChannelTopicSubscriber extends SubscribingRaceActor {
       for (e <- subscriptions){
         val channelTopic = e._1
         val (provider,n) = e._2
-        info(s"$name releasing $channelTopic")
+        info(s"releasing $channelTopic")
         provider ! ChannelTopicRelease(channelTopic, self)
       }
       subscriptions.clear()

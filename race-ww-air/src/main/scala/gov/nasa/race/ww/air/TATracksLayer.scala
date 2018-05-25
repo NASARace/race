@@ -20,7 +20,6 @@ import java.awt.{Color, Font}
 
 import akka.actor.Actor.Receive
 import com.typesafe.config.Config
-import gov.nasa.race.air.TATrack.Status
 import gov.nasa.race.air.{AirLocator, TATrack, Tracon}
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.Messages.BusEvent
@@ -30,7 +29,6 @@ import gov.nasa.race.swing.{IdAndNamePanel, StaticSelectionPanel}
 import gov.nasa.race.track.Trajectory
 import gov.nasa.race.uom.Angle
 import gov.nasa.race.uom.Length._
-import gov.nasa.race.ww.Implicits._
 import gov.nasa.race.ww._
 import gov.nasa.race.ww.track._
 import gov.nasa.worldwind.WorldWind
@@ -147,6 +145,7 @@ class TATracksLayer (val raceViewer: RaceViewer, val config: Config) extends Mod
   def selectTracon(tracon: Tracon) = raceViewer.trackUserAction(gotoTracon(tracon))
 
   def reset(): Unit = {
+    selTracon = None
     clearTrackEntries
     releaseAll
     ifSome(traconGrid){ _.hide}
@@ -165,7 +164,7 @@ class TATracksLayer (val raceViewer: RaceViewer, val config: Config) extends Mod
   }
 
   def gotoTracon(tracon: Tracon) = {
-    if (tracon eq Tracon.NoTracon) {
+    if (tracon == Tracon.NoTracon) {
       reset
     } else {
       selTracon match {

@@ -23,6 +23,7 @@ import gov.nasa.race.uom.Length
 import gov.nasa.race.swing.GBPanel.{Anchor, Fill}
 import gov.nasa.race.swing.Style._
 import gov.nasa.race.swing._
+import gov.nasa.worldwind.event.{PositionEvent, PositionListener}
 import gov.nasa.worldwind.geom.{Angle, Position}
 import gov.nasa.worldwind.globes.projections.ProjectionMercator
 import gov.nasa.worldwind.globes.{Earth, EarthFlat}
@@ -37,7 +38,7 @@ import scala.swing.event.ButtonClicked
   * and show eye position
   */
 class ViewPanel (raceViewer: RaceViewer, config: Option[Config]=None) extends GBPanel
-                  with RacePanel with DeferredPositionListener with ViewListener with LayerObjectListener {
+                  with RacePanel with PositionListener with ViewListener with LayerObjectListener {
 
   val wwd = raceViewer.wwd
   val earthGlobe = new Earth
@@ -82,8 +83,10 @@ class ViewPanel (raceViewer: RaceViewer, config: Option[Config]=None) extends GB
       raceViewer.resetFocused
   }
 
-  onMoved(wwd){ positionEvent =>
-    ifNotNull(positionEvent.getPosition){ pos =>
+  wwd.addPositionListener(this)
+
+  override def moved (e: PositionEvent): Unit = {
+    ifNotNull(e.getPosition){ pos =>
       latField.setValue(pos.getLatitude.getDegrees)
       lonField.setValue(pos.getLongitude.getDegrees)
       val elev = Length.meters2Feet(wwd.getModel.getGlobe.getElevation(pos.getLatitude, pos.getLongitude))

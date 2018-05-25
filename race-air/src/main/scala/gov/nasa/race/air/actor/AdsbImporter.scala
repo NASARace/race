@@ -23,10 +23,61 @@ import java.net.Socket
 import akka.actor.ActorRef
 import com.typesafe.config.Config
 import gov.nasa.race._
+import gov.nasa.race.actor.ReplayActor
 import gov.nasa.race.config.ConfigUtils._
-import gov.nasa.race.core.{PublishingRaceActor, RaceContext}
+import gov.nasa.race.core.Messages.ChannelTopicRequest
 import gov.nasa.race.core.RaceActorCapabilities._
+import gov.nasa.race.core.{ChannelTopicProvider, RaceContext}
+import gov.nasa.race.geo.LatLonPos
 import gov.nasa.race.util.ThreadUtils
+
+object AdsbStation {
+  final val NoStation = AdsbStation("<none>",None,None,true)
+}
+case class AdsbStation(id: String, description: Option[String], position: Option[LatLonPos], var isAvailable: Boolean) extends Ordered[AdsbStation] {
+  override def compare (other: AdsbStation) = id.compare(other.id)
+}
+
+
+/**
+  * common base type for SBS import/replay actors, which are ChannelTopicProviders
+  */
+trait AdsbImporter extends ChannelTopicProvider {
+
+  val stationId: String = config.getStringOrElse("station-id", "default") // the station we serve
+  val stationLocation: Option[LatLonPos] = config.getOptionalLatLonPos("station-location") // where the station is located
+
+  val stationChannel: Option[String] = config.getOptionalString("write-station-to") // where we publish station availability
+
+  override def isRequestAccepted (request: ChannelTopicRequest): Boolean = {
+    val channelTopic = request.channelTopic
+    if (writeTo.contains(channelTopic.channel)){ // we don't respond to requests through stationChannel
+      channelTopic.topic match {
+        case Some(id: String) =>
+          if (id == stationId) {
+            info(s"accepting request for station $id")
+            true
+          } else false
+        case other => false
+      }
+    } else false
+  }
+
+  override def onStartRaceActor(originator: ActorRef): Boolean = {
+    if (super.onStartRaceActor(originator)){
+      ifSome(stationChannel) { publish(_,AdsbStation(stationId,None,stationLocation,true)) }
+      true
+    } else false
+  }
+}
+
+/**
+  * a specialized ReplayActor for on-demand SBS messages
+  */
+class AdsbReplayActor(config: Config) extends ReplayActor(config) with AdsbImporter {
+  override def handleMessage = handleReplayMessage orElse handleFilteringPublisherMessage
+}
+
 
 /**
   * Actor to import ADS-B messages via SBS messages
@@ -36,7 +87,7 @@ import gov.nasa.race.util.ThreadUtils
   *   dump1090 --net-sbs-port <port> (default port is 30003)
   *
   */
-class SBSImportActor(val config: Config) extends PublishingRaceActor {
+class AdsbImportActor(val config: Config) extends AdsbImporter {
 
   override def getCapabilities = super.getCapabilities - SupportsPauseResume - SupportsSimTimeReset
 
