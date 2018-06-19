@@ -46,10 +46,10 @@ object Dependencies {
   val typesafeConfig = "com.typesafe" % "config" % "1.3.3"
 
   //--- nscala-time (Dates with operators): https://github.com/nscala-time/nscala-time
-  val nscalaTime = "com.github.nscala-time" %% "nscala-time" %  "2.18.0"
+  val nscalaTime = "com.github.nscala-time" %% "nscala-time" %  "2.20.0"
 
   //--- Scala parser combinators (https://github.com/scala/scala-parser-combinators)
-  val scalaParser = "org.scala-lang.modules" % "scala-parser-combinators_2.12" % "1.1.0"
+  val scalaParser = "org.scala-lang.modules" % "scala-parser-combinators_2.12" % "1.1.1"
 
   //--- scala-xml
   val scalaXml = "org.scala-lang.modules" % "scala-xml_2.12" % "1.1.0"
@@ -111,7 +111,7 @@ object Dependencies {
   val argon2 = "de.mkammerer" % "argon2-jvm" % "2.4"
 
   //--- Akka
-  val akkaVersion = "2.5.12"
+  val akkaVersion = "2.5.13"
   val akkaOrg = "com.typesafe.akka"
 
   val akkaActor = akkaOrg %% "akka-actor" % akkaVersion
@@ -121,13 +121,13 @@ object Dependencies {
   val akkaTestkit = akkaOrg %% "akka-testkit" % akkaVersion
   val akkaMultiNodeTestkit = akkaOrg %% "akka-multi-node-testkit" % akkaVersion // % "test,multi-jvm"
 
-  val akkaHttp = akkaOrg %% "akka-http" % "10.1.1"
+  val akkaHttp = akkaOrg %% "akka-http" % "10.1.3"
 
   val akkaAll = Seq(akkaActor)
 
 
   //--- ActiveMQ
-  val amqVersion = "5.15.3"  // >= 5.11.1
+  val amqVersion = "5.15.4"  // >= 5.11.1
   val amqOrg = "org.apache.activemq"
   val amqBroker = amqOrg % "activemq-broker" % amqVersion
 

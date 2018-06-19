@@ -24,7 +24,7 @@ import static gov.nasa.race.util.CodecUtils.*;
 
 /**
  * class to read/write packet data for XPlane
- * this assumes XPlane is running on a little-endian platform (Intel)
+ * this assumes XPlane >= 11  running on a little-endian platform (Intel)
  *
  * This class is implemented in Java so that we can create stand-alone test
  * cases for X-Plane communication that do not require RACE
@@ -80,11 +80,11 @@ public class XPlaneCodec {
     return null;
   }
 
-  private RPOS rpos = new RPOS();
-  public static void readRPOSdata (RPOS rpos, byte[] buf, int off) {
+  protected RPOS rpos = new RPOS();
+  public void readRPOSdata (RPOS rpos, byte[] buf, int off) {
     rpos.lonDeg = readLeD8(buf,off);          off += 8;
     rpos.latDeg = readLeD8(buf,off);          off += 8;
-    rpos.elevationMslm = readLeF4(buf,off);   off += 4;
+    rpos.elevationMslm = readLeD8(buf,off);   off += 8;
     rpos.elevationAglm = readLeF4(buf,off);   off += 4;
     rpos.pitchDeg = readLeF4(buf,off);        off += 4;
     rpos.headingDeg = readLeF4(buf,off);      off += 4;
@@ -107,9 +107,10 @@ public class XPlaneCodec {
    * @param frequencyHz requested RPOS frequency in Hz (0 means no data)
    * @return length of written data
    */
-  public static int writeRPOSrequest (byte[] buf, int frequencyHz) {
+  public int writeRPOSrequest (byte[] buf, int frequencyHz) {
     int off = writeString0(buf,0, "RPOS");
-    off = writeLeI4(buf, off, frequencyHz);
+    //off = writeLeI4(buf, off, frequencyHz);
+    off = writeString0(buf,off,Integer.toString(frequencyHz));
     return off;
   }
   public DatagramPacket getRPOSrequestPacket (int frequencyHz) {
@@ -121,7 +122,7 @@ public class XPlaneCodec {
    * @param airportId 4 char airport id (e.g. "KSJC")
    * @return
    */
-  public static int writePAPT (byte[] buf, String airportId) {
+  public int writePAPT (byte[] buf, String airportId) {
     int off = writeString0(buf,0, "PAPT");
     off = writeStringN0(buf, off, airportId, 8);
     off = writeLeI4(buf, off, 11); // 10: ramp start, 11: rwy takeoff, 12: VFR approach, 13: IFR approach
@@ -139,7 +140,7 @@ public class XPlaneCodec {
    * @param relPath relative path to *.acf file, e.g. "Aircraft/Heavy Metal/B747-100 NASA/B747-100 NASA.acf"
    * @return length of written data
    */
-  public static int writeACFN (byte[] buf, int aircraft, String relPath, int liveryIndex) {
+  public int writeACFN (byte[] buf, int aircraft, String relPath, int liveryIndex) {
     int off = writeString0(buf, 0, "ACFN");
     off = writeLeI4(buf, off, aircraft);
     off = writeStringN0(buf, off, relPath, 150);
@@ -154,13 +155,12 @@ public class XPlaneCodec {
   /**
    * write single aircraft position
    */
-  public static int writeVEH1 (byte[] buf, int aircraft,
-                        double latDeg, double lonDeg, double elevMsl,
-                        float headingDeg, float pitchDeg, float rollDeg,
-                        float gear, float flaps, float thrust) {
-    int off = writeString0(buf, 0, "VEH1");
+  public int writeVEHx(byte[] buf, int aircraft,
+                              double latDeg, double lonDeg, double elevMsl,
+                              float headingDeg, float pitchDeg, float rollDeg,
+                              float gear, float flaps, float thrust) {
+    int off = writeString0(buf, 0, "VEHX");
     off = writeLeI4(buf, off, aircraft);
-    off += 4; // 8byte struct align
 
     off = writeLeD8(buf, off, latDeg);  // 8
     off = writeLeD8(buf, off, lonDeg);
@@ -170,15 +170,11 @@ public class XPlaneCodec {
     off = writeLeF4(buf, off, pitchDeg);
     off = writeLeF4(buf, off, rollDeg);
 
-    // all [0.0 - 1.0]
-    off = writeLeF4(buf, off, gear);  // 44
-    off = writeLeF4(buf, off, flaps);
-    off = writeLeF4(buf, off, thrust);
     return off;
   }
-  public DatagramPacket getVEH1packet (int aircraft, double latDeg, double lonDeg, double elevMsl,
-                        float headingDeg, float pitchDeg, float rollDeg, float gear, float flaps, float thrust) {
-    return new DatagramPacket(writeBuf, writeVEH1(writeBuf, aircraft,
+  public DatagramPacket getVEHxPacket(int aircraft, double latDeg, double lonDeg, double elevMsl,
+                                      float headingDeg, float pitchDeg, float rollDeg, float gear, float flaps, float thrust) {
+    return new DatagramPacket(writeBuf, writeVEHx(writeBuf, aircraft,
             latDeg,lonDeg,elevMsl,headingDeg,pitchDeg,rollDeg,gear,flaps,thrust));
   }
 

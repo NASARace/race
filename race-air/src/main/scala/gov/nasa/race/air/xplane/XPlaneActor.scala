@@ -68,7 +68,7 @@ class XPlaneActor (val config: Config) extends PublishingRaceActor
   val publishInterval = config.getFiniteDurationOrElse("interval", 0 milliseconds)
   var publishScheduler: Option[Cancellable] = None
 
-  val codec = new XPlaneCodec
+  val codec = createXPlaneCodec
   var socket = new DatagramSocket(ownPort, ownIpAddress)
   var publishedFrame = -1L  // last published frame number
 
@@ -89,6 +89,14 @@ class XPlaneActor (val config: Config) extends PublishingRaceActor
 
 
   //--- end initialization
+
+  def createXPlaneCodec: XPlaneCodec = {
+    config.getIntOrElse("xplane-version",11) match {
+      case 10 => new XPlane10Codec
+      case 11 => new XPlaneCodec
+      case other => throw new RaceException(s"unsupported X-Plane version: $other")
+    }
+  }
 
   def readXPlanePositions: Unit = {
     val maxConsecutiveFailures = config.getIntOrElse("max-failures", 5) // if we exceed, we stop reading
@@ -293,7 +301,7 @@ class XPlaneActor (val config: Config) extends PublishingRaceActor
         val e = xpAircraft.entries(idx)
         if (e.isRelevant) {
           info(f"sending VEH1[$idx] =  ${e.cs}: ${e.latDeg}%.4f,${e.lonDeg}%.4f, ${e.psiDeg}%3.0f°, ${e.altMeters.toInt}m")
-          sendPacket(codec.getVEH1packet( e.idx,
+          sendPacket(codec.getVEHxPacket( e.idx,
             e.latDeg, e.lonDeg, e.altMeters,
             e.psiDeg, e.thetaDeg, e.phiDeg,
             e.gear, e.flaps, e.throttle))
@@ -307,7 +315,7 @@ class XPlaneActor (val config: Config) extends PublishingRaceActor
   def updateXPlaneAircraft (e: ACEntry) = {
     e.updateEstimates( currentSimTimeMillis)
     info(s"sending VEH1[${e.idx}] = ${e.fpos}")
-    sendPacket(codec.getVEH1packet(e.idx,
+    sendPacket(codec.getVEHxPacket(e.idx,
       e.latDeg, e.lonDeg, e.altMeters,
       e.psiDeg, e.thetaDeg, e.phiDeg,
       e.gear, e.flaps, e.throttle))
@@ -316,12 +324,12 @@ class XPlaneActor (val config: Config) extends PublishingRaceActor
   def sendFpos (idx: Int, fpos: FlightPos) = { // <2do> still needs pitch/roll info
     info(s"sending VEH1[$idx] = $fpos")
     val pos = fpos.position
-    sendPacket(codec.getVEH1packet(idx, pos.φ.toDegrees, pos.λ.toDegrees, fpos.altitude.toMeters,
+    sendPacket(codec.getVEHxPacket(idx, pos.φ.toDegrees, pos.λ.toDegrees, fpos.altitude.toMeters,
                                         fpos.heading.toDegrees.toFloat,0f,0f, 1.0f,1.0f,10.0f))
   }
 
   def sendHideAircraft(idx: Int) = {
     info(s"sending VEH1[$idx] to hide plane")
-    sendPacket(codec.getVEH1packet(idx, 0.1,0.1,1000000.0, 0.1f,0.1f,0.1f, 0f,0f,0f))
+    sendPacket(codec.getVEHxPacket(idx, 0.1,0.1,1000000.0, 0.1f,0.1f,0.1f, 0f,0f,0f))
   }
 }
