@@ -69,5 +69,17 @@ public class XPlane10Codec extends XPlaneCodec {
         return off;
     }
 
-
+    /**
+     * position own aircraft at airport
+     * @param airportId 4 char airport id (e.g. "KSJC")
+     * @return
+     */
+    public int writePAPT (byte[] buf, String airportId) {
+        int off = writeString0(buf,0, "PAPT");
+        off = writeStringN0(buf, off, airportId, 8);
+        off = writeLeI4(buf, off, 11); // 10: ramp start, 11: rwy takeoff, 12: VFR approach, 13: IFR approach
+        off = writeLeI4(buf, off, 0);
+        off = writeLeI4(buf, off, 0);
+        return off;
+    }
 }

@@ -176,7 +176,7 @@ class XPlaneActor (val config: Config) extends PublishingRaceActor
   }
 
   def computeVr (rpos: RPOS) = {
-    Speed.UndefinedSpeed  // TODO - compute from vx,vy,vz
+    MetersPerSecond(rpos.vz)
   }
 
   def publishFPos (rpos: RPOS) = {
@@ -269,52 +269,30 @@ class XPlaneActor (val config: Config) extends PublishingRaceActor
     sendPacket(codec.getACFNpacket(idx,acType,liveryIdx))
   }
 
-  // this can be called frequently - minimize allocation
-  def sendAllXPlaneAircraftVEHA = {
-    val n = xpAircraft.length
-    info(s"sending VEHA($n)");
-
-    @tailrec def _addVEHAentries ( buf: Array[Byte], idx: Int): Unit = {
-      if (idx < n){
-        val e = xpAircraft.entries(idx)
-        if (e.isVisible) {
-          info(f"  $idx: ${e.cs} = ${e.latDeg}%.3f,${e.lonDeg}%.3f")
-          codec.writeVEHAn(buf, e.idx,
-            e.latDeg, e.lonDeg, e.altMeters,
-            e.psiDeg, e.thetaDeg, e.phiDeg,
-            e.gear, e.flaps, e.throttle)
-        }
-        _addVEHAentries(buf,idx+1)
-      }
-    }
-
-    val buf = codec.getVEHAbuffer(n)
-    _addVEHAentries(buf,0)
-    //sendPacket(codec.getVEHApacket(buf))
-  }
+  // VEHA is not supported by XPlane 11 anymore so we only send individual aircraft
 
   def sendAllXPlaneAircraft = {
     val n = xpAircraft.length
 
-    @tailrec def _sendVEH1 (idx: Int): Unit = {
+    @tailrec def _sendVEH (idx: Int): Unit = {
       if (idx < n){
         val e = xpAircraft.entries(idx)
         if (e.isRelevant) {
-          info(f"sending VEH1[$idx] =  ${e.cs}: ${e.latDeg}%.4f,${e.lonDeg}%.4f, ${e.psiDeg}%3.0f°, ${e.altMeters.toInt}m")
+          info(f"sending VEHx[$idx] =  ${e.cs}: ${e.latDeg}%.4f,${e.lonDeg}%.4f, ${e.psiDeg}%3.0f°, ${e.altMeters.toInt}m")
           sendPacket(codec.getVEHxPacket( e.idx,
             e.latDeg, e.lonDeg, e.altMeters,
             e.psiDeg, e.thetaDeg, e.phiDeg,
             e.gear, e.flaps, e.throttle))
         }
-        _sendVEH1(idx+1)
+        _sendVEH(idx+1)
       }
     }
-    _sendVEH1(0)
+    _sendVEH(0)
   }
 
   def updateXPlaneAircraft (e: ACEntry) = {
     e.updateEstimates( currentSimTimeMillis)
-    info(s"sending VEH1[${e.idx}] = ${e.fpos}")
+    info(s"sending VEHx[${e.idx}] = ${e.fpos}")
     sendPacket(codec.getVEHxPacket(e.idx,
       e.latDeg, e.lonDeg, e.altMeters,
       e.psiDeg, e.thetaDeg, e.phiDeg,
@@ -322,14 +300,14 @@ class XPlaneActor (val config: Config) extends PublishingRaceActor
   }
 
   def sendFpos (idx: Int, fpos: FlightPos) = { // <2do> still needs pitch/roll info
-    info(s"sending VEH1[$idx] = $fpos")
+    info(s"sending VEHx[$idx] = $fpos")
     val pos = fpos.position
     sendPacket(codec.getVEHxPacket(idx, pos.φ.toDegrees, pos.λ.toDegrees, fpos.altitude.toMeters,
                                         fpos.heading.toDegrees.toFloat,0f,0f, 1.0f,1.0f,10.0f))
   }
 
   def sendHideAircraft(idx: Int) = {
-    info(s"sending VEH1[$idx] to hide plane")
+    info(s"sending VEHx[$idx] to hide plane")
     sendPacket(codec.getVEHxPacket(idx, 0.1,0.1,1000000.0, 0.1f,0.1f,0.1f, 0f,0f,0f))
   }
 }

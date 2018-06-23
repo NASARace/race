@@ -18,6 +18,8 @@ package gov.nasa.race.archive
 
 import java.io.File
 
+import gov.nasa.race.util.ClassLoaderUtils._
+
 import org.apache.avro.Schema
 import org.apache.avro.file.DataFileWriter
 import org.apache.avro.specific.{SpecificDatumWriter, SpecificRecord}
@@ -44,7 +46,7 @@ class AvroSerializer[T <: SpecificRecord] (val cls: Class[T], val file: File) {
 
   def serialize (ts: Seq[T]): Unit = serialize(append(ts))
   def serializeMapped[A](as: Seq[A])(f: A=>T): Unit = serialize( appendMapped(as)(f))
-  def serializeMappedCache[A](as: Seq[A])(f: (A,T)=>Unit): Unit = serialize( appendMappedCache(as,cls.newInstance)(f))
+  def serializeMappedCache[A](as: Seq[A])(f: (A,T)=>Unit): Unit = serialize( appendMappedCache(as,newInstanceOf(cls))(f))
 
 
   def create: Unit = {
@@ -72,7 +74,7 @@ class AvroSerializer[T <: SpecificRecord] (val cls: Class[T], val file: File) {
     this
   }
 
-  def appendMappedCache[A](as: Seq[A], t: T = cls.newInstance)(f: (A,T)=>Unit): AvroSerializer[T] = {
+  def appendMappedCache[A](as: Seq[A], t: T = newInstanceOf(cls))(f: (A,T)=>Unit): AvroSerializer[T] = {
     as.foreach( a=> {
       f(a,t)
       dataFileWriter.append(t)

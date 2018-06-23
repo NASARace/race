@@ -18,6 +18,7 @@ package gov.nasa.race.archive
 
 import java.io.File
 
+import gov.nasa.race.util.ClassLoaderUtils
 import org.apache.avro.file.DataFileReader
 import org.apache.avro.specific.{SpecificDatumReader, SpecificRecord}
 
@@ -51,7 +52,7 @@ class AvroDeserializer[T <: SpecificRecord : ClassTag] (val cls: Class[T], val f
   def toArray: Array[T] = contents.toArray
 
   def map[A](f: T=>A): Seq[A] = {
-    val t = cls.newInstance()
+    val t = ClassLoaderUtils.newInstanceOf(cls)
     val l = new ListBuffer[A]
     while (dataFileReader.hasNext) {
       l += f(dataFileReader.next(t))

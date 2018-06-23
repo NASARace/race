@@ -30,11 +30,37 @@ import scala.swing.Frame
 object Platform {
   final val osName = Symbol(System.getProperty("os.name"))
   final val OS_X = Symbol("Mac OS X")
+  final val Linux = Symbol("Linux")
+  final val Windows = Symbol("Windows")
+  final val UnknownOS = Symbol("Unknown")
+
+  final val javaVersion: Int = getJavaVersion
+  final val os: Symbol = getOS
+
+  def getJavaVersion: Int = {
+    val s = System.getProperty("java.version")
+    if (s.startsWith("1.8")) 8
+    else if (s.startsWith("9.")) 9
+    else if (s.startsWith("10.")) 10
+    else throw new RuntimeException(s"unknown Java version $s")
+  }
+
+  def getOS: Symbol = {
+    val s = System.getProperty("os.name")
+    if (s.startsWith("Linux")) Linux
+    else if (s.startsWith("Max OS X")) OS_X
+    else if (s.startsWith("Windows")) Windows
+    else UnknownOS
+  }
+
+  def isMacOS = os eq OS_X
+  def isJava8 = javaVersion == 8
 
   def useScreenMenuBar = {
-    osName match {
-      case OS_X => System.setProperty("apple.laf.useScreenMenuBar", "true")
-      case _ => // not relevant
+    if (isMacOS) {
+      System.setProperty("apple.laf.useScreenMenuBar", "true")
+    } else {
+      // not supported
     }
   }
 
@@ -44,20 +70,23 @@ object Platform {
   }
 
   def enableFullScreen (frame: Frame) = {
-    osName match {
-      case OS_X => enableOSXFullScreen(frame)
-      case _ => // not yet
+    if (isMacOS && isJava8){
+      enableOSXFullScreen(frame)
+    } else {
+      // not required
     }
   }
 
   def requestFullScreen (frame: Frame) = {
-    osName match {
-      case OS_X => requestOSXFullScreen(frame)
-      case _ => // not yet
+    if (isMacOS && isJava8) {
+      requestOSXFullScreen(frame)
+    } else {
+      // not supported yet
     }
   }
 
-  //--- OS X specifics
+  //--- OS X specifics (note these cause "illegal reflective access" warnings under Java > 8)
+
   def enableOSXFullScreen(frame: Frame): Unit = {
     try {
       val utilCls = Class.forName("com.apple.eawt.FullScreenUtilities")

@@ -326,7 +326,7 @@ trait RaceActor extends Actor with ImplicitActorLogging {
 
         case None => // no entry for this key
           // arg-less ctor is just a fallback - this will fail if the requested type is abstract
-          Some(classTag[T].runtimeClass.newInstance.asInstanceOf[T])
+          Some(ClassLoaderUtils.newInstanceOf(classTag[T].runtimeClass))
       }
     } catch {
       case _: ConfigException.WrongType => // we have an entry but it is not a Config

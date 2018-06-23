@@ -118,16 +118,27 @@ public class XPlaneCodec {
   }
 
   /**
-   * position own aircraft at airport
-   * @param airportId 4 char airport id (e.g. "KSJC")
+   * position own aircraft at airport/runway/dir
+   *
+   * TODO we should encode runway and dir in the airportId spec
+   *
+   * @param airportId 4 char airport id (e.g. "KNUQ")
    * @return
    */
   public int writePAPT (byte[] buf, String airportId) {
-    int off = writeString0(buf,0, "PAPT");
+    int off = writeString0(buf,0, "PREL");
+    off = writeLeI4(buf,off,11);  // take off on runway
     off = writeStringN0(buf, off, airportId, 8);
-    off = writeLeI4(buf, off, 11); // 10: ramp start, 11: rwy takeoff, 12: VFR approach, 13: IFR approach
-    off = writeLeI4(buf, off, 0);
-    off = writeLeI4(buf, off, 0);
+    off = writeLeI4(buf, off, 0); // rwy index ??
+    off = writeLeI4(buf, off, 0); // dir index ??
+
+    // all 0 if we start on an airport
+    off = writeLeD8(buf, off, 0.0); // lat
+    off = writeLeD8(buf, off, 0.0); // lon
+    off = writeLeD8(buf, off, 0.0); // ele
+    off = writeLeD8(buf, off, 0.0); // hdg
+    off = writeLeD8(buf, off, 0.0); // spd
+
     return off;
   }
   public DatagramPacket getPAPTpacket (String airportId) {
@@ -178,54 +189,5 @@ public class XPlaneCodec {
             latDeg,lonDeg,elevMsl,headingDeg,pitchDeg,rollDeg,gear,flaps,thrust));
   }
 
-  //--- VEHA messages have to be constructed sequentially since they contain a sparse iteration
-
-  /*
-      struct vehA_struct {                  // 8-byte aligned
-        p_index num_p;                      // 0
-        xdob lat_lon_ele [20][3];           // 8 +   (n*24)
-        xflt psi_the_phi [20][3];           // 488 + (n*12)
-        xflt gear_flap_vect [20][3];        // 728 + (n*12)
-        xdob lat_view, lon_view, ele_view;  // 968, 976, 984
-        xflt psi_view, the_view, phi_view;  // 992, 1000, 1008
-      };
-      sizeof(vehA_struct) == 1008
-   */
-
-  public byte[] getVEHAbuffer (int nPlanes) {
-    byte[] buf = writeBuf;
-    Arrays.fill(buf,(byte)0);
-
-    int off = writeString0(buf, 0, "VEHA");
-    writeLeI4(buf, off, nPlanes);
-
-    return buf;
-  }
-
-  public void writeVEHAn (byte[] buf, int idx,
-                          double latDeg, double lonDeg, double elevMsl,
-                          float headingDeg, float pitchDeg, float rollDeg,
-                          float gear, float flaps, float thrust) {
-    // xdob (8 byte) fields
-    int off = 13 + idx*24;  // starts at 'VEHA\0' + 8
-    off = writeLeD8(buf, off, latDeg);
-    off = writeLeD8(buf, off, lonDeg);
-    writeLeD8(buf, off, elevMsl);
-
-    // xflt (4 byte) fields
-    off = 488 + idx*12;
-    off = writeLeF4(buf, off, headingDeg);
-    off = writeLeF4(buf, off, pitchDeg);
-    writeLeF4(buf, off, rollDeg);
-
-    // xflt (4 byte) fields
-    off = 728 + idx*12;
-    off = writeLeF4(buf, off, gear);
-    off = writeLeF4(buf, off, flaps);
-    writeLeF4(buf, off, thrust);
-  }
-
-  public DatagramPacket getVEHApacket (byte[] data) {
-    return new DatagramPacket(data,1013); // 1008 sizeof(vehA_struct) + 'VEHA\0' header
-  }
+  // VEHA messages are not supported by X-Plane 11 anymore
 }

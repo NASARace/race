@@ -87,14 +87,14 @@ object ClassLoaderUtils {
       val cls = loadClass(key,clsName,classTag[T].runtimeClass)
       if (args == null || args.isEmpty){
         // if no extra args, fall back to default ctor
-        Some(cls.newInstance.asInstanceOf[T])
+        Some(newInstanceOf[T](cls))
       } else {
         try {
           val ctor = cls.getConstructor(argTypes: _*)
           Some(ctor.newInstance(args: _*).asInstanceOf[T])
         } catch {
           // if no ctor for args is found, fall back to default ctor
-          case _: NoSuchMethodException => Some(cls.newInstance.asInstanceOf[T])
+          case _: NoSuchMethodException => Some(newInstanceOf[T](cls))
         }
       }
     } catch {
@@ -103,6 +103,9 @@ object ClassLoaderUtils {
         None
     }
   }
+
+  // Class.newInstance is deprecated in Java > 8
+  def newInstanceOf[T](cls: Class[_]): T = cls.getDeclaredConstructor().newInstance().asInstanceOf[T]
 
   //--- class verification support
 

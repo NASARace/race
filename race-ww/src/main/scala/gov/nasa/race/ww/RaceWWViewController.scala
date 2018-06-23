@@ -388,9 +388,9 @@ class RaceWWViewController extends OrbitViewInputHandler {
     } else d
   }
 
-  def isAlt = (lastInputEvent != null) && ((lastInputEvent.getModifiers & ALT_MASK) != 0)
-  def isShift = (lastInputEvent != null) && ((lastInputEvent.getModifiers & SHIFT_MASK) != 0)
-  def isMeta = (lastInputEvent != null) && ((lastInputEvent.getModifiers & META_MASK) != 0)
-  def isCtrl = (lastInputEvent != null) && ((lastInputEvent.getModifiers & CTRL_MASK) != 0)
+  def isAlt = (lastInputEvent != null) && ((lastInputEvent.getModifiersEx & ALT_DOWN_MASK) != 0)
+  def isShift = (lastInputEvent != null) && ((lastInputEvent.getModifiersEx & SHIFT_DOWN_MASK) != 0)
+  def isMeta = (lastInputEvent != null) && ((lastInputEvent.getModifiersEx & META_DOWN_MASK) != 0)
+  def isCtrl = (lastInputEvent != null) && ((lastInputEvent.getModifiersEx & CTRL_DOWN_MASK) != 0)
 
 }

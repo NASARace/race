@@ -202,7 +202,7 @@ object Style {
     var clsName = System.getProperty("race.swing.style")
     if (clsName == null) clsName = "gov.nasa.race.ww.RaceDefaultStyle" // FIXME
     try {
-      Class.forName(clsName).newInstance.asInstanceOf[Stylist]
+      Class.forName(clsName).getDeclaredConstructor().newInstance().asInstanceOf[Stylist]
     } catch {
       case t: Throwable => new Stylist {} // 2do - some error message would be in order
     }

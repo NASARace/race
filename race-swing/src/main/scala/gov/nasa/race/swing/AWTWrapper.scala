@@ -50,7 +50,7 @@ class AWTWrapper (awtComponent: AWTComponent) extends Component {
 
   awtComponent.addMouseWheelListener( new MouseWheelListener {
     override def mouseWheelMoved(e: java.awt.event.MouseWheelEvent) = {
-      mouse.wheel.publish(MouseWheelMoved(AWTWrapper.this,e.getPoint, e.getModifiers,e.getWheelRotation)(e))
+      mouse.wheel.publish(MouseWheelMoved(AWTWrapper.this,e.getPoint, e.getModifiersEx,e.getWheelRotation)(e))
     }
   })
 

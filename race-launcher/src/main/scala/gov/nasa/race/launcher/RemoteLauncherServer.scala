@@ -65,7 +65,7 @@ object RemoteLauncherServer extends App {
   val launcherClsName = System.getProperty("race.remote.launcher")
   if (launcherClsName != null){
     try {
-     Class.forName(launcherClsName).newInstance.asInstanceOf[RemoteLauncherServer].run(args)
+     ClassLoaderUtils.newInstanceOf[RemoteLauncherServer](Class.forName(launcherClsName)).run(args)
     } catch {
       case x: ClassNotFoundException => ConsoleIO.printlnErr(s"launcher class not found: $launcherClsName")
       case x: ClassCastException => ConsoleIO.printlnErr(s"not a RemoteLauncherServer: $launcherClsName")
