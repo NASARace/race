@@ -63,7 +63,7 @@ class AppFrame extends Frame {
       appFrames.remove(peer)
       //Toolkit.getDefaultToolkit.getSystemEventQueue.postEvent(new WindowEvent(peer, WindowEvent.WINDOW_CLOSING))
       //peer.dispatchEvent(new WindowEvent(peer, WindowEvent.WINDOW_CLOSING))
-
+      
       if (Platform.javaVersion == 8 || !Platform.isMacOS) dispose // this causes segfaults on Java 10/MacOS but without we get X11Util complaints on Java 8/Linux
     }
 

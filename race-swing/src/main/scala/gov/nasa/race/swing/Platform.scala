@@ -48,7 +48,7 @@ object Platform {
   def getOS: Symbol = {
     val s = System.getProperty("os.name")
     if (s.startsWith("Linux")) Linux
-    else if (s.startsWith("Max OS X")) OS_X
+    else if (s.startsWith("Mac OS X")) OS_X
     else if (s.startsWith("Windows")) Windows
     else UnknownOS
   }
