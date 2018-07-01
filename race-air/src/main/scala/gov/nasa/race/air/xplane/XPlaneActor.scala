@@ -23,7 +23,7 @@ import akka.actor.{ActorRef, Cancellable}
 import com.typesafe.config.Config
 import gov.nasa.race._
 import gov.nasa.race.air.xplane.XPlaneCodec.RPOS
-import gov.nasa.race.air.FlightPos
+import gov.nasa.race.air.{ExtendedFlightPos, FlightPos}
 import gov.nasa.race.common.Status
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.Messages.BusEvent
@@ -188,7 +188,10 @@ class XPlaneActor (val config: Config) extends PublishingRaceActor
       val speed = MetersPerSecond(rpos.speedMsec)
       val heading = Degrees(rpos.headingDeg)
       val vr = computeVr(rpos)
-      flightPos = new FlightPos(id, cs, pos, altitude, speed, heading, vr, simTime)
+      val pitch = Degrees(rpos.pitchDeg)
+      val roll = Degrees(rpos.rollDeg)
+
+      flightPos = new ExtendedFlightPos(id, cs, pos, altitude, speed, heading, vr, simTime, 0, pitch,roll)
 
       publish(flightPos)
       publishedFrame = codec.readFrame

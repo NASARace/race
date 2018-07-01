@@ -137,7 +137,7 @@ class SimpleTrackReader extends DataStreamReader {
     val headingDeg = dis.readDouble
     val vrMS = dis.readDouble
 
-    FlightPos(id, id,
+    new FlightPos(id, id,
       LatLonPos.fromDegrees(latDeg, lonDeg), Meters(altM),
       MetersPerSecond(speedMS), Degrees(headingDeg), MetersPerSecond(vrMS),
       new DateTime(timeMsec),flags)
@@ -166,7 +166,7 @@ class SimpleTrackReader extends DataStreamReader {
     val trackVrMS = dis.readDouble
 
 
-    val track = FlightPos(trackId,trackId,LatLonPos.fromDegrees(trackLatDeg,trackLonDeg),
+    val track = new FlightPos(trackId,trackId,LatLonPos.fromDegrees(trackLatDeg,trackLonDeg),
                           Meters(trackAltM),MetersPerSecond(trackSpdMS),Degrees(trackHdgDeg),MetersPerSecond(trackVrMS),
                           new DateTime(tmsec))
 

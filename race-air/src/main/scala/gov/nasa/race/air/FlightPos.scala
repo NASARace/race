@@ -43,16 +43,16 @@ object FlightPos {
 /**
   * in-flight state consisting of geographic position, altitude, speed and bearing
   */
-case class FlightPos (id: String,
-                      cs: String,
-                      position: LatLonPos,
-                      altitude: Length,
-                      speed: Speed,
-                      heading: Angle,
-                      vr: Speed,
-                      date: DateTime,
-                      status: Int = 0
-                     ) extends TrackedAircraft {
+class FlightPos (val id: String,
+                 val cs: String,
+                 val position: LatLonPos,
+                 val altitude: Length,
+                 val speed: Speed,
+                 val heading: Angle,
+                 val vr: Speed,
+                 val date: DateTime,
+                 val status: Int = 0
+                ) extends TrackedAircraft {
 
   def this (id:String, pos: LatLonPos, alt: Length,spd: Speed,hdg: Angle, vr: Speed, dtg: DateTime) =
     this(id, FlightPos.tempCS(id), pos,alt,spd,hdg,vr,dtg)
@@ -63,6 +63,27 @@ case class FlightPos (id: String,
   def copyWithCS (newCS: String) = new FlightPos(id, newCS, position, altitude,speed,heading,vr,date,status)
 
   override def toString = s"FlightPos($id,$cs,$position,${altitude.toFeet.toInt}ft,${speed.toKnots.toInt}kn,${heading.toNormalizedDegrees.toInt}°,0x${status.toHexString},$date)"
+
+}
+
+/**
+  * a FlightPos specialization that adds more dynamic vehicle state
+  */
+class ExtendedFlightPos(id: String,
+                        cs: String,
+                        position: LatLonPos,
+                        altitude: Length,
+                        speed: Speed,
+                        heading: Angle,
+                        vr: Speed,
+                        date: DateTime,
+                        status: Int = 0,
+                        //--- additional fields
+                        val pitch: Angle,
+                        val roll: Angle
+                        //.. and possibly more to follow
+                       ) extends FlightPos(id, cs, position, altitude, speed, heading, vr, date, status) {
+  override def toString = s"ExtendedFlightPos($id,$cs,$position,${altitude.toFeet.toInt}ft,${speed.toKnots.toInt}kn,${heading.toNormalizedDegrees.toInt}°,${pitch.toDegrees.toInt}°,${roll.toDegrees.toInt}°,0x${status.toHexString},$date)"
 
 }
 

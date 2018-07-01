@@ -91,7 +91,7 @@ class TrackPointReader (val iStream: InputStream, val pathName: String="<unknown
       val id = tp.getId.toString.intern  // we intern because there are likely a lot of points per track
       val cs = idMap.getOrElse(id,id) // we could map this here
 
-      val fpos = FlightPos(
+      val fpos = new FlightPos(
         id,
         cs, // no CS
         LatLonPos.fromDegrees(tp.getLatitude, tp.getLongitude),

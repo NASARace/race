@@ -19,7 +19,7 @@ package gov.nasa.race.air.xplane
 
 import com.typesafe.config.Config
 import gov.nasa.race._
-import gov.nasa.race.air.FlightPos
+import gov.nasa.race.air.{ExtendedFlightPos, FlightPos}
 import gov.nasa.race.common.SmoothingExtrapolator
 
 import scala.annotation.tailrec
@@ -39,7 +39,9 @@ class ACEntry (val idx: Int,                   // X-Plane aircraft index
   val latEstimator = new SmoothingExtrapolator
   val lonEstimator = new SmoothingExtrapolator
   val altEstimator = new SmoothingExtrapolator
-  val psiEstimator = new SmoothingExtrapolator
+  val psiEstimator = new SmoothingExtrapolator // heading
+  val phiEstimator = new SmoothingExtrapolator // roll
+  val thetaEstimator = new SmoothingExtrapolator // pitch
 
   private def estimate(estimator: SmoothingExtrapolator, simMillis: Long) = if (isVisible) estimator.extrapolate(simMillis) else 0.0
 
@@ -70,6 +72,11 @@ class ACEntry (val idx: Int,                   // X-Plane aircraft index
     altEstimator.addObservation(fpos.altitude.toMeters, simTime)
     psiEstimator.addObservation(fpos.heading.toDegrees, simTime)
 
+    ifInstanceOf[ExtendedFlightPos](newFpos) { ef =>
+      thetaEstimator.addObservation(ef.pitch.toDegrees, simTime)
+      phiEstimator.addObservation(ef.roll.toDegrees, simTime)
+    }
+
     isVisible = true
   }
 
@@ -90,6 +97,8 @@ class ACEntry (val idx: Int,                   // X-Plane aircraft index
     lonEstimator.reset
     altEstimator.reset
     psiEstimator.reset
+    phiEstimator.reset
+    thetaEstimator.reset
 
     /*
     latDeg = 0; lonDeg = 0; altMeters = 0
@@ -108,7 +117,8 @@ class ACEntry (val idx: Int,                   // X-Plane aircraft index
       lonDeg = estimate(lonEstimator, simTimeMillis)
       altMeters = estimate(altEstimator, simTimeMillis)
       psiDeg = estimate(psiEstimator, simTimeMillis).toFloat
-      // the rest we don't touch anyways
+      thetaDeg = estimate(thetaEstimator,simTimeMillis).toFloat
+      phiDeg = estimate(phiEstimator,simTimeMillis).toFloat
     }
   }
 }
