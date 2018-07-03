@@ -151,7 +151,7 @@ public class XPlaneCodec {
    * @param relPath relative path to *.acf file, e.g. "Aircraft/Heavy Metal/B747-100 NASA/B747-100 NASA.acf"
    * @return length of written data
    */
-  public int writeACFN (byte[] buf, int aircraft, String relPath, int liveryIndex,
+  public int __writeACFN (byte[] buf, int aircraft, String relPath, int liveryIndex,
                         double latDeg, double lonDeg, double altMeters, double psiDeg, double speedMsec) {
     int off = writeString0(buf, 0, "ACPR");
 
@@ -177,6 +177,19 @@ public class XPlaneCodec {
 
     return off;
   }
+  public int writeACFN (byte[] buf, int aircraft, String relPath, int liveryIndex,
+                        double latDeg, double lonDeg, double altMeters, double psiDeg, double speedMsec) {
+    int off = writeString0(buf, 0, "ACFN");
+
+    // acfn_struct
+    off = writeLeI4(buf, off, aircraft);  // index (starting at 1 for externals)
+    off = writeStringN0(buf, off, relPath, 150);
+    off += 2;
+    off = writeLeI4(buf, off, liveryIndex);
+
+    return off;
+  }
+  
   public DatagramPacket getACFNpacket (int aircraft, String relPath, int liveryIndex,
                                        double latDeg, double lonDeg, double altMeters, double psiDeg, double speedMsec) {
     return new DatagramPacket(writeBuf, writeACFN(writeBuf, aircraft, relPath, liveryIndex,
