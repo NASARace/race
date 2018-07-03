@@ -79,8 +79,8 @@ class ExtendedFlightPos(id: String,
                         date: DateTime,
                         status: Int = 0,
                         //--- additional fields
-                        val pitch: Angle,
-                        val roll: Angle
+                        override val pitch: Angle,
+                        override val roll: Angle
                         //.. and possibly more to follow
                        ) extends FlightPos(id, cs, position, altitude, speed, heading, vr, date, status) {
   override def toString = s"ExtendedFlightPos($id,$cs,$position,${altitude.toFeet.toInt}ft,${speed.toKnots.toInt}kn,${heading.toNormalizedDegrees.toInt}°,${pitch.toDegrees.toInt}°,${roll.toDegrees.toInt}°,0x${status.toHexString},$date)"

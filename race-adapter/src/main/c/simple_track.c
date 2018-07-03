@@ -88,7 +88,7 @@ int race_write_track_data (databuf_t* db, int pos,
                         epoch_millis_t time_millis, double lat_deg, double lon_deg, double alt_m, 
                         double heading_deg, double speed_m_sec, double vr_m_sec) {
     int id_len = strlen(id);
-    int track_len = id_len + 2 + 48;
+    int track_len = id_len + 2 + 64;
     if (pos + track_len > db->capacity) return 0; // not enough space left
 
     int p = pos; 

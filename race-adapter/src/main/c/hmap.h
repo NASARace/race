@@ -29,6 +29,7 @@
 #ifndef MAP_INCLUDED
 #define MAP_INCLUDED
 
+#include <stdlib.h>
 #include <inttypes.h>
 #include <stdbool.h>
 
@@ -74,6 +75,9 @@ bool hmap_add_entry (hmap_t* map, const char* key, void* data);
 hmap_entry_t* hmap_get_entry (hmap_t* map, const char* key);
 bool hmap_remove_entry (hmap_t* map, const char* key);
 hmap_entry_t* hmap_next_entry (hmap_t* map, hmap_entry_t* prev_entry);
+static inline hmap_entry_t* hmap_first_entry (hmap_t* map) {
+  return hmap_next_entry(map, NULL);
+}
 void hmap_free (hmap_t* map);
 
 // for testing/debugging purposes

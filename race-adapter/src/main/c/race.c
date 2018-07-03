@@ -109,7 +109,7 @@ static bool send_data(local_context_t *context, local_endpoint_t *local,
                       remote_endpoint_t *remote) {
     databuf_t *db = local->db;
 
-    int pos = race_begin_write_data(db, SERVER_ID);
+    int pos = race_begin_write_data(db, local->id);
     pos = context->write_data(db,pos);  // acquire data via app specific callback
     if (pos >= 0) {
         pos = race_end_write_data(db,pos);

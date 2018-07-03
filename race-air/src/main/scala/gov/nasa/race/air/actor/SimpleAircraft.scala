@@ -22,6 +22,7 @@ import com.typesafe.config.Config
 import gov.nasa.race.air.FlightPos
 import gov.nasa.race.core.Messages.RaceTick
 import gov.nasa.race.core.{ContinuousTimeRaceActor, PeriodicRaceActor, PublishingRaceActor, SubscribingRaceActor}
+import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.geo.GreatCircle._
 import gov.nasa.race.geo.LatLonPos
 import gov.nasa.race.uom.Angle._
@@ -35,7 +36,7 @@ class SimpleAircraft (val config: Config) extends ContinuousTimeRaceActor
              with SubscribingRaceActor with PublishingRaceActor with PeriodicRaceActor {
 
   //--- initialization from configuration
-  val id = config.getString("id")
+  val id = config.getStringOrElse("id", "12345")
   val cs = config.getString("cs")
 
   // Ok to use vars here since nobody outside this actor will have access

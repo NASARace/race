@@ -25,10 +25,15 @@
 #ifndef RACE_INCLUDED
 #define RACE_INCLUDED
 
+#define __USE_XOPEN
+#include <math.h>
+
 #include <stdbool.h>
 #include <stdlib.h>
 #include <time.h>
 #include <netdb.h>
+
+
 
 /*************************************************************************************************
  * network helpers
@@ -191,6 +196,7 @@ int race_read_data_header (databuf_t* db, int* sender, epoch_millis_t* time_mill
 // simple_track is a virtual type with minimal track state info
 
 #define SIMPLE_TRACK_PROTOCOL "gov.nasa.race.air.SimpleTrackProtocol"
+#define EXTENDED_TRACK_PROTOCOL "gov.nasa.race.air.ExtendedTrackProtocol"
 
 // data message types
 #define TRACK_MSG 1
@@ -209,6 +215,19 @@ int race_read_data_header (databuf_t* db, int* sender, epoch_millis_t* time_mill
 #define PROX_NEW    0x1
 #define PROX_CHANGE 0x2
 #define PROX_DROP   0x4
+
+// some helpful math
+static inline double squared(double v) {
+  return v*v;
+}
+
+static inline double rad_to_deg (double rad) {
+  return rad * (180.0 / M_PI);
+}
+
+static inline double deg_to_rad (double deg) {
+  return deg / (180.0 / M_PI);
+}
 
 int race_write_track_data(databuf_t *db, int pos, char *id, int msg_ordinal, int flags, 
                           epoch_millis_t time_millis, 
@@ -232,6 +251,21 @@ int race_read_proximity_data(databuf_t *db, int pos, char ref_id[], int max_ref_
 int race_write_drop_data (databuf_t* db, int pos, char* id, int flags, epoch_millis_t time_millis);
 
 int race_read_drop_data (databuf_t* db, int pos, char id[], int max_len, int* flags, epoch_millis_t* time_millis);
+
+
+//--- extended track data (more vehicle state)
+
+int race_write_xtrack_data (databuf_t* db, int pos,
+                        char* id, int msg_ordinal, int flags, 
+                        epoch_millis_t time_millis, double lat_deg, double lon_deg, double alt_m, 
+                        double heading_deg, double speed_m_sec, double vr_m_sec,
+                        double pitch_deg, double roll_deg);
+
+int race_read_xtrack_data (databuf_t* db, int pos,
+                       char id[], int max_len, int* msg_ordinal, int* flags,
+                       epoch_millis_t* time_millis, double* lat_deg, double* lon_deg, double* alt_m, 
+                       double* heading_deg, double* speed_m_sec, double* vr_m_sec,
+                       double* pitch_deg, double* roll_deg);
 
 /*************************************************************************************************
  * the top level server interface, which mostly consists of a structure that defines the
@@ -263,6 +297,8 @@ typedef struct {
     //--- static init data
     char* host; // host/ip to connect to (client mode) or serve on (server mode)
     char* port; // port to connect to (client mode) or serve on (server mode)
+
+    char* schema;
 
     int flags; // server capabilities
     int interval_millis; // interval at which we send track data to the client if the client has no preference

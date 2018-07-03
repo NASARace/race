@@ -155,4 +155,16 @@ class SmoothingVectorExtrapolator (dim: Int,                                 // 
       i += 1
     }
   }
+
+  def reset: Unit = {
+    tlast = -1
+    Δtlast = 0
+
+    loopFromTo(0,dim) { i =>
+      α(i) = α0
+      γ(i) = γ0
+      s(i) = 0
+      m(i) = 0
+    }
+  }
 }

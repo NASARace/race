@@ -8,7 +8,7 @@ clean:
 
 all: librace.a
 
-librace.a : race.o messages.o databuf.o netutils.o timeutils.o simpletrack.o hmap.o
+librace.a : race.o messages.o databuf.o netutils.o timeutils.o simple_track.o extended_track.o hmap.o
 	$(AR) -rcs $@ $^ 
 
 
@@ -27,7 +27,10 @@ timeutils.o : timeutils.c
 netutils.o : netutils.c
 	$(CC) $(CFLAGS) -c -o $@ $<
 
-simpletrack.o : simpletrack.c race.h
+simple_track.o : simple_track.c race.h
+	$(CC) $(CFLAGS) -c -o $@ $<
+
+extended_track.o : extended_track.c race.h
 	$(CC) $(CFLAGS) -c -o $@ $<
 
 hmap.o : hmap.c hmap.h

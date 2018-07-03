@@ -21,6 +21,9 @@ import gov.nasa.race.uom.Angle._
 import gov.nasa.race.uom._
 
 object LatLonPos {
+  val zeroLatLonPos = new LatLonPos(Angle.Angle0,Angle.Angle0)
+  val undefinedLatLonPos = new LatLonPos(Angle.UndefinedAngle,Angle.UndefinedAngle)
+
   def fromDegrees (φ: Double, λ: Double) = new LatLonPos( Degrees(φ), Degrees(λ))
 }
 

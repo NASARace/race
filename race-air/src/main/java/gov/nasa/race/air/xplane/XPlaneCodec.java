@@ -151,16 +151,36 @@ public class XPlaneCodec {
    * @param relPath relative path to *.acf file, e.g. "Aircraft/Heavy Metal/B747-100 NASA/B747-100 NASA.acf"
    * @return length of written data
    */
-  public int writeACFN (byte[] buf, int aircraft, String relPath, int liveryIndex) {
-    int off = writeString0(buf, 0, "ACFN");
-    off = writeLeI4(buf, off, aircraft);
+  public int writeACFN (byte[] buf, int aircraft, String relPath, int liveryIndex,
+                        double latDeg, double lonDeg, double altMeters, double psiDeg, double speedMsec) {
+    int off = writeString0(buf, 0, "ACPR");
+
+    // acfn_struct
+    off = writeLeI4(buf, off, aircraft);  // index (starting at 1 for externals)
     off = writeStringN0(buf, off, relPath, 150);
     off += 2;
     off = writeLeI4(buf, off, liveryIndex);
+
+    // PREL_struct
+    off = writeLeI4(buf, off, 9);  // loc_snap_load
+    //off = writeLeI4(buf, off, 6);  // loc_specify_lle
+    off = writeLeI4(buf, off, aircraft);
+    off = writeStringN0(buf, off, "", 8); // airport id
+    off = writeLeI4(buf, off, 0); // rwy index
+    off = writeLeI4(buf, off, 0); // rwy dir
+
+    off = writeLeD8(buf, off, latDeg);
+    off = writeLeD8(buf, off, lonDeg);
+    off = writeLeD8(buf, off, altMeters);
+    off = writeLeD8(buf, off, psiDeg);
+    off = writeLeD8(buf, off, speedMsec);
+
     return off;
   }
-  public DatagramPacket getACFNpacket (int aircraft, String relPath, int liveryIndex) {
-    return new DatagramPacket(writeBuf, writeACFN(writeBuf, aircraft, relPath, liveryIndex));
+  public DatagramPacket getACFNpacket (int aircraft, String relPath, int liveryIndex,
+                                       double latDeg, double lonDeg, double altMeters, double psiDeg, double speedMsec) {
+    return new DatagramPacket(writeBuf, writeACFN(writeBuf, aircraft, relPath, liveryIndex,
+                                                  latDeg,lonDeg,altMeters,psiDeg,speedMsec));
   }
 
   /**
@@ -180,6 +200,8 @@ public class XPlaneCodec {
     off = writeLeF4(buf, off, headingDeg);  // 32
     off = writeLeF4(buf, off, pitchDeg);
     off = writeLeF4(buf, off, rollDeg);
+
+    // how do we control the gear? The old veh1 gear/flaps/throttle are not supported anymore
 
     return off;
   }

@@ -18,6 +18,7 @@
 package gov.nasa.race
 
 import gov.nasa.race.track.TrackedObject
+import gov.nasa.race.uom.Angle
 
 /**
   * package `gov.nasa.race.air` contains data definitions, translators, filters, models and actors that are related
@@ -28,6 +29,10 @@ import gov.nasa.race.track.TrackedObject
 package object air {
 
   trait TrackedAircraft extends TrackedObject {
+
+    // override if concrete type stores actual values
+    def pitch: Angle = Angle.Angle0
+    def roll: Angle = Angle.Angle0
 
     def flightLevel: Int = ((altitude.toFeet)/500).toInt * 5
 

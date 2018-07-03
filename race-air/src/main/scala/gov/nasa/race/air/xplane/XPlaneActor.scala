@@ -23,7 +23,7 @@ import akka.actor.{ActorRef, Cancellable}
 import com.typesafe.config.Config
 import gov.nasa.race._
 import gov.nasa.race.air.xplane.XPlaneCodec.RPOS
-import gov.nasa.race.air.{ExtendedFlightPos, FlightPos}
+import gov.nasa.race.air.{ExtendedFlightPos, FlightPos, TrackedAircraft}
 import gov.nasa.race.common.Status
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.Messages.BusEvent
@@ -52,7 +52,7 @@ class XPlaneActor (val config: Config) extends PublishingRaceActor
   //def info (msg: String) = println(msg) // for debugging
 
   //--- simulated AC
-  val id = config.getString("aircraft.id")
+  val id = config.getStringOrElse("aircraft.id", "42")
   val cs = config.getString("aircraft.cs")
 
   //--- the ip/port for the socket through which we receive data
@@ -77,15 +77,15 @@ class XPlaneActor (val config: Config) extends PublishingRaceActor
   def position = flightPos.position
 
   //--- proximity management
-  // how often do we send updated proximity positions to X-Plane (0 means never)
-  val proximityInterval = config.getFiniteDurationOrElse("proximity-interval", 200 milliseconds)
+  // interval in which we sent periodic updates of external planes to X-Plane (0 means send changed plane on update)
+  val proximityInterval = config.getFiniteDurationOrElse("proximity-interval", Duration.Zero)
   val proximityRange = NauticalMiles(config.getDoubleOrElse("proximity-range", 5.0))
-  var proximityScheduler: Option[Cancellable] = None
 
-  val xpAircraft = new XPlaneAircraftList(config.getConfigSeq("other-aircraft"), onOtherShow, onOtherPositionChanged, onOtherHide)
-  val proximityList = new FlightsNearList (position, proximityRange, xpAircraft)
+  val externalAircraft = new ExternalAircraftList( createExternalAircraft, onOtherShow, onOtherPositionChanged, onOtherHide)
+  val proximityList = new FlightsNearList( position, proximityRange, externalAircraft)
 
   val importThread = ThreadUtils.daemon(readXPlanePositions)
+  var exportThread: Option[Thread] = None // set on startRaceActor if proximity-interval is non-Zero
 
 
   //--- end initialization
@@ -95,6 +95,16 @@ class XPlaneActor (val config: Config) extends PublishingRaceActor
       case 10 => new XPlane10Codec
       case 11 => new XPlaneCodec
       case other => throw new RaceException(s"unsupported X-Plane version: $other")
+    }
+  }
+
+  def createExternalAircraft: Array[ExternalAircraft] = {
+    var i=0 // we start at index 1 (0 is piloted aircraft)
+    config.getConfigArray("other-aircraft").map { acConf =>
+      val acType = acConf.getString("type")
+      val livery = 0 // not yet
+      i += 1
+      if (proximityInterval.length > 0) new ExtrapolatedAC(i, acType,livery) else new NonExtrapolatedAC(i, acType, livery)
     }
   }
 
@@ -125,6 +135,25 @@ class XPlaneActor (val config: Config) extends PublishingRaceActor
     ifSome(publishScheduler) {_.cancel}
   }
 
+  def sendExternalPlanes: Unit = {
+    val maxConsecutiveFailures = config.getIntOrElse("max-failures", 5) // if we exceed, we stop reading
+    var failures = 0
+
+    while (isLive && (failures < maxConsecutiveFailures)) {
+      val t = currentSimTimeMillis
+      externalAircraft.foreachAssigned { e=>
+        e.updateEstimate(t)
+        info(f"sending VEHx[${e.idx}] =  ${e.cs}: ${e.latDeg}%.4f,${e.lonDeg}%.4f, ${e.psiDeg}%3.0f°, ${e.altMeters.toInt}m")
+        sendPacket(codec.getVEHxPacket( e.idx,
+          e.latDeg, e.lonDeg, e.altMeters,
+          e.psiDeg, e.thetaDeg, e.phiDeg,
+          e.gear, e.flaps, e.throttle))
+      }
+
+      Thread.sleep(proximityInterval.toMillis)
+    }
+  }
+
   def initialFlightPos = {
     // <2do> get these from config
     val pos = LatLonPos.fromDegrees(0,0)
@@ -137,7 +166,7 @@ class XPlaneActor (val config: Config) extends PublishingRaceActor
 
   override def onInitializeRaceActor(rc: RaceContext, actorConf: Config) = {
     //sendAirport
-    sendOtherAircraft
+    loadExternalAircraft
     //sendOwnAircraft
     sendRPOSrequest
 
@@ -153,8 +182,8 @@ class XPlaneActor (val config: Config) extends PublishingRaceActor
     }
 
     if (proximityInterval.length > 0){
-      info(s"starting XPlane proximity scheduler $proximityInterval")
-      proximityScheduler = Some(scheduler.schedule(0 seconds, proximityInterval, self, UpdateXPlane))
+      info(s"starting XPlane proximity export thread with interval $proximityInterval")
+      exportThread = Some(ThreadUtils.daemon(sendExternalPlanes))
     }
 
     super.onStartRaceActor(originator)
@@ -162,7 +191,6 @@ class XPlaneActor (val config: Config) extends PublishingRaceActor
 
   override def onTerminateRaceActor(originator: ActorRef) = {
     ifSome(publishScheduler){ _.cancel }
-    ifSome(proximityScheduler){ _.cancel }
     socket.close()
 
     super.onTerminateRaceActor(originator)
@@ -170,8 +198,7 @@ class XPlaneActor (val config: Config) extends PublishingRaceActor
 
   override def handleMessage = {
     case UpdateFlightPos => publishFPos(rpos)
-    case UpdateXPlane => sendProximities
-    case BusEvent(_,fpos:FlightPos,_) => updateProximities(fpos)
+    case BusEvent(_,fpos:TrackedAircraft,_) => updateProximities(fpos)
     case BusEvent(_,fdrop: TrackDropped,_) => dropProximity(fdrop)
   }
 
@@ -202,12 +229,8 @@ class XPlaneActor (val config: Config) extends PublishingRaceActor
 
   //--- other aircraft updates
 
-  def sendProximities = {
-    xpAircraft.updateEstimates(currentSimTimeMillis)
-    sendAllXPlaneAircraft
-  }
 
-  def updateProximities (fpos: FlightPos) = {
+  def updateProximities (fpos: TrackedAircraft) = {
     proximityList.updateWith(fpos)
   }
 
@@ -218,21 +241,22 @@ class XPlaneActor (val config: Config) extends PublishingRaceActor
 
   //--- the XPlaneAircraftList callbacks, which we use to update X-Plane
 
-  def onOtherShow (e: ACEntry): Unit = {
-    info(s"proximities + ${e.idx} : $proximityList")
-    //updateXPlaneAircraft(e)
+  def noAction (e: ExternalAircraft): Unit = {}
+
+  def onOtherShow (e: ExternalAircraft): Unit = {
+    //info(s"proximities + ${e.idx} : $proximityList")
+    updateExternalAircraft(e)
   }
 
-  def onOtherPositionChanged (e: ACEntry): Unit = {
-    //println(e.fpos)
+  def onOtherPositionChanged (e: ExternalAircraft): Unit = {
     //info(s"proximities * ${e.idx} : $proximityList")
-    //updateXPlaneAircraft(e)
+    updateExternalAircraft(e)
   }
 
-  def onOtherHide (e: ACEntry): Unit = {
+  def onOtherHide (e: ExternalAircraft): Unit = {
     info(s"proximities - ${e.idx} : $proximityList")
     e.hide
-    //sendHideAircraft(e.idx)
+    hideExternalAircraft(e)
   }
 
   //--- X-Plane message IO
@@ -245,16 +269,11 @@ class XPlaneActor (val config: Config) extends PublishingRaceActor
 
   def sendOwnAircraft = config.getOptionalString("aircraft.type").foreach { s =>
     info(s"setting X-Plane aircraft 0 to $s")
-    sendPacket(codec.getACFNpacket(0,s,0))
+    //sendPacket(codec.getACFNpacket(0,s,0)) // TODO not yet
   }
 
   // this is only called once during initialization, no need to save iterators
-  def sendOtherAircraft () = {
-    for (e <- xpAircraft.entries) {
-      sendLoadAircraft(e.idx,e.acType,0)
-    }
-    sendAllXPlaneAircraft
-  }
+  def loadExternalAircraft() = externalAircraft.foreach(sendLoadAircraft)
 
   def sendAirport = config.getOptionalString("airport").foreach { s =>
     info(s"setting X-Plane airport to $s")
@@ -267,50 +286,28 @@ class XPlaneActor (val config: Config) extends PublishingRaceActor
     sendPacket(codec.getRPOSrequestPacket(freqHz))
   }
 
-  def sendLoadAircraft(idx: Int, acType: String, liveryIdx: Int) = {
-    info(s"sending ACFN[$idx] = $acType : $liveryIdx")
-    sendPacket(codec.getACFNpacket(idx,acType,liveryIdx))
+  def sendLoadAircraft(e: ExternalAircraft) = {
+    info(s"sending ACFN[${e.idx} = ${e.acType} : ${e.liveryIdx}")
+    sendPacket(codec.getACFNpacket(e.idx,e.acType,e.liveryIdx,
+                                   e.latDeg, e.lonDeg, e.altMeters, e.psiDeg, e.speedMsec))
   }
 
   // VEHA is not supported by XPlane 11 anymore so we only send individual aircraft
 
-  def sendAllXPlaneAircraft = {
-    val n = xpAircraft.length
-
-    @tailrec def _sendVEH (idx: Int): Unit = {
-      if (idx < n){
-        val e = xpAircraft.entries(idx)
-        if (e.isRelevant) {
-          info(f"sending VEHx[$idx] =  ${e.cs}: ${e.latDeg}%.4f,${e.lonDeg}%.4f, ${e.psiDeg}%3.0f°, ${e.altMeters.toInt}m")
-          sendPacket(codec.getVEHxPacket( e.idx,
-            e.latDeg, e.lonDeg, e.altMeters,
-            e.psiDeg, e.thetaDeg, e.phiDeg,
-            e.gear, e.flaps, e.throttle))
-        }
-        _sendVEH(idx+1)
-      }
-    }
-    _sendVEH(0)
-  }
-
-  def updateXPlaneAircraft (e: ACEntry) = {
-    e.updateEstimates( currentSimTimeMillis)
+  def updateExternalAircraft(e: ExternalAircraft) = {
     info(s"sending VEHx[${e.idx}] = ${e.fpos}")
     sendPacket(codec.getVEHxPacket(e.idx,
-      e.latDeg, e.lonDeg, e.altMeters,
-      e.psiDeg, e.thetaDeg, e.phiDeg,
-      e.gear, e.flaps, e.throttle))
+                                   e.latDeg, e.lonDeg, e.altMeters,
+                                   e.psiDeg, e.thetaDeg, e.phiDeg,
+                                   e.gear, e.flaps, e.throttle))
+    e.hasChanged = false
   }
 
-  def sendFpos (idx: Int, fpos: FlightPos) = { // <2do> still needs pitch/roll info
-    info(s"sending VEHx[$idx] = $fpos")
-    val pos = fpos.position
-    sendPacket(codec.getVEHxPacket(idx, pos.φ.toDegrees, pos.λ.toDegrees, fpos.altitude.toMeters,
-                                        fpos.heading.toDegrees.toFloat,0f,0f, 1.0f,1.0f,10.0f))
-  }
-
-  def sendHideAircraft(idx: Int) = {
-    info(s"sending VEHx[$idx] to hide plane")
-    sendPacket(codec.getVEHxPacket(idx, 0.1,0.1,1000000.0, 0.1f,0.1f,0.1f, 0f,0f,0f))
+  def hideExternalAircraft(e: ExternalAircraft) = {
+    info(s"sending VEHx[${e.idx}] to hide plane")
+    sendPacket(codec.getVEHxPacket(e.idx,
+                                   e.latDeg, e.lonDeg, e.altMeters,
+                                   e.psiDeg, e.thetaDeg, e.phiDeg,
+                                   e.gear, e.flaps, e.throttle))
   }
 }

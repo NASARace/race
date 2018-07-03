@@ -146,10 +146,10 @@ int race_read_request (databuf_t* db, epoch_millis_t* time_millis,
 
     struct {
         struct msg_header;
-        int server_flags;          // server capabilities
+        int server_flags;              // server capabilities
         epoch_millis_t* sim_millis;    // server simulation time (can differ from request)
-        int server_interval_millis;  // server update interval (this can differ from request)
-        int client_id;             // assigned by server
+        int server_interval_millis;    // server update interval preference (this can differ from request)
+        int client_id;                 // assigned by server
     }
 
 */
