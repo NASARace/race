@@ -106,7 +106,7 @@ class NonExtrapolatedAC (val idx: Int, val acType: String, val liveryIdx: Int) e
 class ExtrapolatedAC (val idx: Int, val acType: String, val liveryIdx: Int) extends ExternalAircraft {
 
   val estimator = new SmoothingVectorExtrapolator(6)
-  val state = Array[Double](6)
+  val state = new Array[Double](6)
 
 
   def latDeg = state(0)

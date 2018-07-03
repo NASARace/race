@@ -87,6 +87,13 @@ object ThreadUtils {
 
   def daemon (f: =>Unit): Thread = yieldInitialized(new Thread(asRunnable(f))){_.setDaemon(true)}
 
+  def startDaemon (f: => Unit): Thread = {
+    val t = new Thread(asRunnable(f))
+    t.setDaemon(true)
+    t.start
+    t
+  }
+
   def execAsync (f: => Unit): Unit = {
     new Thread(asRunnable(f)).start
   }
