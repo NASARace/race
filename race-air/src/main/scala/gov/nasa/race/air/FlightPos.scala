@@ -60,7 +60,9 @@ class FlightPos (val id: String,
   def hasTempCS = FlightPos.isTempCS(cs)
   def tempCS = if (hasTempCS) cs else FlightPos.tempCS(id)
   def getOldCS: Option[String] = amendments.find(_.isInstanceOf[FlightPos.ChangedCS]).map(_.asInstanceOf[FlightPos.ChangedCS].oldCS)
+
   def copyWithCS (newCS: String) = new FlightPos(id, newCS, position, altitude,speed,heading,vr,date,status)
+  def copyWithStatus (newStatus: Int) = new FlightPos(id, cs, position, altitude,speed,heading,vr,date,newStatus)
 
   override def toString = s"FlightPos($id,$cs,$position,${altitude.toFeet.toInt}ft,${speed.toKnots.toInt}kn,${heading.toNormalizedDegrees.toInt}°,0x${status.toHexString},$date)"
 
@@ -84,7 +86,8 @@ class ExtendedFlightPos(id: String,
                         //.. and possibly more to follow
                        ) extends FlightPos(id, cs, position, altitude, speed, heading, vr, date, status) {
   override def toString = s"ExtendedFlightPos($id,$cs,$position,${altitude.toFeet.toInt}ft,${speed.toKnots.toInt}kn,${heading.toNormalizedDegrees.toInt}°,${pitch.toDegrees.toInt}°,${roll.toDegrees.toInt}°,0x${status.toHexString},$date)"
-
+  override def copyWithCS (newCS: String) = new ExtendedFlightPos(id, newCS, position, altitude,speed,heading,vr,date,status,pitch,roll)
+  override def copyWithStatus (newStatus: Int) = new ExtendedFlightPos(id, cs, position, altitude,speed,heading,vr,date,newStatus,pitch,roll)
 }
 
 

@@ -18,6 +18,7 @@
 package gov.nasa.race.air.xplane;
 
 import java.net.DatagramPacket;
+import java.net.InetAddress;
 import java.util.Arrays;
 
 import static gov.nasa.race.util.CodecUtils.*;
@@ -39,6 +40,7 @@ public class XPlaneCodec {
   static final int HEADER_LEN = 5; // 4 char record type + 0
 
   public static final String RPOS_HDR = "RPOS";
+  public static final String BECN_HDR = "BECN";
 
   public static class RPOS {
     double latDeg;           // deg
@@ -59,25 +61,12 @@ public class XPlaneCodec {
   private byte[] readBuf = new byte[1024];
   private byte[] writeBuf = new byte[1024];
   public DatagramPacket readPacket = new DatagramPacket(readBuf, readBuf.length);
-  public long readFrame = 0;
 
   static final int RPOS_LEN = 60;
 
-  public String getHeader (DatagramPacket packet) {
+  public boolean isRPOSmsg (DatagramPacket packet) {
     byte[] buf = packet.getData();
-    if (buf[0] == 'R'){
-      if (buf[1] == 'P') {
-        if (buf[2] == 'O') {
-          if (buf[3] == 'S') {
-            //if (buf[4] == 0){
-              return RPOS_HDR;
-            //}
-          }
-        }
-      }
-    }
-    //return new String(buf, 0, 4); // unknown header
-    return null;
+    return ((buf[0] == 'R') && (buf[1] == 'P') && (buf[2] == 'O') && (buf[3] == 'S') /*&& (buf[4] == 0) */);
   }
 
   protected RPOS rpos = new RPOS();
@@ -98,7 +87,6 @@ public class XPlaneCodec {
   }
   public RPOS readRPOSpacket (DatagramPacket packet) {
     readRPOSdata(rpos, packet.getData(),5);
-    readFrame++;
     return rpos;
   }
 
@@ -115,6 +103,36 @@ public class XPlaneCodec {
   }
   public DatagramPacket getRPOSrequestPacket (int frequencyHz) {
     return new DatagramPacket(writeBuf, writeRPOSrequest(writeBuf,frequencyHz));
+  }
+
+  /**
+   * BECN - beacon read support to detect running X-Plane instances within the local network
+   */
+
+  public static class BECN {
+    int hostType;
+    int version;
+    int role;
+    int port;
+    String hostName;
+  }
+  protected BECN becn = new BECN();
+
+  public boolean isBECNmsg (DatagramPacket packet) {
+    byte[] buf = packet.getData();
+    return ((buf[0] == 'B') && (buf[1] == 'E') && (buf[2] == 'C') && (buf[3] == 'N') && (buf[4] == 0));
+  }
+
+  public void readBECNdata (BECN becn, byte[] buf, int off) {
+    becn.hostType = readLeI4(buf,7);
+    becn.version = readLeI4(buf, 11);
+    becn.role = readLeI4(buf, 15);
+    becn.port = readLeU2(buf, 19);
+    becn.hostName = readString0(buf, 21, 500);
+  }
+  public BECN readBECNpacket (DatagramPacket packet){
+    readBECNdata(becn, packet.getData(), 5);
+    return becn;
   }
 
   /**

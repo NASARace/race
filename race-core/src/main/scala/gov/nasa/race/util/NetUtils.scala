@@ -19,12 +19,12 @@ package gov.nasa.race.util
 
 import java.io._
 import java.lang.{StringBuilder => JStringBuilder}
-import java.net.Socket
+import java.net.{InetAddress, Socket, UnknownHostException}
 import java.security.cert.X509Certificate
 import java.security.{KeyStore, SecureRandom}
+
 import javax.net.SocketFactory
 import javax.net.ssl._
-
 import gov.nasa.race._
 
 import scala.annotation.tailrec
@@ -138,5 +138,32 @@ object NetUtils {
 
   def sslSocket (ctx: SSLContext, host: String, port: Int): SSLSocket = {
     ctx.getSocketFactory.createSocket(host,port).asInstanceOf[SSLSocket]
+  }
+
+  def localInetAddress (hostName: String): Option[InetAddress] = {
+    try {
+      Some(InetAddress.getByName(hostName))
+    } catch {
+      case x: UnknownHostException =>
+        try {
+          Some(InetAddress.getByName(hostName + ".local"))
+        } catch {
+          case _: Throwable => None
+        }
+      case _: Throwable => None
+    }
+  }
+
+  def isSameHost (addr: InetAddress, host: String): Boolean = {
+    if (host.charAt(0).isDigit) { // host specified as IP address string
+      // some OSes (Debian, Ubuntu) have /etc/hostname localhost entries of 127.0.1.1
+      (addr.getHostAddress == host) || (host.startsWith("127.0.") && addr.isLoopbackAddress)
+    } else {
+      (addr.getHostName == host) || (addr.getCanonicalHostName == host)
+    }
+  }
+
+  def isSameHost (addr1: InetAddress, addr2: InetAddress): Boolean = {
+    (addr1.getHostAddress == addr2.getHostAddress) || (addr1.isLoopbackAddress && addr2.isLoopbackAddress)
   }
 }

@@ -26,11 +26,29 @@ public class CodecUtils {
 
   //--- readers
 
+  public static int readU1 (byte[] buf, int off) {
+    return (buf[off] & 0xff);
+  }
+
+  public static int readLeU2 (byte[] buf, int off){
+    int n=(buf[off++] & 0xff);
+    n |= (int)(buf[off++] & 0xff) <<8;
+    return n;
+  }
+
   /**
    * read little endian int
    */
   public static int readLeI4 (byte[] buf, int off) {
     int n=(buf[off++] & 0xff);
+    n |= (int)(buf[off++] & 0xff) <<8;
+    n |= (int)(buf[off++] & 0xff) <<16;
+    n |= (int)(buf[off++] & 0xff) <<24;
+    return n;
+  }
+
+  public static long readLeU4 (byte[] buf, int off) {
+    long n=(buf[off++] & 0xff);
     n |= (int)(buf[off++] & 0xff) <<8;
     n |= (int)(buf[off++] & 0xff) <<16;
     n |= (int)(buf[off++] & 0xff) <<24;
@@ -68,6 +86,13 @@ public class CodecUtils {
    */
   public static String readStringN0 (byte[] buf, int off, int len) {
     return new String(buf, off, len);
+  }
+
+  public static String readString0 (byte[] buf, int off, int maxLen) {
+    int n = 0;
+    int i1 = off + maxLen;
+    for (int i=off; i<i1 && buf[i] != 0; i++, n++);
+    return new String(buf,off,n);
   }
 
   //--- writers

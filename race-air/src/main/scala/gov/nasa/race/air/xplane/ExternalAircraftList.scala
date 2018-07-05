@@ -39,6 +39,13 @@ class ExternalAircraftList(entries: Array[ExternalAircraft],
                         ) {
   val length = entries.length
 
+  def notEmpty: Boolean = entries.length > 0
+
+  def releaseAll: Unit = foreachAssigned{ e=>
+    onHide(e)
+    e.fpos = ExternalAircraft.noAircraft
+  }
+
   def assign(fpos: TrackedAircraft): Int = {
     val length1 = length-1
 

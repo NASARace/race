@@ -17,39 +17,48 @@
 
 package gov.nasa.race.air.xplane
 
-import java.net.{DatagramPacket, DatagramSocket, InetAddress}
+import java.net._
 
 import akka.actor.{ActorRef, Cancellable}
 import com.typesafe.config.Config
 import gov.nasa.race._
 import gov.nasa.race.air.xplane.XPlaneCodec.RPOS
-import gov.nasa.race.air.{ExtendedFlightPos, FlightPos, TrackedAircraft}
+import gov.nasa.race.air.{ExtendedFlightPos, TrackedAircraft}
 import gov.nasa.race.common.Status
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.Messages.BusEvent
 import gov.nasa.race.core.{PublishingRaceActor, SubscribingRaceActor, _}
 import gov.nasa.race.geo.{GeoPosition, LatLonPos}
-import gov.nasa.race.track.TrackDropped
+import gov.nasa.race.track.{TrackDropped, TrackedObject}
 import gov.nasa.race.uom.Angle._
 import gov.nasa.race.uom.Length._
 import gov.nasa.race.uom.Speed
 import gov.nasa.race.uom.Speed._
-import gov.nasa.race.util.ThreadUtils
+import gov.nasa.race.util.{NetUtils, ThreadUtils}
 
-import scala.annotation.tailrec
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 import scala.language.postfixOps
+
 
 /**
   * a bridge for the X-Plane flight simulator
   */
 class XPlaneActor (val config: Config) extends PublishingRaceActor
                                        with SubscribingRaceActor with ContinuousTimeRaceActor with GeoPosition {
-  case object UpdateFlightPos // publish X-Plane positions on bus
-  case object CheckXPlane     // check if we got updates from X-Plane within the last check interval
+  //--- xplane actor specific state
+  sealed trait XPlaneState
+  case object Searching extends XPlaneState
+  case object Connecting extends XPlaneState
+  case object Connected extends XPlaneState
+  case object Aborted extends XPlaneState // don't try to reconnect
 
-  //def info (msg: String) = println(msg) // for debugging
+  //--- self messages
+  case object StartReceiver // start receiver thread
+  case object StartPeriodicTasks
+  case object UpdateFlightPos // publish X-Plane positions on bus
+
+  var xplaneState: XPlaneState = Searching
 
   //--- simulated AC
   val id = config.getStringOrElse("aircraft.id", "42")
@@ -68,17 +77,21 @@ class XPlaneActor (val config: Config) extends PublishingRaceActor
   val publishInterval = config.getFiniteDurationOrElse("interval", 0 milliseconds)
   var publishScheduler: Option[Cancellable] = None
 
-  // if set to 0 it means we do not try to reconnect (X-Plane might freeze if caught in the middle of its init)
-  val checkInterval = config.getFiniteDurationOrElse("check-interval", 0 seconds)
-  var checkScheduler: Option[Cancellable] = None
+  val rposFrequency = config.getIntOrElse("rpos-frequency", 2) // in Hz - no decimals
+
+  // if set to 0 we don't check if the connection is still alive and hence we don't try to reconnect
+  val checkInterval = config.getFiniteDurationOrElse("check-interval", 2*(1000 / rposFrequency) milliseconds)
 
   val codec = createXPlaneCodec
   var socket = new DatagramSocket(ownPort, ownIpAddress)
-  var publishedFrame = -1L  // last published frame number
+
+  var receivedRPOS: Long = 0  // last received RPOS
+  var publishedRPOS: Long = 0  // last published RPOS
 
   var flightPos = initialFlightPos
   var rpos: RPOS = _ // returned by codec
-  var lastRposTime: Long = 0
+  var lastRPOStime: Long = 0
+
   def position = flightPos.position
 
   //--- proximity management
@@ -93,11 +106,11 @@ class XPlaneActor (val config: Config) extends PublishingRaceActor
   }
   val proximityList = new FlightsNearList( position, proximityRange, externalAircraft)
 
-  val importThread = ThreadUtils.daemon(readXPlanePositions)
-  var exportThread: Option[Thread] = None // set on startRaceActor if proximity-interval is non-Zero
+  var receiverThread: Thread = ThreadUtils.daemon(runReceiver) // for beacon and RPOS message processing
+  var proximityThread: Option[Thread] = None // set on startRaceActor if proximity-interval is non-Zero
 
 
-  //--- end initialization
+  //--- initialization helpers
 
   def createXPlaneCodec: XPlaneCodec = {
     config.getIntOrElse("xplane-version",11) match {
@@ -117,43 +130,135 @@ class XPlaneActor (val config: Config) extends PublishingRaceActor
     }
   }
 
-  def readXPlanePositions: Unit = {
-    val maxConsecutiveFailures = config.getIntOrElse("max-failures", 5) // if we exceed, we stop reading
-    var failures = 0
-    val readPacket = codec.readPacket
-    info("data acquisition thread running")
 
-    while (isLive && (failures < maxConsecutiveFailures)) {
-      try {
-        while (status == Status.Running) {
-          socket.receive(readPacket)
-          codec.getHeader(readPacket) match {
-            case XPlaneCodec.RPOS_HDR =>
-              rpos = codec.readRPOSpacket(readPacket)
-              lastRposTime = currentSimTimeMillis
-              failures = 0
-              if (publishScheduler.isEmpty) publishFPos(rpos) // otherwise the actor will take care of publishing
-            case hdr => info(s"received unknown UDP message from X-Plane: $hdr")
-          }
-        }
-      } catch {
-        case e: Throwable =>
-          error(s"error reading X-Plane socket: $e")
-          failures += 1
-          if (failures == maxConsecutiveFailures) error("max failure threshold reached, terminating X-Plane read thread")
+  //--- receiver thread
+
+  def runReceiver: Unit = {
+    while (status == Status.Running) {
+      xplaneState match {
+        case Searching => readXPlaneBeaconMessages
+        case Connecting => establishConnection
+        case Connected => runConnection
+        case Aborted => return
       }
     }
+  }
+
+  /*
+ * thread function for receiving BECN messages to detect running X-Plane instances
+ * If we get a BECN from our configured X-Plane we automatically start to initialize
+ *
+ * NOTE - this never runs at the same time as the RPOS receiver or the proximity sender
+ */
+  def readXPlaneBeaconMessages: Unit = {
+    val buf = new Array[Byte](1024)  // packet length depends on hostname, which can be up to 500 char
+    val packet = new DatagramPacket(buf,buf.length)
+
+    val becnAddr = InetAddress.getByName("239.255.1.1")  // fixed multicast group for X-Plane BECN messages
+    val socket = new MulticastSocket(49707) // fixed multicast port for X-Plane BECN messages
+    socket.joinGroup(becnAddr);
+
+    info("searching for beacon messages")
+
+    while (xplaneState eq Searching){
+      socket.receive(packet)
+      if (codec.isBECNmsg(packet)){
+        val becn = codec.readBECNpacket(packet)
+
+        if (becn.hostType == 1 && becn.role == 1) { // check if it's from a master X-Plane
+          info(s"got BECN from X-Plane at ${becn.hostName}:${becn.port}")
+
+          ifSome(NetUtils.localInetAddress(becn.hostName)) { addr => // can we resolve the BECN hostname
+            if (NetUtils.isSameHost(addr,remoteIpAddress)) {
+              info(s"X-Plane host accepted, terminating search")
+              xplaneState = Connecting
+            }
+          }
+        }
+      }
+    }
+  }
+
+  def establishConnection: Unit = {
+    val readPacket = codec.readPacket
+    info("connecting..")
+
+    socket.setSoTimeout(0)
+    sendRPOSrequest
+    socket.receive(readPacket) // this blocks until we get the first RPOS message - just wait until X-Plane talks to us
+
+    if (externalAircraft.notEmpty) {
+      loadExternalAircraft // this might take a while on X-Plane's side
+      socket.receive(readPacket) // this blocks until X-Plane is responsive again
+
+      if (proximityInterval.length > 0){
+        info(s"starting XPlane proximity export thread with interval $proximityInterval")
+        proximityThread = Some(ThreadUtils.startDaemon(sendExternalPlanes))
+      }
+    }
+
+    if (publishInterval.length > 0) {
+      info(s"starting XPlane publish scheduler $publishInterval")
+      publishScheduler = Some(scheduler.schedule(0 seconds, publishInterval, self, UpdateFlightPos))
+    }
+
+    xplaneState = Connected
+  }
+
+  def runConnection: Unit = {
+    val readPacket = codec.readPacket
+    info("connected")
+
+    lastRPOStime = 0
+    receivedRPOS = 0
+    publishedRPOS = 0
+
+    if (checkInterval.length > 0) {
+      info(s"setting receive timeout to ${checkInterval.toMillis}")
+      socket.setSoTimeout(checkInterval.toMillis.toInt)
+    }
+
+    try {
+      while (status eq Status.Running) {
+        socket.receive(readPacket)
+
+        if (codec.isRPOSmsg(readPacket)) {
+          rpos = codec.readRPOSpacket(readPacket)
+          lastRPOStime = currentSimTimeMillis
+          receivedRPOS += 1
+
+          if (publishScheduler.isEmpty) publishRPOS(rpos) // otherwise the actor will take care of publishing
+        }
+      }
+    } catch {
+      case stx: SocketTimeoutException =>
+        warning(s"no data from X-Plane within $checkInterval, resetting connection")
+        proximityList.clear
+        externalAircraft.releaseAll
+        xplaneState = Searching
+
+      case scx: SocketException =>
+        xplaneState = Aborted // actor was terminated
+
+      case t: Throwable =>
+        //t.printStackTrace
+        error(s"error while connected: $t, aborting connection")
+        xplaneState = Aborted
+    }
+
+    publishTerminated(rpos)
     ifSome(publishScheduler) {_.cancel}
   }
 
-  def isAlive = (lastRposTime > 0)
+  def isConnected: Boolean = xplaneState eq Connected
 
+  /*
+   * thread function for sending (possibly estimated) external planes to X-Plane at configured `proximityInterval`
+   */
   def sendExternalPlanes: Unit = {
-    val maxConsecutiveFailures = config.getIntOrElse("max-failures", 5) // if we exceed, we stop reading
-    var failures = 0
     info("proximity export thread running")
 
-    while (isLive && (failures < maxConsecutiveFailures)) {
+    while (isConnected) {
       val t = currentSimTimeMillis
       externalAircraft.foreachAssigned { e=>
         e.updateEstimate(t)
@@ -175,42 +280,18 @@ class XPlaneActor (val config: Config) extends PublishingRaceActor
     val speed = Knots(0)
     val heading = Degrees(0)
     val vr = Speed.Speed0
-    new FlightPos(id, cs, pos, altitude, speed, heading, vr, simTime)
-  }
-
-  override def onInitializeRaceActor(rc: RaceContext, actorConf: Config) = {
-    //sendAirport
-    loadExternalAircraft
-    //sendOwnAircraft
-    sendRPOSrequest
-
-    super.onInitializeRaceActor(rc, actorConf)
+    new ExtendedFlightPos(id, cs, pos, altitude, speed, heading, vr, simTime, 0, Degrees(0), Degrees(0))
   }
 
   override def onStartRaceActor(originator: ActorRef) = {
-    importThread.start
-
-    if (publishInterval.length > 0) {
-      info(s"starting XPlane publish scheduler $publishInterval")
-      publishScheduler = Some(scheduler.schedule(0 seconds, publishInterval, self, UpdateFlightPos))
-    }
-
-    if (checkInterval.length > 0) {
-      info(s"starting XPlane check scheduler $checkInterval")
-      checkScheduler = Some(scheduler.schedule(15 seconds, checkInterval, self, CheckXPlane))
-    }
-
-    if (proximityInterval.length > 0){
-      info(s"starting XPlane proximity export thread with interval $proximityInterval")
-      exportThread = Some(ThreadUtils.startDaemon(sendExternalPlanes))
-    }
-
+    receiverThread.start
     super.onStartRaceActor(originator)
   }
 
   override def onTerminateRaceActor(originator: ActorRef) = {
+    xplaneState = Aborted
     ifSome(publishScheduler){ _.cancel }
-    ifSome(checkScheduler){ _.cancel }
+    // exportThread is not blocking indefinitely and will terminate
 
     socket.close()
 
@@ -218,18 +299,15 @@ class XPlaneActor (val config: Config) extends PublishingRaceActor
   }
 
   override def handleMessage = {
-    case UpdateFlightPos => publishFPos(rpos)
-    case CheckXPlane => checkXPlaneConnection
+    case UpdateFlightPos => publishRPOS(rpos)
     case BusEvent(_,fpos:TrackedAircraft,_) => updateProximities(fpos)
     case BusEvent(_,fdrop: TrackDropped,_) => dropProximity(fdrop)
   }
 
-  def computeVr (rpos: RPOS) = {
-    MetersPerSecond(rpos.vz)
-  }
+  def computeVr (rpos: RPOS): Speed = MetersPerSecond(rpos.vz)
 
-  def publishFPos (rpos: RPOS) = {
-    if (codec.readFrame > publishedFrame && rpos != null) {  // we might not have gotten the rpos yet
+  def publishRPOS(rpos: RPOS): Unit = {
+    if (receivedRPOS > publishedRPOS) {  // we might not have gotten the rpos yet
       updatedSimTime
 
       val pos = LatLonPos.fromDegrees(rpos.latDeg, rpos.lonDeg)
@@ -243,18 +321,16 @@ class XPlaneActor (val config: Config) extends PublishingRaceActor
       flightPos = new ExtendedFlightPos(id, cs, pos, altitude, speed, heading, vr, simTime, 0, pitch,roll)
 
       publish(flightPos)
-      publishedFrame = codec.readFrame
+      publishedRPOS = receivedRPOS
 
       proximityList.center = pos
     }
   }
 
-  def checkXPlaneConnection: Unit = {
-    if (currentSimTimeMillis - lastRposTime > checkInterval.toMillis){
-      info("resending rpos request and external aircraft, suspending sends")
-      loadExternalAircraft
-      sendRPOSrequest
-      lastRposTime = 0
+  def publishTerminated (rpos: RPOS): Unit = {
+    if (publishedRPOS > 0) { // if nothing was published yet we don't have to drop anything
+      flightPos = flightPos.copyWithStatus(TrackedObject.DroppedFlag)
+      publish(flightPos)
     }
   }
 
@@ -262,7 +338,7 @@ class XPlaneActor (val config: Config) extends PublishingRaceActor
 
 
   def updateProximities (fpos: TrackedAircraft) = {
-    proximityList.updateWith(fpos)
+    if (isConnected) proximityList.updateWith(fpos)
   }
 
   def dropProximity (fdrop: TrackDropped) = {
@@ -304,7 +380,10 @@ class XPlaneActor (val config: Config) extends PublishingRaceActor
   }
 
   // this is only called once during initialization, no need to save iterators
-  def loadExternalAircraft() = externalAircraft.foreach(sendLoadAircraft)
+  def loadExternalAircraft() = externalAircraft.foreach { e=>
+    sendLoadAircraft(e)
+    hideExternalAircraft(e)  // stash them away until they become proximities
+  }
 
   def sendAirport = config.getOptionalString("airport").foreach { s =>
     info(s"setting X-Plane airport to $s")
@@ -312,9 +391,8 @@ class XPlaneActor (val config: Config) extends PublishingRaceActor
   }
 
   def sendRPOSrequest = {
-    val freqHz = config.getIntOrElse("rpos-frequency", 2)
-    info(s"sending RPOS request with frequency $freqHz Hz")
-    sendPacket(codec.getRPOSrequestPacket(freqHz))
+    info(s"sending RPOS request with frequency $rposFrequency Hz")
+    sendPacket(codec.getRPOSrequestPacket(rposFrequency))
   }
 
   def sendLoadAircraft(e: ExternalAircraft) = {

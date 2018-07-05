@@ -76,6 +76,10 @@ trait WeightedArray[T<:AnyRef,E<:WeightedArray.Entry[T]] extends Iterable[E] {
   def releaseEntry(e: E): Unit = {}                       // entry is dropped (can be used to update cache)
   def updateEntry (e: E): Boolean = false                 // can be overridden to recompute weight etc.
 
+  def clear: Unit = {
+    _size = 0
+  }
+
   @tailrec final protected def _indexOfSame(a: Array[E], n: Int, o: T, i: Int): Int = {
     if (i < n) {
       if (isSame(o, a(i).obj)) i
