@@ -16,6 +16,8 @@
  */
 package gov.nasa.race.air.xplane;
 
+import java.net.DatagramPacket;
+
 import static gov.nasa.race.util.CodecUtils.*;
 import static gov.nasa.race.util.CodecUtils.writeLeF4;
 
@@ -24,9 +26,12 @@ import static gov.nasa.race.util.CodecUtils.writeLeF4;
  */
 public class XPlane10Codec extends XPlaneCodec {
 
-    public int writeRPOSrequest (byte[] buf, int frequencyHz) {
+    public int writeRPOSrequest (DatagramPacket packet, int frequencyHz) {
+        byte[] buf = packet.getData();
         int off = writeString0(buf,0, "RPOS");
         off = writeLeI4(buf, off, frequencyHz);
+
+        packet.setLength(off);
         return off;
     }
 
@@ -46,10 +51,12 @@ public class XPlane10Codec extends XPlaneCodec {
         rpos.r = readLeF4(buf,off);
     }
 
-    public int writeVEHx(byte[] buf, int aircraft,
+    public int writeVEHx(DatagramPacket packet, int aircraft,
                                 double latDeg, double lonDeg, double elevMsl,
                                 float headingDeg, float pitchDeg, float rollDeg,
                                 float gear, float flaps, float thrust) {
+        byte[] buf = packet.getData();
+
         int off = writeString0(buf, 0, "VEH1");
         off = writeLeI4(buf, off, aircraft);
         off += 4; // 8byte struct align
@@ -66,6 +73,8 @@ public class XPlane10Codec extends XPlaneCodec {
         off = writeLeF4(buf, off, gear);  // 44
         off = writeLeF4(buf, off, flaps);
         off = writeLeF4(buf, off, thrust);
+
+        packet.setLength(off);
         return off;
     }
 
@@ -74,25 +83,16 @@ public class XPlane10Codec extends XPlaneCodec {
      * @param airportId 4 char airport id (e.g. "KSJC")
      * @return
      */
-    public int writePAPT (byte[] buf, String airportId) {
+    public int writePAPT (DatagramPacket packet, String airportId) {
+        byte[] buf = packet.getData();
+
         int off = writeString0(buf,0, "PAPT");
         off = writeStringN0(buf, off, airportId, 8);
         off = writeLeI4(buf, off, 11); // 10: ramp start, 11: rwy takeoff, 12: VFR approach, 13: IFR approach
         off = writeLeI4(buf, off, 0);
         off = writeLeI4(buf, off, 0);
-        return off;
-    }
 
-    public int writeACFN (byte[] buf, int aircraft, String relPath, int liveryIndex,
-                          double latDeg, double lonDeg, double altMeters, double psiDeg, double speedMsec) {
-        int off = writeString0(buf, 0, "ACFN");
-
-        // acfn_struct
-        off = writeLeI4(buf, off, aircraft);  // index (starting at 1 for externals)
-        off = writeStringN0(buf, off, relPath, 150);
-        off += 2;
-        off = writeLeI4(buf, off, liveryIndex);
-
+        packet.setLength(off);
         return off;
     }
 

@@ -156,7 +156,26 @@ public class CodecUtils {
     int len = Math.min(b.length, fixLen);
     int off0 = off;
     System.arraycopy(b,0,buf,off,len);
-    if (len < fixLen) Arrays.fill(buf,off0+len, off0+fixLen-1, (byte)0);
+    if (len < fixLen) Arrays.fill(buf,off0+len, off0+fixLen, (byte)0);
     return off0 + fixLen;
+  }
+
+  public static int writeStringN0space (byte[] buf, int off, String s, int fixLen) {
+    byte[] b = s.getBytes();
+    int len = Math.min(b.length, fixLen);
+    int off0 = off;
+    System.arraycopy(b,0,buf,off,len);
+    if (len < fixLen) {
+      buf[off0+len] = 0;
+      if (len < fixLen-1) {
+        Arrays.fill(buf, off0 + len + 1, off0 + fixLen, (byte) 32);
+      }
+    }
+    return off0 + fixLen;
+  }
+
+  public static int writeZeros (byte[] buf, int off, int len) {
+    Arrays.fill(buf,off,off+len,(byte)0);
+    return off + len;
   }
 }

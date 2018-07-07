@@ -41,29 +41,27 @@ class ExternalAircraftList(entries: Array[ExternalAircraft],
 
   def notEmpty: Boolean = entries.length > 0
 
-  def releaseAll: Unit = foreachAssigned{ e=>
-    onHide(e)
-    e.fpos = ExternalAircraft.noAircraft
+  def releaseAssigned: Unit = foreachAssigned{ e=>
+    if (e.fpos ne noAircraft) {
+      onHide(e)
+      e.fpos = noAircraft
+    }
   }
 
   def assign(fpos: TrackedAircraft): Int = {
-    val length1 = length-1
-
-    @tailrec def _allocateNextFree(fpos: TrackedAircraft, idx: Int): Int = {
-      val e = entries(idx)
+    var i=0
+    while (i < length){
+      val e = entries(i)
       if (e.fpos eq noAircraft) {
         e.updateObservation(fpos)
         onShow(e)
-        idx
-      } else {
-        if (idx < length1) _allocateNextFree(fpos, idx+1)
-        else {
-          Thread.dumpStack()
-          -1 // cannot happen since FlightsNearList has same size
-        }
+        return i
       }
+      i += 1
     }
-    _allocateNextFree(fpos,0)
+
+    Thread.dumpStack()
+    -1 // cannot happen since FlightsNearList has same size
   }
 
   def set (idx: Int, fpos: TrackedAircraft) = {
@@ -75,7 +73,7 @@ class ExternalAircraftList(entries: Array[ExternalAircraft],
   def release (idx: Int) = {
     val e = entries(idx)
     onHide(e)
-    e.fpos = null
+    e.fpos = noAircraft
   }
 
   // note this can be called frequently, avoid allocation

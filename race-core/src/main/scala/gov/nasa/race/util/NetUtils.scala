@@ -159,7 +159,7 @@ object NetUtils {
       // some OSes (Debian, Ubuntu) have /etc/hostname localhost entries of 127.0.1.1
       (addr.getHostAddress == host) || (host.startsWith("127.0.") && addr.isLoopbackAddress)
     } else {
-      (addr.getHostName == host) || (addr.getCanonicalHostName == host)
+      (addr.getHostName == host) || (addr.getCanonicalHostName == host) || ((host == "localhost") && addr.isLoopbackAddress)
     }
   }
 

@@ -18,8 +18,6 @@
 package gov.nasa.race.air.xplane;
 
 import java.net.DatagramPacket;
-import java.net.InetAddress;
-import java.util.Arrays;
 
 import static gov.nasa.race.util.CodecUtils.*;
 
@@ -32,8 +30,7 @@ import static gov.nasa.race.util.CodecUtils.*;
  *
  * The interface has to support minimal/no heap allocation per read
  *
- * NOTE - this class is not thread-safe for concurrent read/read or write/write operations
- * since we only have one (per request) read and write buffer
+ * NOTE - thread-safety of this class depends on re-use of the `packet` arguments
  */
 public class XPlaneCodec {
 
@@ -58,18 +55,13 @@ public class XPlaneCodec {
     }
   }
 
-  private byte[] readBuf = new byte[1024];
-  private byte[] writeBuf = new byte[1024];
-  public DatagramPacket readPacket = new DatagramPacket(readBuf, readBuf.length);
-
-  static final int RPOS_LEN = 60;
-
   public boolean isRPOSmsg (DatagramPacket packet) {
     byte[] buf = packet.getData();
     return ((buf[0] == 'R') && (buf[1] == 'P') && (buf[2] == 'O') && (buf[3] == 'S') /*&& (buf[4] == 0) */);
   }
 
   protected RPOS rpos = new RPOS();
+
   public void readRPOSdata (RPOS rpos, byte[] buf, int off) {
     rpos.lonDeg = readLeD8(buf,off);          off += 8;
     rpos.latDeg = readLeD8(buf,off);          off += 8;
@@ -95,14 +87,15 @@ public class XPlaneCodec {
    * @param frequencyHz requested RPOS frequency in Hz (0 means no data)
    * @return length of written data
    */
-  public int writeRPOSrequest (byte[] buf, int frequencyHz) {
+  public int writeRPOSrequest (DatagramPacket packet, int frequencyHz) {
+    byte[] buf = packet.getData();
+
     int off = writeString0(buf,0, "RPOS");
     //off = writeLeI4(buf, off, frequencyHz);
     off = writeString0(buf,off,Integer.toString(frequencyHz));
+
+    packet.setLength(off);
     return off;
-  }
-  public DatagramPacket getRPOSrequestPacket (int frequencyHz) {
-    return new DatagramPacket(writeBuf, writeRPOSrequest(writeBuf,frequencyHz));
   }
 
   /**
@@ -143,7 +136,9 @@ public class XPlaneCodec {
    * @param airportId 4 char airport id (e.g. "KNUQ")
    * @return
    */
-  public int writePAPT (byte[] buf, String airportId) {
+  public int writePAPT (DatagramPacket packet, String airportId) {
+    byte[] buf = packet.getData();
+
     int off = writeString0(buf,0, "PREL");
     off = writeLeI4(buf,off,11);  // take off on runway
     off = writeStringN0(buf, off, airportId, 8);
@@ -157,20 +152,38 @@ public class XPlaneCodec {
     off = writeLeD8(buf, off, 0.0); // hdg
     off = writeLeD8(buf, off, 0.0); // spd
 
+    packet.setLength(off);
     return off;
-  }
-  public DatagramPacket getPAPTpacket (String airportId) {
-    return new DatagramPacket(writeBuf, writePAPT(writeBuf, airportId));
   }
 
   /**
-   * load aircraft
+   * ACFN - load aircraft
+   */
+  public int writeACFN (DatagramPacket packet, int aircraft, String relPath, int liveryIndex) {
+    byte[] buf = packet.getData();
+
+    int off = writeString0(buf, 0, "ACFN");
+
+    // acfn_struct
+    off = writeLeI4(buf, off, aircraft);  // index (starting at 1 for externals)
+    off = writeStringN0(buf, off, relPath, 150);
+    off += 2;
+    off = writeLeI4(buf, off, liveryIndex);
+
+    packet.setLength(off);
+    return off;
+  }
+
+  /**
+   * load & init aircraft
    * @param aircraft [0-19]
    * @param relPath relative path to *.acf file, e.g. "Aircraft/Heavy Metal/B747-100 NASA/B747-100 NASA.acf"
    * @return length of written data
    */
-  public int __writeACFN (byte[] buf, int aircraft, String relPath, int liveryIndex,
-                        double latDeg, double lonDeg, double altMeters, double psiDeg, double speedMsec) {
+  public int writeACPR(DatagramPacket packet, int aircraft, String relPath, int liveryIndex,
+                       double latDeg, double lonDeg, double altMeters, double psiDeg, double speedMsec) {
+    byte[] buf = packet.getData();
+
     int off = writeString0(buf, 0, "ACPR");
 
     // acfn_struct
@@ -180,10 +193,11 @@ public class XPlaneCodec {
     off = writeLeI4(buf, off, liveryIndex);
 
     // PREL_struct
-    off = writeLeI4(buf, off, 9);  // loc_snap_load
-    //off = writeLeI4(buf, off, 6);  // loc_specify_lle
+    //off = writeLeI4(buf, off, 9);  // loc_snap_load
+    off = writeLeI4(buf, off, 6);  // loc_specify_lle
     off = writeLeI4(buf, off, aircraft);
-    off = writeStringN0(buf, off, "", 8); // airport id
+
+    off = writeZeros(buf, off, 8); // airport id
     off = writeLeI4(buf, off, 0); // rwy index
     off = writeLeI4(buf, off, 0); // rwy dir
 
@@ -193,34 +207,44 @@ public class XPlaneCodec {
     off = writeLeD8(buf, off, psiDeg);
     off = writeLeD8(buf, off, speedMsec);
 
+    packet.setLength(off);
     return off;
   }
-  public int writeACFN (byte[] buf, int aircraft, String relPath, int liveryIndex,
-                        double latDeg, double lonDeg, double altMeters, double psiDeg, double speedMsec) {
-    int off = writeString0(buf, 0, "ACFN");
 
-    // acfn_struct
-    off = writeLeI4(buf, off, aircraft);  // index (starting at 1 for externals)
-    off = writeStringN0(buf, off, relPath, 150);
-    off += 2;
-    off = writeLeI4(buf, off, liveryIndex);
+  /**
+   * init aircraft location
+   */
+  public int writePREL (DatagramPacket packet, int aircraft, double latDeg, double lonDeg, double altMeters, double psiDeg, double speedMsec) {
+    byte[] buf = packet.getData();
 
+    int off = writeString0(buf, 0, "PREL");
+    //off = writeLeI4(buf, off, 9);  // loc_snap_load
+    off = writeLeI4(buf, off, 6);  // loc_specify_lle
+    off = writeLeI4(buf, off, aircraft);
+
+    off = writeZeros(buf, off, 8); // airport id
+    off = writeLeI4(buf, off, 0); // rwy index
+    off = writeLeI4(buf, off, 0); // rwy dir
+
+    off = writeLeD8(buf, off, latDeg);
+    off = writeLeD8(buf, off, lonDeg);
+    off = writeLeD8(buf, off, altMeters);
+    off = writeLeD8(buf, off, psiDeg);
+    off = writeLeD8(buf, off, speedMsec);
+
+    packet.setLength(off);
     return off;
-  }
-  
-  public DatagramPacket getACFNpacket (int aircraft, String relPath, int liveryIndex,
-                                       double latDeg, double lonDeg, double altMeters, double psiDeg, double speedMsec) {
-    return new DatagramPacket(writeBuf, writeACFN(writeBuf, aircraft, relPath, liveryIndex,
-                                                  latDeg,lonDeg,altMeters,psiDeg,speedMsec));
   }
 
   /**
    * write single aircraft position
    */
-  public int writeVEHx(byte[] buf, int aircraft,
+  public int writeVEHx(DatagramPacket packet, int aircraft,
                               double latDeg, double lonDeg, double elevMsl,
                               float headingDeg, float pitchDeg, float rollDeg,
                               float gear, float flaps, float thrust) {
+    byte[] buf = packet.getData();
+
     int off = writeString0(buf, 0, "VEHX");
     off = writeLeI4(buf, off, aircraft);
 
@@ -234,13 +258,23 @@ public class XPlaneCodec {
 
     // how do we control the gear? The old veh1 gear/flaps/throttle are not supported anymore
 
+    packet.setLength(off);
     return off;
-  }
-  public DatagramPacket getVEHxPacket(int aircraft, double latDeg, double lonDeg, double elevMsl,
-                                      float headingDeg, float pitchDeg, float rollDeg, float gear, float flaps, float thrust) {
-    return new DatagramPacket(writeBuf, writeVEHx(writeBuf, aircraft,
-            latDeg,lonDeg,elevMsl,headingDeg,pitchDeg,rollDeg,gear,flaps,thrust));
   }
 
   // VEHA messages are not supported by X-Plane 11 anymore
+
+  /**
+   * setting data ref
+   */
+  public int writeDREF (DatagramPacket packet, String dref, float v) {
+    byte[] buf = packet.getData();
+
+    int off = writeString0(buf,0,"DREF");
+    off = writeLeF4(buf,off,v);
+    off = writeStringN0space(buf, off, dref, 500);
+
+    packet.setLength(off);
+    return off;
+  }
 }

@@ -46,6 +46,8 @@ import scala.language.postfixOps
   */
 class XPlaneActor (val config: Config) extends PublishingRaceActor
                                        with SubscribingRaceActor with ContinuousTimeRaceActor with GeoPosition {
+  val MaxPacketLength: Int = 1024
+
   //--- xplane actor specific state
   sealed trait XPlaneState
   case object Searching extends XPlaneState
@@ -64,14 +66,9 @@ class XPlaneActor (val config: Config) extends PublishingRaceActor
   val id = config.getStringOrElse("aircraft.id", "42")
   val cs = config.getString("aircraft.cs")
 
-  //--- the ip/port for the socket through which we receive data
-  // NOTE - those need to be configured in X-Plane's settings
-  val ownIpAddress = InetAddress.getByName(config.getStringOrElse("own-ip-address", "localhost"))
-  val ownPort = config.getIntOrElse("own-port", 49003)
-
-  //--- (remote) address and port of the X-Plane apply we send data to
-  val remoteIpAddress = InetAddress.getByName(config.getStringOrElse("remote-ip-address", "localhost"))
-  val remotePort = config.getIntOrElse("remote-port", 49000)
+  // those are set once we got and selected a beacon host
+  var xplaneAddr: InetAddress = null
+  var xplanePort: Int = -1
 
   // how often do we publish aircraft positions we receive from X-Plane (0 means at receive rate)
   val publishInterval = config.getFiniteDurationOrElse("interval", 0 milliseconds)
@@ -80,17 +77,20 @@ class XPlaneActor (val config: Config) extends PublishingRaceActor
   val rposFrequency = config.getIntOrElse("rpos-frequency", 2) // in Hz - no decimals
 
   // if set to 0 we don't check if the connection is still alive and hence we don't try to reconnect
-  val checkInterval = config.getFiniteDurationOrElse("check-interval", 2*(1000 / rposFrequency) milliseconds)
+  val checkInterval = config.getFiniteDurationOrElse("check-interval", 15 seconds)
 
-  val codec = createXPlaneCodec
-  var socket = new DatagramSocket(ownPort, ownIpAddress)
+  var codec: XPlaneCodec = new XPlaneCodec // might get reset once we know which X-Plane version we are talking to
+  val socket = createSocket
 
   var receivedRPOS: Long = 0  // last received RPOS
   var publishedRPOS: Long = 0  // last published RPOS
 
   var flightPos = initialFlightPos
+
   var rpos: RPOS = _ // returned by codec
   var lastRPOStime: Long = 0
+
+  val proximityPacket = new DatagramPacket(new Array[Byte](MaxPacketLength),MaxPacketLength)
 
   def position = flightPos.position
 
@@ -99,11 +99,7 @@ class XPlaneActor (val config: Config) extends PublishingRaceActor
   val proximityInterval = config.getFiniteDurationOrElse("proximity-interval", Duration.Zero)
   val proximityRange = NauticalMiles(config.getDoubleOrElse("proximity-range", 8.0))
 
-  val externalAircraft = if (proximityInterval.length == 0) {
-    new ExternalAircraftList(createExternalAircraft, onOtherShow, onOtherPositionChanged, onOtherHide)
-  } else {
-    new ExternalAircraftList(createExternalAircraft, noAction, noAction, onOtherHide)
-  }
+  val externalAircraft = createExternalAircraftList
   val proximityList = new FlightsNearList( position, proximityRange, externalAircraft)
 
   var receiverThread: Thread = ThreadUtils.daemon(runReceiver) // for beacon and RPOS message processing
@@ -112,11 +108,24 @@ class XPlaneActor (val config: Config) extends PublishingRaceActor
 
   //--- initialization helpers
 
-  def createXPlaneCodec: XPlaneCodec = {
-    config.getIntOrElse("xplane-version",11) match {
-      case 10 => new XPlane10Codec
-      case 11 => new XPlaneCodec
-      case other => throw new RaceException(s"unsupported X-Plane version: $other")
+  def createSocket: DatagramSocket = {
+    val h = config.getOptionalString("own-ip-address")
+    val p = config.getOptionalInt("own-port")
+
+    if (p.isDefined) {
+      if (h.isDefined) new DatagramSocket(p.get, InetAddress.getByName(h.get)) else new DatagramSocket(p.get)
+    } else {
+      new DatagramSocket
+    }
+  }
+
+  def createExternalAircraftList: ExternalAircraftList = {
+    val ea = createExternalAircraft
+
+    if (proximityInterval.length == 0) { // send them as we get them - no estimation required
+      new ExternalAircraftList(ea, onOtherShow, onOtherPositionChanged, onOtherHide)
+    } else {
+      new ExternalAircraftList(ea, noAction, noAction, onOtherHide)
     }
   }
 
@@ -151,8 +160,7 @@ class XPlaneActor (val config: Config) extends PublishingRaceActor
  * NOTE - this never runs at the same time as the RPOS receiver or the proximity sender
  */
   def readXPlaneBeaconMessages: Unit = {
-    val buf = new Array[Byte](1024)  // packet length depends on hostname, which can be up to 500 char
-    val packet = new DatagramPacket(buf,buf.length)
+    val packet = new DatagramPacket(new Array[Byte](MaxPacketLength),MaxPacketLength)
 
     val becnAddr = InetAddress.getByName("239.255.1.1")  // fixed multicast group for X-Plane BECN messages
     val socket = new MulticastSocket(49707) // fixed multicast port for X-Plane BECN messages
@@ -165,12 +173,18 @@ class XPlaneActor (val config: Config) extends PublishingRaceActor
       if (codec.isBECNmsg(packet)){
         val becn = codec.readBECNpacket(packet)
 
-        if (becn.hostType == 1 && becn.role == 1) { // check if it's from a master X-Plane
+        if (becn.hostType == 1 && becn.role == 1) { // check if this is from a master X-Plane
           info(s"got BECN from X-Plane at ${becn.hostName}:${becn.port}")
 
-          ifSome(NetUtils.localInetAddress(becn.hostName)) { addr => // can we resolve the BECN hostname
-            if (NetUtils.isSameHost(addr,remoteIpAddress)) {
+          ifSome (NetUtils.localInetAddress(becn.hostName)) { becnAddr => // can we resolve the broadcasting beacon host
+            info(s"BECN host resolves to $becnAddr")
+
+            if (acceptHost(becnAddr)) {
               info(s"X-Plane host accepted, terminating search")
+              if (becn.version < 110000) codec = new XPlane10Codec
+
+              xplaneAddr = becnAddr
+              xplanePort = becn.port
               xplaneState = Connecting
             }
           }
@@ -179,17 +193,25 @@ class XPlaneActor (val config: Config) extends PublishingRaceActor
     }
   }
 
+  def acceptHost (becnAddr: InetAddress): Boolean = {
+    config.getOptionalString("xplane-host") match {
+      case Some(host) => NetUtils.isSameHost(becnAddr,host)
+      case None => true // no restriction
+    }
+  }
+
+
   def establishConnection: Unit = {
-    val readPacket = codec.readPacket
     info("connecting..")
+    val packet = new DatagramPacket(new Array[Byte](MaxPacketLength),MaxPacketLength)
 
     socket.setSoTimeout(0)
-    sendRPOSrequest
-    socket.receive(readPacket) // this blocks until we get the first RPOS message - just wait until X-Plane talks to us
+    sendRPOSrequest(packet)
+    socket.receive(packet) // this blocks until we get the first RPOS message - just wait until X-Plane talks to us
 
     if (externalAircraft.notEmpty) {
-      loadExternalAircraft // this might take a while on X-Plane's side
-      socket.receive(readPacket) // this blocks until X-Plane is responsive again
+      loadExternalAircraft(packet) // this might take a while on X-Plane's side
+      socket.receive(packet) // this blocks until X-Plane is responsive again
 
       if (proximityInterval.length > 0){
         info(s"starting XPlane proximity export thread with interval $proximityInterval")
@@ -206,24 +228,24 @@ class XPlaneActor (val config: Config) extends PublishingRaceActor
   }
 
   def runConnection: Unit = {
-    val readPacket = codec.readPacket
     info("connected")
+    val packet = new DatagramPacket(new Array[Byte](MaxPacketLength),MaxPacketLength)
 
     lastRPOStime = 0
     receivedRPOS = 0
     publishedRPOS = 0
 
     if (checkInterval.length > 0) {
-      info(s"setting receive timeout to ${checkInterval.toMillis}")
+      info(s"setting receive timeout to ${checkInterval.toMillis} msec")
       socket.setSoTimeout(checkInterval.toMillis.toInt)
     }
 
     try {
       while (status eq Status.Running) {
-        socket.receive(readPacket)
+        socket.receive(packet)
 
-        if (codec.isRPOSmsg(readPacket)) {
-          rpos = codec.readRPOSpacket(readPacket)
+        if (codec.isRPOSmsg(packet)) {
+          rpos = codec.readRPOSpacket(packet)
           lastRPOStime = currentSimTimeMillis
           receivedRPOS += 1
 
@@ -234,7 +256,7 @@ class XPlaneActor (val config: Config) extends PublishingRaceActor
       case stx: SocketTimeoutException =>
         warning(s"no data from X-Plane within $checkInterval, resetting connection")
         proximityList.clear
-        externalAircraft.releaseAll
+        externalAircraft.releaseAssigned
         xplaneState = Searching
 
       case scx: SocketException =>
@@ -256,17 +278,20 @@ class XPlaneActor (val config: Config) extends PublishingRaceActor
    * thread function for sending (possibly estimated) external planes to X-Plane at configured `proximityInterval`
    */
   def sendExternalPlanes: Unit = {
+    val packet = new DatagramPacket(new Array[Byte](MaxPacketLength),MaxPacketLength)
+
     info("proximity export thread running")
 
     while (isConnected) {
       val t = currentSimTimeMillis
       externalAircraft.foreachAssigned { e=>
         e.updateEstimate(t)
-        info(f"sending estimated VEHx[${e.idx}] =  ${e.cs}: ${e.latDeg}%.4f,${e.lonDeg}%.4f, ${e.psiDeg}%3.0f°, ${e.altMeters.toInt}m")
-        sendPacket(codec.getVEHxPacket( e.idx,
-          e.latDeg, e.lonDeg, e.altMeters,
-          e.psiDeg, e.thetaDeg, e.phiDeg,
-          e.gear, e.flaps, e.throttle))
+        debug(f"sending estimated VEHx[${e.idx}] =  ${e.cs}: ${e.latDeg}%.4f,${e.lonDeg}%.4f, ${e.psiDeg}%3.0f°, ${e.altMeters.toInt}m")
+
+        if (codec.writeVEHx(packet,e.idx,
+                            e.latDeg, e.lonDeg, e.altMeters,
+                            e.psiDeg, e.thetaDeg, e.phiDeg,
+                            e.gear, e.flaps, e.throttle) > 0) sendPacket(packet)
       }
 
       Thread.sleep(proximityInterval.toMillis)
@@ -351,72 +376,94 @@ class XPlaneActor (val config: Config) extends PublishingRaceActor
   def noAction (e: ExternalAircraft): Unit = {}
 
   def onOtherShow (e: ExternalAircraft): Unit = {
-    //info(s"proximities + ${e.idx} : $proximityList")
-    if (isLive) updateExternalAircraft(e)
+    if (isConnected) {
+      info(s"show external aircraft ${e.cs} (${e.idx})")
+      positionExternalAircraft(proximityPacket,e)
+    }
   }
 
   def onOtherPositionChanged (e: ExternalAircraft): Unit = {
-    //info(s"proximities * ${e.idx} : $proximityList")
-    if (isLive) updateExternalAircraft(e)
+    if (isConnected) updateExternalAircraft(proximityPacket,e)
   }
 
   def onOtherHide (e: ExternalAircraft): Unit = {
-    info(s"proximities - ${e.idx} : $proximityList")
-    e.hide
-    if (isLive) hideExternalAircraft(e)
+    //info(s"proximities - ${e.idx} : $proximityList")
+    if (isConnected) {
+      info(s"hide external aircraft ${e.cs} (${e.idx})")
+      e.hide
+      positionExternalAircraft(proximityPacket,e)
+    }
   }
 
   //--- X-Plane message IO
 
   def sendPacket (packet: DatagramPacket) = {
-    packet.setAddress(remoteIpAddress)
-    packet.setPort(remotePort)
+    packet.setAddress(xplaneAddr)
+    packet.setPort(xplanePort)
     socket.send(packet)
   }
 
-  def sendOwnAircraft = config.getOptionalString("aircraft.type").foreach { s =>
+  def loadOwnAircraft(packet: DatagramPacket) = config.getOptionalString("aircraft.type").foreach { s =>
     info(s"setting X-Plane aircraft 0 to $s")
-    //sendPacket(codec.getACFNpacket(0,s,0)) // TODO not yet
+    //if (codec.writeACFN(packet,0,s,0)>0) sendPacket(packet) // TODO not yet
   }
 
   // this is only called once during initialization, no need to save iterators
-  def loadExternalAircraft() = externalAircraft.foreach { e=>
-    sendLoadAircraft(e)
-    hideExternalAircraft(e)  // stash them away until they become proximities
+  def loadExternalAircraft(packet: DatagramPacket) = externalAircraft.foreach { e=>
+    sendLoadAircraft(packet,e)
+    sendGearUp(packet,e)
+    //hideExternalAircraft(e)  // stash them away until they become proximities
   }
 
-  def sendAirport = config.getOptionalString("airport").foreach { s =>
+  def sendAirport(packet: DatagramPacket) = config.getOptionalString("airport").foreach { s =>
     info(s"setting X-Plane airport to $s")
-    sendPacket(codec.getPAPTpacket(s))
+    if (codec.writePAPT(packet,s) > 0) sendPacket(packet)
   }
 
-  def sendRPOSrequest = {
+  def sendRPOSrequest(packet: DatagramPacket) = {
     info(s"sending RPOS request with frequency $rposFrequency Hz")
-    sendPacket(codec.getRPOSrequestPacket(rposFrequency))
+    if (codec.writeRPOSrequest(packet,rposFrequency) > 0) sendPacket(packet)
   }
 
-  def sendLoadAircraft(e: ExternalAircraft) = {
-    info(s"sending ACFN[${e.idx}] = ${e.acType}")
-      sendPacket(codec.getACFNpacket(e.idx, e.acType, e.liveryIdx,
-                                     e.latDeg, e.lonDeg, e.altMeters, e.psiDeg, e.speedMsec))
+  def sendLoadAircraft(packet: DatagramPacket, e: ExternalAircraft) = {
+    info(s"sending ACPR[${e.idx}] = ${e.acType}")
+    if (codec.isInstanceOf[XPlane10Codec]) { // does not support ACPR messages to init+position
+      if (codec.writeACFN(packet,e.idx, e.acType, e.liveryIdx) >0) sendPacket(packet)
+      positionExternalAircraft(packet,e)
+    } else {
+      if (codec.writeACPR(packet,e.idx, e.acType, e.liveryIdx,
+                         e.latDeg, e.lonDeg, e.altMeters, e.psiDeg, e.speedMsec) >0) sendPacket(packet)
+    }
+  }
+
+  def sendGearUp (packet: DatagramPacket, e: ExternalAircraft): Unit = {
+    // TODO - neither one seems to work for external planes
+
+    //sendPacket(codec.getDREFpacket(s"sim/multiplayer/controls/gear_request[${e.idx}]",0f))
+
+    loopFromTo(0,10) { i =>
+      if (codec.writeDREF(packet, s"sim/multiplayer/position/plane${e.idx}_gear_deploy[$i]",0f) >0) sendPacket(packet)
+    }
   }
 
   // VEHA is not supported by XPlane 11 anymore so we only send individual aircraft
 
-  def updateExternalAircraft(e: ExternalAircraft) = {
-    info(s"sending VEHx[${e.idx}] = ${e.fpos}")
-    sendPacket(codec.getVEHxPacket(e.idx,
-                                   e.latDeg, e.lonDeg, e.altMeters,
-                                   e.psiDeg, e.thetaDeg, e.phiDeg,
-                                   e.gear, e.flaps, e.throttle))
+  def updateExternalAircraft(packet: DatagramPacket, e: ExternalAircraft) = {
+    debug(s"sending VEHx[${e.idx}] = ${e.fpos}")
+    if (codec.writeVEHx(packet, e.idx,
+                                e.latDeg, e.lonDeg, e.altMeters,  e.psiDeg, e.thetaDeg, e.phiDeg,
+                                e.gear, e.flaps, e.throttle) >0) sendPacket(packet)
     e.hasChanged = false
   }
 
-  def hideExternalAircraft(e: ExternalAircraft) = {
-    info(s"sending VEHx[${e.idx}] to hide plane")
-    sendPacket(codec.getVEHxPacket(e.idx,
-                                   e.latDeg, e.lonDeg, e.altMeters,
-                                   e.psiDeg, e.thetaDeg, e.phiDeg,
-                                   e.gear, e.flaps, e.throttle))
+  def _hideExternalAircraft(packet: DatagramPacket, e: ExternalAircraft) = {
+    info(s"sending VEHx[${e.idx}] to hide external aircraft")
+    if (codec.writeVEHx(packet, e.idx,
+                        e.latDeg, e.lonDeg, ExternalAircraft.noAircraft.altitude.toMeters, e.psiDeg, e.thetaDeg, e.phiDeg,
+                        e.gear, e.flaps, e.throttle) >0) sendPacket(packet)
+  }
+
+  def positionExternalAircraft(packet: DatagramPacket, e: ExternalAircraft) = {
+    if (codec.writePREL(packet, e.idx, e.latDeg, e.lonDeg, e.altMeters, e.psiDeg, e.speedMsec)>0) sendPacket(packet)
   }
 }
