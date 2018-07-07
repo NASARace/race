@@ -62,6 +62,14 @@ object ThreadUtils {
 
   def sleep(duration: FiniteDuration) = Thread.sleep(duration.toMillis)
 
+  def sleepInterruptible (duration: FiniteDuration): Unit = {
+    try {
+      Thread.sleep(duration.toMillis)
+    } catch {
+      case ix: InterruptedException => // do nothing
+    }
+  }
+
   def pollUpTo(maxMillis: Int, pollMillis: Int)(poll: => Boolean): Boolean = {
     @tailrec def _pollNext(remaining: Int): Boolean = {
       if (remaining < 0) false

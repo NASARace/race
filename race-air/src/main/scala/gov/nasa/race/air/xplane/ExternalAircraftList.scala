@@ -38,13 +38,28 @@ class ExternalAircraftList(entries: Array[ExternalAircraft],
                            onHide: ExternalAircraft=>Unit
                         ) {
   val length = entries.length
+  var nAssigned = 0
 
   def notEmpty: Boolean = entries.length > 0
+
+  def hasAssigned: Boolean = nAssigned > 0
+
+  def waitForAssigned: Boolean = synchronized {
+    if (nAssigned == 0) {
+      try {
+        wait
+      } catch {
+        case ix: InterruptedException =>
+      }
+    }
+    nAssigned > 0
+  }
 
   def releaseAssigned: Unit = foreachAssigned{ e=>
     if (e.fpos ne noAircraft) {
       onHide(e)
       e.fpos = noAircraft
+      nAssigned -= 1
     }
   }
 
@@ -55,6 +70,12 @@ class ExternalAircraftList(entries: Array[ExternalAircraft],
       if (e.fpos eq noAircraft) {
         e.updateObservation(fpos)
         onShow(e)
+
+        synchronized {
+          nAssigned += 1
+          if (nAssigned == 1) notifyAll
+        }
+
         return i
       }
       i += 1

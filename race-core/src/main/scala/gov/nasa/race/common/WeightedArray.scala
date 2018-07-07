@@ -80,6 +80,10 @@ trait WeightedArray[T<:AnyRef,E<:WeightedArray.Entry[T]] extends Iterable[E] {
     _size = 0
   }
 
+  override def size: Int = _size
+  def notEmpty: Boolean = _size > 0
+  override def isEmpty: Boolean = _size == 0
+
   @tailrec final protected def _indexOfSame(a: Array[E], n: Int, o: T, i: Int): Int = {
     if (i < n) {
       if (isSame(o, a(i).obj)) i
@@ -284,8 +288,6 @@ trait WeightedArray[T<:AnyRef,E<:WeightedArray.Entry[T]] extends Iterable[E] {
   //--- minimal iteration interface
 
   override def iterator: Iterator[E] = new ArraySliceIterator[E](array,0,_size)
-
-  override def size: Int = _size
 
   def apply (i: Int): E = {
     if (i>=0 && i<_size) array(i)
