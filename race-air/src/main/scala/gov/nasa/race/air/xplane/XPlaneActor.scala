@@ -154,18 +154,53 @@ class XPlaneActor (val config: Config) extends PublishingRaceActor
     }
   }
 
+  def fallbackToConfiguredXplane: Boolean = {
+    config.getOptionalString("xplane-host") match {
+      case Some(h) =>
+        try {
+          info(s"using configured xplane-host: $h")
+          xplaneAddr = InetAddress.getByName(h)
+          xplanePort = config.getIntOrElse("xplane-port", 49000)
+          xplaneState = Connecting
+          true
+        } catch {
+          case _:UnknownHostException =>
+            error(s"unknown X-Plane host: $h")
+            xplaneState = Aborted
+            false
+        }
+      case None =>
+        error("missing xplane-host configuration")
+        xplaneState = Aborted
+        false
+    }
+  }
+
   /*
- * thread function for receiving BECN messages to detect running X-Plane instances
- * If we get a BECN from our configured X-Plane we automatically start to initialize
- *
- * NOTE - this never runs at the same time as the RPOS receiver or the proximity sender
- */
+   * thread function for receiving BECN messages to detect running X-Plane instances
+   * If we get a BECN from our configured X-Plane we automatically start to initialize
+   *
+   * NOTE - this never runs at the same time as the RPOS receiver or the proximity sender
+   */
   def readXPlaneBeaconMessages: Unit = {
     val packet = new DatagramPacket(new Array[Byte](MaxPacketLength),MaxPacketLength)
 
     val becnAddr = InetAddress.getByName("239.255.1.1")  // fixed multicast group for X-Plane BECN messages
     val socket = new MulticastSocket(49707) // fixed multicast port for X-Plane BECN messages
-    socket.joinGroup(becnAddr);
+
+    if (config.getBooleanOrElse("ignore-beacon", false)) {
+      fallbackToConfiguredXplane
+      return
+    } else {
+      try {
+        socket.joinGroup(becnAddr);
+      } catch {
+        case _:Exception => // multicast disabled in network config, try fallback
+          info(s"multicast not enabled, trying configured 'xplane-host'")
+          fallbackToConfiguredXplane
+          return
+      }
+    }
 
     info("searching for beacon messages")
 
