@@ -17,6 +17,7 @@
 
 package gov.nasa.race.air.xplane
 
+import java.io.IOException
 import java.net._
 
 import akka.actor.{ActorRef, Cancellable}
@@ -207,24 +208,30 @@ class XPlaneActor (val config: Config) extends PublishingRaceActor
 
     socket.setSoTimeout(0)
     sendRPOSrequest(packet)
-    socket.receive(packet) // this blocks until we get the first RPOS message - just wait until X-Plane talks to us
 
-    if (externalAircraft.notEmpty) {
-      loadAllExternalAircraft(packet) // this might take a while on X-Plane's side
-      socket.receive(packet) // this blocks until X-Plane is responsive again
+    try {
+      socket.receive(packet) // this blocks until we get the first RPOS message - just wait until X-Plane talks to us
 
-      if (proximityInterval.length > 0){
-        info(s"starting XPlane proximity export thread with interval $proximityInterval")
-        proximityThread = Some(ThreadUtils.startDaemon(runSendProximities))
+      if (externalAircraft.notEmpty) {
+        loadAllExternalAircraft(packet) // this might take a while on X-Plane's side
+        socket.receive(packet) // this blocks until X-Plane is responsive again
+
+        if (proximityInterval.length > 0) {
+          info(s"starting XPlane proximity export thread with interval $proximityInterval")
+          proximityThread = Some(ThreadUtils.startDaemon(runSendProximities))
+        }
       }
-    }
 
-    if (publishInterval.length > 0) {
-      info(s"starting XPlane publish scheduler $publishInterval")
-      publishScheduler = Some(scheduler.schedule(0 seconds, publishInterval, self, UpdateFlightPos))
-    }
+      if (publishInterval.length > 0) {
+        info(s"starting XPlane publish scheduler $publishInterval")
+        publishScheduler = Some(scheduler.schedule(0 seconds, publishInterval, self, UpdateFlightPos))
+      }
 
-    xplaneState = Connected
+      xplaneState = Connected
+
+    } catch {
+      case _: IOException => xplaneState = Searching
+    }
   }
 
   def runConnection: Unit = {
@@ -260,7 +267,7 @@ class XPlaneActor (val config: Config) extends PublishingRaceActor
         ifSome(proximityThread) { _.interrupt } // it might be waiting for an assigned aircraft
         xplaneState = Searching
 
-      case scx: SocketException =>
+      case iox: IOException =>
         xplaneState = Aborted // actor was terminated
 
       case t: Throwable =>
@@ -321,9 +328,9 @@ class XPlaneActor (val config: Config) extends PublishingRaceActor
   override def onTerminateRaceActor(originator: ActorRef) = {
     xplaneState = Aborted
     ifSome(publishScheduler){ _.cancel }
-    // exportThread is not blocking indefinitely and will terminate
+    ifSome(proximityThread){ _.interrupt } // it might wait for proximities
 
-    socket.close()
+    socket.close() // this will unblock threads that are in socket.receive
 
     super.onTerminateRaceActor(originator)
   }

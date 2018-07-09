@@ -19,7 +19,7 @@ package gov.nasa.race.util
 
 import java.io._
 import java.lang.{StringBuilder => JStringBuilder}
-import java.net.{InetAddress, Socket, UnknownHostException}
+import java.net._
 import java.security.cert.X509Certificate
 import java.security.{KeyStore, SecureRandom}
 
@@ -165,5 +165,14 @@ object NetUtils {
 
   def isSameHost (addr1: InetAddress, addr2: InetAddress): Boolean = {
     (addr1.getHostAddress == addr2.getHostAddress) || (addr1.isLoopbackAddress && addr2.isLoopbackAddress)
+  }
+
+  def receive (socket: DatagramSocket, packet: DatagramPacket): Boolean = {
+    try {
+      socket.receive(packet)
+      true
+    } catch {
+      case _:Exception => false
+    }
   }
 }
