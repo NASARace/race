@@ -436,8 +436,13 @@ class XPlaneActor (val config: Config) extends PublishingRaceActor
       if (codec.writeACFN(packet,e.idx, e.acType, e.liveryIdx) >0) sendPacket(packet)
       sendHideAircraft(packet,e)
     } else {
-      if (codec.writeACPR(packet,e.idx, e.acType, e.liveryIdx,
-                         e.latDeg, e.lonDeg, e.altMeters + (e.idx + 100), e.psiDeg, e.speedMsec) >0) sendPacket(packet)
+      // this only works on Linux (Windows crashes)
+      //if (codec.writeACPR(packet,e.idx, e.acType, e.liveryIdx,
+      //                   e.latDeg, e.lonDeg, e.altMeters + (e.idx + 100), e.psiDeg, e.speedMsec) >0) sendPacket(packet)
+
+      // can't get a struct alignment that works for both Windows and Linux, so we need to send separately
+      if (codec.writeACFN(packet,e.idx, e.acType, e.liveryIdx) >0) sendPacket(packet)
+      if (codec.writePREL(packet,e.idx,e.latDeg, e.lonDeg, e.altMeters + (e.idx + 100), e.psiDeg, e.speedMsec) >0) sendPacket(packet)
     }
 
     // turn off autopilot for this external plane
