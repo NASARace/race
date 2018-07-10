@@ -48,6 +48,8 @@ import scala.language.postfixOps
 class XPlaneActor (val config: Config) extends PublishingRaceActor
                                        with SubscribingRaceActor with ContinuousTimeRaceActor with GeoPosition {
   val MaxPacketLength: Int = 1024
+  val BeaconGroup = "239.255.1.1"
+  val BeaconPort = 49707
 
   //--- xplane actor specific state
   sealed trait XPlaneState
@@ -67,7 +69,10 @@ class XPlaneActor (val config: Config) extends PublishingRaceActor
   val id = config.getStringOrElse("aircraft.id", "42")
   val cs = config.getString("aircraft.cs")
 
-  // those are set once we got and selected a beacon host
+  val ignoreBeacon = config.getBooleanOrElse("ignore-beacon", false)  // do we bypass beacon lookup
+  val xplaneHost: Option[String] = config.getOptionalString("xplane-host")
+
+  // those are set once we found a matching X-Plane
   var xplaneAddr: InetAddress = null
   var xplanePort: Int = -1
 
@@ -146,7 +151,7 @@ class XPlaneActor (val config: Config) extends PublishingRaceActor
   def runReceiver: Unit = {
     while (status == Status.Running) {
       xplaneState match {
-        case Searching => readXPlaneBeaconMessages
+        case Searching => findXPlane
         case Connecting => establishConnection
         case Connected => runConnection
         case Aborted => return
@@ -154,58 +159,61 @@ class XPlaneActor (val config: Config) extends PublishingRaceActor
     }
   }
 
-  def fallbackToConfiguredXplane: Boolean = {
-    config.getOptionalString("xplane-host") match {
-      case Some(h) =>
-        try {
-          info(s"using configured xplane-host: $h")
-          xplaneAddr = InetAddress.getByName(h)
-          xplanePort = config.getIntOrElse("xplane-port", 49000)
-          xplaneState = Connecting
-          true
-        } catch {
-          case _:UnknownHostException =>
-            error(s"unknown X-Plane host: $h")
-            xplaneState = Aborted
-            false
-        }
-      case None =>
-        error("missing xplane-host configuration")
-        xplaneState = Aborted
-        false
+  def findXPlane: Unit = {
+    if (ignoreBeacon){
+      findConfiguredXplane
+    } else {
+      findXplaneBeacon
     }
   }
 
   /*
-   * thread function for receiving BECN messages to detect running X-Plane instances
-   * If we get a BECN from our configured X-Plane we automatically start to initialize
-   *
-   * NOTE - this never runs at the same time as the RPOS receiver or the proximity sender
+   * find X-Plane host with configuration data
    */
-  def readXPlaneBeaconMessages: Unit = {
+  def findConfiguredXplane: Unit = {
+    xplaneHost match {
+      case Some(host) =>
+        NetUtils.localInetAddress(host) match {
+          case Some(addr) =>
+            // we got the host but we don't know yet if there is a X-Plane running on it
+            xplaneAddr = addr
+            xplanePort = config.getIntOrElse("xplane-port", 49000)
+            xplaneState = Connecting
+
+          case None =>
+            error(s"unknown xplane-host $host, aborted")
+            xplaneState = Aborted
+        }
+
+      case None =>
+        error("missing xplane-host configuration, aborted")
+        xplaneState = Aborted
+    }
+  }
+
+  /*
+   * find running X-Plane by listening for BECN multicast messages
+   */
+  def findXplaneBeacon: Unit = {
+
     val packet = new DatagramPacket(new Array[Byte](MaxPacketLength),MaxPacketLength)
+    val becnAddr = InetAddress.getByName(BeaconGroup)  // fixed multicast group for X-Plane BECN messages
+    val socket = new MulticastSocket(BeaconPort) // fixed multicast port for X-Plane BECN messages
 
-    val becnAddr = InetAddress.getByName("239.255.1.1")  // fixed multicast group for X-Plane BECN messages
-    val socket = new MulticastSocket(49707) // fixed multicast port for X-Plane BECN messages
-
-    if (config.getBooleanOrElse("ignore-beacon", false)) {
-      fallbackToConfiguredXplane
-      return
-    } else {
-      try {
-        socket.joinGroup(becnAddr);
-      } catch {
-        case _:Exception => // multicast disabled in network config, try fallback
-          info(s"multicast not enabled, trying configured 'xplane-host'")
-          fallbackToConfiguredXplane
-          return
-      }
+    try {
+      socket.joinGroup(becnAddr);
+    } catch {
+      case _:Exception => // multicast disabled in network config, try fallback
+        warning(s"multicast on $BeaconGroup:$BeaconPort not enabled (check firewall), fall back to configured xplane-host")
+        findConfiguredXplane
+        return
     }
 
     info("searching for beacon messages")
 
     while (xplaneState eq Searching){
       socket.receive(packet)
+
       if (codec.isBECNmsg(packet)){
         val becn = codec.readBECNpacket(packet)
 
@@ -230,10 +238,27 @@ class XPlaneActor (val config: Config) extends PublishingRaceActor
   }
 
   def acceptHost (becnAddr: InetAddress): Boolean = {
-    config.getOptionalString("xplane-host") match {
+    xplaneHost match {
       case Some(host) => NetUtils.isSameHost(becnAddr,host)
       case None => true // no restriction
     }
+  }
+
+  def waitForInitialRPOS (packet: DatagramPacket): Boolean = {
+    socket.setSoTimeout(10000)
+
+    var i = 0
+    while(i < 6) {
+      sendRPOSrequest(packet)
+
+      try {
+        socket.receive(packet)
+        return true
+      } catch {
+        case _:SocketTimeoutException => i += 1
+      }
+    }
+    false
   }
 
 
@@ -241,12 +266,15 @@ class XPlaneActor (val config: Config) extends PublishingRaceActor
     info("connecting..")
     val packet = new DatagramPacket(new Array[Byte](MaxPacketLength),MaxPacketLength)
 
+    if (!waitForInitialRPOS(packet)) {
+      error("no X-Plane RPOS response, aborting")
+      xplaneState = Aborted
+      return
+    }
+
     socket.setSoTimeout(0)
-    sendRPOSrequest(packet)
 
     try {
-      socket.receive(packet) // this blocks until we get the first RPOS message - just wait until X-Plane talks to us
-
       if (externalAircraft.notEmpty) {
         loadAllExternalAircraft(packet) // this might take a while on X-Plane's side
         socket.receive(packet) // this blocks until X-Plane is responsive again

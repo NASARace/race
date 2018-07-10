@@ -146,7 +146,7 @@ object NetUtils {
     } catch {
       case x: UnknownHostException =>
         try {
-          Some(InetAddress.getByName(hostName + ".local"))
+          if (hostName.charAt(0).isDigit) None else Some(InetAddress.getByName(hostName + ".local"))
         } catch {
           case _: Throwable => None
         }
