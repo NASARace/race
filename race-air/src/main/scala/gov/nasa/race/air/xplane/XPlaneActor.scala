@@ -70,6 +70,7 @@ class XPlaneActor (val config: Config) extends PublishingRaceActor
   val cs = config.getString("aircraft.cs")
 
   val ignoreBeacon = config.getBooleanOrElse("ignore-beacon", false)  // do we bypass beacon lookup
+  val maxRequest = config.getIntOrElse("max-request", 6)
   val xplaneHost: Option[String] = config.getOptionalString("xplane-host")
 
   // those are set once we found a matching X-Plane
@@ -191,6 +192,23 @@ class XPlaneActor (val config: Config) extends PublishingRaceActor
     }
   }
 
+  def waitForResponse (socket: DatagramSocket, packet: DatagramPacket)(f: =>Unit): Boolean = {
+    socket.setSoTimeout(10000)
+
+    var i = 0
+    while(i < maxRequest) {
+      try {
+        f
+        info(s"waiting for data ($i/$maxRequest)..")
+        socket.receive(packet)
+        return true
+      } catch {
+        case _:SocketTimeoutException => i += 1
+      }
+    }
+    false
+  }
+
   /*
    * find running X-Plane by listening for BECN multicast messages
    */
@@ -201,9 +219,9 @@ class XPlaneActor (val config: Config) extends PublishingRaceActor
     val socket = new MulticastSocket(BeaconPort) // fixed multicast port for X-Plane BECN messages
 
     try {
-      socket.joinGroup(becnAddr);
+      socket.joinGroup(becnAddr)
     } catch {
-      case _:Exception => // multicast disabled in network config, try fallback
+      case x:Exception => // multicast disabled in network config, try fallback
         warning(s"multicast on $BeaconGroup:$BeaconPort not enabled (check firewall), fall back to configured xplane-host")
         findConfiguredXplane
         return
@@ -212,7 +230,11 @@ class XPlaneActor (val config: Config) extends PublishingRaceActor
     info("searching for beacon messages")
 
     while (xplaneState eq Searching){
-      socket.receive(packet)
+      if (!waitForResponse(socket,packet){}) {
+        warning(s"no data on multicast $BeaconGroup:$BeaconPort (check network config), fall back to configured xplane-host")
+        findConfiguredXplane
+        return
+      }
 
       if (codec.isBECNmsg(packet)){
         val becn = codec.readBECNpacket(packet)
@@ -244,29 +266,11 @@ class XPlaneActor (val config: Config) extends PublishingRaceActor
     }
   }
 
-  def waitForInitialRPOS (packet: DatagramPacket): Boolean = {
-    socket.setSoTimeout(10000)
-
-    var i = 0
-    while(i < 6) {
-      sendRPOSrequest(packet)
-
-      try {
-        socket.receive(packet)
-        return true
-      } catch {
-        case _:SocketTimeoutException => i += 1
-      }
-    }
-    false
-  }
-
-
   def establishConnection: Unit = {
     info("connecting..")
     val packet = new DatagramPacket(new Array[Byte](MaxPacketLength),MaxPacketLength)
 
-    if (!waitForInitialRPOS(packet)) {
+    if (!waitForResponse(socket,packet){sendRPOSrequest(packet)}) {
       error("no X-Plane RPOS response, aborting")
       xplaneState = Aborted
       return
