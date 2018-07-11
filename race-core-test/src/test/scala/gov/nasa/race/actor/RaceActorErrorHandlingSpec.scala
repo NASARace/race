@@ -17,6 +17,7 @@
 
 package gov.nasa.race.actor
 
+import akka.actor.ActorRef
 import akka.event.Logging
 import com.typesafe.config.Config
 import gov.nasa.race.core.RaceActor
@@ -26,10 +27,22 @@ import org.scalatest.FlatSpecLike
 
 object RaceActorErrorHandlingSpec {
   object CrashNow
+  object NeverProcess
 
-  class Crasher (val config: Config) extends RaceActor {
+  var neverProcessed = true
+
+  class MessageCrasher(val config: Config) extends RaceActor {
     override def handleMessage = {
-      case CrashNow => throw new RuntimeException("I'm crashing")
+      case CrashNow => throw new RuntimeException("I'm crashing in handleMessage")
+      case NeverProcess =>
+        println("THIS SHOULD NEVER GET EXECUTED!")
+        neverProcessed = false
+    }
+  }
+
+  class StartCrasher (val config: Config) extends RaceActor {
+    override def onStartRaceActor(originator: ActorRef): Boolean = {
+      throw new RuntimeException("I'm crashing in onStartRaceActor")
     }
   }
 }
@@ -40,17 +53,38 @@ object RaceActorErrorHandlingSpec {
 class RaceActorErrorHandlingSpec extends RaceActorSpec with FlatSpecLike {
   import RaceActorErrorHandlingSpec._
 
-  "the master actor" should "detect and report exceptions during RaceActor execution" in {
+  "master actor" should "detect and report exceptions during RaceActor handleMessage execution" in {
     runRaceActorSystem(Logging.InfoLevel) {
 
       val conf = """name = "crasher" """
-      val actor = addTestActor(classOf[Crasher], "crasher", createConfig(conf))
+      val actor = addTestActor(classOf[MessageCrasher], "crasher", createConfig(conf))
 
       printTestActors
       initializeTestActors
       startTestActors(DateTime.now)
 
       actor ! CrashNow
+
+      // actor should be inactive after it crashed
+      actor ! NeverProcess
+      sleep(100)
+      assert(neverProcessed)
+
+      terminateTestActors
+    }
+  }
+
+  "master actor" should "detect and report exceptions during (sync) onStartRaceActor execution" in {
+    runRaceActorSystem(Logging.InfoLevel) {
+
+      val conf = """name = "crasher" """
+      val actor = addTestActor(classOf[StartCrasher], "crasher", createConfig(conf))
+
+      printTestActors
+      initializeTestActors
+      startTestActors(DateTime.now)
+
+      assert( !ras.isRunning)
 
       terminateTestActors
     }

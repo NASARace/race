@@ -21,7 +21,6 @@ import Messages._
 import akka.event.Logging
 import com.typesafe.config.Config
 import gov.nasa.race.test.RaceActorSpec
-import gov.nasa.race.util.ThreadUtils._
 import org.joda.time.DateTime
 import org.scalatest.WordSpecLike
 
@@ -94,7 +93,7 @@ class BusSpec extends RaceActorSpec with WordSpecLike {
 
         publisher ! PublishTest(TestMessage(42))
 
-        sleep(1 second)
+        sleep(1000)
         terminateTestActors
 
         assert(actor(subscriber).gotIt)

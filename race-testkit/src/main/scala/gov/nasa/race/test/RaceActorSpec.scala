@@ -163,6 +163,8 @@ abstract class RaceActorSpec (tras: TestRaceActorSystem) extends TestKit(tras.sy
 
   def bus = tras.bus
 
+  def ras: TestRaceActorSystem = tras
+
   def runRaceActorSystem(level: LogLevel=Logging.WarningLevel) (f: => Any) = {
     setLogLevel(level)
     println("\n====================================== begin actor test")
@@ -224,6 +226,14 @@ abstract class RaceActorSpec (tras: TestRaceActorSystem) extends TestKit(tras.sy
   def printBusSubscriptions = {
     println(s"------------- bus subscriptions for actor system: $system")
     println(tras.showChannels)
+  }
+
+  def sleep (millis: Int): Unit = {
+    try {
+      Thread.sleep(millis)
+    } catch {
+      case _:InterruptedException => // we don't care
+    }
   }
 
   var nExpect = 0
