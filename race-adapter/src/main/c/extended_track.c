@@ -27,6 +27,7 @@
             <SimpleTrack>
             double pitch_deg;
             double roll_deg;
+            string track_type;
         }
         record TrackMsg {
             int msg_type = 1;
@@ -40,7 +41,7 @@ int race_write_xtrack_data (databuf_t* db, int pos,
                         char* id, int msg_ordinal, int flags, 
                         epoch_millis_t time_millis, double lat_deg, double lon_deg, double alt_m, 
                         double heading_deg, double speed_m_sec, double vr_m_sec,
-                        double pitch_deg, double roll_deg) {
+                        double pitch_deg, double roll_deg, char* track_type) {
     int id_len = strlen(id);
     int track_len = id_len + 2 + 80;
     if (pos + track_len > db->capacity) return 0; // not enough space left
@@ -59,16 +60,17 @@ int race_write_xtrack_data (databuf_t* db, int pos,
 
     p = race_write_double(db, p, pitch_deg);
     p = race_write_double(db, p, roll_deg);
+    p = race_write_string(db, p, track_type, strlen(track_type));
     return p;
 }
 
 int race_read_xtrack_data (databuf_t* db, int pos,
-                       char id[], int max_len, int* msg_ordinal, int* flags,
+                       char id[], int max_id_len, int* msg_ordinal, int* flags,
                        epoch_millis_t* time_millis, double* lat_deg, double* lon_deg, double* alt_m, 
                        double* heading_deg, double* speed_m_sec, double* vr_m_sec,
-                       double* pitch_deg, double* roll_deg) {
+                       double* pitch_deg, double* roll_deg, char track_type[], int max_type_len) {
     int p = pos;
-    p = race_read_strncpy(db, p,id,max_len);
+    p = race_read_strncpy(db, p,id,max_id_len);
     p = race_read_int(db,p, msg_ordinal);
     p = race_read_int(db,p, flags);
     p = race_read_long(db, p, time_millis);
@@ -81,5 +83,6 @@ int race_read_xtrack_data (databuf_t* db, int pos,
 
     p = race_read_double(db, p, pitch_deg);
     p = race_read_double(db, p, roll_deg);
+    p = race_read_strncpy(db, p, track_type, max_type_len);
     return p;
 }

@@ -128,11 +128,12 @@ class XPlaneActor (val config: Config) extends PublishingRaceActor
 
   def createExternalAircraftList: ExternalAircraftList = {
     val ea = createExternalAircraft
+    val matcher = getConfigurableOrElse[ExternalAircraftMatcher]("other-matcher")(new FirstUnassignedMatcher)
 
     if (proximityInterval.length == 0) { // send them as we get them - no estimation required
-      new ExternalAircraftList(ea, onOtherShow, onOtherPositionChanged, onOtherHide)
+      new ExternalAircraftList(ea, matcher, onOtherShow, onOtherPositionChanged, onOtherHide)
     } else {
-      new ExternalAircraftList(ea, onOtherShow, noAction, onOtherHide)
+      new ExternalAircraftList(ea, matcher, onOtherShow, noAction, onOtherHide)
     }
   }
 
@@ -140,9 +141,14 @@ class XPlaneActor (val config: Config) extends PublishingRaceActor
     var i=0 // we start at index 1 (0 is piloted aircraft)
     config.getConfigArray("other-aircraft").map { acConf =>
       val acType = acConf.getString("type")
-      val livery = 0 // not yet
+      val liveryName = acConf.getStringOrElse("livery-name", ExternalAircraft.AnyLivery)
+      val liveryIdx = acConf.getIntOrElse("livery-index", 0)
       i += 1
-      if (proximityInterval.length > 0) new ExtrapolatedAC(i, acType,livery) else new NonExtrapolatedAC(i, acType, livery)
+      if (proximityInterval.length > 0) {
+        new ExtrapolatedAC(i, acType,liveryName,liveryIdx)
+      } else {
+        new NonExtrapolatedAC(i, acType, liveryName, liveryIdx)
+      }
     }
   }
 
@@ -384,7 +390,9 @@ class XPlaneActor (val config: Config) extends PublishingRaceActor
     val speed = Knots(0)
     val heading = Degrees(0)
     val vr = Speed.Speed0
-    new ExtendedFlightPos(id, cs, pos, altitude, speed, heading, vr, simTime, 0, Degrees(0), Degrees(0))
+    val acType = "?"
+
+    new ExtendedFlightPos(id, cs, pos, altitude, speed, heading, vr, simTime, 0, Degrees(0), Degrees(0), acType)
   }
 
   override def onStartRaceActor(originator: ActorRef) = {
@@ -421,8 +429,9 @@ class XPlaneActor (val config: Config) extends PublishingRaceActor
       val vr = computeVr(rpos)
       val pitch = Degrees(rpos.pitchDeg)
       val roll = Degrees(rpos.rollDeg)
+      val acType = "?"
 
-      flightPos = new ExtendedFlightPos(id, cs, pos, altitude, speed, heading, vr, simTime, 0, pitch,roll)
+      flightPos = new ExtendedFlightPos(id, cs, pos, altitude, speed, heading, vr, simTime, 0, pitch,roll,acType)
 
       publish(flightPos)
       publishedRPOS = receivedRPOS

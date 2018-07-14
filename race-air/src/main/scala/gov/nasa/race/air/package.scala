@@ -33,11 +33,21 @@ package object air {
     // override if concrete type stores actual values
     def pitch: Angle = Angle.Angle0
     def roll: Angle = Angle.Angle0
+    def acType: String = "?"
 
     def flightLevel: Int = ((altitude.toFeet)/500).toInt * 5
 
     def stateString = {
       f"FL${flightLevel}%d ${heading.toDegrees.toInt}%03d° ${speed.toKnots.toInt}%dkn"
+    }
+
+    def airline: String = {
+      var i=0
+      while (i < cs.length) {
+        if (cs.charAt(i).isDigit) return cs.substring(0,i)
+        i += 1
+      }
+      "?"
     }
   }
 }

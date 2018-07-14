@@ -34,6 +34,7 @@ object ExtendedTrackProtocol {
         <SimpleTrack>
         double pitchDeg
         double rollDeg
+        string trackType
       }
       record TrackMsg {
         int msg_type = 1;
@@ -47,7 +48,7 @@ class ExtendedTrackReader extends SimpleTrackReader {
   override val schema = ExtendedTrackProtocol.schema
 
   override def readTrack (dis: DataInputStream): TrackedObject = {
-    val id = dis.readUTF
+    val id = dis.readUTF.intern // we likely get lots of messages for the same aircraft, avoid tons of strings
     val msgOrd = dis.readInt  // can be used to check consistency
     val flags = dis.readInt
     val timeMsec = dis.readLong
@@ -60,12 +61,13 @@ class ExtendedTrackReader extends SimpleTrackReader {
 
     val pitchDeg = dis.readDouble
     val rollDeg = dis.readDouble
+    val trackType = dis.readUTF.intern
 
     new ExtendedFlightPos(id, id,
       LatLonPos.fromDegrees(latDeg, lonDeg), Meters(altM),
       MetersPerSecond(speedMS), Degrees(headingDeg), MetersPerSecond(vrMS),
       new DateTime(timeMsec),flags,
-      Degrees(pitchDeg), Degrees(rollDeg))
+      Degrees(pitchDeg), Degrees(rollDeg), trackType)
   }
 }
 

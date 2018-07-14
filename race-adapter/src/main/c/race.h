@@ -259,13 +259,13 @@ int race_write_xtrack_data (databuf_t* db, int pos,
                         char* id, int msg_ordinal, int flags, 
                         epoch_millis_t time_millis, double lat_deg, double lon_deg, double alt_m, 
                         double heading_deg, double speed_m_sec, double vr_m_sec,
-                        double pitch_deg, double roll_deg);
+                        double pitch_deg, double roll_deg, char* track_type);
 
 int race_read_xtrack_data (databuf_t* db, int pos,
-                       char id[], int max_len, int* msg_ordinal, int* flags,
+                       char id[], int max_id_len, int* msg_ordinal, int* flags,
                        epoch_millis_t* time_millis, double* lat_deg, double* lon_deg, double* alt_m, 
                        double* heading_deg, double* speed_m_sec, double* vr_m_sec,
-                       double* pitch_deg, double* roll_deg);
+                       double* pitch_deg, double* roll_deg, char track_type[], int max_type_len);
 
 /*************************************************************************************************
  * the top level server interface, which mostly consists of a structure that defines the

@@ -33,6 +33,7 @@ import scala.annotation.tailrec
   * time a position changes. We rather encapsulate all field access here in order to execute updates in constant space
   */
 class ExternalAircraftList(entries: Array[ExternalAircraft],
+                           matcher: ExternalAircraftMatcher,
                            onShow: ExternalAircraft=>Unit,
                            onMove: ExternalAircraft=>Unit,
                            onHide: ExternalAircraft=>Unit
@@ -63,38 +64,36 @@ class ExternalAircraftList(entries: Array[ExternalAircraft],
     }
   }
 
+
   def assign(fpos: TrackedAircraft): Int = {
-    var i=0
-    while (i < length){
-      val e = entries(i)
-      if (e.fpos eq noAircraft) {
-        e.updateObservation(fpos)
-        onShow(e)
+    val idx = matcher.findMatchingIndex(fpos,entries)
+    if (idx >= 0){
+      val e = entries(idx)
+      e.updateObservation(fpos)
+      onShow(e)
 
-        synchronized {
-          nAssigned += 1
-          if (nAssigned == 1) notifyAll
-        }
-
-        return i
+      synchronized {
+        nAssigned += 1
+        if (nAssigned == 1) notifyAll
       }
-      i += 1
     }
-
-    Thread.dumpStack()
-    -1 // cannot happen since FlightsNearList has same size
+    idx
   }
 
   def set (idx: Int, fpos: TrackedAircraft) = {
-    val e = entries(idx)
-    e.updateObservation(fpos)
-    onMove(e)
+    if (idx >= 0) {
+      val e = entries(idx)
+      e.updateObservation(fpos)
+      onMove(e)
+    }
   }
 
   def release (idx: Int) = {
-    val e = entries(idx)
-    onHide(e)
-    e.fpos = noAircraft
+    if (idx >= 0) {
+      val e = entries(idx)
+      onHide(e)
+      e.fpos = noAircraft
+    }
   }
 
   // note this can be called frequently, avoid allocation

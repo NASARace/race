@@ -37,20 +37,20 @@ class FlightNearEntry(var obj: TrackedAircraft,
   *  dynamic proximity list of FlightPos objects that have to be mapped to XpAircraft entries
   *  This is the bus-facing data structure that is used to update the respective entry positions in the XpAircraft list
   */
-class FlightsNearList (center: LatLonPos, maxDistance: Length, xpAircraft: ExternalAircraftList)
+class FlightsNearList (center: LatLonPos, maxDistance: Length, aircraftList: ExternalAircraftList)
            extends ProximityList[TrackedAircraft,FlightNearEntry](center,maxDistance, NauticalMiles(10)) {
-  override protected val array = new Array[FlightNearEntry](xpAircraft.length)
+  override protected val array = new Array[FlightNearEntry](aircraftList.length)
 
   override def createEntry(obj: TrackedAircraft, weight: Double): FlightNearEntry = {
-    new FlightNearEntry(obj,weight,xpAircraft.assign(obj))
+    new FlightNearEntry(obj,weight,aircraftList.assign(obj))
   }
 
   override def setEntry (e: FlightNearEntry, obj: TrackedAircraft, weight: Double) = {
     super.setEntry(e,obj,weight)
-    xpAircraft.set(e.xpIndex, obj)
+    aircraftList.set(e.xpIndex, obj)
   }
 
-  override def releaseEntry(e: FlightNearEntry): Unit = xpAircraft.release(e.xpIndex)
+  override def releaseEntry(e: FlightNearEntry): Unit = aircraftList.release(e.xpIndex)
 
   override def isSame (a: TrackedAircraft, b: TrackedAircraft): Boolean = a.cs == b.cs
 

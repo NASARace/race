@@ -82,12 +82,13 @@ class ExtendedFlightPos(id: String,
                         status: Int = 0,
                         //--- additional fields
                         override val pitch: Angle,
-                        override val roll: Angle
+                        override val roll: Angle,
+                        override val acType: String
                         //.. and possibly more to follow
                        ) extends FlightPos(id, cs, position, altitude, speed, heading, vr, date, status) {
-  override def toString = s"ExtendedFlightPos($id,$cs,$position,${altitude.toFeet.toInt}ft,${speed.toKnots.toInt}kn,${heading.toNormalizedDegrees.toInt}°,${pitch.toDegrees.toInt}°,${roll.toDegrees.toInt}°,0x${status.toHexString},$date)"
-  override def copyWithCS (newCS: String) = new ExtendedFlightPos(id, newCS, position, altitude,speed,heading,vr,date,status,pitch,roll)
-  override def copyWithStatus (newStatus: Int) = new ExtendedFlightPos(id, cs, position, altitude,speed,heading,vr,date,newStatus,pitch,roll)
+  override def toString = s"ExtendedFlightPos($id,$cs,$acType,$position,${altitude.toFeet.toInt}ft,${speed.toKnots.toInt}kn,${heading.toNormalizedDegrees.toInt}°,${pitch.toDegrees.toInt}°,${roll.toDegrees.toInt}°,0x${status.toHexString},$date)"
+  override def copyWithCS (newCS: String) = new ExtendedFlightPos(id, newCS, position, altitude,speed,heading,vr,date,status,pitch,roll,acType)
+  override def copyWithStatus (newStatus: Int) = new ExtendedFlightPos(id, cs, position, altitude,speed,heading,vr,date,newStatus,pitch,roll,acType)
 }
 
 
@@ -101,20 +102,48 @@ class FlightPosArchiveWriter (val oStream: OutputStream, val pathName: String="<
   val ps = new PrintStream (oStream)
   override def close = ps.close
 
+  protected def writeFlightPos(fpos: FlightPos): Unit = {
+    ps.print(fpos.id); ps.print(',')
+    ps.print(fpos.cs); ps.print(',')
+    ps.print(fpos.position.φ.toDegrees); ps.print(',')
+    ps.print(fpos.position.λ.toDegrees); ps.print(',')
+    ps.print(fpos.altitude.toFeet); ps.print(',')
+    ps.print(fpos.speed.toUsMilesPerHour); ps.print(',')
+    ps.print(fpos.heading.toDegrees); ps.print(',')
+    ps.print(fpos.vr.toFeetPerMinute); ps.print(',')
+    ps.print(fpos.date.getMillis);  ps.print(',')
+    ps.print(fpos.status)
+  }
+
   override def write(date: DateTime, obj: Any): Boolean = {
     obj match {
       case fpos: FlightPos =>
+        ps.print(date.getMillis)
+        ps.print(',')
+        writeFlightPos(fpos)
+        ps.println()
+        true
+      case _ => false
+    }
+  }
+}
+
+class ExtendedFlightPosArchiveWriter (oStream: OutputStream, pathName: String) extends FlightPosArchiveWriter(oStream,pathName) {
+  def this(conf: Config) = this(createOutputStream(conf), configuredPathName(conf))
+
+  protected def writeExtendedFlightPos (xfpos: ExtendedFlightPos): Unit = {
+    writeFlightPos(xfpos); ps.print(',')
+
+    ps.print(xfpos.pitch.toDegrees); ps.print(',')
+    ps.print(xfpos.roll.toDegrees); ps.print(',')
+    ps.print(xfpos.acType)
+  }
+
+  override def write(date: DateTime, obj: Any): Boolean = {
+    obj match {
+      case xfpos: ExtendedFlightPos =>
         ps.print(date.getMillis); ps.print(',')
-        ps.print(fpos.id); ps.print(',')
-        ps.print(fpos.cs); ps.print(',')
-        ps.print(fpos.position.φ.toDegrees); ps.print(',')
-        ps.print(fpos.position.λ.toDegrees); ps.print(',')
-        ps.print(fpos.altitude.toFeet); ps.print(',')
-        ps.print(fpos.speed.toUsMilesPerHour); ps.print(',')
-        ps.print(fpos.heading.toDegrees); ps.print(',')
-        ps.print(fpos.vr.toFeetPerMinute); ps.print(',')
-        ps.print(fpos.date.getMillis);  ps.print(',')
-        ps.print(fpos.status); ps.println()
+        writeExtendedFlightPos(xfpos); ps.println()
         true
       case _ => false
     }
@@ -134,8 +163,8 @@ class FlightPosArchiveReader (val iStream: InputStream, val pathName: String="<u
     if (fs.size == 10) {
       try {
         val recDt = fs.head.toLong; fs = fs.tail
-        val flightId = fs.head; fs = fs.tail
-        val cs = fs.head; fs = fs.tail
+        val flightId = fs.head.intern; fs = fs.tail
+        val cs = fs.head.intern; fs = fs.tail
         val phi = fs.head.toDouble; fs = fs.tail
         val lambda = fs.head.toDouble; fs = fs.tail
         val alt = fs.head.toDouble; fs = fs.tail
@@ -147,8 +176,42 @@ class FlightPosArchiveReader (val iStream: InputStream, val pathName: String="<u
         val status = fs.head.toInt
 
         someEntry(date, new FlightPos(flightId, cs, LatLonPos(Degrees(phi), Degrees(lambda)),
-                                      Feet(alt), UsMilesPerHour(speed), Degrees(heading), FeetPerMinute(vr),
-                                      date,status))
+                                      Feet(alt), UsMilesPerHour(speed), Degrees(heading), FeetPerMinute(vr), date,status))
+      } catch {
+        case x: Throwable => None
+      }
+    } else None
+  }
+}
+
+class ExtendedFlightPosArchiveReader (iStream: InputStream, pathName: String) extends FlightPosArchiveReader(iStream,pathName) {
+  def this(conf: Config) = this(createInputStream(conf), configuredPathName(conf))
+
+  override def readNextEntry: Option[ArchiveEntry] = {
+    var fs = getLineFields(iStream)
+
+    if (fs.size == 13) {
+      try {
+        // bad - duplicated code, but avoiding temp objects is more important
+        val recDt = fs.head.toLong; fs = fs.tail
+        val flightId = fs.head.intern; fs = fs.tail
+        val cs = fs.head.intern; fs = fs.tail
+        val phi = fs.head.toDouble; fs = fs.tail
+        val lambda = fs.head.toDouble; fs = fs.tail
+        val alt = fs.head.toDouble; fs = fs.tail
+        val speed = fs.head.toDouble; fs = fs.tail
+        val heading = fs.head.toDouble; fs = fs.tail
+        val vr = fs.head.toDouble; fs = fs.tail
+        val date = getDate(fs.head.toLong); fs = fs.tail  // we might adjust it on-the-fly
+        val status = fs.head.toInt
+
+        val pitch = fs.head.toDouble; fs = fs.tail
+        val roll = fs.head.toDouble; fs = fs.tail
+        val acType = fs.head.intern
+
+        someEntry(date, new ExtendedFlightPos(flightId, cs, LatLonPos(Degrees(phi), Degrees(lambda)),
+                                              Feet(alt), UsMilesPerHour(speed), Degrees(heading), FeetPerMinute(vr), date,status,
+                                              Degrees(pitch), Degrees(roll), acType))
       } catch {
         case x: Throwable => None
       }

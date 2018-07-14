@@ -27,9 +27,11 @@ object ExternalAircraft {
   final val invisibleAltitude = Meters(50000.12345) // this is how we make aircraft disappear without crashing them
 
   // use values that won't cause exceptions in X-Plane
-  val noAircraft = new ExtendedFlightPos("?","?",LatLonPos.fromDegrees(0.1,0.1),
+  val noAircraft = new ExtendedFlightPos("*","*",LatLonPos.fromDegrees(0.1,0.1),
                                          invisibleAltitude,Speed.Speed0,Angle.Angle0, Speed.Speed0,
-                                         new DateTime(0),0,Angle.Angle0,Angle.Angle0)
+                                         new DateTime(0),0,Angle.Angle0,Angle.Angle0,"*")
+
+  val AnyLivery = "*"
 }
 import gov.nasa.race.air.xplane.ExternalAircraft._
 
@@ -41,9 +43,11 @@ trait ExternalAircraft {
   val idx: Int
   val acType: String
   val liveryIdx: Int
+  val liveryName: String
 
   var fpos: TrackedAircraft = noAircraft
   def isAssigned: Boolean = fpos ne noAircraft
+  def isUnassigned: Boolean = fpos eq noAircraft
   var hasChanged = false
 
   def cs = fpos.cs
@@ -77,12 +81,14 @@ trait ExternalAircraft {
     fpos = noAircraft
     hasChanged = false
   }
+
+  override def toString = acType.substring(acType.lastIndexOf('/') + 1) + ':' + liveryName
 }
 
 /**
   * external X-Plane aircraft that does not extrapolate but only reports last set position/attitude
   */
-class NonExtrapolatedAC (val idx: Int, val acType: String, val liveryIdx: Int) extends ExternalAircraft {
+class NonExtrapolatedAC (val idx: Int, val acType: String, val liveryName: String, val liveryIdx: Int) extends ExternalAircraft {
 
   def latDeg = fpos.position.latDeg
   def lonDeg = fpos.position.lonDeg
@@ -101,7 +107,7 @@ class NonExtrapolatedAC (val idx: Int, val acType: String, val liveryIdx: Int) e
   *
   * NOTE - access and modification is NOT synchronized - the caller has to ensure this is threadsafe
   */
-class ExtrapolatedAC (val idx: Int, val acType: String, val liveryIdx: Int) extends ExternalAircraft {
+class ExtrapolatedAC (val idx: Int, val acType: String, val liveryName: String, val liveryIdx: Int) extends ExternalAircraft {
 
   val estimator = new SmoothingVectorExtrapolator(6)
   val state = new Array[Double](6)
