@@ -1,0 +1,135 @@
+/*
+ * Copyright (c) 2018, United States Government, as represented by the
+ * Administrator of the National Aeronautics and Space Administration.
+ * All rights reserved.
+ *
+ * The RACE - Runtime for Airspace Concept Evaluation platform is licensed
+ * under the Apache License, Version 2.0 (the "License"); you may not use
+ * this file except in compliance with the License. You may obtain a copy
+ * of the License at http://www.apache.org/licenses/LICENSE-2.0.
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package gov.nasa.race.actor
+
+import java.net.{DatagramPacket, InetAddress, MulticastSocket}
+
+import akka.actor.{ActorRef, Cancellable}
+import com.typesafe.config.Config
+
+import scala.concurrent.duration._
+import scala.collection.mutable.{HashMap => MHashMap}
+import scala.concurrent.ExecutionContext.Implicits.global
+
+import gov.nasa.race._
+import gov.nasa.race.config.ConfigUtils._
+import gov.nasa.race.common.{DataStreamReader, Status}
+import gov.nasa.race.core.Messages.Publish
+import gov.nasa.race.util.{SettableDIStream, ThreadUtils}
+
+/**
+  * a filtering publisher that imports messages from a multicast socket
+  * the actor needs to be configured with a 'reader' that understands the received messages
+  *
+  * Note - if this actor has a 'interval' configuration > 0 (in milliseconds) we do not publish when we
+  * receive but accumulate received IdentifiableObjects, to be published in the specified interval.
+  * OTHER ITEMS ARE DISCARDED IN THIS CASE (we wouldn't know what keys to use)
+  */
+class MulticastImportActor (val config: Config) extends FilteringPublisher {
+  val MaxMsgLen: Int = 1600
+
+  //--- this is using multicast so we need a group ip address /port
+  val groupAddr = InetAddress.getByName(config.getStringOrElse("group-address", "239.0.0.42"))
+  val groupPort = config.getIntOrElse("group-port", 4242)
+
+  val reader: DataStreamReader = createReader
+
+  //--- if interval == 0 we publish as soon as we get the packets
+  val publishInterval = config.getFiniteDurationOrElse("interval", 0.milliseconds)
+  var publishScheduler: Option[Cancellable] = None
+  val publishItems = MHashMap.empty[String,Any] // used to store publish items in case we have a explicit publishInterval
+
+  val socket = createSocket
+  var receiverThread: Thread = ThreadUtils.daemon(runReceiver)
+
+
+  def createSocket = {
+    val sock = new MulticastSocket(groupPort)
+    sock.setReuseAddress(true)
+    sock
+  }
+
+  protected def createReader: DataStreamReader = getConfigurable[DataStreamReader]("reader")
+
+  override def onStartRaceActor(originator: ActorRef) = {
+    receiverThread.start
+    super.onStartRaceActor(originator)
+  }
+
+  override def onTerminateRaceActor(originator: ActorRef) = {
+    ifSome(publishScheduler){ _.cancel }
+    receiverThread.interrupt
+    super.onTerminateRaceActor(originator)
+  }
+
+  override def handleMessage = {
+    case Publish => publishStoredItems
+  }
+
+  def publishStoredItems = publishItems.synchronized {
+    if (publishItems.nonEmpty) {
+      publishItems.values.foreach(publishFiltered)
+      publishItems.clear
+    }
+  }
+
+  def storeItems (items: Seq[_]) = publishItems.synchronized {
+    items.foreach { item =>
+      item match {
+        case it: IdentifiableObject => publishItems += it.id -> it
+        case _ => // don't know how to store (perhaps warning?)
+      }
+    }
+  }
+
+  def storeItem (item: Any) = publishItems.synchronized {
+    item match {
+      case it: IdentifiableObject => publishItems += it.id -> it
+      case _ => // don't know how to store (perhaps warning?)
+    }
+  }
+
+  // NOTE - this is executed in a separate thread, beware of race conditions
+  def runReceiver: Unit = {
+    try {
+      socket.joinGroup(groupAddr)
+
+      if (publishInterval.length > 0) {
+        info(s"starting publish scheduler $publishInterval")
+        publishScheduler = Some(scheduler.schedule(0.seconds, publishInterval, self, Publish))
+      }
+
+      info(s"joined multicast $groupAddr")
+      val dis = new SettableDIStream(MaxMsgLen)
+      val packet = new DatagramPacket(dis.getBuffer, dis.getCapacity)
+
+      while (status == Status.Running) {
+        socket.receive(packet)
+
+        dis.clear
+        reader.read(dis) match {
+          case Some(items: Seq[_]) => if (publishScheduler.isDefined) storeItems(items) else items.foreach(publishFiltered)
+          case Some(item) => if (publishScheduler.isDefined) storeItem(item) else publishFiltered(item)
+          case None => // do nothing
+        }
+      }
+    } finally {
+      socket.leaveGroup(groupAddr)
+      socket.close
+    }
+  }
+}

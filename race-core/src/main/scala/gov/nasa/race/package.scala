@@ -436,15 +436,6 @@ package object race {
     def compliesWith (s: String):Boolean = schema == s
   }
 
-  // something that can read records from a DataInputStream
-  trait DataStreamReader extends SchemaImplementor {
-    def read (dis: DataInputStream): Option[Any]
-  }
-
-  // something that can write records to a DataOutputStream
-  trait DataStreamWriter extends SchemaImplementor {
-    def write (dos: DataOutputStream, data: Any): Int
-  }
 
   // a more specialized form of scala.util.Try that only needs to discriminate between success or failure (with explanation)
   // assuming that operations succeed more often than fail and hence not require object allocation on success

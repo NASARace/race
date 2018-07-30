@@ -21,10 +21,10 @@ import java.io.{DataInputStream, DataOutputStream}
 
 import gov.nasa.race.geo.LatLonPos
 import gov.nasa.race.track._
+import gov.nasa.race.common.{DataStreamReader,DataStreamWriter}
 import gov.nasa.race.uom.Angle._
 import gov.nasa.race.uom.Length._
 import gov.nasa.race.uom.Speed._
-import gov.nasa.race.{DataStreamReader, DataStreamWriter}
 import org.joda.time.DateTime
 
 import scala.collection.mutable.ArrayBuffer
