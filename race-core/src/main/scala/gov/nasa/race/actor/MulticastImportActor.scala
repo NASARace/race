@@ -50,8 +50,14 @@ class MulticastImportActor (val config: Config) extends FilteringPublisher {
 
   //--- if interval == 0 we publish as soon as we get the packets
   val publishInterval = config.getFiniteDurationOrElse("interval", 0.milliseconds)
+
   var publishScheduler: Option[Cancellable] = None
   val publishItems = MHashMap.empty[String,Any] // used to store publish items in case we have a explicit publishInterval
+
+  // if this is set we only receive updates about the same items and hence we don't have to accumulate/store
+  // but only check if the duration between receive and lastPublish exceeds the publishInterval
+  // this is a significant optimization because we don't need a scheduler or a publishItems map in this case
+  val sameItems = config.getBooleanOrElse("same-items", false)
 
   val socket = createSocket
   var receiverThread: Thread = ThreadUtils.daemon(runReceiver)
@@ -105,10 +111,25 @@ class MulticastImportActor (val config: Config) extends FilteringPublisher {
 
   // NOTE - this is executed in a separate thread, beware of race conditions
   def runReceiver: Unit = {
+    val publishMillis = publishInterval.toMillis
+    var lastPublish: Long = 0
+
+    def storeOrPublish (storeOp: => Unit, publishOp: =>Unit): Unit = {
+      if (publishScheduler.isDefined) {
+        storeOp
+      } else {
+        val tNow = System.currentTimeMillis
+        if ((tNow - lastPublish) > publishMillis ) {
+          publishOp
+          lastPublish = tNow
+        }
+      }
+    }
+
     try {
       socket.joinGroup(groupAddr)
 
-      if (publishInterval.length > 0) {
+      if (publishInterval.length > 0 && !sameItems) {
         info(s"starting publish scheduler $publishInterval")
         publishScheduler = Some(scheduler.schedule(0.seconds, publishInterval, self, Publish))
       }
@@ -122,8 +143,8 @@ class MulticastImportActor (val config: Config) extends FilteringPublisher {
 
         dis.clear
         reader.read(dis) match {
-          case Some(items: Seq[_]) => if (publishScheduler.isDefined) storeItems(items) else items.foreach(publishFiltered)
-          case Some(item) => if (publishScheduler.isDefined) storeItem(item) else publishFiltered(item)
+          case Some(items: Seq[_]) => storeOrPublish(storeItems(items),items.foreach(publishFiltered))
+          case Some(item) => storeOrPublish(storeItem(item),publishFiltered(item))
           case None => // do nothing
         }
       }
