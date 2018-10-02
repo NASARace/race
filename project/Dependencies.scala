@@ -52,7 +52,7 @@ object Dependencies {
   val scalaParser = "org.scala-lang.modules" % "scala-parser-combinators_2.12" % "1.1.1"
 
   //--- scala-xml
-  val scalaXml = "org.scala-lang.modules" % "scala-xml_2.12" % "1.1.0"
+  val scalaXml = "org.scala-lang.modules" % "scala-xml_2.12" % "1.1.1"
 
   //--- new scala reflection (TypeTags etc.)
   val scalaReflect =  "org.scala-lang" % "scala-reflect" % CommonRaceSettings.scalaVer
@@ -111,7 +111,7 @@ object Dependencies {
   val argon2 = "de.mkammerer" % "argon2-jvm" % "2.4"
 
   //--- Akka
-  val akkaVersion = "2.5.13"
+  val akkaVersion = "2.5.17"
   val akkaOrg = "com.typesafe.akka"
 
   val akkaActor = akkaOrg %% "akka-actor" % akkaVersion
@@ -121,13 +121,13 @@ object Dependencies {
   val akkaTestkit = akkaOrg %% "akka-testkit" % akkaVersion
   val akkaMultiNodeTestkit = akkaOrg %% "akka-multi-node-testkit" % akkaVersion // % "test,multi-jvm"
 
-  val akkaHttp = akkaOrg %% "akka-http" % "10.1.3"
+  val akkaHttp = akkaOrg %% "akka-http" % "10.1.5"
 
   val akkaAll = Seq(akkaActor)
 
 
   //--- ActiveMQ
-  val amqVersion = "5.15.4"  // >= 5.11.1
+  val amqVersion = "5.15.6"  // >= 5.11.1
   val amqOrg = "org.apache.activemq"
   val amqBroker = amqOrg % "activemq-broker" % amqVersion
 
@@ -172,7 +172,7 @@ object Dependencies {
 
 
   //--- LWJGL Java wrapper for OpenGL,Vulkan,,OpenCL,OpenAL and others
-  val lwjglVersion = "3.1.6"
+  val lwjglVersion = "3.2.0"
   lazy val lwjglNativeClassifier = OS.build match {
     case _:Linux => "natives-linux"
     case _:OSX => "natives-macos"
