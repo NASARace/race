@@ -76,6 +76,17 @@ object FileUtils {
     if (file.isFile) Some(Files.readAllBytes(file.toPath)) else None
   }
 
+  def withLines (file: File)(f: String=>Unit) = {
+    val src = new BufferedSource(new FileInputStream(file))
+    try {
+      for (line <- src.getLines) {
+        f(line)
+      }
+    } finally {
+      src.close
+    }
+  }
+
   def existingFile(pathName: String): Option[File] = existingFile(new File(pathName))
 
   def existingFile(file: File, ext: String = null): Option[File] = {
@@ -225,6 +236,16 @@ object FileUtils {
     val dirPath = dir.getAbsolutePath + '/'
     val filePath = file.getAbsolutePath
     if (filePath.startsWith(dirPath)) filePath.substring(dirPath.length) else file.getPath
+  }
+
+  def filenameWithExtension (file: File, ext: String): String = {
+    val name = file.getName
+    val idx = name.lastIndexOf('.')
+    if (idx >= 0) {
+      name.substring(0,idx+1) + ext
+    } else {
+      name + '.' + ext
+    }
   }
 
   def filename(path: String) = (new File(path)).getName
