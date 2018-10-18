@@ -22,7 +22,7 @@ lazy val root = createRootProject("race").
   aggregate(raceCore,raceNetJMS,raceNetKafka,raceNetDDS,raceNetHttp,raceSwing,raceWW,raceAir,raceWWAir,raceSpace,raceLauncher,raceAdapter,
     raceCL,raceTools,raceTestKit,raceCoreTest,raceNetJMSTest,raceNetHttpTest,raceNetKafkaTest,raceCLTest,raceAirTest,raceSpaceTest).
   dependsOn(raceCore,raceNetJMS,raceNetKafka,raceNetDDS,raceNetHttp,raceSwing,raceWW,raceAir,raceWWAir,raceSpace,raceLauncher).
-  enablePlugins(JavaAppPackaging,LauncherJarPlugin).
+  enablePlugins(JavaAppPackaging,LauncherJarPlugin,LaikaPlugin).
   settings(
     commonSettings,
     Defaults.itSettings,

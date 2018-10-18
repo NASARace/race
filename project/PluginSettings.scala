@@ -37,12 +37,12 @@ object PluginSettings {
   val laikaSettings = LaikaPlugin.projectSettings ++ Seq(
     sourceDirectories in Laika := Seq(file("doc/manual")),
     target in Laika := target.value / "doc",
-    laikaRawContent := true,
     laikaIncludePDF := false,
     laikaIncludeAPI := false, // not yet
     excludeFilter in Laika := new FileFilter {
       override def accept(file:File): Boolean = Seq("attic","slides").contains(file.getName)
     },
+    laikaConfig := LaikaConfig(rawContent=true),
     aggregate in Laika := false
   )
 

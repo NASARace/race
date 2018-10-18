@@ -26,7 +26,7 @@ import scala.collection.mutable.ArrayBuffer
   * The layout of the resulting binary is as follows:
   * (all offsets are in bytes from beginning of struct)
   *
-  * struct WpGis {
+  * struct xGis {
   *   i32 strOffset     // string list offset
   *   i32 entryOffset   // entry list offset
   *   i32 mapOffset     // id map offset
@@ -43,9 +43,17 @@ import scala.collection.mutable.ArrayBuffer
   *   //--- entry list
   *   i32 nEntries      // number of waypoint entries
   *   i32 sizeOfEntry   // in bytes
-  *   struct WpEntry {  // (const size)
-  *     ...             // all string references replaced by string list indices
+  *   struct Entry {  // (const size)
+  *     i32 hashCode    // for main id (name)
+  *     i32 id          // index into string list
+  *     f64 lat
+  *     f64 lon
+  *     ...             // other payload fields - all string references replaced by string list indices
   *   } [nEntries]
+  *
+  *   //--- id hashmap (name -> entry)
+  *   i32 mapSize       // number of slots for open hashing table
+  *   i32 mapEntries [mapSize] // index into entry list
   * }
   */
 object GeoDBCreator {
@@ -80,15 +88,16 @@ object GeoDBCreator {
   val UNDEFINED_ELEV = Float.NaN
 
   case class Waypoint(name: String,
-                      wpType: Int,
                       lat: Double,
                       lon: Double,
+                      wpType: Int,
                       magVar: Float,
                       landingSite: Option[String],
                       navaidType: Int,
                       freq: Float,
                       elev: Float
                  ) {
+    val hash = name.hashCode // store to avoid recomputation
   }
 
   class Opts extends CliArgs(s"usage ${getClass.getSimpleName}") {
@@ -120,8 +129,9 @@ object GeoDBCreator {
     }
   }
 
-  def addString (s: String): Unit = {
-    strMap.getOrElseUpdate(s, strMap.size)
+  // we need to base this on the mod-UTF bytes since we might have to compute this from native clients
+  def hash (s: String): Int = {
+
   }
 
   def parseSQL (inFile: File, out: DataOutputStream): Unit = {
@@ -135,7 +145,7 @@ object GeoDBCreator {
           addString(landingSite)
 
           //--- populate the waypoint list
-          entryList += new Waypoint(name,getWpType(wpType),lat.toDouble,lon.toDouble,magVar.toFloat,
+          entryList += new Waypoint(name,lat.toDouble,lon.toDouble,getWpType(wpType),magVar.toFloat,
                                  getLandingSite(landingSite),getNavaid(navaid),getFreq(freq),getElev(elev))
         case _ => // ignore
       }
@@ -143,6 +153,7 @@ object GeoDBCreator {
 
     println(s"parsed ${entryList.size} waypoints")
 
+    ///////////////////////////////////// test
     val strSeg = writeStrList(0)
     println(s"@@ str: ${strSeg.size}")
 
@@ -252,9 +263,9 @@ object GeoDBCreator {
       val lsIdx = if (e.landingSite.isDefined) strMap(e.landingSite.get) else -1
 
       eOut.writeInt(nameIdx)
-      eOut.writeInt(e.wpType)
       eOut.writeDouble(e.lat)
       eOut.writeDouble(e.lon)
+      eOut.writeInt(e.wpType)
       eOut.writeFloat(e.magVar)
       eOut.writeInt(lsIdx)
       eOut.writeInt(e.navaidType)
@@ -281,6 +292,48 @@ object GeoDBCreator {
     val freq = buf.getFloat
     val elev = buf.getFloat
 
-    Waypoint(name,eType,lat,lon,magVar,landingSite,navaid,freq,elev)
+    Waypoint(name,lat,lon,eType,magVar,landingSite,navaid,freq,elev)
+  }
+
+  //--- id hashmap
+
+  val sizeTable = Array(
+    // max entries   size     rehash
+    (       8,         13,        11 ),
+    (      16,         19,        17 ),
+    (      32,         43,        41 ),
+    (      64,         73,        71 ),
+    (     128,        151,       149 ),
+    (     256,        283,       281 ),
+    (     512,        571,       569 ),
+    (    1024,       1153,      1151 ),
+    (    2048,       2269,      2267 ),
+    (    4096,       4519,      4517 ),
+    (    8192,       9013,      9011 ),
+    (   16384,      18043,     18041 ),
+    (   32768,      36109,     36107 ),
+    (   65536,      72091,     72089 ),
+    (  131072,     144409,    144407 ),
+    (  262144,     288361,    288359 ),
+    (  524288,     576883,    576881 ),
+    ( 1048576,    1153459,   1153457 ),
+    ( 2097152,    2307163,   2307161 ),
+    ( 4194304,    4613893,   4613891 ),
+    ( 8388608,    9227641,   9227639 ),
+    (16777216,   18455029,  18455027 )
+  )
+
+  def getMapConst (nEntries: Int): (Int,Int,Int) = {
+    for (e <- sizeTable) {
+      if (e._1 >= nEntries) return e
+    }
+    throw new RuntimeException("too many entries")
+  }
+
+  def writeIdMap (off0: Int): ByteArrayOutputStream = {
+    val mapConst = getMapConst(entryList.size)
+
+
+    null
   }
 }

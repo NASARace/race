@@ -18,7 +18,7 @@
 import java.io.File
 
 import laika.sbt.LaikaPlugin.autoImport._
-import laika.tree.Elements._
+import laika.ast._
 import sbt._
 import sbt.{Command, FileFilter, Project}
 import sbt.Keys._
@@ -32,7 +32,7 @@ object LaikaCommands {
       appendWithoutSession(Seq(
         sourceDirectories in Laika := Seq(new File("doc/manual")),
         target in laikaSite := target.value / "doc",
-        laikaRawContent := true,
+        laikaConfig := LaikaConfig(rawContent=true),
         excludeFilter in Laika := new FileFilter {
           override def accept(file:File): Boolean = Seq("attic", "slides", "articles").contains(file.getName)
         }
@@ -47,8 +47,8 @@ object LaikaCommands {
       appendWithoutSession(Seq(
         sourceDirectories in Laika := Seq(new File("doc/slides")),
         target in laikaSite := target.value / "doc" / "slides",
-        laikaRawContent := true,
-        laikaSiteRenderers += laikaSiteRenderer { out =>
+        laikaConfig := LaikaConfig(rawContent=true),
+        laikaExtensions += laikaHtmlRenderer { out =>
           { case Section(hdr@Header(2, _, _), content, _) => out << "</div><div class=\"slide\">" << hdr << content }
         }
       ), state))._1
