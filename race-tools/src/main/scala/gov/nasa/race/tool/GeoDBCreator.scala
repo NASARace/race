@@ -1,11 +1,13 @@
 package gov.nasa.race.tool
 
-import java.io.{DataOutputStream, File, FileOutputStream, OutputStream}
+import java.io._
+import java.nio.ByteBuffer
 
 import gov.nasa.race._
 import gov.nasa.race.main.CliArgs
 import gov.nasa.race.util.FileUtils
 
+import scala.collection.mutable.LinkedHashMap
 import scala.collection.mutable.ArrayBuffer
 
 
@@ -20,6 +22,31 @@ import scala.collection.mutable.ArrayBuffer
   *  (b) avoid heap allocation of respective objects (waypoints, airports) if they are not used. Our queries
   *      usually return only a small number and hence we do not need to load the heap with thousands of
   *      objects that also need to be instantiated before first use
+  *
+  * The layout of the resulting binary is as follows:
+  * (all offsets are in bytes from beginning of struct)
+  *
+  * struct WpGis {
+  *   i32 strOffset     // string list offset
+  *   i32 entryOffset   // entry list offset
+  *   i32 mapOffset     // id map offset
+  *   i32 kdOffset      // kd tree offset
+  *
+  *   //--- string list
+  *   i32 nStrings      // number of entries in string table
+  *   struct StrEntry { // (const size)
+  *     i32 dataOffset
+  *     i32 dataLen
+  *   } [nStrings]
+  *   char strData[]
+  *
+  *   //--- entry list
+  *   i32 nEntries      // number of waypoint entries
+  *   i32 sizeOfEntry   // in bytes
+  *   struct WpEntry {  // (const size)
+  *     ...             // all string references replaced by string list indices
+  *   } [nEntries]
+  * }
   */
 object GeoDBCreator {
 
@@ -50,17 +77,17 @@ object GeoDBCreator {
   val NAV_LOC       = 1
   val NAV_NDB       = 2
 
-  val UNDEFINED_ELEV = Double.NaN
+  val UNDEFINED_ELEV = Float.NaN
 
-  class Waypoint (name: String,
-                  wpType: Int,
-                  lat: Double,
-                  lon: Double,
-                  magVar: Double,
-                  landingSite: Option[String],
-                  navaidType: Int,
-                  freq: Float,
-                  elev: Double
+  case class Waypoint(name: String,
+                      wpType: Int,
+                      lat: Double,
+                      lon: Double,
+                      magVar: Float,
+                      landingSite: Option[String],
+                      navaidType: Int,
+                      freq: Float,
+                      elev: Float
                  ) {
   }
 
@@ -74,6 +101,10 @@ object GeoDBCreator {
   }
 
   var opts = new Opts
+
+  val entryList = new ArrayBuffer[Waypoint]
+  val strMap = new LinkedHashMap[String,Int]
+
 
   def main (args: Array[String]): Unit = {
     if (opts.parse(args)) {
@@ -89,20 +120,38 @@ object GeoDBCreator {
     }
   }
 
+  def addString (s: String): Unit = {
+    strMap.getOrElseUpdate(s, strMap.size)
+  }
+
   def parseSQL (inFile: File, out: DataOutputStream): Unit = {
     println(s"parsing input SQL: $inFile ..")
-    val wpList = new ArrayBuffer[Waypoint]
 
     FileUtils.withLines(inFile) { line =>
       line match {
-        case WaypointRE(id,name,wpType,lat,lon,magVar,ls,navaid,freq,elev) =>
-          wpList += new Waypoint(name,getWpType(wpType),lat.toDouble,lon.toDouble,magVar.toDouble,
-                                 getLandingSite(ls),getNavaid(navaid),getFreq(freq),getElev(elev))
+        case WaypointRE(id,name,wpType,lat,lon,magVar,landingSite,navaid,freq,elev) =>
+          //--- populate the string map
+          addString(name)
+          addString(landingSite)
+
+          //--- populate the waypoint list
+          entryList += new Waypoint(name,getWpType(wpType),lat.toDouble,lon.toDouble,magVar.toFloat,
+                                 getLandingSite(landingSite),getNavaid(navaid),getFreq(freq),getElev(elev))
         case _ => // ignore
       }
     }
 
-    println(s"parsed ${wpList.size} waypoints")
+    println(s"parsed ${entryList.size} waypoints")
+
+    val strSeg = writeStrList(0)
+    println(s"@@ str: ${strSeg.size}")
+
+    val entrySeg = writeEntryList(0)
+    println(s"@@ ent: ${entrySeg.size}")
+
+    val strList = readStrList(ByteBuffer.wrap(strSeg.toByteArray),0)
+    val wp0 = readEntry(ByteBuffer.wrap(entrySeg.toByteArray), 8, strList)
+    println(s"@@ e[0]: $wp0")
   }
 
   def getWpType (wpType: String): Int = {
@@ -135,7 +184,103 @@ object GeoDBCreator {
     if (freq.equalsIgnoreCase("NULL")) 0.0f else freq.toFloat
   }
 
-  def getElev (elev: String): Double = {
-    if (elev.equalsIgnoreCase("NULL")) UNDEFINED_ELEV else elev.toDouble
+  def getElev (elev: String): Float = {
+    if (elev.equalsIgnoreCase("NULL")) UNDEFINED_ELEV else elev.toFloat
+  }
+
+  //-------------------------------------------------------- IO functions
+
+  //--- string list
+
+  def writeStrList(off0: Int): ByteArrayOutputStream = {
+    val dataBuf = new ByteArrayOutputStream
+    val strDataOut = new DataOutputStream(dataBuf)
+
+    val strBuf = new ByteArrayOutputStream
+    val strListOut = new DataOutputStream(strBuf)
+
+    val d0 = off0 + 4 + strMap.size * 8  // off0 + nStrings + nStrings * (dataOffset,dataLen)
+
+    strListOut.writeInt(strMap.size)
+
+    for (e <- strMap) {
+      val dataOffset = strDataOut.size
+      strDataOut.writeBytes(e._1)
+      strListOut.writeInt(d0 + dataOffset)
+      strListOut.writeInt(strDataOut.size - dataOffset) // mod UTF length of string
+    }
+
+    dataBuf.writeTo(strBuf)
+    strBuf
+  }
+
+
+  def readStrList (buf: ByteBuffer, off0: Int): Array[String] = {
+    val nStrings = buf.getInt(off0)
+    var j = off0 + 4
+    val a = new Array[String](nStrings)
+    var bb = new Array[Byte](256)
+
+    for (i <- 0 until nStrings) {
+      val dataOff = buf.getInt(j)
+      val dataLen = buf.getInt(j+4)
+
+      if (dataLen > bb.length) bb = new Array[Byte](dataLen)
+      buf.position(dataOff)
+      buf.get(bb,0,dataLen)
+      val s = new String(bb, 0, dataLen)
+      a(i) = s
+      println(s"@@@ $i: $s")
+
+      j += 8
+    }
+
+    a
+  }
+
+  //--- entry list
+
+  def writeEntryList (off0: Int): ByteArrayOutputStream = {
+    val eBuf = new ByteArrayOutputStream
+    val eOut = new DataOutputStream(eBuf)
+
+    eOut.writeInt(entryList.size)
+    eOut.writeInt(44)    // sizeof Wp entry
+
+    for (e: Waypoint <- entryList) {
+      val nameIdx = strMap(e.name)
+      val lsIdx = if (e.landingSite.isDefined) strMap(e.landingSite.get) else -1
+
+      eOut.writeInt(nameIdx)
+      eOut.writeInt(e.wpType)
+      eOut.writeDouble(e.lat)
+      eOut.writeDouble(e.lon)
+      eOut.writeFloat(e.magVar)
+      eOut.writeInt(lsIdx)
+      eOut.writeInt(e.navaidType)
+      eOut.writeFloat(e.freq)
+      eOut.writeFloat(e.elev)
+    }
+
+    eBuf
+  }
+
+  def readEntry (buf: ByteBuffer, off: Int, strList: Array[String]): Waypoint = {
+    buf.position(off)
+
+    val name = strList(buf.getInt)
+    val eType = buf.getInt
+    val lat = buf.getDouble
+    val lon = buf.getDouble
+    val magVar = buf.getFloat
+    val landingSite = {
+      val idx = buf.getInt
+      if (idx >= 0) Some(strList(idx)) else None
+    }
+    val navaid = buf.getInt
+    val freq = buf.getFloat
+    val elev = buf.getFloat
+
+    Waypoint(name,eType,lat,lon,magVar,landingSite,navaid,freq,elev)
   }
 }

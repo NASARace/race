@@ -38,10 +38,17 @@ object FlightPos {
   // c/s changes only happen rarely, and if they do we want to preserve the changed value
   // for all downstream actors so we don't use a fixed field for it
   case class ChangedCS(oldCS: String)
+
+  // since FlightPos is not a case class anymore we provide a unapply method for convenience
+  // NOTE - don't select on floating point values (position, speed etc.) or date (which is a millisecond epoch)
+  def unapply (o: FlightPos): Option[(String,String,LatLonPos,Length,Speed,Angle,Speed,DateTime,Int)] = {
+    Some((o.id,o.cs,o.position,o.altitude,o.speed,o.heading,o.vr,o.date,o.status))
+  }
 }
 
 /**
   * in-flight state consisting of geographic position, altitude, speed and bearing
+  * note that we intentionally don't use a case class here so that we can provide structural extensibility
   */
 class FlightPos (val id: String,
                  val cs: String,
