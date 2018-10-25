@@ -2,6 +2,8 @@ package gov.nasa.race.tool
 
 import java.io._
 import java.nio.ByteBuffer
+import java.util
+import java.util.Comparator
 
 import gov.nasa.race._
 import gov.nasa.race.main.CliArgs
@@ -9,6 +11,7 @@ import gov.nasa.race.util.FileUtils
 
 import scala.collection.mutable.LinkedHashMap
 import scala.collection.mutable.ArrayBuffer
+import scala.util.Sorting
 
 
 /**
@@ -43,7 +46,7 @@ import scala.collection.mutable.ArrayBuffer
   *   //--- entry list
   *   i32 nEntries      // number of waypoint entries
   *   i32 sizeOfEntry   // in bytes
-  *   struct Entry {  // (const size)
+  *   struct Entry {    // (const size) - the payload data
   *     i32 hashCode    // for main id (name)
   *     i32 id          // index into string list
   *     f64 lat
@@ -52,8 +55,16 @@ import scala.collection.mutable.ArrayBuffer
   *   } [nEntries]
   *
   *   //--- id hashmap (name -> entry)
-  *   i32 mapSize       // number of slots for open hashing table
-  *   i32 mapEntries [mapSize] // index into entry list
+  *   i32 mapLength       // number of slots for open hashing table
+  *   i32 mapRehash       // number to re-compute hash index
+  *   i32 mapEntries [mapLength] // entry list index (-1 if free slot)
+  *
+  *   //--- kd-tree
+  *   struct Node {
+  *     i32 mapEntry      // entry list index of node (payload data)
+  *     i32 leftChild     // rel Node offset of left child (-1 if none)
+  *     i32 rightChild    // rel Node offset of right child (-1 if none)
+  *   } [nEntries]
   * }
   */
 object GeoDBCreator {
@@ -97,7 +108,9 @@ object GeoDBCreator {
                       freq: Float,
                       elev: Float
                  ) {
-    val hash = name.hashCode // store to avoid recomputation
+    val hash = name.hashCode // store to avoid re-computation
+
+    if (name.equals("FUDDD")) println(s"@@@@@@@@@@@@@@ $name -> $hash")
   }
 
   class Opts extends CliArgs(s"usage ${getClass.getSimpleName}") {
@@ -129,9 +142,10 @@ object GeoDBCreator {
     }
   }
 
-  // we need to base this on the mod-UTF bytes since we might have to compute this from native clients
-  def hash (s: String): Int = {
-
+  def addString (s: String): Boolean = {
+    val n = strMap.size
+    strMap.getOrElseUpdate(s, n)
+    strMap.size > n
   }
 
   def parseSQL (inFile: File, out: DataOutputStream): Unit = {
@@ -141,12 +155,17 @@ object GeoDBCreator {
       line match {
         case WaypointRE(id,name,wpType,lat,lon,magVar,landingSite,navaid,freq,elev) =>
           //--- populate the string map
+          // it appears RUNWAY and 2-letter NAVAID/NDB names are not unique
+          val typeFlag = getWpType(wpType)
+          val navaidFlag = getNavaid(navaid)
+          val optLandingSite = getLandingSite(landingSite)
+
           addString(name)
           addString(landingSite)
 
           //--- populate the waypoint list
-          entryList += new Waypoint(name,lat.toDouble,lon.toDouble,getWpType(wpType),magVar.toFloat,
-                                 getLandingSite(landingSite),getNavaid(navaid),getFreq(freq),getElev(elev))
+          entryList += new Waypoint(name,lat.toDouble,lon.toDouble,typeFlag,magVar.toFloat,
+                                    optLandingSite,navaidFlag,getFreq(freq),getElev(elev))
         case _ => // ignore
       }
     }
@@ -161,8 +180,20 @@ object GeoDBCreator {
     println(s"@@ ent: ${entrySeg.size}")
 
     val strList = readStrList(ByteBuffer.wrap(strSeg.toByteArray),0)
-    val wp0 = readEntry(ByteBuffer.wrap(entrySeg.toByteArray), 8, strList)
-    println(s"@@ e[0]: $wp0")
+    //val wp0 = readEntry(ByteBuffer.wrap(entrySeg.toByteArray), 8, strList)
+    //println(s"@@ e[0]: $wp0")
+
+    val mapSeg = writeIdMap(0)
+    println(s"@@ sizeof idMap: ${mapSeg.size}")
+
+
+    val mapBuf = ByteBuffer.wrap(mapSeg.toByteArray)
+    val entryBuf = ByteBuffer.wrap(entrySeg.toByteArray)
+
+    var id = "FUDDD"
+    var e = readIdMap(id, mapBuf, 0, entryBuf, 0, strList)
+    println(s"@@ e($id) = $e")
+
   }
 
   def getWpType (wpType: String): Int = {
@@ -241,7 +272,6 @@ object GeoDBCreator {
       buf.get(bb,0,dataLen)
       val s = new String(bb, 0, dataLen)
       a(i) = s
-      println(s"@@@ $i: $s")
 
       j += 8
     }
@@ -251,20 +281,27 @@ object GeoDBCreator {
 
   //--- entry list
 
+  val sizeofEntry = 48
+
   def writeEntryList (off0: Int): ByteArrayOutputStream = {
     val eBuf = new ByteArrayOutputStream
     val eOut = new DataOutputStream(eBuf)
 
-    eOut.writeInt(entryList.size)
-    eOut.writeInt(44)    // sizeof Wp entry
+    eOut.writeInt(entryList.size) // number of entries
+    eOut.writeInt(sizeofEntry)    // sizeof Wp entry
 
     for (e: Waypoint <- entryList) {
       val nameIdx = strMap(e.name)
       val lsIdx = if (e.landingSite.isDefined) strMap(e.landingSite.get) else -1
 
+      //--- the common fields
+      eOut.writeInt(e.hash)
+
       eOut.writeInt(nameIdx)
       eOut.writeDouble(e.lat)
       eOut.writeDouble(e.lon)
+
+      //--- DB specific fields
       eOut.writeInt(e.wpType)
       eOut.writeFloat(e.magVar)
       eOut.writeInt(lsIdx)
@@ -277,12 +314,13 @@ object GeoDBCreator {
   }
 
   def readEntry (buf: ByteBuffer, off: Int, strList: Array[String]): Waypoint = {
-    buf.position(off)
+    buf.position(off + 4) // skip over the hash
 
     val name = strList(buf.getInt)
-    val eType = buf.getInt
     val lat = buf.getDouble
     val lon = buf.getDouble
+
+    val eType = buf.getInt
     val magVar = buf.getFloat
     val landingSite = {
       val idx = buf.getInt
@@ -323,6 +361,8 @@ object GeoDBCreator {
     (16777216,   18455029,  18455027 )
   )
 
+  val EMPTY = -1
+
   def getMapConst (nEntries: Int): (Int,Int,Int) = {
     for (e <- sizeTable) {
       if (e._1 >= nEntries) return e
@@ -330,10 +370,142 @@ object GeoDBCreator {
     throw new RuntimeException("too many entries")
   }
 
+  @inline def intToUnsignedLong (i: Int): Long = {
+    0x00000000ffffffffL & i
+  }
+
+  @inline def nextIndex (idx: Int, h: Int, mapLength: Int, rehash: Int): Int = {
+    val h2 = (1 + (intToUnsignedLong(h)) % rehash).toInt
+    (idx + h2) % mapLength
+  }
+
   def writeIdMap (off0: Int): ByteArrayOutputStream = {
     val mapConst = getMapConst(entryList.size)
+    val mapLength = mapConst._2
+    val rehash = mapConst._3
+
+    val slots = new Array[Int](mapLength)
+    util.Arrays.fill(slots,EMPTY)
+
+    def addEntry (eIdx: Int, h: Int): Unit = {
+      var idx = (intToUnsignedLong(h) % mapLength).toInt
+      while (slots(idx) != EMPTY) {
+        idx = nextIndex(idx,h,mapLength,rehash)
+      }
+
+      slots(idx) = eIdx
+    }
+
+    for ((e,i) <- entryList.zipWithIndex) {
+      addEntry(i,e.hash)
+    }
+
+    val baos = new ByteArrayOutputStream(4 + slots.length * 4)
+    val out = new DataOutputStream(baos)
+
+    out.writeInt(mapLength)
+    out.writeInt(rehash)
+    for (s <- slots) {
+      out.writeInt(s)
+    }
+
+    baos
+  }
+
+  def readIdMap (id: String,
+                 mapBuf: ByteBuffer, mapOff: Int,
+                 entryBuf: ByteBuffer, entryOff: Int,
+                 strList: Array[String]): Option[Waypoint] = {
+
+    val nEntries = entryBuf.getInt(entryOff)
+    val sizeofEntry = entryBuf.getInt(entryOff+4)
+    val e0 = entryOff + 8 // beginning of entry data
+
+    val mapLength = mapBuf.getInt(mapOff)
+    val rehash = mapBuf.getInt(mapOff+4)
+    val m0 = mapOff + 8  // beginning of map slots
+
+    val h = id.hashCode
+    var idx = (intToUnsignedLong(h) % mapLength).toInt
+
+    var i = 0
+    while (i < nEntries) {
+      // check slot
+      val eIdx = mapBuf.getInt(m0 + idx * 4)
+      if (eIdx == EMPTY) {
+        return None
+      }
+
+      // check entry hash
+      val eOff = e0 + eIdx * sizeofEntry
+      if (entryBuf.getInt(eOff) == h) {
+        // check entry key
+        val s = strList(entryBuf.getInt(eOff + 4))
+        if (id.equals(s)) {
+          return Some(readEntry(entryBuf, eOff, strList))
+        }
+      }
+
+      // hash collision
+      idx = nextIndex(idx, h, mapLength, rehash)
+      i += 1
+    }
+    throw new RuntimeException(s"entry $id not found in $i iterations - possible map corruption")
+  }
+
+  //--- kd tree
+
+  object LatSort extends Comparator[Int] {
+    def compare(eIdx1: Int, eIdx2: Int) = entryList(eIdx1).lat compare entryList(eIdx2).lat
+  }
+  object LonSort extends Comparator[Int] {
+    def compare(eIdx1: Int, eIdx2: Int) = entryList(eIdx1).lon compare entryList(eIdx2).lon
+  }
+
+  val orderings: Array[Comparator[Int]] = Array(LatSort,LonSort)
 
 
-    null
+  def writeKdTree (off0: Int): ByteBuffer = {
+    val nEntries = entryList.size
+
+    //--- input array with entryList indices
+    val eIdxs = new Array[Int](nEntries)
+    for (i <- 0 to nEntries) eIdxs(i) = i
+
+    //--- output buffer representing the kdtree nodes
+    //    each entry consists of a (Int,Int,Int) tuple: (entryList index, left child idx, right child idx)
+    val buf = ByteBuffer.allocate(nEntries * 3 * 4)
+    var n = 0
+
+    def kdTree (i0: Int, i1: Int, depth: Int): Int = {
+      if (eIdxs.isEmpty) {
+        -1
+
+      } else {
+        util.Arrays.sort[Int](eIdxs, i0, i1, orderings(depth % 2))
+
+        val median = (i1 - i0) / 2
+        val pivot = eIdxs(median)
+        val nodeIdx = n
+        val nodeOffset = nodeIdx * 12  // 3 Ints per node entry
+        n += 1
+
+        buf.putInt(nodeOffset,   pivot)
+        buf.putInt(nodeOffset+4, kdTree( i0, median, depth+1))
+        buf.putInt(nodeOffset+8, kdTree( median+1, i1, depth+1))
+
+        nodeOffset
+      }
+    }
+
+    buf
+  }
+
+  def nearestEntry (lat: Double, lon: Double,
+                    kdBuf: ByteBuffer, kdOff: Int,
+                    entryBuf: ByteBuffer, entryOff: Int,
+                    strList: Array[String]
+                   ): Option[Waypoint] = {
+    None
   }
 }
