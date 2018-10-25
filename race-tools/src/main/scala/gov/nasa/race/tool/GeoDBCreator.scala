@@ -69,7 +69,16 @@ import scala.util.Sorting
   */
 object GeoDBCreator {
 
-  /* waypoint schemafor USA_FAA1801 :
+  //-------------------------------- known GisItem types
+
+  trait GisItem {
+    def name: String
+    def hash: Int
+    def lat: Double
+    def lon: Double
+  }
+
+  /* Waypoint schema for USA_FAA1801 :
    *
    *    `id` INT NOT NULL,
    *    `type` VARCHAR(10) NOT NULL,             TERMINAL|RUNWAY|NAVAID
@@ -81,8 +90,12 @@ object GeoDBCreator {
    *    `navaidType` VARCHAR(10) NULL,           LOC|NDB
    *    `frequency` FLOAT NULL,
    *    `elevation` INT NULL,
+   *
+   *     PRIMARY KEY (`id`),
+   *     INDEX `name_idx` (`name` ASC),
+   *     UNIQUE INDEX `unique_idx` (`name` ASC, `latitude` ASC, `longitude` ASC, `navaidType` ASC, `LandingSite_cid` ASC),
+   *     INDEX `landingsite_cid_idx` (`LandingSite_cid` ASC))
    */
-
   val WaypointRE = """\s*INSERT\s+INTO\s+`Waypoint`\s+VALUES\s*\(\s*(\d+)\s*,\s*'(\w+)'\s*,\s*'(\w+)'\s*,\s*(-?\d+.\d+)\s*,\s*(-?\d+.\d+)\s*,\s*(-?\d+.\d+)\s*,\s*'(\w+)'\s*,\s*'?(NULL|\w+)'?\s*,\s*(NULL|\d+.\d+)\s*,\s*(NULL|\d+)\).*""".r
 
   //--- known waypoint types
@@ -107,11 +120,29 @@ object GeoDBCreator {
                       navaidType: Int,
                       freq: Float,
                       elev: Float
-                 ) {
+                 ) extends GisItem {
     val hash = name.hashCode // store to avoid re-computation
-
-    if (name.equals("FUDDD")) println(s"@@@@@@@@@@@@@@ $name -> $hash")
   }
+
+  /* LandingSite schema for USA_FAA1801:
+   *    `id` INT NULL,
+   *    `category` VARCHAR(20) NOT NULL DEFAULT 'Airport',   Airport | Heliport
+   *    `cid` VARCHAR(10) NOT NULL,                          e.g. KSFO
+   *    `name` VARCHAR(45) NOT NULL,
+   *    `access` VARCHAR(10) NOT NULL,                       Civil | Military | Private
+   *    `elevation` INT NOT NULL,
+   *    `latitude` FLOAT NOT NULL,
+   *    `longitude` FLOAT NOT NULL,
+   *    `magvar` FLOAT NOT NULL,
+   *
+   *     PRIMARY KEY (`id`),
+   *     UNIQUE INDEX `cid_UNIQUE` (`cid` ASC),
+   *     INDEX `category` (`category` ASC)  )
+   */
+  val LandingSiteRE = """\s*INSERT\s+INTO\s+`LandingSite`\s+VALUES\s*\(\s*(\d+)\s*,\s*'(\w+)'\s*,\s*'(\w+)'\s*,\s*(-?\d+.\d+)\s*,\s*(-?\d+.\d+)\s*,\s*(-?\d+.\d+)\s*,\s*'(\w+)'\s*,\s*'?(NULL|\w+)'?\s*,\s*(NULL|\d+.\d+)\s*,\s*(NULL|\d+)\).*""".r
+
+
+  //-------------------------------------
 
   class Opts extends CliArgs(s"usage ${getClass.getSimpleName}") {
     var inFile: Option[File] = None
