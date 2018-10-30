@@ -1,0 +1,384 @@
+/*
+ * Copyright (c) 2018, United States Government, as represented by the
+ * Administrator of the National Aeronautics and Space Administration.
+ * All rights reserved.
+ *
+ * The RACE - Runtime for Airspace Concept Evaluation platform is licensed
+ * under the Apache License, Version 2.0 (the "License"); you may not use
+ * this file except in compliance with the License. You may obtain a copy
+ * of the License at http://www.apache.org/licenses/LICENSE-2.0.
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package gov.nasa.race.geo
+
+import java.io.{ByteArrayOutputStream, DataOutputStream, File, FileOutputStream}
+import java.nio.ByteBuffer
+import java.util.Arrays
+
+import gov.nasa.race._
+import gov.nasa.race.util.{ArrayUtils, FileUtils}
+
+import scala.collection.mutable
+import scala.collection.mutable.ArrayBuffer
+
+/**
+  * a static GisItem database that supports the following types of queries:
+  *
+  *  - name lookup (name being a unique alphanumeric key)
+  *  - nearest item for given location
+  *  - sorted list of N nearest items for given location
+  *  - all items within a given distance of given location
+  *
+  * The goal is to load such DBs from mmapped files that only contain primitive data (char, int, double,..) and
+  * relative references (stored as index values) so that the JVM heap footprint is minimal and DB files can
+  * be used from different languages.
+  *
+  * the memory layout/file format of GisItemDBs is as follows:
+  *
+  * struct RGIS {
+  *   i32 magic         // 1380403539 0x52474953 (RGIS)
+  *
+  *   //--- string table  (first entry is schema name, e.g. "gov.nasa.race.air.LandingSite")
+  *   i32 nStrings          // number of entries in string table
+  *   struct StrEntry {
+  *     i32 dataLen         // in bytes
+  *     i32 dataOffset      // index into strData (local, i.e. 0-based)
+  *   } [nStrings]
+  *   i32 nChars            // number of bytes in strData
+  *   char strData[nChars]  // mod utf8 bytes (without terminating 0)
+  *
+  *   //--- entry list
+  *   i32 nItems        // number of GisItems in this DB
+  *   i32 itemSize      // in bytes
+  *   struct Item {     //  the payload data
+  *     i32 hashCode    // for main id (name)
+  *     i32 id          // index into string list
+  *     f64 lat
+  *     f64 lon
+  *     ...             // other payload fields - all string references replaced by string list indices
+  *   } [nItems]
+  *
+  *   //--- key map (name -> entry)
+  *   i32 mapLength       // number of slots for open hashing table
+  *   i32 mapRehash       // number to re-compute hash index
+  *   i32 mapItems [mapLength] // item list offset (-1 if free slot)
+  *
+  *   //--- kd-tree
+  *   struct Node {
+  *     i32 entry         // item list offset for node data
+  *     i32 leftChild     // Node offset of left child (-1 if none)
+  *     i32 rightChild    // Node offset of right child (-1 if none)
+  *   } [nItems]
+  * }
+  *
+  * total size of structure in bytes:
+  *   4 + (8 + nStrings*8 + nChars) + (8 + nItems*sizeOfItem) + (8 + mapItems*4) + (nItems * 12)
+  *
+  *
+  * TODO - should explicitly specify Charset to use
+  */
+
+object GisItemDB {
+  val MAGIC = 0x52474953 //  "RGIS"
+}
+
+abstract class GisItemDB[T <: GisItem] (data: ByteBuffer) {
+
+  protected val stringTable: Array[String] = createStringTable // we always instantiate String object
+
+  //--- construction
+
+  def createStringTable: Array[String] = {
+    val nStrings = data.getInt(12)
+    val dOff = 16 + nStrings*8
+    val a = new Array[String](nStrings)
+    var buf = new Array[Byte](256)
+
+    for (i <- 0 to nStrings) {
+      val recOff = 16 + i*8
+      val dataLen = data.getInt(recOff)
+      val dataOff = data.getInt(recOff+4)
+
+      if (dataLen > buf.length) buf = new Array[Byte](dataLen)
+      data.position(dataOff)
+      data.get(buf, 0, dataLen)
+      a(i) = new String(buf,0, dataLen)
+    }
+    a
+  }
+  
+  //--- queries
+
+  /**
+    * to be provided by concrete class - turn raw data into object
+    * iIdx is guaranteed to be within 0..nItems
+    */
+  protected def readItem (iIdx: Int): T
+  protected def setItem (item: T, iIdx: Int): Boolean // false if not supported (e.g. if T is invariant case class)
+  
+  def getItem (key: String): Option[T] = {
+    /*******
+    val nEntries = entryBuf.getInt(entryOff)
+    val sizeofEntry = entryBuf.getInt(entryOff+4)
+    val e0 = entryOff + 8 // beginning of entry data
+
+    val mapLength = mapBuf.getInt(mapOff)
+    val rehash = mapBuf.getInt(mapOff+4)
+    val m0 = mapOff + 8  // beginning of map slots
+
+    val h = id.hashCode
+    var idx = (intToUnsignedLong(h) % mapLength).toInt
+
+    var i = 0
+    while (i < nEntries) {
+      // check slot
+      val eIdx = mapBuf.getInt(m0 + idx * 4)
+      if (eIdx == EMPTY) {
+        return None
+      }
+
+      // check entry hash
+      val eOff = e0 + eIdx * sizeofEntry
+      if (entryBuf.getInt(eOff) == h) {
+        // check entry key
+        val s = strList(entryBuf.getInt(eOff + 4))
+        if (id.equals(s)) {
+          return Some(readEntry(entryBuf, eOff, strList))
+        }
+      }
+
+      // hash collision
+      idx = nextIndex(idx, h, mapLength, rehash)
+      i += 1
+    }
+    throw new RuntimeException(s"entry $id not found in $i iterations - possible map corruption")
+
+      **********/
+    None // TODO
+  }
+}
+
+object GisItemDBFactory {
+
+  //-- open hashing support for writing item key maps
+
+  val sizeTable = Array(
+    // max entries   size     rehash
+    (       8,         13,        11 ),
+    (      16,         19,        17 ),
+    (      32,         43,        41 ),
+    (      64,         73,        71 ),
+    (     128,        151,       149 ),
+    (     256,        283,       281 ),
+    (     512,        571,       569 ),
+    (    1024,       1153,      1151 ),
+    (    2048,       2269,      2267 ),
+    (    4096,       4519,      4517 ),
+    (    8192,       9013,      9011 ),
+    (   16384,      18043,     18041 ),
+    (   32768,      36109,     36107 ),
+    (   65536,      72091,     72089 ),
+    (  131072,     144409,    144407 ),
+    (  262144,     288361,    288359 ),
+    (  524288,     576883,    576881 ),
+    ( 1048576,    1153459,   1153457 ),
+    ( 2097152,    2307163,   2307161 ),
+    ( 4194304,    4613893,   4613891 ),
+    ( 8388608,    9227641,   9227639 ),
+    (16777216,   18455029,  18455027 )
+  )
+
+  val EMPTY = -1
+
+  def getMapConst (nItems: Int): (Int,Int,Int) = {
+    for (e <- sizeTable) {
+      if (e._1 >= nItems) return e
+    }
+    throw new RuntimeException("too many entries")
+  }
+
+  @inline def intToUnsignedLong (i: Int): Long = {
+    0x00000000ffffffffL & i
+  }
+
+  @inline def nextIndex (idx: Int, h: Int, mapLength: Int, rehash: Int): Int = {
+    val h2 = (1 + (intToUnsignedLong(h)) % rehash).toInt
+    (idx + h2) % mapLength
+  }
+
+}
+
+
+/**
+  * objects that can create concrete GisItemDBs
+  */
+abstract class GisItemDBFactory[T <: GisItem] {
+
+  val strMap = new mutable.LinkedHashMap[String,Int]
+  val items  = new ArrayBuffer[T]
+
+  var itemOffset = 0  // byte offset if item0
+
+  //--- to be provided by concrete class
+  val schema: String
+  val itemSize: Int // in bytes
+  protected def parse (inFile: File): Unit
+  protected def writeItem (it: T, dos: DataOutputStream): Unit
+
+  def createDB (inFile: File, outFile: File): Boolean = {
+    if (FileUtils.existingNonEmptyFile(inFile).isDefined){
+      if (FileUtils.ensureWritable(outFile).isDefined){
+        parse(inFile)
+        if (!items.isEmpty) {
+          write(outFile)
+          true
+        } else {
+          println(s"no $schema items found in file: $inFile")
+          false
+        }
+      } else {
+        println(s"invalid output file: $inFile")
+        false
+      }
+    } else {
+      println(s"invalid input file: $inFile")
+      false
+    }
+  }
+
+  //--- build support
+
+  protected def clear: Unit = {
+    strMap.clear()
+    items.clear()
+  }
+
+  protected def addString (s: String): Boolean = {
+    val n = strMap.size
+    strMap.getOrElseUpdate(s, n)
+    strMap.size > n
+  }
+
+  protected def addItem (e: T): Unit = {
+    items += e
+  }
+
+  def write (outFile: File): Unit = {
+    val fos = new FileOutputStream(outFile, false)
+    val dos = new DataOutputStream(fos)
+
+    dos.writeInt(GisItemDB.MAGIC)
+    writeStrMap(dos)
+    writeItems(dos)
+    writeKeyMap(dos)
+    writeKdTree(dos)
+
+    dos.close
+  }
+
+  protected def writeStrMap (dos: DataOutputStream): Unit = {
+    val charData = new ByteArrayOutputStream
+    var pos = 0
+
+    dos.writeInt(strMap.size)
+    for (e <- strMap) {
+      val s = e._1
+      val b = s.getBytes
+      charData.write(b)
+
+      dos.writeInt(b.length)
+      dos.writeInt(pos)
+
+      pos += b.length
+    }
+
+    dos.writeInt(charData.size)
+    charData.writeTo(dos)
+  }
+
+  protected def writeItems (dos: DataOutputStream): Unit = {
+    dos.writeInt(items.size)
+    dos.writeInt(itemSize)
+
+    itemOffset = dos.size
+    items.foreach( it=> writeItem(it,dos))
+  }
+
+  protected def writeCommonItemFields (e: T, dos: DataOutputStream): Unit = {
+    val nameIdx = strMap(e.name)
+
+    dos.writeInt(e.hash)
+    dos.writeInt(nameIdx)
+    dos.writeDouble(e.lat)
+    dos.writeDouble(e.lon)
+  }
+
+  protected def writeKeyMap (dos: DataOutputStream): Unit = {
+    import GisItemDBFactory._
+    val mapConst = getMapConst(items.size)
+    val mapLength = mapConst._2
+    val rehash = mapConst._3
+
+    val slots = new Array[Int](mapLength)
+    Arrays.fill(slots,EMPTY)
+
+    def addEntry (eIdx: Int, h: Int): Unit = {
+      var idx = (intToUnsignedLong(h) % mapLength).toInt
+      while (slots(idx) != EMPTY) {  // hash collision
+        idx = nextIndex(idx,h,mapLength,rehash)
+      }
+
+      slots(idx) = itemOffset + (eIdx * itemSize)
+    }
+
+    for ((e,i) <- items.zipWithIndex) {
+      addEntry(i,e.hash)
+    }
+
+    dos.writeInt(mapLength)
+    dos.writeInt(rehash)
+    slots.foreach(dos.writeInt)
+  }
+
+  protected def writeKdTree (dos: DataOutputStream): Unit = {
+    val orderings = Array(
+      new Ordering[Int]() { def compare(eIdx1: Int, eIdx2: Int) = items(eIdx1).lat compare items(eIdx2).lat },
+      new Ordering[Int]() { def compare(eIdx1: Int, eIdx2: Int) = items(eIdx1).lon compare items(eIdx2).lon }
+    )
+
+    val nItems = items.size
+
+    //--- input array with entryList indices
+    val eIdxs = new Array[Int](nItems)
+    for (i <- 0 to nItems) eIdxs(i) = i
+
+    //--- output buffer representing the kdtree nodes
+    //    each entry consists of a (Int,Int,Int) tuple: (item offset, left child off, right child off)
+
+    def kdTree (i0: Int, i1: Int, depth: Int): Int = {
+      if (eIdxs.isEmpty) {
+        -1
+
+      } else {
+        ArrayUtils.quickSort(eIdxs, i0, i1)(orderings(depth % 2))
+
+        val median = (i1 - i0) / 2
+        val pivot = eIdxs(median)
+        val nodeOffset = dos.size
+
+        dos.writeInt( itemOffset + (pivot * itemSize))
+        dos.writeInt( kdTree( i0, median, depth+1))
+        dos.writeInt( kdTree( median+1, i1, depth+1))
+
+        nodeOffset
+      }
+    }
+
+    kdTree(0, nItems-1, 0)
+  }
+}

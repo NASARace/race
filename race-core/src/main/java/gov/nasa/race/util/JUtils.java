@@ -36,5 +36,4 @@ public class JUtils {
             body.apply(array[i]);
         }
     }
-
 }
