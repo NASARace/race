@@ -17,8 +17,11 @@
 package gov.nasa.race.tool
 
 import java.io._
+import java.lang.reflect.InvocationTargetException
+import scala.Console
 
 import gov.nasa.race._
+import gov.nasa.race.geo.GisItemDBFactory
 import gov.nasa.race.main.CliArgs
 import gov.nasa.race.util.FileUtils
 
@@ -29,12 +32,34 @@ object GisItemDBCreator {
   //-------------------------------------
 
   class Opts extends CliArgs(s"usage ${getClass.getSimpleName}") {
+    var factory: Option[GisItemDBFactory[_]] = None
     var inFile: Option[File] = None
     var outDir: File = new File("tmp")
 
     requiredArg1("<pathName>", "SQL file to parse") { a =>
       inFile = parseExistingFileOption(a)
     }
+
+    requiredArg1("<clsName>", "db factory class (e.g. gov.nasa.race.air.geo.faa1801.LandingSite)") { a=>
+      try {
+        val factoryCls = Class.forName(a)
+        factory = Some(factoryCls.getDeclaredConstructor().newInstance().asInstanceOf[GisItemDBFactory[_]])
+
+      } catch {
+        case ClassNotFoundException => Console.err.println(s"class not found: $a")
+        case InvocationTargetException => Console.err.println(s"failed to instantiate factory class: $a")
+        case IllegalAccessException => Console.err.println(s"factory class has no public constructor: $a")
+        case NoSuchMethodException => Console.err.println(s"factory class has no default constructor: $a")
+        case ClassCastException => Console.err.println(s"factory class is not a GisItemDBFactory: $a")
+      }
+    }
+  }
+
+  def getOutFile (opts: Opts): Option[File] = {
+    ifSome(opts.inFile) { fin =>
+
+    }
+    None
   }
 
   var opts = new Opts
@@ -42,13 +67,12 @@ object GisItemDBCreator {
 
   def main (args: Array[String]): Unit = {
     if (opts.parse(args)) {
-      ifSome(opts.inFile) { inFile =>
-        val outFile = new File(opts.outDir, FileUtils.filenameWithExtension(inFile, "bin"))
-        val out = new DataOutputStream(new FileOutputStream(outFile))
-        try {
-        } finally {
-          out.close
-        }
+      for (
+        inFile <- opts.inFile;
+        outFile <- getOutFile(opts);
+        factory <- opts.factory
+      ) {
+
       }
     }
   }
