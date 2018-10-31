@@ -352,33 +352,48 @@ abstract class GisItemDBFactory[T <: GisItem] {
     )
 
     val nItems = items.size
+    val node0Offset = dos.size
 
     //--- input array with entryList indices
     val eIdxs = new Array[Int](nItems)
-    for (i <- 0 to nItems) eIdxs(i) = i
+    for (i <- 0 until nItems) eIdxs(i) = i
+
+    var n = 0
+    val itemIdx = new Array[Int](nItems)
+    val leftNode = new Array[Int](nItems)
+    val rightNode = new Array[Int](nItems)
 
     //--- output buffer representing the kdtree nodes
-    //    each entry consists of a (Int,Int,Int) tuple: (item offset, left child off, right child off)
+    //    each entry consists of a (Int,Int,Int) tuple: (item offset, left node child off, right node child off)
 
     def kdTree (i0: Int, i1: Int, depth: Int): Int = {
-      if (eIdxs.isEmpty) {
+      if (i0 >= i1) {
         -1
 
       } else {
         ArrayUtils.quickSort(eIdxs, i0, i1)(orderings(depth % 2))
 
-        val median = (i1 - i0) / 2
+        val median = (i1 + i0) / 2
         val pivot = eIdxs(median)
-        val nodeOffset = dos.size
+        val nodeIdx = n
+        n += 1
 
-        dos.writeInt( itemOffset + (pivot * itemSize))
-        dos.writeInt( kdTree( i0, median, depth+1))
-        dos.writeInt( kdTree( median+1, i1, depth+1))
+        itemIdx(nodeIdx) = pivot
+        leftNode(nodeIdx)  = kdTree( i0, median-1, depth+1)
+        rightNode(nodeIdx) = kdTree( median+1, i1, depth+1)
 
-        nodeOffset
+        nodeIdx
       }
     }
 
+    def nodeOffset (idx: Int): Int = if (idx == -1) -1 else node0Offset + idx * 12    // 3 Int per node
+
     kdTree(0, nItems-1, 0)
+
+    for (i <- 0 until nItems) {
+      dos.writeInt( itemOffset + (itemIdx(i) * itemSize)) // offset of node item
+      dos.writeInt( nodeOffset(leftNode(i)))
+      dos.writeInt( nodeOffset(rightNode(i)))
+    }
   }
 }

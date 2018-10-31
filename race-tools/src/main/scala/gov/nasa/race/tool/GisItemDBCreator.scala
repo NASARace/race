@@ -17,13 +17,12 @@
 package gov.nasa.race.tool
 
 import java.io._
-import java.lang.reflect.InvocationTargetException
-import scala.Console
 
-import gov.nasa.race._
-import gov.nasa.race.geo.GisItemDBFactory
+import gov.nasa.race.geo.{GisItem, GisItemDBFactory}
 import gov.nasa.race.main.CliArgs
 import gov.nasa.race.util.FileUtils
+
+import scala.Console
 
 
 object GisItemDBCreator {
@@ -32,7 +31,7 @@ object GisItemDBCreator {
   //-------------------------------------
 
   class Opts extends CliArgs(s"usage ${getClass.getSimpleName}") {
-    var factory: Option[GisItemDBFactory[_]] = None
+    var factory: Option[GisItemDBFactory[_ <: GisItem]] = None
     var inFile: Option[File] = None
     var outDir: File = new File("tmp")
 
@@ -43,23 +42,19 @@ object GisItemDBCreator {
     requiredArg1("<clsName>", "db factory class (e.g. gov.nasa.race.air.geo.faa1801.LandingSite)") { a=>
       try {
         val factoryCls = Class.forName(a)
-        factory = Some(factoryCls.getDeclaredConstructor().newInstance().asInstanceOf[GisItemDBFactory[_]])
+        factory = Some(factoryCls.getDeclaredConstructor().newInstance().asInstanceOf[GisItemDBFactory[_ <: GisItem]])
 
       } catch {
-        case ClassNotFoundException => Console.err.println(s"class not found: $a")
-        case InvocationTargetException => Console.err.println(s"failed to instantiate factory class: $a")
-        case IllegalAccessException => Console.err.println(s"factory class has no public constructor: $a")
-        case NoSuchMethodException => Console.err.println(s"factory class has no default constructor: $a")
-        case ClassCastException => Console.err.println(s"factory class is not a GisItemDBFactory: $a")
+        case x:Throwable => Console.err.println(s"error instantiating factory class: $x")
       }
     }
   }
 
   def getOutFile (opts: Opts): Option[File] = {
-    ifSome(opts.inFile) { fin =>
-
+    opts.inFile.map{ fin =>
+      val fn = FileUtils.filenameWithExtension(fin, "rgis")
+      new File(opts.outDir, fn)
     }
-    None
   }
 
   var opts = new Opts
@@ -72,7 +67,7 @@ object GisItemDBCreator {
         outFile <- getOutFile(opts);
         factory <- opts.factory
       ) {
-
+        factory.createDB(inFile,outFile)
       }
     }
   }

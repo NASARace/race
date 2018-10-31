@@ -129,7 +129,7 @@ class WaypointDBFactory extends GisItemDBFactory[Waypoint] {
   val WaypointRE =
     """\s*INSERT\s+INTO\s+`Waypoint`\s+VALUES\s*\(\s*(\d+)\s*,\s*'(\w+)'\s*,\s*'(\w+)'\s*,\s*(-?\d+.\d+)\s*,\s*(-?\d+.\d+)\s*,\s*(-?\d+.\d+)\s*,\s*'(\w+)'\s*,\s*'?(NULL|\w+)'?\s*,\s*(NULL|\d+.\d+)\s*,\s*(NULL|\d+)\).*""".r
 
-  override val schema = "gov.nasa.race.air.Waypoint"
+  override val schema = "gov.nasa.race.air.geo.faa1801.Waypoint"
   override val itemSize: Int = 44
 
   override def parse (inFile: File): Unit = {

@@ -100,7 +100,7 @@ lazy val raceUI = createProject("race-ui", commonSettings).
 
 lazy val raceTools = createProject("race-tools", commonSettings).
   enablePlugins(JavaAppPackaging,ClasspathJarPlugin).
-  dependsOn(raceCore,raceNetHttp).
+  dependsOn(raceCore,raceNetHttp,raceAir).
   settings(
     mainClass in Compile := Some("gov.nasa.race.tool.CryptConfig")).
   addLibraryDependencies(logback,nscalaTime,avro)
