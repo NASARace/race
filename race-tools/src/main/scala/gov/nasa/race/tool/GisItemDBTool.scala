@@ -25,8 +25,11 @@ import gov.nasa.race.util.FileUtils
 import scala.Console
 
 
-object GisItemDBCreator {
+object GisItemDBTool {
 
+  object Op extends Enumeration {
+    val CreateDB, ShowStruct, ShowItems, ShowStrings = Value
+  }
 
   //-------------------------------------
 
@@ -34,8 +37,12 @@ object GisItemDBCreator {
     var factory: Option[GisItemDBFactory[_ <: GisItem]] = None
     var inFile: Option[File] = None
     var outDir: File = new File("tmp")
+    var op: Op.Value = Op.CreateDB
 
-    requiredArg1("<pathName>", "SQL file to parse") { a =>
+    opt0("-i", "--show-struct")("show structure of DB") {
+      op = Op.ShowStruct
+    }
+    requiredArg1("<pathName>", "input file") { a =>
       inFile = parseExistingFileOption(a)
     }
 
@@ -62,14 +69,26 @@ object GisItemDBCreator {
 
   def main (args: Array[String]): Unit = {
     if (opts.parse(args)) {
-      for (
-        inFile <- opts.inFile;
-        outFile <- getOutFile(opts);
-        factory <- opts.factory
-      ) {
-        factory.createDB(inFile,outFile)
+      opts.op match {
+        case Op.CreateDB => createDB
+        case Op.ShowStruct => showStruct
+        case other => println(s"unknown operation $other")
       }
+
     }
   }
 
+  def createDB: Unit = {
+    for (
+      inFile <- opts.inFile;
+      outFile <- getOutFile(opts);
+      factory <- opts.factory
+    ) {
+      factory.createDB(inFile,outFile)
+    }
+  }
+
+  def showStruct: Unit = {
+    
+  }
 }

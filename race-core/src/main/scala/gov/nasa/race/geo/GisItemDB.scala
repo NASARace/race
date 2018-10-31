@@ -16,8 +16,9 @@
  */
 package gov.nasa.race.geo
 
-import java.io.{ByteArrayOutputStream, DataOutputStream, File, FileOutputStream}
+import java.io._
 import java.nio.ByteBuffer
+import java.nio.channels.FileChannel
 import java.util.Arrays
 
 import gov.nasa.race._
@@ -85,16 +86,35 @@ import scala.collection.mutable.ArrayBuffer
 
 object GisItemDB {
   val MAGIC = 0x52474953 //  "RGIS"
+
+  def mapFile(file: File): ByteBuffer = {
+    val fileChannel = new RandomAccessFile(file, "r").getChannel
+    fileChannel.map(FileChannel.MapMode.READ_ONLY, 0, fileChannel.size)
+  }
 }
 
 abstract class GisItemDB[T <: GisItem] (data: ByteBuffer) {
 
-  protected val stringTable: Array[String] = createStringTable // we always instantiate String object
+  def this (f: File) = this(GisItemDB.mapFile(f))
 
-  //--- construction
+  //--- initialize stringtable, offsets and sizes
+
+  val nStrings: Int = data.getInt(12)
+  val nChars: Int = data.getInt(8 + nStrings*8)
+  val charDataOffset: Int = 8 + nStrings*8 + 4
+  protected val stringTable: Array[String] = createStringTable // we always instantiate Strings
+
+  val itemOffset: Int = charDataOffset + nChars + 8
+  val nItems: Int = data.getInt(itemOffset - 8)
+  val itemSize: Int = data.getInt(itemOffset - 4)
+
+  val mapOffset: Int = itemOffset + (nItems * itemSize) + 8
+  val mapLength: Int = data.getInt(mapOffset - 8)
+  val mapRehash: Int = data.getInt(mapOffset - 4)
+
+  val kdOffset: Int = mapOffset + (mapLength * 4)
 
   def createStringTable: Array[String] = {
-    val nStrings = data.getInt(12)
     val dOff = 16 + nStrings*8
     val a = new Array[String](nStrings)
     var buf = new Array[Byte](256)
@@ -111,7 +131,36 @@ abstract class GisItemDB[T <: GisItem] (data: ByteBuffer) {
     }
     a
   }
-  
+
+  //--- testing & debugging
+
+  def stringIterator: Iterator[String] = stringTable.iterator
+
+  def dumpStructure: Unit = {
+    println("--- structure:")
+    println(s"schema:      '${stringTable(0)}'")
+
+    println(s"data size:   ${data.limit()}")
+    println(s"nItems:      $nItems")
+    println(s"itemSize:    $itemSize")
+
+    println(s"nStrings:    $nStrings")
+    println(s"nChars:      $nChars")
+    println(s"mapLength:   $mapLength")
+
+    println(s"char offset: $charDataOffset")
+    println(s"item offset: $itemOffset")
+    println(s"map offset:  $mapOffset")
+    println(s"kd offset:   $kdOffset")
+  }
+
+  def dumpStrings: Unit = {
+    println("--- string table:")
+    for ((s,i) <- stringTable.zipWithIndex){
+      println(f"$i%5d: '$s'")
+    }
+  }
+
   //--- queries
 
   /**
