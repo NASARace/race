@@ -300,6 +300,8 @@ abstract class GisItemDBFactory[T <: GisItem] {
     }
   }
 
+  def loadDB (file: File): Option[GisItemDB[T]]
+
   //--- build support
 
   protected def clear: Unit = {

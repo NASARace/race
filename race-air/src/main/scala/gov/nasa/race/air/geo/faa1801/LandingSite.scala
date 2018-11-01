@@ -17,8 +17,9 @@
 package gov.nasa.race.air.geo.faa1801
 
 import java.io.{DataOutputStream, File}
+import java.nio.ByteBuffer
 
-import gov.nasa.race.geo.{GisItem, GisItemDBFactory}
+import gov.nasa.race.geo.{GisItem, GisItemDB, GisItemDBFactory}
 import gov.nasa.race.util.FileUtils
 
 /**
@@ -76,6 +77,16 @@ case class LandingSite (name: String, // cid
   val hash = name.hashCode // store to avoid re-computation
 }
 
+class LandingSiteDB (data: ByteBuffer) extends GisItemDB[LandingSite](data) {
+  override protected def readItem (off: Int): LandingSite = {
+    null // TBD
+  }
+
+  override protected def setItem (e: LandingSite, off: Int): Boolean = {
+    false // TBD
+  }
+}
+
 class LandingSiteDBFactory extends GisItemDBFactory[LandingSite] {
   import LandingSite._
 
@@ -83,6 +94,10 @@ class LandingSiteDBFactory extends GisItemDBFactory[LandingSite] {
 
   override val schema = "gov.nasa.race.air.LandingSite"
   override val itemSize: Int = 36
+
+  override def loadDB (file: File): Option[LandingSiteDB] = {
+    None // TBD
+  }
 
   override def parse (inFile: File): Unit = {
     clear

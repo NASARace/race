@@ -1,7 +1,8 @@
 package gov.nasa.race.air.geo.faa1801
 
-import java.io.{DataOutputStream, File}
+import java.io.{DataOutputStream, File, RandomAccessFile}
 import java.nio.ByteBuffer
+import java.nio.channels.FileChannel
 
 import gov.nasa.race.geo.{GisItem, GisItemDB, GisItemDBFactory}
 import gov.nasa.race.util.FileUtils
@@ -93,6 +94,7 @@ case class Waypoint(var name: String,
   val hash = name.hashCode // store to avoid re-computation
 }
 
+
 class WaypointDB (data: ByteBuffer) extends GisItemDB[Waypoint](data) {
 
   override protected def readItem (off: Int): Waypoint = {
@@ -131,6 +133,18 @@ class WaypointDBFactory extends GisItemDBFactory[Waypoint] {
 
   override val schema = "gov.nasa.race.air.geo.faa1801.Waypoint"
   override val itemSize: Int = 44
+
+  override def loadDB (file: File): Option[WaypointDB] = {
+    if (file.isFile) {
+      val len = file.length
+      val fc = new RandomAccessFile(file, "r").getChannel
+      val bbuf = fc.map(FileChannel.MapMode.READ_ONLY, 0, len)
+      Some(new WaypointDB(bbuf))
+
+    } else {
+      None
+    }
+  }
 
   override def parse (inFile: File): Unit = {
     clear
