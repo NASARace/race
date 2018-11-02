@@ -28,7 +28,7 @@ import scala.Console
 object GisItemDBTool {
 
   object Op extends Enumeration {
-    val CreateDB, ShowStruct, ShowItems, ShowStrings = Value
+    val CreateDB, ShowStruct, ShowItems, ShowStrings, ShowKey = Value
   }
 
   //-------------------------------------
@@ -37,6 +37,7 @@ object GisItemDBTool {
     var factory: Option[GisItemDBFactory[_ <: GisItem]] = None
     var inFile: Option[File] = None
     var outDir: File = new File("tmp")
+    var key: Option[String] = None
     var op: Op.Value = Op.CreateDB
 
     opt0("-i", "--show-struct")("show structure of DB") {
@@ -48,6 +49,11 @@ object GisItemDBTool {
     opt0("--show-items")("show item list of DB") {
       op = Op.ShowItems
     }
+    opt1("-k","--show-key")("<key>","show item for given key"){ a=>
+      op = Op.ShowKey
+      key = Some(a)
+    }
+
     requiredArg1("<pathName>", "input file") { a =>
       inFile = parseExistingFileOption(a)
     }
@@ -80,6 +86,7 @@ object GisItemDBTool {
         case Op.ShowStruct => showStruct
         case Op.ShowStrings => showStrings
         case Op.ShowItems => showItems
+        case Op.ShowKey => showKey
         case other => println(s"unknown operation $other")
       }
 
@@ -107,6 +114,15 @@ object GisItemDBTool {
   def showItems: Unit = {
     for ( file <- opts.inFile; factory <- opts.factory; db <- factory.loadDB(file)) {
       db.printItems
+    }
+  }
+
+  def showKey: Unit = {
+    for ( file <- opts.inFile; factory <- opts.factory; key <- opts.key; db <- factory.loadDB(file)) {
+      db.getItem(key) match {
+        case Some(e) => println(s"item matching key '$key' = $e")
+        case None => println(s"no item matching key '$key'")
+      }
     }
   }
 }

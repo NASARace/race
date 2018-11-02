@@ -91,9 +91,22 @@ object GisItemDB {
     val fileChannel = new RandomAccessFile(file, "r").getChannel
     fileChannel.map(FileChannel.MapMode.READ_ONLY, 0, fileChannel.size)
   }
+
+
+  @inline def intToUnsignedLong (i: Int): Long = {
+    0x00000000ffffffffL & i
+  }
+
+  @inline def nextIndex (idx: Int, h: Int, mapLength: Int, rehash: Int): Int = {
+    val h2 = (1 + (intToUnsignedLong(h)) % rehash).toInt
+    (idx + h2) % mapLength
+  }
+
+  val EMPTY = -1
 }
 
 abstract class GisItemDB[T <: GisItem] (data: ByteBuffer) {
+  import GisItemDB._
 
   def this (f: File) = this(GisItemDB.mapFile(f))
 
@@ -179,44 +192,26 @@ abstract class GisItemDB[T <: GisItem] (data: ByteBuffer) {
   protected def readItem (iIdx: Int): T
 
   def getItem (key: String): Option[T] = {
-    /*******
-    val nEntries = entryBuf.getInt(entryOff)
-    val sizeofEntry = entryBuf.getInt(entryOff+4)
-    val e0 = entryOff + 8 // beginning of entry data
-
-    val mapLength = mapBuf.getInt(mapOff)
-    val rehash = mapBuf.getInt(mapOff+4)
-    val m0 = mapOff + 8  // beginning of map slots
-
-    val h = id.hashCode
+    val buf = data
+    val h = key.hashCode
     var idx = (intToUnsignedLong(h) % mapLength).toInt
 
     var i = 0
-    while (i < nEntries) {
-      // check slot
-      val eIdx = mapBuf.getInt(m0 + idx * 4)
-      if (eIdx == EMPTY) {
-        return None
-      }
+    while (i < nItems) {
+      val eOff = buf.getInt(mapOffset + (idx * 4))
+      if (eOff == EMPTY) return None
 
-      // check entry hash
-      val eOff = e0 + eIdx * sizeofEntry
-      if (entryBuf.getInt(eOff) == h) {
-        // check entry key
-        val s = strList(entryBuf.getInt(eOff + 4))
-        if (id.equals(s)) {
-          return Some(readEntry(entryBuf, eOff, strList))
-        }
+      if (buf.getInt(eOff) == h) {
+        val k = stringTable(buf.getInt(eOff + 4))
+        if (k.equals(key)) return Some(readItem(eOff))
       }
 
       // hash collision
-      idx = nextIndex(idx, h, mapLength, rehash)
+      idx = nextIndex(idx, h, mapLength, mapRehash)
       i += 1
     }
-    throw new RuntimeException(s"entry $id not found in $i iterations - possible map corruption")
 
-      **********/
-    None // TODO
+    throw new RuntimeException(s"entry $key not found in $i iterations - possible map corruption")
   }
 }
 
@@ -250,24 +245,12 @@ object GisItemDBFactory {
     (16777216,   18455029,  18455027 )
   )
 
-  val EMPTY = -1
-
   def getMapConst (nItems: Int): (Int,Int,Int) = {
     for (e <- sizeTable) {
       if (e._1 >= nItems) return e
     }
     throw new RuntimeException("too many entries")
   }
-
-  @inline def intToUnsignedLong (i: Int): Long = {
-    0x00000000ffffffffL & i
-  }
-
-  @inline def nextIndex (idx: Int, h: Int, mapLength: Int, rehash: Int): Int = {
-    val h2 = (1 + (intToUnsignedLong(h)) % rehash).toInt
-    (idx + h2) % mapLength
-  }
-
 }
 
 
@@ -397,6 +380,8 @@ abstract class GisItemDBFactory[T <: GisItem] {
 
   protected def writeKeyMap (dos: DataOutputStream): Unit = {
     import GisItemDBFactory._
+    import GisItemDB._
+
     val mapConst = getMapConst(items.size)
     val mapLength = mapConst._2
     val rehash = mapConst._3
