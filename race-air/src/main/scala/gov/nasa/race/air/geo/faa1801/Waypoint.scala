@@ -81,15 +81,15 @@ object Waypoint {
   * note - we keep fields as vars so that we can use cache objects for queries
   * (items should not be stored outside the DB anyways)
   */
-case class Waypoint(var name: String,
-                    var lat: Double,
-                    var lon: Double,
-                    var wpType: Int,
-                    var magVar: Float,
-                    var landingSite: Option[String],
-                    var navaidType: Int,
-                    var freq: Float,
-                    var elev: Float
+case class Waypoint(name: String,
+                    lat: Double,
+                    lon: Double,
+                    wpType: Int,
+                    magVar: Float,
+                    landingSite: Option[String],
+                    navaidType: Int,
+                    freq: Float,
+                    elev: Float
                    ) extends GisItem {
   val hash = name.hashCode // store to avoid re-computation
 }
@@ -98,30 +98,24 @@ case class Waypoint(var name: String,
 class WaypointDB (data: ByteBuffer) extends GisItemDB[Waypoint](data) {
 
   override protected def readItem (off: Int): Waypoint = {
-    val wp = Waypoint(null,0.0,0.0,-1,0.0f,None,-1,0.0f, 0.0f)
-    setItem(wp,off)
-    wp
-  }
-
-  override protected def setItem (wp: Waypoint, off: Int): Boolean = {
     val buf = data
     buf.position(off + 4) // skip over the hash
 
-    wp.name = stringTable(data.getInt)
-    wp.lat = buf.getDouble
-    wp.lon = buf.getDouble
+    val name = stringTable(data.getInt)
+    val lat = buf.getDouble
+    val lon = buf.getDouble
 
-    wp.wpType = buf.getInt
-    wp.magVar = buf.getFloat
-    wp.landingSite = {
+    val wpType = buf.getInt
+    val magVar = buf.getFloat
+    val landingSite = {
       val idx = buf.getInt
       if (idx >= 0) Some(stringTable(idx)) else None
     }
-    wp.navaidType = buf.getInt
-    wp.freq = buf.getFloat
-    wp.elev = buf.getFloat
+    val navaidType = buf.getInt
+    val freq = buf.getFloat
+    val elev = buf.getFloat
 
-    true
+    Waypoint(name,lat,lon,wpType,magVar,landingSite,navaidType,freq,elev)
   }
 }
 
@@ -135,15 +129,7 @@ class WaypointDBFactory extends GisItemDBFactory[Waypoint] {
   override val itemSize: Int = 44
 
   override def loadDB (file: File): Option[WaypointDB] = {
-    if (file.isFile) {
-      val len = file.length
-      val fc = new RandomAccessFile(file, "r").getChannel
-      val bbuf = fc.map(FileChannel.MapMode.READ_ONLY, 0, len)
-      Some(new WaypointDB(bbuf))
-
-    } else {
-      None
-    }
+    mapFile(file).map(new WaypointDB(_))
   }
 
   override def parse (inFile: File): Unit = {

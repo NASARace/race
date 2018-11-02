@@ -74,16 +74,27 @@ case class LandingSite (name: String, // cid
                         lsAccess: Int,
                         magVar: Float
                        ) extends GisItem {
-  val hash = name.hashCode // store to avoid re-computation
+  var hash = name.hashCode
 }
 
 class LandingSiteDB (data: ByteBuffer) extends GisItemDB[LandingSite](data) {
-  override protected def readItem (off: Int): LandingSite = {
-    null // TBD
-  }
+  import LandingSite._
 
-  override protected def setItem (e: LandingSite, off: Int): Boolean = {
-    false // TBD
+  override protected def readItem (off: Int): LandingSite = {
+    val buf = data
+    buf.position(off + 4) // skip over the hash
+
+    val name = stringTable(buf.getInt)
+    val lat = buf.getDouble
+    val lon = buf.getDouble
+
+    val descr = stringTable(buf.getInt)
+    val lsType = buf.getInt
+    val lsAccess = buf.getInt
+    val elev = buf.getFloat
+    val magVar = buf.getFloat
+
+    LandingSite(name,lat,lon,descr,elev,lsType,lsAccess,magVar)
   }
 }
 
@@ -92,11 +103,11 @@ class LandingSiteDBFactory extends GisItemDBFactory[LandingSite] {
 
   val LandingSiteRE = """\s*INSERT\s+INTO\s+`LandingSite`\s+VALUES\s*\(\s*(\d+)\s*,\s*'(\w+)'\s*,\s*'(\w+)'\s*,\s*'([^']+)'\s*,\s*'(\w+)'\s*,\s*(\d+)\s*,\s*(-?\d+.\d+)\s*,\s*(-?\d+.\d+)\s*,\s*(-?\d+.\d+)\).*""".r
 
-  override val schema = "gov.nasa.race.air.LandingSite"
-  override val itemSize: Int = 36
+  override val schema = "gov.nasa.race.air.geo.faa1801.LandingSite"
+  override val itemSize: Int = 44
 
   override def loadDB (file: File): Option[LandingSiteDB] = {
-    None // TBD
+    mapFile(file).map(new LandingSiteDB(_))
   }
 
   override def parse (inFile: File): Unit = {
@@ -106,6 +117,8 @@ class LandingSiteDBFactory extends GisItemDBFactory[LandingSite] {
     FileUtils.withLines(inFile) { line =>
       line match {
         case LandingSiteRE(id,cat,name,descr,access,elev,lat,lon,magVar) =>
+          if (items.size > 10) return
+
           //--- populate the string map
           // it appears RUNWAY and 2-letter NAVAID/NDB names are not unique
           val typeFlag = getLsType(cat)

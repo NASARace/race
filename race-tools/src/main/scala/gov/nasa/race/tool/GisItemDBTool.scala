@@ -42,6 +42,12 @@ object GisItemDBTool {
     opt0("-i", "--show-struct")("show structure of DB") {
       op = Op.ShowStruct
     }
+    opt0("--show-strings")("show string table contents of DB") {
+      op = Op.ShowStrings
+    }
+    opt0("--show-items")("show item list of DB") {
+      op = Op.ShowItems
+    }
     requiredArg1("<pathName>", "input file") { a =>
       inFile = parseExistingFileOption(a)
     }
@@ -72,6 +78,8 @@ object GisItemDBTool {
       opts.op match {
         case Op.CreateDB => createDB
         case Op.ShowStruct => showStruct
+        case Op.ShowStrings => showStrings
+        case Op.ShowItems => showItems
         case other => println(s"unknown operation $other")
       }
 
@@ -79,16 +87,26 @@ object GisItemDBTool {
   }
 
   def createDB: Unit = {
-    for (
-      inFile <- opts.inFile;
-      outFile <- getOutFile(opts);
-      factory <- opts.factory
-    ) {
+    for (inFile <- opts.inFile; outFile <- getOutFile(opts); factory <- opts.factory) {
       factory.createDB(inFile,outFile)
     }
   }
 
   def showStruct: Unit = {
-    
+    for ( file <- opts.inFile; factory <- opts.factory; db <- factory.loadDB(file)) {
+      db.printStructure
+    }
+  }
+
+  def showStrings: Unit = {
+    for ( file <- opts.inFile; factory <- opts.factory; db <- factory.loadDB(file)) {
+      db.printStrings
+    }
+  }
+
+  def showItems: Unit = {
+    for ( file <- opts.inFile; factory <- opts.factory; db <- factory.loadDB(file)) {
+      db.printItems
+    }
   }
 }

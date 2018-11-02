@@ -99,7 +99,7 @@ abstract class GisItemDB[T <: GisItem] (data: ByteBuffer) {
 
   //--- initialize stringtable, offsets and sizes
 
-  val nStrings: Int = data.getInt(12)
+  val nStrings: Int = data.getInt(4)
   val nChars: Int = data.getInt(8 + nStrings*8)
   val charDataOffset: Int = 8 + nStrings*8 + 4
   protected val stringTable: Array[String] = createStringTable // we always instantiate Strings
@@ -115,12 +115,11 @@ abstract class GisItemDB[T <: GisItem] (data: ByteBuffer) {
   val kdOffset: Int = mapOffset + (mapLength * 4)
 
   def createStringTable: Array[String] = {
-    val dOff = 16 + nStrings*8
     val a = new Array[String](nStrings)
     var buf = new Array[Byte](256)
 
-    for (i <- 0 to nStrings) {
-      val recOff = 16 + i*8
+    for (i <- 0 until nStrings) {
+      val recOff = 8 + i*8
       val dataLen = data.getInt(recOff)
       val dataOff = data.getInt(recOff+4)
 
@@ -136,7 +135,7 @@ abstract class GisItemDB[T <: GisItem] (data: ByteBuffer) {
 
   def stringIterator: Iterator[String] = stringTable.iterator
 
-  def dumpStructure: Unit = {
+  def printStructure: Unit = {
     println("--- structure:")
     println(s"schema:      '${stringTable(0)}'")
 
@@ -154,10 +153,20 @@ abstract class GisItemDB[T <: GisItem] (data: ByteBuffer) {
     println(s"kd offset:   $kdOffset")
   }
 
-  def dumpStrings: Unit = {
+  def printStrings: Unit = {
     println("--- string table:")
     for ((s,i) <- stringTable.zipWithIndex){
       println(f"$i%5d: '$s'")
+    }
+  }
+
+  def printItems: Unit = {
+    var off = itemOffset
+    println("--- items:")
+    for (i <- 0 until nItems){
+      val e = readItem(off)
+      println(f"$i%5d: $e")
+      off += itemSize
     }
   }
 
@@ -168,8 +177,7 @@ abstract class GisItemDB[T <: GisItem] (data: ByteBuffer) {
     * iIdx is guaranteed to be within 0..nItems
     */
   protected def readItem (iIdx: Int): T
-  protected def setItem (item: T, iIdx: Int): Boolean // false if not supported (e.g. if T is invariant case class)
-  
+
   def getItem (key: String): Option[T] = {
     /*******
     val nEntries = entryBuf.getInt(entryOff)
@@ -304,6 +312,23 @@ abstract class GisItemDBFactory[T <: GisItem] {
 
   //--- build support
 
+  protected def mapFile (file: File): Option[ByteBuffer] = {
+    if (file.isFile) {
+      try {
+        val len = file.length
+        val fc = new RandomAccessFile(file, "r").getChannel
+        Some(fc.map(FileChannel.MapMode.READ_ONLY, 0, len))
+      } catch {
+        case x: Throwable =>
+          println(s"error mapping rgis $file: $x")
+          None
+      }
+    } else {
+      println(s"rgis file not found: $file")
+      None
+    }
+  }
+
   protected def clear: Unit = {
     strMap.clear()
     items.clear()
@@ -324,6 +349,7 @@ abstract class GisItemDBFactory[T <: GisItem] {
     val dos = new DataOutputStream(fos)
 
     dos.writeInt(GisItemDB.MAGIC)
+
     writeStrMap(dos)
     writeItems(dos)
     writeKeyMap(dos)
@@ -334,7 +360,7 @@ abstract class GisItemDBFactory[T <: GisItem] {
 
   protected def writeStrMap (dos: DataOutputStream): Unit = {
     val charData = new ByteArrayOutputStream
-    var pos = 0
+    var pos = 8 + (strMap.size * 8) + 4
 
     dos.writeInt(strMap.size)
     for (e <- strMap) {
@@ -357,7 +383,7 @@ abstract class GisItemDBFactory[T <: GisItem] {
     dos.writeInt(itemSize)
 
     itemOffset = dos.size
-    items.foreach( it=> writeItem(it,dos))
+    items.foreach { it => writeItem(it, dos) }
   }
 
   protected def writeCommonItemFields (e: T, dos: DataOutputStream): Unit = {
