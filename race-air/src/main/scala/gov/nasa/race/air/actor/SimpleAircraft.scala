@@ -24,7 +24,7 @@ import gov.nasa.race.core.Messages.RaceTick
 import gov.nasa.race.core.{ContinuousTimeRaceActor, PeriodicRaceActor, PublishingRaceActor, SubscribingRaceActor}
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.geo.GreatCircle._
-import gov.nasa.race.geo.LatLonPos
+import gov.nasa.race.geo.GeoPosition
 import gov.nasa.race.uom.Angle._
 import gov.nasa.race.uom.Length._
 import gov.nasa.race.uom.Speed._
@@ -40,7 +40,7 @@ class SimpleAircraft (val config: Config) extends ContinuousTimeRaceActor
   val cs = config.getString("cs")
 
   // Ok to use vars here since nobody outside this actor will have access
-  var pos = LatLonPos(Degrees(config.getDouble("lat")), Degrees(config.getDouble("lon")))
+  var pos = GeoPosition(Degrees(config.getDouble("lat")), Degrees(config.getDouble("lon")))
   var speed = Knots(config.getDouble("speed-kn"))
   var altitude = Feet(config.getDouble("altitude-ft"))
   var heading = Degrees(config.getDouble("heading"))

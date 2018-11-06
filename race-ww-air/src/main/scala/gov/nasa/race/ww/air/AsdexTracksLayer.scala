@@ -21,7 +21,7 @@ import com.typesafe.config.Config
 import gov.nasa.race.air.{AirLocator, Airport, AsdexTrack, AsdexTracks}
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.Messages.BusEvent
-import gov.nasa.race.geo.{GreatCircle, LatLonPos}
+import gov.nasa.race.geo.{GreatCircle, GeoPosition}
 import gov.nasa.race.ifSome
 import gov.nasa.race.swing.Style._
 import gov.nasa.race.swing.{IdAndNamePanel, StaticSelectionPanel}
@@ -93,7 +93,7 @@ class AsdexTracksLayer (val raceViewer: RaceViewer, val config: Config)
 
   def selectAirport (a: Airport) = raceViewer.trackUserAction(gotoAirport(a))
 
-  def lookupAirport (pos: LatLonPos, dist: Length): Option[Airport] = {
+  def lookupAirport (pos: GeoPosition, dist: Length): Option[Airport] = {
     Airport.asdexAirports.find( e=> GreatCircle.distance(pos, e._2.position) < dist).map(_._2)
   }
 

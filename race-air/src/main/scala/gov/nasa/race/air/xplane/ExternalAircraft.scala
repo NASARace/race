@@ -18,7 +18,7 @@ package gov.nasa.race.air.xplane
 
 import gov.nasa.race.air.{ExtendedFlightPos, TrackedAircraft}
 import gov.nasa.race.common.SmoothingVectorExtrapolator
-import gov.nasa.race.geo.LatLonPos
+import gov.nasa.race.geo.GeoPosition
 import gov.nasa.race.uom.Length._
 import gov.nasa.race.uom.{Angle, Speed}
 import org.joda.time.DateTime
@@ -27,7 +27,7 @@ object ExternalAircraft {
   final val invisibleAltitude = Meters(50000.12345) // this is how we make aircraft disappear without crashing them
 
   // use values that won't cause exceptions in X-Plane
-  val noAircraft = new ExtendedFlightPos("*","*",LatLonPos.fromDegrees(0.1,0.1),
+  val noAircraft = new ExtendedFlightPos("*","*",GeoPosition.fromDegrees(0.1,0.1),
                                          invisibleAltitude,Speed.Speed0,Angle.Angle0, Speed.Speed0,
                                          new DateTime(0),0,Angle.Angle0,Angle.Angle0,"*")
 

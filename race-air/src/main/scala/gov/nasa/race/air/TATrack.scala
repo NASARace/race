@@ -17,7 +17,7 @@
 package gov.nasa.race.air
 
 import gov.nasa.race.air.TATrack.Status.Status
-import gov.nasa.race.geo.{LatLonPos, XYPos}
+import gov.nasa.race.geo.{GeoPosition, XYPos}
 import gov.nasa.race.uom.{Angle, Length, Speed}
 import org.joda.time.DateTime
 
@@ -39,7 +39,7 @@ object TATrack {
   */
 case class TATrack (id: String,
                     cs: String,
-                    position: LatLonPos,
+                    position: GeoPosition,
                     altitude: Length,
                     heading: Angle,
                     speed: Speed,

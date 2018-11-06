@@ -23,7 +23,7 @@ import gov.nasa.race.config._
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.Messages.BusEvent
 import gov.nasa.race.core.{PublishingRaceActor, RaceContext, SubscribingRaceActor}
-import gov.nasa.race.geo.{GeoUtils, LatLonPos}
+import gov.nasa.race.geo.{GeoPosition, GeoUtils, LatLonPos}
 import gov.nasa.race.track._
 import gov.nasa.race.uom.Length
 import gov.nasa.race.uom.Length._
@@ -114,7 +114,7 @@ trait ProximityActor extends SubscribingRaceActor with PublishingRaceActor {
 class StaticProximityActor (val config: Config) extends ProximityActor {
   import ProximityEvent._
 
-  class StaticRefEntry (val id: String, pos: LatLonPos, altitude: Length) extends RefEntry {
+  class StaticRefEntry (val id: String, pos: GeoPosition, altitude: Length) extends RefEntry {
 
     def getDistanceInMeters (track: TrackedObject): Double = {
       val tLat = track.position.φ.toRadians

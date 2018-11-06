@@ -63,13 +63,15 @@ object Datum {
     LatLonAltPos(Radians(φ),Radians(λ),Meters(h))
   }
   @inline def ecefToWGS84(pos: (Length,Length,Length)): LatLonAltPos = ecefToWGS84(pos._1,pos._2,pos._3)
+  @inline def ecefToWGS84(pos: XyzPos): LatLonAltPos = ecefToWGS84(pos.x,pos.y,pos.z)
+
 
   /**
     * convert geodetic (lat,lon,alt) WGS84 coordinates into geocentric ECI (x,y,z) coordinates
     *
     * from Astronomical Almanac pg. K12
     */
-  def wgs84ToECEF(φ: Angle, λ: Angle, alt: Length): (Length,Length,Length) = {
+  def wgs84ToECEF(φ: Angle, λ: Angle, alt: Length): XyzPos = {
     val h = alt.toMeters
     val cos_φ = Cos(φ)
     val sin_φ = Sin(φ)
@@ -83,9 +85,10 @@ object Datum {
     val y = ach * cos_φ * Sin(λ)
     val z = (RE_E * s + h) * sin_φ
 
-    (Meters(x),Meters(y),(Meters(z)))
+    XyzPos(Meters(x),Meters(y),(Meters(z)))
   }
-  @inline def wgs84ToECEF(pos: LatLonAltPos): (Length,Length,Length) = wgs84ToECEF(pos.φ,pos.λ,pos.altitude)
+  @inline def wgs84ToECEF(pos: GeoPosition): XyzPos = wgs84ToECEF(pos.φ,pos.λ,pos.altitude)
+
 
 
   /**
@@ -115,14 +118,4 @@ object Datum {
     Meters(sqrt(((RE_E2 * cos_φ).`²` + (RE_N2 * sin_φ).`²`)/(RE_E * cos_φ).`²` + (RE_N * sin_φ).`²`))
   }
 
-  def main (args: Array[String]): Unit = {
-    //val pos = LatLonAltPos(Degrees(37.415),Degrees(-122.048333),Meters(10000))
-    val pos = LatLonAltPos(Degrees(-48.654090194270736),Degrees(321.67482079047466),Kilometers(425.1322400365634))
-
-    println(s"start with $pos")
-    val v = wgs84ToECEF(pos)
-    println(v)
-    val p = ecefToWGS84(v)
-    println(p)
-  }
 }

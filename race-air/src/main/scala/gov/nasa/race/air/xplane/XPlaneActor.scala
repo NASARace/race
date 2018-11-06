@@ -29,7 +29,7 @@ import gov.nasa.race.common.Status
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.Messages.BusEvent
 import gov.nasa.race.core.{PublishingRaceActor, SubscribingRaceActor, _}
-import gov.nasa.race.geo.{GeoPosition, LatLonPos}
+import gov.nasa.race.geo.{GeoPositioned, GeoPosition}
 import gov.nasa.race.track.{TrackDropped, TrackedObject}
 import gov.nasa.race.uom.Angle._
 import gov.nasa.race.uom.Length._
@@ -46,7 +46,7 @@ import scala.language.postfixOps
   * a bridge for the X-Plane flight simulator
   */
 class XPlaneActor (val config: Config) extends PublishingRaceActor
-                                       with SubscribingRaceActor with ContinuousTimeRaceActor with GeoPosition {
+                                       with SubscribingRaceActor with ContinuousTimeRaceActor with GeoPositioned {
   val MaxPacketLength: Int = 1024
   val BeaconGroup = "239.255.1.1"
   val BeaconPort = 49707
@@ -385,7 +385,7 @@ class XPlaneActor (val config: Config) extends PublishingRaceActor
 
   def initialFlightPos = {
     // <2do> get these from config
-    val pos = LatLonPos.fromDegrees(0,0)
+    val pos = GeoPosition.fromDegrees(0,0)
     val altitude = Feet(0)
     val speed = Knots(0)
     val heading = Degrees(0)
@@ -422,7 +422,7 @@ class XPlaneActor (val config: Config) extends PublishingRaceActor
     if (receivedRPOS > publishedRPOS) {  // we might not have gotten the rpos yet
       updatedSimTime
 
-      val pos = LatLonPos.fromDegrees(rpos.latDeg, rpos.lonDeg)
+      val pos = GeoPosition.fromDegrees(rpos.latDeg, rpos.lonDeg)
       val altitude = Meters(rpos.elevationMslm)
       val speed = MetersPerSecond(rpos.speedMsec)
       val heading = Degrees(rpos.headingDeg)

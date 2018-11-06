@@ -17,7 +17,7 @@
 
 package gov.nasa.race.track
 
-import gov.nasa.race.geo.{GeoPosition, GreatCircle, LatLonPos}
+import gov.nasa.race.geo.{GeoPositioned, GreatCircle, GeoPosition}
 import gov.nasa.race.uom.Length._
 import gov.nasa.race.uom._
 import gov.nasa.race.util.StringUtils
@@ -30,7 +30,7 @@ import scala.util.parsing.combinator.RegexParsers
 trait TrackQueryContext {
   def queryDate: DateTime
   def queryTrack(id: String): Option[TrackedObject]
-  def queryLocation(id: String): Option[GeoPosition]
+  def queryLocation(id: String): Option[GeoPositioned]
   def reportQueryError(msg: String): Unit
 }
 
@@ -67,13 +67,13 @@ object TrackQuery {
   }
 
   //--- position filters
-  class WithinRadiusFilter (pos: LatLonPos, dist: Length) extends TrackFilter {
+  class WithinRadiusFilter (pos: GeoPosition, dist: Length) extends TrackFilter {
     override def pass(f: TrackedObject)(implicit ctx:TrackQueryContext) = {
       GreatCircle.distance(f.position,pos) < dist
     }
     override def toString = s"WithinRadius($pos,$dist)"
   }
-  class OutsideRadiusFilter (pos: LatLonPos, dist: Length) extends TrackFilter {
+  class OutsideRadiusFilter (pos: GeoPosition, dist: Length) extends TrackFilter {
     override def pass(f: TrackedObject)(implicit ctx:TrackQueryContext) = {
       GreatCircle.distance(f.position,pos) > dist
     }

@@ -24,7 +24,7 @@ import gov.nasa.race._
 import gov.nasa.race.common.{ThresholdLevel, ThresholdLevelList}
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.Messages._
-import gov.nasa.race.geo.{GeoPosition, GreatCircle}
+import gov.nasa.race.geo.{GeoPositioned, GreatCircle}
 import gov.nasa.race.swing.Style._
 import gov.nasa.race.track.{TrackTerminationMessage, _}
 import gov.nasa.race.util.StringUtils
@@ -151,7 +151,7 @@ trait TrackLayer[T <:TrackedObject] extends SubscribingRaceLayer
   override def reportQueryError (msg: String) = error(msg)
 
   // layer specific positions (cities, airports, ports etc.) - TODO - should default at least to cities and airports here
-  def queryLocation (id: String): Option[GeoPosition]
+  def queryLocation (id: String): Option[GeoPositioned]
 
   //--- rendering detail level management
 

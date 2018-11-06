@@ -28,13 +28,13 @@ import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.Messages.ChannelTopicRequest
 import gov.nasa.race.core.RaceActorCapabilities._
 import gov.nasa.race.core.{ChannelTopicProvider, RaceContext}
-import gov.nasa.race.geo.LatLonPos
+import gov.nasa.race.geo.GeoPosition
 import gov.nasa.race.util.ThreadUtils
 
 object AdsbStation {
   final val NoStation = AdsbStation("<none>",None,None,true)
 }
-case class AdsbStation(id: String, description: Option[String], position: Option[LatLonPos], var isAvailable: Boolean) extends Ordered[AdsbStation] {
+case class AdsbStation(id: String, description: Option[String], position: Option[GeoPosition], var isAvailable: Boolean) extends Ordered[AdsbStation] {
   override def compare (other: AdsbStation) = id.compare(other.id)
 }
 
@@ -45,7 +45,7 @@ case class AdsbStation(id: String, description: Option[String], position: Option
 trait AdsbImporter extends ChannelTopicProvider {
 
   val stationId: String = config.getStringOrElse("station-id", "default") // the station we serve
-  val stationLocation: Option[LatLonPos] = config.getOptionalLatLonPos("station-location") // where the station is located
+  val stationLocation: Option[GeoPosition] = config.getOptionalGeoPosition("station-location") // where the station is located
 
   val stationChannel: Option[String] = config.getOptionalString("write-station-to") // where we publish station availability
 

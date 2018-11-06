@@ -18,7 +18,7 @@
 package gov.nasa.race.air
 
 import com.github.nscala_time.time.Imports._
-import gov.nasa.race.geo.{GreatCircle, LatLonPos}
+import gov.nasa.race.geo.{GreatCircle, GeoPosition}
 import gov.nasa.race.track.TrackedObject
 import gov.nasa.race.uom.Angle._
 import gov.nasa.race.uom._
@@ -38,14 +38,14 @@ case class TFMTracks (tracks: Seq[TFMTrack]) {
   */
 case class TFMTrack(id: String,
                     cs: String,
-                    position: LatLonPos,
+                    position: GeoPosition,
                     altitude: Length,
                     speed: Speed,
                     date: DateTime,
                     status: Int,
 
                     source: String,
-                    nextPos: Option[LatLonPos],
+                    nextPos: Option[GeoPosition],
                     nextDate: Option[DateTime]
                    ) extends TrackedObject {
 

@@ -23,7 +23,7 @@ import gov.nasa.race.IdentifiableObject
 import gov.nasa.race.air.FlightPos
 import gov.nasa.race.common._
 import gov.nasa.race.config._
-import gov.nasa.race.geo.LatLonPos
+import gov.nasa.race.geo.GeoPosition
 import gov.nasa.race.track.TrackCompleted
 import gov.nasa.race.uom.Angle._
 import gov.nasa.race.uom.Length._
@@ -110,7 +110,7 @@ class FIXM2FlightObject (val config: Config=NoConfig)
           } else {
             if (lat.isDefined && lon.isDefined && date != null &&
               vx.isDefined && vy.isDefined && spd.isDefined && alt.isDefined) {
-              flights += new FlightPos(id, cs, LatLonPos(Degrees(lat), Degrees(lon)),
+              flights += new FlightPos(id, cs, GeoPosition.fromDegrees(lat,lon),
                                        alt, spd, Degrees(Math.atan2(vx, vy).toDegrees), vr, date)
             } else {
               //println(s"@@@ rejected flight: $cs $lat $lon $date $vx $vy $spd $alt")

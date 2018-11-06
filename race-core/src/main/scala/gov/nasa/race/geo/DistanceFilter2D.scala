@@ -26,9 +26,9 @@ import gov.nasa.race.uom._
 /**
   * a distance based filter for Positionables
   */
-class DistanceFilter2D (val center: LatLonPos, val radius: Length, val config: Config=null) extends ConfigurableFilter {
+class DistanceFilter2D (val center: GeoPosition, val radius: Length, val config: Config=null) extends ConfigurableFilter {
 
-  def this (conf: Config) = this(LatLonPos(Degrees(conf.getDouble("lat")),Degrees(conf.getDouble("lon"))),
+  def this (conf: Config) = this(LatLonPos.fromDegrees(conf.getDouble("lat"),conf.getDouble("lon")),
                                  NauticalMiles(conf.getDouble("radius-nm")),conf)
 
   val limitDeg = (radius.toNauticalMiles + 0.5) / 60.0 // pre-filter for lat/lon
@@ -38,7 +38,7 @@ class DistanceFilter2D (val center: LatLonPos, val radius: Length, val config: C
   override def pass (o: Any): Boolean = {
     if (o != null) {
       o match {
-        case obj: GeoPosition =>
+        case obj: GeoPositioned =>
           val pos = obj.position
           val dlat = Math.abs(latDeg - pos.φ.toDegrees)
           val dlon = Math.abs(lonDeg - pos.λ.toDegrees)

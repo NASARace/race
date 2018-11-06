@@ -21,7 +21,7 @@ import java.nio.ByteBuffer
 import java.nio.channels.FileChannel
 import java.util.Arrays
 
-import gov.nasa.race._
+import gov.nasa.race.common._
 import gov.nasa.race.util.{ArrayUtils, FileUtils}
 
 import scala.collection.mutable
@@ -42,7 +42,7 @@ import scala.collection.mutable.ArrayBuffer
   * the memory layout/file format of GisItemDBs is as follows:
   *
   * struct RGIS {
-  *   i32 magic         // 1380403539 0x52474953 (RGIS)
+  *   i32 magic             // 1380403539 0x52474953 (RGIS)
   *
   *   //--- string table  (first entry is schema name, e.g. "gov.nasa.race.air.LandingSite")
   *   i32 nStrings          // number of entries in string table
@@ -54,26 +54,26 @@ import scala.collection.mutable.ArrayBuffer
   *   char strData[nChars]  // mod utf8 bytes (without terminating 0)
   *
   *   //--- entry list
-  *   i32 nItems        // number of GisItems in this DB
-  *   i32 itemSize      // in bytes
-  *   struct Item {     //  the payload data
-  *     i32 hashCode    // for main id (name)
-  *     i32 id          // index into string list
-  *     f64 lat
-  *     f64 lon
-  *     ...             // other payload fields - all string references replaced by string list indices
+  *   i32 nItems            // number of GisItems in this DB
+  *   i32 itemSize          // in bytes
+  *   struct Item {         //  the payload data
+  *     i32 hashCode        // for main id (name)
+  *     f64 x, y, z         // ECEF coords
+  *     f64 lat, lon, alt   // geodetic coords
+  *     i32 id              // index into string list
+  *     ...                 // other payload fields - all string references replaced by string list indices
   *   } [nItems]
   *
   *   //--- key map (name -> entry)
-  *   i32 mapLength       // number of slots for open hashing table
-  *   i32 mapRehash       // number to re-compute hash index
+  *   i32 mapLength         // number of slots for open hashing table
+  *   i32 mapRehash         // number to re-compute hash index
   *   i32 mapItems [mapLength] // item list offset (-1 if free slot)
   *
   *   //--- kd-tree
   *   struct Node {
-  *     i32 entry         // item list offset for node data
-  *     i32 leftChild     // Node offset of left child (-1 if none)
-  *     i32 rightChild    // Node offset of right child (-1 if none)
+  *     i32 entry           // item list offset for node data
+  *     i32 leftChild       // Node offset of left child (-1 if none)
+  *     i32 rightChild      // Node offset of right child (-1 if none)
   *   } [nItems]
   * }
   *
@@ -103,6 +103,35 @@ object GisItemDB {
   }
 
   val EMPTY = -1
+
+  //--- kdtree support
+
+  trait KdResult {
+    def canContain (d: Double): Boolean
+    def update (d: Double, nOff: Int): Unit
+    def computeDist (lat0: Double, lon0: Double, lat1: Double, lon1: Double): Double
+    def getDistance: Double
+  }
+
+  class CartesianNearestNeighbor extends KdResult {
+    var nodeOff: Int = -1
+    var dist: Double = Double.MaxValue  // can be any value that supports ordering (not only absolute distance)
+
+    def canContain (d: Double): Boolean = d < dist
+
+    def update (d: Double, nOff: Int): Unit = {
+      if (d < dist) {
+        dist = d
+        nodeOff = nOff
+      }
+    }
+
+    def computeDist (lat0: Double, lon0: Double, lat1: Double, lon1: Double): Double = {
+      squared(lat1 - lat0) + squared(lon1 - lon0)
+    }
+
+    def getDistance: Double = Math.sqrt(dist)
+  }
 }
 
 abstract class GisItemDB[T <: GisItem] (data: ByteBuffer) {
@@ -185,12 +214,22 @@ abstract class GisItemDB[T <: GisItem] (data: ByteBuffer) {
 
   //--- queries
 
+  def size: Int = nItems
+
+  def isEmpty: Boolean = nItems > 0
+
   /**
     * to be provided by concrete class - turn raw data into object
     * iIdx is guaranteed to be within 0..nItems
     */
   protected def readItem (iIdx: Int): T
 
+
+  //--- key map
+
+  /**
+    * alphanumeric key lookup
+    */
   def getItem (key: String): Option[T] = {
     val buf = data
     val h = key.hashCode
@@ -212,6 +251,22 @@ abstract class GisItemDB[T <: GisItem] (data: ByteBuffer) {
     }
 
     throw new RuntimeException(s"entry $key not found in $i iterations - possible map corruption")
+  }
+
+
+  //--- kdtree
+
+  protected def searchKd (lat: Double, lon: Double, depth: Int, res: KdResult): Unit = {
+
+  }
+
+  /**
+    * nearest neighbor search
+    */
+  def getNearestItem (lat: Double, lon: Double): Option[T] = {
+    if (!isEmpty) {
+      None // TODO
+    } else None
   }
 }
 
@@ -261,6 +316,7 @@ abstract class GisItemDBFactory[T <: GisItem] {
 
   val strMap = new mutable.LinkedHashMap[String,Int]
   val items  = new ArrayBuffer[T]
+  val xyzPos = new ArrayBuffer[XyzPos]
 
   var itemOffset = 0  // byte offset if item0
 
@@ -325,6 +381,7 @@ abstract class GisItemDBFactory[T <: GisItem] {
 
   protected def addItem (e: T): Unit = {
     items += e
+    xyzPos += e.ecef
   }
 
   def write (outFile: File): Unit = {
@@ -371,11 +428,19 @@ abstract class GisItemDBFactory[T <: GisItem] {
 
   protected def writeCommonItemFields (e: T, dos: DataOutputStream): Unit = {
     val nameIdx = strMap(e.name)
+    val pos = e.pos
+    val ecef = e.ecef
 
     dos.writeInt(e.hash)
+    dos.writeDouble(ecef.xMeters)
+    dos.writeDouble(ecef.yMeters)
+    dos.writeDouble(ecef.zMeters)
+
+    dos.writeDouble(pos.latDeg)
+    dos.writeDouble(pos.lonDeg)
+    dos.writeDouble(pos.altMeters)
+
     dos.writeInt(nameIdx)
-    dos.writeDouble(e.lat)
-    dos.writeDouble(e.lon)
   }
 
   protected def writeKeyMap (dos: DataOutputStream): Unit = {
@@ -409,8 +474,9 @@ abstract class GisItemDBFactory[T <: GisItem] {
 
   protected def writeKdTree (dos: DataOutputStream): Unit = {
     val orderings = Array(
-      new Ordering[Int]() { def compare(eIdx1: Int, eIdx2: Int) = items(eIdx1).lat compare items(eIdx2).lat },
-      new Ordering[Int]() { def compare(eIdx1: Int, eIdx2: Int) = items(eIdx1).lon compare items(eIdx2).lon }
+      new Ordering[Int]() { def compare(eIdx1: Int, eIdx2: Int) = xyzPos(eIdx1).x compare xyzPos(eIdx2).x },
+      new Ordering[Int]() { def compare(eIdx1: Int, eIdx2: Int) = xyzPos(eIdx1).y compare xyzPos(eIdx2).y },
+      new Ordering[Int]() { def compare(eIdx1: Int, eIdx2: Int) = xyzPos(eIdx1).z compare xyzPos(eIdx2).z }
     )
 
     val nItems = items.size
@@ -433,7 +499,7 @@ abstract class GisItemDBFactory[T <: GisItem] {
         -1
 
       } else {
-        ArrayUtils.quickSort(eIdxs, i0, i1)(orderings(depth % 2))
+        ArrayUtils.quickSort(eIdxs, i0, i1)(orderings(depth % 3))
 
         val median = (i1 + i0) / 2
         val pivot = eIdxs(median)

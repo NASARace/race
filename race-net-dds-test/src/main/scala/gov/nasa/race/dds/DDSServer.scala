@@ -17,7 +17,7 @@
 
 package gov.nasa.race.dds
 
-import gov.nasa.race.geo.{GreatCircle, LatLonPos}
+import gov.nasa.race.geo.{GreatCircle, GeoPosition}
 import gov.nasa.race.main.CliArgs
 import gov.nasa.race.util.ThreadUtils
 import gov.nasa.race.util.ConsoleIO._
@@ -106,7 +106,7 @@ object DDSServer {
 
   def update (fr: dds.FlightRecord, t: Long, tLast: Long): Unit = {
     import fr._
-    val pos = LatLonPos.fromDegrees(lat,lon)
+    val pos = GeoPosition.fromDegrees(lat,lon)
     val dist: Length = Knots(speed) * ((t - tLast)/1000.0).seconds
     val pos1 = GreatCircle.endPos(pos, dist, Degrees(heading), Feet(alt))
 

@@ -38,7 +38,7 @@ object GreatCircle {
    *   θ = atan2( sin Δλ ⋅ cos φ2 , cos φ1 ⋅ sin φ2 − sin φ1 ⋅ cos φ2 ⋅ cos Δλ )
    * }}}
    */
-  def initialBearing(startPos: LatLonPos, endPos: LatLonPos): Angle = {
+  def initialBearing(startPos: GeoPosition, endPos: GeoPosition): Angle = {
     val φ1 = startPos.φ
     val φ2 = endPos.φ
     val Δλ = endPos.λ - startPos.λ
@@ -50,7 +50,7 @@ object GreatCircle {
    * compute final bearing for great circle between two given positions, using
    * initialBearing of reverse route
    */
-  def finalBearing(startPos: LatLonPos, endPos: LatLonPos): Angle = {
+  def finalBearing(startPos: GeoPosition, endPos: GeoPosition): Angle = {
     Radians((initialBearing(endPos, startPos).toRadians + Pi) % TwoPi)
   }
 
@@ -61,32 +61,33 @@ object GreatCircle {
     *   c = 2 ⋅ atan2( √a, √(1−a) )
     *   d = R ⋅ c
     * }}}
-    * Note this is only an approximation since it assumes a spherical earth
+    * Note this is only an approximation
     */
-  def distance(startPos: LatLonPos, endPos: LatLonPos, alt: Length = Length0): Length = {
-    val φ1 = startPos.φ
-    val φ2 = endPos.φ
-    val Δφ = φ2 - φ1
-    val Δλ = endPos.λ - startPos.λ
-
-    val a = Sin2(Δφ / 2) + Cos(φ1) * Cos(φ2) * Sin2(Δλ / 2)
-    val c = 2 * atan2(sqrt(a), sqrt(1 - a))
-
-    (MeanEarthRadius + alt) * c
-  }
-
-  def distance2D (φ1: Angle, λ1: Angle, φ2: Angle, λ2: Angle): Length = {
+  @inline def distance (φ1: Angle, λ1: Angle, alt1: Length, φ2: Angle, λ2: Angle, alt2: Length): Length = {
     val Δφ = φ2 - φ1
     val Δλ = λ2 - λ1
 
     val a = Sin2(Δφ / 2) + Cos(φ1) * Cos(φ2) * Sin2(Δλ / 2)
     val c = 2 * atan2(sqrt(a), sqrt(1 - a))
+    (MeanEarthRadius + (alt2 + alt1)/2.0) * c
+  }
 
+  def distance(startPos: GeoPosition, endPos: GeoPosition, alt: Length = Length0): Length = {
+    distance(startPos.φ, startPos.λ, alt, endPos.φ, endPos.λ, alt)
+  }
+
+  def distance2D (φ1: Angle, λ1: Angle, φ2: Angle, λ2: Angle): Length = {
+    // save an addition and division
+    val Δφ = φ2 - φ1
+    val Δλ = λ2 - λ1
+    val a = Sin2(Δφ / 2) + Cos(φ1) * Cos(φ2) * Sin2(Δλ / 2)
+    val c = 2 * atan2(sqrt(a), sqrt(1 - a))
     MeanEarthRadius * c
   }
-  @inline def distance2D (startPos: LatLonPos, endPos: LatLonPos): Length = {
+  @inline def distance2D (startPos: GeoPosition, endPos: GeoPosition): Length = {
     distance2D(startPos.φ, startPos.λ, endPos.φ, endPos.λ)
   }
+
 
   /**
     * approximation for small distances, which is about 2-3 times faster than full haversine with errors ~1%
@@ -99,7 +100,7 @@ object GreatCircle {
     val y = Δλ.toDegrees * Cos(φ1)
     Meters(111320.0 * sqrt(x*x + y*y))  // 110250.0 ?
   }
-  @inline def euclidianDistance2D (startPos: LatLonPos, endPos: LatLonPos): Length = {
+  @inline def euclidianDistance2D (startPos: GeoPosition, endPos: GeoPosition): Length = {
     euclidianDistance2D(startPos.φ, startPos.λ, endPos.φ, endPos.λ)
   }
 
@@ -131,7 +132,7 @@ object GreatCircle {
    *   λ2 = λ1 + atan2( sin θ ⋅ sin δ ⋅ cos φ1, cos δ − sin φ1 ⋅ sin φ2 )
    * }}}
    */
-  def endPos(startPos: LatLonPos, dist: Length, initialBearing: Angle, alt: Length = Meters(0)): LatLonPos = {
+  def endPos(startPos: GeoPosition, dist: Length, initialBearing: Angle, alt: Length = Length0): GeoPosition = {
     val φ1 = startPos.φ
     val λ1 = startPos.λ
     val θ = initialBearing
@@ -140,13 +141,13 @@ object GreatCircle {
     val φ2 = Radians(asin(Sin(φ1) * Cos(δ) + Cos(φ1) * Sin(δ) * Cos(θ)))
     val λ2 = λ1 + Radians(atan2(Sin(θ) * Sin(δ) * Cos(φ1), Cos(δ) - Sin(φ1) * Sin(φ2)))
 
-    LatLonPos(φ2, λ2)
+    startPos.map(φ2, λ2)
   }
 
-  def translate (pos: LatLonPos, startPos: LatLonPos, endPos: LatLonPos): LatLonPos = {
-    val Δφ = endPos.φ - startPos.φ
-    val Δλ = endPos.λ - startPos.λ
-    LatLonPos(pos.φ + Δφ, pos.λ + Δλ)
+  def translate (pos: GeoPosition, startPos: GeoPosition, endPos: GeoPosition): GeoPosition = {
+    val φ = pos.φ +  (endPos.φ - startPos.φ)
+    val λ = pos.λ + (endPos.λ - startPos.λ)
+    pos.map(φ,λ)
   }
 }
 

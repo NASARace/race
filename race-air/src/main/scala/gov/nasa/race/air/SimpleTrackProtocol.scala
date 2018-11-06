@@ -19,7 +19,7 @@ package gov.nasa.race.air
 
 import java.io.{DataInputStream, DataOutputStream}
 
-import gov.nasa.race.geo.LatLonPos
+import gov.nasa.race.geo.GeoPosition
 import gov.nasa.race.track._
 import gov.nasa.race.common.{DataStreamReader,DataStreamWriter}
 import gov.nasa.race.uom.Angle._
@@ -138,7 +138,7 @@ class SimpleTrackReader extends DataStreamReader {
     val vrMS = dis.readDouble
 
     new FlightPos(id, id,
-      LatLonPos.fromDegrees(latDeg, lonDeg), Meters(altM),
+      GeoPosition.fromDegrees(latDeg, lonDeg), Meters(altM),
       MetersPerSecond(speedMS), Degrees(headingDeg), MetersPerSecond(vrMS),
       new DateTime(timeMsec),flags)
   }
@@ -166,12 +166,12 @@ class SimpleTrackReader extends DataStreamReader {
     val trackVrMS = dis.readDouble
 
 
-    val track = new FlightPos(trackId,trackId,LatLonPos.fromDegrees(trackLatDeg,trackLonDeg),
+    val track = new FlightPos(trackId,trackId,GeoPosition.fromDegrees(trackLatDeg,trackLonDeg),
                           Meters(trackAltM),MetersPerSecond(trackSpdMS),Degrees(trackHdgDeg),MetersPerSecond(trackVrMS),
                           new DateTime(tmsec))
 
     // we just use refId to identify the event - if clients need unique ids they have to re-identify
-    ProximityEvent(refId,ProximityReference(refId, track.date, LatLonPos.fromDegrees(latDeg,lonDeg), Meters(altM)),
+    ProximityEvent(refId,ProximityReference(refId, track.date, GeoPosition.fromDegrees(latDeg,lonDeg), Meters(altM)),
                     Meters(distM), flags, track)
   }
 

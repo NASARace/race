@@ -16,13 +16,13 @@
  */
 package gov.nasa.race.air
 
-import gov.nasa.race.geo.GeoPosition
+import gov.nasa.race.geo.GeoPositioned
 
 /**
   * something that can knows how to look up names that represent airspace relevant locations
   */
 trait AirLocator {
-  def queryLocation(id: String): Option[GeoPosition] = {
+  def queryLocation(id: String): Option[GeoPositioned] = {
     Airport.allAirports.get(id).orElse( Tracon.tracons.get(id))
   }
 }

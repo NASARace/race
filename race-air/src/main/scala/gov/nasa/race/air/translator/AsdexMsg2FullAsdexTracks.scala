@@ -23,7 +23,7 @@ import com.typesafe.config.Config
 import gov.nasa.race._
 import gov.nasa.race.air.AsdexTrack
 import gov.nasa.race.config._
-import gov.nasa.race.geo.LatLonPos
+import gov.nasa.race.geo.{GeoPosition, LatLonPos}
 import gov.nasa.race.uom.Angle._
 import gov.nasa.race.uom.Length._
 import gov.nasa.race.uom.Speed._
@@ -84,7 +84,7 @@ class AsdexMsg2FullAsdexTracks(config: Config=NoConfig) extends AsdexMsg2AsdexTr
     val cs = fromString(acId, getCallsign(_,trackId), _.cs, trackId)
     val act = fromString(acType, Some(_), _.acType, None)
 
-    val track = new AsdexTrack(trackId,cs,LatLonPos(lat,lon),alt,spd,hdg,vr,date,status,act)
+    val track = new AsdexTrack(trackId,cs,GeoPosition(lat,lon),alt,spd,hdg,vr,date,status,act)
     if (track.isDropped) {
       lastTracks -= trackId
     } else {

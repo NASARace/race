@@ -19,7 +19,7 @@ package gov.nasa.race.air.translator
 
 import gov.nasa.race.IdentifiableObject
 import gov.nasa.race.air.FlightPos
-import gov.nasa.race.geo.LatLonPos
+import gov.nasa.race.geo.GeoPosition
 import gov.nasa.race.test.RaceSpec
 import gov.nasa.race.uom.Angle.Degrees
 import gov.nasa.race.uom.Length.Feet
@@ -55,7 +55,7 @@ class FIXM2FlightObjectSpec extends FlatSpec with RaceSpec {
     val expected = new FlightPos(
       "647",
       "UAL1634",
-      LatLonPos.fromDegrees(37.898333, -79.169722),
+      GeoPosition.fromDegrees(37.898333, -79.169722),
       Feet(35000.0),
       Knots(488.0),
       Degrees(86.47494027976148),

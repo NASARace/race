@@ -19,7 +19,7 @@ package gov.nasa.race.air.xplane
 
 import gov.nasa.race.air.TrackedAircraft
 import gov.nasa.race.common.WeightedArray
-import gov.nasa.race.geo.{LatLonPos, ProximityList, _}
+import gov.nasa.race.geo.{GeoPosition, ProximityList, _}
 import gov.nasa.race.uom.Length._
 import gov.nasa.race.uom._
 import gov.nasa.race.util.StringUtils
@@ -37,7 +37,7 @@ class FlightNearEntry(var obj: TrackedAircraft,
   *  dynamic proximity list of FlightPos objects that have to be mapped to XpAircraft entries
   *  This is the bus-facing data structure that is used to update the respective entry positions in the XpAircraft list
   */
-class FlightsNearList (center: LatLonPos, maxDistance: Length, aircraftList: ExternalAircraftList)
+class FlightsNearList (center: GeoPosition, maxDistance: Length, aircraftList: ExternalAircraftList)
            extends ProximityList[TrackedAircraft,FlightNearEntry](center,maxDistance, NauticalMiles(10)) {
   override protected val array = new Array[FlightNearEntry](aircraftList.length)
 

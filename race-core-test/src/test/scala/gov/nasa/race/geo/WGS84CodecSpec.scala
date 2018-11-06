@@ -30,10 +30,10 @@ class WGS84CodecSpec extends FlatSpec with RaceSpec {
   final val nSuccessful = 100
 
   //--- continental US
-  val positions: Gen[LatLonPos] = for {
+  val positions: Gen[GeoPosition] = for {
     φ <- Gen.choose(10.0, 60.0)
     λ <- Gen.choose(-140.0, -40.0)
-  } yield LatLonPos(Degrees(φ), Degrees(λ))
+  } yield GeoPosition(Degrees(φ), Degrees(λ))
 
   "a WGS84Codec" should "reproduce lat/lon degrees within NAS to 6 digits" in {
     val codec = new WGS84Codec

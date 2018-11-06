@@ -20,7 +20,7 @@ import java.awt.{Color, Insets, Point}
 import java.util
 
 import gov.nasa.race._
-import gov.nasa.race.geo.{GreatCircle, LatLonPos}
+import gov.nasa.race.geo.{GreatCircle, GeoPosition}
 import gov.nasa.race.uom.Angle._
 import gov.nasa.race.uom.{Angle, Length}
 import gov.nasa.race.ww.Implicits._
@@ -36,7 +36,7 @@ import gov.nasa.worldwind.render._
   * TODO - this should probably be its own Renderable, to be able to rotate the angular grid lines
   * and avoid the annotation overhead
   */
-class PolarGrid (var center: LatLonPos, val heading: Angle, val ringInc: Length, val nRings: Int,
+class PolarGrid (var center: GeoPosition, val heading: Angle, val ringInc: Length, val nRings: Int,
                  layer: RenderableLayer, gridColor: Color, gridAlpha: Float, fillColor: Color, fillAlpha: Float) {
   val gridMaterial = new Material(gridColor)
   val gridAttrs: BasicShapeAttributes = createGridAttrs
@@ -183,7 +183,7 @@ class PolarGrid (var center: LatLonPos, val heading: Angle, val ringInc: Length,
     }
   }
 
-  def setCenter (newCenter: LatLonPos) = {
+  def setCenter (newCenter: GeoPosition) = {
     center = newCenter
     outerRing.setCenter(latLonPos2LatLon(newCenter))
     innerRings.foreach { _.setCenter(latLonPos2LatLon(newCenter)) }

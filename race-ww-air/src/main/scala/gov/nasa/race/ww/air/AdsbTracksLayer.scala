@@ -50,7 +50,7 @@ class AdsbTracksLayer(val raceViewer: RaceViewer, val config: Config) extends Mo
 
   override def extraReadChannels = config.getOptionalStringList("read-station-from")
 
-  override def queryLocation(id: String): Option[geo.GeoPosition] = None
+  override def queryLocation(id: String): Option[geo.GeoPositioned] = None
 
   def handleAdsbMessage: Receive = {
     case BusEvent(_, station: AdsbStation, _) =>

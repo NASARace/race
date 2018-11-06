@@ -17,7 +17,7 @@
 
 package gov.nasa.race.air
 
-import gov.nasa.race.geo.LatLonPos
+import gov.nasa.race.geo.GeoPosition
 import gov.nasa.race.track.TrackedObject
 import gov.nasa.race.uom._
 import gov.nasa.race.util.DateTimeUtils._
@@ -47,7 +47,7 @@ object AsdexTrack {
 
 case class AsdexTrack(id: String,
                       cs: String,
-                      position: LatLonPos,
+                      position: GeoPosition,
                       altitude: Length,
                       speed: Speed,
                       heading: Angle,

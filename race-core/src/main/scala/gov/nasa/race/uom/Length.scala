@@ -126,6 +126,8 @@ class Length protected[uom] (val d: Double) extends AnyVal {
   @inline def isDefined = !d.isNaN
   @inline def orElse(fallback: Length) = if (isDefined) this else fallback
 
+  @inline def compare (other: Length): Int = d compare other.d
+
   override def toString = show   // calling this would cause allocation
   def show = s"${d}m"
   def showMeters = s"${d}m"

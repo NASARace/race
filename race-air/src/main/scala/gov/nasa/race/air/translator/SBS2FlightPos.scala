@@ -22,7 +22,7 @@ import gov.nasa.race.air.FlightPos
 import gov.nasa.race.air.FlightPos.ChangedCS
 import gov.nasa.race.config._
 import gov.nasa.race.config.ConfigUtils._
-import gov.nasa.race.geo.LatLonPos
+import gov.nasa.race.geo.GeoPosition
 import gov.nasa.race.uom.Length._
 import gov.nasa.race.uom.Angle._
 import gov.nasa.race.uom.Speed._
@@ -70,7 +70,7 @@ object SBS2FlightPos {
     def tryToFlightPos : Option[FlightPos] = {
       if (cs !=null && posDtg !=null && lat !=null && lon !=null && speed !=null && alt !=null && track !=null) {
         val fpos = new FlightPos(icao24, cs,
-          LatLonPos.fromDegrees(lat.toDouble, lon.toDouble),
+          GeoPosition.fromDegrees(lat.toDouble, lon.toDouble),
           Feet(alt.toDouble),
           Knots(speed.toDouble),
           Degrees(track.toDouble),

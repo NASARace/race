@@ -5,7 +5,7 @@ import java.awt.Color
 import akka.actor.Actor.Receive
 import com.typesafe.config.Config
 import gov.nasa.race.core.Messages.BusEvent
-import gov.nasa.race.geo.GeoPosition
+import gov.nasa.race.geo.GeoPositioned
 import gov.nasa.race._
 import gov.nasa.race.swing.{FieldPanel, GBPanel}
 import gov.nasa.race.swing.GBPanel.{Anchor, Fill}
@@ -100,7 +100,7 @@ class ProximityEventLayer (val raceViewer: RaceViewer, val config: Config) exten
   override def defaultLabelThreshold: Length = Meters(1000000)
 
   override def getTrackKey(ev: ProximityEvent): String = ev.id
-  override def queryLocation(id: String): Option[GeoPosition] = None
+  override def queryLocation(id: String): Option[GeoPositioned] = None
 
   override def createTrackEntry(ev: ProximityEvent) = new ProximityEntry(ev,createTrajectory(ev),this)
   override def createLayerInfoPanel = new ProximityEventLayerInfoPanel(raceViewer,this)

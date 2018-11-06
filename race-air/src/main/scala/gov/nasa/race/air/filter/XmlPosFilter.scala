@@ -20,7 +20,7 @@ package gov.nasa.race.air.filter
 import com.typesafe.config.Config
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.config.ConfigurableFilter
-import gov.nasa.race.geo.{GreatCircle, LatLonPos}
+import gov.nasa.race.geo.{GreatCircle, GeoPosition}
 import gov.nasa.race.uom.Length._
 import gov.nasa.race.uom.Angle._
 import gov.nasa.race.uom._
@@ -28,10 +28,10 @@ import gov.nasa.race.uom._
 /**
   * filter for XML messages with <pos>lat lon</pos> elements
  */
-class XmlPosFilter(val center: LatLonPos, val radius: Length, val config: Config=null) extends ConfigurableFilter {
+class XmlPosFilter(val center: GeoPosition, val radius: Length, val config: Config=null) extends ConfigurableFilter {
   final val posRE =  "<pos>([-+.\\d]+) ([-+.\\d]+)</pos>".r
 
-  def this (conf: Config) = this(LatLonPos(Degrees(conf.getDoubleOrElse("lat",0)),
+  def this (conf: Config) = this(GeoPosition(Degrees(conf.getDoubleOrElse("lat",0)),
                                              Degrees(conf.getDoubleOrElse("lon",0))),
                                    NauticalMiles(conf.getDoubleOrElse("radius-nm", 0)), conf)
 
@@ -41,7 +41,7 @@ class XmlPosFilter(val center: LatLonPos, val radius: Length, val config: Config
         posRE.findAllMatchIn(txt).exists( m => {
           val msgLat = m.group(1)
           val msgLon = m.group(2)
-          val msgPos = LatLonPos(Degrees(msgLat.toDouble), Degrees(msgLon.toDouble))
+          val msgPos = GeoPosition(Degrees(msgLat.toDouble), Degrees(msgLon.toDouble))
           val dist = GreatCircle.distance(center, msgPos)
           dist < radius
         })

@@ -23,7 +23,7 @@ import com.github.nscala_time.time.Imports._
 import com.typesafe.config.Config
 import gov.nasa.race.archive._
 import gov.nasa.race.common.ConfigurableStreamCreator._
-import gov.nasa.race.geo.LatLonPos
+import gov.nasa.race.geo.GeoPosition
 import gov.nasa.race.uom.Angle._
 import gov.nasa.race.uom.Length._
 import gov.nasa.race.uom.Speed._
@@ -41,7 +41,7 @@ object FlightPos {
 
   // since FlightPos is not a case class anymore we provide a unapply method for convenience
   // NOTE - don't select on floating point values (position, speed etc.) or date (which is a millisecond epoch)
-  def unapply (o: FlightPos): Option[(String,String,LatLonPos,Length,Speed,Angle,Speed,DateTime,Int)] = {
+  def unapply (o: FlightPos): Option[(String,String,GeoPosition,Length,Speed,Angle,Speed,DateTime,Int)] = {
     Some((o.id,o.cs,o.position,o.altitude,o.speed,o.heading,o.vr,o.date,o.status))
   }
 }
@@ -52,7 +52,7 @@ object FlightPos {
   */
 class FlightPos (val id: String,
                  val cs: String,
-                 val position: LatLonPos,
+                 val position: GeoPosition,
                  val altitude: Length,
                  val speed: Speed,
                  val heading: Angle,
@@ -61,7 +61,7 @@ class FlightPos (val id: String,
                  val status: Int = 0
                 ) extends TrackedAircraft {
 
-  def this (id:String, pos: LatLonPos, alt: Length,spd: Speed,hdg: Angle, vr: Speed, dtg: DateTime) =
+  def this (id:String, pos: GeoPosition, alt: Length, spd: Speed, hdg: Angle, vr: Speed, dtg: DateTime) =
     this(id, FlightPos.tempCS(id), pos,alt,spd,hdg,vr,dtg)
 
   def hasTempCS = FlightPos.isTempCS(cs)
@@ -80,7 +80,7 @@ class FlightPos (val id: String,
   */
 class ExtendedFlightPos(id: String,
                         cs: String,
-                        position: LatLonPos,
+                        position: GeoPosition,
                         altitude: Length,
                         speed: Speed,
                         heading: Angle,
@@ -182,7 +182,7 @@ class FlightPosArchiveReader (val iStream: InputStream, val pathName: String="<u
         val date = getDate(fs.head.toLong); fs = fs.tail  // we might adjust it on-the-fly
         val status = fs.head.toInt
 
-        someEntry(date, new FlightPos(flightId, cs, LatLonPos(Degrees(phi), Degrees(lambda)),
+        someEntry(date, new FlightPos(flightId, cs, GeoPosition(Degrees(phi), Degrees(lambda)),
                                       Feet(alt), UsMilesPerHour(speed), Degrees(heading), FeetPerMinute(vr), date,status))
       } catch {
         case x: Throwable => None
@@ -216,7 +216,7 @@ class ExtendedFlightPosArchiveReader (iStream: InputStream, pathName: String) ex
         val roll = fs.head.toDouble; fs = fs.tail
         val acType = fs.head.intern
 
-        someEntry(date, new ExtendedFlightPos(flightId, cs, LatLonPos(Degrees(phi), Degrees(lambda)),
+        someEntry(date, new ExtendedFlightPos(flightId, cs, GeoPosition(Degrees(phi), Degrees(lambda)),
                                               Feet(alt), UsMilesPerHour(speed), Degrees(heading), FeetPerMinute(vr), date,status,
                                               Degrees(pitch), Degrees(roll), acType))
       } catch {

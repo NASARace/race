@@ -59,6 +59,9 @@ class Area protected[uom] (val d: Double) extends AnyVal {
   @inline def > (x: Area) = d > x.d
   @inline def =:= (x: Area) = d == x.d
   @inline def ≡ (x: Area) = d == x.d
+
+  @inline def compare (other: Length): Int = d compare other.d
+
   // we intentionally omit ==, <=, >=
 
   override def toString = show

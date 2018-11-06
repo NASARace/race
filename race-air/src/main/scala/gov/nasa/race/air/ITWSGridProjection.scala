@@ -31,8 +31,8 @@ import Math._
  *
  * <2do> verify signums (offsets and rotation)
  */
-class ITWSGridProjection (val trpPos: LatLonPos,                  // tracon reference point in (φ,λ)
-                          val xoffset: Length, yoffset: Length,   // trp -> grid origin (SW)
+class ITWSGridProjection (val trpPos: GeoPosition, // tracon reference point in (φ,λ)
+                          val xoffset: Length, yoffset: Length, // trp -> grid origin (SW)
                           val rotation: Angle) {                  // trueN -> magN at trp
 
   // rotation constants
@@ -44,9 +44,9 @@ class ITWSGridProjection (val trpPos: LatLonPos,                  // tracon refe
    *
    * @param xGrid  horizontal distance relative to grid origin (SW corner)
    * @param yGrid  vertical distance relative to grid origin (SW corner)
-   * @return LatLonPos with latitude and longitude angles
+   * @return GeoPosition with latitude and longitude angles
    */
-  def toLatLonPos (xGrid: Length, yGrid: Length): LatLonPos = {
+  def toLatLonPos (xGrid: Length, yGrid: Length): GeoPosition = {
     val x = xGrid + xoffset
     val y = yGrid + yoffset
     val xʹ = x * CosΘ - y * SinΘ

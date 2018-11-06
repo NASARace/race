@@ -19,7 +19,7 @@ package gov.nasa.race.air
 
 import java.io.{DataInputStream, DataOutputStream}
 
-import gov.nasa.race.geo.LatLonPos
+import gov.nasa.race.geo.GeoPosition
 import gov.nasa.race.track.TrackedObject
 import gov.nasa.race.uom.Angle.Degrees
 import gov.nasa.race.uom.Length.Meters
@@ -64,7 +64,7 @@ class ExtendedTrackReader extends SimpleTrackReader {
     val trackType = dis.readUTF.intern
 
     new ExtendedFlightPos(id, id,
-      LatLonPos.fromDegrees(latDeg, lonDeg), Meters(altM),
+      GeoPosition.fromDegrees(latDeg, lonDeg), Meters(altM),
       MetersPerSecond(speedMS), Degrees(headingDeg), MetersPerSecond(vrMS),
       new DateTime(timeMsec),flags,
       Degrees(pitchDeg), Degrees(rollDeg), trackType)

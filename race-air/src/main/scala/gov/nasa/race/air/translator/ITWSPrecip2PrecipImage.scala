@@ -22,7 +22,7 @@ import java.awt.image.{BufferedImage, DataBuffer, IndexColorModel}
 import com.typesafe.config.Config
 import gov.nasa.race.air.{PrecipImage, PrecipImageStore, RLEByteImageParser}
 import gov.nasa.race.config._
-import gov.nasa.race.geo.LatLonPos
+import gov.nasa.race.geo.GeoPosition
 import gov.nasa.race.util.XmlPullParser
 import org.joda.time.DateTime
 import gov.nasa.race.uom.Length._
@@ -139,7 +139,7 @@ class ITWSprecip2PrecipImage (val config: Config=NoConfig) extends XmlPullParser
       // <2do> do some sanity checks here
       Some( PrecipImage( id, product, itwsSite,
                          genDate, expDate,
-                         LatLonPos(trpLat,trpLon), xoffset, yoffset, rotation,
+                         GeoPosition(trpLat,trpLon), xoffset, yoffset, rotation,
                          dx * nCols, dy * nRows,
                          maxPrecipLevel, img))
     } catch {

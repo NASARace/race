@@ -19,8 +19,11 @@ package gov.nasa.race.air.geo.faa1801
 import java.io.{DataOutputStream, File}
 import java.nio.ByteBuffer
 
-import gov.nasa.race.geo.{GisItem, GisItemDB, GisItemDBFactory}
+import gov.nasa.race.geo._
 import gov.nasa.race.util.FileUtils
+import gov.nasa.race.uom.Length._
+import gov.nasa.race.uom.Angle._
+
 
 /**
   *  LandingSite schema for USA_FAA1801:
@@ -66,35 +69,32 @@ object LandingSite {
 }
 
 case class LandingSite (name: String, // cid
-                        lat:  Double,
-                        lon:  Double,
+                        pos: LatLonAltPos,
                         descr: String,
-                        elev: Float,
                         lsType: Int,
                         lsAccess: Int,
                         magVar: Float
-                       ) extends GisItem {
-  var hash = name.hashCode
-}
+                       ) extends GisItem
 
 class LandingSiteDB (data: ByteBuffer) extends GisItemDB[LandingSite](data) {
-  import LandingSite._
 
   override protected def readItem (off: Int): LandingSite = {
     val buf = data
     buf.position(off + 4) // skip over the hash
 
     val name = stringTable(buf.getInt)
+
     val lat = buf.getDouble
     val lon = buf.getDouble
+    val elev = buf.getDouble
+    val pos = LatLonAltPos(Degrees(lat),Degrees(lon),Feet(elev))
 
     val descr = stringTable(buf.getInt)
     val lsType = buf.getInt
     val lsAccess = buf.getInt
-    val elev = buf.getFloat
     val magVar = buf.getFloat
 
-    LandingSite(name,lat,lon,descr,elev,lsType,lsAccess,magVar)
+    LandingSite(name,pos, descr,lsType,lsAccess,magVar)
   }
 }
 
@@ -119,8 +119,8 @@ class LandingSiteDBFactory extends GisItemDBFactory[LandingSite] {
         case LandingSiteRE(id,cat,name,descr,access,elev,lat,lon,magVar) =>
           if (items.size > 10) return
 
-          //--- populate the string map
-          // it appears RUNWAY and 2-letter NAVAID/NDB names are not unique
+          val pos = LatLonAltPos(Degrees(lat.toDouble), Degrees(lon.toDouble), Feet(elev.toDouble))
+
           val typeFlag = getLsType(cat)
           val accessFlag = getLsAccess(access)
 
@@ -128,7 +128,7 @@ class LandingSiteDBFactory extends GisItemDBFactory[LandingSite] {
           addString(descr)
 
           //--- populate the waypoint list
-          addItem( LandingSite(name,lat.toDouble,lon.toDouble,descr,elev.toFloat,typeFlag,accessFlag,magVar.toFloat))
+          addItem( LandingSite(name,pos,descr,typeFlag,accessFlag,magVar.toFloat))
         case _ => // ignore
       }
     }
@@ -141,7 +141,6 @@ class LandingSiteDBFactory extends GisItemDBFactory[LandingSite] {
     out.writeInt(descrIdx)
     out.writeInt(e.lsType)
     out.writeInt(e.lsAccess)
-    out.writeFloat(e.elev)
     out.writeFloat(e.magVar)
   }
 }

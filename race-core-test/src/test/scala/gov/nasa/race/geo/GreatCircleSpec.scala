@@ -24,8 +24,8 @@ import org.scalatest._
 
 class GreatCircleSpec extends FlatSpec with RaceSpec {
   // test data
-  val SJC = LatLonPos(Degrees(37.363947), Degrees(-121.928937))
-  val IND = LatLonPos(Degrees(39.716859), Degrees(-86.295595))
+  val SJC = GeoPosition(Degrees(37.363947), Degrees(-121.928937))
+  val IND = GeoPosition(Degrees(39.716859), Degrees(-86.295595))
 
   behavior of "GreatCircle algorithms"
 
@@ -40,13 +40,13 @@ class GreatCircleSpec extends FlatSpec with RaceSpec {
   }
 
   //--- properties (scalacheck based)
-  val positions: Gen[LatLonPos] = for {
+  val positions: Gen[GeoPosition] = for {
     φ <- Gen.choose(-180.0, 180.0)
     λ <- Gen.choose(-180.0, 180.0)
-  } yield LatLonPos(Degrees(φ), Degrees(λ))
+  } yield GeoPosition(Degrees(φ), Degrees(λ))
 
   "distance" should "be commutative" in {
-    forAll((positions, "p1"), (positions, "p2")) { (p1: LatLonPos, p2: LatLonPos) =>
+    forAll((positions, "p1"), (positions, "p2")) { (p1: GeoPosition, p2: GeoPosition) =>
       val d12 = GreatCircle.distance(p1, p2)
       val d21 = GreatCircle.distance(p2, p1)
       val delta = (d12 - d21).toKilometers
@@ -57,7 +57,7 @@ class GreatCircleSpec extends FlatSpec with RaceSpec {
   }
 
   "final bearing" should "be inverse init bearing" in {
-    forAll((positions, "p1"), (positions, "p2")) { (p1: LatLonPos, p2: LatLonPos) =>
+    forAll((positions, "p1"), (positions, "p2")) { (p1: GeoPosition, p2: GeoPosition) =>
       //println(s"p1=$p1, p2=$p2")
       (GreatCircle.finalBearing(p1, p2) - (GreatCircle.initialBearing(p2, p1) - Degrees(180))).toNormalizedDegrees should be(0.0 +- 0.5)
     }

@@ -24,7 +24,7 @@ import java.awt.event.{InputEvent, KeyEvent, MouseEvent, MouseWheelEvent}
 import gov.nasa.race._
 import Implicits._
 import gov.nasa.race.common._
-import gov.nasa.race.geo.LatLonPos
+import gov.nasa.race.geo.GeoPosition
 import gov.nasa.race.swing.DeferredEDTAction
 import gov.nasa.race.uom.Angle._
 import gov.nasa.race.uom.Length

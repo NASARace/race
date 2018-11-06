@@ -17,7 +17,7 @@
 
 package gov.nasa.race.ww
 
-import gov.nasa.race.geo.{GeoPosition3D, LatLonPos}
+import gov.nasa.race.geo.{GeoPositioned3D, GeoPosition}
 import gov.nasa.race.track.TrackPoint3D
 import gov.nasa.worldwind.geom.{LatLon, Position}
 import gov.nasa.race.uom._
@@ -31,7 +31,7 @@ import scala.language.implicitConversions
 object Implicits {
 
 
-  implicit def geoPosition3d2Position (pos: GeoPosition3D): Position = {
+  implicit def geoPosition3d2Position (pos: GeoPositioned3D): Position = {
     Position.fromDegrees(pos.position.φ.toDegrees, pos.position.λ.toDegrees, pos.altitude.toMeters)
   }
 
@@ -39,8 +39,8 @@ object Implicits {
 
   implicit def angle2WWAngle(angle: Angle): WWAngle = gov.nasa.worldwind.geom.Angle.fromDegrees(angle.toDegrees)
 
-  implicit def latLonPos2LatLon (pos: LatLonPos): LatLon = LatLon.fromDegrees(pos.φ.toDegrees, pos.λ.toDegrees)
+  implicit def latLonPos2LatLon (pos: GeoPosition): LatLon = LatLon.fromDegrees(pos.φ.toDegrees, pos.λ.toDegrees)
 
-  implicit def latLon2LatLonPos(latLon: LatLon): LatLonPos = LatLonPos.fromDegrees( latLon.latitude.degrees, latLon.longitude.degrees)
+  implicit def latLon2LatLonPos(latLon: LatLon): GeoPosition = GeoPosition.fromDegrees( latLon.latitude.degrees, latLon.longitude.degrees)
 
 }

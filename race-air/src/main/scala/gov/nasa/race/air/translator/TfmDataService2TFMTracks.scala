@@ -20,7 +20,7 @@ package gov.nasa.race.air.translator
 import com.typesafe.config.Config
 import gov.nasa.race.air.{TFMTrack, TFMTracks}
 import gov.nasa.race.config._
-import gov.nasa.race.geo.LatLonPos
+import gov.nasa.race.geo.GeoPosition
 import gov.nasa.race.util.XmlPullParser
 import gov.nasa.race.uom.Length._
 import gov.nasa.race.uom.Angle._
@@ -56,7 +56,7 @@ class TfmDataService2TFMTracks(val config: Config=NoConfig) extends XmlPullParse
     var speed: Speed = UndefinedSpeed
     var alt: Length = UndefinedLength
     var vr: Speed = UndefinedSpeed // no vertical rate in current schema
-    var nextWP: LatLonPos = null
+    var nextWP: GeoPosition = null
     var nextWPDate: DateTime = null
     var completed: Boolean = false
 
@@ -126,7 +126,7 @@ class TfmDataService2TFMTracks(val config: Config=NoConfig) extends XmlPullParse
             case "nxcm:nextEvent" if isTrackInfo & hasParent("nxcm:ncsmTrackData") =>
               var lat = readDoubleAttribute("latitudeDecimal")
               var lon = readDoubleAttribute("longitudeDecimal")
-              nextWP = LatLonPos.fromDegrees(lat,lon)
+              nextWP = GeoPosition.fromDegrees(lat,lon)
             case "nxcm:eta" if isTrackInfo & hasParent("nxcm:ncsmTrackData") =>
               nextWPDate = DateTime.parse(readAttribute("timeValue"))
             case other => // ignore
@@ -138,10 +138,10 @@ class TfmDataService2TFMTracks(val config: Config=NoConfig) extends XmlPullParse
               if (checkVars) {
                 val status = if (completed) TrackedObject.CompletedFlag else TrackedObject.TrackNoStatus
                 val track = if (completed) {
-                  TFMTrack(flightRef,cs,LatLonPos(lat,lon),alt,speed,date,status,
+                  TFMTrack(flightRef,cs,GeoPosition(lat,lon),alt,speed,date,status,
                            source,None,None)
                 } else {
-                  TFMTrack(flightRef,cs,LatLonPos(lat,lon),alt,speed,date,status,
+                  TFMTrack(flightRef,cs,GeoPosition(lat,lon),alt,speed,date,status,
                            source,Some(nextWP),Some(nextWPDate))
                 }
                 tracks = track  +: tracks

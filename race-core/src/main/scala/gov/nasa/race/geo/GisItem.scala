@@ -16,14 +16,17 @@
  */
 package gov.nasa.race.geo
 
+import gov.nasa.race.uom.Length
+
 
 /**
   * a type that can be kept in a GisItemDB
   */
 trait GisItem {
   def name: String  // unique alphanumeric identifier for item
-  def hash: Int     // hash value for name
+  def pos: GeoPosition
 
-  def lat: Double   // latitude in degrees
-  def lon: Double   // longitude in degrees
+  def ecef: XyzPos = Datum.wgs84ToECEF(pos)
+  def hash: Int = name.hashCode
+  def ecefDistanceTo(xyz: XyzPos): Length = ecef.distanceTo(xyz)
 }

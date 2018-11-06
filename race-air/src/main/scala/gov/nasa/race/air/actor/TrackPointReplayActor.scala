@@ -24,7 +24,7 @@ import gov.nasa.race.air.FlightPos
 import gov.nasa.race.archive.ArchiveReader
 import gov.nasa.race.common.ConfigurableStreamCreator.{configuredPathName, createInputStream}
 import gov.nasa.race.config.ConfigUtils._
-import gov.nasa.race.geo.LatLonPos
+import gov.nasa.race.geo.GeoPosition
 import gov.nasa.race.track.TrackCompleted
 import gov.nasa.race.track.avro.{TrackIdRecord, TrackPoint}
 import gov.nasa.race.uom.Angle._
@@ -94,7 +94,7 @@ class TrackPointReader (val iStream: InputStream, val pathName: String="<unknown
       val fpos = new FlightPos(
         id,
         cs, // no CS
-        LatLonPos.fromDegrees(tp.getLatitude, tp.getLongitude),
+        GeoPosition.fromDegrees(tp.getLatitude, tp.getLongitude),
         Meters(tp.getAltitude),
         MetersPerSecond(tp.getSpeed),
         Degrees(tp.getHeading),

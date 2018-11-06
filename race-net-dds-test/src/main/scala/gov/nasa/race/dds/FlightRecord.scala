@@ -24,7 +24,7 @@ import gov.nasa.race.config._
 import gov.nasa.race.uom.Length._
 import gov.nasa.race.uom.Speed._
 import gov.nasa.race.uom.Angle._
-import gov.nasa.race.geo.LatLonPos
+import gov.nasa.race.geo.GeoPosition
 import gov.nasa.race.util.DateTimeUtils._
 import org.joda.time.DateTime
 
@@ -53,7 +53,7 @@ object FlightRecord {
   }
 
   implicit def fr2Fpos (fr: dds.FlightRecord): FlightPos = {
-    FlightPos("?",fr.cs,LatLonPos.fromDegrees(fr.lat,fr.lon),
+    FlightPos("?",fr.cs,GeoPosition.fromDegrees(fr.lat,fr.lon),
       Feet(fr.alt),Knots(fr.speed),Degrees(fr.heading),new DateTime(fr.date))
   }
 }

@@ -46,7 +46,7 @@ object TrackedObject {
 trait TrackedObject extends IdentifiableObject with TrackPoint3D with MovingObject with TrackMessage {
   import TrackedObject._
 
-  // generic mechanism to dynamically attach per-event data to FlightPos objects
+  // generic mechanism to dynamically attach per-event data to track objects
   var amendments = List.empty[Any]
 
   def status: Int // flag field, can be channel specific (hence no enum)

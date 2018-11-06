@@ -17,14 +17,14 @@
 package gov.nasa.race.air
 
 import gov.nasa.race.common.ContactInfo
-import gov.nasa.race.geo.{GeoPosition, LatLonPos}
+import gov.nasa.race.geo.{GeoPositioned, GeoPosition}
 
 import scala.collection.SortedMap
 
 object Tracon {
   def apply (id: String, name: String, lat: Double, lon: Double,
              street: String, city: String, state: String, zip: String, phone: String) = {
-    new Tracon(id,name, LatLonPos.fromDegrees(lat,lon), ContactInfo(street,city,state,zip,phone))
+    new Tracon(id,name, GeoPosition.fromDegrees(lat,lon), ContactInfo(street,city,state,zip,phone))
   }
 
   val A80 = Tracon("A80", "Atlanta", 33.3517888,-84.5525863,
@@ -65,12 +65,12 @@ object Tracon {
   val tracons = traconList.foldLeft(SortedMap.empty[String,Tracon]) { (m, a) => m + (a.id -> a) }
 
   // can be used for selection lists to reset selection
-  final val NoTracon = new Tracon("<none>", "", LatLonPos.fromDegrees(0,0),ContactInfo.NoContactInfo)
+  final val NoTracon = new Tracon("<none>", "", GeoPosition.fromDegrees(0,0),ContactInfo.NoContactInfo)
 }
 
 /**
   * represents TRACONs (Terminal Radar Approach Control facilities)
   */
-case class Tracon (id: String, name: String, position: LatLonPos, contact: ContactInfo) extends GeoPosition {
+case class Tracon (id: String, name: String, position: GeoPosition, contact: ContactInfo) extends GeoPositioned {
   def toShortString = s"$id - $name"
 }

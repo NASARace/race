@@ -1,10 +1,27 @@
+/*
+ * Copyright (c) 2018, United States Government, as represented by the
+ * Administrator of the National Aeronautics and Space Administration.
+ * All rights reserved.
+ *
+ * The RACE - Runtime for Airspace Concept Evaluation platform is licensed
+ * under the Apache License, Version 2.0 (the "License"); you may not use
+ * this file except in compliance with the License. You may obtain a copy
+ * of the License at http://www.apache.org/licenses/LICENSE-2.0.
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package gov.nasa.race.air.geo.faa1801
 
-import java.io.{DataOutputStream, File, RandomAccessFile}
+import java.io.{DataOutputStream, File}
 import java.nio.ByteBuffer
-import java.nio.channels.FileChannel
 
-import gov.nasa.race.geo.{GisItem, GisItemDB, GisItemDBFactory}
+import gov.nasa.race.geo._
+import gov.nasa.race.uom.Angle.Degrees
+import gov.nasa.race.uom.Length.Feet
 import gov.nasa.race.util.FileUtils
 
 
@@ -72,8 +89,8 @@ object Waypoint {
     if (freq.equalsIgnoreCase("NULL")) 0.0f else freq.toFloat
   }
 
-  def getWpElev(elev: String): Float = {
-    if (elev.equalsIgnoreCase("NULL")) UNDEFINED_ELEV else elev.toFloat
+  def getWpElev(elev: String): Double = {
+    if (elev.equalsIgnoreCase("NULL")) UNDEFINED_ELEV else elev.toDouble
   }
 }
 
@@ -82,18 +99,13 @@ object Waypoint {
   * (items should not be stored outside the DB anyways)
   */
 case class Waypoint(name: String,
-                    lat: Double,
-                    lon: Double,
+                    pos: LatLonAltPos,
                     wpType: Int,
                     magVar: Float,
                     landingSite: Option[String],
                     navaidType: Int,
-                    freq: Float,
-                    elev: Float
-                   ) extends GisItem {
-  val hash = name.hashCode // store to avoid re-computation
-}
-
+                    freq: Float
+                   ) extends GisItem
 
 class WaypointDB (data: ByteBuffer) extends GisItemDB[Waypoint](data) {
 
@@ -102,8 +114,11 @@ class WaypointDB (data: ByteBuffer) extends GisItemDB[Waypoint](data) {
     buf.position(off + 4) // skip over the hash
 
     val name = stringTable(data.getInt)
+
     val lat = buf.getDouble
     val lon = buf.getDouble
+    val elev = buf.getDouble
+    val pos = LatLonAltPos(Degrees(lat),Degrees(lon),Feet(elev))
 
     val wpType = buf.getInt
     val magVar = buf.getFloat
@@ -113,9 +128,8 @@ class WaypointDB (data: ByteBuffer) extends GisItemDB[Waypoint](data) {
     }
     val navaidType = buf.getInt
     val freq = buf.getFloat
-    val elev = buf.getFloat
 
-    Waypoint(name,lat,lon,wpType,magVar,landingSite,navaidType,freq,elev)
+    Waypoint(name, pos, wpType,magVar,landingSite,navaidType,freq)
   }
 }
 
@@ -126,7 +140,7 @@ class WaypointDBFactory extends GisItemDBFactory[Waypoint] {
     """\s*INSERT\s+INTO\s+`Waypoint`\s+VALUES\s*\(\s*(\d+)\s*,\s*'(\w+)'\s*,\s*'(\w+)'\s*,\s*(-?\d+.\d+)\s*,\s*(-?\d+.\d+)\s*,\s*(-?\d+.\d+)\s*,\s*'(\w+)'\s*,\s*'?(NULL|\w+)'?\s*,\s*(NULL|\d+.\d+)\s*,\s*(NULL|\d+)\).*""".r
 
   override val schema = "gov.nasa.race.air.geo.faa1801.Waypoint"
-  override val itemSize: Int = 44
+  override val itemSize: Int = 56
 
   override def loadDB (file: File): Option[WaypointDB] = {
     mapFile(file).map(new WaypointDB(_))
@@ -139,8 +153,9 @@ class WaypointDBFactory extends GisItemDBFactory[Waypoint] {
     FileUtils.withLines(inFile) { line =>
       line match {
         case WaypointRE(id,name,wpType,lat,lon,magVar,landingSite,navaid,freq,elev) =>
-          //--- populate the string map
-          // it appears RUNWAY and 2-letter NAVAID/NDB names are not unique
+
+          val pos = LatLonAltPos(Degrees(lat.toDouble), Degrees(lon.toDouble), Feet(getWpElev(elev)))
+
           val typeFlag = getWpType(wpType)
           val navaidFlag = getWpNavaid(navaid)
           val optLandingSite = getWpLandingSite(landingSite)
@@ -149,8 +164,7 @@ class WaypointDBFactory extends GisItemDBFactory[Waypoint] {
           addString(landingSite)
 
           //--- populate the waypoint list
-          addItem( new Waypoint(name,lat.toDouble,lon.toDouble,typeFlag,magVar.toFloat,
-                                          optLandingSite,navaidFlag,getWpFreq(freq),getWpElev(elev)))
+          addItem( new Waypoint(name,pos,typeFlag,magVar.toFloat, optLandingSite,navaidFlag,getWpFreq(freq)))
         case _ => // ignore
       }
     }
@@ -166,6 +180,5 @@ class WaypointDBFactory extends GisItemDBFactory[Waypoint] {
     out.writeInt(lsIdx)
     out.writeInt(e.navaidType)
     out.writeFloat(e.freq)
-    out.writeFloat(e.elev)
   }
 }

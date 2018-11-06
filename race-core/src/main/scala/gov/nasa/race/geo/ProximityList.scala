@@ -27,8 +27,8 @@ import gov.nasa.race.uom._
   *
   * the weight basis is meters
   */
-abstract class ProximityList[T<:GeoPosition, E<:WeightedArray.Entry[T]]
-               (var _center: LatLonPos,
+abstract class ProximityList[T<:GeoPositioned, E<:WeightedArray.Entry[T]]
+               (var _center: GeoPosition,
                 var _maxDistance: Length,
                 val ignoreDistance: Length)  extends WeightedArray[T,E] {
 
@@ -42,7 +42,7 @@ abstract class ProximityList[T<:GeoPosition, E<:WeightedArray.Entry[T]]
     * set new center, update distances and re-sort array
     * @param newCenter new center position
     */
-  def center_= (newCenter: LatLonPos): Unit = {
+  def center_= (newCenter: GeoPosition): Unit = {
     val newLatDeg = newCenter.φ.toDegrees
     val newLonDeg = newCenter.λ.toDegrees
 

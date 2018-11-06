@@ -57,7 +57,7 @@ class VarEuclideanDistanceFilter3D (φ: Angle, λ: Angle, alt: Length, d: Length
 
   override def pass (o: Any): Boolean = {
     o match {
-      case ap: GeoPosition3D =>
+      case ap: GeoPositioned3D =>
         val pos = ap.position
         pass(pos.φ,pos.λ,ap.altitude)
 
@@ -72,5 +72,5 @@ class VarEuclideanDistanceFilter3D (φ: Angle, λ: Angle, alt: Length, d: Length
       (Datum.meanEuclideanDistance(refLat,refLon,refAlt, φ,λ,alt) < dist)
   }
 
-  @inline def pass (ap: GeoPosition3D): Boolean = pass(ap.position.φ, ap.position.λ, ap.altitude)
+  @inline def pass (ap: GeoPositioned3D): Boolean = pass(ap.position.φ, ap.position.λ, ap.altitude)
 }

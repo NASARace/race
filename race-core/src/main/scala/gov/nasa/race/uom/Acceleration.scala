@@ -60,6 +60,9 @@ class Acceleration protected[uom] (val d: Double) extends AnyVal {
   @inline def =:= (x: Acceleration) = d == x.d  // use this if you really mean equality
   @inline def ≡ (x: Acceleration) = d == x.d
 
+  @inline def compare (other: Length): Int = d compare other.d
+
+
   //-- undefined value handling (value based alternative for finite cases that would otherwise require Option)
   @inline def isUndefined = d.isNaN
   @inline def isDefined = !d.isNaN

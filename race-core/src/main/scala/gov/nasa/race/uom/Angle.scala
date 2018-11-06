@@ -119,6 +119,7 @@ class Angle protected[uom] (val d: Double) extends AnyVal {
   @inline def isUndefined = d.isNaN
   @inline def isDefined = !d.isNaN
   @inline def orElse(fallback: Angle) = if (isDefined) this else fallback
+  @inline def compare (other: Length): Int = d compare other.d
 
   //--- string converters
   override def toString = show // NOTE - calling this will cause allocation, use 'show'

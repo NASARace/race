@@ -16,7 +16,7 @@
  */
 package gov.nasa.race.track
 
-import gov.nasa.race.geo.LatLonPos
+import gov.nasa.race.geo.GeoPosition
 import gov.nasa.race.uom.{Angle, Length, Speed}
 import org.joda.time.DateTime
 
@@ -55,7 +55,7 @@ object ProximityEvent {
   */
 case class ProximityReference (id: String,
                                date: DateTime,
-                               position: LatLonPos,
+                               position: GeoPosition,
                                altitude: Length) extends TrackPoint3D {
   def this (ref: TrackedObjectEstimator, date: DateTime) = this(ref.track.cs, date, ref.estimatedPosition, ref.altitude)
 }

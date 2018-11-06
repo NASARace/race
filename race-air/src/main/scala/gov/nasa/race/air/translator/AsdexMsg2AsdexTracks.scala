@@ -23,7 +23,7 @@ import com.typesafe.config.Config
 import gov.nasa.race.air.{AsdexTrack, AsdexTracks}
 import gov.nasa.race.common.XmlParser
 import gov.nasa.race.config._
-import gov.nasa.race.geo.LatLonPos
+import gov.nasa.race.geo.{GeoPosition, LatLonPos}
 import gov.nasa.race.ifNotNull
 import gov.nasa.race.track.TrackedObject._
 import gov.nasa.race.uom.Angle._
@@ -150,7 +150,7 @@ class AsdexMsg2AsdexTracks(val config: Config=NoConfig) extends XmlParser[AsdexT
       val cs = if (acId != null) getCallsign(acId,trackId) else trackId
       val act = if (acType != null) Some(acType) else None
 
-      new AsdexTrack(trackId, cs, LatLonPos(lat, lon), alt, spd, hdg, vr, date, status, act)
+      new AsdexTrack(trackId, cs, GeoPosition(lat, lon), alt, spd, hdg, vr, date, status, act)
 
     } else null
   }

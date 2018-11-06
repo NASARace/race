@@ -22,7 +22,7 @@ import java.awt.image.BufferedImage
 import com.github.nscala_time.time.Imports._
 import com.typesafe.config.{Config, ConfigValue, ConfigValueFactory}
 import gov.nasa.race.config.{ConfigValueMapper, ConfigurableTimeTranslator}
-import gov.nasa.race.geo.LatLonPos
+import gov.nasa.race.geo.GeoPosition
 import gov.nasa.race.uom._
 
 import scala.collection.concurrent.TrieMap
@@ -39,7 +39,7 @@ object PrecipImageStore {
  * precipitation image created from ITWS precip messages
  */
 case class PrecipImage (id: String, product: Int, site: String, genDate: DateTime, expDate: DateTime,
-                        trpPos: LatLonPos, xoffset: Length, yoffset: Length, rotation: Angle,
+                        trpPos: GeoPosition, xoffset: Length, yoffset: Length, rotation: Angle,
                         width: Length, height: Length,
                         maxPrecipLevel: Int,
                         img: BufferedImage) {
