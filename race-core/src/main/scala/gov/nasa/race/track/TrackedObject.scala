@@ -43,7 +43,7 @@ object TrackedObject {
   * cases where occasionally associated data (a) should not be type restricted and (b)
   * are set too rarely to waste storage on all TrackObject instances
   */
-trait TrackedObject extends IdentifiableObject with TrackPoint3D with MovingObject with TrackMessage {
+trait TrackedObject extends IdentifiableObject with TrackPoint with MovingObject with TrackMessage {
   import TrackedObject._
 
   // generic mechanism to dynamically attach per-event data to track objects

@@ -19,7 +19,6 @@ package gov.nasa.race.geo
 
 import com.typesafe.config.Config
 import gov.nasa.race.config.ConfigurableFilter
-import gov.nasa.race.uom.Angle._
 import gov.nasa.race.uom.Length._
 import gov.nasa.race.uom._
 
@@ -28,7 +27,7 @@ import gov.nasa.race.uom._
   */
 class DistanceFilter2D (val center: GeoPosition, val radius: Length, val config: Config=null) extends ConfigurableFilter {
 
-  def this (conf: Config) = this(LatLonPos.fromDegrees(conf.getDouble("lat"),conf.getDouble("lon")),
+  def this (conf: Config) = this(GeoPosition.fromDegrees(conf.getDouble("lat"),conf.getDouble("lon")),
                                  NauticalMiles(conf.getDouble("radius-nm")),conf)
 
   val limitDeg = (radius.toNauticalMiles + 0.5) / 60.0 // pre-filter for lat/lon

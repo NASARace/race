@@ -50,6 +50,16 @@ trait GeoPosition {
   def map (φ: Angle, λ: Angle, alt: Length = Length0): GeoPosition
 }
 
+/**
+  * object that has a position
+  */
+trait GeoPositioned {
+  def position: GeoPosition
+}
+
+trait GeoPositioned3D extends GeoPositioned {
+  def altitude: Length
+}
 
 object LatLonPos {
   val zeroPos = new LatLonPos(Angle.Angle0, Angle.Angle0)

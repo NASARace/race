@@ -52,14 +52,5 @@ package object geo {
   case class XYPos (x: Length, y: Length)
 
 
-  /**
-    * object that has a position
-    */
-  trait GeoPositioned {
-    def position: GeoPosition
-  }
 
-  trait GeoPositioned3D extends GeoPositioned {
-    def altitude: Length
-  }
 }

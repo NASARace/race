@@ -28,9 +28,9 @@ import gov.nasa.race.uom.{Angle, Speed}
 package object track {
 
   /** a GeoPosition3D that is associated with a date */
-  trait TrackPoint3D extends GeoPositioned3D with Dated
+  trait TrackPoint extends GeoPositioned3D with Dated
 
-  trait IdentifiableTrackPoint3D extends TrackPoint3D with IdentifiableObject
+  trait IdentifiableTrackPoint extends TrackPoint with IdentifiableObject
 
   trait MovingObject {
     def heading: Angle

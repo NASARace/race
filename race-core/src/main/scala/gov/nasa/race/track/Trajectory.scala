@@ -25,11 +25,11 @@ trait Trajectory {
   def size: Int
 
   def add (lat: Double, lon: Double, alt: Double, t: Long): Trajectory // low level add to avoid temporary objects
-  def add (tp: TrackPoint3D): Trajectory  // can be chained
-  def += (tp: TrackPoint3D) = add(tp)
+  def add (tp: TrackPoint): Trajectory  // can be chained
+  def += (tp: TrackPoint) = add(tp)
 
-  def addAll (tps: Seq[TrackPoint3D]): Unit = tps.foreach(add)  // can be overridden for more efficient version
-  def ++= (tps: Seq[TrackPoint3D]) = addAll(tps)
+  def addAll (tps: Seq[TrackPoint]): Unit = tps.foreach(add)  // can be overridden for more efficient version
+  def ++= (tps: Seq[TrackPoint]) = addAll(tps)
 
   def nonEmpty = size > 0
 
@@ -47,6 +47,6 @@ object EmptyTrajectory extends Trajectory {
   override def capacity = 0
   override def size = 0
   override def add (lat: Double, lon: Double, alt: Double, t: Long) = new CompactTrajectory().add(lat,lon,alt,t)
-  override def add(tp: TrackPoint3D) = new CompactTrajectory().add(tp)
+  override def add(tp: TrackPoint) = new CompactTrajectory().add(tp)
   override def foreach(f: (Int,Double,Double,Double,Long) => Unit) = {}
 }

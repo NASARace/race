@@ -17,11 +17,11 @@
 package gov.nasa.race.track
 
 import gov.nasa.race.common.SmoothingVectorExtrapolator
-import gov.nasa.race.geo.LatLonPos
-import gov.nasa.race.uom.{Angle, Length, Speed}
+import gov.nasa.race.geo.GeoPosition
 import gov.nasa.race.uom.Angle._
 import gov.nasa.race.uom.Length._
 import gov.nasa.race.uom.Speed._
+import gov.nasa.race.uom.{Angle, Length, Speed}
 
 
 /**
@@ -52,7 +52,7 @@ trait TrackedObjectEstimator extends Cloneable {
 
   override def clone: TrackedObjectEstimator = super.clone.asInstanceOf[TrackedObjectEstimator]
 
-  def estimatedPosition = LatLonPos(lat,lon)
+  def estimatedPosition = GeoPosition(lat,lon)
 }
 
 /**

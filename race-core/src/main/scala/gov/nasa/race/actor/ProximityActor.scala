@@ -19,11 +19,11 @@ package gov.nasa.race.actor
 
 import com.typesafe.config.Config
 import gov.nasa.race._
-import gov.nasa.race.config._
 import gov.nasa.race.config.ConfigUtils._
+import gov.nasa.race.config._
 import gov.nasa.race.core.Messages.BusEvent
 import gov.nasa.race.core.{PublishingRaceActor, RaceContext, SubscribingRaceActor}
-import gov.nasa.race.geo.{GeoPosition, GeoUtils, LatLonPos}
+import gov.nasa.race.geo.{GeoPosition, GeoUtils}
 import gov.nasa.race.track._
 import gov.nasa.race.uom.Length
 import gov.nasa.race.uom.Length._
@@ -154,7 +154,7 @@ class StaticProximityActor (val config: Config) extends ProximityActor {
       for (lat <- conf.getOptionalDouble("lat");
            lon <- conf.getOptionalDouble("lon");
            alt <- conf.getOptionalDouble("altitude-ft")) {
-        refs += (id -> new StaticRefEntry(id, LatLonPos.fromDegrees(lat,lon), Feet(alt)))
+        refs += (id -> new StaticRefEntry(id, GeoPosition.fromDegrees(lat,lon), Feet(alt)))
       }
     }
   }

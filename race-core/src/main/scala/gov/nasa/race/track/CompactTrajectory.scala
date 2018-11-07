@@ -44,7 +44,7 @@ class CompactTrajectory(capacityIncrement: Int=32) extends Trajectory {
 
   override def capacity = if (data != null) data.length / 2 else capacityIncrement
 
-  override def add (e: TrackPoint3D): Trajectory = {
+  override def add (e: TrackPoint): Trajectory = {
     val pos = e.position
     add(pos.φ.toDegrees,pos.λ.toDegrees,e.altitude.toMeters,e.date.getMillis)
   }

@@ -56,7 +56,7 @@ object ProximityEvent {
 case class ProximityReference (id: String,
                                date: DateTime,
                                position: GeoPosition,
-                               altitude: Length) extends TrackPoint3D {
+                               altitude: Length) extends TrackPoint {
   def this (ref: TrackedObjectEstimator, date: DateTime) = this(ref.track.cs, date, ref.estimatedPosition, ref.altitude)
 }
 

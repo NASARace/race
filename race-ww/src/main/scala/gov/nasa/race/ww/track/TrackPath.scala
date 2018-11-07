@@ -19,7 +19,7 @@ package gov.nasa.race.ww.track
 import java.util.Vector
 
 import gov.nasa.race.common.BasicTimeSeries
-import gov.nasa.race.track.{TrackPoint3D, TrackedObject}
+import gov.nasa.race.track.{TrackPoint, TrackedObject}
 import gov.nasa.race.ww.Implicits._
 import gov.nasa.worldwind.WorldWind
 import gov.nasa.worldwind.avlist.AVKey
@@ -59,7 +59,7 @@ class TrackPath[T <: TrackedObject](val entry: TrackEntry[T]) extends Path with 
   def setLineAttrs = setShowPositions(false)
   def setLinePosAttrs = setShowPositions(averageUpdateFrequency < 2) // no point showing points for high frequency updates
 
-  def addTrackPosition(tp: TrackPoint3D) = {
+  def addTrackPosition(tp: TrackPoint) = {
     addSample
     posList.add(tp)
     setPositions(posList)

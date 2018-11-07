@@ -23,7 +23,7 @@ import com.typesafe.config.Config
 import gov.nasa.race._
 import gov.nasa.race.air.AsdexTrack
 import gov.nasa.race.config._
-import gov.nasa.race.geo.{GeoPosition, LatLonPos}
+import gov.nasa.race.geo.GeoPosition
 import gov.nasa.race.uom.Angle._
 import gov.nasa.race.uom.Length._
 import gov.nasa.race.uom.Speed._

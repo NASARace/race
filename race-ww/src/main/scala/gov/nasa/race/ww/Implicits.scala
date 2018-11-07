@@ -18,7 +18,7 @@
 package gov.nasa.race.ww
 
 import gov.nasa.race.geo.{GeoPositioned3D, GeoPosition}
-import gov.nasa.race.track.TrackPoint3D
+import gov.nasa.race.track.TrackPoint
 import gov.nasa.worldwind.geom.{LatLon, Position}
 import gov.nasa.race.uom._
 
@@ -35,7 +35,7 @@ object Implicits {
     Position.fromDegrees(pos.position.φ.toDegrees, pos.position.λ.toDegrees, pos.altitude.toMeters)
   }
 
-  implicit def trackPoint3D2Position(e: TrackPoint3D): Position = wwPosition(e.position, e.altitude)
+  implicit def trackPoint3D2Position(e: TrackPoint): Position = wwPosition(e.position, e.altitude)
 
   implicit def angle2WWAngle(angle: Angle): WWAngle = gov.nasa.worldwind.geom.Angle.fromDegrees(angle.toDegrees)
 

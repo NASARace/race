@@ -67,7 +67,7 @@ class ITWSGridProjection (val trpPos: GeoPosition, // tracon reference point in 
     }
 
     val λ = trpPos.λ + Radians( xʹ / (rTrans * Cos((trpPos.φ + φ)/2)))
-    LatLonPos(φ,λ)
+    GeoPosition(φ,λ)
   }
 
 }

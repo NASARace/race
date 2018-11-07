@@ -22,13 +22,13 @@ import java.io.File
 
 import com.github.nscala_time.time.Imports._
 import com.typesafe.config._
-import gov.nasa.race.geo.{GeoPosition, LatLonPos}
-
-import scala.collection.JavaConverters._
-import scala.concurrent.duration._
+import gov.nasa.race.geo.GeoPosition
 import gov.nasa.race.uom.Length
 import gov.nasa.race.uom.Length._
 import gov.nasa.race.util._
+
+import scala.collection.JavaConverters._
+import scala.concurrent.duration._
 
 /**
  * Config is just an interface, i.e. we can't use it as a Map without implicit
@@ -266,7 +266,7 @@ object ConfigUtils {
         val lat = pos.getDouble("lat")
         val lon = pos.getDouble("lon")
 
-        LatLonPos.fromDegrees(lat,lon)
+        GeoPosition.fromDegrees(lat,lon)
       } catch {
         case _ : Throwable => throw new ConfigException.Generic("illegal LatLonPos format (expect {lat=<double>,lon=<double>})")
       }
