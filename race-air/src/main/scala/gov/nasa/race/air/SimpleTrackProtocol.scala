@@ -138,7 +138,7 @@ class SimpleTrackReader extends DataStreamReader {
     val vrMS = dis.readDouble
 
     new FlightPos(id, id,
-      GeoPosition.fromDegrees(latDeg, lonDeg), Meters(altM),
+      GeoPosition.fromDegreesAndMeters(latDeg, lonDeg, altM),
       MetersPerSecond(speedMS), Degrees(headingDeg), MetersPerSecond(vrMS),
       new DateTime(timeMsec),flags)
   }
@@ -166,12 +166,12 @@ class SimpleTrackReader extends DataStreamReader {
     val trackVrMS = dis.readDouble
 
 
-    val track = new FlightPos(trackId,trackId,GeoPosition.fromDegrees(trackLatDeg,trackLonDeg),
-                          Meters(trackAltM),MetersPerSecond(trackSpdMS),Degrees(trackHdgDeg),MetersPerSecond(trackVrMS),
-                          new DateTime(tmsec))
+    val track = new FlightPos(trackId,trackId,GeoPosition(Degrees(trackLatDeg),Degrees(trackLonDeg),Meters(trackAltM)),
+                              MetersPerSecond(trackSpdMS),Degrees(trackHdgDeg),MetersPerSecond(trackVrMS),
+                              new DateTime(tmsec))
 
     // we just use refId to identify the event - if clients need unique ids they have to re-identify
-    ProximityEvent(refId,ProximityReference(refId, track.date, GeoPosition.fromDegrees(latDeg,lonDeg), Meters(altM)),
+    ProximityEvent(refId,ProximityReference(refId, track.date, GeoPosition.fromDegreesAndMeters(latDeg,lonDeg,altM)),
                     Meters(distM), flags, track)
   }
 
@@ -205,7 +205,7 @@ class SimpleTrackWriter extends DataStreamWriter {
     dos.writeLong(t.date.getMillis)
     dos.writeDouble(latLonPos.φ.toDegrees)
     dos.writeDouble(latLonPos.λ.toDegrees)
-    dos.writeDouble(t.altitude.toMeters)
+    dos.writeDouble(latLonPos.altitude.toMeters)
     dos.writeDouble(t.speed.toMetersPerSecond)
     dos.writeDouble(t.heading.toDegrees)
     dos.writeDouble(t.vr.toMetersPerSecond)
@@ -213,22 +213,24 @@ class SimpleTrackWriter extends DataStreamWriter {
 
   def writeProximity (dos: DataOutputStream, p: ProximityEvent) = {
     val ref = p.ref
-    val latLonPos = ref.position
+    var pos = ref.position
 
     dos.writeUTF(ref.id)
-    dos.writeDouble(latLonPos.φ.toDegrees)
-    dos.writeDouble(latLonPos.λ.toDegrees)
-    dos.writeDouble(ref.altitude.toMeters)
+    dos.writeDouble(pos.φ.toDegrees)
+    dos.writeDouble(pos.λ.toDegrees)
+    dos.writeDouble(pos.altitude.toMeters)
 
     dos.writeDouble(p.distance.toMeters)
     dos.writeInt(p.status)
 
     val prox = p.track
+    pos = prox.position
+
     dos.writeUTF(prox.cs)
     dos.writeLong(prox.date.getMillis)
-    dos.writeDouble(prox.position.φ.toDegrees)
-    dos.writeDouble(prox.position.λ.toDegrees)
-    dos.writeDouble(prox.altitude.toMeters)
+    dos.writeDouble(pos.φ.toDegrees)
+    dos.writeDouble(pos.λ.toDegrees)
+    dos.writeDouble(pos.altitude.toMeters)
     dos.writeDouble(prox.speed.toMetersPerSecond)
     dos.writeDouble(prox.heading.toDegrees)
     dos.writeDouble(prox.vr.toMetersPerSecond)

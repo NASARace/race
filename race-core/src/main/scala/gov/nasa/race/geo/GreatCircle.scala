@@ -24,10 +24,9 @@ import gov.nasa.race.uom._
 import math.{atan2,asin,sqrt,cos,Pi}
 
 /**
- * object with library functions to compute great circle trajectories using
- * the squants project (http://www.squants.com/) for dimensional analysis
+ * object with library functions to compute great circle trajectories
  *
- * note this is just the spherical approximation, not WGS84 based
+ * note this is just the spherical approximation
  */
 object GreatCircle {
 
@@ -72,7 +71,11 @@ object GreatCircle {
     (MeanEarthRadius + (alt2 + alt1)/2.0) * c
   }
 
-  def distance(startPos: GeoPosition, endPos: GeoPosition, alt: Length = Length0): Length = {
+  def distance(startPos: GeoPosition, endPos: GeoPosition): Length = {
+    distance(startPos.φ, startPos.λ, startPos.altitude, endPos.φ, endPos.λ, endPos.altitude)
+  }
+
+  def distance(startPos: GeoPosition, endPos: GeoPosition, alt: Length): Length = {
     distance(startPos.φ, startPos.λ, alt, endPos.φ, endPos.λ, alt)
   }
 
@@ -141,13 +144,14 @@ object GreatCircle {
     val φ2 = Radians(asin(Sin(φ1) * Cos(δ) + Cos(φ1) * Sin(δ) * Cos(θ)))
     val λ2 = λ1 + Radians(atan2(Sin(θ) * Sin(δ) * Cos(φ1), Cos(δ) - Sin(φ1) * Sin(φ2)))
 
-    startPos.map(φ2, λ2)
+    GeoPosition(φ2, λ2, alt)
   }
 
   def translate (pos: GeoPosition, startPos: GeoPosition, endPos: GeoPosition): GeoPosition = {
     val φ = pos.φ +  (endPos.φ - startPos.φ)
     val λ = pos.λ + (endPos.λ - startPos.λ)
-    pos.map(φ,λ)
+    val h = pos.altitude + (endPos.altitude - startPos.altitude)
+    GeoPosition(φ,λ,h)
   }
 }
 

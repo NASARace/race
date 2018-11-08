@@ -51,6 +51,4 @@ package object geo {
 
   case class XYPos (x: Length, y: Length)
 
-
-
 }

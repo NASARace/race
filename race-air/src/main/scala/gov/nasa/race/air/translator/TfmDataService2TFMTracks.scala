@@ -138,10 +138,10 @@ class TfmDataService2TFMTracks(val config: Config=NoConfig) extends XmlPullParse
               if (checkVars) {
                 val status = if (completed) TrackedObject.CompletedFlag else TrackedObject.TrackNoStatus
                 val track = if (completed) {
-                  TFMTrack(flightRef,cs,GeoPosition(lat,lon),alt,speed,date,status,
+                  TFMTrack(flightRef,cs,GeoPosition(lat,lon,alt),speed,date,status,
                            source,None,None)
                 } else {
-                  TFMTrack(flightRef,cs,GeoPosition(lat,lon),alt,speed,date,status,
+                  TFMTrack(flightRef,cs,GeoPosition(lat,lon,alt),speed,date,status,
                            source,Some(nextWP),Some(nextWPDate))
                 }
                 tracks = track  +: tracks

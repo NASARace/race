@@ -41,8 +41,8 @@ object FlightPos {
 
   // since FlightPos is not a case class anymore we provide a unapply method for convenience
   // NOTE - don't select on floating point values (position, speed etc.) or date (which is a millisecond epoch)
-  def unapply (o: FlightPos): Option[(String,String,GeoPosition,Length,Speed,Angle,Speed,DateTime,Int)] = {
-    Some((o.id,o.cs,o.position,o.altitude,o.speed,o.heading,o.vr,o.date,o.status))
+  def unapply (o: FlightPos): Option[(String,String,GeoPosition,Speed,Angle,Speed,DateTime,Int)] = {
+    Some((o.id,o.cs,o.position,o.speed,o.heading,o.vr,o.date,o.status))
   }
 }
 
@@ -53,7 +53,6 @@ object FlightPos {
 class FlightPos (val id: String,
                  val cs: String,
                  val position: GeoPosition,
-                 val altitude: Length,
                  val speed: Speed,
                  val heading: Angle,
                  val vr: Speed,
@@ -61,17 +60,17 @@ class FlightPos (val id: String,
                  val status: Int = 0
                 ) extends TrackedAircraft {
 
-  def this (id:String, pos: GeoPosition, alt: Length, spd: Speed, hdg: Angle, vr: Speed, dtg: DateTime) =
-    this(id, FlightPos.tempCS(id), pos,alt,spd,hdg,vr,dtg)
+  def this (id:String, pos: GeoPosition, spd: Speed, hdg: Angle, vr: Speed, dtg: DateTime) =
+    this(id, FlightPos.tempCS(id), pos,spd,hdg,vr,dtg)
 
   def hasTempCS = FlightPos.isTempCS(cs)
   def tempCS = if (hasTempCS) cs else FlightPos.tempCS(id)
   def getOldCS: Option[String] = amendments.find(_.isInstanceOf[FlightPos.ChangedCS]).map(_.asInstanceOf[FlightPos.ChangedCS].oldCS)
 
-  def copyWithCS (newCS: String) = new FlightPos(id, newCS, position, altitude,speed,heading,vr,date,status)
-  def copyWithStatus (newStatus: Int) = new FlightPos(id, cs, position, altitude,speed,heading,vr,date,newStatus)
+  def copyWithCS (newCS: String) = new FlightPos(id, newCS, position,speed,heading,vr,date,status)
+  def copyWithStatus (newStatus: Int) = new FlightPos(id, cs, position,speed,heading,vr,date,newStatus)
 
-  override def toString = s"FlightPos($id,$cs,$position,${altitude.toFeet.toInt}ft,${speed.toKnots.toInt}kn,${heading.toNormalizedDegrees.toInt}°,0x${status.toHexString},$date)"
+  override def toString = s"FlightPos($id,$cs,$position,${speed.toKnots.toInt}kn,${heading.toNormalizedDegrees.toInt}°,0x${status.toHexString},$date)"
 
 }
 
@@ -81,7 +80,6 @@ class FlightPos (val id: String,
 class ExtendedFlightPos(id: String,
                         cs: String,
                         position: GeoPosition,
-                        altitude: Length,
                         speed: Speed,
                         heading: Angle,
                         vr: Speed,
@@ -92,10 +90,10 @@ class ExtendedFlightPos(id: String,
                         override val roll: Angle,
                         override val acType: String
                         //.. and possibly more to follow
-                       ) extends FlightPos(id, cs, position, altitude, speed, heading, vr, date, status) {
-  override def toString = s"ExtendedFlightPos($id,$cs,$acType,$position,${altitude.toFeet.toInt}ft,${speed.toKnots.toInt}kn,${heading.toNormalizedDegrees.toInt}°,${pitch.toDegrees.toInt}°,${roll.toDegrees.toInt}°,0x${status.toHexString},$date)"
-  override def copyWithCS (newCS: String) = new ExtendedFlightPos(id, newCS, position, altitude,speed,heading,vr,date,status,pitch,roll,acType)
-  override def copyWithStatus (newStatus: Int) = new ExtendedFlightPos(id, cs, position, altitude,speed,heading,vr,date,newStatus,pitch,roll,acType)
+                       ) extends FlightPos(id, cs, position, speed, heading, vr, date, status) {
+  override def toString = s"ExtendedFlightPos($id,$cs,$acType,$position,${speed.toKnots.toInt}kn,${heading.toNormalizedDegrees.toInt}°,${pitch.toDegrees.toInt}°,${roll.toDegrees.toInt}°,0x${status.toHexString},$date)"
+  override def copyWithCS (newCS: String) = new ExtendedFlightPos(id, newCS, position,speed,heading,vr,date,status,pitch,roll,acType)
+  override def copyWithStatus (newStatus: Int) = new ExtendedFlightPos(id, cs, position,speed,heading,vr,date,newStatus,pitch,roll,acType)
 }
 
 
@@ -112,9 +110,12 @@ class FlightPosArchiveWriter (val oStream: OutputStream, val pathName: String="<
   protected def writeFlightPos(fpos: FlightPos): Unit = {
     ps.print(fpos.id); ps.print(',')
     ps.print(fpos.cs); ps.print(',')
-    ps.print(fpos.position.φ.toDegrees); ps.print(',')
-    ps.print(fpos.position.λ.toDegrees); ps.print(',')
-    ps.print(fpos.altitude.toFeet); ps.print(',')
+
+    val pos = fpos.position
+    ps.print(pos.φ.toDegrees); ps.print(',')
+    ps.print(pos.λ.toDegrees); ps.print(',')
+    ps.print(pos.altitude.toFeet); ps.print(',')
+
     ps.print(fpos.speed.toUsMilesPerHour); ps.print(',')
     ps.print(fpos.heading.toDegrees); ps.print(',')
     ps.print(fpos.vr.toFeetPerMinute); ps.print(',')
@@ -182,8 +183,8 @@ class FlightPosArchiveReader (val iStream: InputStream, val pathName: String="<u
         val date = getDate(fs.head.toLong); fs = fs.tail  // we might adjust it on-the-fly
         val status = fs.head.toInt
 
-        someEntry(date, new FlightPos(flightId, cs, GeoPosition(Degrees(phi), Degrees(lambda)),
-                                      Feet(alt), UsMilesPerHour(speed), Degrees(heading), FeetPerMinute(vr), date,status))
+        someEntry(date, new FlightPos(flightId, cs, GeoPosition(Degrees(phi), Degrees(lambda), Feet(alt)),
+                                      UsMilesPerHour(speed), Degrees(heading), FeetPerMinute(vr), date,status))
       } catch {
         case x: Throwable => None
       }
@@ -216,8 +217,8 @@ class ExtendedFlightPosArchiveReader (iStream: InputStream, pathName: String) ex
         val roll = fs.head.toDouble; fs = fs.tail
         val acType = fs.head.intern
 
-        someEntry(date, new ExtendedFlightPos(flightId, cs, GeoPosition(Degrees(phi), Degrees(lambda)),
-                                              Feet(alt), UsMilesPerHour(speed), Degrees(heading), FeetPerMinute(vr), date,status,
+        someEntry(date, new ExtendedFlightPos(flightId, cs, GeoPosition(Degrees(phi), Degrees(lambda), Feet(alt)),
+                                              UsMilesPerHour(speed), Degrees(heading), FeetPerMinute(vr), date,status,
                                               Degrees(pitch), Degrees(roll), acType))
       } catch {
         case x: Throwable => None

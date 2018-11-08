@@ -55,9 +55,8 @@ object ProximityEvent {
   */
 case class ProximityReference (id: String,
                                date: DateTime,
-                               position: GeoPosition,
-                               altitude: Length) extends TrackPoint {
-  def this (ref: TrackedObjectEstimator, date: DateTime) = this(ref.track.cs, date, ref.estimatedPosition, ref.altitude)
+                               position: GeoPosition) extends TrackPoint {
+  def this (ref: TrackedObjectEstimator, date: DateTime) = this(ref.track.cs, date, ref.estimatedPosition)
 }
 
 /**
@@ -79,7 +78,7 @@ case class ProximityEvent (id: String,
   //--- TrackedObject interface
   def cs = id  // should be named 'gid'
   def position = ref.position
-  def altitude = ref.altitude
+  def altitude = ref.position.altitude
   def date = ref.date
 
   // those are not defined

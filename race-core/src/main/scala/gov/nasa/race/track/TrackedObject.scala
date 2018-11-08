@@ -72,7 +72,7 @@ trait TrackedObject extends IdentifiableObject with TrackPoint with MovingObject
     val mm = d.getMinuteOfHour
     val ss = d.getSecondOfMinute
     val id = StringUtils.capLength(cs)(8)
-    f"$id%-7s $hh%02d:$mm%02d:$ss%02d ${altitude.toFeet.toInt}%6dft ${heading.toNormalizedDegrees.toInt}%3d° ${speed.toKnots.toInt}%4dkn"
+    f"$id%-7s $hh%02d:$mm%02d:$ss%02d ${position.altitude.toFeet.toInt}%6dft ${heading.toNormalizedDegrees.toInt}%3d° ${speed.toKnots.toInt}%4dkn"
   }
 }
 

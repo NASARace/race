@@ -70,8 +70,7 @@ object SBS2FlightPos {
     def tryToFlightPos : Option[FlightPos] = {
       if (cs !=null && posDtg !=null && lat !=null && lon !=null && speed !=null && alt !=null && track !=null) {
         val fpos = new FlightPos(icao24, cs,
-          GeoPosition.fromDegrees(lat.toDouble, lon.toDouble),
-          Feet(alt.toDouble),
+          GeoPosition(Degrees(lat.toDouble), Degrees(lon.toDouble), Feet(alt.toDouble)),
           Knots(speed.toDouble),
           Degrees(track.toDouble),
           FeetPerMinute(vr.toDouble),

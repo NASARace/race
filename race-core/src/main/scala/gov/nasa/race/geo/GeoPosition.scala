@@ -22,9 +22,18 @@ import gov.nasa.race.uom.Length._
 import gov.nasa.race.uom._
 
 object GeoPosition {
-  def apply (φ: Angle, λ: Angle): GeoPosition = new LatLonPos(φ,λ)
+  val zeroPos = new LatLonPos(Angle0, Angle0, Length0)
+  val undefinedPos = new LatLonPos(UndefinedAngle, UndefinedAngle, UndefinedLength)
 
-  def fromDegrees (latDeg: Double, lonDeg: Double): GeoPosition = new LatLonPos( Degrees(latDeg), Degrees(lonDeg))
+  def apply (φ: Angle, λ: Angle, alt: Length = Length0): GeoPosition = new LatLonPos(φ,λ,alt)
+
+  def fromDegrees (latDeg: Double, lonDeg: Double): GeoPosition = new LatLonPos( Degrees(latDeg), Degrees(lonDeg), Length0)
+  def fromDegreesAndMeters (latDeg: Double, lonDeg: Double, altMeters: Double) = {
+    new LatLonPos(Degrees(latDeg), Degrees(lonDeg), Meters(altMeters))
+  }
+  def fromDegreesAndFeet (latDeg: Double, lonDeg: Double, altFeet: Double) = {
+    new LatLonPos(Degrees(latDeg), Degrees(lonDeg), Feet(altFeet))
+  }
 }
 
 /**
@@ -37,7 +46,8 @@ trait GeoPosition {
   def λ: Angle
   @inline def lon = λ  // just an alias
 
-  def altitude: Length = Length0  // override if we have one
+  def altitude: Length
+  def hasDefinedAltitude: Boolean = altitude.isDefined
 
   @inline def =:= (other: GeoPosition): Boolean = (φ =:= other.φ) && (λ =:= other.λ) && (altitude =:= other.altitude)
 
@@ -47,7 +57,6 @@ trait GeoPosition {
   @inline def lonDeg = λ.toDegrees
   @inline def altMeters: Double = altitude.toMeters
 
-  def map (φ: Angle, λ: Angle, alt: Length = Length0): GeoPosition
 }
 
 /**
@@ -57,16 +66,6 @@ trait GeoPositioned {
   def position: GeoPosition
 }
 
-trait GeoPositioned3D extends GeoPositioned {
-  def altitude: Length
-}
-
-object LatLonPos {
-  val zeroPos = new LatLonPos(Angle.Angle0, Angle.Angle0)
-  val undefinedPos = new LatLonPos(Angle.UndefinedAngle, Angle.UndefinedAngle)
-
-  def fromDegrees (φ: Double, λ: Double) = new LatLonPos( Degrees(φ), Degrees(λ))
-}
 
 /**
  * geographic position consisting of latitude and longitude
@@ -74,35 +73,8 @@ object LatLonPos {
  * @param φ latitude (positive north)
  * @param λ longitude (positive east)
  */
-case class LatLonPos(val φ: Angle, val λ: Angle) extends GeoPosition {
+case class LatLonPos(val φ: Angle, val λ: Angle, val altitude: Length) extends GeoPosition {
   override def toString = {
-    f"LatLonPos{φ=${φ.toDegrees}%+3.5f°,λ=${λ.toDegrees}%+3.5f°}"
-  }
-
-  override def map (φ: Angle, λ: Angle, alt: Length = Length0): GeoPosition = {
-    new LatLonPos(φ,λ)
-  }
-}
-
-
-object LatLonAltPos {
-  val zeroPos = new LatLonAltPos(Angle.Angle0, Angle.Angle0, Length.Length0)
-  val undefinedPos = new LatLonAltPos(Angle.UndefinedAngle, Angle.UndefinedAngle, Length.UndefinedLength)
-
-  def fromDegreesAndFeet (φ: Double, λ: Double, alt: Double) = new LatLonAltPos( Degrees(φ), Degrees(λ), Feet(alt))
-}
-/**
-  * geographic position with altitude
-  *
-  * TODO - should this be merged with LatLonPos? If so, how to separate between alt/elev? What to use
-  * if there is no alt info (undefined or 0)?
-  */
-case class LatLonAltPos (val φ: Angle, val λ: Angle, override val altitude: Length) extends GeoPosition {
-  override def toString = {
-    f"LatLonAltPos{φ=${φ.toDegrees}%+3.5f°,λ=${λ.toDegrees}%+3.5f°,alt=${altitude.toMeters}m"
-  }
-
-  override def map (φ: Angle, λ: Angle, alt: Length = Length0): GeoPosition = {
-    new LatLonAltPos(φ,λ,alt)
+    f"LatLonPos{φ=${φ.toDegrees}%+3.5f°,λ=${λ.toDegrees}%+3.5f°,alt=${altitude.toMeters}m"
   }
 }

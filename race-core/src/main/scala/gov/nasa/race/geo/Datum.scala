@@ -40,7 +40,7 @@ object Datum {
     *
     * from Astronomical Almanac pg. K12
     */
-  def ecefToWGS84(xLen: Length, yLen: Length, zLen: Length): LatLonAltPos = {
+  def ecefToWGS84(xLen: Length, yLen: Length, zLen: Length): GeoPosition = {
     val x = xLen.toMeters
     val y = yLen.toMeters
     val z = zLen.toMeters
@@ -60,10 +60,10 @@ object Datum {
     val h = r / cos(φ) - RE_E*c
     val λ = atan(y/x)
 
-    LatLonAltPos(Radians(φ),Radians(λ),Meters(h))
+    GeoPosition(Radians(φ),Radians(λ),Meters(h))
   }
-  @inline def ecefToWGS84(pos: (Length,Length,Length)): LatLonAltPos = ecefToWGS84(pos._1,pos._2,pos._3)
-  @inline def ecefToWGS84(pos: XyzPos): LatLonAltPos = ecefToWGS84(pos.x,pos.y,pos.z)
+  @inline def ecefToWGS84(pos: (Length,Length,Length)): GeoPosition = ecefToWGS84(pos._1,pos._2,pos._3)
+  @inline def ecefToWGS84(pos: XyzPos): GeoPosition = ecefToWGS84(pos.x,pos.y,pos.z)
 
 
   /**

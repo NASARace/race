@@ -55,9 +55,12 @@ class TrackRecordWriter(val config: Config) extends DenseRecordWriter[FloatTrack
           rec.id := track.id
           rec.cs := track.cs
           rec.date := track.date.getMillis
-          rec.lat := track.position.latDeg.toFloat
-          rec.lon := track.position.lonDeg.toFloat
-          rec.alt := track.altitude.toMeters.toFloat
+
+          val pos = track.position
+          rec.lat := pos.latDeg.toFloat
+          rec.lon := pos.lonDeg.toFloat
+          rec.alt := pos.altMeters.toFloat
+
           rec.hdg := track.heading.toDegrees.toFloat
           rec.spd := track.speed.toMetersPerSecond.toFloat
           rec.vr := track.vr.toMetersPerSecond.toFloat

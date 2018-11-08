@@ -114,12 +114,12 @@ trait ProximityActor extends SubscribingRaceActor with PublishingRaceActor {
 class StaticProximityActor (val config: Config) extends ProximityActor {
   import ProximityEvent._
 
-  class StaticRefEntry (val id: String, pos: GeoPosition, altitude: Length) extends RefEntry {
+  class StaticRefEntry (val id: String, pos: GeoPosition) extends RefEntry {
 
     def getDistanceInMeters (track: TrackedObject): Double = {
       val tLat = track.position.φ.toRadians
       val tLon = track.position.λ.toRadians
-      GeoUtils.euclideanDistanceRad(pos.φ.toRadians,pos.λ.toRadians,tLat,tLon,altitude.toMeters)
+      GeoUtils.euclideanDistanceRad(pos.φ.toRadians,pos.λ.toRadians,tLat,tLon,pos.altitude.toMeters)
     }
 
     override def checkProximity (track: TrackedObject) = {
@@ -129,11 +129,11 @@ class StaticProximityActor (val config: Config) extends ProximityActor {
       if ((dist <= distanceInMeters) && !track.isDroppedOrCompleted) {
         val flags = if (proximities.contains(tId)) ProxChange else ProxNew
         proximities += (tId -> track)
-        publish(createProximityEvent(new ProximityReference(id,track.date,pos,altitude), Meters(dist), flags, track))
+        publish(createProximityEvent(new ProximityReference(id,track.date,pos), Meters(dist), flags, track))
       } else {
         if (proximities.contains(tId)) {
           proximities -= tId
-          publish(createProximityEvent(new ProximityReference(id,track.date,pos,altitude), Meters(dist), ProxDrop, track))
+          publish(createProximityEvent(new ProximityReference(id,track.date,pos), Meters(dist), ProxDrop, track))
         }
       }
     }
@@ -142,7 +142,7 @@ class StaticProximityActor (val config: Config) extends ProximityActor {
       ifSome(proximities.get(tId)) { track =>
         val dist = getDistanceInMeters(track)
         proximities -= tId
-        publish(createProximityEvent(new ProximityReference(id,date,pos,altitude), Meters(dist), ProxDrop, track))
+        publish(createProximityEvent(new ProximityReference(id,date,pos), Meters(dist), ProxDrop, track))
       }
     }
   }
@@ -154,7 +154,7 @@ class StaticProximityActor (val config: Config) extends ProximityActor {
       for (lat <- conf.getOptionalDouble("lat");
            lon <- conf.getOptionalDouble("lon");
            alt <- conf.getOptionalDouble("altitude-ft")) {
-        refs += (id -> new StaticRefEntry(id, GeoPosition.fromDegrees(lat,lon), Feet(alt)))
+        refs += (id -> new StaticRefEntry(id, GeoPosition.fromDegreesAndFeet(lat,lon,alt)))
       }
     }
   }

@@ -16,7 +16,7 @@
  */
 package gov.nasa.race
 
-import gov.nasa.race.geo.GeoPositioned3D
+import gov.nasa.race.geo.GeoPositioned
 import gov.nasa.race.uom.{Angle, Speed}
 
 /**
@@ -28,7 +28,7 @@ import gov.nasa.race.uom.{Angle, Speed}
 package object track {
 
   /** a GeoPosition3D that is associated with a date */
-  trait TrackPoint extends GeoPositioned3D with Dated
+  trait TrackPoint extends GeoPositioned with Dated
 
   trait IdentifiableTrackPoint extends TrackPoint with IdentifiableObject
 

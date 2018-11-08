@@ -40,7 +40,6 @@ object TATrack {
 case class TATrack (id: String,
                     cs: String,
                     position: GeoPosition,
-                    altitude: Length,
                     heading: Angle,
                     speed: Speed,
                     vr: Speed,
@@ -55,7 +54,7 @@ case class TATrack (id: String,
   import TATrack._
 
   override def toString = {
-    f"TATrack($src,$id,$cs,0x${status.toHexString},$position,${altitude.toFeet}%.0f,${heading.toDegrees}%.0f°,${speed.toKnots}%.1fkn,${vr.toFeetPerMinute}%.0f, $date, $flightPlan)"
+    f"TATrack($src,$id,$cs,0x${status.toHexString},$position,${heading.toDegrees}%.0f°,${speed.toKnots}%.1fkn,${vr.toFeetPerMinute}%.0f, $date, $flightPlan)"
   }
 
   def isPseudo = (status & PseudoFlag) != 0

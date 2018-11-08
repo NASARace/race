@@ -17,7 +17,7 @@
 
 package gov.nasa.race.air
 
-import gov.nasa.race.geo.{GeoPositioned3D, GeoPosition}
+import gov.nasa.race.geo.{GeoPosition,GeoPositioned}
 import gov.nasa.race.uom.Length._
 import gov.nasa.race.uom._
 
@@ -92,6 +92,6 @@ case class Airport (id: String,
                     city: String,
                     position: GeoPosition,
                     elevation: Length,
-                    hasAsdex: Boolean) extends GeoPositioned3D {
+                    hasAsdex: Boolean) extends GeoPositioned {
   def altitude = elevation
 }

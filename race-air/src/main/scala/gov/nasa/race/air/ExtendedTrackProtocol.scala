@@ -64,7 +64,7 @@ class ExtendedTrackReader extends SimpleTrackReader {
     val trackType = dis.readUTF.intern
 
     new ExtendedFlightPos(id, id,
-      GeoPosition.fromDegrees(latDeg, lonDeg), Meters(altM),
+      GeoPosition( Degrees(latDeg), Degrees(lonDeg), Meters(altM)),
       MetersPerSecond(speedMS), Degrees(headingDeg), MetersPerSecond(vrMS),
       new DateTime(timeMsec),flags,
       Degrees(pitchDeg), Degrees(rollDeg), trackType)

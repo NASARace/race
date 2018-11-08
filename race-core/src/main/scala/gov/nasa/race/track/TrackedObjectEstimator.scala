@@ -71,7 +71,7 @@ class HoldEstimator extends TrackedObjectEstimator {
 
   override def lat = _track.position.φ
   override def lon = _track.position.λ
-  override def altitude = _track.altitude
+  override def altitude = _track.position.altitude
   override def heading = _track.heading
   override def speed = _track.speed
 }
@@ -100,7 +100,8 @@ class TrackedObjectExtrapolator extends TrackedObjectEstimator {
 
       state(0) = pos.φ.toDegrees
       state(1) = pos.λ.toDegrees
-      state(2) = obs.altitude.toMeters
+      state(2) = pos.altitude.toMeters
+
       state(3) = obs.heading.toDegrees
       state(4) = obs.speed.toMetersPerSecond
 

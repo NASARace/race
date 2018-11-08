@@ -110,8 +110,8 @@ class FIXM2FlightObject (val config: Config=NoConfig)
           } else {
             if (lat.isDefined && lon.isDefined && date != null &&
               vx.isDefined && vy.isDefined && spd.isDefined && alt.isDefined) {
-              flights += new FlightPos(id, cs, GeoPosition.fromDegrees(lat,lon),
-                                       alt, spd, Degrees(Math.atan2(vx, vy).toDegrees), vr, date)
+              flights += new FlightPos(id, cs, GeoPosition(Degrees(lat),Degrees(lon),alt),
+                                       spd, Degrees(Math.atan2(vx, vy).toDegrees), vr, date)
             } else {
               //println(s"@@@ rejected flight: $cs $lat $lon $date $vx $vy $spd $alt")
             }

@@ -39,7 +39,6 @@ case class TFMTracks (tracks: Seq[TFMTrack]) {
 case class TFMTrack(id: String,
                     cs: String,
                     position: GeoPosition,
-                    altitude: Length,
                     speed: Speed,
                     date: DateTime,
                     status: Int,

@@ -19,7 +19,7 @@ package gov.nasa.race.air
 
 import com.typesafe.config.Config
 import gov.nasa.race.config.ConfigUtils._
-import gov.nasa.race.geo.GreatCircle.{finalBearing,distance}
+import gov.nasa.race.geo.GreatCircle.{finalBearing,distance2D}
 import gov.nasa.race.uom.Angle._
 
 import scala.concurrent.duration._
@@ -51,7 +51,7 @@ class FlightPosHeadingChecker (config: Config) extends FlightPosChecker {
         Some(FlightPosProblem(fpos, lastFPos, s"stale position for ${fpos.cs} (dt=$dt)"))
 
       } else if (dt < minTimeDiff) { // ambiguous or redundant
-        val compDist = distance(fpos.position, lastFPos.position, fpos.altitude).toMeters
+        val compDist = distance(fpos.position, lastFPos.position).toMeters
         val estDist = fpos.speed.toMetersPerSecond * dt
         if (Math.abs(compDist - estDist) > posAccuracy) {
           Some(FlightPosProblem(fpos, lastFPos, s"ambiguous positions for ${fpos.cs} (dt=$dt,ds=$compDist"))

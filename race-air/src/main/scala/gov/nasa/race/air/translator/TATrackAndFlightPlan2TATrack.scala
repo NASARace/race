@@ -133,7 +133,7 @@ class TATrackAndFlightPlan2TATrack (val config: Config=NoConfig) extends XmlPars
             val hdg = Angle.fromVxVy(vx, vy)
             if (acId == null) acId = trackId
 
-            val track = new TATrack(trackId,acId,GeoPosition(lat,lon),reportedAltitude,hdg,spd,vVert,mrtTime,status,
+            val track = new TATrack(trackId,acId,GeoPosition(lat,lon,reportedAltitude),hdg,spd,vVert,mrtTime,status,
                                     src, XYPos(xPos, yPos), beaconCode, flightPlan)
 
             if (attachRev && stddsRev >= 0) track.amend(Rev(3, stddsRev.toShort))

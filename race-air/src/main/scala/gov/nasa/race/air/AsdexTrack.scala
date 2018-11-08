@@ -48,7 +48,6 @@ object AsdexTrack {
 case class AsdexTrack(id: String,
                       cs: String,
                       position: GeoPosition,
-                      altitude: Length,
                       speed: Speed,
                       heading: Angle,
                       vr: Speed,
@@ -60,10 +59,10 @@ case class AsdexTrack(id: String,
   import AsdexTrack._
 
   def isAircraft = (status & AircraftFlag) != 0
-  def isGroundAircraft = ((status & OnGroundFlag) != 0) && !altitude.isDefined
-  def isAirborne = altitude.isDefined
+  def isGroundAircraft = ((status & OnGroundFlag) != 0) && !position.hasDefinedAltitude
+  def isAirborne = position.hasDefinedAltitude
   def isMovingGroundAircraft = isGroundAircraft && heading.isDefined
-  def isAirborneAircraft = isAircraft && altitude.isDefined
+  def isAirborneAircraft = isAircraft && position.hasDefinedAltitude
   def isVehicle = (status & VehicleFlag) != 0
   def isUp = (status & UpFlag) != 0
   def isDown = (status & DownFlag) != 0

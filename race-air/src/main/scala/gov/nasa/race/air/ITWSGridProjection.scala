@@ -40,7 +40,7 @@ class ITWSGridProjection (val trpPos: GeoPosition, // tracon reference point in 
   final val CosΘ = Cos(rotation)
 
   /**
-   * transform cartesian grid coordinates into LatLonPos(φ,λ)
+   * transform cartesian grid coordinates into GeoPosition(φ,λ)
    *
    * @param xGrid  horizontal distance relative to grid origin (SW corner)
    * @param yGrid  vertical distance relative to grid origin (SW corner)

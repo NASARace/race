@@ -80,7 +80,7 @@ class AsdexTrack2FlightPos (val config: Config=NoConfig) extends ConfigurableTra
   }
 
   def translateTrack (track: AsdexTrack): Option[FlightPos] = {
-    val alt = track.altitude
+    val alt = track.position.altitude
     if (alt.isDefined) {
       if (alt >= airborneAltitude) {
         var spd = track.speed
@@ -92,7 +92,7 @@ class AsdexTrack2FlightPos (val config: Config=NoConfig) extends ConfigurableTra
 
         val hdg = track.heading
         if (hdg.isDefined) {
-          Some(new FlightPos(track.id, track.cs, track.position, alt, spd, hdg, track.vr, track.date))
+          Some(new FlightPos(track.id, track.cs, track.position, spd, hdg, track.vr, track.date))
         } else None
 
       } else None // too low

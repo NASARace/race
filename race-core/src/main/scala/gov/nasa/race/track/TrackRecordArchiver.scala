@@ -49,9 +49,11 @@ class TrackRecordArchiveWriter(pathName: String, openOptions: Set[OpenOption])
         rec.date := track.date.getMillis
         rec.stat := track.status
 
-        rec.lat := track.position.latDeg
-        rec.lon := track.position.lonDeg
-        rec.alt := track.altitude.toMeters
+        val pos = track.position
+        rec.lat := pos.latDeg
+        rec.lon := pos.lonDeg
+        rec.alt := pos.altMeters
+
         rec.hdg := track.heading.toDegrees
         rec.spd := track.speed.toMetersPerSecond
         rec.vr  := track.vr.toMetersPerSecond
@@ -78,9 +80,11 @@ class FloatTrackRecordArchiveWriter(pathName: String, openOptions: Set[OpenOptio
         rec.date := track.date.getMillis
         rec.stat := track.status
 
-        rec.lat := track.position.latDeg.toFloat
-        rec.lon := track.position.lonDeg.toFloat
-        rec.alt := track.altitude.toMeters.toFloat
+        val pos = track.position
+        rec.lat := pos.latDeg.toFloat
+        rec.lon := pos.lonDeg.toFloat
+        rec.alt := pos.altMeters.toFloat
+
         rec.hdg := track.heading.toDegrees.toFloat
         rec.spd := track.speed.toMetersPerSecond.toFloat
         rec.vr  := track.vr.toMetersPerSecond.toFloat

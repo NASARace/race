@@ -150,7 +150,7 @@ class AsdexMsg2AsdexTracks(val config: Config=NoConfig) extends XmlParser[AsdexT
       val cs = if (acId != null) getCallsign(acId,trackId) else trackId
       val act = if (acType != null) Some(acType) else None
 
-      new AsdexTrack(trackId, cs, GeoPosition(lat, lon), alt, spd, hdg, vr, date, status, act)
+      new AsdexTrack(trackId, cs, GeoPosition(lat, lon, alt), spd, hdg, vr, date, status, act)
 
     } else null
   }
