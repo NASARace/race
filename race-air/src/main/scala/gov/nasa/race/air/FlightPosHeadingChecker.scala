@@ -51,7 +51,7 @@ class FlightPosHeadingChecker (config: Config) extends FlightPosChecker {
         Some(FlightPosProblem(fpos, lastFPos, s"stale position for ${fpos.cs} (dt=$dt)"))
 
       } else if (dt < minTimeDiff) { // ambiguous or redundant
-        val compDist = distance(fpos.position, lastFPos.position).toMeters
+        val compDist = distance2D(fpos.position, lastFPos.position).toMeters
         val estDist = fpos.speed.toMetersPerSecond * dt
         if (Math.abs(compDist - estDist) > posAccuracy) {
           Some(FlightPosProblem(fpos, lastFPos, s"ambiguous positions for ${fpos.cs} (dt=$dt,ds=$compDist"))

@@ -21,14 +21,15 @@ import gov.nasa.race.common.SmoothingVectorExtrapolator
 import gov.nasa.race.geo.GeoPosition
 import gov.nasa.race.uom.Length._
 import gov.nasa.race.uom.{Angle, Speed}
+import gov.nasa.race.uom.Angle._
 import org.joda.time.DateTime
 
 object ExternalAircraft {
   final val invisibleAltitude = Meters(50000.12345) // this is how we make aircraft disappear without crashing them
 
   // use values that won't cause exceptions in X-Plane
-  val noAircraft = new ExtendedFlightPos("*","*",GeoPosition.fromDegrees(0.1,0.1),
-                                         invisibleAltitude,Speed.Speed0,Angle.Angle0, Speed.Speed0,
+  val noAircraft = new ExtendedFlightPos("*","*",GeoPosition(Degrees(0.1),Degrees(0.1),invisibleAltitude),
+                                         Speed.Speed0,Angle.Angle0, Speed.Speed0,
                                          new DateTime(0),0,Angle.Angle0,Angle.Angle0,"*")
 
   val AnyLivery = "*"
@@ -92,7 +93,7 @@ class NonExtrapolatedAC (val idx: Int, val acType: String, val liveryName: Strin
 
   def latDeg = fpos.position.latDeg
   def lonDeg = fpos.position.lonDeg
-  def altMeters = fpos.altitude.toMeters
+  def altMeters = fpos.position.altMeters
   def psiDeg = fpos.heading.toDegrees.toFloat
   def thetaDeg = fpos.pitch.toDegrees.toFloat
   def phiDeg = fpos.roll.toDegrees.toFloat
@@ -128,7 +129,7 @@ class ExtrapolatedAC (val idx: Int, val acType: String, val liveryName: String, 
 
     state(0) = newFPos.position.latDeg
     state(1) = newFPos.position.lonDeg
-    state(2) = newFPos.altitude.toMeters
+    state(2) = newFPos.position.altMeters
     state(3) = newFPos.heading.toDegrees
     state(4) = newFPos.pitch.toDegrees
     state(5) = newFPos.roll.toDegrees

@@ -20,14 +20,14 @@ import java.awt.Insets
 
 import gov.nasa.race.swing.GBPanel.Anchor
 import gov.nasa.race.swing.Style._
-import gov.nasa.race.swing.{FieldPanel, Filler, GBPanel}
+import gov.nasa.race.swing.{FieldPanel, GBPanel}
 import gov.nasa.race.track.{TrackInfo, TrackedObject}
 import gov.nasa.race.util.DateTimeUtils._
 import gov.nasa.race.ww.{Images, RacePanel, RaceViewer}
 import org.joda.time.DateTime
 
-import scala.swing.event.{ButtonClicked,MouseClicked}
-import scala.swing.{Action, BoxPanel, Button, CheckBox, Orientation, Label, Alignment}
+import scala.swing.event.{ButtonClicked, MouseClicked}
+import scala.swing.{Alignment, BoxPanel, CheckBox, Label, Orientation}
 
 object TrackEntryPanel {
   val ejectIcon = Images.getIcon("eject-blue-16x16.png")
@@ -60,8 +60,9 @@ class TrackEntryPanel[T <: TrackedObject](raceView: RaceViewer, layer: TrackLaye
     override def update (obj: T): Unit = {
       cs.text = obj.cs
       date.text = hhmmss.print(obj.date)
-      pos.text = f"${obj.position.φ.toDegrees}%.6f° , ${obj.position.λ.toDegrees}%.6f°"
-      alt.text = f"${obj.altitude.toFeet.toInt}%d ft"
+      val opos = obj.position
+      pos.text = f"${opos.latDeg}%.6f° , ${opos.lonDeg}%.6f°"
+      alt.text = f"${opos.altFeet}%d ft"
       hdg.text = f"${obj.heading.toDegrees.toInt}%d°"
       spd.text = f"${obj.speed.toKnots.toInt}%d kn"
     }

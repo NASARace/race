@@ -65,7 +65,7 @@ class TrackEntry[T <: TrackedObject](var obj: T, var trajectory: Trajectory, val
   def labelText: String = if (obj.cs != obj.id) obj.cs else obj.id
 
   def infoText: String = {
-    s"${obj.cs}\n${hhmmss.print(obj.date)}\n${obj.altitude.toFeet.toInt} ft\n${obj.heading.toDegrees.toInt}°\n${obj.speed.toKnots.toInt} kn"
+    s"${obj.cs}\n${hhmmss.print(obj.date)}\n${obj.position.altitude.toFeet.toInt} ft\n${obj.heading.toDegrees.toInt}°\n${obj.speed.toKnots.toInt} kn"
   }
 
   //--- override creators in subclasses for more specialized types

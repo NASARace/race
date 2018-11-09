@@ -58,7 +58,7 @@ class SimpleAircraft (val config: Config) extends ContinuousTimeRaceActor
     case RaceTick =>
       if (!simClock.isStopped) {  // TODO - should be in base type
         updatePos
-        publish(new FlightPos(id, cs, pos, altitude, speed, heading, vr, simTime))
+        publish(new FlightPos(id, cs, pos, speed, heading, vr, simTime))
       }
   }
 

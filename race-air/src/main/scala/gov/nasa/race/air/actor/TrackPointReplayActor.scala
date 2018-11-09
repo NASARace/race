@@ -94,8 +94,7 @@ class TrackPointReader (val iStream: InputStream, val pathName: String="<unknown
       val fpos = new FlightPos(
         id,
         cs, // no CS
-        GeoPosition.fromDegrees(tp.getLatitude, tp.getLongitude),
-        Meters(tp.getAltitude),
+        GeoPosition.fromDegreesAndMeters(tp.getLatitude, tp.getLongitude, tp.getAltitude),
         MetersPerSecond(tp.getSpeed),
         Degrees(tp.getHeading),
         Speed.UndefinedSpeed,       // TODO - we only store this in FullTrackPoints

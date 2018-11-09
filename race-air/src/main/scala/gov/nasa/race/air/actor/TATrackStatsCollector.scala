@@ -173,8 +173,7 @@ class TATrackStatsData  (val src: String) extends TSStatsData[TATrack,TATrackEnt
 
   override def rateSameness (t1: TATrack, t2: TATrack): Sameness = {
     // we don't need to compare src and trackNum since those are used to look up the respective entries
-    if (t1.xyPos != t2.xyPos) Ambiguous(Some("xyPos"))
-    else if (t1.altitude != t2.altitude) Ambiguous(Some("altitude"))
+    if (t1.position != t2.position) Ambiguous(Some("position"))
     else if (t1.speed != t2.speed) Ambiguous(Some("speed"))
     else if (t1.heading != t2.heading) Ambiguous(Some("heading"))
     else if (t1.vr != t2.vr) Ambiguous(Some("vr"))

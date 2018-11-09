@@ -74,7 +74,7 @@ class TrackEntryRenderer[T <: TrackedObject](config: Config)  extends ItemRender
   }
 
   protected def setDataLabel (obj: T): Unit = {
-    val alt = obj.altitude.toFeet.toInt
+    val alt = obj.position.altitude.toFeet.toInt
     val hdg = obj.heading.toNormalizedDegrees.toInt
     val spd = obj.speed.toKnots.toInt
     dataLabel.text = f" $alt%6d $hdg%3d° $spd%4d"

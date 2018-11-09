@@ -21,10 +21,7 @@ import java.awt.Color
 import java.awt.event._
 
 import com.typesafe.config.Config
-import gov.nasa.race.geo._
-import gov.nasa.race.geo.{GeoPositioned3D, GeoPosition}
-import gov.nasa.race.uom._
-import gov.nasa.race.uom.Length._
+import gov.nasa.race.geo.{GeoPosition, _}
 import gov.nasa.worldwind._
 import gov.nasa.worldwind.event.SelectEvent
 import gov.nasa.worldwind.geom.Position
@@ -60,8 +57,8 @@ package object ww {
 
   val FarAway = Position.fromDegrees(0,0,Double.MaxValue) // use this for invisible positions
 
-  @inline def wwPosition(pos: GeoPosition, alt: Length= Length0): Position = {
-    Position.fromDegrees(pos.φ.toDegrees, pos.λ.toDegrees, alt.toMeters)
+  @inline def wwPosition(pos: GeoPosition): Position = {
+    Position.fromDegrees(pos.latDeg, pos.lonDeg, pos.altMeters)
   }
 
   val ZeroWWAngle = gov.nasa.worldwind.geom.Angle.ZERO
@@ -94,7 +91,7 @@ package object ww {
   trait LayerObject {
     def id: String
     def layer: RaceLayer
-    def pos: GeoPositioned3D
+    def pos: GeoPositioned
 
     def isFocused: Boolean
     def setFocused(cond: Boolean): Unit

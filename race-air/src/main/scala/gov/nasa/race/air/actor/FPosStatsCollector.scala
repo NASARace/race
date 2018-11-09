@@ -59,7 +59,6 @@ class FlightPosStatsData extends TSStatsData[FlightPos,TSEntryData[FlightPos]] {
 
   override def rateSameness (fpos: FlightPos, last: FlightPos): Sameness = {
     if (fpos.position != last.position) Ambiguous(Some("position"))
-    else if (fpos.altitude != last.altitude) Ambiguous(Some("altitude"))
     else Duplicate
   }
 

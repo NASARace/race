@@ -78,7 +78,7 @@ class TrkReader extends DataStreamReader {
         val psi = Degrees(dis.readFloat)
         val status = dis.readInt
 
-        val track = new ExtendedFlightPos(id,id, GeoPosition(lat,lon),alt, spd,hdg,vr, date,status, theta,phi,"?")
+        val track = new ExtendedFlightPos(id,id, GeoPosition(lat,lon,alt), spd,hdg,vr, date,status, theta,phi,"?")
         tracks += track
       }
       Some(tracks)

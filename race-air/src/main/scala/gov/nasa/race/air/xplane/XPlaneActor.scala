@@ -385,14 +385,13 @@ class XPlaneActor (val config: Config) extends PublishingRaceActor
 
   def initialFlightPos = {
     // <2do> get these from config
-    val pos = GeoPosition.fromDegrees(0,0)
-    val altitude = Feet(0)
+    val pos = GeoPosition.fromDegreesAndFeet(0,0,0)
     val speed = Knots(0)
     val heading = Degrees(0)
     val vr = Speed.Speed0
     val acType = "?"
 
-    new ExtendedFlightPos(id, cs, pos, altitude, speed, heading, vr, simTime, 0, Degrees(0), Degrees(0), acType)
+    new ExtendedFlightPos(id, cs, pos, speed, heading, vr, simTime, 0, Degrees(0), Degrees(0), acType)
   }
 
   override def onStartRaceActor(originator: ActorRef) = {
@@ -422,8 +421,7 @@ class XPlaneActor (val config: Config) extends PublishingRaceActor
     if (receivedRPOS > publishedRPOS) {  // we might not have gotten the rpos yet
       updatedSimTime
 
-      val pos = GeoPosition.fromDegrees(rpos.latDeg, rpos.lonDeg)
-      val altitude = Meters(rpos.elevationMslm)
+      val pos = GeoPosition.fromDegreesAndMeters(rpos.latDeg, rpos.lonDeg, rpos.elevationMslm)
       val speed = MetersPerSecond(rpos.speedMsec)
       val heading = Degrees(rpos.headingDeg)
       val vr = computeVr(rpos)
@@ -431,7 +429,7 @@ class XPlaneActor (val config: Config) extends PublishingRaceActor
       val roll = Degrees(rpos.rollDeg)
       val acType = "?"
 
-      flightPos = new ExtendedFlightPos(id, cs, pos, altitude, speed, heading, vr, simTime, 0, pitch,roll,acType)
+      flightPos = new ExtendedFlightPos(id, cs, pos, speed, heading, vr, simTime, 0, pitch,roll,acType)
 
       publish(flightPos)
       publishedRPOS = receivedRPOS

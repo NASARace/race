@@ -35,7 +35,7 @@ package object air {
     def roll: Angle = Angle.Angle0
     def acType: String = "?"
 
-    def flightLevel: Int = ((altitude.toFeet)/500).toInt * 5
+    def flightLevel: Int = ((position.altitude.toFeet)/500).toInt * 5
 
     def stateString = {
       f"FL${flightLevel}%d ${heading.toDegrees.toInt}%03d° ${speed.toKnots.toInt}%dkn"

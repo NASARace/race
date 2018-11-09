@@ -56,6 +56,7 @@ trait GeoPosition {
   @inline def latDeg = φ.toDegrees
   @inline def lonDeg = λ.toDegrees
   @inline def altMeters: Double = altitude.toMeters
+  @inline def altFeet: Int = altitude.toFeet.toInt
 
 }
 

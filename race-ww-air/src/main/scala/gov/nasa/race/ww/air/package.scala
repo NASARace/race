@@ -28,5 +28,5 @@ import scala.language.implicitConversions
   * package `gov.nasa.race.ww.air` contains WorldWind specific airspace visualization
   */
 package object air {
-  implicit def positionFromAsdexTrack(t: AsdexTrack): Position = wwPosition(t.position, t.altitude.orElse(Length0))
+  implicit def positionFromAsdexTrack(t: AsdexTrack): Position = wwPosition(t.position)
 }

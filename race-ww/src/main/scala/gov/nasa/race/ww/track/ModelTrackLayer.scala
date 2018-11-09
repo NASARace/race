@@ -114,7 +114,7 @@ trait ModelTrackLayer[T <:TrackedObject] extends TrackLayer[T] with ViewListener
 
   def isProximity (e: TrackEntry[T]): Boolean = {
     val fpos = e.obj
-    (e.isFocused && (Meters(eyeAltitude) - fpos.altitude < modelDistance)) ||
+    (e.isFocused && (Meters(eyeAltitude) - fpos.position.altitude < modelDistance)) ||
       eyeDistanceFilter.pass(fpos)
   }
 

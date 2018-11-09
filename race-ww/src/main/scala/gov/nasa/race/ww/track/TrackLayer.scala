@@ -256,7 +256,7 @@ trait TrackLayer[T <:TrackedObject] extends SubscribingRaceLayer
           // keep eye altitude, view pitch and heading, translate eye position
           GreatCircle.translate(raceViewer.tgtEyePos, lastObj.position,obj.position)
         }
-        val dAlt = (obj.altitude - lastObj.altitude).toMeters
+        val dAlt = (obj.position.altitude - lastObj.position.altitude).toMeters
         raceViewer.jumpToEyePosition(new Position(ep,raceViewer.tgtZoom + dAlt))
         //raceViewer.panToCenter(wwPosition(ep, Meters(raceViewer.tgtZoom + dAlt)),500) // FIXME
       }
@@ -313,7 +313,8 @@ trait TrackLayer[T <:TrackedObject] extends SubscribingRaceLayer
       e.setFocused(cond)
       if (report) raceViewer.setFocused(e, cond) // report upwards in the chain
       if (cond) {
-        raceViewer.centerTo(wwPosition(lo.pos.position, Meters(raceViewer.tgtZoom)))  // FIXME
+        val loPos = lo.pos.position
+        raceViewer.centerTo(Position.fromDegrees(loPos.latDeg, loPos.lonDeg, raceViewer.tgtZoom))  // FIXME
         raceViewer.objectChanged(lo,StartFocus)
       } else {
         raceViewer.objectChanged(lo,StopFocus)

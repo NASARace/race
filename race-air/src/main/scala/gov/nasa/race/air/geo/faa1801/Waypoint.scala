@@ -99,7 +99,7 @@ object Waypoint {
   * (items should not be stored outside the DB anyways)
   */
 case class Waypoint(name: String,
-                    pos: LatLonAltPos,
+                    pos: GeoPosition,
                     wpType: Int,
                     magVar: Float,
                     landingSite: Option[String],
@@ -118,7 +118,7 @@ class WaypointDB (data: ByteBuffer) extends GisItemDB[Waypoint](data) {
     val lat = buf.getDouble
     val lon = buf.getDouble
     val elev = buf.getDouble
-    val pos = LatLonAltPos(Degrees(lat),Degrees(lon),Feet(elev))
+    val pos = GeoPosition(Degrees(lat),Degrees(lon),Feet(elev))
 
     val wpType = buf.getInt
     val magVar = buf.getFloat
@@ -154,7 +154,7 @@ class WaypointDBFactory extends GisItemDBFactory[Waypoint] {
       line match {
         case WaypointRE(id,name,wpType,lat,lon,magVar,landingSite,navaid,freq,elev) =>
 
-          val pos = LatLonAltPos(Degrees(lat.toDouble), Degrees(lon.toDouble), Feet(getWpElev(elev)))
+          val pos = GeoPosition(Degrees(lat.toDouble), Degrees(lon.toDouble), Feet(getWpElev(elev)))
 
           val typeFlag = getWpType(wpType)
           val navaidFlag = getWpNavaid(navaid)

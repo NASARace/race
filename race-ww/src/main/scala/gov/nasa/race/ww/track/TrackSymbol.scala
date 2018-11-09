@@ -65,7 +65,7 @@ class TrackSymbol[T <: TrackedObject](val trackEntry: TrackEntry[T])
 
   def updateDisplayName = {
     val obj = trackEntry.obj
-    val s = s"${obj.cs}\n${hhmmss.print(obj.date)}\n${obj.altitude.toFeet.toInt} ft\n${obj.heading.toDegrees.toInt}°\n${obj.speed.toKnots.toInt} kn"
+    val s = s"${obj.cs}\n${hhmmss.print(obj.date)}\n${obj.position.altFeet} ft\n${obj.heading.toDegrees.toInt}°\n${obj.speed.toKnots.toInt} kn"
     setValue( AVKey.DISPLAY_NAME, s.toString)
   }
 

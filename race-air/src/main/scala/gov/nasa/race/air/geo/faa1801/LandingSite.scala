@@ -69,7 +69,7 @@ object LandingSite {
 }
 
 case class LandingSite (name: String, // cid
-                        pos: LatLonAltPos,
+                        pos: GeoPosition,
                         descr: String,
                         lsType: Int,
                         lsAccess: Int,
@@ -87,7 +87,7 @@ class LandingSiteDB (data: ByteBuffer) extends GisItemDB[LandingSite](data) {
     val lat = buf.getDouble
     val lon = buf.getDouble
     val elev = buf.getDouble
-    val pos = LatLonAltPos(Degrees(lat),Degrees(lon),Feet(elev))
+    val pos = GeoPosition(Degrees(lat),Degrees(lon),Feet(elev))
 
     val descr = stringTable(buf.getInt)
     val lsType = buf.getInt
@@ -119,7 +119,7 @@ class LandingSiteDBFactory extends GisItemDBFactory[LandingSite] {
         case LandingSiteRE(id,cat,name,descr,access,elev,lat,lon,magVar) =>
           if (items.size > 10) return
 
-          val pos = LatLonAltPos(Degrees(lat.toDouble), Degrees(lon.toDouble), Feet(elev.toDouble))
+          val pos = GeoPosition(Degrees(lat.toDouble), Degrees(lon.toDouble), Feet(elev.toDouble))
 
           val typeFlag = getLsType(cat)
           val accessFlag = getLsAccess(access)
