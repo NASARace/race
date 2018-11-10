@@ -80,14 +80,14 @@ class LandingSiteDB (data: ByteBuffer) extends GisItemDB[LandingSite](data) {
 
   override protected def readItem (off: Int): LandingSite = {
     val buf = data
-    buf.position(off + 4) // skip over the hash
-
-    val name = stringTable(buf.getInt)
+    buf.position(off + 28) // skip over hash and xyz coords
 
     val lat = buf.getDouble
     val lon = buf.getDouble
     val elev = buf.getDouble
     val pos = GeoPosition(Degrees(lat),Degrees(lon),Feet(elev))
+
+    val name = stringTable(buf.getInt)
 
     val descr = stringTable(buf.getInt)
     val lsType = buf.getInt
@@ -104,7 +104,7 @@ class LandingSiteDBFactory extends GisItemDBFactory[LandingSite] {
   val LandingSiteRE = """\s*INSERT\s+INTO\s+`LandingSite`\s+VALUES\s*\(\s*(\d+)\s*,\s*'(\w+)'\s*,\s*'(\w+)'\s*,\s*'([^']+)'\s*,\s*'(\w+)'\s*,\s*(\d+)\s*,\s*(-?\d+.\d+)\s*,\s*(-?\d+.\d+)\s*,\s*(-?\d+.\d+)\).*""".r
 
   override val schema = "gov.nasa.race.air.geo.faa1801.LandingSite"
-  override val itemSize: Int = 44
+  override val itemSize: Int = 72
 
   override def loadDB (file: File): Option[LandingSiteDB] = {
     mapFile(file).map(new LandingSiteDB(_))

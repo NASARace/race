@@ -127,7 +127,7 @@ object Dependencies {
 
 
   //--- ActiveMQ
-  val amqVersion = "5.15.6"  // >= 5.11.1
+  val amqVersion = "5.15.7"  // >= 5.11.1
   val amqOrg = "org.apache.activemq"
   val amqBroker = amqOrg % "activemq-broker" % amqVersion
 

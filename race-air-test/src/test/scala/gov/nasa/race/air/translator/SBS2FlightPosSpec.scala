@@ -17,6 +17,7 @@
 
 package gov.nasa.race.air.translator
 
+import gov.nasa.race.air.FlightPos
 import gov.nasa.race.test.RaceSpec
 import org.scalatest.FlatSpec
 

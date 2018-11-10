@@ -55,8 +55,7 @@ class FIXM2FlightObjectSpec extends FlatSpec with RaceSpec {
     val expected = new FlightPos(
       "647",
       "UAL1634",
-      GeoPosition.fromDegrees(37.898333, -79.169722),
-      Feet(35000.0),
+      GeoPosition.fromDegreesAndFeet(37.898333, -79.169722, 35000.0),
       Knots(488.0),
       Degrees(86.47494027976148),
       UndefinedSpeed,
@@ -74,10 +73,12 @@ class FIXM2FlightObjectSpec extends FlatSpec with RaceSpec {
           case fpos: FlightPos =>
             fpos.cs should be(expected.cs)
             fpos.id should be(expected.id)
-            fpos.altitude.toFeet should be(expected.altitude.toFeet +- EPS)
-            fpos.speed.toKnots should be(expected.speed.toKnots +- EPS)
+
             fpos.position.λ.toDegrees should be(expected.position.λ.toDegrees +- EPS)
             fpos.position.φ.toDegrees should be(expected.position.φ.toDegrees +- EPS)
+            fpos.position.altitude.toFeet should be(expected.position.altitude.toFeet +- EPS)
+
+            fpos.speed.toKnots should be(expected.speed.toKnots +- EPS)
             fpos.heading.toDegrees should be(expected.heading.toDegrees +- EPS)
             fpos.date.getMillis should be(expected.date.getMillis)
             println("matches expected values")

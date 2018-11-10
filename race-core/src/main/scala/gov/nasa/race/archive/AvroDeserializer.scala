@@ -52,7 +52,7 @@ class AvroDeserializer[T <: SpecificRecord : ClassTag] (val cls: Class[T], val f
   def toArray: Array[T] = contents.toArray
 
   def map[A](f: T=>A): Seq[A] = {
-    val t = ClassLoaderUtils.newInstanceOf(cls)
+    val t: T = ClassLoaderUtils.newInstanceOf(cls) // as of Scala 2.12.7 needs explicit instance type
     val l = new ListBuffer[A]
     while (dataFileReader.hasNext) {
       l += f(dataFileReader.next(t))

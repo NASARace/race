@@ -72,6 +72,15 @@ class FlightPos (val id: String,
 
   override def toString = s"FlightPos($id,$cs,$position,${speed.toKnots.toInt}kn,${heading.toNormalizedDegrees.toInt}°,0x${status.toHexString},$date)"
 
+  override def equals (o: Any): Boolean = {
+    if (o.getClass == getClass) {
+      val other = o.asInstanceOf[FlightPos]
+      id == other.id && cs == other.cs &&
+        position == other.position &&
+        speed == other.speed && heading == other.heading &&
+        vr == other.vr && date == other.date && status == other.status
+    } else false
+  }
 }
 
 /**
@@ -94,6 +103,13 @@ class ExtendedFlightPos(id: String,
   override def toString = s"ExtendedFlightPos($id,$cs,$acType,$position,${speed.toKnots.toInt}kn,${heading.toNormalizedDegrees.toInt}°,${pitch.toDegrees.toInt}°,${roll.toDegrees.toInt}°,0x${status.toHexString},$date)"
   override def copyWithCS (newCS: String) = new ExtendedFlightPos(id, newCS, position,speed,heading,vr,date,status,pitch,roll,acType)
   override def copyWithStatus (newStatus: Int) = new ExtendedFlightPos(id, cs, position,speed,heading,vr,date,newStatus,pitch,roll,acType)
+
+  override def equals (o: Any): Boolean = {
+    if (o.getClass == getClass) {
+      val other = o.asInstanceOf[ExtendedFlightPos]
+      super.equals(other) && pitch == other.pitch && roll == other.roll && acType == other.acType
+    } else false
+  }
 }
 
 

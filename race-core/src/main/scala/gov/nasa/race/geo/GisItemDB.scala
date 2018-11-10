@@ -241,7 +241,7 @@ abstract class GisItemDB[T <: GisItem] (data: ByteBuffer) {
       if (eOff == EMPTY) return None
 
       if (buf.getInt(eOff) == h) {
-        val k = stringTable(buf.getInt(eOff + 4))
+        val k = stringTable(buf.getInt(eOff + 52))
         if (k.equals(key)) return Some(readItem(eOff))
       }
 
