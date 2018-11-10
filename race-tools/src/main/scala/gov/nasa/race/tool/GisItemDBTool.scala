@@ -18,7 +18,7 @@ package gov.nasa.race.tool
 
 import java.io._
 
-import gov.nasa.race.geo.{GisItem, GisItemDBFactory}
+import gov.nasa.race.geo.{GeoPosition, GisItem, GisItemDBFactory}
 import gov.nasa.race.main.CliArgs
 import gov.nasa.race.util.FileUtils
 
@@ -28,16 +28,19 @@ import scala.Console
 object GisItemDBTool {
 
   object Op extends Enumeration {
-    val CreateDB, ShowStruct, ShowItems, ShowStrings, ShowKey = Value
+    val CreateDB, ShowStruct, ShowItems, ShowStrings, ShowKey, ShowNearest = Value
   }
 
   //-------------------------------------
 
   class Opts extends CliArgs(s"usage ${getClass.getSimpleName}") {
+    val posRE = """(-?\d+\.\d+),(-?\d+\.\d+)""".r
+
     var factory: Option[GisItemDBFactory[_ <: GisItem]] = None
     var inFile: Option[File] = None
     var outDir: File = new File("tmp")
     var key: Option[String] = None
+    var pos: Option[GeoPosition] = None
     var op: Op.Value = Op.CreateDB
 
     opt0("-i", "--show-struct")("show structure of DB") {
@@ -52,6 +55,13 @@ object GisItemDBTool {
     opt1("-k","--show-key")("<key>","show item for given key"){ a=>
       op = Op.ShowKey
       key = Some(a)
+    }
+    opt1("-n","--show-nearest")("<lat,lon>","show item nearest to given pos"){ a=>
+      op = Op.ShowNearest
+      a match {
+        case posRE(slat,slon) =>
+          pos = Some(GeoPosition.fromDegrees(slat.toDouble,slon.toDouble))
+      }
     }
 
     requiredArg1("<pathName>", "input file") { a =>
@@ -87,6 +97,7 @@ object GisItemDBTool {
         case Op.ShowStrings => showStrings
         case Op.ShowItems => showItems
         case Op.ShowKey => showKey
+        case Op.ShowNearest => showNearest
         case other => println(s"unknown operation $other")
       }
 
@@ -124,5 +135,9 @@ object GisItemDBTool {
         case None => println(s"no item matching key '$key'")
       }
     }
+  }
+
+  def showNearest: Unit = {
+    println(s"show nearest to ${opts.pos}")
   }
 }
