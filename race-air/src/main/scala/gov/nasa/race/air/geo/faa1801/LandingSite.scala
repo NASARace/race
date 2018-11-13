@@ -117,8 +117,6 @@ class LandingSiteDBFactory extends GisItemDBFactory[LandingSite] {
     FileUtils.withLines(inFile) { line =>
       line match {
         case LandingSiteRE(id,cat,name,descr,access,elev,lat,lon,magVar) =>
-          if (items.size > 10) return
-
           val pos = GeoPosition(Degrees(lat.toDouble), Degrees(lon.toDouble), Feet(elev.toDouble))
 
           val typeFlag = getLsType(cat)

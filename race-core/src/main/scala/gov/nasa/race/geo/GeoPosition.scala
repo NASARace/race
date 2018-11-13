@@ -76,7 +76,7 @@ trait GeoPositioned {
  */
 case class LatLonPos(val φ: Angle, val λ: Angle, val altitude: Length) extends GeoPosition {
   override def toString = {
-    f"LatLonPos{φ=${φ.toDegrees}%+3.5f°,λ=${λ.toDegrees}%+3.5f°,alt=${altitude.toMeters}m"
+    f"LatLonPos{φ=${φ.toDegrees}%+3.5f°,λ=${λ.toDegrees}%+3.5f°,alt=${altitude.toMeters}%.0fm"
     //s"LatLonPos{φ=${φ.toDegrees}°,λ=${λ.toDegrees}°,alt=${altitude.toMeters}m"
   }
 }

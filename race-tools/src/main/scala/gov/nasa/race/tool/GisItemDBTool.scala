@@ -138,6 +138,11 @@ object GisItemDBTool {
   }
 
   def showNearest: Unit = {
-    println(s"show nearest to ${opts.pos}")
+    for ( file <- opts.inFile; factory <- opts.factory; db <- factory.loadDB(file); pos <- opts.pos) {
+      db.getNearestItem(pos) match {
+        case Some(e) => println(s"nearest item to $pos = $e")
+        case None => println(s"no item near $pos found")
+      }
+    }
   }
 }

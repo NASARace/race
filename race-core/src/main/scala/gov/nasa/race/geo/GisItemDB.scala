@@ -22,6 +22,8 @@ import java.nio.channels.FileChannel
 import java.util.Arrays
 
 import gov.nasa.race.common._
+import gov.nasa.race.uom.Length._
+import gov.nasa.race.uom.Angle._
 import gov.nasa.race.util.{ArrayUtils, FileUtils}
 
 import scala.collection.mutable
@@ -107,27 +109,51 @@ object GisItemDB {
   //--- kdtree support
 
   trait KdResult {
+    @inline final def _closest (v: Double, min: Double, max: Double): Double = {
+      if (v <= min) min
+      else if (v >= max) max
+      else v
+    }
+
+    def prune (x: Double, y: Double, z: Double,
+               minX: Double, minY: Double, minZ: Double,
+               maxX: Double, maxY: Double, maxZ: Double): Boolean = {
+      val cx = _closest(x, minX, maxX)
+      val cy = _closest(y, minY, maxY)
+      val cz = _closest(z, minZ, maxZ)
+      val d = computeDist(x,y,z, cx, cy, cz)
+      !canContain(d)
+    }
+
     def canContain (d: Double): Boolean
     def update (d: Double, nOff: Int): Unit
-    def computeDist (lat0: Double, lon0: Double, lat1: Double, lon1: Double): Double
+    def computeDist (x1: Double, y1: Double, z1: Double, x2: Double, y2: Double, z2: Double): Double
     def getDistance: Double
   }
 
-  class CartesianNearestNeighbor extends KdResult {
-    var nodeOff: Int = -1
-    var dist: Double = Double.MaxValue  // can be any value that supports ordering (not only absolute distance)
+  final val ME = 6371000.0
+  final val ME2 = ME * ME
+
+  class NearestNeighbor extends KdResult {
+    var itemOff: Int = -1  // offset of nearest item
+    var dist: Double = Double.MaxValue  // distance in Meters of nearest item
 
     def canContain (d: Double): Boolean = d < dist
 
-    def update (d: Double, nOff: Int): Unit = {
+    def update (d: Double, iOff: Int): Unit = {
       if (d < dist) {
         dist = d
-        nodeOff = nOff
+        itemOff = iOff
       }
     }
 
-    def computeDist (lat0: Double, lon0: Double, lat1: Double, lon1: Double): Double = {
-      squared(lat1 - lat0) + squared(lon1 - lon0)
+    // we only need a order-preserving value (save the sqrt)
+    def computeDist (x1: Double, y1: Double, z1: Double, x2: Double, y2: Double, z2: Double): Double = {
+      val d2 = squared(x1 - x2) + squared(y1 - y2) + squared(z1 - z2)
+      if (d2 > 1e10) { // if distance > 100,000m we approximate with sphere
+        // dist = R * crd(a)  => dist = R * 2*sin(a/2) => rad(a) = 2R * asin(dist/2R)
+        squared( ME * Math.acos( 1.0 - d2/(2 * ME2)))
+      } else d2 // error is less than 1m
     }
 
     def getDistance: Double = Math.sqrt(dist)
@@ -216,7 +242,7 @@ abstract class GisItemDB[T <: GisItem] (data: ByteBuffer) {
 
   def size: Int = nItems
 
-  def isEmpty: Boolean = nItems > 0
+  def isEmpty: Boolean = nItems == 0
 
   /**
     * to be provided by concrete class - turn raw data into object
@@ -256,17 +282,93 @@ abstract class GisItemDB[T <: GisItem] (data: ByteBuffer) {
 
   //--- kdtree
 
-  protected def searchKd (lat: Double, lon: Double, depth: Int, res: KdResult): Unit = {
+  //var nSteps: Int = 0
 
+  protected final def searchKdTree(res: KdResult, nodeOff: Int, depth: Int,
+                             tgtX: Double, tgtY: Double, tgtZ: Double,  // the test point
+                             minX: Double, minY: Double, minZ: Double,  // the bounding hyperrect for this node
+                             maxX: Double, maxY: Double, maxZ: Double): Unit = {
+    //nSteps += 1
+    val itemOff = data.getInt(nodeOff)
+    val curX = data.getDouble(itemOff + 4)
+    val curY = data.getDouble(itemOff + 12)
+    val curZ = data.getDouble(itemOff + 20)
+
+    val leftChild = data.getInt(nodeOff + 4)  // node offset of left child
+    val rightChild = data.getInt(nodeOff + 8)  // node offset of right child
+
+    //--- update result for current node
+    val d = res.computeDist(curX, curY, curZ, tgtX, tgtY, tgtZ)
+    res.update(d, itemOff)
+
+    //--- split hyperrect
+    var nearOff = EMPTY
+    var nearMinX = minX;  var nearMinY = minY;  var nearMinZ = minZ
+    var nearMaxX = maxX;  var nearMaxY = maxY;  var nearMaxZ = maxZ
+
+    var farOff = EMPTY
+    var farMinX = minX;  var farMinY = minY;  var farMinZ = minZ
+    var farMaxX = maxX;  var farMaxY = maxY;  var farMaxZ = maxZ
+
+    depth % 3 match {
+      case 0 => { // x split
+        if (tgtX <= curX) {
+          nearOff = leftChild;   nearMaxX = curX
+          farOff  = rightChild;  farMinX  = curX
+        } else {
+          nearOff = rightChild;  nearMinX = curX
+          farOff  = leftChild;   farMaxX  = curX
+        }
+      }
+      case 1 => { // y split
+        if (tgtY <= curY) {
+          nearOff = leftChild;   nearMaxY = curY
+          farOff  = rightChild;  farMinY  = curY
+        } else {
+          nearOff = rightChild;  nearMinY = curY
+          farOff  = leftChild;   farMaxY  = curY
+        }
+      }
+      case 2 => { // z split
+        if (tgtZ <= curZ) {
+          nearOff = leftChild;   nearMaxZ = curZ
+          farOff  = rightChild;  farMinZ  = curZ
+        } else {
+          nearOff = rightChild;  nearMinZ = curZ
+          farOff  = leftChild;   farMaxZ  = curZ
+        }
+      }
+    }
+
+    if (nearOff != EMPTY) {
+      searchKdTree(res, nearOff, depth+1, tgtX,tgtY,tgtZ, nearMinX,nearMinY,nearMinZ,nearMaxX,nearMaxY,nearMaxZ)
+    }
+
+    if (farOff != EMPTY) {
+      // descend into far subtree only if the corresponding hyperrect /could/ have a matching point
+      // (this is where the kd-tree gets its O(log(N)) from)
+      if (!res.prune(tgtX,tgtY,tgtZ, farMinX,farMinY,farMinZ,farMaxX,farMaxY,farMaxZ)) {
+        searchKdTree(res, farOff, depth+1, tgtX,tgtY,tgtZ, farMinX,farMinY,farMinZ,farMaxX,farMaxY,farMaxZ)
+      }
+    }
   }
 
   /**
     * nearest neighbor search
     */
-  def getNearestItem (lat: Double, lon: Double): Option[T] = {
+  def getNearestItem (pos: GeoPosition): Option[T] = {
     if (!isEmpty) {
-      None // TODO
-    } else None
+      val p = Datum.wgs84ToECEF(pos)
+      val res = new NearestNeighbor
+      searchKdTree(res, kdOffset, 0,
+        p.x.toMeters, p.y.toMeters, p.z.toMeters,
+        Double.MinValue, Double.MinValue, Double.MinValue, Double.MaxValue, Double.MaxValue, Double.MaxValue)
+      if (res.itemOff != EMPTY) {
+        Some(readItem(res.itemOff))
+      } else None
+    } else {
+      None
+    }
   }
 }
 
@@ -495,8 +597,17 @@ abstract class GisItemDBFactory[T <: GisItem] {
     //    each entry consists of a (Int,Int,Int) tuple: (item offset, left node child off, right node child off)
 
     def kdTree (i0: Int, i1: Int, depth: Int): Int = {
-      if (i0 >= i1) {
+      if (i0 > i1) {
         -1
+
+      } else if (i0 == i1) {
+        val nodeIdx = n
+        n += 1
+        itemIdx(nodeIdx) = eIdxs(i0)
+        leftNode(nodeIdx) = -1
+        rightNode(nodeIdx) = -1
+
+        nodeIdx
 
       } else {
         ArrayUtils.quickSort(eIdxs, i0, i1)(orderings(depth % 3))
@@ -519,7 +630,8 @@ abstract class GisItemDBFactory[T <: GisItem] {
     kdTree(0, nItems-1, 0)
 
     for (i <- 0 until nItems) {
-      dos.writeInt( itemOffset + (itemIdx(i) * itemSize)) // offset of node item
+      val itemOff = itemOffset + (itemIdx(i) * itemSize)
+      dos.writeInt( itemOff) // offset of node item
       dos.writeInt( nodeOffset(leftNode(i)))
       dos.writeInt( nodeOffset(rightNode(i)))
     }
