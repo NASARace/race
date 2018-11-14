@@ -46,4 +46,6 @@ case class XyzPos (x: Length, y: Length, z: Length) {
   @inline def xMeters: Double = x.toMeters
   @inline def yMeters: Double = y.toMeters
   @inline def zMeters: Double = z.toMeters
+
+  @inline def toMeters: (Double,Double,Double) = (x.toMeters, y.toMeters, z.toMeters)
 }

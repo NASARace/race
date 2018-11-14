@@ -26,7 +26,9 @@ import gov.nasa.race.util.FileUtils
 
 import scala.Console
 
-
+/**
+  * command line application to create, analyze and query RACE GistItemDBs
+  */
 object GisItemDBTool {
 
   object Op extends Enumeration {
@@ -150,7 +152,7 @@ object GisItemDBTool {
   }
 
   def showKey: Unit = {
-    for ( file <- opts.inFile; factory <- opts.factory; key <- opts.key; db <- factory.loadDB(file)) {
+    for (file <- opts.inFile; factory <- opts.factory; key <- opts.key; db <- factory.loadDB(file)) {
       db.getItem(key) match {
         case Some(e) => println(s"item matching key '$key' = $e")
         case None => println(s"no item matching key '$key'")
@@ -159,17 +161,18 @@ object GisItemDBTool {
   }
 
   def showNearest: Unit = {
-    for ( file <- opts.inFile; factory <- opts.factory; db <- factory.loadDB(file); pos <- opts.pos) {
+    for (file <- opts.inFile; factory <- opts.factory; db <- factory.loadDB(file); pos <- opts.pos) {
       opts.nItems match {
         case Some(n) =>
           println(s"$n nearest items to ($pos):")
           for (((e,d),i) <- db.getNNearestItems(pos,n).zipWithIndex) {
-            println(f"[$i] $d%10.0fm : $e")
+            println(f"[${i+1}]\t${d.toMeters}%10.0fm : $e")
           }
         case None => { // show just the nearest one
+          println(s"nearest item to ($pos):")
           db.getNearestItem(pos) match {
-            case Some(e) => println(s"nearest item to ($pos): $e")
-            case None => println(s"no item near $pos found")
+            case Some(e) => println(f"\t${e._2.toMeters}%10.0fm : ${e._1}")
+            case None =>
           }
         }
       }
@@ -177,14 +180,10 @@ object GisItemDBTool {
   }
 
   def showRange: Unit = {
-    for ( file <- opts.inFile;
-          factory <- opts.factory;
-          db <- factory.loadDB(file);
-          pos <- opts.pos;
-          dist <- opts.dist) {
+    for (file <- opts.inFile; factory <- opts.factory; db <- factory.loadDB(file); pos <- opts.pos; dist <- opts.dist) {
       println(s"items in range ($pos) + $dist :")
-      db.getItemsWithin(pos, dist).foreach { e =>
-        println(f"${e._2}%12.0fm : ${e._1}")
+      for (((e,d),i) <- db.getItemsWithin(pos, dist).zipWithIndex) {
+        println(f"[${i+1}]\t${d.toMeters}%10.0fm : $e")
       }
     }
   }

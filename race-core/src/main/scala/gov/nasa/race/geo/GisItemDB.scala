@@ -22,11 +22,11 @@ import java.nio.channels.FileChannel
 import java.util.Arrays
 
 import gov.nasa.race.common._
-import gov.nasa.race.uom.Length._
-import gov.nasa.race.uom.Angle._
 import gov.nasa.race.uom.Length
+import gov.nasa.race.uom.Length._
 import gov.nasa.race.util.{ArrayUtils, FileUtils}
 
+import Double.{MinValue => DMin, MaxValue => DMax}
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 
@@ -166,6 +166,8 @@ object GisItemDB {
     }
 
     def getDistance: Double = Math.sqrt(dist)
+
+    def result: (Int,Double) = (itemOff,Math.sqrt(dist))
   }
 
   /**
@@ -224,6 +226,10 @@ object GisItemDB {
           maxDist = dists(nn1)
         } // otherwise ignore
       }
+    }
+
+    def sortedResult: Seq[(Int,Double)] = {
+      itemOffs.zip(dists.map(Math.sqrt)).sortBy(_._2)
     }
 
     // this is the max distance
@@ -465,18 +471,18 @@ abstract class GisItemDB[T <: GisItem] (data: ByteBuffer) {
     }
   }
 
+  @inline final protected def itemize (e: (Int,Double)): (T,Length) = (readItem(e._1),Meters(e._2))
+
   /**
     * nearest neighbor search
     */
-  def getNearestItem (pos: GeoPosition): Option[T] = {
+  def getNearestItem (pos: GeoPosition): Option[(T,Length)] = {
     if (!isEmpty) {
-      val p = Datum.wgs84ToECEF(pos)
       val res = new NearestNeighbor
-      searchKdTree(res, kdOffset, 0,
-        p.x.toMeters, p.y.toMeters, p.z.toMeters,
-        Double.MinValue, Double.MinValue, Double.MinValue, Double.MaxValue, Double.MaxValue, Double.MaxValue)
+      val (x,y,z) = Datum.wgs84ToECEF(pos).toMeters
+      searchKdTree(res, kdOffset, 0, x,y,z, DMin,DMin,DMin, DMax,DMax,DMax)
       if (res.itemOff != EMPTY) {
-        Some(readItem(res.itemOff))
+        Some(res.result).map(itemize)
       } else None
     } else None
   }
@@ -484,31 +490,25 @@ abstract class GisItemDB[T <: GisItem] (data: ByteBuffer) {
   /**
     * get 'n' nearest neighbors
     */
-  def getNNearestItems (pos: GeoPosition, n: Int): Seq[(T,Double)] = {
+  def getNNearestItems (pos: GeoPosition, n: Int): Seq[(T,Length)] = {
     if (!isEmpty) {
-      val p = Datum.wgs84ToECEF(pos)
       val res = new NNearestNeighbors(n)
-      searchKdTree(res, kdOffset, 0,
-        p.x.toMeters, p.y.toMeters, p.z.toMeters,
-        Double.MinValue, Double.MinValue, Double.MinValue, Double.MaxValue, Double.MaxValue, Double.MaxValue)
-      if (!res.isEmpty) {
-        res.itemOffs.map(readItem).zip(res.getDistances)
-      } else Seq.empty[(T,Double)]
-    } else Seq.empty[(T,Double)]
+      val (x,y,z) = Datum.wgs84ToECEF(pos).toMeters
+      searchKdTree(res, kdOffset, 0, x,y,z, DMin,DMin,DMin, DMax,DMax,DMax)
+      res.sortedResult.map(itemize)
+    } else Seq.empty[(T,Length)]
   }
 
   /**
     * range search
     */
-  def getItemsWithin (pos: GeoPosition, d: Length): Seq[(T,Double)] = {
+  def getItemsWithin (pos: GeoPosition, d: Length): Seq[(T,Length)] = {
     if (!isEmpty) {
-      val p = Datum.wgs84ToECEF(pos)
       val res = new RangeNeighbors(d.toMeters)
-      searchKdTree(res, kdOffset, 0,
-        p.x.toMeters, p.y.toMeters, p.z.toMeters,
-        Double.MinValue, Double.MinValue, Double.MinValue, Double.MaxValue, Double.MaxValue, Double.MaxValue)
-      res.sortedResult.map(e=> (readItem(e._1),e._2))
-    } else Seq.empty[(T,Double)]
+      val (x,y,z) = Datum.wgs84ToECEF(pos).toMeters
+      searchKdTree(res, kdOffset, 0, x,y,z, DMin,DMin,DMin, DMax,DMax,DMax)
+      res.sortedResult.map(itemize)
+    } else Seq.empty[(T,Length)]
   }
 }
 
