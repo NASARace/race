@@ -20,6 +20,8 @@ import java.io._
 
 import gov.nasa.race.geo.{GeoPosition, GisItem, GisItemDBFactory}
 import gov.nasa.race.main.CliArgs
+import gov.nasa.race.uom.Length
+import gov.nasa.race.uom.Length._
 import gov.nasa.race.util.FileUtils
 
 import scala.Console
@@ -28,19 +30,21 @@ import scala.Console
 object GisItemDBTool {
 
   object Op extends Enumeration {
-    val CreateDB, ShowStruct, ShowItems, ShowStrings, ShowKey, ShowNearest = Value
+    val CreateDB, ShowStruct, ShowItems, ShowStrings, ShowKey, ShowNearest, ShowRange = Value
   }
 
   //-------------------------------------
 
   class Opts extends CliArgs(s"usage ${getClass.getSimpleName}") {
     val posRE = """(-?\d+\.\d+),(-?\d+\.\d+)""".r
+    val rangeRE = """(-?\d+\.\d+),(-?\d+\.\d+),(\d+)""".r
 
     var factory: Option[GisItemDBFactory[_ <: GisItem]] = None
     var inFile: Option[File] = None
     var outDir: File = new File("tmp")
     var key: Option[String] = None
     var pos: Option[GeoPosition] = None
+    var dist: Option[Length] = None
     var nItems: Option[Int] = None
     var op: Op.Value = Op.CreateDB
 
@@ -57,7 +61,7 @@ object GisItemDBTool {
       op = Op.ShowKey
       key = Some(a)
     }
-    opt1("-n","--show-nearest")("<lat,lon>","show item nearest to given pos"){ a=>
+    opt1("-n","--show-near")("<lat,lon>","show item(s) nearest to given pos"){ a=>
       op = Op.ShowNearest
       a match {
         case posRE(slat,slon) =>
@@ -66,6 +70,15 @@ object GisItemDBTool {
     }
     opt1("-m", "--max-items")("<number>", "max number of items"){ a=>
       nItems = Some(a.toInt)
+    }
+
+    opt1("-r", "--show-range")("<lat,lon,meters>", "show items in given range"){ a=>
+      op = Op.ShowRange
+      a match {
+        case rangeRE(slat,slon,smeters) =>
+          pos = Some(GeoPosition.fromDegrees(slat.toDouble,slon.toDouble))
+          dist = Some(Meters(smeters.toDouble))
+      }
     }
 
     requiredArg1("<pathName>", "input file") { a =>
@@ -102,6 +115,7 @@ object GisItemDBTool {
         case Op.ShowItems => showItems
         case Op.ShowKey => showKey
         case Op.ShowNearest => showNearest
+        case Op.ShowRange => showRange
         case other => println(s"unknown operation $other")
       }
 
@@ -128,7 +142,10 @@ object GisItemDBTool {
 
   def showItems: Unit = {
     for ( file <- opts.inFile; factory <- opts.factory; db <- factory.loadDB(file)) {
-      db.printItems
+      opts.nItems match {
+        case Some(n) => db.printItems(n)
+        case None => db.printItems(db.nItems)
+      }
     }
   }
 
@@ -147,7 +164,7 @@ object GisItemDBTool {
         case Some(n) =>
           println(s"$n nearest items to ($pos):")
           for (((e,d),i) <- db.getNNearestItems(pos,n).zipWithIndex) {
-            println(s"[$i] $e : $d")
+            println(f"[$i] $d%10.0fm : $e")
           }
         case None => { // show just the nearest one
           db.getNearestItem(pos) match {
@@ -159,4 +176,16 @@ object GisItemDBTool {
     }
   }
 
+  def showRange: Unit = {
+    for ( file <- opts.inFile;
+          factory <- opts.factory;
+          db <- factory.loadDB(file);
+          pos <- opts.pos;
+          dist <- opts.dist) {
+      println(s"items in range ($pos) + $dist :")
+      db.getItemsWithin(pos, dist).foreach { e =>
+        println(f"${e._2}%12.0fm : ${e._1}")
+      }
+    }
+  }
 }

@@ -24,6 +24,7 @@ import java.util.Arrays
 import gov.nasa.race.common._
 import gov.nasa.race.uom.Length._
 import gov.nasa.race.uom.Angle._
+import gov.nasa.race.uom.Length
 import gov.nasa.race.util.{ArrayUtils, FileUtils}
 
 import scala.collection.mutable
@@ -175,14 +176,14 @@ object GisItemDB {
   class NNearestNeighbors (val maxNeighbors: Int) extends GeoKdResult {
     val itemOffs: Array[Int] = new Array[Int](maxNeighbors)
     val dists: Array[Double] = new Array[Double](maxNeighbors)
-    var maxDist: Double = Double.MaxValue
+    var maxDist: Double = Double.MinValue
     var nNeighbors: Int = 0
 
     def size: Int = nNeighbors
     def isEmpty: Boolean = nNeighbors == 0
 
     override def canContain(d: Double): Boolean = {
-      nNeighbors == 0 || d < maxDist
+      nNeighbors < maxNeighbors || d < maxDist
     }
 
     override def update(d: Double, iOff: Int): Unit = {
@@ -197,7 +198,7 @@ object GisItemDB {
       }
 
       if (nNeighbors < maxNeighbors) { // not yet full
-        if (d >= maxDist) {
+        if (d >= maxDist) {  // also used for first entry
           dists(nNeighbors) = d
           itemOffs(nNeighbors) = iOff
           nNeighbors += 1
@@ -215,11 +216,12 @@ object GisItemDB {
       } else { // full
         if (d < maxDist) {
           val i = insertPosition // can't be the last position (this would otherwise be maxDist)
-          System.arraycopy(dists, i, dists, i+1, nNeighbors - i - 1)
-          System.arraycopy(itemOffs, i, itemOffs, i+1, nNeighbors - i - 1)
+          val nn1 = nNeighbors-1
+          System.arraycopy(dists, i, dists, i+1, nn1 - i)
+          System.arraycopy(itemOffs, i, itemOffs, i+1, nn1 - i)
           dists(i) = d
           itemOffs(i) = iOff
-          maxDist = dists(nNeighbors)
+          maxDist = dists(nn1)
         } // otherwise ignore
       }
     }
@@ -230,6 +232,30 @@ object GisItemDB {
     }
 
     def getDistances: Array[Double] = dists.map(Math.sqrt)
+  }
+
+  class RangeNeighbors (val maxDist: Double) extends GeoKdResult {
+    val itemOffs = new ArrayBuffer[Int]
+    val dists = new ArrayBuffer[Double]
+    val maxDist2 = squared(maxDist)
+
+    def size = itemOffs.size
+    def isEmpty = itemOffs.isEmpty
+
+    override def canContain(d: Double): Boolean = d <= maxDist2
+
+    override def update(d: Double, iOff: Int): Unit = {
+      if (d <= maxDist2) {
+        itemOffs += iOff
+        dists += d
+      }
+    }
+
+    def sortedResult: Seq[(Int,Double)] = {
+      itemOffs.zip(dists.map(Math.sqrt)).sortBy(_._2)
+    }
+
+    override def getDistance = maxDist
   }
 }
 
@@ -301,14 +327,27 @@ abstract class GisItemDB[T <: GisItem] (data: ByteBuffer) {
     }
   }
 
-  def printItems: Unit = {
+  def printItems (n: Int = nItems): Unit = {
     var off = itemOffset
     println("--- items:")
-    for (i <- 0 until nItems){
+    for (i <- 0 until n){
       val e = readItem(off)
       println(f"$i%5d: $e")
       off += itemSize
     }
+    if (n < nItems) println(s"... ($nItems)")
+  }
+
+  def foreachItem (f: (T)=>Unit): Unit = {
+    var off = itemOffset
+    for (i <- 0 until nItems){
+      f( readItem(off))
+      off += itemSize
+    }
+  }
+
+  def itemIterator: Iterator[T] = {
+    (itemOffset to (itemOffset + nItems * itemSize) by itemSize).map(readItem).iterator
   }
 
   //--- queries
@@ -439,11 +478,12 @@ abstract class GisItemDB[T <: GisItem] (data: ByteBuffer) {
       if (res.itemOff != EMPTY) {
         Some(readItem(res.itemOff))
       } else None
-    } else {
-      None
-    }
+    } else None
   }
 
+  /**
+    * get 'n' nearest neighbors
+    */
   def getNNearestItems (pos: GeoPosition, n: Int): Seq[(T,Double)] = {
     if (!isEmpty) {
       val p = Datum.wgs84ToECEF(pos)
@@ -454,9 +494,21 @@ abstract class GisItemDB[T <: GisItem] (data: ByteBuffer) {
       if (!res.isEmpty) {
         res.itemOffs.map(readItem).zip(res.getDistances)
       } else Seq.empty[(T,Double)]
-    } else {
-      Seq.empty[(T,Double)]
-    }
+    } else Seq.empty[(T,Double)]
+  }
+
+  /**
+    * range search
+    */
+  def getItemsWithin (pos: GeoPosition, d: Length): Seq[(T,Double)] = {
+    if (!isEmpty) {
+      val p = Datum.wgs84ToECEF(pos)
+      val res = new RangeNeighbors(d.toMeters)
+      searchKdTree(res, kdOffset, 0,
+        p.x.toMeters, p.y.toMeters, p.z.toMeters,
+        Double.MinValue, Double.MinValue, Double.MinValue, Double.MaxValue, Double.MaxValue, Double.MaxValue)
+      res.sortedResult.map(e=> (readItem(e._1),e._2))
+    } else Seq.empty[(T,Double)]
   }
 }
 
