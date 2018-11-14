@@ -41,6 +41,7 @@ object GisItemDBTool {
     var outDir: File = new File("tmp")
     var key: Option[String] = None
     var pos: Option[GeoPosition] = None
+    var nItems: Option[Int] = None
     var op: Op.Value = Op.CreateDB
 
     opt0("-i", "--show-struct")("show structure of DB") {
@@ -62,6 +63,9 @@ object GisItemDBTool {
         case posRE(slat,slon) =>
           pos = Some(GeoPosition.fromDegrees(slat.toDouble,slon.toDouble))
       }
+    }
+    opt1("-m", "--max-items")("<number>", "max number of items"){ a=>
+      nItems = Some(a.toInt)
     }
 
     requiredArg1("<pathName>", "input file") { a =>
@@ -139,10 +143,20 @@ object GisItemDBTool {
 
   def showNearest: Unit = {
     for ( file <- opts.inFile; factory <- opts.factory; db <- factory.loadDB(file); pos <- opts.pos) {
-      db.getNearestItem(pos) match {
-        case Some(e) => println(s"nearest item to $pos = $e")
-        case None => println(s"no item near $pos found")
+      opts.nItems match {
+        case Some(n) =>
+          println(s"$n nearest items to ($pos):")
+          for (((e,d),i) <- db.getNNearestItems(pos,n).zipWithIndex) {
+            println(s"[$i] $e : $d")
+          }
+        case None => { // show just the nearest one
+          db.getNearestItem(pos) match {
+            case Some(e) => println(s"nearest item to ($pos): $e")
+            case None => println(s"no item near $pos found")
+          }
+        }
       }
     }
   }
+
 }
