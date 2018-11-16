@@ -113,7 +113,7 @@ class WaypointDB (data: ByteBuffer) extends GisItemDB[Waypoint](data) {
     val buf = data
     buf.position(off + 4) // skip over the hash
 
-    val name = stringTable(data.getInt)
+    val name = strings(data.getInt)
 
     val lat = buf.getDouble
     val lon = buf.getDouble
@@ -124,7 +124,7 @@ class WaypointDB (data: ByteBuffer) extends GisItemDB[Waypoint](data) {
     val magVar = buf.getFloat
     val landingSite = {
       val idx = buf.getInt
-      if (idx >= 0) Some(stringTable(idx)) else None
+      if (idx >= 0) Some(strings(idx)) else None
     }
     val navaidType = buf.getInt
     val freq = buf.getFloat

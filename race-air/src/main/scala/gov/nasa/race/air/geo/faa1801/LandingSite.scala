@@ -87,9 +87,9 @@ class LandingSiteDB (data: ByteBuffer) extends GisItemDB[LandingSite](data) {
     val elev = buf.getDouble
     val pos = GeoPosition(Degrees(lat),Degrees(lon),Feet(elev))
 
-    val name = stringTable(buf.getInt)
+    val name = strings(buf.getInt)
 
-    val descr = stringTable(buf.getInt)
+    val descr = strings(buf.getInt)
     val lsType = buf.getInt
     val lsAccess = buf.getInt
     val magVar = buf.getFloat
@@ -127,6 +127,7 @@ class LandingSiteDBFactory extends GisItemDBFactory[LandingSite] {
 
           //--- populate the waypoint list
           addItem( LandingSite(name,pos,descr,typeFlag,accessFlag,magVar.toFloat))
+
         case _ => // ignore
       }
     }

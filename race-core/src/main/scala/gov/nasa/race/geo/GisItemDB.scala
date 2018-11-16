@@ -46,15 +46,16 @@ import scala.collection.mutable.ArrayBuffer
   *
   * struct RGIS {
   *   i32 magic             // 1380403539 0x52474953 (RGIS)
+  *   i32 length            // byte length of whole structure
+  *   i32 checksum          // CRC32
+  *   i64 date              // epoch in millis
   *
   *   //--- string table  (first entry is schema name, e.g. "gov.nasa.race.air.LandingSite")
   *   i32 nStrings          // number of entries in string table
   *   struct StrEntry {
-  *     i32 dataLen         // in bytes
-  *     i32 dataOffset      // index into strData (local, i.e. 0-based)
+  *     i32 strLen             // in bytes, without terminating 0
+  *     char strBytes[strLen]  // string bytes (mod-UTF8), with terminating 0
   *   } [nStrings]
-  *   i32 nChars            // number of bytes in strData
-  *   char strData[nChars]  // mod utf8 bytes (without terminating 0)
   *
   *   //--- entry list
   *   i32 nItems            // number of GisItems in this DB
@@ -63,7 +64,7 @@ import scala.collection.mutable.ArrayBuffer
   *     i32 hashCode        // for main id (name)
   *     f64 x, y, z         // ECEF coords
   *     f64 lat, lon, alt   // geodetic coords
-  *     i32 id              // index into string list
+  *     i32 id              // string index (NOT offset)
   *     ...                 // other payload fields - all string references replaced by string list indices
   *   } [nItems]
   *
@@ -272,12 +273,15 @@ abstract class GisItemDB[T <: GisItem] (data: ByteBuffer) {
 
   //--- initialize stringtable, offsets and sizes
 
-  val nStrings: Int = data.getInt(4)
-  val nChars: Int = data.getInt(8 + nStrings*8)
-  val charDataOffset: Int = 8 + nStrings*8 + 4
-  protected val stringTable: Array[String] = createStringTable // we always instantiate Strings
+  val length = data.getInt(4)
+  val crc32  = data.getInt(8)
+  val date   = data.getLong(12)
 
-  val itemOffset: Int = charDataOffset + nChars + 8
+  val headerLength = 20  // magic + file-length + checksum + date
+  val nStrings: Int = data.getInt(headerLength)
+  val strings: Array[String] = new Array[String](nStrings)
+
+  val itemOffset: Int = initializeStrings + 8
   val nItems: Int = data.getInt(itemOffset - 8)
   val itemSize: Int = data.getInt(itemOffset - 4)
 
@@ -287,48 +291,49 @@ abstract class GisItemDB[T <: GisItem] (data: ByteBuffer) {
 
   val kdOffset: Int = mapOffset + (mapLength * 4)
 
-  def createStringTable: Array[String] = {
-    val a = new Array[String](nStrings)
+
+  def initializeStrings: Int = {
+    val a = strings
     var buf = new Array[Byte](256)
 
-    for (i <- 0 until nStrings) {
-      val recOff = 8 + i*8
-      val dataLen = data.getInt(recOff)
-      val dataOff = data.getInt(recOff+4)
+    var i = 0
+    var pos = headerLength + 4
 
-      if (dataLen > buf.length) buf = new Array[Byte](dataLen)
-      data.position(dataOff)
-      data.get(buf, 0, dataLen)
-      a(i) = new String(buf,0, dataLen)
+    while (i < nStrings) {
+      val sLen = data.getInt(pos)
+      if (sLen > buf.length) buf = new Array[Byte](sLen)
+      data.position(pos+4)
+      data.get(buf, 0, sLen)
+      a(i) = new String(buf, 0, sLen)
+      pos += sLen + 5 // skip terminating 0
+      i += 1
     }
-    a
+
+    pos
   }
 
   //--- testing & debugging
 
-  def stringIterator: Iterator[String] = stringTable.iterator
+  def stringIterator: Iterator[String] = strings.iterator
 
   def printStructure: Unit = {
     println("--- structure:")
-    println(s"schema:      '${stringTable(0)}'")
-
-    println(s"data size:   ${data.limit()}")
-    println(s"nItems:      $nItems")
-    println(s"itemSize:    $itemSize")
-
-    println(s"nStrings:    $nStrings")
-    println(s"nChars:      $nChars")
-    println(s"mapLength:   $mapLength")
-
-    println(s"char offset: $charDataOffset")
-    println(s"item offset: $itemOffset")
-    println(s"map offset:  $mapOffset")
-    println(s"kd offset:   $kdOffset")
+    println(s"schema:       '${strings(0)}'")
+    println(s"length:       $length bytes")
+    println(f"crc32:        $crc32%x")
+    println(s"date:         $date")
+    println(s"nItems:       $nItems")
+    println(s"itemSize:     $itemSize")
+    println(s"nStrings:     $nStrings")
+    println(s"mapLength:    $mapLength")
+    println(s"item offset:  $itemOffset")
+    println(s"map offset:   $mapOffset")
+    println(s"kd offset:    $kdOffset")
   }
 
   def printStrings: Unit = {
     println("--- string table:")
-    for ((s,i) <- stringTable.zipWithIndex){
+    for ((s,i) <- strings.zipWithIndex){
       println(f"$i%5d: '$s'")
     }
   }
@@ -385,7 +390,7 @@ abstract class GisItemDB[T <: GisItem] (data: ByteBuffer) {
       if (eOff == EMPTY) return None
 
       if (buf.getInt(eOff) == h) {
-        val k = stringTable(buf.getInt(eOff + 52))
+        val k = strings(buf.getInt(eOff + 52))
         if (k.equals(key)) return Some(readItem(eOff))
       }
 
@@ -630,8 +635,7 @@ abstract class GisItemDBFactory[T <: GisItem] {
     val fos = new FileOutputStream(outFile, false)
     val dos = new DataOutputStream(fos)
 
-    dos.writeInt(GisItemDB.MAGIC)
-
+    writeHeader(dos)
     writeStrMap(dos)
     writeItems(dos)
     writeKeyMap(dos)
@@ -640,24 +644,22 @@ abstract class GisItemDBFactory[T <: GisItem] {
     dos.close
   }
 
-  protected def writeStrMap (dos: DataOutputStream): Unit = {
-    val charData = new ByteArrayOutputStream
-    var pos = 8 + (strMap.size * 8) + 4
+  protected def writeHeader (dos: DataOutputStream): Unit = {
+    dos.writeInt(GisItemDB.MAGIC)
+    dos.writeInt(0)   // file length (filled in later)
+    dos.writeInt(0)   // CRC32 checksum (filled in later)
+    dos.writeLong(0)  // version date of data
+  }
 
-    dos.writeInt(strMap.size)
+  protected def writeStrMap (dos: DataOutputStream): Unit = {
+    dos.writeInt(strMap.size)  // nStrings
     for (e <- strMap) {
       val s = e._1
-      val b = s.getBytes
-      charData.write(b)
-
+      val b = s.getBytes       // without terminating 0
       dos.writeInt(b.length)
-      dos.writeInt(pos)
-
-      pos += b.length
+      dos.write(b)
+      dos.write(0)
     }
-
-    dos.writeInt(charData.size)
-    charData.writeTo(dos)
   }
 
   protected def writeItems (dos: DataOutputStream): Unit = {

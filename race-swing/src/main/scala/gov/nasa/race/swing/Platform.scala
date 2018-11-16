@@ -40,9 +40,9 @@ object Platform {
   def getJavaVersion: Int = {
     val s = System.getProperty("java.version")
     if (s.startsWith("1.8")) 8
-    else if (s.startsWith("9.")) 9
-    else if (s.startsWith("10.")) 10
-    else if (s.startsWith("11.")) 11
+    else if (s.startsWith("9")) 9
+    else if (s.startsWith("10")) 10
+    else if (s.startsWith("11")) 11
     else throw new RuntimeException(s"unknown Java version $s")
   }
 
