@@ -110,160 +110,9 @@ object GisItemDB {
 
   //--- kdtree support
 
-  /**
-    * abstract type for kd-tree query results
-    */
-  trait KdResult {
-    @inline final def _closest (v: Double, min: Double, max: Double): Double = {
-      if (v <= min) min
-      else if (v >= max) max
-      else v
-    }
-
-    def prune (x: Double, y: Double, z: Double,
-               minX: Double, minY: Double, minZ: Double,
-               maxX: Double, maxY: Double, maxZ: Double): Boolean = {
-      val cx = _closest(x, minX, maxX)
-      val cy = _closest(y, minY, maxY)
-      val cz = _closest(z, minZ, maxZ)
-      val d = computeDist(x,y,z, cx, cy, cz)
-      !canContain(d)
-    }
-
-    def canContain (d: Double): Boolean
-    def update (d: Double, iOff: Int): Unit
-    def computeDist (x1: Double, y1: Double, z1: Double, x2: Double, y2: Double, z2: Double): Double
-    def getDistance: Double
-  }
-
-  trait GeoKdResult extends KdResult {
-    // we only need a order-preserving value (save the sqrt)
-    def computeDist (x1: Double, y1: Double, z1: Double, x2: Double, y2: Double, z2: Double): Double = {
-      val d2 = squared(x1 - x2) + squared(y1 - y2) + squared(z1 - z2)
-      if (d2 > 1e10) { // if distance > 100,000m we approximate with sphere
-        // dist = R * crd(a)  => dist = R * 2*sin(a/2) => rad(a) = 2R * asin(dist/2R)
-        squared( ME * Math.acos( 1.0 - d2/(2 * ME2)))
-      } else d2 // error is less than 1m
-    }
-  }
 
   final val ME = 6371000.0
   final val ME2 = ME * ME
-
-  /**
-    * a KdResult that finds the nearest item for a given position
-    */
-  class NearestNeighbor extends GeoKdResult {
-    var itemOff: Int = -1  // offset of nearest item
-    var dist: Double = Double.MaxValue  // distance in Meters of nearest item
-
-    def canContain (d: Double): Boolean = d < dist
-
-    def update (d: Double, iOff: Int): Unit = {
-      if (d < dist) {
-        dist = d
-        itemOff = iOff
-      }
-    }
-
-    def getDistance: Double = Math.sqrt(dist)
-
-    def result: (Int,Double) = (itemOff,Math.sqrt(dist))
-  }
-
-  /**
-    * a KdResult to find the N nearest neighbors
-    * note - we could have used WeightedArray for keeping the match list, but this would require per-query
-    * allocation and hence not execute queries in const space
-    */
-  class NNearestNeighbors (val maxNeighbors: Int) extends GeoKdResult {
-    val itemOffs: Array[Int] = new Array[Int](maxNeighbors)
-    val dists: Array[Double] = new Array[Double](maxNeighbors)
-    var maxDist: Double = Double.MinValue
-    var nNeighbors: Int = 0
-
-    def size: Int = nNeighbors
-    def isEmpty: Boolean = nNeighbors == 0
-
-    override def canContain(d: Double): Boolean = {
-      nNeighbors < maxNeighbors || d < maxDist
-    }
-
-    override def update(d: Double, iOff: Int): Unit = {
-
-      def insertPosition: Int = {
-        var i = 0
-        while (i < nNeighbors) {
-          if (dists(i) > d) return i
-          i += 1
-        }
-        -1
-      }
-
-      if (nNeighbors < maxNeighbors) { // not yet full
-        if (d >= maxDist) {  // also used for first entry
-          dists(nNeighbors) = d
-          itemOffs(nNeighbors) = iOff
-          nNeighbors += 1
-          maxDist = d
-
-        } else {
-          val i = insertPosition
-          System.arraycopy(dists, i, dists, i+1, nNeighbors - i)
-          System.arraycopy(itemOffs, i, itemOffs, i+1, nNeighbors - i)
-          dists(i) = d
-          itemOffs(i) = iOff
-          nNeighbors += 1
-        }
-
-      } else { // full
-        if (d < maxDist) {
-          val i = insertPosition // can't be the last position (this would otherwise be maxDist)
-          val nn1 = nNeighbors-1
-          System.arraycopy(dists, i, dists, i+1, nn1 - i)
-          System.arraycopy(itemOffs, i, itemOffs, i+1, nn1 - i)
-          dists(i) = d
-          itemOffs(i) = iOff
-          maxDist = dists(nn1)
-        } // otherwise ignore
-      }
-    }
-
-    def sortedResult: Seq[(Int,Double)] = {
-      itemOffs.zip(dists.map(Math.sqrt)).sortBy(_._2)
-    }
-
-    // this is the max distance
-    override def getDistance: Double = {
-      if (nNeighbors == 0) Double.NaN else Math.sqrt(maxDist)
-    }
-
-    def getDistances: Array[Double] = dists.map(Math.sqrt)
-  }
-
-  class RangeNeighbors (val maxDist: Double) extends GeoKdResult {
-    val itemOffs = new ArrayBuffer[Int]
-    val dists = new ArrayBuffer[Double]
-    val maxDist2 = squared(maxDist)
-
-    def size = itemOffs.size
-    def isEmpty = itemOffs.isEmpty
-
-    override def canContain(d: Double): Boolean = d <= maxDist2
-
-    override def update(d: Double, iOff: Int): Unit = {
-      if (d <= maxDist2) {
-        itemOffs += iOff
-        dists += d
-      }
-    }
-
-    def sortedResult: Seq[(Int,Double)] = {
-      itemOffs.zip(dists.map(Math.sqrt)).sortBy(_._2)
-    }
-
-    override def getDistance = maxDist
-  }
 }
 
 abstract class GisItemDB[T <: GisItem] (data: ByteBuffer) {
@@ -371,8 +220,9 @@ abstract class GisItemDB[T <: GisItem] (data: ByteBuffer) {
     * to be provided by concrete class - turn raw data into object
     * iIdx is guaranteed to be within 0..nItems
     */
-  protected def readItem (iIdx: Int): T
+  protected def readItem (iOff: Int): T
 
+  @inline protected def itemId (iOff: Int): String = strings(data.getInt(iOff + 52))
 
   //--- key map
 
@@ -405,12 +255,329 @@ abstract class GisItemDB[T <: GisItem] (data: ByteBuffer) {
 
   //--- kdtree
 
+  //--- supported geospatial queries
+
+  /**
+    * abstract type for kd-tree query results
+    */
+  abstract class GisItemDBQuery (val pos: GeoPosition) {
+
+    private[GisItemDB]  var x: Double = 0
+    private[GisItemDB]  var y: Double = 0
+    private[GisItemDB]  var z: Double = 0
+
+    Datum.withECEF(pos)(setXyz)
+
+    private[GisItemDB] def setXyz (lx: Length, ly: Length, lz: Length): Unit = {
+      x = lx.toMeters
+      y = ly.toMeters
+      z = lz.toMeters
+    }
+
+    @inline final def _closest (v: Double, min: Double, max: Double): Double = {
+      if (v <= min) min
+      else if (v >= max) max
+      else v
+    }
+
+    private[GisItemDB]  def prune (minX: Double, minY: Double, minZ: Double,
+                         maxX: Double, maxY: Double, maxZ: Double): Boolean = {
+      val cx = _closest(x, minX, maxX)
+      val cy = _closest(y, minY, maxY)
+      val cz = _closest(z, minZ, maxZ)
+      val d = computeDist(cx, cy, cz)
+      !canContain(d)
+    }
+
+    private[GisItemDB]  def clear: Unit
+    private[GisItemDB]  def canContain (d: Double): Boolean
+    private[GisItemDB]  def update (d: Double, iOff: Int): Unit
+
+    // we only need a order-preserving value (save the sqrt)
+    private[GisItemDB]  def computeDist (x2: Double, y2: Double, z2: Double): Double = {
+      val d2 = squared(x - x2) + squared(y - y2) + squared(z - z2)
+      if (d2 > 1e10) { // if distance > 100,000m we approximate with sphere
+        // dist = R * crd(a)  => dist = R * 2*sin(a/2) => rad(a) = 2R * asin(dist/2R)
+        squared( ME * Math.acos( 1.0 - d2/(2 * ME2)))
+      } else d2 // error is less than 1m
+    }
+  }
+
+  /**
+    * find the nearest item for a given position
+    */
+  class NearestNeighborQuery (pos: GeoPosition) extends GisItemDBQuery(pos) {
+    private[GisItemDB]  var itemOff: Int = -1  // offset of nearest item
+    private[GisItemDB]  var dist: Double = Double.MaxValue  // distance in Meters of nearest item
+
+    private[GisItemDB]  def clear: Unit = {
+      itemOff = -1
+      dist = Double.MaxValue
+    }
+
+    private[GisItemDB]  def canContain (d: Double): Boolean = d < dist
+
+    private[GisItemDB]  def update (d: Double, iOff: Int): Unit = {
+      if (d < dist) {
+        dist = d
+        itemOff = iOff
+      }
+    }
+
+    def getItemId: String = if (itemOff == -1) "?" else itemId(itemOff)
+    def getItem: Option[T] = if (itemOff == -1) None else Some(readItem(itemOff))
+    def getDistance: Length = Meters(Math.sqrt(dist))
+    def getResult: Option[(T,Length)] = {
+      if (itemOff != -1) Some( (readItem(itemOff),getDistance)) else None
+    }
+
+    def foreachItemId (f: (String,Length)=>Unit): Unit = {
+      if (itemOff != -1) f( itemId(itemOff),Meters(Math.sqrt(dist)))
+    }
+    def foreach (f: (T,Length)=>Unit): Unit = {
+      if (itemOff != -1) f( readItem(itemOff),Meters(Math.sqrt(dist)))
+    }
+  }
+
+  def createNearestNeighborQuery (pos: GeoPosition) = new NearestNeighborQuery(pos)
+
+  /**
+    * nearest neighbor search
+    */
+  def withNearestItem (pos: GeoPosition)(f: (T,Length)=>Unit) = {
+    if (!isEmpty) {
+      val query = new NearestNeighborQuery(pos)
+      searchKdTree(query, kdOffset, 0, DMin,DMin,DMin, DMax,DMax,DMax)
+      query.foreach(f)
+    }
+  }
+
+  def getNearestItem (pos: GeoPosition): Option[(T,Length)] = {
+    if (!isEmpty) {
+      val query = new NearestNeighborQuery(pos)
+      searchKdTree(query, kdOffset, 0, DMin,DMin,DMin, DMax,DMax,DMax)
+      query.getResult
+    } else None
+  }
+
+  /**
+    * find the N nearest neighbors
+    * note - we could have used WeightedArray for keeping the match list, but this would require per-query
+    * allocation and hence not execute queries in const space
+    */
+  class NnearestNeighborsQuery(pos: GeoPosition, val maxNeighbors: Int) extends GisItemDBQuery(pos) {
+    private[GisItemDB]  val itemOffs: Array[Int] = new Array[Int](maxNeighbors)
+    private[GisItemDB]  val dists: Array[Double] = new Array[Double](maxNeighbors)
+    private[GisItemDB]  var maxDist: Double = Double.MinValue
+    private[GisItemDB]  var nNeighbors: Int = 0
+
+    def size: Int = nNeighbors
+    def isEmpty: Boolean = nNeighbors == 0
+
+    private[GisItemDB]  def clear: Unit = {
+      maxDist = Double.MinValue
+      nNeighbors = 0
+    }
+
+    private[GisItemDB] def canContain(d: Double): Boolean = {
+      nNeighbors < maxNeighbors || d < maxDist
+    }
+
+    private[GisItemDB]  def update(d: Double, iOff: Int): Unit = {
+
+      def insertPosition: Int = {
+        var i = 0
+        while (i < nNeighbors) {
+          if (dists(i) > d) return i
+          i += 1
+        }
+        -1
+      }
+
+      if (nNeighbors < maxNeighbors) { // not yet full
+        if (d >= maxDist) {  // also used for first entry
+          dists(nNeighbors) = d
+          itemOffs(nNeighbors) = iOff
+          nNeighbors += 1
+          maxDist = d
+
+        } else {
+          val i = insertPosition
+          System.arraycopy(dists, i, dists, i+1, nNeighbors - i)
+          System.arraycopy(itemOffs, i, itemOffs, i+1, nNeighbors - i)
+          dists(i) = d
+          itemOffs(i) = iOff
+          nNeighbors += 1
+        }
+
+      } else { // full
+        if (d < maxDist) {
+          val i = insertPosition // can't be the last position (this would otherwise be maxDist)
+          val nn1 = nNeighbors-1
+          System.arraycopy(dists, i, dists, i+1, nn1 - i)
+          System.arraycopy(itemOffs, i, itemOffs, i+1, nn1 - i)
+          dists(i) = d
+          itemOffs(i) = iOff
+          maxDist = dists(nn1)
+        } // otherwise ignore
+      }
+    }
+
+    def getItemIds: Array[String] = itemOffs.map(itemId)
+    def getItems: Seq[T] = itemOffs.map(readItem)
+
+    def getMaxDistance: Length = {
+      if (nNeighbors == 0) Length.UndefinedLength else Meters(Math.sqrt(maxDist))
+    }
+    def getDistances: Array[Length] = dists.map(d=> Meters(Math.sqrt(d)))
+
+    def foreachItemId (f: (String,Length)=>Unit): Unit = {
+      var i = 0
+      while (i < nNeighbors) {
+        f( itemId(itemOffs(i)), Meters(dists(i)))
+        i += 1
+      }
+    }
+
+    def foreach (f: (T,Length)=>Unit): Unit = {
+      var i = 0
+      while (i < nNeighbors) {
+        f( readItem(itemOffs(i)), Meters(dists(i)))
+        i += 1
+      }
+    }
+
+    def getResult: Seq[(T,Length)] = getItems.zip(getDistances)
+  }
+
+  def createNnearestNeighborsQuery (pos: GeoPosition, nItems: Int): NnearestNeighborsQuery = {
+    new NnearestNeighborsQuery( pos, nItems)
+  }
+
+  def foreachNearItem (pos: GeoPosition, nItems: Int)(f: (T,Length)=>Unit) = {
+    if (!isEmpty) {
+      val query = new NnearestNeighborsQuery(pos,nItems)
+      searchKdTree(query, kdOffset, 0, DMin,DMin,DMin, DMax,DMax,DMax)
+      query.foreach(f)
+    }
+  }
+
+  def getNnearestItems (pos: GeoPosition, nItems: Int): Seq[(T,Length)] = {
+    if (!isEmpty) {
+      val query = new NnearestNeighborsQuery(pos,nItems)
+      searchKdTree(query, kdOffset, 0, DMin,DMin,DMin, DMax,DMax,DMax)
+      query.getResult
+    } else Seq.empty[(T,Length)]
+  }
+
+  /**
+    * find all items within given range
+    */
+  class RangeNeighborsQuery(pos: GeoPosition, val maxDistance: Length) extends GisItemDBQuery(pos) {
+    private[GisItemDB]  val itemOffs = new ArrayBuffer[Int]
+    private[GisItemDB]  val dists = new ArrayBuffer[Double]
+    private[GisItemDB]  val maxDist2 = squared(maxDistance.toMeters)
+
+    def size = itemOffs.size
+    def isEmpty = itemOffs.isEmpty
+
+    private[GisItemDB]  def clear: Unit = {
+      itemOffs.clear
+      dists.clear
+    }
+
+    private[GisItemDB]  def canContain(d: Double): Boolean = d <= maxDist2
+
+    /**
+      * while not strictly required we sort new items in so that we don't have to
+      * sort two separate arrays when returning/processing results
+      */
+    private[GisItemDB]  def update(d: Double, iOff: Int): Unit = {
+      if (d <= maxDist2) {
+        if (dists.isEmpty || d >= dists.last){
+          dists += d
+          itemOffs += iOff
+        } else {
+          val n1 = dists.size - 1
+          var i=0
+          while (i < n1 && d >= dists(i)) i += 1
+          //--- move last item
+          dists += dists.last
+          itemOffs += itemOffs.last
+          //--- shift items up
+          var j = n1
+          while (j > i) {
+            val j1 = j - 1
+            dists.update(j, dists(j1))
+            itemOffs.update(j, itemOffs(j1))
+            j = j1
+          }
+          //--- insert new item
+          dists.update(i, d)
+          itemOffs.update(i, iOff)
+        }
+      }
+    }
+
+    def getItemIds: Seq[String] = itemOffs.map(itemId)
+    def getItems: Seq[T] = itemOffs.map(readItem)
+
+    def getDistances: Seq[Length] = dists.map(d=> Meters(Math.sqrt(d)))
+
+    def foreachItemId (f: (String,Length)=>Unit): Unit = {
+      val nNeighbors = size
+      var i = 0
+      while (i < nNeighbors) {
+        f( itemId(itemOffs(i)), Meters(dists(i)))
+        i += 1
+      }
+    }
+
+    def foreach (f: (T,Length)=>Unit): Unit = {
+      val nNeighbors = size
+      var i = 0
+      while (i < nNeighbors) {
+        f( readItem(itemOffs(i)), Meters(dists(i)))
+        i += 1
+      }
+    }
+
+    def getResult: Seq[(T,Length)] = getItems.zip(getDistances)
+  }
+
+  def createRangeNeighborsQuery (pos: GeoPosition, radius: Length): RangeNeighborsQuery = {
+    new RangeNeighborsQuery(pos, radius)
+  }
+
+  def foreachRangeItem (pos: GeoPosition, radius: Length)(f: (T,Length)=>Unit) = {
+    if (!isEmpty) {
+      val query = new RangeNeighborsQuery(pos,radius)
+      searchKdTree(query, kdOffset, 0, DMin,DMin,DMin, DMax,DMax,DMax)
+      query.foreach(f)
+    }
+  }
+
+  def getRangeItems (pos: GeoPosition, radius: Length): Seq[(T,Length)] = {
+    if (!isEmpty) {
+      val query = new RangeNeighborsQuery(pos,radius)
+      searchKdTree(query, kdOffset, 0, DMin,DMin,DMin, DMax,DMax,DMax)
+      query.getResult
+    } else Seq.empty[(T,Length)]
+  }
+
   //var nSteps: Int = 0
 
-  protected final def searchKdTree(res: KdResult, nodeOff: Int, depth: Int,
-                             tgtX: Double, tgtY: Double, tgtZ: Double,  // the test point
-                             minX: Double, minY: Double, minZ: Double,  // the bounding hyperrect for this node
-                             maxX: Double, maxY: Double, maxZ: Double): Unit = {
+  /**
+    * use this for const space queries that are cached by the client
+    */
+  @inline def processQuery (query: GisItemDBQuery): Unit = {
+    query.clear
+    searchKdTree(query, kdOffset, 0, DMin,DMin,DMin, DMax,DMax,DMax)
+  }
+
+  protected final def searchKdTree(query: GisItemDBQuery, nodeOff: Int, depth: Int,
+                                   minX: Double, minY: Double, minZ: Double, // the bounding hyperrect for this node
+                                   maxX: Double, maxY: Double, maxZ: Double): Unit = {
     //nSteps += 1
     val itemOff = data.getInt(nodeOff)
     val curX = data.getDouble(itemOff + 4)
@@ -421,8 +588,8 @@ abstract class GisItemDB[T <: GisItem] (data: ByteBuffer) {
     val rightChild = data.getInt(nodeOff + 8)  // node offset of right child
 
     //--- update result for current node
-    val d = res.computeDist(curX, curY, curZ, tgtX, tgtY, tgtZ)
-    res.update(d, itemOff)
+    val d = query.computeDist(curX, curY, curZ)
+    query.update(d, itemOff)
 
     //--- split hyperrect
     var nearOff = EMPTY
@@ -435,7 +602,7 @@ abstract class GisItemDB[T <: GisItem] (data: ByteBuffer) {
 
     depth % 3 match {
       case 0 => { // x split
-        if (tgtX <= curX) {
+        if (query.x <= curX) {
           nearOff = leftChild;   nearMaxX = curX
           farOff  = rightChild;  farMinX  = curX
         } else {
@@ -444,7 +611,7 @@ abstract class GisItemDB[T <: GisItem] (data: ByteBuffer) {
         }
       }
       case 1 => { // y split
-        if (tgtY <= curY) {
+        if (query.y <= curY) {
           nearOff = leftChild;   nearMaxY = curY
           farOff  = rightChild;  farMinY  = curY
         } else {
@@ -453,7 +620,7 @@ abstract class GisItemDB[T <: GisItem] (data: ByteBuffer) {
         }
       }
       case 2 => { // z split
-        if (tgtZ <= curZ) {
+        if (query.z <= curZ) {
           nearOff = leftChild;   nearMaxZ = curZ
           farOff  = rightChild;  farMinZ  = curZ
         } else {
@@ -464,57 +631,18 @@ abstract class GisItemDB[T <: GisItem] (data: ByteBuffer) {
     }
 
     if (nearOff != EMPTY) {
-      searchKdTree(res, nearOff, depth+1, tgtX,tgtY,tgtZ, nearMinX,nearMinY,nearMinZ,nearMaxX,nearMaxY,nearMaxZ)
+      searchKdTree(query, nearOff, depth+1, nearMinX,nearMinY,nearMinZ,nearMaxX,nearMaxY,nearMaxZ)
     }
 
     if (farOff != EMPTY) {
       // descend into far subtree only if the corresponding hyperrect /could/ have a matching point
       // (this is where the kd-tree gets its O(log(N)) from)
-      if (!res.prune(tgtX,tgtY,tgtZ, farMinX,farMinY,farMinZ,farMaxX,farMaxY,farMaxZ)) {
-        searchKdTree(res, farOff, depth+1, tgtX,tgtY,tgtZ, farMinX,farMinY,farMinZ,farMaxX,farMaxY,farMaxZ)
+      if (!query.prune(farMinX,farMinY,farMinZ,farMaxX,farMaxY,farMaxZ)) {
+        searchKdTree(query, farOff, depth+1, farMinX,farMinY,farMinZ,farMaxX,farMaxY,farMaxZ)
       }
     }
   }
 
-  @inline final protected def itemize (e: (Int,Double)): (T,Length) = (readItem(e._1),Meters(e._2))
-
-  /**
-    * nearest neighbor search
-    */
-  def getNearestItem (pos: GeoPosition): Option[(T,Length)] = {
-    if (!isEmpty) {
-      val res = new NearestNeighbor
-      val (x,y,z) = Datum.wgs84ToECEF(pos).toMeters
-      searchKdTree(res, kdOffset, 0, x,y,z, DMin,DMin,DMin, DMax,DMax,DMax)
-      if (res.itemOff != EMPTY) {
-        Some(res.result).map(itemize)
-      } else None
-    } else None
-  }
-
-  /**
-    * get 'n' nearest neighbors
-    */
-  def getNNearestItems (pos: GeoPosition, n: Int): Seq[(T,Length)] = {
-    if (!isEmpty) {
-      val res = new NNearestNeighbors(n)
-      val (x,y,z) = Datum.wgs84ToECEF(pos).toMeters
-      searchKdTree(res, kdOffset, 0, x,y,z, DMin,DMin,DMin, DMax,DMax,DMax)
-      res.sortedResult.map(itemize)
-    } else Seq.empty[(T,Length)]
-  }
-
-  /**
-    * range search
-    */
-  def getItemsWithin (pos: GeoPosition, d: Length): Seq[(T,Length)] = {
-    if (!isEmpty) {
-      val res = new RangeNeighbors(d.toMeters)
-      val (x,y,z) = Datum.wgs84ToECEF(pos).toMeters
-      searchKdTree(res, kdOffset, 0, x,y,z, DMin,DMin,DMin, DMax,DMax,DMax)
-      res.sortedResult.map(itemize)
-    } else Seq.empty[(T,Length)]
-  }
 }
 
 object GisItemDBFactory {

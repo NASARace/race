@@ -71,7 +71,7 @@ object Datum {
     *
     * from Astronomical Almanac pg. K12
     */
-  def wgs84ToECEF(φ: Angle, λ: Angle, alt: Length): XyzPos = {
+  def withECEF[U] (φ: Angle, λ: Angle, alt: Length)(fn: (Length,Length,Length)=>U): U = {
     val h = alt.toMeters
     val cos_φ = Cos(φ)
     val sin_φ = Sin(φ)
@@ -85,7 +85,14 @@ object Datum {
     val y = ach * cos_φ * Sin(λ)
     val z = (RE_E * s + h) * sin_φ
 
-    XyzPos(Meters(x),Meters(y),(Meters(z)))
+    fn( Meters(x),Meters(y),Meters(z))
+  }
+  @inline def withECEF(pos: GeoPosition)(f: (Length,Length,Length)=>Unit): Unit = {
+    withECEF(pos.φ,pos.λ,pos.altitude)(f)
+  }
+
+  def wgs84ToECEF(φ: Angle, λ: Angle, alt: Length): XyzPos = {
+    withECEF(φ, λ, alt)( (x,y,z) => XyzPos(x,y,z))
   }
   @inline def wgs84ToECEF(pos: GeoPosition): XyzPos = wgs84ToECEF(pos.φ,pos.λ,pos.altitude)
 

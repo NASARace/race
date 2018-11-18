@@ -165,9 +165,10 @@ object GisItemDBTool {
       opts.nItems match {
         case Some(n) =>
           println(s"$n nearest items to ($pos):")
-          for (((e,d),i) <- db.getNNearestItems(pos,n).zipWithIndex) {
-            println(f"[${i+1}]\t${d.toMeters}%10.0fm : $e")
+          for ((e,i) <- db.getNnearestItems(pos,n).zipWithIndex) {
+            println(f"[${i+1}]\t${e._2.toMeters}%10.0fm : ${e._1}")
           }
+
         case None => { // show just the nearest one
           println(s"nearest item to ($pos):")
           db.getNearestItem(pos) match {
@@ -182,7 +183,7 @@ object GisItemDBTool {
   def showRange: Unit = {
     for (file <- opts.inFile; factory <- opts.factory; db <- factory.loadDB(file); pos <- opts.pos; dist <- opts.dist) {
       println(s"items in range ($pos) + $dist :")
-      for (((e,d),i) <- db.getItemsWithin(pos, dist).zipWithIndex) {
+      for (((e,d),i) <- db.getRangeItems(pos, dist).zipWithIndex) {
         println(f"[${i+1}]\t${d.toMeters}%10.0fm : $e")
       }
     }

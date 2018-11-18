@@ -24,6 +24,8 @@ import gov.nasa.race.uom.Length._
 object XyzPos {
   val zeroXyzPos = XyzPos(Length.Length0, Length.Length0, Length.Length0)
   val undefinedXyzPos = XyzPos(Length.UndefinedLength,Length.UndefinedLength,Length.UndefinedLength)
+
+  def fromMeters(x: Double, y: Double, z: Double) = XyzPos(Meters(x),Meters(y),Meters(z))
 }
 
 /**
