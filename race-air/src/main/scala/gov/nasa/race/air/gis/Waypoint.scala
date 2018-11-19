@@ -14,22 +14,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package gov.nasa.race.air.geo.faa1801
+package gov.nasa.race.air.gis
 
 import java.io.{DataOutputStream, File}
 import java.nio.ByteBuffer
 
 import gov.nasa.race.geo._
+import gov.nasa.race.gis.{GisItem, GisItemDB, GisItemDBFactory}
 import gov.nasa.race.uom.Angle.Degrees
 import gov.nasa.race.uom.Length.Feet
 import gov.nasa.race.util.FileUtils
+
+import scala.collection.mutable.{HashSet => MHashSet}
 
 
 /**
   *  Waypoint schema for USA_FAA1801 :
   *
   *    `id` INT NOT NULL,
-  *    `type` VARCHAR(10) NOT NULL,             TERMINAL|RUNWAY|NAVAID
+  *    `type` VARCHAR(10) NOT NULL,             TERMINAL|RUNWAY|NAVAID|AIRPORT|HELIPORT|ENROUTE
   *    `name` VARCHAR(10) NOT NULL,
   *    `latitude` FLOAT NOT NULL,
   *    `longitude` FLOAT NOT NULL,
@@ -51,11 +54,18 @@ object Waypoint {
   val WP_TERMINAL = 1
   val WP_RUNWAY = 2
   val WP_NAVAID = 3
+  val WP_ENROUTE = 4
+  val WP_AIRPORT = 5
+  val WP_HELIPORT = 6
 
   //--- known navaid types
   val NAV_UNDEFINED = -1
   val NAV_LOC = 1
   val NAV_NDB = 2
+  val NAV_VORTAC = 3
+  val NAV_TAC = 4
+  val NAV_DME = 5
+  val NAV_VOR = 6
 
   val UNDEFINED_ELEV = Float.NaN
 
@@ -64,6 +74,9 @@ object Waypoint {
       case "TERMINAL" => WP_TERMINAL
       case "RUNWAY" => WP_RUNWAY
       case "NAVAID" => WP_NAVAID
+      case "ENROUTE" => WP_ENROUTE
+      case "AIRPORT" => WP_AIRPORT
+      case "HELIPORT" => WP_HELIPORT
       case other =>
         println(s"unknown waypoint type: $other")
         WP_UNDEFINED
@@ -79,6 +92,10 @@ object Waypoint {
       case "NULL" => NAV_UNDEFINED
       case "LOC" => NAV_LOC
       case "NDB" => NAV_NDB
+      case "TAC" => NAV_TAC
+      case "VORTAC" => NAV_VORTAC
+      case "DME" => NAV_DME
+      case "VOR" => NAV_VOR
       case other =>
         println(s"unknown navaid type: $other")
         NAV_UNDEFINED
@@ -111,15 +128,13 @@ class WaypointDB (data: ByteBuffer) extends GisItemDB[Waypoint](data) {
 
   override protected def readItem (off: Int): Waypoint = {
     val buf = data
-    buf.position(off + 4) // skip over the hash
-
-    val name = strings(data.getInt)
+    buf.position(off + 28) // skip over hash and xyz coords
 
     val lat = buf.getDouble
     val lon = buf.getDouble
     val elev = buf.getDouble
     val pos = GeoPosition(Degrees(lat),Degrees(lon),Feet(elev))
-
+    val name = strings(buf.getInt)
     val wpType = buf.getInt
     val magVar = buf.getFloat
     val landingSite = {
@@ -133,41 +148,53 @@ class WaypointDB (data: ByteBuffer) extends GisItemDB[Waypoint](data) {
   }
 }
 
-class WaypointDBFactory extends GisItemDBFactory[Waypoint] {
+object WaypointDB extends GisItemDBFactory[Waypoint] {
   import Waypoint._
 
   val WaypointRE =
-    """\s*INSERT\s+INTO\s+`Waypoint`\s+VALUES\s*\(\s*(\d+)\s*,\s*'(\w+)'\s*,\s*'(\w+)'\s*,\s*(-?\d+.\d+)\s*,\s*(-?\d+.\d+)\s*,\s*(-?\d+.\d+)\s*,\s*'(\w+)'\s*,\s*'?(NULL|\w+)'?\s*,\s*(NULL|\d+.\d+)\s*,\s*(NULL|\d+)\).*""".r
+    """\s*INSERT\s+INTO\s+`Waypoint`\s+VALUES\s*\(\s*(\d+)\s*,\s*'(\w+)'\s*,\s*'(\w+)'\s*,\s*(-?\d+.\d+)\s*,\s*(-?\d+.\d+)\s*,\s*(-?\d+.\d+)\s*,\s*'?(\w+)'?\s*,\s*'?(\w+)'?\s*,\s*(NULL|\d+.\d+)\s*,\s*(NULL|\d+)\).*""".r
 
-  override val schema = "gov.nasa.race.air.geo.faa1801.Waypoint"
-  override val itemSize: Int = 56
+  override val schema = "gov.nasa.race.air.gis.Waypoint"
+  override val itemSize: Int = 56 + 20
 
   override def loadDB (file: File): Option[WaypointDB] = {
     mapFile(file).map(new WaypointDB(_))
   }
 
-  override def parse (inFile: File): Unit = {
+  override def parse (inFile: File): Boolean = {
     clear
     addString(schema)
+    val keySet = new MHashSet[String]
+
+    if (!FileUtils.getExtension(inFile).equalsIgnoreCase("sql")) {
+      println(s"not a SQL source: $inFile")
+      return false
+    }
 
     FileUtils.withLines(inFile) { line =>
       line match {
         case WaypointRE(id,name,wpType,lat,lon,magVar,landingSite,navaid,freq,elev) =>
-
           val pos = GeoPosition(Degrees(lat.toDouble), Degrees(lon.toDouble), Feet(getWpElev(elev)))
-
           val typeFlag = getWpType(wpType)
           val navaidFlag = getWpNavaid(navaid)
           val optLandingSite = getWpLandingSite(landingSite)
 
-          addString(name)
+          val key = if (keySet.contains(name)) {
+              //println(s"dis-ambiguating $name @ $landingSite")
+              s"$name@$landingSite"
+          } else name
+          keySet += key
+
+          addString(key)
           addString(landingSite)
 
-          //--- populate the waypoint list
-          addItem( new Waypoint(name,pos,typeFlag,magVar.toFloat, optLandingSite,navaidFlag,getWpFreq(freq)))
+          val wp = new Waypoint(key,pos,typeFlag,magVar.toFloat, optLandingSite,navaidFlag,getWpFreq(freq))
+          addItem( wp)
+
         case _ => // ignore
       }
     }
+    items.nonEmpty
   }
 
   override protected def writeItem(e: Waypoint, out: DataOutputStream): Unit = {

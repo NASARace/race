@@ -14,10 +14,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package gov.nasa.race.geo
+package gov.nasa.race.gis
 
+import gov.nasa.race.geo.{Datum, GeoPosition, XyzPos}
 import gov.nasa.race.uom.Length
-
 
 /**
   * a type that can be kept in a GisItemDB

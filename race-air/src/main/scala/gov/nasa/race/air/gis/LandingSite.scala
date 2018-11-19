@@ -14,15 +14,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package gov.nasa.race.air.geo.faa1801
+package gov.nasa.race.air.gis
 
 import java.io.{DataOutputStream, File}
 import java.nio.ByteBuffer
 
 import gov.nasa.race.geo._
-import gov.nasa.race.util.FileUtils
-import gov.nasa.race.uom.Length._
+import gov.nasa.race.gis.{GisItem, GisItemDB, GisItemDBFactory}
 import gov.nasa.race.uom.Angle._
+import gov.nasa.race.uom.Length._
+import gov.nasa.race.util.FileUtils
 
 
 /**
@@ -98,21 +99,26 @@ class LandingSiteDB (data: ByteBuffer) extends GisItemDB[LandingSite](data) {
   }
 }
 
-class LandingSiteDBFactory extends GisItemDBFactory[LandingSite] {
+object LandingSiteDB extends GisItemDBFactory[LandingSite] {
   import LandingSite._
 
   val LandingSiteRE = """\s*INSERT\s+INTO\s+`LandingSite`\s+VALUES\s*\(\s*(\d+)\s*,\s*'(\w+)'\s*,\s*'(\w+)'\s*,\s*'([^']+)'\s*,\s*'(\w+)'\s*,\s*(\d+)\s*,\s*(-?\d+.\d+)\s*,\s*(-?\d+.\d+)\s*,\s*(-?\d+.\d+)\).*""".r
 
-  override val schema = "gov.nasa.race.air.geo.faa1801.LandingSite"
+  override val schema = "gov.nasa.race.air.gis.LandingSite"
   override val itemSize: Int = 72
 
   override def loadDB (file: File): Option[LandingSiteDB] = {
     mapFile(file).map(new LandingSiteDB(_))
   }
 
-  override def parse (inFile: File): Unit = {
+  override def parse (inFile: File): Boolean = {
     clear
     addString(schema)
+
+    if (!FileUtils.getExtension(inFile).equalsIgnoreCase("sql")) {
+      println(s"not a SQL source: $inFile")
+      return false
+    }
 
     FileUtils.withLines(inFile) { line =>
       line match {
@@ -131,6 +137,7 @@ class LandingSiteDBFactory extends GisItemDBFactory[LandingSite] {
         case _ => // ignore
       }
     }
+    items.nonEmpty
   }
 
   override protected def writeItem(e: LandingSite, out: DataOutputStream): Unit = {

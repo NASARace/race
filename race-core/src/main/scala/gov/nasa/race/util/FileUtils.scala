@@ -113,6 +113,13 @@ object FileUtils {
 
   def existingNonEmptyFile(s: String): Option[File] = existingNonEmptyFile(new File(s))
 
+  // file extension (without '.')
+  def getExtension (fn: String): String = {
+    val i = fn.lastIndexOf('.')
+    if (i < 0) "" else fn.substring(i+1)
+  }
+  def getExtension (file: File): String = getExtension(file.getName)
+
   def inputStreamFor (f: File, bufLen: Int): Option[InputStream] = {
     if (f.isFile) {
       if (f.getName.endsWith(".gz")){
