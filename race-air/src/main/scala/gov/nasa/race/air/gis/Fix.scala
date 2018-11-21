@@ -143,7 +143,7 @@ object FixDB extends GisItemDBFactory[Fix] {
       lastId = id
       addString(fix.name)
       fix.navaid.foreach(addString)
-      
+
       fix
     }
   }

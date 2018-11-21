@@ -24,7 +24,7 @@ import java.nio.charset.{CharsetDecoder, StandardCharsets}
 import java.nio.file._
 import java.nio.file.attribute.BasicFileAttributes
 import java.security.MessageDigest
-import java.util.zip.GZIPInputStream
+import java.util.zip.{CRC32, GZIPInputStream}
 
 import scala.io.BufferedSource
 import StringUtils._
@@ -199,7 +199,26 @@ object FileUtils {
   }
 
   def sha1CheckSum(file: File) = hexCheckSum(file, MessageDigest.getInstance("SHA-1"))
+  def sha1CheckSum(pathName: String) = sha1CheckSum(new File(pathName))
+
   def md5CheckSum(file: File) = hexCheckSum(file, MessageDigest.getInstance("MD5")).map(padLeft(_, 32, ' '))
+  def md5CheckSum(pathName: String) = md5CheckSum(new File(pathName))
+
+  def crc32CheckSum(file: File): Option[Long] = {
+    if (file.isFile) {
+      val checksum = new CRC32
+      using(new FileInputStream(file)) { fis =>
+        val buf = new Array[Byte](8192)
+        var len = fis.read(buf)
+        while (len > 0) {
+          checksum.update(buf, 0, len)
+          len = fis.read(buf)
+        }
+        Some(checksum.getValue)
+      }
+    } else None
+  }
+  @inline def crc32CheckSum(pathName: String) = crc32CheckSum(new File(pathName))
 
   /**
    * wrapper object for java.nio.file FileSystem matchers
