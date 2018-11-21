@@ -175,4 +175,50 @@ object NetUtils {
       case _:Exception => false
     }
   }
+
+  def blockingHttpsPost (urlString: String, paramString: String): Either[String,String] = {
+    try {
+      val url = new URL(urlString)
+      val con = url.openConnection.asInstanceOf[HttpsURLConnection]
+      con.setRequestMethod("POST")
+      con.setRequestProperty("User-Agent", "Mozilla/5.0")
+      con.setRequestProperty("Accept-Language", "en-US,en;q=0.5")
+
+      con.setDoOutput(true)
+      val dos = new DataOutputStream(con.getOutputStream)
+      dos.writeBytes(paramString)
+      dos.flush
+
+      val responseCode = con.getResponseCode // this blocks
+
+      if (responseCode != HttpURLConnection.HTTP_OK) {
+        Left(s"response: $responseCode")
+
+      } else {
+        val buf = new StringBuffer
+        val is = new InputStreamReader(con.getInputStream)
+        val cbuf = new Array[Char](4096)
+        var n = is.read(cbuf, 0, cbuf.length)
+        while (n >= 0) {
+          buf.append(cbuf, 0, n)
+          n = is.read(cbuf, 0, cbuf.length)
+        }
+        Right(buf.toString)
+      }
+    } catch {
+      case x: Throwable => Left(s"https post failed: $x")
+    }
+  }
+
+  def blockingHttpsPost (urlString: String, params: Map[String,String]): Either[String,String] = {
+    val buf = new StringBuffer
+    params.foreach { e =>
+      if (buf.length > 0) buf.append('&')
+      buf.append(e._1)
+      buf.append('=')
+      buf.append(e._2)
+    }
+
+    blockingHttpsPost(urlString,buf.toString)
+  }
 }

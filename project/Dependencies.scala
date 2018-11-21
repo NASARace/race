@@ -74,13 +74,16 @@ object Dependencies {
   //--- scalaCheck
   val scalaCheck = "org.scalacheck" % "scalacheck_2.12" % "1.14.0"
 
-  // liftJson
-  val liftJson = "net.liftweb" %% "lift-json" % "3.2.0-M3"
-  val liftJsonExt = "net.liftweb" %% "lift-json-ext" % "3.2.0-M3"
-  val liftJsonAll = Seq(liftJson,liftJsonExt)
-
-  val defaultLibs =  Seq(logback,typesafeConfig,nscalaTime,liftJson)
+  val defaultLibs =  Seq(logback,typesafeConfig,nscalaTime)
   val defaultTestLibs = Seq(scalaTest,scalaCheck,pegDown)
+
+  //--- Circe Json support
+  val circeVersion = "0.10.1"
+  val circeCore = "io.circe" %% "circe-core" % circeVersion
+  val circeGeneric = "io.circe" %% "circe-generic" % circeVersion
+  val circeParser = "io.circe" %% "circe-parser" % circeVersion
+
+  val circeAll = Seq(circeCore,circeGeneric,circeParser)
 
   // Apache Avro serialization (for archiving/unarchiving)
   val avro = "org.apache.avro" % "avro" % "1.8.2"

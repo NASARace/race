@@ -42,16 +42,6 @@ object FileUtils {
 
   @inline def file (pathName: String): File = new File(pathName)
 
-  def fileContentsAsUTF8String(file: File): Option[String] = {
-    if (file.isFile) {
-      Some(new String(Files.readAllBytes(file.toPath), StandardCharsets.UTF_8))
-    } else {
-      None
-    }
-  }
-
-  def fileContentsAsUTF8String(pathName: String): Option[String] = fileContentsAsUTF8String(new File(pathName))
-
   def resourceContentsAsUTF8String(cls: Class[_],fileName: String): Option[String] = {
     val is = cls.getResourceAsStream(fileName)
     if (is != null){
@@ -62,6 +52,21 @@ object FileUtils {
     } else None
   }
 
+  // platform charset
+  def fileContentsAsString(file: File): Option[String] = {
+    if (file.isFile) Some(new String(Files.readAllBytes(file.toPath))) else None
+  }
+  @inline def fileContentsAsString(pathName: String): Option[String] = fileContentsAsString(new File(pathName))
+
+  def fileContentsAsUTF8String(file: File): Option[String] = {
+    if (file.isFile) {
+      Some(new String(Files.readAllBytes(file.toPath), StandardCharsets.UTF_8))
+    } else {
+      None
+    }
+  }
+  @inline def fileContentsAsUTF8String(pathName: String): Option[String] = fileContentsAsUTF8String(new File(pathName))
+
   def fileContentsAsChars(file: File): Option[Array[Char]] = {
     if (file.isFile) {
       val decoder: CharsetDecoder = StandardCharsets.UTF_8.newDecoder
@@ -69,12 +74,12 @@ object FileUtils {
       Some(decoder.decode(in).array)
     } else None
   }
-
-  def fileContentsAsChars(pathName: String): Option[Array[Char]] = fileContentsAsChars(new File(pathName))
+  @inline def fileContentsAsChars(pathName: String): Option[Array[Char]] = fileContentsAsChars(new File(pathName))
 
   def fileContentsAsBytes(file: File): Option[Array[Byte]] = {
     if (file.isFile) Some(Files.readAllBytes(file.toPath)) else None
   }
+  @inline def fileContentsAsBytes(pathName: String): Option[Array[Byte]] = fileContentsAsBytes(new File(pathName))
 
   def withLines (file: File)(f: String=>Unit) = {
     val src = new BufferedSource(new FileInputStream(file))

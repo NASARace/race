@@ -95,6 +95,8 @@ class Angle protected[uom] (val d: Double) extends AnyVal {
   @inline def toDegrees: Double = d / DegreesInRadian
   @inline def toNormalizedDegrees: Double = normalizeDegrees(toDegrees)
 
+  @inline def negative = new Angle(-d)
+
   //--- numeric and comparison operators
   @inline def + (x: Angle) = new Angle(d + x.d)
   @inline def - (x: Angle) = new Angle(d - x.d)

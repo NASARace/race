@@ -104,7 +104,7 @@ abstract class GisItemDBFactory[T <: GisItem] {
           false
         }
       } else {
-        println(s"invalid output file: $inFile")
+        println(s"invalid output file: $outFile")
         false
       }
     } else {

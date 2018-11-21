@@ -76,7 +76,7 @@ lazy val raceSwing = createProject("race-swing", commonSettings).
 
 lazy val raceAir = createProject("race-air", commonSettings).
   dependsOn(raceCore,raceNetJMS,raceNetHttp).
-  addLibraryDependencies(akkaActor,typesafeConfig,nscalaTime,scalaParser)
+  addLibraryDependencies(akkaActor,typesafeConfig,nscalaTime,scalaParser,circeAll)
 
 lazy val raceWW = createProject("race-ww", commonSettings).
   dependsOn(raceCore,raceSwing).
