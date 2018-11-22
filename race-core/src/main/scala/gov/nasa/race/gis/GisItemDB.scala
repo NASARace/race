@@ -20,12 +20,14 @@ import java.io._
 import java.nio.ByteBuffer
 import java.nio.channels.FileChannel
 import java.util.Arrays
+import java.util.zip.CRC32
 
 import gov.nasa.race.common._
 import gov.nasa.race.geo._
 import gov.nasa.race.uom.Length
 import gov.nasa.race.uom.Length._
 import gov.nasa.race.util.{ArrayUtils, FileUtils}
+import org.joda.time.DateTime
 
 import scala.Double.{MaxValue => DMax, MinValue => DMin}
 import scala.collection.mutable
@@ -47,8 +49,8 @@ import scala.collection.mutable.ArrayBuffer
   *
   * struct RGIS {
   *   i32 magic             // 1380403539 0x52474953 (RGIS)
-  *   i32 length            // byte length of whole structure
-  *   i32 checksum          // CRC32
+  *   i64 length            // byte length of whole structure
+  *   i64 checksum          // CRC32 checksum
   *   i64 date              // epoch in millis
   *
   *   //--- string table  (first entry is schema name, e.g. "gov.nasa.race.air.LandingSite")
@@ -91,6 +93,7 @@ import scala.collection.mutable.ArrayBuffer
 
 object GisItemDB {
   val MAGIC = 0x52474953 //  "RGIS"
+  val HEADER_LENGTH = 28  // magic + file-length + checksum + date
 
   def mapFile(file: File): ByteBuffer = {
     val fileChannel = new RandomAccessFile(file, "r").getChannel
@@ -121,14 +124,17 @@ abstract class GisItemDB[T <: GisItem] (data: ByteBuffer) {
 
   def this (f: File) = this(GisItemDB.mapFile(f))
 
-  //--- initialize stringtable, offsets and sizes
+  if (data.getInt(0) != MAGIC) throw new RuntimeException("invalid file magic (should be 'RGIS')")
 
-  val length = data.getInt(4)
-  val crc32  = data.getInt(8)
-  val date   = data.getLong(12)
+  val length = data.getLong(4)
+  if (data.limit() != length) throw new RuntimeException(s"invalid data length (should be $length)")
 
-  val headerLength = 20  // magic + file-length + checksum + date
-  val nStrings: Int = data.getInt(headerLength)
+  val checkSum  = data.getLong(12)
+  if (!checkCheckSum) throw new RuntimeException(f"invalid CRC32 checksum (should be $checkSum%x)")
+
+  val date   = new DateTime(data.getLong(20))
+
+  val nStrings: Int = data.getInt(HEADER_LENGTH)
   val strings: Array[String] = new Array[String](nStrings)
 
   val itemOffset: Int = initializeStrings + 8
@@ -141,13 +147,23 @@ abstract class GisItemDB[T <: GisItem] (data: ByteBuffer) {
 
   val kdOffset: Int = mapOffset + (mapLength * 4)
 
+  def checkCheckSum: Boolean = {
+    val crc32 = new CRC32
+    val lastPos = data.position()
+    data.position(HEADER_LENGTH)  // skip the header
+    crc32.update(data)
+    val x = crc32.getValue()
+    data.position(lastPos)
+
+    x == checkSum
+  }
 
   def initializeStrings: Int = {
     val a = strings
     var buf = new Array[Byte](256)
 
     var i = 0
-    var pos = headerLength + 4
+    var pos = HEADER_LENGTH + 4
 
     while (i < nStrings) {
       val sLen = data.getInt(pos)
@@ -170,7 +186,7 @@ abstract class GisItemDB[T <: GisItem] (data: ByteBuffer) {
     println("--- structure:")
     println(s"schema:       '${strings(0)}'")
     println(s"length:       $length bytes")
-    println(f"crc32:        $crc32%x")
+    println(f"checkSum:     $checkSum%x")
     println(s"date:         $date")
     println(s"nItems:       $nItems")
     println(s"itemSize:     $itemSize")

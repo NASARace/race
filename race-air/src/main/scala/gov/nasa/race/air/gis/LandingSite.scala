@@ -111,7 +111,9 @@ object LandingSiteDB extends GisItemDBFactory[LandingSite] {
     mapFile(file).map(new LandingSiteDB(_))
   }
 
-  override def parse (inFile: File): Boolean = {
+  override def parse (inFile: File, extraArgs: Seq[String]): Boolean = {
+    if (extraArgs.nonEmpty) println(s"extra arguments ignored: [${extraArgs.mkString(",")}]")
+
     clear
     addString(schema)
 

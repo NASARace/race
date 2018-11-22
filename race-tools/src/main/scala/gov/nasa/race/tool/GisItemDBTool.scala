@@ -24,6 +24,7 @@ import gov.nasa.race.main.CliArgs
 import gov.nasa.race.uom.Length
 import gov.nasa.race.uom.Length._
 import gov.nasa.race.util.FileUtils
+import org.joda.time.DateTime
 
 import scala.Console
 
@@ -50,6 +51,8 @@ object GisItemDBTool {
     var dist: Option[Length] = None
     var nItems: Option[Int] = None
     var op: Op.Value = Op.CreateDB
+    var date: DateTime = DateTime.now
+    var passArgs: Seq[String] = List.empty
 
     opt0("-i", "--show-struct")("show structure of DB") {
       op = Op.ShowStruct
@@ -88,6 +91,14 @@ object GisItemDBTool {
     }
     opt1("-f", "--in")("<pathName>", "input file") { a =>
       inFile = parseExistingFileOption(a)
+    }
+
+    opt1("--date")("<dateSpec>", "date to be stored in generated DB"){ a=>
+      date = DateTime.parse(a)
+    }
+
+    opt1("-a", "--arg")("<argString>", "extra arguments to be passed to concrete DB factory"){ a=>
+      passArgs = passArgs:+ a
     }
 
     requiredArg1("<clsName>", "concrete GisItemDBFactory class (e.g. gov.nasa.race.air.gis.LandingSite$)") { a=>
@@ -148,10 +159,10 @@ object GisItemDBTool {
       val outFile = getOutFile(factory,opts)
 
       if (opts.inFile match {
-        case Some(srcFile) => factory.createDB(outFile,srcFile)
-        case None => factory.createDB(outFile)
+        case Some(srcFile) => factory.createDB(outFile,srcFile,opts.passArgs,opts.date)
+        case None => factory.createDB(outFile,opts.passArgs,opts.date)
       }){
-        println(s"file created: $outFile")
+        println(s"file created: $outFile (${outFile.length/1024} kB)")
       } else {
         println(s"ERROR could not create ${factory.schema} DB")
       }

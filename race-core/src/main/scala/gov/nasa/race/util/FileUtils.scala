@@ -198,11 +198,11 @@ object FileUtils {
     } else None
   }
 
-  def sha1CheckSum(file: File) = hexCheckSum(file, MessageDigest.getInstance("SHA-1"))
-  def sha1CheckSum(pathName: String) = sha1CheckSum(new File(pathName))
+  def sha1CheckSum(file: File): Option[String] = hexCheckSum(file, MessageDigest.getInstance("SHA-1"))
+  def sha1CheckSum(pathName: String): Option[String] = sha1CheckSum(new File(pathName))
 
-  def md5CheckSum(file: File) = hexCheckSum(file, MessageDigest.getInstance("MD5")).map(padLeft(_, 32, ' '))
-  def md5CheckSum(pathName: String) = md5CheckSum(new File(pathName))
+  def md5CheckSum(file: File): Option[String] = hexCheckSum(file, MessageDigest.getInstance("MD5")).map(padLeft(_, 32, ' '))
+  def md5CheckSum(pathName: String): Option[String] = md5CheckSum(new File(pathName))
 
   def crc32CheckSum(file: File): Option[Long] = {
     if (file.isFile) {
@@ -218,7 +218,18 @@ object FileUtils {
       }
     } else None
   }
-  @inline def crc32CheckSum(pathName: String) = crc32CheckSum(new File(pathName))
+  @inline def crc32CheckSum(pathName: String): Option[Long] = crc32CheckSum(new File(pathName))
+
+  def crc32CheckSumMapped(file: File, offset: Int = 0): Option[Long] = {
+    if (file.isFile) {
+      val checksum = new CRC32
+      val fileChannel = new RandomAccessFile(file, "r").getChannel
+      val buf = fileChannel.map(FileChannel.MapMode.READ_ONLY, 0, fileChannel.size)
+      buf.position(offset)
+      checksum.update(buf)
+      Some(checksum.getValue)
+    } else None
+  }
 
   /**
    * wrapper object for java.nio.file FileSystem matchers

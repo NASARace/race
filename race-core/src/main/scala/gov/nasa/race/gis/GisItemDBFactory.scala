@@ -20,9 +20,11 @@ import java.io.{DataOutputStream, File, FileOutputStream, RandomAccessFile}
 import java.nio.ByteBuffer
 import java.nio.channels.FileChannel
 import java.util.Arrays
+import java.util.zip.CRC32
 
 import gov.nasa.race.geo.XyzPos
 import gov.nasa.race.util.{ArrayUtils, FileUtils}
+import org.joda.time.DateTime
 
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
@@ -88,16 +90,17 @@ abstract class GisItemDBFactory[T <: GisItem] {
   protected def writeItem (it: T, dos: DataOutputStream): Unit
 
 
-  def createDB (outFile: File): Boolean = {
+  def createDB (outFile: File, extraArgs: Seq[String], date: DateTime): Boolean = {
     println(s"error - no source to create $outFile")
     false
   }
 
-  def createDB (outFile: File, inFile: File): Boolean = {
+  def createDB (outFile: File, inFile: File, extraArgs: Seq[String], date: DateTime): Boolean = {
     if (FileUtils.existingNonEmptyFile(inFile).isDefined){
       if (FileUtils.ensureWritable(outFile).isDefined){
-        if (parse(inFile)) {
-          write(outFile)
+        println(s"parsing input file $inFile")
+        if (parse(inFile, extraArgs)) {
+          write(outFile, date)
           true
         } else {
           println(s"error - no items found in: $inFile")
@@ -116,7 +119,7 @@ abstract class GisItemDBFactory[T <: GisItem] {
   /**
     * override if this factory can parse input sources such as SQL, CSV etc
     */
-  protected def parse (inFile: File): Boolean = false
+  protected def parse (inFile: File, extraArgs: Seq[String]): Boolean = false
 
   def loadDB (file: File): Option[GisItemDB[T]]
 
@@ -155,27 +158,54 @@ abstract class GisItemDBFactory[T <: GisItem] {
     xyzPos += e.ecef
   }
 
-  def write (outFile: File): Unit = {
+  def write (outFile: File, date: DateTime): Unit = {
+    println(s"writing output file $outFile ..")
     val fos = new FileOutputStream(outFile, false)
     val dos = new DataOutputStream(fos)
 
-    writeHeader(dos)
+    writeHeader(dos,date)
     writeStrMap(dos)
     writeItems(dos)
     writeKeyMap(dos)
     writeKdTree(dos)
 
     dos.close
+
+    fillInHeaderValues(outFile)
+    println("done.")
   }
 
-  protected def writeHeader (dos: DataOutputStream): Unit = {
+  protected def writeHeader (dos: DataOutputStream, date: DateTime): Unit = {
+    println("writing header")
     dos.writeInt(GisItemDB.MAGIC)
-    dos.writeInt(0)   // file length (filled in later)
-    dos.writeInt(0)   // CRC32 checksum (filled in later)
-    dos.writeLong(0)  // version date of data
+    // place holders to be filled in later
+    dos.writeLong(0)  // file length
+    dos.writeLong(0)  // CRC32 checksum
+    dos.writeLong(date.getMillis)  // version date of data
+  }
+
+  // not very efficient but this is executed once
+  def fillInHeaderValues(outFile: File): Unit = {
+    if (outFile.isFile) {
+      println("filling in length and checksum")
+      val len = outFile.length
+
+      val fileChannel = new RandomAccessFile(outFile, "rw").getChannel
+      val buf = fileChannel.map(FileChannel.MapMode.READ_WRITE, 0, len)
+      val crc32 = new CRC32
+      buf.position(GisItemDB.HEADER_LENGTH)
+      crc32.update(buf)
+
+      buf.position(4)
+      buf.putLong(len)
+      buf.putLong(crc32.getValue)
+
+      buf.force
+    }
   }
 
   protected def writeStrMap (dos: DataOutputStream): Unit = {
+    println("writing string map")
     dos.writeInt(strMap.size)  // nStrings
     for (e <- strMap) {
       val s = e._1
@@ -187,6 +217,7 @@ abstract class GisItemDBFactory[T <: GisItem] {
   }
 
   protected def writeItems (dos: DataOutputStream): Unit = {
+    println("writing items")
     dos.writeInt(items.size)
     dos.writeInt(itemSize)
 
@@ -215,6 +246,7 @@ abstract class GisItemDBFactory[T <: GisItem] {
     import GisItemDB._
     import GisItemDBFactory._
 
+    println("writing id map")
     val mapConst = getMapConst(items.size)
     val mapLength = mapConst._2
     val rehash = mapConst._3
@@ -241,6 +273,8 @@ abstract class GisItemDBFactory[T <: GisItem] {
   }
 
   protected def writeKdTree (dos: DataOutputStream): Unit = {
+    println("writing kd-tree")
+
     val orderings = Array(
       new Ordering[Int]() { def compare(eIdx1: Int, eIdx2: Int) = xyzPos(eIdx1).x compare xyzPos(eIdx2).x },
       new Ordering[Int]() { def compare(eIdx1: Int, eIdx2: Int) = xyzPos(eIdx1).y compare xyzPos(eIdx2).y },

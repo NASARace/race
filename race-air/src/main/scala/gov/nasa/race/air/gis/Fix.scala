@@ -27,6 +27,7 @@ import gov.nasa.race.uom.Length.Feet
 import gov.nasa.race.util.{ConsoleIO, FileUtils, NetUtils}
 import io.circe
 import io.circe._
+import org.joda.time.DateTime
 
 /**
   * Fix as defined on https://www.faa.gov/air_traffic/flight_info/aeronav/aero_data/Loc_ID_Search/Fixes_Waypoints/
@@ -76,16 +77,17 @@ object FixDB extends GisItemDBFactory[Fix] {
   /**
     * create GisItemDB by running online queries on FAA website
     */
-  override def createDB (outFile: File): Boolean = {
+  override def createDB (outFile: File, extraArgs: Seq[String], date: DateTime): Boolean = {
     if (FileUtils.ensureWritable(outFile).isDefined){
       val url = "https://nfdc.faa.gov/nfdcApps/controllers/PublicDataController/getLidData"
+      val extraParams = extraArgs.mkString("&","&","")
       var r = 0
-      var n = 60000
+      var n = 0
 
       println(s"retrieving fixes from $url..")
       do {
         ConsoleIO.line(s"read $n fixes")
-        val params = s"dataType=LIDFIXESWAYPOINTS&length=1000&sortcolumn=fix_identifier&sortdir=asc&start=$n"
+        val params = s"dataType=LIDFIXESWAYPOINTS&length=1000&sortcolumn=fix_identifier&sortdir=asc&start=$n$extraParams"
         NetUtils.blockingHttpsPost(url,params) match {
           case Right(json) =>
             val fixes = parseJson(json)
@@ -98,7 +100,7 @@ object FixDB extends GisItemDBFactory[Fix] {
       ConsoleIO.line(s"read $n fixes")
 
       if (items.nonEmpty) {
-        write(outFile)
+        write(outFile, date)
         true
 
       } else {

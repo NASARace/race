@@ -161,7 +161,9 @@ object WaypointDB extends GisItemDBFactory[Waypoint] {
     mapFile(file).map(new WaypointDB(_))
   }
 
-  override def parse (inFile: File): Boolean = {
+  override def parse (inFile: File, extraArgs: Seq[String]): Boolean = {
+    if (extraArgs.nonEmpty) println(s"extra arguments ignored: [${extraArgs.mkString(",")}]")
+
     clear
     addString(schema)
     val keySet = new MHashSet[String]
