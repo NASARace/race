@@ -23,7 +23,7 @@ import gov.nasa.race.geo._
 import gov.nasa.race.gis.{GisItem, GisItemDB, GisItemDBFactory}
 import gov.nasa.race.uom.Angle.Degrees
 import gov.nasa.race.uom.Length.Feet
-import gov.nasa.race.util.FileUtils
+import gov.nasa.race.util.{FileUtils, LeDataOutputStream}
 
 import scala.collection.mutable.{HashSet => MHashSet}
 
@@ -199,7 +199,7 @@ object WaypointDB extends GisItemDBFactory[Waypoint] {
     items.nonEmpty
   }
 
-  override protected def writeItem(e: Waypoint, out: DataOutputStream): Unit = {
+  override protected def writeItem(e: Waypoint, out: LeDataOutputStream): Unit = {
     writeCommonItemFields(e, out)
 
     val lsIdx = if (e.landingSite.isDefined) strMap(e.landingSite.get) else -1

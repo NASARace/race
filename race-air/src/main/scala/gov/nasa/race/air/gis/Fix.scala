@@ -24,7 +24,7 @@ import gov.nasa.race.geo.GeoPosition
 import gov.nasa.race.gis.{GisItem, GisItemDB, GisItemDBFactory}
 import gov.nasa.race.uom.Angle.Degrees
 import gov.nasa.race.uom.Length.Feet
-import gov.nasa.race.util.{ConsoleIO, FileUtils, NetUtils}
+import gov.nasa.race.util.{ConsoleIO, FileUtils, LeDataOutputStream, NetUtils}
 import io.circe
 import io.circe._
 import org.joda.time.DateTime
@@ -61,7 +61,7 @@ object FixDB extends GisItemDBFactory[Fix] {
   override val schema: String = "gov.nasa.race.air.gis.Fix"
   override val itemSize: Int = 56 + 4
 
-  override protected def writeItem(it: Fix, dos: DataOutputStream): Unit = {
+  override protected def writeItem(it: Fix, dos: LeDataOutputStream): Unit = {
     writeCommonItemFields(it, dos)
 
     it.navaid match {

@@ -23,7 +23,7 @@ import gov.nasa.race.geo._
 import gov.nasa.race.gis.{GisItem, GisItemDB, GisItemDBFactory}
 import gov.nasa.race.uom.Angle._
 import gov.nasa.race.uom.Length._
-import gov.nasa.race.util.FileUtils
+import gov.nasa.race.util.{FileUtils, LeDataOutputStream}
 
 
 /**
@@ -142,7 +142,7 @@ object LandingSiteDB extends GisItemDBFactory[LandingSite] {
     items.nonEmpty
   }
 
-  override protected def writeItem(e: LandingSite, out: DataOutputStream): Unit = {
+  override protected def writeItem(e: LandingSite, out: LeDataOutputStream): Unit = {
     writeCommonItemFields(e, out)
 
     val descrIdx = strMap(e.descr)

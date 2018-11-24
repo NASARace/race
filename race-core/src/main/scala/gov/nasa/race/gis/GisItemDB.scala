@@ -17,20 +17,17 @@
 package gov.nasa.race.gis
 
 import java.io._
-import java.nio.ByteBuffer
 import java.nio.channels.FileChannel
-import java.util.Arrays
+import java.nio.{ByteBuffer, ByteOrder}
 import java.util.zip.CRC32
 
 import gov.nasa.race.common._
 import gov.nasa.race.geo._
 import gov.nasa.race.uom.Length
 import gov.nasa.race.uom.Length._
-import gov.nasa.race.util.{ArrayUtils, FileUtils}
 import org.joda.time.DateTime
 
 import scala.Double.{MaxValue => DMax, MinValue => DMin}
-import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 
 /**
@@ -84,6 +81,8 @@ import scala.collection.mutable.ArrayBuffer
   *   } [nItems]
   * }
   *
+  * data is stored in little endian format, to simplify native client processing
+  *
   * total size of structure in bytes:
   *   4 + (8 + nStrings*8 + nChars) + (8 + nItems*sizeOfItem) + (8 + mapItems*4) + (nItems * 12)
   *
@@ -124,6 +123,8 @@ abstract class GisItemDB[T <: GisItem] (data: ByteBuffer) {
 
   def this (f: File) = this(GisItemDB.mapFile(f))
 
+  data.order(ByteOrder.LITTLE_ENDIAN)
+  println(s"@@@ ${data.order}: ${data.getInt(0).toHexString}")
   if (data.getInt(0) != MAGIC) throw new RuntimeException("invalid file magic (should be 'RGIS')")
 
   val length = data.getLong(4)

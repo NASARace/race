@@ -16,14 +16,14 @@
  */
 package gov.nasa.race.gis
 
-import java.io.{DataOutputStream, File, FileOutputStream, RandomAccessFile}
-import java.nio.ByteBuffer
+import java.io.{File, FileOutputStream, RandomAccessFile}
+import java.nio.{ByteBuffer, ByteOrder}
 import java.nio.channels.FileChannel
 import java.util.Arrays
 import java.util.zip.CRC32
 
 import gov.nasa.race.geo.XyzPos
-import gov.nasa.race.util.{ArrayUtils, FileUtils}
+import gov.nasa.race.util.{ArrayUtils, FileUtils, LeDataOutputStream}
 import org.joda.time.DateTime
 
 import scala.collection.mutable
@@ -87,7 +87,7 @@ abstract class GisItemDBFactory[T <: GisItem] {
   val itemSize: Int // in bytes
 
   // to be provided by concrete factory
-  protected def writeItem (it: T, dos: DataOutputStream): Unit
+  protected def writeItem (it: T, dos: LeDataOutputStream): Unit
 
 
   def createDB (outFile: File, extraArgs: Seq[String], date: DateTime): Boolean = {
@@ -161,7 +161,7 @@ abstract class GisItemDBFactory[T <: GisItem] {
   def write (outFile: File, date: DateTime): Unit = {
     println(s"writing output file $outFile ..")
     val fos = new FileOutputStream(outFile, false)
-    val dos = new DataOutputStream(fos)
+    val dos = new LeDataOutputStream(fos)
 
     writeHeader(dos,date)
     writeStrMap(dos)
@@ -175,7 +175,7 @@ abstract class GisItemDBFactory[T <: GisItem] {
     println("done.")
   }
 
-  protected def writeHeader (dos: DataOutputStream, date: DateTime): Unit = {
+  protected def writeHeader (dos: LeDataOutputStream, date: DateTime): Unit = {
     println("writing header")
     dos.writeInt(GisItemDB.MAGIC)
     // place holders to be filled in later
@@ -192,6 +192,8 @@ abstract class GisItemDBFactory[T <: GisItem] {
 
       val fileChannel = new RandomAccessFile(outFile, "rw").getChannel
       val buf = fileChannel.map(FileChannel.MapMode.READ_WRITE, 0, len)
+      buf.order(ByteOrder.LITTLE_ENDIAN)
+
       val crc32 = new CRC32
       buf.position(GisItemDB.HEADER_LENGTH)
       crc32.update(buf)
@@ -204,7 +206,7 @@ abstract class GisItemDBFactory[T <: GisItem] {
     }
   }
 
-  protected def writeStrMap (dos: DataOutputStream): Unit = {
+  protected def writeStrMap (dos: LeDataOutputStream): Unit = {
     println("writing string map")
     dos.writeInt(strMap.size)  // nStrings
     for (e <- strMap) {
@@ -216,7 +218,7 @@ abstract class GisItemDBFactory[T <: GisItem] {
     }
   }
 
-  protected def writeItems (dos: DataOutputStream): Unit = {
+  protected def writeItems (dos: LeDataOutputStream): Unit = {
     println("writing items")
     dos.writeInt(items.size)
     dos.writeInt(itemSize)
@@ -225,7 +227,7 @@ abstract class GisItemDBFactory[T <: GisItem] {
     items.foreach { it => writeItem(it, dos) }
   }
 
-  protected def writeCommonItemFields (e: T, dos: DataOutputStream): Unit = {
+  protected def writeCommonItemFields (e: T, dos: LeDataOutputStream): Unit = {
     val nameIdx = strMap(e.name)
     val pos = e.pos
     val ecef = e.ecef
@@ -242,7 +244,7 @@ abstract class GisItemDBFactory[T <: GisItem] {
     dos.writeInt(nameIdx)
   }
 
-  protected def writeKeyMap (dos: DataOutputStream): Unit = {
+  protected def writeKeyMap (dos: LeDataOutputStream): Unit = {
     import GisItemDB._
     import GisItemDBFactory._
 
@@ -272,7 +274,7 @@ abstract class GisItemDBFactory[T <: GisItem] {
     slots.foreach(dos.writeInt)
   }
 
-  protected def writeKdTree (dos: DataOutputStream): Unit = {
+  protected def writeKdTree (dos: LeDataOutputStream): Unit = {
     println("writing kd-tree")
 
     val orderings = Array(
