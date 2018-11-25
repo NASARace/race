@@ -35,7 +35,14 @@ import org.joda.time.DateTime
 case class Fix (name: String,
                 pos: GeoPosition,
                 navaid: Option[String]
-               ) extends GisItem
+               ) extends GisItem {
+  override def toString: String = {
+    navaid match {
+      case Some(s) => s"""Fix("$name",${pos.toGeneric2DString},"$s""""
+      case None => s"""Fix("$name",${pos.toGeneric2DString})"""
+    }
+  }
+}
 
 
 /**
@@ -54,12 +61,9 @@ case class Fix (name: String,
   *      ]
   *   }
   */
-object FixDB extends GisItemDBFactory[Fix] {
+object FixDB extends GisItemDBFactory[Fix](60) {
 
   val DescrRE = """(?:(.+)\s+)?(\d+)-(\d+)-(\d+.\d+)(N|S)\s+(\d+)-(\d+)-(\d+.\d+)(E|W)""".r
-
-  override val schema: String = "gov.nasa.race.air.gis.Fix"
-  override val itemSize: Int = 56 + 4
 
   override protected def writeItemPayloadFields(it: Fix, buf: ByteBuffer): Unit = {
     it.navaid match {
@@ -77,6 +81,8 @@ object FixDB extends GisItemDBFactory[Fix] {
     */
   override def createDB (outFile: File, extraArgs: Seq[String], date: DateTime): Boolean = {
     if (FileUtils.ensureWritable(outFile).isDefined){
+      reset
+
       val url = "https://nfdc.faa.gov/nfdcApps/controllers/PublicDataController/getLidData"
       val extraParams = extraArgs.mkString("&","&","")
       var r = 0

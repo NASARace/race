@@ -30,6 +30,8 @@ import org.joda.time.DateTime
 
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
+import scala.reflect.classTag
+import scala.reflect._
 
 
 object GisItemDBFactory {
@@ -76,7 +78,7 @@ object GisItemDBFactory {
   * Note that we use a regular class here (instead of a companion object) to simplify
   * instantiation via reflection
   */
-abstract class GisItemDBFactory[T <: GisItem] {
+abstract class GisItemDBFactory[T <: GisItem: ClassTag] (val itemSize: Int) {
   import GisItemDBFactory._
 
   val strMap = new mutable.LinkedHashMap[String,Int]
@@ -85,13 +87,13 @@ abstract class GisItemDBFactory[T <: GisItem] {
 
   var itemOffset = 0  // byte offset if item0
 
-  //--- to be provided by concrete class
-  val schema: String
-  val itemSize: Int // in bytes
-
   // to be provided by concrete factory - this has to write all fields other than hash, position(s) and name
   protected def writeItemPayloadFields(it: T, buf: ByteBuffer): Unit
 
+  /**
+    * override if schema does not correspond with concrete item type
+    */
+  def schema: String = classTag[T].runtimeClass.getName
 
   def createDB (outFile: File, extraArgs: Seq[String], date: DateTime): Boolean = {
     println(s"error - no source to create $outFile")
@@ -101,6 +103,7 @@ abstract class GisItemDBFactory[T <: GisItem] {
   def createDB (outFile: File, inFile: File, extraArgs: Seq[String], date: DateTime): Boolean = {
     if (FileUtils.existingNonEmptyFile(inFile).isDefined){
       if (FileUtils.ensureWritable(outFile).isDefined){
+        reset
         println(s"parsing input file $inFile")
         if (parse(inFile, extraArgs)) {
           write(outFile, date)
@@ -145,9 +148,11 @@ abstract class GisItemDBFactory[T <: GisItem] {
     }
   }
 
-  protected def clear: Unit = {
+  protected def reset: Unit = {
     strMap.clear()
     items.clear()
+
+    addString(schema)
   }
 
   protected def addString (s: String): Boolean = {
@@ -214,7 +219,7 @@ abstract class GisItemDBFactory[T <: GisItem] {
 
   // not very efficient but this is executed once
   def fillInHeaderValues(buf: ByteBuffer): Unit = {
-    println("filling checksum")
+    println("computing checksum")
 
     val crc32 = new CRC32
     buf.position(GisItemDB.HEADER_LENGTH)

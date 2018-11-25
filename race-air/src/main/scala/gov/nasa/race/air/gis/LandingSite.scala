@@ -49,16 +49,29 @@ object LandingSite {
   val LS_AIRPORT = 1
   val LS_HELIPORT = 2
 
+  def lsType (t: Int) = t match {
+    case LS_AIRPORT => "airport"
+    case LS_HELIPORT => "heliport"
+    case _ => "?"
+  }
+
+  def getLsType(s: String): Int = {
+    if (s.equalsIgnoreCase("Airport")) LS_AIRPORT
+    else if (s.equalsIgnoreCase("Heliport")) LS_HELIPORT
+    else LS_UNDEFINED
+  }
+
   //--- landing site access
   val ACC_UNDEFINED = -1
   val ACC_CIVIL = 1
   val ACC_MIL = 2
   val ACC_PRIVATE = 3
 
-  def getLsType(s: String): Int = {
-    if (s.equalsIgnoreCase("Airport")) LS_AIRPORT
-    else if (s.equalsIgnoreCase("Heliport")) LS_HELIPORT
-    else LS_UNDEFINED
+  def lsAccess (t: Int) = t match {
+    case ACC_CIVIL => "civil"
+    case ACC_MIL => "mil"
+    case ACC_PRIVATE => "priv"
+    case _ => "?"
   }
 
   def getLsAccess(s: String): Int = {
@@ -75,7 +88,11 @@ case class LandingSite (name: String, // cid
                         lsType: Int,
                         lsAccess: Int,
                         magVar: Float
-                       ) extends GisItem
+                       ) extends GisItem {
+  override def toString: String = {
+    s"""LandingSite("$name",${pos.toGenericString},"$descr",${LandingSite.lsType(lsType)},${LandingSite.lsAccess(lsAccess)},$magVar})"""
+  }
+}
 
 class LandingSiteDB (data: ByteBuffer) extends GisItemDB[LandingSite](data) {
 
@@ -99,13 +116,10 @@ class LandingSiteDB (data: ByteBuffer) extends GisItemDB[LandingSite](data) {
   }
 }
 
-object LandingSiteDB extends GisItemDBFactory[LandingSite] {
+object LandingSiteDB extends GisItemDBFactory[LandingSite](72) {
   import LandingSite._
 
   val LandingSiteRE = """\s*INSERT\s+INTO\s+`LandingSite`\s+VALUES\s*\(\s*(\d+)\s*,\s*'(\w+)'\s*,\s*'(\w+)'\s*,\s*'([^']+)'\s*,\s*'(\w+)'\s*,\s*(\d+)\s*,\s*(-?\d+.\d+)\s*,\s*(-?\d+.\d+)\s*,\s*(-?\d+.\d+)\).*""".r
-
-  override val schema = "gov.nasa.race.air.gis.LandingSite"
-  override val itemSize: Int = 72
 
   override def loadDB (file: File): Option[LandingSiteDB] = {
     mapFile(file).map(new LandingSiteDB(_))
@@ -113,9 +127,6 @@ object LandingSiteDB extends GisItemDBFactory[LandingSite] {
 
   override def parse (inFile: File, extraArgs: Seq[String]): Boolean = {
     if (extraArgs.nonEmpty) println(s"extra arguments ignored: [${extraArgs.mkString(",")}]")
-
-    clear
-    addString(schema)
 
     if (!FileUtils.getExtension(inFile).equalsIgnoreCase("sql")) {
       println(s"not a SQL source: $inFile")

@@ -148,14 +148,11 @@ class WaypointDB (data: ByteBuffer) extends GisItemDB[Waypoint](data) {
   }
 }
 
-object WaypointDB extends GisItemDBFactory[Waypoint] {
+object WaypointDB extends GisItemDBFactory[Waypoint](76) {
   import Waypoint._
 
   val WaypointRE =
     """\s*INSERT\s+INTO\s+`Waypoint`\s+VALUES\s*\(\s*(\d+)\s*,\s*'(\w+)'\s*,\s*'(\w+)'\s*,\s*(-?\d+.\d+)\s*,\s*(-?\d+.\d+)\s*,\s*(-?\d+.\d+)\s*,\s*'?(\w+)'?\s*,\s*'?(\w+)'?\s*,\s*(NULL|\d+.\d+)\s*,\s*(NULL|\d+)\).*""".r
-
-  override val schema = "gov.nasa.race.air.gis.Waypoint"
-  override val itemSize: Int = 56 + 20
 
   override def loadDB (file: File): Option[WaypointDB] = {
     mapFile(file).map(new WaypointDB(_))
@@ -164,8 +161,6 @@ object WaypointDB extends GisItemDBFactory[Waypoint] {
   override def parse (inFile: File, extraArgs: Seq[String]): Boolean = {
     if (extraArgs.nonEmpty) println(s"extra arguments ignored: [${extraArgs.mkString(",")}]")
 
-    clear
-    addString(schema)
     val keySet = new MHashSet[String]
 
     if (!FileUtils.getExtension(inFile).equalsIgnoreCase("sql")) {

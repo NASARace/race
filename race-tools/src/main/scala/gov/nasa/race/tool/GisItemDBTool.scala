@@ -97,15 +97,20 @@ object GisItemDBTool {
       date = DateTime.parse(a)
     }
 
-    opt1("-a", "--arg")("<argString>", "extra arguments to be passed to concrete DB factory"){ a=>
+    opt1("-x", "--xarg")("<argString>", "extra arguments to be passed to concrete DB factory"){ a=>
       passArgs = passArgs:+ a
     }
 
     requiredArg1("<clsName>", "concrete GisItemDBFactory class (e.g. gov.nasa.race.air.gis.LandingSite$)") { a=>
       try {
-        factoryClass = Some(Class.forName(a).asInstanceOf[Class[_ <: GisItemDBFactory[_ <: GisItem]]])
+        val cls = Class.forName(a)
+        if (!classOf[GisItemDBFactory[_]].isAssignableFrom(cls)) {
+          Console.err.println(s"error - not a GisItemDBFactory class: $a")
+        } else {
+          factoryClass = Some(cls.asInstanceOf[Class[_ <: GisItemDBFactory[_ <: GisItem]]])
+        }
       } catch {
-        case x:Throwable => Console.err.println(s"error instantiating factory class: $x")
+        case x:Throwable => Console.err.println(s"error retrieving factory class: $x")
       }
     }
   }
@@ -174,9 +179,13 @@ object GisItemDBTool {
       case Some(inFile) =>
         getFactoryObject(opts) match {
           case Some(factory) =>
-            factory.loadDB(inFile) match {
-              case Some(db) => f(db)
-              case None => println("ERROR - could not load DB")
+            try {
+              factory.loadDB(inFile) match {
+                case Some(db) => f(db)
+                case None => println("ERROR - could not load DB")
+              }
+            } catch {
+              case t: Throwable => println(s"ERROR - exception during DB load: ${t.getMessage}")
             }
           case None => println("ERROR - could not obtain factory instance")
         }

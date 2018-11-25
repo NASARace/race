@@ -30,6 +30,7 @@ import org.joda.time.DateTime
 
 import scala.Double.{MaxValue => DMax, MinValue => DMin}
 import scala.collection.mutable.ArrayBuffer
+import scala.reflect._
 
 /**
   * a static GisItem database that supports the following types of queries:
@@ -121,7 +122,7 @@ object GisItemDB {
   final val ME2 = ME * ME
 }
 
-abstract class GisItemDB[T <: GisItem] (data: ByteBuffer) {
+abstract class GisItemDB[T <: GisItem: ClassTag] (data: ByteBuffer) {
   import GisItemDB._
 
   def this (f: File) = this(GisItemDB.mapFile(f))
@@ -138,35 +139,45 @@ abstract class GisItemDB[T <: GisItem] (data: ByteBuffer) {
   val date   = new DateTime(data.getLong(20))
 
   val nStrings: Int = data.getInt(HEADER_LENGTH)
-  val strings: Array[String] = new Array[String](nStrings)
+  if (nStrings <= 1) throw new RuntimeException("no schema found in DB")
+  val strings: Array[String] = loadStrings(nStrings)
+  if (strings(0) != schema) throw new RuntimeException(s"wrong schema '${strings(0)}' found in DB (should be $schema)")
 
-  val itemOffset: Int = initializeStrings + 8
+  skipPadding
+
+  val itemOffset: Int = position + 8  // beginning of item data
   val nItems: Int = data.getInt(itemOffset - 8)
   val itemSize: Int = data.getInt(itemOffset - 4)
 
-  val mapOffset: Int = itemOffset + (nItems * itemSize) + 8
+  val mapOffset: Int = itemOffset + (nItems * itemSize) + 8  // beginning of key map
   val mapLength: Int = data.getInt(mapOffset - 8)
   val mapRehash: Int = data.getInt(mapOffset - 4)
 
-  val kdOffset: Int = mapOffset + (mapLength * 4)
+  val kdOffset: Int = mapOffset + (mapLength * 4)  // beginning of kdtree nodes
+
+  //--- end initialization
+
+  @inline final def position: Int = data.position()
+  @inline final def setPosition(newPos: Int) = data.position(newPos)
+
 
   def checkCheckSum: Boolean = {
     val crc32 = new CRC32
-    val lastPos = data.position()
-    data.position(HEADER_LENGTH)  // skip the header
+    val lastPos = position
+    setPosition(HEADER_LENGTH)  // skip the header
     crc32.update(data)
     val x = crc32.getValue()
-    data.position(lastPos)
+    setPosition(lastPos)
 
     x == checkSum
   }
 
-  def initializeStrings: Int = {
-    val a = strings
+  def loadStrings(n: Int): Array[String] = {
+    val a = new Array[String](n)
     var buf = new Array[Byte](256)
 
     var i = 0
-    data.position(HEADER_LENGTH + 4)
+    setPosition(HEADER_LENGTH + 4)
 
     while (i < nStrings) {
       val sLen = data.getShort
@@ -177,11 +188,15 @@ abstract class GisItemDB[T <: GisItem] (data: ByteBuffer) {
       i += 1
     }
 
-    var pos: Int = data.position()
-    val pad = pos % 4
-    if (pad > 0) {
-      pos += 4 - pad
-      data.position(pos)
+    a
+  }
+
+  def skipPadding: Int = {
+    var pos = position
+    val x = pos % 4
+    if (x > 0) {
+      pos += 4 - x
+      setPosition(pos)
     }
     pos
   }
@@ -252,6 +267,11 @@ abstract class GisItemDB[T <: GisItem] (data: ByteBuffer) {
     * iIdx is guaranteed to be within 0..nItems
     */
   protected def readItem (iOff: Int): T
+
+  /**
+    * what schema do we implement - override if this does not correspond with class name of item type
+    */
+  def schema: String = classTag[T].runtimeClass.getName
 
   @inline protected def itemId (iOff: Int): String = strings(data.getInt(iOff + 52))
 
