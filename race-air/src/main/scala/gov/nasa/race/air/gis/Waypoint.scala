@@ -199,15 +199,13 @@ object WaypointDB extends GisItemDBFactory[Waypoint] {
     items.nonEmpty
   }
 
-  override protected def writeItem(e: Waypoint, out: LeDataOutputStream): Unit = {
-    writeCommonItemFields(e, out)
-
+  override protected def writeItemPayloadFields(e: Waypoint, buf: ByteBuffer): Unit = {
     val lsIdx = if (e.landingSite.isDefined) strMap(e.landingSite.get) else -1
 
-    out.writeInt(e.wpType)
-    out.writeFloat(e.magVar)
-    out.writeInt(lsIdx)
-    out.writeInt(e.navaidType)
-    out.writeFloat(e.freq)
+    buf.putInt(e.wpType)
+    buf.putFloat(e.magVar)
+    buf.putInt(lsIdx)
+    buf.putInt(e.navaidType)
+    buf.putFloat(e.freq)
   }
 }

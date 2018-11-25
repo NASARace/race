@@ -18,6 +18,7 @@ package gov.nasa.race.gis
 
 import java.io._
 import java.nio.channels.FileChannel
+import java.nio.charset.StandardCharsets
 import java.nio.{ByteBuffer, ByteOrder}
 import java.util.zip.CRC32
 
@@ -53,7 +54,7 @@ import scala.collection.mutable.ArrayBuffer
   *   //--- string table  (first entry is schema name, e.g. "gov.nasa.race.air.LandingSite")
   *   i32 nStrings          // number of entries in string table
   *   struct StrEntry {
-  *     i32 strLen             // in bytes, without terminating 0
+  *     i16 strLen             // in bytes, without terminating 0
   *     char strBytes[strLen]  // string bytes (mod-UTF8), with terminating 0
   *   } [nStrings]
   *
@@ -84,7 +85,7 @@ import scala.collection.mutable.ArrayBuffer
   * data is stored in little endian format, to simplify native client processing
   *
   * total size of structure in bytes:
-  *   4 + (8 + nStrings*8 + nChars) + (8 + nItems*sizeOfItem) + (8 + mapItems*4) + (nItems * 12)
+  *   28 + (4 + nStrings*4 + nChars + nStrings) + (8 + nItems*sizeOfItem) + (8 + mapItems*4) + (nItems * 12)
   *
   *
   * TODO - should explicitly specify Charset to use
@@ -124,7 +125,6 @@ abstract class GisItemDB[T <: GisItem] (data: ByteBuffer) {
   def this (f: File) = this(GisItemDB.mapFile(f))
 
   data.order(ByteOrder.LITTLE_ENDIAN)
-  println(s"@@@ ${data.order}: ${data.getInt(0).toHexString}")
   if (data.getInt(0) != MAGIC) throw new RuntimeException("invalid file magic (should be 'RGIS')")
 
   val length = data.getLong(4)
@@ -164,19 +164,18 @@ abstract class GisItemDB[T <: GisItem] (data: ByteBuffer) {
     var buf = new Array[Byte](256)
 
     var i = 0
-    var pos = HEADER_LENGTH + 4
+    data.position(HEADER_LENGTH + 4)
 
     while (i < nStrings) {
-      val sLen = data.getInt(pos)
+      val sLen = data.getShort
       if (sLen > buf.length) buf = new Array[Byte](sLen)
-      data.position(pos+4)
       data.get(buf, 0, sLen)
-      a(i) = new String(buf, 0, sLen)
-      pos += sLen + 5 // skip terminating 0
+      a(i) = new String(buf, 0, sLen, StandardCharsets.UTF_8)
+      data.get() // skip terminating 0
       i += 1
     }
 
-    pos
+    data.position
   }
 
   //--- testing & debugging

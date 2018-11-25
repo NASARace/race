@@ -16,10 +16,7 @@
  */
 package gov.nasa.race.util;
 
-import java.io.DataOutputStream;
-import java.io.FilterOutputStream;
-import java.io.IOException;
-import java.io.OutputStream;
+import java.io.*;
 
 /**
  * little endian DataOutputStream replacement
@@ -27,7 +24,7 @@ import java.io.OutputStream;
  * NOTE this implementation is not threadsafe, clients have to ensure proper synchronization
  * note also that we can't just derive from DataOutputStream since all of its writeX() methods are final
  */
-public class LeDataOutputStream extends FilterOutputStream {
+public class LeDataOutputStream extends FilterOutputStream implements DataOutput {
 
     byte[] buf = new byte[8];
 
@@ -53,6 +50,10 @@ public class LeDataOutputStream extends FilterOutputStream {
         for (int i = 0; i < s.length(); i++) {
             writeChar(s.charAt(i));
         }
+    }
+
+    public void writeBytes (String s) throws IOException {
+        ((DataOutputStream) out).writeBytes(s);
     }
 
     public void writeShort (int v)  throws IOException {

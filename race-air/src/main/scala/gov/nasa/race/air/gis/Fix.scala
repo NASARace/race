@@ -61,12 +61,10 @@ object FixDB extends GisItemDBFactory[Fix] {
   override val schema: String = "gov.nasa.race.air.gis.Fix"
   override val itemSize: Int = 56 + 4
 
-  override protected def writeItem(it: Fix, dos: LeDataOutputStream): Unit = {
-    writeCommonItemFields(it, dos)
-
+  override protected def writeItemPayloadFields(it: Fix, buf: ByteBuffer): Unit = {
     it.navaid match {
-      case Some(s) => dos.writeInt(strMap(s))
-      case None => dos.writeInt(-1)
+      case Some(s) => buf.putInt(strMap(s))
+      case None => buf.putInt(-1)
     }
   }
 

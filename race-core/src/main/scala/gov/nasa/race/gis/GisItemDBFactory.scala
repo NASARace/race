@@ -16,9 +16,10 @@
  */
 package gov.nasa.race.gis
 
-import java.io.{File, FileOutputStream, RandomAccessFile}
+import java.io.{DataOutput, File, FileOutputStream, RandomAccessFile}
 import java.nio.{ByteBuffer, ByteOrder}
 import java.nio.channels.FileChannel
+import java.nio.charset.StandardCharsets
 import java.util.Arrays
 import java.util.zip.CRC32
 
@@ -75,6 +76,7 @@ object GisItemDBFactory {
   * instantiation via reflection
   */
 abstract class GisItemDBFactory[T <: GisItem] {
+  import GisItemDBFactory._
 
   val strMap = new mutable.LinkedHashMap[String,Int]
   val items  = new ArrayBuffer[T]
@@ -86,8 +88,8 @@ abstract class GisItemDBFactory[T <: GisItem] {
   val schema: String
   val itemSize: Int // in bytes
 
-  // to be provided by concrete factory
-  protected def writeItem (it: T, dos: LeDataOutputStream): Unit
+  // to be provided by concrete factory - this has to write all fields other than hash, position(s) and name
+  protected def writeItemPayloadFields(it: T, buf: ByteBuffer): Unit
 
 
   def createDB (outFile: File, extraArgs: Seq[String], date: DateTime): Boolean = {
@@ -158,93 +160,108 @@ abstract class GisItemDBFactory[T <: GisItem] {
     xyzPos += e.ecef
   }
 
+
+  /**
+    * get byte length of UTF-8 encoded string data segment
+    * byte length is stored as Short, \0 is appended as C-string termination in case of ASCII strings
+    */
+  protected def stringDataLength: Int = {
+    strMap.foldLeft(0)( (acc,e) => acc + e._1.getBytes(StandardCharsets.UTF_8).length + 3)
+  }
+
+  protected def calculateLength: Int = {
+    (GisItemDB.HEADER_LENGTH +
+      4 + stringDataLength +               // string segment
+      8 + items.size * itemSize +          // item segment
+      8 + getMapConst(items.size)._2 * 4 + // keymap segment
+      items.size * 12)                     // kd-tree segment
+  }
+
   def write (outFile: File, date: DateTime): Unit = {
-    println(s"writing output file $outFile ..")
-    val fos = new FileOutputStream(outFile, false)
-    val dos = new LeDataOutputStream(fos)
+    val len = calculateLength
+    println(s"writing output file $outFile ($len bytes)..")
 
-    writeHeader(dos,date)
-    writeStrMap(dos)
-    writeItems(dos)
-    writeKeyMap(dos)
-    writeKdTree(dos)
+    val fileChannel = new RandomAccessFile(outFile, "rw").getChannel
+    fileChannel.truncate(len)
+    val buf = fileChannel.map(FileChannel.MapMode.READ_WRITE, 0, len)
+    buf.order(ByteOrder.LITTLE_ENDIAN)
 
-    dos.close
+    writeHeader(buf,len,date)
+    writeStrMap(buf)
+    writeItems(buf)
+    writeKeyMap(buf)
+    writeKdTree(buf)
 
-    fillInHeaderValues(outFile)
+    fillInHeaderValues(buf)
+    buf.force()
     println("done.")
   }
 
-  protected def writeHeader (dos: LeDataOutputStream, date: DateTime): Unit = {
+  protected def writeHeader (buf: ByteBuffer, len: Int, date: DateTime): Unit = {
     println("writing header")
-    dos.writeInt(GisItemDB.MAGIC)
+    buf.putInt(GisItemDB.MAGIC)
     // place holders to be filled in later
-    dos.writeLong(0)  // file length
-    dos.writeLong(0)  // CRC32 checksum
-    dos.writeLong(date.getMillis)  // version date of data
+    buf.putLong(len)  // data/file length in bytes
+    buf.putLong(0)  // CRC32 checksum
+    buf.putLong(date.getMillis)  // version date of data
   }
 
   // not very efficient but this is executed once
-  def fillInHeaderValues(outFile: File): Unit = {
-    if (outFile.isFile) {
-      println("filling in length and checksum")
-      val len = outFile.length
+  def fillInHeaderValues(buf: ByteBuffer): Unit = {
+    println("filling checksum")
 
-      val fileChannel = new RandomAccessFile(outFile, "rw").getChannel
-      val buf = fileChannel.map(FileChannel.MapMode.READ_WRITE, 0, len)
-      buf.order(ByteOrder.LITTLE_ENDIAN)
+    val crc32 = new CRC32
+    buf.position(GisItemDB.HEADER_LENGTH)
+    crc32.update(buf)
 
-      val crc32 = new CRC32
-      buf.position(GisItemDB.HEADER_LENGTH)
-      crc32.update(buf)
-
-      buf.position(4)
-      buf.putLong(len)
-      buf.putLong(crc32.getValue)
-
-      buf.force
-    }
+    buf.putLong(12, crc32.getValue)
   }
 
-  protected def writeStrMap (dos: LeDataOutputStream): Unit = {
+
+  protected def writeStrMap (buf: ByteBuffer): Unit = {
     println("writing string map")
-    dos.writeInt(strMap.size)  // nStrings
+    buf.putInt(strMap.size)  // nStrings
     for (e <- strMap) {
       val s = e._1
-      val b = s.getBytes       // without terminating 0
-      dos.writeInt(b.length)
-      dos.write(b)
-      dos.write(0)
+      val b = s.getBytes(StandardCharsets.UTF_8)       // without terminating 0
+      buf.putShort(b.length.toShort)
+      buf.put(b)
+      buf.put(0.toByte)
     }
   }
 
-  protected def writeItems (dos: LeDataOutputStream): Unit = {
+  protected def writeItems (buf: ByteBuffer): Unit = {
     println("writing items")
-    dos.writeInt(items.size)
-    dos.writeInt(itemSize)
+    buf.putInt(items.size)
+    buf.putInt(itemSize)
 
-    itemOffset = dos.size
-    items.foreach { it => writeItem(it, dos) }
+    itemOffset = buf.position
+    items.foreach { it => writeItem(it, buf) }
   }
 
-  protected def writeCommonItemFields (e: T, dos: LeDataOutputStream): Unit = {
+  protected def writeItem(e: T, buf: ByteBuffer): Unit = {
+    writeItemHeaderFields(e,buf)
+    writeItemPayloadFields(e,buf)
+  }
+
+  protected def writeItemHeaderFields(e: T, buf: ByteBuffer): Unit = {
     val nameIdx = strMap(e.name)
     val pos = e.pos
     val ecef = e.ecef
 
-    dos.writeInt(e.hash)
-    dos.writeDouble(ecef.xMeters)
-    dos.writeDouble(ecef.yMeters)
-    dos.writeDouble(ecef.zMeters)
+    buf.putInt(e.hash)
+    buf.putDouble(ecef.xMeters)
+    buf.putDouble(ecef.yMeters)
+    buf.putDouble(ecef.zMeters)
 
-    dos.writeDouble(pos.latDeg)
-    dos.writeDouble(pos.lonDeg)
-    dos.writeDouble(pos.altMeters)
+    buf.putDouble(pos.latDeg)
+    buf.putDouble(pos.lonDeg)
+    buf.putDouble(pos.altMeters)
 
-    dos.writeInt(nameIdx)
+    buf.putInt(nameIdx)
   }
 
-  protected def writeKeyMap (dos: LeDataOutputStream): Unit = {
+  protected def writeKeyMap (buf: ByteBuffer): Unit = {
     import GisItemDB._
     import GisItemDBFactory._
 
@@ -269,12 +286,12 @@ abstract class GisItemDBFactory[T <: GisItem] {
       addEntry(i,e.hash)
     }
 
-    dos.writeInt(mapLength)
-    dos.writeInt(rehash)
-    slots.foreach(dos.writeInt)
+    buf.putInt(mapLength)
+    buf.putInt(rehash)
+    slots.foreach(buf.putInt)
   }
 
-  protected def writeKdTree (dos: LeDataOutputStream): Unit = {
+  protected def writeKdTree (buf: ByteBuffer): Unit = {
     println("writing kd-tree")
 
     val orderings = Array(
@@ -284,7 +301,7 @@ abstract class GisItemDBFactory[T <: GisItem] {
     )
 
     val nItems = items.size
-    val node0Offset = dos.size
+    val node0Offset: Int = buf.position
 
     //--- input array with entryList indices
     val eIdxs = new Array[Int](nItems)
@@ -333,9 +350,9 @@ abstract class GisItemDBFactory[T <: GisItem] {
 
     for (i <- 0 until nItems) {
       val itemOff = itemOffset + (itemIdx(i) * itemSize)
-      dos.writeInt( itemOff) // offset of node item
-      dos.writeInt( nodeOffset(leftNode(i)))
-      dos.writeInt( nodeOffset(rightNode(i)))
+      buf.putInt( itemOff) // offset of node item
+      buf.putInt( nodeOffset(leftNode(i)))
+      buf.putInt( nodeOffset(rightNode(i)))
     }
   }
 }

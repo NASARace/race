@@ -142,13 +142,11 @@ object LandingSiteDB extends GisItemDBFactory[LandingSite] {
     items.nonEmpty
   }
 
-  override protected def writeItem(e: LandingSite, out: LeDataOutputStream): Unit = {
-    writeCommonItemFields(e, out)
-
+  override protected def writeItemPayloadFields(e: LandingSite, buf: ByteBuffer): Unit = {
     val descrIdx = strMap(e.descr)
-    out.writeInt(descrIdx)
-    out.writeInt(e.lsType)
-    out.writeInt(e.lsAccess)
-    out.writeFloat(e.magVar)
+    buf.putInt(descrIdx)
+    buf.putInt(e.lsType)
+    buf.putInt(e.lsAccess)
+    buf.putFloat(e.magVar)
   }
 }
