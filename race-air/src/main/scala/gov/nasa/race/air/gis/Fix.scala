@@ -38,8 +38,8 @@ case class Fix (name: String,
                ) extends GisItem {
   override def toString: String = {
     navaid match {
-      case Some(s) => s"""Fix("$name",${pos.toGeneric2DString},"$s""""
-      case None => s"""Fix("$name",${pos.toGeneric2DString})"""
+      case Some(s) => s"""Fix("$name",${pos.toGenericString2D},"$s""""
+      case None => s"""Fix("$name",${pos.toGenericString2D})"""
     }
   }
 }

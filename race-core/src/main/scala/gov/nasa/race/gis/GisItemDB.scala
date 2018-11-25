@@ -485,7 +485,7 @@ abstract class GisItemDB[T <: GisItem: ClassTag] (data: ByteBuffer) {
     def foreachItemId (f: (String,Length)=>Unit): Unit = {
       var i = 0
       while (i < nNeighbors) {
-        f( itemId(itemOffs(i)), Meters(dists(i)))
+        f( itemId(itemOffs(i)), Meters(Math.sqrt(dists(i))))
         i += 1
       }
     }
@@ -493,7 +493,7 @@ abstract class GisItemDB[T <: GisItem: ClassTag] (data: ByteBuffer) {
     def foreach (f: (T,Length)=>Unit): Unit = {
       var i = 0
       while (i < nNeighbors) {
-        f( readItem(itemOffs(i)), Meters(dists(i)))
+        f( readItem(itemOffs(i)), Meters(Math.sqrt(dists(i))))
         i += 1
       }
     }
@@ -579,7 +579,7 @@ abstract class GisItemDB[T <: GisItem: ClassTag] (data: ByteBuffer) {
       val nNeighbors = size
       var i = 0
       while (i < nNeighbors) {
-        f( itemId(itemOffs(i)), Meters(dists(i)))
+        f( itemId(itemOffs(i)), Meters(Math.sqrt(dists(i))))
         i += 1
       }
     }
@@ -588,7 +588,7 @@ abstract class GisItemDB[T <: GisItem: ClassTag] (data: ByteBuffer) {
       val nNeighbors = size
       var i = 0
       while (i < nNeighbors) {
-        f( readItem(itemOffs(i)), Meters(dists(i)))
+        f( readItem(itemOffs(i)), Meters(Math.sqrt(dists(i))))
         i += 1
       }
     }
@@ -605,6 +605,14 @@ abstract class GisItemDB[T <: GisItem: ClassTag] (data: ByteBuffer) {
       val query = new RangeNeighborsQuery(pos,radius)
       searchKdTree(query, kdOffset, 0, DMin,DMin,DMin, DMax,DMax,DMax)
       query.foreach(f)
+    }
+  }
+
+  def foreachRangeItemId (pos: GeoPosition, radius: Length)(f: (String,Length)=> Unit): Unit = {
+    if (!isEmpty) {
+      val query = new RangeNeighborsQuery(pos,radius)
+      searchKdTree(query, kdOffset, 0, DMin,DMin,DMin, DMax,DMax,DMax)
+      query.foreachItemId(f)
     }
   }
 

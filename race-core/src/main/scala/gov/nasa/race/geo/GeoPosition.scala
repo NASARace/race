@@ -59,7 +59,7 @@ trait GeoPosition {
   @inline def altFeet: Int = altitude.toFeet.toInt
 
   def toGenericString: String = f"(φ=${φ.toDegrees}%+3.5f°,λ=${λ.toDegrees}%+3.5f°,alt=${altitude.toMeters}%.0fm)"
-  def toGeneric2DString: String = f"(φ=${φ.toDegrees}%+3.5f°,λ=${λ.toDegrees}%+3.5f°)"
+  def toGenericString2D: String = f"(φ=${φ.toDegrees}%+3.5f°,λ=${λ.toDegrees}%+3.5f°)"
 }
 
 /**
