@@ -58,6 +58,8 @@ import scala.collection.mutable.ArrayBuffer
   *     char strBytes[strLen]  // string bytes (mod-UTF8), with terminating 0
   *   } [nStrings]
   *
+  *   u8 pad[]              // to 4byte-align entry list
+  *
   *   //--- entry list
   *   i32 nItems            // number of GisItems in this DB
   *   i32 itemSize          // in bytes
@@ -175,7 +177,13 @@ abstract class GisItemDB[T <: GisItem] (data: ByteBuffer) {
       i += 1
     }
 
-    data.position
+    var pos: Int = data.position()
+    val pad = pos % 4
+    if (pad > 0) {
+      pos += 4 - pad
+      data.position(pos)
+    }
+    pos
   }
 
   //--- testing & debugging

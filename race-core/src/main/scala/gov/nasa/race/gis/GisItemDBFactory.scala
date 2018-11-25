@@ -23,6 +23,7 @@ import java.nio.charset.StandardCharsets
 import java.util.Arrays
 import java.util.zip.CRC32
 
+import gov.nasa.race._
 import gov.nasa.race.geo.XyzPos
 import gov.nasa.race.util.{ArrayUtils, FileUtils, LeDataOutputStream}
 import org.joda.time.DateTime
@@ -170,8 +171,13 @@ abstract class GisItemDBFactory[T <: GisItem] {
   }
 
   protected def calculateLength: Int = {
+    val slen = stringDataLength
+    val pad = slen % 4
+    val padding = if (pad > 0) 4 - pad else 0
+
     (GisItemDB.HEADER_LENGTH +
-      4 + stringDataLength +               // string segment
+      4 + slen +               // string segment
+      padding +
       8 + items.size * itemSize +          // item segment
       8 + getMapConst(items.size)._2 * 4 + // keymap segment
       items.size * 12)                     // kd-tree segment
@@ -227,6 +233,11 @@ abstract class GisItemDBFactory[T <: GisItem] {
       buf.putShort(b.length.toShort)
       buf.put(b)
       buf.put(0.toByte)
+    }
+
+    val pad: Int = buf.position() % 4
+    if (pad > 0) {
+      repeat(4 - pad)(buf.put(0.toByte))
     }
   }
 
