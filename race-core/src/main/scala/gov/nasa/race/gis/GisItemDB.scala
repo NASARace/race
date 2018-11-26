@@ -403,6 +403,14 @@ abstract class GisItemDB[T <: GisItem: ClassTag] (data: ByteBuffer) {
     }
   }
 
+  def withNearestItemId (pos: GeoPosition)(f: (String,Length)=>Unit) = {
+    if (!isEmpty) {
+      val query = new NearestNeighborQuery(pos)
+      searchKdTree(query, kdOffset, 0, DMin,DMin,DMin, DMax,DMax,DMax)
+      query.foreachItemId(f)
+    }
+  }
+
   def getNearestItem (pos: GeoPosition): Option[(T,Length)] = {
     if (!isEmpty) {
       val query = new NearestNeighborQuery(pos)
