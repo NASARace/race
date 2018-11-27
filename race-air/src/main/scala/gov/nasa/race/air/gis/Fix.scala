@@ -174,6 +174,8 @@ object FixDB extends GisItemDBFactory[Fix](60) {
 
 class FixDB (data: ByteBuffer) extends GisItemDB[Fix](data) {
 
+  def this (file: File) = this(GisItemDB.mapFile(file))
+
   override protected def readItem(iOff: Int): Fix = {
     val buf = data
     buf.position(iOff + 28) // skip over hash and xyz coords

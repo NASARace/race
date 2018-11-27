@@ -37,22 +37,22 @@ queries. This approach keeps (most of) the data outside the JVM heap and allows 
 space. The main implementation types are shown in the following diagram:
 
 .. image:: ../images/rgis-classes.svg
-    :class: center scale80
+    :class: center scale90
     :alt: RGIS class diagram
 
-``GisItem``
-    is the abstract type defining common item features (name, position)
+**GisItem**
+    is the trait defining common item features (name, position)
 
-``GisItemDB[T <:GisItem]``
+**GisItemDB[T <:GisItem]**
     is the abstract base that contains the database initialization and query code. Concrete
     subclasses mostly have to provide a ``readItem(offset)`` method that instantiates concrete
     ``GisItem`` objects for a given item position within the binary (mapped) data
 
-``GisItemDBFactory[T <: GisItem]``
+**GisItemDBFactory[T <: GisItem]**
     is a abstract factory class that is used to generate binary ``GisItemDB`` files and to load/
     instantiate concrete ``GisItemDB`` objects from such files
 
-``GisItemDBTool``
+**GisItemDBTool**
     is a command line application that uses ``GisItemDBFactory`` objects to create, check and
     query ``GisItemDB`` databases
 
@@ -91,7 +91,7 @@ query types mentioned above.
 A formal definition of the format can be found in the comment of ``gov.nasa.race.gis.GisItemDB``
 
 .. image:: ../images/rgis.svg
-    :class: center scale80
+    :class: center scale70
     :alt: RACE GIS data model
 
 **Header** - this section starts with a magic token (0x52474953 : "RGIS"), followed by some fields
@@ -141,31 +141,95 @@ to keep query costs low.
 For details of the id hash map and kd-tree algorithms see ``gov.nasa.race.gis.GisItemDBFactory``
 for creation and ``gov.nasa.race.gis.GisItemDB`` for queries.
 
-Clients
--------
 
-    val db: GisItemDB[Fix] = FixDB.loadDB(file).get
+Client API
+----------
+The public API supports two major functions: instantiation and queries. Instantiation is usually
+just a plain constructor call of the concrete GisItemDB class::
 
-    db.getItem("KLAUS") match {
-      case Some(fix) => ...
-      case None => ...
-    }
+    val fixDB: FixDB = new FixDB(file)
 
+Since this can throw exceptions during file access or DB consistency checks it should be called
+from a ``try {..}`` block. Clients can use the ``GisItemDB.load(file)`` for a ``Option[GisItemDB[T]]``
+result, but note that this method does not give access to the concrete GisItemDB type (e.g. ``FixDB``)
+and hence additional methods of the concrete type are not visible.
 
-positinal queries:
+Query support is more complex. As noted at the top of this page ``GisItemDB`` supports four types
+of queries:
 
-- item/distance list
-- item/distance iterator
-- name/distance iterator
+- item lookup by name
+- nearest item for given position
+- N nearest items for given position
+- all items within a given position and range
 
+All geospatial query results include respective distances of matching items to the provided
+position. If a query can return several items those are sorted in order of increasing distance.
 
-    val pos = GeoPosition.fromDegrees(37.59443,-122.38892)
-    val (fix,dist) = db.getNearestItem(pos).get
+In general, all queries can either ask for item instances or provide iterator functions that are
+called by GisItemDB for each of the query matches. Iterator functions can either take full item
+object arguments or only id and position if full item objects are not required.
 
-    val range = Meters(5000)
-    db.foreachRangeItem(pos,range){ (fix,dist) => .. }
+Using iterator functions can save allocations, both in terms of result collections and item
+instantiations.
 
-    db.foreachRangeItemId(pos,range){ (id,dist) => .. }
+**Name Query**::
+
+    // item instantiation
+    val fix = fixDB.getItem("BRIXX").get
+
+    // iterator
+    fixDB.withItemPos(name){ (lat,lon,alt) => .. }
+
+**Nearest Item**::
+
+    // item instantiation
+    val (dist,fix) = fixDB.getNearestItem(refPos).get
+
+    // iterators
+    fixDB.withNearestItemId(refPos){ (dist,id) => .. }
+    // or
+    fixDB.withNearestItemIdPos(refPos){ (dist,id,lat,lon,alt) => .. }
+    // or
+    fixDB.withNearestItem(refPos){ (dist,fix) => .. }
+
+**N Nearest Items**::
+
+    // result list
+    val proximities: Seq[(Length,Fix)] = fixDB.getNnearestItems(refPos,maxNumber)
+
+    // iterators
+    fixDB.foreachNearItemId(refPos,maxNumber){ (dist,id) => .. }
+    // or
+    fixDB.foreachNearItemIdPos(refPos,maxNumber){ (dist,id,lat,lon,alt) => .. }
+    // or
+    fixDB.foreachNearItem(refPos,maxNumber){ (dist,fix) => .. }
+
+**Range Items**::
+
+    // result list
+    val proximities: Seq[(Length,Fix)] = fixDB.getRangeItems(refPos,maxDist)
+
+    // iterators
+    fixDB.foreachRangeItemId(refPos,maxDist){ (dist,id) => .. }
+    // or
+    fixDB.foreachRangeItemIdPos(refPos,maxDist){ (dist,id,lat,lon,alt) => .. }
+    // or
+    fixDB.foreachRangeItem(refPos,maxDist){ (dist,fix) => .. }
+
+If repetitive queries can happen at a high rate (e.g. to obtain the nearest waypoint for a
+frequently updated aircraft position) it is advisible to obtain and cache a respective query object
+from the GisItemDB::
+
+    val nearestItemQuery = fixDB.createNearestNeighborQuery(trackPos)
+    ..
+    while (..) {
+        nearestItemQuery.setPos(track.position)
+        fixDB.processQuery(nearestItemQuery)
+        nearestItemQuery.withItemId { (dist,id) => .. }
+        ..
+
+Such queries will execute in constant space if no result item objects are required. Note that
+clients have to ensure that query objects are not modified while the GisItemDB is processing them.
 
 Query examples can be found in the ``gov.nasa.race.air.gis.FixDBSpec`` regression test that is
 included in the ``race-air-test`` sub-project.

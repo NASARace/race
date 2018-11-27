@@ -212,13 +212,13 @@ object GisItemDBTool {
           case Some(n) =>
             println(s"$n nearest items to ($pos):")
             for ((e,i) <- db.getNnearestItems(pos,n).zipWithIndex) {
-              println(f"[${i+1}]\t${e._2.toMeters}%10.0fm : ${e._1}")
+              println(f"[${i+1}]\t${e._1.toMeters}%10.0fm : ${e._2}")
             }
 
           case None => { // show just the nearest one
             println(s"nearest item to ($pos):")
             db.getNearestItem(pos) match {
-              case Some(e) => println(f"\t${e._2.toMeters}%10.0fm : ${e._1}")
+              case Some(e) => println(f"\t${e._1.toMeters}%10.0fm : ${e._2}")
               case None =>
             }
           }
@@ -233,7 +233,7 @@ object GisItemDBTool {
         opts.dist match {
           case Some(dist) =>
             println(s"items in range ($pos) + $dist :")
-            for (((e,d),i) <- db.getRangeItems(pos, dist).zipWithIndex) {
+            for (((d,e),i) <- db.getRangeItems(pos, dist).zipWithIndex) {
               println(f"[${i+1}]\t${d.toMeters}%10.0fm : $e")
             }
           case None => println("no target distance specified")

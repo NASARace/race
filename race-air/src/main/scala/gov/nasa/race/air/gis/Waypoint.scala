@@ -126,6 +126,8 @@ case class Waypoint(name: String,
 
 class WaypointDB (data: ByteBuffer) extends GisItemDB[Waypoint](data) {
 
+  def this (file: File) = this(GisItemDB.mapFile(file))
+
   override protected def readItem (off: Int): Waypoint = {
     val buf = data
     buf.position(off + 28) // skip over hash and xyz coords

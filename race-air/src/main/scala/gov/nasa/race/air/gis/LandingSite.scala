@@ -96,6 +96,8 @@ case class LandingSite (name: String, // cid
 
 class LandingSiteDB (data: ByteBuffer) extends GisItemDB[LandingSite](data) {
 
+  def this (file: File) = this(GisItemDB.mapFile(file))
+
   override protected def readItem (off: Int): LandingSite = {
     val buf = data
     buf.position(off + 28) // skip over hash and xyz coords
