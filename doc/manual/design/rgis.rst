@@ -235,6 +235,67 @@ Query examples can be found in the ``gov.nasa.race.air.gis.FixDBSpec`` regressio
 included in the ``race-air-test`` sub-project.
 
 
+GisItemDBTool
+-------------
+The ``race-tools`` sub-project includes a ``gov.nasa.race.tool.GisItemDBTool`` command line
+application that can be used to create and query ``GisItemDB`` databases interactively. The tool
+is also accessible through the ``script/geodb`` shell script::
+
+    > script/geodb --help
+    usage GisItemDBTool$ <option>.. <arg>
+    options:
+      -i|--show-struct                    - show structure of DB
+      --show-strings                      - show string table contents of DB
+      --show-items                        - show item list of DB
+      -k|--show-key <key>                 - show item for given key
+      -n|--show-near <lat,lon>            - show item(s) nearest to given pos
+      -m|--max-items <number>             - max number of items
+      -r|--show-range <lat,lon,meters>    - show items in given range
+      -o|--out <pathname>                 - pathname of file to generate
+      -f|--in <pathName>                  - input file
+      --date <dateSpec>                   - date to be stored in generated DB
+      -x|--xarg <argString>               - extra arguments to be passed to concrete DB factory
+    args:
+      <clsName>                           - concrete GisItemDBFactory class (e.g. gov.nasa.race.air.gis.LandingSite$) - REQUIRED
+
+
+The application requires the name of the ``GisItemDBFactory``` class (*not* the GisItem or
+GisItemDB) in order to specify the database/item type.
+
+This is an example of how to create a database from a *.sql data distribution::
+
+    script/geodb --in ../data/usa_faa1801.data.sql --out tmp/landingsites.rgis gov.nasa.race.air.gis.LandingSiteDB\$
+
+Note how to reference a companion object (``gov.nasa.race.air.gis.LandingSiteDB``) as
+the ``GisItemDBFactory`` object to use (bash requires the classname ending '$' to be escaped).
+
+This is an example of how to create a database of all California fixes through
+`FAA website <https://www.faa.gov/air_traffic/flight_info/aeronav/aero_data/Loc_ID_Search/Fixes_Waypoints>`_
+queries::
+
+    > script/geodb -x "searchval=CALIFORNIA" --out tmp/fix-ca.rgis gov.nasa.race.air.gis.FixDB\$
+
+Note that '-x' arguments are passed down into the ``GisItemDBFactory``, i.e. they are type specific.
+
+Example how to check consistency and contents of a database::
+
+    > script/geodb -i --in tmp/landingsites.rgis gov.nasa.race.air.gis.LandingSiteDB\$
+    --- structure:
+    schema:       'gov.nasa.race.air.gis.LandingSite'
+    length:       866036 bytes
+    checkSum:     ceca5b11
+    date:         2018-11-27T10:14:02.316-08:00
+    nItems:       7566
+    itemSize:     72
+    ...
+
+Example how to query the 10 nearest items of a database around a given position::
+
+    script/geodb --show-near 37.62,-122.38 --max-items 10  --in tmp/landingsites.rgis gov.nasa.race.air.gis.LandingSiteDB\$
+    [1]	       424m : LandingSite("KSFO",(φ=+37.61881°,λ=-122.37542°,alt=1m),"SAN FRANCISCO INTL",airport,civil,14.0})
+    [2]	     15913m : LandingSite("KHAF",(φ=+37.51344°,λ=-122.50117°,alt=6m),"HALF MOON BAY",airport,civil,15.0})
+
+
 .. _GIS: https://en.wikipedia.org/wiki/Geographic_information_system
 .. _KD_TREE: https://en.wikipedia.org/wiki/K-d_tree
 .. _SQL: https://en.wikipedia.org/wiki/SQL

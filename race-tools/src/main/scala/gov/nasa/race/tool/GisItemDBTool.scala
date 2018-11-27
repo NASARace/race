@@ -211,7 +211,7 @@ object GisItemDBTool {
         opts.nItems match {
           case Some(n) =>
             println(s"$n nearest items to ($pos):")
-            for ((e,i) <- db.getNnearestItems(pos,n).zipWithIndex) {
+            for ((e,i) <- db.getNearItems(pos,n).zipWithIndex) {
               println(f"[${i+1}]\t${e._1.toMeters}%10.0fm : ${e._2}")
             }
 
