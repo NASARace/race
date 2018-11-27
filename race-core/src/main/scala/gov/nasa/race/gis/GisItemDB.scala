@@ -287,6 +287,8 @@ abstract class GisItemDB[T <: GisItem: ClassTag] (data: ByteBuffer) {
     GeoPosition.fromDegreesAndMeters(lat,lon,alt)
   }
 
+  //--- O(N) queries - those should not be the primary use case
+
   def foreach (f: (T)=>Unit): Unit = {
     var iOff = itemOffset
     var i = 0
@@ -317,9 +319,35 @@ abstract class GisItemDB[T <: GisItem: ClassTag] (data: ByteBuffer) {
     }
   }
 
-  // TODO we should support generic find
+  def find (f: (T)=>Boolean): Option[T] = {
+    var iOff = itemOffset
+    var i = 0
+    while (i < nItems) {
+      val t = readItem(iOff)
+      if (f(t)) return Some(t)
+      iOff += itemSize
+      i += 1
+    }
+    None
+  }
 
-  //--- key map
+  def find (f: (String,Angle,Angle,Length)=>Boolean): Option[T] = {
+    var iOff = itemOffset
+    var i = 0
+    while (i < nItems) {
+      val id = itemId(iOff)
+      val lat = itemLat(iOff)
+      val lon = itemLon(iOff)
+      val alt = itemAlt(iOff)
+      if (f(id,Degrees(lat),Degrees(lon),Meters(alt))) return Some(readItem(iOff))
+      iOff += itemSize
+      i += 1
+    }
+    None
+  }
+
+
+  //--- key map - this is O(1) on average
 
   /**
     * alphanumeric key lookup
@@ -369,7 +397,7 @@ abstract class GisItemDB[T <: GisItem: ClassTag] (data: ByteBuffer) {
     if (eOff != -1) f( itemPos(eOff))
   }
 
-  //--- kdtree
+  //--- kdtree - O(log N) on average
 
   //--- supported geospatial queries
 
@@ -384,12 +412,12 @@ abstract class GisItemDB[T <: GisItem: ClassTag] (data: ByteBuffer) {
 
     Datum.withECEF(pos)(setXyz)
 
-    def getPos: GeoPosition = pos
-
+    /** NOTE - don't change while processQuery on same query object is running */
     def setPos (newPos: GeoPosition): Unit = {
       pos = newPos
       Datum.withECEF(pos)(setXyz)
     }
+    def getPos: GeoPosition = pos
 
     private[GisItemDB] def setXyz(lx: Length, ly: Length, lz: Length): Unit = {
       x = lx.toMeters
@@ -429,7 +457,7 @@ abstract class GisItemDB[T <: GisItem: ClassTag] (data: ByteBuffer) {
   /**
     * find the nearest item for a given position
     */
-  class NearestNeighborQuery (pos: GeoPosition) extends GisItemDBQuery(pos) {
+  class NearestItemQuery (pos: GeoPosition) extends GisItemDBQuery(pos) {
     private[GisItemDB]  var itemOff: Int = -1  // offset of nearest item
     private[GisItemDB]  var dist: Double = Double.MaxValue  // distance in Meters of nearest item
 
@@ -479,14 +507,14 @@ abstract class GisItemDB[T <: GisItem: ClassTag] (data: ByteBuffer) {
     }
   }
 
-  def createNearestNeighborQuery (pos: GeoPosition) = new NearestNeighborQuery(pos)
+  def createNearestItemQuery(pos: GeoPosition) = new NearestItemQuery(pos)
 
   /**
     * nearest neighbor search
     */
   def withNearestItem (pos: GeoPosition)(f: (Length,T)=>Unit) = {
     if (!isEmpty) {
-      val query = new NearestNeighborQuery(pos)
+      val query = new NearestItemQuery(pos)
       searchKdTree(query, kdOffset, 0, DMin,DMin,DMin, DMax,DMax,DMax)
       query.withItem(f)
     }
@@ -494,21 +522,21 @@ abstract class GisItemDB[T <: GisItem: ClassTag] (data: ByteBuffer) {
 
   def withNearestItemId (pos: GeoPosition)(f: (Length,String)=>Unit) = {
     if (!isEmpty) {
-      val query = new NearestNeighborQuery(pos)
+      val query = new NearestItemQuery(pos)
       searchKdTree(query, kdOffset, 0, DMin,DMin,DMin, DMax,DMax,DMax)
       query.withItemId(f)
     }
   }
   def withNearestItemIdPos (pos: GeoPosition)(f: (Length,String,Angle,Angle,Length)=>Unit) = {
     if (!isEmpty) {
-      val query = new NearestNeighborQuery(pos)
+      val query = new NearestItemQuery(pos)
       searchKdTree(query, kdOffset, 0, DMin,DMin,DMin, DMax,DMax,DMax)
       query.withItemIdPos(f)
     }
   }
   def withNearestItemIdPos (pos: GeoPosition)(f: (Length,String,GeoPosition)=>Unit) = {
     if (!isEmpty) {
-      val query = new NearestNeighborQuery(pos)
+      val query = new NearestItemQuery(pos)
       searchKdTree(query, kdOffset, 0, DMin,DMin,DMin, DMax,DMax,DMax)
       query.withItemIdPos(f)
     }
@@ -516,7 +544,7 @@ abstract class GisItemDB[T <: GisItem: ClassTag] (data: ByteBuffer) {
 
   def getNearestItem (pos: GeoPosition): Option[(Length,T)] = {
     if (!isEmpty) {
-      val query = new NearestNeighborQuery(pos)
+      val query = new NearestItemQuery(pos)
       searchKdTree(query, kdOffset, 0, DMin,DMin,DMin, DMax,DMax,DMax)
       query.getResult
     } else None
@@ -527,14 +555,18 @@ abstract class GisItemDB[T <: GisItem: ClassTag] (data: ByteBuffer) {
     * note - we could have used WeightedArray for keeping the match list, but this would require per-query
     * allocation and hence not execute queries in const space
     */
-  class NnearestNeighborsQuery(pos: GeoPosition, val maxNeighbors: Int) extends GisItemDBQuery(pos) {
-    private[GisItemDB]  val itemOffs: Array[Int] = new Array[Int](maxNeighbors)
-    private[GisItemDB]  val dists: Array[Double] = new Array[Double](maxNeighbors)
+  class NearItemsQuery (p: GeoPosition, protected var maxItems: Int) extends GisItemDBQuery(p) {
+    private[GisItemDB]  val itemOffs: Array[Int] = new Array[Int](maxItems)
+    private[GisItemDB]  val dists: Array[Double] = new Array[Double](maxItems)
     private[GisItemDB]  var maxDist: Double = Double.MinValue
     private[GisItemDB]  var nNeighbors: Int = 0
 
     def size: Int = nNeighbors
     def isEmpty: Boolean = nNeighbors == 0
+
+    /** NOTE - don't change while processQuery on same query object is running */
+    def setMaxItems (newMaxItems: Int): Unit = { maxItems = newMaxItems }
+    def getMaxItems: Int = maxItems
 
     private[GisItemDB]  def clear: Unit = {
       maxDist = Double.MinValue
@@ -542,7 +574,7 @@ abstract class GisItemDB[T <: GisItem: ClassTag] (data: ByteBuffer) {
     }
 
     private[GisItemDB] def canContain(d: Double): Boolean = {
-      nNeighbors < maxNeighbors || d < maxDist
+      nNeighbors < maxItems || d < maxDist
     }
 
     private[GisItemDB]  def update(d: Double, iOff: Int): Unit = {
@@ -556,7 +588,7 @@ abstract class GisItemDB[T <: GisItem: ClassTag] (data: ByteBuffer) {
         -1
       }
 
-      if (nNeighbors < maxNeighbors) { // not yet full
+      if (nNeighbors < maxItems) { // not yet full
         if (d >= maxDist) {  // also used for first entry
           dists(nNeighbors) = d
           itemOffs(nNeighbors) = iOff
@@ -635,13 +667,13 @@ abstract class GisItemDB[T <: GisItem: ClassTag] (data: ByteBuffer) {
     def getResult: Seq[(Length,T)] = getDistances.zip(getItems)
   }
 
-  def createNnearestNeighborsQuery (pos: GeoPosition, nItems: Int): NnearestNeighborsQuery = {
-    new NnearestNeighborsQuery( pos, nItems)
+  def createNearItemsQuery(pos: GeoPosition, nItems: Int): NearItemsQuery = {
+    new NearItemsQuery( pos, nItems)
   }
 
   def foreachNearItem (pos: GeoPosition, nItems: Int)(f: (Length,T)=>Unit) = {
     if (!isEmpty) {
-      val query = new NnearestNeighborsQuery(pos,nItems)
+      val query = new NearItemsQuery(pos,nItems)
       searchKdTree(query, kdOffset, 0, DMin,DMin,DMin, DMax,DMax,DMax)
       query.foreach(f)
     }
@@ -649,21 +681,21 @@ abstract class GisItemDB[T <: GisItem: ClassTag] (data: ByteBuffer) {
 
   def foreachNearItemId (pos: GeoPosition, nItems: Int)(f: (Length,String)=>Unit) = {
     if (!isEmpty) {
-      val query = new NnearestNeighborsQuery(pos,nItems)
+      val query = new NearItemsQuery(pos,nItems)
       searchKdTree(query, kdOffset, 0, DMin,DMin,DMin, DMax,DMax,DMax)
       query.foreachItemId(f)
     }
   }
   def foreachNearItemIdPos (pos: GeoPosition, nItems: Int)(f: (Length,String,Angle,Angle,Length)=>Unit) = {
     if (!isEmpty) {
-      val query = new NnearestNeighborsQuery(pos,nItems)
+      val query = new NearItemsQuery(pos,nItems)
       searchKdTree(query, kdOffset, 0, DMin,DMin,DMin, DMax,DMax,DMax)
       query.foreachItemIdPos(f)
     }
   }
   def foreachNearItemIdPos (pos: GeoPosition, nItems: Int)(f: (Length,String,GeoPosition)=>Unit) = {
     if (!isEmpty) {
-      val query = new NnearestNeighborsQuery(pos,nItems)
+      val query = new NearItemsQuery(pos,nItems)
       searchKdTree(query, kdOffset, 0, DMin,DMin,DMin, DMax,DMax,DMax)
       query.foreachItemIdPos(f)
     }
@@ -671,7 +703,7 @@ abstract class GisItemDB[T <: GisItem: ClassTag] (data: ByteBuffer) {
 
   def getNearItems (pos: GeoPosition, nItems: Int): Seq[(Length,T)] = {
     if (!isEmpty) {
-      val query = new NnearestNeighborsQuery(pos,nItems)
+      val query = new NearItemsQuery(pos,nItems)
       searchKdTree(query, kdOffset, 0, DMin,DMin,DMin, DMax,DMax,DMax)
       query.getResult
     } else Seq.empty[(Length,T)]
@@ -680,13 +712,17 @@ abstract class GisItemDB[T <: GisItem: ClassTag] (data: ByteBuffer) {
   /**
     * find all items within given range
     */
-  class RangeNeighborsQuery(pos: GeoPosition, val maxDistance: Length) extends GisItemDBQuery(pos) {
+  class RangeItemsQuery (pos: GeoPosition, protected var maxDistance: Length) extends GisItemDBQuery(pos) {
     private[GisItemDB]  val itemOffs = new ArrayBuffer[Int]
     private[GisItemDB]  val dists = new ArrayBuffer[Double]
     private[GisItemDB]  val maxDist2 = squared(maxDistance.toMeters)
 
     def size = itemOffs.size
     def isEmpty = itemOffs.isEmpty
+
+    /** NOTE - don't change while processQuery on same query object is running */
+    def setMaxDistance (newMaxDistance: Length): Unit = { maxDistance = newMaxDistance }
+    def getMaxDistance: Length = maxDistance
 
     private[GisItemDB]  def clear: Unit = {
       itemOffs.clear
@@ -776,13 +812,13 @@ abstract class GisItemDB[T <: GisItem: ClassTag] (data: ByteBuffer) {
     def getResult: Seq[(Length,T)] = getDistances.zip(getItems)
   }
 
-  def createRangeNeighborsQuery (pos: GeoPosition, radius: Length): RangeNeighborsQuery = {
-    new RangeNeighborsQuery(pos, radius)
+  def createRangeItemsQuery(pos: GeoPosition, radius: Length): RangeItemsQuery = {
+    new RangeItemsQuery(pos, radius)
   }
 
   def foreachRangeItem (pos: GeoPosition, radius: Length)(f: (Length,T)=>Unit) = {
     if (!isEmpty) {
-      val query = new RangeNeighborsQuery(pos,radius)
+      val query = new RangeItemsQuery(pos,radius)
       searchKdTree(query, kdOffset, 0, DMin,DMin,DMin, DMax,DMax,DMax)
       query.foreach(f)
     }
@@ -790,21 +826,21 @@ abstract class GisItemDB[T <: GisItem: ClassTag] (data: ByteBuffer) {
 
   def foreachRangeItemId (pos: GeoPosition, radius: Length)(f: (Length,String)=> Unit): Unit = {
     if (!isEmpty) {
-      val query = new RangeNeighborsQuery(pos,radius)
+      val query = new RangeItemsQuery(pos,radius)
       searchKdTree(query, kdOffset, 0, DMin,DMin,DMin, DMax,DMax,DMax)
       query.foreachItemId(f)
     }
   }
   def foreachRangeItemIdPos (pos: GeoPosition, radius: Length)(f: (Length,String,Angle,Angle,Length)=> Unit): Unit = {
     if (!isEmpty) {
-      val query = new RangeNeighborsQuery(pos,radius)
+      val query = new RangeItemsQuery(pos,radius)
       searchKdTree(query, kdOffset, 0, DMin,DMin,DMin, DMax,DMax,DMax)
       query.foreachItemIdPos(f)
     }
   }
   def foreachRangeItemIdPos (pos: GeoPosition, radius: Length)(f: (Length,String,GeoPosition)=> Unit): Unit = {
     if (!isEmpty) {
-      val query = new RangeNeighborsQuery(pos,radius)
+      val query = new RangeItemsQuery(pos,radius)
       searchKdTree(query, kdOffset, 0, DMin,DMin,DMin, DMax,DMax,DMax)
       query.foreachItemIdPos(f)
     }
@@ -812,7 +848,7 @@ abstract class GisItemDB[T <: GisItem: ClassTag] (data: ByteBuffer) {
 
   def getRangeItems (pos: GeoPosition, radius: Length): Seq[(Length,T)] = {
     if (!isEmpty) {
-      val query = new RangeNeighborsQuery(pos,radius)
+      val query = new RangeItemsQuery(pos,radius)
       searchKdTree(query, kdOffset, 0, DMin,DMin,DMin, DMax,DMax,DMax)
       query.getResult
     } else Seq.empty[(Length,T)]

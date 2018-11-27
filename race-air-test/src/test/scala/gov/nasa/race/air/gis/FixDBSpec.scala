@@ -69,7 +69,7 @@ class FixDBSpec extends FlatSpec with RaceSpec {
 
   "FixDB" should "support cached query objects" in {
     var nearestFixId: String = "?"
-    val nearestQuery = db.createNearestNeighborQuery(GeoPosition.fromDegrees(0,0))
+    val nearestQuery = db.createNearestItemQuery(GeoPosition.fromDegrees(0,0))
     val newPos = GeoPosition.fromDegrees(37.62000,-122.38000)
     nearestQuery.setPos(newPos)
     db.processQuery(nearestQuery)

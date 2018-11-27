@@ -195,7 +195,7 @@ instantiations.
 **N Nearest Items**::
 
     // result list
-    val proximities: Seq[(Length,Fix)] = fixDB.getNnearestItems(refPos,maxNumber)
+    val proximities: Seq[(Length,Fix)] = fixDB.getNearItems(refPos,maxNumber)
 
     // iterators
     fixDB.foreachNearItemId(refPos,maxNumber){ (dist,id) => .. }
@@ -220,7 +220,7 @@ If repetitive queries can happen at a high rate (e.g. to obtain the nearest wayp
 frequently updated aircraft position) it is advisible to obtain and cache a respective query object
 from the GisItemDB::
 
-    val nearestItemQuery = fixDB.createNearestNeighborQuery(trackPos)
+    val nearestItemQuery = fixDB.createNearestItemQuery(trackPos)
     ..
     while (..) {
         nearestItemQuery.setPos(track.position)
