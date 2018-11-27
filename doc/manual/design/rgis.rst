@@ -294,6 +294,7 @@ Example how to query the 10 nearest items of a database around a given position:
     script/geodb --show-near 37.62,-122.38 --max-items 10  --in tmp/landingsites.rgis gov.nasa.race.air.gis.LandingSiteDB\$
     [1]	       424m : LandingSite("KSFO",(φ=+37.61881°,λ=-122.37542°,alt=1m),"SAN FRANCISCO INTL",airport,civil,14.0})
     [2]	     15913m : LandingSite("KHAF",(φ=+37.51344°,λ=-122.50117°,alt=6m),"HALF MOON BAY",airport,civil,15.0})
+    ...
 
 
 .. _GIS: https://en.wikipedia.org/wiki/Geographic_information_system
