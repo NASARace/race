@@ -25,13 +25,6 @@ trait Trajectory {
   def size: Int
 
   def add (lat: Double, lon: Double, alt: Double, t: Long): Trajectory // low level add to avoid temporary objects
-  def add (tp: TrackPoint): Trajectory  // can be chained
-  def += (tp: TrackPoint) = add(tp)
-
-  def addAll (tps: Seq[TrackPoint]): Unit = tps.foreach(add)  // can be overridden for more efficient version
-  def ++= (tps: Seq[TrackPoint]) = addAll(tps)
-
-  def nonEmpty = size > 0
 
   /** low level iteration support that does not require temporary objects for FlightPath elements
     * The provided function takes 5 arguments:
@@ -40,7 +33,23 @@ trait Trajectory {
     *   Double - alt in meters
     *   Long - epoch millis
     */
-  def foreach(f: (Int,Double,Double,Double,Long) => Unit)
+  def foreach(f: (Int,Double,Double,Double,Long)=>Unit): Unit
+  def foreachReverse(f: (Int,Double,Double,Double,Long)=>Unit): Unit
+
+  //--- methods that can be overridden but have a generic implementation
+
+  def isEmpty: Boolean = size == 0
+  def nonEmpty: Boolean = size > 0
+
+  def add (e: TrackPoint): Trajectory = {
+    val pos = e.position
+    add(pos.φ.toDegrees,pos.λ.toDegrees,pos.altitude.toMeters,e.date.getMillis)
+  }
+  def += (tp: TrackPoint) = add(tp)
+
+  def addAll (tps: Seq[TrackPoint]): Unit = tps.foreach(add)  // can be overridden for more efficient version
+  def ++= (tps: Seq[TrackPoint]): Unit = addAll(tps)
+
 }
 
 object EmptyTrajectory extends Trajectory {
@@ -49,4 +58,5 @@ object EmptyTrajectory extends Trajectory {
   override def add (lat: Double, lon: Double, alt: Double, t: Long) = new CompactTrajectory().add(lat,lon,alt,t)
   override def add(tp: TrackPoint) = new CompactTrajectory().add(tp)
   override def foreach(f: (Int,Double,Double,Double,Long) => Unit) = {}
+  override def foreachReverse(f: (Int,Double,Double,Double,Long) => Unit) = {}
 }

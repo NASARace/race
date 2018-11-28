@@ -20,6 +20,9 @@ package gov.nasa.race.geo
   * encode/decode lat lon in degrees to/from 64 bit preserving 6 decimal places, which gives us about 10cm accuracy
   * see http://www.dupuis.me/node/35
   *
+  * Note this uses instance fields for results so that we can save tuple allocation. This implementation favors
+  * constant space and efficiency over thread safety
+  *
   * TODO - find a better way to handle the abs(lon)=180.0 case (grid has a few values left that are not used)
   */
 class WGS84Codec {

@@ -27,7 +27,7 @@ class CompactTrajectory(capacityIncrement: Int=32) extends Trajectory {
   private var growthCycle = 0
   final val linearGrowthCycles = 5 // once that is exceeded we grow exponentially
 
-  protected var posCodec = new WGS84Codec
+  protected var posCodec = new WGS84Codec // needs to be our own object to avoid result allocation
   protected var data: Array[Long] = _             // initialized on demand
   protected var t0Millis: Long = 0                // start time in epoch millis
   protected var _size = 0
@@ -44,10 +44,6 @@ class CompactTrajectory(capacityIncrement: Int=32) extends Trajectory {
 
   override def capacity = if (data != null) data.length / 2 else capacityIncrement
 
-  override def add (e: TrackPoint): Trajectory = {
-    val pos = e.position
-    add(pos.φ.toDegrees,pos.λ.toDegrees,pos.altitude.toMeters,e.date.getMillis)
-  }
 
   /**
     * low level add that avoids temporary objects
@@ -93,5 +89,20 @@ class CompactTrajectory(capacityIncrement: Int=32) extends Trajectory {
       }
     }
     _processEntry(0,f)
+  }
+
+  override def foreachReverse(f: (Int,Double,Double,Double,Long)=>Unit): Unit = {
+    @tailrec def _processEntry (i: Int, f: (Int,Double,Double,Double,Long)=>Unit): Unit = {
+      if (i >= 0) {
+        val j = i*2
+        posCodec.decode(data(j))
+        val w = data(j+1)
+        val t = t0Millis + (w >> 32)
+        val altMeters = (w & 0xffffffff).toInt / 100.0
+        f(i,posCodec.latDeg,posCodec.lonDeg,altMeters,t)
+        _processEntry(i-1,f)
+      }
+    }
+    _processEntry(_size-1,f)
   }
 }
