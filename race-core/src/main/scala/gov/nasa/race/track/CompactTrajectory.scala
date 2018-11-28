@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, United States Government, as represented by the
+ * Copyright (c) 2018, United States Government, as represented by the
  * Administrator of the National Aeronautics and Space Administration.
  * All rights reserved.
  *
@@ -18,91 +18,36 @@ package gov.nasa.race.track
 
 import gov.nasa.race.geo.WGS84Codec
 
-import scala.annotation.tailrec
-
 /**
-  * A FlightPath with a compact encoding
+  * a trajectory that stores track points in compressed format
+  *
+  * each track point occupies two Long values. The first one encodes lat/lon, the second one alt/t
+  * Note that we store the track point date (epoch in millis) as relative to the first entry, in 32bit,
+  * which limits CompactTrajectories to about 1200h duration
+  *
+  * the data is kept in a single Array[Long] that has to be allocated/resized by the type that implements
+  * this trait
   */
-class CompactTrajectory(capacityIncrement: Int=32) extends Trajectory {
-  private var growthCycle = 0
-  final val linearGrowthCycles = 5 // once that is exceeded we grow exponentially
+trait CompactTrajectory extends Trajectory {
+  protected var data: Array[Long]  // provided by concrete type
 
   protected var posCodec = new WGS84Codec // needs to be our own object to avoid result allocation
-  protected var data: Array[Long] = _             // initialized on demand
-  protected var t0Millis: Long = 0                // start time in epoch millis
-  protected var _size = 0
+  protected var t0Millis: Long = 0        // start time in epoch millis
 
-  def size = _size
-
-  protected def growDataCapacity = {
-    growthCycle += 1
-    val newCapacity = if (growthCycle > linearGrowthCycles) data.length * 2 else data.length + capacityIncrement*2
-    val newData = new Array[Long](newCapacity)
-    data.copyToArray(newData,0,data.length)
-    data = newData
-  }
-
-  override def capacity = if (data != null) data.length / 2 else capacityIncrement
-
-
-  /**
-    * low level add that avoids temporary objects
-    * NOTE - caller has to ensure proper units of measure
-    *
-    * @param lat latitude in degrees
-    * @param lon longitude in degrees
-    * @param alt altitude in meters (or NaN if undefined)
-    * @param t epoch value (or 0 if undefined)
-    */
-  override def add (lat: Double, lon: Double, alt: Double, t: Long): Trajectory = {
-    val i = _size*2
-
-    if (i == 0) {
-      data = new Array[Long](capacityIncrement*2)
-      t0Millis = t
-    } else if (i == data.length) {
-      growDataCapacity
-    }
-
+  protected def setTrackPointData(idx: Int, lat: Double, lon: Double, alt: Double, t: Long): Unit = {
     val dtMillis = t - t0Millis
     val latlon = posCodec.encode(lat,lon)
     val altCm = Math.round(alt * 100.0).toInt
 
-    data(i) = latlon
-    data(i+1) = (dtMillis << 32) | altCm
-
-    _size += 1
-    this
+    data(idx) = latlon
+    data(idx+1) = (dtMillis << 32) | altCm
   }
 
-
-  override def foreach(f: (Int,Double,Double,Double,Long)=>Unit): Unit = {
-    @tailrec def _processEntry (i: Int, f: (Int,Double,Double,Double,Long)=>Unit): Unit = {
-      if (i < _size) {
-        val j = i*2
-        posCodec.decode(data(j))
-        val w = data(j+1)
-        val t = t0Millis + (w >> 32)
-        val altMeters = (w & 0xffffffff).toInt / 100.0
-        f(i,posCodec.latDeg,posCodec.lonDeg,altMeters,t)
-        _processEntry(i+1,f)
-      }
-    }
-    _processEntry(0,f)
-  }
-
-  override def foreachReverse(f: (Int,Double,Double,Double,Long)=>Unit): Unit = {
-    @tailrec def _processEntry (i: Int, f: (Int,Double,Double,Double,Long)=>Unit): Unit = {
-      if (i >= 0) {
-        val j = i*2
-        posCodec.decode(data(j))
-        val w = data(j+1)
-        val t = t0Millis + (w >> 32)
-        val altMeters = (w & 0xffffffff).toInt / 100.0
-        f(i,posCodec.latDeg,posCodec.lonDeg,altMeters,t)
-        _processEntry(i-1,f)
-      }
-    }
-    _processEntry(_size-1,f)
+  protected def processTrackPointData(idx: Int, f: (Int,Double,Double,Double,Long)=>Unit): Unit = {
+    posCodec.decode(data(idx))
+    val w = data(idx+1)
+    val t = t0Millis + (w >> 32)
+    val altMeters = (w & 0xffffffff).toInt / 100.0
+    f(idx/2, posCodec.latDeg, posCodec.lonDeg, altMeters, t)
   }
 }

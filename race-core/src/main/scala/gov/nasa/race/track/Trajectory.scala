@@ -55,8 +55,8 @@ trait Trajectory {
 object EmptyTrajectory extends Trajectory {
   override def capacity = 0
   override def size = 0
-  override def add (lat: Double, lon: Double, alt: Double, t: Long) = new CompactTrajectory().add(lat,lon,alt,t)
-  override def add(tp: TrackPoint) = new CompactTrajectory().add(tp)
+  override def add (lat: Double, lon: Double, alt: Double, t: Long) = new CompactFullTrajectory().add(lat,lon,alt,t)
+  override def add(tp: TrackPoint) = new CompactFullTrajectory().add(tp)
   override def foreach(f: (Int,Double,Double,Double,Long) => Unit) = {}
   override def foreachReverse(f: (Int,Double,Double,Double,Long) => Unit) = {}
 }

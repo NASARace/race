@@ -18,7 +18,7 @@ package gov.nasa.race.air
 
 import gov.nasa.race.geo.GeoPosition
 import gov.nasa.race.test.RaceSpec
-import gov.nasa.race.track.CompactTrajectory
+import gov.nasa.race.track.CompactFullTrajectory
 import org.joda.time.DateTime
 import org.scalatest.FlatSpec
 import gov.nasa.race.uom.Length._
@@ -66,7 +66,7 @@ class CompactFlightPathSpec extends FlatSpec with RaceSpec {
       ( 37.58134,-122.28631, 1100 , DateTime.parse("2016-07-03T13:53:43.871") )
     )
 
-    val path = new CompactTrajectory(2)  // force growth during population
+    val path = new CompactFullTrajectory(2)  // force growth during population
     for (e <- positions) {
       val fpos = new FlightPos("123","X42", GeoPosition.fromDegreesAndMeters(e._1,e._2,e._3),
                                Knots(100.0),Degrees(42), MetersPerSecond(0),e._4)

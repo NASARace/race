@@ -24,6 +24,15 @@ import org.scalatest.FlatSpec
   */
 class TraceSpec extends FlatSpec with RaceSpec {
 
+  "an empty trace" should "not produce any values" in {
+    val trace = new Trace(4)
+    trace.size shouldBe(0)
+
+    trace.foreach { (i, lat, lon, alt, t) =>
+      fail("entry in an empty trace")
+    }
+  }
+
   "a non-saturated trace" should "contain exact values of entries in right order" in {
     val data = Array(
       (10.0, 20.0, 100.0, 1),
