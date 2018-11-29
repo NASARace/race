@@ -20,12 +20,12 @@ import gov.nasa.race.test.RaceSpec
 import org.scalatest.FlatSpec
 
 /**
-  * reg test for Trace
+  * reg test for LossLessTrace
   */
-class TraceSpec extends FlatSpec with RaceSpec {
+class LossLessTraceSpec extends FlatSpec with RaceSpec {
 
   "an empty trace" should "not produce any values" in {
-    val trace = new Trace(4)
+    val trace = new LossLessTrace(4)
     trace.size shouldBe(0)
 
     trace.foreach { (i, lat, lon, alt, t) =>
@@ -40,7 +40,7 @@ class TraceSpec extends FlatSpec with RaceSpec {
       (10.2, 20.2, 100.2, 3)
     )
 
-    val trace = new Trace(4)
+    val trace = new LossLessTrace(4)
     for (d <- data) trace.add(d._1, d._2, d._3, d._4)
 
     assert(trace.size == data.length)
@@ -74,7 +74,7 @@ class TraceSpec extends FlatSpec with RaceSpec {
       (10.5, 20.5, 100.5, 5)
     )
 
-    val trace = new Trace(4)
+    val trace = new LossLessTrace(4)
     for (d <- data) trace.add(d._1, d._2, d._3, d._4)
 
     assert(trace.size == trace.capacity)

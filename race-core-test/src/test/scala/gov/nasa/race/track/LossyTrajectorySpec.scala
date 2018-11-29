@@ -20,9 +20,9 @@ import gov.nasa.race.test.RaceSpec
 import org.scalatest.FlatSpec
 
 /**
-  * reg test for CompactFullTrajectory
+  * reg test for LossyTrajectory
   */
-class CompactFullTrajectorySpec extends FlatSpec with RaceSpec {
+class LossyTrajectorySpec extends FlatSpec with RaceSpec {
 
   "a init sized CompactFullTrajectory" should "contain approximate values of entries in right order" in {
     val data = Array(
@@ -31,7 +31,7 @@ class CompactFullTrajectorySpec extends FlatSpec with RaceSpec {
       (37.62002,-122.38002, 3002.0, 3)
     )
 
-    val t = new CompactFullTrajectory
+    val t = new LossyTrajectory
     assert( t.isEmpty)
     for (d <- data)  t.add(d._1, d._2, d._3, d._4)
 
@@ -69,12 +69,12 @@ class CompactFullTrajectorySpec extends FlatSpec with RaceSpec {
       (37.62008,-122.38008, 3008.0, 8),
     )
 
-    val t = new CompactFullTrajectory(4)
+    val t = new LossyTrajectory(4)
     assert( t.isEmpty)
     for (d <- data)  t.add(d._1, d._2, d._3, d._4)
     assert( t.size == data.length)
 
-    println("--- grown compact trajectory in order of entry:")
+    println("--- grown lossy trajectory in order of entry:")
     t.foreach { (i, lat,lon,alt,t) =>
       println(f"$i: ($lat%10.5f, $lon%10.5f, $alt%5.0f, $t)")
       lat shouldBe( data(i)._1 +- 0.00001)

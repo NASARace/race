@@ -28,7 +28,7 @@ import gov.nasa.race.geo.WGS84Codec
   * the data is kept in a single Array[Long] that has to be allocated/resized by the type that implements
   * this trait
   */
-trait CompactTrajectory extends Trajectory {
+trait LossyTraj extends Trajectory {
   protected var data: Array[Long]  // provided by concrete type
 
   protected var posCodec = new WGS84Codec // needs to be our own object to avoid result allocation
@@ -43,11 +43,11 @@ trait CompactTrajectory extends Trajectory {
     data(idx+1) = (dtMillis << 32) | altCm
   }
 
-  protected def processTrackPointData(idx: Int, f: (Int,Double,Double,Double,Long)=>Unit): Unit = {
+  protected def processTrackPointData(i: Int, idx: Int, f: (Int,Double,Double,Double,Long)=>Unit): Unit = {
     posCodec.decode(data(idx))
     val w = data(idx+1)
     val t = t0Millis + (w >> 32)
     val altMeters = (w & 0xffffffff).toInt / 100.0
-    f(idx/2, posCodec.latDeg, posCodec.lonDeg, altMeters, t)
+    f(i, posCodec.latDeg, posCodec.lonDeg, altMeters, t)
   }
 }

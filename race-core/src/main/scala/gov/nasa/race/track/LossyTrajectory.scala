@@ -21,9 +21,9 @@ import gov.nasa.race.geo.WGS84Codec
 import scala.annotation.tailrec
 
 /**
-  * A FlightPath with a compact encoding
+  * A track path (full trajectory)  with a compact encoding
   */
-class CompactFullTrajectory(capacityIncrement: Int=32) extends CompactTrajectory {
+class LossyTrajectory(capacityIncrement: Int=32) extends LossyTraj {
   private var growthCycle = 0
   final val linearGrowthCycles = 5 // once that is exceeded we grow exponentially
 
@@ -74,7 +74,7 @@ class CompactFullTrajectory(capacityIncrement: Int=32) extends CompactTrajectory
     @tailrec def _processEntry (i: Int, f: (Int,Double,Double,Double,Long)=>Unit): Unit = {
       if (i < _size) {
         val j = i*2
-        processTrackPointData(j,f)
+        processTrackPointData(i,j,f)
         _processEntry(i+1,f)
       }
     }
@@ -85,7 +85,7 @@ class CompactFullTrajectory(capacityIncrement: Int=32) extends CompactTrajectory
     @tailrec def _processEntry (i: Int, f: (Int,Double,Double,Double,Long)=>Unit): Unit = {
       if (i >= 0) {
         val j = i*2
-        processTrackPointData(j,f)
+        processTrackPointData(i,j,f)
         _processEntry(i-1,f)
       }
     }

@@ -16,23 +16,21 @@
  */
 package gov.nasa.race.track
 
-
 /**
-  * a trajectory with a fixed size of slots, keeping the last N track points
-  * implemented as a simple ring buffer in which elements are never removed, only added
+  * a trajectory that is stored as a circular buffer, i.e. has a max number of entries in which
+  * it stores the most recent track points
   */
-class Trace (val capacity: Int) extends Trajectory {
+trait Trace extends Trajectory {
 
-  protected val lats: Array[Double] = new Array[Double](capacity)
-  protected val lons: Array[Double] = new Array[Double](capacity)
-  protected val alts: Array[Double] = new Array[Double](capacity)
-  protected val dates: Array[Long] = new Array[Long](capacity)
-
+  // note that head,tail are logical indices (1..capacity)
   protected var head: Int = -1
   protected var tail: Int = -1
   protected var _size: Int = 0
 
   override def size: Int = _size
+
+  protected def setTrackPointData(idx: Int, lat: Double, lon: Double, alt: Double, t: Long): Unit
+  protected def processTrackPointData(i: Int, idx: Int, f: (Int,Double,Double,Double,Long)=>Unit): Unit
 
   override def add (lat: Double, lon: Double, alt: Double, t: Long): Trajectory = {
     var head = this.head
@@ -51,10 +49,7 @@ class Trace (val capacity: Int) extends Trajectory {
       }
     }
 
-    lats(head) = lat
-    lons(head) = lon
-    alts(head) = alt
-    dates(head) = t
+    setTrackPointData(head, lat,lon,alt,t)
 
     this.head = head
     this.tail = tail
@@ -70,7 +65,7 @@ class Trace (val capacity: Int) extends Trajectory {
     var i = 0
     val n = _size
     while (i < n) {
-      f(i, lats(j),lons(j),alts(j),dates(j))
+      processTrackPointData(i,j,f)
       j = (j + 1) % capacity
       i += 1
     }
@@ -83,7 +78,7 @@ class Trace (val capacity: Int) extends Trajectory {
     var j = head
     var i = _size-1
     while (i >= 0) {
-      f(i, lats(j),lons(j),alts(j),dates(j))
+      processTrackPointData(i,j,f)
       j = if (j > 0) j - 1 else capacity - 1
       i -= 1
     }
