@@ -34,7 +34,7 @@ trait CompressedTrajectory extends Trajectory {
   protected var posCodec = new WGS84Codec // needs to be our own object to avoid result allocation
   protected var t0Millis: Long = 0        // start time in epoch millis
 
-  protected def setTrackPointData(idx: Int, lat: Double, lon: Double, alt: Double, t: Long): Unit = {
+  protected def setTrackPointData(idx: Int, t: Long, lat: Double, lon: Double, alt: Double): Unit = {
     val dtMillis = t - t0Millis
     val latlon = posCodec.encode(lat,lon)
     val altCm = Math.round(alt * 100.0).toInt
