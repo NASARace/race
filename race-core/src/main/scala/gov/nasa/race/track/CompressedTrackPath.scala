@@ -63,7 +63,7 @@ class CompressedTrackPath (capacityIncrement: Int=32) extends CompressedTrajecto
       growDataCapacity
     }
 
-    setTrackPointData(i, lat,lon,alt,t)
+    setTrackPointData(i, t, lat,lon,alt)
 
     _size += 1
     this

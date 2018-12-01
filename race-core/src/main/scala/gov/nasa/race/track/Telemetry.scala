@@ -29,8 +29,8 @@ trait Telemetry {
   def capacity: Int
   def size: Int
 
-  def addPre(t: Long, lat: Double, lon: Double, alt: Double, hdg: Double, spd: Double, vr: Double): Trajectory // low level add to avoid temporary objects
-  def add(date: DateTime, lat: Angle, lon: Angle, alt: Length, hdg: Angle, spd: Speed, vr: Speed): Trajectory = {
+  def addPre(t: Long, lat: Double, lon: Double, alt: Double, hdg: Double, spd: Double, vr: Double): Telemetry // low level add to avoid temporary objects
+  def add(date: DateTime, lat: Angle, lon: Angle, alt: Length, hdg: Angle, spd: Speed, vr: Speed): Telemetry = {
     addPre(date.getMillis, lat.toDegrees, lon.toDegrees, alt.toMeters, hdg.toDegrees, spd.toMetersPerSecond, vr.toMetersPerSecond)
   }
 

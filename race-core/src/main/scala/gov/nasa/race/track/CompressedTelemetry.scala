@@ -15,7 +15,7 @@ trait CompressedTelemetry extends Telemetry {
 
     data(idx) = latlon
     data(idx+1) = (dtMillis << 32) | altCm
-    
+
   }
 
   protected def processTrackData(i: Int, idx: Int, f: (Int,Long,Double,Double,Double,Double,Double,Double)=>Unit): Unit = {
