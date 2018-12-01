@@ -21,9 +21,9 @@ import gov.nasa.race.geo.WGS84Codec
 import scala.annotation.tailrec
 
 /**
-  * A track path (full trajectory)  with a compact encoding
+  * A track path (full trajectory)  with a compressed (lossy) encoding
   */
-class LossyTrajectory(capacityIncrement: Int=32) extends LossyTraj {
+class CompressedTrackPath (capacityIncrement: Int=32) extends CompressedTrajectory {
   private var growthCycle = 0
   final val linearGrowthCycles = 5 // once that is exceeded we grow exponentially
 
@@ -53,7 +53,7 @@ class LossyTrajectory(capacityIncrement: Int=32) extends LossyTraj {
     * @param alt altitude in meters (or NaN if undefined)
     * @param t epoch value (or 0 if undefined)
     */
-  override def add (lat: Double, lon: Double, alt: Double, t: Long): Trajectory = {
+  override def addPre(t: Long, lat: Double, lon: Double, alt: Double): Trajectory = {
     val i = _size*2
 
     if (i == 0) {
@@ -70,8 +70,8 @@ class LossyTrajectory(capacityIncrement: Int=32) extends LossyTraj {
   }
 
 
-  override def foreach(f: (Int,Double,Double,Double,Long)=>Unit): Unit = {
-    @tailrec def _processEntry (i: Int, f: (Int,Double,Double,Double,Long)=>Unit): Unit = {
+  override def foreachPre(f: (Int,Long,Double,Double,Double)=>Unit): Unit = {
+    @tailrec def _processEntry (i: Int, f: (Int,Long,Double,Double,Double)=>Unit): Unit = {
       if (i < _size) {
         val j = i*2
         processTrackPointData(i,j,f)
@@ -81,8 +81,8 @@ class LossyTrajectory(capacityIncrement: Int=32) extends LossyTraj {
     _processEntry(0,f)
   }
 
-  override def foreachReverse(f: (Int,Double,Double,Double,Long)=>Unit): Unit = {
-    @tailrec def _processEntry (i: Int, f: (Int,Double,Double,Double,Long)=>Unit): Unit = {
+  override def foreachPreReverse(f: (Int,Long,Double,Double,Double)=>Unit): Unit = {
+    @tailrec def _processEntry (i: Int, f: (Int,Long,Double,Double,Double)=>Unit): Unit = {
       if (i >= 0) {
         val j = i*2
         processTrackPointData(i,j,f)

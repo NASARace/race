@@ -16,6 +16,11 @@
  */
 package gov.nasa.race.track
 
+import gov.nasa.race.uom._
+import gov.nasa.race.uom.Length._
+import gov.nasa.race.uom.Angle._
+import org.joda.time.DateTime
+
 /**
   * abstraction for trajectories that does not imply underlying representation, allowing for memory
   * optimized implementations
@@ -24,7 +29,10 @@ trait Trajectory {
   def capacity: Int
   def size: Int
 
-  def add (lat: Double, lon: Double, alt: Double, t: Long): Trajectory // low level add to avoid temporary objects
+  def addPre(t: Long, lat: Double, lon: Double, alt: Double): Trajectory // low level add to avoid temporary objects
+  def add(date: DateTime, lat: Angle, lon: Angle, alt: Length): Trajectory = {
+    addPre(date.getMillis, lat.toDegrees, lon.toDegrees, alt.toMeters)
+  }
 
   /** low level iteration support that does not require temporary objects for FlightPath elements
     * The provided function takes 5 arguments:
@@ -33,9 +41,22 @@ trait Trajectory {
     *   Double - alt in meters
     *   Long - epoch millis
     */
-  def foreach(f: (Int,Double,Double,Double,Long)=>Unit): Unit
-  def foreachReverse(f: (Int,Double,Double,Double,Long)=>Unit): Unit
+  def foreachPre(f: (Int,Long,Double,Double,Double)=>Unit): Unit
+  final def foreach(g: (Int, DateTime, Angle,Angle,Length)=>Unit): Unit = {
+    foreachPre((i:Int, t:Long, latDeg:Double, lonDeg:Double, altM:Double) => {
+      g(i,new DateTime(t),Degrees(latDeg),Degrees(lonDeg),Meters(altM))
+    })
+  }
 
+  /**
+    * iterator in LIFO order
+    */
+  def foreachPreReverse(f: (Int,Long,Double,Double,Double)=>Unit): Unit
+  final def foreachReverse(g: (Int, DateTime, Angle,Angle,Length)=>Unit): Unit = {
+    foreachPreReverse((i:Int, t:Long, latDeg:Double, lonDeg:Double, altM:Double) => {
+      g(i,new DateTime(t),Degrees(latDeg),Degrees(lonDeg),Meters(altM))
+    })
+  }
   //--- methods that can be overridden but have a generic implementation
 
   def isEmpty: Boolean = size == 0
@@ -43,7 +64,7 @@ trait Trajectory {
 
   def add (e: TrackPoint): Trajectory = {
     val pos = e.position
-    add(pos.φ.toDegrees,pos.λ.toDegrees,pos.altitude.toMeters,e.date.getMillis)
+    addPre(e.date.getMillis, pos.φ.toDegrees, pos.λ.toDegrees, pos.altitude.toMeters)
   }
   def += (tp: TrackPoint) = add(tp)
 
@@ -55,8 +76,8 @@ trait Trajectory {
 object EmptyTrajectory extends Trajectory {
   override def capacity = 0
   override def size = 0
-  override def add (lat: Double, lon: Double, alt: Double, t: Long) = new LossyTrajectory().add(lat,lon,alt,t)
-  override def add(tp: TrackPoint) = new LossyTrajectory().add(tp)
-  override def foreach(f: (Int,Double,Double,Double,Long) => Unit) = {}
-  override def foreachReverse(f: (Int,Double,Double,Double,Long) => Unit) = {}
+  override def addPre(t: Long, lat: Double, lon: Double, alt: Double): Trajectory = new CompressedTrackPath().addPre(t, lat, lon, alt)
+  override def add(tp: TrackPoint) = new CompressedTrackPath().add(tp)
+  override def foreachPre(f: (Int,Long,Double,Double,Double) => Unit): Unit = {}
+  override def foreachPreReverse(f: (Int,Long,Double,Double,Double) => Unit) = {}
 }

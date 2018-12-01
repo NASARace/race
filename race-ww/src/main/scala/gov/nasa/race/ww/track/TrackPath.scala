@@ -51,7 +51,7 @@ class TrackPath[T <: TrackedObject](val entry: TrackEntry[T]) extends Path with 
   setAltitudeMode(WorldWind.ABSOLUTE)
 
   var posList = new Vector[Position](flightPath.capacity)
-  flightPath foreach { (_,latDeg,lonDeg,altMeters,_) =>
+  flightPath foreachPre { (_, latDeg, lonDeg, altMeters, _) =>
     posList.add(Position.fromDegrees(latDeg,lonDeg,altMeters))
   }
   setPositions(posList)

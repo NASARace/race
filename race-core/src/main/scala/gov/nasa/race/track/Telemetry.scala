@@ -14,28 +14,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package gov.nasa.race
-
-import gov.nasa.race.geo.GeoPositioned
-import gov.nasa.race.uom.{Angle, Speed}
+package gov.nasa.race.track
 
 /**
-  * common types for track objects
-  *
-  * this package relies on gov.nasa.race.geo for spatial information and adds time and identification
-  * or generic tracks
+  * object encapsulating history of dynamic states of a TrackedObject (position,velocities,heading)
   */
-package object track {
-
-  /** a GeoPositioned that is associated with a date */
-  trait TrackPoint extends GeoPositioned with Dated
-
-  trait IdentifiableTrackPoint extends TrackPoint with IdentifiableObject
-
-  trait MovingObject {
-    def heading: Angle
-    def speed: Speed
-    def vr: Speed   // vertical rate
-  }
+trait Telemetry {
 
 }

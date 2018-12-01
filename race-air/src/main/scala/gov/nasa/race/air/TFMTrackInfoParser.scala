@@ -85,7 +85,7 @@ class TFMTrackInfoParser extends XmlParser[Seq[TrackInfo]] with XmlAttrProcessor
     } {
       case "nxce:waypoint" =>
         if (!lat.isNaN && !lon.isNaN) {
-          route = route.add(lat,lon,Double.NaN,0) // no altitude or time info
+          route = route.addPre(0, lat, lon, Double.NaN) // no altitude or time info
         }
 
       case "fdm:fltdMessage" =>

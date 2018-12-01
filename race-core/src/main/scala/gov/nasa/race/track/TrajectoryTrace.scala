@@ -20,7 +20,7 @@ package gov.nasa.race.track
   * a trajectory that is stored as a circular buffer, i.e. has a max number of entries in which
   * it stores the most recent track points
   */
-trait Trace extends Trajectory {
+trait TrajectoryTrace extends Trajectory {
 
   // note that head,tail are logical indices (1..capacity)
   protected var head: Int = -1
@@ -29,10 +29,10 @@ trait Trace extends Trajectory {
 
   override def size: Int = _size
 
-  protected def setTrackPointData(idx: Int, lat: Double, lon: Double, alt: Double, t: Long): Unit
-  protected def processTrackPointData(i: Int, idx: Int, f: (Int,Double,Double,Double,Long)=>Unit): Unit
+  protected def setTrackPointData(idx: Int, t: Long, lat: Double, lon: Double, alt: Double): Unit
+  protected def processTrackPointData(i: Int, idx: Int, f: (Int,Long,Double,Double,Double)=>Unit): Unit
 
-  override def add (lat: Double, lon: Double, alt: Double, t: Long): Trajectory = {
+  override def addPre(t: Long, lat: Double, lon: Double, alt: Double): Trajectory = {
     var head = this.head
     var tail = this.tail
 
@@ -49,7 +49,7 @@ trait Trace extends Trajectory {
       }
     }
 
-    setTrackPointData(head, lat,lon,alt,t)
+    setTrackPointData(head, t, lat,lon,alt)
 
     this.head = head
     this.tail = tail
@@ -60,7 +60,7 @@ trait Trace extends Trajectory {
   /**
     * iterate through track points in order of entry (FIFO)
     */
-  override def foreach(f: (Int,Double,Double,Double,Long)=>Unit): Unit = {
+  override def foreachPre(f: (Int,Long,Double,Double,Double)=>Unit): Unit = {
     var j = tail
     var i = 0
     val n = _size
@@ -74,7 +74,7 @@ trait Trace extends Trajectory {
   /**
     * iterate through track points in reverse order of entry (LIFO)
     */
-  override def foreachReverse(f: (Int,Double,Double,Double,Long)=>Unit): Unit = {
+  override def foreachPreReverse(f: (Int,Long,Double,Double,Double)=>Unit): Unit = {
     var j = head
     var i = _size-1
     while (i >= 0) {

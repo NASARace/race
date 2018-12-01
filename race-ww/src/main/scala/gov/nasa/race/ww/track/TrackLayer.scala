@@ -122,7 +122,7 @@ trait TrackLayer[T <:TrackedObject] extends SubscribingRaceLayer
   // override in subclasses for more specialized types
   protected def createLayerInfoPanel: TrackLayerInfoPanel[T] = new TrackLayerInfoPanel(raceViewer,this).styled('consolePanel)
   protected def createEntryPanel: TrackEntryPanel[T] = new TrackEntryPanel(raceViewer,this).styled('consolePanel)
-  protected def createTrajectory(track: T) = new LossyTrajectory
+  protected def createTrajectory(track: T) = new CompressedTrackPath
   protected def createTrackEntry(track: T): TrackEntry[T] = new TrackEntry[T](track,createTrajectory(track), this)
 
 

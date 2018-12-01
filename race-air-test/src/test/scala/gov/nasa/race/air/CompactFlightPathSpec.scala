@@ -18,7 +18,7 @@ package gov.nasa.race.air
 
 import gov.nasa.race.geo.GeoPosition
 import gov.nasa.race.test.RaceSpec
-import gov.nasa.race.track.LossyTrajectory
+import gov.nasa.race.track.CompressedTrackPath
 import org.joda.time.DateTime
 import org.scalatest.FlatSpec
 import gov.nasa.race.uom.Length._
@@ -66,14 +66,14 @@ class CompactFlightPathSpec extends FlatSpec with RaceSpec {
       ( 37.58134,-122.28631, 1100 , DateTime.parse("2016-07-03T13:53:43.871") )
     )
 
-    val path = new LossyTrajectory(2)  // force growth during population
+    val path = new CompressedTrackPath(2)  // force growth during population
     for (e <- positions) {
       val fpos = new FlightPos("123","X42", GeoPosition.fromDegreesAndMeters(e._1,e._2,e._3),
                                Knots(100.0),Degrees(42), MetersPerSecond(0),e._4)
       path.add(fpos)
     }
 
-    path.foreach { (i, latDeg, lonDeg, altMeters, tMillis) =>
+    path.foreachPre { (i, latDeg, lonDeg, altMeters, tMillis) =>
       println(f"$i%2d :  $latDeg%.5f,$lonDeg%.5f, $altMeters%.0f, ${new DateTime(tMillis)}")
       val e = positions(i)
       latDeg should be(e._1 +- 0.000001)

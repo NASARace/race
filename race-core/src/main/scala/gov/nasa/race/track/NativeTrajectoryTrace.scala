@@ -20,21 +20,21 @@ package gov.nasa.race.track
 /**
   * a trace that stores track points in original size
   */
-class LossLessTrace(val capacity: Int) extends Trace {
+class NativeTrajectoryTrace(val capacity: Int) extends TrajectoryTrace {
 
   protected val lats: Array[Double] = new Array[Double](capacity)
   protected val lons: Array[Double] = new Array[Double](capacity)
   protected val alts: Array[Double] = new Array[Double](capacity)
   protected val dates: Array[Long] = new Array[Long](capacity)
 
-  override protected def setTrackPointData(idx: Int, lat: Double, lon: Double, alt: Double, t: Long): Unit = {
+  override protected def setTrackPointData(idx: Int, t: Long, lat: Double, lon: Double, alt: Double): Unit = {
     lats(idx) = lat
     lons(idx) = lon
     alts(idx) = alt
     dates(idx) = t
   }
 
-  override protected def processTrackPointData(i: Int, idx: Int, f: (Int,Double,Double,Double,Long)=>Unit): Unit = {
-    f(i, lats(idx),lons(idx),alts(idx),dates(idx))
+  override protected def processTrackPointData(i: Int, idx: Int, f: (Int,Long,Double,Double,Double)=>Unit): Unit = {
+    f(i, dates(idx), lats(idx),lons(idx),alts(idx))
   }
 }
