@@ -24,7 +24,7 @@ import org.scalatest.FlatSpec
   */
 class CompressedTrajectoryTraceSpec extends FlatSpec with RaceSpec {
 
-  "a LossyTrace" should "store positions with 4-5 digits" in {
+  "a CompressedTrajectoryTrace" should "store positions with 4-5 digits" in {
 
     val data = Array(
       (0, 37.62000, -122.38000, 3000.0),
@@ -44,7 +44,7 @@ class CompressedTrajectoryTraceSpec extends FlatSpec with RaceSpec {
     for (d <- data) t.addPre(d._1, d._2, d._3, d._4)
     assert(t.size == t.capacity)
 
-    println("--- saturated lossy trace in reverse order of entry:")
+    println("--- saturated CompressedTrajectoryTrace in reverse order of entry:")
     var i = data.length-1
     t.foreachPreReverse { (_, t, lat, lon, alt) =>
       println(f"$i: $t = ($lat%10.5f, $lon%10.5f, $alt%5.0f)")

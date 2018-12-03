@@ -23,14 +23,14 @@ import gov.nasa.race.uom.Speed._
 import org.joda.time.DateTime
 
 /**
-  * object encapsulating history of dynamic states of a TrackedObject (position,velocities,heading)
+  * object encapsulating history of dynamic states of a TrackedObject (position,heading,velocities)
   */
-trait Telemetry {
+trait TrackHistory {
   def capacity: Int
   def size: Int
 
-  def addPre(t: Long, lat: Double, lon: Double, alt: Double, hdg: Double, spd: Double, vr: Double): Telemetry // low level add to avoid temporary objects
-  def add(date: DateTime, lat: Angle, lon: Angle, alt: Length, hdg: Angle, spd: Speed, vr: Speed): Telemetry = {
+  def addPre(t: Long, lat: Double, lon: Double, alt: Double, hdg: Double, spd: Double, vr: Double): TrackHistory // low level add to avoid temporary objects
+  def add(date: DateTime, lat: Angle, lon: Angle, alt: Length, hdg: Angle, spd: Speed, vr: Speed): TrackHistory = {
     addPre(date.getMillis, lat.toDegrees, lon.toDegrees, alt.toMeters, hdg.toDegrees, spd.toMetersPerSecond, vr.toMetersPerSecond)
   }
 
@@ -62,7 +62,7 @@ trait Telemetry {
   def isEmpty: Boolean = size == 0
   def nonEmpty: Boolean = size > 0
 
-  def add (e: TrackedObject): Telemetry = {
+  def add (e: TrackedObject): TrackHistory = {
     val pos = e.position
     addPre(e.date.getMillis, pos.φ.toDegrees, pos.λ.toDegrees, pos.altitude.toMeters,
            e.heading.toDegrees,e.speed.toMetersPerSecond, e.vr.toMetersPerSecond)

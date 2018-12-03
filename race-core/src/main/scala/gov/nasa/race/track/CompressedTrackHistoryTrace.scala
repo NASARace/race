@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, United States Government, as represented by the
+ * Copyright (c) 2018, United States Government, as represented by the
  * Administrator of the National Aeronautics and Space Administration.
  * All rights reserved.
  *
@@ -16,6 +16,11 @@
  */
 package gov.nasa.race.track
 
-class TelemetryTrace {
+/**
+  * a trace with a compact (lossy) track state encoding
+  */
+class CompressedTrackHistoryTrace (val capacity: Int) extends TrackHistoryTrace with CompressedTrackHistory {
+  override protected var data: Array[Long] = new Array[Long](capacity*3)
+
 
 }

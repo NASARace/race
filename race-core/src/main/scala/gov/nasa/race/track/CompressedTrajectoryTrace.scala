@@ -22,23 +22,4 @@ package gov.nasa.race.track
 class CompressedTrajectoryTrace(val capacity: Int) extends TrajectoryTrace with CompressedTrajectory {
 
   override protected var data: Array[Long] = new Array[Long](capacity*2)
-
-  override protected def setTrackPointData(idx: Int, t: Long, lat: Double, lon: Double, alt: Double): Unit = {
-    val dtMillis = t - t0Millis
-    val latlon = posCodec.encode(lat,lon)
-    val altCm = Math.round(alt * 100.0).toInt
-
-    val j = idx*2
-    data(j) = latlon
-    data(j+1) = (dtMillis << 32) | altCm
-  }
-
-  override protected def processTrackPointData(i: Int, idx: Int, f: (Int,Long,Double,Double,Double)=>Unit): Unit = {
-    val j = idx*2
-    posCodec.decode(data(j))
-    val w = data(j+1)
-    val t = t0Millis + (w >> 32)
-    val altMeters = (w & 0xffffffff).toInt / 100.0
-    f(i, t, posCodec.latDeg, posCodec.lonDeg, altMeters)
-  }
 }

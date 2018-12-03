@@ -54,12 +54,11 @@ class CompressedTrackPath (capacityIncrement: Int=32) extends CompressedTrajecto
     * @param t epoch value (or 0 if undefined)
     */
   override def addPre(t: Long, lat: Double, lon: Double, alt: Double): Trajectory = {
-    val i = _size*2
+    val i = _size
 
     if (i == 0) {
       data = new Array[Long](capacityIncrement*2)
-      t0Millis = t
-    } else if (i == data.length) {
+    } else if (i*2 == data.length) {
       growDataCapacity
     }
 
@@ -73,8 +72,7 @@ class CompressedTrackPath (capacityIncrement: Int=32) extends CompressedTrajecto
   override def foreachPre(f: (Int,Long,Double,Double,Double)=>Unit): Unit = {
     @tailrec def _processEntry (i: Int, f: (Int,Long,Double,Double,Double)=>Unit): Unit = {
       if (i < _size) {
-        val j = i*2
-        processTrackPointData(i,j,f)
+        processTrackPointData(i,i,f)
         _processEntry(i+1,f)
       }
     }
@@ -84,8 +82,7 @@ class CompressedTrackPath (capacityIncrement: Int=32) extends CompressedTrajecto
   override def foreachPreReverse(f: (Int,Long,Double,Double,Double)=>Unit): Unit = {
     @tailrec def _processEntry (i: Int, f: (Int,Long,Double,Double,Double)=>Unit): Unit = {
       if (i >= 0) {
-        val j = i*2
-        processTrackPointData(i,j,f)
+        processTrackPointData(i,i,f)
         _processEntry(i-1,f)
       }
     }

@@ -16,6 +16,7 @@
  */
 package gov.nasa.race.track
 
+import gov.nasa.race.geo.GeoPosition
 import gov.nasa.race.uom._
 import gov.nasa.race.uom.Length._
 import gov.nasa.race.uom.Angle._
@@ -42,7 +43,7 @@ trait Trajectory {
     *   Long - epoch millis
     */
   def foreachPre(f: (Int,Long,Double,Double,Double)=>Unit): Unit
-  final def foreach(g: (Int, DateTime, Angle,Angle,Length)=>Unit): Unit = {
+  def foreach(g: (Int, DateTime, Angle,Angle,Length)=>Unit): Unit = {
     foreachPre((i:Int, t:Long, latDeg:Double, lonDeg:Double, altM:Double) => {
       g(i,new DateTime(t),Degrees(latDeg),Degrees(lonDeg),Meters(altM))
     })
@@ -52,7 +53,7 @@ trait Trajectory {
     * iterator in LIFO order
     */
   def foreachPreReverse(f: (Int,Long,Double,Double,Double)=>Unit): Unit
-  final def foreachReverse(g: (Int, DateTime, Angle,Angle,Length)=>Unit): Unit = {
+  def foreachReverse(g: (Int, DateTime, Angle,Angle,Length)=>Unit): Unit = {
     foreachPreReverse((i:Int, t:Long, latDeg:Double, lonDeg:Double, altM:Double) => {
       g(i,new DateTime(t),Degrees(latDeg),Degrees(lonDeg),Meters(altM))
     })
@@ -71,6 +72,32 @@ trait Trajectory {
   def addAll (tps: Seq[TrackPoint]): Unit = tps.foreach(add)  // can be overridden for more efficient version
   def ++= (tps: Seq[TrackPoint]): Unit = addAll(tps)
 
+
+  //--- retrieve snapshot as arrays of times positions
+
+  def getPositionsPre: (Array[Long],Array[Double],Array[Double], Array[Double]) = {
+    val ts = new Array[Long](size)
+    val lats = new Array[Double](size)
+    val lons = new Array[Double](size)
+    val alts = new Array[Double](size)
+
+    foreachPre { (i, t, lat, lon, alt) =>
+      ts(i) = t
+      lats(i) = lat
+      lons(i) = lon
+      alts(i) = alt
+    }
+
+    (ts,lats,lons,alts)
+  }
+
+  def getPositions: Array[(DateTime,GeoPosition)] = {
+    val a = new Array[(DateTime,GeoPosition)](size)
+    foreachPre { (i, t, lat, lon, alt) =>
+      a(i) = (new DateTime(t), GeoPosition.fromDegreesAndMeters(lat,lon,alt))
+    }
+    a
+  }
 }
 
 object EmptyTrajectory extends Trajectory {

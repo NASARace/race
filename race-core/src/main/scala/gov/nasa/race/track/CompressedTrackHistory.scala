@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018, United States Government, as represented by the
+ * Copyright (c) 2017, United States Government, as represented by the
  * Administrator of the National Aeronautics and Space Administration.
  * All rights reserved.
  *
@@ -17,18 +17,12 @@
 package gov.nasa.race.track
 
 import gov.nasa.race.geo.WGS84Codec
+import gov.nasa.race.uom.Angle
 
 /**
-  * a trajectory that stores track points in compressed format
-  *
-  * each track point occupies two Long values. The first one encodes lat/lon, the second one alt/t
-  * Note that we store the track point date (epoch in millis) as relative to the first entry, in 32bit,
-  * which limits CompactTrajectories to about 1200h duration
-  *
-  * the data is kept in a single Array[Long] that has to be allocated/resized by the type that implements
-  * this trait
+  * dynamic TrackedObject states stored as (lossy) fixed point values. Each state occupies 3 Long values
   */
-trait CompressedTrajectory extends Trajectory {
+trait CompressedTrackHistory extends TrackHistory {
   protected var data: Array[Long]  // provided by concrete type
 
   protected var posCodec = new WGS84Codec // needs to be our own object to avoid result allocation
@@ -43,8 +37,8 @@ trait CompressedTrajectory extends Trajectory {
     }
   }
 
-  protected def setTrackPointData(idx: Int, t: Long, lat: Double, lon: Double, alt: Double): Unit = {
-    val j = idx * 2 // each data point occupies 2 Long slots
+  protected def setTrackData(idx: Int, t: Long, lat: Double, lon: Double, alt: Double, hdg: Double, spd: Double, vr: Double): Unit = {
+    val j = idx * 3 // each data point occupies 3 Long slots
 
     val dtMillis = getRelTime(t)
     val latlon = posCodec.encode(lat,lon)
@@ -52,15 +46,36 @@ trait CompressedTrajectory extends Trajectory {
 
     data(j) = latlon
     data(j+1) = (dtMillis << 32) | altCm
+
+    // heading is stored 0..360 fixedpoint with two decimals in 2 bytes
+    val h: Long = (Angle.normalizeDegrees(hdg) * 100).round & 0xffff
+
+    // both speed and vr are stored as signed 3 byte fixedpoints with 4 decimals (-838..838 m/sec)
+    val s: Long = if (spd >= 0) ((spd * 10000).round & 0x7fffff) else (((-spd * 10000).round & 0x7fffff) | 0x800000)
+    val v: Long = if (vr >= 0) ((vr * 10000).round & 0x7fffff) else (((-vr * 10000).round & 0x7fffff) | 0x800000)
+
+    data(j+2) = (h << 48) | (s << 24) | v
   }
 
-  protected def processTrackPointData(i: Int, idx: Int, f: (Int,Long,Double,Double,Double)=>Unit): Unit = {
-    val j = idx * 2 // each data point occupies 2 Long slots
+  protected def processTrackData(i: Int, idx: Int, f: (Int,Long,Double,Double,Double,Double,Double,Double)=>Unit): Unit = {
+    val j = idx * 3 // each data point occupies 3 Long slots
 
     posCodec.decode(data(j))
     val w = data(j+1)
     val t = t0Millis + (w >> 32)
     val altMeters = (w & 0xffffffff).toInt / 100.0
-    f(i, t, posCodec.latDeg, posCodec.lonDeg, altMeters)
+
+    var l = data(j+2)
+    var vrMs = (l & 0x7fffff)/10000.0
+    if ((l & 0x800000) != 0) vrMs = -vrMs
+
+    l >>= 24
+    var spdMs = (l & 0x7fffff)/10000.0
+    if ((l & 0x800000) != 0) spdMs = -spdMs
+
+    l >>= 24
+    val hdgDeg = (l & 0xffff)/100.0
+
+    f(i, t, posCodec.latDeg, posCodec.lonDeg, altMeters, hdgDeg,spdMs,vrMs)
   }
 }
