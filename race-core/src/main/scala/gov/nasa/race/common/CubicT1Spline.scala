@@ -30,24 +30,27 @@ package gov.nasa.race.common
   *     import fracOps._
   *     ..
   */
-class CubicTSpline(val t0: Long, val ts: Array[Int], val c1: Array[Double]) {
+class CubicT1Spline(val t0: Long, val ts: Array[Int], val c1: Array[Double]) {
 
   val N = ts.length
   val N1 = N-1
 
-  val c2: Array[Double] = new Array(ts.length)
-  val c3: Array[Double] = new Array(ts.length)
-  val c4: Array[Double] = new Array(ts.length)
+  val c2: Array[Double] = new Array(N)
+  val c3: Array[Double] = new Array(N)
+  val c4: Array[Double] = new Array(N)
 
-  calcCoefficients
+  calcCoefficients_nat
+
+  def startTime: Long = t0
+  def endTime: Long = t0 + ts(N1)
 
   def evaluateFromTo(tStart: Long, tEnd: Long, dt: Int)(f: (Long,Double)=>Unit) = {
     // the bounds are relative to t0
     val tMin = if (tStart < t0) 0 else (tStart - t0).toInt
     val tMax = if (tEnd > (t0 + ts(N1))) ts(N1) else (tEnd - t0).toInt
 
-    var i = getUpperIndex(tMin)
-    if (i > 0) {
+    var i = getIndex(tMin)
+    if (i >= 0) {
       var t = tMin
       var ti = ts(i)
       var ti1 = ts(i+1)
@@ -57,31 +60,41 @@ class CubicTSpline(val t0: Long, val ts: Array[Int], val c1: Array[Double]) {
       var a4 = c4(i)
 
       while (t <= tMax) {
+        //print(s"@@ $i: ti=$ti t=$t")
         if (t == ti) {
+          //println(s"  => $a1")
           f(t, a1)
         } else {
           val x = (t - ti)
-          val y = a1 + x * (a2 + x * (a3 + x * a4))
+          val y = a1 + x*(a2 + x*(a3 + x*a4))
+
+          //println(s" dt=$x => $y")
           f(t0 + t, y)
         }
 
         t += dt
-        if (t >= ti1 ) { // next spline segment
-          i += 1
+
+        if (t >= ti1) {
           ti = ti1
-          ti1 = ts(i)
-          a1 = c1(i); a2 = c2(i); a3 = c3(i); a4 = c4(i)
+          i += 1
+          if (i < N){
+            a1 = c1(i)
+            a2 = c2(i)
+            a3 = c3(i)
+            a4 = c4(i)
+            if (i < N1) ti1 = ts(i+1)
+          }
         }
       }
     }
   }
 
-  def getUpperIndex (x: Int): Int = {
-    if (x > ts(N1)) return -1 // outside interpolated interval
 
-    var i = 0
-    while (ts(i) < x) i += 1
-    i
+  @inline protected final def getIndex (x: Int): Int = {
+    if (x < 0 || x > ts(N1)) return -1 // outside our interval
+    var i = 1
+    while (ts(i) <= x) i += 1
+    i-1
   }
 
 
@@ -104,22 +117,24 @@ class CubicTSpline(val t0: Long, val ts: Array[Int], val c1: Array[Double]) {
       i += 1
     }
 
+    // TODO check for N > 2 here..
     // use not-a-knot left boundary conditions
     c4(0) = c3(2)
     c3(0) = c3(1) + c3(2)
-    c2(0) = ((c3(1) + 2*c3(0)) * c4(1) * c3(2) + squared(c3(1)) * c4(2)) / c3(0)
+    c2(0) = ((c3(1) + 2d*c3(0)) * c4(1) * c3(2) + squared(c3(1)) * c4(2)) / c3(0)
 
     i = 1
     while (i <= n1){
       val g = -c3(i+1)/c4(i-1)
-      c2(i) = g*c2(i-1) + 3*(c3(i) * c4(i+1) + c3(i+1) * c4(i))
-      c4(i) = g*c3(i-1) + 2*(c3(i) + c3(i+1))
+      c2(i) = g*c2(i-1) + 3d*(c3(i) * c4(i+1) + c3(i+1) * c4(i))
+      c4(i) = g*c3(i-1) + 2d*(c3(i) + c3(i+1))
       i += 1
     }
 
+    // TODO check for N == 3 here..
     // use not-a-knot right boundary condition
     var g = c3(n1) + c3(n)
-    c2(n) = ((c3(n) +2*g) * c4(n) * c3(n1) + squared(c3(n)) * (c1(n1) - c1(n-2)) / c3(n1)) / g
+    c2(n) = ((c3(n) +2d*g) * c4(n) * c3(n1) + squared(c3(n)) * (c1(n1) - c1(n-2)) / c3(n1)) / g
     g = -g / c4(n1)
     c4(n) = c3(n1)
 
@@ -130,15 +145,52 @@ class CubicTSpline(val t0: Long, val ts: Array[Int], val c1: Array[Double]) {
     do {
       c2(i) = (c2(i) - c3(i) * c2(i+1)) / c4(i)
       i -= 1
-    } while (i > 0)
+    } while (i >= 0)
 
     i = 1
     while (i <= n) {
       val dtau = c3(i)
       val divdf1 = (c1(i) - c1(i-1)) / dtau
-      val divdf3 = c2(i-1) + c2(i) - 2*divdf1
-      c3(i-1) = 2* (divdf1 - c2(i-1) - divdf3) / dtau
-      c4(i-1) = (divdf3/dtau) * 6/dtau
+      val divdf3 = c2(i-1) + c2(i) - 2d*divdf1
+      c3(i-1) = 2d* (divdf1 - c2(i-1) - divdf3) / dtau
+      c4(i-1) = (divdf3/dtau) * 6d/dtau
+      i += 1
+    }
+  }
+
+  def calcCoefficients_nat: Unit = {
+    val n = ts.length -1 // n intervals, not length
+    val y = c1
+    val b = c2
+    val c = c3
+    val d = c4
+
+    var mu: Array[Double] = new Array(n)
+    var z: Array[Double] = new Array(n+1)
+
+    var hPrev = ts(1) - ts(0)
+    var t = ts(1)
+    var tPrev = ts(0)
+    var i = 1
+    while (i < n) {
+      val tNext = ts(i+1)
+      val h = tNext - t
+      val g = 2.0 * (tNext - tPrev) - hPrev * mu(i-1)
+      mu(i) = h / g
+      z(i) = (3.0 * (y(i+1) * hPrev - y(i) * (tNext - tPrev)+ y(i-1) * h) / (hPrev * h) - hPrev * z(i-1)) / g
+      i += 1
+      hPrev = h
+      tPrev = t
+      t = tNext
+    }
+
+    var j = n-1
+    while (j >= 0) {
+      val h = ts(j+1) - ts(j)
+      c(j) = z(j) - mu(j) * c(j + 1)
+      b(j) = (y(j+1) - y(j)) / h - h * (c(j+1) + 2.0 * c(j)) / 3.0
+      d(j) = (c(j+1) - c(j)) / (3.0 * h)
+      j -= 1
     }
   }
 }
