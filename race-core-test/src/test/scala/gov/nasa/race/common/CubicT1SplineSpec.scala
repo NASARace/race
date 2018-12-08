@@ -25,10 +25,9 @@ import org.scalatest.FlatSpec
 class CubicT1SplineSpec extends FlatSpec with RaceSpec {
 
   "a CubicT1Spline" should "approximate known functions" in {
-/**
     {
       println("--- f(x) = x")
-      val ts: Array[Int]    = Array(0,  10,  20,  30,  40,  50)
+      val ts: Array[Int] = Array(0, 10, 20, 30, 40, 50)
       val vs: Array[Double] = Array(0d, 10d, 20d, 30d, 40d, 50d)
 
       val s = new CubicT1Spline(0, ts, vs)
@@ -41,7 +40,7 @@ class CubicT1SplineSpec extends FlatSpec with RaceSpec {
 
     {
       println("--- f(x) = C")
-      val ts: Array[Int]    = Array( 0,  10,  20,  30,  40,  50)
+      val ts: Array[Int] = Array(0, 10, 20, 30, 40, 50)
       val vs: Array[Double] = Array(10d, 10d, 10d, 10d, 10d, 10d)
 
       val s = new CubicT1Spline(0, ts, vs)
@@ -51,21 +50,42 @@ class CubicT1SplineSpec extends FlatSpec with RaceSpec {
         v shouldBe 10d
       }
     }
-**/
+
     {
       println("--- f(x) = sin(x)")
-      val ts: Array[Int]    = Array( 0, 45, 90, 135, 180 )
+      val ts: Array[Int] = Array(0, 45, 90, 135, 180)
       val vs: Array[Double] = new Array(ts.length)
 
-      for ( (a,i) <- ts.zipWithIndex) {
-        vs(i) = Math.sin((a.toDouble/180.0) * Math.PI)
+      for ((a, i) <- ts.zipWithIndex) {
+        vs(i) = Math.sin((a.toDouble / 180.0) * Math.PI)
         //println(f"@@ $a%3d = ${vs(i)}%.1f")
       }
 
       val s = new CubicT1Spline(0, ts, vs)
 
       s.evaluateFromTo(0, 180, 10) { (t, v) =>
-        println(f"$t%3d: $v%.2f")
+        val y = Math.sin((t.toDouble / 180.0) * Math.PI)
+        println(f"$t%3d: $v%.2f ($y%.2f) e=${v - y}")
+        assert(Math.abs(v - y) < 0.01)
+      }
+    }
+
+    {
+      println("--- f(x) = sqrt(R^2 - t^2) (circle)")
+      val ts: Array[Int] = Array(0, 20, 40, 60, 80, 100)
+      val vs: Array[Double] = new Array(ts.length)
+
+      for ((t, i) <- ts.zipWithIndex) {
+        vs(i) = Math.sqrt(10000 - squared(t.toDouble))
+        //println(f"@@ $t%3d = ${vs(i)}%.1f")
+      }
+
+      val s = new CubicT1Spline(0, ts, vs)
+
+      s.evaluateFromTo(0, 100, 10) { (t, v) =>
+        val y = Math.sqrt(10000 - squared(t.toDouble))
+        println(f"$t%3d: $v%.2f ($y%.2f) e=${v - y}")
+        //assert(Math.abs(v - y) < 0.01)
       }
     }
   }
