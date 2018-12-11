@@ -122,30 +122,30 @@ class CubicT1Spline(val t0: Long, val ts: Array[Int], val vs: Array[Double]) ext
     val cs = this.c
     val ds = this.d
 
-    var mu: Array[Double] = new Array(n)
-    var zs: Array[Double] = new Array(n+1)
+    var p: Array[Double] = new Array(n)
+    var qs: Array[Double] = new Array(n+1)
 
     var hPrev = ts(1) - ts(0)
     var t = ts(1)
     var tPrev = ts(0)
     var a = as(1)
     var aPrev = as(0)
-    var zPrev = 0d
+    var qPrev = 0d
     var i = 1
     while (i < n) {
       val tNext = ts(i+1)
       val aNext = as(i+1)
       val h = tNext - t
-      val g = 2.0 * (tNext - tPrev) - hPrev * mu(i-1)
-      mu(i) = h / g
-      val z = (3.0 * (aNext * hPrev - a * (tNext - tPrev)+ aPrev * h) / (hPrev * h) - hPrev * zPrev) / g
-      zs(i) = z
+      val g = 2.0 * (tNext - tPrev) - hPrev * p(i-1)
+      p(i) = h / g
+      val q = (3.0 * (aNext * hPrev - a * (tNext - tPrev)+ aPrev * h) / (hPrev * h) - hPrev * qPrev) / g
+      qs(i) = q
 
       i += 1
       hPrev = h
       tPrev = t; t = tNext
       aPrev = a; a = aNext
-      zPrev = z
+      qPrev = q
     }
 
     aPrev = as(n)
@@ -157,7 +157,7 @@ class CubicT1Spline(val t0: Long, val ts: Array[Int], val vs: Array[Double]) ext
       val h = tPrev - t
       val a = as(i)
 
-      val c = zs(i) - mu(i) * cPrev
+      val c = qs(i) - p(i) * cPrev
       cs(i) = c
       bs(i) = (aPrev - a) / h - h * (cPrev + 2.0 * c) / 3.0
       ds(i) = (cPrev - c) / (3.0 * h)
