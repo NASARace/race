@@ -29,7 +29,7 @@ class RatInterSpec extends FlatSpec with RaceSpec {
 
   "a TRatInter" should "approximate a const function" in {
     println("\n--- f(x) = C")
-    val C: Double = 1.0
+    val C: Double = 0.0
     val ts: Array[Int] = Array(0, 20, 40, 80)
     val vs: Array[Double] = new Array(ts.length)
 
