@@ -27,6 +27,23 @@ class RatInterSpec extends FlatSpec with RaceSpec {
   @inline def rad(deg: Double): Double = deg * Math.PI / 180.0
   @inline def cot(r: Double): Double = 1d / Math.tan(r)
 
+  "a TRatInter" should "approximate a const function" in {
+    println("\n--- f(x) = C")
+    val C: Double = 1.0
+    val ts: Array[Int] = Array(0, 20, 40, 80)
+    val vs: Array[Double] = new Array(ts.length)
+
+    for ((a, i) <- ts.zipWithIndex) {
+      vs(i) = C
+    }
+
+    val rat = new TRatInter(0, ts, vs)
+
+    val t = 35
+    val v = rat.interpolate(t)
+    println(s"t=$t -> v=$v ($C)")
+  }
+
   "a TRatInter" should "approximate a linear function" in {
     println("\n--- f(x) = x")
     val ts: Array[Int] = Array(0, 20, 40, 80)
@@ -88,23 +105,20 @@ class RatInterSpec extends FlatSpec with RaceSpec {
     def f (x: Double): Double = Math.sin(x)
 
     println("\n--- f(x) = sin(x)")
-    val ts: Array[Int] = Array(0, 45, 90, 135, 140)
+    val ts: Array[Int] = Array(0, 45, 90, 135, 180)
     val vs: Array[Double] = new Array(ts.length)
 
     for ((a, i) <- ts.zipWithIndex) {
       vs(i) = f(rad(a))
-      println(f"@@ $a%3d : ${vs(i)}%.1f")
+      //println(f"@@ $a%3d : ${vs(i)}")
     }
 
     val rat = new TRatInter(0, ts, vs)
 
-    val t = 44
+    val t = 30
     val v = rat.interpolate(t)
     println(s"t=$t -> v=$v (${f(rad(t))})")
   }
-
-
-
 
   "a DRatInter" should "approximate a cot(x) function" in {
     println("\n--- f(x) = cot(x)")
@@ -122,5 +136,4 @@ class RatInterSpec extends FlatSpec with RaceSpec {
     val v = rat.interpolate(x)
     println(s"x=$x -> v=$v (${cot(rad(x))})")
   }
-
 }

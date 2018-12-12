@@ -23,14 +23,18 @@ class TRatInter (val t0: Long, val ts: Array[Int], val vs: Array[Double]) {
   val N = ts.length
   val N1 = N-1
 
-  val a: Array[Double] = new Array(N1)
-  val b: Array[Double] = new Array(N1)
+  val a: Array[Double] = new Array(N)
+  val b: Array[Double] = new Array(N)
 
   def interpolate (t: Long): Double = {
+    val EPS = 1e6
+
     var rPrev = a
     var r = b
     var tiPrev = ts(0)
     var viPrev = vs(0)
+    var rkPrev: Double = 0
+    rPrev(0) = viPrev
 
     // TODO - use linear interpolation if there are only 2 observations
 
@@ -38,31 +42,34 @@ class TRatInter (val t0: Long, val ts: Array[Int], val vs: Array[Double]) {
     var i = 1
     while (i < N) {
       val ti = ts(i)
+      //val vi = vs(i)
       val vi = vs(i)
+
+      //--- k = 0
+      r(0) = vi
 
       if (t == ti) return vi  // observation point
       val dti = (t - ti).toDouble
 
-      // k = 1
+      //--- k = 1
       var x: Double = (t - tiPrev).toDouble / dti
       var tt = vi - viPrev
-      var rkPrev = vi + (tt / (x * (1d - tt/vi) - 1d))
+      rkPrev = vi + (tt / (x * (1d - tt/vi) - 1d))
       r(1) = rkPrev
+      //println(s"r(1) = $rkPrev")
 
+      //--- k > 1
       var k = 2
       while (k <= i) {
         x = (t - ts(i - k)).toDouble / dti
         tt = rkPrev - rPrev(k-1)
-        val rk = rkPrev + (tt / (x * (1d - tt/(rkPrev - rPrev(k-2))) - 1d))
+        val t2 = rkPrev - rPrev(k-2)
 
-        if (k == N1) {
-          return rk     // done - we reached the lower right diagonal
+        val rk = rkPrev + (tt / (x * (1d - tt/t2) - 1d))
 
-        } else {
-          r(k) = rk
-          rkPrev = rk
-          k += 1
-        }
+        r(k) = rk
+        rkPrev = rk
+        k += 1
       }
 
       // swap r,rPrev
@@ -75,7 +82,7 @@ class TRatInter (val t0: Long, val ts: Array[Int], val vs: Array[Double]) {
       i += 1
     }
 
-    return Double.NaN // can't get here
+    rkPrev
   }
 }
 
