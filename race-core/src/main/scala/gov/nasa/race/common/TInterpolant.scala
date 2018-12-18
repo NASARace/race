@@ -82,6 +82,4 @@ trait T1Interpolant extends TInterpolant {
   def interpolate (tStart: Long, tEnd: Long, dt: Int): Array[Double]
   def interpolateHeadInto (result: Array[Double], tStart: Long, tEnd: Long, dt: Int): Int
   def interpolateReverseTailInto (result: Array[Double], tStart: Long, tEnd: Long, dt: Int): Int
-  def evalFromTo (tStart: Long, tEnd: Long, dt: Int)(f: (Long,Double)=>Boolean): Unit
-  def evalFromToReverse (tStart: Long, tEnd: Long, dt: Int)(f: (Long,Double)=>Boolean): Unit
 }

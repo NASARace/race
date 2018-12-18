@@ -38,20 +38,18 @@ class FHT1InterpolantSpec extends FlatSpec with RaceSpec {
   def testRange (ts: Array[Int], tStart: Int, tEnd: Int, dt: Int)(f: (Int)=>Double) = {
     val vs: Array[Double] = ts.map(f)
     val r = new FHT1Interpolant(0, ts, vs)
-    r.evalFromTo(tStart,tEnd,dt) { (t, v) =>
+    r.evalForward(tStart,tEnd,dt) { (t, v) =>
       val u = f(t.toInt)
       println(s"       r($t) = $v ($u -> e=${u - v})")
-      true
     }
   }
 
   def testRangeReverse (ts: Array[Int], tStart: Int, tEnd: Int, dt: Int)(f: (Int)=>Double) = {
     val vs: Array[Double] = ts.map(f)
     val r = new FHT1Interpolant(0, ts, vs)
-    r.evalFromToReverse(tStart,tEnd,dt) { (t, v) =>
+    r.evalReverse(tEnd,tStart,dt) { (t, v) =>
       val u = f(t.toInt)
       println(s"       r($t) = $v ($u -> e=${u - v})")
-      true
     }
   }
 
