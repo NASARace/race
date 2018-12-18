@@ -17,37 +17,6 @@
 package gov.nasa.race.common
 
 /**
-  * a time based spline function
-  */
-trait TSpline {
-  val t0: Long
-  val ts: Array[Int]
-
-  val N = ts.length
-  val N1 = N-1
-
-  def startTime: Long = t0
-  def endTime: Long = t0 + ts(N1)
-
-  @inline protected def getTMin (t: Long): Int = if (t < t0) 0 else (t - t0).toInt
-  @inline protected def getTMax (t: Long): Int = if (t > (t0 + ts(N1))) ts(N1) else (t - t0).toInt
-
-  @inline protected final def getLeftIndex(x: Int): Int = {
-    if (x < 0 || x > ts(N1)) return -1 // outside our interval
-    var i = 1
-    while (ts(i) <= x) i += 1
-    i-1
-  }
-
-  @inline protected final def getLeftIndexReverse(x: Int): Int = {
-    if (x < 0 || x > ts(N1)) return -1 // outside our interval
-    var i = N1
-    while (ts(i) > x) i -= 1
-    i
-  }
-}
-
-/**
   * a cubic spline over a parametric function that has a integer time parameter (e.g. milliseconds)
   * this implementation uses 'natural' splines, i.e. P''' = 0 in both end points
   * we minimize field and array access in order to speed up computation
@@ -58,7 +27,7 @@ trait TSpline {
   *     import fracOps._
   *     ..
   */
-class CubicT1Spline(val t0: Long, val ts: Array[Int], val vs: Array[Double]) extends TSpline {
+class CubicT1Interpolant(val t0: Long, val ts: Array[Int], val vs: Array[Double]) extends TInterpolant {
 
   // the polynom coefficients
   val a: Array[Double] = vs
@@ -173,7 +142,7 @@ class CubicT1Spline(val t0: Long, val ts: Array[Int], val vs: Array[Double]) ext
 /**
   * a 2-dimensional time based cubic spline
   */
-class CubicT2Spline (val t0: Long, val ts: Array[Int], val xs: Array[Double], val ys: Array[Double]) extends TSpline {
+class CubicT2Interpolant(val t0: Long, val ts: Array[Int], val xs: Array[Double], val ys: Array[Double]) extends TInterpolant {
 
   // polynom coefficients for x values
   val ax: Array[Double] = xs
@@ -321,7 +290,7 @@ class CubicT2Spline (val t0: Long, val ts: Array[Int], val xs: Array[Double], va
 /**
   * a 3-dimensional time based cubic spline
   */
-class CubicT3Spline (val t0: Long, val ts: Array[Int], val xs: Array[Double], val ys: Array[Double], val zs: Array[Double]) extends TSpline {
+class CubicT3Interpolant(val t0: Long, val ts: Array[Int], val xs: Array[Double], val ys: Array[Double], val zs: Array[Double]) extends TInterpolant {
 
   // polynom coefficients for x values
   val ax: Array[Double] = xs

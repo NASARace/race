@@ -116,4 +116,5 @@ package object common {
   }
 
   def objRef (o: AnyRef): String = Integer.toHexString(System.identityHashCode(o))
+
 }
