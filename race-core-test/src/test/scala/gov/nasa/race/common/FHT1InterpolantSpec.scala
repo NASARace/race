@@ -82,7 +82,7 @@ class FHT1InterpolantSpec extends FlatSpec with RaceSpec {
     val t0 = 20
     val t1 = 40
     val dt = 2
-    val a = r.interpolate(t0,t1,dt)
+    val a = r.evalRange(t0,t1,dt)
     for ((v,i) <- a.zipWithIndex) {
       val t = t0 + (i * dt)
       val u = f(t)
@@ -100,7 +100,7 @@ class FHT1InterpolantSpec extends FlatSpec with RaceSpec {
     val a = new Array[Double](5)
     val t0 = 0
     val dt = 5
-    val m = r.interpolateHeadInto(a, t0, 40, dt)
+    val m = r.evalHeadInto(a, t0, 40, dt)
     for (i <- 0 until m) {
       val v = a(i)
       val t = t0 + (i * dt)
@@ -119,7 +119,7 @@ class FHT1InterpolantSpec extends FlatSpec with RaceSpec {
     val a = new Array[Double](5)
     val t1 = 90
     val dt = 5
-    val m = r.interpolateReverseTailInto(a, 0, t1, dt)
+    val m = r.evalReverseTailInto(a, 0, t1, dt)
     for (i <- 0 until m) {
       val v = a(i)
       val t = t1 - (i * dt)

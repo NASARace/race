@@ -211,6 +211,9 @@ abstract class FHInterpolant (val t0: Long, val ts: Array[Int], val d: Int) exte
 }
 
 
+/**
+  * Floater Hormann interpolant for 1-dim time series
+  */
 class FHT1Interpolant (_t0: Long, _ts: Array[Int], val vs: Array[Double], _d: Int=3)
                     extends FHInterpolant(_t0, _ts, min(_d,_ts.length)) with T1Interpolant {
 
@@ -232,7 +235,7 @@ class FHT1Interpolant (_t0: Long, _ts: Array[Int], val vs: Array[Double], _d: In
 
   //--- result array interpolation
 
-  def interpolate (tStart: Long, tEnd: Long, dt: Int): Array[Double] = {
+  def evalRange(tStart: Long, tEnd: Long, dt: Int): Array[Double] = {
     val len = 1 + (tEnd - tStart).toInt / dt
     val result = new Array[Double](len)
     var i = 0
@@ -243,7 +246,7 @@ class FHT1Interpolant (_t0: Long, _ts: Array[Int], val vs: Array[Double], _d: In
     result
   }
 
-  def interpolateHeadInto (result: Array[Double], tStart: Long, tEnd: Long, dt: Int): Int = {
+  def evalHeadInto(result: Array[Double], tStart: Long, tEnd: Long, dt: Int): Int = {
     val l = 1 + (tEnd - tStart).toInt / dt
     val te = if (l > result.length) tStart + (result.length-1) * dt else tEnd
     var i = 0
@@ -253,7 +256,7 @@ class FHT1Interpolant (_t0: Long, _ts: Array[Int], val vs: Array[Double], _d: In
     }
     i
   }
-  def interpolateReverseTailInto (result: Array[Double], tStart: Long, tEnd: Long, dt: Int): Int = {
+  def evalReverseTailInto(result: Array[Double], tStart: Long, tEnd: Long, dt: Int): Int = {
     val l = 1 + (tEnd - tStart).toInt / dt
     val ts = if (l > result.length) tEnd - (result.length-1) * dt else tStart
     var i = 0
@@ -305,29 +308,338 @@ class FHT1Interpolant (_t0: Long, _ts: Array[Int], val vs: Array[Double], _d: In
   }
 
   //--- iterators
-  type LD = T2[Long,Double]  // the iterator next() type
+  type Result = T2[Long,Double]  // the iterator next() type
 
-  def iterator (tStart: Long, tEnd: Long, dt: Int): Iterator[LD] = {
-    val ld = new LD(0,0)
-    def exact (t: Int, i: Int): LD = { ld.updated(t,vs(i)) }
-    def approx (t: Int, dist: Int): LD = { ld.updated(t,_eval(t,dist,vs)) }
+  def iterator (tStart: Long, tEnd: Long, dt: Int): Iterator[Result] = {
+    val ld = new Result(0,0)
+    def exact (t: Int, i: Int): Result = { ld.updated(t,vs(i)) }
+    def approx (t: Int, dist: Int): Result = { ld.updated(t,_eval(t,dist,vs)) }
     new ForwardIterator(tStart, tEnd, dt)(exact)(approx)
   }
 
-  def reverseIterator (tEnd: Long, tStart: Long, dt: Int): Iterator[LD] = {
-    val ld = new LD(0,0)
-    def exact (t: Int, i: Int): LD = { ld.updated(t,vs(i)) }
-    def approx (t: Int, dist: Int): LD = { ld.updated(t,_eval(t,dist,vs)) }
+  def reverseIterator (tEnd: Long, tStart: Long, dt: Int): Iterator[Result] = {
+    val ld = new Result(0,0)
+    def exact (t: Int, i: Int): Result = { ld.updated(t,vs(i)) }
+    def approx (t: Int, dist: Int): Result = { ld.updated(t,_eval(t,dist,vs)) }
     new ReverseIterator(tEnd, tStart, dt)(exact)(approx)
   }
 
-  def reverseTailDurationIterator (dur: Long, dt: Int): Iterator[LD] = {
+  def reverseTailDurationIterator (dur: Long, dt: Int): Iterator[Result] = {
     val tEnd = ts(N1) + t0
     val tStart = tEnd - dur
     reverseIterator(tEnd,tStart,dt)
   }
 
-  def reverseTailIterator (tEnd: Long, dur: Long, dt: Int): Iterator[LD] = {
+  def reverseTailIterator (tEnd: Long, dur: Long, dt: Int): Iterator[Result] = {
+    val tStart = tEnd - dur
+    reverseIterator(tEnd,tStart,dt)
+  }
+}
+
+/**
+  * Floater Hormann interpolant for 2-dim time series
+  */
+class FHT2Interpolant (_t0: Long, _ts: Array[Int], val vx: Array[Double], val vy: Array[Double], _d: Int=3)
+                                                            extends FHInterpolant(_t0, _ts, min(_d,_ts.length)) {
+  type Result = T3[Long,Double,Double]
+
+  @inline protected final def _eval2 (t: Int, dist: Int, result: Result): Unit = {
+    val n1 = N1
+    val w = this.w
+    val ts = this.ts
+
+    var sDenom, sx, sy: Double = 0.0
+    var i = 0
+    while (i <= n1){
+      val wd = (w(i) * dist) / (t - ts(i))
+      sDenom += wd
+
+      sx += wd * vx(i)
+      sy += wd * vy(i)
+
+      i += 1
+    }
+
+    result._1 = t + t0
+    result._2 = sx / sDenom
+    result._2 = sy / sDenom
+  }
+
+  def eval (tAbs: Long, result: Result): Unit = {
+    val t: Int = (tAbs - t0).toInt
+    val j = findLeftIndex(t)
+
+    if (j < 0) { // before first observation
+      _eval2(t, -t, result)
+    } else if (j == N1) { // after last observation
+      _eval2(t, t - ts(N1), result)
+    } else {
+      _eval2(t, min(t - ts(j), ts(j+1) - t), result)
+    }
+  }
+
+  def evalForward (tStart: Long, tEnd: Long, dt: Int)(f: (Long,Double,Double)=>Unit): Unit = {
+    val tLeft: Int = (tStart - t0).toInt
+    val tRight: Int = (tEnd - t0).toInt
+
+    val i = findLeftIndex(tLeft)
+    val tPrev = if (i < 0) Int.MinValue else ts(i)
+    val tNext = if (i == N1) Int.MaxValue else ts(i+1)
+    val result = new Result(0, 0.0, 0.0)
+
+    def exact (t: Int, i: Int): Unit = f(t + t0, vx(i), vy(i))
+    def approx (t: Int, dist: Int): Unit = {
+      _eval2(t, dist, result)
+      f(t + t0, result._2, result._3)
+    }
+
+    try {
+      _evalForward(i, tLeft, tPrev, tNext, tRight, dt)(exact)(approx)
+    } catch {
+      case _: BreakException => // do nothing
+    }
+  }
+
+  def evalReverse (tEnd: Long, tStart: Long, dt: Int)(f: (Long,Double,Double)=>Unit): Unit = {
+    val tLeft: Int = (tStart - t0).toInt
+    val tRight: Int = (tEnd - t0).toInt
+
+    val i = findLeftIndex(tRight)
+    val tPrev = if (i < 0) Int.MinValue else ts(i)
+    val tNext = if (i == N1) Int.MaxValue else ts(i+1)
+    val result = new Result(0, 0.0, 0.0)
+
+    def exact (t: Int, i: Int): Unit = f(t + t0, vx(i), vy(i))
+    def approx (t: Int, dist: Int): Unit = {
+      _eval2(t, dist, result)
+      f(t + t0, result._2, result._3)
+    }
+
+    try {
+      _evalReverse(i, tRight, tPrev, tNext, tLeft, dt)(exact)(approx)
+    } catch {
+      case _: BreakException => // do nothing
+    }
+  }
+
+  def evalRange2(tStart: Long, tEnd: Long, dt: Int): (Array[Double],Array[Double]) = {
+    val len = 1 + (tEnd - tStart).toInt / dt
+    val rx = new Array[Double](len)
+    val ry = new Array[Double](len)
+    var i = 0
+    evalForward(tStart, tEnd, dt) { (t,x,y) =>
+      rx(i) = x
+      ry(i) = y
+      i += 1
+    }
+    (rx,ry)
+  }
+
+  def evalHeadInto(rx: Array[Double], ry: Array[Double], tStart: Long, tEnd: Long, dt: Int): Int = {
+    val nr = min(rx.length, ry.length)
+    val l = 1 + (tEnd - tStart).toInt / dt
+    val te = if (l > nr) tStart + (nr-1) * dt else tEnd
+    var i = 0
+    evalForward(tStart, te, dt) { (t,x,y) =>
+      rx(i) = x
+      ry(i) = y
+      i += 1
+    }
+    i
+  }
+  def evalReverseTailInto(rx: Array[Double], ry: Array[Double], tStart: Long, tEnd: Long, dt: Int): Int = {
+    val nr = min(rx.length, ry.length)
+
+    val l = 1 + (tEnd - tStart).toInt / dt
+    val ts = if (l > nr) tEnd - (nr-1) * dt else tStart
+    var i = 0
+    evalReverse(tEnd, ts, dt) { (t,x,y) =>
+      rx(i) = x
+      ry(i) = y
+      i += 1
+    }
+    i
+  }
+
+  def iterator (tStart: Long, tEnd: Long, dt: Int): Iterator[Result] = {
+    val result = new Result(0,0.0,0.0)
+    def exact (t: Int, i: Int): Result = { result.updated(t,vx(i),vy(i)) }
+    def approx (t: Int, dist: Int): Result = { _eval2(t,dist,result); result }
+    new ForwardIterator(tStart, tEnd, dt)(exact)(approx)
+  }
+
+  def reverseIterator (tEnd: Long, tStart: Long, dt: Int): Iterator[Result] = {
+    val result = new Result(0,0.0,0.0)
+    def exact (t: Int, i: Int): Result = { result.updated(t,vx(i),vy(i)) }
+    def approx (t: Int, dist: Int): Result = { _eval2(t,dist,result); result }
+    new ReverseIterator(tEnd, tStart, dt)(exact)(approx)
+  }
+
+  def reverseTailDurationIterator (dur: Long, dt: Int): Iterator[Result] = {
+    val tEnd = ts(N1) + t0
+    val tStart = tEnd - dur
+    reverseIterator(tEnd,tStart,dt)
+  }
+
+  def reverseTailIterator (tEnd: Long, dur: Long, dt: Int): Iterator[Result] = {
+    val tStart = tEnd - dur
+    reverseIterator(tEnd,tStart,dt)
+  }
+}
+
+
+/**
+  * Floater Hormann interpolant for 3-dim time series
+  */
+class FHT3Interpolant (_t0: Long, _ts: Array[Int], val vx: Array[Double], val vy: Array[Double], val vz: Array[Double], _d: Int=3)
+                                extends FHInterpolant(_t0, _ts, min(_d,_ts.length)) {
+  type Result = T4[Long,Double,Double,Double]
+
+  @inline protected final def _eval3 (t: Int, dist: Int, result: Result): Unit = {
+    val n1 = N1
+    val w = this.w
+    val ts = this.ts
+
+    var sDenom, sx, sy, sz: Double = 0.0
+    var i = 0
+    while (i <= n1){
+      val wd = (w(i) * dist) / (t - ts(i))
+      sDenom += wd
+
+      sx += wd * vx(i)
+      sy += wd * vy(i)
+      sz += wd * vz(i)
+
+      i += 1
+    }
+
+    result._1 = t + t0
+    result._2 = sx / sDenom
+    result._2 = sy / sDenom
+    result._3 = sz / sDenom
+  }
+
+  def eval (tAbs: Long, result: Result): Unit = {
+    val t: Int = (tAbs - t0).toInt
+    val j = findLeftIndex(t)
+
+    if (j < 0) { // before first observation
+      _eval3(t, -t, result)
+    } else if (j == N1) { // after last observation
+      _eval3(t, t - ts(N1), result)
+    } else {
+      _eval3(t, min(t - ts(j), ts(j+1) - t), result)
+    }
+  }
+
+  def evalForward (tStart: Long, tEnd: Long, dt: Int)(f: (Long,Double,Double,Double)=>Unit): Unit = {
+    val tLeft: Int = (tStart - t0).toInt
+    val tRight: Int = (tEnd - t0).toInt
+
+    val i = findLeftIndex(tLeft)
+    val tPrev = if (i < 0) Int.MinValue else ts(i)
+    val tNext = if (i == N1) Int.MaxValue else ts(i+1)
+    val result = new Result(0, 0.0, 0.0, 0.0)
+
+    def exact (t: Int, i: Int): Unit = f(t + t0, vx(i), vy(i), vz(i))
+    def approx (t: Int, dist: Int): Unit = {
+      _eval3(t, dist, result)
+      f(t + t0, result._2, result._3, result._4)
+    }
+
+    try {
+      _evalForward(i, tLeft, tPrev, tNext, tRight, dt)(exact)(approx)
+    } catch {
+      case _: BreakException => // do nothing
+    }
+  }
+
+  def evalReverse (tEnd: Long, tStart: Long, dt: Int)(f: (Long,Double,Double,Double)=>Unit): Unit = {
+    val tLeft: Int = (tStart - t0).toInt
+    val tRight: Int = (tEnd - t0).toInt
+
+    val i = findLeftIndex(tRight)
+    val tPrev = if (i < 0) Int.MinValue else ts(i)
+    val tNext = if (i == N1) Int.MaxValue else ts(i+1)
+    val result = new Result(0, 0.0, 0.0, 0.0)
+
+    def exact (t: Int, i: Int): Unit = f(t + t0, vx(i), vy(i), vz(i))
+    def approx (t: Int, dist: Int): Unit = {
+      _eval3(t, dist, result)
+      f(t + t0, result._2, result._3, result._4)
+    }
+
+    try {
+      _evalReverse(i, tRight, tPrev, tNext, tLeft, dt)(exact)(approx)
+    } catch {
+      case _: BreakException => // do nothing
+    }
+  }
+
+  def evalRange2(tStart: Long, tEnd: Long, dt: Int): (Array[Double],Array[Double],Array[Double]) = {
+    val len = 1 + (tEnd - tStart).toInt / dt
+    val rx = new Array[Double](len)
+    val ry = new Array[Double](len)
+    val rz = new Array[Double](len)
+
+    var i = 0
+    evalForward(tStart, tEnd, dt) { (t,x,y,z) =>
+      rx(i) = x
+      ry(i) = y
+      rz(i) = z
+      i += 1
+    }
+    (rx,ry,rz)
+  }
+
+  def evalHeadInto(rx: Array[Double], ry: Array[Double], rz: Array[Double], tStart: Long, tEnd: Long, dt: Int): Int = {
+    val nr = min(min(rx.length, ry.length),rz.length)
+    val l = 1 + (tEnd - tStart).toInt / dt
+    val te = if (l > nr) tStart + (nr-1) * dt else tEnd
+    var i = 0
+    evalForward(tStart, te, dt) { (t,x,y,z) =>
+      rx(i) = x
+      ry(i) = y
+      rz(i) = z
+      i += 1
+    }
+    i
+  }
+  def evalReverseTailInto(rx: Array[Double], ry: Array[Double], rz: Array[Double], tStart: Long, tEnd: Long, dt: Int): Int = {
+    val nr = min(min(rx.length, ry.length),rz.length)
+    val l = 1 + (tEnd - tStart).toInt / dt
+    val ts = if (l > nr) tEnd - (nr-1) * dt else tStart
+    var i = 0
+    evalReverse(tEnd, ts, dt) { (t,x,y,z) =>
+      rx(i) = x
+      ry(i) = y
+      rz(i) = z
+      i += 1
+    }
+    i
+  }
+
+  def iterator (tStart: Long, tEnd: Long, dt: Int): Iterator[Result] = {
+    val result = new Result(0,0.0,0.0, 0.0)
+    def exact (t: Int, i: Int): Result = { result.updated(t,vx(i),vy(i),vz(i)) }
+    def approx (t: Int, dist: Int): Result = { _eval3(t,dist,result); result }
+    new ForwardIterator(tStart, tEnd, dt)(exact)(approx)
+  }
+
+  def reverseIterator (tEnd: Long, tStart: Long, dt: Int): Iterator[Result] = {
+    val result = new Result(0,0.0,0.0, 0.0)
+    def exact (t: Int, i: Int): Result = { result.updated(t,vx(i),vy(i),vz(i)) }
+    def approx (t: Int, dist: Int): Result = { _eval3(t,dist,result); result }
+    new ReverseIterator(tEnd, tStart, dt)(exact)(approx)
+  }
+
+  def reverseTailDurationIterator (dur: Long, dt: Int): Iterator[Result] = {
+    val tEnd = ts(N1) + t0
+    val tStart = tEnd - dur
+    reverseIterator(tEnd,tStart,dt)
+  }
+
+  def reverseTailIterator (tEnd: Long, dur: Long, dt: Int): Iterator[Result] = {
     val tStart = tEnd - dur
     reverseIterator(tEnd,tStart,dt)
   }

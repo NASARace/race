@@ -79,7 +79,7 @@ trait TInterpolant {
 
 trait T1Interpolant extends TInterpolant {
   def eval (t: Long): Double
-  def interpolate (tStart: Long, tEnd: Long, dt: Int): Array[Double]
-  def interpolateHeadInto (result: Array[Double], tStart: Long, tEnd: Long, dt: Int): Int
-  def interpolateReverseTailInto (result: Array[Double], tStart: Long, tEnd: Long, dt: Int): Int
+  def evalRange(tStart: Long, tEnd: Long, dt: Int): Array[Double]
+  def evalHeadInto(result: Array[Double], tStart: Long, tEnd: Long, dt: Int): Int
+  def evalReverseTailInto(result: Array[Double], tStart: Long, tEnd: Long, dt: Int): Int
 }
