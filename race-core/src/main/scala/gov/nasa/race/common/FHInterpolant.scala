@@ -16,7 +16,7 @@
  */
 package gov.nasa.race.common
 
-import java.lang.Math._
+import java.lang.Math.{min,max}
 
 import scala.annotation.tailrec
 
@@ -69,7 +69,7 @@ abstract class FHInterpolant (val t0: Long, val ts: Array[Int], val d: Int) exte
 
   @tailrec protected final def _evalForward (_i: Int, t: Int, _tPrev: Int, _tNext: Int, tEnd: Int, dt: Int)
                                             (exact: (Int,Int)=>Unit)
-                                            (interpolate: (Int,Int)=>Unit): Unit = {
+                                            (approx: (Int,Int)=>Unit): Unit = {
     if (t <= tEnd) {
       var i = _i
       var tPrev = _tPrev
@@ -86,16 +86,54 @@ abstract class FHInterpolant (val t0: Long, val ts: Array[Int], val d: Int) exte
       if (t == tPrev) { // no need to compute
         exact(t, iPrev)
       } else {
-        interpolate(t, min(t - tPrev, tNext - t))
+        approx(t, min(t - tPrev, tNext - t))
       }
 
-      _evalForward(i, t + dt, tPrev, tNext, tEnd, dt)(exact)(interpolate)
+      _evalForward(i, t + dt, tPrev, tNext, tEnd, dt)(exact)(approx)
+    }
+  }
+
+  /**
+    * iterator version - can be used to iterate over several functions at the same time
+    */
+  protected[this] class ForwardIterator[T] (tStart: Long, tEnd: Long, dt: Int)
+                           (exact: (Int,Int)=>T)
+                           (approx: (Int,Int)=>T) extends Iterator[T] {
+    var tLeft: Int = (tStart - t0).toInt
+    var tRight: Int = (tEnd - t0).toInt
+
+    var i = findLeftIndex(tLeft)
+    var tPrev = if (i < 0) Int.MinValue else ts(i)
+    var tNext = if (i == N1) Int.MaxValue else ts(i+1)
+    var t = tLeft
+
+    override def hasNext: Boolean = t <= tEnd
+
+    override def next(): T = {
+      if (t > tRight) throw new NoSuchElementException(s"t = $t outside range [$tLeft..$tRight]")
+
+      var iPrev = i
+      while (t >= tNext) {
+        iPrev = i
+        i += 1
+        tPrev = tNext
+        tNext = if (i == N1) Int.MaxValue else ts(i)
+      }
+
+      val tt = t
+      t += dt
+
+      if (tt == tPrev) { // no need to compute
+        exact(tt, iPrev)
+      } else {
+        approx(tt, Math.min(t - tPrev, tNext - tt))
+      }
     }
   }
 
   @tailrec protected final def _evalReverse (_i: Int, t: Int, _tPrev: Int, _tNext: Int, tLeft: Int, dt: Int)
                                             (exact: (Int,Int)=>Unit)
-                                            (interpolate: (Int,Int)=>Unit): Unit = {
+                                            (approx: (Int,Int)=>Unit): Unit = {
     if (t >= tLeft) {
       var i = _i
       var tPrev = _tPrev
@@ -112,10 +150,45 @@ abstract class FHInterpolant (val t0: Long, val ts: Array[Int], val d: Int) exte
       if (t == tNext) {
         exact(t, iNext)
       } else {
-        interpolate(t, min(t - tPrev, tNext - t))
+        approx(t, min(t - tPrev, tNext - t))
       }
 
-      _evalReverse(i, t - dt, tPrev, tNext, tLeft, dt)(exact)(interpolate)
+      _evalReverse(i, t - dt, tPrev, tNext, tLeft, dt)(exact)(approx)
+    }
+  }
+
+  protected[this] class ReverseIterator[T] (tEnd: Long, tStart: Long, dt: Int)
+                                             (exact: (Int,Int)=>T)
+                                             (approx: (Int,Int)=>T) extends Iterator[T] {
+    val tLeft: Int = (tStart - t0).toInt
+    val tRight: Int = (tEnd - t0).toInt
+
+    var i = findLeftIndex(tRight)
+    var tPrev = if (i < 0) Int.MinValue else ts(i)
+    var tNext = if (i == N1) Int.MaxValue else ts(i + 1)
+    var t = tRight
+
+    override def hasNext: Boolean = t >= tLeft
+
+    override def next(): T = {
+      if (t < tLeft) throw new NoSuchElementException(s"t = $t outside range [$tLeft..$tRight]")
+
+      var iNext = i
+      while (t <= tPrev && i > 0) {
+        iNext = i
+        i -= 1
+        tNext = tPrev
+        tPrev = if (i == 0) Int.MinValue else ts(i)
+      }
+
+      val tt = t
+      t -= dt
+
+      if (tt == tNext) { // no need to compute
+        exact(tt, iNext)
+      } else {
+        approx(tt, Math.min(tt - tPrev, tNext - tt))
+      }
     }
   }
 }
@@ -123,7 +196,6 @@ abstract class FHInterpolant (val t0: Long, val ts: Array[Int], val d: Int) exte
 
 class FHT1Interpolant (_t0: Long, _ts: Array[Int], val vs: Array[Double], _d: Int=3)
                     extends FHInterpolant(_t0, _ts, min(_d,_ts.length)) with T1Interpolant {
-
 
   /**
     * a single time point interpolation
@@ -190,7 +262,6 @@ class FHT1Interpolant (_t0: Long, _ts: Array[Int], val vs: Array[Double], _d: In
     evalReverse(tEnd, ts, dt) { (t,v) =>
       result(i) = v
       i += 1
-      true
     }
     i
   }
@@ -235,102 +306,30 @@ class FHT1Interpolant (_t0: Long, _ts: Array[Int], val vs: Array[Double], _d: In
     }
   }
 
-
   //--- iterators
 
-
-  @inline protected final def _getV (t: Int, tPrev: Int, iPrev: Int, tNext: Int): Double = {
-    if (t == tPrev) { // no need to compute
-      vs(iPrev)
-    } else {
-      _eval(t, min(t - tPrev, tNext - t))
-    }
+  def iterator (tStart: Long, tEnd: Long, dt: Int): Iterator[LD] = {
+    val ld = new LD
+    def exact (t: Int, i: Int): LD = { ld.set(t,vs(i)); ld }
+    def approx (t: Int, dist: Int): LD = { ld.set(t,_eval(t,dist)); ld }
+    new ForwardIterator(tStart, tEnd, dt)(exact)(approx)
   }
 
-
-  class ForwardIterator (result: LD, tStart: Long, tEnd: Long, dt: Int) extends Iterator[LD] {
-    val tLeft: Int = (tStart - t0).toInt
-    val tRight: Int = (tEnd - t0).toInt
-
-    var i = findLeftIndex(tLeft)
-    var iPrev = i
-    var tPrev = if (i < 0) Int.MinValue else ts(i)
-    var tNext = if (i == N1) Int.MaxValue else ts(i+1)
-    var t = tLeft
-
-    override def hasNext: Boolean = t <= tRight
-
-    override def next: LD = {
-      if (t > tRight) throw new NoSuchElementException(s"t = $t outside range [$tLeft..$tRight]")
-
-      while (t >= tNext) {
-        iPrev = i
-        i += 1
-        tPrev = tNext
-        tNext = if (i == N1) Int.MaxValue else ts(i)
-      }
-
-      result.set( t+t0, _getV(t,tPrev,iPrev,tNext))
-      t += dt
-      result
-    }
+  def reverseIterator (tEnd: Long, tStart: Long, dt: Int): Iterator[LD] = {
+    val ld = new LD
+    def exact (t: Int, i: Int): LD = { ld.set(t,vs(i)); ld }
+    def approx (t: Int, dist: Int): LD = { ld.set(t,_eval(t,dist)); ld }
+    new ReverseIterator(tEnd, tStart, dt)(exact)(approx)
   }
 
-  def iterator (tStart: Long, tEnd: Long, dt: Int, ld: LD = new LD): Iterator[LD] = {
-    new ForwardIterator(ld, tStart, tEnd, dt)
-  }
-
-
-  @inline protected final def _getVReverse (t: Int, tPrev: Int, tNext: Int, iNext: Int): Double = {
-    if (t == tNext) {
-      vs(iNext)
-    } else {
-      val dl = t - tPrev
-      val dr = tNext - t
-      val d = if (dl > dr) dr else dl
-      _eval(t, d)
-    }
-  }
-
-
-  class ReverseIterator (result: LD, tStart: Long, tEnd: Long, dt: Int) extends Iterator[LD] {
-    val tLeft: Int = (tStart - t0).toInt
-    val tRight: Int = (tEnd - t0).toInt
-
-    var i = findLeftIndex(tRight)
-    var iNext = i
-    var tPrev = if (i < 0) Int.MinValue else ts(i)
-    var tNext = if (i == N1) Int.MaxValue else ts(i+1)
-    var t = tRight
-
-    override def hasNext: Boolean = t >= tLeft
-
-    override def next: LD = {
-      if (t < tLeft) throw new NoSuchElementException(s"t = $t outside range [$tLeft..$tRight]")
-      while (t <= tPrev) {
-        iNext = i
-        i -= 1
-        tNext = tPrev
-        tPrev = if (i == 0) Int.MinValue else ts(i)
-      }
-      result.set(t + t0, _getVReverse(t, tPrev, tNext, iNext))
-      t -= dt
-      result
-    }
-  }
-
-  def reverseIterator (tStart: Long, tEnd: Long, dt: Int, ld: LD = new LD): Iterator[LD] = {
-    new ReverseIterator(ld, tStart, tEnd, dt)
-  }
-
-  def reverseTailDurationIterator (dur: Long, dt: Int, ld: LD = new LD): Iterator[LD] = {
+  def reverseTailDurationIterator (dur: Long, dt: Int): Iterator[LD] = {
     val tEnd = ts(N1) + t0
     val tStart = tEnd - dur
-    new ReverseIterator(ld, tStart, tEnd, dt)
+    reverseIterator(tEnd,tStart,dt)
   }
 
-  def reverseTailIterator (tEnd: Long, dur: Long, dt: Int, ld: LD = new LD): Iterator[LD] = {
+  def reverseTailIterator (tEnd: Long, dur: Long, dt: Int): Iterator[LD] = {
     val tStart = tEnd - dur
-    new ReverseIterator(ld, tStart, tEnd, dt)
+    reverseIterator(tEnd,tStart,dt)
   }
 }

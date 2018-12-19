@@ -153,7 +153,7 @@ class FHT1InterpolantSpec extends FlatSpec with RaceSpec {
     val ts = Array(0, 20, 40, 60, 80, 100, 120, 140, 160, 180)
     val vs: Array[Double] = ts.map(f)
     val r = new FHT1Interpolant(0, ts, vs)
-    val it = r.reverseIterator(20,40,2)
+    val it = r.reverseIterator(40,20,2)
     while (it.hasNext) {
       val p = it.next
       val t = p._1
