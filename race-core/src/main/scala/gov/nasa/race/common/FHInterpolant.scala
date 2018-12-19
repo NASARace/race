@@ -62,6 +62,23 @@ abstract class FHInterpolant (val t0: Long, val ts: Array[Int], val d: Int) exte
     }
   }
 
+  @inline protected final def _eval (t: Int, dist: Int, vs: Array[Double]): Double = {
+    val n1 = N1
+    val w = this.w
+    val ts = this.ts
+
+    var sumNoms: Double = 0
+    var sumDenoms: Double = 0;
+    var i = 0
+    while (i <= n1){
+      val wd = (w(i) * dist) / (t - ts(i))
+      sumNoms += wd * vs(i)
+      sumDenoms += wd
+      i += 1
+    }
+    sumNoms / sumDenoms
+  }
+
   /**
     * use from within loop callbacks to break iteration
     */
@@ -205,32 +222,13 @@ class FHT1Interpolant (_t0: Long, _ts: Array[Int], val vs: Array[Double], _d: In
     val j = findLeftIndex(t)
 
     if (j < 0) { // before first observation
-      _eval(t, -t)
+      _eval(t, -t, vs)
     } else if (j == N1) { // after last observation
-      _eval(t, t - ts(N1))
+      _eval(t, t - ts(N1), vs)
     } else {
-      _eval(t, min(t - ts(j), ts(j+1) - t))
+      _eval(t, min(t - ts(j), ts(j+1) - t), vs)
     }
   }
-
-  @inline protected final def _eval (t: Int, dist: Int): Double = {
-    val n1 = N1
-    val w = this.w
-    val ts = this.ts
-    val vs = this.vs
-
-    var sumNoms: Double = 0
-    var sumDenoms: Double = 0;
-    var i = 0
-    while (i <= n1){
-      val wd = (w(i) * dist) / (t - ts(i))
-      sumNoms += wd * vs(i)
-      sumDenoms += wd
-      i += 1
-    }
-    sumNoms / sumDenoms
-  }
-
 
   //--- result array interpolation
 
@@ -280,7 +278,7 @@ class FHT1Interpolant (_t0: Long, _ts: Array[Int], val vs: Array[Double], _d: In
       _evalForward(i, tLeft, tPrev, tNext, tRight, dt) { (t, j) =>
         f(t, vs(j))
       } { (t, dist) =>
-        f(t, _eval(t, dist))
+        f(t, _eval(t, dist, vs))
       }
     } catch {
       case _: BreakException => // do nothing
@@ -299,7 +297,7 @@ class FHT1Interpolant (_t0: Long, _ts: Array[Int], val vs: Array[Double], _d: In
       _evalReverse(i, tRight, tPrev, tNext, tLeft, dt) { (t, j) =>
         f(t, vs(j))
       } { (t, dist) =>
-        f(t, _eval(t, dist))
+        f(t, _eval(t, dist, vs))
       }
     } catch {
       case _: BreakException => // do nothing
@@ -307,18 +305,19 @@ class FHT1Interpolant (_t0: Long, _ts: Array[Int], val vs: Array[Double], _d: In
   }
 
   //--- iterators
+  type LD = T2[Long,Double]  // the iterator next() type
 
   def iterator (tStart: Long, tEnd: Long, dt: Int): Iterator[LD] = {
-    val ld = new LD
-    def exact (t: Int, i: Int): LD = { ld.set(t,vs(i)); ld }
-    def approx (t: Int, dist: Int): LD = { ld.set(t,_eval(t,dist)); ld }
+    val ld = new LD(0,0)
+    def exact (t: Int, i: Int): LD = { ld.updated(t,vs(i)) }
+    def approx (t: Int, dist: Int): LD = { ld.updated(t,_eval(t,dist,vs)) }
     new ForwardIterator(tStart, tEnd, dt)(exact)(approx)
   }
 
   def reverseIterator (tEnd: Long, tStart: Long, dt: Int): Iterator[LD] = {
-    val ld = new LD
-    def exact (t: Int, i: Int): LD = { ld.set(t,vs(i)); ld }
-    def approx (t: Int, dist: Int): LD = { ld.set(t,_eval(t,dist)); ld }
+    val ld = new LD(0,0)
+    def exact (t: Int, i: Int): LD = { ld.updated(t,vs(i)) }
+    def approx (t: Int, dist: Int): LD = { ld.updated(t,_eval(t,dist,vs)) }
     new ReverseIterator(tEnd, tStart, dt)(exact)(approx)
   }
 

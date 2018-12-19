@@ -27,7 +27,8 @@ class T2 [A,B] (var _1: A, var _2: B) extends Product2[A,B] {
 
   def toTuple: Tuple2[A,B] = (_1, _2)
   def ?= (other: Product2[A,B]): Boolean = (other != null) && (other._1 == _1) && (other._2 == _2)
-  def set (a: A, b: B): Unit = { _1 = a; _2 = b }
+  @inline final def update (a: A, b: B): Unit = { _1 = a; _2 = b }
+  @inline final def updated (a: A, b: B): T2[A,B] = { _1 = a; _2 = b; this }
 }
 
 
@@ -44,7 +45,8 @@ class T3 [A,B,C] (var _1: A, var _2: B, var _3: C) extends Product3[A,B,C] {
   def ?= (other: Product3[A,B,C]): Boolean = {
     (other != null) && (other._1 == _1) && (other._2 == _2) && (other._3 == _3)
   }
-  def set (a: A, b: B, c: C): Unit = { _1 = a; _2 = b; _3 = c }
+  @inline final def update (a: A, b: B, c: C): Unit = { _1 = a; _2 = b; _3 = c }
+  @inline final def updated (a: A, b: B, c: C): T3[A,B,C] = { _1 = a; _2 = b; _3 = c; this }
 }
 
 /**
@@ -60,23 +62,6 @@ class T4 [A,B,C,D] (var _1: A, var _2: B, var _3: C, var _4: D) extends Product4
   def ?= (other: Product4[A,B,C,D]): Boolean = {
     (other != null) && (other._1 == _1) && (other._2 == _2) && (other._3 == _3) && (other._4 == _4)
   }
-  def set (a: A, b: B, c: C, d: D): Unit = { _1 = a; _2 = b; _3 = c; _4 = d }
-}
-
-
-//--- specializations for timed doubles
-
-class LD (l: Long, d1: Double) extends T2[Long,Double](l,d1) {
-  def this() = this(0, 0.0)
-  def this (t: (Long,Double)) = this(t._1, t._2)
-}
-
-class LDD (l: Long, d1: Double, d2: Double) extends T3[Long,Double,Double](l,d1,d2) {
-  def this() = this(0, 0.0, 0.0)
-  def this (t: (Long,Double,Double)) = this(t._1, t._2, t._3)
-}
-
-class LDDD (l: Long, d1: Double, d2: Double, d3: Double) extends T4[Long,Double,Double,Double](l,d1,d2,d3) {
-  def this() = this(0, 0.0, 0.0, 0.0)
-  def this (t: (Long,Double,Double,Double)) = this(t._1, t._2, t._3, t._4)
+  @inline final def update (a: A, b: B, c: C, d: D): Unit = { _1 = a; _2 = b; _3 = c; _4 = d }
+  @inline final def updated (a: A, b: B, c: C, d: D): T4[A,B,C,D] = { _1 = a; _2 = b; _3 = c; _4 = d; this }
 }
