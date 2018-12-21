@@ -29,6 +29,8 @@ trait TrajectoryTrace extends Trajectory {
 
   override def size: Int = _size
 
+  @inline final protected def storeIdx(i: Int): Int = (tail + i) % capacity
+
   protected def setTrackPointData(idx: Int, t: Long, lat: Double, lon: Double, alt: Double): Unit
   protected def processTrackPointData(i: Int, idx: Int, f: (Int,Long,Double,Double,Double)=>Unit): Unit
 

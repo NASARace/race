@@ -52,7 +52,7 @@ class TATrackAndFlightPlan2TATrack (val config: Config=NoConfig) extends XmlPars
   override def flatten = true // report as single tracks
 
   onStartElement = {
-    case "TATrackAndFlightPlan" => taTrackAndFlightPlan
+    case "TATrackAndFlightPlan" | "ns2:TATrackAndFlightPlan" => taTrackAndFlightPlan
     case other => stopParsing
   }
 
@@ -84,7 +84,7 @@ class TATrackAndFlightPlan2TATrack (val config: Config=NoConfig) extends XmlPars
       case "record" => record(src, stddsRev)
       case _ => // ignore
     }{
-      case "TATrackAndFlightPlan" => if (tracks.nonEmpty) setResult(tracks)
+      case "TATrackAndFlightPlan" | "ns2:TATrackAndFlightPlan" => if (tracks.nonEmpty) setResult(tracks)
       case _ => // ignore
     }
   }
