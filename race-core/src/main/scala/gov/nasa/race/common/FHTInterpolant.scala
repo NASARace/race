@@ -21,28 +21,31 @@ import java.lang.Math.{min,max}
 import scala.annotation.tailrec
 
 /**
-  * Interpolant that uses barycentric rational interpolation according to
+  * abstract Interpolant that uses barycentric rational interpolation according to
   * M. Floater, K. Hormann: "Barycentric rational interpolation with no poles and high rates of approximation"
   * https://www.inf.usi.ch/hormann/papers/Floater.2007.BRI.pdf
+  *
+  * Note that we do not imply a specific time or value storage but require an accessor that maps logical indices
+  * [0..n-1] to time values of observations
   */
-abstract class FHInterpolant (val t0: Long, val ts: Array[Int], val d: Int) extends TInterpolant {
+abstract class FHTInterpolant(val n: Int, val d: Int)(getT: (Int)=>Long) extends TInterpolant {
   protected[this] class BreakException extends Exception
   protected[this] val breakException = new BreakException
+
+  val n1 = n-1
+  val tLeft = getT(0)
+  val tRight = getT(n1)
 
   val w: Array[Double] = new Array(N)  // barycentric weights
   calcWeights
 
-
   protected def calcWeights: Unit = {
-    val n1 = this.N1
-    val d  = this.d
-
     var sign: Int = if (d % 2 > 0) -1 else 1
 
     var k = 0
     while (k <= n1) {
       var s: Double = 0
-      val tk = ts(k)
+      val tk = getT(k)
       val iMin = max(k - d, 0)
       val iMax = min(k, n1 - d)
       var i = iMin
@@ -62,21 +65,24 @@ abstract class FHInterpolant (val t0: Long, val ts: Array[Int], val d: Int) exte
     }
   }
 
-  @inline protected final def _eval (t: Int, dist: Int, vs: Array[Double]): Double = {
-    val n1 = N1
-    val w = this.w
-    val ts = this.ts
-
-    var sumNoms: Double = 0
-    var sumDenoms: Double = 0;
-    var i = 0
-    while (i <= n1){
-      val wd = (w(i) * dist) / (t - ts(i))
-      sumNoms += wd * vs(i)
-      sumDenoms += wd
-      i += 1
+  protected final def findLeftIndex (t: Long): Int = {
+    if (t < tLeft) {  // lower than start -> no left index
+      -1
+    } else if (t > tRight) {  // higher than end -> last observation
+      n1
     }
-    sumNoms / sumDenoms
+    else {
+      var a = 0
+      var b = n1
+      while (b - a > 1){
+        val c = (a + b)/2;
+        val tc = getT(c);
+        if (t == tc) return c
+        else if (t > tc) a = c
+        else b = c
+      }
+      a
+    }
   }
 
   /**
@@ -84,20 +90,20 @@ abstract class FHInterpolant (val t0: Long, val ts: Array[Int], val d: Int) exte
     */
   def break: Unit = throw breakException
 
-  @tailrec protected final def _evalForward (_i: Int, t: Int, _tPrev: Int, _tNext: Int, tEnd: Int, dt: Int)
-                                            (exact: (Int,Int)=>Unit)
-                                            (approx: (Int,Int)=>Unit): Unit = {
+  @tailrec protected final def _evalForward (_i: Int, t: Long, _tPrev: Long, _tNext: Long, tEnd: Long, dt: Int)
+                                            (exact: (Long,Long)=>Unit)
+                                            (approx: (Long,Long)=>Unit): Unit = {
     if (t <= tEnd) {
       var i = _i
       var tPrev = _tPrev
       var tNext = _tNext
       var iPrev = i
 
-      while (t >= tNext && i < N1) {
+      while (t >= tNext && i < n1) {
         iPrev = i
         i += 1
         tPrev = tNext
-        tNext = if (i == N1) Int.MaxValue else ts(i)
+        tNext = if (i == n1) Int.MaxValue else getT(i)
       }
 
       if (t == tPrev) { // no need to compute
@@ -114,27 +120,24 @@ abstract class FHInterpolant (val t0: Long, val ts: Array[Int], val d: Int) exte
     * iterator version - can be used to iterate over several functions at the same time
     */
   protected[this] class ForwardIterator[T] (tStart: Long, tEnd: Long, dt: Int)
-                           (exact: (Int,Int)=>T)
-                           (approx: (Int,Int)=>T) extends Iterator[T] {
-    var tLeft: Int = (tStart - t0).toInt
-    var tRight: Int = (tEnd - t0).toInt
-
-    var i = findLeftIndex(tLeft)
-    var tPrev = if (i < 0) Int.MinValue else ts(i)
-    var tNext = if (i == N1) Int.MaxValue else ts(i+1)
-    var t = tLeft
+                           (exact: (Long,Int)=>T)
+                           (approx: (Long,Long)=>T) extends Iterator[T] {
+    var i = findLeftIndex(tStart)
+    var tPrev = if (i < 0) Int.MinValue else getT(i)
+    var tNext = if (i == N1) Int.MaxValue else getT(i+1)
+    var t = tStart
 
     override def hasNext: Boolean = t <= tEnd
 
     override def next(): T = {
-      if (t > tRight) throw new NoSuchElementException(s"t = $t outside range [$tLeft..$tRight]")
+      if (t > tEnd) throw new NoSuchElementException(s"t = $t outside range [$tStart..$tEnd]")
 
       var iPrev = i
       while (t >= tNext) {
         iPrev = i
         i += 1
         tPrev = tNext
-        tNext = if (i == N1) Int.MaxValue else ts(i)
+        tNext = if (i == N1) Int.MaxValue else getT(i)
       }
 
       val tt = t
@@ -148,9 +151,9 @@ abstract class FHInterpolant (val t0: Long, val ts: Array[Int], val d: Int) exte
     }
   }
 
-  @tailrec protected final def _evalReverse (_i: Int, t: Int, _tPrev: Int, _tNext: Int, tLeft: Int, dt: Int)
-                                            (exact: (Int,Int)=>Unit)
-                                            (approx: (Int,Int)=>Unit): Unit = {
+  @tailrec protected final def _evalReverse (_i: Int, t: Long, _tPrev: Long, _tNext: Long, tLeft: Long, dt: Int)
+                                            (exact: (Long,Int)=>Unit)
+                                            (approx: (Long,Long)=>Unit): Unit = {
     if (t >= tLeft) {
       var i = _i
       var tPrev = _tPrev
@@ -161,7 +164,7 @@ abstract class FHInterpolant (val t0: Long, val ts: Array[Int], val d: Int) exte
         iNext = i
         i -= 1
         tNext = tPrev
-        tPrev = if (i == 0) Int.MinValue else ts(i)
+        tPrev = if (i == 0) Int.MinValue else getT(i)
       }
 
       if (t == tNext) {
@@ -175,27 +178,24 @@ abstract class FHInterpolant (val t0: Long, val ts: Array[Int], val d: Int) exte
   }
 
   protected[this] class ReverseIterator[T] (tEnd: Long, tStart: Long, dt: Int)
-                                             (exact: (Int,Int)=>T)
-                                             (approx: (Int,Int)=>T) extends Iterator[T] {
-    val tLeft: Int = (tStart - t0).toInt
-    val tRight: Int = (tEnd - t0).toInt
+                                             (exact: (Long,Int)=>T)
+                                             (approx: (Long,Long)=>T) extends Iterator[T] {
+    var i = findLeftIndex(tEnd)
+    var tPrev = if (i < 0) Int.MinValue else getT(i)
+    var tNext = if (i == N1) Int.MaxValue else getT(i + 1)
+    var t = tEnd
 
-    var i = findLeftIndex(tRight)
-    var tPrev = if (i < 0) Int.MinValue else ts(i)
-    var tNext = if (i == N1) Int.MaxValue else ts(i + 1)
-    var t = tRight
-
-    override def hasNext: Boolean = t >= tLeft
+    override def hasNext: Boolean = t >= tStart
 
     override def next(): T = {
-      if (t < tLeft) throw new NoSuchElementException(s"t = $t outside range [$tLeft..$tRight]")
+      if (t < tStart) throw new NoSuchElementException(s"t = $t outside range [$tStart..$tEnd]")
 
       var iNext = i
       while (t <= tPrev && i > 0) {
         iNext = i
         i -= 1
         tNext = tPrev
-        tPrev = if (i == 0) Int.MinValue else ts(i)
+        tPrev = if (i == 0) Int.MinValue else getT(i)
       }
 
       val tt = t
@@ -214,22 +214,33 @@ abstract class FHInterpolant (val t0: Long, val ts: Array[Int], val d: Int) exte
 /**
   * Floater Hormann interpolant for 1-dim time series
   */
-class FHT1Interpolant (_t0: Long, _ts: Array[Int], val vs: Array[Double], _d: Int=3)
-                    extends FHInterpolant(_t0, _ts, min(_d,_ts.length)) with T1Interpolant {
+class FHT1Interpolant (n: Int, d: Int=3)(getT: (Int)=>Long)(getX: (Int)=>Double) extends FHTInterpolant(n,d)(getT)  {
+
+  @inline protected final def _eval1(t: Long, dist: Long): Double = {
+    var sumNoms: Double = 0
+    var sumDenoms: Double = 0;
+    var i = 0
+    while (i <= n1){
+      val wd = (w(i) * dist) / (t - getT(i))
+      sumNoms += wd * getX(i)
+      sumDenoms += wd
+      i += 1
+    }
+    sumNoms / sumDenoms
+  }
 
   /**
     * a single time point interpolation
     */
-  def eval (tAbs: Long): Double = {
-    val t: Int = (tAbs - t0).toInt
+  def eval (t: Long): Double = {
     val j = findLeftIndex(t)
 
     if (j < 0) { // before first observation
-      _eval(t, -t, vs)
+      _eval1(t, -t)
     } else if (j == N1) { // after last observation
-      _eval(t, t - ts(N1), vs)
+      _eval1(t, t - getT(N1))
     } else {
-      _eval(t, min(t - ts(j), ts(j+1) - t), vs)
+      _eval1(t, min(t - getT(j), getT(j+1) - t))
     }
   }
 
@@ -270,18 +281,15 @@ class FHT1Interpolant (_t0: Long, _ts: Array[Int], val vs: Array[Double], _d: In
   //--- iteration
 
   def evalForward (tStart: Long, tEnd: Long, dt: Int)(f: (Long,Double)=>Unit): Unit = {
-    val tLeft: Int = (tStart - t0).toInt
-    val tRight: Int = (tEnd - t0).toInt
-
-    val i = findLeftIndex(tLeft)
-    val tPrev = if (i < 0) Int.MinValue else ts(i)
-    val tNext = if (i == N1) Int.MaxValue else ts(i+1)
+    val i = findLeftIndex(tStart)
+    val tPrev = if (i < 0) Int.MinValue else getT(i)
+    val tNext = if (i == N1) Int.MaxValue else getT(i+1)
 
     try {
-      _evalForward(i, tLeft, tPrev, tNext, tRight, dt) { (t, j) =>
-        f(t, vs(j))
+      _evalForward(i, tStart, tPrev, tNext, tEnd, dt) { (t, j) =>
+        f(t, getX(j))
       } { (t, dist) =>
-        f(t, _eval(t, dist, vs))
+        f(t, _eval1(t, dist))
       }
     } catch {
       case _: BreakException => // do nothing
@@ -289,18 +297,15 @@ class FHT1Interpolant (_t0: Long, _ts: Array[Int], val vs: Array[Double], _d: In
   }
 
   def evalReverse (tEnd: Long, tStart: Long, dt: Int)(f: (Long,Double)=>Unit): Unit = {
-    val tLeft: Int = (tStart - t0).toInt
-    val tRight: Int = (tEnd - t0).toInt
-
-    val i = findLeftIndex(tRight)
-    val tPrev = if (i < 0) Int.MinValue else ts(i)
-    val tNext = if (i == N1) Int.MaxValue else ts(i+1)
+    val i = findLeftIndex(tEnd)
+    val tPrev = if (i < 0) Int.MinValue else getT(i)
+    val tNext = if (i == n1) Int.MaxValue else getT(i+1)
 
     try {
-      _evalReverse(i, tRight, tPrev, tNext, tLeft, dt) { (t, j) =>
-        f(t, vs(j))
+      _evalReverse(i, tEnd, tPrev, tNext, tStart, dt) { (t, j) =>
+        f(t, getX(j))
       } { (t, dist) =>
-        f(t, _eval(t, dist, vs))
+        f(t, _eval1(t, dist))
       }
     } catch {
       case _: BreakException => // do nothing
@@ -312,20 +317,20 @@ class FHT1Interpolant (_t0: Long, _ts: Array[Int], val vs: Array[Double], _d: In
 
   def iterator (tStart: Long, tEnd: Long, dt: Int): Iterator[Result] = {
     val ld = new Result(0,0)
-    def exact (t: Int, i: Int): Result = { ld.updated(t,vs(i)) }
-    def approx (t: Int, dist: Int): Result = { ld.updated(t,_eval(t,dist,vs)) }
+    def exact (t: Long, i: Int): Result = { ld.updated(t,getX(i)) }
+    def approx (t: Long, dist: Long): Result = { ld.updated(t,_eval1(t,dist)) }
     new ForwardIterator(tStart, tEnd, dt)(exact)(approx)
   }
 
   def reverseIterator (tEnd: Long, tStart: Long, dt: Int): Iterator[Result] = {
     val ld = new Result(0,0)
-    def exact (t: Int, i: Int): Result = { ld.updated(t,vs(i)) }
-    def approx (t: Int, dist: Int): Result = { ld.updated(t,_eval(t,dist,vs)) }
+    def exact (t: Long, i: Int): Result = { ld.updated(t,getX(i)) }
+    def approx (t: Long, dist: Long): Result = { ld.updated(t,_eval1(t,dist)) }
     new ReverseIterator(tEnd, tStart, dt)(exact)(approx)
   }
 
   def reverseTailDurationIterator (dur: Long, dt: Int): Iterator[Result] = {
-    val tEnd = ts(N1) + t0
+    val tEnd = tRight
     val tStart = tEnd - dur
     reverseIterator(tEnd,tStart,dt)
   }
@@ -340,7 +345,7 @@ class FHT1Interpolant (_t0: Long, _ts: Array[Int], val vs: Array[Double], _d: In
   * Floater Hormann interpolant for 2-dim time series
   */
 class FHT2Interpolant (_t0: Long, _ts: Array[Int], val vx: Array[Double], val vy: Array[Double], _d: Int=3)
-                                                            extends FHInterpolant(_t0, _ts, min(_d,_ts.length)) {
+                                                            extends FHTInterpolant(_t0, _ts, min(_d,_ts.length)) {
   type Result = T3[Long,Double,Double]
 
   @inline protected final def _eval2 (t: Int, dist: Int, result: Result): Unit = {
@@ -492,7 +497,7 @@ class FHT2Interpolant (_t0: Long, _ts: Array[Int], val vx: Array[Double], val vy
   * Floater Hormann interpolant for 3-dim time series
   */
 class FHT3Interpolant (_t0: Long, _ts: Array[Int], val vx: Array[Double], val vy: Array[Double], val vz: Array[Double], _d: Int=3)
-                                extends FHInterpolant(_t0, _ts, min(_d,_ts.length)) {
+                                extends FHTInterpolant(_t0, _ts, min(_d,_ts.length)) {
   type Result = T4[Long,Double,Double,Double]
 
   @inline protected final def _eval3 (t: Int, dist: Int, result: Result): Unit = {
