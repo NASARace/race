@@ -19,6 +19,7 @@ package gov.nasa.race.ww.track
 
 import java.awt.Point
 
+import gov.nasa.race._
 import gov.nasa.race.track.TrackedObject
 import gov.nasa.race.util.DateTimeUtils._
 import gov.nasa.race.ww.Implicits._
@@ -74,8 +75,9 @@ class TrackSymbol[T <: TrackedObject](val trackEntry: TrackEntry[T])
     attrs.setHeading(newT.heading.toDegrees)
 
     if (hasLabel) setLabelText(trackEntry.labelText)
+    loopFromTo(0,trackEntry.numberOfSublabels) { i=> setSubLabelText(i, trackEntry.subLabelText(i)) }
+
     if (showDisplayName) updateDisplayName
-    //updateAttributes
   }
 
   def setDotAttrs = {

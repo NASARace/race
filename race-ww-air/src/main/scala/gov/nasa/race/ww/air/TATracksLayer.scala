@@ -20,7 +20,7 @@ import java.awt.{Color, Font}
 
 import akka.actor.Actor.Receive
 import com.typesafe.config.Config
-import gov.nasa.race.air.{AirLocator, TATrack, Tracon}
+import gov.nasa.race.air.{AirLocator, Airport, TATrack, Tracon}
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.Messages.BusEvent
 import gov.nasa.race.ifSome
@@ -52,7 +52,7 @@ class TraconSymbol(val tracon: Tracon, val layer: TATracksLayer) extends PointPl
   override def layerItem: AnyRef = tracon
 }
 
-class TATrackEntry (obj: TATrack, trajectory: Trajectory, layer: TATracksLayer) extends TrackEntry[TATrack](obj,trajectory,layer) {
+class TATrackEntry (_obj: TATrack, _trajectory: Trajectory, _layer: TATracksLayer) extends TrackEntry[TATrack](_obj,_trajectory,_layer) {
 
   override def setLabelLevel = symbol.foreach { sym =>
     sym.removeSubLabels
@@ -65,6 +65,10 @@ class TATrackEntry (obj: TATrack, trajectory: Trajectory, layer: TATracksLayer) 
     sym.addSubLabelText(obj.stateString)
     sym.setIconAttrs
   }
+
+  // we have a single sublabel line
+  override def numberOfSublabels: Int = 1
+  override def subLabelText (i: Int): String = if (i == 0) obj.stateString else null
 }
 
 /**
@@ -86,9 +90,14 @@ class TATracksLayer (val raceViewer: RaceViewer, val config: Config) extends Mod
 
   val traconGrid: Option[PolarGrid] =  createGrid
 
-  var selTracon: Option[Tracon] = None
+  var selTracon: Option[Tracon] = configuredTracon
 
   showTraconSymbols
+
+  def configuredTracon: Option[Tracon] = {
+    val topics = config.getOptionalStringList("request-topics")
+    if (topics.nonEmpty) Tracon.tracons.get(topics.head) else None
+  }
 
   override def createTrackEntry(track: TATrack) = new TATrackEntry(track,createTrajectory(track),this)
 

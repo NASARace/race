@@ -63,6 +63,8 @@ class TrackEntry[T <: TrackedObject](var obj: T, var trajectory: Trajectory, val
 
   //--- label and info text creation
   def labelText: String = if (obj.cs != obj.id) obj.cs else obj.id
+  def numberOfSublabels: Int = 0
+  def subLabelText(i: Int): String = null  // override in concrete types if there are sublabels
 
   def infoText: String = {
     s"${obj.cs}\n${hhmmss.print(obj.date)}\n${obj.position.altitude.toFeet.toInt} ft\n${obj.heading.toDegrees.toInt}°\n${obj.speed.toKnots.toInt} kn"

@@ -46,7 +46,7 @@ class AsdexMsg2AsdexTracks(val config: Config=NoConfig) extends XmlParser[AsdexT
   //-- the XML messages we handle
 
   onStartElement = {
-    case "asdexMsg" => asdexMsg
+    case "asdexMsg" | "ns2:asdexMsg" => asdexMsg
     case other => stopParsing
   }
 
@@ -58,7 +58,7 @@ class AsdexMsg2AsdexTracks(val config: Config=NoConfig) extends XmlParser[AsdexT
       case "airport" => airport = setAirport(readText)
       case "positionReport" => positionReport(tracks)
     } { // end elements
-      case "asdexMsg" =>
+      case "asdexMsg" | "ns2:asdexMsg" =>
         if (tracks.nonEmpty) setResult(new AsdexTracks(airport,tracks))
       case _ => // ignore
     }
