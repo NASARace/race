@@ -18,7 +18,7 @@ package gov.nasa.race.air.actor
 
 import akka.actor.ActorRef
 import com.typesafe.config.Config
-import gov.nasa.race.air.FlightPos
+import gov.nasa.race.track.TrackedObject
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.Messages.RaceTick
 import gov.nasa.race.core.{ContinuousTimeRaceActor, PeriodicRaceActor, PublishingRaceActor}
@@ -40,8 +40,8 @@ trait FPosDropper extends PublishingRaceActor with ContinuousTimeRaceActor with 
 
   //--- to be provided by concrete class
   val config: Config // actor config to be provided by concrete actor class
-  val flights: Map[String,FlightPos] // map with last active FlightPos objects
-  def removeStaleFlight (fpos: FlightPos) // update map in implementor
+  val flights: Map[String,TrackedObject] // map with last active FlightPos objects
+  def removeStaleTrack(ac: TrackedObject) // update map in implementor
 
   val publishDropped = config.getBooleanOrElse("publish-dropped", true)
   val dropAfterMillis = config.getFiniteDurationOrElse("drop-after", 60.seconds).toMillis // this is sim time
@@ -65,11 +65,11 @@ trait FPosDropper extends PublishingRaceActor with ContinuousTimeRaceActor with 
 
     flights foreach { e =>    // make sure we don't allocate per entry
       val cs = e._1
-      val fpos = e._2
-      val dt = elapsedSimTimeMillisSince(fpos.date)
+      val ac = e._2
+      val dt = elapsedSimTimeMillisSince(ac.date)
       if (dt > cut){
-        removeStaleFlight(fpos)  // provided by concrete class
-        if (publishDropped) publish(TrackDropped(fpos.id, fpos.cs, now))
+        removeStaleTrack(ac)  // provided by concrete class
+        if (publishDropped) publish(TrackDropped(ac.id, ac.cs, now))
         info(s"dropping $cs after $dt msec")
       }
     }

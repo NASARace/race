@@ -33,6 +33,15 @@ object TrackedObject {
   final val DroppedFlag: Int    = 0x04
   final val CompletedFlag: Int  = 0x08
   final val FrozenFlag: Int     = 0x10
+
+  def tempCS (flightId: String) = "?" + flightId
+  def isTempCS (cs: String) = cs.charAt(0) == '?'
+
+  // c/s changes only happen rarely, and if they do we want to preserve the changed value
+  // for all downstream actors so we don't use a fixed field for it
+  case class ChangedCS(oldCS: String)
+
+  case class TrackProblem(fpos: TrackedObject, lastFpos: TrackedObject, problem: String)
 }
 
 /**
@@ -74,6 +83,11 @@ trait TrackedObject extends IdentifiableObject with TrackPoint with MovingObject
     val id = StringUtils.capLength(cs)(8)
     f"$id%-7s $hh%02d:$mm%02d:$ss%02d ${position.altitude.toFeet.toInt}%6dft ${heading.toNormalizedDegrees.toInt}%3d° ${speed.toKnots.toInt}%4dkn"
   }
+
+  def hasTempCS = isTempCS(cs)
+  def tempCS = if (hasTempCS) cs else TrackedObject.tempCS(id)
+  def getOldCS: Option[String] = amendments.find(_.isInstanceOf[ChangedCS]).map(_.asInstanceOf[ChangedCS].oldCS)
+
 }
 
 trait TrackedObjectEnumerator {

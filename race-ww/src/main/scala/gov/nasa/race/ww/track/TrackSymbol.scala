@@ -75,7 +75,7 @@ class TrackSymbol[T <: TrackedObject](val trackEntry: TrackEntry[T])
     attrs.setHeading(newT.heading.toDegrees)
 
     if (hasLabel) setLabelText(trackEntry.labelText)
-    loopFromTo(0,trackEntry.numberOfSublabels) { i=> setSubLabelText(i, trackEntry.subLabelText(i)) }
+    if (hasSubLabels) loopFromTo(0,trackEntry.numberOfSublabels) { i=> setSubLabelText(i, trackEntry.subLabelText(i)) }
 
     if (showDisplayName) updateDisplayName
   }

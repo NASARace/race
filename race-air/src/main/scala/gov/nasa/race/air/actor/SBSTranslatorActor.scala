@@ -6,19 +6,20 @@ import gov.nasa.race.actor.TranslatorActor
 import gov.nasa.race.air.translator.SBS2FlightPos
 import gov.nasa.race.air._
 import gov.nasa.race.config.ConfigUtils._
-import gov.nasa.race.track.TrackCsChanged
+import gov.nasa.race.track.{TrackCsChanged, TrackedObject}
+import gov.nasa.race.track.TrackedObject.TrackProblem
 
 import scala.collection.mutable.{HashMap => MHashMap}
 
 /**
-  * a SBS to FlightPos translator with built-in support for sanity checks, delayed callsign
-  * changes, and FlightDropped generation for stale FlightPos objects. Effectively, this is
+  * a SBS to TrackedAircraft translator with built-in support for sanity checks, delayed callsign
+  * changes, and FlightDropped generation for stale TrackedAircraft objects. Effectively, this is
   * also a optional EitherOrRouter (if sanity violations are recorded), but that trait is not
   * worth mixing in separately
   *
   * This breaks a bit with the small dedicated actor paradigm for scalability reasons, since
   * all secondary functions (checks and c/s changes) require to keep maps of active
-  * FlightPos objects that have update intervals of > 1Hz
+  * TrackedAircraft objects that have update intervals of > 1Hz
   */
 class SBSTranslatorActor (config: Config) extends TranslatorActor(config) with FPosDropper {
 
@@ -27,26 +28,26 @@ class SBSTranslatorActor (config: Config) extends TranslatorActor(config) with F
   val writeToFail = config.getOptionalString("write-to-fail")
   val sanityChecker = getConfigurableOrElse[FlightPosChecker]("checker"){ EmptyFlightPosChecker }
 
-  val flights = MHashMap.empty[String,FlightPos]
+  val flights = MHashMap.empty[String,TrackedAircraft]
 
   override def createTranslator = new SBS2FlightPos(config)  // for TranslatorActor
 
   override def handleMessage = handleTranslatorMessage orElse handleFPosDropperMessage
 
-  override def removeStaleFlight (fpos: FlightPos) = flights -= fpos.cs // for FPosDropper
+  override def removeStaleTrack (fpos: TrackedObject) = flights -= fpos.cs // for FPosDropper
 
   // specialized translation processing, called from TranslatorActor
   override def processTranslationProduct(o: Any) = o match {
-    case fpos: FlightPos =>
+    case fpos: TrackedAircraft =>
       val cs = fpos.cs
       flights.get(cs) orElse getReplacedCSFlight(fpos) match {
         case Some(lastFPos) => checkAndUpdate(fpos,lastFPos)
         case None => checkAndAdd(fpos)
       }
-    case _ => // ignore translation product, we only publish FlightPos objects
+    case _ => // ignore translation product, we only publish TrackedAircraft objects
   }
 
-  def getReplacedCSFlight(fpos: FlightPos): Option[FlightPos] = for {
+  def getReplacedCSFlight(fpos: TrackedAircraft): Option[TrackedAircraft] = for {
     oldCS <- fpos.getOldCS
     lastFPos <- flights.get(oldCS)
   } yield {
@@ -56,17 +57,17 @@ class SBSTranslatorActor (config: Config) extends TranslatorActor(config) with F
     lastFPos
   }
 
-  def checkAndAdd (fpos: FlightPos) = {
+  def checkAndAdd (fpos: TrackedAircraft) = {
     processCheckResult(fpos, sanityChecker.check(fpos),Long.MaxValue)
   }
 
-  def checkAndUpdate (fpos: FlightPos, lastFPos: FlightPos) = {
+  def checkAndUpdate (fpos: TrackedAircraft, lastFPos: TrackedAircraft) = {
     processCheckResult(fpos, sanityChecker.checkPair(fpos,lastFPos),dtMillis(fpos,lastFPos))
   }
 
-  @inline def dtMillis(fpos: FlightPos, lastFPos: FlightPos) = fpos.date.getMillis - lastFPos.date.getMillis
+  @inline def dtMillis(fpos: TrackedAircraft, lastFPos: TrackedAircraft) = fpos.date.getMillis - lastFPos.date.getMillis
 
-  def processCheckResult(fpos: FlightPos, checkResult: Option[FlightPosProblem], dt: Long) = {
+  def processCheckResult(fpos: TrackedAircraft, checkResult: Option[TrackProblem], dt: Long) = {
     checkResult match {
       case Some(problem) =>
         reportProblem(problem)
@@ -76,13 +77,13 @@ class SBSTranslatorActor (config: Config) extends TranslatorActor(config) with F
     }
   }
 
-  def updateAndPublish(fpos: FlightPos) = {
+  def updateAndPublish(fpos: TrackedAircraft) = {
     flights.update(fpos.cs, fpos)
     publish(fpos)
   }
 
-  def reportProblem (checkResult: FlightPosProblem) = {
-    info(s"inconsistent SBS FlightPos: ${checkResult.problem}")
+  def reportProblem (checkResult: TrackProblem) = {
+    info(s"inconsistent SBS TrackedAircraft: ${checkResult.problem}")
     ifSome(writeToFail) { channel =>
       val msg = new StringBuilder
       msg.append(s"--- SBS position inconsistency: ${checkResult.problem}\n")

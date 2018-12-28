@@ -18,6 +18,7 @@
 package gov.nasa.race.actor
 
 import com.typesafe.config.Config
+import gov.nasa.race.core.Messages.ChannelTopicRequest
 import gov.nasa.race.core._
 
 /**
@@ -26,6 +27,10 @@ import gov.nasa.race.core._
   * this actor only publishes messages that pass. If we also need to publish the
   * ones that fail, use a EitherOrRouter
   */
-class FilterActor (val config: Config) extends FilteringPublisher with SubscribingRaceActor {
+class FilterActor (val config: Config) extends FilteringPublisher with SubscribingRaceActor with TransitiveChannelTopicProvider {
   override def handleMessage = handleFilteringPublisherMessage
+
+  override def isRequestAccepted (request: ChannelTopicRequest) = {
+    writeTo.contains(request.channelTopic.channel)
+  }
 }

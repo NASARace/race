@@ -27,11 +27,16 @@ import scala.language.postfixOps
 object Angle {
 
   //--- constants
+  final val π_2 = Math.PI/2.0
   final val π = Math.PI
+  final val π3_2 = 3 * π_2
   final val TwoPi = π * 2.0
   final val DegreesInRadian = π / 180.0
   final val MinutesInRadian = DegreesInRadian * 60.0
   final val Angle0 = new Angle(0)
+  final val Angle90 = new Angle(π_2)
+  final val Angle180 = new Angle(π)
+  final val Angle270 = new Angle(π3_2)
   final val UndefinedAngle = new Angle(Double.NaN)
   @inline def isDefined(x: Angle): Boolean  = !x.d.isNaN
 
@@ -44,7 +49,7 @@ object Angle {
   @inline def normalizeDegrees (d: Double) =  if (d < 0) d % 360 + 360 else d % 360 // 0..360
   @inline def normalizedDegreesToRadians (d: Double) = normalizeDegrees(d) * DegreesInRadian
 
-  @inline def AbsDiff(a1: Angle, a2: Angle) = {
+  @inline def absDiff(a1: Angle, a2: Angle) = {
     val d1 = normalizeRadians2Pi(a1.d)
     val d2 = normalizeRadians2Pi(a2.d)
     val dd = abs(d1 - d2)
@@ -61,12 +66,6 @@ object Angle {
   @inline def Cos2(a:Angle) = Cos(a)`²`
   @inline def Tan(a:Angle) = tan(a.d)
   @inline def Tan2(a:Angle) = Tan(a)`²`
-  @inline def Asin(a:Angle) = asin(a.d)
-  @inline def Asin2(a:Angle) = Asin(a)`²`
-  @inline def Acos(a:Angle) = acos(a.d)
-  @inline def Acos2(a:Angle) = Acos(a)`²`
-  @inline def Atan(a:Angle) = atan(a.d)
-  @inline def Atan2(a:Angle) = Atan(a)`²`
 
 
   //--- Angle constructors

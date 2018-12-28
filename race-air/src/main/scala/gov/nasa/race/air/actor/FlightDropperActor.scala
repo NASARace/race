@@ -18,10 +18,9 @@
 package gov.nasa.race.air.actor
 
 import com.typesafe.config.Config
-import gov.nasa.race.air.FlightPos
 import gov.nasa.race.core.Messages.BusEvent
 import gov.nasa.race.core.SubscribingRaceActor
-import gov.nasa.race.track.{TrackCompleted, TrackCsChanged, TrackDropped}
+import gov.nasa.race.track.{TrackCompleted, TrackCsChanged, TrackDropped, TrackedObject}
 
 import scala.collection.mutable
 
@@ -33,12 +32,12 @@ import scala.collection.mutable
   * into the concrete class at some point
   */
 class FlightDropperActor(val config: Config) extends SubscribingRaceActor with FPosDropper {
-  val flights = mutable.HashMap.empty[String,FlightPos]
+  val flights = mutable.HashMap.empty[String,TrackedObject]
 
-  override def removeStaleFlight(fpos: FlightPos) = flights -= fpos.cs
+  override def removeStaleTrack(ac: TrackedObject) = flights -= ac.cs
 
   override def handleMessage = handleFPosDropperMessage orElse {
-    case BusEvent(_,fpos: FlightPos,_) => flights += fpos.cs -> fpos
+    case BusEvent(_,ac: TrackedObject,_) => flights += ac.cs -> ac
     case BusEvent(_,fcompleted: TrackCompleted,_) => flights -= fcompleted.cs
     case BusEvent(_,_:TrackDropped,_) => // ignore - we are generating these
     case BusEvent(_,_:TrackCsChanged,_) => // ignore

@@ -23,8 +23,10 @@ import java.io.File
 import com.github.nscala_time.time.Imports._
 import com.typesafe.config._
 import gov.nasa.race.geo.GeoPosition
-import gov.nasa.race.uom.Length
+import gov.nasa.race.uom.{Angle, Length, Speed}
+import gov.nasa.race.uom.Angle._
 import gov.nasa.race.uom.Length._
+import gov.nasa.race.uom.Speed._
 import gov.nasa.race.util._
 
 import scala.collection.JavaConverters._
@@ -301,7 +303,7 @@ object ConfigUtils {
       }
     }
 
-    final val unitNumberRE = """^([-+]?\d*\.?\d+(?:[eE][-+]?\d+)?)([a-zA-Z]+)?$""".r
+    final val unitNumberRE = """^([-+]?\d*\.?\d+(?:[eE][-+]?\d+)?)([a-zA-Z/]+)?$""".r
 
     def getLength (key: String): Length = {
       val v = conf.getValue(key)
@@ -327,6 +329,33 @@ object ConfigUtils {
     }
 
     def getLengthOrElse (key: String, fallbackAction: =>Length): Length = getWithFallback(key,fallbackAction)(getLength(key))
+
+
+    def getSpeed (key: String): Speed = {
+      val v = conf.getValue(key)
+      v.unwrapped match {
+        case s: String =>
+          s match {
+            case unitNumberRE(n,u) =>
+              val d = java.lang.Double.parseDouble(n)
+              u match {
+                case null => MetersPerSecond(d)
+                case "m/s" => MetersPerSecond(d)
+                case "kn" => Knots(d)
+                case "mph" => UsMilesPerHour(d)
+                case "kmh" => KilometersPerHour(d)
+                case other => throw new ConfigException.Generic(s"unknown speed unit: $other")
+              }
+            case _ =>  throw new ConfigException.Generic(s"invalid speed format: $s")
+          }
+        case n: Number => MetersPerSecond(n.doubleValue)
+        case other => throw new ConfigException.Generic(s"wrong speed type: $other")
+      }
+    }
+
+    def getSpeedOrElse (key: String, fallbackAction: =>Speed): Speed = getWithFallback(key,fallbackAction)(getSpeed(key))
+
+    def getAngleOrElse (key: String, fallbackAction: =>Angle): Angle = getWithFallback(key,fallbackAction)(Degrees(conf.getDouble(key)))
 
     //--- scope operations
 

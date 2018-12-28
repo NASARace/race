@@ -26,7 +26,7 @@ import gov.nasa.race.core.Messages.BusEvent
 import gov.nasa.race.ifSome
 import gov.nasa.race.swing.Style._
 import gov.nasa.race.swing.{IdAndNamePanel, StaticSelectionPanel}
-import gov.nasa.race.track.Trajectory
+import gov.nasa.race.track.{TrackDropped, Trajectory}
 import gov.nasa.race.uom.Angle
 import gov.nasa.race.uom.Length._
 import gov.nasa.race.ww._
@@ -118,9 +118,9 @@ class TATracksLayer (val raceViewer: RaceViewer, val config: Config) extends Mod
   override def createLayerInfoPanel = {
     new TrackLayerInfoPanel(raceViewer,this){
       // insert tracon selection panel after generic layer info
-      contents.insert(1, new StaticSelectionPanel[Tracon,IdAndNamePanel[Tracon]]("select TRACON",
-                                            Tracon.NoTracon +: Tracon.traconList, 40,
-                                            new IdAndNamePanel[Tracon]( _.id, _.name), selectTracon).styled())
+      val choice = new StaticSelectionPanel[Tracon,IdAndNamePanel[Tracon]]("select TRACON",
+        Tracon.NoTracon +: Tracon.traconList, 40, new IdAndNamePanel[Tracon]( _.id, _.name), selectTracon).styled()
+      contents.insert(1, choice)
     }.styled('consolePanel)
   }
 
@@ -142,6 +142,11 @@ class TATracksLayer (val raceViewer: RaceViewer, val config: Config) extends Mod
             }
           }
         case None => // nothing selected, ignore
+      }
+    case BusEvent(_, drop: TrackDropped, _) =>
+      trackEntries.get(drop.id) match {
+        case Some(acEntry) => removeTrackEntry(acEntry)
+        case None => // nothing to drop
       }
   }
 

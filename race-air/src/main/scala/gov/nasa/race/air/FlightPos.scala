@@ -28,16 +28,13 @@ import gov.nasa.race.uom.Angle._
 import gov.nasa.race.uom.Length._
 import gov.nasa.race.uom.Speed._
 import gov.nasa.race.uom._
+import gov.nasa.race.track.TrackedObject
+import gov.nasa.race.track.TrackedObject.TrackProblem
 import gov.nasa.race.util.InputStreamLineTokenizer
 
 
 object FlightPos {
-  def tempCS (flightId: String) = "?" + flightId
-  def isTempCS (cs: String) = cs.charAt(0) == '?'
 
-  // c/s changes only happen rarely, and if they do we want to preserve the changed value
-  // for all downstream actors so we don't use a fixed field for it
-  case class ChangedCS(oldCS: String)
 
   // since FlightPos is not a case class anymore we provide a unapply method for convenience
   // NOTE - don't select on floating point values (position, speed etc.) or date (which is a millisecond epoch)
@@ -61,11 +58,7 @@ class FlightPos (val id: String,
                 ) extends TrackedAircraft {
 
   def this (id:String, pos: GeoPosition, spd: Speed, hdg: Angle, vr: Speed, dtg: DateTime) =
-    this(id, FlightPos.tempCS(id), pos,spd,hdg,vr,dtg)
-
-  def hasTempCS = FlightPos.isTempCS(cs)
-  def tempCS = if (hasTempCS) cs else FlightPos.tempCS(id)
-  def getOldCS: Option[String] = amendments.find(_.isInstanceOf[FlightPos.ChangedCS]).map(_.asInstanceOf[FlightPos.ChangedCS].oldCS)
+    this(id, TrackedObject.tempCS(id), pos,spd,hdg,vr,dtg)
 
   def copyWithCS (newCS: String) = new FlightPos(id, newCS, position,speed,heading,vr,date,status)
   def copyWithStatus (newStatus: Int) = new FlightPos(id, cs, position,speed,heading,vr,date,newStatus)
@@ -243,12 +236,11 @@ class ExtendedFlightPosArchiveReader (iStream: InputStream, pathName: String) ex
   }
 }
 
-case class FlightPosProblem(fpos: FlightPos, lastFpos: FlightPos, problem: String)
 
 trait FlightPosChecker {
   // overide the ones you need
-  def check (fpos: FlightPos): Option[FlightPosProblem] = None
-  def checkPair (fpos: FlightPos, lastFPos: FlightPos): Option[FlightPosProblem] = None
+  def check (fpos: TrackedObject): Option[TrackProblem] = None
+  def checkPair (fpos: TrackedObject, lastFPos: TrackedObject): Option[TrackProblem] = None
 }
 
 object EmptyFlightPosChecker extends FlightPosChecker

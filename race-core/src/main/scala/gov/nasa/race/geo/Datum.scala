@@ -117,6 +117,45 @@ object Datum {
 
     √((x1-x2).`²` + (y1-y2).`²` + (z1-z2).`²` )
   }
+  def meanEuclideanDistance (pos1: GeoPosition, pos2: GeoPosition): Length = {
+    meanEuclideanDistance(pos1.φ,pos1.λ,pos1.altitude, pos2.φ,pos2.λ,pos2.altitude)
+  }
+
+
+  def meanEuclidean2dDistance (φ1: Angle, λ1: Angle, φ2: Angle, λ2: Angle): Length = {
+    val r = MeanEarthRadius
+
+    val r_cos_φ1 = r * Cos(φ1)
+    val x1 = r_cos_φ1 * Cos(λ1)
+    val y1 = r_cos_φ1 * Sin(λ1)
+
+    val r_cos_φ2 = r * Cos(φ2)
+    val x2 = r_cos_φ2 * Cos(λ2)
+    val y2 = r_cos_φ2 * Sin(λ2)
+
+    √((x1-x2).`²` + (y1-y2).`²`)
+  }
+  def meanEuclidean2dDistance (pos1: GeoPosition, pos2: GeoPosition): Length = meanEuclidean2dDistance(pos1.φ,pos1.λ, pos2.φ,pos2.λ)
+
+
+  def euclideanHeading (φ1: Angle, λ1: Angle, φ2: Angle, λ2: Angle): Angle = {
+    val dx = λ2.toRadians - λ1.toRadians
+    val dy = φ2.toRadians - φ1.toRadians
+
+    if (dx == 0) { // singularities
+      if (dy > 0)   Angle.Angle0
+      else          Angle.Angle180
+
+    } else {
+      val a = Math.atan(dy/dx)
+      if (a < 0){
+        if (dy > 0) Radians(π3_2 - a) else Radians(π_2 - a)
+      } else {
+        if (dy > 0) Radians(π_2 - a) else Radians(π3_2 - a)
+      }
+    }
+  }
+  def euclideanHeading (pos1: GeoPosition, pos2: GeoPosition): Angle = euclideanHeading(pos1.φ,pos1.λ, pos2.φ,pos2.λ)
 
   def earthRadius (φ: Angle): Length = {
     val cos_φ = Cos(φ)
@@ -124,5 +163,4 @@ object Datum {
 
     Meters(sqrt(((RE_E2 * cos_φ).`²` + (RE_N2 * sin_φ).`²`)/(RE_E * cos_φ).`²` + (RE_N * sin_φ).`²`))
   }
-
 }

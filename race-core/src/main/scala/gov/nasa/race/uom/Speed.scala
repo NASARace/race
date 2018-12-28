@@ -85,7 +85,9 @@ class Speed protected[uom] (val d: Double) extends AnyVal {
   @inline def within (x: Speed, distance: Speed) = Math.abs(d - x.d) <= distance.d
 
   @inline def < (x: Speed) = d < x.d
+  @inline def <= (x: Speed) = d <= x.d
   @inline def > (x: Speed) = d > x.d
+  @inline def >= (x: Speed) = d >= x.d
   @inline def =:= (x: Speed) = d == x.d  // use this if you really mean equality
   @inline def ≡ (x: Speed) = d == x.d
 

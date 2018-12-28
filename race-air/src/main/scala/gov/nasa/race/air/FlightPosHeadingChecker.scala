@@ -19,7 +19,9 @@ package gov.nasa.race.air
 
 import com.typesafe.config.Config
 import gov.nasa.race.config.ConfigUtils._
-import gov.nasa.race.geo.GreatCircle.{finalBearing,distance2D}
+import gov.nasa.race.geo.GreatCircle.{distance2D, finalBearing}
+import gov.nasa.race.track.TrackedObject
+import gov.nasa.race.track.TrackedObject.TrackProblem
 import gov.nasa.race.uom.Angle._
 
 import scala.concurrent.duration._
@@ -40,21 +42,21 @@ class FlightPosHeadingChecker (config: Config) extends FlightPosChecker {
   // don't check if reported headings indicate flight path change
   val maxHeadingChange = Degrees(config.getDoubleOrElse("max-heading-change", 45.0))
 
-  override def checkPair (fpos: FlightPos, lastFPos: FlightPos): Option[FlightPosProblem] = {
+  override def checkPair (fpos: TrackedObject, lastFPos: TrackedObject): Option[TrackProblem] = {
     if (fpos.id != lastFPos.id) { // Ouch - same c/s for different flights
-      Some(FlightPosProblem(fpos, lastFPos, s"callsign collision ${fpos.cs} (id1=${fpos.id},id2=${lastFPos.id})"))
+      Some(TrackProblem(fpos, lastFPos, s"callsign collision ${fpos.cs} (id1=${fpos.id},id2=${lastFPos.id})"))
 
     } else {
       val dt = (fpos.date.getMillis - lastFPos.date.getMillis) / 1000.0 // fractional seconds
 
       if (dt < 0) { // stale position
-        Some(FlightPosProblem(fpos, lastFPos, s"stale position for ${fpos.cs} (dt=$dt)"))
+        Some(TrackProblem(fpos, lastFPos, s"stale position for ${fpos.cs} (dt=$dt)"))
 
       } else if (dt < minTimeDiff) { // ambiguous or redundant
         val compDist = distance2D(fpos.position, lastFPos.position).toMeters
         val estDist = fpos.speed.toMetersPerSecond * dt
         if (Math.abs(compDist - estDist) > posAccuracy) {
-          Some(FlightPosProblem(fpos, lastFPos, s"ambiguous positions for ${fpos.cs} (dt=$dt,ds=$compDist"))
+          Some(TrackProblem(fpos, lastFPos, s"ambiguous positions for ${fpos.cs} (dt=$dt,ds=$compDist"))
         } else None // redundant (not considered an inconsistency here)
 
       } else {
@@ -62,7 +64,7 @@ class FlightPosHeadingChecker (config: Config) extends FlightPosChecker {
         if ((dt < maxTimeDiff) && fpos.heading.within(lastFPos.heading, maxHeadingChange)) {
           val compHeading = finalBearing(lastFPos.position, fpos.position)
           if (!compHeading.within(lastFPos.heading, maxHeadingDiff)) {
-            Some(FlightPosProblem(fpos, lastFPos, s"inconsistent heading for ${fpos.cs} (Ψ=$compHeading)"))
+            Some(TrackProblem(fpos, lastFPos, s"inconsistent heading for ${fpos.cs} (Ψ=$compHeading)"))
           } else None // checks out
         } else None // should not be checked against lastFpos
       }

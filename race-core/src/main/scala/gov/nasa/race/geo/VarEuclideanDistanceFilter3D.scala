@@ -64,8 +64,8 @@ class VarEuclideanDistanceFilter3D (φ: Angle, λ: Angle, alt: Length, d: Length
 
   def pass (φ: Angle, λ: Angle, alt: Length): Boolean = {
     (!alt.isDefined || (Abs(refAlt - alt) < dist)) &&
-    (AbsDiff(refLat,φ) < maxAngularDiff) &&
-    (AbsDiff(refLon,λ) < maxAngularDiff) &&
+    (absDiff(refLat,φ) < maxAngularDiff) &&
+    (absDiff(refLon,λ) < maxAngularDiff) &&
     (Datum.meanEuclideanDistance(refLat,refLon,refAlt, φ,λ,alt) < dist)
   }
 

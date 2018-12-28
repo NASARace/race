@@ -19,10 +19,11 @@ package gov.nasa.race.air.translator
 
 import com.typesafe.config.Config
 import gov.nasa.race.air.FlightPos
-import gov.nasa.race.air.FlightPos.ChangedCS
+import gov.nasa.race.track.TrackedObject.ChangedCS
 import gov.nasa.race.config._
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.geo.GeoPosition
+import gov.nasa.race.track.TrackedObject
 import gov.nasa.race.uom.Length._
 import gov.nasa.race.uom.Angle._
 import gov.nasa.race.uom.Speed._
@@ -180,7 +181,7 @@ class SBS2FlightPos (val config: Config=NoConfig) extends ConfigurableTranslator
       skipNextFields(2,i0) // DB sessionId, aircraftId
       val icao24 = nextFields(1,i0)
       val acInfo = acInfos.getOrElseUpdate(icao24,
-        if (useTempCS) new AircraftInfo(icao24, FlightPos.tempCS(icao24))
+        if (useTempCS) new AircraftInfo(icao24, TrackedObject.tempCS(icao24))
         else new AircraftInfo(icao24))
 
       skipNextFields(1,i0) // DB flightId
