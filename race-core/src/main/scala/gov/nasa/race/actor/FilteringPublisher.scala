@@ -47,10 +47,10 @@ trait FilteringPublisher extends PublishingRaceActor {
   def createFilters: Array[ConfigurableFilter] = getConfigurables("filters")
 
   // override this if we only want to let messages pass if we have filters set
-  def passUnfliteredDefault = config.getBooleanOrElse("pass-unfiltered", true)
+  def passUnfliteredDefault: Boolean = config.getBooleanOrElse("pass-unfiltered", true)
 
   /** override if there is selective publishing or additional action */
-  def action (msg: Any, isPassing: Boolean) = if (isPassing) publish(msg)
+  def action (msg: Any, isPassing: Boolean): Unit = if (isPassing) publish(msg)
 
   /**
     * this is what concrete actor handleMessage implementations can use to generically publish filtered

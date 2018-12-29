@@ -60,7 +60,7 @@ trait CompressedTrajectory extends Trajectory {
     posCodec.decode(data(j))
     val w = data(j+1)
     val t = t0Millis + (w >> 32)
-    val altMeters = (w & 0xffffffff).toInt / 100.0
+    val altMeters = (w & 0x00000000ffffffffL) / 100.0
     f(i, t, posCodec.latDeg, posCodec.lonDeg, altMeters)
   }
 }

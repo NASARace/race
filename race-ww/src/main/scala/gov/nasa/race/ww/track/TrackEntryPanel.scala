@@ -51,6 +51,7 @@ class TrackEntryPanel[T <: TrackedObject](raceView: RaceViewer, layer: TrackLaye
     val alt  = addField("altitude:")
     val hdg  = addField("heading:")
     val spd  = addField("speed:")
+    val vr   = addField("vr:")
     addSeparator
     val dep  = addField("departure:", "…")
     val arr  = addField("arrival:", "…")
@@ -65,6 +66,7 @@ class TrackEntryPanel[T <: TrackedObject](raceView: RaceViewer, layer: TrackLaye
       alt.text = f"${opos.altFeet}%d ft"
       hdg.text = f"${obj.heading.toDegrees.toInt}%d°"
       spd.text = f"${obj.speed.toKnots.toInt}%d kn"
+      vr.text = f"${obj.vr.toFeetPerSecond.toInt}%d fps"
     }
 
     override def setTrackInfo (ti: TrackInfo): Unit = {

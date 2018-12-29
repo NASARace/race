@@ -122,6 +122,7 @@ class WorldWindFrame (config: Config, raceView: RaceViewer) extends AppFrame {
     })
 
     //--- the menubar
+    /*
     val menuBar = new JMenuBar
     val showMenu = new JMenu("Show")
     mbShowPanelsMI = new JCheckBoxMenuItem("show console panel", showConsole)
@@ -129,18 +130,19 @@ class WorldWindFrame (config: Config, raceView: RaceViewer) extends AppFrame {
     showMenu.add(mbShowPanelsMI)
     menuBar.add(showMenu)
     peer.setJMenuBar(menuBar)
+    */
 
     val showConsoleListener = new ItemListener {
       override def itemStateChanged(e: ItemEvent): Unit = {
         val isSelected = e.getStateChange == ItemEvent.SELECTED
         raceView.showConsolePanels(isSelected)
         popupShowPanelsMI.setSelected(isSelected)
-        mbShowPanelsMI.setSelected(isSelected)
+        //mbShowPanelsMI.setSelected(isSelected)
       }
     }
 
     popupShowPanelsMI.addItemListener( showConsoleListener)
-    mbShowPanelsMI.addItemListener( showConsoleListener)
+    //mbShowPanelsMI.addItemListener( showConsoleListener)
   }
 
   def initializePanel (e: PanelEntry) = consolePanel.add( e.name, e.panel, e.tooltip, e.expand)
@@ -163,7 +165,7 @@ class WorldWindFrame (config: Config, raceView: RaceViewer) extends AppFrame {
       worldPanel.reInit // required for OS X to adapt the GLCanvas size & position
 
       popupShowPanelsMI.setSelected(setVisible)
-      mbShowPanelsMI.setSelected(setVisible)
+      //mbShowPanelsMI.setSelected(setVisible)
     }
   }
 
