@@ -55,6 +55,8 @@ object SBS2FlightPos {
                      ) {
     var oldCS: String = null
 
+    override def toString: String = s"AircraftInfo($dtg,$cs: pos=($lat,$lon,$alt), spd=$speed, alt=$track)"
+
     @inline def setCS (s: String) = if (s != null) {
       oldCS = if (cs == s) null else cs
       cs = s
