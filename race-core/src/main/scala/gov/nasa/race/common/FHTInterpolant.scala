@@ -75,7 +75,7 @@ abstract class FHTInterpolant(val n: Int, val d: Int)(getT: (Int)=>Long)  {
   protected final def findLeftIndex (t: Long): Int = {
     if (t < tLeft) {  // lower than start -> no left index
       -1
-    } else if (t > tRight) {  // higher than end -> last observation
+    } else if (t >= tRight) {  // higher or equal to end -> last observation
       n1
     }
     else {

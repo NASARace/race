@@ -128,12 +128,16 @@ object Datum {
     val r_cos_φ1 = r * Cos(φ1)
     val x1 = r_cos_φ1 * Cos(λ1)
     val y1 = r_cos_φ1 * Sin(λ1)
+    val z1 = r * Sin(φ1)
+
 
     val r_cos_φ2 = r * Cos(φ2)
     val x2 = r_cos_φ2 * Cos(λ2)
     val y2 = r_cos_φ2 * Sin(λ2)
+    val z2 = r * Sin(φ2)
 
-    √((x1-x2).`²` + (y1-y2).`²`)
+
+    √((x1-x2).`²` + (y1-y2).`²` + (z1-z2).`²` )
   }
   def meanEuclidean2dDistance (pos1: GeoPosition, pos2: GeoPosition): Length = meanEuclidean2dDistance(pos1.φ,pos1.λ, pos2.φ,pos2.λ)
 

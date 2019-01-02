@@ -64,4 +64,5 @@ class T4 [A,B,C,D] (var _1: A, var _2: B, var _3: C, var _4: D) extends Product4
   }
   @inline final def update (a: A, b: B, c: C, d: D): Unit = { _1 = a; _2 = b; _3 = c; _4 = d }
   @inline final def updated (a: A, b: B, c: C, d: D): T4[A,B,C,D] = { _1 = a; _2 = b; _3 = c; _4 = d; this }
+  @inline final def updated (t: (A,B,C,D)): T4[A,B,C,D] = { _1 = t._1; _2 = t._2; _3 = t._3; _4 = t._4; this }
 }
