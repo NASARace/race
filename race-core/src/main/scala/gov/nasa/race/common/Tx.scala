@@ -16,13 +16,21 @@
  */
 package gov.nasa.race.common
 
+import scala.language.implicitConversions
+
+object Tx {
+  implicit def tupleFromT2[A,B] (t: T2[A,B]): (A,B) = (t._1, t._2)
+  implicit def tupleFromT3[A,B,C] (t: T3[A,B,C]): (A,B,C) = (t._1, t._2, t._3)
+  implicit def tupleFromT4[A,B,C,D] (t: T4[A,B,C,D]): (A,B,C,D) = (t._1, t._2, t._3, t._4)
+}
+
 /**
   * a modifiable 2-tuple
   *
   * can be used in cases where we need a single object holding data but want to avoid allocation
   * by means of a cache object
   */
-class T2 [A,B] (var _1: A, var _2: B) extends Product2[A,B] {
+case class T2 [A,B] (var _1: A, var _2: B) extends Product2[A,B] {
   override def canEqual (other: Any): Boolean = other.isInstanceOf[Product2[A,B]]
 
   def toTuple: Tuple2[A,B] = (_1, _2)
@@ -38,7 +46,7 @@ class T2 [A,B] (var _1: A, var _2: B) extends Product2[A,B] {
   * can be used in cases where we need a single object holding data but want to avoid allocation
   * by means of a cache object
   */
-class T3 [A,B,C] (var _1: A, var _2: B, var _3: C) extends Product3[A,B,C] {
+case class T3 [A,B,C] (var _1: A, var _2: B, var _3: C) extends Product3[A,B,C] {
   override def canEqual (other: Any): Boolean = other.isInstanceOf[Product3[A,B,C]]
 
   def toTuple: Tuple3[A,B,C] = (_1, _2, _3)
@@ -55,7 +63,7 @@ class T3 [A,B,C] (var _1: A, var _2: B, var _3: C) extends Product3[A,B,C] {
   * can be used in cases where we need a single object holding data but want to avoid allocation
   * by means of a cache object
   */
-class T4 [A,B,C,D] (var _1: A, var _2: B, var _3: C, var _4: D) extends Product4[A,B,C,D] {
+case class T4 [A,B,C,D] (var _1: A, var _2: B, var _3: C, var _4: D) extends Product4[A,B,C,D] {
   override def canEqual (other: Any): Boolean = other.isInstanceOf[Product4[A,B,C,D]]
 
   def toTuple: Tuple4[A,B,C,D] = (_1, _2, _3, _4)

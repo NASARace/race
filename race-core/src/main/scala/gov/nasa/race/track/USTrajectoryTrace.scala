@@ -18,7 +18,7 @@ package gov.nasa.race.track
 
 import java.lang.Math.{max, min}
 
-import gov.nasa.race.common.FHInterpolant.Data3
+import gov.nasa.race.common.TInterpolant.Data3
 import gov.nasa.race.common.{FHT3Interpolant, T4}
 
 object USTrajectoryTrace {

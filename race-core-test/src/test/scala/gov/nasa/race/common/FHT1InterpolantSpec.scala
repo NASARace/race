@@ -23,55 +23,42 @@ import java.lang.Math._
 /**
   * reg test for FHT1Interpolant
   */
-class FHT1InterpolantSpec extends FlatSpec with RaceSpec {
+class FHT1InterpolantSpec extends FlatSpec with RaceSpec with T1InterpolantTest {
+
+  val ε: Double = 1e-3
+  checkError = true
 
   @inline def rad(deg: Double): Double = deg * Math.PI / 180.0
 
-  def testPoint (ts: Array[Long], t: Int)(f: (Long)=>Double) = {
-    val vs: Array[Double] = ts.map(f)
-    val r = new FHT1(ts, vs)
-    val v = r.eval(t)
-    val u = f(t)
-    println(s" r($t) = $v ($u -> e=${u - v})")
-  }
-
-  def testRange (ts: Array[Long], tStart: Int, tEnd: Int, dt: Int)(f: (Long)=>Double) = {
-    val vs: Array[Double] = ts.map(f)
-    val r = new FHT1(ts, vs)
-    r.evalForward(tStart,tEnd,dt) { (t, v) =>
-      val u = f(t)
-      println(s"       r($t) = $v ($u -> e=${u - v})")
-    }
-  }
-
-  def testRangeReverse (ts: Array[Long], tStart: Int, tEnd: Int, dt: Int)(f: (Long)=>Double) = {
-    val vs: Array[Double] = ts.map(f)
-    val r = new FHT1(ts, vs)
-    r.evalReverse(tEnd,tStart,dt) { (t, v) =>
-      val u = f(t)
-      println(s"       r($t) = $v ($u -> e=${u - v})")
-    }
-  }
-
+  def gen (ts: Array[Long], vs: Array[Double]): T1Interpolant = new FHT1(ts,vs)
+  def func (t: Long): Double = sin(rad(t))
 
   "a FHT1Interpolant" should "approximate known analytical functions at given points" in {
     println("--- point of sin(x)")
-    //testPoint(  Array(0, 45, 90, 135, 180),  60){ t=> sin(rad(t)) }
-    testPoint(  Array(0, 20, 40, 60, 80, 100, 120, 140, 160, 180),  70){ t=> sin(rad(t)) }
+    testPoint(  Array(0, 20, 40, 60, 80, 100, 120, 140, 160, 180),  70)(func)(gen)
   }
 
-  "a FH1Interpolant" should "approximate forward intervals of analytical functions" in {
+  "a FHT1Interpolant" should "approximate forward intervals of analytical functions" in {
     println("--- forward interval of sin(x)")
-    //testPoint(  Array(0, 45, 90, 135, 180),  60){ t=> sin(rad(t)) }
-    testRange(  Array(0, 20, 40, 60, 80, 100, 120, 140, 160, 180),  20,40,2){ t=> sin(rad(t)) }
+    testRange(  Array(0, 20, 40, 60, 80, 100, 120, 140, 160, 180),  20,40,2)(func)(gen)
   }
 
-  "a FH1Interpolant" should "approximate backwards intervals of analytical functions" in {
-    println("--- backwards interval of sin(x)")
-    //testPoint(  Array(0, 45, 90, 135, 180),  60){ t=> sin(rad(t)) }
-    testRangeReverse(  Array(0, 20, 40, 60, 80, 100, 120, 140, 160, 180),  20,40,2){ t=> sin(rad(t)) }
+  "a FHT1Interpolant" should "approximate backwards intervals of analytical functions" in {
+    println("--- reverse interval of sin(x)")
+    testReverseRange(  Array(0, 20, 40, 60, 80, 100, 120, 140, 160, 180),  40,20,2)(func)(gen)
   }
 
+  "a FHT1Interpolant" should "provide a forward iterator" in {
+    println("--- forward iterator for interpolated values for sin(x)")
+    testForwardIterator(Array(0, 20, 40, 60, 80, 100, 120, 140, 160, 180), 20, 40, 2)(func)(gen)
+  }
+
+  "a FHT1Interpolant" should "provide a reverse iterator" in {
+    println("--- reverse iterator for interpolated values for sin(x)")
+    testReverseIterator(Array(0, 20, 40, 60, 80, 100, 120, 140, 160, 180), 40, 20, 2)(func)(gen)
+  }
+
+  /**
   "a FH1Interpolant" should "generate a interpolated vector" in {
     def f(t: Long): Double = sin(rad(t))
 
@@ -129,39 +116,7 @@ class FHT1InterpolantSpec extends FlatSpec with RaceSpec {
   }
 
 
-  "a FHInterpolant" should "provide a forward iterator" in {
-    def f(t: Long): Double = sin(rad(t))
 
-    println("--- forward iterator for interpolated values for sin(x)")
-    val ts: Array[Long] = Array(0, 20, 40, 60, 80, 100, 120, 140, 160, 180)
-    val vs: Array[Double] = ts.map(f)
-    val r = new FHT1(ts, vs)
-    val it = r.iterator(20,40,2)
-    while (it.hasNext) {
-      val p = it.next
-      val t = p._1
-      val v = p._2
-      val u = f(t)
-      println(s"       r($t) = $v ($u -> e=${u - v})")
-    }
-  }
-
-  "a FHInterpolant" should "provide a reverse iterator" in {
-    def f(t: Long): Double = sin(rad(t))
-
-    println("--- reverse iterator for interpolated values for sin(x)")
-    val ts: Array[Long] = Array(0, 20, 40, 60, 80, 100, 120, 140, 160, 180)
-    val vs: Array[Double] = ts.map(f)
-    val r = new FHT1(ts, vs)
-    val it = r.reverseIterator(40,20,2)
-    while (it.hasNext) {
-      val p = it.next
-      val t = p._1
-      val v = p._2
-      val u = f(t)
-      println(s"       r($t) = $v ($u -> e=${u - v})")
-    }
-  }
 
   "a FHInterpolant" should "provide a reverse tail iterator" in {
     def f(t: Long): Double = sin(rad(t))
@@ -179,4 +134,6 @@ class FHT1InterpolantSpec extends FlatSpec with RaceSpec {
       println(s"       r($t) = $v ($u -> e=${u - v})")
     }
   }
+
+    **/
 }

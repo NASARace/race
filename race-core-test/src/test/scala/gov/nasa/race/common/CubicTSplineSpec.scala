@@ -22,7 +22,7 @@ import org.scalatest.FlatSpec
 /**
   * reg test for CubicT1Spline
   */
-class CubicTInterpolantSpec extends FlatSpec with RaceSpec {
+class CubicTSplineSpec extends FlatSpec with RaceSpec {
 
   @inline def rad(deg: Double): Double = deg * Math.PI / 180.0
 
@@ -32,7 +32,7 @@ class CubicTInterpolantSpec extends FlatSpec with RaceSpec {
       val ts: Array[Int] = Array(0, 10, 20, 30, 40, 50)
       val vs: Array[Double] = Array(0d, 10d, 20d, 30d, 40d, 50d)
 
-      val s = new CubicT1Interpolant(0, ts, vs)
+      val s = new CubicT1Spline(0, ts, vs)
 
       s.evaluateFromTo(15, 25, 1) { (t, v) =>
         println(f"$t: $v%.1f")
@@ -45,7 +45,7 @@ class CubicTInterpolantSpec extends FlatSpec with RaceSpec {
       val ts: Array[Int] = Array(0, 10, 20, 30, 40, 50)
       val vs: Array[Double] = Array(10d, 10d, 10d, 10d, 10d, 10d)
 
-      val s = new CubicT1Interpolant(0, ts, vs)
+      val s = new CubicT1Spline(0, ts, vs)
 
       s.evaluateFromTo(41, 60, 1) { (t, v) =>
         println(f"$t: $v%.1f")
@@ -63,7 +63,7 @@ class CubicTInterpolantSpec extends FlatSpec with RaceSpec {
         //println(f"@@ $a%3d = ${vs(i)}%.1f")
       }
 
-      val s = new CubicT1Interpolant(0, ts, vs)
+      val s = new CubicT1Spline(0, ts, vs)
 
       s.evaluateFromTo(0, 180, 10) { (t, v) =>
         val y = Math.sin(rad(t))
@@ -82,7 +82,7 @@ class CubicTInterpolantSpec extends FlatSpec with RaceSpec {
         //println(f"@@ $a%3d = ${vs(i)}%.1f")
       }
 
-      val s = new CubicT1Interpolant(0, ts, vs)
+      val s = new CubicT1Spline(0, ts, vs)
 
       s.evaluateFromTo(0, 180, 10) { (t, v) =>
         val y = Math.cos(rad(t))
@@ -101,7 +101,7 @@ class CubicTInterpolantSpec extends FlatSpec with RaceSpec {
         //println(f"@@ $t%3d = ${vs(i)}%.1f")
       }
 
-      val s = new CubicT1Interpolant(0, ts, vs)
+      val s = new CubicT1Spline(0, ts, vs)
 
       s.evaluateFromTo(0, 100, 10) { (t, v) =>
         val y = Math.sqrt(10000 - squared(t.toDouble))
@@ -122,7 +122,7 @@ class CubicTInterpolantSpec extends FlatSpec with RaceSpec {
         //println(f"@@ $a%3d = ${vs(i)}%.1f")
       }
 
-      val s = new CubicT1Interpolant(0, ts, vs)
+      val s = new CubicT1Spline(0, ts, vs)
 
       s.evaluateFromTo(0, 180, 10) { (t, v) =>
         val y = Math.sin(rad(t))
@@ -146,7 +146,7 @@ class CubicTInterpolantSpec extends FlatSpec with RaceSpec {
       ys(i) = Math.cos(r)
     }
 
-    val s = new CubicT2Interpolant(0,ts,xs,ys)
+    val s = new CubicT2Spline(0,ts,xs,ys)
 
     s.evaluateFromTo(0, 180, 10) { (t, x, y) =>
       val r = rad(t)
@@ -175,7 +175,7 @@ class CubicTInterpolantSpec extends FlatSpec with RaceSpec {
       zs(i) = Math.sin(r)
     }
 
-    val s = new CubicT3Interpolant(0,ts,xs,ys,zs)
+    val s = new CubicT3Spline(0,ts,xs,ys,zs)
 
     s.evaluateFromTo(0, 180, 10) { (t, x,y,z) =>
       val r = rad(t)

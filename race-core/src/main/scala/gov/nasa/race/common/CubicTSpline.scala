@@ -17,6 +17,70 @@
 package gov.nasa.race.common
 
 /**
+  * a time based interpolant
+  * we store time relative to the first time point, which limits the length of observations
+  */
+trait TSpline {
+  val t0: Long
+  val ts: Array[Int]
+
+  val N = ts.length
+  val N1 = N-1
+
+  val tEnd = ts(N1)
+
+  def startTime: Long = t0
+  def endTime: Long = t0 + ts(N1)
+
+  @inline protected def getTMin (t: Long): Int = if (t < t0) 0 else (t - t0).toInt
+  @inline protected def getTMax (t: Long): Int = if (t > (t0 + ts(N1))) ts(N1) else (t - t0).toInt
+
+  @inline protected final def getLeftIndex(t: Int): Int = {
+    if (t < 0 || t > ts(N1)) return -1 // outside our interval
+    var i = 1
+    while (ts(i) <= t) i += 1
+    i-1
+  }
+
+  @inline protected final def getLeftIndexReverse(t: Int): Int = {
+    if (t < 0 || t > ts(N1)) return -1 // outside our interval
+    var i = N1
+    while (ts(i) > t) i -= 1
+    i
+  }
+
+  protected final def findLeftIndex (t: Int): Int = {
+    if (t < 0) {  // lower than start
+      -1
+    } else if (t > ts(N1)) {  // higher than end
+      N1
+    }
+    else {
+      var a = 0
+      var b = N1
+      while (b - a > 1){
+        val c = (a + b)/2;
+        val tc = ts(c);
+        if (t == tc) return c
+        else if (t > tc) a = c
+        else b = c
+      }
+      a
+    }
+  }
+
+  /**
+    * find highest index with ts[i] <= t by means of bisection
+    * assumes ts[] is ordered and strictly monotone
+    */
+  def findLeftIndexAbsolute (tAbs: Long): Int = findLeftIndex((tAbs - t0).toInt)
+
+}
+
+/**
+  * TODO - unify this with FHTInterpolant (which is more expensive for interpolant evaluation
+  * but much less so for coefficient calculation)
+  *
   * a cubic spline over a parametric function that has a integer time parameter (e.g. milliseconds)
   * this implementation uses 'natural' splines, i.e. P''' = 0 in both end points
   * we minimize field and array access in order to speed up computation
@@ -27,7 +91,7 @@ package gov.nasa.race.common
   *     import fracOps._
   *     ..
   */
-class CubicT1Interpolant(val t0: Long, val ts: Array[Int], val vs: Array[Double]) extends TInterpolant {
+class CubicT1Spline(val t0: Long, val ts: Array[Int], val vs: Array[Double]) extends TSpline {
 
   // the polynom coefficients
   val a: Array[Double] = vs
@@ -142,7 +206,7 @@ class CubicT1Interpolant(val t0: Long, val ts: Array[Int], val vs: Array[Double]
 /**
   * a 2-dimensional time based cubic spline
   */
-class CubicT2Interpolant(val t0: Long, val ts: Array[Int], val xs: Array[Double], val ys: Array[Double]) extends TInterpolant {
+class CubicT2Spline(val t0: Long, val ts: Array[Int], val xs: Array[Double], val ys: Array[Double]) extends TSpline {
 
   // polynom coefficients for x values
   val ax: Array[Double] = xs
@@ -290,7 +354,7 @@ class CubicT2Interpolant(val t0: Long, val ts: Array[Int], val xs: Array[Double]
 /**
   * a 3-dimensional time based cubic spline
   */
-class CubicT3Interpolant(val t0: Long, val ts: Array[Int], val xs: Array[Double], val ys: Array[Double], val zs: Array[Double]) extends TInterpolant {
+class CubicT3Spline(val t0: Long, val ts: Array[Int], val xs: Array[Double], val ys: Array[Double], val zs: Array[Double]) extends TSpline {
 
   // polynom coefficients for x values
   val ax: Array[Double] = xs

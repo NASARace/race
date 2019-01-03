@@ -1,6 +1,6 @@
 package gov.nasa.race.common
 
-import gov.nasa.race.common.FHInterpolant.Data3
+import gov.nasa.race.common.TInterpolant.Data3
 import gov.nasa.race.test.RaceSpec
 import org.scalatest.FlatSpec
 
