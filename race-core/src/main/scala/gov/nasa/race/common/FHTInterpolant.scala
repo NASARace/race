@@ -342,6 +342,8 @@ class FHT2Interpolant (n: Int, d: Int=3)
   }
 }
 
+class FHT2 (ts: Array[Long], xs: Array[Double], ys: Array[Double])
+  extends FHT2Interpolant(ts.length)(ts(_))((i,res)=> res.updated(ts(i),xs(i),ys(i)))
 
 /**
   * Floater Hormann interpolant for 3-dim time series
@@ -593,3 +595,6 @@ class FHTnInterpolant (n: Int, getT: (Int)=>Long, getV: Array[(Int)=>Double], d:
     reverseIterator(tEnd,tStart,dt)
   }
 }
+
+class FHT3 (ts: Array[Long], xs: Array[Double], ys: Array[Double], zs: Array[Double])
+  extends FHT3Interpolant(ts.length)(ts(_))((i,res)=> res.updated(ts(i),xs(i),ys(i),zs(i)))

@@ -325,7 +325,7 @@ class LinT2Interpolant (n: Int)
 }
 
 class LinT2 (ts: Array[Long], xs: Array[Double], ys: Array[Double])
-  extends LinT2Interpolant(ts.length)(ts(_))(xs(_))(ys(_))
+  extends LinT2Interpolant(ts.length)(ts(_))((i,res)=> res.updated(ts(i),xs(i),ys(i)))
 
 
 class LinT3Interpolant (n: Int)
@@ -497,4 +497,4 @@ class LinT3Interpolant (n: Int)
 }
 
 class LinT3 (ts: Array[Long], xs: Array[Double], ys: Array[Double], zs: Array[Double])
-  extends LinT2Interpolant(ts.length)(ts(_))(xs(_))(ys(_))(zs(_))
+  extends LinT3Interpolant(ts.length)(ts(_))((i,res)=> res.updated(ts(i),xs(i),ys(i),zs(i)))
