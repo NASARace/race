@@ -248,7 +248,7 @@ class FHT2Interpolant (n: Int, d: Int=3)
     }
 
     try {
-      _evalForward(i, tLeft, tPrev, tNext, tRight, dt)(exact)(approx)
+      _evalForward(i, tStart, tPrev, tNext, tEnd, dt)(exact)(approx)
     } catch {
       case _: BreakException => // do nothing
     }
@@ -271,7 +271,7 @@ class FHT2Interpolant (n: Int, d: Int=3)
     }
 
     try {
-      _evalReverse(i, tRight, tPrev, tNext, tLeft, dt)(exact)(approx)
+      _evalReverse(i, tEnd, tPrev, tNext, tStart, dt)(exact)(approx)
     } catch {
       case _: BreakException => // do nothing
     }
@@ -398,7 +398,7 @@ class FHT3Interpolant (n: Int, d: Int=3)
     }
 
     try {
-      _evalForward(i, tLeft, tPrev, tNext, tRight, dt)(exact)(approx)
+      _evalForward(i, tStart, tPrev, tNext, tEnd, dt)(exact)(approx)
     } catch {
       case _: BreakException => // do nothing
     }
@@ -421,7 +421,7 @@ class FHT3Interpolant (n: Int, d: Int=3)
     }
 
     try {
-      _evalReverse(i, tRight, tPrev, tNext, tLeft, dt)(exact)(approx)
+      _evalReverse(i, tEnd, tPrev, tNext, tStart, dt)(exact)(approx)
     } catch {
       case _: BreakException => // do nothing
     }
