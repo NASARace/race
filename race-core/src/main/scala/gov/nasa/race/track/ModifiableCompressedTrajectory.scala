@@ -20,18 +20,59 @@ import gov.nasa.race.geo.WGS84Codec
 
 import scala.annotation.tailrec
 
+trait LinearCompressedTrajectory extends CompressedTrajectory {
+  override protected[track] var data: Array[Long] = _             // initialized on demand
+
+  protected[track] var _size = 0
+  def size = _size
+
+  override def capacity: Int = if (data != null) data.length / 2 else 0
+
+  override def foreachPre(f: (Int,Long,Double,Double,Double)=>Unit): Unit = {
+    @tailrec def _processEntry (i: Int, f: (Int,Long,Double,Double,Double)=>Unit): Unit = {
+      if (i < _size) {
+        processTrackPointData(i,i,f)
+        _processEntry(i+1,f)
+      }
+    }
+    _processEntry(0,f)
+  }
+
+  override def foreachPreReverse(f: (Int,Long,Double,Double,Double)=>Unit): Unit = {
+    @tailrec def _processEntry (i: Int, f: (Int,Long,Double,Double,Double)=>Unit): Unit = {
+      if (i >= 0) {
+        processTrackPointData(i,i,f)
+        _processEntry(i-1,f)
+      }
+    }
+    _processEntry(_size-1,f)
+  }
+}
+
+
+class FixedCompressedTrajectory extends LinearCompressedTrajectory {
+
+  override def snapshot: Trajectory = this // no need to snap, we are invariant
+
+  /**
+    * return a new Trajectory object that can be modified
+    * use this for branching trajectories
+    */
+  override def branch: ModifiableTrajectory = {
+    val t = new ModifiableCompressedTrajectory
+    t.data = data.clone()
+    t._size = _size
+    t
+  }
+}
+
 /**
-  * A track path (full trajectory)  with a compressed (lossy) encoding
+  * a LinearCompressedTrajectory that can be modified
   */
-class CompressedTrackPath (capacityIncrement: Int=32) extends CompressedTrajectory {
+class ModifiableCompressedTrajectory(capacityIncrement: Int=32)
+             extends LinearCompressedTrajectory with ModifiableTrajectory {
   private var growthCycle = 0
   final val linearGrowthCycles = 5 // once that is exceeded we grow exponentially
-
-  override protected var data: Array[Long] = _             // initialized on demand
-
-  protected var _size = 0
-
-  def size = _size
 
   protected def growDataCapacity = {
     growthCycle += 1
@@ -53,7 +94,7 @@ class CompressedTrackPath (capacityIncrement: Int=32) extends CompressedTrajecto
     * @param alt altitude in meters (or NaN if undefined)
     * @param t epoch value (or 0 if undefined)
     */
-  override def addPre(t: Long, lat: Double, lon: Double, alt: Double): Trajectory = {
+  override def addPre(t: Long, lat: Double, lon: Double, alt: Double): ModifiableTrajectory = {
     val i = _size
 
     if (i == 0) {
@@ -69,23 +110,17 @@ class CompressedTrackPath (capacityIncrement: Int=32) extends CompressedTrajecto
   }
 
 
-  override def foreachPre(f: (Int,Long,Double,Double,Double)=>Unit): Unit = {
-    @tailrec def _processEntry (i: Int, f: (Int,Long,Double,Double,Double)=>Unit): Unit = {
-      if (i < _size) {
-        processTrackPointData(i,i,f)
-        _processEntry(i+1,f)
-      }
-    }
-    _processEntry(0,f)
+  override def snapshot: Trajectory = {
+    val t = new FixedCompressedTrajectory
+    t.data = data.clone()
+    t._size = _size
+    t
   }
 
-  override def foreachPreReverse(f: (Int,Long,Double,Double,Double)=>Unit): Unit = {
-    @tailrec def _processEntry (i: Int, f: (Int,Long,Double,Double,Double)=>Unit): Unit = {
-      if (i >= 0) {
-        processTrackPointData(i,i,f)
-        _processEntry(i-1,f)
-      }
-    }
-    _processEntry(_size-1,f)
+  override def branch: ModifiableTrajectory = {
+    val t = new ModifiableCompressedTrajectory(capacityIncrement)
+    t.data = data.clone()
+    t._size = _size
+    t
   }
 }

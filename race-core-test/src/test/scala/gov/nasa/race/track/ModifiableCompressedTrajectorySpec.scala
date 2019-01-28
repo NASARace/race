@@ -22,7 +22,7 @@ import org.scalatest.FlatSpec
 /**
   * reg test for LossyTrajectory
   */
-class CompressedTrackPathSpec extends FlatSpec with RaceSpec {
+class ModifiableCompressedTrajectorySpec extends FlatSpec with RaceSpec {
 
   "a init sized CompressedTrackPath" should "contain approximate values of entries in right order" in {
     val data = Array(
@@ -31,7 +31,7 @@ class CompressedTrackPathSpec extends FlatSpec with RaceSpec {
       (3, 37.62002,-122.38002, 3002.0)
     )
 
-    val t = new CompressedTrackPath
+    val t = new ModifiableCompressedTrajectory
     assert( t.isEmpty)
     for (d <- data)  t.addPre(d._1, d._2, d._3, d._4)
 
@@ -69,7 +69,7 @@ class CompressedTrackPathSpec extends FlatSpec with RaceSpec {
       (8, 37.62008,-122.38008, 3008.0),
     )
 
-    val t = new CompressedTrackPath(4)
+    val t = new ModifiableCompressedTrajectory(4)
     assert( t.isEmpty)
     for (d <- data)  t.addPre(d._1, d._2, d._3, d._4)
     assert( t.size == data.length)
@@ -98,7 +98,7 @@ class CompressedTrackPathSpec extends FlatSpec with RaceSpec {
       (100090, 37.62009,-122.38009, 3009.0),
     )
 
-    val traj = new TimedTrajectoryFilter(new CompressedTrackPath(4), 20)
+    val traj = new TimeFilteredTrajectory(new ModifiableCompressedTrajectory(4), 20)
     assert( traj.isEmpty)
     for (d <- data)  traj.addPre(d._1, d._2, d._3, d._4)
     assert( traj.size == data.length/2)

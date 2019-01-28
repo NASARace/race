@@ -26,7 +26,10 @@ import gov.nasa.race.geo.WGS84Codec
   * which limits CompactTrajectories to about 1200h duration
   *
   * the data is kept in a single Array[Long] that has to be allocated/resized by the type that implements
-  * this trait
+  * this trait.
+  *
+  * note that we do not imply any specific storage layout of the data array, indexing is the responsibility
+  * of concrete types (e.g. using ring buffers)
   */
 trait CompressedTrajectory extends Trajectory {
   protected var data: Array[Long]  // provided by concrete type

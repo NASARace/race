@@ -20,6 +20,7 @@ package gov.nasa
 import java.io.{DataInputStream, DataOutputStream}
 
 import com.github.nscala_time.time.Imports._
+import org.joda.time.ReadableDateTime
 
 import scala.annotation.tailrec
 import scala.collection.immutable.{Map => ImmutableMap, Set => ImmutableSet}
@@ -394,7 +395,7 @@ package object race {
 
   // something that has a date
   trait Dated {
-    def date: DateTime
+    def date: ReadableDateTime
   }
 
   // something that can be identified across channels

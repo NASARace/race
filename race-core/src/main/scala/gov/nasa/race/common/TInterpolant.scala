@@ -16,25 +16,64 @@
  */
 package gov.nasa.race.common
 
-import scala.annotation.tailrec
+import gov.nasa.race.common.Nat.{N1, N2, N3}
 
-object TInterpolant {
-  type Data1 = T2[Long,Double]
-  type Data2 = T3[Long,Double,Double]
-  type Data3 = T4[Long,Double,Double,Double]
-}
-import TInterpolant._
 
 /**
-  * base class for time based, storage independent interpolants
+  * the owner of data to interpolate
   */
-abstract class TInterpolant (val n: Int)(getT: (Int)=>Long) {
-  protected[this] class BreakException extends Exception
-  protected[this] val breakException = new BreakException
+trait TDataSource[N<:Nat,T<:TDataPoint[N]] {
+  val n1: Int = size - 1
+  def size: Int                // number of data points
+  def getTime(i: Int): Long    // get time of observation point with logical index i
+  def newDataPoint: T          // create a new zero'ed DataPoint object
+  def getDataPoint(i: Int, dp: T): T  // set provided DataPoint values to observation i, using provided cache
+}
 
-  val n1 = n-1
-  val tLeft = getT(0)
-  val tRight = getT(n1)
+//--- array based convenience sources (mostly for testing)
+
+class ArrayTDataSource1 (val ts: Array[Long], val v0: Array[Double]) extends TDataSource[N1,TDataPoint1]{
+  val size = ts.length
+  assert(size == v0.length)
+  def getTime(i: Int) = ts(i)
+  def newDataPoint = new TDataPoint1(0,0)
+  def getDataPoint(i: Int, dp: TDataPoint1) = dp.update(ts(i), v0(i))
+}
+
+class ArrayTDataSource2 (val ts: Array[Long], val v0: Array[Double], val v1: Array[Double])
+                                                                 extends TDataSource[N2,TDataPoint2]{
+  val size = ts.length
+  assert(size == v0.length)
+  assert(size == v1.length)
+  def getTime(i: Int) = ts(i)
+  def newDataPoint = new TDataPoint2(0,0, 0)
+  def getDataPoint(i: Int, dp: TDataPoint2) = dp.update(ts(i), v0(i), v1(i))
+}
+
+class ArrayTDataSource3 (val ts: Array[Long], val v0: Array[Double], val v1: Array[Double], val v2: Array[Double])
+                                                                 extends TDataSource[N3,TDataPoint3]{
+  val size = ts.length
+  assert(size == v0.length)
+  assert(size == v1.length)
+  assert(size == v2.length)
+
+  def getTime(i: Int) = ts(i)
+  def newDataPoint = new TDataPoint3(0,0, 0,0)
+  def getDataPoint(i: Int, dp: TDataPoint3) = dp.update(ts(i), v0(i), v1(i), v2(i))
+}
+
+
+/**
+  * base class for multi-dimensional time series interpolants
+  *
+  * Note this class does not imply a interpolation algorithm (linear, rational etc.) or
+  * DataPoint storage mechanism
+  */
+abstract class TInterpolant[N<:Nat,T<:TDataPoint[N]](val src: TDataSource[N,T]) {
+
+  val n1 = src.size-1
+  val tLeft = src.getTime(0)
+  val tRight = src.getTime(n1)
 
   protected final def findLeftIndex (t: Long): Int = {
     if (t < tLeft) {  // lower than start -> no left index
@@ -47,7 +86,7 @@ abstract class TInterpolant (val n: Int)(getT: (Int)=>Long) {
       var b = n1
       while (b - a > 1){
         val c = (a + b)/2;
-        val tc = getT(c);
+        val tc = src.getTime(c);
         if (t == tc) return c
         else if (t > tc) a = c
         else b = c
@@ -56,47 +95,14 @@ abstract class TInterpolant (val n: Int)(getT: (Int)=>Long) {
     }
   }
 
-  /**
-    * use from within loop callbacks to break iteration
-    */
-  def break: Unit = throw breakException
+  //--- iterator support
 
-  @tailrec protected final def _evalForward (_iPrev: Int, t: Long, _tPrev: Long, _tNext: Long, tEnd: Long, dt: Int)
-                                            (exact: (Long,Int)=>Unit)
-                                            (approx: (Long,Long,Long,Int)=>Unit): Unit = {
-    if (t <= tEnd) {
-      var iPrev = _iPrev
-      var tPrev = _tPrev
-      var tNext = _tNext
-
-      while (t >= tNext && iPrev <= n1) {
-        iPrev += 1
-        tPrev = tNext
-        tNext = if (iPrev >= n1) Int.MaxValue else getT(iPrev+1)
-      }
-
-      if (t == tPrev) { // no need to compute
-        exact(t, iPrev)
-      } else {
-        approx(tPrev,t,tNext,iPrev)
-      }
-
-      _evalForward(iPrev, t + dt, tPrev, tNext, tEnd, dt)(exact)(approx)
-    }
-  }
-
-  /**
-    * iterator version - can be used to iterate over several functions at the same time
-    *
-    * Note this is less efficint than _evalForward since it stores the iteration state on
-    * the heap (fields). While the source looks very redudant to _evalForward, the bytecode does not
-    */
   protected[this] class ForwardIterator[T] (tStart: Long, tEnd: Long, dt: Int)
                                            (exact: (Long,Int)=>T)
                                            (approx: (Long,Long,Long,Int)=>T) extends Iterator[T] {
     var iPrev = findLeftIndex(tStart)
-    var tPrev = if (iPrev < 0) Int.MinValue else getT(iPrev)
-    var tNext = if (iPrev == n1) Int.MaxValue else getT(iPrev+1)
+    var tPrev = if (iPrev < 0) Int.MinValue else src.getTime(iPrev)
+    var tNext = if (iPrev == n1) Int.MaxValue else src.getTime(iPrev+1)
     var t = tStart
 
     override def hasNext: Boolean = t <= tEnd
@@ -107,7 +113,7 @@ abstract class TInterpolant (val n: Int)(getT: (Int)=>Long) {
       while (t >= tNext && iPrev <= n1) {
         iPrev += 1
         tPrev = tNext
-        tNext = if (iPrev >= n1) Int.MaxValue else getT(iPrev+1)
+        tNext = if (iPrev >= n1) Int.MaxValue else src.getTime(iPrev+1)
       }
 
       val tt = t
@@ -121,36 +127,12 @@ abstract class TInterpolant (val n: Int)(getT: (Int)=>Long) {
     }
   }
 
-  @tailrec protected final def _evalReverse (_iPrev: Int, t: Long, _tPrev: Long, _tNext: Long, tLeft: Long, dt: Int)
-                                            (exact: (Long,Int)=>Unit)
-                                            (approx: (Long,Long,Long,Int)=>Unit): Unit = {
-    if (t >= tLeft) {
-      var iPrev = _iPrev
-      var tPrev = _tPrev
-      var tNext = _tNext
-
-      while (t < tPrev && iPrev >= 0) {
-        iPrev -= 1
-        tNext = tPrev
-        tPrev = if (iPrev < 0) Int.MinValue else getT(iPrev)
-      }
-
-      if (t == tPrev) {
-        exact(t, iPrev)
-      } else {
-        approx(tPrev,t,tNext,iPrev)
-      }
-
-      _evalReverse(iPrev, t - dt, tPrev, tNext, tLeft, dt)(exact)(approx)
-    }
-  }
-
   protected[this] class ReverseIterator[T] (tEnd: Long, tStart: Long, dt: Int)
                                            (exact: (Long,Int)=>T)
                                            (approx: (Long,Long,Long,Int)=>T) extends Iterator[T] {
     var iPrev = findLeftIndex(tEnd)
-    var tPrev = if (iPrev < 0) Int.MinValue else getT(iPrev)
-    var tNext = if (iPrev == n1) Int.MaxValue else getT(iPrev + 1)
+    var tPrev = if (iPrev < 0) Int.MinValue else src.getTime(iPrev)
+    var tNext = if (iPrev == n1) Int.MaxValue else src.getTime(iPrev + 1)
     var t = tEnd
 
     override def hasNext: Boolean = t >= tStart
@@ -161,7 +143,7 @@ abstract class TInterpolant (val n: Int)(getT: (Int)=>Long) {
       while (t < tPrev && iPrev >= 0) {
         iPrev -= 1
         tNext = tPrev
-        tPrev = if (iPrev < 0) Int.MinValue else getT(iPrev)
+        tPrev = if (iPrev < 0) Int.MinValue else src.getTime(iPrev)
       }
 
       val tt = t
@@ -174,53 +156,19 @@ abstract class TInterpolant (val n: Int)(getT: (Int)=>Long) {
       }
     }
   }
-}
 
-trait T1Interpolant {
-  def eval (t: Long): Double
+  def iterator (tStart: Long, tEnd: Long, dt: Int): Iterator[TDataPoint[N]]
 
-  def evalForward(tStart: Long, tEnd: Long, dt: Int)(f: (Long,Double)=>Unit)
-  def evalReverse(tEnd: Long, tStart: Long, dt: Int)(f: (Long,Double)=>Unit)
+  def reverseIterator (tEnd: Long, tStart: Long, dt: Int): Iterator[TDataPoint[N]]
 
-  def iterator (tStart: Long, tEnd: Long, dt: Int): Iterator[Data1]
-  def reverseIterator (tEnd: Long, tStart: Long, dt: Int): Iterator[Data1]
+  def reverseTailDurationIterator (dur: Long, dt: Int): Iterator[TDataPoint[N]] = {
+    val tEnd = tRight
+    val tStart = tEnd - dur
+    reverseIterator(tEnd,tStart,dt)
+  }
 
-  def reverseTailDurationIterator (dur: Long, dt: Int): Iterator[Data1]
-  def reverseTailIterator (tEnd: Long, dur: Long, dt: Int): Iterator[Data1]
-}
-
-trait T2Interpolant {
-  def eval (t: Long, result: Data2): Unit
-
-  def evalForward(tStart: Long, tEnd: Long, dt: Int)(f: (Long,Double,Double)=>Unit)
-  def evalReverse(tEnd: Long, tStart: Long, dt: Int)(f: (Long,Double,Double)=>Unit)
-
-  def iterator (tStart: Long, tEnd: Long, dt: Int): Iterator[Data2]
-  def reverseIterator (tEnd: Long, tStart: Long, dt: Int): Iterator[Data2]
-
-  def reverseTailDurationIterator (dur: Long, dt: Int): Iterator[Data2]
-  def reverseTailIterator (tEnd: Long, dur: Long, dt: Int): Iterator[Data2]
-}
-
-trait T3Interpolant {
-  def eval (t: Long, result: Data3): Unit
-
-  def evalForward(tStart: Long, tEnd: Long, dt: Int)(f: (Long,Double,Double,Double)=>Unit)
-  def evalReverse(tEnd: Long, tStart: Long, dt: Int)(f: (Long,Double,Double,Double)=>Unit)
-
-  def iterator (tStart: Long, tEnd: Long, dt: Int): Iterator[Data3]
-  def reverseIterator (tEnd: Long, tStart: Long, dt: Int): Iterator[Data3]
-
-  def reverseTailDurationIterator (dur: Long, dt: Int): Iterator[Data3]
-  def reverseTailIterator (tEnd: Long, dur: Long, dt: Int): Iterator[Data3]
-}
-
-trait TnInterpolant {
-  def eval (t: Long, result: Array[Double]): Unit
-
-  def iterator (tStart: Long, tEnd: Long, dt: Int): Iterator[Array[Double]]
-  def reverseIterator (tEnd: Long, tStart: Long, dt: Int): Iterator[Array[Double]]
-
-  def reverseTailDurationIterator (dur: Long, dt: Int): Iterator[Array[Double]]
-  def reverseTailIterator (tEnd: Long, dur: Long, dt: Int): Iterator[Array[Double]]
+  def reverseTailIterator (tEnd: Long, dur: Long, dt: Int): Iterator[TDataPoint[N]] = {
+    val tStart = tEnd - dur
+    reverseIterator(tEnd,tStart,dt)
+  }
 }

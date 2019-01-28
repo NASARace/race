@@ -16,7 +16,7 @@
  */
 package gov.nasa.race.common
 
-import gov.nasa.race.common.TInterpolant.Data3
+import gov.nasa.race.common.TInterpolant.LD3
 
 /**
   * helper class to generate T3 test data
@@ -68,14 +68,14 @@ class SampleT3 {
 
   def interpolateLin: LinT3Interpolant = {
     def _getT(i: Int): Long = data(i)._1
-    def _getDataPoint(i: Int, d: Data3): Data3 = d.updated(data(i))
+    def _getDataPoint(i: Int, d: LD3): LD3 = d.updated(data(i))
 
     new LinT3Interpolant(data.length)(_getT)(_getDataPoint)
   }
 
   def interpolateFH: FHT3Interpolant = {
     def _getT(i: Int): Long = data(i)._1
-    def _getDataPoint(i: Int, d: Data3): Data3 = d.updated(data(i))
+    def _getDataPoint(i: Int, d: LD3): LD3 = d.updated(data(i))
 
     new FHT3Interpolant(data.length)(_getT)(_getDataPoint)
   }

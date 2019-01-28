@@ -17,7 +17,10 @@
 package gov.nasa.race.uom
 
 import Math._
+
 import gov.nasa.race.common._
+
+import scala.collection.mutable.ArrayBuffer
 import scala.language.postfixOps
 
 /**
@@ -85,9 +88,9 @@ object Angle {
     @inline def * (x: Angle) = new Angle(x.d * d)
   }
 }
+import Angle._
 
 class Angle protected[uom] (val d: Double) extends AnyVal {
-  import Angle._
 
   //---  Double converters
   @inline def toRadians: Double = d
@@ -127,4 +130,100 @@ class Angle protected[uom] (val d: Double) extends AnyVal {
   def show: String = s"${toNormalizedDegrees}°"
   def showRounded: String = f"${toNormalizedDegrees}%.0f°"
   def showRounded5: String = f"${toNormalizedDegrees}%.5f°"
+}
+
+//-------------- element allocation free Angle collections
+// note that while we could factor out most of the delegation methods into a trait that is
+// based on an abstract Seq[Angle] this would make it harder (if not impossible) for the compiler to inline
+// (Array[T] needs a implicit conversion for the Seq[T] interface)
+
+object AngleArray {
+  def DegreesArray (a: Array[Double]): AngleArray = new AngleArray(UOMArray.initData(a,DegreesInRadian))
+  def RadiansArray (a: Array[Double]): AngleArray = new AngleArray(a.clone())
+}
+
+/**
+  * wrapper class for arrays of Angles without per element allocation
+  * note that Array[T] is final hence we cannot extend it
+  *
+  * TODO - implement scala.collection.Seq[Angle]
+  */
+final class AngleArray protected[uom] (protected[uom] val data: Array[Double]) extends UOMArray {
+
+  def this(len: Int) = this(new Array[Double](len))
+
+  @inline def apply(i:Int): Angle = Radians(data(i))
+  @inline def update(i:Int, a: Angle): Unit = data(i) = a.toRadians
+  @inline def foreach(f: (Angle)=>Unit): Unit = data.foreach( d=> f(Radians(d)))
+
+  @inline def slice(from: Int, until: Int): AngleArray = new AngleArray(data.slice(from,until))
+  @inline def tail: AngleArray = new AngleArray(data.tail)
+  @inline def take (n: Int): AngleArray = new AngleArray(data.take(n))
+  @inline def drop (n: Int): AngleArray = new AngleArray(data.drop(n))
+
+  @inline def copyToArray(other: AngleArray): Unit = data.copyToArray(other.data)
+  @inline def copyToArray(other: AngleArray, start: Int): Unit = data.copyToArray(other.data, start)
+  @inline def copyToArray(other: AngleArray, start: Int, len: Int): Unit = data.copyToArray(other.data, start, len)
+
+  @inline def last: Angle = Radians(data.last)
+  @inline def exists(p: (Angle)=>Boolean): Boolean = data.exists( d=> p(Radians(d)))
+  @inline def count(p: (Angle)=>Boolean): Int = data.count( d=> p(Radians(d)))
+  @inline def max: Angle = Radians(data.max)
+  @inline def min: Angle = Radians(data.min)
+
+  def toBuffer: AngleArrayBuffer = AngleArrayBuffer.RadiansArrayBuffer(data)
+  def toDegreesArray: Array[Double] = toDoubleArray(DegreesInRadian)
+  def toRadiansArray: Array[Double] = data.clone()
+}
+
+object AngleArrayBuffer {
+  def DegreesArrayBuffer (as: Seq[Double]): AngleArrayBuffer = new AngleArrayBuffer(UOMArrayBuffer.initData(as,DegreesInRadian))
+  def RadiansArrayBuffer (as: Seq[Double]): AngleArrayBuffer = new AngleArrayBuffer(UOMArrayBuffer.initData(as))
+}
+
+/**
+  * Wrapper class for resizable arrays of Angle values without per element allocation
+  * TODO - implement scala.collection.mutable.Seq[Angle]
+  *
+  * note - while we could extend ArrayBuffer instead of using delegation, this would either
+  * expose the underlying predefined type (Double - if we extend ArrayBuffer[Double]),
+  * or cause a reference element type despite Angle being a AnyVal (if we extend
+  * ArrayBuffer[Angle])
+  */
+final class AngleArrayBuffer protected[uom] (protected[uom] val data: ArrayBuffer[Double]) extends UOMArrayBuffer {
+
+  private class AngleIterator (it: Iterator[Double]) extends Iterator[Angle] {
+    @inline def hasNext: Boolean = it.hasNext
+    @inline def next: Angle = Radians(it.next)
+  }
+
+  def this (initialSize: Int) = this(new ArrayBuffer[Double](initialSize))
+
+  @inline def += (v: Angle): AngleArrayBuffer = { data += v.toRadians; this }
+  @inline def append (vs: Angle*): Unit = vs.foreach( data += _.toRadians )
+
+  @inline def apply(i:Int): Angle = Radians(data(i))
+  @inline def update(i:Int, a: Angle): Unit = data(i) = a.toRadians
+  @inline def foreach(f: (Angle)=>Unit): Unit = data.foreach( d=> f(Radians(d)))
+  @inline def iterator: Iterator[Angle] = new AngleIterator(data.iterator)
+  @inline def reverseIterator: Iterator[Angle] = new AngleIterator(data.reverseIterator)
+
+  @inline def slice(from: Int, until: Int): AngleArrayBuffer = new AngleArrayBuffer(data.slice(from,until))
+  @inline def tail: AngleArrayBuffer = new AngleArrayBuffer(data.tail)
+  @inline def take (n: Int): AngleArrayBuffer = new AngleArrayBuffer(data.take(n))
+  @inline def drop (n: Int): AngleArrayBuffer = new AngleArrayBuffer(data.drop(n))
+
+  @inline def copyToArray(other: AngleArray): Unit = data.copyToArray(other.data)
+  @inline def copyToArray(other: AngleArray, start: Int): Unit = data.copyToArray(other.data, start)
+  @inline def copyToArray(other: AngleArray, start: Int, len: Int): Unit = data.copyToArray(other.data, start, len)
+
+  @inline def last: Angle = Radians(data.last)
+  @inline def exists(p: (Angle)=>Boolean): Boolean = data.exists( d=> p(Radians(d)))
+  @inline def count(p: (Angle)=>Boolean): Int = data.count( d=> p(Radians(d)))
+  @inline def max: Angle = Radians(data.max)
+  @inline def min: Angle = Radians(data.min)
+
+  def toArray: AngleArray = new AngleArray(data.toArray)
+  def toRadiansArray: Array[Double] = data.toArray
+  def toDegreesArray: Array[Double] = toDoubleArray(DegreesInRadian)
 }

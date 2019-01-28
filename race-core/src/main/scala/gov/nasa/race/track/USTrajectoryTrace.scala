@@ -16,10 +16,8 @@
  */
 package gov.nasa.race.track
 
-import java.lang.Math.{max, min}
-
-import gov.nasa.race.common.TInterpolant.Data3
-import gov.nasa.race.common.{FHT3Interpolant, T4}
+import gov.nasa.race.common.Nat.N3
+import gov.nasa.race.common.{TDataPoint3, TDataSource}
 
 object USTrajectoryTrace {
 
@@ -37,7 +35,7 @@ object USTrajectoryTrace {
   * trajectories can not extend 900h duration, position is accurate within +- 1m (still better
   * than most GPS)
   */
-class USTrajectoryTrace (val capacity: Int) extends TrajectoryTrace {
+class USTrajectoryTrace (val capacity: Int) extends TrajectoryTrace with TDataSource[N3,TDataPoint3] {
   import USTrajectoryTrace._
 
   var t0Millis: Long = -1 // start time of trajectory in epoch millis (set when entering first point)
@@ -46,7 +44,6 @@ class USTrajectoryTrace (val capacity: Int) extends TrajectoryTrace {
   val dlats: Array[Float] = new Array(capacity)
   val dlons: Array[Float] = new Array(capacity)
   val alts: Array[Float] = new Array(capacity)
-
 
   override protected def setTrackPointData(idx: Int, t: Long, lat: Double, lon: Double, alt: Double): Unit = {
     if (t0Millis < 0) {
@@ -65,15 +62,29 @@ class USTrajectoryTrace (val capacity: Int) extends TrajectoryTrace {
     f(i, ts(idx) + t0Millis, dlats(idx) + USCenterLat, dlons(idx) + USCenterLon, alts(idx).toDouble)
   }
 
-  def interpolate: FHT3Interpolant = {
-    def _getT (i: Int): Long = {
-      ts((tail+i)%capacity) + t0Millis
-    }
-    def _getData (i: Int, data: Data3): Data3 = {
-      val j = (tail+i)%capacity
-      data.updated(ts(j) + t0Millis, dlats(j) + USCenterLat, dlons(j) + USCenterLon, alts(j))
-    }
+  //--- the TDataSource interface for interpolation
 
-    new FHT3Interpolant(_size)(_getT)(_getData)
+  override def getTime(i: Int): Long = ts((tail+i)%capacity) + t0Millis
+
+  override def newDataPoint: TDataPoint3 = new TDataPoint3(0,0,0,0)
+
+  override def getDataPoint(i: Int, dp: TDataPoint3): Unit = {
+    val j = (tail+i)%capacity
+    dp.setTime(ts(j))
+    dp._0 = dlats(j) + USCenterLat
+    dp._1 = dlons(j) + USCenterLon
+    dp._2 = alts(j)
   }
+
+
+  /**
+    * return a new Trajectory object that preserves the current state
+    */
+  override def snapshot: Trajectory = ???
+
+  /**
+    * return a new Trajectory object that can be modified
+    * use this for branching trajectories
+    */
+  override def branch: ModifiableTrajectory = ???
 }

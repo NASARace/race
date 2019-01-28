@@ -17,10 +17,13 @@
 package gov.nasa.race.track
 
 /**
-  * a trajectory that is stored as a circular buffer, i.e. has a max number of entries in which
+  * a modifiable trajectory that is stored as a circular buffer, i.e. has a max number of entries in which
   * it stores the most recent track points
+  *
+  * note it doesn't make sense to have a fixed trace since the whole point of using a ring buffer is
+  * to guarantee storage bounds for updated trajectories
   */
-trait TrajectoryTrace extends Trajectory {
+trait TrajectoryTrace extends ModifiableTrajectory {
 
   // note that head,tail are logical indices (1..capacity)
   protected var head: Int = -1
@@ -34,7 +37,7 @@ trait TrajectoryTrace extends Trajectory {
   protected def setTrackPointData(idx: Int, t: Long, lat: Double, lon: Double, alt: Double): Unit
   protected def processTrackPointData(i: Int, idx: Int, f: (Int,Long,Double,Double,Double)=>Unit): Unit
 
-  override def addPre(t: Long, lat: Double, lon: Double, alt: Double): Trajectory = {
+  override def addPre(t: Long, lat: Double, lon: Double, alt: Double): ModifiableTrajectory = {
     var head = this.head
     var tail = this.tail
 

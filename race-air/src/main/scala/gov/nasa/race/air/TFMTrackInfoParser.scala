@@ -57,7 +57,7 @@ class TFMTrackInfoParser extends XmlParser[Seq[TrackInfo]] with XmlAttrProcessor
     var etd,atd,eta,ata: DateTime = null
     var lat = Double.NaN
     var lon = Double.NaN
-    var route: Trajectory = EmptyTrajectory
+    var route: Trajectory = EmptyModifiableTrajectory
 
     val trackRef = readAttribute("flightRef")
 

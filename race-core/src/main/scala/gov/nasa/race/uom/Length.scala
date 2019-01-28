@@ -19,6 +19,8 @@ package gov.nasa.race.uom
 import scala.concurrent.duration.Duration
 import Math._
 
+import scala.collection.mutable.ArrayBuffer
+
 /**
   * length quantities
   * underlying unit is meters
@@ -79,12 +81,13 @@ object Length {
   @inline final def feet2Meters(f: Double) = f * MetersInFoot
 }
 
+import Length._
+
 
 /**
   * basis is meters, ISO symbol is 'm'
   */
 class Length protected[uom] (val d: Double) extends AnyVal {
-  import Length._
 
   //--- Double converters
   @inline def toKilometers = d / 1000.0
@@ -136,4 +139,97 @@ class Length protected[uom] (val d: Double) extends AnyVal {
   def showNm = showNauticalMiles
   def showUsMiles = s"${toUsMiles}mi"
   def showKilometers = s"${toKilometers}km"
+}
+
+object LengthArray {
+  def MetersArray (a: Array[Double]): LengthArray = new LengthArray(a.clone())
+  def FeetArray (a: Array[Double]): LengthArray = new LengthArray(UOMArray.initData(a,MetersInFoot))
+  def NauticalMilesArray (a: Array[Double]): LengthArray = new LengthArray(UOMArray.initData(a,MetersInNauticalMile))
+  def UsMilesArray (a: Array[Double]): LengthArray = new LengthArray(UOMArray.initData(a,MetersInUsMile))
+  def KilometersArray (a: Array[Double]): LengthArray = new LengthArray(UOMArray.initData(a,1000.0))
+}
+
+/**
+  * wrapper class for arrays of Angles without per element allocation
+  * TODO - needs more Array methods
+  *
+  * note that Array[T] is final hence we cannot extend it
+  */
+final class LengthArray protected[uom] (protected[uom] val data: Array[Double]) extends UOMArray {
+
+  def this(len: Int) = this(new Array[Double](len))
+
+  @inline def apply(i:Int): Length = Meters(data(i))
+  @inline def update(i:Int, v: Length): Unit = data(i) = v.toMeters
+  @inline def foreach(f: (Length)=>Unit): Unit = data.foreach( d=> f(Meters(d)))
+
+  @inline def slice(from: Int, until: Int): LengthArray = new LengthArray(data.slice(from,until))
+  @inline def tail: LengthArray = new LengthArray(data.tail)
+  @inline def take (n: Int): LengthArray = new LengthArray(data.take(n))
+  @inline def drop (n: Int): LengthArray = new LengthArray(data.drop(n))
+
+  @inline def copyToArray(other: LengthArray): Unit = data.copyToArray(other.data)
+  @inline def copyToArray(other: LengthArray, start: Int): Unit = data.copyToArray(other.data, start)
+  @inline def copyToArray(other: LengthArray, start: Int, len: Int): Unit = data.copyToArray(other.data, start, len)
+
+  @inline def last: Length = Meters(data.last)
+  @inline def exists(p: (Length)=>Boolean): Boolean = data.exists( d=> p(Meters(d)))
+  @inline def count(p: (Length)=>Boolean): Int = data.count( d=> p(Meters(d)))
+  @inline def max: Length = Meters(data.max)
+  @inline def min: Length = Meters(data.min)
+
+  def toBuffer: LengthArrayBuffer = LengthArrayBuffer.MetersArrayBuffer(data)
+  def toMetersArray: Array[Double] = data.clone()
+  def toFeetArray: Array[Double] = toDoubleArray(MetersInFoot)
+  def toUsMilesArray: Array[Double] = toDoubleArray(MetersInUsMile)
+  def toNauticalMilesArray: Array[Double] = toDoubleArray(MetersInNauticalMile)
+  def toKilometersArray: Array[Double] = toDoubleArray(1000)
+}
+
+object LengthArrayBuffer {
+  def MetersArrayBuffer (a: Seq[Double]): LengthArrayBuffer = new LengthArrayBuffer(UOMArrayBuffer.initData(a))
+  def FeetArrayBuffer (a: Seq[Double]): LengthArrayBuffer = new LengthArrayBuffer(UOMArrayBuffer.initData(a,MetersInFoot))
+  def NauticalMilesArrayBuffer (a: Seq[Double]): LengthArrayBuffer = new LengthArrayBuffer(UOMArrayBuffer.initData(a,MetersInNauticalMile))
+  def UsMilesArrayBuffer (a: Seq[Double]): LengthArrayBuffer = new LengthArrayBuffer(UOMArrayBuffer.initData(a,MetersInUsMile))
+  def KilometersArrayBuffer (a: Seq[Double]): LengthArrayBuffer = new LengthArrayBuffer(UOMArrayBuffer.initData(a,1000.0))
+}
+
+final class LengthArrayBuffer protected[uom] (protected[uom] val data: ArrayBuffer[Double]) extends UOMArrayBuffer {
+  private class LengthIterator (it: Iterator[Double]) extends Iterator[Length] {
+    @inline def hasNext: Boolean = it.hasNext
+    @inline def next: Length = Meters(it.next)
+  }
+
+  def this(initialSize: Int) = this(new ArrayBuffer[Double](initialSize))
+
+  @inline def += (v: Length): LengthArrayBuffer = { data += v.toMeters; this }
+  @inline def append (vs: Length*): Unit = vs.foreach( data += _.toMeters )
+
+  @inline def apply(i:Int): Length = Meters(data(i))
+  @inline def update(i:Int, v: Length): Unit = data(i) = v.toMeters
+  @inline def foreach(f: (Length)=>Unit): Unit = data.foreach( d=> f(Meters(d)))
+  @inline def iterator: Iterator[Length] = new LengthIterator(data.iterator)
+  @inline def reverseIterator: Iterator[Length] = new LengthIterator(data.reverseIterator)
+
+  @inline def slice(from: Int, until: Int): LengthArrayBuffer = new LengthArrayBuffer(data.slice(from,until))
+  @inline def tail: LengthArrayBuffer = new LengthArrayBuffer(data.tail)
+  @inline def take (n: Int): LengthArrayBuffer = new LengthArrayBuffer(data.take(n))
+  @inline def drop (n: Int): LengthArrayBuffer = new LengthArrayBuffer(data.drop(n))
+
+  @inline def copyToArray(other: LengthArray): Unit = data.copyToArray(other.data)
+  @inline def copyToArray(other: LengthArray, start: Int): Unit = data.copyToArray(other.data, start)
+  @inline def copyToArray(other: LengthArray, start: Int, len: Int): Unit = data.copyToArray(other.data, start, len)
+
+  @inline def last: Length = Meters(data.last)
+  @inline def exists(p: (Length)=>Boolean): Boolean = data.exists( d=> p(Meters(d)))
+  @inline def count(p: (Length)=>Boolean): Int = data.count( d=> p(Meters(d)))
+  @inline def max: Length = Meters(data.max)
+  @inline def min: Length = Meters(data.min)
+
+  def toArray: LengthArray = new LengthArray(data.toArray)
+  def toMetersArray: Array[Double] = data.toArray
+  def toFeetArray: Array[Double] = toDoubleArray(MetersInFoot)
+  def toUsMilesArray: Array[Double] = toDoubleArray(MetersInUsMile)
+  def toNauticalMilesArray: Array[Double] = toDoubleArray(MetersInNauticalMile)
+  def toKilometersArray: Array[Double] = toDoubleArray(1000)
 }

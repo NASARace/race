@@ -17,6 +17,8 @@
 package gov.nasa.race.uom
 
 import gov.nasa.race.common._
+
+import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.duration.FiniteDuration
 
 
@@ -59,8 +61,9 @@ object Speed {
   }
 }
 
+import Speed._
+
 class Speed protected[uom] (val d: Double) extends AnyVal {
-  import Speed._
 
   @inline def toMetersPerSecond: Double = d
   @inline def toKnots: Double = d / MetersPerSecInKnot
@@ -106,4 +109,89 @@ class Speed protected[uom] (val d: Double) extends AnyVal {
   def showMph = s"${toMph}mph"
   def showKnots = s"${toKnots}kn"
 
+}
+
+object SpeedArray {
+  def MetersPerSecondArray (a: Array[Double]): SpeedArray = new SpeedArray(a.clone())
+  def FeetPerSecondArray (a: Array[Double]): SpeedArray = new SpeedArray(UOMArray.initData(a,MetersPerSecInFps))
+  def KnotsArray (a: Array[Double]): SpeedArray = new SpeedArray(UOMArray.initData(a,MetersPerSecInKnot))
+}
+
+/**
+  * wrapper class for arrays of Angles without per element allocation
+  * TODO - needs more Array methods
+  *
+  * note that Array[T] is final hence we cannot extend it
+  */
+final class SpeedArray protected[uom] (protected[uom] val data: Array[Double]) extends UOMArray {
+
+  def this(len: Int) = this(new Array[Double](len))
+
+  @inline def apply(i:Int): Speed = MetersPerSecond(data(i))
+  @inline def update(i:Int, a: Speed): Unit = data(i) = a.toMetersPerSecond
+  @inline def foreach(f: (Speed)=>Unit): Unit = data.foreach( d=> f(MetersPerSecond(d)))
+
+  @inline def slice(from: Int, until: Int): SpeedArray = new SpeedArray(data.slice(from,until))
+  @inline def tail: SpeedArray = new SpeedArray(data.tail)
+  @inline def take (n: Int): SpeedArray = new SpeedArray(data.take(n))
+  @inline def drop (n: Int): SpeedArray = new SpeedArray(data.drop(n))
+
+  @inline def copyToArray(other: SpeedArray): Unit = data.copyToArray(other.data)
+  @inline def copyToArray(other: SpeedArray, start: Int): Unit = data.copyToArray(other.data, start)
+  @inline def copyToArray(other: SpeedArray, start: Int, len: Int): Unit = data.copyToArray(other.data, start, len)
+
+  @inline def last: Speed = MetersPerSecond(data.last)
+  @inline def exists(p: (Speed)=>Boolean): Boolean = data.exists( d=> p(MetersPerSecond(d)))
+  @inline def count(p: (Speed)=>Boolean): Int = data.count( d=> p(MetersPerSecond(d)))
+  @inline def max: Speed = MetersPerSecond(data.max)
+  @inline def min: Speed = MetersPerSecond(data.min)
+
+  def toBuffer: SpeedArrayBuffer = SpeedArrayBuffer.MetersPerSecondArrayBuffer(data)
+  def toKnotsArray: Array[Double] = toDoubleArray(MetersPerSecInKnot)
+  def toFeetPerSecondArray: Array[Double] = toDoubleArray( MetersPerSecInFps)
+  def toMetersPerSecondArray: Array[Double] = data.clone()
+}
+
+object SpeedArrayBuffer {
+  def MetersPerSecondArrayBuffer (vs: Seq[Double]): SpeedArrayBuffer = new SpeedArrayBuffer(UOMArrayBuffer.initData(vs))
+  def FeetPerSecondArrayBuffer (vs: Seq[Double]): SpeedArrayBuffer = new SpeedArrayBuffer(UOMArrayBuffer.initData(vs,MetersPerSecInFps))
+  def KnotsArrayBuffer (vs: Seq[Double]): SpeedArrayBuffer = new SpeedArrayBuffer(UOMArrayBuffer.initData(vs,MetersPerSecInKnot))
+}
+
+final class SpeedArrayBuffer protected[uom] (protected[uom] val data: ArrayBuffer[Double]) extends UOMArrayBuffer {
+  private class SpeedIterator (it: Iterator[Double]) extends Iterator[Speed] {
+    @inline def hasNext: Boolean = it.hasNext
+    @inline def next: Speed = MetersPerSecond(it.next)
+  }
+
+  def this (initialSize: Int) = this(new ArrayBuffer[Double](initialSize))
+
+  @inline def += (v: Speed): SpeedArrayBuffer = { data += v.toMetersPerSecond; this }
+  @inline def append (vs: Speed*): Unit = vs.foreach( data += _.toMetersPerSecond )
+
+  @inline def apply(i:Int): Speed = MetersPerSecond(data(i))
+  @inline def update(i:Int, a: Speed): Unit = data(i) = a.toMetersPerSecond
+  @inline def foreach(f: (Speed)=>Unit): Unit = data.foreach( d=> f(MetersPerSecond(d)))
+  @inline def iterator: Iterator[Speed] = new SpeedIterator(data.iterator)
+  @inline def reverseIterator: Iterator[Speed] = new SpeedIterator(data.reverseIterator)
+
+  @inline def slice(from: Int, until: Int): SpeedArrayBuffer = new SpeedArrayBuffer(data.slice(from,until))
+  @inline def tail: SpeedArrayBuffer = new SpeedArrayBuffer(data.tail)
+  @inline def take (n: Int): SpeedArrayBuffer = new SpeedArrayBuffer(data.take(n))
+  @inline def drop (n: Int): SpeedArrayBuffer = new SpeedArrayBuffer(data.drop(n))
+
+  @inline def copyToArray(other: SpeedArray): Unit = data.copyToArray(other.data)
+  @inline def copyToArray(other: SpeedArray, start: Int): Unit = data.copyToArray(other.data, start)
+  @inline def copyToArray(other: SpeedArray, start: Int, len: Int): Unit = data.copyToArray(other.data, start, len)
+
+  @inline def last: Speed = MetersPerSecond(data.last)
+  @inline def exists(p: (Speed)=>Boolean): Boolean = data.exists( d=> p(MetersPerSecond(d)))
+  @inline def count(p: (Speed)=>Boolean): Int = data.count( d=> p(MetersPerSecond(d)))
+  @inline def max: Speed = MetersPerSecond(data.max)
+  @inline def min: Speed = MetersPerSecond(data.min)
+
+  def toArray: SpeedArray = new SpeedArray(data.toArray)
+  def toMetersPerSecondArray: Array[Double] = data.toArray
+  def toKnotsArray: Array[Double] = toDoubleArray(MetersPerSecInKnot)
+  def toFeetPerSecondArray: Array[Double] = toDoubleArray(MetersPerSecInFps)
 }

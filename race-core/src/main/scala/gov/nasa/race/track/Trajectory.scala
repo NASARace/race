@@ -30,11 +30,6 @@ trait Trajectory {
   def capacity: Int
   def size: Int
 
-  def addPre(t: Long, lat: Double, lon: Double, alt: Double): Trajectory // low level add to avoid temporary objects
-  def add(date: DateTime, lat: Angle, lon: Angle, alt: Length): Trajectory = {
-    addPre(date.getMillis, lat.toDegrees, lon.toDegrees, alt.toMeters)
-  }
-
   /** low level iteration support that does not require temporary objects for FlightPath elements
     * The provided function takes 5 arguments:
     *   Int - path element index
@@ -63,16 +58,6 @@ trait Trajectory {
   def isEmpty: Boolean = size == 0
   def nonEmpty: Boolean = size > 0
 
-  def add (e: TrackPoint): Trajectory = {
-    val pos = e.position
-    addPre(e.date.getMillis, pos.φ.toDegrees, pos.λ.toDegrees, pos.altitude.toMeters)
-  }
-  def += (tp: TrackPoint) = add(tp)
-
-  def addAll (tps: Seq[TrackPoint]): Unit = tps.foreach(add)  // can be overridden for more efficient version
-  def ++= (tps: Seq[TrackPoint]): Unit = addAll(tps)
-
-
   //--- retrieve snapshot as arrays of times positions
 
   def getPositionsPre: (Array[Long],Array[Double],Array[Double], Array[Double]) = {
@@ -98,13 +83,53 @@ trait Trajectory {
     }
     a
   }
+
+  /**
+    * return a new Trajectory object that preserves the current state
+    */
+  def snapshot: Trajectory
+
+  /**
+    * return a new Trajectory object that can be modified
+    * use this for branching trajectories
+    */
+  def branch: ModifiableTrajectory
 }
 
-object EmptyTrajectory extends Trajectory {
+trait ModifiableTrajectory extends Trajectory {
+  def addPre(t: Long, lat: Double, lon: Double, alt: Double): ModifiableTrajectory // low level add to avoid temporary objects
+
+  def add(date: DateTime, lat: Angle, lon: Angle, alt: Length): ModifiableTrajectory = {
+    addPre(date.getMillis, lat.toDegrees, lon.toDegrees, alt.toMeters)
+  }
+
+  def add (e: TrackPoint): ModifiableTrajectory = {
+    val pos = e.position
+    addPre(e.date.getMillis, pos.φ.toDegrees, pos.λ.toDegrees, pos.altitude.toMeters)
+  }
+  def += (tp: TrackPoint) = add(tp)
+
+  def addAll (tps: Seq[TrackPoint]): Unit = tps.foreach(add)  // can be overridden for more efficient version
+  def ++= (tps: Seq[TrackPoint]): Unit = addAll(tps)
+}
+
+object EmptyFixedTrajectory extends Trajectory {
   override def capacity = 0
   override def size = 0
-  override def addPre(t: Long, lat: Double, lon: Double, alt: Double): Trajectory = new CompressedTrackPath().addPre(t, lat, lon, alt)
-  override def add(tp: TrackPoint) = new CompressedTrackPath().add(tp)
   override def foreachPre(f: (Int,Long,Double,Double,Double) => Unit): Unit = {}
   override def foreachPreReverse(f: (Int,Long,Double,Double,Double) => Unit) = {}
+  override def snapshot: Trajectory = this
+  override def branch: ModifiableTrajectory = EmptyModifiableTrajectory
+}
+
+object EmptyModifiableTrajectory extends ModifiableTrajectory {
+  override def capacity = 0
+  override def size = 0
+  override def foreachPre(f: (Int,Long,Double,Double,Double) => Unit): Unit = {}
+  override def foreachPreReverse(f: (Int,Long,Double,Double,Double) => Unit) = {}
+  override def snapshot: Trajectory = EmptyFixedTrajectory
+  override def branch: ModifiableTrajectory = this
+
+  override def addPre(t: Long, lat: Double, lon: Double, alt: Double): ModifiableTrajectory = new ModifiableCompressedTrajectory().addPre(t, lat, lon, alt)
+  override def add(tp: TrackPoint): ModifiableTrajectory = new ModifiableCompressedTrajectory().add(tp)
 }

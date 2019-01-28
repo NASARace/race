@@ -19,14 +19,13 @@ package gov.nasa.race.track
 /**
   * a decorator to filter which updates should be stored in a underlying Trajectory
   */
-trait TrajectoryFilter extends Trajectory {
-  var traj: Trajectory  // the underlying trajectory, provided by the concrete type (needs to be var since add can change type)
+trait FilteredTrajectory extends ModifiableTrajectory {
+  protected var traj: ModifiableTrajectory  // the underlying trajectory, provided by the concrete type (needs to be var since add can change type)
 
   protected def pass (t: Long, lat: Double, lon: Double, alt: Double): Boolean
 
-  override def addPre(t: Long, lat: Double, lon: Double, alt: Double): Trajectory = {
+  override def addPre(t: Long, lat: Double, lon: Double, alt: Double): ModifiableTrajectory = {
     if (pass(t,lat,lon,alt)) {
-
       traj = traj.addPre(t,lat,lon,alt)
     }
     this
@@ -39,12 +38,17 @@ trait TrajectoryFilter extends Trajectory {
 
   override def foreachPre(f: (Int,Long,Double,Double,Double)=>Unit) = traj.foreachPre(f)
   override def foreachPreReverse(f: (Int,Long,Double,Double,Double)=>Unit) = traj.foreachPreReverse(f)
+
+  override def snapshot: Trajectory = traj.snapshot
 }
 
 /**
   * a TrajectoryFilter that filters entries which are less than dtMillis apart
+  *
+  * note this also takes care of filtering duplicated or out-of-order updates
   */
-class TimedTrajectoryFilter (var traj: Trajectory, val dtMillis: Long) extends TrajectoryFilter {
+class TimeFilteredTrajectory(_traj: ModifiableTrajectory, val dtMillis: Long) extends FilteredTrajectory {
+  protected var traj = _traj
   protected var tLastMillis: Long = -dtMillis*2 // something that makes the first test pass
 
   override protected def pass (t: Long, lat: Double, lon: Double, alt: Double): Boolean = {
@@ -52,5 +56,9 @@ class TimedTrajectoryFilter (var traj: Trajectory, val dtMillis: Long) extends T
       tLastMillis = t
       true
     } else false
+  }
+
+  override def branch: ModifiableTrajectory = {
+    new TimeFilteredTrajectory(traj.branch, dtMillis)
   }
 }

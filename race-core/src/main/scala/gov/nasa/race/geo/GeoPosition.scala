@@ -58,8 +58,12 @@ trait GeoPosition {
   @inline def altMeters: Double = altitude.toMeters
   @inline def altFeet: Int = altitude.toFeet.toInt
 
-  def toGenericString: String = f"(φ=${φ.toDegrees}%+3.5f°,λ=${λ.toDegrees}%+3.5f°,alt=${altitude.toMeters}%.0fm)"
+  override def toString: String = f"${getClass.getSimpleName}(φ=${φ.toDegrees}%+3.5f°,λ=${λ.toDegrees}%+3.5f°,alt=${altitude.toMeters}%.0fm)"
   def toGenericString2D: String = f"(φ=${φ.toDegrees}%+3.5f°,λ=${λ.toDegrees}%+3.5f°)"
+
+  def toLatLonPos: LatLonPos = LatLonPos(φ, λ, altitude)
+  def toMutLatLonPos: MutLatLonPos = MutLatLonPos( φ, λ, altitude)
+  def toDegreesAndMeters: (Double,Double,Double) = (φ.toDegrees, λ.toDegrees, altitude.toMeters)
 }
 
 /**
@@ -71,14 +75,28 @@ trait GeoPositioned {
 
 
 /**
- * geographic position consisting of latitude and longitude
+ * invariant geographic position consisting of latitude and longitude
  *
  * @param φ latitude (positive north)
  * @param λ longitude (positive east)
  */
 case class LatLonPos(val φ: Angle, val λ: Angle, val altitude: Length) extends GeoPosition {
-  override def toString = {
-    f"LatLonPos(φ=${φ.toDegrees}%+3.5f°,λ=${λ.toDegrees}%+3.5f°,alt=${altitude.toMeters}%.0fm)"
-    //s"LatLonPos{φ=${φ.toDegrees}°,λ=${λ.toDegrees}°,alt=${altitude.toMeters}m"
+  override def toLatLonPos: LatLonPos = this // no need to create a new one
+}
+
+/**
+  * a GeoPosition that can be mutated
+  * (e.g. to iterate through a large number of positions without allocation)
+  */
+case class MutLatLonPos (var φ: Angle, var λ: Angle, var altitude: Length) extends GeoPosition {
+  def update (lat: Angle, lon: Angle, alt: Length): Unit = {
+    φ = lat
+    λ = lon
+    altitude = alt
+  }
+
+  def update2D (lat: Angle, lon: Angle): Unit = {
+    φ = lat
+    λ = lon
   }
 }

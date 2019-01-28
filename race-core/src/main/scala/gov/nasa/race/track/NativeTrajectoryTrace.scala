@@ -37,4 +37,15 @@ class NativeTrajectoryTrace(val capacity: Int) extends TrajectoryTrace {
   override protected def processTrackPointData(i: Int, idx: Int, f: (Int,Long,Double,Double,Double)=>Unit): Unit = {
     f(i, dates(idx), lats(idx),lons(idx),alts(idx))
   }
+
+  /**
+    * return a new Trajectory object that preserves the current state
+    */
+  override def snapshot: Trajectory = ???
+
+  /**
+    * return a new Trajectory object that can be modified
+    * use this for branching trajectories
+    */
+  override def branch: ModifiableTrajectory = ???
 }

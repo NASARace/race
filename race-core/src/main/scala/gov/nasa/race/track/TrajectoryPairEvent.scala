@@ -17,20 +17,13 @@
 package gov.nasa.race.track
 
 /**
-  * a trace with a compact (lossy) track point encoding
+  * an event that involves a pair of trajectories
   */
-class CompressedTrajectoryTrace(val capacity: Int) extends TrajectoryTrace with CompressedTrajectory {
-
-  override protected var data: Array[Long] = new Array[Long](capacity*2)
-
-  /**
-    * return a new Trajectory object that preserves the current state
-    */
-  override def snapshot: Trajectory = ???
-
-  /**
-    * return a new Trajectory object that can be modified
-    * use this for branching trajectories
-    */
-  override def branch: ModifiableTrajectory = ???
-}
+case class TrajectoryPairEvent (id: String,                 // of event, not tracks
+                                eventType: String,          // description (short)
+                                track1: TrackedObject,      // first involved track
+                                trajectory1: Trajectory,
+                                track2: TrackedObject,      // second involved track
+                                trajectory2: Trajectory,
+                                eventDetails: Option[Any] = None
+                               )

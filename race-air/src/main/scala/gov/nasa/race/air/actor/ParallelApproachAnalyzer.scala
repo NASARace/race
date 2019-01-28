@@ -19,13 +19,14 @@ package gov.nasa.race.air.actor
 import com.typesafe.config.Config
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.Messages.BusEvent
-import gov.nasa.race.core.SubscribingRaceActor
+import gov.nasa.race.core.{SubscribingRaceActor,PublishingRaceActor}
 import gov.nasa.race.geo.Datum
 import gov.nasa.race.track._
 import gov.nasa.race.uom.{Length,Angle}
 import gov.nasa.race.uom.Length._
 import gov.nasa.race.uom.Angle._
 
+import org.joda.time.DateTime
 import scala.concurrent.duration._
 import scala.collection.mutable.{HashMap => MHashMap, Set =>MSet}
 
@@ -36,16 +37,18 @@ import scala.collection.mutable.{HashMap => MHashMap, Set =>MSet}
   * converge exceeding a max heading difference within a given radius, indicating that at least one
   * plane had to roll to an extend that it lost sight of the other
   */
-class ParallelApproachAnalyzer (val config: Config) extends SubscribingRaceActor {
+class ParallelApproachAnalyzer (val config: Config) extends SubscribingRaceActor with PublishingRaceActor {
 
+  //--- settings to detect parallel proximity flights
   val maxParallelDist = config.getLengthOrElse("max-par-dist", Meters(2000))
   val maxParallelAngle = config.getAngleOrElse("max-par-angle", Degrees(10))
-  val maxParallelDalt = config.getLengthOrElse("max-dalt", Meters(50))
+  val maxParallelDalt = config.getLengthOrElse("max-par-dalt", Meters(50))
 
-  val maxRollDist = config.getLengthOrElse("max-roll-dist", Meters(6000))  // about 30 sec flight
-  val maxRollAngle = config.getAngleOrElse("max-roll-angle", Degrees(30))
-  val maxRollDuration = config.getFiniteDurationOrElse("max-roll-duration", 120.seconds).toMillis
-  val rollInterval = config.getFiniteDurationOrElse("roll-interval", 1.second).toMillis.toInt
+  //--- settings to analyze converging trajectories
+  val maxConvergeDist = config.getLengthOrElse("max-conv-dist", Meters(6000))  // about 30 sec flight
+  val maxConvergeAngle = config.getAngleOrElse("max-conv-angle", Degrees(30))
+  val maxConvergeDuration = config.getFiniteDurationOrElse("max-conv-duration", 120.seconds).toMillis
+  val convergeInterval = config.getFiniteDurationOrElse("conv-interval", 1.second).toMillis.toInt
 
 
   class Candidate {
@@ -108,8 +111,8 @@ class ParallelApproachAnalyzer (val config: Config) extends SubscribingRaceActor
 
     // c1 was last updated, so we start backwards interpolation from last c2 entry
 
-    val it2 = tr2.reverseTailDurationIterator(maxRollDuration, rollInterval)
-    val it1 = tr1.reverseIterator(tr2.tRight, tr2.tRight - maxRollDuration, rollInterval)
+    val it2 = tr2.reverseTailDurationIterator(maxConvergeDuration, convergeInterval)
+    val it1 = tr1.reverseIterator(tr2.tRight, tr2.tRight - maxConvergeDuration, convergeInterval)
 
     if (it1.hasNext && it2.hasNext){
       var p = it1.next
@@ -123,8 +126,10 @@ class ParallelApproachAnalyzer (val config: Config) extends SubscribingRaceActor
       var t = 0
       var dist = Length0
       var deltaHdg = Angle0
+      val dt = convergeInterval/1000
+      var stop = false
 
-      while (it1.hasNext && it2.hasNext && dist < maxRollDist) {
+      while (!stop && it1.hasNext && it2.hasNext) {
         p = it1.next
         val lat1 = Degrees(p._2)
         val lon1 = Degrees(p._3)
@@ -142,9 +147,22 @@ class ParallelApproachAnalyzer (val config: Config) extends SubscribingRaceActor
         deltaHdg = Angle.absDiff(hdg1,hdg2)
         dist = Datum.meanEuclidean2dDistance(lat1,lon1, lat2,lon2)
 
-        println(f"@@ $t%4d: ${dist.toMeters}%10.0f, ${hdg1.toDegrees}%3.0f, ${hdg2.toDegrees}%3.0f -> delta= ${deltaHdg.toDegrees}%3.0f")
-        t += rollInterval/1000
+        if (deltaHdg > maxConvergeAngle){ // Bingo - got one
+          val date = new DateTime(p._1)
+          publishEvent(c1, c2, date, deltaHdg, dist)
+          //println(f"@@ $t%4d: ${dist.toMeters}%10.0f, ${hdg1.toDegrees}%3.0f, ${hdg2.toDegrees}%3.0f -> delta= ${deltaHdg.toDegrees}%3.0f")
+          info(f"max angle-in exceeded: ${c1.track.cs},${c2.track.cs} at $date: Δhdg = ${deltaHdg.toDegrees}%.0f, dist = ${dist.toMeters}%.0mf")
+          stop = true
+
+        } else {
+          t += dt
+          stop = (dist > maxConvergeDist)
+        }
       }
     }
+  }
+
+  def publishEvent(c1: Candidate, c2: Candidate, date: DateTime, deltaHdg: Angle, dist: Length): Unit = {
+
   }
 }
