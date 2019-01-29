@@ -54,7 +54,7 @@ class LinTInterpolant3Spec extends FlatSpec with RaceSpec {
     val tStart = 0
     val tEnd = 90
 
-    for (p <- r.iterator(tStart, tEnd, 1000)) {
+    for (p <- r.iterator(tStart, tEnd, 10)) {
       val t = p.getTime
       val x = p._0
       val y = p._1

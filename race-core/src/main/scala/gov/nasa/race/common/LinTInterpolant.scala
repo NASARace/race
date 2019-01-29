@@ -34,7 +34,7 @@ class LinTInterpolant [N<:Nat,T<:TDataPoint[N]](override val src: TDataSource[N,
     c := b
     b -= a
     b *= w
-    c -= b
+    c += b
     c.setTime(t)
 
     c
