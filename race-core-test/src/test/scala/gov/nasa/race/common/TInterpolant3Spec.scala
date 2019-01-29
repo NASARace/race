@@ -24,7 +24,7 @@ import org.scalatest.FlatSpec
 /**
   * reg test for interpolating T3 iterators
   */
-class T3IteratorSpec extends FlatSpec with RaceSpec {
+class TInterpolant3Spec extends FlatSpec with RaceSpec {
 
   @inline def rad(deg: Double): Double = deg * Math.PI / 180.0
   @inline def squared(x: Double): Double = x * x
@@ -48,14 +48,14 @@ class T3IteratorSpec extends FlatSpec with RaceSpec {
     val it1 = r1.reverseTailIterator(tEnd, 20000, 2000)
     val it2 = r2.reverseTailIterator(tEnd, 20000, 2000)
     while (it1.hasNext && it2.hasNext){
-      val T4(t,x1,y1,z1) = it1.next
-      val T4(_,x2,y2,z2) = it2.next
+      val TDataPoint3(t, x1, y1, z1) = it1.next
+      val TDataPoint3(_, x2, y2, z2) = it2.next
 
-      val tt = _t(t)
       val vx = fx(t)
       val vy = fy(t)
       val vz = fz(t)
-      print(f"$t ($tt):")
+
+      print(f"$t:")
       print(f"    $x1%10.5f, $y1%10.5f, $z1%4.0f")
       print(f"    $x2%10.5f, $y2%10.5f, $z2%4.0f")
       print(f"    $vx%10.5f, $vy%10.5f, $vz%4.0f\n")

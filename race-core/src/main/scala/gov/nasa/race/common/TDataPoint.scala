@@ -99,6 +99,10 @@ class TDataPoint1 (var millis: Long, var _0: Double) extends TDataPoint[N1] {
   }
 }
 
+object TDataPoint1 {
+  def unapply (p: TDataPoint1): Option[(Long,Double)] = Some((p.millis, p._0))
+}
+
 /**
   * DataPoint with 2 Double values
   */
@@ -173,6 +177,10 @@ class TDataPoint2 (var millis: Long, var _0: Double, var _1: Double) extends TDa
     _1 = v1
     this
   }
+}
+
+object TDataPoint2 {
+  def unapply (p: TDataPoint2): Option[(Long,Double,Double)] = Some((p.millis, p._0, p._1))
 }
 
 /**
@@ -261,6 +269,10 @@ class TDataPoint3 (var millis: Long, var _0: Double, var _1: Double, var _2: Dou
     _2 = v2
     this
   }
+}
+
+object TDataPoint3 {
+  def unapply (p: TDataPoint3): Option[(Long,Double,Double,Double)] = Some((p.millis, p._0, p._1, p._2))
 }
 
 //... and more specialized implementations to follow

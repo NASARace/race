@@ -23,12 +23,18 @@ import gov.nasa.race.common.Nat.{N1, N2, N3}
   * the owner of data to interpolate
   */
 trait TDataSource[N<:Nat,T<:TDataPoint[N]] {
-  val n1: Int = size - 1
   def size: Int                // number of data points
   def getTime(i: Int): Long    // get time of observation point with logical index i
   def newDataPoint: T          // create a new zero'ed DataPoint object
   def getDataPoint(i: Int, dp: T): T  // set provided DataPoint values to observation i, using provided cache
 }
+
+//--- convenience types
+trait TDataSource1 extends TDataSource[N1,TDataPoint1]
+trait TDataSource2 extends TDataSource[N2,TDataPoint2]
+trait TDataSource3 extends TDataSource[N3,TDataPoint3]
+//... and more
+
 
 //--- array based convenience sources (mostly for testing)
 
@@ -95,6 +101,10 @@ abstract class TInterpolant[N<:Nat,T<:TDataPoint[N]](val src: TDataSource[N,T]) 
     }
   }
 
+  //--- single time point
+
+  def eval (t: Long): T
+
   //--- iterator support
 
   protected[this] class ForwardIterator[T] (tStart: Long, tEnd: Long, dt: Int)
@@ -157,17 +167,17 @@ abstract class TInterpolant[N<:Nat,T<:TDataPoint[N]](val src: TDataSource[N,T]) 
     }
   }
 
-  def iterator (tStart: Long, tEnd: Long, dt: Int): Iterator[TDataPoint[N]]
+  def iterator (tStart: Long, tEnd: Long, dt: Int): Iterator[T]
 
-  def reverseIterator (tEnd: Long, tStart: Long, dt: Int): Iterator[TDataPoint[N]]
+  def reverseIterator (tEnd: Long, tStart: Long, dt: Int): Iterator[T]
 
-  def reverseTailDurationIterator (dur: Long, dt: Int): Iterator[TDataPoint[N]] = {
+  def reverseTailDurationIterator (dur: Long, dt: Int): Iterator[T] = {
     val tEnd = tRight
     val tStart = tEnd - dur
     reverseIterator(tEnd,tStart,dt)
   }
 
-  def reverseTailIterator (tEnd: Long, dur: Long, dt: Int): Iterator[TDataPoint[N]] = {
+  def reverseTailIterator (tEnd: Long, dur: Long, dt: Int): Iterator[T] = {
     val tStart = tEnd - dur
     reverseIterator(tEnd,tStart,dt)
   }

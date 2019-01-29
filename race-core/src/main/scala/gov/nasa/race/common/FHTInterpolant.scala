@@ -16,7 +16,9 @@
  */
 package gov.nasa.race.common
 
-import java.lang.Math.{min,max}
+import java.lang.Math.{max, min}
+
+import gov.nasa.race.common.Nat.{N1,N2,N3}
 
 
 /**
@@ -27,7 +29,7 @@ import java.lang.Math.{min,max}
   * Note that we do not imply a specific time or value storage but require a TDataSource that maps logical indices
   * [0..n-1] to observation DataPoints
   */
-final class FHTInterpolant[N<:Nat,T<:TDataPoint[N]](override val src: TDataSource[N,T], d: Int=3)
+class FHTInterpolant[N<:Nat,T<:TDataPoint[N]](override val src: TDataSource[N,T], d: Int=3)
                                                                  extends TInterpolant[N,T](src) {
   private val w: Array[Double] = new Array(src.size) // barycentric weights
   val res: T = src.newDataPoint // result value cache
@@ -108,3 +110,11 @@ final class FHTInterpolant[N<:Nat,T<:TDataPoint[N]](override val src: TDataSourc
     new ReverseIterator(tEnd, tStart, dt)(exact)(approx)
   }
 }
+
+//--- convenience types
+class FHTInterpolant1(ts: Array[Long], v0:Array[Double])
+                                       extends FHTInterpolant[N1,TDataPoint1](new ArrayTDataSource1(ts,v0))
+class FHTInterpolant2(ts: Array[Long], v0:Array[Double], v1:Array[Double])
+                                       extends FHTInterpolant[N2,TDataPoint2](new ArrayTDataSource2(ts,v0,v1))
+class FHTInterpolant3(ts: Array[Long], v0:Array[Double], v1:Array[Double], v2:Array[Double])
+                                       extends FHTInterpolant[N3,TDataPoint3](new ArrayTDataSource3(ts,v0,v1,v2))

@@ -4,14 +4,20 @@ import gov.nasa.race.test.RaceSpec
 import org.scalatest.FlatSpec
 import java.lang.Math._
 
-class FHT3InterpolantSpec extends FlatSpec with RaceSpec {
+class FHTInterpolant3Spec extends FlatSpec with RaceSpec {
 
   "a FHT3Interpolant" should "work support generic data model" in {
     val r = (new SampleT3).interpolateFH
     val tStart = ((r.tLeft + 500) / 1000) * 1000
     val tEnd = tStart + 20000
-    r.evalForward(tStart, tEnd, 1000){ (t,a,b,c) =>
-      println(s"$t : $a,\t$b,\t$c")
+
+    for (p <- r.iterator(tStart, tEnd, 1000)) {
+      val t = p.getTime
+      val x = p._0
+      val y = p._1
+      val z = p._2
+      println(s"$t : $x,\t$y,\t$z")
+      // TODO add oracle
     }
   }
 
@@ -26,7 +32,13 @@ class FHT3InterpolantSpec extends FlatSpec with RaceSpec {
     val r = new SyntheticT3(ts,fx,fy,fz).interpolateFH
     val tStart = 0
     val tEnd = 90
-    r.evalForward(tStart, tEnd, 10){ (t,x,y,z) =>
+
+    for (p <- r.iterator(tStart, tEnd, 1000)) {
+      val t = p.getTime
+      val x = p._0
+      val y = p._1
+      val z = p._2
+
       val ex = abs(fx(t) - x)
       val ey = abs(fy(t) - y)
       val ez = abs(fz(t) - z)

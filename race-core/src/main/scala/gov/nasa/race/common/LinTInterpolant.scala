@@ -1,12 +1,14 @@
 package gov.nasa.race.common
 
+import gov.nasa.race.common.Nat.{N1, N2, N3}
+
 /**
   * linear interpolant for time series data
   *
   * Note that we do not imply a specific time or value storage but require a TDataSource that maps logical indices
   * [0..n-1] to observation DataPoints
   */
-final class LinTInterpolant [N<:Nat,T<:TDataPoint[N]](override val src: TDataSource[N,T]) extends TInterpolant[N,T](src) {
+class LinTInterpolant [N<:Nat,T<:TDataPoint[N]](override val src: TDataSource[N,T]) extends TInterpolant[N,T](src) {
   val a: T = src.newDataPoint
   val b: T = src.newDataPoint
   val c: T = src.newDataPoint
@@ -83,3 +85,11 @@ final class LinTInterpolant [N<:Nat,T<:TDataPoint[N]](override val src: TDataSou
     new ReverseIterator(tEnd, tStart, dt)(exact)(approx)
   }
 }
+
+//--- convenience types
+class LinTInterpolant1(ts: Array[Long], v0:Array[Double])
+                                        extends LinTInterpolant[N1,TDataPoint1](new ArrayTDataSource1(ts,v0))
+class LinTInterpolant2(ts: Array[Long], v0:Array[Double], v1:Array[Double])
+                                        extends LinTInterpolant[N2,TDataPoint2](new ArrayTDataSource2(ts,v0,v1))
+class LinTInterpolant3(ts: Array[Long], v0:Array[Double], v1:Array[Double], v2:Array[Double])
+                                        extends LinTInterpolant[N3,TDataPoint3](new ArrayTDataSource3(ts,v0,v1,v2))
