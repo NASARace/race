@@ -16,7 +16,7 @@
  */
 package gov.nasa.race.trajectory
 
-import gov.nasa.race.common.CircularBuffer
+import gov.nasa.race.common.CircularSeq
 import gov.nasa.race.geo.LatLonPos
 import gov.nasa.race.track.TrackPoint
 import gov.nasa.race.uom.{Angle, AngleArray, Length, LengthArray, TimeArray}
@@ -42,7 +42,7 @@ import USTrajectoryTrace._
   * for locations within the continental US the positional error due to truncation is <1m, which
   * is below the accuracy of single frequency GPS (~2m URE according to FAA data)
   */
-class USTrajectoryTrace (val capacity: Int) extends MutTrajectory with CircularBuffer {
+class USTrajectoryTrace (val capacity: Int) extends MutTrajectory with CircularSeq {
 
   var t0Millis: Long = -1 // start time of trajectory in epoch millis (set when entering first point)
 
@@ -50,6 +50,8 @@ class USTrajectoryTrace (val capacity: Int) extends MutTrajectory with CircularB
   val lats: Array[Float] = new Array(capacity)
   val lons: Array[Float] = new Array(capacity)
   val alts: Array[Float] = new Array(capacity)
+
+  val cleanUp = None // no need to clean up dropped track points since we don't store objects
 
   override def getTime(i: Int): Long = ts((tail+i)%capacity) + t0Millis
 

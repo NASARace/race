@@ -22,11 +22,16 @@ package gov.nasa.race.common
   * Note that we don't use a generic element type parameter since we might use the
   * indices for separate value arrays
   */
-trait CircularBuffer {
-  val capacity: Int
+trait CircularSeq {
 
+  // to be provided by concrete type
+  val capacity: Int
+  val cleanUp: Option[(Int)=>Unit] // element clean up function (e.g. to avoid memory leaks)
+
+  // these are strictly monotone logical indices. Requires modulo op for storage index
   protected var head: Int = -1
   protected var tail: Int = -1
+
   protected var _size: Int = 0
 
   def size: Int = _size
@@ -34,59 +39,88 @@ trait CircularBuffer {
   // startOffset == 0 is the first stored value
   @inline final protected def storeIdx(startOffset: Int): Int = (tail + startOffset) % capacity
 
-  // update head/tail/_size for adding a new track point to be added at index 'head'
+  /**
+    * update head/tail/_size, return physical index at which next value will be added
+    */
   protected def incIndices: Int = {
     if (head < 0) { // first entry
       head = 0
       tail = 0
       _size = 1
+      0
+
     } else {
-      head = (head + 1) % capacity
-      if (head == tail) {
-        tail = (tail + 1) % capacity
+      head += 1
+      val hi = head % capacity
+      if (hi == (tail % capacity)) {
+        tail += 1
       } else {
         _size += 1
       }
+      hi
     }
-    head
   }
 
   def clear: Unit = {
-    head = -1
-    tail = -1
-    _size = 0
+    if (_size > 0) {
+      cleanUp match {
+        case Some(f) => for (i <- tail to head) f(i)
+        case None =>
+      }
+
+      head = -1
+      tail = -1
+      _size = 0
+    }
   }
 
-  // TODO - these need optional func arguments for clean up
-
+  /**
+    * move tail forward
+    */
   def drop (n: Int): Unit = {
     if (_size <= n){
       clear
     } else {
-      tail = (tail + n) % capacity
+      val nt = tail + n
+      cleanUp match {
+        case Some(f) => for (i <- tail until nt) f(i)
+        case None =>
+      }
+
+      tail = nt // has to be < head or the size test would have failed
       _size -= n
     }
   }
 
+  /**
+    * move head backwards
+    */
   def dropRight (n: Int): Unit = {
     if (_size <= n){
       clear
     } else {
-      head = if (head >= n) head - n else capacity - (n - head)
+      val nh = head - n
+      cleanUp match {
+        case Some(f) => for (i <- head until nh) f(i)
+        case None =>
+      }
+
+      head = nh // has to be > tail or the size test would have failed
       _size -= n
     }
   }
 
-  // TODO - not safe for concurrent modification
-
   class ForwardIterator[T] (f: (Int)=>T) extends Iterator[T] {
     var j = tail
 
-    override def hasNext: Boolean = j != head
+    override def hasNext: Boolean = j <= head
 
     override def next(): T = {
-      val i = j
-      j = (j + 1) % capacity
+      if (j > head) throw new NoSuchElementException("forward iteration past head")
+      if (j < tail) j = tail // tail has moved
+
+      val i = j % capacity
+      j += 1
       f(i)
     }
   }
@@ -94,13 +128,26 @@ trait CircularBuffer {
   class ReverseIterator[T] (f: (Int)=>T) extends Iterator[T] {
     var j = head
 
-    override def hasNext: Boolean = j != tail
+    override def hasNext: Boolean = j >= tail
 
     override def next(): T = {
-      val i = j
+      if (j < tail) throw new NoSuchElementException("reverse iteration past tail")
+      if (j > head) j = head // head has moved
+
+      val i = j % capacity
       j -= 1
-      if (j < 0) j = capacity - 1
       f(i)
     }
   }
+}
+
+class CircularArray[T: Manifest](val data: Array[T], val cleanUp: Option[(Int)=>Unit]) extends CircularSeq {
+  def this (len: Int, cf: Option[(Int)=>Unit] = None) = this(new Array[T](len), cf)
+  val capacity = data.length
+
+  def append(e: T): this.type = { data(incIndices) = e; this }
+  def += (e: T): this.type = { data(incIndices) = e; this }
+
+  def iterator = new ForwardIterator[T](data)
+  def reverseIterator = new ReverseIterator[T](data)
 }

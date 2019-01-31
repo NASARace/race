@@ -76,7 +76,7 @@ object WeightedArraySpec {
 
 
 /**
-  * unit test for WeightArraySpec
+  * unit test for WeightedArray
   */
 class WeightedArraySpec extends FlatSpec with RaceSpec {
   import WeightedArraySpec._
