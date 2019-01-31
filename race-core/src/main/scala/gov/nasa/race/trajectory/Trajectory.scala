@@ -18,32 +18,74 @@ package gov.nasa.race.trajectory
 
 import gov.nasa.race.common.Nat.N3
 import gov.nasa.race.common.{TDataPoint3, TDataSource}
-import gov.nasa.race.geo.{GeoPosition, MutLatLonPos}
+import gov.nasa.race.geo.{GeoPosition, LatLonPos, MutLatLonPos}
 import gov.nasa.race.track.TrackPoint
-import gov.nasa.race.uom.{Angle, Length}
-import org.joda.time.{DateTime, MutableDateTime}
+import gov.nasa.race.uom.{Time, Angle, AngleArray, Length, LengthArray, TimeArray}
+import gov.nasa.race.uom.Angle._
+import gov.nasa.race.uom.Length._
+import org.joda.time.{DateTime, MutableDateTime, ReadableDateTime}
 
 /**
   * immutable object holding trajectory point information
   */
-class TrajectoryPoint (val date: DateTime, val position: GeoPosition) extends TrackPoint
+class TrajectoryPoint (val date: DateTime, val position: GeoPosition) extends TrackPoint {
+  def this (t: Time, lat: Angle, lon: Angle, alt: Length) = this(t.toDateTime, LatLonPos(lat,lon,alt))
+
+  def setTDataPoint3(p: TDataPoint3): Unit = {
+    p.update(date.getMillis, position.latDeg, position.lonDeg, position.altMeters)
+  }
+}
 
 /**
   * mutable object holding trajectory point information
   * can be used to sequentially iterate through trajectory without allocation
   */
 class MutTrajectoryPoint (val date: MutableDateTime, val position: MutLatLonPos) extends TrackPoint {
-  def update (millis: Long, lat: Angle, lon: Angle, alt: Length): Unit = {
+  def this() = this(new MutableDateTime(0), new MutLatLonPos(Angle0,Angle0,Length0))
+
+  def update (millis: Long, lat: Angle, lon: Angle, alt: Length): this.type = {
     date.setMillis(millis)
     position.update(lat,lon,alt)
+    this
+  }
+
+  def updateTDataPoint3(p: TDataPoint3): Unit = {
+    p.update(date.getMillis, position.latDeg, position.lonDeg, position.altMeters)
+  }
+
+  def toTrajectoryPoint: TrajectoryPoint = new TrajectoryPoint(new DateTime(date.getMillis), position.toLatLonPos)
+}
+
+/**
+  * the low level type version of a TrajectoryPoint which is compatible with TInterpolant/TDataSource
+  * but adds uom accessors and high level conversion
+  */
+class TDP3 (_millis: Long, _lat: Double, _lon: Double, _alt: Double)
+                                            extends TDataPoint3(_millis,_lat,_lon,_alt) with GeoPosition {
+  override def φ: Angle = Degrees(_0)
+  def φ_= (lat: Angle): Unit = _0 = lat.toDegrees
+
+  override def λ: Angle = Degrees(_1)
+  def λ_= (lon: Angle): Unit = _1 = lon.toDegrees
+
+  override def altitude: Length = Meters(_2)
+  def altitude_= (alt: Length): Unit = _2 = alt.toMeters
+
+
+  def toTrajectoryPoint = new TrajectoryPoint(new DateTime(millis), LatLonPos(Degrees(_0),Degrees(_1),Meters(_2)))
+
+  def updateTrajectoryPoint (p: MutTrajectoryPoint): Unit = {
+    p.update(millis, Degrees(_0), Degrees(_1), Meters(_2))
   }
 }
 
 /**
   * root interface for trajectories
-  * implementation does not imply mutability, storage (direct, compressed, local) or coverage (full, trace)
+  *
+  * note that implementation does not imply mutability, storage (direct, compressed, local)
+  * or coverage (full, trace). We only use a abstract TrackPoint result type
   */
-trait Trajectory extends TDataSource[N3,TDataPoint3] {
+trait Trajectory extends TDataSource[N3,TDP3] {
 
   def capacity: Int  // max size (might be dynamically adapted if mutable)
   def size: Int
@@ -51,39 +93,22 @@ trait Trajectory extends TDataSource[N3,TDataPoint3] {
   def isEmpty: Boolean = size == 0
   def nonEmpty: Boolean = size > 0
 
+  def newDataPoint: TDP3 = new TDP3(0,0,0,0)
+
   /**
     * trajectory point access with logical index [0..size-1]
     * throws ArrayIndexOutOfBounds exception if outside limits
     */
-  def apply (i: Int): TrajectoryPoint
+  def apply (i: Int): TrackPoint
 
-  /**
-    * allocation free forward iteration
-    * function parameters are epoch millis, latitude, longitude and altitude
-    */
-  def foreach(g: (Long,Angle,Angle,Length)=>Unit): Unit
+  def iterator: Iterator[TrackPoint]
+  def iterator (p: MutTrajectoryPoint): Iterator[TrackPoint]
 
-  def iterator: Iterator[TrajectoryPoint]
-  def iterator (tp: MutTrajectoryPoint): Iterator[MutTrajectoryPoint]
+  def reverseIterator: Iterator[TrackPoint]
+  def reverseIterator (p: MutTrajectoryPoint): Iterator[TrackPoint]
 
-  /**
-    * allocation free backwards iteration
-    * function parameters are epoch millis, latitude, longitude and altitude
-    */
-  def foreachReverse(g: (Long, Angle,Angle,Length)=>Unit)
 
-  def reverseIterator: Iterator[TrajectoryPoint]
-  def reverseIterator (tp: MutTrajectoryPoint): Iterator[MutTrajectoryPoint]
-
-  /**
-    * copy this trajectory into client managed predefined type arrays
-    * this is the most basic, least type safe representation for expensive trajectory computations
-    * @param t    trackpoint times in epoch millis
-    * @param lat  trackpoint latitudes in degrees
-    * @param lon  trackpoint longitudes in degrees
-    * @param alt  trackpoint altitudes in meters
-    */
-  def copyToMillisDegreesMeters (t: Array[Long], lat: Array[Double], lon: Array[Double], alt: Array[Double])
+  def copyToArrays (t: TimeArray, lat: AngleArray, lon: AngleArray, alt: LengthArray)
 
   /**
     * return a new Trajectory object that preserves the current state (immutable)
@@ -98,12 +123,29 @@ trait Trajectory extends TDataSource[N3,TDataPoint3] {
 
 
 /**
-  * a mutable trajectory that supports adding/clearing points
+  * a mutable trajectory that supports adding/removing track points
+  *
+  * default implementation uses basic unit value types, but interface includes higher level track points.
+  * Override more abstract methods in case those are stored directly, in order to avoid extra allocation
   */
 trait MutTrajectory extends Trajectory {
 
+  // basic type appender
   def append (millis: Long, lat: Angle, lon: Angle, alt: Length): Unit
-  def += (p: TrackPoint): MutTrajectory.this.type
+
+  //--- override if any of the types are stored directly
+  def append (p: TrackPoint): Unit = {
+    val pos = p.position
+    append(p.date.getMillis, pos.φ, pos.λ, pos.altitude)
+  }
+  def append (date: ReadableDateTime, pos: GeoPosition): Unit = {
+    append(date.getMillis, pos.φ, pos.λ, pos.altitude)
+  }
+  def += (p: TrackPoint): Unit = append(p)
+  def ++= (ps: Seq[TrackPoint]): Unit = ps.foreach(append)
 
   def clear: Unit
+  def drop (n: Int)
+  def dropWhile (p: (TrackPoint)=>Boolean)
+  def dropRight (n: Int)
 }
