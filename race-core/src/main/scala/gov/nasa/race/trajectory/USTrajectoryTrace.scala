@@ -82,35 +82,11 @@ class USTrajectoryTrace (val capacity: Int) extends MutTrajectory with CircularB
     p.update(ts(i) + t0Millis, lats(i) + USCenterLat, lons(i) + USCenterLon, alts(i))
   }
 
-
-  class ForwardIterator (f: (Int)=>TrackPoint) extends Iterator[TrackPoint] {
-    var j = tail
-
-    override def hasNext: Boolean = j != head
-
-    override def next(): TrackPoint = {
-      val i = j
-      j = (j + 1) % capacity
-      f(i)
-    }
-  }
   override def iterator: Iterator[TrackPoint] = new ForwardIterator(getTrackPoint)
 
   override def iterator(p: MutTrajectoryPoint): Iterator[TrackPoint] = new ForwardIterator(updateMutTrackPoint(p))
 
 
-  class ReverseIterator (f: (Int)=>TrackPoint) extends Iterator[TrackPoint] {
-    var j = head
-
-    override def hasNext: Boolean = j != tail
-
-    override def next(): TrackPoint = {
-      val i = j
-      j -= 1
-      if (j < 0) j = capacity - 1
-      f(i)
-    }
-  }
   override def reverseIterator: Iterator[TrackPoint] = new ReverseIterator(getTrackPoint)
 
   override def reverseIterator(p: MutTrajectoryPoint): Iterator[TrackPoint] = new ReverseIterator(updateMutTrackPoint(p))

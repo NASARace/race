@@ -56,6 +56,9 @@ trait CircularBuffer {
     tail = -1
     _size = 0
   }
+
+  // TODO - these need optional func arguments for clean up
+
   def drop (n: Int): Unit = {
     if (_size <= n){
       clear
@@ -71,6 +74,33 @@ trait CircularBuffer {
     } else {
       head = if (head >= n) head - n else capacity - (n - head)
       _size -= n
+    }
+  }
+
+  // TODO - not safe for concurrent modification
+
+  class ForwardIterator[T] (f: (Int)=>T) extends Iterator[T] {
+    var j = tail
+
+    override def hasNext: Boolean = j != head
+
+    override def next(): T = {
+      val i = j
+      j = (j + 1) % capacity
+      f(i)
+    }
+  }
+
+  class ReverseIterator[T] (f: (Int)=>T) extends Iterator[T] {
+    var j = head
+
+    override def hasNext: Boolean = j != tail
+
+    override def next(): T = {
+      val i = j
+      j -= 1
+      if (j < 0) j = capacity - 1
+      f(i)
     }
   }
 }
