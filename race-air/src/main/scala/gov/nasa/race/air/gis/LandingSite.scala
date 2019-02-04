@@ -90,7 +90,7 @@ case class LandingSite (name: String, // cid
                         magVar: Float
                        ) extends GisItem {
   override def toString: String = {
-    s"""LandingSite("$name",${pos.toGenericString},"$descr",${LandingSite.lsType(lsType)},${LandingSite.lsAccess(lsAccess)},$magVar})"""
+    s"""LandingSite("$name",$pos,"$descr",${LandingSite.lsType(lsType)},${LandingSite.lsAccess(lsAccess)},$magVar})"""
   }
 }
 

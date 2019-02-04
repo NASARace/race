@@ -92,7 +92,7 @@ class TDataPoint1 (var millis: Long, var _0: Double) extends TDataPoint[N1] {
     }
   }
 
-  def update (t: Long, d: Double): this.type = {
+  def set(t: Long, d: Double): this.type = {
     millis = t
     _0 = d
     this
@@ -171,7 +171,7 @@ class TDataPoint2 (var millis: Long, var _0: Double, var _1: Double) extends TDa
     }
   }
 
-  def update (t: Long, v0: Double, v1: Double): this.type = {
+  def set(t: Long, v0: Double, v1: Double): this.type = {
     millis = t
     _0 = v0
     _1 = v1
@@ -262,7 +262,7 @@ class TDataPoint3 (var millis: Long, var _0: Double, var _1: Double, var _2: Dou
     }
   }
 
-  def update (t: Long, v0: Double, v1: Double, v2: Double): this.type = {
+  def set(t: Long, v0: Double, v1: Double, v2: Double): this.type = {
     millis = t
     _0 = v0
     _1 = v1

@@ -9,17 +9,19 @@ import gov.nasa.race.geo.GeoPositioned
 import gov.nasa.race._
 import gov.nasa.race.swing.{FieldPanel, GBPanel}
 import gov.nasa.race.swing.GBPanel.{Anchor, Fill}
-import gov.nasa.race.track.{ProximityEvent, TrackTerminationMessage, Trajectory}
+import gov.nasa.race.track.{ProximityEvent, TrackTerminationMessage}
 import gov.nasa.race.uom.Length
 import gov.nasa.race.uom.Length._
 import gov.nasa.race.util.{DateTimeUtils, StringUtils}
 import gov.nasa.race.ww.{Images, RaceViewer}
 import gov.nasa.race.swing.Style._
+import gov.nasa.race.trajectory.MutTrajectory
 import gov.nasa.race.util.DateTimeUtils.hhmmss
 
 import scala.swing.{Action, Label, MenuItem, PopupMenu, Separator}
 
-class ProximityEntry (o: ProximityEvent, trajectory: Trajectory, layer: ProximityEventLayer)
+// TODO - this should not be a regular TrackEntry, we only need trajectory snapshots
+class ProximityEntry (o: ProximityEvent, trajectory: MutTrajectory, layer: ProximityEventLayer)
                                        extends TrackEntry[ProximityEvent](o,trajectory,layer) {
   override def symbolImgScale = 1.0
   override def symbolHeading = 0.0 // no rotation for event symbols

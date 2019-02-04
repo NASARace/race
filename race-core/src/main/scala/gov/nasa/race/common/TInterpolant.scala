@@ -43,7 +43,7 @@ class ArrayTDataSource1 (val ts: Array[Long], val v0: Array[Double]) extends TDa
   assert(size == v0.length)
   def getTime(i: Int) = ts(i)
   def newDataPoint = new TDataPoint1(0,0)
-  def getDataPoint(i: Int, dp: TDataPoint1) = dp.update(ts(i), v0(i))
+  def getDataPoint(i: Int, dp: TDataPoint1) = dp.set(ts(i), v0(i))
 }
 
 class ArrayTDataSource2 (val ts: Array[Long], val v0: Array[Double], val v1: Array[Double])
@@ -53,7 +53,7 @@ class ArrayTDataSource2 (val ts: Array[Long], val v0: Array[Double], val v1: Arr
   assert(size == v1.length)
   def getTime(i: Int) = ts(i)
   def newDataPoint = new TDataPoint2(0,0, 0)
-  def getDataPoint(i: Int, dp: TDataPoint2) = dp.update(ts(i), v0(i), v1(i))
+  def getDataPoint(i: Int, dp: TDataPoint2) = dp.set(ts(i), v0(i), v1(i))
 }
 
 class ArrayTDataSource3 (val ts: Array[Long], val v0: Array[Double], val v1: Array[Double], val v2: Array[Double])
@@ -65,7 +65,7 @@ class ArrayTDataSource3 (val ts: Array[Long], val v0: Array[Double], val v1: Arr
 
   def getTime(i: Int) = ts(i)
   def newDataPoint = new TDataPoint3(0,0, 0,0)
-  def getDataPoint(i: Int, dp: TDataPoint3) = dp.update(ts(i), v0(i), v1(i), v2(i))
+  def getDataPoint(i: Int, dp: TDataPoint3) = dp.set(ts(i), v0(i), v1(i), v2(i))
 }
 
 

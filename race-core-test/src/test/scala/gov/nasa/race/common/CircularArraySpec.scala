@@ -34,7 +34,7 @@ class CircularArraySpec extends FlatSpec with RaceSpec {
     println(s"size = ${a.size}")
     assert( a.size == n)
 
-    print("forward iterator ")
+    print("forward: ")
     val fwd = a.iterator
     for (i <- 0 to n-1) {
       assert(fwd.hasNext)
@@ -44,13 +44,47 @@ class CircularArraySpec extends FlatSpec with RaceSpec {
     }
     println
 
-    print("reverse iterator ")
+    print("reverse: ")
     val rev = a.reverseIterator
     for (i <- Range.inclusive(n-1, 0, -1)) {
       assert(rev.hasNext)
       val e = rev.next()
       print(s"$e ")
       assert(e == i)
+    }
+    println
+  }
+
+  "a CircularArray" should "store the last N items after a wrap around" in {
+    val n = 5
+    val m = 11
+    println(s"--- wrap around n = $n, $m appends")
+
+    val a = new CircularArray[Int](n)
+    for (i <- 0 until m) a += i
+
+    println(s"size = ${a.size}")
+    assert( a.size == n)
+
+    print("forward: ")
+    var i = 6
+    val fwd = a.iterator
+    while (fwd.hasNext) {
+      val e = fwd.next
+      print(f"$e%2d ")
+      assert(e == i)
+      i += 1
+    }
+    println
+
+    print("reverse: ")
+    i = 10
+    val rev = a.reverseIterator
+    while (rev.hasNext) {
+      val e = rev.next
+      print(f"$e%2d ")
+      assert(e == i)
+      i -= 1
     }
     println
   }

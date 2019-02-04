@@ -115,6 +115,9 @@ final class TimeArray protected[uom] (protected[uom] val data: Array[Long]) {
 
   def this(len: Int) = this(new Array[Long](len))
 
+  def length: Int = data.length
+  override def clone: TimeArray = new TimeArray(data.clone)
+
   @inline def apply(i: Int) = Milliseconds(data(i))
   @inline def update(i:Int, v: Time): Unit = data(i) = v.toMillis
   @inline def foreach(f: (Time)=>Unit): Unit = data.foreach( d=> f(Milliseconds(d)))

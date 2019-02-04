@@ -27,6 +27,7 @@ import gov.nasa.race.ifSome
 import gov.nasa.race.swing.Style._
 import gov.nasa.race.swing.{IdAndNamePanel, StaticSelectionPanel}
 import gov.nasa.race.track.{TrackDropped, Trajectory}
+import gov.nasa.race.trajectory.MutTrajectory
 import gov.nasa.race.uom.Angle
 import gov.nasa.race.uom.Length._
 import gov.nasa.race.ww._
@@ -52,7 +53,7 @@ class TraconSymbol(val tracon: Tracon, val layer: TATracksLayer) extends PointPl
   override def layerItem: AnyRef = tracon
 }
 
-class TATrackEntry (_obj: TATrack, _trajectory: Trajectory, _layer: TATracksLayer) extends TrackEntry[TATrack](_obj,_trajectory,_layer) {
+class TATrackEntry (_obj: TATrack, _trajectory: MutTrajectory, _layer: TATracksLayer) extends TrackEntry[TATrack](_obj,_trajectory,_layer) {
 
   override def setLabelLevel = symbol.foreach { sym =>
     sym.removeSubLabels

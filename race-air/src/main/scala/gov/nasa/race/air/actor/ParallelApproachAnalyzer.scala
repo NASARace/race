@@ -17,18 +17,21 @@
 package gov.nasa.race.air.actor
 
 import com.typesafe.config.Config
+import gov.nasa.race.common.Nat.N3
+import gov.nasa.race.common.{FHTInterpolant, FHTInterpolant3}
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.Messages.BusEvent
-import gov.nasa.race.core.{SubscribingRaceActor,PublishingRaceActor}
+import gov.nasa.race.core.{PublishingRaceActor, SubscribingRaceActor}
 import gov.nasa.race.geo.Datum
-import gov.nasa.race.track._
-import gov.nasa.race.uom.{Length,Angle}
+import gov.nasa.race.track.{TrackDropped, TrackedObject, TrackedObjectExtrapolator}
+import gov.nasa.race.trajectory.{TDP3, USTrajectoryTrace}
+import gov.nasa.race.uom.{Angle, Length}
 import gov.nasa.race.uom.Length._
 import gov.nasa.race.uom.Angle._
-
 import org.joda.time.DateTime
+
 import scala.concurrent.duration._
-import scala.collection.mutable.{HashMap => MHashMap, Set =>MSet}
+import scala.collection.mutable.{HashMap => MHashMap, Set => MSet}
 
 
 
@@ -61,7 +64,7 @@ class ParallelApproachAnalyzer (val config: Config) extends SubscribingRaceActor
       if (track == null || newTrack.date.getMillis > track.date.getMillis) {
         track = newTrack
         estimator.addObservation(newTrack)
-        trajectory.add(newTrack)
+        trajectory += newTrack
       }
     }
   }
@@ -106,8 +109,8 @@ class ParallelApproachAnalyzer (val config: Config) extends SubscribingRaceActor
   }
 
   def checkConvergence (c1: Candidate, c2: Candidate): Unit = {
-    val tr1 = c1.trajectory.interpolate
-    val tr2 = c2.trajectory.interpolate
+    val tr1 = new FHTInterpolant[N3,TDP3](c1.trajectory)
+    val tr2 = new FHTInterpolant[N3,TDP3](c2.trajectory)
 
     // c1 was last updated, so we start backwards interpolation from last c2 entry
 
@@ -116,12 +119,12 @@ class ParallelApproachAnalyzer (val config: Config) extends SubscribingRaceActor
 
     if (it1.hasNext && it2.hasNext){
       var p = it1.next
-      var lastLat1 = Degrees(p._2)
-      var lastLon1 = Degrees(p._3)
+      var lastLat1 = p.φ
+      var lastLon1 = p.λ
 
       p = it2.next
-      var lastLat2 = Degrees(p._2)
-      var lastLon2 = Degrees(p._3)
+      var lastLat2 = p.φ
+      var lastLon2 = p.λ
 
       var t = 0
       var dist = Length0
@@ -131,15 +134,15 @@ class ParallelApproachAnalyzer (val config: Config) extends SubscribingRaceActor
 
       while (!stop && it1.hasNext && it2.hasNext) {
         p = it1.next
-        val lat1 = Degrees(p._2)
-        val lon1 = Degrees(p._3)
+        val lat1 = p.φ
+        val lon1 = p.λ
         val hdg1 = Datum.euclideanHeading(lat1,lon1, lastLat1,lastLon1)
         lastLat1 = lat1
         lastLon1 = lon1
 
         p = it2.next
-        val lat2 = Degrees(p._2)
-        val lon2 = Degrees(p._3)
+        val lat2 = p.φ
+        val lon2 = p.λ
         val hdg2 = Datum.euclideanHeading(lat2,lon2, lastLat2,lastLon2)
         lastLat2 = lat2
         lastLon2 = lon2
@@ -151,7 +154,7 @@ class ParallelApproachAnalyzer (val config: Config) extends SubscribingRaceActor
           val date = new DateTime(p._1)
           publishEvent(c1, c2, date, deltaHdg, dist)
           //println(f"@@ $t%4d: ${dist.toMeters}%10.0f, ${hdg1.toDegrees}%3.0f, ${hdg2.toDegrees}%3.0f -> delta= ${deltaHdg.toDegrees}%3.0f")
-          info(f"max angle-in exceeded: ${c1.track.cs},${c2.track.cs} at $date: Δhdg = ${deltaHdg.toDegrees}%.0f, dist = ${dist.toMeters}%.0mf")
+          info(f"max angle-in exceeded: ${c1.track.cs},${c2.track.cs} at $date: Δhdg = ${deltaHdg.toDegrees}%.0f, dist = ${dist.toMeters}%.0fm")
           stop = true
 
         } else {

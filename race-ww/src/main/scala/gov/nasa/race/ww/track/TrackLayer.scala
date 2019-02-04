@@ -27,6 +27,7 @@ import gov.nasa.race.core.Messages._
 import gov.nasa.race.geo.{GeoPositioned, GreatCircle}
 import gov.nasa.race.swing.Style._
 import gov.nasa.race.track.{TrackTerminationMessage, _}
+import gov.nasa.race.trajectory.{MutTrajectory, MutUSTrajectory}
 import gov.nasa.race.util.StringUtils
 import gov.nasa.race.uom.Length._
 import gov.nasa.race.ww.Implicits._
@@ -122,7 +123,7 @@ trait TrackLayer[T <:TrackedObject] extends SubscribingRaceLayer
   // override in subclasses for more specialized types
   protected def createLayerInfoPanel: TrackLayerInfoPanel[T] = new TrackLayerInfoPanel(raceViewer,this).styled('consolePanel)
   protected def createEntryPanel: TrackEntryPanel[T] = new TrackEntryPanel(raceViewer,this).styled('consolePanel)
-  protected def createTrajectory(track: T): Trajectory = new ModifiableCompressedTrajectory
+  protected def createTrajectory(track: T): MutTrajectory = new MutUSTrajectory(50)  // TODO - this should be global
   protected def createTrackEntry(track: T): TrackEntry[T] = new TrackEntry[T](track,createTrajectory(track), this)
 
 

@@ -18,6 +18,7 @@
 package gov.nasa.race.track
 
 import gov.nasa.race._
+import gov.nasa.race.trajectory.{Trajectory=>Traj}
 import org.joda.time.DateTime
 
 /**
@@ -44,7 +45,7 @@ class TrackInfo(val trackRef: String,
                 val eta: Option[DateTime],
                 val ata: Option[DateTime],
 
-                val route: Option[Trajectory]
+                val route: Option[Traj]
                 // ... and more to follow
                ) {
 

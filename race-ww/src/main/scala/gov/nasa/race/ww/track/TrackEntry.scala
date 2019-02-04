@@ -21,7 +21,8 @@ import java.awt.image.BufferedImage
 import java.awt.{Font, Point}
 
 import gov.nasa.race._
-import gov.nasa.race.track.{TrackedObject, Trajectory}
+import gov.nasa.race.track.TrackedObject
+import gov.nasa.race.trajectory.MutTrajectory
 import gov.nasa.race.util.DateTimeUtils.hhmmss
 import gov.nasa.race.ww.Implicits._
 import gov.nasa.race.ww._
@@ -34,7 +35,7 @@ import gov.nasa.worldwind.render.{Material, Offset, PointPlacemark, PointPlacema
   * This aggregates all Renderables that can be associated with a given TrackObject based on viewer
   * state (eye position and selected options)
   */
-class TrackEntry[T <: TrackedObject](var obj: T, var trajectory: Trajectory, val layer: TrackLayer[T]) extends LayerObject {
+class TrackEntry[T <: TrackedObject](var obj: T, var trajectory: MutTrajectory, val layer: TrackLayer[T]) extends LayerObject {
 
   //--- the renderables that can be associated with this entry
   protected var symbol: Option[TrackSymbol[T]] = Some(createSymbol)
@@ -46,7 +47,7 @@ class TrackEntry[T <: TrackedObject](var obj: T, var trajectory: Trajectory, val
   var isFocused = false // do we follow and center the track position (note this can come from any level: raceView, layer, panel)
   var drawPathContour = false // do we draw a path contour for this track
 
-  trajectory.add(obj)
+  trajectory += obj
 
   def viewPitch = layer.raceViewer.viewPitch
   def viewRoll = layer.raceViewer.viewRoll
@@ -109,7 +110,7 @@ class TrackEntry[T <: TrackedObject](var obj: T, var trajectory: Trajectory, val
   def setNewObj (newObj: T): Unit = {
     obj = newObj
 
-    trajectory.add(newObj)
+    trajectory += newObj
     ifSome(path) {_.addTrackPosition(newObj)}
   }
 

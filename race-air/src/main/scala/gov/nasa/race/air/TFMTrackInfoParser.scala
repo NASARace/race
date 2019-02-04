@@ -18,7 +18,10 @@ package gov.nasa.race.air
 
 import gov.nasa.race._
 import gov.nasa.race.common.XmlParser
-import gov.nasa.race.track._
+import gov.nasa.race.track.TrackInfo
+import gov.nasa.race.trajectory.{MutTrajectory, MutUSTrajectory}
+import gov.nasa.race.uom.Length._
+import gov.nasa.race.uom.Angle._
 import gov.nasa.race.util.XmlAttrProcessor
 import org.joda.time.DateTime
 
@@ -57,7 +60,7 @@ class TFMTrackInfoParser extends XmlParser[Seq[TrackInfo]] with XmlAttrProcessor
     var etd,atd,eta,ata: DateTime = null
     var lat = Double.NaN
     var lon = Double.NaN
-    var route: Trajectory = EmptyModifiableTrajectory
+    var route: MutTrajectory = new MutUSTrajectory(30)
 
     val trackRef = readAttribute("flightRef")
 
@@ -85,7 +88,7 @@ class TFMTrackInfoParser extends XmlParser[Seq[TrackInfo]] with XmlAttrProcessor
     } {
       case "nxce:waypoint" =>
         if (!lat.isNaN && !lon.isNaN) {
-          route = route.addPre(0, lat, lon, Double.NaN) // no altitude or time info
+          route.append(0, Degrees(lat), Degrees(lon), UndefinedLength) // no altitude or time info
         }
 
       case "fdm:fltdMessage" =>
@@ -93,7 +96,7 @@ class TFMTrackInfoParser extends XmlParser[Seq[TrackInfo]] with XmlAttrProcessor
                          optional(trackCat), optional(trackType),
                          optional(departurePoint), optional(arrivalPoint),
                          optional(etd), optional(atd), optional(eta), optional(ata),
-                         if (route.nonEmpty) Some(route) else None)
+                         if (route.nonEmpty) Some(route.snapshot) else None)
         tInfos += ti
         return
       case _ => // ignore

@@ -32,7 +32,7 @@ class TrajectoryPoint (val date: DateTime, val position: GeoPosition) extends Tr
   def this (t: Time, lat: Angle, lon: Angle, alt: Length) = this(t.toDateTime, LatLonPos(lat,lon,alt))
 
   def setTDataPoint3(p: TDataPoint3): Unit = {
-    p.update(date.getMillis, position.latDeg, position.lonDeg, position.altMeters)
+    p.set(date.getMillis, position.latDeg, position.lonDeg, position.altMeters)
   }
 }
 
@@ -50,7 +50,7 @@ class MutTrajectoryPoint (val date: MutableDateTime, val position: MutLatLonPos)
   }
 
   def updateTDataPoint3(p: TDataPoint3): Unit = {
-    p.update(date.getMillis, position.latDeg, position.lonDeg, position.altMeters)
+    p.set(date.getMillis, position.latDeg, position.lonDeg, position.altMeters)
   }
 
   def toTrajectoryPoint: TrajectoryPoint = new TrajectoryPoint(new DateTime(date.getMillis), position.toLatLonPos)
@@ -104,9 +104,26 @@ trait Trajectory extends TDataSource[N3,TDP3] {
   def iterator: Iterator[TrackPoint]
   def iterator (p: MutTrajectoryPoint): Iterator[TrackPoint]
 
+  def foreach (f: (TrackPoint)=>Unit): Unit = {
+    val it = iterator
+    while (it.hasNext) f(it.next)
+  }
+  def foreach (p: MutTrajectoryPoint)(f: (TrackPoint)=>Unit): Unit = {
+    val it = iterator(p)
+    while (it.hasNext) f(it.next)
+  }
+
   def reverseIterator: Iterator[TrackPoint]
   def reverseIterator (p: MutTrajectoryPoint): Iterator[TrackPoint]
 
+  def foreachReverse (f: (TrackPoint)=>Unit): Unit = {
+    val it = reverseIterator
+    while (it.hasNext) f(it.next)
+  }
+  def foreachReverse (p: MutTrajectoryPoint)(f: (TrackPoint)=>Unit): Unit = {
+    val it = reverseIterator(p)
+    while (it.hasNext) f(it.next)
+  }
 
   def copyToArrays (t: TimeArray, lat: AngleArray, lon: AngleArray, alt: LengthArray)
 
@@ -146,6 +163,5 @@ trait MutTrajectory extends Trajectory {
 
   def clear: Unit
   def drop (n: Int)
-  def dropWhile (p: (TrackPoint)=>Boolean)
   def dropRight (n: Int)
 }

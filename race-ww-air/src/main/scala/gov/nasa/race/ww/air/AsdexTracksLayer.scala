@@ -21,22 +21,20 @@ import com.typesafe.config.Config
 import gov.nasa.race.air.{AirLocator, Airport, AsdexTrack, AsdexTracks}
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.Messages.BusEvent
-import gov.nasa.race.geo.{GreatCircle, GeoPosition}
+import gov.nasa.race.geo.{GeoPosition, GreatCircle}
 import gov.nasa.race.ifSome
 import gov.nasa.race.swing.Style._
 import gov.nasa.race.swing.{IdAndNamePanel, StaticSelectionPanel}
-import gov.nasa.race.track.Trajectory
+import gov.nasa.race.trajectory.MutTrajectory
 import gov.nasa.race.uom.Length
 import gov.nasa.race.uom.Length.{Feet, Meters, UsMiles, meters2Feet}
-import gov.nasa.race.ww._
 import gov.nasa.race.ww.Implicits._
 import gov.nasa.race.ww.track.{TrackEntry, TrackLayer, TrackLayerInfoPanel}
-import gov.nasa.race.ww.{Images, RaceViewer, ViewListener, WWAngle}
-import gov.nasa.worldwind.geom.Position
+import gov.nasa.race.ww.{Images, RaceViewer, ViewListener, _}
 
 
 // NOTE - 'obj' is a var and might change (don't mask in ctor args)
-class AsdexTrackEntry (o: AsdexTrack, trajectory: Trajectory, layer: AsdexTracksLayer)
+class AsdexTrackEntry (o: AsdexTrack, trajectory: MutTrajectory, layer: AsdexTracksLayer)
                                             extends TrackEntry[AsdexTrack](o,trajectory,layer) {
   var wasAircraft = o.guessAircraft // we remember if it was an aircraft
 

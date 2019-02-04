@@ -70,7 +70,7 @@ class USTrajectoryTrace (val capacity: Int) extends TrajectoryTrace with TDataSo
 
   override def getDataPoint(i: Int, dp: TDataPoint3): TDataPoint3 = {
     val j = (tail+i)%capacity
-    dp.update(ts(j), dlats(j) + USCenterLat, dlons(j) + USCenterLon, alts(j))
+    dp.set(ts(j), dlats(j) + USCenterLat, dlons(j) + USCenterLon, alts(j))
   }
 
 

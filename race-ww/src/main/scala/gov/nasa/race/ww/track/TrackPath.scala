@@ -20,6 +20,7 @@ import java.util.Vector
 
 import gov.nasa.race.common.BasicTimeSeries
 import gov.nasa.race.track.{TrackPoint, TrackedObject}
+import gov.nasa.race.trajectory.MutTrajectoryPoint
 import gov.nasa.race.ww.Implicits._
 import gov.nasa.worldwind.WorldWind
 import gov.nasa.worldwind.avlist.AVKey
@@ -51,8 +52,8 @@ class TrackPath[T <: TrackedObject](val entry: TrackEntry[T]) extends Path with 
   setAltitudeMode(WorldWind.ABSOLUTE)
 
   var posList = new Vector[Position](flightPath.capacity)
-  flightPath.foreachPre { (_, _, latDeg, lonDeg, altMeters) =>
-    val pos = Position.fromDegrees(latDeg,lonDeg,altMeters)
+  for (p <- flightPath.iterator(new MutTrajectoryPoint)){ // we can use a MutTrajectoryPoint since we convert to Position anyways
+    val pos: Position = p
     posList.add(pos)
   }
   setPositions(posList)

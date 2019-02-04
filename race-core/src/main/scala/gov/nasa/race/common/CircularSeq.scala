@@ -26,7 +26,7 @@ trait CircularSeq {
 
   // to be provided by concrete type
   val capacity: Int
-  val cleanUp: Option[(Int)=>Unit] // element clean up function (e.g. to avoid memory leaks)
+  protected val cleanUp: Option[(Int)=>Unit] // element clean up function (e.g. to avoid memory leaks)
 
   // these are strictly monotone logical indices. Requires modulo op for storage index
   protected var head: Int = -1

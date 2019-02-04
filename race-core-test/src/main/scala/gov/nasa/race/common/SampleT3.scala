@@ -70,7 +70,7 @@ class SampleT3 extends TDataSource3 {
   override def getTime(i: Int): Long = data(i)._1
   override def getDataPoint(i: Int, p: TDataPoint3): TDataPoint3 = {
     val d = data(i)
-    p.update(d._1,d._2,d._3,d._4)
+    p.set(d._1,d._2,d._3,d._4)
   }
   override def newDataPoint: TDataPoint3 = new TDataPoint3(0,0,0,0)
 
