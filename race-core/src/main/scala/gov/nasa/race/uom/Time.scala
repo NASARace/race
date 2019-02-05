@@ -18,6 +18,8 @@ package gov.nasa.race.uom
 
 import gov.nasa.race.util.DateTimeUtils
 import org.joda.time.{DateTime, MutableDateTime, ReadableDateTime}
+
+import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.duration._
 
 class TimeException (msg: String) extends RuntimeException(msg)
@@ -105,6 +107,11 @@ object TimeArray {
   //... and more
 }
 
+final class TimeIterator (it: Iterator[Long]) extends Iterator[Time] {
+  @inline def hasNext: Boolean = it.hasNext
+  @inline def next: Time = new Time(it.next)
+}
+
 /**
   * wrapper class for arrays of Time vals without per element allocation
   * TODO - needs more Array methods
@@ -120,6 +127,9 @@ final class TimeArray protected[uom] (protected[uom] val data: Array[Long]) {
 
   @inline def apply(i: Int) = Milliseconds(data(i))
   @inline def update(i:Int, v: Time): Unit = data(i) = v.toMillis
+
+  @inline def iterator: Iterator[Time] = new TimeIterator(data.iterator)
+  @inline def reverseIterator: Iterator[Time] = new TimeIterator(data.reverseIterator)
   @inline def foreach(f: (Time)=>Unit): Unit = data.foreach( d=> f(Milliseconds(d)))
 
   @inline def slice(from: Int, until: Int): TimeArray = new TimeArray(data.slice(from,until))
@@ -130,5 +140,39 @@ final class TimeArray protected[uom] (protected[uom] val data: Array[Long]) {
   def toMillisecondArray: Array[Long] = data.clone
   def toDateTimeArray: Array[DateTime] = data.map(new DateTime(_))
 
-  //... and more
+  def toBuffer: TimeArrayBuffer = new TimeArrayBuffer(ArrayBuffer[Long](data:_*))
+
+  //... and more to follow
+}
+
+final class TimeArrayBuffer protected[uom] (protected[uom] val data: ArrayBuffer[Long]) {
+
+  def this(capacity: Int) = this(new ArrayBuffer[Long](capacity))
+
+  @inline def size: Int = data.size
+  @inline def isEmpty: Boolean = data.isEmpty
+  @inline def nonEmpty: Boolean = data.nonEmpty
+  override def clone: TimeArrayBuffer = new TimeArrayBuffer(data.clone)
+
+  @inline def += (v: Time): TimeArrayBuffer = { data += v.millis; this }
+  @inline def append (vs: Time*): Unit = vs.foreach( data += _.millis )
+
+  @inline def apply(i:Int): Time = new Time(data(i))
+  @inline def update(i:Int, v: Time): Unit = data(i) = v.millis
+
+  @inline def foreach(f: (Time)=>Unit): Unit = data.foreach( l=> f(new Time(l)))
+  @inline def iterator: Iterator[Time] = new TimeIterator(data.iterator)
+  @inline def reverseIterator: Iterator[Time] = new TimeIterator(data.reverseIterator)
+
+  @inline def slice(from: Int, until: Int): TimeArrayBuffer = new TimeArrayBuffer(data.slice(from,until))
+  @inline def take (n: Int): TimeArrayBuffer = new TimeArrayBuffer(data.take(n))
+  @inline def drop (n: Int): TimeArrayBuffer = new TimeArrayBuffer(data.drop(n))
+
+  @inline def head: Time = new Time(data.head)
+  @inline def tail: TimeArrayBuffer = new TimeArrayBuffer(data.tail)
+  @inline def last: Time = new Time(data.last)
+
+  def toArray: TimeArray = new TimeArray(data.toArray)
+
+  //... and more to follow
 }
