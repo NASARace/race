@@ -17,7 +17,7 @@
 
 package gov.nasa.race.air
 
-import com.github.nscala_time.time.Imports._
+import org.joda.time.DateTime
 import gov.nasa.race.geo.{GreatCircle, GeoPosition}
 import gov.nasa.race.track.TrackedObject
 import gov.nasa.race.uom.Angle._
@@ -45,7 +45,7 @@ case class TFMTrack(id: String,
 
                     source: String,
                     nextPos: Option[GeoPosition],
-                    nextDate: Option[DateTime]
+                    nextDate: Option[Date]
                    ) extends TrackedObject {
 
   val heading = if (nextPos.isDefined) GreatCircle.initialBearing(position,nextPos.get) else Degrees(0)

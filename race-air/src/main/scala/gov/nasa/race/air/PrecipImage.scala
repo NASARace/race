@@ -19,7 +19,7 @@ package gov.nasa.race.air
 
 import java.awt.image.BufferedImage
 
-import com.github.nscala_time.time.Imports._
+import org.joda.time.DateTime
 import com.typesafe.config.{Config, ConfigValue, ConfigValueFactory}
 import gov.nasa.race.config.{ConfigValueMapper, ConfigurableTimeTranslator}
 import gov.nasa.race.geo.GeoPosition
@@ -60,7 +60,7 @@ class PrecipImageTimeAdjuster (val config: Config = null) extends ConfigurableTi
       case pi: PrecipImage =>
         val dt = (pi.expDate.getMillis - pi.genDate.getMillis)
         val newGenDate = simTime
-        val newExpDate = simTime + dt
+        val newExpDate = simTime.plus(dt)
         pi.copy( genDate = newGenDate, expDate = newExpDate)
       case other => other
     }

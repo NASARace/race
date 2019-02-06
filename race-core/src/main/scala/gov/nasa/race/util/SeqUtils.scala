@@ -57,4 +57,44 @@ object SeqUtils {
     if (k < 0 || k >= n) throw new IllegalArgumentException(s"k outside range 0..$n")
     quickSelect(list,0,n-1,k)(ord)
   }
+
+  /**
+    * simple quicksort to sort IndexSeq collections in place
+    * (scala.util.Sorting only provides in-place sorting for arrays)
+    */
+  def quickSort[A] (list: IndexedSeq[A])(implicit ord: Ordering[A]): Unit = {
+    @inline def swap (i: Int, j: Int): Unit = {
+      val tmp = list(i)
+      list(i) = list(j)
+      list(j) = tmp
+    }
+
+    def qs(left: Int, right: Int): Unit = {
+      if (left < right){
+        val i = partition(left,right)
+        qs(left,i-1)
+        qs(i+1,right)
+      }
+    }
+
+    def partition (left: Int, right: Int): Int = {
+      val pivot = list(right)
+      var i = left - 1
+
+      var j = left
+      while (j < right){
+        if (ord.lteq(list(j),pivot)){
+          i += 1
+          swap(i,j)
+        }
+        j += 1
+      }
+
+      i += 1
+      swap(i,right)
+      i
+    }
+
+    qs(0,list.size-1)
+  }
 }

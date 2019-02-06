@@ -25,7 +25,7 @@ object LatLon {
   final val eps = 0.00000000001
   final val frac = 10000000.0
 
-  def apply (lat: Angle, lon: Angle): LatLon = new LatLon( encode(lat,lon))
+  @inline def apply (lat: Angle, lon: Angle): LatLon = new LatLon( encode(lat,lon))
 
   /**
     * encode lat lon Double values in degrees to a 64 bit Long, preserving 6 decimal places, which gives us
@@ -77,12 +77,34 @@ class LatLon protected[geo] (val l: Long) extends AnyVal {
   }
 }
 
-final class LatLonIterator (it: Iterator[Long]) extends Iterator[LatLon] {
-  @inline def hasNext: Boolean = it.hasNext
-  @inline def next: LatLon = new LatLon(it.next)
-}
+// delegating iterator is unfortunately 3x slower due to indirection
+//final class LatLonIterator (it: Iterator[Long]) extends Iterator[LatLon] {
+//  @inline def hasNext: Boolean = it.hasNext
+//  @inline def next: LatLon = new LatLon(it.next)
+//}
 
 final class LatLonArray protected[geo] (protected[geo] val data: Array[Long]) {
+
+  class Iter extends Iterator[LatLon] {
+    private var i = 0
+    def hasNext: Boolean = i < data.length
+    def next: LatLon = {
+      if (i >= data.length) throw new NoSuchElementException
+      val j = i
+      i += 1
+      new LatLon(data(j)) // should not allocate
+    }
+  }
+  class ReverseIter extends Iterator[LatLon] {
+    private var i = data.length-1
+    def hasNext: Boolean = i >= 0
+    def next: LatLon = {
+      if (i <0) throw new NoSuchElementException
+      val j = i
+      i -= 1
+      new LatLon(data(j)) // should not allocate
+    }
+  }
 
   def this(len: Int) = this(new Array[Long](len))
 
@@ -92,9 +114,17 @@ final class LatLonArray protected[geo] (protected[geo] val data: Array[Long]) {
   @inline def apply(i:Int): LatLon = new LatLon(data(i))
   @inline def update(i:Int, v: LatLon): Unit = data(i) = v.l
 
-  @inline def foreach(f: (LatLon)=>Unit): Unit = data.foreach( l=> f(new LatLon(l)))
-  @inline def iterator: Iterator[LatLon] = new LatLonIterator(data.iterator)
-  @inline def reverseIterator: Iterator[LatLon] = new LatLonIterator(data.reverseIterator)
+  @inline def iterator: Iterator[LatLon] = new Iter
+  @inline def reverseIterator: Iterator[LatLon] = new ReverseIter
+
+  // this is also much faster than using data.foreach, which adds another indirection
+  def foreach(f: (LatLon)=>Unit): Unit = {
+    var i = 0
+    while (i < data.length) {
+      f(new LatLon(data(i)))
+      i += 1
+    }
+  }
 
   @inline def slice(from: Int, until: Int): LatLonArray = new LatLonArray(data.slice(from,until))
   @inline def tail: LatLonArray = new LatLonArray(data.tail)
@@ -107,6 +137,27 @@ final class LatLonArray protected[geo] (protected[geo] val data: Array[Long]) {
 }
 
 final class LatLonArrayBuffer protected[geo] (protected[geo] val data: ArrayBuffer[Long]) {
+
+  class Iter extends Iterator[LatLon] {
+    private var i = 0
+    def hasNext: Boolean = i < data.size
+    def next: LatLon = {
+      if (i >= data.size) throw new NoSuchElementException
+      val j = i
+      i += 1
+      new LatLon(data(j)) // should not allocate
+    }
+  }
+  class ReverseIter extends Iterator[LatLon] {
+    private var i = data.size-1
+    def hasNext: Boolean = i >= 0
+    def next: LatLon = {
+      if (i <0) throw new NoSuchElementException
+      val j = i
+      i -= 1
+      new LatLon(data(j)) // should not allocate
+    }
+  }
 
   def this(capacity: Int) = this(new ArrayBuffer[Long](capacity))
 
@@ -121,9 +172,16 @@ final class LatLonArrayBuffer protected[geo] (protected[geo] val data: ArrayBuff
   @inline def apply(i:Int): LatLon = new LatLon(data(i))
   @inline def update(i:Int, v: LatLon): Unit = data(i) = v.l
 
-  @inline def foreach(f: (LatLon)=>Unit): Unit = data.foreach( l=> f(new LatLon(l)))
-  @inline def iterator: Iterator[LatLon] = new LatLonIterator(data.iterator)
-  @inline def reverseIterator: Iterator[LatLon] = new LatLonIterator(data.reverseIterator)
+  @inline def iterator: Iterator[LatLon] = new Iter
+  @inline def reverseIterator: Iterator[LatLon] = new ReverseIter
+
+  def foreach(f: (LatLon)=>Unit): Unit = {
+    var i = 0
+    while (i < data.size) {
+      f(new LatLon(data(i)))
+      i += 1
+    }
+  }
 
   @inline def slice(from: Int, until: Int): LatLonArrayBuffer = new LatLonArrayBuffer(data.slice(from,until))
   @inline def take (n: Int): LatLonArrayBuffer = new LatLonArrayBuffer(data.take(n))

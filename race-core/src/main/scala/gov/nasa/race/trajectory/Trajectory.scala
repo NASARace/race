@@ -20,16 +20,16 @@ import gov.nasa.race.common.Nat.N3
 import gov.nasa.race.common.{TDataPoint3, TDataSource}
 import gov.nasa.race.geo.{GeoPosition, LatLonPos, MutLatLonPos}
 import gov.nasa.race.track.TrackPoint
-import gov.nasa.race.uom.{Time, Angle, AngleArray, Length, LengthArray, TimeArray}
+import gov.nasa.race.uom.{Date, Angle, AngleArray, Length, LengthArray, TimeArray}
 import gov.nasa.race.uom.Angle._
 import gov.nasa.race.uom.Length._
-import org.joda.time.{DateTime, MutableDateTime, ReadableDateTime}
+import org.joda.time.{DateTime=>JodaDateTime, MutableDateTime, ReadableDateTime}
 
 /**
   * immutable object holding trajectory point information
   */
-class TrajectoryPoint (val date: DateTime, val position: GeoPosition) extends TrackPoint {
-  def this (t: Time, lat: Angle, lon: Angle, alt: Length) = this(t.toDateTime, LatLonPos(lat,lon,alt))
+class TrajectoryPoint (val date: JodaDateTime, val position: GeoPosition) extends TrackPoint {
+  def this (t: JodaDateTime, lat: Angle, lon: Angle, alt: Length) = this(t.toDateTime, LatLonPos(lat,lon,alt))
 
   def setTDataPoint3(p: TDataPoint3): Unit = {
     p.set(date.getMillis, position.latDeg, position.lonDeg, position.altMeters)
@@ -53,7 +53,7 @@ class MutTrajectoryPoint (val date: MutableDateTime, val position: MutLatLonPos)
     p.set(date.getMillis, position.latDeg, position.lonDeg, position.altMeters)
   }
 
-  def toTrajectoryPoint: TrajectoryPoint = new TrajectoryPoint(new DateTime(date.getMillis), position.toLatLonPos)
+  def toTrajectoryPoint: TrajectoryPoint = new TrajectoryPoint(new JodaDateTime(date.getMillis), position.toLatLonPos)
 }
 
 /**
@@ -72,7 +72,7 @@ class TDP3 (_millis: Long, _lat: Double, _lon: Double, _alt: Double)
   def altitude_= (alt: Length): Unit = _2 = alt.toMeters
 
 
-  def toTrajectoryPoint = new TrajectoryPoint(new DateTime(millis), LatLonPos(Degrees(_0),Degrees(_1),Meters(_2)))
+  def toTrajectoryPoint = new TrajectoryPoint(new JodaDateTime(millis), LatLonPos(Degrees(_0),Degrees(_1),Meters(_2)))
 
   def updateTrajectoryPoint (p: MutTrajectoryPoint): Unit = {
     p.update(millis, Degrees(_0), Degrees(_1), Meters(_2))
