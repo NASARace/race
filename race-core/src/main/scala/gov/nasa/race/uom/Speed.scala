@@ -127,6 +127,12 @@ final class SpeedArray protected[uom] (protected[uom] val data: Array[Double]) e
 
   def this(len: Int) = this(new Array[Double](len))
 
+  def grow(newCapacity: Int): SpeedArray = {
+    val newData = new Array[Double](newCapacity)
+    System.arraycopy(data,0,newData,0,data.length)
+    new SpeedArray(newData)
+  }
+
   @inline def apply(i:Int): Speed = MetersPerSecond(data(i))
   @inline def update(i:Int, a: Speed): Unit = data(i) = a.toMetersPerSecond
   @inline def foreach(f: (Speed)=>Unit): Unit = data.foreach( d=> f(MetersPerSecond(d)))

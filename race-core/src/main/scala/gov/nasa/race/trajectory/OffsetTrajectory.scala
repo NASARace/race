@@ -19,10 +19,12 @@ package gov.nasa.race.trajectory
 import gov.nasa.race.common.{CircularSeq, CountDownIterator, CountUpIterator}
 import gov.nasa.race.geo.LatLonPos
 import gov.nasa.race.track.TrackPoint
-import gov.nasa.race.uom.{Angle, AngleArray, Length, LengthArray, Time, TimeArray}
+import gov.nasa.race.uom.{Angle, AngleArray, DateArray, Length, LengthArray, Time, TimeArray}
 import gov.nasa.race.uom.Angle._
 import gov.nasa.race.uom.Length._
+import gov.nasa.race.uom.Date._
 import gov.nasa.race.uom.Time._
+import gov.nasa.race.util.ArrayUtils
 import org.joda.time.DateTime
 
 
@@ -32,9 +34,9 @@ object OffsetTrajectory {
 }
 
 /**
-  * common abstraction for trajectories that use a offsets to store time and position as 32bit quantities
+  * common storage abstraction for trajectories that use a offsets to store time and position as 32bit quantities
   *
-  * maximum duration is <900h
+  * maximum duration is <24d
   * for locations within the continental US the positional error due to truncation is <1m, which
   * is below the accuracy of single frequency GPS (~2m URE according to FAA data)
   *
@@ -56,6 +58,13 @@ trait OffsetTraj extends Trajectory {
     System.arraycopy(other.lats, srcIdx, lats, dstIdx, len)
     System.arraycopy(other.lons, srcIdx, lons, dstIdx, len)
     System.arraycopy(other.alts, srcIdx, alts, dstIdx, len)
+  }
+
+  protected def grow (newCapacity: Int): Unit = {
+    ts = ArrayUtils.grow(ts,newCapacity)
+    lats = ArrayUtils.grow(lats,newCapacity)
+    lons = ArrayUtils.grow(lons,newCapacity)
+    alts = ArrayUtils.grow(alts,newCapacity)
   }
 
   override def getTime(i: Int): Long = ts(i) + t0Millis
@@ -89,8 +98,8 @@ trait OffsetTraj extends Trajectory {
   }
 
   protected def updateUOMArrayElements (i: Int, destIdx: Int,
-                                        t: TimeArray, lat: AngleArray, lon: AngleArray, alt: LengthArray): Unit = {
-    t(destIdx) = Milliseconds(ts(i) + t0Millis)
+                                        t: DateArray, lat: AngleArray, lon: AngleArray, alt: LengthArray): Unit = {
+    t(destIdx) = EpochMillis(t0Millis + ts(i))
     lat(destIdx) = Degrees(lats(i)) + offset.φ
     lon(destIdx) = Degrees(lons(i)) + offset.λ
     alt(destIdx) = Meters(alts(i)) + offset.altitude
@@ -101,30 +110,20 @@ trait OffsetTraj extends Trajectory {
 /**
   * a growable offset trajectory
   */
-class MutOffsetTrajectory (initCapacity: Int, val offset: LatLonPos) extends OffsetTraj with MutTrajectory {
+class MutOffsetTrajectory (initCapacity: Int, val offset: LatLonPos)
+                                   extends MutTrajectory with IndexedTraj with OffsetTraj {
   protected var _capacity = initCapacity
   protected[trajectory] var _size: Int = 0
+
+  override def size = _size
+  def capacity = _capacity
 
   protected def ensureSize (n: Int): Unit = {
     if (n > capacity) {
       var newCapacity = _capacity * 2
       while (newCapacity < n) newCapacity *= 2
       if (newCapacity > Int.MaxValue) newCapacity = Int.MaxValue // should probably be an exception
-
-      val newTs = new Array[Int](newCapacity)
-      val newLats = new Array[Float](newCapacity)
-      val newLons = new Array[Float](newCapacity)
-      val newAlts = new Array[Float](newCapacity)
-
-      System.arraycopy(ts,0,newTs,0,_capacity)
-      System.arraycopy(lats,0,lats,0,_capacity)
-      System.arraycopy(lons,0,lons,0,_capacity)
-      System.arraycopy(alts,0,alts,0,_capacity)
-
-      ts = newTs
-      lats = newLats
-      lons = newLons
-      alts = newAlts
+      grow(newCapacity)
       _capacity = newCapacity
     }
   }
@@ -136,9 +135,6 @@ class MutOffsetTrajectory (initCapacity: Int, val offset: LatLonPos) extends Off
     o.copyArraysFrom(this, 0, 0, _size)
     o
   }
-
-  def size = _size
-  def capacity = _capacity
 
   override def append(millis: Long, lat: Angle, lon: Angle, alt: Length): Unit = {
     ensureSize(_size + 1)
@@ -168,36 +164,6 @@ class MutOffsetTrajectory (initCapacity: Int, val offset: LatLonPos) extends Off
       _size -= n
     } else {
       _size = 0
-    }  }
-
-  override def apply(i: Int): TrackPoint = {
-    if (i < 0 || i >= _size) throw new IndexOutOfBoundsException(i)
-    getTrackPoint(i)
-  }
-
-  override def iterator: Iterator[TrackPoint] = {
-    new CountUpIterator[TrackPoint](0,_size)(getTrackPoint)
-  }
-
-  override def iterator(p: MutTrajectoryPoint): Iterator[TrackPoint] = {
-    new CountUpIterator[TrackPoint](0,_size)(updateMutTrackPoint(p))
-  }
-
-  override def reverseIterator: Iterator[TrackPoint] = {
-    new CountDownIterator[TrackPoint](_size-1,_size)(getTrackPoint)
-  }
-
-  override def reverseIterator(p: MutTrajectoryPoint): Iterator[TrackPoint] = {
-    new CountDownIterator[TrackPoint](_size-1,_size)(updateMutTrackPoint(p))
-  }
-
-  override def copyToArrays(t: TimeArray, lat: AngleArray, lon: AngleArray, alt: LengthArray): Unit = {
-    var i = 0
-    var j = 0
-    while (i < _size){
-      updateUOMArrayElements(i, j, t, lat, lon, alt)
-      i += 1
-      j += 1
     }
   }
 
@@ -216,36 +182,8 @@ class MutUSTrajectory (capacity: Int) extends MutOffsetTrajectory(capacity,Offse
 /**
   * invariant representation of offset based trajectory
   */
-class OffsetTrajectory (val capacity: Int, val offset: LatLonPos) extends OffsetTraj {
-  def size = capacity
-
-  override def apply(i: Int): TrackPoint = getTrackPoint(i)
-
-  override def iterator: Iterator[TrackPoint] = {
-    new CountUpIterator[TrackPoint](0,capacity)(getTrackPoint)
-  }
-
-  override def iterator(p: MutTrajectoryPoint): Iterator[TrackPoint] = {
-    new CountUpIterator[TrackPoint](0,capacity)(updateMutTrackPoint(p))
-  }
-
-  override def reverseIterator: Iterator[TrackPoint] = {
-    new CountDownIterator[TrackPoint](capacity-1,capacity)(getTrackPoint)
-  }
-
-  override def reverseIterator(p: MutTrajectoryPoint): Iterator[TrackPoint] = {
-    new CountDownIterator[TrackPoint](capacity-1,capacity)(updateMutTrackPoint(p))
-  }
-
-  override def copyToArrays(t: TimeArray, lat: AngleArray, lon: AngleArray, alt: LengthArray): Unit = {
-    var i = 0
-    var j = 0
-    while (i < capacity){
-      updateUOMArrayElements(i, j, t, lat, lon, alt)
-      i += 1
-      j += 1
-    }
-  }
+class OffsetTrajectory (val capacity: Int, val offset: LatLonPos) extends IndexedTraj with OffsetTraj {
+  override def size = capacity
 
   override def snapshot: Trajectory = this // no need to create a new one, we are invariant
 
@@ -264,64 +202,26 @@ class USTrajectory (capacity: Int) extends OffsetTrajectory(capacity,OffsetTraje
 /**
   * a mutable offset trajectory that stores N last track points in a circular buffers
   */
-class OffsetTrajectoryTrace(val capacity: Int, val offset: LatLonPos) extends OffsetTraj with MutTrajectory with CircularSeq {
+class OffsetTrajectoryTrace(val capacity: Int, val offset: LatLonPos) extends TrajTrace with OffsetTraj {
 
   protected val cleanUp = None // no need to clean up dropped track points since we don't store objects
 
   override def clone: OffsetTrajectoryTrace = {
     val o = new OffsetTrajectoryTrace(capacity,offset)
     o.copyArraysFrom(this, 0, 0, capacity)
+    o.setIndices(head,tail)
     o
-  }
-
-  override def getTime(off: Int): Long = {
-    if (off >= _size || off < 0) throw new IndexOutOfBoundsException(off)
-    super.getTime(storeIdx(off))
-  }
-
-  override def append (millis: Long, lat: Angle, lon: Angle, alt: Length): Unit = {
-    update( incIndices, millis,lat,lon,alt)
-  }
-
-  override def apply (off: Int): TrackPoint = {
-    if (off >= _size || off < 0) throw new IndexOutOfBoundsException(off)
-    getTrackPoint(storeIdx(off))
-  }
-
-  override def getDataPoint (off: Int, p: TDP3): TDP3 = {
-    if (off >= _size || off < 0) throw new IndexOutOfBoundsException(off)
-    super.getDataPoint(storeIdx(off),p)
-  }
-
-  override def iterator: Iterator[TrackPoint] = new ForwardIterator(getTrackPoint)
-
-  override def iterator(p: MutTrajectoryPoint): Iterator[TrackPoint] = new ForwardIterator(updateMutTrackPoint(p))
-
-  override def reverseIterator: Iterator[TrackPoint] = new ReverseIterator(getTrackPoint)
-
-  override def reverseIterator(p: MutTrajectoryPoint): Iterator[TrackPoint] = new ReverseIterator(updateMutTrackPoint(p))
-
-  override def copyToArrays(t: TimeArray, lat: AngleArray, lon: AngleArray, alt: LengthArray): Unit = {
-    var j = 0
-    var i = tail
-    while (i < head){
-      updateUOMArrayElements(i % capacity, j, t, lat, lon, alt)
-      j += 1
-      i += 1
-    }
   }
 
   override def snapshot: Trajectory = {
     val o = new OffsetTrajectory(_size,offset)
     o.t0Millis = t0Millis
 
-    val i0 = tail % capacity
-    if (i0 + _size < capacity) {
-      o.copyArraysFrom(this, i0, 0, _size)
+    if (head >= tail) {
+      o.copyArraysFrom(this,tail,0,_size)
     } else {
-      val len = capacity - i0
-      o.copyArraysFrom(this, i0, 0, len)
-      o.copyArraysFrom(this, 0, len, _size - len)
+      o.copyArraysFrom(this,tail ,0, capacity - tail)
+      o.copyArraysFrom(this,0, capacity - tail, head+1)
     }
     o
   }

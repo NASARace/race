@@ -39,6 +39,19 @@ trait CircularSeq {
   // startOffset == 0 is the first stored value
   @inline final protected def storeIdx(startOffset: Int): Int = (tail + startOffset) % capacity
 
+  protected def setIndices (newHead: Int, newTail: Int): Unit = {
+    if (newHead >= capacity) throw new IndexOutOfBoundsException(newHead)
+    if (newTail >= capacity) throw new IndexOutOfBoundsException(newTail)
+
+    head = newHead
+    tail = newTail
+    if (newHead >= newTail) {
+      _size = newHead - newTail
+    } else {
+      _size = capacity - newTail + newHead
+    }
+  }
+
   /**
     * update head/tail/_size, return physical index at which next value will be added
     */

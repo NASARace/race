@@ -42,7 +42,9 @@ object Date {
     val chrono = ISOChronology.getInstance(zone)
     new Date(chrono.getDateTimeMillis(year,month,day,hour,minutes,secs,ms))
   }
+
   @inline def Now: Date = new Date(System.currentTimeMillis)
+  @inline def EpochMillis (millis: Long) = new Date(millis)
 
   val Date0 = new Date(0)
   val UndefinedDate = new Date(UNDEFINED_DATE)
@@ -86,9 +88,10 @@ class Date protected[uom](val millis: Long) extends AnyVal {
   @inline def seconds: Int = ((millis % Time.MillisInMinute) / 1000).toInt
   @inline def milliseconds: Int = (millis % 1000).toInt
 
+  def timeOfDay: Time = new Time((millis % Time.MillisInDay).toInt)
 
   // unfortunately we can't overload '-' because of erasure
-  def timeTo (d: Date): Time = new Time(millis - d.millis)
+  def to (d: Date): Time = new Time((millis - d.millis).toInt)
 
   def + (t: Time): Date = new Date(millis + t.millis)
   def - (t: Time): Date = new Date(millis - t.millis)
@@ -142,7 +145,13 @@ final class DateArray protected[uom] (protected[uom] val data: Array[Long]) {
   def this(len: Int) = this(new Array[Long](len))
 
   def length: Int = data.length
-  override def clone: TimeArray = new TimeArray(data.clone)
+  override def clone: DateArray = new DateArray(data.clone)
+
+  def grow(newCapacity: Int): DateArray = {
+    val newData = new Array[Long](newCapacity)
+    System.arraycopy(data,0,newData,0,data.length)
+    new DateArray(newData)
+  }
 
   @inline def apply(i: Int) = new Date(data(i))
   @inline def update(i:Int, v: Date): Unit = data(i) = v.millis
@@ -205,11 +214,14 @@ final class DateArrayBuffer protected[uom] (protected[uom] val data: ArrayBuffer
   @inline def nonEmpty: Boolean = data.nonEmpty
   override def clone: DateArrayBuffer = new DateArrayBuffer(data.clone)
 
-  @inline def += (v: Date): DateArrayBuffer = { data += v.millis; this }
+  @inline def += (v: Date): Unit = { data += v.millis }
   @inline def append (vs: Date*): Unit = vs.foreach( data += _.millis )
 
   @inline def apply(i:Int): Date = new Date(data(i))
-  @inline def update(i:Int, v: Date): Unit = data(i) = v.millis
+  @inline def update(i:Int, v: Date): Unit = {
+    if (i < 0 || i >= data.size) throw new IndexOutOfBoundsException(i)
+    data(i) = v.millis
+  }
 
   @inline def iterator: Iterator[Date] = new Iter
   @inline def reverseIterator: Iterator[Date] = new ReverseIter

@@ -17,13 +17,13 @@
 package gov.nasa.race.trajectory
 
 import gov.nasa.race.common.Nat.N3
-import gov.nasa.race.common.{TDataPoint3, TDataSource}
+import gov.nasa.race.common.{CircularSeq, CountDownIterator, CountUpIterator, TDataPoint3, TDataSource}
 import gov.nasa.race.geo.{GeoPosition, LatLonPos, MutLatLonPos}
 import gov.nasa.race.track.TrackPoint
-import gov.nasa.race.uom.{Date, Angle, AngleArray, Length, LengthArray, TimeArray}
+import gov.nasa.race.uom.{Angle, AngleArray, Date, DateArray, Length, LengthArray, TimeArray}
 import gov.nasa.race.uom.Angle._
 import gov.nasa.race.uom.Length._
-import org.joda.time.{DateTime=>JodaDateTime, MutableDateTime, ReadableDateTime}
+import org.joda.time.{MutableDateTime, ReadableDateTime, DateTime => JodaDateTime}
 
 /**
   * immutable object holding trajectory point information
@@ -125,7 +125,7 @@ trait Trajectory extends TDataSource[N3,TDP3] {
     while (it.hasNext) f(it.next)
   }
 
-  def copyToArrays (t: TimeArray, lat: AngleArray, lon: AngleArray, alt: LengthArray)
+  def copyToArrays (t: DateArray, lat: AngleArray, lon: AngleArray, alt: LengthArray)
 
   /**
     * return a new Trajectory object that preserves the current state (immutable)
@@ -164,4 +164,102 @@ trait MutTrajectory extends Trajectory {
   def clear: Unit
   def drop (n: Int)
   def dropRight (n: Int)
+}
+
+/**
+  * common storage-independent parts of concrete Trajectories
+  * this is an internal implementation type
+  */
+trait IndexedTraj extends Trajectory {
+
+  //--- the storage interface (mixed-in by storage traits or provided by concrete type)
+  protected def update(i: Int, millis: Long, lat: Angle, lon: Angle, alt: Length): Unit
+  protected def getTrackPoint (i: Int): TrackPoint
+  protected def updateMutTrackPoint (p: MutTrajectoryPoint) (i: Int): TrackPoint
+  protected def updateUOMArrayElements (i: Int, destIdx: Int,
+                                        t: DateArray, lat: AngleArray, lon: AngleArray, alt: LengthArray): Unit
+
+  //--- generic implementations of the Trajectory interface (based on storage interface
+
+  override def apply(i: Int): TrackPoint = {
+    if (i < 0 || i >= size) throw new IndexOutOfBoundsException(i)
+    getTrackPoint(i)
+  }
+
+  override def iterator: Iterator[TrackPoint] = {
+    new CountUpIterator[TrackPoint](0, size)(getTrackPoint)
+  }
+
+  override def iterator(p: MutTrajectoryPoint): Iterator[TrackPoint] = {
+    new CountUpIterator[TrackPoint](0, size)(updateMutTrackPoint(p))
+  }
+
+  override def reverseIterator: Iterator[TrackPoint] = {
+    val len = size
+    new CountDownIterator[TrackPoint](len-1, len)(getTrackPoint)
+  }
+
+  override def reverseIterator(p: MutTrajectoryPoint): Iterator[TrackPoint] = {
+    val len = size
+    new CountDownIterator[TrackPoint](len-1, len)(updateMutTrackPoint(p))
+  }
+
+  override def copyToArrays(t: DateArray, lat: AngleArray, lon: AngleArray, alt: LengthArray): Unit = {
+    val len = size
+    var i = 0
+    var j = 0
+    while (i < len){
+      updateUOMArrayElements(i, j, t, lat, lon, alt)
+      i += 1
+      j += 1
+    }
+  }
+}
+
+/**
+  * common storage independent parts of trajectory traces (implemented as CircularSeq)
+  *
+  * offset parameters represent logical indices (starting with 0 for the first stored track point),
+  * NOT storage indices
+  *
+  * this is an internal implementation type
+  */
+trait TrajTrace extends MutTrajectory with IndexedTraj with CircularSeq {
+
+  override def getTime(off: Int): Long = {
+    if (off >= _size || off < 0) throw new IndexOutOfBoundsException(off)
+    super.getTime(storeIdx(off))
+  }
+
+  override def append (millis: Long, lat: Angle, lon: Angle, alt: Length): Unit = {
+    update( incIndices, millis,lat,lon,alt)
+  }
+
+  override def apply (off: Int): TrackPoint = {
+    if (off >= _size || off < 0) throw new IndexOutOfBoundsException(off)
+    getTrackPoint(storeIdx(off))
+  }
+
+  override def getDataPoint (off: Int, p: TDP3): TDP3 = {
+    if (off >= _size || off < 0) throw new IndexOutOfBoundsException(off)
+    super.getDataPoint(storeIdx(off),p)
+  }
+
+  override def iterator: Iterator[TrackPoint] = new ForwardIterator(getTrackPoint)
+
+  override def iterator(p: MutTrajectoryPoint): Iterator[TrackPoint] = new ForwardIterator(updateMutTrackPoint(p))
+
+  override def reverseIterator: Iterator[TrackPoint] = new ReverseIterator(getTrackPoint)
+
+  override def reverseIterator(p: MutTrajectoryPoint): Iterator[TrackPoint] = new ReverseIterator(updateMutTrackPoint(p))
+
+  override def copyToArrays(t: DateArray, lat: AngleArray, lon: AngleArray, alt: LengthArray): Unit = {
+    var j = 0
+    var i = tail
+    while (i < head){
+      updateUOMArrayElements(i % capacity, j, t, lat, lon, alt)
+      j += 1
+      i += 1
+    }
+  }
 }

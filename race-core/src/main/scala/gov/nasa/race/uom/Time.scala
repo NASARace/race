@@ -22,37 +22,35 @@ import scala.collection.mutable.ArrayBuffer
 class TimeException (msg: String) extends RuntimeException(msg)
 
 /**
-  * Value class based time abstraction
-  * There are a ton of date and time abstractions in system/app libraries. This implementation is
-  * an attempt to provide a unified (although limited) interface and automatic conversions
+  * Value class based time abstraction for relative time (duration)
   */
 object Time {
-  final val UNDEFINED_TIME = Long.MinValue
-  final val MillisInMinute: Long = 1000 * 60
-  final val MillisInHour: Long = MillisInMinute * 60
-  final val MillisInDay: Long = MillisInHour * 24
+  final val UNDEFINED_TIME = Int.MinValue
+  final val MillisInMinute: Int = 1000 * 60
+  final val MillisInHour: Int = MillisInMinute * 60
+  final val MillisInDay: Int = MillisInHour * 24
 
   //--- unit constructors
-  @inline def Milliseconds(l: Long): Time = new Time(l)
-  @inline def Seconds(s: Long): Time = new Time(s*1000L)
-  @inline def Minutes(m: Long): Time = new Time(m * MillisInMinute)
-  @inline def Hours(h: Long): Time = new Time(h * MillisInHour)
-  @inline def Days(d: Long): Time = new Time(d * MillisInDay)
-  @inline def HMS(h: Int, m: Int, s: Int): Time = new Time(h * MillisInHour + m * MillisInMinute + s * 1000L)
+  @inline def Milliseconds(l: Int): Time = new Time(l)
+  @inline def Seconds(s: Int): Time = new Time(s*1000)
+  @inline def Minutes(m: Int): Time = new Time(m * MillisInMinute)
+  @inline def Hours(h: Int): Time = new Time(h * MillisInHour)
+  @inline def Days(d: Int): Time = new Time(d * MillisInDay)
+  @inline def HMS(h: Int, m: Int, s: Int): Time = new Time(h * MillisInHour + m * MillisInMinute + s * 1000)
   @inline def HMSms(h: Int, m: Int, s: Int, ms: Int): Time = {
-    new Time(h * MillisInHour + m * MillisInMinute + s * 1000L + ms)
+    new Time(h * MillisInHour + m * MillisInMinute + s * 1000 + ms)
   }
   @inline def HM_S(h: Int, m: Int, s: Double): Time = {
-    new Time(h * MillisInHour + m * MillisInMinute + (s * 1000).toLong )
+    new Time(h * MillisInHour + m * MillisInMinute + (s * 1000).toInt )
   }
 
   def unapply(t: Time): Option[(Int,Int,Int,Int)] = {
     val millis = t.millis
     if (millis != UNDEFINED_TIME) {
-      val s = ((millis / 1000) % 60).toInt
-      val m = ((millis / 60000) % 60).toInt
-      val h = (millis / 3600000).toInt
-      val ms = (millis % 1000).toInt
+      val s = (millis / 1000) % 60
+      val m = (millis / 60000) % 60
+      val h = millis / 3600000
+      val ms = millis % 1000
       Some((h,m,s,ms))
     } else None
   }
@@ -63,26 +61,27 @@ object Time {
 import Time._
 
 /**
-  * relative time value based on milliseconds
+  * relative time value (duration) based on milliseconds
+  * the underlying type is Int, i.e. durations are limited to 24 days (=596h)
   *
-  * note this cannot be directly converted into Date
+  * note this cannot be directly converted into Date, but we can add to dates or extract time values from them
   */
-class Time protected[uom] (val millis: Long) extends AnyVal {
+class Time protected[uom] (val millis: Int) extends AnyVal {
 
   //--- converters
-  def toMillis: Long = millis
+  def toMillis: Int = millis
   def toSeconds: Double = if (millis != UNDEFINED_TIME) millis / 1000.0 else Double.NaN
   def toHours: Double = if (millis != UNDEFINED_TIME) millis / MillisInHour else Double.NaN
   def toDays: Double = if (millis != UNDEFINED_TIME) millis / MillisInDay else Double.NaN
   def toHMSms: (Int,Int,Int,Int) = {
-    val s = ((millis / 1000) % 60).toInt
-    val m = ((millis / 60000) % 60).toInt
-    val h = (millis / 3600000).toInt
-    val ms = (millis % 1000).toInt
+    val s = (millis / 1000) % 60
+    val m = (millis / 60000) % 60
+    val h = millis / 3600000
+    val ms = millis % 1000
     (h,m,s,ms)
   }
 
-  // we don't try to be symmetric with Date - it seems non-intuitive to add a Date to a Time, only the other way
+  // we don't try to be symmetric with Date - it seems non-intuitive to add a Date to a Time
   def + (t: Time): Time = new Time(millis + t.millis)
   def - (t: Time): Time = new Time(millis - t.millis)
 
@@ -99,12 +98,12 @@ class Time protected[uom] (val millis: Long) extends AnyVal {
 
   override def toString: String = showMillis   // calling this would cause allocation
   def showMillis: String = if (millis != UNDEFINED_TIME) s"${millis}ms" else "<undefined>"
-  def showDurationHHMMSS: String = if (millis != UNDEFINED_TIME) DateTimeUtils.durationMillisToHMMSS(millis) else "<undefined>"
+  def showHHMMSS: String = if (millis != UNDEFINED_TIME) DateTimeUtils.durationMillisToHMMSS(millis) else "<undefined>"
 }
 
 
 object TimeArray {
-  def MillisecondArray (a: Array[Long]): TimeArray = new TimeArray(a.clone)
+  def MillisecondArray (a: Array[Int]): TimeArray = new TimeArray(a.clone)
   //... and more
 }
 
@@ -113,7 +112,7 @@ object TimeArray {
   *
   * note that Array[T] is final hence we cannot extend it
   */
-final class TimeArray protected[uom] (protected[uom] val data: Array[Long]) {
+final class TimeArray protected[uom] (protected[uom] val data: Array[Int]) {
 
   class Iter extends Iterator[Time] {
     private var i = 0
@@ -136,7 +135,13 @@ final class TimeArray protected[uom] (protected[uom] val data: Array[Long]) {
     }
   }
 
-  def this(len: Int) = this(new Array[Long](len))
+  def this(len: Int) = this(new Array[Int](len))
+
+  def grow(newCapacity: Int): TimeArray = {
+    val newData = new Array[Int](newCapacity)
+    System.arraycopy(data,0,newData,0,data.length)
+    new TimeArray(newData)
+  }
 
   def length: Int = data.length
   override def clone: TimeArray = new TimeArray(data.clone)
@@ -160,14 +165,14 @@ final class TimeArray protected[uom] (protected[uom] val data: Array[Long]) {
   @inline def take (n: Int): TimeArray = new TimeArray(data.take(n))
   @inline def drop (n: Int): TimeArray = new TimeArray(data.drop(n))
 
-  def toMillisecondArray: Array[Long] = data.clone
+  def toMillisecondArray: Array[Int] = data.clone
 
-  def toBuffer: TimeArrayBuffer = new TimeArrayBuffer(ArrayBuffer[Long](data:_*))
+  def toBuffer: TimeArrayBuffer = new TimeArrayBuffer(ArrayBuffer[Int](data:_*))
 
   //... and more to follow
 }
 
-final class TimeArrayBuffer protected[uom] (protected[uom] val data: ArrayBuffer[Long]) {
+final class TimeArrayBuffer protected[uom] (protected[uom] val data: ArrayBuffer[Int]) {
 
   class Iter extends Iterator[Time] {
     private var i = 0
@@ -190,18 +195,21 @@ final class TimeArrayBuffer protected[uom] (protected[uom] val data: ArrayBuffer
     }
   }
 
-  def this(capacity: Int) = this(new ArrayBuffer[Long](capacity))
+  def this(capacity: Int) = this(new ArrayBuffer[Int](capacity))
 
   @inline def size: Int = data.size
   @inline def isEmpty: Boolean = data.isEmpty
   @inline def nonEmpty: Boolean = data.nonEmpty
   override def clone: TimeArrayBuffer = new TimeArrayBuffer(data.clone)
 
-  @inline def += (v: Time): TimeArrayBuffer = { data += v.millis; this }
+  @inline def += (v: Time): Unit = { data += v.millis }
   @inline def append (vs: Time*): Unit = vs.foreach( data += _.millis )
 
   @inline def apply(i:Int): Time = new Time(data(i))
-  @inline def update(i:Int, v: Time): Unit = data(i) = v.millis
+  @inline def update(i:Int, v: Time): Unit = {
+    if (i < 0 || i >= data.size) throw new IndexOutOfBoundsException(i)
+    data(i) = v.millis
+  }
 
   @inline def iterator: Iterator[Time] = new Iter
   @inline def reverseIterator: Iterator[Time] = new ReverseIter

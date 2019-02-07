@@ -159,6 +159,12 @@ final class LengthArray protected[uom] (protected[uom] val data: Array[Double]) 
 
   def this(len: Int) = this(new Array[Double](len))
 
+  def grow(newCapacity: Int): LengthArray = {
+    val newData = new Array[Double](newCapacity)
+    System.arraycopy(data,0,newData,0,data.length)
+    new LengthArray(newData)
+  }
+
   @inline def apply(i:Int): Length = Meters(data(i))
   @inline def update(i:Int, v: Length): Unit = data(i) = v.toMeters
   @inline def foreach(f: (Length)=>Unit): Unit = data.foreach( d=> f(Meters(d)))

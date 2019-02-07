@@ -152,6 +152,12 @@ final class AngleArray protected[uom] (protected[uom] val data: Array[Double]) e
 
   def this(len: Int) = this(new Array[Double](len))
 
+  def grow(newCapacity: Int): AngleArray = {
+    val newData = new Array[Double](newCapacity)
+    System.arraycopy(data,0,newData,0,data.length)
+    new AngleArray(newData)
+  }
+
   @inline def apply(i:Int): Angle = Radians(data(i))
   @inline def update(i:Int, a: Angle): Unit = data(i) = a.toRadians
   @inline def foreach(f: (Angle)=>Unit): Unit = data.foreach( d=> f(Radians(d)))

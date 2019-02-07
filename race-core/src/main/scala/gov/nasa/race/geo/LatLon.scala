@@ -111,6 +111,12 @@ final class LatLonArray protected[geo] (protected[geo] val data: Array[Long]) {
   @inline def length: Int = data.length
   override def clone: LatLonArray = new LatLonArray(data.clone)
 
+  def grow(newCapacity: Int): LatLonArray = {
+    val newData = new Array[Long](newCapacity)
+    System.arraycopy(data,0,newData,0,data.length)
+    new LatLonArray(newData)
+  }
+
   @inline def apply(i:Int): LatLon = new LatLon(data(i))
   @inline def update(i:Int, v: LatLon): Unit = data(i) = v.l
 
