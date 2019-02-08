@@ -45,7 +45,7 @@ case class TFMTrack(id: String,
 
                     source: String,
                     nextPos: Option[GeoPosition],
-                    nextDate: Option[Date]
+                    nextDate: Option[DateTime]
                    ) extends TrackedObject {
 
   val heading = if (nextPos.isDefined) GreatCircle.initialBearing(position,nextPos.get) else Degrees(0)

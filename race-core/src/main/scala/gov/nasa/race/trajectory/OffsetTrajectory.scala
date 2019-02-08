@@ -19,7 +19,7 @@ package gov.nasa.race.trajectory
 import gov.nasa.race.common.{CircularSeq, CountDownIterator, CountUpIterator}
 import gov.nasa.race.geo.LatLonPos
 import gov.nasa.race.track.TrackPoint
-import gov.nasa.race.uom.{Angle, AngleArray, DateArray, Length, LengthArray, Time, TimeArray}
+import gov.nasa.race.uom.{Angle, AngleArray, DateArray, DeltaAngleArray, DeltaDateArray, DeltaLengthArray, Length, LengthArray, Time, TimeArray}
 import gov.nasa.race.uom.Angle._
 import gov.nasa.race.uom.Length._
 import gov.nasa.race.uom.Date._
@@ -43,66 +43,56 @@ object OffsetTrajectory {
   * all index values are direct array indices
   */
 trait OffsetTraj extends Traj {
-  protected[trajectory] var t0Millis: Long = -1 // start time of trajectory in epoch millis (set when entering first point)
 
   val offset: LatLonPos
 
   // those have to be vars to support growable trajectories
-  protected[trajectory] var ts: Array[Int] = new Array(capacity)
-  protected[trajectory] var lats: Array[Float] = new Array(capacity)
-  protected[trajectory] var lons: Array[Float] = new Array(capacity)
-  protected[trajectory] var alts: Array[Float] = new Array(capacity)
+  protected[trajectory] var ts: DeltaDateArray = new DeltaDateArray(capacity)
+  protected[trajectory] var lats: DeltaAngleArray = new DeltaAngleArray(capacity,offset.lat)
+  protected[trajectory] var lons: DeltaAngleArray = new DeltaAngleArray(capacity,offset.lon)
+  protected[trajectory] var alts: DeltaLengthArray = new DeltaLengthArray(capacity,offset.altitude)
 
   protected[trajectory] def copyArraysFrom (other: OffsetTraj, srcIdx: Int, dstIdx: Int, len: Int): Unit = {
-    System.arraycopy(other.ts, srcIdx, ts, dstIdx, len)
-    System.arraycopy(other.lats, srcIdx, lats, dstIdx, len)
-    System.arraycopy(other.lons, srcIdx, lons, dstIdx, len)
-    System.arraycopy(other.alts, srcIdx, alts, dstIdx, len)
+    ts.copyFrom(other.ts, srcIdx,dstIdx,len)
+    lats.copyFrom(other.lats,srcIdx,dstIdx,len)
+    lons.copyFrom(other.lons, srcIdx,dstIdx,len)
+    alts.copyFrom(other.alts,srcIdx,dstIdx,len)
   }
 
   protected def grow (newCapacity: Int): Unit = {
-    ts = ArrayUtils.grow(ts,newCapacity)
-    lats = ArrayUtils.grow(lats,newCapacity)
-    lons = ArrayUtils.grow(lons,newCapacity)
-    alts = ArrayUtils.grow(alts,newCapacity)
+    ts = ts.grow(newCapacity)
+    lats = lats.grow(newCapacity)
+    lons = lons.grow(newCapacity)
+    alts = alts.grow(newCapacity)
   }
 
-  def getDateMillis(i: Int): Long = ts(i) + t0Millis
+  def getDateMillis(i: Int): Long = ts(i).toMillis
 
   protected def update(i: Int, millis: Long, lat: Angle, lon: Angle, alt: Length): Unit = {
-    if (t0Millis < 0) {
-      t0Millis = millis
-      ts(i) = 0
-    } else {
-      ts(i) = (millis - t0Millis).toInt
-    }
-    lats(i) = (lat - offset.φ).toDegrees.toFloat
-    lons(i) = (lon - offset.λ).toDegrees.toFloat
-    alts(i) = (alt - offset.altitude).toMeters.toFloat
+    lats(i) = lat
+    lons(i) = lon
+    alts(i) = alt
   }
 
   protected def getTrackPoint (i: Int): TrackPoint = {
-    val pos = new LatLonPos(Degrees(lats(i)) + offset.φ, Degrees(lons(i)) + offset.λ, Meters(alts(i)) + offset.altitude)
-    new TrajectoryPoint(new DateTime(ts(i).toLong + t0Millis), pos)
+    val pos = new LatLonPos(lats(i), lons(i), alts(i))
+    new TrajectoryPoint(ts(i).toDateTime, pos)
   }
 
   protected def updateMutTrackPoint (p: MutTrajectoryPoint) (i: Int): TrackPoint = {
-    p.update(ts(i).toLong + t0Millis, Degrees(lats(i)) + offset.φ, Degrees(lons(i)) + offset.λ, Meters(alts(i)) + offset.altitude)
+    p.update(ts(i).toMillis, lats(i), lons(i), alts(i))
   }
 
   override def getTDP3 (i: Int, p: TDP3): TDP3 = {
-    p.set(ts(i) + t0Millis,
-          (Degrees(lats(i)) + offset.φ).toDegrees,
-          (Degrees(lons(i)) + offset.λ).toDegrees,
-          (Meters(alts(i)) + offset.altitude).toMeters)
+    p.set(ts(i).toMillis, lats(i).toDegrees, lons(i).toDegrees, alts(i).toMeters)
   }
 
   protected def updateUOMArrayElements (i: Int, destIdx: Int,
                                         t: DateArray, lat: AngleArray, lon: AngleArray, alt: LengthArray): Unit = {
-    t(destIdx) = EpochMillis(t0Millis + ts(i))
-    lat(destIdx) = Degrees(lats(i)) + offset.φ
-    lon(destIdx) = Degrees(lons(i)) + offset.λ
-    alt(destIdx) = Meters(alts(i)) + offset.altitude
+    t(destIdx) = ts(i)
+    lat(destIdx) = lats(i)
+    lon(destIdx) = lons(i)
+    alt(destIdx) = alts(i)
   }
 }
 
@@ -115,7 +105,6 @@ class MutOffsetTrajectory (initCapacity: Int, val offset: LatLonPos)
 
   override def clone: MutOffsetTrajectory = {
     val o = new MutOffsetTrajectory(capacity,offset)
-    o.t0Millis = t0Millis
     o._size = _size
     o.copyArraysFrom(this, 0, 0, _size)
     o
@@ -123,7 +112,6 @@ class MutOffsetTrajectory (initCapacity: Int, val offset: LatLonPos)
 
   override def snapshot: Trajectory = {
     val o = new OffsetTrajectory(_size,offset)
-    o.t0Millis = t0Millis
     o.copyArraysFrom(this, 0, 0, _size)
     o
   }
@@ -143,7 +131,6 @@ class OffsetTrajectory (val capacity: Int, val offset: LatLonPos) extends Traj w
 
   override def branch: MutTrajectory = {
     val o = new MutOffsetTrajectory(capacity*2, offset) // no point branching if we don't append subsequently
-    o.t0Millis = t0Millis
     o._size = capacity
     o.copyArraysFrom(this, 0, 0, capacity)
     o
@@ -169,7 +156,6 @@ class OffsetTrajectoryTrace(val capacity: Int, val offset: LatLonPos) extends Tr
 
   override def snapshot: Trajectory = {
     val o = new OffsetTrajectory(_size,offset)
-    o.t0Millis = t0Millis
 
     if (head >= tail) {
       o.copyArraysFrom(this,tail,0,_size)

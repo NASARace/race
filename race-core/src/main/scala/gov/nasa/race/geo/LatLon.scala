@@ -117,6 +117,10 @@ final class LatLonArray protected[geo] (protected[geo] val data: Array[Long]) {
     new LatLonArray(newData)
   }
 
+  @inline def copyFrom(other: LatLonArray, srcIdx: Int, dstIdx: Int, len: Int): Unit = {
+    System.arraycopy(other.data,srcIdx,data,dstIdx,len)
+  }
+
   @inline def apply(i:Int): LatLon = new LatLon(data(i))
   @inline def update(i:Int, v: LatLon): Unit = data(i) = v.l
 

@@ -19,6 +19,8 @@ package gov.nasa.race.uom
 import scala.concurrent.duration.Duration
 import Math._
 
+import gov.nasa.race.util.ArrayUtils
+
 import scala.collection.mutable.ArrayBuffer
 
 /**
@@ -143,48 +145,79 @@ class Length protected[uom] (val d: Double) extends AnyVal {
 
 object LengthArray {
   def MetersArray (a: Array[Double]): LengthArray = new LengthArray(a.clone())
-  def FeetArray (a: Array[Double]): LengthArray = new LengthArray(UOMArray.initData(a,MetersInFoot))
-  def NauticalMilesArray (a: Array[Double]): LengthArray = new LengthArray(UOMArray.initData(a,MetersInNauticalMile))
-  def UsMilesArray (a: Array[Double]): LengthArray = new LengthArray(UOMArray.initData(a,MetersInUsMile))
-  def KilometersArray (a: Array[Double]): LengthArray = new LengthArray(UOMArray.initData(a,1000.0))
+  def FeetArray (a: Array[Double]): LengthArray = new LengthArray(UOMDoubleArray.initData(a,MetersInFoot))
+  def NauticalMilesArray (a: Array[Double]): LengthArray = new LengthArray(UOMDoubleArray.initData(a,MetersInNauticalMile))
+  def UsMilesArray (a: Array[Double]): LengthArray = new LengthArray(UOMDoubleArray.initData(a,MetersInUsMile))
+  def KilometersArray (a: Array[Double]): LengthArray = new LengthArray(UOMDoubleArray.initData(a,1000.0))
+}
+
+
+// we need to define these explicitly since we otherwise call a conversion function for each value
+
+private[uom] class LengthIter (data: Seq[Double], first: Int, last: Int) extends Iterator[Length] {
+  private var i = first
+  def hasNext: Boolean = (i <= last)
+  def next: Length = {
+    val j = i
+    if (j > last) throw new NoSuchElementException
+    i += 1
+    new Length(data(j))
+  }
+}
+
+private[uom] class ReverseLengthIter (data: Seq[Double], first: Int, last: Int) extends Iterator[Length] {
+  private var i = first
+  def hasNext: Boolean = (i >= last)
+  def next: Length = {
+    val j = i
+    if (j < last) throw new NoSuchElementException
+    i -= 1
+    new Length(data(j))
+  }
 }
 
 /**
-  * wrapper class for arrays of Angles without per element allocation
+  * wrapper class for arrays of Lengths without per element allocation
   * TODO - needs more Array methods
   *
   * note that Array[T] is final hence we cannot extend it
   */
-final class LengthArray protected[uom] (protected[uom] val data: Array[Double]) extends UOMArray {
+final class LengthArray protected[uom] (protected[uom] val data: Array[Double]) extends UOMDoubleArray[Length] {
+  type Self = LengthArray
+  type SelfBuffer = LengthArrayBuffer
 
   def this(len: Int) = this(new Array[Double](len))
 
-  def grow(newCapacity: Int): LengthArray = {
+  override def grow(newCapacity: Int): LengthArray = {
     val newData = new Array[Double](newCapacity)
     System.arraycopy(data,0,newData,0,data.length)
     new LengthArray(newData)
   }
 
-  @inline def apply(i:Int): Length = Meters(data(i))
-  @inline def update(i:Int, v: Length): Unit = data(i) = v.toMeters
-  @inline def foreach(f: (Length)=>Unit): Unit = data.foreach( d=> f(Meters(d)))
+  @inline override def copyFrom(other: Self, srcIdx: Int, dstIdx: Int, len: Int): Unit = {
+    System.arraycopy(other.data,srcIdx,data,dstIdx,len)
+  }
 
-  @inline def slice(from: Int, until: Int): LengthArray = new LengthArray(data.slice(from,until))
-  @inline def tail: LengthArray = new LengthArray(data.tail)
-  @inline def take (n: Int): LengthArray = new LengthArray(data.take(n))
-  @inline def drop (n: Int): LengthArray = new LengthArray(data.drop(n))
+  @inline override def apply(i:Int): Length = new Length(data(i))
+  @inline override def update(i:Int, v: Length): Unit = data(i) = v.toMeters
+  @inline override def foreach(f: (Length)=>Unit): Unit = data.foreach( d=> f(new Length(d)))
 
-  @inline def copyToArray(other: LengthArray): Unit = data.copyToArray(other.data)
-  @inline def copyToArray(other: LengthArray, start: Int): Unit = data.copyToArray(other.data, start)
-  @inline def copyToArray(other: LengthArray, start: Int, len: Int): Unit = data.copyToArray(other.data, start, len)
+  @inline override def iterator: Iterator[Length] = new LengthIter(data,0,data.length-1)
+  @inline override def reverseIterator: Iterator[Length] = new ReverseLengthIter(data,data.length-1,0)
 
-  @inline def last: Length = Meters(data.last)
-  @inline def exists(p: (Length)=>Boolean): Boolean = data.exists( d=> p(Meters(d)))
-  @inline def count(p: (Length)=>Boolean): Int = data.count( d=> p(Meters(d)))
-  @inline def max: Length = Meters(data.max)
-  @inline def min: Length = Meters(data.min)
+  @inline override def slice(from: Int, until: Int): Self = new LengthArray(data.slice(from,until))
+  @inline override def tail: Self = new LengthArray(data.tail)
+  @inline override def take (n: Int): Self = new LengthArray(data.take(n))
+  @inline override def drop (n: Int): Self = new LengthArray(data.drop(n))
 
-  def toBuffer: LengthArrayBuffer = LengthArrayBuffer.MetersArrayBuffer(data)
+  @inline override def last: Length = Meters(data.last)
+  @inline override def exists(p: (Length)=>Boolean): Boolean = data.exists( d=> p(new Length(d)))
+  @inline override def count(p: (Length)=>Boolean): Int = data.count( d=> p(new Length(d)))
+  @inline override def max: Length = new Length(data.max)
+  @inline override def min: Length = new Length(data.min)
+
+  override def toBuffer: SelfBuffer = LengthArrayBuffer.MetersArrayBuffer(data)
+
   def toMetersArray: Array[Double] = data.clone()
   def toFeetArray: Array[Double] = toDoubleArray(MetersInFoot)
   def toUsMilesArray: Array[Double] = toDoubleArray(MetersInUsMile)
@@ -193,49 +226,176 @@ final class LengthArray protected[uom] (protected[uom] val data: Array[Double]) 
 }
 
 object LengthArrayBuffer {
-  def MetersArrayBuffer (a: Seq[Double]): LengthArrayBuffer = new LengthArrayBuffer(UOMArrayBuffer.initData(a))
-  def FeetArrayBuffer (a: Seq[Double]): LengthArrayBuffer = new LengthArrayBuffer(UOMArrayBuffer.initData(a,MetersInFoot))
-  def NauticalMilesArrayBuffer (a: Seq[Double]): LengthArrayBuffer = new LengthArrayBuffer(UOMArrayBuffer.initData(a,MetersInNauticalMile))
-  def UsMilesArrayBuffer (a: Seq[Double]): LengthArrayBuffer = new LengthArrayBuffer(UOMArrayBuffer.initData(a,MetersInUsMile))
-  def KilometersArrayBuffer (a: Seq[Double]): LengthArrayBuffer = new LengthArrayBuffer(UOMArrayBuffer.initData(a,1000.0))
+  def MetersArrayBuffer (a: Seq[Double]): LengthArrayBuffer = new LengthArrayBuffer(UOMDoubleArrayBuffer.initData(a))
+  def FeetArrayBuffer (a: Seq[Double]): LengthArrayBuffer = new LengthArrayBuffer(UOMDoubleArrayBuffer.initData(a,MetersInFoot))
+  def NauticalMilesArrayBuffer (a: Seq[Double]): LengthArrayBuffer = new LengthArrayBuffer(UOMDoubleArrayBuffer.initData(a,MetersInNauticalMile))
+  def UsMilesArrayBuffer (a: Seq[Double]): LengthArrayBuffer = new LengthArrayBuffer(UOMDoubleArrayBuffer.initData(a,MetersInUsMile))
+  def KilometersArrayBuffer (a: Seq[Double]): LengthArrayBuffer = new LengthArrayBuffer(UOMDoubleArrayBuffer.initData(a,1000.0))
 }
 
-final class LengthArrayBuffer protected[uom] (protected[uom] val data: ArrayBuffer[Double]) extends UOMArrayBuffer {
-  private class LengthIterator (it: Iterator[Double]) extends Iterator[Length] {
-    @inline def hasNext: Boolean = it.hasNext
-    @inline def next: Length = Meters(it.next)
-  }
+final class LengthArrayBuffer protected[uom] (protected[uom] val data: ArrayBuffer[Double]) extends UOMDoubleArrayBuffer[Length] {
+  type Self = LengthArrayBuffer
+  type SelfArray = LengthArray
 
   def this(initialSize: Int) = this(new ArrayBuffer[Double](initialSize))
 
-  @inline def += (v: Length): LengthArrayBuffer = { data += v.toMeters; this }
-  @inline def append (vs: Length*): Unit = vs.foreach( data += _.toMeters )
+  @inline override def += (v: Length): Self = { data += v.toMeters; this }
+  @inline override def append (vs: Length*): Unit = vs.foreach( data += _.toMeters )
 
-  @inline def apply(i:Int): Length = Meters(data(i))
-  @inline def update(i:Int, v: Length): Unit = data(i) = v.toMeters
-  @inline def foreach(f: (Length)=>Unit): Unit = data.foreach( d=> f(Meters(d)))
-  @inline def iterator: Iterator[Length] = new LengthIterator(data.iterator)
-  @inline def reverseIterator: Iterator[Length] = new LengthIterator(data.reverseIterator)
+  @inline override def apply(i:Int): Length = new Length(data(i))
+  @inline override def update(i:Int, v: Length): Unit = data(i) = v.toMeters
+  @inline override def foreach(f: (Length)=>Unit): Unit = data.foreach( d=> f(new Length(d)))
 
-  @inline def slice(from: Int, until: Int): LengthArrayBuffer = new LengthArrayBuffer(data.slice(from,until))
-  @inline def tail: LengthArrayBuffer = new LengthArrayBuffer(data.tail)
-  @inline def take (n: Int): LengthArrayBuffer = new LengthArrayBuffer(data.take(n))
-  @inline def drop (n: Int): LengthArrayBuffer = new LengthArrayBuffer(data.drop(n))
+  @inline override def iterator: Iterator[Length] = new LengthIter(data,0,data.size-1)
+  @inline override def reverseIterator: Iterator[Length] = new ReverseLengthIter(data,data.size-1,0)
 
-  @inline def copyToArray(other: LengthArray): Unit = data.copyToArray(other.data)
-  @inline def copyToArray(other: LengthArray, start: Int): Unit = data.copyToArray(other.data, start)
-  @inline def copyToArray(other: LengthArray, start: Int, len: Int): Unit = data.copyToArray(other.data, start, len)
+  @inline override def slice(from: Int, until: Int): Self = new LengthArrayBuffer(data.slice(from,until))
+  @inline override def tail: Self = new LengthArrayBuffer(data.tail)
+  @inline override def take (n: Int): Self = new LengthArrayBuffer(data.take(n))
+  @inline override def drop (n: Int): Self = new LengthArrayBuffer(data.drop(n))
 
-  @inline def last: Length = Meters(data.last)
-  @inline def exists(p: (Length)=>Boolean): Boolean = data.exists( d=> p(Meters(d)))
-  @inline def count(p: (Length)=>Boolean): Int = data.count( d=> p(Meters(d)))
-  @inline def max: Length = Meters(data.max)
-  @inline def min: Length = Meters(data.min)
+  @inline override def last: Length = new Length(data.last)
+  @inline override def exists(p: (Length)=>Boolean): Boolean = data.exists( d=> p(new Length(d)))
+  @inline override def count(p: (Length)=>Boolean): Int = data.count( d=> p(new Length(d)))
+  @inline override def max: Length = new Length(data.max)
+  @inline override def min: Length = new Length(data.min)
 
-  def toArray: LengthArray = new LengthArray(data.toArray)
+  override def toArray: SelfArray = new LengthArray(data.toArray)
+
   def toMetersArray: Array[Double] = data.toArray
   def toFeetArray: Array[Double] = toDoubleArray(MetersInFoot)
   def toUsMilesArray: Array[Double] = toDoubleArray(MetersInUsMile)
   def toNauticalMilesArray: Array[Double] = toDoubleArray(MetersInNauticalMile)
   def toKilometersArray: Array[Double] = toDoubleArray(1000)
+}
+
+
+//--- delta angle support (a memory saving optimization if we know diffs are bounded)
+
+private[uom] class DeltaLengthIter (data: Seq[Float], first: Int, last: Int, ref: Length) extends Iterator[Length] {
+  private var i = first
+  def hasNext: Boolean = (i <= last)
+  def next: Length = {
+    val j = i
+    if (j > last) throw new NoSuchElementException
+    i += 1
+    ref + new Length(data(j))
+  }
+}
+
+private[uom] class ReverseDeltaLengthIter (data: Seq[Float], first: Int, last: Int, ref: Length) extends Iterator[Length] {
+  private var i = first
+  def hasNext: Boolean = (i >= last)
+  def next: Length = {
+    val j = i
+    if (j < last) throw new NoSuchElementException
+    i -= 1
+    ref + new Length(data(j))
+  }
+}
+
+/**
+  * stores Lengths as Float diff to a fixed ref value
+  */
+final class DeltaLengthArray protected[uom] (protected[uom] val data: Array[Float], val ref: Length) {
+
+  def this(len: Int, ref: Length) = this(new Array[Float](len), ref)
+
+  def grow(newCapacity: Int): DeltaLengthArray = new DeltaLengthArray(ArrayUtils.grow(data,newCapacity),ref)
+
+  @inline def delta(i: Int): Length = new Length(data(i))
+
+  @inline def apply(i:Int): Length = ref + new Length(data(i))
+  @inline def update(i:Int, a: Length): Unit = data(i) = (a - ref).toMeters.toFloat
+  @inline def foreach(f: (Length)=>Unit): Unit = data.foreach( d=> f(ref + new Length(d)))
+  @inline def iterator: Iterator[Length] = new DeltaLengthIter(data,0,data.size-1,ref)
+  @inline def reverseIterator: Iterator[Length] = new ReverseDeltaLengthIter(data,data.size-1,0,ref)
+
+  @inline def slice(from: Int, until: Int): DeltaLengthArray = new DeltaLengthArray(data.slice(from,until),ref)
+  @inline def tail: DeltaLengthArray = new DeltaLengthArray(data.tail,ref)
+  @inline def take (n: Int): DeltaLengthArray = new DeltaLengthArray(data.take(n),ref)
+  @inline def drop (n: Int): DeltaLengthArray = new DeltaLengthArray(data.drop(n),ref)
+
+  // NOTE - ref of destination is not changed
+  @inline def copyToArray(other: DeltaLengthArray): Unit = data.copyToArray(other.data)
+  @inline def copyToArray(other: DeltaLengthArray, start: Int): Unit = data.copyToArray(other.data, start)
+  @inline def copyToArray(other: DeltaLengthArray, start: Int, len: Int): Unit = data.copyToArray(other.data, start, len)
+
+  @inline def copyFrom(other: DeltaLengthArray, srcIdx: Int, dstIdx: Int, len: Int): Unit = {
+    if (ref != other.ref) throw new RuntimeException("cannot copy to delta array with different reference value")
+    System.arraycopy(other.data,srcIdx,data,dstIdx,len)
+  }
+
+  @inline def last: Length = ref + new Length(data.last)
+  @inline def exists(p: (Length)=>Boolean): Boolean = data.exists( d=> p(ref + new Length(d)))
+  @inline def count(p: (Length)=>Boolean): Int = data.count( d=> p(ref + new Length(d)))
+  @inline def max: Length = ref + new Length(data.max)
+  @inline def min: Length = ref + new Length(data.min)
+
+  def toMetersArray: Array[Double] = {
+    val n = data.length
+    val a = new Array[Double](n)
+    var i=0
+    while (i < n) { a(i) = (ref + new Length(data(i))).toMeters; i += 1 }
+    a
+  }
+  def toFeetArray: Array[Double] = {
+    val n = data.length
+    val a = new Array[Double](n)
+    var i=0
+    while (i < n) { a(i) = (ref + new Length(data(i))).toFeet; i += 1 }
+    a
+  }
+
+  def toBuffer: DeltaLengthArrayBuffer = new DeltaLengthArrayBuffer(ArrayBuffer(data:_*),ref)
+}
+
+final class DeltaLengthArrayBuffer protected[uom] (protected[uom] val data: ArrayBuffer[Float], val ref: Length) {
+
+  def this (initialSize: Int, ref: Length) = this(new ArrayBuffer[Float](initialSize), ref)
+
+  @inline def size = data.size
+
+  @inline def += (v: Length): DeltaLengthArrayBuffer = { data += (v - ref).toMeters.toFloat; this }
+  @inline def append (vs: Length*): Unit = vs.foreach( a=> data += (a - ref).toMeters.toFloat )
+
+  @inline def delta(i: Int): Length = new Length(data(i))
+
+  @inline def apply(i:Int): Length = ref + new Length(data(i))
+  @inline def update(i:Int, a: Length): Unit = data(i) = (a - ref).toMeters.toFloat
+  @inline def foreach(f: (Length)=>Unit): Unit = data.foreach( d=> f(ref + new Length(d)))
+  @inline def iterator: Iterator[Length] = new DeltaLengthIter(data,0,data.size-1,ref)
+  @inline def reverseIterator: Iterator[Length] = new ReverseDeltaLengthIter(data,data.size-1,0,ref)
+
+  @inline def slice(from: Int, until: Int): DeltaLengthArrayBuffer = new DeltaLengthArrayBuffer(data.slice(from,until),ref)
+  @inline def tail: DeltaLengthArrayBuffer = new DeltaLengthArrayBuffer(data.tail,ref)
+  @inline def take (n: Int): DeltaLengthArrayBuffer = new DeltaLengthArrayBuffer(data.take(n),ref)
+  @inline def drop (n: Int): DeltaLengthArrayBuffer = new DeltaLengthArrayBuffer(data.drop(n),ref)
+
+  @inline def copyToArray(other: DeltaLengthArray): Unit = data.copyToArray(other.data)
+  @inline def copyToArray(other: DeltaLengthArray, start: Int): Unit = data.copyToArray(other.data, start)
+  @inline def copyToArray(other: DeltaLengthArray, start: Int, len: Int): Unit = data.copyToArray(other.data, start, len)
+
+  @inline def last: Length = ref + new Length(data.last)
+  @inline def exists(p: (Length)=>Boolean): Boolean = data.exists( d=> p(ref + new Length(d)))
+  @inline def count(p: (Length)=>Boolean): Int = data.count( d=> p(ref + new Length(d)))
+  @inline def max: Length = ref + new Length(data.max)
+  @inline def min: Length = ref + new Length(data.min)
+
+  def toArray: DeltaLengthArray = new DeltaLengthArray(data.toArray,ref)
+
+  def toMetersArray: Array[Double] = {
+    val n = data.size
+    val a = new Array[Double](n)
+    var i=0
+    while (i < n) { a(i) = (ref + new Length(data(i))).toMeters; i += 1 }
+    a
+  }
+  def toFeetArray: Array[Double] = {
+    val n = data.size
+    val a = new Array[Double](n)
+    var i=0
+    while (i < n) { a(i) = (ref + new Length(data(i))).toFeet; i += 1 }
+    a
+  }
 }

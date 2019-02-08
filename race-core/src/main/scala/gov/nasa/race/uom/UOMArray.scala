@@ -25,7 +25,7 @@ import scala.collection.mutable.ArrayBuffer
   relies on a implicit scala.collection.mutable.WrappedArray[T] conversion
 */
 
-object UOMArray {
+object UOMDoubleArray {
   def initData (a: Array[Double], factor: Double): Array[Double] = {
     val data = a.clone()
     var i = 0
@@ -39,14 +39,19 @@ object UOMArray {
 }
 
 /**
-  * abstract base for uom arrays
+  * abstract base for uom arrays that map to Double elements
+  * unfortunately we can't have a generic Fractional storage type since trait type args can't have context bounds
   */
-trait UOMArray {
+trait UOMDoubleArray[T] {
+  type Self
+  type SelfBuffer
+
   protected val data: Array[Double]
 
   @inline def length: Int = data.length
   @inline def size: Int = length
   @inline def isEmpty: Boolean = length == 0
+  @inline def nonEmpty: Boolean = length > 0
 
   protected def toDoubleArray (quot: Double): Array[Double] = {
     val a = data.clone()
@@ -58,9 +63,32 @@ trait UOMArray {
     }
     a
   }
+
+  def apply(i:Int): T
+  def update(i:Int, a: T): Unit
+
+  def grow(newLength: Int): Self
+  def copyFrom(other: Self, srcIdx: Int, dstIdx: Int, len: Int)
+
+  def slice(from: Int, until: Int): Self
+  def tail: Self
+  def take (n: Int): Self
+  def drop (n: Int): Self
+
+  def iterator: Iterator[T]
+  def reverseIterator: Iterator[T]
+  def foreach (f: (T)=>Unit)
+
+  def last: T
+  def exists(p: (T)=>Boolean): Boolean
+  def count(p: (T)=>Boolean): Int
+  def max: T
+  def min: T
+
+  def toBuffer: SelfBuffer
 }
 
-object UOMArrayBuffer {
+object UOMDoubleArrayBuffer {
   def initData (as: Seq[Double], factor: Double): ArrayBuffer[Double] = {
     val n = as.length
     val data = new ArrayBuffer[Double](n)
@@ -84,7 +112,14 @@ object UOMArrayBuffer {
   }
 }
 
-trait UOMArrayBuffer {
+/**
+  * abstract base fpr UOM array types that map to Double elements
+  * unfortunately we can't have a generic Fractional storage type since trait type args can't have context bounds
+  */
+trait UOMDoubleArrayBuffer[T] {
+  type Self
+  type SelfArray
+
   protected val data: ArrayBuffer[Double]
 
   @inline def length: Int = data.length
@@ -102,4 +137,27 @@ trait UOMArrayBuffer {
     }
     a
   }
+
+  def iterator: Iterator[T]
+  def reverseIterator: Iterator[T]
+  def foreach (f: (T)=>Unit)
+
+  def += (a:T): Self
+  def append (as: T*): Unit
+
+  def apply(i:Int): T
+  def update(i:Int, a: T): Unit
+
+  def slice(from: Int, until: Int): Self
+  def tail: Self
+  def take (n: Int): Self
+  def drop (n: Int): Self
+
+  def last: T
+  def exists(p: (T)=>Boolean): Boolean
+  def count(p: (T)=>Boolean): Int
+  def max: T
+  def min: T
+
+  def toArray: SelfArray
 }

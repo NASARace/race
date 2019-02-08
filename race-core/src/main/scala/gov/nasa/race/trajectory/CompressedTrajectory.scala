@@ -19,7 +19,8 @@ package gov.nasa.race.trajectory
 import gov.nasa.race.geo.{LatLon, LatLonArray, LatLonPos}
 import gov.nasa.race.track.TrackPoint
 import gov.nasa.race.uom.Date._
-import gov.nasa.race.uom.{Angle, AngleArray, DateArray, DeltaDateArray, Length, LengthArray}
+import gov.nasa.race.uom.Length._
+import gov.nasa.race.uom.{Angle, AngleArray, DateArray, DeltaDateArray, DeltaLengthArray, Length, LengthArray}
 
 /**
   * common storage abstraction of compressed trajectories that store data in 32bit quantities.
@@ -34,7 +35,7 @@ trait CompressedTraj extends Traj {
 
   protected[trajectory] var ts: DeltaDateArray = new DeltaDateArray(capacity)
   protected[trajectory] var latLons: LatLonArray = new LatLonArray(capacity)
-  protected[trajectory] var alts: LengthArray = new LengthArray(capacity)
+  protected[trajectory] var alts: DeltaLengthArray = new DeltaLengthArray(capacity,Length0)
 
   protected def grow(newCapacity: Int): Unit = {
     ts = ts.grow(newCapacity)
@@ -43,9 +44,9 @@ trait CompressedTraj extends Traj {
   }
 
   protected[trajectory] def copyArraysFrom (other: CompressedTraj, srcIdx: Int, dstIdx: Int, len: Int): Unit = {
-    System.arraycopy(other.ts, srcIdx, ts, dstIdx, len)
-    System.arraycopy(other.latLons, srcIdx, latLons, dstIdx, len)
-    System.arraycopy(other.alts, srcIdx, alts, dstIdx, len)
+    ts.copyFrom(other.ts, srcIdx, dstIdx, len)
+    latLons.copyFrom(other.latLons, srcIdx, dstIdx, len)
+    alts.copyFrom(alts, srcIdx, dstIdx, len)
   }
 
   def getDateMillis(i: Int): Long = ts(i).toMillis

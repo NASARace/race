@@ -153,6 +153,10 @@ final class DateArray protected[uom] (protected[uom] val data: Array[Long]) {
     new DateArray(newData)
   }
 
+  def copyFrom(other: DateArray, srcIdx: Int, dstIdx: Int, len: Int): Unit = {
+    System.arraycopy(other.data,srcIdx,data,dstIdx,len)
+  }
+
   @inline def apply(i: Int) = new Date(data(i))
   @inline def update(i:Int, v: Date): Unit = data(i) = v.millis
 
