@@ -43,7 +43,7 @@ class FHTInterpolant[N<:Nat,T<:TDataPoint[N]](override val src: TDataSource[N,T]
     var k = 0
     while (k <= n1) {
       var s: Double = 0
-      val tk = src.getTime(k)
+      val tk = src.getT(k)
       val iMin = max(k - d, 0)
       val iMax = min(k, n1 - d)
       var i = iMin
@@ -51,9 +51,9 @@ class FHTInterpolant[N<:Nat,T<:TDataPoint[N]](override val src: TDataSource[N,T]
         var v: Double = 1
         val jMax = i + d
         var j = i
-        while (j < k)     { v /= tk - src.getTime(j); j += 1 }
+        while (j < k)     { v /= tk - src.getT(j); j += 1 }
         j += 1
-        while (j <= jMax) { v /= src.getTime(j) - tk; j += 1 }
+        while (j <= jMax) { v /= src.getT(j) - tk; j += 1 }
         s += v
         i += 1
       }
@@ -92,9 +92,9 @@ class FHTInterpolant[N<:Nat,T<:TDataPoint[N]](override val src: TDataSource[N,T]
     if (j < 0) { // before first observation
       interpolate(t, -t)
     } else if (j == n1) { // after last observation
-      interpolate(t, t - src.getTime(n1))
+      interpolate(t, t - src.getT(n1))
     } else {
-      interpolate(t, min(t - src.getTime(j), src.getTime(j+1) - t))
+      interpolate(t, min(t - src.getT(j), src.getT(j+1) - t))
     }
   }
 

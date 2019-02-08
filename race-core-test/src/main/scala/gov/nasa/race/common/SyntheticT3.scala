@@ -30,7 +30,7 @@ class SyntheticT3 (val ts: Array[Long],
   val zs: Array[Double] = ts.map(fz)
 
   override def size: Int = ts.length
-  override def getTime(i: Int): Long = ts(i)
+  override def getT(i: Int): Long = ts(i)
   override def getDataPoint(i: Int, p: TDataPoint3): TDataPoint3 = p.set(ts(i),xs(i),ys(i),zs(i))
   override def newDataPoint: TDataPoint3 = new TDataPoint3(0,0,0,0)
 

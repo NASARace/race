@@ -30,7 +30,7 @@ import gov.nasa.race.uom.{Angle, AngleArray, DateArray, DeltaDateArray, Length, 
   *
   * all indices are 0-based array offsets
   */
-trait CompressedTraj extends Trajectory {
+trait CompressedTraj extends Traj {
 
   protected[trajectory] var ts: DeltaDateArray = new DeltaDateArray(capacity)
   protected[trajectory] var latLons: LatLonArray = new LatLonArray(capacity)
@@ -48,7 +48,7 @@ trait CompressedTraj extends Trajectory {
     System.arraycopy(other.alts, srcIdx, alts, dstIdx, len)
   }
 
-  override def getTime(i: Int): Long = ts(i).toMillis
+  def getDateMillis(i: Int): Long = ts(i).toMillis
 
   protected def update(i: Int, millis: Long, lat: Angle, lon: Angle, alt: Length): Unit = {
     ts(i) = EpochMillis(millis)
@@ -67,7 +67,7 @@ trait CompressedTraj extends Trajectory {
     mp.update(ts(i).toMillis, p.lat, p.lon, alts(i))
   }
 
-  override def getDataPoint (i: Int, tdp: TDP3): TDP3 = {
+  override def getTDP3 (i: Int, tdp: TDP3): TDP3 = {
     val p = latLons(i)
     tdp.set(ts(i).toMillis, p.lat.toDegrees, p.lon.toDegrees, alts(i).toMeters)
   }
@@ -83,30 +83,21 @@ trait CompressedTraj extends Trajectory {
   }
 }
 
-class CompressedTrajectory (val capacity: Int) extends IndexedTraj with CompressedTraj {
+class CompressedTrajectory (val capacity: Int) extends Traj with CompressedTraj {
   override def size = capacity
 
   override def snapshot: Trajectory = this
 
-  override def branch: MutTrajectory = ???
+  override def branch: MutTrajectory = {
+    val o = new MutCompressedTrajectory(capacity)
+    o.copyArraysFrom(this, 0, 0, size)
+    o._size = capacity
+    o
+  }
 }
 
-class MutCompressedTrajectory (initCapacity: Int) extends MutTrajectory with IndexedTraj with CompressedTraj {
+class MutCompressedTrajectory (initCapacity: Int) extends MutTraj with CompressedTraj {
   protected var _capacity = initCapacity
-  protected[trajectory] var _size: Int = 0
-
-  override def size = _size
-  def capacity = _capacity
-
-  protected def ensureSize (n: Int): Unit = {
-    if (n > capacity) {
-      var newCapacity = _capacity * 2
-      while (newCapacity < n) newCapacity *= 2
-      if (newCapacity > Int.MaxValue) newCapacity = Int.MaxValue // should probably be an exception
-      grow(newCapacity)
-      _capacity = newCapacity
-    }
-  }
 
   override def clone: MutCompressedTrajectory = {
     val o = new MutCompressedTrajectory(_capacity)
@@ -115,45 +106,16 @@ class MutCompressedTrajectory (initCapacity: Int) extends MutTrajectory with Ind
     o
   }
 
-  override def append(millis: Long, lat: Angle, lon: Angle, alt: Length): Unit = {
-    ensureSize(_size + 1)
-    update( _size, millis,lat,lon,alt)
-    _size += 1
-  }
-
-  override def clear: Unit = {
-    _size = 0
-  }
-
-  override def drop(n: Int): Unit = {
-    if (_size > n) {
-      val i = n-1
-      _size -= n
-
-      //... adjust storage arrays here
-    } else {
-      _size = 0
-    }
-  }
-
-  override def dropRight(n: Int): Unit = {
-    if (_size > n) {
-      _size -= n
-    } else {
-      _size = 0
-    }
-  }
-
   override def snapshot: Trajectory = this
 
   override def branch: MutTrajectory = clone
 }
 
-class CompressedTrajectoryTrace (val capacity: Int) extends TrajTrace with CompressedTraj {
+class CompressedTraceTrajectory(val capacity: Int) extends TraceTraj with CompressedTraj {
   protected val cleanUp = None // no need to clean up dropped track points since we don't store objects
 
-  override def clone: CompressedTrajectoryTrace = {
-    val o = new CompressedTrajectoryTrace(capacity)
+  override def clone: CompressedTraceTrajectory = {
+    val o = new CompressedTraceTrajectory(capacity)
     o._size = _size
     o.copyArraysFrom(this,0,0,_size)
     o.setIndices(head,tail)

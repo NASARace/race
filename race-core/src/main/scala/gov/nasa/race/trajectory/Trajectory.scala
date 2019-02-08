@@ -80,7 +80,7 @@ class TDP3 (_millis: Long, _lat: Double, _lon: Double, _alt: Double)
 }
 
 /**
-  * root interface for trajectories
+  * public root interface for trajectories
   *
   * note that implementation does not imply mutability, storage (direct, compressed, local)
   * or coverage (full, trace). We only use a abstract TrackPoint result type
@@ -93,7 +93,7 @@ trait Trajectory extends TDataSource[N3,TDP3] {
   def isEmpty: Boolean = size == 0
   def nonEmpty: Boolean = size > 0
 
-  def newDataPoint: TDP3 = new TDP3(0,0,0,0)
+  def newDataPoint: TDP3 = new TDP3(0,0,0,0)  // TDataSource interface
 
   /**
     * trajectory point access with logical index [0..size-1]
@@ -140,7 +140,7 @@ trait Trajectory extends TDataSource[N3,TDP3] {
 
 
 /**
-  * a mutable trajectory that supports adding/removing track points
+  * public interface for a mutable trajectory that supports adding/removing track points
   *
   * default implementation uses basic unit value types, but interface includes higher level track points.
   * Override more abstract methods in case those are stored directly, in order to avoid extra allocation
@@ -170,9 +170,11 @@ trait MutTrajectory extends Trajectory {
   * common storage-independent parts of concrete Trajectories
   * this is an internal implementation type
   */
-trait IndexedTraj extends Trajectory {
+trait Traj extends Trajectory {
 
   //--- the storage interface (mixed-in by storage traits or provided by concrete type)
+  protected def getDateMillis(i: Int): Long
+  protected def getTDP3(i: Int, dp: TDP3): TDP3
   protected def update(i: Int, millis: Long, lat: Angle, lon: Angle, alt: Length): Unit
   protected def getTrackPoint (i: Int): TrackPoint
   protected def updateMutTrackPoint (p: MutTrajectoryPoint) (i: Int): TrackPoint
@@ -180,6 +182,10 @@ trait IndexedTraj extends Trajectory {
                                         t: DateArray, lat: AngleArray, lon: AngleArray, alt: LengthArray): Unit
 
   //--- generic implementations of the Trajectory interface (based on storage interface
+
+  override def getT(i: Int): Long = getDateMillis(i) // TDataSource interface
+
+  override def getDataPoint(i: Int, dp: TDP3): TDP3 = getTDP3(i,dp) // TDataSource interface
 
   override def apply(i: Int): TrackPoint = {
     if (i < 0 || i >= size) throw new IndexOutOfBoundsException(i)
@@ -217,6 +223,59 @@ trait IndexedTraj extends Trajectory {
 }
 
 /**
+  * common storage independent part of mutable trajectories
+  */
+trait MutTraj extends MutTrajectory with Traj {
+  protected var _capacity: Int
+  protected[trajectory] var _size: Int = 0
+
+  protected def grow(newCapacity: Int): Unit // storage dependent
+  protected def update(i: Int, millis: Long, lat: Angle, lon: Angle, alt: Length): Unit // storage dependent
+
+  override def size = _size
+  def capacity = _capacity
+
+  protected def ensureSize (n: Int): Unit = {
+    if (n > capacity) {
+      var newCapacity = _capacity * 2
+      while (newCapacity < n) newCapacity *= 2
+      if (newCapacity > Int.MaxValue) newCapacity = Int.MaxValue // should probably be an exception
+      grow(newCapacity)
+      _capacity = newCapacity
+    }
+  }
+
+  override def append(millis: Long, lat: Angle, lon: Angle, alt: Length): Unit = {
+    ensureSize(_size + 1)
+    update( _size, millis,lat,lon,alt)
+    _size += 1
+  }
+
+  override def clear: Unit = {
+    _size = 0
+  }
+
+  override def drop(n: Int): Unit = {
+    if (_size > n) {
+      val i = n-1
+      _size -= n
+
+      //... adjust storage arrays here
+    } else {
+      _size = 0
+    }
+  }
+
+  override def dropRight(n: Int): Unit = {
+    if (_size > n) {
+      _size -= n
+    } else {
+      _size = 0
+    }
+  }
+}
+
+/**
   * common storage independent parts of trajectory traces (implemented as CircularSeq)
   *
   * offset parameters represent logical indices (starting with 0 for the first stored track point),
@@ -224,11 +283,11 @@ trait IndexedTraj extends Trajectory {
   *
   * this is an internal implementation type
   */
-trait TrajTrace extends MutTrajectory with IndexedTraj with CircularSeq {
+trait TraceTraj extends MutTrajectory with Traj with CircularSeq {
 
-  override def getTime(off: Int): Long = {
+  override def getT(off: Int): Long = {
     if (off >= _size || off < 0) throw new IndexOutOfBoundsException(off)
-    super.getTime(storeIdx(off))
+    getDateMillis(storeIdx(off))
   }
 
   override def append (millis: Long, lat: Angle, lon: Angle, alt: Length): Unit = {
@@ -242,7 +301,7 @@ trait TrajTrace extends MutTrajectory with IndexedTraj with CircularSeq {
 
   override def getDataPoint (off: Int, p: TDP3): TDP3 = {
     if (off >= _size || off < 0) throw new IndexOutOfBoundsException(off)
-    super.getDataPoint(storeIdx(off),p)
+    getTDP3(storeIdx(off),p)
   }
 
   override def iterator: Iterator[TrackPoint] = new ForwardIterator(getTrackPoint)

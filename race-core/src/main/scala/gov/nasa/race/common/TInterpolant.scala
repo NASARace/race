@@ -24,7 +24,7 @@ import gov.nasa.race.common.Nat.{N1, N2, N3}
   */
 trait TDataSource[N<:Nat,T<:TDataPoint[N]] {
   def size: Int                // number of data points
-  def getTime(i: Int): Long    // get time of observation point with logical index i
+  def getT(i: Int): Long    // get time of observation point with logical index i
   def newDataPoint: T          // create a new zero'ed DataPoint object
   def getDataPoint(i: Int, dp: T): T  // set provided DataPoint values to observation i, using provided cache
 }
@@ -41,7 +41,7 @@ trait TDataSource3 extends TDataSource[N3,TDataPoint3]
 class ArrayTDataSource1 (val ts: Array[Long], val v0: Array[Double]) extends TDataSource[N1,TDataPoint1]{
   val size = ts.length
   assert(size == v0.length)
-  def getTime(i: Int) = ts(i)
+  def getT(i: Int) = ts(i)
   def newDataPoint = new TDataPoint1(0,0)
   def getDataPoint(i: Int, dp: TDataPoint1) = dp.set(ts(i), v0(i))
 }
@@ -51,7 +51,7 @@ class ArrayTDataSource2 (val ts: Array[Long], val v0: Array[Double], val v1: Arr
   val size = ts.length
   assert(size == v0.length)
   assert(size == v1.length)
-  def getTime(i: Int) = ts(i)
+  def getT(i: Int) = ts(i)
   def newDataPoint = new TDataPoint2(0,0, 0)
   def getDataPoint(i: Int, dp: TDataPoint2) = dp.set(ts(i), v0(i), v1(i))
 }
@@ -63,7 +63,7 @@ class ArrayTDataSource3 (val ts: Array[Long], val v0: Array[Double], val v1: Arr
   assert(size == v1.length)
   assert(size == v2.length)
 
-  def getTime(i: Int) = ts(i)
+  def getT(i: Int) = ts(i)
   def newDataPoint = new TDataPoint3(0,0, 0,0)
   def getDataPoint(i: Int, dp: TDataPoint3) = dp.set(ts(i), v0(i), v1(i), v2(i))
 }
@@ -78,8 +78,8 @@ class ArrayTDataSource3 (val ts: Array[Long], val v0: Array[Double], val v1: Arr
 abstract class TInterpolant[N<:Nat,T<:TDataPoint[N]](val src: TDataSource[N,T]) {
 
   val n1 = src.size-1
-  val tLeft = src.getTime(0)
-  val tRight = src.getTime(n1)
+  val tLeft = src.getT(0)
+  val tRight = src.getT(n1)
 
   protected final def findLeftIndex (t: Long): Int = {
     if (t < tLeft) {  // lower than start -> no left index
@@ -92,7 +92,7 @@ abstract class TInterpolant[N<:Nat,T<:TDataPoint[N]](val src: TDataSource[N,T]) 
       var b = n1
       while (b - a > 1){
         val c = (a + b)/2;
-        val tc = src.getTime(c);
+        val tc = src.getT(c);
         if (t == tc) return c
         else if (t > tc) a = c
         else b = c
@@ -111,8 +111,8 @@ abstract class TInterpolant[N<:Nat,T<:TDataPoint[N]](val src: TDataSource[N,T]) 
                                            (exact: (Long,Int)=>T)
                                            (approx: (Long,Long,Long,Int)=>T) extends Iterator[T] {
     var iPrev = findLeftIndex(tStart)
-    var tPrev = if (iPrev < 0) Int.MinValue else src.getTime(iPrev)
-    var tNext = if (iPrev == n1) Int.MaxValue else src.getTime(iPrev+1)
+    var tPrev = if (iPrev < 0) Int.MinValue else src.getT(iPrev)
+    var tNext = if (iPrev == n1) Int.MaxValue else src.getT(iPrev+1)
     var t = tStart
 
     override def hasNext: Boolean = t <= tEnd
@@ -123,7 +123,7 @@ abstract class TInterpolant[N<:Nat,T<:TDataPoint[N]](val src: TDataSource[N,T]) 
       while (t >= tNext && iPrev <= n1) {
         iPrev += 1
         tPrev = tNext
-        tNext = if (iPrev >= n1) Int.MaxValue else src.getTime(iPrev+1)
+        tNext = if (iPrev >= n1) Int.MaxValue else src.getT(iPrev+1)
       }
 
       val tt = t
@@ -141,8 +141,8 @@ abstract class TInterpolant[N<:Nat,T<:TDataPoint[N]](val src: TDataSource[N,T]) 
                                            (exact: (Long,Int)=>T)
                                            (approx: (Long,Long,Long,Int)=>T) extends Iterator[T] {
     var iPrev = findLeftIndex(tEnd)
-    var tPrev = if (iPrev < 0) Int.MinValue else src.getTime(iPrev)
-    var tNext = if (iPrev == n1) Int.MaxValue else src.getTime(iPrev + 1)
+    var tPrev = if (iPrev < 0) Int.MinValue else src.getT(iPrev)
+    var tNext = if (iPrev == n1) Int.MaxValue else src.getT(iPrev + 1)
     var t = tEnd
 
     override def hasNext: Boolean = t >= tStart
@@ -153,7 +153,7 @@ abstract class TInterpolant[N<:Nat,T<:TDataPoint[N]](val src: TDataSource[N,T]) 
       while (t < tPrev && iPrev >= 0) {
         iPrev -= 1
         tNext = tPrev
-        tPrev = if (iPrev < 0) Int.MinValue else src.getTime(iPrev)
+        tPrev = if (iPrev < 0) Int.MinValue else src.getT(iPrev)
       }
 
       val tt = t

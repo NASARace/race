@@ -64,7 +64,7 @@ class USTrajectoryTrace (val capacity: Int) extends TrajectoryTrace with TDataSo
 
   //--- the TDataSource interface for interpolation
 
-  override def getTime(i: Int): Long = ts((tail+i)%capacity) + t0Millis
+  override def getT(i: Int): Long = ts((tail+i)%capacity) + t0Millis
 
   override def newDataPoint: TDataPoint3 = new TDataPoint3(0,0,0,0)
 

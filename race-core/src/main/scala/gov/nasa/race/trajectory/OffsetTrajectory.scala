@@ -42,7 +42,7 @@ object OffsetTrajectory {
   *
   * all index values are direct array indices
   */
-trait OffsetTraj extends Trajectory {
+trait OffsetTraj extends Traj {
   protected[trajectory] var t0Millis: Long = -1 // start time of trajectory in epoch millis (set when entering first point)
 
   val offset: LatLonPos
@@ -67,7 +67,7 @@ trait OffsetTraj extends Trajectory {
     alts = ArrayUtils.grow(alts,newCapacity)
   }
 
-  override def getTime(i: Int): Long = ts(i) + t0Millis
+  def getDateMillis(i: Int): Long = ts(i) + t0Millis
 
   protected def update(i: Int, millis: Long, lat: Angle, lon: Angle, alt: Length): Unit = {
     if (t0Millis < 0) {
@@ -90,7 +90,7 @@ trait OffsetTraj extends Trajectory {
     p.update(ts(i).toLong + t0Millis, Degrees(lats(i)) + offset.φ, Degrees(lons(i)) + offset.λ, Meters(alts(i)) + offset.altitude)
   }
 
-  override def getDataPoint (i: Int, p: TDP3): TDP3 = {
+  override def getTDP3 (i: Int, p: TDP3): TDP3 = {
     p.set(ts(i) + t0Millis,
           (Degrees(lats(i)) + offset.φ).toDegrees,
           (Degrees(lons(i)) + offset.λ).toDegrees,
@@ -106,27 +106,12 @@ trait OffsetTraj extends Trajectory {
   }
 }
 
-
 /**
   * a growable offset trajectory
   */
 class MutOffsetTrajectory (initCapacity: Int, val offset: LatLonPos)
-                                   extends MutTrajectory with IndexedTraj with OffsetTraj {
+                                   extends MutTraj with OffsetTraj {
   protected var _capacity = initCapacity
-  protected[trajectory] var _size: Int = 0
-
-  override def size = _size
-  def capacity = _capacity
-
-  protected def ensureSize (n: Int): Unit = {
-    if (n > capacity) {
-      var newCapacity = _capacity * 2
-      while (newCapacity < n) newCapacity *= 2
-      if (newCapacity > Int.MaxValue) newCapacity = Int.MaxValue // should probably be an exception
-      grow(newCapacity)
-      _capacity = newCapacity
-    }
-  }
 
   override def clone: MutOffsetTrajectory = {
     val o = new MutOffsetTrajectory(capacity,offset)
@@ -134,37 +119,6 @@ class MutOffsetTrajectory (initCapacity: Int, val offset: LatLonPos)
     o._size = _size
     o.copyArraysFrom(this, 0, 0, _size)
     o
-  }
-
-  override def append(millis: Long, lat: Angle, lon: Angle, alt: Length): Unit = {
-    ensureSize(_size + 1)
-    update( _size, millis,lat,lon,alt)
-    _size += 1
-  }
-
-  override def clear: Unit = {
-    _size = 0
-  }
-
-  override def drop(n: Int): Unit = {
-    if (_size > n) {
-      val i = n-1
-      _size -= n
-      System.arraycopy(ts,i,ts,0,_size)
-      System.arraycopy(lats,i,lats,0,_size)
-      System.arraycopy(lons,i,lons,0,_size)
-      System.arraycopy(alts,i,alts,0,_size)
-    } else {
-      _size = 0
-    }
-  }
-
-  override def dropRight(n: Int): Unit = {
-    if (_size > n) {
-      _size -= n
-    } else {
-      _size = 0
-    }
   }
 
   override def snapshot: Trajectory = {
@@ -182,7 +136,7 @@ class MutUSTrajectory (capacity: Int) extends MutOffsetTrajectory(capacity,Offse
 /**
   * invariant representation of offset based trajectory
   */
-class OffsetTrajectory (val capacity: Int, val offset: LatLonPos) extends IndexedTraj with OffsetTraj {
+class OffsetTrajectory (val capacity: Int, val offset: LatLonPos) extends Traj with OffsetTraj {
   override def size = capacity
 
   override def snapshot: Trajectory = this // no need to create a new one, we are invariant
@@ -202,7 +156,7 @@ class USTrajectory (capacity: Int) extends OffsetTrajectory(capacity,OffsetTraje
 /**
   * a mutable offset trajectory that stores N last track points in a circular buffers
   */
-class OffsetTrajectoryTrace(val capacity: Int, val offset: LatLonPos) extends TrajTrace with OffsetTraj {
+class OffsetTrajectoryTrace(val capacity: Int, val offset: LatLonPos) extends TraceTraj with OffsetTraj {
 
   protected val cleanUp = None // no need to clean up dropped track points since we don't store objects
 
