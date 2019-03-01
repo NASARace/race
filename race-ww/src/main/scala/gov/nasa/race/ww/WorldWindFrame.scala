@@ -95,12 +95,8 @@ class WorldWindFrame (config: Config, raceView: RaceViewer) extends AppFrame {
   }
 
   def loadMapCursor: Cursor = {
-    val defaultMapCursor = "mapcursor-black-white-32x32.png"
-    val mapCursor = config.getStringOrElse("mapcursor", defaultMapCursor)
-    val url: URL = ifNull(getClass.getResource(mapCursor))(getClass.getResource(defaultMapCursor))
-
-    val icon = Swing.Icon(url)
-    Toolkit.getDefaultToolkit.createCustomCursor(icon.getImage,new Point(16,16),"map cursor")
+    val mapCursor = config.getStringOrElse("mapcursor", "mapcursor-white")
+    Images.loadCursor("mapcursor", mapCursor)
   }
 
   def setWwdMenu(config: Config, raceView: RaceViewer, wwd: WorldWindowGLCanvas) = {

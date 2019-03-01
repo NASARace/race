@@ -18,7 +18,7 @@ package gov.nasa.race.trajectory
 
 import gov.nasa.race.geo.LatLonPos
 import gov.nasa.race.track.TrackPoint
-import gov.nasa.race.uom.{Angle, AngleArray, DateArray, Length, LengthArray}
+import gov.nasa.race.uom.{Angle, AngleArray, Date, DateArray, Length, LengthArray}
 
 /**
   * trajectory storage that does not try to save memory and stores data in full 64 bit quantities
@@ -46,7 +46,8 @@ trait AccurateTraj extends Traj {
 
   def getDateMillis(i: Int): Long = ts(i).toMillis
 
-  protected def update(i: Int, millis: Long, lat: Angle, lon: Angle, alt: Length): Unit = {
+  protected def update(i: Int, date: Date, lat: Angle, lon: Angle, alt: Length): Unit = {
+    ts(i) = date
     lats(i) = lat
     lons(i) = lon
     alts(i) = alt
@@ -58,7 +59,7 @@ trait AccurateTraj extends Traj {
   }
 
   protected def updateMutTrackPoint (p: MutTrajectoryPoint) (i: Int): TrackPoint = {
-    p.update(ts(i).toMillis, lats(i), lons(i), alts(i))
+    p.update(ts(i), lats(i), lons(i), alts(i))
   }
 
   override def getTDP3 (i: Int, p: TDP3): TDP3 = {
@@ -111,11 +112,11 @@ class MutAccurateTrajectory (initCapacity: Int) extends MutTraj with AccurateTra
 /**
   * accurate trace trajectory that stores N last track points
   */
-class AccurateTraceTrajectory(val capacity: Int) extends TraceTraj with AccurateTraj {
+class AccurateTrace(val capacity: Int) extends TraceTraj with AccurateTraj {
   protected val cleanUp = None // no need to clean up dropped track points since we don't store objects
 
-  override def clone: AccurateTraceTrajectory = {
-    val o = new AccurateTraceTrajectory(capacity)
+  override def clone: AccurateTrace = {
+    val o = new AccurateTrace(capacity)
     o._size = _size
     o.copyArraysFrom(this,0,0,_size)
     o.setIndices(head,tail)

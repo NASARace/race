@@ -24,6 +24,7 @@ import akka.actor.Props
 import com.typesafe.config.Config
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.{RaceActor, RaceActorRec, error, info}
+import gov.nasa.race.swing._
 import gov.nasa.race.swing.Redrawable
 import gov.nasa.race.swing.Style._
 import gov.nasa.race.uom.Length.Meters
@@ -68,7 +69,7 @@ class RaceViewer(viewerActor: RaceViewerActor) extends DeferredEyePositionListen
   val defaultColor = config.getColorOrElse("color", Color.yellow)
   val defaultLabelColor = config.getColorOrElse("label-color", defaultColor)
   val defaultLineColor = config.getColorOrElse("line-color", defaultColor)
-  val defaultLabelFont = config.getFontOrElse("label-font",  new Font(null,Font.PLAIN,13))
+  val defaultLabelFont = config.getFontOrElse("label-font",  new Font(null,Font.PLAIN,scaledSize(13)))
   val defaultSubLabelFont = config.getFontOrElse("sublabel-font", defaultLabelFont)
 
   // we want to avoid several DeferredXListeners because of the context switch overhead

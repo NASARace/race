@@ -16,16 +16,11 @@
  */
 package gov.nasa.race.trajectory
 
-import gov.nasa.race.common.{CircularSeq, CountDownIterator, CountUpIterator}
 import gov.nasa.race.geo.LatLonPos
 import gov.nasa.race.track.TrackPoint
-import gov.nasa.race.uom.{Angle, AngleArray, DateArray, DeltaAngleArray, DeltaDateArray, DeltaLengthArray, Length, LengthArray, Time, TimeArray}
 import gov.nasa.race.uom.Angle._
 import gov.nasa.race.uom.Length._
-import gov.nasa.race.uom.Date._
-import gov.nasa.race.uom.Time._
-import gov.nasa.race.util.ArrayUtils
-import org.joda.time.DateTime
+import gov.nasa.race.uom.{Angle, AngleArray, Date, DateArray, DeltaAngleArray, DeltaDateArray, DeltaLengthArray, Length, LengthArray}
 
 
 object OffsetTrajectory {
@@ -68,7 +63,8 @@ trait OffsetTraj extends Traj {
 
   def getDateMillis(i: Int): Long = ts(i).toMillis
 
-  protected def update(i: Int, millis: Long, lat: Angle, lon: Angle, alt: Length): Unit = {
+  protected def update(i: Int, date: Date, lat: Angle, lon: Angle, alt: Length): Unit = {
+    ts(i) = date
     lats(i) = lat
     lons(i) = lon
     alts(i) = alt
@@ -80,7 +76,7 @@ trait OffsetTraj extends Traj {
   }
 
   protected def updateMutTrackPoint (p: MutTrajectoryPoint) (i: Int): TrackPoint = {
-    p.update(ts(i).toMillis, lats(i), lons(i), alts(i))
+    p.update(ts(i), lats(i), lons(i), alts(i))
   }
 
   override def getTDP3 (i: Int, p: TDP3): TDP3 = {
@@ -143,12 +139,12 @@ class USTrajectory (capacity: Int) extends OffsetTrajectory(capacity,OffsetTraje
 /**
   * a mutable offset trajectory that stores N last track points in a circular buffers
   */
-class OffsetTrajectoryTrace(val capacity: Int, val offset: LatLonPos) extends TraceTraj with OffsetTraj {
+class OffsetTrace(val capacity: Int, val offset: LatLonPos) extends TraceTraj with OffsetTraj {
 
   protected val cleanUp = None // no need to clean up dropped track points since we don't store objects
 
-  override def clone: OffsetTrajectoryTrace = {
-    val o = new OffsetTrajectoryTrace(capacity,offset)
+  override def clone: OffsetTrace = {
+    val o = new OffsetTrace(capacity,offset)
     o.copyArraysFrom(this, 0, 0, capacity)
     o.setIndices(head,tail)
     o
@@ -169,4 +165,4 @@ class OffsetTrajectoryTrace(val capacity: Int, val offset: LatLonPos) extends Tr
   override def branch: MutTrajectory = clone
 }
 
-class USTrajectoryTrace (capacity: Int) extends OffsetTrajectoryTrace(capacity,OffsetTrajectory.USOffset)
+class USTrace(capacity: Int) extends OffsetTrace(capacity,OffsetTrajectory.USOffset)

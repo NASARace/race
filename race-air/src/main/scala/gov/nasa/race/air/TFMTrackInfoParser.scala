@@ -22,6 +22,7 @@ import gov.nasa.race.track.TrackInfo
 import gov.nasa.race.trajectory.{MutTrajectory, MutUSTrajectory}
 import gov.nasa.race.uom.Length._
 import gov.nasa.race.uom.Angle._
+import gov.nasa.race.uom.Date._
 import gov.nasa.race.util.XmlAttrProcessor
 import org.joda.time.DateTime
 
@@ -88,7 +89,7 @@ class TFMTrackInfoParser extends XmlParser[Seq[TrackInfo]] with XmlAttrProcessor
     } {
       case "nxce:waypoint" =>
         if (!lat.isNaN && !lon.isNaN) {
-          route.append(0, Degrees(lat), Degrees(lon), UndefinedLength) // no altitude or time info
+          route.append(Date0, Degrees(lat), Degrees(lon), UndefinedLength) // no altitude or time info
         }
 
       case "fdm:fltdMessage" =>

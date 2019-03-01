@@ -24,7 +24,7 @@ import gov.nasa.race.core.Messages.BusEvent
 import gov.nasa.race.core.{PublishingRaceActor, SubscribingRaceActor}
 import gov.nasa.race.geo.Datum
 import gov.nasa.race.track.{TrackDropped, TrackedObject, TrackedObjectExtrapolator}
-import gov.nasa.race.trajectory.{TDP3, USTrajectoryTrace}
+import gov.nasa.race.trajectory.{TDP3, USTrace}
 import gov.nasa.race.uom.{Angle, Length}
 import gov.nasa.race.uom.Length._
 import gov.nasa.race.uom.Angle._
@@ -57,7 +57,7 @@ class ParallelApproachAnalyzer (val config: Config) extends SubscribingRaceActor
   class Candidate {
     var track: TrackedObject = _
     val estimator = getConfigurableOrElse("estimator")(new TrackedObjectExtrapolator)
-    val trajectory = new USTrajectoryTrace(config.getIntOrElse("max-path",50))
+    val trajectory = new USTrace(config.getIntOrElse("max-path",50))
     val checked: MSet[String] = MSet.empty
 
     def update (newTrack: TrackedObject): Unit = {
@@ -113,7 +113,6 @@ class ParallelApproachAnalyzer (val config: Config) extends SubscribingRaceActor
     val tr2 = new FHTInterpolant[N3,TDP3](c2.trajectory)
 
     // c1 was last updated, so we start backwards interpolation from last c2 entry
-
     val it2 = tr2.reverseTailDurationIterator(maxConvergeDuration, convergeInterval)
     val it1 = tr1.reverseIterator(tr2.tRight, tr2.tRight - maxConvergeDuration, convergeInterval)
 
@@ -151,7 +150,7 @@ class ParallelApproachAnalyzer (val config: Config) extends SubscribingRaceActor
         dist = Datum.meanEuclidean2dDistance(lat1,lon1, lat2,lon2)
 
         if (deltaHdg > maxConvergeAngle){ // Bingo - got one
-          val date = new DateTime(p._1)
+          val date = new DateTime(p.millis)
           publishEvent(c1, c2, date, deltaHdg, dist)
           //println(f"@@ $t%4d: ${dist.toMeters}%10.0f, ${hdg1.toDegrees}%3.0f, ${hdg2.toDegrees}%3.0f -> delta= ${deltaHdg.toDegrees}%3.0f")
           info(f"max angle-in exceeded: ${c1.track.cs},${c2.track.cs} at $date: Δhdg = ${deltaHdg.toDegrees}%.0f, dist = ${dist.toMeters}%.0fm")

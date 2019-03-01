@@ -21,7 +21,6 @@ package gov.nasa.race.common
   */
 class CountUpIterator[T](val iStart: Int, val n: Int)(f:(Int)=>T) extends Iterator[T] {
   val limit = iStart + n
-
   protected var i = iStart
 
   override def hasNext: Boolean = i < limit

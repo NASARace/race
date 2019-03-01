@@ -63,7 +63,7 @@ final class DeltaDateArray protected[uom] (protected[uom] val elapsed: TimeArray
       date0 = d
       elapsed(i) = Time0
     } else {
-      elapsed(i) = date0 to d
+      elapsed(i) = date0 timeUntil d
     }
   }
 
@@ -137,12 +137,12 @@ final class DeltaDateArrayBuffer protected[uom] (protected[uom] val elapsed: Tim
       date0 = d
       elapsed += Time0
     } else {
-      elapsed += date0 to d
+      elapsed += date0 timeUntil d
     }
   }
   @inline def append (ds: Date*): Unit = {
     if (date0.isUndefined) date0 = ds.head
-    ds.foreach( d => elapsed += date0 to d )
+    ds.foreach( d => elapsed += date0 timeUntil d )
   }
 
   @inline def apply(i:Int): Date = date0 + elapsed(i)
@@ -152,7 +152,7 @@ final class DeltaDateArrayBuffer protected[uom] (protected[uom] val elapsed: Tim
       date0 = d
       elapsed(i) = Time0
     } else {
-      elapsed(i) = date0 to d
+      elapsed(i) = date0 timeUntil d
     }
   }
 

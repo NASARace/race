@@ -18,9 +18,8 @@ package gov.nasa.race.trajectory
 
 import gov.nasa.race.geo.{LatLon, LatLonArray, LatLonPos}
 import gov.nasa.race.track.TrackPoint
-import gov.nasa.race.uom.Date._
 import gov.nasa.race.uom.Length._
-import gov.nasa.race.uom.{Angle, AngleArray, DateArray, DeltaDateArray, DeltaLengthArray, Length, LengthArray}
+import gov.nasa.race.uom.{Angle, AngleArray, Date, DateArray, DeltaDateArray, DeltaLengthArray, Length, LengthArray}
 
 /**
   * common storage abstraction of compressed trajectories that store data in 32bit quantities.
@@ -51,8 +50,8 @@ trait CompressedTraj extends Traj {
 
   def getDateMillis(i: Int): Long = ts(i).toMillis
 
-  protected def update(i: Int, millis: Long, lat: Angle, lon: Angle, alt: Length): Unit = {
-    ts(i) = EpochMillis(millis)
+  protected def update(i: Int, date: Date, lat: Angle, lon: Angle, alt: Length): Unit = {
+    ts(i) = date
     latLons(i) = LatLon(lat, lon)
     alts(i) = alt
   }
@@ -65,7 +64,7 @@ trait CompressedTraj extends Traj {
 
   protected def updateMutTrackPoint(mp: MutTrajectoryPoint)(i: Int): TrackPoint = {
     val p = latLons(i)
-    mp.update(ts(i).toMillis, p.lat, p.lon, alts(i))
+    mp.update(ts(i), p.lat, p.lon, alts(i))
   }
 
   override def getTDP3 (i: Int, tdp: TDP3): TDP3 = {
@@ -97,8 +96,7 @@ class CompressedTrajectory (val capacity: Int) extends Traj with CompressedTraj 
   }
 }
 
-class MutCompressedTrajectory (initCapacity: Int) extends MutTraj with CompressedTraj {
-  protected var _capacity = initCapacity
+class MutCompressedTrajectory (protected var _capacity: Int) extends MutTraj with CompressedTraj {
 
   override def clone: MutCompressedTrajectory = {
     val o = new MutCompressedTrajectory(_capacity)
@@ -112,11 +110,11 @@ class MutCompressedTrajectory (initCapacity: Int) extends MutTraj with Compresse
   override def branch: MutTrajectory = clone
 }
 
-class CompressedTraceTrajectory(val capacity: Int) extends TraceTraj with CompressedTraj {
+class CompressedTrace(val capacity: Int) extends TraceTraj with CompressedTraj {
   protected val cleanUp = None // no need to clean up dropped track points since we don't store objects
 
-  override def clone: CompressedTraceTrajectory = {
-    val o = new CompressedTraceTrajectory(capacity)
+  override def clone: CompressedTrace = {
+    val o = new CompressedTrace(capacity)
     o._size = _size
     o.copyArraysFrom(this,0,0,_size)
     o.setIndices(head,tail)

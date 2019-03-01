@@ -58,7 +58,7 @@ class TrackEntry[T <: TrackedObject](var obj: T, var trajectory: MutTrajectory, 
   def labelMaterial: Material = layer.labelMaterial
   def lineMaterial: Material = layer.lineMaterial
   def symbolImg: BufferedImage = layer.symbolImg
-  def symbolImgScale: Double = 0.35
+  def symbolImgScale: Double = 1.0
   def symbolHeading: Double = obj.heading.toDegrees
   def markImg: BufferedImage = layer.markImg
   def labelFont: Font = layer.labelFont

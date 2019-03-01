@@ -20,9 +20,10 @@ import gov.nasa.race.common.Nat.N3
 import gov.nasa.race.common.{CircularSeq, CountDownIterator, CountUpIterator, TDataPoint3, TDataSource}
 import gov.nasa.race.geo.{GeoPosition, LatLonPos, MutLatLonPos}
 import gov.nasa.race.track.TrackPoint
-import gov.nasa.race.uom.{Angle, AngleArray, Date, DateArray, Length, LengthArray, TimeArray}
 import gov.nasa.race.uom.Angle._
+import gov.nasa.race.uom.Date._
 import gov.nasa.race.uom.Length._
+import gov.nasa.race.uom.{Angle, AngleArray, Date, DateArray, Length, LengthArray}
 import org.joda.time.{MutableDateTime, ReadableDateTime, DateTime => JodaDateTime}
 
 /**
@@ -43,8 +44,8 @@ class TrajectoryPoint (val date: JodaDateTime, val position: GeoPosition) extend
 class MutTrajectoryPoint (val date: MutableDateTime, val position: MutLatLonPos) extends TrackPoint {
   def this() = this(new MutableDateTime(0), new MutLatLonPos(Angle0,Angle0,Length0))
 
-  def update (millis: Long, lat: Angle, lon: Angle, alt: Length): this.type = {
-    date.setMillis(millis)
+  def update (d: Date, lat: Angle, lon: Angle, alt: Length): this.type = {
+    date.setMillis(d.toMillis)
     position.update(lat,lon,alt)
     this
   }
@@ -75,7 +76,7 @@ class TDP3 (_millis: Long, _lat: Double, _lon: Double, _alt: Double)
   def toTrajectoryPoint = new TrajectoryPoint(new JodaDateTime(millis), LatLonPos(Degrees(_0),Degrees(_1),Meters(_2)))
 
   def updateTrajectoryPoint (p: MutTrajectoryPoint): Unit = {
-    p.update(millis, Degrees(_0), Degrees(_1), Meters(_2))
+    p.update(EpochMillis(millis), Degrees(_0), Degrees(_1), Meters(_2))
   }
 }
 
@@ -103,6 +104,7 @@ trait Trajectory extends TDataSource[N3,TDP3] {
 
   def iterator: Iterator[TrackPoint]
   def iterator (p: MutTrajectoryPoint): Iterator[TrackPoint]
+  def iterator (p: TDP3): Iterator[TDP3]
 
   def foreach (f: (TrackPoint)=>Unit): Unit = {
     val it = iterator
@@ -112,15 +114,24 @@ trait Trajectory extends TDataSource[N3,TDP3] {
     val it = iterator(p)
     while (it.hasNext) f(it.next)
   }
+  def foreach (p: TDP3)(f: (TDP3)=>Unit): Unit = {
+    val it = iterator(p)
+    while (it.hasNext) f(it.next)
+  }
 
   def reverseIterator: Iterator[TrackPoint]
   def reverseIterator (p: MutTrajectoryPoint): Iterator[TrackPoint]
+  def reverseIterator (p: TDP3): Iterator[TDP3]
 
   def foreachReverse (f: (TrackPoint)=>Unit): Unit = {
     val it = reverseIterator
     while (it.hasNext) f(it.next)
   }
   def foreachReverse (p: MutTrajectoryPoint)(f: (TrackPoint)=>Unit): Unit = {
+    val it = reverseIterator(p)
+    while (it.hasNext) f(it.next)
+  }
+  def foreachReverse (p: TDP3)(f: (TDP3)=>Unit): Unit = {
     val it = reverseIterator(p)
     while (it.hasNext) f(it.next)
   }
@@ -148,15 +159,15 @@ trait Trajectory extends TDataSource[N3,TDP3] {
 trait MutTrajectory extends Trajectory {
 
   // basic type appender
-  def append (millis: Long, lat: Angle, lon: Angle, alt: Length): Unit
+  def append(date: Date, lat: Angle, lon: Angle, alt: Length): Unit
 
   //--- override if any of the types are stored directly
   def append (p: TrackPoint): Unit = {
     val pos = p.position
-    append(p.date.getMillis, pos.φ, pos.λ, pos.altitude)
+    append(Date(p.date), pos.φ, pos.λ, pos.altitude)
   }
   def append (date: ReadableDateTime, pos: GeoPosition): Unit = {
-    append(date.getMillis, pos.φ, pos.λ, pos.altitude)
+    append(Date(date), pos.φ, pos.λ, pos.altitude)
   }
   def += (p: TrackPoint): Unit = append(p)
   def ++= (ps: Seq[TrackPoint]): Unit = ps.foreach(append)
@@ -175,9 +186,10 @@ trait Traj extends Trajectory {
   //--- the storage interface (mixed-in by storage traits or provided by concrete type)
   protected def getDateMillis(i: Int): Long
   protected def getTDP3(i: Int, dp: TDP3): TDP3
-  protected def update(i: Int, millis: Long, lat: Angle, lon: Angle, alt: Length): Unit
+  protected def update(i: Int, date: Date, lat: Angle, lon: Angle, alt: Length): Unit
   protected def getTrackPoint (i: Int): TrackPoint
   protected def updateMutTrackPoint (p: MutTrajectoryPoint) (i: Int): TrackPoint
+  protected def updateTDP3 (dp: TDP3) (i: Int): TDP3 = getTDP3(i,dp)
   protected def updateUOMArrayElements (i: Int, destIdx: Int,
                                         t: DateArray, lat: AngleArray, lon: AngleArray, alt: LengthArray): Unit
 
@@ -200,6 +212,10 @@ trait Traj extends Trajectory {
     new CountUpIterator[TrackPoint](0, size)(updateMutTrackPoint(p))
   }
 
+  override def iterator(p: TDP3): Iterator[TDP3] = {
+    new CountUpIterator[TDP3](0, size)(updateTDP3(p))
+  }
+
   override def reverseIterator: Iterator[TrackPoint] = {
     val len = size
     new CountDownIterator[TrackPoint](len-1, len)(getTrackPoint)
@@ -208,6 +224,11 @@ trait Traj extends Trajectory {
   override def reverseIterator(p: MutTrajectoryPoint): Iterator[TrackPoint] = {
     val len = size
     new CountDownIterator[TrackPoint](len-1, len)(updateMutTrackPoint(p))
+  }
+
+  override def reverseIterator(p: TDP3): Iterator[TDP3] = {
+    val len = size
+    new CountDownIterator[TDP3](len-1, len)(updateTDP3(p))
   }
 
   override def copyToArrays(t: DateArray, lat: AngleArray, lon: AngleArray, alt: LengthArray): Unit = {
@@ -230,7 +251,7 @@ trait MutTraj extends MutTrajectory with Traj {
   protected[trajectory] var _size: Int = 0
 
   protected def grow(newCapacity: Int): Unit // storage dependent
-  protected def update(i: Int, millis: Long, lat: Angle, lon: Angle, alt: Length): Unit // storage dependent
+  protected def update(i: Int, date: Date, lat: Angle, lon: Angle, alt: Length): Unit // storage dependent
 
   override def size = _size
   def capacity = _capacity
@@ -245,9 +266,9 @@ trait MutTraj extends MutTrajectory with Traj {
     }
   }
 
-  override def append(millis: Long, lat: Angle, lon: Angle, alt: Length): Unit = {
+  override def append(date: Date, lat: Angle, lon: Angle, alt: Length): Unit = {
     ensureSize(_size + 1)
-    update( _size, millis,lat,lon,alt)
+    update( _size, date,lat,lon,alt)
     _size += 1
   }
 
@@ -290,8 +311,8 @@ trait TraceTraj extends MutTrajectory with Traj with CircularSeq {
     getDateMillis(storeIdx(off))
   }
 
-  override def append (millis: Long, lat: Angle, lon: Angle, alt: Length): Unit = {
-    update( incIndices, millis,lat,lon,alt)
+  override def append(date: Date, lat: Angle, lon: Angle, alt: Length): Unit = {
+    update( incIndices, date,lat,lon,alt)
   }
 
   override def apply (off: Int): TrackPoint = {
@@ -308,9 +329,13 @@ trait TraceTraj extends MutTrajectory with Traj with CircularSeq {
 
   override def iterator(p: MutTrajectoryPoint): Iterator[TrackPoint] = new ForwardIterator(updateMutTrackPoint(p))
 
+  override def iterator(p: TDP3): Iterator[TDP3] = new ForwardIterator(updateTDP3(p))
+
   override def reverseIterator: Iterator[TrackPoint] = new ReverseIterator(getTrackPoint)
 
   override def reverseIterator(p: MutTrajectoryPoint): Iterator[TrackPoint] = new ReverseIterator(updateMutTrackPoint(p))
+
+  override def reverseIterator(p: TDP3): Iterator[TDP3] = new ReverseIterator(updateTDP3(p))
 
   override def copyToArrays(t: DateArray, lat: AngleArray, lon: AngleArray, alt: LengthArray): Unit = {
     var j = 0

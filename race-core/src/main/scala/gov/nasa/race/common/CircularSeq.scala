@@ -126,10 +126,10 @@ trait CircularSeq {
   class ForwardIterator[T] (f: (Int)=>T) extends Iterator[T] {
     var j = tail
 
-    override def hasNext: Boolean = j <= head
+    override def hasNext: Boolean = j >= 0 && j <= head
 
     override def next(): T = {
-      if (j > head) throw new NoSuchElementException("forward iteration past head")
+      if (j < 0 || j > head) throw new NoSuchElementException("forward iteration past head")
       if (j < tail) j = tail // tail has moved
 
       val i = j % capacity
@@ -141,10 +141,10 @@ trait CircularSeq {
   class ReverseIterator[T] (f: (Int)=>T) extends Iterator[T] {
     var j = head
 
-    override def hasNext: Boolean = j >= tail
+    override def hasNext: Boolean = j >= 0 && j >= tail
 
     override def next(): T = {
-      if (j < tail) throw new NoSuchElementException("reverse iteration past tail")
+      if (j < 0 || j < tail) throw new NoSuchElementException("reverse iteration past tail")
       if (j > head) j = head // head has moved
 
       val i = j % capacity

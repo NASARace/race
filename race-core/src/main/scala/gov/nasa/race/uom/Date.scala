@@ -43,6 +43,11 @@ object Date {
     new Date(chrono.getDateTimeMillis(year,month,day,hour,minutes,secs,ms))
   }
 
+  def timeBetween (a: Date, b: Date): Time = {
+    if (a.millis >= b.millis) new Time((a.millis - b.millis).toInt)
+    else new Time((b.millis - a.millis).toInt)
+  }
+
   @inline def Now: Date = new Date(System.currentTimeMillis)
   @inline def EpochMillis (millis: Long) = new Date(millis)
 
@@ -91,7 +96,8 @@ class Date protected[uom](val millis: Long) extends AnyVal {
   def timeOfDay: Time = new Time((millis % Time.MillisInDay).toInt)
 
   // unfortunately we can't overload '-' because of erasure
-  def to (d: Date): Time = new Time((millis - d.millis).toInt)
+  def timeUntil(d: Date): Time = new Time((d.millis - millis).toInt)
+  def timeSince(d: Date): Time = new Time((millis - d.millis).toInt)
 
   def + (t: Time): Date = new Date(millis + t.millis)
   def - (t: Time): Date = new Date(millis - t.millis)
