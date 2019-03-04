@@ -49,7 +49,8 @@ object Images {
       case Color.yellow => "yellow"
       case Color.cyan => "cyan"
       case Color.magenta => "magenta"
-      case _ => "red" // default
+      case Color.orange => "orange"
+      case _ => "yellow" // default
     }
   }
 
