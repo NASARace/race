@@ -23,7 +23,7 @@ import gov.nasa.race.track.TrackPoint
 import gov.nasa.race.uom.Angle._
 import gov.nasa.race.uom.Date._
 import gov.nasa.race.uom.Length._
-import gov.nasa.race.uom.{Angle, AngleArray, Date, DateArray, Length, LengthArray}
+import gov.nasa.race.uom.{Angle, AngleArray, Date, DateArray, Length, LengthArray, Time}
 import org.joda.time.{MutableDateTime, ReadableDateTime, DateTime => JodaDateTime}
 
 /**
@@ -93,6 +93,10 @@ trait Trajectory extends TDataSource[N3,TDP3] {
 
   def isEmpty: Boolean = size == 0
   def nonEmpty: Boolean = size > 0
+
+  def getFirstDate: Date
+  def getLastDate: Date
+  def getDuration: Time = getLastDate.timeSince(getFirstDate)
 
   def newDataPoint: TDP3 = new TDP3(0,0,0,0)  // TDataSource interface
 
@@ -198,6 +202,9 @@ trait Traj extends Trajectory {
   override def getT(i: Int): Long = getDateMillis(i) // TDataSource interface
 
   override def getDataPoint(i: Int, dp: TDP3): TDP3 = getTDP3(i,dp) // TDataSource interface
+
+  override def getFirstDate: Date = Date.EpochMillis(getDateMillis(0))
+  override def getLastDate: Date = Date.EpochMillis(getDateMillis(size-1))
 
   override def apply(i: Int): TrackPoint = {
     if (i < 0 || i >= size) throw new IndexOutOfBoundsException(i)
@@ -346,4 +353,7 @@ trait TraceTraj extends MutTrajectory with Traj with CircularSeq {
       i += 1
     }
   }
+
+  override def getFirstDate: Date = Date.EpochMillis(getDateMillis(storeIdx(0)))
+  override def getLastDate: Date = Date.EpochMillis(getDateMillis(storeIdx(size-1)))
 }

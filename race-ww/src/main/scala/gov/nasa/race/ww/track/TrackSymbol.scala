@@ -28,6 +28,10 @@ import gov.nasa.worldwind.WorldWind
 import gov.nasa.worldwind.avlist.AVKey
 import gov.nasa.worldwind.render.{MultiLabelPointPlacemark, Offset, PointPlacemarkAttributes}
 
+object TrackSymbol{
+  val LabelOffset = Offset.fromFraction(1.0,0.5)
+  val IconOffset = Offset.fromFraction(1.5,0.5)
+}
 
 /**
   * Renderable representing 2D aircraft symbol
@@ -46,6 +50,7 @@ class TrackSymbol[T <: TrackedObject](val trackEntry: TrackEntry[T])
   attrs.setLabelMaterial(trackEntry.labelMaterial)
   attrs.setLabelFont(trackEntry.labelFont)
   attrs.setLineMaterial(trackEntry.labelMaterial)
+
   //attrs.setImageColor(layer.color) // does not seem to work, and if so would probably require monochrome images
   setAttributes(attrs)
 
@@ -93,6 +98,8 @@ class TrackSymbol[T <: TrackedObject](val trackEntry: TrackEntry[T])
     attrs.setScale(5d)
     attrs.setImage(null)
     attrs.setUsePointAsDefaultImage(true)
+
+    attrs.setLabelOffset(TrackSymbol.LabelOffset)
     //setAttributes(attrs)
   }
 
@@ -104,6 +111,8 @@ class TrackSymbol[T <: TrackedObject](val trackEntry: TrackEntry[T])
     attrs.setImageOffset(Offset.CENTER)
     attrs.setHeading(trackEntry.symbolHeading)
     attrs.setHeadingReference(AVKey.RELATIVE_TO_GLOBE)
+
+    attrs.setLabelOffset(TrackSymbol.IconOffset)
 
     // TODO check view pitch and adjust symbol accordingly
     //setAttributes(attrs)

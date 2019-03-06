@@ -24,7 +24,7 @@ import gov.nasa.race.common.Nat.{N1, N2, N3}
   */
 trait TDataSource[N<:Nat,T<:TDataPoint[N]] {
   def size: Int                // number of data points
-  def getT(i: Int): Long    // get time of observation point with logical index i
+  def getT(i: Int): Long       // get time of observation point with logical index i
   def newDataPoint: T          // create a new zero'ed DataPoint object
   def getDataPoint(i: Int, dp: T): T  // set provided DataPoint values to observation i, using provided cache
 }

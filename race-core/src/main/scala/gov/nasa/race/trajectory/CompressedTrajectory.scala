@@ -19,7 +19,7 @@ package gov.nasa.race.trajectory
 import gov.nasa.race.geo.{LatLon, LatLonArray, LatLonPos}
 import gov.nasa.race.track.TrackPoint
 import gov.nasa.race.uom.Length._
-import gov.nasa.race.uom.{Angle, AngleArray, Date, DateArray, DeltaDateArray, DeltaLengthArray, Length, LengthArray}
+import gov.nasa.race.uom.{Angle, AngleArray, Date, DateArray, DeltaDateArray, DeltaLengthArray, Length, LengthArray, Time}
 
 /**
   * common storage abstraction of compressed trajectories that store data in 32bit quantities.

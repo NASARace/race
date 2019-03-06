@@ -22,7 +22,7 @@ import gov.nasa.race.common.{FHTInterpolant, FHTInterpolant3}
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.Messages.BusEvent
 import gov.nasa.race.core.{PublishingRaceActor, SubscribingRaceActor}
-import gov.nasa.race.geo.Datum
+import gov.nasa.race.geo.{Datum, GeoPosition}
 import gov.nasa.race.track.{TrackDropped, TrackedObject, TrackedObjectExtrapolator}
 import gov.nasa.race.trajectory.{TDP3, USTrace}
 import gov.nasa.race.uom.{Angle, Length}
@@ -135,6 +135,7 @@ class ParallelApproachAnalyzer (val config: Config) extends SubscribingRaceActor
         p = it1.next
         val lat1 = p.φ
         val lon1 = p.λ
+        val alt1 = p.altitude
         val hdg1 = Datum.euclideanHeading(lat1,lon1, lastLat1,lastLon1)
         lastLat1 = lat1
         lastLon1 = lon1
@@ -142,6 +143,7 @@ class ParallelApproachAnalyzer (val config: Config) extends SubscribingRaceActor
         p = it2.next
         val lat2 = p.φ
         val lon2 = p.λ
+        val alt2 = p.altitude
         val hdg2 = Datum.euclideanHeading(lat2,lon2, lastLat2,lastLon2)
         lastLat2 = lat2
         lastLon2 = lon2
@@ -151,7 +153,9 @@ class ParallelApproachAnalyzer (val config: Config) extends SubscribingRaceActor
 
         if (deltaHdg > maxConvergeAngle){ // Bingo - got one
           val date = new DateTime(p.millis)
-          publishEvent(c1, c2, date, deltaHdg, dist)
+          val pos1 = GeoPosition(lat1,lon1,alt1)
+          val pos2 = GeoPosition(lat2,lon2,alt2)
+          publishEvent(c1, c2, date, pos1, pos2, deltaHdg, dist)
           //println(f"@@ $t%4d: ${dist.toMeters}%10.0f, ${hdg1.toDegrees}%3.0f, ${hdg2.toDegrees}%3.0f -> delta= ${deltaHdg.toDegrees}%3.0f")
           info(f"max angle-in exceeded: ${c1.track.cs},${c2.track.cs} at $date: Δhdg = ${deltaHdg.toDegrees}%.0f, dist = ${dist.toMeters}%.0fm")
           stop = true
@@ -164,7 +168,7 @@ class ParallelApproachAnalyzer (val config: Config) extends SubscribingRaceActor
     }
   }
 
-  def publishEvent(c1: Candidate, c2: Candidate, date: DateTime, deltaHdg: Angle, dist: Length): Unit = {
+  def publishEvent(c1: Candidate, c2: Candidate, date: DateTime, pos1: GeoPosition, pos2: GeoPosition, deltaHdg: Angle, dist: Length): Unit = {
 
   }
 }

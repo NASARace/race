@@ -16,6 +16,7 @@
  */
 package gov.nasa.race.track
 
+import gov.nasa.race.geo.GeoPosition
 import gov.nasa.race.trajectory.{Trajectory => Traj}
 
 /**
@@ -24,8 +25,10 @@ import gov.nasa.race.trajectory.{Trajectory => Traj}
 case class TrajectoryPairEvent (id: String,                 // of event, not tracks
                                 eventType: String,          // description (short)
                                 track1: TrackedObject,      // first involved track
+                                pos1: GeoPosition,
                                 trajectory1: Traj,
                                 track2: TrackedObject,      // second involved track
+                                pos2: GeoPosition,
                                 trajectory2: Traj,
                                 eventDetails: Option[Any] = None
                                )
