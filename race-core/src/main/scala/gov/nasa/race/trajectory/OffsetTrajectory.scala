@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, United States Government, as represented by the
+ * Copyright (c) 2019, United States Government, as represented by the
  * Administrator of the National Aeronautics and Space Administration.
  * All rights reserved.
  *
@@ -16,11 +16,12 @@
  */
 package gov.nasa.race.trajectory
 
+import gov.nasa.race._
 import gov.nasa.race.geo.LatLonPos
 import gov.nasa.race.track.TrackPoint
 import gov.nasa.race.uom.Angle._
 import gov.nasa.race.uom.Length._
-import gov.nasa.race.uom.{Angle, AngleArray, Date, DateArray, DeltaAngleArray, DeltaDateArray, DeltaLengthArray, Length, LengthArray}
+import gov.nasa.race.uom.{Angle, AngleArray, Date, DateArray, DeltaAngleArray, DeltaDateArray, DeltaLengthArray, Length, LengthArray, Time}
 
 
 object OffsetTrajectory {
@@ -37,7 +38,7 @@ object OffsetTrajectory {
   *
   * all index values are direct array indices
   */
-trait OffsetTraj extends Traj {
+trait OffsetTraj extends ArrayTraj[OffsetTraj] {
 
   val offset: LatLonPos
 
@@ -90,6 +91,25 @@ trait OffsetTraj extends Traj {
     lon(destIdx) = lons(i)
     alt(destIdx) = alts(i)
   }
+
+  override def emptyMutable (initCapacity: Int): MutTrajectory = new MutOffsetTrajectory(initCapacity,offset)
+}
+
+
+/**
+  * invariant representation of offset based trajectory
+  */
+class OffsetTrajectory (val capacity: Int, val offset: LatLonPos) extends Traj with OffsetTraj {
+  override def size = capacity
+
+  override def snapshot: Trajectory = this
+
+  override def traceSnapshot (dur: Time): Trajectory = snap(getDurationStartIndex(dur), size-1, new OffsetTrajectory(_,offset))
+
+  override def branch: MutTrajectory = yieldInitialized(new MutOffsetTrajectory(capacity*2, offset)) { o=>
+    o._size = capacity
+    o.copyArraysFrom(this, 0, 0, capacity)
+  }
 }
 
 /**
@@ -99,39 +119,19 @@ class MutOffsetTrajectory (initCapacity: Int, val offset: LatLonPos)
                                    extends MutTraj with OffsetTraj {
   protected var _capacity = initCapacity
 
-  override def clone: MutOffsetTrajectory = {
-    val o = new MutOffsetTrajectory(capacity,offset)
+  override def clone: MutOffsetTrajectory = yieldInitialized(new MutOffsetTrajectory(capacity,offset)) { o=>
     o._size = _size
     o.copyArraysFrom(this, 0, 0, _size)
-    o
   }
 
-  override def snapshot: Trajectory = {
-    val o = new OffsetTrajectory(_size,offset)
-    o.copyArraysFrom(this, 0, 0, _size)
-    o
-  }
+  override def snapshot: Trajectory = snap(0,_size-1, new OffsetTrajectory(_,offset))
+
+  override def traceSnapshot (dur: Time): Trajectory = snap(getDurationStartIndex(dur), _size-1, new OffsetTrajectory(_,offset))
 
   override def branch: MutTrajectory = clone
 }
 
 class MutUSTrajectory (capacity: Int) extends MutOffsetTrajectory(capacity,OffsetTrajectory.USOffset)
-
-/**
-  * invariant representation of offset based trajectory
-  */
-class OffsetTrajectory (val capacity: Int, val offset: LatLonPos) extends Traj with OffsetTraj {
-  override def size = capacity
-
-  override def snapshot: Trajectory = this // no need to create a new one, we are invariant
-
-  override def branch: MutTrajectory = {
-    val o = new MutOffsetTrajectory(capacity*2, offset) // no point branching if we don't append subsequently
-    o._size = capacity
-    o.copyArraysFrom(this, 0, 0, capacity)
-    o
-  }
-}
 
 class USTrajectory (capacity: Int) extends OffsetTrajectory(capacity,OffsetTrajectory.USOffset)
 
@@ -139,28 +139,18 @@ class USTrajectory (capacity: Int) extends OffsetTrajectory(capacity,OffsetTraje
 /**
   * a mutable offset trajectory that stores N last track points in a circular buffers
   */
-class OffsetTrace(val capacity: Int, val offset: LatLonPos) extends TraceTraj with OffsetTraj {
+class OffsetTrace(val capacity: Int, val offset: LatLonPos) extends OffsetTraj with TraceArrayTraj[OffsetTraj] {
 
   protected val cleanUp = None // no need to clean up dropped track points since we don't store objects
 
-  override def clone: OffsetTrace = {
-    val o = new OffsetTrace(capacity,offset)
-    o.copyArraysFrom(this, 0, 0, capacity)
+  override def clone: OffsetTrace = yieldInitialized(new OffsetTrace(capacity,offset)) { o=>
     o.setIndices(head,tail)
-    o
+    o.copyArraysFrom(this, 0, 0, capacity)
   }
 
-  override def snapshot: Trajectory = {
-    val o = new OffsetTrajectory(_size,offset)
+  override def snapshot: Trajectory = snap(tail,head, new OffsetTrajectory(_,offset))
 
-    if (head >= tail) {
-      o.copyArraysFrom(this,tail,0,_size)
-    } else {
-      o.copyArraysFrom(this,tail ,0, capacity - tail)
-      o.copyArraysFrom(this,0, capacity - tail, head+1)
-    }
-    o
-  }
+  override def traceSnapshot (dur: Time): Trajectory = snap(getDurationStartIndex(dur), head, new OffsetTrajectory(_,offset))
 
   override def branch: MutTrajectory = clone
 }

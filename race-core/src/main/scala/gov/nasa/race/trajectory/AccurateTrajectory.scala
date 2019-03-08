@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, United States Government, as represented by the
+ * Copyright (c) 2019, United States Government, as represented by the
  * Administrator of the National Aeronautics and Space Administration.
  * All rights reserved.
  *
@@ -16,14 +16,15 @@
  */
 package gov.nasa.race.trajectory
 
+import gov.nasa.race._
 import gov.nasa.race.geo.LatLonPos
 import gov.nasa.race.track.TrackPoint
-import gov.nasa.race.uom.{Angle, AngleArray, Date, DateArray, Length, LengthArray}
+import gov.nasa.race.uom.{Angle, AngleArray, Date, DateArray, Length, LengthArray, Time}
 
 /**
   * trajectory storage that does not try to save memory and stores data in full 64 bit quantities
   */
-trait AccurateTraj extends Traj {
+trait AccurateTraj extends ArrayTraj[AccurateTraj] {
 
   protected[trajectory] var ts: DateArray = new DateArray(capacity)
   protected[trajectory] var lats: AngleArray = new AngleArray(capacity)
@@ -73,6 +74,8 @@ trait AccurateTraj extends Traj {
     lon(destIdx) = lons(i)
     alt(destIdx) = alts(i)
   }
+
+  override def emptyMutable (initCapacity: Int): MutTrajectory = new MutAccurateTrajectory(initCapacity)
 }
 
 /**
@@ -83,11 +86,11 @@ class AccurateTrajectory (val capacity: Int) extends Traj with AccurateTraj {
 
   override def snapshot: Trajectory = this
 
-  override def branch: MutTrajectory = {
-    val o = new MutAccurateTrajectory(capacity)
-    o.copyArraysFrom(this, 0, 0, size)
+  override def traceSnapshot (dur: Time): Trajectory = snap(getDurationStartIndex(dur), size-1, new AccurateTrajectory(_))
+
+  override def branch: MutTrajectory = yieldInitialized(new MutAccurateTrajectory(capacity)) { o=>
     o._size = capacity
-    o
+    o.copyArraysFrom(this, 0, 0, size)
   }
 }
 
@@ -97,14 +100,14 @@ class AccurateTrajectory (val capacity: Int) extends Traj with AccurateTraj {
 class MutAccurateTrajectory (initCapacity: Int) extends MutTraj with AccurateTraj {
   protected var _capacity = initCapacity
 
-  override def clone: MutAccurateTrajectory = {
-    val o = new MutAccurateTrajectory(_capacity)
+  override def clone: MutAccurateTrajectory = yieldInitialized(new MutAccurateTrajectory(_capacity)) { o =>
     o._size = _size
     o.copyArraysFrom(this,0,0,_size)
-    o
   }
 
-  override def snapshot: Trajectory = this
+  override def snapshot: Trajectory = snap(0,_size-1, new AccurateTrajectory(_))
+
+  override def traceSnapshot (dur: Time): Trajectory = snap(getDurationStartIndex(dur), _size-1, new AccurateTrajectory(_))
 
   override def branch: MutTrajectory = clone
 }
@@ -112,27 +115,18 @@ class MutAccurateTrajectory (initCapacity: Int) extends MutTraj with AccurateTra
 /**
   * accurate trace trajectory that stores N last track points
   */
-class AccurateTrace(val capacity: Int) extends TraceTraj with AccurateTraj {
+class AccurateTrace(val capacity: Int) extends AccurateTraj with TraceArrayTraj[AccurateTraj] {
   protected val cleanUp = None // no need to clean up dropped track points since we don't store objects
 
-  override def clone: AccurateTrace = {
-    val o = new AccurateTrace(capacity)
+  override def clone: AccurateTrace = yieldInitialized(new AccurateTrace(capacity)) { o=>
     o._size = _size
-    o.copyArraysFrom(this,0,0,_size)
     o.setIndices(head,tail)
-    o
+    o.copyArraysFrom(this,0,0,_size)
   }
 
-  override def snapshot: Trajectory = {
-    val o = new AccurateTrajectory(_size)
-    if (head >= tail) {
-      o.copyArraysFrom(this,tail,0,_size)
-    } else {
-      o.copyArraysFrom(this,tail ,0, capacity - tail)
-      o.copyArraysFrom(this,0, capacity - tail, head+1)
-    }
-    o
-  }
+  override def snapshot: Trajectory = snap(tail,head, new AccurateTrajectory(_))
+
+  override def traceSnapshot (dur: Time): Trajectory = snap(getDurationStartIndex(dur), head, new AccurateTrajectory(_))
 
   override def branch: MutTrajectory = clone
 }

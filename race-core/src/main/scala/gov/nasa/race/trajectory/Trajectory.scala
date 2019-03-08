@@ -17,7 +17,7 @@
 package gov.nasa.race.trajectory
 
 import gov.nasa.race.common.Nat.N3
-import gov.nasa.race.common.{CircularSeq, CountDownIterator, CountUpIterator, TDataPoint3, TDataSource}
+import gov.nasa.race.common.{CircularSeq, CountDownIterator, CountUpIterator, TDataPoint3, TDataSource, TInterpolant}
 import gov.nasa.race.geo.{GeoPosition, LatLonPos, MutLatLonPos}
 import gov.nasa.race.track.TrackPoint
 import gov.nasa.race.uom.Angle._
@@ -63,6 +63,8 @@ class MutTrajectoryPoint (val date: MutableDateTime, val position: MutLatLonPos)
   */
 class TDP3 (_millis: Long, _lat: Double, _lon: Double, _alt: Double)
                                             extends TDataPoint3(_millis,_lat,_lon,_alt) with GeoPosition {
+  def epochMillis: Date = EpochMillis(_millis)
+
   override def φ: Angle = Degrees(_0)
   def φ_= (lat: Angle): Unit = _0 = lat.toDegrees
 
@@ -71,7 +73,6 @@ class TDP3 (_millis: Long, _lat: Double, _lon: Double, _alt: Double)
 
   override def altitude: Length = Meters(_2)
   def altitude_= (alt: Length): Unit = _2 = alt.toMeters
-
 
   def toTrajectoryPoint = new TrajectoryPoint(new JodaDateTime(millis), LatLonPos(Degrees(_0),Degrees(_1),Meters(_2)))
 
@@ -148,9 +149,27 @@ trait Trajectory extends TDataSource[N3,TDP3] {
   def snapshot: Trajectory
 
   /**
+    * returns an immutable trajectory that covers all most recent datapoints within specified duration
+    */
+  def traceSnapshot (dur: Time): Trajectory
+
+  /**
+    * create a interpolated trajectory for the given date interval and delta
+    * note that callers are responsible for reasonable start and end dates, to make sure
+    * errors are acceptable if outside the datapoint interval
+    */
+  def interpolate (start: Date, end: Date, dt: Time)
+                  (createInterpolant: (Trajectory)=>TInterpolant[N3,TDP3]): Trajectory
+
+  /**
     * returns a new MutableTrajectory object holding the current state
     */
   def branch: MutTrajectory
+
+  /**
+    * returns a empty mutable trajectory based on concrete type
+    */
+  def emptyMutable (initCapacity: Int): MutTrajectory
 }
 
 
@@ -173,8 +192,15 @@ trait MutTrajectory extends Trajectory {
   def append (date: ReadableDateTime, pos: GeoPosition): Unit = {
     append(Date(date), pos.φ, pos.λ, pos.altitude)
   }
+  def append (p: TDP3): Unit = {
+    append(p.epochMillis,p.φ, p.λ, p.altitude)
+  }
+
   def += (p: TrackPoint): Unit = append(p)
-  def ++= (ps: Seq[TrackPoint]): Unit = ps.foreach(append)
+  def += (p: TDP3): Unit = append(p)
+
+  def ++= (ps: TraversableOnce[TrackPoint]): Unit = ps.foreach(append)
+  def ++= (ps: Iterator[TDP3]): Unit = ps.foreach(append)
 
   def clear: Unit
   def drop (n: Int)
@@ -207,7 +233,7 @@ trait Traj extends Trajectory {
   override def getLastDate: Date = Date.EpochMillis(getDateMillis(size-1))
 
   override def apply(i: Int): TrackPoint = {
-    if (i < 0 || i >= size) throw new IndexOutOfBoundsException(i)
+    if (i < 0 || i >= size) throw new IndexOutOfBoundsException(s"track point index out of range: $i")
     getTrackPoint(i)
   }
 
@@ -247,6 +273,35 @@ trait Traj extends Trajectory {
       i += 1
       j += 1
     }
+  }
+
+  def getDurationStartIndex(dur: Time): Int = {
+    val dFirst = getFirstDate
+    val dLast = getLastDate
+
+    if (nonEmpty){
+      if (dLast.timeSince(dFirst) <= dur) {
+        0
+      } else {
+        var i = size - 2
+        while (i >= 0) {
+          val d = Date.EpochMillis(getDateMillis(i))
+          if (dLast.timeSince(d) <= dur) {
+            i -= 1
+          }
+        }
+        i + 1
+      }
+    } else -1
+  }
+
+  // this is the generic implementation
+  def interpolate (start: Date, end: Date, dt: Time)
+                  (createInterpolant: (Trajectory)=>TInterpolant[N3,TDP3]): Trajectory = {
+    val traj = emptyMutable( (end.timeSince(start) / dt).round.toInt )
+    val intr = createInterpolant(this)
+    traj ++= intr.iterator(start.toMillis, end.toMillis, dt.toMillis)
+    traj
   }
 }
 
@@ -314,8 +369,8 @@ trait MutTraj extends MutTrajectory with Traj {
 trait TraceTraj extends MutTrajectory with Traj with CircularSeq {
 
   override def getT(off: Int): Long = {
-    if (off >= _size || off < 0) throw new IndexOutOfBoundsException(off)
-    getDateMillis(storeIdx(off))
+    if (off >= _size || off < 0) throw new IndexOutOfBoundsException(s"time value index out of range: $off")
+    getDateMillis(circularOffsetIdx(off))
   }
 
   override def append(date: Date, lat: Angle, lon: Angle, alt: Length): Unit = {
@@ -323,13 +378,13 @@ trait TraceTraj extends MutTrajectory with Traj with CircularSeq {
   }
 
   override def apply (off: Int): TrackPoint = {
-    if (off >= _size || off < 0) throw new IndexOutOfBoundsException(off)
-    getTrackPoint(storeIdx(off))
+    if (off >= _size || off < 0) throw new IndexOutOfBoundsException(s"datapoint index out of range: $off")
+    getTrackPoint(circularOffsetIdx(off))
   }
 
   override def getDataPoint (off: Int, p: TDP3): TDP3 = {
-    if (off >= _size || off < 0) throw new IndexOutOfBoundsException(off)
-    getTDP3(storeIdx(off),p)
+    if (off >= _size || off < 0) throw new IndexOutOfBoundsException(s"datapoint index out of range: $off")
+    getTDP3(circularOffsetIdx(off),p)
   }
 
   override def iterator: Iterator[TrackPoint] = new ForwardIterator(getTrackPoint)
@@ -354,6 +409,64 @@ trait TraceTraj extends MutTrajectory with Traj with CircularSeq {
     }
   }
 
-  override def getFirstDate: Date = Date.EpochMillis(getDateMillis(storeIdx(0)))
-  override def getLastDate: Date = Date.EpochMillis(getDateMillis(storeIdx(size-1)))
+  override def getFirstDate: Date = {
+    if (tail >= 0) Date.EpochMillis(getDateMillis(circularIdx(tail))) else Date.UndefinedDate
+  }
+  override def getLastDate: Date = {
+    if (head >= 0) Date.EpochMillis(getDateMillis(circularIdx(head))) else Date.UndefinedDate
+  }
+
+  /**
+    * note - this returns a logical index (0..head), not a physical (0..capacity) one
+    */
+  override def getDurationStartIndex(dur: Time): Int = {
+    val dFirst = getFirstDate
+    val dLast = getLastDate
+
+    if (nonEmpty){
+      if (dLast.timeSince(dFirst) <= dur) {
+        tail
+      } else {
+        var i = head - 1
+        while (i >= tail) {
+          val d = Date.EpochMillis(getDateMillis(circularIdx(i)))
+          if (dLast.timeSince(d) > dur) return i + 1
+          i -= 1
+        }
+        throw new RuntimeException("inconsistent trajectory data")
+      }
+    } else -1
+  }
+}
+
+trait ArrayTraj[T] extends Traj {
+  this: T =>
+
+  protected[trajectory] def copyArraysFrom (other: T, srcIdx: Int, dstIdx: Int, len: Int): Unit
+
+  protected def snap (iStart: Int, iEnd: Int, create: (Int)=>ArrayTraj[T]): Trajectory = {
+    val len = iEnd - iStart + 1
+    val o = create(len)
+    o.copyArraysFrom(this, iStart, 0, len)
+    o
+  }
+}
+
+trait TraceArrayTraj[T] extends TraceTraj with ArrayTraj[T] {
+  this: T => // apparently self types are not inherited
+
+  override protected def snap (iStart: Int, iEnd: Int, create: (Int)=>ArrayTraj[T]): Trajectory = {
+    val hIdx = circularIdx(iEnd)
+    val tIdx = circularIdx(iStart)
+    val len = iEnd - iStart + 1
+    val o = create(len)
+    if (hIdx >= tIdx) {
+      o.copyArraysFrom(this,tIdx,0,len)
+    } else {
+      val n = capacity - tIdx
+      o.copyArraysFrom(this,tIdx ,0, n)
+      o.copyArraysFrom(this,0, n, hIdx+1)
+    }
+    o
+  }
 }

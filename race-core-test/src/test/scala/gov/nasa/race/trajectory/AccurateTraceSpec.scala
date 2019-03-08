@@ -20,6 +20,7 @@ import gov.nasa.race.test.RaceSpec
 import gov.nasa.race.uom.Angle.Degrees
 import gov.nasa.race.uom.Date.EpochMillis
 import gov.nasa.race.uom.Length.Meters
+import gov.nasa.race.uom.Time._
 import org.scalatest.FlatSpec
 
 /**
@@ -112,5 +113,54 @@ class AccurateTraceSpec extends FlatSpec with RaceSpec {
       p._2 shouldBe (data(j)._4)
       i -= 1
     }
+  }
+
+  "a partial AccurateTrace snapshot" should "be immutable and cover the requested duration" in {
+    val data = Array(
+      (0, 10.0, 20.0, 100.0),
+      (1, 10.1, 20.1, 100.1),
+      (2, 10.2, 20.2, 100.2),
+      (3, 10.3, 20.3, 100.3),
+      (4, 10.4, 20.4, 100.4),
+      (5, 10.5, 20.5, 100.5)
+    )
+
+    val cap = 5
+    println(s"--- AccurateTrace($cap) traceSnapshot(Milliseconds(3)):")
+
+    var i = 0
+    println(s"data:")
+    val traj = new AccurateTrace(cap)
+    for (d <- data) {
+      println(s"$i: $d")
+      traj.append(EpochMillis(d._1), Degrees(d._2), Degrees(d._3), Meters(d._4))
+      i += 1
+    }
+
+    println(s"source trace ($cap):")
+    i = 0
+    traj.foreach(traj.newDataPoint) { p=>
+      println(f"$i: ${p.millis} = (${p._0}%10.5f, ${p._1}%10.5f, ${p._2}%5.0f)")
+      i += 1
+    }
+
+    val dur = Milliseconds(3)
+    val snap = traj.traceSnapshot(dur)
+    i = 0
+    var j = data.length - snap.size
+    println(s"snapshot($dur) is a ${snap.getClass}: ")
+    snap.foreach(traj.newDataPoint) { p=>
+      println(f"$i: ${p.millis} = (${p._0}%10.5f, ${p._1}%10.5f, ${p._2}%5.0f)")
+
+      assert(p.millis == data(j)._1)
+      p._0 shouldBe (data(j)._2)
+      p._1 shouldBe (data(j)._3)
+      p._2 shouldBe (data(j)._4)
+
+      j += 1
+      i += 1
+    }
+    println(s"snapshot duration = ${snap.getDuration}")
+    assert(snap.getDuration <= dur)
   }
 }

@@ -84,6 +84,7 @@ class Time protected[uom] (val millis: Int) extends AnyVal {
   // we don't try to be symmetric with Date - it seems non-intuitive to add a Date to a Time
   def + (t: Time): Time = new Time(millis + t.millis)
   def - (t: Time): Time = new Time(millis - t.millis)
+  def / (t: Time): Double = millis.toDouble / t.millis
 
   //-- undefined value handling (value based alternative for finite cases that would otherwise require Option)
   @inline def isUndefined: Boolean = millis == UNDEFINED_TIME

@@ -379,7 +379,7 @@ package object race {
     t
   }
 
-  def getHomogenous[T,R](items:Array[T], f: (T)=>R, comp: (R,R)=>Boolean): Option[R] = {
+  def getHomogeneous[T,R](items:Array[T], f: (T)=>R, comp: (R,R)=>Boolean): Option[R] = {
     if (items.isEmpty) return None
 
     val z = f(items.head)

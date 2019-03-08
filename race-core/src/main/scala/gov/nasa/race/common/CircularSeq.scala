@@ -37,11 +37,13 @@ trait CircularSeq {
   def size: Int = _size
 
   // startOffset == 0 is the first stored value
-  @inline final protected def storeIdx(startOffset: Int): Int = (tail + startOffset) % capacity
+  @inline final protected def circularOffsetIdx(offset: Int): Int = (tail + offset) % capacity
+
+  @inline final protected def circularIdx(i: Int): Int = i % capacity
 
   protected def setIndices (newHead: Int, newTail: Int): Unit = {
-    if (newHead >= capacity) throw new IndexOutOfBoundsException(newHead)
-    if (newTail >= capacity) throw new IndexOutOfBoundsException(newTail)
+    if (newHead >= capacity) throw new IndexOutOfBoundsException(s"$newHead")
+    if (newTail >= capacity) throw new IndexOutOfBoundsException(s"$newTail")
 
     head = newHead
     tail = newTail

@@ -75,11 +75,11 @@ object CLContext {
   */
 class CLContext (val id: Long, val devices: Array[CLDevice]) extends CLResource {
 
-  val platform = getHomogenous[CLDevice,CLPlatform](devices, _.platform, _.id == _.id).getOrElse {
+  val platform = getHomogeneous[CLDevice,CLPlatform](devices, _.platform, _.id == _.id).getOrElse {
     throw new RuntimeException(s"heterogenous platform devices not supported for CLContext")
   }
 
-  val byteOrder = getHomogenous[CLDevice,ByteOrder](devices, _.byteOrder, _ eq _).getOrElse {
+  val byteOrder = getHomogeneous[CLDevice,ByteOrder](devices, _.byteOrder, _ eq _).getOrElse {
     throw new RuntimeException(s"heterogenous byte order not supported for CLContext")
   }
 
