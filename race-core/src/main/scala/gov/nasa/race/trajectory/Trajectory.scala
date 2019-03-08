@@ -80,6 +80,8 @@ class TDP3 (_millis: Long, _lat: Double, _lon: Double, _alt: Double)
   def updateTrajectoryPoint (p: MutTrajectoryPoint): Unit = {
     p.update(EpochMillis(millis), Degrees(_0), Degrees(_1), Meters(_2))
   }
+
+  def toTDPString: String = super[TDataPoint3].toString
 }
 
 /**

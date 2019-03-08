@@ -17,17 +17,20 @@
 package gov.nasa.race.air.actor
 
 import com.typesafe.config.Config
+import gov.nasa.race.common._
 import gov.nasa.race.common.Nat.N3
-import gov.nasa.race.common.{FHTInterpolant, FHTInterpolant3}
+import gov.nasa.race.common.{FHTInterpolant, FHTInterpolant3, TInterpolant}
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.Messages.BusEvent
 import gov.nasa.race.core.{PublishingRaceActor, SubscribingRaceActor}
 import gov.nasa.race.geo.{Datum, GeoPosition}
 import gov.nasa.race.track.{TrackDropped, TrackedObject, TrackedObjectExtrapolator}
 import gov.nasa.race.trajectory.{TDP3, USTrace}
-import gov.nasa.race.uom.{Angle, Length}
+import gov.nasa.race.uom.{Angle, Length, Date, Time}
 import gov.nasa.race.uom.Length._
 import gov.nasa.race.uom.Angle._
+import gov.nasa.race.uom.Date._
+import gov.nasa.race.uom.Time._
 import org.joda.time.DateTime
 
 import scala.concurrent.duration._
@@ -155,7 +158,7 @@ class ParallelApproachAnalyzer (val config: Config) extends SubscribingRaceActor
           val date = new DateTime(p.millis)
           val pos1 = GeoPosition(lat1,lon1,alt1)
           val pos2 = GeoPosition(lat2,lon2,alt2)
-          publishEvent(c1, c2, date, pos1, pos2, deltaHdg, dist)
+          publishEvent(c1, tr1, c2, tr2, date, pos1, pos2, deltaHdg, dist)
           //println(f"@@ $t%4d: ${dist.toMeters}%10.0f, ${hdg1.toDegrees}%3.0f, ${hdg2.toDegrees}%3.0f -> delta= ${deltaHdg.toDegrees}%3.0f")
           info(f"max angle-in exceeded: ${c1.track.cs},${c2.track.cs} at $date: Δhdg = ${deltaHdg.toDegrees}%.0f, dist = ${dist.toMeters}%.0fm")
           stop = true
@@ -168,7 +171,30 @@ class ParallelApproachAnalyzer (val config: Config) extends SubscribingRaceActor
     }
   }
 
-  def publishEvent(c1: Candidate, c2: Candidate, date: DateTime, pos1: GeoPosition, pos2: GeoPosition, deltaHdg: Angle, dist: Length): Unit = {
+  def publishEvent(c1: Candidate, tr1: TInterpolant[N3,TDP3], c2: Candidate, tr2: TInterpolant[N3,TDP3],
+                   date: DateTime, pos1: GeoPosition, pos2: GeoPosition, deltaHdg: Angle, dist: Length): Unit = {
 
+    val dur = Milliseconds( minl( Seconds(60).millis, c1.trajectory.getDuration.millis, c2.trajectory.getDuration.millis).toInt )
+
+    val dEnd = c2.trajectory.getLastDate
+    val dStart = dEnd - dur
+    val interval = Seconds(1)
+    val n = (dur / interval).toInt + 1
+
+    val t1 = c1.trajectory.emptyMutable(n)
+    t1 ++= tr1.iterator(dStart.toMillis, dEnd.toMillis, interval.toMillis)
+
+    val t2 = c2.trajectory.emptyMutable(n)
+    t2 ++= tr2.iterator(dStart.toMillis, dEnd.toMillis, interval.toMillis)
+
+    val it1 = t1.iterator(new TDP3(0,0,0,0))
+    val it2 = t2.iterator(new TDP3(0,0,0,0))
+    while (it1.hasNext && it2.hasNext){
+      val p1 = it1.next
+      val p2 = it2.next
+      println(p1.toTDPString)
+      println(p2.toTDPString)
+      println
+    }
   }
 }
