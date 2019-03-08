@@ -44,6 +44,23 @@ trait TDataPoint[N<:Nat] {
   def := (v: TDataPoint[N]): Unit
   def += (v: TDataPoint[N]): Unit
   def -= (v: TDataPoint[N]): Unit
+
+  // generic string conversion
+  override def toString: String = {
+    val s = new StringBuffer
+    s.append("TDataPoint")
+    s.append('[')
+    s.append(length)
+    s.append("](")
+    s.append(millis)
+    val n = length
+    for (i <- 0 to n) {
+      s.append(',')
+      s.append(apply(i))
+    }
+    s.append(')')
+    s.toString
+  }
 }
 
 //--- specialized types for a number of Nats

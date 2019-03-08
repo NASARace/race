@@ -97,8 +97,7 @@ class AccurateTrajectory (val capacity: Int) extends Traj with AccurateTraj {
 /**
   * mutable (growable) accurate trajectory
   */
-class MutAccurateTrajectory (initCapacity: Int) extends MutTraj with AccurateTraj {
-  protected var _capacity = initCapacity
+class MutAccurateTrajectory (protected var _capacity: Int) extends MutTraj with AccurateTraj {
 
   override def clone: MutAccurateTrajectory = yieldInitialized(new MutAccurateTrajectory(_capacity)) { o =>
     o._size = _size

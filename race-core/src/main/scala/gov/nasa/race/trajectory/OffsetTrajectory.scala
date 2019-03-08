@@ -115,9 +115,8 @@ class OffsetTrajectory (val capacity: Int, val offset: LatLonPos) extends Traj w
 /**
   * a growable offset trajectory
   */
-class MutOffsetTrajectory (initCapacity: Int, val offset: LatLonPos)
+class MutOffsetTrajectory (protected var _capacity: Int, val offset: LatLonPos)
                                    extends MutTraj with OffsetTraj {
-  protected var _capacity = initCapacity
 
   override def clone: MutOffsetTrajectory = yieldInitialized(new MutOffsetTrajectory(capacity,offset)) { o=>
     o._size = _size

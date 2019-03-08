@@ -16,8 +16,9 @@
  */
 package gov.nasa.race.trajectory
 
+import gov.nasa.race.common
 import gov.nasa.race.common.Nat.N3
-import gov.nasa.race.common.{CircularSeq, CountDownIterator, CountUpIterator, TDataPoint3, TDataSource, TInterpolant}
+import gov.nasa.race.common.{CircularSeq, CountDownIterator, CountUpIterator, TDataPoint, TDataPoint3, TDataSource, TInterpolant}
 import gov.nasa.race.geo.{GeoPosition, LatLonPos, MutLatLonPos}
 import gov.nasa.race.track.TrackPoint
 import gov.nasa.race.uom.Angle._
@@ -63,7 +64,7 @@ class MutTrajectoryPoint (val date: MutableDateTime, val position: MutLatLonPos)
   */
 class TDP3 (_millis: Long, _lat: Double, _lon: Double, _alt: Double)
                                             extends TDataPoint3(_millis,_lat,_lon,_alt) with GeoPosition {
-  def epochMillis: Date = EpochMillis(_millis)
+  def epochMillis: Date = EpochMillis(millis)
 
   override def φ: Angle = Degrees(_0)
   def φ_= (lat: Angle): Unit = _0 = lat.toDegrees
@@ -298,7 +299,7 @@ trait Traj extends Trajectory {
   // this is the generic implementation
   def interpolate (start: Date, end: Date, dt: Time)
                   (createInterpolant: (Trajectory)=>TInterpolant[N3,TDP3]): Trajectory = {
-    val traj = emptyMutable( (end.timeSince(start) / dt).round.toInt )
+    val traj = emptyMutable( (end.timeSince(start) / dt).round.toInt + 1)
     val intr = createInterpolant(this)
     traj ++= intr.iterator(start.toMillis, end.toMillis, dt.toMillis)
     traj

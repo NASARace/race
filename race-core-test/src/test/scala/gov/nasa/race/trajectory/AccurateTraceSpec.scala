@@ -16,6 +16,8 @@
  */
 package gov.nasa.race.trajectory
 
+import gov.nasa.race.common.FHTInterpolant
+import gov.nasa.race.common.Nat.N3
 import gov.nasa.race.test.RaceSpec
 import gov.nasa.race.uom.Angle.Degrees
 import gov.nasa.race.uom.Date.EpochMillis
@@ -162,5 +164,58 @@ class AccurateTraceSpec extends FlatSpec with RaceSpec {
     }
     println(s"snapshot duration = ${snap.getDuration}")
     assert(snap.getDuration <= dur)
+  }
+
+  "a interpolated trace" should "match linear data model" in {
+    val data = Array(
+      (0, 10.0, 20.0, 100.0),
+      (1, 10.1, 20.1, 100.1),
+      //(2, 10.2, 20.2, 100.2),
+      //(3, 10.3, 20.3, 100.3),
+      (4, 10.4, 20.4, 100.4),
+      (5, 10.5, 20.5, 100.5),
+      //(6, 10.6, 20.6, 100.6),
+      (7, 10.7, 20.7, 100.7),
+      //(8, 10.8, 20.8, 100.8),
+      (9, 10.9, 20.9, 100.9)
+    )
+
+    val cap = 5
+    println(s"--- interpolated trace($cap)")
+
+    var i = 0
+    println(s"data:")
+    val traj = new AccurateTrace(cap)
+    for (d <- data) {
+      println(s"$i: $d")
+      traj.append(EpochMillis(d._1), Degrees(d._2), Degrees(d._3), Meters(d._4))
+      i += 1
+    }
+
+    println(s"source trace ($cap):")
+    i = 0
+    traj.foreach(traj.newDataPoint) { p=>
+      println(f"$i: ${p.millis} = (${p._0}%10.5f, ${p._1}%10.5f, ${p._2}%5.1f)")
+      i += 1
+    }
+
+    val dStart = EpochMillis(3)
+    val dEnd = EpochMillis(8)
+    val interval = Milliseconds(1)
+    println(s"interpolated trajectory (start=${dStart.toMillis},end=${dEnd.toMillis},interval=${interval.toMillis}) :")
+
+    val trajInt = traj.interpolate(dStart,dEnd,interval)(new FHTInterpolant[N3,TDP3](_))
+
+    i = 0
+    trajInt.foreach(traj.newDataPoint) { p=>
+      println(f"$i: ${p.millis} = (${p._0}%10.5f, ${p._1}%10.5f, ${p._2}%5.1f)")
+
+      assert( p.millis == dStart.millis + i)
+      p._0  shouldBe( (10.0 + p.millis/10.0) +- 0.00001)
+      p._1  shouldBe( (20.0 + p.millis/10.0) +- 0.00001)
+      p._2  shouldBe( (100.0 + p.millis/10.0) +- 0.00001)
+
+      i += 1
+    }
   }
 }
