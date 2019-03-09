@@ -54,7 +54,7 @@ trait TDataPoint[N<:Nat] {
     s.append("](")
     s.append(millis)
     val n = length
-    for (i <- 0 to n) {
+    for (i <- 0 until n) {
       s.append(',')
       s.append(apply(i))
     }
@@ -206,7 +206,7 @@ object TDataPoint2 {
 class TDataPoint3 (var millis: Long, var _0: Double, var _1: Double, var _2: Double) extends TDataPoint[N3] {
   type Self = TDataPoint3
 
-  def length = 2
+  def length = 3
   def apply (i: Int): Double = {
     i match {
       case 0 => _0

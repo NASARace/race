@@ -57,6 +57,20 @@ object Time {
 
   final val Time0 = new Time(0)
   final val UndefinedTime = new Time(UNDEFINED_TIME)
+
+  @inline def min (a: Time, b: Time): Time = if (a.millis <= b.millis) a else b
+  @inline def min (a: Time, b: Time, c: Time): Time = if (a.millis <= b.millis) {
+    if (a.millis <= c.millis) a else c
+  } else {
+    if (b.millis <= c.millis) b else c
+  }
+
+  @inline def max (a: Time, b: Time): Time = if (a.millis >= b.millis) a else b
+  @inline def max (a: Time, b: Time, c: Time): Time = if (a.millis >= b.millis) {
+    if (a.millis >= c.millis) a else c
+  } else {
+    if (b.millis >= c.millis) b else c
+  }
 }
 import Time._
 

@@ -174,27 +174,24 @@ class ParallelApproachAnalyzer (val config: Config) extends SubscribingRaceActor
   def publishEvent(c1: Candidate, tr1: TInterpolant[N3,TDP3], c2: Candidate, tr2: TInterpolant[N3,TDP3],
                    date: DateTime, pos1: GeoPosition, pos2: GeoPosition, deltaHdg: Angle, dist: Length): Unit = {
 
-    val dur = Milliseconds( minl( Seconds(60).millis, c1.trajectory.getDuration.millis, c2.trajectory.getDuration.millis).toInt )
+    val dur = Time.min( Seconds(60), c1.trajectory.getDuration, c2.trajectory.getDuration)
+    println(s"@@@ trajectory duration: $dur")
 
     val dEnd = c2.trajectory.getLastDate
     val dStart = dEnd - dur
     val interval = Seconds(1)
     val n = (dur / interval).toInt + 1
+    //println(s"@@@ end time: ${dEnd.millis} -> $n")
 
-    val t1 = c1.trajectory.emptyMutable(n)
-    t1 ++= tr1.iterator(dStart.toMillis, dEnd.toMillis, interval.toMillis)
-
+    //val it2 = tr2.iterator(dStart.toMillis, dEnd.toMillis, interval.toMillis)
     val t2 = c2.trajectory.emptyMutable(n)
     t2 ++= tr2.iterator(dStart.toMillis, dEnd.toMillis, interval.toMillis)
 
-    val it1 = t1.iterator(new TDP3(0,0,0,0))
     val it2 = t2.iterator(new TDP3(0,0,0,0))
-    while (it1.hasNext && it2.hasNext){
-      val p1 = it1.next
+    while (it2.hasNext){
       val p2 = it2.next
-      println(p1.toTDPString)
       println(p2.toTDPString)
-      println
     }
+
   }
 }

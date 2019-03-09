@@ -111,8 +111,8 @@ abstract class TInterpolant[N<:Nat,T<:TDataPoint[N]](val src: TDataSource[N,T]) 
                                            (exact: (Long,Int)=>T)
                                            (approx: (Long,Long,Long,Int)=>T) extends Iterator[T] {
     var iPrev = findLeftIndex(tStart)
-    var tPrev = if (iPrev < 0) Int.MinValue else src.getT(iPrev)
-    var tNext = if (iPrev == n1) Int.MaxValue else src.getT(iPrev+1)
+    var tPrev = if (iPrev < 0) Long.MinValue else src.getT(iPrev)
+    var tNext = if (iPrev == n1) Long.MaxValue else src.getT(iPrev+1)
     var t = tStart
 
     override def hasNext: Boolean = t <= tEnd
@@ -120,10 +120,10 @@ abstract class TInterpolant[N<:Nat,T<:TDataPoint[N]](val src: TDataSource[N,T]) 
     override def next(): T = {
       if (t > tEnd) throw new NoSuchElementException(s"t = $t outside range [$tStart..$tEnd]")
 
-      while (t >= tNext && iPrev <= n1) {
+      while (t >= tNext && iPrev <= n1) {  // ??? >=
         iPrev += 1
         tPrev = tNext
-        tNext = if (iPrev >= n1) Int.MaxValue else src.getT(iPrev+1)
+        tNext = if (iPrev >= n1) Long.MaxValue else src.getT(iPrev+1)  // ??? >=
       }
 
       val tt = t
@@ -141,8 +141,8 @@ abstract class TInterpolant[N<:Nat,T<:TDataPoint[N]](val src: TDataSource[N,T]) 
                                            (exact: (Long,Int)=>T)
                                            (approx: (Long,Long,Long,Int)=>T) extends Iterator[T] {
     var iPrev = findLeftIndex(tEnd)
-    var tPrev = if (iPrev < 0) Int.MinValue else src.getT(iPrev)
-    var tNext = if (iPrev == n1) Int.MaxValue else src.getT(iPrev + 1)
+    var tPrev = if (iPrev < 0) Long.MinValue else src.getT(iPrev)
+    var tNext = if (iPrev == n1) Long.MaxValue else src.getT(iPrev + 1)
     var t = tEnd
 
     override def hasNext: Boolean = t >= tStart
@@ -153,7 +153,7 @@ abstract class TInterpolant[N<:Nat,T<:TDataPoint[N]](val src: TDataSource[N,T]) 
       while (t < tPrev && iPrev >= 0) {
         iPrev -= 1
         tNext = tPrev
-        tPrev = if (iPrev < 0) Int.MinValue else src.getT(iPrev)
+        tPrev = if (iPrev < 0) Long.MinValue else src.getT(iPrev)
       }
 
       val tt = t
