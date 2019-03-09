@@ -120,10 +120,10 @@ abstract class TInterpolant[N<:Nat,T<:TDataPoint[N]](val src: TDataSource[N,T]) 
     override def next(): T = {
       if (t > tEnd) throw new NoSuchElementException(s"t = $t outside range [$tStart..$tEnd]")
 
-      while (t >= tNext && iPrev <= n1) {  // ??? >=
+      while (t >= tNext && iPrev <= n1) {
         iPrev += 1
         tPrev = tNext
-        tNext = if (iPrev >= n1) Long.MaxValue else src.getT(iPrev+1)  // ??? >=
+        tNext = if (iPrev >= n1) Long.MaxValue else src.getT(iPrev+1)
       }
 
       val tt = t

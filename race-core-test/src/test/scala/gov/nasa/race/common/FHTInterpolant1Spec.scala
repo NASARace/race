@@ -49,4 +49,51 @@ class FHTInterpolant1Spec extends FlatSpec with RaceSpec with TInterpolant1Test 
     println("--- reverse interval of sin(x)")
     testReverseRange(  Array(0, 20, 40, 60, 80, 100, 120, 140, 160, 180),  40,20,2)(func)(gen)
   }
+
+  def checkLinearIteration (it: Iterator[TDataPoint1]): Unit = {
+    while (it.hasNext){
+      val p = it.next
+      println(p)
+      p._0 shouldBe( p.millis * 10.0 +- 0.0000001)
+    }
+  }
+
+  "a FHTInterpolant1 forward iterator" should "cover the correct end interval" in {
+    println("--- forward iteration over end interval [5..8] of linear data model")
+
+    val intr = new FHTInterpolant1(
+      Array(0,  4,  6,  8),
+      Array(0, 40, 60, 80)
+    )
+    checkLinearIteration(intr.iterator(5,8,1))
+  }
+
+  "a FHTInterpolant1 forward iterator" should "cover the correct start interval" in {
+    println("--- forward iteration over start interval [0..5] of linear data model")
+
+    val intr = new FHTInterpolant1(
+      Array(0,  4,  6,  8),
+      Array(0, 40, 60, 80)
+    )
+    checkLinearIteration(intr.iterator(0,5,1))
+  }
+
+  "a FHTInterpolant1 reverse iterator" should "cover the correct start interval" in {
+    println("--- reverse iteration over start interval [0..5] of linear data model")
+
+    val intr = new FHTInterpolant1(
+      Array(0,  4,  6,  8),
+      Array(0, 40, 60, 80)
+    )
+    checkLinearIteration(intr.reverseIterator(5,0,1))
+  }
+  "a FHTInterpolant1 reverse iterator" should "cover the correct end interval" in {
+    println("--- reverse iteration over end interval [5..8] of linear data model")
+
+    val intr = new FHTInterpolant1(
+      Array(0,  4,  6,  8),
+      Array(0, 40, 60, 80)
+    )
+    checkLinearIteration(intr.reverseIterator(8,5,1))
+  }
 }
