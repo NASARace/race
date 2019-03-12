@@ -17,24 +17,22 @@
 package gov.nasa.race.air.actor
 
 import com.typesafe.config.Config
-import gov.nasa.race.common._
 import gov.nasa.race.common.Nat.N3
-import gov.nasa.race.common.{FHTInterpolant, FHTInterpolant3, TInterpolant}
+import gov.nasa.race.common.{FHTInterpolant, TInterpolant}
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.Messages.BusEvent
 import gov.nasa.race.core.{PublishingRaceActor, SubscribingRaceActor}
 import gov.nasa.race.geo.{Datum, GeoPosition}
-import gov.nasa.race.track.{TrackDropped, TrackedObject, TrackedObjectExtrapolator}
-import gov.nasa.race.trajectory.{TDP3, USTrace}
-import gov.nasa.race.uom.{Angle, Length, Date, Time}
-import gov.nasa.race.uom.Length._
+import gov.nasa.race.track.{TrackDropped, TrackedObject, TrackedObjectExtrapolator, TrajectoryPairEvent}
+import gov.nasa.race.trajectory.{TDP3, Trajectory, USTrace}
 import gov.nasa.race.uom.Angle._
-import gov.nasa.race.uom.Date._
+import gov.nasa.race.uom.Length._
 import gov.nasa.race.uom.Time._
+import gov.nasa.race.uom.{Angle, Date, Length, Time}
 import org.joda.time.DateTime
 
-import scala.concurrent.duration._
 import scala.collection.mutable.{HashMap => MHashMap, Set => MSet}
+import scala.concurrent.duration._
 
 
 
@@ -56,6 +54,8 @@ class ParallelApproachAnalyzer (val config: Config) extends SubscribingRaceActor
   val maxConvergeDuration = config.getFiniteDurationOrElse("max-conv-duration", 120.seconds).toMillis
   val convergeInterval = config.getFiniteDurationOrElse("conv-interval", 1.second).toMillis.toInt
 
+  val eventIdPrefix = config.getStringOrElse("event-id", name)
+  var nEvents: Int = 0 // reported events
 
   class Candidate {
     var track: TrackedObject = _
@@ -171,27 +171,34 @@ class ParallelApproachAnalyzer (val config: Config) extends SubscribingRaceActor
     }
   }
 
+  def reportTrajectory (c: Candidate, tr: TInterpolant[N3,TDP3], dStart: Date, dEnd: Date, interval: Time, n: Int): Trajectory = {
+    val reportTrajectory = c.trajectory.emptyMutable(n)
+    reportTrajectory ++= tr.iterator(dStart.toMillis, dEnd.toMillis, interval.toMillis)
+    reportTrajectory
+  }
+
   def publishEvent(c1: Candidate, tr1: TInterpolant[N3,TDP3], c2: Candidate, tr2: TInterpolant[N3,TDP3],
                    date: DateTime, pos1: GeoPosition, pos2: GeoPosition, deltaHdg: Angle, dist: Length): Unit = {
 
     val dur = Time.min( Seconds(60), c1.trajectory.getDuration, c2.trajectory.getDuration)
-    println(s"@@@ trajectory duration: $dur")
 
     val dEnd = c2.trajectory.getLastDate
     val dStart = dEnd - dur
     val interval = Seconds(1)
     val n = (dur / interval).toInt + 1
-    //println(s"@@@ end time: ${dEnd.millis} -> $n")
 
-    //val it2 = tr2.iterator(dStart.toMillis, dEnd.toMillis, interval.toMillis)
-    val t2 = c2.trajectory.emptyMutable(n)
-    t2 ++= tr2.iterator(dStart.toMillis, dEnd.toMillis, interval.toMillis)
+    val t1 = reportTrajectory(c1, tr1, dStart, dEnd, interval, n)
+    val t2 = reportTrajectory(c2, tr2, dStart, dEnd, interval, n)
 
-    val it2 = t2.iterator(new TDP3(0,0,0,0))
-    while (it2.hasNext){
-      val p2 = it2.next
-      println(p2.toTDPString)
-    }
+    nEvents += 1
+    val ev = TrajectoryPairEvent(
+      s"$eventIdPrefix-$nEvents",
+      "angle-in",
+      c1.track, pos1, t1,
+      c2.track, pos2, t2,
+      Some(s"angle $deltaHdg at distance $dist")
+    )
 
+    publish(ev)
   }
 }
