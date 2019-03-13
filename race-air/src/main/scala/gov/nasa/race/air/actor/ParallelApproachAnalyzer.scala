@@ -158,7 +158,9 @@ class ParallelApproachAnalyzer (val config: Config) extends SubscribingRaceActor
           val date = new DateTime(p.millis)
           val pos1 = GeoPosition(lat1,lon1,alt1)
           val pos2 = GeoPosition(lat2,lon2,alt2)
-          publishEvent(c1, tr1, c2, tr2, date, pos1, pos2, deltaHdg, dist)
+          val pos = pos1 // position of event - TODO should be mid-point
+
+          publishEvent(date, pos, deltaHdg, dist, c1, tr1, pos1, c2, tr2, pos2)
           //println(f"@@ $t%4d: ${dist.toMeters}%10.0f, ${hdg1.toDegrees}%3.0f, ${hdg2.toDegrees}%3.0f -> delta= ${deltaHdg.toDegrees}%3.0f")
           info(f"max angle-in exceeded: ${c1.track.cs},${c2.track.cs} at $date: Δhdg = ${deltaHdg.toDegrees}%.0f, dist = ${dist.toMeters}%.0fm")
           stop = true
@@ -177,8 +179,9 @@ class ParallelApproachAnalyzer (val config: Config) extends SubscribingRaceActor
     reportTrajectory
   }
 
-  def publishEvent(c1: Candidate, tr1: TInterpolant[N3,TDP3], c2: Candidate, tr2: TInterpolant[N3,TDP3],
-                   date: DateTime, pos1: GeoPosition, pos2: GeoPosition, deltaHdg: Angle, dist: Length): Unit = {
+  def publishEvent(date: DateTime, pos: GeoPosition, deltaHdg: Angle, dist: Length,
+                   c1: Candidate, tr1: TInterpolant[N3,TDP3], pos1: GeoPosition,
+                   c2: Candidate, tr2: TInterpolant[N3,TDP3], pos2: GeoPosition): Unit = {
 
     val dur = Time.min( Seconds(60), c1.trajectory.getDuration, c2.trajectory.getDuration)
 
@@ -193,6 +196,7 @@ class ParallelApproachAnalyzer (val config: Config) extends SubscribingRaceActor
     nEvents += 1
     val ev = TrajectoryPairEvent(
       s"$eventIdPrefix-$nEvents",
+      date, pos,
       "angle-in",
       c1.track, pos1, t1,
       c2.track, pos2, t2,

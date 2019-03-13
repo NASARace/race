@@ -372,7 +372,7 @@ trait TrackLayer[T <:TrackedObject] extends SubscribingRaceLayer
     }
   }
 
-  override def handleMessage = {
+  override def handleMessage: PartialFunction[Any, Unit] = {
     case BusEvent(_,fInfo:TrackInfo,_) => entryPanel.setTrackInfo(fInfo)
     case BusEvent(_,csChange:TrackCsChanged,_) => // todo
     case DelayedAction(_,action) => action()

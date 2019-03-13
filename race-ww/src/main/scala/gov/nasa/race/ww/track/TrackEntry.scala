@@ -35,7 +35,8 @@ import gov.nasa.worldwind.render.{Material, Offset, PointPlacemark, PointPlacema
   * This aggregates all Renderables that can be associated with a given TrackObject based on viewer
   * state (eye position and selected options)
   */
-class TrackEntry[T <: TrackedObject](var obj: T, var trajectory: MutTrajectory, val layer: TrackLayer[T]) extends LayerObject {
+class TrackEntry[T <: TrackedObject](var obj: T, var trajectory: MutTrajectory, val layer: TrackLayer[T])
+                      extends LayerObject with LayerSymbolOwner {
 
   //--- the renderables that can be associated with this entry
   protected var symbol: Option[TrackSymbol[T]] = Some(createSymbol)
@@ -55,19 +56,23 @@ class TrackEntry[T <: TrackedObject](var obj: T, var trajectory: MutTrajectory, 
   override def pos = obj
 
   //--- per-layer rendering resources
-  def labelMaterial: Material = layer.labelMaterial
-  def lineMaterial: Material = layer.lineMaterial
-  def symbolImg: BufferedImage = layer.symbolImg
-  def symbolImgScale: Double = 1.0
-  def symbolHeading: Double = obj.heading.toDegrees
-  def markImg: BufferedImage = layer.markImg
-  def labelFont: Font = layer.labelFont
-  def subLabelFont: Font = layer.subLabelFont
+  override def labelMaterial: Material = layer.labelMaterial
+  override def lineMaterial: Material = layer.lineMaterial
+  override def symbolImg: BufferedImage = layer.symbolImg
+  override def symbolImgScale: Double = 1.0
+  override def symbolHeading: Double = obj.heading.toDegrees
+  override def labelFont: Font = layer.labelFont
+  override def subLabelFont: Font = layer.subLabelFont
+
+  override def labelOffset: Offset = TrackSymbol.LabelOffset
+  override def iconOffset: Offset = TrackSymbol.IconOffset
+  override def wwPosition: WWPosition = ww.wwPosition(obj.position)
+  override def displayName: String = infoText
 
   //--- label and info text creation
-  def labelText: String = if (obj.cs != obj.id) obj.cs else obj.id
-  def numberOfSublabels: Int = 0
-  def subLabelText(i: Int): String = null  // override in concrete types if there are sublabels
+  override def labelText: String = if (obj.cs != obj.id) obj.cs else obj.id
+
+  def markImg: BufferedImage = layer.markImg
 
   def infoText: String = {
     s"${obj.cs}\n${hhmmss.print(obj.date)}\n${obj.position.altitude.toFeet.toInt} ft\n${obj.heading.toDegrees.toInt}°\n${obj.speed.toKnots.toInt} kn"
