@@ -23,12 +23,13 @@ import com.typesafe.config.Config
 import gov.nasa.race._
 import gov.nasa.race.common.{ThresholdLevel, ThresholdLevelList}
 import gov.nasa.race.core.Messages.BusEvent
-import gov.nasa.race.geo.GeoPositioned
+import gov.nasa.race.geo.{GeoPosition, GeoPositioned}
 import gov.nasa.race.track.TrajectoryPairEvent
+import gov.nasa.race.trajectory.Trajectory
 import gov.nasa.race.util.DateTimeUtils.hhmmss
 import gov.nasa.race.ww
 import gov.nasa.race.ww.{AltitudeSensitiveRaceLayer, ConfigurableRenderingLayer, DynamicLayerInfoPanel, Images, LayerObject, LayerSymbol, LayerSymbolOwner, RaceLayer, RaceViewer, SubscribingRaceLayer, WWPosition}
-import gov.nasa.worldwind.render.{Material, Offset, Path}
+import gov.nasa.worldwind.render._
 
 import scala.collection.mutable.{Map => MutableMap}
 
@@ -38,17 +39,88 @@ import scala.collection.mutable.{Map => MutableMap}
 class TrajectoryPairEventEntry (val event: TrajectoryPairEvent, val layer: TrajectoryPairEventLayer)
                 extends LayerObject with LayerSymbolOwner {
 
-  //--- the renderables that can be associated with this entry
-  protected var symbol: Option[LayerSymbol] = None
-  protected var path1: Option[Path] = None
-  protected var path2: Option[Path] = None
+  protected var isVisible = true
+  protected var symbolShowing = false
+  protected var pathsShowing = false  // only set if isVisible, depending on view level
 
-  def hasSymbol = symbol.isDefined
-  def hasPaths: Boolean = path1.isDefined || path2.isDefined
+  val dotAttrs = yieldInitialized(new PointPlacemarkAttributes) { attrs=>
+    attrs.setLabelMaterial(labelMaterial)
+    attrs.setLineMaterial(labelMaterial)
+    attrs.setScale(7d)
+    attrs.setImage(null)
+    attrs.setUsePointAsDefaultImage(true)
+  }
 
-  def setDotLevel: Unit = ifSome(symbol) { _.setDotAttrs }
-  def setLabelLevel: Unit = ifSome(symbol) { _.setLabelAttrs }
-  def setIconLevel: Unit = ifSome(symbol) { _.setIconAttrs }
+  //--- the renderables that are associated with this entry
+  protected var symbol: LayerSymbol = createSymbol
+  protected var dot1:   PointPlacemark = createDot(event.pos1)
+  protected var path1:  Path = createPath(event.trajectory1)
+  protected var dot2:   PointPlacemark = createDot(event.pos2)
+  protected var path2:  Path = createPath(event.trajectory2)
+
+  addSymbol
+
+  //--- override in subclasses for specific rendering
+  def createSymbol: LayerSymbol = new LayerSymbol(this)
+
+  def createDot (pos: GeoPosition): PointPlacemark = yieldInitialized(new PointPlacemark(ww.wwPosition(pos))){ dot=>
+    dot.setLabelText(null)
+    dot.setAttributes(dotAttrs)
+  }
+
+  def createPath (traj: Trajectory): TrajectoryPath = new TrajectoryPath(traj,lineMaterial)
+
+  def addSymbol = {
+    if (!symbolShowing) {
+      layer.addRenderable(symbol)
+      symbolShowing = true
+    }
+  }
+
+  def removeSymbol = {
+    if (symbolShowing) {
+      layer.removeRenderable(symbol)
+      symbolShowing = false
+    }
+  }
+
+  def addPaths = {
+    if (!pathsShowing) {
+      layer.addRenderable(dot1)
+      layer.addRenderable(path1)
+      layer.addRenderable(dot2)
+      layer.addRenderable(path2)
+      pathsShowing = true
+    }
+  }
+
+  def removePaths = {
+    if (pathsShowing) {
+      layer.removeRenderable(dot1)
+      layer.removeRenderable(path1)
+      layer.removeRenderable(dot2)
+      layer.removeRenderable(path2)
+      pathsShowing = false
+    }
+  }
+
+
+  //--- called by rendering levels (e.g. when changing eye altitude)
+
+  def setDotLevel: Unit = { // only event dot
+    symbol.setDotAttrs
+    removePaths
+  }
+  def setLabelLevel: Unit = { // only event label
+    symbol.setLabelAttrs
+    removePaths
+  }
+  def setIconLevel: Unit = { // icon, label and paths
+    symbol.setIconAttrs
+    if (isVisible) {
+      addPaths
+    }
+  }
 
   override def id: String = event.id
   override def pos: GeoPositioned = event
@@ -72,8 +144,16 @@ class TrajectoryPairEventEntry (val event: TrajectoryPairEvent, val layer: Traje
   //--- label and info text creation
   override def labelText: String = event.id
 
-  def updateRenderables: Unit = {
-    ifSome(symbol) { _.update }
+  def show (showIt: Boolean): Unit = {
+    if (showIt) {
+      if (!isVisible) {
+        addSymbol
+      }
+    } else {
+      removePaths
+      removeSymbol
+    }
+    isVisible = showIt
   }
 }
 
@@ -113,8 +193,8 @@ class TrajectoryPairEventLayer (val raceViewer: RaceViewer, val config: Config)
       case None =>
         val entry = new TrajectoryPairEventEntry(event, this)
         events += event.id -> entry
-        symbolLevels.triggerInCurrentLevel(entry)
-        entry.updateRenderables
+        entry.show(true)
+        symbolLevels.triggerInCurrentLevel(entry) // this sets rendering attributes
     }
 
     wwdRedrawManager.redraw

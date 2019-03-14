@@ -22,7 +22,7 @@ import gov.nasa.race.common.{FHTInterpolant, TInterpolant}
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.Messages.BusEvent
 import gov.nasa.race.core.{PublishingRaceActor, SubscribingRaceActor}
-import gov.nasa.race.geo.{Datum, GeoPosition}
+import gov.nasa.race.geo.{Datum, GeoPosition, GreatCircle}
 import gov.nasa.race.track.{TrackDropped, TrackedObject, TrackedObjectExtrapolator, TrajectoryPairEvent}
 import gov.nasa.race.trajectory.{TDP3, Trajectory, USTrace}
 import gov.nasa.race.uom.Angle._
@@ -54,7 +54,7 @@ class ParallelApproachAnalyzer (val config: Config) extends SubscribingRaceActor
   val maxConvergeDuration = config.getFiniteDurationOrElse("max-conv-duration", 120.seconds).toMillis
   val convergeInterval = config.getFiniteDurationOrElse("conv-interval", 1.second).toMillis.toInt
 
-  val eventIdPrefix = config.getStringOrElse("event-id", name)
+  val eventIdPrefix = config.getStringOrElse("event-id", "angle")
   var nEvents: Int = 0 // reported events
 
   class Candidate {
@@ -158,7 +158,7 @@ class ParallelApproachAnalyzer (val config: Config) extends SubscribingRaceActor
           val date = new DateTime(p.millis)
           val pos1 = GeoPosition(lat1,lon1,alt1)
           val pos2 = GeoPosition(lat2,lon2,alt2)
-          val pos = pos1 // position of event - TODO should be mid-point
+          val pos = GreatCircle.euclidianMidpoint(pos1,pos2)
 
           publishEvent(date, pos, deltaHdg, dist, c1, tr1, pos1, c2, tr2, pos2)
           //println(f"@@ $t%4d: ${dist.toMeters}%10.0f, ${hdg1.toDegrees}%3.0f, ${hdg2.toDegrees}%3.0f -> delta= ${deltaHdg.toDegrees}%3.0f")

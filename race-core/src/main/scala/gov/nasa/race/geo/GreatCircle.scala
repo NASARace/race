@@ -91,6 +91,19 @@ object GreatCircle {
     distance2D(startPos.φ, startPos.λ, endPos.φ, endPos.λ)
   }
 
+  def midPoint (pos1: GeoPosition, pos2: GeoPosition): GeoPosition = {
+    val dist2 = distance(pos1,pos2) / 2.0
+    val bearing = initialBearing(pos1,pos2)
+    val alt = (pos1.altitude + pos2.altitude) / 2.0
+    endPos(pos1,dist2,bearing,alt)
+  }
+
+  def euclidianMidpoint (pos1: GeoPosition, pos2: GeoPosition): GeoPosition = {
+    val lat = (pos1.φ + pos2.φ) / 2.0
+    val lon = (pos1.λ + pos2.λ) / 2.0
+    val alt = (pos1.altitude + pos2.altitude) / 2.0
+    GeoPosition(lat,lon,alt)
+  }
 
   /**
     * approximation for small distances, which is about 2-3 times faster than full haversine with errors ~1%

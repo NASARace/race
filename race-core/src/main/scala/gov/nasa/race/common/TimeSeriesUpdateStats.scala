@@ -20,7 +20,7 @@ package gov.nasa.race.common
   * mixin type for generic time series data
   * this one only keeps track of update time / intervals
   */
-trait BasicTimeSeries {
+trait TimeSeriesUpdateStats {
   var tLast: Long = 0
   var sampleCount = 0
 
