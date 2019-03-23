@@ -17,23 +17,27 @@
 package gov.nasa.race.track
 
 import gov.nasa.race.geo.{GeoPosition, GeoPositioned}
-import gov.nasa.race.trajectory.{Trajectory => Traj}
+import gov.nasa.race.trajectory.Trajectory
 import org.joda.time.DateTime
 
 /**
   * an event that involves a pair of trajectories
   * note that this is also a generic TrackPoint
+  *
+  * TODO - unify this with ProximityEvent
   */
-case class TrajectoryPairEvent (id: String,                 // of event, not tracks
+case class TrajectoryPairEvent (id: String, // of event, not tracks
                                 date: DateTime,
                                 position: GeoPosition,
-                                //---------------------------- specifics
-                                eventType: String,          // description (short)
-                                track1: TrackedObject,      // first involved track
-                                pos1: GeoPosition,
-                                trajectory1: Traj,
-                                track2: TrackedObject,      // second involved track
-                                pos2: GeoPosition,
-                                trajectory2: Traj,
-                                eventDetails: Option[Any] = None
-                               ) extends TrackPoint with GeoPositioned
+                                eventType: String,
+                                eventDetails: String,
+
+                                //--- specifics
+                                track1: TrackedObject, // first involved track
+                                pos1: GeoPosition, // at time of event
+                                trajectory1: Trajectory,
+
+                                track2: TrackedObject, // second involved track
+                                pos2: GeoPosition, // at time of event
+                                trajectory2: Trajectory
+                               ) extends TrackEvent with TrackPoint with GeoPositioned

@@ -29,11 +29,15 @@ import gov.nasa.race.trajectory.MutTrajectory
 import gov.nasa.race.uom.Length
 import gov.nasa.race.uom.Length.{Feet, Meters, UsMiles, meters2Feet}
 import gov.nasa.race.ww.Implicits._
-import gov.nasa.race.ww.track.{TrackEntry, TrackLayer, TrackLayerInfoPanel}
+import gov.nasa.race.ww.track._
 import gov.nasa.race.ww.{Images, RaceViewer, ViewListener, _}
 
-
-// NOTE - 'obj' is a var and might change (don't mask in ctor args)
+/**
+  * we need a specialized TrackEntry since the object type (aircraft/vehicle) is not
+  * known a priori (we usually get that from a update message later-on)
+  *
+  * NOTE - 'obj' is a var and might change (don't mask in ctor args)
+  */
 class AsdexTrackEntry (o: AsdexTrack, trajectory: MutTrajectory, layer: AsdexTracksLayer)
                                             extends TrackEntry[AsdexTrack](o,trajectory,layer) {
   var wasAircraft = o.guessAircraft // we remember if it was an aircraft
@@ -53,13 +57,19 @@ class AsdexTrackEntry (o: AsdexTrack, trajectory: MutTrajectory, layer: AsdexTra
   }
 }
 
-class AsdexTracksLayer (val raceViewer: RaceViewer, val config: Config)
-                           extends TrackLayer[AsdexTrack] with AirLocator with ViewListener {
 
-  override protected def createLayerInfoPanel = new TrackLayerInfoPanel[AsdexTrack](raceViewer,this) {
-    contents += new StaticSelectionPanel[Airport,IdAndNamePanel[Airport]]("select airport",Airport.NoAirport +: Airport.airportList, 40,
-      new IdAndNamePanel[Airport]( _.id, _.city), selectAirport).styled()
-  }.styled('consolePanel)
+class AsdexTracksLayer (val raceViewer: RaceViewer, val config: Config)
+                           extends TrackLayer[AsdexTrack]
+                             with AirLocator with ViewListener {
+
+  val selPanel = new StaticSelectionPanel[Airport,IdAndNamePanel[Airport]](
+    "select airport",
+    Airport.NoAirport +: Airport.airportList, 40,
+    new IdAndNamePanel[Airport]( _.id, _.city),
+    selectAirport
+  ).styled()
+
+  panel.contents += selPanel
 
   override def createTrackEntry(track: AsdexTrack)= new AsdexTrackEntry(track,createTrajectory(track),this)
 

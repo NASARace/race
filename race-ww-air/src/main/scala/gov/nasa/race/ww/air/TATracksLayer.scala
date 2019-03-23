@@ -96,6 +96,10 @@ class TATracksLayer (val raceViewer: RaceViewer, val config: Config) extends Mod
 
   showTraconSymbols
 
+  val selPanel = new StaticSelectionPanel[Tracon,IdAndNamePanel[Tracon]]("select TRACON",
+    Tracon.NoTracon +: Tracon.traconList, 40, new IdAndNamePanel[Tracon]( _.id, _.name), selectTracon).styled()
+  panel.contents.insert(1, selPanel)
+
   def configuredTracon: Option[Tracon] = {
     val topics = config.getOptionalStringList("request-topics")
     if (topics.nonEmpty) Tracon.tracons.get(topics.head) else None
@@ -115,15 +119,6 @@ class TATracksLayer (val raceViewer: RaceViewer, val config: Config) extends Mod
       Some(new PolarGrid(Tracon.NoTracon.position, Angle.Angle0, gridRingDist, gridRings,
         this, gridLineColor, gridLineAlpha, gridFillColor, gridFillAlpha))
     } else None
-  }
-
-  override def createLayerInfoPanel = {
-    new TrackLayerInfoPanel(raceViewer,this){
-      // insert tracon selection panel after generic layer info
-      val choice = new StaticSelectionPanel[Tracon,IdAndNamePanel[Tracon]]("select TRACON",
-        Tracon.NoTracon +: Tracon.traconList, 40, new IdAndNamePanel[Tracon]( _.id, _.name), selectTracon).styled()
-      contents.insert(1, choice)
-    }.styled('consolePanel)
   }
 
   /**

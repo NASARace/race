@@ -69,10 +69,9 @@ class TrackEntry[T <: TrackedObject](var obj: T, var trajectory: MutTrajectory, 
   override def wwPosition: WWPosition = ww.wwPosition(obj.position)
   override def displayName: String = infoText
 
-  //--- label and info text creation
-  override def labelText: String = if (obj.cs != obj.id) obj.cs else obj.id
-
   def markImg: BufferedImage = layer.markImg
+
+  override def labelText: String = obj.cs
 
   def infoText: String = {
     s"${obj.cs}\n${hhmmss.print(obj.date)}\n${obj.position.altitude.toFeet.toInt} ft\n${obj.heading.toDegrees.toInt}°\n${obj.speed.toKnots.toInt} kn"
@@ -101,8 +100,10 @@ class TrackEntry[T <: TrackedObject](var obj: T, var trajectory: MutTrajectory, 
     balloon
   }
 
+  override def id: String = obj.cs // required for pick support
 
-  override def id = obj.cs // required for pick support
+  def isVisible: Boolean = symbol.isDefined
+  def setVisible (cond: Boolean): Unit = show(cond)
 
   def hasAttrs = isFocused || path.isDefined || info.isDefined || mark.isDefined
   def hasModel = model.isDefined
@@ -187,6 +188,24 @@ class TrackEntry[T <: TrackedObject](var obj: T, var trajectory: MutTrajectory, 
 
     } else if (!showIt && symbol.isDefined) {
       removeRenderables  // no symbol also means no other renderables
+    }
+  }
+
+  override def setAttr(attr: LayerObjectAttr, cond: Boolean): Unit = {
+    attr match {
+      case LayerObject.PathAttr => setPath(cond)
+      case LayerObject.InfoAttr => setInfo(cond)
+      case LayerObject.MarkAttr => setMark(cond)
+      case _ => // ignore
+    }
+  }
+
+  override def isAttrSet(attr: LayerObjectAttr): Boolean = {
+    attr match {
+      case LayerObject.PathAttr => path.isDefined
+      case LayerObject.InfoAttr => info.isDefined
+      case LayerObject.MarkAttr => mark.isDefined
+      case _ => false
     }
   }
 

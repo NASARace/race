@@ -27,41 +27,27 @@ import gov.nasa.race.core.Messages._
 import gov.nasa.race.geo.{GeoPositioned, GreatCircle}
 import gov.nasa.race.swing.Style._
 import gov.nasa.race.track.{TrackTerminationMessage, _}
-import gov.nasa.race.trajectory.{MutCompressedTrajectory, MutTrajectory, MutUSTrajectory}
+import gov.nasa.race.trajectory.{MutCompressedTrajectory, MutTrajectory}
 import gov.nasa.race.util.StringUtils
-import gov.nasa.race.uom.Length._
-import gov.nasa.race.ww.Implicits._
 import gov.nasa.race.ww.EventAction.EventAction
+import gov.nasa.race.ww.Implicits._
 import gov.nasa.race.ww.{AltitudeSensitiveRaceLayer, _}
 import gov.nasa.worldwind.geom.Position
 
 import scala.collection.mutable.{Map => MutableMap}
 import scala.util.matching.Regex
 
-object TrackLayer {
-
-  //--- predefined actions (used for reference conparison - don't use literals instead)
-
-  final val ShowPath = "ShowPath"
-  final val HidePath = "HidePath"
-  final val ShowContour = "ShowContour"
-  final val HideContour = "HideContour"
-  final val ShowInfo = "ShowInfo"
-  final val HideInfo = "HideInfo"
-  final val ShowMark = "ShowMark"
-  final val HideMark = "HideMark"
-
-}
 
 /**
   * abstract layer class to display generic track objects
   *
-  * Since the layer object owns the track collection and hence is responsible for track entry changes, it also has
-  * to update/manage related panels (LayerInfo and TrackEntry)
+  * Since the layer object owns the track collection and hence is responsible for track entry changes,
+  * it also has to update/manage related panels (LayerInfo (with list view), TrackEntry)
   */
 trait TrackLayer[T <:TrackedObject] extends SubscribingRaceLayer
-                             with ConfigurableRenderingLayer with AltitudeSensitiveRaceLayer with TrackQueryContext {
-  import TrackLayer._
+                             with ConfigurableRenderingLayer
+                             with AltitudeSensitiveRaceLayer
+                             with TrackQueryContext {
 
   val panel = createLayerInfoPanel
   val entryPanel = createEntryPanel
@@ -113,18 +99,61 @@ trait TrackLayer[T <:TrackedObject] extends SubscribingRaceLayer
   //--- the data we manage
   val trackEntries = MutableMap[String,TrackEntry[T]]()
 
-  val noDisplayFilter: (TrackEntry[T])=>Boolean = (f) => true
-  var displayFilter: (TrackEntry[T])=>Boolean = noDisplayFilter
-
   override def size = trackEntries.size
+
+  var displayFilter: Option[TrackEntry[T]=>Boolean] = None
 
   //--- end ctor
 
-  // override in subclasses for more specialized types
-  protected def createLayerInfoPanel: TrackLayerInfoPanel[T] = new TrackLayerInfoPanel(raceViewer,this).styled('consolePanel)
+  //--- override in subclasses for more specialized types
+  def maxTrackEntryRows: Int = config.getIntOrElse("max-rows", 10)
+
+  def getAllTrackEntries: Iterable[TrackEntry[T]] = trackEntries.values
+
+  def trackEntryIdHeader: String = "c/s"
+  def trackEntryIdText (e: TrackEntry[T]): String = e.id
+
+  def trackEntryDataHeader: String = "t-pos   [ft]  hdg [kn]"
+  def trackEntryDataText (e: TrackEntry[T]): String = {
+    val obj = e.obj
+    val alt = obj.position.altitude.toFeet.toInt
+    val hdg = obj.heading.toNormalizedDegrees.toInt
+    val spd = obj.speed.toKnots.toInt
+    f" $alt%6d $hdg%3d° $spd%4d"
+  }
+
+  def setDisplayFilter (df: Option[TrackEntry[T]=>Boolean]): Unit = {
+    displayFilter = df
+    df match {
+      case None => trackEntries.foreach ( _._2.setVisible(true))
+      case Some(f) => trackEntries.foreach { p => p._2.setVisible(f(p._2))}
+    }
+    wwdRedrawManager.redraw()
+  }
+
+  protected def createLayerInfoPanel: InteractiveLayerInfoPanel[TrackEntry[T]] = {
+    new InteractiveLayerInfoPanel[TrackEntry[T]](
+      maxTrackEntryRows,
+      new TrackQuery[TrackEntry[T]](this, _.obj),
+      getAllTrackEntries,
+      setDisplayFilter,
+      setTrackEntryPanel,
+      trackEntryIdHeader,
+      trackEntryIdText,
+      trackEntryDataHeader,
+      trackEntryDataText
+    ).styled('consolePanel)
+  }
+
   protected def createEntryPanel: TrackEntryPanel[T] = new TrackEntryPanel(raceViewer,this).styled('consolePanel)
+
   protected def createTrajectory(track: T): MutTrajectory = new MutCompressedTrajectory(50)
+
   protected def createTrackEntry(track: T): TrackEntry[T] = new TrackEntry[T](track,createTrajectory(track), this)
+
+  //--- InteractiveRaceLayer interface
+
+
 
 
   def matchingTracks(f: TrackEntry[T]=>Boolean): Seq[TrackEntry[T]] = {
@@ -154,6 +183,7 @@ trait TrackLayer[T <:TrackedObject] extends SubscribingRaceLayer
   // layer specific positions (cities, airports, ports etc.) - TODO - should default at least to cities and airports here
   def queryLocation (id: String): Option[GeoPositioned]
 
+
   //--- rendering detail level management
 
 
@@ -163,20 +193,9 @@ trait TrackLayer[T <:TrackedObject] extends SubscribingRaceLayer
   def dismissEntryPanel (e: TrackEntry[T]) = {
     if (entryPanel.isShowing(e)) {
       raceViewer.dismissObjectPanel
-      raceViewer.objectChanged(e, DismissPanel)
+      raceViewer.objectChanged(e, LayerObject.DismissPanel)
     }
   }
-
-  def setDisplayFilter(filter: (TrackEntry[T])=>Boolean) = {
-    displayFilter = filter
-    if (filter eq noDisplayFilter) {
-      trackEntries.foreach(_._2.show(true))
-    } else {
-      trackEntries.foreach { e => e._2.show(filter(e._2)) }
-    }
-    redraw
-  }
-
 
   /**
     * the pick handler interface
@@ -195,15 +214,15 @@ trait TrackLayer[T <:TrackedObject] extends SubscribingRaceLayer
   }
 
   def selectTrackEntry(e: TrackEntry[T]) = {
-    panel.trySelectTrackEntry(e)
-    raceViewer.objectChanged(e,Select)
+    panel.trySelectEntry(e)
+    raceViewer.objectChanged(e,LayerObject.Select)
   }
 
   def setTrackEntryPanel(e: TrackEntry[T]) = {
     if (!entryPanel.isShowing(e)) {
       entryPanel.setTrackEntry(e)
       raceViewer.setObjectPanel(entryPanel)
-      raceViewer.objectChanged(e,ShowPanel)
+      raceViewer.objectChanged(e,LayerObject.ShowPanel)
     }
   }
 
@@ -229,6 +248,8 @@ trait TrackLayer[T <:TrackedObject] extends SubscribingRaceLayer
   def updateTrackEntryAttributes(e: TrackEntry[T]): Unit = e.updateRenderables
   def releaseTrackEntryAttributes(e: TrackEntry[T]): Unit = e.removeRenderables
 
+  def checkVisibility (e: TrackEntry[T]): Boolean = displayFilter.isEmpty || displayFilter.get(e)
+
   protected def addTrackEntry(track: T) = {
     val e = createTrackEntry(track)
     symbolLevels.triggerInCurrentLevel(e)
@@ -236,7 +257,7 @@ trait TrackLayer[T <:TrackedObject] extends SubscribingRaceLayer
     trackEntries += (getTrackKey(track) -> e)
     // ?? should we also add the entry under the cross-channel 'cs' key ??
 
-    if (displayFilter(e)) {
+    if (checkVisibility(e)) {
       // ad hoc track display
       if (StringUtils.matchesAny(track.cs, pathTrackFilter)) setPath(e,true)
       if (StringUtils.matchesAny(track.cs, infoTrackFilter)) setInfo(e,true)
@@ -244,6 +265,9 @@ trait TrackLayer[T <:TrackedObject] extends SubscribingRaceLayer
 
       addTrackEntryAttributes(e)
       wwdRedrawManager.redraw()
+
+    } else {
+      e.setVisible(false)
     }
     // we don't add to the panel here since it might have an active query and the new entry might not match
   }
@@ -258,7 +282,7 @@ trait TrackLayer[T <:TrackedObject] extends SubscribingRaceLayer
           GreatCircle.translate(raceViewer.tgtEyePos, lastObj.position,obj.position)
         }
         val dAlt = (obj.position.altitude - lastObj.position.altitude).toMeters
-        raceViewer.jumpToEyePosition(new Position(ep,raceViewer.tgtZoom + dAlt))
+        raceViewer.jumpToEyePosition(Position.fromDegrees(ep.latDeg, ep.lonDeg, raceViewer.tgtZoom + dAlt))
         //raceViewer.panToCenter(wwPosition(ep, Meters(raceViewer.tgtZoom + dAlt)),500) // FIXME
       }
       updateTrackEntryAttributes(e)
@@ -287,23 +311,23 @@ trait TrackLayer[T <:TrackedObject] extends SubscribingRaceLayer
 
   //--- track entry attribute management. Note we have to guard against recursive calls by checking for attr change
 
-  override def changeObject(objectId: String, action: String) = {
+  override def changeObject(objectId: String, action: LayerObjectAction) = {
     ifSome(trackEntries.get(objectId)) { e =>
       action match {
-        case `Select`       => selectTrackEntry(e)
-        case `ShowPanel`    => setTrackEntryPanel(e)
-        case `DismissPanel` => dismissEntryPanel(e)
+        case LayerObject.Select       => selectTrackEntry(e)
+        case LayerObject.ShowPanel    => setTrackEntryPanel(e)
+        case LayerObject.DismissPanel => dismissEntryPanel(e)
+        case LayerObject.StartFocus   => setFocused(e,true)
+        case LayerObject.StopFocus    => setFocused(e,false)
 
-        case `StartFocus`   => setFocused(e,true)
-        case `StopFocus`    => setFocused(e,false)
-        case `ShowPath`     => setPath(e,true)
-        case `HidePath`     => setPath(e,false)
-        case `ShowContour`  => setPathContour(e,true)
-        case `HideContour`  => setPathContour(e,false)
-        case `ShowInfo`     => setInfo(e,true)
-        case `HideInfo`     => setInfo(e,false)
-        case `ShowMark`     => setMark(e,true)
-        case `HideMark`     => setMark(e,false)
+        case LayerObject.ShowPath     => setPath(e,true)
+        case LayerObject.HidePath     => setPath(e,false)
+        case LayerObject.ShowContour  => setPathContour(e,true)
+        case LayerObject.HideContour  => setPathContour(e,false)
+        case LayerObject.ShowInfo     => setInfo(e,true)
+        case LayerObject.HideInfo     => setInfo(e,false)
+        case LayerObject.ShowMark     => setMark(e,true)
+        case LayerObject.HideMark     => setMark(e,false)
         case _ => // ignore
       }
     }
@@ -316,9 +340,9 @@ trait TrackLayer[T <:TrackedObject] extends SubscribingRaceLayer
       if (cond) {
         val loPos = lo.pos.position
         raceViewer.centerTo(Position.fromDegrees(loPos.latDeg, loPos.lonDeg, raceViewer.tgtZoom))  // FIXME
-        raceViewer.objectChanged(lo,StartFocus)
+        raceViewer.objectChanged(lo,LayerObject.StartFocus)
       } else {
-        raceViewer.objectChanged(lo,StopFocus)
+        raceViewer.objectChanged(lo,LayerObject.StopFocus)
       }
     }
   }
@@ -345,7 +369,7 @@ trait TrackLayer[T <:TrackedObject] extends SubscribingRaceLayer
         if (e.layer == this) {
           if (guard(e)) {
             action(e)
-            panel.updateTrackEntryAttributes // update layerinfo panel
+            panel.updateEntryAttributes // update layerinfo panel
             entryPanel.updateTrackEntryAttributes // update entry panel
             redraw // ?? do we need this
           }

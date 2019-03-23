@@ -384,8 +384,10 @@ class RaceViewer(viewerActor: RaceViewerActor) extends DeferredEyePositionListen
   def changeLayer (name: String, enable: Boolean) = layerController.foreach(_.changeLayer(name,enable))
 
   //--- object change management
-  def objectChanged (obj: LayerObject, action: String) = objectListener.foreach(_.objectChanged(obj,action))
-  def changeObject (id: String, layerName: String, action: String) = {
+  def objectChanged (obj: LayerObject, action: LayerObjectAction): Unit = {
+    objectListener.foreach(_.objectChanged(obj,action))
+  }
+  def changeObject (id: String, layerName: String, action: LayerObjectAction): Option[RaceLayer] = {
     ifSome(getLayer(layerName)){ _.changeObject(id,action)}
   }
 

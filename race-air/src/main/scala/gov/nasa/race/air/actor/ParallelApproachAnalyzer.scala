@@ -198,9 +198,9 @@ class ParallelApproachAnalyzer (val config: Config) extends SubscribingRaceActor
       s"$eventIdPrefix-$nEvents",
       date, pos,
       "angle-in",
+      s"angle $deltaHdg at distance $dist",
       c1.track, pos1, t1,
       c2.track, pos2, t2,
-      Some(s"angle $deltaHdg at distance $dist")
     )
 
     publish(ev)

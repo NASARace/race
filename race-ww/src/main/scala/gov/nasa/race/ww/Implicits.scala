@@ -32,8 +32,12 @@ import scala.language.implicitConversions
 object Implicits {
 
 
-  implicit def geoPosition2Position(pos: GeoPositioned): Position = {
+  implicit def geoPositioned2Position(pos: GeoPositioned): Position = {
     val gp = pos.position
+    Position.fromDegrees(gp.latDeg, gp.lonDeg, gp.altMeters)
+  }
+
+  implicit def geoPosition2Position (gp: GeoPosition): Position = {
     Position.fromDegrees(gp.latDeg, gp.lonDeg, gp.altMeters)
   }
 

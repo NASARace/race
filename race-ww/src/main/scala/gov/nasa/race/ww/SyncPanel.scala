@@ -135,10 +135,10 @@ class SyncPanel (raceView: RaceViewer, config: Option[Config]=None)
   }
 
   //--- ObjectListener
-  override def objectChanged (obj: LayerObject, action: String) = {
+  override def objectChanged (obj: LayerObject, action: LayerObjectAction) = {
     if (sendObjectChange && isLocalChange) {
       info(s"outbound object change: ${obj.id} $action")
-      publish(ObjectChanged(obj.id,obj.layer.getName,action))
+      publish(ObjectChanged(obj.id,obj.layer.getName,action.name))
     }
   }
 
@@ -184,10 +184,10 @@ class SyncPanel (raceView: RaceViewer, config: Option[Config]=None)
     }
   }
 
-  def handleObjectChanged (id: String, layerName: String, action: String) = {
+  def handleObjectChanged (id: String, layerName: String, actionName: String) = {
     if (receiveObjectChange) {
-      info(s"inbound object change: $layerName($id) $action")
-      raceView.changeObject(id,layerName,action)
+      info(s"inbound object change: $layerName($id) $actionName")
+      LayerObjectAction.get(actionName).foreach( raceView.changeObject(id,layerName,_))
     }
   }
 

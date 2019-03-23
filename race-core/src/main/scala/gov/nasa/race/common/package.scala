@@ -133,4 +133,15 @@ package object common {
 
   def objRef (o: AnyRef): String = Integer.toHexString(System.identityHashCode(o))
 
+  /**
+    * a functional interface for something that can perform queries over iterables
+    *
+    * normally, implementations involve a query parser and a function that applies
+    * the compiled query to the provided items
+    */
+  trait Query[T] {
+    def error (msg: String): Unit // error report function
+    def getMatchingItems(query: String, items: Iterable[T]): Iterable[T]
+  }
+
 }

@@ -3,6 +3,7 @@ package gov.nasa.race.util
 import scala.annotation.tailrec
 import scala.util.Random
 import scala.collection.mutable.IndexedSeq
+import scala.reflect.ClassTag
 
 object SeqUtils {
 
@@ -96,5 +97,17 @@ object SeqUtils {
     }
 
     qs(0,list.size-1)
+  }
+
+  def sortedArray[A: ClassTag] (it: Iterable[A])(sortFunc: (A,A)=>Boolean): Array[A] = {
+    val a = it.toArray
+    a.sortWith(sortFunc)
+    a
+  }
+
+  def sortedSeq[A] (it: Iterable[A])(sortFunc: (A,A)=>Boolean): Seq[A] = {
+    val seq = it.toSeq
+    seq.sortWith(sortFunc)
+    seq
   }
 }

@@ -21,17 +21,30 @@ import java.awt.image.BufferedImage
 
 import com.typesafe.config.Config
 import gov.nasa.race._
-import gov.nasa.race.common.{ThresholdLevel, ThresholdLevelList}
+import gov.nasa.race.common.{Query, ThresholdLevel, ThresholdLevelList}
 import gov.nasa.race.core.Messages.BusEvent
 import gov.nasa.race.geo.{GeoPosition, GeoPositioned}
 import gov.nasa.race.track.TrajectoryPairEvent
 import gov.nasa.race.trajectory.Trajectory
 import gov.nasa.race.util.DateTimeUtils.hhmmss
+import gov.nasa.race.config.ConfigUtils._
+import gov.nasa.race.swing.Style._
 import gov.nasa.race.ww
-import gov.nasa.race.ww.{AltitudeSensitiveRaceLayer, ConfigurableRenderingLayer, DynamicLayerInfoPanel, Images, LayerObject, LayerSymbol, LayerSymbolOwner, RaceLayer, RaceViewer, SubscribingRaceLayer, WWPosition}
+import gov.nasa.race.ww.{AltitudeSensitiveRaceLayer, ConfigurableRenderingLayer, Images, InteractiveLayerInfoPanel, LayerObject, LayerObjectAttr, LayerSymbol, LayerSymbolOwner, RaceLayer, RaceViewer, SubscribingRaceLayer, WWPosition}
 import gov.nasa.worldwind.render._
 
 import scala.collection.mutable.{Map => MutableMap}
+
+
+class TrajectoryPairEventQuery[T] (getEvent: T=>TrajectoryPairEvent) extends Query[T] {
+  override def error(msg: String): Unit = {
+    // TODO
+  }
+
+  override def getMatchingItems(query: String, items: Iterable[T]): Iterable[T] = {
+    items // TODO
+  }
+}
 
 /**
   * the connector between the TrajectoryPairEvent and associated renderables
@@ -39,7 +52,7 @@ import scala.collection.mutable.{Map => MutableMap}
 class TrajectoryPairEventEntry (val event: TrajectoryPairEvent, val layer: TrajectoryPairEventLayer)
                 extends LayerObject with LayerSymbolOwner {
 
-  protected var isVisible = true
+  protected var _isVisible = true
   protected var symbolShowing = false
   protected var pathsShowing = false  // only set if isVisible, depending on view level
 
@@ -117,13 +130,16 @@ class TrajectoryPairEventEntry (val event: TrajectoryPairEvent, val layer: Traje
   }
   def setIconLevel: Unit = { // icon, label and paths
     symbol.setIconAttrs
-    if (isVisible) {
+    if (_isVisible) {
       addPaths
     }
   }
 
   override def id: String = event.id
   override def pos: GeoPositioned = event
+
+  override def isVisible: Boolean = _isVisible
+  override def setVisible(cond: Boolean): Unit = show(cond)
 
   override def isFocused = false // no focus support (yet) - this is static
   override def setFocused(cond: Boolean): Unit = {}
@@ -146,14 +162,32 @@ class TrajectoryPairEventEntry (val event: TrajectoryPairEvent, val layer: Traje
 
   def show (showIt: Boolean): Unit = {
     if (showIt) {
-      if (!isVisible) {
+      if (!_isVisible) {
         addSymbol
       }
     } else {
       removePaths
       removeSymbol
     }
-    isVisible = showIt
+    _isVisible = showIt
+  }
+
+  override def setAttr(attr: LayerObjectAttr, cond: Boolean): Unit = {
+    attr match {
+      case LayerObject.PathAttr => if (cond) addPaths else removePaths
+      case LayerObject.InfoAttr => // TBD
+      case LayerObject.MarkAttr => // TDB
+      case _ => // ignore
+    }
+  }
+
+  override def isAttrSet(attr: LayerObjectAttr): Boolean = {
+    attr match {
+      case LayerObject.PathAttr => pathsShowing
+      case LayerObject.InfoAttr => false
+      case LayerObject.MarkAttr => false
+      case _ => false
+    }
   }
 }
 
@@ -163,7 +197,8 @@ class TrajectoryPairEventEntry (val event: TrajectoryPairEvent, val layer: Traje
 class TrajectoryPairEventLayer (val raceViewer: RaceViewer, val config: Config)
               extends SubscribingRaceLayer with ConfigurableRenderingLayer with AltitudeSensitiveRaceLayer {
 
-  val panel = new DynamicLayerInfoPanel
+  val panel = createLayerInfoPanel
+
   val events = MutableMap[String,TrajectoryPairEventEntry]()
 
   val iconLevel = new ThresholdLevel[TrajectoryPairEventEntry](iconThresholdLevel)(setIconLevel)
@@ -172,6 +207,8 @@ class TrajectoryPairEventLayer (val raceViewer: RaceViewer, val config: Config)
 
   def defaultSymbolImg: BufferedImage = Images.getEventImage(color)
   val symbolImg = defaultSymbolImg
+
+  var displayFilter: Option[TrajectoryPairEventEntry=>Boolean] = None
 
   def setDotLevel(e: TrajectoryPairEventEntry): Unit = e.setDotLevel
   def setLabelLevel(e: TrajectoryPairEventEntry): Unit = e.setLabelLevel
@@ -184,6 +221,50 @@ class TrajectoryPairEventLayer (val raceViewer: RaceViewer, val config: Config)
     case BusEvent(_, e: TrajectoryPairEvent, _) => updateEvents(e)
   }
 
+
+  // override if we need specialized entries/init
+  protected def createEventEntry (event: TrajectoryPairEvent): TrajectoryPairEventEntry = {
+    new TrajectoryPairEventEntry(event, this)
+  }
+
+  def createLayerInfoPanel: InteractiveLayerInfoPanel[TrajectoryPairEventEntry] = {
+    new InteractiveLayerInfoPanel[TrajectoryPairEventEntry](
+      maxEventRows,
+      new TrajectoryPairEventQuery[TrajectoryPairEventEntry](_.event),
+      getAllEvents,
+      setDisplayFilter,
+      setEventPanel,
+      eventIdHeader,
+      eventIdText,
+      eventDataHeader,
+      eventDataText
+    ).styled('consolePanel)
+  }
+
+  //--- InteractiveLayerInfo callbacks
+  def maxEventRows: Int = config.getIntOrElse("max-rows", 10)
+  def getAllEvents: Iterable[TrajectoryPairEventEntry] = events.values
+
+  def eventIdHeader: String = "event"
+  def eventIdText (e: TrajectoryPairEventEntry): String = e.event.id
+
+  def eventDataHeader: String = "  Δhdg  dist[m]"
+  def eventDataText (e: TrajectoryPairEventEntry): String = e.event.eventDetails
+
+  def setEventPanel (e: TrajectoryPairEventEntry): Unit = {
+    // TODO
+  }
+
+  def setDisplayFilter (df: Option[TrajectoryPairEventEntry=>Boolean]): Unit = {
+    displayFilter = df
+    df match {
+      case None => events.foreach ( _._2.setVisible(true))
+      case Some(f) => events.foreach { p => p._2.setVisible(f(p._2))}
+    }
+    wwdRedrawManager.redraw()
+  }
+
+
   def updateEvents(event: TrajectoryPairEvent): Unit = {
     incUpdateCount
 
@@ -191,7 +272,7 @@ class TrajectoryPairEventLayer (val raceViewer: RaceViewer, val config: Config)
       case Some(entry) =>
         // TODO - not sure if entries should be mutable
       case None =>
-        val entry = new TrajectoryPairEventEntry(event, this)
+        val entry = createEventEntry(event)
         events += event.id -> entry
         entry.show(true)
         symbolLevels.triggerInCurrentLevel(entry) // this sets rendering attributes

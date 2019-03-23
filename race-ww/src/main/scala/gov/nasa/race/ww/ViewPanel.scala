@@ -103,13 +103,15 @@ class ViewPanel (raceViewer: RaceViewer, config: Option[Config]=None) extends GB
     altField.setValue(alt)
   }
 
-  override def objectChanged (obj: LayerObject, action: String) = {
-    if (action eq StopFocus) {
-      focusBtn.selected = false
-      focusBtn.enabled = false
-    } else if (action eq StartFocus) {
-      focusBtn.selected = true
-      focusBtn.enabled = true
+  override def objectChanged (obj: LayerObject, action: LayerObjectAction) = {
+    action match {
+      case LayerObject.StopFocus =>
+        focusBtn.selected = false
+        focusBtn.enabled = false
+      case LayerObject.StartFocus =>
+        focusBtn.selected = true
+        focusBtn.enabled = true
+      case _ => // ignore
     }
   }
 }
