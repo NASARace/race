@@ -30,8 +30,10 @@ import scala.swing._
 import scala.swing.event.{ButtonClicked, ListSelectionChanged, MouseClicked}
 
 /**
- * default panel to display and manipulate WorldWind layers
- */
+  * panel to display and manipulate all WorldWind layers
+  *
+  * note this also includes LayerInfo entries for layers that are not RaceLayers
+  */
 class LayerListPanel (raceView: RaceViewer, config: Option[Config]=None)
                                                      extends BoxPanel(Orientation.Vertical)
                                                        with RacePanel with LayerController {
@@ -107,6 +109,8 @@ class LayerListPanel (raceView: RaceViewer, config: Option[Config]=None)
   val toolTipController = new ToolTipController(raceView.wwd, layerInfoList.tooltipAnnotationLayer)
   val highlightController = new HighlightController(raceView.wwd)
 
+  var lastLayerInfoPanel: Option[LayerInfoPanel] = None
+
   raceView.setLayerController(this)
 
   //--- methods
@@ -117,8 +121,12 @@ class LayerListPanel (raceView: RaceViewer, config: Option[Config]=None)
   def updateLayerInfoPanel (layerSelection: Option[Layer]) = {
     ifSome(layerSelection) { layer =>
       val panel = layer.layerInfo.panel
-      panel.setLayer(layer)
-      raceView.setLayerPanel(panel.asInstanceOf[Component])
+
+      ifInstanceOf[SharedLayerInfoPanel](panel) { _.setLayer(layer) }
+      lastLayerInfoPanel = ifSome(lastLayerInfoPanel){ _.unselect } orElse { Some(panel) }
+
+      raceView.setLayerPanel(panel)
+      panel.select
     }
   }
 

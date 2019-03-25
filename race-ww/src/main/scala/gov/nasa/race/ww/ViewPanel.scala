@@ -23,6 +23,7 @@ import gov.nasa.race.uom.Length
 import gov.nasa.race.swing.GBPanel.{Anchor, Fill}
 import gov.nasa.race.swing.Style._
 import gov.nasa.race.swing._
+import gov.nasa.race.ww.LayerObjectAction.LayerObjectAction
 import gov.nasa.worldwind.event.{PositionEvent, PositionListener}
 import gov.nasa.worldwind.geom.{Angle, Position}
 import gov.nasa.worldwind.globes.projections.ProjectionMercator
@@ -105,10 +106,10 @@ class ViewPanel (raceViewer: RaceViewer, config: Option[Config]=None) extends GB
 
   override def objectChanged (obj: LayerObject, action: LayerObjectAction) = {
     action match {
-      case LayerObject.StopFocus =>
+      case LayerObjectAction.StopFocus =>
         focusBtn.selected = false
         focusBtn.enabled = false
-      case LayerObject.StartFocus =>
+      case LayerObjectAction.StartFocus =>
         focusBtn.selected = true
         focusBtn.enabled = true
       case _ => // ignore

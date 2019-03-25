@@ -23,26 +23,47 @@ import gov.nasa.race.swing.GBPanel._
 import gov.nasa.race.swing.Style._
 import gov.nasa.race.swing.{Filler, GBPanel, ItemRenderPanel, ListItemRenderer, SelectionPreserving, Style, VisibilityBounding}
 import gov.nasa.race.util.{SeqUtils, StringUtils}
+import gov.nasa.race.ww.LayerObjectAttribute.LayerObjectAttribute
 
 import scala.swing.Swing._
 import scala.swing.event._
 import scala.swing.{Action, BoxPanel, Button, ButtonGroup, CheckBox, Component, Label, ListView, MenuItem, Orientation, PopupMenu, RadioButton, ScrollPane, TextField}
 
+/**
+  * a RaceLayer whose LayerObjects can be queried and managed through UI components
+  */
+trait InteractiveRaceLayer[T <: LayerObject] extends SubscribingRaceLayer {
+
+  // note this might be used by implementors that dynamically add/modify layerObjects
+  protected var displayFilter: Option[T=>Boolean] = None
+
+  def layerObjects: Iterable[T]
+  def layerObjectQuery: Query[T]
+
+  def filterLayerObjectDisplay(filter: Option[T=>Boolean]): Unit = {
+    filter match {
+      case None => layerObjects.foreach(_.setVisible(true)) // if none make all objects visible
+      case Some(f) => layerObjects.foreach( e=> e.setVisible(f(e)))
+    }
+  }
+
+  def setLayerObjectAttribute(o: T, attr: LayerObjectAttribute, cond: Boolean): Unit
+  def doubleClickLayerObject(o: T): Unit
+
+  //--- for rendering layerObjects in a ListView
+  def maxLayerObjectRows: Int
+  def layerObjectIdHeader: String
+  def layerObjectIdText(o: T): String
+  def layerObjectDataHeader: String
+  def layerObjectDataText(o: T): String
+}
 
 /**
   * a LayerInfoPanel that supports (delegated) queries and result lists that
   * can be used to select and control display of matching entries
   */
-class InteractiveLayerInfoPanel[T <: LayerObject]( maxVisibleRows: Int,
-                                                   query: Query[T],
-                                                   allItems: =>Iterable[T],
-                                                   setDisplayFilter: Option[T=>Boolean]=>Unit,
-                                                   doubleClickSelect: T=>Unit,
-                                                   idHeader: String,
-                                                   getIdText: T=>String,
-                                                   dataHeader: String,
-                                                   getDataText: T=>String
-                                                 ) extends DynamicLayerInfoPanel {
+class InteractiveLayerInfoPanel[T <: LayerObject](override val layer: InteractiveRaceLayer[T])
+                                                               extends DynamicLayerInfoPanel(layer) {
 
   class LayerObjectListView extends ListView[T]
                                          with VisibilityBounding[T] with SelectionPreserving[T]{
@@ -77,12 +98,12 @@ class InteractiveLayerInfoPanel[T <: LayerObject]( maxVisibleRows: Int,
 
       def configure(list: ListView[_], isSelected: Boolean, focused: Boolean, e: T, index: Int) = {
         displayLabel.icon = if (e.isFocused) centerIcon else if (!e.isVisible) hiddenIcon else blankIcon
-        pathLabel.icon = if (e.isAttrSet(LayerObject.PathAttr)) pathIcon else blankIcon
-        infoLabel.icon = if (e.isAttrSet(LayerObject.InfoAttr)) infoIcon else blankIcon
-        markLabel.icon = if (e.isAttrSet(LayerObject.MarkAttr)) markIcon else blankIcon
+        pathLabel.icon = if (e.isAttrSet(LayerObjectAttribute.Path)) pathIcon else blankIcon
+        infoLabel.icon = if (e.isAttrSet(LayerObjectAttribute.Info)) infoIcon else blankIcon
+        markLabel.icon = if (e.isAttrSet(LayerObjectAttribute.Mark)) markIcon else blankIcon
 
-        idLabel.text = f" ${StringUtils.capLength(getIdText(e))(8)}%-8s"
-        dataLabel.text = getDataText(e)
+        idLabel.text = f" ${StringUtils.capLength(layer.layerObjectIdText(e))(8)}%-8s"
+        dataLabel.text = layer.layerObjectDataText(e)
       }
     }
 
@@ -90,8 +111,8 @@ class InteractiveLayerInfoPanel[T <: LayerObject]( maxVisibleRows: Int,
 
     // this has to match the renderer
     def createColumnHeaderView: Component = {
-      val idTxt = f" ${StringUtils.capLength(idHeader)(8)}%-8s"
-      val dataTxt = dataHeader
+      val idTxt = f"     ${StringUtils.capLength(layer.layerObjectIdHeader)(8)}%-8s"
+      val dataTxt = layer.layerObjectDataHeader
 
       new GBPanel {
         val c = new Constraints(fill=Fill.Horizontal)
@@ -167,16 +188,16 @@ class InteractiveLayerInfoPanel[T <: LayerObject]( maxVisibleRows: Int,
     // note that EditDone would also be triggererd by a FocusLost, running the query again if we select a listView item
     case KeyReleased(`queryEntry`, Key.Enter, _,_) => updateMatchList(queryEntry.text)
     case ListSelectionChanged(`listView`,range,live) => updateMatchOptions
-    case ButtonClicked(`displayAllRb`) => setDisplayFilter(None)
-    case ButtonClicked(`displayMatchesRb`) => setDisplayFilter(Some(matchDisplayFilter))
-    case ButtonClicked(`displaySelectedRb`) => setDisplayFilter(Some(selectionDisplayFilter))
+    case ButtonClicked(`displayAllRb`) => layer.filterLayerObjectDisplay(None)
+    case ButtonClicked(`displayMatchesRb`) => layer.filterLayerObjectDisplay(Some(matchDisplayFilter))
+    case ButtonClicked(`displaySelectedRb`) => layer.filterLayerObjectDisplay(Some(selectionDisplayFilter))
 
     case MousePressed(`listView`,p,_,_,true) => popUpMenu.show(listView,p.x,p.y)
-    case MouseClicked(`listView`,_,_,2,false) => lastSelectedMatch.foreach(doubleClickSelect)
-      // raceViewer.trackUserAction { layer.setEntryPanel(lastSelectedMatch) }
-    case ButtonClicked(`pathCb`) => raceViewer.trackUserAction { setSelectedAttr(LayerObject.PathAttr,pathCb.selected) }
-    case ButtonClicked(`infoCb`) => raceViewer.trackUserAction { setSelectedAttr(LayerObject.InfoAttr,infoCb.selected) }
-    case ButtonClicked(`markCb`) => raceViewer.trackUserAction { setSelectedAttr(LayerObject.MarkAttr,markCb.selected) }
+    case MouseClicked(`listView`,_,_,2,false) => raceViewer.trackUserAction { lastSelectedMatch.foreach(layer.doubleClickLayerObject) }
+
+    case ButtonClicked(`pathCb`) => raceViewer.trackUserAction { setSelectedAttr(LayerObjectAttribute.Path,pathCb.selected) }
+    case ButtonClicked(`infoCb`) => raceViewer.trackUserAction { setSelectedAttr(LayerObjectAttribute.Info,infoCb.selected) }
+    case ButtonClicked(`markCb`) => raceViewer.trackUserAction { setSelectedAttr(LayerObjectAttribute.Mark,markCb.selected) }
   }
 
   val matchDisplayFilter: T=>Boolean = (f) => matchList.contains(f)
@@ -208,7 +229,6 @@ class InteractiveLayerInfoPanel[T <: LayerObject]( maxVisibleRows: Int,
     }
   }
 
-
   //--- entry and matchList management
 
   def sortById (a: T, b: T): Boolean = a.id < b.id
@@ -228,7 +248,7 @@ class InteractiveLayerInfoPanel[T <: LayerObject]( maxVisibleRows: Int,
   }
 
   def updateMatchList (queryString: String): Unit = {
-    val candidates = query.getMatchingItems(queryString,allItems)
+    val candidates = layer.layerObjectQuery.getMatchingItems(queryString,layer.layerObjects)
     matchList = SeqUtils.sortedSeq( getVisibleEntries(candidates))(sortById)
 
     if (inheritCb.selected) matchList.foreach(setEntryOptions)
@@ -237,12 +257,12 @@ class InteractiveLayerInfoPanel[T <: LayerObject]( maxVisibleRows: Int,
     listBox.visible = matchList.size > 0
 
     if (displayMatchesRb.selected) {
-      allItems.foreach { e =>
+      layer.layerObjects.foreach { e =>
         val isMatch = matchList.contains(e) // TODO - not very efficient
         if (e.isVisible != isMatch) e.setVisible(isMatch)
       }
     } else if (displaySelectedRb.selected) {
-      allItems.foreach { e =>
+      layer.layerObjects.foreach { e =>
         if (!e.isVisible) e.setVisible(true)
       }
     }
@@ -250,16 +270,16 @@ class InteractiveLayerInfoPanel[T <: LayerObject]( maxVisibleRows: Int,
 
   def updateMatchList: Unit = updateMatchList(queryEntry.text)
 
-  def setSelectedAttr (attr: LayerObjectAttr, showIt: Boolean): Unit = {
-    listView.selection.items.foreach { e=> e.setAttr(attr, showIt) }
-    listView.repaint
-    layer.redraw
+  def setSelectedAttr (attr: LayerObjectAttribute, showIt: Boolean): Unit = {
+    listView.selection.items.foreach { e=> layer.setLayerObjectAttribute(e,attr,showIt) }
+    //listView.repaint
+    //layer.redraw
   }
 
   def setEntryOptions (e: LayerObject) = {
-    e.setAttr(LayerObject.PathAttr, pathCb.selected)
-    e.setAttr(LayerObject.InfoAttr, infoCb.selected)
-    e.setAttr(LayerObject.MarkAttr, markCb.selected)
+    e.setAttr(LayerObjectAttribute.Path, pathCb.selected)
+    e.setAttr(LayerObjectAttribute.Info, infoCb.selected)
+    e.setAttr(LayerObjectAttribute.Mark, markCb.selected)
   }
 
   def updateMatchOptions = {
@@ -275,9 +295,9 @@ class InteractiveLayerInfoPanel[T <: LayerObject]( maxVisibleRows: Int,
         markCb.selected = false
       } else {
         val e = sel.head
-        pathCb.selected = e.isAttrSet(LayerObject.PathAttr)
-        infoCb.selected = e.isAttrSet(LayerObject.InfoAttr)
-        markCb.selected = e.isAttrSet(LayerObject.MarkAttr)
+        pathCb.selected = e.isAttrSet(LayerObjectAttribute.Path)
+        infoCb.selected = e.isAttrSet(LayerObjectAttribute.Info)
+        markCb.selected = e.isAttrSet(LayerObjectAttribute.Mark)
       }
     }
   }

@@ -23,7 +23,7 @@ import gov.nasa.race.swing.Style._
 import gov.nasa.race.swing.{FieldPanel, GBPanel}
 import gov.nasa.race.track.{TrackInfo, TrackedObject}
 import gov.nasa.race.util.DateTimeUtils._
-import gov.nasa.race.ww.{Images, RacePanel, RaceViewer}
+import gov.nasa.race.ww.{Images, LayerObjectAttribute, RacePanel, RaceViewer}
 import org.joda.time.DateTime
 
 import scala.swing.event.{ButtonClicked, MouseClicked}
@@ -106,10 +106,10 @@ class TrackEntryPanel[T <: TrackedObject](raceView: RaceViewer, layer: TrackLaye
   listenTo(focusCb,pathCb,path3dCb,infoCb,markCb,dismissBtn.mouse.clicks)
   reactions += {
     case ButtonClicked(`focusCb`)  => raceView.trackUserAction { setFocused(focusCb.selected) }
-    case ButtonClicked(`pathCb`)   => raceView.trackUserAction { setPath(pathCb.selected) }
+    case ButtonClicked(`pathCb`)   => raceView.trackUserAction { layer.setLayerObjectAttribute(trackEntry,LayerObjectAttribute.Path,pathCb.selected) }
     case ButtonClicked(`path3dCb`) => raceView.trackUserAction { setPathContour(path3dCb.selected) }
-    case ButtonClicked(`infoCb`)   => raceView.trackUserAction { setInfo(infoCb.selected) }
-    case ButtonClicked(`markCb`)   => raceView.trackUserAction { setMark(markCb.selected) }
+    case ButtonClicked(`infoCb`)   => raceView.trackUserAction { layer.setLayerObjectAttribute(trackEntry,LayerObjectAttribute.Info,infoCb.selected) }
+    case ButtonClicked(`markCb`)   => raceView.trackUserAction { layer.setLayerObjectAttribute(trackEntry,LayerObjectAttribute.Mark,markCb.selected) }
     case MouseClicked(`dismissBtn`,_,_,_,_) => raceView.trackUserAction { dismissPanel }
   }
 
@@ -141,13 +141,8 @@ class TrackEntryPanel[T <: TrackedObject](raceView: RaceViewer, layer: TrackLaye
 
   def setFocused(focusIt: Boolean) = layer.setFocused(trackEntry,focusIt)
 
-  def setPath(showIt: Boolean) = layer.setPath(trackEntry,showIt)
-
   def setPathContour (showIt: Boolean) = layer.setPathContour(trackEntry,showIt)
 
-  def setInfo(showIt: Boolean) = layer.setInfo(trackEntry,showIt)
-
-  def setMark(showIt: Boolean) = layer.setMark(trackEntry,showIt)
 
   // this is just a notification that attributes have changed externally
   def updateTrackEntryAttributes = {

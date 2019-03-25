@@ -24,8 +24,8 @@ import gov.nasa.race.core.{PublishingRaceActor, SubscribingRaceActor, _}
 import gov.nasa.race.swing.GBPanel.{Anchor, Fill}
 import gov.nasa.race.swing.Style._
 import gov.nasa.race.swing.{AkkaSwingBridge, Filler, GBPanel, OnOffIndicator, SwingTimer, Separator => RSeparator}
-import gov.nasa.race.ww._
-
+import gov.nasa.race._
+import gov.nasa.race.ww.LayerObjectAction.LayerObjectAction
 import gov.nasa.worldwind.geom.{Angle, Position}
 import gov.nasa.worldwind.layers.Layer
 
@@ -138,7 +138,7 @@ class SyncPanel (raceView: RaceViewer, config: Option[Config]=None)
   override def objectChanged (obj: LayerObject, action: LayerObjectAction) = {
     if (sendObjectChange && isLocalChange) {
       info(s"outbound object change: ${obj.id} $action")
-      publish(ObjectChanged(obj.id,obj.layer.getName,action.name))
+      publish(ObjectChanged(obj.id,obj.layer.getName,action.toString))
     }
   }
 
@@ -187,7 +187,9 @@ class SyncPanel (raceView: RaceViewer, config: Option[Config]=None)
   def handleObjectChanged (id: String, layerName: String, actionName: String) = {
     if (receiveObjectChange) {
       info(s"inbound object change: $layerName($id) $actionName")
-      LayerObjectAction.get(actionName).foreach( raceView.changeObject(id,layerName,_))
+      ifSome(LayerObjectAction.get(actionName)) { action =>
+        raceView.changeObject(id,layerName,action)
+      }
     }
   }
 

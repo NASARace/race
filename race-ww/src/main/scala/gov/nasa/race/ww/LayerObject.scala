@@ -16,11 +16,10 @@
  */
 package gov.nasa.race.ww
 
+import gov.nasa.race._
 import gov.nasa.race.geo.GeoPositioned
-import gov.nasa.race.swing.{SelectionPreserving, VisibilityBounding}
-
-import scala.collection.mutable.{HashMap => MHashMap}
-import scala.swing.{Component, ListView}
+import gov.nasa.race.ww.LayerObjectAction.LayerObjectAction
+import gov.nasa.race.ww.LayerObjectAttribute.LayerObjectAttribute
 
 
 /**
@@ -35,8 +34,8 @@ trait LayerObject {
   def pos: GeoPositioned
 
   // per object display attribute management
-  def setAttr(attr: LayerObjectAttr, cond: Boolean)
-  def isAttrSet(attr: LayerObjectAttr): Boolean
+  def setAttr(attr: LayerObjectAttribute, cond: Boolean)
+  def isAttrSet(attr: LayerObjectAttribute): Boolean
 
   // global RaceViewer focus (automatic follow-object)
   def setFocused(cond: Boolean): Unit
@@ -47,50 +46,49 @@ trait LayerObject {
 }
 
 /**
-  * marker trait for LayerObject display attributes
-  * note this is not sealed so that RaceLayers can add their own
+  * predefined actions for LayerObjects
   */
-trait LayerObjectAttr
+object LayerObjectAction extends Enumeration {
+  type LayerObjectAction = Value
 
-object LayerObjectAction {
-  protected val map = new MHashMap[String,LayerObjectAction]
-  def get (name: String): Option[LayerObjectAction] = map.get(name)
+  val Select       = Value
+  val ShowPanel    = Value
+  val DismissPanel = Value
+  val StartFocus   = Value
+  val StopFocus    = Value
+  val ShowPath     = Value
+  val HidePath     = Value
+  val ShowContour  = Value
+  val HideContour  = Value
+  val ShowInfo     = Value
+  val HideInfo     = Value
+  val ShowMark     = Value
+  val HideMark     = Value
+
+  def get(name: String): Option[Value] = trySome(LayerObjectAction.withName(name))
 }
+
 
 /**
-  * marker trait for actions that can be performed on LayerObjects
+  * predefined display attributes for LayerObjects
   */
-trait LayerObjectAction {
-  val name: String = {
-    val s = getClass.getSimpleName
-    if (s.endsWith("$")) s"LayerObjectAction.${s.substring(0,s.length-1)}"
-    else s"LayerObjectAction.$s"
+object LayerObjectAttribute extends Enumeration {
+  type LayerObjectAttribute = Value
+
+  val Path = Value
+  val Info = Value
+  val Mark = Value
+
+  def get(name: String): Option[Value] = trySome(LayerObjectAttribute.withName(name))
+
+  def getAction (attr: Value, cond: Boolean): Option[LayerObjectAction] = {
+    attr match {
+      case Path => Some( if (cond) LayerObjectAction.ShowPath else LayerObjectAction.HidePath)
+      case Info => Some( if (cond) LayerObjectAction.ShowInfo else LayerObjectAction.HideInfo)
+      case Mark => Some( if (cond) LayerObjectAction.ShowMark else LayerObjectAction.HideMark)
+      case _ => None
+    }
   }
-  LayerObjectAction.map += name -> this
-}
-
-
-object LayerObject {
-
-  //--- the predefined LayerObject display attributes
-  object PathAttr extends LayerObjectAttr
-  object InfoAttr extends LayerObjectAttr
-  object MarkAttr extends LayerObjectAttr
-
-  //--- predefined LayerObject actions
-  object Select extends LayerObjectAction
-  object ShowPanel extends LayerObjectAction
-  object DismissPanel extends LayerObjectAction
-  object StartFocus extends LayerObjectAction
-  object StopFocus extends LayerObjectAction
-  object ShowPath extends LayerObjectAction
-  object HidePath extends LayerObjectAction
-  object ShowContour extends LayerObjectAction
-  object HideContour extends LayerObjectAction
-  object ShowInfo extends LayerObjectAction
-  object HideInfo extends LayerObjectAction
-  object ShowMark extends LayerObjectAction
-  object HideMark extends LayerObjectAction
 }
 
 trait LayerObjectListener {

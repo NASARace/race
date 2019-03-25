@@ -25,6 +25,7 @@ import gov.nasa.race.track.TrackedObject
 import gov.nasa.race.trajectory.MutTrajectory
 import gov.nasa.race.util.DateTimeUtils.hhmmss
 import gov.nasa.race.ww.Implicits._
+import gov.nasa.race.ww.LayerObjectAttribute.LayerObjectAttribute
 import gov.nasa.race.ww._
 import gov.nasa.worldwind.WorldWind
 import gov.nasa.worldwind.render.{Material, Offset, PointPlacemark, PointPlacemarkAttributes}
@@ -191,20 +192,20 @@ class TrackEntry[T <: TrackedObject](var obj: T, var trajectory: MutTrajectory, 
     }
   }
 
-  override def setAttr(attr: LayerObjectAttr, cond: Boolean): Unit = {
+  override def setAttr(attr: LayerObjectAttribute, cond: Boolean): Unit = {
     attr match {
-      case LayerObject.PathAttr => setPath(cond)
-      case LayerObject.InfoAttr => setInfo(cond)
-      case LayerObject.MarkAttr => setMark(cond)
+      case LayerObjectAttribute.Path => setPath(cond)
+      case LayerObjectAttribute.Info => setInfo(cond)
+      case LayerObjectAttribute.Mark => setMark(cond)
       case _ => // ignore
     }
   }
 
-  override def isAttrSet(attr: LayerObjectAttr): Boolean = {
+  override def isAttrSet(attr: LayerObjectAttribute): Boolean = {
     attr match {
-      case LayerObject.PathAttr => path.isDefined
-      case LayerObject.InfoAttr => info.isDefined
-      case LayerObject.MarkAttr => mark.isDefined
+      case LayerObjectAttribute.Path => path.isDefined
+      case LayerObjectAttribute.Info => info.isDefined
+      case LayerObjectAttribute.Mark => mark.isDefined
       case _ => false
     }
   }

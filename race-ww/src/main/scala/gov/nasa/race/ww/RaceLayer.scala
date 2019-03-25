@@ -27,6 +27,7 @@ import gov.nasa.race.core.Messages.{BusEvent, DelayedAction}
 import gov.nasa.race.core._
 import gov.nasa.race.swing.AkkaSwingBridge
 import gov.nasa.race.ww.EventAction.EventAction
+import gov.nasa.race.ww.LayerObjectAction.LayerObjectAction
 import gov.nasa.worldwind.layers.RenderableLayer
 import gov.nasa.worldwind.render.Material
 
@@ -83,6 +84,8 @@ trait RaceLayer extends RenderableLayer with RaceLayerInfo {
 
   // called by RaceViewer if a focus object is reset
   def setFocused (e: LayerObject, isFocused: Boolean, report: Boolean): Unit = {} // default is no focus objects
+
+  def size: Int // answer number of items in layer
 }
 
 /**
@@ -124,7 +127,6 @@ trait SubscribingRaceLayer extends RaceLayer with AkkaSwingBridge {
 
   var updateCount = 0// to keep track of number of changes
   def incUpdateCount: Unit = updateCount += 1
-  def size: Int // answer number of items in layer
 
   /**
     * override if we need a layer specific actor (e.g. for actor<->layer communication)

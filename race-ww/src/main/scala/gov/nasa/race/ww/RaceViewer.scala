@@ -29,6 +29,7 @@ import gov.nasa.race.swing.Redrawable
 import gov.nasa.race.swing.Style._
 import gov.nasa.race.uom.Length.Meters
 import gov.nasa.race.ww.Implicits._
+import gov.nasa.race.ww.LayerObjectAction.LayerObjectAction
 import gov.nasa.race.{ifInstanceOf, ifSome}
 import gov.nasa.worldwind.geom.{Angle, Position}
 import gov.nasa.worldwind.layers.Layer
@@ -276,9 +277,11 @@ class RaceViewer(viewerActor: RaceViewerActor) extends DeferredEyePositionListen
   def showConsolePanel(name: String, setVisible: Boolean) = frame.showConsolePanel(name, setVisible)
 
   // layer/object panel selection
+  def getLayerPanel: Option[Component] = frame.getPanel(SelectedLayer)
   def setLayerPanel (c: Component) = if (panels.contains(SelectedLayer)) frame.setPanel(SelectedLayer, c)
   def dismissLayerPanel = if (panels.contains(SelectedLayer)) frame.setPanel(SelectedLayer, emptyLayerInfoPanel)
 
+  def getObjectPanel: Option[Component] = frame.getPanel(SelectedObject)
   def setObjectPanel (c: Component) = if (panels.contains(SelectedObject)) frame.setPanel(SelectedObject, c)
   def dismissObjectPanel = if (panels.contains(SelectedObject)) frame.setPanel(SelectedObject, emptyObjectPanel)
 

@@ -30,7 +30,8 @@ import gov.nasa.race.util.DateTimeUtils.hhmmss
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.swing.Style._
 import gov.nasa.race.ww
-import gov.nasa.race.ww.{AltitudeSensitiveRaceLayer, ConfigurableRenderingLayer, Images, InteractiveLayerInfoPanel, LayerObject, LayerObjectAttr, LayerSymbol, LayerSymbolOwner, RaceLayer, RaceViewer, SubscribingRaceLayer, WWPosition}
+import gov.nasa.race.ww.LayerObjectAttribute.LayerObjectAttribute
+import gov.nasa.race.ww.{AltitudeSensitiveRaceLayer, ConfigurableRenderingLayer, Images, InteractiveLayerInfoPanel, InteractiveRaceLayer, LayerObject, LayerObjectAttribute, LayerSymbol, LayerSymbolOwner, RaceLayer, RaceViewer, SubscribingRaceLayer, WWPosition}
 import gov.nasa.worldwind.render._
 
 import scala.collection.mutable.{Map => MutableMap}
@@ -172,20 +173,20 @@ class TrajectoryPairEventEntry (val event: TrajectoryPairEvent, val layer: Traje
     _isVisible = showIt
   }
 
-  override def setAttr(attr: LayerObjectAttr, cond: Boolean): Unit = {
+  override def setAttr(attr: LayerObjectAttribute, cond: Boolean): Unit = {
     attr match {
-      case LayerObject.PathAttr => if (cond) addPaths else removePaths
-      case LayerObject.InfoAttr => // TBD
-      case LayerObject.MarkAttr => // TDB
+      case LayerObjectAttribute.Path => if (cond) addPaths else removePaths
+      case LayerObjectAttribute.Info => // TBD
+      case LayerObjectAttribute.Mark => // TDB
       case _ => // ignore
     }
   }
 
-  override def isAttrSet(attr: LayerObjectAttr): Boolean = {
+  override def isAttrSet(attr: LayerObjectAttribute): Boolean = {
     attr match {
-      case LayerObject.PathAttr => pathsShowing
-      case LayerObject.InfoAttr => false
-      case LayerObject.MarkAttr => false
+      case LayerObjectAttribute.Path => pathsShowing
+      case LayerObjectAttribute.Info => false
+      case LayerObjectAttribute.Mark => false
       case _ => false
     }
   }
@@ -195,7 +196,10 @@ class TrajectoryPairEventEntry (val event: TrajectoryPairEvent, val layer: Traje
   * a RACE layer to control display of TrajectoryPairEvents
   */
 class TrajectoryPairEventLayer (val raceViewer: RaceViewer, val config: Config)
-              extends SubscribingRaceLayer with ConfigurableRenderingLayer with AltitudeSensitiveRaceLayer {
+              extends SubscribingRaceLayer
+                with ConfigurableRenderingLayer
+                with AltitudeSensitiveRaceLayer
+                with InteractiveRaceLayer[TrajectoryPairEventEntry] {
 
   val panel = createLayerInfoPanel
 
@@ -208,8 +212,6 @@ class TrajectoryPairEventLayer (val raceViewer: RaceViewer, val config: Config)
   def defaultSymbolImg: BufferedImage = Images.getEventImage(color)
   val symbolImg = defaultSymbolImg
 
-  var displayFilter: Option[TrajectoryPairEventEntry=>Boolean] = None
-
   def setDotLevel(e: TrajectoryPairEventEntry): Unit = e.setDotLevel
   def setLabelLevel(e: TrajectoryPairEventEntry): Unit = e.setLabelLevel
   def setIconLevel(e: TrajectoryPairEventEntry): Unit = e.setIconLevel
@@ -221,47 +223,41 @@ class TrajectoryPairEventLayer (val raceViewer: RaceViewer, val config: Config)
     case BusEvent(_, e: TrajectoryPairEvent, _) => updateEvents(e)
   }
 
+  //--- InteractiveRaceLayer interface
 
-  // override if we need specialized entries/init
+  override def layerObjects: Iterable[TrajectoryPairEventEntry] = events.values
+  override def layerObjectQuery: Query[TrajectoryPairEventEntry] = {
+    new TrajectoryPairEventQuery[TrajectoryPairEventEntry](_.event)
+  }
+
+  override def maxLayerObjectRows: Int = config.getIntOrElse("max-rows", 10)
+
+  override def layerObjectIdHeader: String = "id"
+  override def layerObjectIdText (e: TrajectoryPairEventEntry): String = e.id
+
+  override def layerObjectDataHeader: String = "data"
+  override def layerObjectDataText (e: TrajectoryPairEventEntry): String = e.event.eventType
+
+  override def setLayerObjectAttribute(e: TrajectoryPairEventEntry, attr: LayerObjectAttribute, cond: Boolean): Unit = {
+    if (e.isAttrSet(attr) != cond) {
+      e.setAttr(attr, cond)
+      ifSome(LayerObjectAttribute.getAction(attr, cond)) { action =>
+        raceViewer.objectChanged(e,action)
+      }
+    }
+  }
+
+  override def doubleClickLayerObject(e: TrajectoryPairEventEntry): Unit = {
+    // TODO - set entry panel
+  }
+
+  //--- initialization support - override if we need specialized entries/init
   protected def createEventEntry (event: TrajectoryPairEvent): TrajectoryPairEventEntry = {
     new TrajectoryPairEventEntry(event, this)
   }
 
   def createLayerInfoPanel: InteractiveLayerInfoPanel[TrajectoryPairEventEntry] = {
-    new InteractiveLayerInfoPanel[TrajectoryPairEventEntry](
-      maxEventRows,
-      new TrajectoryPairEventQuery[TrajectoryPairEventEntry](_.event),
-      getAllEvents,
-      setDisplayFilter,
-      setEventPanel,
-      eventIdHeader,
-      eventIdText,
-      eventDataHeader,
-      eventDataText
-    ).styled('consolePanel)
-  }
-
-  //--- InteractiveLayerInfo callbacks
-  def maxEventRows: Int = config.getIntOrElse("max-rows", 10)
-  def getAllEvents: Iterable[TrajectoryPairEventEntry] = events.values
-
-  def eventIdHeader: String = "event"
-  def eventIdText (e: TrajectoryPairEventEntry): String = e.event.id
-
-  def eventDataHeader: String = "  Δhdg  dist[m]"
-  def eventDataText (e: TrajectoryPairEventEntry): String = e.event.eventDetails
-
-  def setEventPanel (e: TrajectoryPairEventEntry): Unit = {
-    // TODO
-  }
-
-  def setDisplayFilter (df: Option[TrajectoryPairEventEntry=>Boolean]): Unit = {
-    displayFilter = df
-    df match {
-      case None => events.foreach ( _._2.setVisible(true))
-      case Some(f) => events.foreach { p => p._2.setVisible(f(p._2))}
-    }
-    wwdRedrawManager.redraw()
+    new InteractiveLayerInfoPanel(this).styled('consolePanel)
   }
 
 

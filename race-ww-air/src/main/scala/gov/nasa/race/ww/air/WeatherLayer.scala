@@ -43,8 +43,6 @@ object WeatherLayer {
                    latLonPos2LatLon( proj.toLatLonPos(pi.width, pi.height)),
                    latLonPos2LatLon( proj.toLatLonPos(Length0, pi.height)))
   }
-
-  val weatherLayerPanel = new DynamicLayerInfoPanel styled 'consolePanel
 }
 import gov.nasa.race.ww.air.WeatherLayer._
 
@@ -54,7 +52,7 @@ import gov.nasa.race.ww.air.WeatherLayer._
 class WeatherLayer (val raceViewer: RaceViewer, val config: Config) extends SubscribingRaceLayer {
 
   val precipMap = MutableMap[String,PrecipEntry]()
-  val panel = weatherLayerPanel
+  val panel = new DynamicLayerInfoPanel(this).styled('consolePanel)
 
   override def size = precipMap.size
 

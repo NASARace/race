@@ -147,6 +147,7 @@ class WorldWindFrame (config: Config, raceView: RaceViewer) extends AppFrame {
     * dynamic view modifications during runtime
     */
   def setPanel (name: String, panel: Component) = consolePanel.set(name, panel)
+  def getPanel (name: String): Option[Component] = consolePanel.get(name)
 
   /**
     * set visibility of all active console panels

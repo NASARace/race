@@ -27,7 +27,7 @@ import scala.collection.JavaConverters._
 import scala.collection.mutable.Buffer
 
 object LayerInfoList {
-  val defaultPanel = new DefaultLayerInfoPanel().styled('consolePanel)
+  val defaultPanel = new SharedLayerInfoPanel().styled('consolePanel)
 
   class WWLayerInfo (val name: String, val categories: Set[String], val description: String,
                      val enable: Boolean, val enablePick: Boolean,

@@ -58,9 +58,17 @@ class CollapsiblePanel extends GBPanel {
           c.setContent(child)
           child.repaint
           true
-        case other => false
+        case _ => false
       }
     }) add(title,child,toolTip,isExpanded)
+  }
+
+  def get (title: String): Option[Component] = {
+    contents.foreach( _ match {
+      case c: Collapsible if c.title == title => return Some(c.content)
+      case _ => // ignore
+    })
+    None
   }
 
   def expand(title: String, setExpanded: Boolean): Unit = {

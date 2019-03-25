@@ -86,7 +86,10 @@ package object ww {
   }
 
 
-  case class PanelEntry (name: String, panel: RacePanel, tooltip: String="click to hide/show panel", var expand: Boolean=true)
+  case class PanelEntry ( name: String,
+                          panel: RacePanel,
+                          tooltip: String="click to hide/show panel",
+                          var expand: Boolean=true)
 
   object EventAction extends Enumeration {
     type EventAction = Value

@@ -21,16 +21,18 @@ import java.awt.image.BufferedImage
 
 import com.github.nscala_time.time.Imports._
 import gov.nasa.race._
-import gov.nasa.race.common.{ThresholdLevel, ThresholdLevelList}
+import gov.nasa.race.common.{Query, ThresholdLevel, ThresholdLevelList}
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.Messages._
 import gov.nasa.race.geo.{GeoPositioned, GreatCircle}
 import gov.nasa.race.swing.Style._
 import gov.nasa.race.track.{TrackTerminationMessage, _}
 import gov.nasa.race.trajectory.{MutCompressedTrajectory, MutTrajectory}
-import gov.nasa.race.util.StringUtils
+import gov.nasa.race.util.{DateTimeUtils, StringUtils}
 import gov.nasa.race.ww.EventAction.EventAction
 import gov.nasa.race.ww.Implicits._
+import gov.nasa.race.ww.LayerObjectAction.LayerObjectAction
+import gov.nasa.race.ww.LayerObjectAttribute.LayerObjectAttribute
 import gov.nasa.race.ww.{AltitudeSensitiveRaceLayer, _}
 import gov.nasa.worldwind.geom.Position
 
@@ -47,6 +49,7 @@ import scala.util.matching.Regex
 trait TrackLayer[T <:TrackedObject] extends SubscribingRaceLayer
                              with ConfigurableRenderingLayer
                              with AltitudeSensitiveRaceLayer
+                             with InteractiveRaceLayer[TrackEntry[T]]
                              with TrackQueryContext {
 
   val panel = createLayerInfoPanel
@@ -101,48 +104,45 @@ trait TrackLayer[T <:TrackedObject] extends SubscribingRaceLayer
 
   override def size = trackEntries.size
 
-  var displayFilter: Option[TrackEntry[T]=>Boolean] = None
+  //--- InteractiveRaceLayer interface
 
-  //--- end ctor
+  override def layerObjects: Iterable[TrackEntry[T]] = trackEntries.values
+  override def layerObjectQuery: Query[TrackEntry[T]] = new TrackQuery(this, _.obj)
 
-  //--- override in subclasses for more specialized types
-  def maxTrackEntryRows: Int = config.getIntOrElse("max-rows", 10)
+  override def maxLayerObjectRows: Int = config.getIntOrElse("max-rows", 10)
 
-  def getAllTrackEntries: Iterable[TrackEntry[T]] = trackEntries.values
+  override def layerObjectIdHeader: String = "c/s"
+  override def layerObjectIdText (e: TrackEntry[T]): String = e.id
 
-  def trackEntryIdHeader: String = "c/s"
-  def trackEntryIdText (e: TrackEntry[T]): String = e.id
-
-  def trackEntryDataHeader: String = "t-pos   [ft]  hdg [kn]"
-  def trackEntryDataText (e: TrackEntry[T]): String = {
+  override def layerObjectDataHeader: String = "    time   [ft] hdg [kn]"
+                                             //"--:--:-- ------ --- ----"
+  override def layerObjectDataText (e: TrackEntry[T]): String = {
     val obj = e.obj
+    val dtg = DateTimeUtils.formatDate(obj.date, DateTimeUtils.hhmmss)
     val alt = obj.position.altitude.toFeet.toInt
     val hdg = obj.heading.toNormalizedDegrees.toInt
     val spd = obj.speed.toKnots.toInt
-    f" $alt%6d $hdg%3d° $spd%4d"
+    f"$dtg $alt%6d $hdg%3d $spd%4d"
   }
 
-  def setDisplayFilter (df: Option[TrackEntry[T]=>Boolean]): Unit = {
-    displayFilter = df
-    df match {
-      case None => trackEntries.foreach ( _._2.setVisible(true))
-      case Some(f) => trackEntries.foreach { p => p._2.setVisible(f(p._2))}
+  override def setLayerObjectAttribute(o: TrackEntry[T], attr: LayerObjectAttribute, cond: Boolean): Unit = {
+    if (o.isAttrSet(attr) != cond) {
+      o.setAttr(attr, cond)
+      ifSome(LayerObjectAttribute.getAction(attr, cond)) { action =>
+        raceViewer.objectChanged(o,action)
+      }
+      panel.updateEntryAttributes // update layerinfo panel
+      entryPanel.updateTrackEntryAttributes // update entry panel
+      redraw
     }
-    wwdRedrawManager.redraw()
   }
+
+  override def doubleClickLayerObject(e: TrackEntry[T]): Unit = setTrackEntryPanel(e)
+
+  //--- initialization support - override in subclasses for more specialized types
 
   protected def createLayerInfoPanel: InteractiveLayerInfoPanel[TrackEntry[T]] = {
-    new InteractiveLayerInfoPanel[TrackEntry[T]](
-      maxTrackEntryRows,
-      new TrackQuery[TrackEntry[T]](this, _.obj),
-      getAllTrackEntries,
-      setDisplayFilter,
-      setTrackEntryPanel,
-      trackEntryIdHeader,
-      trackEntryIdText,
-      trackEntryDataHeader,
-      trackEntryDataText
-    ).styled('consolePanel)
+    new InteractiveLayerInfoPanel[TrackEntry[T]](this).styled('consolePanel)
   }
 
   protected def createEntryPanel: TrackEntryPanel[T] = new TrackEntryPanel(raceViewer,this).styled('consolePanel)
@@ -150,10 +150,6 @@ trait TrackLayer[T <:TrackedObject] extends SubscribingRaceLayer
   protected def createTrajectory(track: T): MutTrajectory = new MutCompressedTrajectory(50)
 
   protected def createTrackEntry(track: T): TrackEntry[T] = new TrackEntry[T](track,createTrajectory(track), this)
-
-  //--- InteractiveRaceLayer interface
-
-
 
 
   def matchingTracks(f: TrackEntry[T]=>Boolean): Seq[TrackEntry[T]] = {
@@ -193,7 +189,7 @@ trait TrackLayer[T <:TrackedObject] extends SubscribingRaceLayer
   def dismissEntryPanel (e: TrackEntry[T]) = {
     if (entryPanel.isShowing(e)) {
       raceViewer.dismissObjectPanel
-      raceViewer.objectChanged(e, LayerObject.DismissPanel)
+      raceViewer.objectChanged(e, LayerObjectAction.DismissPanel)
     }
   }
 
@@ -215,14 +211,14 @@ trait TrackLayer[T <:TrackedObject] extends SubscribingRaceLayer
 
   def selectTrackEntry(e: TrackEntry[T]) = {
     panel.trySelectEntry(e)
-    raceViewer.objectChanged(e,LayerObject.Select)
+    raceViewer.objectChanged(e,LayerObjectAction.Select)
   }
 
   def setTrackEntryPanel(e: TrackEntry[T]) = {
     if (!entryPanel.isShowing(e)) {
       entryPanel.setTrackEntry(e)
       raceViewer.setObjectPanel(entryPanel)
-      raceViewer.objectChanged(e,LayerObject.ShowPanel)
+      raceViewer.objectChanged(e,LayerObjectAction.ShowPanel)
     }
   }
 
@@ -314,20 +310,20 @@ trait TrackLayer[T <:TrackedObject] extends SubscribingRaceLayer
   override def changeObject(objectId: String, action: LayerObjectAction) = {
     ifSome(trackEntries.get(objectId)) { e =>
       action match {
-        case LayerObject.Select       => selectTrackEntry(e)
-        case LayerObject.ShowPanel    => setTrackEntryPanel(e)
-        case LayerObject.DismissPanel => dismissEntryPanel(e)
-        case LayerObject.StartFocus   => setFocused(e,true)
-        case LayerObject.StopFocus    => setFocused(e,false)
+        case LayerObjectAction.Select       => selectTrackEntry(e)
+        case LayerObjectAction.ShowPanel    => setTrackEntryPanel(e)
+        case LayerObjectAction.DismissPanel => dismissEntryPanel(e)
+        case LayerObjectAction.StartFocus   => setFocused(e,true)
+        case LayerObjectAction.StopFocus    => setFocused(e,false)
 
-        case LayerObject.ShowPath     => setPath(e,true)
-        case LayerObject.HidePath     => setPath(e,false)
-        case LayerObject.ShowContour  => setPathContour(e,true)
-        case LayerObject.HideContour  => setPathContour(e,false)
-        case LayerObject.ShowInfo     => setInfo(e,true)
-        case LayerObject.HideInfo     => setInfo(e,false)
-        case LayerObject.ShowMark     => setMark(e,true)
-        case LayerObject.HideMark     => setMark(e,false)
+        case LayerObjectAction.ShowPath     => setPath(e,true)
+        case LayerObjectAction.HidePath     => setPath(e,false)
+        case LayerObjectAction.ShowContour  => setPathContour(e,true)
+        case LayerObjectAction.HideContour  => setPathContour(e,false)
+        case LayerObjectAction.ShowInfo     => setInfo(e,true)
+        case LayerObjectAction.HideInfo     => setInfo(e,false)
+        case LayerObjectAction.ShowMark     => setMark(e,true)
+        case LayerObjectAction.HideMark     => setMark(e,false)
         case _ => // ignore
       }
     }
@@ -340,9 +336,9 @@ trait TrackLayer[T <:TrackedObject] extends SubscribingRaceLayer
       if (cond) {
         val loPos = lo.pos.position
         raceViewer.centerTo(Position.fromDegrees(loPos.latDeg, loPos.lonDeg, raceViewer.tgtZoom))  // FIXME
-        raceViewer.objectChanged(lo,LayerObject.StartFocus)
+        raceViewer.objectChanged(lo,LayerObjectAction.StartFocus)
       } else {
-        raceViewer.objectChanged(lo,LayerObject.StopFocus)
+        raceViewer.objectChanged(lo,LayerObjectAction.StopFocus)
       }
     }
   }
