@@ -18,7 +18,6 @@ package gov.nasa.race.ww
 
 import java.awt.Insets
 
-import gov.nasa.race.common.Query
 import gov.nasa.race.swing.GBPanel._
 import gov.nasa.race.swing.Style._
 import gov.nasa.race.swing.{Filler, GBPanel, ItemRenderPanel, ListItemRenderer, SelectionPreserving, Style, VisibilityBounding}
@@ -29,34 +28,6 @@ import scala.swing.Swing._
 import scala.swing.event._
 import scala.swing.{Action, BoxPanel, Button, ButtonGroup, CheckBox, Component, Label, ListView, MenuItem, Orientation, PopupMenu, RadioButton, ScrollPane, TextField}
 
-/**
-  * a RaceLayer whose LayerObjects can be queried and managed through UI components
-  */
-trait InteractiveRaceLayer[T <: LayerObject] extends SubscribingRaceLayer {
-
-  // note this might be used by implementors that dynamically add/modify layerObjects
-  protected var displayFilter: Option[T=>Boolean] = None
-
-  def layerObjects: Iterable[T]
-  def layerObjectQuery: Query[T]
-
-  def filterLayerObjectDisplay(filter: Option[T=>Boolean]): Unit = {
-    filter match {
-      case None => layerObjects.foreach(_.setVisible(true)) // if none make all objects visible
-      case Some(f) => layerObjects.foreach( e=> e.setVisible(f(e)))
-    }
-  }
-
-  def setLayerObjectAttribute(o: T, attr: LayerObjectAttribute, cond: Boolean): Unit
-  def doubleClickLayerObject(o: T): Unit
-
-  //--- for rendering layerObjects in a ListView
-  def maxLayerObjectRows: Int
-  def layerObjectIdHeader: String
-  def layerObjectIdText(o: T): String
-  def layerObjectDataHeader: String
-  def layerObjectDataText(o: T): String
-}
 
 /**
   * a LayerInfoPanel that supports (delegated) queries and result lists that

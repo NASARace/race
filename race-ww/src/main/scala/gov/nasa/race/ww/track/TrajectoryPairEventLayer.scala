@@ -20,18 +20,19 @@ import java.awt.Font
 import java.awt.image.BufferedImage
 
 import com.typesafe.config.Config
-import gov.nasa.race._
 import gov.nasa.race.common.{Query, ThresholdLevel, ThresholdLevelList}
+import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.Messages.BusEvent
 import gov.nasa.race.geo.{GeoPosition, GeoPositioned}
+import gov.nasa.race.swing.FieldPanel
+import gov.nasa.race.swing.Style._
 import gov.nasa.race.track.TrajectoryPairEvent
 import gov.nasa.race.trajectory.Trajectory
 import gov.nasa.race.util.DateTimeUtils.hhmmss
-import gov.nasa.race.config.ConfigUtils._
-import gov.nasa.race.swing.Style._
-import gov.nasa.race.ww
+import gov.nasa.race.{ww, _}
 import gov.nasa.race.ww.LayerObjectAttribute.LayerObjectAttribute
-import gov.nasa.race.ww.{AltitudeSensitiveRaceLayer, ConfigurableRenderingLayer, Images, InteractiveLayerInfoPanel, InteractiveRaceLayer, LayerObject, LayerObjectAttribute, LayerSymbol, LayerSymbolOwner, RaceLayer, RaceViewer, SubscribingRaceLayer, WWPosition}
+import gov.nasa.race.ww.{AltitudeSensitiveRaceLayer, ConfigurableRenderingLayer, Images, InteractiveLayerInfoPanel, InteractiveLayerObjectPanel, InteractiveRaceLayer, LayerObject, LayerObjectAttribute, LayerSymbol, LayerSymbolOwner, RaceViewer, SubscribingRaceLayer, WWPosition}
+import gov.nasa.worldwind.WorldWind
 import gov.nasa.worldwind.render._
 
 import scala.collection.mutable.{Map => MutableMap}
@@ -47,6 +48,42 @@ class TrajectoryPairEventQuery[T] (getEvent: T=>TrajectoryPairEvent) extends Que
   }
 }
 
+class EventFields extends FieldPanel {
+  val id = addField("id:")
+  val etype = addField("type:")
+  val details = addField("details:")
+  val time = addField("time:")
+  addSeparator
+  val track1 = addField("track-1:")
+  val pos1 = addField("pos-1")
+  val alt1 = addField("alt-1:")
+  // TODO speed and heading ?
+  addSeparator
+  val track2 = addField("track-2:")
+  val pos2 = addField("pos-2")
+  val alt2 = addField("alt-2:")
+
+  def update (e: TrajectoryPairEvent): Unit = {
+    id.text = e.id
+    etype.text = e.eventType
+    details.text = e.eventDetails
+    time.text = hhmmss.print(e.date)
+
+    track1.text = e.track1.cs
+    pos1.text = f"${e.pos1.latDeg}%.6f° ${e.pos1.lonDeg}%.6f°"
+    alt1.text = s"${e.pos1.altFeet}%d ft"
+
+    track2.text = e.track2.cs
+    pos2.text = f"${e.pos2.latDeg}%.6f° ${e.pos2.lonDeg}%.6f°"
+    alt2.text = s"${e.pos2.altFeet}%d ft"
+  }
+}
+
+class TrajectoryPairEventPanel (override val layer: TrajectoryPairEventLayer)
+                                       extends InteractiveLayerObjectPanel[TrajectoryPairEventEntry,EventFields](layer) {
+  override def createFieldPanel = new EventFields
+}
+
 /**
   * the connector between the TrajectoryPairEvent and associated renderables
   */
@@ -55,6 +92,7 @@ class TrajectoryPairEventEntry (val event: TrajectoryPairEvent, val layer: Traje
 
   protected var _isVisible = true
   protected var symbolShowing = false
+  protected var marksShowing = false
   protected var pathsShowing = false  // only set if isVisible, depending on view level
 
   val dotAttrs = yieldInitialized(new PointPlacemarkAttributes) { attrs=>
@@ -67,9 +105,9 @@ class TrajectoryPairEventEntry (val event: TrajectoryPairEvent, val layer: Traje
 
   //--- the renderables that are associated with this entry
   protected var symbol: LayerSymbol = createSymbol
-  protected var dot1:   PointPlacemark = createDot(event.pos1)
+  protected var posMarker1: PointPlacemark = createPosMarker(event.pos1)
   protected var path1:  Path = createPath(event.trajectory1)
-  protected var dot2:   PointPlacemark = createDot(event.pos2)
+  protected var posMarker2: PointPlacemark = createPosMarker(event.pos2)
   protected var path2:  Path = createPath(event.trajectory2)
 
   addSymbol
@@ -77,9 +115,10 @@ class TrajectoryPairEventEntry (val event: TrajectoryPairEvent, val layer: Traje
   //--- override in subclasses for specific rendering
   def createSymbol: LayerSymbol = new LayerSymbol(this)
 
-  def createDot (pos: GeoPosition): PointPlacemark = yieldInitialized(new PointPlacemark(ww.wwPosition(pos))){ dot=>
-    dot.setLabelText(null)
-    dot.setAttributes(dotAttrs)
+  def createPosMarker (pos: GeoPosition): PointPlacemark = yieldInitialized(new PointPlacemark(ww.wwPosition(pos))){ p=>
+    p.setLabelText(null)
+    p.setAttributes(dotAttrs)
+    p.setAltitudeMode(WorldWind.ABSOLUTE)
   }
 
   def createPath (traj: Trajectory): TrajectoryPath = new TrajectoryPath(traj,lineMaterial)
@@ -98,11 +137,27 @@ class TrajectoryPairEventEntry (val event: TrajectoryPairEvent, val layer: Traje
     }
   }
 
+  def addMarks: Unit = {
+    if (!marksShowing) {
+      layer.addRenderable(posMarker1)
+      layer.addRenderable(posMarker2)
+      marksShowing = true
+    }
+  }
+
+  def removeMarks: Unit = {
+    if (marksShowing) {
+      layer.removeRenderable(posMarker1)
+      layer.removeRenderable(posMarker2)
+      marksShowing = false
+    }
+  }
+
   def addPaths = {
     if (!pathsShowing) {
-      layer.addRenderable(dot1)
+      layer.addRenderable(posMarker1)
       layer.addRenderable(path1)
-      layer.addRenderable(dot2)
+      layer.addRenderable(posMarker2)
       layer.addRenderable(path2)
       pathsShowing = true
     }
@@ -110,29 +165,31 @@ class TrajectoryPairEventEntry (val event: TrajectoryPairEvent, val layer: Traje
 
   def removePaths = {
     if (pathsShowing) {
-      layer.removeRenderable(dot1)
+      layer.removeRenderable(posMarker1)
       layer.removeRenderable(path1)
-      layer.removeRenderable(dot2)
+      layer.removeRenderable(posMarker2)
       layer.removeRenderable(path2)
       pathsShowing = false
     }
   }
-
 
   //--- called by rendering levels (e.g. when changing eye altitude)
 
   def setDotLevel: Unit = { // only event dot
     symbol.setDotAttrs
     removePaths
+    removeMarks
   }
   def setLabelLevel: Unit = { // only event label
     symbol.setLabelAttrs
     removePaths
+    removeMarks
   }
   def setIconLevel: Unit = { // icon, label and paths
     symbol.setIconAttrs
     if (_isVisible) {
-      addPaths
+      addSymbol
+      addMarks
     }
   }
 
@@ -232,11 +289,14 @@ class TrajectoryPairEventLayer (val raceViewer: RaceViewer, val config: Config)
 
   override def maxLayerObjectRows: Int = config.getIntOrElse("max-rows", 10)
 
-  override def layerObjectIdHeader: String = "id"
+  override def layerObjectIdHeader: String = "event"
   override def layerObjectIdText (e: TrajectoryPairEventEntry): String = e.id
 
   override def layerObjectDataHeader: String = "data"
-  override def layerObjectDataText (e: TrajectoryPairEventEntry): String = e.event.eventType
+  override def layerObjectDataText (e: TrajectoryPairEventEntry): String = {
+    val ev = e.event
+    s"${ev.eventType} : ${ev.eventDetails}"
+  }
 
   override def setLayerObjectAttribute(e: TrajectoryPairEventEntry, attr: LayerObjectAttribute, cond: Boolean): Unit = {
     if (e.isAttrSet(attr) != cond) {
@@ -250,6 +310,11 @@ class TrajectoryPairEventLayer (val raceViewer: RaceViewer, val config: Config)
   override def doubleClickLayerObject(e: TrajectoryPairEventEntry): Unit = {
     // TODO - set entry panel
   }
+
+  override def focusLayerObject(o: TrajectoryPairEventEntry, cond: Boolean): Unit = {
+    // TODO
+  }
+
 
   //--- initialization support - override if we need specialized entries/init
   protected def createEventEntry (event: TrajectoryPairEvent): TrajectoryPairEventEntry = {

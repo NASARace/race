@@ -102,12 +102,10 @@ object SeqUtils {
   def sortedArray[A: ClassTag] (it: Iterable[A])(sortFunc: (A,A)=>Boolean): Array[A] = {
     val a = it.toArray
     a.sortWith(sortFunc)
-    a
   }
 
   def sortedSeq[A] (it: Iterable[A])(sortFunc: (A,A)=>Boolean): Seq[A] = {
     val seq = it.toSeq
     seq.sortWith(sortFunc)
-    seq
   }
 }

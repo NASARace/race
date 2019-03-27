@@ -76,6 +76,7 @@ object LayerObjectAttribute extends Enumeration {
   type LayerObjectAttribute = Value
 
   val Path = Value
+  val Contour = Value
   val Info = Value
   val Mark = Value
 
@@ -84,6 +85,7 @@ object LayerObjectAttribute extends Enumeration {
   def getAction (attr: Value, cond: Boolean): Option[LayerObjectAction] = {
     attr match {
       case Path => Some( if (cond) LayerObjectAction.ShowPath else LayerObjectAction.HidePath)
+      case Contour => Some( if (cond) LayerObjectAction.ShowContour else LayerObjectAction.HideContour)
       case Info => Some( if (cond) LayerObjectAction.ShowInfo else LayerObjectAction.HideInfo)
       case Mark => Some( if (cond) LayerObjectAction.ShowMark else LayerObjectAction.HideMark)
       case _ => None

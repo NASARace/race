@@ -16,141 +16,83 @@
  */
 package gov.nasa.race.ww.track
 
-import java.awt.Insets
-
-import gov.nasa.race.swing.GBPanel.Anchor
-import gov.nasa.race.swing.Style._
-import gov.nasa.race.swing.{FieldPanel, GBPanel}
+import gov.nasa.race._
+import gov.nasa.race.swing.FieldPanel
 import gov.nasa.race.track.{TrackInfo, TrackedObject}
 import gov.nasa.race.util.DateTimeUtils._
-import gov.nasa.race.ww.{Images, LayerObjectAttribute, RacePanel, RaceViewer}
+import gov.nasa.race.ww.InteractiveLayerObjectPanel
 import org.joda.time.DateTime
 
-import scala.swing.event.{ButtonClicked, MouseClicked}
-import scala.swing.{Alignment, BoxPanel, CheckBox, Label, Orientation}
 
-object TrackEntryPanel {
-  val ejectIcon = Images.getIcon("eject-blue-16x16.png")
+class TrackFields[T <: TrackedObject] extends FieldPanel {
+  val cs   = addField("cs:")
+  val date = addField("date:")
+  val pos  = addField("position:")
+  val alt  = addField("altitude:")
+  val hdg  = addField("heading:")
+  val spd  = addField("speed:")
+  val vr   = addField("vr:")
+  addSeparator
+  val dep  = addField("departure:", "…")
+  val arr  = addField("arrival:", "…")
+  val acType = addField("aircraft:", "…")
+  setContents
+
+  // owner has to make sure updates are for the right object
+
+  def update (obj: T): Unit = {
+    cs.text = obj.cs
+    date.text = hhmmss.print(obj.date)
+    val opos = obj.position
+    pos.text = f"${opos.latDeg}%.6f° , ${opos.lonDeg}%.6f°"
+    alt.text = f"${opos.altFeet}%d ft"
+    hdg.text = f"${obj.heading.toDegrees.toInt}%d°"
+    spd.text = f"${obj.speed.toKnots.toInt}%d kn"
+    vr.text = f"${obj.vr.toFeetPerSecond.toInt}%d fps"
+  }
+
+  def setTrackInfo (ti: TrackInfo): Unit = {
+    def optString(opt: Option[String]): String = if (opt.isDefined) opt.get else "…"
+    def optDate(opt: Option[DateTime]): String = if (opt.isDefined) hhmmss.print(opt.get) else "…"
+
+    dep.text = s"${optString(ti.departurePoint)}  ${optDate(ti.etd)} / ${optDate(ti.atd)}"
+    arr.text = s"${optString(ti.arrivalPoint)}  ${optDate(ti.eta)} / ${optDate(ti.ata)}"
+    acType.text = s"${optString(ti.trackCategory)} ${optString(ti.trackType)}"
+  }
 }
 
-trait TrackEntryFields[T <: TrackedObject] extends FieldPanel { // we need a named type or field access will use reflection
-  def update (obj: T): Unit
-  def setTrackInfo (ti: TrackInfo): Unit = {} // not all TrackedObjects have them
-}
 
 /**
   * RaceLayer item panel for FlightEntry objects
   */
-class TrackEntryPanel[T <: TrackedObject](raceView: RaceViewer, layer: TrackLayer[T])
-                extends BoxPanel(Orientation.Vertical) with RacePanel {
+class TrackEntryPanel[T <: TrackedObject](override val layer: TrackLayer[T])
+                     extends InteractiveLayerObjectPanel[TrackEntry[T],TrackFields[T]](layer) {
 
-  class TrackFields extends TrackEntryFields[T] {
-    val cs   = addField("cs:")
-    val date = addField("date:")
-    val pos  = addField("position:")
-    val alt  = addField("altitude:")
-    val hdg  = addField("heading:")
-    val spd  = addField("speed:")
-    val vr   = addField("vr:")
-    addSeparator
-    val dep  = addField("departure:", "…")
-    val arr  = addField("arrival:", "…")
-    val acType = addField("aircraft:", "…")
-    setContents
+  override def createFieldPanel = new TrackFields[T]
 
-    override def update (obj: T): Unit = {
-      cs.text = obj.cs
-      date.text = hhmmss.print(obj.date)
-      val opos = obj.position
-      pos.text = f"${opos.latDeg}%.6f° , ${opos.lonDeg}%.6f°"
-      alt.text = f"${opos.altFeet}%d ft"
-      hdg.text = f"${obj.heading.toDegrees.toInt}%d°"
-      spd.text = f"${obj.speed.toKnots.toInt}%d kn"
-      vr.text = f"${obj.vr.toFeetPerSecond.toInt}%d fps"
-    }
+  def setTrackEntry(newEntry: TrackEntry[T]) = {
+    ifSome (entry) { layer.releaseTrackInfoUpdates(_) }
 
-    override def setTrackInfo (ti: TrackInfo): Unit = {
-      def optString(opt: Option[String]): String = if (opt.isDefined) opt.get else "…"
-      def optDate(opt: Option[DateTime]): String = if (opt.isDefined) hhmmss.print(opt.get) else "…"
-
-      if (ti.cs == trackEntry.obj.cs) {
-        dep.text = s"${optString(ti.departurePoint)}  ${optDate(ti.etd)} / ${optDate(ti.atd)}"
-        arr.text = s"${optString(ti.arrivalPoint)}  ${optDate(ti.eta)} / ${optDate(ti.ata)}"
-        acType.text = s"${optString(ti.trackCategory)} ${optString(ti.trackType)}"
-      }
-    }
+    entry = Some(newEntry)
+    updateTrackEntryAttributes
+    update
+    layer.requestTrackInfoUpdates(newEntry)
   }
 
-  val fields = createFieldPanel.styled()
+  def update: Unit = ifSome(entry){ e=> fields.update(e.obj) }
 
-  val pathCb = new CheckBox("path").styled()
-  val path3dCb = new CheckBox("3d").styled()
-  val infoCb = new CheckBox("info").styled()
-  val markCb = new CheckBox("mark").styled()
-  val focusCb = new CheckBox("focus").styled()
-  val dismissBtn = new Label("",TrackEntryPanel.ejectIcon,Alignment.Center).styled()
+  def setTrackInfo(ti: TrackInfo): Unit = ifSome(entry) { e=> fields.setTrackInfo(ti) }
 
-  val buttonPanel = new GBPanel {
-    val c = new Constraints(insets = new Insets(5, 0, 0, 0), anchor = Anchor.West)
-    layout(pathCb)   = c(0,0)
-    layout(path3dCb) = c(1,0)
-    layout(infoCb)   = c(2,0)
-    layout(markCb)   = c(3,0)
-    layout(focusCb) = c(4,0)
-    layout(dismissBtn) = c(5,0).weightx(0)
-  }.styled()
+  def setFocused(focusIt: Boolean): Unit = ifSome(entry) { layer.setFocused(_,focusIt) }
 
-  contents += fields
-  contents += buttonPanel
-
-  listenTo(focusCb,pathCb,path3dCb,infoCb,markCb,dismissBtn.mouse.clicks)
-  reactions += {
-    case ButtonClicked(`focusCb`)  => raceView.trackUserAction { setFocused(focusCb.selected) }
-    case ButtonClicked(`pathCb`)   => raceView.trackUserAction { layer.setLayerObjectAttribute(trackEntry,LayerObjectAttribute.Path,pathCb.selected) }
-    case ButtonClicked(`path3dCb`) => raceView.trackUserAction { setPathContour(path3dCb.selected) }
-    case ButtonClicked(`infoCb`)   => raceView.trackUserAction { layer.setLayerObjectAttribute(trackEntry,LayerObjectAttribute.Info,infoCb.selected) }
-    case ButtonClicked(`markCb`)   => raceView.trackUserAction { layer.setLayerObjectAttribute(trackEntry,LayerObjectAttribute.Mark,markCb.selected) }
-    case MouseClicked(`dismissBtn`,_,_,_,_) => raceView.trackUserAction { dismissPanel }
-  }
-
-  var trackEntry: TrackEntry[T] = _
-
-  protected def createFieldPanel: TrackEntryFields[T] = new TrackFields
-
-  def dismissPanel: Unit = {
-    layer.releaseTrackInfoUpdates(trackEntry)
-    layer.dismissEntryPanel(trackEntry)
-    trackEntry = null
-  }
-
-  def isShowing(e: TrackEntry[T]) = showing && trackEntry == e
-
-  def setTrackEntry(e: TrackEntry[T]) = {
-    if (e != trackEntry) {
-      if (trackEntry != null) layer.releaseTrackInfoUpdates(trackEntry)
-      trackEntry = e
-      updateTrackEntryAttributes
-      update
-      layer.requestTrackInfoUpdates(trackEntry)
-    }
-  }
-
-  def update = fields.update(trackEntry.obj)
-
-  def setTrackInfo(ti: TrackInfo) = fields.setTrackInfo(ti)
-
-  def setFocused(focusIt: Boolean) = layer.setFocused(trackEntry,focusIt)
-
-  def setPathContour (showIt: Boolean) = layer.setPathContour(trackEntry,showIt)
+  def setPathContour (showIt: Boolean): Unit = ifSome(entry) { layer.setPathContour(_,showIt) }
 
 
   // this is just a notification that attributes have changed externally
-  def updateTrackEntryAttributes = {
-    if (trackEntry != null) {
-      focusCb.selected = trackEntry.isFocused
-      pathCb.selected = trackEntry.hasPath
-      infoCb.selected = trackEntry.hasInfo
-      markCb.selected = trackEntry.hasMark
-    }
+  def updateTrackEntryAttributes: Unit = ifSome(entry) { e=>
+    focusCb.selected = e.isFocused
+    pathCb.selected = e.hasPath
+    infoCb.selected = e.hasInfo
+    markCb.selected = e.hasMark
   }
 }

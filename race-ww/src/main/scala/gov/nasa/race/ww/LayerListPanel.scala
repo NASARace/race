@@ -103,7 +103,7 @@ class LayerListPanel (raceView: RaceViewer, config: Option[Config]=None)
 
     case ListSelectionChanged(`listView`,range,live) =>
       selectionChanged = true
-      updateLayerInfoPanel(getFirstSelected)
+      raceView.trackUserAction { updateLayerInfoPanel(getFirstSelected) }
   }
 
   val toolTipController = new ToolTipController(raceView.wwd, layerInfoList.tooltipAnnotationLayer)
@@ -121,12 +121,15 @@ class LayerListPanel (raceView: RaceViewer, config: Option[Config]=None)
   def updateLayerInfoPanel (layerSelection: Option[Layer]) = {
     ifSome(layerSelection) { layer =>
       val panel = layer.layerInfo.panel
+      if (lastLayerInfoPanel.isEmpty || lastLayerInfoPanel.get.layer != layer) {
+        ifInstanceOf[SharedLayerInfoPanel](panel) {_.setLayer(layer)}
+        lastLayerInfoPanel = ifSome(lastLayerInfoPanel) {_.unselect} orElse {Some(panel)}
 
-      ifInstanceOf[SharedLayerInfoPanel](panel) { _.setLayer(layer) }
-      lastLayerInfoPanel = ifSome(lastLayerInfoPanel){ _.unselect } orElse { Some(panel) }
+        raceView.setLayerPanel(panel)
+        panel.select
 
-      raceView.setLayerPanel(panel)
-      panel.select
+        raceView.layerChanged(layer)
+      }
     }
   }
 

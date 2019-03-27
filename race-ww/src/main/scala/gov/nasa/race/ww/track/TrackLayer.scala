@@ -139,13 +139,28 @@ trait TrackLayer[T <:TrackedObject] extends SubscribingRaceLayer
 
   override def doubleClickLayerObject(e: TrackEntry[T]): Unit = setTrackEntryPanel(e)
 
+  override def focusLayerObject(e: TrackEntry[T], cond: Boolean): Unit = {
+    // TODO - reporting should be consistent with attribute changes
+    setFocused(e,cond,true)
+  }
+
+  override  def dismissLayerObjectPanel (e: TrackEntry[T]): Unit = {
+    if (entryPanel.isShowing(e)) {
+      releaseTrackInfoUpdates(e)
+      entryPanel.reset
+
+      raceViewer.dismissObjectPanel
+      raceViewer.objectChanged(e, LayerObjectAction.DismissPanel)
+    }
+  }
+
   //--- initialization support - override in subclasses for more specialized types
 
   protected def createLayerInfoPanel: InteractiveLayerInfoPanel[TrackEntry[T]] = {
     new InteractiveLayerInfoPanel[TrackEntry[T]](this).styled('consolePanel)
   }
 
-  protected def createEntryPanel: TrackEntryPanel[T] = new TrackEntryPanel(raceViewer,this).styled('consolePanel)
+  protected def createEntryPanel: TrackEntryPanel[T] = new TrackEntryPanel(this).styled('consolePanel)
 
   protected def createTrajectory(track: T): MutTrajectory = new MutCompressedTrajectory(50)
 
@@ -184,14 +199,6 @@ trait TrackLayer[T <:TrackedObject] extends SubscribingRaceLayer
 
 
   def showPathPositions = showPositions && eyeAltitude < linePosLevel.upperBoundary
-
-
-  def dismissEntryPanel (e: TrackEntry[T]) = {
-    if (entryPanel.isShowing(e)) {
-      raceViewer.dismissObjectPanel
-      raceViewer.objectChanged(e, LayerObjectAction.DismissPanel)
-    }
-  }
 
   /**
     * the pick handler interface
@@ -312,7 +319,7 @@ trait TrackLayer[T <:TrackedObject] extends SubscribingRaceLayer
       action match {
         case LayerObjectAction.Select       => selectTrackEntry(e)
         case LayerObjectAction.ShowPanel    => setTrackEntryPanel(e)
-        case LayerObjectAction.DismissPanel => dismissEntryPanel(e)
+        case LayerObjectAction.DismissPanel => dismissLayerObjectPanel(e)
         case LayerObjectAction.StartFocus   => setFocused(e,true)
         case LayerObjectAction.StopFocus    => setFocused(e,false)
 

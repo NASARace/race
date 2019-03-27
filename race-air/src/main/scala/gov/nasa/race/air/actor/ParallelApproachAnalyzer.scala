@@ -160,6 +160,8 @@ class ParallelApproachAnalyzer (val config: Config) extends SubscribingRaceActor
           val pos2 = GeoPosition(lat2,lon2,alt2)
           val pos = GreatCircle.euclidianMidpoint(pos1,pos2)
 
+          // TODO should probably include speed and heading for both tracks
+
           publishEvent(date, pos, deltaHdg, dist, c1, tr1, pos1, c2, tr2, pos2)
           //println(f"@@ $t%4d: ${dist.toMeters}%10.0f, ${hdg1.toDegrees}%3.0f, ${hdg2.toDegrees}%3.0f -> delta= ${deltaHdg.toDegrees}%3.0f")
           info(f"max angle-in exceeded: ${c1.track.cs},${c2.track.cs} at $date: Δhdg = ${deltaHdg.toDegrees}%.0f, dist = ${dist.toMeters}%.0fm")
@@ -198,7 +200,7 @@ class ParallelApproachAnalyzer (val config: Config) extends SubscribingRaceActor
       s"$eventIdPrefix-$nEvents",
       date, pos,
       "angle-in",
-      s"angle $deltaHdg at distance $dist",
+      f"${deltaHdg.toDegrees}%3.0f° at ${dist.toMeters}%5.0fm",
       c1.track, pos1, t1,
       c2.track, pos2, t2,
     )
