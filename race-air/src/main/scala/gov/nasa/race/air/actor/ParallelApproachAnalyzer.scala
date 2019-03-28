@@ -23,7 +23,7 @@ import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.Messages.BusEvent
 import gov.nasa.race.core.{PublishingRaceActor, SubscribingRaceActor}
 import gov.nasa.race.geo.{Datum, GeoPosition, GreatCircle}
-import gov.nasa.race.track.{TrackDropped, TrackedObject, TrackedObjectExtrapolator, TrajectoryPairEvent}
+import gov.nasa.race.track.{TrackDropped, TrackedObject, TrackedObjectExtrapolator, TrackPairEvent}
 import gov.nasa.race.trajectory.{TDP3, Trajectory, USTrace}
 import gov.nasa.race.uom.Angle._
 import gov.nasa.race.uom.Length._
@@ -203,7 +203,7 @@ class ParallelApproachAnalyzer (val config: Config) extends SubscribingRaceActor
     val t2 = reportTrajectory(c2, tr2, dStart, dEnd, interval, n)
 
     nEvents += 1
-    val ev = TrajectoryPairEvent(
+    val ev = TrackPairEvent(
       s"$eventIdPrefix-$nEvents",
       date, pos,
       "angle-in",

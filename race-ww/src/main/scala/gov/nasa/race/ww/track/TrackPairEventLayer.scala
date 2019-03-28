@@ -26,7 +26,7 @@ import gov.nasa.race.core.Messages.BusEvent
 import gov.nasa.race.geo.{GeoPosition, GeoPositioned}
 import gov.nasa.race.swing.FieldPanel
 import gov.nasa.race.swing.Style._
-import gov.nasa.race.track.TrajectoryPairEvent
+import gov.nasa.race.track.TrackPairEvent
 import gov.nasa.race.trajectory.Trajectory
 import gov.nasa.race.util.DateTimeUtils.hhmmss
 import gov.nasa.race.ww.EventAction.EventAction
@@ -39,7 +39,7 @@ import gov.nasa.worldwind.render._
 import scala.collection.mutable.{Map => MutableMap}
 
 
-class TrajectoryPairEventQuery[T] (getEvent: T=>TrajectoryPairEvent) extends Query[T] {
+class TrackPairEventQuery[T](getEvent: T=>TrackPairEvent) extends Query[T] {
   override def error(msg: String): Unit = {
     // TODO
   }
@@ -71,7 +71,7 @@ class EventFields extends FieldPanel {
 
   setContents
 
-  def update (e: TrajectoryPairEvent): Unit = {
+  def update (e: TrackPairEvent): Unit = {
     id.text = e.id
     etype.text = e.eventType
     details.text = e.eventDetails
@@ -92,11 +92,11 @@ class EventFields extends FieldPanel {
   }
 }
 
-class TrajectoryPairEventPanel (override val layer: TrajectoryPairEventLayer)
-                                       extends InteractiveLayerObjectPanel[TrajectoryPairEventEntry,EventFields](layer) {
+class TrackPairEventPanel(override val layer: TrackPairEventLayer)
+                                       extends InteractiveLayerObjectPanel[TrackPairEventEntry,EventFields](layer) {
   override def createFieldPanel = new EventFields
 
-  def setEntry (e: TrajectoryPairEventEntry): Unit = {
+  def setEntry (e: TrackPairEventEntry): Unit = {
     entry = Some(e)
     fields.update(e.event)
   }
@@ -106,7 +106,7 @@ class TrajectoryPairEventPanel (override val layer: TrajectoryPairEventLayer)
 /**
   * the connector between the TrajectoryPairEvent and associated renderables
   */
-class TrajectoryPairEventEntry (val event: TrajectoryPairEvent, val layer: TrajectoryPairEventLayer)
+class TrackPairEventEntry(val event: TrackPairEvent, val layer: TrackPairEventLayer)
                 extends LayerObject with LayerSymbolOwner {
 
   protected var _isVisible = true
@@ -271,54 +271,54 @@ class TrajectoryPairEventEntry (val event: TrajectoryPairEvent, val layer: Traje
 /**
   * a RACE layer to control display of TrajectoryPairEvents
   */
-class TrajectoryPairEventLayer (val raceViewer: RaceViewer, val config: Config)
+class TrackPairEventLayer(val raceViewer: RaceViewer, val config: Config)
               extends SubscribingRaceLayer
                 with ConfigurableRenderingLayer
                 with AltitudeSensitiveRaceLayer
-                with InteractiveRaceLayer[TrajectoryPairEventEntry] {
+                with InteractiveRaceLayer[TrackPairEventEntry] {
 
   val panel = createLayerInfoPanel
   val entryPanel = createEntryPanel
 
-  val events = MutableMap[String,TrajectoryPairEventEntry]()
+  val events = MutableMap[String,TrackPairEventEntry]()
 
-  val iconLevel = new ThresholdLevel[TrajectoryPairEventEntry](iconThresholdLevel)(setIconLevel)
-  val labelLevel = new ThresholdLevel[TrajectoryPairEventEntry](labelThresholdLevel)(setLabelLevel)
+  val iconLevel = new ThresholdLevel[TrackPairEventEntry](iconThresholdLevel)(setIconLevel)
+  val labelLevel = new ThresholdLevel[TrackPairEventEntry](labelThresholdLevel)(setLabelLevel)
   val symbolLevels = new ThresholdLevelList(setDotLevel).sortIn(labelLevel,iconLevel)
 
   def defaultSymbolImg: BufferedImage = Images.getEventImage(color)
   val symbolImg = defaultSymbolImg
 
-  def setDotLevel(e: TrajectoryPairEventEntry): Unit = e.setDotLevel
-  def setLabelLevel(e: TrajectoryPairEventEntry): Unit = e.setLabelLevel
-  def setIconLevel(e: TrajectoryPairEventEntry): Unit = e.setIconLevel
+  def setDotLevel(e: TrackPairEventEntry): Unit = e.setDotLevel
+  def setLabelLevel(e: TrackPairEventEntry): Unit = e.setLabelLevel
+  def setIconLevel(e: TrackPairEventEntry): Unit = e.setIconLevel
 
   override def size: Int = events.size
   override def checkNewEyeAltitude: Unit = symbolLevels.triggerForEachValue(eyeAltitude,events)
 
   override def handleMessage: PartialFunction[Any, Unit] = {
-    case BusEvent(_, e: TrajectoryPairEvent, _) => updateEvents(e)
+    case BusEvent(_, e: TrackPairEvent, _) => updateEvents(e)
   }
 
   //--- InteractiveRaceLayer interface
 
-  override def layerObjects: Iterable[TrajectoryPairEventEntry] = events.values
-  override def layerObjectQuery: Query[TrajectoryPairEventEntry] = {
-    new TrajectoryPairEventQuery[TrajectoryPairEventEntry](_.event)
+  override def layerObjects: Iterable[TrackPairEventEntry] = events.values
+  override def layerObjectQuery: Query[TrackPairEventEntry] = {
+    new TrackPairEventQuery[TrackPairEventEntry](_.event)
   }
 
   override def maxLayerObjectRows: Int = config.getIntOrElse("max-rows", 10)
 
   override def layerObjectIdHeader: String = "event"
-  override def layerObjectIdText (e: TrajectoryPairEventEntry): String = e.id
+  override def layerObjectIdText (e: TrackPairEventEntry): String = e.id
 
   override def layerObjectDataHeader: String = "data"
-  override def layerObjectDataText (e: TrajectoryPairEventEntry): String = {
+  override def layerObjectDataText (e: TrackPairEventEntry): String = {
     val ev = e.event
     s"${ev.eventType} : ${ev.eventDetails}"
   }
 
-  override def setLayerObjectAttribute(e: TrajectoryPairEventEntry, attr: LayerObjectAttribute, cond: Boolean): Unit = {
+  override def setLayerObjectAttribute(e: TrackPairEventEntry, attr: LayerObjectAttribute, cond: Boolean): Unit = {
     if (e.isAttrSet(attr) != cond) {
       e.setAttr(attr, cond)
       ifSome(LayerObjectAttribute.getAction(attr, cond)) { action =>
@@ -327,7 +327,7 @@ class TrajectoryPairEventLayer (val raceViewer: RaceViewer, val config: Config)
     }
   }
 
-  override def doubleClickLayerObject(e: TrajectoryPairEventEntry): Unit = {
+  override def doubleClickLayerObject(e: TrackPairEventEntry): Unit = {
     if (!entryPanel.isShowing(e)) {
       entryPanel.setEntry(e)
       raceViewer.setObjectPanel(entryPanel)
@@ -335,11 +335,11 @@ class TrajectoryPairEventLayer (val raceViewer: RaceViewer, val config: Config)
     }
   }
 
-  override def focusLayerObject(o: TrajectoryPairEventEntry, cond: Boolean): Unit = {
+  override def focusLayerObject(o: TrackPairEventEntry, cond: Boolean): Unit = {
     // TODO
   }
 
-  override def dismissLayerObjectPanel (e: TrajectoryPairEventEntry): Unit = {
+  override def dismissLayerObjectPanel (e: TrackPairEventEntry): Unit = {
     if (entryPanel.isShowing(e)) {
       entryPanel.reset
 
@@ -349,19 +349,19 @@ class TrajectoryPairEventLayer (val raceViewer: RaceViewer, val config: Config)
   }
 
   //--- initialization support - override if we need specialized entries/init
-  protected def createEventEntry (event: TrajectoryPairEvent): TrajectoryPairEventEntry = {
-    new TrajectoryPairEventEntry(event, this)
+  protected def createEventEntry (event: TrackPairEvent): TrackPairEventEntry = {
+    new TrackPairEventEntry(event, this)
   }
 
-  protected def createLayerInfoPanel: InteractiveLayerInfoPanel[TrajectoryPairEventEntry] = {
+  protected def createLayerInfoPanel: InteractiveLayerInfoPanel[TrackPairEventEntry] = {
     new InteractiveLayerInfoPanel(this).styled('consolePanel)
   }
 
-  protected def createEntryPanel: TrajectoryPairEventPanel = new TrajectoryPairEventPanel(this)
+  protected def createEntryPanel: TrackPairEventPanel = new TrackPairEventPanel(this)
 
 
 
-  def updateEvents(event: TrajectoryPairEvent): Unit = {
+  def updateEvents(event: TrackPairEvent): Unit = {
     incUpdateCount
 
     events.get(event.id) match {
@@ -381,7 +381,7 @@ class TrajectoryPairEventLayer (val raceViewer: RaceViewer, val config: Config)
 
   override def selectObject(o: RaceLayerPickable, a: EventAction) = {
     o.layerItem match {
-      case e: TrajectoryPairEventEntry =>
+      case e: TrackPairEventEntry =>
         a match {
           case EventAction.LeftDoubleClick => doubleClickLayerObject(e)
           case _ => // ignored

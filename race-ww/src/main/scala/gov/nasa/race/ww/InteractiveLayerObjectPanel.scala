@@ -80,7 +80,7 @@ abstract class InteractiveLayerObjectPanel[T <: LayerObject, U <: FieldPanel](va
     markCb.selected = e.isAttrSet(LayerObjectAttribute.Mark)
   }
 
-  def isShowing (e: T): Boolean = entry.isDefined && entry.get == e
+  def isShowing (e: T): Boolean = peer.isShowing && entry.isDefined && entry.get == e
 
   def dismissPanel: Unit = ifSome(entry) { e =>
     layer.dismissLayerObjectPanel(e)
