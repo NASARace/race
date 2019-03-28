@@ -144,7 +144,7 @@ trait TrackLayer[T <:TrackedObject] extends SubscribingRaceLayer
     setFocused(e,cond,true)
   }
 
-  override  def dismissLayerObjectPanel (e: TrackEntry[T]): Unit = {
+  override def dismissLayerObjectPanel (e: TrackEntry[T]): Unit = {
     if (entryPanel.isShowing(e)) {
       releaseTrackInfoUpdates(e)
       entryPanel.reset

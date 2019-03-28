@@ -28,7 +28,7 @@ import gov.nasa.race.trajectory.{TDP3, Trajectory, USTrace}
 import gov.nasa.race.uom.Angle._
 import gov.nasa.race.uom.Length._
 import gov.nasa.race.uom.Time._
-import gov.nasa.race.uom.{Angle, Date, Length, Time}
+import gov.nasa.race.uom.{Angle, Date, Length, Speed, Time}
 import org.joda.time.DateTime
 
 import scala.collection.mutable.{HashMap => MHashMap, Set => MSet}
@@ -140,16 +140,14 @@ class ParallelApproachAnalyzer (val config: Config) extends SubscribingRaceActor
         val lon1 = p.λ
         val alt1 = p.altitude
         val hdg1 = Datum.euclideanHeading(lat1,lon1, lastLat1,lastLon1)
-        lastLat1 = lat1
-        lastLon1 = lon1
+
 
         p = it2.next
         val lat2 = p.φ
         val lon2 = p.λ
         val alt2 = p.altitude
         val hdg2 = Datum.euclideanHeading(lat2,lon2, lastLat2,lastLon2)
-        lastLat2 = lat2
-        lastLon2 = lon2
+
 
         deltaHdg = Angle.absDiff(hdg1,hdg2)
         dist = Datum.meanEuclidean2dDistance(lat1,lon1, lat2,lon2)
@@ -157,12 +155,15 @@ class ParallelApproachAnalyzer (val config: Config) extends SubscribingRaceActor
         if (deltaHdg > maxConvergeAngle){ // Bingo - got one
           val date = new DateTime(p.millis)
           val pos1 = GeoPosition(lat1,lon1,alt1)
+          val spd1 = Datum.meanEuclideanDistance(lat1,lon1,alt1,lastLat1,lastLon1,alt1) / convergeInterval.milliseconds
           val pos2 = GeoPosition(lat2,lon2,alt2)
+          val spd2 = Datum.meanEuclideanDistance(lat2,lon2,alt2,lastLat2,lastLon2,alt2) / convergeInterval.milliseconds
+
           val pos = GreatCircle.euclidianMidpoint(pos1,pos2)
 
           // TODO should probably include speed and heading for both tracks
 
-          publishEvent(date, pos, deltaHdg, dist, c1, tr1, pos1, c2, tr2, pos2)
+          publishEvent(date, pos, deltaHdg, dist, c1, tr1, pos1, hdg1, spd1, c2, tr2, pos2, hdg2, spd2)
           //println(f"@@ $t%4d: ${dist.toMeters}%10.0f, ${hdg1.toDegrees}%3.0f, ${hdg2.toDegrees}%3.0f -> delta= ${deltaHdg.toDegrees}%3.0f")
           info(f"max angle-in exceeded: ${c1.track.cs},${c2.track.cs} at $date: Δhdg = ${deltaHdg.toDegrees}%.0f, dist = ${dist.toMeters}%.0fm")
           stop = true
@@ -171,6 +172,12 @@ class ParallelApproachAnalyzer (val config: Config) extends SubscribingRaceActor
           t += dt
           stop = (dist > maxConvergeDist)
         }
+
+        lastLat1 = lat1
+        lastLon1 = lon1
+
+        lastLat2 = lat2
+        lastLon2 = lon2
       }
     }
   }
@@ -182,8 +189,8 @@ class ParallelApproachAnalyzer (val config: Config) extends SubscribingRaceActor
   }
 
   def publishEvent(date: DateTime, pos: GeoPosition, deltaHdg: Angle, dist: Length,
-                   c1: Candidate, tr1: TInterpolant[N3,TDP3], pos1: GeoPosition,
-                   c2: Candidate, tr2: TInterpolant[N3,TDP3], pos2: GeoPosition): Unit = {
+                   c1: Candidate, tr1: TInterpolant[N3,TDP3], pos1: GeoPosition, hdg1: Angle, spd1: Speed,
+                   c2: Candidate, tr2: TInterpolant[N3,TDP3], pos2: GeoPosition, hdg2: Angle, spd2: Speed): Unit = {
 
     val dur = Time.min( Seconds(60), c1.trajectory.getDuration, c2.trajectory.getDuration)
 
@@ -201,8 +208,8 @@ class ParallelApproachAnalyzer (val config: Config) extends SubscribingRaceActor
       date, pos,
       "angle-in",
       f"${deltaHdg.toDegrees}%3.0f° at ${dist.toMeters}%5.0fm",
-      c1.track, pos1, t1,
-      c2.track, pos2, t2,
+      c1.track, pos1, hdg1, spd1, t1,
+      c2.track, pos2, hdg2, spd2, t2,
     )
 
     publish(ev)

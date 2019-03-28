@@ -29,9 +29,10 @@ import gov.nasa.race.swing.Style._
 import gov.nasa.race.track.TrajectoryPairEvent
 import gov.nasa.race.trajectory.Trajectory
 import gov.nasa.race.util.DateTimeUtils.hhmmss
+import gov.nasa.race.ww.EventAction.EventAction
 import gov.nasa.race.{ww, _}
 import gov.nasa.race.ww.LayerObjectAttribute.LayerObjectAttribute
-import gov.nasa.race.ww.{AltitudeSensitiveRaceLayer, ConfigurableRenderingLayer, Images, InteractiveLayerInfoPanel, InteractiveLayerObjectPanel, InteractiveRaceLayer, LayerObject, LayerObjectAttribute, LayerSymbol, LayerSymbolOwner, RaceViewer, SubscribingRaceLayer, WWPosition}
+import gov.nasa.race.ww.{AltitudeSensitiveRaceLayer, ConfigurableRenderingLayer, EventAction, Images, InteractiveLayerInfoPanel, InteractiveLayerObjectPanel, InteractiveRaceLayer, LayerObject, LayerObjectAction, LayerObjectAttribute, LayerSymbol, LayerSymbolOwner, RaceLayerPickable, RaceViewer, SubscribingRaceLayer, WWPosition}
 import gov.nasa.worldwind.WorldWind
 import gov.nasa.worldwind.render._
 
@@ -53,15 +54,22 @@ class EventFields extends FieldPanel {
   val etype = addField("type:")
   val details = addField("details:")
   val time = addField("time:")
+
   addSeparator
   val track1 = addField("track-1:")
   val pos1 = addField("pos-1")
   val alt1 = addField("alt-1:")
-  // TODO speed and heading ?
+  val hdg1 = addField("hdg-1:")
+  val spd1 = addField("spd-1:")
+
   addSeparator
   val track2 = addField("track-2:")
   val pos2 = addField("pos-2")
   val alt2 = addField("alt-2:")
+  val hdg2 = addField("hdg-2:")
+  val spd2 = addField("spd-2:")
+
+  setContents
 
   def update (e: TrajectoryPairEvent): Unit = {
     id.text = e.id
@@ -70,18 +78,29 @@ class EventFields extends FieldPanel {
     time.text = hhmmss.print(e.date)
 
     track1.text = e.track1.cs
-    pos1.text = f"${e.pos1.latDeg}%.6f° ${e.pos1.lonDeg}%.6f°"
-    alt1.text = s"${e.pos1.altFeet}%d ft"
+    pos1.text = f"${e.pos1.latDeg}%.6f°   ${e.pos1.lonDeg}%.6f°"
+    alt1.text = s"${e.pos1.altFeet} ft"
+    hdg1.text = f"${e.hdg1.toDegrees}%3.0f°"
+    spd1.text = s"${e.spd1.toKnots.toInt} kn"
 
     track2.text = e.track2.cs
-    pos2.text = f"${e.pos2.latDeg}%.6f° ${e.pos2.lonDeg}%.6f°"
-    alt2.text = s"${e.pos2.altFeet}%d ft"
+    pos2.text = f"${e.pos2.latDeg}%.6f°   ${e.pos2.lonDeg}%.6f°"
+    alt2.text = s"${e.pos2.altFeet} ft"
+    hdg2.text = f"${e.hdg2.toDegrees}%3.0f°"
+    spd2.text = s"${e.spd2.toKnots.toInt} kn"
+
   }
 }
 
 class TrajectoryPairEventPanel (override val layer: TrajectoryPairEventLayer)
                                        extends InteractiveLayerObjectPanel[TrajectoryPairEventEntry,EventFields](layer) {
   override def createFieldPanel = new EventFields
+
+  def setEntry (e: TrajectoryPairEventEntry): Unit = {
+    entry = Some(e)
+    fields.update(e.event)
+  }
+
 }
 
 /**
@@ -259,6 +278,7 @@ class TrajectoryPairEventLayer (val raceViewer: RaceViewer, val config: Config)
                 with InteractiveRaceLayer[TrajectoryPairEventEntry] {
 
   val panel = createLayerInfoPanel
+  val entryPanel = createEntryPanel
 
   val events = MutableMap[String,TrajectoryPairEventEntry]()
 
@@ -308,22 +328,37 @@ class TrajectoryPairEventLayer (val raceViewer: RaceViewer, val config: Config)
   }
 
   override def doubleClickLayerObject(e: TrajectoryPairEventEntry): Unit = {
-    // TODO - set entry panel
+    if (!entryPanel.isShowing(e)) {
+      entryPanel.setEntry(e)
+      raceViewer.setObjectPanel(entryPanel)
+      raceViewer.objectChanged(e,LayerObjectAction.ShowPanel)
+    }
   }
 
   override def focusLayerObject(o: TrajectoryPairEventEntry, cond: Boolean): Unit = {
     // TODO
   }
 
+  override def dismissLayerObjectPanel (e: TrajectoryPairEventEntry): Unit = {
+    if (entryPanel.isShowing(e)) {
+      entryPanel.reset
+
+      raceViewer.dismissObjectPanel
+      raceViewer.objectChanged(e, LayerObjectAction.DismissPanel)
+    }
+  }
 
   //--- initialization support - override if we need specialized entries/init
   protected def createEventEntry (event: TrajectoryPairEvent): TrajectoryPairEventEntry = {
     new TrajectoryPairEventEntry(event, this)
   }
 
-  def createLayerInfoPanel: InteractiveLayerInfoPanel[TrajectoryPairEventEntry] = {
+  protected def createLayerInfoPanel: InteractiveLayerInfoPanel[TrajectoryPairEventEntry] = {
     new InteractiveLayerInfoPanel(this).styled('consolePanel)
   }
+
+  protected def createEntryPanel: TrajectoryPairEventPanel = new TrajectoryPairEventPanel(this)
+
 
 
   def updateEvents(event: TrajectoryPairEvent): Unit = {
@@ -342,5 +377,16 @@ class TrajectoryPairEventLayer (val raceViewer: RaceViewer, val config: Config)
     wwdRedrawManager.redraw
     // the layerInfo panel does update periodically on its own
     //if (entryPanel.isShowing(entry)) entryPanel.update
+  }
+
+  override def selectObject(o: RaceLayerPickable, a: EventAction) = {
+    o.layerItem match {
+      case e: TrajectoryPairEventEntry =>
+        a match {
+          case EventAction.LeftDoubleClick => doubleClickLayerObject(e)
+          case _ => // ignored
+        }
+      case _ => // ignored
+    }
   }
 }

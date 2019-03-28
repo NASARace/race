@@ -21,7 +21,7 @@ import java.io.File
 
 import com.typesafe.config.{Config, ConfigFactory}
 import org.scalatest._
-import org.scalatest.prop._
+import org.scalatestplus.scalacheck.ScalaCheckPropertyChecks
 
 import scala.reflect.ClassTag
 
@@ -30,7 +30,7 @@ import scala.reflect.ClassTag
   * common base for all RACE regression tests, which mostly mixes in the
   * various scalatest traits
   */
-trait RaceSpec extends Suite with Matchers with OptionValues with Inside with PropertyChecks {
+trait RaceSpec extends Suite with Matchers with OptionValues with Inside with ScalaCheckPropertyChecks {
   val testOutputDir = new File("tmp")
 
   def mkTestOutputDir = testOutputDir.mkdir
