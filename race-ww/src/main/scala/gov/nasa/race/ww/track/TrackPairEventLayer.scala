@@ -30,10 +30,13 @@ import gov.nasa.race.track.TrackPairEvent
 import gov.nasa.race.trajectory.Trajectory
 import gov.nasa.race.util.DateTimeUtils.hhmmss
 import gov.nasa.race.ww.EventAction.EventAction
-import gov.nasa.race.{ww, _}
+import gov.nasa.race.ww.Implicits._
 import gov.nasa.race.ww.LayerObjectAttribute.LayerObjectAttribute
 import gov.nasa.race.ww.{AltitudeSensitiveRaceLayer, ConfigurableRenderingLayer, EventAction, Images, InteractiveLayerInfoPanel, InteractiveLayerObjectPanel, InteractiveRaceLayer, LayerObject, LayerObjectAction, LayerObjectAttribute, LayerSymbol, LayerSymbolOwner, RaceLayerPickable, RaceViewer, SubscribingRaceLayer, WWPosition}
+import gov.nasa.race.{ww, _}
 import gov.nasa.worldwind.WorldWind
+import gov.nasa.worldwind.avlist.AVKey
+import gov.nasa.worldwind.geom.Position
 import gov.nasa.worldwind.render._
 
 import scala.collection.mutable.{Map => MutableMap}
@@ -114,19 +117,37 @@ class TrackPairEventEntry(val event: TrackPairEvent, val layer: TrackPairEventLa
   protected var marksShowing = false
   protected var pathsShowing = false  // only set if isVisible, depending on view level
 
-  val dotAttrs = yieldInitialized(new PointPlacemarkAttributes) { attrs=>
+  val mark1Attrs = yieldInitialized(new PointPlacemarkAttributes) { attrs=>
     attrs.setLabelMaterial(labelMaterial)
     attrs.setLineMaterial(labelMaterial)
-    attrs.setScale(7d)
-    attrs.setImage(null)
-    attrs.setUsePointAsDefaultImage(true)
+    attrs.setImage(layer.defaultMarkerImage)
+    attrs.setImageOffset(Offset.CENTER)
+    attrs.setHeading(event.hdg1.toDegrees)
+    attrs.setHeadingReference(AVKey.RELATIVE_TO_GLOBE)
+  }
+
+  val mark2Attrs = yieldInitialized(new PointPlacemarkAttributes) { attrs=>
+    attrs.setLabelMaterial(labelMaterial)
+    attrs.setLineMaterial(labelMaterial)
+    attrs.setImage(layer.defaultMarkerImage)
+    attrs.setImageOffset(Offset.CENTER)
+    attrs.setHeading(event.hdg2.toDegrees)
+    attrs.setHeadingReference(AVKey.RELATIVE_TO_GLOBE)
+  }
+
+  val connectorAttrs = yieldInitialized(new BasicShapeAttributes) { attrs=>
+    attrs.setOutlineWidth(1)
+    attrs.setOutlineMaterial(lineMaterial)
+    attrs.setEnableAntialiasing(true)
+    attrs.setDrawInterior(false)
   }
 
   //--- the renderables that are associated with this entry
   protected var symbol: LayerSymbol = createSymbol
-  protected var posMarker1: PointPlacemark = createPosMarker(event.pos1)
+  protected var connector: Path = createConnector
+  protected var posMarker1: PointPlacemark = createPosMarker(event.pos1, mark1Attrs)
   protected var path1:  Path = createPath(event.trajectory1)
-  protected var posMarker2: PointPlacemark = createPosMarker(event.pos2)
+  protected var posMarker2: PointPlacemark = createPosMarker(event.pos2, mark2Attrs)
   protected var path2:  Path = createPath(event.trajectory2)
 
   addSymbol
@@ -134,9 +155,14 @@ class TrackPairEventEntry(val event: TrackPairEvent, val layer: TrackPairEventLa
   //--- override in subclasses for specific rendering
   def createSymbol: LayerSymbol = new LayerSymbol(this)
 
-  def createPosMarker (pos: GeoPosition): PointPlacemark = yieldInitialized(new PointPlacemark(ww.wwPosition(pos))){ p=>
+  def createPosMarker (pos: GeoPosition, attrs: PointPlacemarkAttributes): PointPlacemark = yieldInitialized(new PointPlacemark(ww.wwPosition(pos))){ p=>
     p.setLabelText(null)
-    p.setAttributes(dotAttrs)
+    p.setAttributes(attrs)
+    p.setAltitudeMode(WorldWind.ABSOLUTE)
+  }
+
+  def createConnector: Path = yieldInitialized(new Path(event.pos1, event.pos2)){ p=>
+    p.setAttributes(connectorAttrs)
     p.setAltitudeMode(WorldWind.ABSOLUTE)
   }
 
@@ -160,6 +186,7 @@ class TrackPairEventEntry(val event: TrackPairEvent, val layer: TrackPairEventLa
     if (!marksShowing) {
       layer.addRenderable(posMarker1)
       layer.addRenderable(posMarker2)
+      layer.addRenderable(connector)
       marksShowing = true
     }
   }
@@ -168,26 +195,29 @@ class TrackPairEventEntry(val event: TrackPairEvent, val layer: TrackPairEventLa
     if (marksShowing) {
       layer.removeRenderable(posMarker1)
       layer.removeRenderable(posMarker2)
+      layer.removeRenderable(connector)
       marksShowing = false
     }
   }
 
   def addPaths = {
     if (!pathsShowing) {
-      layer.addRenderable(posMarker1)
+      //layer.addRenderable(posMarker1)
       layer.addRenderable(path1)
-      layer.addRenderable(posMarker2)
+      //layer.addRenderable(posMarker2)
       layer.addRenderable(path2)
+      //layer.addRenderable(connector)
       pathsShowing = true
     }
   }
 
   def removePaths = {
     if (pathsShowing) {
-      layer.removeRenderable(posMarker1)
+      //layer.removeRenderable(posMarker1)
       layer.removeRenderable(path1)
-      layer.removeRenderable(posMarker2)
+      //layer.removeRenderable(posMarker2)
       layer.removeRenderable(path2)
+      //layer.removeRenderable(connector)
       pathsShowing = false
     }
   }
@@ -207,8 +237,8 @@ class TrackPairEventEntry(val event: TrackPairEvent, val layer: TrackPairEventLa
   def setIconLevel: Unit = { // icon, label and paths
     symbol.setIconAttrs
     if (_isVisible) {
-      addSymbol
       addMarks
+      addSymbol
     }
   }
 
@@ -231,7 +261,9 @@ class TrackPairEventEntry(val event: TrackPairEvent, val layer: TrackPairEventLa
 
   override def labelOffset: Offset = TrackSymbol.LabelOffset
   override def iconOffset: Offset = TrackSymbol.IconOffset
-  override def wwPosition: WWPosition = ww.wwPosition(event.position)
+  override def wwPosition: WWPosition = {
+    Position.fromDegrees(event.position.latDeg, event.position.lonDeg, event.position.altMeters)
+  }
   override def displayName: String = s"${event.id}\n${hhmmss.print(event.date)}\n${event.eventType}"
 
   //--- label and info text creation
@@ -288,6 +320,7 @@ class TrackPairEventLayer(val raceViewer: RaceViewer, val config: Config)
 
   def defaultSymbolImg: BufferedImage = Images.getEventImage(color)
   val symbolImg = defaultSymbolImg
+  def defaultMarkerImage: BufferedImage = Images.getArrowImage(color)
 
   def setDotLevel(e: TrackPairEventEntry): Unit = e.setDotLevel
   def setLabelLevel(e: TrackPairEventEntry): Unit = e.setLabelLevel
@@ -315,7 +348,7 @@ class TrackPairEventLayer(val raceViewer: RaceViewer, val config: Config)
   override def layerObjectDataHeader: String = "data"
   override def layerObjectDataText (e: TrackPairEventEntry): String = {
     val ev = e.event
-    s"${ev.eventType} : ${ev.eventDetails}"
+    f"${ev.eventType}%10s  ${ev.eventDetails}%12s"
   }
 
   override def setLayerObjectAttribute(e: TrackPairEventEntry, attr: LayerObjectAttribute, cond: Boolean): Unit = {
@@ -328,11 +361,11 @@ class TrackPairEventLayer(val raceViewer: RaceViewer, val config: Config)
   }
 
   override def doubleClickLayerObject(e: TrackPairEventEntry): Unit = {
-    if (!entryPanel.isShowing(e)) {
+    //if (!entryPanel.isShowing(e)) {
       entryPanel.setEntry(e)
       raceViewer.setObjectPanel(entryPanel)
       raceViewer.objectChanged(e,LayerObjectAction.ShowPanel)
-    }
+    //}
   }
 
   override def focusLayerObject(o: TrackPairEventEntry, cond: Boolean): Unit = {

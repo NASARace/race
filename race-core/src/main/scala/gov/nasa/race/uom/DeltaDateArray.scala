@@ -79,8 +79,25 @@ final class DeltaDateArray protected[uom] (protected[uom] val elapsed: TimeArray
   }
 
   @inline def copyFrom(other: DeltaDateArray, srcIdx: Int, dstIdx: Int, len: Int): Unit = {
-    if (date0 != other.date0) throw new RuntimeException("cannot copy to DeltaDateArray with different reference date")
-    System.arraycopy(other.elapsed,srcIdx,elapsed,dstIdx,len)
+    var tAdjust: Time = UndefinedTime
+    if (date0 != other.date0) {
+      if (date0.isUndefined) {
+        date0 = other.date0
+      } else {
+        tAdjust = date0.timeSince(other.date0)
+      }
+    }
+
+    System.arraycopy(other.elapsed.data,srcIdx,elapsed.data,dstIdx,len)
+
+    if (tAdjust.isDefined){
+      var i = dstIdx
+      val i1 = dstIdx + len
+      while (i < i1) {
+        elapsed(i) += tAdjust
+        i += 1
+      }
+    }
   }
 
   @inline def slice(from: Int, until: Int): DeltaDateArray = new DeltaDateArray(elapsed.slice(from,until))

@@ -102,7 +102,7 @@ class LayerSymbol (val owner: LayerSymbolOwner) extends MultiLabelPointPlacemark
     attrs.setHeading(owner.symbolHeading)
     attrs.setHeadingReference(AVKey.RELATIVE_TO_GLOBE)
 
-    attrs.setLabelOffset(owner.iconOffset)
+    attrs.setLabelOffset(owner.labelOffset)
 
     // TODO check view pitch and adjust symbol accordingly
     //setAttributes(attrs)
