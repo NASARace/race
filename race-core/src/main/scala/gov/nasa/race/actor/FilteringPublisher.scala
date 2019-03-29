@@ -29,16 +29,16 @@ import gov.nasa.race.core._
   */
 trait FilteringPublisher extends PublishingRaceActor {
 
-  val config: Config // actor config to be provided by concrete actor class
-
-  val passUnfiltered = passUnfliteredDefault // do we let pass if there is no filter set?
+  val passUnfiltered = passUnfilteredDefault // do we let pass if there is no filter set?
   var filters: Array[ConfigurableFilter] = createFilters
   val matchAll = config.getBooleanOrElse("match-all", defaultMatchAll) // default is to let pass if any of the filters passes
 
-  val publishFiltered: (Any=>Unit) = filters.length match {
-    case 0 => (msg) => { action(msg, passUnfiltered) }
-    case 1 => (msg) => { action(msg, filters(0).pass(msg)) }
-    case _ => (msg) => { action(msg, if (matchAll) !filters.exists(!_.pass(msg)) else filters.exists(_.pass(msg))) }
+  def publishFiltered (msg: Any): Unit = action(msg,pass(msg))
+
+  def pass(msg: Any): Boolean = filters.length match {
+    case 0 => passUnfiltered
+    case 1 => filters(0).pass(msg)
+    case _ => if (matchAll) !filters.exists(!_.pass(msg)) else filters.exists(_.pass(msg))
   }
 
   def defaultMatchAll = false
@@ -47,7 +47,7 @@ trait FilteringPublisher extends PublishingRaceActor {
   def createFilters: Array[ConfigurableFilter] = getConfigurables("filters")
 
   // override this if we only want to let messages pass if we have filters set
-  def passUnfliteredDefault: Boolean = config.getBooleanOrElse("pass-unfiltered", true)
+  def passUnfilteredDefault: Boolean = config.getBooleanOrElse("pass-unfiltered", true)
 
   /** override if there is selective publishing or additional action */
   def action (msg: Any, isPassing: Boolean): Unit = if (isPassing) publish(msg)

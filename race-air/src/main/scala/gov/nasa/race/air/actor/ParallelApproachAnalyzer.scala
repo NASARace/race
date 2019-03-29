@@ -22,8 +22,8 @@ import gov.nasa.race.common.{FHTInterpolant, TInterpolant}
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.Messages.BusEvent
 import gov.nasa.race.core.{PublishingRaceActor, SubscribingRaceActor}
-import gov.nasa.race.geo.{Datum, GeoPosition, GreatCircle}
-import gov.nasa.race.track.{TrackDropped, TrackedObject, TrackedObjectExtrapolator, TrackPairEvent}
+import gov.nasa.race.geo.{Euclidean, GeoPosition}
+import gov.nasa.race.track.{TrackDropped, TrackPairEvent, TrackedObject, TrackedObjectExtrapolator}
 import gov.nasa.race.trajectory.{TDP3, Trajectory, USTrace}
 import gov.nasa.race.uom.Angle._
 import gov.nasa.race.uom.Length._
@@ -96,7 +96,7 @@ class ParallelApproachAnalyzer (val config: Config) extends SubscribingRaceActor
         if (!otherEntry.checked.contains(track.id)) {
           val est = otherEntry.estimator
           est.estimateState(track.date.getMillis)
-          val d = Datum.meanEuclidean2dDistance(track.position, est.estimatedPosition)
+          val d = Euclidean.distance(track.position, est.estimatedPosition)
           if (d < maxParallelDist) {
             if (track.position.altitude - est.altitude < maxParallelDalt) {
               if (absDiff(track.heading, est.heading) < maxParallelAngle) {
@@ -139,27 +139,27 @@ class ParallelApproachAnalyzer (val config: Config) extends SubscribingRaceActor
         val lat1 = p.φ
         val lon1 = p.λ
         val alt1 = p.altitude
-        val hdg1 = Datum.euclideanHeading(lat1,lon1, lastLat1,lastLon1)
+        val hdg1 = Euclidean.heading(lat1,lon1, lastLat1,lastLon1)
 
 
         p = it2.next
         val lat2 = p.φ
         val lon2 = p.λ
         val alt2 = p.altitude
-        val hdg2 = Datum.euclideanHeading(lat2,lon2, lastLat2,lastLon2)
+        val hdg2 = Euclidean.heading(lat2,lon2, lastLat2,lastLon2)
 
 
         deltaHdg = Angle.absDiff(hdg1,hdg2)
-        dist = Datum.meanEuclidean2dDistance(lat1,lon1, lat2,lon2)
+        dist = Euclidean.distance(lat1,lon1,alt1, lat2,lon2,alt2)
 
         if (deltaHdg > maxConvergeAngle){ // Bingo - got one
           val date = new DateTime(p.millis)
           val pos1 = GeoPosition(lat1,lon1,alt1)
-          val spd1 = Datum.meanEuclideanDistance(lat1,lon1,alt1,lastLat1,lastLon1,alt1) / convergeInterval.milliseconds
+          val spd1 = Euclidean.distance(lat1,lon1,alt1,lastLat1,lastLon1,alt1) / convergeInterval.milliseconds
           val pos2 = GeoPosition(lat2,lon2,alt2)
-          val spd2 = Datum.meanEuclideanDistance(lat2,lon2,alt2,lastLat2,lastLon2,alt2) / convergeInterval.milliseconds
+          val spd2 = Euclidean.distance(lat2,lon2,alt2,lastLat2,lastLon2,alt2) / convergeInterval.milliseconds
 
-          val pos = GreatCircle.euclidianMidpoint(pos1,pos2)
+          val pos = Euclidean.midpoint(pos1,pos2)
 
           // TODO should probably include speed and heading for both tracks
 

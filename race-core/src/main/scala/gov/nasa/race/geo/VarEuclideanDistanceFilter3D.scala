@@ -66,7 +66,7 @@ class VarEuclideanDistanceFilter3D (φ: Angle, λ: Angle, alt: Length, d: Length
     (!alt.isDefined || (Abs(refAlt - alt) < dist)) &&
     (absDiff(refLat,φ) < maxAngularDiff) &&
     (absDiff(refLon,λ) < maxAngularDiff) &&
-    (Datum.meanEuclideanDistance(refLat,refLon,refAlt, φ,λ,alt) < dist)
+    (Euclidean.distance(refLat,refLon,refAlt, φ,λ,alt) < dist)
   }
 
   @inline def pass (ap: GeoPositioned): Boolean = {
