@@ -22,7 +22,7 @@ import gov.nasa.race.ww._
 import gov.nasa.worldwind.render.Offset
 
 object TrackSymbol{
-  val LabelOffset = Offset.fromFraction(1.0,0.5)
+  val LabelOffset = Offset.fromFraction(1.4,0.5)
   val IconOffset = Offset.fromFraction(1.5,0.5)
 }
 
