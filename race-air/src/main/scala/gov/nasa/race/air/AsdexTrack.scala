@@ -68,7 +68,7 @@ case class AsdexTrack(id: String,
   def isDown = (status & DownFlag) != 0
 
   // some airports are not setting flags appropriately
-  def guessAircraft: Boolean = (status & noVehicleFlags) != 0 || vr.isDefined || acType.isDefined
+  def guessAircraft: Boolean =  (status & AircraftFlag) != 0
 
   override def toShortString = s"Track{$id,0x${status.toHexString},$position,$date}"
 }

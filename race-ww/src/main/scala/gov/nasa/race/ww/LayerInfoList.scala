@@ -110,7 +110,7 @@ class LayerInfoList (raceView: RaceViewer) {
     insertBeforeCompass(tooltipAnnotationLayer)
 
     val graticule = new Graticule()
-    insertBeforePlacenames(graticule)
+    insertBeforeCategory(graticule, "widget")
   }
 
   def addApplicationLayers = {

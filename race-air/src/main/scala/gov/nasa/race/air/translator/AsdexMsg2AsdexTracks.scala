@@ -76,6 +76,12 @@ class AsdexMsg2AsdexTracks(val config: Config=NoConfig) extends XmlParser[AsdexT
     case _ => 0
   }
 
+  def readACType: String = readText match {
+    case "" => null
+    case "VEH" => null
+    case acType => acType
+  }
+
   def readVertRate(isUp: Boolean) = readText match {
     case "unavailable" => NaN
     case s => if (isUp) s.toDouble else -s.toDouble
@@ -112,7 +118,7 @@ class AsdexMsg2AsdexTracks(val config: Config=NoConfig) extends XmlParser[AsdexT
 
       case "aircraftId" => acId = readText
       case "tgtType" => status |= readTargetTypeFlag
-      case "acType" => acType = readText
+      case "acType" => acType = readACType
       case "altitude" => altFt = readDouble
       case "heading" => hdgDeg = readDouble
       case "speed" => spdMph = readDouble
