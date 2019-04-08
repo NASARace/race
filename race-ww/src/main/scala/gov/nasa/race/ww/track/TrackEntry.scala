@@ -133,7 +133,7 @@ class TrackEntry[T <: TrackedObject](var obj: T, var trajectory: MutTrajectory, 
 
       ifSome(info) { balloon =>
         balloon.setText(infoText)
-        balloon.setScreenPoint(sym.getScreenPoint)
+        balloon.setScreenPoint(sym.getScreenPt)
       }
       ifSome(mark) {
         _.setPosition(obj)
@@ -241,7 +241,7 @@ class TrackEntry[T <: TrackedObject](var obj: T, var trajectory: MutTrajectory, 
 
   def setInfo(showIt: Boolean) = ifSome(symbol) { sym =>
     if (showIt && info.isEmpty) {
-      val balloon = createInfo(sym.getScreenPoint)
+      val balloon = createInfo(sym.getScreenPt)
       info = Some(balloon)
       layer.addRenderable(balloon)
 

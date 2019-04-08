@@ -136,7 +136,7 @@ class LayerSymbol (val owner: LayerSymbolOwner) extends MultiLabelPointPlacemark
     else new Offset(.0,.0,AVKey.PIXELS,AVKey.PIXELS)
   }
 
-  def getScreenPoint: Point = {
+  def getScreenPt: Point = {
     if (screenPoint != null) screenPt.setLocation(screenPoint.x, screenPoint.y)
     screenPt
   }
