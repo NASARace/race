@@ -67,6 +67,7 @@ class LayerSymbol (val owner: LayerSymbolOwner) extends MultiLabelPointPlacemark
   attrs.setLabelMaterial(owner.labelMaterial)
   attrs.setLabelFont(owner.labelFont)
   attrs.setLineMaterial(owner.labelMaterial)
+  attrs.setLabelOffset(owner.labelOffset)
   setAttributes(attrs)
 
   setSubLabelFont(owner.subLabelFont)
@@ -90,7 +91,6 @@ class LayerSymbol (val owner: LayerSymbolOwner) extends MultiLabelPointPlacemark
     attrs.setImage(null)
     attrs.setUsePointAsDefaultImage(true)
 
-    attrs.setLabelOffset(owner.labelOffset)
     //setAttributes(attrs)
   }
 
@@ -101,8 +101,6 @@ class LayerSymbol (val owner: LayerSymbolOwner) extends MultiLabelPointPlacemark
     attrs.setImageOffset(Offset.CENTER)
     attrs.setHeading(owner.symbolHeading)
     attrs.setHeadingReference(AVKey.RELATIVE_TO_GLOBE)
-
-    attrs.setLabelOffset(owner.labelOffset)
 
     // TODO check view pitch and adjust symbol accordingly
     //setAttributes(attrs)
