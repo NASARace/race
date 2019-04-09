@@ -24,9 +24,11 @@ import gov.nasa.race.air.{AirLocator, Airport, TATrack, Tracon}
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.Messages.BusEvent
 import gov.nasa.race.ifSome
+import gov.nasa.race.swing._
 import gov.nasa.race.swing.Style._
 import gov.nasa.race.swing.{IdAndNamePanel, StaticSelectionPanel}
-import gov.nasa.race.track.{TrackDropped, Trajectory}
+import gov.nasa.race.track.TrackDropped
+import gov.nasa.race.trajectory.MutTrajectory
 import gov.nasa.race.uom.Angle
 import gov.nasa.race.uom.Length._
 import gov.nasa.race.ww._
@@ -52,7 +54,7 @@ class TraconSymbol(val tracon: Tracon, val layer: TATracksLayer) extends PointPl
   override def layerItem: AnyRef = tracon
 }
 
-class TATrackEntry (_obj: TATrack, _trajectory: Trajectory, _layer: TATracksLayer) extends TrackEntry[TATrack](_obj,_trajectory,_layer) {
+class TATrackEntry (_obj: TATrack, _trajectory: MutTrajectory, _layer: TATracksLayer) extends TrackEntry[TATrack](_obj,_trajectory,_layer) {
 
   override def setLabelLevel = symbol.foreach { sym =>
     sym.removeSubLabels
@@ -83,7 +85,7 @@ class TATracksLayer (val raceViewer: RaceViewer, val config: Config) extends Mod
   val gotoAltitude = Feet(config.getDoubleOrElse("goto-altitude", 5000000d)) // feet above ground
 
   override def defaultColor = Color.green
-  override def defaultSubLabelFont = new Font(Font.MONOSPACED,Font.PLAIN,11)
+  override def defaultSubLabelFont = new Font(Font.MONOSPACED,Font.PLAIN,scaledSize(11))
 
   override def defaultLabelThreshold = Meters(600000.0)
   override def defaultIconThreshold = Meters(200000.0)
@@ -93,6 +95,10 @@ class TATracksLayer (val raceViewer: RaceViewer, val config: Config) extends Mod
   var selTracon: Option[Tracon] = configuredTracon
 
   showTraconSymbols
+
+  val selPanel = new StaticSelectionPanel[Tracon,IdAndNamePanel[Tracon]]("select TRACON",
+    Tracon.NoTracon +: Tracon.traconList, 40, new IdAndNamePanel[Tracon]( _.id, _.name), selectTracon).styled()
+  panel.contents.insert(1, selPanel)
 
   def configuredTracon: Option[Tracon] = {
     val topics = config.getOptionalStringList("request-topics")
@@ -113,15 +119,6 @@ class TATracksLayer (val raceViewer: RaceViewer, val config: Config) extends Mod
       Some(new PolarGrid(Tracon.NoTracon.position, Angle.Angle0, gridRingDist, gridRings,
         this, gridLineColor, gridLineAlpha, gridFillColor, gridFillAlpha))
     } else None
-  }
-
-  override def createLayerInfoPanel = {
-    new TrackLayerInfoPanel(raceViewer,this){
-      // insert tracon selection panel after generic layer info
-      val choice = new StaticSelectionPanel[Tracon,IdAndNamePanel[Tracon]]("select TRACON",
-        Tracon.NoTracon +: Tracon.traconList, 40, new IdAndNamePanel[Tracon]( _.id, _.name), selectTracon).styled()
-      contents.insert(1, choice)
-    }.styled('consolePanel)
   }
 
   /**

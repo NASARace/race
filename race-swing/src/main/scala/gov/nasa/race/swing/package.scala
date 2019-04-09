@@ -18,10 +18,11 @@
 package gov.nasa.race
 
 import java.awt.{Component => AWTComponent, Window => AWTWindow, _}
+
 import javax.swing.{SwingConstants, SwingUtilities}
 
 import scala.language.{implicitConversions, reflectiveCalls}
-import scala.swing.{Component, ListView}
+import scala.swing.{Component, Dimension, Insets, ListView}
 
 /**
  * common swing utilities
@@ -98,4 +99,26 @@ package object swing {
       renderer.configure(list,isSelected,focused,item,index)
     }
   }
+
+  //--- ui scale support
+
+  val uiScale: Float = {
+    val scaleSpec = System.getProperty("race.swing.scale")
+    if (scaleSpec != null) {
+      try {
+        java.lang.Float.parseFloat(scaleSpec)
+      } catch {
+        case _: Throwable =>
+          println("error parsing race.swing.scale property, setting default 1.0")
+          1.0f
+      }
+    } else 1.0f
+  }
+
+  @inline def scaledSize(size: Int): Int = Math.round(uiScale * size)
+  def scaledDimension(w: Int, h: Int): Dimension = new Dimension(scaledSize(w), scaledSize(h))
+  def scaledDimension(d: Dimension): Dimension = new Dimension(scaledSize(d.width), scaledSize(d.height))
+  def scaledInsets(t: Int, l: Int, b: Int, r: Int): Insets = new Insets(
+    scaledSize(t), scaledSize(l), scaledSize(b), scaledSize(r)
+  )
 }

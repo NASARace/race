@@ -19,6 +19,7 @@ package gov.nasa.race.ww
 
 import gov.nasa.race.geo.{GeoPosition, GeoPositioned}
 import gov.nasa.race.track.TrackPoint
+import gov.nasa.race.trajectory.TDP3
 import gov.nasa.worldwind.geom.{LatLon, Position}
 import gov.nasa.race.uom._
 
@@ -31,12 +32,18 @@ import scala.language.implicitConversions
 object Implicits {
 
 
-  implicit def geoPosition2Position(pos: GeoPositioned): Position = {
+  implicit def geoPositioned2Position(pos: GeoPositioned): Position = {
     val gp = pos.position
     Position.fromDegrees(gp.latDeg, gp.lonDeg, gp.altMeters)
   }
 
+  implicit def geoPosition2Position (gp: GeoPosition): Position = {
+    Position.fromDegrees(gp.latDeg, gp.lonDeg, gp.altMeters)
+  }
+
   implicit def trackPoint2Position(e: TrackPoint): Position = wwPosition(e.position)
+
+  implicit def tdp3ToPosition (p: TDP3): Position = Position.fromDegrees(p.latDeg, p.lonDeg, p.altMeters)
 
   implicit def angle2WWAngle(angle: Angle): WWAngle = gov.nasa.worldwind.geom.Angle.fromDegrees(angle.toDegrees)
 

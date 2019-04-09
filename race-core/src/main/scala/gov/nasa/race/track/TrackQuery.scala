@@ -17,7 +17,8 @@
 
 package gov.nasa.race.track
 
-import gov.nasa.race.geo.{GeoPositioned, GreatCircle, GeoPosition}
+import gov.nasa.race.common.Query
+import gov.nasa.race.geo.{GeoPosition, GeoPositioned, GreatCircle}
 import gov.nasa.race.uom.Length._
 import gov.nasa.race.uom._
 import gov.nasa.race.util.StringUtils
@@ -171,11 +172,41 @@ class TrackQueryParser(val ctx: TrackQueryContext)  extends RegexParsers {
 
   //... TODO - and more to follow
 
-  def parseQuery (input: String): ParseResult[TrackFilter] = parseAll(expr, input)
 
-  def apply(input: String): Query = parseAll(expr, input) match {
-    case Success(result, _) => result
-    case failure: NoSuccess => scala.sys.error(failure.msg)
+  def parseQuery (input: String): ParseResult[TrackFilter] =  parseAll(expr, input)
+
+}
+
+/**
+  * a Query that can run over Iterables of items that contain TrackObjects (e.g TrackEntries)
+  */
+class TrackQuery[T](val ctx: TrackQueryContext, getTrack: T=>TrackedObject) extends Query[T] {
+
+  val parser = new TrackQueryParser(ctx)
+
+  // optimization to avoid recompilation of same query
+  protected var lastQuery: String = ""
+  protected var lastFilter: Option[T=>Boolean] = None
+
+  override def error (msg: String): Unit = ctx.reportQueryError(msg)
+
+  override def getMatchingItems(query: String, items: Iterable[T]): Iterable[T] = {
+    val filter: Option[T=>Boolean] =
+      if (query == lastQuery) {
+        lastFilter
+      } else {
+        lastQuery = query
+        lastFilter = parser.parseQuery(query) match {
+          case parser.Success(f: TrackFilter, _) => Some( (o: T) => f.pass(getTrack(o))(ctx) )
+          case failure: parser.NoSuccess => error(failure.msg); None
+        }
+        lastFilter
+      }
+
+    filter match {
+      case Some(f) => items.filter(f)
+      case None => items
+    }
   }
 }
 

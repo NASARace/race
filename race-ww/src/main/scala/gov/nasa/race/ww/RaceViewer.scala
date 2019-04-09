@@ -24,10 +24,12 @@ import akka.actor.Props
 import com.typesafe.config.Config
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.{RaceActor, RaceActorRec, error, info}
+import gov.nasa.race.swing._
 import gov.nasa.race.swing.Redrawable
 import gov.nasa.race.swing.Style._
 import gov.nasa.race.uom.Length.Meters
 import gov.nasa.race.ww.Implicits._
+import gov.nasa.race.ww.LayerObjectAction.LayerObjectAction
 import gov.nasa.race.{ifInstanceOf, ifSome}
 import gov.nasa.worldwind.geom.{Angle, Position}
 import gov.nasa.worldwind.layers.Layer
@@ -68,7 +70,7 @@ class RaceViewer(viewerActor: RaceViewerActor) extends DeferredEyePositionListen
   val defaultColor = config.getColorOrElse("color", Color.yellow)
   val defaultLabelColor = config.getColorOrElse("label-color", defaultColor)
   val defaultLineColor = config.getColorOrElse("line-color", defaultColor)
-  val defaultLabelFont = config.getFontOrElse("label-font",  new Font(null,Font.PLAIN,13))
+  val defaultLabelFont = config.getFontOrElse("label-font",  new Font(null,Font.PLAIN,scaledSize(13)))
   val defaultSubLabelFont = config.getFontOrElse("sublabel-font", defaultLabelFont)
 
   // we want to avoid several DeferredXListeners because of the context switch overhead
@@ -275,9 +277,11 @@ class RaceViewer(viewerActor: RaceViewerActor) extends DeferredEyePositionListen
   def showConsolePanel(name: String, setVisible: Boolean) = frame.showConsolePanel(name, setVisible)
 
   // layer/object panel selection
+  def getLayerPanel: Option[Component] = frame.getPanel(SelectedLayer)
   def setLayerPanel (c: Component) = if (panels.contains(SelectedLayer)) frame.setPanel(SelectedLayer, c)
   def dismissLayerPanel = if (panels.contains(SelectedLayer)) frame.setPanel(SelectedLayer, emptyLayerInfoPanel)
 
+  def getObjectPanel: Option[Component] = frame.getPanel(SelectedObject)
   def setObjectPanel (c: Component) = if (panels.contains(SelectedObject)) frame.setPanel(SelectedObject, c)
   def dismissObjectPanel = if (panels.contains(SelectedObject)) frame.setPanel(SelectedObject, emptyObjectPanel)
 
@@ -383,8 +387,10 @@ class RaceViewer(viewerActor: RaceViewerActor) extends DeferredEyePositionListen
   def changeLayer (name: String, enable: Boolean) = layerController.foreach(_.changeLayer(name,enable))
 
   //--- object change management
-  def objectChanged (obj: LayerObject, action: String) = objectListener.foreach(_.objectChanged(obj,action))
-  def changeObject (id: String, layerName: String, action: String) = {
+  def objectChanged (obj: LayerObject, action: LayerObjectAction): Unit = {
+    objectListener.foreach(_.objectChanged(obj,action))
+  }
+  def changeObject (id: String, layerName: String, action: LayerObjectAction): Option[RaceLayer] = {
     ifSome(getLayer(layerName)){ _.changeObject(id,action)}
   }
 

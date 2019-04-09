@@ -44,4 +44,10 @@ object ArrayUtils {
       quickSort(a, p+1, right)
     }
   }
+
+  def grow[T:Manifest](array: Array[T], newLength: Int): Array[T] = {
+    val newArray = new Array[T](newLength)
+    System.arraycopy(array,0,newArray,0,array.length)
+    newArray
+  }
 }

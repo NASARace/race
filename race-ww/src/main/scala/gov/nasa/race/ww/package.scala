@@ -85,32 +85,11 @@ package object ww {
     def changeLayer (name: String, isEnabled: Boolean)
   }
 
-  /**
-    * minimal interface of objects managed by RaceLayers
-    */
-  trait LayerObject {
-    def id: String
-    def layer: RaceLayer
-    def pos: GeoPositioned
 
-    def isFocused: Boolean
-    def setFocused(cond: Boolean): Unit
-  }
-
-  //--- predefined LayerObject actions (NOTE they are used in 'eq' comparison - use the vals, not literals)
-
-  final val Select = "Select"
-  final val ShowPanel = "ShowPanel"
-  final val DismissPanel = "DismissPanel"
-
-  final val StartFocus = "StartFocus"
-  final val StopFocus = "StopFocus"
-
-  trait LayerObjectListener {
-    def objectChanged(obj: LayerObject, action: String)
-  }
-
-  case class PanelEntry (name: String, panel: RacePanel, tooltip: String="click to hide/show panel", var expand: Boolean=true)
+  case class PanelEntry ( name: String,
+                          panel: RacePanel,
+                          tooltip: String="click to hide/show panel",
+                          var expand: Boolean=true)
 
   object EventAction extends Enumeration {
     type EventAction = Value

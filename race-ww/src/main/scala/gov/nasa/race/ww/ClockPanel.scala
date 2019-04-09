@@ -45,9 +45,9 @@ class BasicClockPanel(raceView: RaceViewer, config: Option[Config]=None) extends
 
 class ControlClockPanel (raceView: RaceViewer, config: Option[Config]=None) extends BasicClockPanel(raceView,config) {
 
-  val stopIcon = Images.getIcon("stop-red-16x16.png")
-  val playIcon = Images.getIcon("play-green-16x16.png")
-  val pauseIcon = Images.getIcon("pause-yellow-16x16.png")
+  val stopIcon = Images.getScaledIcon("stop-red-16x16.png")
+  val playIcon = Images.getScaledIcon("play-green-16x16.png")
+  val pauseIcon = Images.getScaledIcon("pause-yellow-16x16.png")
   def pauseResumeIcon = if (raceView.isStopped) playIcon else pauseIcon
 
   val stopButton = new Button(){

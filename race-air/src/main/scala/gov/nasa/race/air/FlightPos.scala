@@ -19,7 +19,7 @@ package gov.nasa.race.air
 
 import java.io.{InputStream, OutputStream, PrintStream}
 
-import com.github.nscala_time.time.Imports._
+import org.joda.time.DateTime
 import com.typesafe.config.Config
 import gov.nasa.race.archive._
 import gov.nasa.race.common.ConfigurableStreamCreator._

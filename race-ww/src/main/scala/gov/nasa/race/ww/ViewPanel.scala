@@ -23,6 +23,7 @@ import gov.nasa.race.uom.Length
 import gov.nasa.race.swing.GBPanel.{Anchor, Fill}
 import gov.nasa.race.swing.Style._
 import gov.nasa.race.swing._
+import gov.nasa.race.ww.LayerObjectAction.LayerObjectAction
 import gov.nasa.worldwind.event.{PositionEvent, PositionListener}
 import gov.nasa.worldwind.geom.{Angle, Position}
 import gov.nasa.worldwind.globes.projections.ProjectionMercator
@@ -103,13 +104,15 @@ class ViewPanel (raceViewer: RaceViewer, config: Option[Config]=None) extends GB
     altField.setValue(alt)
   }
 
-  override def objectChanged (obj: LayerObject, action: String) = {
-    if (action eq StopFocus) {
-      focusBtn.selected = false
-      focusBtn.enabled = false
-    } else if (action eq StartFocus) {
-      focusBtn.selected = true
-      focusBtn.enabled = true
+  override def objectChanged (obj: LayerObject, action: LayerObjectAction) = {
+    action match {
+      case LayerObjectAction.StopFocus =>
+        focusBtn.selected = false
+        focusBtn.enabled = false
+      case LayerObjectAction.StartFocus =>
+        focusBtn.selected = true
+        focusBtn.enabled = true
+      case _ => // ignore
     }
   }
 }

@@ -36,7 +36,7 @@ object Dependencies {
 
   //--- slf4j
   // NOTE - slf4j 1.8 now uses ServiceProvider and logback has not caught up as of 12/01/17
-  val slf4jSimple = "org.slf4j" % "slf4j-simple" % "1.8.0-beta2"
+  val slf4jSimple = "org.slf4j" % "slf4j-simple" % "1.8.0-beta4"
 
   //--- logback
   // does not support slf4j 1.8 (provider) yet
@@ -46,7 +46,7 @@ object Dependencies {
   val typesafeConfig = "com.typesafe" % "config" % "1.3.3"
 
   //--- nscala-time (Dates with operators): https://github.com/nscala-time/nscala-time
-  val nscalaTime = "com.github.nscala-time" %% "nscala-time" %  "2.20.0"
+  val nscalaTime = "com.github.nscala-time" %% "nscala-time" %  "2.22.0"
 
   //--- Scala parser combinators (https://github.com/scala/scala-parser-combinators)
   val scalaParser = "org.scala-lang.modules" % "scala-parser-combinators_2.12" % "1.1.1"
@@ -68,7 +68,7 @@ object Dependencies {
   // val breezeNative = "org.scalanlp" %% "breeze-natives" % "0.13.2"
 
   //--- scalaTest
-  val scalaTest = "org.scalatest" % "scalatest_2.12" % "3.0.5"
+  val scalaTest = "org.scalatest" % "scalatest_2.12" % "3.0.7"
   val pegDown = "org.pegdown" % "pegdown" % "1.6.0"
 
   //--- scalaCheck
@@ -78,7 +78,7 @@ object Dependencies {
   val defaultTestLibs = Seq(scalaTest,scalaCheck,pegDown)
 
   //--- Circe Json support
-  val circeVersion = "0.10.1"
+  val circeVersion = "0.11.1"
   val circeCore = "io.circe" %% "circe-core" % circeVersion
   val circeGeneric = "io.circe" %% "circe-generic" % circeVersion
   val circeParser = "io.circe" %% "circe-parser" % circeVersion
@@ -95,12 +95,12 @@ object Dependencies {
   //val scodecAll = Seq(scodecBits, scodecCore)
 
   //--- scala-swing
-  val scalaSwing = "org.scala-lang.modules" %% "scala-swing" % "2.0.3"
+  val scalaSwing = "org.scala-lang.modules" %% "scala-swing" % "2.1.0"
   //val swingx = "org.swinglabs.swingx" % "swingx-core" % "1.6.5-1"
   //.. and possibly extensions for Tree and jfreechart
 
   //--- RSyntaxTextArea (TextEditor with syntax support)
-  val rsTextArea = "com.fifesoft" % "rsyntaxtextarea" % "2.6.1"
+  val rsTextArea = "com.fifesoft" % "rsyntaxtextarea" % "3.0.2"
 
   //--- the jfreechart plot and chart lib
   val jfreeChart = "org.jfree" % "jfreechart" % "1.5.0"
@@ -108,13 +108,13 @@ object Dependencies {
   //--- pure Java implementation of ssh2 (http://www.jcraft.com/jsch/)
   // NOTE this has to be a known version and verified instance so that we don't
   // enter credentials processed by a un-verified jar
-  val jsch = "com.jcraft" % "jsch" % "0.1.54"
+  val jsch = "com.jcraft" % "jsch" % "0.1.55"
 
   //--- argon2 based password hashes ()
-  val argon2 = "de.mkammerer" % "argon2-jvm" % "2.4"
+  val argon2 = "de.mkammerer" % "argon2-jvm" % "2.5"
 
   //--- Akka
-  val akkaVersion = "2.5.18"
+  val akkaVersion = "2.5.21"
   val akkaOrg = "com.typesafe.akka"
 
   val akkaActor = akkaOrg %% "akka-actor" % akkaVersion
@@ -124,13 +124,13 @@ object Dependencies {
   val akkaTestkit = akkaOrg %% "akka-testkit" % akkaVersion
   val akkaMultiNodeTestkit = akkaOrg %% "akka-multi-node-testkit" % akkaVersion // % "test,multi-jvm"
 
-  val akkaHttp = akkaOrg %% "akka-http" % "10.1.5"
+  val akkaHttp = akkaOrg %% "akka-http" % "10.1.8"
 
   val akkaAll = Seq(akkaActor)
 
 
   //--- ActiveMQ
-  val amqVersion = "5.15.7"  // >= 5.11.1
+  val amqVersion = "5.15.9"
   val amqOrg = "org.apache.activemq"
   val amqBroker = amqOrg % "activemq-broker" % amqVersion
 
@@ -175,7 +175,7 @@ object Dependencies {
 
 
   //--- LWJGL Java wrapper for OpenGL,Vulkan,,OpenCL,OpenAL and others
-  val lwjglVersion = "3.2.0"
+  val lwjglVersion = "3.2.1"
   lazy val lwjglNativeClassifier = OS.build match {
     case _:Linux => "natives-linux"
     case _:OSX => "natives-macos"
@@ -189,7 +189,7 @@ object Dependencies {
 
 
   //--- publishable WorldWindJava version
-  val worldwindPcm = "com.github.pcmehlitz" % "worldwind-pcm" % "2.1.0.187"
+  val worldwindPcm = "com.github.pcmehlitz" % "worldwind-pcm" % "latest.integration" // "2.1.0.191"
 
 
   //--- this is used from build.sbt to add dependency resolvers

@@ -23,7 +23,7 @@ import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.uom.Length._
 import gov.nasa.race.uom.Speed._
 import gov.nasa.race.uom.Angle._
-import gov.nasa.race.geo.{Datum, GeoPosition}
+import gov.nasa.race.geo.{Euclidean, GeoPosition}
 import gov.nasa.race.uom.{Angle, Length, Speed}
 
 
@@ -70,10 +70,10 @@ class ApproachFilter (val center: GeoPosition,
 
   def isApproachCandidate (ac: TrackedAircraft): Boolean = {
     val acPos = ac.position
-    val d = Datum.meanEuclidean2dDistance(center,acPos)
+    val d = Euclidean.distance2D(center,acPos)
 
     if (d < radius){                                        // near enough
-      val bearing = Datum.euclideanHeading(acPos, center)
+      val bearing = Euclidean.heading(acPos, center)
       val acHeading = ac.heading
       val acSpeed = ac.speed
 

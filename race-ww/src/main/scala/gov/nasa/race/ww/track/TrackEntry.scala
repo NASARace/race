@@ -21,9 +21,11 @@ import java.awt.image.BufferedImage
 import java.awt.{Font, Point}
 
 import gov.nasa.race._
-import gov.nasa.race.track.{TrackedObject, Trajectory}
+import gov.nasa.race.track.TrackedObject
+import gov.nasa.race.trajectory.MutTrajectory
 import gov.nasa.race.util.DateTimeUtils.hhmmss
 import gov.nasa.race.ww.Implicits._
+import gov.nasa.race.ww.LayerObjectAttribute.LayerObjectAttribute
 import gov.nasa.race.ww._
 import gov.nasa.worldwind.WorldWind
 import gov.nasa.worldwind.render.{Material, Offset, PointPlacemark, PointPlacemarkAttributes}
@@ -34,7 +36,8 @@ import gov.nasa.worldwind.render.{Material, Offset, PointPlacemark, PointPlacema
   * This aggregates all Renderables that can be associated with a given TrackObject based on viewer
   * state (eye position and selected options)
   */
-class TrackEntry[T <: TrackedObject](var obj: T, var trajectory: Trajectory, val layer: TrackLayer[T]) extends LayerObject {
+class TrackEntry[T <: TrackedObject](var obj: T, var trajectory: MutTrajectory, val layer: TrackLayer[T])
+                      extends LayerObject with LayerSymbolOwner {
 
   //--- the renderables that can be associated with this entry
   protected var symbol: Option[TrackSymbol[T]] = Some(createSymbol)
@@ -46,7 +49,7 @@ class TrackEntry[T <: TrackedObject](var obj: T, var trajectory: Trajectory, val
   var isFocused = false // do we follow and center the track position (note this can come from any level: raceView, layer, panel)
   var drawPathContour = false // do we draw a path contour for this track
 
-  trajectory.add(obj)
+  trajectory += obj
 
   def viewPitch = layer.raceViewer.viewPitch
   def viewRoll = layer.raceViewer.viewRoll
@@ -54,19 +57,22 @@ class TrackEntry[T <: TrackedObject](var obj: T, var trajectory: Trajectory, val
   override def pos = obj
 
   //--- per-layer rendering resources
-  def labelMaterial: Material = layer.labelMaterial
-  def lineMaterial: Material = layer.lineMaterial
-  def symbolImg: BufferedImage = layer.symbolImg
-  def symbolImgScale: Double = 0.35
-  def symbolHeading: Double = obj.heading.toDegrees
-  def markImg: BufferedImage = layer.markImg
-  def labelFont: Font = layer.labelFont
-  def subLabelFont: Font = layer.subLabelFont
+  override def labelMaterial: Material = layer.labelMaterial
+  override def lineMaterial: Material = layer.lineMaterial
+  override def symbolImg: BufferedImage = layer.symbolImg
+  override def symbolImgScale: Double = 1.0
+  override def symbolHeading: Double = obj.heading.toDegrees
+  override def labelFont: Font = layer.labelFont
+  override def subLabelFont: Font = layer.subLabelFont
 
-  //--- label and info text creation
-  def labelText: String = if (obj.cs != obj.id) obj.cs else obj.id
-  def numberOfSublabels: Int = 0
-  def subLabelText(i: Int): String = null  // override in concrete types if there are sublabels
+  override def labelOffset: Offset = TrackSymbol.LabelOffset
+  override def iconOffset: Offset = TrackSymbol.IconOffset
+  override def wwPosition: WWPosition = ww.wwPosition(obj.position)
+  override def displayName: String = infoText
+
+  def markImg: BufferedImage = layer.markImg
+
+  override def labelText: String = obj.cs
 
   def infoText: String = {
     s"${obj.cs}\n${hhmmss.print(obj.date)}\n${obj.position.altitude.toFeet.toInt} ft\n${obj.heading.toDegrees.toInt}°\n${obj.speed.toKnots.toInt} kn"
@@ -95,8 +101,10 @@ class TrackEntry[T <: TrackedObject](var obj: T, var trajectory: Trajectory, val
     balloon
   }
 
+  override def id: String = obj.cs // required for pick support
 
-  override def id = obj.cs // required for pick support
+  def isVisible: Boolean = symbol.isDefined
+  def setVisible (cond: Boolean): Unit = show(cond)
 
   def hasAttrs = isFocused || path.isDefined || info.isDefined || mark.isDefined
   def hasModel = model.isDefined
@@ -109,7 +117,7 @@ class TrackEntry[T <: TrackedObject](var obj: T, var trajectory: Trajectory, val
   def setNewObj (newObj: T): Unit = {
     obj = newObj
 
-    trajectory.add(newObj)
+    trajectory += newObj
     ifSome(path) {_.addTrackPosition(newObj)}
   }
 
@@ -125,7 +133,7 @@ class TrackEntry[T <: TrackedObject](var obj: T, var trajectory: Trajectory, val
 
       ifSome(info) { balloon =>
         balloon.setText(infoText)
-        balloon.setScreenPoint(sym.getScreenPoint)
+        balloon.setScreenPoint(sym.getScreenPt)
       }
       ifSome(mark) {
         _.setPosition(obj)
@@ -184,6 +192,24 @@ class TrackEntry[T <: TrackedObject](var obj: T, var trajectory: Trajectory, val
     }
   }
 
+  override def setAttr(attr: LayerObjectAttribute, cond: Boolean): Unit = {
+    attr match {
+      case LayerObjectAttribute.Path => setPath(cond)
+      case LayerObjectAttribute.Info => setInfo(cond)
+      case LayerObjectAttribute.Mark => setMark(cond)
+      case _ => // ignore
+    }
+  }
+
+  override def isAttrSet(attr: LayerObjectAttribute): Boolean = {
+    attr match {
+      case LayerObjectAttribute.Path => path.isDefined
+      case LayerObjectAttribute.Info => info.isDefined
+      case LayerObjectAttribute.Mark => mark.isDefined
+      case _ => false
+    }
+  }
+
   def setPath(showIt: Boolean) = ifSome(symbol) { sym =>
     if (showIt && path.isEmpty) {
       path = Some(createPath)
@@ -215,7 +241,7 @@ class TrackEntry[T <: TrackedObject](var obj: T, var trajectory: Trajectory, val
 
   def setInfo(showIt: Boolean) = ifSome(symbol) { sym =>
     if (showIt && info.isEmpty) {
-      val balloon = createInfo(sym.getScreenPoint)
+      val balloon = createInfo(sym.getScreenPt)
       info = Some(balloon)
       layer.addRenderable(balloon)
 

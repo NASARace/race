@@ -49,7 +49,7 @@ object HttpRequestBuilder {
     c.getOptionalVaultableString("content").map { s =>
       c.getStringOrElse("type", "text/plain") match {
         case "application/x-www-form-urlencoded" =>
-          HttpEntity(`application/x-www-form-urlencoded` withCharset `UTF-8`, ByteString(s))
+          HttpEntity(`application/x-www-form-urlencoded`, ByteString(s))
         case "application/json" =>
           HttpEntity(`application/json`, ByteString(s))
         case "application/xml" =>

@@ -51,10 +51,9 @@ import scala.concurrent.duration._
   * In particular, eye position and proximity updates should only happen if we have configured models
   */
 trait ModelTrackLayer[T <:TrackedObject] extends TrackLayer[T] with ViewListener  {
-  import TrackLayer._
 
   //--- 3D models and proximities
-  val modelDistance = Meters(config.getDoubleOrElse("model-distance",2000.0))
+  val modelDistance = Meters(config.getDoubleOrElse("model-distance",4000.0))
   val eyeDistanceFilter = new VarEuclideanDistanceFilter3D(Angle0,Angle0,Length0, modelDistance)
   var proximities = HashSet.empty[TrackEntry[T]]
 

@@ -16,12 +16,12 @@
  */
 package gov.nasa.race.common
 
-import gov.nasa.race.common.TInterpolant.Data3
+import gov.nasa.race.common.Nat.N3
 
 /**
   * helper class to generate T3 test data
   */
-class SampleT3 {
+class SampleT3 extends TDataSource3 {
   val data = Array[(Long,Double,Double,Double)](
     (1545265794210L, 37.37403009777832, -122.11855982189941, 1767.8399658203125),
     (1545265799397L, 37.38000009899903, -122.12082956677246, 1706.8800048828125),
@@ -66,18 +66,15 @@ class SampleT3 {
     (1545265966140L, 37.53906010037232, -122.18788050061035, 883.9199829101562)
   )
 
-  def interpolateLin: LinT3Interpolant = {
-    def _getT(i: Int): Long = data(i)._1
-    def _getDataPoint(i: Int, d: Data3): Data3 = d.updated(data(i))
-
-    new LinT3Interpolant(data.length)(_getT)(_getDataPoint)
+  override def size: Int = data.length
+  override def getT(i: Int): Long = data(i)._1
+  override def getDataPoint(i: Int, p: TDataPoint3): TDataPoint3 = {
+    val d = data(i)
+    p.set(d._1,d._2,d._3,d._4)
   }
+  override def newDataPoint: TDataPoint3 = new TDataPoint3(0,0,0,0)
 
-  def interpolateFH: FHT3Interpolant = {
-    def _getT(i: Int): Long = data(i)._1
-    def _getDataPoint(i: Int, d: Data3): Data3 = d.updated(data(i))
 
-    new FHT3Interpolant(data.length)(_getT)(_getDataPoint)
-  }
-
+  def interpolateLin: LinTInterpolant[N3,TDataPoint3] = new LinTInterpolant[N3,TDataPoint3](this)
+  def interpolateFH: FHTInterpolant[N3,TDataPoint3] = new FHTInterpolant[N3,TDataPoint3](this)
 }

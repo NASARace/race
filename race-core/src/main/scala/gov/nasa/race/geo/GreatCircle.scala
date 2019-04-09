@@ -91,22 +91,12 @@ object GreatCircle {
     distance2D(startPos.φ, startPos.λ, endPos.φ, endPos.λ)
   }
 
-
-  /**
-    * approximation for small distances, which is about 2-3 times faster than full haversine with errors ~1%
-    */
-  def euclidianDistance2D (φ1: Angle, λ1: Angle, φ2: Angle, λ2: Angle): Length = {
-    val Δφ = φ2 - φ1
-    val Δλ = λ2 - λ1
-
-    val x = Δφ.toDegrees
-    val y = Δλ.toDegrees * Cos(φ1)
-    Meters(111320.0 * sqrt(x*x + y*y))  // 110250.0 ?
+  def midPoint (pos1: GeoPosition, pos2: GeoPosition): GeoPosition = {
+    val dist2 = distance(pos1,pos2) / 2.0
+    val bearing = initialBearing(pos1,pos2)
+    val alt = (pos1.altitude + pos2.altitude) / 2.0
+    endPos(pos1,dist2,bearing,alt)
   }
-  @inline def euclidianDistance2D (startPos: GeoPosition, endPos: GeoPosition): Length = {
-    euclidianDistance2D(startPos.φ, startPos.λ, endPos.φ, endPos.λ)
-  }
-
 
   def generateArcLonDeg = {
     println("val ArcLonDeg = Array[Double](")

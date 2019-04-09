@@ -32,6 +32,7 @@ import scala.swing._
   */
 
 class Stylist {
+
   // this is just to handle the NoStyle case so that we can use PartialFunctions
   // for specialized cases in the Stylist.style() implementations
   def ignoreId: PartialFunction[Symbol,Any] = {case _ =>}

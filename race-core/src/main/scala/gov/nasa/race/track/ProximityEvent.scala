@@ -73,6 +73,7 @@ case class ProximityEvent (id: String,
 
   override def toString = f"ProximityEvent(ref=${ref.id},track=${track.cs},dist=${distance.toMeters}%.0f m,flags=${flagDescription(status)}"
 
+  override def isNew = (status & ProxNew) != 0
   def isCollision = (status & ProxCollision) != 0
 
   //--- TrackedObject interface

@@ -38,7 +38,7 @@ class TranslatorActor (val config: Config) extends SubscribingRaceActor with Fil
     case BusEvent(_,msg,_) => translateAndPublish(msg)
   }
 
-  override def handleMessage = handleTranslatorMessage
+  override def handleMessage: Receive = handleTranslatorMessage
 
   def translateAndPublish (msg: Any) = {
     translator.translate(msg) match {

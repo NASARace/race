@@ -42,9 +42,10 @@ object DateTimeUtils {
   val hhmmssZ = DateTimeFormat.forPattern("hh:mm:ss Z")
   val hhmmss = DateTimeFormat.forPattern("hh:mm:ss")
 
-  def toHHMMSS(d: FiniteDuration): (Int, Int, Int) = (d.toHours.toInt, (d.toMinutes % 60).toInt, (d.toSeconds % 60).toInt)
+  @inline def toHHMMSS(d: FiniteDuration): (Int, Int, Int) = (d.toHours.toInt, (d.toMinutes % 60).toInt, (d.toSeconds % 60).toInt)
 
-  def formatDate (epoch: Long, formatter: DateTimeFormatter): String = formatter.print(epoch)
+  @inline def formatDate (epoch: Long, formatter: DateTimeFormatter): String = formatter.print(epoch)
+  @inline def formatDate (d: DateTime, formatter: DateTimeFormatter): String = formatter.print(d.getMillis)
 
   def durationMillisToHMMSS (millis: Long): String = {
     val s = ((millis / 1000) % 60).toInt

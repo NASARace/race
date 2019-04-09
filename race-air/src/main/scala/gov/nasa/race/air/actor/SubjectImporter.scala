@@ -60,7 +60,7 @@ trait SubjectImporter[T] extends ChannelTopicProvider with FilteringPublisher {
 
   //--- the FilteringPublisher interface
   override def createFilters =  Array[ConfigurableFilter](new SubjectFilter(ConfigFactory.empty))
-  override def passUnfliteredDefault = false // no filter, no publishing
+  override def passUnfilteredDefault = false // no filter, no publishing
 
   //--- publishing support
 

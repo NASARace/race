@@ -16,46 +16,17 @@
  */
 package gov.nasa.race.ww.track
 
-import java.util.Vector
-
-import gov.nasa.race.common.BasicTimeSeries
+import gov.nasa.race.common.TimeSeriesUpdateStats
 import gov.nasa.race.track.{TrackPoint, TrackedObject}
 import gov.nasa.race.ww.Implicits._
-import gov.nasa.worldwind.WorldWind
-import gov.nasa.worldwind.avlist.AVKey
-import gov.nasa.worldwind.geom.Position
-import gov.nasa.worldwind.render.{BasicShapeAttributes, Path}
 
 
 /**
-  * WWJ Path to display aircraft flight paths
+  * a extensible WWJ Path to display TrackedObject trajectories
   */
-class TrackPath[T <: TrackedObject](val entry: TrackEntry[T]) extends Path with BasicTimeSeries {
-  val flightPath = entry.trajectory
+class TrackPath[T <: TrackedObject](val entry: TrackEntry[T])
+                     extends TrajectoryPath(entry.trajectory, entry.lineMaterial) with TimeSeriesUpdateStats {
 
-  val attrs = new BasicShapeAttributes
-  attrs.setOutlineWidth(1)
-  attrs.setOutlineMaterial(entry.lineMaterial)
-  attrs.setEnableAntialiasing(true)
-  attrs.setDrawInterior(false)
-
-  // those we set in preparation if there is a request to draw contours
-  attrs.setInteriorOpacity(0.3)
-  attrs.setInteriorMaterial(entry.lineMaterial)
-
-  setShowPositionsScale(4.0)
-  setAttributes(attrs)
-
-  // we don't use setShowPositionsThreshold because it is based on eye distance to position, not altitude
-  setPathType(AVKey.LINEAR)
-  setAltitudeMode(WorldWind.ABSOLUTE)
-
-  var posList = new Vector[Position](flightPath.capacity)
-  flightPath.foreachPre { (_, _, latDeg, lonDeg, altMeters) =>
-    val pos = Position.fromDegrees(latDeg,lonDeg,altMeters)
-    posList.add(pos)
-  }
-  setPositions(posList)
 
   def setLineAttrs = setShowPositions(false)
   def setLinePosAttrs = setShowPositions(averageUpdateFrequency < 2) // no point showing points for high frequency updates
@@ -64,12 +35,6 @@ class TrackPath[T <: TrackedObject](val entry: TrackEntry[T]) extends Path with 
     addSample
     posList.add(tp)
     setPositions(posList)
-  }
-
-  def setContourAttrs (showContour: Boolean) = {
-    attrs.setDrawInterior(showContour)
-    setExtrude(showContour)
-    setDrawVerticals(showContour)
   }
 
   override def computePositionCount = numPositions = posList.size

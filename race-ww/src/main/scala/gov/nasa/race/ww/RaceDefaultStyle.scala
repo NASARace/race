@@ -33,7 +33,7 @@ import scala.swing.{UIElement,Component,ListView,TextField,Button,CheckBox,Combo
  */
 class RaceDefaultStyle extends Stylist {
 
-  val preferredConsoleWidth = 360
+  val preferredConsoleWidth = scaledSize(360)
 
   val background = DARK_GRAY
   val foreground = WHITE
@@ -41,8 +41,8 @@ class RaceDefaultStyle extends Stylist {
   val focusColor = Color.BLUE
   val separatorColor = new Color(42,42,42)
 
-  val sysFont = new Font("lucida grande", Font.PLAIN, 12)
-  val txtFont = new Font("Monospaced", Font.PLAIN, 12)
+  val sysFont = new Font("lucida grande", Font.PLAIN, scaledSize(12))
+  val txtFont = new Font("Monospaced", Font.PLAIN, scaledSize(12))
 
   val hiInner = background.brighter
   val hiOuter = hiInner.brighter
@@ -63,7 +63,7 @@ class RaceDefaultStyle extends Stylist {
   UIManager.put("ScrollBar.track", background)
   UIManager.put("ScrollBar.background", background)
   UIManager.put("ScrollBar.thumb", GRAY)
-  UIManager.put("ScrollBar.width", 12)
+  UIManager.put("ScrollBar.width", scaledSize(12))
 
   UIManager.put("SplitPane.background", background)
   UIManager.put("Focus.color", focusColor)
@@ -82,19 +82,22 @@ class RaceDefaultStyle extends Stylist {
 
     setIdStyle(id) {
       case 'collapseBar =>
-        c.border = new CompoundBorder( new EmptyBorder(7,5,5,5), new MatteBorder(1,0,0,0,LIGHT_GRAY))
+        c.border = new CompoundBorder(
+          new EmptyBorder(scaledSize(7),scaledSize(5),scaledSize(5),scaledSize(5)),
+          new MatteBorder(scaledSize(1),scaledSize(0),scaledSize(0),scaledSize(0),LIGHT_GRAY)
+        )
     }
   }
 
   override def style (c: Separator, id: Symbol) = {
     super.style(c,id)
 
-    c.preferredSize = new Dimension(7,7)
+    c.preferredSize = scaledDimension(7,7)
     var clr = separatorColor
     setIdStyle(id) {
       case 'panel => clr = GRAY
     }
-    c.border = new CompoundBorder( new EmptyBorder(3,3,3,3), new LineBorder(clr))
+    c.border = new CompoundBorder( new EmptyBorder(scaledSize(3),scaledSize(3),scaledSize(3),scaledSize(3)), new LineBorder(clr))
   }
 
   override def style (c: Panel, id: Symbol) = {
@@ -106,12 +109,12 @@ class RaceDefaultStyle extends Stylist {
         //c.border = new EmptyBorder(5,5,5,5)
         //c.preferredSize = (preferredConsoleWidth, 1400) // this would force the v-scroll bar
       case 'collapsible =>
-        c.border = new EmptyBorder(12,5,5,10)  // top,left,bottom,right (compensate for v-scroll)
+        c.border = new EmptyBorder(scaledSize(12),scaledSize(5),scaledSize(5),scaledSize(10))  // top,left,bottom,right (compensate for v-scroll)
       case 'consolePanel =>
-        c.border = new EmptyBorder(5,5,5,5)
+        c.border = new EmptyBorder(scaledSize(5),scaledSize(5),scaledSize(5),scaledSize(5))
       case 'layerInfo =>
         c.background = BLACK
-        c.border = new EmptyBorder(2,2,2,2)
+        c.border = new EmptyBorder(scaledSize(2),scaledSize(2),scaledSize(2),scaledSize(2))
       case 'titled =>
         if (c.border != null && c.border.isInstanceOf[TitledBorder]){
           val titledBorder = c.border.asInstanceOf[TitledBorder]
@@ -125,8 +128,8 @@ class RaceDefaultStyle extends Stylist {
     super.style(c,id)
     setIdStyle(id) {
       case 'appPanel =>
-        c.vGap = 10
-        c.hGap = 10
+        c.vGap = scaledSize(10)
+        c.hGap = scaledSize(10)
     }
   }
 
@@ -177,7 +180,8 @@ class RaceDefaultStyle extends Stylist {
   override def style (c: Button, id: Symbol) = {
     super.style(c,id)
     c.opaque = true
-    c.margin = new Insets(2,8,2,8)
+    //c.preferredSize = scaledDimension(c.preferredSize)
+    c.margin = new Insets(scaledSize(2),scaledSize(8),scaledSize(2),scaledSize(8))
     c.peer.setUI(new ButtonUI) // the basic plafs are utterly useless
   }
 
@@ -196,8 +200,8 @@ class RaceDefaultStyle extends Stylist {
     c.opaque = false
     setIdStyle(id) {
       case 'collapseButton =>
-        c.selectedIcon = ArrowIcon(Direction.South, 12, foreground, 1, Some(Color.green))
-        c.icon = ArrowIcon(Direction.East, 12, foreground, 1, Some(Color.red))
+        c.selectedIcon = ArrowIcon(Direction.South, scaledSize(12), foreground, 1, Some(Color.green))
+        c.icon = ArrowIcon(Direction.East, scaledSize(12), foreground, 1, Some(Color.red))
     }
   }
 
@@ -211,7 +215,7 @@ class RaceDefaultStyle extends Stylist {
     super.style(c, id)
     setIdStyle(id) {
       case 'console =>
-        c.font = new Font("Monospaced", Font.PLAIN, 12)
+        c.font = new Font("Monospaced", Font.PLAIN, scaledSize(12))
     }
   }
 
@@ -270,7 +274,7 @@ class RaceDefaultStyle extends Stylist {
     super.style(c,id)
     setIdStyle(id) {
       case 'layerCategory =>
-        c.font = new Font("lucida grande", Font.ITALIC, 10)
+        c.font = new Font("lucida grande", Font.ITALIC, scaledSize(10))
         c.horizontalAlignment = Alignment.Right
       case 'layerName =>
         c.foreground = GREEN
@@ -297,7 +301,7 @@ class RaceDefaultStyle extends Stylist {
         c.horizontalAlignment = Alignment.Right
       case 'title =>
         c.horizontalAlignment = Alignment.Left
-        c.font = new Font("lucida grande", Font.BOLD, 13)
+        c.font = new Font("lucida grande", Font.BOLD, scaledSize(13))
     }
   }
 
@@ -326,10 +330,10 @@ class RaceDefaultStyle extends Stylist {
     setIdStyle(id) {
       case 'time =>
         c.horizontalAlignment = Alignment.Center
-        c.font = new Font("Monospaced", Font.BOLD, 16)
+        c.font = new Font("Monospaced", Font.BOLD, scaledSize(16))
       case 'date =>
         c.horizontalAlignment = Alignment.Left
-        c.font = new Font("sans-serif", Font.BOLD, 12)
+        c.font = new Font("sans-serif", Font.BOLD, scaledSize(12))
     }
   }
 

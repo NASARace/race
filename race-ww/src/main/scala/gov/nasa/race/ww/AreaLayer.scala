@@ -54,12 +54,15 @@ class CircularArea (val config: Config) extends SurfaceCircle with ConfigurableA
   */
 class AreaLayer (val raceViewer: RaceViewer, val config: Config) extends RenderableLayer with RaceLayer {
 
-  val panel = new DynamicLayerInfoPanel
-
   var areas: Seq[ConfigurableArea] = createAreas
+  val panel = new StaticLayerInfoPanel(this, size)
 
   areas.foreach(addRenderable)
 
+  def size: Int = areas.size
+
   def createAreas: Seq[ConfigurableArea] = config.getConfigSeq("areas").flatMap(createArea)
   def createArea (areaConf: Config): Option[ConfigurableArea] = raceViewer.configurable[ConfigurableArea](areaConf)
+
+
 }

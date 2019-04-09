@@ -17,6 +17,8 @@
 
 package gov.nasa.race.ww
 
+import gov.nasa.race.geo.GeoPosition
+import gov.nasa.race.ww.Implicits._
 import gov.nasa.worldwind.awt.WorldWindowGLCanvas
 import gov.nasa.worldwind.geom.Position
 import gov.nasa.worldwind.globes.{Earth, Globe2D}
@@ -34,10 +36,12 @@ object InViewChecker {
 trait InViewChecker {
   val wwd: WorldWindowGLCanvas
   def isInView (pos: Position): Boolean
+  def isInView (pos: GeoPosition): Boolean = isInView(geoPosition2Position(pos))
 }
 
 class AlwaysInViewChecker (val wwd: WorldWindowGLCanvas) extends InViewChecker {
   override def isInView (pos: Position) = true
+  override def isInView (pos: GeoPosition) = true
 }
 
 class Globe2DInViewChecker (val wwd: WorldWindowGLCanvas, val globe: Globe2D) extends InViewChecker {

@@ -22,11 +22,14 @@ import java.awt.{Color, Font}
 import akka.actor.ActorRef
 import com.typesafe.config.Config
 import gov.nasa.race._
+import gov.nasa.race.common.Query
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.Messages.{BusEvent, DelayedAction}
 import gov.nasa.race.core._
 import gov.nasa.race.swing.AkkaSwingBridge
 import gov.nasa.race.ww.EventAction.EventAction
+import gov.nasa.race.ww.LayerObjectAction.LayerObjectAction
+import gov.nasa.race.ww.LayerObjectAttribute.LayerObjectAttribute
 import gov.nasa.worldwind.layers.RenderableLayer
 import gov.nasa.worldwind.render.Material
 
@@ -75,7 +78,7 @@ trait RaceLayer extends RenderableLayer with RaceLayerInfo {
 
   //--- object attribute change
 
-  def changeObject(objectId: String, action: String) = {}
+  def changeObject(objectId: String, action: LayerObjectAction) = {}
 
   // called in response to a WW SelectHandler notification if object is interactively picked
   // NOTE this is only called for the layer that owns the picked renderable
@@ -83,6 +86,8 @@ trait RaceLayer extends RenderableLayer with RaceLayerInfo {
 
   // called by RaceViewer if a focus object is reset
   def setFocused (e: LayerObject, isFocused: Boolean, report: Boolean): Unit = {} // default is no focus objects
+
+  def size: Int // answer number of items in layer
 }
 
 /**
@@ -124,7 +129,6 @@ trait SubscribingRaceLayer extends RaceLayer with AkkaSwingBridge {
 
   var updateCount = 0// to keep track of number of changes
   def incUpdateCount: Unit = updateCount += 1
-  def size: Int // answer number of items in layer
 
   /**
     * override if we need a layer specific actor (e.g. for actor<->layer communication)
@@ -185,4 +189,36 @@ class RaceLayerActor (val config: Config, val layer: SubscribingRaceLayer) exten
 trait RaceLayerPickable {
   def layer: RaceLayer
   def layerItem: AnyRef
+}
+
+/**
+  * a RaceLayer whose LayerObjects can be queried and managed through UI components
+  */
+trait InteractiveRaceLayer[T <: LayerObject] extends SubscribingRaceLayer {
+
+  // note this might be used by implementors that dynamically add/modify layerObjects
+  protected var displayFilter: Option[T=>Boolean] = None
+
+  def layerObjects: Iterable[T]
+  def layerObjectQuery: Query[T]
+
+  def filterLayerObjectDisplay(filter: Option[T=>Boolean]): Unit = {
+    filter match {
+      case None => layerObjects.foreach(_.setVisible(true)) // if none make all objects visible
+      case Some(f) => layerObjects.foreach( e=> e.setVisible(f(e)))
+    }
+  }
+
+  def setLayerObjectAttribute(o: T, attr: LayerObjectAttribute, cond: Boolean): Unit
+  def doubleClickLayerObject(o: T): Unit
+  def focusLayerObject(o: T, cond: Boolean): Unit
+
+  def dismissLayerObjectPanel (o: T): Unit = {} // override if layer keeps panel state/data
+
+  //--- for rendering layerObjects in a ListView
+  def maxLayerObjectRows: Int
+  def layerObjectIdHeader: String
+  def layerObjectIdText(o: T): String
+  def layerObjectDataHeader: String
+  def layerObjectDataText(o: T): String
 }

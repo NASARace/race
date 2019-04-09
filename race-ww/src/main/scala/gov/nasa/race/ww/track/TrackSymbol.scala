@@ -17,112 +17,21 @@
 
 package gov.nasa.race.ww.track
 
-import java.awt.Point
-
-import gov.nasa.race._
 import gov.nasa.race.track.TrackedObject
-import gov.nasa.race.util.DateTimeUtils._
-import gov.nasa.race.ww.Implicits._
 import gov.nasa.race.ww._
-import gov.nasa.worldwind.WorldWind
-import gov.nasa.worldwind.avlist.AVKey
-import gov.nasa.worldwind.render.{MultiLabelPointPlacemark, Offset, PointPlacemarkAttributes}
+import gov.nasa.worldwind.render.Offset
 
+object TrackSymbol{
+  val LabelOffset = Offset.fromFraction(1.4,0.5)
+  val IconOffset = Offset.fromFraction(1.5,0.5)
+}
 
 /**
-  * Renderable representing 2D aircraft symbol
-  *
-  * Note this is a pick-enabled object type and hence we need a link to the corresponding
-  * FlightEntry (the FlightPos objects referenced from there change upon update and hence
-  * cannot be used to do a FlightEntry lookup)
+  * a LayerSymbol representing a TrackedObject
   */
-class TrackSymbol[T <: TrackedObject](val trackEntry: TrackEntry[T])
-                                                  extends MultiLabelPointPlacemark(trackEntry.obj) with RaceLayerPickable {
+class TrackSymbol[T <: TrackedObject](val trackEntry: TrackEntry[T]) extends LayerSymbol(trackEntry) {
 
-  var showDisplayName = false
-  var attrs = new PointPlacemarkAttributes
+  // override if there are concrete TrackedObject specifics which are display relevant
+  def update (newT: T) = super.update
 
-  //--- those are invariant
-  attrs.setLabelMaterial(trackEntry.labelMaterial)
-  attrs.setLabelFont(trackEntry.labelFont)
-  attrs.setLineMaterial(trackEntry.labelMaterial)
-  //attrs.setImageColor(layer.color) // does not seem to work, and if so would probably require monochrome images
-  setAttributes(attrs)
-
-  setSubLabelFont(trackEntry.subLabelFont)
-
-  setAltitudeMode(WorldWind.ABSOLUTE)
-
-  //--- pick support
-  override def layerItem = trackEntry
-  override def layer = trackEntry.layer
-
-  def setDisplayName(showIt:Boolean) = {
-    if (showIt) {
-      showDisplayName = true
-      updateDisplayName
-    } else showDisplayName = false
-  }
-
-  def updateDisplayName = {
-    val obj = trackEntry.obj
-    val s = s"${obj.cs}\n${hhmmss.print(obj.date)}\n${obj.position.altFeet} ft\n${obj.heading.toDegrees.toInt}°\n${obj.speed.toKnots.toInt} kn"
-    setValue( AVKey.DISPLAY_NAME, s.toString)
-  }
-
-  def update (newT: T) = {
-    setPosition(newT)
-    attrs.setHeading(newT.heading.toDegrees)
-
-    if (hasLabel) setLabelText(trackEntry.labelText)
-    if (hasSubLabels) loopFromTo(0,trackEntry.numberOfSublabels) { i=> setSubLabelText(i, trackEntry.subLabelText(i)) }
-
-    if (showDisplayName) updateDisplayName
-  }
-
-  def setDotAttrs = {
-    removeAllLabels()
-    attrs.setScale(5d)
-    attrs.setImage(null)
-    attrs.setUsePointAsDefaultImage(true)
-    //setAttributes(attrs)
-  }
-
-  def setLabelAttrs = {
-    setLabelText(trackEntry.labelText)
-    attrs.setScale(5d)
-    attrs.setImage(null)
-    attrs.setUsePointAsDefaultImage(true)
-    //setAttributes(attrs)
-  }
-
-  def setIconAttrs = {
-    val obj = trackEntry.obj
-    setLabelText(trackEntry.labelText)
-    attrs.setImage(trackEntry.symbolImg)
-    attrs.setScale(trackEntry.symbolImgScale)
-    attrs.setImageOffset(Offset.CENTER)
-    attrs.setHeading(trackEntry.symbolHeading)
-    attrs.setHeadingReference(AVKey.RELATIVE_TO_GLOBE)
-
-    // TODO check view pitch and adjust symbol accordingly
-    //setAttributes(attrs)
-  }
-
-  // cache so that we don't create gazillions of Points and Offsets
-  val screenPt = if (screenPoint != null) new Point(screenPoint.x.toInt, screenPoint.y.toInt) else new Point(0,0)
-  val screenOffset = if (screenPoint != null) new Offset(screenPoint.x,screenPoint.y,AVKey.PIXELS,AVKey.PIXELS)
-                     else new Offset(.0,.0,AVKey.PIXELS,AVKey.PIXELS)
-
-  def getScreenPoint: Point = {
-    if (screenPoint != null) screenPt.setLocation(screenPoint.x, screenPoint.y)
-    screenPt
-  }
-
-  def getScreenOffset: Offset = {
-    if (screenPoint != null){ screenOffset.setX(screenPoint.x); screenOffset.setY(screenPoint.y) }
-    screenOffset
-  }
-  def screenPointX = screenPoint.x
-  def screenPointY = screenPoint.y
 }
