@@ -36,20 +36,20 @@ import scala.swing._
 object Images {
 
   val sizePostfix: String =  {
-    if (uiScale >= 2.0f) "65" else "33"
+    if (uiScale >= 2.0f) "-hidpi" else ""
   }
 
   def colorPostfix (clr: Color): String = {
     clr match {
       case Color.white => "white"
-      case Color.black => "black"
+      //case Color.black => "black"
       case Color.red => "red"
       case Color.green => "green"
       case Color.blue => "blue"
       case Color.yellow => "yellow"
       case Color.cyan => "cyan"
       case Color.magenta => "magenta"
-      case Color.orange => "orange"
+      //case Color.orange => "orange"
       case _ => "yellow" // default
     }
   }
@@ -63,7 +63,7 @@ object Images {
   }
 
   def loadImage(shape: String, color: Color): BufferedImage = {
-    val fname = s"$shape-${colorPostfix(color)}-$sizePostfix.png"
+    val fname = s"$shape-${colorPostfix(color)}$sizePostfix.png"
     ImageIO.read(getClass.getResourceAsStream(fname))
   }
 
@@ -122,7 +122,7 @@ object Images {
     Color.blue -> loadImage("plane", Color.blue),
     Color.magenta -> loadImage("plane", Color.magenta),
     Color.white -> loadImage("plane", Color.white),
-    Color.black -> loadImage("plane", Color.black)
+    //Color.black -> loadImage("plane", Color.black)
   )
   val defaultPlaneImg = defaultPlaneImgs(Color.red)
   def getPlaneImage(color: Color) = defaultPlaneImgs.getOrElse(color, defaultPlaneImg)
@@ -135,7 +135,7 @@ object Images {
     Color.blue -> loadImage("arrow", Color.blue),
     Color.magenta -> loadImage("arrow", Color.magenta),
     Color.white -> loadImage("arrow", Color.white),
-    Color.black -> loadImage("arrow", Color.black)
+    //Color.black -> loadImage("arrow", Color.black)
   )
   val defaultArrowImg = defaultArrowImgs(Color.green)
   def getArrowImage(color: Color) = defaultArrowImgs.getOrElse(color,defaultArrowImg)
@@ -149,7 +149,7 @@ object Images {
     Color.blue -> loadImage("mark", Color.blue),
     Color.magenta -> loadImage("mark", Color.magenta),
     Color.white -> loadImage("mark", Color.white),
-    Color.black -> loadImage("mark", Color.black)
+    //Color.black -> loadImage("mark", Color.black)
   )
   val defaultMarkImg = defaultMarkImgs(Color.white)
   def getMarkImage(color: Color) = defaultMarkImgs.getOrElse(color, defaultMarkImg)
@@ -163,7 +163,7 @@ object Images {
     Color.blue -> loadImage("event", Color.blue),
     Color.magenta -> loadImage("event", Color.magenta),
     Color.white -> loadImage("event", Color.white),
-    Color.black -> loadImage("event", Color.black)
+    //Color.black -> loadImage("event", Color.black)
   )
   val defaultEventImg = defaultEventImgs(Color.red)
   def getEventImage(color: Color) = defaultEventImgs.getOrElse(color,defaultEventImg)

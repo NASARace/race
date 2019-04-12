@@ -25,7 +25,7 @@ import gov.nasa.race.core._
   * actor that filters messages using a set of configurable filters
   *
   * this actor only publishes messages that pass. If we also need to publish the
-  * ones that fail, use a EitherOrRouter
+  * ones that fail, use an EitherOrRouter
   */
 class FilterActor (val config: Config) extends FilteringPublisher with SubscribingRaceActor with TransitiveChannelTopicProvider {
   override def handleMessage = handleFilteringPublisherMessage
