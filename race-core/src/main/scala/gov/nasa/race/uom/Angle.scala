@@ -385,3 +385,12 @@ final class DeltaAngleArrayBuffer protected[uom] (protected[uom] val data: Array
     a
   }
 }
+
+class OnlineAngleStats extends SampleStats[Angle] {
+  protected val stats = new OnlineSampleStats
+
+  def += (a: Angle): Unit = stats += a.toRadians
+  def mean: Angle = Radians(stats.mean)
+  def variance: Double = stats.variance
+  def numberOfSamples: Int = stats.numberOfSamples
+}

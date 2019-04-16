@@ -17,7 +17,10 @@
 package gov.nasa.race.uom
 
 import gov.nasa.race.util.DateTimeUtils
+
 import scala.collection.mutable.ArrayBuffer
+import scala.concurrent.duration.FiniteDuration
+import scala.language.implicitConversions
 
 class TimeException (msg: String) extends RuntimeException(msg)
 
@@ -71,6 +74,8 @@ object Time {
   } else {
     if (b.millis >= c.millis) b else c
   }
+
+  implicit def toFiniteDuration (t: Time): FiniteDuration = t.toFiniteDuration
 }
 import Time._
 
@@ -94,11 +99,17 @@ class Time protected[uom] (val millis: Int) extends AnyVal {
     val ms = millis % 1000
     (h,m,s,ms)
   }
+  def toFiniteDuration: FiniteDuration = new FiniteDuration(millis, scala.concurrent.duration.MILLISECONDS)
 
   // we don't try to be symmetric with Date - it seems non-intuitive to add a Date to a Time
   def + (t: Time): Time = new Time(millis + t.millis)
   def - (t: Time): Time = new Time(millis - t.millis)
   def / (t: Time): Double = millis.toDouble / t.millis
+
+  // we can't overload the normal / operator because of type erasure
+  def / (d: Double): Time = new Time((millis / d).round.toInt)
+  def * (d: Double): Time = new Time((millis * d).round.toInt)
+
 
   //-- undefined value handling (value based alternative for finite cases that would otherwise require Option)
   @inline def isUndefined: Boolean = millis == UNDEFINED_TIME

@@ -96,8 +96,11 @@ class Date protected[uom](val millis: Long) extends AnyVal {
   def timeOfDay: Time = new Time((millis % Time.MillisInDay).toInt)
 
   // unfortunately we can't overload '-' because of erasure
-  def timeUntil(d: Date): Time = new Time((d.millis - millis).toInt)
-  def timeSince(d: Date): Time = new Time((millis - d.millis).toInt)
+  @inline def timeUntil(d: Date): Time = new Time((d.millis - millis).toInt)
+  def :-> (d: Date): Time = timeUntil(d)
+
+  @inline def timeSince(d: Date): Time = new Time((millis - d.millis).toInt)
+  def <-: (d: Date): Time = timeSince(d)
 
   def + (t: Time): Date = new Date(millis + t.millis)
   def - (t: Time): Date = new Date(millis - t.millis)

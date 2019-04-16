@@ -19,6 +19,7 @@ package gov.nasa.race.uom
 import scala.concurrent.duration.Duration
 import Math._
 
+import gov.nasa.race.common.{OnlineSampleStats, SampleStats}
 import gov.nasa.race.util.ArrayUtils
 
 import scala.collection.mutable.ArrayBuffer
@@ -398,4 +399,13 @@ final class DeltaLengthArrayBuffer protected[uom] (protected[uom] val data: Arra
     while (i < n) { a(i) = (ref + new Length(data(i))).toFeet; i += 1 }
     a
   }
+}
+
+class OnlineLengthStats extends SampleStats[Length] {
+  protected val stats = new OnlineSampleStats
+
+  def += (l: Length): Unit = stats += l.toMeters
+  def mean: Length = Meters(stats.mean)
+  def variance: Double = stats.variance
+  def numberOfSamples: Int = stats.numberOfSamples
 }

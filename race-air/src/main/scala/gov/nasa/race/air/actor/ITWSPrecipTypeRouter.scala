@@ -30,7 +30,7 @@ import scala.collection.mutable
   */
 class ITWSPrecipTypeRouter (val config: Config) extends SubscribingRaceActor with PublishingRaceActor {
 
-  val routes = mutable.Map.empty[Int,mutable.Set[String]]
+  val routes = mutable.Map.empty[Int,Array[String]]
 
   override def onInitializeRaceActor (raceContext: RaceContext, actorConf: Config) = {
     routes += 9849 -> writeTo.map(_ + "/9849")

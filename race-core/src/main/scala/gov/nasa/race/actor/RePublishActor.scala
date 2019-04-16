@@ -19,6 +19,7 @@ package gov.nasa.race.actor
 import com.typesafe.config.Config
 import gov.nasa.race.core.Messages.BusEvent
 import gov.nasa.race.core.{PublishingRaceActor, RaceContext, SubscribingRaceActor}
+import gov.nasa.race.util.ArrayUtils
 
 /**
   * an actor that simply republishes its input on different channels.
@@ -32,7 +33,7 @@ class RePublishActor (val config: Config) extends SubscribingRaceActor with Publ
 
   override def onInitializeRaceActor(raceContext: RaceContext, actorConf: Config): Boolean = {
     if (super.onInitializeRaceActor(raceContext, actorConf)){
-      if ((readFrom & writeTo).nonEmpty){
+      if (ArrayUtils.intersect(readFrom,writeTo)){
         error("read-from and write-to channel sets not disjunct")
         false
       } else true

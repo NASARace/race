@@ -24,6 +24,7 @@ import gov.nasa.race.track.TrackPoint
 import gov.nasa.race.uom.Angle._
 import gov.nasa.race.uom.Date._
 import gov.nasa.race.uom.Length._
+import gov.nasa.race.uom.Time._
 import gov.nasa.race.uom.{Angle, AngleArray, Date, DateArray, Length, LengthArray, Time}
 import org.joda.time.{MutableDateTime, ReadableDateTime, DateTime => JodaDateTime}
 
@@ -64,6 +65,8 @@ class MutTrajectoryPoint (val date: MutableDateTime, val position: MutLatLonPos)
   */
 class TDP3 (_millis: Long, _lat: Double, _lon: Double, _alt: Double)
                                             extends TDataPoint3(_millis,_lat,_lon,_alt) with GeoPosition {
+  def this() = this(0,0.0,0.0,0.0)
+
   def epochMillis: Date = EpochMillis(millis)
 
   override def φ: Angle = Degrees(_0)
@@ -101,6 +104,8 @@ trait Trajectory extends TDataSource[N3,TDP3] {
   def getFirstDate: Date
   def getLastDate: Date
   def getDuration: Time = getLastDate.timeSince(getFirstDate)
+
+  def getAverageUpdateDuration: Time = getLastDate.timeSince(getFirstDate) / size
 
   def newDataPoint: TDP3 = new TDP3(0,0,0,0)  // TDataSource interface
 

@@ -18,7 +18,7 @@
 package gov.nasa.race.air
 
 import gov.nasa.race.geo.GeoPosition
-import gov.nasa.race.track.TrackedObject
+import gov.nasa.race.track.{TrackListMessage, TrackedObject}
 import gov.nasa.race.uom._
 import gov.nasa.race.util.DateTimeUtils._
 import org.joda.time.DateTime
@@ -26,7 +26,7 @@ import org.joda.time.DateTime
 /**
   * track report for airports (e.g. generated from SWIM asdexMsg messages)
   */
-class AsdexTracks(val airport: String, val tracks: Seq[AsdexTrack]) {
+class AsdexTracks(val airport: String, val tracks: Seq[AsdexTrack])  extends TrackListMessage {
   override def toString = {
     val d = if (!tracks.isEmpty) hhmmssZ.print(tracks.head.date) else "?"
     s"AsdexTracks{$airport,date=$d,nTracks=${tracks.size}}"

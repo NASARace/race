@@ -138,6 +138,20 @@ object ConfigUtils {
         case _: ConfigException.Missing => Array.empty[String]
       }
     }
+    def getStrings (key: String): Array[String] = {
+      try {
+        toArray(conf.getStringList(key))
+      } catch {
+        case _: ConfigException.WrongType =>
+          try {
+            Array(conf.getString(key))
+          } catch {
+            case _: ConfigException.Missing => Array.empty[String]
+          }
+        case _: ConfigException.Missing => Array.empty[String]
+      }
+    }
+
     def getStringListOrElse(key: String, fallbackValue: Seq[String]): Seq[String] = {
       try {
         conf.getStringList(key).asScala

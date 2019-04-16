@@ -12,6 +12,10 @@ trait TrackMessage {
   def date: DateTime
 }
 
+trait TrackListMessage {
+  def tracks: Seq[TrackedObject]
+}
+
 trait TrackTerminationMessage extends TrackMessage
 
 /**

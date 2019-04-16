@@ -41,7 +41,7 @@ import scala.collection.mutable
   */
 class RoutingPrecipImageTranslatorActor (config: Config) extends TranslatorActor(config) {
 
-  val routes = mutable.Map.empty[Int,mutable.Set[String]]
+  val routes = mutable.Map.empty[Int,Array[String]]
 
   override def createTranslator = new ITWSprecip2PrecipImage
 

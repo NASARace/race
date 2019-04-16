@@ -19,23 +19,22 @@ package gov.nasa.race.core
 import com.typesafe.config.Config
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.Messages.BusEvent
-
-import scala.collection.mutable.{Set => MutableSet}
+import gov.nasa.race.util.ArrayUtils
 
 /**
  * a RaceActor that can publish to the Bus
  */
 trait PublishingRaceActor extends RaceActor {
-  var writeTo = MutableSet.empty[String]
+  var writeTo: Array[String] = Array.empty
 
   override def onInitializeRaceActor(raceContext: RaceContext, actorConf: Config) = {
-    writeTo ++= actorConf.getOptionalStringList("write-to")
+    writeTo = actorConf.getStrings("write-to")
     super.onInitializeRaceActor(raceContext, actorConf)
   }
 
   // we just add the new channels
   override def onReInitializeRaceActor(raceContext: RaceContext, actorConf: Config) = {
-    writeTo ++= actorConf.getOptionalStringList("write-to")
+    writeTo = ArrayUtils.addUniques(writeTo, actorConf.getStrings("write-to"))
     super.onReInitializeRaceActor(raceContext, actorConf)
   }
 

@@ -18,49 +18,49 @@ package gov.nasa.race.core
 
 import akka.actor.ActorRef
 import com.typesafe.config.Config
-import scala.collection.mutable.{Set => MutableSet}
+
 import gov.nasa.race.config.ConfigUtils._
+import gov.nasa.race.util.ArrayUtils
 
 
 /**
  * a RaceActor that can subscribe to the Bus
  */
 trait SubscribingRaceActor extends RaceActor {
-  var readFrom = MutableSet.empty[String]
+  var readFrom: Array[String] = Array.empty
 
   //--- pre-init channel setting
-  def addSubscription (channel: String*) = readFrom ++= channel
-  def addSubscriptions (channels: Seq[String]) = readFrom ++= channels
+  def addSubscription (channel: String) = { readFrom = readFrom :+ channel }
+  def addSubscriptions (channels: Seq[String]) = { readFrom  = readFrom ++ channels }
 
   override def onInitializeRaceActor(raceContext: RaceContext, actorConf: Config) = {
-    readFrom ++= actorConf.getOptionalStringList("read-from")
+    readFrom = actorConf.getStrings("read-from")
     readFrom.foreach { channel => busFor(channel).subscribe(self,channel) }
     super.onInitializeRaceActor(raceContext,actorConf)
   }
 
   // we add new channels and (re-)subscribe to everything since old channels might now be global
   override def onReInitializeRaceActor(raceContext: RaceContext, actorConf: Config) = {
-    val newChannels = actorConf.getOptionalStringList("read-from")
+    val newChannels = actorConf.getStrings("read-from")
     // re-subscription is benign in case we already were subscribed (bus keeps subscribers as sets)
-    readFrom ++= newChannels
-    //newChannels.foreach { channel => busFor(channel).subscribe(self,channel) }
+    readFrom = ArrayUtils.addUniques(readFrom, newChannels)
     readFrom.foreach { channel => busFor(channel).subscribe(self,channel) }
     super.onReInitializeRaceActor(raceContext,actorConf)
   }
 
   //--- dynamic subscriptions
   def subscribe(channel: String) = {
-    readFrom += channel
+    readFrom = readFrom :+ channel
     busFor(channel).subscribe(self,channel)
   }
   def unsubscribe(channel: String) = {
-    readFrom -= channel
+    readFrom = ArrayUtils.withoutFirst(readFrom, channel)
     busFor(channel).unsubscribe(self,channel)
   }
 
   def unsubscribeAll: Unit = {
     readFrom.foreach { channel => busFor(channel).unsubscribe(self,channel) }
-    readFrom.clear
+    readFrom = Array.empty
   }
 
   override def onTerminateRaceActor(originator: ActorRef) = {

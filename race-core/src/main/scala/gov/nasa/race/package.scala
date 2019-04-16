@@ -420,6 +420,12 @@ package object race {
   trait Filter[T] {
     def pass(x: T): Boolean
   }
+  class PassAllFilter[T] extends Filter[T] {
+    def pass (x: T): Boolean = true
+  }
+  class RejectAllFilter[T] extends Filter[T] {
+    def pass (x: T): Boolean = false
+  }
 
   // something that can be converted to a String
   // (Object.toString is always defined, so we can't easily check if there is a more specialized converter)

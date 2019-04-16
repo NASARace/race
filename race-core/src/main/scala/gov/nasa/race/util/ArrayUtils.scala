@@ -1,5 +1,7 @@
 package gov.nasa.race.util
 
+import scala.reflect.ClassTag
+
 object ArrayUtils {
 
   /**
@@ -45,9 +47,62 @@ object ArrayUtils {
     }
   }
 
-  def grow[T:Manifest](array: Array[T], newLength: Int): Array[T] = {
+  def grow[T:ClassTag](array: Array[T], newLength: Int): Array[T] = {
     val newArray = new Array[T](newLength)
     System.arraycopy(array,0,newArray,0,array.length)
     newArray
   }
+
+  def withoutIndex[T: ClassTag] (a: Array[T], i: Int): Array[T] = {
+    val len = a.length
+    if (i < 0) {
+      a
+    } else if (i == 0) {
+      a.slice(1,len)
+    } else if (i == len-1) {
+      a.slice(0,len-1)
+    } else {
+      val b = new Array[T](len-1)
+      System.arraycopy(a,0,b,0,i)
+      System.arraycopy(a,i+1,b,i,len-i-1)
+      b
+    }
+  }
+
+  @inline def withoutFirst[T: ClassTag] (a: Array[T], e: T): Array[T] = withoutIndex(a, a.indexOf(e))
+
+  def intersect[T] (a: Array[T], b: Array[T]): Boolean = {
+    var i = 0
+    while (i < a.length) {
+      var j = 0
+      while (j < b.length){
+        if (a(i) == b(j)) return true
+        j += 1
+      }
+      i += 1
+    }
+    return false
+  }
+
+  // TODO not very efficient for large arrays
+
+  def addUnique[T: ClassTag] (a: Array[T], e: T): Array[T] = {
+    var i = 0
+    while (i < a.length){
+      if (a(i) == e) return a
+      i += 1
+    }
+    a :+ e
+  }
+
+  def addUniques[T: ClassTag] (a0: Array[T], b: Array[T]): Array[T] = {
+    var a = a0
+    var j = 0
+    while (j < b.length){
+      a = addUnique(a,b(j))
+      j += 1
+    }
+    a
+  }
+
 }
