@@ -98,14 +98,17 @@ trait Trajectory extends TDataSource[N3,TDP3] {
   def capacity: Int  // max size (might be dynamically adapted if mutable)
   def size: Int
 
-  def isEmpty: Boolean = size == 0
-  def nonEmpty: Boolean = size > 0
+  @inline def isEmpty: Boolean = size == 0
+  @inline def nonEmpty: Boolean = size > 0
 
   def getFirstDate: Date
   def getLastDate: Date
-  def getDuration: Time = getLastDate.timeSince(getFirstDate)
+  @inline def getDuration: Time = getLastDate.timeSince(getFirstDate)
 
-  def getAverageUpdateDuration: Time = getLastDate.timeSince(getFirstDate) / size
+  @inline def includesDate (d: Date): Boolean = d > getFirstDate && d < getLastDate
+  @inline def includesTDP (p: TDP3): Boolean = includesDate(p.epochMillis)
+
+  @inline def getAverageUpdateDuration: Time = getLastDate.timeSince(getFirstDate) / size
 
   def newDataPoint: TDP3 = new TDP3(0,0,0,0)  // TDataSource interface
 

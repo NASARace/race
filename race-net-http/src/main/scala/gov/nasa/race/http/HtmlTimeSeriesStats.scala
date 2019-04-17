@@ -53,7 +53,7 @@ trait HtmlTimeSeriesStats[O <: Dated,E <: TSEntryData[O]] extends TimeSeriesStat
           tr(
             td(nActive),td(minActive),td(maxActive),td(completed),td(""),
             buckets match {
-              case Some(bc) if bc.nSamples > 0 => Seq( td(bc.nSamples),td(dur(bc.min)),td(dur(bc.max)),td(dur(bc.mean)))
+              case Some(bc) if bc.numberOfSamples > 0 => Seq( td(bc.numberOfSamples),td(dur(bc.min)),td(dur(bc.max)),td(dur(bc.mean)))
               case _ => Seq( td("-"),td("-"),td("-"),td("-"))
             },
             td(""), td(stale),td(dropped),td(blackout),td(outOfOrder),td(duplicate),td(ambiguous)
@@ -67,7 +67,7 @@ trait HtmlTimeSeriesStats[O <: Dated,E <: TSEntryData[O]] extends TimeSeriesStat
 
   def diagramArtifacts = {
     data.buckets match {
-      case Some(bc) if bc.nSamples > 0 =>
+      case Some(bc) if bc.numberOfSamples > 0 =>
         def dataset = {
           val ds = new XYSeries("updates")
           bc.processBuckets { (i, count) => ds.add(Math.round(i * bc.bucketSize / 1000), count) }

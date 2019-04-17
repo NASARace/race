@@ -270,7 +270,7 @@ class TATrackStatsFormatter (conf: Config) extends PrintStatsFormatter {
       pw.print(f"${ts.src}%7s ${ts.stddsRev}%7s   ${ts.nActive}%7d ${ts.nFlightPlans}%7d ${ts.completed}%7d   ")
       pw.print(f"${ts.dropped}%7d ${ts.blackout}%7d ${ts.outOfOrder}%7d ${ts.duplicate}%7d ${ts.ambiguous}%7d   ${ts.nNoTime}%7d")
       ifSome(ts.buckets) { bc =>
-        pw.print(f"   ${bc.nSamples}%7d ${dur(bc.min)}%5s ${dur(bc.max)}%5s ${dur(bc.mean)}%5s")
+        pw.print(f"   ${bc.numberOfSamples}%7d ${dur(bc.min)}%5s ${dur(bc.max)}%5s ${dur(bc.mean)}%5s")
       }
       pw.println
     }
@@ -312,7 +312,7 @@ class HtmlTATrackStatsFormatter (config: Config) extends HtmlStatsFormatter {
         for (t <- traconStats) yield tr(cls:="value top")(
           td(t.src),td(t.stddsRevs(2)),td(t.stddsRevs(3)),td(t.nActive),td(t.nFlightPlans),td(t.minActive),td(t.maxActive),td(t.completed),td(""),
           t.buckets match {
-            case Some(bc) if bc.nSamples > 0 => Seq( td(bc.nSamples),td(dur(bc.min)),td(dur(bc.max)),td(dur(bc.mean)))
+            case Some(bc) if bc.numberOfSamples > 0 => Seq( td(bc.numberOfSamples),td(dur(bc.min)),td(dur(bc.max)),td(dur(bc.mean)))
             case _ => Seq( td("-"),td("-"),td("-"),td("-"))
           },td(""),
           td(t.stale),td(t.dropped),td(t.blackout),td(t.outOfOrder),td(t.duplicate),td(t.ambiguous),td(t.nNoTime)

@@ -404,8 +404,10 @@ final class DeltaLengthArrayBuffer protected[uom] (protected[uom] val data: Arra
 class OnlineLengthStats extends SampleStats[Length] {
   protected val stats = new OnlineSampleStats
 
-  def += (l: Length): Unit = stats += l.toMeters
-  def mean: Length = Meters(stats.mean)
-  def variance: Double = stats.variance
-  def numberOfSamples: Int = stats.numberOfSamples
+  @inline def += (l: Length): Unit = stats += l.toMeters
+  @inline def mean: Length = Meters(stats.mean)
+  @inline def variance: Double = stats.variance
+  @inline def numberOfSamples: Int = stats.numberOfSamples
+  @inline def min: Length = Meters(stats.min)
+  @inline def max: Length = Meters(stats.max)
 }

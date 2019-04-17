@@ -19,36 +19,57 @@ package gov.nasa.race.common
 import scala.annotation.tailrec
 
 /**
-  * a trait for basic on-the-fly sample statistics calculation
+  * base trait for sample statistics
+  *
+  * note this interface does not include methods to manipulate/add samples
   */
-trait SampleStats extends XmlSource {
-  var nSamples: Int = 0
+trait SampleStats[T] {
+  def numberOfSamples: Int
+  def mean: T
+  def min: T
+  def max: T
+  def variance: Double
+  def sigma: Double = Math.sqrt(variance)
+  //.. and maybe more to follow
+}
+
+/**
+  * a trait for basic online (incremental) sample statistics calculation
+  *
+  * note - while we could use scala.math.Numeric as a parameterized type constraint this
+  * would (a) loose efficiency and (b) would not work for uom AnyVals which do not support
+  * automatic conversion to primitives and a full range of arithmetic ops (what would multiplication
+  * mean for Date?). This means the conversion to Double should happen in a SampleStats implementor
+  * that just delegates to OnlineSampleStats
+  */
+class OnlineSampleStats extends SampleStats[Double] with XmlSource {
+  var numberOfSamples: Int = 0
   var min: Double = Double.PositiveInfinity
   var max: Double = Double.NegativeInfinity
-  var mean: Double = Double.NaN
-  var variance: Double = 0    // incrementally computed
+  var mean: Double = 0
 
-  private var sum: Double = 0.0  // more efficient than incremental mean calculation
+  protected var s: Double = 0
 
-  def add (v: Double): Unit = {
-    sum += v
-    nSamples += 1
+  // Welford's algorithm
+  def addSample (x: Double): Unit = {
+    val m = mean
+    val k = numberOfSamples + 1
 
-    if (v < min) min = v
-    if (v > max) max = v
+    val mNext = m + (x - m)/k
+    s += (x - m) * (x - mNext)
+    mean = mNext
+    numberOfSamples = k
 
-    val n = nSamples
-    if (n > 1){
-      variance = (n -2)*variance / (n-1) + squared(v - mean)/n
-    }
-    mean = sum / nSamples
+    if (x < min) min = x
+    if (x > max) max = x
   }
 
+  @inline def += (x: Double): Unit = addSample(x)
 
-  @inline def sigma: Double = Math.sqrt(variance)
+  @inline def variance: Double = s / (numberOfSamples-1)
 
   def toXML = <samples>
-    <count>{nSamples}</count>
+    <count>{numberOfSamples}</count>
     <min>{min}</min>
     <max>{max}</max>
     <mean>{mean}</mean>
@@ -70,7 +91,7 @@ object BucketCounter {
   * Note that instances of BucketCounter are not thread safe
   */
 class BucketCounter (val low: Double, val high: Double, val nBuckets: Int, val useOutliers: Boolean = false)
-                                                          extends SampleStats with Cloneable {
+                                                          extends OnlineSampleStats with Cloneable {
   var lower: Int = 0     // low outliers
   var higher: Int = 0    // high outliers
   val bucketSize = (high - low) / nBuckets
@@ -78,16 +99,16 @@ class BucketCounter (val low: Double, val high: Double, val nBuckets: Int, val u
 
   @inline def bucketIndex (v: Double): Int = ((v - low) / bucketSize).toInt
 
-  override def add (v: Double): Unit = {
+  override def addSample (v: Double): Unit = {
     if (v < low) {
       lower += 1
-      if (useOutliers) super.add(v)
+      if (useOutliers) super.addSample(v)
     } else if (v >= high) {
       higher += 1
-      if (useOutliers) super.add(v)
+      if (useOutliers) super.addSample(v)
     } else {
       buckets(bucketIndex(v)) += 1
-      super.add(v)
+      super.addSample(v)
     }
   }
 

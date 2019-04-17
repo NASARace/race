@@ -31,12 +31,11 @@ import gov.nasa.race.uom.{Angle, Length}
 import scala.collection.mutable.{HashMap => MutHashMap}
 import scala.concurrent.ExecutionContext.Implicits.global
 
-
 /**
   * actor that stores trajectories for tracks received from different channels in order to compute
   * positional discrepancies between those channels.
-  * We add tracks as soon as the first message passes the (area) filter, we analyze trajectories once
-  * both tracks fail the filter
+  * We add tracks as soon as the first message passes the (area) filter, we analyze each
+  * diffTrajectory once it is closed and we have a closed refTrajectory
   *
   * Note this actor needs to subscribe to exactly two channels
   *
@@ -49,7 +48,27 @@ class TrackDiffActor (val config: Config) extends SubscribingRaceActor with Filt
 
   class TrackDiffEntry (val id: String, val trajectories: Array[MutTrajectory]) {
     var isClosed: Array[Boolean] = new Array(trajectories.size)
+
+    // set once the reference trajectory is complete
+    var refTrajectory: Option[Trajectory] = None
+    var refInterpolant: Option[TInterpolant[N3,TDP3]] = None
+
+    def setClosed(i: Int): Unit = isClosed(i) = true
     def allClosed: Boolean = !isClosed.exists(_ == false)
+
+    def setRefTrajectory: Unit = {
+      val tr = trajectories(0).snapshot
+      refTrajectory = Some(tr)
+      refInterpolant = Some(new LinTInterpolant[N3,TDP3](tr))
+    }
+
+    def foreachClosedDiffTrajectory(f: (Trajectory)=>Unit): Unit = {
+      var i = 1
+      while (i < trajectories.length) {
+        if (isClosed(i)) f(trajectories(i))
+        i += 1
+      }
+    }
   }
 
   val tracks = new MutHashMap[String,TrackDiffEntry]
@@ -89,48 +108,31 @@ class TrackDiffActor (val config: Config) extends SubscribingRaceActor with Filt
 
   protected def closeTrack (chanIdx: Int, id: String, recheck: Boolean): Unit = {
     ifSome(tracks.get(id)) { e=>
-
       if (!e.isClosed(chanIdx)) {
-        e.isClosed(chanIdx) = true
-        if (e.allClosed) {
-          analyzeEntry(e)
-          tracks -= id
+        e.setClosed(chanIdx)
+        if (chanIdx == 0) { // reference trajectory is done
+          e.setRefTrajectory
+          e.foreachClosedDiffTrajectory { tr =>
+            report(diff(e.refTrajectory.get, e.refInterpolant.get, tr))
+          }
         } else {
-          if (recheck) scheduleClosedChecks(e)
+          ifSome(e.refTrajectory){ refTr =>
+            report(diff(refTr, e.refInterpolant.get, e.trajectories(chanIdx)))
+          }
         }
+        if (e.allClosed) tracks -= id
       }
     }
   }
 
-  protected def scheduleClosedChecks (e: TrackDiffEntry): Unit = {
-    var i = 0
-    while (i < e.isClosed.length) {
-      if (!e.isClosed(i)) {
-        val traj = e.trajectories(i)
-        val d = traj.getAverageUpdateDuration * 2
-        if (traj.size > 1) scheduler.scheduleOnce(d, self, CheckClosed(i, e.id))
-      }
-      i += 1
+  protected def diff (refTraj: Trajectory, refIntr: TInterpolant[N3,TDP3], diffTraj: Trajectory): Option[TrajectoryDiff] = {
+    TrajectoryDiff.calculate(refTraj, diffTraj,
+                             (t) => refIntr, posFilter.pass, Euclidean.distance2D, Euclidean.heading)
+  }
+
+  protected def report (trDiff: Option[TrajectoryDiff]): Unit = {
+    ifSome(trDiff) { td=>
+      println(s"@@@ diff ")
     }
-  }
-
-  protected def analyzeEntry (e: TrackDiffEntry): Unit = {
-    // compute differences of all secondary trajectory points to respective interpolated position for primary trajectory
-    val tr = e.trajectories
-    if (tr(0).size < 1) return // nothing to interpolate
-    val refIntr = new LinTInterpolant[N3,TDP3](tr(0))  // compute once in case we have several diff trajectories
-    
-
-  }
-
-  protected def diff (refTraj: Trajectory, refIntr: TInterpolant[N3,TDP3], diffTraj: Trajectory): TrajectoryDiff = {
-    TrajectoryDiff.calculate(
-      refTraj,
-      diffTraj,
-      (t) => refIntr,
-      posFilter.pass,
-      Euclidean.distance2D,
-      Euclidean.heading
-    )
   }
 }

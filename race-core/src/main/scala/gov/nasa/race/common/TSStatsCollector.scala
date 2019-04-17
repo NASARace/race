@@ -136,7 +136,7 @@ trait TSStatsData[O <: Dated,E <: TSEntryData[O]] extends Cloneable with XmlSour
         if (dt > dtMax) dtMax = dt
         if (isSettled) {
           if (dt < dtMin || dtMin == 0) dtMin = dt
-          buckets.foreach(_.add(dt))
+          buckets.foreach(_.addSample(dt))
         }
       case Implausible(reason) =>
         implausible += 1
@@ -252,9 +252,9 @@ class TimeSeriesStats[O <: Dated,E <: TSEntryData[O]](val topic: String,
 
     buckets match {
       case Some(bc)  =>
-        pw.println(f"   ${bc.nSamples}%7d ${dur(bc.min)}%5s ${dur(bc.max)}%5s ${dur(bc.mean)}%5s")
+        pw.println(f"   ${bc.numberOfSamples}%7d ${dur(bc.min)}%5s ${dur(bc.max)}%5s ${dur(bc.mean)}%5s")
 
-        if (bc.nBuckets > 1 && bc.nSamples > 0) {
+        if (bc.nBuckets > 1 && bc.numberOfSamples > 0) {
           bc.processBuckets((i, c) => {
             if (i % 6 == 0) pw.println // 6 buckets per line
             pw.print(f"${Math.round(i * bc.bucketSize / 1000)}%3ds: $c%6d | ")

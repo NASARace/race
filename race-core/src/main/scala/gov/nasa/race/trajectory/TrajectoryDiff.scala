@@ -28,26 +28,28 @@ object TrajectoryDiff {
     *
     * @param refTrajectory       the reference trajectory that will be interpolated
     * @param diffTrajectory      the trajectory for which the deviation to refTrajectory will be calculated
-    * @param createInterpolator  function to create a interpolator for refTrajectory
+    * @param getInterpolant  function to create a interpolator for refTrajectory
     * @param computeDistance2D   function to compute 2D (lat/lon) distance between two trajectory points
     * @param computeDiffAngle    function to compute angle between two trajectory points
     * @return
     */
   def calculate (refTrajectory: Trajectory,
-                  diffTrajectory: Trajectory,
-                  createInterpolator: Trajectory=>TInterpolant[N3,TDP3],
-                  areaFilter: GeoPosition=>Boolean,
-                  computeDistance2D: (GeoPosition,GeoPosition)=>Length,
-                  computeDiffAngle: (GeoPosition,GeoPosition)=>Angle
-                 ): TrajectoryDiff = {
-    val refIntr = createInterpolator(refTrajectory)
+                 diffTrajectory: Trajectory,
+                 getInterpolant: Trajectory=>TInterpolant[N3,TDP3],
+                 areaFilter: GeoPosition=>Boolean,
+                 computeDistance2D: (GeoPosition,GeoPosition)=>Length,
+                 computeDiffAngle: (GeoPosition,GeoPosition)=>Angle
+                 ): Option[TrajectoryDiff] = {
+    if (refTrajectory.size < 2) return None // nothing we can interpolate
+
+    val refIntr = getInterpolant(refTrajectory)
 
     val dist2DStats = new OnlineLengthStats
     val altDiffStats = new OnlineLengthStats
     val angleDiffStats = new OnlineAngleStats
 
     diffTrajectory.foreach(new TDP3){ p=>
-      if (areaFilter(p)) {
+      if (areaFilter(p) && refTrajectory.includesDate(p.epochMillis)) {
         val pRef = refIntr.eval(p.millis)
 
         dist2DStats += computeDistance2D(pRef, p)
@@ -56,13 +58,9 @@ object TrajectoryDiff {
       }
     }
 
-    new TrajectoryDiff(
-      refTrajectory,
-      diffTrajectory,
-      dist2DStats,
-      angleDiffStats,
-      altDiffStats
-    )
+    if (dist2DStats.numberOfSamples > 0) {
+      Some(new TrajectoryDiff(refTrajectory, diffTrajectory, dist2DStats, angleDiffStats, altDiffStats))
+    } else None
   }
 }
 
