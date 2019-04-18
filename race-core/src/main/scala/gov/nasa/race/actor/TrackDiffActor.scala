@@ -18,18 +18,15 @@ package gov.nasa.race.actor
 
 import com.typesafe.config.Config
 import gov.nasa.race._
-import gov.nasa.race.common.{LinTInterpolant, TInterpolant}
 import gov.nasa.race.common.Nat.N3
-import gov.nasa.race.core.{RaceContext, RaceInitializeException, SubscribingRaceActor}
+import gov.nasa.race.common.{LinTInterpolant, TInterpolant}
 import gov.nasa.race.core.Messages.BusEvent
+import gov.nasa.race.core.{RaceContext, SubscribingRaceActor}
 import gov.nasa.race.geo.{Euclidean, GeoPosition}
-import gov.nasa.race.uom.Time._
 import gov.nasa.race.track.{TrackListMessage, TrackTerminationMessage, TrackedObject}
-import gov.nasa.race.trajectory.{MutCompressedTrajectory, MutTrajectory, TDP3, Trajectory, TrajectoryDiff}
-import gov.nasa.race.uom.{Angle, Length}
+import gov.nasa.race.trajectory._
 
 import scala.collection.mutable.{HashMap => MutHashMap}
-import scala.concurrent.ExecutionContext.Implicits.global
 
 /**
   * actor that stores trajectories for tracks received from different channels in order to compute
@@ -62,17 +59,17 @@ class TrackDiffActor (val config: Config) extends SubscribingRaceActor with Filt
       refInterpolant = Some(new LinTInterpolant[N3,TDP3](tr))
     }
 
-    def foreachClosedDiffTrajectory(f: (Trajectory)=>Unit): Unit = {
+    def foreachClosedDiffTrajectory(f: (Int,Trajectory)=>Unit): Unit = {
       var i = 1
       while (i < trajectories.length) {
-        if (isClosed(i)) f(trajectories(i))
+        if (isClosed(i)) f(i, trajectories(i))
         i += 1
       }
     }
   }
 
   val tracks = new MutHashMap[String,TrackDiffEntry]
-  val posFilter: Filter[GeoPosition]= getConfigurableOrElse("pos-filter")(new PassAllFilter[GeoPosition])
+  val posFilter = getConfigurableOrElse[Filter[GeoPosition]]("pos-filter")(new PassAllFilter[GeoPosition])
 
   override def onInitializeRaceActor(raceContext: RaceContext, actorConf: Config) = {
     super.onInitializeRaceActor(raceContext,actorConf) && (readFrom.length > 1)
@@ -112,27 +109,30 @@ class TrackDiffActor (val config: Config) extends SubscribingRaceActor with Filt
         e.setClosed(chanIdx)
         if (chanIdx == 0) { // reference trajectory is done
           e.setRefTrajectory
-          e.foreachClosedDiffTrajectory { tr =>
-            report(diff(e.refTrajectory.get, e.refInterpolant.get, tr))
+          e.foreachClosedDiffTrajectory { (idx,tr) =>
+            analyzeTrajectoryPair(e,idx)
           }
         } else {
-          ifSome(e.refTrajectory){ refTr =>
-            report(diff(refTr, e.refInterpolant.get, e.trajectories(chanIdx)))
-          }
+          analyzeTrajectoryPair(e,chanIdx)
         }
         if (e.allClosed) tracks -= id
       }
     }
   }
 
-  protected def diff (refTraj: Trajectory, refIntr: TInterpolant[N3,TDP3], diffTraj: Trajectory): Option[TrajectoryDiff] = {
-    TrajectoryDiff.calculate(refTraj, diffTraj,
-                             (t) => refIntr, posFilter.pass, Euclidean.distance2D, Euclidean.heading)
+  protected def analyzeTrajectoryPair(e: TrackDiffEntry, chanIdx: Int): Unit = {
+    val diffTraj = e.trajectories(chanIdx)
+    for (refTraj <- e.refTrajectory; refInter <- e.refInterpolant) {
+      val td = TrajectoryDiff.calculate(refTraj,diffTraj,
+                                       (t) => refInter, posFilter.pass, Euclidean.distance2D, Euclidean.heading)
+
+      ifSome(td) { report(e.id, chanIdx, _) }
+    }
   }
 
-  protected def report (trDiff: Option[TrajectoryDiff]): Unit = {
-    ifSome(trDiff) { td=>
-      println(s"@@@ diff ")
-    }
+  protected def report (id: String, chanIdx: Int, td: TrajectoryDiff): Unit = {
+    println(s"@@ trackdiff $id on ${readFrom(chanIdx)} : ${td.distance2DStats.numberOfSamples}")
+    println(f"  dist  mean=${td.distance2DStats.mean.showRounded}, min=${td.distance2DStats.min.showRounded}, max=${td.distance2DStats.max.showRounded} σ²=${td.distance2DStats.variance}%.4f " )
+    println(f"  angle mean=${td.angleDiffStats.mean.showRounded}, min=${td.angleDiffStats.min.showRounded}, max=${td.angleDiffStats.max.showRounded} σ²=${td.angleDiffStats.variance}%.4f ")
   }
 }

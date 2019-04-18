@@ -105,7 +105,7 @@ trait Trajectory extends TDataSource[N3,TDP3] {
   def getLastDate: Date
   @inline def getDuration: Time = getLastDate.timeSince(getFirstDate)
 
-  @inline def includesDate (d: Date): Boolean = d > getFirstDate && d < getLastDate
+  @inline def includesDate (d: Date): Boolean = d >= getFirstDate && d <= getLastDate
   @inline def includesTDP (p: TDP3): Boolean = includesDate(p.epochMillis)
 
   @inline def getAverageUpdateDuration: Time = getLastDate.timeSince(getFirstDate) / size

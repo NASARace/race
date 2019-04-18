@@ -19,7 +19,8 @@ package gov.nasa.race.trajectory
 import gov.nasa.race.common.Nat.N3
 import gov.nasa.race.common.{SampleStats, TInterpolant}
 import gov.nasa.race.geo.GeoPosition
-import gov.nasa.race.uom.{Angle, Length, OnlineAngleStats, OnlineLengthStats}
+import gov.nasa.race.uom.{Angle, Length, OnlineAngleStats, OnlineLengthStats, Time}
+import gov.nasa.race.uom.Length._
 
 object TrajectoryDiff {
 
@@ -40,7 +41,9 @@ object TrajectoryDiff {
                  computeDistance2D: (GeoPosition,GeoPosition)=>Length,
                  computeDiffAngle: (GeoPosition,GeoPosition)=>Angle
                  ): Option[TrajectoryDiff] = {
-    if (refTrajectory.size < 2) return None // nothing we can interpolate
+    if (refTrajectory.size < 2) {
+      return None // nothing we can interpolate
+    }
 
     val refIntr = getInterpolant(refTrajectory)
 
@@ -60,7 +63,31 @@ object TrajectoryDiff {
 
     if (dist2DStats.numberOfSamples > 0) {
       Some(new TrajectoryDiff(refTrajectory, diffTrajectory, dist2DStats, angleDiffStats, altDiffStats))
-    } else None
+    } else {
+      None
+    }
+  }
+
+  def closestPoint (trajectory: Trajectory, pos: GeoPosition, dt: Time,
+                    getInterpolant: Trajectory=>TInterpolant[N3,TDP3],
+                    computeDistance: (GeoPosition,GeoPosition)=>Length,
+                   ): Option[TDP3] = {
+    var dMin = Double.MaxValue
+    val intr = getInterpolant(trajectory)
+    val it = intr.iterator(trajectory.getFirstDate.toMillis,trajectory.getLastDate.toMillis,dt.toMillis)
+
+    while (it.hasNext) {
+      val p = it.next
+      val d = Math.abs(computeDistance(pos,p).toMeters)
+      if (d < dMin) { // distance decreasing
+        dMin = d
+      } else { // distance increasing
+        return Some(p)
+      }
+    }
+
+    // no minimum distance found
+    None
   }
 }
 

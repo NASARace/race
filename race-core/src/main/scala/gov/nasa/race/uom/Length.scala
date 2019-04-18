@@ -36,6 +36,8 @@ object Length {
   final val MetersInInch = 0.0254
 
   final val Length0 = Meters(0)
+  final val MaxLength = Meters(Double.MaxValue)
+  final val MinLength = Meters(Double.MinValue)
   final val UndefinedLength = Meters(Double.NaN)
   @inline def isDefined(x: Length): Boolean = !x.d.isNaN
 
@@ -142,6 +144,8 @@ class Length protected[uom] (val d: Double) extends AnyVal {
   def showNm = showNauticalMiles
   def showUsMiles = s"${toUsMiles}mi"
   def showKilometers = s"${toKilometers}km"
+
+  def showRounded = f"${toMeters}%.0fm"
 }
 
 object LengthArray {
