@@ -21,7 +21,7 @@ import gov.nasa.race.common._
 import gov.nasa.race.uom.Angle._
 import gov.nasa.race.uom.Length._
 import gov.nasa.race.uom._
-import math.{atan2,asin,sqrt,cos,Pi}
+import math.{atan2,asin,acos,sqrt,sin,cos,Pi}
 
 /**
  * object with library functions to compute great circle trajectories
@@ -31,26 +31,41 @@ import math.{atan2,asin,sqrt,cos,Pi}
 object GreatCircle {
 
   /**
-   * compute initial bearing for great circle between two given positions, using
-   * equation:
-   * {{{
-   *   θ = atan2( sin Δλ ⋅ cos φ2 , cos φ1 ⋅ sin φ2 − sin φ1 ⋅ cos φ2 ⋅ cos Δλ )
-   * }}}
-   */
-  def initialBearing(startPos: GeoPosition, endPos: GeoPosition): Angle = {
-    val φ1 = startPos.φ
-    val φ2 = endPos.φ
-    val Δλ = endPos.λ - startPos.λ
+    * compute initial bearing for great circle between two given positions, using
+    * equation:
+    * {{{
+    *   θ = atan2( sin Δλ ⋅ cos φ2 , cos φ1 ⋅ sin φ2 − sin φ1 ⋅ cos φ2 ⋅ cos Δλ )
+    * }}}
+    */
 
-    Radians(atan2(Sin(Δλ) * Cos(φ2), Cos(φ1) * Sin(φ2) - Sin(φ1) * Cos(φ2) * Cos(Δλ)))
+  def initialBearing (φ1: Angle, λ1: Angle, φ2: Angle, λ2: Angle): Angle = {
+    val Δλ = λ2 - λ1
+    Radians(atan2( Sin(Δλ) * Cos(φ2), Cos(φ1) * Sin(φ2) - Sin(φ1) * Cos(φ2) * Cos(Δλ)) % TwoPi)
+  }
+  @inline def initialBearing (startPos: GeoPosition, endPos: GeoPosition): Angle = {
+    initialBearing(startPos.φ,startPos.λ,endPos.φ,endPos.λ)
   }
 
   /**
    * compute final bearing for great circle between two given positions, using
    * initialBearing of reverse route
    */
-  def finalBearing(startPos: GeoPosition, endPos: GeoPosition): Angle = {
-    Radians((initialBearing(endPos, startPos).toRadians + Pi) % TwoPi)
+  @inline def finalBearing (φ1: Angle, λ1: Angle, φ2: Angle, λ2: Angle): Angle = {
+    Radians((initialBearing(φ1,λ1, φ2,λ2).toRadians + Pi) % TwoPi)
+  }
+  @inline def finalBearing(startPos: GeoPosition, endPos: GeoPosition): Angle = {
+    finalBearing(startPos.φ,startPos.λ,endPos.φ,endPos.λ)
+  }
+
+  def angularDistance (φ1: Angle, λ1: Angle, φ2: Angle, λ2: Angle): Angle = {
+    val Δφ = φ2 - φ1
+    val Δλ = λ2 - λ1
+
+    val a = Sin2(Δφ / 2) + Cos(φ1) * Cos(φ2) * Sin2(Δλ / 2)
+    Radians(2.0 * atan2(sqrt(a), sqrt(1.0 - a)))
+  }
+  @inline def angularDistance(startPos: GeoPosition, endPos: GeoPosition): Angle = {
+    angularDistance(startPos.φ, startPos.λ, endPos.φ, endPos.λ)
   }
 
   /**
@@ -62,7 +77,7 @@ object GreatCircle {
     * }}}
     * Note this is only an approximation
     */
-  @inline def distance (φ1: Angle, λ1: Angle, alt1: Length, φ2: Angle, λ2: Angle, alt2: Length): Length = {
+  def distance (φ1: Angle, λ1: Angle, alt1: Length, φ2: Angle, λ2: Angle, alt2: Length): Length = {
     val Δφ = φ2 - φ1
     val Δλ = λ2 - λ1
 
@@ -71,11 +86,11 @@ object GreatCircle {
     (MeanEarthRadius + (alt2 + alt1)/2.0) * c
   }
 
-  def distance(startPos: GeoPosition, endPos: GeoPosition): Length = {
+  @inline def distance(startPos: GeoPosition, endPos: GeoPosition): Length = {
     distance(startPos.φ, startPos.λ, startPos.altitude, endPos.φ, endPos.λ, endPos.altitude)
   }
 
-  def distance(startPos: GeoPosition, endPos: GeoPosition, alt: Length): Length = {
+  @inline def distance(startPos: GeoPosition, endPos: GeoPosition, alt: Length): Length = {
     distance(startPos.φ, startPos.λ, alt, endPos.φ, endPos.λ, alt)
   }
 
@@ -143,5 +158,38 @@ object GreatCircle {
     val h = pos.altitude + (endPos.altitude - startPos.altitude)
     GeoPosition(φ,λ,h)
   }
+
+  def crossTrackDistance (φ: Angle, λ: Angle,
+                          φ1: Angle, λ1: Angle, alt1: Length,
+                          φ2: Angle, λ2: Angle, alt2: Length): Length = {
+
+    val d13 = acos( Sin(φ1)*Sin(φ) + (Cos(φ1)*Cos(φ) * Cos(λ1-λ))) // angular distance between p1,p
+    //val d13 = 2.0 * asin(sqrt(squared(Sin((φ1-φ)/2)) + Cos(φ1)*Cos(φ)*squared((Sin((φ1-φ)/2)))))
+
+    val h13 = initialBearing(φ1,λ1, φ,λ)
+    val h12 = initialBearing(φ1,λ1, φ2,λ2)
+
+    asin( sin(d13) * Sin(h13 - h12)) * (MeanEarthRadius + (alt1 + alt2)/2.0)
+  }
+  @inline def crossTrackDistance(pos: GeoPosition, startPos: GeoPosition, endPos: GeoPosition): Length = {
+    crossTrackDistance( pos.φ,pos.λ, startPos.φ,startPos.λ,startPos.altitude, endPos.φ,endPos.λ,endPos.altitude)
+  }
+
+  def alongTrackDistance (φ: Angle, λ: Angle,
+                          φ1: Angle, λ1: Angle, alt1: Length,
+                          φ2: Angle, λ2: Angle, alt2: Length): Length = {
+    val r = MeanEarthRadius + (alt1 + alt2)/2
+
+    val d13 = acos( Sin(φ1)*Sin(φ) + (Cos(φ1)*Cos(φ) * Cos(λ1-λ))) // angular distance between p1,p
+    val h13 = initialBearing(φ1,λ1, φ,λ)
+    val h12 = initialBearing(φ1,λ1, φ2,λ2)
+    val dxt = asin( sin(d13) * Sin(h13 - h12)) * r
+
+    acos(cos(d13)/cos(dxt/r)) * r
+  }
+  @inline def alongTrackDistance(pos: GeoPosition, startPos: GeoPosition, endPos: GeoPosition): Length = {
+    alongTrackDistance( pos.φ,pos.λ, startPos.φ,startPos.λ,startPos.altitude, endPos.φ,endPos.λ,endPos.altitude)
+  }
+
 }
 

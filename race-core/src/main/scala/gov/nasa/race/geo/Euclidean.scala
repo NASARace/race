@@ -16,6 +16,7 @@
  */
 package gov.nasa.race.geo
 
+import gov.nasa.race.common._
 import gov.nasa.race.uom.Angle.{Cos, Radians, Sin, π3_2, π_2}
 import gov.nasa.race.uom.Area.√
 import gov.nasa.race.uom.{Angle, Length}
@@ -97,4 +98,41 @@ object Euclidean {
     heading(pos1.φ,pos1.λ, pos2.φ,pos2.λ)
   }
 
+  /**
+    * approximation of cross-track distance for small dlat/dlon
+    */
+  def crossTrackDistance (φ: Angle, λ: Angle,
+                          φ1: Angle, λ1: Angle, alt1: Length,
+                          φ2: Angle, λ2: Angle, alt2: Length): Length = {
+    val aAvg = ((alt1 + alt2) / 2).toMeters
+    val cy = (MeanEarthRadius.toMeters + aAvg)
+    val cx = cy * Cos(φ2 - φ1)
+
+    val y1 = φ1.toRadians * cy
+    val y2 = φ2.toRadians * cy
+    val y = φ.toRadians * cy
+
+    val x1 = λ1.toRadians * cx
+    val x2 = λ2.toRadians * cx
+    val x = λ.toRadians * cx
+
+    Meters(((y2 - y1)*x - (x2 - x1)*y + x2*y1 - y2*x1) / sqrt( squared(y2-y1) + squared(x2-x1)))
+  }
+  @inline def crossTrackDistance(pos: GeoPosition, startPos: GeoPosition, endPos: GeoPosition): Length = {
+    crossTrackDistance( pos.φ,pos.λ, startPos.φ,startPos.λ,startPos.altitude, endPos.φ,endPos.λ,endPos.altitude)
+  }
+
+  def alongTrackDistance (φ: Angle, λ: Angle,
+                          φ1: Angle, λ1: Angle, alt1: Length,
+                          φ2: Angle, λ2: Angle, alt2: Length): Length = {
+    val aAvg = (alt1 + alt2)/2
+    val dxt = crossTrackDistance(φ,λ, φ1,λ1,alt1, φ2,λ2,alt2).toMeters
+    val dp = distance(φ1,λ1,aAvg, φ,λ,aAvg).toMeters
+
+    Meters( sqrt( squared(dp) - squared(dxt) ))
+  }
+
+  @inline def alongTrackDistance(pos: GeoPosition, startPos: GeoPosition, endPos: GeoPosition): Length = {
+    alongTrackDistance( pos.φ,pos.λ, startPos.φ,startPos.λ,startPos.altitude, endPos.φ,endPos.λ,endPos.altitude)
+  }
 }
