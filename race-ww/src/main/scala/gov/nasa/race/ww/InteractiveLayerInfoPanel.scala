@@ -127,7 +127,7 @@ class InteractiveLayerInfoPanel[T <: LayerObject](override val layer: Interactiv
   }) styled()
 
   val listView: LayerObjectListView = createMatchListView
-    // layer.createMatchListView.styled('itemList)
+  listView.maxVisibleRows = layer.maxLayerObjectRows
 
   val listViewScroller = new ScrollPane(listView).styled('verticalIfNeeded)
   listViewScroller.columnHeaderView = listView.createColumnHeaderView
@@ -189,9 +189,7 @@ class InteractiveLayerInfoPanel[T <: LayerObject](override val layer: Interactiv
 
   //--- overridable init methods
 
-  def createMatchListView: LayerObjectListView = {
-    new LayerObjectListView().styled('itemList)
-  }
+  def createMatchListView: LayerObjectListView = new LayerObjectListView().styled('itemList)
 
   def createPopupMenu: PopupMenu = {
     new PopupMenu {

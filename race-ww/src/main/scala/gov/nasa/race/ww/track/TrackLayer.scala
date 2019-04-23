@@ -109,7 +109,7 @@ trait TrackLayer[T <:TrackedObject] extends SubscribingRaceLayer
   override def layerObjects: Iterable[TrackEntry[T]] = trackEntries.values
   override def layerObjectQuery: Query[TrackEntry[T]] = new TrackQuery(this, _.obj)
 
-  override def maxLayerObjectRows: Int = config.getIntOrElse("max-rows", 10)
+  override def maxLayerObjectRows: Int = config.getIntOrElse("max-rows", 15)
 
   override def layerObjectIdHeader: String = "c/s"
   override def layerObjectIdText (e: TrackEntry[T]): String = e.id
