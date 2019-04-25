@@ -286,6 +286,13 @@ class TDataPoint3 (var millis: Long, var _0: Double, var _1: Double, var _2: Dou
     _2 = v2
     this
   }
+
+  def update (p: TDataPoint3): Unit = {
+    millis = p.millis
+    _0 = p._0
+    _1 = p._1
+    _2 = p._2
+  }
 }
 
 object TDataPoint3 {

@@ -46,7 +46,7 @@ trait CompressedTraj extends ArrayTraj[CompressedTraj] {
   protected[trajectory] def copyArraysFrom (other: CompressedTraj, srcIdx: Int, dstIdx: Int, len: Int): Unit = {
     ts.copyFrom(other.ts, srcIdx, dstIdx, len)
     latLons.copyFrom(other.latLons, srcIdx, dstIdx, len)
-    alts.copyFrom(alts, srcIdx, dstIdx, len)
+    alts.copyFrom(other.alts, srcIdx, dstIdx, len)
   }
 
   def getDateMillis(i: Int): Long = ts(i).toMillis

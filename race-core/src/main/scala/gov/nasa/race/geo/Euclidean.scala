@@ -99,14 +99,14 @@ object Euclidean {
   }
 
   /**
-    * approximation of cross-track distance for small dlat/dlon
+    * approximation of cross-track distance for small lat/lon deltas
     */
   def crossTrackDistance (φ: Angle, λ: Angle,
                           φ1: Angle, λ1: Angle, alt1: Length,
                           φ2: Angle, λ2: Angle, alt2: Length): Length = {
     val aAvg = ((alt1 + alt2) / 2).toMeters
     val cy = (MeanEarthRadius.toMeters + aAvg)
-    val cx = cy * Cos(φ2 - φ1)
+    val cx = cy / Cos(φ2 - φ1)
 
     val y1 = φ1.toRadians * cy
     val y2 = φ2.toRadians * cy

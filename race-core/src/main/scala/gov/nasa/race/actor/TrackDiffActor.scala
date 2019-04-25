@@ -40,9 +40,6 @@ import scala.collection.mutable.{HashMap => MutHashMap}
   */
 class TrackDiffActor (val config: Config) extends SubscribingRaceActor with FilteringPublisher {
 
-  // used to check if track entry for a given input channel should be closed
-  case class CheckClosed (chanIdx: Int, id: String)
-
   class TrackDiffEntry (val id: String, val trajectories: Array[MutTrajectory]) {
     var isClosed: Array[Boolean] = new Array(trajectories.size)
 
@@ -83,7 +80,6 @@ class TrackDiffActor (val config: Config) extends SubscribingRaceActor with Filt
     case BusEvent(chan,o: TrackedObject, _) => updateTracks(chan,o)
     case BusEvent(chan,tm: TrackListMessage, _) => tm.tracks.foreach( updateTracks(chan,_))
     case BusEvent(chan,tm: TrackTerminationMessage,_) => closeTrack(chan,tm.cs)
-    case CheckClosed(chanIdx,id) => closeTrack(chanIdx,id,false)
   }
 
   override def handleMessage: Receive = handleTrackMessage
@@ -93,6 +89,10 @@ class TrackDiffActor (val config: Config) extends SubscribingRaceActor with Filt
   protected def updateTracks(chan: String, o: TrackedObject): Unit = {
     if (pass(o)) { // if we have a filter, only keep trajectories of tracks that pass
       val e = tracks.getOrElseUpdate(o.cs, new TrackDiffEntry(o.cs, createTrajectories))
+      if (o.isChangedCS) {
+        println(s"@@@ changed CS: $o")
+      }
+
       e.trajectories(channelIndex(chan)) += o
       if (o.isDroppedOrCompleted) closeTrack(chan,o.cs)
 
@@ -123,6 +123,10 @@ class TrackDiffActor (val config: Config) extends SubscribingRaceActor with Filt
   protected def analyzeTrajectoryPair(e: TrackDiffEntry, chanIdx: Int): Unit = {
     val diffTraj = e.trajectories(chanIdx)
     for (refTraj <- e.refTrajectory; refInter <- e.refInterpolant) {
+      refTraj.dump
+      diffTraj.dump
+      println(diffTraj.arithmeticMidDataPoint)
+
       val td = TrajectoryDiff.calculate(refTraj,diffTraj,
                                        (t) => refInter, posFilter.pass, Euclidean.distance2D, Euclidean.heading)
 

@@ -33,6 +33,7 @@ object TrackedObject {
   final val DroppedFlag: Int    = 0x04
   final val CompletedFlag: Int  = 0x08
   final val FrozenFlag: Int     = 0x10
+  final val ChangedCSFlag: Int  = 0x20
 
   def tempCS (flightId: String) = "?" + flightId
   def isTempCS (cs: String) = cs.charAt(0) == '?'
@@ -66,6 +67,7 @@ trait TrackedObject extends IdentifiableObject with TrackPoint with MovingObject
   def isCompleted = (status & CompletedFlag) != 0
   def isDroppedOrCompleted = (status & (DroppedFlag|CompletedFlag)) != 0
   def isFrozen = (status & FrozenFlag) != 0
+  def isChangedCS: Boolean = (status & ChangedCSFlag) != 0
 
   def amend (a: Any): TrackedObject = { amendments = a +: amendments; this }
   def amendAll (as: Any*) = { as.foreach(amend); this }

@@ -28,6 +28,25 @@ import gov.nasa.race.uom.Time._
 import gov.nasa.race.uom.{Angle, AngleArray, Date, DateArray, Length, LengthArray, Time}
 import org.joda.time.{MutableDateTime, ReadableDateTime, DateTime => JodaDateTime}
 
+object Trajectory {
+
+  // mostly for generating tests
+  def apply (dps: (Long,Double,Double,Double)*): Trajectory = {
+    create(new MutAccurateTrajectory(_),dps:_*)
+  }
+
+  // mostly for generating tests
+  def create (f: Int=>MutTrajectory, dps: (Long,Double,Double,Double)*): Trajectory = {
+    val tr = f(dps.size)
+    val dp = new TDP3
+    dps.foreach { p=>
+      dp.set(p._1,p._2,p._3,p._4)
+      tr += dp
+    }
+    tr
+  }
+}
+
 /**
   * immutable object holding trajectory point information
   */
@@ -62,6 +81,8 @@ class MutTrajectoryPoint (val date: MutableDateTime, val position: MutLatLonPos)
 /**
   * the low level type version of a TrajectoryPoint which is compatible with TInterpolant/TDataSource
   * but adds uom accessors and high level conversion
+  *
+  * Note that we store lat/lon in degrees
   */
 class TDP3 (_millis: Long, _lat: Double, _lon: Double, _alt: Double)
                                             extends TDataPoint3(_millis,_lat,_lon,_alt) with GeoPosition {
@@ -77,6 +98,8 @@ class TDP3 (_millis: Long, _lat: Double, _lon: Double, _alt: Double)
 
   override def altitude: Length = Meters(_2)
   def altitude_= (alt: Length): Unit = _2 = alt.toMeters
+
+  override def clone: TDP3 = new TDP3(millis,_0,_1,_2)
 
   def toTrajectoryPoint = new TrajectoryPoint(new JodaDateTime(millis), LatLonPos(Degrees(_0),Degrees(_1),Meters(_2)))
 
@@ -117,6 +140,7 @@ trait Trajectory extends TDataSource[N3,TDP3] {
     * throws ArrayIndexOutOfBounds exception if outside limits
     */
   def apply (i: Int): TrackPoint
+  def dataPoint (i: Int): TDP3
 
   def iterator: Iterator[TrackPoint]
   def iterator (p: MutTrajectoryPoint): Iterator[TrackPoint]
@@ -181,6 +205,26 @@ trait Trajectory extends TDataSource[N3,TDP3] {
     * returns a empty mutable trajectory based on concrete type
     */
   def emptyMutable (initCapacity: Int): MutTrajectory
+
+  /**
+    * return data point at mid index
+    * note this is not the mid-point in terms of time or position
+    */
+  def arithmeticMidDataPoint: TDP3 = dataPoint(size/2)
+
+  /**
+    * for debugging purposes
+    */
+  def dump: Unit = {
+    var i = 0
+    println("Trajectory(")
+    foreach (new TDP3){ p=>
+      if (i > 0) println(',')
+      print(s"  (${p.millis}, ${p._0}, ${p._1}, ${p._2})")
+      i += 1
+    }
+    println("\n)")
+  }
 }
 
 
@@ -246,6 +290,11 @@ trait Traj extends Trajectory {
   override def apply(i: Int): TrackPoint = {
     if (i < 0 || i >= size) throw new IndexOutOfBoundsException(s"track point index out of range: $i")
     getTrackPoint(i)
+  }
+
+  override def dataPoint (i: Int): TDP3 = {
+    if (i < 0 || i >= size) throw new IndexOutOfBoundsException(s"track point index out of range: $i")
+    getTDP3(i, new TDP3)
   }
 
   override def iterator: Iterator[TrackPoint] = {
