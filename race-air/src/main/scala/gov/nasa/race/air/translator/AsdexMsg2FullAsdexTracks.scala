@@ -25,6 +25,7 @@ import gov.nasa.race.air.AsdexTrack
 import gov.nasa.race.config._
 import gov.nasa.race.geo.GeoPosition
 import gov.nasa.race.track.TrackedObject
+import gov.nasa.race.track.TrackedObject.ChangedCS
 import gov.nasa.race.uom.Angle._
 import gov.nasa.race.uom.Length._
 import gov.nasa.race.uom.Speed._
@@ -85,14 +86,18 @@ class AsdexMsg2FullAsdexTracks(config: Config=NoConfig) extends AsdexMsg2AsdexTr
     val cs = fromString(acId, getCallsign(_,trackId), _.cs, trackId)
     val act = fromString(acType, Some(_), _.acType, None)
     var statusFlags = status
+    var changedCS: Option[ChangedCS] = None
 
     ifSome(lastTracks.get(trackId)) { lastTrack =>
-      if (acId != null && lastTrack.cs != acId) {
+      if (acId != null && lastTrack.cs != cs) {
         statusFlags |= TrackedObject.ChangedCSFlag
+        changedCS = Some(ChangedCS(lastTrack.cs))
       }
     }
 
     val track = new AsdexTrack(trackId,cs,GeoPosition(lat,lon,alt),spd,hdg,vr,date,statusFlags,act)
+    ifSome(changedCS) { track.amend }
+
     if (track.isDropped) {
       lastTracks -= trackId
 

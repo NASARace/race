@@ -154,11 +154,11 @@ object TrajectoryDiff {
   }
 }
 
-class TrajectoryDiff(val refTrajectory: Trajectory,
-                     val diffTrajectory: Trajectory,
-                     val distance2DStats: SampleStats[Length],
-                     val angleDiffStats: SampleStats[Angle],
-                     val altDiffStats: SampleStats[Length]
-                    ) {
+class TrajectoryDiff( val refTrajectory: Trajectory,
+                      val diffTrajectory: Trajectory,
+                      val distance2DStats: SampleStats[Length],
+                      val angleDiffStats: SampleStats[Angle],
+                      val altDiffStats: SampleStats[Length]
+                      ) {
   def numberOfSamples: Int = distance2DStats.numberOfSamples
 }

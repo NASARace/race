@@ -63,6 +63,15 @@ class TrackDiffActor (val config: Config) extends SubscribingRaceActor with Filt
         i += 1
       }
     }
+
+    def copyTrajectory(i: Int, other: TrackDiffEntry): Unit = {
+      trajectories(i) = other.trajectories(i)
+      isClosed(i) = other.isClosed(i)
+      if (i == 0 && other.refTrajectory.isDefined) {
+        refTrajectory = other.refTrajectory
+        refInterpolant = other.refInterpolant
+      }
+    }
   }
 
   val tracks = new MutHashMap[String,TrackDiffEntry]
@@ -73,7 +82,7 @@ class TrackDiffActor (val config: Config) extends SubscribingRaceActor with Filt
   }
 
   protected def createTrajectories: Array[MutTrajectory] = {
-    Array[MutTrajectory](new MutCompressedTrajectory(32),new MutCompressedTrajectory(32))
+    readFrom.toArray.map( _ => new MutCompressedTrajectory(32))
   }
 
   def handleTrackMessage: Receive = {
@@ -88,12 +97,18 @@ class TrackDiffActor (val config: Config) extends SubscribingRaceActor with Filt
 
   protected def updateTracks(chan: String, o: TrackedObject): Unit = {
     if (pass(o)) { // if we have a filter, only keep trajectories of tracks that pass
-      val e = tracks.getOrElseUpdate(o.cs, new TrackDiffEntry(o.cs, createTrajectories))
+      val channelIdx = channelIndex(chan)
+      var e = tracks.getOrElseUpdate(o.cs, new TrackDiffEntry(o.cs, createTrajectories))
+
       if (o.isChangedCS) {
-        println(s"@@@ changed CS: $o")
+        // we can't just rename the old entry since other channels might already have
+        // reported tracks for the new CS
+        for ( oldCS <- o.getOldCS; oldEntry <- tracks.get(oldCS)) {
+          e.copyTrajectory(channelIdx, oldEntry)
+        }
       }
 
-      e.trajectories(channelIndex(chan)) += o
+      e.trajectories(channelIdx) += o
       if (o.isDroppedOrCompleted) closeTrack(chan,o.cs)
 
     } else { // check if this was a recorded track leaving the area of interest
