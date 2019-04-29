@@ -232,7 +232,7 @@ final class DateArrayBuffer protected[uom] (protected[uom] val data: ArrayBuffer
 
   @inline def apply(i:Int): Date = new Date(data(i))
   @inline def update(i:Int, v: Date): Unit = {
-    if (i < 0 || i >= data.size) throw new IndexOutOfBoundsException(i)
+    if (i < 0 || i >= data.size) throw new IndexOutOfBoundsException(i.toString)
     data(i) = v.millis
   }
 

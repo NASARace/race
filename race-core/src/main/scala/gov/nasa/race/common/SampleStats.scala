@@ -48,6 +48,9 @@ class OnlineSampleStats extends SampleStats[Double] with XmlSource {
   var max: Double = Double.NegativeInfinity
   var mean: Double = 0
 
+  protected var isMax = false
+  protected var isMin = false
+
   protected var s: Double = 0
 
   // Welford's algorithm
@@ -60,11 +63,17 @@ class OnlineSampleStats extends SampleStats[Double] with XmlSource {
     mean = mNext
     numberOfSamples = k
 
-    if (x < min) min = x
-    if (x > max) max = x
+    isMin = (x < min)
+    if (isMin) min = x
+
+    isMax = (x > max)
+    if (isMax) max = x
   }
 
   @inline def += (x: Double): Unit = addSample(x)
+
+  @inline def isMinimum: Boolean = isMin
+  @inline def isMaximum: Boolean = isMax
 
   @inline def variance: Double = s / (numberOfSamples-1)
 

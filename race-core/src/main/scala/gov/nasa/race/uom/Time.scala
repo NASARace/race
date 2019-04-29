@@ -233,7 +233,7 @@ final class TimeArrayBuffer protected[uom] (protected[uom] val data: ArrayBuffer
 
   @inline def apply(i:Int): Time = new Time(data(i))
   @inline def update(i:Int, v: Time): Unit = {
-    if (i < 0 || i >= data.size) throw new IndexOutOfBoundsException(i)
+    if (i < 0 || i >= data.size) throw new IndexOutOfBoundsException(i.toString)
     data(i) = v.millis
   }
 

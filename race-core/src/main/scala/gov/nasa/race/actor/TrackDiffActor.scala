@@ -25,8 +25,18 @@ import gov.nasa.race.core.{RaceContext, SubscribingRaceActor}
 import gov.nasa.race.geo.{Euclidean, GeoPosition}
 import gov.nasa.race.track.{TrackListMessage, TrackTerminationMessage, TrackedObject}
 import gov.nasa.race.trajectory._
+import org.joda.time.DateTime
 
 import scala.collection.mutable.{HashMap => MutHashMap}
+
+/**
+  * message type to report track diff events
+  */
+case class TrackDiffEvent(id: String,
+                          date: DateTime,
+                          refSource: String,
+                          diffSource: String,
+                          diff: TrajectoryDiff)
 
 /**
   * actor that stores trajectories for tracks received from different channels in order to compute
@@ -138,20 +148,23 @@ class TrackDiffActor (val config: Config) extends SubscribingRaceActor with Filt
   protected def analyzeTrajectoryPair(e: TrackDiffEntry, chanIdx: Int): Unit = {
     val diffTraj = e.trajectories(chanIdx)
     for (refTraj <- e.refTrajectory; refInter <- e.refInterpolant) {
-      refTraj.dump
-      diffTraj.dump
-      println(diffTraj.arithmeticMidDataPoint)
+      //refTraj.dump
+      //diffTraj.dump
+      //println(diffTraj.arithmeticMidDataPoint)
 
+      val date: DateTime = refTraj.getLastDate.toDateTime
       val td = TrajectoryDiff.calculate(refTraj,diffTraj,
                                        (t) => refInter, posFilter.pass, Euclidean.distance2D, Euclidean.heading)
 
-      ifSome(td) { report(e.id, chanIdx, _) }
+      ifSome(td) { report(e.id, date, chanIdx, _) }
     }
   }
 
-  protected def report (id: String, chanIdx: Int, td: TrajectoryDiff): Unit = {
-    println(s"@@ trackdiff $id on ${readFrom(chanIdx)} : ${td.distance2DStats.numberOfSamples}")
-    println(f"  dist  mean=${td.distance2DStats.mean.showRounded}, min=${td.distance2DStats.min.showRounded}, max=${td.distance2DStats.max.showRounded} σ²=${td.distance2DStats.variance}%.4f " )
-    println(f"  angle mean=${td.angleDiffStats.mean.showRounded}, min=${td.angleDiffStats.min.showRounded}, max=${td.angleDiffStats.max.showRounded} σ²=${td.angleDiffStats.variance}%.4f ")
+  protected def report (id: String, date: DateTime, chanIdx: Int, td: TrajectoryDiff): Unit = {
+    publish(TrackDiffEvent(id,date,readFrom(0),readFrom(chanIdx),td))
+
+    // println(s"@@ trackdiff $id on ${readFrom(chanIdx)} : ${td.distance2DStats.numberOfSamples}")
+    // println(f"  dist  mean=${td.distance2DStats.mean.showRounded}, min=${td.distance2DStats.min.showRounded}, max=${td.distance2DStats.max.showRounded} σ²=${td.distance2DStats.variance}%.4f " )
+    // println(f"  angle mean=${td.angleDiffStats.mean.showRounded}, min=${td.angleDiffStats.min.showRounded}, max=${td.angleDiffStats.max.showRounded} σ²=${td.angleDiffStats.variance}%.4f ")
   }
 }

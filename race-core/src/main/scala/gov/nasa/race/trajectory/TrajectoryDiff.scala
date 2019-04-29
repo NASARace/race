@@ -52,18 +52,36 @@ object TrajectoryDiff {
     val altDiffStats = new OnlineLengthStats
     val angleDiffStats = new OnlineAngleStats
 
+    val pMax = new TDP3
+    val pRefMax = new TDP3
+    val pMin = new TDP3
+    val pRefMin = new TDP3
+
     diffTrajectory.foreach(new TDP3) { p =>
       if (areaFilter(p) && refTrajectory.includesDate(p.epochMillis)) {
         val pRef = refIntr.eval(p.millis)
 
         dist2DStats += computeDistance2D(pRef, p)
+        if (dist2DStats.isMaximum){
+          pMax.update(p)
+          pRefMax.update(pRef)
+        }
+        if (dist2DStats.isMinimum){
+          pMin.update(p)
+          pRefMin.update(pRef)
+        }
+
         altDiffStats += (pRef.altitude - p.altitude)
         angleDiffStats += computeDiffAngle(pRef, p)
       }
     }
 
     if (dist2DStats.numberOfSamples > 0) {
-      Some(new TrajectoryDiff(refTrajectory, diffTrajectory, dist2DStats, angleDiffStats, altDiffStats))
+      Some(new TrajectoryDiff(refTrajectory,
+                              diffTrajectory,
+                              dist2DStats,
+                              pRefMax, pMax, pRefMin, pMin,
+                              angleDiffStats, altDiffStats))
     } else {
       None
     }
@@ -157,6 +175,10 @@ object TrajectoryDiff {
 class TrajectoryDiff( val refTrajectory: Trajectory,
                       val diffTrajectory: Trajectory,
                       val distance2DStats: SampleStats[Length],
+                      val maxDistanceRefPos: GeoPosition,
+                      val maxDistanceDiffPos: GeoPosition,
+                      val minDistanceRefPos: GeoPosition,
+                      val minDistanceDiffPos: GeoPosition,
                       val angleDiffStats: SampleStats[Angle],
                       val altDiffStats: SampleStats[Length]
                       ) {

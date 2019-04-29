@@ -164,7 +164,7 @@ final class DeltaDateArrayBuffer protected[uom] (protected[uom] val elapsed: Tim
 
   @inline def apply(i:Int): Date = date0 + elapsed(i)
   @inline def update(i:Int, d: Date): Unit = {
-    if (i < 0 || i >= elapsed.size) throw new IndexOutOfBoundsException(i)
+    if (i < 0 || i >= elapsed.size) throw new IndexOutOfBoundsException(i.toString)
     if (date0.isUndefined){
       date0 = d
       elapsed(i) = Time0

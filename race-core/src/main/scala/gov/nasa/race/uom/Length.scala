@@ -414,4 +414,7 @@ class OnlineLengthStats extends SampleStats[Length] {
   @inline def numberOfSamples: Int = stats.numberOfSamples
   @inline def min: Length = Meters(stats.min)
   @inline def max: Length = Meters(stats.max)
+
+  @inline def isMinimum: Boolean = stats.isMinimum
+  @inline def isMaximum: Boolean = stats.isMaximum
 }
