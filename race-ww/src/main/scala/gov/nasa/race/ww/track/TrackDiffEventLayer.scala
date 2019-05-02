@@ -19,13 +19,13 @@ package gov.nasa.race.ww.track
 import java.awt.Color
 
 import com.typesafe.config.Config
-import gov.nasa.race.actor.TrackDiffEvent
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.common.Query
 import gov.nasa.race.swing.FieldPanel
 import gov.nasa.race.trajectory.{Trajectory, TrajectoryDiff}
 import gov.nasa.race.util.DateTimeUtils.hhmmss
 import gov.nasa.race.swing.Style._
+import gov.nasa.race.track.TrackPairEvent
 import gov.nasa.race.ww.{AltitudeSensitiveRaceLayer, ConfigurableRenderingLayer, InteractiveLayerInfoPanel, InteractiveLayerObjectPanel, InteractiveRaceLayer, LayerObject, LayerSymbolOwner, RaceViewer, SubscribingRaceLayer}
 import gov.nasa.worldwind.render.{Material, Path}
 
@@ -33,7 +33,7 @@ import scala.collection.mutable.{Map => MutableMap}
 
 // TODO - too much overlap with TrackPairEventLayer. Unify
 
-class TrackDiffrEventQuery[T](getEvent: T=>TrackDiffEvent) extends Query[T] {
+class TrackDiffEventQuery[T](getEvent: T=>T) extends Query[T] {
   override def error(msg: String): Unit = {
     // TODO
   }
@@ -60,20 +60,22 @@ class TrackDiffEventFields extends FieldPanel {
 
   setContents
 
-  def update (e: TrackDiffEvent): Unit = {
-    val diff: TrajectoryDiff = e.diff
-
-    id.text = e.id
-    time.text = hhmmss.print(e.date)
-    refSrc.text = e.refSource
-    diffSrc.text = e.diffSource
-    nPoints.text = diff.numberOfSamples.toString
-    minDist.text = diff.distance2DStats.min.showRounded
-    maxDist.text = diff.distance2DStats.max.showRounded
-    avgDist.text = diff.distance2DStats.mean.showRounded
-    varDist.text = f"${diff.distance2DStats.variance}%.3f"
-    avgAngle.text = diff.angleDiffStats.mean.showRounded
-    varAngle.text = f"${diff.angleDiffStats.variance}%.3f"
+  def update (e: TrackPairEvent): Unit = {
+    e.extraData match {
+      case Some(diff:TrajectoryDiff) =>
+        id.text = e.id
+        time.text = hhmmss.print(e.date)
+        refSrc.text = diff.refSource
+        diffSrc.text = diff.diffSource
+        nPoints.text = diff.numberOfSamples.toString
+        minDist.text = diff.distance2DStats.min.showRounded
+        maxDist.text = diff.distance2DStats.max.showRounded
+        avgDist.text = diff.distance2DStats.mean.showRounded
+        varDist.text = f"${diff.distance2DStats.variance}%.3f"
+        avgAngle.text = diff.angleDiffStats.mean.showRounded
+        varAngle.text = f"${diff.angleDiffStats.variance}%.3f"
+      case other => // ignore?
+    }
   }
 }
 
@@ -89,11 +91,11 @@ class TrackDiffEventPanel(override val layer: TrackDiffEventLayer)
 }
 
 // TODO unify with TrackPairEventAntry
-abstract class TrackDiffEventEntry(val event: TrackDiffEvent, val layer: TrackDiffEventLayer)
+abstract class TrackDiffEventEntry(val event: TrackPairEvent, val layer: TrackDiffEventLayer)
                                                   extends LayerObject with LayerSymbolOwner {
 
-  protected var refPath:  Path = createPath(event.diff.refTrajectory, layer.lineMaterial)
-  protected var diffPath:  Path = createPath(event.diff.diffTrajectory, layer.diffMaterial)
+  //protected var refPath:  Path = createPath(event.diff.refTrajectory, layer.lineMaterial)
+  //protected var diffPath:  Path = createPath(event.diff.diffTrajectory, layer.diffMaterial)
 
 
   def createPath (traj: Trajectory, mat: Material): TrajectoryPath = new TrajectoryPath(traj,mat)
@@ -114,7 +116,7 @@ abstract class TrackDiffEventLayer (val raceViewer: RaceViewer, val config: Conf
   val diffMaterial = new Material(config.getColorOrElse("diff-color", Color.orange))
 
   //--- creators
-  protected def createEventEntry (event: TrackDiffEvent): TrackDiffEventEntry = {
+  protected def createEventEntry (event: TrackPairEvent): TrackDiffEventEntry = {
     //new TrackDiffEventEntry(event, this)
     null
   }

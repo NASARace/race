@@ -16,12 +16,10 @@
  */
 package gov.nasa.race.trajectory
 
-import gov.nasa.race.geo._
 import gov.nasa.race.common.Nat.N3
 import gov.nasa.race.common.{SampleStats, TInterpolant}
 import gov.nasa.race.geo.GeoPosition
-import gov.nasa.race.uom.{Angle, Length, OnlineAngleStats, OnlineLengthStats, Time}
-import gov.nasa.race.uom.Length._
+import gov.nasa.race.uom.{Angle, Date, Length, OnlineAngleStats, OnlineLengthStats, Time}
 
 object TrajectoryDiff {
 
@@ -35,7 +33,9 @@ object TrajectoryDiff {
     * @param computeDiffAngle  function to compute angle between two trajectory points
     * @return
     */
-  def calculate(refTrajectory: Trajectory,
+  def calculate(refSource: String,
+                refTrajectory: Trajectory,
+                diffSource: String,
                 diffTrajectory: Trajectory,
                 getInterpolant: Trajectory => TInterpolant[N3, TDP3],
                 areaFilter: GeoPosition => Boolean,
@@ -77,11 +77,18 @@ object TrajectoryDiff {
     }
 
     if (dist2DStats.numberOfSamples > 0) {
-      Some(new TrajectoryDiff(refTrajectory,
-                              diffTrajectory,
-                              dist2DStats,
-                              pRefMax, pMax, pRefMin, pMin,
-                              angleDiffStats, altDiffStats))
+      Some( new TrajectoryDiff(
+        refSource,
+        refTrajectory,
+        diffSource,
+        diffTrajectory,
+        dist2DStats,
+        pRefMax, pMax, pMax.epochMillis,
+        pRefMin, pMin, pMin.epochMillis,
+        angleDiffStats,
+        altDiffStats
+      ))
+
     } else {
       None
     }
@@ -172,13 +179,22 @@ object TrajectoryDiff {
   }
 }
 
-class TrajectoryDiff( val refTrajectory: Trajectory,
+class TrajectoryDiff( val refSource: String,
+                      val refTrajectory: Trajectory,
+
+                      val diffSource: String,
                       val diffTrajectory: Trajectory,
+
                       val distance2DStats: SampleStats[Length],
+
                       val maxDistanceRefPos: GeoPosition,
                       val maxDistanceDiffPos: GeoPosition,
+                      val maxDistanceTime: Date,
+
                       val minDistanceRefPos: GeoPosition,
                       val minDistanceDiffPos: GeoPosition,
+                      val minDistanceTime: Date,
+
                       val angleDiffStats: SampleStats[Angle],
                       val altDiffStats: SampleStats[Length]
                       ) {

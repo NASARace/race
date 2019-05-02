@@ -27,22 +27,26 @@ import org.joda.time.DateTime
   *
   * TODO - unify this with ProximityEvent
   */
-case class TrackPairEvent(id: String, // of event, not tracks
-                          date: DateTime,
-                          position: GeoPosition,
-                          eventType: String,
-                          eventDetails: String,
+case class TrackPairEvent(
+                           id: String, // of event, not tracks
+                           date: DateTime,
+                           position: GeoPosition,
+                           eventType: String,
+                           eventDetails: String,
 
-                          //--- the participating tracks with respective state at event time
-                          track1: TrackedObject, // first involved track
-                          pos1: GeoPosition, // at time of event
-                          hdg1: Angle,
-                          spd1: Speed,
-                          trajectory1: Trajectory,
+                           //--- the participating tracks with respective state at event time
+                           track1: TrackedObject, // first involved track
+                           pos1: GeoPosition, // at time of event
+                           hdg1: Angle,
+                           spd1: Speed,
+                           trajectory1: Trajectory,
 
-                          track2: TrackedObject, // second involved track
-                          pos2: GeoPosition, // at time of event
-                          hdg2: Angle,
-                          spd2: Speed,
-                          trajectory2: Trajectory
+                           track2: TrackedObject, // second involved track
+                           pos2: GeoPosition, // at time of event
+                           hdg2: Angle,
+                           spd2: Speed,
+                           trajectory2: Trajectory,
+
+                           extraData: Option[Any] = None
+
                          ) extends TrackEvent with TrackPoint with GeoPositioned
