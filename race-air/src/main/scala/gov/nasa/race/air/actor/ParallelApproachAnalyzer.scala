@@ -159,7 +159,7 @@ class ParallelApproachAnalyzer (val config: Config) extends SubscribingRaceActor
           val pos2 = GeoPosition(lat2,lon2,alt2)
           val spd2 = Euclidean.distance(lat2,lon2,alt2,lastLat2,lastLon2,alt2) / convergeInterval.milliseconds
 
-          val pos = Euclidean.midpoint(pos1,pos2)
+          val pos = Euclidean.midPoint(pos1,pos2)
 
           // TODO should probably include speed and heading for both tracks
 

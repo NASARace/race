@@ -38,4 +38,9 @@ package object track {
     def vr: Speed   // vertical rate
   }
 
+  class Velocity2D (
+    var heading: Angle,
+    var speed: Speed
+  )
+
 }

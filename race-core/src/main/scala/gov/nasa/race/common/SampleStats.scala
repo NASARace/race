@@ -63,17 +63,21 @@ class OnlineSampleStats extends SampleStats[Double] with XmlSource {
     mean = mNext
     numberOfSamples = k
 
-    isMin = (x < min)
-    if (isMin) min = x
+    isMin = if (x < min){
+      min = x
+      true
+    } else false
 
-    isMax = (x > max)
-    if (isMax) max = x
+    isMax = if (x > max){
+      max = x
+      true
+    } else false
   }
 
   @inline def += (x: Double): Unit = addSample(x)
 
-  @inline def isMinimum: Boolean = isMin
-  @inline def isMaximum: Boolean = isMax
+  @inline def isNewMinimum: Boolean = isMin
+  @inline def isNewMaximum: Boolean = isMax
 
   @inline def variance: Double = s / (numberOfSamples-1)
 

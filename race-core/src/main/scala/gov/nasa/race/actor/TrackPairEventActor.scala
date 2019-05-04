@@ -53,7 +53,7 @@ class TrackPairEventActor (val config: Config) extends Tracer {
         nEvents += 1
         val tpe = new TrackPairEvent(s"$eventPrefix-$nEvents",
           prox.date,
-          Euclidean.midpoint(prox.ref.position, prox.track.position),
+          Euclidean.midPoint(prox.ref.position, prox.track.position),
           eventType(prox),
           eventDetails(prox),
           o1, prox.ref.position, o1.heading, o1.speed, e1.trajectory.snapshot,

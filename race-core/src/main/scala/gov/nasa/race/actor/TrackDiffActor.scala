@@ -23,8 +23,9 @@ import gov.nasa.race.common.{LinTInterpolant, TInterpolant}
 import gov.nasa.race.core.Messages.BusEvent
 import gov.nasa.race.core.{RaceContext, SubscribingRaceActor}
 import gov.nasa.race.geo.{Euclidean, GeoPosition}
-import gov.nasa.race.track.{TrackListMessage, TrackTerminationMessage, TrackedObject}
+import gov.nasa.race.track.{TrackListMessage, TrackPairEvent, TrackTerminationMessage, TrackedObject}
 import gov.nasa.race.trajectory._
+import gov.nasa.race.uom.{Angle, Speed}
 import org.joda.time.DateTime
 
 import scala.collection.mutable.{HashMap => MutHashMap}
@@ -44,6 +45,7 @@ class TrackDiffActor (val config: Config) extends SubscribingRaceActor with Filt
 
   class TrackDiffEntry (val id: String, val trajectories: Array[MutTrajectory]) {
     var isClosed: Array[Boolean] = new Array(trajectories.size)
+    val objs: Array[TrackedObject] = new Array(trajectories.size)
 
     // set once the reference trajectory is complete
     var refTrajectory: Option[Trajectory] = None
@@ -111,6 +113,7 @@ class TrackDiffActor (val config: Config) extends SubscribingRaceActor with Filt
       }
 
       e.trajectories(channelIdx) += o
+      e.objs(channelIdx) = o
       if (o.isDroppedOrCompleted) closeTrack(chan,o.cs)
 
     } else { // check if this was a recorded track leaving the area of interest
@@ -153,12 +156,30 @@ class TrackDiffActor (val config: Config) extends SubscribingRaceActor with Filt
         Euclidean.distance2D,
         Euclidean.heading)
 
-      ifSome(td) { report(e.id, date, chanIdx, _) }
+      ifSome(td) { report(e.id, date, chanIdx, e, _) }
     }
   }
 
-  protected def report (id: String, date: DateTime, chanIdx: Int, td: TrajectoryDiff): Unit = {
-    //publish(TrackDiffEvent(id,date,readFrom(0),readFrom(chanIdx),td))
+  protected def report (id: String, date: DateTime, chanIdx: Int, e: TrackDiffEntry, td: TrajectoryDiff): Unit = {
+    val pRef = td.maxDistanceRefPos
+    val pDiff = td.maxDistanceDiffPos
+    val pEvent = Euclidean.midPoint(pRef,pDiff)
+    val tEvent = td.maxDistanceTime
+
+    val vRef = td.refTrajectory.computeVelocity2D(tEvent, Euclidean.distance2D, Euclidean.heading)
+    val vDiff = td.diffTrajectory.computeVelocity2D(tEvent, Euclidean.distance2D, Euclidean.heading)
+
+    val event = TrackPairEvent(
+      id,
+      tEvent.toDateTime, pEvent,
+      "MaxDeviation",
+      s"max track deviation ${readFrom(0)} : ${readFrom(chanIdx)}",
+      e.objs(0), pRef, vRef.heading, vRef.speed, td.refTrajectory,
+      e.objs(chanIdx), pDiff, vDiff.heading, vDiff.speed, td.diffTrajectory,
+      Some(td)
+    )
+
+    publish(event)
 
     // println(s"@@ trackdiff $id on ${readFrom(chanIdx)} : ${td.distance2DStats.numberOfSamples}")
     // println(f"  dist  mean=${td.distance2DStats.mean.showRounded}, min=${td.distance2DStats.min.showRounded}, max=${td.distance2DStats.max.showRounded} σ²=${td.distance2DStats.variance}%.4f " )

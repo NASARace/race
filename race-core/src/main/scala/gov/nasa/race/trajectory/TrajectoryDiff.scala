@@ -60,19 +60,20 @@ object TrajectoryDiff {
     diffTrajectory.foreach(new TDP3) { p =>
       if (areaFilter(p) && refTrajectory.includesDate(p.epochMillis)) {
         val pRef = refIntr.eval(p.millis)
+        if (areaFilter(pRef)) {
+          dist2DStats += computeDistance2D(pRef, p)
+          if (dist2DStats.isMaximum) {
+            pMax.update(p)
+            pRefMax.update(pRef)
+          }
+          if (dist2DStats.isMinimum) {
+            pMin.update(p)
+            pRefMin.update(pRef)
+          }
 
-        dist2DStats += computeDistance2D(pRef, p)
-        if (dist2DStats.isMaximum){
-          pMax.update(p)
-          pRefMax.update(pRef)
+          altDiffStats += (pRef.altitude - p.altitude)
+          angleDiffStats += computeDiffAngle(pRef, p)
         }
-        if (dist2DStats.isMinimum){
-          pMin.update(p)
-          pRefMin.update(pRef)
-        }
-
-        altDiffStats += (pRef.altitude - p.altitude)
-        angleDiffStats += computeDiffAngle(pRef, p)
       }
     }
 

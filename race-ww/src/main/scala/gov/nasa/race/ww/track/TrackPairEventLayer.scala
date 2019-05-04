@@ -52,7 +52,11 @@ class TrackPairEventQuery[T](getEvent: T=>TrackPairEvent) extends Query[T] {
   }
 }
 
-class TrackPairEventFields extends FieldPanel {
+trait TrackPairEventFields extends FieldPanel {
+  def update (e: TrackPairEvent): Unit
+}
+
+class GenericTrackPairEventFields extends TrackPairEventFields {
   val id = addField("id:")
   val etype = addField("type:")
   val details = addField("details:")
@@ -96,7 +100,7 @@ class TrackPairEventFields extends FieldPanel {
 
 class TrackPairEventPanel(override val layer: TrackPairEventLayer)
                                        extends InteractiveLayerObjectPanel[TrackPairEventEntry,TrackPairEventFields](layer) {
-  override def createFieldPanel = new TrackPairEventFields
+  override def createFieldPanel: TrackPairEventFields = new GenericTrackPairEventFields
 
   def setEntry (e: TrackPairEventEntry): Unit = {
     entry = Some(e)

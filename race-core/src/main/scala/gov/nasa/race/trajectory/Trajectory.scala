@@ -19,13 +19,13 @@ package gov.nasa.race.trajectory
 import gov.nasa.race.common
 import gov.nasa.race.common.Nat.N3
 import gov.nasa.race.common.{CircularSeq, CountDownIterator, CountUpIterator, TDataPoint, TDataPoint3, TDataSource, TInterpolant}
-import gov.nasa.race.geo.{GeoPosition, LatLonPos, MutLatLonPos}
-import gov.nasa.race.track.TrackPoint
+import gov.nasa.race.geo.{Euclidean, GeoPosition, LatLonPos, MutLatLonPos}
+import gov.nasa.race.track.{TrackPoint, Velocity2D}
 import gov.nasa.race.uom.Angle._
 import gov.nasa.race.uom.Date._
 import gov.nasa.race.uom.Length._
 import gov.nasa.race.uom.Time._
-import gov.nasa.race.uom.{Angle, AngleArray, Date, DateArray, Length, LengthArray, Time}
+import gov.nasa.race.uom.{Angle, AngleArray, Date, DateArray, Length, LengthArray, Speed, Time}
 import org.joda.time.{MutableDateTime, ReadableDateTime, DateTime => JodaDateTime}
 
 object Trajectory {
@@ -127,9 +127,25 @@ trait Trajectory extends TDataSource[N3,TDP3] {
   def getFirstDate: Date
   def getLastDate: Date
   @inline def getDuration: Time = getLastDate.timeSince(getFirstDate)
-
   @inline def includesDate (d: Date): Boolean = d >= getFirstDate && d <= getLastDate
-  @inline def includesTDP (p: TDP3): Boolean = includesDate(p.epochMillis)
+
+  /**
+    * get (logical) data point index i for given time with tdp(i).epochMillis <= d
+    * return -1 if time is lower than first data point, or size-1 if greater than
+    * last data point
+    */
+  def indexOf(d: Date): Int = {
+    if (d < getFirstDate) return -1
+    else if (d >= getLastDate) return size-1
+    else {
+      var i = 0
+      foreach (new TDP3){ p=>
+        if (p.epochMillis > d) return i
+        i += 1
+      }
+      throw new RuntimeException("should not get here")
+    }
+  }
 
   @inline def getAverageUpdateDuration: Time = getLastDate.timeSince(getFirstDate) / size
 
@@ -211,6 +227,41 @@ trait Trajectory extends TDataSource[N3,TDP3] {
     * note this is not the mid-point in terms of time or position
     */
   def arithmeticMidDataPoint: TDP3 = dataPoint(size/2)
+
+  /**
+    * compute heading and speed at given time
+    * if date is before first or equal or greater than last data point return values of first or last leg
+    *
+    * note - this means caller might have to check if provided time is covered by trajectory
+    */
+  def computeVelocity2D (d: Date,
+                     computeDistance: (GeoPosition,GeoPosition)=>Length,
+                     computeHeading: (GeoPosition,GeoPosition)=>Angle
+                    ): Velocity2D = {
+    if (size <= 1) { // not enough data points
+      new Velocity2D(Angle.UndefinedAngle, Speed.UndefinedSpeed)
+    }
+
+    var i0 = 0
+    val i = indexOf(d)
+
+    if (i <= 0) {
+      i0 = 0
+    } else if (i == size-1) {
+      i0 = i - 1
+    } else {
+      i0 = i
+    }
+
+    val i1 = i0 + 1
+    val p0 = dataPoint(i0)
+    val p1 = dataPoint(i1)
+
+    val hdg = computeHeading(p0,p1)
+    val spd = computeDistance(p0,p1) / p1.epochMillis.timeSince(p0.epochMillis)
+
+    new Velocity2D(hdg, spd)
+  }
 
   /**
     * for debugging purposes

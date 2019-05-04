@@ -32,7 +32,7 @@ import scala.math.sqrt
   * <1m for distances <10nm)
   */
 object Euclidean {
-  def midpoint(pos1: GeoPosition, pos2: GeoPosition): GeoPosition = {
+  def midPoint(pos1: GeoPosition, pos2: GeoPosition): GeoPosition = {
     val lat = (pos1.φ + pos2.φ) / 2.0
     val lon = (pos1.λ + pos2.λ) / 2.0
     val alt = (pos1.altitude + pos2.altitude) / 2.0

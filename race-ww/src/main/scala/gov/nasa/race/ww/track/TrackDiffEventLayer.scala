@@ -16,22 +16,12 @@
  */
 package gov.nasa.race.ww.track
 
-import java.awt.Color
-
 import com.typesafe.config.Config
-import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.common.Query
-import gov.nasa.race.swing.FieldPanel
-import gov.nasa.race.trajectory.{Trajectory, TrajectoryDiff}
-import gov.nasa.race.util.DateTimeUtils.hhmmss
-import gov.nasa.race.swing.Style._
 import gov.nasa.race.track.TrackPairEvent
-import gov.nasa.race.ww.{AltitudeSensitiveRaceLayer, ConfigurableRenderingLayer, InteractiveLayerInfoPanel, InteractiveLayerObjectPanel, InteractiveRaceLayer, LayerObject, LayerSymbolOwner, RaceViewer, SubscribingRaceLayer}
-import gov.nasa.worldwind.render.{Material, Path}
-
-import scala.collection.mutable.{Map => MutableMap}
-
-// TODO - too much overlap with TrackPairEventLayer. Unify
+import gov.nasa.race.trajectory.TrajectoryDiff
+import gov.nasa.race.util.DateTimeUtils.hhmmss
+import gov.nasa.race.ww.RaceViewer
 
 class TrackDiffEventQuery[T](getEvent: T=>T) extends Query[T] {
   override def error(msg: String): Unit = {
@@ -43,7 +33,7 @@ class TrackDiffEventQuery[T](getEvent: T=>T) extends Query[T] {
   }
 }
 
-class TrackDiffEventFields extends FieldPanel {
+class TrackDiffEventFields extends TrackPairEventFields {
   val id = addField("id:")
   val time = addField("time:")
   val refSrc = addField("refSrc:")
@@ -79,51 +69,23 @@ class TrackDiffEventFields extends FieldPanel {
   }
 }
 
-class TrackDiffEventPanel(override val layer: TrackDiffEventLayer)
-           extends InteractiveLayerObjectPanel[TrackDiffEventEntry,TrackDiffEventFields](layer) {
-
+class TrackDiffEventPanel(override val layer: TrackDiffEventLayer)  extends TrackPairEventPanel(layer) {
   override def createFieldPanel = new TrackDiffEventFields
-
-  def setEntry (e: TrackDiffEventEntry): Unit = {
-    entry = Some(e)
-    fields.update(e.event)
-  }
 }
 
-// TODO unify with TrackPairEventAntry
-abstract class TrackDiffEventEntry(val event: TrackPairEvent, val layer: TrackDiffEventLayer)
-                                                  extends LayerObject with LayerSymbolOwner {
+class TrackDiffEventLayer (override val raceViewer: RaceViewer, override val config: Config)
+                                               extends TrackPairEventLayer(raceViewer, config) {
+  override protected def createEntryPanel: TrackDiffEventPanel = new TrackDiffEventPanel(this)
 
-  //protected var refPath:  Path = createPath(event.diff.refTrajectory, layer.lineMaterial)
-  //protected var diffPath:  Path = createPath(event.diff.diffTrajectory, layer.diffMaterial)
+  override def layerObjectDataHeader: String =  "avg[m]  max[m]        σ"
 
-
-  def createPath (traj: Trajectory, mat: Material): TrajectoryPath = new TrajectoryPath(traj,mat)
-}
-
-// TODO unify with TrackPairEventLayer
-abstract class TrackDiffEventLayer (val raceViewer: RaceViewer, val config: Config)
-  extends SubscribingRaceLayer
-    with ConfigurableRenderingLayer
-    with AltitudeSensitiveRaceLayer
-    with InteractiveRaceLayer[TrackDiffEventEntry] {
-
-  val panel = createLayerInfoPanel
-  val entryPanel = createEntryPanel
-
-  val events = MutableMap[String,TrackDiffEventEntry]()
-
-  val diffMaterial = new Material(config.getColorOrElse("diff-color", Color.orange))
-
-  //--- creators
-  protected def createEventEntry (event: TrackPairEvent): TrackDiffEventEntry = {
-    //new TrackDiffEventEntry(event, this)
-    null
+  override def layerObjectDataText (e: TrackPairEventEntry): String = {
+    val ev = e.event
+    ev.extraData match {
+      case Some(td:TrajectoryDiff) =>
+        f"${td.distance2DStats.mean.toMeters}%6.0f  ${td.distance2DStats.max.toMeters}%6.0f  ${td.distance2DStats.sigma}%7.2f"
+      case _ =>
+        "     ?       ?        ?"
+    }
   }
-
-  protected def createLayerInfoPanel: InteractiveLayerInfoPanel[TrackDiffEventEntry] = {
-    new InteractiveLayerInfoPanel(this).styled('consolePanel)
-  }
-
-  protected def createEntryPanel: TrackDiffEventPanel = new TrackDiffEventPanel(this)
 }
