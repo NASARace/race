@@ -49,4 +49,19 @@ case class TrackPairEvent(
 
                            extraData: Option[Any] = None
 
-                         ) extends TrackEvent with TrackPoint with GeoPositioned
+                         ) extends TrackEvent with TrackPoint with GeoPositioned {
+
+  def withExtraOrElse[T: Manifest,U](fallback: U)(f: T=>U): U = {
+    extraData match {
+      case Some(t: T) => f(t)
+      case _ => fallback
+    }
+  }
+
+  def flatMapExtra[T: Manifest,U](f: T=>Option[U]): Option[U] = {
+    extraData match {
+      case Some(t: T) => f(t)
+      case _ => None
+    }
+  }
+}

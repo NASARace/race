@@ -16,12 +16,18 @@
  */
 package gov.nasa.race.ww.track
 
+import java.awt.Color
+import java.awt.image.BufferedImage
+
 import com.typesafe.config.Config
+import gov.nasa.race._
 import gov.nasa.race.common.Query
+import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.track.TrackPairEvent
 import gov.nasa.race.trajectory.TrajectoryDiff
 import gov.nasa.race.util.DateTimeUtils.hhmmss
-import gov.nasa.race.ww.RaceViewer
+import gov.nasa.race.util.StringUtils
+import gov.nasa.race.ww.{Images, RaceViewer}
 
 class TrackDiffEventQuery[T](getEvent: T=>T) extends Query[T] {
   override def error(msg: String): Unit = {
@@ -77,15 +83,30 @@ class TrackDiffEventLayer (override val raceViewer: RaceViewer, override val con
                                                extends TrackPairEventLayer(raceViewer, config) {
   override protected def createEntryPanel: TrackDiffEventPanel = new TrackDiffEventPanel(this)
 
-  override def layerObjectDataHeader: String =  "avg[m]  max[m]        σ"
+  override def symbolImage (e: TrackPairEvent): BufferedImage = Images.getArrowImage(color)
+  override def symbolHeading (e: TrackPairEvent): Double =  ((e.hdg1 + e.hdg2) / 2).toDegrees
+
+  override def pos1Image (e: TrackPairEvent) = None
+  override def pos1Label (e: TrackPairEvent): Option[String] = e.flatMapExtra { td: TrajectoryDiff =>
+    None
+    //if (isSignificantDeviation(td)) Some(StringUtils.lastPathElement(td.refSource)) else None
+  }
+  override def track1Color (e: TrackPairEvent): Color = config.getColorOrElse("track1-color", color)
+
+  override def pos2Image (e: TrackPairEvent) = None
+  override def pos2Label (e: TrackPairEvent): Option[String] = e.flatMapExtra { td: TrajectoryDiff =>
+    None
+    //if (isSignificantDeviation(td)) Some(StringUtils.lastPathElement(td.diffSource)) else None
+  }
+  override def track2Color (e: TrackPairEvent): Color = config.getColorOrElse("track2-color", color)
+
+  override def layerObjectDataHeader: String =  "avg[m]  max[m]       SD"
 
   override def layerObjectDataText (e: TrackPairEventEntry): String = {
-    val ev = e.event
-    ev.extraData match {
-      case Some(td:TrajectoryDiff) =>
-        f"${td.distance2DStats.mean.toMeters}%6.0f  ${td.distance2DStats.max.toMeters}%6.0f  ${td.distance2DStats.sigma}%7.2f"
-      case _ =>
-        "     ?       ?        ?"
+    e.event.withExtraOrElse("?"){ td: TrajectoryDiff =>
+      f"${td.distance2DStats.mean.toMeters}%6.0f  ${td.distance2DStats.max.toMeters}%6.0f  ${td.distance2DStats.sigma}%7.2f"
     }
   }
+
+  def isSignificantDeviation(td: TrajectoryDiff): Boolean = td.distance2DStats.max.toMeters > 30
 }

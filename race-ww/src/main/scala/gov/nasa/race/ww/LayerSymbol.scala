@@ -38,8 +38,8 @@ trait LayerSymbolOwner {
   def iconOffset: Offset
   def wwPosition: WWPosition
 
-  def symbolImg: BufferedImage
-  def symbolImgScale: Double = 1.0
+  def symbolImage: BufferedImage
+  def symbolImageScale: Double = 1.0
   def symbolHeading: Double = 0.0
 
   //--- RACE specifics
@@ -96,8 +96,8 @@ class LayerSymbol (val owner: LayerSymbolOwner) extends MultiLabelPointPlacemark
 
   def setIconAttrs = {
     setLabelText(owner.labelText)
-    attrs.setImage(owner.symbolImg)
-    attrs.setScale(owner.symbolImgScale)
+    attrs.setImage(owner.symbolImage)
+    attrs.setScale(owner.symbolImageScale)
     attrs.setImageOffset(Offset.CENTER)
     attrs.setHeading(owner.symbolHeading)
     attrs.setHeadingReference(AVKey.RELATIVE_TO_GLOBE)

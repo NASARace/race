@@ -52,6 +52,13 @@ package object race {
     None
   }
 
+  def flatMapAny[T: Manifest,U](opt: Option[Any])(f: T=>Option[U]): Option[U] = {
+    opt match {
+      case Some(t: T) => f(t)
+      case _ => None
+    }
+  }
+
   def none[T](f: =>Any): Option[T] = { // can be used as alternative for ifSome{..}
     f
     None

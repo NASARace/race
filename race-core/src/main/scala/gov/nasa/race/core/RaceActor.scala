@@ -73,6 +73,8 @@ trait RaceActor extends Actor with ImplicitActorLogging {
   @inline final def raceActorSystem = RaceActorSystem(system)
   @inline final def isOptional = config.getBooleanOrElse("optional", false)
 
+  @inline final def timeScale: Double = raceActorSystem.timeScale
+
   // override if different
   def getCapabilities: RaceActorCapabilities = {
     import RaceActorCapabilities._

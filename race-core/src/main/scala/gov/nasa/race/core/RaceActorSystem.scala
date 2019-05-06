@@ -220,6 +220,8 @@ class RaceActorSystem(val config: Config) extends LogController with VerifiableA
     new SettableClock(startTime, timeScale, endTime, stopped = true)
   }
 
+  def timeScale: Double = simClock.timeScale
+
   def wallClockStartTime (isLaunched: Boolean): Option[DateTime] = {
     config.getOptionalDateTime("start-at") match {
       case absDateOpt @ Some(date) => absDateOpt // value is wallclock time

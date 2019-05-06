@@ -69,7 +69,7 @@ class FIXM2FlightObject (val config: Config=NoConfig)
     if (flights.nonEmpty) setResult(flights)
   }
 
-  def flight = {
+  def flight: Unit = {
     var id, cs: String = null
     var lat, lon, vx, vy: Double = UndefinedDouble
     var alt: Length = UndefinedLength
@@ -110,13 +110,16 @@ class FIXM2FlightObject (val config: Config=NoConfig)
           } else {
             if (lat.isDefined && lon.isDefined && date != null &&
               vx.isDefined && vy.isDefined && spd.isDefined && alt.isDefined) {
-              flights += new FlightPos(id, cs, GeoPosition(Degrees(lat),Degrees(lon),alt),
+              val fpos = new FlightPos(id, cs, GeoPosition(Degrees(lat),Degrees(lon),alt),
                                        spd, Degrees(Math.atan2(vx, vy).toDegrees), vr, date)
+              flights += fpos
             } else {
               //println(s"@@@ rejected flight: $cs $lat $lon $date $vx $vy $spd $alt")
             }
           }
         }
+        return
+
       case _ =>  // ignore
     }
   }

@@ -147,7 +147,9 @@ trait Trajectory extends TDataSource[N3,TDP3] {
     }
   }
 
-  @inline def getAverageUpdateDuration: Time = getLastDate.timeSince(getFirstDate) / size
+  def getAverageUpdateDuration: Time = {
+    if (size < 2) Time.UndefinedTime else getLastDate.timeSince(getFirstDate) / size
+  }
 
   def newDataPoint: TDP3 = new TDP3(0,0,0,0)  // TDataSource interface
 
@@ -238,7 +240,7 @@ trait Trajectory extends TDataSource[N3,TDP3] {
                      computeDistance: (GeoPosition,GeoPosition)=>Length,
                      computeHeading: (GeoPosition,GeoPosition)=>Angle
                     ): Velocity2D = {
-    if (size <= 1) { // not enough data points
+    if (size < 2) { // not enough data points
       new Velocity2D(Angle.UndefinedAngle, Speed.UndefinedSpeed)
     }
 
@@ -302,6 +304,16 @@ trait MutTrajectory extends Trajectory {
     append(p.epochMillis,p.φ, p.λ, p.altitude)
   }
 
+  def appendIfNew (p: TrackPoint): Unit = {
+    if (size == 0 || p.date.getMillis > getLastDate.toMillis) append(p)
+  }
+  def appendIfNew (date: ReadableDateTime, pos: GeoPosition): Unit = {
+    if (size == 0 || date.getMillis > getLastDate.toMillis) append(date,pos)
+  }
+  def appendIfNew (p: TDP3): Unit = {
+    if (size == 0 || p.epochMillis > getLastDate) append(p)
+  }
+
   def += (p: TrackPoint): Unit = append(p)
   def += (p: TDP3): Unit = append(p)
 
@@ -335,8 +347,8 @@ trait Traj extends Trajectory {
 
   override def getDataPoint(i: Int, dp: TDP3): TDP3 = getTDP3(i,dp) // TDataSource interface
 
-  override def getFirstDate: Date = Date.EpochMillis(getDateMillis(0))
-  override def getLastDate: Date = Date.EpochMillis(getDateMillis(size-1))
+  override def getFirstDate: Date = if (nonEmpty) Date.EpochMillis(getDateMillis(0)) else Date.UndefinedDate
+  override def getLastDate: Date = if (nonEmpty) Date.EpochMillis(getDateMillis(size-1)) else Date.UndefinedDate
 
   override def apply(i: Int): TrackPoint = {
     if (i < 0 || i >= size) throw new IndexOutOfBoundsException(s"track point index out of range: $i")

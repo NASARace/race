@@ -59,8 +59,8 @@ class TrackEntry[T <: TrackedObject](var obj: T, var trajectory: MutTrajectory, 
   //--- per-layer rendering resources
   override def labelMaterial: Material = layer.labelMaterial
   override def lineMaterial: Material = layer.lineMaterial
-  override def symbolImg: BufferedImage = layer.symbolImg
-  override def symbolImgScale: Double = 1.0
+  override def symbolImage: BufferedImage = layer.symbolImg
+  override def symbolImageScale: Double = 1.0
   override def symbolHeading: Double = obj.heading.toDegrees
   override def labelFont: Font = layer.labelFont
   override def subLabelFont: Font = layer.subLabelFont

@@ -22,13 +22,15 @@ import gov.nasa.race.common.Nat.N3
 import gov.nasa.race.common.{LinTInterpolant, TInterpolant}
 import gov.nasa.race.core.Messages.BusEvent
 import gov.nasa.race.core.{RaceContext, SubscribingRaceActor}
+import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.geo.{Euclidean, GeoPosition}
 import gov.nasa.race.track.{TrackListMessage, TrackPairEvent, TrackTerminationMessage, TrackedObject}
 import gov.nasa.race.trajectory._
-import gov.nasa.race.uom.{Angle, Speed}
+import gov.nasa.race.uom.Date
 import org.joda.time.DateTime
 
 import scala.collection.mutable.{HashMap => MutHashMap}
+import scala.concurrent.duration._
 
 
 /**
@@ -60,10 +62,10 @@ class TrackDiffActor (val config: Config) extends SubscribingRaceActor with Filt
       refInterpolant = Some(new LinTInterpolant[N3,TDP3](tr))
     }
 
-    def foreachClosedDiffTrajectory(f: (Int,Trajectory)=>Unit): Unit = {
+    def foreachDiffTrajectory(f: (Int,Trajectory)=>Unit): Unit = {
       var i = 1
       while (i < trajectories.length) {
-        if (isClosed(i)) f(i, trajectories(i))
+        f(i, trajectories(i))
         i += 1
       }
     }
@@ -80,6 +82,8 @@ class TrackDiffActor (val config: Config) extends SubscribingRaceActor with Filt
 
   val tracks = new MutHashMap[String,TrackDiffEntry]
   val posFilter = getConfigurableOrElse[Filter[GeoPosition]]("pos-filter")(new PassAllFilter[GeoPosition])
+
+  val checkClose = config.getBooleanOrElse("close-check", false)
 
   override def onInitializeRaceActor(raceContext: RaceContext, actorConf: Config) = {
     super.onInitializeRaceActor(raceContext,actorConf) && (readFrom.length > 1)
@@ -112,7 +116,8 @@ class TrackDiffActor (val config: Config) extends SubscribingRaceActor with Filt
         }
       }
 
-      e.trajectories(channelIdx) += o
+      e.trajectories(channelIdx).appendIfNew(o)
+
       e.objs(channelIdx) = o
       if (o.isDroppedOrCompleted) closeTrack(chan,o.cs)
 
@@ -121,21 +126,26 @@ class TrackDiffActor (val config: Config) extends SubscribingRaceActor with Filt
     }
   }
 
-  protected def closeTrack(chan: String, id: String): Unit = closeTrack(channelIndex(chan), id, true)
+  protected def closeTrack(chan: String, id: String): Unit = closeTrack(channelIndex(chan), id)
 
-  protected def closeTrack (chanIdx: Int, id: String, recheck: Boolean): Unit = {
+  protected def closeTrack (chanIdx: Int, id: String): Unit = {
     ifSome(tracks.get(id)) { e=>
       if (!e.isClosed(chanIdx)) {
         e.setClosed(chanIdx)
-        if (chanIdx == 0) { // reference trajectory is done
+        if (chanIdx == 0 && e.trajectories(chanIdx).size > 1) { // reference trajectory is done
           e.setRefTrajectory
-          e.foreachClosedDiffTrajectory { (idx,tr) =>
-            analyzeTrajectoryPair(e,idx)
+          e.foreachDiffTrajectory { (idx,tr) =>
+            if (e.isClosed(idx)) analyzeTrajectoryPair(e,idx)
+            else scheduleCloseCheck(e,idx)
           }
         } else {
           analyzeTrajectoryPair(e,chanIdx)
         }
-        if (e.allClosed) tracks -= id
+        if (e.allClosed) { // avoid this track gets re-opened after exiting into capture zone
+          scheduleOnce(30.seconds){
+            tracks -= id
+          }
+        }
       }
     }
   }
@@ -184,5 +194,28 @@ class TrackDiffActor (val config: Config) extends SubscribingRaceActor with Filt
     // println(s"@@ trackdiff $id on ${readFrom(chanIdx)} : ${td.distance2DStats.numberOfSamples}")
     // println(f"  dist  mean=${td.distance2DStats.mean.showRounded}, min=${td.distance2DStats.min.showRounded}, max=${td.distance2DStats.max.showRounded} σ²=${td.distance2DStats.variance}%.4f " )
     // println(f"  angle mean=${td.angleDiffStats.mean.showRounded}, min=${td.angleDiffStats.min.showRounded}, max=${td.angleDiffStats.max.showRounded} σ²=${td.angleDiffStats.variance}%.4f ")
+  }
+
+  protected def scheduleCloseCheck (e: TrackDiffEntry, chanIdx: Int): Unit = {
+    if (checkClose){
+      val avgUpdate = e.trajectories(chanIdx).getAverageUpdateDuration
+      if (avgUpdate.isDefined) {
+        val lastUpdate = e.trajectories(chanIdx).getLastDate
+        scheduleOnce((avgUpdate * 1.5 * timeScale).toFiniteDuration) {
+          closeCheck(e, chanIdx, lastUpdate)
+        }
+      }
+    }
+  }
+
+  protected def closeCheck (e: TrackDiffEntry, chanIdx: Int, lastUpdate: Date): Unit = {
+    if (!e.isClosed(chanIdx)){
+      if (lastUpdate == e.trajectories(chanIdx).getLastDate){ // no updates
+        e.setClosed(chanIdx)
+        analyzeTrajectoryPair(e, chanIdx)
+      } else {
+        scheduleCloseCheck(e, chanIdx)
+      }
+    }
   }
 }

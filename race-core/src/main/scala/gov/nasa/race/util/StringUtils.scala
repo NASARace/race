@@ -177,4 +177,9 @@ object StringUtils {
     buffer.put(bs,0,len)
     if (len < length) buffer.put(pos + len, 0)
   }
+
+  def lastPathElement (s: String): String = {
+    val i = s.lastIndexOf('/')
+    if (i < 0) s else s.substring(i+1)
+  }
 }

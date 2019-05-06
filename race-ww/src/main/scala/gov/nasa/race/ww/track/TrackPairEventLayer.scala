@@ -16,7 +16,7 @@
  */
 package gov.nasa.race.ww.track
 
-import java.awt.Font
+import java.awt.{Color, Font}
 import java.awt.image.BufferedImage
 
 import com.typesafe.config.Config
@@ -119,23 +119,8 @@ class TrackPairEventEntry(val event: TrackPairEvent, val layer: TrackPairEventLa
   protected var marksShowing = false
   protected var pathsShowing = false  // only set if isVisible, depending on view level
 
-  val mark1Attrs = yieldInitialized(new PointPlacemarkAttributes) { attrs=>
-    attrs.setLabelMaterial(labelMaterial)
-    attrs.setLineMaterial(labelMaterial)
-    attrs.setImage(layer.defaultMarkerImage)
-    attrs.setImageOffset(Offset.CENTER)
-    attrs.setHeading(event.hdg1.toDegrees)
-    attrs.setHeadingReference(AVKey.RELATIVE_TO_GLOBE)
-  }
-
-  val mark2Attrs = yieldInitialized(new PointPlacemarkAttributes) { attrs=>
-    attrs.setLabelMaterial(labelMaterial)
-    attrs.setLineMaterial(labelMaterial)
-    attrs.setImage(layer.defaultMarkerImage)
-    attrs.setImageOffset(Offset.CENTER)
-    attrs.setHeading(event.hdg2.toDegrees)
-    attrs.setHeadingReference(AVKey.RELATIVE_TO_GLOBE)
-  }
+  val mark1Attrs = new PointPlacemarkAttributes
+  val mark2Attrs = new PointPlacemarkAttributes
 
   val connectorAttrs = yieldInitialized(new BasicShapeAttributes) { attrs=>
     attrs.setOutlineWidth(1)
@@ -147,20 +132,56 @@ class TrackPairEventEntry(val event: TrackPairEvent, val layer: TrackPairEventLa
   //--- the renderables that are associated with this entry
   protected var symbol: LayerSymbol = createSymbol
   protected var connector: Path = createConnector
-  protected var posMarker1: PointPlacemark = createPosMarker(event.pos1, mark1Attrs)
-  protected var path1:  Path = createPath(event.trajectory1)
-  protected var posMarker2: PointPlacemark = createPosMarker(event.pos2, mark2Attrs)
-  protected var path2:  Path = createPath(event.trajectory2)
+  protected var posMarker1: PointPlacemark = createPos1Marker
+  protected var posMarker2: PointPlacemark = createPos2Marker
+  protected var path1:  Path = createPath1
+  protected var path2:  Path = createPath2
 
   addSymbol
 
   //--- override in subclasses for specific rendering
   def createSymbol: LayerSymbol = new LayerSymbol(this)
 
-  def createPosMarker (pos: GeoPosition, attrs: PointPlacemarkAttributes): PointPlacemark = yieldInitialized(new PointPlacemark(ww.wwPosition(pos))){ p=>
-    p.setLabelText(null)
+  def createPos1Marker: PointPlacemark =
+    createPosMarker(event.pos1, mark1Attrs,
+                    layer.pos1Image(event), layer.pos1Label(event), layer.pos1LabelOffset(event), layer.track1Color(event))
+
+  def createPos2Marker: PointPlacemark =
+    createPosMarker(event.pos2, mark2Attrs,
+                    layer.pos2Image(event), layer.pos2Label(event), layer.pos2LabelOffset(event), layer.track2Color(event))
+
+  def createPosMarker(pos: GeoPosition, attrs: PointPlacemarkAttributes,
+                      getImage: =>Option[BufferedImage],
+                      getLabelText: =>Option[String],
+                      getLabelOffset: =>Offset,
+                      getColor: =>Color ): PointPlacemark = {
+
+    val p = new PointPlacemark(pos)
+    getImage match {
+      case Some(img:BufferedImage) =>
+        attrs.setImage(img)
+      case None =>
+        attrs.setImage(null)
+        attrs.setUsePointAsDefaultImage(true)
+        attrs.setScale(5d)
+    }
+    getLabelText match {
+      case Some(txt:String) =>
+        attrs.setLabelOffset(getLabelOffset)
+        p.setLabelText(txt)
+      case None => p.setLabelText(null)
+    }
+    val material = new Material(getColor)
+    attrs.setLabelMaterial(material)
+    attrs.setLineMaterial(material)
+
+    attrs.setImageOffset(Offset.CENTER)
+    attrs.setHeading(event.hdg1.toDegrees)
+    attrs.setHeadingReference(AVKey.RELATIVE_TO_GLOBE)
+
     p.setAttributes(attrs)
     p.setAltitudeMode(WorldWind.ABSOLUTE)
+    p
   }
 
   def createConnector: Path = yieldInitialized(new Path(event.pos1, event.pos2)){ p=>
@@ -168,7 +189,13 @@ class TrackPairEventEntry(val event: TrackPairEvent, val layer: TrackPairEventLa
     p.setAltitudeMode(WorldWind.ABSOLUTE)
   }
 
-  def createPath (traj: Trajectory): TrajectoryPath = new TrajectoryPath(traj,lineMaterial)
+  def createPath1: TrajectoryPath = createPath(event.trajectory1,mark1Attrs.getLabelMaterial,true)
+  def createPath2: TrajectoryPath = createPath(event.trajectory2,mark2Attrs.getLabelMaterial,true)
+  def createPath (traj: Trajectory, material: Material, showPositions: Boolean): TrajectoryPath = {
+    val path = new TrajectoryPath(traj,material)
+    path.setShowPositions(showPositions)
+    path
+  }
 
   def addSymbol = {
     if (!symbolShowing) {
@@ -255,9 +282,9 @@ class TrackPairEventEntry(val event: TrackPairEvent, val layer: TrackPairEventLa
 
   override def labelMaterial: Material = layer.labelMaterial
   override def lineMaterial: Material = layer.lineMaterial
-  override def symbolImg: BufferedImage = layer.symbolImg
-  override def symbolImgScale: Double = 1.0
-  override def symbolHeading: Double = 0.0
+  override def symbolImage: BufferedImage = layer.symbolImage(event)
+  override def symbolImageScale: Double = 1.0
+  override def symbolHeading: Double = layer.symbolHeading(event)
   override def labelFont: Font = layer.labelFont
   override def subLabelFont: Font = layer.subLabelFont
 
@@ -320,9 +347,11 @@ class TrackPairEventLayer(val raceViewer: RaceViewer, val config: Config)
   val labelLevel = new ThresholdLevel[TrackPairEventEntry](labelThresholdLevel)(setLabelLevel)
   val symbolLevels = new ThresholdLevelList(setDotLevel).sortIn(labelLevel,iconLevel)
 
-  def defaultSymbolImg: BufferedImage = Images.getEventImage(color)
-  val symbolImg = defaultSymbolImg
+  def defaultSymbolImage: BufferedImage = Images.getEventImage(color)
   def defaultMarkerImage: BufferedImage = Images.getArrowImage(color)
+
+  def symbolImage (e: TrackPairEvent): BufferedImage = defaultSymbolImage
+  def symbolHeading (e: TrackPairEvent): Double = 0
 
   def setDotLevel(e: TrackPairEventEntry): Unit = e.setDotLevel
   def setLabelLevel(e: TrackPairEventEntry): Unit = e.setLabelLevel
@@ -334,6 +363,16 @@ class TrackPairEventLayer(val raceViewer: RaceViewer, val config: Config)
   override def handleMessage: PartialFunction[Any, Unit] = {
     case BusEvent(_, e: TrackPairEvent, _) => updateEvents(e)
   }
+
+  //--- track marker and path rendering attributes
+  def pos1Image (e: TrackPairEvent): Option[BufferedImage] = Some(defaultMarkerImage)
+  def pos2Image (e: TrackPairEvent): Option[BufferedImage] = Some(defaultMarkerImage)
+  def pos1Label (e: TrackPairEvent): Option[String] = None
+  def pos1LabelOffset (e: TrackPairEvent): Offset = Offset.fromFraction(0.5, 1.0)
+  def pos2Label (e: TrackPairEvent): Option[String] = None
+  def pos2LabelOffset (e: TrackPairEvent): Offset = Offset.fromFraction(0.5, -1.0)
+  def track1Color (e: TrackPairEvent): Color = color
+  def track2Color (e: TrackPairEvent): Color = color
 
   //--- InteractiveRaceLayer interface
 
