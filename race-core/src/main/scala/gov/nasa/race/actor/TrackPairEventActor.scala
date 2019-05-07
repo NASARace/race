@@ -29,6 +29,8 @@ import gov.nasa.race.track.{ProximityEvent, TrackPairEvent}
 class TrackPairEventActor (val config: Config) extends Tracer {
 
   val eventPrefix = config.getStringOrElse("event-prefix", "TPE")
+  val eventClassifier = config.getStringOrElse("event-classifier", name)
+
   var nEvents = 0
 
   val writeEventsTo = config.getString("write-events-to")
@@ -56,6 +58,7 @@ class TrackPairEventActor (val config: Config) extends Tracer {
           Euclidean.midPoint(prox.ref.position, prox.track.position),
           eventType(prox),
           eventDetails(prox),
+          eventClassifier,
           o1, prox.ref.position, o1.heading, o1.speed, e1.trajectory.snapshot,
           o2, prox.track.position, prox.track.heading, prox.track.speed, e2.trajectory.snapshot
         )

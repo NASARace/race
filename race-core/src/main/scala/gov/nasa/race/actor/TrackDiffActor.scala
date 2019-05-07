@@ -80,6 +80,7 @@ class TrackDiffActor (val config: Config) extends SubscribingRaceActor with Filt
     }
   }
 
+  val eventClassifier = config.getStringOrElse("event-classifier", name)
   val tracks = new MutHashMap[String,TrackDiffEntry]
   val posFilter = getConfigurableOrElse[Filter[GeoPosition]]("pos-filter")(new PassAllFilter[GeoPosition])
 
@@ -106,7 +107,7 @@ class TrackDiffActor (val config: Config) extends SubscribingRaceActor with Filt
   protected def updateTracks(chan: String, o: TrackedObject): Unit = {
     if (pass(o)) { // if we have a filter, only keep trajectories of tracks that pass
       val channelIdx = channelIndex(chan)
-      var e = tracks.getOrElseUpdate(o.cs, new TrackDiffEntry(o.cs, createTrajectories))
+      val e = tracks.getOrElseUpdate(o.cs, new TrackDiffEntry(o.cs, createTrajectories))
 
       if (o.isChangedCS) {
         // we can't just rename the old entry since other channels might already have
@@ -184,6 +185,7 @@ class TrackDiffActor (val config: Config) extends SubscribingRaceActor with Filt
       tEvent.toDateTime, pEvent,
       "MaxDeviation",
       s"max track deviation ${readFrom(0)} : ${readFrom(chanIdx)}",
+      eventClassifier,
       e.objs(0), pRef, vRef.heading, vRef.speed, td.refTrajectory,
       e.objs(chanIdx), pDiff, vDiff.heading, vDiff.speed, td.diffTrajectory,
       Some(td)

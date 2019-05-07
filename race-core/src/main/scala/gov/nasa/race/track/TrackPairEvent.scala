@@ -33,6 +33,7 @@ case class TrackPairEvent(
                            position: GeoPosition,
                            eventType: String,
                            eventDetails: String,
+                           classifier: String,
 
                            //--- the participating tracks with respective state at event time
                            track1: TrackedObject, // first involved track
@@ -50,6 +51,13 @@ case class TrackPairEvent(
                            extraData: Option[Any] = None
 
                          ) extends TrackEvent with TrackPoint with GeoPositioned {
+
+  def withExtra[T:Manifest](f: T=>Unit): Unit = {
+    extraData match {
+      case Some(t: T) => f(t)
+      case _ => // ignore
+    }
+  }
 
   def withExtraOrElse[T: Manifest,U](fallback: U)(f: T=>U): U = {
     extraData match {

@@ -55,6 +55,7 @@ class ParallelApproachAnalyzer (val config: Config) extends SubscribingRaceActor
   val convergeInterval = config.getFiniteDurationOrElse("conv-interval", 1.second).toMillis.toInt
 
   val eventIdPrefix = config.getStringOrElse("event-id", "angle")
+  val eventClassifier = config.getStringOrElse("event-classifier", name)
   var nEvents: Int = 0 // reported events
 
   class Candidate {
@@ -208,6 +209,7 @@ class ParallelApproachAnalyzer (val config: Config) extends SubscribingRaceActor
       date, pos,
       "angle-in",
       f"${deltaHdg.toDegrees}%3.0f° at ${dist.toMeters}%5.0fm",
+      eventClassifier,
       c1.track, pos1, hdg1, spd1, t1,
       c2.track, pos2, hdg2, spd2, t2,
     )
