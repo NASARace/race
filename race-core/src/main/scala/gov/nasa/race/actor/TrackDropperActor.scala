@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package gov.nasa.race.air.actor
+package gov.nasa.race.actor
 
 import com.typesafe.config.Config
 import gov.nasa.race.core.Messages.BusEvent
@@ -31,14 +31,14 @@ import scala.collection.mutable
   * nothing we have to add here, it's all in FPosDropper, but we might move the flights map
   * into the concrete class at some point
   */
-class FlightDropperActor(val config: Config) extends SubscribingRaceActor with FPosDropper {
-  val flights = mutable.HashMap.empty[String,TrackedObject]
+class TrackDropperActor(val config: Config) extends SubscribingRaceActor with TrackDropper {
+  val tracks = mutable.HashMap.empty[String,TrackedObject]
 
-  override def removeStaleTrack(ac: TrackedObject) = flights -= ac.cs
+  override def removeStaleTrack(ac: TrackedObject) = tracks -= ac.cs
 
   override def handleMessage = handleFPosDropperMessage orElse {
-    case BusEvent(_,ac: TrackedObject,_) => flights += ac.cs -> ac
-    case BusEvent(_,fcompleted: TrackCompleted,_) => flights -= fcompleted.cs
+    case BusEvent(_,ac: TrackedObject,_) => tracks += ac.cs -> ac
+    case BusEvent(_,fcompleted: TrackCompleted,_) => tracks -= fcompleted.cs
     case BusEvent(_,_:TrackDropped,_) => // ignore - we are generating these
     case BusEvent(_,_:TrackCsChanged,_) => // ignore
   }

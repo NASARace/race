@@ -2,7 +2,7 @@ package gov.nasa.race.air.actor
 
 import com.typesafe.config.Config
 import gov.nasa.race._
-import gov.nasa.race.actor.TranslatorActor
+import gov.nasa.race.actor.{TrackDropper, TranslatorActor}
 import gov.nasa.race.air.translator.SBS2FlightPos
 import gov.nasa.race.air._
 import gov.nasa.race.config.ConfigUtils._
@@ -21,26 +21,26 @@ import scala.collection.mutable.{HashMap => MHashMap}
   * all secondary functions (checks and c/s changes) require to keep maps of active
   * TrackedAircraft objects that have update intervals of > 1Hz
   */
-class SBSTranslatorActor (config: Config) extends TranslatorActor(config) with FPosDropper {
+class SBSTranslatorActor (config: Config) extends TranslatorActor(config) with TrackDropper {
 
   val timeCut = config.getIntOrElse("time-cut-ms", 0) // in millis, non-ambiguous positions with lower dt are ignored
   val passSanityViolations = config.getBooleanOrElse ("pass-failed", true)
   val writeToFail = config.getOptionalString("write-to-fail")
   val sanityChecker = getConfigurableOrElse[FlightPosChecker]("checker"){ EmptyFlightPosChecker }
 
-  val flights = MHashMap.empty[String,TrackedAircraft]
+  val tracks = MHashMap.empty[String,TrackedAircraft]
 
   override def createTranslator = new SBS2FlightPos(config)  // for TranslatorActor
 
   override def handleMessage = handleTranslatorMessage orElse handleFPosDropperMessage
 
-  override def removeStaleTrack (fpos: TrackedObject) = flights -= fpos.cs // for FPosDropper
+  override def removeStaleTrack (fpos: TrackedObject) = tracks -= fpos.cs // for FPosDropper
 
   // specialized translation processing, called from TranslatorActor
   override def processTranslationProduct(o: Any) = o match {
     case fpos: TrackedAircraft =>
       val cs = fpos.cs
-      flights.get(cs) orElse getReplacedCSFlight(fpos) match {
+      tracks.get(cs) orElse getReplacedCSFlight(fpos) match {
         case Some(lastFPos) => checkAndUpdate(fpos,lastFPos)
         case None => checkAndAdd(fpos)
       }
@@ -49,9 +49,9 @@ class SBSTranslatorActor (config: Config) extends TranslatorActor(config) with F
 
   def getReplacedCSFlight(fpos: TrackedAircraft): Option[TrackedAircraft] = for {
     oldCS <- fpos.getOldCS
-    lastFPos <- flights.get(oldCS)
+    lastFPos <- tracks.get(oldCS)
   } yield {
-    flights -= oldCS
+    tracks -= oldCS
     info(s"changing c/s of $oldCS to ${fpos.cs}")
     publish(TrackCsChanged(fpos.id,fpos.cs, oldCS, fpos.date))
     lastFPos
@@ -78,7 +78,7 @@ class SBSTranslatorActor (config: Config) extends TranslatorActor(config) with F
   }
 
   def updateAndPublish(fpos: TrackedAircraft) = {
-    flights.update(fpos.cs, fpos)
+    tracks.update(fpos.cs, fpos)
     publish(fpos)
   }
 

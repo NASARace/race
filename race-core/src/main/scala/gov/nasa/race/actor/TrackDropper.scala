@@ -14,16 +14,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package gov.nasa.race.air.actor
+package gov.nasa.race.actor
 
 import akka.actor.ActorRef
 import com.typesafe.config.Config
-import gov.nasa.race.track.TrackedObject
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.Messages.RaceTick
 import gov.nasa.race.core.{ContinuousTimeRaceActor, PeriodicRaceActor, PublishingRaceActor}
 import gov.nasa.race.ifTrue
-import gov.nasa.race.track.TrackDropped
+import gov.nasa.race.track.{TrackDropped, TrackedObject}
 
 import scala.collection.Map
 import scala.concurrent.duration._
@@ -31,16 +30,16 @@ import scala.concurrent.duration._
 case object CheckStaleFlightPos
 
 /**
-  * mix-in to generate/publish FlightDropped messages for stale FlightPos objects
+  * mix-in to generate/publish TrackDropped messages for stale track objects
   *
   * TODO - check if we can move the flights map into the concrete class so that it
   * can add its own storage without adding memory or performance penalties
   */
-trait FPosDropper extends PublishingRaceActor with ContinuousTimeRaceActor with PeriodicRaceActor {
+trait TrackDropper extends PublishingRaceActor with ContinuousTimeRaceActor with PeriodicRaceActor {
 
   //--- to be provided by concrete class
   val config: Config // actor config to be provided by concrete actor class
-  val flights: Map[String,TrackedObject] // map with last active FlightPos objects
+  val tracks: Map[String,TrackedObject] // map with last active FlightPos objects
   def removeStaleTrack(ac: TrackedObject) // update map in implementor
 
   val publishDropped = config.getBooleanOrElse("publish-dropped", true)
@@ -63,7 +62,7 @@ trait FPosDropper extends PublishingRaceActor with ContinuousTimeRaceActor with 
     val now = updatedSimTime
     val cut = dropAfterMillis
 
-    flights foreach { e =>    // make sure we don't allocate per entry
+    tracks foreach { e =>    // make sure we don't allocate per entry
       val cs = e._1
       val ac = e._2
       val dt = elapsedSimTimeMillisSince(ac.date)
