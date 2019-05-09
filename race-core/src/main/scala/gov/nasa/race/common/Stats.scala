@@ -25,10 +25,10 @@ import scala.xml.NodeSeq
   * the snapshot element type is serializable
   */
 trait Stats extends Cloneable with XmlSource {
-  val topic: String         // what we measure
-  val source: String        // where we measure it from
-  val takeMillis: Long      // absolute time value when stats snapshot was taken
-  val elapsedMillis: Long   // duration covered by the snapshot
+  def topic: String         // what we measure
+  def source: String        // where we measure it from
+  def takeMillis: Long      // absolute time value when stats snapshot was taken
+  def elapsedMillis: Long   // duration covered by the snapshot
 
   //--- XML generation interface
   def toXML = {

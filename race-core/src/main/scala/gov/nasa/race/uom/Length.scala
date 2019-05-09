@@ -104,6 +104,8 @@ class Length protected[uom] (val d: Double) extends AnyVal {
   @inline def toInches = d / MetersInInch
   @inline def toNauticalMiles = d / MetersInNauticalMile
 
+  @inline def toRoundedMeters: Long = d.round
+
   @inline def + (x: Length) = new Length(d + x.d)
   @inline def - (x: Length) = new Length(d - x.d)
 
