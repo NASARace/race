@@ -91,14 +91,12 @@ class TrackDiffEventLayer (override val raceViewer: RaceViewer, override val con
     None
     //if (isSignificantDeviation(td)) Some(StringUtils.lastPathElement(td.refSource)) else None
   }
-  override def track1Color (e: TrackPairEvent): Color = config.getColorOrElse("track1-color", color)
 
   override def pos2Image (e: TrackPairEvent) = None
   override def pos2Label (e: TrackPairEvent): Option[String] = e.flatMapExtra { td: TrajectoryDiff =>
     None
     //if (isSignificantDeviation(td)) Some(StringUtils.lastPathElement(td.diffSource)) else None
   }
-  override def track2Color (e: TrackPairEvent): Color = config.getColorOrElse("track2-color", color)
 
   override def layerObjectDataHeader: String =  "avg[m]  max[m]       SD"
 

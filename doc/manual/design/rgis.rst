@@ -62,7 +62,7 @@ In order to implement a new database, the user has to create the following types
   that only contains (scalar) field definitions
 - a ``GisItemDB`` subclass that provides the ``readItem()`` method to instantiate item types
   from binary data
-- a ``GisItemDBFactory``subclass that is used to create the binary data for the ``GisItemDB``.
+- a ``GisItemDBFactory`` subclass that is used to create the binary data for the ``GisItemDB``.
   This is usually implemented as a ``GisItemDB`` companion object, which mainly has to provide a
   parser to instantiate item objects from external formats (e.g. SQL), and a
   ``writeItemPayloadFields()`` method that writes such items into a ``java.nio.ByteBuffer`` that
@@ -77,7 +77,7 @@ sections: header, string data, item list, key map and kd-tree. The model is prog
 agnostic and self contained - only internal references are allowed and all references are kept as
 offsets into the byte array.
 
-Numerical values are stored in little endiean format to avoid any parsing overhead on x86 and ARM
+Numerical values are stored in little endian format to avoid any parsing overhead on x86 and ARM
 architectures. String data is stored in UTF-8, but with added '\0' termination to allow direct
 pointers from C clients in case strings are guaranteed to be ASCII. The only complex type that is
 allowed is the fixed size item type itself, which is composed of scalar values (integer and floating
@@ -120,7 +120,7 @@ the number of items in this database and the fixed byte length of item records, 
 of all item records that are referenced in this database. This section is the first one that is
 (repeatedly) processed during queries at runtime, hence all values from here on are 4-byte aligned.
 
-Each item record consists of a standard header and a item type specieif payload. The header includes
+Each item record consists of a standard header and an item type specific payload. The header includes
 a hash value of the item id, the geographic position (both as WGS84 and ECEF coordinates), and a
 reference to the id string for this item. The remaining payload fields are item type specific.
 

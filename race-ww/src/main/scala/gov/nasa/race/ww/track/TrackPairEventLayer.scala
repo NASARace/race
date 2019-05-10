@@ -28,6 +28,7 @@ import gov.nasa.race.swing.FieldPanel
 import gov.nasa.race.swing.Style._
 import gov.nasa.race.track.TrackPairEvent
 import gov.nasa.race.trajectory.Trajectory
+import gov.nasa.race.uom.Angle
 import gov.nasa.race.util.DateTimeUtils.hhmmss
 import gov.nasa.race.ww.EventAction.EventAction
 import gov.nasa.race.ww.Implicits._
@@ -143,14 +144,14 @@ class TrackPairEventEntry(val event: TrackPairEvent, val layer: TrackPairEventLa
   def createSymbol: LayerSymbol = new LayerSymbol(this)
 
   def createPos1Marker: PointPlacemark =
-    createPosMarker(event.pos1, mark1Attrs,
-                    layer.pos1Image(event), layer.pos1Label(event), layer.pos1LabelOffset(event), layer.track1Color(event))
+    createPosMarker(event.pos1, mark1Attrs, event.hdg1,
+      layer.pos1Image(event), layer.pos1Label(event), layer.pos1LabelOffset(event), layer.track1Color(event))
 
   def createPos2Marker: PointPlacemark =
-    createPosMarker(event.pos2, mark2Attrs,
-                    layer.pos2Image(event), layer.pos2Label(event), layer.pos2LabelOffset(event), layer.track2Color(event))
+    createPosMarker(event.pos2, mark2Attrs, event.hdg2,
+      layer.pos2Image(event), layer.pos2Label(event), layer.pos2LabelOffset(event), layer.track2Color(event))
 
-  def createPosMarker(pos: GeoPosition, attrs: PointPlacemarkAttributes,
+  def createPosMarker(pos: GeoPosition, attrs: PointPlacemarkAttributes, heading: Angle,
                       getImage: =>Option[BufferedImage],
                       getLabelText: =>Option[String],
                       getLabelOffset: =>Offset,
@@ -176,7 +177,7 @@ class TrackPairEventEntry(val event: TrackPairEvent, val layer: TrackPairEventLa
     attrs.setLineMaterial(material)
 
     attrs.setImageOffset(Offset.CENTER)
-    attrs.setHeading(event.hdg1.toDegrees)
+    attrs.setHeading(heading.toDegrees)
     attrs.setHeadingReference(AVKey.RELATIVE_TO_GLOBE)
 
     p.setAttributes(attrs)
@@ -348,7 +349,6 @@ class TrackPairEventLayer(val raceViewer: RaceViewer, val config: Config)
   val symbolLevels = new ThresholdLevelList(setDotLevel).sortIn(labelLevel,iconLevel)
 
   def defaultSymbolImage: BufferedImage = Images.getEventImage(color)
-  def defaultMarkerImage: BufferedImage = Images.getArrowImage(color)
 
   def symbolImage (e: TrackPairEvent): BufferedImage = defaultSymbolImage
   def symbolHeading (e: TrackPairEvent): Double = 0
@@ -365,14 +365,17 @@ class TrackPairEventLayer(val raceViewer: RaceViewer, val config: Config)
   }
 
   //--- track marker and path rendering attributes
-  def pos1Image (e: TrackPairEvent): Option[BufferedImage] = Some(defaultMarkerImage)
-  def pos2Image (e: TrackPairEvent): Option[BufferedImage] = Some(defaultMarkerImage)
+  val track1Clr = config.getColorOrElse("track1-color", color)
+  val track2Clr = config.getColorOrElse("track2-color", color)
+
+  def pos1Image (e: TrackPairEvent): Option[BufferedImage] = Some(Images.getArrowImage(track1Clr))
+  def pos2Image (e: TrackPairEvent): Option[BufferedImage] = Some(Images.getArrowImage(track2Clr))
   def pos1Label (e: TrackPairEvent): Option[String] = None
   def pos1LabelOffset (e: TrackPairEvent): Offset = Offset.fromFraction(0.5, 1.0)
   def pos2Label (e: TrackPairEvent): Option[String] = None
   def pos2LabelOffset (e: TrackPairEvent): Offset = Offset.fromFraction(0.5, -1.0)
-  def track1Color (e: TrackPairEvent): Color = color
-  def track2Color (e: TrackPairEvent): Color = color
+  def track1Color (e: TrackPairEvent): Color = track1Clr
+  def track2Color (e: TrackPairEvent): Color = track2Clr
 
   //--- InteractiveRaceLayer interface
 
