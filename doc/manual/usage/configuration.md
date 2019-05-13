@@ -20,7 +20,7 @@ parts of a configuration file is the name of the actor system, and an ordered li
     
 The order in which actors are specified does matter since it defines the order in which they are
 created, initialized, started and (in reverse order) terminated. Please refer to 
-[RaceActor lifecycle](raceactor.md) for details.
+[RaceActor lifecycle][raceactor] for details.
 
 Each actor needs to have a `name` property that uniquely identifies the actor within this universe.
 
@@ -40,7 +40,7 @@ protocol, remote universe name, host and port, e.g.
       ...
     }
 
-Please refer to [how to use remote actors](remoting.md) for further details.
+Please refer to [how to use remote actors][remoting] for further details.
 
 
 Communication between actors is defined by means of `read-fom` and `write-to` values, which contain
@@ -59,5 +59,6 @@ strings (`read-from = "test"`) or arrays of strings (`read-from = [ "channel-1",
 
 Channel names starting with `/local/..` are not shared between connected RACE systems.
 
-
+[raceactor]: ../design/raceactors.html
+[remoting]: ../
 [hocon]: https://github.com/typesafehub/config/blob/master/HOCON.md

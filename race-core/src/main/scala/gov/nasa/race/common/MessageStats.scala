@@ -135,8 +135,8 @@ class MsgStats(val topic: String, val source: String, val takeMillis: Long, val 
         val memSize = FileUtils.sizeString(byteSize)
         val avgMemSize = if (count > 0) FileUtils.sizeString((byteSize / count).toInt) else 0
 
-        pw.println("----------   ------ ------   ------ ------   ------ ------")
-        pw.println(f"${count}%10d   ${avgMps}%6.0f ${peakMps}%6.0f   $bps%6s $bpsPeak%6s   $memSize%6s $avgMemSize%6s")
+        pw.println("----------   ------- -------   ------- -------   ------- -------")
+        pw.println(f"${count}%10d   ${avgMps}%7.0f ${peakMps}%7.0f   $bps%7s $bpsPeak%7s   $memSize%7s $avgMemSize%7s")
       }
     }
   }
