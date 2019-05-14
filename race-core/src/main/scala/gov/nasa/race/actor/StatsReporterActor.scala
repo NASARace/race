@@ -24,9 +24,9 @@ import gov.nasa.race._
 import gov.nasa.race.common.{PrintStats, PrintStatsFormatter, Stats}
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.Messages.{BusEvent, RaceTick}
-import gov.nasa.race.core.{PeriodicRaceActor, PublishingRaceActor, SubscribingRaceActor}
+import gov.nasa.race.core.{PeriodicRaceActor, PublishingRaceActor, RaceInitializeException, SubscribingRaceActor}
 import gov.nasa.race.util.DateTimeUtils.durationMillisToHMMSS
-import gov.nasa.race.util.{BufferedFileWriter, ConsoleIO, StringUtils}
+import gov.nasa.race.util.{BufferedFileWriter, ConsoleIO, FileUtils, StringUtils}
 
 import scala.collection.mutable.{SortedMap => MSortedMap}
 import scala.concurrent.duration._
@@ -166,6 +166,11 @@ class FileStatsReporter (val config: Config) extends PrintStatsReporterActor {
 
   def defaultPathName = s"tmp/$name" // override in concrete class
   val reportFile = new File(config.getStringOrElse("pathname", defaultPathName))
+
+  if (!FileUtils.ensureWritable(reportFile).isDefined) {
+    val msg = s"invalid report file $reportFile"
+    throw new RaceInitializeException(msg)
+  }
 
   val writer = new BufferedFileWriter(reportFile, config.getIntOrElse("buffer-size",16384), false)
   val pw = new PrintWriter(writer)
