@@ -56,7 +56,7 @@ class AsdexMsg2AsdexTracks(val config: Config=NoConfig) extends XmlParser[AsdexT
 
     whileNextElement { // start elements
       case "airport" => airport = setAirport(readText)
-      case "positionReport" => positionReport(tracks)
+      case "positionReport" => positionReport(airport,tracks)
     } { // end elements
       case "asdexMsg" | "ns2:asdexMsg" =>
         if (tracks.nonEmpty) setResult(new AsdexTracks(airport,tracks))
@@ -87,7 +87,7 @@ class AsdexMsg2AsdexTracks(val config: Config=NoConfig) extends XmlParser[AsdexT
     case s => if (isUp) s.toDouble else -s.toDouble
   }
 
-  def positionReport (tracks: ArrayBuffer[AsdexTrack]): Unit = {
+  def positionReport (airport: String, tracks: ArrayBuffer[AsdexTrack]): Unit = {
     // note that we have to use different values for optionals that might not be in a delta update so that
     // we can distinguish from cached values
     var trackId: String = null
@@ -129,7 +129,7 @@ class AsdexMsg2AsdexTracks(val config: Config=NoConfig) extends XmlParser[AsdexT
       case "positionReport" =>
         // our minimal requirements are a dated lat/lon position and a trackId
         if (trackId != null && (date != null)) {
-          ifNotNull(createTrack(trackId,acId,latDeg,lonDeg,altFt,spdMph,hdgDeg,vertRate,date,status,acType))( tracks += _)
+          ifNotNull(createTrack(airport,trackId,acId,latDeg,lonDeg,altFt,spdMph,hdgDeg,vertRate,date,status,acType))( tracks += _)
         }
         return // done
       case _ => // ignore
@@ -139,7 +139,7 @@ class AsdexMsg2AsdexTracks(val config: Config=NoConfig) extends XmlParser[AsdexT
   //-- override these if we report full tracks (as opposed to deltas)
   protected def setAirport (ap: String) = ap
 
-  protected def createTrack (trackId: String, acId: String,
+  protected def createTrack (airport: String, trackId: String, acId: String,
                              latDeg: Double, lonDeg: Double,
                              altFt: Double, spdMph: Double, hdgDeg: Double, vertRate: Double,
                              date: DateTime, status: Int, acType: String): AsdexTrack = {
@@ -156,7 +156,7 @@ class AsdexMsg2AsdexTracks(val config: Config=NoConfig) extends XmlParser[AsdexT
       val cs = if (acId != null) getCallsign(acId,trackId) else trackId
       val act = if (acType != null) Some(acType) else None
 
-      new AsdexTrack(trackId, cs, GeoPosition(lat, lon, alt), spd, hdg, vr, date, status, act)
+      new AsdexTrack(trackId, cs, GeoPosition(lat, lon, alt), spd, hdg, vr, date, status, airport, act)
 
     } else null
   }

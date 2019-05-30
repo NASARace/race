@@ -264,8 +264,8 @@ class TATrackStatsFormatter (conf: Config) extends PrintStatsFormatter {
     pw.print("\n\n")
 
     //--- per tracon data
-    pw.println(" tracon     rev    tracks   fplan   cmplt   dropped     blck   order     dup   ambig   no-time         n dtMin dtMax dtAvg")
-    pw.println("------- -------   ------- ------- -------   -------  ------- ------- ------- -------   -------   ------- ----- ----- -----")
+    pw.println(" tracon     rev    tracks   fplan   cmplt   dropped    blck   order     dup   ambig   no-time         n dtMin dtMax dtAvg")
+    pw.println("------- -------   ------- ------- -------   ------- ------- ------- ------- -------   -------   ------- ----- ----- -----")
     traconStats.foreach { ts =>
       pw.print(f"${ts.src}%7s ${ts.stddsRev}%7s   ${ts.nActive}%7d ${ts.nFlightPlans}%7d ${ts.completed}%7d   ")
       pw.print(f"${ts.dropped}%7d ${ts.blackout}%7d ${ts.outOfOrder}%7d ${ts.duplicate}%7d ${ts.ambiguous}%7d   ${ts.nNoTime}%7d")

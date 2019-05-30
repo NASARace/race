@@ -98,6 +98,7 @@ class FIXM2FlightObject (val config: Config=NoConfig)
 
       //--- completed flights
       case "arrival" => if (parseAttribute("arrivalPoint")) arrivalPoint = value
+      // it seems we always get arrival/runwayPositionAndTime/actual and flightStatus(COMPLETED) together
       case "actual" if hasSomeParent("arrival") => arrivalDate = DateTime.parse(readAttribute("time"))
 
       case _ =>  // ignore
@@ -106,6 +107,7 @@ class FIXM2FlightObject (val config: Config=NoConfig)
       case "flight" | "ns5:NasFlight" =>
         if (cs != null) {
           if (arrivalDate != null) {
+            // this is reported as a separate event since we normally don't get positions for completes
             flights += TrackCompleted(id, cs, arrivalPoint, arrivalDate)
           } else {
             if (lat.isDefined && lon.isDefined && date != null &&

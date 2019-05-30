@@ -29,8 +29,8 @@ import gov.nasa.race.common.Status
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.Messages.BusEvent
 import gov.nasa.race.core.{PublishingRaceActor, SubscribingRaceActor, _}
-import gov.nasa.race.geo.{GeoPositioned, GeoPosition}
-import gov.nasa.race.track.{TrackDropped, TrackedObject}
+import gov.nasa.race.geo.{GeoPosition, GeoPositioned}
+import gov.nasa.race.track.{TrackDropped, TrackTerminationMessage, TrackedObject}
 import gov.nasa.race.uom.Angle._
 import gov.nasa.race.uom.Length._
 import gov.nasa.race.uom.Speed
@@ -412,7 +412,7 @@ class XPlaneActor (val config: Config) extends PublishingRaceActor
   override def handleMessage = {
     case UpdateFlightPos => publishRPOS(rpos)
     case BusEvent(_,fpos:TrackedAircraft,_) => updateProximities(fpos)
-    case BusEvent(_,fdrop: TrackDropped,_) => dropProximity(fdrop)
+    case BusEvent(_,term: TrackTerminationMessage,_) => dropProximity(term)
   }
 
   def computeVr (rpos: RPOS): Speed = MetersPerSecond(rpos.vz)
@@ -452,8 +452,8 @@ class XPlaneActor (val config: Config) extends PublishingRaceActor
     if (isConnected) proximityList.updateWith(fpos)
   }
 
-  def dropProximity (fdrop: TrackDropped) = {
-    val cs = fdrop.cs
+  def dropProximity (term: TrackTerminationMessage) = {
+    val cs = term.cs
     proximityList.removeFirst { e => e.obj.cs == cs }
   }
 

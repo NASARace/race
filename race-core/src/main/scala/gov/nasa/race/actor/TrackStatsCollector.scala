@@ -22,31 +22,41 @@ import java.io.PrintWriter
 
 import com.typesafe.config.Config
 import gov.nasa.race._
+import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.common.{PrintStats, Stats}
 import gov.nasa.race.core.Messages.{BusEvent, RaceTick}
 import gov.nasa.race.track.{TrackListMessage, TrackTerminationMessage, TrackedObject}
+import org.joda.time.DateTime
 
+import scala.concurrent.duration._
 import scala.collection.mutable.{HashMap => MutHashMap}
 
+/**
+  * Stats object for all track updates we receive. Since those refer to different
+  * tracks we don't extend/use TSEntryData, which would only make sense for single objects.
+  */
 class TrackStats (val topic: String, val source: String) extends PrintStats {
   var takeMillis: Long = 0
   var elapsedMillis: Long = 0
 
   var nLive: Int = 0
   var maxLive: Int = 0
-  var nTerminated: Int = 0
+  var nCompleted: Int = 0
+  var nNew: Int = 0
   var nUpdates: Int = 0
 
   var nOutOfOrder: Int = 0
   var nAmbiguous: Int = 0
   var nDuplicates: Int = 0
-
-  //... and more to follow
+  var nBlackout: Int = 0
+  var nDropped: Int = 0
 
   override def printWith(pw: PrintWriter): Unit = {
-    pw.println(" tracks  maxLive     term  updates     order     dup   ambig")
-    pw.println("-------  -------  -------  -------    ------  ------  ------")
-    pw.println(f"$nLive%7d  $maxLive%7d  $nTerminated%7d  $nUpdates%7d    $nOutOfOrder%6d  $nDuplicates%6d  $nAmbiguous%6d")
+    val rate = (nUpdates * 1000.0) / elapsedMillis
+    pw.println("                          tracks              changes                      anomalies")
+    pw.println(" updates     rate       live  maxLive        new     term      drop   black   order     dup   ambig")
+    pw.println("--------  -------    -------  -------    -------  -------    ------  ------  ------  ------  ------")
+    pw.println(f"$nUpdates%8d  $rate%7.1f    $nLive%7d  $maxLive%7d    $nNew%7d  $nCompleted%7d    $nDropped%6d  $nBlackout%6d  $nOutOfOrder%6d  $nDuplicates%6d  $nAmbiguous%6d")
   }
 
   def snapshot (simTime: Long, elapsedSimTime: Long): Stats = {
@@ -57,50 +67,121 @@ class TrackStats (val topic: String, val source: String) extends PrintStats {
   }
 }
 
+class TrackStatsSourceEntry(val source: Option[String]) {
+  val liveTracks = new MutHashMap[String, TrackedObject]
+  val completions = new MutHashMap[String, DateTime]
+
+  def checkExpirations (ts: TrackStats, simMillis: Long, dropAfterMillis: Long): Unit = {
+    completions.foreach { e =>
+      if (simMillis - e._2.getMillis > dropAfterMillis){
+        completions -= e._1
+      }
+    }
+
+    liveTracks.foreach { e =>
+      val cs = e._1
+      val track = e._2
+
+      if ((simMillis - track.date.getMillis) >= dropAfterMillis) {
+        if (!completions.contains(cs)) {
+          ts.nDropped += 1
+        }
+      }
+    }
+  }
+
+  def update (ts: TrackStats, track: TrackedObject, dropAfterMillis: Long): Unit = {
+    val cs = track.cs
+
+    ts.nUpdates += 1
+
+    liveTracks.get(cs) match {
+      case Some(t) =>
+        if (t.date.isAfter(track.date)) { // out of order
+          ts.nOutOfOrder += 1
+
+        } else if (t.date.equals(track.date)){ // duplicate or ambiguous
+          if (t.position == track.position && t.speed == track.speed && t.heading == track.heading) {
+            ts.nDuplicates += 1
+          } else {
+            ts.nAmbiguous += 1
+          }
+        }
+
+        if (track.isDroppedOrCompleted){
+          completions += (cs -> track.date)
+          ts.nCompleted += 1
+
+          liveTracks -= cs
+          ts.nLive -= 1
+
+        } else {
+          // check blackout violation
+          ifSome(completions.get(cs)) { completionDate =>
+            if (track.date.getMillis - completionDate.getMillis <= dropAfterMillis) {
+              ts.nBlackout += 1
+            }
+          }
+
+          liveTracks += cs -> track // just an update, size hasn't changed
+        }
+
+      case None => // new track
+        ts.nNew += 1
+        liveTracks += cs -> track
+        ts.nLive += 1
+        if (ts.nLive > ts.maxLive) ts.maxLive = ts.nLive
+    }
+  }
+
+  def terminate (ts: TrackStats, tm: TrackTerminationMessage): Unit = {
+    val cs = tm.cs
+    ifSome(liveTracks.get(cs)) { t =>
+      completions += (cs -> tm.date)
+      ts.nCompleted += 1
+
+      liveTracks -= cs
+      ts.nLive -= 1
+    }
+  }
+}
+
 /**
   * actor to collect basic track stats
+  *
+  * note this is not a TSStatsCollector since we don't keep per-track statistics. This causes
+  * some redundancy but is more efficient for a large number of tracks
   */
 class TrackStatsCollector (val config: Config) extends StatsCollectorActor {
 
-  val tracks = new MutHashMap[String,TrackedObject]
+  // note this is sim time and only gets checked before we publish
+  // note also we use this for both drop and blackout checks
+  val dropAfterMillis = config.getFiniteDurationOrElse("drop-after", 60.seconds).toMillis
+
   val stats = new TrackStats(title,channels)
+
+  val sources = new MutHashMap[Option[String],TrackStatsSourceEntry]
+
+  def getSource (id: Option[String]): TrackStatsSourceEntry = sources.getOrElseUpdate(id, new TrackStatsSourceEntry(id))
+
+  def checkExpirations: Unit = {
+    val curSimMillis = updatedSimTimeMillis
+    sources.foreach( e=> e._2.checkExpirations(stats,curSimMillis,dropAfterMillis))
+  }
 
   override def handleMessage = {
     case BusEvent(_, track: TrackedObject, _) => update(track)
     case BusEvent(_, tlm: TrackListMessage, _) => tlm.tracks.foreach(update)
-    case BusEvent(_, term: TrackTerminationMessage, _) =>
+    case BusEvent(_, term: TrackTerminationMessage, _) => terminate(term)
 
-    case RaceTick => publishSnapshot
+    case RaceTick =>
+      checkExpirations
+      publishSnapshot
   }
 
-  def update (track: TrackedObject): Unit = {
-    val cs = track.cs
+  def update (t: TrackedObject): Unit = getSource(t.source).update(stats,t, dropAfterMillis)
 
-    tracks.get(cs) match {
-      case Some(t) =>
-        stats.nUpdates += 1
-        if (t.date.isAfter(track.date)) {
-          stats.nOutOfOrder += 1
-        } else if (t.date.equals(track.date)){ // duplicate or ambiguous
-          if (t.position == track.position && t.speed == track.speed && t.heading == track.heading) {
-            stats.nDuplicates += 1
-          } else {
-            stats.nAmbiguous += 1
-          }
-        }
-
-      case None =>
-        stats.nLive += 1
-        if (stats.nLive > stats.maxLive) stats.maxLive = stats.nLive
-    }
-    tracks += cs -> track
-  }
-
-  def terminate (term: TrackTerminationMessage): Unit = {
-    tracks -= term.cs
-    stats.nTerminated += 1
-    stats.nLive -= 1
-  }
+  def terminate (tm: TrackTerminationMessage): Unit = getSource(tm.source).terminate(stats,tm)
 
   def publishSnapshot: Unit = {
     val takeMillis = updatedSimTimeMillis

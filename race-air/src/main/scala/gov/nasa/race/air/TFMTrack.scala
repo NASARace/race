@@ -43,11 +43,13 @@ case class TFMTrack(id: String,
                     date: DateTime,
                     status: Int,
 
-                    source: String,
+                    src: String,
                     nextPos: Option[GeoPosition],
                     nextDate: Option[DateTime]
                    ) extends TrackedObject {
 
   val heading = if (nextPos.isDefined) GreatCircle.initialBearing(position,nextPos.get) else Degrees(0)
   def vr = Speed.UndefinedSpeed // not in current data model
+
+  override def source: Option[String] = Some(src)
 }

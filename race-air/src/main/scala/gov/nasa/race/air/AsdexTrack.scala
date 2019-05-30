@@ -53,9 +53,8 @@ case class AsdexTrack(id: String,
                       vr: Speed,
                       date: DateTime,
                       status: Int,
-
-                      acType: Option[String]
-                     ) extends TrackedObject {
+                      src: String, // originating airport
+                      acType: Option[String]) extends TrackedObject {
   import AsdexTrack._
 
   def isAircraft = (status & AircraftFlag) != 0
@@ -66,6 +65,8 @@ case class AsdexTrack(id: String,
   def isVehicle = (status & VehicleFlag) != 0
   def isUp = (status & UpFlag) != 0
   def isDown = (status & DownFlag) != 0
+
+  override def source: Option[String] = Some(src)
 
   // some airports are not setting flags appropriately
   def guessAircraft: Boolean =  (status & AircraftFlag) != 0

@@ -52,7 +52,7 @@ trait TrackedObjectEstimator extends Cloneable {
 
   override def clone: TrackedObjectEstimator = super.clone.asInstanceOf[TrackedObjectEstimator]
 
-  def estimatedPosition = GeoPosition(lat,lon)
+  def estimatedPosition = GeoPosition(lat,lon,altitude)
 }
 
 /**

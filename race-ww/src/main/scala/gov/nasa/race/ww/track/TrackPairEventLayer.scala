@@ -65,14 +65,14 @@ class GenericTrackPairEventFields extends TrackPairEventFields {
 
   addSeparator
   val track1 = addField("track-1:")
-  val pos1 = addField("pos-1")
+  val pos1 = addField("pos-1:")
   val alt1 = addField("alt-1:")
   val hdg1 = addField("hdg-1:")
   val spd1 = addField("spd-1:")
 
   addSeparator
   val track2 = addField("track-2:")
-  val pos2 = addField("pos-2")
+  val pos2 = addField("pos-2:")
   val alt2 = addField("alt-2:")
   val hdg2 = addField("hdg-2:")
   val spd2 = addField("spd-2:")
@@ -190,8 +190,8 @@ class TrackPairEventEntry(val event: TrackPairEvent, val layer: TrackPairEventLa
     p.setAltitudeMode(WorldWind.ABSOLUTE)
   }
 
-  def createPath1: TrajectoryPath = createPath(event.trajectory1,mark1Attrs.getLabelMaterial,true)
-  def createPath2: TrajectoryPath = createPath(event.trajectory2,mark2Attrs.getLabelMaterial,true)
+  def createPath1: TrajectoryPath = createPath(event.trajectory1,mark1Attrs.getLabelMaterial,layer.showPathPositions)
+  def createPath2: TrajectoryPath = createPath(event.trajectory2,mark2Attrs.getLabelMaterial,layer.showPathPositions)
   def createPath (traj: Trajectory, material: Material, showPositions: Boolean): TrajectoryPath = {
     val path = new TrajectoryPath(traj,material)
     path.setShowPositions(showPositions)
@@ -347,6 +347,8 @@ class TrackPairEventLayer(val raceViewer: RaceViewer, val config: Config)
   val iconLevel = new ThresholdLevel[TrackPairEventEntry](iconThresholdLevel)(setIconLevel)
   val labelLevel = new ThresholdLevel[TrackPairEventEntry](labelThresholdLevel)(setLabelLevel)
   val symbolLevels = new ThresholdLevelList(setDotLevel).sortIn(labelLevel,iconLevel)
+
+  val showPathPositions: Boolean = config.getBooleanOrElse("show-positions", false)
 
   def defaultSymbolImage: BufferedImage = Images.getEventImage(color)
 

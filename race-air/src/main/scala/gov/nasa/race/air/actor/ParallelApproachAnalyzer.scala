@@ -23,7 +23,7 @@ import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.Messages.BusEvent
 import gov.nasa.race.core.{PublishingRaceActor, SubscribingRaceActor}
 import gov.nasa.race.geo.{Euclidean, GeoPosition}
-import gov.nasa.race.track.{TrackDropped, TrackPairEvent, TrackedObject, TrackedObjectExtrapolator}
+import gov.nasa.race.track.{TrackDropped, TrackPairEvent, TrackTerminationMessage, TrackedObject, TrackedObjectExtrapolator}
 import gov.nasa.race.trajectory.{TDP3, Trajectory, USTrace}
 import gov.nasa.race.uom.Angle._
 import gov.nasa.race.uom.Length._
@@ -76,7 +76,7 @@ class ParallelApproachAnalyzer (val config: Config) extends SubscribingRaceActor
   val candidates: MHashMap[String,Candidate] = MHashMap.empty
 
   override def handleMessage = {
-    case BusEvent(_,trackDropped:TrackDropped,_) => candidates.remove(trackDropped.id)
+    case BusEvent(_,term:TrackTerminationMessage,_) => candidates.remove(term.id)
     case BusEvent(_,track:TrackedObject,_) => {
       if (track.isDroppedOrCompleted) {
         candidates.remove(track.id)

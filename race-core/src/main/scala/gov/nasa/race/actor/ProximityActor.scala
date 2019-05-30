@@ -89,10 +89,12 @@ trait ProximityActor extends SubscribingRaceActor with PublishingRaceActor {
   }
 
   val proximityIdentifier = getConfigurableOrElse[ProximityIdentifier]("identifier")(new NumberedProximityRefId(NoConfig))
-  
+  val proximityType = config.getStringOrElse("proximity-type", defaultProximityType)
+  def defaultProximityType: String = "proximity"
+
   // the distance we consider as proximity
   def defaultDistance: Length = NauticalMiles(5)
-  val distanceInMeters = NauticalMiles(config.getDoubleOrElse("distance-nm", defaultDistance.toNauticalMiles)).toMeters
+  val distanceInMeters = config.getLengthOrElse("distance", defaultDistance).toMeters
 
   val refs: MHashMap[String,RefEntry] = MHashMap.empty
 
@@ -104,7 +106,7 @@ trait ProximityActor extends SubscribingRaceActor with PublishingRaceActor {
 
   protected def createProximityEvent (pr: ProximityReference, dist: Length, status: Int, track: TrackedObject): ProximityEvent = {
     val id = proximityIdentifier.getId(pr,track,status)
-    new ProximityEvent(id,pr,dist,status,track)
+    new ProximityEvent(id,proximityType,pr,dist,status,track)
   }
 }
 
@@ -269,6 +271,7 @@ class DynamicProximityActor (val config: Config) extends ProximityActor {
 class CollisionDetector (config: Config) extends DynamicProximityActor(config) {
   import ProximityEvent._
 
+  override def defaultProximityType: String = "collision"
   override def defaultDistance = Feet(500) // NMAC distance
 
   class CollisionRefEntry(refEstimator: TrackedObjectEstimator) extends DynamicRefEntry(refEstimator) {

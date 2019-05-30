@@ -68,7 +68,7 @@ trait TrackDropper extends PublishingRaceActor with ContinuousTimeRaceActor with
       val dt = elapsedSimTimeMillisSince(ac.date)
       if (dt > cut){
         removeStaleTrack(ac)  // provided by concrete class
-        if (publishDropped) publish(TrackDropped(ac.id, ac.cs, now))
+        if (publishDropped) publish(TrackDropped(ac.id, ac.cs, now, ac.source))
         info(s"dropping $cs after $dt msec")
       }
     }

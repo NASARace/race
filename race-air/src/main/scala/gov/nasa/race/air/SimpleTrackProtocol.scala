@@ -171,7 +171,7 @@ class SimpleTrackReader extends DataStreamReader {
                               new DateTime(tmsec))
 
     // we just use refId to identify the event - if clients need unique ids they have to re-identify
-    ProximityEvent(refId,ProximityReference(refId, track.date, GeoPosition.fromDegreesAndMeters(latDeg,lonDeg,altM)),
+    ProximityEvent(refId,"proximity",ProximityReference(refId, track.date, GeoPosition.fromDegreesAndMeters(latDeg,lonDeg,altM)),
                     Meters(distM), flags, track)
   }
 

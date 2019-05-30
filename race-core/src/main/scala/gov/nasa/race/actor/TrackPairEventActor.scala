@@ -43,12 +43,7 @@ class TrackPairEventActor (val config: Config) extends Tracer {
 
   def createPairEvent(prox: ProximityEvent): Option[TrackPairEvent] = {
     if (prox.isNew || prox.isCollision) {
-      val entry1 = trajectories.get(prox.ref.id)
-      val entry2 = trajectories.get(prox.track.cs)
-
-      if (entry1.isDefined && entry2.isDefined) {
-        val e1 = entry1.get
-        val e2 = entry2.get
+      for ( e1 <- trajectories.get(prox.ref.id); e2 <- trajectories.get(prox.track.cs) ) {
         val o1 = e1.obj
         val o2 = e2.obj
 
@@ -63,15 +58,13 @@ class TrackPairEventActor (val config: Config) extends Tracer {
           o2, prox.track.position, prox.track.heading, prox.track.speed, e2.trajectory.snapshot
         )
 
-        Some(tpe)
-
-      } else None // unknown tracks
-    } else None // not a new proximity event
+        return Some(tpe)
+      }
+    }
+    None // not a new proximity event
   }
 
-  def eventType (prox: ProximityEvent): String = {
-    if (prox.isCollision) "collision" else "proximity"
-  }
+  def eventType (prox: ProximityEvent): String = prox.eventType
 
   def eventDetails (prox: ProximityEvent): String = {
     s"${prox.distance.toMeters.toInt}m"

@@ -65,6 +65,7 @@ case class ProximityReference (id: String,
   * note that ProximityEvents are also implementing TrackedObject themselves
   */
 case class ProximityEvent (id: String,
+                           eventType: String,
                            ref: ProximityReference,
                            distance: Length,
                            status: Int,

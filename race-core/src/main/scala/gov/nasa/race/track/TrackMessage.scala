@@ -10,6 +10,8 @@ trait TrackMessage {
   def id: String
   def cs: String
   def date: DateTime
+
+  def source: Option[String] = None // override if message is associated to a source
 }
 
 trait TrackListMessage {
@@ -24,14 +26,16 @@ trait TrackTerminationMessage extends TrackMessage
 case class TrackCompleted(id: String,
                           cs: String,
                           arrivalPoint: String,
-                          date: DateTime) extends Dated with IdentifiableObject with TrackTerminationMessage
+                          date: DateTime,
+                          override val source: Option[String] = None) extends Dated with IdentifiableObject with TrackTerminationMessage
 
 /**
   * track was dropped (no updates received for a given duration)
   */
 case class TrackDropped(id: String,
                         cs: String,
-                        date: DateTime) extends Dated with IdentifiableObject with TrackTerminationMessage
+                        date: DateTime,
+                        override val source: Option[String] = None) extends Dated with IdentifiableObject with TrackTerminationMessage
 
 /**
   * track changed call sign

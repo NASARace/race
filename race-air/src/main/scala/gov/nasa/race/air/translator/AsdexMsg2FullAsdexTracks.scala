@@ -31,7 +31,7 @@ import gov.nasa.race.uom.Length._
 import gov.nasa.race.uom.Speed._
 import org.joda.time.DateTime
 
-import scala.collection.mutable.HashMap
+import scala.collection.mutable.{HashMap => MutHashMap}
 
 /**
   * translator for SWIM ASDE-X asdexMsg messages to full AsdexTracks
@@ -49,9 +49,10 @@ import scala.collection.mutable.HashMap
 class AsdexMsg2FullAsdexTracks(config: Config=NoConfig) extends AsdexMsg2AsdexTracks(config) {
 
   //--- our cache to accumulate track infos over full/delta reports
+
+  // TODO - this is not thread safe, turn lastTracks into a function argument
   var lastAirport: String = null // currently cached airport
-  var lastUpdate: Long = 0 // wall time epoch of last update
-  val lastTracks = new HashMap[String,AsdexTrack]
+  var lastTracks = new MutHashMap[String,AsdexTrack]
 
   override protected def setAirport (airportId: String) = {
     if (airportId != lastAirport) {
@@ -61,7 +62,6 @@ class AsdexMsg2FullAsdexTracks(config: Config=NoConfig) extends AsdexMsg2AsdexTr
     airportId
   }
 
-
   @inline def fromDouble[A](d: Double, f: Double=>A, g: AsdexTrack=>A, fallback: A)(implicit last: Option[AsdexTrack]): A = {
     if (isFinite(d)) f(d) else withSomeOrElse(last,fallback)(g)
   }
@@ -70,7 +70,7 @@ class AsdexMsg2FullAsdexTracks(config: Config=NoConfig) extends AsdexMsg2AsdexTr
   }
 
   // here we use the previously accumulated info to turn delta reports into full reports
-  override protected def createTrack (trackId: String, acId: String,
+  override protected def createTrack (airport: String, trackId: String, acId: String,
                                       latDeg: Double, lonDeg: Double,
                                       altFt: Double, spdMph: Double, hdgDeg: Double, vertRate: Double,
                                       date: DateTime, status: Int, acType: String): AsdexTrack = {
@@ -95,16 +95,33 @@ class AsdexMsg2FullAsdexTracks(config: Config=NoConfig) extends AsdexMsg2AsdexTr
       }
     }
 
-    val track = new AsdexTrack(trackId,cs,GeoPosition(lat,lon,alt),spd,hdg,vr,date,statusFlags,act)
+    val track = new AsdexTrack(trackId, cs, GeoPosition(lat,lon,alt), spd, hdg, vr, date, statusFlags, airport, act)
     ifSome(changedCS) { track.amend }
 
     if (track.isDropped) {
       lastTracks -= trackId
-
     } else {
       lastTracks += trackId -> track
     }
 
     if (track.position.isDefined) track else null
+  }
+}
+
+/**
+  * an AsdexMsg3FullAsdexTracks translator that does not reset track maps when switching
+  * between airports
+  * Use this variant if we need to process several airports simultaneously
+  */
+class AllAsdexMsg2FullAsdexTracks(config: Config=NoConfig) extends AsdexMsg2FullAsdexTracks(config) {
+
+  val airports = new MutHashMap[String,MutHashMap[String,AsdexTrack]]
+
+  override protected def setAirport (airportId: String) = {
+    if (airportId != lastAirport) {
+      lastAirport = airportId
+      lastTracks = airports.getOrElseUpdate(airportId, new MutHashMap[String,AsdexTrack])
+    }
+    airportId
   }
 }

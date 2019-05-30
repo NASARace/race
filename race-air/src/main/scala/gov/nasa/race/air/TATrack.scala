@@ -57,6 +57,8 @@ case class TATrack (id: String,
     f"TATrack($src,$id,$cs,0x${status.toHexString},$position,${heading.toDegrees}%.0f°,${speed.toKnots}%.1fkn,${vr.toFeetPerMinute}%.0f, $date, $flightPlan)"
   }
 
+  override def source: Option[String] = Some(src)
+
   def isPseudo = (status & PseudoFlag) != 0
   def isAdsb = (status & AdsbFlag) != 0
 

@@ -55,7 +55,7 @@ class ApproachFilterActor(_conf: Config) extends FilterActor(_conf) {
         case ac: TrackedAircraft =>
           if (candidates.contains(ac.id)){
             candidates -= ac.id
-            publish(TrackDropped(ac.id, ac.cs, ac.date))
+            publish(TrackDropped(ac.id, ac.cs, ac.date, ac.source))
           }
         case _ => // ignore
       }

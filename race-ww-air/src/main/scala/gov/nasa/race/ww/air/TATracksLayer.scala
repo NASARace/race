@@ -27,7 +27,7 @@ import gov.nasa.race.ifSome
 import gov.nasa.race.swing._
 import gov.nasa.race.swing.Style._
 import gov.nasa.race.swing.{IdAndNamePanel, StaticSelectionPanel}
-import gov.nasa.race.track.TrackDropped
+import gov.nasa.race.track.{TrackDropped, TrackTerminationMessage}
 import gov.nasa.race.trajectory.MutTrajectory
 import gov.nasa.race.uom.Angle
 import gov.nasa.race.uom.Length._
@@ -140,8 +140,8 @@ class TATracksLayer (val raceViewer: RaceViewer, val config: Config) extends Mod
           }
         case None => // nothing selected, ignore
       }
-    case BusEvent(_, drop: TrackDropped, _) =>
-      trackEntries.get(drop.id) match {
+    case BusEvent(_, term: TrackTerminationMessage, _) =>
+      trackEntries.get(term.id) match {
         case Some(acEntry) => removeTrackEntry(acEntry)
         case None => // nothing to drop
       }
