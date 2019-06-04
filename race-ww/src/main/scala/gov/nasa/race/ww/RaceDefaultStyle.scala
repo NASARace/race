@@ -20,13 +20,14 @@ package gov.nasa.race.ww
 import gov.nasa.race.swing._
 import java.awt.Color._
 import java.awt.{Color, Font, Button => _, Component => _, Label => _, Panel => _, ScrollPane => _, TextComponent => _, TextField => _, _}
+
 import javax.swing.UIManager
 import javax.swing.border._
 import javax.swing.plaf.basic.BasicScrollBarUI
 import javax.swing.text.StyleConstants
 import org.fife.ui.rsyntaxtextarea.Theme
-import scala.swing.{UIElement,Component,ListView,TextField,Button,CheckBox,ComboBox,Label,Panel,TextPane,
-                    FlowPanel,ScrollPane,TextComponent,Alignment}
+
+import scala.swing.{Alignment, Button, CheckBox, ComboBox, Component, FlowPanel, Label, ListView, Panel, RadioButton, ScrollPane, TextComponent, TextField, TextPane, UIElement}
 
 /**
  * default Swing component styles for Race
@@ -198,11 +199,22 @@ class RaceDefaultStyle extends Stylist {
   override def style (c: CheckBox, id: Symbol) = {
     super.style(c,id)
     c.opaque = false
-    setIdStyle(id) {
-      case 'collapseButton =>
-        c.selectedIcon = ArrowIcon(Direction.South, scaledSize(12), foreground, 1, Some(Color.green))
-        c.icon = ArrowIcon(Direction.East, scaledSize(12), foreground, 1, Some(Color.red))
+
+    if (id == Style.NoStyle) {
+      c.peer.setUI( new CheckBoxUI)
+    } else {
+      setIdStyle(id) {
+        case 'collapseButton =>
+          c.selectedIcon = ArrowIcon(Direction.South, scaledSize(12), foreground, 1, Some(Color.green))
+          c.icon = ArrowIcon(Direction.East, scaledSize(12), foreground, 1, Some(Color.red))
+      }
     }
+  }
+
+  override def style (c: RadioButton, id: Symbol) = {
+    super.style(c, id)
+    c.opaque = false
+    c.peer.setUI( new RadioButtonUI)
   }
 
   override def style (c: TextComponent, id: Symbol) = {
