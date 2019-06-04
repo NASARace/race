@@ -26,43 +26,73 @@ import javax.swing.plaf.basic.BasicButtonUI
   */
 abstract class ToggleButtonUI extends BasicButtonUI {
 
-  protected def paintIcon(g: Graphics2D, c: JToggleButton, x: Int, y: Int, h: Int)
+  final val DefaultTextGap = 8
+
+  protected var iconWidth = 0
+  protected var iconHeight = 0
+  protected var xBase = 0
+  protected var yBase = 0
+
+  protected def paintIcon(c: JToggleButton, g: Graphics2D, x: Int, y: Int, w: Int, h: Int)
 
   override def paint(g: Graphics, c: JComponent): Unit = {
     val g2 = g.asInstanceOf[Graphics2D]
     val b = c.asInstanceOf[JToggleButton]
-    val dim: Dimension = b.getSize
-    val in = b.getInsets
     val txt = b.getText
-    val fnt = b.getFont
-    val fm = b.getFontMetrics(fnt)
-    val clr = c.getForeground
+    val dim: Dimension = b.getSize
 
-    val x = dim.height
-    val y = in.top + fm.getMaxAscent
-
-    val h = fm.getHeight * 2 / 3
-    val d = (dim.height - h) / 2
+    val y = (dim.height - iconHeight) / 2
+    val x = y
 
     //--- draw selection symbol
-    paintIcon(g2,b, d, d, h)
+    val icon = if (b.isSelected) b.getSelectedIcon else b.getIcon
+    if (icon !=  null){
+      icon.paintIcon(b, g2, x, y)
+    } else {
+      paintIcon(b, g2, x, y, iconWidth, iconHeight)
+    }
 
     //--- draw text
-    g2.drawString(txt, x, y)
+    if (txt != null) {
+      g2.drawString(txt, xBase, yBase)
+    }
   }
 
   override def getPreferredSize (c: JComponent): Dimension = {
     val b = c.asInstanceOf[JToggleButton]
     val txt = b.getText
-    val fnt = b.getFont
-    val fm = b.getFontMetrics(fnt)
+    val icon = b.getIcon
     val in = b.getInsets
 
+    var h = 0
+    var w = 0
+
+    if (icon != null){
+      iconWidth = icon.getIconWidth
+      iconHeight = icon.getIconHeight
+
+      h = iconHeight
+      w = iconWidth
+    }
+
+    val fnt = b.getFont
+    val fm = b.getFontMetrics(fnt)
     val sw = fm.stringWidth(txt)
     val sh = fm.getHeight
 
-    val h = sh + in.top + in.bottom
-    val w = sw + h + in.left + in.right
+    if (sh > h) h = sh
+    w += sw
+
+    yBase = (h - sh)/2 + fm.getMaxAscent + in.top
+    xBase = (if (icon != null) icon.getIconWidth  else sh) + Math.max(b.getIconTextGap,DefaultTextGap)
+
+    if (icon == null){
+      iconWidth = sh / 2
+      iconHeight = iconWidth
+    }
+
+    w += in.left + in.right
+    h += in.top + in.bottom
 
     new Dimension(w,h)
   }
@@ -70,22 +100,22 @@ abstract class ToggleButtonUI extends BasicButtonUI {
 
 class RadioButtonUI extends ToggleButtonUI {
 
-  protected def paintIcon(g: Graphics2D, c: JToggleButton, x: Int, y: Int, h: Int): Unit = {
+  protected def paintIcon(c: JToggleButton, g: Graphics2D, x: Int, y: Int, w: Int, h: Int): Unit = {
     if (c.isSelected) {
-      g.fillOval(x,y,h,h)
+      g.fillOval(x,y,w+1,h+1)
     } else {
-      g.drawOval(x,y,h,h)
+      g.drawOval(x,y,w,h)
     }
   }
 }
 
 class CheckBoxUI extends ToggleButtonUI {
 
-  protected def paintIcon(g: Graphics2D, c: JToggleButton, x: Int, y: Int, h: Int): Unit = {
+  protected def paintIcon(c: JToggleButton, g: Graphics2D, x: Int, y: Int, w: Int, h: Int): Unit = {
     if (c.isSelected) {
-      g.fillRect(x,y,h,h)
+      g.fillRect(x,y,w+1,h+1)
     } else {
-      g.drawRect(x,y,h,h)
+      g.drawRect(x,y,w,h)
     }
   }
 }

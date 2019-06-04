@@ -199,15 +199,12 @@ class RaceDefaultStyle extends Stylist {
   override def style (c: CheckBox, id: Symbol) = {
     super.style(c,id)
     c.opaque = false
+    c.peer.setUI( new CheckBoxUI)
 
-    if (id == Style.NoStyle) {
-      c.peer.setUI( new CheckBoxUI)
-    } else {
-      setIdStyle(id) {
-        case 'collapseButton =>
-          c.selectedIcon = ArrowIcon(Direction.South, scaledSize(12), foreground, 1, Some(Color.green))
-          c.icon = ArrowIcon(Direction.East, scaledSize(12), foreground, 1, Some(Color.red))
-      }
+    setIdStyle(id) {
+      case 'collapseButton =>
+        c.selectedIcon = ArrowIcon(Direction.South, scaledSize(12), foreground, 1, Some(Color.green))
+        c.icon = ArrowIcon(Direction.East, scaledSize(12), foreground, 1, Some(Color.red))
     }
   }
 
