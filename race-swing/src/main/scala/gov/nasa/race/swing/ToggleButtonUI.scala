@@ -16,24 +16,33 @@
  */
 package gov.nasa.race.swing
 
-import java.awt.{Dimension, Graphics, Graphics2D, FontMetrics}
+import java.awt.{BasicStroke, Color, Dimension, FontMetrics, Graphics, Graphics2D}
 
 import javax.swing.{JComponent, JToggleButton}
 import javax.swing.plaf.basic.BasicButtonUI
+
+object ToggleButtonUI {
+  final val DefaultTextGap = 8
+  final val DefaultIconHeightFactor = 0.7
+  final val DefaultIconStroke = new BasicStroke(1.5f)
+}
 
 /**
   * very simplistic plaf that is more suitable for HiDPI
   */
 abstract class ToggleButtonUI extends BasicButtonUI {
-
-  final val DefaultTextGap = 8
+  import ToggleButtonUI._
 
   protected var iconWidth = 0
   protected var iconHeight = 0
+
   protected var xBase = 0
   protected var yBase = 0
 
   protected def paintIcon(c: JToggleButton, g: Graphics2D, x: Int, y: Int, w: Int, h: Int)
+
+  protected def iconOutlineClr (c: JComponent): Color = modifyColor(c.getForeground, 0.7)
+  protected def iconFillClr (c: JComponent): Color = modifyColor(c.getForeground, 0.3)
 
   override def paint(g: Graphics, c: JComponent): Unit = {
     val g2 = g.asInstanceOf[Graphics2D]
@@ -44,17 +53,17 @@ abstract class ToggleButtonUI extends BasicButtonUI {
     val y = (dim.height - iconHeight) / 2
     val x = y
 
+    //--- draw text
+    if (txt != null && txt.nonEmpty) {
+      g2.drawString(txt, xBase, yBase)
+    }
+
     //--- draw selection symbol
     val icon = if (b.isSelected) b.getSelectedIcon else b.getIcon
     if (icon !=  null){
       icon.paintIcon(b, g2, x, y)
     } else {
       paintIcon(b, g2, x, y, iconWidth, iconHeight)
-    }
-
-    //--- draw text
-    if (txt != null) {
-      g2.drawString(txt, xBase, yBase)
     }
   }
 
@@ -87,7 +96,7 @@ abstract class ToggleButtonUI extends BasicButtonUI {
     xBase = (if (icon != null) icon.getIconWidth  else sh) + Math.max(b.getIconTextGap,DefaultTextGap)
 
     if (icon == null){
-      iconWidth = sh / 2
+      iconWidth = (sh * DefaultIconHeightFactor).toInt | 1 // make odd
       iconHeight = iconWidth
     }
 
@@ -101,21 +110,33 @@ abstract class ToggleButtonUI extends BasicButtonUI {
 class RadioButtonUI extends ToggleButtonUI {
 
   protected def paintIcon(c: JToggleButton, g: Graphics2D, x: Int, y: Int, w: Int, h: Int): Unit = {
-    if (c.isSelected) {
-      g.fillOval(x,y,w+1,h+1)
-    } else {
-      g.drawOval(x,y,w,h)
-    }
+    g.setColor(iconOutlineClr(c))
+    g.drawOval(x,y,w,h)
+
+    g.setColor( if (c.isSelected) c.getForeground else iconFillClr(c))
+    g.fillOval(x+2,y+2,w-4,h-4)
   }
 }
 
 class CheckBoxUI extends ToggleButtonUI {
 
   protected def paintIcon(c: JToggleButton, g: Graphics2D, x: Int, y: Int, w: Int, h: Int): Unit = {
+    g.setColor(iconOutlineClr(c))
+    g.drawRect(x,y,w,h)
+
+    g.setColor(iconFillClr(c))
+    g.fillRect(x+1,y+1,w-1,h-1)
+
     if (c.isSelected) {
-      g.fillRect(x,y,w+1,h+1)
-    } else {
-      g.drawRect(x,y,w,h)
+      g.setColor(c.getForeground)
+      val x0 = x+3
+      val x1 = x+w-3
+      val y0 = y+3
+      val y1 = y+w-3
+
+      g.setStroke(ToggleButtonUI.DefaultIconStroke)
+      g.drawLine(x0,y0,x1,y1)
+      g.drawLine(x1,y0,x0,y1)
     }
   }
 }

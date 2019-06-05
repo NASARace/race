@@ -121,4 +121,11 @@ package object swing {
   def scaledInsets(t: Int, l: Int, b: Int, r: Int): Insets = new Insets(
     scaledSize(t), scaledSize(l), scaledSize(b), scaledSize(r)
   )
+
+  def modifyColor (c: Color, factor: Double): Color = {
+    new Color(Math.min( Math.max( (c.getRed * factor).toInt, 0), 255),
+              Math.min( Math.max( (c.getGreen * factor).toInt, 0), 255),
+              Math.min( Math.max( (c.getBlue * factor).toInt, 0), 255),
+              c.getAlpha)
+  }
 }

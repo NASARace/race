@@ -43,22 +43,22 @@ object Dependencies {
   val logback = "ch.qos.logback" % "logback-classic" % "1.2.3"
 
   //--- Typesafe config
-  val typesafeConfig = "com.typesafe" % "config" % "1.3.3"
+  val typesafeConfig = "com.typesafe" % "config" % "1.3.4"
 
   //--- nscala-time (Dates with operators): https://github.com/nscala-time/nscala-time
   val nscalaTime = "com.github.nscala-time" %% "nscala-time" %  "2.22.0"
 
   //--- Scala parser combinators (https://github.com/scala/scala-parser-combinators)
-  val scalaParser = "org.scala-lang.modules" % "scala-parser-combinators_2.12" % "1.1.1"
+  val scalaParser = "org.scala-lang.modules" % "scala-parser-combinators_2.12" % "1.1.2"
 
   //--- scala-xml
-  val scalaXml = "org.scala-lang.modules" % "scala-xml_2.12" % "1.1.1"
+  val scalaXml = "org.scala-lang.modules" % "scala-xml_2.12" % "1.2.0"
 
   //--- new scala reflection (TypeTags etc.)
   val scalaReflect =  "org.scala-lang" % "scala-reflect" % CommonRaceSettings.scalaVer
 
   //--- scalaTags HTML generator
-  val scalaTags = "com.lihaoyi" %% "scalatags" % "0.6.7"
+  val scalaTags = "com.lihaoyi" %% "scalatags" % "0.6.8"
 
   //--- scala automatic resource management (https://github.com/jsuereth/scala-arm)
   //val scalaArm = "com.jsuereth" %% "scala-arm" % "2.0"
@@ -86,7 +86,7 @@ object Dependencies {
   val circeAll = Seq(circeCore,circeGeneric,circeParser)
 
   // Apache Avro serialization (for archiving/unarchiving)
-  val avro = "org.apache.avro" % "avro" % "1.8.2"
+  val avro = "org.apache.avro" % "avro" % "1.9.0"
 
   // scodec
   //val scodecBits = "org.scodec" %% "scodec-bits" % "1.1.5"
@@ -95,12 +95,12 @@ object Dependencies {
   //val scodecAll = Seq(scodecBits, scodecCore)
 
   //--- scala-swing
-  val scalaSwing = "org.scala-lang.modules" %% "scala-swing" % "2.1.0"
+  val scalaSwing = "org.scala-lang.modules" %% "scala-swing" % "2.1.1"
   //val swingx = "org.swinglabs.swingx" % "swingx-core" % "1.6.5-1"
   //.. and possibly extensions for Tree and jfreechart
 
   //--- RSyntaxTextArea (TextEditor with syntax support)
-  val rsTextArea = "com.fifesoft" % "rsyntaxtextarea" % "3.0.2"
+  val rsTextArea = "com.fifesoft" % "rsyntaxtextarea" % "3.0.3"
 
   //--- the jfreechart plot and chart lib
   val jfreeChart = "org.jfree" % "jfreechart" % "1.5.0"
@@ -114,7 +114,7 @@ object Dependencies {
   val argon2 = "de.mkammerer" % "argon2-jvm" % "2.5"
 
   //--- Akka
-  val akkaVersion = "2.5.21"
+  val akkaVersion = "2.5.23"
   val akkaOrg = "com.typesafe.akka"
 
   val akkaActor = akkaOrg %% "akka-actor" % akkaVersion
@@ -146,10 +146,10 @@ object Dependencies {
   // note - kafka still uses the old log4j
 
   val log4j = "org.apache.logging.log4j" % "log4j" % "2.10.0"
-  val log4jOverSlf4j = "org.slf4j" % "log4j-over-slf4j" % "1.8.0-beta2"
+  val log4jOverSlf4j = "org.slf4j" % "log4j-over-slf4j" % "1.8.0-beta4"
 
   //--- ZooKeeper
-  val zookeeper = "org.apache.zookeeper" % "zookeeper" % "3.5.3-beta" excludeAll(
+  val zookeeper = "org.apache.zookeeper" % "zookeeper" % "3.5.5" excludeAll(
     ExclusionRule(organization = "log4j", name="log4j"),
     ExclusionRule(organization = "org.slf4j", name = "slf4j-log4j12")
   )
@@ -175,7 +175,7 @@ object Dependencies {
 
 
   //--- LWJGL Java wrapper for OpenGL,Vulkan,,OpenCL,OpenAL and others
-  val lwjglVersion = "3.2.1"
+  val lwjglVersion = "3.2.2"
   lazy val lwjglNativeClassifier = OS.build match {
     case _:Linux => "natives-linux"
     case _:OSX => "natives-macos"
