@@ -61,7 +61,7 @@ class LayerListPanel (raceView: RaceViewer, config: Option[Config]=None)
 
   // note this is only used for rendering, we can't listen to components
   class LayerInfoRenderer extends ItemRenderPanel[Layer] {
-    var checkBox = new CheckBox().styled()
+    var checkBox = new CheckBox().styled('layerEnabled)
     var nameLabel = new Label().styled('layerName)
     var catLabel = new Label().styled('layerCategory)
 

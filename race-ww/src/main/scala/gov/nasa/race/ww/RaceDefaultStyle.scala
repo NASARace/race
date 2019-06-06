@@ -205,6 +205,8 @@ class RaceDefaultStyle extends Stylist {
       case 'collapseButton =>
         c.selectedIcon = ArrowIcon(Direction.South, scaledSize(12), foreground, 1, Some(Color.green))
         c.icon = ArrowIcon(Direction.East, scaledSize(12), foreground, 1, Some(Color.red))
+      case 'layerEnabled =>
+        c.foreground = GREEN
     }
   }
 

@@ -22,8 +22,8 @@ import javax.swing.{JComponent, JToggleButton}
 import javax.swing.plaf.basic.BasicButtonUI
 
 object ToggleButtonUI {
-  final val DefaultTextGap = 8
-  final val DefaultIconHeightFactor = 0.7
+  final val DefaultTextGap = 9
+  final val DefaultIconHeightFactor = 0.75
   final val DefaultIconStroke = new BasicStroke(1.5f)
 }
 
@@ -71,7 +71,6 @@ abstract class ToggleButtonUI extends BasicButtonUI {
     val b = c.asInstanceOf[JToggleButton]
     val txt = b.getText
     val icon = b.getIcon
-    val in = b.getInsets
 
     var h = 0
     var w = 0
@@ -79,9 +78,7 @@ abstract class ToggleButtonUI extends BasicButtonUI {
     if (icon != null){
       iconWidth = icon.getIconWidth
       iconHeight = icon.getIconHeight
-
       h = iconHeight
-      w = iconWidth
     }
 
     val fnt = b.getFont
@@ -92,19 +89,23 @@ abstract class ToggleButtonUI extends BasicButtonUI {
     if (sh > h) h = sh
     w += sw
 
-    yBase = (h - sh)/2 + fm.getMaxAscent + in.top
-    xBase = (if (icon != null) icon.getIconWidth  else sh) + Math.max(b.getIconTextGap,DefaultTextGap)
-
     if (icon == null){
-      iconWidth = (sh * DefaultIconHeightFactor).toInt | 1 // make odd
-      iconHeight = iconWidth
+      iconHeight = (sh * DefaultIconHeightFactor).toInt | 1 // make odd
+      iconWidth = iconHeight
     }
 
-    w += in.left + in.right
-    h += in.top + in.bottom
+    val iconLead = (h - iconHeight)/2
+    val txtLead =  if (txt.nonEmpty) Math.max(b.getIconTextGap,DefaultTextGap) else iconLead
 
-    new Dimension(w,h)
+    yBase = (h - sh)/2 + fm.getMaxAscent
+    xBase = iconLead + iconWidth + txtLead
+
+    w += xBase
+
+    new Dimension(w + 10,h)  // ?? fixme
   }
+
+  override def getMinimumSize (c: JComponent): Dimension = getPreferredSize(c)
 }
 
 class RadioButtonUI extends ToggleButtonUI {
@@ -130,13 +131,15 @@ class CheckBoxUI extends ToggleButtonUI {
     if (c.isSelected) {
       g.setColor(c.getForeground)
       val x0 = x+3
-      val x1 = x+w-3
-      val y0 = y+3
-      val y1 = y+w-3
+      val y0 = y + w/2
+      val x1 = x + w/2
+      val y1 = y + w - 3
+      val x2 = x + w - 2
+      val y2 = y+2
 
       g.setStroke(ToggleButtonUI.DefaultIconStroke)
       g.drawLine(x0,y0,x1,y1)
-      g.drawLine(x1,y0,x0,y1)
+      g.drawLine(x1,y1,x2,y2)
     }
   }
 }

@@ -52,7 +52,7 @@ abstract class InteractiveLayerObjectPanel[T <: LayerObject, U <: FieldPanel](va
     layout(infoCb)     = c(2,0)
     layout(markCb)     = c(3,0)
     layout(focusCb)    = c(4,0)
-    layout(dismissBtn) = c(5,0).weightx(0)
+    layout(dismissBtn) = c(0,1).weightx(0)
   }.styled()
 
   contents += fields
