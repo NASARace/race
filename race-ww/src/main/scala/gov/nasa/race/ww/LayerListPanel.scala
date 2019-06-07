@@ -61,9 +61,9 @@ class LayerListPanel (raceView: RaceViewer, config: Option[Config]=None)
 
   // note this is only used for rendering, we can't listen to components
   class LayerInfoRenderer extends ItemRenderPanel[Layer] {
-    var checkBox = new CheckBox().styled('layerEnabled)
-    var nameLabel = new Label().styled('layerName)
-    var catLabel = new Label().styled('layerCategory)
+    val checkBox: CheckBox = new CheckBox().styled('layerEnabled)
+    val nameLabel: Label = new Label().styled('layerName)
+    val catLabel: Label = new Label().styled('layerCategory)
 
     val c = new Constraints(fill=Fill.Horizontal, anchor=Anchor.West)
     layout(checkBox)  = c(0,0)
@@ -86,8 +86,7 @@ class LayerListPanel (raceView: RaceViewer, config: Option[Config]=None)
   val scrollPane = new ScrollPane(listView).styled('verticalIfNeeded)
   contents += scrollPane
 
-  var selectionChanged = false
-  listenTo(listView.mouse.clicks, listView.selection)
+  listenTo(listView.mouse.clicks)
   reactions += {
     case MouseClicked(`listView`,pos,mod,clicks,triggerPopup) =>
       if (layerInfoRenderer.checkBox.bounds.contains(pos.x,0)) {
@@ -99,10 +98,6 @@ class LayerListPanel (raceView: RaceViewer, config: Option[Config]=None)
         }
         listView.repaint
       }
-      selectionChanged = false
-
-    case ListSelectionChanged(`listView`,range,live) =>
-      selectionChanged = true
       raceView.trackUserAction { updateLayerInfoPanel(getFirstSelected) }
   }
 
@@ -122,8 +117,9 @@ class LayerListPanel (raceView: RaceViewer, config: Option[Config]=None)
     ifSome(layerSelection) { layer =>
       val panel = layer.layerInfo.panel
       if (lastLayerInfoPanel.isEmpty || lastLayerInfoPanel.get.layer != layer) {
+        ifSome(lastLayerInfoPanel){ _.unselect}
         ifInstanceOf[SharedLayerInfoPanel](panel) {_.setLayer(layer)}
-        lastLayerInfoPanel = ifSome(lastLayerInfoPanel) {_.unselect} orElse {Some(panel)}
+        lastLayerInfoPanel = Some(panel)
 
         raceView.setLayerPanel(panel)
         panel.select

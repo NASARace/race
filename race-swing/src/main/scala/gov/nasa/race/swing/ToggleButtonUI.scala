@@ -70,6 +70,7 @@ abstract class ToggleButtonUI extends BasicButtonUI {
   override def getPreferredSize (c: JComponent): Dimension = {
     val b = c.asInstanceOf[JToggleButton]
     val txt = b.getText
+    val hasText = txt != null && txt.nonEmpty
     val icon = b.getIcon
 
     var h = 0
@@ -83,11 +84,11 @@ abstract class ToggleButtonUI extends BasicButtonUI {
 
     val fnt = b.getFont
     val fm = b.getFontMetrics(fnt)
-    val sw = fm.stringWidth(txt)
     val sh = fm.getHeight
-
+    if (hasText) {
+      w += fm.stringWidth(txt)
+    }
     if (sh > h) h = sh
-    w += sw
 
     if (icon == null){
       iconHeight = (sh * DefaultIconHeightFactor).toInt | 1 // make odd
@@ -95,7 +96,7 @@ abstract class ToggleButtonUI extends BasicButtonUI {
     }
 
     val iconLead = (h - iconHeight)/2
-    val txtLead =  if (txt.nonEmpty) Math.max(b.getIconTextGap,DefaultTextGap) else iconLead
+    val txtLead =  if (hasText) Math.max(b.getIconTextGap,DefaultTextGap) else iconLead
 
     yBase = (h - sh)/2 + fm.getMaxAscent
     xBase = iconLead + iconWidth + txtLead
