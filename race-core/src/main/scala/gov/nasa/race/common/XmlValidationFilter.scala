@@ -105,7 +105,7 @@ class XmlValidationFilter(val schemaFiles: Seq[File], val config: Config= null) 
       m
     }.map { e=>
       val (tns,files) = e
-      val schemaSource = combineSchemas(files,tns)
+      val schemaSource = combineSchemas(files.toSeq,tns)
       val schema = schemaFactory.newSchema(schemaSource)
       val validator = schema.newValidator
       validator.setErrorHandler(xh)

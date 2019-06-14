@@ -36,7 +36,7 @@ import gov.nasa.race.util.FileUtils._
   */
 trait ConsoleMainBase extends MainBase {
 
-  def main(args: Array[String]) {
+  def main(args: Array[String]): Unit = {
     ifSome(getOptions(args)) { opts =>
       setSystemProperties(opts)
       setConsoleUserInfoFactory

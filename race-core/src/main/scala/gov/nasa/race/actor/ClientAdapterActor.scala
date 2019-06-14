@@ -125,7 +125,7 @@ class ClientAdapterActor(val config: Config) extends AdapterActor {
 
   //--- utility functions
 
-  override def terminateConnection = {
+  override def terminateConnection: Unit = {
     isConnected = false
     terminate = true  // we don't try to reconnect
   }

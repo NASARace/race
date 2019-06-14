@@ -27,7 +27,7 @@ import scala.collection.mutable.{Map => MMap,HashMap => MHashMap}
   */
 trait TrackInfoStore {
   def get (id: String): Option[TrackInfo]
-  def add (id: String, ti: TrackInfo)
+  def add (id: String, ti: TrackInfo): Unit
 }
 
 /**

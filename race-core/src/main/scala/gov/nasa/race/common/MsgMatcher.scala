@@ -37,7 +37,7 @@ object MsgMatcher {
   def getMsgMatchers(config: Config): Seq[MsgMatcher] = {
     config.getOptionalConfigList("matchers").reverse.foldLeft(List.empty[MsgMatcher]) { (list, conf) =>
       val name = conf.getString("name")
-      val patterns = conf.getStringList("patterns").asScala.map(new Regex(_))
+      val patterns = conf.getStringList("patterns").asScala.map(new Regex(_)).toSeq
       MsgMatcher(name, patterns) :: list
     }
   }

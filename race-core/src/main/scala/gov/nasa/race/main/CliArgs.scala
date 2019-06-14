@@ -71,8 +71,8 @@ class CliArgs (val title: String) {
 
     def missing: Boolean = required && !seen
     def id: String = s"option ${keyNames.head}"
-    def show
-    def showRequired = if (required) "- REQUIRED" else ""
+    def show: String
+    def showRequired: String = if (required) "- REQUIRED" else ""
   }
 
   class Opt0 (keyNames: Seq[String], text: String, req: Boolean, action: =>Unit)

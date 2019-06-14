@@ -29,7 +29,7 @@ import gov.nasa.race.uom.Length._
 import gov.nasa.race.uom.Speed._
 import gov.nasa.race.util._
 
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 import scala.concurrent.duration._
 
 /**
@@ -154,14 +154,14 @@ object ConfigUtils {
 
     def getStringListOrElse(key: String, fallbackValue: Seq[String]): Seq[String] = {
       try {
-        conf.getStringList(key).asScala
+        conf.getStringList(key).asScala.toSeq
       } catch {
         case _: ConfigException.Missing => fallbackValue
       }
     }
     def getOptionalStringList(key: String): Seq[String] = {
       try {
-        conf.getStringList(key).asScala
+        conf.getStringList(key).asScala.toSeq
       } catch {
         case _: ConfigException.WrongType =>
           try {
@@ -178,7 +178,7 @@ object ConfigUtils {
 
     def getOptionalConfigList(key: String): Seq[Config] = {
       try {
-        conf.getConfigList(key).asScala
+        conf.getConfigList(key).asScala.toSeq
       } catch {
         case _: ConfigException.Missing => Nil
       }
@@ -186,7 +186,7 @@ object ConfigUtils {
 
     def getConfigSeq(key: String): Seq[Config] = {
       try {
-        conf.getConfigList(key).asScala
+        conf.getConfigList(key).asScala.toSeq
       } catch {
         case _: ConfigException.Missing => Seq.empty
       }

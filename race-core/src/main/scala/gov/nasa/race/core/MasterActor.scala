@@ -698,7 +698,7 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ImplicitActorLogging
     } else warning(s"RemoteRaceTerminate from unknown remote master: $remoteMaster")
   }
 
-  def terminateRaceActors = { // terminate in reverse order of creation
+  def terminateRaceActors: Unit = { // terminate in reverse order of creation
     setUnrespondingTerminatees( actors.foldRight (Seq.empty[(ActorRef,Config)]) { (e, leftOverActors) =>
       val (actorRef,actorConfig) = e
       info(s"sending TerminateRaceActor to ${actorRef.path}")

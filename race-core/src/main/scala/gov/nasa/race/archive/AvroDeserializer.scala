@@ -57,6 +57,6 @@ class AvroDeserializer[T <: SpecificRecord : ClassTag] (val cls: Class[T], val f
     while (dataFileReader.hasNext) {
       l += f(dataFileReader.next(t))
     }
-    l
+    l.toSeq
   }
 }

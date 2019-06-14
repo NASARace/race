@@ -235,7 +235,7 @@ trait AdapterActor extends PublishingRaceActor with SubscribingRaceActor with Co
 
   def sendResume = sendPacket(writeResume(dos))
 
-  def terminateConnection
+  def terminateConnection: Unit
 
   override def onTerminateRaceActor(originator: ActorRef) = {
     if (isConnected) sendStop

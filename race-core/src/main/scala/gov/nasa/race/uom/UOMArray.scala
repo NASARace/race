@@ -68,7 +68,7 @@ trait UOMDoubleArray[T] {
   def update(i:Int, a: T): Unit
 
   def grow(newLength: Int): Self
-  def copyFrom(other: Self, srcIdx: Int, dstIdx: Int, len: Int)
+  def copyFrom(other: Self, srcIdx: Int, dstIdx: Int, len: Int): Unit
 
   def slice(from: Int, until: Int): Self
   def tail: Self
@@ -77,7 +77,7 @@ trait UOMDoubleArray[T] {
 
   def iterator: Iterator[T]
   def reverseIterator: Iterator[T]
-  def foreach (f: (T)=>Unit)
+  def foreach (f: (T)=>Unit): Unit
 
   def last: T
   def exists(p: (T)=>Boolean): Boolean
@@ -140,7 +140,7 @@ trait UOMDoubleArrayBuffer[T] {
 
   def iterator: Iterator[T]
   def reverseIterator: Iterator[T]
-  def foreach (f: (T)=>Unit)
+  def foreach (f: (T)=>Unit): Unit
 
   def += (a:T): Self
   def append (as: T*): Unit

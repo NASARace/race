@@ -94,5 +94,5 @@ trait TrackedObject extends IdentifiableObject with TrackPoint with MovingObject
 
 trait TrackedObjectEnumerator {
   def numberOfTrackedObjects: Int
-  def foreachTrackedObject (f: TrackedObject=>Unit)
+  def foreachTrackedObject (f: TrackedObject=>Unit): Unit
 }

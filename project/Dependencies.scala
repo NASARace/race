@@ -36,7 +36,7 @@ object Dependencies {
 
   //--- slf4j
   // NOTE - slf4j 1.8 now uses ServiceProvider and logback has not caught up as of 12/01/17
-  val slf4jSimple = "org.slf4j" % "slf4j-simple" % "1.8.0-beta4"
+  val slf4jSimple = "org.slf4j" % "slf4j-simple" % "2.0.0-alpha0"
 
   //--- logback
   // does not support slf4j 1.8 (provider) yet
@@ -49,16 +49,17 @@ object Dependencies {
   val nscalaTime = "com.github.nscala-time" %% "nscala-time" %  "2.22.0"
 
   //--- Scala parser combinators (https://github.com/scala/scala-parser-combinators)
-  val scalaParser = "org.scala-lang.modules" % "scala-parser-combinators_2.12" % "1.1.2"
+  val scalaParser = "org.scala-lang.modules" %% "scala-parser-combinators" % "1.1.2"
 
   //--- scala-xml
-  val scalaXml = "org.scala-lang.modules" % "scala-xml_2.12" % "1.2.0"
+  val scalaXml = "org.scala-lang.modules" % "scala-xml_2.12" % "1.2.0"  // otherwise scalatest conflicts
+  //val scalaXml = "org.scala-lang.modules" %% "scala-xml" % "1.2.0"
 
   //--- new scala reflection (TypeTags etc.)
   val scalaReflect =  "org.scala-lang" % "scala-reflect" % CommonRaceSettings.scalaVer
 
   //--- scalaTags HTML generator
-  val scalaTags = "com.lihaoyi" %% "scalatags" % "0.6.8"
+  val scalaTags = "com.lihaoyi" % "scalatags_2.12" % "0.6.8"
 
   //--- scala automatic resource management (https://github.com/jsuereth/scala-arm)
   //val scalaArm = "com.jsuereth" %% "scala-arm" % "2.0"
@@ -68,17 +69,17 @@ object Dependencies {
   // val breezeNative = "org.scalanlp" %% "breeze-natives" % "0.13.2"
 
   //--- scalaTest
-  val scalaTest = "org.scalatest" % "scalatest_2.12" % "3.0.7"
+  val scalaTest = "org.scalatest" % "scalatest_2.12" % "3.2.0-SNAP10" % Test
   val pegDown = "org.pegdown" % "pegdown" % "1.6.0"
 
   //--- scalaCheck
-  val scalaCheck = "org.scalacheck" % "scalacheck_2.12" % "1.14.0"
+  val scalaCheck = "org.scalacheck" %% "scalacheck" % "1.14.0" % Test
 
   val defaultLibs =  Seq(logback,typesafeConfig,nscalaTime)
   val defaultTestLibs = Seq(scalaTest,scalaCheck,pegDown)
 
   //--- Circe Json support
-  val circeVersion = "0.11.1"
+  val circeVersion = "0.12.0-M3"
   val circeCore = "io.circe" %% "circe-core" % circeVersion
   val circeGeneric = "io.circe" %% "circe-generic" % circeVersion
   val circeParser = "io.circe" %% "circe-parser" % circeVersion
@@ -164,7 +165,8 @@ object Dependencies {
   val newKafkaClients = "org.apache.kafka" % "kafka-clients" % "1.0.1"
 
   //--- Kafka (make sure to add log4j to kafkaServer dependencies
-  val kafka = "org.apache.kafka" %% "kafka" % "1.0.1" excludeAll(
+  val kafka = "org.apache.kafka" % "kafka_2.12" % "2.2.1" excludeAll(
+  //val kafka = "org.apache.kafka" %% "kafka" % "1.0.1" excludeAll(
     ExclusionRule(organization = "log4j", name="log4j"),
     ExclusionRule(organization = "org.slf4j", name = "slf4j-log4j12")
   )

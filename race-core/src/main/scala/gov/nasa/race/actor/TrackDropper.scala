@@ -40,7 +40,7 @@ trait TrackDropper extends PublishingRaceActor with ContinuousTimeRaceActor with
   //--- to be provided by concrete class
   val config: Config // actor config to be provided by concrete actor class
   val tracks: Map[String,TrackedObject] // map with last active FlightPos objects
-  def removeStaleTrack(ac: TrackedObject) // update map in implementor
+  def removeStaleTrack(ac: TrackedObject): Unit // update map in implementor
 
   val publishDropped = config.getBooleanOrElse("publish-dropped", true)
   val dropAfterMillis = config.getFiniteDurationOrElse("drop-after", 60.seconds).toMillis // this is sim time

@@ -194,7 +194,7 @@ trait Trajectory extends TDataSource[N3,TDP3] {
     while (it.hasNext) f(it.next)
   }
 
-  def copyToArrays (t: DateArray, lat: AngleArray, lon: AngleArray, alt: LengthArray)
+  def copyToArrays (t: DateArray, lat: AngleArray, lon: AngleArray, alt: LengthArray): Unit
 
   /**
     * return a new Trajectory object that preserves the current state (immutable)
@@ -321,8 +321,8 @@ trait MutTrajectory extends Trajectory {
   def ++= (ps: Iterator[TDP3]): Unit = ps.foreach(append)
 
   def clear: Unit
-  def drop (n: Int)
-  def dropRight (n: Int)
+  def drop (n: Int): Unit
+  def dropRight (n: Int): Unit
 }
 
 /**

@@ -128,7 +128,7 @@ class ServerAdapterActor (val config: Config) extends AdapterActor {
     }
   }
 
-  override def terminateConnection = {
+  override def terminateConnection: Unit = {
     isConnected = false
   }
 

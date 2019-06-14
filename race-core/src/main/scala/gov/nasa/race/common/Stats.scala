@@ -44,7 +44,7 @@ trait Stats extends Cloneable with XmlSource {
   * Stats that can be printed
   */
 trait PrintStats extends Stats {
-  def printWith(pw: PrintWriter)
+  def printWith(pw: PrintWriter): Unit
 }
 
 /**
