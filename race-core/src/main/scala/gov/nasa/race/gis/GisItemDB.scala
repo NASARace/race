@@ -30,6 +30,7 @@ import gov.nasa.race.uom.Angle._
 import org.joda.time.DateTime
 
 import scala.Double.{MaxValue => DMax, MinValue => DMin}
+import scala.collection.Seq
 import scala.collection.mutable.ArrayBuffer
 import scala.reflect._
 

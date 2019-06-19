@@ -18,14 +18,11 @@ package gov.nasa.race.cl
 
 import java.nio.ByteOrder
 
-import CLUtils._
-import gov.nasa.race.common.CloseStack
-import gov.nasa.race.tryWithResource
+import gov.nasa.race.cl.CLUtils._
 import org.lwjgl.opencl.CL._
 import org.lwjgl.opencl.CL10._
 import org.lwjgl.opencl.CL11.CL_DEVICE_OPENCL_C_VERSION
-import org.lwjgl.opencl.{CL12, CLContextCallbackI, CLProgramCallbackI}
-import org.lwjgl.system.{MemoryStack, MemoryUtil}
+import org.lwjgl.opencl.CL12
 
 import scala.collection.immutable.HashSet
 
@@ -98,7 +95,7 @@ class CLDevice (val index: Int, val id: Long, val platform: CLPlatform) extends 
   val maxWorkItemDimensions: Int = getDeviceInfoInt(id, CL_DEVICE_MAX_WORK_ITEM_DIMENSIONS)
   val maxWorkGroupSize: Int = getDeviceInfoLong(id, CL_DEVICE_MAX_WORK_GROUP_SIZE).toInt
 
-  val extensions: HashSet[String] = HashSet[String](getDeviceInfoStringUTF8(id,CL_DEVICE_EXTENSIONS).split(" "): _*)
+  val extensions: HashSet[String] = HashSet.from(getDeviceInfoStringUTF8(id,CL_DEVICE_EXTENSIONS).split(" "))
   val isFp64: Boolean = extensions.contains("cl_khr_fp64")
 
   val isLittleEndian: Boolean = getDeviceInfoInt(id, CL_DEVICE_ENDIAN_LITTLE) == 1

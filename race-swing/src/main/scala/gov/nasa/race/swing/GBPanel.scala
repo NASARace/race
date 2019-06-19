@@ -72,8 +72,8 @@ class GBPanel extends Panel with LayoutContainer {
   protected def areValid (c: Constraints): (Boolean, String) = (true, "")
   protected def add (c: Component, l: Constraints) = peer.add(c.peer, l.peer)
 
-  class Constraints (val peer: GridBagConstraints) extends Proxy with Cloneable {
-    def self = peer
+  class Constraints (val peer: GridBagConstraints) extends Cloneable {
+    def self: GridBagConstraints = peer
 
     def this (gridx: Int = Grid.Relative.id, gridy: Int = Grid.Relative.id,
               gridwidth: Int = 1, gridheight: Int = 1,
@@ -93,45 +93,45 @@ class GBPanel extends Panel with LayoutContainer {
     def gridx: Int = peer.gridx
     def gridx (x:Int): Constraints = { peer.gridx = x; this }
     def gridx (x:Grid.Value): Constraints = { peer.gridx = x.id; this }
-    def gridx_= (x: Int) { peer.gridx = x }
+    def gridx_= (x: Int): Unit = { peer.gridx = x }
     def gridy: Int = peer.gridy
     def gridy (y: Int): Constraints = { peer.gridy = y; this }
     def gridy (y: Grid.Value): Constraints = { peer.gridy = y.id; this }
-    def gridy_= (y: Int) { peer.gridy = y }
+    def gridy_= (y: Int): Unit = { peer.gridy = y }
     def grid: (Int, Int) = (gridx, gridy)
     def grid (x: Int, y: Int): Constraints = { gridx = x; gridy = y; this }
     def grid (x: Grid.Value, y: Grid.Value): Constraints = { gridx = x.id; gridy = y.id; this }
-    def grid_= (c: (Int, Int)) = { gridx = c._1; gridy = c._2 }
+    def grid_= (c: (Int, Int)): Unit = { gridx = c._1; gridy = c._2 }
     def gridwidth: Int = peer.gridwidth
     def gridwidth (w: Int): Constraints = { peer.gridwidth = w; this }
     def gridwidth (w: Grid.Value): Constraints = { peer.gridwidth = w.id; this }
-    def gridwidth_= (w: Int) { peer.gridwidth = w }
-    def gridwidth_= (w: Grid.Value) { peer.gridwidth = w.id }
+    def gridwidth_= (w: Int): Unit = { peer.gridwidth = w }
+    def gridwidth_= (w: Grid.Value): Unit = { peer.gridwidth = w.id }
     def gridheight: Int = peer.gridheight
     def gridheight (h: Int): Constraints = { peer.gridheight = h; this }
     def gridheight (h: Grid.Value): Constraints = { peer.gridheight = h.id; this }
-    def gridheight_= (h: Int) { peer.gridheight = h }
-    def gridheight_= (h: Grid.Value) { peer.gridheight = h.id }
+    def gridheight_= (h: Int): Unit = { peer.gridheight = h }
+    def gridheight_= (h: Grid.Value): Unit = { peer.gridheight = h.id }
     def weightx: Double = peer.weightx
     def weightx (x: Double): Constraints = { peer.weightx = x; this }
-    def weightx_= (x: Double) { peer.weightx = x }
+    def weightx_= (x: Double): Unit = { peer.weightx = x }
     def weighty: Double = peer.weighty
     def weighty (y: Double): Constraints = { peer.weighty = y; this }
-    def weighty_= (y: Double) { peer.weighty = y }
+    def weighty_= (y: Double): Unit = { peer.weighty = y }
     def anchor: Anchor.Value = Anchor(peer.anchor)
     def anchor (a: Anchor.Value): Constraints = { peer.anchor = a.id; this }
-    def anchor_= (a: Anchor.Value) { peer.anchor = a.id }
+    def anchor_= (a: Anchor.Value): Unit = { peer.anchor = a.id }
     def fill: Fill.Value = Fill(peer.fill)
     def fill (f: Fill.Value): Constraints = { peer.fill = f.id; this }
-    def fill_= (f: Fill.Value) { peer.fill = f.id }
+    def fill_= (f: Fill.Value): Unit = { peer.fill = f.id }
     def insets: Insets = peer.insets
     def insets (i: Insets): Constraints = { peer.insets = i; this }
-    def insets_= (i: Insets) { peer.insets = i }
+    def insets_= (i: Insets): Unit = { peer.insets = i }
     def ipadx: Int = peer.ipadx
     def ipadx (x: Int): Constraints = { peer.ipadx = x; this }
-    def ipadx_= (x: Int) { peer.ipadx = x }
+    def ipadx_= (x: Int): Unit = { peer.ipadx = x }
     def ipady: Int = peer.ipady
     def ipady (y: Int): Constraints = { peer.ipady = y; this }
-    def ipady_= (y: Int) { peer.ipady = y }
+    def ipady_= (y: Int): Unit = { peer.ipady = y }
   }
 }

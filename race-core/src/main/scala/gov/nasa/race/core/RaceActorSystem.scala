@@ -36,10 +36,10 @@ import gov.nasa.race.util.NetUtils._
 import gov.nasa.race.util.{ClassLoaderUtils, DateTimeUtils, ThreadUtils}
 import org.joda.time.DateTime
 
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 import scala.collection._
 import scala.collection.concurrent.TrieMap
-import scala.collection.immutable.ListMap
+import scala.collection.immutable.{ListMap,Set,Map}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 import scala.language.postfixOps

@@ -48,7 +48,7 @@ class ViewPanel (raceViewer: RaceViewer, config: Option[Config]=None) extends GB
   earthFlat.setProjection(new ProjectionMercator)
 
   //--- buttons to switch between globe displays
-  val globeBtn = new RadioButton("globe") {selected = true} styled()
+  val globeBtn = new RadioButton("globe") {selected = true}.styled()
   val flatBtn = new RadioButton("flat map").styled()
   val group = new ButtonGroup( globeBtn,flatBtn)
 

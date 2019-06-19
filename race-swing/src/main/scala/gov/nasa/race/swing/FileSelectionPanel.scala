@@ -42,8 +42,8 @@ class FileSelectionPanel(labelText: String, optDir: Option[String]=None, optExt:
                         (var action: (File)=>Any = f=>{}) extends GBPanel {
   var history = List.empty[String]
   var fileSelection: Option[File] = None
-  val label = new Label(labelText).styled('labelFor)
-  val textField = new TextField(20).styled('stringField)
+  val label = new Label(labelText).styled("labelFor")
+  val textField = new TextField(20).styled("stringField")
 
   val dir = new File(if (optDir.isDefined) optDir.get else System.getProperty("user.dir"))
   val chooser = new FileChooser(dir)

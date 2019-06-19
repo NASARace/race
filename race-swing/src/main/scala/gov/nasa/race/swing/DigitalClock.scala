@@ -36,8 +36,8 @@ class DigitalClock (private[this] var clock: Option[Clock]=None) extends GridPan
   }
 
   val timer = new SwingTimer(1.second)
-  val clockDate = new ClockLabel(" EE, MM/dd/yyyy").styled('date)
-  val clockTime = new ClockLabel(" hh:mm:ss a ", " 00:00:00 AM ").styled('time)
+  val clockDate = new ClockLabel(" EE, MM/dd/yyyy").styled("date")
+  val clockTime = new ClockLabel(" hh:mm:ss a ", " 00:00:00 AM ").styled("time")
 
   contents ++= Seq(clockDate,clockTime)
 

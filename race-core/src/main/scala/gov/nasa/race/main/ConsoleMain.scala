@@ -26,6 +26,8 @@ import gov.nasa.race.util.ConsoleIO
 import gov.nasa.race.util.ConsoleIO._
 import gov.nasa.race.util.FileUtils._
 
+import scala.collection.Seq
+
 /**
   * a RACE driver that runs RACE interactively from the command line,
   * parsing command line options, reading config file arguments, instantiating
@@ -101,8 +103,8 @@ trait ConsoleMainBase extends MainBase {
   }
 
   def showUniverses(universes: Seq[RaceActorSystem]): Unit = {
-    for ((u, i) <- universes.zip(Stream from 1)) {
-      println(f"${i}%3d: ${u.master.path} : ${u.currentStatus}")
+    for ((u, i) <- universes.zipWithIndex) {
+      println(f"${i+1}%3d: ${u.master.path} : ${u.currentStatus}")
     }
   }
 

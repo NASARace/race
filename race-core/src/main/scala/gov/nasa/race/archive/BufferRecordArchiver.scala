@@ -23,7 +23,7 @@ import java.nio.file.{FileSystems, OpenOption}
 import gov.nasa.race.common.BufferRecord
 import org.joda.time.DateTime
 
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 
 /**
   * an ArchiveWriter that writes BufferRecords to a file

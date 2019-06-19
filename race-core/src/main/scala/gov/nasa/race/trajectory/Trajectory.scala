@@ -317,7 +317,7 @@ trait MutTrajectory extends Trajectory {
   def += (p: TrackPoint): Unit = append(p)
   def += (p: TDP3): Unit = append(p)
 
-  def ++= (ps: TraversableOnce[TrackPoint]): Unit = ps.foreach(append)
+  def ++= (ps: IterableOnce[TrackPoint]): Unit = ps.iterator.foreach(append)
   def ++= (ps: Iterator[TDP3]): Unit = ps.foreach(append)
 
   def clear: Unit

@@ -111,10 +111,10 @@ class Bus (val system: ActorSystem) extends ActorEventBus with SubchannelClassif
   // for debugging
   def showChannelSubscriptions = {
     val s = new StringBuilder
-    for (((channel,actors),i) <- channelSubscriptions.toSeq.sortBy(_._1).zip(Stream from 1)){
-      s ++= f" ${i}%3d: '$channel' subscribers:\n"
-      for ((a,j) <- actors.zip(Stream from 1)) {
-        s ++= f"   ${j}%3d: ${a.path.name}\n"
+    for (((channel,actors),i) <- channelSubscriptions.toSeq.sortBy(_._1).zipWithIndex){
+      s ++= f" ${i+1}%3d: '$channel' subscribers:\n"
+      for ((a,j) <- actors.zipWithIndex) {
+        s ++= f"   ${j+1}%3d: ${a.path.name}\n"
       }
     }
     s.toString

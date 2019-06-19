@@ -141,7 +141,7 @@ final class LatLonArray protected[geo] (protected[geo] val data: Array[Long]) {
   @inline def take (n: Int): LatLonArray = new LatLonArray(data.take(n))
   @inline def drop (n: Int): LatLonArray = new LatLonArray(data.drop(n))
 
-  @inline def toBuffer: LatLonArrayBuffer = new LatLonArrayBuffer(ArrayBuffer[Long](data:_*))
+  @inline def toBuffer: LatLonArrayBuffer = new LatLonArrayBuffer(ArrayBuffer.from(data))
 
   //.. and more to follow
 }

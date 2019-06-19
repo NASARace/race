@@ -38,7 +38,7 @@ object RunControlPanel {
   def main (args:Array[String]): Unit = {
     val top = new MainFrame {
       title = "RunControlPanel Test"
-      contents = new RunControlPanel().styled('topLevel)
+      contents = new RunControlPanel().styled("topLevel")
     }
     top.open()
   }

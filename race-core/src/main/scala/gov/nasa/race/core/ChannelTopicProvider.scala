@@ -110,7 +110,7 @@ trait ChannelTopicSubscriber extends SubscribingRaceActor {
       if (isResponseAccepted(response)) {
         acceptProvider(response)
         if (isAllChannelRequest) {
-          pendingRequests.retain(_.topic != channelTopic.topic)
+          pendingRequests.filterInPlace(_.topic != channelTopic.topic)
           isAllChannelRequest = false
         } else {
           pendingRequests -= channelTopic
@@ -222,7 +222,7 @@ trait ChannelTopicProvider extends PublishingRaceActor {
     case BusSysEvent(PROVIDER_CHANNEL,request: ChannelTopicRequest,_) => processRequest(request)
     case accept: ChannelTopicAccept => processAccept(accept)
     case release: ChannelTopicRelease => processRelease(release)
-    case Terminated(client) => clients.retain( release => release.client != client)
+    case Terminated(client) => clients.filterInPlace( release => release.client != client)
   }
 
   override def handleSystemMessage: Receive = handleCTProviderMessage orElse super.handleSystemMessage

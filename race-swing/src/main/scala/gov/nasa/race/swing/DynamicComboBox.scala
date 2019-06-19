@@ -20,7 +20,7 @@ import javax.swing.{DefaultComboBoxModel, JComboBox}
 
 import scala.reflect.ClassTag
 import scala.swing.ComboBox
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 
 import java.util.Vector
 

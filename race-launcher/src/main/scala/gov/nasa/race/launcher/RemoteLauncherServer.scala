@@ -29,6 +29,8 @@ import gov.nasa.race.util.ThreadUtils._
 import gov.nasa.race._
 import gov.nasa.race.util.{ConsoleIO, _}
 
+import scala.collection.Seq
+
 /**
   * command line options for RemoteLauncherServer (scopt based parser, but mutable options)
   */

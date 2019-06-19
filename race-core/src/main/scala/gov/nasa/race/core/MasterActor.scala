@@ -28,11 +28,12 @@ import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.Messages._
 import gov.nasa.race.util.NetUtils._
 import gov.nasa.race.util.StringUtils._
+import gov.nasa.race.util.ThreadUtils._
 import org.joda.time.DateTime
 
 import scala.collection.immutable.ListMap
 import scala.collection.{Seq, mutable}
-import scala.concurrent.SyncVar
+import java.util.concurrent.{LinkedBlockingQueue,TimeUnit}
 import scala.concurrent.duration._
 import scala.language.postfixOps
 
@@ -354,16 +355,16 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ImplicitActorLogging
     * takes a creator function argument so that we can sync on the actor construction and
     * know if there was an exception in the respective ctor
     */
-  protected def getActorProps (ctor: ()=>Actor, sync: SyncVar[Boolean]) = {
+  protected def getActorProps (ctor: ()=>Actor, sync: LinkedBlockingQueue[Either[Throwable,ActorRef]]) = {
     Props( creator = {
       try {
         val a = ctor()
-        sync.put(true)
+        sync.put(Right(a.self))
         a
       } catch {
         case t: Throwable =>
           ras.reportException(t)
-          sync.put(false)
+          sync.put(Left(t))
           throw t
       }
     })
@@ -371,12 +372,17 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ImplicitActorLogging
 
   /**
     * this is the workhorse for actor construction
+    *
     * Note that it does NOT follow normal Akka convention because it has to construct
     * actors synchronously and tell us right away if there was an exception during construction.
     * We still need to be able to specify a supervisorStrategy though, i.e. we need to
     * instantiate through Props and from another thread.
     *
-    * NOTE - since we use a SyncVar this does not work for remote actor creation
+    * While it would be more idiomatic to use a Future here this would require yet another additional
+    * thread / threadpool and all we need is to find out if the actor ctor completed in time and
+    * with success/failure without resorting to busy waiting
+    *
+    * NOTE - since we use local synchronization this does not work for remote actor creation
     *
     * @param actorConfig the Config object that specifies the actor
     * @return Some(ActorRef) in case instantiation has succeeded, None otherwise
@@ -389,7 +395,7 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ImplicitActorLogging
       val createActor = getActorCtor(actorCls, actorConfig)
 
       info(s"creating $actorName ..")
-      val sync = new SyncVar[Boolean]
+      val sync = new LinkedBlockingQueue[Either[Throwable,ActorRef]](1)
       val props = getActorProps(createActor,sync)
 
       val aref = context.actorOf(props,actorName) // note this executes the ctor in another thread
@@ -400,30 +406,34 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ImplicitActorLogging
       // All failure handling has to consider if the actor is optional or not
       val createTimeout = actorConfig.getFiniteDurationOrElse("create-timeout",ras.defaultActorTimeout)
 
-      sync.get(createTimeout.toMillis) match {
-        case Some(success) =>  // actor construction returned, but might have failed in ctor
-          if (success) { // ctor success
+      def _timedOut: Option[ActorRef] = {
+        if (isOptionalActor(actorConfig)) {
+          warning(s"optional actor construction timed out $actorName")
+          None
+        } else {
+          error(s"non-optional actor construction timed out $actorName, escalating")
+          throw new RaceInitializeException(s"failed to create actor $actorName")
+        }
+      }
+
+      waitInterruptibleUpTo(createTimeout, _timedOut) { dur =>
+        sync.poll(dur.toMillis, TimeUnit.MILLISECONDS) match {
+          case null => _timedOut
+
+          case Left(t) => // ctor bombed
+            if (isOptionalActor(actorConfig)) {
+              warning(s"constructor of optional actor $actorName caused exception $t")
+              None
+            } else {
+              error(s"constructor of non-optional actor $actorName caused exception $t, escalating")
+              throw new RaceInitializeException(s"failed to create actor $actorName")
+            }
+
+          case Right(ar) => // success, we could check actorRef equality here
             info(s"actor $actorName created")
             context.watch(aref) // start death watch
             Some(aref)
-
-          } else { // ctor exception
-            if (isOptionalActor(actorConfig)) {
-              warning(s"optional actor construction caused exception $actorName")
-              None
-            } else {
-              error(s"non-optional actor construction caused exception $actorName, escalating")
-              throw new RaceInitializeException(s"failed to create actor $actorName")
-            }
-          }
-        case None => // ctor timeout
-          if (isOptionalActor(actorConfig)) {
-            warning(s"optional actor construction timed out $actorName")
-            None
-          } else {
-            error(s"non-optional actor construction timed out $actorName, escalating")
-            throw new RaceInitializeException(s"failed to create actor $actorName")
-          }
+        }
       }
 
     } catch { // those are exceptions that happened in this thread
@@ -726,7 +736,7 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ImplicitActorLogging
   }
 
   def setUnrespondingTerminatees(unresponding: Seq[(ActorRef,Config)]): Unit = {
-    ras.actors = ListMap(unresponding:_*)
+    ras.actors = ListMap.from(unresponding)
   }
 
   def stopRaceActor (actorRef: ActorRef): Unit =  {

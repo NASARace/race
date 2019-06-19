@@ -17,6 +17,7 @@
 package gov.nasa.race.swing
 
 import scala.swing.ListView
+import scala.collection.Seq
 
 /**
   * a ListView trait that preserves selections and viewport

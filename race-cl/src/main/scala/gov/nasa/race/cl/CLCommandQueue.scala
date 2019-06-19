@@ -94,10 +94,12 @@ class CLJobCommandQueue(id: Long, context: CLContext, device: CLDevice)
     super.release
   }
 
+  private def noOp: Unit = {}
+
   /**
     * this is normally called from a producer thread, after queueing commands
     */
-  def submitJob(action: =>Unit = ()=>{}): Long = {
+  def submitJob(action: =>Unit = noOp): Long = {
     action
 
     jobcount += 1
@@ -108,7 +110,7 @@ class CLJobCommandQueue(id: Long, context: CLContext, device: CLDevice)
   /**
     * this is called from a consumer thread with the event argument obtained from a submitJob() call
     */
-  def waitForJob (ev: Long)(action: =>Unit = ()=>{}) = {
+  def waitForJob (ev: Long)(action: =>Unit = noOp) = {
     clWaitForEvents(ev).?
     clReleaseEvent(ev).?
 

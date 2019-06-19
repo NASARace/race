@@ -40,7 +40,7 @@ import scala.collection.mutable.{HashMap, ListBuffer}
   */
 class XmlValidationFilter(val schemaFiles: Seq[File], val config: Config= null) extends ConfigurableFilter {
 
-  def this (schemaFile: File) = this(Array(schemaFile),null)
+  def this (schemaFile: File) = this(Seq(schemaFile),null)
 
   final val NoNamespace = ""
   val tnsExtractor = new XmlAttrExtractor("targetNamespace", e => {e == "xs:schema"} ) // for schemas

@@ -23,6 +23,7 @@ import gov.nasa.race.util.CryptUtils
 
 import scala.io.BufferedSource
 import scala.util.matching.Regex
+import scala.collection.Seq
 
 object User {
   final val AnyRole = "*"
@@ -149,6 +150,6 @@ class PasswordStore (val file: File) {
   }
 
   def matching (pattern: Regex): Seq[(String,UserEntry)] = {
-    map.filterKeys(uid => pattern.findFirstIn(uid).isDefined).toSeq.sortBy(_._1)
+    map.view.filterKeys(uid => pattern.findFirstIn(uid).isDefined).toSeq.sortBy(_._1)
   }
 }

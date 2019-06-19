@@ -68,7 +68,7 @@ object Passwd {
 
       case Op.Add =>
         ifSome(promptPassword) { pw =>
-          store.addUser(opts.uid, pw, opts.roles.split(','))
+          store.addUser(opts.uid, pw, StringUtils.splitToSeq(opts.roles,","))
           saveStore(store)
         }
 

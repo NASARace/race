@@ -70,7 +70,7 @@ abstract class DDSWriter[T: ClassTag] (conf: Config) extends DDSClient[T](conf) 
 
   protected def createWriter: DataWriter[T] = publisher.createDataWriter(topic)
 
-  def write (o: Any) // implemented by subclass, calling writer.write(t)
+  def write (o: Any): Unit // implemented by subclass, calling writer.write(t)
 
   def close: Unit = {
     writer.close

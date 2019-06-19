@@ -37,7 +37,7 @@ class DigitalStopWatch (val clock: Clock)  extends GridPanel(1,1) {
   }
 
   val timer = new SwingTimer(1.second)
-  val clockTime = new StopWatchLabel(" 00:00:00 ").styled('time)
+  val clockTime = new StopWatchLabel(" 00:00:00 ").styled("time")
 
   contents += clockTime
 

@@ -17,6 +17,7 @@
 
 package gov.nasa.race.main
 
+import scala.collection.Seq
 import java.io.File
 
 /**

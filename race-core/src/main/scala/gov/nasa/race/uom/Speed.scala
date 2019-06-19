@@ -19,6 +19,7 @@ package gov.nasa.race.uom
 import gov.nasa.race.common._
 
 import scala.collection.mutable.ArrayBuffer
+import scala.collection.Seq
 import scala.concurrent.duration.FiniteDuration
 
 
@@ -148,6 +149,8 @@ private[uom] class ReverseSpeedIter (data: Seq[Double], first: Int, last: Int) e
   * note that Array[T] is final hence we cannot extend it
   */
 final class SpeedArray protected[uom] (protected[uom] val data: Array[Double]) extends UOMDoubleArray[Speed] {
+  import scala.math.Ordering.Double.TotalOrdering
+
   type Self = SpeedArray
   type SelfBuffer = SpeedArrayBuffer
 
@@ -195,6 +198,8 @@ object SpeedArrayBuffer {
 }
 
 final class SpeedArrayBuffer protected[uom] (protected[uom] val data: ArrayBuffer[Double]) extends UOMDoubleArrayBuffer[Speed] {
+  import scala.math.Ordering.Double.TotalOrdering
+
   type Self = SpeedArrayBuffer
   type SelfArray = SpeedArray
 

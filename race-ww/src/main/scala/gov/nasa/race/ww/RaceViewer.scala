@@ -34,7 +34,7 @@ import gov.nasa.race.{ifInstanceOf, ifSome}
 import gov.nasa.worldwind.geom.{Angle, Position}
 import gov.nasa.worldwind.layers.Layer
 
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 import scala.collection.immutable.ListMap
 import scala.reflect.ClassTag
 import scala.swing.Component
@@ -213,7 +213,7 @@ class RaceViewer(viewerActor: RaceViewerActor) extends DeferredEyePositionListen
     val panel = newInstance[RacePanel](panelConfig.getString("class"),
       Array(classOf[RaceViewer], classOf[Option[Config]]),
       Array(this, Some(panelConfig))).get
-    panel.styled('consolePanel)
+    panel.styled("consolePanel")
 
     PanelEntry(name, panel, tooltip, expand)
   }
@@ -226,7 +226,7 @@ class RaceViewer(viewerActor: RaceViewerActor) extends DeferredEyePositionListen
           new ControlClockPanel(this)
         } else {
           new BasicClockPanel(this)
-        }).styled('consolePanel)
+        }).styled("consolePanel")
         Some(PanelEntry("clock", clockPanel))
     }
   }
@@ -234,28 +234,28 @@ class RaceViewer(viewerActor: RaceViewerActor) extends DeferredEyePositionListen
   def createViewPanel: Option[PanelEntry] = {
     config.getOptionalConfig("view-panel") match {
       case Some(pconf) => if (pconf.isEmpty) None else Some(createPanelEntry(pconf))
-      case None => Some(PanelEntry("view", new ViewPanel(this).styled('consolePanel)))
+      case None => Some(PanelEntry("view", new ViewPanel(this).styled("consolePanel")))
     }
   }
 
   def createSyncPanel: Option[PanelEntry] = {
     config.getOptionalConfig("sync-panel") match {
       case Some(pconf) => if (pconf.isEmpty) None else Some(createPanelEntry(pconf))
-      case None => Some(PanelEntry("sync", new SyncPanel(this).styled('consolePanel)))
+      case None => Some(PanelEntry("sync", new SyncPanel(this).styled("consolePanel")))
     }
   }
 
   def createLayersPanel: Option[PanelEntry] = {
     config.getOptionalConfig("layers-panel") match {
       case Some(pconf) => if (pconf.isEmpty) None else Some(createPanelEntry(pconf))
-      case None => Some(PanelEntry("layers", new LayerListPanel(this).styled('consolePanel)))
+      case None => Some(PanelEntry("layers", new LayerListPanel(this).styled("consolePanel")))
     }
   }
 
 
   def createDefaultPanels(collapsed: Set[String]): ListMap[String,PanelEntry] = {
     def panelEntry(name: String, c: RacePanel, tt: String=null) = name -> PanelEntry(name,c,tt,!collapsed.contains(name))
-    def styled (c: RacePanel) = c.styled('consolePanel)
+    def styled (c: RacePanel) = c.styled("consolePanel")
 
     var panels = new ListMap[String,PanelEntry]
     Seq(createClockPanel, createViewPanel, createSyncPanel, createLayersPanel).foreach { o=>

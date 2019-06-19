@@ -32,7 +32,7 @@ import gov.nasa.race._
 import gov.nasa.race.config.ConfigUtils
 
 import scala.annotation.tailrec
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 
 /**
   * cryptography utilities

@@ -18,6 +18,7 @@ package gov.nasa.race.air
 
 import com.typesafe.config.Config
 import gov.nasa.race.track.{TrackInfo, TrackInfoReader}
+import scala.collection.Seq
 
 /**
   * a TrackInfoReader that parses TFM messages for TrackInfo data

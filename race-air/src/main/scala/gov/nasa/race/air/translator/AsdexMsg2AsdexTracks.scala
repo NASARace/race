@@ -33,6 +33,7 @@ import org.joda.time.DateTime
 
 import scala.Double.NaN
 import scala.collection.mutable.ArrayBuffer
+import scala.collection.Seq
 
 /**
   * translator for SWIM ASDE-X asdexMsg messages to raw AsdexTracks (with incomplete delta info)

@@ -38,7 +38,7 @@ class BasicClockPanel(raceView: RaceViewer, config: Option[Config]=None) extends
 
   val c = new Constraints( fill=Fill.Horizontal, anchor=Anchor.West, insets=(8,2,0,2))
   layout(simClockPanel)                           = c(0,0).weightx(0)
-  layout(new Label("elapsed:").styled('labelFor)) = c(1,0).weightx(0.5)
+  layout(new Label("elapsed:").styled("labelFor")) = c(1,0).weightx(0.5)
   layout(simStopWatchPanel)                       = c(2,0).weightx(0)
 
 }

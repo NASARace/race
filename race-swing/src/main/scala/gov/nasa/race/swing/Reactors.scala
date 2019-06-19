@@ -65,7 +65,7 @@ object Reactors {
   //--- bean listeners
   case class PropertyChanged (source:AnyRef, propertyName:String, oldValue:AnyRef, newValue: AnyRef)
 
-  implicit class RichBean (val bean: {def addPropertyChangeListener(l:PropertyChangeListener)}) {
+  implicit class RichBean (val bean: {def addPropertyChangeListener(l:PropertyChangeListener): Unit}) {
     def setPropertyChangeReactions (pf: PartialFunction[PropertyChanged,Any]) = {
       def ignore: PartialFunction[PropertyChanged,Any] = { case _ => }
       bean.addPropertyChangeListener (new PropertyChangeListener {

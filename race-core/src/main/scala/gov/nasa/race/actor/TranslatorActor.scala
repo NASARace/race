@@ -21,6 +21,7 @@ import com.typesafe.config.Config
 import gov.nasa.race.Translator
 import gov.nasa.race.core.Messages.BusEvent
 import gov.nasa.race.core.SubscribingRaceActor
+import scala.collection.Seq
 
 /**
  * a generic actor that translates text messages into objects by means of a

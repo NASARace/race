@@ -123,7 +123,7 @@ class ConsolePane extends TextPane {
   */
 class ConsoleHeader (title: String, consolePane: ConsolePane, maxLines: Int = 0) extends GBPanel {
 
-  val titleLabel = new Label(title).styled('title)
+  val titleLabel = new Label(title).styled("title")
   titleLabel.preferredSize = (80, 20)
 
   val filePanel = new FileSelectionPanel("log to:", Some("tmp"), Some(".log"))( f =>
@@ -135,11 +135,11 @@ class ConsoleHeader (title: String, consolePane: ConsolePane, maxLines: Int = 0)
   maxLinesCb.selected = maxLines > 0
   listenTo(maxLinesCb)
 
-  val maxLinesInput = new IntInput(6).styled('numField)
+  val maxLinesInput = new IntInput(6).styled("numField")
   maxLinesInput.value = maxLines
   listenTo(maxLinesInput)
 
-  val commentInput = new TextField(10).styled('stringField)
+  val commentInput = new TextField(10).styled("stringField")
   listenTo(commentInput)
 
   reactions += {
@@ -157,7 +157,7 @@ class ConsoleHeader (title: String, consolePane: ConsolePane, maxLines: Int = 0)
     var c = new Constraints(gridy = 0, fill = Fill.Horizontal, anchor = Anchor.West, insets = (2,2,2,2))
     layout(titleLabel) = c
     layout(new Label().styled()) = c.weightx(0.5) // a filler
-    layout(new Label("cmt:").styled('labelFor)) = c.anchor(Anchor.East).weightx(0)
+    layout(new Label("cmt:").styled("labelFor")) = c.anchor(Anchor.East).weightx(0)
     layout(commentInput) = c
     layout(maxLinesCb) = c
     layout(maxLinesInput) = c
@@ -237,7 +237,7 @@ class LogHeader (t: String, lp: LogConsole, max: Int, actions: PartialFunction[S
     layout(titleLabel) = c
     layout(logLevelSelector) = c
     layout(new Label().styled()) = c.weightx(0.5) // a filler
-    layout(new Label("cmt:").styled('labelFor)) = c.anchor(Anchor.East).weightx(0)
+    layout(new Label("cmt:").styled("labelFor")) = c.anchor(Anchor.East).weightx(0)
     layout(commentInput) = c
     layout(maxLinesCb) = c
     layout(maxLinesInput) = c

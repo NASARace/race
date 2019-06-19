@@ -27,6 +27,7 @@ import gov.nasa.race.util.XmlAttrProcessor
 import org.joda.time.DateTime
 
 import scala.collection.mutable.ArrayBuffer
+import scala.collection.Seq
 
 /**
   * a XML parser that creates and stores TrackInfos from fdm:fltdMessage messages

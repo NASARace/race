@@ -30,10 +30,10 @@ class DoubleOutputField (val varName: String, val fmt: String)
                         (implicit doubleOutputLength: Int=12, doubleOutputLabelLength: Int=6)
                            extends FlowPanel (FlowPanel.Alignment.Right)(){
 
-  val label = new Label().styled('fieldLabel)
+  val label = new Label().styled("fieldLabel")
   setLabel(varName)
 
-  val value = new TextField(doubleOutputLength).styled('numField)
+  val value = new TextField(doubleOutputLength).styled("numField")
   value.editable = false
   value.horizontalAlignment = Alignment.Right
   setValue(0)

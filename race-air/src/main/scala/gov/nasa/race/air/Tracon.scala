@@ -19,7 +19,7 @@ package gov.nasa.race.air
 import gov.nasa.race.common.ContactInfo
 import gov.nasa.race.geo.{GeoPositioned, GeoPosition}
 
-import scala.collection.SortedMap
+import scala.collection.immutable.SortedMap
 
 object Tracon {
   def apply (id: String, name: String, lat: Double, lon: Double,

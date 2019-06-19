@@ -36,7 +36,7 @@ object Dependencies {
 
   //--- slf4j
   // NOTE - slf4j 1.8 now uses ServiceProvider and logback has not caught up as of 12/01/17
-  val slf4jSimple = "org.slf4j" % "slf4j-simple" % "2.0.0-alpha0"
+  val slf4jSimple = "org.slf4j" % "slf4j-simple" % "1.7.26"
 
   //--- logback
   // does not support slf4j 1.8 (provider) yet
@@ -52,8 +52,7 @@ object Dependencies {
   val scalaParser = "org.scala-lang.modules" %% "scala-parser-combinators" % "1.1.2"
 
   //--- scala-xml
-  val scalaXml = "org.scala-lang.modules" % "scala-xml_2.12" % "1.2.0"  // otherwise scalatest conflicts
-  //val scalaXml = "org.scala-lang.modules" %% "scala-xml" % "1.2.0"
+  val scalaXml = "org.scala-lang.modules" %% "scala-xml" % "1.2.0"
 
   //--- new scala reflection (TypeTags etc.)
   val scalaReflect =  "org.scala-lang" % "scala-reflect" % CommonRaceSettings.scalaVer
@@ -69,14 +68,16 @@ object Dependencies {
   // val breezeNative = "org.scalanlp" %% "breeze-natives" % "0.13.2"
 
   //--- scalaTest
-  val scalaTest = "org.scalatest" % "scalatest_2.12" % "3.2.0-SNAP10" % Test
+  val scalaTest = "org.scalatest" %% "scalatest" % "3.1.0-SNAP13"
+  val scalaTestPlus = "org.scalatestplus" %% "scalatestplus-scalacheck" % "1.0.0-SNAP8"
+
   val pegDown = "org.pegdown" % "pegdown" % "1.6.0"
 
   //--- scalaCheck
-  val scalaCheck = "org.scalacheck" %% "scalacheck" % "1.14.0" % Test
+  val scalaCheck = "org.scalacheck" %% "scalacheck" % "1.14.0"
 
   val defaultLibs =  Seq(logback,typesafeConfig,nscalaTime)
-  val defaultTestLibs = Seq(scalaTest,scalaCheck,pegDown)
+  val defaultTestLibs = Seq(scalaTest,scalaTestPlus,scalaCheck,pegDown)
 
   //--- Circe Json support
   val circeVersion = "0.12.0-M3"

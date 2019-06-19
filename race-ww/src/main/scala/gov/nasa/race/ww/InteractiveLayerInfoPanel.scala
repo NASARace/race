@@ -41,23 +41,23 @@ class InteractiveLayerInfoPanel[T <: LayerObject](override val layer: Interactiv
     class LayerObjectRenderer extends ItemRenderPanel[T] {
 
       //--- the standard icons
-      val blankIcon = Style.getIcon('flightNone)
-      val centerIcon = Style.getIcon('flightCentered)
-      val hiddenIcon = Style.getIcon('flightHidden)
-      val pathIcon = Style.getIcon('flightPath)
-      val infoIcon = Style.getIcon('flightInfo)
-      val markIcon = Style.getIcon('flightMark)
+      val blankIcon = Style.getIcon("flightNone")
+      val centerIcon = Style.getIcon("flightCentered")
+      val hiddenIcon = Style.getIcon("flightHidden")
+      val pathIcon = Style.getIcon("flightPath")
+      val infoIcon = Style.getIcon("flightInfo")
+      val markIcon = Style.getIcon("flightMark")
 
       //--- the icon labels
-      val displayLabel = new Label styled()
-      val pathLabel = new Label styled()
-      val infoLabel = new Label styled()
-      val markLabel = new Label styled()
+      val displayLabel = new Label().styled()
+      val pathLabel = new Label().styled()
+      val infoLabel = new Label().styled()
+      val markLabel = new Label().styled()
 
       //--- the text labels
-      val idLabel = new Label styled('fixedFieldValue)
-      val dateLabel = new Label styled('fixedFieldValue)
-      val dataLabel = new Label styled('fixedFieldValue)
+      val idLabel = new Label().styled("fixedFieldValue")
+      val dateLabel = new Label().styled("fixedFieldValue")
+      val dataLabel = new Label().styled("fixedFieldValue")
 
       val c = new Constraints(fill=Fill.Horizontal,anchor=Anchor.West)
       layout(displayLabel) = c(0,0)
@@ -87,8 +87,8 @@ class InteractiveLayerInfoPanel[T <: LayerObject](override val layer: Interactiv
 
       new GBPanel {
         val c = new Constraints(fill=Fill.Horizontal)
-        layout(new Label(idTxt).styled('fixedHeader)) = c(0,0).anchor(Anchor.West).weightx(0.5).gridwidth(2)
-        layout(new Label(dataTxt).styled('fixedHeader)) = c(2,0).weightx(0).anchor(Anchor.East)
+        layout(new Label(idTxt).styled("fixedHeader")) = c(0,0).anchor(Anchor.West).weightx(0.5).gridwidth(2)
+        layout(new Label(dataTxt).styled("fixedHeader")) = c(2,0).weightx(0).anchor(Anchor.East)
       }.styled()
     }
 
@@ -112,24 +112,24 @@ class InteractiveLayerInfoPanel[T <: LayerObject](override val layer: Interactiv
   val displayBox = new BoxPanel(Orientation.Horizontal) {
     border = TitledBorder(EtchedBorder, "display")
     contents ++= Seq(displayAllRb,displayMatchesRb,displaySelectedRb)
-  } styled 'titled
+  }.styled("titled")
 
   val updateMatchCb = new CheckBox("update").styled()
   val inViewMatchCb = new CheckBox("in view").styled()
   val queryAttrBox = new BoxPanel(Orientation.Vertical) {
     contents ++= Seq(updateMatchCb,inViewMatchCb)
-  } styled()
+  }.styled()
 
-  val queryEntry = new TextField().styled('queryField)
+  val queryEntry = new TextField().styled("queryField")
   val queryButton = new Button(Action("query") {
     if (queryEntry.text.isEmpty){queryEntry.text = "all"}
     updateMatchList(queryEntry.text)
-  }) styled()
+  }).styled()
 
   val listView: LayerObjectListView = createMatchListView
   listView.maxVisibleRows = layer.maxLayerObjectRows
 
-  val listViewScroller = new ScrollPane(listView).styled('verticalIfNeeded)
+  val listViewScroller = new ScrollPane(listView).styled("verticalIfNeeded")
   listViewScroller.columnHeaderView = listView.createColumnHeaderView
 
   val pathCb = new CheckBox("path").styled()
@@ -149,7 +149,7 @@ class InteractiveLayerInfoPanel[T <: LayerObject](override val layer: Interactiv
   val listBox = new BoxPanel(Orientation.Vertical){
     contents ++= Seq(listViewScroller, optionBox)
     visible = false
-  } styled()
+  }.styled()
 
   val popUpMenu = createPopupMenu
 
@@ -189,7 +189,7 @@ class InteractiveLayerInfoPanel[T <: LayerObject](override val layer: Interactiv
 
   //--- overridable init methods
 
-  def createMatchListView: LayerObjectListView = new LayerObjectListView().styled('itemList)
+  def createMatchListView: LayerObjectListView = new LayerObjectListView().styled("itemList")
 
   def createPopupMenu: PopupMenu = {
     new PopupMenu {

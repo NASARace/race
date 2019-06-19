@@ -35,19 +35,19 @@ class Stylist {
 
   // this is just to handle the NoStyle case so that we can use PartialFunctions
   // for specialized cases in the Stylist.style() implementations
-  def ignoreId: PartialFunction[Symbol,Any] = {case _ =>}
-  def setIdStyle(id: Symbol)(pf: PartialFunction[Symbol,Any]) = {
+  def ignoreId: PartialFunction[String,Any] = {case _ =>}
+  def setIdStyle(id: String)(pf: PartialFunction[String,Any]) = {
     if (id != Style.NoStyle){
       pf.applyOrElse(id, ignoreId)
     }
   }
 
-  def getIcon (id: Symbol): Icon = Style.undefinedIcon
+  def getIcon (id: String): Icon = Style.undefinedIcon
 
   val defaultFont = new java.awt.Label().getFont
-  def getFont (id: Symbol): Font = defaultFont
+  def getFont (id: String): Font = defaultFont
 
-  def getColor (id: Symbol): Color = Color.black
+  def getColor (id: String): Color = Color.black
 
   // this is the runtime dispatcher. Unfortunately we cannot dispatch with
   // target type specific implicit classes (i.e. at compile time) because the
@@ -60,7 +60,7 @@ class Stylist {
   // obviously, order of cases does matter but the compiler will tell us about
   // unreachable code if we get it wrong
 
-  def setStyle (o: UIElement, id: Symbol): Unit = {
+  def setStyle (o: UIElement, id: String): Unit = {
     o match {
 
       case c:Separator          => style(c, id)
@@ -132,64 +132,64 @@ class Stylist {
   // While this should match the target hierarchy, we can introduce pseudo hierarchies such as for GBPanel
   // order should not matter
 
-  def style (c: ToggleButton, id: Symbol)                        : Unit = style(c.asInstanceOf[AbstractButton], id)
-  def style (c: RadioButton, id: Symbol)                         : Unit = style(c.asInstanceOf[AbstractButton], id)
-  def style (c: CheckBox, id: Symbol)                            : Unit = style(c.asInstanceOf[AbstractButton], id)
-  def style (c: AbstractButton, id: Symbol)                      : Unit = style(c.asInstanceOf[Component], id)
-  def style (c: Button, id: Symbol)                              : Unit = style(c.asInstanceOf[AbstractButton], id)
-  def style (c: ComboBox[_], id: Symbol)                         : Unit = style(c.asInstanceOf[Component], id)
-  def style (c: Menu, id: Symbol)                                : Unit = style(c.asInstanceOf[Component], id)
-  def style (c: MenuItem, id: Symbol)                            : Unit = style(c.asInstanceOf[AbstractButton], id)
-  def style (c: CheckMenuItem, id: Symbol)                       : Unit = style(c.asInstanceOf[MenuItem], id)
-  def style (c: PopupMenu, id: Symbol)                           : Unit = style(c.asInstanceOf[Component], id)
-  def style (c: MenuBar, id: Symbol)                             : Unit = style(c.asInstanceOf[Component], id)
-  def style (c: ScrollBar, id: Symbol)                           : Unit = style(c.asInstanceOf[Component], id)
-  def style (c: Slider, id: Symbol)                              : Unit = style(c.asInstanceOf[Component], id)
-  def style (c: ProgressBar, id: Symbol)                         : Unit = style(c.asInstanceOf[Component], id)
-  def style (c: TextField, id: Symbol)                           : Unit = style(c.asInstanceOf[TextComponent], id)
-  def style (c: StdConsole, id: Symbol)                          : Unit = style(c.asInstanceOf[TextPane], id)
-  def style (c: LogConsole, id: Symbol)                          : Unit = style(c.asInstanceOf[TextPane], id)
-  def style (c: TextPane, id: Symbol)                            : Unit = style(c.asInstanceOf[TextComponent], id)
-  def style (c: EditorPane, id: Symbol)                          : Unit = style(c.asInstanceOf[TextComponent], id)
-  def style (c: PasswordField, id: Symbol)                       : Unit = style(c.asInstanceOf[TextField], id)
-  def style (c: FormattedTextField, id: Symbol)                  : Unit = style(c.asInstanceOf[TextComponent], id)
-  def style (c: TextArea, id: Symbol)                            : Unit = style(c.asInstanceOf[TextComponent], id)
-  def style (c: RSTextArea, id: Symbol)                          : Unit = style(c.asInstanceOf[TextComponent], id)
-  def style (c: TextComponent, id: Symbol)                       : Unit = style(c.asInstanceOf[Component], id)
-  def style (c: ListView[_], id: Symbol)                         : Unit = style(c.asInstanceOf[Component], id)
-  def style (c: Table, id: Symbol)                               : Unit = style(c.asInstanceOf[Component], id)
-  def style (c: BoxPanel, id: Symbol)                            : Unit = style(c.asInstanceOf[Panel], id)
-  def style (c: FlowPanel, id: Symbol)                           : Unit = style(c.asInstanceOf[Panel], id)
-  def style (c: GridPanel, id: Symbol)                           : Unit = style(c.asInstanceOf[Panel], id)
-  def style (c: GBPanel, id: Symbol)                             : Unit = style(c.asInstanceOf[Panel], id)
-  def style (c: GridBagPanel, id: Symbol)                        : Unit = style(c.asInstanceOf[Panel], id)
-  def style (c: BorderPanel, id: Symbol)                         : Unit = style(c.asInstanceOf[Panel], id)
-  def style (c: SplitPane, id: Symbol)                           : Unit = style(c.asInstanceOf[Component], id)
-  def style (c: ScrollPane, id: Symbol)                          : Unit = style(c.asInstanceOf[Component], id)
+  def style (c: ToggleButton, id: String)                        : Unit = style(c.asInstanceOf[AbstractButton], id)
+  def style (c: RadioButton, id: String)                         : Unit = style(c.asInstanceOf[AbstractButton], id)
+  def style (c: CheckBox, id: String)                            : Unit = style(c.asInstanceOf[AbstractButton], id)
+  def style (c: AbstractButton, id: String)                      : Unit = style(c.asInstanceOf[Component], id)
+  def style (c: Button, id: String)                              : Unit = style(c.asInstanceOf[AbstractButton], id)
+  def style (c: ComboBox[_], id: String)                         : Unit = style(c.asInstanceOf[Component], id)
+  def style (c: Menu, id: String)                                : Unit = style(c.asInstanceOf[Component], id)
+  def style (c: MenuItem, id: String)                            : Unit = style(c.asInstanceOf[AbstractButton], id)
+  def style (c: CheckMenuItem, id: String)                       : Unit = style(c.asInstanceOf[MenuItem], id)
+  def style (c: PopupMenu, id: String)                           : Unit = style(c.asInstanceOf[Component], id)
+  def style (c: MenuBar, id: String)                             : Unit = style(c.asInstanceOf[Component], id)
+  def style (c: ScrollBar, id: String)                           : Unit = style(c.asInstanceOf[Component], id)
+  def style (c: Slider, id: String)                              : Unit = style(c.asInstanceOf[Component], id)
+  def style (c: ProgressBar, id: String)                         : Unit = style(c.asInstanceOf[Component], id)
+  def style (c: TextField, id: String)                           : Unit = style(c.asInstanceOf[TextComponent], id)
+  def style (c: StdConsole, id: String)                          : Unit = style(c.asInstanceOf[TextPane], id)
+  def style (c: LogConsole, id: String)                          : Unit = style(c.asInstanceOf[TextPane], id)
+  def style (c: TextPane, id: String)                            : Unit = style(c.asInstanceOf[TextComponent], id)
+  def style (c: EditorPane, id: String)                          : Unit = style(c.asInstanceOf[TextComponent], id)
+  def style (c: PasswordField, id: String)                       : Unit = style(c.asInstanceOf[TextField], id)
+  def style (c: FormattedTextField, id: String)                  : Unit = style(c.asInstanceOf[TextComponent], id)
+  def style (c: TextArea, id: String)                            : Unit = style(c.asInstanceOf[TextComponent], id)
+  def style (c: RSTextArea, id: String)                          : Unit = style(c.asInstanceOf[TextComponent], id)
+  def style (c: TextComponent, id: String)                       : Unit = style(c.asInstanceOf[Component], id)
+  def style (c: ListView[_], id: String)                         : Unit = style(c.asInstanceOf[Component], id)
+  def style (c: Table, id: String)                               : Unit = style(c.asInstanceOf[Component], id)
+  def style (c: BoxPanel, id: String)                            : Unit = style(c.asInstanceOf[Panel], id)
+  def style (c: FlowPanel, id: String)                           : Unit = style(c.asInstanceOf[Panel], id)
+  def style (c: GridPanel, id: String)                           : Unit = style(c.asInstanceOf[Panel], id)
+  def style (c: GBPanel, id: String)                             : Unit = style(c.asInstanceOf[Panel], id)
+  def style (c: GridBagPanel, id: String)                        : Unit = style(c.asInstanceOf[Panel], id)
+  def style (c: BorderPanel, id: String)                         : Unit = style(c.asInstanceOf[Panel], id)
+  def style (c: SplitPane, id: String)                           : Unit = style(c.asInstanceOf[Component], id)
+  def style (c: ScrollPane, id: String)                          : Unit = style(c.asInstanceOf[Component], id)
 
-  def style (c: DoubleOutputField, id: Symbol)                   : Unit = style(c.asInstanceOf[FlowPanel], id)
-  def style (c: AWTWrapper, id: Symbol)                          : Unit = style(c.asInstanceOf[Component], id)
-  def style (c: Filler, id: Symbol)                              : Unit = style(c.asInstanceOf[Component], id)
-  def style (c: Separator, id: Symbol)                           : Unit = style(c.asInstanceOf[Component], id)
-  def style (c: DigitalClock, id: Symbol)                        : Unit = style(c.asInstanceOf[Panel], id)
-  def style (c: DigitalClock#ClockLabel, id: Symbol)             : Unit = style(c.asInstanceOf[Label], id)
-  def style (c: DigitalStopWatch, id: Symbol)                    : Unit = style(c.asInstanceOf[Panel], id)
-  def style (c: DigitalStopWatch#StopWatchLabel, id: Symbol)     : Unit = style(c.asInstanceOf[Label], id)
-  def style (c: MessageArea, id: Symbol)                         : Unit = style(c.asInstanceOf[Label], id)
-  def style (c: CollapsiblePanel, id: Symbol)                    : Unit = style(c.asInstanceOf[GBPanel], id)
-  def style (c: Collapsible, id: Symbol)                         : Unit = style(c.asInstanceOf[BorderPanel], id)
+  def style (c: DoubleOutputField, id: String)                   : Unit = style(c.asInstanceOf[FlowPanel], id)
+  def style (c: AWTWrapper, id: String)                          : Unit = style(c.asInstanceOf[Component], id)
+  def style (c: Filler, id: String)                              : Unit = style(c.asInstanceOf[Component], id)
+  def style (c: Separator, id: String)                           : Unit = style(c.asInstanceOf[Component], id)
+  def style (c: DigitalClock, id: String)                        : Unit = style(c.asInstanceOf[Panel], id)
+  def style (c: DigitalClock#ClockLabel, id: String)             : Unit = style(c.asInstanceOf[Label], id)
+  def style (c: DigitalStopWatch, id: String)                    : Unit = style(c.asInstanceOf[Panel], id)
+  def style (c: DigitalStopWatch#StopWatchLabel, id: String)     : Unit = style(c.asInstanceOf[Label], id)
+  def style (c: MessageArea, id: String)                         : Unit = style(c.asInstanceOf[Label], id)
+  def style (c: CollapsiblePanel, id: String)                    : Unit = style(c.asInstanceOf[GBPanel], id)
+  def style (c: Collapsible, id: String)                         : Unit = style(c.asInstanceOf[BorderPanel], id)
 
-  def style (c: Label, id: Symbol)                               : Unit = style(c.asInstanceOf[Component], id)
-  def style (c: Component, id: Symbol)                           : Unit = style(c.asInstanceOf[UIElement], id)
-  def style (c: Panel, id: Symbol)                               : Unit = style(c.asInstanceOf[Component], id)
-  def style (c: Window, id: Symbol)                              : Unit = style(c.asInstanceOf[UIElement], id)
-  def style (c: Frame, id: Symbol)                               : Unit = style(c.asInstanceOf[Window], id)
-  def style (c: UIElement, id: Symbol)                           : Unit = {}
+  def style (c: Label, id: String)                               : Unit = style(c.asInstanceOf[Component], id)
+  def style (c: Component, id: String)                           : Unit = style(c.asInstanceOf[UIElement], id)
+  def style (c: Panel, id: String)                               : Unit = style(c.asInstanceOf[Component], id)
+  def style (c: Window, id: String)                              : Unit = style(c.asInstanceOf[UIElement], id)
+  def style (c: Frame, id: String)                               : Unit = style(c.asInstanceOf[Window], id)
+  def style (c: UIElement, id: String)                           : Unit = {}
 }
 
 
 object Style {
-  final val NoStyle = 'None
+  final val NoStyle = ""
   final val undefinedIcon = new ImageIcon()
 
   private var _stylist: Stylist = initStyle
@@ -211,12 +211,12 @@ object Style {
 
   //--- the API
 
-  def getIcon (id: Symbol) = _stylist.getIcon(id)
-  def getFont (id: Symbol) = _stylist.getFont(id)
-  def getColor (id: Symbol) = _stylist.getColor(id)
+  def getIcon (id: String) = _stylist.getIcon(id)
+  def getFont (id: String) = _stylist.getFont(id)
+  def getColor (id: String) = _stylist.getColor(id)
 
   implicit class Styled[C<:UIElement] (c:C) {
-    def styled (id:Symbol=NoStyle): C = { stylist.setStyle(c, id); c}
+    def styled (id:String=NoStyle): C = { stylist.setStyle(c, id); c}
   }
 }
 

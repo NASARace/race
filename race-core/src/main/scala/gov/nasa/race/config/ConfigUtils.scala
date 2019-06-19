@@ -30,6 +30,7 @@ import gov.nasa.race.uom.Speed._
 import gov.nasa.race.util._
 
 import scala.jdk.CollectionConverters._
+import scala.collection.immutable.ArraySeq
 import scala.concurrent.duration._
 
 /**
@@ -131,6 +132,13 @@ object ConfigUtils {
     def getIntOrElse(key: String, fallback: Int) = getWithFallback(key,fallback)(conf.getInt(key))
     def getOptionalInt(key: String): Option[Int] = getOptional(key)( conf.getInt(key) )
 
+    def getStringSeq (key: String): Seq[String] = {
+      try {
+        Seq.from(conf.getStringList(key).asScala)
+      } catch {
+        case _: ConfigException.Missing => Seq.empty[String]
+      }
+    }
     def getStringArray (key: String): Array[String] = {
       try {
         toArray(conf.getStringList(key))

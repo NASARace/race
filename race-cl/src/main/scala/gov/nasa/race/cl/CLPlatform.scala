@@ -49,7 +49,7 @@ class CLPlatform (val index: Int, val id: Long) {
   val version: String = getPlatformInfoStringUTF8(id, CL_PLATFORM_VERSION)
   val isFullProfile: Boolean = getPlatformInfoStringUTF8(id, CL_PLATFORM_PROFILE).equalsIgnoreCase("FULL_PROFILE")
 
-  val extensions: HashSet[String] = HashSet[String](getPlatformInfoStringUTF8(id,CL_PLATFORM_EXTENSIONS).split(" "): _*)
+  val extensions: HashSet[String] = HashSet.from(getPlatformInfoStringUTF8(id,CL_PLATFORM_EXTENSIONS).split(" "))
 
   val devices: Array[CLDevice] = withMemoryStack { stack =>
     val deviceIDs = stack.getCLPointerBuffer((pn, pid) => clGetDeviceIDs(id, CL_DEVICE_TYPE_ALL, pid, pn))

@@ -27,7 +27,7 @@ import javax.swing.plaf.basic.BasicScrollBarUI
 import javax.swing.text.StyleConstants
 import org.fife.ui.rsyntaxtextarea.Theme
 
-import scala.swing.{Alignment, Button, CheckBox, ComboBox, Component, FlowPanel, Label, ListView, Panel, RadioButton, ScrollPane, TextComponent, TextField, TextPane, UIElement}
+import scala.swing.{Alignment, Button, CheckBox, ComboBox, Component, Separator, FlowPanel, Label, ListView, Panel, RadioButton, ScrollPane, TextComponent, TextField, TextPane, UIElement}
 
 /**
  * default Swing component styles for Race
@@ -71,18 +71,18 @@ class RaceDefaultStyle extends Stylist {
 
   //--- component styles
 
-  override def style (c: UIElement, id: Symbol) = {
+  override def style (c: UIElement, id: String) = {
     super.style(c,id)
     c.foreground = foreground
     c.background = background
     c.font = sysFont
   }
 
-  override def style (c: Component, id: Symbol) = {
+  override def style (c: Component, id: String) = {
     super.style(c,id)
 
     setIdStyle(id) {
-      case 'collapseBar =>
+      case "collapseBar" =>
         c.border = new CompoundBorder(
           new EmptyBorder(scaledSize(7),scaledSize(5),scaledSize(5),scaledSize(5)),
           new MatteBorder(scaledSize(1),scaledSize(0),scaledSize(0),scaledSize(0),LIGHT_GRAY)
@@ -90,33 +90,33 @@ class RaceDefaultStyle extends Stylist {
     }
   }
 
-  override def style (c: Separator, id: Symbol) = {
+  override def style (c: Separator, id: String) = {
     super.style(c,id)
 
     c.preferredSize = scaledDimension(7,7)
     var clr = separatorColor
     setIdStyle(id) {
-      case 'panel => clr = GRAY
+      case "panel" => clr = GRAY
     }
     c.border = new CompoundBorder( new EmptyBorder(scaledSize(3),scaledSize(3),scaledSize(3),scaledSize(3)), new LineBorder(clr))
   }
 
-  override def style (c: Panel, id: Symbol) = {
+  override def style (c: Panel, id: String) = {
     super.style(c,id)
     //c.opaque = true
 
     setIdStyle(id) {
-      case 'console =>
+      case "console" =>
         //c.border = new EmptyBorder(5,5,5,5)
         //c.preferredSize = (preferredConsoleWidth, 1400) // this would force the v-scroll bar
-      case 'collapsible =>
+      case "collapsible" =>
         c.border = new EmptyBorder(scaledSize(12),scaledSize(5),scaledSize(5),scaledSize(10))  // top,left,bottom,right (compensate for v-scroll)
-      case 'consolePanel =>
+      case "consolePanel" =>
         c.border = new EmptyBorder(scaledSize(5),scaledSize(5),scaledSize(5),scaledSize(5))
-      case 'layerInfo =>
+      case "layerInfo" =>
         c.background = BLACK
         c.border = new EmptyBorder(scaledSize(2),scaledSize(2),scaledSize(2),scaledSize(2))
-      case 'titled =>
+      case "titled" =>
         if (c.border != null && c.border.isInstanceOf[TitledBorder]){
           val titledBorder = c.border.asInstanceOf[TitledBorder]
           titledBorder.setTitleColor(foreground)
@@ -125,25 +125,25 @@ class RaceDefaultStyle extends Stylist {
     }
   }
 
-  override def style (c: FlowPanel, id: Symbol) = {
+  override def style (c: FlowPanel, id: String) = {
     super.style(c,id)
     setIdStyle(id) {
-      case 'appPanel =>
+      case "appPanel" =>
         c.vGap = scaledSize(10)
         c.hGap = scaledSize(10)
     }
   }
 
-  override def style (c: GBPanel, id: Symbol) = {
+  override def style (c: GBPanel, id: String) = {
     super.style(c,id)
     setIdStyle(id) {
-      case 'fieldGrid =>
+      case "fieldGrid" =>
         c.background = BLACK
         //c.minimumSize = (300,lineHeight * 3)
     }
   }
 
-  override def style (c: ScrollPane, id: Symbol) = {
+  override def style (c: ScrollPane, id: String) = {
     super.style(c,id)
     //c.opaque = true
     c.border = loweredBevelBorder
@@ -153,32 +153,32 @@ class RaceDefaultStyle extends Stylist {
     c.peer.getHorizontalScrollBar.setUI(new BasicScrollBarUI)
 
     setIdStyle(id) {
-      case 'verticalAsNeeded =>
+      case "verticalAsNeeded" =>
         c.horizontalScrollBarPolicy = ScrollPane.BarPolicy.Never
     }
   }
 
-  override def style (c: ListView[_], id: Symbol) = {
+  override def style (c: ListView[_], id: String) = {
     super.style(c,id)
     //c.minimumSize = (300,lineHeight * 4)
 
     setIdStyle(id) {
-      case 'layerList | 'itemList =>
+      case "layerList" | "itemList" =>
         c.background = BLACK
         c.selectionBackground = selectionBackground
     }
   }
 
-  override def style (c: AWTWrapper, id: Symbol) = {
+  override def style (c: AWTWrapper, id: String) = {
     super.style(c,id)
     setIdStyle(id){
-      case 'world =>
+      case "world" =>
         c.cursor = Cursor.getPredefinedCursor( Cursor.CROSSHAIR_CURSOR)
         c.border = loweredBevelBorder
     }
   }
 
-  override def style (c: Button, id: Symbol) = {
+  override def style (c: Button, id: String) = {
     super.style(c,id)
     c.opaque = true
     //c.preferredSize = scaledDimension(c.preferredSize)
@@ -186,7 +186,7 @@ class RaceDefaultStyle extends Stylist {
     c.peer.setUI(new ButtonUI) // the basic plafs are utterly useless
   }
 
-  override def style (c: ComboBox[_], id: Symbol) = {
+  override def style (c: ComboBox[_], id: String) = {
     super.style(c,id)
     //c.peer.setUI(new BasicComboBoxUI)
     //c.background = background
@@ -196,41 +196,41 @@ class RaceDefaultStyle extends Stylist {
   }
 
 
-  override def style (c: CheckBox, id: Symbol) = {
+  override def style (c: CheckBox, id: String) = {
     super.style(c,id)
     c.opaque = false
     c.peer.setUI( new CheckBoxUI)
 
     setIdStyle(id) {
-      case 'collapseButton =>
+      case "collapseButton" =>
         c.selectedIcon = ArrowIcon(Direction.South, scaledSize(12), foreground, 1, Some(Color.green))
         c.icon = ArrowIcon(Direction.East, scaledSize(12), foreground, 1, Some(Color.red))
-      case 'layerEnabled =>
+      case "layerEnabled" =>
         c.foreground = GREEN
     }
   }
 
-  override def style (c: RadioButton, id: Symbol) = {
+  override def style (c: RadioButton, id: String) = {
     super.style(c, id)
     c.opaque = false
     c.peer.setUI( new RadioButtonUI)
   }
 
-  override def style (c: TextComponent, id: Symbol) = {
+  override def style (c: TextComponent, id: String) = {
     super.style(c, id)
 
     c.background = if (c.editable) BLACK else DARK_GRAY
   }
 
-  override def style (c: TextPane, id: Symbol) = {
+  override def style (c: TextPane, id: String) = {
     super.style(c, id)
     setIdStyle(id) {
-      case 'console =>
+      case "console" =>
         c.font = new Font("Monospaced", Font.PLAIN, scaledSize(12))
     }
   }
 
-  override def style (c: RSTextArea, id: Symbol) = {
+  override def style (c: RSTextArea, id: String) = {
     super.style(c, id)
 
     val theme = Theme.load(classOf[RSTextArea].getResourceAsStream("rst-dark.xml"))
@@ -238,7 +238,7 @@ class RaceDefaultStyle extends Stylist {
     c.peer.setCursor(Cursor.getDefaultCursor) // until we have a colored TEXT_CURSOR
   }
 
-  override def style (c: LogConsole, id: Symbol) = {
+  override def style (c: LogConsole, id: String) = {
     super.style(c, id)
 
     c.background = Color.black
@@ -250,7 +250,7 @@ class RaceDefaultStyle extends Stylist {
     StyleConstants.setForeground(c.debugStyle, Color.darkGray)
   }
 
-  override def style (c: StdConsole, id: Symbol) = {
+  override def style (c: StdConsole, id: String) = {
     super.style(c, id)
 
     c.background = Color.black
@@ -260,7 +260,7 @@ class RaceDefaultStyle extends Stylist {
     StyleConstants.setForeground(c.outStyle, Color.green)
   }
 
-  override def style (c: TextField, id: Symbol) = {
+  override def style (c: TextField, id: String) = {
     super.style(c,id)
 
     val prefSize = c.preferredSize
@@ -269,54 +269,54 @@ class RaceDefaultStyle extends Stylist {
     c.caret.color = Color.red
 
     setIdStyle(id) {
-      case 'numField =>
+      case "numField" =>
         c.foreground = GREEN
         c.font = txtFont
 
-      case 'stringField =>
+      case "stringField" =>
         c.foreground = GREEN
 
-      case 'queryField =>
+      case "queryField" =>
         c.foreground = YELLOW
     }
   }
 
-  override def style (c: Label, id: Symbol) = {
+  override def style (c: Label, id: String) = {
     super.style(c,id)
     setIdStyle(id) {
-      case 'layerCategory =>
+      case "layerCategory" =>
         c.font = new Font("lucida grande", Font.ITALIC, scaledSize(10))
         c.horizontalAlignment = Alignment.Right
-      case 'layerName =>
+      case "layerName" =>
         c.foreground = GREEN
-      case 'fieldName =>
+      case "fieldName" =>
         c.foreground = LIGHT_GRAY
         //c.font = txtFont
         c.horizontalAlignment = Alignment.Right
-      case 'fieldValue =>
+      case "fieldValue" =>
         c.foreground = GREEN
         //c.font = txtFont
         c.horizontalAlignment = Alignment.Left
-      case 'fixedHeader =>
+      case "fixedHeader" =>
         c.foreground = LIGHT_GRAY
         c.font = txtFont
         c.horizontalAlignment = Alignment.Left
         c.opaque = false
         //c.border = new LineBorder(LIGHT_GRAY)
-      case 'fixedFieldValue =>
+      case "fixedFieldValue" =>
         c.foreground = GREEN
         c.font = txtFont
         c.horizontalAlignment = Alignment.Left
-      case 'labelFor =>
+      case "labelFor" =>
         c.verticalAlignment = Alignment.Center
         c.horizontalAlignment = Alignment.Right
-      case 'title =>
+      case "title" =>
         c.horizontalAlignment = Alignment.Left
         c.font = new Font("lucida grande", Font.BOLD, scaledSize(13))
     }
   }
 
-  override def style (c: MessageArea, id: Symbol) = {
+  override def style (c: MessageArea, id: String) = {
     super.style(c,id)
 
     val prefSize = c.preferredSize
@@ -327,31 +327,31 @@ class RaceDefaultStyle extends Stylist {
     c.alertColor = YELLOW
   }
 
-  def styleTimePanel (c: Panel, id: Symbol) = {
+  def styleTimePanel (c: Panel, id: String) = {
     super.style(c,id)
     c.opaque = true
     c.border = loweredBevelBorder
   }
-  def styleTimeLabel (c: Label, id: Symbol) = {
+  def styleTimeLabel (c: Label, id: String) = {
     super.style(c,id)
     c.opaque = true
     c.background = BLACK
     c.foreground = GREEN
 
     setIdStyle(id) {
-      case 'time =>
+      case "time" =>
         c.horizontalAlignment = Alignment.Center
         c.font = new Font("Monospaced", Font.BOLD, scaledSize(16))
-      case 'date =>
+      case "date" =>
         c.horizontalAlignment = Alignment.Left
         c.font = new Font("sans-serif", Font.BOLD, scaledSize(12))
     }
   }
 
-  override def style (c: DigitalClock, id: Symbol) = styleTimePanel(c, id)
-  override def style (c: DigitalClock#ClockLabel, id: Symbol) = styleTimeLabel(c,id)
-  override def style (c: DigitalStopWatch, id: Symbol) = styleTimePanel(c, id)
-  override def style (c: DigitalStopWatch#StopWatchLabel, id: Symbol) = styleTimeLabel(c,id)
+  override def style (c: DigitalClock, id: String) = styleTimePanel(c, id)
+  override def style (c: DigitalClock#ClockLabel, id: String) = styleTimeLabel(c,id)
+  override def style (c: DigitalStopWatch, id: String) = styleTimePanel(c, id)
+  override def style (c: DigitalStopWatch#StopWatchLabel, id: String) = styleTimeLabel(c,id)
 
   //--- icons, fonts & colors
 
@@ -363,23 +363,23 @@ class RaceDefaultStyle extends Stylist {
   val flightInfoIcon = Images.getFlightInfoIcon(flightIconColor)
   val flightMarkIcon = Images.getFlightMarkIcon(flightIconColor)
 
-  override def getIcon (id: Symbol) = {
+  override def getIcon (id: String) = {
     id match {
-      case 'flightNone => flightBlankIcon
-      case 'flightCentered => flightCenteredIcon
-      case 'flightHidden => flightHiddenIcon
-      case 'flightPath => flightPathIcon
-      case 'flightInfo => flightInfoIcon
-      case 'flightMark => flightMarkIcon
-      case other => super.getIcon(id)
+      case "flightNone" => flightBlankIcon
+      case "flightCentered" => flightCenteredIcon
+      case "flightHidden" => flightHiddenIcon
+      case "flightPath" => flightPathIcon
+      case "flightInfo" => flightInfoIcon
+      case "flightMark" => flightMarkIcon
+      case _ => super.getIcon(id)
     }
   }
 
   val balloonFont = txtFont
 
-  override def getFont (id: Symbol) = {
+  override def getFont (id: String) = {
     id match {
-      case 'balloonText => txtFont
+      case "balloonText" => txtFont
       case other => sysFont
     }
   }
@@ -388,12 +388,12 @@ class RaceDefaultStyle extends Stylist {
   val balloonBackgroundColor = new Color(0, 0, 0, 0.4f)
   val balloonBorderColor = Color.cyan.darker.darker
 
-  override def getColor (id: Symbol) = {
+  override def getColor (id: String) = {
     id match {
-      case 'balloonText => balloonTextColor
-      case 'balloonBackground => balloonBackgroundColor
-      case 'balloonBorder => balloonBorderColor
-      case other => super.getColor(id)
+      case "balloonText" => balloonTextColor
+      case "balloonBackground" => balloonBackgroundColor
+      case "balloonBorder" => balloonBorderColor
+      case _ => super.getColor(id)
     }
   }
 }

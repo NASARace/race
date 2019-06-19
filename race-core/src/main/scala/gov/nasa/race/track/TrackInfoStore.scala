@@ -16,11 +16,11 @@
  */
 
 package gov.nasa.race.track
-import com.typesafe.config.Config
 import gov.nasa.race.config.NamedConfigurable
 
 import scala.collection.concurrent.TrieMap
 import scala.collection.mutable.{Map => MMap,HashMap => MHashMap}
+import scala.collection.Seq
 
 /**
   * an abstract store for TrackInfos

@@ -17,12 +17,13 @@
 
 package gov.nasa.race.util
 
-import java.io.ByteArrayOutputStream
 import java.nio.ByteBuffer
 
 import gov.nasa.race._
 
 import scala.annotation.tailrec
+import scala.collection.Seq
+import scala.collection.immutable.ArraySeq
 import scala.util.matching.Regex
 
 /**
@@ -34,7 +35,7 @@ object StringUtils {
 
   def upToLast (s: String, c: Char) = s.substring(0,s.lastIndexOf(c))
 
-  def trimmedSplit(s: String): Seq[String] = s.split("[ ,;]+").map(_.trim)
+  def trimmedSplit(s: String): Seq[String] = ArraySeq.unsafeWrapArray(s.trim.split("[ ,;]+"))
 
   final val hexChar = Array('0','1','2','3','4','5','6','7','8','9','a','b','c','d','e','f')
 
@@ -181,5 +182,9 @@ object StringUtils {
   def lastPathElement (s: String): String = {
     val i = s.lastIndexOf('/')
     if (i < 0) s else s.substring(i+1)
+  }
+
+  def splitToSeq (s: String, delim: String): Seq[String] = {
+    ArraySeq.unsafeWrapArray(s.split(delim))
   }
 }

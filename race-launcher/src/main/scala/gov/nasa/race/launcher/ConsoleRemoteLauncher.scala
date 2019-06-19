@@ -22,6 +22,7 @@ import gov.nasa.race._
 import gov.nasa.race.util.ConsoleIO._
 import gov.nasa.race.util.FileUtils._
 import gov.nasa.race.util.{ClassLoaderUtils, CryptUtils}
+import scala.collection.Seq
 
 /**
  * an interactive RemoteLauncher that lets the

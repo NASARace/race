@@ -18,10 +18,9 @@
 package gov.nasa.race.air
 
 import gov.nasa.race.geo.{GeoPosition,GeoPositioned}
-import gov.nasa.race.uom.Length._
 import gov.nasa.race.uom._
 
-import scala.collection.SortedMap
+import scala.collection.immutable.SortedMap
 
 /**
   * list of airports, with respective ASDE-X support as of 09/16
