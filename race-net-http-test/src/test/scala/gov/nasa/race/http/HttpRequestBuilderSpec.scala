@@ -18,12 +18,12 @@ package gov.nasa.race.http
 
 import akka.http.scaladsl.model.{HttpEntity, HttpMethods}
 import gov.nasa.race.test.RaceSpec
-import org.scalatest.WordSpecLike
+import org.scalatest.wordspec.AnyWordSpecLike
 
 /**
   * unit test for HttpRequestBuilder
   */
-class HttpRequestBuilderSpec extends WordSpecLike with RaceSpec {
+class HttpRequestBuilderSpec extends AnyWordSpecLike with RaceSpec {
 
   "HttpRequestBuilder" should {
     "create minimal GET request" in {

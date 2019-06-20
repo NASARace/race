@@ -22,7 +22,7 @@ import gov.nasa.race.core.RaceActorSystem
 import gov.nasa.race.main.ConsoleMain
 import gov.nasa.race.test.{RaceMultiNodeSpec, WrappedApp}
 import gov.nasa.race.test.WrappedApp._
-import org.scalatest.WordSpecLike
+import org.scalatest.wordspec.AnyWordSpecLike
 
 import scala.concurrent.duration._
 import scala.language.postfixOps
@@ -49,7 +49,7 @@ case object RaceDone
  * This uses the RACE agnostic swimServer and swimClient, which are generic
  * JMS applications.
  */
-class JMSMultiNodeSpec extends RaceMultiNodeSpec(JMSMultiNodeConfig) with WordSpecLike {
+class JMSMultiNodeSpec extends RaceMultiNodeSpec(JMSMultiNodeConfig) with AnyWordSpecLike {
 
   "A MultiNodeJMSSpec test" must {
 

@@ -24,7 +24,7 @@ import gov.nasa.race.core.RaceActorSystem
 import gov.nasa.race.main.ConsoleMain
 import gov.nasa.race.test.WrappedApp._
 import gov.nasa.race.test.{RaceMultiNodeSpec, WrappedApp}
-import org.scalatest.WordSpecLike
+import org.scalatest.wordspec.AnyWordSpecLike
 
 import scala.concurrent.duration._
 import scala.language.postfixOps
@@ -47,7 +47,7 @@ case object RaceDone
 /**
   * integration test for KafkaProducer/Consumer
   */
-class KafkaMultiNodeSpec extends RaceMultiNodeSpec(KafkaMultiNodeConfig) with WordSpecLike {
+class KafkaMultiNodeSpec extends RaceMultiNodeSpec(KafkaMultiNodeConfig) with AnyWordSpecLike {
 
   "A KafkaMultiNodeSpec test" must {
 
