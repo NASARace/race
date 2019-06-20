@@ -16,13 +16,13 @@
  */
 package gov.nasa.race.test
 
-import org.scalatest.FlatSpec
+import org.scalatest.flatspec.AnyFlatSpec
 import java.util.{List =>JList}
 
 /**
   * test suite for RACE test infrastructure
   */
-class TestkitSpec  extends FlatSpec with RaceSpec {
+class TestkitSpec  extends AnyFlatSpec with RaceSpec {
 
   "a RACE test" should "find qualified resource files" in {
     val rf = qualifiedResourceFile("testResource")

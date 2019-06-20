@@ -4,9 +4,9 @@ import gov.nasa.race.geo.GeoPosition
 import gov.nasa.race.gis.GisItemDB
 import gov.nasa.race.uom.Length._
 import gov.nasa.race.test.RaceSpec
-import org.scalatest.FlatSpec
+import org.scalatest.flatspec.AnyFlatSpec
 
-class FixDBSpec extends FlatSpec with RaceSpec {
+class FixDBSpec extends AnyFlatSpec with RaceSpec {
 
   val file = baseResourceFile("fix-ca.rgis")
   lazy val db: FixDB = new FixDB(file)  // load only once

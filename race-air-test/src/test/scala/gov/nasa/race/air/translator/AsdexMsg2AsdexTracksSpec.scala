@@ -22,12 +22,12 @@ import java.io.File
 import gov.nasa.race._
 import gov.nasa.race.util.FileUtils._
 import gov.nasa.race.test.RaceSpec
-import org.scalatest.FlatSpec
+import org.scalatest.flatspec.AnyFlatSpec
 
 /**
   * unit test for AsdexMsg2AirportTracks translator
   */
-class AsdexMsg2AsdexTracksSpec extends FlatSpec with RaceSpec {
+class AsdexMsg2AsdexTracksSpec extends AnyFlatSpec with RaceSpec {
 
   val xmlMsg = fileContentsAsUTF8String(baseResourceFile("asdex.xml"))
 

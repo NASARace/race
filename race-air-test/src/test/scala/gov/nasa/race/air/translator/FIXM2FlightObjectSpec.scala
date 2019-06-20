@@ -22,13 +22,13 @@ import gov.nasa.race.air.FlightPos
 import gov.nasa.race.geo.GeoPosition
 import gov.nasa.race.test.RaceSpec
 import gov.nasa.race.uom.Angle.Degrees
-import gov.nasa.race.uom.Length.Feet
 import gov.nasa.race.uom.Speed._
 import gov.nasa.race.util.FileUtils._
 import org.joda.time.DateTime
-import org.scalatest.FlatSpec
+import org.scalatest.flatspec.AnyFlatSpec
+import scala.collection.Seq
 
-class FIXM2FlightObjectSpec extends FlatSpec with RaceSpec {
+class FIXM2FlightObjectSpec extends AnyFlatSpec with RaceSpec {
   final val EPS = 0.000001
 
   behavior of "FIXM2FlightObject translator"
@@ -37,7 +37,7 @@ class FIXM2FlightObjectSpec extends FlatSpec with RaceSpec {
     val xmlMsg = fileContentsAsUTF8String(baseResourceFile("fixm.xml")).get
 
     val flightRE = "<flight ".r
-    val nFlights = flightRE.findAllIn(xmlMsg).size
+    val nFlights = flightRE.findAllIn(xmlMsg).size - 1   // flight HBAL476 has no altitude and should not be reported
 
     val translator = new FIXM2FlightObject()
     val res = translator.translate(xmlMsg)
@@ -45,7 +45,7 @@ class FIXM2FlightObjectSpec extends FlatSpec with RaceSpec {
       case Some(list:Seq[IdentifiableObject]) =>
         list.foreach { println }
         assert(list.size == nFlights)
-        println(s"all $nFlights FlightObjects accounted for")
+        println(s"all $nFlights valid FlightObjects accounted for (HBAL476 has no altitude)")
       case other => fail(s"failed to parse messages, result=$other")
     }
   }

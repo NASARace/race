@@ -19,9 +19,9 @@ package gov.nasa.race.air
 import java.io.FileInputStream
 
 import gov.nasa.race.test.RaceSpec
-import org.scalatest.FlatSpec
+import org.scalatest.flatspec.AnyFlatSpec
 
-class DWArchiveReaderSpec extends FlatSpec with RaceSpec {
+class DWArchiveReaderSpec extends AnyFlatSpec with RaceSpec {
 
   behavior of "DWArchiveReader subclasses"
 

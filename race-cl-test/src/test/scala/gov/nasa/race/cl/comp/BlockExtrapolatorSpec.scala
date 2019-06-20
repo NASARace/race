@@ -18,13 +18,13 @@ package gov.nasa.race.cl.comp
 
 import gov.nasa.race.common.SmoothingExtrapolator
 import gov.nasa.race.test.RaceSpec
-import org.scalatest.FlatSpec
+import org.scalatest.flatspec.AnyFlatSpec
 import scala.concurrent.duration._
 
 /**
   * unit test for BlockExtrapolator
   */
-class BlockExtrapolatorSpec extends FlatSpec with RaceSpec {
+class BlockExtrapolatorSpec extends AnyFlatSpec with RaceSpec {
 
   "a BlockExtrapolator" should "produce the same results as a SmoothingExtrapolator" in {
     val N = 10

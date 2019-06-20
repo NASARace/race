@@ -22,12 +22,12 @@ import gov.nasa.race.trajectory.MutCompressedTrajectory
 import gov.nasa.race.uom.Angle._
 import gov.nasa.race.uom.Speed._
 import org.joda.time.DateTime
-import org.scalatest.FlatSpec
+import org.scalatest.flatspec.AnyFlatSpec
 
 /**
   * unit test for CompactFlightPath
   */
-class CompressedFlightPathSpec extends FlatSpec with RaceSpec {
+class CompressedFlightPathSpec extends AnyFlatSpec with RaceSpec {
 
   behavior of "CompactFlightPath"
 

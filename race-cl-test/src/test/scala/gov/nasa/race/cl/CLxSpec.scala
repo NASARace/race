@@ -19,12 +19,12 @@ package gov.nasa.race.cl
 import gov.nasa.race._
 import gov.nasa.race.common.CloseStack
 import gov.nasa.race.test.RaceSpec
-import org.scalatest.FlatSpec
+import org.scalatest.flatspec.AnyFlatSpec
 
 /**
   * unit tests for basic gov.nasa.race.cl constructs
   */
-class CLxSpec extends FlatSpec with RaceSpec {
+class CLxSpec extends AnyFlatSpec with RaceSpec {
 
   "a GPU CLDevice" should "execute a 1D kernel to add array elements" in {
 

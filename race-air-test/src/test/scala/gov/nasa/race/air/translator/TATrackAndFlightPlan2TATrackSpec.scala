@@ -21,12 +21,13 @@ package gov.nasa.race.air.translator
 import gov.nasa.race.air.TATrack
 import gov.nasa.race.test.RaceSpec
 import gov.nasa.race.util.FileUtils.fileContentsAsUTF8String
-import org.scalatest.FlatSpec
+import org.scalatest.flatspec.AnyFlatSpec
+import scala.collection.Seq
 
 /**
   * regression test for TATrackAndFlightPlan2TATrack translator
   */
-class TATrackAndFlightPlan2TATrackSpec extends FlatSpec with RaceSpec {
+class TATrackAndFlightPlan2TATrackSpec extends AnyFlatSpec with RaceSpec {
   final val EPS = 0.000001
   val xmlMsg = fileContentsAsUTF8String(baseResourceFile("tais.xml"))
 

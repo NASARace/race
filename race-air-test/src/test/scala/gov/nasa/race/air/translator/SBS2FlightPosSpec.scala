@@ -19,12 +19,12 @@ package gov.nasa.race.air.translator
 
 import gov.nasa.race.air.FlightPos
 import gov.nasa.race.test.RaceSpec
-import org.scalatest.FlatSpec
+import org.scalatest.flatspec.AnyFlatSpec
 
 /**
   * unit test for SBS2FlightPosSpec
   */
-class SBS2FlightPosSpec extends FlatSpec with RaceSpec {
+class SBS2FlightPosSpec extends AnyFlatSpec with RaceSpec {
 
   behavior of "SBS2FlightPosSpec translator"
 
