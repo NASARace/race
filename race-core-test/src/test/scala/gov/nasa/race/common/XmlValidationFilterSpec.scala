@@ -20,12 +20,13 @@ import java.io.File
 
 import gov.nasa.race.test.RaceSpec
 import gov.nasa.race.util.FileUtils
-import org.scalatest.FlatSpec
+import org.scalatest.flatspec.AnyFlatSpec
+import scala.collection.Seq
 
 /**
   * regression test for XmlValidationFilter
   */
-class XmlValidationFilterSpec extends FlatSpec with RaceSpec {
+class XmlValidationFilterSpec extends AnyFlatSpec with RaceSpec {
 
   "a XmlValidationFilter" should "reject a message that does not conform to a schema" in {
     val schemaFile = baseResourceFile("schema.xsd")
@@ -38,7 +39,7 @@ class XmlValidationFilterSpec extends FlatSpec with RaceSpec {
   }
 
   "a XmlValidationFilter" should "let pass a message that does conform to a schema" in {
-    val schemaFiles = Array[File](baseResourceFile("schema1.xsd"), baseResourceFile("schema.xsd"))
+    val schemaFiles = Seq[File](baseResourceFile("schema1.xsd"), baseResourceFile("schema.xsd"))
     val validationFilter = new XmlValidationFilter(schemaFiles)
     var res = false
 

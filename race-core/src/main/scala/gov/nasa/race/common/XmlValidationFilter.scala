@@ -31,7 +31,7 @@ import org.w3c.dom.ls.{LSInput, LSResourceResolver}
 import org.xml.sax.{ErrorHandler, SAXParseException}
 
 import scala.beans.BeanProperty
-import scala.collection.Map
+import scala.collection.{Map,Seq}
 import scala.collection.mutable.{HashMap, ListBuffer}
 
 /**

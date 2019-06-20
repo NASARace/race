@@ -1,12 +1,12 @@
 package gov.nasa.race.util
 
 import gov.nasa.race.test.RaceSpec
-import org.scalatest.FlatSpec
+import org.scalatest.flatspec.AnyFlatSpec
 
 /**
   * regression tests for gov.nasa.race.util.SeqUtils
   */
-class SeqUtilsSpec extends FlatSpec with RaceSpec {
+class SeqUtilsSpec extends AnyFlatSpec with RaceSpec {
 
   behavior of "SeqUtils"
 

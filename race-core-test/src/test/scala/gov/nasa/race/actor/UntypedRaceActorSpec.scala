@@ -20,14 +20,14 @@ import akka.event.Logging
 import gov.nasa.race.core.Messages.BusEvent
 import gov.nasa.race.test.RaceActorSpec
 import org.joda.time.DateTime
-import org.scalatest.FlatSpecLike
+import org.scalatest.flatspec.AnyFlatSpecLike
 import test.TestJavaRaceActor
 import scala.concurrent.duration._
 
 /**
   * test for RaceActors that are implemented in Java
   */
-class UntypedRaceActorSpec extends RaceActorSpec with FlatSpecLike {
+class UntypedRaceActorSpec extends RaceActorSpec with AnyFlatSpecLike {
 
   "a test.TestJavaRaceActor" should "respond with PONG when receiving PING messages" in {
     runRaceActorSystem(Logging.InfoLevel) {

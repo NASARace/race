@@ -18,12 +18,12 @@
 package gov.nasa.race.common
 
 import gov.nasa.race.test.RaceSpec
-import org.scalatest.FlatSpec
+import org.scalatest.flatspec.AnyFlatSpec
 
 /**
   * unit test for BucketCounter
   */
-class BucketCounterSpec extends FlatSpec with RaceSpec {
+class BucketCounterSpec extends AnyFlatSpec with RaceSpec {
 
   val eps = 0.000001
 
@@ -43,8 +43,8 @@ class BucketCounterSpec extends FlatSpec with RaceSpec {
       for (i <- 0 until n) xd += squared(population(i) - mean)
       val variance = if (n>1) xd / (n-1) else 0.0
 
-      sampleSet.add(v)
-      print(f"v=$v, n=${sampleSet.nSamples}, m=${sampleSet.mean}%5.3f, s2=${sampleSet.variance}%5.3f")
+      sampleSet.addSample(v)
+      print(f"v=$v, n=${sampleSet.numberOfSamples}, m=${sampleSet.mean}%5.3f, s2=${sampleSet.variance}%5.3f")
       println(s"   buckets= ${sampleSet.showBuckets}")
 
       sampleSet.mean shouldBe mean+-eps

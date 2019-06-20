@@ -23,7 +23,7 @@ import com.typesafe.config.Config
 import gov.nasa.race.core.Messages._
 import gov.nasa.race.test.RaceActorSpec
 import org.joda.time.DateTime
-import org.scalatest.WordSpecLike
+import org.scalatest.wordspec.AnyWordSpecLike
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
@@ -153,7 +153,7 @@ import gov.nasa.race.core.ChannelTopicProviderSpec._
 /**
   * tests for ChannelTopicProvider/Subscriber chains
   */
-class ChannelTopicProviderSpec extends RaceActorSpec with WordSpecLike {
+class ChannelTopicProviderSpec extends RaceActorSpec with AnyWordSpecLike {
 
   "a provider-subscriber chain" must {
     "start and stop publishing messages on demand" in {

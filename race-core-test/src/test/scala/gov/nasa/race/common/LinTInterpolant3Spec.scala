@@ -19,12 +19,12 @@ package gov.nasa.race.common
 import java.lang.Math.{abs, cos, sin}
 
 import gov.nasa.race.test.RaceSpec
-import org.scalatest.FlatSpec
+import org.scalatest.flatspec.AnyFlatSpec
 
 /**
   * reg test for linear T3 interpolation
   */
-class LinTInterpolant3Spec extends FlatSpec with RaceSpec {
+class LinTInterpolant3Spec extends AnyFlatSpec with RaceSpec {
 
   "a LinT3Interpolant" should "work support sample data model" in {
     val r = (new SampleT3).interpolateLin

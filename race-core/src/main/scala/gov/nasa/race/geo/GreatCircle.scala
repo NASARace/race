@@ -51,7 +51,7 @@ object GreatCircle {
    * initialBearing of reverse route
    */
   @inline def finalBearing (φ1: Angle, λ1: Angle, φ2: Angle, λ2: Angle): Angle = {
-    Radians((initialBearing(φ1,λ1, φ2,λ2).toRadians + Pi) % TwoPi)
+    Radians((initialBearing(φ2,λ2, φ1,λ1).toRadians + Pi) % TwoPi)
   }
   @inline def finalBearing(startPos: GeoPosition, endPos: GeoPosition): Angle = {
     finalBearing(startPos.φ,startPos.λ,endPos.φ,endPos.λ)

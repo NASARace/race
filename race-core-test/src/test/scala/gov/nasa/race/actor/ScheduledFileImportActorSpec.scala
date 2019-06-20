@@ -22,7 +22,7 @@ import gov.nasa.race.core.Messages._
 import gov.nasa.race.test.RaceActorSpec
 import gov.nasa.race.test.RaceActorSpec.Continue
 import org.joda.time.DateTime
-import org.scalatest.WordSpecLike
+import org.scalatest.wordspec.AnyWordSpecLike
 
 import scala.concurrent.duration._
 import scala.language.postfixOps
@@ -33,7 +33,7 @@ import scala.language.postfixOps
   * Note that our inpt file schedule.xml does contain path names of the messages to send, it has to be
   * updated accordingly if this test is moved
   */
-class ScheduledFileImportActorSpec extends RaceActorSpec with WordSpecLike {
+class ScheduledFileImportActorSpec extends RaceActorSpec with AnyWordSpecLike {
 
   "a ScheduledFileImportActor" must {
     "publish all scheduled messages" in {

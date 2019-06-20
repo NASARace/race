@@ -69,15 +69,16 @@ object Dependencies {
 
   //--- scalaTest
   val scalaTest = "org.scalatest" %% "scalatest" % "3.1.0-SNAP13"
+  val flexmarkAll = "com.vladsch.flexmark" % "flexmark-all" % "0.35.10" // should be a scalaTest dependency but 3.1.0-SNAP13 is missing it
   val scalaTestPlus = "org.scalatestplus" %% "scalatestplus-scalacheck" % "1.0.0-SNAP8"
 
-  val pegDown = "org.pegdown" % "pegdown" % "1.6.0"
+  val pegDown = "org.pegdown" % "pegdown" % "1.6.0" % Test
 
   //--- scalaCheck
-  val scalaCheck = "org.scalacheck" %% "scalacheck" % "1.14.0"
+  val scalaCheck = "org.scalacheck" %% "scalacheck" % "1.14.0" % Test
 
   val defaultLibs =  Seq(logback,typesafeConfig,nscalaTime)
-  val defaultTestLibs = Seq(scalaTest,scalaTestPlus,scalaCheck,pegDown)
+  val defaultTestLibs = Seq(scalaTest,scalaTestPlus,flexmarkAll,scalaCheck,pegDown)
 
   //--- Circe Json support
   val circeVersion = "0.12.0-M3"

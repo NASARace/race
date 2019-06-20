@@ -17,14 +17,14 @@
 package gov.nasa.race.archive
 
 import gov.nasa.race.test.RaceSpec
-import org.scalatest.FlatSpec
+import org.scalatest.flatspec.AnyFlatSpec
 
 case class TestRecordMappable (s: String)
 
 /**
   * unit test for Avro based serializing/de-serializing
   */
-class AvroSpec extends FlatSpec with RaceSpec {
+class AvroSpec extends AnyFlatSpec with RaceSpec {
   "AvroSerializer and AvroDeserializer" should "reproduce roundtrip input values" in {
     withEmptyTestOutputFile("avrotestrecords-1.avro"){ archive =>
       val recs = Seq(

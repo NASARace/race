@@ -23,7 +23,7 @@ import com.typesafe.config.Config
 import gov.nasa.race.core.RaceActor
 import gov.nasa.race.test.RaceActorSpec
 import org.joda.time.DateTime
-import org.scalatest.FlatSpecLike
+import org.scalatest.flatspec.AnyFlatSpecLike
 
 object RaceActorErrorHandlingSpec {
   object CrashNow
@@ -50,7 +50,7 @@ object RaceActorErrorHandlingSpec {
 /**
   * regression tests for RaceActor error handling
   */
-class RaceActorErrorHandlingSpec extends RaceActorSpec with FlatSpecLike {
+class RaceActorErrorHandlingSpec extends RaceActorSpec with AnyFlatSpecLike {
   import RaceActorErrorHandlingSpec._
 
   "master actor" should "detect and report exceptions during RaceActor handleMessage execution" in {

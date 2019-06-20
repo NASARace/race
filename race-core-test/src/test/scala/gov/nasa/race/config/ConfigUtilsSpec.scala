@@ -1,13 +1,12 @@
 package gov.nasa.race.config
 
 import ConfigUtils._
-import com.typesafe.config.Config
 import gov.nasa.race.uom.Length
 import gov.nasa.race.uom.Length._
 import gov.nasa.race.test.RaceSpec
-import org.scalatest._
+import org.scalatest.flatspec.AnyFlatSpec
 
-class ConfigUtilsSpec extends FlatSpec with RaceSpec {
+class ConfigUtilsSpec extends AnyFlatSpec with RaceSpec {
   val eps = 0.00000001
 
   "ConfigUtils" should "parse optional length units" in {
