@@ -36,11 +36,11 @@ object Dependencies {
 
   //--- slf4j
   // NOTE - slf4j 1.8 now uses ServiceProvider and logback has not caught up as of 12/01/17
-  val slf4jSimple = "org.slf4j" % "slf4j-simple" % "1.7.26"
+  val slf4jSimple = "org.slf4j" % "slf4j-simple" % "2.0.0-alpha0" // "1.7.26"
 
   //--- logback
   // does not support slf4j 1.8 (provider) yet
-  val logback = "ch.qos.logback" % "logback-classic" % "1.2.3"
+  val logback = "ch.qos.logback" % "logback-classic" %  "1.3.0-alpha4" // "1.2.3"
 
   //--- Typesafe config
   val typesafeConfig = "com.typesafe" % "config" % "1.3.4"
@@ -164,13 +164,13 @@ object Dependencies {
 
   // note - we can't move to 1.1.0 yet since it breaks KafkaServer (again)
   val kafkaClients = "org.apache.kafka" % "kafka-clients" % "0.9.0.0"
-  val newKafkaClients = "org.apache.kafka" % "kafka-clients" % "1.0.1"
+  val newKafkaClients = "org.apache.kafka" % "kafka-clients" % "2.2.1"
 
   //--- Kafka (make sure to add log4j to kafkaServer dependencies
   val kafka = "org.apache.kafka" % "kafka_2.12" % "2.2.1" excludeAll(
   //val kafka = "org.apache.kafka" %% "kafka" % "1.0.1" excludeAll(
-    ExclusionRule(organization = "log4j", name="log4j"),
-    ExclusionRule(organization = "org.slf4j", name = "slf4j-log4j12")
+    //ExclusionRule(organization = "log4j", name="log4j"),
+    //ExclusionRule(organization = "org.slf4j", name = "slf4j-log4j12")
   )
 
   //--- DDS Java 5 PSM
