@@ -53,7 +53,10 @@ class MultiNodeTestkitSpec extends RaceMultiNodeSpec(MultiNodeTestkitSpecConfig)
           expectOutput(server, 10 seconds, "^server running".r)
           sendMsg(clientNode, ServerUp)
           expectMsg(15 seconds, ClientUp)
-          // send message to 
+          expectOutput(server, 5 seconds, "^enter command".r)
+          sendInput(server, "1")
+          expectMsg(10 seconds, ClientDone)
+          sendInput(server, "2")
         } execute
       }
 
@@ -69,6 +72,8 @@ class MultiNodeTestkitSpec extends RaceMultiNodeSpec(MultiNodeTestkitSpecConfig)
         } whileExecuting {
           expectOutput(client, 10 seconds, "^client running".r)
           sendMsg(serverNode, ClientUp)
+          expectOutput(client, 10 seconds, "^client received message".r)
+          sendMsg(serverNode, ClientDone)
         } execute
       }
     }
@@ -78,16 +83,69 @@ class MultiNodeTestkitSpec extends RaceMultiNodeSpec(MultiNodeTestkitSpecConfig)
 class MultiNodeTestkitSpecMultiJvmNode1 extends MultiNodeTestkitSpec
 class MultiNodeTestkitSpecMultiJvmNode2 extends MultiNodeTestkitSpec
 
-//--- mock apps
+//----------------------------------------------------------------------------- mockup apps
+
+import java.net.{ServerSocket, Socket}
+import java.io.{PrintWriter, InputStreamReader, BufferedReader}
 
 object ServerApp {
   def main (args: Array[String]): Unit = {
     println("server running")
+
+    val port: Int = 5432
+    var listener: ServerSocket = null
+    var sock: Socket = null
+    var out: PrintWriter = null
+    var in = new BufferedReader(new InputStreamReader(System.in))
+
+    try {
+      listener = new ServerSocket(port)
+      println(s"server waiting for connection on port $port..")
+      sock = listener.accept()
+      println("server connected")
+      out = new PrintWriter(sock.getOutputStream(),true)
+
+      var cmd: String = ""
+      do {
+        println("enter command (1=send message, 2=terminate): ")
+        cmd = in.readLine()
+        if (cmd.equals("1")) {
+          out.println("Hi there")
+        }
+
+      } while (!cmd.equals("2"))
+
+    } finally {
+      println("server terminating")
+      if (out != null) out.close()
+      if (sock != null) sock.close()
+      if (listener != null) listener.close()
+    }
   }
 }
 
 object ClientApp {
   def main (args: Array[String]): Unit = {
     println("client running")
+
+    val host: String = "localhost"
+    val port: Int = 5432
+    var sock: Socket = null
+    var in: BufferedReader = null
+
+    try {
+      sock = new Socket(host,port)
+      println(s"client connected to $host:$port")
+      in = new BufferedReader( new InputStreamReader(sock.getInputStream()))
+
+      println("client waiting for message..")
+      val msg = in.readLine()
+      println(s"client received message '$msg'")
+
+    } finally {
+      println("client terminating")
+      if (in != null) in.close()
+      if (sock != null) sock.close()
+    }
   }
 }
