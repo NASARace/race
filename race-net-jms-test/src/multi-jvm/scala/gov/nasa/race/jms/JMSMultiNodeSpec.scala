@@ -94,7 +94,7 @@ class JMSMultiNodeSpec extends RaceMultiNodeSpec(JMSMultiNodeConfig) with AnyWor
           expectMsg(10 seconds, ServerUp)
 
         } whileExecuting {
-          expectOutput(race, 10 seconds, "jmsExporter is running".r)
+          expectOutput(race, 15 seconds, "jmsExporter is running".r)
           sendMsg(jmsClientNode, RaceUp)
           expectMsg(20 seconds, ClientDone)
           sendInput(race, "9") // exit

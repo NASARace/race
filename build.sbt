@@ -120,7 +120,9 @@ lazy val raceAdapter = createProject("race-adapter", commonSettings).
 //--- test projects - no artifacts, only used to test this repository
 
 lazy val raceTestKitTest = createTestProject("race-testkit-test", testSettings).
-  dependsOn(raceCore,raceTestKit)
+  enablePlugins(MultiJvmPlugin).
+  dependsOn(raceCore,raceTestKit).
+  configs(MultiJvm)
 
 lazy val raceCoreTest = createTestProject("race-core-test", testSettings).
   dependsOn(raceCore,raceTestKit)
