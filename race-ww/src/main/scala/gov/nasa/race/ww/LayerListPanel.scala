@@ -56,14 +56,14 @@ class LayerListPanel (raceView: RaceViewer, config: Option[Config]=None)
 
   val categoryPanel = new GridPanel ((categoryCheckBoxes.size+3)/4, 4) {
     contents ++= categoryCheckBoxes
-  } styled()
+  }.styled()
   contents += categoryPanel
 
   // note this is only used for rendering, we can't listen to components
   class LayerInfoRenderer extends ItemRenderPanel[Layer] {
-    val checkBox: CheckBox = new CheckBox().styled('layerEnabled)
-    val nameLabel: Label = new Label().styled('layerName)
-    val catLabel: Label = new Label().styled('layerCategory)
+    val checkBox: CheckBox = new CheckBox().styled("layerEnabled")
+    val nameLabel: Label = new Label().styled("layerName")
+    val catLabel: Label = new Label().styled("layerCategory")
 
     val c = new Constraints(fill=Fill.Horizontal, anchor=Anchor.West)
     layout(checkBox)  = c(0,0)
@@ -80,10 +80,10 @@ class LayerListPanel (raceView: RaceViewer, config: Option[Config]=None)
   val layerInfoRenderer = new LayerInfoRenderer
 
   val listView = new ListView[Layer](getListData(selectedCategories,layerInfoList))
-                      with VisibilityBounding[Layer].styled('layerList)
+                      with VisibilityBounding[Layer].styled("layerList")
   listView.maxVisibleRows = 8 // FIXME should be configured
   listView.renderer = new ListItemRenderer(layerInfoRenderer)
-  val scrollPane = new ScrollPane(listView).styled('verticalIfNeeded)
+  val scrollPane = new ScrollPane(listView).styled("verticalIfNeeded")
   contents += scrollPane
 
   listenTo(listView.mouse.clicks)

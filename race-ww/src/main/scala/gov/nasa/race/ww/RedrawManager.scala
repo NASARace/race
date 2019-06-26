@@ -48,10 +48,10 @@ abstract class RedrawManager (val wwd: Redrawable) {
   protected var pending: Option[Future[Any]] = None
   @volatile protected var lastTime: Long = 0 // time of most recent request
 
-  def redraw()
+  def redraw(): Unit
 
   // only the generic version - override if it has to sync with redraw()
-  def redrawNow() = wwd.redrawNow()
+  def redrawNow(): Unit = wwd.redrawNow()
 }
 
 /**
@@ -69,7 +69,7 @@ abstract class RedrawManager (val wwd: Redrawable) {
  */
 class SlidingTimeFramePolicy (wwd: Redrawable, val minDelay: Long=300, val maxDelay: Long=600)
                                                                          extends RedrawManager(wwd) {
-  def redraw() = {
+  def redraw(): Unit = {
     lastTime = System.currentTimeMillis
     synchronized {
       if (pending == None) {

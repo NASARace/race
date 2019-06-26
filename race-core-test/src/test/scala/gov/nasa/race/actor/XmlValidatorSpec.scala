@@ -21,13 +21,13 @@ import gov.nasa.race.core.Messages._
 import gov.nasa.race.test.RaceActorSpec
 import gov.nasa.race.util.FileUtils
 import org.joda.time.DateTime
-import org.scalatest.FlatSpecLike
+import org.scalatest.flatspec.AnyFlatSpecLike
 import scala.concurrent.duration._
 
 /**
   * regression test for XmlValidator actor
   */
-class XmlValidatorSpec extends RaceActorSpec with FlatSpecLike {
+class XmlValidatorSpec extends RaceActorSpec with AnyFlatSpecLike {
 
   "a XmlValidatorActor" should "route valid and invalid messages to different channels" in {
     runRaceActorSystem(Logging.WarningLevel) {

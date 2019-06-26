@@ -27,14 +27,14 @@ import gov.nasa.race.common.{ConsoleUserInfoAdapter, UserInfoFactory}
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.config.ConfigVault
 import gov.nasa.race.core.RaceActorSystem
-import gov.nasa.race.util.ConsoleIO._
 import gov.nasa.race.util.FileUtils._
 import gov.nasa.race.util.NetUtils._
 import gov.nasa.race.util.{ClassLoaderUtils, ConsoleIO, CryptUtils}
 import org.joda.time.DateTime
 
-import scala.collection.JavaConverters._
-import scala.collection.mutable
+import scala.jdk.CollectionConverters._
+import scala.collection.Seq
+import scala.collection.mutable.{Set=>MutSet}
 
 /**
  * common functions for all xxMain objects
@@ -187,7 +187,7 @@ trait MainBase {
 
   def addRemotingConfig(conf: Config): Config = {
     val masterName = conf.getString("name")
-    val remotes = mutable.Set.empty[String]
+    val remotes = MutSet.empty[String]
 
     conf.getOptionalConfigList("actors").foldLeft(conf) { (universeConf, actorConf) =>
       if (actorConf.hasPath("remote")) {

@@ -17,12 +17,12 @@
 package gov.nasa.race.common
 
 import gov.nasa.race.test.RaceSpec
-import org.scalatest.FlatSpec
+import org.scalatest.flatspec.AnyFlatSpec
 
 /**
   * reg test for CubicT1Spline
   */
-class CubicTSplineSpec extends FlatSpec with RaceSpec {
+class CubicTSplineSpec extends AnyFlatSpec with RaceSpec {
 
   @inline def rad(deg: Double): Double = deg * Math.PI / 180.0
 

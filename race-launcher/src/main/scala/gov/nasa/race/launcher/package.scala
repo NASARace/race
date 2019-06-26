@@ -18,6 +18,7 @@
 package gov.nasa.race
 
 import com.typesafe.config.Config
+import scala.collection.Seq
 
 /**
   * common functions and types for remote races

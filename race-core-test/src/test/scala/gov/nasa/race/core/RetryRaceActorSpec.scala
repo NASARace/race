@@ -22,7 +22,7 @@ import com.typesafe.config.Config
 import gov.nasa.race.test.RaceActorSpec
 import gov.nasa.race.config._
 import org.joda.time.DateTime
-import org.scalatest.WordSpecLike
+import org.scalatest.wordspec.AnyWordSpecLike
 import scala.concurrent.duration._
 import scala.collection.immutable.List
 
@@ -60,7 +60,7 @@ class TestRetryActor1 (val config: Config) extends RetryRaceActor {
 /**
   * regression test for RetryRaceActors
   */
-class RetryRaceActorSpec extends RaceActorSpec with WordSpecLike {
+class RetryRaceActorSpec extends RaceActorSpec with AnyWordSpecLike {
 
   "a RetryRaceActor" must {
     "process messages in the order in which they were received, regardless of retries" in {

@@ -21,7 +21,7 @@ import com.typesafe.config.Config
 import gov.nasa.race.util.StringUtils
 
 import scala.util.matching.Regex
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 
 
 /**

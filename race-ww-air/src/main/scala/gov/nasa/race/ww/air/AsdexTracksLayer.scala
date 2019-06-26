@@ -32,6 +32,8 @@ import gov.nasa.race.ww.Implicits._
 import gov.nasa.race.ww.track._
 import gov.nasa.race.ww.{Images, RaceViewer, ViewListener, _}
 
+import scala.collection.Seq
+
 /**
   * we need a specialized TrackEntry since the object type (aircraft/vehicle) is not
   * known a priori (we usually get that from a update message later-on)

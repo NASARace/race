@@ -54,16 +54,16 @@ class WorldWindFrame (config: Config, raceView: RaceViewer) extends AppFrame {
   // this is the potential blocking point, which might run into timeouts
   val wwd = createWorldWindow(config, raceView)
 
-  val worldPanel =  new AWTWrapper(wwd).styled('world)
-  val consolePanel = new CollapsiblePanel().styled('console)
-  val consoleWrapper = new ScrollPane(consolePanel).styled('verticalAsNeeded)
+  val worldPanel =  new AWTWrapper(wwd).styled("world")
+  val consolePanel = new CollapsiblePanel().styled("console")
+  val consoleWrapper = new ScrollPane(consolePanel).styled("verticalAsNeeded")
 
   wwd.setCursor(loadMapCursor)
 
   val top = new BorderPanel {
     layout(consoleWrapper) = BorderPanel.Position.West
     layout(worldPanel) = BorderPanel.Position.Center
-  } styled ('toplevel)
+  } styled ("toplevel")
   contents = top
 
   size = config.getDimensionOrElse("size", (1400, 1000)) // set size no matter what

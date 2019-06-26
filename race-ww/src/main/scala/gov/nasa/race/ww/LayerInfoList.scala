@@ -23,11 +23,11 @@ import gov.nasa.worldwind.event.SelectListener
 import gov.nasa.worldwind.layers._
 import gov.nasa.worldwind.layers.placename.PlaceNameLayer
 
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 import scala.collection.mutable.Buffer
 
 object LayerInfoList {
-  val defaultPanel = new SharedLayerInfoPanel().styled('consolePanel)
+  val defaultPanel = new SharedLayerInfoPanel().styled("consolePanel")
 
   class WWLayerInfo (val name: String, val categories: Set[String], val description: String,
                      val enable: Boolean, val enablePick: Boolean,

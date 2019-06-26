@@ -21,12 +21,12 @@ import java.io.File
 import gov.nasa.race._
 import gov.nasa.race.util.FileUtils._
 import gov.nasa.race.test.RaceSpec
-import org.scalatest.FlatSpec
+import org.scalatest.flatspec.AnyFlatSpec
 
 /**
   * unit test for TfmDataService2TFMTracksSpec translation
   */
-class TfmDataService2TFMTracksSpec extends FlatSpec with RaceSpec {
+class TfmDataService2TFMTracksSpec extends AnyFlatSpec with RaceSpec {
 
   val xmlMsg = fileContentsAsUTF8String(baseResourceFile("tfmdata.xml"))
 

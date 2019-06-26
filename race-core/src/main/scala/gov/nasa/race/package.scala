@@ -280,7 +280,7 @@ package object race {
     asInstanceOf[T](o).flatMap( t => if (pred(t)) Some(t) else None)
   }
 
-  def containsAny[T](a: Set[T], b: Traversable[T]): Boolean = {
+  def containsAny[T](a: Set[T], b: Iterable[T]): Boolean = {
     b.foreach { e =>
       if (a.contains(e)) return true
     }

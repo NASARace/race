@@ -27,11 +27,11 @@ import gov.nasa.race.swing.Style
 class InfoBalloon (text: String) extends ScreenAnnotation(text, new Point(0,0)) {
   attributes.setAdjustWidthToText(AVKey.SIZE_FIT_TEXT)
   attributes.setFrameShape(AVKey.SHAPE_RECTANGLE)
-  attributes.setTextColor(Style.getColor('balloonText))
-  attributes.setBackgroundColor(Style.getColor('balloonBackground))
+  attributes.setTextColor(Style.getColor("balloonText"))
+  attributes.setBackgroundColor(Style.getColor("balloonBackground"))
   attributes.setCornerRadius(5)
-  attributes.setBorderColor(Style.getColor('balloonBorder))
-  attributes.setFont(Style.getFont('balloonText))
+  attributes.setBorderColor(Style.getColor("balloonBorder"))
+  attributes.setFont(Style.getFont("balloonText"))
   attributes.setTextAlign(AVKey.LEFT)
   attributes.setInsets(new Insets(3, 3, 3, 3))
 

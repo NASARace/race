@@ -27,11 +27,13 @@ import gov.nasa.race.ww.{DynamicLayerInfoPanel, RaceViewer, SubscribingRaceLayer
 import gov.nasa.worldwind.geom.LatLon
 import gov.nasa.worldwind.render.SurfaceImage
 
-import scala.collection.JavaConverters._
+import scala.collection.immutable.ArraySeq
+import scala.jdk.CollectionConverters._
 import scala.collection.mutable.{Map => MutableMap}
 
 object WeatherLayer {
-  class PrecipEntry (val pi: PrecipImage) extends SurfaceImage(pi.img, Iterable(computeGridCorners(pi):_*).asJava) {
+  class PrecipEntry (val pi: PrecipImage)
+              extends SurfaceImage(pi.img, ArraySeq.unsafeWrapArray(computeGridCorners(pi)).asJava) {
     def update (newPi: PrecipImage) = setImageSource(newPi.img, corners)
   }
 
@@ -52,7 +54,7 @@ import gov.nasa.race.ww.air.WeatherLayer._
 class WeatherLayer (val raceViewer: RaceViewer, val config: Config) extends SubscribingRaceLayer {
 
   val precipMap = MutableMap[String,PrecipEntry]()
-  val panel = new DynamicLayerInfoPanel(this).styled('consolePanel)
+  val panel = new DynamicLayerInfoPanel(this).styled("consolePanel")
 
   override def size = precipMap.size
 

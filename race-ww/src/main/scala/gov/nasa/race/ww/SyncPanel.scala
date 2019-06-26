@@ -58,7 +58,7 @@ class SyncPanel (raceView: RaceViewer, config: Option[Config]=None)
   val channelCombo = new ComboBox(syncChannels).styled()
   val onOffBtn = new CheckBox("active").styled()
   val readyLED = new OnOffIndicator
-  val channelGroup = new FlowPanel(channelCombo,onOffBtn,readyLED) styled()
+  val channelGroup = new FlowPanel(channelCombo,onOffBtn,readyLED).styled()
 
   //--- outbound control group
   val outEyePos = new CheckBox("eye pos").styled()
@@ -76,13 +76,13 @@ class SyncPanel (raceView: RaceViewer, config: Option[Config]=None)
 
   val optionGroup = new GBPanel {
     val c = new Constraints(insets = new Insets(5, 0, 0, 0), anchor = Anchor.West)
-    layout(new Label("inbound:").styled('labelFor)) = c(0,0)
+    layout(new Label("inbound:").styled("labelFor")) = c(0,0)
     for ((cb,i) <- inCbs.zipWithIndex) { layout(cb) = c(i+2,0) }
-    layout(new Label("outbound:").styled('labelFor)) = c(0,2)
+    layout(new Label("outbound:").styled("labelFor")) = c(0,2)
     for ((cb,i) <- outCbs.zipWithIndex) { layout(cb) = c(i+2,2) }
     layout(new Filler().styled()) = c(1,0).weightx(0.5).fill(Fill.Horizontal).gridheight(3)
-    layout(new RSeparator().styled('panel)) = c(2,1).gridwidth(inCbs.size).gridheight(1)
-  } styled()
+    layout(new RSeparator().styled("panel")) = c(2,1).gridwidth(inCbs.size).gridheight(1)
+  }.styled()
 
   contents += channelGroup
   contents += optionGroup

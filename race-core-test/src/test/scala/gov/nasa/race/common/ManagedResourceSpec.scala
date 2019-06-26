@@ -19,14 +19,14 @@ package gov.nasa.race.common
 
 import ManagedResource._
 import gov.nasa.race.test.RaceSpec
-import org.scalatest.FlatSpec
+import org.scalatest.flatspec.AnyFlatSpec
 
 import scala.collection.mutable.ArrayBuffer
 
 /**
   * unit test for ManagedResource
   */
-class ManagedResourceSpec  extends FlatSpec with RaceSpec {
+class ManagedResourceSpec  extends AnyFlatSpec with RaceSpec {
   final val dontThrow = 0
   final val throwInCtor = 1
   final val throwInUse = 2

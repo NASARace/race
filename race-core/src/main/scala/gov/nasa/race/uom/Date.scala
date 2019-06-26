@@ -189,7 +189,7 @@ final class DateArray protected[uom] (protected[uom] val data: Array[Long]) {
 
   def sort: Unit = Sorting.quickSort(data)
 
-  def toBuffer: DateArrayBuffer = new DateArrayBuffer(ArrayBuffer[Long](data:_*))
+  def toBuffer: DateArrayBuffer = new DateArrayBuffer(ArrayBuffer.from(data))
 
   //... and more to follow
 }

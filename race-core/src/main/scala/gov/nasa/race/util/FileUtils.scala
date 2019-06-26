@@ -353,7 +353,7 @@ object FileUtils {
   def getOpenOptionsOrElse(opts: Array[String], defaults: Set[OpenOption]): Set[OpenOption] = {
     if (opts.nonEmpty) {
       import StandardOpenOption._
-      HashSet(opts.map {
+      opts.map {
         case "append" => APPEND
         case "create" => CREATE
         case "create_new" => CREATE_NEW
@@ -364,7 +364,7 @@ object FileUtils {
         case "delete_on_close" => DELETE_ON_CLOSE
         case "dsync" => DSYNC
         case "sync" => SYNC
-      }: _*)
+      }.toSet
     } else defaults
   }
 

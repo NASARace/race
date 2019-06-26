@@ -92,7 +92,7 @@ package object swing {
   }
 
   abstract class ItemRenderPanel[-A] extends GBPanel {
-    def configure (list: ListView[_], isSelected: Boolean, focused: Boolean, item: A, index: Int)
+    def configure (list: ListView[_], isSelected: Boolean, focused: Boolean, item: A, index: Int): Unit
   }
   class ListItemRenderer[-A,B <: ItemRenderPanel[A]](renderer: B) extends ListView.AbstractRenderer[A,B](renderer) {
     def configure(list: ListView[_], isSelected: Boolean, focused: Boolean, item: A, index: Int) = {

@@ -22,7 +22,7 @@ import akka.event.Logging
 import com.typesafe.config.Config
 import gov.nasa.race.test.RaceActorSpec
 import org.joda.time.DateTime
-import org.scalatest.WordSpecLike
+import org.scalatest.wordspec.AnyWordSpecLike
 
 import scala.concurrent.duration._
 import scala.language.postfixOps
@@ -55,7 +55,7 @@ import gov.nasa.race.core.BusSpec._
 /**
   * tests for RaceActor pub/sub communication through a Race Bus
   */
-class BusSpec extends RaceActorSpec with WordSpecLike {
+class BusSpec extends RaceActorSpec with AnyWordSpecLike {
   val testChannel = "testChannel"
 
   "a RaceActorSystem bus" must {

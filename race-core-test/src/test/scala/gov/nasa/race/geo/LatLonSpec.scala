@@ -3,9 +3,9 @@ package gov.nasa.race.geo
 import gov.nasa.race.test.RaceSpec
 import gov.nasa.race.uom.Angle.Degrees
 import org.scalacheck.Gen
-import org.scalatest.FlatSpec
+import org.scalatest.flatspec.AnyFlatSpec
 
-class LatLonSpec extends FlatSpec with RaceSpec {
+class LatLonSpec extends AnyFlatSpec with RaceSpec {
 
   final val eps = 0.000001
   final val nSuccessful = 100

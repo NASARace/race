@@ -21,7 +21,7 @@ import java.nio.ByteBuffer
 import gov.nasa.race._
 import gov.nasa.race.common.{BufferRecord, CloseStack}
 import gov.nasa.race.test.RaceSpec
-import org.scalatest.FlatSpec
+import org.scalatest.flatspec.AnyFlatSpec
 
 class TestRecord (buffer: ByteBuffer) extends BufferRecord(20,buffer) {
   var a = double(0)
@@ -35,7 +35,7 @@ class TestRecord (buffer: ByteBuffer) extends BufferRecord(20,buffer) {
 /**
   * unit tests for MappedRecordBuffer
   */
-class CLMappedRecordBufferSpec extends FlatSpec with RaceSpec {
+class CLMappedRecordBufferSpec extends AnyFlatSpec with RaceSpec {
 
   "a MappedRecordBuffer" should "be directly accessible from both host and device" in {
 

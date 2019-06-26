@@ -20,6 +20,7 @@ import java.io.File
 
 import org.joda.time.DateTime
 
+import scala.collection.Seq
 import scala.collection.mutable.ArrayBuffer
 import scala.util.control.Breaks._
 
@@ -71,7 +72,7 @@ class CliArgs (val title: String) {
 
     def missing: Boolean = required && !seen
     def id: String = s"option ${keyNames.head}"
-    def show: String
+    def show: Unit
     def showRequired: String = if (required) "- REQUIRED" else ""
   }
 

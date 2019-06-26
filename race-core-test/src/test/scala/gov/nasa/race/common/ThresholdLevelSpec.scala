@@ -17,12 +17,12 @@
 package gov.nasa.race.common
 
 import gov.nasa.race.test.RaceSpec
-import org.scalatest.FlatSpec
+import org.scalatest.flatspec.AnyFlatSpec
 
 /**
   * regression test for ThresholdLevel/List
   */
-class ThresholdLevelSpec extends FlatSpec with RaceSpec {
+class ThresholdLevelSpec extends AnyFlatSpec with RaceSpec {
 
   var triggeredLevel: String = null
 

@@ -39,7 +39,7 @@ abstract class ToggleButtonUI extends BasicButtonUI {
   protected var xBase = 0
   protected var yBase = 0
 
-  protected def paintIcon(c: JToggleButton, g: Graphics2D, x: Int, y: Int, w: Int, h: Int)
+  protected def paintIcon(c: JToggleButton, g: Graphics2D, x: Int, y: Int, w: Int, h: Int): Unit
 
   protected def iconOutlineClr (c: JComponent): Color = modifyColor(c.getForeground, 0.7)
   protected def iconFillClr (c: JComponent): Color = modifyColor(c.getForeground, 0.3)

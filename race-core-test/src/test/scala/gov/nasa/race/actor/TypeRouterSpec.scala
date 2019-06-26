@@ -20,7 +20,7 @@ import akka.event.Logging
 import gov.nasa.race.core.Messages.BusEvent
 import gov.nasa.race.test.RaceActorSpec
 import org.joda.time.DateTime
-import org.scalatest.FlatSpecLike
+import org.scalatest.flatspec.AnyFlatSpecLike
 import scala.concurrent.duration._
 
 object TypeRouterSpec {
@@ -30,7 +30,7 @@ object TypeRouterSpec {
 /**
   * regression test for TypeRouter actor
   */
-class TypeRouterSpec extends RaceActorSpec with FlatSpecLike {
+class TypeRouterSpec extends RaceActorSpec with AnyFlatSpecLike {
   import TypeRouterSpec._
 
   "a TypeRouter actor" should "publish incoming messages to the right channels" in {

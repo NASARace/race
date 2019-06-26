@@ -23,9 +23,10 @@ import gov.nasa.race._
 import gov.nasa.race.test.RaceSpec
 import org.scalacheck.Gen
 import org.scalacheck.Gen._
-import org.scalatest.FlatSpec
+import org.scalatest.flatspec.AnyFlatSpec
 
 import scala.collection.mutable.ArrayBuffer
+import scala.collection.Seq
 
 /**
   * unit test for gov.nasa.race.common.WeightedArray
@@ -78,7 +79,7 @@ object WeightedArraySpec {
 /**
   * unit test for WeightedArray
   */
-class WeightedArraySpec extends FlatSpec with RaceSpec {
+class WeightedArraySpec extends AnyFlatSpec with RaceSpec {
   import WeightedArraySpec._
 
   "fixed sequence of operations" should "reproduce known list" in {

@@ -19,12 +19,12 @@ package gov.nasa.race.geo
 import gov.nasa.race.test.RaceSpec
 import gov.nasa.race.uom.Angle.Degrees
 import org.scalacheck.Gen
-import org.scalatest.FlatSpec
+import org.scalatest.flatspec.AnyFlatSpec
 
 /**
   * unit test for WGS84 lat/lon compression/decompression
   */
-class WGS84CodecSpec extends FlatSpec with RaceSpec {
+class WGS84CodecSpec extends AnyFlatSpec with RaceSpec {
 
   final val eps = 0.000001
   final val nSuccessful = 100

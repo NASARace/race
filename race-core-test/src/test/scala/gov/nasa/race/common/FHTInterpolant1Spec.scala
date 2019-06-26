@@ -17,7 +17,7 @@
 package gov.nasa.race.common
 
 import gov.nasa.race.test.RaceSpec
-import org.scalatest.FlatSpec
+import org.scalatest.flatspec.AnyFlatSpec
 import java.lang.Math._
 
 import gov.nasa.race.common.Nat.N1
@@ -25,7 +25,7 @@ import gov.nasa.race.common.Nat.N1
 /**
   * reg test for FHT1Interpolant
   */
-class FHTInterpolant1Spec extends FlatSpec with RaceSpec with TInterpolant1Test {
+class FHTInterpolant1Spec extends AnyFlatSpec with RaceSpec with TInterpolant1Test {
 
   val ε: Double = 1e-3
   checkError = true

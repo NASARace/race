@@ -34,7 +34,7 @@ import org.apache.avro.Schema
 import org.apache.avro.specific.{SpecificDatumReader, SpecificDatumWriter, SpecificRecord}
 
 import scala.collection.mutable.{SortedSet => MSortedSet, HashMap => MHashMap, HashSet => MHashSet}
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 import scala.util.matching.Regex
 
 

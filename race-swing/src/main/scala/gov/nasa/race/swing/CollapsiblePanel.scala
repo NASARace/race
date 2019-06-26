@@ -47,7 +47,7 @@ class CollapsiblePanel extends GBPanel {
   // this is reasonably brain dead - since we don't have a callback for doLayout, we have to constantly remove/add a filler
   def add (title: String, child: Component, toolTip:String= "click to collapse/expand", isExpanded: Boolean=true) = {
     if (contents.nonEmpty) layout -= filler
-    layout(new Collapsible(title,child,toolTip,isExpanded).styled('collapsible)) = c
+    layout(new Collapsible(title,child,toolTip,isExpanded).styled("collapsible")) = c
     layout(filler) = cFiller
   }
 
@@ -96,12 +96,12 @@ class Collapsible (val title: String, var content: Component, toolTip:String, va
     tooltip = toolTip
     horizontalTextPosition = Alignment.Right
     selected = isExpanded
-  }.styled('collapseButton)
+  }.styled("collapseButton")
 
   val titleBox = new BoxPanel(Orientation.Horizontal){
     contents += titleButton
-    contents += new Component {}.styled('collapseBar)
-  }.styled('collapseTitlebar)
+    contents += new Component {}.styled("collapseBar")
+  }.styled("collapseTitlebar")
   layout(titleBox) = BorderPanel.Position.North
 
   val contentWrapper = new ContentWrapper(content)
@@ -189,7 +189,7 @@ class Collapsible (val title: String, var content: Component, toolTip:String, va
 
   class TimerAction (val timer: Timer, val nTicks: Int, expand: Boolean) extends ActionListener {
     var n = 0
-    var y, yLast: Double = 0;
+    var y, yLast: Double = 0.0;
     var dx: Double = 2.0 / nTicks
     val w = contentWrapper.getWidth
     val h = prefContentSize.height

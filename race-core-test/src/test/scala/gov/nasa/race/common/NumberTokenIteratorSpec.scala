@@ -19,14 +19,14 @@ package gov.nasa.race.common
 
 import gov.nasa.race.test.RaceSpec
 import gov.nasa.race.util.NumberTokenIterator
-import org.scalatest.FlatSpec
+import org.scalatest.flatspec.AnyFlatSpec
 
 /**
  * unit test for generic NumberTokenIterator utility
  *
  * <2do> add test for failures
  */
-class NumberTokenIteratorSpec extends FlatSpec with RaceSpec {
+class NumberTokenIteratorSpec extends AnyFlatSpec with RaceSpec {
 
   "NumberTokenIterator[Int]" should "reproduce given input values with varying whitespace" in {
     val testData = """ 1,2, 3,  4  ,

@@ -22,6 +22,7 @@ import gov.nasa.race.track.{TrackListMessage, TrackedObject}
 import gov.nasa.race.uom._
 import gov.nasa.race.util.DateTimeUtils._
 import org.joda.time.DateTime
+import scala.collection.Seq
 
 /**
   * track report for airports (e.g. generated from SWIM asdexMsg messages)

@@ -30,7 +30,7 @@ import gov.nasa.race.core.{PublishingRaceActor, SubscribingRaceActor}
   */
 class ContentRouter (val config: Config) extends SubscribingRaceActor with PublishingRaceActor {
 
-  val routes: Map[ConfigValue,String] = createRouteMap(config.getConfigArray("routes"))
+  val routes: Map[ConfigValue,String] = createRouteMap(config.getConfigSeq("routes"))
   val defaultRoute = config.getOptionalString("default-route")
   val mapper: ConfigValueMapper = createMapper(config.getConfig("mapper"))
 

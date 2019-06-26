@@ -95,7 +95,7 @@ object DateTimeUtils {
   }
 
   def asFiniteDuration(dur: scala.concurrent.duration.Duration): FiniteDuration = {
-    if (dur.isFinite())
+    if (dur.isFinite)
       FiniteDuration(dur.toMillis, MILLISECONDS)
     else
       throw new IllegalArgumentException(s"not a finite duration: $dur")

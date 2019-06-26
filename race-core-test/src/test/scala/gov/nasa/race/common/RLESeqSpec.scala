@@ -18,12 +18,12 @@
 package gov.nasa.race.common
 
 import gov.nasa.race.test.RaceSpec
-import org.scalatest.FlatSpec
+import org.scalatest.flatspec.AnyFlatSpec
 
 /**
  * unit tests for generic RLEIterator
  */
-class RLESeqSpec extends FlatSpec with RaceSpec {
+class RLESeqSpec extends AnyFlatSpec with RaceSpec {
 
   "variable length RLESeq[Byte]" should "reproduce given values" in {
     val s = "1,2, -2,2, 3,3"

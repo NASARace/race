@@ -22,12 +22,12 @@ import java.io.File
 import javax.imageio.ImageIO
 import gov.nasa.race.util.FileUtils._
 import gov.nasa.race.test.RaceSpec
-import org.scalatest.FlatSpec
+import org.scalatest.flatspec.AnyFlatSpec
 
 /**
  * unit tests for ITWSprecip2PrecipData translator
  */
-class ITWSprecip2PrecipImageSpec extends FlatSpec with RaceSpec {
+class ITWSprecip2PrecipImageSpec extends AnyFlatSpec with RaceSpec {
 
   // create a color model we can compare with the reference ITWSGriddedConverter from Lincoln Labs
   def createColorModel = {

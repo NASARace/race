@@ -22,6 +22,7 @@ import gov.nasa.race.common._
 import gov.nasa.race.util.ArrayUtils
 
 import scala.collection.mutable.ArrayBuffer
+import scala.collection.Seq
 import scala.language.postfixOps
 
 /**
@@ -177,6 +178,8 @@ private[uom] class ReverseAngleIter (data: Seq[Double], first: Int, last: Int) e
   * TODO - implement scala.collection.Seq[Angle]
   */
 final class AngleArray protected[uom] (protected[uom] val data: Array[Double]) extends UOMDoubleArray[Angle] {
+  import scala.math.Ordering.Double.TotalOrdering
+
   type Self = AngleArray
   type SelfBuffer = AngleArrayBuffer
 
@@ -227,6 +230,8 @@ object AngleArrayBuffer {
   * ArrayBuffer[Angle])
   */
 final class AngleArrayBuffer protected[uom] (protected[uom] val data: ArrayBuffer[Double]) extends UOMDoubleArrayBuffer[Angle] {
+  import scala.math.Ordering.Double.TotalOrdering
+
   type Self = AngleArrayBuffer
   type SelfArray = AngleArray
 
@@ -286,6 +291,8 @@ private[uom] class ReverseDeltaAngleIter (data: Seq[Float], first: Int, last: In
   * stores Angles as Float diff to a fixed ref value
   */
 final class DeltaAngleArray protected[uom] (protected[uom] val data: Array[Float], val ref: Angle) {
+  import scala.math.Ordering.Float.TotalOrdering
+
 
   def this(len: Int, ref: Angle) = this(new Array[Float](len), ref)
 
@@ -335,10 +342,11 @@ final class DeltaAngleArray protected[uom] (protected[uom] val data: Array[Float
     a
   }
 
-  def toBuffer: DeltaAngleArrayBuffer = new DeltaAngleArrayBuffer(ArrayBuffer(data:_*),ref)
+  def toBuffer: DeltaAngleArrayBuffer = new DeltaAngleArrayBuffer(ArrayBuffer.from(data),ref)
 }
 
 final class DeltaAngleArrayBuffer protected[uom] (protected[uom] val data: ArrayBuffer[Float], val ref: Angle) {
+  import scala.math.Ordering.Float.TotalOrdering
 
   def this (initialSize: Int, ref: Angle) = this(new ArrayBuffer[Float](initialSize), ref)
 

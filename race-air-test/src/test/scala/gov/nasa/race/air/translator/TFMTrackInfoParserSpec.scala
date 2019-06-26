@@ -19,14 +19,14 @@ package gov.nasa.race.air.translator
 import gov.nasa.race.air.TFMTrackInfoParser
 import gov.nasa.race.test.RaceSpec
 import gov.nasa.race.util.FileUtils._
-import org.scalatest.FlatSpec
+import org.scalatest.flatspec.AnyFlatSpec
 
 /**
   * unit test for FlightInfo, FlightInfoStore and FlightInfoTfmParser
   *
   * TODO - this still needs assertions
   */
-class TFMTrackInfoParserSpec extends FlatSpec with RaceSpec {
+class TFMTrackInfoParserSpec extends AnyFlatSpec with RaceSpec {
   val xmlMsg = fileContentsAsUTF8String(baseResourceFile("tfmdata.xml")).get
 
   behavior of "TFMTrackInfoParser"

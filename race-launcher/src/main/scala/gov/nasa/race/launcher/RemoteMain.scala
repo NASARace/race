@@ -25,6 +25,7 @@ import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.config.ConfigVault
 import gov.nasa.race.core.RaceActorSystem
 import gov.nasa.race.main.MainBase
+import scala.collection.Seq
 
 /**
  * application object that runs Main without user interaction, to be started via RemoteLauncher.

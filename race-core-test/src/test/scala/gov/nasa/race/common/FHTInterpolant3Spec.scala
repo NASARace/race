@@ -1,10 +1,10 @@
 package gov.nasa.race.common
 
 import gov.nasa.race.test.RaceSpec
-import org.scalatest.FlatSpec
+import org.scalatest.flatspec.AnyFlatSpec
 import java.lang.Math._
 
-class FHTInterpolant3Spec extends FlatSpec with RaceSpec {
+class FHTInterpolant3Spec extends AnyFlatSpec with RaceSpec {
 
   "a FHT3Interpolant" should "work support generic data model" in {
     val r = (new SampleT3).interpolateFH

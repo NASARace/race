@@ -193,7 +193,7 @@ final class TimeArray protected[uom] (protected[uom] val data: Array[Int]) {
 
   def toMillisecondArray: Array[Int] = data.clone
 
-  def toBuffer: TimeArrayBuffer = new TimeArrayBuffer(ArrayBuffer[Int](data:_*))
+  def toBuffer: TimeArrayBuffer = new TimeArrayBuffer(ArrayBuffer.from(data))
 
   //... and more to follow
 }

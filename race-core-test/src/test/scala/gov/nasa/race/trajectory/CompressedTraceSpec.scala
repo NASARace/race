@@ -20,12 +20,12 @@ import gov.nasa.race.test.RaceSpec
 import gov.nasa.race.uom.Date._
 import gov.nasa.race.uom.Angle._
 import gov.nasa.race.uom.Length._
-import org.scalatest.FlatSpec
+import org.scalatest.flatspec.AnyFlatSpec
 
 /**
   * reg test for LossyTrace
   */
-class CompressedTraceSpec extends FlatSpec with RaceSpec {
+class CompressedTraceSpec extends AnyFlatSpec with RaceSpec {
 
   "a CompressedTrace" should "store positions with 4-5 digits" in {
 

@@ -26,7 +26,7 @@ import com.typesafe.config._
 import gov.nasa.race.config.ConfigUtils
 import gov.nasa.race.util.CryptUtils._
 
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 
 
 /**

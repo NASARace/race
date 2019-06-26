@@ -17,12 +17,12 @@
 package gov.nasa.race.space
 
 import gov.nasa.race.test.RaceSpec
-import org.scalatest.WordSpecLike
+import org.scalatest.wordspec.AnyWordSpecLike
 
 /**
   * unit test for TLE
   */
-class TLESpec extends WordSpecLike with RaceSpec {
+class TLESpec extends AnyWordSpecLike with RaceSpec {
 
   "a TLE" should {
     "print identical to its input" in {

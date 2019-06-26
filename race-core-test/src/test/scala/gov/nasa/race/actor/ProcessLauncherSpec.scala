@@ -20,7 +20,7 @@ package gov.nasa.race.actor
 import akka.event.Logging
 import gov.nasa.race.test.RaceActorSpec
 import org.joda.time.DateTime
-import org.scalatest.WordSpecLike
+import org.scalatest.wordspec.AnyWordSpecLike
 
 import scala.util.Properties
 
@@ -31,7 +31,7 @@ import scala.util.Properties
   * so that it can find our ExternalProc.java test class
   * THIS MAKES THIS TEST BRITTLE WITH RESPECT TO MOVING ExternalProc OR UPDATING SCALA
   */
-class ProcessLauncherSpec  extends RaceActorSpec with WordSpecLike {
+class ProcessLauncherSpec  extends RaceActorSpec with AnyWordSpecLike {
   mkTestOutputDir
 
   "a ProcessLauncher" should {

@@ -19,12 +19,12 @@ package gov.nasa.race.common
 import java.lang.Math.{cos, sin, abs}
 
 import gov.nasa.race.test.RaceSpec
-import org.scalatest.FlatSpec
+import org.scalatest.flatspec.AnyFlatSpec
 
 /**
   * reg test for interpolating T3 iterators
   */
-class TInterpolant3Spec extends FlatSpec with RaceSpec {
+class TInterpolant3Spec extends AnyFlatSpec with RaceSpec {
 
   @inline def rad(deg: Double): Double = deg * Math.PI / 180.0
   @inline def squared(x: Double): Double = x * x

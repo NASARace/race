@@ -28,12 +28,12 @@ import gov.nasa.race.swing.Style._
 class StringOutput(varName: String, editable: Boolean = false, align: Alignment.Value = Alignment.Center)
                   (implicit outputLength: Int=12,labelLength: Int=6)
                                                     extends BoxPanel(Orientation.Horizontal){
-  val label = new Label(varName).styled('fieldLabel)
+  val label = new Label(varName).styled("fieldLabel")
 
   val value = new TextField(outputLength)
   value.editable = editable
   value.horizontalAlignment = align
-  value.styled('stringField)  // we have to style after setting editable
+  value.styled("stringField")  // we have to style after setting editable
 
   val tfSize = value.preferredSize
   val lblSize = label.preferredSize

@@ -17,12 +17,12 @@
 package gov.nasa.race.common
 
 import gov.nasa.race.test.RaceSpec
-import org.scalatest.FlatSpec
+import org.scalatest.flatspec.AnyFlatSpec
 
 /**
   * unit test for CircularArray
   */
-class CircularArraySpec extends FlatSpec with RaceSpec {
+class CircularArraySpec extends AnyFlatSpec with RaceSpec {
 
   "a CircularArray" should "behave like a normal Seq if it does not wrap around" in {
     val n = 10

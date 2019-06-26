@@ -79,10 +79,10 @@ package object ww {
   }
 
   trait LayerListener {
-    def layerChanged(layer: Layer)
+    def layerChanged(layer: Layer): Unit
   }
   trait LayerController {
-    def changeLayer (name: String, isEnabled: Boolean)
+    def changeLayer (name: String, isEnabled: Boolean): Unit
   }
 
 

@@ -32,6 +32,7 @@ import gov.nasa.race.uom.{Angle, Length, Speed}
 import org.joda.time.DateTime
 
 import scala.collection.mutable.ArrayBuffer
+import scala.collection.Seq
 
 /**
   * STDDS TATrackAndFlightPlan to TATrack translator that uses stack frames to avoid the

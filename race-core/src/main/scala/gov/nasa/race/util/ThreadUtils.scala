@@ -32,7 +32,7 @@ object ThreadUtils {
   class Signal {
     def wait(timeout: Duration): Unit = {
       this.synchronized {
-        if (timeout.isFinite()) {
+        if (timeout.isFinite) {
           super.wait(timeout.toMillis)
         } else {
           super.wait()
@@ -66,8 +66,25 @@ object ThreadUtils {
     try {
       Thread.sleep(duration.toMillis)
     } catch {
-      case ix: InterruptedException => // do nothing
+      case _: InterruptedException => // do nothing
     }
+  }
+
+  def waitInterruptibleUpTo[A] (dur: FiniteDuration, fallback: =>A)(waitOp: FiniteDuration=>A): A = {
+    var d = dur
+
+    while (d > Duration.Zero){
+      val t0 = System.currentTimeMillis
+      try {
+        return waitOp(d) // this is a blocking call
+      } catch {
+        case _:InterruptedException =>
+          val t1 = System.currentTimeMillis
+          d = d.minus((t1 - t0).milliseconds)
+        // everything else is escalated
+      }
+    }
+    fallback
   }
 
   def pollUpTo(maxMillis: Int, pollMillis: Int)(poll: => Boolean): Boolean = {

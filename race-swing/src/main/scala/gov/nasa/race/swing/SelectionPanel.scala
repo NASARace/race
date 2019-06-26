@@ -38,7 +38,7 @@ abstract class SelectionPanel[T:ClassTag,L <:ItemRenderPanel[T]] (label: String,
   combo.renderer = new ListItemRenderer[T,ItemRenderPanel[T]](itemRenderPanel)
 
   val c = new Constraints( fill=Fill.Horizontal, anchor=Anchor.West, insets=(8,2,0,2))
-  layout(new Label(label).styled('labelFor)) = c(0,0).weightx(0.5)
+  layout(new Label(label).styled("labelFor")) = c(0,0).weightx(0.5)
   layout(combo) = c(1,0).weightx(0)
 
   listenTo(combo.selection)
@@ -56,7 +56,7 @@ class StaticSelectionPanel[T: ClassTag,L <:ItemRenderPanel[T]](label: String,
                                                      itemRenderPanel: L,
                                                      selectAction: T=>Unit)
                           extends SelectionPanel[T,L](label,items,maxRows,itemRenderPanel,selectAction) {
-  override def createCombo: ComboBox[T] = new ComboBox[T](items) styled()
+  override def createCombo: ComboBox[T] = new ComboBox[T](items).styled()
 }
 
 
@@ -67,7 +67,7 @@ class DynamicSelectionPanel[T: ClassTag,L <:ItemRenderPanel[T]](label: String,
                                                       selectAction: T=>Unit)
                             extends SelectionPanel[T,L](label,items,maxRows,itemRenderPanel,selectAction) {
 
-  override def createCombo: ComboBox[T] = new DynamicComboBox[T](items) styled()
+  override def createCombo: ComboBox[T] = new DynamicComboBox[T](items).styled()
 
   def addItem(t: T): Unit = combo.asInstanceOf[DynamicComboBox[T]].addItem(t)
   def removeItem(t: T): Unit = combo.asInstanceOf[DynamicComboBox[T]].removeItem(t)

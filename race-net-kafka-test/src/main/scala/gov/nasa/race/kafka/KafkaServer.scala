@@ -26,7 +26,8 @@ import kafka.admin.TopicCommand.TopicCommandOptions
 import kafka.metrics.KafkaMetricsReporter
 import kafka.server.{KafkaConfig, KafkaServerStartable}
 import kafka.utils.VerifiableProperties
-import kafka.utils.ZkUtils
+import org.apache.kafka.clients.admin.AdminClient
+
 /** 1.1.x
 import kafka.zk.KafkaZkClient
 import kafka.zookeeper.ZooKeeperClient
@@ -155,8 +156,6 @@ object KafkaServer {
     zkFactory.startup(zkServer)
     Thread.sleep(500)
 
-    val zkClient = ZkUtils(props.get("zookeeper.connect").toString, 30000, 30000, false) // 1.0.1
-
     /** 1.1.x
     val time = Time.SYSTEM
     val zooKeeperClient: ZooKeeperClient = new ZooKeeperClient(props.get("zookeeper.connect").toString,
@@ -192,12 +191,12 @@ object KafkaServer {
     thread.start()
     Thread.sleep(1000)
 
-    ifSome(cliOpts.topic){ topicName => createTopic(zkClient,topicName,"1","1")}
+    ifSome(cliOpts.topic){ topicName => createTopic(topicName,"1","1")}
 
     menu("enter command [1:listTopics, 2:createTopic, 9:exit]:\n") {
       case "1" =>
-        //TopicCommand.main(Array("--list", "--zookeeper", props.get("zookeeper.connect").toString))
-        TopicCommand.listTopics(zkClient,new TopicCommandOptions(Array[String]()))
+        //TopicCommand.listTopics(zkClient,new TopicCommandOptions(Array[String]()))
+        TopicCommand.main(Array("--list", "--zookeeper", props.get("zookeeper.connect").toString))
         repeatMenu
 
       case "2" =>
@@ -207,7 +206,7 @@ object KafkaServer {
           if (partitions == "") partitions = "1"
           var replicationFactor = StdIn.readLine("  enter replication factor (default=1):\n")
           if (replicationFactor == "") replicationFactor = "1"
-          createTopic(zkClient, topic, partitions, replicationFactor)
+          createTopic(topic, partitions, replicationFactor)
         }
         repeatMenu
       case "9" =>
@@ -217,10 +216,10 @@ object KafkaServer {
     }
   }
 
-  def createTopic (zkClient: ZkUtils /* KafkaZkClient */, topic: String, partitions: String, replicationFactor: String) = {
-    val args = Array("--replication-factor", replicationFactor,
-      "--partitions", partitions,
-      "--topic", topic)
-    TopicCommand.createTopic(zkClient, new TopicCommandOptions(args))
+  def createTopic (topic: String, partitions: String, replicationFactor: String) = {
+    TopicCommand.main(Array("--create",
+                            "--replication-factor", replicationFactor,
+                            "--partitions", partitions,
+                            "--topic", topic))
   }
 }

@@ -20,9 +20,9 @@ package gov.nasa.race.geo
 import gov.nasa.race.test.RaceSpec
 import gov.nasa.race.uom.Angle._
 import org.scalacheck._
-import org.scalatest._
+import org.scalatest.flatspec.AnyFlatSpec
 
-class GreatCircleSpec extends FlatSpec with RaceSpec {
+class GreatCircleSpec extends AnyFlatSpec with RaceSpec {
   // test data
   val SJC = GeoPosition(Degrees(37.363947), Degrees(-121.928937))
   val IND = GeoPosition(Degrees(39.716859), Degrees(-86.295595))
@@ -31,8 +31,13 @@ class GreatCircleSpec extends FlatSpec with RaceSpec {
 
   //--- simple test cases
   "bearings" should "comply with known values" in {
-    GreatCircle.initialBearing(SJC, IND).toNormalizedDegrees should be(74.0 +- 0.01)
-    GreatCircle.finalBearing(SJC, IND).toNormalizedDegrees should be(96.65 +- 0.01)
+    val initBearing = GreatCircle.initialBearing(SJC, IND)
+    println(s"init-bearing $SJC -> $IND = $initBearing  (expected ~74.0)")
+    initBearing.toNormalizedDegrees should be(74.0 +- 0.01)
+
+    val finalBearing = GreatCircle.finalBearing(SJC, IND)
+    println(s"final-bearing $SJC -> $IND = $finalBearing  (expected ~96.65)")
+    finalBearing.toNormalizedDegrees should be(96.65 +- 0.01)
   }
 
   "distance" should "comply with known values" in {

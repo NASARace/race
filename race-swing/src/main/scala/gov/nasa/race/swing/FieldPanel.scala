@@ -41,8 +41,8 @@ abstract class FieldPanel extends ScrollPane {
   val lines = ListBuffer.empty[(Component,Component)]
 
   def addField (fieldName: String, initValue: String=""): FieldValueLabel = {
-    val nameField  = new Label(fieldName).styled('fieldName)
-    val valueField = new FieldValueLabel(initValue).styled('fieldValue)
+    val nameField  = new Label(fieldName).styled("fieldName")
+    val valueField = new FieldValueLabel(initValue).styled("fieldValue")
     lines += (nameField -> valueField)
     valueField
   }
@@ -63,7 +63,7 @@ abstract class FieldPanel extends ScrollPane {
           layout(linePair._1) = c(0, i).weightx(0.5).gridwidth(2)
         }
       }
-    } styled ('fieldGrid)
+    }.styled("fieldGrid")
 
     contents = labelPanel
   }

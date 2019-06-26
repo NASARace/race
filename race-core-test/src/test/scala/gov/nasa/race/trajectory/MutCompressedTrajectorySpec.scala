@@ -21,12 +21,12 @@ import gov.nasa.race.uom.Time._
 import gov.nasa.race.uom.Angle.Degrees
 import gov.nasa.race.uom.Date.EpochMillis
 import gov.nasa.race.uom.Length.Meters
-import org.scalatest.FlatSpec
+import org.scalatest.flatspec.AnyFlatSpec
 
 /**
   * reg test for LossyTrajectory
   */
-class MutCompressedTrajectorySpec extends FlatSpec with RaceSpec {
+class MutCompressedTrajectorySpec extends AnyFlatSpec with RaceSpec {
 
   "a init sized MutCompressedTrajectory" should "contain approximate values of entries in right order" in {
     val data = Array(

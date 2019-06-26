@@ -17,6 +17,7 @@
 package gov.nasa.race.uom
 
 import scala.collection.mutable.ArrayBuffer
+import scala.collection.Seq
 
 /*
   TODO - check if specialization really has an impact on inlining or if

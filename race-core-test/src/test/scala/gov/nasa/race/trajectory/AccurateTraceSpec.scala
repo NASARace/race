@@ -23,12 +23,12 @@ import gov.nasa.race.uom.Angle.Degrees
 import gov.nasa.race.uom.Date.EpochMillis
 import gov.nasa.race.uom.Length.Meters
 import gov.nasa.race.uom.Time._
-import org.scalatest.FlatSpec
+import org.scalatest.flatspec.AnyFlatSpec
 
 /**
   * reg test for LossLessTrace
   */
-class AccurateTraceSpec extends FlatSpec with RaceSpec {
+class AccurateTraceSpec extends AnyFlatSpec with RaceSpec {
 
   "an empty trace" should "not produce any values" in {
     val trace = new AccurateTrace(4)

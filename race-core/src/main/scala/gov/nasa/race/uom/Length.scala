@@ -23,6 +23,7 @@ import gov.nasa.race.common.{OnlineSampleStats, SampleStats}
 import gov.nasa.race.util.ArrayUtils
 
 import scala.collection.mutable.ArrayBuffer
+import scala.collection.Seq
 
 /**
   * length quantities
@@ -190,6 +191,8 @@ private[uom] class ReverseLengthIter (data: Seq[Double], first: Int, last: Int) 
   * note that Array[T] is final hence we cannot extend it
   */
 final class LengthArray protected[uom] (protected[uom] val data: Array[Double]) extends UOMDoubleArray[Length] {
+  import scala.math.Ordering.Double.TotalOrdering
+
   type Self = LengthArray
   type SelfBuffer = LengthArrayBuffer
 
@@ -241,6 +244,8 @@ object LengthArrayBuffer {
 }
 
 final class LengthArrayBuffer protected[uom] (protected[uom] val data: ArrayBuffer[Double]) extends UOMDoubleArrayBuffer[Length] {
+  import scala.math.Ordering.Double.TotalOrdering
+
   type Self = LengthArrayBuffer
   type SelfArray = LengthArray
 
@@ -305,6 +310,7 @@ private[uom] class ReverseDeltaLengthIter (data: Seq[Float], first: Int, last: I
   * stores Lengths as Float diff to a fixed ref value
   */
 final class DeltaLengthArray protected[uom] (protected[uom] val data: Array[Float], val ref: Length) {
+  import scala.math.Ordering.Float.TotalOrdering
 
   def this(len: Int, ref: Length) = this(new Array[Float](len), ref)
 
@@ -354,10 +360,11 @@ final class DeltaLengthArray protected[uom] (protected[uom] val data: Array[Floa
     a
   }
 
-  def toBuffer: DeltaLengthArrayBuffer = new DeltaLengthArrayBuffer(ArrayBuffer(data:_*),ref)
+  def toBuffer: DeltaLengthArrayBuffer = new DeltaLengthArrayBuffer(ArrayBuffer.from(data),ref)
 }
 
 final class DeltaLengthArrayBuffer protected[uom] (protected[uom] val data: ArrayBuffer[Float], val ref: Length) {
+  import scala.math.Ordering.Float.TotalOrdering
 
   def this (initialSize: Int, ref: Length) = this(new ArrayBuffer[Float](initialSize), ref)
 

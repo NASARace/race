@@ -34,7 +34,7 @@ trait LayerObject {
   def pos: GeoPositioned
 
   // per object display attribute management
-  def setAttr(attr: LayerObjectAttribute, cond: Boolean)
+  def setAttr(attr: LayerObjectAttribute, cond: Boolean): Unit
   def isAttrSet(attr: LayerObjectAttribute): Boolean
 
   // global RaceViewer focus (automatic follow-object)
@@ -94,5 +94,5 @@ object LayerObjectAttribute extends Enumeration {
 }
 
 trait LayerObjectListener {
-  def objectChanged(obj: LayerObject, action: LayerObjectAction)
+  def objectChanged(obj: LayerObject, action: LayerObjectAction): Unit
 }

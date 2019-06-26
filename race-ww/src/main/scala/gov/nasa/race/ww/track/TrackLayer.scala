@@ -157,10 +157,10 @@ trait TrackLayer[T <:TrackedObject] extends SubscribingRaceLayer
   //--- initialization support - override in subclasses for more specialized types
 
   protected def createLayerInfoPanel: InteractiveLayerInfoPanel[TrackEntry[T]] = {
-    new InteractiveLayerInfoPanel[TrackEntry[T]](this).styled('consolePanel)
+    new InteractiveLayerInfoPanel[TrackEntry[T]](this).styled("consolePanel")
   }
 
-  protected def createEntryPanel: TrackEntryPanel[T] = new TrackEntryPanel(this).styled('consolePanel)
+  protected def createEntryPanel: TrackEntryPanel[T] = new TrackEntryPanel(this).styled("consolePanel")
 
   protected def createTrajectory(track: T): MutTrajectory = new MutCompressedTrajectory(50)
 

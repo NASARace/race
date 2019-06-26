@@ -79,7 +79,13 @@ class OnlineSampleStats extends SampleStats[Double] with XmlSource {
   @inline def isNewMinimum: Boolean = isMin
   @inline def isNewMaximum: Boolean = isMax
 
-  @inline def variance: Double = s / (numberOfSamples-1)
+  @inline def variance: Double = {
+    numberOfSamples match {
+      case 0 => Double.NaN
+      case 1 => 0.0
+      case _ => s / (numberOfSamples-1)
+    }
+  }
 
   def toXML = <samples>
     <count>{numberOfSamples}</count>

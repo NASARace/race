@@ -433,7 +433,7 @@ class TrackPairEventLayer(val raceViewer: RaceViewer, val config: Config)
   }
 
   protected def createLayerInfoPanel: InteractiveLayerInfoPanel[TrackPairEventEntry] = {
-    new InteractiveLayerInfoPanel(this).styled('consolePanel)
+    new InteractiveLayerInfoPanel(this).styled("consolePanel")
   }
 
   protected def createEntryPanel: TrackPairEventPanel = new TrackPairEventPanel(this)

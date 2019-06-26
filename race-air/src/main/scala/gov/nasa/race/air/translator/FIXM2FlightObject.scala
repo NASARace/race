@@ -32,6 +32,7 @@ import gov.nasa.race.uom._
 import org.joda.time.DateTime
 
 import scala.collection.mutable.ArrayBuffer
+import scala.collection.Seq
 
 /**
   * FIXM MessageCollection/NasFlight to FlightPos to translator

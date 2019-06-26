@@ -19,7 +19,7 @@ package gov.nasa.race.common
 import java.io.{FileOutputStream, PrintStream}
 
 import gov.nasa.race.test.RaceSpec
-import org.scalatest.FlatSpec
+import org.scalatest.flatspec.AnyFlatSpec
 
 import scala.concurrent.duration._
 import scala.io.Source
@@ -27,7 +27,7 @@ import scala.io.Source
 /**
   * unit test for SmoothingExtrapolator (irregular time series extrapolation)
   */
-class SmoothingExtrapolatorSpec extends FlatSpec with RaceSpec {
+class SmoothingExtrapolatorSpec extends AnyFlatSpec with RaceSpec {
 
   mkTestOutputDir
 

@@ -31,7 +31,8 @@ import org.joda.time.DateTime
 import org.scalatest.BeforeAndAfterAll
 
 import scala.collection.immutable.ListMap
-import scala.collection.{Map, Seq}
+import scala.collection.Seq
+import scala.collection.immutable.Map
 import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
 import scala.reflect.ClassTag
@@ -191,7 +192,7 @@ abstract class RaceActorSpec (tras: TestRaceActorSystem) extends TestKit(tras.sy
     actorRef
   }
 
-  override def afterAll {
+  override def afterAll: Unit = {
     println("\nshutting down TestKit actor system\n")
     TestKit.shutdownActorSystem(system)
   }

@@ -2,6 +2,7 @@ package gov.nasa.race.track
 
 import com.github.nscala_time.time.Imports.DateTime
 import gov.nasa.race.{Dated, IdentifiableObject}
+import scala.collection.Seq
 
 /**
   * base type for in-flight related messages
