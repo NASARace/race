@@ -27,7 +27,7 @@ import gov.nasa.race.ww.LayerObjectAction.LayerObjectAction
 import gov.nasa.worldwind.event.{PositionEvent, PositionListener}
 import gov.nasa.worldwind.geom.{Angle, Position}
 import gov.nasa.worldwind.globes.projections.ProjectionMercator
-import gov.nasa.worldwind.globes.{Earth, EarthFlat}
+import gov.nasa.worldwind.globes.{Earth, EarthFlat, FlatGlobe, Globe}
 import gov.nasa.worldwind.terrain.ZeroElevationModel
 
 import scala.language.postfixOps
@@ -42,9 +42,10 @@ class ViewPanel (raceViewer: RaceViewer, config: Option[Config]=None) extends GB
                   with RacePanel with PositionListener with ViewListener with LayerObjectListener {
 
   val wwd = raceViewer.wwd
-  val earthGlobe = new Earth
-  val earthFlat = new EarthFlat
-  earthFlat.setElevationModel(new ZeroElevationModel)
+
+  /////// we don't have a initialized wwd.view yet
+  val earthGlobe: Globe = wwd.getModel().getGlobe()
+  val earthFlat: FlatGlobe = new EarthFlat(earthGlobe.getElevationModel())
   earthFlat.setProjection(new ProjectionMercator)
 
   //--- buttons to switch between globe displays
@@ -73,12 +74,12 @@ class ViewPanel (raceViewer: RaceViewer, config: Option[Config]=None) extends GB
   listenTo(globeBtn, flatBtn, focusBtn)
   reactions += {
     case ButtonClicked(`globeBtn`) =>
-      wwd.getModel.setGlobe(earthGlobe)
       wwd.getView.stopMovement()
+      wwd.getModel.setGlobe(earthGlobe)
 
     case ButtonClicked(`flatBtn`) =>
-      wwd.getModel.setGlobe(earthFlat)
       wwd.getView.stopMovement()
+      wwd.getModel.setGlobe(earthFlat)
 
     case ButtonClicked(`focusBtn`) =>
       raceViewer.resetFocused
@@ -115,4 +116,5 @@ class ViewPanel (raceViewer: RaceViewer, config: Option[Config]=None) extends GB
       case _ => // ignore
     }
   }
+
 }
