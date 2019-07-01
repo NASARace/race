@@ -37,7 +37,7 @@ abstract class SelectionPanel[T:ClassTag,L <:ItemRenderPanel[T]] (label: String,
   combo.maximumRowCount = maxRows
   combo.renderer = new ListItemRenderer[T,ItemRenderPanel[T]](itemRenderPanel)
 
-  val c = new Constraints( fill=Fill.Horizontal, anchor=Anchor.West, insets=(8,2,0,2))
+  val c = new Constraints( fill=Fill.Horizontal, anchor=Anchor.West, insets=scaledInsets(8,2,0,2))
   layout(new Label(label).styled("labelFor")) = c(0,0).weightx(0.5)
   layout(combo) = c(1,0).weightx(0)
 

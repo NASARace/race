@@ -22,7 +22,7 @@ import javax.swing.{JComponent, JToggleButton}
 import javax.swing.plaf.basic.BasicButtonUI
 
 object ToggleButtonUI {
-  final val DefaultTextGap = 9
+  final val DefaultTextGap = scaledSize(9)
   final val DefaultIconHeightFactor = 0.75
   final val DefaultIconStroke = new BasicStroke(1.5f)
 }
@@ -98,12 +98,14 @@ abstract class ToggleButtonUI extends BasicButtonUI {
     val iconLead = (h - iconHeight)/2
     val txtLead =  if (hasText) Math.max(b.getIconTextGap,DefaultTextGap) else iconLead
 
+    h += scaledSize(6)
+
     yBase = (h - sh)/2 + fm.getMaxAscent
     xBase = iconLead + iconWidth + txtLead
 
-    w += xBase
+    w += xBase + scaledSize(10)
 
-    new Dimension(w + 10,h)  // ?? fixme
+    new Dimension(w, h)
   }
 
   override def getMinimumSize (c: JComponent): Dimension = getPreferredSize(c)
@@ -116,7 +118,9 @@ class RadioButtonUI extends ToggleButtonUI {
     g.drawOval(x,y,w,h)
 
     g.setColor( if (c.isSelected) c.getForeground else iconFillClr(c))
-    g.fillOval(x+2,y+2,w-4,h-4)
+    val dOrigin = scaledSize(2)
+    val dCorner = scaledSize(4)
+    g.fillOval(x+dOrigin, y+dOrigin, w-dCorner, h-dCorner)
   }
 }
 
@@ -131,12 +135,15 @@ class CheckBoxUI extends ToggleButtonUI {
 
     if (c.isSelected) {
       g.setColor(c.getForeground)
-      val x0 = x+3
+      val d2 = scaledSize(2)
+      val d3 = scaledSize(3)
+
+      val x0 = x+d3
       val y0 = y + w/2
       val x1 = x + w/2
-      val y1 = y + w - 3
-      val x2 = x + w - 2
-      val y2 = y+2
+      val y1 = y + w - d3
+      val x2 = x + w - d2
+      val y2 = y+d2
 
       g.setStroke(ToggleButtonUI.DefaultIconStroke)
       g.drawLine(x0,y0,x1,y1)

@@ -67,7 +67,7 @@ class AsdexTracksLayer (val raceViewer: RaceViewer, val config: Config)
   val selPanel = new StaticSelectionPanel[Airport,IdAndNamePanel[Airport]](
     "select airport",
     Airport.NoAirport +: Airport.airportList, 40,
-    new IdAndNamePanel[Airport]( _.id, _.city),
+    new IdAndNamePanel[Airport]( _.id, _.city).styled(),
     selectAirport
   ).styled()
 

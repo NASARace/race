@@ -54,7 +54,7 @@ abstract class FieldPanel extends ScrollPane {
     */
   def setContents: Unit = {
     val labelPanel = new GBPanel {
-      val c = new Constraints(fill = Fill.Horizontal, anchor = Anchor.West, insets = (1, 3, 1, 3))
+      val c = new Constraints(fill = Fill.Horizontal, anchor = Anchor.West, insets = scaledInsets(1, 3, 1, 3))
       for ((linePair, i) <- lines.zipWithIndex) {
         if (linePair._2 != null) {
           layout(linePair._1) = c(0, i).weightx(0).gridwidth(1)

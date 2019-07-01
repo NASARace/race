@@ -26,17 +26,17 @@ import scala.swing.{Alignment, Label, FlowPanel, TextField}
 /**
  * read-only text field to show formatted double variables
  */
-class DoubleOutputField (val varName: String, val fmt: String)
-                        (implicit doubleOutputLength: Int=12, doubleOutputLabelLength: Int=6)
+class DoubleOutputField (val varName: String, val fmt: String,
+                         val doubleOutputLength: Int=12, val doubleOutputLabelLength: Int=6)
                            extends FlowPanel (FlowPanel.Alignment.Right)(){
-
+  val labelFmt = s"%${doubleOutputLabelLength}.${doubleOutputLabelLength}s"
   val label = new Label().styled("fieldLabel")
   setLabel(varName)
 
   val value = new TextField(doubleOutputLength).styled("numField")
   value.editable = false
   value.horizontalAlignment = Alignment.Right
-  setValue(0)
+  setValue(0.0)
 
   val tfSize = value.preferredSize
   val lblSize = label.preferredSize
@@ -44,12 +44,9 @@ class DoubleOutputField (val varName: String, val fmt: String)
 
   contents ++= Seq(label,value)
 
-  def setLabel (s: String) = {
-    val fmt = "%" + doubleOutputLabelLength + '.' + doubleOutputLabelLength + "s"
-    label.text = String.format(fmt, s)
-  }
+  def setLabel (s: String): Unit = label.text = String.format(labelFmt, s)
 
-  def setValue (v: Double) = value.text = String.format(fmt,Double.box(v))
+  def setValue (v: Double): Unit = value.text = String.format(fmt,Double.box(v))
 
-  def setForeground( color: Color) = value.foreground = color
+  def setForeground( color: Color): Unit = value.foreground = color
 }

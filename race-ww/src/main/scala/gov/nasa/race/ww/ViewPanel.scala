@@ -19,16 +19,14 @@ package gov.nasa.race.ww
 
 import com.typesafe.config.Config
 import gov.nasa.race._
-import gov.nasa.race.uom.Length
 import gov.nasa.race.swing.GBPanel.{Anchor, Fill}
 import gov.nasa.race.swing.Style._
 import gov.nasa.race.swing._
+import gov.nasa.race.uom.Length
 import gov.nasa.race.ww.LayerObjectAction.LayerObjectAction
 import gov.nasa.worldwind.event.{PositionEvent, PositionListener}
-import gov.nasa.worldwind.geom.{Angle, Position}
 import gov.nasa.worldwind.globes.projections.ProjectionMercator
-import gov.nasa.worldwind.globes.{Earth, EarthFlat, FlatGlobe, Globe}
-import gov.nasa.worldwind.terrain.ZeroElevationModel
+import gov.nasa.worldwind.globes.{EarthFlat, FlatGlobe, Globe}
 
 import scala.language.postfixOps
 import scala.swing._
@@ -57,11 +55,12 @@ class ViewPanel (raceViewer: RaceViewer, config: Option[Config]=None) extends GB
   focusBtn.enabled = false
 
   //--- fields to display attitude information
-  implicit val doubleOutputLength = 11
-  val lonField = new DoubleOutputField("lon", "%+3.5f").styled()
-  val latField = new DoubleOutputField("lat", "%+3.5f").styled()
-  val altField = new DoubleOutputField("alt [ft]", "%,6.0f").styled()
-  val elevField = new DoubleOutputField("elev [ft]", "%,6.0f").styled()
+  val valLen = 11
+  val lblLen = 10
+  val lonField = new DoubleOutputField("lon", "%+3.5f", valLen,lblLen).styled()
+  val latField = new DoubleOutputField("lat", "%+3.5f", valLen,lblLen).styled()
+  val altField = new DoubleOutputField("alt [ft]", "%6.0f", valLen,lblLen).styled()
+  val elevField = new DoubleOutputField("elev [ft]", "%6.0f", valLen,lblLen).styled()
 
   val c = new Constraints( fill=Fill.Horizontal)
   layout(new FlowPanel(globeBtn,flatBtn,focusBtn).styled()) = c(0,0).gridwidth(2).anchor(Anchor.West)

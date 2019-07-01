@@ -16,15 +16,16 @@
  */
 package gov.nasa.race.swing
 
+import Style._
 import gov.nasa.race.swing.GBPanel.{Anchor, Fill}
 import scala.swing.{Alignment, Label, ListView}
 
 
 // the rendering componnet
 class IdAndNamePanel[T](id: T=>String, name: T=>String) extends ItemRenderPanel[T] {
-  val idLabel = new Label()
+  val idLabel = new Label().styled()
   idLabel.horizontalTextPosition = Alignment.Left
-  val nameLabel = new Label()
+  val nameLabel = new Label().styled()
 
   val c = new Constraints(fill=Fill.Horizontal, anchor=Anchor.West, ipadx=10)
   layout(idLabel) = c(0,0)

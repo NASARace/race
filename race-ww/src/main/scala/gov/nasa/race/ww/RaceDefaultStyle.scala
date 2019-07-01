@@ -17,17 +17,18 @@
 
 package gov.nasa.race.ww
 
-import gov.nasa.race.swing._
 import java.awt.Color._
 import java.awt.{Color, Font, Button => _, Component => _, Label => _, Panel => _, ScrollPane => _, TextComponent => _, TextField => _, _}
 
+import gov.nasa.race.swing._
 import javax.swing.UIManager
 import javax.swing.border._
+import javax.swing.plaf.ColorUIResource
 import javax.swing.plaf.basic.BasicScrollBarUI
 import javax.swing.text.StyleConstants
 import org.fife.ui.rsyntaxtextarea.Theme
 
-import scala.swing.{Alignment, Button, CheckBox, ComboBox, Component, Separator, FlowPanel, Label, ListView, Panel, RadioButton, ScrollPane, TextComponent, TextField, TextPane, UIElement}
+import scala.swing.{Alignment, Button, CheckBox, ComboBox, Component, FlowPanel, Label, ListView, Panel, RadioButton, ScrollPane, Separator, TextComponent, TextField, TextPane, UIElement}
 
 /**
  * default Swing component styles for Race
@@ -59,15 +60,19 @@ class RaceDefaultStyle extends Stylist {
   def raisedBevelBorder = new BevelBorder(BevelBorder.RAISED,
                                     hiOuter, hiInner, shadowOuter, shadowInner)
 
-  // this does unfortunately not work with the standard Mac Plaf
-  UIManager.put("ScrollPane.background", background)
-  UIManager.put("ScrollBar.track", background)
-  UIManager.put("ScrollBar.background", background)
-  UIManager.put("ScrollBar.thumb", GRAY)
-  UIManager.put("ScrollBar.width", scaledSize(12))
+  val uiDefaults = UIManager.getDefaults
 
-  UIManager.put("SplitPane.background", background)
-  UIManager.put("Focus.color", focusColor)
+  // this does unfortunately not work with most of the standard plafs
+  uiDefaults.put("ScrollPane.background", background)
+  uiDefaults.put("ScrollBar.track", background)
+  uiDefaults.put("ScrollBar.background", background)
+  uiDefaults.put("ScrollBar.thumb", GRAY)
+  uiDefaults.put("ScrollBar.width", scaledSize(12))
+
+  uiDefaults.put("SplitPane.background", background)
+  uiDefaults.put("Focus.color", focusColor)
+
+  uiDefaults.put("List.selectionBackground", selectionBackground)
 
   //--- component styles
 
@@ -90,7 +95,7 @@ class RaceDefaultStyle extends Stylist {
     }
   }
 
-  override def style (c: Separator, id: String) = {
+  override def style (c: Separator, id: String): Unit = {
     super.style(c,id)
 
     c.preferredSize = scaledDimension(7,7)
@@ -131,6 +136,9 @@ class RaceDefaultStyle extends Stylist {
       case "appPanel" =>
         c.vGap = scaledSize(10)
         c.hGap = scaledSize(10)
+      case _ =>
+        c.vGap = scaledSize(5)
+        c.hGap = scaledSize(5)
     }
   }
 
@@ -188,11 +196,14 @@ class RaceDefaultStyle extends Stylist {
 
   override def style (c: ComboBox[_], id: String) = {
     super.style(c,id)
-    //c.peer.setUI(new BasicComboBoxUI)
-    //c.background = background
-    //c.foreground = foreground
-    c.foreground = BLACK
-    c.background = WHITE
+
+    //c.foreground = BLACK
+    //c.background = WHITE
+    c.background = background
+    c.foreground = foreground
+
+    val ui = new ComboBoxUI(c)
+    ui.setSelectionBackground(selectionBackground)
   }
 
 

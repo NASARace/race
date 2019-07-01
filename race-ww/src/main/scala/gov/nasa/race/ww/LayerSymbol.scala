@@ -20,6 +20,7 @@ import java.awt.image.BufferedImage
 import java.awt.{Font, Point}
 
 import gov.nasa.race.loopFromTo
+import gov.nasa.race.swing.scaledSize
 import gov.nasa.worldwind.WorldWind
 import gov.nasa.worldwind.avlist.AVKey
 import gov.nasa.worldwind.render.{Material, MultiLabelPointPlacemark, Offset, PointPlacemarkAttributes}
@@ -79,7 +80,7 @@ class LayerSymbol (val owner: LayerSymbolOwner) extends MultiLabelPointPlacemark
 
   def setDotAttrs = {
     removeAllLabels()
-    attrs.setScale(5d)
+    attrs.setScale( scaledSize(5).toDouble )
     attrs.setImage(null)
     attrs.setUsePointAsDefaultImage(true)
     //setAttributes(attrs)
@@ -87,7 +88,7 @@ class LayerSymbol (val owner: LayerSymbolOwner) extends MultiLabelPointPlacemark
 
   def setLabelAttrs = {
     setLabelText(owner.labelText)
-    attrs.setScale(5d)
+    attrs.setScale( scaledSize(5).toDouble)
     attrs.setImage(null)
     attrs.setUsePointAsDefaultImage(true)
 
