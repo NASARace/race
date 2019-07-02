@@ -227,15 +227,15 @@ object Benchmarks {
       kernel.setArgs(a,b,c,x,y,z)
 
       val nanos = measureNanos(nRounds) {
-        queue.enqueueArrayBufferWrite(a)
-        queue.enqueueArrayBufferWrite(b)
-        queue.enqueueArrayBufferWrite(c)
+        queue.enqueueBlockingArrayBufferWrite(a)
+        queue.enqueueBlockingArrayBufferWrite(b)
+        queue.enqueueBlockingArrayBufferWrite(c)
 
         queue.enqueue1DRange(kernel, nWorkItems)
 
-        queue.enqueueArrayBufferRead(x)
-        queue.enqueueArrayBufferRead(y)
-        queue.enqueueArrayBufferRead(z, true)
+        queue.enqueueBlockingArrayBufferRead(x)
+        queue.enqueueBlockingArrayBufferRead(y)
+        queue.enqueueBlockingArrayBufferRead(z)
       }
       if (showResult) printOutput("testArrays",nRounds,nWorkItems,nanos)
     }

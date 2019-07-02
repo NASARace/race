@@ -33,6 +33,11 @@ import scala.reflect.{ClassTag, classTag}
   * the latter
   *
   * note that read/write is from the device perspective, i.e. corresponding host operations are reverse
+  *
+  * THIS CLASS ONLY PROVIDES BLOCKING READ/WRITE ENQUEUE OPERATIONS.
+  * Array backed buffers are not pinned in memory (only direct ByteBuffers are), hence we cannot enqueue non-blocking
+  * operations (LWJGL now throws a RuntimeException if we try) since the JVM might move the array object while OpenCL
+  * is executing the non-blocked op.
   */
 
 object CLArrayBuffer {
@@ -107,13 +112,13 @@ trait ABuf[T] extends CLBuffer {
 }
 
 trait AReadBuf[T] extends  ABuf[T] {
-  private def _enqueueWriteByte(q: CLCommandQueue,isBlocking: Boolean,pe: PointerBuffer): Unit = clEnqueueWriteBuffer(q.id,id,isBlocking,0,ByteBuffer.wrap(data.asInstanceOf[Array[Byte]]),null,pe).?
-  private def _enqueueWriteShort(q: CLCommandQueue,isBlocking: Boolean,pe: PointerBuffer): Unit = clEnqueueWriteBuffer(q.id,id,isBlocking,0,data.asInstanceOf[Array[Short]],null,pe).?
-  private def _enqueueWriteInt(q: CLCommandQueue,isBlocking: Boolean,pe: PointerBuffer): Unit = clEnqueueWriteBuffer(q.id,id,isBlocking,0,data.asInstanceOf[Array[Int]],null,pe).?
-  private def _enqueueWriteFloat(q: CLCommandQueue,isBlocking: Boolean,pe: PointerBuffer): Unit = clEnqueueWriteBuffer(q.id,id,isBlocking,0,data.asInstanceOf[Array[Float]],null,pe).?
-  private def _enqueueWriteDouble(q: CLCommandQueue,isBlocking: Boolean,pe: PointerBuffer): Unit = clEnqueueWriteBuffer(q.id,id,isBlocking,0,data.asInstanceOf[Array[Double]],null,pe).?
+  private def _enqueueWriteByte(q: CLCommandQueue,pe: PointerBuffer): Unit   = clEnqueueWriteBuffer(q.id,id,true,0,ByteBuffer.wrap(data.asInstanceOf[Array[Byte]]),null,pe).?
+  private def _enqueueWriteShort(q: CLCommandQueue,pe: PointerBuffer): Unit  = clEnqueueWriteBuffer(q.id,id,true,0,data.asInstanceOf[Array[Short]],null,pe).?
+  private def _enqueueWriteInt(q: CLCommandQueue,pe: PointerBuffer): Unit    = clEnqueueWriteBuffer(q.id,id,true,0,data.asInstanceOf[Array[Int]],null,pe).?
+  private def _enqueueWriteFloat(q: CLCommandQueue,pe: PointerBuffer): Unit  = clEnqueueWriteBuffer(q.id,id,true,0,data.asInstanceOf[Array[Float]],null,pe).?
+  private def _enqueueWriteDouble(q: CLCommandQueue,pe: PointerBuffer): Unit = clEnqueueWriteBuffer(q.id,id,true,0,data.asInstanceOf[Array[Double]],null,pe).?
 
-  val _enqueueWrite: (CLCommandQueue,Boolean,PointerBuffer)=>Unit = elementClass match {
+  val _enqueueWrite: (CLCommandQueue,PointerBuffer)=>Unit = elementClass match {
     case ClassOfByte => _enqueueWriteByte
     case ClassOfShort => _enqueueWriteShort
     case ClassOfInt => _enqueueWriteInt
@@ -121,8 +126,7 @@ trait AReadBuf[T] extends  ABuf[T] {
     case ClassOfDouble => _enqueueWriteDouble
   }
 
-  def enqueueWrite (queue: CLCommandQueue, isBlocking: Boolean = false) = _enqueueWrite(queue,isBlocking,null)
-  def enqueueBlockingWrite (queue: CLCommandQueue) = enqueueWrite(queue,true)
+  def enqueueBlockingWrite (queue: CLCommandQueue) = _enqueueWrite(queue,null)
 
   /**
     * note - this is the low level version, the caller is responsible for calling clReleaseEvent on the returned event pointer
@@ -130,7 +134,7 @@ trait AReadBuf[T] extends  ABuf[T] {
     */
   def enqueueWriteEv (queue: CLCommandQueue): Long = withMemoryStack { stack =>
     val pev = stack.allocPointer
-    _enqueueWrite(queue,false,pev)
+    _enqueueWrite(queue,pev)
     pev(0)
   }
 
@@ -138,21 +142,20 @@ trait AReadBuf[T] extends  ABuf[T] {
 }
 
 trait AWriteBuf[T] extends  ABuf[T] {
-  private def _enqueueReadByte(q: CLCommandQueue,isBlocking: Boolean): Unit = clEnqueueReadBuffer(q.id,id,isBlocking,0,ByteBuffer.wrap(data.asInstanceOf[Array[Byte]]),null,null).?
-  private def _enqueueReadShort(q: CLCommandQueue, isBlocking: Boolean): Unit = clEnqueueReadBuffer(q.id,id,isBlocking,0,data.asInstanceOf[Array[Short]],null,null).?
-  private def _enqueueReadInt(q: CLCommandQueue, isBlocking: Boolean): Unit = clEnqueueReadBuffer(q.id,id,isBlocking,0,data.asInstanceOf[Array[Int]],null,null).?
-  private def _enqueueReadFloat(q: CLCommandQueue, isBlocking: Boolean): Unit = clEnqueueReadBuffer(q.id,id,isBlocking,0,data.asInstanceOf[Array[Float]],null,null).?
-  private def _enqueueReadDouble(q: CLCommandQueue, isBlocking: Boolean): Unit = clEnqueueReadBuffer(q.id,id,isBlocking,0,data.asInstanceOf[Array[Double]],null,null).?
+  private def _enqueueReadByte(q: CLCommandQueue): Unit   = clEnqueueReadBuffer(q.id,id,true,0,ByteBuffer.wrap(data.asInstanceOf[Array[Byte]]),null,null).?
+  private def _enqueueReadShort(q: CLCommandQueue): Unit  = clEnqueueReadBuffer(q.id,id,true,0,data.asInstanceOf[Array[Short]],null,null).?
+  private def _enqueueReadInt(q: CLCommandQueue): Unit    = clEnqueueReadBuffer(q.id,id,true,0,data.asInstanceOf[Array[Int]],null,null).?
+  private def _enqueueReadFloat(q: CLCommandQueue): Unit  = clEnqueueReadBuffer(q.id,id,true,0,data.asInstanceOf[Array[Float]],null,null).?
+  private def _enqueueReadDouble(q: CLCommandQueue): Unit = clEnqueueReadBuffer(q.id,id,true,0,data.asInstanceOf[Array[Double]],null,null).?
 
-  private val _enqueueRead: (CLCommandQueue,Boolean)=>Unit = elementClass match {
+  private val _enqueueRead: (CLCommandQueue)=>Unit = elementClass match {
     case ClassOfByte => _enqueueReadByte
     case ClassOfShort => _enqueueReadShort
     case ClassOfInt => _enqueueReadInt
     case ClassOfFloat => _enqueueReadFloat
     case ClassOfDouble => _enqueueReadDouble
   }
-  def enqueueRead(queue: CLCommandQueue, isBlocking: Boolean=false): Unit = _enqueueRead(queue,isBlocking)
-  def enqueueBlockingRead(queue: CLCommandQueue) = enqueueRead(queue,true)
+  def enqueueBlockingRead(queue: CLCommandQueue) = _enqueueRead(queue)
 
 }
 

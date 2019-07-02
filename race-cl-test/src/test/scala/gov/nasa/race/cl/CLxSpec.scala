@@ -53,7 +53,7 @@ class CLxSpec extends AnyFlatSpec with RaceSpec {
 
       val job = queue.submitJob {
         queue.enqueue1DRange(kernel, aBuf.length)
-        queue.enqueueArrayBufferRead(cBuf)
+        queue.enqueueBlockingArrayBufferRead(cBuf)
       }
 
       queue.waitForJob(job) {
