@@ -19,9 +19,9 @@ package gov.nasa.race.swing
 
 import java.awt.event.{ActionEvent, ActionListener}
 import java.awt.{BorderLayout, Color}
-import javax.swing.border.EmptyBorder
-import javax.swing.{JPanel, Timer}
 
+import javax.swing.border.EmptyBorder
+import javax.swing.{Box, JPanel, Timer}
 import gov.nasa.race._
 import gov.nasa.race.swing.GBPanel.{Anchor, Fill}
 import gov.nasa.race.swing.Style._
@@ -98,10 +98,13 @@ class Collapsible (val title: String, var content: Component, toolTip:String, va
     selected = isExpanded
   }.styled("collapseButton")
 
+  var toolBar: Option[ToolBar] = getOptionalToolBar(content)
+
   val titleBox = new BoxPanel(Orientation.Horizontal){
     contents += titleButton
     contents += new Component {}.styled("collapseBar")
   }.styled("collapseTitlebar")
+  setToolBar( getOptionalToolBar(content))
   layout(titleBox) = BorderPanel.Position.North
 
   val contentWrapper = new ContentWrapper(content)
@@ -119,7 +122,29 @@ class Collapsible (val title: String, var content: Component, toolTip:String, va
     case ButtonClicked(`titleButton`) => setExpanded(titleButton.selected)
   }
 
+  def getOptionalToolBar (c: Component): Option[ToolBar] = {
+    c match {
+      case ic: InstrumentedCollapsibleComponent => ic.getToolBar
+      case _ => None
+    }
+  }
+
+  def setToolBar (to: Option[ToolBar]): Unit = {
+    ifSome(toolBar) { tb =>
+      val len = titleBox.contents.length
+      titleBox.contents.remove(len - 1)
+      titleBox.contents.remove(len - 2)
+    }
+    toolBar = to
+    ifSome(to) { tb =>
+      titleBox.contents += Swing.VGlue
+      titleBox.contents += tb
+    }
+  }
+
   def setContent (newContent: Component) = {
+    setToolBar( getOptionalToolBar(newContent))
+
     content = newContent
     prefContentSize.height = content.preferredSize.height
     contentWrapper.setContent(newContent)
@@ -218,4 +243,11 @@ class Collapsible (val title: String, var content: Component, toolTip:String, va
       }
     }
   }
+}
+
+/**
+  * a component that has extra buttons displayed in the collapsible title bar
+  */
+trait InstrumentedCollapsibleComponent {
+  def getToolBar: Option[ToolBar]
 }

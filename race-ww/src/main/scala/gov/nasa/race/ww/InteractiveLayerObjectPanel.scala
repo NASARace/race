@@ -20,18 +20,19 @@ import java.awt.Insets
 
 import gov.nasa.race._
 import gov.nasa.race.swing.GBPanel.Anchor
-import gov.nasa.race.swing.{FieldPanel, GBPanel}
+import gov.nasa.race.swing.{FieldPanel, GBPanel, InstrumentedCollapsibleComponent}
 import gov.nasa.race.swing.Style._
 
 import scala.swing.event.{ButtonClicked, MouseClicked}
-import scala.swing.{Alignment, BoxPanel, CheckBox, Label, Orientation}
+import scala.swing.{Alignment, BoxPanel, Button, CheckBox, Label, Orientation, ToolBar}
 
 /**
   * base type for panels that display details about the selected LayerObject and allow
   * to manipulate its display attributes
   */
 abstract class InteractiveLayerObjectPanel[T <: LayerObject, U <: FieldPanel](val layer: InteractiveRaceLayer[T])
-                          extends BoxPanel(Orientation.Vertical) with RacePanel{
+                          extends BoxPanel(Orientation.Vertical)
+                            with RacePanel with InstrumentedCollapsibleComponent {
   protected var entry: Option[T] = None  // panel can be reused for different objects
 
   val fields: U = createFieldPanel
@@ -43,7 +44,8 @@ abstract class InteractiveLayerObjectPanel[T <: LayerObject, U <: FieldPanel](va
   val infoCb = new CheckBox("info").styled()
   val markCb = new CheckBox("mark").styled()
   val focusCb = new CheckBox("focus").styled()
-  val dismissBtn = new Label("",Images.getIcon("eject-blue-16x16.png"),Alignment.Center).styled()
+
+  val dismissBtn = new Label("",Images.getScaledIcon("eject-blue-16x16.png"),Alignment.Center).styled()
 
   val buttonPanel = new GBPanel {
     val c = new Constraints(insets = new Insets(5, 0, 0, 0), anchor = Anchor.West)
@@ -52,13 +54,12 @@ abstract class InteractiveLayerObjectPanel[T <: LayerObject, U <: FieldPanel](va
     layout(infoCb)     = c(2,0)
     layout(markCb)     = c(3,0)
     layout(focusCb)    = c(4,0)
-    layout(dismissBtn) = c(0,1).weightx(0)
   }.styled()
 
   contents += fields
   contents += buttonPanel
 
-  listenTo(focusCb,pathCb,contourCb,infoCb,markCb,dismissBtn.mouse.clicks)
+  listenTo(focusCb,pathCb,contourCb,infoCb,markCb, dismissBtn.mouse.clicks)
   reactions += {
     case ButtonClicked(`focusCb`)  => userAction { layer.focusLayerObject(_,focusCb.selected) }
     case ButtonClicked(`pathCb`)   => userAction { layer.setLayerObjectAttribute(_,LayerObjectAttribute.Path,pathCb.selected) }
@@ -66,6 +67,13 @@ abstract class InteractiveLayerObjectPanel[T <: LayerObject, U <: FieldPanel](va
     case ButtonClicked(`infoCb`)   => userAction { layer.setLayerObjectAttribute(_,LayerObjectAttribute.Info,infoCb.selected) }
     case ButtonClicked(`markCb`)   => userAction { layer.setLayerObjectAttribute(_,LayerObjectAttribute.Mark,markCb.selected) }
     case MouseClicked(`dismissBtn`,_,_,_,_) => userAction { dismissPanel }
+  }
+
+  override def getToolBar: Option[ToolBar] = {
+    val tb = new ToolBar().styled()
+    tb.contents += dismissBtn
+    tb.peer.setFloatable(false)
+    Some(tb)
   }
 
   def userAction(f: T=>Unit): Unit = ifSome(entry){ e=> raceView.trackUserAction( f(e)) }
