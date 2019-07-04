@@ -111,7 +111,7 @@ object BlockExtrapolatorTest {
       val kernel = prog.createKernel("extrapolate")                       >> resources
 
       kernel.setArgs(inBuf,outBuf,t,be.tScale)
-      queue.enqueueByteBufferWrite(inBuf)
+      queue.enqueueBufferWrite(inBuf)
 
       /**/
       val nanos = measureNanos(R) {
@@ -120,9 +120,9 @@ object BlockExtrapolatorTest {
 
         //kernel.setArgs(inBuf,outBuf,t,be.tScale)
 
-        queue.enqueueByteBufferWrite(inBuf)
+        queue.enqueueBufferWrite(inBuf)
         queue.enqueue1DRange(kernel, be.workItems)
-        queue.enqueueByteBufferRead(outBuf, true)
+        queue.enqueueBufferRead(outBuf, true)
       }
 
       println(s"BE $R rounds: ${nanos/1000000}msec (${be.workItems} work items)")

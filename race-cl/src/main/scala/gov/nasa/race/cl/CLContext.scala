@@ -92,9 +92,36 @@ class CLContext (val id: Long, val devices: Array[CLDevice]) extends CLResource 
   def createProgram(src: String): CLProgram = CLProgram.createProgram(this,src)
 
   //--- buffers
-  def createByteRBuffer(data: ByteBuffer) = CLByteBuffer.createByteRBuffer(this,data)
-  def createByteWBuffer(data: ByteBuffer) = CLByteBuffer.createByteWBuffer(this,data)
-  def createByteRWBuffer(data: ByteBuffer) = CLByteBuffer.createByteRWBuffer(this,data)
+
+  // note that ByteBuffer instances have to be direct for non-blocking enqueue ops
+  def createByteRBuffer(data: ByteBuffer): CLByteRBuffer = CLByteBuffer.createByteRBuffer(this,data)
+  def createByteWBuffer(data: ByteBuffer): CLByteWBuffer = CLByteBuffer.createByteWBuffer(this,data)
+  def createByteRWBuffer(data: ByteBuffer): CLByteRWBuffer = CLByteBuffer.createByteRWBuffer(this,data)
+
+  def createByteRBuffer(capacity: Int):  CLByteRBuffer  = CLByteBuffer.createByteRBuffer(this,capacity)
+  def createByteWBuffer(capacity: Int):  CLByteWBuffer  = CLByteBuffer.createByteWBuffer(this,capacity)
+  def createByteRWBuffer(capacity: Int): CLByteRWBuffer = CLByteBuffer.createByteRWBuffer(this,capacity)
+
+  def createShortRBuffer(capacity: Int):  CLShortRBuffer  = CLByteBuffer.createShortRBuffer(this,capacity)
+  def createShortWBuffer(capacity: Int):  CLShortWBuffer  = CLByteBuffer.createShortWBuffer(this,capacity)
+  def createShortRWBuffer(capacity: Int): CLShortRWBuffer = CLByteBuffer.createShortRWBuffer(this,capacity)
+
+  def createIntRBuffer(capacity: Int):  CLIntRBuffer  = CLByteBuffer.createIntRBuffer(this,capacity)
+  def createIntWBuffer(capacity: Int):  CLIntWBuffer  = CLByteBuffer.createIntWBuffer(this,capacity)
+  def createIntRWBuffer(capacity: Int): CLIntRWBuffer = CLByteBuffer.createIntRWBuffer(this,capacity)
+
+  def createFloatRBuffer(capacity: Int):  CLFloatRBuffer  = CLByteBuffer.createFloatRBuffer(this,capacity)
+  def createFloatWBuffer(capacity: Int):  CLFloatWBuffer  = CLByteBuffer.createFloatWBuffer(this,capacity)
+  def createFloatRWBuffer(capacity: Int): CLFloatRWBuffer = CLByteBuffer.createFloatRWBuffer(this,capacity)
+
+  def createLongRBuffer(capacity: Int):  CLLongRBuffer  = CLByteBuffer.createLongRBuffer(this,capacity)
+  def createLongWBuffer(capacity: Int):  CLLongWBuffer  = CLByteBuffer.createLongWBuffer(this,capacity)
+  def createLongRWBuffer(capacity: Int): CLLongRWBuffer = CLByteBuffer.createLongRWBuffer(this,capacity)
+
+  def createDoubleRBuffer(capacity: Int):  CLDoubleRBuffer  = CLByteBuffer.createDoubleRBuffer(this,capacity)
+  def createDoubleWBuffer(capacity: Int):  CLDoubleWBuffer  = CLByteBuffer.createDoubleWBuffer(this,capacity)
+  def createDoubleRWBuffer(capacity: Int): CLDoubleRWBuffer = CLByteBuffer.createDoubleRWBuffer(this,capacity)
+
 
   def createArrayRBuffer[T<:AnyVal :ClassTag](data: Array[T]): CLArrayRBuffer[T] = CLArrayBuffer.createArrayRBuffer(this,data)
   def createArrayRWBuffer[T<:AnyVal :ClassTag](data: Array[T]): CLArrayRWBuffer[T] = CLArrayBuffer.createArrayRWBuffer(this,data)

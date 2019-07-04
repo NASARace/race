@@ -26,16 +26,16 @@ import org.scalatest.flatspec.AnyFlatSpec
   */
 class CLxSpec extends AnyFlatSpec with RaceSpec {
 
-  "a GPU CLDevice" should "execute a 1D kernel to add array elements" in {
-
-    val src =
-      """
+  val src =
+    """
          __kernel void add (__global int* a, __global int* b, __global int* c) {
            unsigned int i = get_global_id(0);
+           //printf("%d: %d + %d\n", i, a[i],b[i]);
            c[i] = a[i] + b[i];
          }
       """
 
+  "a GPU CLDevice" should "execute a 1D kernel to add ArrayBuffer elements" in {
     tryWithResource(new CloseStack) { resources =>
       val device = CLPlatform.preferredDevice                                >> resources
       println(s"got $device")
@@ -48,7 +48,7 @@ class CLxSpec extends AnyFlatSpec with RaceSpec {
       val cBuf = context.createArrayWBuffer[Int](aBuf.length)                >> resources
 
       val prog = context.createAndBuildProgram(src)                          >> resources
-      val kernel = prog.createKernel("add")                                  >> resources
+      val kernel = prog.createKernel("add")                           >> resources
       kernel.setArgs(aBuf, bBuf, cBuf)
 
       val job = queue.submitJob {
@@ -56,8 +56,52 @@ class CLxSpec extends AnyFlatSpec with RaceSpec {
         queue.enqueueBlockingArrayBufferRead(cBuf)
       }
 
-      queue.waitForJob(job) {
+      //queue.waitForJob(job) {
+      // nothing to wait for since cBuf read was blocking
         println(s"result: ${cBuf.data.mkString(",")}")
+      //}
+    }
+  }
+
+  "a GPU CLDevice" should "execute a 1D kernel to add (non-blocking) IntBuffer elements" in {
+    tryWithResource(new CloseStack) { resources =>
+      val device = CLPlatform.preferredDevice                                >> resources
+      println(s"got $device")
+
+      val context = device.createContext                                     >> resources
+      val queue = device.createJobCommandQueue(context)                      >> resources
+
+      val aInit = Array[Int](38, 39, 40, 41, 42)
+      val aBuf = context.createIntRBuffer(aInit.length)                      >> resources
+      aBuf.put(aInit)
+
+      val bInit = Array[Int](4, 3, 2, 1, 0)
+      val bBuf = context.createIntRBuffer(bInit.length)                      >> resources
+      bBuf.put(bInit)
+
+      val cBuf = context.createIntWBuffer(aBuf.length)                       >> resources
+      cBuf.clear
+
+      val prog = context.createAndBuildProgram(src)                          >> resources
+      val kernel = prog.createKernel("add")                           >> resources
+      kernel.setArgs(aBuf, bBuf, cBuf)
+
+      val job = queue.submitJob {
+        queue.enqueueBufferWrite(aBuf)
+        queue.enqueueBufferWrite(bBuf)
+        queue.enqueue1DRange(kernel, aBuf.length)
+        queue.enqueueBufferRead(cBuf, false)  // this is non-blocking
+      }
+
+      queue.waitForJob(job) {
+        print("result: ")
+        var i = 0
+        val max = cBuf.length
+        while (i < max) {
+          print(s"${cBuf(i)},")
+          i += 1
+        }
+        println
       }
     }
   }

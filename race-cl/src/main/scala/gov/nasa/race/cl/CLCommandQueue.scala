@@ -63,8 +63,8 @@ class CLCommandQueue (val id: Long,  val context: CLContext, val device: CLDevic
     clEnqueueNDRangeKernel(id,kernel.id,1,null,globWS,null,null,null).?
   }
 
-  def enqueueByteBufferRead(buffer: ByteWBuf, isBlocking: Boolean = false): Unit = buffer.enqueueRead(this,isBlocking)
-  def enqueueByteBufferWrite(buffer: ByteRBuf, isBlocking: Boolean = false): Unit = buffer.enqueueWrite(this,isBlocking)
+  def enqueueBufferRead(buffer: ByteWBuf, isBlocking: Boolean = false): Unit = buffer.enqueueRead(this,isBlocking)
+  def enqueueBufferWrite(buffer: ByteRBuf, isBlocking: Boolean = false): Unit = buffer.enqueueWrite(this,isBlocking)
 
   def enqueueRecordBufferRead(buffer: RecWBuf, isBlocking: Boolean = false): Unit = buffer.enqueueRead(this,isBlocking)
   def enqueueRecordBufferWrite(buffer: RecRBuf, isBlocking: Boolean = false): Unit = buffer.enqueueWrite(this,isBlocking)
