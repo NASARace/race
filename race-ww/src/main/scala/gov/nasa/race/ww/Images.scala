@@ -36,7 +36,7 @@ import scala.swing._
 object Images {
 
   val sizePostfix: String =  {
-    if (uiScale >= 2.0f) "-hidpi" else ""
+    if (uiScale >= hidpiScale) "-hidpi" else ""
   }
 
   def colorPostfix (clr: Color): String = {

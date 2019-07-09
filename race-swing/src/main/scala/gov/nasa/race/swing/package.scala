@@ -102,18 +102,21 @@ package object swing {
 
   //--- ui scale support
 
-  val uiScale: Float = {
-    val scaleSpec = System.getProperty("race.swing.scale")
-    if (scaleSpec != null) {
+  def getSysPropertyFloat (key: String, defaultValue: Float): Float = {
+    val v = System.getProperty(key)
+    if (v != null){
       try {
-        java.lang.Float.parseFloat(scaleSpec)
+        java.lang.Float.parseFloat(v)
       } catch {
         case _: Throwable =>
-          println("error parsing race.swing.scale property, setting default 1.0")
-          1.0f
+          println(s"error parsing $key property, setting default $defaultValue")
+          defaultValue
       }
-    } else 1.0f
+    } else defaultValue
   }
+
+  val uiScale: Float = getSysPropertyFloat("race.swing.scale", 1.0f)
+  val hidpiScale: Float = getSysPropertyFloat("race.swing.hidpi-scale", 2.0f)
 
   @inline def scaledSize(size: Int): Int = Math.round(uiScale * size)
   def scaledDimension(w: Int, h: Int): Dimension = new Dimension(scaledSize(w), scaledSize(h))

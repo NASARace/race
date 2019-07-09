@@ -21,8 +21,8 @@ import java.awt.event._
 import java.awt.{Color, Cursor, Toolkit}
 import java.net.URL
 import java.util.concurrent.CountDownLatch
-import javax.swing._
 
+import javax.swing._
 import com.typesafe.config.Config
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.uom.Length
@@ -35,6 +35,7 @@ import gov.nasa.worldwind.geom.Position
 import gov.nasa.worldwind.{Model, WorldWind}
 
 import scala.swing._
+import scala.swing.event.{MouseClicked, MousePressed}
 
 /**
   * a toplevel frame with a WorldWindGLCanvas
@@ -48,8 +49,8 @@ class WorldWindFrame (config: Config, raceView: RaceViewer) extends AppFrame {
   title = config.getStringOrElse("title", "RACE Viewer")
 
   // menu items we have to update
-  private var popupShowPanelsMI: JMenuItem = _
-  private var mbShowPanelsMI: JMenuItem = _
+  private var popupShowPanelsMI: CheckMenuItem = _
+  private var mbShowPanelsMI: CheckMenuItem = _
 
   // this is the potential blocking point, which might run into timeouts
   val wwd = createWorldWindow(config, raceView)
@@ -59,6 +60,7 @@ class WorldWindFrame (config: Config, raceView: RaceViewer) extends AppFrame {
   val consoleWrapper = new ScrollPane(consolePanel).styled("verticalAsNeeded")
 
   wwd.setCursor(loadMapCursor)
+  setWwdMenu(config,raceView,wwd)
 
   val top = new BorderPanel {
     layout(consoleWrapper) = BorderPanel.Position.West
@@ -89,7 +91,6 @@ class WorldWindFrame (config: Config, raceView: RaceViewer) extends AppFrame {
 
     wwd.setModel(WorldWind.createConfigurationComponent(AVKey.MODEL_CLASS_NAME).asInstanceOf[Model])
     //wwd.getSceneController().setDeepPickEnabled(true)
-    setWwdMenu(config,raceView,wwd)
 
     wwd
   }
@@ -105,19 +106,18 @@ class WorldWindFrame (config: Config, raceView: RaceViewer) extends AppFrame {
     // we can't use scala-swing for menus since wwd is either a native window or a JPanel
 
     //--- the popup menu
-    val popup = new JPopupMenu()
-    popupShowPanelsMI = new JCheckBoxMenuItem("show console panel", showConsole)
-    popup.add(popupShowPanelsMI)
+    val popup = new PopupMenu()
+    popupShowPanelsMI = new CheckMenuItem("").styled()
+    popupShowPanelsMI.action = scala.swing.Action("show console panels"){ showConsolePanels(popupShowPanelsMI.selected) }
+    popupShowPanelsMI.selected = true
+    popup.contents += popupShowPanelsMI
 
-    wwd.addMouseListener(new MouseAdapter(){
-      override def mousePressed(e: MouseEvent): Unit = {
-        if (e.isPopupTrigger){
-          popup.show(e.getComponent, e.getX, e.getY)
-        }
-      }
-    })
+    listenTo(worldPanel.mouse.clicks)
+    reactions += {
+      case MousePressed( c, pos, _, _, true) => popup.show(worldPanel, pos.x,pos.y)
+    }
 
-    //--- the menubar
+    //--- the menubar // we don't use one as long as there is just a single item - too much space
     /*
     val menuBar = new JMenuBar
     val showMenu = new JMenu("Show")
@@ -127,18 +127,6 @@ class WorldWindFrame (config: Config, raceView: RaceViewer) extends AppFrame {
     menuBar.add(showMenu)
     peer.setJMenuBar(menuBar)
     */
-
-    val showConsoleListener = new ItemListener {
-      override def itemStateChanged(e: ItemEvent): Unit = {
-        val isSelected = e.getStateChange == ItemEvent.SELECTED
-        raceView.showConsolePanels(isSelected)
-        popupShowPanelsMI.setSelected(isSelected)
-        //mbShowPanelsMI.setSelected(isSelected)
-      }
-    }
-
-    popupShowPanelsMI.addItemListener( showConsoleListener)
-    //mbShowPanelsMI.addItemListener( showConsoleListener)
   }
 
   def initializePanel (e: PanelEntry) = consolePanel.add( e.name, e.panel, e.tooltip, e.expand)
@@ -161,7 +149,7 @@ class WorldWindFrame (config: Config, raceView: RaceViewer) extends AppFrame {
 
       worldPanel.reInit // required for OS X to adapt the GLCanvas size & position
 
-      popupShowPanelsMI.setSelected(setVisible)
+      popupShowPanelsMI.selected = setVisible
       //mbShowPanelsMI.setSelected(setVisible)
     }
   }

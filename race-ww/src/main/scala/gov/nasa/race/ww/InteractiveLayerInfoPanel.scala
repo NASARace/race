@@ -193,8 +193,8 @@ class InteractiveLayerInfoPanel[T <: LayerObject](override val layer: Interactiv
 
   def createPopupMenu: PopupMenu = {
     new PopupMenu {
-      contents += new MenuItem(Action("select all"){listView.selectAll})
-      contents += new MenuItem(Action("clear selection"){listView.clearSelection})
+      contents += new MenuItem(Action("select all"){listView.selectAll}).styled()
+      contents += new MenuItem(Action("clear selection"){listView.clearSelection}).styled()
     }
   }
 
