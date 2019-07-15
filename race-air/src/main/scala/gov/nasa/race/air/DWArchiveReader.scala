@@ -23,7 +23,7 @@ import com.typesafe.config.Config
 import gov.nasa.race._
 import gov.nasa.race.archive.ArchiveReader
 import gov.nasa.race.common.{BMSearch, SearchStream}
-import org.joda.time.DateTime
+import gov.nasa.race.uom.DateTime
 
 object DWArchiveReader {
   final val BufferLength = 8192
@@ -61,7 +61,7 @@ abstract class DWArchiveReader (iStream: InputStream, val headerStart: BMSearch)
     // we are at a headerStart
     if (ss.readTo(headerEnd,headerStart.length)) {
       val date = readDateTime(res.cs,res.startIdx,res.endIdx)
-      if (date != null) {
+      if (date.isDefined) {
         if (ss.readTo(headerStart,headerEnd.length)){
           val msg = res.asString(headerEnd.length)
           someEntry(date,msg)
@@ -105,8 +105,8 @@ abstract class DWArchiveReader (iStream: InputStream, val headerStart: BMSearch)
 abstract class FirstEpochDWArchiveReader(iStream: InputStream, hdrStart: String)
                                        extends DWArchiveReader(iStream, new BMSearch(hdrStart)) {
   // we just use the x_TIMESTAMP, which is an epoch value directly following our headerStart
-  override def readDateTime(cs: Array[Char], i0: Int, i1: Int) = {
-    tryNull { new DateTime(readLong(cs, i0+hdrStart.length, i1)) }
+  override def readDateTime(cs: Array[Char], i0: Int, i1: Int): DateTime = {
+    DateTime.epochMillis(readLong(cs, i0+hdrStart.length, i1))
   }
 }
 
@@ -115,10 +115,8 @@ abstract class DateFieldDWArchiveReader (iStream: InputStream, hdrStart: String,
   val fieldPattern = new BMSearch(field)
 
   override def readDateTime(cs: Array[Char], i0: Int, i1: Int) = {
-    tryNull {
       val i = fieldPattern.indexOfFirst(cs, i0 + hdrStart.length, i1)
-      if (i >= 0) DateTime.parse(readWord(cs,i+fieldPattern.length,i1)) else null
-    }
+      if (i >= 0) DateTime.parse(readWord(cs,i+fieldPattern.length,i1)) else DateTime.UndefinedDateTime
   }
 }
 

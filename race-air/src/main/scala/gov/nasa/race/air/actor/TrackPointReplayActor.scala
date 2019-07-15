@@ -28,12 +28,11 @@ import gov.nasa.race.geo.GeoPosition
 import gov.nasa.race.track.TrackCompleted
 import gov.nasa.race.track.avro.{TrackIdRecord, TrackPoint}
 import gov.nasa.race.uom.Angle._
-import gov.nasa.race.uom.Length._
 import gov.nasa.race.uom.Speed
 import gov.nasa.race.uom.Speed._
 import org.apache.avro.file.{DataFileReader, DataFileStream}
 import org.apache.avro.specific.SpecificDatumReader
-import org.joda.time.DateTime
+import gov.nasa.race.uom.DateTime
 
 /**
   * a ReplayActor that reads Avro TrackPoint archives and emits them as FlightMessage objects
@@ -87,7 +86,7 @@ class TrackPointReader (val iStream: InputStream, val pathName: String="<unknown
 
     } else {
       val tp = dfr.next(recCache)
-      val date = new DateTime(tp.getDate)
+      val date = DateTime.epochMillis(tp.getDate)
       val id = tp.getId.toString.intern  // we intern because there are likely a lot of points per track
       val cs = idMap.getOrElse(id,id) // we could map this here
 

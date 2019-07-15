@@ -17,7 +17,7 @@
 package gov.nasa.race.trajectory
 
 import gov.nasa.race.test.RaceSpec
-import gov.nasa.race.uom.Date._
+import gov.nasa.race.uom.DateTime._
 import gov.nasa.race.uom.Angle._
 import gov.nasa.race.uom.Length._
 import org.scalatest.flatspec.AnyFlatSpec
@@ -44,7 +44,7 @@ class CompressedTraceSpec extends AnyFlatSpec with RaceSpec {
     val traj = new CompressedTrace(5)
 
     assert(traj.isEmpty)
-    for (d <- data) traj.append(EpochMillis(d._1), Degrees(d._2), Degrees(d._3), Meters(d._4))
+    for (d <- data) traj.append(epochMillis(d._1), Degrees(d._2), Degrees(d._3), Meters(d._4))
     assert(traj.size == traj.capacity)
 
     println("--- saturated CompressedTrace in reverse order of entry:")

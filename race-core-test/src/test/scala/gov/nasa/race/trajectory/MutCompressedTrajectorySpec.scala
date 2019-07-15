@@ -19,7 +19,7 @@ package gov.nasa.race.trajectory
 import gov.nasa.race.test.RaceSpec
 import gov.nasa.race.uom.Time._
 import gov.nasa.race.uom.Angle.Degrees
-import gov.nasa.race.uom.Date.EpochMillis
+import gov.nasa.race.uom.DateTime.epochMillis
 import gov.nasa.race.uom.Length.Meters
 import org.scalatest.flatspec.AnyFlatSpec
 
@@ -37,7 +37,7 @@ class MutCompressedTrajectorySpec extends AnyFlatSpec with RaceSpec {
 
     val traj = new MutCompressedTrajectory(5)
     assert( traj.isEmpty)
-    for (d <- data) traj.append(EpochMillis(d._1), Degrees(d._2), Degrees(d._3), Meters(d._4))
+    for (d <- data) traj.append(epochMillis(d._1), Degrees(d._2), Degrees(d._3), Meters(d._4))
 
     assert( traj.size == data.length)
     println("--- compact trajectory in order of entry:")
@@ -79,7 +79,7 @@ class MutCompressedTrajectorySpec extends AnyFlatSpec with RaceSpec {
 
     val traj = new MutCompressedTrajectory(4)
     assert( traj.isEmpty)
-    for (d <- data) traj.append(EpochMillis(d._1), Degrees(d._2), Degrees(d._3), Meters(d._4))
+    for (d <- data) traj.append(epochMillis(d._1), Degrees(d._2), Degrees(d._3), Meters(d._4))
     assert( traj.size == data.length)
 
     println("--- grown compressed trajectory in order of entry:")
@@ -112,7 +112,7 @@ class MutCompressedTrajectorySpec extends AnyFlatSpec with RaceSpec {
     val filter = new TimeFilter(traj,Milliseconds(20))
 
     assert( traj.isEmpty)
-    for (d <- data) filter.append(EpochMillis(d._1), Degrees(d._2), Degrees(d._3), Meters(d._4))
+    for (d <- data) filter.append(epochMillis(d._1), Degrees(d._2), Degrees(d._3), Meters(d._4))
     assert( traj.size == data.length/2)
 
     println("--- 20ms time filtered track path in order of entry")

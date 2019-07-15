@@ -20,7 +20,7 @@ import gov.nasa.race.common.FHTInterpolant
 import gov.nasa.race.common.Nat.N3
 import gov.nasa.race.test.RaceSpec
 import gov.nasa.race.uom.Angle.Degrees
-import gov.nasa.race.uom.Date.EpochMillis
+import gov.nasa.race.uom.DateTime.epochMillis
 import gov.nasa.race.uom.Length.Meters
 import gov.nasa.race.uom.Time._
 import org.scalatest.flatspec.AnyFlatSpec
@@ -47,7 +47,7 @@ class AccurateTraceSpec extends AnyFlatSpec with RaceSpec {
     )
 
     val traj = new AccurateTrace(4)
-    for (d <- data) traj.append(EpochMillis(d._1), Degrees(d._2), Degrees(d._3), Meters(d._4))
+    for (d <- data) traj.append(epochMillis(d._1), Degrees(d._2), Degrees(d._3), Meters(d._4))
 
     assert(traj.size == data.length)
 
@@ -85,7 +85,7 @@ class AccurateTraceSpec extends AnyFlatSpec with RaceSpec {
     )
 
     val traj = new AccurateTrace(4)
-    for (d <- data) traj.append(EpochMillis(d._1), Degrees(d._2), Degrees(d._3), Meters(d._4))
+    for (d <- data) traj.append(epochMillis(d._1), Degrees(d._2), Degrees(d._3), Meters(d._4))
 
     assert(traj.size == traj.capacity)
 
@@ -135,7 +135,7 @@ class AccurateTraceSpec extends AnyFlatSpec with RaceSpec {
     val traj = new AccurateTrace(cap)
     for (d <- data) {
       println(s"$i: $d")
-      traj.append(EpochMillis(d._1), Degrees(d._2), Degrees(d._3), Meters(d._4))
+      traj.append(epochMillis(d._1), Degrees(d._2), Degrees(d._3), Meters(d._4))
       i += 1
     }
 
@@ -188,7 +188,7 @@ class AccurateTraceSpec extends AnyFlatSpec with RaceSpec {
     val traj = new AccurateTrace(cap)
     for (d <- data) {
       println(s"$i: $d")
-      traj.append(EpochMillis(d._1), Degrees(d._2), Degrees(d._3), Meters(d._4))
+      traj.append(epochMillis(d._1), Degrees(d._2), Degrees(d._3), Meters(d._4))
       i += 1
     }
 
@@ -199,8 +199,8 @@ class AccurateTraceSpec extends AnyFlatSpec with RaceSpec {
       i += 1
     }
 
-    val dStart = EpochMillis(3)
-    val dEnd = EpochMillis(8)
+    val dStart = epochMillis(3)
+    val dEnd = epochMillis(8)
     val interval = Milliseconds(1)
     println(s"interpolated trajectory (start=${dStart.toMillis},end=${dEnd.toMillis},interval=${interval.toMillis}) :")
 

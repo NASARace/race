@@ -24,7 +24,7 @@ import gov.nasa.race.test.RaceSpec
 import gov.nasa.race.uom.Angle.Degrees
 import gov.nasa.race.uom.Speed._
 import gov.nasa.race.util.FileUtils._
-import org.joda.time.DateTime
+import gov.nasa.race.uom.DateTime
 import org.scalatest.flatspec.AnyFlatSpec
 import scala.collection.Seq
 
@@ -59,7 +59,7 @@ class FIXM2FlightObjectSpec extends AnyFlatSpec with RaceSpec {
       Knots(488.0),
       Degrees(86.47494027976148),
       UndefinedSpeed,
-      new DateTime("2015-09-11T17:59:30Z")
+      DateTime.parseYMDT("2015-09-11T17:59:30Z")
     )
 
     val translator = new FIXM2FlightObject()
@@ -80,7 +80,7 @@ class FIXM2FlightObjectSpec extends AnyFlatSpec with RaceSpec {
 
             fpos.speed.toKnots should be(expected.speed.toKnots +- EPS)
             fpos.heading.toDegrees should be(expected.heading.toDegrees +- EPS)
-            fpos.date.getMillis should be(expected.date.getMillis)
+            fpos.date.toMillis should be(expected.date.toMillis)
             println("matches expected values")
           case _ => fail("result list does not contain FlightPos")
         }

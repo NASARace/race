@@ -21,7 +21,7 @@ import gov.nasa.race.geo.LatLonPos
 import gov.nasa.race.track.TrackPoint
 import gov.nasa.race.uom.Angle._
 import gov.nasa.race.uom.Length._
-import gov.nasa.race.uom.{Angle, AngleArray, Date, DateArray, DeltaAngleArray, DeltaDateArray, DeltaLengthArray, Length, LengthArray, Time}
+import gov.nasa.race.uom.{Angle, AngleArray, DateTime, DateArray, DeltaAngleArray, DeltaDateArray, DeltaLengthArray, Length, LengthArray, Time}
 
 
 object OffsetTrajectory {
@@ -64,7 +64,7 @@ trait OffsetTraj extends ArrayTraj[OffsetTraj] {
 
   def getDateMillis(i: Int): Long = ts(i).toMillis
 
-  protected def update(i: Int, date: Date, lat: Angle, lon: Angle, alt: Length): Unit = {
+  protected def update(i: Int, date: DateTime, lat: Angle, lon: Angle, alt: Length): Unit = {
     ts(i) = date
     lats(i) = lat
     lons(i) = lon
@@ -73,7 +73,7 @@ trait OffsetTraj extends ArrayTraj[OffsetTraj] {
 
   protected def getTrackPoint (i: Int): TrackPoint = {
     val pos = new LatLonPos(lats(i), lons(i), alts(i))
-    new TrajectoryPoint(ts(i).toDateTime, pos)
+    new TrajectoryPoint(ts(i), pos)
   }
 
   protected def updateMutTrackPoint (p: MutTrajectoryPoint) (i: Int): TrackPoint = {

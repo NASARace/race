@@ -30,7 +30,7 @@ import gov.nasa.race.core.RaceActorSystem
 import gov.nasa.race.util.FileUtils._
 import gov.nasa.race.util.NetUtils._
 import gov.nasa.race.util.{ClassLoaderUtils, ConsoleIO, CryptUtils}
-import org.joda.time.DateTime
+import gov.nasa.race.uom.DateTime
 
 import scala.jdk.CollectionConverters._
 import scala.collection.Seq
@@ -123,7 +123,7 @@ trait MainBase {
     }
 
     if (System.getProperty("race.date") == null) {
-      System.setProperty("race.date", DateTime.now().toString("yyyy-MM-dd'T'HH:mm:ss"))
+      System.setProperty("race.date", DateTime.now.toString("yyyy-MM-dd'T'HH:mm:ss"))
     }
 
     // logging related system properties (logback)

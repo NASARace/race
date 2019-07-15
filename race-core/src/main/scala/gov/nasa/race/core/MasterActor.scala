@@ -17,8 +17,6 @@
 
 package gov.nasa.race.core
 
-import java.lang.reflect.InvocationTargetException
-
 import akka.actor.SupervisorStrategy.Stop
 import akka.actor._
 import akka.pattern.AskSupport
@@ -29,7 +27,7 @@ import gov.nasa.race.core.Messages._
 import gov.nasa.race.util.NetUtils._
 import gov.nasa.race.util.StringUtils._
 import gov.nasa.race.util.ThreadUtils._
-import org.joda.time.DateTime
+import gov.nasa.race.uom.DateTime
 
 import scala.collection.immutable.ListMap
 import scala.collection.{Seq, mutable}

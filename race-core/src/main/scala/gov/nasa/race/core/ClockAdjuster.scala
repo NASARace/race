@@ -16,7 +16,7 @@
  */
 package gov.nasa.race.core
 
-import org.joda.time.DateTime
+import gov.nasa.race.uom.DateTime
 import gov.nasa.race.config.ConfigUtils._
 
 

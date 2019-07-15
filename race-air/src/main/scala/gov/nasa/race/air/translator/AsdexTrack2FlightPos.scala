@@ -105,7 +105,7 @@ class AsdexTrack2FlightPos (val config: Config=NoConfig) extends ConfigurableTra
 
     lt match {
       case Some(lastTrack) =>
-        val dt = track.date.getMillis - lastTrack.date.getMillis
+        val dt = track.date.toMillis - lastTrack.date.toMillis
         if (dt < dropAfter) {
           val d = GreatCircle.distance(lastTrack.position, track.position)
           GreatCircle.distance(lastTrack.position, track.position) / Duration(dt,MILLISECONDS)

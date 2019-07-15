@@ -18,7 +18,7 @@ package gov.nasa.race.main
 
 import java.io.File
 
-import org.joda.time.DateTime
+import gov.nasa.race.uom.DateTime
 
 import scala.collection.Seq
 import scala.collection.mutable.ArrayBuffer
@@ -186,7 +186,7 @@ class CliArgs (val title: String) {
 
   def parseDouble (a: String) = java.lang.Double.parseDouble(a)
 
-  def parseTimeMillis (a: String): Long = DateTime.parse(a).getMillis
+  def parseTimeMillis (a: String): Long = DateTime.parse(a).toMillis
   def parseDateTime (a: String): DateTime = DateTime.parse(a)
 
   //--- internals

@@ -19,7 +19,7 @@ package gov.nasa.race.air
 
 import java.io.{InputStream, OutputStream, PrintStream}
 
-import org.joda.time.DateTime
+import gov.nasa.race.uom.DateTime
 import com.typesafe.config.Config
 import gov.nasa.race.archive._
 import gov.nasa.race.common.ConfigurableStreamCreator._
@@ -128,14 +128,14 @@ class FlightPosArchiveWriter (val oStream: OutputStream, val pathName: String="<
     ps.print(fpos.speed.toUsMilesPerHour); ps.print(',')
     ps.print(fpos.heading.toDegrees); ps.print(',')
     ps.print(fpos.vr.toFeetPerMinute); ps.print(',')
-    ps.print(fpos.date.getMillis);  ps.print(',')
+    ps.print(fpos.date.toMillis);  ps.print(',')
     ps.print(fpos.status)
   }
 
   override def write(date: DateTime, obj: Any): Boolean = {
     obj match {
       case fpos: FlightPos =>
-        ps.print(date.getMillis)
+        ps.print(date.toMillis)
         ps.print(',')
         writeFlightPos(fpos)
         ps.println()
@@ -159,7 +159,7 @@ class ExtendedFlightPosArchiveWriter (oStream: OutputStream, pathName: String) e
   override def write(date: DateTime, obj: Any): Boolean = {
     obj match {
       case xfpos: ExtendedFlightPos =>
-        ps.print(date.getMillis); ps.print(',')
+        ps.print(date.toMillis); ps.print(',')
         writeExtendedFlightPos(xfpos); ps.println()
         true
       case _ => false
@@ -189,7 +189,7 @@ class FlightPosArchiveReader (val iStream: InputStream, val pathName: String="<u
         val heading = fs.head.toDouble; fs = fs.tail
         val vr = fs.head.toDouble; fs = fs.tail
 
-        val date = getDate(fs.head.toLong); fs = fs.tail  // we might adjust it on-the-fly
+        val date = getDate(DateTime.epochMillis(fs.head.toLong)); fs = fs.tail  // we might adjust it on-the-fly
         val status = fs.head.toInt
 
         someEntry(date, new FlightPos(flightId, cs, GeoPosition(Degrees(phi), Degrees(lambda), Feet(alt)),
@@ -219,7 +219,7 @@ class ExtendedFlightPosArchiveReader (iStream: InputStream, pathName: String) ex
         val speed = fs.head.toDouble; fs = fs.tail
         val heading = fs.head.toDouble; fs = fs.tail
         val vr = fs.head.toDouble; fs = fs.tail
-        val date = getDate(fs.head.toLong); fs = fs.tail  // we might adjust it on-the-fly
+        val date = getDate(DateTime.epochMillis(fs.head.toLong)); fs = fs.tail  // we might adjust it on-the-fly
         val status = fs.head.toInt
 
         val pitch = fs.head.toDouble; fs = fs.tail

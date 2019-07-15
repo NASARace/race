@@ -22,7 +22,7 @@ import gov.nasa.race.geo.{GeoPosition, GeoPositioned, GreatCircle}
 import gov.nasa.race.uom.Length._
 import gov.nasa.race.uom._
 import gov.nasa.race.util.StringUtils
-import org.joda.time.DateTime
+import gov.nasa.race.uom.DateTime
 
 import scala.concurrent.duration.Duration
 import scala.util.matching.Regex
@@ -92,33 +92,33 @@ object TrackQuery {
 
   //--- time filters
   class OlderDateFilter (d: DateTime) extends TrackFilter {
-    override def pass(f: TrackedObject)(implicit ctx:TrackQueryContext) = d.isAfter(f.date)
+    override def pass(f: TrackedObject)(implicit ctx:TrackQueryContext): Boolean = d > f.date
     override def toString = s"Older($d)"
   }
   class YoungerDateFilter (d: DateTime) extends TrackFilter {
-    override def pass(f: TrackedObject)(implicit ctx:TrackQueryContext) = d.isBefore(f.date)
+    override def pass(f: TrackedObject)(implicit ctx:TrackQueryContext): Boolean = d < f.date
     override def toString = s"Younger($d)"
   }
   class WithinDurationFilter (dur: Duration) extends TrackFilter {
     override def pass(f: TrackedObject)(implicit ctx:TrackQueryContext) = {
-      ctx.queryDate.getMillis - f.date.getMillis < dur.toMillis
+      ctx.queryDate.toMillis - f.date.toMillis < dur.toMillis
     }
     override def toString = s"DateWithin($dur)"
   }
   class OutsideDurationFilter (dur: Duration) extends TrackFilter {
     override def pass(f: TrackedObject)(implicit ctx:TrackQueryContext) = {
-      ctx.queryDate.getMillis - f.date.getMillis > dur.toMillis
+      ctx.queryDate.toMillis - f.date.toMillis > dur.toMillis
     }
     override def toString = s"DateOutside($dur)"
   }
 
   //--- composed filters
   class And (a: TrackFilter, b: TrackFilter) extends TrackFilter {
-    override def pass(f: TrackedObject)(implicit ctx:TrackQueryContext) = a.pass(f) && b.pass(f)
+    override def pass(f: TrackedObject)(implicit ctx:TrackQueryContext): Boolean = a.pass(f) && b.pass(f)
     override def toString = s"And($a,$b)"
   }
   class Or (a: TrackFilter, b: TrackFilter) extends TrackFilter {
-    override def pass(f: TrackedObject)(implicit ctx:TrackQueryContext) = a.pass(f) || b.pass(f)
+    override def pass(f: TrackedObject)(implicit ctx:TrackQueryContext): Boolean = a.pass(f) || b.pass(f)
     override def toString = s"Or($a,$b)"
   }
 }

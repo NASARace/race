@@ -17,10 +17,7 @@
 
 package gov.nasa
 
-import java.io.{DataInputStream, DataOutputStream}
-
-import com.github.nscala_time.time.Imports._
-import org.joda.time.ReadableDateTime
+import gov.nasa.race.uom.DateTime
 
 import scala.annotation.tailrec
 import scala.collection.immutable.{Map => ImmutableMap, Set => ImmutableSet}
@@ -402,7 +399,7 @@ package object race {
 
   // something that has a date
   trait Dated {
-    def date: ReadableDateTime
+    def date: DateTime
   }
 
   // something that can be identified across channels
@@ -450,6 +447,13 @@ package object race {
     def compliesWith (s: String):Boolean = schema == s
   }
 
+  trait Definable[T] extends Any {
+    this: T =>
+
+    def isDefined: Boolean
+    def isUndefined: Boolean = !isDefined
+    def orElse(fallback: => T): T = if (isDefined) this else fallback
+  }
 
   // a more specialized form of scala.util.Try that only needs to discriminate between success or failure (with explanation)
   // assuming that operations succeed more often than fail and hence not require object allocation on success

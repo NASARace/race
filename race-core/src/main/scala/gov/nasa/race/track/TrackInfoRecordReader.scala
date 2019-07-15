@@ -23,7 +23,7 @@ import gov.nasa.race.track.avro.TrackInfoRecord
 import gov.nasa.race.util.FileUtils
 import org.apache.avro.file.DataFileReader
 import org.apache.avro.specific.SpecificDatumReader
-import org.joda.time.DateTime
+import gov.nasa.race.uom.DateTime
 import scala.collection.mutable.{Map=>MMap}
 
 /**
@@ -53,9 +53,9 @@ class TrackInfoRecordReader  (val config: Config) extends TrackInfoReader {
         Some(rec.getVehicleType.toString),
         Some(rec.getDeparturePoint.toString),
         Some(rec.getArrivalPoint.toString),
-        Some(new DateTime(rec.getEtd)),
+        Some(DateTime.epochMillis(rec.getEtd)),
         None, // no atd
-        Some(new DateTime(rec.getEta)),
+        Some(DateTime.epochMillis(rec.getEta)),
         None, // no ata
         None // no planned route
       )

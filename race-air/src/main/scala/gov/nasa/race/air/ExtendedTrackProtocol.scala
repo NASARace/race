@@ -24,7 +24,7 @@ import gov.nasa.race.track.TrackedObject
 import gov.nasa.race.uom.Angle.Degrees
 import gov.nasa.race.uom.Length.Meters
 import gov.nasa.race.uom.Speed.MetersPerSecond
-import org.joda.time.DateTime
+import gov.nasa.race.uom.DateTime
 
 object ExtendedTrackProtocol {
   final val schema = "gov.nasa.race.air.ExtendedTrackProtocol" // TODO - should be a schema definition
@@ -66,7 +66,7 @@ class ExtendedTrackReader extends SimpleTrackReader {
     new ExtendedFlightPos(id, id,
       GeoPosition( Degrees(latDeg), Degrees(lonDeg), Meters(altM)),
       MetersPerSecond(speedMS), Degrees(headingDeg), MetersPerSecond(vrMS),
-      new DateTime(timeMsec),flags,
+      DateTime.epochMillis(timeMsec),flags,
       Degrees(pitchDeg), Degrees(rollDeg), trackType)
   }
 }

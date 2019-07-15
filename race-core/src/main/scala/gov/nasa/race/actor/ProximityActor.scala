@@ -27,7 +27,7 @@ import gov.nasa.race.geo.{GeoPosition, GeoUtils}
 import gov.nasa.race.track._
 import gov.nasa.race.uom.Length
 import gov.nasa.race.uom.Length._
-import org.joda.time.DateTime
+import gov.nasa.race.uom.DateTime
 
 import scala.collection.mutable.{HashMap => MHashMap, Set => MSet}
 
@@ -195,7 +195,7 @@ class DynamicProximityActor (val config: Config) extends ProximityActor {
       val tId = track.cs
 
       if (tId != re.track.cs) {  // don't try to be a proximity to yourself
-        if (re.estimateState(track.date.getMillis)) {
+        if (re.estimateState(track.date.toMillis)) {
           val dist = getDistanceInMeters(track)
 
           if ((dist <= distanceInMeters) && !track.isDroppedOrCompleted) {
@@ -214,7 +214,7 @@ class DynamicProximityActor (val config: Config) extends ProximityActor {
 
     override def dropProximity (tId: String, date: DateTime) = {
       ifSome(proximities.get(tId)) { track =>
-        if (refEstimator.estimateState(date.getMillis)) {
+        if (refEstimator.estimateState(date.toMillis)) {
           val dist = getDistanceInMeters(track)
           proximities -= tId
           publish(createProximityEvent(new ProximityReference(refEstimator, date), Meters(dist), ProxDrop, track))
@@ -282,7 +282,7 @@ class CollisionDetector (config: Config) extends DynamicProximityActor(config) {
       val tcs = track.cs
 
       if (tcs != re.track.cs) { // don't try to be a proximity to yourself
-        if (re.estimateState(track.date.getMillis)) {
+        if (re.estimateState(track.date.toMillis)) {
           val dist = getDistanceInMeters(track)
           if (dist <= distanceInMeters) {
             if (!collisions.contains(tcs)) {

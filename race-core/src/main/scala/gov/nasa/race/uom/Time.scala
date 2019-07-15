@@ -16,6 +16,8 @@
  */
 package gov.nasa.race.uom
 
+import java.time.Duration
+
 import gov.nasa.race.util.DateTimeUtils
 
 import scala.collection.mutable.ArrayBuffer
@@ -35,6 +37,7 @@ object Time {
 
   //--- unit constructors
   @inline def Milliseconds(l: Int): Time = new Time(l)
+  @inline def Milliseconds(d: Double): Time = new Time(d.round.toInt)
   @inline def Seconds(s: Int): Time = new Time(s*1000)
   @inline def Minutes(m: Int): Time = new Time(m * MillisInMinute)
   @inline def Hours(h: Int): Time = new Time(h * MillisInHour)
@@ -46,6 +49,8 @@ object Time {
   @inline def HM_S(h: Int, m: Int, s: Double): Time = {
     new Time(h * MillisInHour + m * MillisInMinute + (s * 1000).toInt )
   }
+
+  def parse(spec: String): Time = new Time( Duration.parse(spec).toMillis.toInt)
 
   def unapply(t: Time): Option[(Int,Int,Int,Int)] = {
     val millis = t.millis
@@ -85,7 +90,7 @@ import Time._
   *
   * note this cannot be directly converted into Date, but we can add to dates or extract time values from them
   */
-class Time protected[uom] (val millis: Int) extends AnyVal {
+class Time protected[uom] (val millis: Int) extends AnyVal with Ordered[Time] {
 
   //--- converters
   def toMillis: Int = millis
@@ -117,10 +122,11 @@ class Time protected[uom] (val millis: Int) extends AnyVal {
   @inline def orElse(fallback: Time): Time = if (isDefined) this else fallback
 
   //--- comparison (TODO - handle undefined values)
-  @inline def < (o: Time): Boolean = millis < o.millis
-  @inline def <= (o: Time): Boolean = millis <= o.millis
-  @inline def > (o: Time): Boolean = millis > o.millis
-  @inline def >= (o: Time): Boolean = millis >= o.millis
+  @inline override def < (o: Time): Boolean = millis < o.millis
+  @inline override def <= (o: Time): Boolean = millis <= o.millis
+  @inline override def > (o: Time): Boolean = millis > o.millis
+  @inline override def >= (o: Time): Boolean = millis >= o.millis
+  def compare (other: Time): Int = millis.compare(other.millis)
 
   override def toString: String = showMillis   // calling this would cause allocation
   def showMillis: String = if (millis != UNDEFINED_TIME) s"${millis}ms" else "<undefined>"

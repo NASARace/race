@@ -28,8 +28,8 @@ import gov.nasa.race.trajectory.{TDP3, Trajectory, USTrace}
 import gov.nasa.race.uom.Angle._
 import gov.nasa.race.uom.Length._
 import gov.nasa.race.uom.Time._
-import gov.nasa.race.uom.{Angle, Date, Length, Speed, Time}
-import org.joda.time.DateTime
+import gov.nasa.race.uom.{Angle, Length, Speed, Time}
+import gov.nasa.race.uom.DateTime
 
 import scala.collection.mutable.{HashMap => MHashMap, Set => MSet}
 import scala.concurrent.duration._
@@ -65,7 +65,7 @@ class ParallelApproachAnalyzer (val config: Config) extends SubscribingRaceActor
     val checked: MSet[String] = MSet.empty
 
     def update (newTrack: TrackedObject): Unit = {
-      if (track == null || newTrack.date.getMillis > track.date.getMillis) {
+      if (track == null || newTrack.date > track.date) {
         track = newTrack
         estimator.addObservation(newTrack)
         trajectory += newTrack
@@ -96,7 +96,7 @@ class ParallelApproachAnalyzer (val config: Config) extends SubscribingRaceActor
 
         if (!otherEntry.checked.contains(track.id)) {
           val est = otherEntry.estimator
-          est.estimateState(track.date.getMillis)
+          est.estimateState(track.date.toMillis)
           val d = Euclidean.distance(track.position, est.estimatedPosition)
           if (d < maxParallelDist) {
             if (track.position.altitude - est.altitude < maxParallelDalt) {
@@ -154,7 +154,7 @@ class ParallelApproachAnalyzer (val config: Config) extends SubscribingRaceActor
         dist = Euclidean.distance(lat1,lon1,alt1, lat2,lon2,alt2)
 
         if (deltaHdg > maxConvergeAngle){ // Bingo - got one
-          val date = new DateTime(p.millis)
+          val date = DateTime.epochMillis(p.millis)
           val pos1 = GeoPosition(lat1,lon1,alt1)
           val spd1 = Euclidean.distance(lat1,lon1,alt1,lastLat1,lastLon1,alt1) / convergeInterval.milliseconds
           val pos2 = GeoPosition(lat2,lon2,alt2)
@@ -183,7 +183,7 @@ class ParallelApproachAnalyzer (val config: Config) extends SubscribingRaceActor
     }
   }
 
-  def reportTrajectory (c: Candidate, tr: TInterpolant[N3,TDP3], dStart: Date, dEnd: Date, interval: Time, n: Int): Trajectory = {
+  def reportTrajectory (c: Candidate, tr: TInterpolant[N3,TDP3], dStart: DateTime, dEnd: DateTime, interval: Time, n: Int): Trajectory = {
     val reportTrajectory = c.trajectory.emptyMutable(n)
     reportTrajectory ++= tr.iterator(dStart.toMillis, dEnd.toMillis, interval.toMillis)
     reportTrajectory

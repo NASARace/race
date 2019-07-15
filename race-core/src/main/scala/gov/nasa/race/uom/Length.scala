@@ -19,6 +19,7 @@ package gov.nasa.race.uom
 import scala.concurrent.duration.Duration
 import Math._
 
+import gov.nasa.race._
 import gov.nasa.race.common.{OnlineSampleStats, SampleStats}
 import gov.nasa.race.util.ArrayUtils
 
@@ -93,7 +94,7 @@ import Length._
 /**
   * basis is meters, ISO symbol is 'm'
   */
-class Length protected[uom] (val d: Double) extends AnyVal {
+class Length protected[uom] (val d: Double) extends AnyVal with Definable[Length] {
 
   //--- Double converters
   @inline def toKilometers = d / 1000.0
@@ -133,9 +134,7 @@ class Length protected[uom] (val d: Double) extends AnyVal {
   // we intentionally omit == since this is based on Double
 
   //-- undefined value handling (value based alternative for finite cases that would otherwise require Option)
-  @inline def isUndefined = d.isNaN
   @inline def isDefined = !d.isNaN
-  @inline def orElse(fallback: Length) = if (isDefined) this else fallback
 
   @inline def compare (other: Length): Int = d compare other.d
 

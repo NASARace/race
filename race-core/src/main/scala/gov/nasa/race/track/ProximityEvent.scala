@@ -18,7 +18,7 @@ package gov.nasa.race.track
 
 import gov.nasa.race.geo.GeoPosition
 import gov.nasa.race.uom.{Angle, Length, Speed}
-import org.joda.time.DateTime
+import gov.nasa.race.uom.DateTime
 
 
 object ProximityEvent {

@@ -20,18 +20,20 @@ package gov.nasa.race.actor
 import java.io.File
 
 import akka.actor.ActorRef
-import com.github.nscala_time.time.Imports._
 import com.typesafe.config.Config
 import gov.nasa.race.core.PublishingRaceActor
 import gov.nasa.race.schedule.{FileEventScheduler, SchedulerEvent}
 import gov.nasa.race.util.FileUtils._
+import gov.nasa.race.uom.DateTime
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 
 /**
- * a RaceActor that reads a XML based schedule and imports the referenced
- * file contents at the specified times
+  * a RaceActor that reads a XML based schedule and imports the referenced
+  * file contents at the specified wall-clock times
+  *
+  * TODO - this should be extended to sim clock time
  */
 class ScheduledFileImportActor (val config: Config)  extends PublishingRaceActor {
 
@@ -75,7 +77,7 @@ class ScheduledFileImportActor (val config: Config)  extends PublishingRaceActor
         if (delay >= 0) {
           scheduler.scheduleOnce(delay.millis, self, ProcessEvent(nextEvent))
         } else {
-          warning(s"event time has already passed: $e")
+          warning(s"event time has already passed: $e ($delay msec)")
         }
       case None =>
         info(s"all scheduled events of $schedule processed")

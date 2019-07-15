@@ -27,7 +27,7 @@ import gov.nasa.race.geo._
 import gov.nasa.race.uom._
 import gov.nasa.race.uom.Length._
 import gov.nasa.race.uom.Angle._
-import org.joda.time.DateTime
+import gov.nasa.race.uom.DateTime
 
 import scala.Double.{MaxValue => DMax, MinValue => DMin}
 import scala.collection.Seq
@@ -138,7 +138,7 @@ abstract class GisItemDB[T <: GisItem: ClassTag] (data: ByteBuffer) {
   val checkSum  = data.getLong(12)
   if (!checkCheckSum) throw new RuntimeException(f"invalid CRC32 checksum (should be $checkSum%x)")
 
-  val date   = new DateTime(data.getLong(20))
+  val date   = DateTime.epochMillis(data.getLong(20))
 
   val nStrings: Int = data.getInt(HEADER_LENGTH)
   if (nStrings <= 1) throw new RuntimeException("no schema found in DB")

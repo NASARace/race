@@ -18,7 +18,7 @@ package gov.nasa.race.core
 
 import akka.actor.ActorRef
 import gov.nasa.race.common.Clock
-import org.joda.time.DateTime
+import gov.nasa.race.uom.DateTime
 
 import scala.concurrent.duration.{Duration, FiniteDuration, MILLISECONDS}
 import scala.math.max
@@ -51,12 +51,12 @@ trait ContinuousTimeRaceActor extends RaceActor {
     super.onSyncWithRaceClock
   }
 
-  @inline def updateSimTime = lastSimMillis = simClock.millis
-  @inline def simTime = new DateTime(lastSimMillis)
-  @inline def simTimeMillis = lastSimMillis
-  @inline def updatedSimTime = {
+  @inline def updateSimTime: Unit = lastSimMillis = simClock.millis
+  @inline def simTime: DateTime = DateTime.epochMillis(lastSimMillis)
+  @inline def simTimeMillis: Long = lastSimMillis
+  @inline def updatedSimTime: DateTime = {
     lastSimMillis = simClock.millis
-    new DateTime(lastSimMillis)
+    DateTime.epochMillis(lastSimMillis)
   }
   @inline def updatedSimTimeMillis = {
     lastSimMillis = simClock.millis
@@ -79,7 +79,7 @@ trait ContinuousTimeRaceActor extends RaceActor {
   }
   def updateElapsedSimTimeMillisSince (dt: DateTime): Long = {
     lastSimMillis = simClock.millis
-    lastSimMillis - dt.getMillis
+    lastSimMillis - dt.toMillis
   }
   def updatedElapsedSimTimeMillisSinceStart: Long = {
     lastSimMillis = simClock.millis
@@ -93,8 +93,8 @@ trait ContinuousTimeRaceActor extends RaceActor {
   @inline def currentWallTimeMillisSinceStart = currentWallTimeMillis - startWallTimeMillis
 
   // those are based on the last update
-  def elapsedSimTimeSince (dt: DateTime) = Duration(max(0,lastSimMillis - dt.getMillis), MILLISECONDS)
-  def elapsedSimTimeMillisSince (dt: DateTime) = lastSimMillis - dt.getMillis
+  def elapsedSimTimeSince (dt: DateTime) = Duration(max(0,lastSimMillis - dt.toMillis), MILLISECONDS)
+  def elapsedSimTimeMillisSince (dt: DateTime) = lastSimMillis - dt.toMillis
 
   def elapsedSimTimeSinceStart = Duration(lastSimMillis - startSimTimeMillis, MILLISECONDS)
   @inline def elapsedSimTimeMillisSinceStart = lastSimMillis - startSimTimeMillis

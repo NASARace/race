@@ -17,7 +17,7 @@
 package gov.nasa.race.track
 
 import gov.nasa.race.geo.GeoPosition
-import org.joda.time.DateTime
+import gov.nasa.race.uom.DateTime
 
 /**
   * base type for events involving tracks

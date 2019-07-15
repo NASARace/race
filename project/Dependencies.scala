@@ -58,7 +58,7 @@ object Dependencies {
   val scalaReflect =  "org.scala-lang" % "scala-reflect" % CommonRaceSettings.scalaVer
 
   //--- scalaTags HTML generator
-  val scalaTags = "com.lihaoyi" % "scalatags_2.12" % "0.6.8"
+  val scalaTags = "com.lihaoyi" %% "scalatags" % "0.7.0"
 
   //--- scala automatic resource management (https://github.com/jsuereth/scala-arm)
   //val scalaArm = "com.jsuereth" %% "scala-arm" % "2.0"
@@ -81,7 +81,7 @@ object Dependencies {
   val defaultTestLibs = Seq(scalaTest,scalaTestPlus,flexmarkAll,scalaCheck,pegDown)
 
   //--- Circe Json support
-  val circeVersion = "0.12.0-M3"
+  val circeVersion = "0.12.0-M4"
   val circeCore = "io.circe" %% "circe-core" % circeVersion
   val circeGeneric = "io.circe" %% "circe-generic" % circeVersion
   val circeParser = "io.circe" %% "circe-parser" % circeVersion

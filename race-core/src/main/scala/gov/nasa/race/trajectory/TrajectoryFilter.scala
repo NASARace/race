@@ -18,9 +18,8 @@ package gov.nasa.race.trajectory
 
 import gov.nasa.race.geo.GeoPosition
 import gov.nasa.race.track.TrackPoint
-import gov.nasa.race.uom.Date.EpochMillis
-import gov.nasa.race.uom.{Angle, Date, Length, Time}
-import org.joda.time.ReadableDateTime
+import gov.nasa.race.uom.DateTime.epochMillis
+import gov.nasa.race.uom.{Angle, DateTime, Length, Time}
 
 /**
   * a filter for adding track points
@@ -35,15 +34,15 @@ import org.joda.time.ReadableDateTime
   * of their input channels
   */
 abstract class TrajectoryFilter (val traj: MutTrajectory) {
-  def append(date: Date, lat: Angle, lon: Angle, alt: Length): Unit
+  def append(date: DateTime, lat: Angle, lon: Angle, alt: Length): Unit
   def append (p: TrackPoint): Unit
-  def append (date: ReadableDateTime, pos: GeoPosition): Unit
+  def append (date: DateTime, pos: GeoPosition): Unit
 }
 
 class TimeFilter (t: MutTrajectory, dt: Time) extends TrajectoryFilter(t) {
-  protected var lastDate: Date = EpochMillis(Long.MinValue) // make sure the first append passes
+  protected var lastDate: DateTime = epochMillis(Long.MinValue) // make sure the first append passes
 
-  override def append (date: Date, lat: Angle, lon: Angle, alt: Length): Unit = {
+  override def append (date: DateTime, lat: Angle, lon: Angle, alt: Length): Unit = {
     if (lastDate.timeUntil(date) >= dt) {
       traj.append(date,lat,lon,alt)
       lastDate = date
@@ -51,18 +50,17 @@ class TimeFilter (t: MutTrajectory, dt: Time) extends TrajectoryFilter(t) {
   }
 
   def append (p: TrackPoint): Unit = {
-    val d = Date(p.date)
+    val d = p.date
     if (lastDate.timeUntil(d) >= dt) {
       traj.append(p)
       lastDate = d
     }
   }
 
-  def append (date: ReadableDateTime, pos: GeoPosition): Unit = {
-    val d = Date(date)
-    if (lastDate.timeUntil(d) >= dt) {
+  def append (date: DateTime, pos: GeoPosition): Unit = {
+    if (lastDate.timeUntil(date) >= dt) {
       traj.append(date,pos)
-      lastDate = d
+      lastDate = date
     }
   }
 }

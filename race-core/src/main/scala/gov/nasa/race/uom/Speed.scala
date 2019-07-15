@@ -16,6 +16,7 @@
  */
 package gov.nasa.race.uom
 
+import gov.nasa.race._
 import gov.nasa.race.common._
 
 import scala.collection.mutable.ArrayBuffer
@@ -64,7 +65,7 @@ object Speed {
 
 import Speed._
 
-class Speed protected[uom] (val d: Double) extends AnyVal {
+class Speed protected[uom] (val d: Double) extends AnyVal with Definable[Speed] {
 
   @inline def toMetersPerSecond: Double = d
   @inline def toKnots: Double = d / MetersPerSecInKnot
@@ -100,9 +101,7 @@ class Speed protected[uom] (val d: Double) extends AnyVal {
   // we intentionally omit ==, <=, >=
 
   //-- undefined value handling (value based alternative for finite cases that would otherwise require Option)
-  @inline def isUndefined = d.isNaN
   @inline def isDefined = !d.isNaN
-  @inline def orElse(fallback: Speed) = if (isDefined) this else fallback
 
   override def toString = show
   def show = s"${d}m/s"

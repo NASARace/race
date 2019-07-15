@@ -20,17 +20,15 @@ package gov.nasa.race.config
 import java.awt.{Color, Font}
 import java.io.File
 
-import com.github.nscala_time.time.Imports._
 import com.typesafe.config._
 import gov.nasa.race.geo.GeoPosition
-import gov.nasa.race.uom.{Angle, Length, Speed}
+import gov.nasa.race.uom.{Angle, DateTime, Length, Speed}
 import gov.nasa.race.uom.Angle._
 import gov.nasa.race.uom.Length._
 import gov.nasa.race.uom.Speed._
 import gov.nasa.race.util._
 
 import scala.jdk.CollectionConverters._
-import scala.collection.immutable.ArraySeq
 import scala.concurrent.duration._
 
 /**

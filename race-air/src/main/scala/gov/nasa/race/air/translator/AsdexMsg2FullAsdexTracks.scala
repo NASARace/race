@@ -29,7 +29,7 @@ import gov.nasa.race.track.TrackedObject.ChangedCS
 import gov.nasa.race.uom.Angle._
 import gov.nasa.race.uom.Length._
 import gov.nasa.race.uom.Speed._
-import org.joda.time.DateTime
+import gov.nasa.race.uom.DateTime
 
 import scala.collection.mutable.{HashMap => MutHashMap}
 

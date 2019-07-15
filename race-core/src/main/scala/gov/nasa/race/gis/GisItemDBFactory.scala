@@ -26,7 +26,7 @@ import java.util.zip.CRC32
 import gov.nasa.race._
 import gov.nasa.race.geo.XyzPos
 import gov.nasa.race.util.{ArrayUtils, FileUtils, LeDataOutputStream}
-import org.joda.time.DateTime
+import gov.nasa.race.uom.DateTime
 
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
@@ -214,7 +214,7 @@ abstract class GisItemDBFactory[T <: GisItem: ClassTag] (val itemSize: Int) {
     // place holders to be filled in later
     buf.putLong(len)  // data/file length in bytes
     buf.putLong(0)  // CRC32 checksum
-    buf.putLong(date.getMillis)  // version date of data
+    buf.putLong(date.toMillis)  // version date of data
   }
 
   // not very efficient but this is executed once

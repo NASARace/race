@@ -26,7 +26,7 @@ import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.common.{PrintStats, Stats}
 import gov.nasa.race.core.Messages.{BusEvent, RaceTick}
 import gov.nasa.race.track.{TrackListMessage, TrackTerminationMessage, TrackedObject}
-import org.joda.time.DateTime
+import gov.nasa.race.uom.DateTime
 
 import scala.concurrent.duration._
 import scala.collection.mutable.{HashMap => MutHashMap}
@@ -73,7 +73,7 @@ class TrackStatsSourceEntry(val source: Option[String]) {
 
   def checkExpirations (ts: TrackStats, simMillis: Long, dropAfterMillis: Long): Unit = {
     completions.foreach { e =>
-      if (simMillis - e._2.getMillis > dropAfterMillis){
+      if (simMillis - e._2.toMillis > dropAfterMillis){
         completions -= e._1
       }
     }
@@ -82,7 +82,7 @@ class TrackStatsSourceEntry(val source: Option[String]) {
       val cs = e._1
       val track = e._2
 
-      if ((simMillis - track.date.getMillis) >= dropAfterMillis) {
+      if ((simMillis - track.date.toMillis) >= dropAfterMillis) {
         if (!completions.contains(cs)) {
           ts.nDropped += 1
         }
@@ -97,10 +97,10 @@ class TrackStatsSourceEntry(val source: Option[String]) {
 
     liveTracks.get(cs) match {
       case Some(t) =>
-        if (t.date.isAfter(track.date)) { // out of order
+        if (t.date > track.date) { // out of order
           ts.nOutOfOrder += 1
 
-        } else if (t.date.equals(track.date)){ // duplicate or ambiguous
+        } else if (t.date == track.date){ // duplicate or ambiguous
           if (t.position == track.position && t.speed == track.speed && t.heading == track.heading) {
             ts.nDuplicates += 1
           } else {
@@ -118,7 +118,7 @@ class TrackStatsSourceEntry(val source: Option[String]) {
         } else {
           // check blackout violation
           ifSome(completions.get(cs)) { completionDate =>
-            if (track.date.getMillis - completionDate.getMillis <= dropAfterMillis) {
+            if (track.date.toMillis - completionDate.toMillis <= dropAfterMillis) {
               ts.nBlackout += 1
             }
           }

@@ -24,7 +24,7 @@ import gov.nasa.race.repeat
 import gov.nasa.race.uom.Angle.Degrees
 import gov.nasa.race.uom.Length.Meters
 import gov.nasa.race.uom.Speed.MetersPerSecond
-import org.joda.time.DateTime
+import gov.nasa.race.uom.DateTime
 
 import scala.collection.mutable.ArrayBuffer
 
@@ -66,7 +66,7 @@ class TrkReader extends DataStreamReader {
       val nTracks = dis.readUnsignedByte
       repeat(nTracks) {
         val id = readString256(dis,buf)
-        val date = new DateTime(dis.readLong)
+        val date = DateTime.epochMillis(dis.readLong)
         val lat = Degrees(dis.readDouble)
         val lon = Degrees(dis.readDouble)
         val alt = Meters(dis.readDouble)

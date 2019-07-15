@@ -66,7 +66,7 @@ class TATrackStatsCollector (val config: Config) extends StatsCollectorActor wit
   override def handleMessage = {
     case BusEvent(_, track: TATrack, _) =>
       try {
-        if (track.date != null) {
+        if (track.date.isDefined) {
           checkInitialClockReset(track.date)
           val tracon = tracons.getOrElseUpdate(track.src, new TACollector(config, track.src))
           if (track.isDropped) {
@@ -158,7 +158,7 @@ class TATrackStatsData  (val src: String) extends TSStatsData[TATrack,TATrackEnt
         }
       case None => // ignore
     }
-    if (obj.date == null) nNoTime += 1
+    if (obj.date.isUndefined) nNoTime += 1
   }
 
   override def update (obj: TATrack, e: TATrackEntryData, isSettled: Boolean): Unit = {

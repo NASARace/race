@@ -16,18 +16,19 @@
  */
 package gov.nasa.race.air.gis
 
-import java.io.{DataOutputStream, File}
+import java.io.File
 import java.nio.ByteBuffer
 
-import scala.util.Either
 import gov.nasa.race.geo.GeoPosition
 import gov.nasa.race.gis.{GisItem, GisItemDB, GisItemDBFactory}
 import gov.nasa.race.uom.Angle.Degrees
+import gov.nasa.race.uom.DateTime
 import gov.nasa.race.uom.Length.Feet
-import gov.nasa.race.util.{ConsoleIO, FileUtils, LeDataOutputStream, NetUtils}
+import gov.nasa.race.util.{ConsoleIO, FileUtils, NetUtils}
 import io.circe
 import io.circe._
-import org.joda.time.DateTime
+
+import scala.util.Either
 
 /**
   * Fix as defined on https://www.faa.gov/air_traffic/flight_info/aeronav/aero_data/Loc_ID_Search/Fixes_Waypoints/

@@ -22,7 +22,7 @@ import java.io._
 import gov.nasa.race._
 import gov.nasa.race.util.DateTimeUtils._
 import gov.nasa.race.util.{FileUtils, XmlAttrProcessor, XmlPullParser}
-import org.joda.time.DateTime
+import gov.nasa.race.uom.{DateTime, Time}
 
 /**
  * a EventScheduler that processes files
@@ -53,8 +53,8 @@ class FileEventScheduler (val action: (File)=>Unit) extends XmlPullParser with X
             if (pathName != null && timeSpec != null) {
               ifSome(FileUtils.existingNonEmptyFile(pathName)) { f =>
                 timeSpec match {
-                  case hhmmssRE(hh,mm,ss) => schedule(duration(hh.toInt,mm.toInt,ss.toInt))(action(f))
-                  case iso8601PeriodRE(s) => schedule(isoPeriodFormatter.parsePeriod(s).toStandardDuration)(action(f))
+                  case hhmmssRE(hh,mm,ss) => schedule(Time.HMS(hh.toInt,mm.toInt,ss.toInt))(action(f))
+                  case iso8601PeriodRE(s) => schedule(Time.parse(s))(action(f))
                   case dateTimeRE(s) => schedule(DateTime.parse(s))(action(f))
                 }
               }

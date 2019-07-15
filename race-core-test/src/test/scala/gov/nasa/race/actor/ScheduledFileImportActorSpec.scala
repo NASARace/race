@@ -30,7 +30,7 @@ import scala.language.postfixOps
 /**
   * unit test for ScheduledFileImportActor
   *
-  * Note that our inpt file schedule.xml does contain path names of the messages to send, it has to be
+  * Note that our input file schedule.xml does contain path names of the messages to send, it has to be
   * updated accordingly if this test is moved
   */
 class ScheduledFileImportActorSpec extends RaceActorSpec with AnyWordSpecLike {

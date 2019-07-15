@@ -17,7 +17,7 @@
 
 package gov.nasa.race.air
 
-import org.joda.time.DateTime
+import gov.nasa.race.uom.DateTime
 import gov.nasa.race.geo.{GreatCircle, GeoPosition}
 import gov.nasa.race.track.TrackedObject
 import gov.nasa.race.uom.Angle._

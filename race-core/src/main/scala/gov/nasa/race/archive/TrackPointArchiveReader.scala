@@ -23,7 +23,7 @@ import gov.nasa.race.common.ConfigurableStreamCreator._
 import gov.nasa.race.track.avro.TrackPoint
 import org.apache.avro.file.DataFileStream
 import org.apache.avro.specific.SpecificDatumReader
-import org.joda.time.DateTime
+import gov.nasa.race.uom.DateTime
 
 /**
   * an ArchiveReader for Avro archive streams that contain TrackPoint records
@@ -49,6 +49,6 @@ class TrackPointArchiveReader (val iStream: InputStream, val pathName:String="<u
 
   override def readNextEntry = {
     val tp = dfs.next(recCache)
-    someEntry(new DateTime(tp.getDate),tp)
+    someEntry(DateTime.epochMillis(tp.getDate),tp)
   }
 }

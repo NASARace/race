@@ -17,8 +17,7 @@
 
 package gov.nasa.race.archive
 
-import com.github.nscala_time.time.Imports._
-import org.joda.time.DateTime
+import gov.nasa.race.uom.DateTime
 
 /**
   * a trait for objects that can adjust date based on delta between a original (first)
@@ -28,27 +27,25 @@ import org.joda.time.DateTime
   * context
   */
 trait DateAdjuster {
-  var baseDate: DateTime = _
-  var firstDate: DateTime = _
+  var baseDate: DateTime = DateTime.UndefinedDateTime
+  var firstDate: DateTime = DateTime.UndefinedDateTime
 
-  def setBaseDate(date: DateTime) = baseDate = date
+  def setBaseDate(date: DateTime): Unit = baseDate = date
 
   def getDate(date: DateTime): DateTime = {
-    if (baseDate == null) {
+    if (baseDate.isUndefined) {
       date
     } else {
-      if (firstDate == null) {
+      if (firstDate.isUndefined) {
         firstDate = date
         baseDate
       } else {
         if (date > firstDate) {
-          baseDate + (firstDate to date).toDurationMillis
+          baseDate + firstDate.timeUntil(date)
         } else {
-          baseDate - (date to firstDate).toDurationMillis
+          baseDate - firstDate.timeSince(date)
         }
       }
     }
   }
-
-  def getDate(millis: Long): DateTime = getDate(new DateTime(millis))
 }

@@ -17,7 +17,7 @@
 
 package gov.nasa.race.schedule
 
-import com.github.nscala_time.time.Imports._
+import gov.nasa.race.uom.{DateTime, Time}
 import gov.nasa.race.util.ThreadUtils.Signal
 
 import scala.collection.mutable
@@ -25,41 +25,43 @@ import scala.collection.mutable
 abstract class SchedulerEvent (action: =>Any) {
   def fire() = action
 }
-class RelSchedulerEvent (val after: Duration, action: => Any) extends SchedulerEvent(action) {
+
+class RelSchedulerEvent (val after: Time, action: => Any) extends SchedulerEvent(action) {
   def toAbsSchedulerEvent (baseDate: DateTime) = new AbsSchedulerEvent(baseDate + after, action)
+
   override def toString = s"RelSchedulerEvent $after"
 }
+
 class AbsSchedulerEvent (val when: DateTime, action: => Any) extends SchedulerEvent(action) {
   override def toString = s"AbsSchedulerEvent $when"
 
   def millisFromNow: Long = {
     val tNow = DateTime.now
-    if (tNow <= when)
-      (tNow to when).millis
-    else
-      -(when to tNow).millis
+    tNow.timeUntil(when).toMillis
   }
 }
 
 object SchedulerEvent {
-  def apply(after: Duration)(action: => Any) = new RelSchedulerEvent(after,action)
+  def apply(after: Time)(action: => Any) = new RelSchedulerEvent(after,action)
   def apply(when: DateTime)(action: => Any) = new AbsSchedulerEvent(when,action)
 
   implicit val relOrdering = new Ordering[RelSchedulerEvent] {
-    def compare (a: RelSchedulerEvent, b: RelSchedulerEvent) = -DurationOrdering.compare(a.after, b.after)
+    def compare (a: RelSchedulerEvent, b: RelSchedulerEvent): Int = b.after.compare(a.after)
   }
   implicit val absOrdering = new Ordering[AbsSchedulerEvent] {
-    def compare (a: AbsSchedulerEvent, b: AbsSchedulerEvent) = -DateTimeOrdering.compare(a.when, b.when)
+    def compare (a: AbsSchedulerEvent, b: AbsSchedulerEvent): Int = b.when.compare(a.when)
   }
 }
 
 /**
- * a thread based scheduler
- *
- * We don't use futures or Akka scheduling here since we don't want
- * to burn a pooled thread on something that waits/sleeps 99% of the time, and
- * we need something that also works outside of actors
- * This is what Java'ish Scala looks like
+  * a thread based scheduler
+  *
+  * We don't use futures or Akka scheduling here since we don't want
+  * to burn a pooled thread on something that waits/sleeps 99% of the time, and
+  * we need something that also works outside of actors
+  * This is what Java'ish Scala looks like
+  *
+  * TODO - this should support sim time
  */
 trait EventScheduler {
   private val lock = new Signal // we can't sync on 'queue' because its a var, and 'this' is public
@@ -74,13 +76,13 @@ trait EventScheduler {
   // the queue that will be processed
   private val absQueue = new mutable.PriorityQueue[AbsSchedulerEvent]()
 
-  def schedule (after: Duration)(action: =>Any) = scheduleEvent( SchedulerEvent(after)(action))
+  def schedule (after: Time)(action: =>Any) = scheduleEvent( SchedulerEvent(after)(action))
 
   def scheduleEvent (newEvent: RelSchedulerEvent) = {
     lock.synchronized {
       if (thread != null){
         absQueue += newEvent.toAbsSchedulerEvent(DateTime.now)
-        lock.notify
+        lock.notify // schedule thread already running
       } else {
         relQueue += newEvent
       }
@@ -147,11 +149,14 @@ trait EventScheduler {
     }
   }
 
-  def setTimeBase (baseDate: DateTime) = mergeInRelQueue(baseDate)
-  // <2do> we also need support to transform simTime (schedule) to wallTime
+  def setTimeBase (baseDate: DateTime): Unit = {
+    mergeInRelQueue(baseDate)
+  }
 
   protected def mergeInRelQueue (baseDate: DateTime) = {
-    for (re <- relQueue) absQueue += re.toAbsSchedulerEvent(baseDate)
+    for (re <- relQueue) {
+      absQueue += re.toAbsSchedulerEvent(baseDate)
+    }
     relQueue.clear()
   }
 

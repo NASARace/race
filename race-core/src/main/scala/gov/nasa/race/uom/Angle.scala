@@ -18,6 +18,7 @@ package gov.nasa.race.uom
 
 import Math._
 
+import gov.nasa.race._
 import gov.nasa.race.common._
 import gov.nasa.race.util.ArrayUtils
 
@@ -92,7 +93,7 @@ object Angle {
 }
 import Angle._
 
-class Angle protected[uom] (val d: Double) extends AnyVal {
+class Angle protected[uom] (val d: Double) extends AnyVal with Definable[Angle] {
 
   //---  Double converters
   @inline def toRadians: Double = d
@@ -124,9 +125,7 @@ class Angle protected[uom] (val d: Double) extends AnyVal {
   // we intentionally omit ==, <=, >=
 
   //-- undefined value handling (value based alternative for finite cases that would otherwise require Option)
-  @inline def isUndefined = d.isNaN
   @inline def isDefined = !d.isNaN
-  @inline def orElse(fallback: Angle) = if (isDefined) this else fallback
   @inline def compare (other: Length): Int = d compare other.d
 
   //--- string converters

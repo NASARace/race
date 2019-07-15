@@ -29,11 +29,10 @@ import gov.nasa.race.track.TrackedObject._
 import gov.nasa.race.uom.Angle._
 import gov.nasa.race.uom.Length._
 import gov.nasa.race.uom.Speed._
-import org.joda.time.DateTime
+import gov.nasa.race.uom.DateTime
 
 import scala.Double.NaN
 import scala.collection.mutable.ArrayBuffer
-import scala.collection.Seq
 
 /**
   * translator for SWIM ASDE-X asdexMsg messages to raw AsdexTracks (with incomplete delta info)
@@ -92,7 +91,7 @@ class AsdexMsg2AsdexTracks(val config: Config=NoConfig) extends XmlParser[AsdexT
     // note that we have to use different values for optionals that might not be in a delta update so that
     // we can distinguish from cached values
     var trackId: String = null
-    var date: DateTime = null
+    var date: DateTime = DateTime.UndefinedDateTime
     var latDeg, lonDeg: Double = NaN
     var altFt: Double = NaN
     var hdgDeg: Double = NaN
@@ -129,7 +128,7 @@ class AsdexMsg2AsdexTracks(val config: Config=NoConfig) extends XmlParser[AsdexT
       //--- end elements
       case "positionReport" =>
         // our minimal requirements are a dated lat/lon position and a trackId
-        if (trackId != null && (date != null)) {
+        if (trackId != null && (date.isDefined)) {
           ifNotNull(createTrack(airport,trackId,acId,latDeg,lonDeg,altFt,spdMph,hdgDeg,vertRate,date,status,acType))( tracks += _)
         }
         return // done

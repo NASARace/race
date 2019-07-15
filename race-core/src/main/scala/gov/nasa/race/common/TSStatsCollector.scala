@@ -167,7 +167,7 @@ trait TSStatsData[O <: Dated,E <: TSEntryData[O]] extends Cloneable with XmlSour
   // on-the-fly update of entry
   // note that the entryStats are not updated yet so that we can assess the changes
   def update (obj: O, e: E, isSettled: Boolean): Unit = {
-    val dt = (obj.date.getMillis - e.tLast).toInt
+    val dt = (obj.date.toMillis - e.tLast).toInt
     if (dt > 0){
       updatePositiveTimeDelta(dt,obj,e,isSettled) // plausible/implausible
     } else if (dt == 0) {
@@ -279,7 +279,7 @@ class TSEntryData[O <: Dated](var tLast: Long, var lastObj: O) extends Cloneable
   var removed: Boolean = false // set to true after receiving a completed event
 
   def update (obj: O, isSettled: Boolean) = {
-    val t = obj.date.getMillis
+    val t = obj.date.toMillis
     val dt = (t - tLast).toInt
 
     if (dt > 0) {
@@ -303,7 +303,7 @@ class BasicTimeSeriesEntryStats[O <: Dated] (t: Long, o: O) extends TSEntryData[
     * can be overridden to update additional stats, but make sure to call super.update
     */
   override def update (obj: O, isSettled: Boolean): Unit = {
-    val t = obj.date.getMillis
+    val t = obj.date.toMillis
     val dt = (t - tLast).toInt
 
     if (dt > 0) {
@@ -357,7 +357,7 @@ trait TSStatsCollector[K,O <: Dated,E <: TSEntryData[O],S <: TSStatsData[O,E]] {
 
   def updateActive (key: K, obj: O) = {
     statsData.nUpdates += 1
-    val t = obj.date.getMillis
+    val t = obj.date.toMillis
     val isSettled = currentSimTimeMillisSinceStart > settleTimeMillis
 
     def _add = {
@@ -404,7 +404,7 @@ trait TSStatsCollector[K,O <: Dated,E <: TSEntryData[O],S <: TSStatsData[O,E]] {
     */
   def removeActive (key: K, obj: O) = {
     val isSettled = currentSimTimeMillisSinceStart > settleTimeMillis
-    val t = obj.date.getMillis
+    val t = obj.date.toMillis
 
     entries.get(key) match {
       case Some(e) =>

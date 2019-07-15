@@ -21,7 +21,7 @@ import java.io.{BufferedReader, InputStream, InputStreamReader, OutputStream}
 
 import com.typesafe.config.Config
 import gov.nasa.race.common.ConfigurableStreamCreator._
-import org.joda.time.DateTime
+import gov.nasa.race.uom.DateTime
 
 import scala.annotation.tailrec
 
@@ -81,7 +81,7 @@ class HexEpochLineArchiveWriter(val oStream: OutputStream, val pathName: String 
   }
 
   override def write(date: DateTime, obj: Any): Boolean = {
-    longToHexCharBytes(buf, date.getMillis)
+    longToHexCharBytes(buf, date.toMillis)
     oStream.write(buf)
     oStream.write(obj.toString.getBytes)
     oStream.write('\n')
@@ -122,7 +122,7 @@ class HexEpochLineArchiveReader (val iStream: InputStream, val pathName: String 
   override def readNextEntry: Option[ArchiveEntry] = {
     try {
       val line = reader.readLine()
-      if (line != null) someEntry(new DateTime(hexCharsToLong(line)), line.substring(17)) else None
+      if (line != null) someEntry(DateTime.epochMillis(hexCharsToLong(line)), line.substring(17)) else None
     } catch {
       case _:Throwable => None
     }

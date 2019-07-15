@@ -19,7 +19,7 @@ package gov.nasa.race.trajectory
 import gov.nasa.race.common.Nat.N3
 import gov.nasa.race.common.{SampleStats, TInterpolant}
 import gov.nasa.race.geo.GeoPosition
-import gov.nasa.race.uom.{Angle, Date, Length, OnlineAngleStats, OnlineLengthStats, Time}
+import gov.nasa.race.uom.{Angle, DateTime, Length, OnlineAngleStats, OnlineLengthStats, Time}
 
 object TrajectoryDiff {
 
@@ -180,24 +180,24 @@ object TrajectoryDiff {
   }
 }
 
-class TrajectoryDiff( val refSource: String,
-                      val refTrajectory: Trajectory,
+class TrajectoryDiff(val refSource: String,
+                     val refTrajectory: Trajectory,
 
-                      val diffSource: String,
-                      val diffTrajectory: Trajectory,
+                     val diffSource: String,
+                     val diffTrajectory: Trajectory,
 
-                      val distance2DStats: SampleStats[Length],
+                     val distance2DStats: SampleStats[Length],
 
-                      val maxDistanceRefPos: GeoPosition,
-                      val maxDistanceDiffPos: GeoPosition,
-                      val maxDistanceTime: Date,
+                     val maxDistanceRefPos: GeoPosition,
+                     val maxDistanceDiffPos: GeoPosition,
+                     val maxDistanceTime: DateTime,
 
-                      val minDistanceRefPos: GeoPosition,
-                      val minDistanceDiffPos: GeoPosition,
-                      val minDistanceTime: Date,
+                     val minDistanceRefPos: GeoPosition,
+                     val minDistanceDiffPos: GeoPosition,
+                     val minDistanceTime: DateTime,
 
-                      val angleDiffStats: SampleStats[Angle],
-                      val altDiffStats: SampleStats[Length]
+                     val angleDiffStats: SampleStats[Angle],
+                     val altDiffStats: SampleStats[Length]
                       ) {
   def numberOfSamples: Int = distance2DStats.numberOfSamples
 }

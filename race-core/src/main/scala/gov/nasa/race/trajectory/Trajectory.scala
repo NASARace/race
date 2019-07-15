@@ -16,17 +16,14 @@
  */
 package gov.nasa.race.trajectory
 
-import gov.nasa.race.common
 import gov.nasa.race.common.Nat.N3
-import gov.nasa.race.common.{CircularSeq, CountDownIterator, CountUpIterator, TDataPoint, TDataPoint3, TDataSource, TInterpolant}
-import gov.nasa.race.geo.{Euclidean, GeoPosition, LatLonPos, MutLatLonPos}
+import gov.nasa.race.common.{CircularSeq, CountDownIterator, CountUpIterator, TDataPoint3, TDataSource, TInterpolant}
+import gov.nasa.race.geo.{GeoPosition, LatLonPos, MutLatLonPos}
 import gov.nasa.race.track.{TrackPoint, Velocity2D}
 import gov.nasa.race.uom.Angle._
-import gov.nasa.race.uom.Date._
 import gov.nasa.race.uom.Length._
 import gov.nasa.race.uom.Time._
-import gov.nasa.race.uom.{Angle, AngleArray, Date, DateArray, Length, LengthArray, Speed, Time}
-import org.joda.time.{MutableDateTime, ReadableDateTime, DateTime => JodaDateTime}
+import gov.nasa.race.uom.{Angle, AngleArray, DateArray, DateTime, Length, LengthArray, Speed, Time}
 
 object Trajectory {
 
@@ -50,11 +47,11 @@ object Trajectory {
 /**
   * immutable object holding trajectory point information
   */
-class TrajectoryPoint (val date: JodaDateTime, val position: GeoPosition) extends TrackPoint {
-  def this (t: JodaDateTime, lat: Angle, lon: Angle, alt: Length) = this(t.toDateTime, LatLonPos(lat,lon,alt))
+class TrajectoryPoint (val date: DateTime, val position: GeoPosition) extends TrackPoint {
+  def this (t: DateTime, lat: Angle, lon: Angle, alt: Length) = this(t, LatLonPos(lat,lon,alt))
 
   def setTDataPoint3(p: TDataPoint3): Unit = {
-    p.set(date.getMillis, position.latDeg, position.lonDeg, position.altMeters)
+    p.set(date.toMillis, position.latDeg, position.lonDeg, position.altMeters)
   }
 }
 
@@ -62,20 +59,20 @@ class TrajectoryPoint (val date: JodaDateTime, val position: GeoPosition) extend
   * mutable object holding trajectory point information
   * can be used to sequentially iterate through trajectory without allocation
   */
-class MutTrajectoryPoint (val date: MutableDateTime, val position: MutLatLonPos) extends TrackPoint {
-  def this() = this(new MutableDateTime(0), new MutLatLonPos(Angle0,Angle0,Length0))
+class MutTrajectoryPoint (var date: DateTime, val position: MutLatLonPos) extends TrackPoint {
+  def this() = this(DateTime.UndefinedDateTime, new MutLatLonPos(Angle0,Angle0,Length0))
 
-  def update (d: Date, lat: Angle, lon: Angle, alt: Length): this.type = {
-    date.setMillis(d.toMillis)
+  def update (d: DateTime, lat: Angle, lon: Angle, alt: Length): this.type = {
+    date = d
     position.update(lat,lon,alt)
     this
   }
 
   def updateTDataPoint3(p: TDataPoint3): Unit = {
-    p.set(date.getMillis, position.latDeg, position.lonDeg, position.altMeters)
+    p.set(date.toMillis, position.latDeg, position.lonDeg, position.altMeters)
   }
 
-  def toTrajectoryPoint: TrajectoryPoint = new TrajectoryPoint(new JodaDateTime(date.getMillis), position.toLatLonPos)
+  def toTrajectoryPoint: TrajectoryPoint = new TrajectoryPoint(date, position.toLatLonPos)
 }
 
 /**
@@ -88,7 +85,7 @@ class TDP3 (_millis: Long, _lat: Double, _lon: Double, _alt: Double)
                                             extends TDataPoint3(_millis,_lat,_lon,_alt) with GeoPosition {
   def this() = this(0,0.0,0.0,0.0)
 
-  def epochMillis: Date = EpochMillis(millis)
+  def epochMillis: DateTime = DateTime.epochMillis(millis)
 
   override def φ: Angle = Degrees(_0)
   def φ_= (lat: Angle): Unit = _0 = lat.toDegrees
@@ -101,10 +98,10 @@ class TDP3 (_millis: Long, _lat: Double, _lon: Double, _alt: Double)
 
   override def clone: TDP3 = new TDP3(millis,_0,_1,_2)
 
-  def toTrajectoryPoint = new TrajectoryPoint(new JodaDateTime(millis), LatLonPos(Degrees(_0),Degrees(_1),Meters(_2)))
+  def toTrajectoryPoint = new TrajectoryPoint(DateTime.epochMillis(millis), LatLonPos(Degrees(_0),Degrees(_1),Meters(_2)))
 
   def updateTrajectoryPoint (p: MutTrajectoryPoint): Unit = {
-    p.update(EpochMillis(millis), Degrees(_0), Degrees(_1), Meters(_2))
+    p.update(epochMillis, Degrees(_0), Degrees(_1), Meters(_2))
   }
 
   def toTDPString: String = super[TDataPoint3].toString
@@ -124,17 +121,17 @@ trait Trajectory extends TDataSource[N3,TDP3] {
   @inline def isEmpty: Boolean = size == 0
   @inline def nonEmpty: Boolean = size > 0
 
-  def getFirstDate: Date
-  def getLastDate: Date
+  def getFirstDate: DateTime
+  def getLastDate: DateTime
   @inline def getDuration: Time = getLastDate.timeSince(getFirstDate)
-  @inline def includesDate (d: Date): Boolean = d >= getFirstDate && d <= getLastDate
+  @inline def includesDate (d: DateTime): Boolean = d >= getFirstDate && d <= getLastDate
 
   /**
     * get (logical) data point index i for given time with tdp(i).epochMillis <= d
     * return -1 if time is lower than first data point, or size-1 if greater than
     * last data point
     */
-  def indexOf(d: Date): Int = {
+  def indexOf(d: DateTime): Int = {
     if (d < getFirstDate) return -1
     else if (d >= getLastDate) return size-1
     else {
@@ -211,7 +208,7 @@ trait Trajectory extends TDataSource[N3,TDP3] {
     * note that callers are responsible for reasonable start and end dates, to make sure
     * errors are acceptable if outside the datapoint interval
     */
-  def interpolate (start: Date, end: Date, dt: Time)
+  def interpolate (start: DateTime, end: DateTime, dt: Time)
                   (createInterpolant: (Trajectory)=>TInterpolant[N3,TDP3]): Trajectory
 
   /**
@@ -236,9 +233,9 @@ trait Trajectory extends TDataSource[N3,TDP3] {
     *
     * note - this means caller might have to check if provided time is covered by trajectory
     */
-  def computeVelocity2D (d: Date,
-                     computeDistance: (GeoPosition,GeoPosition)=>Length,
-                     computeHeading: (GeoPosition,GeoPosition)=>Angle
+  def computeVelocity2D (d: DateTime,
+                         computeDistance: (GeoPosition,GeoPosition)=>Length,
+                         computeHeading: (GeoPosition,GeoPosition)=>Angle
                     ): Velocity2D = {
     if (size < 2) { // not enough data points
       new Velocity2D(Angle.UndefinedAngle, Speed.UndefinedSpeed)
@@ -290,25 +287,25 @@ trait Trajectory extends TDataSource[N3,TDP3] {
 trait MutTrajectory extends Trajectory {
 
   // basic type appender
-  def append(date: Date, lat: Angle, lon: Angle, alt: Length): Unit
+  def append(date: DateTime, lat: Angle, lon: Angle, alt: Length): Unit
 
   //--- override if any of the types are stored directly
   def append (p: TrackPoint): Unit = {
     val pos = p.position
-    append(Date(p.date), pos.φ, pos.λ, pos.altitude)
+    append(p.date, pos.φ, pos.λ, pos.altitude)
   }
-  def append (date: ReadableDateTime, pos: GeoPosition): Unit = {
-    append(Date(date), pos.φ, pos.λ, pos.altitude)
+  def append (date: DateTime, pos: GeoPosition): Unit = {
+    append(date, pos.φ, pos.λ, pos.altitude)
   }
   def append (p: TDP3): Unit = {
     append(p.epochMillis,p.φ, p.λ, p.altitude)
   }
 
   def appendIfNew (p: TrackPoint): Unit = {
-    if (size == 0 || p.date.getMillis > getLastDate.toMillis) append(p)
+    if (size == 0 || p.date.toMillis > getLastDate.toMillis) append(p)
   }
-  def appendIfNew (date: ReadableDateTime, pos: GeoPosition): Unit = {
-    if (size == 0 || date.getMillis > getLastDate.toMillis) append(date,pos)
+  def appendIfNew (date: DateTime, pos: GeoPosition): Unit = {
+    if (size == 0 || date.toMillis > getLastDate.toMillis) append(date,pos)
   }
   def appendIfNew (p: TDP3): Unit = {
     if (size == 0 || p.epochMillis > getLastDate) append(p)
@@ -334,7 +331,7 @@ trait Traj extends Trajectory {
   //--- the storage interface (mixed-in by storage traits or provided by concrete type)
   protected def getDateMillis(i: Int): Long
   protected def getTDP3(i: Int, dp: TDP3): TDP3
-  protected def update(i: Int, date: Date, lat: Angle, lon: Angle, alt: Length): Unit
+  protected def update(i: Int, date: DateTime, lat: Angle, lon: Angle, alt: Length): Unit
   protected def getTrackPoint (i: Int): TrackPoint
   protected def updateMutTrackPoint (p: MutTrajectoryPoint) (i: Int): TrackPoint
   protected def updateTDP3 (dp: TDP3) (i: Int): TDP3 = getTDP3(i,dp)
@@ -347,8 +344,8 @@ trait Traj extends Trajectory {
 
   override def getDataPoint(i: Int, dp: TDP3): TDP3 = getTDP3(i,dp) // TDataSource interface
 
-  override def getFirstDate: Date = if (nonEmpty) Date.EpochMillis(getDateMillis(0)) else Date.UndefinedDate
-  override def getLastDate: Date = if (nonEmpty) Date.EpochMillis(getDateMillis(size-1)) else Date.UndefinedDate
+  override def getFirstDate: DateTime = if (nonEmpty) DateTime.epochMillis(getDateMillis(0)) else DateTime.UndefinedDateTime
+  override def getLastDate: DateTime = if (nonEmpty) DateTime.epochMillis(getDateMillis(size-1)) else DateTime.UndefinedDateTime
 
   override def apply(i: Int): TrackPoint = {
     if (i < 0 || i >= size) throw new IndexOutOfBoundsException(s"track point index out of range: $i")
@@ -408,7 +405,7 @@ trait Traj extends Trajectory {
       } else {
         var i = size - 2
         while (i >= 0) {
-          val d = Date.EpochMillis(getDateMillis(i))
+          val d = DateTime.epochMillis(getDateMillis(i))
           if (dLast.timeSince(d) <= dur) {
             i -= 1
           }
@@ -419,7 +416,7 @@ trait Traj extends Trajectory {
   }
 
   // this is the generic implementation
-  def interpolate (start: Date, end: Date, dt: Time)
+  def interpolate (start: DateTime, end: DateTime, dt: Time)
                   (createInterpolant: (Trajectory)=>TInterpolant[N3,TDP3]): Trajectory = {
     val traj = emptyMutable( (end.timeSince(start) / dt).round.toInt + 1)
     val intr = createInterpolant(this)
@@ -436,7 +433,7 @@ trait MutTraj extends MutTrajectory with Traj {
   protected[trajectory] var _size: Int = 0
 
   protected def grow(newCapacity: Int): Unit // storage dependent
-  protected def update(i: Int, date: Date, lat: Angle, lon: Angle, alt: Length): Unit // storage dependent
+  protected def update(i: Int, date: DateTime, lat: Angle, lon: Angle, alt: Length): Unit // storage dependent
 
   override def size = _size
   def capacity = _capacity
@@ -451,7 +448,7 @@ trait MutTraj extends MutTrajectory with Traj {
     }
   }
 
-  override def append(date: Date, lat: Angle, lon: Angle, alt: Length): Unit = {
+  override def append(date: DateTime, lat: Angle, lon: Angle, alt: Length): Unit = {
     ensureSize(_size + 1)
     update( _size, date,lat,lon,alt)
     _size += 1
@@ -496,7 +493,7 @@ trait TraceTraj extends MutTrajectory with Traj with CircularSeq {
     getDateMillis(circularOffsetIdx(off))
   }
 
-  override def append(date: Date, lat: Angle, lon: Angle, alt: Length): Unit = {
+  override def append(date: DateTime, lat: Angle, lon: Angle, alt: Length): Unit = {
     update( incIndices, date,lat,lon,alt)
   }
 
@@ -532,11 +529,11 @@ trait TraceTraj extends MutTrajectory with Traj with CircularSeq {
     }
   }
 
-  override def getFirstDate: Date = {
-    if (tail >= 0) Date.EpochMillis(getDateMillis(circularIdx(tail))) else Date.UndefinedDate
+  override def getFirstDate: DateTime = {
+    if (tail >= 0) DateTime.epochMillis(getDateMillis(circularIdx(tail))) else DateTime.UndefinedDateTime
   }
-  override def getLastDate: Date = {
-    if (head >= 0) Date.EpochMillis(getDateMillis(circularIdx(head))) else Date.UndefinedDate
+  override def getLastDate: DateTime = {
+    if (head >= 0) DateTime.epochMillis(getDateMillis(circularIdx(head))) else DateTime.UndefinedDateTime
   }
 
   /**
@@ -552,7 +549,7 @@ trait TraceTraj extends MutTrajectory with Traj with CircularSeq {
       } else {
         var i = head - 1
         while (i >= tail) {
-          val d = Date.EpochMillis(getDateMillis(circularIdx(i)))
+          val d = DateTime.epochMillis(getDateMillis(circularIdx(i)))
           if (dLast.timeSince(d) > dur) return i + 1
           i -= 1
         }

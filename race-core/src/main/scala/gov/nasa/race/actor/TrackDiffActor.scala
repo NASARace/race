@@ -26,8 +26,7 @@ import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.geo.{Euclidean, GeoPosition}
 import gov.nasa.race.track.{TrackListMessage, TrackPairEvent, TrackTerminationMessage, TrackedObject}
 import gov.nasa.race.trajectory._
-import gov.nasa.race.uom.Date
-import org.joda.time.DateTime
+import gov.nasa.race.uom.DateTime
 
 import scala.collection.mutable.{HashMap => MutHashMap}
 import scala.concurrent.duration._
@@ -158,7 +157,7 @@ class TrackDiffActor (val config: Config) extends SubscribingRaceActor with Filt
       //diffTraj.dump
       //println(diffTraj.arithmeticMidDataPoint)
 
-      val date: DateTime = refTraj.getLastDate.toDateTime
+      val date: DateTime = refTraj.getLastDate
       val td = TrajectoryDiff.calculate(
         readFrom(0), refTraj,
         readFrom(chanIdx), diffTraj,
@@ -182,7 +181,7 @@ class TrackDiffActor (val config: Config) extends SubscribingRaceActor with Filt
 
     val event = TrackPairEvent(
       id,
-      tEvent.toDateTime, pEvent,
+      tEvent, pEvent,
       "MaxDeviation",
       s"max track deviation ${readFrom(0)} : ${readFrom(chanIdx)}",
       eventClassifier,
@@ -210,7 +209,7 @@ class TrackDiffActor (val config: Config) extends SubscribingRaceActor with Filt
     }
   }
 
-  protected def closeCheck (e: TrackDiffEntry, chanIdx: Int, lastUpdate: Date): Unit = {
+  protected def closeCheck (e: TrackDiffEntry, chanIdx: Int, lastUpdate: DateTime): Unit = {
     if (!e.isClosed(chanIdx)){
       if (lastUpdate == e.trajectories(chanIdx).getLastDate){ // no updates
         e.setClosed(chanIdx)

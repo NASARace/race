@@ -24,7 +24,7 @@ import gov.nasa.race.air.{PrecipImage, PrecipImageStore, RLEByteImageParser}
 import gov.nasa.race.config._
 import gov.nasa.race.geo.GeoPosition
 import gov.nasa.race.util.XmlPullParser
-import org.joda.time.DateTime
+import gov.nasa.race.uom.DateTime
 import gov.nasa.race.uom.Length._
 import gov.nasa.race.uom.Angle._
 import gov.nasa.race.uom._
@@ -90,7 +90,7 @@ class ITWSprecip2PrecipImage (val config: Config=NoConfig) extends XmlPullParser
     // we deliberately use null here to fail early
     var product = 0 // 9849: precip 5nm, 9850: tracon, 9905: long range
     var itwsSite: String = null // site id (e.g. N90 - describing a list of airports/tracons)
-    var genDate: DateTime = null; var expDate: DateTime = null;
+    var genDate: DateTime = DateTime.UndefinedDateTime; var expDate: DateTime = DateTime.UndefinedDateTime;
     var trpLat: Angle=UndefinedAngle; var trpLon: Angle=UndefinedAngle; var rotation: Angle=UndefinedAngle// degrees
     var xoffset: Length=UndefinedLength; var yoffset: Length=UndefinedLength; // meters
     var dx: Length=UndefinedLength; var dy: Length=UndefinedLength; var dz: Length=UndefinedLength; // meters
@@ -105,8 +105,8 @@ class ITWSprecip2PrecipImage (val config: Config=NoConfig) extends XmlPullParser
           tag match {
             case "product_msg_id" => product = readInt()
             case "product_header_itws_sites" => itwsSite = readText()
-            case "product_header_generation_time_seconds" => genDate = new DateTime( 1000L * readInt())
-            case "product_header_expiration_time_seconds" => expDate = new DateTime( 1000L * readInt())
+            case "product_header_generation_time_seconds" => genDate = DateTime.epochMillis( 1000L * readInt())
+            case "product_header_expiration_time_seconds" => expDate = DateTime.epochMillis( 1000L * readInt())
 
             case "prcp_TRP_latitude" => trpLat = readDegreesWithPrecision
             case "prcp_TRP_longitude" => trpLon = readDegreesWithPrecision

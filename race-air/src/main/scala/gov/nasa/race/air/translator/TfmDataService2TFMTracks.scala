@@ -27,7 +27,7 @@ import gov.nasa.race.uom.Angle._
 import gov.nasa.race.uom.Speed._
 import gov.nasa.race.uom._
 import gov.nasa.race.track.TrackedObject
-import org.joda.time.DateTime
+import gov.nasa.race.uom.DateTime
 
 
 /**
@@ -50,14 +50,14 @@ class TfmDataService2TFMTracks(val config: Config=NoConfig) extends XmlPullParse
     var flightRef: String = "?"
     var cs: String = null
     var source: String = "?"
-    var date: DateTime = null
+    var date: DateTime = DateTime.UndefinedDateTime
     var lat: Angle = UndefinedAngle
     var lon: Angle = UndefinedAngle
     var speed: Speed = UndefinedSpeed
     var alt: Length = UndefinedLength
     var vr: Speed = UndefinedSpeed // no vertical rate in current schema
     var nextWP: GeoPosition = null
-    var nextWPDate: DateTime = null
+    var nextWPDate: DateTime = DateTime.UndefinedDateTime
     var completed: Boolean = false
 
     var isTrackInfo = false
@@ -65,14 +65,14 @@ class TfmDataService2TFMTracks(val config: Config=NoConfig) extends XmlPullParse
 
     def resetVars = {
       flightRef="?"; cs=null; source="?"; completed = false
-      date=null; lat=UndefinedAngle; lon=UndefinedAngle; speed=UndefinedSpeed; alt=UndefinedLength; vr=UndefinedSpeed;
-      nextWP=null; nextWPDate=null
+      date=DateTime.UndefinedDateTime; lat=UndefinedAngle; lon=UndefinedAngle; speed=UndefinedSpeed; alt=UndefinedLength; vr=UndefinedSpeed;
+      nextWP=null; nextWPDate=DateTime.UndefinedDateTime
     }
 
     // <2do> this probably can be relaxed - we have useful info even without nextWP
     def checkVars = {
       cs != null && (completed ||
-                     (date != null && lat.isDefined && lon.isDefined && alt.isDefined && nextWP != null) )
+                     (date.isDefined && lat.isDefined && lon.isDefined && alt.isDefined && nextWP != null) )
     }
 
     def readDMS: Angle = {
@@ -117,7 +117,7 @@ class TfmDataService2TFMTracks(val config: Config=NoConfig) extends XmlPullParse
               // we could get the airport location here
             case "nxcm:eta" if hasParent("nxcm:airlineData") =>
               if (readAttribute("etaType") == "ACTUAL") {
-                if (date == null) date = DateTime.parse(readAttribute("timeValue"))
+                if (date.isUndefined) date = DateTime.parse(readAttribute("timeValue"))
                 if (lat.isUndefined) lat = Angle0
                 if (lon.isUndefined) lon = Angle0
               }

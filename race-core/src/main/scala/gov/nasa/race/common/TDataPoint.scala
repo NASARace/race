@@ -19,7 +19,7 @@ package gov.nasa.race.common
 import java.util
 
 import Nat._
-import org.joda.time.DateTime
+import gov.nasa.race.uom.DateTime
 
 /**
   * a mutable type that represents a multi-dimensional data point consisting of a date and a ordered
@@ -33,8 +33,8 @@ trait TDataPoint[N<:Nat] {
   def update (i: Int, d: Double): Unit
   def clear: Unit
 
-  def date: DateTime = new DateTime(millis)
-  def setDate(date: DateTime): Unit = millis = date.getMillis
+  def date: DateTime = DateTime.epochMillis(millis)
+  def setDate(date: DateTime): Unit = millis = date.toMillis
   def getTime: Long = millis
   def setTime(millis: Long): Unit = this.millis = millis
 

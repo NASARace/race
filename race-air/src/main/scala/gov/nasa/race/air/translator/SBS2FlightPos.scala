@@ -27,16 +27,14 @@ import gov.nasa.race.track.TrackedObject
 import gov.nasa.race.uom.Length._
 import gov.nasa.race.uom.Angle._
 import gov.nasa.race.uom.Speed._
-import org.joda.time.DateTime
-import org.joda.time.format.DateTimeFormat
+import gov.nasa.race.uom.DateTime
 
 import scala.annotation.tailrec
 import scala.collection.concurrent.TrieMap
 
 object SBS2FlightPos {
-  // SBS date-time group, e.g. ...,2016/03/11,13:07:18.054,...", parse with DateTime.parse(s,dtf)
+  // SBS date-time group, e.g. ...,2016/03/11,13:07:18.054,...", parse with DateTime.parseYMDT(s)
   // NOTE - sbs reports without time zone (assuming local), hence we need this parser
-  val dtf = DateTimeFormat.forPattern("yyyy/MM/dd,HH:mm:ss.SSS")
 
   // this is sub-optimal - translators should not have state. Unfortunately, the alternative
   // would be to create intermediate objects and hand them back to our translator, and the
@@ -77,7 +75,7 @@ object SBS2FlightPos {
           Knots(speed.toDouble),
           Degrees(track.toDouble),
           FeetPerMinute(vr.toDouble),
-          DateTime.parse(posDtg, dtf))
+          DateTime.parseYMDT(posDtg))
         if (oldCS != null) fpos.amend(ChangedCS(oldCS))
         Some(fpos)
       } else None

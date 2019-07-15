@@ -20,7 +20,7 @@ package gov.nasa.race.core
 import akka.actor.ActorRef
 import akka.event.Logging.LogLevel
 import com.typesafe.config.Config
-import org.joda.time.DateTime
+import gov.nasa.race.uom.DateTime
 
 import scala.concurrent.duration.FiniteDuration
 

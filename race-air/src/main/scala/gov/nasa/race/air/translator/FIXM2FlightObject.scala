@@ -29,7 +29,7 @@ import gov.nasa.race.uom.Angle._
 import gov.nasa.race.uom.Length._
 import gov.nasa.race.uom.Speed._
 import gov.nasa.race.uom._
-import org.joda.time.DateTime
+import gov.nasa.race.uom.DateTime
 
 import scala.collection.mutable.ArrayBuffer
 import scala.collection.Seq
@@ -76,7 +76,7 @@ class FIXM2FlightObject (val config: Config=NoConfig)
     var alt: Length = UndefinedLength
     var spd: Speed = UndefinedSpeed
     var vr: Speed = UndefinedSpeed // there is no vertical rate in FIXM_v3_2
-    var date, arrivalDate: DateTime = null
+    var date, arrivalDate: DateTime = DateTime.UndefinedDateTime
     var arrivalPoint: String = null
 
     whileNextElement { // start elements
@@ -107,11 +107,11 @@ class FIXM2FlightObject (val config: Config=NoConfig)
     } { // end elements
       case "flight" | "ns5:NasFlight" =>
         if (cs != null) {
-          if (arrivalDate != null) {
+          if (arrivalDate.isDefined) {
             // this is reported as a separate event since we normally don't get positions for completes
             flights += TrackCompleted(id, cs, arrivalPoint, arrivalDate)
           } else {
-            if (lat.isDefined && lon.isDefined && date != null &&
+            if (lat.isDefined && lon.isDefined && date.isDefined &&
               vx.isDefined && vy.isDefined && spd.isDefined && alt.isDefined) {
               val fpos = new FlightPos(id, cs, GeoPosition(Degrees(lat),Degrees(lon),alt),
                                        spd, Degrees(Math.atan2(vx, vy).toDegrees), vr, date)

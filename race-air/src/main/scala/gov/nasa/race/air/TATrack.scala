@@ -16,10 +16,9 @@
  */
 package gov.nasa.race.air
 
-import gov.nasa.race.air.TATrack.Status.Status
 import gov.nasa.race.geo.{GeoPosition, XYPos}
-import gov.nasa.race.uom.{Angle, Length, Speed}
-import org.joda.time.DateTime
+import gov.nasa.race.uom.{Angle, Speed}
+import gov.nasa.race.uom.DateTime
 
 object TATrack {
   // status bit flags for TATrack attrs (should be >0xffff)

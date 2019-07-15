@@ -17,7 +17,7 @@
 
 package gov.nasa.race.common
 
-import com.github.nscala_time.time.Imports._
+import gov.nasa.race.uom.{DateTime,Time}
 
 import scala.concurrent.duration._
 
@@ -47,17 +47,17 @@ class Clock (initTime: DateTime = DateTime.now,
   def end = _end
   def initMillis = _initMillis
   @inline def stoppedAt = _stoppedAt
-  def baseMillis = _base.getMillis
+  def baseMillis = _base.toMillis
   def endMillis = endTimeMillis
 
   @inline def isStopped = _stoppedAt != 0
 
 
   /** simulation time milliseconds */
-  @inline def millis: Long = _base.getMillis + ((currentMillis - _initMillis) * _timeScale).toLong
+  @inline def millis: Long = _base.toMillis + ((currentMillis - _initMillis) * _timeScale).toLong
 
   /** simulation time DateTime */
-  def dateTime: DateTime = _base + ((currentMillis - _initMillis) * _timeScale).toLong
+  def dateTime: DateTime = _base + Time.Milliseconds(((currentMillis - _initMillis) * _timeScale))
 
   /** simulation time duration since initTime */
   def elapsed: FiniteDuration = ((currentMillis - _initMillis) * _timeScale).toLong.milliseconds
@@ -67,22 +67,22 @@ class Clock (initTime: DateTime = DateTime.now,
 
   /** wallclock time for given sim time */
   def wallTime (simTime: DateTime): DateTime = {
-    DateTime.now.plusMillis(((simTime.getMillis - millis)/_timeScale).toInt)
+    DateTime.now + Time.Milliseconds(((simTime.toMillis - millis)/_timeScale))
   }
 
   /** wallclock time for given sim duration */
   def wallTimeIn (simDuration: FiniteDuration): DateTime = {
-    DateTime.now.plusMillis((simDuration.toMillis/_timeScale).toInt)
+    DateTime.now + Time.Milliseconds((simDuration.toMillis/_timeScale))
   }
 
   def wallEndTime: Option[DateTime] = _end.map(wallTime)
 
   def endTimeMillis: Long = _end match {
-    case Some(date) => date.getMillis
+    case Some(date) => date.toMillis
     case None => Long.MaxValue
   }
 
-  def exceedsEndTime (d: DateTime): Boolean = d.getMillis > endTimeMillis
+  def exceedsEndTime (d: DateTime): Boolean = d.toMillis > endTimeMillis
 
   def save = clone.asInstanceOf[Clock]
 }

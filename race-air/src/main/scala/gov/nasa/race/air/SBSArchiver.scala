@@ -22,8 +22,7 @@ import java.io.{InputStream, OutputStream}
 import com.typesafe.config.Config
 import gov.nasa.race.archive.{TextLineArchiveReader, TimedTextLineArchiveWriter}
 import gov.nasa.race.common.ConfigurableStreamCreator.{configuredPathName, createInputStream, createOutputStream}
-import org.joda.time.DateTime
-import org.joda.time.format.DateTimeFormat
+import gov.nasa.race.uom.DateTime
 
 import scala.annotation.tailrec
 
@@ -42,8 +41,7 @@ import scala.annotation.tailrec
   */
 
 object SBSArchiver {
-  val dtgPattern = DateTimeFormat.forPattern("yyyy/MM/dd,HH:mm:ss.SSS")
-  final val dtgPatternLength = 23
+  final val dtgPatternLength = 23  // yyyy/MM/dd,HH:mm:ss.SSS
 }
 
 class SBSArchiveWriter (val oStream: OutputStream, val pathName: String = "<unknown>") extends TimedTextLineArchiveWriter {
@@ -58,7 +56,7 @@ class SBSArchiveReader (val iStream: InputStream, val pathName: String="<unknown
 
   override def close = iStream.close
 
-  def readDate (line: String) = {
+  def readDate (line: String): DateTime = {
     @tailrec def _skipToField (s: String, n: Int, sep: Char, i: Int): Int = {
       if (i < s.length) {
         if (s.charAt(i) == sep) {
@@ -71,7 +69,7 @@ class SBSArchiveReader (val iStream: InputStream, val pathName: String="<unknown
     }
 
     val i0 = _skipToField(line,6,',',0)
-    if (i0 > 0) DateTime.parse(line.substring(i0,i0+dtgPatternLength-1),dtgPattern) else null
+    if (i0 > 0) DateTime.parseYMDT(line.substring(i0,i0+dtgPatternLength-1)) else DateTime.UndefinedDateTime
   }
 
   override def readNextEntry: Option[ArchiveEntry] = {

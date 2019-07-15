@@ -19,7 +19,7 @@ package gov.nasa.race.track
 import gov.nasa.race.geo.{GeoPosition, GeoPositioned}
 import gov.nasa.race.trajectory.Trajectory
 import gov.nasa.race.uom.{Angle, Speed}
-import org.joda.time.DateTime
+import gov.nasa.race.uom.DateTime
 
 /**
   * an event that involves a pair of TrackedObjects

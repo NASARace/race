@@ -21,7 +21,7 @@ import java.nio.channels.FileChannel
 import java.nio.file.{FileSystems, OpenOption}
 
 import gov.nasa.race.common.BufferRecord
-import org.joda.time.DateTime
+import gov.nasa.race.uom.DateTime
 
 import scala.jdk.CollectionConverters._
 
@@ -44,7 +44,7 @@ abstract class BufferRecordArchiveWriter[R <: BufferRecord](val pathName: String
   override def write (date: DateTime, obj: Any): Boolean = {
     if (set(obj)) {
       val buf = rec.buffer
-      buf.putLong(0, date.getMillis)
+      buf.putLong(0, date.toMillis)
       buf.clear // position=0, limit=capacity
       channel.write(buf)
       true

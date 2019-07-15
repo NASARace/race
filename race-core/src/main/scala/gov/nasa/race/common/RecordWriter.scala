@@ -17,7 +17,7 @@
 package gov.nasa.race.common
 
 import gov.nasa.race._
-import org.joda.time.DateTime
+import gov.nasa.race.uom.DateTime
 
 import scala.collection.mutable
 

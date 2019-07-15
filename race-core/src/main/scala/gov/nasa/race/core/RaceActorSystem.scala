@@ -34,10 +34,9 @@ import gov.nasa.race.core.Messages._
 import gov.nasa.race.util.FileUtils._
 import gov.nasa.race.util.NetUtils._
 import gov.nasa.race.util.{ClassLoaderUtils, DateTimeUtils, ThreadUtils}
-import org.joda.time.DateTime
+import gov.nasa.race.uom.DateTime
 
 import scala.jdk.CollectionConverters._
-import scala.collection._
 import scala.collection.concurrent.TrieMap
 import scala.collection.immutable.{ListMap,Set,Map}
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -215,7 +214,7 @@ class RaceActorSystem(val config: Config) extends LogController with VerifiableA
     val startTime = config.getDateTimeOrElse("start-time", DateTime.now) // in sim time
     val timeScale = config.getDoubleOrElse("time-scale", 1.0)
     val endTime = config.getOptionalDateTime("end-time") orElse { // both in sim time
-      config.getOptionalFiniteDuration("run-for") map (d=> startTime.plus(d.toMillis))
+      config.getOptionalFiniteDuration("run-for") map (d => startTime + d)
     }
     new SettableClock(startTime, timeScale, endTime, stopped = true)
   }
@@ -233,7 +232,7 @@ class RaceActorSystem(val config: Config) extends LogController with VerifiableA
 
   def scheduleStart(date: DateTime) = {
     info(s"scheduling start of universe $name at $date")
-    val dur = FiniteDuration(date.getMillis - System.currentTimeMillis(), MILLISECONDS)
+    val dur = FiniteDuration(date.toMillis - System.currentTimeMillis(), MILLISECONDS)
     system.scheduler.scheduleOnce(dur, new Runnable {
       override def run: Unit = {
         startActors
@@ -242,7 +241,7 @@ class RaceActorSystem(val config: Config) extends LogController with VerifiableA
   }
   def scheduleTermination(date: DateTime) = {
     info(s"scheduling termination of universe $name at $date")
-    val dur = FiniteDuration(date.getMillis - System.currentTimeMillis(), MILLISECONDS)
+    val dur = FiniteDuration(date.toMillis - System.currentTimeMillis(), MILLISECONDS)
     system.scheduler.scheduleOnce(dur, new Runnable {
       override def run: Unit = terminate
     })

@@ -17,11 +17,9 @@
 
 package gov.nasa.race.archive
 
-import java.io.File
-
 import gov.nasa.race.Dated
 import gov.nasa.race.util.FileUtils
-import org.joda.time.DateTime
+import gov.nasa.race.uom.DateTime
 
 /*
  * support for archiving and replay of data
@@ -64,7 +62,7 @@ trait ArchiveReader extends DateAdjuster {
   // NOTE - this breaks immutability of the return value. Use only in a single threaded context
   // that does not store ArchiveEntries
 
-  protected val nextEntry = new ArchiveEntry(null,null)
+  protected val nextEntry = new ArchiveEntry(DateTime.UndefinedDateTime,null)
   protected val someEntry = Some(nextEntry)
 
   protected def someEntry(d: DateTime, m: Any): Option[ArchiveEntry] = {

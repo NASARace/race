@@ -46,7 +46,7 @@ class TrackRecordArchiveWriter(pathName: String, openOptions: Set[OpenOption])
       case track: TrackedObject =>
         rec.id := track.id
         rec.cs := track.cs
-        rec.date := track.date.getMillis
+        rec.date := track.date.toMillis
         rec.stat := track.status
 
         val pos = track.position
@@ -77,7 +77,7 @@ class FloatTrackRecordArchiveWriter(pathName: String, openOptions: Set[OpenOptio
       case track: TrackedObject =>
         rec.id := track.id
         rec.cs := track.cs
-        rec.date := track.date.getMillis
+        rec.date := track.date.toMillis
         rec.stat := track.status
 
         val pos = track.position

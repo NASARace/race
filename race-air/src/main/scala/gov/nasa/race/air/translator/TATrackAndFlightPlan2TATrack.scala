@@ -29,7 +29,7 @@ import gov.nasa.race.uom.Angle.{Degrees, UndefinedAngle}
 import gov.nasa.race.uom.Length.{Feet, NauticalMiles, UndefinedLength}
 import gov.nasa.race.uom.Speed.{FeetPerMinute, Knots, UndefinedSpeed}
 import gov.nasa.race.uom.{Angle, Length, Speed}
-import org.joda.time.DateTime
+import gov.nasa.race.uom.DateTime
 
 import scala.collection.mutable.ArrayBuffer
 import scala.collection.Seq
@@ -94,7 +94,7 @@ class TATrackAndFlightPlan2TATrack (val config: Config=NoConfig) extends XmlPars
     var trackId: String = null
     var acId: String  = null
     var beaconCode: String = null
-    var mrtTime: DateTime = null
+    var mrtTime: DateTime = DateTime.UndefinedDateTime
     var lat,lon: Angle = UndefinedAngle
     var xPos,yPos: Length = UndefinedLength
     var vx,vy,vVert: Speed = UndefinedSpeed
@@ -129,7 +129,7 @@ class TATrackAndFlightPlan2TATrack (val config: Config=NoConfig) extends XmlPars
       case "record" =>
         // src, trackNum, x/yPos are all required by the schema
         if (src != null && trackId != null && xPos.isDefined && yPos.isDefined) {
-          if (allowIncompleteTrack || (mrtTime != null && vx.isDefined && vy.isDefined && reportedAltitude.isDefined)) {
+          if (allowIncompleteTrack || (mrtTime.isDefined && vx.isDefined && vy.isDefined && reportedAltitude.isDefined)) {
             val spd = Speed.fromVxVy(vx, vy)
             val hdg = Angle.fromVxVy(vx, vy)
             if (acId == null) acId = trackId

@@ -20,7 +20,7 @@ import gov.nasa.race._
 import gov.nasa.race.geo.{LatLon, LatLonArray, LatLonPos}
 import gov.nasa.race.track.TrackPoint
 import gov.nasa.race.uom.Length._
-import gov.nasa.race.uom.{Angle, AngleArray, Date, DateArray, DeltaDateArray, DeltaLengthArray, Length, LengthArray, Time}
+import gov.nasa.race.uom.{Angle, AngleArray, DateTime, DateArray, DeltaDateArray, DeltaLengthArray, Length, LengthArray, Time}
 
 /**
   * common storage abstraction of compressed trajectories that store data in 32bit quantities.
@@ -51,7 +51,7 @@ trait CompressedTraj extends ArrayTraj[CompressedTraj] {
 
   def getDateMillis(i: Int): Long = ts(i).toMillis
 
-  protected def update(i: Int, date: Date, lat: Angle, lon: Angle, alt: Length): Unit = {
+  protected def update(i: Int, date: DateTime, lat: Angle, lon: Angle, alt: Length): Unit = {
     ts(i) = date
     latLons(i) = LatLon(lat, lon)
     alts(i) = alt
@@ -60,7 +60,7 @@ trait CompressedTraj extends ArrayTraj[CompressedTraj] {
   protected def getTrackPoint(i: Int): TrackPoint = {
     val p = latLons(i)
     val pos = new LatLonPos(p.lat, p.lon, alts(i))
-    new TrajectoryPoint(ts(i).toDateTime, pos)
+    new TrajectoryPoint(ts(i), pos)
   }
 
   protected def updateMutTrackPoint(mp: MutTrajectoryPoint)(i: Int): TrackPoint = {

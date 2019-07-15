@@ -18,7 +18,7 @@
 package gov.nasa.race.util
 
 import com.github.nscala_time.time.Imports._
-import org.joda.time.DateTime
+import gov.nasa.race.uom.DateTime
 import org.joda.time.format.{DateTimeFormatter, ISODateTimeFormat, ISOPeriodFormat}
 
 import scala.concurrent.duration._
@@ -44,8 +44,7 @@ object DateTimeUtils {
 
   @inline def toHHMMSS(d: FiniteDuration): (Int, Int, Int) = (d.toHours.toInt, (d.toMinutes % 60).toInt, (d.toSeconds % 60).toInt)
 
-  @inline def formatDate (epoch: Long, formatter: DateTimeFormatter): String = formatter.print(epoch)
-  @inline def formatDate (d: DateTime, formatter: DateTimeFormatter): String = formatter.print(d.getMillis)
+  @inline def formatDate (d: DateTime, formatter: DateTimeFormatter): String = formatter.print(d.toMillis)
 
   def durationMillisToHMMSS (millis: Long): String = {
     val s = ((millis / 1000) % 60).toInt
@@ -101,7 +100,7 @@ object DateTimeUtils {
       throw new IllegalArgumentException(s"not a finite duration: $dur")
   }
 
-  def fromNow (dur: FiniteDuration): DateTime = DateTime.now.plusMillis(dur.toMillis.toInt)
+  def fromNow (dur: FiniteDuration): DateTime = DateTime.now + dur
 
   def timeTag(d: FiniteDuration): Long = System.currentTimeMillis() / (d.toMillis)
 

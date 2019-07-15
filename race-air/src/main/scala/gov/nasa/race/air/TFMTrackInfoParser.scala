@@ -22,9 +22,9 @@ import gov.nasa.race.track.TrackInfo
 import gov.nasa.race.trajectory.{MutTrajectory, MutUSTrajectory}
 import gov.nasa.race.uom.Length._
 import gov.nasa.race.uom.Angle._
-import gov.nasa.race.uom.Date._
+import gov.nasa.race.uom.DateTime._
 import gov.nasa.race.util.XmlAttrProcessor
-import org.joda.time.DateTime
+import gov.nasa.race.uom.DateTime
 
 import scala.collection.mutable.ArrayBuffer
 import scala.collection.Seq
@@ -59,12 +59,14 @@ class TFMTrackInfoParser extends XmlParser[Seq[TrackInfo]] with XmlAttrProcessor
     var cs: String = null
     var departurePoint, arrivalPoint: String = null
     var trackCat, trackType: String = null
-    var etd,atd,eta,ata: DateTime = null
+    var etd,atd,eta,ata: DateTime = DateTime.UndefinedDateTime
     var lat = Double.NaN
     var lon = Double.NaN
     var route: MutTrajectory = new MutUSTrajectory(30)
 
     val trackRef = readAttribute("flightRef")
+
+    def optDate(d: DateTime): Option[DateTime] = if (d.isDefined) Some(d) else None
 
     whileNextElement {
       case "nxce:aircraftId" =>
@@ -97,7 +99,7 @@ class TFMTrackInfoParser extends XmlParser[Seq[TrackInfo]] with XmlAttrProcessor
         val ti = new TrackInfo( trackRef, cs,
                          optional(trackCat), optional(trackType),
                          optional(departurePoint), optional(arrivalPoint),
-                         optional(etd), optional(atd), optional(eta), optional(ata),
+                         optDate(etd), optDate(atd), optDate(eta), optDate(ata),
                          if (route.nonEmpty) Some(route.snapshot) else None)
         tInfos += ti
         return

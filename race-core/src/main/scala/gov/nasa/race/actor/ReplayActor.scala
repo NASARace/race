@@ -23,7 +23,7 @@ import gov.nasa.race.archive.ArchiveReader
 import gov.nasa.race.common.Counter
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.{ClockAdjuster, ContinuousTimeRaceActor}
-import org.joda.time.DateTime
+import gov.nasa.race.uom.DateTime
 
 import scala.annotation.tailrec
 import scala.collection.mutable.ListBuffer
@@ -106,7 +106,7 @@ class ReplayActor (val config: Config) extends ContinuousTimeRaceActor
 
   def handleReplayMessage: Receive = {
     case r@Replay(msg,date) =>
-      val dtMillis = date.getMillis - updatedSimTimeMillis
+      val dtMillis = date.toMillis - updatedSimTimeMillis
       if (dtMillis < SchedulerThresholdMillis) { // this includes times that already have passed
         debug(f"publishing scheduled: $msg%30.30s.. ")
         publishFiltered(msg)
@@ -208,7 +208,7 @@ class ReplayActor (val config: Config) extends ContinuousTimeRaceActor
       var didSchedule = false
       if (pendingMsgs.nonEmpty) {
         pendingMsgs.foreach { r =>
-          val dtMillis = r.date.getMillis - updatedSimTimeMillis
+          val dtMillis = r.date.toMillis - updatedSimTimeMillis
           if (dtMillis < SchedulerThresholdMillis) {
             publishFiltered(r.msg)
           } else {

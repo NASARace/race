@@ -16,7 +16,7 @@
  */
 package gov.nasa.race.uom
 
-import Date._
+import DateTime._
 import Time._
 
 /**
@@ -24,21 +24,21 @@ import Time._
   * this is a memory efficient way to store a time series that is limited to <= 24d
   */
 final class DeltaDateArray protected[uom] (protected[uom] val elapsed: TimeArray,
-                                           protected[uom] var date0: Date = UndefinedDate) {
-  class Iter extends Iterator[Date] {
+                                           protected[uom] var date0: DateTime = UndefinedDateTime) {
+  class Iter extends Iterator[DateTime] {
     private var i = 0
     def hasNext: Boolean = i < elapsed.length
-    def next: Date = {
+    def next: DateTime = {
       if (i >= elapsed.length) throw new NoSuchElementException
       val j = i
       i += 1
       date0 + elapsed(j) // should not allocate
     }
   }
-  class ReverseIter extends Iterator[Date] {
+  class ReverseIter extends Iterator[DateTime] {
     private var i = elapsed.length-1
     def hasNext: Boolean = i >= 0
-    def next: Date = {
+    def next: DateTime = {
       if (i <0) throw new NoSuchElementException
       val j = i
       i -= 1
@@ -58,7 +58,7 @@ final class DeltaDateArray protected[uom] (protected[uom] val elapsed: TimeArray
 
   @inline def apply(i: Int) = date0 + elapsed(i)
 
-  @inline def update(i:Int, d: Date): Unit = {
+  @inline def update(i:Int, d: DateTime): Unit = {
     if (date0.isUndefined) {
       date0 = d
       elapsed(i) = Time0
@@ -67,10 +67,10 @@ final class DeltaDateArray protected[uom] (protected[uom] val elapsed: TimeArray
     }
   }
 
-  @inline def iterator: Iterator[Date] = new Iter
-  @inline def reverseIterator: Iterator[Date] = new ReverseIter
+  @inline def iterator: Iterator[DateTime] = new Iter
+  @inline def reverseIterator: Iterator[DateTime] = new ReverseIter
 
-  def foreach(f: (Date)=>Unit): Unit = {
+  def foreach(f: (DateTime)=>Unit): Unit = {
     var i = 0
     while (i < elapsed.length) {
       f(date0 + elapsed(i))
@@ -117,22 +117,22 @@ final class DeltaDateArray protected[uom] (protected[uom] val elapsed: TimeArray
 }
 
 final class DeltaDateArrayBuffer protected[uom] (protected[uom] val elapsed: TimeArrayBuffer,
-                                                 protected[uom] var date0: Date = UndefinedDate) {
+                                                 protected[uom] var date0: DateTime = UndefinedDateTime) {
 
-  class Iter extends Iterator[Date] {
+  class Iter extends Iterator[DateTime] {
     private var i = 0
     def hasNext: Boolean = i < elapsed.size
-    def next: Date = {
+    def next: DateTime = {
       if (i >= elapsed.size) throw new NoSuchElementException
       val j = i
       i += 1
       date0 + elapsed(j) // should not allocate
     }
   }
-  class ReverseIter extends Iterator[Date] {
+  class ReverseIter extends Iterator[DateTime] {
     private var i = elapsed.size-1
     def hasNext: Boolean = i >= 0
-    def next: Date = {
+    def next: DateTime = {
       if (i <0) throw new NoSuchElementException
       val j = i
       i -= 1
@@ -140,16 +140,16 @@ final class DeltaDateArrayBuffer protected[uom] (protected[uom] val elapsed: Tim
     }
   }
 
-  def this(capacity: Int) = this(new TimeArrayBuffer(capacity), UndefinedDate)
+  def this(capacity: Int) = this(new TimeArrayBuffer(capacity), UndefinedDateTime)
 
   @inline def size: Int = elapsed.size
   @inline def isEmpty: Boolean = elapsed.isEmpty
   @inline def nonEmpty: Boolean = elapsed.nonEmpty
   override def clone: DeltaDateArrayBuffer = new DeltaDateArrayBuffer(elapsed.clone, date0)
 
-  @inline def startDate: Date = date0 // not necessarily the same as head (elements can be dropped)
+  @inline def startDate: DateTime = date0 // not necessarily the same as head (elements can be dropped)
 
-  @inline def += (d: Date): Unit = {
+  @inline def += (d: DateTime): Unit = {
     if (date0.isUndefined){
       date0 = d
       elapsed += Time0
@@ -157,13 +157,13 @@ final class DeltaDateArrayBuffer protected[uom] (protected[uom] val elapsed: Tim
       elapsed += date0 timeUntil d
     }
   }
-  @inline def append (ds: Date*): Unit = {
+  @inline def append (ds: DateTime*): Unit = {
     if (date0.isUndefined) date0 = ds.head
     ds.foreach( d => elapsed += date0 timeUntil d )
   }
 
-  @inline def apply(i:Int): Date = date0 + elapsed(i)
-  @inline def update(i:Int, d: Date): Unit = {
+  @inline def apply(i:Int): DateTime = date0 + elapsed(i)
+  @inline def update(i:Int, d: DateTime): Unit = {
     if (i < 0 || i >= elapsed.size) throw new IndexOutOfBoundsException(i.toString)
     if (date0.isUndefined){
       date0 = d
@@ -173,10 +173,10 @@ final class DeltaDateArrayBuffer protected[uom] (protected[uom] val elapsed: Tim
     }
   }
 
-  @inline def iterator: Iterator[Date] = new Iter
-  @inline def reverseIterator: Iterator[Date] = new ReverseIter
+  @inline def iterator: Iterator[DateTime] = new Iter
+  @inline def reverseIterator: Iterator[DateTime] = new ReverseIter
 
-  def foreach(f: (Date)=>Unit): Unit = {
+  def foreach(f: (DateTime)=>Unit): Unit = {
     var i = 0
     while (i < elapsed.size) {
       f(date0 + elapsed(i))
@@ -188,9 +188,9 @@ final class DeltaDateArrayBuffer protected[uom] (protected[uom] val elapsed: Tim
   @inline def take (n: Int): DeltaDateArrayBuffer = new DeltaDateArrayBuffer(elapsed.take(n),date0)
   @inline def drop (n: Int): DeltaDateArrayBuffer = new DeltaDateArrayBuffer(elapsed.drop(n),date0)
 
-  @inline def head: Date = date0 + elapsed.head
+  @inline def head: DateTime = date0 + elapsed.head
   @inline def tail: DeltaDateArrayBuffer = new DeltaDateArrayBuffer(elapsed.tail,date0)
-  @inline def last: Date = date0 + elapsed.last
+  @inline def last: DateTime = date0 + elapsed.last
 
   //def sort: Unit = SeqUtils.quickSort(elapsed)
 

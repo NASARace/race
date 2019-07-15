@@ -19,7 +19,7 @@ package gov.nasa.race.track
 
 import gov.nasa.race._
 import gov.nasa.race.trajectory.{Trajectory=>Traj}
-import org.joda.time.DateTime
+import gov.nasa.race.uom.DateTime
 
 /**
   * meta info for tracks, such as departure and arrival location and times, flight plans etc.

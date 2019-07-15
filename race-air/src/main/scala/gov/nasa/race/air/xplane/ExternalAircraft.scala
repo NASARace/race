@@ -22,7 +22,7 @@ import gov.nasa.race.geo.GeoPosition
 import gov.nasa.race.uom.Length._
 import gov.nasa.race.uom.{Angle, Speed}
 import gov.nasa.race.uom.Angle._
-import org.joda.time.DateTime
+import gov.nasa.race.uom.DateTime
 
 object ExternalAircraft {
   final val invisibleAltitude = Meters(50000.12345) // this is how we make aircraft disappear without crashing them
@@ -30,7 +30,7 @@ object ExternalAircraft {
   // use values that won't cause exceptions in X-Plane
   val noAircraft = new ExtendedFlightPos("*","*",GeoPosition(Degrees(0.1),Degrees(0.1),invisibleAltitude),
                                          Speed.Speed0,Angle.Angle0, Speed.Speed0,
-                                         new DateTime(0),0,Angle.Angle0,Angle.Angle0,"*")
+                                         DateTime.UndefinedDateTime,0,Angle.Angle0,Angle.Angle0,"*")
 
   val AnyLivery = "*"
 }
@@ -134,7 +134,7 @@ class ExtrapolatedAC (val idx: Int, val acType: String, val liveryName: String, 
     state(4) = newFPos.pitch.toDegrees
     state(5) = newFPos.roll.toDegrees
 
-    estimator.addObservation(state,newFPos.date.getMillis)
+    estimator.addObservation(state,newFPos.date.toMillis)
     hasChanged = true
   }
 

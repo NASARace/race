@@ -24,7 +24,7 @@ import com.typesafe.config.Config
 import gov.nasa.race.common.DenseRecordWriter
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.{Failure, Result, Success}
-import org.joda.time.DateTime
+import gov.nasa.race.uom.DateTime
 
 
 /**
@@ -54,7 +54,7 @@ class TrackRecordWriter(val config: Config) extends DenseRecordWriter[FloatTrack
           rec.setRecordIndex(recIndex)
           rec.id := track.id
           rec.cs := track.cs
-          rec.date := track.date.getMillis
+          rec.date := track.date.toMillis
 
           val pos = track.position
           rec.lat := pos.latDeg.toFloat
@@ -72,7 +72,7 @@ class TrackRecordWriter(val config: Config) extends DenseRecordWriter[FloatTrack
       }
   }
 
-  override def updateDate(date: DateTime) = buffer.putLong(dateOffset,date.getMillis)
+  override def updateDate(date: DateTime) = buffer.putLong(dateOffset,date.toMillis)
 
   override def updateRecCount = buffer.putInt(recCountOffset, recCount)
 

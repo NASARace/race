@@ -25,7 +25,7 @@ import gov.nasa.race.common.{DataStreamReader,DataStreamWriter}
 import gov.nasa.race.uom.Angle._
 import gov.nasa.race.uom.Length._
 import gov.nasa.race.uom.Speed._
-import org.joda.time.DateTime
+import gov.nasa.race.uom.DateTime
 
 import scala.collection.mutable.ArrayBuffer
 
@@ -140,7 +140,7 @@ class SimpleTrackReader extends DataStreamReader {
     new FlightPos(id, id,
       GeoPosition.fromDegreesAndMeters(latDeg, lonDeg, altM),
       MetersPerSecond(speedMS), Degrees(headingDeg), MetersPerSecond(vrMS),
-      new DateTime(timeMsec),flags)
+      DateTime.epochMillis(timeMsec),flags)
   }
 
   def readProximityMsg (dis: DataInputStream, list: ArrayBuffer[Any]) = {
@@ -168,7 +168,7 @@ class SimpleTrackReader extends DataStreamReader {
 
     val track = new FlightPos(trackId,trackId,GeoPosition(Degrees(trackLatDeg),Degrees(trackLonDeg),Meters(trackAltM)),
                               MetersPerSecond(trackSpdMS),Degrees(trackHdgDeg),MetersPerSecond(trackVrMS),
-                              new DateTime(tmsec))
+                              DateTime.epochMillis(tmsec))
 
     // we just use refId to identify the event - if clients need unique ids they have to re-identify
     ProximityEvent(refId,"proximity",ProximityReference(refId, track.date, GeoPosition.fromDegreesAndMeters(latDeg,lonDeg,altM)),
@@ -184,7 +184,7 @@ class SimpleTrackReader extends DataStreamReader {
     val id = dis.readUTF
     val flags = dis.readInt // TODO - we should use this to determine the type of drop
     val timeMsec = dis.readLong
-    TrackDropped(id,id,new DateTime(timeMsec))
+    TrackDropped(id,id,DateTime.epochMillis(timeMsec))
   }
 }
 
@@ -202,7 +202,7 @@ class SimpleTrackWriter extends DataStreamWriter {
     dos.writeUTF(t.cs)
     dos.writeInt(msgOrd)
     dos.writeInt(t.status)
-    dos.writeLong(t.date.getMillis)
+    dos.writeLong(t.date.toMillis)
     dos.writeDouble(latLonPos.φ.toDegrees)
     dos.writeDouble(latLonPos.λ.toDegrees)
     dos.writeDouble(latLonPos.altitude.toMeters)
@@ -227,7 +227,7 @@ class SimpleTrackWriter extends DataStreamWriter {
     pos = prox.position
 
     dos.writeUTF(prox.cs)
-    dos.writeLong(prox.date.getMillis)
+    dos.writeLong(prox.date.toMillis)
     dos.writeDouble(pos.φ.toDegrees)
     dos.writeDouble(pos.λ.toDegrees)
     dos.writeDouble(pos.altitude.toMeters)
@@ -241,7 +241,7 @@ class SimpleTrackWriter extends DataStreamWriter {
 
     dos.writeUTF(drop.cs)
     dos.writeInt(flags)
-    dos.writeLong(drop.date.getMillis)
+    dos.writeLong(drop.date.toMillis)
   }
 
   def write (dos: DataOutputStream, data: Any): Int = {

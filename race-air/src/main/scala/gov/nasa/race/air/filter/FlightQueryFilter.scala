@@ -22,10 +22,10 @@ import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.air._
 import gov.nasa.race.config.ConfigurableFilter
 import gov.nasa.race.track._
-import org.joda.time.DateTime
+import gov.nasa.race.uom.DateTime
 
 object StaticFlightQueryContext extends TrackQueryContext {
-  def queryDate = DateTime.now() // we don't model time
+  def queryDate: DateTime = DateTime.now // we don't model time
   def queryTrack(cs: String) = None // we don't have a source for flights
   def queryLocation(id: String) = Airport.allAirports.get(id)
   def reportQueryError(msg: String) = scala.sys.error(msg)
