@@ -21,7 +21,7 @@ import akka.pattern._
 import com.typesafe.config.Config
 import gov.nasa.race.test.RaceActorSpec
 import gov.nasa.race.config._
-import org.joda.time.DateTime
+import gov.nasa.race.uom.DateTime
 import org.scalatest.wordspec.AnyWordSpecLike
 import scala.concurrent.duration._
 import scala.collection.immutable.List

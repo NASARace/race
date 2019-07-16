@@ -21,7 +21,7 @@ import akka.event.Logging
 import gov.nasa.race.core.Messages._
 import gov.nasa.race.test.RaceActorSpec
 import gov.nasa.race.test.RaceActorSpec.Continue
-import org.joda.time.DateTime
+import gov.nasa.race.uom.DateTime
 import org.scalatest.wordspec.AnyWordSpecLike
 
 import scala.concurrent.duration._

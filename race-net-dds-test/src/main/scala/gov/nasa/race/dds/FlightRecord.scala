@@ -26,7 +26,7 @@ import gov.nasa.race.uom.Speed._
 import gov.nasa.race.uom.Angle._
 import gov.nasa.race.geo.GeoPosition
 import gov.nasa.race.util.DateTimeUtils._
-import org.joda.time.DateTime
+import gov.nasa.race.uom.DateTime
 
 
 import scala.language.implicitConversions

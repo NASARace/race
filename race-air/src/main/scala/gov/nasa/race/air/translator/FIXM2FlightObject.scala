@@ -100,7 +100,7 @@ class FIXM2FlightObject (val config: Config=NoConfig)
       //--- completed flights
       case "arrival" => if (parseAttribute("arrivalPoint")) arrivalPoint = value
       // it seems we always get arrival/runwayPositionAndTime/actual and flightStatus(COMPLETED) together
-      case "actual" if hasSomeParent("arrival") => arrivalDate = DateTime.parse(readAttribute("time"))
+      case "actual" if hasSomeParent("arrival") => arrivalDate = DateTime.parseYMDT(readAttribute("time"))
 
       case _ =>  // ignore
 

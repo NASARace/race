@@ -23,8 +23,7 @@ import gov.nasa.race.gis.{GisItem, GisItemDB, GisItemDBFactory}
 import gov.nasa.race.main.CliArgs
 import gov.nasa.race.uom.Length
 import gov.nasa.race.uom.Length._
-import gov.nasa.race.util.FileUtils
-import org.joda.time.DateTime
+import gov.nasa.race.uom.DateTime
 
 import scala.Console
 
@@ -94,7 +93,7 @@ object GisItemDBTool {
     }
 
     opt1("--date")("<dateSpec>", "date to be stored in generated DB"){ a=>
-      date = DateTime.parse(a)
+      date = DateTime.parseYMDT(a)
     }
 
     opt1("-x", "--xarg")("<argString>", "extra arguments to be passed to concrete DB factory"){ a=>

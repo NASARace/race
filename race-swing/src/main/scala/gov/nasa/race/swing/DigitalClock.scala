@@ -17,11 +17,10 @@
 
 package gov.nasa.race.swing
 
-import Reactors._
 import Style._
 import gov.nasa.race.common.Clock
 import scala.concurrent.duration._
-import org.joda.time.DateTime
+import gov.nasa.race.uom.DateTime
 import org.joda.time.format.DateTimeFormat
 import scala.swing.{Label, GridPanel}
 

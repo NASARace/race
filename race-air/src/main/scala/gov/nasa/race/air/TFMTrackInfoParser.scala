@@ -112,7 +112,7 @@ class TFMTrackInfoParser extends XmlParser[Seq[TrackInfo]] with XmlAttrProcessor
     processAttributes {
       case `tAttr` => tType = value
       case "timeValue" => if (value != null){
-        val date = DateTime.parse(value)
+        val date = DateTime.parseYMDT(value)
         tType match {
           case "ESTIMATED" => estimateAction(date)
           case "ACTUAL" => actualAction(date)

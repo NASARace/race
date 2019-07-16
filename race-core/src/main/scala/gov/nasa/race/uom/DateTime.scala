@@ -18,7 +18,6 @@ package gov.nasa.race.uom
 
 import java.time.{Instant, LocalDateTime, ZoneId, ZoneOffset, ZonedDateTime}
 import java.time.format.{DateTimeFormatter, TextStyle}
-import java.time.temporal.{ChronoField, TemporalAccessor, TemporalField, UnsupportedTemporalTypeException}
 import java.util.{Calendar, Locale, TimeZone}
 
 import gov.nasa.race._
@@ -52,16 +51,6 @@ object DateTime {
   def timeBetween (a: DateTime, b: DateTime): Time = {
     if (a.millis >= b.millis) new Time((a.millis - b.millis).toInt)
     else new Time((b.millis - a.millis).toInt)
-  }
-
-  /**
-    * parses textual representation of DateTime assuming ISO formatted string with optional time zone/offset
-    * TODO - this should use more forgiving RE based parsing
-    */
-  def parse(spec: String): DateTime = {
-    val dtf = DateTimeFormatter.ISO_DATE_TIME
-    val epochMillis = LocalDateTime.from(dtf.parse(spec)).atZone(ZoneOffset.UTC).toInstant().toEpochMilli()
-    new DateTime(epochMillis)
   }
 
   def parseLocal(spec: String, dtf: DateTimeFormatter): DateTime = {
@@ -100,8 +89,6 @@ object DateTime {
         calendar.setTimeZone(tz)
         calendar.set(yr,mon,d,h,m,s)
 
-        println(s"@@@ month: ${calendar.get(Calendar.MONTH)}")
-
         new DateTime(calendar.getTimeInMillis + ms)
       case _ => throw new RuntimeException(s"invalid date spec: $spec")
     }
@@ -135,6 +122,12 @@ class DateTime protected[uom](val millis: Long) extends AnyVal with Ordered[Date
   def toMillis: Long = millis
   @inline def toLocalMillis: Long = (millis + LocalOffsetMillis)
 
+  def getCalendarUTC: Calendar = {
+    val cal = Calendar.getInstance(GMTTimeZone)
+    cal.setTimeInMillis(millis)
+    cal
+  }
+
   def toDateTime: JodaDateTime = {
     if (millis != UNDEFINED_DATE) new JodaDateTime(millis)
     else throw new DateException("undefined Date value")
@@ -151,9 +144,13 @@ class DateTime protected[uom](val millis: Long) extends AnyVal with Ordered[Date
 
   // TODO use Calendar.getInstance(GMTZone).setTimeInMillis(millis).get(Calendar.XX) to extract
 
-  def yearUTC: Int = isoChronoUTC.year.get(millis)
-  def monthUTC: Int = isoChronoUTC.monthOfYear.get(millis)
-  def dayUTC: Int = isoChronoUTC.dayOfMonth.get(millis)
+  def yearUTC: Int = getCalendarUTC.get(Calendar.YEAR)
+  def monthUTC: Int = getCalendarUTC.get(Calendar.MONTH)
+  def dayUTC: Int = getCalendarUTC.get(Calendar.DAY_OF_MONTH)
+  def getYMD: (Int,Int,Int) = {
+    val cal = getCalendarUTC
+    (cal.get(Calendar.YEAR), cal.get(Calendar.MONTH), cal.get(Calendar.DAY_OF_MONTH))
+  }
 
   def year(zone: DateTimeZone): Int = ISOChronology.getInstance(zone).year.get(millis)
   def month(zone: DateTimeZone): Int = ISOChronology.getInstance(zone).monthOfYear.get(millis)
@@ -209,11 +206,16 @@ class DateTime protected[uom](val millis: Long) extends AnyVal with Ordered[Date
   }
 
   def toYMDTString: String = {
-    f"$yearUTC%4d/$monthUTC%02d/$dayUTC%02dT$hour%02d:$minutes%02d:$seconds%02d.$milliseconds%03d Z"
+    val (year,month,day) = getYMD
+    f"$year%4d/$month%02d/$day%02dT$hour%02d:$minutes%02d:$seconds%02d.$milliseconds%03d Z"
   }
 
   def toTString: String = {
     f"$hour%02d:$minutes%02d:$seconds%02d.$milliseconds%03d"
+  }
+
+  def toHMSString: String = {
+    f"$hour%02d:$minutes%02d:$seconds%02d"
   }
 
   //.. and possibly more formatters

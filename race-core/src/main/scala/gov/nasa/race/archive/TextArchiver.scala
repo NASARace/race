@@ -60,7 +60,7 @@ class TextArchiveReader(val iStream: InputStream, val pathName:String="<unknown>
         case null => return None
 
         case beginMarkerRE(dtg) =>
-          val date = getDate(DateTime.parse(dtg))
+          val date = getDate(DateTime.parseYMDT(dtg))
           buf.setLength(0)
           while (true) {
             br.readLine match {

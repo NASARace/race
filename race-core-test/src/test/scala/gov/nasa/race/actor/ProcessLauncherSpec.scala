@@ -19,7 +19,7 @@ package gov.nasa.race.actor
 
 import akka.event.Logging
 import gov.nasa.race.test.RaceActorSpec
-import org.joda.time.DateTime
+import gov.nasa.race.uom.DateTime
 import org.scalatest.wordspec.AnyWordSpecLike
 
 import scala.util.Properties

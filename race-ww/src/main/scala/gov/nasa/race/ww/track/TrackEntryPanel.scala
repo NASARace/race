@@ -19,9 +19,8 @@ package gov.nasa.race.ww.track
 import gov.nasa.race._
 import gov.nasa.race.swing.FieldPanel
 import gov.nasa.race.track.{TrackInfo, TrackedObject}
-import gov.nasa.race.util.DateTimeUtils._
 import gov.nasa.race.ww.InteractiveLayerObjectPanel
-import org.joda.time.DateTime
+import gov.nasa.race.uom.DateTime
 
 
 class TrackFields[T <: TrackedObject] extends FieldPanel {
@@ -42,7 +41,7 @@ class TrackFields[T <: TrackedObject] extends FieldPanel {
 
   def update (obj: T): Unit = {
     cs.text = obj.cs
-    date.text = hhmmss.print(obj.date)
+    date.text = obj.date.toHMSString
     val opos = obj.position
     pos.text = f"${opos.latDeg}%.6f° , ${opos.lonDeg}%.6f°"
     alt.text = f"${opos.altFeet}%d ft"
@@ -53,7 +52,7 @@ class TrackFields[T <: TrackedObject] extends FieldPanel {
 
   def setTrackInfo (ti: TrackInfo): Unit = {
     def optString(opt: Option[String]): String = if (opt.isDefined) opt.get else "…"
-    def optDate(opt: Option[DateTime]): String = if (opt.isDefined) hhmmss.print(opt.get) else "…"
+    def optDate(opt: Option[DateTime]): String = if (opt.isDefined) opt.get.toHMSString else "…"
 
     dep.text = s"${optString(ti.departurePoint)}  ${optDate(ti.etd)} / ${optDate(ti.atd)}"
     arr.text = s"${optString(ti.arrivalPoint)}  ${optDate(ti.eta)} / ${optDate(ti.ata)}"

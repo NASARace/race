@@ -116,7 +116,7 @@ abstract class DateFieldDWArchiveReader (iStream: InputStream, hdrStart: String,
 
   override def readDateTime(cs: Array[Char], i0: Int, i1: Int) = {
       val i = fieldPattern.indexOfFirst(cs, i0 + hdrStart.length, i1)
-      if (i >= 0) DateTime.parse(readWord(cs,i+fieldPattern.length,i1)) else DateTime.UndefinedDateTime
+      if (i >= 0) DateTime.parseYMDT(readWord(cs,i+fieldPattern.length,i1)) else DateTime.UndefinedDateTime
   }
 }
 

@@ -107,7 +107,7 @@ class TfmDataService2TFMTracks(val config: Config=NoConfig) extends XmlPullParse
               if (parseTrimmedText()) speed = UsMilesPerHour(text.toDouble)
             case "nxce:simpleAltitude" if isTrackInfo & hasSomeParent("nxcm:reportedAltitude") =>
               if (parseTrimmedText()) alt = readAlt
-            case "nxcm:timeAtPosition" if isTrackInfo => date = DateTime.parse(readText())
+            case "nxcm:timeAtPosition" if isTrackInfo => date = DateTime.parseYMDT(readText())
             case "nxce:latitudeDMS" if isTrackInfo => lat = readDMS
             case "nxce:longitudeDMS" if isTrackInfo => lon = readDMS
 
@@ -117,7 +117,7 @@ class TfmDataService2TFMTracks(val config: Config=NoConfig) extends XmlPullParse
               // we could get the airport location here
             case "nxcm:eta" if hasParent("nxcm:airlineData") =>
               if (readAttribute("etaType") == "ACTUAL") {
-                if (date.isUndefined) date = DateTime.parse(readAttribute("timeValue"))
+                if (date.isUndefined) date = DateTime.parseYMDT(readAttribute("timeValue"))
                 if (lat.isUndefined) lat = Angle0
                 if (lon.isUndefined) lon = Angle0
               }
@@ -128,7 +128,7 @@ class TfmDataService2TFMTracks(val config: Config=NoConfig) extends XmlPullParse
               var lon = readDoubleAttribute("longitudeDecimal")
               nextWP = GeoPosition.fromDegrees(lat,lon)
             case "nxcm:eta" if isTrackInfo & hasParent("nxcm:ncsmTrackData") =>
-              nextWPDate = DateTime.parse(readAttribute("timeValue"))
+              nextWPDate = DateTime.parseYMDT(readAttribute("timeValue"))
             case other => // ignore
           }
         } else { // end element

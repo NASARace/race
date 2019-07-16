@@ -27,7 +27,7 @@ import com.typesafe.config.{Config, ConfigFactory, ConfigValueFactory}
 import gov.nasa.race.common.Status._
 import gov.nasa.race.core.Messages._
 import gov.nasa.race.core.{Bus, MasterActor, RaceActor, RaceActorSystem, TimedOut, _}
-import org.joda.time.DateTime
+import gov.nasa.race.uom.DateTime
 import org.scalatest.BeforeAndAfterAll
 
 import scala.collection.immutable.ListMap
