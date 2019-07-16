@@ -88,7 +88,7 @@ class FIXM2FlightObject (val config: Config=NoConfig)
 
       //--- enRoute info
       case "position" if hasParent("enRoute") =>
-        if (parseAttribute("positionTime")) date = DateTime.parse(value)
+        if (parseAttribute("positionTime")) date = DateTime.parseYMDT(value)
       case "pos" if hasParent("location") =>
         lat = readDouble
         lon = readNextDouble

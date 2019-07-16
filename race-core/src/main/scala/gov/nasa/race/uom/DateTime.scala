@@ -100,6 +100,8 @@ object DateTime {
         calendar.setTimeZone(tz)
         calendar.set(yr,mon,d,h,m,s)
 
+        println(s"@@@ month: ${calendar.get(Calendar.MONTH)}")
+
         new DateTime(calendar.getTimeInMillis + ms)
       case _ => throw new RuntimeException(s"invalid date spec: $spec")
     }
@@ -109,12 +111,18 @@ object DateTime {
   @inline def now: DateTime = new DateTime(System.currentTimeMillis)
   @inline def epochMillis(millis: Long) = new DateTime(millis)
 
+  //--- constants
+
   val Date0 = new DateTime(0)
   val UndefinedDateTime = new DateTime(UNDEFINED_DATE)
 
   val LocalOffsetMillis: Long = ZonedDateTime.now.getOffset.getTotalSeconds * 1000
   val LocalOffsetHours: Int = ZonedDateTime.now.getOffset.getTotalSeconds / 3600
   val LocalZoneID: String = ZoneId.systemDefault.getDisplayName(TextStyle.SHORT,Locale.getDefault)
+  val LocalTimeZone: TimeZone = TimeZone.getTimeZone(LocalZoneID)
+
+  val GMTTimeZone: TimeZone = TimeZone.getTimeZone("GMT")
+  val GMTZoneID: ZoneId = GMTTimeZone.toZoneId
 }
 import DateTime._
 
@@ -140,6 +148,8 @@ class DateTime protected[uom](val millis: Long) extends AnyVal with Ordered[Date
     if (millis != UNDEFINED_DATE) d.setMillis(millis)
     else throw new DateException("undefined Date value")
   }
+
+  // TODO use Calendar.getInstance(GMTZone).setTimeInMillis(millis).get(Calendar.XX) to extract
 
   def yearUTC: Int = isoChronoUTC.year.get(millis)
   def monthUTC: Int = isoChronoUTC.monthOfYear.get(millis)
@@ -184,7 +194,7 @@ class DateTime protected[uom](val millis: Long) extends AnyVal with Ordered[Date
   @inline override def >= (o: DateTime): Boolean = millis >= o.millis
   def compare (other: DateTime): Int = millis.compare(other.millis)
 
-  override def toString: String = showDate
+  override def toString: String = toYMDTString
   def showTTime: String = if (millis != UNDEFINED_DATE) DateTimeUtils.toISODateString(millis) else "<undefined>"
   def showDate: String = if (millis != UNDEFINED_DATE) DateTimeUtils.toISODateString(millis) else "<undefined>"
   def showHHMMSSZ: String = {
@@ -195,7 +205,15 @@ class DateTime protected[uom](val millis: Long) extends AnyVal with Ordered[Date
 
   def toString(fmtSpec: String): String = {
     val fmt = DateTimeFormatter.ofPattern(fmtSpec)
-    fmt.format(Instant.ofEpochMilli(millis))
+    fmt.format(Instant.ofEpochMilli(millis).atZone(GMTZoneID))
+  }
+
+  def toYMDTString: String = {
+    f"$yearUTC%4d/$monthUTC%02d/$dayUTC%02dT$hour%02d:$minutes%02d:$seconds%02d.$milliseconds%03d Z"
+  }
+
+  def toTString: String = {
+    f"$hour%02d:$minutes%02d:$seconds%02d.$milliseconds%03d"
   }
 
   //.. and possibly more formatters
