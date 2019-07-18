@@ -73,7 +73,7 @@ class TrackStatsSourceEntry(val source: Option[String]) {
 
   def checkExpirations (ts: TrackStats, simMillis: Long, dropAfterMillis: Long): Unit = {
     completions.foreach { e =>
-      if (simMillis - e._2.toMillis > dropAfterMillis){
+      if (simMillis - e._2.toEpochMillis > dropAfterMillis){
         completions -= e._1
       }
     }
@@ -82,7 +82,7 @@ class TrackStatsSourceEntry(val source: Option[String]) {
       val cs = e._1
       val track = e._2
 
-      if ((simMillis - track.date.toMillis) >= dropAfterMillis) {
+      if ((simMillis - track.date.toEpochMillis) >= dropAfterMillis) {
         if (!completions.contains(cs)) {
           ts.nDropped += 1
         }
@@ -118,7 +118,7 @@ class TrackStatsSourceEntry(val source: Option[String]) {
         } else {
           // check blackout violation
           ifSome(completions.get(cs)) { completionDate =>
-            if (track.date.toMillis - completionDate.toMillis <= dropAfterMillis) {
+            if (track.date.toEpochMillis - completionDate.toEpochMillis <= dropAfterMillis) {
               ts.nBlackout += 1
             }
           }

@@ -93,7 +93,7 @@ object Angle {
 }
 import Angle._
 
-class Angle protected[uom] (val d: Double) extends AnyVal with Definable[Angle] {
+class Angle protected[uom] (val d: Double) extends AnyVal with MaybeUndefined {
 
   //---  Double converters
   @inline def toRadians: Double = d
@@ -118,15 +118,17 @@ class Angle protected[uom] (val d: Double) extends AnyVal with Definable[Angle] 
     Math.abs(normalizeRadians(normalizeRadians(d) - normalizeRadians(x.d))) <= tolerance.d
   }
 
+  // use only for sub-range
   @inline def < (x: Angle) = d < x.d
   @inline def > (x: Angle) = d > x.d
+
   @inline def =:= (x: Angle) = d == x.d // use this if you really mean equality
   @inline def ≡ (x: Angle) = d == x.d
   // we intentionally omit ==, <=, >=
 
   //-- undefined value handling (value based alternative for finite cases that would otherwise require Option)
-  @inline def isDefined = !d.isNaN
-  @inline def compare (other: Length): Int = d compare other.d
+  @inline override def isDefined = !d.isNaN
+  @inline override def isUndefined = d.isNaN
 
   //--- string converters
   override def toString = show // NOTE - calling this will cause allocation, use 'show'

@@ -44,7 +44,7 @@ object DateTimeUtils {
 
   @inline def toHHMMSS(d: FiniteDuration): (Int, Int, Int) = (d.toHours.toInt, (d.toMinutes % 60).toInt, (d.toSeconds % 60).toInt)
 
-  @inline def formatDate (d: DateTime, formatter: DateTimeFormatter): String = formatter.print(d.toMillis)
+  @inline def formatDate (d: DateTime, formatter: DateTimeFormatter): String = formatter.print(d.toEpochMillis)
 
   def durationMillisToHMMSS (millis: Long): String = {
     val s = ((millis / 1000) % 60).toInt

@@ -83,7 +83,7 @@ class GenericTrackPairEventFields extends TrackPairEventFields {
     id.text = e.id
     etype.text = e.eventType
     details.text = e.eventDetails
-    time.text = hhmmss.print(e.date)
+    time.text = e.date.format_Hms
 
     track1.text = e.track1.cs
     pos1.text = f"${e.pos1.latDeg}%.6f°   ${e.pos1.lonDeg}%.6f°"
@@ -294,7 +294,7 @@ class TrackPairEventEntry(val event: TrackPairEvent, val layer: TrackPairEventLa
   override def wwPosition: WWPosition = {
     Position.fromDegrees(event.position.latDeg, event.position.lonDeg, event.position.altMeters)
   }
-  override def displayName: String = s"${event.id}\n${hhmmss.print(event.date)}\n${event.eventType}"
+  override def displayName: String = s"${event.id}\n${event.date.format_Hms}\n${event.eventType}"
 
   //--- label and info text creation
   override def labelText: String = event.id

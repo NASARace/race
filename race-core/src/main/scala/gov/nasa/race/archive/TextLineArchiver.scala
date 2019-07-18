@@ -81,7 +81,7 @@ class HexEpochLineArchiveWriter(val oStream: OutputStream, val pathName: String 
   }
 
   override def write(date: DateTime, obj: Any): Boolean = {
-    longToHexCharBytes(buf, date.toMillis)
+    longToHexCharBytes(buf, date.toEpochMillis)
     oStream.write(buf)
     oStream.write(obj.toString.getBytes)
     oStream.write('\n')

@@ -75,7 +75,7 @@ object TextArchiveExtractor {
     while (ar.hasMoreData) {
       ar.readNextEntry match {
         case Some(e) =>
-          val dateMillis = e.date.toMillis
+          val dateMillis = e.date.toEpochMillis
           val msg = e.msg.toString
 
           if (dateMillis >= opts.startTime && dateMillis <= opts.endTime) {

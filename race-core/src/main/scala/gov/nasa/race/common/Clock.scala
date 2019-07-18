@@ -47,14 +47,14 @@ class Clock (initTime: DateTime = DateTime.now,
   def end = _end
   def initMillis = _initMillis
   @inline def stoppedAt = _stoppedAt
-  def baseMillis = _base.toMillis
+  def baseMillis = _base.toEpochMillis
   def endMillis = endTimeMillis
 
   @inline def isStopped = _stoppedAt != 0
 
 
   /** simulation time milliseconds */
-  @inline def millis: Long = _base.toMillis + ((currentMillis - _initMillis) * _timeScale).toLong
+  @inline def millis: Long = _base.toEpochMillis + ((currentMillis - _initMillis) * _timeScale).toLong
 
   /** simulation time DateTime */
   def dateTime: DateTime = _base + Time.Milliseconds(((currentMillis - _initMillis) * _timeScale))
@@ -67,7 +67,7 @@ class Clock (initTime: DateTime = DateTime.now,
 
   /** wallclock time for given sim time */
   def wallTime (simTime: DateTime): DateTime = {
-    DateTime.now + Time.Milliseconds(((simTime.toMillis - millis)/_timeScale))
+    DateTime.now + Time.Milliseconds(((simTime.toEpochMillis - millis)/_timeScale))
   }
 
   /** wallclock time for given sim duration */
@@ -78,11 +78,11 @@ class Clock (initTime: DateTime = DateTime.now,
   def wallEndTime: Option[DateTime] = _end.map(wallTime)
 
   def endTimeMillis: Long = _end match {
-    case Some(date) => date.toMillis
+    case Some(date) => date.toEpochMillis
     case None => Long.MaxValue
   }
 
-  def exceedsEndTime (d: DateTime): Boolean = d.toMillis > endTimeMillis
+  def exceedsEndTime (d: DateTime): Boolean = d.toEpochMillis > endTimeMillis
 
   def save = clone.asInstanceOf[Clock]
 }

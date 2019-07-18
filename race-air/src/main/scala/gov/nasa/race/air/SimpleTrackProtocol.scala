@@ -202,7 +202,7 @@ class SimpleTrackWriter extends DataStreamWriter {
     dos.writeUTF(t.cs)
     dos.writeInt(msgOrd)
     dos.writeInt(t.status)
-    dos.writeLong(t.date.toMillis)
+    dos.writeLong(t.date.toEpochMillis)
     dos.writeDouble(latLonPos.φ.toDegrees)
     dos.writeDouble(latLonPos.λ.toDegrees)
     dos.writeDouble(latLonPos.altitude.toMeters)
@@ -227,7 +227,7 @@ class SimpleTrackWriter extends DataStreamWriter {
     pos = prox.position
 
     dos.writeUTF(prox.cs)
-    dos.writeLong(prox.date.toMillis)
+    dos.writeLong(prox.date.toEpochMillis)
     dos.writeDouble(pos.φ.toDegrees)
     dos.writeDouble(pos.λ.toDegrees)
     dos.writeDouble(pos.altitude.toMeters)
@@ -241,7 +241,7 @@ class SimpleTrackWriter extends DataStreamWriter {
 
     dos.writeUTF(drop.cs)
     dos.writeInt(flags)
-    dos.writeLong(drop.date.toMillis)
+    dos.writeLong(drop.date.toEpochMillis)
   }
 
   def write (dos: DataOutputStream, data: Any): Int = {

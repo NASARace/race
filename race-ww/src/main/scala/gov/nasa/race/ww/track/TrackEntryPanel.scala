@@ -41,7 +41,7 @@ class TrackFields[T <: TrackedObject] extends FieldPanel {
 
   def update (obj: T): Unit = {
     cs.text = obj.cs
-    date.text = obj.date.toHMSString
+    date.text = obj.date.format_Hms
     val opos = obj.position
     pos.text = f"${opos.latDeg}%.6f° , ${opos.lonDeg}%.6f°"
     alt.text = f"${opos.altFeet}%d ft"
@@ -52,7 +52,7 @@ class TrackFields[T <: TrackedObject] extends FieldPanel {
 
   def setTrackInfo (ti: TrackInfo): Unit = {
     def optString(opt: Option[String]): String = if (opt.isDefined) opt.get else "…"
-    def optDate(opt: Option[DateTime]): String = if (opt.isDefined) opt.get.toHMSString else "…"
+    def optDate(opt: Option[DateTime]): String = if (opt.isDefined) opt.get.format_Hms else "…"
 
     dep.text = s"${optString(ti.departurePoint)}  ${optDate(ti.etd)} / ${optDate(ti.atd)}"
     arr.text = s"${optString(ti.arrivalPoint)}  ${optDate(ti.eta)} / ${optDate(ti.ata)}"

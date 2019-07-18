@@ -17,13 +17,19 @@
 package gov.nasa.race.uom
 
 import Length._
+import gov.nasa.race.MaybeUndefined
 
 /**
   * area quantities
   * underlying unit is square meter
+  *
+  * TODO - still needs lots of conversions
   */
 object Area {
   final implicit val εArea = SquareMeters(1e-10)
+
+  final val UndefinedArea = new Area(Double.NaN)
+  final val Area0 = new Area(0.0)
 
   //--- constructors
   def SquareMeters (d: Double) = new Area(d)
@@ -40,7 +46,8 @@ object Area {
   * derived unit for squared lengths
   * basis is m²
   */
-class Area protected[uom] (val d: Double) extends AnyVal {
+class Area protected[uom] (val d: Double) extends AnyVal
+                                   with Ordered[Area] with MaybeUndefined {
 
   @inline def toSquareMeters: Double = d
 
@@ -55,12 +62,18 @@ class Area protected[uom] (val d: Double) extends AnyVal {
   @inline def ~= (x: Area)(implicit εArea: Area) = Math.abs(d - x.d) <= εArea.d
   @inline def within (x: Area, tolerance: Area) = Math.abs(d - x.d) <= tolerance.d
 
-  @inline def < (x: Area) = d < x.d
-  @inline def > (x: Area) = d > x.d
-  @inline def =:= (x: Area) = d == x.d
-  @inline def ≡ (x: Area) = d == x.d
+  @inline def =:= (x: Area): Boolean = d == x.d
+  @inline def ≡ (x: Area): Boolean = d == x.d
 
-  @inline def compare (other: Length): Int = d compare other.d
+  @inline override def < (x: Area): Boolean = d < x.d
+  @inline override def <= (x: Area): Boolean = d <= x.d
+  @inline override def > (x: Area): Boolean = d > x.d
+  @inline override def >= (x: Area): Boolean = d >= x.d
+  @inline override def compare (other: Area): Int = if (d > other.d) 1 else if (d < other.d) -1 else 0
+  @inline override def compareTo (other: Area): Int = compare(other)
+
+  @inline override def isDefined: Boolean = !d.isNaN
+  @inline override def isUndefined: Boolean = d.isNaN
 
   // we intentionally omit ==, <=, >=
 

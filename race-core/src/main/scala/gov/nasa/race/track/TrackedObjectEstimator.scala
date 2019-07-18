@@ -92,7 +92,7 @@ class TrackedObjectExtrapolator extends TrackedObjectEstimator {
   override def speed = MetersPerSecond(state(4))
 
   override def addObservation (obs: TrackedObject) = {
-    val obsMillis = obs.date.toMillis
+    val obsMillis = obs.date.toEpochMillis
 
     // TODO - we should add some consistency checks here
     if (obsMillis > estimator.lastObservationMillis) {

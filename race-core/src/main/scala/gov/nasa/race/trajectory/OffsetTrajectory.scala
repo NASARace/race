@@ -62,7 +62,7 @@ trait OffsetTraj extends ArrayTraj[OffsetTraj] {
     alts = alts.grow(newCapacity)
   }
 
-  def getDateMillis(i: Int): Long = ts(i).toMillis
+  def getDateMillis(i: Int): Long = ts(i).toEpochMillis
 
   protected def update(i: Int, date: DateTime, lat: Angle, lon: Angle, alt: Length): Unit = {
     ts(i) = date
@@ -81,7 +81,7 @@ trait OffsetTraj extends ArrayTraj[OffsetTraj] {
   }
 
   override def getTDP3 (i: Int, p: TDP3): TDP3 = {
-    p.set(ts(i).toMillis, lats(i).toDegrees, lons(i).toDegrees, alts(i).toMeters)
+    p.set(ts(i).toEpochMillis, lats(i).toDegrees, lons(i).toDegrees, alts(i).toMeters)
   }
 
   protected def updateUOMArrayElements (i: Int, destIdx: Int,

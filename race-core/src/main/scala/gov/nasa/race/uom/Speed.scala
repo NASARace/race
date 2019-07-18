@@ -65,7 +65,8 @@ object Speed {
 
 import Speed._
 
-class Speed protected[uom] (val d: Double) extends AnyVal with Definable[Speed] {
+class Speed protected[uom] (val d: Double) extends AnyVal
+                                             with Ordered[Speed] with MaybeUndefined {
 
   @inline def toMetersPerSecond: Double = d
   @inline def toKnots: Double = d / MetersPerSecInKnot
@@ -85,23 +86,25 @@ class Speed protected[uom] (val d: Double) extends AnyVal with Definable[Speed] 
   @inline def * (t: FiniteDuration) = new Length((d * t.toMicros)/1e6)
   @inline def / (t: FiniteDuration) = new Acceleration((d / t.toMicros)*1e6)
 
-  @inline def ≈ (x: Speed)(implicit εSpeed: Speed) = Math.abs(d - x.d) <= εSpeed.d
-  @inline def ~= (x: Speed)(implicit εSpeed: Speed) = Math.abs(d - x.d) <= εSpeed.d
-  @inline def within (x: Speed, distance: Speed) = Math.abs(d - x.d) <= distance.d
+  @inline def ≈ (x: Speed)(implicit εSpeed: Speed): Boolean = Math.abs(d - x.d) <= εSpeed.d
+  @inline def ~= (x: Speed)(implicit εSpeed: Speed): Boolean = Math.abs(d - x.d) <= εSpeed.d
+  @inline def within (x: Speed, distance: Speed): Boolean = Math.abs(d - x.d) <= distance.d
 
-  @inline def < (x: Speed) = d < x.d
-  @inline def <= (x: Speed) = d <= x.d
-  @inline def > (x: Speed) = d > x.d
-  @inline def >= (x: Speed) = d >= x.d
-  @inline def =:= (x: Speed) = d == x.d  // use this if you really mean equality
-  @inline def ≡ (x: Speed) = d == x.d
+  @inline def =:= (x: Speed): Boolean = d == x.d  // use this if you really mean equality
+  @inline def ≡ (x: Speed): Boolean = d == x.d
 
-  @inline def compare (other: Length): Int = d compare other.d
+  @inline override def < (x: Speed): Boolean = d < x.d
+  @inline override def <= (x: Speed): Boolean = d <= x.d
+  @inline override def > (x: Speed): Boolean = d > x.d
+  @inline override def >= (x: Speed): Boolean = d >= x.d
+  @inline override def compare (other: Speed): Int = if (d > other.d) 1 else if (d < other.d) -1 else 0
+  @inline override def compareTo (other: Speed): Int = compare(other)
 
   // we intentionally omit ==, <=, >=
 
   //-- undefined value handling (value based alternative for finite cases that would otherwise require Option)
-  @inline def isDefined = !d.isNaN
+  @inline override def isDefined: Boolean = !d.isNaN
+  @inline override def isUndefined: Boolean = d.isNaN
 
   override def toString = show
   def show = s"${d}m/s"

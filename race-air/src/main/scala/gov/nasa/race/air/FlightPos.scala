@@ -128,14 +128,14 @@ class FlightPosArchiveWriter (val oStream: OutputStream, val pathName: String="<
     ps.print(fpos.speed.toUsMilesPerHour); ps.print(',')
     ps.print(fpos.heading.toDegrees); ps.print(',')
     ps.print(fpos.vr.toFeetPerMinute); ps.print(',')
-    ps.print(fpos.date.toMillis);  ps.print(',')
+    ps.print(fpos.date.toEpochMillis);  ps.print(',')
     ps.print(fpos.status)
   }
 
   override def write(date: DateTime, obj: Any): Boolean = {
     obj match {
       case fpos: FlightPos =>
-        ps.print(date.toMillis)
+        ps.print(date.toEpochMillis)
         ps.print(',')
         writeFlightPos(fpos)
         ps.println()
@@ -159,7 +159,7 @@ class ExtendedFlightPosArchiveWriter (oStream: OutputStream, pathName: String) e
   override def write(date: DateTime, obj: Any): Boolean = {
     obj match {
       case xfpos: ExtendedFlightPos =>
-        ps.print(date.toMillis); ps.print(',')
+        ps.print(date.toEpochMillis); ps.print(',')
         writeExtendedFlightPos(xfpos); ps.println()
         true
       case _ => false

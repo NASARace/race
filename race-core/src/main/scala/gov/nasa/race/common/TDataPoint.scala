@@ -34,7 +34,7 @@ trait TDataPoint[N<:Nat] {
   def clear: Unit
 
   def date: DateTime = DateTime.epochMillis(millis)
-  def setDate(date: DateTime): Unit = millis = date.toMillis
+  def setDate(date: DateTime): Unit = millis = date.toEpochMillis
   def getTime: Long = millis
   def setTime(millis: Long): Unit = this.millis = millis
 

@@ -47,7 +47,7 @@ class FlightPosHeadingChecker (config: Config) extends FlightPosChecker {
       Some(TrackProblem(fpos, lastFPos, s"callsign collision ${fpos.cs} (id1=${fpos.id},id2=${lastFPos.id})"))
 
     } else {
-      val dt = (fpos.date.toMillis - lastFPos.date.toMillis) / 1000.0 // fractional seconds
+      val dt = (fpos.date.toEpochMillis - lastFPos.date.toEpochMillis) / 1000.0 // fractional seconds
 
       if (dt < 0) { // stale position
         Some(TrackProblem(fpos, lastFPos, s"stale position for ${fpos.cs} (dt=$dt)"))

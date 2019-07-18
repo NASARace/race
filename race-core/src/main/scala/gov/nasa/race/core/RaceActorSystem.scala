@@ -232,7 +232,7 @@ class RaceActorSystem(val config: Config) extends LogController with VerifiableA
 
   def scheduleStart(date: DateTime) = {
     info(s"scheduling start of universe $name at $date")
-    val dur = FiniteDuration(date.toMillis - System.currentTimeMillis(), MILLISECONDS)
+    val dur = FiniteDuration(date.toEpochMillis - System.currentTimeMillis(), MILLISECONDS)
     system.scheduler.scheduleOnce(dur, new Runnable {
       override def run: Unit = {
         startActors
@@ -241,7 +241,7 @@ class RaceActorSystem(val config: Config) extends LogController with VerifiableA
   }
   def scheduleTermination(date: DateTime) = {
     info(s"scheduling termination of universe $name at $date")
-    val dur = FiniteDuration(date.toMillis - System.currentTimeMillis(), MILLISECONDS)
+    val dur = FiniteDuration(date.toEpochMillis - System.currentTimeMillis(), MILLISECONDS)
     system.scheduler.scheduleOnce(dur, new Runnable {
       override def run: Unit = terminate
     })

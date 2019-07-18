@@ -195,7 +195,7 @@ class DynamicProximityActor (val config: Config) extends ProximityActor {
       val tId = track.cs
 
       if (tId != re.track.cs) {  // don't try to be a proximity to yourself
-        if (re.estimateState(track.date.toMillis)) {
+        if (re.estimateState(track.date.toEpochMillis)) {
           val dist = getDistanceInMeters(track)
 
           if ((dist <= distanceInMeters) && !track.isDroppedOrCompleted) {
@@ -214,7 +214,7 @@ class DynamicProximityActor (val config: Config) extends ProximityActor {
 
     override def dropProximity (tId: String, date: DateTime) = {
       ifSome(proximities.get(tId)) { track =>
-        if (refEstimator.estimateState(date.toMillis)) {
+        if (refEstimator.estimateState(date.toEpochMillis)) {
           val dist = getDistanceInMeters(track)
           proximities -= tId
           publish(createProximityEvent(new ProximityReference(refEstimator, date), Meters(dist), ProxDrop, track))
@@ -282,7 +282,7 @@ class CollisionDetector (config: Config) extends DynamicProximityActor(config) {
       val tcs = track.cs
 
       if (tcs != re.track.cs) { // don't try to be a proximity to yourself
-        if (re.estimateState(track.date.toMillis)) {
+        if (re.estimateState(track.date.toEpochMillis)) {
           val dist = getDistanceInMeters(track)
           if (dist <= distanceInMeters) {
             if (!collisions.contains(tcs)) {

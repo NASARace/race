@@ -51,7 +51,7 @@ class TrajectoryPoint (val date: DateTime, val position: GeoPosition) extends Tr
   def this (t: DateTime, lat: Angle, lon: Angle, alt: Length) = this(t, LatLonPos(lat,lon,alt))
 
   def setTDataPoint3(p: TDataPoint3): Unit = {
-    p.set(date.toMillis, position.latDeg, position.lonDeg, position.altMeters)
+    p.set(date.toEpochMillis, position.latDeg, position.lonDeg, position.altMeters)
   }
 }
 
@@ -69,7 +69,7 @@ class MutTrajectoryPoint (var date: DateTime, val position: MutLatLonPos) extend
   }
 
   def updateTDataPoint3(p: TDataPoint3): Unit = {
-    p.set(date.toMillis, position.latDeg, position.lonDeg, position.altMeters)
+    p.set(date.toEpochMillis, position.latDeg, position.lonDeg, position.altMeters)
   }
 
   def toTrajectoryPoint: TrajectoryPoint = new TrajectoryPoint(date, position.toLatLonPos)
@@ -302,10 +302,10 @@ trait MutTrajectory extends Trajectory {
   }
 
   def appendIfNew (p: TrackPoint): Unit = {
-    if (size == 0 || p.date.toMillis > getLastDate.toMillis) append(p)
+    if (size == 0 || p.date.toEpochMillis > getLastDate.toEpochMillis) append(p)
   }
   def appendIfNew (date: DateTime, pos: GeoPosition): Unit = {
-    if (size == 0 || date.toMillis > getLastDate.toMillis) append(date,pos)
+    if (size == 0 || date.toEpochMillis > getLastDate.toEpochMillis) append(date,pos)
   }
   def appendIfNew (p: TDP3): Unit = {
     if (size == 0 || p.epochMillis > getLastDate) append(p)
@@ -420,7 +420,7 @@ trait Traj extends Trajectory {
                   (createInterpolant: (Trajectory)=>TInterpolant[N3,TDP3]): Trajectory = {
     val traj = emptyMutable( (end.timeSince(start) / dt).round.toInt + 1)
     val intr = createInterpolant(this)
-    traj ++= intr.iterator(start.toMillis, end.toMillis, dt.toMillis)
+    traj ++= intr.iterator(start.toEpochMillis, end.toEpochMillis, dt.toMillis)
     traj
   }
 }

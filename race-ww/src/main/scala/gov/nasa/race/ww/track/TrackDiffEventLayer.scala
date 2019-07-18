@@ -60,7 +60,7 @@ class TrackDiffEventFields extends TrackPairEventFields {
     e.extraData match {
       case Some(diff:TrajectoryDiff) =>
         id.text = e.id
-        time.text = hhmmss.print(e.date)
+        time.text = e.date.format_Hms
         refSrc.text = diff.refSource
         diffSrc.text = diff.diffSource
         nPoints.text = diff.numberOfSamples.toString

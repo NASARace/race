@@ -106,7 +106,7 @@ object TrajectoryDiff {
     val pMin = new TDP3
     var dMin = Double.MaxValue
     val intr = getInterpolant(trajectory)
-    val it = intr.iterator(trajectory.getFirstDate.toMillis, trajectory.getLastDate.toMillis, dt.toMillis)
+    val it = intr.iterator(trajectory.getFirstDate.toEpochMillis, trajectory.getLastDate.toEpochMillis, dt.toMillis)
 
     while (it.hasNext) {
       val p = it.next

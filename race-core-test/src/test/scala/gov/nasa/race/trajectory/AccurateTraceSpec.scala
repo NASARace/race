@@ -202,7 +202,7 @@ class AccurateTraceSpec extends AnyFlatSpec with RaceSpec {
     val dStart = epochMillis(3)
     val dEnd = epochMillis(8)
     val interval = Milliseconds(1)
-    println(s"interpolated trajectory (start=${dStart.toMillis},end=${dEnd.toMillis},interval=${interval.toMillis}) :")
+    println(s"interpolated trajectory (start=${dStart.toEpochMillis},end=${dEnd.toEpochMillis},interval=${interval.toMillis}) :")
 
     val trajInt = traj.interpolate(dStart,dEnd,interval)(new FHTInterpolant[N3,TDP3](_))
 
