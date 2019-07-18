@@ -52,11 +52,11 @@ trait ContinuousTimeRaceActor extends RaceActor {
   }
 
   @inline def updateSimTime: Unit = lastSimMillis = simClock.millis
-  @inline def simTime: DateTime = DateTime.epochMillis(lastSimMillis)
+  @inline def simTime: DateTime = DateTime.ofEpochMillis(lastSimMillis)
   @inline def simTimeMillis: Long = lastSimMillis
   @inline def updatedSimTime: DateTime = {
     lastSimMillis = simClock.millis
-    DateTime.epochMillis(lastSimMillis)
+    DateTime.ofEpochMillis(lastSimMillis)
   }
   @inline def updatedSimTimeMillis = {
     lastSimMillis = simClock.millis

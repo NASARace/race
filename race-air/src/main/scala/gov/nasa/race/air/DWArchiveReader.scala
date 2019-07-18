@@ -106,7 +106,7 @@ abstract class FirstEpochDWArchiveReader(iStream: InputStream, hdrStart: String)
                                        extends DWArchiveReader(iStream, new BMSearch(hdrStart)) {
   // we just use the x_TIMESTAMP, which is an epoch value directly following our headerStart
   override def readDateTime(cs: Array[Char], i0: Int, i1: Int): DateTime = {
-    DateTime.epochMillis(readLong(cs, i0+hdrStart.length, i1))
+    DateTime.ofEpochMillis(readLong(cs, i0+hdrStart.length, i1))
   }
 }
 

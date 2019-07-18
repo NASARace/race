@@ -189,7 +189,7 @@ class FlightPosArchiveReader (val iStream: InputStream, val pathName: String="<u
         val heading = fs.head.toDouble; fs = fs.tail
         val vr = fs.head.toDouble; fs = fs.tail
 
-        val date = getDate(DateTime.epochMillis(fs.head.toLong)); fs = fs.tail  // we might adjust it on-the-fly
+        val date = getDate(DateTime.ofEpochMillis(fs.head.toLong)); fs = fs.tail  // we might adjust it on-the-fly
         val status = fs.head.toInt
 
         someEntry(date, new FlightPos(flightId, cs, GeoPosition(Degrees(phi), Degrees(lambda), Feet(alt)),
@@ -219,7 +219,7 @@ class ExtendedFlightPosArchiveReader (iStream: InputStream, pathName: String) ex
         val speed = fs.head.toDouble; fs = fs.tail
         val heading = fs.head.toDouble; fs = fs.tail
         val vr = fs.head.toDouble; fs = fs.tail
-        val date = getDate(DateTime.epochMillis(fs.head.toLong)); fs = fs.tail  // we might adjust it on-the-fly
+        val date = getDate(DateTime.ofEpochMillis(fs.head.toLong)); fs = fs.tail  // we might adjust it on-the-fly
         val status = fs.head.toInt
 
         val pitch = fs.head.toDouble; fs = fs.tail

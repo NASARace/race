@@ -122,7 +122,7 @@ class HexEpochLineArchiveReader (val iStream: InputStream, val pathName: String 
   override def readNextEntry: Option[ArchiveEntry] = {
     try {
       val line = reader.readLine()
-      if (line != null) someEntry(DateTime.epochMillis(hexCharsToLong(line)), line.substring(17)) else None
+      if (line != null) someEntry(DateTime.ofEpochMillis(hexCharsToLong(line)), line.substring(17)) else None
     } catch {
       case _:Throwable => None
     }

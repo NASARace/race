@@ -16,12 +16,14 @@
  */
 package gov.nasa.race.uom
 
-import java.time.{Instant, LocalDateTime, ZoneId, ZoneOffset, ZonedDateTime}
 import java.time.format.{DateTimeFormatter, TextStyle}
+import java.time.temporal.ChronoField
+import java.time._
 import java.util.{Calendar, Locale, TimeZone}
 
 import gov.nasa.race._
-import gov.nasa.race.util.{DateTimeUtils, SeqUtils}
+import gov.nasa.race.util.SeqUtils
+
 import org.joda.time.chrono.ISOChronology
 import org.joda.time.{DateTimeZone, MutableDateTime, ReadableDateTime, DateTime => JodaDateTime}
 
@@ -39,14 +41,14 @@ object DateTime {
   val UNDEFINED_MILLIS = Long.MinValue
   val isoChronoUTC = ISOChronology.getInstanceUTC
 
-  @inline def apply(d: ReadableDateTime): DateTime = new DateTime(d.getMillis)
+  //--- the constructors
 
-  @inline def apply(year: Int, month: Int, day: Int, hour: Int, minutes: Int, secs: Int, ms: Int): DateTime = {
-    new DateTime(isoChronoUTC.getDateTimeMillis(year,month,day,hour,minutes,secs,ms))
-  }
-  @inline def apply(year: Int, month: Int, day: Int, hour: Int, minutes: Int, secs: Int, ms: Int, zone: DateTimeZone): DateTime = {
-    val chrono = ISOChronology.getInstance(zone)
-    new DateTime(chrono.getDateTimeMillis(year,month,day,hour,minutes,secs,ms))
+  @inline def now: DateTime = new DateTime(System.currentTimeMillis)
+  @inline def ofEpochMillis(millis: Long) = new DateTime(millis)
+
+  @inline def apply(year: Int, month: Int, day: Int, hour: Int, minutes: Int, secs: Int, ms: Int, zoneId: ZoneId): DateTime = {
+    val zdt = ZonedDateTime.of(year,month,day, hour,minutes,secs,ms * 1000000, zoneId)
+    new DateTime(zdt.getLong(ChronoField.INSTANT_SECONDS) + ms)
   }
 
   def timeBetween (a: DateTime, b: DateTime): Time = {
@@ -54,12 +56,12 @@ object DateTime {
     else new Time((b.millis - a.millis).toInt)
   }
 
-  def parseLocal(spec: String, dtf: DateTimeFormatter): DateTime = {
-    val ta = dtf.parse(spec)
-    val locDate = LocalDateTime.from(ta)
-    val zonedDate = locDate.atZone(ZoneOffset.UTC)
-    new DateTime(zonedDate.toEpochSecond * 1000)
+  def parse(spec: String, dtf: DateTimeFormatter): DateTime = {
+    val inst = Instant.from(dtf.parse(spec))
+    new DateTime(inst.getEpochSecond * 1000 + (inst.getNano / 1000000))
   }
+
+  @inline def parseISO (spec: String): DateTime = parse(spec, DateTimeFormatter.ISO_DATE_TIME)
 
   val YMD_RE = """(?:(\d+)[/-](\d+)[/-](\d+)[ ,T]?)?(?:(\d\d):(\d\d):(\d\d)(?:\.(\d\d\d))?(?:[ ]?([+-]\d+|\w+))?)?""".r
 
@@ -96,9 +98,6 @@ object DateTime {
   }
 
 
-  @inline def now: DateTime = new DateTime(System.currentTimeMillis)
-  @inline def epochMillis(millis: Long) = new DateTime(millis)
-
   //--- constants
 
   val Date0 = new DateTime(0)
@@ -110,7 +109,7 @@ object DateTime {
   val LocalZoneIdName: String = LocalZoneId.getDisplayName(TextStyle.SHORT,Locale.getDefault)
   val GMTZoneId: ZoneId = ZoneId.of("GMT")
 }
-import DateTime._
+import gov.nasa.race.uom.DateTime._
 
 /**
   * value class representing absolute time value based on Unix epoch time (ms since 01/01/1970-00:00:00)

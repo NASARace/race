@@ -66,7 +66,7 @@ class ExtendedTrackReader extends SimpleTrackReader {
     new ExtendedFlightPos(id, id,
       GeoPosition( Degrees(latDeg), Degrees(lonDeg), Meters(altM)),
       MetersPerSecond(speedMS), Degrees(headingDeg), MetersPerSecond(vrMS),
-      DateTime.epochMillis(timeMsec),flags,
+      DateTime.ofEpochMillis(timeMsec),flags,
       Degrees(pitchDeg), Degrees(rollDeg), trackType)
   }
 }

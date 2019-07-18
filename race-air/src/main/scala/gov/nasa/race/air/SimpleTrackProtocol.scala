@@ -140,7 +140,7 @@ class SimpleTrackReader extends DataStreamReader {
     new FlightPos(id, id,
       GeoPosition.fromDegreesAndMeters(latDeg, lonDeg, altM),
       MetersPerSecond(speedMS), Degrees(headingDeg), MetersPerSecond(vrMS),
-      DateTime.epochMillis(timeMsec),flags)
+      DateTime.ofEpochMillis(timeMsec),flags)
   }
 
   def readProximityMsg (dis: DataInputStream, list: ArrayBuffer[Any]) = {
@@ -168,7 +168,7 @@ class SimpleTrackReader extends DataStreamReader {
 
     val track = new FlightPos(trackId,trackId,GeoPosition(Degrees(trackLatDeg),Degrees(trackLonDeg),Meters(trackAltM)),
                               MetersPerSecond(trackSpdMS),Degrees(trackHdgDeg),MetersPerSecond(trackVrMS),
-                              DateTime.epochMillis(tmsec))
+                              DateTime.ofEpochMillis(tmsec))
 
     // we just use refId to identify the event - if clients need unique ids they have to re-identify
     ProximityEvent(refId,"proximity",ProximityReference(refId, track.date, GeoPosition.fromDegreesAndMeters(latDeg,lonDeg,altM)),
@@ -184,7 +184,7 @@ class SimpleTrackReader extends DataStreamReader {
     val id = dis.readUTF
     val flags = dis.readInt // TODO - we should use this to determine the type of drop
     val timeMsec = dis.readLong
-    TrackDropped(id,id,DateTime.epochMillis(timeMsec))
+    TrackDropped(id,id,DateTime.ofEpochMillis(timeMsec))
   }
 }
 

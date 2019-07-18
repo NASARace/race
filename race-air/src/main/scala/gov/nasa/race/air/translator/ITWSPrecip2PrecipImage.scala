@@ -105,8 +105,8 @@ class ITWSprecip2PrecipImage (val config: Config=NoConfig) extends XmlPullParser
           tag match {
             case "product_msg_id" => product = readInt()
             case "product_header_itws_sites" => itwsSite = readText()
-            case "product_header_generation_time_seconds" => genDate = DateTime.epochMillis( 1000L * readInt())
-            case "product_header_expiration_time_seconds" => expDate = DateTime.epochMillis( 1000L * readInt())
+            case "product_header_generation_time_seconds" => genDate = DateTime.ofEpochMillis( 1000L * readInt())
+            case "product_header_expiration_time_seconds" => expDate = DateTime.ofEpochMillis( 1000L * readInt())
 
             case "prcp_TRP_latitude" => trpLat = readDegreesWithPrecision
             case "prcp_TRP_longitude" => trpLon = readDegreesWithPrecision

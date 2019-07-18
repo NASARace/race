@@ -154,7 +154,7 @@ class ParallelApproachAnalyzer (val config: Config) extends SubscribingRaceActor
         dist = Euclidean.distance(lat1,lon1,alt1, lat2,lon2,alt2)
 
         if (deltaHdg > maxConvergeAngle){ // Bingo - got one
-          val date = DateTime.epochMillis(p.millis)
+          val date = DateTime.ofEpochMillis(p.millis)
           val pos1 = GeoPosition(lat1,lon1,alt1)
           val spd1 = Euclidean.distance(lat1,lon1,alt1,lastLat1,lastLon1,alt1) / convergeInterval.milliseconds
           val pos2 = GeoPosition(lat2,lon2,alt2)

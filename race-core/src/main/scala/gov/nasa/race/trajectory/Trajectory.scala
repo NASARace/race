@@ -85,7 +85,7 @@ class TDP3 (_millis: Long, _lat: Double, _lon: Double, _alt: Double)
                                             extends TDataPoint3(_millis,_lat,_lon,_alt) with GeoPosition {
   def this() = this(0,0.0,0.0,0.0)
 
-  def epochMillis: DateTime = DateTime.epochMillis(millis)
+  def epochMillis: DateTime = DateTime.ofEpochMillis(millis)
 
   override def φ: Angle = Degrees(_0)
   def φ_= (lat: Angle): Unit = _0 = lat.toDegrees
@@ -98,7 +98,7 @@ class TDP3 (_millis: Long, _lat: Double, _lon: Double, _alt: Double)
 
   override def clone: TDP3 = new TDP3(millis,_0,_1,_2)
 
-  def toTrajectoryPoint = new TrajectoryPoint(DateTime.epochMillis(millis), LatLonPos(Degrees(_0),Degrees(_1),Meters(_2)))
+  def toTrajectoryPoint = new TrajectoryPoint(DateTime.ofEpochMillis(millis), LatLonPos(Degrees(_0),Degrees(_1),Meters(_2)))
 
   def updateTrajectoryPoint (p: MutTrajectoryPoint): Unit = {
     p.update(epochMillis, Degrees(_0), Degrees(_1), Meters(_2))
@@ -344,8 +344,8 @@ trait Traj extends Trajectory {
 
   override def getDataPoint(i: Int, dp: TDP3): TDP3 = getTDP3(i,dp) // TDataSource interface
 
-  override def getFirstDate: DateTime = if (nonEmpty) DateTime.epochMillis(getDateMillis(0)) else DateTime.UndefinedDateTime
-  override def getLastDate: DateTime = if (nonEmpty) DateTime.epochMillis(getDateMillis(size-1)) else DateTime.UndefinedDateTime
+  override def getFirstDate: DateTime = if (nonEmpty) DateTime.ofEpochMillis(getDateMillis(0)) else DateTime.UndefinedDateTime
+  override def getLastDate: DateTime = if (nonEmpty) DateTime.ofEpochMillis(getDateMillis(size-1)) else DateTime.UndefinedDateTime
 
   override def apply(i: Int): TrackPoint = {
     if (i < 0 || i >= size) throw new IndexOutOfBoundsException(s"track point index out of range: $i")
@@ -405,7 +405,7 @@ trait Traj extends Trajectory {
       } else {
         var i = size - 2
         while (i >= 0) {
-          val d = DateTime.epochMillis(getDateMillis(i))
+          val d = DateTime.ofEpochMillis(getDateMillis(i))
           if (dLast.timeSince(d) <= dur) {
             i -= 1
           }
@@ -530,10 +530,10 @@ trait TraceTraj extends MutTrajectory with Traj with CircularSeq {
   }
 
   override def getFirstDate: DateTime = {
-    if (tail >= 0) DateTime.epochMillis(getDateMillis(circularIdx(tail))) else DateTime.UndefinedDateTime
+    if (tail >= 0) DateTime.ofEpochMillis(getDateMillis(circularIdx(tail))) else DateTime.UndefinedDateTime
   }
   override def getLastDate: DateTime = {
-    if (head >= 0) DateTime.epochMillis(getDateMillis(circularIdx(head))) else DateTime.UndefinedDateTime
+    if (head >= 0) DateTime.ofEpochMillis(getDateMillis(circularIdx(head))) else DateTime.UndefinedDateTime
   }
 
   /**
@@ -549,7 +549,7 @@ trait TraceTraj extends MutTrajectory with Traj with CircularSeq {
       } else {
         var i = head - 1
         while (i >= tail) {
-          val d = DateTime.epochMillis(getDateMillis(circularIdx(i)))
+          val d = DateTime.ofEpochMillis(getDateMillis(circularIdx(i)))
           if (dLast.timeSince(d) > dur) return i + 1
           i -= 1
         }
