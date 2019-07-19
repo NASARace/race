@@ -48,7 +48,7 @@ object DateTime {
 
   @inline def apply(year: Int, month: Int, day: Int, hour: Int, minutes: Int, secs: Int, ms: Int, zoneId: ZoneId): DateTime = {
     val zdt = ZonedDateTime.of(year,month,day, hour,minutes,secs,ms * 1000000, zoneId)
-    new DateTime(zdt.getLong(ChronoField.INSTANT_SECONDS) + ms)
+    new DateTime(zdt.getLong(ChronoField.INSTANT_SECONDS) * 1000 + ms)
   }
 
   def timeBetween (a: DateTime, b: DateTime): Time = {
@@ -58,45 +58,54 @@ object DateTime {
 
   def parse(spec: String, dtf: DateTimeFormatter): DateTime = {
     val inst = Instant.from(dtf.parse(spec))
-    new DateTime(inst.getEpochSecond * 1000 + (inst.getNano / 1000000))
+    new DateTime(inst.toEpochMilli)
   }
 
   @inline def parseISO (spec: String): DateTime = parse(spec, DateTimeFormatter.ISO_DATE_TIME)
 
-  val YMD_RE = """(?:(\d+)[/-](\d+)[/-](\d+)[ ,T]?)?(?:(\d\d):(\d\d):(\d\d)(?:\.(\d\d\d))?(?:[ ]?([+-]\d+(?:\:\d+)|\w+))?)?""".r
+  val YMDT_RE = """(\d{4})[\/-](\d{1,2})[\/-](\d{1,2})[ ,T](\d{1,2}):(\d{1,2}):(\d{1,2})(?:\.(\d{1,9}))? ?(?:([+-]\d{1,2})(?:\:(\d{1,2})))? ?\[?([\w\/]+)?+\]?""".r
 
   def parseYMDT(spec: String): DateTime = {
     spec match {
-      case YMD_RE(year,month,day,hour,min,sec,milli,off) =>
-        val tz = if (off == null) {
-          TimeZone.getDefault
-        } else {
-          if (off.charAt(0) == '-' || off.charAt(0) == '+') {
-            TimeZone.getTimeZone(ZoneId.ofOffset("UTC", ZoneOffset.ofHours(Integer.parseInt(off))))
-          }else {
-            TimeZone.getTimeZone(off)
-          }
-        }
-        val calendar = Calendar.getInstance(tz)
+      case YMDT_RE(year,month,day,hour,min,sec,secFrac, offHour,offMin,zId) =>
+        val zoneId = getZoneId(zId,offHour,offMin)
 
-        val yr = if (year == null) calendar.get(Calendar.YEAR) else Integer.parseInt(year)
-        val mon = if (month == null) calendar.get(Calendar.MONTH) else Integer.parseInt(month)
-        val d = if (day == null) calendar.get(Calendar.DAY_OF_MONTH) else Integer.parseInt(day)
+        val y = Integer.parseInt(year)
+        val M = Integer.parseInt(month)
+        val d = Integer.parseInt(day)
+        val H = Integer.parseInt(hour)
+        val m = Integer.parseInt(min)
+        val s = Integer.parseInt(sec)
+        val S = if (secFrac == null) 0 else getFracNanos(secFrac)
 
-        val h = if (hour == null) 0 else Integer.parseInt(hour)
-        val m = if (min == null) 0 else Integer.parseInt(min)
-        val s = if (sec == null) 0 else Integer.parseInt(sec)
-        val ms = if (milli == null) 0 else Integer.parseInt(milli)
+        val zdt = ZonedDateTime.of(y,M,d, H,m,s,S, zoneId)
+        new DateTime(zdt.getLong(ChronoField.INSTANT_SECONDS) * 1000 + S / 1000000)
 
-        calendar.clear
-        calendar.setTimeZone(tz)
-        calendar.set(yr,mon,d,h,m,s)
-
-        new DateTime(calendar.getTimeInMillis + ms)
       case _ => throw new RuntimeException(s"invalid date spec: $spec")
     }
   }
 
+  def getZoneId (zid: String, offHour: String, offMin: String): ZoneId = {
+    if (offHour == null) {
+      if (zid == null) ZoneId.systemDefault else ZoneId.of(zid)
+
+    } else { // zone name is ignored
+      val h = Integer.parseInt(offHour)
+      val m = if (offMin == null) 0 else if (h < 0) -Integer.parseInt(offMin) else Integer.parseInt(offMin)
+      ZoneId.ofOffset("", ZoneOffset.ofHoursMinutes(h, m))
+    }
+  }
+
+  def getFracNanos(secFrac: String): Int = {
+    val n = Integer.parseInt(secFrac)
+    var s = 1000000000
+    var i = secFrac.length
+    while (i > 0) {
+      s /= 10
+      i -= 1
+    }
+    n * s
+  }
 
   //--- constants
 
@@ -238,29 +247,29 @@ class DateTime protected[uom](val millis: Long) extends AnyVal
 
   def format_yMd_HmsS_z: String = {
     val (year,month,day) = getYMD
-    f"$year%4d/$month%02d/$day%02dT$getHour%02d:$getMinute%02d:$getSecond%02d.$getMillisecond%03d Z"
+    f"$year%4d-$month%02d-$day%02dT$getHour%02d:$getMinute%02d:$getSecond%02d.$getMillisecond%03dZ"
   }
   def format_yMd_Hms_z: String = {
     val (year,month,day) = getYMD
-    f"$year%4d/$month%02d/$day%02dT$getHour%02d:$getMinute%02d:$getSecond%02d Z"
+    f"$year%4d-$month%02d-$day%02dT$getHour%02d:$getMinute%02d:$getSecond%02dZ"
   }
   def format_yMd_Hms_z(zoneId: ZoneId): String = {
     val (year,month,day,hour,minute,second,_) = getYMDT(zoneId)
     val shortId = zoneId.getDisplayName(TextStyle.SHORT,Locale.getDefault)
-    f"$year%4d/$month%02d/$day%02dT$getHour%02d:$getMinute%02d:$getSecond%02d $shortId"
+    f"$year%4d-$month%02d-$day%02dT$getHour%02d:$getMinute%02d:$getSecond%02d$shortId"
   }
   def formatLocal_yMd_Hms_z: String = {
     val (year,month,day,hour,minute,second,_) = getYMDT(LocalZoneId)
-    f"$year%4d/$month%02d/$day%02dT$getHour%02d:$getMinute%02d:$getSecond%02d $LocalZoneIdName"
+    f"$year%4d-$month%02d-$day%02dT$getHour%02d:$getMinute%02d:$getSecond%02d$LocalZoneIdName"
   }
   def formatLocal_yMd_Hms: String = {
     val (year,month,day,hour,minute,second,_) = getYMDT(LocalZoneId)
-    f"$year%4d/$month%02d/$day%02dT$getHour%02d:$getMinute%02d:$getSecond%02d"
+    f"$year%4d-$month%02d-$day%02dT$getHour%02d:$getMinute%02d:$getSecond%02d"
   }
 
   def format_yMd: String = {
     val (year,month,day) = getYMD
-    f"$year%4d/$month%02d/$day%02d"
+    f"$year%4d-$month%02d-$day%02d"
   }
 
   def format_E_Mdy: String = {
@@ -269,12 +278,12 @@ class DateTime protected[uom](val millis: Long) extends AnyVal
     val month = zdt.getMonthValue
     val day = zdt.getDayOfMonth
     val dayName = zdt.getDayOfWeek.getDisplayName(TextStyle.SHORT,Locale.getDefault)
-    f"$dayName $month%02d/$day%02d/$year%4d"
+    f"$dayName $month%02d-$day%02d-$year%4d"
   }
 
   def format_Hms: String = f"$getHour%02d:$getMinute%02d:$getSecond%02d"
 
-  def format_Hmsz: String = f"$getHour%02d:$getMinute%02d:$getSecond%02d Z"
+  def format_Hmsz: String = f"$getHour%02d:$getMinute%02d:$getSecond%02dZ"
 
   override def toString: String = format_yMd_HmsS_z
 
