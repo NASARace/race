@@ -107,7 +107,7 @@ final class DeltaDateArray protected[uom] (protected[uom] val elapsed: TimeArray
 
   def toMillisecondArray: Array[Long] = {
     val a = new Array[Long](elapsed.length)
-    for (i <- 0 until elapsed.length) a(i) = (date0 + elapsed(i)).toMillis
+    for (i <- 0 until elapsed.length) a(i) = (date0 + elapsed(i)).toEpochMillis
     a
   }
 

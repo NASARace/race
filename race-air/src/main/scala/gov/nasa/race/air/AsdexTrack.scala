@@ -28,7 +28,7 @@ import scala.collection.Seq
   */
 class AsdexTracks(val airport: String, val tracks: Seq[AsdexTrack])  extends TrackListMessage {
   override def toString = {
-    val d = if (!tracks.isEmpty) tracks.head.date.showHHMMSSZ else "?"
+    val d = if (!tracks.isEmpty) tracks.head.date.format_Hmsz else "?"
     s"AsdexTracks{$airport,date=$d,nTracks=${tracks.size}}"
   }
 }

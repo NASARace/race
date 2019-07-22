@@ -17,27 +17,33 @@
 
 package gov.nasa.race.swing
 
-import Reactors._
 import Style._
 import gov.nasa.race.common.Clock
+
 import scala.concurrent.duration._
-import org.joda.time.DateTime
-import org.joda.time.format.DateTimeFormat
-import scala.swing.{Label, GridPanel}
+import gov.nasa.race.uom.{DateTime, Time}
+import java.time.format.DateTimeFormatter
+
+import scala.swing.{GridPanel, Label}
 
 /**
  * Panel that contains a digital clock with date and time
  */
 class DigitalClock (private[this] var clock: Option[Clock]=None) extends GridPanel(2,1) {
 
+  protected var lastTimeOfDay: Time = Time.UndefinedTime
+
   class ClockLabel (fmtString: String, txt: String=null) extends Label(txt) {
-    val fmt = DateTimeFormat.forPattern(fmtString)
-    def update(d: DateTime) = text = fmt.print(d)
+    val fmt = DateTimeFormatter.ofPattern(fmtString)
+
+    def update(d: DateTime): Unit = {
+      text = d.format(fmt)
+    }
   }
 
   val timer = new SwingTimer(1.second)
   val clockDate = new ClockLabel(" EE, MM/dd/yyyy").styled("date")
-  val clockTime = new ClockLabel(" hh:mm:ss a ", " 00:00:00 AM ").styled("time")
+  val clockTime = new ClockLabel(" HH:mm:ss", " 00:00:00").styled("time")
 
   contents ++= Seq(clockDate,clockTime)
 
@@ -45,9 +51,12 @@ class DigitalClock (private[this] var clock: Option[Clock]=None) extends GridPan
   timer.whenExpired {
     if (!showing) {
       timer.stop
+
     } else {
       val dt = getDateTime
-      clockDate.update(dt)
+      val td = dt.getTimeOfDay
+      if (lastTimeOfDay.isUndefined || td < lastTimeOfDay) clockDate.update(dt) // only need update after wrap around
+      lastTimeOfDay = td
       clockTime.update(dt)
     }
   }

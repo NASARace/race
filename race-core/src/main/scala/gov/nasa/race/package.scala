@@ -447,12 +447,20 @@ package object race {
     def compliesWith (s: String):Boolean = schema == s
   }
 
-  trait Definable[T] extends Any {
-    this: T =>
-
+  /**
+    * universal trait to support undefined values
+    *
+    * NOTE - this can be used for value classes but they have to override *all* methods
+    * in order to avoid allocation when calling the default methods, not just the abstract ones.
+    *
+    * However, at least as of Scala 2.13 it appears that just extending a universal trait is NOT
+    * automatically causing allocation anymore
+    */
+  trait MaybeUndefined extends Any {
     def isDefined: Boolean
-    def isUndefined: Boolean = !isDefined
-    def orElse(fallback: => T): T = if (isDefined) this else fallback
+
+    // NOTE - calling this without override causes allocation
+    def isUndefined: Boolean  = !isDefined
   }
 
   // a more specialized form of scala.util.Try that only needs to discriminate between success or failure (with explanation)

@@ -49,7 +49,7 @@ trait CompressedTraj extends ArrayTraj[CompressedTraj] {
     alts.copyFrom(other.alts, srcIdx, dstIdx, len)
   }
 
-  def getDateMillis(i: Int): Long = ts(i).toMillis
+  def getDateMillis(i: Int): Long = ts(i).toEpochMillis
 
   protected def update(i: Int, date: DateTime, lat: Angle, lon: Angle, alt: Length): Unit = {
     ts(i) = date
@@ -70,7 +70,7 @@ trait CompressedTraj extends ArrayTraj[CompressedTraj] {
 
   override def getTDP3 (i: Int, tdp: TDP3): TDP3 = {
     val p = latLons(i)
-    tdp.set(ts(i).toMillis, p.lat.toDegrees, p.lon.toDegrees, alts(i).toMeters)
+    tdp.set(ts(i).toEpochMillis, p.lat.toDegrees, p.lon.toDegrees, alts(i).toMeters)
   }
 
   protected def updateUOMArrayElements (i: Int, destIdx: Int,

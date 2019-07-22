@@ -22,7 +22,7 @@ import com.jcraft.jsch.{Channel, ChannelExec, JSch}
 import gov.nasa.race._
 import gov.nasa.race.common.UserInfoFactory
 import gov.nasa.race.util.NetUtils._
-import org.joda.time.DateTime
+import gov.nasa.race.uom.DateTime
 
 /**
  * class that represents a Jsch ssh session at runtime, including

@@ -94,7 +94,8 @@ import Length._
 /**
   * basis is meters, ISO symbol is 'm'
   */
-class Length protected[uom] (val d: Double) extends AnyVal with Definable[Length] {
+class Length protected[uom] (val d: Double) extends AnyVal
+                                        with Ordered[Length] with MaybeUndefined {
 
   //--- Double converters
   @inline def toKilometers = d / 1000.0
@@ -124,19 +125,23 @@ class Length protected[uom] (val d: Double) extends AnyVal with Definable[Length
   @inline def ~= (x: Length)(implicit εLength: Length) = Math.abs(d - x.d) <= εLength.d
   @inline def within (x: Length, distance: Length) = Math.abs(d - x.d) <= distance.d
 
-  @inline def < (x: Length) = d < x.d
-  @inline def <= (x: Length) = d <= x.d
-  @inline def > (x: Length) = d > x.d
-  @inline def >= (x: Length) = d >= x.d
   @inline def =:= (x: Length) = d == x.d  // use this if you really mean equality
   @inline def ≡ (x: Length) = d == x.d
 
   // we intentionally omit == since this is based on Double
 
   //-- undefined value handling (value based alternative for finite cases that would otherwise require Option)
-  @inline def isDefined = !d.isNaN
+  @inline override def isDefined = !d.isNaN
+  @inline override def isUndefined: Boolean = d.isNaN
 
-  @inline def compare (other: Length): Int = d compare other.d
+  // comparison
+  @inline override def < (x: Length) = d < x.d
+  @inline override def <= (x: Length) = d <= x.d
+  @inline override def > (x: Length) = d > x.d
+  @inline override def >= (x: Length) = d >= x.d
+
+  @inline override def compare (other: Length): Int = if (d > other.d) 1 else if (d < other.d) -1 else 0
+  @inline override def compareTo (other: Length): Int = compare(other)
 
   override def toString = show   // calling this would cause allocation
   def show = s"${d}m"

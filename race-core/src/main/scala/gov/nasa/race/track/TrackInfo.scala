@@ -40,10 +40,10 @@ class TrackInfo(val trackRef: String,
                 val departurePoint: Option[String],
                 val arrivalPoint: Option[String],
 
-                val etd: Option[DateTime],
-                val atd: Option[DateTime],
-                val eta: Option[DateTime],
-                val ata: Option[DateTime],
+                val etd: DateTime,
+                val atd: DateTime,
+                val eta: DateTime,
+                val ata: DateTime,
 
                 val route: Option[Traj]
                 // ... and more to follow
@@ -55,8 +55,8 @@ class TrackInfo(val trackRef: String,
     ifSome(trackType){ s=> sb.append(s",type:$s")}
     ifSome(departurePoint){ s=> sb.append(s",from:$s")}
     ifSome(arrivalPoint){ s=> sb.append(s",to:$s")}
-    if (atd.isDefined) sb.append(s",atd:${atd.get}") else if (etd.isDefined) sb.append(s",etd:${etd.get}")
-    if (ata.isDefined) sb.append(s",ata:${ata.get}") else if (eta.isDefined) sb.append(s",eta:${eta.get}")
+    if (atd.isDefined) sb.append(s",atd:${atd}") else if (etd.isDefined) sb.append(s",etd:${etd}")
+    if (ata.isDefined) sb.append(s",ata:${ata}") else if (eta.isDefined) sb.append(s",eta:${eta}")
     sb.append('}')
     sb.toString
   }

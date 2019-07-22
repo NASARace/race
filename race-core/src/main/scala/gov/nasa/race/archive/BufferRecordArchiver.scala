@@ -44,7 +44,7 @@ abstract class BufferRecordArchiveWriter[R <: BufferRecord](val pathName: String
   override def write (date: DateTime, obj: Any): Boolean = {
     if (set(obj)) {
       val buf = rec.buffer
-      buf.putLong(0, date.toMillis)
+      buf.putLong(0, date.toEpochMillis)
       buf.clear // position=0, limit=capacity
       channel.write(buf)
       true

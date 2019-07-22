@@ -21,7 +21,7 @@ import java.io.File
 import gov.nasa.race.archive.TextArchiveReader
 import gov.nasa.race.main.CliArgs
 import gov.nasa.race.util.FileUtils
-import org.joda.time.DateTime
+import gov.nasa.race.uom.DateTime
 
 import scala.util.matching.Regex
 
@@ -75,7 +75,7 @@ object TextArchiveExtractor {
     while (ar.hasMoreData) {
       ar.readNextEntry match {
         case Some(e) =>
-          val dateMillis = e.date.getMillis
+          val dateMillis = e.date.toEpochMillis
           val msg = e.msg.toString
 
           if (dateMillis >= opts.startTime && dateMillis <= opts.endTime) {

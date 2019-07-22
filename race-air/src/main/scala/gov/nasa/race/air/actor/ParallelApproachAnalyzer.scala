@@ -96,7 +96,7 @@ class ParallelApproachAnalyzer (val config: Config) extends SubscribingRaceActor
 
         if (!otherEntry.checked.contains(track.id)) {
           val est = otherEntry.estimator
-          est.estimateState(track.date.toMillis)
+          est.estimateState(track.date.toEpochMillis)
           val d = Euclidean.distance(track.position, est.estimatedPosition)
           if (d < maxParallelDist) {
             if (track.position.altitude - est.altitude < maxParallelDalt) {
@@ -154,7 +154,7 @@ class ParallelApproachAnalyzer (val config: Config) extends SubscribingRaceActor
         dist = Euclidean.distance(lat1,lon1,alt1, lat2,lon2,alt2)
 
         if (deltaHdg > maxConvergeAngle){ // Bingo - got one
-          val date = DateTime.epochMillis(p.millis)
+          val date = DateTime.ofEpochMillis(p.millis)
           val pos1 = GeoPosition(lat1,lon1,alt1)
           val spd1 = Euclidean.distance(lat1,lon1,alt1,lastLat1,lastLon1,alt1) / convergeInterval.milliseconds
           val pos2 = GeoPosition(lat2,lon2,alt2)
@@ -185,7 +185,7 @@ class ParallelApproachAnalyzer (val config: Config) extends SubscribingRaceActor
 
   def reportTrajectory (c: Candidate, tr: TInterpolant[N3,TDP3], dStart: DateTime, dEnd: DateTime, interval: Time, n: Int): Trajectory = {
     val reportTrajectory = c.trajectory.emptyMutable(n)
-    reportTrajectory ++= tr.iterator(dStart.toMillis, dEnd.toMillis, interval.toMillis)
+    reportTrajectory ++= tr.iterator(dStart.toEpochMillis, dEnd.toEpochMillis, interval.toMillis)
     reportTrajectory
   }
 

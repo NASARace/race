@@ -20,7 +20,7 @@ import akka.event.Logging
 import gov.nasa.race.core.Messages._
 import gov.nasa.race.test.RaceActorSpec
 import gov.nasa.race.util.FileUtils
-import org.joda.time.DateTime
+import gov.nasa.race.uom.DateTime
 import org.scalatest.flatspec.AnyFlatSpecLike
 import scala.concurrent.duration._
 

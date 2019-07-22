@@ -18,7 +18,6 @@ package gov.nasa.race.space
 
 import gov.nasa.race.util.SubstringParser
 import gov.nasa.race.common._
-import org.joda.time.DateTime
 
 /**
   * class that represents Two Line Element (TLE) orbit specifications as defined on

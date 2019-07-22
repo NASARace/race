@@ -214,7 +214,7 @@ abstract class GisItemDBFactory[T <: GisItem: ClassTag] (val itemSize: Int) {
     // place holders to be filled in later
     buf.putLong(len)  // data/file length in bytes
     buf.putLong(0)  // CRC32 checksum
-    buf.putLong(date.toMillis)  // version date of data
+    buf.putLong(date.toEpochMillis)  // version date of data
   }
 
   // not very efficient but this is executed once

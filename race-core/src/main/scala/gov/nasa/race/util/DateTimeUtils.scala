@@ -17,9 +17,7 @@
 
 package gov.nasa.race.util
 
-import com.github.nscala_time.time.Imports._
 import gov.nasa.race.uom.DateTime
-import org.joda.time.format.{DateTimeFormatter, ISODateTimeFormat, ISOPeriodFormat}
 
 import scala.concurrent.duration._
 import scala.language.implicitConversions
@@ -35,16 +33,10 @@ object DateTimeUtils {
 
   val iso8601PeriodRE = """(P.+)""".r
   // <2do> too general
-  val isoPeriodFormatter = ISOPeriodFormat.standard
   val dateTimeRE = """(\d.+)""".r // everything that starts with a digit
-
-  val MMddyyyyhhmmssZ = DateTimeFormat.forPattern("MM/dd/yyyy hh:mm:ss Z")
-  val hhmmssZ = DateTimeFormat.forPattern("hh:mm:ss Z")
-  val hhmmss = DateTimeFormat.forPattern("hh:mm:ss")
 
   @inline def toHHMMSS(d: FiniteDuration): (Int, Int, Int) = (d.toHours.toInt, (d.toMinutes % 60).toInt, (d.toSeconds % 60).toInt)
 
-  @inline def formatDate (d: DateTime, formatter: DateTimeFormatter): String = formatter.print(d.toMillis)
 
   def durationMillisToHMMSS (millis: Long): String = {
     val s = ((millis / 1000) % 60).toInt
@@ -82,17 +74,6 @@ object DateTimeUtils {
     }
   }
 
-  def dateMillisToTTime (t: Long): String = ISODateTimeFormat.tTime.print(t)
-
-  // Duration is another Java/Scala quagmire - we have them in java.time,
-  // scala.concurrent.duration and org.joda.time. To make matters worse,
-  // the scala durations come in two flavors: Duration and FiniteDuration, which
-  // are both instantiable
-
-  def duration(hh: Int, mm: Int, ss: Int) = {
-    new org.joda.time.Duration(hh * 3600000000L + mm * 3600000 + ss * 1000)
-  }
-
   def asFiniteDuration(dur: scala.concurrent.duration.Duration): FiniteDuration = {
     if (dur.isFinite)
       FiniteDuration(dur.toMillis, MILLISECONDS)
@@ -112,12 +93,5 @@ object DateTimeUtils {
 
   @inline def hourOfDay(t: Long): Int = (t % MsecPerDay).toInt / MsecPerHour
   @inline def hours (d: Long): Double = d.toDouble / MsecPerHour
-  @inline def toISODateString(t:Long): String = ISODateTimeFormat.basicDateTime.print(t)
-  @inline def toFullDateTimeString(t: Long): String = DateTimeFormat.fullDateTime.print(t)
 
-  val ISODHMSZ = ISODateTimeFormat.dateHourMinuteSecond.withZone(DateTimeZone.UTC)
-  val SimpleDHMSZ = DateTimeFormat.forPattern( "yyyy-MM-dd'T'HH:mm:ss'Z'").withZone(DateTimeZone.UTC)
-
-  @inline def toDhmsStringUTC (t: Long): String = ISODHMSZ.print(t)
-  @inline def toSimpleDhmsStringZ (t: Long): String = SimpleDHMSZ.print(t)
 }

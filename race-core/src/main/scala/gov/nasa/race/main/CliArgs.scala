@@ -186,8 +186,8 @@ class CliArgs (val title: String) {
 
   def parseDouble (a: String) = java.lang.Double.parseDouble(a)
 
-  def parseTimeMillis (a: String): Long = DateTime.parse(a).toMillis
-  def parseDateTime (a: String): DateTime = DateTime.parse(a)
+  def parseTimeMillis (a: String): Long = DateTime.parseYMDT(a).toEpochMillis
+  def parseDateTime (a: String): DateTime = DateTime.parseYMDT(a)
 
   //--- internals
 

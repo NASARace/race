@@ -19,7 +19,7 @@ package gov.nasa.race.actor
 import akka.event.Logging
 import gov.nasa.race.core.Messages.BusEvent
 import gov.nasa.race.test.RaceActorSpec
-import org.joda.time.DateTime
+import gov.nasa.race.uom.DateTime
 import org.scalatest.flatspec.AnyFlatSpecLike
 import test.TestJavaRaceActor
 import scala.concurrent.duration._

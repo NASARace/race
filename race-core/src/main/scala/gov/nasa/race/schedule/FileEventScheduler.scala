@@ -55,7 +55,7 @@ class FileEventScheduler (val action: (File)=>Unit) extends XmlPullParser with X
                 timeSpec match {
                   case hhmmssRE(hh,mm,ss) => schedule(Time.HMS(hh.toInt,mm.toInt,ss.toInt))(action(f))
                   case iso8601PeriodRE(s) => schedule(Time.parse(s))(action(f))
-                  case dateTimeRE(s) => schedule(DateTime.parse(s))(action(f))
+                  case dateTimeRE(s) => schedule(DateTime.parseYMDT(s))(action(f))
                 }
               }
             }

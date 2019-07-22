@@ -123,7 +123,7 @@ trait MainBase {
     }
 
     if (System.getProperty("race.date") == null) {
-      System.setProperty("race.date", DateTime.now.toString("yyyy-MM-dd'T'HH:mm:ss"))
+      System.setProperty("race.date", DateTime.now.formatLocal_yMd_Hms)
     }
 
     // logging related system properties (logback)

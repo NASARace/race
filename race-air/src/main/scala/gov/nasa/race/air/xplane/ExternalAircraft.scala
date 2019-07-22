@@ -134,7 +134,7 @@ class ExtrapolatedAC (val idx: Int, val acType: String, val liveryName: String, 
     state(4) = newFPos.pitch.toDegrees
     state(5) = newFPos.roll.toDegrees
 
-    estimator.addObservation(state,newFPos.date.toMillis)
+    estimator.addObservation(state,newFPos.date.toEpochMillis)
     hasChanged = true
   }
 

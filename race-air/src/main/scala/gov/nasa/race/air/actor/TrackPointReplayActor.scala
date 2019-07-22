@@ -86,7 +86,7 @@ class TrackPointReader (val iStream: InputStream, val pathName: String="<unknown
 
     } else {
       val tp = dfr.next(recCache)
-      val date = DateTime.epochMillis(tp.getDate)
+      val date = DateTime.ofEpochMillis(tp.getDate)
       val id = tp.getId.toString.intern  // we intern because there are likely a lot of points per track
       val cs = idMap.getOrElse(id,id) // we could map this here
 

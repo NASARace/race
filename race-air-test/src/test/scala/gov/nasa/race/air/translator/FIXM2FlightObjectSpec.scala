@@ -80,7 +80,7 @@ class FIXM2FlightObjectSpec extends AnyFlatSpec with RaceSpec {
 
             fpos.speed.toKnots should be(expected.speed.toKnots +- EPS)
             fpos.heading.toDegrees should be(expected.heading.toDegrees +- EPS)
-            fpos.date.toMillis should be(expected.date.toMillis)
+            fpos.date.toEpochMillis should be(expected.date.toEpochMillis)
             println("matches expected values")
           case _ => fail("result list does not contain FlightPos")
         }

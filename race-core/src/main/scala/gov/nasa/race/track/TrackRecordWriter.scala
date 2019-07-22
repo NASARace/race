@@ -54,7 +54,7 @@ class TrackRecordWriter(val config: Config) extends DenseRecordWriter[FloatTrack
           rec.setRecordIndex(recIndex)
           rec.id := track.id
           rec.cs := track.cs
-          rec.date := track.date.toMillis
+          rec.date := track.date.toEpochMillis
 
           val pos = track.position
           rec.lat := pos.latDeg.toFloat
@@ -72,7 +72,7 @@ class TrackRecordWriter(val config: Config) extends DenseRecordWriter[FloatTrack
       }
   }
 
-  override def updateDate(date: DateTime) = buffer.putLong(dateOffset,date.toMillis)
+  override def updateDate(date: DateTime) = buffer.putLong(dateOffset,date.toEpochMillis)
 
   override def updateRecCount = buffer.putInt(recCountOffset, recCount)
 

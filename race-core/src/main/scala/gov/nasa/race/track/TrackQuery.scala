@@ -101,13 +101,13 @@ object TrackQuery {
   }
   class WithinDurationFilter (dur: Duration) extends TrackFilter {
     override def pass(f: TrackedObject)(implicit ctx:TrackQueryContext) = {
-      ctx.queryDate.toMillis - f.date.toMillis < dur.toMillis
+      ctx.queryDate.toEpochMillis - f.date.toEpochMillis < dur.toMillis
     }
     override def toString = s"DateWithin($dur)"
   }
   class OutsideDurationFilter (dur: Duration) extends TrackFilter {
     override def pass(f: TrackedObject)(implicit ctx:TrackQueryContext) = {
-      ctx.queryDate.toMillis - f.date.toMillis > dur.toMillis
+      ctx.queryDate.toEpochMillis - f.date.toEpochMillis > dur.toMillis
     }
     override def toString = s"DateOutside($dur)"
   }

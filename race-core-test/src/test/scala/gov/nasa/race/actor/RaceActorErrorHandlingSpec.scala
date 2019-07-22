@@ -22,7 +22,7 @@ import akka.event.Logging
 import com.typesafe.config.Config
 import gov.nasa.race.core.RaceActor
 import gov.nasa.race.test.RaceActorSpec
-import org.joda.time.DateTime
+import gov.nasa.race.uom.DateTime
 import org.scalatest.flatspec.AnyFlatSpecLike
 
 object RaceActorErrorHandlingSpec {

@@ -52,11 +52,11 @@ trait ContinuousTimeRaceActor extends RaceActor {
   }
 
   @inline def updateSimTime: Unit = lastSimMillis = simClock.millis
-  @inline def simTime: DateTime = DateTime.epochMillis(lastSimMillis)
+  @inline def simTime: DateTime = DateTime.ofEpochMillis(lastSimMillis)
   @inline def simTimeMillis: Long = lastSimMillis
   @inline def updatedSimTime: DateTime = {
     lastSimMillis = simClock.millis
-    DateTime.epochMillis(lastSimMillis)
+    DateTime.ofEpochMillis(lastSimMillis)
   }
   @inline def updatedSimTimeMillis = {
     lastSimMillis = simClock.millis
@@ -79,7 +79,7 @@ trait ContinuousTimeRaceActor extends RaceActor {
   }
   def updateElapsedSimTimeMillisSince (dt: DateTime): Long = {
     lastSimMillis = simClock.millis
-    lastSimMillis - dt.toMillis
+    lastSimMillis - dt.toEpochMillis
   }
   def updatedElapsedSimTimeMillisSinceStart: Long = {
     lastSimMillis = simClock.millis
@@ -93,8 +93,8 @@ trait ContinuousTimeRaceActor extends RaceActor {
   @inline def currentWallTimeMillisSinceStart = currentWallTimeMillis - startWallTimeMillis
 
   // those are based on the last update
-  def elapsedSimTimeSince (dt: DateTime) = Duration(max(0,lastSimMillis - dt.toMillis), MILLISECONDS)
-  def elapsedSimTimeMillisSince (dt: DateTime) = lastSimMillis - dt.toMillis
+  def elapsedSimTimeSince (dt: DateTime) = Duration(max(0,lastSimMillis - dt.toEpochMillis), MILLISECONDS)
+  def elapsedSimTimeMillisSince (dt: DateTime) = lastSimMillis - dt.toEpochMillis
 
   def elapsedSimTimeSinceStart = Duration(lastSimMillis - startSimTimeMillis, MILLISECONDS)
   @inline def elapsedSimTimeMillisSinceStart = lastSimMillis - startSimTimeMillis

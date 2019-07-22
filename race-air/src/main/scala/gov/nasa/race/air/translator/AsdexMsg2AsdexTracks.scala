@@ -106,7 +106,7 @@ class AsdexMsg2AsdexTracks(val config: Config=NoConfig) extends XmlParser[AsdexT
     whileNextElement {
       //--- start elements
       case "track" => trackId = readText()
-      case "time" => date = DateTime.parse(readText())
+      case "time" => date = DateTime.parseYMDT(readText())
       case "latitude" => latDeg = readDouble
       case "longitude" => lonDeg = readDouble
       // apparently some messages have malformed elements such as <aircraftId r="1"/>

@@ -121,8 +121,15 @@ object ConfigUtils {
     def getDoubleOrElse(key: String, fallback: Double) = getWithFallback(key,fallback)( conf.getDouble(key) )
     def getOptionalDouble(key: String): Option[Double] = getOptional(key)( conf.getDouble(key) )
 
-    def getDateTimeOrElse(key: String, fallback: DateTime) = getWithFallback(key,fallback)( DateTime.parse(conf.getString(key)) )
-    def getOptionalDateTime(key: String): Option[DateTime] = getOptional(key)( DateTime.parse(conf.getString(key)) )
+    def getDateTimeOrElse(key: String, fallback: DateTime) = getWithFallback(key,fallback)( DateTime.parseYMDT(conf.getString(key)) )
+    def getOptionalDateTime(key: String): DateTime = {
+      try {
+        val s = conf.getString(key)
+        DateTime.parseYMDT(s)
+      } catch {
+        case _: ConfigException.Missing => DateTime.UndefinedDateTime
+      }
+    }
 
     def getBooleanOrElse(key: String, fallback: Boolean) = getWithFallback(key,fallback)(conf.getBoolean(key))
     def getOptionalBoolean(key: String): Option[Boolean] = getOptional(key)( conf.getBoolean(key) )

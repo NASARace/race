@@ -80,7 +80,7 @@ class CompressedFlightPathSpec extends AnyFlatSpec with RaceSpec {
       p.latDeg should be(e._1 +- 0.000001)
       p.lonDeg should be(e._2 +- 0.000001)
       p.altMeters should be(e._3 +- 0.01)
-      p.millis should be(e._4.toMillis)
+      p.millis should be(e._4.toEpochMillis)
       i += 1
     }
   }

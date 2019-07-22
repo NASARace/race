@@ -16,15 +16,13 @@
  */
 package gov.nasa.race.uom
 
-import java.time.{Instant, LocalDateTime, ZoneId, ZoneOffset, ZonedDateTime}
 import java.time.format.{DateTimeFormatter, TextStyle}
-import java.time.temporal.{ChronoField, TemporalAccessor, TemporalField, UnsupportedTemporalTypeException}
-import java.util.{Calendar, Locale, TimeZone}
+import java.time.temporal.ChronoField
+import java.time._
+import java.util.Locale
 
 import gov.nasa.race._
-import gov.nasa.race.util.{DateTimeUtils, SeqUtils}
-import org.joda.time.chrono.ISOChronology
-import org.joda.time.{DateTimeZone, MutableDateTime, ReadableDateTime, DateTime => JodaDateTime}
+import gov.nasa.race.util.SeqUtils
 
 import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.duration.{Duration, FiniteDuration, MILLISECONDS}
@@ -37,16 +35,19 @@ class DateException (msg: String) extends RuntimeException(msg)
   * constructors for Date
   */
 object DateTime {
-  val UNDEFINED_DATE = Long.MinValue
-  val isoChronoUTC = ISOChronology.getInstanceUTC
+  val UNDEFINED_MILLIS = Long.MinValue
 
-  @inline def apply(d: ReadableDateTime): DateTime = new DateTime(d.getMillis)
-  @inline def apply(year: Int, month: Int, day: Int, hour: Int, minutes: Int, secs: Int, ms: Int): DateTime = {
-    new DateTime(isoChronoUTC.getDateTimeMillis(year,month,day,hour,minutes,secs,ms))
-  }
-  @inline def apply(year: Int, month: Int, day: Int, hour: Int, minutes: Int, secs: Int, ms: Int, zone: DateTimeZone): DateTime = {
-    val chrono = ISOChronology.getInstance(zone)
-    new DateTime(chrono.getDateTimeMillis(year,month,day,hour,minutes,secs,ms))
+  final val MsecPerDay = 1000*60*60*24
+  final val MsecPerHour = 1000*60*60
+
+  //--- the constructors
+
+  @inline def now: DateTime = new DateTime(System.currentTimeMillis)
+  @inline def ofEpochMillis(millis: Long) = new DateTime(millis)
+
+  @inline def apply(year: Int, month: Int, day: Int, hour: Int, minutes: Int, secs: Int, ms: Int, zoneId: ZoneId): DateTime = {
+    val zdt = ZonedDateTime.of(year,month,day, hour,minutes,secs,ms * 1000000, zoneId)
+    new DateTime(zdt.getLong(ChronoField.INSTANT_SECONDS) * 1000 + ms)
   }
 
   def timeBetween (a: DateTime, b: DateTime): Time = {
@@ -54,111 +55,150 @@ object DateTime {
     else new Time((b.millis - a.millis).toInt)
   }
 
-  /**
-    * parses textual representation of DateTime assuming ISO formatted string with optional time zone/offset
-    * TODO - this should use more forgiving RE based parsing
-    */
-  def parse(spec: String): DateTime = {
-    val dtf = DateTimeFormatter.ISO_DATE_TIME
-    val epochMillis = LocalDateTime.from(dtf.parse(spec)).atZone(ZoneOffset.UTC).toInstant().toEpochMilli()
-    new DateTime(epochMillis)
+  def parse(spec: String, dtf: DateTimeFormatter): DateTime = {
+    val inst = Instant.from(dtf.parse(spec))
+    new DateTime(inst.toEpochMilli)
   }
 
-  def parseLocal(spec: String, dtf: DateTimeFormatter): DateTime = {
-    val ta = dtf.parse(spec)
-    val locDate = LocalDateTime.from(ta)
-    val zonedDate = locDate.atZone(ZoneOffset.UTC)
-    new DateTime(zonedDate.toEpochSecond * 1000)
-  }
+  @inline def parseISO (spec: String): DateTime = parse(spec, DateTimeFormatter.ISO_DATE_TIME)
 
-  val YMD_RE = """(?:(\d+)[/-](\d+)[/-](\d+)[ ,T]?)?(?:(\d\d):(\d\d):(\d\d)(?:\.(\d\d\d))?(?:[ ]?([+-]\d+|\w+))?)?""".r
+  val YMDT_RE = """(\d{4})[\/-](\d{1,2})[\/-](\d{1,2})[ ,T](\d{1,2}):(\d{1,2}):(\d{1,2})(?:\.(\d{1,9}))? ?(?:([+-]\d{1,2})(?:\:(\d{1,2})))? ?\[?([\w\/]+)?+\]?""".r
 
   def parseYMDT(spec: String): DateTime = {
     spec match {
-      case YMD_RE(year,month,day,hour,min,sec,milli,off) =>
-        val tz = if (off == null) {
-          TimeZone.getDefault
-        } else {
-          if (off.charAt(0) == '-' || off.charAt(0) == '+') {
-            TimeZone.getTimeZone(ZoneId.ofOffset("UTC", ZoneOffset.ofHours(Integer.parseInt(off))))
-          }else {
-            TimeZone.getTimeZone(off)
-          }
-        }
-        val calendar = Calendar.getInstance(tz)
+      case YMDT_RE(year,month,day,hour,min,sec,secFrac, offHour,offMin,zId) =>
+        val zoneId = getZoneId(zId,offHour,offMin)
 
-        val yr = if (year == null) calendar.get(Calendar.YEAR) else Integer.parseInt(year)
-        val mon = if (month == null) calendar.get(Calendar.MONTH) else Integer.parseInt(month)
-        val d = if (day == null) calendar.get(Calendar.DAY_OF_MONTH) else Integer.parseInt(day)
+        val y = Integer.parseInt(year)
+        val M = Integer.parseInt(month)
+        val d = Integer.parseInt(day)
+        val H = Integer.parseInt(hour)
+        val m = Integer.parseInt(min)
+        val s = Integer.parseInt(sec)
+        val S = if (secFrac == null) 0 else getFracNanos(secFrac)
 
-        val h = if (hour == null) 0 else Integer.parseInt(hour)
-        val m = if (min == null) 0 else Integer.parseInt(min)
-        val s = if (sec == null) 0 else Integer.parseInt(sec)
-        val ms = if (milli == null) 0 else Integer.parseInt(milli)
+        val zdt = ZonedDateTime.of(y,M,d, H,m,s,S, zoneId)
+        new DateTime(zdt.getLong(ChronoField.INSTANT_SECONDS) * 1000 + S / 1000000)
 
-        calendar.clear
-        calendar.setTimeZone(tz)
-        calendar.set(yr,mon,d,h,m,s)
-
-        new DateTime(calendar.getTimeInMillis + ms)
       case _ => throw new RuntimeException(s"invalid date spec: $spec")
     }
   }
 
+  def getZoneId (zid: String, offHour: String, offMin: String): ZoneId = {
+    if (offHour == null) {
+      if (zid == null) ZoneId.systemDefault else ZoneId.of(zid)
 
-  @inline def now: DateTime = new DateTime(System.currentTimeMillis)
-  @inline def epochMillis(millis: Long) = new DateTime(millis)
+    } else { // zone name is ignored
+      val h = Integer.parseInt(offHour)
+      val m = if (offMin == null) 0 else if (h < 0) -Integer.parseInt(offMin) else Integer.parseInt(offMin)
+      ZoneId.ofOffset("", ZoneOffset.ofHoursMinutes(h, m))
+    }
+  }
+
+  def getFracNanos(secFrac: String): Int = {
+    val n = Integer.parseInt(secFrac)
+    var s = 1000000000
+    var i = secFrac.length
+    while (i > 0) {
+      s /= 10
+      i -= 1
+    }
+    n * s
+  }
+
+  //--- convenience methods for epoch milli conversion
+  def epochMillisToString (millis: Long): String = new DateTime(millis).format_yMd_HmsS_z
+  def hoursBetweenEpochMillis (t1: Long, t2: Long): Double = (t2 - t1).toDouble / MsecPerHour
+  def daysBetweenEpochMillis (t1: Long, t2: Long): Double = (t2 - t1).toDouble / MsecPerDay
+
+  //--- constants
 
   val Date0 = new DateTime(0)
-  val UndefinedDateTime = new DateTime(UNDEFINED_DATE)
+  val UndefinedDateTime = new DateTime(UNDEFINED_MILLIS)
 
   val LocalOffsetMillis: Long = ZonedDateTime.now.getOffset.getTotalSeconds * 1000
   val LocalOffsetHours: Int = ZonedDateTime.now.getOffset.getTotalSeconds / 3600
-  val LocalZoneID: String = ZoneId.systemDefault.getDisplayName(TextStyle.SHORT,Locale.getDefault)
+  val LocalZoneId: ZoneId = ZoneId.systemDefault
+  val LocalZoneIdName: String = LocalZoneId.getDisplayName(TextStyle.SHORT,Locale.getDefault)
+  val GMTZoneId: ZoneId = ZoneId.of("GMT")
 }
-import DateTime._
+import gov.nasa.race.uom.DateTime._
 
 /**
   * value class representing absolute time value based on Unix epoch time (ms since 01/01/1970-00:00:00)
-  * NOTE - this is stored as UTC epoch millis - we don't store a time zone or offset
+  *
+  * NOTE - this is stored as UTC epoch millis - we don't store a time zone or offset. TimeZones have
+  * to be explicitly provided in methods that are zone specific
   */
-class DateTime protected[uom](val millis: Long) extends AnyVal with Ordered[DateTime] with Definable[DateTime] {
+class DateTime protected[uom](val millis: Long) extends AnyVal
+                         with Ordered[DateTime] with MaybeUndefined {
 
-  def toMillis: Long = millis
+  @inline def toEpochMillis: Long = millis
   @inline def toLocalMillis: Long = (millis + LocalOffsetMillis)
 
-  def toDateTime: JodaDateTime = {
-    if (millis != UNDEFINED_DATE) new JodaDateTime(millis)
-    else throw new DateException("undefined Date value")
+  @inline def toInstant: Instant = Instant.ofEpochMilli(millis)
+  @inline def toZonedDateTime (zoneId: ZoneId): ZonedDateTime = {
+    ZonedDateTime.ofInstant(Instant.ofEpochMilli(millis),zoneId)
   }
+  @inline def toZonedDateTime: ZonedDateTime = toZonedDateTime(GMTZoneId)
+  @inline def toLocalZonedDateTime: ZonedDateTime = toZonedDateTime(LocalZoneId)
+
   def toFiniteDuration: FiniteDuration = {
-    if (millis != UNDEFINED_DATE) FiniteDuration(millis,MILLISECONDS)
+    if (millis != UNDEFINED_MILLIS) FiniteDuration(millis,MILLISECONDS)
     else throw new DateException("undefined Date value")
   }
 
-  def setDateTime(d: MutableDateTime): Unit = {
-    if (millis != UNDEFINED_DATE) d.setMillis(millis)
-    else throw new DateException("undefined Date value")
+  //--- field accessors
+
+  @inline def getYear: Int = toZonedDateTime.getYear
+  @inline def getYear (zoneId: ZoneId): Int = toZonedDateTime(zoneId).getYear
+  @inline def getLocalYear: Int = toZonedDateTime(LocalZoneId).getYear
+
+  @inline def getMonthValue: Int = toZonedDateTime.getMonthValue
+  @inline def getMonthValue (zoneId: ZoneId): Int = toZonedDateTime(zoneId).getMonthValue
+  @inline def getLocalMonthValue: Int = getMonthValue(LocalZoneId)
+
+  @inline def getDayOfMonth: Int = toZonedDateTime.getDayOfMonth
+  @inline def getDayOfMonth (zoneId: ZoneId): Int = toZonedDateTime(zoneId).getDayOfMonth
+  @inline def getLocalDayOfMonth: Int = getDayOfMonth(LocalZoneId)
+
+  @inline def getYMD: (Int,Int,Int) = {
+    val zdt = toZonedDateTime
+    (zdt.getYear, zdt.getMonthValue, zdt.getDayOfMonth)
   }
+  @inline def getYMD (zoneId: ZoneId): (Int,Int,Int) = {
+    val zdt = toZonedDateTime(zoneId)
+    (zdt.getYear, zdt.getMonthValue, zdt.getDayOfMonth)
+  }
+  @inline def getLocalYMD: (Int,Int,Int) = getYMD(LocalZoneId)
 
-  def yearUTC: Int = isoChronoUTC.year.get(millis)
-  def monthUTC: Int = isoChronoUTC.monthOfYear.get(millis)
-  def dayUTC: Int = isoChronoUTC.dayOfMonth.get(millis)
-
-  def year(zone: DateTimeZone): Int = ISOChronology.getInstance(zone).year.get(millis)
-  def month(zone: DateTimeZone): Int = ISOChronology.getInstance(zone).monthOfYear.get(millis)
-  def day(zone: DateTimeZone): Int = ISOChronology.getInstance(zone).dayOfMonth.get(millis)
+  @inline def getYMDT: (Int,Int,Int, Int,Int,Int,Int) = {
+    val zdt = toZonedDateTime
+    (zdt.getYear, zdt.getMonthValue, zdt.getDayOfMonth, zdt.getHour, getMinute, getSecond, getMillisecond)
+  }
+  @inline def getYMDT (zoneId: ZoneId): (Int,Int,Int, Int,Int,Int,Int) = {
+    val zdt = toZonedDateTime(zoneId)
+    (zdt.getYear, zdt.getMonthValue, zdt.getDayOfMonth, zdt.getHour, getMinute, getSecond, getMillisecond)
+  }
+  @inline def getLocalYMDT: (Int,Int,Int, Int,Int,Int,Int) = {
+    val zdt = toLocalZonedDateTime
+    (zdt.getYear, zdt.getMonthValue, zdt.getDayOfMonth, zdt.getHour, getMinute, getSecond, getMillisecond)
+  }
 
   //--- these refer to UTC
-  @inline def hour: Int = ((millis % Time.MillisInDay) / Time.MillisInHour).toInt
-  @inline def minutes: Int = ((millis % Time.MillisInHour) / Time.MillisInMinute).toInt
-  @inline def seconds: Int = ((millis % Time.MillisInMinute) / 1000).toInt
-  @inline def milliseconds: Int = (millis % 1000).toInt
+  @inline def getHour: Int = ((millis % Time.MillisInDay) / Time.MillisInHour).toInt
+  @inline def getHour (zoneId: ZoneId): Int = toZonedDateTime(zoneId).getHour
+  @inline def getLocalHour: Int = (((millis + LocalOffsetMillis) % Time.MillisInDay) / Time.MillisInHour).toInt
 
-  def localHour: Int = (((millis + LocalOffsetMillis) % Time.MillisInDay) / Time.MillisInHour).toInt
+  // we assume only full hour offsets so minute, second and millisecond do not depend on zone
 
-  def timeOfDay: Time = new Time((millis % Time.MillisInDay).toInt)
-  def localTimeOfDay: Time = new Time(((millis + LocalOffsetMillis) % Time.MillisInDay).toInt)
+  @inline def getMinute: Int = ((millis % Time.MillisInHour) / Time.MillisInMinute).toInt
+  @inline def getSecond: Int = ((millis % Time.MillisInMinute) / 1000).toInt
+  @inline def getMillisecond: Int = (millis % 1000).toInt
+
+
+  def getTimeOfDay: Time = new Time((millis % Time.MillisInDay).toInt)
+  def getLocalTimeOfDay: Time = new Time(((millis + LocalOffsetMillis) % Time.MillisInDay).toInt)
 
   // unfortunately we can't overload '-' because of erasure
   @inline def timeUntil(d: DateTime): Time = new Time((d.millis - millis).toInt)
@@ -167,36 +207,81 @@ class DateTime protected[uom](val millis: Long) extends AnyVal with Ordered[Date
   @inline def timeSince(d: DateTime): Time = new Time((millis - d.millis).toInt)
   def <-: (d: DateTime): Time = timeSince(d)
 
-  def + (t: Time): DateTime = new DateTime(millis + t.millis)
-  def - (t: Time): DateTime = new DateTime(millis - t.millis)
+  @inline def + (t: Time): DateTime = new DateTime(millis + t.millis)
+  @inline def - (t: Time): DateTime = new DateTime(millis - t.millis)
 
-  def + (dur: Duration): DateTime = new DateTime(millis + dur.toMillis)
-  def - (dur: Duration): DateTime = new DateTime(millis - dur.toMillis)
+  @inline def + (dur: Duration): DateTime = new DateTime(millis + dur.toMillis)
+  @inline def - (dur: Duration): DateTime = new DateTime(millis - dur.toMillis)
 
   //-- undefined value handling (value based alternative for finite cases that would otherwise require Option)
-  @inline override def isUndefined: Boolean = millis == UNDEFINED_DATE
-  @inline def isDefined = millis != UNDEFINED_DATE
+  @inline override def isDefined: Boolean = millis != UNDEFINED_MILLIS
+  @inline override def isUndefined: Boolean = millis == UNDEFINED_MILLIS
+  @inline def orElse (f: => DateTime): DateTime = if (isDefined) this else f
+  @inline def map (f: DateTime => DateTime): DateTime = if (isDefined) f(this) else DateTime.UndefinedDateTime
 
   //--- comparison (TODO - handle undefined values)
   @inline override def < (o: DateTime): Boolean = millis < o.millis
   @inline override def <= (o: DateTime): Boolean = millis <= o.millis
   @inline override def > (o: DateTime): Boolean = millis > o.millis
   @inline override def >= (o: DateTime): Boolean = millis >= o.millis
-  def compare (other: DateTime): Int = millis.compare(other.millis)
 
-  override def toString: String = showDate
-  def showTTime: String = if (millis != UNDEFINED_DATE) DateTimeUtils.toISODateString(millis) else "<undefined>"
-  def showDate: String = if (millis != UNDEFINED_DATE) DateTimeUtils.toISODateString(millis) else "<undefined>"
-  def showHHMMSSZ: String = {
-    if (millis != UNDEFINED_DATE) {
-      f"$hour%02d:$minutes%02d:$seconds%02d Z"
-    } else "<undefined>"
+  @inline override def compare (other: DateTime): Int = if (millis > other.millis) 1 else if (millis < other.millis) -1 else 0
+  @inline override def compareTo (other: DateTime): Int = compare(other)
+
+  //--- formatting
+
+  def format (fmt: DateTimeFormatter): String = toZonedDateTime.format(fmt)
+  def format(fmtSpec: String): String = format(DateTimeFormatter.ofPattern(fmtSpec))
+
+  def format (fmt: DateTimeFormatter, zoneId: ZoneId): String = toZonedDateTime(zoneId).format(fmt)
+  def format(fmtSpec: String, zoneId: ZoneId): String = format(DateTimeFormatter.ofPattern(fmtSpec),zoneId)
+
+  def formatLocal (fmt: DateTimeFormatter): String = toZonedDateTime(LocalZoneId).format(fmt)
+  def formatLocal (fmtSpec: String): String = formatLocal(DateTimeFormatter.ofPattern(fmtSpec))
+
+  //--- simple formatting
+
+  def format_yMd_HmsS_z: String = {
+    val (year,month,day) = getYMD
+    f"$year%4d-$month%02d-$day%02dT$getHour%02d:$getMinute%02d:$getSecond%02d.$getMillisecond%03dZ"
+  }
+  def format_yMd_Hms_z: String = {
+    val (year,month,day) = getYMD
+    f"$year%4d-$month%02d-$day%02dT$getHour%02d:$getMinute%02d:$getSecond%02dZ"
+  }
+  def format_yMd_Hms_z(zoneId: ZoneId): String = {
+    val (year,month,day,hour,minute,second,_) = getYMDT(zoneId)
+    val shortId = zoneId.getDisplayName(TextStyle.SHORT,Locale.getDefault)
+    f"$year%4d-$month%02d-$day%02dT$getHour%02d:$getMinute%02d:$getSecond%02d$shortId"
+  }
+  def formatLocal_yMd_Hms_z: String = {
+    val (year,month,day,hour,minute,second,_) = getYMDT(LocalZoneId)
+    f"$year%4d-$month%02d-$day%02dT$getHour%02d:$getMinute%02d:$getSecond%02d$LocalZoneIdName"
+  }
+  def formatLocal_yMd_Hms: String = {
+    val (year,month,day,hour,minute,second,_) = getYMDT(LocalZoneId)
+    f"$year%4d-$month%02d-$day%02dT$getHour%02d:$getMinute%02d:$getSecond%02d"
   }
 
-  def toString(fmtSpec: String): String = {
-    val fmt = DateTimeFormatter.ofPattern(fmtSpec)
-    fmt.format(Instant.ofEpochMilli(millis))
+  def format_yMd: String = {
+    val (year,month,day) = getYMD
+    f"$year%4d-$month%02d-$day%02d"
   }
+
+  def format_E_Mdy: String = {
+    val zdt = toZonedDateTime
+    val year = zdt.getYear
+    val month = zdt.getMonthValue
+    val day = zdt.getDayOfMonth
+    val dayName = zdt.getDayOfWeek.getDisplayName(TextStyle.SHORT,Locale.getDefault)
+    f"$dayName $month%02d-$day%02d-$year%4d"
+  }
+
+  def format_Hms: String = f"$getHour%02d:$getMinute%02d:$getSecond%02d"
+
+  def format_Hmsz: String = f"$getHour%02d:$getMinute%02d:$getSecond%02dZ"
+
+  override def toString: String = format_yMd_HmsS_z
 
   //.. and possibly more formatters
 }

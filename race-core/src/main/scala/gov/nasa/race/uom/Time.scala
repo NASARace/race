@@ -18,6 +18,7 @@ package gov.nasa.race.uom
 
 import java.time.Duration
 
+import gov.nasa.race.MaybeUndefined
 import gov.nasa.race.util.DateTimeUtils
 
 import scala.collection.mutable.ArrayBuffer
@@ -31,6 +32,7 @@ class TimeException (msg: String) extends RuntimeException(msg)
   */
 object Time {
   final val UNDEFINED_TIME = Int.MinValue
+
   final val MillisInMinute: Int = 1000 * 60
   final val MillisInHour: Int = MillisInMinute * 60
   final val MillisInDay: Int = MillisInHour * 24
@@ -64,6 +66,7 @@ object Time {
   }
 
   final val Time0 = new Time(0)
+  final val MaxTimeOfDay = new Time(MillisInDay)
   final val UndefinedTime = new Time(UNDEFINED_TIME)
 
   @inline def min (a: Time, b: Time): Time = if (a.millis <= b.millis) a else b
@@ -90,7 +93,8 @@ import Time._
   *
   * note this cannot be directly converted into Date, but we can add to dates or extract time values from them
   */
-class Time protected[uom] (val millis: Int) extends AnyVal with Ordered[Time] {
+class Time protected[uom] (val millis: Int) extends AnyVal
+                                    with Ordered[Time] with MaybeUndefined {
 
   //--- converters
   def toMillis: Int = millis
@@ -107,26 +111,25 @@ class Time protected[uom] (val millis: Int) extends AnyVal with Ordered[Time] {
   def toFiniteDuration: FiniteDuration = new FiniteDuration(millis, scala.concurrent.duration.MILLISECONDS)
 
   // we don't try to be symmetric with Date - it seems non-intuitive to add a Date to a Time
-  def + (t: Time): Time = new Time(millis + t.millis)
-  def - (t: Time): Time = new Time(millis - t.millis)
-  def / (t: Time): Double = millis.toDouble / t.millis
+  @inline def + (t: Time): Time = new Time(millis + t.millis)
+  @inline def - (t: Time): Time = new Time(millis - t.millis)
+  @inline def / (t: Time): Double = millis.toDouble / t.millis
 
   // we can't overload the normal / operator because of type erasure
-  def / (d: Double): Time = new Time((millis / d).round.toInt)
-  def * (d: Double): Time = new Time((millis * d).round.toInt)
-
+  @inline def / (d: Double): Time = new Time((millis / d).round.toInt)
+  @inline def * (d: Double): Time = new Time((millis * d).round.toInt)
 
   //-- undefined value handling (value based alternative for finite cases that would otherwise require Option)
-  @inline def isUndefined: Boolean = millis == UNDEFINED_TIME
-  @inline def isDefined = millis != UNDEFINED_TIME
-  @inline def orElse(fallback: Time): Time = if (isDefined) this else fallback
+  @inline override def isUndefined: Boolean = millis == UNDEFINED_TIME
+  @inline override def isDefined: Boolean = millis != UNDEFINED_TIME
 
   //--- comparison (TODO - handle undefined values)
   @inline override def < (o: Time): Boolean = millis < o.millis
   @inline override def <= (o: Time): Boolean = millis <= o.millis
   @inline override def > (o: Time): Boolean = millis > o.millis
   @inline override def >= (o: Time): Boolean = millis >= o.millis
-  def compare (other: Time): Int = millis.compare(other.millis)
+  @inline override def compare (other: Time): Int = if (millis > other.millis) 1 else if (millis < other.millis) -1 else 0
+  @inline override def compareTo (other: Time): Int = compare(other)
 
   override def toString: String = showMillis   // calling this would cause allocation
   def showMillis: String = if (millis != UNDEFINED_TIME) s"${millis}ms" else "<undefined>"

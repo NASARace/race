@@ -25,7 +25,6 @@ import gov.nasa.race.common.Query
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.track.TrackPairEvent
 import gov.nasa.race.trajectory.TrajectoryDiff
-import gov.nasa.race.util.DateTimeUtils.hhmmss
 import gov.nasa.race.util.StringUtils
 import gov.nasa.race.ww.{Images, RaceViewer}
 
@@ -60,7 +59,7 @@ class TrackDiffEventFields extends TrackPairEventFields {
     e.extraData match {
       case Some(diff:TrajectoryDiff) =>
         id.text = e.id
-        time.text = hhmmss.print(e.date)
+        time.text = e.date.format_Hms
         refSrc.text = diff.refSource
         diffSrc.text = diff.diffSource
         nPoints.text = diff.numberOfSamples.toString

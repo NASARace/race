@@ -66,7 +66,7 @@ class TrkReader extends DataStreamReader {
       val nTracks = dis.readUnsignedByte
       repeat(nTracks) {
         val id = readString256(dis,buf)
-        val date = DateTime.epochMillis(dis.readLong)
+        val date = DateTime.ofEpochMillis(dis.readLong)
         val lat = Degrees(dis.readDouble)
         val lon = Degrees(dis.readDouble)
         val alt = Meters(dis.readDouble)

@@ -18,7 +18,7 @@ package gov.nasa.race.trajectory
 
 import gov.nasa.race.geo.GeoPosition
 import gov.nasa.race.track.TrackPoint
-import gov.nasa.race.uom.DateTime.epochMillis
+import gov.nasa.race.uom.DateTime.ofEpochMillis
 import gov.nasa.race.uom.{Angle, DateTime, Length, Time}
 
 /**
@@ -40,7 +40,7 @@ abstract class TrajectoryFilter (val traj: MutTrajectory) {
 }
 
 class TimeFilter (t: MutTrajectory, dt: Time) extends TrajectoryFilter(t) {
-  protected var lastDate: DateTime = epochMillis(Long.MinValue) // make sure the first append passes
+  protected var lastDate: DateTime = ofEpochMillis(Long.MinValue) // make sure the first append passes
 
   override def append (date: DateTime, lat: Angle, lon: Angle, alt: Length): Unit = {
     if (lastDate.timeUntil(date) >= dt) {

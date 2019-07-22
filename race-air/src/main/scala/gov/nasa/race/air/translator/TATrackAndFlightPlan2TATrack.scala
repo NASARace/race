@@ -104,7 +104,7 @@ class TATrackAndFlightPlan2TATrack (val config: Config=NoConfig) extends XmlPars
 
     whileNextElement {
       case "trackNum" => trackId = readText
-      case "mrtTime" => mrtTime = DateTime.parse(readText)
+      case "mrtTime" => mrtTime = DateTime.parseYMDT(readText)
       case "xPos" => xPos = NauticalMiles(readInt / 256.0)
       case "yPos" => yPos = NauticalMiles(readInt / 256.0)
       case "lat" => lat = Degrees(readDouble)

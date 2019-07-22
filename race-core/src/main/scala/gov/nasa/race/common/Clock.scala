@@ -30,7 +30,7 @@ import scala.concurrent.duration._
   */
 class Clock (initTime: DateTime = DateTime.now,
              initTimeScale: Double = 1,
-             endTime: Option[DateTime] = None,
+             endTime: DateTime = DateTime.UndefinedDateTime,
              stopped: Boolean=false)
          extends Cloneable {
 
@@ -47,14 +47,14 @@ class Clock (initTime: DateTime = DateTime.now,
   def end = _end
   def initMillis = _initMillis
   @inline def stoppedAt = _stoppedAt
-  def baseMillis = _base.toMillis
+  def baseMillis = _base.toEpochMillis
   def endMillis = endTimeMillis
 
   @inline def isStopped = _stoppedAt != 0
 
 
   /** simulation time milliseconds */
-  @inline def millis: Long = _base.toMillis + ((currentMillis - _initMillis) * _timeScale).toLong
+  @inline def millis: Long = _base.toEpochMillis + ((currentMillis - _initMillis) * _timeScale).toLong
 
   /** simulation time DateTime */
   def dateTime: DateTime = _base + Time.Milliseconds(((currentMillis - _initMillis) * _timeScale))
@@ -67,7 +67,7 @@ class Clock (initTime: DateTime = DateTime.now,
 
   /** wallclock time for given sim time */
   def wallTime (simTime: DateTime): DateTime = {
-    DateTime.now + Time.Milliseconds(((simTime.toMillis - millis)/_timeScale))
+    DateTime.now + Time.Milliseconds(((simTime.toEpochMillis - millis)/_timeScale))
   }
 
   /** wallclock time for given sim duration */
@@ -75,14 +75,11 @@ class Clock (initTime: DateTime = DateTime.now,
     DateTime.now + Time.Milliseconds((simDuration.toMillis/_timeScale))
   }
 
-  def wallEndTime: Option[DateTime] = _end.map(wallTime)
+  def wallEndTime: DateTime = _end.map(wallTime)
 
-  def endTimeMillis: Long = _end match {
-    case Some(date) => date.toMillis
-    case None => Long.MaxValue
-  }
+  def endTimeMillis: Long = if (_end.isDefined) _end.toEpochMillis else Long.MaxValue
 
-  def exceedsEndTime (d: DateTime): Boolean = d.toMillis > endTimeMillis
+  def exceedsEndTime (d: DateTime): Boolean = d.toEpochMillis > endTimeMillis
 
   def save = clone.asInstanceOf[Clock]
 }
@@ -92,10 +89,10 @@ class Clock (initTime: DateTime = DateTime.now,
   */
 class SettableClock (initTime: DateTime = DateTime.now,
                      initTimeScale: Double = 1,
-                     endTime: Option[DateTime] = None,
+                     endTime: DateTime = DateTime.UndefinedDateTime,
                      stopped: Boolean = false) extends Clock (initTime,initTimeScale,endTime,stopped) {
 
-  def reset (initTime: DateTime, initTimeScale: Double = 1, endTime: Option[DateTime] = None): SettableClock = synchronized {
+  def reset (initTime: DateTime, initTimeScale: Double = 1, endTime: DateTime = DateTime.UndefinedDateTime): SettableClock = synchronized {
     _timeScale = initTimeScale
     _base = initTime
     _end = endTime

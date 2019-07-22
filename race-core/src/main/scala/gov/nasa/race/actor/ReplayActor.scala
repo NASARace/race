@@ -106,7 +106,7 @@ class ReplayActor (val config: Config) extends ContinuousTimeRaceActor
 
   def handleReplayMessage: Receive = {
     case r@Replay(msg,date) =>
-      val dtMillis = date.toMillis - updatedSimTimeMillis
+      val dtMillis = date.toEpochMillis - updatedSimTimeMillis
       if (dtMillis < SchedulerThresholdMillis) { // this includes times that already have passed
         debug(f"publishing scheduled: $msg%30.30s.. ")
         publishFiltered(msg)
@@ -208,7 +208,7 @@ class ReplayActor (val config: Config) extends ContinuousTimeRaceActor
       var didSchedule = false
       if (pendingMsgs.nonEmpty) {
         pendingMsgs.foreach { r =>
-          val dtMillis = r.date.toMillis - updatedSimTimeMillis
+          val dtMillis = r.date.toEpochMillis - updatedSimTimeMillis
           if (dtMillis < SchedulerThresholdMillis) {
             publishFiltered(r.msg)
           } else {

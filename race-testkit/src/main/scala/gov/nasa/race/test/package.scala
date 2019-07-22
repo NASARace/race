@@ -17,19 +17,62 @@
 
 package gov.nasa.race
 
+import java.lang.management.ManagementFactory
+
 /**
   * package `gov.nasa.race.test` contains types and utilities that are used to create RACE specific tests
   */
 package object test {
 
+  val runtime = Runtime.getRuntime
+  val threadMxBean = ManagementFactory.getThreadMXBean
+  val memoryMxBean = ManagementFactory.getMemoryMXBean
+  val gcMxBeans = ManagementFactory.getGarbageCollectorMXBeans
+
   def elapsedMillis(n: Int)(f: => Any): Long = {
-    val t1 = System.currentTimeMillis
+    val t0 = System.currentTimeMillis
     var i = 0
     while (i < n) {
       f
       i += 1
     }
-    val t2 = System.currentTimeMillis
-    t2 - t1
+    System.currentTimeMillis - t0
+  }
+
+  def elapsedNanos(n: Int)(f: => Any): Long = {
+    val t0 = System.nanoTime
+    var i = 0
+    while (i < n) {
+      f
+      i += 1
+    }
+    System.nanoTime - t0
+  }
+
+  def setThreadCpuEnabled: Unit = {
+    threadMxBean.setThreadCpuTimeEnabled(true)
+    if (!threadMxBean.isThreadCpuTimeEnabled) throw new RuntimeException("VM does not support thread CPU time")
+  }
+
+  def elapsedThreadCpuNanos(n: Int)(f: => Any): Long = {
+    setThreadCpuEnabled
+    val tid = Thread.currentThread.getId
+    val t0 = threadMxBean.getThreadCpuTime(tid)
+    var i = 0
+    while (i < n) {
+      f
+      i += 1
+    }
+    threadMxBean.getThreadCpuTime(tid) - t0
+  }
+
+  def usedHeapMemory: Long = {
+    memoryMxBean.getHeapMemoryUsage.getUsed
+  }
+
+  def usedHeapMemoryDiff (f: => Any): Long = {
+    val m0 = usedHeapMemory
+    f
+    usedHeapMemory - m0
   }
 }

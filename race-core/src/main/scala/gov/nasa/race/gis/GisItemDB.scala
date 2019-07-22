@@ -138,7 +138,7 @@ abstract class GisItemDB[T <: GisItem: ClassTag] (data: ByteBuffer) {
   val checkSum  = data.getLong(12)
   if (!checkCheckSum) throw new RuntimeException(f"invalid CRC32 checksum (should be $checkSum%x)")
 
-  val date   = DateTime.epochMillis(data.getLong(20))
+  val date   = DateTime.ofEpochMillis(data.getLong(20))
 
   val nStrings: Int = data.getInt(HEADER_LENGTH)
   if (nStrings <= 1) throw new RuntimeException("no schema found in DB")

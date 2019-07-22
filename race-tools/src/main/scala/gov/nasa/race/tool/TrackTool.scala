@@ -20,20 +20,19 @@ import java.io.{File, FileOutputStream, PrintStream}
 
 import gov.nasa.race._
 import gov.nasa.race.main.CliArgs
-import gov.nasa.race.util.{ConsoleIO, DateTimeUtils, FileUtils}
+import gov.nasa.race.util.{ConsoleIO, FileUtils}
 import gov.nasa.race.uom.Length._
 import gov.nasa.race.uom.Speed._
 import gov.nasa.race.uom.Acceleration._
 import gov.nasa.race.common.ManagedResource._
-import gov.nasa.race.track.avro.{TrackPoint => AvroTrackPoint, TrackRoutePoint => AvroTrackRoutePoint,
-                                 FullTrackPoint => AvroFullTrackPoint, TrackInfoRecord => AvroTrackInfo,
-                                 TrackIdRecord => AvroTrackIdRecord}
+import gov.nasa.race.track.avro.{FullTrackPoint => AvroFullTrackPoint, TrackIdRecord => AvroTrackIdRecord, TrackInfoRecord => AvroTrackInfo, TrackPoint => AvroTrackPoint, TrackRoutePoint => AvroTrackRoutePoint}
+import gov.nasa.race.uom.DateTime
 import org.apache.avro.file.{DataFileReader, DataFileWriter}
 import org.apache.avro.generic.{GenericData, GenericDatumReader, GenericDatumWriter, GenericRecord}
 import org.apache.avro.Schema
 import org.apache.avro.specific.{SpecificDatumReader, SpecificDatumWriter, SpecificRecord}
 
-import scala.collection.mutable.{SortedSet => MSortedSet, HashMap => MHashMap, HashSet => MHashSet}
+import scala.collection.mutable.{HashMap => MHashMap, HashSet => MHashSet, SortedSet => MSortedSet}
 import scala.jdk.CollectionConverters._
 import scala.util.matching.Regex
 
@@ -436,9 +435,9 @@ object TrackTool {
     println(s"number of track points: $nTrackPoints")
     println(s"max TP per flight:      $nTPmax")
     println(s"avg TP per flight:      $nTPavg")
-    println(s"start date:             ${DateTimeUtils.toSimpleDhmsStringZ(tMin)}")
-    println(s"end date:               ${DateTimeUtils.toSimpleDhmsStringZ(tMax)}")
-    println(f"duration:               ${DateTimeUtils.hours(tMax - tMin)}%.1fh")
+    println(s"start date:             ${DateTime.epochMillisToString(tMin)}")
+    println(s"end date:               ${DateTime.epochMillisToString(tMax)}")
+    println(f"duration:               ${DateTime.hoursBetweenEpochMillis(tMin, tMax)}%.1fh")
   }
 
   def initFlightInfoStore (file: File) = {
@@ -618,9 +617,9 @@ object TrackTool {
     ConsoleIO.clearLine
     println(s"size of generated $outFile: ${FileUtils.sizeString(outFile.length)}")
     println(s"number of track points: $nTP")
-    println(s"start date:             ${DateTimeUtils.toSimpleDhmsStringZ(tMin)}")
-    println(s"end date:               ${DateTimeUtils.toSimpleDhmsStringZ(tMax)}")
-    println(f"duration:               ${DateTimeUtils.hours(tMax - tMin)}%.1fh")
+    println(s"start date:             ${DateTime.epochMillisToString(tMin)}")
+    println(s"end date:               ${DateTime.epochMillisToString(tMax)}")
+    println(f"duration:               ${DateTime.hoursBetweenEpochMillis(tMin, tMax)}%.1fh")
   }
 
 

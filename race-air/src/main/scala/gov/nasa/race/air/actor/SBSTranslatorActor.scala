@@ -65,7 +65,7 @@ class SBSTranslatorActor (config: Config) extends TranslatorActor(config) with T
     processCheckResult(fpos, sanityChecker.checkPair(fpos,lastFPos),dtMillis(fpos,lastFPos))
   }
 
-  @inline def dtMillis(fpos: TrackedAircraft, lastFPos: TrackedAircraft) = fpos.date.toMillis - lastFPos.date.toMillis
+  @inline def dtMillis(fpos: TrackedAircraft, lastFPos: TrackedAircraft) = fpos.date.toEpochMillis - lastFPos.date.toEpochMillis
 
   def processCheckResult(fpos: TrackedAircraft, checkResult: Option[TrackProblem], dt: Long) = {
     checkResult match {

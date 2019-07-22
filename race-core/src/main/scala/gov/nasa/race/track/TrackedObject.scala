@@ -79,9 +79,9 @@ trait TrackedObject extends IdentifiableObject with TrackPoint with MovingObject
 
   def toShortString = {
     val d = date
-    val hh = d.hour
-    val mm = d.minutes
-    val ss = d.seconds
+    val hh = d.getHour
+    val mm = d.getMinute
+    val ss = d.getSecond
     val id = StringUtils.capLength(cs)(8)
     f"$id%-7s $hh%02d:$mm%02d:$ss%02d ${position.altitude.toFeet.toInt}%6dft ${heading.toNormalizedDegrees.toInt}%3d° ${speed.toKnots.toInt}%4dkn"
   }

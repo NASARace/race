@@ -16,6 +16,8 @@
  */
 package gov.nasa.race.uom
 
+import gov.nasa.race.MaybeUndefined
+
 import scala.concurrent.duration.FiniteDuration
 
 /**
@@ -38,7 +40,8 @@ object Acceleration {
 
 }
 
-class Acceleration protected[uom] (val d: Double) extends AnyVal {
+class Acceleration protected[uom] (val d: Double) extends AnyVal
+                                                   with Ordered[Acceleration] with MaybeUndefined {
   import Acceleration._
 
   def toMetersPerSecond2: Double = d
@@ -55,18 +58,19 @@ class Acceleration protected[uom] (val d: Double) extends AnyVal {
   @inline def ≈ (x: Acceleration)(implicit εAcceleration: Acceleration) = Math.abs(d - x.d) <= εAcceleration.d
   @inline def ~= (x: Acceleration)(implicit εAcceleration: Acceleration) = Math.abs(d - x.d) <= εAcceleration.d
 
-  @inline def < (x: Acceleration) = d < x.d
-  @inline def > (x: Acceleration) = d > x.d
   @inline def =:= (x: Acceleration) = d == x.d  // use this if you really mean equality
   @inline def ≡ (x: Acceleration) = d == x.d
 
-  @inline def compare (other: Length): Int = d compare other.d
-
+  @inline override def < (x: Acceleration): Boolean = d < x.d
+  @inline override def <= (x: Acceleration): Boolean = d <= x.d
+  @inline override def > (x: Acceleration): Boolean = d > x.d
+  @inline override def >= (x: Acceleration): Boolean = d >= x.d
+  @inline override def compare (other: Acceleration): Int = if (d > other.d) 1 else if (d < other.d) -1 else 0
+  @inline override def compareTo (other: Acceleration): Int = compare(other)
 
   //-- undefined value handling (value based alternative for finite cases that would otherwise require Option)
-  @inline def isUndefined = d.isNaN
-  @inline def isDefined = !d.isNaN
-  @inline def orElse(fallback: Acceleration) = if (isDefined) this else fallback
+  @inline override def isUndefined = d.isNaN
+  @inline override def isDefined = !d.isNaN
 
   override def toString = show
   def show = s"${d}m/s²"
