@@ -23,7 +23,6 @@ import java.awt.{Font, Point}
 import gov.nasa.race._
 import gov.nasa.race.track.TrackedObject
 import gov.nasa.race.trajectory.MutTrajectory
-import gov.nasa.race.util.DateTimeUtils.hhmmss
 import gov.nasa.race.ww.Implicits._
 import gov.nasa.race.ww.LayerObjectAttribute.LayerObjectAttribute
 import gov.nasa.race.ww._

@@ -42,7 +42,7 @@ lazy val raceCore = createProject("race-core", commonSettings).
   settings(
     mainClass in Compile := Some("gov.nasa.race.main.ConsoleMain")
   ).
-  addLibraryDependencies(akkaActor,akkaRemote,typesafeConfig,nscalaTime,scalaReflect,jsch,scalaXml,avro)
+  addLibraryDependencies(akkaActor,akkaRemote,typesafeConfig,scalaReflect,jsch,scalaXml,avro)
 
 lazy val raceLauncher = createProject("race-launcher", commonSettings).
   dependsOn(raceCore).
@@ -76,7 +76,7 @@ lazy val raceSwing = createProject("race-swing", commonSettings).
 
 lazy val raceAir = createProject("race-air", commonSettings).
   dependsOn(raceCore,raceNetJMS,raceNetHttp).
-  addLibraryDependencies(akkaActor,typesafeConfig,nscalaTime,scalaParser,circeAll)
+  addLibraryDependencies(akkaActor,typesafeConfig,scalaParser,circeAll)
 
 lazy val raceWW = createProject("race-ww", commonSettings).
   dependsOn(raceCore,raceSwing).
@@ -84,7 +84,7 @@ lazy val raceWW = createProject("race-ww", commonSettings).
 
 lazy val raceWWAir = createProject("race-ww-air", commonSettings).
   dependsOn(raceWW,raceAir).
-  addLibraryDependencies(typesafeConfig,nscalaTime)
+  addLibraryDependencies(typesafeConfig)
 
 lazy val raceCL = createProject("race-cl", commonSettings).
   enablePlugins(JavaAppPackaging,ClasspathJarPlugin).
@@ -93,7 +93,7 @@ lazy val raceCL = createProject("race-cl", commonSettings).
 
 lazy val raceTestKit = createProject("race-testkit", commonSettings).
   dependsOn(raceCore).
-  addLibraryDependencies(defaultTestLibs,nscalaTime,akkaActor,akkaTestkit,akkaMultiNodeTestkit)
+  addLibraryDependencies(defaultTestLibs,akkaActor,akkaTestkit,akkaMultiNodeTestkit)
 
 lazy val raceUI = createProject("race-ui", commonSettings).
   dependsOn(raceCore,raceSwing)
@@ -103,7 +103,7 @@ lazy val raceTools = createProject("race-tools", commonSettings).
   dependsOn(raceCore,raceNetHttp,raceAir).
   settings(
     mainClass in Compile := Some("gov.nasa.race.tool.CryptConfig")).
-  addLibraryDependencies(logback,nscalaTime,avro)
+  addLibraryDependencies(logback,avro)
 
 lazy val raceSpace = createProject("race-space", commonSettings).
   dependsOn(raceCore).

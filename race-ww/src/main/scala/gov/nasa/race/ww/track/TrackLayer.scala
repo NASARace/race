@@ -19,7 +19,6 @@ package gov.nasa.race.ww.track
 
 import java.awt.image.BufferedImage
 
-import com.github.nscala_time.time.Imports._
 import gov.nasa.race._
 import gov.nasa.race.common.{Query, ThresholdLevel, ThresholdLevelList}
 import gov.nasa.race.config.ConfigUtils._
@@ -28,7 +27,7 @@ import gov.nasa.race.geo.{GeoPositioned, GreatCircle}
 import gov.nasa.race.swing.Style._
 import gov.nasa.race.track.{TrackTerminationMessage, _}
 import gov.nasa.race.trajectory.{MutCompressedTrajectory, MutTrajectory}
-import gov.nasa.race.util.{DateTimeUtils, StringUtils}
+import gov.nasa.race.util.StringUtils
 import gov.nasa.race.ww.EventAction.EventAction
 import gov.nasa.race.ww.Implicits._
 import gov.nasa.race.ww.LayerObjectAction.LayerObjectAction
@@ -118,7 +117,7 @@ trait TrackLayer[T <:TrackedObject] extends SubscribingRaceLayer
                                              //"--:--:-- ------ --- ----"
   override def layerObjectDataText (e: TrackEntry[T]): String = {
     val obj = e.obj
-    val dtg = DateTimeUtils.formatDate(obj.date, DateTimeUtils.hhmmss)
+    val dtg = obj.date.format_Hms
     val alt = obj.position.altitude.toFeet.toInt
     val hdg = obj.heading.toNormalizedDegrees.toInt
     val spd = obj.speed.toKnots.toInt

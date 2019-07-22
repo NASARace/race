@@ -45,9 +45,6 @@ object Dependencies {
   //--- Typesafe config
   val typesafeConfig = "com.typesafe" % "config" % "1.3.4"
 
-  //--- nscala-time (Dates with operators): https://github.com/nscala-time/nscala-time
-  val nscalaTime = "com.github.nscala-time" %% "nscala-time" %  "2.22.0"
-
   //--- Scala parser combinators (https://github.com/scala/scala-parser-combinators)
   val scalaParser = "org.scala-lang.modules" %% "scala-parser-combinators" % "1.1.2"
 
@@ -77,7 +74,7 @@ object Dependencies {
   //--- scalaCheck
   val scalaCheck = "org.scalacheck" %% "scalacheck" % "1.14.0" % Test
 
-  val defaultLibs =  Seq(logback,typesafeConfig,nscalaTime)
+  val defaultLibs =  Seq(logback,typesafeConfig)
   val defaultTestLibs = Seq(scalaTest,scalaTestPlus,flexmarkAll,scalaCheck,pegDown)
 
   //--- Circe Json support

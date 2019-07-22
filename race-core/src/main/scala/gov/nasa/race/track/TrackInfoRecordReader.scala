@@ -53,10 +53,10 @@ class TrackInfoRecordReader  (val config: Config) extends TrackInfoReader {
         Some(rec.getVehicleType.toString),
         Some(rec.getDeparturePoint.toString),
         Some(rec.getArrivalPoint.toString),
-        Some(DateTime.ofEpochMillis(rec.getEtd)),
-        None, // no atd
-        Some(DateTime.ofEpochMillis(rec.getEta)),
-        None, // no ata
+        DateTime.ofEpochMillis(rec.getEtd),
+        DateTime.UndefinedDateTime, // no atd
+        DateTime.ofEpochMillis(rec.getEta),
+        DateTime.UndefinedDateTime, // no ata
         None // no planned route
       )
       list = ti +: list

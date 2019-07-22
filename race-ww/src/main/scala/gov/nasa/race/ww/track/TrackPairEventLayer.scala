@@ -29,7 +29,6 @@ import gov.nasa.race.swing.Style._
 import gov.nasa.race.track.TrackPairEvent
 import gov.nasa.race.trajectory.Trajectory
 import gov.nasa.race.uom.Angle
-import gov.nasa.race.util.DateTimeUtils.hhmmss
 import gov.nasa.race.ww.EventAction.EventAction
 import gov.nasa.race.ww.Implicits._
 import gov.nasa.race.ww.LayerObjectAttribute.LayerObjectAttribute

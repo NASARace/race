@@ -19,13 +19,10 @@ package gov.nasa.race.uom
 import java.time.format.{DateTimeFormatter, TextStyle}
 import java.time.temporal.ChronoField
 import java.time._
-import java.util.{Calendar, Locale, TimeZone}
+import java.util.Locale
 
 import gov.nasa.race._
 import gov.nasa.race.util.SeqUtils
-
-import org.joda.time.chrono.ISOChronology
-import org.joda.time.{DateTimeZone, MutableDateTime, ReadableDateTime, DateTime => JodaDateTime}
 
 import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.duration.{Duration, FiniteDuration, MILLISECONDS}
@@ -39,7 +36,9 @@ class DateException (msg: String) extends RuntimeException(msg)
   */
 object DateTime {
   val UNDEFINED_MILLIS = Long.MinValue
-  val isoChronoUTC = ISOChronology.getInstanceUTC
+
+  final val MsecPerDay = 1000*60*60*24
+  final val MsecPerHour = 1000*60*60
 
   //--- the constructors
 
@@ -107,6 +106,11 @@ object DateTime {
     n * s
   }
 
+  //--- convenience methods for epoch milli conversion
+  def epochMillisToString (millis: Long): String = new DateTime(millis).format_yMd_HmsS_z
+  def hoursBetweenEpochMillis (t1: Long, t2: Long): Double = (t2 - t1).toDouble / MsecPerHour
+  def daysBetweenEpochMillis (t1: Long, t2: Long): Double = (t2 - t1).toDouble / MsecPerDay
+
   //--- constants
 
   val Date0 = new DateTime(0)
@@ -139,18 +143,8 @@ class DateTime protected[uom](val millis: Long) extends AnyVal
   @inline def toZonedDateTime: ZonedDateTime = toZonedDateTime(GMTZoneId)
   @inline def toLocalZonedDateTime: ZonedDateTime = toZonedDateTime(LocalZoneId)
 
-
-  def toDateTime: JodaDateTime = {
-    if (millis != UNDEFINED_MILLIS) new JodaDateTime(millis)
-    else throw new DateException("undefined Date value")
-  }
   def toFiniteDuration: FiniteDuration = {
     if (millis != UNDEFINED_MILLIS) FiniteDuration(millis,MILLISECONDS)
-    else throw new DateException("undefined Date value")
-  }
-
-  def setDateTime(d: MutableDateTime): Unit = {
-    if (millis != UNDEFINED_MILLIS) d.setMillis(millis)
     else throw new DateException("undefined Date value")
   }
 
@@ -222,6 +216,8 @@ class DateTime protected[uom](val millis: Long) extends AnyVal
   //-- undefined value handling (value based alternative for finite cases that would otherwise require Option)
   @inline override def isDefined: Boolean = millis != UNDEFINED_MILLIS
   @inline override def isUndefined: Boolean = millis == UNDEFINED_MILLIS
+  @inline def orElse (f: => DateTime): DateTime = if (isDefined) this else f
+  @inline def map (f: DateTime => DateTime): DateTime = if (isDefined) f(this) else DateTime.UndefinedDateTime
 
   //--- comparison (TODO - handle undefined values)
   @inline override def < (o: DateTime): Boolean = millis < o.millis

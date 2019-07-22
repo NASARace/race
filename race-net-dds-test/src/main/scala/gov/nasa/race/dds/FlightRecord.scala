@@ -38,8 +38,8 @@ import scala.language.implicitConversions
 object FlightRecord {
 
   def show (fr: dds.FlightRecord): String = {
-    val d = new DateTime(fr.date)
-    f"FlightRecord{cs='${fr.cs}%s',date=${hhmmss.print(d)},lat=${fr.lat}%.6f,lon=${fr.lon}%.6f,alt=${fr.alt}%.1f,heading=${fr.heading}%.1f,speed=${fr.speed}%.1f}"
+    val d = DateTime.ofEpochMillis(fr.date)
+    f"FlightRecord{cs='${fr.cs}%s',date=${d.format_Hms},lat=${fr.lat}%.6f,lon=${fr.lon}%.6f,alt=${fr.alt}%.1f,heading=${fr.heading}%.1f,speed=${fr.speed}%.1f}"
   }
 
   implicit class RichFlightRecord (fr: dds.FlightRecord) extends Show {
@@ -49,12 +49,12 @@ object FlightRecord {
   implicit def fpos2Fr (fpos: FlightPos): dds.FlightRecord = {
     val pos = fpos.position
     new dds.FlightRecord(fpos.cs, pos.φ.toDegrees, pos.λ.toDegrees,
-      fpos.altitude.toFeet, fpos.speed.toKnots, fpos.heading.toDegrees, fpos.date.getMillis)
+      fpos.position.altitude.toFeet, fpos.speed.toKnots, fpos.heading.toDegrees, fpos.date.toEpochMillis)
   }
 
   implicit def fr2Fpos (fr: dds.FlightRecord): FlightPos = {
     FlightPos("?",fr.cs,GeoPosition.fromDegrees(fr.lat,fr.lon),
-      Feet(fr.alt),Knots(fr.speed),Degrees(fr.heading),new DateTime(fr.date))
+      Feet(fr.alt),Knots(fr.speed),Degrees(fr.heading),DateTime.ofEpochMillis(fr.date))
   }
 }
 import FlightRecord._

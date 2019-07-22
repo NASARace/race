@@ -195,10 +195,12 @@ class RaceActorSystem(val config: Config) extends LogController with VerifiableA
     */
   def launch: Boolean = {
     wallStartTime = wallClockStartTime(true)
-    wallStartTime match {
-      case Some(startDate) => scheduleStart(startDate)
-      case None => startActors
+    if (wallStartTime.isDefined) {
+      scheduleStart(wallStartTime)
+    } else {
+      startActors
     }
+
     status == Started
   }
 
@@ -213,20 +215,23 @@ class RaceActorSystem(val config: Config) extends LogController with VerifiableA
   def createSimClock: SettableClock = {
     val startTime = config.getDateTimeOrElse("start-time", DateTime.now) // in sim time
     val timeScale = config.getDoubleOrElse("time-scale", 1.0)
-    val endTime = config.getOptionalDateTime("end-time") orElse { // both in sim time
-      config.getOptionalFiniteDuration("run-for") map (d => startTime + d)
+    val endTime = config.getOptionalDateTime("end-time").orElse { // both in sim time
+      config.getOptionalFiniteDuration("run-for") match {
+        case Some(d) => startTime + d
+        case None => DateTime.UndefinedDateTime
+      }
     }
     new SettableClock(startTime, timeScale, endTime, stopped = true)
   }
 
   def timeScale: Double = simClock.timeScale
 
-  def wallClockStartTime (isLaunched: Boolean): Option[DateTime] = {
-    config.getOptionalDateTime("start-at") match {
-      case absDateOpt @ Some(date) => absDateOpt // value is wallclock time
-      case None =>
-        if (isLaunched) config.getOptionalFiniteDuration("start-in").map(DateTimeUtils.fromNow)
-        else None
+  def wallClockStartTime (isLaunched: Boolean): DateTime = {
+    config.getOptionalDateTime("start-at").orElse {
+      config.getOptionalFiniteDuration("start-in") match {
+        case Some(d) => DateTime.now + d
+        case None => DateTime.UndefinedDateTime
+      }
     }
   }
 
@@ -283,7 +288,7 @@ class RaceActorSystem(val config: Config) extends LogController with VerifiableA
   // called by RACE driver (TODO enforce or verify)
   def startActors = {
     if (status == Initialized) {
-      ifSome(simClock.wallEndTime) { scheduleTermination }
+      if (simClock.wallEndTime.isDefined) scheduleTermination(simClock.wallEndTime)
 
       info(s"starting actors of universe $name ..")
       status = Started

@@ -66,8 +66,6 @@ class TFMTrackInfoParser extends XmlParser[Seq[TrackInfo]] with XmlAttrProcessor
 
     val trackRef = readAttribute("flightRef")
 
-    def optDate(d: DateTime): Option[DateTime] = if (d.isDefined) Some(d) else None
-
     whileNextElement {
       case "nxce:aircraftId" =>
         cs = trimmedTextOrNull
@@ -99,7 +97,7 @@ class TFMTrackInfoParser extends XmlParser[Seq[TrackInfo]] with XmlAttrProcessor
         val ti = new TrackInfo( trackRef, cs,
                          optional(trackCat), optional(trackType),
                          optional(departurePoint), optional(arrivalPoint),
-                         optDate(etd), optDate(atd), optDate(eta), optDate(ata),
+                         etd, atd, eta, ata,
                          if (route.nonEmpty) Some(route.snapshot) else None)
         tInfos += ti
         return

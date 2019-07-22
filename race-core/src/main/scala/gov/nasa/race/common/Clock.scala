@@ -30,7 +30,7 @@ import scala.concurrent.duration._
   */
 class Clock (initTime: DateTime = DateTime.now,
              initTimeScale: Double = 1,
-             endTime: Option[DateTime] = None,
+             endTime: DateTime = DateTime.UndefinedDateTime,
              stopped: Boolean=false)
          extends Cloneable {
 
@@ -75,12 +75,9 @@ class Clock (initTime: DateTime = DateTime.now,
     DateTime.now + Time.Milliseconds((simDuration.toMillis/_timeScale))
   }
 
-  def wallEndTime: Option[DateTime] = _end.map(wallTime)
+  def wallEndTime: DateTime = _end.map(wallTime)
 
-  def endTimeMillis: Long = _end match {
-    case Some(date) => date.toEpochMillis
-    case None => Long.MaxValue
-  }
+  def endTimeMillis: Long = if (_end.isDefined) _end.toEpochMillis else Long.MaxValue
 
   def exceedsEndTime (d: DateTime): Boolean = d.toEpochMillis > endTimeMillis
 
@@ -92,10 +89,10 @@ class Clock (initTime: DateTime = DateTime.now,
   */
 class SettableClock (initTime: DateTime = DateTime.now,
                      initTimeScale: Double = 1,
-                     endTime: Option[DateTime] = None,
+                     endTime: DateTime = DateTime.UndefinedDateTime,
                      stopped: Boolean = false) extends Clock (initTime,initTimeScale,endTime,stopped) {
 
-  def reset (initTime: DateTime, initTimeScale: Double = 1, endTime: Option[DateTime] = None): SettableClock = synchronized {
+  def reset (initTime: DateTime, initTimeScale: Double = 1, endTime: DateTime = DateTime.UndefinedDateTime): SettableClock = synchronized {
     _timeScale = initTimeScale
     _base = initTime
     _end = endTime

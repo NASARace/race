@@ -25,7 +25,6 @@ import gov.nasa.race.common.Query
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.track.TrackPairEvent
 import gov.nasa.race.trajectory.TrajectoryDiff
-import gov.nasa.race.util.DateTimeUtils.hhmmss
 import gov.nasa.race.util.StringUtils
 import gov.nasa.race.ww.{Images, RaceViewer}
 
