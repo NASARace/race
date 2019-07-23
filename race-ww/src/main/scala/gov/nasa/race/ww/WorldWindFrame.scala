@@ -18,7 +18,7 @@
 package gov.nasa.race.ww
 
 import java.awt.event._
-import java.awt.{Color, Cursor, Toolkit}
+import java.awt.{Color, Cursor, GraphicsEnvironment, Toolkit}
 import java.net.URL
 import java.util.concurrent.CountDownLatch
 
@@ -49,6 +49,7 @@ class WorldWindFrame (config: Config, raceView: RaceViewer) extends AppFrame {
   title = config.getStringOrElse("title", "RACE Viewer")
 
   // menu items we have to update
+  private var popupFullScreenMI: CheckMenuItem = _
   private var popupShowPanelsMI: CheckMenuItem = _
   private var mbShowPanelsMI: CheckMenuItem = _
 
@@ -70,7 +71,7 @@ class WorldWindFrame (config: Config, raceView: RaceViewer) extends AppFrame {
 
   size = config.getDimensionOrElse("size", (1400, 1000)) // set size no matter what
   if (config.getBooleanOrElse("fullscreen", false)) {
-    Platform.requestFullScreen(this)
+    setFullScreen(true)
   }
 
   def createWorldWindow (config: Config, raceView: RaceViewer): WorldWindowGLCanvas = {
@@ -107,6 +108,12 @@ class WorldWindFrame (config: Config, raceView: RaceViewer) extends AppFrame {
 
     //--- the popup menu
     val popup = new PopupMenu()
+
+    popupFullScreenMI = new CheckMenuItem("").styled()
+    popupFullScreenMI.action = scala.swing.Action("fullscreen") { setFullScreen(popupFullScreenMI.selected) }
+    popupFullScreenMI.selected = config.getBooleanOrElse("fullscreen", false)
+    popup.contents += popupFullScreenMI
+
     popupShowPanelsMI = new CheckMenuItem("").styled()
     popupShowPanelsMI.action = scala.swing.Action("show console panels"){ showConsolePanels(popupShowPanelsMI.selected) }
     popupShowPanelsMI.selected = true

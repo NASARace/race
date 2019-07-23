@@ -140,7 +140,6 @@ object Images {
   val defaultArrowImg = defaultArrowImgs(Color.green)
   def getArrowImage(color: Color) = defaultArrowImgs.getOrElse(color,defaultArrowImg)
 
-
   val defaultMarkImgs = Map[Color,BufferedImage](
     Color.red -> loadImage("mark", Color.red),
     Color.yellow -> loadImage("mark", Color.yellow),

@@ -65,7 +65,6 @@ trait TrackLayer[T <:TrackedObject] extends SubscribingRaceLayer
   def defaultMarkImg: BufferedImage = Images.defaultMarkImg
   val markImg = defaultMarkImg
 
-
   //--- symbol levels (with different rendering attributes)
   val iconLevel = new ThresholdLevel[TrackEntry[T]](iconThresholdLevel)(setIconLevel)
   val labelLevel = new ThresholdLevel[TrackEntry[T]](labelThresholdLevel)(setLabelLevel)

@@ -17,7 +17,7 @@
 
 package gov.nasa.race.swing
 
-import java.awt.{EventQueue, Toolkit, Window => AWTWindow}
+import java.awt.{EventQueue, GraphicsEnvironment, Toolkit, Window => AWTWindow}
 import java.awt.event.WindowEvent
 
 import javax.swing.WindowConstants
@@ -80,6 +80,16 @@ class AppFrame extends Frame {
     val queue = Toolkit.getDefaultToolkit.getSystemEventQueue
     while (queue.peekEvent() != null) {
       queue.getNextEvent // remove and discard event
+    }
+  }
+
+  def setFullScreen (b: Boolean): Unit = {
+    val env = GraphicsEnvironment.getLocalGraphicsEnvironment
+    val device = env.getDefaultScreenDevice
+    if (b) {
+      device.setFullScreenWindow(this.peer)
+    } else {
+      device.setFullScreenWindow(null)
     }
   }
 }
