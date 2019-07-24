@@ -23,6 +23,7 @@ import com.typesafe.config.Config
 import gov.nasa.race.air.{AirLocator, Airport, TATrack, Tracon}
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.Messages.BusEvent
+import gov.nasa.race.geo.GreatCircle
 import gov.nasa.race.ifSome
 import gov.nasa.race.swing._
 import gov.nasa.race.swing.Style._
@@ -83,6 +84,7 @@ class TATracksLayer (val raceViewer: RaceViewer, val config: Config) extends Mod
   val traconLabelColor = toABGRString(config.getColorOrElse("tracon-color", Color.white))
   var traconLabelThreshold = config.getDoubleOrElse("tracon-label-altitude", Meters(2200000.0).toMeters)
   val gotoAltitude = Feet(config.getDoubleOrElse("goto-altitude", 5000000d)) // feet above ground
+  val panDistance = config.getLengthOrElse("tracon-dist", NauticalMiles(200))
 
   override def defaultColor = Color.green
   override def defaultSubLabelFont = new Font(Font.MONOSPACED,Font.PLAIN,scaledSize(11))
@@ -164,7 +166,20 @@ class TATracksLayer (val raceViewer: RaceViewer, val config: Config) extends Mod
   }
 
   def setTracon(tracon: Tracon) = {
-    raceViewer.panTo(wwPosition(tracon.position), gotoAltitude.toMeters)
+    val eyePos = raceViewer.eyeLatLonPos
+    val eyeAlt = Meters(eyeAltitude)
+    val traconPos = tracon.position
+    val viewCenterDist = GreatCircle.distance(eyePos,traconPos)
+
+    if (eyeAlt > gotoAltitude) {
+      if (viewCenterDist > panDistance) {
+        raceViewer.panTo(wwPosition(traconPos), gotoAltitude.toMeters)
+      } else {
+        raceViewer.zoomTo(gotoAltitude.toMeters)
+      }
+    } else if (viewCenterDist > panDistance){
+      raceViewer.panTo(wwPosition(traconPos), gotoAltitude.toMeters)
+    }
 
     selTracon = Some(tracon)
     ifSome(traconGrid) { grid =>

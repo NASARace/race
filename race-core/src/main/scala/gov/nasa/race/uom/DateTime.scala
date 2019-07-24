@@ -118,6 +118,7 @@ object DateTime {
 
   val LocalOffsetMillis: Long = ZonedDateTime.now.getOffset.getTotalSeconds * 1000
   val LocalOffsetHours: Int = ZonedDateTime.now.getOffset.getTotalSeconds / 3600
+  val LocalOffsetMinutes: Int = ZonedDateTime.now.getOffset.getTotalSeconds / 60
   val LocalZoneId: ZoneId = ZoneId.systemDefault
   val LocalZoneIdName: String = LocalZoneId.getDisplayName(TextStyle.SHORT,Locale.getDefault)
   val GMTZoneId: ZoneId = ZoneId.of("GMT")
@@ -190,9 +191,11 @@ class DateTime protected[uom](val millis: Long) extends AnyVal
   @inline def getHour (zoneId: ZoneId): Int = toZonedDateTime(zoneId).getHour
   @inline def getLocalHour: Int = (((millis + LocalOffsetMillis) % Time.MillisInDay) / Time.MillisInHour).toInt
 
-  // we assume only full hour offsets so minute, second and millisecond do not depend on zone
-
   @inline def getMinute: Int = ((millis % Time.MillisInHour) / Time.MillisInMinute).toInt
+  @inline def getLocalMinute: Int = (((millis + LocalOffsetMillis) % Time.MillisInHour) / Time.MillisInMinute).toInt
+
+  // we assume only full minute offsets so second and millisecond do not depend on zone
+
   @inline def getSecond: Int = ((millis % Time.MillisInMinute) / 1000).toInt
   @inline def getMillisecond: Int = (millis % 1000).toInt
 
@@ -206,6 +209,7 @@ class DateTime protected[uom](val millis: Long) extends AnyVal
 
   @inline def timeSince(d: DateTime): Time = new Time((millis - d.millis).toInt)
   def <-: (d: DateTime): Time = timeSince(d)
+  @inline def - (d: DateTime): Time = new Time((millis - d.millis).toInt)
 
   @inline def + (t: Time): DateTime = new DateTime(millis + t.millis)
   @inline def - (t: Time): DateTime = new DateTime(millis - t.millis)
@@ -227,6 +231,10 @@ class DateTime protected[uom](val millis: Long) extends AnyVal
 
   @inline override def compare (other: DateTime): Int = if (millis > other.millis) 1 else if (millis < other.millis) -1 else 0
   @inline override def compareTo (other: DateTime): Int = compare(other)
+
+  @inline def isAfter (o: DateTime): Boolean = millis > o.millis
+  @inline def isBefore (o: DateTime): Boolean = millis < o.millis
+  @inline def == (o: DateTime): Boolean = millis == o.millis
 
   //--- formatting
 
@@ -252,15 +260,15 @@ class DateTime protected[uom](val millis: Long) extends AnyVal
   def format_yMd_Hms_z(zoneId: ZoneId): String = {
     val (year,month,day,hour,minute,second,_) = getYMDT(zoneId)
     val shortId = zoneId.getDisplayName(TextStyle.SHORT,Locale.getDefault)
-    f"$year%4d-$month%02d-$day%02dT$getHour%02d:$getMinute%02d:$getSecond%02d$shortId"
+    f"$year%4d-$month%02d-$day%02dT$hour%02d:$minute%02d:$second%02d$shortId"
   }
   def formatLocal_yMd_Hms_z: String = {
     val (year,month,day,hour,minute,second,_) = getYMDT(LocalZoneId)
-    f"$year%4d-$month%02d-$day%02dT$getHour%02d:$getMinute%02d:$getSecond%02d$LocalZoneIdName"
+    f"$year%4d-$month%02d-$day%02dT$hour%02d:$minute%02d:$second%02d$LocalZoneIdName"
   }
   def formatLocal_yMd_Hms: String = {
     val (year,month,day,hour,minute,second,_) = getYMDT(LocalZoneId)
-    f"$year%4d-$month%02d-$day%02dT$getHour%02d:$getMinute%02d:$getSecond%02d"
+    f"$year%4d-$month%02d-$day%02dT$hour%02d:$minute%02d:$second%02d"
   }
 
   def format_yMd: String = {
@@ -268,8 +276,7 @@ class DateTime protected[uom](val millis: Long) extends AnyVal
     f"$year%4d-$month%02d-$day%02d"
   }
 
-  def format_E_Mdy: String = {
-    val zdt = toZonedDateTime
+  def format_E_Mdy (zdt: ZonedDateTime): String = {
     val year = zdt.getYear
     val month = zdt.getMonthValue
     val day = zdt.getDayOfMonth
@@ -277,9 +284,27 @@ class DateTime protected[uom](val millis: Long) extends AnyVal
     f"$dayName $month%02d-$day%02d-$year%4d"
   }
 
+  def format_E_Mdy: String = format_E_Mdy(toZonedDateTime)
+
+  def formatLocal_E_Mdy: String = format_E_Mdy(toLocalZonedDateTime)
+
   def format_Hms: String = f"$getHour%02d:$getMinute%02d:$getSecond%02d"
 
-  def format_Hmsz: String = f"$getHour%02d:$getMinute%02d:$getSecond%02dZ"
+  def format_Hms_z: String = f"$getHour%02d:$getMinute%02d:$getSecond%02d Z"
+
+  def formatLocal_Hms: String = {
+    val hour = getLocalHour
+    val minute = getLocalMinute
+    val second = getSecond
+    f"$hour%02d:$minute%02d:$second%02d"
+  }
+
+  def formatLocal_Hms_z: String = {
+    val hour = getLocalHour
+    val minute = getLocalMinute
+    val second = getSecond
+    f"$hour%02d:$minute%02d:$second%02d $LocalZoneIdName"
+  }
 
   override def toString: String = format_yMd_HmsS_z
 

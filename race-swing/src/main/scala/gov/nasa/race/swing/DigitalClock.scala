@@ -33,17 +33,27 @@ class DigitalClock (private[this] var clock: Option[Clock]=None) extends GridPan
 
   protected var lastTimeOfDay: Time = Time.UndefinedTime
 
-  class ClockLabel (fmtString: String, txt: String=null) extends Label(txt) {
-    val fmt = DateTimeFormatter.ofPattern(fmtString)
+  abstract class ClockLabel (txt: String) extends Label(txt) {
+    def update (d: DateTime): Unit
+  }
 
-    def update(d: DateTime): Unit = {
-      text = d.format(fmt)
+  class DateLabel (txt: String=null) extends ClockLabel(txt) {
+    def update (d: DateTime): Unit = {
+      text = d.format_E_Mdy
     }
   }
 
+  class TimeLabel (txt: String=null) extends ClockLabel(txt) {
+    def update (d: DateTime): Unit = {
+      text = d.format_Hms_z
+    }
+  }
+
+  val clockDate = new DateLabel("... 00-00-0000").styled("date")
+  val clockTime = new TimeLabel("00:00:00").styled("time")
+
   val timer = new SwingTimer(1.second)
-  val clockDate = new ClockLabel(" EE, MM/dd/yyyy").styled("date")
-  val clockTime = new ClockLabel(" HH:mm:ss", " 00:00:00").styled("time")
+
 
   contents ++= Seq(clockDate,clockTime)
 

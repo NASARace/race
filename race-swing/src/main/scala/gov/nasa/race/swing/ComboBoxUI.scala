@@ -16,9 +16,10 @@
  */
 package gov.nasa.race.swing
 
-import java.awt.Color
+import java.awt.{Color, Graphics, Rectangle}
 
 import javax.swing.plaf.basic.BasicComboBoxUI
+import sun.swing.DefaultLookup
 
 import scala.swing.ComboBox
 

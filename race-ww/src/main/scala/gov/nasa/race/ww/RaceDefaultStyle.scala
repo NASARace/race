@@ -197,10 +197,9 @@ class RaceDefaultStyle extends Stylist {
   override def style (c: ComboBox[_], id: String) = {
     super.style(c,id)
 
-    //c.foreground = BLACK
-    //c.background = WHITE
     c.background = background
     c.foreground = foreground
+    c.border = loweredBevelBorder
 
     val ui = new ComboBoxUI(c)
     ui.setSelectionBackground(selectionBackground)

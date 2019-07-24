@@ -124,7 +124,7 @@ object Dependencies {
   val akkaTestkit = akkaOrg %% "akka-testkit" % akkaVersion
   val akkaMultiNodeTestkit = akkaOrg %% "akka-multi-node-testkit" % akkaVersion // % "test,multi-jvm"
 
-  val akkaHttp = akkaOrg %% "akka-http" % "10.1.8"
+  val akkaHttp = akkaOrg %% "akka-http" % "10.1.9"
 
   val akkaAll = Seq(akkaActor)
 

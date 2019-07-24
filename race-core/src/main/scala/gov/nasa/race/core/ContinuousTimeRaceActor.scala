@@ -99,8 +99,8 @@ trait ContinuousTimeRaceActor extends RaceActor {
   def elapsedSimTimeSinceStart = Duration(lastSimMillis - startSimTimeMillis, MILLISECONDS)
   @inline def elapsedSimTimeMillisSinceStart = lastSimMillis - startSimTimeMillis
 
-  @inline def toWallTimeMillis (d: Duration) = (d.toMillis * simClock.timeScale).toLong
-  @inline def toWallTimeMillis (ms: Long) = (ms * simClock.timeScale).toLong
+  @inline def toWallTimeMillis (d: Duration) = (d.toMillis / simClock.timeScale).toLong
+  @inline def toWallTimeMillis (ms: Long) = (ms / simClock.timeScale).toLong
 
   @inline def exceedsEndTime (d: DateTime) = simClock.exceedsEndTime(d)
 
