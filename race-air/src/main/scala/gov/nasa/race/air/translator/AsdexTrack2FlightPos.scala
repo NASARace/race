@@ -43,8 +43,6 @@ import scala.concurrent.duration._
   */
 class AsdexTrack2FlightPos (val config: Config=NoConfig) extends ConfigurableTranslator {
 
-  override def flatten = true // report as single flight objects
-
   val airborneThreshold = Feet(config.getIntOrElse("airborne-ft", 50))
   val dropAfter = config.getFiniteDurationOrElse("drop-after", 10.seconds).toMillis
   val addAltitude = Feet(config.getDoubleOrElse("add-altitude",0)) // optional addition to make it appear on top

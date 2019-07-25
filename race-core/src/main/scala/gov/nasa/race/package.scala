@@ -412,7 +412,6 @@ package object race {
   // something that can translate between two types
   trait Translator[S, T] {
     def translate(src: S): Option[T]
-    def flatten = false
   }
 
   // something that can translate time values in a given type

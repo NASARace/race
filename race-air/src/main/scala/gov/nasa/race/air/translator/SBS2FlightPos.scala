@@ -137,7 +137,7 @@ object SBS2FlightPos {
 class SBS2FlightPos (val config: Config=NoConfig) extends ConfigurableTranslator {
   import SBS2FlightPos._
 
-  var useTempCS = if (config != null) config.getBooleanOrElse("temp-cs",true) else true
+  var useTempCS = if (config != null) config.getBooleanOrElse("temp-cs",false) else false
 
   override def translate(src: Any): Option[Any] = {
     src match {

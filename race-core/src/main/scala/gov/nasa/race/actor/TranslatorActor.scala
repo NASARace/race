@@ -21,7 +21,7 @@ import com.typesafe.config.Config
 import gov.nasa.race.Translator
 import gov.nasa.race.core.Messages.BusEvent
 import gov.nasa.race.core.SubscribingRaceActor
-import scala.collection.Seq
+import gov.nasa.race.config.ConfigUtils._
 
 /**
  * a generic actor that translates text messages into objects by means of a
@@ -30,6 +30,7 @@ import scala.collection.Seq
 class TranslatorActor (val config: Config) extends SubscribingRaceActor with FilteringPublisher {
 
   var translator: Translator[Any,Any] = createTranslator
+  val flatten: Boolean = config.getBooleanOrElse("flatten", true)
 
   /** override this to use a hardwired translator */
   protected def createTranslator: Translator[Any,Any] = getConfigurable[Translator[Any,Any]]("translator")
@@ -43,8 +44,13 @@ class TranslatorActor (val config: Config) extends SubscribingRaceActor with Fil
 
   def translateAndPublish (msg: Any) = {
     translator.translate(msg) match {
-      case Some(list:Seq[_]) if translator.flatten => list.foreach(processTranslationProduct)
-      case Some(m) => processTranslationProduct(m)
+      case Some(it:Iterable[_]) =>
+        if (flatten) {
+          it.foreach(processTranslationProduct)
+        } else {
+          processTranslationProduct(it)
+        }
+      case Some(o) => processTranslationProduct(o)
       case None => // ignore
     }
   }

@@ -77,7 +77,7 @@ class HttpServer (val config: Config) extends ParentRaceActor {
 
   def getConnectionContext: ConnectionContext = {
     if (config.getBooleanOrElse("use-https", false)) {
-      ConnectionContext.https(getSSLContext)
+      ConnectionContext.https(getSSLContext, None,None,None,None,None)
     } else {
       httpExt.defaultServerHttpContext
     }

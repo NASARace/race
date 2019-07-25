@@ -47,8 +47,6 @@ class FIXM2FlightObject (val config: Config=NoConfig)
 
   protected var flights = new ArrayBuffer[IdentifiableObject](20)
 
-  override def flatten = true // report as single flight objects
-
   onStartElement = {
     case "ns5:MessageCollection" => messageCollection // new format (Solace 12sec)
     case "ns5:NasFlight" => nasFlight // old format (one flight per msg)

@@ -50,8 +50,6 @@ class TATrackAndFlightPlan2TATrack (val config: Config=NoConfig) extends XmlPars
 
   setBuffered(8192) // we will get a lot of these
 
-  override def flatten = true // report as single tracks
-
   onStartElement = {
     case "TATrackAndFlightPlan" | "ns2:TATrackAndFlightPlan" => taTrackAndFlightPlan
     case other => stopParsing
