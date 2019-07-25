@@ -90,14 +90,25 @@ class TextArchiveWriter(val oStream: OutputStream, val pathName:String="<unknown
   override def close = out.close
 
   override def write (date: DateTime, obj: Any): Boolean = {
-    // make sure this matches the TextArchiveReader regexes!
+    printProlog(date)
+    printObject(obj)
+    printEpilog
+
+    true
+  }
+
+  //--- subclass overridable methods
+  // NOTE: make sure this matches the respective TextArchiveReader regexes!
+
+  protected def printProlog(date: DateTime): Unit = {
     out.print("\n<!-- BEGIN ARCHIVED ")
     out.print(date)
     out.println(" -->")
+  }
 
-    out.println(obj)
+  protected def printObject (obj: Any): Unit = out.println(obj)
 
+  protected def printEpilog: Unit = {
     out.println("<!-- END ARCHIVED -->")
-    true
   }
 }
