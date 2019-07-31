@@ -21,7 +21,8 @@ import java.lang.StringBuilder
 
 import com.typesafe.config.Config
 import gov.nasa.race.common.ConfigurableStreamCreator._
-import gov.nasa.race.uom.DateTime
+import gov.nasa.race.geo.{GeoPosition, XYPos}
+import gov.nasa.race.uom.{Angle, DateTime, Length, Speed}
 
 
 /**
@@ -79,15 +80,24 @@ class TextArchiveReader(val iStream: InputStream, val pathName:String="<unknown>
 }
 
 /**
+  * an ArchiveWriter that writes to a PrintStream
+  */
+trait PrintStreamArchiveWriter extends ArchiveWriter {
+  val oStream: OutputStream
+
+  protected val ps = new PrintStream(oStream)
+
+  override def close = ps.close
+
+}
+
+
+/**
   * an ArchiveWriter that stores text wrapped into begin and end marker lines
   */
-class TextArchiveWriter(val oStream: OutputStream, val pathName:String="<unknown>") extends ArchiveWriter {
+class TextArchiveWriter(val oStream: OutputStream, val pathName:String="<unknown>") extends PrintStreamArchiveWriter {
 
   def this (conf: Config) = this(createOutputStream(conf), configuredPathName(conf))
-
-  private val out = new PrintStream(oStream)
-
-  override def close = out.close
 
   override def write (date: DateTime, obj: Any): Boolean = {
     printProlog(date)
@@ -101,14 +111,56 @@ class TextArchiveWriter(val oStream: OutputStream, val pathName:String="<unknown
   // NOTE: make sure this matches the respective TextArchiveReader regexes!
 
   protected def printProlog(date: DateTime): Unit = {
-    out.print("\n<!-- BEGIN ARCHIVED ")
-    out.print(date)
-    out.println(" -->")
+    ps.print("\n<!-- BEGIN ARCHIVED ")
+    ps.print(date)
+    ps.println(" -->")
   }
 
-  protected def printObject (obj: Any): Unit = out.println(obj)
+  protected def printObject (obj: Any): Unit = ps.println(obj)
 
   protected def printEpilog: Unit = {
-    out.println("<!-- END ARCHIVED -->")
+    ps.println("<!-- END ARCHIVED -->")
+  }
+}
+
+
+/**
+  * a PrintStreamArchiveWriter that writes fields as CSVs
+  *
+  * instances have to rely on position to identify fields
+  *
+  * note this tries to avoid any allocation or parsing to keep computational costs as low as possible
+  */
+trait CSVArchiveWriter extends PrintStreamArchiveWriter {
+  
+  val fieldSep = ','
+  val recSep = '\n'
+
+  @inline final def printString(s: String, sep: Char): Unit = { ps.print(s); ps.print(sep) }
+
+  @inline final def printInt(i: Int, sep: Char): Unit = printString(i.toString, sep)
+
+  @inline final def printDouble(d: Double, sep: Char): Unit = printString(d.toString, sep)
+
+  @inline final def printAngle(a: Angle, sep: Char): Unit = printString(a.toDegrees.toString, sep)
+
+  @inline final def printLength(l: Length, sep: Char): Unit = printString(l.toMeters.toString, sep)
+
+  @inline final def printSpeed(v: Speed, sep: Char): Unit = printString(v.toMetersPerSecond.toString, sep)
+
+
+  protected def translateDate (d: DateTime): DateTime = d
+
+  @inline final def printDateTime(d: DateTime, sep: Char): Unit = printString( translateDate(d).toEpochMillis.toString, sep)
+
+  @inline final def printGeoposition(pos: GeoPosition, sep: Char): Unit = {
+    printAngle(pos.lat, fieldSep)
+    printAngle(pos.lon, fieldSep)
+    printLength(pos.altitude, sep)
+  }
+
+  @inline final def printXYPos(pos: XYPos, sep: Char = fieldSep): Unit = {
+    printLength(pos.x, fieldSep)
+    printLength(pos.y, sep)
   }
 }

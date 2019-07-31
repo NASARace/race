@@ -16,9 +16,13 @@
  */
 package gov.nasa.race.air
 
+import java.io.{OutputStream, PrintStream}
+
+import com.typesafe.config.Config
+import gov.nasa.race.archive.{ArchiveWriter, CSVArchiveWriter}
+import gov.nasa.race.common.ConfigurableStreamCreator.{configuredPathName, createOutputStream}
 import gov.nasa.race.geo.{GeoPosition, XYPos}
-import gov.nasa.race.uom.{Angle, Speed}
-import gov.nasa.race.uom.DateTime
+import gov.nasa.race.uom.{Angle, DateTime, Length, Speed}
 
 object TATrack {
   // status bit flags for TATrack attrs (should be >0xffff)
@@ -62,4 +66,60 @@ case class TATrack (id: String,
   def isAdsb = (status & AdsbFlag) != 0
 
   def hasFlightPlan = flightPlan.isDefined
+}
+
+
+/**
+  * an ArchiveWriter for a collection of TATracks that were received/should be replayed together
+  * (normally corresponding to a TATrackAndFlightPlan XML message)
+  */
+class TATrackBulkArchiveWriter(val oStream: OutputStream, val pathName: String="<unknown>") extends CSVArchiveWriter {
+  def this(conf: Config) = this(createOutputStream(conf), configuredPathName(conf))
+
+
+  override def write(date: DateTime, obj: Any): Boolean = {
+    obj match {
+      case it: Iterable[TATrack] => writeTracks(date, it)
+      case _ => false
+    }
+  }
+
+  def writeTracks (date: DateTime, tracks: Iterable[TATrack]): Boolean = {
+    if (tracks.nonEmpty) {
+      var src: String = null
+
+      tracks.foreach { t=>
+        if (src == null) {
+          src = t.src
+          writeHeader(date,src)
+        }
+        writeTrack(t)
+      }
+
+      true
+    } else false // nothing written
+  }
+
+  def writeHeader (date: DateTime, src: String): Unit = {
+    ps.print("--- ")
+    ps.print(src)
+    ps.print(' ')
+    ps.println(date.toEpochMillis)  // receive/replay date -- TODO: add optional offset
+  }
+
+  def writeTrack (t: TATrack): Unit = {
+    printString(t.id)
+    printString(t.cs)  // TODO: add optional obfuscation
+    printString(t.position)
+    printString(t.heading)
+    printString(t.speed)
+    printString(t.vr)
+    printString(t.date)
+    printString(t.status)
+    // we don't need the src since it is in the header
+    printXYPos(t.xyPos)
+    printString(t.beaconCode, recSep)
+    // TODO: add flightPlan
+
+  }
 }
