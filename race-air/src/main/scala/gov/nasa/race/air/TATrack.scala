@@ -20,6 +20,7 @@ import java.io.{OutputStream, PrintStream}
 
 import com.typesafe.config.Config
 import gov.nasa.race.archive.{ArchiveWriter, CSVArchiveWriter}
+import gov.nasa.race.common.CSVInputStream
 import gov.nasa.race.common.ConfigurableStreamCreator.{configuredPathName, createOutputStream}
 import gov.nasa.race.geo.{GeoPosition, XYPos}
 import gov.nasa.race.uom.{Angle, DateTime, Length, Speed}
@@ -73,53 +74,96 @@ case class TATrack (id: String,
   * an ArchiveWriter for a collection of TATracks that were received/should be replayed together
   * (normally corresponding to a TATrackAndFlightPlan XML message)
   */
-class TATrackBulkArchiveWriter(val oStream: OutputStream, val pathName: String="<unknown>") extends CSVArchiveWriter {
+class TATrackBatchWriter(val oStream: OutputStream, val pathName: String="<unknown>") extends CSVArchiveWriter {
   def this(conf: Config) = this(createOutputStream(conf), configuredPathName(conf))
 
 
   override def write(date: DateTime, obj: Any): Boolean = {
     obj match {
-      case it: Iterable[TATrack] => writeTracks(date, it)
+      case t: TATrack => writeTrack(t)
+      case it: Iterable[_] => writeTracks(date,it)
       case _ => false
     }
   }
 
-  def writeTracks (date: DateTime, tracks: Iterable[TATrack]): Boolean = {
-    if (tracks.nonEmpty) {
-      var src: String = null
-
-      tracks.foreach { t=>
-        if (src == null) {
-          src = t.src
-          writeHeader(date,src)
-        }
-        writeTrack(t)
-      }
-
-      true
-    } else false // nothing written
+  def writeHeader (date: DateTime, src: String, nTracks: Int): Unit = {
+    printFieldSep // start with empty field to allow parsing without object allocation
+    printString("---")
+    printString(src)
+    printDateTimeAsEpochMillis(date)
+    printInt(nTracks,recSep)
   }
 
-  def writeHeader (date: DateTime, src: String): Unit = {
-    ps.print("--- ")
-    ps.print(src)
-    ps.print(' ')
-    ps.println(date.toEpochMillis)  // receive/replay date -- TODO: add optional offset
-  }
-
-  def writeTrack (t: TATrack): Unit = {
+  def writeTrack (t: TATrack): Boolean = {
     printString(t.id)
     printString(t.cs)  // TODO: add optional obfuscation
-    printString(t.position)
-    printString(t.heading)
-    printString(t.speed)
-    printString(t.vr)
-    printString(t.date)
-    printString(t.status)
-    // we don't need the src since it is in the header
-    printXYPos(t.xyPos)
+
+    printDegrees_5(t.position.lat)
+    printDegrees_5(t.position.lon)
+    printMeters_1(t.position.altitude)
+
+    printDegrees_0(t.heading)
+    printMetersPerSecond_1(t.speed)
+    printMetersPerSecond_1(t.vr)
+
+    printDateTimeAsEpochMillis(t.date)
+    printInt(t.status)
+
+    //printString(t.src) // the source is stored in the batch header
+
+    printMeters_1(t.xyPos.x)
+    printMeters_1(t.xyPos.y)
+
     printString(t.beaconCode, recSep)
     // TODO: add flightPlan
 
+    true
+  }
+
+  def writeTracks (date: DateTime, it: Iterable[_]): Boolean = {
+    var src: String = null
+    var res = false
+
+    it.foreach { obj =>
+      obj match {
+        case t: TATrack =>
+          if (src == null) {
+            src = t.src
+            writeHeader(date,src,it.size)
+          }
+          if (t.src == src) {
+            res |= writeTrack(t)
+          } // if this is a different source we skip
+        case _ => // ignore
+      }
+    }
+    res
+  }
+}
+
+class TATrackCSVReader(in: CSVInputStream) {
+  import gov.nasa.race.uom.Angle._
+  import gov.nasa.race.uom.Length._
+  import gov.nasa.race.uom.Speed._
+
+  def read (src: String): TATrack = {
+    val id = in.readString
+    val cs = in.readString
+    val lat = Degrees(in.readDouble)
+    val lon = Degrees(in.readDouble)
+    val alt = Meters(in.readDouble)
+    val hdg = Degrees(in.readDouble)
+    val spd = MetersPerSecond(in.readDouble)
+    val vr = MetersPerSecond(in.readDouble)
+    val date = DateTime.ofEpochMillis(in.readLong)
+    val status = in.readInt
+    // we use the batch src
+    val x = Meters(in.readDouble)
+    val y = Meters(in.readDouble)
+    val beacon = in.readOptionalString
+    // TODO: add flightPlan
+    assert(in.wasEndOfRecord)
+
+    new TATrack(id,cs,GeoPosition(lat,lon,alt),hdg,spd,vr,date,status,src,XYPos(x,y),beacon,None)
   }
 }

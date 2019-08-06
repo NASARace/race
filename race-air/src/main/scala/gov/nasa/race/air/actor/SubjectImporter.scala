@@ -54,6 +54,8 @@ trait SubjectImporter[T] extends ChannelTopicProvider with FilteringPublisher {
 
   //--- provided by concrete type
   def topicSubject (topic: Any): Option[T]     // get the optional subject instance for a generic topic
+
+  // TODO - filtering should be abstract since regex implies there is text message input
   def subjectRegex(subject: T): Option[Regex]  // get the optional regex for a subject
 
   override def handleMessage = handleFilteringPublisherMessage

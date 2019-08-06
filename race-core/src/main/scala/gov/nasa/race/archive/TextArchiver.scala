@@ -128,39 +128,44 @@ class TextArchiveWriter(val oStream: OutputStream, val pathName:String="<unknown
   * a PrintStreamArchiveWriter that writes fields as CSVs
   *
   * instances have to rely on position to identify fields
-  *
-  * note this tries to avoid any allocation or parsing to keep computational costs as low as possible
   */
 trait CSVArchiveWriter extends PrintStreamArchiveWriter {
   
   val fieldSep = ','
   val recSep = '\n'
 
-  @inline final def printString(s: String, sep: Char): Unit = { ps.print(s); ps.print(sep) }
+  @inline def printFieldSep: Unit =  ps.print(fieldSep)
 
-  @inline final def printInt(i: Int, sep: Char): Unit = printString(i.toString, sep)
+  @inline def printRecSep: Unit = ps.print(recSep)
 
-  @inline final def printDouble(d: Double, sep: Char): Unit = printString(d.toString, sep)
+  @inline def printString(s: String, sep: Char=fieldSep): Unit = { ps.print(s); ps.print(sep) }
 
-  @inline final def printAngle(a: Angle, sep: Char): Unit = printString(a.toDegrees.toString, sep)
+  @inline def printInt(i: Int, sep: Char=fieldSep): Unit = printString(i.toString, sep)
 
-  @inline final def printLength(l: Length, sep: Char): Unit = printString(l.toMeters.toString, sep)
+  @inline def printDouble(d: Double, sep: Char=fieldSep): Unit = printString(d.toString, sep)
 
-  @inline final def printSpeed(v: Speed, sep: Char): Unit = printString(v.toMetersPerSecond.toString, sep)
+  //--- those are preserving precision
+
+  @inline def printAngle(a: Angle, sep: Char=fieldSep): Unit = printString(a.toDegrees.toString, sep)
+
+  @inline def printLength(l: Length, sep: Char=fieldSep): Unit = printString(l.toMeters.toString, sep)
+
+  @inline def printSpeed(v: Speed, sep: Char=fieldSep): Unit = printString(v.toMetersPerSecond.toString, sep)
 
 
   protected def translateDate (d: DateTime): DateTime = d
 
-  @inline final def printDateTime(d: DateTime, sep: Char): Unit = printString( translateDate(d).toEpochMillis.toString, sep)
+  @inline def printDateTimeAsEpochMillis(d: DateTime, sep: Char=fieldSep): Unit = printString( translateDate(d).toEpochMillis.toString, sep)
 
-  @inline final def printGeoposition(pos: GeoPosition, sep: Char): Unit = {
-    printAngle(pos.lat, fieldSep)
-    printAngle(pos.lon, fieldSep)
-    printLength(pos.altitude, sep)
-  }
+  //--- rounding versions (note that precision might not suffice for some applications)
 
-  @inline final def printXYPos(pos: XYPos, sep: Char = fieldSep): Unit = {
-    printLength(pos.x, fieldSep)
-    printLength(pos.y, sep)
-  }
+  @inline def printDegrees_0(a: Angle, sep: Char=fieldSep): Unit = ps.print(f"${a.toDegrees.round}%d$sep")
+  @inline def printDegrees_5(a: Angle, sep: Char=fieldSep): Unit = ps.print(f"${a.toDegrees}%.5f$sep")
+
+  @inline def printMeters_1(l: Length, sep: Char=fieldSep): Unit = ps.print(f"${l.toMeters}%.1f$sep")
+  @inline def printMeters_3(l: Length, sep: Char=fieldSep): Unit = ps.print(f"${l.toMeters}%.3f$sep")
+
+  @inline def printMetersPerSecond_1(v: Speed, sep: Char=fieldSep): Unit = ps.print(f"${v.toMetersPerSecond}%.1f$sep")
+  @inline def printMetersPerSecond_3(v: Speed, sep: Char=fieldSep): Unit = ps.print(f"${v.toMetersPerSecond}%.3f$sep")
+
 }

@@ -123,25 +123,38 @@ class TATracksLayer (val raceViewer: RaceViewer, val config: Config) extends Mod
     } else None
   }
 
+  def handleTATrack (track: TATrack): Unit = {
+    selTracon match {
+      case Some(tracon) =>
+        if (track.src == tracon.id) {
+          incUpdateCount
+          getTrackEntry(track) match {
+            case Some(acEntry) =>
+              if (!track.isDropped) updateTrackEntry(acEntry, track)
+              else (removeTrackEntry(acEntry))
+            case None => addTrackEntry(track)
+          }
+        }
+      case None => // nothing selected, ignore
+    }
+  }
+
+  def handleIterable (it: Iterable[_]): Unit = {
+    it.foreach { o =>
+      o match {
+        case track: TATrack => handleTATrack(track)
+        case _ => // ignore
+      }
+    }
+  }
+
   /**
     * this has to be implemented in the concrete RaceLayer. It is executed in the
     * event dispatcher
     */
   override def handleMessage: Receive = {
-    case BusEvent(_, track: TATrack, _) =>
-      selTracon match {
-        case Some(tracon) =>
-          if (track.src == tracon.id) {
-            incUpdateCount
-            getTrackEntry(track) match {
-              case Some(acEntry) =>
-                if (!track.isDropped) updateTrackEntry(acEntry, track)
-                else (removeTrackEntry(acEntry))
-              case None => addTrackEntry(track)
-            }
-          }
-        case None => // nothing selected, ignore
-      }
+    case BusEvent(_, track: TATrack, _) => handleTATrack(track)
+    case BusEvent(_, it: Iterable[_],_) => handleIterable(it)
     case BusEvent(_, term: TrackTerminationMessage, _) =>
       trackEntries.get(term.id) match {
         case Some(acEntry) => removeTrackEntry(acEntry)
