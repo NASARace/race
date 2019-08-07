@@ -39,7 +39,7 @@ class MurmurHash64Spec extends AnyFlatSpec with RaceSpec {
       val hBytes = MurmurHash64.hash(id.getBytes)
       val hChars = MurmurHash64.hash(id.toCharArray)
 
-      //assert (!seen(hBytes))
+      assert (!seen(hBytes))
       seen += hBytes
 
       println(s"$id : ($hBytes, $hChars)")
