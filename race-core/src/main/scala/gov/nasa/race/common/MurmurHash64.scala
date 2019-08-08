@@ -17,15 +17,21 @@
 package gov.nasa.race.common
 
 import scala.annotation.switch
+import scala.language.implicitConversions
 
 /**
   * MurmurHash64 implementation
   */
 object MurmurHash64 {
+
+  @inline implicit def byteToLong (b: Byte): Long = (b & 0xffL)
+  @inline implicit def charToLong (c: Char): Long = (c & 0xffL)
+
   val seed: Int = 0xe17a1465
 
   // this assumes utf8 bytes
-  def hash (data: Array[Byte], off: Int, len: Int): Long = {
+  // note we might have to create explicit Byte/Char versions as the implicit arg does incur some runtime costs
+  def hash [@specialized(Byte,Char)T<:AnyVal](data: Array[T], off: Int, len: Int) (implicit ev: T=>Long): Long = {
     val m: Long = 0xc6a4a7935bd1e995L
     val r: Int = 47
     var h: Long = (seed & 0xffffffffL) ^ (len * m)
@@ -35,14 +41,14 @@ object MurmurHash64 {
     var i = 0
     var j = off
     while (i < nOctets) {
-      var k: Long = (data(j) & 0xffL); j+= 1
-      k += (data(j) & 0xffL)<<8   ; j += 1
-      k += (data(j) & 0xffL)<<16  ; j += 1
-      k += (data(j) & 0xffL)<<24  ; j += 1
-      k += (data(j) & 0xffL)<<32  ; j += 1
-      k += (data(j) & 0xffL)<<40  ; j += 1
-      k += (data(j) & 0xffL)<<48  ; j += 1
-      k += (data(j) & 0xffL)<<56  ; j += 1
+      var k: Long = (data(j).toLong); j+= 1
+      k += data(j).toLong << 8   ; j += 1
+      k += data(j).toLong << 16  ; j += 1
+      k += data(j).toLong << 24  ; j += 1
+      k += data(j).toLong << 32  ; j += 1
+      k += data(j).toLong << 40  ; j += 1
+      k += data(j).toLong << 48  ; j += 1
+      k += data(j).toLong << 56  ; j += 1
 
       k *= m
       k ^= k >>> r
@@ -56,40 +62,40 @@ object MurmurHash64 {
 
     ((len % 8): @switch) match {
       case 7 =>
-        h ^= (data(j+6) & 0xffL) << 48
-        h ^= (data(j+5) & 0xffL) << 40
-        h ^= (data(j+4) & 0xffL) << 32
-        h ^= (data(j+3) & 0xffL) << 24
-        h ^= (data(j+2) & 0xffL) << 16
-        h ^= (data(j+1) & 0xffL) << 8
-        h ^= (data(j)   & 0xffL); h *= m
+        h ^= data(j+6).toLong << 48
+        h ^= data(j+5).toLong << 40
+        h ^= data(j+4).toLong << 32
+        h ^= data(j+3).toLong << 24
+        h ^= data(j+2).toLong << 16
+        h ^= data(j+1).toLong << 8
+        h ^= data(j).toLong  ; h *= m
       case 6 =>
-        h ^= (data(j+5) & 0xffL) << 40
-        h ^= (data(j+4) & 0xffL) << 32
-        h ^= (data(j+3) & 0xffL) << 24
-        h ^= (data(j+2) & 0xffL) << 16
-        h ^= (data(j+1) & 0xffL) << 8
-        h ^= (data(j)   & 0xffL); h *= m
+        h ^= data(j+5).toLong << 40
+        h ^= data(j+4).toLong << 32
+        h ^= data(j+3).toLong << 24
+        h ^= data(j+2).toLong << 16
+        h ^= data(j+1).toLong << 8
+        h ^= data(j).toLong  ; h *= m
       case 5 =>
-        h ^= (data(j+4) & 0xffL) << 32
-        h ^= (data(j+3) & 0xffL) << 24
-        h ^= (data(j+2) & 0xffL) << 16
-        h ^= (data(j+1) & 0xffL) << 8
-        h ^= (data(j)   & 0xffL); h *= m
+        h ^= data(j+4).toLong << 32
+        h ^= data(j+3).toLong << 24
+        h ^= data(j+2).toLong << 16
+        h ^= data(j+1).toLong << 8
+        h ^= data(j).toLong  ; h *= m
       case 4 =>
-        h ^= (data(j+3) & 0xffL) << 24
-        h ^= (data(j+2) & 0xffL) << 16
-        h ^= (data(j+1) & 0xffL) << 8
-        h ^= (data(j)   & 0xffL); h *= m
+        h ^= data(j+3).toLong << 24
+        h ^= data(j+2).toLong << 16
+        h ^= data(j+1).toLong << 8
+        h ^= data(j).toLong  ; h *= m
       case 3 =>
-        h ^= (data(j+2) & 0xffL) << 16
-        h ^= (data(j+1) & 0xffL) << 8
-        h ^= (data(j)   & 0xffL); h *= m
+        h ^= data(j+2).toLong << 16
+        h ^= data(j+1).toLong << 8
+        h ^= data(j).toLong  ; h *= m
       case 2 =>
-        h ^= (data(j+1) & 0xffL) << 8
-        h ^= (data(j)   & 0xffL); h *= m
+        h ^= data(j+1).toLong << 8
+        h ^= data(j).toLong  ; h *= m
       case 1 =>
-        h ^= (data(j)   & 0xffL); h *= m
+        h ^= data(j).toLong; h *= m
       case 0 =>
     }
 
@@ -98,98 +104,6 @@ object MurmurHash64 {
     h ^ (h >>> r)
   }
 
-  // this duplication sucks, but a generic version would incur runtime costs
-  def hashASCII (data: Array[Char], off: Int, len: Int): Long = {
-    val m: Long = 0xc6a4a7935bd1e995L
-    val r: Int = 47
-    var h: Long = (seed & 0xffffffffL) ^ (len * m)
-
-    val nOctets = len / 8
-
-    var i = 0
-    var j = off
-    while (i < nOctets) {
-      var k: Long = (data(j) & 0xffL); j+= 1
-      k += (data(j) & 0xffL)<<8   ; j += 1
-      k += (data(j) & 0xffL)<<16  ; j += 1
-      k += (data(j) & 0xffL)<<24  ; j += 1
-      k += (data(j) & 0xffL)<<32  ; j += 1
-      k += (data(j) & 0xffL)<<40  ; j += 1
-      k += (data(j) & 0xffL)<<48  ; j += 1
-      k += (data(j) & 0xffL)<<56  ; j += 1
-
-      k *= m
-      k ^= k >>> r
-      k *= m
-
-      h ^= k
-      h *= m
-
-      i += 1
-    }
-
-    ((len % 8): @switch) match {
-      case 7 =>
-        h ^= (data(j+6) & 0xffL) << 48
-        h ^= (data(j+5) & 0xffL) << 40
-        h ^= (data(j+4) & 0xffL) << 32
-        h ^= (data(j+3) & 0xffL) << 24
-        h ^= (data(j+2) & 0xffL) << 16
-        h ^= (data(j+1) & 0xffL) << 8
-        h ^= (data(j)   & 0xffL); h *= m
-      case 6 =>
-        h ^= (data(j+5) & 0xffL) << 40
-        h ^= (data(j+4) & 0xffL) << 32
-        h ^= (data(j+3) & 0xffL) << 24
-        h ^= (data(j+2) & 0xffL) << 16
-        h ^= (data(j+1) & 0xffL) << 8
-        h ^= (data(j)   & 0xffL); h *= m
-      case 5 =>
-        h ^= (data(j+4) & 0xffL) << 32
-        h ^= (data(j+3) & 0xffL) << 24
-        h ^= (data(j+2) & 0xffL) << 16
-        h ^= (data(j+1) & 0xffL) << 8
-        h ^= (data(j)   & 0xffL); h *= m
-      case 4 =>
-        h ^= (data(j+3) & 0xffL) << 24
-        h ^= (data(j+2) & 0xffL) << 16
-        h ^= (data(j+1) & 0xffL) << 8
-        h ^= (data(j)   & 0xffL); h *= m
-      case 3 =>
-        h ^= (data(j+2) & 0xffL) << 16
-        h ^= (data(j+1) & 0xffL) << 8
-        h ^= (data(j)   & 0xffL); h *= m
-      case 2 =>
-        h ^= (data(j+1) & 0xffL) << 8
-        h ^= (data(j)   & 0xffL); h *= m
-      case 1 =>
-        h ^= (data(j)   & 0xffL); h *= m
-      case 0 =>
-    }
-
-    h ^= h >>> r
-    h *= m
-    h ^ (h >>> r)
-  }
-
-
-  // this needs to produce the same values as the Array[Byte] version for utf8 encoded chars
-  def hash (data: Array[Char], off: Int, len: Int): Long = {
-    if (isASCII(data,off,len)) hashASCII(data,off,len)
-    else 0
-  }
-
-
-
-  def isASCII (data: Array[Char], off: Int, len: Int): Boolean = {
-    val i1 = off+len
-    var i = off
-    while (i < i1) {
-      if ((data(i) & 0xff00) != 0) return false
-      i += 1
-    }
-    true
-  }
 
   @inline def hash (data: Array[Byte]): Long = hash(data,0,data.length)
   @inline def hash (data: Array[Char]): Long = hash(data,0,data.length)

@@ -19,31 +19,43 @@ package gov.nasa.race.common
 import gov.nasa.race.test.RaceSpec
 import org.scalatest.flatspec.AnyFlatSpec
 
-import scala.collection.mutable.Set
-
 /**
-  * reg test for MurmurHash64
+  * reg test for UTF8 support functions
   */
-class MurmurHash64Spec extends AnyFlatSpec with RaceSpec {
+class UTF8Spec extends AnyFlatSpec with RaceSpec {
 
-  val names = Seq[String](
-    "AA001", "AA002", "AA1001", "AA1111", "AA1",
-    "SWA8762", "SWA8912", "SWA129", "SWA9999",
-    "DAL7", "DAL70", "DAL700", "DAL7000"
+  val ts = Array(
+    "abc",
+    "I'm \u263b",  // smiley, 3 bytes
+    "I'm \u263b \u00b6"  // paragraph, 2 bytes
   )
 
-  "MurmurHash64" should "produce unique hash values for known data" in {
-    val seen = Set.empty[Long]
+  "UTF8.utf8Length" should "compute the right UTF-8 length for Strings" in {
+    ts.foreach { s=>
+      val len = UTF8.utf8Length(s)
+      len shouldBe s.getBytes.length
+      println(s"$s : $len")
+    }
+  }
 
-    names.foreach { id =>
-      val hBytes = MurmurHash64.hash(id.getBytes)
-      val hChars = MurmurHash64.hash(id.toCharArray)
+  "UTF8.Encoder" should "properly encode Array[Char]" in {
+    ts.foreach { s =>
+      val cs = s.toCharArray
+      val bs = s.getBytes
+      val bss = bs.map( b=> (b.toInt & 0xff).toHexString).mkString(",")
 
-      assert (hBytes == hChars)
-      assert (!seen(hBytes))
-      seen += hBytes
+      println(s"--- '$s' (${bs.length} : $bss)")
 
-      println(s"$id : ($hBytes, $hChars)")
+      var j = 0
+      var utf8 = UTF8.initEncoder(cs)
+      while (!utf8.isEnd) {
+        val b = utf8.utf8Byte
+        print(f"$b%x , state: ")
+        utf8.print
+        assert(b == bs(j))
+        j += 1
+        utf8 = utf8.next(cs,cs.length)
+      }
     }
   }
 }
