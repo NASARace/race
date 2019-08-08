@@ -22,7 +22,7 @@ import org.scalatest.flatspec.AnyFlatSpec
 /**
   * reg test for UTF8 support functions
   */
-class UTF8Spec extends AnyFlatSpec with RaceSpec {
+class UTFxSpec extends AnyFlatSpec with RaceSpec {
 
   val ts = Array(
     "abc",
@@ -32,9 +32,9 @@ class UTF8Spec extends AnyFlatSpec with RaceSpec {
 
   "UTF8.utf8Length" should "compute the right UTF-8 length for Strings" in {
     ts.foreach { s=>
-      val len = UTF8.utf8Length(s)
+      val len = UTFx.utf8Length(s)
+      println(s"'$s' : utf-8 length = $len")
       len shouldBe s.getBytes.length
-      println(s"$s : $len")
     }
   }
 
@@ -44,18 +44,51 @@ class UTF8Spec extends AnyFlatSpec with RaceSpec {
       val bs = s.getBytes
       val bss = bs.map( b=> (b.toInt & 0xff).toHexString).mkString(",")
 
-      println(s"--- '$s' (${bs.length} : $bss)")
+      println(s"--- encode '$s' (${bs.length} : $bss)")
 
       var j = 0
-      var utf8 = UTF8.initEncoder(cs)
-      while (!utf8.isEnd) {
-        val b = utf8.utf8Byte
+      var encoder = UTFx.initUTF8Encoder(cs)
+      while (!encoder.isEnd) {
+        val b = encoder.utf8Byte
         print(f"$b%x , state: ")
-        utf8.print
+        encoder.print
         assert(b == bs(j))
         j += 1
-        utf8 = utf8.next(cs,cs.length)
+        encoder = encoder.next(cs,cs.length)
       }
+      j shouldBe bs.length
+    }
+  }
+
+  "UTF8.Decoder" should "properly decode utf-8 Array[Byte] into Chars" in {
+    ts.foreach { s =>
+      val cs = s.toCharArray
+      val bs = s.getBytes
+      val bss = bs.map( b=> (b.toInt & 0xff).toHexString).mkString(",")
+
+      println(s"--- decode '$s' (${bs.length} : $bss)")
+
+      var j = 0
+      var decoder = UTFx.initUTF8Decoder(bs)
+      while (!decoder.isEnd) {
+        val c = decoder.utf16Char
+        print(f"'$c' ($c%x) , state: ")
+        decoder.print
+        assert(c == cs(j))
+        j += 1
+        decoder = decoder.next(bs,bs.length)
+      }
+      j shouldBe cs.length
+    }
+  }
+
+  "UTF8.utf16Length" should "compute the right UTF-16 length for UTF-8 Array[Byte]" in {
+    ts.foreach { s=>
+      val bs = s.getBytes
+
+      val len = UTFx.utf16Length(bs)
+      println(s"'$s' : utf-16 length= $len")
+      len shouldBe s.length
     }
   }
 }
