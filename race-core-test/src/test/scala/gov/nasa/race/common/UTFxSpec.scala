@@ -91,4 +91,13 @@ class UTFxSpec extends AnyFlatSpec with RaceSpec {
       len shouldBe s.length
     }
   }
+
+  "UTF8.equals" should "detect char equivalence with Strings" in {
+    ts.foreach { s =>
+      val bs = s.getBytes
+      UTFx.utf8Equals(bs,s) shouldBe true
+      bs(2) = '?'.toByte // make sure the 3rd byte is not part of a unicode char
+      UTFx.utf8Equals(bs,s) shouldBe false
+    }
+  }
 }

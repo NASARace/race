@@ -213,4 +213,28 @@ object UTFx {
     }
     true
   }
+
+  def utf8Equals (bs: Array[Byte], off: Int, len: Int, s: String): Boolean = {
+    val end = off+len
+    var dec = initUTF8Decoder(bs,off)
+    var j = 0
+    while (!dec.isEnd){
+      if (dec.utf16Char != s.charAt(j)) return false
+      j += 1
+      dec = dec.next(bs,end)
+    }
+    (j == s.length)
+  }
+
+  @inline def utf8Equals (bs: Array[Byte], s: String): Boolean = utf8Equals(bs, 0, bs.length, s)
+
+  def asciiEquals (bs: Array[Byte], off: Int, len: Int, s: String): Boolean = {
+    var i1 = off+len
+    var i = 0
+    while (i < i1) {
+      if ((bs(i) & 0xff) != s.charAt(i)) return false
+      i += 1
+    }
+    (i == s.length)
+  }
 }
