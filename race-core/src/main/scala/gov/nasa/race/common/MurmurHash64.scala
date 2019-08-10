@@ -21,17 +21,19 @@ import scala.language.implicitConversions
 
 /**
   * MurmurHash64 implementation
+  *
+  * this is very redundant code but unfortunately all refactoring to avoid replication would carry a significant
+  * runtime performance cost
   */
 object MurmurHash64 {
 
-  @inline implicit def byteToLong (b: Byte): Long = (b & 0xffL)
-  @inline implicit def charToLong (c: Char): Long = (c & 0xffL)
-
   val seed: Int = 0xe17a1465
 
-  // this assumes utf8 bytes
-  // note we might have to create explicit Byte/Char versions as the implicit arg does incur some runtime costs
-  def hash [@specialized(Byte,Char)T<:AnyVal](data: Array[T], off: Int, len: Int) (implicit ev: T=>Long): Long = {
+  // this is bad - we have to duplicate the code so that we avoid the runtime cost of a conversion call per byte/char
+  // (there is no numeric type that has a '&' operator). When compiling optimized, the generic version that uses
+  // implicit conversion to Long is slower by a factor of >2
+  
+  def hashBytes (data: Array[Byte], off: Int, len: Int): Long = {
     val m: Long = 0xc6a4a7935bd1e995L
     val r: Int = 47
     var h: Long = (seed & 0xffffffffL) ^ (len * m)
@@ -41,14 +43,14 @@ object MurmurHash64 {
     var i = 0
     var j = off
     while (i < nOctets) {
-      var k: Long = (data(j).toLong); j+= 1
-      k += data(j).toLong << 8   ; j += 1
-      k += data(j).toLong << 16  ; j += 1
-      k += data(j).toLong << 24  ; j += 1
-      k += data(j).toLong << 32  ; j += 1
-      k += data(j).toLong << 40  ; j += 1
-      k += data(j).toLong << 48  ; j += 1
-      k += data(j).toLong << 56  ; j += 1
+      var k: Long = (data(j) & 0xffL); j+= 1
+      k += (data(j) & 0xffL) << 8   ; j += 1
+      k += (data(j) & 0xffL) << 16  ; j += 1
+      k += (data(j) & 0xffL) << 24  ; j += 1
+      k += (data(j) & 0xffL) << 32  ; j += 1
+      k += (data(j) & 0xffL) << 40  ; j += 1
+      k += (data(j) & 0xffL) << 48  ; j += 1
+      k += (data(j) & 0xffL) << 56  ; j += 1
 
       k *= m
       k ^= k >>> r
@@ -62,40 +64,120 @@ object MurmurHash64 {
 
     ((len % 8): @switch) match {
       case 7 =>
-        h ^= data(j+6).toLong << 48
-        h ^= data(j+5).toLong << 40
-        h ^= data(j+4).toLong << 32
-        h ^= data(j+3).toLong << 24
-        h ^= data(j+2).toLong << 16
-        h ^= data(j+1).toLong << 8
-        h ^= data(j).toLong  ; h *= m
+        h ^= (data(j+6) & 0xffL) << 48
+        h ^= (data(j+5) & 0xffL) << 40
+        h ^= (data(j+4) & 0xffL) << 32
+        h ^= (data(j+3) & 0xffL) << 24
+        h ^= (data(j+2) & 0xffL) << 16
+        h ^= (data(j+1) & 0xffL) << 8
+        h ^= (data(j)   & 0xffL); h *= m
       case 6 =>
-        h ^= data(j+5).toLong << 40
-        h ^= data(j+4).toLong << 32
-        h ^= data(j+3).toLong << 24
-        h ^= data(j+2).toLong << 16
-        h ^= data(j+1).toLong << 8
-        h ^= data(j).toLong  ; h *= m
+        h ^= (data(j+5) & 0xffL) << 40
+        h ^= (data(j+4) & 0xffL) << 32
+        h ^= (data(j+3) & 0xffL) << 24
+        h ^= (data(j+2) & 0xffL) << 16
+        h ^= (data(j+1) & 0xffL) << 8
+        h ^= (data(j)   & 0xffL)  ; h *= m
       case 5 =>
-        h ^= data(j+4).toLong << 32
-        h ^= data(j+3).toLong << 24
-        h ^= data(j+2).toLong << 16
-        h ^= data(j+1).toLong << 8
-        h ^= data(j).toLong  ; h *= m
+        h ^= (data(j+4) & 0xffL) << 32
+        h ^= (data(j+3) & 0xffL) << 24
+        h ^= (data(j+2) & 0xffL) << 16
+        h ^= (data(j+1) & 0xffL) << 8
+        h ^= (data(j)   & 0xffL)  ; h *= m
       case 4 =>
-        h ^= data(j+3).toLong << 24
-        h ^= data(j+2).toLong << 16
-        h ^= data(j+1).toLong << 8
-        h ^= data(j).toLong  ; h *= m
+        h ^= (data(j+3) & 0xffL) << 24
+        h ^= (data(j+2) & 0xffL) << 16
+        h ^= (data(j+1) & 0xffL) << 8
+        h ^= (data(j)   & 0xffL)  ; h *= m
       case 3 =>
-        h ^= data(j+2).toLong << 16
-        h ^= data(j+1).toLong << 8
-        h ^= data(j).toLong  ; h *= m
+        h ^= (data(j+2) & 0xffL) << 16
+        h ^= (data(j+1) & 0xffL) << 8
+        h ^= (data(j)   & 0xffL)  ; h *= m
       case 2 =>
-        h ^= data(j+1).toLong << 8
-        h ^= data(j).toLong  ; h *= m
+        h ^= (data(j+1) & 0xffL) << 8
+        h ^= (data(j)   & 0xffL)  ; h *= m
       case 1 =>
-        h ^= data(j).toLong; h *= m
+        h ^= (data(j)   & 0xffL)  ; h *= m
+      case 0 =>
+    }
+
+    h ^= h >>> r
+    h *= m
+    h ^ (h >>> r)
+  }
+  
+  def hashASCIIChars (data: Array[Char], off: Int, len: Int): Long = {
+    val m: Long = 0xc6a4a7935bd1e995L
+    val r: Int = 47
+    var h: Long = (seed & 0xffffffffL) ^ (len * m)
+
+    val nOctets = len / 8
+
+    var i = 0
+    var j = off
+    while (i < nOctets) {
+      var k: Long = (data(j) & 0xffL); j+= 1
+      k += (data(j) & 0xffL) << 8   ; j += 1
+      k += (data(j) & 0xffL) << 16  ; j += 1
+      k += (data(j) & 0xffL) << 24  ; j += 1
+      k += (data(j) & 0xffL) << 32  ; j += 1
+      k += (data(j) & 0xffL) << 40  ; j += 1
+      k += (data(j) & 0xffL) << 48  ; j += 1
+      k += (data(j) & 0xffL) << 56  ; j += 1
+
+      k *= m
+      k ^= k >>> r
+      k *= m
+
+      h ^= k
+      h *= m
+
+      i += 1
+    }
+
+    ((len % 8): @switch) match {
+      case 7 =>
+        h ^= (data(j+6) & 0xffL) << 48
+        h ^= (data(j+5) & 0xffL) << 40
+        h ^= (data(j+4) & 0xffL) << 32
+        h ^= (data(j+3) & 0xffL) << 24
+        h ^= (data(j+2) & 0xffL) << 16
+        h ^= (data(j+1) & 0xffL) << 8
+        h ^= (data(j)   & 0xffL)
+        h *= m
+      case 6 =>
+        h ^= (data(j+5) & 0xffL) << 40
+        h ^= (data(j+4) & 0xffL) << 32
+        h ^= (data(j+3) & 0xffL) << 24
+        h ^= (data(j+2) & 0xffL) << 16
+        h ^= (data(j+1) & 0xffL) << 8
+        h ^= (data(j)   & 0xffL)
+        h *= m
+      case 5 =>
+        h ^= (data(j+4) & 0xffL) << 32
+        h ^= (data(j+3) & 0xffL) << 24
+        h ^= (data(j+2) & 0xffL) << 16
+        h ^= (data(j+1) & 0xffL) << 8
+        h ^= (data(j)   & 0xffL)
+        h *= m
+      case 4 =>
+        h ^= (data(j+3) & 0xffL) << 24
+        h ^= (data(j+2) & 0xffL) << 16
+        h ^= (data(j+1) & 0xffL) << 8
+        h ^= (data(j)   & 0xffL)
+        h *= m
+      case 3 =>
+        h ^= (data(j+2) & 0xffL) << 16
+        h ^= (data(j+1) & 0xffL) << 8
+        h ^= (data(j)   & 0xffL)
+        h *= m
+      case 2 =>
+        h ^= (data(j+1) & 0xffL) << 8
+        h ^= (data(j)   & 0xffL)
+        h *= m
+      case 1 =>
+        h ^= (data(j)   & 0xffL)
+        h *= m
       case 0 =>
     }
 
@@ -105,6 +187,184 @@ object MurmurHash64 {
   }
 
 
-  @inline def hash (data: Array[Byte]): Long = hash(data,0,data.length)
-  @inline def hash (data: Array[Char]): Long = hash(data,0,data.length)
+  def hashChars (data: Array[Char], off: Int, len: Int): Long = {
+    val utf8Len = UTFx.utf8Length(data,off,len)
+    var enc = UTFx.initUTF8Encoder(data,off)
+
+    val m: Long = 0xc6a4a7935bd1e995L
+    val r: Int = 47
+    var h: Long = (seed & 0xffffffffL) ^ (utf8Len * m)
+
+    val nOctets = utf8Len / 8
+
+    var i = 0
+    while (i < nOctets) {
+      var k: Long = (enc.utf8Byte & 0xffL)    ; enc = enc ++ data
+      k += (enc.utf8Byte & 0xffL) << 8        ; enc = enc ++ data
+      k += (enc.utf8Byte & 0xffL) << 16       ; enc = enc ++ data
+      k += (enc.utf8Byte & 0xffL) << 24       ; enc = enc ++ data
+      k += (enc.utf8Byte & 0xffL) << 32       ; enc = enc ++ data
+      k += (enc.utf8Byte & 0xffL) << 40       ; enc = enc ++ data
+      k += (enc.utf8Byte & 0xffL) << 48       ; enc = enc ++ data
+      k += (enc.utf8Byte & 0xffL) << 56       ; enc = enc ++ data
+
+      k *= m
+      k ^= k >>> r
+      k *= m
+
+      h ^= k
+      h *= m
+
+      i += 1
+    }
+
+    ((utf8Len % 8): @switch) match {
+      case 7 =>
+        var k: Long = (enc.utf8Byte & 0xffL)  ; enc = enc ++ data
+        k |= (enc.utf8Byte & 0xffL) << 8      ; enc = enc ++ data
+        k |= (enc.utf8Byte & 0xffL) << 16     ; enc = enc ++ data
+        k |= (enc.utf8Byte & 0xffL) << 24     ; enc = enc ++ data
+        k |= (enc.utf8Byte & 0xffL) << 32     ; enc = enc ++ data
+        k |= (enc.utf8Byte & 0xffL) << 40     ; enc = enc ++ data
+        k |= (enc.utf8Byte & 0xffL) << 48
+        h ^= k
+        h *= m
+      case 6 =>
+        var k: Long = (enc.utf8Byte & 0xffL)  ; enc = enc ++ data
+        k |= (enc.utf8Byte & 0xffL) << 8      ; enc = enc ++ data
+        k |= (enc.utf8Byte & 0xffL) << 16     ; enc = enc ++ data
+        k |= (enc.utf8Byte & 0xffL) << 24     ; enc = enc ++ data
+        k |= (enc.utf8Byte & 0xffL) << 32     ; enc = enc ++ data
+        k |= (enc.utf8Byte & 0xffL) << 40
+        h ^= k
+        h *= m
+      case 5 =>
+        var k: Long = (enc.utf8Byte & 0xffL)  ; enc = enc ++ data
+        k |= (enc.utf8Byte & 0xffL) << 8      ; enc = enc ++ data
+        k |= (enc.utf8Byte & 0xffL) << 16     ; enc = enc ++ data
+        k |= (enc.utf8Byte & 0xffL) << 24     ; enc = enc ++ data
+        k |= (enc.utf8Byte & 0xffL) << 32
+        h ^= k
+        h *= m
+      case 4 =>
+        var k: Long = (enc.utf8Byte & 0xffL)  ; enc = enc ++ data
+        k |= (enc.utf8Byte & 0xffL) << 8      ; enc = enc ++ data
+        k |= (enc.utf8Byte & 0xffL) << 16     ; enc = enc ++ data
+        k |= (enc.utf8Byte & 0xffL) << 24
+        h ^= k
+        h *= m
+      case 3 =>
+        var k: Long = (enc.utf8Byte & 0xffL)  ; enc = enc ++ data
+        k |= (enc.utf8Byte & 0xffL) << 8      ; enc = enc ++ data
+        k |= (enc.utf8Byte & 0xffL) << 16
+        h ^= k
+        h *= m
+      case 2 =>
+        var k: Long = (enc.utf8Byte & 0xffL)  ; enc = enc ++ data
+        k |= (enc.utf8Byte & 0xffL) << 8
+        h ^= k
+        h *= m
+      case 1 =>
+        h ^= (enc.utf8Byte & 0xffL)
+        h *= m
+      case 0 =>
+    }
+
+    h ^= h >>> r
+    h *= m
+    h ^ (h >>> r)
+  }
+
+  def hashString (data: String): Long = {
+    val utf8Len = UTFx.utf8Length(data)
+    var enc = UTFx.initUTF8Encoder(data,0)
+
+    val m: Long = 0xc6a4a7935bd1e995L
+    val r: Int = 47
+    var h: Long = (seed & 0xffffffffL) ^ (utf8Len * m)
+
+    val nOctets = utf8Len / 8
+
+    var i = 0
+    while (i < nOctets) {
+      var k: Long = (enc.utf8Byte & 0xffL)    ; enc = enc ++ data
+      k += (enc.utf8Byte & 0xffL) << 8        ; enc = enc ++ data
+      k += (enc.utf8Byte & 0xffL) << 16       ; enc = enc ++ data
+      k += (enc.utf8Byte & 0xffL) << 24       ; enc = enc ++ data
+      k += (enc.utf8Byte & 0xffL) << 32       ; enc = enc ++ data
+      k += (enc.utf8Byte & 0xffL) << 40       ; enc = enc ++ data
+      k += (enc.utf8Byte & 0xffL) << 48       ; enc = enc ++ data
+      k += (enc.utf8Byte & 0xffL) << 56       ; enc = enc ++ data
+
+      k *= m
+      k ^= k >>> r
+      k *= m
+
+      h ^= k
+      h *= m
+
+      i += 1
+    }
+
+    ((utf8Len % 8): @switch) match {
+      case 7 =>
+        var k: Long = (enc.utf8Byte & 0xffL)  ; enc = enc ++ data
+        k |= (enc.utf8Byte & 0xffL) << 8      ; enc = enc ++ data
+        k |= (enc.utf8Byte & 0xffL) << 16     ; enc = enc ++ data
+        k |= (enc.utf8Byte & 0xffL) << 24     ; enc = enc ++ data
+        k |= (enc.utf8Byte & 0xffL) << 32     ; enc = enc ++ data
+        k |= (enc.utf8Byte & 0xffL) << 40     ; enc = enc ++ data
+        k |= (enc.utf8Byte & 0xffL) << 48
+        h ^= k
+        h *= m
+      case 6 =>
+        var k: Long = (enc.utf8Byte & 0xffL)  ; enc = enc ++ data
+        k |= (enc.utf8Byte & 0xffL) << 8      ; enc = enc ++ data
+        k |= (enc.utf8Byte & 0xffL) << 16     ; enc = enc ++ data
+        k |= (enc.utf8Byte & 0xffL) << 24     ; enc = enc ++ data
+        k |= (enc.utf8Byte & 0xffL) << 32     ; enc = enc ++ data
+        k |= (enc.utf8Byte & 0xffL) << 40
+        h ^= k
+        h *= m
+      case 5 =>
+        var k: Long = (enc.utf8Byte & 0xffL)  ; enc = enc ++ data
+        k |= (enc.utf8Byte & 0xffL) << 8      ; enc = enc ++ data
+        k |= (enc.utf8Byte & 0xffL) << 16     ; enc = enc ++ data
+        k |= (enc.utf8Byte & 0xffL) << 24     ; enc = enc ++ data
+        k |= (enc.utf8Byte & 0xffL) << 32
+        h ^= k
+        h *= m
+      case 4 =>
+        var k: Long = (enc.utf8Byte & 0xffL)  ; enc = enc ++ data
+        k |= (enc.utf8Byte & 0xffL) << 8      ; enc = enc ++ data
+        k |= (enc.utf8Byte & 0xffL) << 16     ; enc = enc ++ data
+        k |= (enc.utf8Byte & 0xffL) << 24
+        h ^= k
+        h *= m
+      case 3 =>
+        var k: Long = (enc.utf8Byte & 0xffL)  ; enc = enc ++ data
+        k |= (enc.utf8Byte & 0xffL) << 8      ; enc = enc ++ data
+        k |= (enc.utf8Byte & 0xffL) << 16
+        h ^= k
+        h *= m
+      case 2 =>
+        var k: Long = (enc.utf8Byte & 0xffL)  ; enc = enc ++ data
+        k |= (enc.utf8Byte & 0xffL) << 8
+        h ^= k
+        h *= m
+      case 1 =>
+        h ^= (enc.utf8Byte & 0xffL)
+        h *= m
+      case 0 =>
+    }
+
+    h ^= h >>> r
+    h *= m
+    h ^ (h >>> r)
+  }
+
+
+  @inline def hashBytes (data: Array[Byte]): Long = hashBytes(data,0,data.length)
+  @inline def hashASCIIChars (data: Array[Char]): Long = hashASCIIChars(data,0,data.length)
+  @inline def hashChars (data: Array[Char]): Long = hashChars(data,0,data.length)
 }

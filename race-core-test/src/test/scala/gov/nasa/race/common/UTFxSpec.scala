@@ -25,9 +25,10 @@ import org.scalatest.flatspec.AnyFlatSpec
 class UTFxSpec extends AnyFlatSpec with RaceSpec {
 
   val ts = Array(
-    "abc",
-    "I'm \u263b",  // smiley, 3 bytes
-    "I'm \u263b \u00b6"  // paragraph, 2 bytes
+    //"abc",
+    //"I'm \u263b",  // smiley, 3 bytes
+    //"I'm \u263b \u00b6",  // paragraph, 2 bytes
+    "I'm \u263b, or am I \uD83D\uDE36 ?"  // surrogate pair, 4 bytes/2 chars
   )
 
   "UTF8.utf8Length" should "compute the right UTF-8 length for Strings" in {
@@ -38,13 +39,17 @@ class UTFxSpec extends AnyFlatSpec with RaceSpec {
     }
   }
 
-  "UTF8.Encoder" should "properly encode Array[Char]" in {
+  "UTF8.Encoder" should "properly utf-8 encode Array[Char]" in {
     ts.foreach { s =>
       val cs = s.toCharArray
       val bs = s.getBytes
+      val css = cs.map( b=> (b.toInt & 0xffff).toHexString).mkString(",")
       val bss = bs.map( b=> (b.toInt & 0xff).toHexString).mkString(",")
 
-      println(s"--- encode '$s' (${bs.length} : $bss)")
+
+      println(s"--- encode utf-8 for '$s'")
+      println(s"       => utf-16: (${cs.length} : $css)")
+      println(s"       => utf-8:  (${bs.length} : $bss)")
 
       var j = 0
       var encoder = UTFx.initUTF8Encoder(cs)
@@ -64,10 +69,12 @@ class UTFxSpec extends AnyFlatSpec with RaceSpec {
     ts.foreach { s =>
       val cs = s.toCharArray
       val bs = s.getBytes
+      val css = cs.map( b=> (b.toInt & 0xffff).toHexString).mkString(",")
       val bss = bs.map( b=> (b.toInt & 0xff).toHexString).mkString(",")
 
-      println(s"--- decode '$s' (${bs.length} : $bss)")
-
+      println(s"--- decode utf-16 for '$s'")
+      println(s"       => utf-16: (${cs.length} : $css)")
+      println(s"       => utf-8:  (${bs.length} : $bss)")
       var j = 0
       var decoder = UTFx.initUTF8Decoder(bs)
       while (!decoder.isEnd) {
@@ -87,7 +94,7 @@ class UTFxSpec extends AnyFlatSpec with RaceSpec {
       val bs = s.getBytes
 
       val len = UTFx.utf16Length(bs)
-      println(s"'$s' : utf-16 length= $len")
+      println(s"'$s' : utf-16 length= $len (expected ${s.length})")
       len shouldBe s.length
     }
   }

@@ -26,24 +26,79 @@ import scala.collection.mutable.Set
   */
 class MurmurHash64Spec extends AnyFlatSpec with RaceSpec {
 
-  val names = Seq[String](
+  val flightIdx = Seq[String](
     "AA001", "AA002", "AA1001", "AA1111", "AA1",
     "SWA8762", "SWA8912", "SWA129", "SWA9999",
     "DAL7", "DAL70", "DAL700", "DAL7000"
   )
 
-  "MurmurHash64" should "produce unique hash values for known data" in {
+  val utfStrings = Seq[String](
+    "abc",
+    "I'm \u263b",  // smiley, 3 bytes
+    "I'm \u263b \u00b6"  // paragraph, 2 bytes
+  )
+
+  val longStrings = Seq[String](
+    "abc XYZ blabla hicks whatever",
+    "I'm \u263b, or am I \u2639",  // smiley, 3 bytes
+  )
+
+  "MurmurHash64" should "produce same hash values for known ascii data < 8 bytes(byte, char and string)" in {
     val seen = Set.empty[Long]
 
-    names.foreach { id =>
-      val hBytes = MurmurHash64.hash(id.getBytes)
-      val hChars = MurmurHash64.hash(id.toCharArray)
+    println("--- ASCII data < 8 bytes")
+    flightIdx.foreach { id =>
+      val hBytes = MurmurHash64.hashBytes(id.getBytes)
+      val hChars = MurmurHash64.hashChars(id.toCharArray)
+      val hAscii = MurmurHash64.hashASCIIChars(id.toCharArray)
+      val hStr   = MurmurHash64.hashString(id)
+
+      println(s"'$id' : ($hBytes, $hChars, $hAscii $hStr)")
 
       assert (hBytes == hChars)
+      assert (hChars == hAscii)   // flight ids are all ascii
+      assert (hAscii == hStr)
       assert (!seen(hBytes))
-      seen += hBytes
 
-      println(s"$id : ($hBytes, $hChars)")
+      seen += hBytes
+    }
+  }
+
+  "MurmurHash64" should "produce same hash values for UTF-16 data < 8 bytes" in {
+    val seen = Set.empty[Long]
+
+    println("--- UTF-16 data")
+    utfStrings.foreach { s =>
+      val hBytes = MurmurHash64.hashBytes(s.getBytes)
+      val hChars = MurmurHash64.hashChars(s.toCharArray)
+      val hStr   = MurmurHash64.hashString(s)
+
+      println(s"'$s' : ($hBytes, $hChars, $hStr)")
+
+      assert (hBytes == hChars)
+      assert (hChars == hStr)   // flight ids are all ascii
+      assert (!seen(hBytes))
+
+      seen += hBytes
+    }
+  }
+
+  "MurmurHash64" should "produce same hash values for UTF-16 data > 8 bytes" in {
+    val seen = Set.empty[Long]
+
+    println("--- UTF-16 data")
+    longStrings.foreach { s =>
+      val hBytes = MurmurHash64.hashBytes(s.getBytes)
+      val hChars = MurmurHash64.hashChars(s.toCharArray)
+      val hStr   = MurmurHash64.hashString(s)
+
+      println(s"'$s' : ($hBytes, $hChars, $hStr)")
+
+      assert (hBytes == hChars)
+      assert (hChars == hStr)   // flight ids are all ascii
+      assert (!seen(hBytes))
+
+      seen += hBytes
     }
   }
 }

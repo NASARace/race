@@ -20,49 +20,88 @@ import scala.annotation.switch
 
 /**
   * support functions for UTF-x conversion without the need to use a CharSet/allocation
+  *
+  * TODO - check for possible optimizations for conversions. This also does not handle modified utf-8
   */
 object UTFx {
 
-  // low 4 bytes are next char
-  // high 4 bytes are utf-8 index
+  // low 4 bytes are next char(s)
+  // high 4 bytes are 3 byte utf-8 index and one byte remaining chars
   final class UTF8Decoder(val state: Long) extends AnyVal {
 
     @inline def isEnd: Boolean = state == 0xffffffff00000000L
 
-    @inline def nextByteIndex: Int = (state >> 32).toInt
+    @inline def nextByteIndex: Int = (state >> 40).toInt
 
-    def utf16Char: Char = (state & 0xffffL).toChar
+    @inline def remainingChars: Int = (state >> 32 & 0xffL).toInt
+
+    def utf16Char: Char = {
+      if ((state & 0x200000000L) == 0) {
+        (state & 0xffffL).toChar
+      } else {    // surrogate pair
+        (state>>16 & 0xffffL).toChar
+      }
+    }
+
+    def utf16Char1: Char = (state & 0xffffL).toChar
+
+    def utf16Char2: Char = (((state>>16) & 0xffffL)).toChar
 
     def next (bs: Array[Byte], maxIndex: Int): UTF8Decoder = {
-      val i = nextByteIndex
-      if (i >= maxIndex) new UTF8Decoder(0xffffffff00000000L) else initUTF8Decoder(bs,i)
+      if ((state & 0x200000000L) == 0) {
+        val i = nextByteIndex
+        if (i >= maxIndex) new UTF8Decoder(0xffffffff00000000L) else initUTF8Decoder(bs, i)
+      } else {
+        new UTF8Decoder((state ^ 0x300000000L ))
+      }
+    }
+
+    // use this in a loop that guarantees we are not exceeding the max index
+    @inline def ++ (bs: Array[Byte]): UTF8Decoder = {
+      if ((state & 0x200000000L) == 0) {
+        initUTF8Decoder(bs, nextByteIndex)
+      } else {
+        new UTF8Decoder((state ^ 0x300000000L ))
+      }
     }
 
     def print: Unit = {
-      println(f"Decoder( nextByteIndex=$nextByteIndex, utf16Char=$utf16Char ($utf16Char%x))")
+      println(f"Decoder( nextByteIndex=$nextByteIndex, remainingChars=$remainingChars, utf16Chars= ($utf16Char2%x,$utf16Char1%x))")
     }
   }
 
   def initUTF8Decoder(bs: Array[Byte], off: Int): UTF8Decoder = {
     var i = off
-    val c0 = bs(i) & 0xff
-    if ((c0 & 0x80) == 0) { // single byte char
-      new UTF8Decoder((i+1).toLong << 32 | c0)
+    val b0 = bs(i) & 0xff
+    if ((b0 & 0x80) == 0) { // single byte char (ASCII)
+      new UTF8Decoder((i+1).toLong << 40 | 0x100000000L | b0)
 
     } else {
       i += 1
-      val c1 = bs(i) & 0xff
+      val b1 = bs(i) & 0xff
 
-      if (c0 >> 5 == 0x6) { // 110b prefix => 2 bytes
-        new UTF8Decoder((i+1).toLong << 32 | (c0 & 0x1fL)<<6 | (c1 & 0x3fL))
+      if (b0 >> 5 == 0x6) { // 110b prefix => 2 bytes (1 char)
+        new UTF8Decoder((i+1).toLong << 40 | 0x100000000L | (b0 & 0x1fL)<<6 | (b1 & 0x3fL))
 
-      } else if (c0 >> 4 == 0xe) { // 1110b prefix => 3 bytes
+      } else {
         i += 1
-        val c2 = bs(i) & 0xff
+        val b2 = bs(i) & 0xff
 
-        new UTF8Decoder((i+1).toLong << 32 | (c0 & 0xfL)<<12 | (c1 & 0x3fL)<<6 | (c2 & 0x3fL))
+        if (b0 >> 4 == 0xe) { // 1110b prefix => 3 bytes (1 char)
+          new UTF8Decoder((i+1).toLong << 40 | 0x100000000L | (b0 & 0xfL)<<12 | (b1 & 0x3fL)<<6 | (b2 & 0x3fL))
 
-      } else throw new RuntimeException(f"invalid utf8 lead byte $c0%x")
+        } else if (b0 >> 3 == 0x1e) { // 11110 prefix => surrogate pair: 4 bytes (2 chars)
+          i += 1
+          val b3 = bs(i) & 0xff
+          // 11110yyy 10yyyyyy 	10yyxxxx 	10xxxxxx    => 110110yy.yyyyyy.xx  110111xxxx.xxxxxx
+          val v = ((b0 & 0x3)<<18 | (b1 & 0x3f)<<12 | (b2 & 0x3f)<<6 | (b3 & 0x3f)) - 0x10000
+          val c1 = 0xd800L | (v>>10)
+          val c2 = 0xdc00L | (v & 0x3ff)
+
+          new UTF8Decoder((i+1).toLong << 40 | 0x200000000L | (c1 << 16) | c2)
+
+        } else throw new RuntimeException(f"invalid utf8 lead byte $b0%x")
+      }
     }
   }
   @inline def initUTF8Decoder(bs: Array[Byte]): UTF8Decoder = initUTF8Decoder(bs,0)
@@ -77,6 +116,10 @@ object UTFx {
       if ((c0 & 0x80) == 0) i += 1
       else if ((c0 & 0xe0) == 0xc0) i += 2
       else if ((c0 & 0xf0) == 0xe0) i += 3
+      else if ((c0 & 0xf8) == 0xf0) {
+        utf16Length += 1
+        i += 4
+      }
       else throw new RuntimeException("invalid utf8 data")
 
       utf16Length += 1
@@ -92,9 +135,9 @@ object UTFx {
 
     @inline def isEnd: Boolean = state == 0L
 
-    @inline def charIndex: Int = (state >> 48).toInt
+    @inline def charIndex: Int = ((state >> 40) & 0xffffffL).toInt
 
-    @inline def remainingBytes: Int = ((state & 0xff00000000L)>>32).toInt
+    @inline def remainingBytes: Int = ((state>>32) & 0xffL).toInt
 
     def utf8Byte: Byte = {
       (remainingBytes: @switch) match {
@@ -113,9 +156,44 @@ object UTFx {
           if (i >= maxIndex) new UTF8Encoder(0) else initUTF8Encoder(cs,i)
         }
 
-        case 2 => new UTF8Encoder( state & 0xffffff00ffffffffL | 0x100000000L)
-        case 3 => new UTF8Encoder( state & 0xffffff00ffffffffL | 0x200000000L)
-        case 4 => new UTF8Encoder( state & 0xffffff00ffffffffL | 0x300000000L)
+        case 2 => new UTF8Encoder( state ^ 0x300000000L)
+        case 3 => new UTF8Encoder( state ^ 0x100000000L)
+        case 4 => new UTF8Encoder( state ^ 0x700000000L)
+        case _ => throw new RuntimeException("invalid utf8 encoding state")
+      }
+    }
+
+    def next (s: String): UTF8Encoder = {
+      (remainingBytes: @switch) match {
+        case 1 => { // next char (if any)
+          val i = charIndex+1
+          if (i >= s.length) new UTF8Encoder(0) else initUTF8Encoder(s,i)
+        }
+
+        case 2 => new UTF8Encoder( state ^ 0x300000000L)
+        case 3 => new UTF8Encoder( state ^ 0x100000000L)
+        case 4 => new UTF8Encoder( state ^ 0x700000000L)
+        case _ => throw new RuntimeException("invalid utf8 encoding state")
+      }
+    }
+
+    // use this in a loop that guarantees we do not exceed the max index
+    def ++ (cs: Array[Char]): UTF8Encoder = {
+      (remainingBytes: @switch) match {
+        case 1 => initUTF8Encoder(cs,charIndex+1)
+        case 2 => new UTF8Encoder( state ^ 0x300000000L)
+        case 3 => new UTF8Encoder( state ^ 0x100000000L)
+        case 4 => new UTF8Encoder( state ^ 0x700000000L)
+        case _ => throw new RuntimeException("invalid utf8 encoding state")
+      }
+    }
+
+    def ++ (s: String): UTF8Encoder = {
+      (remainingBytes: @switch) match {
+        case 1 => initUTF8Encoder(s,charIndex+1)
+        case 2 => new UTF8Encoder( state ^ 0x300000000L)
+        case 3 => new UTF8Encoder( state ^ 0x100000000L)
+        case 4 => new UTF8Encoder( state ^ 0x700000000L)
         case _ => throw new RuntimeException("invalid utf8 encoding state")
       }
     }
@@ -126,21 +204,46 @@ object UTFx {
   }
 
   def initUTF8Encoder(cs: Array[Char], off: Int): UTF8Encoder = {
-    val idx = (off & 0xffffffL) << 48
-    val c = cs(off)
+    var idx: Int = off
+    val c: Int = cs(idx) & 0xffff
 
     if (c < 0x80) {
-      new UTF8Encoder( idx | 0x100000000L | (c & 0xffL))
+      new UTF8Encoder( ((idx.toLong)<<40) | 0x100000000L | (c & 0xffL))
     } else if (c < 0x800) {
-      new UTF8Encoder( idx | 0x200000000L | (0xc0 | (c>>6))<<8 | (0x80 | (c & 0x3f)))
+      new UTF8Encoder( ((idx.toLong)<<40) | 0x200000000L | (0xc0 | (c>>6))<<8 | (0x80 | (c & 0x3f)))
     } else if (c < 0xd800 || c >= 0xe000) {
-      new UTF8Encoder( idx | 0x300000000L | (0xe0 | (c>>12))<<16 | (0x80 | (c>>6 & 0x3f))<<8 | (0x80 | (c & 0x3f)))
+      new UTF8Encoder( ((idx.toLong)<<40) | 0x300000000L | (0xe0 | (c>>12))<<16 | (0x80 | (c>>6 & 0x3f))<<8 | (0x80 | (c & 0x3f)))
     } else { // surrogate pair
-      throw new RuntimeException("not yet")
+      idx += 1
+      val v = ((c & 0xffff) - 0xd800) << 10 | ((cs(idx) & 0xffff) - 0xdc00) + 0x10000
+
+      new UTF8Encoder( ((idx.toLong)<<40) | 0x400000000L |
+        ((0xf0L | (v>>18)) <<24) | ((0x80L | ((v>>12) & 0x3f)) <<16) | ((0x80L | ((v>>6) & 0x3f)) <<8) | (0x80L | (v& 0x3f))
+      )
     }
   }
 
-  def initUTF8Encoder(cs: Array[Char]): UTF8Encoder = initUTF8Encoder(cs,0)
+  @inline def initUTF8Encoder(cs: Array[Char]): UTF8Encoder = initUTF8Encoder(cs,0)
+
+  @inline def initUTF8Encoder(s: String, off: Int): UTF8Encoder = {
+    var idx: Int = off
+    val c: Int = s.charAt(idx) & 0xffff
+
+    if (c < 0x80) {
+      new UTF8Encoder( ((idx.toLong)<<40) | 0x100000000L | (c & 0xffL))
+    } else if (c < 0x800) {
+      new UTF8Encoder( ((idx.toLong)<<40) | 0x200000000L | (0xc0 | (c>>6))<<8 | (0x80 | (c & 0x3f)))
+    } else if (c < 0xd800 || c >= 0xe000) {
+      new UTF8Encoder( ((idx.toLong)<<40) | 0x300000000L | (0xe0 | (c>>12))<<16 | (0x80 | (c>>6 & 0x3f))<<8 | (0x80 | (c & 0x3f)))
+    } else { // surrogate pair
+      idx += 1
+      val v = ((c & 0xffff) - 0xd800) << 10 | ((s.charAt(idx) & 0xffff) - 0xdc00) + 0x10000
+
+      new UTF8Encoder( ((idx.toLong)<<40) | 0x400000000L |
+        ((0xf0L | (v>>18)) <<24) | ((0x80L | ((v>>12) & 0x3f)) <<16) | ((0x80L | ((v>>6) & 0x3f)) <<8) | (0x80L | (v& 0x3f))
+      )
+    }
+  }
 
   //--- utf8 length calculation
 
@@ -155,7 +258,9 @@ object UTFx {
       if (c < 0x80) utf8Len += 1
       else if (c < 0x800) utf8Len += 2
       else if (c < 0xd800 || c >= 0xe000) utf8Len += 3
-      else utf8Len += 4
+      else { // surrogate pair (we check each char)
+        utf8Len += 2
+      }
 
       i += 1
     }
@@ -176,7 +281,9 @@ object UTFx {
       if (c < 0x80) utf8Len += 1
       else if (c < 0x800) utf8Len += 2
       else if (c < 0xd800 || c >= 0xe000) utf8Len += 3
-      else utf8Len += 4
+      else { // surrogate pair (we check each char
+        utf8Len += 2
+      }
 
       i += 1
     }
