@@ -41,6 +41,7 @@ class MurmurHash64Spec extends AnyFlatSpec with RaceSpec {
   val longStrings = Seq[String](
     "abc XYZ blabla hicks whatever",
     "I'm \u263b, or am I \u2639",  // smiley, 3 bytes
+    "or I'm not \u263b but \uD83D\uDE36?"
   )
 
   "MurmurHash64" should "produce same hash values for known ascii data < 8 bytes(byte, char and string)" in {

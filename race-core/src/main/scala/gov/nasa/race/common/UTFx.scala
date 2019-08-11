@@ -204,6 +204,8 @@ object UTFx {
   }
 
   def initUTF8Encoder(cs: Array[Char], off: Int): UTF8Encoder = {
+    if (off >= cs.length) return new UTF8Encoder(0L)
+
     var idx: Int = off
     val c: Int = cs(idx) & 0xffff
 
@@ -226,6 +228,8 @@ object UTFx {
   @inline def initUTF8Encoder(cs: Array[Char]): UTF8Encoder = initUTF8Encoder(cs,0)
 
   @inline def initUTF8Encoder(s: String, off: Int): UTF8Encoder = {
+    if (off >= s.length) return new UTF8Encoder(0L)
+
     var idx: Int = off
     val c: Int = s.charAt(idx) & 0xffff
 
@@ -334,6 +338,17 @@ object UTFx {
   }
 
   @inline def utf8Equals (bs: Array[Byte], s: String): Boolean = utf8Equals(bs, 0, bs.length, s)
+
+  def utf16Equals (cs: Array[Char], off: Int, len: Int, s: String): Boolean = {
+    var i = 0
+    var j = off
+    while (i < len) {
+      if (cs(j) != s.charAt(i)) return false
+      j += 1
+      i += 1
+    }
+    true
+  }
 
   def asciiEquals (bs: Array[Byte], off: Int, len: Int, s: String): Boolean = {
     var i1 = off+len

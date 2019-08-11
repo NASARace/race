@@ -16,9 +16,140 @@
  */
 package gov.nasa.race.common
 
+import scala.collection.mutable
+
 /**
+  * an internalizer for arbitrary string data up to a utf-8 length of 64k
   *
+  * the purpose of this object is to provide internalization without the need to allocate
+  * temporary strings. Note that performance hinges on having few collisions (which we have to resolve
+  * based on the map values ourselves). This is why we use a 64bit key computed from the utf-8
+  * string representation using MurmurHash64
+  *
+  * note that it is Ok to do the map entry match for Seq[String] unchecked since this is a private
+  * map and this is the only place where it is populated so if it's a Seq we know it holds Strings.
+  * Not worth burning another object to wrap the Seq[String] for type safety.
   */
 object Internalizer {
 
+  private val map = new mutable.LongMap[Any](8192)
+
+  def size: Int = map.size
+  // todo - maybe add a few other map accessors
+
+  def get (bs: Array[Byte], off: Int, len: Int): String = {
+    val oldSize = map.size
+    val key = MurmurHash64.hashBytes(bs,off,len)
+    map.getOrElseUpdate( key, new String(bs,off,len)) match {
+      case s: String =>
+        if (map.size == oldSize) { // was already there, check if hash collision
+          if (UTFx.utf8Equals(bs,off,len,s)) { // no collision, equal string
+            s
+          } else { // hash collision
+            val newStr = new String(bs,off,len)
+            map.put(key, Seq(s, newStr))
+            newStr
+          }
+        } else { // first lookup, return the added string
+          s
+        }
+      case list: Seq[String] @unchecked =>
+        list.foreach { s=>
+          if (UTFx.utf8Equals(bs,off,len,s)) return s
+        }
+        val newStr = new String(bs,off,len)
+        map.put(key, list :+ newStr)
+        newStr
+    }
+  }
+
+  def get (cs: Array[Char], off: Int, len: Int): String = {
+    val oldSize = map.size
+    val key = MurmurHash64.hashChars(cs,off,len)
+    map.getOrElseUpdate( key, new String(cs,off,len)) match {
+      case s: String =>
+        if (map.size == oldSize) { // was already there, check if hash collision
+          if (UTFx.utf16Equals(cs,off,len,s)) { // no collision, equal string
+            s
+          } else { // hash collision
+            val newStr = new String(cs,off,len)
+            map.put(key, Seq(s, newStr))
+            newStr
+          }
+        } else { // first lookup, return the added string
+          s
+        }
+      case list: Seq[String] @unchecked =>
+        list.foreach { s=>
+          if (UTFx.utf16Equals(cs,off,len,s)) return s
+        }
+        val newStr = new String(cs,off,len)
+        map.put(key, list :+ newStr)
+        newStr
+    }
+  }
+
+  def get (s: String): String = {
+    val oldSize = map.size
+    val key = MurmurHash64.hashString(s)
+    map.getOrElseUpdate( key, s) match {
+      case ms: String =>
+        if (s ne ms) { // was already there, check if hash collision
+          if (s == ms) { // no collision, equal string
+            ms
+          } else { // hash collision
+            map.put(key, Seq(ms, s))
+            s
+          }
+        } else { // first lookup, return the added string
+          s
+        }
+      case list: Seq[String] @unchecked =>
+        list.foreach { ms=>
+          if (ms == s) return ms
+        }
+        map.put(key, list :+ s)
+        s
+    }
+
+  }
+
+}
+
+/**
+  * specialized string internalizer for ASCII strings not exceeding a length of 8
+  *
+  * note that for such strings we can hash without collisions and hence do not have to
+  * compare data or keep collision lists
+  */
+object ASCII8Internalizer {
+
+  private val map = new mutable.LongMap[String](8192)
+
+  def size: Int = map.size
+  // todo - maybe add a few other map accessors
+
+  def get (bs: Array[Byte], off: Int, len: Int): String = {
+    if (len > 8) {
+      new String(bs,off,len).intern
+    } else {
+      map.getOrElseUpdate(ASCII8Hash64.hashBytes(bs,off,len), new String(bs,off,len))
+    }
+  }
+
+  def get (cs: Array[Char], off: Int, len: Int): String = {
+    if (len > 8) {
+      new String(cs,off,len).intern
+    } else {
+      map.getOrElseUpdate(ASCII8Hash64.hashChars(cs,off,len), new String(cs,off,len))
+    }
+  }
+
+  def get (s: String): String = {
+    if (s.length > 8) {
+      s.intern
+    } else {
+      map.getOrElseUpdate(ASCII8Hash64.hashString(s), s)
+    }
+  }
 }
