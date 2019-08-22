@@ -37,17 +37,16 @@ object Internalizer {
   def size: Int = map.size
   // todo - maybe add a few other map accessors
 
-  def get (bs: Array[Byte], off: Int, len: Int): String = {
+  def getMurmurHashed (hash: Long, bs: Array[Byte], off: Int, len: Int): String = {
     val oldSize = map.size
-    val key = MurmurHash64.hashBytes(bs,off,len)
-    map.getOrElseUpdate( key, new String(bs,off,len)) match {
+    map.getOrElseUpdate( hash, new String(bs,off,len)) match {
       case s: String =>
         if (map.size == oldSize) { // was already there, check if hash collision
           if (UTFx.utf8Equals(bs,off,len,s)) { // no collision, equal string
             s
           } else { // hash collision
             val newStr = new String(bs,off,len)
-            map.put(key, Seq(s, newStr))
+            map.put(hash, Seq(s, newStr))
             newStr
           }
         } else { // first lookup, return the added string
@@ -58,22 +57,23 @@ object Internalizer {
           if (UTFx.utf8Equals(bs,off,len,s)) return s
         }
         val newStr = new String(bs,off,len)
-        map.put(key, list :+ newStr)
+        map.put(hash, list :+ newStr)
         newStr
     }
   }
 
-  def get (cs: Array[Char], off: Int, len: Int): String = {
+  @inline def get (bs: Array[Byte], off: Int, len: Int): String = getMurmurHashed(MurmurHash64.hashBytes(bs,off,len), bs,off,len)
+
+  def getMurmurHashed (hash: Long, cs: Array[Char], off: Int, len: Int): String = {
     val oldSize = map.size
-    val key = MurmurHash64.hashChars(cs,off,len)
-    map.getOrElseUpdate( key, new String(cs,off,len)) match {
+    map.getOrElseUpdate( hash, new String(cs,off,len)) match {
       case s: String =>
         if (map.size == oldSize) { // was already there, check if hash collision
           if (UTFx.utf16Equals(cs,off,len,s)) { // no collision, equal string
             s
           } else { // hash collision
             val newStr = new String(cs,off,len)
-            map.put(key, Seq(s, newStr))
+            map.put(hash, Seq(s, newStr))
             newStr
           }
         } else { // first lookup, return the added string
@@ -84,10 +84,12 @@ object Internalizer {
           if (UTFx.utf16Equals(cs,off,len,s)) return s
         }
         val newStr = new String(cs,off,len)
-        map.put(key, list :+ newStr)
+        map.put(hash, list :+ newStr)
         newStr
     }
   }
+
+  @inline def get (cs: Array[Char], off: Int, len: Int): String = getMurmurHashed(MurmurHash64.hashChars(cs,off,len), cs,off,len)
 
   def get (s: String): String = {
     val oldSize = map.size
@@ -129,21 +131,26 @@ object ASCII8Internalizer {
   def size: Int = map.size
   // todo - maybe add a few other map accessors
 
-  def get (bs: Array[Byte], off: Int, len: Int): String = {
+  def getASCII8Hashed (hash: Long, bs: Array[Byte], off: Int, len: Int): String = {
     if (len > 8) {
       new String(bs,off,len).intern
     } else {
-      map.getOrElseUpdate(ASCII8Hash64.hashBytes(bs,off,len), new String(bs,off,len))
+      map.getOrElseUpdate(hash, new String(bs,off,len))
     }
   }
 
-  def get (cs: Array[Char], off: Int, len: Int): String = {
+  @inline def get ( bs: Array[Byte], off: Int, len: Int): String = getASCII8Hashed(ASCII8Hash64.hashBytes(bs,off,len), bs,off,len)
+
+  def getASCII8Hashed (hash: Long, cs: Array[Char], off: Int, len: Int): String = {
     if (len > 8) {
       new String(cs,off,len).intern
     } else {
-      map.getOrElseUpdate(ASCII8Hash64.hashChars(cs,off,len), new String(cs,off,len))
+      map.getOrElseUpdate( hash, new String(cs,off,len))
     }
   }
+
+  @inline def get (cs: Array[Char], off: Int, len: Int): String = getASCII8Hashed(ASCII8Hash64.hashChars(cs,off,len), cs,off,len)
+
 
   def get (s: String): String = {
     if (s.length > 8) {

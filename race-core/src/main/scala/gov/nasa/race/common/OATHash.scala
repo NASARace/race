@@ -26,13 +26,13 @@ package gov.nasa.race.common
   */
 object OATHash {
 
-  private def mixin (h0: Int, b: Int): Int = {
+  @inline private def mixin (h0: Int, b: Int): Int = {
     var h = h0 + b
     h += (h << 10)
     h ^ (h >> 6)
   }
 
-  private def finalize (h0: Int): Int = {
+  @inline private def finalize (h0: Int): Int = {
     var h = h0 + (h0 << 3)
     h ^= (h >> 11)
     h + (h << 15)
@@ -55,7 +55,7 @@ object OATHash {
   def hash (data: Array[Char], off: Int, len: Int): Int = {
     var h: Int = 0
     var i = off
-    var i1 = off + len
+    val i1 = off + len
 
     while (i < i1) {
       val c = data(i)
