@@ -16,6 +16,8 @@
  */
 package gov.nasa.race.common
 
+import java.io.OutputStream
+
 object Slice {
   def apply (bs: Array[Byte], off: Int, len: Int): Slice = new SliceImpl(bs,off,len)
 }
@@ -31,7 +33,10 @@ trait Slice {
   def offset: Int
   def length: Int
 
-  override def toString: String = new String(bs,offset,length)
+  def isEmpty: Boolean = length == 0
+  def nonEmpty: Boolean = length > 0
+
+  override def toString: String = if (length > 0) new String(bs,offset,length) else ""
 
   def apply (i: Int): Byte = bs(offset+i)
 
@@ -40,9 +45,8 @@ trait Slice {
     var i = offset
     val iEnd = i + length
     var j = otherOffset
-    val bsOther = otherBs
     while (i < iEnd) {
-      if (bs(i) != bsOther(j)) return false
+      if (bs(i) != otherBs(j)) return false
       i += 1
       j += 1
     }
@@ -58,6 +62,10 @@ trait Slice {
       ASCII8Internalizer.get(bs,offset,length)
     }
   }
+
+  def writeTo(out: OutputStream): Unit = {
+    out.write(bs,offset,length)
+  }
 }
 
 /**
@@ -65,6 +73,19 @@ trait Slice {
   */
 class SliceImpl (var bs: Array[Byte], var offset: Int, var length: Int) extends Slice {
   def this (s: String) = this(s.getBytes,0,s.length)
+
+  def clear: Unit = {
+    offset = 0
+    length = 0
+  }
+
+  def set (bsNew: Array[Byte], offNew: Int, lenNew: Int): Unit = {
+    bs = bsNew
+    offset = offNew
+    length = lenNew
+  }
+
+  @inline def setFrom (other: SliceImpl): Unit = set(other.bs,other.offset,other.length)
 }
 
 /**
@@ -77,7 +98,17 @@ class HashedSliceImpl (_bs: Array[Byte], _offset: Int, _length: Int) extends Sli
 
   def this (s: String) = this(s.getBytes,0,s.length)
 
-  private def computeHash = if (length <= 9) ASCII8Hash64.hashBytes(bs,offset,length) else MurmurHash64.hashBytes(bs,offset,length)
+  override def clear: Unit = {
+    hash = 0L
+    offset = 0
+    length = 0
+  }
+
+  private def computeHash = {
+    if (length == 0) 0L
+    else if (length <= 9) ASCII8Hash64.hashBytes(bs,offset,length)
+    else MurmurHash64.hashBytes(bs,offset,length)
+  }
 
   def getHash: Long = hash
 
@@ -93,6 +124,8 @@ class HashedSliceImpl (_bs: Array[Byte], _offset: Int, _length: Int) extends Sli
     length = lenNew
     hash = computeHash
   }
+
+  @inline override def set (bsNew: Array[Byte], offNew: Int, lenNew: Int) = setAndRehash(bsNew,offNew,lenNew)
 
   def equals (otherBs: Array[Byte], otherOffset: Int, otherLength: Int, otherHash: Long): Boolean = {
     if (otherHash != hash) false else equals(otherBs,otherOffset,otherLength)
