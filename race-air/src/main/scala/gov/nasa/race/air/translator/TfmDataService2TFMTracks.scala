@@ -101,7 +101,7 @@ class TfmDataService2TFMTracks(val config: Config=NoConfig) extends XmlPullParse
             case "fdm:fltdMessage" => if (parseAttribute("flightRef")) flightRef = value
             case "fdm:trackInformation" => isTrackInfo = true
             case "nxce:facilityIdentifier" if isTrackInfo => if (parseTrimmedText()) source = text
-            case "nxce:aircraftId" => if (parseTrimmedText()) cs = text
+            case "nxce:aircraftId" => if (parseTrimmedText()) cs = text                               // internalize
             case "nxcm:speed" if isTrackInfo =>
               // watch out, there are also nested "speed" elements that don't have actual values
               if (parseTrimmedText()) speed = UsMilesPerHour(text.toDouble)
@@ -113,7 +113,7 @@ class TfmDataService2TFMTracks(val config: Config=NoConfig) extends XmlPullParse
 
             //--- completion
             case "nxce:airport" if hasParent("nxce:arrivalPoint") =>
-              val airportId = readText()
+              val airportId = readText()                                                            // internalize
               // we could get the airport location here
             case "nxcm:eta" if hasParent("nxcm:airlineData") =>
               if (readAttribute("etaType") == "ACTUAL") {

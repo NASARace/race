@@ -101,7 +101,7 @@ class TATrackAndFlightPlan2TATrack (val config: Config=NoConfig) extends XmlPars
     var flightPlan: Option[FlightPlan] = None
 
     whileNextElement {
-      case "trackNum" => trackId = readText
+      case "trackNum" => trackId = readText                                                      // internalize
       case "mrtTime" => mrtTime = DateTime.parseYMDT(readText)
       case "xPos" => xPos = NauticalMiles(readInt / 256.0)
       case "yPos" => yPos = NauticalMiles(readInt / 256.0)
@@ -120,7 +120,7 @@ class TATrackAndFlightPlan2TATrack (val config: Config=NoConfig) extends XmlPars
       case "reportedBeaconCode" => beaconCode = readText
       case "reportedAltitude" => reportedAltitude = Feet(readInt)
       case "flightPlan" => flightPlan = Some(new FlightPlan) // just a placeholder for now
-      case "acid" => acId = readText // part of the flight plan but we extract it no matter what
+      case "acid" => acId = readText // part of the flight plan but we extract it no matter what   // internalize
 
       case _ => // ignore
     } {

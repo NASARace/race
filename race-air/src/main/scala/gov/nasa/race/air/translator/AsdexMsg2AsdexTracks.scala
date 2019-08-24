@@ -55,7 +55,7 @@ class AsdexMsg2AsdexTracks(val config: Config=NoConfig) extends XmlParser[AsdexT
     val tracks = new ArrayBuffer[AsdexTrack]
 
     whileNextElement { // start elements
-      case "airport" => airport = setAirport(readText)
+      case "airport" => airport = setAirport(readText)                     // internalize
       case "positionReport" => positionReport(airport,tracks)
     } { // end elements
       case "asdexMsg" | "ns2:asdexMsg" =>

@@ -79,8 +79,8 @@ class FIXM2FlightObject (val config: Config=NoConfig)
 
     whileNextElement { // start elements
       case "flightIdentification" => parseAllAttributes {
-        case "computerId" => id = value
-        case "aircraftIdentification" => cs = value
+        case "computerId" => id = value                                // internalize
+        case "aircraftIdentification" => cs = value                    // internalize
         case _ => // ignored
       }
 
