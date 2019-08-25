@@ -20,6 +20,11 @@ import java.io.OutputStream
 
 object Slice {
   def apply (bs: Array[Byte], off: Int, len: Int): Slice = new SliceImpl(bs,off,len)
+
+  final val TruePattern = "true".getBytes
+  final val FalsePattern = "false".getBytes
+  final val YesPattern = "yes".getBytes
+  final val NoPattern = "no".getBytes
 }
 
 /**
@@ -53,6 +58,26 @@ trait Slice {
     true
   }
 
+  def equals (otherBs: Array[Byte]): Boolean = equals(otherBs,0,otherBs.length)
+
+  // todo - add string comparison based on utf-8 encoding
+
+  def equalsIgnoreCase(otherBs: Array[Byte], otherOffset: Int, otherLength: Int): Boolean = {
+    if (length != otherLength) return false
+    var i = offset
+    val iEnd = i + length
+    var j = otherOffset
+    while (i < iEnd) {
+      if ((bs(i)|32) != (otherBs(j)|32)) return false
+      i += 1
+      j += 1
+    }
+    true
+  }
+
+  def equalsIgnoreCase (otherBs: Array[Byte]): Boolean = equalsIgnoreCase(otherBs,0,otherBs.length)
+
+
   @inline def == (other: Slice): Boolean = equals(other.bs, other.offset, other.length)
 
   def intern: String = {
@@ -65,6 +90,116 @@ trait Slice {
 
   def writeTo(out: OutputStream): Unit = {
     out.write(bs,offset,length)
+  }
+
+  //--- type conversion
+
+  @inline final def isDigit(b: Byte): Boolean = b >= '0' && b <= '9'
+  @inline final def digitValue(b: Byte): Int = b - '0'
+
+  def toDouble: Double = {
+    var i = offset
+    val iMax = i + length
+    val bs = this.bs
+    var n: Long = 0
+    var d: Double = 0.0
+    var e: Long = 1
+    var b: Byte = 0
+
+    if (i >= iMax) throw new NumberFormatException(this.toString)
+    val sig = if (bs(i)=='-') {i+= 1;  -1 } else 1
+
+    //--- integer part
+    while (i < iMax && {b=bs(i); isDigit(b)}){
+      n = (n*10) + digitValue(b)
+      i += 1
+    }
+
+    //--- fractional part
+    if (b == '.') {
+      i += 1
+      var m: Long = 1
+      var frac: Int = 0
+      while (i < iMax && {b=bs(i); isDigit(b)}){
+        frac = (frac*10) + digitValue(b)
+        m *= 10
+        i += 1
+      }
+      d = frac/m.toDouble
+    }
+
+    //--- exponent part
+    if ((b|32) == 'e'){
+      i += 1
+      if (i >= iMax) throw new NumberFormatException(this.toString)
+
+      e = if ({b=bs(i); b == '-'}){
+        i += 1
+        -1
+      } else if (b == '+'){
+        i += 1
+        1
+      } else 1
+      var exp: Int = 0
+      while (i < iMax && {b=bs(i); isDigit(b)}){
+        exp = (exp*10) + digitValue(b)
+        i += 1
+      }
+
+      var j = 0
+      while (j < exp) { e *= 10; j += 1 }
+    }
+
+    if (i < iMax) throw new NumberFormatException(this.toString)
+
+    if (e < 0){
+      sig * -(n + d) / e
+    } else {
+      sig * (n + d) * e
+    }
+  }
+
+  def toLong: Long = {
+    var i = offset
+    val iMax = i + length
+    val bs = this.bs
+    var n: Long = 0
+    var b: Byte = 0
+
+    if (i >= iMax) throw new NumberFormatException(this.toString)
+    val sig = if (bs(i)=='-') {i+= 1;  -1 } else 1
+
+    //--- integer part
+    while (i < iMax && {b=bs(i); isDigit(b)}){
+      n = (n*10) + digitValue(b)
+      i += 1
+    }
+
+    if (i < iMax) throw new NumberFormatException(this.toString)
+
+    sig * n
+  }
+
+  def toInt: Int = {
+    val l = toLong
+    if (l > Int.MaxValue || l < Int.MinValue) throw new NumberFormatException(this.toString) // todo - not the standard behavior, which silently trucates
+    l.toInt
+  }
+
+  def toBoolean: Boolean = {
+    // todo - more precise than Boolean.parseBoolean, but do we want to differ?
+    if (length == 1){
+      if (bs(offset) == '1') true
+      else if (bs(offset) == '0') false
+      else throw new RuntimeException(s"not a boolean: $this")
+    } else {
+      if (equalsIgnoreCase(Slice.TruePattern)) true
+      else if (equalsIgnoreCase(Slice.FalsePattern)) false
+      else if (equalsIgnoreCase(Slice.YesPattern)) true
+      else if (equalsIgnoreCase(Slice.NoPattern)) false
+      else  throw new RuntimeException(s"not a boolean: $this")
+    }
+
   }
 }
 
