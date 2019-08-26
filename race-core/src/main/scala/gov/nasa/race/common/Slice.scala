@@ -19,6 +19,10 @@ package gov.nasa.race.common
 import java.io.OutputStream
 
 object Slice {
+  def apply (s: String): Slice = {
+    val bs = s.getBytes()
+    new SliceImpl(bs,0,bs.length)
+  }
   def apply (bs: Array[Byte], off: Int, len: Int): Slice = new SliceImpl(bs,off,len)
 
   final val TruePattern = "true".getBytes
@@ -33,8 +37,7 @@ object Slice {
   * the trait does not allow to modify the internals
   */
 trait Slice {
-  protected def bs: Array[Byte]
-
+  def bs: Array[Byte]
   def offset: Int
   def length: Int
 
@@ -59,6 +62,13 @@ trait Slice {
   }
 
   def equals (otherBs: Array[Byte]): Boolean = equals(otherBs,0,otherBs.length)
+
+  override def equals (o: Any): Boolean = {
+    o match {
+      case slice: Slice => equals(slice.bs, slice.offset, slice.length)
+      case _ => false
+    }
+  }
 
   // todo - add string comparison based on utf-8 encoding
 
@@ -264,6 +274,14 @@ class HashedSliceImpl (_bs: Array[Byte], _offset: Int, _length: Int) extends Sli
 
   def equals (otherBs: Array[Byte], otherOffset: Int, otherLength: Int, otherHash: Long): Boolean = {
     if (otherHash != hash) false else equals(otherBs,otherOffset,otherLength)
+  }
+
+  override def equals (o: Any): Boolean = {
+    o match {
+      case slice: HashedSliceImpl => equals(slice.bs,slice.offset,slice.length,slice.getHash)
+      case slice: Slice => equals(slice.bs, slice.offset, slice.length)
+      case _ => false
+    }
   }
 
   override def == (o: Slice): Boolean = {

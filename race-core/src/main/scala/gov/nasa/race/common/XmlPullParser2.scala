@@ -49,8 +49,15 @@ trait XmlPullParser2  {
   protected var _isStartElement = false
   protected var lastWasStartElement = false
 
-  def element: Slice = elementName
+  //--- public accessors (those should not be modifiable)
+
   def isStartElement = _isStartElement
+
+  def element: Slice = elementName
+  def elementText: Slice = value
+
+  def attr: Slice = attrName
+  def attrValue: Slice = value
 
   //--- path management
 
@@ -150,8 +157,13 @@ trait XmlPullParser2  {
       while (buf(i) != '>') i += 1
 
       if (buf(i-1) == '/') { // no text for <../> elements
+        //lastWasStartElement = _isStartElement
+        //_isStartElement = false
+        //idx = i+1
         false
+
       } else {
+        lastWasStartElement = true
         i += 1
         idx = i
         textEnd = i
@@ -247,6 +259,10 @@ trait XmlPullParser2  {
     var i = i0
     val buf = this.buf
 
+    elementName.clear
+    attrName.clear
+    value.clear
+
     if (_isStartElement) {
       if (textEnd < 0){
         while (buf(i) != '>') i += 1
@@ -311,6 +327,9 @@ trait XmlPullParser2  {
   }
 
   def parseNextAttribute: Boolean = {
+    attrName.clear
+    value.clear
+
     if (_isStartElement){
       var i = idx
       val buf = this.buf
@@ -325,7 +344,7 @@ trait XmlPullParser2  {
         var i0 = i
         i += 1
         while (buf(i) != '=') i += 1
-        attrName.setAndRehash(buf,i0, i-i0-1)
+        attrName.setAndRehash(buf,i0, i-i0)
         i += 1
         if (buf(i) != '"') throw new XmlParseException("non-quoted attribute value around ..${context(i0)}.. ")
         i += 1
@@ -340,7 +359,10 @@ trait XmlPullParser2  {
     }
   }
 
+  def skipAttributes: Unit = skipToText
+
   def parseTrimmedText: Boolean = {
+    value.clear
     if (skipToText) {
       var i = idx
       val buf = this.buf
@@ -364,7 +386,28 @@ trait XmlPullParser2  {
     }
   }
 
+  def parseText: Boolean = {
+    value.clear
+    if (skipToText) {
+      var i = idx
+      val buf = this.buf
+      val i0 = i
+      while (buf(i) != '<') i += 1
+      textEnd = i
+      i -= 1
+      if (i >= i0){
+        value.set(buf,i0,i-i0+1)
+        true
+      } else {  // no text, just spaces
+        false
+      }
+
+    } else {
+      false
+    }
+  }
 }
+
 
 /**
   * a XmlPullParser2 that uses a pre-allocated (but growable) buffer
