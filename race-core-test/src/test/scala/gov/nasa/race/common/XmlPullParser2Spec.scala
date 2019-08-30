@@ -28,22 +28,21 @@ class XmlPullParser2Spec extends AnyFlatSpec with RaceSpec {
     """
       |<top>
       |   <middle>
-      |       <bottom1 attr1="123" attr2="whatdoiknow" attr3="skip this"/>
+      |       <bottom1 attr1="123 < 321" attr2="whatdoiknow" attr3="skip this"/>
       |       <number>1.234</number>
       |       <bottom2>blah</bottom2>
       |   </middle>
       |</top>
       |""".stripMargin
 
-  def indent (level: Int): Unit = {
-    for (i <- 0 until level) print("  ")
-  }
 
+/*
   "a XmlPullParser2" should "print well-formed XML" in {
     val parser = new BufferedXmlPullParser2
     parser.initialize(testMsg)
     parser.printOn(System.out)
   }
+ */
 
   "a XmlPullParser2" should "extract known values from a test message" in {
     val parser = new BufferedXmlPullParser2
@@ -55,7 +54,10 @@ class XmlPullParser2Spec extends AnyFlatSpec with RaceSpec {
     val Attr3 = new HashedSliceImpl("attr3")
     val Number = new HashedSliceImpl("number")
 
-    while (parser.parseNextElement) {
+    while (parser.parseNextTag) {
+      println(s"${parser.tag} ${parser.isStartTag}")
+
+      /*
       parser.element match {
         case Top =>
           if (parser.isStartElement) println(s"top start") else println("top end")
@@ -81,6 +83,8 @@ class XmlPullParser2Spec extends AnyFlatSpec with RaceSpec {
 
         case _ => // ignore
       }
+
+       */
     }
   }
 }
