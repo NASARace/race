@@ -100,19 +100,19 @@ trait XmlPullParser2  {
 
   //--- auxiliary parse functions used by states
 
-  def skipPastProlog(i0: Int): Int = {
-    var i = i0
+  def seekRootTag: Int = {
+    var i = 0
     val buf = this.buf
-    do {
-      var c = 0
-      while ({c = buf(i); c != '?'}){
-        i += 1
-        if (c == '"'){
-          while( buf(i) != '"') i += 1
-        }
-      }
-    } while ({ i += 1; buf(i) != '>'})
-    i + 1
+
+    while (i < length && buf(i) != '<') i += 1
+    val i1 = i+1
+    if (i1 < length && buf(i1) == '?' ){
+      i = i1+1
+      while (i<length && buf(i) != '>' && buf(i-1) != '?') i += 1
+      i += 1
+      while (i<length && buf(i) != '<') i += 1
+    }
+    i
   }
 
   def seekTagStart (i0: Int): Int = {
