@@ -36,16 +36,16 @@ class XmlPullParser2Spec extends AnyFlatSpec with RaceSpec {
       |""".stripMargin
 
 
-/*
   "a XmlPullParser2" should "print well-formed XML" in {
-    val parser = new BufferedXmlPullParser2
+    val parser = new StringXmlPullParser2
     parser.initialize(testMsg)
     parser.printOn(System.out)
   }
- */
 
+
+  /*
   "a XmlPullParser2" should "extract known values from a test message" in {
-    val parser = new BufferedXmlPullParser2
+    val parser = new StringXmlPullParser2
     parser.initialize(testMsg)
 
     val Top = new HashedSliceImpl("top")
@@ -57,15 +57,15 @@ class XmlPullParser2Spec extends AnyFlatSpec with RaceSpec {
     while (parser.parseNextTag) {
       println(s"${parser.tag} ${parser.isStartTag}")
 
-      /*
-      parser.element match {
+
+      parser.tag match {
         case Top =>
-          if (parser.isStartElement) println(s"top start") else println("top end")
+          if (parser.isStartTag) println(s"top start") else println("top end")
 
         case Bottom1 =>
-          if (parser.isStartElement) {
-            while (parser.parseNextAttribute) {
-              parser.attr match {
+          if (parser.isStartTag) {
+            while (parser.parseNextAttr) {
+              parser.attrName match {
                 case Attr2 =>
                   println(s"bottom1 attr2 = '${parser.attrValue}'")
                   //parser.skipAttributes
@@ -76,15 +76,15 @@ class XmlPullParser2Spec extends AnyFlatSpec with RaceSpec {
           }
 
         case Number =>
-          if (parser.isStartElement) {
-            parser.parseText
-            println(s"number = ${parser.elementText.toDouble}")
+          if (parser.isStartTag) {
+            parser.parseContent
+            println(s"number = ${parser.rawContent.toDouble}")
           }
 
         case _ => // ignore
       }
-
-       */
     }
   }
+
+   */
 }

@@ -239,7 +239,7 @@ class SliceImpl (var bs: Array[Byte], var offset: Int, var length: Int) extends 
   * TODO - check if this actually buys much over SliceImpl (runtime type check, cast and super call might nix gains)
   */
 class HashedSliceImpl (_bs: Array[Byte], _offset: Int, _length: Int) extends SliceImpl(_bs,_offset,_length) {
-  protected var hash: Long = computeHash
+  var hash: Long = computeHash
 
   def this (s: String) = this(s.getBytes,0,s.length)
 
@@ -278,7 +278,7 @@ class HashedSliceImpl (_bs: Array[Byte], _offset: Int, _length: Int) extends Sli
 
   override def equals (o: Any): Boolean = {
     o match {
-      case slice: HashedSliceImpl => equals(slice.bs,slice.offset,slice.length,slice.getHash)
+      case slice: HashedSliceImpl => equals(slice.bs,slice.offset,slice.length,slice.hash)
       case slice: Slice => equals(slice.bs, slice.offset, slice.length)
       case _ => false
     }
