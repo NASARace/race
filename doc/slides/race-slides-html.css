@@ -128,6 +128,18 @@ img.right {
     margin: 15px 15px 15px 15px;
 }
 
+img.alignTop {
+    vertical-align: text-top;
+}
+
+img.alignBottom {
+    vertical-align: text-bottom;
+}
+
+img.alignBase {
+    vertical-align: baseline;
+}
+
 img.scale10 {
     height: 10vh;
 }
