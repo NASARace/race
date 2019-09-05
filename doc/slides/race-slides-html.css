@@ -37,7 +37,9 @@ div.slide {
 
 p.author {
     display: block;
-    font-size: 90%
+    font-size: 80%;
+    font-family: Courier;
+    color: Gray;
     margin-top: 5em;
     text-align: center;
 }

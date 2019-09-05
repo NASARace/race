@@ -1,53 +1,55 @@
 # Analyzing Airspace Data with RACE
-showcase and evaluation</br>
 
 website: <http://nasarace.github.io/race><br/>
 repository: <https://github.com/nasarace/race><br/>
 
-~
+<p class="author">
+{Peter.C.Mehlitz, Dimitra.Giannakopoulou, Nastaran.Shafiei}@nasa.gov<br/>
+NASA Ames Research Center
+</p>
 
-<a href="https://ti.arc.nasa.gov/profile/pcmehlitz/" rel="author">Peter.C.Mehlitz</a><br/>
-<a href="https://ti.arc.nasa.gov/profile/dimitra/" rel="author">Dimitra Giannakopoulou</a><br/>
-<a href="https://ti.arc.nasa.gov/profile/nshafiei/" rel="author">Nastaran Shafiei</a><br/>
-SGT Inc, NASA Ames Research Center
+## Slides
+@:toc root="#currentDocument".
 
 ## What is RACE?
-framework to build event driven applications that
+* started as a distributed LVC simulation framework in 2015
+<img src="../images/lvc-sim.svg" class="center scale35">
+* evolved into a general event driven application framework:
 
-* can import/export from/to external systems - **connectivity**
-* can process high event rate and data volume - **scalability**
-* have extensible set of concurrent, low overhead components
-* support distributed and massively concurrent operation
-* developed since 2015
-
-<img src="../images/lvc-sim.svg" class="center scale40">
-
-
-## Actors
-* basic building blocks of RACE applications
-* well known concurrency programming model since 1973 (Hewitt et al)
-* _Actors_ are objects that communicate only through async messages  
-⟹ no shared state
-* objects process messages one-at-a-time ⟹ sequential code
-
-<img src="../images/actor-communication.svg" class="center scale50">
+    + can import/export from/to external systems - **connectivity**
+    + can process high event rate and data volume - **scalability**
+    + supports distributed and massively concurrent operation
+    + has batteries included (except Java runtime, SBT build system)
 
 
-## Configuring RACE Actor Systems
-* RACE actor systems are JSON configured graphs
-* nodes are actors
-* edges are pub/sub (bus) channels through which actors communicate
+## RACE Implementation
+* runs on JVM, programmed in Scala using Akka actor library
+* basic building blocks are **actors** - objects that only communicate through messages (processed
+sequentially)
+* RACE messages are sent through **channels**
+* RACE actors/channels runtime configured (JSON), not hardwired
 
-<img src="../images/race-dataflow.svg" class="center scale50">
+<img src="../images/race-design.svg" class="center scale50">
 
 
-## Target Application Model
-common tasks of example applications (mapped to dedicated actors):
+## Presented Example Applications
+automatic detection of
+
+* (1) temporal inconsistencies in SWIM messages
+* (2) unsafe parallel approach trajectories
+* (3) trajectory deviations between different reporting systems
+* (4) loss of separation between live and simulated aircraft
+
+
+##  Common Tasks of Example Applications
+<img src="../images/app-tasks.svg" class="center scale35">
+
+mapped to dedicated actors
 
 * import async data messages from external systems
-* filtering messages for relevance
 * translate relevant external messages into data model entities
-* analyze entity state (changes)
+* filtering entities for relevance
+* analyze relevant entities
 * (opt) export entities to external systems
 * report/visualize results
 
@@ -58,57 +60,56 @@ common tasks of example applications (mapped to dedicated actors):
 * RACE report:
 <img src="../images/tais-stats-output.png" class="alignTop scale40">
 
+
 ## (1) Temporal Inconsistencies - Implementation & Lessons
+<img src="../images/tais-stats-config.svg" class="center scale30">
+
+* only ~140 app specific lines of code (mostly HTML formatting)
 * original goal was only XML schema validation - time series analysis added
 after visualization showed anomalies
-* import layer convenient to switch between live/recorded and different channels
+* import layer convenient to switch between input sources
 * first application to use HTML server for reporting (was running headless
 in private network)
-* only ~140 app specific lines of code (mostly HTML formatting) because 
-of generic statistics and reporting support
-
-<img src="../images/tais-stats-config.svg" class="center scale30">
 
 
 ## (2) Detecting Unsafe Parallel Approach Trajectories
 goal: automatically detect parallel approaches that are angled-in exceeding 
-30deg heading differences within given distance (causing loss of sight)
+30° heading differences within given distance (causing loss of sight)
 
 <img src="../images/par-approach-output.png" class="center scale70">
 
 
 ## (2) Parallel Approach - Implementation & Lessons
-* quadratic problem: pairwise trajectory comparison of un-synchronized irregular time series
-* approach: filter candidates, detect parallel approach, interpolate and compare traces 
-* GPU-based brute force approach did not work (data transfer costs)
-* more trajectory infrastructure needed (traces, extrapolation/interpolation)
-* ~180 lines of code (approach analyzer)
-
 <img src="../images/par-approach-config.svg" class="center scale40">
 
+* ~180 lines of code (approach analyzer)
+* quadratic problem: pairwise trajectory comparison of un-synchronized irregular time series
+* ? GPU-based brute force approach did not work (data transfer costs)
+* approach: filter candidates, detect parallel approach, interpolate and compare traces 
+* more trajectory infrastructure needed (traces, extrapolation/interpolation)
 
 
 ## (3) Detecting Deviations between Tracking Systems
-* how do positions for same flight differ between different input channels
-and sensor systems (ASDE-X, TAIS, SFDPS, direct ADS-B)?
+* how do positions for same flight differ between different input sources
+(ASDE-X, TAIS, SFDPS, direct ADS-B)?
 * are differences random or systematic?
 
 <img src="../images/trackdiff-output.png" class="center scale60">
 
 
 ## (3) Track Deviation - Implementation & Lessons
+<img src="../images/trackdiff-config.svg" class="center scale45">
+
+* ~180 lines of code (trajectory comparer)
 * again motivated by visualization (noticing discrepancies)
 * import layer convenient to switch between channels (SFDPS,TAIS,ASDE-X)
 * again pairwise trajectory comparison but pair detection easy (flight id)
 * comparison requires interpolation and statistics computation (variance)
-* ~180 lines of code in trajectory comparer
-
-<img src="../images/trackdiff-config.svg" class="center scale45">
 
 
 ## (4) Detecting Loss of Separation
 * heterogeneous system: combines live (SWIM) data and external simulators
-* RACE used as a data hub that adds services (proximities, LoS detection) 
+* RACE used as a data hub that adds analysis (proximities, LoS detection) 
 
 <img src="../images/fdz-demo.svg" class="center scale70">
 
@@ -140,6 +141,5 @@ that significantly reduce extensibility)
 * discrete flight updates require domain specific support for interpolation, extrapolation
 * visualization is important but currently a problem (general: native APIs, specific: WorldWind) 
 * native code/memory support needs to be extended (hybrid systems interfacing, graphics APIs, 
-utilizing SIMD for parallel computation)
+utilizing SIMD for parallel computation ? GPU ?)
 
-<p class="standout">Thank You!</p> 
