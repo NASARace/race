@@ -159,5 +159,8 @@
     <rect x="781.6104" y="226.4322" width="53.18076" height="12.93836" opacity="1" fill="#FB0106" fill-opacity="0.1906571" />
     <rect x="781.0797" y="282.5424" width="53.18076" height="12.93836" opacity="1" fill="#FB0106" fill-opacity="0.1906571" />
     <rect x="818.6292" y="241.2973" width="66.74613" height="12.93836" opacity="1" fill="#0000FE" fill-opacity="0.1302708" />
+    <text x="513.2415" y="312.6542" font-size="11" fill="#7F7F7F" fill-opacity="1" font-family="Helvetica" font-weight="normal" font-style="normal">msg 
+</text>
+    <text x="505.2842" y="326.6542" font-size="11" fill="#7F7F7F" fill-opacity="1" font-family="Helvetica" font-weight="normal" font-style="normal">handler</text>
   </g>
 </svg>

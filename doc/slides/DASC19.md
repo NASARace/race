@@ -111,15 +111,15 @@ goal: automatically detect parallel approaches that are angled-in exceeding
 * heterogeneous system: combines live (SWIM) data and external simulators
 * RACE used as a data hub that adds analysis (proximities, LoS detection) 
 
-<img src="../images/fdz-demo.svg" class="center scale70">
+<img src="../images/fdz-demo.svg" class="center scale65">
 
 
 ## (4) Loss of Separation - Output
 * left shows TCAS display of simulator flight FDZ001 - live flight XY333 shown as alert
 * right shows RACE viewer with LoS event between simulated (FDZ001) and live (XY333) flight
 
-<img src="../images/fdz-output-a.png" class="left scale40">
-<img src="../images/fdz-output-b.png" class="right scale40">
+<img src="../images/fdz-output-a.png" class="left scale35">
+<img src="../images/fdz-output-b.png" class="right scale35">
 
 
 ## (4) Loss of Separation - Implementation & Lessons
@@ -131,15 +131,16 @@ goal: automatically detect parallel approaches that are angled-in exceeding
 
 
 ## Conclusions
-* actors are a good programming model for target applications
-* implementation platform (JVM, Scala, Akka) was suitable basis but favor throughput over latency
+* actors are a good programming model for presented applications
+* implementation platform (JVM, Scala, Akka) is suitable basis but favors throughput over latency
 (soft realtime)
-* RACE has not yet reached scalability limits for NAS (~4000 simultaneous flights) 
-* irregular time series require domain specific support for interpolation, extrapolation
-* visualization is important for property identification but currently a problem 
+* trajectory analysis requires more domain specific support for interpolation, extrapolation
+* visualization is important for property identification but currently a challenge 
 (general: native APIs, specific: WorldWind)
 * applications often highly parallel but HW based solution (GPU,SIMD) difficult in JVM 
 without sacrificing extensibility
 * native code/memory support becomes more important (hybrid systems interfacing, graphics APIs, 
 heterogeneous computing)
+* yet RACE already scales up to whole NAS (>4000 simultaneous flights, >1000 msg/sec) and more
+optimizations in the queue 
 
