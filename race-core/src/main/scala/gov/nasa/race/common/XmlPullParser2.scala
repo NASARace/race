@@ -55,7 +55,9 @@ trait XmlPullParser2  {
 
   //--- content string list (avoiding runtime allocation)
   protected val contentStrings = new RangeStack(16)
-  val rawContent = new SliceImpl(data,0,0)
+  protected var contentIdx = 0
+  val contentString = new SliceImpl(data,0,0) // for iteration over content strings
+  val rawContent = new SliceImpl(data,0,0) // slice over all content (without leading/trailing blanks)
 
   val attrName = new HashedSliceImpl(data,0,0)
   val attrValue = new SliceImpl(data,0,0)  // not hashed by default
@@ -81,15 +83,20 @@ trait XmlPullParser2  {
         idx = i
         tag.set(data,i0,i-i0)
         _isStartTag = isStart
+
+        attrName.clear
+        attrValue.clear
+        rawContent.clear
+        contentStrings.clear
+
         if (isStart) {
           path.push(tag.offset,tag.length,tag.hash)
-          rawContent.clear
-          contentStrings.clear
-          attrName.clear
-          attrValue.clear
         } else {
-          if (path.isTop(tag.offset,tag.length,tag.hash)) path.pop
-          else throw new XmlParseException(s"unbalanced end tag around ${context(i0)}")
+          if (isTopTag(tag)) {
+            path.pop
+          } else {
+            throw new XmlParseException(s"unbalanced end tag around ${context(i0)}")
+          }
         }
         state = nextState
         true
@@ -103,7 +110,7 @@ trait XmlPullParser2  {
           val i0 = i
           i = skipTo(i, '>')
           if (i < limit) {
-            return _setTag(i, i0, false, contentState)
+            return _setTag(i0, i, false, contentState)
           }
           throw new XmlParseException(s"malformed end tag around ${context(i0)}")
 
@@ -180,7 +187,7 @@ trait XmlPullParser2  {
                 val i0 = i
                 i = skipTo(i,'"')
                 if (i < limit){
-                  attrValue.set(data,i0,i)
+                  attrValue.set(data,i0,i-i0)
                   idx = i+1
                   return true
                 }
@@ -217,21 +224,41 @@ trait XmlPullParser2  {
     */
   class ContentState extends State {
     def parseNextTag = {
-      idx = seekPastContent(idx)
-      state = tagState
-      state.parseNextTag
+      if (path.nonEmpty) {
+        idx = seekPastContent(idx+1)
+        state = tagState
+        state.parseNextTag
+      } else {
+        false
+      }
     }
 
     def parseNextAttr = false
 
     def parseContent: Boolean = {
-      val i0 = skipSpace(idx+1)
-      idx = seekPastContent(i0)
-      val i1 = backtrackSpace(idx-1)
-      rawContent.set(data,i0,i1-i0+1)
+      val i0 = idx+1
+      idx = seekPastContent(i0) // this also sets the contentStrings
+      rawContent.set(data,i0,idx-i0) // this includes surrounding whitespace, comments and CDATA sections
       state = tagState
-      contentStrings.nonEmpty
+      if (contentStrings.nonEmpty){
+        contentIdx = 0
+        true
+      } else false
     }
+  }
+
+  // reset all vars
+  protected def clear: Unit = {
+    idx = 0
+    state = tagState
+    path.clear
+    contentStrings.clear
+    _isStartTag = false
+    _wasEmptyElementTag = false
+    tag.clear
+    attrName.clear
+    attrValue.clear
+    rawContent.clear
   }
 
   //--- public methods
@@ -240,11 +267,71 @@ trait XmlPullParser2  {
 
   def parseNextAttr: Boolean = state.parseNextAttr
 
+  def parseAttr (at: HashedSliceImpl): Boolean = {
+    while (parseNextAttr) {
+      if (attrName.equals(at)) return true
+    }
+    false
+  }
+
   def parseContent: Boolean = state.parseContent
 
+  //--- content retrieval
 
+  /**
+    * iterate over all contentStrings
+    */
+  def getNextContentString: Boolean = {
+    val i = contentIdx
+    if (i <= contentStrings.top) {
+      contentString.set(data,contentStrings.offsets(i),contentStrings.lengths(i))
+      contentIdx += 1
+      true
+    } else false
+  }
+
+  /**
+    * coalesce all content strings
+    */
+  def getContent: String = {
+    if (contentStrings.nonEmpty) {
+      val len = contentLength
+      val bs = new Array[Byte](len)
+      var i = 0
+      contentStrings.foreach { (_,o,l)=>
+        System.arraycopy(data,o,bs,i,l)
+        i += l
+      }
+      new String(bs,StandardCharsets.UTF_8 )
+    } else ""
+  }
+
+  //--- path query (e.g. to disambiguate elements at different nesting levels)
+
+  def tagHasParent(parent: HashedSliceImpl): Boolean = {
+    if (path.top > 0){
+      val i = path.top-1
+      parent.equals(data, path.offsets(i), path.lengths(i), path.hashes(i))
+    } else false
+  }
+
+  def tagHasAncestor(ancestor: HashedSliceImpl): Boolean = {
+    path.exists( (o,l,h) =>ancestor.equals(data,o,l,h))
+  }
+
+  //.. and probably more path predicates
 
   //--- auxiliary parse functions used by states
+
+  def contentLength: Int = {
+    var len = 0
+    contentStrings.foreach { (_,_,l) => len += l }
+    len
+  }
+
+  def isTopTag (t: HashedSliceImpl): Boolean = {
+    t.equals(data,path.topOffset,path.topLength,path.topHash)
+  }
 
   def seekRootTag: Int = {
     var i = 0
@@ -339,7 +426,7 @@ trait XmlPullParser2  {
   // ?? raw content ??
 
   def seekPastContent (i0: Int): Int = {
-    var iStart = i0
+    var iStart = skipSpace(i0)
     var i = i0
     val buf = this.data
     val limit = this.limit
@@ -352,12 +439,14 @@ trait XmlPullParser2  {
           val i2 = i1 + 1
           if (i2 < limit) {
             if (buf(i2) == '[') {          // '<![CDATA[...]]>'
-              if (i > iStart) contentStrings.push(iStart, i-iStart)
+              val iEnd = backtrackSpace(i-1)
+              if (iEnd > iStart) contentStrings.push(iStart, iEnd-iStart+1)
               i = i2 + 7
               while (i < limit && buf(i) != '>' || buf(i-1) != ']') i += 1
               iStart = i-1
             } else if (buf(i2) == '-') {   // <!--...-->
-              if (i > iStart) contentStrings.push(iStart, i-iStart)
+              val iEnd = backtrackSpace(i-1)
+              if (iEnd > iStart) contentStrings.push(iStart, iEnd-iStart+1)
               i = i2+3
               while (i < limit && buf(i) != '>' || (buf(i-1) != '-' || buf(i-2) != '-')) i += 1
               iStart = i2 + 6
@@ -366,7 +455,8 @@ trait XmlPullParser2  {
             } else throw new XmlParseException(s"malformed comment or CDATA around '${context(i0)}'")
           } else throw new XmlParseException(s"malformed comment or CDATA around '${context(i0)}'")
         } else {
-          if (i > iStart) contentStrings.push(iStart, i-iStart)
+          val iEnd = backtrackSpace(i-1) + 1
+          if (iEnd > iStart) contentStrings.push(iStart, iEnd-iStart)
           return i
         }
       } else if (c == '>') {
@@ -385,18 +475,21 @@ trait XmlPullParser2  {
     new String(data, i0, i1-i0)
   }
 
-  def printIndentOn (ps: PrintStream): Unit = {
-    var level = if (_isStartTag) path.top else path.top+1  // when we get the end tag the top is already popped
-    while (level > 0) {
-      ps.print("  ")
-      level -= 1
-    }
-  }
 
   def printOn (ps: PrintStream): Unit = {
+    def printIndent: Unit = {
+      var level = if (_isStartTag) path.top else path.top+1  // when we get the end tag the top is already popped
+      while (level > 0) {
+        ps.print("  ")
+        level -= 1
+      }
+    }
+
+    var hadContent = false
+
     while (parseNextTag){
       if (isStartTag){
-        printIndentOn(ps)
+        printIndent
         ps.print('<')
         ps.print(tag)
 
@@ -404,7 +497,7 @@ trait XmlPullParser2  {
           ps.print(' ')
           ps.print(attrName)
           ps.print("=\"")
-          //ps.print(attrValue)
+          ps.print(attrValue)
           ps.print('"')
         }
 
@@ -412,8 +505,10 @@ trait XmlPullParser2  {
           ps.print('>')
           if (parseContent) {
             ps.print(rawContent)
+            hadContent = true
           } else {
             ps.println
+            hadContent = false
           }
         }
 
@@ -421,15 +516,22 @@ trait XmlPullParser2  {
         if (_wasEmptyElementTag) {
           ps.println("/>")
         } else {
-          printIndentOn(ps)
+          if (!hadContent) printIndent
           ps.print("</")
           ps.print(tag)
           ps.println('>')
         }
+        hadContent = false // no mixed content yet
       }
     }
   }
 
+  def dumpPath: Unit = {
+    path.foreach { (idx,off,len)=>
+      if (idx > 0)print(',')
+      print(Slice(data,off,len).toString)
+    }
+  }
 }
 
 
@@ -463,6 +565,22 @@ class StringXmlPullParser2(initBufSize: Int = 8192) extends XmlPullParser2 {
       }
     } while (!done)
 
+    clear
+    idx = seekRootTag
+    idx >= 0
+  }
+}
+
+/**
+  * a XmlPullParser2 that works directly on a provided utf-8 byte array
+  */
+class UTF8XmlPullParser2 extends XmlPullParser2 {
+  protected var data: Array[Byte] = Array.empty
+
+  def initialize (bs: Array[Byte]): Boolean = {
+    clear
+    data = bs
+    limit = bs.length
     idx = seekRootTag
     idx >= 0
   }

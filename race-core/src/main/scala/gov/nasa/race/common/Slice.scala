@@ -241,6 +241,7 @@ class SliceImpl (var bs: Array[Byte], var offset: Int, var length: Int) extends 
 class HashedSliceImpl (_bs: Array[Byte], _offset: Int, _length: Int) extends SliceImpl(_bs,_offset,_length) {
   var hash: Long = computeHash
 
+  def this (bs: Array[Byte]) = this (bs,0,bs.length)
   def this (s: String) = this(s.getBytes,0,s.length)
 
   override def clear: Unit = {
@@ -251,7 +252,7 @@ class HashedSliceImpl (_bs: Array[Byte], _offset: Int, _length: Int) extends Sli
 
   private def computeHash = {
     if (length == 0) 0L
-    else if (length <= 9) ASCII8Hash64.hashBytes(bs,offset,length)
+    else if (length <= 8) ASCII8Hash64.hashBytes(bs,offset,length)
     else MurmurHash64.hashBytes(bs,offset,length)
   }
 
@@ -286,8 +287,8 @@ class HashedSliceImpl (_bs: Array[Byte], _offset: Int, _length: Int) extends Sli
 
   override def == (o: Slice): Boolean = {
     o match {
-      case other: HashedSliceImpl => equals(other)
-      case other: Slice => equals(other)
+      case slice: HashedSliceImpl => equals(slice.bs,slice.offset,slice.length,slice.hash)
+      case slice: Slice => equals(slice.bs, slice.offset, slice.length)
     }
   }
 
@@ -300,4 +301,45 @@ class HashedSliceImpl (_bs: Array[Byte], _offset: Int, _length: Int) extends Sli
   }
 }
 
+/**
+  * just some syntactic sugar
+  */
+class Literal (s: String) extends HashedSliceImpl (s.getBytes)
 
+object EmptySlice extends SliceImpl(new Array[Byte](0),0,0)
+
+
+class SubSlicer (val sep: Byte, var src: Slice) {
+  val subSlice: SliceImpl = new SliceImpl(src.bs,0,0)
+  var idx = src.offset
+  var limit = src.offset + src.length
+
+  def this (sep: Byte) = this(sep,EmptySlice)
+
+  def setSource(newSrc: Slice): Unit = {
+    src = newSrc
+    idx = src.offset
+    limit = src.offset + src.length
+  }
+
+  def sliceNext: Boolean = {
+    val bs = src.bs
+    val limit = this.limit
+    var i = idx
+    while (i < limit && bs(i) == sep) i += 1
+    val i0 = i
+    while (i < limit) {
+      if (bs(i) == sep) {
+        subSlice.set(bs,i0,i-i0)
+        idx = i
+        return true
+      }
+      i += 1
+    }
+    idx = limit
+    if (limit > i0) {
+      subSlice.set(bs,i0,limit-i0)
+      return true
+    } else false
+  }
+}

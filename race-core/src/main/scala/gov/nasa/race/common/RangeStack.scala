@@ -55,11 +55,39 @@ class RangeStack (var capacity: Int) {
     top >= 0 && offsets(top) == off && lengths(top) == len
   }
 
+  @inline final def topOffset: Int = offsets(top)
+  @inline final def topLength: Int = lengths(top)
+
   def push (off: Int, len: Int): Unit = {
     top += 1
     if (top >= capacity) grow(capacity*2)
     offsets(top) = off
     lengths(top) = len
+  }
+
+  def foreach (f: (Int,Int,Int)=> Unit): Unit = {
+    var i = 0
+    while (i <=top) {
+      f(i,offsets(i),lengths(i))
+      i += 1
+    }
+  }
+
+  def foreachReverse (f: (Int,Int,Int)=> Unit): Unit = {
+    var i = top
+    while (i >= 0) {
+      f(i,offsets(i),lengths(i))
+      i -= 1
+    }
+  }
+
+  def exists (f: (Int,Int)=> Boolean): Boolean = {
+    var i = 0
+    while (i <=top) {
+      if (f(offsets(i),lengths(i))) return true
+      i += 1
+    }
+    false
   }
 }
 
@@ -77,6 +105,8 @@ class HashedRangeStack (initCapacity: Int) extends RangeStack(initCapacity) {
     hashes = newHashes
   }
 
+  @inline final def topHash: Long = hashes(top)
+
   override def push (off: Int, len: Int): Unit = {
     throw new RuntimeException("missing hash argument") // todo - not very scalatic
   }
@@ -88,5 +118,30 @@ class HashedRangeStack (initCapacity: Int) extends RangeStack(initCapacity) {
 
   def isTop (off: Int, len: Int, hash: Long): Boolean = {
     top >= 0 && hashes(top) == hash && offsets(top) == off && lengths(top) == len
+  }
+
+  def foreach (f: (Int,Int,Int,Long)=> Unit): Unit = {
+    var i = 0
+    while (i <=top) {
+      f(i,offsets(i),lengths(i),hashes(i))
+      i += 1
+    }
+  }
+
+  def foreachReverse (f: (Int,Int,Int,Long)=> Unit): Unit = {
+    var i = top
+    while (i >= 0) {
+      f(i, offsets(i), lengths(i), hashes(i))
+      i -= 1
+    }
+  }
+
+  def exists (f: (Int,Int,Long) => Boolean): Boolean = {
+    var i = 0
+    while (i <=top) {
+      if (f(offsets(i),lengths(i),hashes(i))) return true
+      i += 1
+    }
+    false
   }
 }
