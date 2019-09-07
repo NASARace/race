@@ -72,6 +72,7 @@ class WorldWindFrame (config: Config, raceView: RaceViewer) extends AppFrame {
   size = config.getDimensionOrElse("size", (1400, 1000)) // set size no matter what
   if (config.getBooleanOrElse("fullscreen", false)) {
     setFullScreen(true)
+    popupFullScreenMI.selected = true
   }
 
   def createWorldWindow (config: Config, raceView: RaceViewer): WorldWindowGLCanvas = {

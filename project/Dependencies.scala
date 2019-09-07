@@ -78,7 +78,7 @@ object Dependencies {
   val defaultTestLibs = Seq(scalaTest,scalaTestPlus,flexmarkAll,scalaCheck,pegDown)
 
   //--- Circe Json support
-  val circeVersion = "0.12.0-M4"
+  val circeVersion = "0.12.0-RC4"
   val circeCore = "io.circe" %% "circe-core" % circeVersion
   val circeGeneric = "io.circe" %% "circe-generic" % circeVersion
   val circeParser = "io.circe" %% "circe-parser" % circeVersion
@@ -86,7 +86,7 @@ object Dependencies {
   val circeAll = Seq(circeCore,circeGeneric,circeParser)
 
   // Apache Avro serialization (for archiving/unarchiving)
-  val avro = "org.apache.avro" % "avro" % "1.9.0"
+  val avro = "org.apache.avro" % "avro" % "1.9.1"
 
   // scodec
   //val scodecBits = "org.scodec" %% "scodec-bits" % "1.1.5"
@@ -114,7 +114,7 @@ object Dependencies {
   val argon2 = "de.mkammerer" % "argon2-jvm" % "2.5"
 
   //--- Akka
-  val akkaVersion = "2.5.23"
+  val akkaVersion = "2.5.25"
   val akkaOrg = "com.typesafe.akka"
 
   val akkaActor = akkaOrg %% "akka-actor" % akkaVersion
@@ -130,7 +130,7 @@ object Dependencies {
 
 
   //--- ActiveMQ
-  val amqVersion = "5.15.9"
+  val amqVersion = "5.15.10"
   val amqOrg = "org.apache.activemq"
   val amqBroker = amqOrg % "activemq-broker" % amqVersion
 
@@ -164,7 +164,7 @@ object Dependencies {
   val newKafkaClients = "org.apache.kafka" % "kafka-clients" % "2.2.1"
 
   //--- Kafka (make sure to add log4j to kafkaServer dependencies
-  val kafka = "org.apache.kafka" % "kafka_2.12" % "2.2.1" excludeAll(
+  val kafka = "org.apache.kafka" % "kafka_2.12" % "2.3.0" excludeAll(
   //val kafka = "org.apache.kafka" %% "kafka" % "1.0.1" excludeAll(
     //ExclusionRule(organization = "log4j", name="log4j"),
     //ExclusionRule(organization = "org.slf4j", name = "slf4j-log4j12")
@@ -176,7 +176,7 @@ object Dependencies {
 
 
   //--- LWJGL Java wrapper for OpenGL,Vulkan,,OpenCL,OpenAL and others
-  val lwjglVersion = "3.2.2"
+  val lwjglVersion = "3.2.3"
   lazy val lwjglNativeClassifier = OS.build match {
     case _:Linux => "natives-linux"
     case _:OSX => "natives-macos"

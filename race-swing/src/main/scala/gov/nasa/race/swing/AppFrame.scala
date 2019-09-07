@@ -84,12 +84,10 @@ class AppFrame extends Frame {
   }
 
   def setFullScreen (b: Boolean): Unit = {
-    val env = GraphicsEnvironment.getLocalGraphicsEnvironment
-    val device = env.getDefaultScreenDevice
     if (b) {
-      device.setFullScreenWindow(this.peer)
+      Platform.requestFullScreen(this.peer)
     } else {
-      device.setFullScreenWindow(null)
+      Platform.requestFullScreen(null)
     }
   }
 }
