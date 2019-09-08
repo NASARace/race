@@ -17,44 +17,28 @@
             <p>~</p>
             <p><a href="https://ti.arc.nasa.gov/profile/pcmehlitz/" rel="author">Peter.C.Mehlitz</a><br/>
             SGT Inc, NASA Ames Research Center</p>
-            
             </div><div class="slide">
-            
-            <h2 id="race-design" class="section">RACE Design</h2>
-            <ul>
+            <h2 id="race-design" class="section">RACE Design</h2><ul>
               <li>everything is an actor</li>
               <li>(almost) every actor is configured</li>
               <li>actors communicate internally through (configured) bus channels</li>
               <li><strong>but how do they talk to the outside world?</strong></li>
-            </ul>
-            <img src="../images/race-overview-2.svg" class="center scale55">
-            
+            </ul><img src="../images/race-overview-2.svg" class="center scale55">
             </div><div class="slide">
-            
-            <h2 id="import-exportactors" class="section">Import/ExportActors</h2>
-            <ul>
+            <h2 id="import-exportactors" class="section">Import/ExportActors</h2><ul>
               <li>dedicated import/export actors</li>
               <li>separation of protocol (actor: JMS,Kafka,..) and optional payload data handling (readers/writers)</li>
-            </ul>
-            <img src="../images/import-export.svg" class="center scale65">
-            
+            </ul><img src="../images/import-export.svg" class="center scale65">
             </div><div class="slide">
-            
-            <h2 id="raceadapter" class="section">RaceAdapter</h2>
-            <ul>
+            <h2 id="raceadapter" class="section">RaceAdapter</h2><ul>
               <li>native lib + generic actor to connect external systems without network interface</li>
               <li>lightweight protocol with extensible/configurable payload data</li>
-            </ul>
-            <img src="../images/race-adapter.svg" class="center scale75">
-            
+            </ul><img src="../images/race-adapter.svg" class="center scale75">
             </div><div class="slide">
-            
-            <h2 id="flightdeckz-example" class="section">Flightdeckz Example</h2>
-            <ul>
+            <h2 id="flightdeckz-example" class="section">Flightdeckz Example</h2><ul>
               <li>uses <code>SimpleTrackProtocol</code> (bi-directional track and proximity data)</li>
               <li><code>race-server</code> process using <code>librace.a</code> to read/write shared memory segments</li>
-            </ul>
-            <img src="../images/fdz-race-server.svg" class="center scale65">
+            </ul><img src="../images/fdz-race-server.svg" class="center scale65">
         </div>
     </body>
 

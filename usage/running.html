@@ -70,6 +70,7 @@
                         <li><span class="toc level2"><a href="../design/channeltopics.html">ChannelTopics</a></span></li>
                         <li><span class="toc level2"><a href="../design/embedded-objects.html">Embedded Objects</a></span></li>
                         <li><span class="toc level2"><a href="../design/connectivity.html">Connecting External Systems</a></span></li>
+                        <li><span class="toc level2"><a href="../design/rgis.html">RACE GIS Support</a></span></li>
                         <li><span class="toc level2"><a href="../design/archive-replay.html">Archive and Replay</a></span></li>
                         <li><span class="toc level2"><a href="../design/worldwind.html">WorldWind Viewer</a></span></li>
                         <li><span class="toc level2"><a href="../design/http-server.html">HttpServer</a></span></li>
@@ -103,8 +104,12 @@
                     <li>
                       <p class="toc level1"><a href="../known-problems.html">Known Problems</a></p>
                       <ul>
-                        <li><span class="toc level2"><a href="../known-problems.html#build">Build</a></span></li>
-                        <li><span class="toc level2"><a href="../known-problems.html#runtime">Runtime</a></span></li>
+                        <li><span class="toc level2"><a href="../known-problems.html#problems-with-worldwind-jogl-native-libraries-on-linux">problems with WorldWind/JOGL native libraries on Linux</a></span></li>
+                        <li><span class="toc level2"><a href="../known-problems.html#incompatible-class-file-errors-during-race-startup">incompatible class file errors during RACE startup</a></span></li>
+                        <li><span class="toc level2"><a href="../known-problems.html#kafka-clients">kafka-clients</a></span></li>
+                        <li><span class="toc level2"><a href="../known-problems.html#kafkaserver">KafkaServer</a></span></li>
+                        <li><span class="toc level2"><a href="../known-problems.html#windows-console-output">Windows console output</a></span></li>
+                        <li><span class="toc level2"><a href="../known-problems.html#race-not-starting-because-of-racevieweractor-timeout">RACE not starting because of RaceViewerActor timeout</a></span></li>
                       </ul>
                     </li>
                     <li><span class="toc level1"><a href="../changes.html">Changes</a></span></li>
@@ -142,13 +147,13 @@
             Outside of SBT, this can be done by executing the <code>./race &lt;configfile&gt;</code> script from the command 
             line, e.g.</p>
             <pre><code>&gt; ./race config/local/aircraft.conf</code></pre>
-            <p>The main argument is the <a href="configuration.md">configuration file</a> to run, which defines which actors
+            <p>The main argument is the <a href="configuration.html">configuration file</a> to run, which defines which actors
             to run, and how these actors are connected.</p>
             <p>Executing <code>./race --help</code> will list the supported command line options, of which the following ones
             are particularly of interest</p>
             <p><code>--delay</code> - initialize, but wait for an explicit user command to start the simulation run</p>
             <p><code>--vault &lt;path&gt; [--keystore &lt;path&gt; [--alias &lt;keyname&gt;]]</code> - this allows the use of configuration
-            files with <a href="encryption.md">encrypted values</a> (e.g. for values such as passwords). Without a
+            files with <a href="encryption.html">encrypted values</a> (e.g. for values such as passwords). Without a
             <code>--keystore</code> specification, the user will be prompted for a vault password. If there is a
             keystore/alias argument, the user will be prompted for the keystore password and the vault will
             be decrypted with the key (alias) that is stored in it. If any of the passwords are not valid,

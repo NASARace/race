@@ -15,33 +15,22 @@
             <h1 id="race" class="title">RACE</h1>
             <p>the fast way to concurrent and distributed network applications</p>
             <p><a href="https://github.com/nasarace/race">https://github.com/nasarace/race</a></p>
-            
             </div><div class="slide">
-            
-            <h2 id="what-is-race" class="section">What is RACE</h2>
-            <ul>
+            <h2 id="what-is-race" class="section">What is RACE</h2><ul>
               <li>RACE is a set of libraries to build event driven applications</li>
               <li>supports massively concurrent and distributed operation</li>
               <li>originally meant for creating large LVC airspace simulations</li>
-            </ul>
-            <img src="../images/lvc-sim.svg" class="center scale40">
-            
+            </ul><img src="../images/lvc-sim.svg" class="center scale40">
             </div><div class="slide">
-            
-            <h2 id="how-does-race-work" class="section">How does RACE work</h2>
-            <ul>
+            <h2 id="how-does-race-work" class="section">How does RACE work</h2><ul>
               <li>centered around <strong>actor programming model</strong></li>
               <li>actors communicate through logical channels on message bus</li>
               <li>actors and channels are configured (JSON/HOCON)</li>
               <li>deterministic system initialization/termination following state model</li>
               <li>strict supervisor hierarchy (master)</li>
-            </ul>
-            <img src="../images/race-overview-2.svg" class="center scale50">
-            
+            </ul><img src="../images/race-overview-2.svg" class="center scale50">
             </div><div class="slide">
-            
-            <h2 id="race-implementation-5-15-17" class="section">RACE Implementation (5/15/17)</h2>
-            <ul>
+            <h2 id="race-implementation-5-15-17" class="section">RACE Implementation (5/15/17)</h2><ul>
               <li>
                 <p>implemented in Scala, runs on JVMs</p>
               </li>
@@ -70,31 +59,23 @@
                 <p>40 documentation pages (markdown and rst)</p>
               </li>
             </ul>
-            
             </div><div class="slide">
-            
-            <h2 id="race-use-case-1-vr-simulation" class="section">RACE Use Case 1: VR simulation</h2>
-            <ul>
+            <h2 id="race-use-case-1-vr-simulation" class="section">RACE Use Case 1: VR simulation</h2><ul>
               <li>import ADS-B messages from antenna/SDR (35 flights with 1-2 Hz update)</li>
               <li>translate ADS-B messages into flight objects</li>
               <li>connect to X-Plane flight simulator, import flight simulator state</li>
               <li>compute proximity flight objects for simulator position</li>
               <li>send real proximities to flight simulator (cockpit view)</li>
               <li>display simulator and real flight objects in geospatial viewer (WorldWind)</li>
-            </ul>
-            <img src="../images/VR-sim.svg" class="center scale40">
-            
+            </ul><img src="../images/VR-sim.svg" class="center scale40">
             </div><div class="slide">
-            
-            <h2 id="race-use-case-2-live-nas-monitoring" class="section">RACE Use Case 2: live NAS monitoring</h2>
-            <ul>
+            <h2 id="race-use-case-2-live-nas-monitoring" class="section">RACE Use Case 2: live NAS monitoring</h2><ul>
               <li>import enRoute flight info from SWIM (4500 flights with 12 sec update)</li>
               <li>validate XML messages, create statistics (total, rate, size etc.)</li>
               <li>translate enRoute messages into flight objects</li>
               <li>check for duplicated, out-of-order and ambiguous messages, create statistics</li>
               <li>export statistics through embedded web server</li>
-            </ul>
-            <img src="../images/NAS-monitor.svg" class="center scale40">
+            </ul><img src="../images/NAS-monitor.svg" class="center scale40">
         </div>
     </body>
 

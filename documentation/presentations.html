@@ -69,6 +69,7 @@
                         <li><span class="toc level2"><a href="../design/channeltopics.html">ChannelTopics</a></span></li>
                         <li><span class="toc level2"><a href="../design/embedded-objects.html">Embedded Objects</a></span></li>
                         <li><span class="toc level2"><a href="../design/connectivity.html">Connecting External Systems</a></span></li>
+                        <li><span class="toc level2"><a href="../design/rgis.html">RACE GIS Support</a></span></li>
                         <li><span class="toc level2"><a href="../design/archive-replay.html">Archive and Replay</a></span></li>
                         <li><span class="toc level2"><a href="../design/worldwind.html">WorldWind Viewer</a></span></li>
                         <li><span class="toc level2"><a href="../design/http-server.html">HttpServer</a></span></li>
@@ -102,8 +103,12 @@
                     <li>
                       <p class="toc level1"><a href="../known-problems.html">Known Problems</a></p>
                       <ul>
-                        <li><span class="toc level2"><a href="../known-problems.html#build">Build</a></span></li>
-                        <li><span class="toc level2"><a href="../known-problems.html#runtime">Runtime</a></span></li>
+                        <li><span class="toc level2"><a href="../known-problems.html#problems-with-worldwind-jogl-native-libraries-on-linux">problems with WorldWind/JOGL native libraries on Linux</a></span></li>
+                        <li><span class="toc level2"><a href="../known-problems.html#incompatible-class-file-errors-during-race-startup">incompatible class file errors during RACE startup</a></span></li>
+                        <li><span class="toc level2"><a href="../known-problems.html#kafka-clients">kafka-clients</a></span></li>
+                        <li><span class="toc level2"><a href="../known-problems.html#kafkaserver">KafkaServer</a></span></li>
+                        <li><span class="toc level2"><a href="../known-problems.html#windows-console-output">Windows console output</a></span></li>
+                        <li><span class="toc level2"><a href="../known-problems.html#race-not-starting-because-of-racevieweractor-timeout">RACE not starting because of RaceViewerActor timeout</a></span></li>
                       </ul>
                     </li>
                     <li><span class="toc level1"><a href="../changes.html">Changes</a></span></li>
@@ -129,11 +134,11 @@
             <p>This page contains links to RACE presentations that can be viewed online in a browser. Each presentation is contained
             in a single HTML file (linked below) that can be navigated with the following commands</p>
             <ul>
-              <li>&lt;enter&gt; - next slide</li>
-              <li>&lt;shift-enter&gt; - previous slide</li>
-              <li>&#39;f&#39; - enter full screen (presentation) mode (exit is browser specific, usually &lt;esc&gt;)</li>
-              <li>&lt;digit&gt; - go to page 0..9 (&#39;0&#39; being title page)</li>
-              <li>&lt;ctrl-digit&gt;&lt;digit&gt; - go to pages &gt; 10</li>
+              <li><enter> - next slide</li>
+              <li><shift-enter> - previous slide</li>
+              <li>&#39;f&#39; - enter full screen (presentation) mode (exit is browser specific, usually <esc>)</li>
+              <li><digit> - go to page 0..9 (&#39;0&#39; being title page)</li>
+              <li><ctrl-digit><digit> - go to pages &gt; 10</li>
             </ul>
             <p>The slides are best viewed in fullscreen mode since they are based on browser view height.
             Use your browsers &quot;print&quot; command to create hard copies or PDF files.</p>
@@ -149,8 +154,10 @@
             Technical Exchange Meeting 2016</p>
             <p><a href="../slides/Connectivity.html">Connecting RACE</a> is a short introduction for connecting RACE to external applications</p>
             <p><a href="../slides/RACEin10.html">RACE in 10</a> is a high level 10 minute RACE introduction</p>
-            <p><a href="../slides/DASC16.html">RACE - building airspace simulations faster and better with actors</a> is a general RACE introduction,
-            to be presented at DASC 2016</p>
+            <p><a href="../slides/DASC16.html">RACE - building airspace simulations faster and better with actors</a> is a general RACE introduction which
+            was presented at DASC 2016</p>
+            <p><a href="../slides/DASC19.html">Analyzing Airspace Data with RACE</a> is a showcase and reflection about lessons learned during application
+            development with RACE, presented at DASC 2019</p>
         </div>
 
     </body>

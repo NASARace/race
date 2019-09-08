@@ -1,0 +1,174 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<svg width="100%" height="100%" version="1.1" viewBox="186 114 618 429" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <filter id="shadow1" width="150%" height="150%">
+      <feGaussianBlur in="SourceAlpha" result="blur" stdDeviation="3" />
+      <feOffset dx="3" dy="3" in="blur" result="offsetBlur" />
+      <feMerge>
+        <feMergeNode in="offsetBlur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+  </defs>
+  <marker id="marker1" markerUnits="strokeWidth" orient="auto" refX="-11.17254" refY="0" markerWidth="13.27247" markerHeight="10.22955" viewBox="-12.27247 -5.114774 13.27247 10.22955">
+    <path d="M-11.27247 -4.114774 L0 0 L-11.27247 4.114773 Z " fill="#000000" fill-opacity="1" stroke="#000000" stroke-opacity="1" />
+  </marker>
+  <marker id="marker2" markerUnits="strokeWidth" orient="auto" refX="-11.17254" refY="0" markerWidth="13.27247" markerHeight="10.22955" viewBox="-12.27247 -5.114774 13.27247 10.22955">
+    <path d="M-11.27247 -4.114774 L0 0 L-11.27247 4.114773 Z " fill="#000000" fill-opacity="1" stroke="#000000" stroke-opacity="1" />
+  </marker>
+  <marker id="marker3" markerUnits="strokeWidth" orient="auto" refX="11.17254" refY="0" markerWidth="13.27247" markerHeight="10.22955" viewBox="-1 -5.114774 13.27247 10.22955">
+    <path d="M11.27247 4.114773 L0 0 L11.27247 -4.114774 Z " fill="#000000" fill-opacity="1" stroke="#000000" stroke-opacity="1" />
+  </marker>
+  <marker id="marker4" markerUnits="strokeWidth" orient="auto" refX="-11.17254" refY="0" markerWidth="13.27247" markerHeight="10.22955" viewBox="-12.27247 -5.114774 13.27247 10.22955">
+    <path d="M-11.27247 -4.114774 L0 0 L-11.27247 4.114773 Z " fill="#000000" fill-opacity="1" stroke="#000000" stroke-opacity="1" />
+  </marker>
+  <marker id="marker5" markerUnits="strokeWidth" orient="auto" refX="-11.17254" refY="0" markerWidth="13.27247" markerHeight="10.22955" viewBox="-12.27247 -5.114774 13.27247 10.22955">
+    <path d="M-11.27247 -4.114774 L0 0 L-11.27247 4.114773 Z " fill="#000000" fill-opacity="1" stroke="#000000" stroke-opacity="1" />
+  </marker>
+  <marker id="marker6" markerUnits="strokeWidth" orient="auto" refX="-11.17254" refY="0" markerWidth="13.27247" markerHeight="10.22955" viewBox="-12.27247 -5.114774 13.27247 10.22955">
+    <path d="M-11.27247 -4.114774 L0 0 L-11.27247 4.114773 Z " fill="#000000" fill-opacity="1" stroke="#000000" stroke-opacity="1" />
+  </marker>
+  <marker id="marker7" markerUnits="strokeWidth" orient="auto" refX="-11.17254" refY="0" markerWidth="13.27247" markerHeight="10.22955" viewBox="-12.27247 -5.114774 13.27247 10.22955">
+    <path d="M-11.27247 -4.114774 L0 0 L-11.27247 4.114773 Z " fill="#000000" fill-opacity="1" stroke="#000000" stroke-opacity="1" />
+  </marker>
+  <g id="layer1" inkscape:label="Layer 1" inkscape:groupmode="layer">
+    <rect x="414" y="234" width="306" height="198" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FCD6D4" fill-opacity="1" filter="url(#shadow1)" />
+    <text x="546.1792" y="338.8004" font-size="18" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">RACE</text>
+    <rect x="441" y="324" width="72" height="36" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FEF6D7" fill-opacity="1" />
+    <rect x="432" y="315" width="72" height="36" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FEF6D7" fill-opacity="1" />
+    <text x="458.6353" y="330.4559" font-size="14" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">sim
+</text>
+    <text x="445.0933" y="347.4559" font-size="14" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">adapter</text>
+    <rect x="459" y="261" width="72" height="36" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FEF6D7" fill-opacity="1" />
+    <line x1="513" y1="270" x2="567" y2="333" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    <line x1="567" y1="333" x2="567" y2="405" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    <line x1="504" y1="333" x2="531" y2="333" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    <rect x="198" y="306" width="126" height="63" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#B0FFEC" fill-opacity="1" filter="url(#shadow1)" />
+    <text x="240.7725" y="343.3004" font-size="18" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">FDz 1</text>
+    <rect x="189" y="297" width="126" height="63" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#B0FFEC" fill-opacity="1" filter="url(#shadow1)" />
+    <text x="215.728" y="334.3004" font-size="18" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">Simulator</text>
+    <rect x="531" y="387" width="72" height="36" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FEF6D7" fill-opacity="1" />
+    <text x="547.8052" y="410.9559" font-size="14" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">viewer</text>
+    <rect x="450" y="252" width="72" height="36" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FEF6D7" fill-opacity="1" />
+    <text x="460.7793" y="275.9558" font-size="14" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">importer</text>
+    <line x1="567" y1="333" x2="675" y2="324" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    <rect x="639" y="306" width="72" height="36" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FEF6D7" fill-opacity="1" />
+    <text x="647.2363" y="321.4559" font-size="14" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">proximity
+</text>
+    <text x="649.8545" y="338.4559" font-size="14" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">detector</text>
+    <line x1="567" y1="333" x2="657" y2="378" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    <rect x="630" y="360" width="72" height="36" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FEF6D7" fill-opacity="1" />
+    <text x="647.2495" y="375.4559" font-size="14" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">NMAC
+</text>
+    <text x="640.8545" y="392.4559" font-size="14" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">detector</text>
+    <rect x="315" y="468" width="81" height="45" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" />
+    <text x="333.6187" y="487.9559" font-size="14" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">cockpit
+</text>
+    <text x="336.3052" y="504.9559" font-size="14" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">viewer</text>
+    <line x1="288" y1="378" x2="327.5563" y2="457.1125" marker-end="url(#marker1)" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    <line x1="468" y1="360" x2="385.7927" y2="458.6488" marker-end="url(#marker2)" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    <line x1="336.1725" y1="324" x2="432" y2="324" marker-start="url(#marker3)" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    <line x1="324" y1="342" x2="419.8275" y2="342" marker-end="url(#marker4)" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    <text x="342.0483" y="315.8797" font-size="14" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">proximities</text>
+    <text x="368.7139" y="360.8797" font-size="14" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">pos</text>
+    <text x="405.0483" y="459.8797" font-size="14" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">proximities</text>
+    <text x="251.2139" y="438.3797" font-size="14" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">- control
+</text>
+    <text x="257.0483" y="454.3797" font-size="14" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">- state</text>
+    <g>
+      <g>
+        <path d="M335.5546 126.0501 L307.2159 126.0501 L307.2159 189 L335.5546 189" opacity="1" fill="#026C9B" fill-opacity="1" />
+        <path d="M335.5546 126.0501 L307.2159 126.0501 L307.2159 189 L335.5546 189" opacity="1" stroke="#FFFFFF" stroke-opacity="1" stroke-width="0.4" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+        <path d="M335.5546 189 L344.6049 179.9499 L344.6049 117 L316.2661 117 L307.2159 126.0501 L335.5546 126.0501 Z " opacity="1" fill="#026C9B" fill-opacity="1" />
+        <path d="M335.5546 189 L344.6049 179.9499 L344.6049 117 L316.2661 117 L307.2159 126.0501 L335.5546 126.0501 Z " opacity="1" stroke="#FFFFFF" stroke-opacity="1" stroke-width="0.4" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+        <line x1="335.5546" y1="126.0501" x2="344.6049" y2="117" opacity="1" stroke="#026C9B" stroke-opacity="1" stroke-width="0" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+        <line x1="335.5546" y1="126.0501" x2="344.6049" y2="117" opacity="1" stroke="#FFFFFF" stroke-opacity="1" stroke-width="0.4" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+        <path d="M323.9424 154.842 L323.9424 152.7701 L309.6691 152.7701 L309.6691 154.842 Z " opacity="1" fill="#026C9B" fill-opacity="1" />
+        <path d="M309.6691 154.842 L323.9424 154.842 L323.9424 152.7701 L309.6691 152.7701 Z " opacity="1" stroke="#FFFFFF" stroke-opacity="1" stroke-width="0.4" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+        <path d="M323.9424 159.1372 L323.9424 157.0653 L309.6691 157.0653 L309.6691 159.1372 Z " opacity="1" fill="#026C9B" fill-opacity="1" />
+        <path d="M309.6691 159.1372 L323.9424 159.1372 L323.9424 157.0653 L309.6691 157.0653 Z " opacity="1" stroke="#FFFFFF" stroke-opacity="1" stroke-width="0.4" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+        <path d="M323.9424 163.4394 L323.9424 161.3675 L309.6691 161.3675 L309.6691 163.4394 Z " opacity="1" fill="#026C9B" fill-opacity="1" />
+        <path d="M309.6691 163.4394 L323.9424 163.4394 L323.9424 161.3675 L309.6691 161.3675 Z " opacity="1" stroke="#FFFFFF" stroke-opacity="1" stroke-width="0.4" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+        <path d="M323.9424 167.7346 L323.9424 165.6626 L309.6691 165.6626 L309.6691 167.7346 Z " opacity="1" fill="#026C9B" fill-opacity="1" />
+        <path d="M309.6691 167.7346 L323.9424 167.7346 L323.9424 165.6626 L309.6691 165.6626 Z " opacity="1" stroke="#FFFFFF" stroke-opacity="1" stroke-width="0.4" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+        <path d="M323.9424 172.0287 L323.9424 169.9573 L309.6691 169.9573 L309.6691 172.0287 Z " opacity="1" fill="#026C9B" fill-opacity="1" />
+        <path d="M309.6691 172.0287 L323.9424 172.0287 L323.9424 169.9573 L309.6691 169.9573 Z " opacity="1" stroke="#FFFFFF" stroke-opacity="1" stroke-width="0.4" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+        <path d="M323.9424 176.324 L323.9424 174.252 L309.6691 174.252 L309.6691 176.324 Z " opacity="1" fill="#026C9B" fill-opacity="1" />
+        <path d="M309.6691 176.324 L323.9424 176.324 L323.9424 174.252 L309.6691 174.252 Z " opacity="1" stroke="#FFFFFF" stroke-opacity="1" stroke-width="0.4" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+        <path d="M323.9424 180.6262 L323.9424 178.5542 L309.6691 178.5542 L309.6691 180.6262 Z " opacity="1" fill="#026C9B" fill-opacity="1" />
+        <path d="M309.6691 180.6262 L323.9424 180.6262 L323.9424 178.5542 L309.6691 178.5542 Z " opacity="1" stroke="#FFFFFF" stroke-opacity="1" stroke-width="0.4" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+        <path d="M323.9424 184.9137 L323.9424 182.8418 L309.6691 182.8418 L309.6691 184.9137 Z " opacity="1" fill="#026C9B" fill-opacity="1" />
+        <path d="M309.6691 184.9137 L323.9424 184.9137 L323.9424 182.8418 L309.6691 182.8418 Z " opacity="1" stroke="#FFFFFF" stroke-opacity="1" stroke-width="0.4" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+        <path d="M325.6626 133.3804 L325.6443 133.653 L325.589 133.9237 L325.4969 134.1887 L325.3717 134.4488 L325.2113 134.7067 L325.018 134.9571 L324.7915 135.204 L324.5355 135.4453 L324.2482 135.679 L323.9314 135.9091 L323.5869 136.1302 L323.2149 136.3457 L322.8152 136.5536 L322.3898 136.7544 L321.9385 136.9462 L321.4634 137.1303 L320.9661 137.3053 L320.4468 137.4727 L319.9053 137.6295 L319.3436 137.7788 L318.7616 137.9148 L318.1613 138.0438 L317.5442 138.1597 L316.9088 138.2664 L316.2587 138.3625 L315.592 138.4454 L314.9121 138.5173 L314.2189 138.576 L313.5132 138.622 L312.7962 138.6554 L312.0683 138.6756 L311.3311 138.6827 C303.4173 138.6827 297 136.3087 297 133.3804 L297 145.6114 C297 148.5326 303.4173 150.9137 311.3311 150.9137 C319.2441 150.9137 325.6626 148.5326 325.6626 145.6114 Z " opacity="1" fill="#026C9B" fill-opacity="1" />
+        <path d="M325.6626 133.3804 L325.6443 133.653 L325.589 133.9237 L325.4969 134.1887 L325.3717 134.4488 L325.2113 134.7067 L325.018 134.9571 L324.7915 135.204 L324.5355 135.4453 L324.2482 135.679 L323.9314 135.9091 L323.5869 136.1302 L323.2149 136.3457 L322.8152 136.5536 L322.3898 136.7544 L321.9385 136.9462 L321.4634 137.1303 L320.9661 137.3053 L320.4468 137.4727 L319.9053 137.6295 L319.3436 137.7788 L318.7616 137.9148 L318.1613 138.0438 L317.5442 138.1597 L316.9088 138.2664 L316.2587 138.3625 L315.592 138.4454 L314.9121 138.5173 L314.2189 138.576 L313.5132 138.622 L312.7962 138.6554 L312.0683 138.6756 L311.3311 138.6827 C303.4173 138.6827 297 136.3087 297 133.3804 L297 145.6114 C297 148.5326 303.4173 150.9137 311.3311 150.9137 C319.2441 150.9137 325.6626 148.5326 325.6626 145.6114 Z " opacity="1" stroke="#FFFFFF" stroke-opacity="1" stroke-width="0.4" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+        <path d="M311.3311 138.6827 L312.0683 138.6756 L312.7962 138.6554 L313.5132 138.622 L314.2189 138.576 L314.9121 138.5173 L315.592 138.4454 L316.2587 138.3625 L316.9088 138.2664 L317.5442 138.1597 L318.1613 138.0438 L318.7616 137.9148 L319.3436 137.7788 L319.9053 137.6295 L320.4468 137.4727 L320.9661 137.3053 L321.4634 137.1303 L321.9385 136.9462 L322.3898 136.7544 L322.8152 136.5536 L323.2149 136.3457 L323.5869 136.1302 L323.9314 135.9091 L324.2482 135.679 L324.5355 135.4453 L324.7915 135.204 L325.018 134.9571 L325.2113 134.7067 L325.3717 134.4488 L325.4969 134.1887 L325.589 133.9237 L325.6443 133.653 L325.6626 133.3804 C325.6626 130.4465 319.2441 128.0725 311.3311 128.0725 C303.4173 128.0725 297 130.4465 297 133.3804 C297 136.3087 303.4173 138.6827 311.3311 138.6827 Z " opacity="1" fill="#026C9B" fill-opacity="1" />
+        <path d="M311.3311 138.6827 L312.0683 138.6756 L312.7962 138.6554 L313.5132 138.622 L314.2189 138.576 L314.9121 138.5173 L315.592 138.4454 L316.2587 138.3625 L316.9088 138.2664 L317.5442 138.1597 L318.1613 138.0438 L318.7616 137.9148 L319.3436 137.7788 L319.9053 137.6295 L320.4468 137.4727 L320.9661 137.3053 L321.4634 137.1303 L321.9385 136.9462 L322.3898 136.7544 L322.8152 136.5536 L323.2149 136.3457 L323.5869 136.1302 L323.9314 135.9091 L324.2482 135.679 L324.5355 135.4453 L324.7915 135.204 L325.018 134.9571 L325.2113 134.7067 L325.3717 134.4488 L325.4969 134.1887 L325.589 133.9237 L325.6443 133.653 L325.6626 133.3804 C325.6626 130.4465 319.2441 128.0725 311.3311 128.0725 C303.4173 128.0725 297 130.4465 297 133.3804 C297 136.3087 303.4173 138.6827 311.3311 138.6827 Z " opacity="1" stroke="#FFFFFF" stroke-opacity="1" stroke-width="0.4" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+        <path d="M341.008 144.4306 L340.9896 144.7034 L340.9343 144.9739 L340.8423 145.2395 L340.717 145.499 L340.5568 145.757 L340.3634 146.0074 L340.1386 146.2542 L339.8808 146.4956 L339.5936 146.7292 L339.2786 146.9594 L338.9323 147.1805 L338.5603 147.396 L338.1606 147.6044 L337.7352 147.8052 L337.284 147.9964 L336.8088 148.1805 L336.3116 148.3556 L335.7922 148.523 L335.2507 148.6798 L334.689 148.829 L334.107 148.965 L333.5066 149.0941 L332.8896 149.2104 L332.2542 149.3172 L331.6041 149.4127 L330.9373 149.4957 L330.2578 149.5676 L329.5652 149.6262 L328.858 149.6723 L328.1416 149.7056 L327.4142 149.7259 L326.6756 149.7335 C318.7634 149.7335 312.3454 147.359 312.3454 144.4306 L312.3454 156.6621 C312.3454 159.5829 318.7634 161.9644 326.6756 161.9644 C334.5896 161.9644 341.008 159.5829 341.008 156.6621 Z " opacity="1" fill="#026C9B" fill-opacity="1" />
+        <path d="M341.008 144.4306 L340.9896 144.7034 L340.9343 144.9739 L340.8423 145.2395 L340.717 145.499 L340.5568 145.757 L340.3634 146.0074 L340.1386 146.2542 L339.8808 146.4956 L339.5936 146.7292 L339.2786 146.9594 L338.9323 147.1805 L338.5603 147.396 L338.1606 147.6044 L337.7352 147.8052 L337.284 147.9964 L336.8088 148.1805 L336.3116 148.3556 L335.7922 148.523 L335.2507 148.6798 L334.689 148.829 L334.107 148.965 L333.5066 149.0941 L332.8896 149.2104 L332.2542 149.3172 L331.6041 149.4127 L330.9373 149.4957 L330.2578 149.5676 L329.5652 149.6262 L328.858 149.6723 L328.1416 149.7056 L327.4142 149.7259 L326.6756 149.7335 C318.7634 149.7335 312.3454 147.359 312.3454 144.4306 L312.3454 156.6621 C312.3454 159.5829 318.7634 161.9644 326.6756 161.9644 C334.5896 161.9644 341.008 159.5829 341.008 156.6621 Z " opacity="1" stroke="#FFFFFF" stroke-opacity="1" stroke-width="0.4" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+        <path d="M326.6756 149.7335 L327.4142 149.7259 L328.1416 149.7056 L328.858 149.6723 L329.5652 149.6262 L330.2578 149.5676 L330.9373 149.4957 L331.6041 149.4127 L332.2542 149.3172 L332.8896 149.2104 L333.5066 149.0941 L334.107 148.965 L334.689 148.829 L335.2507 148.6798 L335.7922 148.523 L336.3116 148.3556 L336.8088 148.1805 L337.284 147.9964 L337.7352 147.8052 L338.1606 147.6044 L338.5603 147.396 L338.9323 147.1805 L339.2786 146.9594 L339.5936 146.7292 L339.8808 146.4956 L340.1386 146.2542 L340.3634 146.0074 L340.5568 145.757 L340.717 145.499 L340.8423 145.2395 L340.9343 144.9739 L340.9896 144.7034 L341.008 144.4306 C341.008 141.4967 334.5896 139.1228 326.6756 139.1228 C318.7634 139.1228 312.3454 141.4967 312.3454 144.4306 C312.3454 147.359 318.7634 149.7335 326.6756 149.7335 Z " opacity="1" fill="#026C9B" fill-opacity="1" />
+        <path d="M326.6756 149.7335 L327.4142 149.7259 L328.1416 149.7056 L328.858 149.6723 L329.5652 149.6262 L330.2578 149.5676 L330.9373 149.4957 L331.6041 149.4127 L332.2542 149.3172 L332.8896 149.2104 L333.5066 149.0941 L334.107 148.965 L334.689 148.829 L335.2507 148.6798 L335.7922 148.523 L336.3116 148.3556 L336.8088 148.1805 L337.284 147.9964 L337.7352 147.8052 L338.1606 147.6044 L338.5603 147.396 L338.9323 147.1805 L339.2786 146.9594 L339.5936 146.7292 L339.8808 146.4956 L340.1386 146.2542 L340.3634 146.0074 L340.5568 145.757 L340.717 145.499 L340.8423 145.2395 L340.9343 144.9739 L340.9896 144.7034 L341.008 144.4306 C341.008 141.4967 334.5896 139.1228 326.6756 139.1228 C318.7634 139.1228 312.3454 141.4967 312.3454 144.4306 C312.3454 147.359 318.7634 149.7335 326.6756 149.7335 Z " opacity="1" stroke="#FFFFFF" stroke-opacity="1" stroke-width="0.4" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+      </g>
+    </g>
+    <text x="244.1983" y="154.8797" font-size="14" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">SWIM 
+</text>
+    <text x="243.8018" y="170.8797" font-size="14" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">server</text>
+    <g>
+      <g>
+        <path d="M479.3065 143.4403 L481.1295 143.4311 L482.9283 143.4053 L484.7014 143.3627 L486.4455 143.3035 L488.1594 143.2293 L489.8397 143.138 L491.4868 143.0334 L493.0943 142.9137 L494.6639 142.7799 L496.191 142.631 L497.6741 142.4701 L499.1116 142.2958 L500.5006 142.1091 L501.8394 141.9101 L503.1236 141.6992 L504.3548 141.4774 L505.5281 141.2439 L506.6408 141.0008 L507.6928 140.7473 L508.681 140.4847 L509.6024 140.2129 L510.4555 139.9323 L511.2372 139.6425 L511.9461 139.3448 L512.5807 139.0413 L513.1378 138.7286 L513.6159 138.4113 L514.0106 138.0865 L514.3218 137.7555 L514.548 137.4198 L514.6846 137.0784 L514.7302 136.734 C514.7302 133.0284 498.8687 130.0273 479.3065 130.0273 C459.7457 130.0273 443.8894 133.0284 443.8894 136.734 C443.8894 140.4392 459.7457 143.4403 479.3065 143.4403 Z " opacity="1" fill="#FFFFFF" fill-opacity="1" />
+        <path d="M479.3065 143.4403 L481.1295 143.4311 L482.9283 143.4053 L484.7014 143.3627 L486.4455 143.3035 L488.1594 143.2293 L489.8397 143.138 L491.4868 143.0334 L493.0943 142.9137 L494.6639 142.7799 L496.191 142.631 L497.6741 142.4701 L499.1116 142.2958 L500.5006 142.1091 L501.8394 141.9101 L503.1236 141.6992 L504.3548 141.4774 L505.5281 141.2439 L506.6408 141.0008 L507.6928 140.7473 L508.681 140.4847 L509.6024 140.2129 L510.4555 139.9323 L511.2372 139.6425 L511.9461 139.3448 L512.5807 139.0413 L513.1378 138.7286 L513.6159 138.4113 L514.0106 138.0865 L514.3218 137.7555 L514.548 137.4198 L514.6846 137.0784 L514.7302 136.734 C514.7302 133.0284 498.8687 130.0273 479.3065 130.0273 C459.7457 130.0273 443.8894 133.0284 443.8894 136.734 C443.8894 140.4392 459.7457 143.4403 479.3065 143.4403 Z " opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="0.14999" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+        <path d="M479.4962 155.2106 L481.3193 155.1681 L483.1166 155.0438 L484.8866 154.8424 L486.6277 154.5685 L488.337 154.227 L490.0128 153.8235 L491.6522 153.3602 L493.2552 152.8441 L494.8173 152.2796 L496.3368 151.6725 L497.8123 151.0242 L499.2422 150.3408 L500.622 149.6292 L501.9517 148.8928 L503.2284 148.1353 L504.4489 147.3611 L505.6132 146.5781 L506.7182 145.7884 L507.7611 144.9963 L508.7402 144.2083 L509.654 143.4282 L510.4995 142.6614 L511.2737 141.9119 L511.9765 141.1847 L512.6035 140.4834 L513.1561 139.8155 L513.6281 139.1822 L514.0197 138.5919 L514.3264 138.0469 L514.5495 137.552 L514.6846 137.1134 L514.7302 136.734 C514.7302 133.0284 498.8687 130.0273 479.3065 130.0273 C459.7457 130.0273 443.8894 133.0284 443.8894 136.734 C443.8894 140.4392 459.9354 155.2106 479.4962 155.2106 Z " opacity="1" fill="#036998" fill-opacity="1" />
+        <path d="M479.3065 143.4403 L481.1295 143.4311 L482.9283 143.4053 L484.7014 143.3627 L486.4455 143.3035 L488.1594 143.2293 L489.8397 143.138 L491.4868 143.0334 L493.0943 142.9137 L494.6639 142.7799 L496.191 142.631 L497.6741 142.4701 L499.1116 142.2958 L500.5006 142.1091 L501.8394 141.9101 L503.1236 141.6992 L504.3548 141.4774 L505.5281 141.2439 L506.6408 141.0008 L507.6928 140.7473 L508.681 140.4847 L509.6024 140.2129 L510.4555 139.9323 L511.2372 139.6425 L511.9461 139.3448 L512.5807 139.0413 L513.1378 138.7286 L513.6159 138.4113 L514.0106 138.0865 L514.3218 137.7555 L514.548 137.4198 L514.6846 137.0784 L514.7302 136.734 C514.7302 133.0284 498.8687 130.0273 479.3065 130.0273 C459.7457 130.0273 443.8894 133.0284 443.8894 136.734 C443.8894 140.4392 459.7457 143.4403 479.3065 143.4403 Z " opacity="1" fill="#FFFFFF" fill-opacity="1" />
+        <path d="M479.3065 143.4403 L481.1295 143.4311 L482.9283 143.4053 L484.7014 143.3627 L486.4455 143.3035 L488.1594 143.2293 L489.8397 143.138 L491.4868 143.0334 L493.0943 142.9137 L494.6639 142.7799 L496.191 142.631 L497.6741 142.4701 L499.1116 142.2958 L500.5006 142.1091 L501.8394 141.9101 L503.1236 141.6992 L504.3548 141.4774 L505.5281 141.2439 L506.6408 141.0008 L507.6928 140.7473 L508.681 140.4847 L509.6024 140.2129 L510.4555 139.9323 L511.2372 139.6425 L511.9461 139.3448 L512.5807 139.0413 L513.1378 138.7286 L513.6159 138.4113 L514.0106 138.0865 L514.3218 137.7555 L514.548 137.4198 L514.6846 137.0784 L514.7302 136.734 C514.7302 133.0284 498.8687 130.0273 479.3065 130.0273 C459.7457 130.0273 443.8894 133.0284 443.8894 136.734 C443.8894 140.4392 459.7457 143.4403 479.3065 143.4403 Z " opacity="1" stroke="#036998" stroke-opacity="1" stroke-width="0.39999" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+        <path d="M470.0984 131.7109 C464.5122 132.0494 459.5499 132.7019 455.6775 133.5674" opacity="1" stroke="#036998" stroke-opacity="1" stroke-width="0.375" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+        <path d="M470.4778 133.1105 C465.0526 133.5082 460.3089 134.232 456.7211 135.1809" opacity="1" stroke="#036998" stroke-opacity="1" stroke-width="0.375" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+        <path d="M470.8635 134.6165 C465.5565 135.0792 460.9844 135.8914 457.6816 136.9358" opacity="1" stroke="#036998" stroke-opacity="1" stroke-width="0.375" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+        <path d="M471.6285 136.3725 C466.4461 136.8766 462.0288 137.748 458.9563 138.8683" opacity="1" stroke="#036998" stroke-opacity="1" stroke-width="0.375" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+        <path d="M471.9958 138.0089 C467.0805 138.5723 462.9715 139.5207 460.2315 140.7065" opacity="1" stroke="#036998" stroke-opacity="1" stroke-width="0.375" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+        <path d="M472.6653 139.9414 C468.7641 140.4755 465.4549 141.2756 463.0776 142.2608" opacity="1" stroke="#036998" stroke-opacity="1" stroke-width="0.375" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+        <path d="M472.8914 141.7388 C471.3203 142.0223 469.8737 142.3609 468.5803 142.7406" opacity="1" stroke="#036998" stroke-opacity="1" stroke-width="0.375" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+        <path d="M443.7946 137.3744 L479.4962 119.4666 L514.7302 136.734" opacity="1" stroke="#036998" stroke-opacity="1" stroke-width="0.39999" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+        <path d="M479.6859 123.9965 L479.8104 123.9948 L479.9333 123.9902 L480.0548 123.9827 L480.1733 123.9723 L480.2901 123.9585 L480.4055 123.9431 L480.5179 123.9235 L480.6271 123.9023 L480.7349 123.8781 L480.8381 123.8506 L480.9398 123.8218 L481.0384 123.7913 L481.1326 123.7568 L481.2252 123.7217 L481.3117 123.6838 L481.3968 123.6429 L481.4772 123.6016 L481.5531 123.5578 L481.6244 123.512 L481.6927 123.4653 L481.7549 123.4148 L481.8126 123.3648 L481.8673 123.3132 L481.9158 123.2585 L481.9583 123.2039 L481.9963 123.148 L482.0297 123.0901 L482.0571 123.0309 L482.0783 122.9717 L482.0936 122.9112 L482.1026 122.8504 L482.1056 122.7866 C482.1056 122.1232 481.0204 121.5783 479.6859 121.5783 C478.3517 121.5783 477.2739 122.1232 477.2739 122.7866 C477.2739 123.4574 478.3517 123.9965 479.6859 123.9965 Z " opacity="1" fill="#036998" fill-opacity="1" />
+        <path d="M479.6859 117 L478.9269 141.8572 L480.6347 141.8572 Z " opacity="1" fill="#036998" fill-opacity="1" />
+        <path d="M488.9836 159.5037 L488.9836 155.5191 L471.9064 155.5191 L471.9064 159.5037 Z " opacity="1" fill="#036998" fill-opacity="1" />
+        <path d="M475.1319 159.1242 L485.9476 159.1242 L485.9476 166.3345 C485.9476 166.3345 474.9422 169.7501 475.1319 169.7501 C475.3217 169.7501 475.1319 159.1242 475.1319 159.1242 Z " opacity="1" fill="#036998" fill-opacity="1" />
+      </g>
+    </g>
+    <text x="421.8569" y="168.3797" font-size="14" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">ADS-B
+</text>
+    <text x="418.3535" y="184.3797" font-size="14" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">receiver</text>
+    <g>
+      <g>
+        <g>
+          <path d="M594 142.6094 L594 181.5155 Q601.0001 188 621.9999 188 Q642.9999 188 650 181.5155 L650 142.6094 Z " opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" />
+          <ellipse cx="622" cy="142.6093" rx="28" ry="6.484338" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" />
+        </g>
+      </g>
+    </g>
+    <g>
+      <g>
+        <g>
+          <path d="M585 133.6094 L585 172.5155 Q592.0001 179 612.9999 179 Q633.9999 179 641 172.5155 L641 133.6094 Z " opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" />
+          <text x="591.5596" y="162.2605" font-size="14" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">archive</text>
+          <ellipse cx="613" cy="133.6093" rx="28" ry="6.484338" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" />
+        </g>
+      </g>
+    </g>
+    <line x1="369" y1="180" x2="449.4948" y2="244.3959" marker-end="url(#marker5)" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    <line x1="486" y1="180" x2="486" y2="239.8275" marker-end="url(#marker6)" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    <rect x="558" y="252" width="72" height="36" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FEF6D7" fill-opacity="1" />
+    <line x1="603" y1="198" x2="596.3873" y2="231.0638" marker-end="url(#marker7)" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    <line x1="567" y1="333" x2="585" y2="261" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    <ellipse cx="567" cy="333" rx="36" ry="27" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFDAD9" fill-opacity="1" />
+    <text x="542.0818" y="340.7" font-size="19" fill="#000000" fill-opacity="1" font-family="Helvetica" font-weight="bold" font-style="normal">RACE</text>
+    <rect x="549" y="243" width="72" height="36" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FEF6D7" fill-opacity="1" />
+    <text x="560.9312" y="266.9558" font-size="14" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">replayer</text>
+    <text x="343.9041" y="532.1211" font-size="15" fill="#0000FF" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="italic">(xplane)</text>
+    <text x="221" y="388.1211" font-size="15" fill="#0000FF" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="italic">(fdz)</text>
+    <text x="430.7158" y="217.1211" font-size="15" fill="#0000FF" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="italic">external data import</text>
+    <text x="740.3252" y="325.6211" font-size="15" fill="#0000FF" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="italic">realtime
+</text>
+    <text x="739.9041" y="342.6211" font-size="15" fill="#0000FF" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="italic">analysis</text>
+    <text x="600.1455" y="455.6211" font-size="15" fill="#0000FF" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="italic">visualization</text>
+    <text x="422.813" y="392.6211" font-size="15" fill="#0000FF" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="italic">adapters</text>
+  </g>
+</svg>

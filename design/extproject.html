@@ -71,6 +71,7 @@
                         <li><span class="toc level2"><a href="channeltopics.html">ChannelTopics</a></span></li>
                         <li><span class="toc level2"><a href="embedded-objects.html">Embedded Objects</a></span></li>
                         <li><span class="toc level2"><a href="connectivity.html">Connecting External Systems</a></span></li>
+                        <li><span class="toc level2"><a href="rgis.html">RACE GIS Support</a></span></li>
                         <li><span class="toc level2"><a href="archive-replay.html">Archive and Replay</a></span></li>
                         <li><span class="toc level2"><a href="worldwind.html">WorldWind Viewer</a></span></li>
                         <li><span class="toc level2"><a href="http-server.html">HttpServer</a></span></li>
@@ -104,8 +105,12 @@
                     <li>
                       <p class="toc level1"><a href="../known-problems.html">Known Problems</a></p>
                       <ul>
-                        <li><span class="toc level2"><a href="../known-problems.html#build">Build</a></span></li>
-                        <li><span class="toc level2"><a href="../known-problems.html#runtime">Runtime</a></span></li>
+                        <li><span class="toc level2"><a href="../known-problems.html#problems-with-worldwind-jogl-native-libraries-on-linux">problems with WorldWind/JOGL native libraries on Linux</a></span></li>
+                        <li><span class="toc level2"><a href="../known-problems.html#incompatible-class-file-errors-during-race-startup">incompatible class file errors during RACE startup</a></span></li>
+                        <li><span class="toc level2"><a href="../known-problems.html#kafka-clients">kafka-clients</a></span></li>
+                        <li><span class="toc level2"><a href="../known-problems.html#kafkaserver">KafkaServer</a></span></li>
+                        <li><span class="toc level2"><a href="../known-problems.html#windows-console-output">Windows console output</a></span></li>
+                        <li><span class="toc level2"><a href="../known-problems.html#race-not-starting-because-of-racevieweractor-timeout">RACE not starting because of RaceViewerActor timeout</a></span></li>
                       </ul>
                     </li>
                     <li><span class="toc level1"><a href="../changes.html">Changes</a></span></li>
@@ -135,8 +140,8 @@
             <p>Artifacts (jars) of various RACE <a href="layers-and-modules.html#layers-and-modules">Layers and Modules</a> are published on the <a href="http://central.sonatype.org/">Central_Repository</a> within the
             <code>gov.nasa.race</code> group, and can be imported into external projects by declaring them as normal dependencies within
             their respective build configurations. For <a href="http://www.scala-sbt.org/">SBT</a>, a typical dependency definition in <code>build.sbt</code> for the latest
-            1.3.x release of RACE would be:</p>
-            <pre><code>libraryDependencies += &quot;gov.nasa.race&quot; %% &quot;race-core&quot; % &quot;1.3.+&quot;</code></pre>
+            1.5.x release of RACE would be:</p>
+            <pre><code>libraryDependencies += &quot;gov.nasa.race&quot; %% &quot;race-core&quot; % &quot;1.5.+&quot;</code></pre>
             <p>Typical RACE module dependencies are</p>
             <ul>
               <li><code>race-core</code> - the basic RACE module containing <code>RaceActor</code>, <code>RaceActorSystem</code> and other core classes</li>
@@ -160,8 +165,8 @@ $ sbt publishLocal</code></pre>
             <p>Typical version specifications in dependencies are:</p>
             <ul>
               <li><code>&quot;latest.release&quot;</code> - the latest</li>
-              <li><code>&quot;1.3.+&quot;</code> - the latest version within the &quot;1.3&quot; line, to ensure API compatibility</li>
-              <li><code>&quot;1.3.1&quot;</code> - an explicit version</li>
+              <li><code>&quot;1.5.+&quot;</code> - the latest version within the &quot;1.5&quot; line, to ensure API compatibility</li>
+              <li><code>&quot;1.5.3&quot;</code> - an explicit version</li>
             </ul>
             <p>While version specifications for RACE modules could differ, it is recommended to use a single specification for all
             modules, e.g. by defining a common <code>raceVersion</code> variable.</p>
@@ -179,7 +184,7 @@ fork in run := true
 outputStrategy := Some(StdoutOutput)
 Keys.connectInput in run := true
 
-val raceVersion = &quot;1.3.+&quot;  // the latest revision within the &quot;1.3&quot; line
+val raceVersion = &quot;1.5.+&quot;  // the latest revision within the &quot;1.5&quot; line
 
 lazy val root = (project in file(&quot;.&quot;)).
   enablePlugins(JavaAppPackaging). // provides &#39;stage&#39; task to generate stand alone scripts that can be executed outside SBT

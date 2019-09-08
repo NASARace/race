@@ -18,11 +18,8 @@
             <p>~</p>
             <p><a href="https://ti.arc.nasa.gov/profile/pcmehlitz/" rel="author">Peter.C.Mehlitz</a><br/>
             SGT Inc, NASA Ames Research Center</p>
-            
             </div><div class="slide">
-            
-            <h2 id="slides" class="section">Slides</h2>
-            <div class="toc">
+            <h2 id="slides" class="section">Slides</h2><div class="toc">
               <ul>
                 <li><span class="toc level1"><a href="#slides">Slides</a></span></li>
                 <li><span class="toc level1"><a href="#outline">Outline</a></span></li>
@@ -44,40 +41,24 @@
                 <li><span class="toc level1"><a href="#ui-framework">UI Framework</a></span></li>
               </ul>
             </div>
-            
             </div><div class="slide">
-            
-            <h2 id="outline" class="section">Outline</h2>
-            <p>more <em>show</em>, less <em>tell</em>:</p>
-            <ol class="arabic">
+            <h2 id="outline" class="section">Outline</h2><p>more <em>show</em>, less <em>tell</em>:</p><ol class="arabic">
               <li>what you will see</li>
               <li>demo</li>
               <li>how it works</li>
             </ol>
-            
             </div><div class="slide">
-            
-            <h2 id="worldwind-application-challenges" class="section">WorldWind Application Challenges</h2>
-            <p>don&#39;t re-invent the wheel:</p>
-            <ul>
+            <h2 id="worldwind-application-challenges" class="section">WorldWind Application Challenges</h2><p>don&#39;t re-invent the wheel:</p><ul>
               <li>how to get &amp; process data</li>
               <li>how to add data-specific UI</li>
-            </ul>
-            <img src="../images/geo-app.svg" class="center scale60">
-            
+            </ul><img src="../images/geo-app.svg" class="center scale60">
             </div><div class="slide">
-            
-            <h2 id="race-to-the-rescue" class="section">RACE to the rescue</h2>
-            <ul>
+            <h2 id="race-to-the-rescue" class="section">RACE to the rescue</h2><ul>
               <li>embed WorldWind into RACE application</li>
               <li>RACE adds data acquisition and (WorldWind specific) UI framework</li>
-            </ul>
-            <img src="../images/geo-race.svg" class="center scale70">
-            
+            </ul><img src="../images/geo-race.svg" class="center scale70">
             </div><div class="slide">
-            
-            <h2 id="perfect-symbiosis" class="section">Perfect Symbiosis</h2>
-            <ul>
+            <h2 id="perfect-symbiosis" class="section">Perfect Symbiosis</h2><ul>
               <li>
                 <p>RACE</p>
                 <ul>
@@ -97,11 +78,8 @@
                 </ul>
               </li>
             </ul>
-            
             </div><div class="slide">
-            
-            <h2 id="worldwind-perspective-layers-and-panels" class="section">WorldWind perspective: Layers and Panels</h2>
-            <ul>
+            <h2 id="worldwind-perspective-layers-and-panels" class="section">WorldWind perspective: Layers and Panels</h2><ul>
               <li>
                 <p>RACE provides</p>
                 <ul>
@@ -109,110 +87,67 @@
                   <li>extensible UI framework of (Swing) <em>Panels</em></li>
                 </ul>
               </li>
-            </ul>
-            <img src="../images/race-ww.svg" class="center scale60">
-            
+            </ul><img src="../images/race-ww.svg" class="center scale60">
             </div><div class="slide">
-            
-            <h2 id="race-perspective-lego-box-of-actors" class="section">RACE perspective: Lego box of actors</h2>
-            <ul>
+            <h2 id="race-perspective-lego-box-of-actors" class="section">RACE perspective: Lego box of actors</h2><ul>
               <li>WorldWind as one of the building blocks</li>
               <li>don&#39;t look at the details (yet)</li>
-            </ul>
-            <img src="../images/swim-sbs-all-ww.svg" class="center scale65">
-            
+            </ul><img src="../images/swim-sbs-all-ww.svg" class="center scale65">
             </div><div class="slide">
-            
-            <h2 id="demos" class="section">Demos</h2>
-            <ul>
+            <h2 id="demos" class="section">Demos</h2><ul>
               <li>live data import (lots of!)</li>
               <li>synchronized remote viewer</li>
               <li>virtual reality</li>
             </ul>
-            
             </div><div class="slide">
-            
-            <h2 id="concrete-schematics" class="section">Concrete Schematics</h2>
-            <img src="../images/swim-sbs-all-ww.svg" class="center scale85">
-            
+            <h2 id="concrete-schematics" class="section">Concrete Schematics</h2><img src="../images/swim-sbs-all-ww.svg" class="center scale85">
             </div><div class="slide">
-            
-            <h2 id="abstract-schematics" class="section">Abstract Schematics</h2>
-            <ul>
+            <h2 id="abstract-schematics" class="section">Abstract Schematics</h2><ul>
               <li>RACE is <strong>not</strong> a monolythic application, its a generic framework</li>
               <li>uniform building blocks: <strong>Actors</strong></li>
               <li>composition and interaction of actors is configured</li>
-            </ul>
-            <img src="../images/race-dataflow.svg" class="center scale55">
-            
+            </ul><img src="../images/race-dataflow.svg" class="center scale55">
             </div><div class="slide">
-            
-            <h2 id="so-what-are-these-actors-anyway" class="section">So what are these actors anyway?</h2>
-            <ul>
+            <h2 id="so-what-are-these-actors-anyway" class="section">So what are these actors anyway?</h2><ul>
               <li>concurrency programming model since 1973 (Hewitt et el)</li>
               <li>objects that communicate only through async messages ⟹ no shared state</li>
               <li>process messages one-at-a-time ⟹ sequential code</li>
-            </ul>
-            <img src="../images/actor.svg" class="center scale55">
-            
+            </ul><img src="../images/actor.svg" class="center scale55">
             </div><div class="slide">
-            
-            <h2 id="how-are-actors-implemented-in-race" class="section">How are actors implemented in RACE?</h2>
-            <ul>
+            <h2 id="how-are-actors-implemented-in-race" class="section">How are actors implemented in RACE?</h2><ul>
               <li>using <strong>Akka</strong> <a href="http://akka.io">http://akka.io</a></li>
               <li>programmed in Scala (running on JVM)</li>
               <li>extended by <code>RaceActor</code> (configuration, state, initialization, remoting)</li>
               <li>uniform programming model for large (WWJ) <em>and</em> small components:</li>
-            </ul>
-            <pre>
+            </ul><pre>
    class ProbeActor (config: Config) extends SubscribingRaceActor {
      def handleMessage = {
        case BusEvent(channel,msg,sender) =&gt; println(msg)
      }
    }
 </pre>
-            
             </div><div class="slide">
-            
-            <h2 id="actors-don-t-live-in-a-vacuum---raceactorsystems" class="section">Actors don&#39;t live in a vacuum - RaceActorSystems</h2>
-            <ul>
+            <h2 id="actors-don-t-live-in-a-vacuum---raceactorsystems" class="section">Actors don&#39;t live in a vacuum - RaceActorSystems</h2><ul>
               <li>deterministic, synchronous initialization &amp; termination</li>
               <li>central supervision &amp; control (master)</li>
               <li>distributed - can seamlessly communicate with each other</li>
-            </ul>
-            <img src="../images/race-overview-2.svg" class="center scale60">
-            
+            </ul><img src="../images/race-overview-2.svg" class="center scale60">
             </div><div class="slide">
-            
-            <h2 id="congratulations---you-have-reached-the-bonus-part" class="section">Congratulations - you have reached the bonus part</h2>
-            <ul>
+            <h2 id="congratulations---you-have-reached-the-bonus-part" class="section">Congratulations - you have reached the bonus part</h2><ul>
               <li>RaceLayers and AkkaSwingBridge</li>
               <li>data-on-demand: ChannelTopics</li>
               <li>remote viewer synchronization</li>
               <li>UI framework - Panels</li>
             </ul>
-            
             </div><div class="slide">
-            
-            <h2 id="race-and-worldwind-under-the-hood" class="section">RACE and WorldWind under the hood</h2>
-            <p>thread-safe data-import and UI model:
+            <h2 id="race-and-worldwind-under-the-hood" class="section">RACE and WorldWind under the hood</h2><p>thread-safe data-import and UI model:
             <img src="../images/race-viewer.svg" class="center scale80"></p>
-            
             </div><div class="slide">
-            
-            <h2 id="data-integration-on-demand---channeltopics" class="section">Data Integration on demand - ChannelTopics</h2>
-            <p>don&#39;t overwhelm UI threads (0.1 sec rule) ⟹ ChannelTopic &quot;producer valves&quot;</p>
-            <img src="../images/race-channeltopics.svg" class="center scale75">
-            
+            <h2 id="data-integration-on-demand---channeltopics" class="section">Data Integration on demand - ChannelTopics</h2><p>don&#39;t overwhelm UI threads (0.1 sec rule) ⟹ ChannelTopic &quot;producer valves&quot;</p><img src="../images/race-channeltopics.svg" class="center scale75">
             </div><div class="slide">
-            
-            <h2 id="synchronized-viewers" class="section">Synchronized Viewers</h2>
-            <img src="../images/raceviewer-sync.svg" class="center scale85">
-            
+            <h2 id="synchronized-viewers" class="section">Synchronized Viewers</h2><img src="../images/raceviewer-sync.svg" class="center scale85">
             </div><div class="slide">
-            
-            <h2 id="ui-framework" class="section">UI Framework</h2>
-            <img src="../images/race-panels.svg" class="center scale85">
+            <h2 id="ui-framework" class="section">UI Framework</h2><img src="../images/race-panels.svg" class="center scale85">
         </div>
     </body>
 

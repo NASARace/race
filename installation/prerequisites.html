@@ -78,6 +78,7 @@
                         <li><span class="toc level2"><a href="../design/channeltopics.html">ChannelTopics</a></span></li>
                         <li><span class="toc level2"><a href="../design/embedded-objects.html">Embedded Objects</a></span></li>
                         <li><span class="toc level2"><a href="../design/connectivity.html">Connecting External Systems</a></span></li>
+                        <li><span class="toc level2"><a href="../design/rgis.html">RACE GIS Support</a></span></li>
                         <li><span class="toc level2"><a href="../design/archive-replay.html">Archive and Replay</a></span></li>
                         <li><span class="toc level2"><a href="../design/worldwind.html">WorldWind Viewer</a></span></li>
                         <li><span class="toc level2"><a href="../design/http-server.html">HttpServer</a></span></li>
@@ -111,8 +112,12 @@
                     <li>
                       <p class="toc level1"><a href="../known-problems.html">Known Problems</a></p>
                       <ul>
-                        <li><span class="toc level2"><a href="../known-problems.html#build">Build</a></span></li>
-                        <li><span class="toc level2"><a href="../known-problems.html#runtime">Runtime</a></span></li>
+                        <li><span class="toc level2"><a href="../known-problems.html#problems-with-worldwind-jogl-native-libraries-on-linux">problems with WorldWind/JOGL native libraries on Linux</a></span></li>
+                        <li><span class="toc level2"><a href="../known-problems.html#incompatible-class-file-errors-during-race-startup">incompatible class file errors during RACE startup</a></span></li>
+                        <li><span class="toc level2"><a href="../known-problems.html#kafka-clients">kafka-clients</a></span></li>
+                        <li><span class="toc level2"><a href="../known-problems.html#kafkaserver">KafkaServer</a></span></li>
+                        <li><span class="toc level2"><a href="../known-problems.html#windows-console-output">Windows console output</a></span></li>
+                        <li><span class="toc level2"><a href="../known-problems.html#race-not-starting-because-of-racevieweractor-timeout">RACE not starting because of RaceViewerActor timeout</a></span></li>
                       </ul>
                     </li>
                     <li><span class="toc level1"><a href="../changes.html">Changes</a></span></li>
@@ -157,8 +162,8 @@
             <h2 id="software" class="section">Software</h2>
             
             <h3 id="java-jdk" class="section">Java JDK</h3>
-            <p>RACE needs to have a working Java JDK &gt;=1.8 installed on developent machines,
-            which can be obtained from the <a href="http://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html">Oracle website</a>. You can check the current
+            <p>RACE needs to have a working Java JDK &gt;=11 installed on developent machines,
+            preferably obtained from the <a href="https://jdk.java.net">OpenJDK</a> website. You can check the current
             java version by running</p>
             <pre><code>&gt; java -version</code></pre>
             <p>from the command line.</p>
@@ -167,9 +172,10 @@
             <p>and setting <code>JAVA_HOME</code> in your <code>~/.profile</code> accordingly.</p>
             
             <h3 id="sbt-1" class="section">SBT</h3>
-            <p>The <a href="http://www.scala-sbt.org/">Scala Build Tool</a> &gt;=13.15 is used to build and run RACE. Please refer
+            <p>The <a href="http://www.scala-sbt.org/">Scala Build Tool</a> &gt;=1.0 is used to build and run RACE. Please refer
             to the <a href="http://www.scala-sbt.org/0.13/tutorial/index.html">SBT documentation</a> for details of how to install SBT on
-            various platforms.</p>
+            various platforms. The RACE build itself uses Scala &gt;=2.13.0, which is installed
+            by SBT</p>
             
             <h3 id="git-1" class="section">Git</h3>
             <p>To obtain and update RACE sources, we use <a href="https://git-scm.com/">Git</a> as the distributed version

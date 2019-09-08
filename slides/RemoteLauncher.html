@@ -14,11 +14,8 @@
             <!-- additional divs inserted by renderer extension -->
             <h1 id="remotelauncher" class="title">RemoteLauncher</h1>
             <p>Run RACE Remotely</p>
-            
             </div><div class="slide">
-            
-            <h2 id="slides" class="section">Slides</h2>
-            <div class="toc">
+            <h2 id="slides" class="section">Slides</h2><div class="toc">
               <ul>
                 <li><span class="toc level1"><a href="#slides">Slides</a></span></li>
                 <li><span class="toc level1"><a href="#remotelauncher---one-sentence-purpose">RemoteLauncher - one sentence purpose</a></span></li>
@@ -34,34 +31,22 @@
                 <li><span class="toc level1"><a href="#logical-protocols">Logical Protocols</a></span></li>
               </ul>
             </div>
-            
             </div><div class="slide">
-            
-            <h2 id="remotelauncher---one-sentence-purpose" class="section">RemoteLauncher - one sentence purpose</h2>
-            <p class="box">
+            <h2 id="remotelauncher---one-sentence-purpose" class="section">RemoteLauncher - one sentence purpose</h2><p class="box">
             Start, monitor and terminate remote RACE processes in a secure way from a central location
-            </p>
-            <p>Dissection:</p>
-            <ul>
+            </p><p>Dissection:</p><ul>
               <li>what is a remote RACE process?</li>
               <li>what does it need to start one?</li>
               <li>what are the protected resources?</li>
             </ul>
-            
             </div><div class="slide">
-            
-            <h2 id="excursion-what-do-we-run---remotemain-processes" class="section">(Excursion) What do we run - RemoteMain processes</h2>
-            <ol class="arabic">
+            <h2 id="excursion-what-do-we-run---remotemain-processes" class="section">(Excursion) What do we run - RemoteMain processes</h2><ol class="arabic">
               <li><code>RemoteMain</code> driver instantiating <code>RaceActorSystem</code> with config</li>
               <li><code>RaceActorSystem</code> instantiating <code>Master</code> actor</li>
               <li><code>Master</code> actor instantiating configured <code>RaceActors</code></li>
-            </ol>
-            <img src="../images/race-overview-2.svg" class="center scale60">
-            
+            </ol><img src="../images/race-overview-2.svg" class="center scale60">
             </div><div class="slide">
-            
-            <h2 id="excursion-config-is-everything" class="section">(Excursion²) Config is Everything</h2>
-            <ul>
+            <h2 id="excursion-config-is-everything" class="section">(Excursion²) Config is Everything</h2><ul>
               <li>configs are HOCON text files (<code>com.typesafe.config</code>)</li>
               <li>
                 <p>configs use a declarative language (graph with RaceActors as nodes and channels as edges)</p>
@@ -81,46 +66,25 @@
    ...</code></pre>
               </li>
             </ul>
-            
             </div><div class="slide">
-            
-            <h2 id="excursion-config-zoom-in" class="section">(Excursion²) Config Zoom In</h2>
-            <img src="../images/race-config.svg" class="center scale65">
-            
+            <h2 id="excursion-config-zoom-in" class="section">(Excursion²) Config Zoom In</h2><img src="../images/race-config.svg" class="center scale65">
             </div><div class="slide">
-            
-            <h2 id="excursion-secret-config-values---vault" class="section">(Excursion³) Secret Config Values - Vault</h2>
-            <ul>
+            <h2 id="excursion-secret-config-values---vault" class="section">(Excursion³) Secret Config Values - Vault</h2><ul>
               <li>some config values are secret (uid, passwords)</li>
               <li>&quot;??&quot; prefixed config values are <em>vault</em> keys</li>
-            </ul>
-            <img src="../images/race-vault.svg" class="center scale70">
-            
+            </ul><img src="../images/race-vault.svg" class="center scale70">
             </div><div class="slide">
-            
-            <h2 id="excursion-raceactors-zoom-in" class="section">(Excursion⁴) RaceActors Zoom In</h2>
-            <img src="../images/raceactor.svg" class="center scale85">
-            
+            <h2 id="excursion-raceactors-zoom-in" class="section">(Excursion⁴) RaceActors Zoom In</h2><img src="../images/raceactor.svg" class="center scale85">
             </div><div class="slide">
-            
-            <h2 id="remotelauncher---the-man-in-the-middle" class="section">RemoteLauncher - the man in the middle</h2>
-            <p>different concerns:</p>
-            <ul>
+            <h2 id="remotelauncher---the-man-in-the-middle" class="section">RemoteLauncher - the man in the middle</h2><p>different concerns:</p><ul>
               <li>front end: UI, config selection</li>
               <li>RemoteLauncher: config files, gateway, remote processes</li>
               <li>RemoteMain: actors</li>
-            </ul>
-            <img src="../images/remotelauncher-context.svg" class="center scale50">
-            
+            </ul><img src="../images/remotelauncher-context.svg" class="center scale50">
             </div><div class="slide">
-            
-            <h2 id="remotelauncher-zoom-in" class="section">RemoteLauncher Zoom In</h2>
-            <p>  <img src="../images/remotelauncher-2.svg" class="center scale70"></p>
-            
+            <h2 id="remotelauncher-zoom-in" class="section">RemoteLauncher Zoom In</h2><img src="../images/remotelauncher-2.svg" class="center scale70">
             </div><div class="slide">
-            
-            <h2 id="physical-protocol-requirements" class="section">Physical Protocol: Requirements</h2>
-            <ul>
+            <h2 id="physical-protocol-requirements" class="section">Physical Protocol: Requirements</h2><ul>
               <li>
                 <p>need to start remote processes in secure way:</p>
                 <ul>
@@ -140,22 +104,15 @@
                 <p>minimize number of ports through firewall (admin footprint)</p>
               </li>
             </ul>
-            
             </div><div class="slide">
-            
-            <h2 id="physical-protocol-ssh" class="section">Physical Protocol: SSH</h2>
-            <ul>
+            <h2 id="physical-protocol-ssh" class="section">Physical Protocol: SSH</h2><ul>
               <li>all encrypted, trusted daemon + client, known port</li>
               <li>public key authentication (no login shell required)</li>
               <li>tunnel control socket (separated from stdio/logging/data streams)</li>
               <li>tunnel data server sockets</li>
-            </ul>
-            <img src="../images/reverse-portmap.svg" class="center scale50">
-            
+            </ul><img src="../images/reverse-portmap.svg" class="center scale50">
             </div><div class="slide">
-            
-            <h2 id="logical-protocols" class="section">Logical Protocols</h2>
-            <p>  <img src="../images/remotelauncher-proto.svg" class="center scale75"></p>
+            <h2 id="logical-protocols" class="section">Logical Protocols</h2><img src="../images/remotelauncher-proto.svg" class="center scale75">
         </div>
     </body>
 

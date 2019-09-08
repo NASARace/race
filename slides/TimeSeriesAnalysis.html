@@ -14,36 +14,24 @@
             <!-- additional divs inserted by renderer extension -->
             <h1 id="time-series-analysis-infrastructure" class="title">Time Series Analysis Infrastructure</h1>
             <p>detect anomalies </p>
-            
             </div><div class="slide">
-            
-            <h2 id="data-model---track-update-channels" class="section">Data Model - Track Update Channels</h2>
-            <ul>
+            <h2 id="data-model---track-update-channels" class="section">Data Model - Track Update Channels</h2><ul>
               <li>(multiplexed) channels with messages that update <em>tracks</em> (enRoute flights, ASDE-X tracks, ..)</li>
               <li>transformed into stream of per-track update events that have timestamps</li>
               <li>each stream constitutes time series over track states </li>
-            </ul>
-            <img src="../images/ts-analysis.svg" class="center scale50">
-            
+            </ul><img src="../images/ts-analysis.svg" class="center scale50">
             </div><div class="slide">
-            
-            <h2 id="order--and-content-anomalies" class="section">Order- and Content Anomalies</h2>
-            <ul>
+            <h2 id="order--and-content-anomalies" class="section">Order- and Content Anomalies</h2><ul>
               <li>out-of-order: older update received later</li>
               <li>ambiguous: same timestamp, different data</li>
               <li>duplicate: same timestamp, same data</li>
-            </ul>
-            <img src="../images/ts-anomaly-content.svg" class="center scale60">
-            
+            </ul><img src="../images/ts-anomaly-content.svg" class="center scale60">
             </div><div class="slide">
-            
-            <h2 id="duration-based-anomalies" class="section">Duration-Based Anomalies</h2>
-            <ul>
+            <h2 id="duration-based-anomalies" class="section">Duration-Based Anomalies</h2><ul>
               <li>stale: dead on arrival</li>
               <li>drop: not terminated, not updated</li>
               <li>blackout: terminated, then updated</li>
-            </ul>
-            <img src="../images/ts-anomaly-temp.svg" class="center scale60">
+            </ul><img src="../images/ts-anomaly-temp.svg" class="center scale60">
         </div>
     </body>
 

@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8"/>
+        <title>RACE</title>
+
+        <link href="../race-html.css" rel="stylesheet"/>
+    </head>
+
+    <body>
+        <div class="navbar">
+            <div class=""banner>
+                <a href="index.html" ><img class="logo" src="../images/race128.png"></a>
+                <p class="doctitle">RACE Manual</p>
+            </div>
+            <br/>
+            <div class="toc">
+                <p class="title">Project Links</p>
+                <ul>
+                    <li><span class="toc level2"><a href="https://github.com/NASARace/race.git">Repository</a></span></li>
+                    <li><span class="toc level2"><a href="http://nasarace.github.io/race">Website</a></span></li>
+                </ul>
+            </div>
+            <div class="pagetoc">
+                <div class="toc">
+                  <p class="title">Page</p>
+                  <ul>
+                    <li><span class="toc level1"><a href="#traits-and-classes">Traits and Classes</a></span></li>
+                    <li><span class="toc level1"><a href="#binary-data-model">Binary Data Model</a></span></li>
+                    <li><span class="toc level1"><a href="#client-api">Client API</a></span></li>
+                    <li><span class="toc level1"><a href="#gisitemdbtool">GisItemDBTool</a></span></li>
+                  </ul>
+                </div>
+            </div>
+            <div class="globaltoc">
+                <div class="toc">
+                  <p class="title">Site</p>
+                  <ul>
+                    <li><span class="toc level1"><a href="../index.html">About RACE</a></span></li>
+                    <li><span class="toc level1"><a href="../project-log.html">Project Log</a></span></li>
+                    <li>
+                      <p class="toc level1">Installing RACE</p>
+                      <ul>
+                        <li><span class="toc level2"><a href="../installation/prerequisites.html">Prerequisites</a></span></li>
+                        <li><span class="toc level2"><a href="../installation/download.html">Downloading RACE</a></span></li>
+                        <li><span class="toc level2"><a href="../installation/build.html">Building RACE</a></span></li>
+                        <li><span class="toc level2"><a href="../installation/pitfalls.html">Installation Pitfalls</a></span></li>
+                        <li><span class="toc level2"><a href="../installation/osx.html">OS X Specifics</a></span></li>
+                      </ul>
+                    </li>
+                    <li>
+                      <p class="toc level1">Using RACE</p>
+                      <ul>
+                        <li><span class="toc level2"><a href="../usage/running.html">How to Run RACE</a></span></li>
+                        <li><span class="toc level2"><a href="../usage/configuration.html">RACE Configuration</a></span></li>
+                        <li><span class="toc level2"><a href="../usage/encryption.html">Using Encrypted Configurations</a></span></li>
+                      </ul>
+                    </li>
+                    <li>
+                      <p class="toc level1"><a href="../actors.html">Actors</a></p>
+                      <ul>
+                        <li><span class="toc level2"><a href="../actors.html#actor-components-and-properties">Actor Components and Properties</a></span></li>
+                        <li><span class="toc level2"><a href="../actors.html#actor-communication">Actor Communication</a></span></li>
+                      </ul>
+                    </li>
+                    <li>
+                      <p class="toc level1">RACE Design</p>
+                      <ul>
+                        <li><span class="toc level2"><a href="overview.html">Design Overview</a></span></li>
+                        <li><span class="toc level2"><a href="configuration.html">Runtime Configuration</a></span></li>
+                        <li><span class="toc level2"><a href="raceactors.html">RaceActors</a></span></li>
+                        <li><span class="toc level2"><a href="channeltopics.html">ChannelTopics</a></span></li>
+                        <li><span class="toc level2"><a href="embedded-objects.html">Embedded Objects</a></span></li>
+                        <li><span class="toc level2"><a href="connectivity.html">Connecting External Systems</a></span></li>
+                        <li><span class="toc level2 active">RACE GIS Support</span></li>
+                        <li><span class="toc level2"><a href="archive-replay.html">Archive and Replay</a></span></li>
+                        <li><span class="toc level2"><a href="worldwind.html">WorldWind Viewer</a></span></li>
+                        <li><span class="toc level2"><a href="http-server.html">HttpServer</a></span></li>
+                        <li><span class="toc level2"><a href="timeseries.html">Time Series Analysis</a></span></li>
+                        <li><span class="toc level2"><a href="remotelauncher.html">RemoteLauncher</a></span></li>
+                        <li><span class="toc level2"><a href="layers-and-modules.html">Layers and Modules</a></span></li>
+                        <li><span class="toc level2"><a href="directory-structure.html">Directory Structure</a></span></li>
+                        <li><span class="toc level2"><a href="repository.html">Repository Structure</a></span></li>
+                        <li><span class="toc level2"><a href="local-build.html">Local Build Configuration</a></span></li>
+                        <li><span class="toc level2"><a href="dds.html">RACE and DDS</a></span></li>
+                        <li><span class="toc level2"><a href="extproject.html">Using RACE from External Projects</a></span></li>
+                        <li><span class="toc level2"><a href="whyscala.html">Why Scala</a></span></li>
+                      </ul>
+                    </li>
+                    <li>
+                      <p class="toc level1"><a href="../examples.html">RACE Examples</a></p>
+                      <ul>
+                        <li><span class="toc level2"><a href="../examples.html#basic-examples">Basic Examples</a></span></li>
+                        <li><span class="toc level2"><a href="../examples.html#distributed-operation">Distributed Operation</a></span></li>
+                        <li><span class="toc level2"><a href="../examples.html#live-data-import">Live Data Import</a></span></li>
+                        <li><span class="toc level2"><a href="../examples.html#data-replay">Data Replay</a></span></li>
+                      </ul>
+                    </li>
+                    <li>
+                      <p class="toc level1">Documentation</p>
+                      <ul>
+                        <li><span class="toc level2"><a href="../documentation/overview.html">RACE Documentation Overview</a></span></li>
+                        <li><span class="toc level2"><a href="../documentation/presentations.html">Available Slide Presentations</a></span></li>
+                      </ul>
+                    </li>
+                    <li>
+                      <p class="toc level1"><a href="../known-problems.html">Known Problems</a></p>
+                      <ul>
+                        <li><span class="toc level2"><a href="../known-problems.html#problems-with-worldwind-jogl-native-libraries-on-linux">problems with WorldWind/JOGL native libraries on Linux</a></span></li>
+                        <li><span class="toc level2"><a href="../known-problems.html#incompatible-class-file-errors-during-race-startup">incompatible class file errors during RACE startup</a></span></li>
+                        <li><span class="toc level2"><a href="../known-problems.html#kafka-clients">kafka-clients</a></span></li>
+                        <li><span class="toc level2"><a href="../known-problems.html#kafkaserver">KafkaServer</a></span></li>
+                        <li><span class="toc level2"><a href="../known-problems.html#windows-console-output">Windows console output</a></span></li>
+                        <li><span class="toc level2"><a href="../known-problems.html#race-not-starting-because-of-racevieweractor-timeout">RACE not starting because of RaceViewerActor timeout</a></span></li>
+                      </ul>
+                    </li>
+                    <li><span class="toc level1"><a href="../changes.html">Changes</a></span></li>
+                    <li><span class="toc level1"><a href="../todo.html">TODO List</a></span></li>
+                    <li>
+                      <p class="toc level1"><a href="../learning.html">Learning Resources</a></p>
+                      <ul>
+                        <li><span class="toc level2"><a href="../learning.html#scala">Scala</a></span></li>
+                        <li><span class="toc level2"><a href="../learning.html#actors-and-akka">Actors and Akka</a></span></li>
+                        <li><span class="toc level2"><a href="../learning.html#sbt">SBT</a></span></li>
+                        <li><span class="toc level2"><a href="../learning.html#interactive-scala-akka-and-sbt-learning-environment-and-examples">Interactive Scala, Akka and SBT Learning Environment and Examples</a></span></li>
+                        <li><span class="toc level2"><a href="../learning.html#git">Git</a></span></li>
+                      </ul>
+                    </li>
+                    <li><span class="toc level1"><a href="../glossary.html">Glossary</a></span></li>
+                  </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="main">
+            <h1 id="race-gis-support" class="title">RACE GIS Support</h1>
+            <p>RACE applications often require access to geographic databases in order to process tracks. Typical
+            examples are tasks such as finding the nearest landing site for a given aircraft position, or
+            to generate a trajectory from a flight plan that consists of waypoint names.</p>
+            <p>Most of these databases are semi-static, i.e. the data only changes periodically and is immutable
+            during a given RACE execution. Items have alphanumeric ids, geographic positions and other fields
+            containing scalar values and strings, e.g.:</p>
+            <pre><code>LandingSite(&quot;KPAO&quot;,(φ=+37.46111°,λ=-122.11506°,alt=1m),&quot;PALO ALTO&quot;,airport,civil,magvar=15.0°})</code></pre>
+            <p>Databases can contain a large number of items (&gt;10,000), but only a small number have to be
+            instantiated as objects at any given time during execution (e.g. only the <code>LandingSite</code> objects
+            matching a narrow search criteria).</p>
+            <p>Four types of queries stand out:</p>
+            <ol class="arabic">
+              <li>find item for a given name</li>
+              <li>find nearest item and distance for a given position</li>
+              <li>find N nearest items (sorted by distance) for a given position and max. number of items</li>
+              <li>find all items (sorted by distance) for a given position and max. distance</li>
+            </ol>
+            <p>This use case warrants specific support for <em>Geographic Information Systems</em> (<a href="https://en.wikipedia.org/wiki/Geographic_information_system">GIS</a>) in RACE.
+            Although the raw data is often distributed as <a href="https://en.wikipedia.org/wiki/SQL">SQL</a> code, relational databases (<a href="https://en.wikipedia.org/wiki/Relational_database_management_system">RDBMS</a>) are not
+            considered to be a suitable GIS implementation basis since they involve too much overhead
+            (transactions, users, memory footprint) and do not efficiently support geographic queries.</p>
+            
+            <h2 id="traits-and-classes" class="section">Traits and Classes</h2>
+            <p>RACE GIS uses a different approach. The <code>GisItemDBTool</code> application reads external data (e.g.
+            from SQL source files or retrieved via http) and translates it into a programming language
+            independent binary format that is stored in regular files. At RACE runtime, those files are
+            memory mapped and accessed by query functions that only instantiate objects satisfying the respective
+            queries. This approach keeps (most of) the data outside the JVM heap and allows queries in constant
+            space. The main implementation types are shown in the following diagram:</p>
+            <p><img class="center scale90" src="../images/rgis-classes.svg" alt="RGIS class diagram"></p>
+            <dl>
+              <dt><strong>GisItem</strong></dt>
+              <dd>is the trait defining common item features (name, position)</dd>
+              <dt><strong>GisItemDB[T &lt;:GisItem]</strong></dt>
+              <dd>is the abstract base that contains the database initialization and query code. Concrete
+              subclasses mostly have to provide a <code>readItem(offset)</code> method that instantiates concrete
+              <code>GisItem</code> objects for a given item position within the binary (mapped) data</dd>
+              <dt><strong>GisItemDBFactory[T &lt;: GisItem]</strong></dt>
+              <dd>is a abstract factory class that is used to generate binary <code>GisItemDB</code> files and to load/
+              instantiate concrete <code>GisItemDB</code> objects from such files</dd>
+              <dt><strong>GisItemDBTool</strong></dt>
+              <dd>is a command line application that uses <code>GisItemDBFactory</code> objects to create, check and
+              query <code>GisItemDB</code> databases</dd>
+            </dl>
+            <p>In order to implement a new database, the user has to create the following types:</p>
+            <ul>
+              <li>a <code>GisItem</code> subclass, which is usually a case class (e.g. <code>gov.nasa.race.air.gis.Fix</code>)
+              that only contains (scalar) field definitions</li>
+              <li>a <code>GisItemDB</code> subclass that provides the <code>readItem()</code> method to instantiate item types
+              from binary data</li>
+              <li>a <code>GisItemDBFactory</code> subclass that is used to create the binary data for the <code>GisItemDB</code>.
+              This is usually implemented as a <code>GisItemDB</code> companion object, which mainly has to provide a
+              parser to instantiate item objects from external formats (e.g. SQL), and a
+              <code>writeItemPayloadFields()</code> method that writes such items into a <code>java.nio.ByteBuffer</code> that
+              represents the binary data.</li>
+            </ul>
+            <p>An example for such a tripple can be found in <code>gov.nasa.race.air.gis.LandingSite</code>.</p>
+            
+            <h2 id="binary-data-model" class="section">Binary Data Model</h2>
+            <p>The underlying binary data model of RACE GIS is a byte array that is partitioned into 5
+            sections: header, string data, item list, key map and kd-tree. The model is programming language
+            agnostic and self contained - only internal references are allowed and all references are kept as
+            offsets into the byte array.</p>
+            <p>Numerical values are stored in little endian format to avoid any parsing overhead on x86 and ARM
+            architectures. String data is stored in UTF-8, but with added &#39;0&#39; termination to allow direct
+            pointers from C clients in case strings are guaranteed to be ASCII. The only complex type that is
+            allowed is the fixed size item type itself, which is composed of scalar values (integer and floating
+            point) and string references.</p>
+            <p>The main goals for the format are to (a) allow efficient direct reads during queries, and (b) to
+            avoid parsing overhead during load time. The primary mode of operation is to <code>mmap</code> the binary
+            file into the clients address space and access it with a thin layer of functions that implement the
+            query types mentioned above.</p>
+            <p>A formal definition of the format can be found in the comment of <code>gov.nasa.race.gis.GisItemDB</code></p>
+            <p><img class="center scale70" src="../images/rgis.svg" alt="RACE GIS data model"></p>
+            <p><strong>Header</strong> - this section starts with a magic token (0x52474953 : &quot;RGIS&quot;), followed by some fields
+            that are used to check the consistency and version (date) of the data.</p>
+            <p><strong>String Data</strong> - since the item records are fixed size, string values referenced from items are
+            stored as offsets into a string array that is created upon load time from the variable length data
+            of this section. This is the only section that needs to be translated - a step that is required in
+            order to</p>
+            <ul>
+              <li>allow efficient storage of string chars as UTF-8</li>
+              <li>avoid per-query translation of UTF-8 to native char sets</li>
+              <li>enable sharing of string objects at runtime and across all items (strings should only
+              be created once)</li>
+            </ul>
+            <p>Each entry in the string data section consists of a <code>short</code> (2-byte) character length, followed
+            by a UTF-8 encoding of the string characters, followed by a &#39;0&#39; terminator (not used in languages
+            that provide native string types).</p>
+            <p>The first string that is stored in this section is always the name of the schema that represents
+            the item type (e.g. <code>gov.nasa.race.air.gis.LandingSite</code>). This is the only string that is not
+            referenced from the following item section.</p>
+            <p><strong>Item List</strong> - this is the main data section that contains values for all items. It starts with
+            the number of items in this database and the fixed byte length of item records, followed by a list
+            of all item records that are referenced in this database. This section is the first one that is
+            (repeatedly) processed during queries at runtime, hence all values from here on are 4-byte aligned.</p>
+            <p>Each item record consists of a standard header and an item type specific payload. The header includes
+            a hash value of the item id, the geographic position (both as WGS84 and ECEF coordinates), and a
+            reference to the id string for this item. The remaining payload fields are item type specific.</p>
+            <p><strong>Key Map</strong> - the purpose of this section is to support efficient lookup of items by name. To that
+            end, this section is implemented as a simple open hash map that uses double hashing to resolve
+            hash collisions. Each entry of this hash map contains either the respective item list offset value
+            for this item or -1 if the slot is un-occupied. The hash map is based on Java String hashing and
+            uses a re-hash that is stored at the beginning of this section.</p>
+            <p><strong>KD-Tree</strong> - the last section implements a <a href="https://en.wikipedia.org/wiki/K-d_tree">kd-tree </a> that
+            allows <code>O(log N)</code> searches based on positions. It contains fixed size node records that are
+            composed of the item offset of the respecive node data, and the node offsets of the left/right
+            branches for this node (-1 if empty). Kd-trees depend on efficient sub-tree pruning based on
+            potential nearest points in <em>far</em> branches, for which this implementation uses hyper-rectangles and
+            hence relies on ECEF (xyz) coordinates that allow efficient distance calculation. This is essential
+            to keep query costs low.</p>
+            <p>For details of the id hash map and kd-tree algorithms see <code>gov.nasa.race.gis.GisItemDBFactory</code>
+            for creation and <code>gov.nasa.race.gis.GisItemDB</code> for queries.</p>
+            
+            <h2 id="client-api" class="section">Client API</h2>
+            <p>The public API supports two major functions: instantiation and queries. Instantiation is usually
+            just a plain constructor call of the concrete GisItemDB class:</p>
+            <pre><code>val fixDB: FixDB = new FixDB(file)</code></pre>
+            <p>Since this can throw exceptions during file access or DB consistency checks it should be called
+            from a <code>try {..}</code> block. Clients can use the <code>GisItemDB.load(file)</code> for a <code>Option[GisItemDB[T]]</code>
+            result, but note that this method does not give access to the concrete GisItemDB type (e.g. <code>FixDB</code>)
+            and hence additional methods of the concrete type are not visible.</p>
+            <p>Query support is more complex. As noted at the top of this page <code>GisItemDB</code> supports four types
+            of queries:</p>
+            <ul>
+              <li>item lookup by name</li>
+              <li>nearest item for given position</li>
+              <li>N nearest items for given position</li>
+              <li>all items within a given position and range</li>
+            </ul>
+            <p>All geospatial query results include respective distances of matching items to the provided
+            position. If a query can return several items those are sorted in order of increasing distance.</p>
+            <p>In general, all queries can either ask for item instances or provide iterator functions that are
+            called by GisItemDB for each of the query matches. Iterator functions can either take full item
+            object arguments or only id and position if full item objects are not required.</p>
+            <p>Using iterator functions can save allocations, both in terms of result collections and item
+            instantiations.</p>
+            <p><strong>Name Query</strong>:</p>
+            <pre><code>// item instantiation
+val fix = fixDB.getItem(&quot;BRIXX&quot;).get
+
+// iterator
+fixDB.withItemPos(name){ (lat,lon,alt) =&gt; .. }</code></pre>
+            <p><strong>Nearest Item</strong>:</p>
+            <pre><code>// item instantiation
+val (dist,fix) = fixDB.getNearestItem(refPos).get
+
+// iterators
+fixDB.withNearestItemId(refPos){ (dist,id) =&gt; .. }
+// or
+fixDB.withNearestItemIdPos(refPos){ (dist,id,lat,lon,alt) =&gt; .. }
+// or
+fixDB.withNearestItem(refPos){ (dist,fix) =&gt; .. }</code></pre>
+            <p><strong>N Nearest Items</strong>:</p>
+            <pre><code>// result list
+val proximities: Seq[(Length,Fix)] = fixDB.getNearItems(refPos,maxNumber)
+
+// iterators
+fixDB.foreachNearItemId(refPos,maxNumber){ (dist,id) =&gt; .. }
+// or
+fixDB.foreachNearItemIdPos(refPos,maxNumber){ (dist,id,lat,lon,alt) =&gt; .. }
+// or
+fixDB.foreachNearItem(refPos,maxNumber){ (dist,fix) =&gt; .. }</code></pre>
+            <p><strong>Range Items</strong>:</p>
+            <pre><code>// result list
+val proximities: Seq[(Length,Fix)] = fixDB.getRangeItems(refPos,maxDist)
+
+// iterators
+fixDB.foreachRangeItemId(refPos,maxDist){ (dist,id) =&gt; .. }
+// or
+fixDB.foreachRangeItemIdPos(refPos,maxDist){ (dist,id,lat,lon,alt) =&gt; .. }
+// or
+fixDB.foreachRangeItem(refPos,maxDist){ (dist,fix) =&gt; .. }</code></pre>
+            <p>If repetitive queries can happen at a high rate (e.g. to obtain the nearest waypoint for a
+            frequently updated aircraft position) it is advisible to obtain and cache a respective query object
+            from the GisItemDB:</p>
+            <pre><code>val nearestItemQuery = fixDB.createNearestItemQuery(trackPos)
+..
+while (..) {
+    nearestItemQuery.setPos(track.position)
+    fixDB.processQuery(nearestItemQuery)
+    nearestItemQuery.withItemId { (dist,id) =&gt; .. }
+    ..</code></pre>
+            <p>Such queries will execute in constant space if no result item objects are required. Note that
+            clients have to ensure that query objects are not modified while the GisItemDB is processing them.</p>
+            <p>Query examples can be found in the <code>gov.nasa.race.air.gis.FixDBSpec</code> regression test that is
+            included in the <code>race-air-test</code> sub-project.</p>
+            
+            <h2 id="gisitemdbtool" class="section">GisItemDBTool</h2>
+            <p>The <code>race-tools</code> sub-project includes a <code>gov.nasa.race.tool.GisItemDBTool</code> command line
+            application that can be used to create and query <code>GisItemDB</code> databases interactively. The tool
+            is also accessible through the <code>script/geodb</code> shell script:</p>
+            <pre><code>&gt; script/geodb --help
+usage GisItemDBTool$ &lt;option&gt;.. &lt;arg&gt;
+options:
+  -i|--show-struct                    - show structure of DB
+  --show-strings                      - show string table contents of DB
+  --show-items                        - show item list of DB
+  -k|--show-key &lt;key&gt;                 - show item for given key
+  -n|--show-near &lt;lat,lon&gt;            - show item(s) nearest to given pos
+  -m|--max-items &lt;number&gt;             - max number of items
+  -r|--show-range &lt;lat,lon,meters&gt;    - show items in given range
+  -o|--out &lt;pathname&gt;                 - pathname of file to generate
+  -f|--in &lt;pathName&gt;                  - input file
+  --date &lt;dateSpec&gt;                   - date to be stored in generated DB
+  -x|--xarg &lt;argString&gt;               - extra arguments to be passed to concrete DB factory
+args:
+  &lt;clsName&gt;                           - concrete GisItemDBFactory class (e.g. gov.nasa.race.air.gis.LandingSite$) - REQUIRED</code></pre>
+            <p>The application requires the name of the <code>GisItemDBFactory`</code> class (<em>not</em> the GisItem or
+            GisItemDB) in order to specify the database/item type.</p>
+            <p>This is an example of how to create a database from a *.sql data distribution:</p>
+            <pre><code>script/geodb --in ../data/usa_faa1801.data.sql --out tmp/landingsites.rgis gov.nasa.race.air.gis.LandingSiteDB\$</code></pre>
+            <p>Note how to reference a companion object (<code>gov.nasa.race.air.gis.LandingSiteDB</code>) as
+            the <code>GisItemDBFactory</code> object to use (bash requires the classname ending &#39;$&#39; to be escaped).</p>
+            <p>This is an example of how to create a database of all California fixes through
+            <a href="https://www.faa.gov/air_traffic/flight_info/aeronav/aero_data/Loc_ID_Search/Fixes_Waypoints">FAA website </a>
+            queries:</p>
+            <pre><code>&gt; script/geodb -x &quot;searchval=CALIFORNIA&quot; --out tmp/fix-ca.rgis gov.nasa.race.air.gis.FixDB\$</code></pre>
+            <p>Note that &#39;-x&#39; arguments are passed down into the <code>GisItemDBFactory</code>, i.e. they are type specific.</p>
+            <p>Example how to check consistency and contents of a database:</p>
+            <pre><code>&gt; script/geodb -i --in tmp/landingsites.rgis gov.nasa.race.air.gis.LandingSiteDB\$
+--- structure:
+schema:       &#39;gov.nasa.race.air.gis.LandingSite&#39;
+length:       866036 bytes
+checkSum:     ceca5b11
+date:         2018-11-27T10:14:02.316-08:00
+nItems:       7566
+itemSize:     72
+...</code></pre>
+            <p>Example how to query the 10 nearest items of a database around a given position:</p>
+            <pre><code>script/geodb --show-near 37.62,-122.38 --max-items 10  --in tmp/landingsites.rgis gov.nasa.race.air.gis.LandingSiteDB\$
+[1]        424m : LandingSite(&quot;KSFO&quot;,(φ=+37.61881°,λ=-122.37542°,alt=1m),&quot;SAN FRANCISCO INTL&quot;,airport,civil,14.0})
+[2]      15913m : LandingSite(&quot;KHAF&quot;,(φ=+37.51344°,λ=-122.50117°,alt=6m),&quot;HALF MOON BAY&quot;,airport,civil,15.0})
+...</code></pre>
+        </div>
+
+    </body>
+</html>
