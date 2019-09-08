@@ -29,7 +29,7 @@ sequentially)
 * RACE messages are sent through **channels**
 * RACE actors/channels runtime configured (JSON), not hardwired
 
-<img src="../images/race-design.svg" class="center scale50">
+<img src="../images/race-design.svg" class="center scale45">
 
 
 ## Presented Example Applications
@@ -42,7 +42,7 @@ automatic detection of
 
 
 ##  Common Tasks of Example Applications
-<img src="../images/app-tasks.svg" class="center scale35">
+<img src="../images/app-tasks.svg" class="center scale25">
 
 mapped to dedicated actors
 
@@ -62,7 +62,7 @@ mapped to dedicated actors
 
 
 ## (1) Temporal Inconsistencies - Implementation & Lessons
-<img src="../images/tais-stats-config.svg" class="center scale30">
+<img src="../images/tais-stats-config.svg" class="center scale25">
 
 * only ~140 app specific lines of code (mostly HTML formatting)
 * original goal was only XML schema validation - time series analysis added
@@ -76,11 +76,11 @@ in private network)
 goal: automatically detect parallel approaches that are angled-in exceeding 
 30° heading differences within given distance (causing loss of sight)
 
-<img src="../images/par-approach-output.png" class="center scale70">
+<img src="../images/par-approach-output.png" class="center scale65">
 
 
 ## (2) Parallel Approach - Implementation & Lessons
-<img src="../images/par-approach-config.svg" class="center scale40">
+<img src="../images/par-approach-config.svg" class="center scale30">
 
 * ~180 lines of code (approach analyzer)
 * quadratic problem: pairwise trajectory comparison of un-synchronized irregular time series
@@ -94,11 +94,11 @@ goal: automatically detect parallel approaches that are angled-in exceeding
 (ASDE-X, TAIS, SFDPS, direct ADS-B)?
 * are differences random or systematic?
 
-<img src="../images/trackdiff-output.png" class="center scale60">
+<img src="../images/trackdiff-output.png" class="center scale55">
 
 
 ## (3) Track Deviation - Implementation & Lessons
-<img src="../images/trackdiff-config.svg" class="center scale45">
+<img src="../images/trackdiff-config.svg" class="center scale40">
 
 * ~180 lines of code (trajectory comparer)
 * again motivated by visualization (noticing discrepancies)
@@ -123,7 +123,7 @@ goal: automatically detect parallel approaches that are angled-in exceeding
 
 
 ## (4) Loss of Separation - Implementation & Lessons
-<img src="../images/fdz-config.svg" class="center scale50">
+<img src="../images/fdz-config.svg" class="center scale45">
 
 * uses generic native interface layer (memory layout, native library for external simulator)
 * highly parallel problem (trajectory extrapolation, sorted proximity calculation)

@@ -4,7 +4,7 @@
 
 body {
     margin: 0 10px 0 10px;
-    font-size: 2.8vw;
+    font-size: 3.2vh;
     font-family: Arial, sans-serif;
 }
 
@@ -29,7 +29,7 @@ div.slide {
 
 .slide h2,h3 {
     text-align: center;
-    font-size: 120%;
+    font-size: 110%;
     /* padding: 4px 10px 4px 10px; */
     margin: 0;
     border-bottom: 2px solid LightGray;
