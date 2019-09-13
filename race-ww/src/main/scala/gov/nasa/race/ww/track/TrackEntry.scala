@@ -194,6 +194,7 @@ class TrackEntry[T <: TrackedObject](var obj: T, var trajectory: MutTrajectory, 
   override def setAttr(attr: LayerObjectAttribute, cond: Boolean): Unit = {
     attr match {
       case LayerObjectAttribute.Path => setPath(cond)
+      case LayerObjectAttribute.Contour => setPathContour(cond)
       case LayerObjectAttribute.Info => setInfo(cond)
       case LayerObjectAttribute.Mark => setMark(cond)
       case _ => // ignore
@@ -203,6 +204,7 @@ class TrackEntry[T <: TrackedObject](var obj: T, var trajectory: MutTrajectory, 
   override def isAttrSet(attr: LayerObjectAttribute): Boolean = {
     attr match {
       case LayerObjectAttribute.Path => path.isDefined
+      case LayerObjectAttribute.Contour => drawPathContour
       case LayerObjectAttribute.Info => info.isDefined
       case LayerObjectAttribute.Mark => mark.isDefined
       case _ => false

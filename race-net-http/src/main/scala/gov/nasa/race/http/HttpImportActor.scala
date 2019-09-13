@@ -17,6 +17,8 @@
 
 package gov.nasa.race.http
 
+import java.util.concurrent.atomic.AtomicInteger
+
 import akka.actor.ActorRef
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.Uri.Path
@@ -32,7 +34,29 @@ import gov.nasa.race.core.{PeriodicRaceActor, PublishingRaceActor, SubscribingRa
 
 import scala.annotation.tailrec
 import scala.concurrent.duration._
-import scala.collection.mutable.{Map => MMap}
+import scala.collection.mutable.{ArrayBuffer, Map => MMap}
+import scala.concurrent.{Await, Future}
+
+object HttpImportActor {
+  var liveInstances: AtomicInteger = new AtomicInteger(0)
+
+  def registerLive(a: HttpImportActor): Unit = {
+    liveInstances.incrementAndGet
+  }
+
+  def unregisterLive(a: HttpImportActor): Boolean = {
+    if (liveInstances.decrementAndGet == 0) {
+      try {
+        a.materializer.shutdown
+        Await.ready(a.http.shutdownAllConnectionPools, 12.seconds)
+      } catch {
+        case _:java.util.concurrent.TimeoutException =>
+          a.warning("shutting down Http pool timed out")
+      }
+    }
+    true
+  }
+}
 
 /**
   * import actor that publishes responses for configured, potentially periodic http requests
@@ -52,6 +76,8 @@ class HttpImportActor (val config: Config) extends PublishingRaceActor
 
   var requests: Seq[HttpRequest] = config.getConfigSeq("data-requests").toList.flatMap(HttpRequestBuilder.get)
 
+  //val pendingResponses = ArrayBuffer.empty[Future[HttpResponse]]
+
   final implicit val materializer: ActorMaterializer = ActorMaterializer(ActorMaterializerSettings(context.system))
   val http = Http(context.system)
 
@@ -61,7 +87,9 @@ class HttpImportActor (val config: Config) extends PublishingRaceActor
   def sendRequest (request: HttpRequest) = {
     val req = addRequestCookies(request)
     info(s"sending http request to ${req.uri.authority}${req.uri.path}") // don't log credentials!
-    http.singleRequest(req).pipeTo(self)
+    val responseFuture = http.singleRequest(req)
+    //pendingResponses += responseFuture
+    responseFuture.pipeTo(self)
   }
 
   def addRequestCookies (request: HttpRequest): HttpRequest = {
@@ -99,7 +127,7 @@ class HttpImportActor (val config: Config) extends PublishingRaceActor
 
   override def handleMessage = {
     case RaceTick | BusEvent(_,SendHttpRequest,_) =>
-      requests.foreach(sendRequest)
+      if (isLive) requests.foreach(sendRequest)
 
     case BusEvent(_,SendNewHttpRequest(request),_) =>
       sendRequest(request)
@@ -154,6 +182,7 @@ class HttpImportActor (val config: Config) extends PublishingRaceActor
   //--- system message callbacks
   override def onStartRaceActor(originator: ActorRef): Boolean = {
     ifTrue(super.onStartRaceActor(originator)) {
+      HttpImportActor.registerLive(this)
       loginRequest match {
         case Some(req) =>
           waitForLoginResponse = true
@@ -170,5 +199,11 @@ class HttpImportActor (val config: Config) extends PublishingRaceActor
     } else {
       requests.foreach(sendRequest)
     }
+  }
+
+  override def onTerminateRaceActor(originator: ActorRef): Boolean = {
+    stopScheduler
+    HttpImportActor.unregisterLive(this) && super.onTerminateRaceActor(originator)
+    //super.onTerminateRaceActor(originator) && HttpImportActor.unregisterLive(this)
   }
 }

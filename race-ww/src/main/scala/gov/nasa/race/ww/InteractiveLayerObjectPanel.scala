@@ -84,6 +84,7 @@ abstract class InteractiveLayerObjectPanel[T <: LayerObject, U <: FieldPanel](va
   def updateEntryAttributes = ifSome(entry) { e=>
     focusCb.selected = e.isFocused
     pathCb.selected = e.isAttrSet(LayerObjectAttribute.Path)
+    contourCb.selected = e.isAttrSet(LayerObjectAttribute.Contour)
     infoCb.selected = e.isAttrSet(LayerObjectAttribute.Info)
     markCb.selected = e.isAttrSet(LayerObjectAttribute.Mark)
   }

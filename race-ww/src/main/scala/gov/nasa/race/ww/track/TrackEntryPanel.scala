@@ -84,7 +84,9 @@ class TrackEntryPanel[T <: TrackedObject](override val layer: TrackLayer[T])
 
   def setFocused(focusIt: Boolean): Unit = ifSome(entry) { layer.setFocused(_,focusIt) }
 
-  def setPathContour (showIt: Boolean): Unit = ifSome(entry) { layer.setPathContour(_,showIt) }
+  def setPathContour (showIt: Boolean): Unit = {
+    ifSome(entry) { layer.setPathContour(_,showIt) }
+  }
 
 
   // this is just a notification that attributes have changed externally

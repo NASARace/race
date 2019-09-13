@@ -174,7 +174,6 @@ object Dependencies {
   // add implementation libraries and settings in local-build.sbt - this is only an abstract interface for compilation
   val omgDDS = "org.omg.dds" % "java5-psm" % "1.0"
 
-
   //--- LWJGL Java wrapper for OpenGL,Vulkan,,OpenCL,OpenAL and others
   val lwjglVersion = "3.2.3"
   lazy val lwjglNativeClassifier = OS.build match {
