@@ -27,24 +27,14 @@ import gov.nasa.race.ww.Implicits._
 class TrackPath[T <: TrackedObject](val entry: TrackEntry[T])
                      extends TrajectoryPath(entry.trajectory, entry.lineMaterial) with TimeSeriesUpdateStats {
 
-
   def setLineAttrs = setShowPositions(false)
   def setLinePosAttrs = setShowPositions(averageUpdateFrequency < 2) // no point showing points for high frequency updates
 
   def addTrackPosition(tp: TrackPoint) = {
     addSample
 
-    //posList.add(tp)
-    //setPositions(posList)
-
-    if (posList.isEmpty || {
-        val p = posList.lastElement
-        Math.abs(p.latitude.getRadians - tp.position.lat.toRadians) > 0.000001 ||
-        Math.abs(p.longitude.getRadians - tp.position.lon.toRadians) > 0.000001 ||
-        Math.abs(p.getAltitude - tp.position.altitude.toMeters) > 0.5 } ) {
-      posList.add(tp)
-      setPositions(posList)
-    }
+    posList.add(tp)
+    setPositions(posList)
   }
 
   override def computePositionCount = numPositions = posList.size
