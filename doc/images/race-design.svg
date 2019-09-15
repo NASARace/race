@@ -1,0 +1,166 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<svg width="100%" height="100%" version="1.1" viewBox="338.0605 124.3605 665.1119 256.3355" style="background-color:#FFFFFF" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <filter id="shadow1" width="150%" height="150%">
+      <feGaussianBlur in="SourceAlpha" result="blur" stdDeviation="3" />
+      <feOffset dx="3" dy="3" in="blur" result="offsetBlur" />
+      <feMerge>
+        <feMergeNode in="offsetBlur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+    <filter id="shadow2" width="150%" height="150%">
+      <feGaussianBlur in="SourceAlpha" result="blur" stdDeviation="3" />
+      <feOffset dx="3" dy="3" in="blur" result="offsetBlur" />
+      <feMerge>
+        <feMergeNode in="offsetBlur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+  </defs>
+  <marker id="marker1" markerUnits="strokeWidth" orient="auto" refX="-11.17254" refY="0" markerWidth="13.27247" markerHeight="10.22955" viewBox="-12.27247 -5.114774 13.27247 10.22955">
+    <path d="M-11.27247 -4.114774 L0 0 L-11.27247 4.114773 Z " fill="none" stroke="#7F007F" stroke-opacity="1" />
+  </marker>
+  <marker id="marker2" markerUnits="strokeWidth" orient="auto" refX="-7.52078" refY="0" markerWidth="9.89073" markerHeight="7.760683" viewBox="-8.89073 -3.880342 9.89073 7.760683">
+    <path d="M-7.89073 -2.880342 L0 0 L-7.89073 2.880341 Z " fill="#0000FE" fill-opacity="1" stroke="#0000FE" stroke-opacity="1" />
+  </marker>
+  <marker id="marker3" markerUnits="strokeWidth" orient="auto" refX="-7.52078" refY="0" markerWidth="9.89073" markerHeight="7.760683" viewBox="-8.89073 -3.880342 9.89073 7.760683">
+    <path d="M-7.89073 -2.880342 L0 0 L-7.89073 2.880341 Z " fill="#0000FE" fill-opacity="1" stroke="#0000FE" stroke-opacity="1" />
+  </marker>
+  <marker id="marker4" markerUnits="strokeWidth" orient="auto" refX="-7.52078" refY="0" markerWidth="9.89073" markerHeight="7.760683" viewBox="-8.89073 -3.880342 9.89073 7.760683">
+    <path d="M-7.89073 -2.880342 L0 0 L-7.89073 2.880341 Z " fill="#0000FE" fill-opacity="1" stroke="#0000FE" stroke-opacity="1" />
+  </marker>
+  <marker id="marker5" markerUnits="strokeWidth" orient="auto" refX="-2.651763" refY="0" markerWidth="5.381742" markerHeight="4.468864" viewBox="-4.381742 -2.234432 5.381742 4.468864">
+    <path d="M-3.381742 -1.234432 L0 0 L-3.381742 1.234432 Z " fill="#BFBFBF" fill-opacity="1" stroke="#BFBFBF" stroke-opacity="1" />
+  </marker>
+  <marker id="marker6" markerUnits="strokeWidth" orient="auto" refX="-2.651763" refY="0" markerWidth="5.381742" markerHeight="4.468864" viewBox="-4.381742 -2.234432 5.381742 4.468864">
+    <path d="M-3.381742 -1.234432 L0 0 L-3.381742 1.234432 Z " fill="#BFBFBF" fill-opacity="1" stroke="#BFBFBF" stroke-opacity="1" />
+  </marker>
+  <marker id="marker7" markerUnits="strokeWidth" orient="auto" refX="-2.651763" refY="0" markerWidth="5.381742" markerHeight="4.468864" viewBox="-4.381742 -2.234432 5.381742 4.468864">
+    <path d="M-3.381742 -1.234432 L0 0 L-3.381742 1.234432 Z " fill="#BFBFBF" fill-opacity="1" stroke="#BFBFBF" stroke-opacity="1" />
+  </marker>
+  <marker id="marker8" markerUnits="strokeWidth" orient="auto" refX="-2.651763" refY="0" markerWidth="5.381742" markerHeight="4.468864" viewBox="-4.381742 -2.234432 5.381742 4.468864">
+    <path d="M-3.381742 -1.234432 L0 0 L-3.381742 1.234432 Z " fill="#BFBFBF" fill-opacity="1" stroke="#BFBFBF" stroke-opacity="1" />
+  </marker>
+  <marker id="marker9" markerUnits="strokeWidth" orient="auto" refX="-2.651763" refY="0" markerWidth="5.381742" markerHeight="4.468864" viewBox="-4.381742 -2.234432 5.381742 4.468864">
+    <path d="M-3.381742 -1.234432 L0 0 L-3.381742 1.234432 Z " fill="#BFBFBF" fill-opacity="1" stroke="#BFBFBF" stroke-opacity="1" />
+  </marker>
+  <marker id="marker10" markerUnits="strokeWidth" orient="auto" refX="-2.651763" refY="0" markerWidth="5.381742" markerHeight="4.468864" viewBox="-4.381742 -2.234432 5.381742 4.468864">
+    <path d="M-3.381742 -1.234432 L0 0 L-3.381742 1.234432 Z " fill="#BFBFBF" fill-opacity="1" stroke="#BFBFBF" stroke-opacity="1" />
+  </marker>
+  <marker id="marker11" markerUnits="strokeWidth" orient="auto" refX="-2.651763" refY="0" markerWidth="5.381742" markerHeight="4.468864" viewBox="-4.381742 -2.234432 5.381742 4.468864">
+    <path d="M-3.381742 -1.234432 L0 0 L-3.381742 1.234432 Z " fill="#BFBFBF" fill-opacity="1" stroke="#BFBFBF" stroke-opacity="1" />
+  </marker>
+  <marker id="marker12" markerUnits="strokeWidth" orient="auto" refX="-2.651763" refY="0" markerWidth="5.381742" markerHeight="4.468864" viewBox="-4.381742 -2.234432 5.381742 4.468864">
+    <path d="M-3.381742 -1.234432 L0 0 L-3.381742 1.234432 Z " fill="#BFBFBF" fill-opacity="1" stroke="#BFBFBF" stroke-opacity="1" />
+  </marker>
+  <marker id="marker13" markerUnits="strokeWidth" orient="auto" refX="-2.651763" refY="0" markerWidth="5.381742" markerHeight="4.468864" viewBox="-4.381742 -2.234432 5.381742 4.468864">
+    <path d="M-3.381742 -1.234432 L0 0 L-3.381742 1.234432 Z " fill="#BFBFBF" fill-opacity="1" stroke="#BFBFBF" stroke-opacity="1" />
+  </marker>
+  <g id="layer1">
+    <rect x="341.0605" y="183.9056" width="329.5793" height="193.7904" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFAE8" fill-opacity="1" filter="url(#shadow1)" />
+    <rect x="370.7498" y="228.9056" width="57.85716" height="45" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" filter="url(#shadow1)" />
+    <text x="379.5539" y="242.6015" font-size="14" fill="#FB0106" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">actor-A</text>
+    <rect x="476.3946" y="277.2949" width="67.15211" height="51.00863" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" filter="url(#shadow1)" />
+    <text x="489.7581" y="291.1759" font-size="14" fill="#FB0106" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">actor-B</text>
+    <g>
+      <rect x="590.72" y="230.7226" width="57.85716" height="45" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" filter="url(#shadow1)" />
+      <rect x="591.5322" y="231.5302" width="9" height="9" opacity="1" fill-opacity="0" />
+      <rect x="592.0532" y="265.1605" width="9" height="9" opacity="1" fill-opacity="0" />
+    </g>
+    <text x="599.3329" y="244.5505" font-size="14" fill="#FB0106" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">actor-C</text>
+    <text x="480.909" y="245.9178" font-size="14" fill="#0000FF" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">channel-X</text>
+    <text x="552.2939" y="312.0048" font-size="14" fill="#0000FF" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">channel-Y</text>
+    <text x="493.5481" y="209.7509" font-size="18" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">RACE</text>
+    <path d="M720 153 L513 153 L513.7258 173.034" marker-end="url(#marker1)" opacity="1" stroke="#7F007F" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+    <text x="734.0797" y="159.0305" font-size="14" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">config</text>
+    <g>
+      <path d="M699.7394 169.2382 L699.7394 321.9996 Q736.9013 372.9199 774.0641 372.9199 C811.2261 372.9199 885.551 321.9996 922.7131 321.9996 Q959.8752 321.9996 997.038 347.4596 L997.038 169.2382 Z " opacity="1" stroke="#7F007F" stroke-opacity="0.26" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" filter="url(#shadow2)" />
+      <text x="703.7394" y="184.3914" font-size="12" fill="#7F007F" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">actors = [
+</text>
+      <text x="703.7394" y="198.3914" font-size="12" fill="#7F007F" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">  { name: “actor-A”
+</text>
+      <text x="703.7394" y="212.3914" font-size="12" fill="#7F007F" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">    write-to: “channel-X” …},
+</text>
+      <text x="703.7394" y="226.3914" font-size="12" fill="#7F007F" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">
+</text>
+      <text x="703.7394" y="240.3914" font-size="12" fill="#7F007F" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">  { name: “actor-B”
+</text>
+      <text x="703.7394" y="254.3914" font-size="12" fill="#7F007F" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">    read-from: “channel-X”
+</text>
+      <text x="703.7394" y="268.3914" font-size="12" fill="#7F007F" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">    write-to: “channel-Y” …},
+</text>
+      <text x="703.7394" y="282.3914" font-size="12" fill="#7F007F" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">
+</text>
+      <text x="703.7394" y="296.3914" font-size="12" fill="#7F007F" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">  { name: “actor-C”
+</text>
+      <text x="703.7394" y="310.3914" font-size="12" fill="#7F007F" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">    read-from: [“channel-X”,”channel-Y”]
+</text>
+      <text x="703.7394" y="324.3914" font-size="12" fill="#7F007F" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">    …}
+</text>
+      <text x="703.7394" y="338.3914" font-size="12" fill="#7F007F" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal"> ]</text>
+    </g>
+    <text x="511.4775" y="148.9605" font-size="12" fill="#167D0D" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">&gt; ./race myApplication.conf</text>
+    <g>
+      <line x1="355.2998" y1="246.1953" x2="382.2998" y2="246.1953" opacity="1" stroke="#7F7F7F" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+      <line x1="355.2998" y1="259.5452" x2="382.2998" y2="259.5452" opacity="1" stroke="#7F7F7F" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+      <rect x="360.9523" y="246.2936" width="7.54483" height="13.20914" opacity="1" stroke="#7F7F7F" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" />
+      <rect x="368.5391" y="246.2936" width="7.54483" height="13.20914" opacity="1" stroke="#7F7F7F" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" />
+    </g>
+    <g>
+      <line x1="574.0121" y1="246.5928" x2="601.0121" y2="246.5928" opacity="1" stroke="#7F7F7F" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+      <line x1="574.0121" y1="259.9427" x2="601.0121" y2="259.9427" opacity="1" stroke="#7F7F7F" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+      <rect x="579.6646" y="246.6911" width="7.54483" height="13.20914" opacity="1" stroke="#7F7F7F" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" />
+      <rect x="587.2513" y="246.6911" width="7.54483" height="13.20914" opacity="1" stroke="#7F7F7F" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" />
+    </g>
+    <g>
+      <line x1="459.908" y1="295.6495" x2="486.908" y2="295.6495" opacity="1" stroke="#7F7F7F" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+      <line x1="459.908" y1="308.9994" x2="486.908" y2="308.9994" opacity="1" stroke="#7F7F7F" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+      <rect x="465.5605" y="295.7478" width="7.54483" height="13.20914" opacity="1" stroke="#7F7F7F" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" />
+      <rect x="473.1472" y="295.7478" width="7.54483" height="13.20914" opacity="1" stroke="#7F7F7F" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" />
+    </g>
+    <line x1="585.6302" y1="251.438" x2="585.7627" y2="251.438" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    <line x1="422.0826" y1="249.5207" x2="562.897" y2="249.5207" marker-end="url(#marker2)" opacity="1" stroke="#0000FE" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    <path d="M441.0699 249.7635 L440.5731 301.9395 L452.2325 301.8013" marker-end="url(#marker3)" opacity="1" stroke="#0000FE" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+    <path d="M526.6443 301.106 L551.8454 300.7435 L551.9816 257.7787 L562.8405 257.6519" marker-end="url(#marker4)" opacity="1" stroke="#0000FE" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+    <text x="432.8314" y="321.081" font-size="11" fill="#7F7F7F" fill-opacity="1" font-family="Helvetica" font-weight="normal" font-style="normal">mailbox</text>
+    <text x="447.4316" y="265.8064" font-size="11" fill="#7F7F7F" fill-opacity="1" font-family="Helvetica" font-weight="normal" font-style="normal">message</text>
+    <g>
+      <line x1="390.777" y1="253.5111" x2="402.7787" y2="247.8839" marker-end="url(#marker5)" opacity="1" stroke="#BFBFBF" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+      <line x1="390.777" y1="253.5111" x2="403.8116" y2="253.8244" marker-end="url(#marker6)" opacity="1" stroke="#BFBFBF" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+      <line x1="390.777" y1="253.5111" x2="402.4174" y2="259.7829" marker-end="url(#marker7)" opacity="1" stroke="#BFBFBF" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+      <ellipse cx="389.9609" cy="253.2082" rx="3.734338" ry="3.734338" opacity="1" stroke="#7F7F7F" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#BFBFBF" fill-opacity="1" />
+    </g>
+    <g>
+      <line x1="494.249" y1="302.8894" x2="506.2505" y2="297.2622" marker-end="url(#marker8)" opacity="1" stroke="#BFBFBF" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+      <line x1="494.249" y1="302.8894" x2="507.2835" y2="303.2026" marker-end="url(#marker9)" opacity="1" stroke="#BFBFBF" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+      <line x1="494.249" y1="302.8894" x2="505.8893" y2="309.1611" marker-end="url(#marker10)" opacity="1" stroke="#BFBFBF" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+      <ellipse cx="493.4329" cy="302.5864" rx="3.734338" ry="3.734338" opacity="1" stroke="#7F7F7F" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#BFBFBF" fill-opacity="1" />
+    </g>
+    <g>
+      <line x1="608.2137" y1="254.2767" x2="620.2152" y2="248.6495" marker-end="url(#marker11)" opacity="1" stroke="#BFBFBF" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+      <line x1="608.2137" y1="254.2767" x2="621.2482" y2="254.5899" marker-end="url(#marker12)" opacity="1" stroke="#BFBFBF" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+      <line x1="608.2137" y1="254.2767" x2="619.854" y2="260.5484" marker-end="url(#marker13)" opacity="1" stroke="#BFBFBF" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+      <ellipse cx="607.3977" cy="253.9737" rx="3.734338" ry="3.734338" opacity="1" stroke="#7F7F7F" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#BFBFBF" fill-opacity="1" />
+    </g>
+    <ellipse cx="440.9442" cy="271.4486" rx="3.734338" ry="3.734338" opacity="1" stroke="#7F7F7F" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#BFBFBF" fill-opacity="1" />
+    <ellipse cx="466.3036" cy="249.5804" rx="3.734338" ry="3.734338" opacity="1" stroke="#7F7F7F" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#BFBFBF" fill-opacity="1" />
+    <ellipse cx="552.0717" cy="270.653" rx="3.734338" ry="3.734338" opacity="1" stroke="#7F7F7F" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#BFBFBF" fill-opacity="1" />
+    <text x="920.5871" y="183.5981" font-size="10" fill="#7F7F7F" fill-opacity="1" font-family="Helvetica" font-weight="normal" font-style="normal">HOCON / JSON</text>
+    <line x1="341.7887" y1="340.5502" x2="671.6481" y2="340.5502" opacity="1" stroke="#BFBFBF" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    <line x1="341.0988" y1="359.2401" x2="670.9583" y2="359.2401" opacity="1" stroke="#BFBFBF" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    <text x="461.8639" y="354.76" font-size="11" fill="#7F7F7F" fill-opacity="1" font-family="Helvetica" font-weight="normal" font-style="normal">Akka actor library</text>
+    <text x="472.1997" y="373.4242" font-size="11" fill="#7F7F7F" fill-opacity="1" font-family="Helvetica" font-weight="normal" font-style="normal">Java runtime</text>
+    <rect x="910.4047" y="297.0984" width="66.74613" height="12.93836" opacity="1" fill="#0000FE" fill-opacity="0.1302708" />
+    <rect x="823.5626" y="297.128" width="66.74613" height="12.93836" opacity="1" fill="#0000FE" fill-opacity="0.1302708" />
+    <rect x="809.6292" y="255.4823" width="66.74613" height="12.93836" opacity="1" fill="#0000FE" fill-opacity="0.1302708" />
+    <rect x="809.8143" y="198.7376" width="66.74613" height="12.93836" opacity="1" fill="#0000FE" fill-opacity="0.1302708" />
+    <rect x="781.0668" y="184.9165" width="53.18076" height="12.93836" opacity="1" fill="#FB0106" fill-opacity="0.1906571" />
+    <rect x="781.6104" y="226.4322" width="53.18076" height="12.93836" opacity="1" fill="#FB0106" fill-opacity="0.1906571" />
+    <rect x="781.0797" y="282.5424" width="53.18076" height="12.93836" opacity="1" fill="#FB0106" fill-opacity="0.1906571" />
+    <rect x="818.6292" y="241.2973" width="66.74613" height="12.93836" opacity="1" fill="#0000FE" fill-opacity="0.1302708" />
+    <text x="513.2415" y="312.6542" font-size="11" fill="#7F7F7F" fill-opacity="1" font-family="Helvetica" font-weight="normal" font-style="normal">msg 
+</text>
+    <text x="505.2842" y="326.6542" font-size="11" fill="#7F7F7F" fill-opacity="1" font-family="Helvetica" font-weight="normal" font-style="normal">handler</text>
+  </g>
+</svg>

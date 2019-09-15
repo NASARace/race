@@ -33,8 +33,18 @@ class TrackPath[T <: TrackedObject](val entry: TrackEntry[T])
 
   def addTrackPosition(tp: TrackPoint) = {
     addSample
-    posList.add(tp)
-    setPositions(posList)
+
+    //posList.add(tp)
+    //setPositions(posList)
+
+    if (posList.isEmpty || {
+        val p = posList.lastElement
+        Math.abs(p.latitude.getRadians - tp.position.lat.toRadians) > 0.000001 ||
+        Math.abs(p.longitude.getRadians - tp.position.lon.toRadians) > 0.000001 ||
+        Math.abs(p.getAltitude - tp.position.altitude.toMeters) > 0.5 } ) {
+      posList.add(tp)
+      setPositions(posList)
+    }
   }
 
   override def computePositionCount = numPositions = posList.size

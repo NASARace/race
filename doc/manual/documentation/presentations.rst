@@ -30,9 +30,11 @@ Technical Exchange Meeting 2016
 
 `RACE in 10`_ is a high level 10 minute RACE introduction
 
-`RACE - building airspace simulations faster and better with actors`_ is a general RACE introduction,
-to be presented at DASC 2016
+`RACE - building airspace simulations faster and better with actors`_ is a general RACE introduction which
+was presented at DASC 2016
 
+`Analyzing Airspace Data with RACE`_ is a showcase and reflection about lessons learned during application
+development with RACE, presented at DASC 2019
 
 .. _RACE Viewer Infrastructure: ../slides/RaceViewer.html
 .. _RemoteLauncher Infrastructure: ../slides/RemoteLauncher.html
@@ -41,3 +43,5 @@ to be presented at DASC 2016
 .. _NASA WorldWind: https://github.com/NASAWorldWind
 .. _Connecting RACE: ../slides/Connectivity.html
 .. _RACE in 10: ../slides/RACEin10.html
+.. _Analyzing Airspace Data with RACE: ../slides/DASC19.html
+

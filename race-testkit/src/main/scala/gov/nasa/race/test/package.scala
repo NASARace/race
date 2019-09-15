@@ -75,4 +75,22 @@ package object test {
     f
     usedHeapMemory - m0
   }
+
+  def gcMillis (mgr: Int): Long = {
+    gcMxBeans.get(mgr).getCollectionTime
+  }
+
+  def gcCount (mgr: Int): Long = {
+    gcMxBeans.get(mgr).getCollectionCount
+  }
+
+  def gcCountDiff (mgr: Int)(f: => Any): Long = {
+    val c1 = gcCount(mgr)
+    f
+    (gcCount(mgr) - c1)
+  }
+
+  def gc: Unit = {
+    Runtime.getRuntime.gc()
+  }
 }

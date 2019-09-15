@@ -17,6 +17,7 @@
 package gov.nasa.race.common
 
 import gov.nasa.race.test.RaceSpec
+import gov.nasa.race.util.FileUtils
 import org.scalatest.flatspec.AnyFlatSpec
 
 /**
@@ -26,22 +27,144 @@ class XmlPullParser2Spec extends AnyFlatSpec with RaceSpec {
 
   val testMsg =
     """
+      |<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
       |<top>
       |   <middle>
-      |       <bottom1 attr1="123" attr2="whatdoiknow" />
-      |       <number>1.234</number>
-      |       <bottom2>blah</bottom2>
+      |       <bottom1 attr1="123 < 321" attr2="whatdoiknow" attr3="skip this"/>
+      |       <number> 1.234 <!-- in [fops/brizl] --> </number>
+      |       <!-- this is ignored -->
+      |       <bottom2> blah </bottom2>
       |   </middle>
       |</top>
       |""".stripMargin
 
-  def indent (level: Int): Unit = {
-    for (i <- 0 until level) print("  ")
-  }
 
   "a XmlPullParser2" should "print well-formed XML" in {
-    val parser = new BufferedXmlPullParser2
+    val parser = new StringXmlPullParser2
     parser.initialize(testMsg)
     parser.printOn(System.out)
+  }
+
+
+  "a XmlPullParser2" should "extract known values from a test message" in {
+    val parser = new StringXmlPullParser2
+    parser.initialize(testMsg)
+
+    //--- the parsed tags/attrs
+    val top = new Literal("top")
+    val bottom1 = new Literal("bottom1")
+    val attr2 = new Literal("attr2")
+    val number = new Literal("number")
+    val middle = new Literal("middle")
+
+    if (parser.parseNextTag) {
+      if (parser.tag == top) assert(parseTop)
+      else fail("unexpected top element")
+    }
+
+    def parseTop: Boolean = {
+      println("parsing <top> element")
+      while (parser.parseNextTag) {
+
+        if (parser.isStartTag){
+          parser.tag match {
+            case `bottom1`  => assert(parseBottom1Attrs)
+            case `number`  =>
+              if (parser.parseContent && parser.getNextContentString) {
+                val num = parser.contentString.toDouble
+                println(s"number value = $num")
+                assert (num == 1.234)
+              } else fail("expected number content")
+            case _ => // ignore
+          }
+
+        } else { // end tags
+          if (parser.tag == middle) {
+            println("terminating on </middle>")
+            return true
+          }
+        }
+      }
+      false
+    }
+
+    def parseBottom1Attrs: Boolean = {
+      while (parser.parseNextAttr) {
+        parser.attrName match {
+          case `attr2` =>
+            println(s"bottom1 attr2 = '${parser.attrValue}'")
+            return true
+          case _ => // ignore
+        }
+      }
+      false
+    }
+  }
+
+  "a XmlPullParser2" should "extract flights and positions from SFDPS messages" in {
+    val msg = FileUtils.fileContentsAsBytes(baseResourceFile("sfdps-msg.xml")).get
+
+    var nFlights = 0
+
+    //--- tags, attrs and value extractors we need
+    val flightIdentification = new Literal("flightIdentification")
+    val aircraftIdentification = new Literal("aircraftIdentification")
+    val flight = new Literal("flight")
+    val positionTime = new Literal("positionTime") // attr
+    val pos = new Literal("pos")
+    val enRoute = new Literal("enRoute")
+    val position = new Literal("position")
+    val location = new Literal("location")
+    val slicer = new SubSlicer(' ')
+
+    val parser = new UTF8XmlPullParser2
+    if (parser.initialize(msg)) {
+      println(s"--- begin parsing ${msg.length} bytes")
+
+      while (parser.parseNextTag) {
+        if (parser.tag == flight && parser.isStartTag) parseFlight
+      }
+    }
+
+    def parseFlight: Unit = {
+      var id: String = null
+      var lat,lon: Double = 0.0
+      var dtg: String = null
+
+      while (parser.parseNextTag) {
+        if (parser.isStartTag) {
+          parser.tag match {
+            case `flightIdentification` =>
+              if (parser.parseAttr(aircraftIdentification)) id = parser.attrValue.intern
+
+            case `position` =>
+              if (parser.tagHasParent(enRoute)) {
+                if (parser.parseAttr(positionTime)) dtg = parser.attrValue.toString
+              }
+
+            case `pos` =>
+              if (parser.tagHasParent(location)) {
+                if (parser.parseContent && parser.getNextContentString) {
+                  slicer.setSource(parser.contentString)
+                  if (slicer.sliceNext) lat = slicer.subSlice.toDouble
+                  if (slicer.sliceNext) lon = slicer.subSlice.toDouble
+                }
+              }
+
+            case _ => // ignore
+          }
+        } else {
+          if (parser.tag == flight) {
+            if (id != null && lat != 0.0 && lon != 0.0 && dtg != null) {
+              nFlights += 1
+              println(s"$nFlights: $id, $dtg, $lat, $lon")
+              return
+            }
+          }
+        }
+      }
+    }
+
+    assert(nFlights == 100)
   }
 }

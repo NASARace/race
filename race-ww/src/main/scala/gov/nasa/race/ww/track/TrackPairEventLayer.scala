@@ -118,6 +118,7 @@ class TrackPairEventEntry(val event: TrackPairEvent, val layer: TrackPairEventLa
   protected var symbolShowing = false
   protected var marksShowing = false
   protected var pathsShowing = false  // only set if isVisible, depending on view level
+  protected var contoursShowing = false
 
   val mark1Attrs = new PointPlacemarkAttributes
   val mark2Attrs = new PointPlacemarkAttributes
@@ -134,8 +135,8 @@ class TrackPairEventEntry(val event: TrackPairEvent, val layer: TrackPairEventLa
   protected var connector: Path = createConnector
   protected var posMarker1: PointPlacemark = createPos1Marker
   protected var posMarker2: PointPlacemark = createPos2Marker
-  protected var path1:  Path = createPath1
-  protected var path2:  Path = createPath2
+  protected var path1:  TrajectoryPath = createPath1
+  protected var path2:  TrajectoryPath = createPath2
 
   addSymbol
 
@@ -251,6 +252,22 @@ class TrackPairEventEntry(val event: TrackPairEvent, val layer: TrackPairEventLa
     }
   }
 
+  def showContours = {
+    if (pathsShowing && !contoursShowing) {
+      path1.setContourAttrs(true)
+      path2.setContourAttrs(true)
+    }
+    contoursShowing = true
+  }
+
+  def hideContours = {
+    if (pathsShowing && contoursShowing) {
+      path1.setContourAttrs(false)
+      path2.setContourAttrs(false)
+    }
+    contoursShowing = false
+  }
+
   //--- called by rendering levels (e.g. when changing eye altitude)
 
   def setDotLevel: Unit = { // only event dot
@@ -313,6 +330,7 @@ class TrackPairEventEntry(val event: TrackPairEvent, val layer: TrackPairEventLa
   override def setAttr(attr: LayerObjectAttribute, cond: Boolean): Unit = {
     attr match {
       case LayerObjectAttribute.Path => if (cond) addPaths else removePaths
+      case LayerObjectAttribute.Contour => if (cond) showContours else hideContours
       case LayerObjectAttribute.Info => // TBD
       case LayerObjectAttribute.Mark => // TDB
       case _ => // ignore
@@ -322,6 +340,7 @@ class TrackPairEventEntry(val event: TrackPairEvent, val layer: TrackPairEventLa
   override def isAttrSet(attr: LayerObjectAttribute): Boolean = {
     attr match {
       case LayerObjectAttribute.Path => pathsShowing
+      case LayerObjectAttribute.Contour => contoursShowing
       case LayerObjectAttribute.Info => false
       case LayerObjectAttribute.Mark => false
       case _ => false

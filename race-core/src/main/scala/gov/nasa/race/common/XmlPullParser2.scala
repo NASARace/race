@@ -20,7 +20,10 @@ import java.io.PrintStream
 import java.nio.{ByteBuffer, CharBuffer}
 import java.nio.charset.{CoderResult, StandardCharsets}
 
+import scala.annotation.switch
+
 class XmlParseException (msg: String) extends RuntimeException(msg)
+
 
 /**
   * a XML parser trait that is based on Slices, i.e. tries to avoid allocation of
@@ -28,364 +31,527 @@ class XmlParseException (msg: String) extends RuntimeException(msg)
   */
 trait XmlPullParser2  {
 
-  protected var buf: Array[Byte] // the data (UTF-8), might grow
+  protected var data: Array[Byte] // the (abstract) data (UTF-8), might grow
+  protected var limit: Int = 0
   protected var idx = 0 // points to the next unprocessed byte in data
 
-  protected var textEnd = 0 // set if getText returned something
+  protected final val tagState = new TagState
+  protected final val attrState = new AttrState
+  protected final val endTagState = new EndTagState
+  protected final val contentState = new ContentState
 
-  // we need to store the path elements separately to avoid allocation
-  protected var pathCapacity: Int = 32
-  protected var pathOffset = new Array[Int](pathCapacity)
-  protected var pathLength = new Array[Int](pathCapacity)
-  protected var pathHash = new Array[Long](pathCapacity)
-  protected var pathTop: Int = -1
+  protected var state: State  = tagState
 
-  // hashed so that clients/subclasses can efficiently filter
-  protected val elementName = new HashedSliceImpl(buf,0,0)  // the current element name (without '<' '/' and '>')
-  protected val attrName = new HashedSliceImpl(buf,0,0) // the current attr name
+  val tag = new HashedSliceImpl(data,0,0)
+  protected var _isStartTag: Boolean = false
+  protected var _wasEmptyElementTag = false
 
-  protected val value = new SliceImpl(buf,0,0) // current attr value or element text
+  @inline final def isStartTag: Boolean = _isStartTag
+  @inline final def isEndTag: Boolean = !_isStartTag
+  @inline final def wasEmptyElementTag = _wasEmptyElementTag
 
-  protected var _isStartElement = false
-  protected var lastWasStartElement = false
+  //--- element path stack (avoiding runtime allocation)
+  protected val path = new HashedRangeStack(32)
 
-  def element: Slice = elementName
-  def isStartElement = _isStartElement
+  //--- content string list (avoiding runtime allocation)
+  protected val contentStrings = new RangeStack(16)
+  protected var contentIdx = 0
+  val contentString = new SliceImpl(data,0,0) // for iteration over content strings
+  val rawContent = new SliceImpl(data,0,0) // slice over all content (without leading/trailing blanks)
 
-  //--- path management
+  val attrName = new HashedSliceImpl(data,0,0)
+  val attrValue = new SliceImpl(data,0,0)  // not hashed by default
 
-  def growPath: Unit = {
-    val newCapacity = pathCapacity * 2
-    val newOffsets = new Array[Int](newCapacity)
-    val newLengths = new Array[Int](newCapacity)
-    val newHashes = new Array[Long](newCapacity)
+  //--- state management
 
-    val len = pathTop+1
-    System.arraycopy(pathOffset,0,newOffsets,0,len)
-    System.arraycopy(pathLength,0,newLengths,0,len)
-    System.arraycopy(pathHash,0,newHashes,0,len)
-
-    pathCapacity = newCapacity
-    pathOffset = newOffsets
-    pathLength = newLengths
-    pathHash = newHashes
+  sealed abstract class State {
+    def parseNextTag: Boolean       // if true result is in tag
+    def parseNextAttr: Boolean      // if true result is in attrName,attrValue
+    def parseContent: Boolean       // if true result can be obtained with content,contentAsLong,contentAsDouble
   }
 
-  def pushPath: Unit = {
-    pathTop += 1
-    if (pathTop >= pathCapacity) growPath
+  /**
+    * position is on '<'
+    * next state is either attrState (' '), endTagState ('/>') or contentState ('>')
+    */
+  class TagState extends State {
+    def parseNextTag: Boolean = {
+      val data = XmlPullParser2.this.data
+      val limit = XmlPullParser2.this.limit
 
-    pathOffset(pathTop) = elementName.offset
-    pathLength(pathTop) = elementName.length
-    pathHash(pathTop) = elementName.getHash
-  }
+      @inline def _setTag(i0: Int, i: Int, isStart: Boolean, nextState: State): Boolean = {
+        idx = i
+        tag.set(data,i0,i-i0)
+        _isStartTag = isStart
 
-  def popPath: Unit = {
-    if (pathTop >= 0) pathTop -= 1
-  }
+        attrName.clear
+        attrValue.clear
+        rawContent.clear
+        contentStrings.clear
 
-  def popPathIfEqual: Boolean = {
-    if (pathTop >= 0){
-      if (elementName.equals(buf,pathOffset(pathTop),pathLength(pathTop),pathHash(pathTop))) {
-        pathTop -= 1
-        return true
+        if (isStart) {
+          path.push(tag.offset,tag.length,tag.hash)
+        } else {
+          if (isTopTag(tag)) {
+            path.pop
+          } else {
+            throw new XmlParseException(s"unbalanced end tag around ${context(i0)}")
+          }
+        }
+        state = nextState
+        true
       }
+
+      val i0 = idx+1
+      var i = i0
+      if (i < limit){
+        if (data(i) == '/') { // '</..> end tag
+          i += 1
+          val i0 = i
+          i = skipTo(i, '>')
+          if (i < limit) {
+            return _setTag(i0, i, false, contentState)
+          }
+          throw new XmlParseException(s"malformed end tag around ${context(i0)}")
+
+        } else {  // '<..' start tag
+          while (i < limit) {
+            (data(i): @switch) match {
+              case ' ' =>
+                return _setTag(i0, i, true, attrState)
+              case '/' =>
+                val i1 = i + 1
+                if (i1 < limit && data(i1) == '>') {
+                  _wasEmptyElementTag = true
+                  return _setTag(i0, i1, true, endTagState)
+                }
+                throw new XmlParseException(s"malformed empty element tag around ${context(i0)}")
+              case '>' =>
+                _wasEmptyElementTag = false
+                return _setTag(i0, i, true, contentState)
+              case _ =>
+                i += 1
+            }
+          }
+        }
+      }
+      idx = i
+      false // past limit
+    }
+    def parseNextAttr = false
+    def parseContent = false
+  }
+
+  /**
+    * position on ' ' after tag
+    * next state is either attrState (in case attr is parsed), endtagState ('/>') or contentState ('>')
+    */
+  class AttrState extends State {
+    def parseNextTag = {
+      idx = seekPastTag(idx)
+      state = if (_wasEmptyElementTag) endTagState else contentState
+      state.parseNextTag
+    }
+
+    // current position on first space before attribute name
+    def parseNextAttr: Boolean = {
+      val data = XmlPullParser2.this.data
+      val limit = XmlPullParser2.this.limit
+
+      var i = skipSpace(idx)
+      if (i < limit){
+        (data(i): @switch) match {
+          case '/' =>
+            val i1 = i+1
+            if (i1 < limit && data(i1) == '>') {
+              idx = i1
+              _wasEmptyElementTag = true
+              state = endTagState
+              return false
+            }
+            throw new XmlParseException(s"malformed tag end around ${context(idx)}")
+          case '>' =>
+            idx = i
+            _wasEmptyElementTag = false
+            state = contentState
+            return false
+          case _ =>
+            val i0 = i
+            i = skipTo(i,'=')
+            if (i < limit) {
+              val i1 = backtrackSpace(i-1)+1
+              attrName.set(data,i0,i1-i0)
+              i = skipTo(i+1,'"')
+              if (i < limit){
+                i += 1
+                val i0 = i
+                i = skipTo(i,'"')
+                if (i < limit){
+                  attrValue.set(data,i0,i-i0)
+                  idx = i+1
+                  return true
+                }
+              }
+            }
+            throw new XmlParseException(s"malformed attribute around ${context(idx)}")
+        }
+      }
+      idx = i
+      false // past limit
+    }
+    def parseContent = false
+  }
+
+  /**
+    * position is on '>' of a '.../>' tag
+    * next is always contentState
+    */
+  class EndTagState extends State {
+    def parseNextTag: Boolean = {
+      // tag is still valid
+      _isStartTag = false
+      _wasEmptyElementTag = true
+      state = contentState
+      path.pop
+      true  // this always returns true since we already got the end tag
+    }
+    def parseNextAttr = false
+    def parseContent = false
+  }
+
+  /**
+    * position is on '>',  _wasEmptyElementTag is reset (processed)
+    */
+  class ContentState extends State {
+    def parseNextTag = {
+      if (path.nonEmpty) {
+        idx = seekPastContent(idx+1)
+        state = tagState
+        state.parseNextTag
+      } else {
+        false
+      }
+    }
+
+    def parseNextAttr = false
+
+    def parseContent: Boolean = {
+      val i0 = idx+1
+      idx = seekPastContent(i0) // this also sets the contentStrings
+      rawContent.set(data,i0,idx-i0) // this includes surrounding whitespace, comments and CDATA sections
+      state = tagState
+      if (contentStrings.nonEmpty){
+        contentIdx = 0
+        true
+      } else false
+    }
+  }
+
+  // reset all vars
+  protected def clear: Unit = {
+    idx = 0
+    state = tagState
+    path.clear
+    contentStrings.clear
+    _isStartTag = false
+    _wasEmptyElementTag = false
+    tag.clear
+    attrName.clear
+    attrValue.clear
+    rawContent.clear
+  }
+
+  //--- public methods
+
+  def parseNextTag: Boolean = state.parseNextTag
+
+  def parseNextAttr: Boolean = state.parseNextAttr
+
+  def parseAttr (at: HashedSliceImpl): Boolean = {
+    while (parseNextAttr) {
+      if (attrName.equals(at)) return true
     }
     false
   }
 
-  def dumpPath: Unit = {
+  def parseContent: Boolean = state.parseContent
+
+  //--- content retrieval
+
+  /**
+    * iterate over all contentStrings
+    */
+  def getNextContentString: Boolean = {
+    val i = contentIdx
+    if (i <= contentStrings.top) {
+      contentString.set(data,contentStrings.offsets(i),contentStrings.lengths(i))
+      contentIdx += 1
+      true
+    } else false
+  }
+
+  /**
+    * coalesce all content strings
+    */
+  def getContent: String = {
+    if (contentStrings.nonEmpty) {
+      val len = contentLength
+      val bs = new Array[Byte](len)
+      var i = 0
+      contentStrings.foreach { (_,o,l)=>
+        System.arraycopy(data,o,bs,i,l)
+        i += l
+      }
+      new String(bs,StandardCharsets.UTF_8 )
+    } else ""
+  }
+
+  //--- path query (e.g. to disambiguate elements at different nesting levels)
+
+  def tagHasParent(parent: HashedSliceImpl): Boolean = {
+    if (path.top > 0){
+      val i = path.top-1
+      parent.equals(data, path.offsets(i), path.lengths(i), path.hashes(i))
+    } else false
+  }
+
+  def tagHasAncestor(ancestor: HashedSliceImpl): Boolean = {
+    path.exists( (o,l,h) =>ancestor.equals(data,o,l,h))
+  }
+
+  //.. and probably more path predicates
+
+  //--- auxiliary parse functions used by states
+
+  def contentLength: Int = {
+    var len = 0
+    contentStrings.foreach { (_,_,l) => len += l }
+    len
+  }
+
+  def isTopTag (t: HashedSliceImpl): Boolean = {
+    t.equals(data,path.topOffset,path.topLength,path.topHash)
+  }
+
+  def seekRootTag: Int = {
     var i = 0
-    while (i < pathTop){
+    val buf = this.data
+    val limit = this.limit
+
+    while (i < limit && buf(i) != '<') i += 1
+    val i1 = i+1
+    if (i1 < limit && buf(i1) == '?' ){
+      i = i1+1
+      while (i<limit && buf(i) != '>' && buf(i-1) != '?') i += 1
       i += 1
+      while (i<limit && buf(i) != '<') i += 1
     }
+    i
   }
 
-  def pathDepth: Int = pathTop+1
+  @inline protected final def skipTo (i0: Int, c: Byte): Int = {
+    val data = XmlPullParser2.this.data
+    val limit = XmlPullParser2.this.limit
 
-  //... and probably more path accessors
-
-  //--- auxiliary parse functions
-
-  def skipPastEndDirective(i0: Int) = {
     var i = i0
-    val buf = this.buf
-    do {
-      var c = 0
-      while ({c = buf(i); c != '?'}){
+    while (i < limit && data(i) != c) i += 1
+    i
+  }
+
+  // skip forward to first position that is not a space or newline
+  @inline protected final def skipSpace (i0: Int): Int = {
+    val data = XmlPullParser2.this.data
+    val limit = XmlPullParser2.this.limit
+    var c: Byte = 0
+
+    var i = i0
+    while (i < limit && {c = data(i); c == ' ' || c == '\n'}) i += 1
+    i
+  }
+
+  // skip backwards to first position that is not a space
+  @inline protected final def backtrackSpace (i0: Int): Int = {
+    val data = XmlPullParser2.this.data
+
+    var i = i0
+    while (i >= 0 && data(i) == ' ') i -= 1
+    i
+  }
+
+
+
+  def seekTagStart (i0: Int): Int = {
+    var i = i0
+    val buf = this.data
+    val limit = this.limit
+
+    while (i < limit && buf(i) != '<') i += 1
+    i
+  }
+
+
+  // to be used inside tag to skip to the ending '>' and set _wasEmptyElementTag accordingly
+  // this has to skip over attribute value literals (..attr="..."..)
+  // current position has to be outside attribute value string literal
+  // note that XML comments are only allowed outside of tags
+  def seekPastTag (i0: Int): Int = {
+    var i = i0
+    val buf = this.data
+    val limit = this.limit
+
+    while (i < limit) {
+      val c = buf(i)
+      if (c == '>') {
+        _wasEmptyElementTag = false
+        return i
+      } else if (c == '/') {
         i += 1
-        if (c == '"'){
-          while( buf(i) != '"') i += 1
+        if (i < limit && buf(i) == '>'){
+          _wasEmptyElementTag = true
+          return i
+        } else throw new XmlParseException(s"malformed tag ending around ${context(i0)}")
+      } else if (c == '"'){
+        i += 1
+        while (i<limit && buf(i) != '"') i += 1
+      }
+      i += 1
+    }
+    throw new XmlParseException(s"unterminated tag around ${context(i0)}")
+  }
+
+  // skip to end of text (beginning of next tag)
+  // current position has to be outside of tag (i.e. past ending '>')
+  // this has to skip over '<![CDATA[...]]>' and '<!-- ... -->' sections
+
+  // ?? raw content ??
+
+  def seekPastContent (i0: Int): Int = {
+    var iStart = skipSpace(i0)
+    var i = i0
+    val buf = this.data
+    val limit = this.limit
+
+    while (i < limit) {
+      val c = buf(i)
+      if (c == '<') {
+        val i1 = i+1
+        if (i1 < limit && (buf(i1) == '!')){
+          val i2 = i1 + 1
+          if (i2 < limit) {
+            if (buf(i2) == '[') {          // '<![CDATA[...]]>'
+              val iEnd = backtrackSpace(i-1)
+              if (iEnd > iStart) contentStrings.push(iStart, iEnd-iStart+1)
+              i = i2 + 7
+              while (i < limit && buf(i) != '>' || buf(i-1) != ']') i += 1
+              iStart = i-1
+            } else if (buf(i2) == '-') {   // <!--...-->
+              val iEnd = backtrackSpace(i-1)
+              if (iEnd > iStart) contentStrings.push(iStart, iEnd-iStart+1)
+              i = i2+3
+              while (i < limit && buf(i) != '>' || (buf(i-1) != '-' || buf(i-2) != '-')) i += 1
+              iStart = i2 + 6
+              contentStrings.push(iStart, i - iStart-2) // the CDATA[..] content
+              iStart = i-1
+            } else throw new XmlParseException(s"malformed comment or CDATA around '${context(i0)}'")
+          } else throw new XmlParseException(s"malformed comment or CDATA around '${context(i0)}'")
+        } else {
+          val iEnd = backtrackSpace(i-1) + 1
+          if (iEnd > iStart) contentStrings.push(iStart, iEnd-iStart)
+          return i
         }
+      } else if (c == '>') {
+        throw new XmlParseException(s"malformed element content around '${context(i0)}'")
       }
-    } while ({ i += 1; buf(i) != '>'})
-    i + 1
-  }
-
-  def skipPastComment(i0: Int) = {
-    var i = i0
-    val buf = this.buf
-
-    do {
-      while (buf(i) != '-') i += 1
-    } while ({ i += 1; buf(i) != '-'} || { i += 1; buf(i) != '>'} )
-    i + 1
-  }
-
-  def skipPastCDATA(i0: Int) = {
-    var i = i0
-    val buf = this.buf
-
-    do {
-      while (buf(i) != ']') i += 1
-    } while ({ i+= 1; buf(i) != ']'} || { i += 1; buf(i) != '>'})
-    i + 1
-  }
-
-  def skipToText: Boolean = {
-    if (_isStartElement){
-      var i = idx
-      val buf = this.buf
-
-      while (buf(i) != '>') i += 1
-
-      if (buf(i-1) == '/') { // no text for <../> elements
-        false
-      } else {
-        i += 1
-        idx = i
-        textEnd = i
-        true
-      }
-    } else { // no text for </..> end elements
-      false
-    }
-  }
-
-  private def matchPattern (i0: Int, pattern: Array[Byte]): Boolean = {
-    var i = i0
-    val buf = this.buf
-    var j = 0
-    while (j < pattern.length) {
-      if (buf(i) != pattern(j)) return false
       i += 1
-      j += 1
     }
-    true
+    throw new XmlParseException(s"unterminated content around ${context(i0)}")
   }
 
-  final val CD_START = "[CDATA[".getBytes
+  //--- aux and debug functions
 
   def context (i: Int): String = {
     val i0 = i
-    val i1 = Math.min(i0+20, buf.length)
-    new String(buf, i0, i1-i0)
+    val i1 = Math.min(i0+20, data.length)
+    new String(data, i0, i1-i0)
   }
 
-  def printIndentOn (ps: PrintStream): Unit = {
-    var level = if (_isStartElement) pathTop else pathTop+1
-    while (level > 0) {
-      ps.print("  ")
-      level -= 1
-    }
-  }
 
   def printOn (ps: PrintStream): Unit = {
-    val lastText = new SliceImpl(buf,0,0)
-    while (parseNextElement){
-      if (_isStartElement) {
-        lastText.clear
-        if (lastWasStartElement) ps.println('>')
-        printIndentOn(ps)
-        ps.print('<')
-        elementName.writeTo(ps)
+    def printIndent: Unit = {
+      var level = if (_isStartTag) path.top else path.top+1  // when we get the end tag the top is already popped
+      while (level > 0) {
+        ps.print("  ")
+        level -= 1
+      }
+    }
 
-        while (parseNextAttribute){
+    var hadContent = false
+
+    while (parseNextTag){
+      if (isStartTag){
+        printIndent
+        ps.print('<')
+        ps.print(tag)
+
+        while (parseNextAttr) {
           ps.print(' ')
-          attrName.writeTo(ps)
+          ps.print(attrName)
           ps.print("=\"")
-          ps.print(value)
+          ps.print(attrValue)
           ps.print('"')
         }
 
-        if (parseTrimmedText) {
-          lastText.setFrom(value)
+        if (!_wasEmptyElementTag) {
+          ps.print('>')
+          if (parseContent) {
+            ps.print(rawContent)
+            hadContent = true
+          } else {
+            ps.println
+            hadContent = false
+          }
         }
 
-      } else {  // end element
-        if (lastWasStartElement){
-          if (lastText.nonEmpty) {
-            ps.print('>')
-            lastText.writeTo(ps)
-            ps.print("</")
-            elementName.writeTo(ps)
-            ps.println('>')
-          } else {
-            ps.println("/>")
-          }
+      } else {
+        if (_wasEmptyElementTag) {
+          ps.println("/>")
         } else {
-          printIndentOn(ps)
+          if (!hadContent) printIndent
           ps.print("</")
-          elementName.writeTo(ps)
+          ps.print(tag)
           ps.println('>')
         }
+        hadContent = false // no mixed content yet
       }
     }
   }
 
-  //--- element parsing
-
-  def parseNextElement: Boolean = {
-    try {
-      _parseNext(idx)
-    } catch {
-      case x: ArrayIndexOutOfBoundsException => false
+  def dumpPath: Unit = {
+    path.foreach { (idx,off,len)=>
+      if (idx > 0)print(',')
+      print(Slice(data,off,len).toString)
     }
   }
-
-  protected def _parseNext (i0: Int): Boolean = {
-    var i = i0
-    val buf = this.buf
-
-    if (_isStartElement) {
-      if (textEnd < 0){
-        while (buf(i) != '>') i += 1
-        if (buf(i-1) == '/'){
-          lastWasStartElement = _isStartElement
-          _isStartElement = false
-          idx = i+1
-          popPath
-          return true
-        }
-      } else {
-        i = textEnd
-        textEnd = -1
-      }
-    }
-
-    while (true) {
-      while (buf(i) != '<') {
-        i += 1
-        if (buf(i) == 0) return false // end marker reached
-      }
-      i +=1
-      val i0 = i
-      buf(i) match {
-        case '?' =>  // metadata (prolog) -> skip
-          i = skipPastEndDirective(i+1)
-        case '!' =>  // comment or CDATA
-          if (buf(i+1) == '-' && buf(i+2) == '-') {
-            i = skipPastComment(i+3)
-          } else {  // maybe CDATA ("<![CDATA[..]]>") - ignored for now
-            if (matchPattern(i+1, CD_START)) {
-              i = skipPastCDATA(i+CD_START.length)
-            } else {
-              throw new XmlParseException(s"comment or CDATA expected around ..${context(i0)}..")
-            }
-          }
-        case '/' => // end element
-          i += 1
-          while (buf(i) != '>') i += 1
-          elementName.setAndRehash(buf,i0+1, i-i0-1)
-          idx = i+1
-          if (!popPathIfEqual) throw new XmlParseException(s"unbalanced end element around ..${context(i0-1)}..")
-          lastWasStartElement = _isStartElement
-          _isStartElement = false
-          return true
-
-        case _ => // start element
-          var c = buf(i)
-          while (c > ' ' && c != '/' && c != '>'){
-            i += 1
-            c = buf(i)
-          }
-          elementName.setAndRehash(buf,i0,i-i0)
-          idx = i
-          pushPath
-          lastWasStartElement = _isStartElement
-          _isStartElement = true
-          return true
-      }
-    }
-    throw new RuntimeException("can't get here")
-  }
-
-  def parseNextAttribute: Boolean = {
-    if (_isStartElement){
-      var i = idx
-      val buf = this.buf
-      var c = 0
-
-      while ({ c = buf(i); c <= ' '}) i += 1
-      if (c == '/' || c == '>') { // no attr
-        idx = i
-        false
-
-      } else {  // attr
-        var i0 = i
-        i += 1
-        while (buf(i) != '=') i += 1
-        attrName.setAndRehash(buf,i0, i-i0-1)
-        i += 1
-        if (buf(i) != '"') throw new XmlParseException("non-quoted attribute value around ..${context(i0)}.. ")
-        i += 1
-        i0 = i
-        while (buf(i) != '"') i += 1
-        value.set(buf,i0,i - i0)
-        idx = i + 1
-        true
-      }
-    } else {
-      false  // no attributes for end elements
-    }
-  }
-
-  def parseTrimmedText: Boolean = {
-    if (skipToText) {
-      var i = idx
-      val buf = this.buf
-
-      while (buf(i) <= ' ') i += 1
-      val i0 = i
-      while (buf(i) != '<') i += 1
-      textEnd = i
-
-      // backtrack over trailing spaces
-      i -= 1
-      while (buf(i) <= ' ') i -= 1
-      if (i >= i0){
-        value.set(buf,i0,i-i0+1)
-        true
-      } else {  // no text, just spaces
-        false
-      }
-    } else {
-      false
-    }
-  }
-
 }
 
+
 /**
-  * a XmlPullParser2 that uses a pre-allocated (but growable) buffer
-  * 
-  * Use this for String parsing to avoid per-parse allocation of the complete
-  * string data
+  * a XmlPullParser2 that uses a pre-allocated (but growable) byte array to parse UTF-8 string data
   */
-class BufferedXmlPullParser2 (initBufSize: Int = 8192) extends XmlPullParser2 {
-  protected var buf: Array[Byte] = new Array(initBufSize)
-  protected var bb: ByteBuffer = ByteBuffer.wrap(buf)
+class StringXmlPullParser2(initBufSize: Int = 8192) extends XmlPullParser2 {
+  protected var data: Array[Byte] = new Array(initBufSize)
+  protected var bb: ByteBuffer = ByteBuffer.wrap(data)
   protected val enc = StandardCharsets.UTF_8.newEncoder
 
   protected def growBuf: Unit = {
-    val newBuf = new Array[Byte](buf.length*2)
+    val newBuf = new Array[Byte](data.length*2)
     val newBB = ByteBuffer.wrap(newBuf)
     newBB.put(bb)
-    buf = newBuf
+    data = newBuf
     bb = newBB
   }
 
-  def initialize (s: String): Unit = {
+  def initialize (s: String): Boolean = {
     val cb = CharBuffer.wrap(s)
     bb.rewind
     var done = false
@@ -393,16 +559,29 @@ class BufferedXmlPullParser2 (initBufSize: Int = 8192) extends XmlPullParser2 {
     do {
       enc.encode(cb, bb, true) match {
         case CoderResult.UNDERFLOW => // all chars encoded
-          buf(bb.position) = 0 // end marker
+          limit = bb.position
           done = true
         case CoderResult.OVERFLOW => growBuf
       }
     } while (!done)
 
-    idx = 0
-    textEnd = -1
-    pathTop = -1
-    _isStartElement = false
-    lastWasStartElement = false
+    clear
+    idx = seekRootTag
+    idx >= 0
+  }
+}
+
+/**
+  * a XmlPullParser2 that works directly on a provided utf-8 byte array
+  */
+class UTF8XmlPullParser2 extends XmlPullParser2 {
+  protected var data: Array[Byte] = Array.empty
+
+  def initialize (bs: Array[Byte]): Boolean = {
+    clear
+    data = bs
+    limit = bs.length
+    idx = seekRootTag
+    idx >= 0
   }
 }

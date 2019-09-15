@@ -17,9 +17,12 @@
 
 package gov.nasa.race.swing
 
-import java.awt.{Window => AWTWindow}
+import java.awt.{GraphicsEnvironment, Window => AWTWindow}
+
 import javax.swing.JPopupMenu
+
 import scala.swing.Frame
+import java.awt.{Frame => AWTFrame}
 
 
 /**
@@ -44,6 +47,7 @@ object Platform {
     else if (s.startsWith("10")) 10
     else if (s.startsWith("11")) 11
     else if (s.startsWith("12")) 12
+    else if (s.startsWith("13")) 13
     else throw new RuntimeException(s"unknown Java version $s")
   }
 
@@ -72,18 +76,24 @@ object Platform {
   }
 
   def enableFullScreen (frame: Frame) = {
-    if (isMacOS && isJava8){
+    if (isMacOS){
       enableOSXFullScreen(frame)
     } else {
       // not required
     }
   }
 
-  def requestFullScreen (frame: Frame) = {
-    if (isMacOS && isJava8) {
+  def requestFullScreen (frame: AWTFrame) = {
+    if (isMacOS) {
       requestOSXFullScreen(frame)
+
     } else {
-      // not supported yet
+      // this is supposed to be the portable Java way to request fullscreen but
+      // at least on macOS 0.13.6 it does not allow to switch between workspaces
+      // and disables popups
+      val env = GraphicsEnvironment.getLocalGraphicsEnvironment
+      val device = env.getDefaultScreenDevice
+      device.setFullScreenWindow(frame)
     }
   }
 
@@ -99,14 +109,14 @@ object Platform {
     }
   }
 
-  def requestOSXFullScreen (frame: Frame): Unit = {
+  def requestOSXFullScreen (frame: AWTFrame): Unit = {
     try {
       val appClass = Class.forName("com.apple.eawt.Application")
       val getApplication = appClass.getMethod("getApplication")
       val application = getApplication.invoke(appClass)
 
       val requestToggleFulLScreen = application.getClass().getMethod("requestToggleFullScreen", classOf[AWTWindow])
-      requestToggleFulLScreen.invoke(application, frame.peer)
+      requestToggleFulLScreen.invoke(application, frame)
     } catch {
       case x: Throwable => println(x)
     }
