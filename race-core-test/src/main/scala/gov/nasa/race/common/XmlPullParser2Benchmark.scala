@@ -7,7 +7,7 @@ import gov.nasa.race.test._
 
 object XmlPullParser2Benchmark {
 
-  val nRounds = 300
+  val nRounds = 30000
 
   def main (args: Array[String]): Unit = {
     println("hit any key to start..")
@@ -18,7 +18,6 @@ object XmlPullParser2Benchmark {
 
     gc
     runOldPullParser(msg)
-
     gc
     runXmlPullParser2(msg)
   }
@@ -47,6 +46,26 @@ object XmlPullParser2Benchmark {
 
       while (parser.parseNextTag) {
         if (parser.isStartTag) {
+          val tag = parser.tag
+
+          if (tag =:= flightIdentification) {
+            if (parser.parseAttr(aircraftIdentification)) id = parser.attrValue.intern
+
+          } else if (tag =:= position){
+            if (parser.tagHasParent(enRoute)) {
+              if (parser.parseAttr(positionTime)) dtg = parser.attrValue.toString
+            }
+
+          } else if (tag =:= pos) {
+            if (parser.tagHasParent(location)) {
+              if (parser.parseContent && parser.getNextContentString) {
+                slicer.setSource(parser.contentString)
+                if (slicer.sliceNext) lat = slicer.subSlice.toDouble
+                if (slicer.sliceNext) lon = slicer.subSlice.toDouble
+              }
+            }
+          }
+          /*
           parser.tag match {
             case `flightIdentification` =>
               if (parser.parseAttr(aircraftIdentification)) id = parser.attrValue.intern
@@ -67,8 +86,9 @@ object XmlPullParser2Benchmark {
 
             case _ => // ignore
           }
+          */
         } else {
-          if (parser.tag == flight) {
+          if (parser.tag =:= flight) {
             if (id != null && lat != 0.0 && lon != 0.0 && dtg != null) {
               nFlights += 1
               //println(s"$nFlights: $id, $dtg, $lat, $lon")
@@ -88,7 +108,7 @@ object XmlPullParser2Benchmark {
       if (parser.initialize(msg)) {
         nFlights = 0
         while (parser.parseNextTag) {
-          if (parser.tag == flight && parser.isStartTag) parseFlight
+          if (parser.tag =:= flight && parser.isStartTag) parseFlight
         }
       }
       j += 1
@@ -106,7 +126,7 @@ object XmlPullParser2Benchmark {
   def runOldPullParser (msg: Array[Byte]): Unit = {
     val msgChars = new String(msg).toCharArray
     var nFlights = 0
-    println(s"-- parsing ${nRounds}x using XmlPullParser")
+    println(s"-- parsing ${nRounds}x using old XmlPullParser")
     val parser = new XmlPullParser
 
     def parseFlight: Unit = {
