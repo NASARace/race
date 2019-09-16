@@ -398,8 +398,8 @@ class RaceViewer(viewerActor: RaceViewerActor) extends DeferredEyePositionListen
     if (config.hasPath("layer-categories")) config.getStringList("layer-categories").asScala.toSet else default
   }
 
-  def redraw = redrawManager.redraw()
-  def redrawNow = redrawManager.redrawNow()
+  def redraw = redrawManager.redraw
+  def redrawNow = redrawManager.redrawNow
 
   def getInViewChecker = InViewChecker(wwd)
 

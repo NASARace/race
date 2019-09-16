@@ -80,7 +80,7 @@ class WeatherLayer (val raceViewer: RaceViewer, val config: Config) extends Subs
           }
       }
 
-      wwdRedrawManager.redraw()
+      wwdRedrawManager.redraw
 
     case other => warning(f"$name ignoring message $other%30.30s..")
   }

@@ -265,7 +265,7 @@ trait TrackLayer[T <:TrackedObject] extends SubscribingRaceLayer
       if (StringUtils.matchesAny(track.cs, focusTrackFilter)) setFocused(e,true)
 
       addTrackEntryAttributes(e)
-      wwdRedrawManager.redraw()
+      wwdRedrawManager.redraw
 
     } else {
       e.setVisible(false)
@@ -287,7 +287,7 @@ trait TrackLayer[T <:TrackedObject] extends SubscribingRaceLayer
         //raceViewer.panToCenter(wwPosition(ep, Meters(raceViewer.tgtZoom + dAlt)),500) // FIXME
       }
       updateTrackEntryAttributes(e)
-      if (e.hasSymbol) wwdRedrawManager.redraw()
+      if (e.hasSymbol) wwdRedrawManager.redraw
       // the layerInfo panel does update periodically on its own
       if (entryPanel.isShowing(e)) entryPanel.update
     }
@@ -297,7 +297,7 @@ trait TrackLayer[T <:TrackedObject] extends SubscribingRaceLayer
     val wasShowing = e.hasSymbol
     releaseTrackEntryAttributes(e)
     trackEntries -= getTrackKey(e.obj)
-    if (wasShowing) wwdRedrawManager.redraw()
+    if (wasShowing) wwdRedrawManager.redraw
     panel.removedEntry(e)
     if (entryPanel.isShowing(e)) entryPanel.update
   }
@@ -305,7 +305,7 @@ trait TrackLayer[T <:TrackedObject] extends SubscribingRaceLayer
   protected def clearTrackEntries = {
     trackEntries.clear
     removeAllRenderables()
-    wwdRedrawManager.redraw()
+    wwdRedrawManager.redraw
     panel.removedAllEntries
   }
 

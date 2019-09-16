@@ -17,8 +17,12 @@
 
 package gov.nasa.race.ww
 
+import java.awt.event.{ActionEvent, ActionListener}
+
 import gov.nasa.race.swing.Redrawable
 import gov.nasa.worldwind.WorldWindow
+import javax.swing.Timer
+
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -26,7 +30,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
  * the factory singleton for redraw policies
  */
 object RedrawManager {
-  def apply (wwd: Redrawable) = new SlidingTimeFramePolicy(wwd)
+  def apply (wwd: Redrawable) = new ContinuousOnDemandPolicy(wwd)
 }
 
 /**
@@ -45,13 +49,12 @@ object RedrawManager {
  * costs (reflection call) which we want to avoid here
  */
 abstract class RedrawManager (val wwd: Redrawable) {
-  protected var pending: Option[Future[Any]] = None
-  @volatile protected var lastTime: Long = 0 // time of most recent request
 
-  def redraw(): Unit
+  // schedule a redraw within a instance specific time frame
+  def redraw: Unit
 
   // only the generic version - override if it has to sync with redraw()
-  def redrawNow(): Unit = wwd.redrawNow()
+  def redrawNow: Unit = wwd.redrawNow()
 }
 
 /**
@@ -69,7 +72,10 @@ abstract class RedrawManager (val wwd: Redrawable) {
  */
 class SlidingTimeFramePolicy (wwd: Redrawable, val minDelay: Long=300, val maxDelay: Long=600)
                                                                          extends RedrawManager(wwd) {
-  def redraw(): Unit = {
+  protected var pending: Option[Future[Any]] = None
+  @volatile protected var lastTime: Long = 0 // epoch millis of most recent request
+
+  def redraw: Unit = {
     lastTime = System.currentTimeMillis
     synchronized {
       if (pending == None) {
@@ -90,6 +96,40 @@ class SlidingTimeFramePolicy (wwd: Redrawable, val minDelay: Long=300, val maxDe
           synchronized {pending = None}
         })
       }
+    }
+  }
+}
+
+/**
+  * policy that avoids allocation or additional threads, and periodically redraws even without pending requests
+  * (required for object selection without position updates)
+  */
+class ContinuousOnDemandPolicy (wwd: Redrawable, val startDelay: Int = 500, val checkInterval: Int = 100, val maxDelay: Int=1000)
+        extends RedrawManager(wwd) with ActionListener {
+
+  @volatile protected var pendingRequest: Boolean = false
+  protected var lastRedraw: Long = 0
+
+  val timer = new Timer(checkInterval, this)
+  timer.setInitialDelay(startDelay)
+  timer.setCoalesce(true)
+  timer.start
+
+  def redraw: Unit = pendingRequest = true
+
+  override def redrawNow = {
+    pendingRequest = false
+    lastRedraw = System.currentTimeMillis
+    wwd.redrawNow
+  }
+
+  override def actionPerformed(actionEvent: ActionEvent): Unit = {
+    val t = System.currentTimeMillis
+
+    if (pendingRequest || (t-lastRedraw)>maxDelay){
+      pendingRequest = false
+      lastRedraw = t
+      wwd.redraw
     }
   }
 }

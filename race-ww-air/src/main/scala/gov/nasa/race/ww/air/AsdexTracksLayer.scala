@@ -152,7 +152,7 @@ class AsdexTracksLayer (val raceViewer: RaceViewer, val config: Config)
         if (active && ap.id == updateMsg.airport) {
           incUpdateCount
           updateTracks(updateMsg.tracks)
-          wwdRedrawManager.redraw()
+          wwdRedrawManager.redraw
         }
       }
   }
