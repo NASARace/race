@@ -36,7 +36,7 @@ class OpenSky2FlightPos (val config: Config=NoConfig) extends ConfigurableTransl
   implicit val decoder: Decoder[FlightPos] = (hCursor: HCursor) => {
     for {
       icao24 <- hCursor.downArray.as[String]
-      csRaw <- hCursor.downN(1).as[String]
+      cs <- hCursor.downN(1).as[String]
       //origin <- hCursor.downN(2).as[String]
       timePos <- hCursor.downN(3).as[Long]
       //lastContact <- hCursor.downN(4).as[Long]
@@ -52,9 +52,8 @@ class OpenSky2FlightPos (val config: Config=NoConfig) extends ConfigurableTransl
       //spi <- hCursor.downN(15).as[Boolean]
       //posSrc <- hCursor.downN(16).as[Int]
     } yield {
-      val cs = if (csRaw.nonEmpty && csRaw.charAt(0).isLetter) csRaw.trim else "?"
       new FlightPos(
-        icao24,cs,GeoPosition.fromDegreesAndMeters(lat,lon,alt),MetersPerSecond(speed),Degrees(trueTrack),
+        icao24,cs.trim,GeoPosition.fromDegreesAndMeters(lat,lon,alt),MetersPerSecond(speed),Degrees(trueTrack),
         MetersPerSecond(vr),DateTime.ofEpochMillis(timePos*1000)
       )
     }
@@ -67,6 +66,19 @@ class OpenSky2FlightPos (val config: Config=NoConfig) extends ConfigurableTransl
     }
   }
 
+  def validateFpos(fpos: FlightPos): Boolean = {
+    val cs = fpos.cs
+    if (cs.isEmpty || !cs.charAt(0).isLetter) return false
+
+    val pos = fpos.position
+    if (pos.lat.isUndefined || pos.lon.isUndefined || pos.altitude.isUndefined) {
+      //println(s"@@@ incomplete pos: $fpos")
+      return false
+    }
+
+    true
+  }
+
   def translateJson (input: String): Option[Seq[FlightPos]] = {
     val json: Json = parser.parse(input).getOrElse(Json.Null)
     val data: Option[Json] = json.hcursor.downField("states").focus
@@ -74,7 +86,7 @@ class OpenSky2FlightPos (val config: Config=NoConfig) extends ConfigurableTransl
     data match {
       case Some(list) =>
         list.hcursor.as[List[FlightPos]] match {
-          case Right(flist) => Some(flist.filter(_.cs != "?"))
+          case Right(flist) => Some(flist.filter(validateFpos))
           case Left(err) => println(err); None
         }
       case None => None
