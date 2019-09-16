@@ -14,7 +14,12 @@ object CommonRaceSettings {
       TaskSettings.taskSettings ++
       Seq(
         scalaVersion := scalaVer,
-        scalacOptions ++= Seq("-unchecked", "-deprecation", "-feature", "-opt-inline-from:**"), // alternatively use -opt-inline-from:<source> for compilation scope
+        scalacOptions ++= Seq("-unchecked", "-deprecation", "-feature"
+          , "-opt:l:inline", "-opt-inline-from:**"
+          //, "-opt:unreachable-code", "-opt:simplify-jumps"
+          //, "-opt:compact-locals", "-opt:copy-propagation"
+          //, "-opt:box-unbox",  "-opt:closure-invocations"
+        ),
         resolvers ++= Dependencies.dependencyResolvers,
 
         fork in run := true,

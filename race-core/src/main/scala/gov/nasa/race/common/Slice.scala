@@ -36,7 +36,7 @@ object Slice {
   *
   * the trait does not allow to modify the internals
   */
-trait Slice {
+abstract class Slice {
   def bs: Array[Byte]
   def offset: Int
   def length: Int
@@ -48,20 +48,22 @@ trait Slice {
 
   def apply (i: Int): Byte = bs(offset+i)
 
-  def equals(otherBs: Array[Byte], otherOffset: Int, otherLength: Int): Boolean = {
-    if (length != otherLength) return false
-    var i = offset
-    val iEnd = i + length
-    var j = otherOffset
-    while (i < iEnd) {
-      if (bs(i) != otherBs(j)) return false
-      i += 1
-      j += 1
-    }
-    true
+  @inline final def equals(otherBs: Array[Byte], otherOffset: Int, otherLength: Int): Boolean = {
+    val bs = this.bs
+    if (length == otherLength) {
+      var i = offset
+      val iEnd = i + length
+      var j = otherOffset
+      while (i < iEnd) {
+        if (bs(i) != otherBs(j)) return false
+        i += 1
+        j += 1
+      }
+      true
+    } else false
   }
 
-  def equals (otherBs: Array[Byte]): Boolean = equals(otherBs,0,otherBs.length)
+  @inline final def equals (otherBs: Array[Byte]): Boolean = equals(otherBs,0,otherBs.length)
 
   override def equals (o: Any): Boolean = {
     o match {
@@ -69,6 +71,8 @@ trait Slice {
       case _ => false
     }
   }
+
+  @inline final def =:= (other: Slice): Boolean = equals(other.bs,other.offset,other.length)
 
   // todo - add string comparison based on utf-8 encoding
 
@@ -219,12 +223,12 @@ trait Slice {
 class SliceImpl (var bs: Array[Byte], var offset: Int, var length: Int) extends Slice {
   def this (s: String) = this(s.getBytes,0,s.length)
 
-  def clear: Unit = {
+  @inline def clear: Unit = {
     offset = 0
     length = 0
   }
 
-  def set (bsNew: Array[Byte], offNew: Int, lenNew: Int): Unit = {
+  @inline def set (bsNew: Array[Byte], offNew: Int, lenNew: Int): Unit = {
     bs = bsNew
     offset = offNew
     length = lenNew
@@ -273,8 +277,10 @@ class HashedSliceImpl (_bs: Array[Byte], _offset: Int, _length: Int) extends Sli
 
   @inline override def set (bsNew: Array[Byte], offNew: Int, lenNew: Int) = setAndRehash(bsNew,offNew,lenNew)
 
-  def equals (otherBs: Array[Byte], otherOffset: Int, otherLength: Int, otherHash: Long): Boolean = {
-    if (otherHash != hash) false else equals(otherBs,otherOffset,otherLength)
+  @inline final def equals (other: HashedSliceImpl): Boolean = equals(other.bs, other.offset, other.length, other.getHash)
+
+  @inline final def equals (otherBs: Array[Byte], otherOffset: Int, otherLength: Int, otherHash: Long): Boolean = {
+    otherHash == hash && equals(otherBs,otherOffset,otherLength)
   }
 
   override def equals (o: Any): Boolean = {
@@ -285,11 +291,8 @@ class HashedSliceImpl (_bs: Array[Byte], _offset: Int, _length: Int) extends Sli
     }
   }
 
-  override def == (o: Slice): Boolean = {
-    o match {
-      case slice: HashedSliceImpl => equals(slice.bs,slice.offset,slice.length,slice.hash)
-      case slice: Slice => equals(slice.bs, slice.offset, slice.length)
-    }
+  @inline final def =:= (other: HashedSliceImpl): Boolean = {
+    other.hash == hash && equals(other.bs,other.offset,other.length)
   }
 
   override def intern: String = {
@@ -304,7 +307,7 @@ class HashedSliceImpl (_bs: Array[Byte], _offset: Int, _length: Int) extends Sli
 /**
   * just some syntactic sugar
   */
-class Literal (s: String) extends HashedSliceImpl (s.getBytes)
+class Literal (s: String) extends SliceImpl (s)
 
 object EmptySlice extends SliceImpl(new Array[Byte](0),0,0)
 
