@@ -15,10 +15,15 @@ object CommonRaceSettings {
       Seq(
         scalaVersion := scalaVer,
         scalacOptions ++= Seq("-unchecked", "-deprecation", "-feature"
-          , "-opt:l:inline", "-opt-inline-from:**"
-          //, "-opt:unreachable-code", "-opt:simplify-jumps"
-          //, "-opt:compact-locals", "-opt:copy-propagation"
-          //, "-opt:box-unbox",  "-opt:closure-invocations"
+          //, "-opt-warnings"
+          , "-opt:l:method"
+          , "-opt:l:inline"                      // only safe if we recompile everything after changing a inlined method
+          , "-opt-inline-from:gov.nasa.race.**"  //  - " -
+          , "-opt:unreachable-code"
+          , "-opt:simplify-jumps"
+          //, "-opt:compact-locals"
+          , "-opt:copy-propagation"
+          , "-opt:box-unbox",  "-opt:closure-invocations"
         ),
         resolvers ++= Dependencies.dependencyResolvers,
 

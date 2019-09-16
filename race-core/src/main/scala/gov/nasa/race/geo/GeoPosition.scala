@@ -41,22 +41,22 @@ object GeoPosition {
   */
 trait GeoPosition {
   def φ: Angle
-  @inline def lat = φ  // just an alias
+  @inline final def lat = φ  // just an alias
 
   def λ: Angle
-  @inline def lon = λ  // just an alias
+  @inline final def lon = λ  // just an alias
 
   def altitude: Length
   def hasDefinedAltitude: Boolean = altitude.isDefined
 
   @inline def =:= (other: GeoPosition): Boolean = (φ =:= other.φ) && (λ =:= other.λ) && (altitude =:= other.altitude)
 
-  @inline def isDefined = φ.isDefined && λ.isDefined && altitude.isDefined
+  @inline final def isDefined = φ.isDefined && λ.isDefined && altitude.isDefined
 
-  @inline def latDeg = φ.toDegrees
-  @inline def lonDeg = λ.toDegrees
-  @inline def altMeters: Double = altitude.toMeters
-  @inline def altFeet: Int = altitude.toFeet.toInt
+  @inline final def latDeg = φ.toDegrees
+  @inline final def lonDeg = λ.toDegrees
+  @inline final def altMeters: Double = altitude.toMeters
+  @inline final def altFeet: Int = altitude.toFeet.toInt
 
   override def toString: String = f"${getClass.getSimpleName}(φ=${φ.toDegrees}%+3.5f°,λ=${λ.toDegrees}%+3.5f°,alt=${altitude.toMeters}%.0fm)"
   def toGenericString2D: String = f"(φ=${φ.toDegrees}%+3.5f°,λ=${λ.toDegrees}%+3.5f°)"

@@ -338,7 +338,7 @@ object ConfigUtils {
         case s: String =>
           s match {
             case unitNumberRE(n,u) =>
-              val d = java.lang.Double.parseDouble(n)
+              val d = n.toDouble
               u match {
                 case null => Meters(d)
                 case "m" => Meters(d)

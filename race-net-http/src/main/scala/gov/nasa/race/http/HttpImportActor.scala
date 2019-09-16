@@ -24,6 +24,7 @@ import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.Uri.Path
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.model.headers._
+import akka.http.scaladsl.settings.{ClientConnectionSettings, ConnectionPoolSettings}
 import akka.stream.{ActorMaterializer, ActorMaterializerSettings}
 import akka.util.ByteString
 import com.typesafe.config.Config
@@ -35,7 +36,7 @@ import gov.nasa.race.core.{PeriodicRaceActor, PublishingRaceActor, SubscribingRa
 import scala.annotation.tailrec
 import scala.collection.mutable
 import scala.collection.mutable.{Map => MMap}
-import scala.concurrent.Await
+import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
 
 object HttpImportActor {
@@ -48,8 +49,8 @@ object HttpImportActor {
   def unregisterLive(a: HttpImportActor): Boolean = {
     if (liveInstances.decrementAndGet == 0) {
       try {
-        a.materializer.shutdown
-        Await.ready(a.http.shutdownAllConnectionPools, 12.seconds)
+        //a.materializer.shutdown
+        Await.ready(a.http.shutdownAllConnectionPools, 10.seconds)
       } catch {
         case _:java.util.concurrent.TimeoutException =>
           a.warning("shutting down Http pool timed out")
@@ -59,7 +60,7 @@ object HttpImportActor {
   }
 }
 
-case class PendingRequest (id: Int, request: HttpRequest)
+case class PendingRequest (id: Int, request: HttpRequest, responseFuture: Future[HttpResponse])
 
 /**
   * import actor that publishes responses for configured, potentially periodic http requests
@@ -78,6 +79,9 @@ class HttpImportActor (val config: Config) extends PublishingRaceActor
   // safe to be mutable since it is only accessed from inside this actor
   val cookieMap: MMap[String, MMap[Path, MMap[String,Cookie]]] = MMap.empty
 
+  // do we allow several pending requests
+  val coalesce: Boolean = config.getBooleanOrElse("coalesce", true)
+
   // the configured requests
   var requests: Seq[HttpRequest] = config.getConfigSeq("data-requests").toList.flatMap(HttpRequestBuilder.get)
 
@@ -87,15 +91,20 @@ class HttpImportActor (val config: Config) extends PublishingRaceActor
   final implicit val materializer: ActorMaterializer = ActorMaterializer(ActorMaterializerSettings(context.system))
   val http = Http(context.system)
 
+  val clientSettings = {
+    val origSettings = ClientConnectionSettings(system.settings.config)
+    ConnectionPoolSettings(system.settings.config).withConnectionSettings(origSettings.withIdleTimeout(5.seconds))
+  }
+
   // if no explicit interval is set this is a one-time request
   override def defaultTickInterval: FiniteDuration = 0.seconds
 
   def sendRequest (request: HttpRequest) = {
     val req = addRequestCookies(request)
     info(s"sending http request to ${req.uri.authority}${req.uri.path}") // don't log credentials!
-    val responseFuture = http.singleRequest(req)
+    val responseFuture: Future[HttpResponse] = http.singleRequest(req, settings = clientSettings)
     nRequests += 1
-    val pr = PendingRequest(nRequests,request)
+    val pr = PendingRequest(nRequests,request,responseFuture)
     pendingRequests += pr
     responseFuture.map( resp=> (pr,resp)).pipeTo(self)
   }
@@ -135,58 +144,67 @@ class HttpImportActor (val config: Config) extends PublishingRaceActor
 
   override def handleMessage = {
     case RaceTick | BusEvent(_,SendHttpRequest,_) =>
-      if (isLive) requests.foreach(sendRequest)
-
-    case BusEvent(_,SendNewHttpRequest(request),_) =>
-      sendRequest(request)
-
-    case (pr:PendingRequest, HttpResponse(StatusCodes.OK, headers, entity, _)) =>
-      pendingRequests -= pr
       if (isLive) {
-        headers.foreach { h =>
-          h match {
-            case `Set-Cookie`(cookie) =>
-              for (
-                domain <- cookie.domain;
-                path <- cookie.path
-              ) {
-                val name = cookie.name
-                val value = cookie.value
-                val cookieHdr = Cookie(name, value)
-
-                val domainMap = cookieMap.getOrElseUpdate(domain, MMap.empty)
-                val pathMap = domainMap.getOrElseUpdate(Path(path).reverse, MMap.empty)
-                pathMap += (name -> cookieHdr)
-                info(f"adding cookie for $domain$path: $name=$value%20.20s..")
-              }
-            case other => debug(s"ignored http header: $other")
-          }
-        }
-
-        if (waitForLoginResponse) {
-          waitForLoginResponse = false
-          firstRequest
-
-        } else {
-          entity.dataBytes.runFold(ByteString(""))(_ ++ _).foreach { body =>
-            val msg = body.utf8String
-            if (msg.nonEmpty) {
-              info(f"received http response: $msg%20.20s..")
-              publish(msg)
-            }
-          }
+        if (pendingRequests.isEmpty || !coalesce) {
+          requests.foreach(sendRequest)
         }
       }
 
-    case resp @ HttpResponse(code, headers, entity, _) =>
-      warning("Request failed, response code: " + code)
+    case BusEvent(_,SendNewHttpRequest(request),_) =>
+      if (isLive) sendRequest(request)
 
-      if (log.isDebugEnabled) {
-        entity.dataBytes.runFold(ByteString(""))(_ ++ _).foreach { body =>
-          debug(f"response: ${body.utf8String}%40.40s..")
+    case (pr:PendingRequest, resp@HttpResponse(code, headers, entity, _)) =>
+      pendingRequests -= pr
+
+      if (code == StatusCodes.OK) {
+        if (isLive) {
+          headers.foreach { h =>
+            h match {
+              case `Set-Cookie`(cookie) =>
+                for (
+                  domain <- cookie.domain;
+                  path <- cookie.path
+                ) {
+                  val name = cookie.name
+                  val value = cookie.value
+                  val cookieHdr = Cookie(name, value)
+
+                  val domainMap = cookieMap.getOrElseUpdate(domain, MMap.empty)
+                  val pathMap = domainMap.getOrElseUpdate(Path(path).reverse, MMap.empty)
+                  pathMap += (name -> cookieHdr)
+                  info(f"adding cookie for $domain$path: $name=$value%20.20s..")
+                }
+              case other => debug(s"ignored http header: $other")
+            }
+          }
+
+          if (waitForLoginResponse) {
+            waitForLoginResponse = false
+            firstRequest
+
+          } else {
+            entity.dataBytes.runFold(ByteString(""))(_ ++ _).foreach { body =>
+              val msg = body.utf8String
+              if (msg.nonEmpty) {
+                info(f"received http response: $msg%20.20s..")
+                publish(msg)
+              }
+            }
+          }
+
+        } else { // not alive, discard
+          resp.discardEntityBytes()
         }
-      } else {
-        resp.discardEntityBytes()
+
+      } else { // request failed
+        warning("Request failed, response code: " + code)
+        if (log.isDebugEnabled) {
+          entity.dataBytes.runFold(ByteString(""))(_ ++ _).foreach { body =>
+            debug(f"response: ${body.utf8String}%40.40s..")
+          }
+        } else {
+          resp.discardEntityBytes()
+        }
       }
   }
 
@@ -215,8 +233,11 @@ class HttpImportActor (val config: Config) extends PublishingRaceActor
   override def onTerminateRaceActor(originator: ActorRef): Boolean = {
     stopScheduler
     pendingRequests.foreach { pr =>
+      info(s"dropping pending request ${pr.request.method} : ${pr.request.uri}")
       pr.request.discardEntityBytes(materializer)
+      pr.responseFuture.onComplete{ _.get.discardEntityBytes() }
     }
+    pendingRequests.clear
     HttpImportActor.unregisterLive(this)
     super.onTerminateRaceActor(originator)
   }

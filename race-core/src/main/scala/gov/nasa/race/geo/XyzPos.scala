@@ -37,7 +37,7 @@ case class XyzPos (x: Length, y: Length, z: Length) {
   }
 
   @inline def =:= (other: XyzPos): Boolean = (x =:= other.x) && (y =:= other.y) && (z =:= other.z)
-  @inline def isDefined: Boolean = x.isDefined && y.isDefined && z.isDefined
+  @inline final def isDefined: Boolean = x.isDefined && y.isDefined && z.isDefined
 
   def distanceTo (other: XyzPos): Length = {
     Meters( Math.sqrt( squared(x.toMeters - other.x.toMeters) +
@@ -45,9 +45,9 @@ case class XyzPos (x: Length, y: Length, z: Length) {
                        squared(z.toMeters - other.z.toMeters)))
   }
 
-  @inline def xMeters: Double = x.toMeters
-  @inline def yMeters: Double = y.toMeters
-  @inline def zMeters: Double = z.toMeters
+  @inline final def xMeters: Double = x.toMeters
+  @inline final def yMeters: Double = y.toMeters
+  @inline final def zMeters: Double = z.toMeters
 
-  @inline def toMeters: (Double,Double,Double) = (x.toMeters, y.toMeters, z.toMeters)
+  @inline final def toMeters: (Double,Double,Double) = (x.toMeters, y.toMeters, z.toMeters)
 }
