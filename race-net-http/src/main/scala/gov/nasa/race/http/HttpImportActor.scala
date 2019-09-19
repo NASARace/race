@@ -36,7 +36,7 @@ import gov.nasa.race.core.{PeriodicRaceActor, PublishingRaceActor, SubscribingRa
 import scala.annotation.tailrec
 import scala.collection.mutable
 import scala.collection.mutable.{Map => MMap}
-import scala.concurrent.{Await, Future}
+import scala.concurrent.{Await, Future, TimeoutException}
 import scala.concurrent.duration._
 
 object HttpImportActor {
@@ -206,6 +206,9 @@ class HttpImportActor (val config: Config) extends PublishingRaceActor
           resp.discardEntityBytes()
         }
       }
+
+    case Failure(reason) =>
+      info(s"request failed for reason: $reason") // should this be a warning?
   }
 
   //--- system message callbacks
@@ -236,6 +239,12 @@ class HttpImportActor (val config: Config) extends PublishingRaceActor
       info(s"dropping pending request ${pr.request.method} : ${pr.request.uri}")
       pr.request.discardEntityBytes(materializer)
       pr.responseFuture.onComplete{ _.get.discardEntityBytes() }
+
+      try {
+        Await.ready(pr.responseFuture, 3.seconds) // give akka some time to complete
+      } catch {
+        case x: TimeoutException => // nothing we can do
+      }
     }
     pendingRequests.clear
     HttpImportActor.unregisterLive(this)

@@ -43,7 +43,7 @@ object Dependencies {
   val logback = "ch.qos.logback" % "logback-classic" %  "1.3.0-alpha4" // "1.2.3"
 
   //--- Typesafe config
-  val typesafeConfig = "com.typesafe" % "config" % "1.3.4"
+  val typesafeConfig = "com.typesafe" % "config" % "1.3.3"  // akka still depends on 1.3.3
 
   //--- Scala parser combinators (https://github.com/scala/scala-parser-combinators)
   val scalaParser = "org.scala-lang.modules" %% "scala-parser-combinators" % "1.1.2"
