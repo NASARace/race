@@ -46,6 +46,10 @@ public class Slice {
         this.length = data.length;
     }
 
+    public Slice () {
+        // go with empty defaults
+    }
+
     public boolean isEmpty() {
         return (length == 0);
     }

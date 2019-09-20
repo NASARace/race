@@ -68,4 +68,7 @@ public class RangeStack {
         capacity = newCapacity;
     }
 
+    public boolean topEquals (Slice slice) {
+        return top >= 0 && slice.offset == offset[top] && slice.length == length[top];
+    }
 }

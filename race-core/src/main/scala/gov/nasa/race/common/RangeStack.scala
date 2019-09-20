@@ -20,8 +20,8 @@ package gov.nasa.race.common
   * a minimal stack that stores offset and length values as Array[Int] to avoid runtime allocation
   */
 class RangeStack (var capacity: Int) {
-  var offsets: Array[Int] = new Array[Int](capacity)
-  var lengths: Array[Int] = new Array[Int](capacity)
+  var offset: Array[Int] = new Array[Int](capacity)
+  var length: Array[Int] = new Array[Int](capacity)
   var top: Int = -1
 
   @inline final def size: Int = top+1
@@ -33,11 +33,11 @@ class RangeStack (var capacity: Int) {
     val newLengths = new Array[Int](newCapacity)
 
     val len = top+1
-    System.arraycopy(offsets,0,newOffsets,0,len)
-    System.arraycopy(lengths,0,newLengths,0,len)
+    System.arraycopy(offset,0,newOffsets,0,len)
+    System.arraycopy(length,0,newLengths,0,len)
 
-    offsets = newOffsets
-    lengths = newLengths
+    offset = newOffsets
+    length = newLengths
     capacity = newCapacity
   }
 
@@ -52,23 +52,23 @@ class RangeStack (var capacity: Int) {
   }
 
   def isTop (off: Int, len: Int): Boolean = {
-    top >= 0 && offsets(top) == off && lengths(top) == len
+    top >= 0 && offset(top) == off && length(top) == len
   }
 
-  @inline final def topOffset: Int = offsets(top)
-  @inline final def topLength: Int = lengths(top)
+  @inline final def topOffset: Int = offset(top)
+  @inline final def topLength: Int = length(top)
 
   def push (off: Int, len: Int): Unit = {
     top += 1
     if (top >= capacity) grow(capacity*2)
-    offsets(top) = off
-    lengths(top) = len
+    offset(top) = off
+    length(top) = len
   }
 
   def foreach (f: (Int,Int,Int)=> Unit): Unit = {
     var i = 0
     while (i <=top) {
-      f(i,offsets(i),lengths(i))
+      f(i,offset(i),length(i))
       i += 1
     }
   }
@@ -76,7 +76,7 @@ class RangeStack (var capacity: Int) {
   def foreachReverse (f: (Int,Int,Int)=> Unit): Unit = {
     var i = top
     while (i >= 0) {
-      f(i,offsets(i),lengths(i))
+      f(i,offset(i),length(i))
       i -= 1
     }
   }
@@ -84,7 +84,7 @@ class RangeStack (var capacity: Int) {
   def exists (f: (Int,Int)=> Boolean): Boolean = {
     var i = 0
     while (i <=top) {
-      if (f(offsets(i),lengths(i))) return true
+      if (f(offset(i),length(i))) return true
       i += 1
     }
     false
@@ -117,13 +117,13 @@ class HashedRangeStack (initCapacity: Int) extends RangeStack(initCapacity) {
   }
 
   def isTop (off: Int, len: Int, hash: Long): Boolean = {
-    top >= 0 && hashes(top) == hash && offsets(top) == off && lengths(top) == len
+    top >= 0 && hashes(top) == hash && offset(top) == off && length(top) == len
   }
 
   def foreach (f: (Int,Int,Int,Long)=> Unit): Unit = {
     var i = 0
     while (i <=top) {
-      f(i,offsets(i),lengths(i),hashes(i))
+      f(i,offset(i),length(i),hashes(i))
       i += 1
     }
   }
@@ -131,7 +131,7 @@ class HashedRangeStack (initCapacity: Int) extends RangeStack(initCapacity) {
   def foreachReverse (f: (Int,Int,Int,Long)=> Unit): Unit = {
     var i = top
     while (i >= 0) {
-      f(i, offsets(i), lengths(i), hashes(i))
+      f(i, offset(i), length(i), hashes(i))
       i -= 1
     }
   }
@@ -139,7 +139,7 @@ class HashedRangeStack (initCapacity: Int) extends RangeStack(initCapacity) {
   def exists (f: (Int,Int,Long) => Boolean): Boolean = {
     var i = 0
     while (i <=top) {
-      if (f(offsets(i),lengths(i),hashes(i))) return true
+      if (f(offset(i),length(i),hashes(i))) return true
       i += 1
     }
     false

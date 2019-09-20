@@ -282,7 +282,7 @@ abstract class XmlPullParser2  {
   def getNextContentString: Boolean = {
     val i = contentIdx
     if (i <= contentStrings.top) {
-      contentString.set(data,contentStrings.offsets(i),contentStrings.lengths(i))
+      contentString.set(data,contentStrings.offset(i),contentStrings.length(i))
       contentIdx += 1
       true
     } else false
@@ -309,7 +309,7 @@ abstract class XmlPullParser2  {
   def tagHasParent(parent: SliceImpl): Boolean = {
     if (path.top > 0){
       val i = if (_isStartTag) path.top-1 else path.top
-      parent.equals(data, path.offsets(i), path.lengths(i))
+      parent.equals(data, path.offset(i), path.length(i))
     } else false
   }
 

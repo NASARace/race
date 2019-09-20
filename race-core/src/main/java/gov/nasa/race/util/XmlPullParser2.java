@@ -27,44 +27,260 @@ public class XmlPullParser2 {
         }
     }
 
-    static final int STATE_TAG = 1;
-    static final int STATE_ATTR = 2;
-    static final int STATE_END_TAG = 3;
-    static final int STATE_CONTENT = 4;
-    static final int STATE_FINISHED = 5;
+    abstract class State {
+        boolean parseNextTag() {
+            return false;
+        }
+        boolean parseNextAttr(){
+            return false;
+        }
+        boolean parseContent() {
+            return false;
+        }
+    }
+
+    protected final  boolean _setTag(int i0, int i, boolean isStart, State nextState) {
+        idx = i;
+        tag.set(data,i0,i-i0);
+        isStartTag = isStart;
+
+        attrName.clear();
+        attrValue.clear();
+        rawContent.clear();
+        contentStrings.clear();
+
+        if (isStart) { // start tag
+            path.push(tag.offset,tag.length);
+            state = nextState;
+
+        } else { // end tag
+            if (isTopTag(tag)) {
+                path.pop();
+                state = (path.isEmpty()) ? finishedState : nextState;
+            } else {
+                throw new XmlParseException("unbalanced end tag around " + context(i0, 20));
+            }
+        }
+        return true;
+    }
+
+    /**
+     * position is on '<'
+     * next state is either attrState (' '), endTagState ('/>') or contentState ('>')
+     */
+    class TagState extends State {
+        @Override boolean parseNextTag() {
+            byte[] data = XmlPullParser2.this.data;
+
+            int i0 = idx+1;
+            int i = i0;
+            if (data[i] == '/') { // '</..> end tag
+                i++;
+                i0 = i;
+                i = skipTo(i, (byte)'>');
+                return _setTag(i0, i, false, contentState);
+
+            } else {  // '<..' start tag
+                while (true) {
+                    switch (data[i]) {
+                        case ' ':
+                            return _setTag(i0, i, true, attrState);
+                        case '/':
+                            int i1 = i + 1;
+                            if (data[i1] == '>') {
+                                wasEmptyElementTag = true;
+                                return _setTag(i0, i1, true, endTagState);
+                            }
+                            throw new XmlParseException("malformed empty element tag around " + context(i0, 20));
+                        case '>':
+                            wasEmptyElementTag = false;
+                            return _setTag(i0, i, true, contentState);
+                        default:
+                            i++;
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * position on ' ' after tag
+     * next state is either attrState (in case attr is parsed), endtagState ('/>') or contentState ('>')
+     */
+    class AttrState extends State {
+        @Override boolean parseNextTag() {
+            idx = skipPastTag(idx);
+            state = wasEmptyElementTag ? endTagState : contentState;
+            return state.parseNextTag();
+        }
+
+        @Override boolean parseNextAttr() {
+            byte[] data = XmlPullParser2.this.data;
+
+            int i = skipSpace(idx);
+            int i1;
+            switch(data[i]) {
+                case '/':
+                    i1 = i+1;
+                    if (data[i1] == '>') {
+                        idx = i1;
+                        wasEmptyElementTag = true;
+                        state = endTagState;
+                        return false;
+                    }
+                    throw new XmlParseException("malformed tag end around " + context(idx, 20));
+                case '>':
+                    idx = i;
+                    wasEmptyElementTag = false;
+                    state = contentState;
+                    return false;
+                default:
+                    int i0 = i;
+                    i = skipTo(i,(byte)'=');
+                    i1 = backtrackSpace(i-1)+1;
+                    attrName.set(data,i0,i1-i0);
+                    i = skipTo(i+1,(byte)'"');
+
+                    i++;
+                    i0 = i;
+                    i = skipTo(i,(byte)'"');
+
+                    attrValue.set(data,i0,i-i0);
+                    idx = i+1;
+                    return true;
+            }
+        }
+    }
+
+    /**
+     * position is on '>' of a '.../>' tag
+     * next is always contentState
+     */
+    class EndTagState extends State {
+        @Override boolean parseNextTag() {
+            // tag is still valid
+            isStartTag = false;
+            wasEmptyElementTag = true;
+            path.pop();
+
+            state = (path.isEmpty()) ? finishedState : contentState;
+
+            return true;  // this always returns true since we already got the end tag
+        }
+    }
+
+    /**
+     * position is on '>',  _wasEmptyElementTag is reset (processed)
+     */
+    class ContentState extends State {
+        @Override boolean parseNextTag() {
+            if (path.nonEmpty()) {
+                idx = skipPastContent(idx + 1);
+                state = tagState;
+                return state.parseNextTag();
+            } else {
+                return false;
+            }
+        }
+
+        @Override boolean parseContent(){
+            int i0 = idx+1;
+            idx = skipPastContent(i0); // this also sets the contentStrings
+            rawContent.set(data,i0,idx-i0); // this includes surrounding whitespace, comments and CDATA sections
+            state = tagState;
+            if (contentStrings.nonEmpty()){
+                contentIdx = 0;
+                return true;
+            } else {
+                return false;
+            }
+        }
+    }
+
+    class FinishedState extends State {
+        // all return false
+    }
+
+    protected final State tagState = new TagState();
+    protected final State attrState = new AttrState();
+    protected final State endTagState = new EndTagState();
+    protected final State contentState = new ContentState();
+    protected final State finishedState = new FinishedState();
 
     protected byte[] data; // the utf-8 bytes we are parsing
     protected int idx = 0; // points to the next un-parsed position in data
 
-    protected int state = STATE_TAG;
+    protected State state = tagState;
 
     protected RangeStack path = new RangeStack(32); // the element path
 
-    public Slice tag = new Slice(data,0,0);
+    public Slice tag = new Slice();
     public boolean isStartTag = false;
     protected boolean wasEmptyElementTag = false;
 
-    public Slice attrName = new Slice(data,0,0);
-    public Slice attrValue = new Slice(data,0,0);
+    public Slice attrName = new Slice();
+    public Slice attrValue = new Slice();
 
     protected RangeStack contentStrings = new RangeStack(8);
     protected int contentIdx = 0;
+    protected Slice rawContent = new Slice();
 
-    //--- the public API
+    //--- the public API (final so that it can be inlined by JIT)
 
-    public boolean parseNextTag() {
+    // reset everything
+    public void clear() {
+        // data might be a self allocated buffer
+        idx = 0;
+        state = tagState;
+        path.clear();
+        contentStrings.clear();
+        isStartTag = false;
+        wasEmptyElementTag = false;
+        tag.clear();
+        attrName.clear();
+        attrValue.clear();
+        rawContent.clear();
+    }
+
+    public final boolean parseNextTag() {
+        return state.parseNextTag();
+    }
+
+    public final boolean parseNextAttr() {
+        return state.parseNextAttr();
+    }
+
+    public final boolean parseAttr (Slice a) {
+        while (state.parseNextAttr()){
+            if (attrName.equals(a.data, a.offset, a.length)) return true;
+        }
         return false;
     }
 
-    public boolean parseNextAttr() {
-        return false;
+    public final boolean parseContent() {
+        return state.parseContent();
     }
 
-    public boolean parseAttr (Slice attr) {
-        return false;
+    public final boolean isTopTag (Slice t) {
+        return path.topEquals(t);
     }
 
-    public boolean parseContent() {
+    //--- path query
+
+    public boolean tagHasParent(Slice tn) {
+        if (path.top > 0){
+            int i = isStartTag ? path.top-1 : path.top;
+            return tn.equals(data, path.offset[i], path.length[i]);
+        } else {
+            return false;
+        }
+    }
+
+    public boolean tagHasAncestor (Slice tn) {
+        int i = isStartTag ? path.top-1 : path.top;
+        for (; i>= 0; i--) {
+            if (tn.equals(data,path.offset[i],path.length[i])) return true;
+        }
         return false;
     }
 
