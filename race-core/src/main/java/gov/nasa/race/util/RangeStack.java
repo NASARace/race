@@ -59,7 +59,7 @@ public class RangeStack {
         int[] newOffset = new int[newCapacity];
         int[] newLength = new int[newCapacity];
 
-        int len = top+1
+        int len = top+1;
         System.arraycopy(offset,0,newOffset,0,len);
         System.arraycopy(length, 0, newLength, 0,len);
 
