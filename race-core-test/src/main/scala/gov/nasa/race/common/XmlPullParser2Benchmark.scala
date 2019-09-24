@@ -7,18 +7,24 @@ import gov.nasa.race.test._
 
 object XmlPullParser2Benchmark {
 
-  val nRounds = 30000
+  var nRounds = 10000
 
   def main (args: Array[String]): Unit = {
-    println("hit any key to start..")
-    System.in.read
+    if (args.nonEmpty){
+      nRounds = args(0).toInt
+    }
 
     val msg = FileUtils.fileContentsAsBytes(new File("src/test/resources/sfdps-msg.xml")).get
     println(s"byte size of input message: ${msg.length}")
 
     gc
+    println("\n---- hit any key to run old parser..")
+    System.in.read
     runOldPullParser(msg)
+
     gc
+    println("\n---- hit any key to run new parser..")
+    System.in.read
     runXmlPullParser2(msg)
   }
 
@@ -27,15 +33,15 @@ object XmlPullParser2Benchmark {
     val parser = new UTF8XmlPullParser2
 
     //--- tags, attrs and value extractors we need
-    val flightIdentification = new Literal("flightIdentification")
-    val aircraftIdentification = new Literal("aircraftIdentification")
-    val flight = new Literal("flight")
-    val positionTime = new Literal("positionTime") // attr
-    val pos = new Literal("pos")
-    val enRoute = new Literal("enRoute")
-    val position = new Literal("position")
-    val location = new Literal("location")
-    val slicer = new SubSlicer(' ')
+    val flightIdentification = Slice("flightIdentification")
+    val aircraftIdentification = Slice("aircraftIdentification")
+    val flight = Slice("flight")
+    val positionTime = Slice("positionTime") // attr
+    val pos =Slice("pos")
+    val enRoute = Slice("enRoute")
+    val position = Slice("position")
+    val location = Slice("location")
+    val slicer = new SliceSplitter(' ')
 
     var nFlights = 0
 
@@ -48,20 +54,20 @@ object XmlPullParser2Benchmark {
         if (parser.isStartTag) {
           val tag = parser.tag
 
-          if (tag =:= flightIdentification) {
+          if (tag == flightIdentification) {
             if (parser.parseAttr(aircraftIdentification)) id = parser.attrValue.intern
 
-          } else if (tag =:= position){
+          } else if (tag == position){
             if (parser.tagHasParent(enRoute)) {
               if (parser.parseAttr(positionTime)) dtg = parser.attrValue.toString
             }
 
-          } else if (tag =:= pos) {
+          } else if (tag == pos) {
             if (parser.tagHasParent(location)) {
               if (parser.parseContent && parser.getNextContentString) {
                 slicer.setSource(parser.contentString)
-                if (slicer.sliceNext) lat = slicer.subSlice.toDouble
-                if (slicer.sliceNext) lon = slicer.subSlice.toDouble
+                if (slicer.hasNext) lat = slicer.next.toDouble
+                if (slicer.hasNext) lon = slicer.next.toDouble
               }
             }
           }
@@ -88,7 +94,7 @@ object XmlPullParser2Benchmark {
           }
           */
         } else {
-          if (parser.tag =:= flight) {
+          if (parser.tag == flight) {
             if (id != null && lat != 0.0 && lon != 0.0 && dtg != null) {
               nFlights += 1
               //println(s"$nFlights: $id, $dtg, $lat, $lon")
@@ -108,7 +114,7 @@ object XmlPullParser2Benchmark {
       if (parser.initialize(msg)) {
         nFlights = 0
         while (parser.parseNextTag) {
-          if (parser.tag =:= flight && parser.isStartTag) parseFlight
+          if (parser.tag == flight && parser.isStartTag) parseFlight
         }
       }
       j += 1

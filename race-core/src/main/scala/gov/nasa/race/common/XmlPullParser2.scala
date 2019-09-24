@@ -31,7 +31,7 @@ class XmlParseException (msg: String) extends RuntimeException(msg)
   */
 abstract class XmlPullParser2  {
 
-  protected var data: Array[Byte] // the (abstract) data (UTF-8), might grow
+  protected var data: Array[Byte] = Array.empty[Byte]// the (abstract) data (UTF-8), might grow
   protected var limit: Int = 0
   protected var idx = 0 // points to the next unprocessed byte in data
 
@@ -43,7 +43,7 @@ abstract class XmlPullParser2  {
 
   protected var state: State  = tagState
 
-  val tag = new SliceImpl(data,0,0)
+  val tag = Slice.empty
   protected var _isStartTag: Boolean = false
   protected var _wasEmptyElementTag = false
 
@@ -57,11 +57,22 @@ abstract class XmlPullParser2  {
   //--- content string list (avoiding runtime allocation)
   protected val contentStrings = new RangeStack(16)
   protected var contentIdx = 0
-  val contentString = new SliceImpl(data,0,0) // for iteration over content strings
-  val rawContent = new SliceImpl(data,0,0) // slice over all content (without leading/trailing blanks)
+  val contentString = Slice.empty // for iteration over content strings
+  val rawContent = Slice.empty // slice over all content (without leading/trailing blanks)
 
-  val attrName = new SliceImpl(data,0,0)
-  val attrValue = new SliceImpl(data,0,0)  // not hashed by default
+  val attrName = Slice.empty
+  val attrValue = Slice.empty  // not hashed by default
+
+  protected def setData (newData: Array[Byte]): Unit = {
+    data = newData
+
+    // those won't change during the parse so set them here once
+    tag.bs = newData
+    attrName.bs = newData
+    attrValue.bs = newData
+    rawContent.bs = newData
+    contentString.bs = newData
+  }
 
   //--- state management
 
@@ -71,37 +82,46 @@ abstract class XmlPullParser2  {
     def parseContent: Boolean       // if true result can be obtained with content,contentAsLong,contentAsDouble
   }
 
-  private def _setTag(i0: Int, i: Int, isStart: Boolean, nextState: State): Boolean = {
-    idx = i
-    tag.set(data,i0,i-i0)
-    _isStartTag = isStart
-
-    attrName.clear
-    attrValue.clear
-    rawContent.clear
-    contentStrings.clear
-
-    if (isStart) { // start tag
-      path.push(tag.offset,tag.length)
-      state = nextState
-
-    } else { // end tag
-      if (isTopTag(tag)) {
-        path.pop
-        state = if (path.isEmpty) finishedState else nextState
-      } else {
-        throw new XmlParseException(s"unbalanced end tag around ${context(i0)}")
-      }
-    }
-    true
-  }
-
   /**
     * position is on '<'
     * next state is either attrState (' '), endTagState ('/>') or contentState ('>')
     */
   class TagState extends State {
     def parseNextTag: Boolean = {
+
+      @inline def _setTag(i0: Int, i: Int, isStart: Boolean, nextState: State): Boolean = {
+        idx = i
+
+        //tag.setRange(i0,i-i0)
+        tag.offset = i0; tag.length = i-i0
+
+        _isStartTag = isStart
+
+        //    attrName.clear
+        //    attrValue.clear
+        //    rawContent.clear
+        //    contentStrings.clear
+
+        contentString.length = 0
+        rawContent.length = 0
+        contentStrings.top = -1
+        contentIdx = 0
+
+        if (isStart) { // start tag
+          path.push(tag.offset,tag.length)
+          state = nextState
+
+        } else { // end tag
+          if (isTopTag(tag)) {
+            path.pop
+            state = if (path.isEmpty) finishedState else nextState
+          } else {
+            throw new XmlParseException(s"unbalanced end tag around ${context(i0)}")
+          }
+        }
+        true
+      }
+
       val data = XmlPullParser2.this.data
 
       val i0 = idx+1
@@ -173,14 +193,14 @@ abstract class XmlPullParser2  {
           var i0 = i
           i = skipTo(i,'=')
           val i1 = backtrackSpace(i-1)+1
-          attrName.set(data,i0,i1-i0)
+          attrName.setRange(i0,i1-i0)
           i = skipTo(i+1,'"')
 
           i += 1
           i0 = i
           i = skipTo(i,'"')
 
-          attrValue.set(data,i0,i-i0)
+          attrValue.setRange(i0,i-i0)
           idx = i+1
           return true
       }
@@ -213,7 +233,7 @@ abstract class XmlPullParser2  {
   class ContentState extends State {
     def parseNextTag = {
       if (path.nonEmpty) {
-        idx = seekPastContent(idx+1)
+        idx = skipContent(idx+1)
         state = tagState
         state.parseNextTag
       } else {
@@ -225,8 +245,8 @@ abstract class XmlPullParser2  {
 
     def parseContent: Boolean = {
       val i0 = idx+1
-      idx = seekPastContent(i0) // this also sets the contentStrings
-      rawContent.set(data,i0,idx-i0) // this includes surrounding whitespace, comments and CDATA sections
+      idx = readContent(i0)
+      rawContent.setRange(i0,idx-i0) // this includes surrounding whitespace, comments and CDATA sections
       state = tagState
       if (contentStrings.nonEmpty){
         contentIdx = 0
@@ -265,9 +285,9 @@ abstract class XmlPullParser2  {
 
   @inline final def parseNextAttr: Boolean = state.parseNextAttr
 
-  def parseAttr (at: SliceImpl): Boolean = {
+  def parseAttr (at: Slice): Boolean = {
     while (parseNextAttr) {
-      if (attrName =:= at) return true
+      if (attrName == at) return true
     }
     false
   }
@@ -282,7 +302,7 @@ abstract class XmlPullParser2  {
   def getNextContentString: Boolean = {
     val i = contentIdx
     if (i <= contentStrings.top) {
-      contentString.set(data,contentStrings.offset(i),contentStrings.length(i))
+      contentString.setRange(contentStrings.offset(i),contentStrings.length(i))
       contentIdx += 1
       true
     } else false
@@ -306,15 +326,15 @@ abstract class XmlPullParser2  {
 
   //--- path query (e.g. to disambiguate elements at different nesting levels)
 
-  def tagHasParent(parent: SliceImpl): Boolean = {
+  def tagHasParent(parent: Slice): Boolean = {
     if (path.top > 0){
       val i = if (_isStartTag) path.top-1 else path.top
       parent.equals(data, path.offset(i), path.length(i))
     } else false
   }
 
-  def tagHasAncestor(ancestor: SliceImpl): Boolean = {
-    path.exists( (o,l) =>ancestor.equals(data,o,l))
+  def tagHasAncestor(ancestor: Slice): Boolean = {
+    path.exists( (o,l) => ancestor.equals(data,o,l))
   }
 
   //.. and probably more path predicates
@@ -327,7 +347,7 @@ abstract class XmlPullParser2  {
     len
   }
 
-  @inline final def isTopTag (t: SliceImpl): Boolean = {
+  @inline final def isTopTag (t: Slice): Boolean = {
     t.equals(data,path.topOffset,path.topLength)
   }
 
@@ -414,7 +434,7 @@ abstract class XmlPullParser2  {
   // current position has to be outside of tag (i.e. past ending '>')
   // this has to skip over '<![CDATA[...]]>' and '<!-- ... -->' sections
 
-  def seekPastContent (i0: Int): Int = {
+  def readContent (i0: Int): Int = {
     var iStart = skipSpace(i0)
     var i = i0
     val buf = this.data
@@ -444,6 +464,35 @@ abstract class XmlPullParser2  {
         } else {
           val iEnd = backtrackSpace(i-1) + 1
           if (iEnd > iStart) contentStrings.push(iStart, iEnd-iStart)
+          return i
+        }
+      } else if (c == '>') {
+        throw new XmlParseException(s"malformed element content around '${context(i0)}'")
+      }
+      i += 1
+    }
+    throw new XmlParseException(s"unterminated content around ${context(i0)}")
+  }
+
+  def skipContent (i0: Int): Int = {
+    var i = i0
+    val buf = this.data
+
+    while (true) {
+      val c = buf(i)
+      if (c == '<') {
+        val i1 = i+1
+        if ((buf(i1) == '!')){
+          val i2 = i1 + 1
+          if (buf(i2) == '[') {          // '<![CDATA[...]]>'
+            i = i2 + 7
+            while (buf(i) != '>' || buf(i-1) != ']') i += 1
+          } else if (buf(i2) == '-') {   // <!--...-->
+            i = i2+3
+            while (buf(i) != '>' || (buf(i-1) != '-' || buf(i-2) != '-')) i += 1
+          } else throw new XmlParseException(s"malformed comment or CDATA around '${context(i0)}'")
+
+        } else {
           return i
         }
       } else if (c == '>') {
@@ -526,33 +575,13 @@ abstract class XmlPullParser2  {
   * a XmlPullParser2 that uses a pre-allocated (but growable) byte array to parse UTF-8 string data
   */
 class StringXmlPullParser2(initBufSize: Int = 8192) extends XmlPullParser2 {
-  protected var data: Array[Byte] = new Array(initBufSize)
-  protected var bb: ByteBuffer = ByteBuffer.wrap(data)
-  protected val enc = StandardCharsets.UTF_8.newEncoder
 
-  protected def growBuf: Unit = {
-    val newBuf = new Array[Byte](data.length*2)
-    val newBB = ByteBuffer.wrap(newBuf)
-    newBB.put(bb)
-    data = newBuf
-    bb = newBB
-  }
+  protected val bb = new UTF8Buffer(initBufSize)
 
   def initialize (s: String): Boolean = {
-    val cb = CharBuffer.wrap(s)
-    bb.rewind
-    var done = false
-
-    do {
-      enc.encode(cb, bb, true) match {
-        case CoderResult.UNDERFLOW => // all chars encoded
-          limit = bb.position
-          done = true
-        case CoderResult.OVERFLOW => growBuf
-      }
-    } while (!done)
-
+    bb.encode(s)
     clear
+    setData(bb.data)
     idx = seekRootTag
     idx >= 0
   }
@@ -562,13 +591,13 @@ class StringXmlPullParser2(initBufSize: Int = 8192) extends XmlPullParser2 {
   * a XmlPullParser2 that works directly on a provided utf-8 byte array
   */
 class UTF8XmlPullParser2 extends XmlPullParser2 {
-  protected var data: Array[Byte] = Array.empty
 
   def initialize (bs: Array[Byte]): Boolean = {
     clear
-    data = bs
+    setData(bs)
     limit = bs.length
     idx = seekRootTag
     idx >= 0
   }
 }
+

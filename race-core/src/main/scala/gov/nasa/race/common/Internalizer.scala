@@ -139,7 +139,8 @@ object ASCII8Internalizer {
     }
   }
 
-  @inline def get ( bs: Array[Byte], off: Int, len: Int): String = getASCII8Hashed(ASCII8Hash64.hashBytes(bs,off,len), bs,off,len)
+  @inline final def get ( bs: Array[Byte], off: Int, len: Int): String = getASCII8Hashed(ASCII8Hash64.hashBytes(bs,off,len), bs,off,len)
+  @inline final def get (slice: Slice): String = get(slice.bs,slice.offset,slice.length)
 
   def getASCII8Hashed (hash: Long, cs: Array[Char], off: Int, len: Int): String = {
     if (len > 8) {

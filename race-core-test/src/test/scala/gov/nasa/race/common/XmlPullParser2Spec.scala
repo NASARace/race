@@ -51,11 +51,11 @@ class XmlPullParser2Spec extends AnyFlatSpec with RaceSpec {
     parser.initialize(testMsg)
 
     //--- the parsed tags/attrs
-    val top = new Literal("top")
-    val bottom1 = new Literal("bottom1")
-    val attr2 = new Literal("attr2")
-    val number = new Literal("number")
-    val middle = new Literal("middle")
+    val top = Slice("top")
+    val bottom1 = Slice("bottom1")
+    val attr2 = Slice("attr2")
+    val number = Slice("number")
+    val middle = Slice("middle")
 
     if (parser.parseNextTag) {
       if (parser.tag == top) assert(parseTop)
@@ -107,15 +107,15 @@ class XmlPullParser2Spec extends AnyFlatSpec with RaceSpec {
     var nFlights = 0
 
     //--- tags, attrs and value extractors we need
-    val flightIdentification = new Literal("flightIdentification")
-    val aircraftIdentification = new Literal("aircraftIdentification")
-    val flight = new Literal("flight")
-    val positionTime = new Literal("positionTime") // attr
-    val pos = new Literal("pos")
-    val enRoute = new Literal("enRoute")
-    val position = new Literal("position")
-    val location = new Literal("location")
-    val slicer = new SubSlicer(' ')
+    val flightIdentification = Slice("flightIdentification")
+    val aircraftIdentification = Slice("aircraftIdentification")
+    val flight = Slice("flight")
+    val positionTime = Slice("positionTime") // attr
+    val pos = Slice("pos")
+    val enRoute = Slice("enRoute")
+    val position = Slice("position")
+    val location = Slice("location")
+    val slicer = new SliceSplitter(' ')
 
     val parser = new UTF8XmlPullParser2
     if (parser.initialize(msg)) {
@@ -146,8 +146,8 @@ class XmlPullParser2Spec extends AnyFlatSpec with RaceSpec {
               if (parser.tagHasParent(location)) {
                 if (parser.parseContent && parser.getNextContentString) {
                   slicer.setSource(parser.contentString)
-                  if (slicer.sliceNext) lat = slicer.subSlice.toDouble
-                  if (slicer.sliceNext) lon = slicer.subSlice.toDouble
+                  if (slicer.hasNext) lat = slicer.next.toDouble
+                  if (slicer.hasNext) lon = slicer.next.toDouble
                 }
               }
 

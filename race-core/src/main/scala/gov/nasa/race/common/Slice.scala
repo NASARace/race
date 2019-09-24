@@ -19,11 +19,15 @@ package gov.nasa.race.common
 import java.io.OutputStream
 
 object Slice {
+
   def apply (s: String): Slice = {
     val bs = s.getBytes()
-    new SliceImpl(bs,0,bs.length)
+    new Slice(bs,0,bs.length)
   }
-  def apply (bs: Array[Byte], off: Int, len: Int): Slice = new SliceImpl(bs,off,len)
+
+  def apply (bs: Array[Byte], off: Int, len: Int): Slice = new Slice(bs,off,len)
+
+  def empty: Slice = new Slice(Array.empty[Byte],0,0)
 
   final val TruePattern = "true".getBytes
   final val FalsePattern = "false".getBytes
@@ -36,17 +40,33 @@ object Slice {
   *
   * the trait does not allow to modify the internals
   */
-abstract class Slice {
-  def bs: Array[Byte]
-  def offset: Int
-  def length: Int
+case class Slice (var bs: Array[Byte], var offset: Int, var length: Int) {
 
-  def isEmpty: Boolean = length == 0
-  def nonEmpty: Boolean = length > 0
+  final def isEmpty: Boolean = length == 0
+  final def nonEmpty: Boolean = length > 0
 
   override def toString: String = if (length > 0) new String(bs,offset,length) else ""
 
-  def apply (i: Int): Byte = bs(offset+i)
+  @inline final def apply (i: Int): Byte = bs(offset+i)
+
+  @inline final def clear: Unit = {
+    bs = Array.empty[Byte]
+    offset = 0
+    length = 0
+  }
+
+  @inline final def set (bsNew: Array[Byte], offNew: Int, lenNew: Int): Unit = {
+    bs = bsNew
+    offset = offNew
+    length = lenNew
+  }
+
+  @inline final def setRange (offNew: Int, lenNew: Int): Unit = {
+    offset = offNew
+    length = lenNew
+  }
+
+  @inline final def setFrom (other: Slice): Unit = set(other.bs,other.offset,other.length)
 
   @inline final def equals(otherBs: Array[Byte], otherOffset: Int, otherLength: Int): Boolean = {
     val bs = this.bs
@@ -63,16 +83,33 @@ abstract class Slice {
     } else false
   }
 
-  @inline final def equals (otherBs: Array[Byte]): Boolean = equals(otherBs,0,otherBs.length)
+  @inline final def equalsString (s: String): Boolean = {
+    val sbs = s.getBytes // BAD - this is allocating
+    equals(sbs,0,sbs.length)
+  }
+
+  @inline final def equalsString (s: String, buf: UTF8Buffer): Boolean = {
+    val len = buf.encode(s)
+    equals(buf.data,0,len)
+  }
+
+  @inline final def equalsBuffer (buf: UTF8Buffer): Boolean = {
+    equals(buf.data,0,buf.length)
+  }
 
   override def equals (o: Any): Boolean = {
     o match {
-      case slice: Slice => equals(slice.bs, slice.offset, slice.length)
+      case slice: Slice =>
+        equals(slice.bs, slice.offset, slice.length)
+
+      case s: String =>
+        equalsString(s)
+
       case _ => false
     }
   }
 
-  @inline final def =:= (other: Slice): Boolean = equals(other.bs,other.offset,other.length)
+  @inline final def == (other: Slice): Boolean = equals(other.bs,other.offset,other.length)
 
   // todo - add string comparison based on utf-8 encoding
 
@@ -91,9 +128,6 @@ abstract class Slice {
 
   def equalsIgnoreCase (otherBs: Array[Byte]): Boolean = equalsIgnoreCase(otherBs,0,otherBs.length)
 
-
-  @inline def == (other: Slice): Boolean = equals(other.bs, other.offset, other.length)
-
   def intern: String = {
     if (length > 8) {
       Internalizer.get(bs, offset, length)
@@ -108,10 +142,11 @@ abstract class Slice {
 
   //--- type conversion
 
-  @inline final def isDigit(b: Byte): Boolean = b >= '0' && b <= '9'
-  @inline final def digitValue(b: Byte): Int = b - '0'
-
   def toDouble: Double = {
+
+    @inline def isDigit(b: Byte): Boolean = b >= '0' && b <= '9'
+    @inline def digitValue(b: Byte): Int = b - '0'
+
     var i = offset
     val iMax = i + length
     val bs = this.bs
@@ -174,6 +209,10 @@ abstract class Slice {
   }
 
   def toLong: Long = {
+
+    @inline def isDigit(b: Byte): Boolean = b >= '0' && b <= '9'
+    @inline def digitValue(b: Byte): Int = b - '0'
+
     var i = offset
     val iMax = i + length
     val bs = this.bs
@@ -217,32 +256,14 @@ abstract class Slice {
   }
 }
 
-/**
-  * Slice implementation that allows to change internals
-  */
-class SliceImpl (var bs: Array[Byte], var offset: Int, var length: Int) extends Slice {
-  def this (s: String) = this(s.getBytes,0,s.length)
-
-  @inline def clear: Unit = {
-    offset = 0
-    length = 0
-  }
-
-  @inline def set (bsNew: Array[Byte], offNew: Int, lenNew: Int): Unit = {
-    bs = bsNew
-    offset = offNew
-    length = lenNew
-  }
-
-  @inline def setFrom (other: SliceImpl): Unit = set(other.bs,other.offset,other.length)
-}
 
 /**
   * a SliceImpl that also computes a 64bit hash value. Can be used for efficient keyword comparison
   *
   * TODO - check if this actually buys much over SliceImpl (runtime type check, cast and super call might nix gains)
   */
-class HashedSliceImpl (_bs: Array[Byte], _offset: Int, _length: Int) extends SliceImpl(_bs,_offset,_length) {
+/*
+class HashedSliceImpl (_bs: Array[Byte], _offset: Int, _length: Int) extends Slice(_bs,_offset,_length) {
   var hash: Long = computeHash
 
   def this (bs: Array[Byte]) = this (bs,0,bs.length)
@@ -304,45 +325,4 @@ class HashedSliceImpl (_bs: Array[Byte], _offset: Int, _length: Int) extends Sli
   }
 }
 
-/**
-  * just some syntactic sugar
-  */
-class Literal (s: String) extends SliceImpl (s)
-
-object EmptySlice extends SliceImpl(new Array[Byte](0),0,0)
-
-
-class SubSlicer (val sep: Byte, var src: Slice) {
-  val subSlice: SliceImpl = new SliceImpl(src.bs,0,0)
-  var idx = src.offset
-  var limit = src.offset + src.length
-
-  def this (sep: Byte) = this(sep,EmptySlice)
-
-  def setSource(newSrc: Slice): Unit = {
-    src = newSrc
-    idx = src.offset
-    limit = src.offset + src.length
-  }
-
-  def sliceNext: Boolean = {
-    val bs = src.bs
-    val limit = this.limit
-    var i = idx
-    while (i < limit && bs(i) == sep) i += 1
-    val i0 = i
-    while (i < limit) {
-      if (bs(i) == sep) {
-        subSlice.set(bs,i0,i-i0)
-        idx = i
-        return true
-      }
-      i += 1
-    }
-    idx = limit
-    if (limit > i0) {
-      subSlice.set(bs,i0,limit-i0)
-      return true
-    } else false
-  }
-}
+ */
