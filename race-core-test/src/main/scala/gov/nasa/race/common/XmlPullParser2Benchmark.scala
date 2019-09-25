@@ -71,28 +71,6 @@ object XmlPullParser2Benchmark {
               }
             }
           }
-          /*
-          parser.tag match {
-            case `flightIdentification` =>
-              if (parser.parseAttr(aircraftIdentification)) id = parser.attrValue.intern
-
-            case `position` =>
-              if (parser.tagHasParent(enRoute)) {
-                if (parser.parseAttr(positionTime)) dtg = parser.attrValue.toString
-              }
-
-            case `pos` =>
-              if (parser.tagHasParent(location)) {
-                if (parser.parseContent && parser.getNextContentString) {
-                  slicer.setSource(parser.contentString)
-                  if (slicer.sliceNext) lat = slicer.subSlice.toDouble
-                  if (slicer.sliceNext) lon = slicer.subSlice.toDouble
-                }
-              }
-
-            case _ => // ignore
-          }
-          */
         } else {
           if (parser.tag == flight) {
             if (id != null && lat != 0.0 && lon != 0.0 && dtg != null) {

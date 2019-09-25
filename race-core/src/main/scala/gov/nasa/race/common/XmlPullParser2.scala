@@ -17,10 +17,10 @@
 package gov.nasa.race.common
 
 import java.io.PrintStream
-import java.nio.{ByteBuffer, CharBuffer}
-import java.nio.charset.{CoderResult, StandardCharsets}
+import java.nio.charset.StandardCharsets
 
 import scala.annotation.switch
+import scala.collection.mutable.Map
 
 class XmlParseException (msg: String) extends RuntimeException(msg)
 
@@ -74,6 +74,28 @@ abstract class XmlPullParser2  {
     contentString.bs = newData
   }
 
+  //--- tag action support
+
+  protected val startTagActions = Map.empty[Slice,()=>Unit]
+  protected val endTagActions = Map.empty[Slice,()=>Unit]
+
+  def addStartTagAction (tagName: String)(action: =>Unit): Unit = {
+    startTagActions += (Slice(tagName), ()=>{action})
+  }
+
+  def addEndTagAction (tagName: String)(action: =>Unit): Unit = {
+    endTagActions += (Slice(tagName), ()=>{action})
+  }
+
+  def processTagActions: Unit = {
+    while (parseNextTag) {
+      val action = if (isStartTag) startTagActions.getOrElse(tag,null) else endTagActions.getOrElse(tag,null)
+      if (action != null) {
+        action()
+      }
+    }
+  }
+
   //--- state management
 
   sealed abstract class State {
@@ -93,14 +115,9 @@ abstract class XmlPullParser2  {
         idx = i
 
         //tag.setRange(i0,i-i0)
-        tag.offset = i0; tag.length = i-i0
+        tag.offset = i0; tag.length = i-i0; tag.hash = 0
 
         _isStartTag = isStart
-
-        //    attrName.clear
-        //    attrValue.clear
-        //    rawContent.clear
-        //    contentStrings.clear
 
         contentString.length = 0
         rawContent.length = 0
@@ -134,23 +151,23 @@ abstract class XmlPullParser2  {
 
       } else {  // '<..' start tag
         while (true) {
-          (data(i): @switch) match {
-            case ' ' =>
-              return _setTag(i0, i, true, attrState)
-            case '/' =>
-              val i1 = i + 1
-              if (data(i1) == '>') {
-                _wasEmptyElementTag = true
-                return _setTag(i0, i1, true, endTagState)
-              }
-              throw new XmlParseException(s"malformed empty element tag around ${context(i0)}")
-            case '>' =>
-              _wasEmptyElementTag = false
-              return _setTag(i0, i, true, contentState)
-            case _ =>
-              i += 1
+          val b = data(i)
+          if (b == ' ') {
+            return _setTag(i0, i, true, attrState)
+          } else if (b == '/') {
+            val i1 = i + 1
+            if (data(i1) == '>') {
+              _wasEmptyElementTag = true
+              return _setTag(i0, i1, true, endTagState)
+            }
+            throw new XmlParseException(s"malformed empty element tag around ${context(i0)}")
+          } else if (b == '>') {
+            _wasEmptyElementTag = false
+            return _setTag(i0, i, true, contentState)
           }
+          i += 1
         }
+
         false
       }
     }
@@ -293,6 +310,10 @@ abstract class XmlPullParser2  {
   }
 
   @inline final def parseContent: Boolean = state.parseContent
+
+  def stopParsing: Unit = {
+    state = finishedState
+  }
 
   //--- content retrieval
 

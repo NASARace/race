@@ -42,10 +42,27 @@ object Slice {
   */
 case class Slice (var bs: Array[Byte], var offset: Int, var length: Int) {
 
+  var hash: Int = 0
+
   final def isEmpty: Boolean = length == 0
   final def nonEmpty: Boolean = length > 0
 
   override def toString: String = if (length > 0) new String(bs,offset,length) else ""
+
+  // same as String (utf-8)
+  override final def hashCode: Int = {
+    var h = hash
+    if (h == 0 && length > 0) {
+      var i = offset
+      val iEnd = offset + length
+      while (i < iEnd) {
+        h = h*31 + (bs(i) & 0xff)
+        i += 1
+      }
+      hash = h
+    }
+    h
+  }
 
   @inline final def apply (i: Int): Byte = bs(offset+i)
 
@@ -53,6 +70,7 @@ case class Slice (var bs: Array[Byte], var offset: Int, var length: Int) {
     bs = Array.empty[Byte]
     offset = 0
     length = 0
+    hash = 0
   }
 
   @inline final def set (bsNew: Array[Byte], offNew: Int, lenNew: Int): Unit = {

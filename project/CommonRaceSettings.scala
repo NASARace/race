@@ -7,7 +7,7 @@ import sbt.{Keys, StdoutOutput, _}
   */
 object CommonRaceSettings {
 
-  val scalaVer = "2.13.0" // keep it as a ordinary var for libs that are Scala version dependent (e.g. scala-reflect)
+  val scalaVer = "2.13.1" // keep it as a ordinary var for libs that are Scala version dependent (e.g. scala-reflect)
 
   lazy val commonRaceSettings =
       PluginSettings.pluginSettings ++
@@ -15,6 +15,7 @@ object CommonRaceSettings {
       Seq(
         scalaVersion := scalaVer,
         scalacOptions ++= Seq("-unchecked", "-deprecation", "-feature"
+          , "-target:9"
           //, "-opt-warnings"
           , "-opt:l:method"   // enables all intra-method optimizations
           , "-opt:l:inline"               // use only for local inlining or we break incremental compilation
