@@ -3,6 +3,7 @@ package gov.nasa.race.common
 import java.io.File
 
 import gov.nasa.race.util.{FileUtils, XmlPullParser}
+import gov.nasa.race.common.inlined.Slice
 import gov.nasa.race.test._
 
 object XmlPullParser2Benchmark {
@@ -17,22 +18,49 @@ object XmlPullParser2Benchmark {
     val msg = FileUtils.fileContentsAsBytes(new File("src/test/resources/sfdps-msg.xml")).get
     println(s"byte size of input message: ${msg.length}")
 
-    gc
-    println("\n---- hit any key to run old parser..")
-    System.in.read
+    prompt("\n---- hit any key to run old parser..")
     runOldPullParser(msg)
 
-    gc
-    println("\n---- hit any key to run new parser..")
-    System.in.read
+    prompt("\n---- hit any key to run new parser..")
     runXmlPullParser2(msg)
   }
 
-  def runXmlPullParser2 (msg: Array[Byte]): Unit = {
+  def prompt (msg: String): Unit = {
+    println(msg)
+    System.in.read
+  }
+
+  def measure (rounds: Int)(f: =>Unit): Unit = {
+    gc
+
+    var j = rounds
+    val g0 = gcCount(0)
+    val gt0 = gcMillis(0)
+    val m0 = usedHeapMemory
+    val t0 = System.nanoTime
+
+    while (j > 0) {
+      f
+      j -= 1
+    }
+
+    val t1 = System.nanoTime
+    val m1 = usedHeapMemory
+    val gt1 = gcMillis(0)
+    val g1 = gcCount(0)
+
+    println(s"  ${(t1 - t0)/1000000} msec")
+    println(s"  ${(m1 - m0)/1024} kB")
+    println(s"  ${g1 - g0} gc cycles, ${gt1 - gt0} msec")
+  }
+
+
+  def runXmlPullParser2(msg: Array[Byte]): Unit = {
     println(s"-- parsing ${nRounds}x using XmlPullParser2")
     val parser = new UTF8XmlPullParser2
 
     //--- tags, attrs and value extractors we need
+    val messageCollection = Slice("ns5:MessageCollection")
     val flightIdentification = Slice("flightIdentification")
     val aircraftIdentification = Slice("aircraftIdentification")
     val flight = Slice("flight")
@@ -41,23 +69,26 @@ object XmlPullParser2Benchmark {
     val enRoute = Slice("enRoute")
     val position = Slice("position")
     val location = Slice("location")
+
     val slicer = new SliceSplitter(' ')
 
     var nFlights = 0
 
     def parseFlight: Unit = {
+      // here we can keep cache vars at the terminal level, i.e. don't have to reset
       var id: String = null
       var lat,lon: Double = 0.0
       var dtg: String = null
 
       while (parser.parseNextTag) {
-        if (parser.isStartTag) {
-          val tag = parser.tag
+        val tag = parser.tag
+
+        if (parser.isStartTag) {  // start tags
 
           if (tag == flightIdentification) {
             if (parser.parseAttr(aircraftIdentification)) id = parser.attrValue.intern
 
-          } else if (tag == position){
+          } else if (tag == position) {
             if (parser.tagHasParent(enRoute)) {
               if (parser.parseAttr(positionTime)) dtg = parser.attrValue.toString
             }
@@ -71,45 +102,36 @@ object XmlPullParser2Benchmark {
               }
             }
           }
-        } else {
-          if (parser.tag == flight) {
+
+        } else { // end tags
+          if (tag == flight) {
             if (id != null && lat != 0.0 && lon != 0.0 && dtg != null) {
               nFlights += 1
               //println(s"$nFlights: $id, $dtg, $lat, $lon")
               return
             }
+
+          } else if (tag == messageCollection){
+            assert( nFlights == 100)
+            nFlights = 0
           }
         }
       }
     }
 
-    var j = 0
-    val g0 = gcCount(0)
-    val gt0 = gcMillis(0)
-    val m0 = usedHeapMemory
-    val t0 = System.nanoTime
-    while (j < nRounds) {
+    measure(nRounds) {
       if (parser.initialize(msg)) {
-        nFlights = 0
         while (parser.parseNextTag) {
           if (parser.tag == flight && parser.isStartTag) parseFlight
         }
       }
-      j += 1
     }
-    val t1 = System.nanoTime
-    val m1 = usedHeapMemory
-    val gt1 = gcMillis(0)
-    val g1 = gcCount(0)
-
-    println(s"  ${(t1 - t0)/1000000} msec")
-    println(s"  ${(m1 - m0)/1024} kB")
-    println(s"  ${g1 - g0} gc cycles, ${gt1 - gt0} msec")
   }
 
   def runOldPullParser (msg: Array[Byte]): Unit = {
     val msgChars = new String(msg).toCharArray
     var nFlights = 0
+
     println(s"-- parsing ${nRounds}x using old XmlPullParser")
     val parser = new XmlPullParser
 
@@ -119,8 +141,10 @@ object XmlPullParser2Benchmark {
       var dtg: String = null
 
       while (parser.parseNextElement){
+        val tag = parser.tag
+
         if (parser.isStartElement){
-          parser.tag match {
+          tag match {
             case "flightIdentification" =>
               id = parser.readAttribute("aircraftIdentification")
             case "position" =>
@@ -132,8 +156,9 @@ object XmlPullParser2Benchmark {
               }
             case _ => // ignore
           }
-        } else { // end tag
-          if (parser.tag == "flight") {
+
+        } else { // end tags
+          if (tag == "flight") {
             if (id != null && lat != 0.0 && lon != 0.0 && dtg != null) {
               nFlights += 1
               //println(s"$nFlights: $id, $dtg, $lat, $lon")
@@ -144,26 +169,19 @@ object XmlPullParser2Benchmark {
       }
     }
 
-    var j = 0
-    val g0 = gcCount(0)
-    val gt0 = gcMillis(0)
-    val m0 = usedHeapMemory
-    val t0 = System.nanoTime
-    while (j < nRounds) {
+    measure(nRounds) {
       parser.initialize(msgChars)
-      nFlights = 0
       while (parser.parseNextElement) {
-        if (parser.tag == "flight" && parser.isStartElement) parseFlight
+        val tag = parser.tag
+        if (parser.isStartElement){
+          if (tag == "flight") parseFlight
+        } else {
+          if (tag == "ns5:MessageCollection") {
+            assert( nFlights == 100)
+            nFlights = 0
+          }
+        }
       }
-      j += 1
     }
-    val t1 = System.nanoTime
-    val m1 = usedHeapMemory
-    val gt1 = gcMillis(0)
-    val g1 = gcCount(0)
-
-    println(s"  ${(t1 - t0)/1000000} msec")
-    println(s"  ${(m1 - m0)/1024} kB")
-    println(s"  ${g1 - g0} gc cycles, ${gt1 - gt0} msec")
   }
 }

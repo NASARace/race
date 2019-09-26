@@ -14,9 +14,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package gov.nasa.race.common
+package gov.nasa.race.common.inlined
 
 import java.io.OutputStream
+
+import gov.nasa.race.common.{ASCII8Internalizer, Internalizer, UTF8Buffer}
 
 object Slice {
 
@@ -26,6 +28,13 @@ object Slice {
   }
 
   def apply (bs: Array[Byte], off: Int, len: Int): Slice = new Slice(bs,off,len)
+
+  def hashed(s: String): Slice = {
+    val bs = s.getBytes()
+    val slice = new Slice(bs,0,bs.length)
+    slice.hashCode
+    slice
+  }
 
   def empty: Slice = new Slice(Array.empty[Byte],0,0)
 
@@ -40,23 +49,24 @@ object Slice {
   *
   * the trait does not allow to modify the internals
   */
-case class Slice (var bs: Array[Byte], var offset: Int, var length: Int) {
+final class Slice (var data: Array[Byte], var offset: Int, var length: Int) {
 
   var hash: Int = 0
 
   final def isEmpty: Boolean = length == 0
   final def nonEmpty: Boolean = length > 0
 
-  override def toString: String = if (length > 0) new String(bs,offset,length) else ""
+  override def toString: String = if (length > 0) new String(data,offset,length) else ""
 
   // same as String (utf-8)
-  override final def hashCode: Int = {
+  override def hashCode: Int = {
     var h = hash
     if (h == 0 && length > 0) {
-      var i = offset
+      h = data(offset) & 0xff
+      var i = offset+1
       val iEnd = offset + length
       while (i < iEnd) {
-        h = h*31 + (bs(i) & 0xff)
+        h = h*31 + (data(i) & 0xff)
         i += 1
       }
       hash = h
@@ -64,70 +74,75 @@ case class Slice (var bs: Array[Byte], var offset: Int, var length: Int) {
     h
   }
 
-  @inline final def apply (i: Int): Byte = bs(offset+i)
+  @inline def apply (i: Int): Byte = data(offset+i)
 
-  @inline final def clear: Unit = {
-    bs = Array.empty[Byte]
+  @inline def clear: Unit = {
+    data = Array.empty[Byte]
     offset = 0
     length = 0
     hash = 0
   }
 
-  @inline final def set (bsNew: Array[Byte], offNew: Int, lenNew: Int): Unit = {
-    bs = bsNew
+  @inline def set (bsNew: Array[Byte], offNew: Int, lenNew: Int): Unit = {
+    data = bsNew
     offset = offNew
     length = lenNew
+    hash = 0
   }
 
-  @inline final def setRange (offNew: Int, lenNew: Int): Unit = {
+  @inline def setRange (offNew: Int, lenNew: Int): Unit = {
     offset = offNew
     length = lenNew
+    hash = 0
   }
 
-  @inline final def setFrom (other: Slice): Unit = set(other.bs,other.offset,other.length)
+  @inline def setFrom (other: Slice): Unit = set(other.data,other.offset,other.length)
 
-  @inline final def equals(otherBs: Array[Byte], otherOffset: Int, otherLength: Int): Boolean = {
-    val bs = this.bs
-    if (length == otherLength) {
-      var i = offset
-      val iEnd = i + length
-      var j = otherOffset
-      while (i < iEnd) {
-        if (bs(i) != otherBs(j)) return false
-        i += 1
-        j += 1
-      }
-      true
-    } else false
+  // note - this is not public since it does not compare lengths (which is the inlined part of the caller)
+  private def equalBytes (otherBs: Array[Byte], otherOffset: Int): Boolean = {
+    val bs = this.data
+    var i = offset
+    val iEnd = i + length
+    var j = otherOffset
+    while (i < iEnd) {
+      if (bs(i) != otherBs(j)) return false
+      i += 1
+      j += 1
+    }
+    true
   }
 
-  @inline final def equalsString (s: String): Boolean = {
+
+  @inline final def == (other: Slice): Boolean = {
+    (length == other.length) && equalBytes(other.data,other.offset)
+  }
+
+  @inline def equals(otherBs: Array[Byte], otherOffset: Int, otherLength: Int): Boolean = {
+    (length == otherLength) && equalBytes(otherBs,otherOffset)
+  }
+
+  @inline def equalsString (s: String): Boolean = {
     val sbs = s.getBytes // BAD - this is allocating
-    equals(sbs,0,sbs.length)
+    (length == sbs.length) && equalBytes(sbs,0)
   }
 
-  @inline final def equalsString (s: String, buf: UTF8Buffer): Boolean = {
+  @inline def equalsString (s: String, buf: UTF8Buffer): Boolean = {
     val len = buf.encode(s)
-    equals(buf.data,0,len)
+    (length == len) && equalBytes(buf.data,0)
   }
 
-  @inline final def equalsBuffer (buf: UTF8Buffer): Boolean = {
-    equals(buf.data,0,buf.length)
+  @inline def equalsBuffer (buf: UTF8Buffer): Boolean = {
+    (length == buf.length) && equalBytes(buf.data,0)
   }
 
   override def equals (o: Any): Boolean = {
     o match {
-      case slice: Slice =>
-        equals(slice.bs, slice.offset, slice.length)
-
-      case s: String =>
-        equalsString(s)
-
+      case other: Slice => this == other
+      case s: String => equalsString(s)
       case _ => false
     }
   }
 
-  @inline final def == (other: Slice): Boolean = equals(other.bs,other.offset,other.length)
 
   // todo - add string comparison based on utf-8 encoding
 
@@ -137,7 +152,7 @@ case class Slice (var bs: Array[Byte], var offset: Int, var length: Int) {
     val iEnd = i + length
     var j = otherOffset
     while (i < iEnd) {
-      if ((bs(i)|32) != (otherBs(j)|32)) return false
+      if ((data(i)|32) != (otherBs(j)|32)) return false
       i += 1
       j += 1
     }
@@ -146,16 +161,16 @@ case class Slice (var bs: Array[Byte], var offset: Int, var length: Int) {
 
   def equalsIgnoreCase (otherBs: Array[Byte]): Boolean = equalsIgnoreCase(otherBs,0,otherBs.length)
 
-  def intern: String = {
+  @inline def intern: String = {
     if (length > 8) {
-      Internalizer.get(bs, offset, length)
+      Internalizer.get(data, offset, length)
     } else {
-      ASCII8Internalizer.get(bs,offset,length)
+      ASCII8Internalizer.get(data,offset,length)
     }
   }
 
   def writeTo(out: OutputStream): Unit = {
-    out.write(bs,offset,length)
+    out.write(data,offset,length)
   }
 
   //--- type conversion
@@ -167,7 +182,7 @@ case class Slice (var bs: Array[Byte], var offset: Int, var length: Int) {
 
     var i = offset
     val iMax = i + length
-    val bs = this.bs
+    val bs = this.data
     var n: Long = 0
     var d: Double = 0.0
     var e: Long = 1
@@ -233,7 +248,7 @@ case class Slice (var bs: Array[Byte], var offset: Int, var length: Int) {
 
     var i = offset
     val iMax = i + length
-    val bs = this.bs
+    val bs = this.data
     var n: Long = 0
     var b: Byte = 0
 
@@ -260,8 +275,8 @@ case class Slice (var bs: Array[Byte], var offset: Int, var length: Int) {
   def toBoolean: Boolean = {
     // todo - more precise than Boolean.parseBoolean, but do we want to differ?
     if (length == 1){
-      if (bs(offset) == '1') true
-      else if (bs(offset) == '0') false
+      if (data(offset) == '1') true
+      else if (data(offset) == '0') false
       else throw new RuntimeException(s"not a boolean: $this")
     } else {
       if (equalsIgnoreCase(Slice.TruePattern)) true
@@ -274,73 +289,3 @@ case class Slice (var bs: Array[Byte], var offset: Int, var length: Int) {
   }
 }
 
-
-/**
-  * a SliceImpl that also computes a 64bit hash value. Can be used for efficient keyword comparison
-  *
-  * TODO - check if this actually buys much over SliceImpl (runtime type check, cast and super call might nix gains)
-  */
-/*
-class HashedSliceImpl (_bs: Array[Byte], _offset: Int, _length: Int) extends Slice(_bs,_offset,_length) {
-  var hash: Long = computeHash
-
-  def this (bs: Array[Byte]) = this (bs,0,bs.length)
-  def this (s: String) = this(s.getBytes,0,s.length)
-
-  override def clear: Unit = {
-    hash = 0L
-    offset = 0
-    length = 0
-  }
-
-  private def computeHash = {
-    if (length == 0) 0L
-    else if (length <= 8) ASCII8Hash64.hashBytes(bs,offset,length)
-    else MurmurHash64.hashBytes(bs,offset,length)
-  }
-
-  def getHash: Long = hash
-
-  def setAndRehash( bsNew: Array[Byte], offNew: Int, lenNew: Int): Unit = {
-    bs = bsNew
-    offset = offNew
-    length = lenNew
-    hash = computeHash
-  }
-
-  def setAndRehash( offNew: Int, lenNew: Int): Unit = {
-    offset = offNew
-    length = lenNew
-    hash = computeHash
-  }
-
-  @inline override def set (bsNew: Array[Byte], offNew: Int, lenNew: Int) = setAndRehash(bsNew,offNew,lenNew)
-
-  @inline final def equals (other: HashedSliceImpl): Boolean = equals(other.bs, other.offset, other.length, other.getHash)
-
-  @inline final def equals (otherBs: Array[Byte], otherOffset: Int, otherLength: Int, otherHash: Long): Boolean = {
-    otherHash == hash && equals(otherBs,otherOffset,otherLength)
-  }
-
-  override def equals (o: Any): Boolean = {
-    o match {
-      case slice: HashedSliceImpl => equals(slice.bs,slice.offset,slice.length,slice.hash)
-      case slice: Slice => equals(slice.bs, slice.offset, slice.length)
-      case _ => false
-    }
-  }
-
-  @inline final def =:= (other: HashedSliceImpl): Boolean = {
-    other.hash == hash && equals(other.bs,other.offset,other.length)
-  }
-
-  override def intern: String = {
-    if (length > 8) {
-      Internalizer.getMurmurHashed( hash, bs, offset, length)
-    } else {
-      ASCII8Internalizer.getASCII8Hashed( hash, bs,offset,length)
-    }
-  }
-}
-
- */

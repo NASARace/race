@@ -19,10 +19,15 @@ package gov.nasa.race.common
 import java.io.PrintStream
 import java.nio.charset.StandardCharsets
 
+import gov.nasa.race.common.inlined.{Slice,RangeStack}
+
 import scala.annotation.switch
-import scala.collection.mutable.Map
 
 class XmlParseException (msg: String) extends RuntimeException(msg)
+
+object TagAction {
+  def apply (s: String)(action: => Unit) = (Slice(s), ()=>{action})
+}
 
 
 /**
@@ -31,7 +36,7 @@ class XmlParseException (msg: String) extends RuntimeException(msg)
   */
 abstract class XmlPullParser2  {
 
-  protected var data: Array[Byte] = Array.empty[Byte]// the (abstract) data (UTF-8), might grow
+  protected var data: Array[Byte] = Array.empty[Byte]  // the (abstract) data (UTF-8), might grow
   protected var limit: Int = 0
   protected var idx = 0 // points to the next unprocessed byte in data
 
@@ -67,34 +72,13 @@ abstract class XmlPullParser2  {
     data = newData
 
     // those won't change during the parse so set them here once
-    tag.bs = newData
-    attrName.bs = newData
-    attrValue.bs = newData
-    rawContent.bs = newData
-    contentString.bs = newData
+    tag.data = newData
+    attrName.data = newData
+    attrValue.data = newData
+    rawContent.data = newData
+    contentString.data = newData
   }
 
-  //--- tag action support
-
-  protected val startTagActions = Map.empty[Slice,()=>Unit]
-  protected val endTagActions = Map.empty[Slice,()=>Unit]
-
-  def addStartTagAction (tagName: String)(action: =>Unit): Unit = {
-    startTagActions += (Slice(tagName), ()=>{action})
-  }
-
-  def addEndTagAction (tagName: String)(action: =>Unit): Unit = {
-    endTagActions += (Slice(tagName), ()=>{action})
-  }
-
-  def processTagActions: Unit = {
-    while (parseNextTag) {
-      val action = if (isStartTag) startTagActions.getOrElse(tag,null) else endTagActions.getOrElse(tag,null)
-      if (action != null) {
-        action()
-      }
-    }
-  }
 
   //--- state management
 
@@ -113,10 +97,8 @@ abstract class XmlPullParser2  {
 
       @inline def _setTag(i0: Int, i: Int, isStart: Boolean, nextState: State): Boolean = {
         idx = i
-
-        //tag.setRange(i0,i-i0)
-        tag.offset = i0; tag.length = i-i0; tag.hash = 0
-
+        val len = i - i0
+        tag.setRange(i0,len)
         _isStartTag = isStart
 
         contentString.length = 0
@@ -125,7 +107,7 @@ abstract class XmlPullParser2  {
         contentIdx = 0
 
         if (isStart) { // start tag
-          path.push(tag.offset,tag.length)
+          path.push(i0,len)
           state = nextState
 
         } else { // end tag
@@ -323,7 +305,7 @@ abstract class XmlPullParser2  {
   def getNextContentString: Boolean = {
     val i = contentIdx
     if (i <= contentStrings.top) {
-      contentString.setRange(contentStrings.offset(i),contentStrings.length(i))
+      contentString.setRange(contentStrings.offsets(i),contentStrings.lengths(i))
       contentIdx += 1
       true
     } else false
@@ -333,14 +315,31 @@ abstract class XmlPullParser2  {
     * coalesce all content strings
     */
   def getContent: String = {
+    val contentStrings = this.contentStrings
+
+    @inline def contentLength: Int = {
+      var length = 0
+      var j = 0
+      while (j < contentStrings.top) {
+        length += contentStrings.lengths(j)
+        j += 1
+      }
+      length
+    }
+
     if (contentStrings.nonEmpty) {
       val len = contentLength
       val bs = new Array[Byte](len)
       var i = 0
-      contentStrings.foreach { (_,o,l)=>
-        System.arraycopy(data,o,bs,i,l)
+      var j = 0
+
+      while (j < contentStrings.top) {
+        val l = contentStrings.lengths(j)
+        System.arraycopy(data,contentStrings.offsets(j), bs, i, l)
         i += l
+        j += 1
       }
+
       new String(bs,StandardCharsets.UTF_8 )
     } else ""
   }
@@ -348,25 +347,23 @@ abstract class XmlPullParser2  {
   //--- path query (e.g. to disambiguate elements at different nesting levels)
 
   def tagHasParent(parent: Slice): Boolean = {
-    if (path.top > 0){
-      val i = if (_isStartTag) path.top-1 else path.top
-      parent.equals(data, path.offset(i), path.length(i))
-    } else false
+    val i = if (_isStartTag) path.top-1 else path.top
+    (i>=0) && parent.equals(data, path.offsets(i), path.lengths(i))
   }
 
   def tagHasAncestor(ancestor: Slice): Boolean = {
-    path.exists( (o,l) => ancestor.equals(data,o,l))
+    var i = if (_isStartTag) path.top-1 else path.top
+    while (i >= 0) {
+      if (ancestor.equals(data,path.offsets(i),path.lengths(i))) return true
+      i -= 1
+    }
+    false
   }
 
   //.. and probably more path predicates
 
   //--- auxiliary parse functions used by states
 
-  def contentLength: Int = {
-    var len = 0
-    contentStrings.foreach { (_,_,l) => len += l }
-    len
-  }
 
   @inline final def isTopTag (t: Slice): Boolean = {
     t.equals(data,path.topOffset,path.topLength)
@@ -526,6 +523,19 @@ abstract class XmlPullParser2  {
 
   //--- aux and debug functions
 
+  // this is redundant to Slice.hashCode but here so that we can inline
+  @inline protected final def hash(i0: Int, len: Int): Int = {
+    val data = this.data
+    var i = i0 + 1
+    val i1 = i0 + len
+    var h = data(i0) & 0xff
+    while (i < i1) {
+      h = (h * 31) + (data(i) & 0xff)
+      i += 1
+    }
+    h
+  }
+
   def context (i: Int): String = {
     val i0 = i
     val i1 = Math.min(i0+20, data.length)
@@ -584,10 +594,13 @@ abstract class XmlPullParser2  {
   }
 
   def dumpPath: Unit = {
-    path.foreach { (idx,off,len)=>
-      if (idx > 0)print(',')
-      print(Slice(data,off,len).toString)
+    var i = 0
+    print("path=[")
+    while (i <= path.top) {
+      if (i > 0) print(',')
+      print(new String(data,path.offsets(i),path.lengths(i)))
     }
+    println("]")
   }
 }
 

@@ -16,6 +16,8 @@
  */
 package gov.nasa.race.common
 
+import gov.nasa.race.common.inlined.Slice
+
 /**
   * an iterator over sub-slices that are delimited by ASCII characters
   *
@@ -26,7 +28,7 @@ package gov.nasa.race.common
   * is not (same as Java's String.split)
   */
 class SliceSplitter (val sep: Byte, var src: Slice) extends Iterator[Slice] {
-  val subSlice: Slice = new Slice(src.bs,0,0)
+  val subSlice: Slice = new Slice(src.data,0,0)
   var idx = src.offset
   var limit = src.offset + src.length
 
@@ -34,7 +36,7 @@ class SliceSplitter (val sep: Byte, var src: Slice) extends Iterator[Slice] {
 
   def setSource(newSrc: Slice): Unit = {
     src = newSrc
-    subSlice.set(newSrc.bs,0,0)
+    subSlice.set(newSrc.data,0,0)
     idx = src.offset
     limit = src.offset + src.length
   }
@@ -47,7 +49,7 @@ class SliceSplitter (val sep: Byte, var src: Slice) extends Iterator[Slice] {
     * note that consecutive separator chars are reported as empty slices
     */
   def next: Slice = {
-    val bs = src.bs
+    val bs = src.data
     val limit = this.limit
     var i = idx
     val i0 = i

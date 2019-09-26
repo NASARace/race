@@ -16,6 +16,7 @@
  */
 package gov.nasa.race.common
 
+import gov.nasa.race.common.inlined.Slice
 import gov.nasa.race.test.RaceSpec
 import gov.nasa.race.util.FileUtils
 import org.scalatest.flatspec.AnyFlatSpec
@@ -101,7 +102,7 @@ class XmlPullParser2Spec extends AnyFlatSpec with RaceSpec {
     }
   }
 
-  "a XmlPullParser2" should "extract flights and positions from SFDPS messages with low level API" in {
+  "a XmlPullParser2" should "extract flights and positions from SFDPS messages" in {
     val msg = FileUtils.fileContentsAsBytes(baseResourceFile("sfdps-msg.xml")).get
 
     var nFlights = 0
@@ -132,29 +133,30 @@ class XmlPullParser2Spec extends AnyFlatSpec with RaceSpec {
       var dtg: String = null
 
       while (parser.parseNextTag) {
+        val tag = parser.tag
+
         if (parser.isStartTag) {
-          parser.tag match {
-            case `flightIdentification` =>
-              if (parser.parseAttr(aircraftIdentification)) id = parser.attrValue.intern
+          // note part of the == comparison can be inlined (as opposed to using match expressions, which defaults to equals)
+          if (tag == flightIdentification) {
+            if (parser.parseAttr(aircraftIdentification)) id = parser.attrValue.intern
 
-            case `position` =>
-              if (parser.tagHasParent(enRoute)) {
-                if (parser.parseAttr(positionTime)) dtg = parser.attrValue.toString
+          } else if (tag == position) {
+            if (parser.tagHasParent(enRoute)) {
+              if (parser.parseAttr(positionTime)) dtg = parser.attrValue.toString
+            }
+
+          } else if (tag == pos) {
+            if (parser.tagHasParent(location)) {
+              if (parser.parseContent && parser.getNextContentString) {
+                slicer.setSource(parser.contentString)
+                if (slicer.hasNext) lat = slicer.next.toDouble
+                if (slicer.hasNext) lon = slicer.next.toDouble
               }
-
-            case `pos` =>
-              if (parser.tagHasParent(location)) {
-                if (parser.parseContent && parser.getNextContentString) {
-                  slicer.setSource(parser.contentString)
-                  if (slicer.hasNext) lat = slicer.next.toDouble
-                  if (slicer.hasNext) lon = slicer.next.toDouble
-                }
-              }
-
-            case _ => // ignore
+            }
           }
+
         } else {
-          if (parser.tag == flight) {
+          if (tag == flight) {
             if (id != null && lat != 0.0 && lon != 0.0 && dtg != null) {
               nFlights += 1
               println(s"$nFlights: $id, $dtg, $lat, $lon")
@@ -163,58 +165,6 @@ class XmlPullParser2Spec extends AnyFlatSpec with RaceSpec {
           }
         }
       }
-    }
-
-    assert(nFlights == 100)
-  }
-
-
-  "a XmlPullParser" should "extract flights and positions from SFDPS messages with high level API" in {
-    val msg = FileUtils.fileContentsAsBytes(baseResourceFile("sfdps-msg.xml")).get
-
-    var nFlights = 0
-
-    // attrs and ancestor tags
-    val aircraftIdentification = Slice("aircraftIdentification")
-    val enRoute = Slice("enRoute")
-    val positionTime = Slice("positionTime")
-    val location = Slice("location")
-
-    val slicer = new SliceSplitter(' ')
-
-    var id: String = null
-    var lat,lon: Double = 0.0
-    var dtg: String = null
-
-    val parser = new UTF8XmlPullParser2
-    parser.addStartTagAction("flightIdentification"){
-      if (parser.parseAttr(aircraftIdentification)) id = parser.attrValue.intern
-    }
-    parser.addStartTagAction("position"){
-      if (parser.tagHasParent(enRoute)) {
-        if (parser.parseAttr(positionTime)) dtg = parser.attrValue.toString
-      }
-    }
-    parser.addStartTagAction("pos"){
-      if (parser.tagHasParent(location)) {
-        if (parser.parseContent && parser.getNextContentString) {
-          slicer.setSource(parser.contentString)
-          if (slicer.hasNext) lat = slicer.next.toDouble
-          if (slicer.hasNext) lon = slicer.next.toDouble
-        }
-      }
-    }
-    parser.addEndTagAction("flight"){
-      if (id != null && lat != 0.0 && lon != 0.0 && dtg != null) {
-        nFlights += 1
-        println(s"$nFlights: $id, $dtg, $lat, $lon")
-      }
-      id = null; lat = 0; lon = 0; dtg = null
-    }
-
-    if (parser.initialize(msg)) {
-      println(s"--- begin parsing ${msg.length} bytes")
-      parser.processTagActions
     }
 
     assert(nFlights == 100)

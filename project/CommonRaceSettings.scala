@@ -18,8 +18,8 @@ object CommonRaceSettings {
           , "-target:9"
           //, "-opt-warnings"
           , "-opt:l:method"   // enables all intra-method optimizations
-          , "-opt:l:inline"               // use only for local inlining or we break incremental compilation
-          , "-opt-inline-from:<sources>"  //  - " -
+          , "-opt:l:inline"               // use only for local inlining and select classes or we break incremental compilation
+          , "-opt-inline-from:<sources>:**.inlined.**"  //  - " -
         ),
         resolvers ++= Dependencies.dependencyResolvers,
 
