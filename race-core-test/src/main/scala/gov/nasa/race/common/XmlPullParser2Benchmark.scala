@@ -158,7 +158,7 @@ object XmlPullParser2Benchmark {
         val len = tag.length
 
         if (parser.isStartTag) {
-          if (len > 0) {
+          //if (len > 0) { //empty tags are not valid XML
             if (data(i) == 'f'){ // flightIdentification
               if (len == 20 && data(i+1)=='l' && data(i+2)=='i' && data(i+3)=='g' && data(i+4)=='h' && data(i+5)=='t' && data(i+6)=='I' && data(i+7)=='d' && data(i+8)=='e' && data(i+9)=='n' && data(i+10)=='t' && data(i+11)=='i' && data(i+12)=='f' && data(i+13)=='i' && data(i+14)=='c' && data(i+15)=='a' && data(i+16)=='t' && data(i+17)=='i' && data(i+18)=='o' && data(i+19)=='n'){
                 if (parser.parseAttr(aircraftIdentification)) id = parser.attrValue.intern
@@ -180,10 +180,10 @@ object XmlPullParser2Benchmark {
                 }
               }
             }
-          }
+          //}
 
         } else { // end tag
-          if (len > 0){
+          //if (len > 0){  // empty tags are not valid XML
             if (data(i) == 'f') { // /flight
               if ((len == 6) && data(i+1)=='l' && data(i+2)=='i' && data(i+3)=='g' && data(i+4)=='h' && data(i+5)=='t') {
                 if (id != null && lat != 0.0 && lon != 0.0 && dtg != null) {
@@ -198,7 +198,7 @@ object XmlPullParser2Benchmark {
                 nFlights = 0
               }
             }
-          }
+          //}
         }
       }
     }

@@ -98,6 +98,8 @@ abstract class XmlPullParser2  {
       @inline def _setTag(i0: Int, i: Int, isStart: Boolean, nextState: State): Boolean = {
         idx = i
         val len = i - i0
+        if (len == 0) throw new XmlParseException(s"empty tag around ${context(i0)}")
+
         tag.setRange(i0,len)
         _isStartTag = isStart
 
