@@ -9,23 +9,39 @@ import gov.nasa.race.test._
 object XmlPullParser2Benchmark {
 
   var nRounds = 10000
+  val sequence = Array("old","new","trie")
 
   def main (args: Array[String]): Unit = {
+
     if (args.nonEmpty){
       nRounds = args(0).toInt
+
+      args.size match {
+        case 2 => sequence(0) = args(1); sequence(1) = ""; sequence(2) = ""
+        case 3 => sequence(0) = args(1); sequence(1) = args(2); sequence(2) = ""
+        case 4 => sequence(0) = args(1); sequence(1) = args(2); sequence(2) = args(3)
+        case _ =>
+      }
     }
 
     val msg = FileUtils.fileContentsAsBytes(new File("src/test/resources/sfdps-msg.xml")).get
     println(s"byte size of input message: ${msg.length}")
 
-    prompt("\n---- hit any key to run old parser..")
-    runOldPullParser(msg)
-
-    prompt("\n---- hit any key to run new parser..")
-    runXmlPullParser2(msg)
-
-    prompt("\n---- hit any key to run new tree parser..")
-    runXmlPullParser2Tree(msg)
+    sequence.foreach { cmd =>
+      cmd match {
+        case "old" =>
+          prompt("\n---- hit any key to run old parser..")
+          runOldPullParser(msg)
+        case "new" =>
+          prompt("\n---- hit any key to run new parser..")
+          runXmlPullParser2(msg)
+        case "trie" =>
+          prompt("\n---- hit any key to run new trie parser..")
+          runXmlPullParser2Tree(msg)
+        case "" => // ignore
+        case unknown => println(s"unknown command: $unknown")
+      }
+    }
   }
 
   def prompt (msg: String): Unit = {
@@ -145,60 +161,60 @@ object XmlPullParser2Benchmark {
     val positionTime = Slice("positionTime")
     val flight = Slice("flight")
 
-    def parseFlight: Unit = {
+    @inline def parseFlight: Unit = {
       // here we can keep cache vars at the terminal level, i.e. don't have to reset
       var id: String = null
       var lat, lon: Double = 0.0
       var dtg: String = null
 
+      @inline def parseFlightStartTags (data: Array[Byte], i: Int, len: Int): Unit = {
+        if (data(i) == 'f'){ // flightIdentification
+          if (len == 20 && data(i+1)=='l' && data(i+2)=='i' && data(i+3)=='g' && data(i+4)=='h' && data(i+5)=='t' && data(i+6)=='I' && data(i+7)=='d' && data(i+8)=='e' && data(i+9)=='n' && data(i+10)=='t' && data(i+11)=='i' && data(i+12)=='f' && data(i+13)=='i' && data(i+14)=='c' && data(i+15)=='a' && data(i+16)=='t' && data(i+17)=='i' && data(i+18)=='o' && data(i+19)=='n'){
+            if (parser.parseAttr(aircraftIdentification)) id = parser.attrValue.intern
+          }
+        } else if (data(i) == 'p') { // position | pos
+          if ((len > 2) && (data(i+1) == 'o') && (data(i+2) == 's')) {
+            if (len == 3) { // pos
+              if (parser.tagHasParent(location)) {
+                if (parser.parseContent && parser.getNextContentString) {
+                  slicer.setSource(parser.contentString)
+                  if (slicer.hasNext) lat = slicer.next.toDouble
+                  if (slicer.hasNext) lon = slicer.next.toDouble
+                }
+              }
+            } else if (len == 8 && data(i + 3) == 'i' && data(i + 4) == 't' && data(i + 5) == 'i' && data(i + 6) == 'o' && data(i + 7) == 'n') {
+              if (parser.tagHasParent(enRoute)) {
+                if (parser.parseAttr(positionTime)) dtg = parser.attrValue.toString
+              }
+            }
+          }
+        }
+      }
+
+      @inline def parseFlightEndTags (data: Array[Byte], i: Int, len: Int): Unit = {
+        if (data(i) == 'f') { // /flight
+          if ((len == 6) && data(i+1)=='l' && data(i+2)=='i' && data(i+3)=='g' && data(i+4)=='h' && data(i+5)=='t') {
+            if (id != null && lat != 0.0 && lon != 0.0 && dtg != null) {
+              nFlights += 1
+              //println(s"$nFlights: $id, $dtg, $lat, $lon")
+              return
+            }
+          }
+        } else if (data(i) == 'm') { // messageCollection
+          if ((len==17) && data(i+1)=='e' && data(i+2)=='s' && data(i+3)=='s' && data(i+4)=='a' && data(i+5)=='g' && data(i+6)=='e' && data(i+7)=='C' && data(i+8)=='o' && data(i+9)=='l' && data(i+10)=='l' && data(i+11)=='e' && data(i+12)=='c' && data(i+13)=='t' && data(i+14)=='i' && data(i+15)=='o' && data(i+16)=='n'){
+            assert( nFlights == 100)
+            nFlights = 0
+          }
+        }
+      }
+
       while (parser.parseNextTag) {
         val tag = parser.tag
-        val data = tag.data
-        val i = tag.offset
-        val len = tag.length
 
         if (parser.isStartTag) {
-          //if (len > 0) { //empty tags are not valid XML
-            if (data(i) == 'f'){ // flightIdentification
-              if (len == 20 && data(i+1)=='l' && data(i+2)=='i' && data(i+3)=='g' && data(i+4)=='h' && data(i+5)=='t' && data(i+6)=='I' && data(i+7)=='d' && data(i+8)=='e' && data(i+9)=='n' && data(i+10)=='t' && data(i+11)=='i' && data(i+12)=='f' && data(i+13)=='i' && data(i+14)=='c' && data(i+15)=='a' && data(i+16)=='t' && data(i+17)=='i' && data(i+18)=='o' && data(i+19)=='n'){
-                if (parser.parseAttr(aircraftIdentification)) id = parser.attrValue.intern
-              }
-            } else if (data(i) == 'p') { // position | pos
-              if ((len > 2) && (data(i+1) == 'o') && (data(i+2) == 's')) {
-                if (len == 3) { // pos
-                  if (parser.tagHasParent(location)) {
-                    if (parser.parseContent && parser.getNextContentString) {
-                      slicer.setSource(parser.contentString)
-                      if (slicer.hasNext) lat = slicer.next.toDouble
-                      if (slicer.hasNext) lon = slicer.next.toDouble
-                    }
-                  }
-                } else if (len == 8 && data(i + 3) == 'i' && data(i + 4) == 't' && data(i + 5) == 'i' && data(i + 6) == 'o' && data(i + 7) == 'n') {
-                  if (parser.tagHasParent(enRoute)) {
-                    if (parser.parseAttr(positionTime)) dtg = parser.attrValue.toString
-                  }
-                }
-              }
-            }
-          //}
-
-        } else { // end tag
-          //if (len > 0){  // empty tags are not valid XML
-            if (data(i) == 'f') { // /flight
-              if ((len == 6) && data(i+1)=='l' && data(i+2)=='i' && data(i+3)=='g' && data(i+4)=='h' && data(i+5)=='t') {
-                if (id != null && lat != 0.0 && lon != 0.0 && dtg != null) {
-                  nFlights += 1
-                  //println(s"$nFlights: $id, $dtg, $lat, $lon")
-                  return
-                }
-              }
-            } else if (data(i) == 'm') { // messageCollection
-              if ((len==17) && data(i+1)=='e' && data(i+2)=='s' && data(i+3)=='s' && data(i+4)=='a' && data(i+5)=='g' && data(i+6)=='e' && data(i+7)=='C' && data(i+8)=='o' && data(i+9)=='l' && data(i+10)=='l' && data(i+11)=='e' && data(i+12)=='c' && data(i+13)=='t' && data(i+14)=='i' && data(i+15)=='o' && data(i+16)=='n'){
-                assert( nFlights == 100)
-                nFlights = 0
-              }
-            }
-          //}
+          parseFlightStartTags(tag.data,tag.offset,tag.length)
+        } else {
+          parseFlightEndTags(tag.data,tag.offset,tag.length)
         }
       }
     }

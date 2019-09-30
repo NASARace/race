@@ -187,4 +187,14 @@ object StringUtils {
   def splitToSeq (s: String, delim: String): Seq[String] = {
     ArraySeq.unsafeWrapArray(s.split(delim))
   }
+
+  def prefixLength (s1: String, s2: String): Int = {
+    val m = Math.min(s1.length, s2.length)
+    var i = 0
+    while (i < m) {
+      if (s1.charAt(i) != s2.charAt(i)) return i
+      i += 1
+    }
+    i
+  }
 }
