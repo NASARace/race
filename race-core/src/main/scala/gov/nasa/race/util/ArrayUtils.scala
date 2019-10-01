@@ -105,4 +105,13 @@ object ArrayUtils {
     a
   }
 
+  def prefixLength[T] (a1: Array[T], a2: Array[T]): Int = {
+    val m = Math.min(a1.length, a2.length)
+    var i = 0
+    while (i < m) {
+      if (a1(i) != a2(i)) return i
+      i += 1
+    }
+    i
+  }
 }
