@@ -238,7 +238,7 @@ object StringMatchGenerator {
       val prefixLength = node.combinedPrefixLength
       val value = node.value
 
-      val branch = if (node.isFirstSibling && (level == 0 || !node.parent.get.isWord)) s"${indent(level)}  if" else " else if"
+      val branch = if (node.isFirstSibling && (level == 0 || !node.parent.get.isWord)) s"${indent(level)}    if" else " else if"
 
       if (node.firstChild.isEmpty) {
         print(s"$branch (len == ${prefixLength + value.length}")
@@ -254,27 +254,39 @@ object StringMatchGenerator {
       println(") {")
 
       if (node.firstChild.isEmpty) {  // implies isWord, no need to check length
-        println(s"${indent(level+1)}  // process '${node.fullValue}'")
+        println(s"""${indent(level+1)}    println("${node.fullValue}")""")
 
       } else {
         if (node.isWord) {
-          println(s"${indent(level+1)}  if (len == ${value.length}) {")
-          println(s"${indent(level+2)}  // process '${node.fullValue}'")
-          print(s"${indent(level+1)}  }")
+          println(s"${indent(level+1)}    if (len == ${value.length}) {")
+          println(s"""${indent(level+2)}    println("${node.fullValue}")""")
+          print(s"${indent(level+1)}    }")
         }
       }
     }
 
     def processUp (node: tree.Node): Unit = {
       val level = node.level
-      print(s"${indent(level)}  }")
+      print(s"${indent(level)}    }")
       if (!node.hasNextSibling) println
     }
 
+    println("/**")
+    println(s"  * string recognizer for [${strings.mkString(",")}]")
+    println("  */")
+    println("object Recognizer {")
+    println("  def main (args: Array[String]): Unit = {")
+    println("    for (s<-args) {")
+    println("      val bs = s.getBytes")
+    println("      matchBytes(bs,0,bs.length)")
+    println("    }")
+    println("  }")
 
     println
-    println("def matchBytes(data: Array[Byte], off: Int, len: Int): Unit = {")
+    println("  def matchBytes(data: Array[Byte], off: Int, len: Int): Unit = {")
     tree.walkDFWrapped(processDown,processUp)
+    println("  }")
+
     println("}")
   }
 }
