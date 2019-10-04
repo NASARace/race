@@ -206,7 +206,11 @@ abstract class XmlPullParser2  {
           return true
       }
     }
-    def parseContent = false
+    def parseContent = {
+      idx = seekPastTag(idx)
+      state = contentState
+      state.parseContent
+    }
   }
 
   /**

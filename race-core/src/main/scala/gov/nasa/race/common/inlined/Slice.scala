@@ -38,6 +38,8 @@ object Slice {
 
   def empty: Slice = new Slice(Array.empty[Byte],0,0)
 
+  final val EmptySlice = new Slice(null,0,0)
+
   final val TruePattern = "true".getBytes
   final val FalsePattern = "false".getBytes
   final val YesPattern = "yes".getBytes
