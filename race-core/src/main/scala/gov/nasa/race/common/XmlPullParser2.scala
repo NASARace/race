@@ -290,7 +290,7 @@ abstract class XmlPullParser2  {
 
   @inline final def parseNextAttr: Boolean = state.parseNextAttr
 
-  def parseAttr (at: Slice): Boolean = {
+  @inline final def parseAttr (at: Slice): Boolean = {
     while (parseNextAttr) {
       if (attrName == at) return true
     }
@@ -299,7 +299,9 @@ abstract class XmlPullParser2  {
 
   @inline final def parseContent: Boolean = state.parseContent
 
-  def stopParsing: Unit = {
+  @inline final def parseSingleContentString = state.parseContent && getNextContentString
+
+  @inline final def stopParsing: Unit = {
     state = finishedState
   }
 
@@ -308,7 +310,7 @@ abstract class XmlPullParser2  {
   /**
     * iterate over all contentStrings
     */
-  def getNextContentString: Boolean = {
+  @inline final def getNextContentString: Boolean = {
     val i = contentIdx
     if (i <= contentStrings.top) {
       contentString.setRange(contentStrings.offsets(i),contentStrings.lengths(i))
