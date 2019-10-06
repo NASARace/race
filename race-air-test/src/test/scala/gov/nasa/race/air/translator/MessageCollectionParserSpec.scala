@@ -25,7 +25,7 @@ import scala.collection.Seq
 /**
   * reg test for SFDPSParser
   */
-class SFDPSParserSpec extends AnyFlatSpec with RaceSpec {
+class MessageCollectionParserSpec extends AnyFlatSpec with RaceSpec {
 
   "a SFDPSParser" should "reproduce known values" in {
     val xmlMsg = fileContentsAsUTF8String(baseResourceFile("fixm.xml")).get
@@ -33,7 +33,7 @@ class SFDPSParserSpec extends AnyFlatSpec with RaceSpec {
     val flightRE = "<flight ".r
     val nFlights = flightRE.findAllIn(xmlMsg).size - 1   // flight HBAL476 has no altitude and should not be reported
 
-    val translator = new SFDPSParser(createConfig("buffer-size = 100000"))
+    val translator = new MessageCollectionParser(createConfig("buffer-size = 100000"))
     val res = translator.translate(xmlMsg)
     res match {
       case Some(list:Seq[_]) =>

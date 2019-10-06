@@ -38,7 +38,7 @@ import scala.collection.mutable.ArrayBuffer
 /**
   * optimized translator for SFDPS MessageCollection (and legacy NasFlight) messages
   */
-class SFDPSParser (val config: Config=NoConfig)
+class MessageCollectionParser(val config: Config=NoConfig)
              extends StringXmlPullParser2(config.getIntOrElse("buffer-size",350000)) with ConfigurableTranslator {
 
   protected var flights = new ArrayBuffer[IdentifiableObject](120)
@@ -171,22 +171,16 @@ class SFDPSParser (val config: Config=NoConfig)
             if (parseAttr(positionTime)) date = DateTime.parseYMDT(attrValue.toString)  // FIXME
           }
         }
-        @inline def process_x = {
-          // we ignore uom since we just use content value to compute heading
-          if (parseSingleContentString) vx = contentString.toDouble
-        }
-        @inline def process_y = {
-          if (parseSingleContentString) vy = contentString.toDouble
-        }
-        @inline def process_surveillance = {
-          if (tagHasParent(actualSpeed)) spd = parseSpeed
-        }
-        @inline def process_altitude = {
-          alt = parseAltitude
-        }
-        @inline def process_arrival = {
-          if (parseAttr(arrivalPoint)) arrPt = attrValue.intern
-        }
+        @inline def process_x = vx = readDoubleContent  // we ignore uom since we just use content value to compute heading
+
+        @inline def process_y = vy = readDoubleContent
+
+        @inline def process_surveillance = if (tagHasParent(actualSpeed)) spd = parseSpeed
+
+        @inline def process_altitude = alt = parseAltitude
+
+        @inline def process_arrival = if (parseAttr(arrivalPoint)) arrPt = attrValue.intern
+
         @inline def process_actual = {
           if (tagHasAncestor(arrival)) {
             if (parseAttr(time)) arrivalDate = DateTime.parseYMDT(attrValue.toString)

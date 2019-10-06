@@ -308,6 +308,12 @@ abstract class XmlPullParser2  {
 
   //--- high level retrieval for mandatory content (no need to check - throw exception if not there)
 
+  @inline final def readSliceContent: Slice = {
+    state.parseContent
+    getNextContentString
+    contentString
+  }
+
   @inline final def readBooleanContent: Boolean = {
     state.parseContent
     getNextContentString

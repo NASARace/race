@@ -118,30 +118,24 @@ class TATrackAndFlightPlanParser (val config: Config=NoConfig)
           else 0
         }
 
-        @inline def process_trackNum = { if (parseSingleContentString) trackId = contentString.intern }
-        @inline def process_acid = { if (parseSingleContentString) acId = contentString.intern }
-        @inline def process_adsb = {
-          if (parseSingleContentString && contentString.toBoolean) status |= TATrack.AdsbFlag
-        }
-        @inline def process_mrtTime = {
-          if (parseSingleContentString) mrtTime = DateTime.parseYMDT(contentString.toString)  // FIXME
-        }
-        @inline def process_xPos = { if (parseSingleContentString) xPos = NauticalMiles(contentString.toInt / 256.0) }
-        @inline def process_yPos = { if (parseSingleContentString) yPos = NauticalMiles(contentString.toInt / 256.0) }
-        @inline def process_lat = { if (parseSingleContentString) lat = Degrees(contentString.toDouble) }
-        @inline def process_lon = { if (parseSingleContentString) lon = Degrees(contentString.toDouble) }
-        @inline def process_vVert = { if (parseSingleContentString) vVert = FeetPerMinute(contentString.toInt) }
-        @inline def process_vx = { if (parseSingleContentString) vx = Knots(contentString.toInt) }
-        @inline def process_vy = { if (parseSingleContentString) vy = Knots(contentString.toInt) }
-        @inline def process_status = { if (parseSingleContentString) readStatusFlag(contentString) }
-        @inline def process_frozen = { if (parseSingleContentString && contentString.toBoolean) status |= TrackedObject.FrozenFlag }
-        @inline def process_flightPlan = {
-          flightPlan = Some(new FlightPlan) // FIXME
-        }
-        @inline def process_new = { if (parseSingleContentString && contentString.toBoolean) status |= TrackedObject.NewFlag }
-        @inline def process_pseudo = { if (parseSingleContentString && contentString.toBoolean) status |= TATrack.PseudoFlag }
-        @inline def process_reportedBeaconCode = { if (parseSingleContentString) beaconCode = contentString.toString }
-        @inline def process_reportedAltitude = { if (parseSingleContentString) reportedAltitude = Feet(contentString.toInt) }
+        @inline def process_trackNum = trackId = readInternedStringContent
+        @inline def process_acid = acId = readInternedStringContent
+        @inline def process_adsb = if (readBooleanContent) status |= TATrack.AdsbFlag
+        @inline def process_mrtTime = mrtTime = readDateTimeContent
+        @inline def process_xPos = xPos = NauticalMiles(readIntContent / 256.0)
+        @inline def process_yPos = yPos = NauticalMiles(readIntContent / 256.0)
+        @inline def process_lat = lat = Degrees(readDoubleContent)
+        @inline def process_lon = lon = Degrees(readDoubleContent)
+        @inline def process_vVert = vVert = FeetPerMinute(readIntContent)
+        @inline def process_vx = vx = Knots(readIntContent)
+        @inline def process_vy = vy = Knots(readIntContent)
+        @inline def process_status = status |= readStatusFlag(readSliceContent)
+        @inline def process_frozen = if (readBooleanContent) status |= TrackedObject.FrozenFlag
+        @inline def process_flightPlan = flightPlan = Some(new FlightPlan) // FIXME
+        @inline def process_new = if (readBooleanContent) status |= TrackedObject.NewFlag
+        @inline def process_pseudo = if (readBooleanContent) status |= TATrack.PseudoFlag
+        @inline def process_reportedBeaconCode = beaconCode = readStringContent
+        @inline def process_reportedAltitude = reportedAltitude = Feet(readIntContent)
 
         @inline def match_trackNum = { len==8 && data(off)==116 && data(off+1)==114 && data(off+2)==97 && data(off+3)==99 && data(off+4)==107 && data(off+5)==78 && data(off+6)==117 && data(off+7)==109 }
         @inline def match_a = { len>=1 && data(off)==97 }
