@@ -116,7 +116,7 @@ class SFDPSParser (val config: Config=NoConfig)
     def parseSpeed: Speed = {
       val u = if (parseAttr(uom)) attrValue else Slice.EmptySlice
 
-      if (parseContent && getNextContentString) {
+      if (parseSingleContentString) {
         val v = contentString.toDouble
         if (u == mph) UsMilesPerHour(v)
         else if (u == kmh) KilometersPerHour(v)
@@ -128,7 +128,7 @@ class SFDPSParser (val config: Config=NoConfig)
     def parseAltitude: Length = {
       val u = if (parseAttr(uom)) attrValue else Slice.EmptySlice
 
-      if (parseContent && getNextContentString) {
+      if (parseSingleContentString) {
         val v = contentString.toDouble
         if (u == meters) Meters(v) else Feet(v)
       } else UndefinedLength
@@ -168,7 +168,7 @@ class SFDPSParser (val config: Config=NoConfig)
         }
         @inline def process_position = {
           if (tagHasParent(enRoute)) {
-            if (parseAttr(positionTime)) date = DateTime.parseYMDT(attrValue.toString)
+            if (parseAttr(positionTime)) date = DateTime.parseYMDT(attrValue.toString)  // FIXME
           }
         }
         @inline def process_x = {

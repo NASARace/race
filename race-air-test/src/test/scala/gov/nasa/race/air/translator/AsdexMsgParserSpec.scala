@@ -16,6 +16,7 @@
  */
 package gov.nasa.race.air.translator
 
+import gov.nasa.race.air.AsdexTrack
 import gov.nasa.race.test.RaceSpec
 import gov.nasa.race.util.FileUtils.fileContentsAsUTF8String
 import org.scalatest.flatspec.AnyFlatSpec
@@ -23,24 +24,32 @@ import org.scalatest.flatspec.AnyFlatSpec
 import scala.collection.Seq
 
 /**
-  * reg test for SFDPSParser
+  * reg test for AsdexMsgParser
   */
-class SFDPSParserSpec extends AnyFlatSpec with RaceSpec {
+class AsdexMsgParserSpec extends AnyFlatSpec with RaceSpec {
 
-  "a SFDPSParser" should "reproduce known values" in {
-    val xmlMsg = fileContentsAsUTF8String(baseResourceFile("fixm.xml")).get
+  val xmlMsg = fileContentsAsUTF8String(baseResourceFile("asdexMsg.xml"))
 
-    val flightRE = "<flight ".r
-    val nFlights = flightRE.findAllIn(xmlMsg).size - 1   // flight HBAL476 has no altitude and should not be reported
+  "a AsdexMsgParser" should "reproduce known values" in {
+    val translator = new AsdexMsgParser
+    translator.translate(xmlMsg) match {
+      case Some(list: Seq[_]) =>
+        list.foreach { e=>
+          println(e)
+          // do some sample value checks
+          e match {
+            case track: AsdexTrack =>
+              track.id match {
+                case "3382" => assert( track.position.altMeters.round == 518)
+                case "1992" => assert (track.position.altitude.isUndefined)
+                case "1833" => assert (track.heading.toDegrees.round == 309)
+                case _ => // ignore
+              }
+            case other => fail(s"item not a AsdexTrack")
+          }
+        }
 
-    val translator = new SFDPSParser(createConfig("buffer-size = 100000"))
-    val res = translator.translate(xmlMsg)
-    res match {
-      case Some(list:Seq[_]) =>
-        list.foreach { println }
-        assert(list.size == nFlights)
-        println(s"all $nFlights valid FlightObjects accounted for (HBAL476 has no altitude)")
-      case other => fail(s"failed to parse messages, result=$other")
+      case other => fail(s"parser failed to produce result: $other")
     }
   }
 }

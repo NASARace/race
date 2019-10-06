@@ -84,6 +84,8 @@ object DateTime {
     }
   }
 
+  // todo - we need a Slice based version
+
   def getZoneId (zid: String, offHour: String, offMin: String): ZoneId = {
     if (offHour == null) {
       if (zid == null) ZoneId.systemDefault else ZoneId.of(zid)

@@ -19,7 +19,8 @@ package gov.nasa.race.common
 import java.io.PrintStream
 import java.nio.charset.StandardCharsets
 
-import gov.nasa.race.common.inlined.{Slice,RangeStack}
+import gov.nasa.race.common.inlined.{RangeStack, Slice}
+import gov.nasa.race.uom.DateTime
 
 import scala.annotation.switch
 
@@ -305,7 +306,45 @@ abstract class XmlPullParser2  {
     state = finishedState
   }
 
-  //--- content retrieval
+  //--- high level retrieval for mandatory content (no need to check - throw exception if not there)
+
+  @inline final def readBooleanContent: Boolean = {
+    state.parseContent
+    getNextContentString
+    contentString.toBoolean
+  }
+
+  @inline final def readIntContent: Int = {
+    state.parseContent
+    getNextContentString
+    contentString.toInt
+  }
+
+  @inline final def readDoubleContent: Double = {
+    state.parseContent
+    getNextContentString
+    contentString.toDouble
+  }
+
+  @inline final def readStringContent: String = {
+    state.parseContent
+    getNextContentString
+    contentString.toString
+  }
+
+  @inline final def readInternedStringContent: String = {
+    state.parseContent
+    getNextContentString
+    contentString.intern
+  }
+
+  @inline final def readDateTimeContent: DateTime = {
+    state.parseContent
+    getNextContentString
+    DateTime.parseYMDT(contentString.toString) // FIXME
+  }
+
+  //--- raw content retrieval
 
   /**
     * iterate over all contentStrings
