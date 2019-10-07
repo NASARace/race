@@ -22,6 +22,7 @@ import java.time._
 import java.util.Locale
 
 import gov.nasa.race._
+import gov.nasa.race.common.inlined.Slice
 import gov.nasa.race.util.SeqUtils
 
 import scala.collection.mutable.ArrayBuffer
@@ -84,7 +85,9 @@ object DateTime {
     }
   }
 
-  // todo - we need a Slice based version
+  def parseYMDT(spec: Slice): DateTime = {
+    parseYMDT(spec.toString) // FIXME
+  }
 
   def getZoneId (zid: String, offHour: String, offMin: String): ZoneId = {
     if (offHour == null) {

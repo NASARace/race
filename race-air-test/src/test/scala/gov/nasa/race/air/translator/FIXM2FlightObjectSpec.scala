@@ -34,7 +34,7 @@ class FIXM2FlightObjectSpec extends AnyFlatSpec with RaceSpec {
   behavior of "FIXM2FlightObject translator"
 
   "translator" should "reproduce known values" in {
-    val xmlMsg = fileContentsAsUTF8String(baseResourceFile("fixm.xml")).get
+    val xmlMsg = fileContentsAsUTF8String(baseResourceFile("MessageCollection.xml")).get
 
     val flightRE = "<flight ".r
     val nFlights = flightRE.findAllIn(xmlMsg).size - 1   // flight HBAL476 has no altitude and should not be reported

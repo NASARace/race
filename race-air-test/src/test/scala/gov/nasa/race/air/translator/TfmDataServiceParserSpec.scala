@@ -16,6 +16,7 @@
  */
 package gov.nasa.race.air.translator
 
+import gov.nasa.race.air.TFMTrack
 import gov.nasa.race.test.RaceSpec
 import gov.nasa.race.util.FileUtils.fileContentsAsUTF8String
 import org.scalatest.flatspec.AnyFlatSpec
@@ -23,24 +24,31 @@ import org.scalatest.flatspec.AnyFlatSpec
 import scala.collection.Seq
 
 /**
-  * reg test for SFDPSParser
+  * reg test for TfmDataServiceParser
   */
-class MessageCollectionParserSpec extends AnyFlatSpec with RaceSpec {
+class TfmDataServiceParserSpec extends AnyFlatSpec with RaceSpec {
+  val xmlMsg = fileContentsAsUTF8String(baseResourceFile("tfmDataService.xml"))
 
-  "a SFDPSParser" should "reproduce known values" in {
-    val xmlMsg = fileContentsAsUTF8String(baseResourceFile("MessageCollection.xml")).get
+  "a TfmDataServiceParser" should "reproduce known values" in {
+    val translator = new TfmDataServiceParser
 
-    val flightRE = "<flight ".r
-    val nFlights = flightRE.findAllIn(xmlMsg).size - 1   // flight HBAL476 has no altitude and should not be reported
-
-    val translator = new MessageCollectionParser(createConfig("buffer-size = 100000"))
     val res = translator.translate(xmlMsg)
     res match {
-      case Some(list:Seq[_]) =>
-        list.foreach { println }
-        assert(list.size == nFlights)
-        println(s"all $nFlights valid FlightObjects accounted for (HBAL476 has no altitude)")
-      case other => fail(s"failed to parse messages, result=$other")
+      case Some(list: Seq[_]) =>
+        list.foreach { e =>
+          println(e)
+          e match {
+            case t: TFMTrack =>
+              t.cs match {
+                case "N407CD" => assert(t.position.altMeters.round == 1951)
+                case "ENY3608" => assert(t.speed.toMetersPerSecond.round == 259)
+                case _ => // ignore
+              }
+            case other => fail(s"parsed item not a TFMTrack object: $other")
+          }
+        }
+        assert(list.size == 36)
+      case other => fail(s"wrong TfmDataServiceParser result: $other")
     }
   }
 }

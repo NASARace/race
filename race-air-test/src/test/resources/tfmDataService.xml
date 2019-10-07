@@ -1,0 +1,1586 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<ds:tfmDataService xmlns:ds="urn:us:gov:dot:faa:atm:tfm:tfmdataservice"
+                   xmlns="urn:us:gov:dot:faa:atm:tfm:tfmdataservice" xmlns:fdm="urn:us:gov:dot:faa:atm:tfm:flightdata"
+                   xmlns:nxce="urn:us:gov:dot:faa:atm:tfm:tfmdatacoreelements"
+                   xmlns:nxcm="urn:us:gov:dot:faa:atm:tfm:flightdatacommonmessages"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="urn:us:gov:dot:faa:atm:tfm:tfmdataservice TFMData_Service.xsd">
+    <fltdOutput>
+        <fdm:fltdMessage acid="VRD169" airline="VRD" arrArpt="KLAX" cdmPart="false" depArpt="KEWR"
+                         fdTrigger="HCS_TRACK_MSG" flightRef="43987902" msgType="trackInformation" sensitivity="A"
+                         sourceFacility="KZOB" sourceTimeStamp="2017-08-08T00:44:12Z">
+            <fdm:trackInformation>
+                <nxcm:qualifiedAircraftId>
+                    <nxce:aircraftId>VRD169</nxce:aircraftId>
+                    <nxce:computerId>
+                        <nxce:facilityIdentifier>KZOB</nxce:facilityIdentifier>
+                        <nxce:idNumber>788</nxce:idNumber>
+                    </nxce:computerId>
+                    <nxce:gufi>KN77432200</nxce:gufi>
+                    <nxce:igtd>2017-08-07T21:59:00Z</nxce:igtd>
+                    <nxce:departurePoint>
+                        <nxce:airport>KEWR</nxce:airport>
+                    </nxce:departurePoint>
+                    <nxce:arrivalPoint>
+                        <nxce:airport>KLAX</nxce:airport>
+                    </nxce:arrivalPoint>
+                </nxcm:qualifiedAircraftId>
+                <nxcm:speed>398</nxcm:speed>
+                <nxcm:reportedAltitude>
+                    <nxce:assignedAltitude>
+                        <nxce:simpleAltitude>320C</nxce:simpleAltitude>
+                    </nxce:assignedAltitude>
+                </nxcm:reportedAltitude>
+                <nxcm:position>
+                    <nxce:latitude>
+                        <nxce:latitudeDMS degrees="41" direction="NORTH" minutes="05" seconds="17"/>
+                    </nxce:latitude>
+                    <nxce:longitude>
+                        <nxce:longitudeDMS degrees="079" direction="WEST" minutes="26" seconds="47"/>
+                    </nxce:longitude>
+                </nxcm:position>
+                <nxcm:timeAtPosition>2017-08-08T00:44:12Z</nxcm:timeAtPosition>
+                <nxcm:ncsmTrackData>
+                    <nxcm:eta etaType="ESTIMATED" timeValue="2017-08-08T05:38:11Z"/>
+                    <nxcm:rvsmData currentCompliance="true" equipped="true" futureCompliance="true"/>
+                    <nxcm:arrivalFixAndTime arrTime="2017-08-08T04:42:03Z" fixName="CIVET"/>
+                    <nxcm:departureFixAndTime arrTime="2017-08-08T00:14:02Z" fixName="NEWEL"/>
+                    <nxcm:nextEvent latitudeDecimal="41.1651222" longitudeDecimal="-80.1563278"/>
+                </nxcm:ncsmTrackData>
+            </fdm:trackInformation>
+        </fdm:fltdMessage>
+        <fdm:fltdMessage acid="N302GV" airline="XXX" arrArpt="KPWK" cdmPart="false" depArpt="KTEB"
+                         fdTrigger="HCS_TRACK_MSG" flightRef="44073920" msgType="trackInformation" sensitivity="A"
+                         sourceFacility="KZOB" sourceTimeStamp="2017-08-08T00:44:12Z">
+            <fdm:trackInformation>
+                <nxcm:qualifiedAircraftId>
+                    <nxce:aircraftId>N302GV</nxce:aircraftId>
+                    <nxce:computerId>
+                        <nxce:facilityIdentifier>KZOB</nxce:facilityIdentifier>
+                        <nxce:idNumber>401</nxce:idNumber>
+                    </nxce:computerId>
+                    <nxce:gufi>KN72565200</nxce:gufi>
+                    <nxce:igtd>2017-08-07T22:08:00Z</nxce:igtd>
+                    <nxce:departurePoint>
+                        <nxce:airport>KTEB</nxce:airport>
+                    </nxce:departurePoint>
+                    <nxce:arrivalPoint>
+                        <nxce:airport>KPWK</nxce:airport>
+                    </nxce:arrivalPoint>
+                </nxcm:qualifiedAircraftId>
+                <nxcm:speed>320</nxcm:speed>
+                <nxcm:reportedAltitude>
+                    <nxce:assignedAltitude>
+                        <nxce:simpleAltitude>430C</nxce:simpleAltitude>
+                    </nxce:assignedAltitude>
+                </nxcm:reportedAltitude>
+                <nxcm:position>
+                    <nxce:latitude>
+                        <nxce:latitudeDMS degrees="41" direction="NORTH" minutes="40" seconds="48"/>
+                    </nxce:latitude>
+                    <nxce:longitude>
+                        <nxce:longitudeDMS degrees="076" direction="WEST" minutes="12" seconds="07"/>
+                    </nxce:longitude>
+                </nxcm:position>
+                <nxcm:timeAtPosition>2017-08-08T00:44:12Z</nxcm:timeAtPosition>
+                <nxcm:ncsmTrackData>
+                    <nxcm:eta etaType="ESTIMATED" timeValue="2017-08-08T02:24:31Z"/>
+                    <nxcm:rvsmData currentCompliance="true" equipped="true" futureCompliance="true"/>
+                    <nxcm:departureFixAndTime arrTime="2017-08-08T00:27:52Z" fixName="COATE"/>
+                    <nxcm:nextEvent latitudeDecimal="41.6862556" longitudeDecimal="-76.2225417"/>
+                </nxcm:ncsmTrackData>
+            </fdm:trackInformation>
+        </fdm:fltdMessage>
+        <fdm:fltdMessage acid="SWA3836" airline="SWA" arrArpt="KSTL" cdmPart="false" depArpt="KPHL"
+                         fdTrigger="HCS_TRACK_MSG" flightRef="43994755" msgType="trackInformation" sensitivity="A"
+                         sourceFacility="KZOB" sourceTimeStamp="2017-08-08T00:44:12Z">
+            <fdm:trackInformation>
+                <nxcm:qualifiedAircraftId>
+                    <nxce:aircraftId>SWA3836</nxce:aircraftId>
+                    <nxce:computerId>
+                        <nxce:facilityIdentifier>KZOB</nxce:facilityIdentifier>
+                        <nxce:idNumber>020</nxce:idNumber>
+                    </nxce:computerId>
+                    <nxce:gufi>KN78128200</nxce:gufi>
+                    <nxce:igtd>2017-08-07T23:25:00Z</nxce:igtd>
+                    <nxce:departurePoint>
+                        <nxce:airport>KPHL</nxce:airport>
+                    </nxce:departurePoint>
+                    <nxce:arrivalPoint>
+                        <nxce:airport>KSTL</nxce:airport>
+                    </nxce:arrivalPoint>
+                </nxcm:qualifiedAircraftId>
+                <nxcm:speed>358</nxcm:speed>
+                <nxcm:reportedAltitude>
+                    <nxce:assignedAltitude>
+                        <nxce:simpleAltitude>380C</nxce:simpleAltitude>
+                    </nxce:assignedAltitude>
+                </nxcm:reportedAltitude>
+                <nxcm:position>
+                    <nxce:latitude>
+                        <nxce:latitudeDMS degrees="40" direction="NORTH" minutes="00" seconds="48"/>
+                    </nxce:latitude>
+                    <nxce:longitude>
+                        <nxce:longitudeDMS degrees="080" direction="WEST" minutes="01" seconds="02"/>
+                    </nxce:longitude>
+                </nxcm:position>
+                <nxcm:timeAtPosition>2017-08-08T00:44:12Z</nxcm:timeAtPosition>
+                <nxcm:ncsmTrackData>
+                    <nxcm:eta etaType="ESTIMATED" timeValue="2017-08-08T02:08:09Z"/>
+                    <nxcm:rvsmData currentCompliance="true" equipped="true" futureCompliance="true"/>
+                    <nxcm:arrivalFixAndTime arrTime="2017-08-08T01:35:38Z" fixName="VLA"/>
+                    <nxcm:departureFixAndTime arrTime="2017-08-08T00:19:00Z" fixName="MXE"/>
+                    <nxcm:nextEvent latitudeDecimal="40.0170242" longitudeDecimal="-80.8172289"/>
+                </nxcm:ncsmTrackData>
+            </fdm:trackInformation>
+        </fdm:fltdMessage>
+        <fdm:fltdMessage acid="SWA569" airline="SWA" arrArpt="KMKE" cdmPart="false" depArpt="KBWI"
+                         fdTrigger="HCS_TRACK_MSG" flightRef="43993328" msgType="trackInformation" sensitivity="A"
+                         sourceFacility="KZOB" sourceTimeStamp="2017-08-08T00:44:12Z">
+            <fdm:trackInformation>
+                <nxcm:qualifiedAircraftId>
+                    <nxce:aircraftId>SWA569</nxce:aircraftId>
+                    <nxce:computerId>
+                        <nxce:facilityIdentifier>KZOB</nxce:facilityIdentifier>
+                        <nxce:idNumber>110</nxce:idNumber>
+                    </nxce:computerId>
+                    <nxce:gufi>KW77474200</nxce:gufi>
+                    <nxce:igtd>2017-08-07T23:15:00Z</nxce:igtd>
+                    <nxce:departurePoint>
+                        <nxce:airport>KBWI</nxce:airport>
+                    </nxce:departurePoint>
+                    <nxce:arrivalPoint>
+                        <nxce:airport>KMKE</nxce:airport>
+                    </nxce:arrivalPoint>
+                </nxcm:qualifiedAircraftId>
+                <nxcm:speed>351</nxcm:speed>
+                <nxcm:reportedAltitude>
+                    <nxce:assignedAltitude>
+                        <nxce:simpleAltitude>400C</nxce:simpleAltitude>
+                    </nxce:assignedAltitude>
+                </nxcm:reportedAltitude>
+                <nxcm:position>
+                    <nxce:latitude>
+                        <nxce:latitudeDMS degrees="40" direction="NORTH" minutes="38" seconds="52"/>
+                    </nxce:latitude>
+                    <nxce:longitude>
+                        <nxce:longitudeDMS degrees="080" direction="WEST" minutes="29" seconds="11"/>
+                    </nxce:longitude>
+                </nxcm:position>
+                <nxcm:timeAtPosition>2017-08-08T00:44:12Z</nxcm:timeAtPosition>
+                <nxcm:ncsmTrackData>
+                    <nxcm:eta etaType="ESTIMATED" timeValue="2017-08-08T01:44:45Z"/>
+                    <nxcm:rvsmData currentCompliance="true" equipped="true" futureCompliance="true"/>
+                    <nxcm:arrivalFixAndTime arrTime="2017-08-08T01:37:29Z" fixName="SUDDS"/>
+                    <nxcm:departureFixAndTime arrTime="2017-08-08T00:19:13Z" fixName="BUFFR"/>
+                    <nxcm:nextEvent latitudeDecimal="40.672277762296694" longitudeDecimal="-80.52416760853254"/>
+                </nxcm:ncsmTrackData>
+            </fdm:trackInformation>
+        </fdm:fltdMessage>
+        <fdm:fltdMessage acid="ENY3546" airline="ENY" arrArpt="KSYR" cdmPart="false" depArpt="KORD"
+                         fdTrigger="HCS_TRACK_MSG" flightRef="43997977" msgType="trackInformation" sensitivity="A"
+                         sourceFacility="KZOB" sourceTimeStamp="2017-08-08T00:44:12Z">
+            <fdm:trackInformation>
+                <nxcm:qualifiedAircraftId>
+                    <nxce:aircraftId>ENY3546</nxce:aircraftId>
+                    <nxce:computerId>
+                        <nxce:facilityIdentifier>KZOB</nxce:facilityIdentifier>
+                        <nxce:idNumber>530</nxce:idNumber>
+                    </nxce:computerId>
+                    <nxce:gufi>KG82244200</nxce:gufi>
+                    <nxce:igtd>2017-08-08T00:05:00Z</nxce:igtd>
+                    <nxce:departurePoint>
+                        <nxce:airport>KORD</nxce:airport>
+                    </nxce:departurePoint>
+                    <nxce:arrivalPoint>
+                        <nxce:airport>KSYR</nxce:airport>
+                    </nxce:arrivalPoint>
+                </nxcm:qualifiedAircraftId>
+                <nxcm:speed>457</nxcm:speed>
+                <nxcm:reportedAltitude>
+                    <nxce:assignedAltitude>
+                        <nxce:simpleAltitude>242</nxce:simpleAltitude>
+                    </nxce:assignedAltitude>
+                </nxcm:reportedAltitude>
+                <nxcm:position>
+                    <nxce:latitude>
+                        <nxce:latitudeDMS degrees="42" direction="NORTH" minutes="18" seconds="21"/>
+                    </nxce:latitude>
+                    <nxce:longitude>
+                        <nxce:longitudeDMS degrees="086" direction="WEST" minutes="23" seconds="14"/>
+                    </nxce:longitude>
+                </nxcm:position>
+                <nxcm:timeAtPosition>2017-08-08T00:44:12Z</nxcm:timeAtPosition>
+                <nxcm:ncsmTrackData>
+                    <nxcm:eta etaType="ESTIMATED" timeValue="2017-08-08T01:45:49Z"/>
+                    <nxcm:rvsmData currentCompliance="true" equipped="true" futureCompliance="true"/>
+                    <nxcm:departureFixAndTime arrTime="2017-08-08T00:39:53Z" fixName="EBAKE"/>
+                    <nxcm:nextEvent latitudeDecimal="42.3156278" longitudeDecimal="-86.0952833"/>
+                </nxcm:ncsmTrackData>
+            </fdm:trackInformation>
+        </fdm:fltdMessage>
+        <fdm:fltdMessage acid="EJA648" airline="EJA" arrArpt="KPDK" cdmPart="false" depArpt="KBOS"
+                         fdTrigger="HCS_TRACK_MSG" flightRef="43990910" msgType="trackInformation" sensitivity="A"
+                         sourceFacility="KZOB" sourceTimeStamp="2017-08-08T00:44:12Z">
+            <fdm:trackInformation>
+                <nxcm:qualifiedAircraftId>
+                    <nxce:aircraftId>EJA648</nxce:aircraftId>
+                    <nxce:computerId>
+                        <nxce:facilityIdentifier>KZOB</nxce:facilityIdentifier>
+                        <nxce:idNumber>848</nxce:idNumber>
+                    </nxce:computerId>
+                    <nxce:gufi>KB70870200</nxce:gufi>
+                    <nxce:igtd>2017-08-07T22:30:00Z</nxce:igtd>
+                    <nxce:departurePoint>
+                        <nxce:airport>KBOS</nxce:airport>
+                    </nxce:departurePoint>
+                    <nxce:arrivalPoint>
+                        <nxce:airport>KPDK</nxce:airport>
+                    </nxce:arrivalPoint>
+                </nxcm:qualifiedAircraftId>
+                <nxcm:speed>318</nxcm:speed>
+                <nxcm:reportedAltitude>
+                    <nxce:assignedAltitude>
+                        <nxce:simpleAltitude>400C</nxce:simpleAltitude>
+                    </nxce:assignedAltitude>
+                </nxcm:reportedAltitude>
+                <nxcm:position>
+                    <nxce:latitude>
+                        <nxce:latitudeDMS degrees="39" direction="NORTH" minutes="30" seconds="57"/>
+                    </nxce:latitude>
+                    <nxce:longitude>
+                        <nxce:longitudeDMS degrees="079" direction="WEST" minutes="32" seconds="45"/>
+                    </nxce:longitude>
+                </nxcm:position>
+                <nxcm:timeAtPosition>2017-08-08T00:44:12Z</nxcm:timeAtPosition>
+                <nxcm:ncsmTrackData>
+                    <nxcm:eta etaType="ESTIMATED" timeValue="2017-08-08T01:58:16Z"/>
+                    <nxcm:rvsmData currentCompliance="true" equipped="true" futureCompliance="true"/>
+                    <nxcm:departureFixAndTime arrTime="2017-08-07T23:30:00Z" fixName="REVSS"/>
+                    <nxcm:nextEvent latitudeDecimal="39.17240978432364" longitudeDecimal="-79.9945334910418"/>
+                </nxcm:ncsmTrackData>
+            </fdm:trackInformation>
+        </fdm:fltdMessage>
+        <fdm:fltdMessage acid="DAL2628" airline="DAL" arrArpt="KPHL" cdmPart="false" depArpt="KDTW"
+                         fdTrigger="HCS_TRACK_MSG" flightRef="44000152" msgType="trackInformation" sensitivity="A"
+                         sourceFacility="KZOB" sourceTimeStamp="2017-08-08T00:44:12Z">
+            <fdm:trackInformation>
+                <nxcm:qualifiedAircraftId>
+                    <nxce:aircraftId>DAL2628</nxce:aircraftId>
+                    <nxce:computerId>
+                        <nxce:facilityIdentifier>KZOB</nxce:facilityIdentifier>
+                        <nxce:idNumber>912</nxce:idNumber>
+                    </nxce:computerId>
+                    <nxce:gufi>KC85420200</nxce:gufi>
+                    <nxce:igtd>2017-08-08T00:33:00Z</nxce:igtd>
+                    <nxce:departurePoint>
+                        <nxce:airport>KDTW</nxce:airport>
+                    </nxce:departurePoint>
+                    <nxce:arrivalPoint>
+                        <nxce:airport>KPHL</nxce:airport>
+                    </nxce:arrivalPoint>
+                </nxcm:qualifiedAircraftId>
+                <nxcm:speed>286</nxcm:speed>
+                <nxcm:reportedAltitude>
+                    <nxce:assignedAltitude>
+                        <nxce:simpleAltitude>096</nxce:simpleAltitude>
+                    </nxce:assignedAltitude>
+                </nxcm:reportedAltitude>
+                <nxcm:position>
+                    <nxce:latitude>
+                        <nxce:latitudeDMS degrees="42" direction="NORTH" minutes="20" seconds="08"/>
+                    </nxce:latitude>
+                    <nxce:longitude>
+                        <nxce:longitudeDMS degrees="083" direction="WEST" minutes="02" seconds="38"/>
+                    </nxce:longitude>
+                </nxcm:position>
+                <nxcm:timeAtPosition>2017-08-08T00:44:12Z</nxcm:timeAtPosition>
+                <nxcm:ncsmTrackData>
+                    <nxcm:eta etaType="ESTIMATED" timeValue="2017-08-08T01:48:14Z"/>
+                    <nxcm:rvsmData currentCompliance="true" equipped="true" futureCompliance="true"/>
+                    <nxcm:arrivalFixAndTime arrTime="2017-08-08T01:32:26Z" fixName="BUNTS"/>
+                    <nxcm:departureFixAndTime arrTime="2017-08-08T00:48:23Z" fixName="OCTAS"/>
+                    <nxcm:nextEvent latitudeDecimal="42.21412347370819" longitudeDecimal="-83.25523741018866"/>
+                </nxcm:ncsmTrackData>
+            </fdm:trackInformation>
+        </fdm:fltdMessage>
+        <fdm:fltdMessage acid="SWA561" airline="SWA" arrArpt="KBWI" cdmPart="false" depArpt="KMSP"
+                         fdTrigger="HCS_TRACK_MSG" flightRef="43995445" msgType="trackInformation" sensitivity="A"
+                         sourceFacility="KZOB" sourceTimeStamp="2017-08-08T00:44:12Z">
+            <fdm:trackInformation>
+                <nxcm:qualifiedAircraftId>
+                    <nxce:aircraftId>SWA561</nxce:aircraftId>
+                    <nxce:computerId>
+                        <nxce:facilityIdentifier>KZOB</nxce:facilityIdentifier>
+                        <nxce:idNumber>630</nxce:idNumber>
+                    </nxce:computerId>
+                    <nxce:gufi>KP78398200</nxce:gufi>
+                    <nxce:igtd>2017-08-07T23:40:00Z</nxce:igtd>
+                    <nxce:departurePoint>
+                        <nxce:airport>KMSP</nxce:airport>
+                    </nxce:departurePoint>
+                    <nxce:arrivalPoint>
+                        <nxce:airport>KBWI</nxce:airport>
+                    </nxce:arrivalPoint>
+                </nxcm:qualifiedAircraftId>
+                <nxcm:speed>536</nxcm:speed>
+                <nxcm:reportedAltitude>
+                    <nxce:assignedAltitude>
+                        <nxce:simpleAltitude>390C</nxce:simpleAltitude>
+                    </nxce:assignedAltitude>
+                </nxcm:reportedAltitude>
+                <nxcm:position>
+                    <nxce:latitude>
+                        <nxce:latitudeDMS degrees="42" direction="NORTH" minutes="16" seconds="15"/>
+                    </nxce:latitude>
+                    <nxce:longitude>
+                        <nxce:longitudeDMS degrees="085" direction="WEST" minutes="21" seconds="53"/>
+                    </nxce:longitude>
+                </nxcm:position>
+                <nxcm:timeAtPosition>2017-08-08T00:44:12Z</nxcm:timeAtPosition>
+                <nxcm:ncsmTrackData>
+                    <nxcm:eta etaType="ESTIMATED" timeValue="2017-08-08T01:50:37Z"/>
+                    <nxcm:rvsmData currentCompliance="true" equipped="true" futureCompliance="true"/>
+                    <nxcm:arrivalFixAndTime arrTime="2017-08-08T01:30:06Z" fixName="BUBBI"/>
+                    <nxcm:departureFixAndTime arrTime="2017-08-08T00:20:06Z" fixName="DLL"/>
+                    <nxcm:nextEvent latitudeDecimal="42.17298695247026" longitudeDecimal="-85.0"/>
+                </nxcm:ncsmTrackData>
+            </fdm:trackInformation>
+        </fdm:fltdMessage>
+        <fdm:fltdMessage acid="DAL2333" airline="DAL" arrArpt="KLGA" cdmPart="false" depArpt="KDEN"
+                         fdTrigger="HCS_TRACK_MSG" flightRef="43988281" msgType="trackInformation" sensitivity="A"
+                         sourceFacility="KZOB" sourceTimeStamp="2017-08-08T00:44:12Z">
+            <fdm:trackInformation>
+                <nxcm:qualifiedAircraftId>
+                    <nxce:aircraftId>DAL2333</nxce:aircraftId>
+                    <nxce:computerId>
+                        <nxce:facilityIdentifier>KZOB</nxce:facilityIdentifier>
+                        <nxce:idNumber>432</nxce:idNumber>
+                    </nxce:computerId>
+                    <nxce:gufi>KD76859200</nxce:gufi>
+                    <nxce:igtd>2017-08-07T22:10:00Z</nxce:igtd>
+                    <nxce:departurePoint>
+                        <nxce:airport>KDEN</nxce:airport>
+                    </nxce:departurePoint>
+                    <nxce:arrivalPoint>
+                        <nxce:airport>KLGA</nxce:airport>
+                    </nxce:arrivalPoint>
+                </nxcm:qualifiedAircraftId>
+                <nxcm:speed>557</nxcm:speed>
+                <nxcm:reportedAltitude>
+                    <nxce:assignedAltitude>
+                        <nxce:simpleAltitude>350C</nxce:simpleAltitude>
+                    </nxce:assignedAltitude>
+                </nxcm:reportedAltitude>
+                <nxcm:position>
+                    <nxce:latitude>
+                        <nxce:latitudeDMS degrees="41" direction="NORTH" minutes="46" seconds="44"/>
+                    </nxce:latitude>
+                    <nxce:longitude>
+                        <nxce:longitudeDMS degrees="084" direction="WEST" minutes="55" seconds="11"/>
+                    </nxce:longitude>
+                </nxcm:position>
+                <nxcm:timeAtPosition>2017-08-08T00:44:12Z</nxcm:timeAtPosition>
+                <nxcm:ncsmTrackData>
+                    <nxcm:eta etaType="ESTIMATED" timeValue="2017-08-08T01:51:03Z"/>
+                    <nxcm:rvsmData currentCompliance="true" equipped="true" futureCompliance="true"/>
+                    <nxcm:arrivalFixAndTime arrTime="2017-08-08T01:34:57Z" fixName="LIZZI"/>
+                    <nxcm:departureFixAndTime arrTime="2017-08-07T23:01:10Z" fixName="EMMYS"/>
+                    <nxcm:nextEvent latitudeDecimal="41.778395942465075" longitudeDecimal="-84.76499978893435"/>
+                </nxcm:ncsmTrackData>
+            </fdm:trackInformation>
+        </fdm:fltdMessage>
+        <fdm:fltdMessage acid="DAL2103" airline="DAL" arrArpt="KDEN" cdmPart="false" depArpt="KDTW"
+                         fdTrigger="HCS_TRACK_MSG" flightRef="43999276" msgType="trackInformation" sensitivity="A"
+                         sourceFacility="KZOB" sourceTimeStamp="2017-08-08T00:44:12Z">
+            <fdm:trackInformation>
+                <nxcm:qualifiedAircraftId>
+                    <nxce:aircraftId>DAL2103</nxce:aircraftId>
+                    <nxce:computerId>
+                        <nxce:facilityIdentifier>KZOB</nxce:facilityIdentifier>
+                        <nxce:idNumber>799</nxce:idNumber>
+                    </nxce:computerId>
+                    <nxce:gufi>KC84940200</nxce:gufi>
+                    <nxce:igtd>2017-08-08T00:25:00Z</nxce:igtd>
+                    <nxce:departurePoint>
+                        <nxce:airport>KDTW</nxce:airport>
+                    </nxce:departurePoint>
+                    <nxce:arrivalPoint>
+                        <nxce:airport>KDEN</nxce:airport>
+                    </nxce:arrivalPoint>
+                </nxcm:qualifiedAircraftId>
+                <nxcm:speed>340</nxcm:speed>
+                <nxcm:reportedAltitude>
+                    <nxce:assignedAltitude>
+                        <nxce:simpleAltitude>197</nxce:simpleAltitude>
+                    </nxce:assignedAltitude>
+                </nxcm:reportedAltitude>
+                <nxcm:position>
+                    <nxce:latitude>
+                        <nxce:latitudeDMS degrees="42" direction="NORTH" minutes="24" seconds="46"/>
+                    </nxce:latitude>
+                    <nxce:longitude>
+                        <nxce:longitudeDMS degrees="084" direction="WEST" minutes="00" seconds="12"/>
+                    </nxce:longitude>
+                </nxcm:position>
+                <nxcm:timeAtPosition>2017-08-08T00:44:12Z</nxcm:timeAtPosition>
+                <nxcm:ncsmTrackData>
+                    <nxcm:eta etaType="ESTIMATED" timeValue="2017-08-08T03:08:00Z"/>
+                    <nxcm:rvsmData currentCompliance="true" equipped="true" futureCompliance="true"/>
+                    <nxcm:arrivalFixAndTime arrTime="2017-08-08T02:56:57Z" fixName="LANDR"/>
+                    <nxcm:departureFixAndTime arrTime="2017-08-08T00:45:40Z" fixName="DUNKS"/>
+                    <nxcm:nextEvent latitudeDecimal="42.39757661722401" longitudeDecimal="-84.07728200942456"/>
+                </nxcm:ncsmTrackData>
+            </fdm:trackInformation>
+        </fdm:fltdMessage>
+        <fdm:fltdMessage acid="JZA453" airline="JZA" arrArpt="CYOW" cdmPart="false" depArpt="KDCA"
+                         fdTrigger="HCS_TRACK_MSG" flightRef="43998295" msgType="trackInformation" sensitivity="A"
+                         sourceFacility="KZOB" sourceTimeStamp="2017-08-08T00:44:12Z">
+            <fdm:trackInformation>
+                <nxcm:qualifiedAircraftId>
+                    <nxce:aircraftId>JZA453</nxce:aircraftId>
+                    <nxce:computerId>
+                        <nxce:facilityIdentifier>KZOB</nxce:facilityIdentifier>
+                        <nxce:idNumber>141</nxce:idNumber>
+                    </nxce:computerId>
+                    <nxce:gufi>KW80825200</nxce:gufi>
+                    <nxce:igtd>2017-08-08T00:10:00Z</nxce:igtd>
+                    <nxce:departurePoint>
+                        <nxce:airport>KDCA</nxce:airport>
+                    </nxce:departurePoint>
+                    <nxce:arrivalPoint>
+                        <nxce:airport>CYOW</nxce:airport>
+                    </nxce:arrivalPoint>
+                </nxcm:qualifiedAircraftId>
+                <nxcm:speed>295</nxcm:speed>
+                <nxcm:reportedAltitude>
+                    <nxce:assignedAltitude>
+                        <nxce:simpleAltitude>144</nxce:simpleAltitude>
+                    </nxce:assignedAltitude>
+                </nxcm:reportedAltitude>
+                <nxcm:position>
+                    <nxce:latitude>
+                        <nxce:latitudeDMS degrees="39" direction="NORTH" minutes="06" seconds="42"/>
+                    </nxce:latitude>
+                    <nxce:longitude>
+                        <nxce:longitudeDMS degrees="077" direction="WEST" minutes="23" seconds="03"/>
+                    </nxce:longitude>
+                </nxcm:position>
+                <nxcm:timeAtPosition>2017-08-08T00:44:12Z</nxcm:timeAtPosition>
+                <nxcm:ncsmTrackData>
+                    <nxcm:eta etaType="ESTIMATED" timeValue="2017-08-08T01:47:42Z"/>
+                    <nxcm:rvsmData currentCompliance="true" equipped="true" futureCompliance="true"/>
+                    <nxcm:arrivalFixAndTime arrTime="2017-08-08T01:36:16Z" fixName="CYRIL"/>
+                    <nxcm:departureFixAndTime arrTime="2017-08-08T00:50:36Z" fixName="JERES"/>
+                    <nxcm:nextEvent latitudeDecimal="39.08899769177507" longitudeDecimal="-77.42996566490828"/>
+                </nxcm:ncsmTrackData>
+            </fdm:trackInformation>
+        </fdm:fltdMessage>
+        <fdm:fltdMessage acid="N407CD" airline="XXX" arrArpt="I19" cdmPart="false" depArpt="KPCW"
+                         fdTrigger="HCS_TRACK_MSG" flightRef="44066189" msgType="trackInformation" sensitivity="A"
+                         sourceFacility="KZOB" sourceTimeStamp="2017-08-08T00:44:12Z">
+            <fdm:trackInformation>
+                <nxcm:qualifiedAircraftId>
+                    <nxce:aircraftId>N407CD</nxce:aircraftId>
+                    <nxce:computerId>
+                        <nxce:facilityIdentifier>KZOB</nxce:facilityIdentifier>
+                        <nxce:idNumber>754</nxce:idNumber>
+                    </nxce:computerId>
+                    <nxce:gufi>KC81988200</nxce:gufi>
+                    <nxce:igtd>2017-08-08T00:45:00Z</nxce:igtd>
+                    <nxce:departurePoint>
+                        <nxce:airport>KPCW</nxce:airport>
+                    </nxce:departurePoint>
+                    <nxce:arrivalPoint>
+                        <nxce:airport>I19</nxce:airport>
+                    </nxce:arrivalPoint>
+                </nxcm:qualifiedAircraftId>
+                <nxcm:speed>117</nxcm:speed>
+                <nxcm:reportedAltitude>
+                    <nxce:assignedAltitude>
+                        <nxce:simpleAltitude>064</nxce:simpleAltitude>
+                    </nxce:assignedAltitude>
+                </nxcm:reportedAltitude>
+                <nxcm:position>
+                    <nxce:latitude>
+                        <nxce:latitudeDMS degrees="41" direction="NORTH" minutes="26" seconds="28"/>
+                    </nxce:latitude>
+                    <nxce:longitude>
+                        <nxce:longitudeDMS degrees="083" direction="WEST" minutes="13" seconds="09"/>
+                    </nxce:longitude>
+                </nxcm:position>
+                <nxcm:timeAtPosition>2017-08-08T00:44:12Z</nxcm:timeAtPosition>
+                <nxcm:ncsmTrackData>
+                    <nxcm:eta etaType="ESTIMATED" timeValue="2017-08-08T01:35:31Z"/>
+                    <nxcm:rvsmData currentCompliance="true" equipped="true" futureCompliance="true"/>
+                    <nxcm:nextEvent latitudeDecimal="41.51611251342483" longitudeDecimal="-82.87143915430897"/>
+                </nxcm:ncsmTrackData>
+            </fdm:trackInformation>
+        </fdm:fltdMessage>
+        <fdm:fltdMessage acid="UAL1853" airline="UAL" arrArpt="KSFO" cdmPart="false" depArpt="KPHL"
+                         fdTrigger="HCS_TRACK_MSG" flightRef="43989222" msgType="trackInformation" sensitivity="A"
+                         sourceFacility="KZOB" sourceTimeStamp="2017-08-08T00:44:12Z">
+            <fdm:trackInformation>
+                <nxcm:qualifiedAircraftId>
+                    <nxce:aircraftId>UAL1853</nxce:aircraftId>
+                    <nxce:computerId>
+                        <nxce:facilityIdentifier>KZOB</nxce:facilityIdentifier>
+                        <nxce:idNumber>228</nxce:idNumber>
+                    </nxce:computerId>
+                    <nxce:gufi>KN77142200</nxce:gufi>
+                    <nxce:igtd>2017-08-07T22:15:00Z</nxce:igtd>
+                    <nxce:departurePoint>
+                        <nxce:airport>KPHL</nxce:airport>
+                    </nxce:departurePoint>
+                    <nxce:arrivalPoint>
+                        <nxce:airport>KSFO</nxce:airport>
+                    </nxce:arrivalPoint>
+                </nxcm:qualifiedAircraftId>
+                <nxcm:speed>382</nxcm:speed>
+                <nxcm:reportedAltitude>
+                    <nxce:assignedAltitude>
+                        <nxce:simpleAltitude>320C</nxce:simpleAltitude>
+                    </nxce:assignedAltitude>
+                </nxcm:reportedAltitude>
+                <nxcm:position>
+                    <nxce:latitude>
+                        <nxce:latitudeDMS degrees="42" direction="NORTH" minutes="01" seconds="32"/>
+                    </nxce:latitude>
+                    <nxce:longitude>
+                        <nxce:longitudeDMS degrees="083" direction="WEST" minutes="24" seconds="54"/>
+                    </nxce:longitude>
+                </nxcm:position>
+                <nxcm:timeAtPosition>2017-08-08T00:44:12Z</nxcm:timeAtPosition>
+                <nxcm:ncsmTrackData>
+                    <nxcm:eta etaType="ESTIMATED" timeValue="2017-08-08T05:19:11Z"/>
+                    <nxcm:rvsmData currentCompliance="true" equipped="true" futureCompliance="true"/>
+                    <nxcm:arrivalFixAndTime arrTime="2017-08-08T05:09:14Z" fixName="CEDES"/>
+                    <nxcm:departureFixAndTime arrTime="2017-08-07T23:44:16Z" fixName="PTW"/>
+                    <nxcm:nextEvent latitudeDecimal="42.048025" longitudeDecimal="-83.4575819"/>
+                </nxcm:ncsmTrackData>
+            </fdm:trackInformation>
+        </fdm:fltdMessage>
+        <fdm:fltdMessage acid="VTE1204" airline="VTE" arrArpt="KPIT" cdmPart="false" depArpt="KIND"
+                         fdTrigger="HCS_TRACK_MSG" flightRef="44010143" msgType="trackInformation" sensitivity="A"
+                         sourceFacility="KZOB" sourceTimeStamp="2017-08-08T00:44:12Z">
+            <fdm:trackInformation>
+                <nxcm:qualifiedAircraftId>
+                    <nxce:aircraftId>VTE1204</nxce:aircraftId>
+                    <nxce:computerId>
+                        <nxce:facilityIdentifier>KZOB</nxce:facilityIdentifier>
+                        <nxce:idNumber>713</nxce:idNumber>
+                    </nxce:computerId>
+                    <nxce:gufi>KI76915200</nxce:gufi>
+                    <nxce:igtd>2017-08-07T23:20:00Z</nxce:igtd>
+                    <nxce:departurePoint>
+                        <nxce:airport>KIND</nxce:airport>
+                    </nxce:departurePoint>
+                    <nxce:arrivalPoint>
+                        <nxce:airport>KPIT</nxce:airport>
+                    </nxce:arrivalPoint>
+                </nxcm:qualifiedAircraftId>
+                <nxcm:speed>490</nxcm:speed>
+                <nxcm:reportedAltitude>
+                    <nxce:assignedAltitude>
+                        <nxce:simpleAltitude>290C</nxce:simpleAltitude>
+                    </nxce:assignedAltitude>
+                </nxcm:reportedAltitude>
+                <nxcm:position>
+                    <nxce:latitude>
+                        <nxce:latitudeDMS degrees="40" direction="NORTH" minutes="01" seconds="14"/>
+                    </nxce:latitude>
+                    <nxce:longitude>
+                        <nxce:longitudeDMS degrees="083" direction="WEST" minutes="47" seconds="36"/>
+                    </nxce:longitude>
+                </nxcm:position>
+                <nxcm:timeAtPosition>2017-08-08T00:44:12Z</nxcm:timeAtPosition>
+                <nxcm:ncsmTrackData>
+                    <nxcm:eta etaType="ESTIMATED" timeValue="2017-08-08T01:12:05Z"/>
+                    <nxcm:rvsmData currentCompliance="true" equipped="true" futureCompliance="true"/>
+                    <nxcm:arrivalFixAndTime arrTime="2017-08-08T01:04:31Z" fixName="WISKE"/>
+                    <nxcm:departureFixAndTime arrTime="2017-08-08T00:34:38Z" fixName="MAREO"/>
+                    <nxcm:nextEvent latitudeDecimal="40.061399860687885" longitudeDecimal="-83.41081890481098"/>
+                </nxcm:ncsmTrackData>
+            </fdm:trackInformation>
+        </fdm:fltdMessage>
+        <fdm:fltdMessage acid="EDV3733" airline="EDV" arrArpt="KBTV" cdmPart="false" depArpt="KDTW"
+                         fdTrigger="HCS_TRACK_MSG" flightRef="43998092" msgType="trackInformation" sensitivity="A"
+                         sourceFacility="KZOB" sourceTimeStamp="2017-08-08T00:44:12Z">
+            <fdm:trackInformation>
+                <nxcm:qualifiedAircraftId>
+                    <nxce:aircraftId>EDV3733</nxce:aircraftId>
+                    <nxce:computerId>
+                        <nxce:facilityIdentifier>KZOB</nxce:facilityIdentifier>
+                        <nxce:idNumber>358</nxce:idNumber>
+                    </nxce:computerId>
+                    <nxce:gufi>KC83807201</nxce:gufi>
+                    <nxce:igtd>2017-08-08T00:02:00Z</nxce:igtd>
+                    <nxce:departurePoint>
+                        <nxce:airport>KDTW</nxce:airport>
+                    </nxce:departurePoint>
+                    <nxce:arrivalPoint>
+                        <nxce:airport>KBTV</nxce:airport>
+                    </nxce:arrivalPoint>
+                </nxcm:qualifiedAircraftId>
+                <nxcm:speed>497</nxcm:speed>
+                <nxcm:reportedAltitude>
+                    <nxce:assignedAltitude>
+                        <nxce:simpleAltitude>266</nxce:simpleAltitude>
+                    </nxce:assignedAltitude>
+                </nxcm:reportedAltitude>
+                <nxcm:position>
+                    <nxce:latitude>
+                        <nxce:latitudeDMS degrees="42" direction="NORTH" minutes="36" seconds="03"/>
+                    </nxce:latitude>
+                    <nxce:longitude>
+                        <nxce:longitudeDMS degrees="079" direction="WEST" minutes="57" seconds="22"/>
+                    </nxce:longitude>
+                </nxcm:position>
+                <nxcm:timeAtPosition>2017-08-08T00:44:12Z</nxcm:timeAtPosition>
+                <nxcm:ncsmTrackData>
+                    <nxcm:eta etaType="ESTIMATED" timeValue="2017-08-08T01:29:06Z"/>
+                    <nxcm:rvsmData currentCompliance="true" equipped="true" futureCompliance="true"/>
+                    <nxcm:departureFixAndTime arrTime="2017-08-08T00:29:31Z" fixName="MOONN"/>
+                    <nxcm:nextEvent latitudeDecimal="42.619412207543895" longitudeDecimal="-79.86490554311851"/>
+                </nxcm:ncsmTrackData>
+            </fdm:trackInformation>
+        </fdm:fltdMessage>
+        <fdm:fltdMessage acid="MRA609" airline="MRA" arrArpt="LAN" cdmPart="false" depArpt="KLDM"
+                         fdTrigger="HCS_TRACK_MSG" flightRef="44086095" msgType="trackInformation" sensitivity="A"
+                         sourceFacility="KZOB" sourceTimeStamp="2017-08-08T00:44:12Z">
+            <fdm:trackInformation>
+                <nxcm:qualifiedAircraftId>
+                    <nxce:aircraftId>MRA609</nxce:aircraftId>
+                    <nxce:computerId>
+                        <nxce:facilityIdentifier>KZOB</nxce:facilityIdentifier>
+                        <nxce:idNumber>945</nxce:idNumber>
+                    </nxce:computerId>
+                    <nxce:gufi>KP81601200</nxce:gufi>
+                    <nxce:igtd>2017-08-07T23:40:00Z</nxce:igtd>
+                    <nxce:departurePoint>
+                        <nxce:airport>KLDM</nxce:airport>
+                    </nxce:departurePoint>
+                    <nxce:arrivalPoint>
+                        <nxce:airport>LAN</nxce:airport>
+                    </nxce:arrivalPoint>
+                </nxcm:qualifiedAircraftId>
+                <nxcm:speed>176</nxcm:speed>
+                <nxcm:reportedAltitude>
+                    <nxce:assignedAltitude>
+                        <nxce:simpleAltitude>012</nxce:simpleAltitude>
+                    </nxce:assignedAltitude>
+                </nxcm:reportedAltitude>
+                <nxcm:position>
+                    <nxce:latitude>
+                        <nxce:latitudeDMS degrees="42" direction="NORTH" minutes="46" seconds="31"/>
+                    </nxce:latitude>
+                    <nxce:longitude>
+                        <nxce:longitudeDMS degrees="084" direction="WEST" minutes="32" seconds="44"/>
+                    </nxce:longitude>
+                </nxcm:position>
+                <nxcm:timeAtPosition>2017-08-08T00:44:12Z</nxcm:timeAtPosition>
+                <nxcm:ncsmRouteData>
+                    <nxcm:etd etdType="ACTUAL" timeValue="2017-08-08T00:08:00Z"/>
+                    <nxcm:eta etaType="ESTIMATED" timeValue="2017-08-08T00:44:50Z"/>
+                    <nxcm:diversionIndicator>NO_DIVERSION</nxcm:diversionIndicator>
+                    <nxcm:rvsmData currentCompliance="true" equipped="true" futureCompliance="true"/>
+                    <nxcm:nextPosition latitudeDecimal="42.7786389" longitudeDecimal="-84.5861944"/>
+                    <nxcm:flightTraversalData2>
+                        <nxce:fix sequenceNumber="1">LDM</nxce:fix>
+                        <nxce:fix elapsedTime="2210" sequenceNumber="2">LAN</nxce:fix>
+                        <nxce:waypoint latitudeDecimal="43.96" longitudeDecimal="-86.41" sequenceNumber="1"/>
+                        <nxce:waypoint elapsedTime="191" latitudeDecimal="43.87" longitudeDecimal="-86.25"
+                                       sequenceNumber="2"/>
+                        <nxce:waypoint elapsedTime="244" latitudeDecimal="43.83" longitudeDecimal="-86.20"
+                                       sequenceNumber="3"/>
+                        <nxce:waypoint elapsedTime="506" latitudeDecimal="43.64" longitudeDecimal="-85.89"
+                                       sequenceNumber="4"/>
+                        <nxce:waypoint elapsedTime="699" latitudeDecimal="43.54" longitudeDecimal="-85.74"
+                                       sequenceNumber="5"/>
+                        <nxce:waypoint elapsedTime="750" latitudeDecimal="43.51" longitudeDecimal="-85.71"
+                                       sequenceNumber="6"/>
+                        <nxce:waypoint elapsedTime="925" latitudeDecimal="43.42" longitudeDecimal="-85.56"
+                                       sequenceNumber="7"/>
+                        <nxce:waypoint elapsedTime="1623" latitudeDecimal="43.05" longitudeDecimal="-85.00"
+                                       sequenceNumber="8"/>
+                        <nxce:waypoint elapsedTime="1790" latitudeDecimal="42.97" longitudeDecimal="-84.87"
+                                       sequenceNumber="9"/>
+                        <nxce:waypoint elapsedTime="1896" latitudeDecimal="42.91" longitudeDecimal="-84.78"
+                                       sequenceNumber="10"/>
+                        <nxce:waypoint elapsedTime="2000" latitudeDecimal="42.85" longitudeDecimal="-84.70"
+                                       sequenceNumber="11"/>
+                        <nxce:waypoint elapsedTime="2093" latitudeDecimal="42.80" longitudeDecimal="-84.61"
+                                       sequenceNumber="12"/>
+                        <nxce:waypoint elapsedTime="2172" latitudeDecimal="42.78" longitudeDecimal="-84.55"
+                                       sequenceNumber="13"/>
+                        <nxce:waypoint elapsedTime="2210" latitudeDecimal="42.78" longitudeDecimal="-84.59"
+                                       sequenceNumber="14"/>
+                        <nxce:center sequenceNumber="1">ZMP</nxce:center>
+                        <nxce:center elapsedEntryTime="506" sequenceNumber="2">ZAU</nxce:center>
+                        <nxce:center elapsedEntryTime="1623" sequenceNumber="3">ZOB</nxce:center>
+                        <nxce:sector sequenceNumber="1">ZMP02</nxce:sector>
+                        <nxce:sector elapsedEntryTime="506" sequenceNumber="2">ZAUMKG</nxce:sector>
+                        <nxce:sector elapsedEntryTime="699" sequenceNumber="3">ZAUGRR</nxce:sector>
+                        <nxce:sector elapsedEntryTime="1623" sequenceNumber="4">ZOBLAN</nxce:sector>
+                    </nxcm:flightTraversalData2>
+                    <nxcm:routeOfFlight>KLDM..LAN/0053</nxcm:routeOfFlight>
+                </nxcm:ncsmRouteData>
+            </fdm:trackInformation>
+        </fdm:fltdMessage>
+        <fdm:fltdMessage acid="GJS6238" airline="GJS" arrArpt="KCHS" cdmPart="false" depArpt="KDTW"
+                         fdTrigger="HCS_TRACK_MSG" flightRef="43999040" msgType="trackInformation" sensitivity="A"
+                         sourceFacility="KZOB" sourceTimeStamp="2017-08-08T00:44:12Z">
+            <fdm:trackInformation>
+                <nxcm:qualifiedAircraftId>
+                    <nxce:aircraftId>GJS6238</nxce:aircraftId>
+                    <nxce:computerId>
+                        <nxce:facilityIdentifier>KZOB</nxce:facilityIdentifier>
+                        <nxce:idNumber>894</nxce:idNumber>
+                    </nxce:computerId>
+                    <nxce:gufi>KC83469200</nxce:gufi>
+                    <nxce:igtd>2017-08-08T00:18:00Z</nxce:igtd>
+                    <nxce:departurePoint>
+                        <nxce:airport>KDTW</nxce:airport>
+                    </nxce:departurePoint>
+                    <nxce:arrivalPoint>
+                        <nxce:airport>KCHS</nxce:airport>
+                    </nxce:arrivalPoint>
+                </nxcm:qualifiedAircraftId>
+                <nxcm:speed>263</nxcm:speed>
+                <nxcm:reportedAltitude>
+                    <nxce:assignedAltitude>
+                        <nxce:simpleAltitude>075</nxce:simpleAltitude>
+                    </nxce:assignedAltitude>
+                </nxcm:reportedAltitude>
+                <nxcm:position>
+                    <nxce:latitude>
+                        <nxce:latitudeDMS degrees="42" direction="NORTH" minutes="12" seconds="22"/>
+                    </nxce:latitude>
+                    <nxce:longitude>
+                        <nxce:longitudeDMS degrees="083" direction="WEST" minutes="08" seconds="43"/>
+                    </nxce:longitude>
+                </nxcm:position>
+                <nxcm:timeAtPosition>2017-08-08T00:44:12Z</nxcm:timeAtPosition>
+                <nxcm:ncsmTrackData>
+                    <nxcm:eta etaType="ESTIMATED" timeValue="2017-08-08T02:17:50Z"/>
+                    <nxcm:rvsmData currentCompliance="true" equipped="true" futureCompliance="true"/>
+                    <nxcm:departureFixAndTime arrTime="2017-08-08T00:47:36Z" fixName="SCORR"/>
+                    <nxcm:nextEvent latitudeDecimal="42.2131367" longitudeDecimal="-83.3666633"/>
+                </nxcm:ncsmTrackData>
+            </fdm:trackInformation>
+        </fdm:fltdMessage>
+        <fdm:fltdMessage acid="UAL1002" airline="UAL" arrArpt="KPHL" cdmPart="false" depArpt="KSFO"
+                         fdTrigger="HCS_TRACK_MSG" flightRef="43969859" msgType="trackInformation" sensitivity="A"
+                         sourceFacility="KZOB" sourceTimeStamp="2017-08-08T00:44:12Z">
+            <fdm:trackInformation>
+                <nxcm:qualifiedAircraftId>
+                    <nxce:aircraftId>UAL1002</nxce:aircraftId>
+                    <nxce:computerId>
+                        <nxce:facilityIdentifier>KZOB</nxce:facilityIdentifier>
+                        <nxce:idNumber>603</nxce:idNumber>
+                    </nxce:computerId>
+                    <nxce:gufi>KO61436200</nxce:gufi>
+                    <nxce:igtd>2017-08-07T18:55:00Z</nxce:igtd>
+                    <nxce:departurePoint>
+                        <nxce:airport>KSFO</nxce:airport>
+                    </nxce:departurePoint>
+                    <nxce:arrivalPoint>
+                        <nxce:airport>KPHL</nxce:airport>
+                    </nxce:arrivalPoint>
+                </nxcm:qualifiedAircraftId>
+                <nxcm:speed>468</nxcm:speed>
+                <nxcm:reportedAltitude>
+                    <nxce:assignedAltitude>
+                        <nxce:simpleAltitude>237</nxce:simpleAltitude>
+                    </nxce:assignedAltitude>
+                </nxcm:reportedAltitude>
+                <nxcm:position>
+                    <nxce:latitude>
+                        <nxce:latitudeDMS degrees="40" direction="NORTH" minutes="17" seconds="11"/>
+                    </nxce:latitude>
+                    <nxce:longitude>
+                        <nxce:longitudeDMS degrees="077" direction="WEST" minutes="38" seconds="48"/>
+                    </nxce:longitude>
+                </nxcm:position>
+                <nxcm:timeAtPosition>2017-08-08T00:44:12Z</nxcm:timeAtPosition>
+                <nxcm:ncsmTrackData>
+                    <nxcm:eta etaType="ESTIMATED" timeValue="2017-08-08T01:10:14Z"/>
+                    <nxcm:rvsmData currentCompliance="true" equipped="true" futureCompliance="true"/>
+                    <nxcm:arrivalFixAndTime arrTime="2017-08-08T00:54:49Z" fixName="BUNTS"/>
+                    <nxcm:departureFixAndTime arrTime="2017-08-07T20:56:43Z" fixName="TIPRE"/>
+                    <nxcm:nextEvent latitudeDecimal="40.3080667" longitudeDecimal="-77.4834028"/>
+                </nxcm:ncsmTrackData>
+            </fdm:trackInformation>
+        </fdm:fltdMessage>
+        <fdm:fltdMessage acid="TFF402" airline="TFF" arrArpt="CYYZ" cdmPart="false" depArpt="KFRG"
+                         fdTrigger="HCS_TRACK_MSG" flightRef="44005132" msgType="trackInformation" sensitivity="A"
+                         sourceFacility="KZOB" sourceTimeStamp="2017-08-08T00:44:12Z">
+            <fdm:trackInformation>
+                <nxcm:qualifiedAircraftId>
+                    <nxce:aircraftId>TFF402</nxce:aircraftId>
+                    <nxce:computerId>
+                        <nxce:facilityIdentifier>KZOB</nxce:facilityIdentifier>
+                        <nxce:idNumber>171</nxce:idNumber>
+                    </nxce:computerId>
+                    <nxce:gufi>KN39701200</nxce:gufi>
+                    <nxce:igtd>2017-08-07T23:00:00Z</nxce:igtd>
+                    <nxce:departurePoint>
+                        <nxce:airport>KFRG</nxce:airport>
+                    </nxce:departurePoint>
+                    <nxce:arrivalPoint>
+                        <nxce:airport>CYYZ</nxce:airport>
+                    </nxce:arrivalPoint>
+                </nxcm:qualifiedAircraftId>
+                <nxcm:speed>380</nxcm:speed>
+                <nxcm:reportedAltitude>
+                    <nxce:assignedAltitude>
+                        <nxce:simpleAltitude>254</nxce:simpleAltitude>
+                    </nxce:assignedAltitude>
+                </nxcm:reportedAltitude>
+                <nxcm:position>
+                    <nxce:latitude>
+                        <nxce:latitudeDMS degrees="42" direction="NORTH" minutes="51" seconds="35"/>
+                    </nxce:latitude>
+                    <nxce:longitude>
+                        <nxce:longitudeDMS degrees="078" direction="WEST" minutes="27" seconds="58"/>
+                    </nxce:longitude>
+                </nxcm:position>
+                <nxcm:timeAtPosition>2017-08-08T00:44:12Z</nxcm:timeAtPosition>
+                <nxcm:ncsmTrackData>
+                    <nxcm:eta etaType="ESTIMATED" timeValue="2017-08-08T01:04:13Z"/>
+                    <nxcm:rvsmData currentCompliance="true" equipped="true" futureCompliance="true"/>
+                    <nxcm:arrivalFixAndTime arrTime="2017-08-08T00:50:27Z" fixName="LINNG"/>
+                    <nxcm:departureFixAndTime arrTime="2017-08-08T00:13:33Z" fixName="GAYEL"/>
+                    <nxcm:nextEvent latitudeDecimal="42.897896084932306" longitudeDecimal="-78.60548618267045"/>
+                </nxcm:ncsmTrackData>
+            </fdm:trackInformation>
+        </fdm:fltdMessage>
+        <fdm:fltdMessage acid="DAL2131" airline="DAL" arrArpt="KDTW" cdmPart="false" depArpt="KLGA"
+                         fdTrigger="HCS_TRACK_MSG" flightRef="43991294" msgType="trackInformation" sensitivity="A"
+                         sourceFacility="KZOB" sourceTimeStamp="2017-08-08T00:44:12Z">
+            <fdm:trackInformation>
+                <nxcm:qualifiedAircraftId>
+                    <nxce:aircraftId>DAL2131</nxce:aircraftId>
+                    <nxce:computerId>
+                        <nxce:facilityIdentifier>KZOB</nxce:facilityIdentifier>
+                        <nxce:idNumber>148</nxce:idNumber>
+                    </nxce:computerId>
+                    <nxce:gufi>KN78663200</nxce:gufi>
+                    <nxce:igtd>2017-08-07T22:40:00Z</nxce:igtd>
+                    <nxce:departurePoint>
+                        <nxce:airport>KLGA</nxce:airport>
+                    </nxce:departurePoint>
+                    <nxce:arrivalPoint>
+                        <nxce:airport>KDTW</nxce:airport>
+                    </nxce:arrivalPoint>
+                </nxcm:qualifiedAircraftId>
+                <nxcm:speed>283</nxcm:speed>
+                <nxcm:reportedAltitude>
+                    <nxce:assignedAltitude>
+                        <nxce:simpleAltitude>040</nxce:simpleAltitude>
+                    </nxce:assignedAltitude>
+                </nxcm:reportedAltitude>
+                <nxcm:position>
+                    <nxce:latitude>
+                        <nxce:latitudeDMS degrees="42" direction="NORTH" minutes="01" seconds="26"/>
+                    </nxce:latitude>
+                    <nxce:longitude>
+                        <nxce:longitudeDMS degrees="083" direction="WEST" minutes="36" seconds="02"/>
+                    </nxce:longitude>
+                </nxcm:position>
+                <nxcm:timeAtPosition>2017-08-08T00:44:12Z</nxcm:timeAtPosition>
+                <nxcm:ncsmTrackData>
+                    <nxcm:eta etaType="ESTIMATED" timeValue="2017-08-08T00:46:45Z"/>
+                    <nxcm:rvsmData currentCompliance="true" equipped="true" futureCompliance="true"/>
+                    <nxcm:arrivalFixAndTime arrTime="2017-08-08T00:32:54Z" fixName="SPICA"/>
+                    <nxcm:departureFixAndTime arrTime="2017-08-07T23:37:00Z" fixName="GAYEL"/>
+                    <nxcm:nextEvent latitudeDecimal="42.2124167" longitudeDecimal="-83.3533889"/>
+                </nxcm:ncsmTrackData>
+            </fdm:trackInformation>
+        </fdm:fltdMessage>
+        <fdm:fltdMessage acid="ROU1982" airline="ROU" arrArpt="MMMX" cdmPart="false" depArpt="CYYZ"
+                         fdTrigger="HCS_TRACK_MSG" flightRef="43999647" msgType="trackInformation" sensitivity="A"
+                         sourceFacility="KZOB" sourceTimeStamp="2017-08-08T00:44:12Z">
+            <fdm:trackInformation>
+                <nxcm:qualifiedAircraftId>
+                    <nxce:aircraftId>ROU1982</nxce:aircraftId>
+                    <nxce:computerId>
+                        <nxce:facilityIdentifier>KZOB</nxce:facilityIdentifier>
+                        <nxce:idNumber>932</nxce:idNumber>
+                    </nxce:computerId>
+                    <nxce:gufi>KC85488200</nxce:gufi>
+                    <nxce:igtd>2017-08-08T00:30:00Z</nxce:igtd>
+                    <nxce:departurePoint>
+                        <nxce:airport>CYYZ</nxce:airport>
+                    </nxce:departurePoint>
+                    <nxce:arrivalPoint>
+                        <nxce:airport>MMMX</nxce:airport>
+                    </nxce:arrivalPoint>
+                </nxcm:qualifiedAircraftId>
+                <nxcm:speed>246</nxcm:speed>
+                <nxcm:reportedAltitude>
+                    <nxce:assignedAltitude>
+                        <nxce:simpleAltitude>050</nxce:simpleAltitude>
+                    </nxce:assignedAltitude>
+                </nxcm:reportedAltitude>
+                <nxcm:position>
+                    <nxce:latitude>
+                        <nxce:latitudeDMS degrees="43" direction="NORTH" minutes="32" seconds="39"/>
+                    </nxce:latitude>
+                    <nxce:longitude>
+                        <nxce:longitudeDMS degrees="079" direction="WEST" minutes="44" seconds="17"/>
+                    </nxce:longitude>
+                </nxcm:position>
+                <nxcm:timeAtPosition>2017-08-08T00:44:12Z</nxcm:timeAtPosition>
+                <nxcm:ncsmTrackData>
+                    <nxcm:eta etaType="ESTIMATED" timeValue="2017-08-08T04:57:38Z"/>
+                    <nxcm:rvsmData currentCompliance="true" equipped="true" futureCompliance="true"/>
+                    <nxcm:arrivalFixAndTime arrTime="2017-08-08T04:29:51Z" fixName="SLM"/>
+                    <nxcm:departureFixAndTime arrTime="2017-08-08T00:55:00Z" fixName="OAKVL"/>
+                    <nxcm:nextEvent latitudeDecimal="43.545549811590995" longitudeDecimal="-79.68446018550979"/>
+                </nxcm:ncsmTrackData>
+            </fdm:trackInformation>
+        </fdm:fltdMessage>
+        <fdm:fltdMessage acid="SKW4443" airline="SKW" arrArpt="KIAD" cdmPart="false" depArpt="KDTW"
+                         fdTrigger="HCS_TRACK_MSG" flightRef="43999003" msgType="trackInformation" sensitivity="A"
+                         sourceFacility="KZOB" sourceTimeStamp="2017-08-08T00:44:12Z">
+            <fdm:trackInformation>
+                <nxcm:qualifiedAircraftId>
+                    <nxce:aircraftId>SKW4443</nxce:aircraftId>
+                    <nxce:computerId>
+                        <nxce:facilityIdentifier>KZOB</nxce:facilityIdentifier>
+                        <nxce:idNumber>074</nxce:idNumber>
+                    </nxce:computerId>
+                    <nxce:gufi>KC82444200</nxce:gufi>
+                    <nxce:igtd>2017-08-08T00:19:00Z</nxce:igtd>
+                    <nxce:departurePoint>
+                        <nxce:airport>KDTW</nxce:airport>
+                    </nxce:departurePoint>
+                    <nxce:arrivalPoint>
+                        <nxce:airport>KIAD</nxce:airport>
+                    </nxce:arrivalPoint>
+                </nxcm:qualifiedAircraftId>
+                <nxcm:speed>332</nxcm:speed>
+                <nxcm:reportedAltitude>
+                    <nxce:assignedAltitude>
+                        <nxce:simpleAltitude>106</nxce:simpleAltitude>
+                    </nxce:assignedAltitude>
+                </nxcm:reportedAltitude>
+                <nxcm:position>
+                    <nxce:latitude>
+                        <nxce:latitudeDMS degrees="42" direction="NORTH" minutes="13" seconds="44"/>
+                    </nxce:latitude>
+                    <nxce:longitude>
+                        <nxce:longitudeDMS degrees="082" direction="WEST" minutes="55" seconds="23"/>
+                    </nxce:longitude>
+                </nxcm:position>
+                <nxcm:timeAtPosition>2017-08-08T00:44:12Z</nxcm:timeAtPosition>
+                <nxcm:ncsmTrackData>
+                    <nxcm:eta etaType="ESTIMATED" timeValue="2017-08-08T01:42:16Z"/>
+                    <nxcm:rvsmData currentCompliance="true" equipped="true" futureCompliance="true"/>
+                    <nxcm:arrivalFixAndTime arrTime="2017-08-08T01:16:26Z" fixName="IGGGY"/>
+                    <nxcm:departureFixAndTime arrTime="2017-08-08T00:46:17Z" fixName="MAARS"/>
+                    <nxcm:nextEvent latitudeDecimal="42.2131367" longitudeDecimal="-83.3666633"/>
+                </nxcm:ncsmTrackData>
+            </fdm:trackInformation>
+        </fdm:fltdMessage>
+        <fdm:fltdMessage acid="SKW3093" airline="SKW" arrArpt="KORD" cdmPart="false" depArpt="KEWR"
+                         fdTrigger="HCS_TRACK_MSG" flightRef="43992943" msgType="trackInformation" sensitivity="A"
+                         sourceFacility="KZOB" sourceTimeStamp="2017-08-08T00:44:12Z">
+            <fdm:trackInformation>
+                <nxcm:qualifiedAircraftId>
+                    <nxce:aircraftId>SKW3093</nxce:aircraftId>
+                    <nxce:computerId>
+                        <nxce:facilityIdentifier>KZOB</nxce:facilityIdentifier>
+                        <nxce:idNumber>923</nxce:idNumber>
+                    </nxce:computerId>
+                    <nxce:gufi>KN78702200</nxce:gufi>
+                    <nxce:igtd>2017-08-07T23:00:00Z</nxce:igtd>
+                    <nxce:departurePoint>
+                        <nxce:airport>KEWR</nxce:airport>
+                    </nxce:departurePoint>
+                    <nxce:arrivalPoint>
+                        <nxce:airport>KORD</nxce:airport>
+                    </nxce:arrivalPoint>
+                </nxcm:qualifiedAircraftId>
+                <nxcm:speed>383</nxcm:speed>
+                <nxcm:reportedAltitude>
+                    <nxce:assignedAltitude>
+                        <nxce:simpleAltitude>324</nxce:simpleAltitude>
+                    </nxce:assignedAltitude>
+                </nxcm:reportedAltitude>
+                <nxcm:position>
+                    <nxce:latitude>
+                        <nxce:latitudeDMS degrees="42" direction="NORTH" minutes="50" seconds="46"/>
+                    </nxce:latitude>
+                    <nxce:longitude>
+                        <nxce:longitudeDMS degrees="084" direction="WEST" minutes="13" seconds="02"/>
+                    </nxce:longitude>
+                </nxcm:position>
+                <nxcm:timeAtPosition>2017-08-08T00:44:12Z</nxcm:timeAtPosition>
+                <nxcm:ncsmTrackData>
+                    <nxcm:eta etaType="ESTIMATED" timeValue="2017-08-08T01:14:54Z"/>
+                    <nxcm:rvsmData currentCompliance="true" equipped="true" futureCompliance="true"/>
+                    <nxcm:arrivalFixAndTime arrTime="2017-08-08T01:03:49Z" fixName="WYNDE"/>
+                    <nxcm:departureFixAndTime arrTime="2017-08-07T23:21:39Z" fixName="COATE"/>
+                    <nxcm:nextEvent latitudeDecimal="42.8844333" longitudeDecimal="-84.5806667"/>
+                </nxcm:ncsmTrackData>
+            </fdm:trackInformation>
+        </fdm:fltdMessage>
+        <fdm:fltdMessage acid="ENY3608" airline="ENY" arrArpt="KPVD" cdmPart="false" depArpt="KORD"
+                         fdTrigger="HCS_TRACK_MSG" flightRef="43996160" msgType="trackInformation" sensitivity="A"
+                         sourceFacility="KZOB" sourceTimeStamp="2017-08-08T00:44:13Z">
+            <fdm:trackInformation>
+                <nxcm:qualifiedAircraftId>
+                    <nxce:aircraftId>ENY3608</nxce:aircraftId>
+                    <nxce:computerId>
+                        <nxce:facilityIdentifier>KZOB</nxce:facilityIdentifier>
+                        <nxce:idNumber>461</nxce:idNumber>
+                    </nxce:computerId>
+                    <nxce:gufi>KG81281200</nxce:gufi>
+                    <nxce:igtd>2017-08-07T23:42:00Z</nxce:igtd>
+                    <nxce:departurePoint>
+                        <nxce:airport>KORD</nxce:airport>
+                    </nxce:departurePoint>
+                    <nxce:arrivalPoint>
+                        <nxce:airport>KPVD</nxce:airport>
+                    </nxce:arrivalPoint>
+                </nxcm:qualifiedAircraftId>
+                <nxcm:speed>580</nxcm:speed>
+                <nxcm:reportedAltitude>
+                    <nxce:assignedAltitude>
+                        <nxce:simpleAltitude>330C</nxce:simpleAltitude>
+                    </nxce:assignedAltitude>
+                </nxcm:reportedAltitude>
+                <nxcm:position>
+                    <nxce:latitude>
+                        <nxce:latitudeDMS degrees="42" direction="NORTH" minutes="12" seconds="33"/>
+                    </nxce:latitude>
+                    <nxce:longitude>
+                        <nxce:longitudeDMS degrees="080" direction="WEST" minutes="12" seconds="51"/>
+                    </nxce:longitude>
+                </nxcm:position>
+                <nxcm:timeAtPosition>2017-08-08T00:44:13Z</nxcm:timeAtPosition>
+                <nxcm:ncsmTrackData>
+                    <nxcm:eta etaType="ESTIMATED" timeValue="2017-08-08T01:39:43Z"/>
+                    <nxcm:rvsmData currentCompliance="true" equipped="true" futureCompliance="true"/>
+                    <nxcm:departureFixAndTime arrTime="2017-08-08T00:17:00Z" fixName="DUFEE"/>
+                    <nxcm:nextEvent latitudeDecimal="42.18732692968518" longitudeDecimal="-78.6320333183619"/>
+                </nxcm:ncsmTrackData>
+            </fdm:trackInformation>
+        </fdm:fltdMessage>
+        <fdm:fltdMessage acid="FDX986" airline="FDX" arrArpt="KBUF" cdmPart="false" depArpt="KMEM"
+                         fdTrigger="HCS_TRACK_MSG" flightRef="44085978" msgType="trackInformation" sensitivity="A"
+                         sourceFacility="KZOB" sourceTimeStamp="2017-08-08T00:44:13Z">
+            <fdm:trackInformation>
+                <nxcm:qualifiedAircraftId>
+                    <nxce:aircraftId>FDX986</nxce:aircraftId>
+                    <nxce:computerId>
+                        <nxce:facilityIdentifier>KZOB</nxce:facilityIdentifier>
+                        <nxce:idNumber>375</nxce:idNumber>
+                    </nxce:computerId>
+                    <nxce:gufi>KM81363200</nxce:gufi>
+                    <nxce:igtd>2017-08-07T23:30:00Z</nxce:igtd>
+                    <nxce:departurePoint>
+                        <nxce:airport>KMEM</nxce:airport>
+                    </nxce:departurePoint>
+                    <nxce:arrivalPoint>
+                        <nxce:airport>KBUF</nxce:airport>
+                    </nxce:arrivalPoint>
+                </nxcm:qualifiedAircraftId>
+                <nxcm:speed>561</nxcm:speed>
+                <nxcm:reportedAltitude>
+                    <nxce:assignedAltitude>
+                        <nxce:simpleAltitude>332</nxce:simpleAltitude>
+                    </nxce:assignedAltitude>
+                </nxcm:reportedAltitude>
+                <nxcm:position>
+                    <nxce:latitude>
+                        <nxce:latitudeDMS degrees="41" direction="NORTH" minutes="26" seconds="06"/>
+                    </nxce:latitude>
+                    <nxce:longitude>
+                        <nxce:longitudeDMS degrees="081" direction="WEST" minutes="43" seconds="18"/>
+                    </nxce:longitude>
+                </nxcm:position>
+                <nxcm:timeAtPosition>2017-08-08T00:44:13Z</nxcm:timeAtPosition>
+                <nxcm:ncsmTrackData>
+                    <nxcm:eta etaType="ESTIMATED" timeValue="2017-08-08T01:10:57Z"/>
+                    <nxcm:rvsmData currentCompliance="true" equipped="true" futureCompliance="true"/>
+                    <nxcm:departureFixAndTime arrTime="2017-08-07T23:54:00Z" fixName="CRSON"/>
+                    <nxcm:nextEvent latitudeDecimal="41.444921798920234" longitudeDecimal="-81.69895852884247"/>
+                </nxcm:ncsmTrackData>
+            </fdm:trackInformation>
+        </fdm:fltdMessage>
+        <fdm:fltdMessage acid="DAL138" airline="DAL" arrArpt="KDTW" cdmPart="false" depArpt="KDCA"
+                         fdTrigger="HCS_TRACK_MSG" flightRef="43996139" msgType="trackInformation" sensitivity="A"
+                         sourceFacility="KZOB" sourceTimeStamp="2017-08-08T00:44:13Z">
+            <fdm:trackInformation>
+                <nxcm:qualifiedAircraftId>
+                    <nxce:aircraftId>DAL138</nxce:aircraftId>
+                    <nxce:computerId>
+                        <nxce:facilityIdentifier>KZOB</nxce:facilityIdentifier>
+                        <nxce:idNumber>801</nxce:idNumber>
+                    </nxce:computerId>
+                    <nxce:gufi>KW82427200</nxce:gufi>
+                    <nxce:igtd>2017-08-07T23:43:00Z</nxce:igtd>
+                    <nxce:departurePoint>
+                        <nxce:airport>KDCA</nxce:airport>
+                    </nxce:departurePoint>
+                    <nxce:arrivalPoint>
+                        <nxce:airport>KDTW</nxce:airport>
+                    </nxce:arrivalPoint>
+                </nxcm:qualifiedAircraftId>
+                <nxcm:speed>307</nxcm:speed>
+                <nxcm:reportedAltitude>
+                    <nxce:assignedAltitude>
+                        <nxce:simpleAltitude>106</nxce:simpleAltitude>
+                    </nxce:assignedAltitude>
+                </nxcm:reportedAltitude>
+                <nxcm:position>
+                    <nxce:latitude>
+                        <nxce:latitudeDMS degrees="41" direction="NORTH" minutes="48" seconds="34"/>
+                    </nxce:latitude>
+                    <nxce:longitude>
+                        <nxce:longitudeDMS degrees="082" direction="WEST" minutes="52" seconds="49"/>
+                    </nxce:longitude>
+                </nxcm:position>
+                <nxcm:timeAtPosition>2017-08-08T00:44:13Z</nxcm:timeAtPosition>
+                <nxcm:ncsmTrackData>
+                    <nxcm:eta etaType="ESTIMATED" timeValue="2017-08-08T00:52:46Z"/>
+                    <nxcm:rvsmData currentCompliance="true" equipped="true" futureCompliance="true"/>
+                    <nxcm:arrivalFixAndTime arrTime="2017-08-08T00:42:58Z" fixName="GEMNI"/>
+                    <nxcm:departureFixAndTime arrTime="2017-08-08T00:00:42Z" fixName="BUFFR"/>
+                    <nxcm:nextEvent latitudeDecimal="41.86411138029558" longitudeDecimal="-82.9449189187325"/>
+                </nxcm:ncsmTrackData>
+            </fdm:trackInformation>
+        </fdm:fltdMessage>
+        <fdm:fltdMessage acid="UAL1893" airline="UAL" arrArpt="KCLE" cdmPart="false" depArpt="KEWR"
+                         fdTrigger="HCS_TRACK_MSG" flightRef="43988531" msgType="trackInformation" sensitivity="A"
+                         sourceFacility="KZOB" sourceTimeStamp="2017-08-08T00:44:25Z">
+            <fdm:trackInformation>
+                <nxcm:qualifiedAircraftId>
+                    <nxce:aircraftId>UAL1893</nxce:aircraftId>
+                    <nxce:computerId>
+                        <nxce:facilityIdentifier>KZOB</nxce:facilityIdentifier>
+                        <nxce:idNumber>889</nxce:idNumber>
+                    </nxce:computerId>
+                    <nxce:gufi>KN71955200</nxce:gufi>
+                    <nxce:igtd>2017-08-07T22:02:00Z</nxce:igtd>
+                    <nxce:departurePoint>
+                        <nxce:airport>KEWR</nxce:airport>
+                    </nxce:departurePoint>
+                    <nxce:arrivalPoint>
+                        <nxce:airport>KCLE</nxce:airport>
+                    </nxce:arrivalPoint>
+                </nxcm:qualifiedAircraftId>
+                <nxcm:speed>420</nxcm:speed>
+                <nxcm:reportedAltitude>
+                    <nxce:assignedAltitude>
+                        <nxce:simpleAltitude>244</nxce:simpleAltitude>
+                    </nxce:assignedAltitude>
+                </nxcm:reportedAltitude>
+                <nxcm:position>
+                    <nxce:latitude>
+                        <nxce:latitudeDMS degrees="41" direction="NORTH" minutes="17" seconds="52"/>
+                    </nxce:latitude>
+                    <nxce:longitude>
+                        <nxce:longitudeDMS degrees="080" direction="WEST" minutes="25" seconds="38"/>
+                    </nxce:longitude>
+                </nxcm:position>
+                <nxcm:timeAtPosition>2017-08-08T00:44:25Z</nxcm:timeAtPosition>
+                <nxcm:ncsmTrackData>
+                    <nxcm:eta etaType="ESTIMATED" timeValue="2017-08-08T00:59:43Z"/>
+                    <nxcm:rvsmData currentCompliance="true" equipped="true" futureCompliance="true"/>
+                    <nxcm:arrivalFixAndTime arrTime="2017-08-08T00:51:18Z" fixName="CXR"/>
+                    <nxcm:departureFixAndTime arrTime="2017-08-08T00:14:00Z" fixName="NEWEL"/>
+                    <nxcm:nextEvent latitudeDecimal="41.3310253" longitudeDecimal="-80.674665"/>
+                </nxcm:ncsmTrackData>
+            </fdm:trackInformation>
+        </fdm:fltdMessage>
+        <fdm:fltdMessage acid="GTI2009" airline="GTI" arrArpt="KBOS" cdmPart="false" depArpt="KCVG"
+                         fdTrigger="HCS_TRACK_MSG" flightRef="44081435" msgType="trackInformation" sensitivity="A"
+                         sourceFacility="KZOB" sourceTimeStamp="2017-08-08T00:44:25Z">
+            <fdm:trackInformation>
+                <nxcm:qualifiedAircraftId>
+                    <nxce:aircraftId>GTI2009</nxce:aircraftId>
+                    <nxce:computerId>
+                        <nxce:facilityIdentifier>KZOB</nxce:facilityIdentifier>
+                        <nxce:idNumber>986</nxce:idNumber>
+                    </nxce:computerId>
+                    <nxce:gufi>KI77213200</nxce:gufi>
+                    <nxce:igtd>2017-08-07T23:45:00Z</nxce:igtd>
+                    <nxce:departurePoint>
+                        <nxce:airport>KCVG</nxce:airport>
+                    </nxce:departurePoint>
+                    <nxce:arrivalPoint>
+                        <nxce:airport>KBOS</nxce:airport>
+                    </nxce:arrivalPoint>
+                </nxcm:qualifiedAircraftId>
+                <nxcm:speed>578</nxcm:speed>
+                <nxcm:reportedAltitude>
+                    <nxce:assignedAltitude>
+                        <nxce:simpleAltitude>350C</nxce:simpleAltitude>
+                    </nxce:assignedAltitude>
+                </nxcm:reportedAltitude>
+                <nxcm:position>
+                    <nxce:latitude>
+                        <nxce:latitudeDMS degrees="42" direction="NORTH" minutes="22" seconds="52"/>
+                    </nxce:latitude>
+                    <nxce:longitude>
+                        <nxce:longitudeDMS degrees="076" direction="WEST" minutes="53" seconds="05"/>
+                    </nxce:longitude>
+                </nxcm:position>
+                <nxcm:timeAtPosition>2017-08-08T00:44:25Z</nxcm:timeAtPosition>
+                <nxcm:ncsmTrackData>
+                    <nxcm:eta etaType="ESTIMATED" timeValue="2017-08-08T01:26:07Z"/>
+                    <nxcm:rvsmData currentCompliance="true" equipped="true" futureCompliance="true"/>
+                    <nxcm:arrivalFixAndTime arrTime="2017-08-08T01:18:52Z" fixName="GDM"/>
+                    <nxcm:departureFixAndTime arrTime="2017-08-08T00:03:14Z" fixName="BNGLE"/>
+                    <nxcm:nextEvent latitudeDecimal="42.43604024756268" longitudeDecimal="-76.39567357286117"/>
+                </nxcm:ncsmTrackData>
+            </fdm:trackInformation>
+        </fdm:fltdMessage>
+        <fdm:fltdMessage acid="DAL2319" airline="DAL" arrArpt="KBOS" cdmPart="false" depArpt="KLAX"
+                         fdTrigger="HCS_TRACK_MSG" flightRef="43982714" msgType="trackInformation" sensitivity="A"
+                         sourceFacility="KZOB" sourceTimeStamp="2017-08-08T00:44:25Z">
+            <fdm:trackInformation>
+                <nxcm:qualifiedAircraftId>
+                    <nxce:aircraftId>DAL2319</nxce:aircraftId>
+                    <nxce:computerId>
+                        <nxce:facilityIdentifier>KZOB</nxce:facilityIdentifier>
+                        <nxce:idNumber>118</nxce:idNumber>
+                    </nxce:computerId>
+                    <nxce:gufi>KL72958200</nxce:gufi>
+                    <nxce:igtd>2017-08-07T21:05:00Z</nxce:igtd>
+                    <nxce:departurePoint>
+                        <nxce:airport>KLAX</nxce:airport>
+                    </nxce:departurePoint>
+                    <nxce:arrivalPoint>
+                        <nxce:airport>KBOS</nxce:airport>
+                    </nxce:arrivalPoint>
+                </nxcm:qualifiedAircraftId>
+                <nxcm:speed>556</nxcm:speed>
+                <nxcm:reportedAltitude>
+                    <nxce:assignedAltitude>
+                        <nxce:simpleAltitude>370C</nxce:simpleAltitude>
+                    </nxce:assignedAltitude>
+                </nxcm:reportedAltitude>
+                <nxcm:position>
+                    <nxce:latitude>
+                        <nxce:latitudeDMS degrees="41" direction="NORTH" minutes="53" seconds="55"/>
+                    </nxce:latitude>
+                    <nxce:longitude>
+                        <nxce:longitudeDMS degrees="084" direction="WEST" minutes="54" seconds="14"/>
+                    </nxce:longitude>
+                </nxcm:position>
+                <nxcm:timeAtPosition>2017-08-08T00:44:25Z</nxcm:timeAtPosition>
+                <nxcm:ncsmTrackData>
+                    <nxcm:eta etaType="ESTIMATED" timeValue="2017-08-08T02:05:10Z"/>
+                    <nxcm:rvsmData currentCompliance="true" equipped="true" futureCompliance="true"/>
+                    <nxcm:arrivalFixAndTime arrTime="2017-08-08T02:05:56Z" fixName="GDM"/>
+                    <nxcm:departureFixAndTime arrTime="2017-08-07T21:41:00Z" fixName="DAG"/>
+                    <nxcm:nextEvent latitudeDecimal="41.898225750339094" longitudeDecimal="-84.83218859477553"/>
+                </nxcm:ncsmTrackData>
+            </fdm:trackInformation>
+        </fdm:fltdMessage>
+        <fdm:fltdMessage acid="TMC403" airline="TMC" arrArpt="KLWC" cdmPart="false" depArpt="KTEB"
+                         fdTrigger="HCS_TRACK_MSG" flightRef="44061094" msgType="trackInformation" sensitivity="A"
+                         sourceFacility="KZOB" sourceTimeStamp="2017-08-08T00:44:25Z">
+            <fdm:trackInformation>
+                <nxcm:qualifiedAircraftId>
+                    <nxce:aircraftId>TMC403</nxce:aircraftId>
+                    <nxce:computerId>
+                        <nxce:facilityIdentifier>KZOB</nxce:facilityIdentifier>
+                        <nxce:idNumber>301</nxce:idNumber>
+                    </nxce:computerId>
+                    <nxce:gufi>KN84529200</nxce:gufi>
+                    <nxce:igtd>2017-08-07T21:30:00Z</nxce:igtd>
+                    <nxce:departurePoint>
+                        <nxce:airport>KTEB</nxce:airport>
+                    </nxce:departurePoint>
+                    <nxce:arrivalPoint>
+                        <nxce:airport>KLWC</nxce:airport>
+                    </nxce:arrivalPoint>
+                </nxcm:qualifiedAircraftId>
+                <nxcm:speed>334</nxcm:speed>
+                <nxcm:reportedAltitude>
+                    <nxce:assignedAltitude>
+                        <nxce:simpleAltitude>380C</nxce:simpleAltitude>
+                    </nxce:assignedAltitude>
+                </nxcm:reportedAltitude>
+                <nxcm:position>
+                    <nxce:latitude>
+                        <nxce:latitudeDMS degrees="42" direction="NORTH" minutes="00" seconds="40"/>
+                    </nxce:latitude>
+                    <nxce:longitude>
+                        <nxce:longitudeDMS degrees="077" direction="WEST" minutes="31" seconds="02"/>
+                    </nxce:longitude>
+                </nxcm:position>
+                <nxcm:timeAtPosition>2017-08-08T00:44:25Z</nxcm:timeAtPosition>
+                <nxcm:ncsmTrackData>
+                    <nxcm:eta etaType="ESTIMATED" timeValue="2017-08-08T03:11:41Z"/>
+                    <nxcm:rvsmData currentCompliance="true" equipped="true" futureCompliance="true"/>
+                    <nxcm:departureFixAndTime arrTime="2017-08-08T00:20:48Z" fixName="COATE"/>
+                    <nxcm:nextEvent latitudeDecimal="42.012469782222816" longitudeDecimal="-77.9825042663337"/>
+                </nxcm:ncsmTrackData>
+            </fdm:trackInformation>
+        </fdm:fltdMessage>
+        <fdm:fltdMessage acid="NKS313" airline="NKS" arrArpt="KDFW" cdmPart="false" depArpt="KDTW"
+                         fdTrigger="HCS_TRACK_MSG" flightRef="43998808" msgType="trackInformation" sensitivity="A"
+                         sourceFacility="KZOB" sourceTimeStamp="2017-08-08T00:44:25Z">
+            <fdm:trackInformation>
+                <nxcm:qualifiedAircraftId>
+                    <nxce:aircraftId>NKS313</nxce:aircraftId>
+                    <nxce:computerId>
+                        <nxce:facilityIdentifier>KZOB</nxce:facilityIdentifier>
+                        <nxce:idNumber>374</nxce:idNumber>
+                    </nxce:computerId>
+                    <nxce:gufi>KC82048200</nxce:gufi>
+                    <nxce:igtd>2017-08-08T00:12:00Z</nxce:igtd>
+                    <nxce:departurePoint>
+                        <nxce:airport>KDTW</nxce:airport>
+                    </nxce:departurePoint>
+                    <nxce:arrivalPoint>
+                        <nxce:airport>KDFW</nxce:airport>
+                    </nxce:arrivalPoint>
+                </nxcm:qualifiedAircraftId>
+                <nxcm:speed>361</nxcm:speed>
+                <nxcm:reportedAltitude>
+                    <nxce:assignedAltitude>
+                        <nxce:simpleAltitude>350</nxce:simpleAltitude>
+                    </nxce:assignedAltitude>
+                </nxcm:reportedAltitude>
+                <nxcm:position>
+                    <nxce:latitude>
+                        <nxce:latitudeDMS degrees="40" direction="NORTH" minutes="50" seconds="31"/>
+                    </nxce:latitude>
+                    <nxce:longitude>
+                        <nxce:longitudeDMS degrees="085" direction="WEST" minutes="15" seconds="04"/>
+                    </nxce:longitude>
+                </nxcm:position>
+                <nxcm:timeAtPosition>2017-08-08T00:44:25Z</nxcm:timeAtPosition>
+                <nxcm:ncsmTrackData>
+                    <nxcm:eta etaType="ESTIMATED" timeValue="2017-08-08T02:43:05Z"/>
+                    <nxcm:rvsmData currentCompliance="true" equipped="true" futureCompliance="true"/>
+                    <nxcm:arrivalFixAndTime arrTime="2017-08-08T02:31:46Z" fixName="BRDJE"/>
+                    <nxcm:departureFixAndTime arrTime="2017-08-08T00:31:15Z" fixName="ANNTS"/>
+                    <nxcm:nextEvent latitudeDecimal="40.79276597703986" longitudeDecimal="-85.32384637467348"/>
+                </nxcm:ncsmTrackData>
+            </fdm:trackInformation>
+        </fdm:fltdMessage>
+        <fdm:fltdMessage acid="UAL1801" airline="UAL" arrArpt="KCLE" cdmPart="false" depArpt="KORD"
+                         fdTrigger="HCS_TRACK_MSG" flightRef="43997783" msgType="trackInformation" sensitivity="A"
+                         sourceFacility="KZOB" sourceTimeStamp="2017-08-08T00:44:25Z">
+            <fdm:trackInformation>
+                <nxcm:qualifiedAircraftId>
+                    <nxce:aircraftId>UAL1801</nxce:aircraftId>
+                    <nxce:computerId>
+                        <nxce:facilityIdentifier>KZOB</nxce:facilityIdentifier>
+                        <nxce:idNumber>700</nxce:idNumber>
+                    </nxce:computerId>
+                    <nxce:gufi>KG75952200</nxce:gufi>
+                    <nxce:igtd>2017-08-08T00:23:00Z</nxce:igtd>
+                    <nxce:departurePoint>
+                        <nxce:airport>KORD</nxce:airport>
+                    </nxce:departurePoint>
+                    <nxce:arrivalPoint>
+                        <nxce:airport>KCLE</nxce:airport>
+                    </nxce:arrivalPoint>
+                </nxcm:qualifiedAircraftId>
+                <nxcm:speed>540</nxcm:speed>
+                <nxcm:reportedAltitude>
+                    <nxce:assignedAltitude>
+                        <nxce:simpleAltitude>270</nxce:simpleAltitude>
+                    </nxce:assignedAltitude>
+                </nxcm:reportedAltitude>
+                <nxcm:position>
+                    <nxce:latitude>
+                        <nxce:latitudeDMS degrees="42" direction="NORTH" minutes="02" seconds="23"/>
+                    </nxce:latitude>
+                    <nxce:longitude>
+                        <nxce:longitudeDMS degrees="085" direction="WEST" minutes="53" seconds="22"/>
+                    </nxce:longitude>
+                </nxcm:position>
+                <nxcm:timeAtPosition>2017-08-08T00:44:25Z</nxcm:timeAtPosition>
+                <nxcm:ncsmTrackData>
+                    <nxcm:eta etaType="ESTIMATED" timeValue="2017-08-08T01:18:47Z"/>
+                    <nxcm:rvsmData currentCompliance="true" equipped="true" futureCompliance="true"/>
+                    <nxcm:arrivalFixAndTime arrTime="2017-08-08T01:10:46Z" fixName="HIMEZ"/>
+                    <nxcm:departureFixAndTime arrTime="2017-08-08T00:46:00Z" fixName="DUFEE"/>
+                    <nxcm:nextEvent latitudeDecimal="42.058484992564985" longitudeDecimal="-85.18886788773511"/>
+                </nxcm:ncsmTrackData>
+            </fdm:trackInformation>
+        </fdm:fltdMessage>
+        <fdm:fltdMessage acid="UAL439" airline="UAL" arrArpt="KORD" cdmPart="false" depArpt="KBOS"
+                         fdTrigger="HCS_TRACK_MSG" flightRef="43989831" msgType="trackInformation" sensitivity="A"
+                         sourceFacility="KZOB" sourceTimeStamp="2017-08-08T00:44:25Z">
+            <fdm:trackInformation>
+                <nxcm:qualifiedAircraftId>
+                    <nxce:aircraftId>UAL439</nxce:aircraftId>
+                    <nxce:computerId>
+                        <nxce:facilityIdentifier>KZOB</nxce:facilityIdentifier>
+                        <nxce:idNumber>641</nxce:idNumber>
+                    </nxce:computerId>
+                    <nxce:gufi>KB75310200</nxce:gufi>
+                    <nxce:igtd>2017-08-07T22:20:00Z</nxce:igtd>
+                    <nxce:departurePoint>
+                        <nxce:airport>KBOS</nxce:airport>
+                    </nxce:departurePoint>
+                    <nxce:arrivalPoint>
+                        <nxce:airport>KORD</nxce:airport>
+                    </nxce:arrivalPoint>
+                </nxcm:qualifiedAircraftId>
+                <nxcm:speed>433</nxcm:speed>
+                <nxcm:reportedAltitude>
+                    <nxce:assignedAltitude>
+                        <nxce:simpleAltitude>240C</nxce:simpleAltitude>
+                    </nxce:assignedAltitude>
+                </nxcm:reportedAltitude>
+                <nxcm:position>
+                    <nxce:latitude>
+                        <nxce:latitudeDMS degrees="43" direction="NORTH" minutes="02" seconds="19"/>
+                    </nxce:latitude>
+                    <nxce:longitude>
+                        <nxce:longitudeDMS degrees="082" direction="WEST" minutes="00" seconds="44"/>
+                    </nxce:longitude>
+                </nxcm:position>
+                <nxcm:timeAtPosition>2017-08-08T00:44:25Z</nxcm:timeAtPosition>
+                <nxcm:ncsmTrackData>
+                    <nxcm:eta etaType="ESTIMATED" timeValue="2017-08-08T01:26:30Z"/>
+                    <nxcm:rvsmData currentCompliance="true" equipped="true" futureCompliance="true"/>
+                    <nxcm:arrivalFixAndTime arrTime="2017-08-08T01:15:34Z" fixName="WYNDE"/>
+                    <nxcm:departureFixAndTime arrTime="2017-08-07T23:34:10Z" fixName="HYLND"/>
+                    <nxcm:nextEvent latitudeDecimal="43.024690194163846" longitudeDecimal="-82.41001349596286"/>
+                </nxcm:ncsmTrackData>
+            </fdm:trackInformation>
+        </fdm:fltdMessage>
+        <fdm:fltdMessage acid="SWA2070" airline="SWA" arrArpt="KBWI" cdmPart="false" depArpt="KLAS"
+                         fdTrigger="HCS_TRACK_MSG" flightRef="43981717" msgType="trackInformation" sensitivity="A"
+                         sourceFacility="KZOB" sourceTimeStamp="2017-08-08T00:44:25Z">
+            <fdm:trackInformation>
+                <nxcm:qualifiedAircraftId>
+                    <nxce:aircraftId>SWA2070</nxce:aircraftId>
+                    <nxce:computerId>
+                        <nxce:facilityIdentifier>KZOB</nxce:facilityIdentifier>
+                        <nxce:idNumber>865</nxce:idNumber>
+                    </nxce:computerId>
+                    <nxce:gufi>KL67782200</nxce:gufi>
+                    <nxce:igtd>2017-08-07T20:55:00Z</nxce:igtd>
+                    <nxce:departurePoint>
+                        <nxce:airport>KLAS</nxce:airport>
+                    </nxce:departurePoint>
+                    <nxce:arrivalPoint>
+                        <nxce:airport>KBWI</nxce:airport>
+                    </nxce:arrivalPoint>
+                </nxcm:qualifiedAircraftId>
+                <nxcm:speed>518</nxcm:speed>
+                <nxcm:reportedAltitude>
+                    <nxce:assignedAltitude>
+                        <nxce:simpleAltitude>297</nxce:simpleAltitude>
+                    </nxce:assignedAltitude>
+                </nxcm:reportedAltitude>
+                <nxcm:position>
+                    <nxce:latitude>
+                        <nxce:latitudeDMS degrees="39" direction="NORTH" minutes="40" seconds="31"/>
+                    </nxce:latitude>
+                    <nxce:longitude>
+                        <nxce:longitudeDMS degrees="079" direction="WEST" minutes="09" seconds="39"/>
+                    </nxce:longitude>
+                </nxcm:position>
+                <nxcm:timeAtPosition>2017-08-08T00:44:25Z</nxcm:timeAtPosition>
+                <nxcm:ncsmTrackData>
+                    <nxcm:eta etaType="ESTIMATED" timeValue="2017-08-08T01:12:02Z"/>
+                    <nxcm:rvsmData currentCompliance="true" equipped="true" futureCompliance="true"/>
+                    <nxcm:arrivalFixAndTime arrTime="2017-08-08T00:51:29Z" fixName="BUBBI"/>
+                    <nxcm:departureFixAndTime arrTime="2017-08-07T21:26:06Z" fixName="TRALR"/>
+                    <nxcm:nextEvent latitudeDecimal="39.6609444" longitudeDecimal="-79.0929361"/>
+                </nxcm:ncsmTrackData>
+            </fdm:trackInformation>
+        </fdm:fltdMessage>
+        <fdm:fltdMessage acid="VIR110" airline="VIR" arrArpt="EGCC" cdmPart="false" depArpt="KATL"
+                         fdTrigger="HCS_TRACK_MSG" flightRef="43993877" msgType="trackInformation" sensitivity="A"
+                         sourceFacility="KZOB" sourceTimeStamp="2017-08-08T00:44:25Z">
+            <fdm:trackInformation>
+                <nxcm:qualifiedAircraftId>
+                    <nxce:aircraftId>VIR110</nxce:aircraftId>
+                    <nxce:computerId>
+                        <nxce:facilityIdentifier>KZOB</nxce:facilityIdentifier>
+                        <nxce:idNumber>849</nxce:idNumber>
+                    </nxce:computerId>
+                    <nxce:gufi>KT74957200</nxce:gufi>
+                    <nxce:igtd>2017-08-07T23:10:00Z</nxce:igtd>
+                    <nxce:departurePoint>
+                        <nxce:airport>KATL</nxce:airport>
+                    </nxce:departurePoint>
+                    <nxce:arrivalPoint>
+                        <nxce:airport>EGCC</nxce:airport>
+                    </nxce:arrivalPoint>
+                </nxcm:qualifiedAircraftId>
+                <nxcm:speed>557</nxcm:speed>
+                <nxcm:reportedAltitude>
+                    <nxce:assignedAltitude>
+                        <nxce:simpleAltitude>390C</nxce:simpleAltitude>
+                    </nxce:assignedAltitude>
+                </nxcm:reportedAltitude>
+                <nxcm:position>
+                    <nxce:latitude>
+                        <nxce:latitudeDMS degrees="39" direction="NORTH" minutes="39" seconds="17"/>
+                    </nxce:latitude>
+                    <nxce:longitude>
+                        <nxce:longitudeDMS degrees="079" direction="WEST" minutes="21" seconds="33"/>
+                    </nxce:longitude>
+                </nxcm:position>
+                <nxcm:timeAtPosition>2017-08-08T00:44:25Z</nxcm:timeAtPosition>
+                <nxcm:ncsmTrackData>
+                    <nxcm:eta etaType="ESTIMATED" timeValue="2017-08-08T06:59:01Z"/>
+                    <nxcm:rvsmData currentCompliance="true" equipped="true" futureCompliance="true"/>
+                    <nxcm:departureFixAndTime arrTime="2017-08-07T23:52:45Z" fixName="SMKEY"/>
+                    <nxcm:nextEvent latitudeDecimal="39.787103294076" longitudeDecimal="-79.15563012551806"/>
+                </nxcm:ncsmTrackData>
+            </fdm:trackInformation>
+        </fdm:fltdMessage>
+        <fdm:fltdMessage acid="DAL138" airline="DAL" arrArpt="KDTW" cdmPart="false" depArpt="KDCA"
+                         fdTrigger="HCS_TRACK_MSG" flightRef="43996139" msgType="trackInformation" sensitivity="A"
+                         sourceFacility="KZOB" sourceTimeStamp="2017-08-08T00:44:25Z">
+            <fdm:trackInformation>
+                <nxcm:qualifiedAircraftId>
+                    <nxce:aircraftId>DAL138</nxce:aircraftId>
+                    <nxce:computerId>
+                        <nxce:facilityIdentifier>KZOB</nxce:facilityIdentifier>
+                        <nxce:idNumber>801</nxce:idNumber>
+                    </nxce:computerId>
+                    <nxce:gufi>KW82427200</nxce:gufi>
+                    <nxce:igtd>2017-08-07T23:43:00Z</nxce:igtd>
+                    <nxce:departurePoint>
+                        <nxce:airport>KDCA</nxce:airport>
+                    </nxce:departurePoint>
+                    <nxce:arrivalPoint>
+                        <nxce:airport>KDTW</nxce:airport>
+                    </nxce:arrivalPoint>
+                </nxcm:qualifiedAircraftId>
+                <nxcm:speed>316</nxcm:speed>
+                <nxcm:reportedAltitude>
+                    <nxce:assignedAltitude>
+                        <nxce:simpleAltitude>104</nxce:simpleAltitude>
+                    </nxce:assignedAltitude>
+                </nxcm:reportedAltitude>
+                <nxcm:position>
+                    <nxce:latitude>
+                        <nxce:latitudeDMS degrees="41" direction="NORTH" minutes="48" seconds="49"/>
+                    </nxce:latitude>
+                    <nxce:longitude>
+                        <nxce:longitudeDMS degrees="082" direction="WEST" minutes="53" seconds="10"/>
+                    </nxce:longitude>
+                </nxcm:position>
+                <nxcm:timeAtPosition>2017-08-08T00:44:25Z</nxcm:timeAtPosition>
+                <nxcm:ncsmTrackData>
+                    <nxcm:eta etaType="ESTIMATED" timeValue="2017-08-08T00:52:46Z"/>
+                    <nxcm:rvsmData currentCompliance="true" equipped="true" futureCompliance="true"/>
+                    <nxcm:arrivalFixAndTime arrTime="2017-08-08T00:42:58Z" fixName="GEMNI"/>
+                    <nxcm:departureFixAndTime arrTime="2017-08-08T00:00:42Z" fixName="BUFFR"/>
+                    <nxcm:nextEvent latitudeDecimal="41.86411138029558" longitudeDecimal="-82.9449189187325"/>
+                </nxcm:ncsmTrackData>
+            </fdm:trackInformation>
+        </fdm:fltdMessage>
+    </fltdOutput>
+</ds:tfmDataService>
