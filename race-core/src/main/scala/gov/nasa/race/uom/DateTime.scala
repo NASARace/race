@@ -63,6 +63,8 @@ object DateTime {
 
   @inline def parseISO (spec: String): DateTime = parse(spec, DateTimeFormatter.ISO_DATE_TIME)
 
+  // examples: "2017-08-08T00:44:12Z" "2018-01-02T10:20:01.234+03:30[US/Pacific]"
+
   val YMDT_RE = """(\d{4})[\/-](\d{1,2})[\/-](\d{1,2})[ ,T](\d{1,2}):(\d{1,2}):(\d{1,2})(?:\.(\d{1,9}))? ?(?:([+-]\d{1,2})(?:\:(\d{1,2})))? ?\[?([\w\/]+)?+\]?""".r
 
   def parseYMDT(spec: String): DateTime = {
@@ -85,10 +87,6 @@ object DateTime {
     }
   }
 
-  def parseYMDT(spec: Slice): DateTime = {
-    parseYMDT(spec.toString) // FIXME
-  }
-
   def getZoneId (zid: String, offHour: String, offMin: String): ZoneId = {
     if (offHour == null) {
       if (zid == null) ZoneId.systemDefault else ZoneId.of(zid)
@@ -109,6 +107,93 @@ object DateTime {
       i -= 1
     }
     n * s
+  }
+
+
+  def parseYMDT (slice: Slice): DateTime = parseYMDT(slice.data, slice.offset, slice.length)
+
+  def parseYMDT(bs: Array[Byte], off: Int, len: Int): DateTime = {
+    var i = off
+    val iMax = off + len
+
+    @inline def readDigit (k: Int): Int = {
+      val d = bs(k) - '0'
+      if (d >= 0 && d <= 9) return d else throw new RuntimeException(s"invalid date spec: ${new String(bs,off,len)}")
+    }
+
+    @inline def read4Digits (k: Int): Int = readDigit(k)*1000 + readDigit(k+1)*100 + readDigit(k+2)*10 + readDigit(k+3)
+    @inline def read2Digits (k: Int): Int = readDigit(k)*10 + readDigit(k+1)
+
+    def readFracNanos: Int = {
+      var d = 0
+      var s = 100000000
+      var b = bs(i)
+      while (b >= '0' && b <= '9') {
+        d = d + (b - '0')*s
+        s /= 10
+        i += 1
+        b = bs(i)
+      }
+      d
+    }
+
+    //--- fixed numeric fields
+    val y = read4Digits(i)
+    val M = read2Digits(i+5)
+    val d = read2Digits(i+8)
+    val H = read2Digits(i+11)
+    val m = read2Digits(i+14)
+    val s = read2Digits(i+17)
+
+    //--- variable and optional fields
+    var S = 0
+    var offH = 0
+    var offMin = 0
+    var zoneId: ZoneId = ZoneId.systemDefault
+
+    i = 19
+    var b = bs(i)
+    if (b == '.'){ // fractional nanos
+      i += 1
+      S = readFracNanos
+      b = bs(i)
+    }
+
+    if (b == '+' || b == '-') { // zone offset (id is ignored)
+      offH = read2Digits(i+1)
+      if (b == '-') offH = -offH
+      i += 3
+      if (bs(i) == ':') {
+        offMin = read2Digits(i+1)
+        if (offH < 0) offMin = -offMin
+        i += 3
+      }
+      zoneId = ZoneId.ofOffset("", ZoneOffset.ofHoursMinutes(offH,offMin))
+
+    } else { // is there a zone id?
+      if (b == 'Z') {
+        zoneId = ZoneOffset.UTC
+
+      } else if (b == '[') {
+        i += 1
+        if ((iMax - i >= 3) &&
+          (bs(i) == 'U' && bs(i+1) == 'T' && bs(i+2) == 'C') ||
+          (bs(i) == 'G' && bs(i+1) == 'M' && bs(i+2) == 'T')) {
+          ZoneOffset.UTC
+
+        } else {
+          val i0 = i
+          while (bs(i) != ']') {
+            i += 1
+          }
+          val zId = new String(bs, i0, i - i0) // unfortunately we have to allocate since ZoneId does not provide other accessors
+          ZoneId.of(zId)
+        }
+      }
+    }
+
+    val zdt = ZonedDateTime.of(y,M,d, H,m,s,S, zoneId) // another allocation we can't avoid
+    new DateTime(zdt.getLong(ChronoField.INSTANT_SECONDS) * 1000 + S / 1000000)
   }
 
   //--- convenience methods for epoch milli conversion

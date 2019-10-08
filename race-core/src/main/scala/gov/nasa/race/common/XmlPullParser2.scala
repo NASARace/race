@@ -347,7 +347,7 @@ abstract class XmlPullParser2  {
   @inline final def readDateTimeContent: DateTime = {
     state.parseContent
     getNextContentString
-    DateTime.parseYMDT(contentString.toString) // FIXME
+    DateTime.parseYMDT(contentString)
   }
 
   //--- raw content retrieval

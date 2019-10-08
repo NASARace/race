@@ -114,6 +114,10 @@ final class Slice (var data: Array[Byte], var offset: Int, var length: Int) {
     true
   }
 
+  @inline def equalsSliceAt (other: Slice, start: Int): Boolean = {
+    (length - start >= other.length) && other.equalBytes(data, offset+start)
+  }
+
 
   @inline final def == (other: Slice): Boolean = {
     (length == other.length) && equalBytes(other.data,other.offset)

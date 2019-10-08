@@ -168,7 +168,7 @@ class MessageCollectionParser(val config: Config=NoConfig)
         }
         @inline def process_position = {
           if (tagHasParent(enRoute)) {
-            if (parseAttr(positionTime)) date = DateTime.parseYMDT(attrValue.toString)  // FIXME
+            if (parseAttr(positionTime)) date = DateTime.parseYMDT(attrValue)
           }
         }
         @inline def process_x = vx = readDoubleContent  // we ignore uom since we just use content value to compute heading
@@ -183,7 +183,7 @@ class MessageCollectionParser(val config: Config=NoConfig)
 
         @inline def process_actual = {
           if (tagHasAncestor(arrival)) {
-            if (parseAttr(time)) arrivalDate = DateTime.parseYMDT(attrValue.toString)
+            if (parseAttr(time)) arrivalDate = DateTime.parseYMDT(attrValue)
           }
         }
 

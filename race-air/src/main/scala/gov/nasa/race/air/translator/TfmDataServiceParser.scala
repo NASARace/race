@@ -37,6 +37,8 @@ import scala.Double.NaN
 
 /**
   * a translator for tfmDataService (tfmdata) SWIM messages. We only process fltdMessage/trackInformation yet
+  *
+  * TODO - check if fltdMessage attributes are mandatory since we don't parse the respective trackInformation sub-elements
   */
 class TfmDataServiceParser (val config: Config=NoConfig)
   extends StringXmlPullParser2(config.getIntOrElse("buffer-size",200000)) with ConfigurableTranslator {
