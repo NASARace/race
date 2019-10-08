@@ -306,6 +306,8 @@ abstract class XmlPullParser2  {
     state = finishedState
   }
 
+  @inline final def depth: Int = path.size
+
   //--- high level retrieval for mandatory content (no need to check - throw exception if not there)
 
   @inline final def readSliceContent: Slice = {
