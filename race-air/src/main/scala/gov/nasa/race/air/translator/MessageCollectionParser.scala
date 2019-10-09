@@ -105,6 +105,8 @@ class MessageCollectionParser(val config: Config=NoConfig)
   }
 
   protected def parseFlight: Unit = {
+    val endLevel = depth-1
+
     var id, cs: String = null
     var lat, lon, vx, vy: Double = UndefinedDouble
     var alt: Length = UndefinedLength
@@ -225,11 +227,7 @@ class MessageCollectionParser(val config: Config=NoConfig)
         }
 
       } else {  // end tag
-
-        @inline def match_flight = { len==6 && data(off)==102 && data(off+1)==108 && data(off+2)==105 && data(off+3)==103 && data(off+4)==104 && data(off+5)==116 }
-        @inline def match_ns5$NasFlight = { len==13 && data(off)==110 && data(off+1)==115 && data(off+2)==53 && data(off+3)==58 && data(off+4)==78 && data(off+5)==97 && data(off+6)==115 && data(off+7)==70 && data(off+8)==108 && data(off+9)==105 && data(off+10)==103 && data(off+11)==104 && data(off+12)==116 }
-
-        if (match_flight || match_ns5$NasFlight) {
+        if (depth == endLevel) {
           // flight || ns5:NasFlight
           if (cs != null) {
             if (arrivalDate.isDefined) {

@@ -85,6 +85,8 @@ class TATrackAndFlightPlanParser (val config: Config=NoConfig)
   }
 
   def parseRecord (srcId: String): Unit = {
+    val endLevel = depth-1
+
     var trackId: String = null
     var acId: String  = null
     var beaconCode: String = ""
@@ -210,7 +212,7 @@ class TATrackAndFlightPlanParser (val config: Config=NoConfig)
         }
 
       } else { // end tag
-        if (tag == record) {
+        if (depth == endLevel) {
           if (srcId != null && trackId != null && xPos.isDefined && yPos.isDefined) {
             if (allowIncompleteTrack || (mrtTime.isDefined && vx.isDefined && vy.isDefined && reportedAltitude.isDefined)) {
               val spd = Speed.fromVxVy(vx, vy)

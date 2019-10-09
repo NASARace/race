@@ -91,6 +91,8 @@ class AsdexMsgParser (val config: Config=NoConfig)
   }
 
   protected def parsePositionReport (airportId: String, tracks: ArrayBuffer[AsdexTrack]): Unit = {
+    val endLevel = depth-1
+
     // note that we have to use different values for optionals that might not be in a delta update so that
     // we can distinguish from cached values
     var trackId: String = null
@@ -235,7 +237,7 @@ class AsdexMsgParser (val config: Config=NoConfig)
         }
 
       } else { // end tag
-        if (tag == positionReport) {
+        if (depth == endLevel) {
           // our minimal requirements are a dated lat/lon position and a trackId
           if (trackId != null && (date.isDefined)) {
             val track = createTrack(airportId,trackId,acId,latDeg,lonDeg,altFt,spdMph,hdgDeg,vertRate,date,status,acType)

@@ -154,43 +154,6 @@ class TfmDataServiceParser (val config: Config=NoConfig)
       var nextWPDate: DateTime = DateTime.UndefinedDateTime
       var completed: Boolean = false
 
-      def readDMS: Angle = {
-        var deg: Double = NaN
-        var min: Double = NaN
-        var sec: Double = 0
-        var isNegative = false
-
-        while (parseNextAttr) {
-          val off = attrName.offset
-          val len = attrName.length
-
-          @inline def process_degrees = deg = attrValue.toInt
-          @inline def process_direction = isNegative = (attrValue == westValue || attrValue == southValue)
-          @inline def process_minutes = min = attrValue.toInt
-          @inline def process_seconds = sec = attrValue.toInt
-
-          @inline def match_d = { len>=1 && data(off)==100 }
-          @inline def match_degrees = { len==7 && data(off+1)==101 && data(off+2)==103 && data(off+3)==114 && data(off+4)==101 && data(off+5)==101 && data(off+6)==115 }
-          @inline def match_direction = { len==9 && data(off+1)==105 && data(off+2)==114 && data(off+3)==101 && data(off+4)==99 && data(off+5)==116 && data(off+6)==105 && data(off+7)==111 && data(off+8)==110 }
-          @inline def match_minutes = { len==7 && data(off)==109 && data(off+1)==105 && data(off+2)==110 && data(off+3)==117 && data(off+4)==116 && data(off+5)==101 && data(off+6)==115 }
-          @inline def match_seconds = { len==7 && data(off)==115 && data(off+1)==101 && data(off+2)==99 && data(off+3)==111 && data(off+4)==110 && data(off+5)==100 && data(off+6)==115 }
-          if (match_d) {
-            if (match_degrees) {
-              process_degrees
-            } else if (match_direction) {
-              process_direction
-            }
-          } else if (match_minutes) {
-            process_minutes
-          } else if (match_seconds) {
-            process_seconds
-          }
-        }
-
-        val d = deg + min/60.0 + sec/3600.0
-        if (isNegative) Degrees(-d) else Degrees(d)
-      }
-
       def readAlt: Length = {
         val v = readSliceContent
         var factor = 100
@@ -209,6 +172,8 @@ class TfmDataServiceParser (val config: Config=NoConfig)
       }
 
       def parseTrackData: Unit = {
+        val endLevel = depth-1
+
         // parse "nxcm:eta" "nxcm:nextEvent"
         while (parseNextTag) {
           val off = tag.offset
@@ -231,12 +196,14 @@ class TfmDataServiceParser (val config: Config=NoConfig)
               }
             }
           } else {
-            if (tag == ncsmTrackData) return
+            if (depth == endLevel) return
           }
         }
       }
 
       def parseRouteData: Unit = {
+        val endLevel = depth-1
+
         // parse "nxcm:eta" "nxcm:nextPosition"
         while (parseNextTag) {
           if (isStartTag) {
@@ -258,7 +225,35 @@ class TfmDataServiceParser (val config: Config=NoConfig)
               }
             }
           } else {
-            if (tag == ncsmRouteData) return
+            if (depth == endLevel) return
+          }
+        }
+      }
+
+      def parseAirlineData: Unit = {
+        val endLevel = depth-1
+
+        while (parseNextTag) {
+          if (isStartTag) {
+            val off = tag.offset
+            val len = tag.length
+
+            @inline def match_nxcm$eta = { len==8 && data(off)==110 && data(off+1)==120 && data(off+2)==99 && data(off+3)==109 && data(off+4)==58 && data(off+5)==101 && data(off+6)==116 && data(off+7)==97 }
+
+            if (match_nxcm$eta) {
+              while (parseNextAttr) {
+                if (attrName == etaType){
+                  if (!(attrValue == actualValue)) return
+                } else if (attrName == timeValue) {
+                  if (date.isUndefined) date =  DateTime.parseYMDT(attrValue)
+                  if (lat.isUndefined) lat = Angle0
+                  if (lon.isUndefined) lon = Angle0
+                }
+              }
+            }
+
+          } else { // end tag
+            if (depth == endLevel) return
           }
         }
       }
@@ -299,9 +294,9 @@ class TfmDataServiceParser (val config: Config=NoConfig)
       def parsePosition: Unit = {
         val endLevel = depth-1
 
-        while (parseNextAttr) {
-          val off = attrName.offset
-          val len = attrName.length
+        while (parseNextTag) {
+          val off = tag.offset
+          val len = tag.length
 
           if (isStartTag) {
             @inline def process_nxce$latitudeDMS = lat = readDMS
@@ -324,8 +319,45 @@ class TfmDataServiceParser (val config: Config=NoConfig)
         }
       }
 
+      def readDMS: Angle = {
+        var deg: Double = NaN
+        var min: Double = NaN
+        var sec: Double = 0
+        var isNegative = false
+
+        while (parseNextAttr) {
+          val off = attrName.offset
+          val len = attrName.length
+
+          @inline def process_degrees = deg = attrValue.toInt
+          @inline def process_direction = isNegative = (attrValue == westValue || attrValue == southValue)
+          @inline def process_minutes = min = attrValue.toInt
+          @inline def process_seconds = sec = attrValue.toInt
+
+          @inline def match_d = { len>=1 && data(off)==100 }
+          @inline def match_degrees = { len==7 && data(off+1)==101 && data(off+2)==103 && data(off+3)==114 && data(off+4)==101 && data(off+5)==101 && data(off+6)==115 }
+          @inline def match_direction = { len==9 && data(off+1)==105 && data(off+2)==114 && data(off+3)==101 && data(off+4)==99 && data(off+5)==116 && data(off+6)==105 && data(off+7)==111 && data(off+8)==110 }
+          @inline def match_minutes = { len==7 && data(off)==109 && data(off+1)==105 && data(off+2)==110 && data(off+3)==117 && data(off+4)==116 && data(off+5)==101 && data(off+6)==115 }
+          @inline def match_seconds = { len==7 && data(off)==115 && data(off+1)==101 && data(off+2)==99 && data(off+3)==111 && data(off+4)==110 && data(off+5)==100 && data(off+6)==115 }
+          if (match_d) {
+            if (match_degrees) {
+              process_degrees
+            } else if (match_direction) {
+              process_direction
+            }
+          } else if (match_minutes) {
+            process_minutes
+          } else if (match_seconds) {
+            process_seconds
+          }
+        }
+
+        val d = deg + min/60.0 + sec/3600.0
+        if (isNegative) Degrees(-d) else Degrees(d)
+      }
+
       /*
-         "nxcm:speed" "nxce:simpleAltitude" "nxce:latitudeDMS" "nxce:longitudeDMS" "nxcm:eta" "nxcm:flightStatus" "nxcm:nextEvent" "nxcm:nextPosition"
+         "nxcm:speed" "nxce:simpleAltitude" "nxcm:flightStatus" "nxcm:ncsmTrackData" "nxcm:ncsmRouteData" "nxcm:airlineData" "nxcm:position"
        */
 
       while (parseNextTag){
@@ -333,71 +365,47 @@ class TfmDataServiceParser (val config: Config=NoConfig)
         val len = tag.length
 
         if (isStartTag) {
-          // if eta refers to actual airlineData data we use it to set completed values // TODO check this logic
-          @inline def process_nxcm$eta: Unit = {
-            if (tagHasParent(ncsmTrackData) || tagHasParent(ncsmRouteData)) {
-              nextWPDate = readNextWPDate
-
-            } else if (tagHasParent(airlineData)) {
-              while (parseNextAttr) {
-                if (attrName == etaType){
-                  if (!(attrValue == actualValue)) return
-                } else if (attrName == timeValue) {
-                  if (date.isUndefined) date =  DateTime.parseYMDT(attrValue)
-                  if (lat.isUndefined) lat = Angle0
-                  if (lon.isUndefined) lon = Angle0
-                }
-              }
-            }
-          }
-          @inline def process_nxcm$nextEvent = if (tagHasParent(ncsmTrackData)) nextWP = readNextWP
-          @inline def process_nxcm$nextPosition = if (tagHasParent(ncsmRouteData)) nextWP = readNextWP
           @inline def process_nxcm$speed = speed = UsMilesPerHour(readDoubleContent)
           @inline def process_nxcm$flightStatus = completed = (readSliceContent == completedValue)
+          @inline def process_nxcm$ncsmTrackData = parseTrackData
+          @inline def process_nxcm$ncsmRouteData = parseRouteData
+          @inline def process_nxcm$airlineData = parseAirlineData
+          @inline def process_nxcm$position = parsePosition
           @inline def process_nxce$simpleAltitude = if (tagHasAncestor(reportedAltitude)) alt = readAlt
-          @inline def process_nxce$latitudeDMS = lat = readDMS
-          @inline def process_nxce$longitudeDMS = lon = readDMS
 
           @inline def match_nxc = { len>=3 && data(off)==110 && data(off+1)==120 && data(off+2)==99 }
           @inline def match_nxcm$ = { len>=5 && data(off+3)==109 && data(off+4)==58 }
           @inline def match_nxcm$speed = { len==10 && data(off+5)==115 && data(off+6)==112 && data(off+7)==101 && data(off+8)==101 && data(off+9)==100 }
-          @inline def match_nxcm$eta = { len==8 && data(off+5)==101 && data(off+6)==116 && data(off+7)==97 }
           @inline def match_nxcm$flightStatus = { len==17 && data(off+5)==102 && data(off+6)==108 && data(off+7)==105 && data(off+8)==103 && data(off+9)==104 && data(off+10)==116 && data(off+11)==83 && data(off+12)==116 && data(off+13)==97 && data(off+14)==116 && data(off+15)==117 && data(off+16)==115 }
-          @inline def match_nxcm$next = { len>=9 && data(off+5)==110 && data(off+6)==101 && data(off+7)==120 && data(off+8)==116 }
-          @inline def match_nxcm$nextEvent = { len==14 && data(off+9)==69 && data(off+10)==118 && data(off+11)==101 && data(off+12)==110 && data(off+13)==116 }
-          @inline def match_nxcm$nextPosition = { len==17 && data(off+9)==80 && data(off+10)==111 && data(off+11)==115 && data(off+12)==105 && data(off+13)==116 && data(off+14)==105 && data(off+15)==111 && data(off+16)==110 }
-          @inline def match_nxce$ = { len>=5 && data(off+3)==101 && data(off+4)==58 }
-          @inline def match_nxce$simpleAltitude = { len==19 && data(off+5)==115 && data(off+6)==105 && data(off+7)==109 && data(off+8)==112 && data(off+9)==108 && data(off+10)==101 && data(off+11)==65 && data(off+12)==108 && data(off+13)==116 && data(off+14)==105 && data(off+15)==116 && data(off+16)==117 && data(off+17)==100 && data(off+18)==101 }
-          @inline def match_nxce$l = { len>=6 && data(off+5)==108 }
-          @inline def match_nxce$latitudeDMS = { len==16 && data(off+6)==97 && data(off+7)==116 && data(off+8)==105 && data(off+9)==116 && data(off+10)==117 && data(off+11)==100 && data(off+12)==101 && data(off+13)==68 && data(off+14)==77 && data(off+15)==83 }
-          @inline def match_nxce$longitudeDMS = { len==17 && data(off+6)==111 && data(off+7)==110 && data(off+8)==103 && data(off+9)==105 && data(off+10)==116 && data(off+11)==117 && data(off+12)==100 && data(off+13)==101 && data(off+14)==68 && data(off+15)==77 && data(off+16)==83 }
+          @inline def match_nxcm$ncsm = { len>=9 && data(off+5)==110 && data(off+6)==99 && data(off+7)==115 && data(off+8)==109 }
+          @inline def match_nxcm$ncsmTrackData = { len==18 && data(off+9)==84 && data(off+10)==114 && data(off+11)==97 && data(off+12)==99 && data(off+13)==107 && data(off+14)==68 && data(off+15)==97 && data(off+16)==116 && data(off+17)==97 }
+          @inline def match_nxcm$ncsmRouteData = { len==18 && data(off+9)==82 && data(off+10)==111 && data(off+11)==117 && data(off+12)==116 && data(off+13)==101 && data(off+14)==68 && data(off+15)==97 && data(off+16)==116 && data(off+17)==97 }
+          @inline def match_nxcm$airlineData = { len==16 && data(off+5)==97 && data(off+6)==105 && data(off+7)==114 && data(off+8)==108 && data(off+9)==105 && data(off+10)==110 && data(off+11)==101 && data(off+12)==68 && data(off+13)==97 && data(off+14)==116 && data(off+15)==97 }
+          @inline def match_nxcm$position = { len==13 && data(off+5)==112 && data(off+6)==111 && data(off+7)==115 && data(off+8)==105 && data(off+9)==116 && data(off+10)==105 && data(off+11)==111 && data(off+12)==110 }
+          @inline def match_nxce$simpleAltitude = { len==19 && data(off+3)==101 && data(off+4)==58 && data(off+5)==115 && data(off+6)==105 && data(off+7)==109 && data(off+8)==112 && data(off+9)==108 && data(off+10)==101 && data(off+11)==65 && data(off+12)==108 && data(off+13)==116 && data(off+14)==105 && data(off+15)==116 && data(off+16)==117 && data(off+17)==100 && data(off+18)==101 }
+
           if (match_nxc) {
             if (match_nxcm$) {
               if (match_nxcm$speed) {
                 process_nxcm$speed
-              } else if (match_nxcm$eta) {
-                process_nxcm$eta
               } else if (match_nxcm$flightStatus) {
                 process_nxcm$flightStatus
-              } else if (match_nxcm$next) {
-                if (match_nxcm$nextEvent) {
-                  process_nxcm$nextEvent
-                } else if (match_nxcm$nextPosition) {
-                  process_nxcm$nextPosition
+              } else if (match_nxcm$ncsm) {
+                if (match_nxcm$ncsmTrackData) {
+                  process_nxcm$ncsmTrackData
+                } else if (match_nxcm$ncsmRouteData) {
+                  process_nxcm$ncsmRouteData
                 }
+              } else if (match_nxcm$airlineData) {
+                process_nxcm$airlineData
+              } else if (match_nxcm$position) {
+                process_nxcm$position
               }
-            } else if (match_nxce$) {
-              if (match_nxce$simpleAltitude) {
-                process_nxce$simpleAltitude
-              } else if (match_nxce$l) {
-                if (match_nxce$latitudeDMS) {
-                  process_nxce$latitudeDMS
-                } else if (match_nxce$longitudeDMS) {
-                  process_nxce$longitudeDMS
-                }
-              }
+            } else if (match_nxce$simpleAltitude) {
+              process_nxce$simpleAltitude
             }
           }
+
 
         } else { // end tag
           if (tag == trackInformation) {
