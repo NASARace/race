@@ -274,8 +274,15 @@ final class Slice (var data: Array[Byte], var offset: Int, var length: Int) {
 
   def toInt: Int = {
     val l = toLong
-    if (l > Int.MaxValue || l < Int.MinValue) throw new NumberFormatException(this.toString) // todo - not the standard behavior, which silently trucates
+    // todo - not the standard behavior, which silently trucates
+    if (l > Int.MaxValue || l < Int.MinValue) throw new NumberFormatException(this.toString)
     l.toInt
+  }
+
+  def toByte: Byte = {
+    val l = toLong
+    if (l > Byte.MaxValue || l < Byte.MinValue) throw new NumberFormatException(this.toString)
+    l.toByte
   }
 
   def toBoolean: Boolean = {

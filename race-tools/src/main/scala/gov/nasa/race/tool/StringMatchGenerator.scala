@@ -124,8 +124,10 @@ class PrefixTree {
           val ss1 = value.substring(pl)
           val ss2 = s.substring(pl)
 
-          val n2 = new Node(ss2,true,Some(this)) // no children, no sibling
-          val n1 = new Node(ss1,true,Some(this),firstChild,Some(n2))
+          val n2 = new Node(ss2,true,Some(this)) // the added node - no children, no sibling
+          val n1 = new Node(ss1,isWord,Some(this),firstChild,Some(n2)) // split off part of current node inherits children
+
+          if (firstChild.isDefined) firstChild.get.reparentSiblings(Some(n1))
 
           // parent does not change
           isWord = false
@@ -154,6 +156,11 @@ class PrefixTree {
           // nextSibling does not change
         }
       }
+    }
+
+    @tailrec final def reparentSiblings (newParent: Option[Node]): Unit = {
+      parent = newParent
+      if (nextSibling.isDefined) nextSibling.get.reparentSiblings(newParent)
     }
 
     @tailrec final def replaceSibling(oldNode: Node, newNode: Node): Unit = {
@@ -253,7 +260,7 @@ object StringMatchGenerator {
   def generateProcessor (node: PrefixTree#Node): Unit = {
     if (node.isWord) {
       val fullValue = node.fullValue
-      println(s"""    @inline def process_${methodName(fullValue)} = { println("$fullValue") }""")
+      println(s"""    @inline def process_${methodName(fullValue)} = println("$fullValue")""")
     }
   }
 

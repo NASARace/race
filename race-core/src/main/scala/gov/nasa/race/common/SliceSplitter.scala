@@ -27,7 +27,7 @@ import gov.nasa.race.common.inlined.Slice
   * substring. This means a leading separator (",...") is reported as an empty Slice, a trailing separator ("...,")
   * is not (same as Java's String.split)
   */
-class SliceSplitter (val sep: Byte, var src: Slice) extends Iterator[Slice] {
+class SliceSplitter (var sep: Byte, var src: Slice) extends Iterator[Slice] {
   val subSlice: Slice = new Slice(src.data,0,0)
   var idx = src.offset
   var limit = src.offset + src.length
@@ -39,6 +39,11 @@ class SliceSplitter (val sep: Byte, var src: Slice) extends Iterator[Slice] {
     subSlice.set(newSrc.data,0,0)
     idx = src.offset
     limit = src.offset + src.length
+  }
+
+  def setSeparator (newSep: Byte): Unit = {
+    sep = newSep
+    subSlice.length = 0
   }
 
   final def hasNext: Boolean = {

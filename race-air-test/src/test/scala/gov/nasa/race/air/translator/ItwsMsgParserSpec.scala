@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, United States Government, as represented by the
+ * Copyright (c) 2019, United States Government, as represented by the
  * Administrator of the National Aeronautics and Space Administration.
  * All rights reserved.
  *
@@ -14,22 +14,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package gov.nasa.race.air.translator
 
 import java.awt.image.{DataBuffer, IndexColorModel}
-import java.io.File
 
 import gov.nasa.race.air.PrecipImage
-import javax.imageio.ImageIO
-import gov.nasa.race.util.FileUtils._
 import gov.nasa.race.test.RaceSpec
+import gov.nasa.race.util.FileUtils.fileContentsAsUTF8String
+import javax.imageio.ImageIO
 import org.scalatest.flatspec.AnyFlatSpec
 
 /**
- * unit tests for ITWSprecip2PrecipData translator
- */
-class ITWSprecip2PrecipImageSpec extends AnyFlatSpec with RaceSpec {
+  * reg test for ItwsMsgParser
+  */
+class ItwsMsgParserSpec extends AnyFlatSpec with RaceSpec {
 
   // create a color model we can compare with the reference ITWSGriddedConverter from Lincoln Labs
   def createColorModel = {
@@ -56,30 +54,33 @@ class ITWSprecip2PrecipImageSpec extends AnyFlatSpec with RaceSpec {
   }
 
   mkTestOutputDir
-  ITWSprecip2PrecipImage.colorModel = createColorModel
+
+  ItwsMsgParser.colorModel = createColorModel
   val xmlMsg = fileContentsAsUTF8String(baseResourceFile("itws-precip.xml"))
 
-
-  behavior of "ITWSprecip2PrecipImage translator"
-
-  "translator" should "reproduce known image data" in {
-    val translator = new ITWSprecip2PrecipImage
-    val res: Option[PrecipImage] = translator.translate(xmlMsg)
+  "a ItwsMsgParser" should "reproduce known image data" in {
+    val translator = new ItwsMsgParser
+    val res = translator.translate(xmlMsg)
     println(s"result: $res")
 
-    val img = res.get.img
-    val raster = img.getData
-    ImageIO.write(img, "PNG", testOutputFile("itws-precip.png"))
+    res match {
+      case Some(pi:PrecipImage) =>
+        val img = pi.img
+        val raster = img.getData
+        ImageIO.write(img, "PNG", testOutputFile("itws-precip.png"))
 
-    val imgRef = ImageIO.read(baseResourceFile("itws-precip.png"))
-    val rasterRef = imgRef.getData
+        val imgRef = ImageIO.read(baseResourceFile("itws-precip.png"))
+        val rasterRef = imgRef.getData
 
-    val w = raster.getWidth
-    val h = raster.getHeight
-    println(s"..checking dimensions $w,$h")
-    raster.getBounds shouldBe( rasterRef.getBounds)
+        val w = raster.getWidth
+        val h = raster.getHeight
+        println(s"..checking dimensions $w,$h")
+        raster.getBounds shouldBe( rasterRef.getBounds)
 
-    println(s"..checking data elements")
-    raster.getDataElements(0,0,w,h,null) shouldBe( rasterRef.getDataElements(0,0,w,h,null))
+        println(s"..checking data elements")
+        raster.getDataElements(0,0,w,h,null) shouldBe( rasterRef.getDataElements(0,0,w,h,null))
+
+      case other => fail(s"wrong result object: $other")
+    }
   }
 }
