@@ -302,6 +302,14 @@ abstract class XmlPullParser2  {
 
   @inline final def parseSingleContentString = state.parseContent && getNextContentString
 
+  // call from start tag match to parse all child-elements with provided function
+  def parseElement (f: (Array[Byte],Int,Int)=>Unit): Unit = {
+    val endLevel = depth-1
+    while (parseNextTag && depth > endLevel) {
+      f(data, tag.offset, tag.length)
+    }
+  }
+
   @inline final def stopParsing: Unit = {
     state = finishedState
   }
@@ -372,17 +380,24 @@ abstract class XmlPullParser2  {
   def getContent: String = {
     val contentStrings = this.contentStrings
 
-    @inline def contentLength: Int = {
-      var length = 0
-      var j = 0
-      while (j < contentStrings.top) {
-        length += contentStrings.lengths(j)
-        j += 1
-      }
-      length
-    }
+    if (contentStrings.top < 0) {
+      ""
+    } else if (contentStrings.top == 0) { // only one range
+      val off = contentStrings.offsets(0)
+      val len = contentStrings.lengths(0)
+      new String(data,off,len)
 
-    if (contentStrings.nonEmpty) {
+    } else { // multiple ranges
+      @inline def contentLength: Int = {
+        var length = 0
+        var j = 0
+        while (j < contentStrings.top) {
+          length += contentStrings.lengths(j)
+          j += 1
+        }
+        length
+      }
+
       val len = contentLength
       val bs = new Array[Byte](len)
       var i = 0
@@ -390,13 +405,13 @@ abstract class XmlPullParser2  {
 
       while (j < contentStrings.top) {
         val l = contentStrings.lengths(j)
-        System.arraycopy(data,contentStrings.offsets(j), bs, i, l)
+        System.arraycopy(data, contentStrings.offsets(j), bs, i, l)
         i += l
         j += 1
       }
 
-      new String(bs,StandardCharsets.UTF_8 )
-    } else ""
+      new String(bs, StandardCharsets.UTF_8)
+    }
   }
 
   //--- path query (e.g. to disambiguate elements at different nesting levels)
