@@ -32,12 +32,12 @@ class UTF8Buffer (initBufSize: Int = 8192) {
   protected val enc = StandardCharsets.UTF_8.newEncoder
 
   protected def growBuf: Unit = {
-    val newBuf = new Array[Byte](data.length*2)
-    val newBB = ByteBuffer.wrap(newBuf)
+    val newData = new Array[Byte](data.length*2)
+    val newBB = ByteBuffer.wrap(newData)
+    bb.rewind
     newBB.put(bb)
     bb = newBB
-
-    data = newBuf
+    data = newData
   }
 
   def encode (s: String): Int = {

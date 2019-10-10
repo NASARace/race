@@ -17,7 +17,7 @@
 package gov.nasa.race.air.translator
 
 import com.typesafe.config.Config
-import gov.nasa.race.air.TFMTrack
+import gov.nasa.race.air.{TFMTrack, TFMTracks}
 import gov.nasa.race.common.StringXmlPullParser2
 import gov.nasa.race.config.{ConfigurableTranslator, NoConfig}
 import gov.nasa.race.common.inlined.Slice
@@ -32,6 +32,7 @@ import gov.nasa.race.uom.Angle._
 import gov.nasa.race.uom.Length._
 import gov.nasa.race.uom.Speed._
 
+import scala.collection.Seq
 import scala.collection.mutable.ArrayBuffer
 import scala.Double.NaN
 
@@ -85,7 +86,7 @@ class TfmDataServiceParser (val config: Config=NoConfig)
         if (tag == fltdMessage) parseFltdMessage(tracks)
       } else { // end tag
         if (tag == tfmDataService) {
-          if (tracks.nonEmpty) return Some(tracks) else None
+          if (tracks.nonEmpty) return Some(TFMTracks(tracks)) else None
         }
       }
     }
@@ -422,7 +423,7 @@ class TfmDataServiceParser (val config: Config=NoConfig)
               }
               tracks += track
             } else {
-              println(s"rejected $cs $date $lat $lon $alt $nextWP")
+              //println(s"rejected $cs $date $lat $lon $alt $nextWP")
             }
             return
           }

@@ -29,7 +29,7 @@ import org.scalatest.flatspec.AnyFlatSpec
   */
 class AsdexMsg2AsdexTracksSpec extends AnyFlatSpec with RaceSpec {
 
-  val xmlMsg = fileContentsAsUTF8String(baseResourceFile("asdex.xml"))
+  val xmlMsg = fileContentsAsUTF8String(baseResourceFile("asdexMsg.xml"))
 
   behavior of "AsdexMsg2AirportTracks translator"
 

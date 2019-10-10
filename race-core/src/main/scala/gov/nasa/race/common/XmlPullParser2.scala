@@ -118,7 +118,7 @@ abstract class XmlPullParser2  {
             path.pop
             state = if (path.isEmpty) finishedState else nextState
           } else {
-            throw new XmlParseException(s"unbalanced end tag around ${context(i0)}")
+            throw new XmlParseException(s"unbalanced end tag '$tag'")
           }
         }
         true
@@ -436,7 +436,7 @@ abstract class XmlPullParser2  {
 
 
   @inline final def isTopTag (t: Slice): Boolean = {
-    t.equals(data,path.topOffset,path.topLength)
+    (path.top >= 0) && t.equals(data,path.topOffset,path.topLength)
   }
 
   def seekRootTag: Int = {

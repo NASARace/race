@@ -16,12 +16,10 @@
  */
 package gov.nasa.race.air.translator
 
-import gov.nasa.race.air.TFMTrack
+import gov.nasa.race.air.{TFMTrack, TFMTracks}
 import gov.nasa.race.test.RaceSpec
 import gov.nasa.race.util.FileUtils.fileContentsAsUTF8String
 import org.scalatest.flatspec.AnyFlatSpec
-
-import scala.collection.Seq
 
 /**
   * reg test for TfmDataServiceParser
@@ -34,20 +32,17 @@ class TfmDataServiceParserSpec extends AnyFlatSpec with RaceSpec {
 
     val res = translator.translate(xmlMsg)
     res match {
-      case Some(list: Seq[_]) =>
-        list.foreach { e =>
-          println(e)
-          e match {
-            case t: TFMTrack =>
-              t.cs match {
-                case "N407CD" => assert(t.position.altMeters.round == 1951)
-                case "ENY3608" => assert(t.speed.toMetersPerSecond.round == 259)
-                case _ => // ignore
-              }
-            case other => fail(s"parsed item not a TFMTrack object: $other")
+      case Some(tfmTracks: TFMTracks) =>
+        val tracks = tfmTracks.tracks
+        tracks.foreach { t =>
+          println(t)
+          t.cs match {
+            case "N407CD" => assert(t.position.altMeters.round == 1951)
+            case "ENY3608" => assert(t.speed.toMetersPerSecond.round == 259)
+            case _ => // ignore
           }
         }
-        assert(list.size == 36)
+        assert(tracks.size == 36)
       case other => fail(s"wrong TfmDataServiceParser result: $other")
     }
   }

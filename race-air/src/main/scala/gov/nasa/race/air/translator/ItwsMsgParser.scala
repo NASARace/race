@@ -275,6 +275,7 @@ class ItwsMsgParser (val config: Config=NoConfig)
   // read content containing list of run length encoded pairs:  <prcp_grid_compressed>15,608 0,24 15,337 0,38 ... </prcp_grid_compressed>
   def readImage (scanLine: Array[Byte], img: BufferedImage): Unit = {
     val slice = readSliceContent
+
     if (slice.nonEmpty){
       val raster = img.getRaster
       val width = img.getWidth

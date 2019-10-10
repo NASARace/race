@@ -26,7 +26,7 @@ import scala.collection.Seq
 /**
   * track report for airports (e.g. generated from SWIM asdexMsg messages)
   */
-class AsdexTracks(val airport: String, val tracks: Seq[AsdexTrack])  extends TrackListMessage {
+case class AsdexTracks(val airport: String, val tracks: Seq[AsdexTrack])  extends TrackListMessage {
   override def toString = {
     val d = if (!tracks.isEmpty) tracks.head.date.format_Hms_z else "?"
     s"AsdexTracks{$airport,date=$d,nTracks=${tracks.size}}"

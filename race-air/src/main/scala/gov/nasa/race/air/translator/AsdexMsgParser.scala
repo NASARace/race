@@ -19,7 +19,7 @@ package gov.nasa.race.air.translator
 import java.lang.Double.isFinite
 
 import com.typesafe.config.Config
-import gov.nasa.race.air.AsdexTrack
+import gov.nasa.race.air.{AsdexTrack, AsdexTracks}
 import gov.nasa.race.air.AsdexTrack._
 import gov.nasa.race.common.StringXmlPullParser2
 import gov.nasa.race.common.inlined.Slice
@@ -89,7 +89,7 @@ class AsdexMsgParser (val config: Config=NoConfig)
       }
     }
 
-    if (tracks.nonEmpty) Some(tracks) else None
+    if (tracks.nonEmpty) Some(AsdexTracks(airportId,tracks)) else None
   }
 
   protected def parsePositionReport (airportId: String, tracks: ArrayBuffer[AsdexTrack]): Unit = {

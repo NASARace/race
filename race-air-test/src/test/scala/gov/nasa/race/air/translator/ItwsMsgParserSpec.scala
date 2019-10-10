@@ -83,4 +83,11 @@ class ItwsMsgParserSpec extends AnyFlatSpec with RaceSpec {
       case other => fail(s"wrong result object: $other")
     }
   }
+
+  "a ItwsMsgParser" should "parse a well formed itwsMsg" in {
+    val xmlMsg = fileContentsAsUTF8String(baseResourceFile("itwsMsg.xml"))
+    val translator = new ItwsMsgParser
+    val res = translator.translate(xmlMsg)
+    println(s"result: $res")
+  }
 }

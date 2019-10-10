@@ -23,6 +23,8 @@ import gov.nasa.race.track.TrackedObject
 import gov.nasa.race.uom.Angle._
 import gov.nasa.race.uom._
 
+import scala.collection.Seq
+
 case class TFMTracks (tracks: Seq[TFMTrack]) {
   override def toString = {
     val sb = new StringBuilder

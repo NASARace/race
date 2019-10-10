@@ -16,7 +16,7 @@
  */
 package gov.nasa.race.air.translator
 
-import gov.nasa.race.air.AsdexTrack
+import gov.nasa.race.air.{AsdexTrack, AsdexTracks}
 import gov.nasa.race.test.RaceSpec
 import gov.nasa.race.util.FileUtils.fileContentsAsUTF8String
 import org.scalatest.flatspec.AnyFlatSpec
@@ -33,21 +33,18 @@ class AsdexMsgParserSpec extends AnyFlatSpec with RaceSpec {
   "a AsdexMsgParser" should "reproduce known values" in {
     val translator = new AsdexMsgParser
     translator.translate(xmlMsg) match {
-      case Some(list: Seq[_]) =>
-        list.foreach { e=>
-          println(e)
-          // do some sample value checks
-          e match {
-            case track: AsdexTrack =>
-              track.id match {
-                case "3382" => assert( track.position.altMeters.round == 518)
-                case "1992" => assert (track.position.altitude.isUndefined)
-                case "1833" => assert (track.heading.toDegrees.round == 309)
-                case _ => // ignore
-              }
-            case other => fail(s"item not a AsdexTrack")
+      case Some(AsdexTracks(airport,tracks)) =>
+        tracks.foreach { t=>
+          println(t)
+          t.id match {
+            case "3382" => assert( t.position.altMeters.round == 518)
+            case "1992" => assert (t.position.altitude.isUndefined)
+            case "1833" => assert (t.heading.toDegrees.round == 309)
+            case _ => // ignore
           }
         }
+        assert(airport == "KSFO")
+        assert(tracks.size == 25)
 
       case other => fail(s"parser failed to produce result: $other")
     }

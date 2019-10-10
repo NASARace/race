@@ -128,7 +128,7 @@ object Internalizer {
   */
 object ASCII8Internalizer {
 
-  private val map = new mutable.LongMap[String](8192)
+  private val map = new mutable.LongMap[String](16384) // (8192)  //causes AIOOB in scala LongMap.getOrElseUpdate ?
 
   def size: Int = map.size
   // todo - maybe add a few other map accessors
