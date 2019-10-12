@@ -143,14 +143,14 @@ class ItwsMsgParser (val config: Config=NoConfig)
       if (isStartTag) {
         def readDegreesWithPrecision: Angle = {
           if (parseAttr(precision)){
-            Degrees(attrValue.toDouble * readDoubleContent)
+            return Degrees(attrValue.toDouble * readDoubleContent)
           }
           Angle.UndefinedAngle
         }
 
         def readMetersWithUnit: Length = {
           if (parseAttr(unit)) {
-            if (attrValue == meters) Meters(readIntContent)
+            if (attrValue == meters) return Meters(readIntContent)
           }
           Length.UndefinedLength
         }

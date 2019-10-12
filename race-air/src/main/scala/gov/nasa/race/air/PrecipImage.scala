@@ -45,7 +45,7 @@ case class PrecipImage (id: String, product: Int, site: String, genDate: DateTim
                         img: BufferedImage) {
 
   //override def toString = s"PrecipImage{$site-$product, ${genDate.toString("yyyy/MM/dd HH:mm:ss")} to ${expDate.toString("HH:mm:ss")}, max:$maxPrecipLevel"
-  override def toString = s"PrecipImage{$site-$product, ${genDate.format_yMd_Hms_z} to ${expDate.format_Hms_z}, max:$maxPrecipLevel"
+  override def toString = s"PrecipImage{$site-$product, ${genDate.format_yMd_Hms_z} to ${expDate.format_Hms_z}, $trpPos, $xoffset, $yoffset w=$width, h=$height, max:$maxPrecipLevel"
 
   def copyImage: BufferedImage = {
     val cm = img.getColorModel

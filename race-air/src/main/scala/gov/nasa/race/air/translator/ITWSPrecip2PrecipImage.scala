@@ -137,11 +137,13 @@ class ITWSprecip2PrecipImage (val config: Config=NoConfig) extends XmlPullParser
       }
 
       // <2do> do some sanity checks here
-      Some( PrecipImage( id, product, itwsSite,
+      val precipImage = PrecipImage( id, product, itwsSite,
                          genDate, expDate,
                          GeoPosition(trpLat,trpLon), xoffset, yoffset, rotation,
                          dx * nCols, dy * nRows,
-                         maxPrecipLevel, img))
+                         maxPrecipLevel, img)
+      Some(precipImage)
+
     } catch {
       case t: Throwable =>
         //t.printStackTrace();
