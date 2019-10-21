@@ -19,22 +19,18 @@ package gov.nasa.race.air.translator
 import com.typesafe.config.Config
 import gov.nasa.race.air.{TFMTrack, TFMTracks}
 import gov.nasa.race.common.StringXmlPullParser2
-import gov.nasa.race.config.{ConfigurableTranslator, NoConfig}
 import gov.nasa.race.common.inlined.Slice
 import gov.nasa.race.config.ConfigUtils._
+import gov.nasa.race.config.{ConfigurableTranslator, NoConfig}
 import gov.nasa.race.geo.GeoPosition
 import gov.nasa.race.track.TrackedObject
-import gov.nasa.race.uom.Angle.UndefinedAngle
-import gov.nasa.race.uom.Length.UndefinedLength
-import gov.nasa.race.uom.Speed.UndefinedSpeed
+import gov.nasa.race.uom.Angle.{UndefinedAngle, _}
+import gov.nasa.race.uom.Length.{UndefinedLength, _}
+import gov.nasa.race.uom.Speed.{UndefinedSpeed, _}
 import gov.nasa.race.uom.{Angle, DateTime, Length, Speed}
-import gov.nasa.race.uom.Angle._
-import gov.nasa.race.uom.Length._
-import gov.nasa.race.uom.Speed._
 
-import scala.collection.Seq
-import scala.collection.mutable.ArrayBuffer
 import scala.Double.NaN
+import scala.collection.mutable.ArrayBuffer
 
 /**
   * a translator for tfmDataService (tfmdata) SWIM messages. We only process fltdMessage/trackInformation yet
