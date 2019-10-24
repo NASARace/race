@@ -22,20 +22,21 @@ import gov.nasa.race.common.inlined.Slice
 import gov.nasa.race.config.{ConfigurableTranslator, NoConfig}
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.optional
-import gov.nasa.race.track.{TrackInfo, TrackInfos}
+import gov.nasa.race.track.{TrackInfo, TrackInfoReader, TrackInfos}
 import gov.nasa.race.trajectory.{MutTrajectory, MutUSTrajectory}
 import gov.nasa.race.uom.Angle.Degrees
 import gov.nasa.race.uom.DateTime
 import gov.nasa.race.uom.DateTime.Date0
 import gov.nasa.race.uom.Length.UndefinedLength
 
+import scala.collection.Seq
 import scala.collection.mutable.ArrayBuffer
 
 /**
   * XmlPullParser2 based parser to extract TrackInfo related information from tfmDataService messages
   */
 class TfmTrackInfoParser2(val config: Config=NoConfig)
-  extends StringXmlPullParser2(config.getIntOrElse("buffer-size",200000)) with ConfigurableTranslator {
+  extends StringXmlPullParser2(config.getIntOrElse("buffer-size",200000)) with ConfigurableTranslator with TrackInfoReader {
 
   // constant tag and attr names
   val tfmDataService = Slice("ds:tfmDataService")
@@ -49,14 +50,18 @@ class TfmTrackInfoParser2(val config: Config=NoConfig)
   val equipmentQualifier = Slice("equipmentQualifier")
 
   override def translate(src: Any): Option[Any] = {
+    def optional (tInfos: Seq[TrackInfo]): Option[TrackInfos] = {
+      if (tInfos.isEmpty) None else Some(TrackInfos(tInfos))
+    }
+
     src match {
-      case s: String => parse(s)
-      case Some(s: String) => parse(s)
+      case s: String => optional( readMessage(s))
+      case Some(s: String) => optional( readMessage(s))
       case _ => None // nothing else supported yet
     }
   }
 
-  protected def parse (msg: String): Option[Any] = {
+  def readMessage (msg: String): Seq[TrackInfo] = {
     if (initialize(msg)) {
       while (parseNextTag) {
         if (isStartTag) {
@@ -64,22 +69,20 @@ class TfmTrackInfoParser2(val config: Config=NoConfig)
         }
       }
     }
-    None
+    Seq.empty[TrackInfo]
   }
 
-  protected def parseTfmDataService: Option[Any] = {
+  protected def parseTfmDataService: Seq[TrackInfo] = {
     val tInfos = new ArrayBuffer[TrackInfo](20)
 
     while (parseNextTag) {
       if (isStartTag) {
         if (tag == fltdMessage) parseFltdMessage(tInfos)
       } else { // end tag
-        if (tag == tfmDataService) {
-          if (tInfos.nonEmpty) return Some(TrackInfos(tInfos)) else None
-        }
+        if (tag == tfmDataService) return tInfos
       }
     }
-    None
+    tInfos
   }
 
   protected def parseFltdMessage (tInfos: ArrayBuffer[TrackInfo]): Unit = {
