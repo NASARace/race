@@ -129,7 +129,7 @@ abstract class BufferRecord (val size: Int, val buffer: ByteBuffer, val recStart
   }
 
   def clear: Unit = {
-    for ( i <- recordOffset until recordOffset + size) buffer.put(i,0) // it sucks there is no memset for buffers
+    for ( i <- recordOffset until recordOffset + size) buffer.put(i,0.toByte) // it sucks there is no memset for buffers, and that Scala 2.13.1 has a problem resolving ByteBuffer methods
   }
 
   def copyTo (idx: Int): Unit = {
@@ -196,7 +196,7 @@ abstract class BufferRecord (val size: Int, val buffer: ByteBuffer, val recStart
 
   // we use a packed byte as the underlying storage type since this is the smallest ByteBuffer unit
   class BooleanField (val fieldOffset: Int) extends RecordField with BooleanConvertible {
-    def := (v: Boolean): Unit = buffer.put(recordOffset + fieldOffset, if (v) 1 else 0)
+    def := (v: Boolean): Unit = buffer.put(recordOffset + fieldOffset, if (v) 1.toByte else 0.toByte) // Scala 2.13.1 / JDK 13.0.1 problem resolving ByteBuffer methods
     def toBoolean = buffer.get(recordOffset + fieldOffset) == 1
     def valueToString = toBoolean.toString
   }

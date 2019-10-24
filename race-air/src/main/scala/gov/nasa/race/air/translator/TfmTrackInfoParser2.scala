@@ -22,7 +22,7 @@ import gov.nasa.race.common.inlined.Slice
 import gov.nasa.race.config.{ConfigurableTranslator, NoConfig}
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.optional
-import gov.nasa.race.track.TrackInfo
+import gov.nasa.race.track.{TrackInfo, TrackInfos}
 import gov.nasa.race.trajectory.{MutTrajectory, MutUSTrajectory}
 import gov.nasa.race.uom.Angle.Degrees
 import gov.nasa.race.uom.DateTime
@@ -34,7 +34,7 @@ import scala.collection.mutable.ArrayBuffer
 /**
   * XmlPullParser2 based parser to extract TrackInfo related information from tfmDataService messages
   */
-class TfmTrackInfoParser (val config: Config=NoConfig)
+class TfmTrackInfoParser2(val config: Config=NoConfig)
   extends StringXmlPullParser2(config.getIntOrElse("buffer-size",200000)) with ConfigurableTranslator {
 
   // constant tag and attr names
@@ -75,7 +75,7 @@ class TfmTrackInfoParser (val config: Config=NoConfig)
         if (tag == fltdMessage) parseFltdMessage(tInfos)
       } else { // end tag
         if (tag == tfmDataService) {
-          if (tInfos.nonEmpty) return Some(tInfos.toSeq) else None
+          if (tInfos.nonEmpty) return Some(TrackInfos(tInfos)) else None
         }
       }
     }
@@ -99,48 +99,39 @@ class TfmTrackInfoParser (val config: Config=NoConfig)
 
     val data = this.data
 
-    def processAttrs: Unit = {
+    def fltdAttrs (data: Array[Byte], off: Int, len: Int): Unit = {
       // acid flightRef arrArpt depArpt
-      while (parseNextAttr) {
-        val off = attrName.offset
-        val len = attrName.length
 
-        @inline def process_acid = cs = attrValue.intern
-        @inline def process_flightRef = trackRef = attrValue.intern
-        @inline def process_arrArpt = arrArpt = attrValue.intern
-        @inline def process_depArpt = depArpt = attrValue.intern
+      @inline def process_acid = cs = attrValue.intern
+      @inline def process_flightRef = trackRef = attrValue.intern
+      @inline def process_arrArpt = arrArpt = attrValue.intern
+      @inline def process_depArpt = depArpt = attrValue.intern
 
-        @inline def match_a = { len>=1 && data(off)==97 }
-        @inline def match_acid = { len==4 && data(off+1)==99 && data(off+2)==105 && data(off+3)==100 }
-        @inline def match_arrArpt = { len==7 && data(off+1)==114 && data(off+2)==114 && data(off+3)==65 && data(off+4)==114 && data(off+5)==112 && data(off+6)==116 }
-        @inline def match_flightRef = { len==9 && data(off)==102 && data(off+1)==108 && data(off+2)==105 && data(off+3)==103 && data(off+4)==104 && data(off+5)==116 && data(off+6)==82 && data(off+7)==101 && data(off+8)==102 }
-        @inline def match_depArpt = { len==7 && data(off)==100 && data(off+1)==101 && data(off+2)==112 && data(off+3)==65 && data(off+4)==114 && data(off+5)==112 && data(off+6)==116 }
+      @inline def match_a = { len>=1 && data(off)==97 }
+      @inline def match_acid = { len==4 && data(off+1)==99 && data(off+2)==105 && data(off+3)==100 }
+      @inline def match_arrArpt = { len==7 && data(off+1)==114 && data(off+2)==114 && data(off+3)==65 && data(off+4)==114 && data(off+5)==112 && data(off+6)==116 }
+      @inline def match_flightRef = { len==9 && data(off)==102 && data(off+1)==108 && data(off+2)==105 && data(off+3)==103 && data(off+4)==104 && data(off+5)==116 && data(off+6)==82 && data(off+7)==101 && data(off+8)==102 }
+      @inline def match_depArpt = { len==7 && data(off)==100 && data(off+1)==101 && data(off+2)==112 && data(off+3)==65 && data(off+4)==114 && data(off+5)==112 && data(off+6)==116 }
 
-        if (match_a) {
-          if (match_acid) {
-            process_acid
-          } else if (match_arrArpt) {
-            process_arrArpt
-          }
-        } else if (match_flightRef) {
-          process_flightRef
-        } else if (match_depArpt) {
-          process_depArpt
+      if (match_a) {
+        if (match_acid) {
+          process_acid
+        } else if (match_arrArpt) {
+          process_arrArpt
         }
-
+      } else if (match_flightRef) {
+        process_flightRef
+      } else if (match_depArpt) {
+        process_depArpt
       }
     }
 
     def arrivalAirport (data: Array[Byte], off: Int, len: Int) = {
-      while (parseNextTag) {
-        if (isStartTag && tag == airport) arrArpt = readInternedStringContent
-      }
+      if (tag == airport) arrArpt = readInternedStringContent
     }
 
     def departureAirport (data: Array[Byte], off: Int, len: Int): Unit = {
-      while (parseNextTag) {
-        if (isStartTag && tag == airport) depArpt = readInternedStringContent
-      }
+      if (tag == airport) depArpt = readInternedStringContent
     }
 
     def readWaypoint: Unit = {
@@ -193,12 +184,15 @@ class TfmTrackInfoParser (val config: Config=NoConfig)
       var isEstimate = true
       var dt = DateTime.UndefinedDateTime
       while (parseNextAttr) {
-        if (attrName == etdType) {
+        if (attrName == etaType) {
           if (attrValue == actual) isEstimate = false
-        } else if (attrName == timeValue) dt = DateTime.parseYMDT(attrValue)
+        } else if (attrName == timeValue) {
+          dt = DateTime.parseYMDT(attrValue)
+        }
       }
 
       if (isEstimate) eta = dt else ata = dt
+      //println(s"@@@ $cs -> $eta")
     }
 
     def readAircraftSpecs: Unit = {
@@ -255,8 +249,8 @@ class TfmTrackInfoParser (val config: Config=NoConfig)
       }
     }
 
-    processAttrs
-    parseElement(fltdMessage)
+    parseAttrs(fltdAttrs)
+    parseElementStartTags(fltdMessage)
 
     val ti = new TrackInfo( trackRef, cs,
       optional(trackCat), optional(trackType),

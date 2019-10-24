@@ -396,7 +396,9 @@ class DateTime protected[uom](val millis: Long) extends AnyVal
     f"$hour%02d:$minute%02d:$second%02d $LocalZoneIdName"
   }
 
-  override def toString: String = format_yMd_HmsS_z
+  override def toString: String = {
+    if (millis != UNDEFINED_MILLIS) format_yMd_HmsS_z else "undefined"
+  }
 
   //.. and possibly more formatters
 }

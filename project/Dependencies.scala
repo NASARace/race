@@ -36,14 +36,14 @@ object Dependencies {
 
   //--- slf4j
   // NOTE - slf4j 1.8 now uses ServiceProvider and logback has not caught up as of 12/01/17
-  val slf4jSimple = "org.slf4j" % "slf4j-simple" % "2.0.0-alpha0" // "1.7.26"
+  val slf4jSimple = "org.slf4j" % "slf4j-simple" % "2.0.0-alpha1" // "1.7.26"
 
   //--- logback
   // does not support slf4j 1.8 (provider) yet
-  val logback = "ch.qos.logback" % "logback-classic" %  "1.3.0-alpha4" // "1.2.3"
+  val logback = "ch.qos.logback" % "logback-classic" %  "1.3.0-alpha5" // "1.2.3"
 
   //--- Typesafe config
-  val typesafeConfig = "com.typesafe" % "config" % "1.3.3"  // akka still depends on 1.3.3
+  val typesafeConfig = "com.typesafe" % "config" % "1.4.0"  // akka still depends on 1.3.3
 
   //--- Scala parser combinators (https://github.com/scala/scala-parser-combinators)
   val scalaParser = "org.scala-lang.modules" %% "scala-parser-combinators" % "1.1.2"
@@ -65,20 +65,20 @@ object Dependencies {
   // val breezeNative = "org.scalanlp" %% "breeze-natives" % "0.13.2"
 
   //--- scalaTest
-  val scalaTest = "org.scalatest" %% "scalatest" % "3.1.0-SNAP13"
+  val scalaTest = "org.scalatest" %% "scalatest" % "3.2.0-M1"
   val flexmarkAll = "com.vladsch.flexmark" % "flexmark-all" % "0.35.10" // should be a scalaTest dependency but 3.1.0-SNAP13 is missing it
-  val scalaTestPlus = "org.scalatestplus" %% "scalatestplus-scalacheck" % "1.0.0-SNAP8"
+  val scalaTestPlus = "org.scalatestplus" %% "scalatestplus-scalacheck" % "3.1.0.0-RC2"
 
   val pegDown = "org.pegdown" % "pegdown" % "1.6.0" % Test
 
   //--- scalaCheck
-  val scalaCheck = "org.scalacheck" %% "scalacheck" % "1.14.0" % Test
+  val scalaCheck = "org.scalacheck" %% "scalacheck" % "1.14.2" % Test
 
   val defaultLibs =  Seq(logback,typesafeConfig)
   val defaultTestLibs = Seq(scalaTest,scalaTestPlus,flexmarkAll,scalaCheck,pegDown)
 
   //--- Circe Json support
-  val circeVersion = "0.12.0-RC4"
+  val circeVersion = "0.12.3"
   val circeCore = "io.circe" %% "circe-core" % circeVersion
   val circeGeneric = "io.circe" %% "circe-generic" % circeVersion
   val circeParser = "io.circe" %% "circe-parser" % circeVersion
@@ -100,7 +100,7 @@ object Dependencies {
   //.. and possibly extensions for Tree and jfreechart
 
   //--- RSyntaxTextArea (TextEditor with syntax support)
-  val rsTextArea = "com.fifesoft" % "rsyntaxtextarea" % "3.0.3"
+  val rsTextArea = "com.fifesoft" % "rsyntaxtextarea" % "3.0.4"
 
   //--- the jfreechart plot and chart lib
   val jfreeChart = "org.jfree" % "jfreechart" % "1.5.0"
@@ -111,10 +111,10 @@ object Dependencies {
   val jsch = "com.jcraft" % "jsch" % "0.1.55"
 
   //--- argon2 based password hashes ()
-  val argon2 = "de.mkammerer" % "argon2-jvm" % "2.5"
+  val argon2 = "de.mkammerer" % "argon2-jvm" % "2.6"
 
   //--- Akka
-  val akkaVersion = "2.5.25"
+  val akkaVersion = "2.5.26"
   val akkaOrg = "com.typesafe.akka"
 
   val akkaActor = akkaOrg %% "akka-actor" % akkaVersion
@@ -124,7 +124,7 @@ object Dependencies {
   val akkaTestkit = akkaOrg %% "akka-testkit" % akkaVersion
   val akkaMultiNodeTestkit = akkaOrg %% "akka-multi-node-testkit" % akkaVersion // % "test,multi-jvm"
 
-  val akkaHttp = akkaOrg %% "akka-http" % "10.1.9"
+  val akkaHttp = akkaOrg %% "akka-http" % "10.1.10"
 
   val akkaAll = Seq(akkaActor)
 
@@ -146,7 +146,7 @@ object Dependencies {
   // note - kafka still uses the old log4j
 
   val log4j = "org.apache.logging.log4j" % "log4j" % "2.10.0"
-  val log4jOverSlf4j = "org.slf4j" % "log4j-over-slf4j" % "1.8.0-beta4"
+  val log4jOverSlf4j = "org.slf4j" % "log4j-over-slf4j" % "2.0.0-alpha1"
 
   //--- ZooKeeper
   val zookeeper = "org.apache.zookeeper" % "zookeeper" % "3.5.5" excludeAll(

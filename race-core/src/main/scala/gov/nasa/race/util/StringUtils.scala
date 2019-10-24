@@ -176,7 +176,7 @@ object StringUtils {
     val len = Math.min(length,bs.length)
     buffer.position(pos)
     buffer.put(bs,0,len)
-    if (len < length) buffer.put(pos + len, 0)
+    if (len < length) buffer.put(pos + len, 0.toByte) // Scala 2.13.1 / JDK 13.0.1 problem resolving ByteBuffer methods
   }
 
   def lastPathElement (s: String): String = {

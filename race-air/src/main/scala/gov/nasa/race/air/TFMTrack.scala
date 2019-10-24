@@ -25,6 +25,9 @@ import gov.nasa.race.uom._
 
 import scala.collection.Seq
 
+/**
+  * helper type to support matching
+  */
 case class TFMTracks (tracks: Seq[TFMTrack]) {
   override def toString = {
     val sb = new StringBuilder

@@ -20,8 +20,8 @@ package gov.nasa.race.test
 import akka.remote.testconductor.RoleName
 import akka.remote.testkit._
 import akka.testkit.ImplicitSender
-import gov.nasa.race.core.RaceActorSystem
-import org.scalatest.{BeforeAndAfterAll, Matchers, Suite}
+import org.scalatest.{BeforeAndAfterAll, Suite}
+import org.scalatest.matchers.should.Matchers
 
 import scala.concurrent.duration.FiniteDuration
 

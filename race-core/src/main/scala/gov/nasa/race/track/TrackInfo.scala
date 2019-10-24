@@ -21,6 +21,21 @@ import gov.nasa.race._
 import gov.nasa.race.trajectory.{Trajectory=>Traj}
 import gov.nasa.race.uom.DateTime
 
+import scala.collection.Seq
+
+/**
+  * helper type to support matching
+  */
+case class TrackInfos (tInfos: Seq[TrackInfo]) {
+  override def toString = {
+    val sb = new StringBuilder
+    sb.append("TrackInfos = [")
+    tInfos.foreach( t => { sb.append("\n"); sb.append(t) } )
+    sb.append(" ]")
+    sb.toString()
+  }
+}
+
 /**
   * meta info for tracks, such as departure and arrival location and times, flight plans etc.
   * This is supposed to be an accumulator that can be updated from different sources to collect all

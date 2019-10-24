@@ -21,6 +21,7 @@ import java.io.File
 
 import com.typesafe.config.{Config, ConfigFactory}
 import org.scalatest._
+import org.scalatest.matchers.should.Matchers
 import org.scalatestplus.scalacheck.ScalaCheckPropertyChecks
 
 import scala.reflect.ClassTag

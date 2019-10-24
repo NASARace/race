@@ -26,9 +26,6 @@ import scala.annotation.switch
 
 class XmlParseException (msg: String) extends RuntimeException(msg)
 
-object TagAction {
-  def apply (s: String)(action: => Unit) = (Slice(s), ()=>{action})
-}
 
 
 /**
@@ -36,6 +33,8 @@ object TagAction {
   * temp objects
   */
 abstract class XmlPullParser2  {
+
+  type SliceParseFunc = (Array[Byte],Int,Int)=>Unit  // args are (data, offset, length)
 
   protected var data: Array[Byte] = Array.empty[Byte]  // the (abstract) data (UTF-8), might grow
   protected var limit: Int = 0
@@ -302,11 +301,35 @@ abstract class XmlPullParser2  {
 
   @inline final def parseSingleContentString = state.parseContent && getNextContentString
 
-  // call from start tag match to parse all child-elements with provided function
-  def parseElement (f: (Array[Byte],Int,Int)=>Unit): Unit = {
+  /**
+    * call from start tag match to parse all child-elements with provided function
+    * note the provided method is called for both start and end tags
+    */
+  def parseElement (f: SliceParseFunc): Unit = {
     val endLevel = depth-1
     while (parseNextTag && depth > endLevel) {
       f(data, tag.offset, tag.length)
+    }
+  }
+
+  def parseElement (fStart: SliceParseFunc, fEnd: SliceParseFunc): Unit = {
+    val endLevel = depth-1
+    while (parseNextTag && depth > endLevel) {
+      if (isStartTag) fStart(data, tag.offset, tag.length)
+      else fEnd(data, tag.offset, tag.length)
+    }
+  }
+
+  def parseElementStartTags (fStart: SliceParseFunc): Unit = {
+    val endLevel = depth-1
+    while (parseNextTag && depth > endLevel) {
+      if (isStartTag) fStart(data, tag.offset, tag.length)
+    }
+  }
+
+  def parseAttrs (f: SliceParseFunc): Unit = {
+    while (parseNextAttr) {
+      f(data, attrName.offset, attrName.length)
     }
   }
 
