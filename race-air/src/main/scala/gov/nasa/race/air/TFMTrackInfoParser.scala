@@ -72,6 +72,8 @@ class TFMTrackInfoParser extends XmlParser[Seq[TrackInfo]] with XmlAttrProcessor
       case "nxce:airport" =>
         if (hasParent("nxce:departurePoint")) departurePoint = trimmedTextOrNull()
         else if (hasParent("nxce:arrivalPoint")) arrivalPoint = trimmedTextOrNull()
+      case "nxce:igtd" =>
+        atd = DateTime.parseYMDT(trimmedTextOrNull)
       case "nxcm:etd" =>  // "actual" estimates?
         parseTime("etdType", etd = _, atd = _)
       case "nxcm:eta" =>

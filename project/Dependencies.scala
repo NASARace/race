@@ -149,7 +149,7 @@ object Dependencies {
   val log4jOverSlf4j = "org.slf4j" % "log4j-over-slf4j" % "2.0.0-alpha1"
 
   //--- ZooKeeper
-  val zookeeper = "org.apache.zookeeper" % "zookeeper" % "3.5.5" excludeAll(
+  val zookeeper = "org.apache.zookeeper" % "zookeeper" % "3.5.6" excludeAll(
     ExclusionRule(organization = "log4j", name="log4j"),
     ExclusionRule(organization = "org.slf4j", name = "slf4j-log4j12")
   )
@@ -164,7 +164,7 @@ object Dependencies {
   val newKafkaClients = "org.apache.kafka" % "kafka-clients" % "2.2.1"
 
   //--- Kafka (make sure to add log4j to kafkaServer dependencies
-  val kafka = "org.apache.kafka" % "kafka_2.12" % "2.3.0" excludeAll(
+  val kafka = "org.apache.kafka" % "kafka_2.12" % "2.3.1" excludeAll(
   //val kafka = "org.apache.kafka" %% "kafka" % "1.0.1" excludeAll(
     //ExclusionRule(organization = "log4j", name="log4j"),
     //ExclusionRule(organization = "org.slf4j", name = "slf4j-log4j12")

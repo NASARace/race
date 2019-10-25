@@ -34,6 +34,8 @@ import scala.collection.mutable.ArrayBuffer
 
 /**
   * XmlPullParser2 based parser to extract TrackInfo related information from tfmDataService messages
+  *
+  * note - ds:tfmDataService messages are just one potential source of TrackInfos
   */
 class TfmTrackInfoParser2(val config: Config=NoConfig)
   extends StringXmlPullParser2(config.getIntOrElse("buffer-size",200000)) with ConfigurableTranslator with TrackInfoReader {
@@ -49,23 +51,34 @@ class TfmTrackInfoParser2(val config: Config=NoConfig)
   val estimated = Slice("ESTIMATED")
   val equipmentQualifier = Slice("equipmentQualifier")
 
+  // the Translator interface
   override def translate(src: Any): Option[Any] = {
     def optional (tInfos: Seq[TrackInfo]): Option[TrackInfos] = {
       if (tInfos.isEmpty) None else Some(TrackInfos(tInfos))
     }
 
     src match {
-      case s: String => optional( readMessage(s))
-      case Some(s: String) => optional( readMessage(s))
+      case s: String => optional( parse(s))
+      case Some(s: String) => optional( parse(s))
       case _ => None // nothing else supported yet
     }
   }
 
-  def readMessage (msg: String): Seq[TrackInfo] = {
+  // the TrackInfoReader interface (TODO - unify)
+  override def readMessage (msg: Any): Seq[TrackInfo] = {
+    msg match {
+      case s: String => parse(s)
+      case _ => Seq.empty[TrackInfo]
+    }
+  }
+
+  def parse(msg: String): Seq[TrackInfo] = {
     if (initialize(msg)) {
       while (parseNextTag) {
         if (isStartTag) {
-          if (tag == tfmDataService) return parseTfmDataService
+          if (tag == tfmDataService) {
+            return parseTfmDataService
+          }
         }
       }
     }
@@ -87,7 +100,7 @@ class TfmTrackInfoParser2(val config: Config=NoConfig)
 
   protected def parseFltdMessage (tInfos: ArrayBuffer[TrackInfo]): Unit = {
     // TODO get acId, arrApt, depApt from element tag attributes
-    // "nxce:aircraftId"  "nxce:departurePoint" "nxce:arrivalPoint" "nxcm:etd" "nxcm:eta" "nxcm:newFlightAircraftSpecs" "nxce:waypoint"
+    // "nxce:aircraftId" "nxce:igtd" "nxce:departurePoint" "nxce:arrivalPoint" "nxcm:etd" "nxcm:eta" "nxcm:newFlightAircraftSpecs" "nxce:waypoint"
 
     var cs: String = null
     var trackRef: String = null
@@ -195,7 +208,6 @@ class TfmTrackInfoParser2(val config: Config=NoConfig)
       }
 
       if (isEstimate) eta = dt else ata = dt
-      //println(s"@@@ $cs -> $eta")
     }
 
     def readAircraftSpecs: Unit = {
@@ -207,6 +219,7 @@ class TfmTrackInfoParser2(val config: Config=NoConfig)
       @inline def process_nxce$aircraftId = if (cs == null) cs = readInternedStringContent
       @inline def process_nxce$arrivalPoint = if (arrArpt == null) parseElement(arrivalAirport)
       @inline def process_nxce$departurePoint = if (depArpt == null) parseElement(departureAirport)
+      @inline def process_nxce$igtd = atd = DateTime.parseYMDT(readSliceContent)  // initial gate time of departure (TODO not sure if we should use this as a etd or atd proxy)
       @inline def process_nxce$waypoint = readWaypoint
       @inline def process_nxcm$etd = readEtd
       @inline def process_nxcm$eta = readEta
@@ -217,7 +230,8 @@ class TfmTrackInfoParser2(val config: Config=NoConfig)
       @inline def match_nxce$a = { len>=6 && data(off+5)==97 }
       @inline def match_nxce$aircraftId = { len==15 && data(off+6)==105 && data(off+7)==114 && data(off+8)==99 && data(off+9)==114 && data(off+10)==97 && data(off+11)==102 && data(off+12)==116 && data(off+13)==73 && data(off+14)==100 }
       @inline def match_nxce$arrivalPoint = { len==17 && data(off+6)==114 && data(off+7)==114 && data(off+8)==105 && data(off+9)==118 && data(off+10)==97 && data(off+11)==108 && data(off+12)==80 && data(off+13)==111 && data(off+14)==105 && data(off+15)==110 && data(off+16)==116 }
-      @inline def match_nxce$departurePoint = { len==19 && data(off+5)==100 && data(off+6)==101 && data(off+7)==112 && data(off+8)==97 && data(off+9)==114 && data(off+10)==116 && data(off+11)==117 && data(off+12)==114 && data(off+13)==101 && data(off+14)==80 && data(off+15)==111 && data(off+16)==105 && data(off+17)==110 && data(off+18)==116 }
+      @inline def match_nxce$igtd = { len==9 && data(off+5)==105 && data(off+6)==103 && data(off+7)==116 && data(off+8)==100 }
+      @inline def match_nxce$departurePoint = { len==19 && data(off+5)==100 && data(off+6)==101 && data(off+7)==112 && data(off+8)==97 && data(off+9)==114 && data(off+10)==116&& data(off+11)==117 && data(off+12)==114 && data(off+13)==101 && data(off+14)==80 && data(off+15)==111 && data(off+16)==105 && data(off+17)==110 && data(off+18)==116 }
       @inline def match_nxce$waypoint = { len==13 && data(off+5)==119 && data(off+6)==97 && data(off+7)==121 && data(off+8)==112 && data(off+9)==111 && data(off+10)==105 && data(off+11)==110 && data(off+12)==116 }
       @inline def match_nxcm$ = { len>=5 && data(off+3)==109 && data(off+4)==58 }
       @inline def match_nxcm$et = { len>=7 && data(off+5)==101 && data(off+6)==116 }
@@ -233,6 +247,8 @@ class TfmTrackInfoParser2(val config: Config=NoConfig)
             } else if (match_nxce$arrivalPoint) {
               process_nxce$arrivalPoint
             }
+          } else if (match_nxce$igtd) {
+            process_nxce$igtd
           } else if (match_nxce$departurePoint) {
             process_nxce$departurePoint
           } else if (match_nxce$waypoint) {

@@ -39,7 +39,7 @@ object Internalizer {
   def size: Int = map.size
   // todo - maybe add a few other map accessors
 
-  def getMurmurHashed (hash: Long, bs: Array[Byte], off: Int, len: Int): String = {
+  def getMurmurHashed (hash: Long, bs: Array[Byte], off: Int, len: Int): String = synchronized {
     val oldSize = map.size
     map.getOrElseUpdate( hash, new String(bs,off,len)) match {
       case s: String =>
@@ -66,7 +66,7 @@ object Internalizer {
 
   @inline def get (bs: Array[Byte], off: Int, len: Int): String = getMurmurHashed(MurmurHash64.hashBytes(bs,off,len), bs,off,len)
 
-  def getMurmurHashed (hash: Long, cs: Array[Char], off: Int, len: Int): String = {
+  def getMurmurHashed (hash: Long, cs: Array[Char], off: Int, len: Int): String = synchronized {
     val oldSize = map.size
     map.getOrElseUpdate( hash, new String(cs,off,len)) match {
       case s: String =>
@@ -93,7 +93,7 @@ object Internalizer {
 
   @inline def get (cs: Array[Char], off: Int, len: Int): String = getMurmurHashed(MurmurHash64.hashChars(cs,off,len), cs,off,len)
 
-  def get (s: String): String = {
+  def get (s: String): String = synchronized {
     val oldSize = map.size
     val key = MurmurHash64.hashString(s)
     map.getOrElseUpdate( key, s) match {
@@ -128,7 +128,7 @@ object Internalizer {
   */
 object ASCII8Internalizer {
 
-  private val map = new mutable.LongMap[String](16384) // (8192)  //causes AIOOB in scala LongMap.getOrElseUpdate ?
+  private val map = new mutable.LongMap[String](16384)
 
   def size: Int = map.size
   // todo - maybe add a few other map accessors
@@ -137,7 +137,14 @@ object ASCII8Internalizer {
     if (len > 8) {
       new String(bs,off,len).intern
     } else {
-      map.getOrElseUpdate(hash, new String(bs,off,len))
+      synchronized {
+        var sIntern = map.getOrNull(hash)
+        if (sIntern == null) {
+          sIntern = new String(bs, off, len)
+          map.update(hash, sIntern)
+        }
+        sIntern
+      }
     }
   }
 
@@ -148,7 +155,14 @@ object ASCII8Internalizer {
     if (len > 8) {
       new String(cs,off,len).intern
     } else {
-      map.getOrElseUpdate( hash, new String(cs,off,len))
+      synchronized {
+        var sIntern = map.getOrNull(hash)
+        if (sIntern == null) {
+          sIntern = new String(cs, off, len)
+          map.update(hash, sIntern)
+        }
+        sIntern
+      }
     }
   }
 
@@ -159,7 +173,15 @@ object ASCII8Internalizer {
     if (s.length > 8) {
       s.intern
     } else {
-      map.getOrElseUpdate(ASCII8Hash64.hashString(s), s)
+      val hash = ASCII8Hash64.hashString(s)
+      synchronized {
+        var sIntern = map.getOrNull(hash)
+        if (sIntern == null) {
+          sIntern = s
+          map.update(hash, sIntern)
+        }
+        sIntern
+      }
     }
   }
 }

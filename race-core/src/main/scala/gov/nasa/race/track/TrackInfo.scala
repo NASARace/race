@@ -24,7 +24,7 @@ import gov.nasa.race.uom.DateTime
 import scala.collection.Seq
 
 /**
-  * helper type to support matching
+  * helper type to support erasure safe type matching
   */
 case class TrackInfos (tInfos: Seq[TrackInfo]) {
   override def toString = {
