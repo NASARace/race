@@ -20,7 +20,7 @@ import java.awt.image.{BufferedImage, DataBuffer, IndexColorModel}
 
 import com.typesafe.config.Config
 import gov.nasa.race.air.{PrecipImage, PrecipImageStore}
-import gov.nasa.race.common.{SliceSplitter, StringXmlPullParser2}
+import gov.nasa.race.common.{ASCIIStringXmlPullParser2, SliceSplitter, StringXmlPullParser2}
 import gov.nasa.race.common.inlined.Slice
 import gov.nasa.race.config.{ConfigurableTranslator, NoConfig}
 import gov.nasa.race.config.ConfigUtils._
@@ -62,7 +62,7 @@ object ItwsMsgParser {
   * upfront detect if we should parse at all
   */
 class ItwsMsgParser (val config: Config=NoConfig)
-  extends StringXmlPullParser2(config.getIntOrElse("buffer-size",20000)) with ConfigurableTranslator {
+  extends ASCIIStringXmlPullParser2(config.getIntOrElse("buffer-size",20000)) with ConfigurableTranslator {
 
   val itwsMsg = Slice("itws_msg")
   val precision = Slice("precision")

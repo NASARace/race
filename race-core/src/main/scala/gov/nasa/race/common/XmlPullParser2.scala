@@ -697,6 +697,20 @@ abstract class XmlPullParser2  {
   }
 }
 
+/**
+  * a XmlPullParser2 that works on full unicode strings
+  *
+  * Note this does allocate a byte[] array per string, i.e. does not use a buffer and hence can cause heap pressure
+  */
+class StrXmlPullParser2 extends XmlPullParser2 {
+
+  def initialize (s: String): Boolean = {
+    clear
+    setData(s.getBytes)
+    idx = seekRootTag
+    idx >= 0
+  }
+}
 
 /**
   * a XmlPullParser2 that uses a pre-allocated (but growable) byte array to parse UTF-8 string data
@@ -704,6 +718,24 @@ abstract class XmlPullParser2  {
 class StringXmlPullParser2(initBufSize: Int = 8192) extends XmlPullParser2 {
 
   protected val bb = new UTF8Buffer(initBufSize)
+
+  def initialize (s: String): Boolean = {
+    bb.encode(s)
+    clear
+    setData(bb.data)
+    idx = seekRootTag
+    idx >= 0
+  }
+}
+
+/**
+  * a XmlPullParser2 that works on ASCII strings and uses a pre-allocated byte[] buffer
+  *
+  * NOTE - client is responsible for ensuring there are no non-ASCII chars in parsed strings
+  */
+class ASCIIStringXmlPullParser2(initBufSize: Int = 8192) extends XmlPullParser2 {
+
+  protected val bb = new ASCIIBuffer(initBufSize)
 
   def initialize (s: String): Boolean = {
     bb.encode(s)

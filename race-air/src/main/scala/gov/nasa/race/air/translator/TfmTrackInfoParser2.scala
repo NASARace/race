@@ -17,7 +17,7 @@
 package gov.nasa.race.air.translator
 
 import com.typesafe.config.Config
-import gov.nasa.race.common.StringXmlPullParser2
+import gov.nasa.race.common.{ASCIIStringXmlPullParser2, StringXmlPullParser2}
 import gov.nasa.race.common.inlined.Slice
 import gov.nasa.race.config.{ConfigurableTranslator, NoConfig}
 import gov.nasa.race.config.ConfigUtils._
@@ -38,7 +38,7 @@ import scala.collection.mutable.ArrayBuffer
   * note - ds:tfmDataService messages are just one potential source of TrackInfos
   */
 class TfmTrackInfoParser2(val config: Config=NoConfig)
-  extends StringXmlPullParser2(config.getIntOrElse("buffer-size",200000)) with ConfigurableTranslator with TrackInfoReader {
+  extends ASCIIStringXmlPullParser2(config.getIntOrElse("buffer-size",100000)) with ConfigurableTranslator with TrackInfoReader {
 
   // constant tag and attr names
   val tfmDataService = Slice("ds:tfmDataService")

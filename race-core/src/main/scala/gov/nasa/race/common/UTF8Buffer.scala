@@ -19,12 +19,19 @@ package gov.nasa.race.common
 import java.nio.{ByteBuffer, CharBuffer}
 import java.nio.charset.{CoderResult, StandardCharsets}
 
+trait StringDataBuffer {
+  def data: Array[Byte]
+  def length: Int
+  def encode (s: String): Int
+}
 
 /**
   * utility class that basically does a String.getBytes() into a re-usable buffer so that we
   * can save per-call allocation
+  *
+  * Note - this is very slow since it maps to per-char charAt(idx) calls
   */
-class UTF8Buffer (initBufSize: Int = 8192) {
+class UTF8Buffer (initBufSize: Int = 8192) extends StringDataBuffer {
   var data: Array[Byte] = new Array(initBufSize)
   var length: Int = 0
 
@@ -56,5 +63,23 @@ class UTF8Buffer (initBufSize: Int = 8192) {
     } while (!done)
 
     length
+  }
+}
+
+/**
+  * utility class to write ASCII String contents into a re-usable buffer
+  *
+  * NOTE - this uses a deprecated String method which only discards the high byte of a
+  * chars, i.e. it does not use a proper CharsetEncoder
+  */
+class ASCIIBuffer (initBufSize: Int = 8192) extends StringDataBuffer {
+  var data: Array[Byte] = new Array(initBufSize)
+  var length: Int = 0
+
+  def encode (s: String): Int = {
+    val len = s.length
+    if (len > data.length) data = new Array[Byte](len)
+    s.getBytes(0,len,data,0)
+    len
   }
 }
