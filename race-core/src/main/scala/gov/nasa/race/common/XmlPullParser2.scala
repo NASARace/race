@@ -487,7 +487,7 @@ abstract class XmlPullParser2  {
 
   // skip forward to first position that is not a space or newline
   @inline protected final def skipSpace (i0: Int): Int = {
-    val data = XmlPullParser2.this.data
+    val data = this.data
     var c: Byte = 0
 
     var i = i0
@@ -497,7 +497,7 @@ abstract class XmlPullParser2  {
 
   // skip backwards to first position that is not a space
   @inline protected final def backtrackSpace (i0: Int): Int = {
-    val data = XmlPullParser2.this.data
+    val data = this.data
 
     var i = i0
     while (data(i) == ' ') i -= 1

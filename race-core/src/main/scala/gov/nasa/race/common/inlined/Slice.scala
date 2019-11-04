@@ -20,6 +20,8 @@ import java.io.OutputStream
 
 import gov.nasa.race.common.{ASCII8Internalizer, Internalizer, UTF8Buffer}
 
+import scala.annotation.switch
+
 object Slice {
 
   def apply (s: String): Slice = {
@@ -80,6 +82,12 @@ final class Slice (var data: Array[Byte], var offset: Int, var length: Int) {
 
   @inline def clear: Unit = {
     data = Array.empty[Byte]
+    offset = 0
+    length = 0
+    hash = 0
+  }
+
+  @inline def clearRange: Unit = {
     offset = 0
     length = 0
     hash = 0
@@ -175,11 +183,24 @@ final class Slice (var data: Array[Byte], var offset: Int, var length: Int) {
     }
   }
 
+  def isNullValue: Boolean = {
+    if (length == 4) {
+      val i = offset
+      val data = this.data
+      (data(i) == 'n' && data(i+1) == 'u' && data(i+2) == 'l' && data(i+3) == 'l')
+    } else false
+  }
+
   def writeTo(out: OutputStream): Unit = {
     out.write(data,offset,length)
   }
 
   //--- type conversion
+
+  def toSubString (off: Int = offset, len: Int = length): String = {
+    val iMax = offset + length
+    if (off >= offset && off < iMax && off+len <= iMax) new String(data,off,len) else ""
+  }
 
   def toDouble: Double = {
 
@@ -298,7 +319,87 @@ final class Slice (var data: Array[Byte], var offset: Int, var length: Int) {
       else if (equalsIgnoreCase(Slice.NoPattern)) false
       else  throw new RuntimeException(s"not a boolean: $this")
     }
+  }
 
+  final def hexDigit (b: Byte): Int = {
+    (b: @switch) match {
+      case '0' => 0
+      case '1' => 1
+      case '2' => 2
+      case '3' => 3
+      case '4' => 4
+      case '5' => 5
+      case '6' => 6
+      case '7' => 7
+      case '8' => 8
+      case '9' => 9
+      case 'A' | 'a' => 10
+      case 'B' | 'b' => 11
+      case 'C' | 'c' => 12
+      case 'D' | 'd' => 13
+      case 'E' | 'e' => 14
+      case 'F' | 'f' => 15
+    }
+  }
+
+  def literalToString: String = toEscString(offset+1,length-2) // remove the leading/trailing double quotes and replace escape chars
+
+  // turn into String with replaced \x chars
+  def toEscString (i0: Int = offset, len: Int = length): String = {
+    val data = this.data
+    val bs = new Array[Byte](len) // can only get shorter
+    var i = 0
+    var j = i0
+    val j1 = j + len
+    while (j < j1) {
+      val b = data(j)
+      if (b == '\\') {
+        if (j < j1-1) {
+          j += 1
+          data(j) match {
+            case 'n' => bs(i) = '\n'; i += 1; j += 1
+            case 'r' => bs(i) = '\r'; i += 1; j += 1
+            case 't' => bs(i) = '\t'; i += 1; j += 1
+            case 'b' => bs(i) = '\b'; i += 1; j += 1
+            case 'f' => bs(i) = '\f'; i += 1; j += 1
+            case '\\' => bs(i) = '\\'; i += 1; j += 1
+
+            case 'u' => { // 4 digit unicode, not particularly efficient
+              if (j < j1-4){
+                var codePoint: Int = hexDigit(data(j+1)) << 24
+                codePoint += hexDigit(data(j+2)) << 16
+                codePoint += hexDigit(data(j+3)) << 8
+                codePoint += hexDigit(data(j+4))
+                val ub = Character.toString(codePoint).getBytes
+                var k = 0
+                while (k < ub.length) {
+                  bs(i) = ub(k)
+                  i += 1
+                  k += 1
+                }
+                j += 5
+              } else {
+                bs(i) = '\\'
+                bs(i+1) = 'u'
+                i += 2
+                j += 1
+              }
+            }
+
+            case other =>
+              bs(i) = '\\'
+              bs(i+1) = other;
+              i += 2; j += 1
+          }
+        }
+      } else {
+        bs(i) = b
+        i += 1
+        j += 1
+      }
+    }
+
+    new String(bs,0,i)
   }
 }
 
