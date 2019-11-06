@@ -16,11 +16,16 @@
  */
 package gov.nasa.race.common
 
+object IntRange {
+  def apply (off: Int, len: Int) = new IntRange(((len & 0x00000000ffffffffL) << 32 + off))
+}
+
 /**
   * value class that encapsulates a offset/length range
+  *
+  * note there is a scala.collection.immutable.Range we have to disambiguate from
   */
-class Range (protected val r: Long) extends AnyVal {
-
+class IntRange(protected val r: Long) extends AnyVal {
   def offset: Int = (r & 0xffffffff).toInt
   def length: Int = ((r >> 32) & 0xffffffff).toInt
 }

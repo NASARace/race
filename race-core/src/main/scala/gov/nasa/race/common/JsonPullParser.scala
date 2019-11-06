@@ -61,7 +61,7 @@ abstract class JsonPullParser {
         env.pop
         if (env.isEmpty) { // done
           state = endState
-          idx = i0+1
+          // no need to change idx
           false
 
         } else { // end of nested object
@@ -141,7 +141,6 @@ abstract class JsonPullParser {
         env.pop
         if (env.isEmpty) { // done
           state = endState
-          idx = i0+1
           false
 
         } else { // end of nested array
@@ -249,7 +248,7 @@ abstract class JsonPullParser {
   @inline final def isObjectValue: Boolean = data(idx) == '{'
 
   @inline final def isObjectEnd (objLevel: Int = env.size): Boolean = {
-    data(idx) == '}' && objLevel == env.size
+    (state == endState || (data(idx) == '}' && objLevel == env.size))
   }
 
   @inline final def isInArray: Boolean = state == arrState
@@ -257,10 +256,12 @@ abstract class JsonPullParser {
   @inline final def isArrayValue: Boolean = data(idx) == '['
 
   @inline final def isArrayEnd (arrLevel: Int = env.size): Boolean = {
-    data(idx) == ']' && arrLevel == env.size
+    (state == endState || (data(idx) == ']' && arrLevel == env.size))
   }
 
   @inline final def elementHasMoreValues: Boolean = idx < limit && data(idx) == ','
+
+  @inline final def notDone = state != endState
 
   // ?? do we need a parseNextMember/parseNextLevelMember ??
 
@@ -368,9 +369,10 @@ abstract class JsonPullParser {
   }
 
   def printOn (ps: PrintStream): Unit = {
+    var indent: Int = 0
 
-    def printIndent (lvl: Int): Unit = {
-      for (i <- 1 to lvl) ps.print("  ")
+    def printIndent: Unit = {
+      for (i <- 1 to indent) ps.print("  ")
     }
 
     def printValue: Unit = {
@@ -388,27 +390,31 @@ abstract class JsonPullParser {
     }
 
     def printObject: Unit = {
+      indent += 1
       ps.println('{')
       while (!isObjectEnd()){
         if (parseNextValue) {
-          printIndent(if (isScalarValue) level else level-1)
+          printIndent
           ps.print(s""""$member": """)
           printValue
         }
       }
-      printIndent(level-1)
+      indent -= 1
+      printIndent
       ps.println('}')
     }
 
     def printArray: Unit = {
+      indent += 1
       ps.println('[')
       while (!isArrayEnd()){
         if (parseNextValue) {
-          printIndent(if (isScalarValue) level else level-1)
+          printIndent
           printValue
         }
       }
-      printIndent(level-1)
+      indent -= 1
+      printIndent
       ps.println(']')
     }
 
