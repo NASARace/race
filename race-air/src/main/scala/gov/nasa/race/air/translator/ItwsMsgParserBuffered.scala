@@ -20,7 +20,7 @@ import java.awt.image.{BufferedImage, DataBuffer, IndexColorModel}
 
 import com.typesafe.config.Config
 import gov.nasa.race.air.{PrecipImage, PrecipImageStore}
-import gov.nasa.race.common.{ASCIIStringXmlPullParser2, SliceSplitter, StringXmlPullParser2}
+import gov.nasa.race.common.{BufferedASCIIStringXmlPullParser2, SliceSplitter, BufferedStringXmlPullParser2}
 import gov.nasa.race.common.inlined.Slice
 import gov.nasa.race.config.{ConfigurableTranslator, NoConfig}
 import gov.nasa.race.config.ConfigUtils._
@@ -29,7 +29,7 @@ import gov.nasa.race.uom.Angle.{Degrees, UndefinedAngle}
 import gov.nasa.race.uom.{Angle, DateTime, Length}
 import gov.nasa.race.uom.Length.{Meters, UndefinedLength}
 
-object ItwsMsgParser {
+object ItwsMsgParserBuffered {
   val cmap = Array[Int](  // reference color model
     0xffffffff, // 0: no precipitation - transparent colormodel index
     0xffa0f000, // 1: level 1
@@ -61,8 +61,8 @@ object ItwsMsgParser {
   * Note - unfortunately the maxPrecipLevel comes *after* the data, i.e. we cannot
   * upfront detect if we should parse at all
   */
-class ItwsMsgParser (val config: Config=NoConfig)
-  extends ASCIIStringXmlPullParser2(config.getIntOrElse("buffer-size",20000)) with ConfigurableTranslator {
+class ItwsMsgParserBuffered(val config: Config=NoConfig)
+  extends BufferedASCIIStringXmlPullParser2(config.getIntOrElse("buffer-size",20000)) with ConfigurableTranslator {
 
   val itwsMsg = Slice("itws_msg")
   val precision = Slice("precision")
@@ -167,7 +167,7 @@ class ItwsMsgParser (val config: Config=NoConfig)
         @inline def process_prcp_grid_max_precip_level = maxPrecipLevel = readIntContent
         @inline def process_prcp_grid_compressed = {
           id = PrecipImageStore.computeId(product,itwsSite,xoffset,yoffset)
-          img = PrecipImageStore.imageStore.getOrElseUpdate(id, createBufferedImage(nCols, nRows, ItwsMsgParser.colorModel))
+          img = PrecipImageStore.imageStore.getOrElseUpdate(id, createBufferedImage(nCols, nRows, ItwsMsgParserBuffered.colorModel))
           readImage(getScanLine(nCols),img)
         }
 

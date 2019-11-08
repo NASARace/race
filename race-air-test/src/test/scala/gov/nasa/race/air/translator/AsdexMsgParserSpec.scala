@@ -31,7 +31,7 @@ class AsdexMsgParserSpec extends AnyFlatSpec with RaceSpec {
   val xmlMsg = fileContentsAsUTF8String(baseResourceFile("asdexMsg.xml"))
 
   "a AsdexMsgParser" should "reproduce known values" in {
-    val translator = new AsdexMsgParser
+    val translator = new AsdexMsgParserBuffered
     translator.translate(xmlMsg) match {
       case Some(AsdexTracks(airport,tracks)) =>
         tracks.foreach { t=>

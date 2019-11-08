@@ -46,6 +46,8 @@ object Slice {
   final val FalsePattern = "false".getBytes
   final val YesPattern = "yes".getBytes
   final val NoPattern = "no".getBytes
+  final val NullPattern = "null".getBytes
+  final val NaNPattern = "NaN".getBytes
 }
 
 /**
@@ -129,6 +131,10 @@ final class Slice (var data: Array[Byte], var offset: Int, var length: Int) {
 
   @inline final def == (other: Slice): Boolean = {
     (length == other.length) && equalBytes(other.data,other.offset)
+  }
+
+  @inline final def != (other: Slice): Boolean = {
+    (length != other.length) || !equalBytes(other.data,other.offset)
   }
 
   @inline def equals(otherBs: Array[Byte], otherOffset: Int, otherLength: Int): Boolean = {
@@ -319,6 +325,17 @@ final class Slice (var data: Array[Byte], var offset: Int, var length: Int) {
       else if (equalsIgnoreCase(Slice.NoPattern)) false
       else  throw new RuntimeException(s"not a boolean: $this")
     }
+  }
+
+  /** less permissive version (only accepts "true" or "false" */
+  def toTrueOrFalse: Boolean = {
+    if (equalsIgnoreCase(Slice.TruePattern)) true
+    else if (equalsIgnoreCase(Slice.FalsePattern)) false
+    else  throw new RuntimeException(s"not a boolean: $this")
+  }
+
+  @inline def toDoubleOrNaN: Double = {
+    if (equalsIgnoreCase(Slice.NullPattern) || equalsIgnoreCase(Slice.NaNPattern)) Double.NaN else toDouble
   }
 
   final def hexDigit (b: Byte): Int = {

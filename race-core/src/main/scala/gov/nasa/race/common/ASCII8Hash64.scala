@@ -58,10 +58,12 @@ object ASCII8Hash64 {
 
   // todo - check valid ASCII range
   def hashString (s: String): Long = {
-    if (s.length > 8) throw new IllegalArgumentException("string exceeding max length 8")
+    val len = s.length
+    if (len > 8) throw new IllegalArgumentException("string exceeding max length 8")
+    if (len == 0) return 0
 
     var h: Long = s.charAt(0) & 0xffL
-    val i1 = s.length
+    val i1 = len
     var i = 1
 
     while (i < i1){

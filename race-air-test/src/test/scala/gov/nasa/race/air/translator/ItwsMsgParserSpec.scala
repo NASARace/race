@@ -55,11 +55,11 @@ class ItwsMsgParserSpec extends AnyFlatSpec with RaceSpec {
 
   mkTestOutputDir
 
-  ItwsMsgParser.colorModel = createColorModel
+  ItwsMsgParserBuffered.colorModel = createColorModel
   val xmlMsg = fileContentsAsUTF8String(baseResourceFile("itws-precip.xml"))
 
   "a ItwsMsgParser" should "reproduce known image data" in {
-    val translator = new ItwsMsgParser
+    val translator = new ItwsMsgParserBuffered
     val res = translator.translate(xmlMsg)
     println(s"result: $res")
 
@@ -86,7 +86,7 @@ class ItwsMsgParserSpec extends AnyFlatSpec with RaceSpec {
 
   "a ItwsMsgParser" should "parse a well formed itwsMsg" in {
     val xmlMsg = fileContentsAsUTF8String(baseResourceFile("itwsMsg.xml"))
-    val translator = new ItwsMsgParser
+    val translator = new ItwsMsgParserBuffered
     val res = translator.translate(xmlMsg)
     println(s"result: $res")
   }

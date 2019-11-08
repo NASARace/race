@@ -41,14 +41,14 @@ class XmlPullParser2Spec extends AnyFlatSpec with RaceSpec {
 
 
   "a XmlPullParser2" should "print well-formed XML" in {
-    val parser = new StringXmlPullParser2
+    val parser = new BufferedStringXmlPullParser2
     parser.initialize(testMsg)
     parser.printOn(System.out)
   }
 
 
   "a XmlPullParser2" should "extract known values from a test message" in {
-    val parser = new StringXmlPullParser2
+    val parser = new BufferedStringXmlPullParser2
     parser.initialize(testMsg)
 
     //--- the parsed tags/attrs

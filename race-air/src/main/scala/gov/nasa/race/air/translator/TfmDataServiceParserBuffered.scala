@@ -18,7 +18,7 @@ package gov.nasa.race.air.translator
 
 import com.typesafe.config.Config
 import gov.nasa.race.air.{TFMTrack, TFMTracks}
-import gov.nasa.race.common.StringXmlPullParser2
+import gov.nasa.race.common.BufferedStringXmlPullParser2
 import gov.nasa.race.common.inlined.Slice
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.config.{ConfigurableTranslator, NoConfig}
@@ -37,8 +37,8 @@ import scala.collection.mutable.ArrayBuffer
   *
   * TODO - check if fltdMessage attributes are mandatory since we don't parse the respective trackInformation sub-elements
   */
-class TfmDataServiceParser (val config: Config=NoConfig)
-  extends StringXmlPullParser2(config.getIntOrElse("buffer-size",200000)) with ConfigurableTranslator {
+class TfmDataServiceParserBuffered(val config: Config=NoConfig)
+  extends BufferedStringXmlPullParser2(config.getIntOrElse("buffer-size",200000)) with ConfigurableTranslator {
 
   val tfmDataService = Slice("ds:tfmDataService")
   val fltdMessage = Slice("fdm:fltdMessage")

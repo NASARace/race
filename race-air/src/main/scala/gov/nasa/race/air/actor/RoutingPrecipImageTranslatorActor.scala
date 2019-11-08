@@ -21,7 +21,7 @@ import com.typesafe.config.Config
 import gov.nasa.race._
 import gov.nasa.race.actor.TranslatorActor
 import gov.nasa.race.air.PrecipImage
-import gov.nasa.race.air.translator.{ITWSprecip2PrecipImage, ItwsMsgParser}
+import gov.nasa.race.air.translator.{ITWSprecip2PrecipImage, ItwsMsgParserBuffered}
 import gov.nasa.race.core.Messages.BusEvent
 import gov.nasa.race.core.RaceContext
 
@@ -69,5 +69,5 @@ class RoutingPrecipImageTranslatorActor (config: Config) extends TranslatorActor
 }
 
 class RoutingPrecipImageTranslator2 (_conf: Config) extends RoutingPrecipImageTranslatorActor(_conf) {
-  override def createTranslator: Translator[Any,Any] = new ItwsMsgParser
+  override def createTranslator: Translator[Any,Any] = new ItwsMsgParserBuffered
 }

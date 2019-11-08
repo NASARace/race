@@ -32,7 +32,7 @@ class TATrackAndFlightPlanParserSpec extends AnyFlatSpec with RaceSpec {
   behavior of "TATrackAndFlightPlan2TATrack translator"
 
   "translator" should "reproduce known values" in {
-    val translator = new TATrackAndFlightPlanParser(createConfig("buffer-size = 8000"))
+    val translator = new TATrackAndFlightPlanParserBuffered(createConfig("buffer-size = 8000"))
 
     val res = translator.translate(xmlMsg)
     res match {

@@ -28,7 +28,7 @@ class TfmDataServiceParserSpec extends AnyFlatSpec with RaceSpec {
   val xmlMsg = fileContentsAsUTF8String(baseResourceFile("tfmDataService.xml"))
 
   "a TfmDataServiceParser" should "reproduce known values" in {
-    val translator = new TfmDataServiceParser
+    val translator = new TfmDataServiceParserBuffered
 
     val res = translator.translate(xmlMsg)
     res match {

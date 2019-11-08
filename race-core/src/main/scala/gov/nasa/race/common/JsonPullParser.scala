@@ -33,10 +33,37 @@ import scala.collection.mutable.Stack
 
 class JsonParseException (msg: String) extends RuntimeException(msg)
 
+object JsonPullParser {
+  sealed abstract trait JsonParseResult {
+    def isDefined: Boolean = true
+    def isScalarValue: Boolean = false
+  }
+  sealed abstract trait AggregateStart extends JsonParseResult
+  sealed abstract trait AggregateEnd extends JsonParseResult
+  sealed abstract trait ScalarValue extends JsonParseResult {
+    override def isScalarValue: Boolean = true
+  }
+
+  case object ObjectStart extends AggregateStart
+  case object ObjectEnd extends AggregateEnd
+  case object ArrayStart extends AggregateStart
+  case object ArrayEnd extends AggregateEnd
+  case object QuotedValue extends ScalarValue
+  case object UnQuotedValue extends ScalarValue
+  case object NoValue extends JsonParseResult {
+    override def isDefined: Boolean = false
+  }
+
+  final val trueValue = Slice("true")
+  final val falseValue = Slice("false")
+  final val nullValue = Slice("null")
+}
+
 /**
   * a pull parser for regular JSON, modeled after the XmlPullParser2
   */
 abstract class JsonPullParser {
+  import JsonPullParser._
 
   protected var data: Array[Byte] = Array.empty[Byte]  // the (abstract) data (UTF-8), might grow
   protected var limit: Int = 0
@@ -45,14 +72,16 @@ abstract class JsonPullParser {
   protected val path = new RangeStack(32)  // member (slice) stack
   protected val env = Stack.empty[State]   // state stack
 
+
   sealed abstract class State {
-    def parseNextValue: Boolean = false
+    def parseNextValue: JsonParseResult = NoValue
+    override def toString: String = getClass.getSimpleName
   }
 
   class ObjectState extends State {
 
     // idx is on opening '{' , preceding ',' or closing '}'
-    override def parseNextValue: Boolean = {
+    override def parseNextValue: JsonParseResult = {
       val data = JsonPullParser.this.data
       var i0 = idx
 
@@ -62,12 +91,11 @@ abstract class JsonPullParser {
         if (env.isEmpty) { // done
           state = endState
           // no need to change idx
-          false
-
+          ObjectEnd
         } else { // end of nested object
           state = env.top
           idx = skipWs(i0 + 1)
-          state.parseNextValue
+          ObjectEnd
         }
 
       } else {
@@ -91,29 +119,28 @@ abstract class JsonPullParser {
             path.push(member.offset,member.length)
             env.push(state)
             idx = i0
-            true
+            ObjectStart
           case '[' => // value is array
             state = arrState
             env.push(state)
             idx = i0
-            true
+            ArrayStart
 
           //--- simple values
           case '"' =>
             i0 += 1
             i1 = skipToEndOfString(i0)
             value.setRange(i0, i1-i0)
-            isStringValue = true
+            isQuotedValue = true
             idx = skipWs(skipToValueSep(i1+1))
-
-            true
+            QuotedValue
 
           case _ =>
             i1 = skipToValueSep(i0+1)
             value.setRange(i0, i1-i0)
-            isStringValue = false
+            isQuotedValue = false
             idx = skipWs(i1)
-            true
+            UnQuotedValue
         }
       }
     }
@@ -130,10 +157,17 @@ abstract class JsonPullParser {
     }
   }
 
+  class InitialObjectState extends ObjectState {
+    override def parseNextValue: JsonParseResult = {
+      state = objState
+      ObjectStart
+    }
+  }
+
   class ArrayState extends State {
 
     // idx is on opening '[' , preceding ',' or closing ']'
-    override def parseNextValue: Boolean = {
+    override def parseNextValue: JsonParseResult = {
       val data = JsonPullParser.this.data
       var i0 = idx
 
@@ -141,12 +175,12 @@ abstract class JsonPullParser {
         env.pop
         if (env.isEmpty) { // done
           state = endState
-          false
+          ArrayEnd
 
         } else { // end of nested array
           state = env.top
           idx = skipWs(i0 + 1)
-          state.parseNextValue
+          ArrayEnd
         }
 
       } else {
@@ -162,27 +196,27 @@ abstract class JsonPullParser {
             state = objState
             env.push(state)
             idx = i0
-            true
+            ObjectStart
           case '[' => // element value is nested array
             env.push(state)
             idx = i0
-            true
+            ArrayStart
 
           //--- simple values
           case '"' =>
             i0 += 1
             val i1 = skipToEndOfString(i0)
             value.setRange(i0, i1-i0)
-            isStringValue = true
+            isQuotedValue = true
             idx = skipWs(skipToValueSep(i1+1))
-            true
+            QuotedValue
 
           case _ =>
             val i1 = skipToValueSep(i0+1)
             value.setRange(i0, i1-i0)
-            isStringValue = false
+            isQuotedValue = false
             idx = skipWs(i1)
-            true
+            UnQuotedValue
         }
       }
     }
@@ -199,31 +233,42 @@ abstract class JsonPullParser {
     }
   }
 
+  class InitialArrayState extends ArrayState {
+    override def parseNextValue: JsonParseResult = {
+      state = arrState
+      ArrayStart
+    }
+  }
+
   class ValState extends State { // single value
 
     // idx is on first char of value
-    override def parseNextValue: Boolean = {
+    override def parseNextValue: JsonParseResult = {
       val data = JsonPullParser.this.data
       val i0 = idx
 
-      if (data(i0) == '"') {  // string value
-        idx = skipToEndOfString(i0+1)
-        value.set(data,i0+1,idx-i0-1)
-
-      } else { // number, bool or null
-        idx = skipToSep(i0)
-        value.set(data,i0,idx-i0)
-      }
       member.clear // no member
       state = endState // done
-      true
+
+      if (data(i0) == '"') {  // string value, could be "true","false" or "null"
+        idx = skipToEndOfString(i0+1)
+        value.set(data,i0+1,idx-i0-1)
+        QuotedValue
+
+      } else { // number
+        idx = skipToSep(i0)
+        value.set(data,i0,idx-i0)
+        UnQuotedValue
+      }
     }
   }
 
   class EndState extends State {
-    override def parseNextValue: Boolean = false
+    override def parseNextValue: JsonParseResult = NoValue
   }
 
+  protected final val initObjState = new InitialObjectState
+  protected final val initArrState = new InitialArrayState
   protected final val objState = new ObjectState
   protected final val arrState = new ArrayState
   protected final val valState = new ValState
@@ -231,7 +276,7 @@ abstract class JsonPullParser {
 
   protected var state: State = endState
 
-  var isStringValue = false
+  var isQuotedValue = false
 
   val member = Slice.empty
   val value = Slice.empty   // holds primitive values (String,number,bool,null)
@@ -243,36 +288,177 @@ abstract class JsonPullParser {
 
   @inline final def isScalarValue: Boolean = value.nonEmpty
 
-  @inline final def isInObject: Boolean = state == objState
+  @inline final def isInObject: Boolean = (state == objState || state == initObjState)
 
   @inline final def isObjectValue: Boolean = data(idx) == '{'
 
   @inline final def isObjectEnd (objLevel: Int = env.size): Boolean = {
-    (state == endState || (data(idx) == '}' && objLevel == env.size))
+    //(state == endState || (data(idx) == '}' && objLevel == env.size))
+    (data(idx) == '}' && objLevel == env.size)
   }
 
-  @inline final def isInArray: Boolean = state == arrState
+  @inline final def isLevelStart: Boolean = (data(idx)|32) == '{'
+  @inline final def isLevelEnd: Boolean = (data(idx)|32) == '}'
+
+  @inline final def isInArray: Boolean = (state == arrState || state == initArrState)
 
   @inline final def isArrayValue: Boolean = data(idx) == '['
 
   @inline final def isArrayEnd (arrLevel: Int = env.size): Boolean = {
-    (state == endState || (data(idx) == ']' && arrLevel == env.size))
+    //(state == endState || (data(idx) == ']' && arrLevel == env.size))
+    (data(idx) == ']' && arrLevel == env.size)
   }
 
   @inline final def elementHasMoreValues: Boolean = idx < limit && data(idx) == ','
 
   @inline final def notDone = state != endState
 
-  // ?? do we need a parseNextMember/parseNextLevelMember ??
+  @inline final def isDone = state ==  endState
 
-  def parseNextValue: Boolean = {
+  @inline final def parseNextValue: JsonParseResult = {
     member.clearRange
     value.clearRange
     state.parseNextValue
   }
 
+  final def readNextMemberValue (name: Slice): JsonParseResult = {
+    val res = parseNextValue
+    if (name.length > 0 && name != member) throw new JsonParseException(s"expected member $name got $member")
+    res
+  }
+
+  def parseAllValues (pf: PartialFunction[JsonParseResult,Unit]): Unit = {
+    while (notDone){
+      val v = parseNextValue
+      if (v.isDefined) pf.apply(v) else return
+    }
+  }
+
+  def parseScalarMember (name: Slice): Boolean = {
+    isInObject && parseNextValue.isScalarValue && member == name
+  }
+
+  //--- those can throw exceptions that have to be handled in the caller
+
+  @inline final def matchObjectStart = {
+    if (parseNextValue != ObjectStart) throw new JsonParseException("not on object start")
+  }
+
+  @inline final def matchObjectEnd = {
+    if (parseNextValue != ObjectEnd) throw new JsonParseException("not on object end")
+  }
+
+  @inline final def matchArrayStart = {
+    if (parseNextValue != ArrayStart) throw new JsonParseException("not on array start")
+  }
+
+  @inline final def matchArrayEnd = {
+    if (parseNextValue != ArrayEnd) throw new JsonParseException("not on array end")
+  }
+
+  @inline final def readQuotedValue: Slice = {
+    if (parseNextValue == QuotedValue) value else throw new JsonParseException(s"not a quoted value: '$value'")
+  }
+  @inline final def readQuotedMember(name: Slice): Slice = {
+    val res = parseNextValue
+    if (member != name) throw new JsonParseException(s"expected member '$name' got '$member'")
+    if (res == QuotedValue) value else throw new JsonParseException(s"not a quoted value: '$value'")
+  }
+
+  @inline final def readUnQuotedValue: Slice = {
+    if (parseNextValue == UnQuotedValue) value else throw new JsonParseException(s"not a un-quoted value: ''$value''")
+  }
+  @inline final def readUnQuotedMember(name: Slice): Slice = {
+    val res = parseNextValue
+    if (member != name) throw new JsonParseException(s"expected member '$name' got '$member'")
+    if (res == UnQuotedValue) value else throw new JsonParseException(s"not a un-quoted value: ''$value''")
+  }
+
+  @inline final def parseArrayStart: Boolean = parseNextValue == ArrayStart
+  @inline final def parseMemberArrayStart(name: Slice): Boolean = (parseNextValue == ArrayStart && member == name)
+
+  @inline final def parseObjectStart: Boolean = parseNextValue == ObjectStart
+  @inline final def parseMemberObjectStart(name: Slice): Boolean = (parseNextValue == ObjectStart && member == name)
+
+
+  def readMemberArray (name: Slice)(f: =>Unit): Unit = {
+    if (readNextMemberValue(name) == ArrayStart) {
+      val endLevel = level
+      do {
+        f // this is supposed to parse ONE array element
+      } while (notDone && (level >= endLevel && elementHasMoreValues))
+      if (parseNextValue != ArrayEnd) throw new JsonParseException(s"invalid array termination for $name")
+    } else throw new JsonParseException(s"not an array value for '$member'")
+  }
+  @inline final def readArray (f: => Unit): Unit = readMemberArray(Slice.EmptySlice)(f)
+
+
+  def readMemberObject (name: Slice)(f: =>Unit): Unit = {
+    if (readNextMemberValue(name) == ObjectStart) {
+      val endLevel = level
+      f // this is supposed to call parseNextValue on ALL members of object (possibly skipping some)
+      if (notDone && (level != endLevel || parseNextValue != ObjectEnd)) throw new JsonParseException("object not parsed correctly: $name")
+    } else throw new JsonParseException(s"not an object value for '$member'")
+  }
+  @inline final def readObject(f: =>Unit): Unit = readMemberObject(Slice.EmptySlice)(f)
+
+  def skipToEndOfLevel (lvl0: Int): Unit = {
+    var lvl = env.size
+    val tgtLevel = if (isLevelStart) lvl0+1 else lvl0
+    var i = idx
+
+    while (true) {
+      if (data(i) == '"') i = skipToEndOfString(i+1)
+      if (i < limit) {
+        (data(i): @switch) match {
+          case '{' | '[' =>
+            lvl += 1
+          case '}' | ']' =>
+            lvl -= 1
+            if (lvl < tgtLevel) { idx = i; return }
+          case _ =>
+        }
+        i += 1
+      } else { idx = i; return }
+    }
+  }
+
+  @inline def skipToEndOfCurrentLevel = skipToEndOfLevel(env.size)
+
+  def skip (nValues: Int): Unit = {
+    var lvl = env.size
+    val tgtLevel = if (isLevelStart) lvl+1 else lvl
+    var remaining = nValues
+    var i = if (data(idx)==',') idx+1 else idx
+
+    while (true) {
+      if (data(i) == '"') i = skipToEndOfString(i+1)
+      if (i < limit) {
+        (data(i): @switch) match {
+          case '{' | '[' =>
+            lvl += 1
+          case '}' | ']' =>
+            lvl -= 1
+            if (lvl < tgtLevel) { idx = i; return }
+          case ',' =>
+            if (lvl == tgtLevel) {
+              remaining -= 1
+              if (remaining == 0) {
+                idx = i; return
+              } else remaining -= 1
+            }
+          case _ =>
+        }
+        i += 1
+      } else { idx = i; return }
+    }
+  }
 
   //--- internal methods
+
+  @inline final protected def checkMember (name: Slice): Unit = {
+    if (member != name) throw new JsonParseException(s"expected member '$name' got '$member'")
+  }
 
   def context (i: Int, len: Int = 20): String = {
     val i0 = i
@@ -352,11 +538,11 @@ abstract class JsonPullParser {
     if (i < limit) {
       val b = data(i)
       if (b == '{') { // object
-        state = objState
-        env.push(state)
+        state = initObjState
+        env.push(objState) // note that we don't push the initObjState since its only purpose is to replace itself
       } else if (b == '[') { // array
-        state = arrState
-        env.push(state)
+        state = initArrState
+        env.push(arrState)
       } else { // single value
         state = valState
       }
@@ -368,66 +554,129 @@ abstract class JsonPullParser {
     }
   }
 
-  def printOn (ps: PrintStream): Unit = {
-    var indent: Int = 0
 
-    def printIndent: Unit = {
-      for (i <- 1 to indent) ps.print("  ")
-    }
+  //--- test and debugging
 
-    def printValue: Unit = {
+  def printAllValues: Unit = {
+    def printValue (res: String) = {
+      //print(s"  $idx '${data(idx).toChar}' @ $level ($state) => ")
+
+      print(res)
+      print(" ")
+      if (member.nonEmpty) print(s""""$member": """)
       if (isScalarValue) {
-        if (isStringValue) ps.print(s""""$value"""") else ps.print(value)
-        if (elementHasMoreValues) ps.println(',') else ps.println
-
-      } else { // object or array
-        if (isObjectValue) {
-          printObject
-        } else {
-          printArray
-        }
+        if (isQuotedValue) print(s"""$value""") else print(value.toString)
       }
+      println
     }
 
-    def printObject: Unit = {
-      indent += 1
-      ps.println('{')
-      while (!isObjectEnd()){
-        if (parseNextValue) {
+    parseAllValues {
+      case ArrayStart => printValue("ArrayStart")
+      case ArrayEnd => printValue("ArrayEnd")
+      case ObjectStart => printValue("ObjectStart")
+      case ObjectEnd => printValue("ObjectEnd")
+      case QuotedValue => printValue("QuotedValue")
+      case UnQuotedValue => printValue("UnQuotedValue")
+    }
+  }
+
+  def printOn (ps: PrintStream): Unit = {
+    var indent = 0
+
+    def printIndent: Unit = for (i <- 1 to indent) ps.print("  ")
+
+    def printMember = if (member.nonEmpty) ps.print(s""""$member": """)
+
+    while (true) {
+      parseNextValue match {
+        case ArrayStart =>
           printIndent
-          ps.print(s""""$member": """)
-          printValue
-        }
-      }
-      indent -= 1
-      printIndent
-      ps.println('}')
-    }
+          printMember
+          indent += 1
+          ps.println('[')
 
-    def printArray: Unit = {
-      indent += 1
-      ps.println('[')
-      while (!isArrayEnd()){
-        if (parseNextValue) {
+        case ArrayEnd =>
+          indent -= 1
           printIndent
-          printValue
-        }
-      }
-      indent -= 1
-      printIndent
-      ps.println(']')
-    }
+          ps.println(']')
 
-    if (isInObject) printObject
-    else if (isInArray) printArray
-    else printValue
+        case ObjectStart =>
+          printIndent
+          printMember
+          indent += 1
+          ps.println('{')
+
+        case ObjectEnd =>
+          indent -= 1
+          printIndent
+          ps.println('}')
+
+        case v:ScalarValue =>
+          printIndent
+          printMember
+          if (isQuotedValue) ps.print(s""""$value"""") else ps.print(value)
+          if (elementHasMoreValues) ps.println(',') else ps.println
+
+        case NoValue => return
+      }
+    }
   }
 }
 
-class StrJsonPullParser extends JsonPullParser {
+/**
+  * unbuffered JsonPullParser processing String input
+  */
+class StringJsonPullParser extends JsonPullParser {
   def initialize (s: String): Boolean = {
     clear
     setData(s.getBytes)
+
+    idx = seekStart
+    idx >= 0
+  }
+}
+
+/**
+  * buffered JsonPullParser processing String input
+  */
+class BufferedStringJsonPullParser (initBufSize: Int = 8192) extends JsonPullParser {
+
+  protected val bb = new UTF8Buffer(initBufSize)
+
+  def initialize (s: String): Boolean = {
+    bb.encode(s)
+    clear
+    setData(bb.data, bb.length)
+
+    idx = seekStart
+    idx >= 0
+  }
+}
+
+/**
+  * buffered JsonPullParser processing ASCII String input
+  */
+class BufferedASCIIStringJsonPullParser (initBufSize: Int = 8192) extends JsonPullParser {
+
+  protected val bb = new ASCIIBuffer(initBufSize)
+
+  def initialize (s: String): Boolean = {
+    bb.encode(s)
+    clear
+    setData(bb.data, bb.length)
+
+    idx = seekStart
+    idx >= 0
+  }
+}
+
+/**
+  * unbuffered JsonPullParser processing utf-8 byte array input
+  */
+class UTF8JsonPullParser extends JsonPullParser {
+  def initialize (bs: Array[Byte]): Boolean = {
+    clear
+    setData(bs)
 
     idx = seekStart
     idx >= 0

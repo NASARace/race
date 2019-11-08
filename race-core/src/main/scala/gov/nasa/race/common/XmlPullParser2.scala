@@ -68,8 +68,9 @@ abstract class XmlPullParser2  {
   val attrName = Slice.empty
   val attrValue = Slice.empty  // not hashed by default
 
-  protected def setData (newData: Array[Byte]): Unit = {
+  protected def setData (newData: Array[Byte], newLimit: Int): Unit = {
     data = newData
+    limit = newLimit
 
     // those won't change during the parse so set them here once
     tag.data = newData
@@ -78,6 +79,8 @@ abstract class XmlPullParser2  {
     rawContent.data = newData
     contentString.data = newData
   }
+
+  protected def setData (newData: Array[Byte]): Unit = setData(newData,newData.length)
 
 
   //--- state management
@@ -702,11 +705,12 @@ abstract class XmlPullParser2  {
   *
   * Note this does allocate a byte[] array per string, i.e. does not use a buffer and hence can cause heap pressure
   */
-class StrXmlPullParser2 extends XmlPullParser2 {
+class StringXmlPullParser2 extends XmlPullParser2 {
 
   def initialize (s: String): Boolean = {
     clear
     setData(s.getBytes)
+
     idx = seekRootTag
     idx >= 0
   }
@@ -715,14 +719,15 @@ class StrXmlPullParser2 extends XmlPullParser2 {
 /**
   * a XmlPullParser2 that uses a pre-allocated (but growable) byte array to parse UTF-8 string data
   */
-class StringXmlPullParser2(initBufSize: Int = 8192) extends XmlPullParser2 {
+class BufferedStringXmlPullParser2(initBufSize: Int = 8192) extends XmlPullParser2 {
 
   protected val bb = new UTF8Buffer(initBufSize)
 
   def initialize (s: String): Boolean = {
     bb.encode(s)
     clear
-    setData(bb.data)
+    setData(bb.data, bb.length)
+
     idx = seekRootTag
     idx >= 0
   }
@@ -733,14 +738,15 @@ class StringXmlPullParser2(initBufSize: Int = 8192) extends XmlPullParser2 {
   *
   * NOTE - client is responsible for ensuring there are no non-ASCII chars in parsed strings
   */
-class ASCIIStringXmlPullParser2(initBufSize: Int = 8192) extends XmlPullParser2 {
+class BufferedASCIIStringXmlPullParser2(initBufSize: Int = 8192) extends XmlPullParser2 {
 
   protected val bb = new ASCIIBuffer(initBufSize)
 
   def initialize (s: String): Boolean = {
     bb.encode(s)
     clear
-    setData(bb.data)
+    setData(bb.data, bb.length)
+
     idx = seekRootTag
     idx >= 0
   }
@@ -754,7 +760,7 @@ class UTF8XmlPullParser2 extends XmlPullParser2 {
   def initialize (bs: Array[Byte]): Boolean = {
     clear
     setData(bs)
-    limit = bs.length
+
     idx = seekRootTag
     idx >= 0
   }
