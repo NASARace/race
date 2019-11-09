@@ -674,11 +674,13 @@ class BufferedASCIIStringJsonPullParser (initBufSize: Int = 8192) extends JsonPu
   * unbuffered JsonPullParser processing utf-8 byte array input
   */
 class UTF8JsonPullParser extends JsonPullParser {
-  def initialize (bs: Array[Byte]): Boolean = {
+  def initialize (bs: Array[Byte], limit: Int): Boolean = {
     clear
-    setData(bs)
+    setData(bs,limit)
 
     idx = seekStart
     idx >= 0
   }
+
+  def initialize (bs: Array[Byte]): Boolean = initialize(bs,bs.length)
 }

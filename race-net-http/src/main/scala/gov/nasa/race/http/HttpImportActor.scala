@@ -25,19 +25,20 @@ import akka.http.scaladsl.model.Uri.Path
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.model.headers._
 import akka.http.scaladsl.settings.{ClientConnectionSettings, ConnectionPoolSettings}
-import akka.stream.{ActorMaterializer, ActorMaterializerSettings}
+import akka.stream.Materializer
 import akka.util.ByteString
 import com.typesafe.config.Config
 import gov.nasa.race._
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.Messages.{BusEvent, RaceTick}
 import gov.nasa.race.core.{PeriodicRaceActor, PublishingRaceActor, SubscribingRaceActor}
+import gov.nasa.race.util.StringUtils
 
 import scala.annotation.tailrec
 import scala.collection.mutable
 import scala.collection.mutable.{Map => MMap}
-import scala.concurrent.{Await, Future, TimeoutException}
 import scala.concurrent.duration._
+import scala.concurrent.{Await, Future, TimeoutException}
 
 object HttpImportActor {
   var liveInstances: AtomicInteger = new AtomicInteger(0)
@@ -85,10 +86,13 @@ class HttpImportActor (val config: Config) extends PublishingRaceActor
   // the configured requests
   var requests: Seq[HttpRequest] = config.getConfigSeq("data-requests").toList.flatMap(HttpRequestBuilder.get)
 
+  // do we publish response data as String or Array[Byte]?
+  val publishAsBytes: Boolean = config.getBooleanOrElse("publish-as-bytes", false)
+
   // we keep a queue of pending requests so that we can detect out-of-order responses and do graceful termination
   val pendingRequests = mutable.Queue.empty[PendingRequest]
 
-  final implicit val materializer: ActorMaterializer = ActorMaterializer(ActorMaterializerSettings(context.system))
+  final implicit val materializer: Materializer = Materializer.matFromSystem(context.system)
   val http = Http(context.system)
 
   val clientSettings = {
@@ -183,13 +187,7 @@ class HttpImportActor (val config: Config) extends PublishingRaceActor
             firstRequest
 
           } else {
-            entity.dataBytes.runFold(ByteString(""))(_ ++ _).foreach { body =>
-              val msg = body.utf8String
-              if (msg.nonEmpty) {
-                info(f"received http response: $msg%20.20s..")
-                publish(msg)
-              }
-            }
+            entity.dataBytes.runFold(ByteString(""))(_ ++ _).foreach { publishResponseData }
           }
 
         } else { // not alive, discard
@@ -209,6 +207,22 @@ class HttpImportActor (val config: Config) extends PublishingRaceActor
 
     case Failure(reason) =>
       info(s"request failed for reason: $reason") // should this be a warning?
+  }
+
+  private def publishResponseData (body: ByteString): Unit = {
+    if (publishAsBytes) {
+      val msg = body.toArray
+      if (msg.nonEmpty) {
+        info(s"received http response: ${StringUtils.mkHexByteString(msg,20)}")
+        publish(msg)
+      }
+    } else {
+      val msg = body.utf8String
+      if (msg.nonEmpty) {
+        info(f"received http response: $msg%20.20s..")
+        publish(msg)
+      }
+    }
   }
 
   //--- system message callbacks

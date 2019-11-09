@@ -19,6 +19,8 @@ package gov.nasa.race.common
 import java.nio.{ByteBuffer, CharBuffer}
 import java.nio.charset.{CoderResult, StandardCharsets}
 
+import gov.nasa.race.util.JUtils
+
 trait StringDataBuffer {
   def data: Array[Byte]
   def length: Int
@@ -79,7 +81,8 @@ class ASCIIBuffer (initBufSize: Int = 8192) extends StringDataBuffer {
   def encode (s: String): Int = {
     val len = s.length
     if (len > data.length) data = new Array[Byte](len)
-    s.getBytes(0,len,data,0)  // this is safe since we only call this on ASCII strings (and we have to avoid allocation)
+    //s.getBytes(0,len,data,0)  // this is safe since we only call this on ASCII strings (and we have to avoid allocation)
+    JUtils.getASCIIBytes(s,0,len,data,0) // FIXME - this is just to suppress the deprecated warning (Scala can't)
     len
   }
 }

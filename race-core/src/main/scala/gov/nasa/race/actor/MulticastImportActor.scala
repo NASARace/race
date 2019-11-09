@@ -131,7 +131,7 @@ class MulticastImportActor (val config: Config) extends FilteringPublisher {
 
       if (publishInterval.length > 0 && !sameItems) {
         info(s"starting publish scheduler $publishInterval")
-        publishScheduler = Some(scheduler.schedule(0.seconds, publishInterval, self, Publish))
+        publishScheduler = Some(scheduler.scheduleWithFixedDelay(0.seconds, publishInterval, self, Publish))
       }
 
       info(s"joined multicast $groupAddr")

@@ -37,7 +37,7 @@ import scala.collection.mutable.ArrayBuffer
   *
   * TODO - check if fltdMessage attributes are mandatory since we don't parse the respective trackInformation sub-elements
   */
-class TfmDataServiceParserBuffered(val config: Config=NoConfig)
+class TfmDataServiceParser(val config: Config=NoConfig)
   extends BufferedStringXmlPullParser2(config.getIntOrElse("buffer-size",200000)) with ConfigurableTranslator {
 
   val tfmDataService = Slice("ds:tfmDataService")

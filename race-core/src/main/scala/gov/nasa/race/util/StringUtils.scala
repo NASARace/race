@@ -197,4 +197,40 @@ object StringUtils {
     }
     i
   }
+
+  def mkQuotedCharString (a: Array[Byte], maxLen: Int): String = {
+    val sb = new StringBuffer
+    val n = Math.min(a.length, maxLen)
+    for (i <- 0 until n){
+      if (i > 0) sb.append(',')
+      sb.append('\'')
+      sb.append(a(i).toChar)
+      sb.append('\'')
+    }
+    sb.toString
+  }
+
+  def mkByteString (a: Array[Byte], maxLen: Int): String = {
+    val sb = new StringBuffer
+    val n = Math.min(a.length, maxLen)
+    for (i <- 0 until n){
+      if (i > 0) sb.append(',')
+      sb.append(a(i))
+    }
+    sb.toString
+  }
+
+  def mkHexByteString (a: Array[Byte], maxLen: Int): String = {
+    val sb = new StringBuffer
+    val n = Math.min(a.length, maxLen)
+    for (i <- 0 until n){
+      if (i > 0) sb.append(',')
+      val b = a(i) & 0xff
+      sb.append(hexChars(b>>4))
+      sb.append(hexChars(b & 0xf))
+    }
+    sb.toString
+  }
+
+  val hexChars = Array ('0','1','2','3','4','5','6','7','8','9','a','b','c','d','e','f')
 }

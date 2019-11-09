@@ -16,6 +16,7 @@
  */
 package gov.nasa.race.air.translator
 
+import gov.nasa.race.air.FlightPos
 import gov.nasa.race.test.RaceSpec
 import gov.nasa.race.util.FileUtils.fileContentsAsUTF8String
 import org.scalatest.flatspec.AnyFlatSpec
@@ -23,23 +24,32 @@ import org.scalatest.flatspec.AnyFlatSpec
 import scala.collection.Seq
 
 /**
-  * reg test for SFDPSParser
+  * reg test for OpenSky2FlightPos translator
   */
-class MessageCollectionParserSpec extends AnyFlatSpec with RaceSpec {
+class OpenSky2FlightPosSpec extends AnyFlatSpec with RaceSpec {
 
-  "a SFDPSParser" should "reproduce known values" in {
-    val xmlMsg = fileContentsAsUTF8String(baseResourceFile("MessageCollection.xml")).get
+  "a OpenSky2FlightPos translator" should "reproduce known values" in {
+    val msg = fileContentsAsUTF8String(baseResourceFile("opensky.json")).get
 
-    val flightRE = "<flight ".r
-    val nFlights = flightRE.findAllIn(xmlMsg).size - 1   // flight HBAL476 has no altitude and should not be reported
+    val translator = new OpenSky2FlightPos()
+    val res = translator.translate(msg)
 
-    val translator = new MessageCollectionParser(createConfig("buffer-size = 100000"))
-    val res = translator.translate(xmlMsg)
     res match {
       case Some(list:Seq[_]) =>
         list.foreach { println }
-        assert(list.size == nFlights)
-        println(s"all $nFlights valid FlightObjects accounted for (HBAL476 has no altitude)")
+        assert(list.size == 33) // there are a number of state vectors that are incomplete
+
+        //--- some sanity checks
+        var fpos = list(0).asInstanceOf[FlightPos]
+        assert(fpos.cs == "SWR5181")
+        assert(fpos.position.altMeters.round == 9197)
+        println(s"check ${fpos.cs} Ok.")
+
+        fpos = list.last.asInstanceOf[FlightPos]
+        assert(fpos.cs == "SWR44KX")
+        assert(fpos.speed.toKnots.round == 157)
+        println(s"check ${fpos.cs} Ok.")
+
       case other => fail(s"failed to parse messages, result=$other")
     }
   }

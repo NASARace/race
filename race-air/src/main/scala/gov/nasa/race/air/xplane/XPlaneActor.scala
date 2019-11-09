@@ -297,7 +297,7 @@ class XPlaneActor (val config: Config) extends PublishingRaceActor
 
       if (publishInterval.length > 0) {
         info(s"starting XPlane publish scheduler $publishInterval")
-        publishScheduler = Some(scheduler.schedule(0 seconds, publishInterval, self, UpdateFlightPos))
+        publishScheduler = Some(scheduler.scheduleWithFixedDelay(0 seconds, publishInterval, self, UpdateFlightPos))
       }
 
       xplaneState = Connected

@@ -69,7 +69,7 @@ trait PeriodicRaceActor extends RaceActor {
 
   def startScheduler = {
     if (schedule.isEmpty) {
-      schedule = Some(scheduler.schedule(tickDelay, tickInterval, self, tickMessage))
+      schedule = Some(scheduler.scheduleWithFixedDelay(tickDelay, tickInterval, self, tickMessage))
     }
   }
 

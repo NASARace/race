@@ -19,20 +19,93 @@ package gov.nasa.race.air.translator
 
 import com.typesafe.config.Config
 import gov.nasa.race.air.FlightPos
+import gov.nasa.race.common.{UTF8Buffer, UTF8JsonPullParser}
+import gov.nasa.race.common.inlined.Slice
 import gov.nasa.race.config.{ConfigurableTranslator, NoConfig}
+import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.geo.GeoPosition
 import gov.nasa.race.uom.Angle._
 import gov.nasa.race.uom.DateTime
 import gov.nasa.race.uom.Speed._
-import io.circe.{Decoder, HCursor, Json, parser}
+//import io.circe.{Decoder, HCursor, Json, parser}
+
+import scala.collection.Seq
+import scala.collection.mutable.ArrayBuffer
 
 /**
   * translator for OpenSky JSON query results as documented in https://opensky-network.org/apidoc/rest.html
   *
-  * TODO - this needs our own JsonPullParser to save resources
+  * using opensky-net json format as defined in: https://opensky-network.org/apidoc/rest.html
+  * {
+  *   "time": 1568090280,
+  *   "states": [
+  *      ["4b1803", "SWR5181 ", "Switzerland", 1568090266, 1568090279, 8.5594, 47.4533, 9197.34,
+  *       true, 0, 5, null, null, null, "1021", false, 0], ...
+  *    ]
+  * }
   */
-class OpenSky2FlightPos (val config: Config=NoConfig) extends ConfigurableTranslator {
+class OpenSky2FlightPos (val config: Config=NoConfig) extends UTF8JsonPullParser with ConfigurableTranslator {
 
+  lazy val bb = new UTF8Buffer(config.getIntOrElse("buffer-size", 8192))
+
+  val _states_ = Slice("states")
+  val _time_ = Slice("time")
+
+  override def translate (src: Any): Option[Any] = {
+    src match {
+      case msg: Array[Byte] =>
+        parse(msg,msg.length)
+      case s: String =>
+        bb.encode(s)
+        parse(bb.data,bb.length)
+      case _ => None
+    }
+  }
+
+  def parse (msg: Array[Byte], lim: Int): Option[Seq[FlightPos]] = {
+    val list = new ArrayBuffer[FlightPos](50)
+
+    def parseState: Unit = {
+      matchArrayStart
+      val icao = readQuotedValue.intern
+      val cs = readQuotedValue.intern
+      skip(1)
+      val timePos = readUnQuotedValue.toLong
+      skip(1)
+      val lon = readUnQuotedValue.toDoubleOrNaN
+      val lat = readUnQuotedValue.toDoubleOrNaN
+      val alt = readUnQuotedValue.toDoubleOrNaN
+      skip(1)
+      val spd = readUnQuotedValue.toDoubleOrNaN
+      val hdg = readUnQuotedValue.toDoubleOrNaN
+      val vr = readUnQuotedValue.toDoubleOrNaN
+      skipToEndOfCurrentLevel
+      matchArrayEnd
+
+      //println(f" $n%2d:  '$icao%10s', '$cs%10s', $timePos%12d,  ($lat%10.5f, $lon%10.5f), $alt%7.2f, $spd%5.2f, $hdg%3.0f, $vr%5.2f")
+
+      if (cs.nonEmpty && !lat.isNaN && !lon.isNaN && !alt.isNaN && !hdg.isNaN && !spd.isNaN){
+        list += new FlightPos(
+          icao,cs.trim,GeoPosition.fromDegreesAndMeters(lat,lon,alt),MetersPerSecond(spd),Degrees(hdg),
+          MetersPerSecond(vr),DateTime.ofEpochMillis(timePos*1000)
+        )
+      }
+    }
+
+    if (initialize(msg,lim)){
+      matchObjectStart
+      val t = readUnQuotedMember(_time_).toLong
+      readMemberArray(_states_){
+        parseState
+      }
+      matchObjectEnd
+    }
+
+    if (list.nonEmpty) Some(list) else None
+  }
+
+
+/*
   implicit val decoder: Decoder[FlightPos] = (hCursor: HCursor) => {
     for {
       icao24 <- hCursor.downArray.as[String]
@@ -92,4 +165,5 @@ class OpenSky2FlightPos (val config: Config=NoConfig) extends ConfigurableTransl
       case None => None
     }
   }
+  */
 }

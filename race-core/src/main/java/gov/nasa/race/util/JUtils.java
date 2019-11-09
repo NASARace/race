@@ -36,4 +36,9 @@ public class JUtils {
             body.apply(array[i]);
         }
     }
+
+    @SuppressWarnings("deprecation")
+    public static void getASCIIBytes(String s, int srcBegin, int srcEnd, byte[] dst, int dstBegin) {
+        s.getBytes(srcBegin,srcEnd,dst,dstBegin);
+    }
 }

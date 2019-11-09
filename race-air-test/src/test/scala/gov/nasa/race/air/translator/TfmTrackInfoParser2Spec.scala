@@ -31,7 +31,7 @@ class TfmTrackInfoParser2Spec extends AnyFlatSpec with RaceSpec {
 
 
   "a TfmTrackInfoParser2" should "parse known values" in {
-    val parser = new TfmTrackInfoParser2Buffered
+    val parser = new TfmTrackInfoParser2
 
     val res = parser.translate(xmlMsg)
     res match {

@@ -37,7 +37,7 @@ import scala.collection.mutable.ArrayBuffer
   *
   * note - ds:tfmDataService messages are just one potential source of TrackInfos
   */
-class TfmTrackInfoParser2Buffered(val config: Config=NoConfig)
+class TfmTrackInfoParser2(val config: Config=NoConfig)
   extends BufferedASCIIStringXmlPullParser2(config.getIntOrElse("buffer-size",100000)) with ConfigurableTranslator with TrackInfoReader {
 
   // constant tag and attr names

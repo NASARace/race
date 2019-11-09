@@ -380,7 +380,7 @@ trait RaceActor extends Actor with ImplicitActorLogging {
   }
 
   def scheduleNow (interval: FiniteDuration, msg: Any) : Option[Cancellable] = {
-    Some(scheduler.schedule(0.seconds, interval, self, msg))
+    Some(scheduler.scheduleWithFixedDelay(0.seconds, interval, self, msg))
   }
 
   def scheduleOnce (dur: FiniteDuration)(f: =>Unit) = scheduler.scheduleOnce(dur)(f)

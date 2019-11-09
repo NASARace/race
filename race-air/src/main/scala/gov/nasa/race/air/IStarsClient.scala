@@ -19,7 +19,7 @@ package gov.nasa.race.air
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.{HttpRequest, HttpResponse, StatusCodes}
-import akka.stream.{ActorMaterializer, ActorMaterializerSettings}
+import akka.stream.Materializer
 import akka.util.ByteString
 import com.typesafe.config.Config
 import gov.nasa.race._
@@ -42,7 +42,7 @@ class IStarRequester extends Actor {
   import IStarsClient._
   import context.dispatcher
 
-  final implicit val materializer: ActorMaterializer = ActorMaterializer(ActorMaterializerSettings(context.system))
+  final implicit val materializer: Materializer = Materializer.matFromSystem(context.system)
   val http = Http(context.system)
 
   val ras = RaceActorSystem(context.system)

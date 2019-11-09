@@ -29,7 +29,7 @@ import gov.nasa.race.uom.Angle.{Degrees, UndefinedAngle}
 import gov.nasa.race.uom.{Angle, DateTime, Length}
 import gov.nasa.race.uom.Length.{Meters, UndefinedLength}
 
-object ItwsMsgParserBuffered {
+object ItwsMsgParser {
   val cmap = Array[Int](  // reference color model
     0xffffffff, // 0: no precipitation - transparent colormodel index
     0xffa0f000, // 1: level 1
@@ -61,7 +61,7 @@ object ItwsMsgParserBuffered {
   * Note - unfortunately the maxPrecipLevel comes *after* the data, i.e. we cannot
   * upfront detect if we should parse at all
   */
-class ItwsMsgParserBuffered(val config: Config=NoConfig)
+class ItwsMsgParser(val config: Config=NoConfig)
   extends BufferedASCIIStringXmlPullParser2(config.getIntOrElse("buffer-size",20000)) with ConfigurableTranslator {
 
   val itwsMsg = Slice("itws_msg")
@@ -167,7 +167,7 @@ class ItwsMsgParserBuffered(val config: Config=NoConfig)
         @inline def process_prcp_grid_max_precip_level = maxPrecipLevel = readIntContent
         @inline def process_prcp_grid_compressed = {
           id = PrecipImageStore.computeId(product,itwsSite,xoffset,yoffset)
-          img = PrecipImageStore.imageStore.getOrElseUpdate(id, createBufferedImage(nCols, nRows, ItwsMsgParserBuffered.colorModel))
+          img = PrecipImageStore.imageStore.getOrElseUpdate(id, createBufferedImage(nCols, nRows, ItwsMsgParser.colorModel))
           readImage(getScanLine(nCols),img)
         }
 

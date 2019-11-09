@@ -18,14 +18,14 @@ package gov.nasa.race.http
 
 import java.io.FileInputStream
 import java.security.{KeyStore, SecureRandom}
-import javax.net.ssl.{KeyManagerFactory, SSLContext, TrustManagerFactory}
 
+import javax.net.ssl.{KeyManagerFactory, SSLContext, TrustManagerFactory}
 import akka.actor.ActorRef
 import akka.http.scaladsl.Http.ServerBinding
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
 import akka.http.scaladsl.{ConnectionContext, Http}
-import akka.stream.ActorMaterializer
+import akka.stream.{ActorMaterializer, Materializer}
 import com.typesafe.config.{Config, ConfigException}
 import gov.nasa.race._
 import gov.nasa.race.config.ConfigUtils._
@@ -47,7 +47,7 @@ import scala.concurrent.{Await, Future}
   * stats channels in the future
   */
 class HttpServer (val config: Config) extends ParentRaceActor {
-  implicit val materializer = ActorMaterializer()
+  final implicit val materializer: Materializer = Materializer.matFromSystem(context.system)
 
   val host = config.getStringOrElse("host", "localhost")
   val port = config.getIntOrElse("port", 8080)
