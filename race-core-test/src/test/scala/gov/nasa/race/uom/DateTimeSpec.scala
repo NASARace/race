@@ -18,8 +18,9 @@ package gov.nasa.race.uom
 
 import gov.nasa.race.test.RaceSpec
 import org.scalatest.flatspec.AnyFlatSpec
+import java.time.ZonedDateTime
 
-import java.time.{ZonedDateTime}
+import gov.nasa.race.common.inlined.Slice
 
 /**
   * regression test for DateTimeSpec
@@ -50,5 +51,17 @@ class DateTimeSpec extends AnyFlatSpec with RaceSpec {
 
       msa shouldBe msb
     }
+  }
+
+  "DateTime" should "support date and time component extractors" in {
+    assert (DateTime.yearOfYMD(Slice("2019-07-19")) == 2019)
+    assert (DateTime.monthOfYMD(Slice("2019-07-19")) == 7)
+    assert (DateTime.dayOfYMD(Slice("2019-07-19")) == 19)
+
+    assert (DateTime.hourOfT(Slice("11:53:04.123")) == 11)
+    assert (DateTime.minutesOfT(Slice("11:53:04.123")) == 53)
+    assert (DateTime.secondsOfT(Slice("11:53:04.123")) == 4)
+
+    assert (DateTime.fracNanosOfT(Slice("11:53:04.123")) == 123 * 1000000)
   }
 }

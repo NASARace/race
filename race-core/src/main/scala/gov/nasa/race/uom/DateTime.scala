@@ -110,6 +110,9 @@ object DateTime {
   }
 
 
+  //--- slice based parsing
+  // TODO - use the component extractors to avoid redundancy
+
   def parseYMDT (slice: Slice): DateTime = parseYMDT(slice.data, slice.offset, slice.length)
 
   def parseYMDT(bs: Array[Byte], off: Int, len: Int): DateTime = {
@@ -195,6 +198,118 @@ object DateTime {
     val zdt = ZonedDateTime.of(y,M,d, H,m,s,S, zoneId) // another allocation we can't avoid
     new DateTime(zdt.getLong(ChronoField.INSTANT_SECONDS) * 1000 + S / 1000000)
   }
+
+  //--- component based DateTime parsing (in case we have to construct from separate date and time inputs
+
+  @inline private def isDigit (b: Byte): Boolean = (b >= '0' && b <= '9')
+  @inline private def readDigit (bs: Array[Byte], k: Int): Int = {
+    val d = bs(k) - '0'
+    if (d >= 0 && d <= 9) return d else throw new RuntimeException(s"not a digit: ${bs(k).toChar}")
+  }
+  @inline private def read4Digits (bs: Array[Byte], k: Int): Int = readDigit(bs,k)*1000 + readDigit(bs,k+1)*100 + readDigit(bs,k+2)*10 + readDigit(bs,k+3)
+  @inline private def read2Digits (bs: Array[Byte], k: Int): Int = readDigit(bs,k)*10 + readDigit(bs,k+1)
+
+  @inline def yearOfYMD (slice: Slice): Int = yearOfYMD(slice.data,slice.offset,slice.length)
+  @inline def yearOfYMD (bs: Array[Byte], off: Int, len: Int): Int = read4Digits(bs,off)
+
+  @inline def monthOfYMD (slice: Slice): Int = monthOfYMD(slice.data,slice.offset,slice.length)
+  @inline def monthOfYMD (bs: Array[Byte], off: Int, len: Int): Int = read2Digits(bs,off+5)
+
+  @inline def dayOfYMD (slice: Slice): Int = dayOfYMD(slice.data,slice.offset,slice.length)
+  @inline def dayOfYMD (bs: Array[Byte], off: Int, len: Int): Int = read2Digits(bs,off+8)
+
+  @inline def hourOfT (slice: Slice): Int = hourOfT(slice.data,slice.offset,slice.length)
+  @inline def hourOfT (bs: Array[Byte], off: Int, len: Int): Int = read2Digits(bs,off)
+
+  @inline def minutesOfT (slice: Slice): Int = minutesOfT(slice.data,slice.offset,slice.length)
+  @inline def minutesOfT (bs: Array[Byte], off: Int, len: Int): Int = read2Digits(bs,off+3)
+
+  @inline def secondsOfT (slice: Slice): Int = secondsOfT(slice.data,slice.offset,slice.length)
+  @inline def secondsOfT (bs: Array[Byte], off: Int, len: Int): Int = read2Digits(bs,off+6)
+
+  @inline def fracNanosOfT (slice: Slice): Int = fracNanosOfT(slice.data,slice.offset,slice.length)
+  def fracNanosOfT (bs: Array[Byte], off: Int, len: Int): Int = {
+    var i = off + 8
+    val iMax = off + len
+    if (i >= iMax || bs(i) != '.') return 0 // no fractional part
+    i += 1
+
+    var S = 0
+    var s = 100000000
+    while (i < iMax) {
+      val b = bs(i)
+      if (!isDigit(b)) return S
+      S = S + (b - '0')*s
+      s /= 10
+      i += 1
+    }
+    S
+  }
+
+  @inline def zoneIdOffsetOfT (slice: Slice): Int = zoneIdOffsetOfT(slice.data,slice.offset,slice.length)
+  def zoneIdOffsetOfT (bs: Array[Byte], off: Int, len: Int): Int = {
+    var i = off
+    val iMax = off+len
+
+    while (i < iMax && isDigit(bs(i))) i += 1
+    if (i == iMax) return -1 // no zone id spec
+
+    if (bs(i) == '.') { // optional fractional seconds
+      i += 1
+      while (i < iMax && isDigit(bs(i))) i += 1
+      if (i == iMax) return -1 // no zone id spec
+    }
+
+    i
+  }
+
+  // apply zoneIdOffsetOfT before calling these
+  @inline def zoneIdOfT (slice: Slice): ZoneId = zoneIdOfT(slice.data,slice.offset,slice.length)
+  def zoneIdOfT (bs: Array[Byte], off: Int, len: Int): ZoneId = {
+    // optional zone id starts either with +/- or a non-digit other than '.'
+    var i = off
+    val iMax = off+len
+
+    val b = bs(i)
+    var offH: Int = 0
+    var offMin: Int = 0
+
+    if (b == '+' || b == '-') { // zone offset (id is ignored)
+      offH = read2Digits(bs, i+1)
+      if (b == '-') offH = -offH
+      i += 3
+      if (bs(i) == ':') {
+        offMin = read2Digits(bs, i+1)
+        if (offH < 0) offMin = -offMin
+        i += 3
+      }
+      ZoneId.ofOffset("", ZoneOffset.ofHoursMinutes(offH,offMin))
+
+    } else { // is there a zone id?
+      if (b == 'Z') {
+        ZoneOffset.UTC
+
+      } else if (b == '[') {
+        i += 1
+        if ((iMax - i >= 3) &&
+          (bs(i) == 'U' && bs(i+1) == 'T' && bs(i+2) == 'C') ||
+          (bs(i) == 'G' && bs(i+1) == 'M' && bs(i+2) == 'T')) {
+          ZoneOffset.UTC
+
+        } else {
+          val i0 = i
+          while (bs(i) != ']') {
+            i += 1
+          }
+          val zId = new String(bs, i0, i - i0) // unfortunately we have to allocate since ZoneId does not provide other accessors
+          ZoneId.of(zId)
+        }
+      } else {
+        throw new RuntimeException(s"not a valid time zone spec: ${new String(bs,off,len)}")
+      }
+    }
+  }
+
 
   //--- convenience methods for epoch milli conversion
   def epochMillisToString (millis: Long): String = new DateTime(millis).format_yMd_HmsS_z
