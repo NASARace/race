@@ -115,7 +115,7 @@ abstract class CsvPullParser {
     if (idx < limit) {
       if (isRecordSeparator(data(idx))) idx = skipRecordSeparator(idx+1)
       nValues = 0
-      true
+      idx < limit
     } else {
       false
     }

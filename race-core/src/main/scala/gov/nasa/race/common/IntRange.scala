@@ -17,7 +17,7 @@
 package gov.nasa.race.common
 
 object IntRange {
-  def apply (off: Int, len: Int) = new IntRange(((len & 0x00000000ffffffffL) << 32 + off))
+  def apply (off: Int, len: Int) = new IntRange((((len & 0x00000000ffffffffL) << 32) + off))
 }
 
 /**
@@ -28,4 +28,6 @@ object IntRange {
 class IntRange(protected val r: Long) extends AnyVal {
   def offset: Int = (r & 0xffffffff).toInt
   def length: Int = ((r >> 32) & 0xffffffff).toInt
+
+  override def toString: String = s"IntRange($offset,$length)"
 }

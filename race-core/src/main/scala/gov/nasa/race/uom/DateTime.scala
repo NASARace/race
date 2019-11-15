@@ -246,6 +246,11 @@ object DateTime {
     S
   }
 
+  def zoneIdOfHHmmssS (slice: Slice): ZoneId = {
+    val off1 = zoneIdOffsetOfT(slice.data,slice.offset+8,slice.length-8)
+    if (off1 >= 0)  zoneIdOfT(slice.data,off1,slice.length-(off1-slice.offset)) else ZoneId.systemDefault
+  }
+
   @inline def zoneIdOffsetOfT (slice: Slice): Int = zoneIdOffsetOfT(slice.data,slice.offset,slice.length)
   def zoneIdOffsetOfT (bs: Array[Byte], off: Int, len: Int): Int = {
     var i = off
@@ -269,6 +274,8 @@ object DateTime {
     // optional zone id starts either with +/- or a non-digit other than '.'
     var i = off
     val iMax = off+len
+
+    if (i >= iMax) return ZoneId.systemDefault // nothing specified, fall back to system configuration
 
     val b = bs(i)
     var offH: Int = 0

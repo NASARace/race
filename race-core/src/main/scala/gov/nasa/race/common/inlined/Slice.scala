@@ -18,7 +18,7 @@ package gov.nasa.race.common.inlined
 
 import java.io.OutputStream
 
-import gov.nasa.race.common.{ASCII8Internalizer, Internalizer, UTF8Buffer}
+import gov.nasa.race.common.{ASCII8Internalizer, IntRange, Internalizer, UTF8Buffer}
 
 import scala.annotation.switch
 
@@ -274,6 +274,21 @@ final class Slice (var data: Array[Byte], var offset: Int, var length: Int) {
     }
   }
 
+  def toHexLong: Long = {
+    var i = offset
+    val iMax = offset + length
+    val bs = this.data
+    var l: Long = 0
+
+    while (i < iMax){
+      l <<= 4
+      l |= hexDigit(bs(i))
+      i += 1
+    }
+
+    l
+  }
+
   def toLong: Long = {
 
     @inline def isDigit(b: Byte): Boolean = b >= '0' && b <= '9'
@@ -338,7 +353,7 @@ final class Slice (var data: Array[Byte], var offset: Int, var length: Int) {
     if (equalsIgnoreCase(Slice.NullPattern) || equalsIgnoreCase(Slice.NaNPattern)) Double.NaN else toDouble
   }
 
-  final def hexDigit (b: Byte): Int = {
+  @inline final def hexDigit (b: Byte): Int = {
     (b: @switch) match {
       case '0' => 0
       case '1' => 1
@@ -356,6 +371,7 @@ final class Slice (var data: Array[Byte], var offset: Int, var length: Int) {
       case 'D' | 'd' => 13
       case 'E' | 'e' => 14
       case 'F' | 'f' => 15
+      case _ => throw new NumberFormatException("not a hex number")
     }
   }
 
@@ -418,5 +434,7 @@ final class Slice (var data: Array[Byte], var offset: Int, var length: Int) {
 
     new String(bs,0,i)
   }
+
+  @inline def getIntRange: IntRange = IntRange(offset,length)
 }
 

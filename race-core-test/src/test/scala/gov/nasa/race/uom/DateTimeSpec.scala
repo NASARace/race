@@ -18,7 +18,7 @@ package gov.nasa.race.uom
 
 import gov.nasa.race.test.RaceSpec
 import org.scalatest.flatspec.AnyFlatSpec
-import java.time.ZonedDateTime
+import java.time.{ZoneId, ZoneOffset, ZonedDateTime}
 
 import gov.nasa.race.common.inlined.Slice
 
@@ -63,5 +63,8 @@ class DateTimeSpec extends AnyFlatSpec with RaceSpec {
     assert (DateTime.secondsOfT(Slice("11:53:04.123")) == 4)
 
     assert (DateTime.fracNanosOfT(Slice("11:53:04.123")) == 123 * 1000000)
+
+    assert (DateTime.zoneIdOfHHmmssS(Slice("11:53:04.123Z")) == ZoneOffset.UTC)
+    assert (DateTime.zoneIdOfHHmmssS(Slice("11:53:04")) == ZoneId.systemDefault)
   }
 }
