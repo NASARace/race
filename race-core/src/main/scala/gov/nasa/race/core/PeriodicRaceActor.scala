@@ -35,19 +35,25 @@ import scala.concurrent.ExecutionContext.Implicits.global
   * running scheduler
   */
 trait PeriodicRaceActor extends RaceActor {
-  final val TickIntervalKey = "tick-interval"
-  final val TickDelayKey = "tick-delay"
+  val TickIntervalKey = "tick-interval"
+  val TickDelayKey = "tick-delay"
 
   // override if there are different default values
-  def defaultTickInterval = 5.seconds
-  def defaultTickDelay = 0.seconds
+  def defaultTickInterval: FiniteDuration = 5.seconds
+  def defaultTickDelay: FiniteDuration = 0.seconds
   def tickMessage = RaceTick
 
-  var tickInterval = config.getFiniteDurationOrElse(TickIntervalKey, defaultTickInterval)
-  var tickDelay = config.getFiniteDurationOrElse(TickDelayKey, defaultTickDelay)
+  var tickInterval = defaultTickInterval // config.getFiniteDurationOrElse(TickIntervalKey, defaultTickInterval)
+  var tickDelay = defaultTickDelay // config.getFiniteDurationOrElse(TickDelayKey, defaultTickDelay)
+
   var schedule: Option[Cancellable] = None
 
   override def onInitializeRaceActor(rc: RaceContext, actorConf: Config) = {
+
+    tickInterval = config.getFiniteDurationOrElse(TickIntervalKey, defaultTickInterval)
+    tickDelay = config.getFiniteDurationOrElse(TickDelayKey, defaultTickDelay)
+
+    /**
     if (!isLocalContext(rc)) {
       // check if we have a different remote tick interval
       if (actorConf.hasPath(TickIntervalKey)) {
@@ -58,6 +64,7 @@ trait PeriodicRaceActor extends RaceActor {
         }
       }
     }
+      **/
 
     super.onInitializeRaceActor(rc, actorConf)
   }
@@ -68,7 +75,7 @@ trait PeriodicRaceActor extends RaceActor {
   }
 
   def startScheduler = {
-    if (schedule.isEmpty) {
+    if (schedule.isEmpty && tickInterval.toMillis > 0) {
       schedule = Some(scheduler.scheduleWithFixedDelay(tickDelay, tickInterval, self, tickMessage))
     }
   }

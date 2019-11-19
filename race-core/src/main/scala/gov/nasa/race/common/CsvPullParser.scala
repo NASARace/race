@@ -100,6 +100,8 @@ abstract class CsvPullParser {
     idx = i
   }
 
+  @inline final def parseNextNonEmptyValue = parseNextValue && value.nonEmpty
+
   def skipToEndOfRecord: Unit = {
     val data = this.data
     var i = idx
