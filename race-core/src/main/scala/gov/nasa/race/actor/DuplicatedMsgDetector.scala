@@ -50,14 +50,13 @@ class DuplicatedMsgDetector (val config: Config) extends StatsCollectorActor wit
   val msgStatsData = MSortedMap.empty[String,DupStatsData]  // per message (automatic)
   val catStatsData = MSortedMap.empty[String,DupStatsData]  // per configured categories
 
+  override def onRaceTick: Unit = {
+    if (reportEmptyStats || catStatsData.nonEmpty || msgStatsData.nonEmpty) publish(snapshot)
+    purgeOldChecksums
+  }
 
   override def handleMessage = {
-    case BusEvent(_, msg: String, _) =>
-      checkMessage(msg)
-
-    case RaceTick =>
-      if (reportEmptyStats || catStatsData.nonEmpty || msgStatsData.nonEmpty) publish(snapshot)
-      purgeOldChecksums
+    case BusEvent(_, msg: String, _) => checkMessage(msg)
   }
 
   def checkMessage (msg: String) = {

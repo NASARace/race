@@ -113,6 +113,14 @@ class HttpImportActor (val config: Config) extends PublishingRaceActor
     responseFuture.map( resp=> (pr,resp)).pipeTo(self)
   }
 
+  def sendRequests = {
+    if (isLive) {
+      if (pendingRequests.isEmpty || !coalesce) {
+        requests.foreach(sendRequest)
+      }
+    }
+  }
+
   def addRequestCookies (request: HttpRequest): HttpRequest = {
     val cookies = getMatchingCookies(request.uri)
     if (cookies.nonEmpty) request.mapHeaders( hdrs => cookies ++ hdrs) else request
@@ -146,13 +154,10 @@ class HttpImportActor (val config: Config) extends PublishingRaceActor
     }
   }
 
+  override def onRaceTick: Unit = sendRequests
+
   override def handleMessage = {
-    case RaceTick | BusEvent(_,SendHttpRequest,_) =>
-      if (isLive) {
-        if (pendingRequests.isEmpty || !coalesce) {
-          requests.foreach(sendRequest)
-        }
-      }
+    case BusEvent(_,SendHttpRequest,_) => sendRequests
 
     case BusEvent(_,SendNewHttpRequest(request),_) =>
       if (isLive) sendRequest(request)

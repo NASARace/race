@@ -124,10 +124,10 @@ class TrackDiffStatsCollector (val config: Config) extends StatsCollectorActor {
 
   val areas: MutHashMap[String,TrackDiffStats] = MutHashMap.empty
 
+  override def onRaceTick: Unit = publishSnapshots
+
   override def handleMessage = {
     case BusEvent(chan, e:TrackPairEvent, _) => update(chan,e)
-
-    case RaceTick => publishSnapshots
   }
 
   def update (chan: String, e: TrackPairEvent): Unit = {

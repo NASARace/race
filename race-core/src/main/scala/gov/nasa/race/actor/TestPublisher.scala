@@ -33,18 +33,13 @@ class TestPublisher (val config: Config) extends PublishingRaceActor with Period
   val count = config.getBooleanOrElse("count", true)
   var n = 0
 
-  override def onStartRaceActor(originator: ActorRef) = {
-    startScheduler
-    super.onStartRaceActor(originator)
-  }
 
-  override def handleMessage = {
-    case RaceTick =>
-      val msg = if (count) {
-        n += 1
-        s"$message-$n"
-      } else message
+  override def onRaceTick = {
+    val msg = if (count) {
+      n += 1
+      s"$message-$n"
+    } else message
 
-      publish(msg)
+    publish(msg)
   }
 }

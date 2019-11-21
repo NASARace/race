@@ -169,14 +169,15 @@ class TrackStatsCollector (val config: Config) extends StatsCollectorActor {
     sources.foreach( e=> e._2.checkExpirations(stats,curSimMillis,dropAfterMillis))
   }
 
+  override def onRaceTick: Unit = {
+    checkExpirations
+    publishSnapshot
+  }
+
   override def handleMessage = {
     case BusEvent(_, track: TrackedObject, _) => update(track)
     case BusEvent(_, tlm: TrackListMessage, _) => tlm.tracks.foreach(update)
     case BusEvent(_, term: TrackTerminationMessage, _) => terminate(term)
-
-    case RaceTick =>
-      checkExpirations
-      publishSnapshot
   }
 
   def update (t: TrackedObject): Unit = getSource(t.source).update(stats,t, dropAfterMillis)

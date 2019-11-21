@@ -107,13 +107,15 @@ class XmlMsgStatsCollector (val config: Config) extends StatsCollectorActor {
     false
   }
 
+  override def onRaceTick: Unit = {
+    if (reportEmptyStats || msgStats.nonEmpty) publish(snapshot)
+  }
+
+
   override def handleMessage = {
     case BusEvent(_,msg: String,_) =>
       val msgStat = parser.parse(msg)
       if (msgStat != null && patterns.nonEmpty) checkMatches(msgStat,msg)
-
-    case RaceTick =>
-      if (reportEmptyStats || msgStats.nonEmpty) publish(snapshot)
   }
 
   def checkMatches (msgStat: MsgStatsData, msg: String) = {

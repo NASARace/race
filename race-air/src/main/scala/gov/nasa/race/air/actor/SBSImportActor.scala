@@ -30,7 +30,7 @@ import gov.nasa.race.core.RaceActorCapabilities._
 import gov.nasa.race.core.{ChannelTopicProvider, ContinuousTimeRaceActor, PeriodicRaceActor, RaceContext}
 import gov.nasa.race.geo.{GeoPosition, LatLonPos}
 import gov.nasa.race.{ifSome, ifTrue}
-import gov.nasa.race.track.TrackedObject
+import gov.nasa.race.track.{TrackDropped, TrackedObject}
 import gov.nasa.race.uom.Angle._
 import gov.nasa.race.uom.DateTime._
 import gov.nasa.race.uom.Length._
@@ -77,7 +77,9 @@ trait SBSImporter extends ChannelTopicProvider {
 /**
   * the work horse of the SBSImportActor, which does the socket reads and parses the data
   */
-class SBSDataAcquisitionThread (socket: Socket, bufLen: Int,  publishFunc: TrackedObject=>Unit) extends Thread {
+class SBSDataAcquisitionThread (socket: Socket, bufLen: Int,
+                                updateFunc: TrackedObject=>Unit,
+                                dropFunc: (String,String,DateTime,Time)=>Unit) extends Thread {
 
   /**
     * aux class to store aircraft info we get from type 1,4 MSG records
@@ -88,6 +90,7 @@ class SBSDataAcquisitionThread (socket: Socket, bufLen: Int,  publishFunc: Track
 
     //--- from MSG-1 (no need to store time since it is invariant)
     var cs: String = null
+    var icao24String: String = null // not set before we have a cs
 
     //--- from MSG-4
     var spd: Speed = UndefinedSpeed
@@ -113,11 +116,14 @@ class SBSDataAcquisitionThread (socket: Socket, bufLen: Int,  publishFunc: Track
               skip(2)
               parseNextValue
               val icao24 = value.toHexLong
+              val icao24String = value.intern
               skip(5)
               val cs = readNextValue.intern
 
               acCache.synchronized {
-                acCache.getOrElseUpdate(icao24, new SBSCache(icao24)).cs = cs
+                var ac = acCache.getOrElseUpdate(icao24, new SBSCache(icao24))
+                ac.cs = cs
+                ac.icao24String = icao24String
               }
 
             case 3 => // airborne position (date,lat,lon,alt)
@@ -127,8 +133,6 @@ class SBSDataAcquisitionThread (socket: Socket, bufLen: Int,  publishFunc: Track
               acCache.synchronized {
                 val ac = acCache.getOrNull(icao24) // avoid allocation
                 if (ac != null) {
-                  val icao24String = value.intern
-
                   if (ac.cs != null && ac.hdg.isDefined && ac.spd.isDefined) {
                     skip(1)
                     val date = readDate
@@ -142,13 +146,13 @@ class SBSDataAcquisitionThread (socket: Socket, bufLen: Int,  publishFunc: Track
                     ac.publishDate = date
 
                     val fpos = new FlightPos(
-                      icao24String, ac.cs,
+                      ac.icao24String, ac.cs,
                       LatLonPos(lat, lon, alt),
                       ac.spd, ac.hdg, ac.vr,
                       date, status
                     )
 
-                    publishFunc(fpos)
+                    updateFunc(fpos)
                   }
                 }
               }
@@ -188,7 +192,10 @@ class SBSDataAcquisitionThread (socket: Socket, bufLen: Int,  publishFunc: Track
     i+1
   }
 
+  // we chose a LongMap based on the assumption that size is limited (<100 entries) and update is much more
+  // frequent than removal (LongMap is an open hashmap that requires reorganization)
   val acCache = new mutable.LongMap[SBSCache](128) // keys are icao24 ids (hex 24bit)
+
   setDaemon(true)
 
   override def run: Unit = {
@@ -233,27 +240,26 @@ class SBSDataAcquisitionThread (socket: Socket, bufLen: Int,  publishFunc: Track
   var nRemoved: Int = 0
 
   // NOTE - this is called from the outside and has to be thread safe
+  // we could do this synchronously in the data acquisition loop but then we would only have removals
+  // if data was received
   def checkDropped (date: DateTime, dropAfter: Time): Unit = {
-    //println("@@@ check dropped")
     acCache.synchronized {
       acCache.foreachValue { ac=>
-        if (date.timeSince(ac.publishDate) > dropAfter) {
-          //println(s"@@ drop ${ac.cs}")
+        val dt = date.timeSince(ac.publishDate)
+        if ( dt > dropAfter) {
           acCache.remove(ac.icao24)
+          dropFunc(ac.icao24String, ac.cs, date, dt)
 
           nRemoved += 1
           if (nRemoved > acCache.size/10) {
-            //println(s"@@@ repack after $nRemoved")
             acCache.repack
             nRemoved = 0
           }
-
         }
       }
     }
   }
 }
-
 
 
 /**
@@ -267,15 +273,16 @@ class SBSDataAcquisitionThread (socket: Socket, bufLen: Int,  publishFunc: Track
   */
 class SBSImportActor (val config: Config) extends SBSImporter with ContinuousTimeRaceActor with PeriodicRaceActor  {
 
+  // this is a wall time actor
   override def getCapabilities = super.getCapabilities - SupportsPauseResume - SupportsSimTimeReset
 
   val host = config.getStringOrElse("host", "localhost")
   val port = config.getIntOrElse("port", 30003)
-  val dropAfter = config.getFiniteDurationOrElse("drop-after", Duration.Zero) // Zero means don't check
+  val dropAfter = config.getFiniteDurationOrElse("drop-after", Duration.Zero) // Zero means don't check for drop
+
+  override def defaultTickInterval = dropAfter * 3/2 // derive RaceTick interval - simTime == wall time
 
   var thread: Option[SBSDataAcquisitionThread] = None // don't create/start yet, the server might get launched by an actor
-
-  override val TickIntervalKey = "drop-after"
 
   override def onInitializeRaceActor(rc: RaceContext, actorConf: Config) = {
     var socket: Socket = null
@@ -284,7 +291,7 @@ class SBSImportActor (val config: Config) extends SBSImporter with ContinuousTim
 
       // NOTE - buffer has to be larger than max record length so that we always have at least a single \n in it
       val bufLen = Math.max(config.getIntOrElse("buffer-size", 0),4096)
-      thread = Some(new SBSDataAcquisitionThread(socket, bufLen, publish))
+      thread = Some(new SBSDataAcquisitionThread(socket, bufLen, publish, dropTrack))
       super.onInitializeRaceActor(rc, actorConf)
 
     } catch {
@@ -295,15 +302,18 @@ class SBSImportActor (val config: Config) extends SBSImporter with ContinuousTim
     }
   }
 
-  override def onStartRaceActor(originator: ActorRef) = {
-    ifSome(thread) { t => t.start }
-    ifTrue (super.onStartRaceActor(originator)){
-      if (dropAfter != Duration.Zero) startScheduler
-    }
+  def dropTrack (id: String, cs: String, date: DateTime, inactive: Time): Unit = {
+    publish(TrackDropped(id,cs,date,Some(stationId)))
+    info(s"dropping $id ($cs) at $date after $inactive")
   }
 
-  override def handleMessage: Receive = {
-    case RaceTick => ifSome(thread) { t=>
+  override def onStartRaceActor(originator: ActorRef) = {
+    ifSome(thread) { t => t.start }
+    super.onStartRaceActor(originator)
+  }
+
+  override def onRaceTick: Unit = {
+    ifSome(thread) { t=>
       t.checkDropped(DateTime.ofEpochMillis(currentSimTimeMillis), Milliseconds(dropAfter.toMillis))
     }
   }

@@ -27,6 +27,8 @@ import gov.nasa.race.track.TrackCompleted
 
 /**
   * actor that collects update statistics for FlightPos objects
+  *
+  * TODO - generalize this to TrackedObject instead of FlightPos
   */
 class FPosStatsCollector (val config: Config)
    extends TSStatsCollectorActor[String,FlightPos,TSEntryData[FlightPos],FlightPosStatsData] with ClockAdjuster {
@@ -38,6 +40,12 @@ class FPosStatsCollector (val config: Config)
   }
   override def createTSEntryData (t: Long, fpos: FlightPos) = new TSEntryData(t,fpos)
 
+  override def onRaceTick: Unit = {
+    // we do our own flight dropped handling since we also check upon first report
+    checkDropped
+    publish(statsSnapshot)
+  }
+
   override def handleMessage = {
     case BusEvent(_, fpos: FlightPos, _) =>
       checkInitialClockReset(fpos.date)
@@ -46,12 +54,6 @@ class FPosStatsCollector (val config: Config)
     case BusEvent(_, fcomplete: TrackCompleted, _) =>
       checkInitialClockReset(fcomplete.date)
       removeActive(fcomplete.cs)
-
-    // we do our own flight dropped handling since we also check upon first report
-
-    case RaceTick =>
-      checkDropped
-      publish(statsSnapshot)
   }
 }
 

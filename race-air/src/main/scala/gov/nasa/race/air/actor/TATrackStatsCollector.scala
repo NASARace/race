@@ -63,25 +63,22 @@ class TATrackStatsCollector (val config: Config) extends StatsCollectorActor wit
 
   val tracons = MHashMap.empty[String, TACollector]
 
+  override def onRaceTick: Unit = {
+    tracons.foreach { e => e._2.checkDropped }
+    publish(snapshot)
+  }
+
   override def handleMessage = {
     case BusEvent(_, track: TATrack, _) =>
-      try {
-        if (track.date.isDefined) {
-          checkInitialClockReset(track.date)
-          val tracon = tracons.getOrElseUpdate(track.src, new TACollector(config, track.src))
-          if (track.isDropped) {
-            tracon.removeActive(track.id, track)
-          } else {
-            tracon.updateActive(track.id, track)
-          }
+      if (track.date.isDefined) {
+        checkInitialClockReset(track.date)
+        val tracon = tracons.getOrElseUpdate(track.src, new TACollector(config, track.src))
+        if (track.isDropped) {
+          tracon.removeActive(track.id, track)
+        } else {
+          tracon.updateActive(track.id, track)
         }
-      } catch {
-        case t: Throwable => t.printStackTrace
       }
-
-    case RaceTick =>
-      tracons.foreach { e => e._2.checkDropped }
-      publish(snapshot)
   }
 
   def snapshot: Stats = {

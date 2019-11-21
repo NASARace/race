@@ -46,23 +46,12 @@ class SimpleAircraft (val config: Config) extends ContinuousTimeRaceActor
   var heading = Degrees(config.getDouble("heading"))
   var vr = Speed.Speed0
 
-  //--- overridden initialization/termination callbacks
-
-  override def onStartRaceActor(originator: ActorRef) = {
-    startScheduler
-    super.onStartRaceActor(originator)
+  override def onRaceTick: Unit = {
+    if (!simClock.isStopped) {  // TODO - should be in base type
+      updatePos
+      publish(new FlightPos(id, cs, pos, speed, heading, vr, simTime))
+    }
   }
-
-  //---  user message handler
-  override def handleMessage = {
-    case RaceTick =>
-      if (!simClock.isStopped) {  // TODO - should be in base type
-        updatePos
-        publish(new FlightPos(id, cs, pos, speed, heading, vr, simTime))
-      }
-  }
-
-  //--- internal functions
 
   def updatePos: Unit = {
     val dist: Length = speed * updateElapsedSimTime

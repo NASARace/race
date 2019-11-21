@@ -39,10 +39,7 @@ class TrackRecordStoreActor (val config: Config) extends SubscribingRaceActor wi
     new TrackRecordWriter(NoConfig)
   }
 
-  override def onStartRaceActor(originator: ActorRef) = {
-    startScheduler
-    super.onStartRaceActor(originator)
-  }
+  override def onRaceTick: Unit = writer.store
 
   override def handleMessage: Receive = {
     case BusEvent(_,track: TrackedObject,_) =>
@@ -50,7 +47,5 @@ class TrackRecordStoreActor (val config: Config) extends SubscribingRaceActor wi
 
     case BusEvent(_,m: TrackTerminationMessage,_) =>
       writer.remove(m.id,m.date)
-
-    case RaceTick => writer.store
   }
 }

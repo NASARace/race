@@ -62,9 +62,17 @@ trait StatsReporterActor extends SubscribingRaceActor with PeriodicRaceActor {
   override def defaultTickInterval = 2300.milliseconds
   override def defaultTickDelay = 2300.milliseconds
 
-  override def onStartRaceActor(originator: ActorRef) = {
-    startScheduler
-    super.onStartRaceActor(originator)
+  override def onRaceTick: Unit = {
+    if (hasNewStats) {
+      val t = System.currentTimeMillis
+      if (lastStatsMillis > 0) {
+        if (((t - lastStatsMillis) > reportDelayMillis) || ((t - lastReportMillis) > maxDelayMillis)) {
+          report
+          lastReportMillis = t
+          hasNewStats = false
+        }
+      }
+    }
   }
 
   def handleStatsReporterMessage: Receive = {
@@ -72,18 +80,6 @@ trait StatsReporterActor extends SubscribingRaceActor with PeriodicRaceActor {
       topics += stats.topic -> stats
       lastStatsMillis = System.currentTimeMillis
       hasNewStats = true
-
-    case RaceTick =>
-      if (hasNewStats) {
-        val t = System.currentTimeMillis
-        if (lastStatsMillis > 0) {
-          if (((t - lastStatsMillis) > reportDelayMillis) || ((t - lastReportMillis) > maxDelayMillis)) {
-            report
-            lastReportMillis = t
-            hasNewStats = false
-          }
-        }
-      }
   }
 
   override def handleMessage = handleStatsReporterMessage

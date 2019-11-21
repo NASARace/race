@@ -42,7 +42,6 @@ trait StatsCollectorActor extends SubscribingRaceActor with PublishingRaceActor 
 
   override def onStartRaceActor(originator: ActorRef) = {
     channels = readFromAsString
-    startScheduler
     super.onStartRaceActor(originator)
   }
 }

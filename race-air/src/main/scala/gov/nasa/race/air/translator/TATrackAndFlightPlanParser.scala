@@ -80,7 +80,7 @@ class TATrackAndFlightPlanParser(val config: Config=NoConfig)
         if (tag == src) {
           if (parseSingleContentString) srcId = contentString.intern
         } else if (tag == record) {
-          if (src != null) parseRecord(srcId)
+          if (srcId != null) parseRecord(srcId)
         }
       }
     }

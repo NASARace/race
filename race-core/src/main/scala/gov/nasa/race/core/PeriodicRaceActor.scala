@@ -28,45 +28,55 @@ import scala.concurrent.ExecutionContext.Implicits.global
 /**
   * a RaceActor that receives periodic RaceCheck messages, which should be processed
   * by its handleMessage().
-  *
-  * NOTE - it is up to the concrete actor to decide when to call startScheduler()
-  * (from ctor, initializeRaceActor or startRaceActor)
-  * This honors remote config tick-interval specs, which would re-start an already
-  * running scheduler
   */
 trait PeriodicRaceActor extends RaceActor {
+  sealed abstract class SchedulePolicy
+  case object FixedDelay extends SchedulePolicy
+  case object FixedRate extends SchedulePolicy
+
+  // override these if derived type uses different keys
   val TickIntervalKey = "tick-interval"
   val TickDelayKey = "tick-delay"
 
   // override if there are different default values
+  // NOTE - if overrides are computed in derived type ctors those values will not be visible here
   def defaultTickInterval: FiniteDuration = 5.seconds
   def defaultTickDelay: FiniteDuration = 0.seconds
-  def tickMessage = RaceTick
+  def defaultPolicy = FixedDelay
 
-  var tickInterval = defaultTickInterval // config.getFiniteDurationOrElse(TickIntervalKey, defaultTickInterval)
-  var tickDelay = defaultTickDelay // config.getFiniteDurationOrElse(TickDelayKey, defaultTickDelay)
+  // those cannot be lazy vals or defs because they might get updated from external config
+  var tickInterval = Duration.Zero
+  var tickDelay = Duration.Zero
 
   var schedule: Option[Cancellable] = None
 
-  override def onInitializeRaceActor(rc: RaceContext, actorConf: Config) = {
+  def handleRaceTick: Receive = {
+    case RaceTick => onRaceTick
+  }
 
+  override def handleSystemMessage: Receive = handleRaceTick orElse super.handleSystemMessage
+
+  def onRaceTick: Unit = {
+    info("received RaceTick at")
+  }
+
+  override def onInitializeRaceActor(rc: RaceContext, actorConf: Config) = {
     tickInterval = config.getFiniteDurationOrElse(TickIntervalKey, defaultTickInterval)
     tickDelay = config.getFiniteDurationOrElse(TickDelayKey, defaultTickDelay)
 
-    /**
     if (!isLocalContext(rc)) {
-      // check if we have a different remote tick interval
-      if (actorConf.hasPath(TickIntervalKey)) {
-        tickInterval = actorConf.getFiniteDuration(TickIntervalKey)
-        if (schedule.isDefined){
-          stopScheduler
-          startScheduler
-        }
-      }
+      // apply different remote config settings (if any)
+      tickInterval = actorConf.getFiniteDurationOrElse(TickIntervalKey, tickInterval)
+      tickDelay = actorConf.getFiniteDurationOrElse(TickDelayKey, tickDelay)
     }
-      **/
 
+    // note that scheduler is started before onStartRaceActor
     super.onInitializeRaceActor(rc, actorConf)
+  }
+
+  override def onStartRaceActor(originator: ActorRef) = {
+    startScheduler
+    super.onStartRaceActor(originator)
   }
 
   override def onTerminateRaceActor(originator: ActorRef) = {
@@ -76,7 +86,7 @@ trait PeriodicRaceActor extends RaceActor {
 
   def startScheduler = {
     if (schedule.isEmpty && tickInterval.toMillis > 0) {
-      schedule = Some(scheduler.scheduleWithFixedDelay(tickDelay, tickInterval, self, tickMessage))
+      schedule = Some(scheduler.scheduleWithFixedDelay(tickDelay, tickInterval, self, RaceTick))
     }
   }
 
