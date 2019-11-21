@@ -274,6 +274,27 @@ final class Slice (var data: Array[Byte], var offset: Int, var length: Int) {
     }
   }
 
+  def trim: Slice = {
+    var i = offset
+    val iMax = offset + length
+    val bs = this.data
+
+    while (i < iMax && bs(i) == ' ') i += 1
+
+    if (i == iMax) { // completely blank
+      offset = 0
+      length = 0
+
+    } else {
+      offset = i
+      i = iMax-1
+      while (i > offset && bs(i) == ' ') i -= 1
+      length = i - offset + 1
+    }
+
+    this
+  }
+
   def toHexLong: Long = {
     var i = offset
     val iMax = offset + length

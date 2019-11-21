@@ -17,7 +17,7 @@
 package gov.nasa.race.air.actor
 
 import java.io.IOException
-import java.net.Socket
+import java.net.{Socket, SocketTimeoutException}
 
 import akka.actor.ActorRef
 import com.typesafe.config.Config
@@ -38,6 +38,7 @@ import gov.nasa.race.uom.Speed._
 import gov.nasa.race.uom.Time._
 import gov.nasa.race.uom.{Angle, DateTime, Speed, Time}
 
+import scala.annotation.tailrec
 import scala.collection.mutable
 import scala.concurrent.duration._
 
@@ -76,10 +77,28 @@ trait SBSImporter extends ChannelTopicProvider {
 
 /**
   * the work horse of the SBSImportActor, which does the socket reads and parses the data
+  *
+  * note that we only perform dropChecks if there is a non-zero dropDuration, and only sync
+  * either from a socket read timeout or after a successful read if the checkInterval is exceeded.
+  * This saves us not only map synchronization but also additional context switches
+  *
+  * note also that with update cycles around 1s it is most unlikely we ever run into a socket timeout,
+  * which serves mostly as a drop safeguard
   */
-class SBSDataAcquisitionThread (socket: Socket, bufLen: Int,
+class SBSDataAcquisitionThread (socket: Socket, bufLen: Int, dropDuration: FiniteDuration,
                                 updateFunc: TrackedObject=>Unit,
                                 dropFunc: (String,String,DateTime,Time)=>Unit) extends Thread {
+
+  val dropAfter = Milliseconds(dropDuration.toMillis)
+  val checkAfter = dropAfter/2
+  var lastDropCheck = UndefinedDateTime
+
+  var nUpdates: Long = 0 // since start
+  var nDropped: Long = 0 // since start
+  var nRemoved: Long = 0 // since last reorg
+
+
+  socket.setSoTimeout(dropAfter.toMillis) // value of 0 means no timeout (indefinite wait)
 
   /**
     * aux class to store aircraft info we get from type 1,4 MSG records
@@ -118,42 +137,39 @@ class SBSDataAcquisitionThread (socket: Socket, bufLen: Int,
               val icao24 = value.toHexLong
               val icao24String = value.intern
               skip(5)
-              val cs = readNextValue.intern
+              val cs = readNextValue.trim.intern  // dump1090 reports c/s with spaces filled to 8 chars
 
-              acCache.synchronized {
-                var ac = acCache.getOrElseUpdate(icao24, new SBSCache(icao24))
-                ac.cs = cs
-                ac.icao24String = icao24String
-              }
+              var ac = acCache.getOrElseUpdate(icao24, new SBSCache(icao24))
+              ac.cs = cs
+              ac.icao24String = icao24String
 
             case 3 => // airborne position (date,lat,lon,alt)
               skip(2)
               val icao24 = readNextValue.toHexLong
 
-              acCache.synchronized {
-                val ac = acCache.getOrNull(icao24) // avoid allocation
-                if (ac != null) {
-                  if (ac.cs != null && ac.hdg.isDefined && ac.spd.isDefined) {
-                    skip(1)
-                    val date = readDate
-                    skip(3)
-                    val alt = Feet(readNextValue.toInt)
-                    skip(2)
-                    val lat = Degrees(readNextValue.toDouble)
-                    val lon = Degrees(readNextValue.toDouble)
+              val ac = acCache.getOrNull(icao24) // avoid allocation
+              if (ac != null) {
+                if (ac.cs != null && ac.hdg.isDefined && ac.spd.isDefined) {
+                  skip(1)
+                  val date = readDate
+                  skip(3)
+                  val alt = Feet(readNextValue.toInt)
+                  skip(2)
+                  val lat = Degrees(readNextValue.toDouble)
+                  val lon = Degrees(readNextValue.toDouble)
 
-                    val status = if (ac.publishDate.isDefined) 0 else TrackedObject.NewFlag
-                    ac.publishDate = date
+                  val status = if (ac.publishDate.isDefined) 0 else TrackedObject.NewFlag
+                  ac.publishDate = date
 
-                    val fpos = new FlightPos(
-                      ac.icao24String, ac.cs,
-                      LatLonPos(lat, lon, alt),
-                      ac.spd, ac.hdg, ac.vr,
-                      date, status
-                    )
+                  val fpos = new FlightPos(
+                    ac.icao24String, ac.cs,
+                    LatLonPos(lat, lon, alt),
+                    ac.spd, ac.hdg, ac.vr,
+                    date, status
+                  )
 
-                    updateFunc(fpos)
-                  }
+                  nUpdates += 1
+                  updateFunc(fpos)
                 }
               }
 
@@ -170,13 +186,11 @@ class SBSDataAcquisitionThread (socket: Socket, bufLen: Int,
               skip(2)
               val vr = if (parseNextNonEmptyValue) FeetPerMinute(value.toInt) else UndefinedSpeed
 
-              acCache.synchronized {
-                val ac = acCache.getOrElseUpdate(icao24, new SBSCache(icao24))
-                ac.msg4Date = date
-                ac.spd = spd
-                ac.hdg = hdg
-                ac.vr = vr
-              }
+              val ac = acCache.getOrElseUpdate(icao24, new SBSCache(icao24))
+              ac.msg4Date = date
+              ac.spd = spd
+              ac.hdg = hdg
+              ac.vr = vr
 
             case _ => // ignore other MSG types
           }
@@ -203,8 +217,28 @@ class SBSDataAcquisitionThread (socket: Socket, bufLen: Int,
     val in = socket.getInputStream
     val parser = new SBSImportParser
 
+    lastDropCheck = DateTime.now
+
+    @inline def dropCheck: Unit = {
+      val tNow = DateTime.now
+      if (tNow - lastDropCheck >= checkAfter) {
+        dropStale(tNow)
+        lastDropCheck = tNow
+      }
+    }
+
+    @tailrec @inline def read (buf: Array[Byte], startIdx: Int, maxLen: Int): Int = {
+      try {
+        in.read(buf,startIdx,maxLen)
+      } catch {
+        case to: SocketTimeoutException =>
+          dropCheck
+          read(buf,startIdx,maxLen)
+      }
+    }
+
     try {
-      var limit = in.read(buf,0,buf.length)
+      var limit = read(buf,0,buf.length)
 
       while (limit >= 0) {
         var recLimit = recordLimit(buf,limit)
@@ -212,19 +246,20 @@ class SBSDataAcquisitionThread (socket: Socket, bufLen: Int,
         while (recLimit == 0) { // no single record in buffer, try to read more
           val nMax = buf.length - limit
           if (nMax <= 0) throw new RuntimeException(s"no linefeed within $buf.length bytes")
-          limit += in.read(buf,limit,nMax) // append - no need to move contents
+          limit += read(buf,limit,nMax) // append - no need to move contents
           recLimit = recordLimit(buf,limit)
         }
 
         if (parser.initialize(buf,recLimit)) parser.parse
+        dropCheck
 
         if (recLimit < limit){ // last record is incomplete
           val nRemaining = limit - recLimit
           System.arraycopy(buf,recLimit,buf,0,nRemaining)
-          limit = nRemaining + in.read(buf,nRemaining,buf.length - nRemaining)
+          limit = nRemaining + read(buf,nRemaining,buf.length - nRemaining)
 
         } else { // last read record is complete
-          limit = in.read(buf, 0, buf.length)
+          limit = read(buf, 0, buf.length)
         }
       }
     } catch {
@@ -237,24 +272,18 @@ class SBSDataAcquisitionThread (socket: Socket, bufLen: Int,
     socket.close // this should interrupt blocked socket reads
   }
 
-  var nRemoved: Int = 0
+  def dropStale (date: DateTime): Unit = {
+    acCache.foreachValue { ac=>
+      val dt = date.timeSince(ac.publishDate)
+      if ( dt > dropAfter) {
+        acCache.remove(ac.icao24)
+        dropFunc(ac.icao24String, ac.cs, date, dt)
+        nDropped += 1
+        nRemoved += 1
 
-  // NOTE - this is called from the outside and has to be thread safe
-  // we could do this synchronously in the data acquisition loop but then we would only have removals
-  // if data was received
-  def checkDropped (date: DateTime, dropAfter: Time): Unit = {
-    acCache.synchronized {
-      acCache.foreachValue { ac=>
-        val dt = date.timeSince(ac.publishDate)
-        if ( dt > dropAfter) {
-          acCache.remove(ac.icao24)
-          dropFunc(ac.icao24String, ac.cs, date, dt)
-
-          nRemoved += 1
-          if (nRemoved > acCache.size/10) {
-            acCache.repack
-            nRemoved = 0
-          }
+        if (nRemoved > acCache.size/10) {
+          acCache.repack
+          nRemoved = 0
         }
       }
     }
@@ -271,7 +300,7 @@ class SBSDataAcquisitionThread (socket: Socket, bufLen: Int,
   * to enable a single, re-used byte array input buffer. The direct translation is possible since SBS (CSV)
   * data is both small and simple to parse, hence translation will not increase socket read latency
   */
-class SBSImportActor (val config: Config) extends SBSImporter with ContinuousTimeRaceActor with PeriodicRaceActor  {
+class SBSImportActor (val config: Config) extends SBSImporter  {
 
   // this is a wall time actor
   override def getCapabilities = super.getCapabilities - SupportsPauseResume - SupportsSimTimeReset
@@ -279,8 +308,6 @@ class SBSImportActor (val config: Config) extends SBSImporter with ContinuousTim
   val host = config.getStringOrElse("host", "localhost")
   val port = config.getIntOrElse("port", 30003)
   val dropAfter = config.getFiniteDurationOrElse("drop-after", Duration.Zero) // Zero means don't check for drop
-
-  override def defaultTickInterval = dropAfter * 3/2 // derive RaceTick interval - simTime == wall time
 
   var thread: Option[SBSDataAcquisitionThread] = None // don't create/start yet, the server might get launched by an actor
 
@@ -291,7 +318,7 @@ class SBSImportActor (val config: Config) extends SBSImporter with ContinuousTim
 
       // NOTE - buffer has to be larger than max record length so that we always have at least a single \n in it
       val bufLen = Math.max(config.getIntOrElse("buffer-size", 0),4096)
-      thread = Some(new SBSDataAcquisitionThread(socket, bufLen, publish, dropTrack))
+      thread = Some(new SBSDataAcquisitionThread(socket, bufLen, dropAfter, publish, dropTrack))
       super.onInitializeRaceActor(rc, actorConf)
 
     } catch {
@@ -310,12 +337,6 @@ class SBSImportActor (val config: Config) extends SBSImporter with ContinuousTim
   override def onStartRaceActor(originator: ActorRef) = {
     ifSome(thread) { t => t.start }
     super.onStartRaceActor(originator)
-  }
-
-  override def onRaceTick: Unit = {
-    ifSome(thread) { t=>
-      t.checkDropped(DateTime.ofEpochMillis(currentSimTimeMillis), Milliseconds(dropAfter.toMillis))
-    }
   }
 
   override def onTerminateRaceActor(originator: ActorRef) = {
