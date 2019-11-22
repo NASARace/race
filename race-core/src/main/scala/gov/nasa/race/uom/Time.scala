@@ -110,6 +110,8 @@ class Time protected[uom] (val millis: Int) extends AnyVal
   }
   def toFiniteDuration: FiniteDuration = new FiniteDuration(millis, scala.concurrent.duration.MILLISECONDS)
 
+  @inline def nonZero: Boolean = millis > 0
+
   // we don't try to be symmetric with Date - it seems non-intuitive to add a Date to a Time
   @inline def + (t: Time): Time = new Time(millis + t.millis)
   @inline def - (t: Time): Time = new Time(millis - t.millis)

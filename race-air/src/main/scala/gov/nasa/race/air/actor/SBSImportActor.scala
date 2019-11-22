@@ -155,21 +155,23 @@ class SBSDataAcquisitionThread (socket: Socket, bufLen: Int, dropDuration: Finit
                   skip(3)
                   val alt = Feet(readNextValue.toInt)
                   skip(2)
-                  val lat = Degrees(readNextValue.toDouble)
-                  val lon = Degrees(readNextValue.toDouble)
+                  val lat = Degrees(readNextValue.toDoubleOrNaN)
+                  val lon = Degrees(readNextValue.toDoubleOrNaN)
 
-                  val status = if (ac.publishDate.isDefined) 0 else TrackedObject.NewFlag
-                  ac.publishDate = date
+                  if (lat.isDefined && lon.isDefined) { // there are MSG3 messages which only contain altitude
+                    val status = if (ac.publishDate.isDefined) 0 else TrackedObject.NewFlag
+                    ac.publishDate = date
 
-                  val fpos = new FlightPos(
-                    ac.icao24String, ac.cs,
-                    LatLonPos(lat, lon, alt),
-                    ac.spd, ac.hdg, ac.vr,
-                    date, status
-                  )
+                    val fpos = new FlightPos(
+                      ac.icao24String, ac.cs,
+                      LatLonPos(lat, lon, alt),
+                      ac.spd, ac.hdg, ac.vr,
+                      date, status
+                    )
 
-                  nUpdates += 1
-                  updateFunc(fpos)
+                    nUpdates += 1
+                    updateFunc(fpos)
+                  }
                 }
               }
 
@@ -232,7 +234,7 @@ class SBSDataAcquisitionThread (socket: Socket, bufLen: Int, dropDuration: Finit
         in.read(buf,startIdx,maxLen)
       } catch {
         case to: SocketTimeoutException =>
-          dropCheck
+          if (checkAfter.nonZero) dropCheck
           read(buf,startIdx,maxLen)
       }
     }
@@ -251,7 +253,7 @@ class SBSDataAcquisitionThread (socket: Socket, bufLen: Int, dropDuration: Finit
         }
 
         if (parser.initialize(buf,recLimit)) parser.parse
-        dropCheck
+        if (checkAfter.nonZero) dropCheck
 
         if (recLimit < limit){ // last record is incomplete
           val nRemaining = limit - recLimit
