@@ -122,7 +122,7 @@ class SBSDataAcquisitionThread (socket: Socket, bufLen: Int, dropDuration: Finit
         in.read(buf,startIdx,maxLen)
       } catch {
         case to: SocketTimeoutException =>
-          dropCheck
+          if (checkAfter.nonZero) dropCheck
           read(buf,startIdx,maxLen)
       }
     }

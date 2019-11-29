@@ -371,7 +371,7 @@ final class Slice (var data: Array[Byte], var offset: Int, var length: Int) {
   }
 
   @inline def toDoubleOrNaN: Double = {
-    if (equalsIgnoreCase(Slice.NullPattern) || equalsIgnoreCase(Slice.NaNPattern)) Double.NaN else toDouble
+    if (length == 0 || equalsIgnoreCase(Slice.NullPattern) || equalsIgnoreCase(Slice.NaNPattern)) Double.NaN else toDouble
   }
 
   @inline final def hexDigit (b: Byte): Int = {
