@@ -21,25 +21,20 @@ import java.net.{Socket, SocketTimeoutException}
 
 import akka.actor.ActorRef
 import com.typesafe.config.Config
-import gov.nasa.race.air.FlightPos
-import gov.nasa.race.common.UTF8CsvPullParser
-import gov.nasa.race.common.inlined.Slice
+import gov.nasa.race.actor.{SocketDataAcquisitionThread, SocketImporter}
+import gov.nasa.race.air.SBSUpdater
 import gov.nasa.race.config.ConfigUtils._
-import gov.nasa.race.core.Messages.{ChannelTopicRequest, RaceTick}
+import gov.nasa.race.core.ChannelTopicProvider
+import gov.nasa.race.core.Messages.ChannelTopicRequest
 import gov.nasa.race.core.RaceActorCapabilities._
-import gov.nasa.race.core.{ChannelTopicProvider, ContinuousTimeRaceActor, PeriodicRaceActor, RaceContext}
-import gov.nasa.race.geo.{GeoPosition, LatLonPos}
-import gov.nasa.race.{ifSome, ifTrue}
+import gov.nasa.race.geo.GeoPosition
+import gov.nasa.race.ifSome
 import gov.nasa.race.track.{TrackDropped, TrackedObject}
-import gov.nasa.race.uom.Angle._
 import gov.nasa.race.uom.DateTime._
-import gov.nasa.race.uom.Length._
-import gov.nasa.race.uom.Speed._
 import gov.nasa.race.uom.Time._
-import gov.nasa.race.uom.{Angle, DateTime, Speed, Time}
+import gov.nasa.race.uom.{DateTime, Time}
 
 import scala.annotation.tailrec
-import scala.collection.mutable
 import scala.concurrent.duration._
 
 /**
@@ -76,129 +71,30 @@ trait SBSImporter extends ChannelTopicProvider {
 
 
 /**
-  * the work horse of the SBSImportActor, which does the socket reads and parses the data
+  * the data acquisition thread of the SBSImportActor
+  *
+  * this thread reads the socket data and triggers drio checks. Parsing data and detecting stale flights is
+  * delegated to an SBSUpdater
   *
   * note that we only perform dropChecks if there is a non-zero dropDuration, and only sync
   * either from a socket read timeout or after a successful read if the checkInterval is exceeded.
   * This saves us not only map synchronization but also additional context switches
   *
-  * note also that with update cycles around 1s it is most unlikely we ever run into a socket timeout,
-  * which serves mostly as a drop safeguard
+  * since drops are not latency critical we do not use a timer to trigger the drop checks but rather perform
+  * them sync after detecting that the dropDuration since the last check was exceeded. This also saves us
+  * from the need to synchronize messages in the underlying updater. The case that we don't get any data anymore
+  * and hence would miss a check is handled by setting a timeout on the socket read (our blocking point).
+  * Note that with update cycles around 1s it is most unlikely we ever run into such a socket timeout.
   */
 class SBSDataAcquisitionThread (socket: Socket, bufLen: Int, dropDuration: FiniteDuration,
-                                updateFunc: TrackedObject=>Unit,
-                                dropFunc: (String,String,DateTime,Time)=>Unit) extends Thread {
+                                updateFunc: TrackedObject=>Boolean,
+                                dropFunc: (String,String,DateTime,Time)=>Unit) extends SocketDataAcquisitionThread(socket) {
 
   val dropAfter = Milliseconds(dropDuration.toMillis)
   val checkAfter = dropAfter/2
   var lastDropCheck = UndefinedDateTime
 
-  var nUpdates: Long = 0 // since start
-  var nDropped: Long = 0 // since start
-  var nRemoved: Long = 0 // since last reorg
-
-
   socket.setSoTimeout(dropAfter.toMillis) // value of 0 means no timeout (indefinite wait)
-
-  /**
-    * aux class to store aircraft info we get from type 1,4 MSG records
-    * that is required to fill in the missing FlightPos fields when receiving a type 3 MSG
-    */
-  class SBSCache (val icao24: Long) {
-    var publishDate: DateTime = UndefinedDateTime // when was the last FPos published
-
-    //--- from MSG-1 (no need to store time since it is invariant)
-    var cs: String = null
-    var icao24String: String = null // not set before we have a cs
-
-    //--- from MSG-4
-    var spd: Speed = UndefinedSpeed
-    var vr: Speed = UndefinedSpeed
-    var hdg: Angle = UndefinedAngle
-    var msg4Date: DateTime = UndefinedDateTime
-  }
-
-  class SBSImportParser extends UTF8CsvPullParser {
-    val _MSG_ = Slice("MSG")
-
-    def parse: Unit = {
-      def readDate: DateTime = {
-        val dateRange = readNextValue.getIntRange
-        val timeRange = readNextValue.getIntRange
-        DateTime.parseYMDT(data,dateRange.offset,dateRange.length+timeRange.length+1)
-      }
-
-      while (skipToNextRecord) {
-        if (readNextValue == _MSG_) {
-          readNextValue.toInt match {
-            case 1 => // flight identification (cs)
-              skip(2)
-              parseNextValue
-              val icao24 = value.toHexLong
-              val icao24String = value.intern
-              skip(5)
-              val cs = readNextValue.trim.intern  // dump1090 reports c/s with spaces filled to 8 chars
-
-              var ac = acCache.getOrElseUpdate(icao24, new SBSCache(icao24))
-              ac.cs = cs
-              ac.icao24String = icao24String
-
-            case 3 => // airborne position (date,lat,lon,alt)
-              skip(2)
-              val icao24 = readNextValue.toHexLong
-
-              val ac = acCache.getOrNull(icao24) // avoid allocation
-              if (ac != null) {
-                if (ac.cs != null && ac.hdg.isDefined && ac.spd.isDefined) {
-                  skip(1)
-                  val date = readDate
-                  skip(3)
-                  val alt = Feet(readNextValue.toInt)
-                  skip(2)
-                  val lat = Degrees(readNextValue.toDouble)
-                  val lon = Degrees(readNextValue.toDouble)
-
-                  val status = if (ac.publishDate.isDefined) 0 else TrackedObject.NewFlag
-                  ac.publishDate = date
-
-                  val fpos = new FlightPos(
-                    ac.icao24String, ac.cs,
-                    LatLonPos(lat, lon, alt),
-                    ac.spd, ac.hdg, ac.vr,
-                    date, status
-                  )
-
-                  nUpdates += 1
-                  updateFunc(fpos)
-                }
-              }
-
-            case 4 => // airborne velocity (date,spd,vr,hdg)
-              skip(2)
-              val icao24 = readNextValue.toHexLong
-              skip(1)
-              val date = readDate
-              skip(4)
-
-              // apparently some aircraft report MSG4 without speed and heading
-              val spd = if (parseNextNonEmptyValue) Knots(value.toInt) else UndefinedSpeed
-              val hdg = if (parseNextNonEmptyValue) Degrees(value.toInt) else UndefinedAngle
-              skip(2)
-              val vr = if (parseNextNonEmptyValue) FeetPerMinute(value.toInt) else UndefinedSpeed
-
-              val ac = acCache.getOrElseUpdate(icao24, new SBSCache(icao24))
-              ac.msg4Date = date
-              ac.spd = spd
-              ac.hdg = hdg
-              ac.vr = vr
-
-            case _ => // ignore other MSG types
-          }
-        }
-        skipToEndOfRecord
-      }
-    }
-  }
 
   @inline final def recordLimit(bs: Array[Byte], len: Int): Int = {
     var i = len-1
@@ -206,23 +102,17 @@ class SBSDataAcquisitionThread (socket: Socket, bufLen: Int, dropDuration: Finit
     i+1
   }
 
-  // we chose a LongMap based on the assumption that size is limited (<100 entries) and update is much more
-  // frequent than removal (LongMap is an open hashmap that requires reorganization)
-  val acCache = new mutable.LongMap[SBSCache](128) // keys are icao24 ids (hex 24bit)
-
-  setDaemon(true)
-
   override def run: Unit = {
     val buf = new Array[Byte](bufLen)
     val in = socket.getInputStream
-    val parser = new SBSImportParser
+    val updater = new SBSUpdater(updateFunc,dropFunc)
 
     lastDropCheck = DateTime.now
 
     @inline def dropCheck: Unit = {
       val tNow = DateTime.now
       if (tNow - lastDropCheck >= checkAfter) {
-        dropStale(tNow)
+        updater.dropStale(tNow,dropAfter)
         lastDropCheck = tNow
       }
     }
@@ -240,7 +130,7 @@ class SBSDataAcquisitionThread (socket: Socket, bufLen: Int, dropDuration: Finit
     try {
       var limit = read(buf,0,buf.length)
 
-      while (limit >= 0) {
+      while (!isDone.get && limit >= 0) {
         var recLimit = recordLimit(buf,limit)
 
         while (recLimit == 0) { // no single record in buffer, try to read more
@@ -250,7 +140,7 @@ class SBSDataAcquisitionThread (socket: Socket, bufLen: Int, dropDuration: Finit
           recLimit = recordLimit(buf,limit)
         }
 
-        if (parser.initialize(buf,recLimit)) parser.parse
+        if (updater.initialize(buf,recLimit)) updater.parse
         dropCheck
 
         if (recLimit < limit){ // last record is incomplete
@@ -266,28 +156,6 @@ class SBSDataAcquisitionThread (socket: Socket, bufLen: Int, dropDuration: Finit
       case x:IOException => // ? should we make a reconnection effort here?
     }
   }
-
-  def terminate: Unit = {
-    socket.shutdownInput
-    socket.close // this should interrupt blocked socket reads
-  }
-
-  def dropStale (date: DateTime): Unit = {
-    acCache.foreachValue { ac=>
-      val dt = date.timeSince(ac.publishDate)
-      if ( dt > dropAfter) {
-        acCache.remove(ac.icao24)
-        dropFunc(ac.icao24String, ac.cs, date, dt)
-        nDropped += 1
-        nRemoved += 1
-
-        if (nRemoved > acCache.size/10) {
-          acCache.repack
-          nRemoved = 0
-        }
-      }
-    }
-  }
 }
 
 
@@ -300,50 +168,26 @@ class SBSDataAcquisitionThread (socket: Socket, bufLen: Int, dropDuration: Finit
   * to enable a single, re-used byte array input buffer. The direct translation is possible since SBS (CSV)
   * data is both small and simple to parse, hence translation will not increase socket read latency
   */
-class SBSImportActor (val config: Config) extends SBSImporter  {
+class SBSImportActor (val config: Config) extends SBSImporter with SocketImporter {
 
   // this is a wall time actor
   override def getCapabilities = super.getCapabilities - SupportsPauseResume - SupportsSimTimeReset
 
-  val host = config.getStringOrElse("host", "localhost")
-  val port = config.getIntOrElse("port", 30003)
   val dropAfter = config.getFiniteDurationOrElse("drop-after", Duration.Zero) // Zero means don't check for drop
 
-  var thread: Option[SBSDataAcquisitionThread] = None // don't create/start yet, the server might get launched by an actor
+  override def defaultPort: Int = 30003
 
-  override def onInitializeRaceActor(rc: RaceContext, actorConf: Config) = {
-    var socket: Socket = null
-    try {
-      socket = new Socket(host, port)
+  override def createDataAcquisitionThread (sock: Socket): Option[SocketDataAcquisitionThread] = {
+    Some(new SBSDataAcquisitionThread(sock, initBufferSize, dropAfter, publishTrack, dropTrack))
+  }
 
-      // NOTE - buffer has to be larger than max record length so that we always have at least a single \n in it
-      val bufLen = Math.max(config.getIntOrElse("buffer-size", 0),4096)
-      thread = Some(new SBSDataAcquisitionThread(socket, bufLen, dropAfter, publish, dropTrack))
-      super.onInitializeRaceActor(rc, actorConf)
-
-    } catch {
-      case x: Throwable  =>
-        if (socket != null) socket.close
-        error(s"failed to create data acquisition thread: $x")
-        false
-    }
+  def publishTrack (track: TrackedObject): Boolean = {
+    publish(track)
+    true // go on as long as the parser has more data
   }
 
   def dropTrack (id: String, cs: String, date: DateTime, inactive: Time): Unit = {
     publish(TrackDropped(id,cs,date,Some(stationId)))
     info(s"dropping $id ($cs) at $date after $inactive")
-  }
-
-  override def onStartRaceActor(originator: ActorRef) = {
-    ifSome(thread) { t => t.start }
-    super.onStartRaceActor(originator)
-  }
-
-  override def onTerminateRaceActor(originator: ActorRef) = {
-    ifSome(thread) { t =>
-      t.terminate
-      thread = None
-    }
-    super.onTerminateRaceActor(originator)
   }
 }
