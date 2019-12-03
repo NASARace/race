@@ -47,6 +47,8 @@ abstract class CsvPullParser {
     nValues = 0
   }
 
+  def hasMoreData: Boolean = idx < limit
+
   //--- the public methods
 
   // idx is on start of first value, the preceding ',', or on EOL

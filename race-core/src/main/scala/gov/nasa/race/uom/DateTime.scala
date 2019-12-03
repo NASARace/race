@@ -135,7 +135,7 @@ object DateTime {
         d = d + (b - '0')*s
         s /= 10
         i += 1
-        b = bs(i)
+        if (i < iMax) b = bs(i) else return d
       }
       d
     }
@@ -154,43 +154,45 @@ object DateTime {
     var offMin = 0
     var zoneId: ZoneId = ZoneId.systemDefault
 
-    i = 19
-    var b = bs(i)
-    if (b == '.'){ // fractional nanos
-      i += 1
-      S = readFracNanos
-      b = bs(i)
-    }
-
-    if (b == '+' || b == '-') { // zone offset (id is ignored)
-      offH = read2Digits(i+1)
-      if (b == '-') offH = -offH
-      i += 3
-      if (bs(i) == ':') {
-        offMin = read2Digits(i+1)
-        if (offH < 0) offMin = -offMin
-        i += 3
-      }
-      zoneId = ZoneId.ofOffset("", ZoneOffset.ofHoursMinutes(offH,offMin))
-
-    } else { // is there a zone id?
-      if (b == 'Z') {
-        zoneId = ZoneOffset.UTC
-
-      } else if (b == '[') {
+    i = off+19
+    if (i < iMax) {
+      var b = bs(i)
+      if (b == '.') { // optional fractional nanos
         i += 1
-        if ((iMax - i >= 3) &&
-          (bs(i) == 'U' && bs(i+1) == 'T' && bs(i+2) == 'C') ||
-          (bs(i) == 'G' && bs(i+1) == 'M' && bs(i+2) == 'T')) {
-          ZoneOffset.UTC
+        S = readFracNanos
+        b = if (i < iMax) bs(i) else 0
+      }
 
-        } else {
-          val i0 = i
-          while (bs(i) != ']') {
-            i += 1
+      if (b == '+' || b == '-') { // optional zone offset (id is ignored)
+        offH = read2Digits(i + 1)
+        if (b == '-') offH = -offH
+        i += 3
+        if (bs(i) == ':') {
+          offMin = read2Digits(i + 1)
+          if (offH < 0) offMin = -offMin
+          i += 3
+        }
+        zoneId = ZoneId.ofOffset("", ZoneOffset.ofHoursMinutes(offH, offMin))
+
+      } else { // is there a zone id?
+        if (b == 'Z') {
+          zoneId = ZoneOffset.UTC
+
+        } else if (b == '[') {
+          i += 1
+          if ((iMax - i >= 3) &&
+            (bs(i) == 'U' && bs(i + 1) == 'T' && bs(i + 2) == 'C') ||
+            (bs(i) == 'G' && bs(i + 1) == 'M' && bs(i + 2) == 'T')) {
+            ZoneOffset.UTC
+
+          } else {
+            val i0 = i
+            while (bs(i) != ']') {
+              i += 1
+            }
+            val zId = new String(bs, i0, i - i0) // unfortunately we have to allocate since ZoneId does not provide other accessors
+            ZoneId.of(zId)
           }
-          val zId = new String(bs, i0, i - i0) // unfortunately we have to allocate since ZoneId does not provide other accessors
-          ZoneId.of(zId)
         }
       }
     }
