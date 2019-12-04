@@ -124,21 +124,23 @@ class SBSUpdater(updateFunc: TrackedObject=>Boolean,
                 skip(3)
                 val alt = Feet(readNextValue.toInt)
                 skip(2)
-                val lat = Degrees(readNextValue.toDouble)
-                val lon = Degrees(readNextValue.toDouble)
+                val lat = if (parseNextNonEmptyValue) Degrees(value.toDouble) else UndefinedAngle
+                val lon = if (parseNextNonEmptyValue) Degrees(value.toDouble) else UndefinedAngle
 
-                val status = if (ac.publishDate.isDefined) 0 else TrackedObject.NewFlag
-                ac.publishDate = date
+                if (lat.isDefined && lon.isDefined) {
+                  val status = if (ac.publishDate.isDefined) 0 else TrackedObject.NewFlag
+                  ac.publishDate = date
 
-                val fpos = new FlightPos(
-                  ac.icao24String, ac.cs,
-                  LatLonPos(lat, lon, alt),
-                  ac.spd, ac.hdg, ac.vr,
-                  date, status
-                )
+                  val fpos = new FlightPos(
+                    ac.icao24String, ac.cs,
+                    LatLonPos(lat, lon, alt),
+                    ac.spd, ac.hdg, ac.vr,
+                    date, status
+                  )
 
-                nUpdates += 1
-                notDone = updateFunc(fpos)
+                  nUpdates += 1
+                  notDone = updateFunc(fpos)
+                }
               }
             }
 
