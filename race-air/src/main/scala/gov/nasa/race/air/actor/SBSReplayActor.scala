@@ -24,16 +24,22 @@ import gov.nasa.race.air.SBSUpdater
 import gov.nasa.race.archive.ArchiveReader
 import gov.nasa.race.common.ConfigurableStreamCreator.{configuredPathName, createInputStream}
 import gov.nasa.race.config.ConfigUtils._
-import gov.nasa.race.track.TrackedObject
+import gov.nasa.race.core.PeriodicRaceActor
+import gov.nasa.race.track.{TrackDropped, TrackedObject}
 import gov.nasa.race.uom.{DateTime, Time}
+import gov.nasa.race.uom.Time._
+
+import scala.concurrent.duration._
 
 /**
   * a ArchiveReader for SBS text archives that minimizes buffer-copies and temporary allocations
   *
+  * this class adds a per-track update pull interface to the SBSUpdater, which otherwise would read
+  * all records in its current buffer when calling parse
+  *
   * note that the primary ctor allows testing outside of an actor context
   */
-class SBSReader (val iStream: InputStream,
-                 val pathName: String="<unknown>", bufLen: Int) extends ArchiveReader {
+class SBSReader (val iStream: InputStream, val pathName: String="<unknown>", bufLen: Int) extends ArchiveReader {
 
   def this(conf: Config) = this(createInputStream(conf), // this takes care of optional compression
                                 configuredPathName(conf),
@@ -47,13 +53,14 @@ class SBSReader (val iStream: InputStream,
   var recLimit = 0 // end of last record in [i0,limit] range
 
   //--- updater callbacks
+
   def updateTrack (track: TrackedObject): Boolean = {
     next = someEntry(track.date, track)
-    false // process entries one at a time
+    false // process entries one at a time - stop the parse loop
   }
 
   def dropTrack (id: String, cs: String, date: DateTime, inactive: Time): Unit = {
-
+    // override in derived class that supports drop checks
   }
 
   //--- the data acquisition loop
@@ -83,7 +90,10 @@ class SBSReader (val iStream: InputStream,
   }
 
   //--- ArchiveReader interface
-  override def hasMoreData: Boolean = updater.hasMoreData || iStream.available > 0
+
+  override def hasMoreData: Boolean = {
+    updater.hasMoreData || iStream.available > 0
+  }
 
   override def readNextEntry: Option[ArchiveEntry] = {
     if (!updater.hasMoreData) {  // refill buffer
@@ -91,13 +101,16 @@ class SBSReader (val iStream: InputStream,
     }
 
     next = None
-    updater.parse
+    do {
+      updater.parse
+    } while (next.isEmpty && (!updater.hasMoreData && refillBuf))
     next
   }
 
   override def close: Unit = iStream.close
 
   //--- debugging
+
   def dumpContents: Unit = {
     var i = 0
     println("--- SBS archive contents:")
@@ -116,8 +129,22 @@ class SBSReader (val iStream: InputStream,
 /**
   * specialized ReplayActor for SBS text archives
   */
-class SBSReplayActor (override val config: Config) extends ReplayActor(config) {
+class SBSReplayActor (override val config: Config) extends ReplayActor(config) with PeriodicRaceActor with SBSImporter {
 
-  override def createReader = new SBSReader(config) // we reuse our own config to keep it symmetric to SBSArchiveActor
+  class DropCheckSBSReader (conf: Config) extends SBSReader(config) {
+    override def dropTrack (id: String, cs: String, date: DateTime, inactive: Time): Unit = {
+      publish(TrackDropped(id,cs,date,Some(stationId)))
+      info(s"dropping $id ($cs) at $date after $inactive")
+    }
+
+    def dropCheck (date: DateTime, dropAfter: Time): Unit = updater.dropStale(date,dropAfter)
+  }
+
+  override def createReader = new DropCheckSBSReader(config) // note this is called during ReplayActor init so don't rely on SBSReplayActor ctor
+
+  val dropAfter = Milliseconds(config.getFiniteDurationOrElse("drop-after", Duration.Zero).toMillis) // this is sim-time. Zero means don't check for drop
+  override def startScheduler = if (dropAfter.nonZero) super.startScheduler  // only start scheduler if we have drop checks
+  override def defaultTickInterval = 30.seconds  // wall clock time
+  override def onRaceTick: Unit = reader.asInstanceOf[DropCheckSBSReader].dropCheck(updatedSimTime,dropAfter) // FIXME
 
 }

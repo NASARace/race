@@ -18,6 +18,8 @@ package gov.nasa.race.common
 
 import gov.nasa.race.common.inlined.Slice
 
+import scala.annotation.tailrec
+
 class CsvParseException (msg: String) extends RuntimeException(msg)
 
 /**
@@ -115,13 +117,16 @@ abstract class CsvPullParser {
     idx = i
   }
 
-  def skipToNextRecord: Boolean = {
+  // override this if the parser is able to obtain more data
+  protected def acquireMoreData: Boolean = false
+
+  @tailrec final def skipToNextRecord: Boolean = {
     if (idx < limit) {
       if (isRecordSeparator(data(idx))) idx = skipRecordSeparator(idx+1)
       nValues = 0
       idx < limit
     } else {
-      false
+      acquireMoreData && skipToNextRecord
     }
   }
 

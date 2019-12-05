@@ -27,7 +27,7 @@ import gov.nasa.race.track.{TrackDropped, TrackedObject}
 import scala.collection.Map
 import scala.concurrent.duration._
 
-case object CheckStaleFlightPos
+case object CheckStaleTracks
 
 /**
   * mix-in to generate/publish TrackDropped messages for stale track objects
@@ -46,14 +46,14 @@ trait TrackDropper extends PublishingRaceActor with ContinuousTimeRaceActor with
   val dropAfterMillis = config.getFiniteDurationOrElse("drop-after", 60.seconds).toMillis // this is sim time
   override def defaultTickInterval = 30.seconds  // wall clock time
 
-  override def onRaceTick: Unit = removeStaleFlights
+  override def onRaceTick: Unit = removeStaleTracks
 
   /** likely to be overridden/replaced */
   def handleFPosDropperMessage: Receive = {
-    case CheckStaleFlightPos => removeStaleFlights  // on demand
+    case CheckStaleTracks => removeStaleTracks  // on demand
   }
 
-  def removeStaleFlights = {
+  def removeStaleTracks = {
     val now = updatedSimTime
     val cut = dropAfterMillis
 
