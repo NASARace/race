@@ -46,11 +46,11 @@ import scala.language.postfixOps
   * Note that is is essential that we only call scheduleNext when the previous entry is published or otherwise
   * we might loose the total order over published entries (potentially resulting in out-of-order messages)
   *
-  * ReplayActor is a potential ClockAdjuster, i.e. if enabled the global sim clock can be reset to the first
+  * A Replayer is a potential ClockAdjuster, i.e. if enabled the global sim clock can be reset to the first
   * message time encountered. The user has to make sure there is no force-fight in the configuration of several ReplayActors
   */
-class ReplayActor (val config: Config) extends ContinuousTimeRaceActor
-                                       with FilteringPublisher with Counter with ClockAdjuster {
+trait Replayer[T<:ArchiveReader] extends ContinuousTimeRaceActor
+                                with FilteringPublisher with Counter with ClockAdjuster {
   case class Replay (msg: Any, date: DateTime)
   case object ScheduleNext
 
@@ -62,15 +62,14 @@ class ReplayActor (val config: Config) extends ContinuousTimeRaceActor
   val skipThresholdMillis = config.getIntOrElse("skip-millis", 1000) // skip until current sim time - replay time is within limit
   val maxSkip = config.getIntOrElse("max-skip", 1000) // stop replay if we hit more than max-skip consecutive malformed entries
 
-  val reader: ArchiveReader = createReader
+  val reader: T = createReader
   var noMoreData = !reader.hasMoreData
 
   var isFirst = true // we haven't scheduled or replayed anything yet
   val pendingMsgs = new ListBuffer[Replay]  // replay messages received in stopped state  that have to be re-scheduled
   var nScheduled = 0
 
-  /** override for hardwired readers */
-  def createReader: ArchiveReader = getConfigurable[ArchiveReader]("reader") // note 2.12.3 can't infer type arg
+  def createReader: T  // to be provided by concrete type
 
   if (noMoreData) {
     warning(s"no data for ${reader.pathName}")
@@ -237,4 +236,11 @@ class ReplayActor (val config: Config) extends ContinuousTimeRaceActor
       }
     }
   }
+}
+
+/**
+  * generic Replayer that gets configured with a ArchiveReader
+  */
+class ReplayActor (val config: Config) extends Replayer[ArchiveReader] {
+  override def createReader: ArchiveReader = getConfigurable[ArchiveReader]("reader") // note 2.12.3 can't infer type arg
 }

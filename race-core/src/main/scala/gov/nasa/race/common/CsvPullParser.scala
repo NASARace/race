@@ -120,14 +120,12 @@ abstract class CsvPullParser {
   // override this if the parser is able to obtain more data
   protected def acquireMoreData: Boolean = false
 
-  @tailrec final def skipToNextRecord: Boolean = {
+  def skipToNextRecord: Boolean = {
+    nValues = 0
     if (idx < limit) {
       if (isRecordSeparator(data(idx))) idx = skipRecordSeparator(idx+1)
-      nValues = 0
-      idx < limit
-    } else {
-      acquireMoreData && skipToNextRecord
     }
+    if (idx < limit) true else acquireMoreData
   }
 
   def hasMoreValues: Boolean = isValueSeparator(data(idx))

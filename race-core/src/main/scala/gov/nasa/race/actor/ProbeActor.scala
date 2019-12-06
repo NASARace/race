@@ -17,7 +17,11 @@
 
 package gov.nasa.race.actor
 
+import java.io.{FileOutputStream, PrintStream}
+
+import akka.actor.ActorRef
 import com.typesafe.config.Config
+import gov.nasa.race._
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.config.ConfigurableTranslator
 import gov.nasa.race.core.Messages.BusEvent
@@ -34,8 +38,17 @@ class ProbeActor (val config: Config) extends ChannelTopicSubscriber {
   val translator: Option[ConfigurableTranslator] = config.getOptionalConfig("translator") flatMap createTranslator
   val alert: Boolean = config.getBooleanOrElse("alert", false)
 
+  val pathName = config.getOptionalString("pathname")  // optional pathname to log to (in addition to console output)
+  val fos = pathName.map(pn => new PrintStream(new FileOutputStream(pn)))
+
+
   override def handleMessage = {
     case BusEvent(sel,msg,_) => report(sel,msg)
+  }
+
+  override def onTerminateRaceActor(originator: ActorRef): Boolean = {
+    ifSome(fos) {_.close}
+    super.onTerminateRaceActor(originator)
   }
 
   def createTranslator(transConf: Config) = {
@@ -57,11 +70,9 @@ class ProbeActor (val config: Config) extends ChannelTopicSubscriber {
         SoundUtils.tone(500, 700, 0.6)
       }
 
-      if (prefix.isDefined) {
-        println(s"${prefix.get}$o")
-      } else {
-        println(s"got on channel: '$channel' message: '$o'")
-      }
+      val msg = if (prefix.isDefined) prefix.get + o else o
+      println(msg)
+      ifSome(fos) { _.println(msg)}
 
       if (alert) print(scala.Console.RESET)
     }

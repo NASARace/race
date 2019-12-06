@@ -19,15 +19,15 @@ package gov.nasa.race.air.actor
 import java.io.InputStream
 
 import com.typesafe.config.Config
-import gov.nasa.race.actor.ReplayActor
+import gov.nasa.race.actor.Replayer
 import gov.nasa.race.air.SBSUpdater
 import gov.nasa.race.archive.ArchiveReader
 import gov.nasa.race.common.ConfigurableStreamCreator.{configuredPathName, createInputStream}
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.PeriodicRaceActor
 import gov.nasa.race.track.{TrackDropped, TrackedObject}
-import gov.nasa.race.uom.{DateTime, Time}
 import gov.nasa.race.uom.Time._
+import gov.nasa.race.uom.{DateTime, Time}
 
 import scala.concurrent.duration._
 
@@ -45,7 +45,11 @@ class SBSReader (val iStream: InputStream, val pathName: String="<unknown>", buf
                                 configuredPathName(conf),
                                 conf.getIntOrElse("buffer-size",4096)) // size has to hold at least 2 records
 
-  val updater: SBSUpdater = new SBSUpdater(updateTrack,dropTrack)
+  class SBSArchiveUpdater extends SBSUpdater(updateTrack,dropTrack) {
+    override protected def acquireMoreData: Boolean = refillBuf
+  }
+
+  val updater: SBSUpdater = new SBSArchiveUpdater
   var next: Option[ArchiveEntry] = None
 
   val buf = new Array[Byte](bufLen)  // the input buffer for reading iStream
@@ -96,18 +100,14 @@ class SBSReader (val iStream: InputStream, val pathName: String="<unknown>", buf
   }
 
   override def readNextEntry: Option[ArchiveEntry] = {
-    if (!updater.hasMoreData) {  // refill buffer
-      if (!refillBuf) return None
-    }
-
     next = None
-    do {
-      updater.parse
-    } while (next.isEmpty && (!updater.hasMoreData && refillBuf))
+    updater.parse
     next
   }
 
   override def close: Unit = iStream.close
+
+  def dropStale (date: DateTime, dropAfter: Time): Unit = updater.dropStale(date,dropAfter)
 
   //--- debugging
 
@@ -129,15 +129,13 @@ class SBSReader (val iStream: InputStream, val pathName: String="<unknown>", buf
 /**
   * specialized ReplayActor for SBS text archives
   */
-class SBSReplayActor (override val config: Config) extends ReplayActor(config) with PeriodicRaceActor with SBSImporter {
+class SBSReplayActor (val config: Config) extends Replayer[SBSReader] with PeriodicRaceActor with SBSImporter {
 
   class DropCheckSBSReader (conf: Config) extends SBSReader(config) {
     override def dropTrack (id: String, cs: String, date: DateTime, inactive: Time): Unit = {
       publish(TrackDropped(id,cs,date,Some(stationId)))
       info(s"dropping $id ($cs) at $date after $inactive")
     }
-
-    def dropCheck (date: DateTime, dropAfter: Time): Unit = updater.dropStale(date,dropAfter)
   }
 
   override def createReader = new DropCheckSBSReader(config) // note this is called during ReplayActor init so don't rely on SBSReplayActor ctor
@@ -145,6 +143,6 @@ class SBSReplayActor (override val config: Config) extends ReplayActor(config) w
   val dropAfter = Milliseconds(config.getFiniteDurationOrElse("drop-after", Duration.Zero).toMillis) // this is sim-time. Zero means don't check for drop
   override def startScheduler = if (dropAfter.nonZero) super.startScheduler  // only start scheduler if we have drop checks
   override def defaultTickInterval = 30.seconds  // wall clock time
-  override def onRaceTick: Unit = reader.asInstanceOf[DropCheckSBSReader].dropCheck(updatedSimTime,dropAfter) // FIXME
+  override def onRaceTick: Unit = reader.dropStale(updatedSimTime,dropAfter) // FIXME
 
 }
