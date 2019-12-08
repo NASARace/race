@@ -24,6 +24,7 @@ import com.typesafe.config.Config
 import gov.nasa.race._
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.config.ConfigurableTranslator
+import gov.nasa.race.common.ConfigurableStreamCreator.{configuredPathName, createOutputStream}
 import gov.nasa.race.core.Messages.BusEvent
 import gov.nasa.race.core.{ChannelTopicSubscriber, SubscribingRaceActor}
 import gov.nasa.race.util.{ConsoleIO, SoundUtils}
@@ -39,7 +40,7 @@ class ProbeActor (val config: Config) extends ChannelTopicSubscriber {
   val alert: Boolean = config.getBooleanOrElse("alert", false)
 
   val pathName = config.getOptionalString("pathname")  // optional pathname to log to (in addition to console output)
-  val fos = pathName.map(pn => new PrintStream(new FileOutputStream(pn)))
+  val fos = pathName.map(pn => new PrintStream(createOutputStream(config,pn)))
 
 
   override def handleMessage = {

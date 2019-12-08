@@ -86,6 +86,9 @@ trait ContinuousTimeRaceActor extends RaceActor {
     lastSimMillis - startSimTimeMillis
   }
 
+  @inline final def baseSimTime: DateTime = simClock.base
+
+  @inline final def currentSimTime: DateTime = DateTime.ofEpochMillis(simClock.millis)
   @inline final def currentSimTimeMillis = simClock.millis
   @inline final def currentWallTimeMillis = System.currentTimeMillis()
 

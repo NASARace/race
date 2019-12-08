@@ -37,6 +37,11 @@ class ArchiveActor (val config: Config) extends ChannelTopicSubscriber with Cont
   // note - scala 2.12.3 can't infer getConfigurable type arg
   protected def createWriter: ArchiveWriter = getConfigurable[ArchiveWriter]("writer")
 
+  override def onStartRaceActor (originator: ActorRef) = {
+    writer.open(baseSimTime)
+    super.onStartRaceActor(originator)
+  }
+
   override def onTerminateRaceActor(originator: ActorRef) = {
     stopArchiving = true
     writer.close
