@@ -72,6 +72,8 @@ trait ArchiveReader extends DateAdjuster {
     someEntry
   }
 
+  def setRefDate (date: DateTime): Unit = {}
+
   //--- to be provided by subtypes
   def hasMoreData: Boolean
   def readNextEntry: Option[ArchiveEntry]

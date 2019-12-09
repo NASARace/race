@@ -299,15 +299,15 @@ final class Slice (var data: Array[Byte], var offset: Int, var length: Int) {
     var i = offset
     val iMax = offset + length
     val bs = this.data
-    var l: Long = 0
+    var n: Long = 0
 
     while (i < iMax){
-      l <<= 4
-      l |= hexDigit(bs(i))
+      n <<= 4
+      n |= hexDigit(bs(i))
       i += 1
     }
 
-    l
+    n
   }
 
   def toLong: Long = {
@@ -333,6 +333,21 @@ final class Slice (var data: Array[Byte], var offset: Int, var length: Int) {
     if (i < iMax) throw new NumberFormatException(this.toString)
 
     sig * n
+  }
+
+  def toHexInt: Int = {
+    var i = offset
+    val iMax = offset + length
+    val bs = this.data
+    var n: Int = 0
+
+    while (i < iMax){
+      n <<= 4
+      n |= hexDigit(bs(i))
+      i += 1
+    }
+
+    n
   }
 
   def toInt: Int = {

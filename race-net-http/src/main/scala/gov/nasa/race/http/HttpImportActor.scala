@@ -87,7 +87,7 @@ class HttpImportActor (val config: Config) extends PublishingRaceActor
   var requests: Seq[HttpRequest] = config.getConfigSeq("data-requests").toList.flatMap(HttpRequestBuilder.get)
 
   // do we publish response data as String or Array[Byte]?
-  val publishAsBytes: Boolean = config.getBooleanOrElse("publish-as-bytes", false)
+  val publishAsBytes: Boolean = config.getBooleanOrElse("publish-raw", false)
 
   // we keep a queue of pending requests so that we can detect out-of-order responses and do graceful termination
   val pendingRequests = mutable.Queue.empty[PendingRequest]
