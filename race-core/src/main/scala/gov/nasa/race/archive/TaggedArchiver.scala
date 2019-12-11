@@ -57,8 +57,7 @@ object TaggedArchiver {
   final val FS: Byte  = ',' // field separator
   final val LF: Byte = '\n' // line feed
 
-  final val fileHeaderLength = 27 // SOH + hex16 + FS + hex8 + EOH
-  final val nEntriesOffset = 18
+  final val fileHeaderLength = 17 // hex16 + EOH
   final val entryHeaderLength = 20 // LF + SOH + hex8 + FS + hex8 + EOH
 }
 import gov.nasa.race.archive.TaggedArchiver._
@@ -200,7 +199,7 @@ trait TaggedTextArchiveReader extends ArchiveReader {
     if (iStream.read(buf,0,entryHeaderLength) == entryHeaderLength) {
       slice.setRange(2, 8)
       val entryDate = refDate + Milliseconds(slice.toHexInt)
-      slice.setRange(10, 8)
+      slice.setRange(11, 8)
       val entryLength = slice.toHexInt
 
       if (entryLength > 0) {

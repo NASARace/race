@@ -62,6 +62,8 @@ trait Replayer[T<:ArchiveReader] extends ContinuousTimeRaceActor
   val skipThresholdMillis = config.getIntOrElse("skip-millis", 1000) // skip until current sim time - replay time is within limit
   val maxSkip = config.getIntOrElse("max-skip", 1000) // stop replay if we hit more than max-skip consecutive malformed entries
 
+  val flatten: Boolean = config.getBooleanOrElse("flatten", false) // do we publish collection results separately
+
   val reader: T = createReader
   var noMoreData = !reader.hasMoreData
 
@@ -135,6 +137,15 @@ trait Replayer[T<:ArchiveReader] extends ContinuousTimeRaceActor
     debug(f"scheduling in $dtMillis milliseconds: $msg%50.50s.. ")
     nScheduled += 1
     scheduler.scheduleOnce(dtMillis milliseconds, self, Replay(msg,date))
+  }
+
+  override def publishFiltered(msg: Any): Unit = {
+    if (flatten){
+      msg match {
+        case list: Iterable[_] => list.foreach(publishFiltered)
+        case m => super.publishFiltered(m)
+      }
+    } else super.publishFiltered(msg)
   }
 
   def replayMessageNow(msg: Any, date: DateTime): Boolean = {

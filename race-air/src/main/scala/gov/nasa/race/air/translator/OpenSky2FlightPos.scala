@@ -32,8 +32,14 @@ import gov.nasa.race.uom.Speed._
 import scala.collection.Seq
 import scala.collection.mutable.ArrayBuffer
 
+object OpenSkyParser {
+  val _states_ = Slice("states")
+  val _time_ = Slice("time")
+}
+import OpenSkyParser._
+
 /**
-  * translator for OpenSky JSON query results as documented in https://opensky-network.org/apidoc/rest.html
+  * a Json parser for OpenSky JSON query results as documented in https://opensky-network.org/apidoc/rest.html
   *
   * using opensky-net json format as defined in: https://opensky-network.org/apidoc/rest.html
   * {
@@ -43,27 +49,13 @@ import scala.collection.mutable.ArrayBuffer
   *       true, 0, 5, null, null, null, "1021", false, 0], ...
   *    ]
   * }
+  *
+  * this parser returns (potentially empty) FlightPos lists
   */
-class OpenSky2FlightPos (val config: Config=NoConfig) extends UTF8JsonPullParser with ConfigurableTranslator {
+class OpenSkyParser extends UTF8JsonPullParser {
 
-  lazy val bb = new UTF8Buffer(config.getIntOrElse("buffer-size", 8192))
-
-  val _states_ = Slice("states")
-  val _time_ = Slice("time")
-
-  override def translate (src: Any): Option[Any] = {
-    src match {
-      case msg: Array[Byte] =>
-        parse(msg,msg.length)
-      case s: String =>
-        bb.encode(s)
-        parse(bb.data,bb.length)
-      case _ => None
-    }
-  }
-
-  def parse (msg: Array[Byte], lim: Int): Option[Seq[FlightPos]] = {
-    val list = new ArrayBuffer[FlightPos](50)
+  def parse (msg: Array[Byte], lim: Int): Seq[FlightPos] = {
+    var list: ArrayBuffer[FlightPos] = null
 
     def parseState: Unit = {
       matchArrayStart
@@ -85,6 +77,7 @@ class OpenSky2FlightPos (val config: Config=NoConfig) extends UTF8JsonPullParser
       //println(f" $n%2d:  '$icao%10s', '$cs%10s', $timePos%12d,  ($lat%10.5f, $lon%10.5f), $alt%7.2f, $spd%5.2f, $hdg%3.0f, $vr%5.2f")
 
       if (cs.nonEmpty && !lat.isNaN && !lon.isNaN && !alt.isNaN && !hdg.isNaN && !spd.isNaN){
+        if (list == null) list = new ArrayBuffer[FlightPos](50)
         list += new FlightPos(
           icao,cs.trim,GeoPosition.fromDegreesAndMeters(lat,lon,alt),MetersPerSecond(spd),Degrees(hdg),
           MetersPerSecond(vr),DateTime.ofEpochMillis(timePos*1000)
@@ -101,69 +94,29 @@ class OpenSky2FlightPos (val config: Config=NoConfig) extends UTF8JsonPullParser
       matchObjectEnd
     }
 
-    if (list.nonEmpty) Some(list) else None
+    if (list.nonEmpty) list else Seq.empty[FlightPos]
   }
+}
+
+/**
+  * a configurable translator that is based on OpenSkyParser
+  */
+class OpenSky2FlightPos (val config: Config=NoConfig) extends OpenSkyParser with ConfigurableTranslator {
+
+  // this is lazy since it is only used if we have to translate strings
+  lazy val bb = new UTF8Buffer(config.getIntOrElse("buffer-size", 8192))
 
 
-/*
-  implicit val decoder: Decoder[FlightPos] = (hCursor: HCursor) => {
-    for {
-      icao24 <- hCursor.downArray.as[String]
-      cs <- hCursor.downN(1).as[String]
-      //origin <- hCursor.downN(2).as[String]
-      timePos <- hCursor.downN(3).as[Long]
-      //lastContact <- hCursor.downN(4).as[Long]
-      lon <- hCursor.downN(5).as[Float]
-      lat <- hCursor.downN(6).as[Float]
-      alt <- hCursor.downN(7).as[Float]
-      //onGround <- hCursor.downN(8).as[Boolean]
-      speed <- hCursor.downN(9).as[Float]
-      trueTrack <- hCursor.downN(10).as[Float]
-      vr <- hCursor.downN(11).as[Float]
-      //geoAlt <- hCursor.downN(13).as[Float]
-      //squawk <- hCursor.downN(14).as[String]
-      //spi <- hCursor.downN(15).as[Boolean]
-      //posSrc <- hCursor.downN(16).as[Int]
-    } yield {
-      new FlightPos(
-        icao24,cs.trim,GeoPosition.fromDegreesAndMeters(lat,lon,alt),MetersPerSecond(speed),Degrees(trueTrack),
-        MetersPerSecond(vr),DateTime.ofEpochMillis(timePos*1000)
-      )
-    }
-  }
+  override def translate (src: Any): Option[Any] = {
+    def result (list: Seq[FlightPos]): Option[Seq[FlightPos]] = if (list.isEmpty) None else Some(list)
 
-  override def translate(src: Any): Option[Any] = {
     src match {
-      case s: String => translateJson(s)
+      case msg: Array[Byte] =>
+        result(parse(msg,msg.length))
+      case s: String =>
+        bb.encode(s)
+        result(parse(bb.data,bb.length))
       case _ => None
     }
   }
-
-  def validateFpos(fpos: FlightPos): Boolean = {
-    val cs = fpos.cs
-    if (cs.isEmpty || !cs.charAt(0).isLetter) return false
-
-    val pos = fpos.position
-    if (pos.lat.isUndefined || pos.lon.isUndefined || pos.altitude.isUndefined) {
-      //println(s"@@@ incomplete pos: $fpos")
-      return false
-    }
-
-    true
-  }
-
-  def translateJson (input: String): Option[Seq[FlightPos]] = {
-    val json: Json = parser.parse(input).getOrElse(Json.Null)
-    val data: Option[Json] = json.hcursor.downField("states").focus
-
-    data match {
-      case Some(list) =>
-        list.hcursor.as[List[FlightPos]] match {
-          case Right(flist) => Some(flist.filter(validateFpos))
-          case Left(err) => println(err); None
-        }
-      case None => None
-    }
-  }
-  */
 }
