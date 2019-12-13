@@ -43,7 +43,8 @@ trait ArchiveWriter {
 
   if (!checkPathName) handlePathNameFailure // no point instantiating if we can't write
 
-  def open (date: DateTime): Unit = {}
+  def open (date: DateTime): Unit = open(date, getClass.getName)
+  def open (date: DateTime, archiveDescription: String): Unit = {}
   def write (date: DateTime, obj: Any): Boolean
   def close: Unit
 

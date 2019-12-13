@@ -30,7 +30,7 @@ object ConfigurableStreamCreator {
 
   def createInputStream (conf: Config, defaultPathName:String = DefaultPathName): InputStream = {
     val pathName = conf.getStringOrElse(PathNameKey,defaultPathName)
-    val bufSize = conf.getIntOrElse(BufSizeKey, 4096)
+    val bufSize = conf.getIntOrElse(BufSizeKey, 65536)
     val compressedMode = conf.getBooleanOrElse(CompressedKey, pathName.endsWith(".gz"))
 
     val fs = new FileInputStream(pathName)

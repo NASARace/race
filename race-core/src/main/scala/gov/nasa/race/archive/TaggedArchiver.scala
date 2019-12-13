@@ -41,6 +41,8 @@ import gov.nasa.race.util.NumUtils
   *
   * the file header uses the following format:
   *   16 hex chars : refDate in epoch milliseconds, encoded as 0-padded hex string
+  *   FS           : field separator char
+  *   8 hex chars  : byte length of extra header data (following file header, preceding first entry)
   *   EOH          : end of header char
   *
   * each entry is preceded by a entry header of the format
@@ -55,9 +57,9 @@ object TaggedArchiver {
   final val SOH: Byte = '\f' // start of header
   final val EOH: Byte = '\n' // end of header
   final val FS: Byte  = ',' // field separator
-  final val LF: Byte = '\n' // line feed
+  final val LF: Byte  = '\n' // line feed
 
-  final val fileHeaderLength = 17 // hex16 + EOH
+  final val fileHeaderLength  = 26 // hex16 + FS + hex8 + EOH
   final val entryHeaderLength = 20 // LF + SOH + hex8 + FS + hex8 + EOH
 }
 import gov.nasa.race.archive.TaggedArchiver._
@@ -65,7 +67,7 @@ import gov.nasa.race.archive.TaggedArchiver._
 /**
   * an ArchiveWriter that that uses the tagged archive format
   */
-trait TaggedTextArchiveWriter extends ArchiveWriter {
+trait TaggedArchiveWriter extends ArchiveWriter {
   val oStream: OutputStream
   val pathName: String
   val buf: StringDataBuffer
@@ -116,16 +118,24 @@ trait TaggedTextArchiveWriter extends ArchiveWriter {
     }
   }
 
-  protected def writeFileHeader: Unit = {
+  protected def writeFileHeader (extraHeaderData: Array[Byte], len: Int): Unit = {
     writeHex16(refDate.toEpochMillis)
+    oStream.write(FS)
+    writeHex8(len)
     oStream.write(EOH)
+
+    oStream.write(extraHeaderData,0,len)
+  }
+  protected def writeFileHeader (extraHeaderData: String): Unit = {
+    val a = extraHeaderData.getBytes
+    writeFileHeader(a,a.length)
   }
 
   //--- ArchiveWriter interface
 
-  override def open (date: DateTime): Unit = {
+  override def open (date: DateTime, extraHeaderData: String): Unit = {
     refDate = date
-    writeFileHeader
+    writeFileHeader(extraHeaderData)
   }
 
   override def write(date: DateTime, obj: Any): Boolean = {
@@ -144,7 +154,7 @@ trait TaggedTextArchiveWriter extends ArchiveWriter {
 /**
   * a TaggedTextArchiveWriter that can store full unicode strings
   */
-class TaggedStringArchiveWriter (val oStream: OutputStream, val pathName:String="<unknown>", initBufferSize: Int) extends TaggedTextArchiveWriter {
+class TaggedStringArchiveWriter (val oStream: OutputStream, val pathName:String="<unknown>", initBufferSize: Int) extends TaggedArchiveWriter {
   val buf = new UTF8Buffer(initBufferSize)
 
   def this(conf: Config) = this(createOutputStream(conf), configuredPathName(conf), conf.getIntOrElse("buffer-size",4096))
@@ -153,7 +163,7 @@ class TaggedStringArchiveWriter (val oStream: OutputStream, val pathName:String=
 /**
   * a TaggedTextArchiveWriter that only stores ASCII strings
   */
-class TaggedASCIIArchiveWriter (val oStream: OutputStream, val pathName:String="<unknown>", initBufferSize: Int) extends TaggedTextArchiveWriter {
+class TaggedASCIIArchiveWriter (val oStream: OutputStream, val pathName:String="<unknown>", initBufferSize: Int) extends TaggedArchiveWriter {
   val buf = new ASCIIBuffer(initBufferSize)
 
   def this(conf: Config) = this(createOutputStream(conf), configuredPathName(conf), conf.getIntOrElse("buffer-size",4096))
@@ -164,7 +174,7 @@ class TaggedASCIIArchiveWriter (val oStream: OutputStream, val pathName:String="
   *
   * note that subclasses can include payload translation to avoid creating raw input copies
   */
-trait TaggedTextArchiveReader extends ArchiveReader {
+trait TaggedArchiveReader extends ArchiveReader {
   val iStream: InputStream
   val pathName: String
   val initBufferSize: Int
@@ -173,6 +183,7 @@ trait TaggedTextArchiveReader extends ArchiveReader {
   protected val slice: Slice = Slice(buf,0,0)
 
   protected var refDate: DateTime = UndefinedDateTime
+  protected var extraFileHeader: Array[Byte] = Array.empty[Byte]
 
   if (!readFileHeader) throw new RuntimeException(s"could not read tagged archive file header of $pathName")
 
@@ -185,8 +196,16 @@ trait TaggedTextArchiveReader extends ArchiveReader {
     if (iStream.read(buf,0,fileHeaderLength) == fileHeaderLength){
       slice.setRange(0,16)
       refDate = DateTime.ofEpochMillis(slice.toHexLong)
-      true
-    } else false
+      slice.setRange(17,8)
+      val extraHdrLength = slice.toHexInt
+      if (extraHdrLength > 0) {
+        val extraData = new Array[Byte](extraHdrLength)
+        if (iStream.read(extraData, 0, extraData.length) == extraHdrLength) {
+          extraFileHeader = extraData
+          true
+        } else false // inconsistent archive, failed to read extra header data
+      } else true // no extra data
+    } else false // incomplete file header
   }
 
   /**
@@ -201,14 +220,19 @@ trait TaggedTextArchiveReader extends ArchiveReader {
       val entryDate = refDate + Milliseconds(slice.toHexInt)
       slice.setRange(11, 8)
       val entryLength = slice.toHexInt
-
       if (entryLength > 0) {
         if (entryLength > buf.length) growBuffer(entryLength)
-        if (iStream.read(buf, 0, entryLength) == entryLength) {
-          nextEntry.date = entryDate
-          nextEntry.msg = entryData(entryLength)
-          true
-        } else false // incomplete entry data
+
+        var remaining = entryLength
+        var idx = 0
+        do {
+          val n = iStream.read(buf,idx,remaining)
+          idx += n
+          remaining -= n
+        } while (remaining > 0)
+        nextEntry.date = entryDate
+        nextEntry.msg = entryData(entryLength)
+        true
       } else false // empty entry
     } else false // no or incomplete entry header
   }
@@ -229,7 +253,7 @@ trait TaggedTextArchiveReader extends ArchiveReader {
 }
 
 class TaggedStringArchiveReader (val iStream: InputStream, val pathName:String="<unknown>",
-                                 val initBufferSize: Int = 8192, val publishRaw: Boolean = false) extends TaggedTextArchiveReader {
+                                 val initBufferSize: Int = 8192, val publishRaw: Boolean = false) extends TaggedArchiveReader {
 
   def this (conf: Config) = this(createInputStream(conf), configuredPathName(conf),
                                  conf.getIntOrElse("buffer-size",4096), conf.getBooleanOrElse("publish-raw", false))

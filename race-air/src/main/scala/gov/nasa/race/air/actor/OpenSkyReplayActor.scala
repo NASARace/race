@@ -21,7 +21,7 @@ import java.io.InputStream
 import com.typesafe.config.Config
 import gov.nasa.race.actor.Replayer
 import gov.nasa.race.air.translator.OpenSkyParser
-import gov.nasa.race.archive.TaggedTextArchiveReader
+import gov.nasa.race.archive.TaggedArchiveReader
 import gov.nasa.race.common.ConfigurableStreamCreator.{configuredPathName, createInputStream}
 import gov.nasa.race.config.ConfigUtils._
 
@@ -29,11 +29,11 @@ import gov.nasa.race.config.ConfigUtils._
   * OpenSkyParser that implements a TaggedTextArchiveReader
   */
 class OpenSkyReader (val iStream: InputStream, val pathName: String="<unknown>", val initBufferSize: Int)
-                 extends OpenSkyParser with TaggedTextArchiveReader {
+                 extends OpenSkyParser with TaggedArchiveReader {
 
   def this(conf: Config) = this(createInputStream(conf), // this takes care of optional compression
     configuredPathName(conf),
-    conf.getIntOrElse("buffer-size",4096)) // size has to hold at least 2 records
+    conf.getIntOrElse("buffer-size",4096))
 
   override protected def entryData(limit: Int): Any = {
     parse(buf,limit)
