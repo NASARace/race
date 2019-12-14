@@ -53,6 +53,12 @@ object Angle {
   @inline def normalizeRadians (d: Double) = d - π*2 * Math.floor((d + π) / (π*2)) // -π..π
   @inline def normalizeRadians2Pi (d: Double) = if (d<0) d % TwoPi + TwoPi else d % TwoPi  // 0..2π
   @inline def normalizeDegrees (d: Double) =  if (d < 0) d % 360 + 360 else d % 360 // 0..360
+  @inline def normalizeDegrees180 (d: Double) = {
+    var nd = d % 360.0
+    nd = (nd + 360.0) % 360.0
+    if (nd > 180.0) nd -= 360.0
+    nd
+  }
   @inline def normalizedDegreesToRadians (d: Double) = normalizeDegrees(d) * DegreesInRadian
 
   @inline def absDiff(a1: Angle, a2: Angle) = {
@@ -99,8 +105,10 @@ class Angle protected[uom] (val d: Double) extends AnyVal with MaybeUndefined {
   @inline def toRadians: Double = d
   @inline def toDegrees: Double = d / DegreesInRadian
   @inline def toNormalizedDegrees: Double = normalizeDegrees(toDegrees)
+  @inline def toNormalizedDegrees180: Double = normalizeDegrees180(toDegrees)
 
   @inline def toRoundedDegrees: Int = toNormalizedDegrees.round.toInt
+  @inline def toRoundedDegrees180: Int = toNormalizedDegrees180.round.toInt
 
   @inline def negative = new Angle(-d)
 

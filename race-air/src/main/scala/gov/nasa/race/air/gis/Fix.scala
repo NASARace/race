@@ -19,15 +19,17 @@ package gov.nasa.race.air.gis
 import java.io.File
 import java.nio.ByteBuffer
 
+import gov.nasa.race.common.inlined.Slice
+import gov.nasa.race.common.{JsonPullParser, StringJsonPullParser}
 import gov.nasa.race.geo.GeoPosition
 import gov.nasa.race.gis.{GisItem, GisItemDB, GisItemDBFactory}
 import gov.nasa.race.uom.Angle.Degrees
 import gov.nasa.race.uom.DateTime
 import gov.nasa.race.uom.Length.Feet
 import gov.nasa.race.util.{ConsoleIO, FileUtils, NetUtils}
-import io.circe
-import io.circe._
 
+import scala.collection.Seq
+import scala.collection.mutable.ArrayBuffer
 import scala.util.Either
 
 /**
@@ -47,12 +49,22 @@ case class Fix (name: String,
 
 
 /**
-  * parse from Json query results with format:
+  * parse fixes from http query:
+  *
+  *    https://nfdc.faa.gov/nfdcApps/controllers/PublicDataController/getLidData?
+  *                  dataType=LIDFIXESWAYPOINTS&length=..&sortcolumn=fix_identifier&sortdir=asc&start=..
+  *
+  * which yields a Json result such as:
   *
   *   {
   *     "totalrows": 4481,
   *     "totaldisplayrows": 4481,
   *     "data": [
+  *         {
+  *            "fix_identifier":"AAALL",
+  *            "state":"MASSACHUSETTS",
+  *            "description":"42-07-12.6800N 071-08-30.3400W"
+  *         },
   *         {
   *            "fix_identifier": "ADUDE",
   *            "state": "CALIFORNIA",
@@ -62,9 +74,62 @@ case class Fix (name: String,
   *      ]
   *   }
   */
-object FixDB extends GisItemDBFactory[Fix](60) {
+class FixParser extends StringJsonPullParser {
+  import JsonPullParser._
 
   val DescrRE = """(?:(.+)\s+)?(\d+)-(\d+)-(\d+.\d+)(N|S)\s+(\d+)-(\d+)-(\d+.\d+)(E|W)""".r
+
+  val _totalrows_ = Slice("totalrows")
+  val _totaldisplayrows_ = Slice("totaldisplayrows")
+  val _data_ = Slice("data")
+  val _fix_identifier_ = Slice("fix_identifier")
+  val _description_ = Slice("description")
+  val _state_ = Slice("state")
+
+  def parse (input: String): Seq[Fix] = {
+    var list: ArrayBuffer[Fix] = ArrayBuffer.empty[Fix]
+
+    def getDeg (d: Int, m: Int, s: Double, dir: String): Double = {
+      var x = d.toDouble + (m/60.0) + (s/3600.0)
+      if (dir == "W" || dir == "S") -x else x
+    }
+
+    def parseFix: Unit = {
+      matchObjectStart
+      val fixId = readQuotedMember(_fix_identifier_).toString
+      val state = readQuotedMember(_state_).intern
+
+      val descr = readQuotedMember(_description_).toString  // not very efficient but this is a offline tool
+      descr match {
+        case DescrRE(nav, slatDeg, slatMin, slatSec, slatDir, slonDeg, slonMin, slonSec, slonDir) =>
+          val lat = getDeg(slatDeg.toInt, slatMin.toInt, slatSec.toDouble, slatDir)
+          val lon = getDeg(slonDeg.toInt, slonMin.toInt, slonSec.toDouble, slonDir)
+          val pos = GeoPosition.fromDegrees(lat, lon)
+          val navaid = Option(nav)
+          list += Fix(fixId,pos,navaid)
+
+        case _ => println(s"invalid fix description for id=$fixId: '$descr'")
+      }
+
+      matchObjectEnd
+    }
+
+    if (initialize(input)){
+      matchObjectStart
+      val totalRows = readUnQuotedMember(_totalrows_).toInt
+      val totalDisplayRows = readUnQuotedMember(_totaldisplayrows_).toInt
+      readMemberArray(_data_) {
+        parseFix
+      }
+      matchObjectEnd
+    }
+    list
+  }
+}
+
+object FixDB extends GisItemDBFactory[Fix](60) {
+
+  val parser = new FixParser
 
   override protected def writeItemPayloadFields(it: Fix, buf: ByteBuffer): Unit = {
     it.navaid match {
@@ -95,7 +160,7 @@ object FixDB extends GisItemDBFactory[Fix](60) {
         val params = s"dataType=LIDFIXESWAYPOINTS&length=1000&sortcolumn=fix_identifier&sortdir=asc&start=$n$extraParams"
         NetUtils.blockingHttpsPost(url,params) match {
           case Right(json) =>
-            val fixes = parseJson(json)
+            val fixes = parser.parse(json)
             fixes.foreach(addItem)
             r = fixes.size
           case Left(err) => println(s"aborting with error: $err")
@@ -116,58 +181,6 @@ object FixDB extends GisItemDBFactory[Fix](60) {
     } else {
       println(s"invalid output file: $outFile")
       false
-    }
-  }
-
-  //--- JSon decoding (using io.circe - TODO this is overkill, replace with a JsonPullParser)
-
-  def getDeg (d: Int, m: Int, s: Double, dir: String): Double = {
-    var x = d.toDouble + (m/60.0) + (s/3600.0)
-    if (dir == "W" || dir == "S") -x else x
-  }
-
-  def getFix(hCursor: HCursor, id: String, descr: String): Either[DecodingFailure,Fix] = {
-    descr match {
-      case DescrRE(nav, slatDeg,slatMin,slatSec,slatDir, slonDeg,slonMin,slonSec,slonDir) =>
-        val lat = getDeg(slatDeg.toInt,slatMin.toInt,slatSec.toDouble,slatDir)
-        val lon = getDeg(slonDeg.toInt,slonMin.toInt,slonSec.toDouble,slonDir)
-        val pos = GeoPosition.fromDegrees(lat,lon)
-        val navaid = Option(nav)
-        Right(Fix(id,pos,navaid))
-      case _ => Left(circe.DecodingFailure(s"failed to parse description of '$id': $descr",hCursor.history))
-    }
-  }
-
-  private var lastId: String = null // for error reporting
-
-  implicit val fixDecoder: Decoder[Fix] = (hCursor: HCursor) => {
-    for {
-      id <- hCursor.get[String]("fix_identifier")
-      //state <- hCursor.get[String]("state")  // not used
-      descr <- hCursor.get[String]("description")
-      fix <- getFix(hCursor,id,descr)
-    } yield {
-      lastId = id
-      addString(fix.name)
-      fix.navaid.foreach(addString)
-
-      fix
-    }
-  }
-
-  def parseJson (input: String): Seq[Fix] = {
-    val json: Json = parser.parse(input).getOrElse(Json.Null)
-    val data: Option[Json] = json.hcursor.downField("data").focus
-
-    data match {
-      case Some(list) =>
-        list.hcursor.as[List[Fix]] match {
-          case Right(fixes) => fixes
-          case Left(err) =>
-            println(s"parse error after fix '$lastId'")
-            Seq.empty[Fix]
-        }
-      case None => Seq.empty[Fix]
     }
   }
 }

@@ -17,7 +17,8 @@
 
 package gov.nasa.race.util
 
-import java.io.{ByteArrayInputStream, ByteArrayOutputStream, DataInputStream, DataOutputStream, EOFException, IOException, OutputStream}
+import java.io.{ByteArrayInputStream, ByteArrayOutputStream, DataInputStream, DataOutputStream, EOFException, IOException, InputStream, OutputStream}
+import java.util.zip.GZIPInputStream
 
 /**
   * an OutputStream that duplicates to several underlying OutputStreams
@@ -251,6 +252,28 @@ class SettableDIStream(bais: SettableBAIStream) extends DataInputStream(bais) {
       bais.setPosition(pos0)
       v
     } else throw new EOFException
+  }
+}
+
+/**
+  * a GZIPInputStream that does not silently do short reads if the inflater buffer is too small for the request
+  *
+  * note this still can do short reads if there is not enough data left in the underlying stream or
+  * the GzInputStream was created in non-blocking mode.
+  */
+class GzInputStream (is: InputStream, isBlocking: Boolean = false, bufferSize: Int = 65536) extends GZIPInputStream(is,bufferSize) {
+
+  override def read (buf: Array[Byte], off: Int, len: Int): Int = {
+    var remaining = len
+    var idx = 0
+    while (remaining > 0 && (isBlocking || available > 0)) {
+      val n = super.read(buf,idx,remaining)
+      if (n < 0) return idx
+
+      idx += n
+      remaining -= n
+    }
+    idx
   }
 }
 

@@ -25,6 +25,8 @@ import gov.nasa.race.uom.Angle._
 import gov.nasa.race.uom.Length._
 import gov.nasa.race.util.{FileUtils, LeDataOutputStream}
 
+import scala.collection.Seq
+
 
 /**
   *  LandingSite schema for USA_FAA1801:

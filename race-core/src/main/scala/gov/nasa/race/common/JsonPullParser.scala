@@ -388,7 +388,9 @@ abstract class JsonPullParser {
         f // this is supposed to parse ONE array element
       } while (notDone && (level >= endLevel && elementHasMoreValues))
       if (parseNextValue != ArrayEnd) throw new JsonParseException(s"invalid array termination for $name")
-    } else throw new JsonParseException(s"not an array value for '$member'")
+    } else {
+      if (!value.isNullValue) throw new JsonParseException(s"not an array value for '$member'")
+    }
   }
   @inline final def readArray (f: => Unit): Unit = readMemberArray(Slice.EmptySlice)(f)
 

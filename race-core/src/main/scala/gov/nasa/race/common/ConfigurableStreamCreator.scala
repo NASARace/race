@@ -17,24 +17,29 @@
 package gov.nasa.race.common
 
 import java.io._
-import java.util.zip.{GZIPInputStream, GZIPOutputStream}
+import java.util.zip.GZIPOutputStream
 
 import com.typesafe.config.Config
 import gov.nasa.race.config.ConfigUtils._
+import gov.nasa.race.util.GzInputStream
 
 object ConfigurableStreamCreator {
   final val PathNameKey = "pathname"
   final val DefaultPathName = "<unknown>"
-  final val BufSizeKey = "buffer-size"
+  final val BufSizeKey = "inflater-size"
   final val CompressedKey = "compressed"
 
   def createInputStream (conf: Config, defaultPathName:String = DefaultPathName): InputStream = {
     val pathName = conf.getStringOrElse(PathNameKey,defaultPathName)
-    val bufSize = conf.getIntOrElse(BufSizeKey, 65536)
     val compressedMode = conf.getBooleanOrElse(CompressedKey, pathName.endsWith(".gz"))
 
     val fs = new FileInputStream(pathName)
-    if (compressedMode) new GZIPInputStream(fs,bufSize) else new BufferedInputStream( fs, bufSize)
+    if (compressedMode) {
+      val bufSize = conf.getIntOrElse(BufSizeKey, 65536)
+      new GzInputStream(fs,true,bufSize)
+    } else {
+      fs
+    }
   }
 
   def createOutputStream (conf: Config, defaultPathName:String = DefaultPathName): OutputStream = {

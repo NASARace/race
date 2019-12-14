@@ -96,6 +96,8 @@ class OpenSkyParser extends UTF8JsonPullParser {
 
     if (list.nonEmpty) list else Seq.empty[FlightPos]
   }
+
+  def parse (msg: Array[Byte]): Seq[FlightPos] = parse(msg,msg.length)
 }
 
 /**

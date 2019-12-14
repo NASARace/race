@@ -61,6 +61,12 @@ package object common {
 
     @inline def isDefined = d != Double.NaN
     @inline def isUndefined = d == Double.NaN
+
+    def round_1 = Math.round(d * 10.0) / 10.0
+    def round_2 = Math.round(d * 100.0) / 100.0
+    def round_3 = Math.round(d * 1000.0) / 1000.0
+    def round_4 = Math.round(d * 10000.0) / 10000.0
+    def round_5 = Math.round(d * 100000.0) / 100000.0
   }
 
   final val UndefinedDouble = Double.NaN

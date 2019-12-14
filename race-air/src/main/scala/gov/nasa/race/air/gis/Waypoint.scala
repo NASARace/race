@@ -25,6 +25,7 @@ import gov.nasa.race.uom.Angle.Degrees
 import gov.nasa.race.uom.Length.Feet
 import gov.nasa.race.util.{FileUtils, LeDataOutputStream}
 
+import scala.collection.Seq
 import scala.collection.mutable.{HashSet => MHashSet}
 
 

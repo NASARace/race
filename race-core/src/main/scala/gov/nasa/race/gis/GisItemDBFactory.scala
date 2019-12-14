@@ -28,6 +28,7 @@ import gov.nasa.race.geo.XyzPos
 import gov.nasa.race.util.{ArrayUtils, FileUtils, LeDataOutputStream}
 import gov.nasa.race.uom.DateTime
 
+import scala.collection.Seq
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 import scala.reflect.classTag

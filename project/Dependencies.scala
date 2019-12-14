@@ -65,7 +65,7 @@ object Dependencies {
   // val breezeNative = "org.scalanlp" %% "breeze-natives" % "0.13.2"
 
   //--- scalaTest
-  val scalaTest = "org.scalatest" %% "scalatest" % "3.2.0-M1"
+  val scalaTest = "org.scalatest" %% "scalatest" % "3.2.0-M2"
   val flexmarkAll = "com.vladsch.flexmark" % "flexmark-all" % "0.35.10" // should be a scalaTest dependency but 3.1.0-SNAP13 is missing it
   val scalaTestPlus = "org.scalatestplus" %% "scalatestplus-scalacheck" % "3.1.0.0-RC2"
 
@@ -77,14 +77,6 @@ object Dependencies {
   val defaultLibs =  Seq(logback,typesafeConfig)
   val defaultTestLibs = Seq(scalaTest,scalaTestPlus,flexmarkAll,scalaCheck,pegDown)
 
-  //--- Circe Json support
-  val circeVersion = "0.12.3"
-  val circeCore = "io.circe" %% "circe-core" % circeVersion
-  val circeGeneric = "io.circe" %% "circe-generic" % circeVersion
-  val circeParser = "io.circe" %% "circe-parser" % circeVersion
-
-  val circeAll = Seq(circeCore,circeGeneric,circeParser)
-
   // Apache Avro serialization (for archiving/unarchiving)
   val avro = "org.apache.avro" % "avro" % "1.9.1"
 
@@ -93,6 +85,14 @@ object Dependencies {
   //val scodecCore = "org.scodec" %% "scodec-core" % "1.10.3"
   //val scodecStream = "org.scodec" %% "scodec-stream" % "1.1.0-M9"
   //val scodecAll = Seq(scodecBits, scodecCore)
+
+  //--- circe Json parsing (only used for -test benchmarks)
+  val circeVersion = "0.12.3"
+  val circeCore = "io.circe" %% "circe-core" % circeVersion
+  val circeGeneric = "io.circe" %% "circe-generic" % circeVersion
+  val circeParser = "io.circe" %% "circe-parser" % circeVersion
+
+  val circeAll = Seq(circeCore,circeGeneric,circeParser)
 
   //--- scala-swing
   val scalaSwing = "org.scala-lang.modules" %% "scala-swing" % "2.1.1"
@@ -114,7 +114,7 @@ object Dependencies {
   val argon2 = "de.mkammerer" % "argon2-jvm" % "2.6"
 
   //--- Akka
-  val akkaVersion = "2.6.0"
+  val akkaVersion = "2.6.1"
   val akkaOrg = "com.typesafe.akka"
 
   val akkaActor = akkaOrg %% "akka-actor" % akkaVersion
@@ -124,13 +124,13 @@ object Dependencies {
   val akkaTestkit = akkaOrg %% "akka-testkit" % akkaVersion
   val akkaMultiNodeTestkit = akkaOrg %% "akka-multi-node-testkit" % akkaVersion // % "test,multi-jvm"
 
-  val akkaHttp = akkaOrg %% "akka-http" % "10.1.10"
+  val akkaHttp = akkaOrg %% "akka-http" % "10.1.11"
 
   val akkaAll = Seq(akkaActor)
 
 
   //--- ActiveMQ
-  val amqVersion = "5.15.10"
+  val amqVersion = "5.15.11"
   val amqOrg = "org.apache.activemq"
   val amqBroker = amqOrg % "activemq-broker" % amqVersion
 

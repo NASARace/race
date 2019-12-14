@@ -17,22 +17,19 @@
 package gov.nasa.race.ww
 
 import java.awt.Color
+import java.util
 
 import com.typesafe.config.Config
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.worldwind.geom.Position
+import gov.nasa.race.uom.Angle._
 import gov.nasa.worldwind.layers.RenderableLayer
-import gov.nasa.worldwind.render.{BasicShapeAttributes, Material, Renderable, SurfaceCircle}
+import gov.nasa.worldwind.render.{BasicShapeAttributes, Material, Renderable, SurfaceCircle, SurfacePolygon, SurfaceQuad}
 
 trait ConfigurableArea extends Renderable {
   val config: Config
   val name = config.getStringOrElse("name","")
-}
 
-class CircularArea (val config: Config) extends SurfaceCircle with ConfigurableArea {
-
-  val centerPos = Position.fromDegrees(config.getDouble("lat"), config.getDouble("lon"))
-  val radius = config.getLength("radius")
   val color = config.getColorOrElse("color", new Color(0,0,0))
 
   val attrs = new BasicShapeAttributes
@@ -40,6 +37,12 @@ class CircularArea (val config: Config) extends SurfaceCircle with ConfigurableA
   attrs.setDrawOutline(false)
   attrs.setInteriorMaterial(new Material(color))
   attrs.setInteriorOpacity(color.getAlpha / 255.0)
+}
+
+class CircularArea (val config: Config) extends SurfaceCircle with ConfigurableArea {
+
+  val centerPos = Position.fromDegrees(config.getDouble("lat"), config.getDouble("lon"))
+  val radius = config.getLength("radius")
 
   setAttributes(attrs)
 
@@ -47,6 +50,25 @@ class CircularArea (val config: Config) extends SurfaceCircle with ConfigurableA
   setRadius(radius.toMeters)
 }
 
+class RectangularArea (val config: Config) extends SurfacePolygon with ConfigurableArea {
+  val minLat = Degrees(config.getDouble("min-lat"))
+  val maxLat = Degrees(config.getDouble("max-lat"))
+  val minLon = Degrees(config.getDouble("min-lon"))
+  val maxLon = Degrees(config.getDouble("max-lon"))
+
+  setAttributes(attrs)
+
+  {
+    val locs = new util.ArrayList[Position](4)
+    locs.add(Position.fromDegrees(minLat.toDegrees,minLon.toDegrees))
+    locs.add(Position.fromDegrees(minLat.toDegrees,maxLon.toDegrees))
+    locs.add(Position.fromDegrees(maxLat.toDegrees,maxLon.toDegrees))
+    locs.add(Position.fromDegrees(maxLat.toDegrees,minLon.toDegrees))
+    setLocations(locs)
+  }
+}
+
+//... and more to follow
 
 /**
   * a layer with optionally configured areas that are displayed in the same color with a

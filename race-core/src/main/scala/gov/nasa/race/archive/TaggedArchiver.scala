@@ -222,17 +222,11 @@ trait TaggedArchiveReader extends ArchiveReader {
       val entryLength = slice.toHexInt
       if (entryLength > 0) {
         if (entryLength > buf.length) growBuffer(entryLength)
-
-        var remaining = entryLength
-        var idx = 0
-        do {
-          val n = iStream.read(buf,idx,remaining)
-          idx += n
-          remaining -= n
-        } while (remaining > 0)
-        nextEntry.date = entryDate
-        nextEntry.msg = entryData(entryLength)
-        true
+        if (iStream.read(buf,0,entryLength) == entryLength) {
+          nextEntry.date = entryDate
+          nextEntry.msg = entryData(entryLength)
+          true
+        } else false // not enough entry data
       } else false // empty entry
     } else false // no or incomplete entry header
   }

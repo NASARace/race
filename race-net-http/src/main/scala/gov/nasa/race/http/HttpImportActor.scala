@@ -31,7 +31,7 @@ import com.typesafe.config.Config
 import gov.nasa.race._
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.Messages.{BusEvent, RaceTick}
-import gov.nasa.race.core.{PeriodicRaceActor, PublishingRaceActor, SubscribingRaceActor}
+import gov.nasa.race.core.{PeriodicRaceActor, PublishingRaceActor, RaceContext, SubscribingRaceActor}
 import gov.nasa.race.util.StringUtils
 
 import scala.annotation.tailrec
@@ -84,7 +84,7 @@ class HttpImportActor (val config: Config) extends PublishingRaceActor
   val coalesce: Boolean = config.getBooleanOrElse("coalesce", true)
 
   // the configured requests
-  var requests: Seq[HttpRequest] = config.getConfigSeq("data-requests").toList.flatMap(HttpRequestBuilder.get)
+  var requests: Seq[HttpRequest] = Seq.empty[HttpRequest] // initialized during RaceInitialize
 
   // do we publish response data as String or Array[Byte]?
   val publishAsBytes: Boolean = config.getBooleanOrElse("publish-raw", false)
@@ -98,6 +98,12 @@ class HttpImportActor (val config: Config) extends PublishingRaceActor
   val clientSettings = {
     val origSettings = ClientConnectionSettings(system.settings.config)
     ConnectionPoolSettings(system.settings.config).withConnectionSettings(origSettings.withIdleTimeout(5.seconds))
+  }
+
+  // this is called during onInitializeRaceActor - override for hardwired requests
+  // (the conf parameter might be a remote config)
+  protected def createRequests (conf: Config): Seq[HttpRequest] = {
+    config.getConfigSeq("data-requests").toList.flatMap(HttpRequestBuilder.get)
   }
 
   // if no explicit interval is set this is a one-time request
@@ -214,7 +220,8 @@ class HttpImportActor (val config: Config) extends PublishingRaceActor
       info(s"request failed for reason: $reason") // should this be a warning?
   }
 
-  private def publishResponseData (body: ByteString): Unit = {
+  // override if we need to publish translated objects
+  protected def publishResponseData (body: ByteString): Unit = {
     if (publishAsBytes) {
       val msg = body.toArray
       if (msg.nonEmpty) {
@@ -231,6 +238,17 @@ class HttpImportActor (val config: Config) extends PublishingRaceActor
   }
 
   //--- system message callbacks
+
+  override def onInitializeRaceActor(rc: RaceContext, actorConf: Config): Boolean = {
+    requests = createRequests(actorConf)
+    if (requests.nonEmpty) {
+      super.onInitializeRaceActor(rc,actorConf)
+    } else {
+      error("no requests specified")
+      false
+    }
+  }
+
   override def onStartRaceActor(originator: ActorRef): Boolean = {
     ifTrue(super.onStartRaceActor(originator)) {
       HttpImportActor.registerLive(this)
