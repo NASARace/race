@@ -24,12 +24,14 @@ import scala.annotation.switch
 
 object Slice {
 
-  def apply (s: String): Slice = {
+  @inline def apply (s: String): Slice = {
     val bs = s.getBytes()
     new Slice(bs,0,bs.length)
   }
 
-  def apply (bs: Array[Byte], off: Int, len: Int): Slice = new Slice(bs,off,len)
+  @inline def apply (bs: Array[Byte]): Slice = new Slice(bs,0,bs.length)
+
+  @inline def apply (bs: Array[Byte], off: Int, len: Int): Slice = new Slice(bs,off,len)
 
   def hashed(s: String): Slice = {
     val bs = s.getBytes()
@@ -59,8 +61,10 @@ final class Slice (var data: Array[Byte], var offset: Int, var length: Int) {
 
   var hash: Int = 0
 
-  final def isEmpty: Boolean = length == 0
-  final def nonEmpty: Boolean = length > 0
+  @inline final def isEmpty: Boolean = length == 0
+  @inline final def nonEmpty: Boolean = length > 0
+
+  @inline final def limit: Int = offset + length
 
   override def toString: String = if (length > 0) new String(data,offset,length) else ""
 

@@ -17,16 +17,19 @@
 
 package gov.nasa.race.jms
 
-import javax.jms.{Connection, JMSException, Message, MessageConsumer, MessageListener, Session, TextMessage, Topic => JMSTopic}
-
+import javax.jms.{BytesMessage, Connection, JMSException, Message, MessageConsumer, MessageListener, Session, TextMessage, Topic => JMSTopic}
 import akka.actor.ActorRef
 import com.typesafe.config.Config
 import gov.nasa.race._
 import gov.nasa.race.actor.FilteringPublisher
+import gov.nasa.race.common.{ASCIIBuffer, StringDataBuffer}
+import gov.nasa.race.common.inlined.Slice
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.RaceContext
 import gov.nasa.race.core.RaceActorCapabilities._
 import org.apache.activemq.ActiveMQConnectionFactory
+import org.apache.activemq.command.{Message => AMQMessage}
+import org.apache.activemq.util.ByteSequence
 
 import scala.language.postfixOps
 
@@ -111,15 +114,11 @@ class JMSImportActor(val config: Config) extends FilteringPublisher {
 
   // NOTE - the listener executes in non-Akka threads (multiple!)
   private[this] class Listener(val topic: JMSTopic) extends MessageListener {
-    override def onMessage(message: Message): Unit = {
-      message match {
-        case textMsg: TextMessage =>
-          try {
-            publishFiltered(textMsg.getText)
-          } catch {
-            case ex: JMSException => error(s"listener exception: $ex")
-          }
-        case msg => warning(s"listener got unknown ${topic.getTopicName} message: ${msg.getClass}")
+    override def onMessage(msg: Message): Unit = {
+      try {
+        publishMessage(msg)
+      } catch {
+        case ex: JMSException => error(s"exception publishing JMS message: $ex")
       }
     }
   }
@@ -129,12 +128,59 @@ class JMSImportActor(val config: Config) extends FilteringPublisher {
   val jmsId = config.getStringOrElse("jms-id", self.path.name + System.currentTimeMillis.toHexString)
   val jmsTopic = config.getString("jms-topic")
 
+  val publishRaw = config.getBooleanOrElse("publish-raw", false)
+
   //--- our state data
   var connection: Option[Connection] = None
   var session: Option[Session] = None
   var consumer: Option[MessageConsumer] = None
 
   //--- end initialization
+
+  // override if we only (re-)use the slice sync (e.g. for translating JMSImporters)
+  protected def getStringSlice(s: String): Slice = Slice(s)
+
+  // this is a ActiveMQ optimization that lets us avoid copying the message content (UTF8 bytes)
+  // into a string, just to copy it again into a Array[Byte] in respective parsers. JMS messages
+  // can be quite large
+  protected def getContentSlice (msg: Message): Slice = {
+    msg match {
+      //--- optimized ActiveMQ messages
+
+      case amqMsg: AMQMessage =>
+        val byteSeq: ByteSequence = amqMsg.getContent
+        val data: Array[Byte] = byteSeq.data
+        val utfLen: Int = ((data(0) & 0xff)<<24) | ((data(1) & 0xff)<<16) | ((data(2) & 0xff)<<8) | (data(3) & 0xff)
+        Slice(data,byteSeq.offset+4,utfLen)
+
+      //--- generic JMS messages
+
+      case txtMsg: TextMessage =>
+          getStringSlice(txtMsg.getText)
+
+      case byteMsg: BytesMessage =>
+        val len = byteMsg.getBodyLength.toInt
+        val bs = new Array[Byte](len)
+        byteMsg.readBytes(bs)
+        Slice(bs)
+
+      case _ => Slice.empty
+    }
+  }
+
+  protected def getContentString (msg: Message): String = {
+    msg match {
+      case txtMsg: TextMessage => txtMsg.getText
+      case byteMsg: BytesMessage => byteMsg.readUTF
+      case _ => ""
+    }
+  }
+
+  // override to publish translated results
+  protected def publishMessage (msg: Message): Unit = {
+    val m = if (publishRaw) getContentSlice(msg) else getContentString(msg)
+    if (m != null) publishFiltered(m)
+  }
 
   // TODO - maybe we should reject if JMS connection or session/consumer init fails
 
@@ -199,5 +245,16 @@ class JMSImportActor(val config: Config) extends FilteringPublisher {
     }
 
     super.onTerminateRaceActor(originator)
+  }
+}
+
+class TranslatingJMSImportActor (conf: Config) extends JMSImportActor(conf) {
+
+  lazy val bb: StringDataBuffer = new ASCIIBuffer(120000) // note this is only instantiated on demand
+
+  // we re-use the same StringBuffer since we only publish results translated from it
+  override protected def getStringSlice(s: String): Slice = {
+    bb.encode(s)
+    Slice(bb.data,0,bb.length)
   }
 }

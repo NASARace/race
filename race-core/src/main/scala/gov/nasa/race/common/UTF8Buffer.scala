@@ -83,6 +83,7 @@ class ASCIIBuffer (initBufSize: Int = 8192) extends StringDataBuffer {
     if (len > data.length) data = new Array[Byte](len)
     //s.getBytes(0,len,data,0)  // this is safe since we only call this on ASCII strings (and we have to avoid allocation)
     JUtils.getASCIIBytes(s,0,len,data,0) // FIXME - this is just to suppress the deprecated warning (Scala can't)
+    length = len
     len
   }
 }

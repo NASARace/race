@@ -29,6 +29,8 @@ import gov.nasa.race.uom.DateTime._
 import gov.nasa.race.uom.Time._
 import gov.nasa.race.util.NumUtils
 
+import scala.collection.Seq
+
 /**
   * archive/replay for tagged text archives comprised of fixed file/entry headers and variable length
   * text payloads of entities.
@@ -114,6 +116,7 @@ trait TaggedArchiveWriter extends ArchiveWriter {
         entrySize = a.length
 
       case s:String => fromString(s)
+
       case x => fromString(x.toString)
     }
   }
@@ -211,24 +214,35 @@ trait TaggedArchiveReader extends ArchiveReader {
   /**
     * turn contents of buf up to limit into entry data object that can be stored/processed by clients
     * override if concrete type does translation
+    * if this method returns null, None or an empty Seq we loop
     */
-  protected def entryData (limit: Int): Any
+  protected def parseEntryData(limit: Int): Any
 
   protected def readEntry: Boolean = {
-    if (iStream.read(buf,0,entryHeaderLength) == entryHeaderLength) {
-      slice.setRange(2, 8)
-      val entryDate = refDate + Milliseconds(slice.toHexInt)
-      slice.setRange(11, 8)
-      val entryLength = slice.toHexInt
-      if (entryLength > 0) {
-        if (entryLength > buf.length) growBuffer(entryLength)
-        if (iStream.read(buf,0,entryLength) == entryLength) {
-          nextEntry.date = entryDate
-          nextEntry.msg = entryData(entryLength)
-          true
-        } else false // not enough entry data
-      } else false // empty entry
-    } else false // no or incomplete entry header
+    while (true) {
+      if (iStream.read(buf, 0, entryHeaderLength) == entryHeaderLength) {
+        slice.setRange(2, 8)
+        val entryDate = refDate + Milliseconds(slice.toHexInt)
+        slice.setRange(11, 8)
+        val entryLength = slice.toHexInt
+        if (entryLength > 0) {
+          if (entryLength > buf.length) growBuffer(entryLength)
+          if (iStream.read(buf, 0, entryLength) == entryLength) {
+            nextEntry.date = entryDate
+            nextEntry.msg = parseEntryData(entryLength) match {
+              case null => null
+              case None => null
+              case Some(obj) => obj
+              case list:Seq[_] if list.isEmpty => null
+              case obj => obj
+            }
+            if (nextEntry.msg != null) return true
+
+          } else return false // not enough entry data
+        } else return false // empty entry
+      } else return false // no or incomplete entry header
+    }
+    throw new RuntimeException("should not get here")
   }
 
   //--- ArchiveReader interface
@@ -252,7 +266,7 @@ class TaggedStringArchiveReader (val iStream: InputStream, val pathName:String="
   def this (conf: Config) = this(createInputStream(conf), configuredPathName(conf),
                                  conf.getIntOrElse("buffer-size",4096), conf.getBooleanOrElse("publish-raw", false))
 
-  override protected def entryData (limit: Int): Any = {
+  override protected def parseEntryData(limit: Int): Any = {
     if (publishRaw) util.Arrays.copyOf(buf,limit) else new String(buf,0,limit)
   }
 }

@@ -68,9 +68,10 @@ abstract class XmlPullParser2  {
   val attrName = Slice.empty
   val attrValue = Slice.empty  // not hashed by default
 
-  protected def setData (newData: Array[Byte], newLimit: Int): Unit = {
+  protected def setData (newData: Array[Byte], newIdx: Int, newLimit: Int): Unit = {
     data = newData
     limit = newLimit
+    idx = newIdx
 
     // those won't change during the parse so set them here once
     tag.data = newData
@@ -80,8 +81,7 @@ abstract class XmlPullParser2  {
     contentString.data = newData
   }
 
-  protected def setData (newData: Array[Byte]): Unit = setData(newData,newData.length)
-
+  protected def setData (newData: Array[Byte]): Unit = setData(newData,0, newData.length)
 
   //--- state management
 
@@ -466,7 +466,7 @@ abstract class XmlPullParser2  {
   }
 
   def seekRootTag: Int = {
-    var i = 0
+    var i = idx
     val buf = this.data
 
     while (buf(i) != '<') i += 1
@@ -726,7 +726,7 @@ class BufferedStringXmlPullParser2(initBufSize: Int = 8192) extends XmlPullParse
   def initialize (s: String): Boolean = {
     bb.encode(s)
     clear
-    setData(bb.data, bb.length)
+    setData(bb.data, 0, bb.length)
 
     idx = seekRootTag
     idx >= 0
@@ -745,7 +745,7 @@ class BufferedASCIIStringXmlPullParser2(initBufSize: Int = 8192) extends XmlPull
   def initialize (s: String): Boolean = {
     bb.encode(s)
     clear
-    setData(bb.data, bb.length)
+    setData(bb.data, 0, bb.length)
 
     idx = seekRootTag
     idx >= 0
@@ -764,5 +764,15 @@ class UTF8XmlPullParser2 extends XmlPullParser2 {
     idx = seekRootTag
     idx >= 0
   }
+
+  def initialize (bs: Array[Byte], off: Int, limit: Int): Boolean = {
+    clear
+    setData(bs, off, limit)
+
+    idx = seekRootTag
+    idx >= 0
+  }
+
+  def initialize (slice: Slice): Boolean = initialize(slice.data, slice.offset, slice.limit)
 }
 
