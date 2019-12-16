@@ -18,11 +18,17 @@
 package gov.nasa.race.air.actor
 
 import com.typesafe.config.Config
-import gov.nasa.race.jms.JMSImportActor
+import gov.nasa.race.air.translator.AsdexMsgParser
+import gov.nasa.race.jms.TranslatingJMSImportActor
+import javax.jms.Message
 
 /**
   * a JMS import actor for SWIM asdexMsg messages.
   * This is a on-demand provider that only publishes messages for requested airports.
   * Filtering airports without clients has to be efficient since asdexMsg can have a high rate (>30/sec)
   */
-class AsdexImportActor(config: Config) extends JMSImportActor(config) with AsdexImporter
+class AsdexImportActor (config: Config) extends TranslatingJMSImportActor(config) with AsdexImporter {
+  val parser = new AsdexMsgParser
+
+  override def translate (msg: Message): Any = parser.parse(getContentSlice(msg))
+}

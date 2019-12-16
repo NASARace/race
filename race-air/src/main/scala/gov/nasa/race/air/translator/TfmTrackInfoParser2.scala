@@ -17,7 +17,7 @@
 package gov.nasa.race.air.translator
 
 import com.typesafe.config.Config
-import gov.nasa.race.common.{BufferedASCIIStringXmlPullParser2, BufferedStringXmlPullParser2}
+import gov.nasa.race.common.{ASCIIBuffer, BufferedASCIIStringXmlPullParser2, BufferedStringXmlPullParser2, UTF8XmlPullParser2}
 import gov.nasa.race.common.inlined.Slice
 import gov.nasa.race.config.{ConfigurableTranslator, NoConfig}
 import gov.nasa.race.config.ConfigUtils._
@@ -37,8 +37,7 @@ import scala.collection.mutable.ArrayBuffer
   *
   * note - ds:tfmDataService messages are just one potential source of TrackInfos
   */
-class TfmTrackInfoParser2(val config: Config=NoConfig)
-  extends BufferedASCIIStringXmlPullParser2(config.getIntOrElse("buffer-size",100000)) with ConfigurableTranslator with TrackInfoReader {
+class TfmTrackInfoParser2(val config: Config=NoConfig) extends UTF8XmlPullParser2 with ConfigurableTranslator with TrackInfoReader {
 
   // constant tag and attr names
   val tfmDataService = Slice("ds:tfmDataService")
@@ -51,29 +50,34 @@ class TfmTrackInfoParser2(val config: Config=NoConfig)
   val estimated = Slice("ESTIMATED")
   val equipmentQualifier = Slice("equipmentQualifier")
 
-  // the Translator interface
-  override def translate(src: Any): Option[Any] = {
-    def optional (tInfos: Seq[TrackInfo]): Option[TrackInfos] = {
-      if (tInfos.isEmpty) None else Some(TrackInfos(tInfos))
-    }
+  // only created on-demand if we have to parse strings
+  lazy protected val bb = new ASCIIBuffer(config.getIntOrElse("buffer-size", 120000))
 
-    src match {
-      case s: String => optional( parse(s))
-      case Some(s: String) => optional( parse(s))
-      case _ => None // nothing else supported yet
-    }
+  override def translate(src: Any): Option[Any] = {
+    val tInfos = readMessage(src)
+    if (tInfos.nonEmpty) Some(TrackInfos(tInfos)) else None
   }
+
 
   // the TrackInfoReader interface (TODO - unify)
   override def readMessage (msg: Any): Seq[TrackInfo] = {
     msg match {
-      case s: String => parse(s)
-      case _ => Seq.empty[TrackInfo]
+      case s: String =>
+        bb.encode(s)
+        parseTracks(bb.data, 0, bb.length)
+      case Some(s: String) =>
+        bb.encode(s)
+        parseTracks(bb.data, 0, bb.length)
+      case s: Slice =>
+        parseTracks(s.data,s.offset,s.limit)
+      case bs: Array[Byte] =>
+        parseTracks(bs,0,bs.length)
+      case _ => Seq.empty[TrackInfo] // unsupported input
     }
   }
 
-  def parse(msg: String): Seq[TrackInfo] = {
-    if (initialize(msg)) {
+  def parseTracks(bs: Array[Byte], off: Int, limit: Int): Seq[TrackInfo] = {
+    if (initialize(bs,off,limit)) {
       while (parseNextTag) {
         if (isStartTag) {
           if (tag == tfmDataService) {
@@ -84,6 +88,8 @@ class TfmTrackInfoParser2(val config: Config=NoConfig)
     }
     Seq.empty[TrackInfo]
   }
+
+  def parseTracks (slice: Slice): Seq[TrackInfo] = parseTracks(slice.data,slice.offset,slice.limit)
 
   protected def parseTfmDataService: Seq[TrackInfo] = {
     val tInfos = new ArrayBuffer[TrackInfo](20)

@@ -18,7 +18,7 @@ package gov.nasa.race.air.translator
 
 import com.typesafe.config.Config
 import gov.nasa.race.air.{TFMTrack, TFMTracks}
-import gov.nasa.race.common.BufferedStringXmlPullParser2
+import gov.nasa.race.common.{ASCIIBuffer, BufferedStringXmlPullParser2, UTF8XmlPullParser2}
 import gov.nasa.race.common.inlined.Slice
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.config.{ConfigurableTranslator, NoConfig}
@@ -37,8 +37,7 @@ import scala.collection.mutable.ArrayBuffer
   *
   * TODO - check if fltdMessage attributes are mandatory since we don't parse the respective trackInformation sub-elements
   */
-class TfmDataServiceParser(val config: Config=NoConfig)
-  extends BufferedStringXmlPullParser2(config.getIntOrElse("buffer-size",200000)) with ConfigurableTranslator {
+class TfmDataServiceParser(val config: Config=NoConfig) extends UTF8XmlPullParser2 with ConfigurableTranslator {
 
   val tfmDataService = Slice("ds:tfmDataService")
   val fltdMessage = Slice("fdm:fltdMessage")
@@ -55,16 +54,27 @@ class TfmDataServiceParser(val config: Config=NoConfig)
   val southValue = Slice("SOUTH")
   val timeValue = Slice("timeValue")
 
+  // only created on-demand if we have to parse strings
+  lazy protected val bb = new ASCIIBuffer(config.getIntOrElse("buffer-size", 120000))
+
   override def translate(src: Any): Option[Any] = {
     src match {
-      case s: String => parse(s)
-      case Some(s: String) => parse(s)
-      case _ => None // nothing else supported yet
+      case s: String =>
+        bb.encode(s)
+        parse(bb.data, 0, bb.length)
+      case Some(s: String) =>
+        bb.encode(s)
+        parse(bb.data, 0, bb.length)
+      case s: Slice =>
+        parse(s.data,s.offset,s.limit)
+      case bs: Array[Byte] =>
+        parse(bs,0,bs.length)
+      case _ => None // unsupported input
     }
   }
 
-  protected def parse (msg: String): Option[Any] = {
-    if (initialize(msg)) {
+  def parse (bs: Array[Byte], off: Int, limit: Int): Option[Any] = {
+    if (initialize(bs,off,limit)) {
       while (parseNextTag) {
         if (isStartTag) {
           if (tag == tfmDataService) return parseTfmDataService
@@ -73,6 +83,8 @@ class TfmDataServiceParser(val config: Config=NoConfig)
     }
     None
   }
+
+  def parse (slice: Slice): Option[Any] = parse(slice.data, slice.offset, slice.limit)
 
   protected def parseTfmDataService: Option[Any] = {
     val tracks = new ArrayBuffer[TFMTrack](20)

@@ -22,7 +22,7 @@ import akka.actor.ActorRef
 import com.typesafe.config.Config
 import gov.nasa.race._
 import gov.nasa.race.actor.FilteringPublisher
-import gov.nasa.race.common.{ASCIIBuffer, StringDataBuffer}
+import gov.nasa.race.common.{ASCIIBuffer, StringDataBuffer, StringSlicer}
 import gov.nasa.race.common.inlined.Slice
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.RaceContext
@@ -32,6 +32,7 @@ import org.apache.activemq.command.{Message => AMQMessage}
 import org.apache.activemq.util.ByteSequence
 
 import scala.language.postfixOps
+import scala.collection.Seq
 
 object JMSImportActor {
   // connection objects are shared, this is where the runtime cost is
@@ -116,7 +117,7 @@ class JMSImportActor(val config: Config) extends FilteringPublisher {
   private[this] class Listener(val topic: JMSTopic) extends MessageListener {
     override def onMessage(msg: Message): Unit = {
       try {
-        publishMessage(msg)
+        publishFiltered(translate(msg))
       } catch {
         case ex: JMSException => error(s"exception publishing JMS message: $ex")
       }
@@ -137,8 +138,11 @@ class JMSImportActor(val config: Config) extends FilteringPublisher {
 
   //--- end initialization
 
+  // override to translate text into objects
+  protected def translate (msg: Message): Any = if (publishRaw) getContentSlice(msg) else getContentString(msg)
+
   // override if we only (re-)use the slice sync (e.g. for translating JMSImporters)
-  protected def getStringSlice(s: String): Slice = Slice(s)
+  protected def getContentSlice(s: String): Slice = Slice(s)
 
   // this is a ActiveMQ optimization that lets us avoid copying the message content (UTF8 bytes)
   // into a string, just to copy it again into a Array[Byte] in respective parsers. JMS messages
@@ -156,7 +160,7 @@ class JMSImportActor(val config: Config) extends FilteringPublisher {
       //--- generic JMS messages
 
       case txtMsg: TextMessage =>
-          getStringSlice(txtMsg.getText)
+          getContentSlice(txtMsg.getText)
 
       case byteMsg: BytesMessage =>
         val len = byteMsg.getBodyLength.toInt
@@ -176,11 +180,6 @@ class JMSImportActor(val config: Config) extends FilteringPublisher {
     }
   }
 
-  // override to publish translated results
-  protected def publishMessage (msg: Message): Unit = {
-    val m = if (publishRaw) getContentSlice(msg) else getContentString(msg)
-    if (m != null) publishFiltered(m)
-  }
 
   // TODO - maybe we should reject if JMS connection or session/consumer init fails
 
@@ -248,13 +247,13 @@ class JMSImportActor(val config: Config) extends FilteringPublisher {
   }
 }
 
-class TranslatingJMSImportActor (conf: Config) extends JMSImportActor(conf) {
-
-  lazy val bb: StringDataBuffer = new ASCIIBuffer(120000) // note this is only instantiated on demand
-
-  // we re-use the same StringBuffer since we only publish results translated from it
-  override protected def getStringSlice(s: String): Slice = {
-    bb.encode(s)
-    Slice(bb.data,0,bb.length)
-  }
+/**
+  * a JMSImportActor that does not have to keep persistent message text since it only publishes the
+  * products of translating this text
+  *
+  * TODO - this should also abstract the parser instantiation and use
+  */
+abstract class TranslatingJMSImportActor (config: Config) extends JMSImportActor(config) {
+  val contentSlicer = new StringSlicer(new ASCIIBuffer(120000)) // this is only executed when processing String messages
+  override def getContentSlice (s: String): Slice = contentSlicer.slice(s)
 }

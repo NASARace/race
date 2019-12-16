@@ -14,21 +14,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package gov.nasa.race.air.actor
+package gov.nasa.race.common
 
-import com.typesafe.config.Config
-import gov.nasa.race.actor.FlatFilteringPublisher
-import gov.nasa.race.air.translator.MessageCollectionParser
-import gov.nasa.race.jms.TranslatingJMSImportActor
-import javax.jms.Message
+import gov.nasa.race.common.inlined.Slice
 
 /**
-  * specialized JMSImportActor for SWIM SFDPS MessageCollection XML messages
-  * note that we can't hardwire the JMS config (authentication, URI, topic etc) since SWIM access might vary
+  * utility class to convert String objects into Slices
+  * note that it is up to the client if the StringDataBuffer is re-used between different StringSlicers
   */
-class SFDPSImportActor (config: Config) extends TranslatingJMSImportActor(config) with FlatFilteringPublisher {
-  val parser = new MessageCollectionParser
-  parser.setTracksReUsable(flatten) // if we flatten we don't have to make sure the collection is copied
+class StringSlicer (createBuffer: =>StringDataBuffer) {
 
-  override def translate (msg: Message): Any = parser.parseTracks(getContentSlice(msg))
+  lazy private val _bb: StringDataBuffer = createBuffer
+  lazy private val slice = Slice.empty
+
+  def slice(s: String): Slice = {
+    _bb.encode(s)
+    slice.set(_bb.data,0,_bb.length)
+    slice
+  }
 }

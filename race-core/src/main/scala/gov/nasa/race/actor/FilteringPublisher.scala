@@ -17,7 +17,6 @@
 
 package gov.nasa.race.actor
 
-import com.typesafe.config.Config
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.config.ConfigurableFilter
 import gov.nasa.race.core.Messages.BusEvent
@@ -33,7 +32,9 @@ trait FilteringPublisher extends PublishingRaceActor {
   var filters: Array[ConfigurableFilter] = createFilters
   val matchAll = config.getBooleanOrElse("match-all", defaultMatchAll) // default is to let pass if any of the filters passes
 
-  def publishFiltered (msg: Any): Unit = action(msg,pass(msg))
+  def publishFiltered (msg: Any): Unit = {
+    if (msg != null && msg != None) action(msg,pass(msg)) // no point publishing null or None
+  }
 
   def pass(msg: Any): Boolean = filters.length match {
     case 0 => passUnfiltered
@@ -58,5 +59,27 @@ trait FilteringPublisher extends PublishingRaceActor {
   def handleFilteringPublisherMessage: Receive = {
     // NOTE - don't match ChannelMessage because that would break system channels/messages (e.g. ChannelTopics)
     case BusEvent(chan,msg:Any,_) => publishFiltered(msg)
+  }
+}
+
+/**
+  * a FilteringPublisher that can flatten a Seq of objects to be published
+  */
+trait FlatFilteringPublisher extends FilteringPublisher {
+
+  val flatten = config.getBooleanOrElse("flatten", true)  // do we publish the Seq elements separately or as a Seq object
+
+  override def publishFiltered (msg: Any): Unit = {
+    msg match {
+      case list: Seq[_] =>
+        if (list.nonEmpty) {
+          if (flatten) {
+            list.foreach(super.publishFiltered)
+          } else {
+            super.publishFiltered(list)
+          }
+        }
+      case o => super.publishFiltered(o)
+    }
   }
 }

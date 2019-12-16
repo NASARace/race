@@ -17,11 +17,20 @@
 package gov.nasa.race.air.actor
 
 import com.typesafe.config.Config
-import gov.nasa.race.jms.JMSImportActor
+import gov.nasa.race.actor.FlatFilteringPublisher
+import gov.nasa.race.air.translator.TATrackAndFlightPlanParser
+import gov.nasa.race.jms.TranslatingJMSImportActor
+import javax.jms.Message
 
 /**
   * a JMS import actor for SWIM TAIS (STDDS) messages.
   * This is a on-demand provider that only publishes messages for requested TRACONs.
   * Filtering tracons without clients has to be efficient since this stream can have a very high rate (>900msg/sec)
   */
-class TAISImportActor(config: Config) extends JMSImportActor(config) with TAISImporter
+class TAISImportActor(config: Config) extends TranslatingJMSImportActor(config) with FlatFilteringPublisher with TAISImporter {
+
+  val parser = new TATrackAndFlightPlanParser
+  parser.setTracksReUsable(flatten) // if we flatten we don't have to make sure the collection is copied
+
+  override def translate (msg: Message): Any = parser.parseTracks(getContentSlice(msg))
+}

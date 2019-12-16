@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, United States Government, as represented by the
+ * Copyright (c) 2017, United States Government, as represented by the
  * Administrator of the National Aeronautics and Space Administration.
  * All rights reserved.
  *
@@ -17,18 +17,16 @@
 package gov.nasa.race.air.actor
 
 import com.typesafe.config.Config
-import gov.nasa.race.actor.FlatFilteringPublisher
-import gov.nasa.race.air.translator.MessageCollectionParser
+import gov.nasa.race.air.translator.ItwsMsgParser
 import gov.nasa.race.jms.TranslatingJMSImportActor
 import javax.jms.Message
 
 /**
-  * specialized JMSImportActor for SWIM SFDPS MessageCollection XML messages
-  * note that we can't hardwire the JMS config (authentication, URI, topic etc) since SWIM access might vary
+  * specialized JMSImportActor for SWIM ITWS messages
+  *
+  * TODO - this still has to route messages according to message type (range) like RoutingPrecipImageTranslator
   */
-class SFDPSImportActor (config: Config) extends TranslatingJMSImportActor(config) with FlatFilteringPublisher {
-  val parser = new MessageCollectionParser
-  parser.setTracksReUsable(flatten) // if we flatten we don't have to make sure the collection is copied
-
-  override def translate (msg: Message): Any = parser.parseTracks(getContentSlice(msg))
+class ITWSImportActor (config: Config) extends TranslatingJMSImportActor(config) {
+  val parser = new ItwsMsgParser
+  override def translate (msg: Message): Any = parser.parse(getContentSlice(msg))
 }

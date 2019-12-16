@@ -775,4 +775,3 @@ class UTF8XmlPullParser2 extends XmlPullParser2 {
 
   def initialize (slice: Slice): Boolean = initialize(slice.data, slice.offset, slice.limit)
 }
-

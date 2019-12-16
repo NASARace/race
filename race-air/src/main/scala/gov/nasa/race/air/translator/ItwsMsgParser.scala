@@ -20,7 +20,7 @@ import java.awt.image.{BufferedImage, DataBuffer, IndexColorModel}
 
 import com.typesafe.config.Config
 import gov.nasa.race.air.{PrecipImage, PrecipImageStore}
-import gov.nasa.race.common.{BufferedASCIIStringXmlPullParser2, SliceSplitter, BufferedStringXmlPullParser2}
+import gov.nasa.race.common.{ASCIIBuffer, BufferedASCIIStringXmlPullParser2, BufferedStringXmlPullParser2, SliceSplitter, UTF8XmlPullParser2}
 import gov.nasa.race.common.inlined.Slice
 import gov.nasa.race.config.{ConfigurableTranslator, NoConfig}
 import gov.nasa.race.config.ConfigUtils._
@@ -61,30 +61,43 @@ object ItwsMsgParser {
   * Note - unfortunately the maxPrecipLevel comes *after* the data, i.e. we cannot
   * upfront detect if we should parse at all
   */
-class ItwsMsgParser(val config: Config=NoConfig)
-  extends BufferedASCIIStringXmlPullParser2(config.getIntOrElse("buffer-size",20000)) with ConfigurableTranslator {
+class ItwsMsgParser(val config: Config=NoConfig) extends UTF8XmlPullParser2 with ConfigurableTranslator {
 
   val itwsMsg = Slice("itws_msg")
   val precision = Slice("precision")
   val unit = Slice("unit")
   val meters = Slice("meters")
 
+  // only created on-demand if we have to parse strings
+  lazy protected val bb = new ASCIIBuffer(config.getIntOrElse("buffer-size", 50000))
+
   override def translate(src: Any): Option[Any] = {
     src match {
-      case s: String => parse(s)
-      case Some(s: String) => parse(s)
-      case _ => None // nothing else supported yet
+      case s: String =>
+        bb.encode(s)
+        parse(bb.data, 0, bb.length)
+      case Some(s: String) =>
+        bb.encode(s)
+        parse(bb.data, 0, bb.length)
+      case s: Slice =>
+        parse(s.data,s.offset,s.limit)
+      case bs: Array[Byte] =>
+        parse(bs,0,bs.length)
+      case _ => None // unsupported input
     }
   }
 
-  protected def parse (msg: String): Option[Any] = {
-    if (initialize(msg)) {
+  def parse (bs: Array[Byte], off: Int, limit: Int): Option[Any] = {
+    if (initialize(bs,off,limit)) {
       if (parseNextTag) {
         if (tag == itwsMsg) return parseItwsMsg
       }
     }
     None
   }
+
+  def parse (slice: Slice): Option[Any] = parse(slice.data, slice.offset, slice.limit)
+
 
   protected def parseItwsMsg: Option[Any] = {
     val data = this.data
