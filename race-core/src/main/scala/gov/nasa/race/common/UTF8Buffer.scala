@@ -24,7 +24,7 @@ import gov.nasa.race.util.JUtils
 trait StringDataBuffer {
   def data: Array[Byte]
   def length: Int
-  def encode (s: String): Int
+  def encode (s: String, off: Int=0): Int
 }
 
 /**
@@ -49,7 +49,7 @@ class UTF8Buffer (initBufSize: Int = 8192) extends StringDataBuffer {
     data = newData
   }
 
-  def encode (s: String): Int = {
+  def encode (s: String, off: Int=0): Int = { // FIXME - implement offset
     val cb = CharBuffer.wrap(s)
     bb.rewind
     length = 0
@@ -78,11 +78,15 @@ class ASCIIBuffer (initBufSize: Int = 8192) extends StringDataBuffer {
   var data: Array[Byte] = new Array(initBufSize)
   var length: Int = 0
 
-  def encode (s: String): Int = {
-    val len = s.length
-    if (len > data.length) data = new Array[Byte](len)
+  def encode (s: String, off: Int = 0): Int = {
+    val len = s.length + off
+    if (len > data.length) {
+      val newData = new Array[Byte](len)
+      if (off > 0) System.arraycopy(data,0,newData,0,off)
+      data = newData
+    }
     //s.getBytes(0,len,data,0)  // this is safe since we only call this on ASCII strings (and we have to avoid allocation)
-    JUtils.getASCIIBytes(s,0,len,data,0) // FIXME - this is just to suppress the deprecated warning (Scala can't)
+    JUtils.getASCIIBytes(s,0,len,data,off) // FIXME - this is just to suppress the deprecated warning (Scala can't)
     length = len
     len
   }

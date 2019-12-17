@@ -118,7 +118,7 @@ class TATrackAndFlightPlanParser(val config: Config=NoConfig)  extends UTF8XmlPu
       if (isStartTag) {
         if (tag == src) {
           if (parseSingleContentString) srcId = contentString.intern
-          if (filterSrc(srcId)) return // bail out point for TRACON filtering
+          if (filterSrc(srcId)) return  // bail out point for TRACON filtering
         } else if (tag == record) {
           if (srcId != null) parseRecord(srcId)
         }
@@ -127,7 +127,7 @@ class TATrackAndFlightPlanParser(val config: Config=NoConfig)  extends UTF8XmlPu
   }
 
   def parseRecord (srcId: String): Unit = {
-    var trackId: String = null
+    var trackNum: String = null
     var acId: String  = null
     var beaconCode: String = ""
     var mrtTime: DateTime = DateTime.UndefinedDateTime
@@ -155,7 +155,7 @@ class TATrackAndFlightPlanParser(val config: Config=NoConfig)  extends UTF8XmlPu
           else if (match_drop) TrackedObject.DroppedFlag
           else 0
         }
-        @inline def process_trackNum = trackId = readInternedStringContent
+        @inline def process_trackNum = trackNum = readInternedStringContent
         @inline def process_acid = acId = readInternedStringContent
         @inline def process_adsb = if (readBooleanContent) status |= TATrack.AdsbFlag
         @inline def process_mrtTime = mrtTime = readDateTimeContent
@@ -250,24 +250,23 @@ class TATrackAndFlightPlanParser(val config: Config=NoConfig)  extends UTF8XmlPu
 
     parseElement(record)
 
-    if (srcId != null && trackId != null && xPos.isDefined && yPos.isDefined) {
+    if (srcId != null && trackNum != null && xPos.isDefined && yPos.isDefined) {
       if (allowIncompleteTrack || (mrtTime.isDefined && vx.isDefined && vy.isDefined && reportedAltitude.isDefined)) {
         val spd = Speed.fromVxVy(vx, vy)
         val hdg = Angle.fromVxVy(vx, vy)
-        if (acId == null) acId = trackId
+        if (acId == null) acId = trackNum
+        val id = getUniqueTrackId(srcId,trackNum,acId)  // note that trackNum is not unique over different Tracons
 
-        val track = new TATrack(trackId,acId,GeoPosition(lat,lon,reportedAltitude),hdg,spd,vVert,mrtTime,status,
+        val track = new TATrack(id,acId,GeoPosition(lat,lon,reportedAltitude),hdg,spd,vVert,mrtTime,status,
           srcId, XYPos(xPos, yPos), beaconCode, flightPlan)
 
-        if (!filterTrack(track)) {
-          tracks += track
-        }
+        if (!filterTrack(track)) tracks += track
       }
     }
   }
-}
 
-class FilteringTATrackAndFlightPlanParser (val filterSrc: (String)=>Boolean,
-                                           val filterTrack: (TATrack)=>Boolean) extends TATrackAndFlightPlanParser {
-
+  val idBuf = new ASCIIBuffer(32)
+  def getUniqueTrackId (srcId: String, trackNum: String, acid: String): String = {
+    srcId + '-' + trackNum // FIXME - use idBuf, this should not allocate
+  }
 }

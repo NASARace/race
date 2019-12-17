@@ -85,6 +85,7 @@ class TATracksLayer (val raceViewer: RaceViewer, val config: Config) extends Mod
   var traconLabelThreshold = config.getDoubleOrElse("tracon-label-altitude", Meters(2200000.0).toMeters)
   val gotoAltitude = Feet(config.getDoubleOrElse("goto-altitude", 5000000d)) // feet above ground
   val panDistance = config.getLengthOrElse("tracon-dist", NauticalMiles(200))
+  val selectedOnly = config.getBooleanOrElse("selected-only", true)
 
   override def defaultColor = Color.green
   override def defaultSubLabelFont = new Font(Font.MONOSPACED,Font.PLAIN,scaledSize(11))
@@ -124,18 +125,25 @@ class TATracksLayer (val raceViewer: RaceViewer, val config: Config) extends Mod
   }
 
   def handleTATrack (track: TATrack): Unit = {
-    selTracon match {
-      case Some(tracon) =>
-        if (track.src == tracon.id) {
-          incUpdateCount
-          getTrackEntry(track) match {
-            case Some(acEntry) =>
-              if (!track.isDropped) updateTrackEntry(acEntry, track)
-              else (removeTrackEntry(acEntry))
-            case None => addTrackEntry(track)
-          }
-        }
-      case None => // nothing selected, ignore
+    def processTrack: Unit = {
+      incUpdateCount
+      getTrackEntry(track) match {
+        case Some(acEntry) =>
+          if (acEntry.obj.src != track.src) println(s"@@@ ARGHH: ambiguous ID of \n\t$track and \n\t${acEntry.obj}")
+
+          if (!track.isDropped) updateTrackEntry(acEntry, track)
+          else (removeTrackEntry(acEntry))
+        case None => addTrackEntry(track)
+      }
+    }
+
+    if (selectedOnly) {
+      selTracon match {
+        case Some(tracon) => if (track.src == tracon.id) processTrack
+        case None => // nothing selected, ignore
+      }
+    } else {
+      processTrack
     }
   }
 
