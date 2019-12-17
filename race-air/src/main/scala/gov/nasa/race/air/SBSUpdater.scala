@@ -175,16 +175,18 @@ class SBSUpdater(updateFunc: TrackedObject=>Boolean,
     */
   def dropStale (date: DateTime, dropAfter: Time): Unit = {
     acCache.foreachValue { ac=>
-      val dt = date.timeSince(ac.publishDate)
-      if ( dt > dropAfter) {
-        acCache.remove(ac.icao24)
-        dropFunc(ac.icao24String, ac.cs, date, dt)
-        nDropped += 1
-        nRemoved += 1
+      if (ac.publishDate.isDefined) { // only defined once we have published this ac
+        val dt = date.timeSince(ac.publishDate)
+        if (dt > dropAfter) {
+          acCache.remove(ac.icao24)
+          dropFunc(ac.icao24String, ac.cs, date, dt)
+          nDropped += 1
+          nRemoved += 1
 
-        if (nRemoved > acCache.size/10) {
-          acCache.repack
-          nRemoved = 0
+          if (nRemoved > acCache.size / 10) {
+            acCache.repack
+            nRemoved = 0
+          }
         }
       }
     }

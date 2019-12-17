@@ -22,6 +22,8 @@ import gov.nasa.race.config.ConfigurableFilter
 import gov.nasa.race.core.Messages.BusEvent
 import gov.nasa.race.core._
 
+import scala.collection.Seq
+
 /**
   * trait for PublishingRaceActors that support filters
   * note that filters are static, this versions does not support dynamic addition/removal
@@ -51,7 +53,11 @@ trait FilteringPublisher extends PublishingRaceActor {
   def passUnfilteredDefault: Boolean = config.getBooleanOrElse("pass-unfiltered", true)
 
   /** override if there is selective publishing or additional action */
-  def action (msg: Any, isPassing: Boolean): Unit = if (isPassing) publish(msg)
+  def action (msg: Any, isPassing: Boolean): Unit = {
+    if (isPassing) {
+      publish(msg)
+    }
+  }
 
   /**
     * this is what concrete actor handleMessage implementations can use to generically publish filtered

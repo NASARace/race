@@ -106,6 +106,10 @@ class TATrackAndFlightPlanParser(val config: Config=NoConfig)  extends UTF8XmlPu
     }
   }
 
+  //--- override to filter TRACONS and tracks
+  protected def filterSrc (srcId: String) = false
+  protected def filterTrack (track: TATrack) = false
+
   def parseTATrackAndFlightPlan: Unit = {
     var srcId: String = null
     clearTracks
@@ -114,6 +118,7 @@ class TATrackAndFlightPlanParser(val config: Config=NoConfig)  extends UTF8XmlPu
       if (isStartTag) {
         if (tag == src) {
           if (parseSingleContentString) srcId = contentString.intern
+          if (filterSrc(srcId)) return // bail out point for TRACON filtering
         } else if (tag == record) {
           if (srcId != null) parseRecord(srcId)
         }
@@ -254,8 +259,15 @@ class TATrackAndFlightPlanParser(val config: Config=NoConfig)  extends UTF8XmlPu
         val track = new TATrack(trackId,acId,GeoPosition(lat,lon,reportedAltitude),hdg,spd,vVert,mrtTime,status,
           srcId, XYPos(xPos, yPos), beaconCode, flightPlan)
 
-        tracks += track
+        if (!filterTrack(track)) {
+          tracks += track
+        }
       }
     }
   }
+}
+
+class FilteringTATrackAndFlightPlanParser (val filterSrc: (String)=>Boolean,
+                                           val filterTrack: (TATrack)=>Boolean) extends TATrackAndFlightPlanParser {
+
 }
