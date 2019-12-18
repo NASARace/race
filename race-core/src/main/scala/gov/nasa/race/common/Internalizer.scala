@@ -29,7 +29,7 @@ import scala.collection.mutable
   * string representation using MurmurHash64
   *
   * note that it is Ok to do the map entry match for Seq[String] unchecked since this is a private
-  * map and this is the only place where it is populated so if it's a Seq we know it holds Strings.
+  * map and this is the only place where it is populated so if it is a Seq we know it holds Strings.
   * Not worth burning another object to wrap the Seq[String] for type safety.
   */
 object Internalizer {
@@ -64,7 +64,10 @@ object Internalizer {
     }
   }
 
-  @inline def get (bs: Array[Byte], off: Int, len: Int): String = getMurmurHashed(MurmurHash64.hashBytes(bs,off,len), bs,off,len)
+  @inline final def get (bs: Array[Byte], off: Int, len: Int): String = getMurmurHashed(MurmurHash64.hashBytes(bs,off,len), bs,off,len)
+  @inline final def get (slice: Slice): String = get(slice.data,slice.offset,slice.length)
+  @inline final def get (buf: StringDataBuffer): String = get(buf.data,0,buf.length)
+
 
   def getMurmurHashed (hash: Long, cs: Array[Char], off: Int, len: Int): String = synchronized {
     val oldSize = map.size
@@ -150,6 +153,7 @@ object ASCII8Internalizer {
 
   @inline final def get ( bs: Array[Byte], off: Int, len: Int): String = getASCII8Hashed(ASCII8Hash64.hashBytes(bs,off,len), bs,off,len)
   @inline final def get (slice: Slice): String = get(slice.data,slice.offset,slice.length)
+  @inline final def get (buf: StringDataBuffer): String = get(buf.data,0,buf.length)
 
   def getASCII8Hashed (hash: Long, cs: Array[Char], off: Int, len: Int): String = {
     if (len > 8) {

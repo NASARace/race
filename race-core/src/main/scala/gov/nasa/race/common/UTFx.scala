@@ -149,6 +149,16 @@ object UTFx {
       }
     }
 
+    def next (c: Char): UTF8Encoder = {
+      (remainingBytes: @switch) match {
+        case 1 => new UTF8Encoder(0) // there is no next char
+        case 2 => new UTF8Encoder(state ^ 0x300000000L)
+        case 3 => new UTF8Encoder(state ^ 0x100000000L)
+        case 4 => new UTF8Encoder(state ^ 0x700000000L)
+        case _ => throw new RuntimeException("invalid utf8 encoding state")
+      }
+    }
+
     def next (cs: Array[Char], maxIndex: Int): UTF8Encoder = {
       (remainingBytes: @switch) match {
         case 1 => { // next char (if any)
@@ -203,6 +213,18 @@ object UTFx {
     }
   }
 
+  def initUTF8Encoder (c: Char): UTF8Encoder = {
+    if (c < 0x80) {
+      new UTF8Encoder( 0x100000000L | (c & 0xffL))
+    } else if (c < 0x800) {
+      new UTF8Encoder( 0x200000000L | (0xc0 | (c>>6))<<8 | (0x80 | (c & 0x3f)))
+    } else if (c < 0xd800 || c >= 0xe000) {
+      new UTF8Encoder( 0x300000000L | (0xe0 | (c>>12))<<16 | (0x80 | (c>>6 & 0x3f))<<8 | (0x80 | (c & 0x3f)))
+    } else {
+      throw new RuntimeException("can't encode single char of surrogate pair")
+    }
+  }
+
   def initUTF8Encoder(cs: Array[Char], off: Int): UTF8Encoder = {
     if (off >= cs.length) return new UTF8Encoder(0L)
 
@@ -250,6 +272,19 @@ object UTFx {
   }
 
   //--- utf8 length calculation
+
+  def isSurrogatePairChar (c: Char): Boolean = {
+    c >= 0xd800 && c < 0xe000
+  }
+
+  def utf8Length (c: Char): Int = {
+    if (c < 0x80) 1
+    else if (c < 0x800) 2
+    else if (c < 0xd800 || c >= 0xe000) 3
+    else { // TODO - what shall we do with single surrogate char?
+      2
+    }
+  }
 
   def utf8Length (cs: Array[Char], off: Int, len: Int): Int = {
     var utf8Len: Int = 0

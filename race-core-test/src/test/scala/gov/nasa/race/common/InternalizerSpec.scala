@@ -73,4 +73,16 @@ class InternalizerSpec extends AnyFlatSpec with RaceSpec {
 
     assert(Internalizer.size == longStrings.size)
   }
+
+  "Internalizer" should "work with UTF8Buffers" in {
+    println("--- internalize from ASCIIBuffer")
+    val buf = new ASCIIBuffer(32)
+    buf += "ZAP"
+    buf += '-'
+    buf += "123"
+    val s1 = ASCII8Internalizer.get(buf)
+    val s2 = ASCII8Internalizer.get("ZAP-123")
+    println(f"'$s1' (${System.identityHashCode(s1)}%x) == '$s2' (${System.identityHashCode(s2)}%x)")
+    assert( s1 eq s2)
+  }
 }

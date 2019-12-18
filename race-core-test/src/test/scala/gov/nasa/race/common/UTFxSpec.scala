@@ -65,6 +65,43 @@ class UTFxSpec extends AnyFlatSpec with RaceSpec {
     }
   }
 
+  "UTF8.Encoder" should "properly utf-8 encode single non-surrogate pair char" in {
+    def checkLength (c: Char, expected: Int): Boolean = {
+      val l = UTFx.utf8Length(c)
+      println(s"  utf8Length('$c') = $l")
+      l == expected
+    }
+
+    def checkEncodeDecode (c: Char): Boolean = {
+      val bs = new Array[Byte](4)
+      var i = 0
+      var enc = UTFx.initUTF8Encoder(c)
+      while (!enc.isEnd){
+        bs(i) = enc.utf8Byte
+        i += 1
+        enc = enc.next(c)
+      }
+      val sIn = new String(Array(c))
+      val sOut = new String(bs,0,i)
+      println(s"  '$sIn' -> '$sOut'")
+      sIn == sOut
+    }
+
+    val a: Array[Char] = Array('x', '\u00b6', '\u263b' )
+
+    println(s"--- '${a(0)}'")
+    assert( checkLength(a(0), 1))
+    assert( checkEncodeDecode(a(0)))
+
+    println(s"--- '${a(1)}'")
+    assert( checkLength(a(1), 2))
+    assert( checkEncodeDecode(a(1)))
+
+    println(s"--- '${a(2)}'")
+    assert( checkLength(a(2), 3))
+    assert( checkEncodeDecode(a(2)))
+  }
+
   "UTF8.Decoder" should "properly decode utf-8 Array[Byte] into Chars" in {
     ts.foreach { s =>
       val cs = s.toCharArray

@@ -19,7 +19,7 @@ package gov.nasa.race.air.translator
 import com.typesafe.config.Config
 import gov.nasa.race.IdentifiableObject
 import gov.nasa.race.air.{FlightPlan, TATrack}
-import gov.nasa.race.common.{ASCIIBuffer, UTF8XmlPullParser2}
+import gov.nasa.race.common.{ASCII8Internalizer, ASCIIBuffer, Internalizer, UTF8XmlPullParser2}
 import gov.nasa.race.common.inlined.Slice
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.config.{ConfigurableTranslator, NoConfig}
@@ -266,7 +266,14 @@ class TATrackAndFlightPlanParser(val config: Config=NoConfig)  extends UTF8XmlPu
   }
 
   val idBuf = new ASCIIBuffer(32)
+
+  // we combine the tracon id with the trackNum in order to get a global (unique) TATrack identifier
   def getUniqueTrackId (srcId: String, trackNum: String, acid: String): String = {
-    srcId + '-' + trackNum // FIXME - use idBuf, this should not allocate
+    idBuf.clear
+    idBuf += srcId
+    idBuf += '-'
+    idBuf += trackNum
+
+    ASCII8Internalizer.get(idBuf)
   }
 }

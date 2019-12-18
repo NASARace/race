@@ -21,10 +21,30 @@ import java.nio.charset.{CoderResult, StandardCharsets}
 
 import gov.nasa.race.util.JUtils
 
-trait StringDataBuffer {
-  def data: Array[Byte]
-  def length: Int
-  def encode (s: String, off: Int=0): Int
+abstract class StringDataBuffer (initDataSize: Int) {
+  var data: Array[Byte] = new Array(initDataSize)
+  var length: Int = 0
+
+  def encode (s: String): Int = {
+    length = 0
+    this += s
+    length
+  }
+
+  def apply (i: Int): Byte = data(i)
+  def clear: Unit = length = 0
+
+  //--- those are the two workhorses that have to be defined in subclasses
+  def += (s: String): Unit
+  def += (c: Char): Unit
+
+  protected def ensureCapacity(len: Int): Unit = {
+    if (len > data.length) {
+      val newData = new Array[Byte] (len)
+      if (length > 0) System.arraycopy (data, 0, newData, 0, length)
+      data = newData
+    }
+  }
 }
 
 /**
@@ -33,38 +53,34 @@ trait StringDataBuffer {
   *
   * Note - this is very slow since it maps to per-char charAt(idx) calls
   */
-class UTF8Buffer (initBufSize: Int = 8192) extends StringDataBuffer {
-  var data: Array[Byte] = new Array(initBufSize)
-  var length: Int = 0
+class UTF8Buffer (initDataSize: Int = 8192) extends StringDataBuffer(initDataSize) {
 
-  protected var bb: ByteBuffer = ByteBuffer.wrap(data)
-  protected val enc = StandardCharsets.UTF_8.newEncoder
+  def += (s: String): Unit = {
+    val len = length + UTFx.utf8Length(s)
+    ensureCapacity(len)
 
-  protected def growBuf: Unit = {
-    val newData = new Array[Byte](data.length*2)
-    val newBB = ByteBuffer.wrap(newData)
-    bb.rewind
-    newBB.put(bb)
-    bb = newBB
-    data = newData
+    var i = length
+    var enc = UTFx.initUTF8Encoder(s,0)
+    while (!enc.isEnd) {
+      data(i) = enc.utf8Byte
+      i += 1
+      enc = enc.next(s)
+    }
+    length = len
   }
 
-  def encode (s: String, off: Int=0): Int = { // FIXME - implement offset
-    val cb = CharBuffer.wrap(s)
-    bb.rewind
-    length = 0
-    var done = false
+  def += (c: Char): Unit = {
+    val len = length + UTFx.utf8Length(c)
+    ensureCapacity(len)
 
-    do {
-      enc.encode(cb, bb, true) match {
-        case CoderResult.UNDERFLOW => // all chars encoded
-          length = bb.position
-          done = true
-        case CoderResult.OVERFLOW => growBuf
-      }
-    } while (!done)
-
-    length
+    var i = length
+    var enc = UTFx.initUTF8Encoder(c)
+    while (!enc.isEnd) {
+      data(i) = enc.utf8Byte
+      i += 1
+      enc = enc.next(c)
+    }
+    length = len
   }
 }
 
@@ -74,20 +90,20 @@ class UTF8Buffer (initBufSize: Int = 8192) extends StringDataBuffer {
   * NOTE - this uses a deprecated String method which only discards the high byte of a
   * chars, i.e. it does not use a proper CharsetEncoder
   */
-class ASCIIBuffer (initBufSize: Int = 8192) extends StringDataBuffer {
-  var data: Array[Byte] = new Array(initBufSize)
-  var length: Int = 0
+class ASCIIBuffer (initDataSize: Int = 8192) extends StringDataBuffer(initDataSize) {
 
-  def encode (s: String, off: Int = 0): Int = {
-    val len = s.length + off
-    if (len > data.length) {
-      val newData = new Array[Byte](len)
-      if (off > 0) System.arraycopy(data,0,newData,0,off)
-      data = newData
-    }
+  def += (s: String): Unit = {
+    val len = length + s.length
+    ensureCapacity(len)
     //s.getBytes(0,len,data,0)  // this is safe since we only call this on ASCII strings (and we have to avoid allocation)
-    JUtils.getASCIIBytes(s,0,len,data,off) // FIXME - this is just to suppress the deprecated warning (Scala can't)
+    JUtils.getASCIIBytes(s,0,s.length,data,length) // FIXME - this is just to suppress the deprecated warning (Scala can't)
     length = len
-    len
+  }
+
+  def += (c: Char): Unit = {
+    val len = length+1
+    ensureCapacity(len)
+    data(length) = c.toByte
+    length = len
   }
 }

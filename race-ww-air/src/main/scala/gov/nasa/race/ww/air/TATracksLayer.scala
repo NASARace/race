@@ -129,8 +129,6 @@ class TATracksLayer (val raceViewer: RaceViewer, val config: Config) extends Mod
       incUpdateCount
       getTrackEntry(track) match {
         case Some(acEntry) =>
-          if (acEntry.obj.src != track.src) println(s"@@@ ARGHH: ambiguous ID of \n\t$track and \n\t${acEntry.obj}")
-
           if (!track.isDropped) updateTrackEntry(acEntry, track)
           else (removeTrackEntry(acEntry))
         case None => addTrackEntry(track)
