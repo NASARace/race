@@ -18,17 +18,33 @@
 package gov.nasa.race.air.actor
 
 import com.typesafe.config.Config
-import gov.nasa.race.air.translator.AsdexMsgParser
+import gov.nasa.race.actor.FlatFilteringPublisher
+import gov.nasa.race.air.Airport
+import gov.nasa.race.air.translator.{AsdexMsgParser, FullAsdexMsgParser}
+import gov.nasa.race.core.AccumulatingTopicIdProvider
 import gov.nasa.race.jms.TranslatingJMSImportActor
 import javax.jms.Message
 
 /**
-  * a JMS import actor for SWIM asdexMsg messages.
-  * This is a on-demand provider that only publishes messages for requested airports.
+  * a specialized JMS import actor for SWIM asdexMsg messages.
+  * This is a on-demand provider that only publishes tracks for requested airports.
   * Filtering airports without clients has to be efficient since asdexMsg can have a high rate (>30/sec)
   */
-class AsdexImportActor (config: Config) extends TranslatingJMSImportActor(config) with AsdexImporter {
-  val parser = new AsdexMsgParser
+class AsdexImportActor (config: Config) extends TranslatingJMSImportActor(config)
+                    with FlatFilteringPublisher with AccumulatingTopicIdProvider {
 
-  override def translate (msg: Message): Any = parser.parse(getContentSlice(msg))
+  class FilteringAsdexMsgParser extends FullAsdexMsgParser {
+    override protected def filterAirport (airportId: String) = !servedTopicIds.contains(airportId)
+  }
+
+  val parser = new FilteringAsdexMsgParser
+
+  override def translate (msg: Message): Any = {
+    parser.parseTracks(getContentSlice(msg))
+  }
+
+  override def topicIdOf (t: Any) = t match {
+    case airport: Airport => Some(airport.id)
+    case _ => None
+  }
 }

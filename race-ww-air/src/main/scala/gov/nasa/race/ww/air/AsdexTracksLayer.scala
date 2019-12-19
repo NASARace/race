@@ -155,6 +155,12 @@ class AsdexTracksLayer (val raceViewer: RaceViewer, val config: Config)
           wwdRedrawManager.redraw
         }
       }
+    case BusEvent(_, t: AsdexTrack, _) =>
+      // todo - check if track src is in servedTopicIds
+      getTrackEntry(t) match {
+        case Some(te) => if (t.isDropped) removeTrackEntry(te) else updateTrackEntry(te, t)
+        case None => if (!t.isDropped) addTrackEntry(t)
+      }
   }
 
   def updateTracks(newTracks: Seq[AsdexTrack]) = {

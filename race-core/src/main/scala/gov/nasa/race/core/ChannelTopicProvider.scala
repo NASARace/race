@@ -19,11 +19,12 @@ package gov.nasa.race.core
 
 import akka.actor.{ActorRef, Terminated}
 import com.typesafe.config.Config
+import gov.nasa.race._
 import gov.nasa.race.core.Messages._
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.util.StringUtils
 
-import scala.collection.mutable.{Map => MutableMap, Set => MutableSet}
+import scala.collection.mutable.{ArrayBuffer, Map => MutableMap, Set => MutableSet}
 import scala.util.matching.Regex
 
 object ChannelTopic {
@@ -195,6 +196,11 @@ trait ChannelTopicSubscriber extends SubscribingRaceActor {
   *
   * In order to control which requests are responded to, the concrete actor has to implement
   * `isRequestAccepted(ChannelTopicRequest)`
+  *
+  * note this trait does not imply how concrete types keep track of served topics, it only
+  * does keep track of clients requesting such topics. The reason is that the former might be
+  * a superset of the latter, and we don't know here what would be a suitable container type
+  * to store them
   */
 trait ChannelTopicProvider extends PublishingRaceActor {
   val clients = MutableSet.empty[ChannelTopicRelease] // the releases for all active clients
@@ -355,5 +361,40 @@ trait TransitiveChannelTopicProvider extends ChannelTopicProvider with ChannelTo
       case _ => // ignore
     }
     super.processRelease(rel) // takes care of updating clients
+  }
+}
+
+/**
+  * a ChannelTopicProvider that keeps track of served topics in a accumulating id list,
+  * thus supporting multiple clients per topic.
+  *
+  * Concrete types have to provide a map from topic types to string ids
+  */
+trait AccumulatingTopicIdProvider extends ChannelTopicProvider {
+
+  val topicKey: String = "served-topics" // override if config should use a more specific name
+
+  var servedTopicIds = ArrayBuffer.empty[String]
+  config.getStringSeq(topicKey).foreach(id => servedTopicIds += id)
+
+  // this basically defines if we accept a topic - return None if not
+  def topicIdOf (t: Any): Option[String]
+
+  override def isRequestAccepted(request: ChannelTopicRequest): Boolean = {
+    val channelTopic = request.channelTopic
+    writeTo.contains(channelTopic.channel) && channelTopic.topic.flatMap(topicIdOf).isDefined
+  }
+
+  override def gotAccept (accept: ChannelTopicAccept) = {
+    ifSome(accept.channelTopic.topic.flatMap(topicIdOf)) { id =>
+      info(s"got channeltopic accept for topic: $id")
+      servedTopicIds += id
+    }
+  }
+  override def gotRelease (release: ChannelTopicRelease) = {
+    ifSome(release.channelTopic.topic.flatMap(topicIdOf)){ id =>
+      info(s"got channeltopic release for topic: $id")
+      servedTopicIds -= id
+    }
   }
 }
