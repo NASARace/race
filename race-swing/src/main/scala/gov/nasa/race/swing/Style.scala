@@ -17,8 +17,9 @@
 
 package gov.nasa.race.swing
 
-import java.awt.Color
-import javax.swing.{Icon, ImageIcon}
+import java.awt.{Canvas, Color}
+
+import javax.swing.ImageIcon
 
 import scala.swing._
 
@@ -42,12 +43,19 @@ class Stylist {
     }
   }
 
-  def getIcon (id: String): Icon = Style.undefinedIcon
-
-  val defaultFont = new java.awt.Label().getFont
+  val defaultFont: Font = new java.awt.Label().getFont
   def getFont (id: String): Font = defaultFont
 
   def getColor (id: String): Color = Color.black
+
+  val defaultIconColor = Color.black
+  def getIconColor (id: String): Color = defaultIconColor
+
+  def sysFont: Font = defaultFont
+  def sysFontMetrics = new Canvas().getFontMetrics(sysFont)
+  def sysFontHeight = sysFontMetrics.getHeight
+  def sysFontWidth(c: Char) = sysFontMetrics.charWidth(c)
+  def lineHeight = sysFontHeight
 
   // this is the runtime dispatcher. Unfortunately we cannot dispatch with
   // target type specific implicit classes (i.e. at compile time) because the
@@ -63,7 +71,6 @@ class Stylist {
   def setStyle (o: UIElement, id: String): Unit = {
     o match {
 
-      case c:Separator          => style(c, id)
       case c:CheckMenuItem      => style(c, id)
       case c:PopupMenu          => style(c, id)
       case c:Menu               => style(c, id)
@@ -113,6 +120,7 @@ class Stylist {
       case c:ScrollPane         => style(c, id)
       case c:AWTWrapper         => style(c, id)
       case c:Filler             => style(c, id)
+      case c:Separator          => style(c, id)
 
       case c:DigitalClock#ClockLabel => style(c, id)  // our own
       case c:DigitalStopWatch#StopWatchLabel => style(c, id)   // our own
@@ -169,8 +177,8 @@ class Stylist {
 
   def style (c: DoubleOutputField, id: String)                   : Unit = style(c.asInstanceOf[FlowPanel], id)
   def style (c: AWTWrapper, id: String)                          : Unit = style(c.asInstanceOf[Component], id)
-  def style (c: Filler, id: String)                              : Unit = style(c.asInstanceOf[Component], id)
   def style (c: Separator, id: String)                           : Unit = style(c.asInstanceOf[Component], id)
+  def style (c: Filler, id: String)                              : Unit = style(c.asInstanceOf[Component], id)
   def style (c: DigitalClock, id: String)                        : Unit = style(c.asInstanceOf[Panel], id)
   def style (c: DigitalClock#ClockLabel, id: String)             : Unit = style(c.asInstanceOf[Label], id)
   def style (c: DigitalStopWatch, id: String)                    : Unit = style(c.asInstanceOf[Panel], id)
@@ -201,7 +209,7 @@ object Style {
 
   def initStyle = {
     var clsName = System.getProperty("race.swing.style")
-    if (clsName == null) clsName = "gov.nasa.race.ww.RaceDefaultStyle" // FIXME
+    if (clsName == null) clsName = "gov.nasa.race.swing.RaceDefaultStyle"
     try {
       Class.forName(clsName).getDeclaredConstructor().newInstance().asInstanceOf[Stylist]
     } catch {
@@ -211,12 +219,17 @@ object Style {
 
   //--- the API
 
-  def getIcon (id: String) = _stylist.getIcon(id)
+  def getIconColor (id: String) = _stylist.getIconColor(id)
   def getFont (id: String) = _stylist.getFont(id)
   def getColor (id: String) = _stylist.getColor(id)
 
+  def getSysFont: Font = _stylist.sysFont
+  def getSysFontHeight = _stylist.sysFontHeight
+  def getSysFontWidth(c: Char) = _stylist.sysFontWidth(c)
+
   implicit class Styled[C<:UIElement] (c:C) {
     def styled (id:String=NoStyle): C = { stylist.setStyle(c, id); c}
+    def defaultStyled: C = { stylist.setStyle(c,NoStyle); c}
   }
 }
 

@@ -17,21 +17,10 @@
 
 package gov.nasa.race.air
 
+import gov.nasa.race.common._
 import gov.nasa.race.geo.GeoPosition
-import gov.nasa.race.track.{TrackListMessage, TrackedObject}
-import gov.nasa.race.uom._
-import gov.nasa.race.uom.DateTime
-import scala.collection.Seq
-
-/**
-  * track report for airports (e.g. generated from SWIM asdexMsg messages)
-  */
-case class AsdexTracks(val airport: String, val tracks: Seq[AsdexTrack])  extends TrackListMessage {
-  override def toString = {
-    val d = if (!tracks.isEmpty) tracks.head.date.format_Hms_z else "?"
-    s"AsdexTracks{$airport,date=$d,nTracks=${tracks.size}}"
-  }
-}
+import gov.nasa.race.track.TrackedObject
+import gov.nasa.race.uom.{DateTime, _}
 
 object AsdexTrack {
   // AsdexTrack specific status flags (>0xffff)
@@ -72,4 +61,11 @@ case class AsdexTrack(id: String,
   def guessAircraft: Boolean =  (status & AircraftFlag) != 0
 
   override def toShortString = s"Track{$id,0x${status.toHexString},$position,$date}"
+}
+
+/**
+  * a matchable type for a Seq of AsdexTracks reported by the same airport
+  */
+trait AsdexTracks extends AssocSeq[AsdexTrack,String] {
+  @inline final def airportId: String = assoc
 }

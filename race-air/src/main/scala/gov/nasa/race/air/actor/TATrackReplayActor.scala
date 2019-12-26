@@ -20,7 +20,7 @@ import java.io.{File, FileInputStream, InputStream}
 import java.util.zip.GZIPInputStream
 
 import com.typesafe.config.Config
-import gov.nasa.race.air.{TATrack, TATrackCSVReader, Tracon}
+import gov.nasa.race.air.{TATrack, TATrackCSVReader, TRACON}
 import gov.nasa.race.common.CSVInputStream
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.ContinuousTimeRaceActor
@@ -31,7 +31,7 @@ import scala.util.matching.Regex
 /**
   * actor to replay TATrack archives in CSV format
   */
-class TATrackReplayActor (val config: Config) extends SubjectImporter[Tracon] with ContinuousTimeRaceActor {
+class TATrackReplayActor (val config: Config) extends SubjectImporter[TRACON] with ContinuousTimeRaceActor {
 
   final val batchStartPattern = ",---,".getBytes
 
@@ -75,12 +75,12 @@ class TATrackReplayActor (val config: Config) extends SubjectImporter[Tracon] wi
   }
 
   //--- SubjectImporter
-  override def topicSubject (topic: Any): Option[Tracon] = {
+  override def topicSubject (topic: Any): Option[TRACON] = {
     topic match {
-      case Some(tracon:Tracon) => Tracon.tracons.get(tracon.id)
-      case Some(traconId: String) => Tracon.tracons.get(traconId)
+      case Some(tracon:TRACON) => TRACON.tracons.get(tracon.id)
+      case Some(traconId: String) => TRACON.tracons.get(traconId)
       case _ => None
     }
   }
-  override def subjectRegex(tracon:Tracon): Option[Regex] = None // TODO - this should go away since it implies message data input
+  override def subjectRegex(tracon:TRACON): Option[Regex] = None // TODO - this should go away since it implies message data input
 }

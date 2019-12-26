@@ -18,7 +18,9 @@ package gov.nasa.race.air.actor
 
 import com.typesafe.config.Config
 import gov.nasa.race.actor.FlatFilteringPublisher
+import gov.nasa.race.air.ARTCC
 import gov.nasa.race.air.translator.MessageCollectionParser
+import gov.nasa.race.core.AccumulatingTopicIdProvider
 import gov.nasa.race.jms.TranslatingJMSImportActor
 import javax.jms.Message
 
@@ -26,9 +28,17 @@ import javax.jms.Message
   * specialized JMSImportActor for SWIM SFDPS MessageCollection XML messages
   * note that we can't hardwire the JMS config (authentication, URI, topic etc) since SWIM access might vary
   */
-class SFDPSImportActor (config: Config) extends TranslatingJMSImportActor(config) with FlatFilteringPublisher {
+class SFDPSImportActor (config: Config) extends TranslatingJMSImportActor(config)
+                                          with FlatFilteringPublisher with AccumulatingTopicIdProvider {
   val parser = new MessageCollectionParser
-  parser.setTracksReUsable(flatten) // if we flatten we don't have to make sure the collection is copied
+  parser.setElementsReusable(flatten)
 
-  override def translate (msg: Message): Any = parser.parseTracks(getContentSlice(msg))
+  override def translate (msg: Message): Any = {
+    parser.parseTracks(getContentSlice(msg))
+  }
+
+  override def topicIdOf (t: Any) = t match {
+    case artcc: ARTCC => Some(artcc.id)
+    case _ => None
+  }
 }

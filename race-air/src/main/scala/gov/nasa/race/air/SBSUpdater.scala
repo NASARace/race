@@ -4,11 +4,11 @@ import gov.nasa.race.common.UTF8CsvPullParser
 import gov.nasa.race.common.inlined.Slice
 import gov.nasa.race.geo.LatLonPos
 import gov.nasa.race.track.TrackedObject
-import gov.nasa.race.uom.Angle.{Degrees, UndefinedAngle}
-import gov.nasa.race.uom.DateTime.UndefinedDateTime
-import gov.nasa.race.uom.Length.Feet
+import gov.nasa.race.uom.Angle._
+import gov.nasa.race.uom.Length._
+import gov.nasa.race.uom.DateTime._
 import gov.nasa.race.uom.{Angle, DateTime, Speed, Time}
-import gov.nasa.race.uom.Speed.{FeetPerMinute, Knots, UndefinedSpeed}
+import gov.nasa.race.uom.Speed._
 
 import scala.collection.mutable
 
@@ -122,12 +122,12 @@ class SBSUpdater(updateFunc: TrackedObject=>Boolean,
                 skip(1)
                 val date = readDate
                 skip(3)
-                val alt = Feet(readNextValue.toInt)
+                val alt = if (parseNextNonEmptyValue) Feet(value.toInt) else UndefinedLength
                 skip(2)
                 val lat = if (parseNextNonEmptyValue) Degrees(value.toDouble) else UndefinedAngle
                 val lon = if (parseNextNonEmptyValue) Degrees(value.toDouble) else UndefinedAngle
 
-                if (lat.isDefined && lon.isDefined) {
+                if (lat.isDefined && lon.isDefined && alt.isDefined) {
                   val status = if (ac.publishDate.isDefined) 0 else TrackedObject.NewFlag
                   ac.publishDate = date
 

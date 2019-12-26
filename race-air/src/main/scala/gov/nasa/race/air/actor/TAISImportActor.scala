@@ -18,7 +18,7 @@ package gov.nasa.race.air.actor
 
 import com.typesafe.config.Config
 import gov.nasa.race.actor.FlatFilteringPublisher
-import gov.nasa.race.air.Tracon
+import gov.nasa.race.air.TRACON
 import gov.nasa.race.air.translator.TATrackAndFlightPlanParser
 import gov.nasa.race.core.AccumulatingTopicIdProvider
 import gov.nasa.race.jms.TranslatingJMSImportActor
@@ -45,7 +45,7 @@ class TAISImportActor(config: Config) extends TranslatingJMSImportActor(config)
   }
 
   override def topicIdOf (t: Any) = t match {
-    case tracon: Tracon => Some(tracon.id)
+    case tracon: TRACON => Some(tracon.id)
     case _ => None
   }
 }

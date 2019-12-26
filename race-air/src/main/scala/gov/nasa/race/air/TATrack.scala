@@ -20,6 +20,7 @@ import java.io.{OutputStream, PrintStream}
 
 import com.typesafe.config.Config
 import gov.nasa.race.archive.{ArchiveWriter, CSVArchiveWriter}
+import gov.nasa.race.common._
 import gov.nasa.race.common.CSVInputStream
 import gov.nasa.race.common.ConfigurableStreamCreator.{configuredPathName, createOutputStream}
 import gov.nasa.race.geo.{GeoPosition, XYPos}
@@ -166,4 +167,9 @@ class TATrackCSVReader(in: CSVInputStream) {
 
     new TATrack(id,cs,GeoPosition(lat,lon,alt),hdg,spd,vr,date,status,src,XYPos(x,y),beacon,None)
   }
+}
+
+// a matchable collection type of TATrack objects reported by the same TRACON
+trait TATracks extends AssocSeq[TATrack,String] {
+  @inline final def traconId: String = assoc
 }

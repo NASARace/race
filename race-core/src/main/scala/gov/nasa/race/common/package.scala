@@ -18,6 +18,7 @@
 package gov.nasa.race
 
 import scala.annotation.tailrec
+import scala.collection.Seq
 import scala.language.implicitConversions
 import scala.math._
 import scala.util.matching.Regex
@@ -153,4 +154,10 @@ package object common {
     def getMatchingItems(query: String, items: Iterable[T]): Iterable[T]
   }
 
+  /**
+    * a Seq that is associated with a non-element value
+    */
+  trait AssocSeq [T,U] extends Seq[T] {
+    def assoc: U
+  }
 }

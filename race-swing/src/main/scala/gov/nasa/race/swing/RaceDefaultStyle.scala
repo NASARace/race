@@ -15,20 +15,18 @@
  * limitations under the License.
  */
 
-package gov.nasa.race.ww
+package gov.nasa.race.swing
 
 import java.awt.Color._
 import java.awt.{Color, Font, Button => _, Component => _, Label => _, Panel => _, ScrollPane => _, TextComponent => _, TextField => _, _}
 
-import gov.nasa.race.swing._
 import javax.swing.UIManager
 import javax.swing.border._
-import javax.swing.plaf.ColorUIResource
 import javax.swing.plaf.basic.BasicScrollBarUI
 import javax.swing.text.StyleConstants
 import org.fife.ui.rsyntaxtextarea.Theme
 
-import scala.swing.{Alignment, Button, CheckBox, ComboBox, Component, FlowPanel, Label, ListView, Panel, RadioButton, ScrollPane, Separator, TextComponent, TextField, TextPane, UIElement}
+import scala.swing.{Alignment, Button, CheckBox, ComboBox, Component, FlowPanel, Label, ListView, Panel, RadioButton, ScrollPane, TextComponent, TextField, TextPane, UIElement}
 
 /**
  * default Swing component styles for Race
@@ -43,16 +41,13 @@ class RaceDefaultStyle extends Stylist {
   val focusColor = Color.BLUE
   val separatorColor = new Color(42,42,42)
 
-  val sysFont = new Font("lucida grande", Font.PLAIN, scaledSize(12))
+  override val sysFont = new Font("lucida grande", Font.PLAIN, scaledSize(12))
   val txtFont = new Font("Monospaced", Font.PLAIN, scaledSize(12))
 
   val hiInner = background.brighter
   val hiOuter = hiInner.brighter
   val shadowInner = background.darker
   val shadowOuter = shadowInner.darker
-
-  val sysFontMetrics = new Canvas().getFontMetrics(sysFont)
-  val lineHeight = sysFontMetrics.getHeight
 
   def loweredBevelBorder = new BevelBorder(BevelBorder.LOWERED,
                                     hiOuter, hiInner, shadowOuter, shadowInner)
@@ -95,7 +90,7 @@ class RaceDefaultStyle extends Stylist {
     }
   }
 
-  override def style (c: Separator, id: String): Unit = {
+  def style (c: Separator, id: String): Unit = { // ?? scalac does not see the super method ??
     super.style(c,id)
 
     c.preferredSize = scaledDimension(7,7)
@@ -365,25 +360,7 @@ class RaceDefaultStyle extends Stylist {
 
   //--- icons, fonts & colors
 
-  val flightIconColor = Color.white
-  val flightBlankIcon = Images.blankFlightIcon
-  val flightCenteredIcon = Images.getFlightCenteredIcon(flightIconColor)
-  val flightHiddenIcon = Images.getFlightHiddenIcon(flightIconColor)
-  val flightPathIcon = Images.getFlightPathIcon(flightIconColor)
-  val flightInfoIcon = Images.getFlightInfoIcon(flightIconColor)
-  val flightMarkIcon = Images.getFlightMarkIcon(flightIconColor)
-
-  override def getIcon (id: String) = {
-    id match {
-      case "flightNone" => flightBlankIcon
-      case "flightCentered" => flightCenteredIcon
-      case "flightHidden" => flightHiddenIcon
-      case "flightPath" => flightPathIcon
-      case "flightInfo" => flightInfoIcon
-      case "flightMark" => flightMarkIcon
-      case _ => super.getIcon(id)
-    }
-  }
+  override def getIconColor (id: String): Color = Color.white
 
   val balloonFont = txtFont
 

@@ -20,7 +20,7 @@ import java.awt.{Color, Font}
 
 import akka.actor.Actor.Receive
 import com.typesafe.config.Config
-import gov.nasa.race.air.{AirLocator, Airport, TATrack, Tracon}
+import gov.nasa.race.air.{AirLocator, Airport, TATrack, TATracks, TRACON}
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.Messages.BusEvent
 import gov.nasa.race.geo.GreatCircle
@@ -38,7 +38,7 @@ import gov.nasa.worldwind.WorldWind
 import gov.nasa.worldwind.render._
 
 
-class TraconSymbol(val tracon: Tracon, val layer: TATracksLayer) extends PointPlacemark(wwPosition(tracon.position)) with RaceLayerPickable {
+class TraconSymbol(val tracon: TRACON, val layer: TATracksLayer) extends PointPlacemark(wwPosition(tracon.position)) with RaceLayerPickable {
   var showDisplayName = false
   var attrs = new PointPlacemarkAttributes
 
@@ -95,17 +95,17 @@ class TATracksLayer (val raceViewer: RaceViewer, val config: Config) extends Mod
 
   val traconGrid: Option[PolarGrid] =  createGrid
 
-  var selTracon: Option[Tracon] = configuredTracon
+  var selTracon: Option[TRACON] = configuredTracon
 
   showTraconSymbols
 
-  val selPanel = new StaticSelectionPanel[Tracon,IdAndNamePanel[Tracon]]("select TRACON",
-    Tracon.NoTracon +: Tracon.traconList, 40, new IdAndNamePanel[Tracon]( _.id, _.name), selectTracon).styled()
+  val selPanel = new StaticSelectionPanel[TRACON,IdAndNamePanel[TRACON]]("select TRACON",
+    TRACON.NoTracon +: TRACON.traconList, 40, new IdAndNamePanel[TRACON]( _.id, _.name), selectTracon).styled()
   panel.contents.insert(1, selPanel)
 
-  def configuredTracon: Option[Tracon] = {
+  def configuredTracon: Option[TRACON] = {
     val topics = config.getOptionalStringList("request-topics")
-    if (topics.nonEmpty) Tracon.tracons.get(topics.head) else None
+    if (topics.nonEmpty) TRACON.tracons.get(topics.head) else None
   }
 
   override def createTrackEntry(track: TATrack) = new TATrackEntry(track,createTrajectory(track),this)
@@ -119,39 +119,32 @@ class TATracksLayer (val raceViewer: RaceViewer, val config: Config) extends Mod
       val gridFillColor = config.getColorOrElse("tracon-bg-color", Color.black)
       val gridFillAlpha = config.getFloatOrElse("tracon-bg-alpha", 0.4f)
 
-      Some(new PolarGrid(Tracon.NoTracon.position, Angle.Angle0, gridRingDist, gridRings,
+      Some(new PolarGrid(TRACON.NoTracon.position, Angle.Angle0, gridRingDist, gridRings,
         this, gridLineColor, gridLineAlpha, gridFillColor, gridFillAlpha))
     } else None
   }
 
-  def handleTATrack (track: TATrack): Unit = {
-    def processTrack: Unit = {
-      incUpdateCount
-      getTrackEntry(track) match {
-        case Some(acEntry) =>
-          if (!track.isDropped) updateTrackEntry(acEntry, track)
-          else (removeTrackEntry(acEntry))
-        case None => addTrackEntry(track)
-      }
-    }
-
-    if (selectedOnly) {
-      selTracon match {
-        case Some(tracon) => if (track.src == tracon.id) processTrack
-        case None => // nothing selected, ignore
-      }
-    } else {
-      processTrack
+  // this is only called for non-filtered tracks
+  protected def processTrack (track: TATrack): Unit = {
+    incUpdateCount
+    getTrackEntry(track) match {
+      case Some(acEntry) =>
+        if (!track.isDropped) updateTrackEntry(acEntry, track)
+        else (removeTrackEntry(acEntry))
+      case None => addTrackEntry(track)
     }
   }
 
-  def handleIterable (it: Iterable[_]): Unit = {
-    it.foreach { o =>
-      o match {
-        case track: TATrack => handleTATrack(track)
-        case _ => // ignore
-      }
-    }
+  @inline def acceptSrc (src: String): Boolean = {
+    !selectedOnly || (selTracon.isDefined && selTracon.get.id == src)
+  }
+
+  def handleTATracks (tracks: TATracks): Unit = {
+    if (acceptSrc(tracks.assoc)) tracks.foreach (processTrack)
+  }
+
+  def handleTATrack (track: TATrack): Unit = {
+    if (acceptSrc(track.src)) processTrack(track)
   }
 
   /**
@@ -160,7 +153,7 @@ class TATracksLayer (val raceViewer: RaceViewer, val config: Config) extends Mod
     */
   override def handleMessage: Receive = {
     case BusEvent(_, track: TATrack, _) => handleTATrack(track)
-    case BusEvent(_, it: Iterable[_],_) => handleIterable(it)
+    case BusEvent(_, tracks: TATracks, _) => handleTATracks(tracks)
     case BusEvent(_, term: TrackTerminationMessage, _) =>
       trackEntries.get(term.id) match {
         case Some(acEntry) => removeTrackEntry(acEntry)
@@ -168,13 +161,13 @@ class TATracksLayer (val raceViewer: RaceViewer, val config: Config) extends Mod
       }
   }
 
-  def showTraconSymbol (tracon: Tracon) = {
+  def showTraconSymbol (tracon: TRACON) = {
     addRenderable(new TraconSymbol(tracon,this))
   }
 
-  def showTraconSymbols = Tracon.traconList.foreach(showTraconSymbol)
+  def showTraconSymbols = TRACON.traconList.foreach(showTraconSymbol)
 
-  def selectTracon(tracon: Tracon) = raceViewer.trackUserAction(gotoTracon(tracon))
+  def selectTracon(tracon: TRACON) = raceViewer.trackUserAction(gotoTracon(tracon))
 
   def reset(): Unit = {
     selTracon = None
@@ -184,7 +177,7 @@ class TATracksLayer (val raceViewer: RaceViewer, val config: Config) extends Mod
     showTraconSymbols
   }
 
-  def setTracon(tracon: Tracon) = {
+  def setTracon(tracon: TRACON) = {
     val eyePos = raceViewer.eyeLatLonPos
     val eyeAlt = Meters(eyeAltitude)
     val traconPos = tracon.position
@@ -208,8 +201,8 @@ class TATracksLayer (val raceViewer: RaceViewer, val config: Config) extends Mod
     requestTopic(selTracon)
   }
 
-  def gotoTracon(tracon: Tracon) = {
-    if (tracon == Tracon.NoTracon) {
+  def gotoTracon(tracon: TRACON) = {
+    if (tracon == TRACON.NoTracon) {
       reset
     } else {
       selTracon match {

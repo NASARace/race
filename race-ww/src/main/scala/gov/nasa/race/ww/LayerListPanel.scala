@@ -60,7 +60,7 @@ class LayerListPanel (raceView: RaceViewer, config: Option[Config]=None)
   contents += categoryPanel
 
   // note this is only used for rendering, we can't listen to components
-  class LayerInfoRenderer extends ItemRenderPanel[Layer] {
+  class LayerInfoRendererPanel extends ItemRenderPanel[Layer] {
     val checkBox: CheckBox = new CheckBox().styled("layerEnabled")
     val nameLabel: Label = new Label().styled("layerName")
     val catLabel: Label = new Label().styled("layerCategory")
@@ -77,7 +77,7 @@ class LayerListPanel (raceView: RaceViewer, config: Option[Config]=None)
       catLabel.text = layerInfo.categories.mkString(",")
     }
   }
-  val layerInfoRenderer = new LayerInfoRenderer
+  val layerInfoRenderer = new LayerInfoRendererPanel
 
   val listView = new ListView[Layer](getListData(selectedCategories,layerInfoList))
                       with VisibilityBounding[Layer].styled("layerList")

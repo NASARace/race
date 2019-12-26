@@ -41,12 +41,13 @@ class InteractiveLayerInfoPanel[T <: LayerObject](override val layer: Interactiv
     class LayerObjectRenderer extends ItemRenderPanel[T] {
 
       //--- the standard icons
-      val blankIcon = Style.getIcon("flightNone")
-      val centerIcon = Style.getIcon("flightCentered")
-      val hiddenIcon = Style.getIcon("flightHidden")
-      val pathIcon = Style.getIcon("flightPath")
-      val infoIcon = Style.getIcon("flightInfo")
-      val markIcon = Style.getIcon("flightMark")
+      val iconClr = Style.getIconColor("default")
+      val blankIcon = Images.blankFlightIcon
+      val centerIcon = Images.getFlightCenteredIcon(iconClr)
+      val hiddenIcon = Images.getFlightHiddenIcon(iconClr)
+      val pathIcon = Images.getFlightPathIcon(iconClr)
+      val infoIcon = Images.getFlightInfoIcon(iconClr)
+      val markIcon = Images.getFlightMarkIcon(iconClr)
 
       //--- the icon labels
       val displayLabel = new Label().styled()

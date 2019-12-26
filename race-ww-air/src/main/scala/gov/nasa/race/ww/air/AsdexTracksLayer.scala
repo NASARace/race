@@ -90,6 +90,8 @@ class AsdexTracksLayer (val raceViewer: RaceViewer, val config: Config)
   var selAirport: Option[Airport] = configuredAirport
   var active = selAirport.isDefined
 
+  val selectedOnly = config.getBooleanOrElse("selected-only", true)
+
   def configuredAirport: Option[Airport] = {
     val topics = config.getOptionalStringList("request-topics")
     if (topics.nonEmpty) Airport.asdexAirports.get(topics.head) else None
@@ -146,21 +148,30 @@ class AsdexTracksLayer (val raceViewer: RaceViewer, val config: Config)
     }
   }
 
-  def handleAsdexTracksLayerMessage: Receive = {
-    case BusEvent(_, updateMsg: AsdexTracks, _) =>
-      ifSome(selAirport){ ap =>
-        if (active && ap.id == updateMsg.airport) {
-          incUpdateCount
-          updateTracks(updateMsg.tracks)
-          wwdRedrawManager.redraw
-        }
-      }
-    case BusEvent(_, t: AsdexTrack, _) =>
-      // todo - check if track src is in servedTopicIds
+  @inline def acceptSrc (src: String): Boolean = {
+    !selectedOnly || (selAirport.isDefined && selAirport.get.id == src)
+  }
+
+  def handleAsdexTrack (t: AsdexTrack): Unit = {
+    if (acceptSrc(t.src)){
       getTrackEntry(t) match {
         case Some(te) => if (t.isDropped) removeTrackEntry(te) else updateTrackEntry(te, t)
         case None => if (!t.isDropped) addTrackEntry(t)
       }
+    }
+  }
+
+  def handleAsdexTracks (tracks: AsdexTracks): Unit = {
+    if (acceptSrc(tracks.assoc)){
+      incUpdateCount
+      updateTracks(tracks)
+      wwdRedrawManager.redraw
+    }
+  }
+
+  def handleAsdexTracksLayerMessage: Receive = {
+    case BusEvent(_, tracks: AsdexTracks, _) => handleAsdexTracks(tracks)
+    case BusEvent(_, track: AsdexTrack, _) => handleAsdexTrack(track)
   }
 
   def updateTracks(newTracks: Seq[AsdexTrack]) = {

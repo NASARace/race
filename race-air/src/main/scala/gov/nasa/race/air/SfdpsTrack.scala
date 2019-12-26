@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, United States Government, as represented by the
+ * Copyright (c) 2019, United States Government, as represented by the
  * Administrator of the National Aeronautics and Space Administration.
  * All rights reserved.
  *
@@ -16,13 +16,30 @@
  */
 package gov.nasa.race.air
 
-import gov.nasa.race.geo.GeoPositioned
+import gov.nasa.race.common.AssocSeq
+import gov.nasa.race.geo.GeoPosition
+import gov.nasa.race.uom.{Angle, DateTime, Speed}
 
 /**
-  * something that can knows how to look up names that represent airspace relevant locations
+  * a TrackedAircraft object obtained through SWIMs SFDPS service
   */
-trait AirLocator {
-  def queryLocation(id: String): Option[GeoPositioned] = {
-    Airport.allAirports.get(id).orElse( TRACON.tracons.get(id))
-  }
+case class SfdpsTrack (
+    id: String,
+    cs: String,
+    position: GeoPosition,
+    speed: Speed,
+    heading: Angle,
+    vr: Speed,
+    date: DateTime,
+    status: Int,
+    src: String // originating ARTCC
+    //.. and probably more to follow
+  ) extends TrackedAircraft {
+}
+
+/**
+  * matchable type that represents a collection of SfdpsTrack objects that originated from the same ARTCC
+  */
+trait SfdpsTracks extends AssocSeq[SfdpsTrack,String] {
+  @inline final def artccId: String = assoc
 }

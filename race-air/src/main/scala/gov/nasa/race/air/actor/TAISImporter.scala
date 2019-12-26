@@ -16,20 +16,20 @@
  */
 package gov.nasa.race.air.actor
 
-import gov.nasa.race.air.Tracon
+import gov.nasa.race.air.TRACON
 
 import scala.util.matching.Regex
 
 /**
   * trait to handle conditional TAIS imports, filtered by requested tracons
   */
-trait TAISImporter extends SubjectImporter[Tracon]{
-  override def topicSubject (topic: Any): Option[Tracon] = {
+trait TAISImporter extends SubjectImporter[TRACON]{
+  override def topicSubject (topic: Any): Option[TRACON] = {
     topic match {
-      case Some(tracon:Tracon) => Tracon.tracons.get(tracon.id)
-      case Some(traconId: String) => Tracon.tracons.get(traconId)
+      case Some(tracon:TRACON) => TRACON.tracons.get(tracon.id)
+      case Some(traconId: String) => TRACON.tracons.get(traconId)
       case _ => None
     }
   }
-  override def subjectRegex(tracon:Tracon): Option[Regex] = Some(s"<src>${tracon.id}</src>".r)
+  override def subjectRegex(tracon:TRACON): Option[Regex] = Some(s"<src>${tracon.id}</src>".r)
 }

@@ -16,8 +16,11 @@
  */
 package gov.nasa.race
 
+import gov.nasa.race.common.{AssocSeq, ClearableElementsHolder}
 import gov.nasa.race.geo.GeoPositioned
 import gov.nasa.race.uom.{Angle, Speed}
+
+import scala.collection.mutable.ArrayBuffer
 
 /**
   * common types for track objects
@@ -43,4 +46,25 @@ package object track {
     var speed: Speed
   )
 
+  /**
+    * a mutable Seq of TrackedObjects that can be associated to a common src
+    */
+  class MutSrcTracks[T <: TrackedObject](initSize: Int) extends ArrayBuffer[T](initSize) with AssocSeq[T,String] {
+    var src: String = null
+    override def assoc: String = src
+  }
+
+  /**
+    * an owner of a MutSrcTracks collection
+    */
+  trait MutSrcTracksHolder[T <: TrackedObject, U <: MutSrcTracks[T]] extends ClearableElementsHolder[U] {
+    override def clearElements: Unit = {
+      super.clearElements
+      elements.src = null
+    }
+
+    //--- just some aliases to improve readability
+    @inline def clearTracks = clearElements
+    @inline def tracks = elements
+  }
 }

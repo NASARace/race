@@ -71,7 +71,7 @@ class PortForwarder (val config: Config) extends PeriodicRaceActor {
     if (!strictHostKey) session.setConfig("StrictHostKeyChecking", "no")
 
     info(s"$name connecting as $user@$host ..")
-    ifSome(config.getOptionalString("pw")) { s => session.setPassword(s) }
+    ifSome(config.getOptionalString("pw")) { session.setPassword }
     ifSome(UserInfoFactory.factory) { f =>
       val ui = f.getUserInfo
       session.setUserInfo(ui)
