@@ -23,7 +23,7 @@ import gov.nasa.race.uom.{Angle, DateTime, Speed}
 /**
   * a TrackedAircraft object obtained through SWIMs SFDPS service
   */
-case class SfdpsTrack (
+case class SFDPSTrack(
     id: String,
     cs: String,
     position: GeoPosition,
@@ -40,6 +40,6 @@ case class SfdpsTrack (
 /**
   * matchable type that represents a collection of SfdpsTrack objects that originated from the same ARTCC
   */
-trait SfdpsTracks extends AssocSeq[SfdpsTrack,String] {
+trait SFDPSTracks extends AssocSeq[SFDPSTrack,String] {
   @inline final def artccId: String = assoc
 }

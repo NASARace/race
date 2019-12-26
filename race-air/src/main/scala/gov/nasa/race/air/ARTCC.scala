@@ -19,6 +19,7 @@ package gov.nasa.race.air
 import gov.nasa.race.geo.{GeoPosition, GeoPositioned}
 
 import scala.collection.immutable.SortedMap
+import scala.util.matching.Regex
 
 /**
   * US Air Route Traffic Control Centers
@@ -28,30 +29,30 @@ object ARTCC {
     new ARTCC(id,name,state,area,GeoPosition.fromDegrees(lat,lon))
   }
 
-  val ZMA = ARTCC("ZMA",	"Miami",            "FL",   "Eastern",  	25.82485,  -80.31933)
-  val ZJX = ARTCC("ZJX",	"Jacksonville",	    "FL",   "Eastern",  	30.69892,  -81.90829)
-  val ZDC = ARTCC("ZDC",	"Washington DC",	  "DC",   "Eastern",  	39.10153,  -77.54286)
-  val ZNY = ARTCC("ZNY",	"New York",	        "NY",   "Eastern",  	40.784306, -73.096861)
-  val ZBW = ARTCC("ZBW",	"Boston",	          "NH",   "Eastern",  	42.73517,  -71.48056)
-  val ZOB = ARTCC("ZOB",	"Cleveland",	      "OH",   "Central",  	41.29725,  -82.20638)
-  val ZID = ARTCC("ZID",	"Indianapolis",	    "IN",   "Central",  	39.73813,  -86.28036)
-  val ZTL = ARTCC("ZTL",	"Atlanta",	        "GA",   "Eastern",  	33.379651, -84.29679)
-  val ZHU = ARTCC("ZHU",	"Houston",	        "TX",   "Central",  	29.961437, -95.33194)
-  val ZME = ARTCC("ZME",	"Memphis",	        "TN",   "Eastern",  	35.06730,  -89.95550)
-  val ZKC = ARTCC("ZKC",	"Kansas City",	    "KS",   "Central",  	38.88005,  -94.79063)
-  val ZAU = ARTCC("ZAU",	"Chicago",	        "IL",   "Central",  	41.78276,  -88.33132)
-  val ZMP = ARTCC("ZMP",	"Minneapolis",	    "MN",   "Central",  	44.63729,  -93.15214)
-  val ZFW = ARTCC("ZFW",	"Fort Worth",	      "TX",   "Central",  	32.83078,  -97.06665)
-  val ZAB = ARTCC("ZAB",	"Albuquerque",	    "NM",   "Central",  	35.17341, -106.56742)
-  val ZDV = ARTCC("ZDV",	"Denver",	          "CO",   "Western",  	40.18731, -105.12707)
-  val ZLC = ARTCC("ZLC",	"Salt Lake City",	  "UT",   "Western",  	40.78607, -111.95232)
-  val ZLA = ARTCC("ZLA",	"Los Angeles",	    "CA",   "Western",  	34.60331, -118.08379)
-  val ZOA = ARTCC("ZOA",	"Oakland",	        "CA",   "Western",  	37.5429,  -122.01601)
-  val ZSE = ARTCC("ZSE",	"Seattle",	        "WA",   "Western",  	47.28693, -122.18819)
-  val ZAN = ARTCC("ZAN",	"Anchorage",	      "AK",   "Western",  	61.22920, -149.78030)
-  val ZHN = ARTCC("ZHN",	"Honolulu",	        "HI",   "Western",  	21.32087, -157.92654)
-  val ZSU = ARTCC("ZSU",	"San Juan",         "PR",   "Eastern",  	18.431273, -65.993459)
-  val ZUA = ARTCC("ZUA",	"Guam",             "GU",   "Western",  	13.47885, -144.79708)
+  val ZMA = new ARTCC("ZMA",	"Miami",            "FL",   "Eastern",  	GeoPosition.fromDegrees(25.82485,  -80.31933))
+  val ZJX = new ARTCC("ZJX",	"Jacksonville",	    "FL",   "Eastern",  	GeoPosition.fromDegrees(30.69892,  -81.90829))
+  val ZDC = new ARTCC("ZDC",	"Washington DC",	  "DC",   "Eastern",  	GeoPosition.fromDegrees(39.10153,  -77.54286))
+  val ZNY = new ARTCC("ZNY",	"New York",	        "NY",   "Eastern",  	GeoPosition.fromDegrees(40.784306, -73.096861))
+  val ZBW = new ARTCC("ZBW",	"Boston",	          "NH",   "Eastern",  	GeoPosition.fromDegrees(42.73517,  -71.48056))
+  val ZOB = new ARTCC("ZOB",	"Cleveland",	      "OH",   "Central",  	GeoPosition.fromDegrees(41.29725,  -82.20638))
+  val ZID = new ARTCC("ZID",	"Indianapolis",	    "IN",   "Central",  	GeoPosition.fromDegrees(39.73813,  -86.28036))
+  val ZTL = new ARTCC("ZTL",	"Atlanta",	        "GA",   "Eastern",  	GeoPosition.fromDegrees(33.379651, -84.29679))
+  val ZHU = new ARTCC("ZHU",	"Houston",	        "TX",   "Central",  	GeoPosition.fromDegrees(29.961437, -95.33194))
+  val ZME = new ARTCC("ZME",	"Memphis",	        "TN",   "Eastern",  	GeoPosition.fromDegrees(35.06730,  -89.95550))
+  val ZKC = new ARTCC("ZKC",	"Kansas City",	    "KS",   "Central",  	GeoPosition.fromDegrees(38.88005,  -94.79063))
+  val ZAU = new ARTCC("ZAU",	"Chicago",	        "IL",   "Central",  	GeoPosition.fromDegrees(41.78276,  -88.33132))
+  val ZMP = new ARTCC("ZMP",	"Minneapolis",	    "MN",   "Central",  	GeoPosition.fromDegrees(44.63729,  -93.15214))
+  val ZFW = new ARTCC("ZFW",	"Fort Worth",	      "TX",   "Central",  	GeoPosition.fromDegrees(32.83078,  -97.06665))
+  val ZAB = new ARTCC("ZAB",	"Albuquerque",	    "NM",   "Central",  	GeoPosition.fromDegrees(35.17341, -106.56742))
+  val ZDV = new ARTCC("ZDV",	"Denver",	          "CO",   "Western",  	GeoPosition.fromDegrees(40.18731, -105.12707))
+  val ZLC = new ARTCC("ZLC",	"Salt Lake City",	  "UT",   "Western",  	GeoPosition.fromDegrees(40.78607, -111.95232))
+  val ZLA = new ARTCC("ZLA",	"Los Angeles",	    "CA",   "Western",  	GeoPosition.fromDegrees(34.60331, -118.08379))
+  val ZOA = new ARTCC("ZOA",	"Oakland",	        "CA",   "Western",  	GeoPosition.fromDegrees(37.5429,  -122.01601))
+  val ZSE = new ARTCC("ZSE",	"Seattle",	        "WA",   "Western",  	GeoPosition.fromDegrees(47.28693, -122.18819))
+  val ZAN = new ARTCC("ZAN",	"Anchorage",	      "AK",   "Western",  	GeoPosition.fromDegrees(61.22920, -149.78030))
+  val ZHN = new ARTCC("ZHN",	"Honolulu",	        "HI",   "Western",  	GeoPosition.fromDegrees(21.32087, -157.92654))
+  val ZSU = new ARTCC("ZSU",	"San Juan",         "PR",   "Eastern",  	GeoPosition.fromDegrees(18.431273, -65.993459))
+  val ZUA = new ARTCC("ZUA",	"Guam",             "GU",   "Western",  	GeoPosition.fromDegrees(13.47885, -144.79708))
 
   val artccList = Seq(
     ZMA, ZJX, ZDC, ZNY, ZBW, ZOB, ZID, ZTL, ZHU, ZME, ZKC, ZAU,
@@ -60,7 +61,17 @@ object ARTCC {
 
   val artccs = artccList.foldLeft(SortedMap.empty[String,ARTCC]) { (m, a) => m + (a.id -> a) }
 
-  final val NoARTCC = new ARTCC("","","","", GeoPosition.undefinedPos)
+  final val NoARTCC = new ARTCC("<none>","<none>","","", GeoPosition.undefinedPos) {
+    override def isMatching (s: String): Boolean = false
+    override def isMatching (r: Regex): Boolean = false
+  }
+  final val AnyARTCC = new ARTCC("<any>","<any>","","", GeoPosition.undefinedPos){
+    override def isMatching (s: String): Boolean = true
+    override def isMatching (r: Regex): Boolean = true
+  }
 }
 
-case class ARTCC (id: String, name: String, state: String, area: String, position: GeoPosition) extends GeoPositioned
+class ARTCC (val id: String, val name: String, val state: String, val area: String, val position: GeoPosition) extends GeoPositioned {
+  def isMatching (s: String): Boolean = s.equals(id)
+  def isMatching (r: Regex): Boolean = r.matches(id)
+}
