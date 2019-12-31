@@ -38,7 +38,7 @@ class MultiSelectionPanel[T:ClassTag] (label: String,
                                        selItems: => Seq[T],
                                        itemLabelFunc: T=>String,
                                        itemDescrFunc: T=>String,
-                                       maxRows: Int = 15)(action: MultiSelectionResult[T] =>Unit) extends GBPanel {
+                                       maxRows: Int = 15)(action: MultiSelection.Result[T] =>Unit) extends GBPanel {
 
   val lbl = new Label(label).styled("labelFor")
 
@@ -53,10 +53,10 @@ class MultiSelectionPanel[T:ClassTag] (label: String,
     dialog.setLocationRelativeTo(this)
     val res = dialog.process
     res match {
-      case Canceled(_) => // do nothing
-      case NoneSelected(_) => tf.text = "<none>"; action(res)
-      case AllSelected(_) => tf.text = "<all>"; action(res)
-      case SomeSelected(sel) => tf.text = getTfText(sel); action(res)
+      case MultiSelection.Canceled(_) => // do nothing
+      case MultiSelection.NoneSelected(_) => tf.text = "<none>"; action(res)
+      case MultiSelection.AllSelected(_) => tf.text = "<all>"; action(res)
+      case MultiSelection.SomeSelected(sel) => tf.text = getTfText(sel); action(res)
     }
   }.defaultStyled
 
@@ -65,13 +65,13 @@ class MultiSelectionPanel[T:ClassTag] (label: String,
     val selLabels = s.split("[ ,]+")
     var selections = Seq.empty[T]
     val res = if (isNoneSelection(selLabels)){
-      NoneSelected(selections)
+      MultiSelection.NoneSelected(selections)
     } else if (isAllSelection(selLabels)) {
       selections = allItems
-      AllSelected(selections)
+      MultiSelection.AllSelected(selections)
     } else {
       selections = allItems.filter( t=> selLabels.contains(itemLabelFunc(t)))
-      SomeSelected(selections)
+      MultiSelection.SomeSelected(selections)
     }
     tf.text = getTfText(selections)
     action(res)
@@ -118,7 +118,7 @@ object MultiSelectionPanel {
     val candidates = Seq("one", "two", "three", "four", "five", "six")
     var selections = Seq("two")
 
-    def processSelection (result: MultiSelectionResult[String]): Unit = {
+    def processSelection (result: MultiSelection.Result[String]): Unit = {
       selections = result.selected
       println(s"selection result: $result")
     }

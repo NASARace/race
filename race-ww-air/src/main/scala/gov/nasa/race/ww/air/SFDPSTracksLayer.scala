@@ -20,16 +20,16 @@ import java.awt.Color
 
 import akka.actor.Actor.Receive
 import com.typesafe.config.Config
-import gov.nasa.race.air.{ARTCC, SFDPSTrack, SFDPSTracks, TrackedAircraft}
+import gov.nasa.race.air.{ARTCC, SFDPSTrack, SFDPSTracks}
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.Messages.BusEvent
 import gov.nasa.race.geo.GeoPositioned
-import gov.nasa.race.swing.{AllSelected, Canceled, MultiSelectionPanel, MultiSelectionResult, NoneSelected, SomeSelected}
-import gov.nasa.race.uom.Length.Meters
-import gov.nasa.race.ww.{EventAction, Images, RaceLayerPickable, RaceViewer, toABGRString, wwPosition}
-import gov.nasa.race.ww.track.{ModelTrackLayer, TrackEntry}
 import gov.nasa.race.swing.Style._
+import gov.nasa.race.swing.{MultiSelection, MultiSelectionPanel}
+import gov.nasa.race.uom.Length.Meters
 import gov.nasa.race.ww.EventAction.EventAction
+import gov.nasa.race.ww.track.ModelTrackLayer
+import gov.nasa.race.ww.{EventAction, Images, RaceLayerPickable, RaceViewer, toABGRString, wwPosition}
 import gov.nasa.worldwind.WorldWind
 import gov.nasa.worldwind.render.{PointPlacemark, PointPlacemarkAttributes}
 
@@ -101,23 +101,23 @@ class SFDPSTracksLayer (val raceViewer: RaceViewer, val config: Config) extends 
   def showArtccSymbol (artcc: ARTCC) = addRenderable(new ArtccSymbol(artcc,this))
   def showArtccSymbols = ARTCC.artccList.foreach(showArtccSymbol)
 
-  def selectARTCCs(res: MultiSelectionResult[ARTCC]): Unit ={
+  def selectARTCCs(res: MultiSelection.Result[ARTCC]): Unit ={
     res match {
-      case SomeSelected(newSel) =>
+      case MultiSelection.SomeSelected(newSel) =>
         val lastSel = selARTCCs
         lastSel.diff(newSel).foreach(a => releaseTopic(Some(a))) // removed ARTCCs
         newSel.diff(lastSel).foreach(a => requestTopic(Some(a))) // added ARTCCs
         selARTCCs = newSel
         removeTrackEntries( e=> !isSelectedARTCC(e.obj.src))
-      case NoneSelected(_) =>
+      case MultiSelection.NoneSelected(_) =>
         if (selARTCCs.nonEmpty) selARTCCs.foreach(a => releaseTopic(Some(a)))
         selARTCCs = Seq.empty[ARTCC]
         clearTrackEntries
-      case AllSelected(_) =>
+      case MultiSelection.AllSelected(_) =>
         if (!isAllSelected) selARTCCs.foreach(a => releaseTopic(Some(a)))
         requestTopic(Some(ARTCC.AnyARTCC))
         selARTCCs = Seq(ARTCC.AnyARTCC)
-      case Canceled(_) => // do nothing
+      case MultiSelection.Canceled(_) => // do nothing
     }
 
     redraw

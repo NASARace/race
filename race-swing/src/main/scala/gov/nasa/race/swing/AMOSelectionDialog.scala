@@ -22,43 +22,33 @@ import gov.nasa.race.swing.GBPanel.{Anchor, Fill}
 import gov.nasa.race.swing.Style._
 
 import scala.collection.Seq
-import scala.language.existentials
 import scala.reflect.ClassTag
 import scala.swing.event.MouseClicked
-import scala.swing.{Alignment, Button, CheckBox, Dialog, FlowPanel, Label, ListView, ScrollPane}
+import scala.swing.{Alignment, Button, Dialog, FlowPanel, Label, ListView, RadioButton, ScrollPane}
 
-object MultiSelection {
-
-  /**
-    * selection result abstraction that can be used for pattern matching
-    * and supports none/any selection shortcuts. While we provide suitable
-    * selection Seqs this might not be efficient in case candidate sets are
-    * large and all items are selected.
-    */
-  sealed abstract class Result[T] {
-    def selected: Seq[T]
+object AMOSelection {
+  sealed abstract class Result[T]{
+    def selected: Option[T]
   }
-
-  case class Canceled[T](selected: Seq[T]) extends Result[T]
-  case class NoneSelected[T](selected: Seq[T]) extends Result[T]
-  case class AllSelected[T](selected: Seq[T]) extends Result[T]
-  case class SomeSelected[T](selected: Seq[T]) extends Result[T]
+  case class Canceled[T](selected: Option[T]) extends Result[T]
+  case class NoneSelected[T](selected: Option[T]=None) extends Result[T]
+  case class OneSelected[T](selected: Option[T]) extends Result[T]
 }
-import MultiSelection._
+import AMOSelection._
 
 /**
-  * a modal dialog that represents choices as columns of checkboxes
+  * at-most-one selection dialog, which allows cancel/none-/one-selected operations
+  * over a set of mutually exclusive choices
   */
-class MultiSelectionDialog[T:ClassTag] ( dialogTitle: String,
-                                         choices: Seq[T],
-                                         initialSelections: Seq[T],
-                                         labelFunc: T=>String,
-                                         descrFunc: T=>String,
-                                         maxRows: Int = 25) extends Dialog {
+class AMOSelectionDialog[T:ClassTag] ( dialogTitle: String,
+                                       choices: Seq[T],
+                                       initialSelection: Option[T],
+                                       labelFunc: T=>String,
+                                       descrFunc: T=>String,
+                                       maxRows: Int = 25) extends Dialog {
 
-  // note this is only used for rendering - we can't add reactions here
   class ChoiceRenderPanel extends ItemRenderPanel[T] {
-    val checkBox: CheckBox = new CheckBox().defaultStyled
+    val radio: RadioButton = new RadioButton().defaultStyled
     val idLabel: Label = new Label().defaultStyled
     val descrLabel: Label = new Label().defaultStyled
 
@@ -67,25 +57,24 @@ class MultiSelectionDialog[T:ClassTag] ( dialogTitle: String,
     descrLabel.horizontalAlignment = Alignment.Left
 
     val c = new Constraints(fill=Fill.Horizontal, anchor=Anchor.West)
-    layout(checkBox)    = c(0,0)
+    layout(radio)       = c(0,0)
     layout(idLabel)     = c(1,0)
     layout(descrLabel)  = c(2,0).weightx(0.5).insets(scaledInsets(0,8,0,0))
 
     def configure(list: ListView[_], isSelected: Boolean, focused: Boolean, item: T, index: Int) = {
-      checkBox.selected = selItems.contains(item)
+      radio.selected = selItem.isDefined && item == selItem.get
       idLabel.text = labelFunc(item)
       descrLabel.text = descrFunc(item)
     }
 
-    def isToggle (pos: Point): Boolean = checkBox.bounds.contains(pos.x,0)
+    def isToggle (pos: Point): Boolean = radio.bounds.contains(pos.x,0)
   }
 
   title = dialogTitle
 
   val candidates = choices.sortWith( (a,b) => labelFunc(a) < labelFunc(b)) // TODO - do we need sorting?
-
-  protected var selItems: Seq[T] = initialSelections
-  var result: MultiSelection.Result[T] = Canceled(initialSelections)
+  var selItem: Option[T] = initialSelection
+  var result: AMOSelection.Result[T] = Canceled(initialSelection)
 
   val listView = new ListView[T](candidates) with VisibilityBounding[T].defaultStyled
   //listView.maxVisibleRows = maxRows
@@ -100,20 +89,18 @@ class MultiSelectionDialog[T:ClassTag] ( dialogTitle: String,
       val t: T = listView.selection.items.head
 
       if (clicks == 2) { // double click selects single item and closes dialog
-        closeWithResult(MultiSelection.SomeSelected(Seq(t)))
-      } else  if (renderPanel.isToggle(pos)) {
-        if (selItems.contains(t)) selItems = selItems.filter(_ != t)
-        else selItems = candidates.filter(a => selItems.contains(a) || a == t) // maintain order
+        closeWithResult(OneSelected(Some(t))) // shortcut for select-and-close
+      } else {
+        selItem = Some(t)
         listView.repaint
       }
   }
 
   val sp = new ScrollPane(listView).styled("verticalIfNeeded")
   val buttons =  new FlowPanel(FlowPanel.Alignment.Right)(
-    Button("Cancel")(closeWithResult(Canceled(initialSelections))).defaultStyled,
-    Button("none")(closeWithResult(NoneSelected(Seq.empty[T]))).defaultStyled,
-    Button("all")(closeWithResult(AllSelected(candidates))).defaultStyled,
-    Button("Ok")(closeWithResult(SomeSelected(selItems))).defaultStyled
+    Button("Cancel")(closeWithResult(Canceled(initialSelection))).defaultStyled,
+    Button("none")(closeWithResult(NoneSelected())).defaultStyled,
+    Button("Ok")(closeWithResult( if (selItem.isDefined) OneSelected(selItem) else NoneSelected())).defaultStyled
   ).defaultStyled
 
   contents = new GBPanel {
@@ -123,13 +110,12 @@ class MultiSelectionDialog[T:ClassTag] ( dialogTitle: String,
   }.defaultStyled
 
   modal = true
-
-  protected def closeWithResult(res: MultiSelection.Result[T]): Unit = {
+  def closeWithResult (res: AMOSelection.Result[T]): Unit = {
     result = res
     close
   }
 
-  def process: MultiSelection.Result[T] = {
+  def process: AMOSelection.Result[T] = {
     open
     result
   }

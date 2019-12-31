@@ -32,6 +32,7 @@ import gov.nasa.race.track.{TrackDropped, TrackTerminationMessage}
 import gov.nasa.race.trajectory.MutTrajectory
 import gov.nasa.race.uom.Angle
 import gov.nasa.race.uom.Length._
+import gov.nasa.race.ww.EventAction.EventAction
 import gov.nasa.race.ww._
 import gov.nasa.race.ww.track._
 import gov.nasa.worldwind.WorldWind
@@ -99,8 +100,14 @@ class TATracksLayer (val raceViewer: RaceViewer, val config: Config) extends Mod
 
   showTraconSymbols
 
-  val selPanel = new StaticSelectionPanel[TRACON,IdAndNamePanel[TRACON]]("select TRACON",
-    TRACON.NoTracon +: TRACON.traconList, 40, new IdAndNamePanel[TRACON]( _.id, _.name), selectTracon).styled()
+  val selPanel = new AMOSelectionPanel[TRACON](
+    "tracon:",
+    "select tracon",
+    TRACON.traconList,
+    selTracon,
+    _.id, _.name,
+    Math.min(TRACON.traconList.size,40)
+  )(processResult).defaultStyled
   panel.contents.insert(1, selPanel)
 
   def configuredTracon: Option[TRACON] = {
@@ -169,6 +176,14 @@ class TATracksLayer (val raceViewer: RaceViewer, val config: Config) extends Mod
 
   def selectTracon(tracon: TRACON) = raceViewer.trackUserAction(gotoTracon(tracon))
 
+  def processResult (res: AMOSelection.Result[TRACON]): Unit = {
+    res match {
+      case AMOSelection.NoneSelected(_) => reset
+      case AMOSelection.OneSelected(Some(tracon:TRACON)) => selectTracon(tracon)
+      case _ => // ignore
+    }
+  }
+
   def reset(): Unit = {
     selTracon = None
     clearTrackEntries
@@ -199,6 +214,8 @@ class TATracksLayer (val raceViewer: RaceViewer, val config: Config) extends Mod
       grid.show
     }
     requestTopic(selTracon)
+
+    selPanel.updateSelection(selTracon)
   }
 
   def gotoTracon(tracon: TRACON) = {
@@ -213,6 +230,18 @@ class TATracksLayer (val raceViewer: RaceViewer, val config: Config) extends Mod
         case None =>
           setTracon(tracon)
       }
+    }
+  }
+
+  override def selectNonTrack(obj: RaceLayerPickable, action: EventAction): Unit = {
+    obj.layerItem match {
+      case tracon: TRACON =>
+        action match {
+          case EventAction.LeftClick =>
+            selectTracon(tracon)
+          case _ => // ignore
+        }
+      case _ => // ignore
     }
   }
 }
