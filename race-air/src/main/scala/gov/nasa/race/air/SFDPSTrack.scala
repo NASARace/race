@@ -40,6 +40,6 @@ case class SFDPSTrack(
 /**
   * matchable type that represents a collection of SfdpsTrack objects that originated from the same ARTCC
   */
-trait SFDPSTracks extends AssocSeq[SFDPSTrack,String] {
+trait SFDPSTracks extends TrackedAircraftSeq[SFDPSTrack] {
   @inline final def artccId: String = assoc
 }

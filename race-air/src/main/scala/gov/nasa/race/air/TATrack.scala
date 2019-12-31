@@ -170,6 +170,6 @@ class TATrackCSVReader(in: CSVInputStream) {
 }
 
 // a matchable collection type of TATrack objects reported by the same TRACON
-trait TATracks extends AssocSeq[TATrack,String] {
+trait TATracks extends TrackedAircraftSeq[TATrack] {
   @inline final def traconId: String = assoc
 }

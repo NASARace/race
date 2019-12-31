@@ -202,7 +202,7 @@ trait TrackLayer[T <:TrackedObject] extends SubscribingRaceLayer
     * the pick handler interface
     * Note we already know this object belongs to this layer
     */
-  override def selectObject(o: RaceLayerPickable, a: EventAction) = {
+  override def selectObject(o: RaceLayerPickable, a: EventAction): Unit = {
     o.layerItem match {
       case e: TrackEntry[T] =>
         a match {
@@ -210,9 +210,11 @@ trait TrackLayer[T <:TrackedObject] extends SubscribingRaceLayer
           case EventAction.LeftDoubleClick => setTrackEntryPanel(e)
           case other => // ignored
         }
-      case other => // ignored
+      case other => selectNonTrack(o,a)
     }
   }
+
+  protected def selectNonTrack (o: RaceLayerPickable, a: EventAction): Unit = {}
 
   def selectTrackEntry(e: TrackEntry[T]) = {
     panel.trySelectEntry(e)
@@ -293,7 +295,7 @@ trait TrackLayer[T <:TrackedObject] extends SubscribingRaceLayer
     }
   }
 
-  protected def removeTrackEntry(e: TrackEntry[T]) = {
+  protected def removeTrackEntry(e: TrackEntry[T]): Unit = {
     val wasShowing = e.hasSymbol
     releaseTrackEntryAttributes(e)
     trackEntries -= getTrackKey(e.obj)
@@ -302,9 +304,22 @@ trait TrackLayer[T <:TrackedObject] extends SubscribingRaceLayer
     if (entryPanel.isShowing(e)) entryPanel.update
   }
 
-  protected def clearTrackEntries = {
+  protected def removeTrackEntries (p: TrackEntry[T]=>Boolean): Unit = {
+    var redraw = false
+    trackEntries.foreach (e =>
+      if (p(e._2)) {
+        trackEntries -= e._1
+        releaseTrackEntryAttributes(e._2)
+        redraw = true
+      }
+    )
+    if (redraw) wwdRedrawManager.redraw
+  }
+
+  protected def clearTrackEntries: Unit = {
+    // we can't do removeAllRenderables because the layer might have static ones
+    trackEntries.foreach( e=> releaseTrackEntryAttributes(e._2))
     trackEntries.clear
-    removeAllRenderables()
     wwdRedrawManager.redraw
     panel.removedAllEntries
   }

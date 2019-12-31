@@ -17,9 +17,10 @@
 package gov.nasa.race.air
 
 import gov.nasa.race.common.ContactInfo
-import gov.nasa.race.geo.{GeoPositioned, GeoPosition}
+import gov.nasa.race.geo.{GeoPosition, GeoPositioned}
 
 import scala.collection.immutable.SortedMap
+import scala.util.matching.Regex
 
 object TRACON {
   def apply (id: String, name: String, state: String, area: String, lat: Double, lon: Double) = {
@@ -90,12 +91,25 @@ object TRACON {
   val tracons = traconList.foldLeft(SortedMap.empty[String,TRACON]) { (m, a) => m + (a.id -> a) }
 
   // can be used for selection lists to reset selection
-  final val NoTracon = new TRACON("<none>", "", "", "", GeoPosition.undefinedPos)
-}
+  final val NoTracon = new TRACON("<none>", "", "", "", GeoPosition.undefinedPos) {
+    override def isMatching (s: String): Boolean = false
+    override def isMatching (r: Regex): Boolean = false
+  }
+
+  final val AnyTracon = new TRACON("<any>", "", "", "", GeoPosition.undefinedPos) {
+    override def isMatching (s: String): Boolean = true
+    override def isMatching (r: Regex): Boolean = true
+  }}
 
 /**
   * represents TRACONs (Terminal Radar Approach Control facilities)
   */
-case class TRACON(id: String, name: String, state: String, area: String, position: GeoPosition) extends GeoPositioned {
+class TRACON(val id: String, val name: String, val state: String, val area: String, val position: GeoPosition) extends GeoPositioned {
   def toShortString = s"$id - $name"
+
+  def isMatching (s: String): Boolean = s.equals(id)
+  def isMatching (r: Regex): Boolean = r.matches(id)
 }
+
+// matchable Seq type for TRACONs
+trait TRACONs extends Seq[TRACON]

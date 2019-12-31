@@ -18,9 +18,10 @@ package gov.nasa.race.air.actor
 
 import com.typesafe.config.Config
 import gov.nasa.race.actor.FlatFilteringPublisher
-import gov.nasa.race.air.ARTCC
+import gov.nasa.race.air.{ARTCC, ARTCCs}
 import gov.nasa.race.air.translator.MessageCollectionParser
-import gov.nasa.race.core.AccumulatingTopicIdProvider
+import gov.nasa.race.core.Messages.ChannelTopicRequest
+import gov.nasa.race.core.{AccumulatingTopicIdProvider, ChannelTopicProvider}
 import gov.nasa.race.jms.TranslatingJMSImportActor
 import javax.jms.Message
 
@@ -28,17 +29,69 @@ import javax.jms.Message
   * specialized JMSImportActor for SWIM SFDPS MessageCollection XML messages
   * note that we can't hardwire the JMS config (authentication, URI, topic etc) since SWIM access might vary
   */
-class SFDPSImportActor (config: Config) extends TranslatingJMSImportActor(config)
+class FilteringSFDPSImportActor(config: Config) extends TranslatingJMSImportActor(config)
                                           with FlatFilteringPublisher with AccumulatingTopicIdProvider {
-  val parser = new MessageCollectionParser
+  var isAllSelected: Boolean = servedTopicIds.contains(ARTCC.AllId)
+
+  class FilteringMessageCollectionParser extends MessageCollectionParser {
+    override protected def filterSrc (srcId: String) = !isAllSelected && !servedTopicIds.contains(srcId)
+  }
+
+  val parser = new FilteringMessageCollectionParser
   parser.setElementsReusable(flatten)
 
   override def translate (msg: Message): Any = {
     parser.parseTracks(getContentSlice(msg))
   }
 
-  override def topicIdOf (t: Any) = t match {
-    case artcc: ARTCC => Some(artcc.id)
-    case _ => None
+  override def topicIdsOf(t: Any): Seq[String] = t match {
+    case artcc: ARTCC =>
+      isAllSelected = artcc == ARTCC.AnyARTCC
+      Seq(artcc.id)
+    case artccs: ARTCCs =>
+      isAllSelected = artccs.contains(ARTCC.AnyARTCC)
+      artccs.map(_.id) // we could check if size > 1
+    case _ =>
+      isAllSelected = false
+      Seq.empty[String]
+  }
+}
+
+/**
+  * a SFDPSImportActor that translates and publishes all messages as soon as there is a
+  * ChannelTopicSubscriber for any ARTCC
+  */
+class OnOffSFDPSImportActor (config: Config) extends TranslatingJMSImportActor(config)
+                                   with FlatFilteringPublisher with ChannelTopicProvider {
+
+  class OnOffMessageCollectionParser extends MessageCollectionParser {
+    override protected def filterSrc (srcId: String) = !hasClients
+  }
+
+  val parser = new OnOffMessageCollectionParser
+  parser.setElementsReusable(flatten)
+
+  override def translate (msg: Message): Any = {
+    parser.parseTracks(getContentSlice(msg))
+  }
+
+  override def isRequestAccepted(request: ChannelTopicRequest): Boolean = {
+    request.channelTopic.topic match {
+      case Some(_:ARTCC) => true // we accept all ARTCC requests
+      case _ => false
+    }
+  }
+}
+
+/**
+  * actor that unconditionally imports and translates all SFDPS MessageCollection messages
+  */
+class SFDPSImportActor (config: Config) extends TranslatingJMSImportActor(config)
+                                           with FlatFilteringPublisher {
+  val parser = new MessageCollectionParser
+  parser.setElementsReusable(flatten)
+
+  override def translate (msg: Message): Any = {
+    parser.parseTracks(getContentSlice(msg))
   }
 }

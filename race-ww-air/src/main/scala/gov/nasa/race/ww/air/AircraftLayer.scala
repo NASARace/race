@@ -19,26 +19,26 @@ package gov.nasa.race.ww.air
 
 import akka.actor.Actor.Receive
 import com.typesafe.config.Config
-import gov.nasa.race._
-import gov.nasa.race.air.{AirLocator, FlightPos}
+import gov.nasa.race.air.{AirLocator, TrackedAircraft, TrackedAircraftSeq}
 import gov.nasa.race.core.Messages.BusEvent
 import gov.nasa.race.track.TrackTerminationMessage
 import gov.nasa.race.ww._
 import gov.nasa.race.ww.track.ModelTrackLayer
 
 /**
- * a WorldWind layer to display FlightPos objects
+ * a WorldWind layer to display TrackedAircraft objects
  */
-class FlightPosLayer (val raceViewer: RaceViewer, val config: Config) extends ModelTrackLayer[FlightPos] with AirLocator {
+class AircraftLayer (val raceViewer: RaceViewer, val config: Config) extends ModelTrackLayer[TrackedAircraft] with AirLocator {
 
   override def defaultSymbolImg = Images.getPlaneImage(color)
 
-  override def getTrackKey(track: FlightPos): String = track.cs
+  override def getTrackKey(track: TrackedAircraft): String = track.cs
 
-  def handleFlightPosLayerMessage: Receive = {
-    case BusEvent(_,fpos:FlightPos,_) => handleTrack(fpos)
+  def handleAircraftLayerMessage: Receive = {
+    case BusEvent(_,track:TrackedAircraft,_) => handleTrack(track)
+    case BusEvent(_,tracks:TrackedAircraftSeq[_],_) => tracks.foreach(handleTrack)
     case BusEvent(_,msg: TrackTerminationMessage,_)  => handleTermination(msg)
   }
 
-  override def handleMessage = handleFlightPosLayerMessage orElse super.handleMessage
+  override def handleMessage = handleAircraftLayerMessage orElse super.handleMessage
 }

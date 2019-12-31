@@ -28,32 +28,34 @@ import scala.swing.{Action, Button, Label, MainFrame, TextField}
 
 /**
   * a panel for multi-item selection
+  *
+  * note that we need functions to initialize allItems and selItems since those sets
+  * can change over the lifetime of the panel (as opposed to the lifetime of the MultiSelectionDialog)
   */
 class MultiSelectionPanel[T:ClassTag] (label: String,
-                              title: String,
-                              var items: Seq[T],
-                              var selections: Seq[T],
-                              itemLabelFunc: T=>String,
-                              itemDescrFunc: T=>String,
-                              maxRows: Int = 15)(action: (Result[T])=>Unit) extends GBPanel {
+                                       title: String,
+                                       allItems: => Seq[T],
+                                       selItems: => Seq[T],
+                                       itemLabelFunc: T=>String,
+                                       itemDescrFunc: T=>String,
+                                       maxRows: Int = 15)(action: MultiSelectionResult[T] =>Unit) extends GBPanel {
 
   val lbl = new Label(label).styled("labelFor")
 
-  val tf = new TextField(20).styled("stringField")
-  tf.text = getTfText(selections)
+  val tf = new TextField(15).styled("stringField")
+  tf.text = getTfText(selItems)
   tf.action = Action("enter"){
     processTextEntry(tf.text)
   }
 
   val btn = Button("sel"){
-    val dialog = new MultiSelectionDialog(title,items,selections,itemLabelFunc,itemDescrFunc,maxRows).defaultStyled
+    val dialog = new MultiSelectionDialog(title,allItems,selItems,itemLabelFunc,itemDescrFunc,maxRows).defaultStyled
     dialog.setLocationRelativeTo(this)
     val res = dialog.process
-    selections = res.selected
     res match {
       case Canceled(_) => // do nothing
-      case NoneSelected(_) => tf.text = ""; action(res)
-      case AllSelected(_) => tf.text = "*"; action(res)
+      case NoneSelected(_) => tf.text = "<none>"; action(res)
+      case AllSelected(_) => tf.text = "<all>"; action(res)
       case SomeSelected(sel) => tf.text = getTfText(sel); action(res)
     }
   }.defaultStyled
@@ -61,40 +63,71 @@ class MultiSelectionPanel[T:ClassTag] (label: String,
 
   def processTextEntry(s: String): Unit = {
     val selLabels = s.split("[ ,]+")
-    val res = if (selLabels.isEmpty){
-      selections = Seq.empty[T]
+    var selections = Seq.empty[T]
+    val res = if (isNoneSelection(selLabels)){
       NoneSelected(selections)
-    } else if (selLabels.contains("*")) {
-      selections = items
+    } else if (isAllSelection(selLabels)) {
+      selections = allItems
       AllSelected(selections)
     } else {
-      selections = items.filter( t=> selLabels.contains(itemLabelFunc(t)))
+      selections = allItems.filter( t=> selLabels.contains(itemLabelFunc(t)))
       SomeSelected(selections)
     }
     tf.text = getTfText(selections)
     action(res)
   }
 
+  def isAllSelection (as: Array[String]): Boolean = {
+    as.foreach { s =>
+      if (s == "*" || s == "<all>" || s == "<any>") return true
+    }
+    false
+  }
+
+  def isNoneSelection (as: Array[String]): Boolean = {
+    if (as.isEmpty) {
+      true
+    } else {
+      as.foreach { s =>
+        if (s == "<none>") return true
+      }
+      false
+    }
+  }
+
+  // selection got updated outside of panel, update selection text field
+  def updateSelection (newSel: Seq[T]): Unit = {
+    tf.text = getTfText(newSel)
+  }
+
   //--- layout
   val c = new Constraints(fill = Fill.Horizontal, anchor = Anchor.West)
-  layout(lbl) = c(0,0).weightx(0).insets( scaledInsets(4,8,4,2))
+  layout(lbl) = c(0,0).weightx(0).insets( scaledInsets(4,0,4,2))
   layout(tf)  = c(1,0).weightx(1.0).insets( scaledInsets(4,0,4,0))
-  layout(btn) = c(2,0).weightx(0).insets( scaledInsets(4,2,4,4))
+  layout(btn) = c(2,0).weightx(0).insets( scaledInsets(4,2,4,0))
 
   protected def getTfText (sel: Seq[T]): String = {
-    if (sel.isEmpty) ""
-    else if (sel.size == items.size) "*"
+    if (sel.isEmpty) "<none>"
+    else if (sel == allItems) "<all>"
     else sel.map(itemLabelFunc).mkString(",")
   }
 }
 
 object MultiSelectionPanel {
   def main (args:Array[String]): Unit = {
+    val candidates = Seq("one", "two", "three", "four", "five", "six")
+    var selections = Seq("two")
+
+    def processSelection (result: MultiSelectionResult[String]): Unit = {
+      selections = result.selected
+      println(s"selection result: $result")
+    }
+    def labelFunc(s: String): String = s
+    def descrFunc(s: String): String = s"the string'$s'"
+
     val top = new MainFrame {
       title = "MultiSelectionDialog Test"
       val result = new Label("<nothing selected yet>")
-      val candidates = Seq("one", "two", "three", "four", "five", "six")
-      var selections = Seq("two")
 
       contents = new MultiSelectionPanel(
         "selections:",
@@ -109,8 +142,4 @@ object MultiSelectionPanel {
 
     top.open
   }
-
-  def processSelection (result: Result[String]): Unit = println(s"selection result: $result")
-  def labelFunc(s: String): String = s
-  def descrFunc(s: String): String = s"the string'$s'"
 }

@@ -17,6 +17,7 @@
 package gov.nasa.race.track
 
 import gov.nasa.race.IdentifiableObject
+import gov.nasa.race.common.AssocSeq
 import gov.nasa.race.util.StringUtils
 
 import scala.reflect.{ClassTag, classTag}
@@ -91,6 +92,8 @@ trait TrackedObject extends IdentifiableObject with TrackPoint with MovingObject
   def getOldCS: Option[String] = amendments.find(_.isInstanceOf[ChangedCS]).map(_.asInstanceOf[ChangedCS].oldCS)
 
 }
+
+trait TrackedObjects[+T <: TrackedObject] extends AssocSeq[T,String]
 
 trait TrackedObjectEnumerator {
   def numberOfTrackedObjects: Int

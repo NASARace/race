@@ -18,7 +18,7 @@ package gov.nasa.race.air.actor
 
 import com.typesafe.config.Config
 import gov.nasa.race.actor.FlatFilteringPublisher
-import gov.nasa.race.air.TRACON
+import gov.nasa.race.air.{TRACON, TRACONs}
 import gov.nasa.race.air.translator.TATrackAndFlightPlanParser
 import gov.nasa.race.core.AccumulatingTopicIdProvider
 import gov.nasa.race.jms.TranslatingJMSImportActor
@@ -44,8 +44,9 @@ class TAISImportActor(config: Config) extends TranslatingJMSImportActor(config)
     parser.parseTracks(getContentSlice(msg))
   }
 
-  override def topicIdOf (t: Any) = t match {
-    case tracon: TRACON => Some(tracon.id)
-    case _ => None
+  override def topicIdsOf(t: Any): Seq[String] = t match {
+    case tracon: TRACON => Seq(tracon.id)
+    case tracons: TRACONs => tracons.map(_.id)
+    case _ => Seq.empty[String]
   }
 }

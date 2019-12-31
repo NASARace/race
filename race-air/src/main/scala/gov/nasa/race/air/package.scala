@@ -17,7 +17,8 @@
 
 package gov.nasa.race
 
-import gov.nasa.race.track.TrackedObject
+import gov.nasa.race.common.AssocSeq
+import gov.nasa.race.track.{TrackedObject, TrackedObjects}
 import gov.nasa.race.uom.Angle
 
 /**
@@ -50,4 +51,6 @@ package object air {
       "?"
     }
   }
+
+  trait TrackedAircraftSeq[+T <: TrackedAircraft] extends TrackedObjects[T]
 }

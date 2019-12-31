@@ -19,7 +19,7 @@ package gov.nasa.race.air
 
 import gov.nasa.race.common._
 import gov.nasa.race.geo.GeoPosition
-import gov.nasa.race.track.TrackedObject
+import gov.nasa.race.track.{TrackedObject, TrackedObjects}
 import gov.nasa.race.uom.{DateTime, _}
 
 object AsdexTrack {
@@ -66,6 +66,6 @@ case class AsdexTrack(id: String,
 /**
   * a matchable type for a Seq of AsdexTracks reported by the same airport
   */
-trait AsdexTracks extends AssocSeq[AsdexTrack,String] {
+trait AsdexTracks extends TrackedObjects[AsdexTrack] {
   @inline final def airportId: String = assoc
 }

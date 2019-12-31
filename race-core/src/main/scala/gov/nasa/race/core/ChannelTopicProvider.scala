@@ -378,23 +378,33 @@ trait AccumulatingTopicIdProvider extends ChannelTopicProvider {
   config.getStringSeq(topicKey).foreach(id => servedTopicIds += id)
 
   // this basically defines if we accept a topic - return None if not
-  def topicIdOf (t: Any): Option[String]
+  def topicIdsOf(t: Any): Seq[String]
 
   override def isRequestAccepted(request: ChannelTopicRequest): Boolean = {
     val channelTopic = request.channelTopic
-    writeTo.contains(channelTopic.channel) && channelTopic.topic.flatMap(topicIdOf).isDefined
+    if (writeTo.contains(channelTopic.channel)) {
+      val topic = channelTopic.topic
+      if (topic.isDefined) {
+        topicIdsOf(topic.get).nonEmpty
+      } else false // no topic
+    } else false // channel not supported
   }
 
   override def gotAccept (accept: ChannelTopicAccept) = {
-    ifSome(accept.channelTopic.topic.flatMap(topicIdOf)) { id =>
-      info(s"got channeltopic accept for topic: $id")
-      servedTopicIds += id
+    ifSome(accept.channelTopic.topic) { t =>
+      topicIdsOf(t).foreach { id =>
+        info(s"got channeltopic accept for topic: $id")
+        servedTopicIds += id
+      }
     }
   }
+
   override def gotRelease (release: ChannelTopicRelease) = {
-    ifSome(release.channelTopic.topic.flatMap(topicIdOf)){ id =>
-      info(s"got channeltopic release for topic: $id")
-      servedTopicIds -= id
+    ifSome(release.channelTopic.topic) { t =>
+      topicIdsOf(t).foreach { id =>
+        info(s"got channeltopic release for topic: $id")
+        servedTopicIds -= id
+      }
     }
   }
 }

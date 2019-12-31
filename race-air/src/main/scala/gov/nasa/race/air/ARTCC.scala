@@ -61,17 +61,45 @@ object ARTCC {
 
   val artccs = artccList.foldLeft(SortedMap.empty[String,ARTCC]) { (m, a) => m + (a.id -> a) }
 
-  final val NoARTCC = new ARTCC("<none>","<none>","","", GeoPosition.undefinedPos) {
+  //--- pseudo ARTCCs to allow more efficient filtering
+
+  final val NoneId = "<none>"
+  final val AllId = "<all>"
+
+  final val NoARTCC = new ARTCC(NoneId,"","","", GeoPosition.undefinedPos) {
     override def isMatching (s: String): Boolean = false
     override def isMatching (r: Regex): Boolean = false
+    override def matchesNone: Boolean = true
   }
-  final val AnyARTCC = new ARTCC("<any>","<any>","","", GeoPosition.undefinedPos){
+  final val AnyARTCC = new ARTCC(AllId,"","","", GeoPosition.undefinedPos){
     override def isMatching (s: String): Boolean = true
     override def isMatching (r: Regex): Boolean = true
+    override def matchesAny: Boolean = true
+  }
+
+  def get(s: String): Option[ARTCC] = {
+    artccs.get(s).orElse {
+      if (s == NoneId) Some(NoARTCC)
+      else if (s == AllId) Some(AnyARTCC)
+      else None
+    }
   }
 }
 
 class ARTCC (val id: String, val name: String, val state: String, val area: String, val position: GeoPosition) extends GeoPositioned {
   def isMatching (s: String): Boolean = s.equals(id)
   def isMatching (r: Regex): Boolean = r.matches(id)
+
+  // ids are unique
+  override def equals(other: Any): Boolean = {
+    other match {
+      case o: ARTCC => id == o.id
+      case _ => false
+    }
+  }
+
+  def matchesAny: Boolean = false
+  def matchesNone: Boolean = false
 }
+
+trait ARTCCs extends Seq[ARTCC]

@@ -16,29 +16,162 @@
  */
 package gov.nasa.race.ww.air
 
+import java.awt.Color
+
 import akka.actor.Actor.Receive
 import com.typesafe.config.Config
 import gov.nasa.race.air.{ARTCC, SFDPSTrack, SFDPSTracks, TrackedAircraft}
+import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.Messages.BusEvent
 import gov.nasa.race.geo.GeoPositioned
-import gov.nasa.race.ww.{Images, RaceViewer}
-import gov.nasa.race.ww.track.ModelTrackLayer
+import gov.nasa.race.swing.{AllSelected, Canceled, MultiSelectionPanel, MultiSelectionResult, NoneSelected, SomeSelected}
+import gov.nasa.race.uom.Length.Meters
+import gov.nasa.race.ww.{EventAction, Images, RaceLayerPickable, RaceViewer, toABGRString, wwPosition}
+import gov.nasa.race.ww.track.{ModelTrackLayer, TrackEntry}
+import gov.nasa.race.swing.Style._
+import gov.nasa.race.ww.EventAction.EventAction
+import gov.nasa.worldwind.WorldWind
+import gov.nasa.worldwind.render.{PointPlacemark, PointPlacemarkAttributes}
+
+import scala.collection.Seq
+
+class ArtccSymbol (val artcc: ARTCC, val layer: SFDPSTracksLayer) extends PointPlacemark(wwPosition(artcc.position)) with RaceLayerPickable {
+  var showDisplayName = false
+  var attrs = new PointPlacemarkAttributes
+
+  //setValue( AVKey.DISPLAY_NAME, tracon.id)
+  setLabelText(artcc.id)
+  setAltitudeMode(WorldWind.RELATIVE_TO_GROUND)
+  attrs.setImage(null)
+  attrs.setLabelColor(layer.artccLabelColor)
+  attrs.setLineColor(layer.artccLabelColor)
+  attrs.setUsePointAsDefaultImage(true) // we should use a different default image
+  attrs.setScale(7d)
+  setAttributes(attrs)
+
+  override def layerItem: AnyRef = artcc
+}
+
 
 /**
-  * a TrackLayer for SFDPS (en route) SWIM data
+  * a TrackLayer for SFDPS (en route) SWIM data that allows selection of displayed ARTCCs
+  * (use generic AircraftLayer if we want to display all)
   */
-class SFDPSTracksLayer (val raceViewer: RaceViewer, val config: Config) extends ModelTrackLayer[TrackedAircraft] {
+class SFDPSTracksLayer (val raceViewer: RaceViewer, val config: Config) extends ModelTrackLayer[SFDPSTrack] {
 
+  val showARTCCs = config.getBooleanOrElse("show-artcss", true)
+  val artccLabelColor = toABGRString(config.getColorOrElse("artcc-color", Color.magenta))
+  var artccLabelThreshold = config.getDoubleOrElse("artcc-label-altitude", Meters(2200000.0).toMeters)
+  val selectedOnly = config.getBooleanOrElse("selected-only", true)
 
-
+  override def defaultColor = Color.red
   override def defaultSymbolImg = Images.getPlaneImage(color)
-  override def getTrackKey(track: TrackedAircraft): String = track.cs
+  override def getTrackKey(track: SFDPSTrack): String = track.cs
   override def queryLocation(id: String): Option[GeoPositioned] = ARTCC.artccs.get(id)
 
+  var selARTCCs = configuredARTCCs
+  val selPanel = new MultiSelectionPanel[ARTCC](
+    "artcc:", "Select ARTCCs",
+    ARTCC.artccList, selectedARTCCs, _.id, _.name, // those are functions
+    ARTCC.artccList.size
+  )( selectARTCCs // the selection action
+  ).defaultStyled
+  panel.contents.insert(1, selPanel)
+
+  if (showARTCCs) showArtccSymbols
+
+  //--- end init
+
+  def configuredARTCCs: Seq[ARTCC] = {
+    val topics = config.getOptionalStringList("request-topics")
+    if (topics.isEmpty) {
+      Seq.empty[ARTCC]
+    } else {
+      topics.flatMap(ARTCC.get) // we should check for No/AnyARTCC
+    }
+  }
+
   def handleSFDPSMessage: Receive = {
-    case BusEvent(_,track:SFDPSTrack,_) => handleTrack(track)
-    case BusEvent(_,tracks:SFDPSTracks,_) =>
+    case BusEvent(_,track:SFDPSTrack,_) => if (acceptSrc(track.src)) handleTrack(track)
+    case BusEvent(_,tracks:SFDPSTracks,_) => if (acceptSrc(tracks.artccId)) tracks.foreach(handleTrack)
   }
 
   override def handleMessage = handleSFDPSMessage orElse super.handleMessage
+
+  def showArtccSymbol (artcc: ARTCC) = addRenderable(new ArtccSymbol(artcc,this))
+  def showArtccSymbols = ARTCC.artccList.foreach(showArtccSymbol)
+
+  def selectARTCCs(res: MultiSelectionResult[ARTCC]): Unit ={
+    res match {
+      case SomeSelected(newSel) =>
+        val lastSel = selARTCCs
+        lastSel.diff(newSel).foreach(a => releaseTopic(Some(a))) // removed ARTCCs
+        newSel.diff(lastSel).foreach(a => requestTopic(Some(a))) // added ARTCCs
+        selARTCCs = newSel
+        removeTrackEntries( e=> !isSelectedARTCC(e.obj.src))
+      case NoneSelected(_) =>
+        if (selARTCCs.nonEmpty) selARTCCs.foreach(a => releaseTopic(Some(a)))
+        selARTCCs = Seq.empty[ARTCC]
+        clearTrackEntries
+      case AllSelected(_) =>
+        if (!isAllSelected) selARTCCs.foreach(a => releaseTopic(Some(a)))
+        requestTopic(Some(ARTCC.AnyARTCC))
+        selARTCCs = Seq(ARTCC.AnyARTCC)
+      case Canceled(_) => // do nothing
+    }
+
+    redraw
+  }
+
+  def selectedARTCCs: Seq[ARTCC] = {
+    if (isAllSelected) ARTCC.artccList else selARTCCs
+  }
+
+  def isSelectedARTCC(id: String): Boolean = {
+    selARTCCs.size match {
+      case 0 => false
+      case 1 => selARTCCs(0).isMatching(id)
+      case _ =>
+        selARTCCs.foreach { a =>
+          if (a.isMatching(id)) return true
+        }
+        false
+    }
+  }
+  @inline def isAllSelected: Boolean = selARTCCs.nonEmpty && selARTCCs(0).matchesAny
+  @inline def isNoneSelected: Boolean = selARTCCs.isEmpty || selARTCCs(0).matchesNone
+
+  // this is a potential high frequency call in case we receive per-track updates so we have to optimize
+  @inline final def acceptSrc (src: String): Boolean = {
+    if (selectedOnly) {
+      selARTCCs.size match {
+        case 0 => false
+        case 1 => selARTCCs(0).isMatching(src) // avoid iterator
+        case _ =>
+          selARTCCs.foreach { a =>
+            if (a.isMatching(src)) return true // short circuit iteration
+          }
+          false
+      }
+    } else true
+  }
+
+  // pcik support for ARTCC symbols
+  override def selectNonTrack(obj: RaceLayerPickable, action: EventAction): Unit = {
+    obj.layerItem match {
+      case artcc: ARTCC =>
+        action match {
+          case EventAction.LeftClick =>
+            if (selARTCCs.nonEmpty) selARTCCs.foreach(a => releaseTopic(Some(a)))
+            selARTCCs = Seq(artcc)
+            clearTrackEntries
+            requestTopic(Some(artcc))
+            selPanel.updateSelection(selARTCCs)
+
+          //case EventAction.LeftDoubleClick =>
+          case _ => // ignored
+        }
+      case _ => // ignore
+    }
+  }
 }

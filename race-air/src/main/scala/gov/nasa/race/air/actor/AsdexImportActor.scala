@@ -19,7 +19,7 @@ package gov.nasa.race.air.actor
 
 import com.typesafe.config.Config
 import gov.nasa.race.actor.FlatFilteringPublisher
-import gov.nasa.race.air.Airport
+import gov.nasa.race.air.{Airport, Airports}
 import gov.nasa.race.air.translator.{AsdexMsgParser, FullAsdexMsgParser}
 import gov.nasa.race.core.AccumulatingTopicIdProvider
 import gov.nasa.race.jms.TranslatingJMSImportActor
@@ -43,8 +43,9 @@ class AsdexImportActor (config: Config) extends TranslatingJMSImportActor(config
     parser.parseTracks(getContentSlice(msg))
   }
 
-  override def topicIdOf (t: Any) = t match {
-    case airport: Airport => Some(airport.id)
-    case _ => None
+  override def topicIdsOf(t: Any): Seq[String] = t match {
+    case airport: Airport => Seq(airport.id)
+    case airports: Airports => airports.map(_.id)
+    case _ => Seq.empty[String]
   }
 }

@@ -17,10 +17,11 @@
 
 package gov.nasa.race.air
 
-import gov.nasa.race.geo.{GeoPosition,GeoPositioned}
+import gov.nasa.race.geo.{GeoPosition, GeoPositioned}
 import gov.nasa.race.uom._
 
 import scala.collection.immutable.SortedMap
+import scala.util.matching.Regex
 
 /**
   * list of airports, with respective ASDE-X support as of 09/16
@@ -31,6 +32,10 @@ import scala.collection.immutable.SortedMap
   * without recompilation
   */
 object Airport {
+  def apply (id: String, name: String, city: String, lat: Double, lon: Double, hasAsdex: Boolean = true) = {
+    new Airport(id,name,city,GeoPosition.fromDegrees(lat,lon),hasAsdex)
+  }
+
   val KATL = new Airport("KATL", "Hartsfield - Jackson Atlanta International", "Atlanta", GeoPosition.fromDegreesAndFeet(33.636667, -84.428056, 1027), true)
   val KORD = new Airport("KORD", "Chicago O'Hare International", "Chicago", GeoPosition.fromDegreesAndFeet(41.978611, -87.904722, 668), true)
   val KLAX = new Airport("KLAX", "Los Angeles International",  "Los Angeles",  GeoPosition.fromDegreesAndFeet(33.9425, -118.408056, 125), true)
@@ -80,16 +85,30 @@ object Airport {
   val airportNames = allAirports.keySet.toSeq
 
   // can be used for airport selection lists, to reset the selection
-  final val NoAirport = new Airport("<none>","","",GeoPosition.fromDegreesAndFeet(0,0,0),false)
+  final val NoAirport = new Airport("<none>","no airport","",GeoPosition.fromDegreesAndFeet(0,0,0),false){
+    override def isMatching (s: String): Boolean = false
+    override def isMatching (r: Regex): Boolean = false
+  }
+
+  final val AnyAirport = new Airport("<any>","any airport","",GeoPosition.fromDegreesAndFeet(0,0,0),false){
+    override def isMatching (s: String): Boolean = true
+    override def isMatching (r: Regex): Boolean = true
+  }
 }
 
 /**
   * represents and locates airports
   */
-case class Airport (id: String,
-                    name: String,
-                    city: String,
-                    position: GeoPosition,
-                    hasAsdex: Boolean) extends GeoPositioned {
+class Airport (val id: String,
+               val name: String,
+               val city: String,
+               val position: GeoPosition,
+               val hasAsdex: Boolean) extends GeoPositioned {
   def elevation: Length = position.altitude
+
+  def isMatching (s: String): Boolean = s.equals(id)
+  def isMatching (r: Regex): Boolean = r.matches(id)
 }
+
+// matchable Seq type for Airports
+trait Airports extends Seq[Airport]

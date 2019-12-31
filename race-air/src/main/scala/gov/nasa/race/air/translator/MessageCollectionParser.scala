@@ -116,12 +116,11 @@ class MessageCollectionParser(val config: Config=NoConfig) extends UTF8XmlPullPa
   protected def filterTrack (track: SFDPSTrack) = false
 
   protected def parseMessageCollection: Unit = {
-    val lastSrc = artccId
     while (parseNextTag) {
       if (isStartTag) {
         if (tag == flight) {
           parseFlight
-          if (lastSrc == null && !filterSrc(artccId)) return // bail out - not a relevant source
+          if (artccId == null) return // it was filtered
         }
       }
     }
@@ -256,6 +255,7 @@ class MessageCollectionParser(val config: Config=NoConfig) extends UTF8XmlPullPa
 
     if (parseAttr(centre)) src = attrValue.intern
     if (artccId == null) {
+      if (filterSrc(src)) return // bail out - not a relevant source
       artccId = src
     } else {
       if (artccId != src) throw new RuntimeException(s"conflicting 'centre' attributes: $artccId - $src")

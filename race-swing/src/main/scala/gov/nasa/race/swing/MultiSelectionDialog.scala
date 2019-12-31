@@ -16,7 +16,7 @@
  */
 package gov.nasa.race.swing
 
-import java.awt.Point
+import java.awt.{Dimension, Point}
 
 import gov.nasa.race.swing.GBPanel.{Anchor, Fill}
 import gov.nasa.race.swing.Style._
@@ -24,18 +24,22 @@ import gov.nasa.race.swing.Style._
 import scala.collection.Seq
 import scala.language.existentials
 import scala.reflect.ClassTag
-import scala.swing.FlowPanel.Alignment
 import scala.swing.event.{ButtonClicked, MouseClicked}
-import scala.swing.{Button, CheckBox, Dialog, FlowPanel, Label, ListView, MainFrame, ScrollPane, Window}
+import scala.swing.{Alignment, Button, CheckBox, Dialog, FlowPanel, Label, ListView, MainFrame, ScrollPane, Window}
 
-
-sealed abstract class Result[T]{
+/**
+  * selection result abstraction that can be used for pattern matching
+  * and supports none/any selection shortcuts. While we provide suitable
+  * selection Seqs this might not be efficient in case candidate sets are
+  * large and all items are selected.
+  */
+sealed abstract class MultiSelectionResult[T]{
   def selected: Seq[T]
 }
-case class Canceled[T](selected: Seq[T]) extends Result[T]
-case class NoneSelected[T](selected: Seq[T]) extends Result[T]
-case class AllSelected[T](selected: Seq[T]) extends Result[T]
-case class SomeSelected[T] (selected: Seq[T]) extends Result[T]
+case class Canceled[T](selected: Seq[T]) extends MultiSelectionResult[T]
+case class NoneSelected[T](selected: Seq[T]) extends MultiSelectionResult[T]
+case class AllSelected[T](selected: Seq[T]) extends MultiSelectionResult[T]
+case class SomeSelected[T] (selected: Seq[T]) extends MultiSelectionResult[T]
 
 /**
   * a modal dialog that represents choices as columns of checkboxes
@@ -53,10 +57,14 @@ class MultiSelectionDialog[T:ClassTag] ( dialogTitle: String,
     val idLabel: Label = new Label().defaultStyled
     val descrLabel: Label = new Label().defaultStyled
 
+    idLabel.horizontalAlignment = Alignment.Left
+    idLabel.preferredSize = new Dimension(Style.getSysFontWidth('M')*6,Style.getSysFontHeight)
+    descrLabel.horizontalAlignment = Alignment.Left
+
     val c = new Constraints(fill=Fill.Horizontal, anchor=Anchor.West)
-    layout(checkBox)  = c(0,0)
-    layout(idLabel) = c(1,0)
-    layout(descrLabel)  = c(2,0).weightx(0.5)
+    layout(checkBox)    = c(0,0)
+    layout(idLabel)     = c(1,0)
+    layout(descrLabel)  = c(2,0).weightx(0.5).insets(scaledInsets(0,8,0,0))
 
     def configure(list: ListView[_], isSelected: Boolean, focused: Boolean, item: T, index: Int) = {
       checkBox.selected = selItems.contains(item)
@@ -72,7 +80,7 @@ class MultiSelectionDialog[T:ClassTag] ( dialogTitle: String,
   val candidates = choices.sortWith( (a,b) => labelFunc(a) < labelFunc(b)) // TODO - do we need sorting?
 
   protected var selItems: Seq[T] = initialSelections
-  var result: Result[T] = Canceled(Seq.empty[T])
+  var result: MultiSelectionResult[T] = Canceled(Seq.empty[T])
 
   val listView = new ListView[T](candidates) with VisibilityBounding[T].defaultStyled
   //listView.maxVisibleRows = maxRows
@@ -96,7 +104,7 @@ class MultiSelectionDialog[T:ClassTag] ( dialogTitle: String,
   }
 
   val sp = new ScrollPane(listView).styled("verticalIfNeeded")
-  val buttons =  new FlowPanel(Alignment.Right)(
+  val buttons =  new FlowPanel(FlowPanel.Alignment.Right)(
     Button("Cancel")(closeWithResult(Canceled(initialSelections))).defaultStyled,
     Button("none")(closeWithResult(NoneSelected(Seq.empty[T]))).defaultStyled,
     Button("all")(closeWithResult(AllSelected(candidates))).defaultStyled,
@@ -111,12 +119,12 @@ class MultiSelectionDialog[T:ClassTag] ( dialogTitle: String,
 
   modal = true
 
-  protected def closeWithResult(res: Result[T]): Unit = {
+  protected def closeWithResult(res: MultiSelectionResult[T]): Unit = {
     result = res
     close
   }
 
-  def process: Result[T] = {
+  def process: MultiSelectionResult[T] = {
     open
     result
   }

@@ -157,7 +157,7 @@ package object common {
   /**
     * a Seq that is associated with a non-element value
     */
-  trait AssocSeq [T,U] extends Seq[T] {
+  trait AssocSeq [+T,U] extends Seq[T] {
     def assoc: U
   }
 }
