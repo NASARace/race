@@ -43,8 +43,8 @@ class ArtccSymbol (val artcc: ARTCC, val layer: SFDPSTracksLayer) extends PointP
   setLabelText(artcc.id)
   setAltitudeMode(WorldWind.RELATIVE_TO_GROUND)
   attrs.setImage(null)
-  attrs.setLabelColor(layer.artccLabelColor)
-  attrs.setLineColor(layer.artccLabelColor)
+  attrs.setLabelColor(layer.locationColor)
+  attrs.setLineColor(layer.locationColor)
   attrs.setUsePointAsDefaultImage(true) // we should use a different default image
   attrs.setScale(7d)
   setAttributes(attrs)
@@ -59,8 +59,8 @@ class ArtccSymbol (val artcc: ARTCC, val layer: SFDPSTracksLayer) extends PointP
   */
 class SFDPSTracksLayer (val raceViewer: RaceViewer, val config: Config) extends ModelTrackLayer[SFDPSTrack] {
 
-  val showARTCCs = config.getBooleanOrElse("show-artcss", true)
-  val artccLabelColor = toABGRString(config.getColorOrElse("artcc-color", Color.magenta))
+  val showLocations = config.getBooleanOrElse("show-locations", true)
+  val locationColor = toABGRString(config.getColorOrElse("location-color", Color.magenta))
   var artccLabelThreshold = config.getDoubleOrElse("artcc-label-altitude", Meters(2200000.0).toMeters)
   val selectedOnly = config.getBooleanOrElse("selected-only", true)
 
@@ -78,7 +78,7 @@ class SFDPSTracksLayer (val raceViewer: RaceViewer, val config: Config) extends 
   ).defaultStyled
   panel.contents.insert(1, selPanel)
 
-  if (showARTCCs) showArtccSymbols
+  if (showLocations) showArtccSymbols
 
   //--- end init
 

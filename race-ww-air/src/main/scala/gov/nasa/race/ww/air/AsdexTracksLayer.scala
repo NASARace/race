@@ -16,6 +16,8 @@
  */
 package gov.nasa.race.ww.air
 
+import java.awt.Color
+
 import akka.actor.Actor.Receive
 import com.typesafe.config.Config
 import gov.nasa.race.air.{AirLocator, Airport, AsdexTrack, AsdexTracks}
@@ -24,15 +26,35 @@ import gov.nasa.race.core.Messages.BusEvent
 import gov.nasa.race.geo.{GeoPosition, GreatCircle}
 import gov.nasa.race.ifSome
 import gov.nasa.race.swing.Style._
-import gov.nasa.race.swing.{IdAndNamePanel, StaticSelectionPanel}
+import gov.nasa.race.swing.{AMOSelection, AMOSelectionPanel, IdAndNamePanel, StaticSelectionPanel}
 import gov.nasa.race.trajectory.MutTrajectory
 import gov.nasa.race.uom.Length
 import gov.nasa.race.uom.Length.{Feet, Meters, UsMiles, meters2Feet}
+import gov.nasa.race.ww.EventAction.EventAction
 import gov.nasa.race.ww.Implicits._
 import gov.nasa.race.ww.track._
 import gov.nasa.race.ww.{Images, RaceViewer, ViewListener, _}
+import gov.nasa.worldwind.WorldWind
+import gov.nasa.worldwind.render.{PointPlacemark, PointPlacemarkAttributes}
 
 import scala.collection.Seq
+
+class AirportSymbol (val airport: Airport, val layer: AsdexTracksLayer) extends PointPlacemark(wwPosition(airport.position)) with RaceLayerPickable {
+  var showDisplayName = false
+  var attrs = new PointPlacemarkAttributes
+
+  //setValue( AVKey.DISPLAY_NAME, tracon.id)
+  setLabelText(airport.id)
+  setAltitudeMode(WorldWind.RELATIVE_TO_GROUND)
+  attrs.setImage(null)
+  attrs.setLabelColor(layer.locationColor)
+  attrs.setLineColor(layer.locationColor)
+  attrs.setUsePointAsDefaultImage(true) // we should use a different default image
+  attrs.setScale(7d)
+  setAttributes(attrs)
+
+  override def layerItem: AnyRef = airport
+}
 
 /**
   * we need a specialized TrackEntry since the object type (aircraft/vehicle) is not
@@ -59,19 +81,12 @@ class AsdexTrackEntry (o: AsdexTrack, trajectory: MutTrajectory, layer: AsdexTra
   }
 }
 
-
 class AsdexTracksLayer (val raceViewer: RaceViewer, val config: Config)
                            extends TrackLayer[AsdexTrack]
                              with AirLocator with ViewListener {
 
-  val selPanel = new StaticSelectionPanel[Airport,IdAndNamePanel[Airport]](
-    "select airport",
-    Airport.NoAirport +: Airport.airportList, 40,
-    new IdAndNamePanel[Airport]( _.id, _.city).styled(),
-    selectAirport
-  ).styled()
-
-  panel.contents += selPanel
+  val showLocations = config.getBooleanOrElse("show-locations", true)
+  val locationColor = toABGRString(config.getColorOrElse("location-color", Color.orange))
 
   override def createTrackEntry(track: AsdexTrack)= new AsdexTrackEntry(track,createTrajectory(track),this)
 
@@ -92,6 +107,24 @@ class AsdexTracksLayer (val raceViewer: RaceViewer, val config: Config)
 
   val selectedOnly = config.getBooleanOrElse("selected-only", true)
 
+  val selPanel = new AMOSelectionPanel[Airport](
+    "airport:",
+    "select airport",
+    Airport.airportList,
+    selAirport,
+    _.id, _.name,
+    Math.min(Airport.airportList.size,40)
+  )(processResult).defaultStyled
+  panel.contents.insert(1, selPanel)
+
+  if (showLocations) showAirportSymbols
+
+  def showAirportSymbol (a: Airport) = {
+    addRenderable(new AirportSymbol(a,this))
+  }
+
+  def showAirportSymbols = Airport.airportList.foreach(showAirportSymbol)
+
   def configuredAirport: Option[Airport] = {
     val topics = config.getOptionalStringList("request-topics")
     if (topics.nonEmpty) Airport.asdexAirports.get(topics.head) else None
@@ -102,6 +135,14 @@ class AsdexTracksLayer (val raceViewer: RaceViewer, val config: Config)
     raceViewer.addViewListener(this)
   }
   override def viewChanged(targetView: ViewGoal): Unit = checkAirportChange(targetView)
+
+  def processResult (res: AMOSelection.Result[Airport]): Unit = {
+    res match {
+      case AMOSelection.NoneSelected(_) => releaseCurrentAirport
+      case AMOSelection.OneSelected(Some(a:Airport)) => selectAirport(a)
+      case _ => // ignore
+    }
+  }
 
   def selectAirport (a: Airport) = raceViewer.trackUserAction(gotoAirport(a))
 
@@ -187,4 +228,16 @@ class AsdexTracksLayer (val raceViewer: RaceViewer, val config: Config)
   }
 
   override def handleMessage = handleAsdexTracksLayerMessage orElse super.handleMessage
+
+  override def selectNonTrack(obj: RaceLayerPickable, action: EventAction): Unit = {
+    obj.layerItem match {
+      case a: Airport =>
+        action match {
+          case EventAction.LeftClick =>
+            selectAirport(a)
+          case _ => // ignore
+        }
+      case _ => // ignore
+    }
+  }
 }
