@@ -25,7 +25,10 @@ import javax.jms.Message
 /**
   * specialized JMSImportActor that translates SWIM tfmData messages into TfmTracks objects
   */
-class TfmDataImportActor (config: Config) extends TranslatingJMSImportActor(config) with FlatFilteringPublisher {
+class TfmDataImportActor (config: Config) extends TranslatingJMSImportActor(config)
+                                             with FlatFilteringPublisher {
   val parser = new TfmDataServiceParser
-  override def translate (msg: Message): Any = parser.parse(getContentSlice(msg))
+  parser.setElementsReusable(flatten)
+
+  override def translate (msg: Message): Any = parser.parseTracks(getContentSlice(msg))
 }

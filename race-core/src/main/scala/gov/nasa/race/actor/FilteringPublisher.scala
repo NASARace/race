@@ -73,7 +73,7 @@ trait FilteringPublisher extends PublishingRaceActor {
   */
 trait FlatFilteringPublisher extends FilteringPublisher {
 
-  val flatten = config.getBooleanOrElse("flatten", true)  // do we publish the Seq elements separately or as a Seq object
+  val flatten = config.getBooleanOrElse("flatten", false)  // do we publish the Seq elements separately or as a Seq object
 
   override def publishFiltered (msg: Any): Unit = {
     msg match {

@@ -34,19 +34,25 @@ class TfmTracksLayer (val raceViewer: RaceViewer, val config: Config) extends Tr
   override def defaultColor = Color.magenta
   override def defaultSymbolImg = Images.getPlaneImage(color)
 
-  def handleTfmTracksLayerMessage: Receive = {
-    case BusEvent(_,msg: TFMTracks,_) =>
-      incUpdateCount
-      msg.tracks foreach { tfmTrack =>
-        getTrackEntry(tfmTrack) match {
-          case Some(trackEntry) =>
-            if (tfmTrack.nextPos.isEmpty) removeTrackEntry(trackEntry)  // completed
-            else updateTrackEntry(trackEntry,tfmTrack)
+  def processTrack (tfmTrack: TFMTrack): Unit = {
+    getTrackEntry(tfmTrack) match {
+      case Some(trackEntry) =>
+        if (tfmTrack.nextPos.isEmpty) removeTrackEntry(trackEntry)  // completed
+        else updateTrackEntry(trackEntry,tfmTrack)
 
-          case None =>
-            if (!tfmTrack.nextPos.isEmpty) addTrackEntry(tfmTrack) // only add if this wasn't the completed message
-        }
-      }
+      case None =>
+        if (!tfmTrack.nextPos.isEmpty) addTrackEntry(tfmTrack) // only add if this wasn't the completed message
+    }
+  }
+
+  def handleTfmTracksLayerMessage: Receive = {
+    case BusEvent(_,tracks: TFMTracks,_) =>
+      incUpdateCount
+      tracks.foreach(processTrack)
+    case BusEvent(_,track: TFMTrack,_) =>
+      incUpdateCount
+      processTrack(track)
+
   }
 
   override def handleMessage = handleTfmTracksLayerMessage orElse super.handleMessage

@@ -26,8 +26,10 @@ import gov.nasa.race.uom._
 import scala.collection.Seq
 
 /**
-  * helper type to support matching
+  * matchable type for a collection of TFMTracks
   */
+trait TFMTracks extends Seq[TFMTrack]
+/*
 case class TFMTracks (tracks: Seq[TFMTrack]) {
   override def toString = {
     val sb = new StringBuilder
@@ -37,6 +39,7 @@ case class TFMTracks (tracks: Seq[TFMTrack]) {
     sb.toString()
   }
 }
+ */
 
 /**
   * object representing a Traffic Flow Management (TFM) track update

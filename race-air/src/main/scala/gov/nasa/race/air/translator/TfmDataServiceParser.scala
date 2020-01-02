@@ -17,27 +17,33 @@
 package gov.nasa.race.air.translator
 
 import com.typesafe.config.Config
+import gov.nasa.race.IdentifiableObject
 import gov.nasa.race.air.{TFMTrack, TFMTracks}
 import gov.nasa.race.common.{ASCIIBuffer, BufferedStringXmlPullParser2, UTF8XmlPullParser2}
 import gov.nasa.race.common.inlined.Slice
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.config.{ConfigurableTranslator, NoConfig}
 import gov.nasa.race.geo.GeoPosition
-import gov.nasa.race.track.TrackedObject
+import gov.nasa.race.track.{MutSrcTracks, MutSrcTracksHolder, TrackedObject}
 import gov.nasa.race.uom.Angle.{UndefinedAngle, _}
 import gov.nasa.race.uom.Length.{UndefinedLength, _}
 import gov.nasa.race.uom.Speed.{UndefinedSpeed, _}
 import gov.nasa.race.uom.{Angle, DateTime, Length, Speed}
 
 import scala.Double.NaN
+import scala.collection.Seq
 import scala.collection.mutable.ArrayBuffer
+
+// we don't really have a source (yet) but keep it similar to SFDPS and TAIS
+class TFMTracksImpl(initSize: Int) extends MutSrcTracks[TFMTrack](initSize) with TFMTracks
 
 /**
   * a translator for tfmDataService (tfmdata) SWIM messages. We only process fltdMessage/trackInformation yet
   *
   * TODO - check if fltdMessage attributes are mandatory since we don't parse the respective trackInformation sub-elements
   */
-class TfmDataServiceParser(val config: Config=NoConfig) extends UTF8XmlPullParser2 with ConfigurableTranslator {
+class TfmDataServiceParser(val config: Config=NoConfig) extends UTF8XmlPullParser2
+                with ConfigurableTranslator with MutSrcTracksHolder[TFMTrack,TFMTracksImpl] {
 
   val tfmDataService = Slice("ds:tfmDataService")
   val fltdMessage = Slice("fdm:fltdMessage")
@@ -57,6 +63,8 @@ class TfmDataServiceParser(val config: Config=NoConfig) extends UTF8XmlPullParse
   // only created on-demand if we have to parse strings
   lazy protected val bb = new ASCIIBuffer(config.getIntOrElse("buffer-size", 120000))
 
+  override def createElements = new TFMTracksImpl(50)
+
   override def translate(src: Any): Option[Any] = {
     src match {
       case s: String =>
@@ -73,35 +81,36 @@ class TfmDataServiceParser(val config: Config=NoConfig) extends UTF8XmlPullParse
     }
   }
 
-  def parse (bs: Array[Byte], off: Int, limit: Int): Option[Any] = {
-    if (initialize(bs,off,limit)) {
-      while (parseNextTag) {
-        if (isStartTag) {
-          if (tag == tfmDataService) return parseTfmDataService
-        }
-      }
-    }
-    None
+  protected def parse (bs: Array[Byte], off: Int, limit: Int): Option[Any] = {
+    parseTracks(bs, off, limit)
+    if (elements.nonEmpty) Some(elements) else None
   }
 
   def parse (slice: Slice): Option[Any] = parse(slice.data, slice.offset, slice.limit)
 
-  protected def parseTfmDataService: Option[Any] = {
-    val tracks = new ArrayBuffer[TFMTrack](20)
-
-    while (parseNextTag) {
-      if (isStartTag) {
-        if (tag == fltdMessage) parseFltdMessage(tracks)
-      } else { // end tag
-        if (tag == tfmDataService) {
-          if (tracks.nonEmpty) return Some(TFMTracks(tracks)) else None
+  def parseTracks (bs: Array[Byte], off: Int, limit: Int): TFMTracks = {
+    clearElements
+    if (initialize(bs,off,limit)) {
+      while (parseNextTag) {
+        if (isStartTag) {
+          if (tag == tfmDataService) parseTfmDataService
         }
       }
     }
-    None
+    elements
   }
 
-  protected def parseFltdMessage (tracks: ArrayBuffer[TFMTrack]): Unit = {
+  def parseTracks(s: Slice): Seq[IdentifiableObject] = parseTracks(s.data,s.offset,s.limit)
+
+  protected def parseTfmDataService: Unit = {
+    while (parseNextTag) {
+      if (isStartTag) {
+        if (tag == fltdMessage) parseFltdMessage
+      }
+    }
+  }
+
+  protected def parseFltdMessage: Unit = {
 
     var flightRef: String = "?"
     var cs: String = null
@@ -429,7 +438,7 @@ class TfmDataServiceParser(val config: Config=NoConfig) extends UTF8XmlPullParse
                 TFMTrack(flightRef,cs,GeoPosition(lat,lon,alt),speed,date,status,
                   source,Some(nextWP),nextWPDate)
               }
-              tracks += track
+              elements += track
             } else {
               //println(s"rejected $cs $date $lat $lon $alt $nextWP")
             }
