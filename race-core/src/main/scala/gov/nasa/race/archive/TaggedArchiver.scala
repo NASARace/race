@@ -72,14 +72,13 @@ import gov.nasa.race.archive.TaggedArchiver._
 trait TaggedArchiveWriter extends ArchiveWriter {
   val oStream: OutputStream
   val pathName: String
-  val buf: StringDataBuffer
 
   val hexBuf = new Array[Byte](16)
 
   var nEntries = 0
   var refDate: DateTime = UndefinedDateTime
-  var entryBytes: Array[Byte] = null
-  var entrySize: Int = 0
+
+  val entryData: Slice = Slice.empty
 
   @inline final def writeHex8 (n: Int): Unit = {
     NumUtils.intToHexPadded(n, hexBuf,8)
@@ -103,23 +102,7 @@ trait TaggedArchiveWriter extends ArchiveWriter {
     oStream.write(EOH)
   }
 
-  protected def setEntryBytes(obj: Any): Unit = {
-    @inline def fromString(s: String): Unit = {
-      buf.encode(s)
-      entryBytes = buf.data
-      entrySize = buf.length
-    }
-
-    obj match {
-      case a:Array[Byte] => // no need to copy - directly use object
-        entryBytes = a
-        entrySize = a.length
-
-      case s:String => fromString(s)
-
-      case x => fromString(x.toString)
-    }
-  }
+  protected def setEntryBytes(obj: Any): Unit
 
   protected def writeFileHeader (extraHeaderData: Array[Byte], len: Int): Unit = {
     writeHex16(refDate.toEpochMillis)
@@ -143,8 +126,8 @@ trait TaggedArchiveWriter extends ArchiveWriter {
 
   override def write(date: DateTime, obj: Any): Boolean = {
     setEntryBytes(obj)
-    writeEntryHeader(date,entrySize)
-    oStream.write(entryBytes,0,entrySize)
+    writeEntryHeader(date,entryData.length)
+    oStream.write(entryData.data, entryData.offset, entryData.length)
     nEntries += 1
     true
   }
@@ -154,11 +137,30 @@ trait TaggedArchiveWriter extends ArchiveWriter {
   }
 }
 
+trait TaggedTextArchiveWriter extends TaggedArchiveWriter {
+  lazy val sdb = createStringDataBuffer
+  protected def createStringDataBuffer: StringDataBuffer
+
+  override protected def setEntryBytes(obj: Any): Unit = {
+    obj match {
+      case s: String =>
+        sdb.encode(s)
+        entryData.set(sdb.data,0,sdb.length)
+      case a: Array[Byte] =>
+        entryData.set(a, 0, a.length)
+      case slice: Slice =>
+        entryData.setFrom(slice)
+      case _ =>
+        entryData.clear
+    }
+  }
+}
+
 /**
   * a TaggedTextArchiveWriter that can store full unicode strings
   */
-class TaggedStringArchiveWriter (val oStream: OutputStream, val pathName:String="<unknown>", initBufferSize: Int) extends TaggedArchiveWriter {
-  val buf = new UTF8Buffer(initBufferSize)
+class TaggedStringArchiveWriter (val oStream: OutputStream, val pathName:String="<unknown>", initBufferSize: Int) extends TaggedTextArchiveWriter {
+  override protected def createStringDataBuffer = new UTF8Buffer(initBufferSize)
 
   def this(conf: Config) = this(createOutputStream(conf), configuredPathName(conf), conf.getIntOrElse("buffer-size",4096))
 }
@@ -166,8 +168,8 @@ class TaggedStringArchiveWriter (val oStream: OutputStream, val pathName:String=
 /**
   * a TaggedTextArchiveWriter that only stores ASCII strings
   */
-class TaggedASCIIArchiveWriter (val oStream: OutputStream, val pathName:String="<unknown>", initBufferSize: Int) extends TaggedArchiveWriter {
-  val buf = new ASCIIBuffer(initBufferSize)
+class TaggedASCIIArchiveWriter (val oStream: OutputStream, val pathName:String="<unknown>", initBufferSize: Int) extends TaggedTextArchiveWriter {
+  override protected def createStringDataBuffer = new ASCIIBuffer(initBufferSize)
 
   def this(conf: Config) = this(createOutputStream(conf), configuredPathName(conf), conf.getIntOrElse("buffer-size",4096))
 }

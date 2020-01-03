@@ -19,13 +19,13 @@ package gov.nasa.race.air.actor
 import com.typesafe.config.Config
 import gov.nasa.race.actor.FlatFilteringPublisher
 import gov.nasa.race.air.translator.TfmDataServiceParser
-import gov.nasa.race.jms.TranslatingJMSImportActor
+import gov.nasa.race.jms.{JMSImportActor, TranslatingJMSImportActor}
 import javax.jms.Message
 
 /**
   * specialized JMSImportActor that translates SWIM tfmData messages into TfmTracks objects
   */
-class TfmDataImportActor (config: Config) extends TranslatingJMSImportActor(config)
+class TfmDataImportActor (config: Config) extends JMSImportActor(config) with TranslatingJMSImportActor
                                              with FlatFilteringPublisher {
   val parser = new TfmDataServiceParser
   parser.setElementsReusable(flatten)

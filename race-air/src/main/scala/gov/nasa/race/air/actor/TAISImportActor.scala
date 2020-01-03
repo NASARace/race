@@ -21,7 +21,7 @@ import gov.nasa.race.actor.FlatFilteringPublisher
 import gov.nasa.race.air.{TRACON, TRACONs}
 import gov.nasa.race.air.translator.TATrackAndFlightPlanParser
 import gov.nasa.race.core.AccumulatingTopicIdProvider
-import gov.nasa.race.jms.TranslatingJMSImportActor
+import gov.nasa.race.jms.{JMSImportActor, TranslatingJMSImportActor}
 import javax.jms.Message
 
 /**
@@ -29,7 +29,7 @@ import javax.jms.Message
   * This is a on-demand provider that only publishes messages for requested TRACONs.
   * Filtering tracons without clients has to be efficient since this stream can have a very high rate (>900msg/sec)
   */
-class TAISImportActor(config: Config) extends TranslatingJMSImportActor(config)
+class TAISImportActor(config: Config) extends JMSImportActor(config) with TranslatingJMSImportActor
                                     with FlatFilteringPublisher with AccumulatingTopicIdProvider {
 
   //--- translation/parsing

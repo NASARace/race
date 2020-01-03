@@ -22,14 +22,14 @@ import gov.nasa.race.air.{ARTCC, ARTCCs}
 import gov.nasa.race.air.translator.MessageCollectionParser
 import gov.nasa.race.core.Messages.ChannelTopicRequest
 import gov.nasa.race.core.{AccumulatingTopicIdProvider, ChannelTopicProvider}
-import gov.nasa.race.jms.TranslatingJMSImportActor
+import gov.nasa.race.jms.{JMSImportActor, TranslatingJMSImportActor}
 import javax.jms.Message
 
 /**
   * specialized JMSImportActor for SWIM SFDPS MessageCollection XML messages
   * note that we can't hardwire the JMS config (authentication, URI, topic etc) since SWIM access might vary
   */
-class FilteringSFDPSImportActor(config: Config) extends TranslatingJMSImportActor(config)
+class FilteringSFDPSImportActor(config: Config) extends JMSImportActor(config) with TranslatingJMSImportActor
                                           with FlatFilteringPublisher with AccumulatingTopicIdProvider {
   var isAllSelected: Boolean = servedTopicIds.contains(ARTCC.AllId)
 
@@ -61,7 +61,7 @@ class FilteringSFDPSImportActor(config: Config) extends TranslatingJMSImportActo
   * a SFDPSImportActor that translates and publishes all messages as soon as there is a
   * ChannelTopicSubscriber for any ARTCC
   */
-class OnOffSFDPSImportActor (config: Config) extends TranslatingJMSImportActor(config)
+class OnOffSFDPSImportActor (config: Config) extends JMSImportActor(config) with TranslatingJMSImportActor
                                    with FlatFilteringPublisher with ChannelTopicProvider {
 
   class OnOffMessageCollectionParser extends MessageCollectionParser {
@@ -86,7 +86,7 @@ class OnOffSFDPSImportActor (config: Config) extends TranslatingJMSImportActor(c
 /**
   * actor that unconditionally imports and translates all SFDPS MessageCollection messages
   */
-class SFDPSImportActor (config: Config) extends TranslatingJMSImportActor(config)
+class SFDPSImportActor (config: Config) extends JMSImportActor(config) with TranslatingJMSImportActor
                                            with FlatFilteringPublisher {
   val parser = new MessageCollectionParser
   parser.setElementsReusable(flatten)

@@ -22,7 +22,7 @@ import gov.nasa.race.actor.FlatFilteringPublisher
 import gov.nasa.race.air.{Airport, Airports}
 import gov.nasa.race.air.translator.{AsdexMsgParser, FullAsdexMsgParser}
 import gov.nasa.race.core.AccumulatingTopicIdProvider
-import gov.nasa.race.jms.TranslatingJMSImportActor
+import gov.nasa.race.jms.{JMSImportActor, TranslatingJMSImportActor}
 import javax.jms.Message
 
 /**
@@ -30,7 +30,7 @@ import javax.jms.Message
   * This is a on-demand provider that only publishes tracks for requested airports.
   * Filtering airports without clients has to be efficient since asdexMsg can have a high rate (>30/sec)
   */
-class AsdexImportActor (config: Config) extends TranslatingJMSImportActor(config)
+class AsdexImportActor (config: Config) extends JMSImportActor(config) with TranslatingJMSImportActor
                     with FlatFilteringPublisher with AccumulatingTopicIdProvider {
 
   class FilteringAsdexMsgParser extends FullAsdexMsgParser {

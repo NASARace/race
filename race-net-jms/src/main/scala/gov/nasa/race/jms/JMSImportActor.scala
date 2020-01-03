@@ -22,10 +22,11 @@ import akka.actor.ActorRef
 import com.typesafe.config.Config
 import gov.nasa.race._
 import gov.nasa.race.actor.FilteringPublisher
+import gov.nasa.race.archive.TaggedASCIIArchiveWriter
 import gov.nasa.race.common.{ASCIIBuffer, StringDataBuffer, StringSlicer}
 import gov.nasa.race.common.inlined.Slice
 import gov.nasa.race.config.ConfigUtils._
-import gov.nasa.race.core.RaceContext
+import gov.nasa.race.core.{ContinuousTimeRaceActor, RaceContext}
 import gov.nasa.race.core.RaceActorCapabilities._
 import org.apache.activemq.ActiveMQConnectionFactory
 import org.apache.activemq.command.{Message => AMQMessage}
@@ -117,7 +118,7 @@ class JMSImportActor(val config: Config) extends FilteringPublisher {
   private[this] class Listener(val topic: JMSTopic) extends MessageListener {
     override def onMessage(msg: Message): Unit = {
       try {
-        publishFiltered(translate(msg))
+        processMessage(msg)
       } catch {
         case ex: JMSException => error(s"exception publishing JMS message: $ex")
       }
@@ -138,8 +139,22 @@ class JMSImportActor(val config: Config) extends FilteringPublisher {
 
   //--- end initialization
 
-  // override to translate text into objects
-  protected def translate (msg: Message): Any = if (publishRaw) getContentSlice(msg) else getContentString(msg)
+  // override to process messages differently than just publishing the content as slice or string
+  protected def processMessage (msg: Message): Unit = {
+    if (publishRaw) {
+      processMessage(getContentSlice(msg))
+    } else {
+      processMessage(getContentString(msg))
+    }
+  }
+
+  protected def processMessage (slice: Slice): Unit = {
+    publishFiltered(slice)
+  }
+
+  protected def processMessage (s: String): Unit = {
+    publishFiltered(s)
+  }
 
   // override if we only (re-)use the slice sync (e.g. for translating JMSImporters)
   protected def getContentSlice(s: String): Slice = Slice(s)
@@ -250,10 +265,40 @@ class JMSImportActor(val config: Config) extends FilteringPublisher {
 /**
   * a JMSImportActor that does not have to keep persistent message text since it only publishes the
   * products of translating this text
-  *
-  * TODO - this should also abstract the parser instantiation and use
   */
-abstract class TranslatingJMSImportActor (config: Config) extends JMSImportActor(config) {
+trait TranslatingJMSImportActor extends JMSImportActor {
+
   val contentSlicer = new StringSlicer(new ASCIIBuffer(120000)) // this is only executed when processing String messages
   override def getContentSlice (s: String): Slice = contentSlicer.slice(s)
+
+  // to be provided by concrete type, e.g. to call parser
+  protected def translate (msg: Message): Any
+
+  override protected def processMessage (msg: Message): Unit = {
+    publishFiltered(translate(msg))
+  }
+}
+
+trait ArchivingJMSImportActor extends JMSImportActor with ContinuousTimeRaceActor {
+  val writer = new TaggedASCIIArchiveWriter(config)
+  val archiveOnly = config.getBooleanOrElse("archive-only", true)
+
+  var cachedContent: Slice = Slice.empty
+
+  override def getContentSlice(msg: Message): Slice = {
+    if (cachedContent.isEmpty) cachedContent = super.getContentSlice(msg)
+    cachedContent
+  }
+
+  override protected def processMessage(msg: Message): Unit = {
+    val content = getContentSlice(msg)
+    if (content.nonEmpty) {
+      writer.write(currentSimTime, content)
+    }
+
+    // NOTE - this should not be used in combination with a supertype that copies data in processMessage
+    if (!archiveOnly) super.processMessage(msg)
+
+    cachedContent.clear // make sure we re-init cache on next call
+  }
 }

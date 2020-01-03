@@ -18,7 +18,7 @@ package gov.nasa.race.air.actor
 
 import com.typesafe.config.Config
 import gov.nasa.race.air.translator.ItwsMsgParser
-import gov.nasa.race.jms.TranslatingJMSImportActor
+import gov.nasa.race.jms.{JMSImportActor, TranslatingJMSImportActor}
 import javax.jms.Message
 
 /**
@@ -26,7 +26,7 @@ import javax.jms.Message
   *
   * TODO - this still has to route messages according to message type (range) like RoutingPrecipImageTranslator
   */
-class ITWSImportActor (config: Config) extends TranslatingJMSImportActor(config) {
+class ITWSImportActor (config: Config) extends JMSImportActor(config) with TranslatingJMSImportActor {
   val parser = new ItwsMsgParser
   override def translate (msg: Message): Any = parser.parse(getContentSlice(msg))
 }
