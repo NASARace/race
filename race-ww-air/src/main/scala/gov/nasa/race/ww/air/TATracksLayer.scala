@@ -198,7 +198,7 @@ class TATracksLayer (val raceViewer: RaceViewer, val config: Config) extends Mod
   }
 
   def setTracon(tracon: TRACON) = {
-    if (raceViewer.eyePosition != null) {
+    if (raceViewer.eyePosition != null) { // FIXME - we should always have an eyePosition here
       val eyePos = raceViewer.eyeLatLonPos
       val eyeAlt = Meters(eyeAltitude)
       val traconPos = tracon.position

@@ -26,6 +26,8 @@ import javax.swing._
 import com.typesafe.config.Config
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.uom.Length
+import gov.nasa.race.uom.Length._
+import gov.nasa.race.uom.Angle._
 import gov.nasa.race._
 import gov.nasa.race.swing.Style._
 import gov.nasa.race.swing._
@@ -75,18 +77,33 @@ class WorldWindFrame (config: Config, raceView: RaceViewer) extends AppFrame {
     popupFullScreenMI.selected = true
   }
 
+  def getInitialEyePosition: Position = {
+    // position over center of continental US if nothing specified
+    val defLat = 40.34
+    val defLon = -98.66
+    val defAlt = Meters(6000000)
+
+    val ec = config.getOptionalConfig("eye")
+    if (ec.isDefined){
+      val e = ec.get
+      val alt = e.getLengthOrElse("altitude", defAlt)
+      val lat = e.getDoubleOrElse("lat", defLat)
+      val lon = e.getDoubleOrElse("lon", defLon)
+
+      Position.fromDegrees(lat,lon,alt.toMeters)
+    } else {
+      Position.fromDegrees(defLat,defLon,defAlt.toMeters)
+    }
+  }
+
   def createWorldWindow (config: Config, raceView: RaceViewer): WorldWindowGLCanvas = {
     val wwd = new WorldWindowGLCanvas with Redrawable
+    val view = wwd.getView
 
-    ifSome(config.getOptionalConfig("eye")) { e => // if we don't have an 'eye' config we default to WWJs
-      val alt = Length.feet2Meters(e.getDoubleOrElse("altitude-ft", 1.65e7))
-      val eyePos = Position.fromDegrees(e.getDoubleOrElse("lat",40.34), e.getDoubleOrElse("lon",-98.66), alt)
+    view.setEyePosition(getInitialEyePosition)
 
-      val view = wwd.getView
-      view.setEyePosition(eyePos)
-      ifSome(config.getOptionalDouble("max-flight-ft")) { d =>
-        ifInstanceOf[RaceWWView](view) { v => v.ensureMaxFlightAltitude(Length.feet2Meters(d))}
-      }
+    ifSome(config.getOptionalDouble("max-flight-ft")) { d =>
+      ifInstanceOf[RaceWWView](view) { v => v.ensureMaxFlightAltitude(Length.feet2Meters(d))}
     }
 
     if (config.getBooleanOrElse("offline", false)) WorldWind.setOfflineMode(true)
