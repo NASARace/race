@@ -34,7 +34,9 @@ class TAISImportActor(config: Config) extends JMSImportActor(config) with Transl
 
   //--- translation/parsing
   class FilteringTATrackAndFlightPlanParser extends TATrackAndFlightPlanParser {
-    override protected def filterSrc (srcId: String) = !servedTopicIds.contains(srcId)
+    override protected def filterSrc (srcId: String) = {
+      !servedTopicIds.contains(srcId)
+    }
   }
 
   val parser = new FilteringTATrackAndFlightPlanParser
@@ -44,9 +46,11 @@ class TAISImportActor(config: Config) extends JMSImportActor(config) with Transl
     parser.parseTracks(getContentSlice(msg))
   }
 
-  override def topicIdsOf(t: Any): Seq[String] = t match {
-    case tracon: TRACON => Seq(tracon.id)
-    case tracons: TRACONs => tracons.map(_.id)
-    case _ => Seq.empty[String]
+  override def topicIdsOf(t: Any): Seq[String] = {
+    t match {
+      case tracon: TRACON => Seq(tracon.id)
+      case tracons: TRACONs => tracons.map(_.id)
+      case _ => Seq.empty[String]
+    }
   }
 }

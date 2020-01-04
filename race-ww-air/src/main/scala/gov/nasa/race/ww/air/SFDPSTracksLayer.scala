@@ -142,7 +142,7 @@ class SFDPSTracksLayer (val raceViewer: RaceViewer, val config: Config) extends 
   @inline def isNoneSelected: Boolean = selARTCCs.isEmpty || selARTCCs(0).matchesNone
 
   // this is a potential high frequency call in case we receive per-track updates so we have to optimize
-  @inline final def acceptSrc (src: String): Boolean = {
+  final def acceptSrc (src: String): Boolean = {
     if (selectedOnly) {
       selARTCCs.size match {
         case 0 => false

@@ -87,7 +87,7 @@ object ARTCC {
 }
 
 class ARTCC (val id: String, val name: String, val state: String, val area: String, val position: GeoPosition) extends GeoPositioned {
-  def isMatching (s: String): Boolean = s.equals(id)
+  def isMatching (s: String): Boolean = id == s
   def isMatching (r: Regex): Boolean = r.matches(id)
 
   // ids are unique

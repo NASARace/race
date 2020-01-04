@@ -74,7 +74,7 @@ trait ChannelTopicSubscriber extends SubscribingRaceActor {
   }
 
   def requestConfiguredTopics: Unit = {
-    config.getStringArray("request-topics").foreach { ctSpec =>
+    config.getOptionalStringList("request-topics").foreach { ctSpec =>
       ChannelTopic.parse(ctSpec) match {
         case (topic@Some(topicName), channelSpec) =>
           channelSpec match {
@@ -375,7 +375,7 @@ trait AccumulatingTopicIdProvider extends ChannelTopicProvider {
   val topicKey: String = "served-topics" // override if config should use a more specific name
 
   var servedTopicIds = ArrayBuffer.empty[String]
-  config.getStringSeq(topicKey).foreach(id => servedTopicIds += id)
+  config.getOptionalStringList(topicKey).foreach(id => servedTopicIds += id)
 
   // this basically defines if we accept a topic - return None if not
   def topicIdsOf(t: Any): Seq[String]

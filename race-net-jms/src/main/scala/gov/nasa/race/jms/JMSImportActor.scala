@@ -125,7 +125,7 @@ class JMSImportActor(val config: Config) extends FilteringPublisher {
     }
   }
 
-  val flushOnStart = config.getBooleanOrElse("flush-on-start", true)
+  val flushOnStart = config.getBooleanOrElse("flush-on-start", false)
   val brokerURI = config.getVaultableStringOrElse("broker-uri", "tcp://localhost:61616")
   val jmsId = config.getStringOrElse("jms-id", self.path.name + System.currentTimeMillis.toHexString)
   val jmsTopic = config.getString("jms-topic")
@@ -279,11 +279,16 @@ trait TranslatingJMSImportActor extends JMSImportActor {
   }
 }
 
+/**
+  * trait that can be mixed in to add archiving of received messages using a
+  * TaggedTextArchiver
+  */
 trait ArchivingJMSImportActor extends JMSImportActor with ContinuousTimeRaceActor {
   val writer = new TaggedASCIIArchiveWriter(config)
   val archiveOnly = config.getBooleanOrElse("archive-only", true)
 
   var cachedContent: Slice = Slice.empty
+  var stopArchiving = false
 
   override def getContentSlice(msg: Message): Slice = {
     if (cachedContent.isEmpty) cachedContent = super.getContentSlice(msg)
@@ -293,12 +298,28 @@ trait ArchivingJMSImportActor extends JMSImportActor with ContinuousTimeRaceActo
   override protected def processMessage(msg: Message): Unit = {
     val content = getContentSlice(msg)
     if (content.nonEmpty) {
-      writer.write(currentSimTime, content)
-    }
+      if (!stopArchiving) writer.write(currentSimTime, content)
 
-    // NOTE - this should not be used in combination with a supertype that copies data in processMessage
-    if (!archiveOnly) super.processMessage(msg)
+      // NOTE - this should not be used in combination with a supertype that copies data in processMessage
+      if (!archiveOnly) super.processMessage(msg)
+    }
 
     cachedContent.clear // make sure we re-init cache on next call
   }
+
+  override def onStartRaceActor (originator: ActorRef) = {
+    writer.open(baseSimTime)
+    super.onStartRaceActor(originator)
+  }
+
+  override def onTerminateRaceActor(originator: ActorRef) = {
+    stopArchiving = true
+    writer.close
+    super.onTerminateRaceActor(originator)
+  }
 }
+
+/**
+  * a JMSImportActor that is solely used for archiving received messages
+  */
+class JMSArchiveActor (config: Config) extends JMSImportActor(config) with ArchivingJMSImportActor

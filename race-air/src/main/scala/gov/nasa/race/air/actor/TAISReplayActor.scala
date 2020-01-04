@@ -16,15 +16,34 @@
  */
 package gov.nasa.race.air.actor
 
+import java.io.InputStream
+
 import com.typesafe.config.Config
-import gov.nasa.race.actor.ReplayActor
+import gov.nasa.race.config.ConfigUtils._
+import gov.nasa.race.actor.Replayer
+import gov.nasa.race.air.translator.TATrackAndFlightPlanParser
+import gov.nasa.race.archive.TaggedArchiveReader
+import gov.nasa.race.common.ConfigurableStreamCreator.{configuredPathName, createInputStream}
 
 /**
-  * a ReplayActor for TAIS, which needs to be a ChannelTopicProvider so that it can
-  * filter out TRACON specific messages for which there is no client
-  * (those messages are big and come at 1Hz, so we don't want to publish unless there
-  * is a client)
+  * a TaggedArchiveReader that can parse TAIS tagged archives
   */
-class TAISReplayActor (conf: Config) extends ReplayActor(conf) with TAISImporter {
-  override def handleMessage = handleReplayMessage orElse handleFilteringPublisherMessage
+class TAISReader (val iStream: InputStream, val pathName: String="<unknown>", val initBufferSize: Int)
+  extends TATrackAndFlightPlanParser with TaggedArchiveReader {
+
+  def this(conf: Config) = this(createInputStream(conf), // this takes care of optional compression
+    configuredPathName(conf),
+    conf.getIntOrElse("buffer-size", 4096))
+
+  override protected def parseEntryData(limit: Int): Any = {
+    parse(buf, 0, limit)
+  }
+}
+
+
+/**
+  * specialized Replayer for TAIS tagged archives
+  */
+class TAISReplayActor (val config: Config) extends Replayer[TAISReader] {
+  override def createReader = new TAISReader(config)
 }

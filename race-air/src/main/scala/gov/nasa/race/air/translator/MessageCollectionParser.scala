@@ -253,10 +253,14 @@ class MessageCollectionParser(val config: Config=NoConfig) extends UTF8XmlPullPa
       }
     }
 
+    // this is a SFDPS specific quirk - there is no src attribute in the MessageCollection elem,
+    // but all flight childElements have the same src attr - we have to dig it out from the first one
     if (parseAttr(centre)) src = attrValue.intern
-    if (artccId == null) {
+    if (artccId == null) { // first src spec in this MessageCollection
       if (filterSrc(src)) return // bail out - not a relevant source
+
       artccId = src
+      elements.src = src
     } else {
       if (artccId != src) throw new RuntimeException(s"conflicting 'centre' attributes: $artccId - $src")
     }

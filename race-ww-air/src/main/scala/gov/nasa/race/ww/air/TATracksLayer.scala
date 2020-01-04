@@ -110,6 +110,11 @@ class TATracksLayer (val raceViewer: RaceViewer, val config: Config) extends Mod
   )(processResult).defaultStyled
   panel.contents.insert(1, selPanel)
 
+  override def initializeLayer: Unit = {
+    super.initializeLayer
+    selTracon.foreach(setTracon)
+  }
+
   def configuredTracon: Option[TRACON] = {
     val topics = config.getOptionalStringList("request-topics")
     if (topics.nonEmpty) TRACON.tracons.get(topics.head) else None
@@ -193,19 +198,21 @@ class TATracksLayer (val raceViewer: RaceViewer, val config: Config) extends Mod
   }
 
   def setTracon(tracon: TRACON) = {
-    val eyePos = raceViewer.eyeLatLonPos
-    val eyeAlt = Meters(eyeAltitude)
-    val traconPos = tracon.position
-    val viewCenterDist = GreatCircle.distance(eyePos,traconPos)
+    if (raceViewer.eyePosition != null) {
+      val eyePos = raceViewer.eyeLatLonPos
+      val eyeAlt = Meters(eyeAltitude)
+      val traconPos = tracon.position
+      val viewCenterDist = GreatCircle.distance(eyePos, traconPos)
 
-    if (eyeAlt > gotoAltitude) {
-      if (viewCenterDist > panDistance) {
+      if (eyeAlt > gotoAltitude) {
+        if (viewCenterDist > panDistance) {
+          raceViewer.panTo(wwPosition(traconPos), gotoAltitude.toMeters)
+        } else {
+          raceViewer.zoomTo(gotoAltitude.toMeters)
+        }
+      } else if (viewCenterDist > panDistance) {
         raceViewer.panTo(wwPosition(traconPos), gotoAltitude.toMeters)
-      } else {
-        raceViewer.zoomTo(gotoAltitude.toMeters)
       }
-    } else if (viewCenterDist > panDistance){
-      raceViewer.panTo(wwPosition(traconPos), gotoAltitude.toMeters)
     }
 
     selTracon = Some(tracon)
