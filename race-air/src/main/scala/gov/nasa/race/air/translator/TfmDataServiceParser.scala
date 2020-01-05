@@ -19,8 +19,8 @@ package gov.nasa.race.air.translator
 import com.typesafe.config.Config
 import gov.nasa.race.IdentifiableObject
 import gov.nasa.race.air.{TFMTrack, TFMTracks}
-import gov.nasa.race.common.{ASCIIBuffer, BufferedStringXmlPullParser2, UTF8XmlPullParser2}
 import gov.nasa.race.common.inlined.Slice
+import gov.nasa.race.common.{ASCIIBuffer, Parser, UTF8XmlPullParser2}
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.config.{ConfigurableTranslator, NoConfig}
 import gov.nasa.race.geo.GeoPosition
@@ -32,7 +32,6 @@ import gov.nasa.race.uom.{Angle, DateTime, Length, Speed}
 
 import scala.Double.NaN
 import scala.collection.Seq
-import scala.collection.mutable.ArrayBuffer
 
 // we don't really have a source (yet) but keep it similar to SFDPS and TAIS
 class TFMTracksImpl(initSize: Int) extends MutSrcTracks[TFMTrack](initSize) with TFMTracks
@@ -43,7 +42,7 @@ class TFMTracksImpl(initSize: Int) extends MutSrcTracks[TFMTrack](initSize) with
   * TODO - check if fltdMessage attributes are mandatory since we don't parse the respective trackInformation sub-elements
   */
 class TfmDataServiceParser(val config: Config=NoConfig) extends UTF8XmlPullParser2
-                with ConfigurableTranslator with MutSrcTracksHolder[TFMTrack,TFMTracksImpl] {
+                with ConfigurableTranslator with Parser with MutSrcTracksHolder[TFMTrack,TFMTracksImpl] {
 
   val tfmDataService = Slice("ds:tfmDataService")
   val fltdMessage = Slice("fdm:fltdMessage")
@@ -81,12 +80,10 @@ class TfmDataServiceParser(val config: Config=NoConfig) extends UTF8XmlPullParse
     }
   }
 
-  protected def parse (bs: Array[Byte], off: Int, limit: Int): Option[Any] = {
+  def parse (bs: Array[Byte], off: Int, limit: Int): Option[Any] = {
     parseTracks(bs, off, limit)
     if (elements.nonEmpty) Some(elements) else None
   }
-
-  def parse (slice: Slice): Option[Any] = parse(slice.data, slice.offset, slice.limit)
 
   def parseTracks (bs: Array[Byte], off: Int, limit: Int): TFMTracks = {
     clearElements

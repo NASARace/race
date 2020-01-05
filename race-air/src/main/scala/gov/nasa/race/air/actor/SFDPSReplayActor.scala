@@ -16,34 +16,15 @@
  */
 package gov.nasa.race.air.actor
 
-import java.io.InputStream
-
 import com.typesafe.config.Config
 import gov.nasa.race.actor.Replayer
 import gov.nasa.race.air.translator.MessageCollectionParser
-import gov.nasa.race.archive.TaggedArchiveReader
-import gov.nasa.race.common.ConfigurableStreamCreator.{configuredPathName, createInputStream}
-import gov.nasa.race.config.ConfigUtils._
-
-/**
-  * a TaggedArchiveReader that can parse SFDPS tagged archives
-  */
-class SFDPSReader (val iStream: InputStream, val pathName: String="<unknown>", val initBufferSize: Int)
-                                 extends MessageCollectionParser with TaggedArchiveReader {
-
-  def this(conf: Config) = this(createInputStream(conf), // this takes care of optional compression
-    configuredPathName(conf),
-    conf.getIntOrElse("buffer-size", 4096))
-
-  override protected def parseEntryData(limit: Int): Any = {
-    parse(buf, 0, limit)
-  }
-}
+import gov.nasa.race.archive.ParsingArchiveReader
 
 
 /**
   * specialized Replayer for SFDPS tagged archives
   */
-class SFDPSReplayActor (val config: Config) extends Replayer[SFDPSReader] {
-  override def createReader = new SFDPSReader(config)
+class SFDPSReplayActor (val config: Config) extends Replayer[ParsingArchiveReader] {
+  override def createReader = new ParsingArchiveReader(new MessageCollectionParser,config)
 }

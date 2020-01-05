@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, United States Government, as represented by the
+ * Copyright (c) 2016, United States Government, as represented by the
  * Administrator of the National Aeronautics and Space Administration.
  * All rights reserved.
  *
@@ -14,17 +14,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package gov.nasa.race.air.actor
 
 import com.typesafe.config.Config
 import gov.nasa.race.actor.Replayer
-import gov.nasa.race.air.translator.TATrackAndFlightPlanParser
+import gov.nasa.race.air.translator.TfmDataServiceParser
 import gov.nasa.race.archive.ParsingArchiveReader
 
 
 /**
-  * specialized Replayer for TAIS tagged archives
+  * a ReplayActor for TFM-DATA
   */
-class TAISReplayActor (val config: Config) extends Replayer[ParsingArchiveReader] {
-  override def createReader = new ParsingArchiveReader( new TATrackAndFlightPlanParser,config)
+class TfmDataReplayActor (val config: Config) extends Replayer[ParsingArchiveReader] {
+  override def createReader = new ParsingArchiveReader(new TfmDataServiceParser,config)
 }

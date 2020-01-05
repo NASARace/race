@@ -18,14 +18,14 @@
 package gov.nasa.race.air.actor
 
 import com.typesafe.config.Config
-import gov.nasa.race.actor.ReplayActor
+import gov.nasa.race.actor.Replayer
+import gov.nasa.race.air.translator.AsdexMsgParser
+import gov.nasa.race.archive.ParsingArchiveReader
+
 
 /**
-  * a ReplayActor for ASDE-X, which needs to be a ChannelTopicProvider so that it can
-  * filter out airport specific messages for which there is no client
-  * (those messages are big and come at 1Hz, so we don't want to publish unless there
-  * is a client)
+  * a ReplayActor for ASDE-X
   */
-class AsdexReplayActor (conf: Config) extends ReplayActor(conf) with AsdexImporter {
-  override def handleMessage = handleReplayMessage orElse handleFilteringPublisherMessage
+class AsdexReplayActor (val config: Config) extends Replayer[ParsingArchiveReader] {
+  override def createReader = new ParsingArchiveReader(new AsdexMsgParser,config)
 }

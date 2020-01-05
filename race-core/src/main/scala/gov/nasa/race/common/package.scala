@@ -17,6 +17,8 @@
 
 package gov.nasa.race
 
+import gov.nasa.race.common.inlined.Slice
+
 import scala.annotation.tailrec
 import scala.collection.Seq
 import scala.language.implicitConversions
@@ -159,5 +161,11 @@ package object common {
     */
   trait AssocSeq [+T,U] extends Seq[T] {
     def assoc: U
+  }
+
+  // something that can parse byte array data
+  trait Parser {
+    def parse (bs: Array[Byte], off: Int, limit: Int): Option[Any]
+    def parse (slice: Slice): Option[Any] = parse(slice.data, slice.offset, slice.limit)
   }
 }

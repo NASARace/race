@@ -23,7 +23,7 @@ import com.typesafe.config.Config
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.common.ConfigurableStreamCreator._
 import gov.nasa.race.common.inlined.Slice
-import gov.nasa.race.common.{ASCIIBuffer, StringDataBuffer, UTF8Buffer}
+import gov.nasa.race.common.{ASCIIBuffer, Parser, StringDataBuffer, UTF8Buffer}
 import gov.nasa.race.uom.DateTime
 import gov.nasa.race.uom.DateTime._
 import gov.nasa.race.uom.Time._
@@ -270,5 +270,22 @@ class TaggedStringArchiveReader (val iStream: InputStream, val pathName:String="
 
   override protected def parseEntryData(limit: Int): Any = {
     if (publishRaw) util.Arrays.copyOf(buf,limit) else new String(buf,0,limit)
+  }
+}
+
+
+class ParsingArchiveReader  (val parser: Parser,
+                             val iStream: InputStream,
+                             val pathName: String="<unknown>",
+                             val initBufferSize: Int = 32768) extends TaggedArchiveReader {
+  def this(parser:Parser, conf: Config) = this(
+    parser,
+    createInputStream(conf),
+    configuredPathName(conf),
+    conf.getIntOrElse("buffer-size", 32768)
+  )
+
+  override protected def parseEntryData(limit: Int): Any = {
+    parser.parse(buf, 0, limit)
   }
 }

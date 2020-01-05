@@ -47,10 +47,11 @@ class TraconSymbol(val tracon: TRACON, val layer: TATracksLayer) extends PointPl
   setLabelText(tracon.id)
   setAltitudeMode(WorldWind.RELATIVE_TO_GROUND)
   attrs.setImage(null)
+  attrs.setLabelFont(layer.labelFont)
   attrs.setLabelColor(layer.traconLabelColor)
   attrs.setLineColor(layer.traconLabelColor)
   attrs.setUsePointAsDefaultImage(true)
-  attrs.setScale(7d)
+  attrs.setScale(scaledSize(7).toDouble)
   setAttributes(attrs)
 
   override def layerItem: AnyRef = tracon

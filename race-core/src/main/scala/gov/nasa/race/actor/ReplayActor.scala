@@ -49,7 +49,7 @@ import scala.language.postfixOps
   * A Replayer is a potential ClockAdjuster, i.e. if enabled the global sim clock can be reset to the first
   * message time encountered. The user has to make sure there is no force-fight in the configuration of several ReplayActors
   */
-trait Replayer[T<:ArchiveReader] extends ContinuousTimeRaceActor
+trait Replayer [T <: ArchiveReader] extends ContinuousTimeRaceActor
                                 with FilteringPublisher with Counter with ClockAdjuster {
   case class Replay (msg: Any, date: DateTime)
   case object ScheduleNext

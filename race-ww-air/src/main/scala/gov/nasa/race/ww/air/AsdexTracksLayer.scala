@@ -26,7 +26,7 @@ import gov.nasa.race.core.Messages.BusEvent
 import gov.nasa.race.geo.{GeoPosition, GreatCircle}
 import gov.nasa.race.ifSome
 import gov.nasa.race.swing.Style._
-import gov.nasa.race.swing.{AMOSelection, AMOSelectionPanel, IdAndNamePanel, StaticSelectionPanel}
+import gov.nasa.race.swing.{AMOSelection, AMOSelectionPanel, IdAndNamePanel, StaticSelectionPanel, scaledSize}
 import gov.nasa.race.trajectory.MutTrajectory
 import gov.nasa.race.uom.Length
 import gov.nasa.race.uom.Length.{Feet, Meters, UsMiles, meters2Feet}
@@ -47,10 +47,11 @@ class AirportSymbol (val airport: Airport, val layer: AsdexTracksLayer) extends 
   setLabelText(airport.id)
   setAltitudeMode(WorldWind.RELATIVE_TO_GROUND)
   attrs.setImage(null)
+  attrs.setLabelFont(layer.labelFont)
   attrs.setLabelColor(layer.locationColor)
   attrs.setLineColor(layer.locationColor)
   attrs.setUsePointAsDefaultImage(true) // we should use a different default image
-  attrs.setScale(7d)
+  attrs.setScale(scaledSize(7).toDouble)
   setAttributes(attrs)
 
   override def layerItem: AnyRef = airport

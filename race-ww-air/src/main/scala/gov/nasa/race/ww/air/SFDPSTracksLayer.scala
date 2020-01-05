@@ -24,6 +24,7 @@ import gov.nasa.race.air.{ARTCC, SFDPSTrack, SFDPSTracks}
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.Messages.BusEvent
 import gov.nasa.race.geo.GeoPositioned
+import gov.nasa.race.swing._
 import gov.nasa.race.swing.Style._
 import gov.nasa.race.swing.{MultiSelection, MultiSelectionPanel}
 import gov.nasa.race.uom.Length.Meters
@@ -43,10 +44,11 @@ class ArtccSymbol (val artcc: ARTCC, val layer: SFDPSTracksLayer) extends PointP
   setLabelText(artcc.id)
   setAltitudeMode(WorldWind.RELATIVE_TO_GROUND)
   attrs.setImage(null)
+  attrs.setLabelFont(layer.labelFont)
   attrs.setLabelColor(layer.locationColor)
   attrs.setLineColor(layer.locationColor)
   attrs.setUsePointAsDefaultImage(true) // we should use a different default image
-  attrs.setScale(7d)
+  attrs.setScale(scaledSize(7).toDouble)
   setAttributes(attrs)
 
   override def layerItem: AnyRef = artcc
