@@ -31,13 +31,27 @@ import gov.nasa.race.uom.Length.{Meters, UndefinedLength}
 
 object ItwsMsgParser {
   val cmap = Array[Int](  // reference color model
+
     0xffffffff, // 0: no precipitation - transparent colormodel index
+
+    //--- green to red
+    /*
     0xffa0f000, // 1: level 1
     0xff60b000, // 2: level 2
     0xfff0f000, // 3: level 3
     0xfff0c000, // 4: level 4
     0xffe09000, // 5: level 5
     0xffa00000, // 6: level 6
+    */
+
+    //--- yellow to red
+    0x94ffff0a, // 1: level 1  yellow
+    0xa4f8d810, // 2: level 2
+    0xa8fd8080, // 3: level 3  orange
+    0xb8F43166, // 4: level 4
+    0xd0D62295, // 5: level 5
+    0xfa9410ff, // 6: level 6
+
     0x00000000, // 7: attenuated
     0x00000000, // 8: anomalous propagation
     0x00000000, // 9: bad value
@@ -88,21 +102,29 @@ class ItwsMsgParser(val config: Config=NoConfig) extends UTF8XmlPullParser2 with
   }
 
   def parse (bs: Array[Byte], off: Int, limit: Int): Option[Any] = {
-    if (initialize(bs,off,limit)) {
-      if (parseNextTag) {
-        if (tag == itwsMsg) return parseItwsMsg
-      }
+    if (checkIfItwsMsg(bs,off,limit)) {
+      parseItwsMsg
+    } else {
+      None
     }
-    None
   }
 
   def parse (slice: Slice): Option[Any] = parse(slice.data, slice.offset, slice.limit)
 
+  def checkIfItwsMsg (bs: Array[Byte], off: Int, limit: Int): Boolean = {
+    if (initialize(bs,off,limit)) {
+      if (parseNextTag && isStartTag) return tag == itwsMsg
+    }
+    false
+  }
 
-  protected def parseItwsMsg: Option[Any] = {
+
+  def filterProduct (productMsgId: String) = false
+
+  def parseItwsMsg: Option[Any] = {
     val data = this.data
 
-    var product = 0 // 9849: precip 5nm, 9850: tracon, 9905: long range
+    var product: String = null // 9849: precip 5nm, 9850: tracon, 9905: long range
     var itwsSite: String = null // site id (e.g. N90 - describing a list of airports/tracons)
     var genDate: DateTime = DateTime.UndefinedDateTime; var expDate: DateTime = DateTime.UndefinedDateTime;
     var trpLat: Angle=UndefinedAngle; var trpLon: Angle=UndefinedAngle; var rotation: Angle=UndefinedAngle// degrees
@@ -122,7 +144,15 @@ class ItwsMsgParser(val config: Config=NoConfig) extends UTF8XmlPullParser2 with
 
         @inline def readDate: DateTime = DateTime.ofEpochMillis(1000L * readIntContent)
 
-        @inline def process_product_msg_id = product = readIntContent
+        def process_product_msg_id: Boolean = {
+          val prodMsgId = readInternedStringContent
+          if (filterProduct(prodMsgId)) {
+            false
+          } else {
+            product = prodMsgId
+            true
+          }
+        }
         @inline def process_product_header_itws_sites = itwsSite = readStringContent
         @inline def process_product_header_generation_time_seconds = genDate = readDate
         @inline def process_product_header_expiration_time_seconds = expDate = readDate
@@ -136,7 +166,7 @@ class ItwsMsgParser(val config: Config=NoConfig) extends UTF8XmlPullParser2 with
 
         if (match_product_) {
           if (match_product_msg_id) {
-            process_product_msg_id
+            if (!process_product_msg_id) return
           } else if (match_product_header_) {
             if (match_product_header_itws_sites) {
               process_product_header_itws_sites
@@ -254,6 +284,7 @@ class ItwsMsgParser(val config: Config=NoConfig) extends UTF8XmlPullParser2 with
         if (match_pr) {
           if (match_product_header) {
             process_product_header
+            if (product == null) return None // filtered product
           } else if (match_precip) {
             process_precip
           }

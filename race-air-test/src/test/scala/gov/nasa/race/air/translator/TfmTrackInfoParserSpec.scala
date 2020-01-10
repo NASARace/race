@@ -16,7 +16,7 @@
  */
 package gov.nasa.race.air.translator
 
-import gov.nasa.race.air.TFMTrackInfoParser
+import gov.nasa.race.air.TfmTrackInfoParser
 import gov.nasa.race.test.RaceSpec
 import gov.nasa.race.util.FileUtils._
 import org.scalatest.flatspec.AnyFlatSpec
@@ -26,13 +26,13 @@ import org.scalatest.flatspec.AnyFlatSpec
   *
   * TODO - this still needs assertions
   */
-class TFMTrackInfoParserSpec extends AnyFlatSpec with RaceSpec {
+class TfmTrackInfoParserSpec extends AnyFlatSpec with RaceSpec {
   val xmlMsg = fileContentsAsUTF8String(baseResourceFile("tfmdata.xml")).get
 
   behavior of "TFMTrackInfoParser"
 
   "a TFMTrackInfoParser" should "parse known values" in {
-    val parser = new TFMTrackInfoParser
+    val parser = new TfmTrackInfoParser
 
     val res = parser.parse(xmlMsg)
     res match {

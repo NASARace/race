@@ -20,10 +20,12 @@ import gov.nasa.race.common.AssocSeq
 import gov.nasa.race.geo.GeoPosition
 import gov.nasa.race.uom.{Angle, DateTime, Speed}
 
+import scala.collection.mutable.ArrayBuffer
+
 /**
   * a TrackedAircraft object obtained through SWIMs SFDPS service
   */
-case class SFDPSTrack(
+case class SfdpsTrack(
     id: String,
     cs: String,
     position: GeoPosition,
@@ -40,6 +42,12 @@ case class SFDPSTrack(
 /**
   * matchable type that represents a collection of SfdpsTrack objects that originated from the same ARTCC
   */
-trait SFDPSTracks extends TrackedAircraftSeq[SFDPSTrack] {
+trait SfdpsTracks extends TrackedAircraftSeq[SfdpsTrack] {
   @inline final def artccId: String = assoc
+}
+
+object SfdpsTracks {
+  val empty = new ArrayBuffer[SfdpsTrack](0) with SfdpsTracks {
+    override def assoc: String = ""
+  }
 }

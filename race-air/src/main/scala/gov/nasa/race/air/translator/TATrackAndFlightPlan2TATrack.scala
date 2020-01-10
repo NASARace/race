@@ -19,7 +19,7 @@
 package gov.nasa.race.air.translator
 
 import com.typesafe.config.Config
-import gov.nasa.race.air.{FlightPlan, TATrack}
+import gov.nasa.race.air.{FlightPlan, TaisTrack}
 import gov.nasa.race.common.{Rev, Src, XmlParser}
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.config._
@@ -38,7 +38,7 @@ import scala.collection.Seq
   * STDDS TATrackAndFlightPlan to TATrack translator that uses stack frames to avoid the
   * cache reset problem
   */
-class TATrackAndFlightPlan2TATrack (val config: Config=NoConfig) extends XmlParser[Seq[TATrack]] with ConfigurableTranslator {
+class TATrackAndFlightPlan2TATrack (val config: Config=NoConfig) extends XmlParser[Seq[TaisTrack]] with ConfigurableTranslator {
 
   //--- configuration
   val allowIncompleteTrack: Boolean = if (config != null) config.getBooleanOrElse("allow-incomplete", false) else false
@@ -46,7 +46,7 @@ class TATrackAndFlightPlan2TATrack (val config: Config=NoConfig) extends XmlPars
   val attachMsg = config.getBooleanOrElse("attach-msg", false)
 
   //--- our result data
-  var tracks = new ArrayBuffer[TATrack](16)
+  var tracks = new ArrayBuffer[TaisTrack](16)
 
   setBuffered(8192) // we will get a lot of these
 
@@ -60,7 +60,7 @@ class TATrackAndFlightPlan2TATrack (val config: Config=NoConfig) extends XmlPars
   def readStatusFlag = {
     readText match { // note that XSD requires lower case
       case "active" => 0
-      case "coasting" => TATrack.CoastingFlag
+      case "coasting" => TaisTrack.CoastingFlag
       case "drop" => TrackedObject.DroppedFlag
       case _ => 0
     }
@@ -114,8 +114,8 @@ class TATrackAndFlightPlan2TATrack (val config: Config=NoConfig) extends XmlPars
       case "status" => status |= readStatusFlag
       case "frozen" => if (readBoolean) status |= TrackedObject.FrozenFlag
       case "new" => if (readBoolean) status |= TrackedObject.NewFlag
-      case "pseudo" => if (readBoolean) status |= TATrack.PseudoFlag
-      case "adsb" => if (readBoolean) status |= TATrack.AdsbFlag
+      case "pseudo" => if (readBoolean) status |= TaisTrack.PseudoFlag
+      case "adsb" => if (readBoolean) status |= TaisTrack.AdsbFlag
 
       case "reportedBeaconCode" => beaconCode = readText
       case "reportedAltitude" => reportedAltitude = Feet(readInt)
@@ -132,7 +132,7 @@ class TATrackAndFlightPlan2TATrack (val config: Config=NoConfig) extends XmlPars
             val hdg = Angle.fromVxVy(vx, vy)
             if (acId == null) acId = trackId
 
-            val track = new TATrack(trackId,acId,GeoPosition(lat,lon,reportedAltitude),hdg,spd,vVert,mrtTime,status,
+            val track = new TaisTrack(trackId,acId,GeoPosition(lat,lon,reportedAltitude),hdg,spd,vVert,mrtTime,status,
                                     src, XYPos(xPos, yPos), beaconCode, flightPlan)
 
             if (attachRev && stddsRev >= 0) track.amend(Rev(3, stddsRev.toShort))

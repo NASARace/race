@@ -24,13 +24,25 @@ import gov.nasa.race.core.AccumulatingTopicIdProvider
 import gov.nasa.race.jms.{JMSImportActor, TranslatingJMSImportActor}
 import javax.jms.Message
 
+trait TRACONTopicIdMapper {
+  def topicIdsOf(t: Any): Seq[String] = {
+    t match {
+      case tracon: TRACON => Seq(tracon.id)
+      case tracons: TRACONs => tracons.map(_.id)
+      case traconId: String => if (TRACON.tracons.contains(traconId)) Seq(traconId) else Seq.empty[String]
+      case traconIds: Seq[_] => traconIds.map(_.toString).filter(TRACON.tracons.contains)
+      case _ => Seq.empty[String]
+    }
+  }
+}
+
 /**
   * a JMS import actor for SWIM TAIS (STDDS) messages.
   * This is a on-demand provider that only publishes messages for requested TRACONs.
   * Filtering tracons without clients has to be efficient since this stream can have a very high rate (>900msg/sec)
   */
-class TAISImportActor(config: Config) extends JMSImportActor(config) with TranslatingJMSImportActor
-                                    with FlatFilteringPublisher with AccumulatingTopicIdProvider {
+class TaisImportActor(config: Config) extends JMSImportActor(config) with TranslatingJMSImportActor
+            with FlatFilteringPublisher with AccumulatingTopicIdProvider with TRACONTopicIdMapper {
 
   //--- translation/parsing
   class FilteringTATrackAndFlightPlanParser extends TATrackAndFlightPlanParser {
@@ -44,13 +56,5 @@ class TAISImportActor(config: Config) extends JMSImportActor(config) with Transl
 
   override def translate (msg: Message): Any = {
     parser.parseTracks(getContentSlice(msg))
-  }
-
-  override def topicIdsOf(t: Any): Seq[String] = {
-    t match {
-      case tracon: TRACON => Seq(tracon.id)
-      case tracons: TRACONs => tracons.map(_.id)
-      case _ => Seq.empty[String]
-    }
   }
 }

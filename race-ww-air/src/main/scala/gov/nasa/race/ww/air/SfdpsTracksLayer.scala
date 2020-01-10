@@ -20,7 +20,7 @@ import java.awt.Color
 
 import akka.actor.Actor.Receive
 import com.typesafe.config.Config
-import gov.nasa.race.air.{ARTCC, SFDPSTrack, SFDPSTracks}
+import gov.nasa.race.air.{ARTCC, SfdpsTrack, SfdpsTracks}
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.Messages.BusEvent
 import gov.nasa.race.geo.GeoPositioned
@@ -36,7 +36,7 @@ import gov.nasa.worldwind.render.{PointPlacemark, PointPlacemarkAttributes}
 
 import scala.collection.Seq
 
-class ArtccSymbol (val artcc: ARTCC, val layer: SFDPSTracksLayer) extends PointPlacemark(wwPosition(artcc.position)) with RaceLayerPickable {
+class ArtccSymbol (val artcc: ARTCC, val layer: SfdpsTracksLayer) extends PointPlacemark(wwPosition(artcc.position)) with RaceLayerPickable {
   var showDisplayName = false
   var attrs = new PointPlacemarkAttributes
 
@@ -59,7 +59,7 @@ class ArtccSymbol (val artcc: ARTCC, val layer: SFDPSTracksLayer) extends PointP
   * a TrackLayer for SFDPS (en route) SWIM data that allows selection of displayed ARTCCs
   * (use generic AircraftLayer if we want to display all)
   */
-class SFDPSTracksLayer (val raceViewer: RaceViewer, val config: Config) extends ModelTrackLayer[SFDPSTrack] {
+class SfdpsTracksLayer(val raceViewer: RaceViewer, val config: Config) extends ModelTrackLayer[SfdpsTrack] {
 
   val showLocations = config.getBooleanOrElse("show-locations", true)
   val locationColor = toABGRString(config.getColorOrElse("location-color", Color.magenta))
@@ -68,10 +68,11 @@ class SFDPSTracksLayer (val raceViewer: RaceViewer, val config: Config) extends 
 
   override def defaultColor = Color.red
   override def defaultSymbolImg = Images.getPlaneImage(color)
-  override def getTrackKey(track: SFDPSTrack): String = track.cs
+  override def getTrackKey(track: SfdpsTrack): String = track.cs
   override def queryLocation(id: String): Option[GeoPositioned] = ARTCC.artccs.get(id)
 
-  var selARTCCs = configuredARTCCs
+  var selARTCCs = Seq.empty[ARTCC]
+
   val selPanel = new MultiSelectionPanel[ARTCC](
     "artcc:", "Select ARTCCs",
     ARTCC.artccList, selectedARTCCs, _.id, _.name, // those are functions
@@ -84,18 +85,28 @@ class SFDPSTracksLayer (val raceViewer: RaceViewer, val config: Config) extends 
 
   //--- end init
 
-  def configuredARTCCs: Seq[ARTCC] = {
-    val topics = config.getOptionalStringList("request-topics")
-    if (topics.isEmpty) {
-      Seq.empty[ARTCC]
-    } else {
-      topics.flatMap(ARTCC.get) // we should check for No/AnyARTCC
+  override def mapTopic (to: Option[Any]): Option[Any] = {
+    to match {
+      case Some(id: String) =>
+        if (ARTCC.artccs.contains(id)) {
+          val artcc = ARTCC.artccs(id)
+          selARTCCs = selARTCCs :+ artcc
+          selPanel.updateSelection(selARTCCs)
+          Some(artcc)
+        } else {
+          if (id == ARTCC.AllId){
+            selARTCCs = Seq(ARTCC.AnyARTCC)
+            selPanel.updateSelection(selARTCCs)
+            Some(ARTCC.AnyARTCC)
+          } else None
+        }
+      case _ => None
     }
   }
 
   def handleSFDPSMessage: Receive = {
-    case BusEvent(_,track:SFDPSTrack,_) => if (acceptSrc(track.src)) handleTrack(track)
-    case BusEvent(_,tracks:SFDPSTracks,_) => if (acceptSrc(tracks.artccId)) tracks.foreach(handleTrack)
+    case BusEvent(_,track:SfdpsTrack,_) => if (acceptSrc(track.src)) handleTrack(track)
+    case BusEvent(_,tracks:SfdpsTracks,_) => if (acceptSrc(tracks.artccId)) tracks.foreach(handleTrack)
   }
 
   override def handleMessage = handleSFDPSMessage orElse super.handleMessage

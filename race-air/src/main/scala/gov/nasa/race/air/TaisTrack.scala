@@ -26,7 +26,9 @@ import gov.nasa.race.common.ConfigurableStreamCreator.{configuredPathName, creat
 import gov.nasa.race.geo.{GeoPosition, XYPos}
 import gov.nasa.race.uom.{Angle, DateTime, Length, Speed}
 
-object TATrack {
+import scala.collection.mutable.ArrayBuffer
+
+object TaisTrack {
   // status bit flags for TATrack attrs (should be >0xffff)
 
   final val PseudoFlag     = 0x10000
@@ -42,21 +44,21 @@ object TATrack {
 /**
   * a specialized TrackedAircraft that represents tracks from TAIS/STARS messages
   */
-case class TATrack (id: String,
-                    cs: String,
-                    position: GeoPosition,
-                    heading: Angle,
-                    speed: Speed,
-                    vr: Speed,
-                    date: DateTime,
-                    status: Int,
+case class TaisTrack(id: String,
+                     cs: String,
+                     position: GeoPosition,
+                     heading: Angle,
+                     speed: Speed,
+                     vr: Speed,
+                     date: DateTime,
+                     status: Int,
 
-                    src: String,
-                    xyPos: XYPos,
-                    beaconCode: String,
-                    flightPlan: Option[FlightPlan]
+                     src: String,
+                     xyPos: XYPos,
+                     beaconCode: String,
+                     flightPlan: Option[FlightPlan]
                   ) extends TrackedAircraft {
-  import TATrack._
+  import TaisTrack._
 
   override def toString = {
     f"TATrack($src,$id,$cs,0x${status.toHexString},$position,${heading.toDegrees}%.0f°,${speed.toKnots}%.1fkn,${vr.toFeetPerMinute}%.0f, $date, $flightPlan)"
@@ -75,13 +77,13 @@ case class TATrack (id: String,
   * an ArchiveWriter for a collection of TATracks that were received/should be replayed together
   * (normally corresponding to a TATrackAndFlightPlan XML message)
   */
-class TATrackBatchWriter(val oStream: OutputStream, val pathName: String="<unknown>") extends CSVArchiveWriter {
+class TaisTrackBatchWriter(val oStream: OutputStream, val pathName: String="<unknown>") extends CSVArchiveWriter {
   def this(conf: Config) = this(createOutputStream(conf), configuredPathName(conf))
 
 
   override def write(date: DateTime, obj: Any): Boolean = {
     obj match {
-      case t: TATrack => writeTrack(t)
+      case t: TaisTrack => writeTrack(t)
       case it: Iterable[_] => writeTracks(date,it)
       case _ => false
     }
@@ -95,7 +97,7 @@ class TATrackBatchWriter(val oStream: OutputStream, val pathName: String="<unkno
     printInt(nTracks,recSep)
   }
 
-  def writeTrack (t: TATrack): Boolean = {
+  def writeTrack (t: TaisTrack): Boolean = {
     printString(t.id)
     printString(t.cs)  // TODO: add optional obfuscation
 
@@ -127,7 +129,7 @@ class TATrackBatchWriter(val oStream: OutputStream, val pathName: String="<unkno
 
     it.foreach { obj =>
       obj match {
-        case t: TATrack =>
+        case t: TaisTrack =>
           if (src == null) {
             src = t.src
             writeHeader(date,src,it.size)
@@ -142,12 +144,12 @@ class TATrackBatchWriter(val oStream: OutputStream, val pathName: String="<unkno
   }
 }
 
-class TATrackCSVReader(in: CSVInputStream) {
+class TaisTrackCSVReader(in: CSVInputStream) {
   import gov.nasa.race.uom.Angle._
   import gov.nasa.race.uom.Length._
   import gov.nasa.race.uom.Speed._
 
-  def read (src: String): TATrack = {
+  def read (src: String): TaisTrack = {
     val id = in.readString
     val cs = in.readString
     val lat = Degrees(in.readDouble)
@@ -165,11 +167,17 @@ class TATrackCSVReader(in: CSVInputStream) {
     // TODO: add flightPlan
     assert(in.wasEndOfRecord)
 
-    new TATrack(id,cs,GeoPosition(lat,lon,alt),hdg,spd,vr,date,status,src,XYPos(x,y),beacon,None)
+    new TaisTrack(id,cs,GeoPosition(lat,lon,alt),hdg,spd,vr,date,status,src,XYPos(x,y),beacon,None)
   }
 }
 
 // a matchable collection type of TATrack objects reported by the same TRACON
-trait TATracks extends TrackedAircraftSeq[TATrack] {
+trait TaisTracks extends TrackedAircraftSeq[TaisTrack] {
   @inline final def traconId: String = assoc
+}
+
+object TaisTracks {
+  val empty: TaisTracks = new ArrayBuffer[TaisTrack](0) with TaisTracks {
+    override def assoc: String = ""
+  }
 }

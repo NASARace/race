@@ -22,7 +22,7 @@ import java.net.{Socket, SocketTimeoutException}
 import akka.actor.ActorRef
 import com.typesafe.config.Config
 import gov.nasa.race.actor.{SocketDataAcquisitionThread, SocketImporter}
-import gov.nasa.race.air.SBSUpdater
+import gov.nasa.race.air.SbsUpdater
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.ChannelTopicProvider
 import gov.nasa.race.core.Messages.ChannelTopicRequest
@@ -40,7 +40,7 @@ import scala.concurrent.duration._
 /**
   * common base type for SBS import/replay actors, which are ChannelTopicProviders for the configured station id
   */
-trait SBSImporter extends ChannelTopicProvider {
+trait SbsImporter extends ChannelTopicProvider {
 
   val stationId: String = config.getStringOrElse("station-id", "default") // the station we serve
   val stationLocation: Option[GeoPosition] = config.getOptionalGeoPosition("station-location") // where the station is located
@@ -86,9 +86,9 @@ trait SBSImporter extends ChannelTopicProvider {
   * and hence would miss a check is handled by setting a timeout on the socket read (our blocking point).
   * Note that with update cycles around 1s it is most unlikely we ever run into such a socket timeout.
   */
-class SBSDataAcquisitionThread (socket: Socket, bufLen: Int, dropDuration: FiniteDuration,
-                                updateFunc: TrackedObject=>Boolean,
-                                dropFunc: (String,String,DateTime,Time)=>Unit) extends SocketDataAcquisitionThread(socket) {
+class SbsDataAcquisitionThread(socket: Socket, bufLen: Int, dropDuration: FiniteDuration,
+                               updateFunc: TrackedObject=>Boolean,
+                               dropFunc: (String,String,DateTime,Time)=>Unit) extends SocketDataAcquisitionThread(socket) {
 
   val dropAfter = Milliseconds(dropDuration.toMillis)
   val checkAfter = dropAfter/2
@@ -105,7 +105,7 @@ class SBSDataAcquisitionThread (socket: Socket, bufLen: Int, dropDuration: Finit
   override def run: Unit = {
     val buf = new Array[Byte](bufLen)
     val in = socket.getInputStream
-    val updater = new SBSUpdater(updateFunc,dropFunc)
+    val updater = new SbsUpdater(updateFunc,dropFunc)
 
     lastDropCheck = DateTime.now
 
@@ -168,7 +168,7 @@ class SBSDataAcquisitionThread (socket: Socket, bufLen: Int, dropDuration: Finit
   * to enable a single, re-used byte array input buffer. The direct translation is possible since SBS (CSV)
   * data is both small and simple to parse, hence translation will not increase socket read latency
   */
-class SBSImportActor (val config: Config) extends SBSImporter with SocketImporter {
+class SbsImportActor(val config: Config) extends SbsImporter with SocketImporter {
 
   // this is a wall time actor
   override def getCapabilities = super.getCapabilities - SupportsPauseResume - SupportsSimTimeReset
@@ -178,7 +178,7 @@ class SBSImportActor (val config: Config) extends SBSImporter with SocketImporte
   override def defaultPort: Int = 30003
 
   override def createDataAcquisitionThread (sock: Socket): Option[SocketDataAcquisitionThread] = {
-    Some(new SBSDataAcquisitionThread(sock, initBufferSize, dropAfter, publishTrack, dropTrack))
+    Some(new SbsDataAcquisitionThread(sock, initBufferSize, dropAfter, publishTrack, dropTrack))
   }
 
   def publishTrack (track: TrackedObject): Boolean = {

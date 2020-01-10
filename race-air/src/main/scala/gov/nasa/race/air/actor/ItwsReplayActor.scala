@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, United States Government, as represented by the
+ * Copyright (c) 2020, United States Government, as represented by the
  * Administrator of the National Aeronautics and Space Administration.
  * All rights reserved.
  *
@@ -14,37 +14,36 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package gov.nasa.race.air.actor
 
 import com.typesafe.config.Config
 import gov.nasa.race.actor.Replayer
-import gov.nasa.race.air.TfmTracks
-import gov.nasa.race.air.translator.TfmDataServiceParser
+import gov.nasa.race.air.translator.ItwsMsgParser
 import gov.nasa.race.archive.{ArchiveReader, ConfiguredTAReader}
+import gov.nasa.race.core.AccumulatingTopicIdProvider
 
+class ItwsReplayActor (val config: Config) extends Replayer[ArchiveReader]
+                                                  with AccumulatingTopicIdProvider with ItwsTopicMapper {
 
-/**
-  * a ReplayActor for TFM-DATA
-  */
-class TfmDataReplayActor (val config: Config) extends Replayer[ArchiveReader] {
+  class FilteringItwsMsgParser extends ItwsMsgParser {
+    override def filterProduct(prodId: String): Boolean = !matchesAnyServedTopicId(prodId)
+  }
 
-  class TfmDataServiceReader (conf: Config) extends ConfiguredTAReader(conf) {
-    val parser = new TfmDataServiceParser
+  class ItwsMsgReader (conf: Config) extends ConfiguredTAReader(conf) {
+    val parser = new FilteringItwsMsgParser
 
     override protected def parseEntryData(limit: Int): Any = {
-      if (parser.checkIfTfmDataService(buf, 0, limit)) parser else None
+      if (parser.checkIfItwsMsg(buf,0,limit)) parser else None
     }
   }
 
-  override def createReader = new TfmDataServiceReader(config)
+  override def createReader = new ItwsMsgReader(config)
 
   override def publishFiltered (msg: Any): Unit = {
     msg match {
-      case parser: TfmDataServiceParser =>
-        val tracks = parser.parseTfmDataServiceInitialized
-        if (tracks.nonEmpty) super.publishFiltered(tracks)
-      case tracks: TfmTracks => super.publishFiltered(tracks)
+      case parser: ItwsMsgParser =>
+        val res = parser.parseItwsMsg
+        if (res.isDefined) super.publishFiltered(res.get)
       case _ => // ignore
     }
   }

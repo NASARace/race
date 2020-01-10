@@ -29,8 +29,12 @@ import scala.collection.concurrent.TrieMap
 
 object PrecipImageStore {
   // if we would have two images of the same product type and trp/offset their grids would overlap
-  def computeId (product: Int, site: String, xoffset: Length, yoffset: Length) =
-    s"$site-$product-${xoffset.toKilometers}-${yoffset.toKilometers}"
+  // TODO - can there be ambiguous product/site combinations
+  def computeId (product: String, site: String, xoffset: Length, yoffset: Length) = {
+    val id = s"$site-$product-${xoffset.toKilometers}-${yoffset.toKilometers}"
+
+    id
+  }
 
   val imageStore = TrieMap[String,BufferedImage]()
 }
@@ -38,7 +42,7 @@ object PrecipImageStore {
 /**
  * precipitation image created from ITWS precip messages
  */
-case class PrecipImage (id: String, product: Int, site: String, genDate: DateTime, expDate: DateTime,
+case class PrecipImage (id: String, product: String, site: String, genDate: DateTime, expDate: DateTime,
                         trpPos: GeoPosition, xoffset: Length, yoffset: Length, rotation: Angle,
                         width: Length, height: Length,
                         maxPrecipLevel: Int,

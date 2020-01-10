@@ -104,7 +104,6 @@ class RaceViewer(viewerActor: RaceViewerActor) extends DeferredEyePositionListen
   var focusObject: Option[LayerObject] = None
 
   val panels: ListMap[String,PanelEntry] = createPanels
-  panels.foreach{ e => frame.initializePanel(e._2) }
 
   // link configured WW objects to this RaceView
   ifInstanceOf[RaceWWView](wwdView){ _.attachToRaceView(this)}
@@ -113,6 +112,7 @@ class RaceViewer(viewerActor: RaceViewerActor) extends DeferredEyePositionListen
   if (!initTimedOut){
     frame.open
     viewController.initialize
+    panels.foreach{ e => frame.initializePanel(e._2) }
   } else {
     frame.dispose
   }

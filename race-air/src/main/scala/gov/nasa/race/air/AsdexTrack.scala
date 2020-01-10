@@ -22,6 +22,8 @@ import gov.nasa.race.geo.GeoPosition
 import gov.nasa.race.track.{TrackedObject, TrackedObjects}
 import gov.nasa.race.uom.{DateTime, _}
 
+import scala.collection.mutable.ArrayBuffer
+
 object AsdexTrack {
   // AsdexTrack specific status flags (>0xffff)
   final val DisplayFlag: Int  =  0x10000
@@ -68,4 +70,11 @@ case class AsdexTrack(id: String,
   */
 trait AsdexTracks extends TrackedObjects[AsdexTrack] {
   @inline final def airportId: String = assoc
+}
+
+object AsdexTracks {
+  // there is no concrete immutable Seq type we can extend?
+  val empty: AsdexTracks = new ArrayBuffer[AsdexTrack](0) with AsdexTracks {
+    override def assoc: String = ""
+  }
 }

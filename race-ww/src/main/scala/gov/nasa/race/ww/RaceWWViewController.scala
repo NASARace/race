@@ -55,7 +55,7 @@ class RaceWWViewController extends OrbitViewInputHandler {
   val viewGoal = new ViewGoal // the goal of a view transition
 
   val viewChangeNotifier = DeferredEDTAction(300,900) {
-    raceViewer.notifyViewChanged
+    if (raceViewer != null) raceViewer.notifyViewChanged
   }
 
   def attachToRaceView(rv: RaceViewer) = {

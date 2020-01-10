@@ -21,7 +21,7 @@ import scala.collection.mutable.{HashMap => MHashMap}
   * all secondary functions (checks and c/s changes) require to keep maps of active
   * TrackedAircraft objects that have update intervals of > 1Hz
   */
-class SBSTranslatorActor (config: Config) extends TranslatorActor(config) with TrackDropper {
+class SbsTranslatorActor(config: Config) extends TranslatorActor(config) with TrackDropper {
 
   val timeCut = config.getIntOrElse("time-cut-ms", 0) // in millis, non-ambiguous positions with lower dt are ignored
   val passSanityViolations = config.getBooleanOrElse ("pass-failed", true)

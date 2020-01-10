@@ -18,7 +18,7 @@ package gov.nasa.race.air.translator
 
 import com.typesafe.config.Config
 import gov.nasa.race.IdentifiableObject
-import gov.nasa.race.air.{TFMTrack, TFMTracks}
+import gov.nasa.race.air.{TfmTrack, TfmTracks}
 import gov.nasa.race.common.inlined.Slice
 import gov.nasa.race.common.{ASCIIBuffer, Parser, UTF8XmlPullParser2}
 import gov.nasa.race.config.ConfigUtils._
@@ -34,7 +34,7 @@ import scala.Double.NaN
 import scala.collection.Seq
 
 // we don't really have a source (yet) but keep it similar to SFDPS and TAIS
-class TFMTracksImpl(initSize: Int) extends MutSrcTracks[TFMTrack](initSize) with TFMTracks
+class TfmTracksImpl(initSize: Int) extends MutSrcTracks[TfmTrack](initSize) with TfmTracks
 
 /**
   * a translator for tfmDataService (tfmdata) SWIM messages. We only process fltdMessage/trackInformation yet
@@ -42,7 +42,7 @@ class TFMTracksImpl(initSize: Int) extends MutSrcTracks[TFMTrack](initSize) with
   * TODO - check if fltdMessage attributes are mandatory since we don't parse the respective trackInformation sub-elements
   */
 class TfmDataServiceParser(val config: Config=NoConfig) extends UTF8XmlPullParser2
-                with ConfigurableTranslator with Parser with MutSrcTracksHolder[TFMTrack,TFMTracksImpl] {
+                with ConfigurableTranslator with Parser with MutSrcTracksHolder[TfmTrack,TfmTracksImpl] {
 
   val tfmDataService = Slice("ds:tfmDataService")
   val fltdMessage = Slice("fdm:fltdMessage")
@@ -62,7 +62,7 @@ class TfmDataServiceParser(val config: Config=NoConfig) extends UTF8XmlPullParse
   // only created on-demand if we have to parse strings
   lazy protected val bb = new ASCIIBuffer(config.getIntOrElse("buffer-size", 120000))
 
-  override def createElements = new TFMTracksImpl(50)
+  override def createElements = new TfmTracksImpl(50)
 
   override def translate(src: Any): Option[Any] = {
     src match {
@@ -85,19 +85,28 @@ class TfmDataServiceParser(val config: Config=NoConfig) extends UTF8XmlPullParse
     if (elements.nonEmpty) Some(elements) else None
   }
 
-  def parseTracks (bs: Array[Byte], off: Int, limit: Int): TFMTracks = {
-    clearElements
-    if (initialize(bs,off,limit)) {
-      while (parseNextTag) {
-        if (isStartTag) {
-          if (tag == tfmDataService) parseTfmDataService
-        }
-      }
+  def parseTracks (bs: Array[Byte], off: Int, limit: Int): TfmTracks = {
+    if (checkIfTfmDataService(bs,off,limit)){
+      parseTfmDataServiceInitialized
+    } else {
+      TfmTracks.empty
     }
-    elements
   }
 
   def parseTracks(s: Slice): Seq[IdentifiableObject] = parseTracks(s.data,s.offset,s.limit)
+
+  def checkIfTfmDataService (bs: Array[Byte], off: Int, limit: Int): Boolean = {
+    if (initialize(bs,off,limit)) {
+      if (parseNextTag && isStartTag) return (tag == tfmDataService)
+    }
+    false
+  }
+
+  def parseTfmDataServiceInitialized: TfmTracks = {
+    clearElements
+    parseTfmDataService
+    elements
+  }
 
   protected def parseTfmDataService: Unit = {
     while (parseNextTag) {
@@ -429,10 +438,10 @@ class TfmDataServiceParser(val config: Config=NoConfig) extends UTF8XmlPullParse
               (date.isDefined && lat.isDefined && lon.isDefined && alt.isDefined && nextWP != null))) {
               val status = if (completed) TrackedObject.CompletedFlag else TrackedObject.TrackNoStatus
               val track = if (completed) {
-                TFMTrack(flightRef,cs,GeoPosition(lat,lon,alt),speed,date,status,
+                TfmTrack(flightRef,cs,GeoPosition(lat,lon,alt),speed,date,status,
                   source,None,DateTime.UndefinedDateTime)
               } else {
-                TFMTrack(flightRef,cs,GeoPosition(lat,lon,alt),speed,date,status,
+                TfmTrack(flightRef,cs,GeoPosition(lat,lon,alt),speed,date,status,
                   source,Some(nextWP),nextWPDate)
               }
               elements += track

@@ -88,7 +88,7 @@ class ITWSprecip2PrecipImage (val config: Config=NoConfig) extends XmlPullParser
     initialize(s.toCharArray)
 
     // we deliberately use null here to fail early
-    var product = 0 // 9849: precip 5nm, 9850: tracon, 9905: long range
+    var product: String = null // 9849: precip 5nm, 9850: tracon, 9905: long range
     var itwsSite: String = null // site id (e.g. N90 - describing a list of airports/tracons)
     var genDate: DateTime = DateTime.UndefinedDateTime; var expDate: DateTime = DateTime.UndefinedDateTime;
     var trpLat: Angle=UndefinedAngle; var trpLon: Angle=UndefinedAngle; var rotation: Angle=UndefinedAngle// degrees
@@ -103,7 +103,7 @@ class ITWSprecip2PrecipImage (val config: Config=NoConfig) extends XmlPullParser
       while (parseNextElement()) {
         if (isStartElement) {
           tag match {
-            case "product_msg_id" => product = readInt()
+            case "product_msg_id" => product = readText()
             case "product_header_itws_sites" => itwsSite = readText()
             case "product_header_generation_time_seconds" => genDate = DateTime.ofEpochMillis( 1000L * readInt())
             case "product_header_expiration_time_seconds" => expDate = DateTime.ofEpochMillis( 1000L * readInt())

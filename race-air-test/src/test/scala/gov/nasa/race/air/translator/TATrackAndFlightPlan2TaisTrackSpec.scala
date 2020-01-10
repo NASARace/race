@@ -1,5 +1,7 @@
 /*
- * Copyright (c) 2019, United States Government, as represented by the
+ * Copyright (c) 2017, United States Government, as represented by the
+ * Administrator of the National Aeronautics and Space Administration.
+ * Copyright (c) 2016, United States Government, as represented by the
  * Administrator of the National Aeronautics and Space Administration.
  * All rights reserved.
  *
@@ -16,43 +18,32 @@
  */
 package gov.nasa.race.air.translator
 
-import gov.nasa.race.air.TATrack
+import gov.nasa.race.air.TaisTrack
 import gov.nasa.race.test.RaceSpec
 import gov.nasa.race.util.FileUtils.fileContentsAsUTF8String
 import org.scalatest.flatspec.AnyFlatSpec
-
 import scala.collection.Seq
 
 /**
-  * reg test for TATrackAndFlightPlanParser (based on XmlPullParser2)
+  * regression test for TATrackAndFlightPlan2TATrack translator
   */
-class TATrackAndFlightPlanParserSpec extends AnyFlatSpec with RaceSpec {
+class TATrackAndFlightPlan2TaisTrackSpec extends AnyFlatSpec with RaceSpec {
+  final val EPS = 0.000001
   val xmlMsg = fileContentsAsUTF8String(baseResourceFile("tais.xml"))
 
   behavior of "TATrackAndFlightPlan2TATrack translator"
 
   "translator" should "reproduce known values" in {
-    val translator = new TATrackAndFlightPlanParser(createConfig("buffer-size = 8000"))
+    val translator = new TATrackAndFlightPlan2TATrack(createConfig("attach-rev = true"))
 
     val res = translator.translate(xmlMsg)
     res match {
-      case Some(list: Seq[_]) =>
-        list.foreach { e =>
-          e match {
-            case taTrack: TATrack =>
-              println(taTrack)
-              taTrack.id match {
-                case "1677" => assert(taTrack.heading.toDegrees.round == 261) // do some sanity check
-                case "146" => assert(taTrack.speed.toKnots.round == 139)
-                case other => fail(s"result item has wrong id: ${taTrack.id}")
-              }
-            case other => fail(s"result item not a TATrack object: $other")
-          }
+      case Some(list: Seq[TaisTrack]) =>
+        list.foreach {
+          println
         }
-        assert(list.size == 2)
       case None => fail("failed to produce result")
       case other => fail(s"failed to parse messages: $other")
     }
   }
-
 }

@@ -25,16 +25,27 @@ import gov.nasa.race.core.{AccumulatingTopicIdProvider, ChannelTopicProvider}
 import gov.nasa.race.jms.{JMSImportActor, TranslatingJMSImportActor}
 import javax.jms.Message
 
+trait ARTCCTopicIdMapper {
+  def topicIdsOf(t: Any): Seq[String] = {
+    t match {
+      case artcc: ARTCC => Seq(artcc.id)
+      case artccs: ARTCCs => artccs.map(_.id) // we could check if size > 1
+      case id: String => if (ARTCC.artccs.contains(id)) Seq(id) else Seq.empty[String]
+      case ids: Seq[_] => ids.map(_.toString).filter(ARTCC.artccs.contains)
+      case _ => Seq.empty[String]
+    }
+  }
+}
+
 /**
   * specialized JMSImportActor for SWIM SFDPS MessageCollection XML messages
   * note that we can't hardwire the JMS config (authentication, URI, topic etc) since SWIM access might vary
   */
-class FilteringSFDPSImportActor(config: Config) extends JMSImportActor(config) with TranslatingJMSImportActor
+class FilteringSfdpsImportActor(config: Config) extends JMSImportActor(config) with TranslatingJMSImportActor
                                           with FlatFilteringPublisher with AccumulatingTopicIdProvider {
-  var isAllSelected: Boolean = servedTopicIds.contains(ARTCC.AllId)
 
   class FilteringMessageCollectionParser extends MessageCollectionParser {
-    override protected def filterSrc (srcId: String) = !isAllSelected && !servedTopicIds.contains(srcId)
+    override protected def filterSrc (srcId: String) = !matchesAnyServedTopicId(srcId)
   }
 
   val parser = new FilteringMessageCollectionParser
@@ -45,15 +56,9 @@ class FilteringSFDPSImportActor(config: Config) extends JMSImportActor(config) w
   }
 
   override def topicIdsOf(t: Any): Seq[String] = t match {
-    case artcc: ARTCC =>
-      isAllSelected = artcc == ARTCC.AnyARTCC
-      Seq(artcc.id)
-    case artccs: ARTCCs =>
-      isAllSelected = artccs.contains(ARTCC.AnyARTCC)
-      artccs.map(_.id) // we could check if size > 1
-    case _ =>
-      isAllSelected = false
-      Seq.empty[String]
+    case artcc: ARTCC => Seq(artcc.id)
+    case artccs: ARTCCs => artccs.map(_.id) // we could check if size > 1
+    case _ => Seq.empty[String]
   }
 }
 
@@ -61,7 +66,7 @@ class FilteringSFDPSImportActor(config: Config) extends JMSImportActor(config) w
   * a SFDPSImportActor that translates and publishes all messages as soon as there is a
   * ChannelTopicSubscriber for any ARTCC
   */
-class OnOffSFDPSImportActor (config: Config) extends JMSImportActor(config) with TranslatingJMSImportActor
+class OnOffSfdpsImportActor(config: Config) extends JMSImportActor(config) with TranslatingJMSImportActor
                                    with FlatFilteringPublisher with ChannelTopicProvider {
 
   class OnOffMessageCollectionParser extends MessageCollectionParser {
@@ -86,7 +91,7 @@ class OnOffSFDPSImportActor (config: Config) extends JMSImportActor(config) with
 /**
   * actor that unconditionally imports and translates all SFDPS MessageCollection messages
   */
-class SFDPSImportActor (config: Config) extends JMSImportActor(config) with TranslatingJMSImportActor
+class SfdpsImportActor(config: Config) extends JMSImportActor(config) with TranslatingJMSImportActor
                                            with FlatFilteringPublisher {
   val parser = new MessageCollectionParser
   parser.setElementsReusable(flatten)

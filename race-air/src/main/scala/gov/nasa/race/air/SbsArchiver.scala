@@ -40,17 +40,17 @@ import scala.annotation.tailrec
   * msg format see http://woodair.net/SBS/Article/Barebones42_Socket_Data.htm
   */
 
-object SBSArchiver {
+object SbsArchiver {
   final val dtgPatternLength = 23  // yyyy/MM/dd,HH:mm:ss.SSS
 }
 
-class SBSArchiveWriter (val oStream: OutputStream, val pathName: String = "<unknown>") extends TimedTextLineArchiveWriter {
+class SbsArchiveWriter(val oStream: OutputStream, val pathName: String = "<unknown>") extends TimedTextLineArchiveWriter {
   def this(conf: Config) = this(createOutputStream(conf), configuredPathName(conf))
   override def close = oStream.close
 }
 
-class SBSArchiveReader (val iStream: InputStream, val pathName: String="<unknown>")  extends TextLineArchiveReader {
-  import SBSArchiver._
+class SbsArchiveReader(val iStream: InputStream, val pathName: String="<unknown>")  extends TextLineArchiveReader {
+  import SbsArchiver._
 
   def this(conf: Config) = this(createInputStream(conf), configuredPathName(conf))
 

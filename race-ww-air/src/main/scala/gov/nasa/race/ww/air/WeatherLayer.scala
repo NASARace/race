@@ -18,33 +18,46 @@
 package gov.nasa.race.ww.air
 
 import com.typesafe.config.Config
-import gov.nasa.race.air.{ITWSGridProjection, PrecipImage}
+import gov.nasa.race.air.{ItwsGridProjection, PrecipImage}
 import gov.nasa.race.core.Messages.BusEvent
+import gov.nasa.race.swing.{MultiSelection, MultiSelectionPanel}
 import gov.nasa.race.swing.Style._
 import gov.nasa.race.uom.Length._
+import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.ww.Implicits._
 import gov.nasa.race.ww.{DynamicLayerInfoPanel, RaceViewer, SubscribingRaceLayer}
 import gov.nasa.worldwind.geom.LatLon
-import gov.nasa.worldwind.render.SurfaceImage
+import gov.nasa.worldwind.render.{Renderable, SurfaceImage}
 
-import scala.collection.immutable.ArraySeq
+import scala.collection.Seq
+import scala.collection.immutable.{ArraySeq, SortedMap}
 import scala.jdk.CollectionConverters._
 import scala.collection.mutable.{Map => MutableMap}
 
 object WeatherLayer {
+
   class PrecipEntry (val pi: PrecipImage)
               extends SurfaceImage(pi.img, ArraySeq.unsafeWrapArray(computeGridCorners(pi)).asJava) {
     def update (newPi: PrecipImage) = setImageSource(newPi.img, corners)
   }
 
   def computeGridCorners(pi: PrecipImage): Array[LatLon] = {
-    val proj = new ITWSGridProjection(pi.trpPos, pi.xoffset, pi.yoffset, pi.rotation)
+    val proj = new ItwsGridProjection(pi.trpPos, pi.xoffset, pi.yoffset, pi.rotation)
     // order is sw,se,ne,nw
     Array[LatLon]( latLonPos2LatLon( proj.toLatLonPos(Length0, Length0)),
                    latLonPos2LatLon( proj.toLatLonPos(pi.width, Length0)),
                    latLonPos2LatLon( proj.toLatLonPos(pi.width, pi.height)),
                    latLonPos2LatLon( proj.toLatLonPos(Length0, pi.height)))
   }
+
+  case class ItwsProduct (val id: String, val descr: String)
+
+  // order represents image Z-order (last on top)
+  val allProducts = SortedMap[String,String](
+    "9905" -> "long range precipitation",
+    "9850" -> "TRACON precipitation",
+    "9849" -> "5nm precipitation"
+  )
 }
 import gov.nasa.race.ww.air.WeatherLayer._
 
@@ -53,10 +66,86 @@ import gov.nasa.race.ww.air.WeatherLayer._
  */
 class WeatherLayer (val raceViewer: RaceViewer, val config: Config) extends SubscribingRaceLayer {
 
+  // this map is used to update images in const time, without having to iterate over all renderables
   val precipMap = MutableMap[String,PrecipEntry]()
+
+  var selProducts: Seq[String] = config.getOptionalStringList("request-topics")
+
   val panel = new DynamicLayerInfoPanel(this).styled("consolePanel")
+  val selPanel = new MultiSelectionPanel[String](
+    "product:", "select product",
+    allProducts.keys.toSeq, selProducts, s => s, allProducts(_), allProducts.size
+  )(selectProducts).defaultStyled
+  panel.contents.addOne(selPanel)
 
   override def size = precipMap.size
+
+  override def initializeLayer: Unit = {
+    super.initializeLayer
+    selProducts.foreach(s => requestTopic(Some(s)))
+  }
+
+  def selectProducts (res: MultiSelection.Result[String]): Unit = {
+    def selProd (newSel: Seq[String]): Unit = {
+      selProducts.diff(newSel).foreach { s => // filter the old products that are released
+        precipMap.filterInPlace { (k, v) =>
+          if (v.pi.product == s) {
+            removeRenderable(v)
+            false
+          } else true
+        }
+        releaseTopic(Some(s))
+      }
+      newSel.diff(selProducts).foreach {  // request the new products
+        s => requestTopic(Some(s))
+      }
+      selProducts = newSel
+    }
+
+    res match {
+      case MultiSelection.SomeSelected(newSel) => selProd(newSel)
+      case MultiSelection.NoneSelected(_) => selProd(Seq.empty[String])
+      case MultiSelection.AllSelected(allProds) => selProd(allProds)
+      case MultiSelection.Canceled(_) => // do nothing
+    }
+  }
+
+  // this is complicated because WWJ RenderableLayer.renderables does not directly allow insertion,
+  // we have to rebuild the complete list of renderables
+  def sortInRenderable (peNew: PrecipEntry): Unit = {
+    val prod = peNew.pi.product
+    var inserted = false
+
+    if (renderables.size > 0) {
+      val rs = renderables.toArray
+      renderables.clear
+      var i = 0
+      while (i < rs.length){
+        val r = rs(i).asInstanceOf[Renderable]
+        if (!inserted) {
+          r match {
+            case pe: PrecipEntry =>
+              // we make use of the fact that prod ids are lexically sorted
+              if (pe.pi.product < prod) { // add in descending order: 9905 -> 9850 -> 9849
+                addRenderable(peNew)
+                inserted = true // just copy the rest
+              }
+            case _ =>
+          }
+        }
+        addRenderable(r)
+        i += 1
+      }
+    }
+
+    if (!inserted) {
+      addRenderable(peNew)
+    }
+  }
+
+  def dumpRenderables: Unit = {
+    renderables.asScala.foreach(e=>println(e.asInstanceOf[PrecipEntry].pi))
+  }
 
   override def handleMessage = {
     case BusEvent(_,pi:PrecipImage,_) =>
@@ -75,13 +164,14 @@ class WeatherLayer (val raceViewer: RaceViewer, val config: Config) extends Subs
         case None =>
           if (pi.maxPrecipLevel > 0) {
             val pe = new PrecipEntry(pi)
-            addRenderable(pe)
+            sortInRenderable(pe)
+            //addRenderable(pe)
             precipMap += (pi.id -> pe)
           }
       }
 
       wwdRedrawManager.redraw
 
-    case other => warning(f"$name ignoring message $other%30.30s..")
+    case other => info(f"$name ignoring message $other%30.30s..")
   }
 }

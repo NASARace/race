@@ -18,15 +18,46 @@ package gov.nasa.race.air.actor
 
 import com.typesafe.config.Config
 import gov.nasa.race.air.translator.ItwsMsgParser
+import gov.nasa.race.core.AccumulatingTopicIdProvider
 import gov.nasa.race.jms.{JMSImportActor, TranslatingJMSImportActor}
 import javax.jms.Message
+
+trait ItwsTopicMapper {
+  def topicIdsOf(t: Any): Seq[String] = {
+    t match {
+      //case "9839" => Seq("9839") // tornado alert
+      // lots more that are not precipitatin images
+
+      //--- precipitation images
+      case s: String => if (isKnownProduct(s)) Seq(s) else Seq.empty[String]
+      case list: Seq[_] => list.map(_.toString).filter(isKnownProduct)
+
+      case _ => Seq.empty[String]
+    }
+  }
+
+  def isKnownProduct (o: String): Boolean = {
+    (o == "9849"            // 5nm
+      || o == "9850"        // tracon
+      || o == "9905")       // long range
+  }
+}
 
 /**
   * specialized JMSImportActor for SWIM ITWS messages
   *
   * TODO - this still has to route messages according to message type (range) like RoutingPrecipImageTranslator
   */
-class ITWSImportActor (config: Config) extends JMSImportActor(config) with TranslatingJMSImportActor {
-  val parser = new ItwsMsgParser
-  override def translate (msg: Message): Any = parser.parse(getContentSlice(msg))
+class ItwsImportActor(config: Config) extends JMSImportActor(config)
+                with TranslatingJMSImportActor with AccumulatingTopicIdProvider with ItwsTopicMapper {
+
+  class FilteringItwsMsgParser extends ItwsMsgParser {
+    override def filterProduct(prodId: String): Boolean = !matchesAnyServedTopicId(prodId)
+  }
+
+  val parser = new FilteringItwsMsgParser
+
+  override def translate (msg: Message): Any = {
+    parser.parse(getContentSlice(msg)).orNull
+  }
 }

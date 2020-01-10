@@ -32,7 +32,7 @@ import scala.collection.Seq
 /**
   * a XML parser that creates and stores TrackInfos from fdm:fltdMessage messages
   */
-class TFMTrackInfoParser extends XmlParser[Seq[TrackInfo]] with XmlAttrProcessor {
+class TfmTrackInfoParser extends XmlParser[Seq[TrackInfo]] with XmlAttrProcessor {
   setBuffered(4096)
 
   val tInfos = new ArrayBuffer[TrackInfo]

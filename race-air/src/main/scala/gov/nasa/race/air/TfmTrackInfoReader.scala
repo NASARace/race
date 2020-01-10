@@ -14,17 +14,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package gov.nasa.race.air.actor
+package gov.nasa.race.air
 
 import com.typesafe.config.Config
-import gov.nasa.race.actor.Replayer
-import gov.nasa.race.air.translator.TATrackAndFlightPlanParser
-import gov.nasa.race.archive.ParsingArchiveReader
-
+import gov.nasa.race.track.{TrackInfo, TrackInfoReader}
+import scala.collection.Seq
 
 /**
-  * specialized Replayer for TAIS tagged archives
+  * a TrackInfoReader that parses TFM messages for TrackInfo data
   */
-class TAISReplayActor (val config: Config) extends Replayer[ParsingArchiveReader] {
-  override def createReader = new ParsingArchiveReader( new TATrackAndFlightPlanParser,config)
+class TfmTrackInfoReader(val config: Config) extends TrackInfoReader {
+
+  val parser = new TfmTrackInfoParser
+
+  override def readMessage(msg: Any): Seq[TrackInfo] = {
+    msg match {
+      case txt: String =>
+        parser.parse(txt) match {
+          case Some(tInfos) => tInfos
+          case None => Seq.empty
+        }
+      case _ => Seq.empty // not handled
+    }
+  }
 }

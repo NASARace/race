@@ -73,10 +73,15 @@ trait ChannelTopicSubscriber extends SubscribingRaceActor {
     for (channel <- readFrom) request(channel,topic)
   }
 
+  // override this in subclasses if we use topics of non-string type
+  def mapTopic (to: Topic): Topic = to
+
+  // this is called during onStartRaceActor
   def requestConfiguredTopics: Unit = {
     config.getOptionalStringList("request-topics").foreach { ctSpec =>
       ChannelTopic.parse(ctSpec) match {
-        case (topic@Some(topicName), channelSpec) =>
+        case (top@Some(topicName), channelSpec) =>
+          val topic = mapTopic(top)
           channelSpec match {
             case Some(regex) =>
               readFrom.foreach { chan =>
@@ -369,23 +374,49 @@ trait TransitiveChannelTopicProvider extends ChannelTopicProvider with ChannelTo
   * thus supporting multiple clients per topic.
   *
   * Concrete types have to provide a map from topic types to string ids
+  *
+  * TODO - this trait maps arbitrarily typed topics back into strings, which are used to
+  * store served topics which can also be pre-configured, i.e. without a client. This is
+  * symmetric to configurable clients, which use request-topics to map strings into topic
+  * objects (Airport etc.), which means the mapping to/from strings to topic objects happens
+  * on both ends (which is suboptimal)
   */
 trait AccumulatingTopicIdProvider extends ChannelTopicProvider {
+  val AllId = "<all>"
 
   val topicKey: String = "served-topics" // override if config should use a more specific name
 
+  var serveAll: Boolean = false  // short circuit for large topic sets
   var servedTopicIds = ArrayBuffer.empty[String]
-  config.getOptionalStringList(topicKey).foreach(id => servedTopicIds += id)
+
+  config.getOptionalStringList(topicKey).foreach { id =>
+    if (id == AllId) {
+      servedTopicIds = ArrayBuffer(id)  // no need to keep anything else
+      serveAll = true
+    } else {
+      if (!serveAll) servedTopicIds += id
+    }
+  }
 
   // this basically defines if we accept a topic - return None if not
+  // FIXME - this is called twice, during request and accept processing. Avoid allocation in
+  // the request
   def topicIdsOf(t: Any): Seq[String]
+
+  def matchesAnyServedTopicId (id: String): Boolean = {
+    if (serveAll) {
+      return true
+    } else {
+      servedTopicIds.contains(id)
+    }
+  }
 
   override def isRequestAccepted(request: ChannelTopicRequest): Boolean = {
     val channelTopic = request.channelTopic
     if (writeTo.contains(channelTopic.channel)) {
       val topic = channelTopic.topic
       if (topic.isDefined) {
-        topicIdsOf(topic.get).nonEmpty
+        serveAll || topicIdsOf(topic.get).nonEmpty
       } else false // no topic
     } else false // channel not supported
   }
@@ -394,6 +425,7 @@ trait AccumulatingTopicIdProvider extends ChannelTopicProvider {
     ifSome(accept.channelTopic.topic) { t =>
       topicIdsOf(t).foreach { id =>
         info(s"got channeltopic accept for topic: $id")
+        if (id == AllId) serveAll = true
         servedTopicIds += id
       }
     }
@@ -404,6 +436,7 @@ trait AccumulatingTopicIdProvider extends ChannelTopicProvider {
       topicIdsOf(t).foreach { id =>
         info(s"got channeltopic release for topic: $id")
         servedTopicIds -= id
+        serveAll = servedTopicIds.contains(AllId) // there might have been other <all> requests
       }
     }
   }

@@ -23,7 +23,7 @@ import java.io.PrintWriter
 import com.typesafe.config.Config
 import gov.nasa.race._
 import gov.nasa.race.actor.{ChannelOptionPublisher, StatsCollectorActor}
-import gov.nasa.race.air.TATrack
+import gov.nasa.race.air.TaisTrack
 import gov.nasa.race.common.TSStatsData.{Ambiguous, Duplicate, Extension, Sameness}
 import gov.nasa.race.common._
 import gov.nasa.race.core.ClockAdjuster
@@ -40,7 +40,7 @@ import scalatags.Text.all._
 class TATrackStatsCollector (val config: Config) extends StatsCollectorActor with ClockAdjuster with ChannelOptionPublisher {
 
   class TACollector (val config: Config, val src: String)
-         extends ConfiguredTSStatsCollector[String,TATrack,TATrackEntryData,TATrackStatsData] {
+         extends ConfiguredTSStatsCollector[String,TaisTrack,TATrackEntryData,TATrackStatsData] {
     val statsData = new TATrackStatsData(src)
     statsData.buckets = createBuckets
 
@@ -51,7 +51,7 @@ class TATrackStatsCollector (val config: Config) extends StatsCollectorActor wit
       statsData.outOfOrderAction = Some(logOutOfOrder)
     }
 
-    def createTSEntryData (t: Long, track: TATrack) = new TATrackEntryData(t,track)
+    def createTSEntryData (t: Long, track: TaisTrack) = new TATrackEntryData(t,track)
     def currentSimTimeMillisSinceStart = TATrackStatsCollector.this.currentSimTimeMillisSinceStart
     def currentSimTimeMillis = TATrackStatsCollector.this.updatedSimTimeMillis
 
@@ -69,7 +69,7 @@ class TATrackStatsCollector (val config: Config) extends StatsCollectorActor wit
   }
 
   override def handleMessage = {
-    case BusEvent(_, track: TATrack, _) =>
+    case BusEvent(_, track: TaisTrack, _) =>
       if (track.date.isDefined) {
         checkInitialClockReset(track.date)
         val tracon = tracons.getOrElseUpdate(track.src, new TACollector(config, track.src))
@@ -88,10 +88,10 @@ class TATrackStatsCollector (val config: Config) extends StatsCollectorActor wit
 
   //--- problem logging (only called if there is a log channel)
 
-  def logUpdate (channel: String, t1: TATrack, t2: TATrack, details: Option[String]=None): Unit = {
+  def logUpdate (channel: String, t1: TaisTrack, t2: TaisTrack, details: Option[String]=None): Unit = {
     val sb = new StringBuilder
 
-    def appendTrack (prefix: String, t: TATrack) = {
+    def appendTrack (prefix: String, t: TaisTrack) = {
       sb.append(prefix)
       sb.append(" [")
       sb.append(objRef(t))
@@ -124,28 +124,28 @@ class TATrackStatsCollector (val config: Config) extends StatsCollectorActor wit
     publishToChannelOption(channel,sb.toString)
   }
 
-  def logDuplicate (t1: TATrack, t2: TATrack): Unit = logUpdate("duplicatedTrack",t1,t2)
-  def logBlackout (t1: TATrack, t2: TATrack): Unit = logUpdate("blackoutTrack", t1,t2)
-  def logAmbiguous (t1: TATrack, t2: TATrack, reason: Option[String]) = logUpdate("ambiguousTrack",t1,t2,reason)
-  def logOutOfOrder (t1: TATrack, t2: TATrack, amount: Option[String]): Unit = logUpdate("outOfOrderTrack", t1,t2, amount)
+  def logDuplicate (t1: TaisTrack, t2: TaisTrack): Unit = logUpdate("duplicatedTrack",t1,t2)
+  def logBlackout (t1: TaisTrack, t2: TaisTrack): Unit = logUpdate("blackoutTrack", t1,t2)
+  def logAmbiguous (t1: TaisTrack, t2: TaisTrack, reason: Option[String]) = logUpdate("ambiguousTrack",t1,t2,reason)
+  def logOutOfOrder (t1: TaisTrack, t2: TaisTrack, amount: Option[String]): Unit = logUpdate("outOfOrderTrack", t1,t2, amount)
 }
 
-class TATrackEntryData (tLast: Long, track: TATrack) extends TSEntryData[TATrack](tLast,track) {
+class TATrackEntryData (tLast: Long, track: TaisTrack) extends TSEntryData[TaisTrack](tLast,track) {
   var nFlightPlan = if (track.hasFlightPlan) 1 else 0 // messages with flight plan
 
-  override def update (obj: TATrack, isSettled: Boolean) = {
+  override def update (obj: TaisTrack, isSettled: Boolean) = {
     super.update(obj,isSettled)
     if (obj.hasFlightPlan) nFlightPlan += 1
   }
   // add consistency status
 }
 
-class TATrackStatsData  (val src: String) extends TSStatsData[TATrack,TATrackEntryData] {
+class TATrackStatsData  (val src: String) extends TSStatsData[TaisTrack,TATrackEntryData] {
   var nNoTime = 0 // number of track positions without time stamps
   var nFlightPlans = 0 // number of active entries with flight plan
   val stddsRevs = new Array[Int](4)
 
-  def updateTATrackStats (obj: TATrack) = {
+  def updateTATrackStats (obj: TaisTrack) = {
     obj.getFirstAmendmentOfType[Rev] match {
       case Some(rev) =>
         rev.level1 match {
@@ -158,17 +158,17 @@ class TATrackStatsData  (val src: String) extends TSStatsData[TATrack,TATrackEnt
     if (obj.date.isUndefined) nNoTime += 1
   }
 
-  override def update (obj: TATrack, e: TATrackEntryData, isSettled: Boolean): Unit = {
+  override def update (obj: TaisTrack, e: TATrackEntryData, isSettled: Boolean): Unit = {
     super.update(obj,e,isSettled) // standard TSStatsData collection
     updateTATrackStats(obj)
   }
 
-  override def add (obj: TATrack, isStale: Boolean, isSettled: Boolean) = {
+  override def add (obj: TaisTrack, isStale: Boolean, isSettled: Boolean) = {
     super.add(obj,isStale,isSettled)
     updateTATrackStats(obj)
   }
 
-  override def rateSameness (t1: TATrack, t2: TATrack): Sameness = {
+  override def rateSameness (t1: TaisTrack, t2: TaisTrack): Sameness = {
     // we don't need to compare src and trackNum since those are used to look up the respective entries
     if (t1.position != t2.position) Ambiguous(Some("position"))
     else if (t1.speed != t2.speed) Ambiguous(Some("speed"))

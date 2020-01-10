@@ -221,6 +221,9 @@ class RaceActorSystem(val config: Config) extends LogController with VerifiableA
         case None => DateTime.UndefinedDateTime
       }
     }
+    info(s"start-time: $startTime")
+    info(s"time-scale:  $timeScale")
+    if (endTime.isDefined) info(s"end-time:   $endTime")
     new SettableClock(startTime, timeScale, endTime, stopped = true)
   }
 

@@ -19,13 +19,37 @@ package gov.nasa.race.air.actor
 
 import com.typesafe.config.Config
 import gov.nasa.race.actor.Replayer
-import gov.nasa.race.air.translator.AsdexMsgParser
-import gov.nasa.race.archive.ParsingArchiveReader
-
+import gov.nasa.race.air.translator.{AsdexMsgParser, FullAsdexMsgParser}
+import gov.nasa.race.air.AsdexTracks
+import gov.nasa.race.archive.{ArchiveReader, ConfiguredTAReader}
+import gov.nasa.race.core.AccumulatingTopicIdProvider
 
 /**
   * a ReplayActor for ASDE-X
   */
-class AsdexReplayActor (val config: Config) extends Replayer[ParsingArchiveReader] {
-  override def createReader = new ParsingArchiveReader(new AsdexMsgParser,config)
+class AsdexReplayActor(val config: Config) extends Replayer[ArchiveReader]
+                    with AccumulatingTopicIdProvider with AirportTopicMapper {
+  class FilteringAsdexMsgParser extends FullAsdexMsgParser {
+    override protected def filterAirport (airportId: String) = !servedTopicIds.contains(airportId)
+  }
+
+  class AsdexMsgReader(conf: Config) extends ConfiguredTAReader(conf) {
+    val parser = new FilteringAsdexMsgParser
+
+    override protected def parseEntryData(limit: Int): Any = {
+      if (parser.checkIfAsdexMsg(buf,0,limit)) return parser else None
+    }
+  }
+
+  override def createReader = new AsdexMsgReader(config)
+
+  override def publishFiltered (msg: Any): Unit = {
+    msg match {
+      case parser: AsdexMsgParser => // delayed parsing
+        val tracks = parser.parseAsdexMsgInitialized
+        if (tracks.nonEmpty) super.publishFiltered(tracks)
+      case tracks: AsdexTracks => super.publishFiltered(tracks)
+      case _ => // ignore
+    }
+  }
 }

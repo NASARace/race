@@ -16,7 +16,7 @@
  */
 package gov.nasa.race.air.translator
 
-import gov.nasa.race.air.{TFMTrack, TFMTracks}
+import gov.nasa.race.air.{TfmTrack, TfmTracks}
 import gov.nasa.race.test.RaceSpec
 import gov.nasa.race.util.FileUtils.fileContentsAsUTF8String
 import org.scalatest.flatspec.AnyFlatSpec
@@ -32,7 +32,7 @@ class TfmDataServiceParserSpec extends AnyFlatSpec with RaceSpec {
 
     val res = translator.translate(xmlMsg)
     res match {
-      case Some(tfmTracks: TFMTracks) =>
+      case Some(tfmTracks: TfmTracks) =>
         val tracks = tfmTracks.tracks
         tracks.foreach { t =>
           println(t)

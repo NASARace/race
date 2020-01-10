@@ -178,19 +178,30 @@ class TaggedASCIIArchiveWriter (val oStream: OutputStream, val pathName:String="
   * an ArchiveReader that uses the tagged archive format
   *
   * note that subclasses can include payload translation to avoid creating raw input copies
+  *
+  * note also that subclasses can call "if (initialized).." at the end of their ctor to make
+  * sure the input stream is readable - otherwise this will be deferred to the first readNextEntry call
   */
 trait TaggedArchiveReader extends ArchiveReader {
   val iStream: InputStream
   val pathName: String
   val initBufferSize: Int
 
-  protected var buf: Array[Byte] = new Array[Byte](initBufferSize)
-  protected val slice: Slice = Slice(buf,0,0)
+  lazy val initialized: Boolean = initialize
+
+  // set by initialize
+  protected var buf: Array[Byte] = _
+  protected var slice: Slice = _
 
   protected var refDate: DateTime = UndefinedDateTime
   protected var extraFileHeader: Array[Byte] = Array.empty[Byte]
 
-  if (!readFileHeader) throw new RuntimeException(s"could not read tagged archive file header of $pathName")
+  // we can't call this from our own init since pathname/istream/initBufferSize are set by derived type
+  private def initialize: Boolean = {
+    buf = new Array[Byte](initBufferSize)
+    slice = Slice(buf,0,0)
+    readFileHeader
+  }
 
   protected def growBuffer (newSize: Int): Unit = {
     buf = new Array[Byte](newSize)
@@ -254,8 +265,8 @@ trait TaggedArchiveReader extends ArchiveReader {
   override def close: Unit = iStream.close
 
   override def readNextEntry: Option[ArchiveEntry] = {
-    if (readEntry) {
-      someEntry
+    if (initialized) {
+      if (readEntry) someEntry else None
     } else None
   }
 
@@ -273,6 +284,14 @@ class TaggedStringArchiveReader (val iStream: InputStream, val pathName:String="
   }
 }
 
+abstract class ConfiguredTAReader (conf: Config) extends TaggedArchiveReader {
+  override val iStream = createInputStream(conf)
+  override val pathName = configuredPathName(conf)
+  override val initBufferSize = conf.getIntOrElse("buffer-size", 32768)
+
+  if (!initialized) throw new RuntimeException(s"failed to initialize tagged archive $pathName")
+}
+
 
 class ParsingArchiveReader  (val parser: Parser,
                              val iStream: InputStream,
@@ -286,6 +305,7 @@ class ParsingArchiveReader  (val parser: Parser,
   )
 
   override protected def parseEntryData(limit: Int): Any = {
+    // this should return a fully initialized parser if this is a message of relevant type
     parser.parse(buf, 0, limit)
   }
 }

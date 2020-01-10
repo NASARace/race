@@ -52,7 +52,7 @@ import scala.collection.mutable
   *
   *  see also http://mode-s.org/decode/
   */
-class SBSUpdater(updateFunc: TrackedObject=>Boolean,
+class SbsUpdater(updateFunc: TrackedObject=>Boolean,
                  dropFunc: (String,String,DateTime,Time)=>Unit) extends UTF8CsvPullParser {
   /**
     * aux object to store aircraft info we get from type 1,4 MSG records

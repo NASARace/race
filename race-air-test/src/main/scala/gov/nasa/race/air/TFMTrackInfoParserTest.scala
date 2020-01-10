@@ -23,7 +23,7 @@ import gov.nasa.race.util.FileUtils
   */
 object TFMTrackInfoParserTest {
   def main (args: Array[String]) = {
-    val parser = new TFMTrackInfoParser
+    val parser = new TfmTrackInfoParser
 
     FileUtils.fileContentsAsUTF8String(args(0)) match {
       case Some(xmlMsg) =>

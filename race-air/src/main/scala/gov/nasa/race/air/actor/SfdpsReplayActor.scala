@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, United States Government, as represented by the
+ * Copyright (c) 2019, United States Government, as represented by the
  * Administrator of the National Aeronautics and Space Administration.
  * All rights reserved.
  *
@@ -14,37 +14,43 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package gov.nasa.race.air.actor
 
 import com.typesafe.config.Config
 import gov.nasa.race.actor.Replayer
-import gov.nasa.race.air.TfmTracks
-import gov.nasa.race.air.translator.TfmDataServiceParser
+import gov.nasa.race.air.SfdpsTracks
+import gov.nasa.race.air.translator.MessageCollectionParser
 import gov.nasa.race.archive.{ArchiveReader, ConfiguredTAReader}
+import gov.nasa.race.core.AccumulatingTopicIdProvider
 
 
 /**
-  * a ReplayActor for TFM-DATA
+  * specialized Replayer for SFDPS tagged archives
   */
-class TfmDataReplayActor (val config: Config) extends Replayer[ArchiveReader] {
-
-  class TfmDataServiceReader (conf: Config) extends ConfiguredTAReader(conf) {
-    val parser = new TfmDataServiceParser
-
-    override protected def parseEntryData(limit: Int): Any = {
-      if (parser.checkIfTfmDataService(buf, 0, limit)) parser else None
+class SfdpsReplayActor(val config: Config) extends Replayer[ArchiveReader]
+                                               with AccumulatingTopicIdProvider with ARTCCTopicIdMapper {
+  class FilteringMessageCollectionParser extends MessageCollectionParser {
+    override protected def filterSrc (artccId: String) = {
+      !matchesAnyServedTopicId(artccId)
     }
   }
 
-  override def createReader = new TfmDataServiceReader(config)
+  class MessageCollectionReader(conf: Config) extends ConfiguredTAReader(conf) {
+    val parser = new FilteringMessageCollectionParser
+
+    override protected def parseEntryData(limit: Int): Any = {
+      if (parser.checkIfMessageCollection(buf,0,limit)) parser else None
+    }
+  }
+
+  override def createReader = new MessageCollectionReader(config)
 
   override def publishFiltered (msg: Any): Unit = {
     msg match {
-      case parser: TfmDataServiceParser =>
-        val tracks = parser.parseTfmDataServiceInitialized
+      case parser: FilteringMessageCollectionParser =>
+        val tracks = parser.parseMessageCollectionInitialized
         if (tracks.nonEmpty) super.publishFiltered(tracks)
-      case tracks: TfmTracks => super.publishFiltered(tracks)
+      case tracks: SfdpsTracks => super.publishFiltered(tracks)
       case _ => // ignore
     }
   }

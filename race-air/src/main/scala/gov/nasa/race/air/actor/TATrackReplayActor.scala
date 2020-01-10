@@ -20,7 +20,7 @@ import java.io.{File, FileInputStream, InputStream}
 import java.util.zip.GZIPInputStream
 
 import com.typesafe.config.Config
-import gov.nasa.race.air.{TATrack, TATrackCSVReader, TRACON}
+import gov.nasa.race.air.{TaisTrack, TaisTrackCSVReader, TRACON}
 import gov.nasa.race.common.CSVInputStream
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.ContinuousTimeRaceActor
@@ -37,12 +37,12 @@ class TATrackReplayActor (val config: Config) extends SubjectImporter[TRACON] wi
 
   val file: File = config.getNonEmptyFile("pathname")
   val in: CSVInputStream = createCSVInputStream
-  val recordReader = new TATrackCSVReader(in)
+  val recordReader = new TaisTrackCSVReader(in)
 
   var nextSubject: String = null
   var nextDate: DateTime = DateTime.UndefinedDateTime // this is simTime
   var nRecords: Int = 0 // in next batch
-  var nextTracks: Array[TATrack] = Array.empty        // set once we encounter a batch we should publish
+  var nextTracks: Array[TaisTrack] = Array.empty        // set once we encounter a batch we should publish
 
   def createCSVInputStream: CSVInputStream = {
     val fis = new FileInputStream(file)
@@ -64,8 +64,8 @@ class TATrackReplayActor (val config: Config) extends SubjectImporter[TRACON] wi
     }
   }
 
-  def readNextBatch: Array[TATrack] = {
-    val a = new Array[TATrack](nRecords)
+  def readNextBatch: Array[TaisTrack] = {
+    val a = new Array[TaisTrack](nRecords)
     var i = 0
     while (i < a.length) {
       a(i) = recordReader.read(nextSubject)

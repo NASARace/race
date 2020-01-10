@@ -20,8 +20,9 @@ import java.awt.{Color, Font}
 
 import akka.actor.Actor.Receive
 import com.typesafe.config.Config
-import gov.nasa.race.air.{AirLocator, Airport, TATrack, TATracks, TRACON}
+import gov.nasa.race.air.{AirLocator, Airport, TaisTrack, TaisTracks, TRACON}
 import gov.nasa.race.config.ConfigUtils._
+import gov.nasa.race.core.ChannelTopicSubscriber
 import gov.nasa.race.core.Messages.BusEvent
 import gov.nasa.race.geo.GreatCircle
 import gov.nasa.race.ifSome
@@ -39,7 +40,7 @@ import gov.nasa.worldwind.WorldWind
 import gov.nasa.worldwind.render._
 
 
-class TraconSymbol(val tracon: TRACON, val layer: TATracksLayer) extends PointPlacemark(wwPosition(tracon.position)) with RaceLayerPickable {
+class TraconSymbol(val tracon: TRACON, val layer: TaisTracksLayer) extends PointPlacemark(wwPosition(tracon.position)) with RaceLayerPickable {
   var showDisplayName = false
   var attrs = new PointPlacemarkAttributes
 
@@ -57,7 +58,7 @@ class TraconSymbol(val tracon: TRACON, val layer: TATracksLayer) extends PointPl
   override def layerItem: AnyRef = tracon
 }
 
-class TATrackEntry (_obj: TATrack, _trajectory: MutTrajectory, _layer: TATracksLayer) extends TrackEntry[TATrack](_obj,_trajectory,_layer) {
+class TaisTrackEntry(_obj: TaisTrack, _trajectory: MutTrajectory, _layer: TaisTracksLayer) extends TrackEntry[TaisTrack](_obj,_trajectory,_layer) {
 
   override def setLabelLevel = symbol.foreach { sym =>
     sym.removeSubLabels
@@ -79,7 +80,7 @@ class TATrackEntry (_obj: TATrack, _trajectory: MutTrajectory, _layer: TATracksL
 /**
   * a layer to display TRACONs and related TATracks
   */
-class TATracksLayer (val raceViewer: RaceViewer, val config: Config) extends ModelTrackLayer[TATrack] with AirLocator {
+class TaisTracksLayer(val raceViewer: RaceViewer, val config: Config) extends ModelTrackLayer[TaisTrack] with AirLocator {
 
   //--- configured values
 
@@ -97,7 +98,7 @@ class TATracksLayer (val raceViewer: RaceViewer, val config: Config) extends Mod
 
   val traconGrid: Option[PolarGrid] =  createGrid
 
-  var selTracon: Option[TRACON] = configuredTracon
+  var selTracon: Option[TRACON] = None
 
   showTraconSymbols
 
@@ -111,17 +112,20 @@ class TATracksLayer (val raceViewer: RaceViewer, val config: Config) extends Mod
   )(processResult).defaultStyled
   panel.contents.insert(1, selPanel)
 
-  override def initializeLayer: Unit = {
-    super.initializeLayer
-    selTracon.foreach(setTracon)
+  // this is used to map configured tracon names into tracons during onStartRaceActor exec
+  override def mapTopic (to: Option[Any]): Option[Any] = {
+    to match {
+      case Some(traconId: String) => selTracon = TRACON.tracons.get(traconId)
+      case _ => // ignore
+    }
+    ifSome (selTracon) { tracon =>
+      selPanel.updateSelection(selTracon)
+      showGrid(tracon)
+    }
+    selTracon
   }
 
-  def configuredTracon: Option[TRACON] = {
-    val topics = config.getOptionalStringList("request-topics")
-    if (topics.nonEmpty) TRACON.tracons.get(topics.head) else None
-  }
-
-  override def createTrackEntry(track: TATrack) = new TATrackEntry(track,createTrajectory(track),this)
+  override def createTrackEntry(track: TaisTrack) = new TaisTrackEntry(track,createTrajectory(track),this)
 
   def createGrid: Option[PolarGrid] = {
     if (config.getBooleanOrElse("show-tracon-grid", false)) {
@@ -138,7 +142,7 @@ class TATracksLayer (val raceViewer: RaceViewer, val config: Config) extends Mod
   }
 
   // this is only called for non-filtered tracks
-  protected def processTrack (track: TATrack): Unit = {
+  protected def processTrack (track: TaisTrack): Unit = {
     incUpdateCount
     getTrackEntry(track) match {
       case Some(acEntry) =>
@@ -152,11 +156,11 @@ class TATracksLayer (val raceViewer: RaceViewer, val config: Config) extends Mod
     !selectedOnly || (selTracon.isDefined && selTracon.get.id == src)
   }
 
-  def handleTATracks (tracks: TATracks): Unit = {
+  def handleTATracks (tracks: TaisTracks): Unit = {
     if (acceptSrc(tracks.assoc)) tracks.foreach (processTrack)
   }
 
-  def handleTATrack (track: TATrack): Unit = {
+  def handleTATrack (track: TaisTrack): Unit = {
     if (acceptSrc(track.src)) processTrack(track)
   }
 
@@ -165,8 +169,8 @@ class TATracksLayer (val raceViewer: RaceViewer, val config: Config) extends Mod
     * event dispatcher
     */
   override def handleMessage: Receive = {
-    case BusEvent(_, track: TATrack, _) => handleTATrack(track)
-    case BusEvent(_, tracks: TATracks, _) => handleTATracks(tracks)
+    case BusEvent(_, track: TaisTrack, _) => handleTATrack(track)
+    case BusEvent(_, tracks: TaisTracks, _) => handleTATracks(tracks)
     case BusEvent(_, term: TrackTerminationMessage, _) =>
       trackEntries.get(term.id) match {
         case Some(acEntry) => removeTrackEntry(acEntry)
@@ -217,13 +221,18 @@ class TATracksLayer (val raceViewer: RaceViewer, val config: Config) extends Mod
     }
 
     selTracon = Some(tracon)
+    showGrid(tracon)
+
+    requestTopic(selTracon)
+
+    selPanel.updateSelection(selTracon)
+  }
+
+  def showGrid (tracon: TRACON): Unit = {
     ifSome(traconGrid) { grid =>
       grid.setCenter(tracon.position)
       grid.show
     }
-    requestTopic(selTracon)
-
-    selPanel.updateSelection(selTracon)
   }
 
   def gotoTracon(tracon: TRACON) = {

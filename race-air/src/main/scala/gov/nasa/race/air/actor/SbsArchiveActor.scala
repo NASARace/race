@@ -17,14 +17,16 @@
 package gov.nasa.race.air.actor
 
 import com.typesafe.config.Config
-import gov.nasa.race.actor.Replayer
-import gov.nasa.race.air.translator.MessageCollectionParser
-import gov.nasa.race.archive.ParsingArchiveReader
-
+import gov.nasa.race.actor.{SocketArchiver, TextLineSocketArchiveWriter}
 
 /**
-  * specialized Replayer for SFDPS tagged archives
+  * a specialized SocketArchiver for SBS text lines received through a socket, assuimg the
+  * default port usec by dump1090 (30003).
+  *
+  * Note that socket data might include incomplete lines, hence we have to use a TextLineSocketArchiveWriter.
+  * Apart from incomplete lines we don't filter
   */
-class SFDPSReplayActor (val config: Config) extends Replayer[ParsingArchiveReader] {
-  override def createReader = new ParsingArchiveReader(new MessageCollectionParser,config)
+class SbsArchiveActor(val config: Config) extends SocketArchiver {
+  override protected def defaultPort: Int = 30003
+  override protected def createWriter = new TextLineSocketArchiveWriter
 }

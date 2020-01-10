@@ -265,15 +265,17 @@ class GzInputStream (is: InputStream, isBlocking: Boolean = false, bufferSize: I
 
   override def read (buf: Array[Byte], off: Int, len: Int): Int = {
     var remaining = len
-    var idx = 0
+    var idx = off
+    var nRead = 0
     while (remaining > 0 && (isBlocking || available > 0)) {
       val n = super.read(buf,idx,remaining)
-      if (n < 0) return idx
+      nRead += n
+      if (n < 0) return nRead
 
       idx += n
       remaining -= n
     }
-    idx
+    nRead
   }
 }
 

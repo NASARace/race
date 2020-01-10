@@ -103,8 +103,8 @@ class AsdexTracksLayer (val raceViewer: RaceViewer, val config: Config)
   // note that we don't move the view here - if the configured view does not show the airport
   // we waste CPU but it would be equally confusing to move the initial view, which might focus
   // on a particular point around the airport
-  var selAirport: Option[Airport] = configuredAirport
-  var active = selAirport.isDefined
+  var selAirport: Option[Airport] = None
+  def active = selAirport.isDefined
 
   val selectedOnly = config.getBooleanOrElse("selected-only", true)
 
@@ -126,6 +126,15 @@ class AsdexTracksLayer (val raceViewer: RaceViewer, val config: Config)
 
   def showAirportSymbols = Airport.airportList.foreach(showAirportSymbol)
 
+  override def mapTopic (to: Option[Any]): Option[Any] = {
+    to match {
+      case Some(id: String) => selAirport = Airport.asdexAirports.get(id)
+      case _ => // ignore
+    }
+    selPanel.updateSelection(selAirport)
+    selAirport
+  }
+
   def configuredAirport: Option[Airport] = {
     val topics = config.getOptionalStringList("request-topics")
     if (topics.nonEmpty) Airport.asdexAirports.get(topics.head) else None
@@ -134,6 +143,7 @@ class AsdexTracksLayer (val raceViewer: RaceViewer, val config: Config)
   override def initializeLayer: Unit = {
     super.initializeLayer
     raceViewer.addViewListener(this)
+    selAirport.foreach(selectAirport)
   }
   override def viewChanged(targetView: ViewGoal): Unit = checkAirportChange(targetView)
 
@@ -155,7 +165,7 @@ class AsdexTracksLayer (val raceViewer: RaceViewer, val config: Config)
     clearTrackEntries
     releaseAll
     selAirport = None
-    active = false
+    selPanel.updateSelection(selAirport)
   }
 
   def checkAirportChange (targetView: ViewGoal): Unit = {
@@ -175,7 +185,7 @@ class AsdexTracksLayer (val raceViewer: RaceViewer, val config: Config)
         if (eyeAltitude <= activeAltitude.toFeet + a.elevation.toFeet){
           requestTopic(newAirport)
           selAirport = newAirport
-          active = true
+          selPanel.updateSelection(selAirport)
         }
       }
     }

@@ -21,7 +21,7 @@ import java.awt.Color
 
 import akka.actor.Actor.Receive
 import com.typesafe.config.Config
-import gov.nasa.race.air.{AirLocator, TFMTrack, TFMTracks}
+import gov.nasa.race.air.{AirLocator, TfmTrack, TfmTracks}
 import gov.nasa.race.core.Messages.BusEvent
 import gov.nasa.race.ww.{Images, RaceViewer}
 import gov.nasa.race.ww.track.TrackLayer
@@ -29,12 +29,12 @@ import gov.nasa.race.ww.track.TrackLayer
 /**
   * a RaceViewerActor WWJ layer to display TFM track data
   */
-class TfmTracksLayer (val raceViewer: RaceViewer, val config: Config) extends TrackLayer[TFMTrack] with AirLocator {
+class TfmTracksLayer (val raceViewer: RaceViewer, val config: Config) extends TrackLayer[TfmTrack] with AirLocator {
 
   override def defaultColor = Color.magenta
   override def defaultSymbolImg = Images.getPlaneImage(color)
 
-  def processTrack (tfmTrack: TFMTrack): Unit = {
+  def processTrack (tfmTrack: TfmTrack): Unit = {
     getTrackEntry(tfmTrack) match {
       case Some(trackEntry) =>
         if (tfmTrack.nextPos.isEmpty) removeTrackEntry(trackEntry)  // completed
@@ -46,10 +46,10 @@ class TfmTracksLayer (val raceViewer: RaceViewer, val config: Config) extends Tr
   }
 
   def handleTfmTracksLayerMessage: Receive = {
-    case BusEvent(_,tracks: TFMTracks,_) =>
+    case BusEvent(_,tracks: TfmTracks,_) =>
       incUpdateCount
       tracks.foreach(processTrack)
-    case BusEvent(_,track: TFMTrack,_) =>
+    case BusEvent(_,track: TfmTrack,_) =>
       incUpdateCount
       processTrack(track)
 

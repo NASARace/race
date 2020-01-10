@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, United States Government, as represented by the
+ * Copyright (c) 2016, United States Government, as represented by the
  * Administrator of the National Aeronautics and Space Administration.
  * All rights reserved.
  *
@@ -14,27 +14,28 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package gov.nasa.race.air
 
-import com.typesafe.config.Config
-import gov.nasa.race.track.{TrackInfo, TrackInfoReader}
-import scala.collection.Seq
+package gov.nasa.race.air.translator
+
+import java.io.File
+import gov.nasa.race._
+import gov.nasa.race.util.FileUtils._
+import gov.nasa.race.test.RaceSpec
+import org.scalatest.flatspec.AnyFlatSpec
 
 /**
-  * a TrackInfoReader that parses TFM messages for TrackInfo data
+  * unit test for TfmDataService2TFMTracksSpec translation
   */
-class TFMTrackInfoReader (val config: Config) extends TrackInfoReader {
+class TfmDataService2TfmTracksSpec extends AnyFlatSpec with RaceSpec {
 
-  val parser = new TFMTrackInfoParser
+  val xmlMsg = fileContentsAsUTF8String(baseResourceFile("tfmdata.xml"))
 
-  override def readMessage(msg: Any): Seq[TrackInfo] = {
-    msg match {
-      case txt: String =>
-        parser.parse(txt) match {
-          case Some(tInfos) => tInfos
-          case None => Seq.empty
-        }
-      case _ => Seq.empty // not handled
-    }
+  behavior of "TfmDataService2TFMTracks translator"
+
+  "translator" should "reproduce known values" in {
+    val translator = new TfmDataService2TFMTracks
+    val res = translator.translate(xmlMsg)
+    println(res)
+    ifSome(res) { a => a.tracks.foreach(println) }
   }
 }

@@ -142,6 +142,7 @@ trait SubscribingRaceLayer extends RaceLayer with AkkaSwingBridge {
   def extraReadChannels: Seq[String] = Seq.empty[String]
 
   // forwards (?? thread safety)
+  def mapTopic (topic: Topic): Topic = topic
   def request (channel: String, topic: Topic) = actor.request(channel, topic)
   def requestTopic (topic: Topic) = actor.requestTopic(topic)
   def release (channel: String, topic: Topic) = actor.release(channel, topic)
@@ -181,6 +182,8 @@ class RaceLayerActor (val config: Config, val layer: SubscribingRaceLayer) exten
     case msg: BusEvent => layer.queueMessage(msg)
     case msg: DelayedAction => layer.queueMessage(msg)
   }
+
+  override def mapTopic (topic: Topic): Topic = layer.mapTopic(topic)
 }
 
 /**

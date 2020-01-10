@@ -87,18 +87,40 @@ class AsdexMsgParser(val config: Config=NoConfig) extends UTF8XmlPullParser2
   }
 
   def parseTracks (bs: Array[Byte], off: Int, limit: Int): AsdexTracks = {
-    clearElements
-    if (initialize(bs,off,limit)) {
-      while (parseNextTag) {
-        if (isStartTag) {
-          if (tag == ns2$asdexMsg || tag == asdexMsg) parseAsdexMsg
-        }
-      }
+    if (checkIfAsdexMsg(bs,off,limit)){
+      parseAsdexMsgInitialized
+    } else {
+      AsdexTracks.empty
     }
-    elements
   }
 
   def parseTracks(s: Slice): AsdexTracks = parseTracks(s.data,s.offset,s.limit)
+
+  /**
+    * only initialize and check if it is a relevant message, but don't parse
+    * the asdexMsg tracks yet. This can be used as the first step for replay actors that
+    * filter messages and tracks, and have to postpone the expensive track parsing until
+    * the message is up and we can check if there is a subscriber for it
+    */
+  def checkIfAsdexMsg (bs: Array[Byte], off: Int, limit: Int): Boolean = {
+    if (initialize(bs,off,limit)) {
+      if (parseNextTag && isStartTag) {
+        if (tag == ns2$asdexMsg || tag == asdexMsg) return true
+      }
+    }
+    false
+  }
+
+  /**
+    * this is the second step for a replayed asdexMsg, which does the heavy lifting track
+    * parsing when it is time to publish/filter respective AsdexTracks.
+    * Note this still uses the extensible src/track filtering
+    */
+  def parseAsdexMsgInitialized: AsdexTracks = {
+    clearElements
+    parseAsdexMsg
+    elements
+  }
 
   // optional filters defined in subclasses
   protected def filterAirport (srcId: String) = false
@@ -113,6 +135,7 @@ class AsdexMsgParser(val config: Config=NoConfig) extends UTF8XmlPullParser2
           if (parseSingleContentString) {
             airportId = contentString.intern
             if (filterAirport(airportId)) return  // bail if this airport is filtered out
+            elements.src = airportId
           }
         } else if (tag == positionReport) {
           if (airportId != null) parsePositionReport(airportId)

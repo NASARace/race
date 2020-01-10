@@ -31,9 +31,9 @@ import Math._
  *
  * <2do> verify signums (offsets and rotation)
  */
-class ITWSGridProjection (val trpPos: GeoPosition, // tracon reference point in (φ,λ)
-                          val xoffset: Length, yoffset: Length, // trp -> grid origin (SW)
-                          val rotation: Angle) {                  // trueN -> magN at trp
+class ItwsGridProjection(val trpPos: GeoPosition, // tracon reference point in (φ,λ)
+                         val xoffset: Length, yoffset: Length, // trp -> grid origin (SW)
+                         val rotation: Angle) {                  // trueN -> magN at trp
 
   // rotation constants
   final val SinΘ = Sin(rotation)

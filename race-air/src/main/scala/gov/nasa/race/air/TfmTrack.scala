@@ -18,33 +18,28 @@
 package gov.nasa.race.air
 
 import gov.nasa.race.uom.DateTime
-import gov.nasa.race.geo.{GreatCircle, GeoPosition}
+import gov.nasa.race.geo.{GeoPosition, GreatCircle}
 import gov.nasa.race.track.TrackedObject
 import gov.nasa.race.uom.Angle._
 import gov.nasa.race.uom._
 
 import scala.collection.Seq
+import scala.collection.mutable.ArrayBuffer
 
 /**
   * matchable type for a collection of TFMTracks
   */
-trait TFMTracks extends Seq[TFMTrack]
-/*
-case class TFMTracks (tracks: Seq[TFMTrack]) {
-  override def toString = {
-    val sb = new StringBuilder
-    sb.append("TFMTracks = [")
-    tracks.foreach( t => { sb.append("\n"); sb.append(t) } )
-    sb.append(" ]")
-    sb.toString()
-  }
+trait TfmTracks extends Seq[TfmTrack]
+
+object TfmTracks {
+  val empty = new ArrayBuffer[TfmTrack](0) with TfmTracks
 }
- */
+
 
 /**
   * object representing a Traffic Flow Management (TFM) track update
   */
-case class TFMTrack(id: String,
+case class TfmTrack(id: String,
                     cs: String,
                     position: GeoPosition,
                     speed: Speed,
@@ -53,7 +48,7 @@ case class TFMTrack(id: String,
 
                     src: String,
                     nextPos: Option[GeoPosition],
-                    nextDate: DateTime  // might be undefined
+                    nextDate: DateTime // might be undefined
                    ) extends TrackedObject {
 
   val heading = if (nextPos.isDefined) GreatCircle.initialBearing(position,nextPos.get) else Degrees(0)
