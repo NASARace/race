@@ -16,6 +16,7 @@
  */
 package gov.nasa.race.air.actor
 
+import akka.actor.ActorRef
 import akka.http.scaladsl.model.{HttpMethods, HttpRequest}
 import akka.util.ByteString
 import com.typesafe.config.Config
@@ -23,6 +24,8 @@ import gov.nasa.race.uom.Angle._
 import gov.nasa.race.actor.FilteringPublisher
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.air.translator.OpenSkyParser
+import gov.nasa.race.archive.TaggedASCIIArchiveWriter
+import gov.nasa.race.core.ContinuousTimeRaceActor
 import gov.nasa.race.http.HttpImportActor
 
 import scala.concurrent.duration._
@@ -52,8 +55,9 @@ class OpenSkyImportActor (config: Config) extends HttpImportActor (config) with 
     Seq(HttpRequest(HttpMethods.GET, uri))
   }
 
-  override protected def publishResponseData (body: ByteString): Unit = {
-    val bs = body.toArray // TODO check if asByteBuffer.array avoids copying
+  override protected def processResponseData(body: ByteString): Unit = {
+    val bs = body.toArray // unfortunately a copying version
+    //val bs = body.asByteBuffer.array // does not work since HeapByteBuffer is readonly
 
     val res = parser.parse(bs)
     if (res.nonEmpty){
@@ -63,5 +67,24 @@ class OpenSkyImportActor (config: Config) extends HttpImportActor (config) with 
         publishFiltered(res)
       }
     }
+  }
+}
+
+class OpenSkyArchiveActor (conf: Config) extends OpenSkyImportActor(conf) with ContinuousTimeRaceActor {
+  val writer = new TaggedASCIIArchiveWriter(config)
+
+  override def onStartRaceActor (originator: ActorRef) = {
+    writer.open(baseSimTime)
+    super.onStartRaceActor(originator)
+  }
+
+  override def onTerminateRaceActor(originator: ActorRef) = {
+    writer.close
+    super.onTerminateRaceActor(originator)
+  }
+
+  override protected def processResponseData(body: ByteString): Unit = {
+    val bs = body.toArray
+    writer.write(currentSimTime,bs)
   }
 }

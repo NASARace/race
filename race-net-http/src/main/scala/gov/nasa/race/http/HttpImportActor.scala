@@ -198,7 +198,7 @@ class HttpImportActor (val config: Config) extends PublishingRaceActor
             firstRequest
 
           } else {
-            entity.dataBytes.runFold(ByteString(""))(_ ++ _).foreach { publishResponseData }
+            entity.dataBytes.runFold(ByteString(""))(_ ++ _).foreach { processResponseData }
           }
 
         } else { // not alive, discard
@@ -221,7 +221,7 @@ class HttpImportActor (val config: Config) extends PublishingRaceActor
   }
 
   // override if we need to publish translated objects
-  protected def publishResponseData (body: ByteString): Unit = {
+  protected def processResponseData(body: ByteString): Unit = {
     if (publishAsBytes) {
       val msg = body.toArray
       if (msg.nonEmpty) {

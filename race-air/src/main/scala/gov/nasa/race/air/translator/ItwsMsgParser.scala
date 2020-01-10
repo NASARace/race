@@ -34,7 +34,7 @@ object ItwsMsgParser {
 
     0xffffffff, // 0: no precipitation - transparent colormodel index
 
-    //--- green to red
+    //--- opaque green to red
     /*
     0xffa0f000, // 1: level 1
     0xff60b000, // 2: level 2
@@ -44,7 +44,7 @@ object ItwsMsgParser {
     0xffa00000, // 6: level 6
     */
 
-    //--- yellow to red
+    //--- transparent yellow to purple
     0x94ffff0a, // 1: level 1  yellow
     0xa4f8d810, // 2: level 2
     0xa8fd8080, // 3: level 3  orange
@@ -52,6 +52,7 @@ object ItwsMsgParser {
     0xd0D62295, // 5: level 5
     0xfa9410ff, // 6: level 6
 
+    //--- pseudo values
     0x00000000, // 7: attenuated
     0x00000000, // 8: anomalous propagation
     0x00000000, // 9: bad value

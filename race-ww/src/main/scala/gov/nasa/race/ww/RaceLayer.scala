@@ -18,6 +18,7 @@
 package gov.nasa.race.ww
 
 import java.awt.{Color, Font}
+import java.util
 
 import akka.actor.ActorRef
 import com.typesafe.config.Config
@@ -31,9 +32,10 @@ import gov.nasa.race.ww.EventAction.EventAction
 import gov.nasa.race.ww.LayerObjectAction.LayerObjectAction
 import gov.nasa.race.ww.LayerObjectAttribute.LayerObjectAttribute
 import gov.nasa.worldwind.layers.RenderableLayer
-import gov.nasa.worldwind.render.Material
+import gov.nasa.worldwind.render.{Material, Renderable}
 
 import scala.concurrent.duration.FiniteDuration
+
 
 /**
   * a RenderableLayer with RaceLayerInfo fields
@@ -43,8 +45,12 @@ import scala.concurrent.duration.FiniteDuration
   *
   * Note - this class provides the abstract members of the
   * RaceLayerInfo trait that can be initialized from the ctor Config argument
+  *
+  * note also this needs to be a class since we can't access the protected Java renderables
+  * field directly
   */
-trait RaceLayer extends RenderableLayer with RaceLayerInfo {
+abstract class RaceLayer extends RenderableLayer with RaceLayerInfo {
+
   val raceViewer: RaceViewer
   val config: Config
 
@@ -88,6 +94,33 @@ trait RaceLayer extends RenderableLayer with RaceLayerInfo {
   def setFocused (e: LayerObject, isFocused: Boolean, report: Boolean): Unit = {} // default is no focus objects
 
   def size: Int // answer number of items in layer
+
+  // this is complicated because WWJ RenderableLayer.renderables does not directly allow insertion,
+  // we have to rebuild the complete list of renderables
+  def sortInRenderable (rNew: Renderable)(compare: (Renderable,Renderable)=>Int): Unit = {
+    var inserted = false
+
+    if (renderables.size > 0) {
+      val rs = renderables.toArray
+      renderables.clear
+      var i = 0
+      while (i < rs.length){
+        val r = rs(i).asInstanceOf[Renderable]  // the element type has to be Renderable
+        if (!inserted) {
+          if (compare(r,rNew) < 0){
+            addRenderable(rNew)
+            inserted = true
+          }
+        }
+        addRenderable(r)
+        i += 1
+      }
+    }
+
+    if (!inserted) {
+      addRenderable(rNew)
+    }
+  }
 }
 
 /**

@@ -74,7 +74,7 @@ class RectangularArea (val config: Config) extends SurfacePolygon with Configura
   * a layer with optionally configured areas that are displayed in the same color with a
   * variable alpha. Useful to create background contrast
   */
-class AreaLayer (val raceViewer: RaceViewer, val config: Config) extends RenderableLayer with RaceLayer {
+class AreaLayer (val raceViewer: RaceViewer, val config: Config) extends RaceLayer {
 
   var areas: Seq[ConfigurableArea] = createAreas
   val panel = new StaticLayerInfoPanel(this, size)

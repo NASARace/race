@@ -110,40 +110,18 @@ class WeatherLayer (val raceViewer: RaceViewer, val config: Config) extends Subs
     }
   }
 
-  // this is complicated because WWJ RenderableLayer.renderables does not directly allow insertion,
-  // we have to rebuild the complete list of renderables
-  def sortInRenderable (peNew: PrecipEntry): Unit = {
+  def sortInPERenderable (peNew: PrecipEntry): Unit = {
     val prod = peNew.pi.product
-    var inserted = false
-
-    if (renderables.size > 0) {
-      val rs = renderables.toArray
-      renderables.clear
-      var i = 0
-      while (i < rs.length){
-        val r = rs(i).asInstanceOf[Renderable]
-        if (!inserted) {
-          r match {
-            case pe: PrecipEntry =>
-              // we make use of the fact that prod ids are lexically sorted
-              if (pe.pi.product < prod) { // add in descending order: 9905 -> 9850 -> 9849
-                addRenderable(peNew)
-                inserted = true // just copy the rest
-              }
-            case _ =>
-          }
-        }
-        addRenderable(r)
-        i += 1
+    sortInRenderable(peNew){ (r, _) =>
+      r match {
+        case pe: PrecipEntry => pe.pi.product.compare(prod)
+        case _ => -1
       }
-    }
-
-    if (!inserted) {
-      addRenderable(peNew)
     }
   }
 
   def dumpRenderables: Unit = {
+    println("----------------")
     renderables.asScala.foreach(e=>println(e.asInstanceOf[PrecipEntry].pi))
   }
 
@@ -164,8 +142,7 @@ class WeatherLayer (val raceViewer: RaceViewer, val config: Config) extends Subs
         case None =>
           if (pi.maxPrecipLevel > 0) {
             val pe = new PrecipEntry(pi)
-            sortInRenderable(pe)
-            //addRenderable(pe)
+            sortInPERenderable(pe)
             precipMap += (pi.id -> pe)
           }
       }

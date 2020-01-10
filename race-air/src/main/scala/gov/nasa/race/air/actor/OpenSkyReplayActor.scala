@@ -33,7 +33,7 @@ class OpenSkyReader (val iStream: InputStream, val pathName: String="<unknown>",
 
   def this(conf: Config) = this(createInputStream(conf), // this takes care of optional compression
     configuredPathName(conf),
-    conf.getIntOrElse("buffer-size",4096))
+    conf.getIntOrElse("buffer-size",32768))
 
   override protected def parseEntryData(limit: Int): Any = {
     parse(buf,limit)
