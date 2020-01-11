@@ -28,9 +28,11 @@ import gov.nasa.race.uom.Angle._
 import gov.nasa.race.uom.Length._
 import gov.nasa.race.uom.Speed._
 import gov.nasa.race.uom._
-import gov.nasa.race.track.TrackedObject
+import gov.nasa.race.track.{MutSrcTracks, TrackedObject}
 import gov.nasa.race.track.TrackedObject.TrackProblem
 import gov.nasa.race.util.InputStreamLineTokenizer
+
+import scala.collection.mutable.ArrayBuffer
 
 
 object FlightPos {
@@ -244,3 +246,13 @@ trait FlightPosChecker {
 }
 
 object EmptyFlightPosChecker extends FlightPosChecker
+
+/**
+  * matchable type for FlightPos Seqs
+  */
+trait FlightPosSeq extends TrackedAircraftSeq[FlightPos]
+
+/**
+  * mutable, sourceable implementation of FlightPosSeq
+  */
+class FlightPosSeqImpl (initSize: Int) extends MutSrcTracks[FlightPos](initSize) with FlightPosSeq

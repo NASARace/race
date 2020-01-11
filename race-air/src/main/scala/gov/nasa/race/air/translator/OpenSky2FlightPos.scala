@@ -18,12 +18,13 @@
 package gov.nasa.race.air.translator
 
 import com.typesafe.config.Config
-import gov.nasa.race.air.FlightPos
+import gov.nasa.race.air.{FlightPos, FlightPosSeq, FlightPosSeqImpl}
 import gov.nasa.race.common.{UTF8Buffer, UTF8JsonPullParser}
 import gov.nasa.race.common.inlined.Slice
 import gov.nasa.race.config.{ConfigurableTranslator, NoConfig}
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.geo.GeoPosition
+import gov.nasa.race.track.MutSrcTracksHolder
 import gov.nasa.race.uom.Angle._
 import gov.nasa.race.uom.DateTime
 import gov.nasa.race.uom.Speed._
@@ -52,11 +53,11 @@ import OpenSkyParser._
   *
   * this parser returns (potentially empty) FlightPos lists
   */
-class OpenSkyParser extends UTF8JsonPullParser {
+class OpenSkyParser extends UTF8JsonPullParser with MutSrcTracksHolder[FlightPos,FlightPosSeqImpl] {
 
-  def parse (msg: Array[Byte], lim: Int): Seq[FlightPos] = {
-    var list: ArrayBuffer[FlightPos] = null
+  override def createElements = new FlightPosSeqImpl(100)
 
+  def parse (msg: Array[Byte], lim: Int): FlightPosSeq = {
     def parseState: Unit = {
       matchArrayStart
       val icao = readQuotedValue.intern
@@ -77,13 +78,14 @@ class OpenSkyParser extends UTF8JsonPullParser {
       //println(f" $n%2d:  '$icao%10s', '$cs%10s', $timePos%12d,  ($lat%10.5f, $lon%10.5f), $alt%7.2f, $spd%5.2f, $hdg%3.0f, $vr%5.2f")
 
       if (cs.nonEmpty && !lat.isNaN && !lon.isNaN && !alt.isNaN && !hdg.isNaN && !spd.isNaN){
-        if (list == null) list = new ArrayBuffer[FlightPos](50)
-        list += new FlightPos(
+        elements += new FlightPos(
           icao,cs.trim,GeoPosition.fromDegreesAndMeters(lat,lon,alt),MetersPerSecond(spd),Degrees(hdg),
           MetersPerSecond(vr),DateTime.ofEpochMillis(timePos*1000)
         )
       }
     }
+
+    clearElements
 
     if (initialize(msg,lim)){
       matchObjectStart
@@ -94,7 +96,7 @@ class OpenSkyParser extends UTF8JsonPullParser {
       matchObjectEnd
     }
 
-    if (list.nonEmpty) list else Seq.empty[FlightPos]
+    elements
   }
 
   def parse (msg: Array[Byte]): Seq[FlightPos] = parse(msg,msg.length)

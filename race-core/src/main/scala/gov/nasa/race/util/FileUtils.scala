@@ -24,7 +24,7 @@ import java.nio.charset.{CharsetDecoder, StandardCharsets}
 import java.nio.file._
 import java.nio.file.attribute.BasicFileAttributes
 import java.security.MessageDigest
-import java.util.zip.{CRC32, GZIPInputStream}
+import java.util.zip.{CRC32, GZIPInputStream, GZIPOutputStream}
 
 import scala.io.BufferedSource
 import StringUtils._
@@ -126,7 +126,7 @@ object FileUtils {
   def getExtension (file: File): String = getExtension(file.getName)
 
   def inputStreamFor (f: File, bufLen: Int): Option[InputStream] = {
-    if (f.isFile) {
+    if (f.canRead) {
       if (f.getName.endsWith(".gz")){
         Some( new GZIPInputStream( new FileInputStream(f)))
       } else {
@@ -135,6 +135,16 @@ object FileUtils {
     } else None
   }
   def inputStreamFor (pathName: String, bufLen: Int): Option[InputStream] = inputStreamFor(new File(pathName),bufLen)
+
+  def outputStreamFor (f: File): Option[OutputStream] = {
+    if (f.createNewFile) {
+      if (f.getName.endsWith(".gz")){
+        Some( new GZIPOutputStream( new FileOutputStream(f)))
+      } else {
+        Some( new FileOutputStream(f))
+      }
+    } else None
+  }
 
   def ensureDir (pathName: String): Option[File] = ensureDir(new File(pathName))
 

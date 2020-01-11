@@ -45,8 +45,10 @@ class OpenSkyImportActor (config: Config) extends HttpImportActor (config) with 
   val maxLon = Degrees(config.getDouble("max-lon"))
 
   val host = config.getStringOrElse("host", "https://opensky-network.org")
-  val flatten = config.getBooleanOrElse("flatten", true)
+  val flatten = config.getBooleanOrElse("flatten", false)
+
   val parser = new OpenSkyParser
+  parser.setElementsReusable(flatten) // only reuse elements if we flatten results
 
   override def defaultTickInterval: FiniteDuration = 5.seconds // we want periodic updates
 

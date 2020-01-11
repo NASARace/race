@@ -20,7 +20,7 @@ package gov.nasa.race.actor
 import com.typesafe.config.Config
 import gov.nasa.race.core.Messages.BusEvent
 import gov.nasa.race.core.SubscribingRaceActor
-import gov.nasa.race.track.{TrackCompleted, TrackCsChanged, TrackDropped, TrackedObject}
+import gov.nasa.race.track.{TrackCompleted, TrackCsChanged, TrackDropped, TrackedObject, TrackedObjects}
 
 import scala.collection.mutable
 
@@ -36,10 +36,21 @@ class TrackDropperActor(val config: Config) extends SubscribingRaceActor with Tr
 
   override def removeStaleTrack(ac: TrackedObject) = tracks -= ac.cs
 
+  def update (track: TrackedObject): Unit = {
+    if (track.isDroppedOrCompleted) {  // ? do we still need to publish TrackDropped event if the track has a drop status?
+      tracks -= track.cs
+    } else {
+      tracks += track.cs -> track
+    }
+  }
+
   override def handleMessage = handleFPosDropperMessage orElse {
-    case BusEvent(_,ac: TrackedObject,_) => tracks += ac.cs -> ac
+    case BusEvent(_,track: TrackedObject,_) => update(track)
+    case BusEvent(_,tracks:TrackedObjects[_],_) => tracks.foreach(update)
+
     case BusEvent(_,fcompleted: TrackCompleted,_) => tracks -= fcompleted.cs
     case BusEvent(_,_:TrackDropped,_) => // ignore - we are generating these
+
     case BusEvent(_,_:TrackCsChanged,_) => // ignore
   }
 }

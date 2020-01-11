@@ -123,6 +123,9 @@ object TrackQuery {
   }
 }
 
+/**
+  * a combinator parser for basic TrackedObject properties supporting and/or operators and glob patterns
+  */
 class TrackQueryParser(val ctx: TrackQueryContext)  extends RegexParsers {
   import TrackQuery._
 
@@ -150,7 +153,7 @@ class TrackQueryParser(val ctx: TrackQueryContext)  extends RegexParsers {
 
   def allSpec: Parser[Query] = ("all" | "*") ^^^ { AllFilter }
 
-  def noneSpec: Parser[Query] = "none" ^^^ { NoneFilter }
+  def noneSpec: Parser[Query] = ("none" | "-") ^^^ { NoneFilter }
 
   def csSpec: Parser[Query] = "cs" ~ "=" ~ GLOB ^^ {
     case _ ~ _ ~ glob => new CsFilter(StringUtils.globToRegex(glob))
