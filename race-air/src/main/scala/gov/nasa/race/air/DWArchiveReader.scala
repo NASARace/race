@@ -102,6 +102,11 @@ abstract class DWArchiveReader (iStream: InputStream, val headerStart: BMSearch)
   }
 }
 
+/**
+  * DW archive with msg time that is first text field following '<properties>' header
+  * field value is epoch in millis
+  * NOTE - this is fragile since DW header formats change
+  */
 abstract class FirstEpochDWArchiveReader(iStream: InputStream, hdrStart: String)
                                        extends DWArchiveReader(iStream, new BMSearch(hdrStart)) {
   // we just use the x_TIMESTAMP, which is an epoch value directly following our headerStart
@@ -110,6 +115,29 @@ abstract class FirstEpochDWArchiveReader(iStream: InputStream, hdrStart: String)
   }
 }
 
+/**
+  * DW archive with msg time that is some text field within '<properties>' header
+  * field value is epoch in millis
+  * note - this is not as fragile as FirstEpochDWArchiveReader but less efficient for direct replay since it requires two searches
+  */
+abstract class EpochFieldDWArchiveReader (iStream: InputStream, hdrStart: String, field: String)
+                                          extends DWArchiveReader(iStream, new BMSearch(hdrStart)) {
+  val fieldPattern = new BMSearch(field)
+
+  override def readDateTime(cs: Array[Char], i0: Int, i1: Int) = {
+    val i = fieldPattern.indexOfFirst(cs, i0 + hdrStart.length, i1)
+    if (i >= 0) {
+      val millis = readLong(cs, i + field.length, i1)
+      if (i0 < 300) println(s"$millis")
+      DateTime.ofEpochMillis(millis)
+    } else DateTime.UndefinedDateTime
+  }
+}
+
+/**
+  * DW archive with message time in some text field within '<properties>' header
+  * field value is YMDT string
+  */
 abstract class DateFieldDWArchiveReader (iStream: InputStream, hdrStart: String, field: String)
                                         extends DWArchiveReader(iStream, new BMSearch(hdrStart)) {
   val fieldPattern = new BMSearch(field)
@@ -128,7 +156,7 @@ import gov.nasa.race.common.ConfigurableStreamCreator._
 // a suitable message injection time stamp
 
 // unfortunately not all airports have a DEX_TIMESTAMP so we still have to use the old 'timestamp' parser.
-// At least that also covers olf archives
+// At least that also covers old archives
 class AsdexDWArchiveReader (val iStream: InputStream, val pathName: String="<unknown>")
                                            extends DateFieldDWArchiveReader(iStream, "<properties> ", "timestamp=") {
   def this(conf: Config) = this(createInputStream(conf),configuredPathName(conf))
@@ -136,7 +164,7 @@ class AsdexDWArchiveReader (val iStream: InputStream, val pathName: String="<unk
 
 // SFDPS also has FDPSMsg messages that have payload properties elements
 class SfdpsDWArchiveReader (val iStream: InputStream, val pathName: String="<unknown>")
-                                           extends FirstEpochDWArchiveReader(iStream, "<properties> DEX_TIMESTAMP=") {
+                                           extends DateFieldDWArchiveReader(iStream, "<properties>", "FDPS_SentTime=") {
   def this(conf: Config) = this(createInputStream(conf),configuredPathName(conf))
 }
 
