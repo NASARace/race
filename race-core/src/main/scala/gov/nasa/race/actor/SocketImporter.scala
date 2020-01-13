@@ -45,8 +45,8 @@ abstract class SocketDataAcquisitionThread(socket: Socket) extends Thread {
   */
 trait SocketImporter extends RaceActor {
 
-  val host = config.getStringOrElse("host",defaultHost)
-  val port = config.getIntOrElse("port",defaultPort) // no default, needs to be specified
+  val host = config.getVaultableStringOrElse("host",defaultHost)
+  val port = config.getVaultableIntOrElse("port",defaultPort) // no default, needs to be specified
   val initBufferSize = config.getIntOrElse("buffer-size", 4096)
 
   var socket: Option[Socket] = None

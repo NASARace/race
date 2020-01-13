@@ -101,6 +101,18 @@ object ConfigUtils {
       }
     }
 
+    def getVaultableIntOrElse(key: String, defaultValue: Int): Int = {
+      try {
+        var s = conf.getString(key)
+        if (s.startsWith(CRYPT_MARKER)) {
+          s = ConfigVault.getString(s.substring(CRYPT_MARKER.length))
+        }
+        s.toInt
+      } catch {
+        case _: ConfigException.Missing => defaultValue
+      }
+    }
+
     def getOptionalVaultableString(key: String): Option[String] = {
       try {
         val s = conf.getString(key)
