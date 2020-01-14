@@ -478,3 +478,17 @@ final class Slice (var data: Array[Byte], var offset: Int, var length: Int) {
   @inline def getIntRange: IntRange = IntRange(offset,length)
 }
 
+final class ASCIICharSequence (bs: Array[Byte], off: Int, len: Int) extends CharSequence {
+
+  def this (slice: Slice) = this(slice.data, slice.offset, slice.length)
+
+  @inline def length(): Int = len
+
+  @inline def charAt(i: Int): Char = bs(i).toChar
+
+  override def subSequence(start: Int, end: Int): CharSequence = {
+    new ASCIICharSequence(bs, off+start, end-start)
+  }
+
+  override def toString: String = new String(bs,off,len)
+}
