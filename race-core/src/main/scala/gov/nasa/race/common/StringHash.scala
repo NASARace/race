@@ -18,6 +18,9 @@ package gov.nasa.race.common
 
 import gov.nasa.race.util.StringUtils
 import java.security.MessageDigest
+
+import gov.nasa.race.common.inlined.Slice
+
 import scala.annotation.tailrec
 
 /**
@@ -29,28 +32,20 @@ import scala.annotation.tailrec
   */
 class MD5Checksum (bufSize: Int=1024) {
 
+  var sdb: StringDataBuffer = null
+
   val md = MessageDigest.getInstance("MD5")
   val hb = new Array[Byte](16) // MD5 computes 128 bit hashes
 
   def getHexChecksum (s: String): String = {
-    val slen = s.length
-    @tailrec def updateMd(i: Int, md: MessageDigest): Unit = {
-      if (i < slen){
-        val c = s.charAt(i)
-        if (c > 255){
-          md.update(((c >> 8) & 0xff).toByte)
-          md.update((c & 0xff).toByte)
-        } else {
-          md.update(c.toByte)
-        }
-        updateMd(i+1,md)
-      }
+    if (sdb == null) {
+      sdb = new UTF8Buffer(Math.max(s.length,bufSize))
+    } else {
+      sdb.clear
     }
-
-    md.reset
-    updateMd(0,md)
-    md.digest(hb,0,hb.length)
-    StringUtils.toHexString(hb)
+    val bs = sdb
+    bs += s
+    getHexChecksum(bs.data,0,bs.length)
   }
 
   def getHexChecksum(cs: Array[Char]): String = {
@@ -72,16 +67,20 @@ class MD5Checksum (bufSize: Int=1024) {
     StringUtils.toHexString(hb)
   }
 
-  def getHexChecksum(bs: Array[Byte]): String = {
-    val n = bs.length
-    var i = 0
+  def getHexChecksum(bs: Array[Byte], off: Int, len: Int): String = {
+    var i = off
+    val iMax = off + len
 
     md.reset
-    while (i < n) {
+    while (i < iMax) {
       md.update(bs(i))
       i += 1
     }
     md.digest(hb,0,hb.length)
     StringUtils.toHexString(hb)
   }
+
+  def getHexChecksum(bs: Array[Byte]): String = getHexChecksum(bs,0,bs.length)
+
+  def getHexChecksum(slice: Slice): String = getHexChecksum(slice.data,slice.offset,slice.length)
 }

@@ -484,7 +484,7 @@ final class ASCIICharSequence (bs: Array[Byte], off: Int, len: Int) extends Char
 
   @inline def length(): Int = len
 
-  @inline def charAt(i: Int): Char = bs(i).toChar
+  @inline def charAt(i: Int): Char = (bs(i) & 0xff).toChar
 
   override def subSequence(start: Int, end: Int): CharSequence = {
     new ASCIICharSequence(bs, off+start, end-start)
