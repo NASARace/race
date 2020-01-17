@@ -68,9 +68,9 @@ abstract class XmlPullParser2  {
   val attrName = Slice.empty
   val attrValue = Slice.empty  // not hashed by default
 
-  protected def setData (newData: Array[Byte], newIdx: Int, newLimit: Int): Unit = {
+  protected def setData (newData: Array[Byte], newIdx: Int, newLength: Int): Unit = {
     data = newData
-    limit = newLimit
+    limit = newIdx + newLength
     idx = newIdx
 
     // those won't change during the parse so set them here once
@@ -765,13 +765,26 @@ class UTF8XmlPullParser2 extends XmlPullParser2 {
     idx >= 0
   }
 
-  def initialize (bs: Array[Byte], off: Int, limit: Int): Boolean = {
+  def initialize (bs: Array[Byte], off: Int, length: Int): Boolean = {
     clear
-    setData(bs, off, limit)
+    setData(bs, off, length)
 
     idx = seekRootTag
     idx >= 0
   }
 
   def initialize (slice: Slice): Boolean = initialize(slice.data, slice.offset, slice.limit)
+}
+
+/**
+  * a XmlPullParser2 that only reads the first (top) element and returns its name (as Slice), if any
+  */
+class XmlTopElementParser extends UTF8XmlPullParser2 {
+
+  def parseTopElement (bs: Array[Byte], off: Int, length: Int): Boolean = {
+    initialize(bs,off,length) && parseNextTag
+  }
+
+  def parseTopElement (bs: Array[Byte]): Boolean = parseTopElement(bs,0,bs.length)
+  def parseTopElement (br: ByteRange): Boolean = parseTopElement(br.data,br.offset,br.length)
 }

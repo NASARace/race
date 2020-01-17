@@ -59,46 +59,46 @@ abstract class DWArchiveReader (iStream: InputStream, val headerStart: BMSearch)
 
   override def readNextEntry: Option[ArchiveEntry] = {
     // we are at a headerStart
-    if (ss.readTo(headerEnd,headerStart.length)) {
+    if (ss.readTo(headerEnd,headerStart.patternLength)) {
       val date = readDateTime(res.cs,res.startIdx,res.endIdx)
       if (date.isDefined) {
-        if (ss.readTo(headerStart,headerEnd.length)){
-          val msg = res.asString(headerEnd.length)
+        if (ss.readTo(headerStart,headerEnd.patternLength)){
+          val msg = res.asString(headerEnd.patternLength)
           someEntry(date,msg)
         } else None // did not find next headerStart, nothing we can do
 
       } else {  // did not find date in header, skip to next chunk
-        ss.skipTo(headerStart, headerEnd.length)
+        ss.skipTo(headerStart, headerEnd.patternLength)
         None
       }
     } else None // did not find headerEnd, nothing we can do
   }
 
   //--- to be provided by concrete subclasses
-  protected def readDateTime(cs: Array[Char], startIdx: Int, endIdx: Int) : DateTime
+  protected def readDateTime(cs: Array[Byte], startIdx: Int, endIdx: Int) : DateTime
 
   //--- those can be used by the type specific readDateTime
-  protected def readLong(cs: Array[Char], startIdx:Int, endIdx: Int): Long = {
-    var c = cs(startIdx)
+  protected def readLong(bs: Array[Byte], startIdx:Int, endIdx: Int): Long = {
+    var c = bs(startIdx)
     var j = startIdx
     var n = 0L
     while (j < endIdx && Character.isDigit(c)){
       n = n * 10 + (c - '0')
       j += 1
-      c = cs(j)
+      c = bs(j)
     }
     n
   }
 
   // read all up to the next white space
-  protected def readWord(cs: Array[Char], startIdx: Int, endIdx: Int): String = {
-    var c = cs(startIdx)
+  protected def readWord(bs: Array[Byte], startIdx: Int, endIdx: Int): String = {
+    var c = bs(startIdx)
     var j = startIdx
     while (j < endIdx && !Character.isWhitespace(c)){
       j += 1
-      c = cs(j)
+      c = bs(j)
     }
-    if (j > startIdx) new String(cs,startIdx,j-startIdx) else ""
+    if (j > startIdx) new String(bs,startIdx,j-startIdx) else ""
   }
 }
 
@@ -110,7 +110,7 @@ abstract class DWArchiveReader (iStream: InputStream, val headerStart: BMSearch)
 abstract class FirstEpochDWArchiveReader(iStream: InputStream, hdrStart: String)
                                        extends DWArchiveReader(iStream, new BMSearch(hdrStart)) {
   // we just use the x_TIMESTAMP, which is an epoch value directly following our headerStart
-  override def readDateTime(cs: Array[Char], i0: Int, i1: Int): DateTime = {
+  override def readDateTime(cs: Array[Byte], i0: Int, i1: Int): DateTime = {
     DateTime.ofEpochMillis(readLong(cs, i0+hdrStart.length, i1))
   }
 }
@@ -124,10 +124,10 @@ abstract class EpochFieldDWArchiveReader (iStream: InputStream, hdrStart: String
                                           extends DWArchiveReader(iStream, new BMSearch(hdrStart)) {
   val fieldPattern = new BMSearch(field)
 
-  override def readDateTime(cs: Array[Char], i0: Int, i1: Int) = {
-    val i = fieldPattern.indexOfFirst(cs, i0 + hdrStart.length, i1)
+  override def readDateTime(bs: Array[Byte], i0: Int, i1: Int) = {
+    val i = fieldPattern.indexOfFirstInRange(bs, i0 + hdrStart.length, i1)
     if (i >= 0) {
-      val millis = readLong(cs, i + field.length, i1)
+      val millis = readLong(bs, i + field.length, i1)
       if (i0 < 300) println(s"$millis")
       DateTime.ofEpochMillis(millis)
     } else DateTime.UndefinedDateTime
@@ -142,9 +142,9 @@ abstract class DateFieldDWArchiveReader (iStream: InputStream, hdrStart: String,
                                         extends DWArchiveReader(iStream, new BMSearch(hdrStart)) {
   val fieldPattern = new BMSearch(field)
 
-  override def readDateTime(cs: Array[Char], i0: Int, i1: Int) = {
-      val i = fieldPattern.indexOfFirst(cs, i0 + hdrStart.length, i1)
-      if (i >= 0) DateTime.parseYMDT(readWord(cs,i+fieldPattern.length,i1)) else DateTime.UndefinedDateTime
+  override def readDateTime(bs: Array[Byte], i0: Int, i1: Int) = {
+      val i = fieldPattern.indexOfFirstInRange(bs, i0 + hdrStart.length, i1)
+      if (i >= 0) DateTime.parseYMDT(readWord(bs,i+fieldPattern.patternLength,i1)) else DateTime.UndefinedDateTime
   }
 }
 

@@ -34,6 +34,7 @@ import scala.jdk.CollectionConverters._
   *      patterns = ["<!-- cvc-.*: The value '[0-9.\\-]+' of element 'pos' is not valid. -->"] }, ...
   */
 object MsgMatcher {
+
   def getMsgMatchers(config: Config): Seq[MsgMatcher] = {
     config.getOptionalConfigList("matchers").reverse.foldLeft(List.empty[MsgMatcher]) { (list, conf) =>
       val name = conf.getString("name")
@@ -48,5 +49,12 @@ object MsgMatcher {
 }
 
 case class MsgMatcher(name: String, patterns: Seq[Regex]) {
+
   def matchCount (msg: String): Int = patterns.foldLeft(0)((acc,p) => acc + p.findAllIn(msg).size )
+
+  def matchCount (bs: Array[Byte], off: Int, len: Int): Int = {
+    val cs = new UTF8CharSequence(bs,off,len)
+    patterns.foldLeft(0)((acc,p) => acc + p.findAllIn(cs).size )
+  }
+
 }

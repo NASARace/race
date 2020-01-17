@@ -20,12 +20,9 @@ import java.io.PrintWriter
 
 import com.typesafe.config.Config
 import gov.nasa.race._
-import gov.nasa.race.common.{MD5Checksum, MsgMatcher, PrintStats, XmlSource}
+import gov.nasa.race.common.{MD5Checksum, MsgMatcher, PrintStats, StringDataBuffer, UTF8Buffer, XmlSource, XmlTopElementParser}
 import gov.nasa.race.config.ConfigUtils._
-import gov.nasa.race.core.FileWriterRaceActor
-import gov.nasa.race.core.Messages.{BusEvent, RaceTick}
-import gov.nasa.race.util.DateTimeUtils._
-import gov.nasa.race.util.StringUtils
+import gov.nasa.race.core.Messages.BusEvent
 
 import scala.collection.mutable.{SortedMap => MSortedMap}
 import scala.concurrent.duration._
@@ -47,8 +44,20 @@ class DuplicatedMsgDetector (val config: Config) extends StatsCollectorActor wit
   val checksums = MSortedMap.empty[String,Long]
   val md5 = new MD5Checksum
 
+  var sdb: StringDataBuffer = null // initialized on demand
+  val msgParser = new XmlTopElementParser
+
   val msgStatsData = MSortedMap.empty[String,DupStatsData]  // per message (automatic)
   val catStatsData = MSortedMap.empty[String,DupStatsData]  // per configured categories
+
+  def getStringDataBuffer (minCapacity: Int): StringDataBuffer = {
+    if (sdb == null) {
+      sdb = new UTF8Buffer(minCapacity)
+    } else {
+      sdb.clear
+    }
+    sdb
+  }
 
   override def onRaceTick: Unit = {
     if (reportEmptyStats || catStatsData.nonEmpty || msgStatsData.nonEmpty) publish(snapshot)
@@ -57,25 +66,33 @@ class DuplicatedMsgDetector (val config: Config) extends StatsCollectorActor wit
 
   override def handleMessage = {
     case BusEvent(_, msg: String, _) => checkMessage(msg)
+    case BusEvent(_, rawMsg: Array[Byte], _) => checkMessage(rawMsg, rawMsg.length)
   }
 
-  def checkMessage (msg: String) = {
+  def checkMessage (msg: String): Unit = {
+    val sdb = getStringDataBuffer(msg.length * 3/2)
+    sdb += msg
+    checkMessage(sdb.data,sdb.length)
+  }
+
+  def checkMessage (msg: Array[Byte], len: Int): Unit = {
     def incStats (map: MSortedMap[String,DupStatsData], key: String, count: Int, dt: Long) = {
       val ds = map.getOrElseUpdate(key, new DupStatsData(key))
       ds.count += count
       ds.dtMillis += dt
     }
 
-    val cs = md5.getHexChecksum(msg)
+    val cs = md5.getHexChecksum(msg, 0, len)
     val tNow = updatedSimTimeMillis
 
     checksums.get(cs) match {
       case Some(tLast) =>
         val dt = tNow - tLast
 
-        incStats(msgStatsData,getMessageType(msg),1,dt)
+        incStats(msgStatsData,getMessageType(msg,len),1,dt)
+
         classifiers.foreach{ c=>
-          val matchCount = c.matchCount(msg)
+          val matchCount = c.matchCount(msg,0,len)
           if (matchCount > 0) incStats(catStatsData,c.name,matchCount,dt)
         }
 
@@ -100,11 +117,8 @@ class DuplicatedMsgDetector (val config: Config) extends StatsCollectorActor wit
   }
 
   // override this if the message is not XML
-  def getMessageType (msg: String): String = {
-    StringUtils.getXmlMsgName(msg) match {
-      case Some(msgName) => msgName
-      case None => "[unspecified]"
-    }
+  def getMessageType (msg: Array[Byte], len: Int): String = {
+    if (msgParser.parseTopElement(msg,0,len)) msgParser.tag.intern else "?"
   }
 }
 

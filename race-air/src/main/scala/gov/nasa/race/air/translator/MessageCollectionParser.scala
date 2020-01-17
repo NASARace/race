@@ -88,25 +88,25 @@ class MessageCollectionParser(val config: Config=NoConfig) extends UTF8XmlPullPa
     }
   }
 
-  def parse (bs: Array[Byte], off: Int, limit: Int): Option[Any] = {
-    parseTracks(bs,off,limit)
+  def parse (bs: Array[Byte], off: Int, length: Int): Option[Any] = {
+    parseTracks(bs,off,length)
     if (artccId != null && elements.nonEmpty) return Some(elements) else None
   }
 
   //--- basic data parse methods that do not wrap results (collections) into Option
 
-  def parseTracks(bs: Array[Byte], off: Int, limit: Int): SfdpsTracks = {
-    if (checkIfMessageCollection(bs,off,limit)) {
+  def parseTracks(bs: Array[Byte], off: Int, length: Int): SfdpsTracks = {
+    if (checkIfMessageCollection(bs,off,length)) {
       parseMessageCollectionInitialized
     } else {
       SfdpsTracks.empty
     }
   }
 
-  def parseTracks(s: Slice): Seq[IdentifiableObject] = parseTracks(s.data,s.offset,s.limit)
+  def parseTracks(br: ByteRange): Seq[IdentifiableObject] = parseTracks(br.data,br.offset,br.length)
 
-  def checkIfMessageCollection (bs: Array[Byte], off: Int, limit: Int): Boolean = {
-    if (initialize(bs,off,limit)) {
+  def checkIfMessageCollection (bs: Array[Byte], off: Int, length: Int): Boolean = {
+    if (initialize(bs,off,length)) {
       if (parseNextTag && isStartTag) return tag == messageCollection
     }
     false

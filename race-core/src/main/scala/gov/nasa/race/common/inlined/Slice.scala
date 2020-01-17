@@ -16,9 +16,10 @@
  */
 package gov.nasa.race.common.inlined
 
+
 import java.io.OutputStream
 
-import gov.nasa.race.common.{ASCII8Internalizer, IntRange, Internalizer, UTF8Buffer}
+import gov.nasa.race.common.{ASCII8Internalizer, ASCIICharSequence, ByteRange, IntRange, Internalizer, UTF8Buffer, UTFx}
 
 import scala.annotation.switch
 
@@ -57,14 +58,16 @@ object Slice {
   *
   * the trait does not allow to modify the internals
   */
-final class Slice (var data: Array[Byte], var offset: Int, var length: Int) {
+final class Slice (var data: Array[Byte], var offset: Int, var length: Int) extends ByteRange {
+
+  def this (cs: ASCIICharSequence) = this(cs.data,cs.offset,cs.length)
 
   var hash: Int = 0
 
   @inline final def isEmpty: Boolean = length == 0
   @inline final def nonEmpty: Boolean = length > 0
 
-  @inline final def limit: Int = offset + length
+  @inline override final def limit: Int = offset + length
 
   override def toString: String = if (length > 0) new String(data,offset,length) else ""
 
@@ -113,6 +116,8 @@ final class Slice (var data: Array[Byte], var offset: Int, var length: Int) {
   }
 
   @inline def setFrom (other: Slice): Unit = set(other.data,other.offset,other.length)
+
+  @inline def setFrom (cs: ASCIICharSequence): Unit = set(cs.data,cs.offset,cs.length)
 
   // note - this is not public since it does not compare lengths (which is the inlined part of the caller)
   private def equalBytes (otherBs: Array[Byte], otherOffset: Int): Boolean = {
@@ -476,19 +481,5 @@ final class Slice (var data: Array[Byte], var offset: Int, var length: Int) {
   }
 
   @inline def getIntRange: IntRange = IntRange(offset,length)
-}
 
-final class ASCIICharSequence (bs: Array[Byte], off: Int, len: Int) extends CharSequence {
-
-  def this (slice: Slice) = this(slice.data, slice.offset, slice.length)
-
-  @inline def length(): Int = len
-
-  @inline def charAt(i: Int): Char = (bs(i) & 0xff).toChar
-
-  override def subSequence(start: Int, end: Int): CharSequence = {
-    new ASCIICharSequence(bs, off+start, end-start)
-  }
-
-  override def toString: String = new String(bs,off,len)
 }

@@ -18,7 +18,7 @@ package gov.nasa.race.air.translator
 
 import com.typesafe.config.Config
 import gov.nasa.race.air.{FlightPlan, TaisTrack, TaisTracks}
-import gov.nasa.race.common.{ASCII8Internalizer, ASCIIBuffer, AssocSeq, ClearableElementsHolder, Parser, UTF8XmlPullParser2}
+import gov.nasa.race.common.{ASCII8Internalizer, ASCIIBuffer, AssocSeq, ByteRange, ClearableElementsHolder, Parser, UTF8XmlPullParser2}
 import gov.nasa.race.common.inlined.Slice
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.config.{ConfigurableTranslator, NoConfig}
@@ -71,25 +71,25 @@ class TATrackAndFlightPlanParser(val config: Config=NoConfig)  extends UTF8XmlPu
     }
   }
 
-  def parse (bs: Array[Byte], off: Int, limit: Int): Option[Any] = {
-    parseTracks(bs,off,limit)
+  def parse (bs: Array[Byte], off: Int, length: Int): Option[Any] = {
+    parseTracks(bs,off,length)
     if (elements.nonEmpty) return Some(elements) else None
   }
 
   //--- basic data parse methods that do not wrap results (collections) into Option
 
-  def parseTracks(bs: Array[Byte], off: Int, limit: Int): TaisTracks = {
-    if (checkIfTATrackAndFlightPlan(bs,off,limit)) {
+  def parseTracks(bs: Array[Byte], off: Int, length: Int): TaisTracks = {
+    if (checkIfTATrackAndFlightPlan(bs,off,length)) {
       parseTATrackAndFlightPlanInitialized
     } else {
       TaisTracks.empty
     }
   }
 
-  def parseTracks(s: Slice): TaisTracks = parseTracks(s.data,s.offset,s.limit)
+  def parseTracks(br: ByteRange): TaisTracks = parseTracks(br.data,br.offset,br.limit)
 
-  def checkIfTATrackAndFlightPlan (bs: Array[Byte], off: Int, limit: Int): Boolean = {
-    if (initialize(bs,off,limit)) {
+  def checkIfTATrackAndFlightPlan (bs: Array[Byte], off: Int, length: Int): Boolean = {
+    if (initialize(bs,off,length)) {
       if (parseNextTag && isStartTag) {
         return tag == ns2TATrackAndFlightPlan || tag == taTrackAndFlightPlan
       }

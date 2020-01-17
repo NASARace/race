@@ -22,7 +22,7 @@ import com.typesafe.config.Config
 import gov.nasa.race.air.AsdexTrack._
 import gov.nasa.race.air.{AsdexTrack, AsdexTracks}
 import gov.nasa.race.common.inlined.Slice
-import gov.nasa.race.common.{ASCII8Internalizer, ASCIIBuffer, Internalizer, Parser, UTF8XmlPullParser2}
+import gov.nasa.race.common.{ASCII8Internalizer, ASCIIBuffer, ByteRange, Internalizer, Parser, UTF8XmlPullParser2}
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.config.{ConfigurableTranslator, NoConfig}
 import gov.nasa.race.geo.GeoPosition
@@ -81,20 +81,20 @@ class AsdexMsgParser(val config: Config=NoConfig) extends UTF8XmlPullParser2
   }
 
 
-  def parse (bs: Array[Byte], off: Int, limit: Int): Option[Any] = {
-    parseTracks(bs,off,limit)
+  def parse (bs: Array[Byte], off: Int, length: Int): Option[Any] = {
+    parseTracks(bs,off,length)
     if (airportId != null && elements.nonEmpty) Some(elements) else None
   }
 
-  def parseTracks (bs: Array[Byte], off: Int, limit: Int): AsdexTracks = {
-    if (checkIfAsdexMsg(bs,off,limit)){
+  def parseTracks (bs: Array[Byte], off: Int, length: Int): AsdexTracks = {
+    if (checkIfAsdexMsg(bs,off,length)){
       parseAsdexMsgInitialized
     } else {
       AsdexTracks.empty
     }
   }
 
-  def parseTracks(s: Slice): AsdexTracks = parseTracks(s.data,s.offset,s.limit)
+  def parseTracks(br: ByteRange): AsdexTracks = parseTracks(br.data,br.offset,br.limit)
 
   /**
     * only initialize and check if it is a relevant message, but don't parse
@@ -102,8 +102,8 @@ class AsdexMsgParser(val config: Config=NoConfig) extends UTF8XmlPullParser2
     * filter messages and tracks, and have to postpone the expensive track parsing until
     * the message is up and we can check if there is a subscriber for it
     */
-  def checkIfAsdexMsg (bs: Array[Byte], off: Int, limit: Int): Boolean = {
-    if (initialize(bs,off,limit)) {
+  def checkIfAsdexMsg (bs: Array[Byte], off: Int, length: Int): Boolean = {
+    if (initialize(bs,off,length)) {
       if (parseNextTag && isStartTag) {
         if (tag == ns2$asdexMsg || tag == asdexMsg) return true
       }

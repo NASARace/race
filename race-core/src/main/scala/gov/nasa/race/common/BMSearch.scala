@@ -19,81 +19,142 @@ package gov.nasa.race.common
 
 import java.util.{Arrays => JArrays}
 
+import gov.nasa.race.common.inlined.Slice
+
 import scala.annotation.tailrec
 
 
 /**
-  * simple ASCII Boyer Moore search using Array[Char] objects
-  * Note that we only support patterns consisting of ASCII chars (<256), and only up to
-  * a pattern length of 127
+  * simple Boyer Moore search using Array[Byte] objects
   *
-  * We provide this as a light weight alternative to Regex based search
+  * this as a light weight alternative to Regex based search
+  *
+  * Note that we only support patterns consisting of ASCII chars (<256), and only up to
+  * a pattern length of 127 so that we don't need to promote jump table values to unsigned
+  *
+  * TODO - this could be extended to full utf-8 by using a sparse jump table (e.g. LongMap)
   */
-class BMSearch (val pattern: Array[Char]) {
+class BMSearch (val pattern: Array[Byte], val patternOffset: Int, val patternLength: Int) {
 
-  def this (pat: String) = this(pat.toCharArray)
+  final val MaxPatternLength = 127
 
-  assert(pattern.length < 128)
-  val jumpTable = initJumpTable(pattern)
+  def this (pat: Array[Byte]) = this( pat,0,pat.length)
+  def this (pat: String) = this( pat.getBytes)
+  def this (pat: Slice) = this( pat.data,pat.offset,pat.length)
 
-  @inline def length = pattern.length
+  assert(patternLength < MaxPatternLength)
 
-  protected def initJumpTable (pat: Array[Char]) = {
-    val m = pat.length
-    val jumps = new Array[Byte](256) // TODO compact this into a Long array with packed 4bit values
-    JArrays.fill(jumps,m.toByte)
+  private val shift = new Array[Byte](256)
+  initShift(shift) // note this stores bytes, access has to convert to unsigned
 
-    var i=0
-    while (i<m){
-      jumps(pat(i)) = i.toByte
-      i += 1
+  private var sdb: StringDataBuffer = null // initialized on demand if we search in strings
+
+  private def getStringDataBuffer (minLen: Int): StringDataBuffer = {
+    if (sdb == null) {
+      sdb = new ASCIIBuffer( Math.max(minLen,8192))
+    } else {
+      sdb.clear
     }
-    jumps
+    sdb
   }
 
-  def indexOfFirst(cs: Array[Char]): Int = indexOfFirst(cs,0,cs.length)
-  def indexOfFirst(cs: Array[Char], i0: Int): Int = indexOfFirst(cs,i0,cs.length)
+  def clear: Unit = {
+    // release any transient resources
+    if (sdb != null) sdb = null
+  }
 
-  def indexOfFirst(cs: Array[Char], i0: Int, i1: Int): Int = {
-    val t = jumpTable
-    val p = pattern
-    val m = p.length
-    val imax = Math.min(cs.length,i1) - m
+  protected def initShift(shiftTable: Array[Byte]): Unit  = {
+    val m = patternLength
+    val m1 = m-1
+    JArrays.fill(shiftTable,m.toByte)
 
-    @tailrec def jump (i: Int, j: Int): Int = {
-      val c = cs(i+j)
-      if (p(j) != c) {
-        val r = if (c > t.length) m else t(c)
-        return Math.max(1, j - r)
+    var i = 0
+    while (i < m1){
+      shiftTable( pattern(patternOffset+i) & 0xff) = (m1 -i).toByte
+      i += 1
+    }
+  }
+
+  //--- all occurrences
+
+  def foreachIndexIn (bs: Array[Byte], off: Int, len: Int)(f: Int=>Unit): Unit = {
+    val iLimit = off+len
+    var i = indexOfFirstIn(bs,off,len)
+    while (i >= 0) {
+      f(i)
+      i += patternLength
+      if (i>=iLimit) return
+      i = indexOfFirstIn(bs,i,len - (i-off))
+    }
+  }
+
+  // since we use curried functions we can't overload
+
+  def foreachIndexInArray(bs: Array[Byte])(f: Int=>Unit): Unit = foreachIndexIn(bs,0,bs.length)(f)
+
+  def foreachIndexInByteRange(br: ByteRange)(f: Int=>Unit): Unit = foreachIndexIn(br.data,br.offset,br.length)(f)
+
+  def foreachIndexInString(s: String)(f: Int=>Unit): Unit = {
+    val sdb = getStringDataBuffer(s.length)
+    sdb += s
+    foreachIndexIn(sdb.data,0,sdb.length)(f)
+  }
+
+  //--- first occurrence
+
+  def indexOfFirstIn(bs: Array[Byte], off: Int, len: Int): Int = {
+    val pl1 = patternLength-1
+    val jMax = patternOffset + pl1
+    val lim = off+len
+
+    var i=off
+    var l=i+pl1
+
+    while (l < lim){
+      var j = jMax
+      var k = pl1
+      while (bs(i+k) == pattern(j)){
+        j -= 1
+        k -= 1
+        if (k < 0) return i
       }
-      if (j == 0) 0 else jump(i,j-1)
+      i += shift(bs(l) & 0xff) & 0xff
+      l = i + pl1
     }
 
-    var i = i0
-    while (i <= imax){
-      val skip = jump(i,m-1)
-      if (skip > 0) i += skip else return i
-    }
     -1 // nothing found
   }
 
-  def indexOfLastPrefix (cs: Array[Char]): Int = indexOfLastPrefix(cs,cs.length)
+  //--- various overloads for related input data
+  def indexOfFirstIn (bs: Array[Byte]): Int = indexOfFirstIn(bs,0,bs.length)
+
+  def indexOfFirstIn (br: ByteRange): Int = indexOfFirstIn(br.data, br.offset, br.length)
+
+  def indexOfFirstIn (s: String): Int = {
+    val sdb = getStringDataBuffer(s.length)
+    sdb += s
+    indexOfFirstIn(sdb.data,0,sdb.length)
+  }
+
+  def indexOfFirstInRange(bs: Array[Byte], i0: Int, i1: Int): Int = indexOfFirstIn(bs,i0,i1-i0)
+
 
   /**
-    * find start index of last prefix match
+    * find start index of last possible pattern prefix at end of given data range
     *
-    * @param cs data to search in
-    * @param i1 end index (exclusive)
-    * @return index of match or -1
+    * this can be used to compute read barriers in streams/buffers to make sure we don't miss
+    * markers that are only partially available at the end of the currently buffered/read data
     */
-  def indexOfLastPrefix (cs: Array[Char], i1: Int): Int = {
+  def indexOfLastPatternPrefixIn(bs: Array[Byte], off: Int, len: Int): Int = {
     val p = pattern
+    val iMax = off + len
 
+    // i: buffer index, j: pattern index
     @tailrec def matchPrefix (i: Int, j: Int): Int = {
-      if (i == i1) {
-        if (j==0) -1 else i1 - j
+      if (i == iMax) {
+        if (j==0) -1 else iMax - j
       } else {
-        if (p(j) == cs(i)) {
+        if (p(j) == bs(i)) {
           matchPrefix(i+1, j+1)
         } else {
           matchPrefix(i+1, 0)
@@ -101,6 +162,16 @@ class BMSearch (val pattern: Array[Char]) {
       }
     }
 
-    matchPrefix(Math.max(0,i1-p.length),0)
+    matchPrefix(Math.max(off,iMax-p.length),0)
+  }
+
+  def indexOfLastPatternPrefixIn (bs: Array[Byte]): Int = indexOfLastPatternPrefixIn(bs,0,bs.length)
+
+  def indexOfLastPatternPrefixIn (slice: Slice): Int = indexOfLastPatternPrefixIn(slice.data, slice.offset, slice.length)
+
+  def indexOfLastPatternPrefixIn (s: String): Int = {
+    val sdb = getStringDataBuffer(s.length)
+    sdb += s
+    indexOfLastPatternPrefixIn(sdb.data,0,sdb.length)
   }
 }

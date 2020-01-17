@@ -163,9 +163,22 @@ package object common {
     def assoc: U
   }
 
-  // something that can parse byte array data
+  /**
+    * something that can parse byte array data
+    */
   trait Parser {
-    def parse (bs: Array[Byte], off: Int, limit: Int): Option[Any]
-    def parse (slice: Slice): Option[Any] = parse(slice.data, slice.offset, slice.limit)
+    def parse (bs: Array[Byte], off: Int, length: Int): Option[Any]
+    def parse (br: ByteRange): Option[Any] = parse(br.data, br.offset, br.length)
+  }
+
+  /**
+    * common interface for the likes of Slice, StringDataBuffer, ASCIICharSequence
+    */
+  trait ByteRange {
+    def data: Array[Byte]
+    def offset: Int
+    def length: Int
+
+    def limit: Int = offset + length
   }
 }

@@ -16,15 +16,13 @@
  */
 package gov.nasa.race.common
 
-import java.nio.{ByteBuffer, CharBuffer}
-import java.nio.charset.{CoderResult, StandardCharsets}
-
-import gov.nasa.race.common.inlined.{ASCIICharSequence, Slice}
 import gov.nasa.race.util.JUtils
 
-abstract class StringDataBuffer (initDataSize: Int) {
+abstract class StringDataBuffer (initDataSize: Int) extends ByteRange {
   var data: Array[Byte] = new Array(initDataSize)
   var length: Int = 0
+
+  def offset: Int = 0
 
   def encode (s: String): Int = {
     length = 0

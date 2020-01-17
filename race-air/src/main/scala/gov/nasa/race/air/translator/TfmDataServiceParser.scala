@@ -20,7 +20,7 @@ import com.typesafe.config.Config
 import gov.nasa.race.IdentifiableObject
 import gov.nasa.race.air.{TfmTrack, TfmTracks}
 import gov.nasa.race.common.inlined.Slice
-import gov.nasa.race.common.{ASCIIBuffer, Parser, UTF8XmlPullParser2}
+import gov.nasa.race.common.{ASCIIBuffer, ByteRange, Parser, UTF8XmlPullParser2}
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.config.{ConfigurableTranslator, NoConfig}
 import gov.nasa.race.geo.GeoPosition
@@ -80,23 +80,23 @@ class TfmDataServiceParser(val config: Config=NoConfig) extends UTF8XmlPullParse
     }
   }
 
-  def parse (bs: Array[Byte], off: Int, limit: Int): Option[Any] = {
-    parseTracks(bs, off, limit)
+  def parse (bs: Array[Byte], off: Int, length: Int): Option[Any] = {
+    parseTracks(bs, off, length)
     if (elements.nonEmpty) Some(elements) else None
   }
 
-  def parseTracks (bs: Array[Byte], off: Int, limit: Int): TfmTracks = {
-    if (checkIfTfmDataService(bs,off,limit)){
+  def parseTracks (bs: Array[Byte], off: Int, length: Int): TfmTracks = {
+    if (checkIfTfmDataService(bs,off,length)){
       parseTfmDataServiceInitialized
     } else {
       TfmTracks.empty
     }
   }
 
-  def parseTracks(s: Slice): Seq[IdentifiableObject] = parseTracks(s.data,s.offset,s.limit)
+  def parseTracks(br: ByteRange): Seq[IdentifiableObject] = parseTracks(br.data,br.offset,br.limit)
 
-  def checkIfTfmDataService (bs: Array[Byte], off: Int, limit: Int): Boolean = {
-    if (initialize(bs,off,limit)) {
+  def checkIfTfmDataService (bs: Array[Byte], off: Int, length: Int): Boolean = {
+    if (initialize(bs,off,length)) {
       if (parseNextTag && isStartTag) return (tag == tfmDataService)
     }
     false

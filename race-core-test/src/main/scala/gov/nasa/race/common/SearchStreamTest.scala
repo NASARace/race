@@ -61,17 +61,17 @@ object SearchStreamTest {
     println(s"skipping through stream...")
     if (ss.skipTo(pattern)){
       n += 1
-      while (ss.skipTo(pattern,pattern.length)) n += 1
+      while (ss.skipTo(pattern,pattern.patternLength)) n += 1
     }
     println(s"found $n matches")
   }
 
-  def checkSingleMatch (pattern: BMSearch, cs: Array[Char], i0: Int, i1: Int): Boolean = {
-    val i = pattern.indexOfFirst(cs,i0,i1)
+  def checkSingleMatch (pattern: BMSearch, bs: Array[Byte], i0: Int, i1: Int): Boolean = {
+    val i = pattern.indexOfFirstInRange(bs,i0,i1)
     if (i < 0) {
       false // we need one match
     } else {
-      pattern.indexOfFirst(cs,i+pattern.length,i1) < 0  // and only one.
+      pattern.indexOfFirstInRange(bs,i+pattern.patternLength,i1) < 0  // and only one.
     }
   }
 
@@ -80,7 +80,7 @@ object SearchStreamTest {
     var nRead: Long = 0
     println(s"reading through stream...")
     if (ss.skipTo(pattern)){
-      while (ss.readTo(pattern,pattern.length)) {
+      while (ss.readTo(pattern,pattern.patternLength)) {
         n += 1
         val res = ss.readResult
         assert( res.isSuccess)
@@ -98,7 +98,7 @@ object SearchStreamTest {
     var nRead: Long = 0
     println(s"printing stream chunks...")
     if (ss.skipTo(pattern)){
-      while (ss.readTo(pattern,pattern.length)) {
+      while (ss.readTo(pattern,pattern.patternLength)) {
         n += 1
         val res = ss.readResult
         println(s"----------------------------- chunk $n at $nRead:")

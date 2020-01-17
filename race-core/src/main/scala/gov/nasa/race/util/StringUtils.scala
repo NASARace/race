@@ -121,15 +121,15 @@ object StringUtils {
     i == s.length
   }
 
-  def matchesAll (s: String, patterns: Seq[Regex]): Boolean = {
-    patterns.isEmpty || !patterns.exists( _.findFirstIn(s).isEmpty)
+  def matchesAll (cs: CharSequence, patterns: Seq[Regex]): Boolean = {
+    patterns.isEmpty || !patterns.exists( _.findFirstIn(cs).isEmpty)
   }
-  def matchesAny (s: String, patterns: Seq[Regex]): Boolean = {
-    patterns.nonEmpty && patterns.exists( _.findFirstIn(s).nonEmpty)
+  def matchesAny (cs: CharSequence, patterns: Seq[Regex]): Boolean = {
+    patterns.nonEmpty && patterns.exists( _.findFirstIn(cs).nonEmpty)
   }
 
-  def matches (s: String, pattern: Regex): Boolean = pattern.findFirstIn(s).isDefined
-  def matchesIgnoreCase (s: String, regex: String): Boolean = new Regex("(?i)" + regex).findFirstIn(s).isDefined
+  def matches (cs: CharSequence, pattern: Regex): Boolean = pattern.findFirstIn(cs).isDefined
+  def matchesIgnoreCase (cs: CharSequence, regex: String): Boolean = new Regex("(?i)" + regex).findFirstIn(cs).isDefined
 
   def caseInsensitiveRegex(pattern: Regex): Regex = new Regex("(?i)" + pattern.regex)
   def caseInsensitiveRegex(regex: String): Regex = {

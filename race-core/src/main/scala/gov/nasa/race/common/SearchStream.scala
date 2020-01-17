@@ -20,7 +20,7 @@ import java.lang.System.arraycopy
 import java.io.{InputStream, InputStreamReader}
 
 /**
-  * a stream which can search for string patterns in underlying char streams
+  * a stream which can search for string patterns in underlying byte streams
   *
   * this is mostly an optimization that tries to minimize runtime cost under the
   * assumptions that
@@ -39,15 +39,15 @@ class SearchStream (istream: InputStream, bufferLength: Int = 4096) {
     * NOTE - field values are not persistent over multiple readTo calls, use the
     * asX() converters to save results
     */
-  class ReadResult (var cs: Array[Char], var startIdx: Int, var len: Int) {
+  class ReadResult (var cs: Array[Byte], var startIdx: Int, var len: Int) {
 
     @inline final def asString: String =  new String(cs,startIdx, len)
     @inline final def asString (off: Int): String = new String(cs,startIdx + off, len-off)
 
-    @inline final def asArray: Array[Char] = asArray(0)
-    @inline final def asArray (off: Int=0): Array[Char] = {
+    @inline final def asArray: Array[Byte] = asArray(0)
+    @inline final def asArray (off: Int=0): Array[Byte] = {
       val l = len - off
-      val a = new Array[Char](l)
+      val a = new Array[Byte](l)
       arraycopy(cs,startIdx + off, a,0, l)
       a
     }
@@ -60,7 +60,7 @@ class SearchStream (istream: InputStream, bufferLength: Int = 4096) {
 
     @inline private[SearchStream] def clear: Unit = len = 0
 
-    @inline private[SearchStream] def set (a: Array[Char], i: Int, l: Int): Boolean = {
+    @inline private[SearchStream] def set (a: Array[Byte], i: Int, l: Int): Boolean = {
       cs = a
       startIdx = i
       len = l
@@ -68,28 +68,27 @@ class SearchStream (istream: InputStream, bufferLength: Int = 4096) {
     }
   }
 
-  protected val ir = new InputStreamReader(istream)
   protected var done = false
 
   //--- the read buffer
-  protected var buf = new Array[Char](bufferLength)
+  protected var buf = new Array[Byte](bufferLength)
   protected var nAvail = 0 // length of data in buf
   protected var maxRead = 0 // length of *available* data in buf (nAvail - current pattern prefix at end)
   protected var iLast = 0 // current start position into read buffer
 
   //--- on-demand buffer to accumulate data that spans multiple read buffer fills
-  protected var sBuf: Array[Char] = null
+  protected var sBuf: Array[Byte] = null
   protected var sLen = 0 // number of chars in sBuf
 
   /** where to store the data of a readTo */
   val readResult = new ReadResult(null,0,0)
 
-  private def ensureBufferLength (b: Array[Char], maxLen: Int, curDataSize: Int): Array[Char] = {
+  private def ensureBufferLength (b: Array[Byte], maxLen: Int, curDataSize: Int): Array[Byte] = {
     if (b == null){
-      new Array[Char](maxLen)
+      new Array[Byte](maxLen)
     } else {
       if (b.length < maxLen) {
-        val newB = new Array[Char](maxLen)
+        val newB = new Array[Byte](maxLen)
         arraycopy(b, 0, newB, 0, curDataSize)
         newB
       } else b // nothing to change
@@ -106,38 +105,38 @@ class SearchStream (istream: InputStream, bufferLength: Int = 4096) {
     }
   }
 
-  private def fillBuffer (pattern: BMSearch): Unit = {
-    buf = ensureBufferLength(buf,pattern.length * 2,maxRead)
+  private def fillBuffer (s: BMSearch): Unit = {
+    buf = ensureBufferLength(buf,s.patternLength * 2,maxRead)
     iLast = 0 // no matter what - after a refill we start at the beginning of the read buffer
     val leftOver = nAvail - maxRead
 
     //--- left shift trailing leftOver and fill available buffer space
     if (leftOver > 0){
       arraycopy(buf,maxRead, buf,0, leftOver)
-      val n = ir.read(buf,leftOver,buf.length-leftOver)
+      val n = istream.read(buf,leftOver,buf.length-leftOver)
       if (n < 0) { // shortcut - only previous leftOver is left to read
         nAvail = leftOver
         maxRead = leftOver
         // not done yet
       } else {
         nAvail = leftOver + n
-        maxRead = readBarrier(pattern)
+        maxRead = readBarrier(s)
       }
     } else { // there was no leftOver, try to fill whole buffer
-      val n = ir.read(buf,0,buf.length)
+      val n = istream.read(buf,0,buf.length)
       if (n < 0) {  // shortcut - nothing left to read
         nAvail = 0
         maxRead = 0
         done = true
       } else {
         nAvail = n
-        maxRead = readBarrier(pattern)
+        maxRead = readBarrier(s)
       }
     }
   }
 
   private def readBarrier (pattern: BMSearch): Int = {
-    val i = pattern.indexOfLastPrefix(buf,nAvail)
+    val i = pattern.indexOfLastPatternPrefixIn(buf,0,nAvail)
     if (i < 0) nAvail else i
   }
 
@@ -158,7 +157,7 @@ class SearchStream (istream: InputStream, bufferLength: Int = 4096) {
       clearSbuf
       if (maxRead == 0) fillBuffer(pattern) // nothing read yet
 
-      var i = pattern.indexOfFirst(buf, iLast + off, maxRead)
+      var i = pattern.indexOfFirstInRange(buf, iLast + off, maxRead)
 
       while (!done) {
         if (i < 0) { // no pattern occurrence found in buffer, save and refill
@@ -181,7 +180,7 @@ class SearchStream (istream: InputStream, bufferLength: Int = 4096) {
             readResult.set(sBuf,0,sLen)
           }
         }
-        i = pattern.indexOfFirst(buf, iLast, maxRead)
+        i = pattern.indexOfFirstInRange(buf, iLast, maxRead)
       }
     }
     false
@@ -197,7 +196,7 @@ class SearchStream (istream: InputStream, bufferLength: Int = 4096) {
   def skipTo (pattern: BMSearch, off: Int = 0): Boolean = {
     if (!done) {
       maxRead = readBarrier(pattern)
-      var i = pattern.indexOfFirst(buf, iLast + off, maxRead)
+      var i = pattern.indexOfFirstInRange(buf, iLast + off, maxRead)
 
       while (!done) {
         if (i < 0) {
@@ -206,7 +205,7 @@ class SearchStream (istream: InputStream, bufferLength: Int = 4096) {
           iLast = i
           return true
         }
-        i = pattern.indexOfFirst(buf, iLast, maxRead)
+        i = pattern.indexOfFirstInRange(buf, iLast, maxRead)
       }
     }
     false
