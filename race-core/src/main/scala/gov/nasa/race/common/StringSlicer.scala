@@ -29,7 +29,7 @@ class StringSlicer (createBuffer: =>StringDataBuffer) {
 
   def slice(s: String): Slice = {
     _bb.encode(s)
-    slice.set(_bb.data,0,_bb.length)
+    slice.set(_bb.data,0,_bb.byteLength)
     slice
   }
 }

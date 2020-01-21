@@ -58,26 +58,26 @@ object Slice {
   *
   * the trait does not allow to modify the internals
   */
-final class Slice (var data: Array[Byte], var offset: Int, var length: Int) extends ByteRange {
+final class Slice (var data: Array[Byte], var offset: Int, var byteLength: Int) extends ByteRange {
 
-  def this (cs: ASCIICharSequence) = this(cs.data,cs.offset,cs.length)
+  def this (cs: ASCIICharSequence) = this(cs.data,cs.offset,cs.byteLength)
 
   var hash: Int = 0
 
-  @inline final def isEmpty: Boolean = length == 0
-  @inline final def nonEmpty: Boolean = length > 0
+  @inline final def isEmpty: Boolean = byteLength == 0
+  @inline final def nonEmpty: Boolean = byteLength > 0
 
-  @inline override final def limit: Int = offset + length
+  @inline override final def limit: Int = offset + byteLength
 
-  override def toString: String = if (length > 0) new String(data,offset,length) else ""
+  override def toString: String = if (byteLength > 0) new String(data,offset,byteLength) else ""
 
   // same as String (utf-8)
   override def hashCode: Int = {
     var h = hash
-    if (h == 0 && length > 0) {
+    if (h == 0 && byteLength > 0) {
       h = data(offset) & 0xff
       var i = offset+1
-      val iEnd = offset + length
+      val iEnd = offset + byteLength
       while (i < iEnd) {
         h = h*31 + (data(i) & 0xff)
         i += 1
@@ -92,38 +92,38 @@ final class Slice (var data: Array[Byte], var offset: Int, var length: Int) exte
   @inline def clear: Unit = {
     data = Array.empty[Byte]
     offset = 0
-    length = 0
+    byteLength = 0
     hash = 0
   }
 
   @inline def clearRange: Unit = {
     offset = 0
-    length = 0
+    byteLength = 0
     hash = 0
   }
 
   @inline def set (bsNew: Array[Byte], offNew: Int, lenNew: Int): Unit = {
     data = bsNew
     offset = offNew
-    length = lenNew
+    byteLength = lenNew
     hash = 0
   }
 
   @inline def setRange (offNew: Int, lenNew: Int): Unit = {
     offset = offNew
-    length = lenNew
+    byteLength = lenNew
     hash = 0
   }
 
-  @inline def setFrom (other: Slice): Unit = set(other.data,other.offset,other.length)
+  @inline def setFrom (other: Slice): Unit = set(other.data,other.offset,other.byteLength)
 
-  @inline def setFrom (cs: ASCIICharSequence): Unit = set(cs.data,cs.offset,cs.length)
+  @inline def setFrom (cs: ASCIICharSequence): Unit = set(cs.data,cs.offset,cs.byteLength)
 
   // note - this is not public since it does not compare lengths (which is the inlined part of the caller)
   private def equalBytes (otherBs: Array[Byte], otherOffset: Int): Boolean = {
     val bs = this.data
     var i = offset
-    val iEnd = i + length
+    val iEnd = i + byteLength
     var j = otherOffset
     while (i < iEnd) {
       if (bs(i) != otherBs(j)) return false
@@ -134,34 +134,34 @@ final class Slice (var data: Array[Byte], var offset: Int, var length: Int) exte
   }
 
   @inline def equalsSliceAt (other: Slice, start: Int): Boolean = {
-    (length - start >= other.length) && other.equalBytes(data, offset+start)
+    (byteLength - start >= other.byteLength) && other.equalBytes(data, offset+start)
   }
 
 
   @inline final def == (other: Slice): Boolean = {
-    (length == other.length) && equalBytes(other.data,other.offset)
+    (byteLength == other.byteLength) && equalBytes(other.data,other.offset)
   }
 
   @inline final def != (other: Slice): Boolean = {
-    (length != other.length) || !equalBytes(other.data,other.offset)
+    (byteLength != other.byteLength) || !equalBytes(other.data,other.offset)
   }
 
   @inline def equals(otherBs: Array[Byte], otherOffset: Int, otherLength: Int): Boolean = {
-    (length == otherLength) && equalBytes(otherBs,otherOffset)
+    (byteLength == otherLength) && equalBytes(otherBs,otherOffset)
   }
 
   @inline def equalsString (s: String): Boolean = {
     val sbs = s.getBytes // BAD - this is allocating
-    (length == sbs.length) && equalBytes(sbs,0)
+    (byteLength == sbs.length) && equalBytes(sbs,0)
   }
 
   @inline def equalsString (s: String, buf: UTF8Buffer): Boolean = {
     val len = buf.encode(s)
-    (length == len) && equalBytes(buf.data,0)
+    (byteLength == len) && equalBytes(buf.data,0)
   }
 
   @inline def equalsBuffer (buf: UTF8Buffer): Boolean = {
-    (length == buf.length) && equalBytes(buf.data,0)
+    (byteLength == buf.byteLength) && equalBytes(buf.data,0)
   }
 
   override def equals (o: Any): Boolean = {
@@ -176,9 +176,9 @@ final class Slice (var data: Array[Byte], var offset: Int, var length: Int) exte
   // todo - add string comparison based on utf-8 encoding
 
   def equalsIgnoreCase(otherBs: Array[Byte], otherOffset: Int, otherLength: Int): Boolean = {
-    if (length != otherLength) return false
+    if (byteLength != otherLength) return false
     var i = offset
-    val iEnd = i + length
+    val iEnd = i + byteLength
     var j = otherOffset
     while (i < iEnd) {
       if ((data(i)|32) != (otherBs(j)|32)) return false
@@ -191,15 +191,15 @@ final class Slice (var data: Array[Byte], var offset: Int, var length: Int) exte
   def equalsIgnoreCase (otherBs: Array[Byte]): Boolean = equalsIgnoreCase(otherBs,0,otherBs.length)
 
   @inline def intern: String = {
-    if (length > 8) {
-      Internalizer.get(data, offset, length)
+    if (byteLength > 8) {
+      Internalizer.get(data, offset, byteLength)
     } else {
-      ASCII8Internalizer.get(data,offset,length)
+      ASCII8Internalizer.get(data,offset,byteLength)
     }
   }
 
   def isNullValue: Boolean = {
-    if (length == 4) {
+    if (byteLength == 4) {
       val i = offset
       val data = this.data
       (data(i) == 'n' && data(i+1) == 'u' && data(i+2) == 'l' && data(i+3) == 'l')
@@ -207,13 +207,43 @@ final class Slice (var data: Array[Byte], var offset: Int, var length: Int) exte
   }
 
   def writeTo(out: OutputStream): Unit = {
-    out.write(data,offset,length)
+    out.write(data,offset,byteLength)
+  }
+
+  def indexOf(b: Byte, fromIndex: Int): Int = {
+    var i = fromIndex
+    val lim = offset + byteLength
+    while (i < lim) {
+      if (data(i) == b) return i
+      i += 1
+    }
+    -1
+  }
+  @inline def indexOf(b: Byte): Int = indexOf(b,offset)
+
+  @inline def subSlice (fromIndex: Int, toIndex: Int): Slice = {
+    new Slice(data,fromIndex,toIndex - fromIndex)
+  }
+
+  @inline def subSlice (fromIndex: Int): Slice = {
+    new Slice(data,fromIndex, byteLength - (fromIndex-offset))
+  }
+
+  def occurrencesOf (b: Byte): Int = {
+    var n=0
+    var i=offset
+    val lim = offset + byteLength
+    while (i < lim){
+      if (data(i) == b) n +=1
+      i += 1
+    }
+    n
   }
 
   //--- type conversion
 
-  def toSubString (off: Int = offset, len: Int = length): String = {
-    val iMax = offset + length
+  def toSubString (off: Int = offset, len: Int = byteLength): String = {
+    val iMax = offset + byteLength
     if (off >= offset && off < iMax && off+len <= iMax) new String(data,off,len) else ""
   }
 
@@ -223,7 +253,7 @@ final class Slice (var data: Array[Byte], var offset: Int, var length: Int) exte
     @inline def digitValue(b: Byte): Int = b - '0'
 
     var i = offset
-    val iMax = i + length
+    val iMax = i + byteLength
     val bs = this.data
     var n: Long = 0
     var d: Double = 0.0
@@ -285,20 +315,20 @@ final class Slice (var data: Array[Byte], var offset: Int, var length: Int) exte
 
   def trim: Slice = {
     var i = offset
-    val iMax = offset + length
+    val iMax = offset + byteLength
     val bs = this.data
 
     while (i < iMax && bs(i) == ' ') i += 1
 
     if (i == iMax) { // completely blank
       offset = 0
-      length = 0
+      byteLength = 0
 
     } else {
       offset = i
       i = iMax-1
       while (i > offset && bs(i) == ' ') i -= 1
-      length = i - offset + 1
+      byteLength = i - offset + 1
     }
 
     this
@@ -306,7 +336,7 @@ final class Slice (var data: Array[Byte], var offset: Int, var length: Int) exte
 
   def toHexLong: Long = {
     var i = offset
-    val iMax = offset + length
+    val iMax = offset + byteLength
     val bs = this.data
     var n: Long = 0
 
@@ -325,7 +355,7 @@ final class Slice (var data: Array[Byte], var offset: Int, var length: Int) exte
     @inline def digitValue(b: Byte): Int = b - '0'
 
     var i = offset
-    val iMax = i + length
+    val iMax = i + byteLength
     val bs = this.data
     var n: Long = 0
     var b: Byte = 0
@@ -346,7 +376,7 @@ final class Slice (var data: Array[Byte], var offset: Int, var length: Int) exte
 
   def toHexInt: Int = {
     var i = offset
-    val iMax = offset + length
+    val iMax = offset + byteLength
     val bs = this.data
     var n: Int = 0
 
@@ -374,7 +404,7 @@ final class Slice (var data: Array[Byte], var offset: Int, var length: Int) exte
 
   def toBoolean: Boolean = {
     // todo - more precise than Boolean.parseBoolean, but do we want to differ?
-    if (length == 1){
+    if (byteLength == 1){
       if (data(offset) == '1') true
       else if (data(offset) == '0') false
       else throw new RuntimeException(s"not a boolean: $this")
@@ -395,7 +425,7 @@ final class Slice (var data: Array[Byte], var offset: Int, var length: Int) exte
   }
 
   @inline def toDoubleOrNaN: Double = {
-    if (length == 0 || equalsIgnoreCase(Slice.NullPattern) || equalsIgnoreCase(Slice.NaNPattern)) Double.NaN else toDouble
+    if (byteLength == 0 || equalsIgnoreCase(Slice.NullPattern) || equalsIgnoreCase(Slice.NaNPattern)) Double.NaN else toDouble
   }
 
   @inline final def hexDigit (b: Byte): Int = {
@@ -420,10 +450,10 @@ final class Slice (var data: Array[Byte], var offset: Int, var length: Int) exte
     }
   }
 
-  def literalToString: String = toEscString(offset+1,length-2) // remove the leading/trailing double quotes and replace escape chars
+  def literalToString: String = toEscString(offset+1,byteLength-2) // remove the leading/trailing double quotes and replace escape chars
 
   // turn into String with replaced \x chars
-  def toEscString (i0: Int = offset, len: Int = length): String = {
+  def toEscString (i0: Int = offset, len: Int = byteLength): String = {
     val data = this.data
     val bs = new Array[Byte](len) // can only get shorter
     var i = 0
@@ -480,6 +510,6 @@ final class Slice (var data: Array[Byte], var offset: Int, var length: Int) exte
     new String(bs,0,i)
   }
 
-  @inline def getIntRange: IntRange = IntRange(offset,length)
+  @inline def getIntRange: IntRange = IntRange(offset,byteLength)
 
 }

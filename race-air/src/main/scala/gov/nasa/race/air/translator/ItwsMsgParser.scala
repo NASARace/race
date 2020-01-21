@@ -90,10 +90,10 @@ class ItwsMsgParser(val config: Config=NoConfig) extends UTF8XmlPullParser2 with
     src match {
       case s: String =>
         bb.encode(s)
-        parse(bb.data, 0, bb.length)
+        parse(bb.data, 0, bb.byteLength)
       case Some(s: String) =>
         bb.encode(s)
-        parse(bb.data, 0, bb.length)
+        parse(bb.data, 0, bb.byteLength)
       case s: Slice =>
         parse(s.data,s.offset,s.limit)
       case bs: Array[Byte] =>
@@ -141,7 +141,7 @@ class ItwsMsgParser(val config: Config=NoConfig) extends UTF8XmlPullParser2 with
 
       if (isStartTag) {
         val off = tag.offset
-        val len = tag.length
+        val len = tag.byteLength
 
         @inline def readDate: DateTime = DateTime.ofEpochMillis(1000L * readIntContent)
 
@@ -273,7 +273,7 @@ class ItwsMsgParser(val config: Config=NoConfig) extends UTF8XmlPullParser2 with
     while (parseNextTag) {
       if (isStartTag) {
         val off = tag.offset
-        val len = tag.length
+        val len = tag.byteLength
 
         @inline def process_product_header = parseElement(productHeader)
         @inline def process_precip = parseElement(precip)

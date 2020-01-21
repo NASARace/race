@@ -19,7 +19,7 @@ package gov.nasa.race.air.actor
 import com.typesafe.config.Config
 import gov.nasa.race._
 import gov.nasa.race.actor.FilterActor
-import gov.nasa.race.air.TrackedAircraft
+import gov.nasa.race.air.{TrackedAircraft, TrackedAircraftSeq}
 import gov.nasa.race.air.filter.ApproachFilter
 import gov.nasa.race.config.ConfigurableFilter
 import gov.nasa.race.track.TrackDropped
@@ -40,6 +40,14 @@ class ApproachFilterActor(_conf: Config) extends FilterActor(_conf) {
   // we always have a ApproachFilter as the first one, which is using the top config
   override def createFilters: Array[ConfigurableFilter] = new ApproachFilter(config) +: super.createFilters
 
+  override def publishFiltered (msg: Any): Unit = {
+    // we need to flatten input
+    msg match {
+      case acs: TrackedAircraftSeq[_] => acs.foreach( ac=> action(ac,pass(ac)))
+      case _ => super.publishFiltered(msg)
+    }
+  }
+
   override def action (msg: Any, isPassing: Boolean): Unit = {
     if (isPassing) { // update the monitored list
       msg match {
@@ -47,6 +55,7 @@ class ApproachFilterActor(_conf: Config) extends FilterActor(_conf) {
           // check for consecutive climbing here
           candidates += ac.id -> ac
           publish(msg)
+
         case _ => // ignore
       }
 

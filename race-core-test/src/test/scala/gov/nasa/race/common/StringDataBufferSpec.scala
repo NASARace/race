@@ -30,8 +30,8 @@ class StringDataBufferSpec extends AnyFlatSpec with RaceSpec {
     buf += '-'
     buf += "two"
 
-    println(s"--- ASCIIBuffer append: '${new String(buf.data,0,buf.length)}' : ${buf.length}")
-    assert(buf.length == 7)
+    println(s"--- ASCIIBuffer append: '${new String(buf.data,0,buf.byteLength)}' : ${buf.byteLength}")
+    assert(buf.byteLength == 7)
   }
 
   "a UTF8Buffer" should "accumulate known ASCII data" in {
@@ -40,8 +40,8 @@ class StringDataBufferSpec extends AnyFlatSpec with RaceSpec {
     buf += '-'
     buf += "two"
 
-    println(s"--- UTF8Buffer append: '${new String(buf.data,0,buf.length)}' : ${buf.length}")
-    assert(buf.length == 7)
+    println(s"--- UTF8Buffer append: '${new String(buf.data,0,buf.byteLength)}' : ${buf.byteLength}")
+    assert(buf.byteLength == 7)
   }
 
   "a UTF8Buffer" should "reproduce known unicode strings" in {
@@ -50,9 +50,9 @@ class StringDataBufferSpec extends AnyFlatSpec with RaceSpec {
     val buf = new UTF8Buffer(64)
     buf.encode(sIn)
 
-    val sOut = new String(buf.data,0,buf.length)
+    val sOut = new String(buf.data,0,buf.byteLength)
 
-    println(s"--- UTF8Buffer.encode: '$sIn' -> '$sOut' : ${buf.length}")
+    println(s"--- UTF8Buffer.encode: '$sIn' -> '$sOut' : ${buf.byteLength}")
     assert (sIn == sOut)
   }
 }

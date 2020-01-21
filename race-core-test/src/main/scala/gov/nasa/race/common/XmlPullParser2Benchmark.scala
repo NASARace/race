@@ -250,9 +250,9 @@ object XmlPullParser2Benchmark {
         val tag = parser.tag
 
         if (parser.isStartTag) {
-          parseFlightStartTags(tag.data,tag.offset,tag.length)
+          parseFlightStartTags(tag.data,tag.offset,tag.byteLength)
         } else {
-          parseFlightEndTags(tag.data,tag.offset,tag.length)
+          parseFlightEndTags(tag.data,tag.offset,tag.byteLength)
           if (done) return
         }
       }

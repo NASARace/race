@@ -27,6 +27,7 @@ object UTFx {
 
   // low 4 bytes are next char(s)
   // high 4 bytes are 3 byte utf-8 index and one byte remaining chars
+  // NOTE - this means we can only decode strings up to a length of 16,777,215 bytes
   final class UTF8Decoder(val state: Long) extends AnyVal {
 
     @inline def isEnd: Boolean = state == 0xffffffff00000000L

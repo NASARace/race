@@ -64,10 +64,10 @@ class TfmTrackInfoParser2(val config: Config=NoConfig) extends UTF8XmlPullParser
     msg match {
       case s: String =>
         bb.encode(s)
-        parseTracks(bb.data, 0, bb.length)
+        parseTracks(bb.data, 0, bb.byteLength)
       case Some(s: String) =>
         bb.encode(s)
-        parseTracks(bb.data, 0, bb.length)
+        parseTracks(bb.data, 0, bb.byteLength)
       case s: Slice =>
         parseTracks(s.data,s.offset,s.limit)
       case bs: Array[Byte] =>
@@ -163,7 +163,7 @@ class TfmTrackInfoParser2(val config: Config=NoConfig) extends UTF8XmlPullParser
 
       while (parseNextAttr) {
         val off = attrName.offset
-        val len = attrName.length
+        val len = attrName.byteLength
 
         @inline def process_elaspedTime = et = attrValue.toInt
         @inline def process_latitudeDecimal = latDeg = attrValue.toDouble

@@ -113,7 +113,7 @@ object DateTime {
   //--- slice based parsing
   // TODO - use the component extractors to avoid redundancy
 
-  def parseYMDT (slice: Slice): DateTime = parseYMDT(slice.data, slice.offset, slice.length)
+  def parseYMDT (slice: Slice): DateTime = parseYMDT(slice.data, slice.offset, slice.byteLength)
 
   def parseYMDT(bs: Array[Byte], off: Int, len: Int): DateTime = {
     var i = off
@@ -211,25 +211,25 @@ object DateTime {
   @inline private def read4Digits (bs: Array[Byte], k: Int): Int = readDigit(bs,k)*1000 + readDigit(bs,k+1)*100 + readDigit(bs,k+2)*10 + readDigit(bs,k+3)
   @inline private def read2Digits (bs: Array[Byte], k: Int): Int = readDigit(bs,k)*10 + readDigit(bs,k+1)
 
-  @inline def yearOfYMD (slice: Slice): Int = yearOfYMD(slice.data,slice.offset,slice.length)
+  @inline def yearOfYMD (slice: Slice): Int = yearOfYMD(slice.data,slice.offset,slice.byteLength)
   @inline def yearOfYMD (bs: Array[Byte], off: Int, len: Int): Int = read4Digits(bs,off)
 
-  @inline def monthOfYMD (slice: Slice): Int = monthOfYMD(slice.data,slice.offset,slice.length)
+  @inline def monthOfYMD (slice: Slice): Int = monthOfYMD(slice.data,slice.offset,slice.byteLength)
   @inline def monthOfYMD (bs: Array[Byte], off: Int, len: Int): Int = read2Digits(bs,off+5)
 
-  @inline def dayOfYMD (slice: Slice): Int = dayOfYMD(slice.data,slice.offset,slice.length)
+  @inline def dayOfYMD (slice: Slice): Int = dayOfYMD(slice.data,slice.offset,slice.byteLength)
   @inline def dayOfYMD (bs: Array[Byte], off: Int, len: Int): Int = read2Digits(bs,off+8)
 
-  @inline def hourOfT (slice: Slice): Int = hourOfT(slice.data,slice.offset,slice.length)
+  @inline def hourOfT (slice: Slice): Int = hourOfT(slice.data,slice.offset,slice.byteLength)
   @inline def hourOfT (bs: Array[Byte], off: Int, len: Int): Int = read2Digits(bs,off)
 
-  @inline def minutesOfT (slice: Slice): Int = minutesOfT(slice.data,slice.offset,slice.length)
+  @inline def minutesOfT (slice: Slice): Int = minutesOfT(slice.data,slice.offset,slice.byteLength)
   @inline def minutesOfT (bs: Array[Byte], off: Int, len: Int): Int = read2Digits(bs,off+3)
 
-  @inline def secondsOfT (slice: Slice): Int = secondsOfT(slice.data,slice.offset,slice.length)
+  @inline def secondsOfT (slice: Slice): Int = secondsOfT(slice.data,slice.offset,slice.byteLength)
   @inline def secondsOfT (bs: Array[Byte], off: Int, len: Int): Int = read2Digits(bs,off+6)
 
-  @inline def fracNanosOfT (slice: Slice): Int = fracNanosOfT(slice.data,slice.offset,slice.length)
+  @inline def fracNanosOfT (slice: Slice): Int = fracNanosOfT(slice.data,slice.offset,slice.byteLength)
   def fracNanosOfT (bs: Array[Byte], off: Int, len: Int): Int = {
     var i = off + 8
     val iMax = off + len
@@ -249,11 +249,11 @@ object DateTime {
   }
 
   def zoneIdOfHHmmssS (slice: Slice): ZoneId = {
-    val off1 = zoneIdOffsetOfT(slice.data,slice.offset+8,slice.length-8)
-    if (off1 >= 0)  zoneIdOfT(slice.data,off1,slice.length-(off1-slice.offset)) else ZoneId.systemDefault
+    val off1 = zoneIdOffsetOfT(slice.data,slice.offset+8,slice.byteLength-8)
+    if (off1 >= 0)  zoneIdOfT(slice.data,off1,slice.byteLength-(off1-slice.offset)) else ZoneId.systemDefault
   }
 
-  @inline def zoneIdOffsetOfT (slice: Slice): Int = zoneIdOffsetOfT(slice.data,slice.offset,slice.length)
+  @inline def zoneIdOffsetOfT (slice: Slice): Int = zoneIdOffsetOfT(slice.data,slice.offset,slice.byteLength)
   def zoneIdOffsetOfT (bs: Array[Byte], off: Int, len: Int): Int = {
     var i = off
     val iMax = off+len
@@ -271,7 +271,7 @@ object DateTime {
   }
 
   // apply zoneIdOffsetOfT before calling these
-  @inline def zoneIdOfT (slice: Slice): ZoneId = zoneIdOfT(slice.data,slice.offset,slice.length)
+  @inline def zoneIdOfT (slice: Slice): ZoneId = zoneIdOfT(slice.data,slice.offset,slice.byteLength)
   def zoneIdOfT (bs: Array[Byte], off: Int, len: Int): ZoneId = {
     // optional zone id starts either with +/- or a non-digit other than '.'
     var i = off

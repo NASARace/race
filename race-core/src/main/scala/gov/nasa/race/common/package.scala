@@ -168,7 +168,7 @@ package object common {
     */
   trait Parser {
     def parse (bs: Array[Byte], off: Int, length: Int): Option[Any]
-    def parse (br: ByteRange): Option[Any] = parse(br.data, br.offset, br.length)
+    def parse (br: ByteRange): Option[Any] = parse(br.data, br.offset, br.byteLength)
   }
 
   /**
@@ -177,8 +177,8 @@ package object common {
   trait ByteRange {
     def data: Array[Byte]
     def offset: Int
-    def length: Int
+    def byteLength: Int  // can't use length as it clashes with CharSequence.length (in chars)
 
-    def limit: Int = offset + length
+    def limit: Int = offset + byteLength
   }
 }

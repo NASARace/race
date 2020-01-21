@@ -30,7 +30,7 @@ import gov.nasa.race.common.inlined.Slice
 class SliceSplitter (var sep: Byte, var src: Slice) extends Iterator[Slice] {
   val subSlice: Slice = new Slice(src.data,0,0)
   var idx = src.offset
-  var limit = src.offset + src.length
+  var limit = src.offset + src.byteLength
 
   def this (sep: Byte) = this(sep, Slice.empty)
 
@@ -38,12 +38,12 @@ class SliceSplitter (var sep: Byte, var src: Slice) extends Iterator[Slice] {
     src = newSrc
     subSlice.set(newSrc.data,0,0)
     idx = src.offset
-    limit = src.offset + src.length
+    limit = src.offset + src.byteLength
   }
 
   def setSeparator (newSep: Byte): Unit = {
     sep = newSep
-    subSlice.length = 0
+    subSlice.byteLength = 0
   }
 
   final def hasNext: Boolean = {

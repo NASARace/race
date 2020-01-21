@@ -119,7 +119,7 @@ class OpenSky2FlightPos (val config: Config=NoConfig) extends OpenSkyParser with
         result(parse(msg,msg.length))
       case s: String =>
         bb.encode(s)
-        result(parse(bb.data,bb.length))
+        result(parse(bb.data,bb.byteLength))
       case _ => None
     }
   }

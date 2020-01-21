@@ -19,7 +19,7 @@ package gov.nasa.race.actor
 import akka.actor.ActorRef
 import com.typesafe.config.Config
 import gov.nasa.race._
-import gov.nasa.race.common.{MsgMatcher, MsgStatsData, PatternStatsData, MsgStats}
+import gov.nasa.race.common.{ConstUTF8CharSequence, MsgMatcher, MsgStats, MsgStatsData, MutUTF8CharSequence, PatternStatsData, SlicePathMatcher, StringDataBuffer, UTF8Buffer, UTF8XmlPullParser2, XmlPullParser2}
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.Messages.{BusEvent, RaceTick}
 import gov.nasa.race.core.{ContinuousTimeRaceActor, PeriodicRaceActor, PublishingRaceActor, SubscribingRaceActor}
@@ -60,38 +60,35 @@ class XmlMsgStatsCollector (val config: Config) extends StatsCollectorActor {
 
   val msgStats = MSortedMap.empty[String,MsgStatsData]
 
-  class Parser extends XmlPullParser {
-    val pathQueries = pathSpecs map(ps => compileGlobPathQuery(ps.split("/")))
-    setBuffer(new Array[Char](config.getIntOrElse("buffer-size", 4096))) // pre-alloc buffer
+  class Parser extends UTF8XmlPullParser2 {
+    val pathMatcher = pathSpecs.map(SlicePathMatcher(_))
 
-    def parse(input: String): MsgStatsData = {
-      initializeBuffered(input)
-
-      var isFirstElement = true
+    def parse (bs: Array[Byte], off: Int, len: Int): MsgStatsData = {
       var msgStat: MsgStatsData = null
-      var done = false
 
-      while (!done && parseNextElement) {
-        if (isStartElement) {
-          if (isFirstElement){
-            if (ignoreMessage(tag)) {
-              done = true
-            } else {
-              isFirstElement = false
-              msgStat = msgStats.getOrElseUpdate(tag, new MsgStatsData(tag))
-              msgStat.update(updatedSimTimeMillis, elapsedSimTimeMillisSinceStart, input.length)
-              if (pathQueries.isEmpty) done = true // no need to parse elements
-            }
+      if (initialize(bs,off,len)) {
+        if (parseNextTag) {
+          val topElem = tag.intern
 
-          } else { // we have pathQueries. Avoid allocation, this can be called frequently
-            var idx = 0
-            pathQueries foreach { pqId =>
-              if (isMatchingPath(pqId)) {
-                val pattern = pathSpecs(idx)
-                val patternStat = msgStat.pathMatches.getOrElseUpdate(pattern,new PatternStatsData(pattern))
-                patternStat.count += 1
+          if (ignoreMessage(topElem)) return null
+
+          msgStat = msgStats.getOrElseUpdate(topElem, new MsgStatsData(topElem))
+          msgStat.update(updatedSimTimeMillis, elapsedSimTimeMillisSinceStart, bs.length)
+
+          if (pathMatcher.nonEmpty) {
+            while (parseNextTag) {
+              if (isStartTag) {
+                var i = 0
+                while (i < pathMatcher.length) { // avoid Iterator allocation
+                  val pm = pathMatcher(i)
+                  if (pathMatches(pm)){
+                    val ps = pathSpecs(i)
+                    val patternStat = msgStat.pathMatches.getOrElseUpdate(ps,new PatternStatsData(ps))
+                    patternStat.count += 1
+                  }
+                  i += 1
+                }
               }
-              idx += 1
             }
           }
         }
@@ -111,14 +108,28 @@ class XmlMsgStatsCollector (val config: Config) extends StatsCollectorActor {
     if (reportEmptyStats || msgStats.nonEmpty) publish(snapshot)
   }
 
+  // on demand initialized if we have to process Strings or use Regex
+  private val sb: StringDataBuffer = new UTF8Buffer(0)
+  private val cs: MutUTF8CharSequence = new MutUTF8CharSequence
 
   override def handleMessage = {
+    case BusEvent(_,msg: Array[Byte],_) =>
+      analyzeMsg(msg,0,msg.length)
+
     case BusEvent(_,msg: String,_) =>
-      val msgStat = parser.parse(msg)
-      if (msgStat != null && patterns.nonEmpty) checkMatches(msgStat,msg)
+      sb.encode( msg)
+      analyzeMsg(sb.data,0,sb.byteLength)
   }
 
-  def checkMatches (msgStat: MsgStatsData, msg: String) = {
+  def analyzeMsg(bs: Array[Byte], off: Int, len: Int): Unit = {
+    val msgStat = parser.parse(bs,off,len)
+    if (msgStat != null && patterns.nonEmpty) {
+      cs.initialize(bs,off,len)
+      checkMatches(msgStat,cs)
+    }
+  }
+
+  def checkMatches (msgStat: MsgStatsData, msg: CharSequence) = {
     MsgMatcher.findFirstMsgMatcher(msg,patterns) foreach { mc =>
       msgStat.regexMatches.getOrElseUpdate(mc.name,new PatternStatsData(mc.name)).count += 1
     }

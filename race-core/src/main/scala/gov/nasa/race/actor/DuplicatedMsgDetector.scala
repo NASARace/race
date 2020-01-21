@@ -72,7 +72,7 @@ class DuplicatedMsgDetector (val config: Config) extends StatsCollectorActor wit
   def checkMessage (msg: String): Unit = {
     val sdb = getStringDataBuffer(msg.length * 3/2)
     sdb += msg
-    checkMessage(sdb.data,sdb.length)
+    checkMessage(sdb.data,sdb.byteLength)
   }
 
   def checkMessage (msg: Array[Byte], len: Int): Unit = {

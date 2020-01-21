@@ -194,7 +194,7 @@ class BufferedStringCsvPullParser (initBufSize: Int = 8192) extends CsvPullParse
   def initialize (s: String): Boolean = {
     bb.encode(s)
     clear
-    setData(bb.data, bb.length)
+    setData(bb.data, bb.byteLength)
 
     idx = skipRecordSeparator(0)
     (idx < limit)
@@ -211,7 +211,7 @@ class BufferedASCIIStringCsvPullParser (initBufSize: Int = 8192) extends CsvPull
   def initialize (s: String): Boolean = {
     bb.encode(s)
     clear
-    setData(bb.data, bb.length)
+    setData(bb.data, bb.byteLength)
 
     idx = skipRecordSeparator(0)
     (idx < limit)

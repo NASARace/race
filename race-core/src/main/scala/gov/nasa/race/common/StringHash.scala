@@ -45,7 +45,7 @@ class MD5Checksum (bufSize: Int=1024) {
     }
     val bs = sdb
     bs += s
-    getHexChecksum(bs.data,0,bs.length)
+    getHexChecksum(bs.data,0,bs.byteLength)
   }
 
   def getHexChecksum(cs: Array[Char]): String = {
@@ -82,5 +82,5 @@ class MD5Checksum (bufSize: Int=1024) {
 
   def getHexChecksum(bs: Array[Byte]): String = getHexChecksum(bs,0,bs.length)
 
-  def getHexChecksum(slice: Slice): String = getHexChecksum(slice.data,slice.offset,slice.length)
+  def getHexChecksum(slice: Slice): String = getHexChecksum(slice.data,slice.offset,slice.byteLength)
 }

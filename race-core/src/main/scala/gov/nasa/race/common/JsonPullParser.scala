@@ -116,7 +116,7 @@ abstract class JsonPullParser {
         data(i0) match {
           //--- new environment
           case '{' => // value is object
-            path.push(member.offset,member.length)
+            path.push(member.offset,member.byteLength)
             env.push(state)
             idx = i0
             ObjectStart
@@ -192,7 +192,7 @@ abstract class JsonPullParser {
         data(i0) match {
           //--- new environment
           case '{' => // element value is object
-            path.push(member.offset,member.length)
+            path.push(member.offset,member.byteLength)
             state = objState
             env.push(state)
             idx = i0
@@ -323,7 +323,7 @@ abstract class JsonPullParser {
 
   final def readNextMemberValue (name: Slice): JsonParseResult = {
     val res = parseNextValue
-    if (name.length > 0 && name != member) throw new JsonParseException(s"expected member $name got $member")
+    if (name.byteLength > 0 && name != member) throw new JsonParseException(s"expected member $name got $member")
     res
   }
 
@@ -648,7 +648,7 @@ class BufferedStringJsonPullParser (initBufSize: Int = 8192) extends JsonPullPar
   def initialize (s: String): Boolean = {
     bb.encode(s)
     clear
-    setData(bb.data, bb.length)
+    setData(bb.data, bb.byteLength)
 
     idx = seekStart
     idx >= 0
@@ -665,7 +665,7 @@ class BufferedASCIIStringJsonPullParser (initBufSize: Int = 8192) extends JsonPu
   def initialize (s: String): Boolean = {
     bb.encode(s)
     clear
-    setData(bb.data, bb.length)
+    setData(bb.data, bb.byteLength)
 
     idx = seekStart
     idx >= 0

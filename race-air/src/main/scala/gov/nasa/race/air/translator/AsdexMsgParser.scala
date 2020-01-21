@@ -68,10 +68,10 @@ class AsdexMsgParser(val config: Config=NoConfig) extends UTF8XmlPullParser2
     src match {
       case s: String =>
         bb.encode(s)
-        parse(bb.data, 0, bb.length)
+        parse(bb.data, 0, bb.byteLength)
       case Some(s: String) =>
         bb.encode(s)
-        parse(bb.data, 0, bb.length)
+        parse(bb.data, 0, bb.byteLength)
       case s: Slice =>
         parse(s.data,s.offset,s.limit)
       case bs: Array[Byte] =>
@@ -320,7 +320,7 @@ class AsdexMsgParser(val config: Config=NoConfig) extends UTF8XmlPullParser2
     idBuf += srcId
     idBuf += trackId
 
-    if (idBuf.length > 8) Internalizer.get(idBuf) else ASCII8Internalizer.get(idBuf)
+    if (idBuf.byteLength > 8) Internalizer.get(idBuf) else ASCII8Internalizer.get(idBuf)
   }
 }
 

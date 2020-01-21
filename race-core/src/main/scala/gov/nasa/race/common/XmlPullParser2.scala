@@ -106,8 +106,8 @@ abstract class XmlPullParser2  {
         tag.setRange(i0,len)
         _isStartTag = isStart
 
-        contentString.length = 0
-        rawContent.length = 0
+        contentString.byteLength = 0
+        rawContent.byteLength = 0
         contentStrings.top = -1
         contentIdx = 0
 
@@ -311,28 +311,28 @@ abstract class XmlPullParser2  {
   def parseElement (f: SliceParseFunc): Unit = {
     val endLevel = depth-1
     while (parseNextTag && depth > endLevel) {
-      f(data, tag.offset, tag.length)
+      f(data, tag.offset, tag.byteLength)
     }
   }
 
   def parseElement (fStart: SliceParseFunc, fEnd: SliceParseFunc): Unit = {
     val endLevel = depth-1
     while (parseNextTag && depth > endLevel) {
-      if (isStartTag) fStart(data, tag.offset, tag.length)
-      else fEnd(data, tag.offset, tag.length)
+      if (isStartTag) fStart(data, tag.offset, tag.byteLength)
+      else fEnd(data, tag.offset, tag.byteLength)
     }
   }
 
   def parseElementStartTags (fStart: SliceParseFunc): Unit = {
     val endLevel = depth-1
     while (parseNextTag && depth > endLevel) {
-      if (isStartTag) fStart(data, tag.offset, tag.length)
+      if (isStartTag) fStart(data, tag.offset, tag.byteLength)
     }
   }
 
   def parseAttrs (f: SliceParseFunc): Unit = {
     while (parseNextAttr) {
-      f(data, attrName.offset, attrName.length)
+      f(data, attrName.offset, attrName.byteLength)
     }
   }
 
@@ -455,6 +455,10 @@ abstract class XmlPullParser2  {
     }
     false
   }
+
+  // make sure this executes in const space (hence a pre-alloc path element slice)
+  private val _pms = Slice.empty
+  def pathMatches (matcher: SlicePathMatcher): Boolean = matcher.matches(data,_pms,path)
 
   //.. and probably more path predicates
 
@@ -726,7 +730,7 @@ class BufferedStringXmlPullParser2(initBufSize: Int = 8192) extends XmlPullParse
   def initialize (s: String): Boolean = {
     bb.encode(s)
     clear
-    setData(bb.data, 0, bb.length)
+    setData(bb.data, 0, bb.byteLength)
 
     idx = seekRootTag
     idx >= 0
@@ -745,7 +749,7 @@ class BufferedASCIIStringXmlPullParser2(initBufSize: Int = 8192) extends XmlPull
   def initialize (s: String): Boolean = {
     bb.encode(s)
     clear
-    setData(bb.data, 0, bb.length)
+    setData(bb.data, 0, bb.byteLength)
 
     idx = seekRootTag
     idx >= 0
@@ -786,5 +790,5 @@ class XmlTopElementParser extends UTF8XmlPullParser2 {
   }
 
   def parseTopElement (bs: Array[Byte]): Boolean = parseTopElement(bs,0,bs.length)
-  def parseTopElement (br: ByteRange): Boolean = parseTopElement(br.data,br.offset,br.length)
+  def parseTopElement (br: ByteRange): Boolean = parseTopElement(br.data,br.offset,br.byteLength)
 }

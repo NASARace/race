@@ -126,8 +126,8 @@ trait TaggedArchiveWriter extends ArchiveWriter {
 
   override def write(date: DateTime, obj: Any): Boolean = {
     setEntryBytes(obj)
-    writeEntryHeader(date,entryData.length)
-    oStream.write(entryData.data, entryData.offset, entryData.length)
+    writeEntryHeader(date,entryData.byteLength)
+    oStream.write(entryData.data, entryData.offset, entryData.byteLength)
     nEntries += 1
     true
   }
@@ -145,7 +145,7 @@ trait TaggedTextArchiveWriter extends TaggedArchiveWriter {
     obj match {
       case s: String =>
         sdb.encode(s)
-        entryData.set(sdb.data,0,sdb.length)
+        entryData.set(sdb.data,0,sdb.byteLength)
       case a: Array[Byte] =>
         entryData.set(a, 0, a.length)
       case slice: Slice =>

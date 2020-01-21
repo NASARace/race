@@ -59,10 +59,10 @@ class TATrackAndFlightPlanParser(val config: Config=NoConfig)  extends UTF8XmlPu
     src match {
       case s: String =>
         bb.encode(s)
-        parse(bb.data, 0, bb.length)
+        parse(bb.data, 0, bb.byteLength)
       case Some(s: String) =>
         bb.encode(s)
-        parse(bb.data, 0, bb.length)
+        parse(bb.data, 0, bb.byteLength)
       case s: Slice =>
         parse(s.data,s.offset,s.limit)
       case bs: Array[Byte] =>
@@ -145,7 +145,7 @@ class TATrackAndFlightPlanParser(val config: Config=NoConfig)  extends UTF8XmlPu
         @inline def readStatusFlag(s: Slice): Int = {
           val data = this.data
           val off = s.offset
-          val len = s.length
+          val len = s.byteLength
 
           @inline def match_active = {len == 6 && data(off) == 97 && data(off + 1) == 99 && data(off + 2) == 116 && data(off + 3) == 105 && data(off + 4) == 118 && data(off + 5) == 101}
           @inline def match_coasting = {len == 8 && data(off) == 99 && data(off + 1) == 111 && data(off + 2) == 97 && data(off + 3) == 115 && data(off + 4) == 116 && data(off + 5) == 105 && data(off + 6) == 110 && data(off + 7) == 103}

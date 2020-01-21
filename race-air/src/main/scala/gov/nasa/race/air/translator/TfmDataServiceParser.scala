@@ -68,10 +68,10 @@ class TfmDataServiceParser(val config: Config=NoConfig) extends UTF8XmlPullParse
     src match {
       case s: String =>
         bb.encode(s)
-        parse(bb.data, 0, bb.length)
+        parse(bb.data, 0, bb.byteLength)
       case Some(s: String) =>
         bb.encode(s)
-        parse(bb.data, 0, bb.length)
+        parse(bb.data, 0, bb.byteLength)
       case s: Slice =>
         parse(s.data,s.offset,s.limit)
       case bs: Array[Byte] =>
@@ -130,7 +130,7 @@ class TfmDataServiceParser(val config: Config=NoConfig) extends UTF8XmlPullParse
     def processAttrs: Unit = {
       while (parseNextAttr) {
         val off = attrName.offset
-        val len = attrName.length
+        val len = attrName.byteLength
 
         @inline def process_acid = cs = attrValue.intern
         @inline def process_arrArpt = arrArpt = attrValue.intern
@@ -184,7 +184,7 @@ class TfmDataServiceParser(val config: Config=NoConfig) extends UTF8XmlPullParse
 
         val bs = v.data
         var i = v.offset
-        val iEnd = v.offset + v.length
+        val iEnd = v.offset + v.byteLength
         var d: Double = 0
         while (i<iEnd) {
           val b = bs(i)
@@ -201,7 +201,7 @@ class TfmDataServiceParser(val config: Config=NoConfig) extends UTF8XmlPullParse
         // parse "nxcm:eta" "nxcm:nextEvent"
         while (parseNextTag) {
           val off = tag.offset
-          val len = tag.length
+          val len = tag.byteLength
 
           if (isStartTag) {
 
@@ -232,7 +232,7 @@ class TfmDataServiceParser(val config: Config=NoConfig) extends UTF8XmlPullParse
         while (parseNextTag) {
           if (isStartTag) {
             val off = tag.offset
-            val len = tag.length
+            val len = tag.byteLength
 
             @inline def process_nxcm$eta = nextWPDate = readNextWPDate
             @inline def process_nxcm$nextPosition = nextWP = readNextWP
@@ -260,7 +260,7 @@ class TfmDataServiceParser(val config: Config=NoConfig) extends UTF8XmlPullParse
         while (parseNextTag) {
           if (isStartTag) {
             val off = tag.offset
-            val len = tag.length
+            val len = tag.byteLength
 
             @inline def match_nxcm$eta = { len==8 && data(off)==110 && data(off+1)==120 && data(off+2)==99 && data(off+3)==109 && data(off+4)==58 && data(off+5)==101 && data(off+6)==116 && data(off+7)==97 }
 
@@ -288,7 +288,7 @@ class TfmDataServiceParser(val config: Config=NoConfig) extends UTF8XmlPullParse
 
         while (parseNextAttr) {
           val off = attrName.offset
-          val len = attrName.length
+          val len = attrName.byteLength
 
           @inline def process_latitudeDecimal = lat = attrValue.toDouble
           @inline def process_longitudeDecimal = lon = attrValue.toDouble
@@ -320,7 +320,7 @@ class TfmDataServiceParser(val config: Config=NoConfig) extends UTF8XmlPullParse
 
         while (parseNextTag) {
           val off = tag.offset
-          val len = tag.length
+          val len = tag.byteLength
 
           if (isStartTag) {
             @inline def process_nxce$latitudeDMS = lat = readDMS
@@ -351,7 +351,7 @@ class TfmDataServiceParser(val config: Config=NoConfig) extends UTF8XmlPullParse
 
         while (parseNextAttr) {
           val off = attrName.offset
-          val len = attrName.length
+          val len = attrName.byteLength
 
           @inline def process_degrees = deg = attrValue.toInt
           @inline def process_direction = isNegative = (attrValue == westValue || attrValue == southValue)
@@ -386,7 +386,7 @@ class TfmDataServiceParser(val config: Config=NoConfig) extends UTF8XmlPullParse
 
       while (parseNextTag){
         val off = tag.offset
-        val len = tag.length
+        val len = tag.byteLength
 
         if (isStartTag) {
           @inline def process_nxcm$speed = speed = UsMilesPerHour(readDoubleContent)

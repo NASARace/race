@@ -24,7 +24,7 @@ import gov.nasa.race.core.Messages.BusEvent
 import gov.nasa.race.core.{RaceContext, SubscribingRaceActor}
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.geo.{Euclidean, GeoPosition}
-import gov.nasa.race.track.{TrackListMessage, TrackPairEvent, TrackTerminationMessage, TrackedObject}
+import gov.nasa.race.track.{TrackListMessage, TrackPairEvent, TrackTerminationMessage, TrackedObject, TrackedObjects}
 import gov.nasa.race.trajectory._
 import gov.nasa.race.uom.DateTime
 
@@ -94,8 +94,8 @@ class TrackDiffActor (val config: Config) extends SubscribingRaceActor with Filt
   }
 
   def handleTrackMessage: Receive = {
-    case BusEvent(chan,o: TrackedObject, _) => updateTracks(chan,o)
-    case BusEvent(chan,tm: TrackListMessage, _) => tm.tracks.foreach( updateTracks(chan,_))
+    case BusEvent(chan,track:TrackedObject, _) => updateTracks(chan,track)
+    case BusEvent(chan,tracks:TrackedObjects[_], _) => tracks.foreach( updateTracks(chan,_))
     case BusEvent(chan,tm: TrackTerminationMessage,_) => closeTrack(chan,tm.cs)
   }
 

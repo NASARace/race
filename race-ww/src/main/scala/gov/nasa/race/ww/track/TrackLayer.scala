@@ -242,6 +242,14 @@ trait TrackLayer[T <:TrackedObject] extends SubscribingRaceLayer
     }
   }
 
+  // this needs to be called by a subclass since we don't know the key or track object
+  def dropTrackEntry (key: String): Unit = {
+    trackEntries.get(key) match {
+      case Some(acEntry) => removeTrackEntry(acEntry)
+      case None => // nothing
+    }
+  }
+
   def handleTermination (msg: TrackTerminationMessage): Unit  = {
     incUpdateCount
     ifSome(trackEntries.get(msg.cs)) { removeTrackEntry }
@@ -413,6 +421,10 @@ trait TrackLayer[T <:TrackedObject] extends SubscribingRaceLayer
   }
 
   override def handleMessage: PartialFunction[Any, Unit] = {
+    case BusEvent(_,track: TrackedObject,_) => // ignored - needs to be handled by subclass
+    case BusEvent(_,tracks: TrackedObjects[_],_) => // ignored - needs to be handled by subclass
+    case BusEvent(_,drop: TrackDropped,_) => // ignored - needs to be handled by subclass
+
     case BusEvent(_,fInfo:TrackInfo,_) => entryPanel.setTrackInfo(fInfo)
     case BusEvent(_,csChange:TrackCsChanged,_) => // todo
     case DelayedAction(_,action) => action()

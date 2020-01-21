@@ -20,18 +20,18 @@ import gov.nasa.race.util.JUtils
 
 abstract class StringDataBuffer (initDataSize: Int) extends ByteRange {
   var data: Array[Byte] = new Array(initDataSize)
-  var length: Int = 0
+  var byteLength: Int = 0
 
   def offset: Int = 0
 
   def encode (s: String): Int = {
-    length = 0
+    byteLength = 0
     this += s
-    length
+    byteLength
   }
 
   def apply (i: Int): Byte = data(i)
-  def clear: Unit = length = 0
+  def clear: Unit = byteLength = 0
 
   //--- those are the two workhorses that have to be defined in subclasses
   def += (s: String): Unit
@@ -40,7 +40,7 @@ abstract class StringDataBuffer (initDataSize: Int) extends ByteRange {
   protected def ensureCapacity(len: Int): Unit = {
     if (len > data.length) {
       val newData = new Array[Byte] (len)
-      if (length > 0) System.arraycopy (data, 0, newData, 0, length)
+      if (byteLength > 0) System.arraycopy (data, 0, newData, 0, byteLength)
       data = newData
     }
   }
@@ -55,31 +55,31 @@ abstract class StringDataBuffer (initDataSize: Int) extends ByteRange {
 class UTF8Buffer (initDataSize: Int = 8192) extends StringDataBuffer(initDataSize) {
 
   def += (s: String): Unit = {
-    val len = length + UTFx.utf8Length(s)
+    val len = byteLength + UTFx.utf8Length(s)
     ensureCapacity(len)
 
-    var i = length
+    var i = byteLength
     var enc = UTFx.initUTF8Encoder(s,0)
     while (!enc.isEnd) {
       data(i) = enc.utf8Byte
       i += 1
       enc = enc.next(s)
     }
-    length = len
+    byteLength = len
   }
 
   def += (c: Char): Unit = {
-    val len = length + UTFx.utf8Length(c)
+    val len = byteLength + UTFx.utf8Length(c)
     ensureCapacity(len)
 
-    var i = length
+    var i = byteLength
     var enc = UTFx.initUTF8Encoder(c)
     while (!enc.isEnd) {
       data(i) = enc.utf8Byte
       i += 1
       enc = enc.next(c)
     }
-    length = len
+    byteLength = len
   }
 }
 
@@ -92,19 +92,19 @@ class UTF8Buffer (initDataSize: Int = 8192) extends StringDataBuffer(initDataSiz
 class ASCIIBuffer (initDataSize: Int = 8192) extends StringDataBuffer(initDataSize) {
 
   def += (s: String): Unit = {
-    val len = length + s.length
+    val len = byteLength + s.length
     ensureCapacity(len)
     //s.getBytes(0,len,data,0)  // this is safe since we only call this on ASCII strings (and we have to avoid allocation)
-    JUtils.getASCIIBytes(s,0,s.length,data,length) // FIXME - this is just to suppress the deprecated warning (Scala can't)
-    length = len
+    JUtils.getASCIIBytes(s,0,s.length,data,byteLength) // FIXME - this is just to suppress the deprecated warning (Scala can't)
+    byteLength = len
   }
 
   def += (c: Char): Unit = {
-    val len = length+1
+    val len = byteLength+1
     ensureCapacity(len)
-    data(length) = c.toByte
-    length = len
+    data(byteLength) = c.toByte
+    byteLength = len
   }
 
-  def toCharSequence: ASCIICharSequence = new ASCIICharSequence(data,0,length)
+  def toCharSequence: ASCIICharSequence = new ConstASCIICharSequence(data,0,byteLength)
 }

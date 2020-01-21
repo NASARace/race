@@ -17,7 +17,7 @@
 package gov.nasa.race.air.filter
 
 import com.typesafe.config.Config
-import gov.nasa.race.air.{Airport, TrackedAircraft}
+import gov.nasa.race.air.{Airport, TrackedAircraft, TrackedAircraftSeq}
 import gov.nasa.race.config.ConfigurableFilter
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.uom.Length._

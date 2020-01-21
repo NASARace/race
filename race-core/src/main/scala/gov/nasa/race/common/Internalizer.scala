@@ -65,8 +65,8 @@ object Internalizer {
   }
 
   @inline final def get (bs: Array[Byte], off: Int, len: Int): String = getMurmurHashed(MurmurHash64.hashBytes(bs,off,len), bs,off,len)
-  @inline final def get (slice: Slice): String = get(slice.data,slice.offset,slice.length)
-  @inline final def get (buf: StringDataBuffer): String = get(buf.data,0,buf.length)
+  @inline final def get (slice: Slice): String = get(slice.data,slice.offset,slice.byteLength)
+  @inline final def get (buf: StringDataBuffer): String = get(buf.data,0,buf.byteLength)
 
 
   def getMurmurHashed (hash: Long, cs: Array[Char], off: Int, len: Int): String = synchronized {
@@ -152,8 +152,8 @@ object ASCII8Internalizer {
   }
 
   @inline final def get ( bs: Array[Byte], off: Int, len: Int): String = getASCII8Hashed(ASCII8Hash64.hashBytes(bs,off,len), bs,off,len)
-  @inline final def get (slice: Slice): String = get(slice.data,slice.offset,slice.length)
-  @inline final def get (buf: StringDataBuffer): String = get(buf.data,0,buf.length)
+  @inline final def get (slice: Slice): String = get(slice.data,slice.offset,slice.byteLength)
+  @inline final def get (buf: StringDataBuffer): String = get(buf.data,0,buf.byteLength)
 
   def getASCII8Hashed (hash: Long, cs: Array[Char], off: Int, len: Int): String = {
     if (len > 8) {

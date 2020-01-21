@@ -76,10 +76,10 @@ class MessageCollectionParser(val config: Config=NoConfig) extends UTF8XmlPullPa
     src match {
       case s: String =>
         bb.encode(s)
-        parse(bb.data, 0, bb.length)
+        parse(bb.data, 0, bb.byteLength)
       case Some(s: String) =>
         bb.encode(s)
-        parse(bb.data, 0, bb.length)
+        parse(bb.data, 0, bb.byteLength)
       case s: Slice =>
         parse(s.data,s.offset,s.limit)
       case bs: Array[Byte] =>
@@ -103,7 +103,7 @@ class MessageCollectionParser(val config: Config=NoConfig) extends UTF8XmlPullPa
     }
   }
 
-  def parseTracks(br: ByteRange): Seq[IdentifiableObject] = parseTracks(br.data,br.offset,br.length)
+  def parseTracks(br: ByteRange): Seq[IdentifiableObject] = parseTracks(br.data,br.offset,br.byteLength)
 
   def checkIfMessageCollection (bs: Array[Byte], off: Int, length: Int): Boolean = {
     if (initialize(bs,off,length)) {
@@ -174,7 +174,7 @@ class MessageCollectionParser(val config: Config=NoConfig) extends UTF8XmlPullPa
         @inline def process_flightIdentification = {
           while ((id == null || cs == null) && parseNextAttr) {
             val off = attrName.offset
-            val len = attrName.length
+            val len = attrName.byteLength
 
             @inline def match_computerId = {
               len == 10 && data(off) == 99 && data(off + 1) == 111 && data(off + 2) == 109 && data(off + 3) == 112 && data(off + 4) == 117 && data(off + 5) == 116 && data(off + 6) == 101 && data(off + 7) == 114 && data(off + 8) == 73 && data(off + 9) == 100

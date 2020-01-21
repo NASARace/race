@@ -142,7 +142,7 @@ trait Replayer [T <: ArchiveReader] extends ContinuousTimeRaceActor
   override def publishFiltered(msg: Any): Unit = {
     if (flatten){
       msg match {
-        case list: Iterable[_] => list.foreach(publishFiltered)
+        case list: Iterable[_] => list.foreach( m=> super.publishFiltered(m))
         case m => super.publishFiltered(m)
       }
     } else super.publishFiltered(msg)

@@ -43,18 +43,22 @@ object MsgMatcher {
     }
   }
 
-  def findFirstMsgMatcher(msg: String, matchers: Seq[MsgMatcher]): Option[MsgMatcher] = {
+  def findFirstMsgMatcher(msg: CharSequence, matchers: Seq[MsgMatcher]): Option[MsgMatcher] = {
     matchers.find(c=> StringUtils.matchesAll(msg,c.patterns))
   }
 }
 
 case class MsgMatcher(name: String, patterns: Seq[Regex]) {
+  private val cs = new MutUTF8CharSequence
 
-  def matchCount (msg: String): Int = patterns.foldLeft(0)((acc,p) => acc + p.findAllIn(msg).size )
+  def matchCount (msg: CharSequence): Int = patterns.foldLeft(0)((acc,p) => acc + p.findAllIn(msg).size )
 
   def matchCount (bs: Array[Byte], off: Int, len: Int): Int = {
-    val cs = new UTF8CharSequence(bs,off,len)
-    patterns.foldLeft(0)((acc,p) => acc + p.findAllIn(cs).size )
+    cs.initialize(bs,off,len)
+    patterns.foldLeft(0)((acc,p) => {
+      cs.reset
+      acc + p.findAllIn(cs).size
+    })
   }
 
 }

@@ -12,13 +12,14 @@ object StringSearchBenchmark {
     val input = FileUtils.fileContentsAsBytes(new File("src/test/resources/sfdps-msg.xml")).get
 
     //--- warmup
+    println("warming up..")
     runBmSearch(input,true)
-    runRegexSearchString(input,true)
     runRegexSearch(input,true)
+    runRegexSearchString(input,true)
 
     runBmSearch(input)
-    runRegexSearchString(input)
     runRegexSearch(input)
+    runRegexSearchString(input)
   }
 
   def runBmSearch (input: Array[Byte], quiet: Boolean=false): Unit = {
@@ -26,6 +27,8 @@ object StringSearchBenchmark {
     var create: Long = 0
     var run: Long = 0
     var n = 0
+
+    Runtime.getRuntime.gc
 
     while (i < nRounds) {
       val t0 = System.nanoTime
@@ -54,11 +57,13 @@ object StringSearchBenchmark {
   }
 
   def runRegexSearch (input: Array[Byte], quiet: Boolean = false): Unit = {
-    val cs = new ASCIICharSequence(input)
+    val cs = new ConstASCIICharSequence(input)
     var i = 0
     var create: Long = 0
     var run: Long = 0
     var n = 0
+
+    Runtime.getRuntime.gc
 
     while (i < nRounds) {
       val t0 = System.nanoTime
@@ -86,6 +91,8 @@ object StringSearchBenchmark {
     var create: Long = 0
     var run: Long = 0
     var n = 0
+
+    Runtime.getRuntime.gc
 
     while (i < nRounds) {
       val t0 = System.nanoTime
