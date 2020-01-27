@@ -19,8 +19,7 @@ package gov.nasa.race.air.translator
 
 import com.typesafe.config.Config
 import gov.nasa.race.air.{FlightPos, FlightPosSeq, FlightPosSeqImpl}
-import gov.nasa.race.common.{UTF8Buffer, UTF8JsonPullParser}
-import gov.nasa.race.common.inlined.Slice
+import gov.nasa.race.common.{ConstAsciiSlice, UTF8JsonPullParser, Utf8Buffer}
 import gov.nasa.race.config.{ConfigurableTranslator, NoConfig}
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.geo.GeoPosition
@@ -34,8 +33,8 @@ import scala.collection.Seq
 import scala.collection.mutable.ArrayBuffer
 
 object OpenSkyParser {
-  val _states_ = Slice("states")
-  val _time_ = Slice("time")
+  val _states_ = ConstAsciiSlice("states")
+  val _time_ = ConstAsciiSlice("time")
 }
 import OpenSkyParser._
 
@@ -108,7 +107,7 @@ class OpenSkyParser extends UTF8JsonPullParser with MutSrcTracksHolder[FlightPos
 class OpenSky2FlightPos (val config: Config=NoConfig) extends OpenSkyParser with ConfigurableTranslator {
 
   // this is lazy since it is only used if we have to translate strings
-  lazy val bb = new UTF8Buffer(config.getIntOrElse("buffer-size", 8192))
+  lazy val bb = new Utf8Buffer(config.getIntOrElse("buffer-size", 8192))
 
 
   override def translate (src: Any): Option[Any] = {
@@ -119,7 +118,7 @@ class OpenSky2FlightPos (val config: Config=NoConfig) extends OpenSkyParser with
         result(parse(msg,msg.length))
       case s: String =>
         bb.encode(s)
-        result(parse(bb.data,bb.byteLength))
+        result(parse(bb.data,bb.len))
       case _ => None
     }
   }

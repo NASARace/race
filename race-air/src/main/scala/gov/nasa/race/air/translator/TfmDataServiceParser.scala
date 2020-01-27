@@ -19,8 +19,8 @@ package gov.nasa.race.air.translator
 import com.typesafe.config.Config
 import gov.nasa.race.IdentifiableObject
 import gov.nasa.race.air.{TfmTrack, TfmTracks}
-import gov.nasa.race.common.inlined.Slice
-import gov.nasa.race.common.{ASCIIBuffer, ByteRange, Parser, UTF8XmlPullParser2}
+import gov.nasa.race.common.inlined.ByteSlice
+import gov.nasa.race.common.{AsciiBuffer, ConstAsciiSlice, Parser, UTF8XmlPullParser2}
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.config.{ConfigurableTranslator, NoConfig}
 import gov.nasa.race.geo.GeoPosition
@@ -44,23 +44,23 @@ class TfmTracksImpl(initSize: Int) extends MutSrcTracks[TfmTrack](initSize) with
 class TfmDataServiceParser(val config: Config=NoConfig) extends UTF8XmlPullParser2
                 with ConfigurableTranslator with Parser with MutSrcTracksHolder[TfmTrack,TfmTracksImpl] {
 
-  val tfmDataService = Slice("ds:tfmDataService")
-  val fltdMessage = Slice("fdm:fltdMessage")
-  val trackInformation = Slice("fdm:trackInformation")
-  val reportedAltitude = Slice("nxcm:reportedAltitude")
-  val position = Slice("nxcm:position")
-  val airlineData = Slice("nxcm:airlineData")
-  val etaType = Slice("etaType")
-  val ncsmTrackData = Slice("nxcm:ncsmTrackData")
-  val ncsmRouteData = Slice("nxcm:ncsmRouteData")
-  val actualValue = Slice("ACTUAL")
-  val completedValue = Slice("COMPLETED")
-  val westValue = Slice("WEST")
-  val southValue = Slice("SOUTH")
-  val timeValue = Slice("timeValue")
+  val tfmDataService = ConstAsciiSlice("ds:tfmDataService")
+  val fltdMessage = ConstAsciiSlice("fdm:fltdMessage")
+  val trackInformation = ConstAsciiSlice("fdm:trackInformation")
+  val reportedAltitude = ConstAsciiSlice("nxcm:reportedAltitude")
+  val position = ConstAsciiSlice("nxcm:position")
+  val airlineData = ConstAsciiSlice("nxcm:airlineData")
+  val etaType = ConstAsciiSlice("etaType")
+  val ncsmTrackData = ConstAsciiSlice("nxcm:ncsmTrackData")
+  val ncsmRouteData = ConstAsciiSlice("nxcm:ncsmRouteData")
+  val actualValue = ConstAsciiSlice("ACTUAL")
+  val completedValue = ConstAsciiSlice("COMPLETED")
+  val westValue = ConstAsciiSlice("WEST")
+  val southValue = ConstAsciiSlice("SOUTH")
+  val timeValue = ConstAsciiSlice("timeValue")
 
   // only created on-demand if we have to parse strings
-  lazy protected val bb = new ASCIIBuffer(config.getIntOrElse("buffer-size", 120000))
+  lazy protected val bb = new AsciiBuffer(config.getIntOrElse("buffer-size", 100000))
 
   override def createElements = new TfmTracksImpl(50)
 
@@ -68,12 +68,12 @@ class TfmDataServiceParser(val config: Config=NoConfig) extends UTF8XmlPullParse
     src match {
       case s: String =>
         bb.encode(s)
-        parse(bb.data, 0, bb.byteLength)
+        parse(bb.data, 0, bb.len)
       case Some(s: String) =>
         bb.encode(s)
-        parse(bb.data, 0, bb.byteLength)
-      case s: Slice =>
-        parse(s.data,s.offset,s.limit)
+        parse(bb.data, 0, bb.len)
+      case s: ByteSlice =>
+        parse(s.data,s.off,s.limit)
       case bs: Array[Byte] =>
         parse(bs,0,bs.length)
       case _ => None // unsupported input
@@ -93,7 +93,7 @@ class TfmDataServiceParser(val config: Config=NoConfig) extends UTF8XmlPullParse
     }
   }
 
-  def parseTracks(br: ByteRange): Seq[IdentifiableObject] = parseTracks(br.data,br.offset,br.limit)
+  def parseTracks(slice: ByteSlice): Seq[IdentifiableObject] = parseTracks(slice.data,slice.off,slice.len)
 
   def checkIfTfmDataService (bs: Array[Byte], off: Int, length: Int): Boolean = {
     if (initialize(bs,off,length)) {
@@ -129,8 +129,8 @@ class TfmDataServiceParser(val config: Config=NoConfig) extends UTF8XmlPullParse
 
     def processAttrs: Unit = {
       while (parseNextAttr) {
-        val off = attrName.offset
-        val len = attrName.byteLength
+        val off = attrName.off
+        val len = attrName.len
 
         @inline def process_acid = cs = attrValue.intern
         @inline def process_arrArpt = arrArpt = attrValue.intern
@@ -183,8 +183,8 @@ class TfmDataServiceParser(val config: Config=NoConfig) extends UTF8XmlPullParse
         var factor = 100
 
         val bs = v.data
-        var i = v.offset
-        val iEnd = v.offset + v.byteLength
+        var i = v.off
+        val iEnd = v.off + v.len
         var d: Double = 0
         while (i<iEnd) {
           val b = bs(i)
@@ -200,8 +200,8 @@ class TfmDataServiceParser(val config: Config=NoConfig) extends UTF8XmlPullParse
 
         // parse "nxcm:eta" "nxcm:nextEvent"
         while (parseNextTag) {
-          val off = tag.offset
-          val len = tag.byteLength
+          val off = tag.off
+          val len = tag.len
 
           if (isStartTag) {
 
@@ -231,8 +231,8 @@ class TfmDataServiceParser(val config: Config=NoConfig) extends UTF8XmlPullParse
         // parse "nxcm:eta" "nxcm:nextPosition"
         while (parseNextTag) {
           if (isStartTag) {
-            val off = tag.offset
-            val len = tag.byteLength
+            val off = tag.off
+            val len = tag.len
 
             @inline def process_nxcm$eta = nextWPDate = readNextWPDate
             @inline def process_nxcm$nextPosition = nextWP = readNextWP
@@ -259,8 +259,8 @@ class TfmDataServiceParser(val config: Config=NoConfig) extends UTF8XmlPullParse
 
         while (parseNextTag) {
           if (isStartTag) {
-            val off = tag.offset
-            val len = tag.byteLength
+            val off = tag.off
+            val len = tag.len
 
             @inline def match_nxcm$eta = { len==8 && data(off)==110 && data(off+1)==120 && data(off+2)==99 && data(off+3)==109 && data(off+4)==58 && data(off+5)==101 && data(off+6)==116 && data(off+7)==97 }
 
@@ -287,8 +287,8 @@ class TfmDataServiceParser(val config: Config=NoConfig) extends UTF8XmlPullParse
         var lon: Double = NaN
 
         while (parseNextAttr) {
-          val off = attrName.offset
-          val len = attrName.byteLength
+          val off = attrName.off
+          val len = attrName.len
 
           @inline def process_latitudeDecimal = lat = attrValue.toDouble
           @inline def process_longitudeDecimal = lon = attrValue.toDouble
@@ -319,8 +319,8 @@ class TfmDataServiceParser(val config: Config=NoConfig) extends UTF8XmlPullParse
         val endLevel = depth-1
 
         while (parseNextTag) {
-          val off = tag.offset
-          val len = tag.byteLength
+          val off = tag.off
+          val len = tag.len
 
           if (isStartTag) {
             @inline def process_nxce$latitudeDMS = lat = readDMS
@@ -350,8 +350,8 @@ class TfmDataServiceParser(val config: Config=NoConfig) extends UTF8XmlPullParse
         var isNegative = false
 
         while (parseNextAttr) {
-          val off = attrName.offset
-          val len = attrName.byteLength
+          val off = attrName.off
+          val len = attrName.len
 
           @inline def process_degrees = deg = attrValue.toInt
           @inline def process_direction = isNegative = (attrValue == westValue || attrValue == southValue)
@@ -385,8 +385,8 @@ class TfmDataServiceParser(val config: Config=NoConfig) extends UTF8XmlPullParse
        */
 
       while (parseNextTag){
-        val off = tag.offset
-        val len = tag.byteLength
+        val off = tag.off
+        val len = tag.len
 
         if (isStartTag) {
           @inline def process_nxcm$speed = speed = UsMilesPerHour(readDoubleContent)

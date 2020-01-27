@@ -16,7 +16,6 @@
  */
 package gov.nasa.race.common
 
-import gov.nasa.race.common.inlined.Slice
 import gov.nasa.race.test.RaceSpec
 import org.scalatest.flatspec.AnyFlatSpec
 
@@ -52,9 +51,9 @@ class JsonPullParserSpec extends AnyFlatSpec with RaceSpec {
   class MyObjectParser extends StringJsonPullParser {
     import JsonPullParser._
 
-    val _foo_ = Slice("foo")
-    val _bar_ = Slice("bar")
-    val _baz_ = Slice("baz")
+    val _foo_ = ConstAsciiSlice("foo")
+    val _bar_ = ConstAsciiSlice("bar")
+    val _baz_ = ConstAsciiSlice("baz")
 
     def readBarObject: Bar = {
       var baz = 0.0

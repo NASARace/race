@@ -19,7 +19,7 @@ package gov.nasa.race.common
 
 import java.util.{Arrays => JArrays}
 
-import gov.nasa.race.common.inlined.Slice
+import gov.nasa.race.common.inlined.ByteSlice
 
 import scala.annotation.tailrec
 
@@ -32,6 +32,8 @@ import scala.annotation.tailrec
   * Note that we only support patterns consisting of ASCII chars (<256), and only up to
   * a pattern length of 127 so that we don't need to promote jump table values to unsigned
   *
+  * TODO - the interface should enforce that we only search in ASCII data
+  *
   * TODO - this could be extended to full utf-8 by using a sparse jump table (e.g. LongMap)
   * but this could nix performance gains compared to Regex (especially since we provide
   * MutUTF8CharSequence to avoid data copies)
@@ -42,7 +44,7 @@ class BMSearch (val pattern: Array[Byte], val patternOffset: Int, val patternLen
 
   def this (pat: Array[Byte]) = this( pat,0,pat.length)
   def this (pat: String) = this( pat.getBytes)
-  def this (pat: Slice) = this( pat.data,pat.offset,pat.byteLength)
+  def this (pat: ByteSlice) = this( pat.data,pat.off,pat.len)
 
   assert(patternLength < MaxPatternLength)
 
@@ -53,7 +55,7 @@ class BMSearch (val pattern: Array[Byte], val patternOffset: Int, val patternLen
 
   private def getStringDataBuffer (minLen: Int): StringDataBuffer = {
     if (sdb == null) {
-      sdb = new ASCIIBuffer( Math.max(minLen,8192))
+      sdb = new AsciiBuffer( Math.max(minLen,8192))
     } else {
       sdb.clear
     }
@@ -94,12 +96,12 @@ class BMSearch (val pattern: Array[Byte], val patternOffset: Int, val patternLen
 
   def foreachIndexInArray(bs: Array[Byte])(f: Int=>Unit): Unit = foreachIndexIn(bs,0,bs.length)(f)
 
-  def foreachIndexInByteRange(br: ByteRange)(f: Int=>Unit): Unit = foreachIndexIn(br.data,br.offset,br.byteLength)(f)
+  def foreachIndexInByteRange(bs: ByteSlice)(f: Int=>Unit): Unit = foreachIndexIn(bs.data,bs.off,bs.len)(f)
 
   def foreachIndexInString(s: String)(f: Int=>Unit): Unit = {
     val sdb = getStringDataBuffer(s.length)
     sdb += s
-    foreachIndexIn(sdb.data,0,sdb.byteLength)(f)
+    foreachIndexIn(sdb.data,0,sdb.len)(f)
   }
 
   //--- first occurrence
@@ -130,12 +132,12 @@ class BMSearch (val pattern: Array[Byte], val patternOffset: Int, val patternLen
   //--- various overloads for related input data
   def indexOfFirstIn (bs: Array[Byte]): Int = indexOfFirstIn(bs,0,bs.length)
 
-  def indexOfFirstIn (br: ByteRange): Int = indexOfFirstIn(br.data, br.offset, br.byteLength)
+  def indexOfFirstIn (bs: ByteSlice): Int = indexOfFirstIn(bs.data,bs.off,bs.len)
 
   def indexOfFirstIn (s: String): Int = {
     val sdb = getStringDataBuffer(s.length)
     sdb += s
-    indexOfFirstIn(sdb.data,0,sdb.byteLength)
+    indexOfFirstIn(sdb.data,0,sdb.len)
   }
 
   def indexOfFirstInRange(bs: Array[Byte], i0: Int, i1: Int): Int = indexOfFirstIn(bs,i0,i1-i0)
@@ -169,11 +171,11 @@ class BMSearch (val pattern: Array[Byte], val patternOffset: Int, val patternLen
 
   def indexOfLastPatternPrefixIn (bs: Array[Byte]): Int = indexOfLastPatternPrefixIn(bs,0,bs.length)
 
-  def indexOfLastPatternPrefixIn (slice: Slice): Int = indexOfLastPatternPrefixIn(slice.data, slice.offset, slice.byteLength)
+  def indexOfLastPatternPrefixIn (slice: ByteSlice): Int = indexOfLastPatternPrefixIn(slice.data, slice.off, slice.len)
 
   def indexOfLastPatternPrefixIn (s: String): Int = {
     val sdb = getStringDataBuffer(s.length)
     sdb += s
-    indexOfLastPatternPrefixIn(sdb.data,0,sdb.byteLength)
+    indexOfLastPatternPrefixIn(sdb.data,0,sdb.len)
   }
 }

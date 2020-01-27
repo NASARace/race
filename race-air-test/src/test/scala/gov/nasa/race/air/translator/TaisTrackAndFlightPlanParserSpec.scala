@@ -42,8 +42,8 @@ class TaisTrackAndFlightPlanParserSpec extends AnyFlatSpec with RaceSpec {
             case taTrack: TaisTrack =>
               println(taTrack)
               taTrack.id match {
-                case "1677" => assert(taTrack.heading.toDegrees.round == 261) // do some sanity check
-                case "146" => assert(taTrack.speed.toKnots.round == 139)
+                case "XYZ-1677" => assert(taTrack.heading.toDegrees.round == 261) // do some sanity check
+                case "XYZ-146" => assert(taTrack.speed.toKnots.round == 139)
                 case other => fail(s"result item has wrong id: ${taTrack.id}")
               }
             case other => fail(s"result item not a TATrack object: $other")

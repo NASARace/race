@@ -17,23 +17,21 @@
 
 package gov.nasa.race.jms
 
-import javax.jms.{BytesMessage, Connection, JMSException, Message, MessageConsumer, MessageListener, Session, TextMessage, Topic => JMSTopic}
 import akka.actor.ActorRef
 import com.typesafe.config.Config
 import gov.nasa.race._
 import gov.nasa.race.actor.FilteringPublisher
 import gov.nasa.race.archive.TaggedASCIIArchiveWriter
-import gov.nasa.race.common.{ASCIIBuffer, StringDataBuffer, StringSlicer}
-import gov.nasa.race.common.inlined.Slice
+import gov.nasa.race.common.{AsciiBuffer, CharSeqByteSlice, ConstAsciiSlice, MutAsciiSlice, MutCharSeqByteSlice, MutUtf8Slice, StringDataBuffer}
 import gov.nasa.race.config.ConfigUtils._
-import gov.nasa.race.core.{ContinuousTimeRaceActor, RaceContext}
 import gov.nasa.race.core.RaceActorCapabilities._
+import gov.nasa.race.core.{ContinuousTimeRaceActor, RaceContext}
+import javax.jms.{BytesMessage, Connection, JMSException, Message, MessageConsumer, MessageListener, Session, TextMessage, Topic => JMSTopic}
 import org.apache.activemq.ActiveMQConnectionFactory
 import org.apache.activemq.command.{Message => AMQMessage}
 import org.apache.activemq.util.ByteSequence
 
 import scala.language.postfixOps
-import scala.collection.Seq
 
 object JMSImportActor {
   // connection objects are shared, this is where the runtime cost is
@@ -98,7 +96,7 @@ object JMSImportActor {
     }
   }
 }
-import JMSImportActor._
+import gov.nasa.race.jms.JMSImportActor._
 
 
 /**
@@ -148,7 +146,7 @@ class JMSImportActor(val config: Config) extends FilteringPublisher {
     }
   }
 
-  protected def processMessage (slice: Slice): Unit = {
+  protected def processMessage (slice: CharSeqByteSlice): Unit = {
     publishFiltered(slice)
   }
 
@@ -156,13 +154,16 @@ class JMSImportActor(val config: Config) extends FilteringPublisher {
     publishFiltered(s)
   }
 
-  // override if we only (re-)use the slice sync (e.g. for translating JMSImporters)
-  protected def getContentSlice(s: String): Slice = Slice(s)
+  // override if we can re-use slice objects (e.g. because of internal use in TranslatingJMSImportActors)
+
+  protected def getContentSlice (s: String): CharSeqByteSlice = ConstAsciiSlice(s)
+
+  protected def getContentSlice (bs: Array[Byte], off: Int, len: Int): CharSeqByteSlice = new ConstAsciiSlice(bs,off,len)
 
   // this is a ActiveMQ optimization that lets us avoid copying the message content (UTF8 bytes)
   // into a string, just to copy it again into a Array[Byte] in respective parsers. JMS messages
   // can be quite large
-  protected def getContentSlice (msg: Message): Slice = {
+  protected def getContentSlice (msg: Message): CharSeqByteSlice = {
     msg match {
       //--- optimized ActiveMQ messages
 
@@ -170,7 +171,7 @@ class JMSImportActor(val config: Config) extends FilteringPublisher {
         val byteSeq: ByteSequence = amqMsg.getContent
         val data: Array[Byte] = byteSeq.data
         val utfLen: Int = ((data(0) & 0xff)<<24) | ((data(1) & 0xff)<<16) | ((data(2) & 0xff)<<8) | (data(3) & 0xff)
-        Slice(data,byteSeq.offset+4,utfLen)
+        getContentSlice(data,byteSeq.offset+4,utfLen)
 
       //--- generic JMS messages
 
@@ -181,9 +182,9 @@ class JMSImportActor(val config: Config) extends FilteringPublisher {
         val len = byteMsg.getBodyLength.toInt
         val bs = new Array[Byte](len)
         byteMsg.readBytes(bs)
-        Slice(bs)
+        getContentSlice(bs, 0, len)
 
-      case _ => Slice.empty
+      case _ => MutAsciiSlice.empty // unsupported type
     }
   }
 
@@ -265,17 +266,34 @@ class JMSImportActor(val config: Config) extends FilteringPublisher {
 /**
   * a JMSImportActor that does not have to keep persistent message text since it only publishes the
   * products of translating this text
+  *
+  * TODO - this should be split into translation and buffer/slice re-use or we end up
+  * with classes that have to provide empty implementations
   */
 trait TranslatingJMSImportActor extends JMSImportActor {
 
-  val contentSlicer = new StringSlicer(new ASCIIBuffer(120000)) // this is only executed when processing String messages
-  override def getContentSlice (s: String): Slice = contentSlicer.slice(s)
+  protected var sdb: StringDataBuffer = null // initialized on demand
+  protected val bsSlice: MutCharSeqByteSlice = MutUtf8Slice.empty
+
+  override def getContentSlice(s: String): CharSeqByteSlice = {
+    if (sdb == null) sdb = new AsciiBuffer(Math.max(s.length, 8192))
+    sdb.encode(s)
+    sdb
+  }
+
+  override def getContentSlice(bs: Array[Byte], off: Int, len: Int): CharSeqByteSlice = {
+    bsSlice.set(bs, off, len)
+    bsSlice
+  }
 
   // to be provided by concrete type, e.g. to call parser
   protected def translate (msg: Message): Any
 
   override protected def processMessage (msg: Message): Unit = {
     publishFiltered(translate(msg))
+    // avoid memory leaks
+    sdb.clear
+    bsSlice.clear
   }
 }
 
@@ -287,13 +305,7 @@ trait ArchivingJMSImportActor extends JMSImportActor with ContinuousTimeRaceActo
   val writer = new TaggedASCIIArchiveWriter(config)
   val archiveOnly = config.getBooleanOrElse("archive-only", true)
 
-  var cachedContent: Slice = Slice.empty
   var stopArchiving = false
-
-  override def getContentSlice(msg: Message): Slice = {
-    if (cachedContent.isEmpty) cachedContent = super.getContentSlice(msg)
-    cachedContent
-  }
 
   override protected def processMessage(msg: Message): Unit = {
     val content = getContentSlice(msg)
@@ -303,8 +315,6 @@ trait ArchivingJMSImportActor extends JMSImportActor with ContinuousTimeRaceActo
       // NOTE - this should not be used in combination with a supertype that copies data in processMessage
       if (!archiveOnly) super.processMessage(msg)
     }
-
-    cachedContent.clear // make sure we re-init cache on next call
   }
 
   override def onStartRaceActor (originator: ActorRef) = {
@@ -321,5 +331,11 @@ trait ArchivingJMSImportActor extends JMSImportActor with ContinuousTimeRaceActo
 
 /**
   * a JMSImportActor that is solely used for archiving received messages
+  * here we can safely re-use slices
   */
-class JMSArchiveActor (config: Config) extends JMSImportActor(config) with ArchivingJMSImportActor
+class JMSArchiveActor (config: Config) extends JMSImportActor(config)
+         with ArchivingJMSImportActor with TranslatingJMSImportActor {
+
+  // we don't translate but we do re-use buffers/slices since there is no publishing
+  override protected def translate (msg: Message): Any = None
+}

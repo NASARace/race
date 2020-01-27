@@ -19,9 +19,8 @@ package gov.nasa.race.common
 import gov.nasa.race.util.StringUtils
 import java.security.MessageDigest
 
-import gov.nasa.race.common.inlined.Slice
+import gov.nasa.race.common.inlined.ByteSlice
 
-import scala.annotation.tailrec
 
 /**
   * create MD5 checksums for Strings
@@ -32,20 +31,20 @@ import scala.annotation.tailrec
   */
 class MD5Checksum (bufSize: Int=1024) {
 
-  var sdb: StringDataBuffer = null
+  var sdb: StringDataBuffer = null  // initialized on demand
 
   val md = MessageDigest.getInstance("MD5")
   val hb = new Array[Byte](16) // MD5 computes 128 bit hashes
 
   def getHexChecksum (s: String): String = {
     if (sdb == null) {
-      sdb = new UTF8Buffer(Math.max(s.length,bufSize))
+      sdb = new Utf8Buffer(Math.max(s.length,bufSize))
     } else {
       sdb.clear
     }
     val bs = sdb
     bs += s
-    getHexChecksum(bs.data,0,bs.byteLength)
+    getHexChecksum(sdb)
   }
 
   def getHexChecksum(cs: Array[Char]): String = {
@@ -82,5 +81,5 @@ class MD5Checksum (bufSize: Int=1024) {
 
   def getHexChecksum(bs: Array[Byte]): String = getHexChecksum(bs,0,bs.length)
 
-  def getHexChecksum(slice: Slice): String = getHexChecksum(slice.data,slice.offset,slice.byteLength)
+  def getHexChecksum(slice: ByteSlice): String = getHexChecksum(slice.data,slice.off,slice.len)
 }

@@ -20,10 +20,10 @@ import java.io.{InputStream, OutputStream}
 import java.util
 
 import com.typesafe.config.Config
-import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.common.ConfigurableStreamCreator._
-import gov.nasa.race.common.inlined.Slice
-import gov.nasa.race.common.{ASCIIBuffer, Parser, StringDataBuffer, UTF8Buffer}
+import gov.nasa.race.common.inlined.{ByteSlice, MutRawByteSlice}
+import gov.nasa.race.common.{AsciiBuffer, MutAsciiSlice, MutCharSeqByteSlice, Parser, StringDataBuffer, Utf8Buffer}
+import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.uom.DateTime
 import gov.nasa.race.uom.DateTime._
 import gov.nasa.race.uom.Time._
@@ -78,7 +78,7 @@ trait TaggedArchiveWriter extends ArchiveWriter {
   var nEntries = 0
   var refDate: DateTime = UndefinedDateTime
 
-  val entryData: Slice = Slice.empty
+  val entryData: MutRawByteSlice = MutRawByteSlice.empty
 
   @inline final def writeHex8 (n: Int): Unit = {
     NumUtils.intToHexPadded(n, hexBuf,8)
@@ -126,8 +126,8 @@ trait TaggedArchiveWriter extends ArchiveWriter {
 
   override def write(date: DateTime, obj: Any): Boolean = {
     setEntryBytes(obj)
-    writeEntryHeader(date,entryData.byteLength)
-    oStream.write(entryData.data, entryData.offset, entryData.byteLength)
+    writeEntryHeader(date,entryData.len)
+    oStream.write(entryData.data, entryData.off, entryData.len)
     nEntries += 1
     true
   }
@@ -145,10 +145,10 @@ trait TaggedTextArchiveWriter extends TaggedArchiveWriter {
     obj match {
       case s: String =>
         sdb.encode(s)
-        entryData.set(sdb.data,0,sdb.byteLength)
+        entryData.setFrom(sdb)
       case a: Array[Byte] =>
         entryData.set(a, 0, a.length)
-      case slice: Slice =>
+      case slice: ByteSlice =>
         entryData.setFrom(slice)
       case _ =>
         entryData.clear
@@ -160,7 +160,7 @@ trait TaggedTextArchiveWriter extends TaggedArchiveWriter {
   * a TaggedTextArchiveWriter that can store full unicode strings
   */
 class TaggedStringArchiveWriter (val oStream: OutputStream, val pathName:String="<unknown>", initBufferSize: Int) extends TaggedTextArchiveWriter {
-  override protected def createStringDataBuffer = new UTF8Buffer(initBufferSize)
+  override protected def createStringDataBuffer = new Utf8Buffer(initBufferSize)
 
   def this(conf: Config) = this(createOutputStream(conf), configuredPathName(conf), conf.getIntOrElse("buffer-size",4096))
 }
@@ -169,7 +169,7 @@ class TaggedStringArchiveWriter (val oStream: OutputStream, val pathName:String=
   * a TaggedTextArchiveWriter that only stores ASCII strings
   */
 class TaggedASCIIArchiveWriter (val oStream: OutputStream, val pathName:String="<unknown>", initBufferSize: Int) extends TaggedTextArchiveWriter {
-  override protected def createStringDataBuffer = new ASCIIBuffer(initBufferSize)
+  override protected def createStringDataBuffer = new AsciiBuffer(initBufferSize)
 
   def this(conf: Config) = this(createOutputStream(conf), configuredPathName(conf), conf.getIntOrElse("buffer-size",4096))
 }
@@ -191,7 +191,7 @@ trait TaggedArchiveReader extends ArchiveReader {
 
   // set by initialize
   protected var buf: Array[Byte] = _
-  protected var slice: Slice = _
+  protected var slice: MutCharSeqByteSlice = _
 
   protected var refDate: DateTime = UndefinedDateTime
   protected var extraFileHeader: Array[Byte] = Array.empty[Byte]
@@ -199,7 +199,7 @@ trait TaggedArchiveReader extends ArchiveReader {
   // we can't call this from our own init since pathname/istream/initBufferSize are set by derived type
   private def initialize: Boolean = {
     buf = new Array[Byte](initBufferSize)
-    slice = Slice(buf,0,0)
+    slice = new MutAsciiSlice(buf,0,0)
     readFileHeader
   }
 

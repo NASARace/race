@@ -19,7 +19,7 @@ package gov.nasa.race.common
 import java.io.PrintStream
 import java.nio.charset.StandardCharsets
 
-import gov.nasa.race.common.inlined.{RangeStack, Slice}
+import gov.nasa.race.common.inlined.{ByteSlice, RangeStack}
 import gov.nasa.race.uom.DateTime
 
 import scala.annotation.switch
@@ -48,7 +48,7 @@ abstract class XmlPullParser2  {
 
   protected var state: State  = tagState
 
-  val tag = Slice.empty
+  val tag = MutUtf8Slice.empty
   protected var _isStartTag: Boolean = false
   protected var _wasEmptyElementTag = false
 
@@ -62,11 +62,11 @@ abstract class XmlPullParser2  {
   //--- content string list (avoiding runtime allocation)
   protected val contentStrings = new RangeStack(16)
   protected var contentIdx = 0
-  val contentString = Slice.empty // for iteration over content strings
-  val rawContent = Slice.empty // slice over all content (without leading/trailing blanks)
+  val contentString = MutUtf8Slice.empty // for iteration over content strings
+  val rawContent = MutUtf8Slice.empty // slice over all content (without leading/trailing blanks)
 
-  val attrName = Slice.empty
-  val attrValue = Slice.empty  // not hashed by default
+  val attrName = MutUtf8Slice.empty
+  val attrValue = MutUtf8Slice.empty  // not hashed by default
 
   protected def setData (newData: Array[Byte], newIdx: Int, newLength: Int): Unit = {
     data = newData
@@ -106,8 +106,8 @@ abstract class XmlPullParser2  {
         tag.setRange(i0,len)
         _isStartTag = isStart
 
-        contentString.byteLength = 0
-        rawContent.byteLength = 0
+        contentString.len = 0
+        rawContent.len = 0
         contentStrings.top = -1
         contentIdx = 0
 
@@ -293,7 +293,7 @@ abstract class XmlPullParser2  {
 
   @inline final def parseNextAttr: Boolean = state.parseNextAttr
 
-  @inline final def parseAttr (at: Slice): Boolean = {
+  @inline final def parseAttr (at: ByteSlice): Boolean = {
     while (parseNextAttr) {
       if (attrName == at) return true
     }
@@ -311,28 +311,28 @@ abstract class XmlPullParser2  {
   def parseElement (f: SliceParseFunc): Unit = {
     val endLevel = depth-1
     while (parseNextTag && depth > endLevel) {
-      f(data, tag.offset, tag.byteLength)
+      f(data, tag.off, tag.len)
     }
   }
 
   def parseElement (fStart: SliceParseFunc, fEnd: SliceParseFunc): Unit = {
     val endLevel = depth-1
     while (parseNextTag && depth > endLevel) {
-      if (isStartTag) fStart(data, tag.offset, tag.byteLength)
-      else fEnd(data, tag.offset, tag.byteLength)
+      if (isStartTag) fStart(data, tag.off, tag.len)
+      else fEnd(data, tag.off, tag.len)
     }
   }
 
   def parseElementStartTags (fStart: SliceParseFunc): Unit = {
     val endLevel = depth-1
     while (parseNextTag && depth > endLevel) {
-      if (isStartTag) fStart(data, tag.offset, tag.byteLength)
+      if (isStartTag) fStart(data, tag.off, tag.len)
     }
   }
 
   def parseAttrs (f: SliceParseFunc): Unit = {
     while (parseNextAttr) {
-      f(data, attrName.offset, attrName.byteLength)
+      f(data, attrName.off, attrName.len)
     }
   }
 
@@ -344,7 +344,7 @@ abstract class XmlPullParser2  {
 
   //--- high level retrieval for mandatory content (no need to check - throw exception if not there)
 
-  @inline final def readSliceContent: Slice = {
+  @inline final def readSliceContent: Utf8Slice = {
     state.parseContent
     getNextContentString
     contentString
@@ -442,22 +442,22 @@ abstract class XmlPullParser2  {
 
   //--- path query (e.g. to disambiguate elements at different nesting levels)
 
-  def tagHasParent(parent: Slice): Boolean = {
+  def tagHasParent(parent: ByteSlice): Boolean = {
     val i = if (_isStartTag) path.top-1 else path.top
-    (i>=0) && parent.equals(data, path.offsets(i), path.lengths(i))
+    (i>=0) && parent.equalsData(data, path.offsets(i), path.lengths(i))
   }
 
-  def tagHasAncestor(ancestor: Slice): Boolean = {
+  def tagHasAncestor(ancestor: ByteSlice): Boolean = {
     var i = if (_isStartTag) path.top-1 else path.top
     while (i >= 0) {
-      if (ancestor.equals(data,path.offsets(i),path.lengths(i))) return true
+      if (ancestor.equalsData(data,path.offsets(i),path.lengths(i))) return true
       i -= 1
     }
     false
   }
 
   // make sure this executes in const space (hence a pre-alloc path element slice)
-  private val _pms = Slice.empty
+  private val _pms = MutUtf8Slice.empty
   def pathMatches (matcher: SlicePathMatcher): Boolean = matcher.matches(data,_pms,path)
 
   //.. and probably more path predicates
@@ -465,8 +465,8 @@ abstract class XmlPullParser2  {
   //--- auxiliary parse functions used by states
 
 
-  @inline final def isTopTag (t: Slice): Boolean = {
-    (path.top >= 0) && t.equals(data,path.topOffset,path.topLength)
+  @inline final def isTopTag (t: ByteSlice): Boolean = {
+    (path.top >= 0) && t.equalsData(data,path.topOffset,path.topLength)
   }
 
   def seekRootTag: Int = {
@@ -725,12 +725,12 @@ class StringXmlPullParser2 extends XmlPullParser2 {
   */
 class BufferedStringXmlPullParser2(initBufSize: Int = 8192) extends XmlPullParser2 {
 
-  protected val bb = new UTF8Buffer(initBufSize)
+  protected val bb = new Utf8Buffer(initBufSize)
 
   def initialize (s: String): Boolean = {
     bb.encode(s)
     clear
-    setData(bb.data, 0, bb.byteLength)
+    setData(bb.data, 0, bb.len)
 
     idx = seekRootTag
     idx >= 0
@@ -744,12 +744,12 @@ class BufferedStringXmlPullParser2(initBufSize: Int = 8192) extends XmlPullParse
   */
 class BufferedASCIIStringXmlPullParser2(initBufSize: Int = 8192) extends XmlPullParser2 {
 
-  protected val bb = new ASCIIBuffer(initBufSize)
+  protected val bb = new AsciiBuffer(initBufSize)
 
   def initialize (s: String): Boolean = {
     bb.encode(s)
     clear
-    setData(bb.data, 0, bb.byteLength)
+    setData(bb.data, 0, bb.len)
 
     idx = seekRootTag
     idx >= 0
@@ -777,7 +777,7 @@ class UTF8XmlPullParser2 extends XmlPullParser2 {
     idx >= 0
   }
 
-  def initialize (slice: Slice): Boolean = initialize(slice.data, slice.offset, slice.limit)
+  def initialize (slice: ByteSlice): Boolean = initialize(slice.data, slice.off, slice.limit)
 }
 
 /**
@@ -790,5 +790,5 @@ class XmlTopElementParser extends UTF8XmlPullParser2 {
   }
 
   def parseTopElement (bs: Array[Byte]): Boolean = parseTopElement(bs,0,bs.length)
-  def parseTopElement (br: ByteRange): Boolean = parseTopElement(br.data,br.offset,br.byteLength)
+  def parseTopElement (slice: ByteSlice): Boolean = parseTopElement(slice.data,slice.off,slice.len)
 }

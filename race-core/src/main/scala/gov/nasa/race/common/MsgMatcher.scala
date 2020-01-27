@@ -49,12 +49,12 @@ object MsgMatcher {
 }
 
 case class MsgMatcher(name: String, patterns: Seq[Regex]) {
-  private val cs = new MutUTF8CharSequence
+  private val cs = MutUtf8Slice.empty
 
   def matchCount (msg: CharSequence): Int = patterns.foldLeft(0)((acc,p) => acc + p.findAllIn(msg).size )
 
   def matchCount (bs: Array[Byte], off: Int, len: Int): Int = {
-    cs.initialize(bs,off,len)
+    cs.set(bs,off,len)
     patterns.foldLeft(0)((acc,p) => {
       cs.reset
       acc + p.findAllIn(cs).size

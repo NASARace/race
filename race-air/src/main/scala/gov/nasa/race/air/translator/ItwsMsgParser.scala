@@ -20,14 +20,14 @@ import java.awt.image.{BufferedImage, DataBuffer, IndexColorModel}
 
 import com.typesafe.config.Config
 import gov.nasa.race.air.{PrecipImage, PrecipImageStore}
-import gov.nasa.race.common.{ASCIIBuffer, BufferedASCIIStringXmlPullParser2, BufferedStringXmlPullParser2, SliceSplitter, UTF8XmlPullParser2}
-import gov.nasa.race.common.inlined.Slice
-import gov.nasa.race.config.{ConfigurableTranslator, NoConfig}
+import gov.nasa.race.common.inlined.ByteSlice
+import gov.nasa.race.common.{AsciiBuffer, CharSeqByteSlice, ConstAsciiSlice, MutAsciiSlice, SliceSplitter, UTF8XmlPullParser2}
 import gov.nasa.race.config.ConfigUtils._
+import gov.nasa.race.config.{ConfigurableTranslator, NoConfig}
 import gov.nasa.race.geo.GeoPosition
 import gov.nasa.race.uom.Angle.{Degrees, UndefinedAngle}
-import gov.nasa.race.uom.{Angle, DateTime, Length}
 import gov.nasa.race.uom.Length.{Meters, UndefinedLength}
+import gov.nasa.race.uom.{Angle, DateTime, Length}
 
 object ItwsMsgParser {
   val cmap = Array[Int](  // reference color model
@@ -78,24 +78,24 @@ object ItwsMsgParser {
   */
 class ItwsMsgParser(val config: Config=NoConfig) extends UTF8XmlPullParser2 with ConfigurableTranslator {
 
-  val itwsMsg = Slice("itws_msg")
-  val precision = Slice("precision")
-  val unit = Slice("unit")
-  val meters = Slice("meters")
+  val itwsMsg = ConstAsciiSlice("itws_msg")
+  val precision = ConstAsciiSlice("precision")
+  val unit = ConstAsciiSlice("unit")
+  val meters = ConstAsciiSlice("meters")
 
   // only created on-demand if we have to parse strings
-  lazy protected val bb = new ASCIIBuffer(config.getIntOrElse("buffer-size", 50000))
+  lazy protected val bb = new AsciiBuffer(config.getIntOrElse("buffer-size", 50000))
 
   override def translate(src: Any): Option[Any] = {
     src match {
       case s: String =>
         bb.encode(s)
-        parse(bb.data, 0, bb.byteLength)
+        parse(bb.data, 0, bb.len)
       case Some(s: String) =>
         bb.encode(s)
-        parse(bb.data, 0, bb.byteLength)
-      case s: Slice =>
-        parse(s.data,s.offset,s.limit)
+        parse(bb.data, 0, bb.len)
+      case s: ByteSlice =>
+        parse(s.data,s.off,s.limit)
       case bs: Array[Byte] =>
         parse(bs,0,bs.length)
       case _ => None // unsupported input
@@ -110,7 +110,7 @@ class ItwsMsgParser(val config: Config=NoConfig) extends UTF8XmlPullParser2 with
     }
   }
 
-  def parse (slice: Slice): Option[Any] = parse(slice.data, slice.offset, slice.limit)
+  def parse (slice: CharSeqByteSlice): Option[Any] = parse(slice.data, slice.off, slice.limit)
 
   def checkIfItwsMsg (bs: Array[Byte], off: Int, limit: Int): Boolean = {
     if (initialize(bs,off,limit)) {
@@ -140,8 +140,8 @@ class ItwsMsgParser(val config: Config=NoConfig) extends UTF8XmlPullParser2 with
       // product_msg_id product_header_itws_sites product_header_generation_time_seconds product_header_expiration_time_seconds
 
       if (isStartTag) {
-        val off = tag.offset
-        val len = tag.byteLength
+        val off = tag.off
+        val len = tag.len
 
         @inline def readDate: DateTime = DateTime.ofEpochMillis(1000L * readIntContent)
 
@@ -272,8 +272,8 @@ class ItwsMsgParser(val config: Config=NoConfig) extends UTF8XmlPullParser2 with
 
     while (parseNextTag) {
       if (isStartTag) {
-        val off = tag.offset
-        val len = tag.byteLength
+        val off = tag.off
+        val len = tag.len
 
         @inline def process_product_header = parseElement(productHeader)
         @inline def process_precip = parseElement(precip)
@@ -307,6 +307,7 @@ class ItwsMsgParser(val config: Config=NoConfig) extends UTF8XmlPullParser2 with
   //--- image support
 
   protected val splitter = new SliceSplitter(',')
+  protected val valueSlice = MutAsciiSlice.empty
   protected var scanLine = new Array[Byte](2056)
 
   def createBufferedImage (width: Int, height: Int, cm: IndexColorModel) = {
@@ -334,9 +335,11 @@ class ItwsMsgParser(val config: Config=NoConfig) extends UTF8XmlPullParser2 with
       splitter.setSeparator(',')
 
       while (splitter.hasNext) {
-        val value: Byte = splitter.next.toByte
+
+        val value: Byte = splitter.next(valueSlice).toByte
         splitter.setSeparator(' ')
-        var count: Int = splitter.next.toInt
+
+        var count: Int = splitter.next(valueSlice).toInt
         splitter.setSeparator(',')
 
         while (count > 0) {

@@ -17,10 +17,10 @@
 package gov.nasa.race.air.translator
 
 import com.typesafe.config.Config
-import gov.nasa.race.common.{ASCIIBuffer, BufferedASCIIStringXmlPullParser2, BufferedStringXmlPullParser2, UTF8XmlPullParser2}
-import gov.nasa.race.common.inlined.Slice
-import gov.nasa.race.config.{ConfigurableTranslator, NoConfig}
+import gov.nasa.race.common.inlined.ByteSlice
+import gov.nasa.race.common.{AsciiBuffer, ConstAsciiSlice, UTF8XmlPullParser2}
 import gov.nasa.race.config.ConfigUtils._
+import gov.nasa.race.config.{ConfigurableTranslator, NoConfig}
 import gov.nasa.race.optional
 import gov.nasa.race.track.{TrackInfo, TrackInfoReader, TrackInfos}
 import gov.nasa.race.trajectory.{MutTrajectory, MutUSTrajectory}
@@ -40,18 +40,18 @@ import scala.collection.mutable.ArrayBuffer
 class TfmTrackInfoParser2(val config: Config=NoConfig) extends UTF8XmlPullParser2 with ConfigurableTranslator with TrackInfoReader {
 
   // constant tag and attr names
-  val tfmDataService = Slice("ds:tfmDataService")
-  val fltdMessage = Slice("fdm:fltdMessage")
-  val airport = Slice("nxce:airport")
-  val etdType = Slice("etdType")
-  val etaType = Slice("etaType")
-  val timeValue = Slice("timeValue")
-  val actual = Slice("ACTUAL")
-  val estimated = Slice("ESTIMATED")
-  val equipmentQualifier = Slice("equipmentQualifier")
+  val tfmDataService = ConstAsciiSlice("ds:tfmDataService")
+  val fltdMessage = ConstAsciiSlice("fdm:fltdMessage")
+  val airport = ConstAsciiSlice("nxce:airport")
+  val etdType = ConstAsciiSlice("etdType")
+  val etaType = ConstAsciiSlice("etaType")
+  val timeValue = ConstAsciiSlice("timeValue")
+  val actual = ConstAsciiSlice("ACTUAL")
+  val estimated = ConstAsciiSlice("ESTIMATED")
+  val equipmentQualifier = ConstAsciiSlice("equipmentQualifier")
 
   // only created on-demand if we have to parse strings
-  lazy protected val bb = new ASCIIBuffer(config.getIntOrElse("buffer-size", 120000))
+  lazy protected val bb = new AsciiBuffer(config.getIntOrElse("buffer-size", 120000))
 
   override def translate(src: Any): Option[Any] = {
     val tInfos = readMessage(src)
@@ -64,12 +64,12 @@ class TfmTrackInfoParser2(val config: Config=NoConfig) extends UTF8XmlPullParser
     msg match {
       case s: String =>
         bb.encode(s)
-        parseTracks(bb.data, 0, bb.byteLength)
+        parseTracks(bb.data, 0, bb.len)
       case Some(s: String) =>
         bb.encode(s)
-        parseTracks(bb.data, 0, bb.byteLength)
-      case s: Slice =>
-        parseTracks(s.data,s.offset,s.limit)
+        parseTracks(bb.data, 0, bb.len)
+      case s: ByteSlice =>
+        parseTracks(s.data,s.off,s.limit)
       case bs: Array[Byte] =>
         parseTracks(bs,0,bs.length)
       case _ => Seq.empty[TrackInfo] // unsupported input
@@ -89,7 +89,7 @@ class TfmTrackInfoParser2(val config: Config=NoConfig) extends UTF8XmlPullParser
     Seq.empty[TrackInfo]
   }
 
-  def parseTracks (slice: Slice): Seq[TrackInfo] = parseTracks(slice.data,slice.offset,slice.limit)
+  def parseTracks (slice: ByteSlice): Seq[TrackInfo] = parseTracks(slice.data,slice.off,slice.limit)
 
   protected def parseTfmDataService: Seq[TrackInfo] = {
     val tInfos = new ArrayBuffer[TrackInfo](20)
@@ -162,8 +162,8 @@ class TfmTrackInfoParser2(val config: Config=NoConfig) extends UTF8XmlPullParser
       var lonDeg = Double.NaN
 
       while (parseNextAttr) {
-        val off = attrName.offset
-        val len = attrName.byteLength
+        val off = attrName.off
+        val len = attrName.len
 
         @inline def process_elaspedTime = et = attrValue.toInt
         @inline def process_latitudeDecimal = latDeg = attrValue.toDouble

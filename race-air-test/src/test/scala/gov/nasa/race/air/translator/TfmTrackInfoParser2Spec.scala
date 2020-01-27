@@ -42,8 +42,8 @@ class TfmTrackInfoParser2Spec extends AnyFlatSpec with RaceSpec {
 
         for (ti <- tInfos) {
           ti.cs match {
-            case "MRA609" => assert (ti.atd.toString == "2017-08-08T07:08:00.000Z")
-            case "DAL138" => assert( ti.eta.toString == "2017-08-08T07:52:46.000Z")
+            case "MRA609" => assert (ti.atd.toString == "2017-08-08T00:08:00.000Z")
+            case "DAL138" => assert( ti.eta.toString == "2017-08-08T00:52:46.000Z")
               //... and more checks
             case _ => // nothing to check
           }

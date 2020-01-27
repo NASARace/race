@@ -19,8 +19,7 @@ package gov.nasa.race.air.gis
 import java.io.File
 import java.nio.ByteBuffer
 
-import gov.nasa.race.common.inlined.Slice
-import gov.nasa.race.common.{JsonPullParser, StringJsonPullParser}
+import gov.nasa.race.common.{ConstAsciiSlice, JsonPullParser, StringJsonPullParser}
 import gov.nasa.race.geo.GeoPosition
 import gov.nasa.race.gis.{GisItem, GisItemDB, GisItemDBFactory}
 import gov.nasa.race.uom.Angle.Degrees
@@ -79,12 +78,12 @@ class FixParser extends StringJsonPullParser {
 
   val DescrRE = """(?:(.+)\s+)?(\d+)-(\d+)-(\d+.\d+)(N|S)\s+(\d+)-(\d+)-(\d+.\d+)(E|W)""".r
 
-  val _totalrows_ = Slice("totalrows")
-  val _totaldisplayrows_ = Slice("totaldisplayrows")
-  val _data_ = Slice("data")
-  val _fix_identifier_ = Slice("fix_identifier")
-  val _description_ = Slice("description")
-  val _state_ = Slice("state")
+  val _totalrows_ = ConstAsciiSlice("totalrows")
+  val _totaldisplayrows_ = ConstAsciiSlice("totaldisplayrows")
+  val _data_ = ConstAsciiSlice("data")
+  val _fix_identifier_ = ConstAsciiSlice("fix_identifier")
+  val _description_ = ConstAsciiSlice("description")
+  val _state_ = ConstAsciiSlice("state")
 
   def parse (input: String): Seq[Fix] = {
     var list: ArrayBuffer[Fix] = ArrayBuffer.empty[Fix]

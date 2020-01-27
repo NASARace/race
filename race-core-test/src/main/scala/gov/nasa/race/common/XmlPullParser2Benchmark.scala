@@ -19,7 +19,6 @@ package gov.nasa.race.common
 import java.io.File
 
 import gov.nasa.race.util.{FileUtils, XmlPullParser}
-import gov.nasa.race.common.inlined.Slice
 import gov.nasa.race.test._
 
 object XmlPullParser2Benchmark {
@@ -95,17 +94,18 @@ object XmlPullParser2Benchmark {
     val parser = new UTF8XmlPullParser2
 
     //--- tags, attrs and value extractors we need
-    val messageCollection = Slice("ns5:MessageCollection")
-    val flightIdentification = Slice("flightIdentification")
-    val aircraftIdentification = Slice("aircraftIdentification")
-    val flight = Slice("flight")
-    val positionTime = Slice("positionTime") // attr
-    val pos =Slice("pos")
-    val enRoute = Slice("enRoute")
-    val position = Slice("position")
-    val location = Slice("location")
+    val messageCollection = ConstAsciiSlice("ns5:MessageCollection")
+    val flightIdentification = ConstAsciiSlice("flightIdentification")
+    val aircraftIdentification = ConstAsciiSlice("aircraftIdentification")
+    val flight = ConstAsciiSlice("flight")
+    val positionTime = ConstAsciiSlice("positionTime") // attr
+    val pos =ConstAsciiSlice("pos")
+    val enRoute = ConstAsciiSlice("enRoute")
+    val position = ConstAsciiSlice("position")
+    val location = ConstAsciiSlice("location")
 
     val slicer = new SliceSplitter(' ')
+    val valueSlice = MutAsciiSlice.empty
 
     var nFlights = 0
 
@@ -132,8 +132,8 @@ object XmlPullParser2Benchmark {
             if (parser.tagHasParent(location)) {
               if (parser.parseContent && parser.getNextContentString) {
                 slicer.setSource(parser.contentString)
-                if (slicer.hasNext) lat = slicer.next.toDouble
-                if (slicer.hasNext) lon = slicer.next.toDouble
+                if (slicer.hasNext) lat = slicer.next(valueSlice).toDouble
+                if (slicer.hasNext) lon = slicer.next(valueSlice).toDouble
               }
             }
           }
@@ -166,16 +166,16 @@ object XmlPullParser2Benchmark {
   def runXmlPullParser2Tree (msg: Array[Byte]): Unit = {
     println(s"-- parsing ${nRounds}x using XmlPullParser2 tree branching")
     val parser = new UTF8XmlPullParser2
-
     val slicer = new SliceSplitter(' ')
+    val valueSlice = MutAsciiSlice.empty
     var nFlights = 0
 
     //--- attributes and ancestor elements
-    val aircraftIdentification = Slice("aircraftIdentification")
-    val enRoute = Slice("enRoute")
-    val location = Slice("location")
-    val positionTime = Slice("positionTime")
-    val flight = Slice("flight")
+    val aircraftIdentification = ConstAsciiSlice("aircraftIdentification")
+    val enRoute = ConstAsciiSlice("enRoute")
+    val location = ConstAsciiSlice("location")
+    val positionTime = ConstAsciiSlice("positionTime")
+    val flight = ConstAsciiSlice("flight")
 
     @inline def parseFlight: Unit = {
       var done = false // to implement non-local returns
@@ -194,8 +194,8 @@ object XmlPullParser2Benchmark {
           if (parser.tagHasParent(location)) {
             if (parser.parseContent && parser.getNextContentString) {
               slicer.setSource(parser.contentString)
-              if (slicer.hasNext) lat = slicer.next.toDouble
-              if (slicer.hasNext) lon = slicer.next.toDouble
+              if (slicer.hasNext) lat = slicer.next(valueSlice).toDouble
+              if (slicer.hasNext) lon = slicer.next(valueSlice).toDouble
             }
           }
         }
@@ -250,9 +250,9 @@ object XmlPullParser2Benchmark {
         val tag = parser.tag
 
         if (parser.isStartTag) {
-          parseFlightStartTags(tag.data,tag.offset,tag.byteLength)
+          parseFlightStartTags(tag.data,tag.off,tag.len)
         } else {
-          parseFlightEndTags(tag.data,tag.offset,tag.byteLength)
+          parseFlightEndTags(tag.data,tag.off,tag.len)
           if (done) return
         }
       }

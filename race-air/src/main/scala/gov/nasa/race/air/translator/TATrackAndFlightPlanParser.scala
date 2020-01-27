@@ -18,8 +18,8 @@ package gov.nasa.race.air.translator
 
 import com.typesafe.config.Config
 import gov.nasa.race.air.{FlightPlan, TaisTrack, TaisTracks}
-import gov.nasa.race.common.{ASCII8Internalizer, ASCIIBuffer, AssocSeq, ByteRange, ClearableElementsHolder, Parser, UTF8XmlPullParser2}
-import gov.nasa.race.common.inlined.Slice
+import gov.nasa.race.common.inlined.ByteSlice
+import gov.nasa.race.common.{ASCII8Internalizer, AsciiBuffer, ConstAsciiSlice, Parser, UTF8XmlPullParser2, Utf8Slice}
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.config.{ConfigurableTranslator, NoConfig}
 import gov.nasa.race.geo.{GeoPosition, XYPos}
@@ -47,24 +47,24 @@ class TATrackAndFlightPlanParser(val config: Config=NoConfig)  extends UTF8XmlPu
 
   override def createElements = new TaisTracksImpl(150)
 
-  val taTrackAndFlightPlan = Slice("TATrackAndFlightPlan")
-  val ns2TATrackAndFlightPlan = Slice("ns2:TATrackAndFlightPlan")
-  val src = Slice("src")
-  val record = Slice("record")
+  val taTrackAndFlightPlan = ConstAsciiSlice("TATrackAndFlightPlan")
+  val ns2TATrackAndFlightPlan = ConstAsciiSlice("ns2:TATrackAndFlightPlan")
+  val src = ConstAsciiSlice("src")
+  val record = ConstAsciiSlice("record")
 
   // only created on-demand if we have to parse strings
-  lazy protected val bb = new ASCIIBuffer(config.getIntOrElse("buffer-size", 120000))
+  lazy protected val bb = new AsciiBuffer(config.getIntOrElse("buffer-size", 100000))
 
   override def translate(src: Any): Option[Any] = {
     src match {
       case s: String =>
         bb.encode(s)
-        parse(bb.data, 0, bb.byteLength)
+        parse(bb.data, 0, bb.len)
       case Some(s: String) =>
         bb.encode(s)
-        parse(bb.data, 0, bb.byteLength)
-      case s: Slice =>
-        parse(s.data,s.offset,s.limit)
+        parse(bb.data, 0, bb.len)
+      case s: ByteSlice =>
+        parse(s.data,s.off,s.limit)
       case bs: Array[Byte] =>
         parse(bs,0,bs.length)
       case _ => None // unsupported input
@@ -86,7 +86,7 @@ class TATrackAndFlightPlanParser(val config: Config=NoConfig)  extends UTF8XmlPu
     }
   }
 
-  def parseTracks(br: ByteRange): TaisTracks = parseTracks(br.data,br.offset,br.limit)
+  def parseTracks(slice: ByteSlice): TaisTracks = parseTracks(slice.data,slice.off,slice.len)
 
   def checkIfTATrackAndFlightPlan (bs: Array[Byte], off: Int, length: Int): Boolean = {
     if (initialize(bs,off,length)) {
@@ -142,10 +142,10 @@ class TATrackAndFlightPlanParser(val config: Config=NoConfig)  extends UTF8XmlPu
     def record (data: Array[Byte], off: Int, len: Int): Unit = {
       if (isStartTag) {
 
-        @inline def readStatusFlag(s: Slice): Int = {
+        @inline def readStatusFlag(s: Utf8Slice): Int = {
           val data = this.data
-          val off = s.offset
-          val len = s.byteLength
+          val off = s.off
+          val len = s.len
 
           @inline def match_active = {len == 6 && data(off) == 97 && data(off + 1) == 99 && data(off + 2) == 116 && data(off + 3) == 105 && data(off + 4) == 118 && data(off + 5) == 101}
           @inline def match_coasting = {len == 8 && data(off) == 99 && data(off + 1) == 111 && data(off + 2) == 97 && data(off + 3) == 115 && data(off + 4) == 116 && data(off + 5) == 105 && data(off + 6) == 110 && data(off + 7) == 103}
@@ -257,16 +257,17 @@ class TATrackAndFlightPlanParser(val config: Config=NoConfig)  extends UTF8XmlPu
         val hdg = Angle.fromVxVy(vx, vy)
         if (acId == null) acId = trackNum
         val id = getUniqueTrackId(srcId,trackNum,acId)  // note that trackNum is not unique over different Tracons
+        val tn = Integer.parseInt(trackNum)
 
         val track = new TaisTrack(id,acId,GeoPosition(lat,lon,reportedAltitude),hdg,spd,vVert,mrtTime,status,
-          srcId, XYPos(xPos, yPos), beaconCode, flightPlan)
+          srcId, tn, XYPos(xPos, yPos), beaconCode, flightPlan)
 
         if (!filterTrack(track)) elements += track
       }
     }
   }
 
-  val idBuf = new ASCIIBuffer(32)
+  val idBuf = new AsciiBuffer(32)
 
   // we combine the tracon id with the trackNum in order to get a global (unique) TATrack identifier
   def getUniqueTrackId (srcId: String, trackNum: String, acid: String): String = {

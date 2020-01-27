@@ -16,17 +16,13 @@
  */
 package gov.nasa.race.actor
 
-import akka.actor.ActorRef
 import com.typesafe.config.Config
 import gov.nasa.race._
-import gov.nasa.race.common.{ConstUTF8CharSequence, MsgMatcher, MsgStats, MsgStatsData, MutUTF8CharSequence, PatternStatsData, SlicePathMatcher, StringDataBuffer, UTF8Buffer, UTF8XmlPullParser2, XmlPullParser2}
+import gov.nasa.race.common.{MsgMatcher, MsgStats, MsgStatsData, MutUtf8Slice, PatternStatsData, SlicePathMatcher, StringDataBuffer, UTF8XmlPullParser2, Utf8Buffer}
 import gov.nasa.race.config.ConfigUtils._
-import gov.nasa.race.core.Messages.{BusEvent, RaceTick}
-import gov.nasa.race.core.{ContinuousTimeRaceActor, PeriodicRaceActor, PublishingRaceActor, SubscribingRaceActor}
-import gov.nasa.race.util.XmlPullParser
+import gov.nasa.race.core.Messages.BusEvent
 
 import scala.collection.mutable.{SortedMap => MSortedMap}
-import scala.concurrent.duration._
 import scala.util.matching.Regex
 
 /**
@@ -109,8 +105,8 @@ class XmlMsgStatsCollector (val config: Config) extends StatsCollectorActor {
   }
 
   // on demand initialized if we have to process Strings or use Regex
-  private val sb: StringDataBuffer = new UTF8Buffer(0)
-  private val cs: MutUTF8CharSequence = new MutUTF8CharSequence
+  private val sb: StringDataBuffer = new Utf8Buffer(0)
+  private val cs: MutUtf8Slice = MutUtf8Slice.empty
 
   override def handleMessage = {
     case BusEvent(_,msg: Array[Byte],_) =>
@@ -118,13 +114,13 @@ class XmlMsgStatsCollector (val config: Config) extends StatsCollectorActor {
 
     case BusEvent(_,msg: String,_) =>
       sb.encode( msg)
-      analyzeMsg(sb.data,0,sb.byteLength)
+      analyzeMsg(sb.data,0,sb.len)
   }
 
   def analyzeMsg(bs: Array[Byte], off: Int, len: Int): Unit = {
     val msgStat = parser.parse(bs,off,len)
     if (msgStat != null && patterns.nonEmpty) {
-      cs.initialize(bs,off,len)
+      cs.set(bs,off,len)
       checkMatches(msgStat,cs)
     }
   }

@@ -33,7 +33,7 @@ class AsdexMsgParserSpec extends AnyFlatSpec with RaceSpec {
   "a AsdexMsgParser" should "reproduce known values" in {
     val translator = new AsdexMsgParser
     translator.translate(xmlMsg) match {
-      case Some(AsdexTracks(airport,tracks)) =>
+      case Some(tracks: AsdexTracks) =>
         tracks.foreach { t=>
           println(t)
           t.id match {
@@ -43,7 +43,7 @@ class AsdexMsgParserSpec extends AnyFlatSpec with RaceSpec {
             case _ => // ignore
           }
         }
-        assert(airport == "KSFO")
+        assert(tracks.airportId == "KSFO")
         assert(tracks.size == 25)
 
       case other => fail(s"parser failed to produce result: $other")

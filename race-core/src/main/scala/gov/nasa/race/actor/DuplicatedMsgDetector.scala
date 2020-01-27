@@ -20,7 +20,7 @@ import java.io.PrintWriter
 
 import com.typesafe.config.Config
 import gov.nasa.race._
-import gov.nasa.race.common.{MD5Checksum, MsgMatcher, PrintStats, StringDataBuffer, UTF8Buffer, XmlSource, XmlTopElementParser}
+import gov.nasa.race.common.{MD5Checksum, MsgMatcher, PrintStats, StringDataBuffer, Utf8Buffer, XmlSource, XmlTopElementParser}
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.Messages.BusEvent
 
@@ -52,7 +52,7 @@ class DuplicatedMsgDetector (val config: Config) extends StatsCollectorActor wit
 
   def getStringDataBuffer (minCapacity: Int): StringDataBuffer = {
     if (sdb == null) {
-      sdb = new UTF8Buffer(minCapacity)
+      sdb = new Utf8Buffer(minCapacity)
     } else {
       sdb.clear
     }
@@ -72,7 +72,7 @@ class DuplicatedMsgDetector (val config: Config) extends StatsCollectorActor wit
   def checkMessage (msg: String): Unit = {
     val sdb = getStringDataBuffer(msg.length * 3/2)
     sdb += msg
-    checkMessage(sdb.data,sdb.byteLength)
+    checkMessage(sdb.data,sdb.len)
   }
 
   def checkMessage (msg: Array[Byte], len: Int): Unit = {

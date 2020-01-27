@@ -16,7 +16,6 @@
  */
 package gov.nasa.race.common
 
-import gov.nasa.race.common.inlined.Slice
 import gov.nasa.race.test.RaceSpec
 import gov.nasa.race.util.FileUtils
 import org.scalatest.flatspec.AnyFlatSpec
@@ -52,11 +51,11 @@ class XmlPullParser2Spec extends AnyFlatSpec with RaceSpec {
     parser.initialize(testMsg)
 
     //--- the parsed tags/attrs
-    val top = Slice("top")
-    val bottom1 = Slice("bottom1")
-    val attr2 = Slice("attr2")
-    val number = Slice("number")
-    val middle = Slice("middle")
+    val top = ConstAsciiSlice("top")
+    val bottom1 = ConstAsciiSlice("bottom1")
+    val attr2 = ConstAsciiSlice("attr2")
+    val number = ConstAsciiSlice("number")
+    val middle = ConstAsciiSlice("middle")
 
     if (parser.parseNextTag) {
       if (parser.tag == top) assert(parseTop)
@@ -108,15 +107,16 @@ class XmlPullParser2Spec extends AnyFlatSpec with RaceSpec {
     var nFlights = 0
 
     //--- tags, attrs and value extractors we need
-    val flightIdentification = Slice("flightIdentification")
-    val aircraftIdentification = Slice("aircraftIdentification")
-    val flight = Slice("flight")
-    val positionTime = Slice("positionTime") // attr
-    val pos = Slice("pos")
-    val enRoute = Slice("enRoute")
-    val position = Slice("position")
-    val location = Slice("location")
+    val flightIdentification = ConstAsciiSlice("flightIdentification")
+    val aircraftIdentification = ConstAsciiSlice("aircraftIdentification")
+    val flight = ConstAsciiSlice("flight")
+    val positionTime = ConstAsciiSlice("positionTime") // attr
+    val pos = ConstAsciiSlice("pos")
+    val enRoute = ConstAsciiSlice("enRoute")
+    val position = ConstAsciiSlice("position")
+    val location = ConstAsciiSlice("location")
     val slicer = new SliceSplitter(' ')
+    val valueSlice = MutAsciiSlice.empty
 
     val parser = new UTF8XmlPullParser2
     if (parser.initialize(msg)) {
@@ -149,8 +149,8 @@ class XmlPullParser2Spec extends AnyFlatSpec with RaceSpec {
             if (parser.tagHasParent(location)) {
               if (parser.parseContent && parser.getNextContentString) {
                 slicer.setSource(parser.contentString)
-                if (slicer.hasNext) lat = slicer.next.toDouble
-                if (slicer.hasNext) lon = slicer.next.toDouble
+                if (slicer.hasNext) lat = slicer.next(valueSlice).toDouble
+                if (slicer.hasNext) lon = slicer.next(valueSlice).toDouble
               }
             }
           }
@@ -174,15 +174,16 @@ class XmlPullParser2Spec extends AnyFlatSpec with RaceSpec {
     val msg = FileUtils.fileContentsAsBytes(baseResourceFile("sfdps-msg.xml")).get
     val parser = new UTF8XmlPullParser2
     val slicer = new SliceSplitter(' ')
+    val valueSlice = MutAsciiSlice.empty
 
     var nFlights = 0
 
     //--- attributes and ancestor elements
-    val aircraftIdentification = Slice("aircraftIdentification")
-    val enRoute = Slice("enRoute")
-    val location = Slice("location")
-    val positionTime = Slice("positionTime")
-    val flight = Slice("flight")
+    val aircraftIdentification = ConstAsciiSlice("aircraftIdentification")
+    val enRoute = ConstAsciiSlice("enRoute")
+    val location = ConstAsciiSlice("location")
+    val positionTime = ConstAsciiSlice("positionTime")
+    val flight = ConstAsciiSlice("flight")
 
     @inline def parseFlight: Unit = {
       var done = false // to implement non-local returns
@@ -201,8 +202,8 @@ class XmlPullParser2Spec extends AnyFlatSpec with RaceSpec {
           if (parser.tagHasParent(location)) {
             if (parser.parseContent && parser.getNextContentString) {
               slicer.setSource(parser.contentString)
-              if (slicer.hasNext) lat = slicer.next.toDouble
-              if (slicer.hasNext) lon = slicer.next.toDouble
+              if (slicer.hasNext) lat = slicer.next(valueSlice).toDouble
+              if (slicer.hasNext) lon = slicer.next(valueSlice).toDouble
             }
           }
         }
@@ -257,9 +258,9 @@ class XmlPullParser2Spec extends AnyFlatSpec with RaceSpec {
         val tag = parser.tag
 
         if (parser.isStartTag) {
-          parseFlightStartTags(tag.data,tag.offset,tag.byteLength)
+          parseFlightStartTags(tag.data,tag.off,tag.len)
         } else {
-          parseFlightEndTags(tag.data,tag.offset,tag.byteLength)
+          parseFlightEndTags(tag.data,tag.off,tag.len)
           if (done) return
         }
       }

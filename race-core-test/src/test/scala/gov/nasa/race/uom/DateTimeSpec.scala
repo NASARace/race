@@ -20,7 +20,8 @@ import gov.nasa.race.test.RaceSpec
 import org.scalatest.flatspec.AnyFlatSpec
 import java.time.{ZoneId, ZoneOffset, ZonedDateTime}
 
-import gov.nasa.race.common.inlined.Slice
+import gov.nasa.race.common.ConstAsciiSlice
+
 
 /**
   * regression test for DateTimeSpec
@@ -54,17 +55,17 @@ class DateTimeSpec extends AnyFlatSpec with RaceSpec {
   }
 
   "DateTime" should "support date and time component extractors" in {
-    assert (DateTime.yearOfYMD(Slice("2019-07-19")) == 2019)
-    assert (DateTime.monthOfYMD(Slice("2019-07-19")) == 7)
-    assert (DateTime.dayOfYMD(Slice("2019-07-19")) == 19)
+    assert (DateTime.yearOfYMD(ConstAsciiSlice("2019-07-19")) == 2019)
+    assert (DateTime.monthOfYMD(ConstAsciiSlice("2019-07-19")) == 7)
+    assert (DateTime.dayOfYMD(ConstAsciiSlice("2019-07-19")) == 19)
 
-    assert (DateTime.hourOfT(Slice("11:53:04.123")) == 11)
-    assert (DateTime.minutesOfT(Slice("11:53:04.123")) == 53)
-    assert (DateTime.secondsOfT(Slice("11:53:04.123")) == 4)
+    assert (DateTime.hourOfT(ConstAsciiSlice("11:53:04.123")) == 11)
+    assert (DateTime.minutesOfT(ConstAsciiSlice("11:53:04.123")) == 53)
+    assert (DateTime.secondsOfT(ConstAsciiSlice("11:53:04.123")) == 4)
 
-    assert (DateTime.fracNanosOfT(Slice("11:53:04.123")) == 123 * 1000000)
+    assert (DateTime.fracNanosOfT(ConstAsciiSlice("11:53:04.123")) == 123 * 1000000)
 
-    assert (DateTime.zoneIdOfHHmmssS(Slice("11:53:04.123Z")) == ZoneOffset.UTC)
-    assert (DateTime.zoneIdOfHHmmssS(Slice("11:53:04")) == ZoneId.systemDefault)
+    assert (DateTime.zoneIdOfHHmmssS(ConstAsciiSlice("11:53:04.123Z")) == ZoneOffset.UTC)
+    assert (DateTime.zoneIdOfHHmmssS(ConstAsciiSlice("11:53:04")) == ZoneId.systemDefault)
   }
 }

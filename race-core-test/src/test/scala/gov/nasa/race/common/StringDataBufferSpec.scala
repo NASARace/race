@@ -25,34 +25,34 @@ import org.scalatest.flatspec.AnyFlatSpec
 class StringDataBufferSpec extends AnyFlatSpec with RaceSpec {
 
   "an ASCIIBuffer" should "accumulate known ASCII data" in {
-    val buf = new ASCIIBuffer(64)
+    val buf = new AsciiBuffer(64)
     buf += "one"
     buf += '-'
     buf += "two"
 
-    println(s"--- ASCIIBuffer append: '${new String(buf.data,0,buf.byteLength)}' : ${buf.byteLength}")
-    assert(buf.byteLength == 7)
+    println(s"--- ASCIIBuffer append: '${new String(buf.data,0,buf.len)}' : ${buf.len}")
+    assert(buf.len == 7)
   }
 
   "a UTF8Buffer" should "accumulate known ASCII data" in {
-    val buf = new UTF8Buffer(64)
+    val buf = new Utf8Buffer(64)
     buf += "one"
     buf += '-'
     buf += "two"
 
-    println(s"--- UTF8Buffer append: '${new String(buf.data,0,buf.byteLength)}' : ${buf.byteLength}")
-    assert(buf.byteLength == 7)
+    println(s"--- UTF8Buffer append: '${new String(buf.data,0,buf.len)}' : ${buf.len}")
+    assert(buf.len == 7)
   }
 
   "a UTF8Buffer" should "reproduce known unicode strings" in {
     val sIn = "I'm \u263b \u00b6"
 
-    val buf = new UTF8Buffer(64)
+    val buf = new Utf8Buffer(64)
     buf.encode(sIn)
 
-    val sOut = new String(buf.data,0,buf.byteLength)
+    val sOut = new String(buf.data,0,buf.len)
 
-    println(s"--- UTF8Buffer.encode: '$sIn' -> '$sOut' : ${buf.byteLength}")
+    println(s"--- UTF8Buffer.encode: '$sIn' -> '$sOut' : ${buf.len}")
     assert (sIn == sOut)
   }
 }

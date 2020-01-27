@@ -16,8 +16,6 @@
  */
 package gov.nasa.race.common
 
-import gov.nasa.race.common.inlined.Slice
-
 /**
   * utility class to convert String objects into Slices
   * note that it is up to the client if the StringDataBuffer is re-used between different StringSlicers
@@ -25,11 +23,11 @@ import gov.nasa.race.common.inlined.Slice
 class StringSlicer (createBuffer: =>StringDataBuffer) {
 
   lazy private val _bb: StringDataBuffer = createBuffer
-  lazy private val slice = Slice.empty
+  private val slice = MutUtf8Slice.empty
 
-  def slice(s: String): Slice = {
+  def slice(s: String): Utf8Slice = {
     _bb.encode(s)
-    slice.set(_bb.data,0,_bb.byteLength)
+    slice.set(_bb.data,0,_bb.len)
     slice
   }
 }

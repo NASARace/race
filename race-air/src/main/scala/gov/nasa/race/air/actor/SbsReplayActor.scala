@@ -23,7 +23,6 @@ import gov.nasa.race.actor.Replayer
 import gov.nasa.race.air.SbsUpdater
 import gov.nasa.race.archive.ArchiveReader
 import gov.nasa.race.common.ConfigurableStreamCreator.{configuredPathName, createInputStream}
-import gov.nasa.race.common.inlined.Slice
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.PeriodicRaceActor
 import gov.nasa.race.track.{TrackDropped, TrackedObject}

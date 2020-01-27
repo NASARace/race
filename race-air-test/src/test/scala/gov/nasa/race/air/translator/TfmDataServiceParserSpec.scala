@@ -32,8 +32,7 @@ class TfmDataServiceParserSpec extends AnyFlatSpec with RaceSpec {
 
     val res = translator.translate(xmlMsg)
     res match {
-      case Some(tfmTracks: TfmTracks) =>
-        val tracks = tfmTracks.tracks
+      case Some(tracks: TfmTracks) =>
         tracks.foreach { t =>
           println(t)
           t.cs match {

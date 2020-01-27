@@ -222,8 +222,16 @@ object UTFx {
     } else if (c < 0xd800 || c >= 0xe000) {
       new UTF8Encoder( 0x300000000L | (0xe0 | (c>>12))<<16 | (0x80 | (c>>6 & 0x3f))<<8 | (0x80 | (c & 0x3f)))
     } else {
-      throw new RuntimeException("can't encode single char of surrogate pair")
+      throw new RuntimeException("can't encode single char of surrogate pair") // FIXME - pass through
     }
+  }
+
+  def initUTF8Encoder (highSurrogate: Char, lowSurrogate: Char): UTF8Encoder = {
+    val v = ((highSurrogate & 0xffff) - 0xd800) << 10 | ((lowSurrogate & 0xffff) - 0xdc00) + 0x10000
+
+    new UTF8Encoder( (1<<40) | 0x400000000L |
+      ((0xf0L | (v>>18)) <<24) | ((0x80L | ((v>>12) & 0x3f)) <<16) | ((0x80L | ((v>>6) & 0x3f)) <<8) | (0x80L | (v& 0x3f))
+    )
   }
 
   def initUTF8Encoder(cs: Array[Char], off: Int): UTF8Encoder = {
@@ -274,8 +282,31 @@ object UTFx {
 
   //--- utf8 length calculation
 
-  def isSurrogatePairChar (c: Char): Boolean = {
+  @inline def isSurrogatePairChar (c: Char): Boolean = {
     c >= 0xd800 && c < 0xe000
+  }
+
+  // an alternative to Java 11 Character.toString(Int)
+  def codePointToUtf8 (cp: Int, bs: Array[Byte], off: Int=0): Int = {
+    if (cp >= 0xffff) {
+      bs(off) = (0xf0 | ((cp >>18) & 0x07)).toByte
+      bs(off+1) = (0x80 | ((cp >> 12) & 0x3f)).toByte
+      bs(off+2) = (0x80 | ((cp >> 6) & 0x3f)).toByte
+      bs(off+3) = (0x80 | (cp & 0x3f)).toByte
+      4
+    } else if (cp >= 0x0800) {
+      bs(off) = (0xe0 | ((cp >> 12) & 0x0f)).toByte
+      bs(off+1) = (0x80 | ((cp >> 6) & 0x3f)).toByte
+      bs(off+2) = (0x80 | (cp & 0x3f)).toByte
+      3
+    } else if (cp  >= 0x0080) {
+      bs(off) = (0xc0 | (cp >> 6) & 0x1f). toByte
+      bs(off+1) = (0x80 | (cp & 0x3f)).toByte
+      2
+    }else {
+      bs(off) = (cp & 0x7f).toByte
+      1
+    }
   }
 
   def utf8Length (c: Char): Int = {

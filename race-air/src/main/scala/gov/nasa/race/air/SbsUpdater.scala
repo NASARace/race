@@ -1,7 +1,6 @@
 package gov.nasa.race.air
 
-import gov.nasa.race.common.UTF8CsvPullParser
-import gov.nasa.race.common.inlined.Slice
+import gov.nasa.race.common.{ConstAsciiSlice, UTF8CsvPullParser}
 import gov.nasa.race.geo.LatLonPos
 import gov.nasa.race.track.TrackedObject
 import gov.nasa.race.uom.Angle._
@@ -72,7 +71,7 @@ class SbsUpdater(updateFunc: TrackedObject=>Boolean,
     var msg4Date: DateTime = UndefinedDateTime
   }
 
-  val _MSG_ = Slice("MSG")
+  val _MSG_ = ConstAsciiSlice("MSG")
 
   var nUpdates: Long = 0 // since start
   var nDropped: Long = 0 // since start
@@ -103,7 +102,9 @@ class SbsUpdater(updateFunc: TrackedObject=>Boolean,
             val icao24 = value.toHexLong
             val icao24String = value.intern
             skip(5)
-            val cs = readNextValue.trim.intern  // dump1090 reports c/s with spaces filled to 8 chars
+            parseNextValue
+            value.trimSelf  // dump1090 reports c/s with spaces filled to 8 chars
+            val cs = value.intern
 
             var ac = acCache.getOrElseUpdate(icao24, new AcCacheEntry(icao24))
             ac.cs = cs

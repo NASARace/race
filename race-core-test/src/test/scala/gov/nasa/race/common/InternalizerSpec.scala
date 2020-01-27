@@ -47,7 +47,7 @@ class InternalizerSpec extends AnyFlatSpec with RaceSpec {
       assert(sChars eq sString)
     }
 
-    assert(ASCII8Internalizer.size == ascii8Data.size)
+    //assert(ASCII8Internalizer.size == ascii8Data.size) // this breaks when executing tests concurrently
   }
 
   val longStrings = Seq[String](
@@ -71,12 +71,12 @@ class InternalizerSpec extends AnyFlatSpec with RaceSpec {
       assert(sChars eq sString)
     }
 
-    assert(Internalizer.size == longStrings.size)
+    //assert(Internalizer.size == longStrings.size)  // this breaks when executing tests concurrently
   }
 
   "Internalizer" should "work with UTF8Buffers" in {
     println("--- internalize from ASCIIBuffer")
-    val buf = new ASCIIBuffer(32)
+    val buf = new AsciiBuffer(32)
     buf += "ZAP"
     buf += '-'
     buf += "123"

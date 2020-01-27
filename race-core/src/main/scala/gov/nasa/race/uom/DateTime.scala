@@ -22,7 +22,7 @@ import java.time._
 import java.util.Locale
 
 import gov.nasa.race._
-import gov.nasa.race.common.inlined.Slice
+import gov.nasa.race.common.inlined.ByteSlice
 import gov.nasa.race.util.SeqUtils
 
 import scala.collection.mutable.ArrayBuffer
@@ -113,7 +113,7 @@ object DateTime {
   //--- slice based parsing
   // TODO - use the component extractors to avoid redundancy
 
-  def parseYMDT (slice: Slice): DateTime = parseYMDT(slice.data, slice.offset, slice.byteLength)
+  def parseYMDT (slice: ByteSlice): DateTime = parseYMDT(slice.data, slice.off, slice.len)
 
   def parseYMDT(bs: Array[Byte], off: Int, len: Int): DateTime = {
     var i = off
@@ -211,25 +211,25 @@ object DateTime {
   @inline private def read4Digits (bs: Array[Byte], k: Int): Int = readDigit(bs,k)*1000 + readDigit(bs,k+1)*100 + readDigit(bs,k+2)*10 + readDigit(bs,k+3)
   @inline private def read2Digits (bs: Array[Byte], k: Int): Int = readDigit(bs,k)*10 + readDigit(bs,k+1)
 
-  @inline def yearOfYMD (slice: Slice): Int = yearOfYMD(slice.data,slice.offset,slice.byteLength)
+  @inline def yearOfYMD (slice: ByteSlice): Int = yearOfYMD(slice.data,slice.off,slice.len)
   @inline def yearOfYMD (bs: Array[Byte], off: Int, len: Int): Int = read4Digits(bs,off)
 
-  @inline def monthOfYMD (slice: Slice): Int = monthOfYMD(slice.data,slice.offset,slice.byteLength)
+  @inline def monthOfYMD (slice: ByteSlice): Int = monthOfYMD(slice.data,slice.off,slice.len)
   @inline def monthOfYMD (bs: Array[Byte], off: Int, len: Int): Int = read2Digits(bs,off+5)
 
-  @inline def dayOfYMD (slice: Slice): Int = dayOfYMD(slice.data,slice.offset,slice.byteLength)
+  @inline def dayOfYMD (slice: ByteSlice): Int = dayOfYMD(slice.data,slice.off,slice.len)
   @inline def dayOfYMD (bs: Array[Byte], off: Int, len: Int): Int = read2Digits(bs,off+8)
 
-  @inline def hourOfT (slice: Slice): Int = hourOfT(slice.data,slice.offset,slice.byteLength)
+  @inline def hourOfT (slice: ByteSlice): Int = hourOfT(slice.data,slice.off,slice.len)
   @inline def hourOfT (bs: Array[Byte], off: Int, len: Int): Int = read2Digits(bs,off)
 
-  @inline def minutesOfT (slice: Slice): Int = minutesOfT(slice.data,slice.offset,slice.byteLength)
+  @inline def minutesOfT (slice: ByteSlice): Int = minutesOfT(slice.data,slice.off,slice.len)
   @inline def minutesOfT (bs: Array[Byte], off: Int, len: Int): Int = read2Digits(bs,off+3)
 
-  @inline def secondsOfT (slice: Slice): Int = secondsOfT(slice.data,slice.offset,slice.byteLength)
+  @inline def secondsOfT (slice: ByteSlice): Int = secondsOfT(slice.data,slice.off,slice.len)
   @inline def secondsOfT (bs: Array[Byte], off: Int, len: Int): Int = read2Digits(bs,off+6)
 
-  @inline def fracNanosOfT (slice: Slice): Int = fracNanosOfT(slice.data,slice.offset,slice.byteLength)
+  @inline def fracNanosOfT (slice: ByteSlice): Int = fracNanosOfT(slice.data,slice.off,slice.len)
   def fracNanosOfT (bs: Array[Byte], off: Int, len: Int): Int = {
     var i = off + 8
     val iMax = off + len
@@ -248,12 +248,12 @@ object DateTime {
     S
   }
 
-  def zoneIdOfHHmmssS (slice: Slice): ZoneId = {
-    val off1 = zoneIdOffsetOfT(slice.data,slice.offset+8,slice.byteLength-8)
-    if (off1 >= 0)  zoneIdOfT(slice.data,off1,slice.byteLength-(off1-slice.offset)) else ZoneId.systemDefault
+  def zoneIdOfHHmmssS (slice: ByteSlice): ZoneId = {
+    val off1 = zoneIdOffsetOfT(slice.data,slice.off+8,slice.len-8)
+    if (off1 >= 0)  zoneIdOfT(slice.data,off1,slice.len-(off1-slice.off)) else ZoneId.systemDefault
   }
 
-  @inline def zoneIdOffsetOfT (slice: Slice): Int = zoneIdOffsetOfT(slice.data,slice.offset,slice.byteLength)
+  @inline def zoneIdOffsetOfT (slice: ByteSlice): Int = zoneIdOffsetOfT(slice.data,slice.off,slice.len)
   def zoneIdOffsetOfT (bs: Array[Byte], off: Int, len: Int): Int = {
     var i = off
     val iMax = off+len
@@ -271,7 +271,7 @@ object DateTime {
   }
 
   // apply zoneIdOffsetOfT before calling these
-  @inline def zoneIdOfT (slice: Slice): ZoneId = zoneIdOfT(slice.data,slice.offset,slice.byteLength)
+  @inline def zoneIdOfT (slice: ByteSlice): ZoneId = zoneIdOfT(slice.data,slice.off,slice.len)
   def zoneIdOfT (bs: Array[Byte], off: Int, len: Int): ZoneId = {
     // optional zone id starts either with +/- or a non-digit other than '.'
     var i = off

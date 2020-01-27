@@ -17,7 +17,7 @@
 
 package gov.nasa.race
 
-import gov.nasa.race.common.inlined.Slice
+import gov.nasa.race.common.inlined.ByteSlice
 
 import scala.annotation.tailrec
 import scala.collection.Seq
@@ -168,17 +168,6 @@ package object common {
     */
   trait Parser {
     def parse (bs: Array[Byte], off: Int, length: Int): Option[Any]
-    def parse (br: ByteRange): Option[Any] = parse(br.data, br.offset, br.byteLength)
-  }
-
-  /**
-    * common interface for the likes of Slice, StringDataBuffer, ASCIICharSequence
-    */
-  trait ByteRange {
-    def data: Array[Byte]
-    def offset: Int
-    def byteLength: Int  // can't use length as it clashes with CharSequence.length (in chars)
-
-    def limit: Int = offset + byteLength
+    def parse (bs: ByteSlice): Option[Any] = parse(bs.data, bs.off, bs.len)
   }
 }

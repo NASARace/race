@@ -54,11 +54,15 @@ case class TaisTrack(id: String,
                      status: Int,
 
                      src: String,
+                     trackNum: Int,
                      xyPos: XYPos,
                      beaconCode: String,
                      flightPlan: Option[FlightPlan]
                   ) extends TrackedAircraft {
   import TaisTrack._
+
+  private var _trackNum: Int = -1
+
 
   override def toString = {
     f"TATrack($src,$id,$cs,0x${status.toHexString},$position,${heading.toDegrees}%.0f°,${speed.toKnots}%.1fkn,${vr.toFeetPerMinute}%.0f, $date, $flightPlan)"
@@ -113,6 +117,7 @@ class TaisTrackBatchWriter(val oStream: OutputStream, val pathName: String="<unk
     printInt(t.status)
 
     //printString(t.src) // the source is stored in the batch header
+    printInt(t.trackNum)
 
     printMeters_1(t.xyPos.x)
     printMeters_1(t.xyPos.y)
@@ -160,6 +165,7 @@ class TaisTrackCSVReader(in: CSVInputStream) {
     val vr = MetersPerSecond(in.readDouble)
     val date = DateTime.ofEpochMillis(in.readLong)
     val status = in.readInt
+    val trackNum = in.readInt
     // we use the batch src
     val x = Meters(in.readDouble)
     val y = Meters(in.readDouble)
@@ -167,7 +173,7 @@ class TaisTrackCSVReader(in: CSVInputStream) {
     // TODO: add flightPlan
     assert(in.wasEndOfRecord)
 
-    new TaisTrack(id,cs,GeoPosition(lat,lon,alt),hdg,spd,vr,date,status,src,XYPos(x,y),beacon,None)
+    new TaisTrack(id,cs,GeoPosition(lat,lon,alt),hdg,spd,vr,date,status,src,trackNum,XYPos(x,y),beacon,None)
   }
 }
 

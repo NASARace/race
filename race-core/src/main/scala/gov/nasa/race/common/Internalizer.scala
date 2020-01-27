@@ -16,7 +16,7 @@
  */
 package gov.nasa.race.common
 
-import gov.nasa.race.common.inlined.Slice
+import gov.nasa.race.common.inlined.ByteSlice
 
 import scala.collection.mutable
 
@@ -34,12 +34,15 @@ import scala.collection.mutable
   */
 object Internalizer {
 
+  val emptyString = ""
   private val map = new mutable.LongMap[Any](8192)
 
   def size: Int = map.size
   // todo - maybe add a few other map accessors
 
   def getMurmurHashed (hash: Long, bs: Array[Byte], off: Int, len: Int): String = synchronized {
+    if (len == 0) return emptyString
+
     val oldSize = map.size
     map.getOrElseUpdate( hash, new String(bs,off,len)) match {
       case s: String =>
@@ -65,11 +68,11 @@ object Internalizer {
   }
 
   @inline final def get (bs: Array[Byte], off: Int, len: Int): String = getMurmurHashed(MurmurHash64.hashBytes(bs,off,len), bs,off,len)
-  @inline final def get (slice: Slice): String = get(slice.data,slice.offset,slice.byteLength)
-  @inline final def get (buf: StringDataBuffer): String = get(buf.data,0,buf.byteLength)
-
+  @inline final def get (slice: ByteSlice): String = get(slice.data,slice.off,slice.len)
 
   def getMurmurHashed (hash: Long, cs: Array[Char], off: Int, len: Int): String = synchronized {
+    if (len == 0) return emptyString
+
     val oldSize = map.size
     map.getOrElseUpdate( hash, new String(cs,off,len)) match {
       case s: String =>
@@ -118,9 +121,7 @@ object Internalizer {
         map.put(key, list :+ s)
         s
     }
-
   }
-
 }
 
 /**
@@ -152,8 +153,7 @@ object ASCII8Internalizer {
   }
 
   @inline final def get ( bs: Array[Byte], off: Int, len: Int): String = getASCII8Hashed(ASCII8Hash64.hashBytes(bs,off,len), bs,off,len)
-  @inline final def get (slice: Slice): String = get(slice.data,slice.offset,slice.byteLength)
-  @inline final def get (buf: StringDataBuffer): String = get(buf.data,0,buf.byteLength)
+  @inline final def get (slice: ByteSlice): String = get(slice.data,slice.off,slice.len)
 
   def getASCII8Hashed (hash: Long, cs: Array[Char], off: Int, len: Int): String = {
     if (len > 8) {

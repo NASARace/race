@@ -21,8 +21,8 @@ import java.lang.Double.isFinite
 import com.typesafe.config.Config
 import gov.nasa.race.air.AsdexTrack._
 import gov.nasa.race.air.{AsdexTrack, AsdexTracks}
-import gov.nasa.race.common.inlined.Slice
-import gov.nasa.race.common.{ASCII8Internalizer, ASCIIBuffer, ByteRange, Internalizer, Parser, UTF8XmlPullParser2}
+import gov.nasa.race.common.inlined.ByteSlice
+import gov.nasa.race.common.{ASCII8Internalizer, AsciiBuffer, ConstAsciiSlice, Internalizer, Parser, UTF8XmlPullParser2}
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.config.{ConfigurableTranslator, NoConfig}
 import gov.nasa.race.geo.GeoPosition
@@ -47,33 +47,33 @@ class AsdexTracksImpl (initSize: Int) extends MutSrcTracks[AsdexTrack](initSize)
 class AsdexMsgParser(val config: Config=NoConfig) extends UTF8XmlPullParser2
             with ConfigurableTranslator with Parser with MutSrcTracksHolder[AsdexTrack,AsdexTracksImpl] {
 
-  val asdexMsg = Slice("asdexMsg")
-  val ns2$asdexMsg = Slice("ns2:asdexMsg")
-  val airport = Slice("airport")
-  val positionReport = Slice("positionReport")
-  val aircraft = Slice("aircraft")
-  val vehicle = Slice("vehicle")
-  val up = Slice("up")
-  val down = Slice("down")
-  val veh = Slice("VEH")
-  val unavailable = Slice("unavailable")
+  val asdexMsg = ConstAsciiSlice("asdexMsg")
+  val ns2$asdexMsg = ConstAsciiSlice("ns2:asdexMsg")
+  val airport = ConstAsciiSlice("airport")
+  val positionReport = ConstAsciiSlice("positionReport")
+  val aircraft = ConstAsciiSlice("aircraft")
+  val vehicle = ConstAsciiSlice("vehicle")
+  val up = ConstAsciiSlice("up")
+  val down = ConstAsciiSlice("down")
+  val veh = ConstAsciiSlice("VEH")
+  val unavailable = ConstAsciiSlice("unavailable")
 
   var airportId: String = null
   override def createElements = new AsdexTracksImpl(150)
 
   // only created on-demand if we have to parse strings
-  lazy protected val bb = new ASCIIBuffer(config.getIntOrElse("buffer-size", 120000))
+  lazy protected val bb = new AsciiBuffer(config.getIntOrElse("buffer-size", 120000))
 
   override def translate(src: Any): Option[Any] = {
     src match {
       case s: String =>
         bb.encode(s)
-        parse(bb.data, 0, bb.byteLength)
+        parse(bb.data, 0, bb.len)
       case Some(s: String) =>
         bb.encode(s)
-        parse(bb.data, 0, bb.byteLength)
-      case s: Slice =>
-        parse(s.data,s.offset,s.limit)
+        parse(bb.data, 0, bb.len)
+      case s: ByteSlice =>
+        parse(s.data,s.off,s.limit)
       case bs: Array[Byte] =>
         parse(bs,0,bs.length)
       case _ => None // unsupported input
@@ -94,7 +94,8 @@ class AsdexMsgParser(val config: Config=NoConfig) extends UTF8XmlPullParser2
     }
   }
 
-  def parseTracks(br: ByteRange): AsdexTracks = parseTracks(br.data,br.offset,br.limit)
+  def parseTracks(slice: ByteSlice): AsdexTracks = parseTracks(slice.data,slice.off,slice.len)
+
 
   /**
     * only initialize and check if it is a relevant message, but don't parse
@@ -312,7 +313,7 @@ class AsdexMsgParser(val config: Config=NoConfig) extends UTF8XmlPullParser2
     if (acId == null || acId == "UNKN") trackId else acId
   }
 
-  val idBuf = new ASCIIBuffer(32)
+  val idBuf = new AsciiBuffer(32)
 
   // if we keep tracks for different airports in the same map we need to have global ids
   def getUniqueTrackId (srcId: String, trackId: String, acid: String): String = {
@@ -320,7 +321,7 @@ class AsdexMsgParser(val config: Config=NoConfig) extends UTF8XmlPullParser2
     idBuf += srcId
     idBuf += trackId
 
-    if (idBuf.byteLength > 8) Internalizer.get(idBuf) else ASCII8Internalizer.get(idBuf)
+    if (idBuf.len > 8) Internalizer.get(idBuf) else ASCII8Internalizer.get(idBuf)
   }
 }
 

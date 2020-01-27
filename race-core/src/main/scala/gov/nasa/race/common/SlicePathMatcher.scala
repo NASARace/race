@@ -16,22 +16,22 @@
  */
 package gov.nasa.race.common
 
-import gov.nasa.race.common.inlined.{RangeStack, Slice}
+import gov.nasa.race.common.inlined.RangeStack
 
 object SlicePathMatcher {
-  final val MatchOneLevel = Slice("*")
-  final val MatchNLevels = Slice("**")
+  final val MatchOneLevel = ConstUtf8Slice("*")
+  final val MatchNLevels = ConstUtf8Slice("**")
 
-  def compileSpec (pathSpec: String, sep: Byte): Array[Slice] = {
+  def compileSpec (pathSpec: String, sep: Byte): Array[CharSeqByteSlice] = {
 
-    def elemSlice (s: Slice, iLast: Int, i: Int): Slice = {
-      val ss = s.subSlice(iLast,i)
+    def elemSlice (s: CharSeqByteSlice, iLast: Int, i: Int): CharSeqByteSlice = {
+      val ss = s.createSubSequence(iLast,i)
       if (ss == MatchOneLevel) MatchOneLevel
       else if (ss == MatchNLevels) MatchNLevels
       else ss
     }
 
-    val s = Slice(pathSpec)
+    val s = ConstUtf8Slice(pathSpec)
     var n = s.occurrencesOf(sep) + 1
     var iLast=0
     if (s(0) == sep) {
@@ -39,7 +39,7 @@ object SlicePathMatcher {
       iLast += 1
     }
 
-    val elems = new Array[Slice](n)
+    val elems = new Array[CharSeqByteSlice](n)
     var j=0
     var i = s.indexOf(sep,iLast)
     while (i > 0) {
@@ -48,14 +48,14 @@ object SlicePathMatcher {
       iLast = i+1
       i = s.indexOf(sep,iLast)
     }
-    elems(j) = elemSlice(s,iLast,s.byteLength)
+    elems(j) = elemSlice(s,iLast,s.len)
 
     elems
   }
 
   def apply (spec: String,sep: Byte='/') = new SlicePathMatcher(compileSpec(spec,sep))
-  def apply (s: Slice*) = new SlicePathMatcher(s.toArray)
-  def apply (s: Array[String]) = new SlicePathMatcher(s.map(Slice(_)))
+  def apply (s: CharSeqByteSlice*) = new SlicePathMatcher(s.toArray)
+  def apply (s: Array[String]) = new SlicePathMatcher(s.map(ConstUtf8Slice(_)))
 }
 import SlicePathMatcher._
 
@@ -71,19 +71,19 @@ import SlicePathMatcher._
   * this represents a subset of regular expressions that can be used to check paths (e.g.
   * for XML elements)
   */
-class SlicePathMatcher(val elements: Array[Slice]) {
+class SlicePathMatcher(val elements: Array[CharSeqByteSlice]) {
 
   val top = elements.length-1
   lazy val pathString: String = elements.mkString("/")
 
   override def toString: String = s"""PathPattern(${elements.mkString(",")})"""
 
-  def matchesPathFunc (pathDepth: Int)(pathFunc: Int=>Slice): Boolean = {
+  def matchesPathFunc (pathDepth: Int)(pathFunc: Int=>CharSeqByteSlice): Boolean = {
     var i = top
-    var barrier: Slice = null // next concrete element to match
+    var barrier: CharSeqByteSlice = null // next concrete element to match
     val elements = this.elements
 
-    @inline def getBarrier: Slice = {
+    @inline def getBarrier: CharSeqByteSlice = {
       i -= 1
       while (i >= 0){
         val e = elements(i)
@@ -125,22 +125,22 @@ class SlicePathMatcher(val elements: Array[Slice]) {
   }
 
   def matches (path: Array[String]): Boolean = {
-    matchesPathFunc(path.length){ i=>Slice(path(i)) }
+    matchesPathFunc(path.length){ i=>ConstUtf8Slice(path(i)) }
   }
 
-  def matches (data: Array[Byte], slice: Slice, stack: RangeStack): Boolean = {
+  def matches (data: Array[Byte], slice: MutCharSeqByteSlice, stack: RangeStack): Boolean = {
     matchesPathFunc(stack.size){ i=>
       slice.set(data,stack.offsets(i),stack.lengths(i))
       slice
     }
   }
 
-  def matches (path: Seq[Slice]): Boolean = {
+  def matches (path: Seq[CharSeqByteSlice]): Boolean = {
     matchesPathFunc(path.size){ path(_) }
   }
 
   def matchesStringPath (ss: String*): Boolean = {
-    matchesPathFunc(ss.size){ i=> Slice(ss(i))}
+    matchesPathFunc(ss.size){ i=> ConstUtf8Slice(ss(i))}
   }
 
   //.. and some more in the future

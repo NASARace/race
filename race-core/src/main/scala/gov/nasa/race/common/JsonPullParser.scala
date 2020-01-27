@@ -18,7 +18,7 @@ package gov.nasa.race.common
 
 import java.io.PrintStream
 
-import gov.nasa.race.common.inlined.{RangeStack, Slice}
+import gov.nasa.race.common.inlined.{ByteSlice, RangeStack}
 
 import scala.annotation.switch
 import scala.collection.mutable.Stack
@@ -54,9 +54,9 @@ object JsonPullParser {
     override def isDefined: Boolean = false
   }
 
-  final val trueValue = Slice("true")
-  final val falseValue = Slice("false")
-  final val nullValue = Slice("null")
+  final val trueValue = ConstAsciiSlice("true")
+  final val falseValue = ConstAsciiSlice("false")
+  final val nullValue = ConstAsciiSlice("null")
 }
 
 /**
@@ -116,7 +116,7 @@ abstract class JsonPullParser {
         data(i0) match {
           //--- new environment
           case '{' => // value is object
-            path.push(member.offset,member.byteLength)
+            path.push(member.off,member.len)
             env.push(state)
             idx = i0
             ObjectStart
@@ -192,7 +192,7 @@ abstract class JsonPullParser {
         data(i0) match {
           //--- new environment
           case '{' => // element value is object
-            path.push(member.offset,member.byteLength)
+            path.push(member.off,member.len)
             state = objState
             env.push(state)
             idx = i0
@@ -278,8 +278,8 @@ abstract class JsonPullParser {
 
   var isQuotedValue = false
 
-  val member = Slice.empty
-  val value = Slice.empty   // holds primitive values (String,number,bool,null)
+  val member = MutUtf8Slice.empty
+  val value = MutUtf8Slice.empty   // holds primitive values (String,number,bool,null)
 
 
   //--- public interface
@@ -321,9 +321,9 @@ abstract class JsonPullParser {
     state.parseNextValue
   }
 
-  final def readNextMemberValue (name: Slice): JsonParseResult = {
+  final def readNextMemberValue (name: ByteSlice): JsonParseResult = {
     val res = parseNextValue
-    if (name.byteLength > 0 && name != member) throw new JsonParseException(s"expected member $name got $member")
+    if (name.len > 0 && name != member) throw new JsonParseException(s"expected member $name got $member")
     res
   }
 
@@ -334,7 +334,7 @@ abstract class JsonPullParser {
     }
   }
 
-  def parseScalarMember (name: Slice): Boolean = {
+  def parseScalarMember (name: ByteSlice): Boolean = {
     isInObject && parseNextValue.isScalarValue && member == name
   }
 
@@ -356,32 +356,32 @@ abstract class JsonPullParser {
     if (parseNextValue != ArrayEnd) throw new JsonParseException("not on array end")
   }
 
-  @inline final def readQuotedValue: Slice = {
+  @inline final def readQuotedValue: Utf8Slice = {
     if (parseNextValue == QuotedValue) value else throw new JsonParseException(s"not a quoted value: '$value'")
   }
-  @inline final def readQuotedMember(name: Slice): Slice = {
+  @inline final def readQuotedMember(name: ByteSlice): Utf8Slice = {
     val res = parseNextValue
     if (member != name) throw new JsonParseException(s"expected member '$name' got '$member'")
     if (res == QuotedValue) value else throw new JsonParseException(s"not a quoted value: '$value'")
   }
 
-  @inline final def readUnQuotedValue: Slice = {
+  @inline final def readUnQuotedValue: Utf8Slice = {
     if (parseNextValue == UnQuotedValue) value else throw new JsonParseException(s"not a un-quoted value: ''$value''")
   }
-  @inline final def readUnQuotedMember(name: Slice): Slice = {
+  @inline final def readUnQuotedMember(name: ByteSlice): Utf8Slice = {
     val res = parseNextValue
     if (member != name) throw new JsonParseException(s"expected member '$name' got '$member'")
     if (res == UnQuotedValue) value else throw new JsonParseException(s"not a un-quoted value: ''$value''")
   }
 
   @inline final def parseArrayStart: Boolean = parseNextValue == ArrayStart
-  @inline final def parseMemberArrayStart(name: Slice): Boolean = (parseNextValue == ArrayStart && member == name)
+  @inline final def parseMemberArrayStart(name: ByteSlice): Boolean = (parseNextValue == ArrayStart && member == name)
 
   @inline final def parseObjectStart: Boolean = parseNextValue == ObjectStart
-  @inline final def parseMemberObjectStart(name: Slice): Boolean = (parseNextValue == ObjectStart && member == name)
+  @inline final def parseMemberObjectStart(name: ByteSlice): Boolean = (parseNextValue == ObjectStart && member == name)
 
 
-  def readMemberArray (name: Slice)(f: =>Unit): Unit = {
+  def readMemberArray(name: ByteSlice)(f: =>Unit): Unit = {
     if (readNextMemberValue(name) == ArrayStart) {
       val endLevel = level
       do {
@@ -392,17 +392,17 @@ abstract class JsonPullParser {
       if (!value.isNullValue) throw new JsonParseException(s"not an array value for '$member'")
     }
   }
-  @inline final def readArray (f: => Unit): Unit = readMemberArray(Slice.EmptySlice)(f)
+  @inline final def readArray (f: => Unit): Unit = readMemberArray(MutUtf8Slice.empty)(f)
 
 
-  def readMemberObject (name: Slice)(f: =>Unit): Unit = {
+  def readMemberObject(name: ByteSlice)(f: =>Unit): Unit = {
     if (readNextMemberValue(name) == ObjectStart) {
       val endLevel = level
       f // this is supposed to call parseNextValue on ALL members of object (possibly skipping some)
       if (notDone && (level != endLevel || parseNextValue != ObjectEnd)) throw new JsonParseException("object not parsed correctly: $name")
     } else throw new JsonParseException(s"not an object value for '$member'")
   }
-  @inline final def readObject(f: =>Unit): Unit = readMemberObject(Slice.EmptySlice)(f)
+  @inline final def readObject(f: =>Unit): Unit = readMemberObject(MutUtf8Slice.empty)(f)
 
   def skipToEndOfLevel (lvl0: Int): Unit = {
     var lvl = env.size
@@ -458,7 +458,7 @@ abstract class JsonPullParser {
 
   //--- internal methods
 
-  @inline final protected def checkMember (name: Slice): Unit = {
+  @inline final protected def checkMember (name: ByteSlice): Unit = {
     if (member != name) throw new JsonParseException(s"expected member '$name' got '$member'")
   }
 
@@ -643,12 +643,12 @@ class StringJsonPullParser extends JsonPullParser {
   */
 class BufferedStringJsonPullParser (initBufSize: Int = 8192) extends JsonPullParser {
 
-  protected val bb = new UTF8Buffer(initBufSize)
+  protected val bb = new Utf8Buffer(initBufSize)
 
   def initialize (s: String): Boolean = {
     bb.encode(s)
     clear
-    setData(bb.data, bb.byteLength)
+    setData(bb.data, bb.len)
 
     idx = seekStart
     idx >= 0
@@ -660,12 +660,12 @@ class BufferedStringJsonPullParser (initBufSize: Int = 8192) extends JsonPullPar
   */
 class BufferedASCIIStringJsonPullParser (initBufSize: Int = 8192) extends JsonPullParser {
 
-  protected val bb = new ASCIIBuffer(initBufSize)
+  protected val bb = new AsciiBuffer(initBufSize)
 
   def initialize (s: String): Boolean = {
     bb.encode(s)
     clear
-    setData(bb.data, bb.byteLength)
+    setData(bb.data, bb.len)
 
     idx = seekStart
     idx >= 0

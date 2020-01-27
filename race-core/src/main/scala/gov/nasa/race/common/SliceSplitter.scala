@@ -16,10 +16,10 @@
  */
 package gov.nasa.race.common
 
-import gov.nasa.race.common.inlined.Slice
+import gov.nasa.race.common.inlined.{ByteSlice, MutByteSlice, MutRawByteSlice}
 
 /**
-  * an iterator over sub-slices that are delimited by ASCII characters
+  * an iterator over sub-slices that are delimited by byte constants
   *
   * Note that the returned slice is mutated so it should not be stored over iteration cycles
   *
@@ -27,23 +27,21 @@ import gov.nasa.race.common.inlined.Slice
   * substring. This means a leading separator (",...") is reported as an empty Slice, a trailing separator ("...,")
   * is not (same as Java's String.split)
   */
-class SliceSplitter (var sep: Byte, var src: Slice) extends Iterator[Slice] {
-  val subSlice: Slice = new Slice(src.data,0,0)
-  var idx = src.offset
-  var limit = src.offset + src.byteLength
+class SliceSplitter (var sep: Byte, var src: ByteSlice) extends Iterator[ByteSlice] {
+  val subSlice: MutByteSlice = new MutRawByteSlice(src.data,0,0)
+  var idx = src.off
+  var limit = src.off + src.len
 
-  def this (sep: Byte) = this(sep, Slice.empty)
+  def this (sep: Byte) = this(sep, MutRawByteSlice.empty)
 
-  def setSource(newSrc: Slice): Unit = {
+  def setSource(newSrc: ByteSlice): Unit = {
     src = newSrc
-    subSlice.set(newSrc.data,0,0)
-    idx = src.offset
-    limit = src.offset + src.byteLength
+    idx = src.off
+    limit = src.off + src.len
   }
 
   def setSeparator (newSep: Byte): Unit = {
     sep = newSep
-    subSlice.byteLength = 0
   }
 
   final def hasNext: Boolean = {
@@ -53,7 +51,13 @@ class SliceSplitter (var sep: Byte, var src: Slice) extends Iterator[Slice] {
   /**
     * note that consecutive separator chars are reported as empty slices
     */
-  def next: Slice = {
+  def next: ByteSlice = next(subSlice)
+
+  /**
+    * alternative accessor that uses a caller provided slice object
+    */
+  def next[T<:MutByteSlice] (slice: T): T = {
+    slice.clear
     val bs = src.data
     val limit = this.limit
     var i = idx
@@ -61,16 +65,16 @@ class SliceSplitter (var sep: Byte, var src: Slice) extends Iterator[Slice] {
     while (i < limit) {
       if (bs(i) == sep) {
         idx = i+1
-        subSlice.setRange(i0,i-i0)
-        return subSlice
+        slice.set(bs,i0,i-i0)
+        return slice
       }
       i += 1
     }
 
     idx = limit
     if (limit > i0) {
-      subSlice.setRange(i0,limit-i0)
-      subSlice
+      slice.set(bs,i0,limit-i0)
+      slice
     } else {
       throw new NoSuchElementException
     }

@@ -57,7 +57,7 @@ object StringSearchBenchmark {
   }
 
   def runRegexSearch (input: Array[Byte], quiet: Boolean = false): Unit = {
-    val cs = new ConstASCIICharSequence(input)
+    val cs = ConstAsciiSlice(input)
     var i = 0
     var create: Long = 0
     var run: Long = 0

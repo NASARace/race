@@ -16,9 +16,6 @@
  */
 package gov.nasa.race.common
 
-import gov.nasa.race.common.inlined.Slice
-
-import scala.annotation.tailrec
 
 class CsvParseException (msg: String) extends RuntimeException(msg)
 
@@ -31,7 +28,7 @@ abstract class CsvPullParser {
   protected var limit: Int = 0
   protected var idx = 0 // points to the next unprocessed byte in data
 
-  val value = Slice.empty
+  val value = MutUtf8Slice.empty
   var nValues = 0
 
   protected def setData (newData: Array[Byte]): Unit = setData(newData,newData.length)
@@ -130,7 +127,7 @@ abstract class CsvPullParser {
 
   def hasMoreValues: Boolean = isValueSeparator(data(idx))
 
-  def readNextValue: Slice = if (parseNextValue) value else throw new CsvParseException("no value left")
+  def readNextValue: Utf8Slice = if (parseNextValue) value else throw new CsvParseException("no value left")
 
   //--- internals
 
@@ -189,12 +186,12 @@ class StringCsvPullParser extends CsvPullParser {
   */
 class BufferedStringCsvPullParser (initBufSize: Int = 8192) extends CsvPullParser {
 
-  protected val bb = new UTF8Buffer(initBufSize)
+  protected val bb = new Utf8Buffer(initBufSize)
 
   def initialize (s: String): Boolean = {
     bb.encode(s)
     clear
-    setData(bb.data, bb.byteLength)
+    setData(bb.data, bb.len)
 
     idx = skipRecordSeparator(0)
     (idx < limit)
@@ -206,12 +203,12 @@ class BufferedStringCsvPullParser (initBufSize: Int = 8192) extends CsvPullParse
   */
 class BufferedASCIIStringCsvPullParser (initBufSize: Int = 8192) extends CsvPullParser {
 
-  protected val bb = new ASCIIBuffer(initBufSize)
+  protected val bb = new AsciiBuffer(initBufSize)
 
   def initialize (s: String): Boolean = {
     bb.encode(s)
     clear
-    setData(bb.data, bb.byteLength)
+    setData(bb.data, bb.len)
 
     idx = skipRecordSeparator(0)
     (idx < limit)

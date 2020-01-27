@@ -18,9 +18,7 @@ package gov.nasa.race.air
 
 import java.io.File
 
-import gov.nasa.race.common.UTF8JsonPullParser
-import gov.nasa.race.common.ASCII8Internalizer
-import gov.nasa.race.common.inlined.Slice
+import gov.nasa.race.common.{ASCII8Internalizer, ConstAsciiSlice, UTF8JsonPullParser}
 import gov.nasa.race.geo.GeoPosition
 import gov.nasa.race.test._
 import gov.nasa.race.uom.Angle.Degrees
@@ -90,8 +88,8 @@ object OpenskyBenchmark {
   //--- JsonPullParser based parsing
 
   def runJsonPullParser (msg: Array[Byte]): Unit = {
-    val _states_ = Slice("states")
-    val _time_ = Slice("time")
+    val _states_ = ConstAsciiSlice("states")
+    val _time_ = ConstAsciiSlice("time")
     println(s"--- running JsonPullParser")
 
     var n = 0
