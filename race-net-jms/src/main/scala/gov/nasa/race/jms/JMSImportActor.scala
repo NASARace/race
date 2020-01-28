@@ -272,8 +272,8 @@ class JMSImportActor(val config: Config) extends FilteringPublisher {
   */
 trait TranslatingJMSImportActor extends JMSImportActor {
 
-  protected var sdb: StringDataBuffer = null // initialized on demand
-  protected val bsSlice: MutCharSeqByteSlice = MutUtf8Slice.empty
+  protected var sdb: StringDataBuffer = new AsciiBuffer(0) // grown on demand
+  protected val bsSlice: MutCharSeqByteSlice = MutAsciiSlice.empty
 
   override def getContentSlice(s: String): CharSeqByteSlice = {
     if (sdb == null) sdb = new AsciiBuffer(Math.max(s.length, 8192))
@@ -334,7 +334,7 @@ trait ArchivingJMSImportActor extends JMSImportActor with ContinuousTimeRaceActo
   * here we can safely re-use slices
   */
 class JMSArchiveActor (config: Config) extends JMSImportActor(config)
-         with ArchivingJMSImportActor with TranslatingJMSImportActor {
+                    with TranslatingJMSImportActor with ArchivingJMSImportActor  {
 
   // we don't translate but we do re-use buffers/slices since there is no publishing
   override protected def translate (msg: Message): Any = None
