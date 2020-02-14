@@ -17,12 +17,11 @@
 
 package gov.nasa.race.swing
 
-import java.awt.{GraphicsEnvironment, Window => AWTWindow}
+import java.awt.{GraphicsDevice, GraphicsEnvironment, Frame => AWTFrame, Window => AWTWindow}
 
 import javax.swing.JPopupMenu
 
 import scala.swing.Frame
-import java.awt.{Frame => AWTFrame}
 
 
 /**
@@ -70,34 +69,63 @@ object Platform {
     }
   }
 
+  def getScreenDevice: GraphicsDevice = {
+    val env = GraphicsEnvironment.getLocalGraphicsEnvironment
+    env.getDefaultScreenDevice
+  }
+
   def enableNativePopups = {
     // should be the same for all OSes
     JPopupMenu.setDefaultLightWeightPopupEnabled(false)
   }
 
+  def enableLightweightPopups = {
+    JPopupMenu.setDefaultLightWeightPopupEnabled(true)
+  }
+
+  def isFullScreen: Boolean = {
+    getScreenDevice.getFullScreenWindow != null
+  }
+
   def enableFullScreen (frame: Frame) = {
-    if (isMacOS){
-      enableOSXFullScreen(frame)
-    } else {
-      // not required
+    if (getScreenDevice.isFullScreenSupported) {
+      if (isMacOS) {
+        enableOSXFullScreen(frame)
+      } else {
+        // not required
+      }
     }
   }
 
   def requestFullScreen (frame: AWTFrame) = {
+
     if (isMacOS) {
       requestOSXFullScreen(frame)
 
     } else {
       // this is supposed to be the portable Java way to request fullscreen but
-      // at least on macOS 0.13.6 it does not allow to switch between workspaces
-      // and disables popups
-      val env = GraphicsEnvironment.getLocalGraphicsEnvironment
-      val device = env.getDefaultScreenDevice
-      device.setFullScreenWindow(frame)
+      // at least on macOS 10.13.6 it does not allow to switch between workspaces
+      // and disables popups, i.e. can cause a user lockout
+      // update: in fullscreen mode popups also don't show on 10.14.6, regardless of calling enableLightweightPopups
+
+      val device = getScreenDevice
+
+      if (device.isFullScreenSupported) {
+        if (frame != null) {
+          try {
+            device.setFullScreenWindow(frame)
+          } catch {
+            case _:Throwable => device.setFullScreenWindow(null)
+          }
+        } else {
+          device.setFullScreenWindow(null) // nothing else we can do if this fails
+        }
+      }
     }
   }
 
-  //--- OS X specifics (note these cause "illegal reflective access" warnings under Java > 8)
+  // OS X specifics (note these cause "illegal reflective access" warnings under Java > 8 and
+  // should be avoided
 
   def enableOSXFullScreen(frame: Frame): Unit = {
     try {
@@ -118,7 +146,8 @@ object Platform {
       val requestToggleFulLScreen = application.getClass().getMethod("requestToggleFullScreen", classOf[AWTWindow])
       requestToggleFulLScreen.invoke(application, frame)
     } catch {
-      case x: Throwable => println(x)
+      case x: Throwable =>
+            // ignore - on 10.14.6 this causes a NPE when trying to get out of fullscreen
     }
   }
 }

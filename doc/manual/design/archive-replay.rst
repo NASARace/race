@@ -85,3 +85,42 @@ reflects the principle that data consistency is rated higher than minimizing the
 archived and actual replay simulation time. The rationale is that replay latency is usually <50msec
 and archived streams are not deterministic to begin with (involve network IO) - RACE is not supposed
 to be a hard-realtime environment.
+
+Archive Formats
+---------------
+The above actors are agnostic with respect to the archive formats used by configured writers/readers,
+the only requirement being that a replay has to use a ``ArchiveReader`` that is compatible with
+the ``ArchiveWriter`` which created the archive.
+
+Some data sources such as CSV streams do not warrant a specific archive format, i.e. writers
+directly store the payload data without any additional formatting.
+
+However, most of external RACE inputs are variable length text messages in payload formats such
+as JSON or XML. To avoid per-message-type readers that have to do expensive parsing of
+archive contents to extract and publish payload data, RACE uses a payload agnostic *tagged archive*
+meta-format that consists of fixed length archive- and entry- headers followed by variable length
+payload entry data bytes
+
+.. image:: ../images/tagged-archive.svg
+    :class: center scale60
+    :alt: Tagged Archive Format
+
+Archive headers can optionally contain schema data to verify writer/reader compatibility. Entry
+headers contain the byte length of the immediately following entry payload data and thus
+allow for efficient extraction of payload data from compressed archives without the need for
+additional buffers.
+
+The archive header also stores the reference date as millisecond epoch value (using a 16 char
+hex format). Each entry header contains a 8 char hex value with the millisecond offset to this
+reference date from which the replay time can be computed. This not only reduces entry header size
+but also allows to easily re-base the archive entry replay times.
+
+`TaggedArchiveReader`` and ``TaggedArchiveWriter`` implementations can be found in the
+``gov.nasa.race.archive`` package and usually can be used as-is, the exception being
+concrete implementations of ``ParsingArchiveReader`` that directly translate payload messages.
+Translating readers are an effective optimization to avoid String or byte array allocation for
+the sole purpose of passing payload messages from ReplayActors to TranslatorActors.
+
+
+
+

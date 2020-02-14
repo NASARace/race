@@ -37,7 +37,7 @@ import gov.nasa.worldwind.geom.Position
 import gov.nasa.worldwind.{Model, WorldWind}
 
 import scala.swing._
-import scala.swing.event.{MouseClicked, MousePressed}
+import scala.swing.event.{Key, KeyPressed, KeyTyped, MouseClicked, MousePressed}
 
 /**
   * a toplevel frame with a WorldWindGLCanvas
@@ -46,6 +46,7 @@ class WorldWindFrame (config: Config, raceView: RaceViewer) extends AppFrame {
 
   Platform.useScreenMenuBar
   Platform.enableNativePopups
+  //Platform.enableLightweightPopups
   Platform.enableFullScreen(this)
 
   title = config.getStringOrElse("title", "RACE Viewer")
@@ -137,9 +138,10 @@ class WorldWindFrame (config: Config, raceView: RaceViewer) extends AppFrame {
     popupShowPanelsMI.selected = true
     popup.contents += popupShowPanelsMI
 
-    listenTo(worldPanel.mouse.clicks)
+    listenTo(worldPanel.mouse.clicks, worldPanel.keys)
     reactions += {
       case MousePressed( c, pos, _, _, true) => popup.show(worldPanel, pos.x,pos.y)
+      case KeyPressed(_, Key.F, _, _) => println("@@@ toggle fullscreen")
     }
 
     //--- the menubar // we don't use one as long as there is just a single item - too much space
