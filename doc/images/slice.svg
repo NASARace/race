@@ -112,7 +112,7 @@
     <line x1="659.1094" y1="333" x2="674.2698" y2="358.5334" marker-end="url(#marker12)" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
     <line x1="499.0528" y1="297" x2="566.373" y2="360.638" marker-end="url(#marker13)" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
     <rect x="207" y="216" width="104.25" height="27" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" filter="url(#shadow1)" />
-    <text x="212.7852" y="235.0336" font-size="12" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">SttringDataBuffer</text>
+    <text x="214.8623" y="235.0336" font-size="12" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">StringDataBuffer</text>
     <line x1="379.1813" y1="198" x2="322.3517" y2="212.9108" marker-end="url(#marker14)" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
     <rect x="207" y="288" width="68.25002" height="27" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" filter="url(#shadow1)" />
     <text x="213.8194" y="307.0336" font-size="12" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">Utf8Buffer</text>

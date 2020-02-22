@@ -343,5 +343,5 @@ orders of magnitudes faster than iteration based unicode conversion.
 .. _JSON: http://json.org/
 .. _CSV: https://tools.ietf.org/html/rfc4180
 .. _UTF-8: https://en.wikipedia.org/wiki/UTF-8
-.. _unicode_: https://home.unicode.org/
+.. _unicode: https://home.unicode.org/
 .. _ASCII: https://en.wikipedia.org/wiki/ASCII
