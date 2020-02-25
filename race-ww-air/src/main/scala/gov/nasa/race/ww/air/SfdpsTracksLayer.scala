@@ -27,7 +27,7 @@ import gov.nasa.race.geo.GeoPositioned
 import gov.nasa.race.swing._
 import gov.nasa.race.swing.Style._
 import gov.nasa.race.swing.{MultiSelection, MultiSelectionPanel}
-import gov.nasa.race.track.TrackDropped
+import gov.nasa.race.track.{TrackCompleted, TrackDropped}
 import gov.nasa.race.uom.Length.Meters
 import gov.nasa.race.ww.EventAction.EventAction
 import gov.nasa.race.ww.track.ModelTrackLayer
@@ -109,6 +109,7 @@ class SfdpsTracksLayer(val raceViewer: RaceViewer, val config: Config) extends M
     case BusEvent(_,track:SfdpsTrack,_) => if (acceptSrc(track.src)) handleTrack(track)
     case BusEvent(_,tracks:SfdpsTracks,_) => if (acceptSrc(tracks.artccId)) tracks.foreach(handleTrack)
     case BusEvent(_,dropped:TrackDropped,_) => dropTrackEntry(dropped.cs)
+    case BusEvent(_,completed:TrackCompleted,_) => dropTrackEntry(completed.cs)
   }
 
   override def handleMessage = handleSFDPSMessage orElse super.handleMessage

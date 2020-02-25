@@ -22,6 +22,8 @@ import gov.nasa.race.air.SfdpsTracks
 import gov.nasa.race.air.translator.MessageCollectionParser
 import gov.nasa.race.archive.{ArchiveReader, ConfiguredTAReader}
 import gov.nasa.race.core.AccumulatingTopicIdProvider
+import gov.nasa.race.config.ConfigUtils._
+import gov.nasa.race.track.TrackCompleted
 
 
 /**
@@ -29,6 +31,8 @@ import gov.nasa.race.core.AccumulatingTopicIdProvider
   */
 class SfdpsReplayActor(val config: Config) extends Replayer[ArchiveReader]
                                                with AccumulatingTopicIdProvider with ARTCCTopicIdMapper {
+  val publishCompleted: Boolean = config.getBooleanOrElse("publish-completed", false)
+
   class FilteringMessageCollectionParser extends MessageCollectionParser {
     override protected def filterSrc (artccId: String) = {
       !matchesAnyServedTopicId(artccId)
@@ -46,11 +50,18 @@ class SfdpsReplayActor(val config: Config) extends Replayer[ArchiveReader]
   override def createReader = new MessageCollectionReader(config)
 
   override def publishFiltered (msg: Any): Unit = {
+    def _publish (tracks: SfdpsTracks): Unit = {
+      super.publishFiltered(tracks)
+      if (publishCompleted){
+        tracks.foreach( t=> if (t.isCompleted) super.publishFiltered(TrackCompleted(t.id,t.cs,t.arrivalPoint,t.date)))
+      }
+    }
+
     msg match {
       case parser: FilteringMessageCollectionParser =>
         val tracks = parser.parseMessageCollectionInitialized
-        if (tracks.nonEmpty) super.publishFiltered(tracks)
-      case tracks: SfdpsTracks => super.publishFiltered(tracks)
+        if (tracks.nonEmpty) _publish(tracks)
+      case tracks: SfdpsTracks => _publish(tracks)
       case _ => // ignore
     }
   }

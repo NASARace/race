@@ -102,4 +102,8 @@ trait RaceSpec extends Suite with Matchers with OptionValues with Inside with Sc
     }
     false // if it doesn't throw the exception, it is a failure
   }
+
+  def expectWithin (v: Double, vExpected: Double, eps: Double): Boolean = {
+    Math.abs(v - vExpected) <= eps
+  }
 }

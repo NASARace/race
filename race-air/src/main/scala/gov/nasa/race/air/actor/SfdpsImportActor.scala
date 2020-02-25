@@ -18,11 +18,13 @@ package gov.nasa.race.air.actor
 
 import com.typesafe.config.Config
 import gov.nasa.race.actor.FlatFilteringPublisher
-import gov.nasa.race.air.{ARTCC, ARTCCs}
+import gov.nasa.race.config.ConfigUtils._
+import gov.nasa.race.air.{ARTCC, ARTCCs, SfdpsTracks}
 import gov.nasa.race.air.translator.MessageCollectionParser
 import gov.nasa.race.core.Messages.ChannelTopicRequest
 import gov.nasa.race.core.{AccumulatingTopicIdProvider, ChannelTopicProvider}
 import gov.nasa.race.jms.{JMSImportActor, TranslatingJMSImportActor}
+import gov.nasa.race.track.TrackCompleted
 import javax.jms.Message
 
 trait ARTCCTopicIdMapper {
@@ -38,11 +40,33 @@ trait ARTCCTopicIdMapper {
 }
 
 /**
+  * a FilterinPublisher for SfdpsTracks that can also (optionally) emit TrackCompleted messages
+  * (default is off)
+  */
+trait SfdpsFilteringPublisher extends FlatFilteringPublisher {
+  val publishCompleted: Boolean = config.getBooleanOrElse("publish-completed", false)
+
+  override def publishFiltered (res: Any) = {
+    super.publishFiltered(res)
+
+    if (publishCompleted){
+      res match {
+        case list: SfdpsTracks =>
+          list.foreach { t =>
+            if (t.isCompleted) super.publishFiltered(TrackCompleted(t.id,t.cs,t.arrivalPoint,t.date))
+          }
+        case _ => // ignore
+      }
+    }
+  }
+}
+
+/**
   * specialized JMSImportActor for SWIM SFDPS MessageCollection XML messages
   * note that we can't hardwire the JMS config (authentication, URI, topic etc) since SWIM access might vary
   */
 class FilteringSfdpsImportActor(config: Config) extends JMSImportActor(config) with TranslatingJMSImportActor
-                                          with FlatFilteringPublisher with AccumulatingTopicIdProvider {
+                                          with SfdpsFilteringPublisher with AccumulatingTopicIdProvider {
 
   class FilteringMessageCollectionParser extends MessageCollectionParser {
     override protected def filterSrc (srcId: String) = !matchesAnyServedTopicId(srcId)
@@ -67,7 +91,7 @@ class FilteringSfdpsImportActor(config: Config) extends JMSImportActor(config) w
   * ChannelTopicSubscriber for any ARTCC
   */
 class OnOffSfdpsImportActor(config: Config) extends JMSImportActor(config) with TranslatingJMSImportActor
-                                   with FlatFilteringPublisher with ChannelTopicProvider {
+                                   with SfdpsFilteringPublisher with ChannelTopicProvider {
 
   class OnOffMessageCollectionParser extends MessageCollectionParser {
     override protected def filterSrc (srcId: String) = !hasClients
@@ -92,7 +116,7 @@ class OnOffSfdpsImportActor(config: Config) extends JMSImportActor(config) with 
   * actor that unconditionally imports and translates all SFDPS MessageCollection messages
   */
 class SfdpsImportActor(config: Config) extends JMSImportActor(config) with TranslatingJMSImportActor
-                                           with FlatFilteringPublisher {
+                                           with SfdpsFilteringPublisher {
   val parser = new MessageCollectionParser
   parser.setElementsReusable(flatten)
 

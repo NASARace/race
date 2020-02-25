@@ -18,6 +18,7 @@ package gov.nasa.race.air
 
 import gov.nasa.race.common.AssocSeq
 import gov.nasa.race.geo.GeoPosition
+import gov.nasa.race.track.PlannedTrack
 import gov.nasa.race.uom.{Angle, DateTime, Speed}
 
 import scala.collection.mutable.ArrayBuffer
@@ -34,9 +35,17 @@ case class SfdpsTrack(
     vr: Speed,
     date: DateTime,
     status: Int,
-    src: String // originating ARTCC
+    //--- SFDPS specific
+    src: String, // originating ARTCC
+    departurePoint: String = "?",
+    departureDate: DateTime = DateTime.UndefinedDateTime, // actual
+    arrivalPoint: String = "?",
+    arrivalDate: DateTime = DateTime.UndefinedDateTime, // actual or estimate
     //.. and probably more to follow
-  ) extends TrackedAircraft {
+  ) extends TrackedAircraft with PlannedTrack {
+
+  def isArrivalPointDefined: Boolean = arrivalPoint != "?"
+  def isDeparturePointDefined: Boolean = departurePoint != "?"
 }
 
 /**

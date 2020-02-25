@@ -18,7 +18,7 @@ package gov.nasa.race.ww.track
 
 import gov.nasa.race._
 import gov.nasa.race.swing.FieldPanel
-import gov.nasa.race.track.{TrackInfo, TrackedObject}
+import gov.nasa.race.track.{PlannedTrack, TrackInfo, TrackedObject}
 import gov.nasa.race.ww.InteractiveLayerObjectPanel
 import gov.nasa.race.uom.DateTime
 
@@ -39,6 +39,9 @@ class TrackFields[T <: TrackedObject] extends FieldPanel {
 
   // owner has to make sure updates are for the right object
 
+  def optString(opt: Option[String]): String = if (opt.isDefined) opt.get else "…"
+  def optDate(opt: DateTime): String = if (opt.isDefined) opt.format_Hms else "…"
+
   def update (obj: T): Unit = {
     cs.text = obj.cs
     date.text = obj.date.format_Hms
@@ -48,14 +51,19 @@ class TrackFields[T <: TrackedObject] extends FieldPanel {
     hdg.text = f"${obj.heading.toDegrees.toInt}%d°"
     spd.text = f"${obj.speed.toKnots.toInt}%d kn"
     vr.text = f"${obj.vr.toFeetPerSecond.toInt}%d fps"
+
+    obj match {
+      case po: PlannedTrack =>
+        dep.text = s"${po.departurePoint}: ${optDate(po.departureDate)}"
+        arr.text = s"${po.arrivalPoint}: ${optDate(po.arrivalDate)}"
+      case _ => // ignore
+    }
   }
 
+  // TODO - trackinfo will be reworked
   def setTrackInfo (ti: TrackInfo): Unit = {
-    def optString(opt: Option[String]): String = if (opt.isDefined) opt.get else "…"
-    def optDate(opt: DateTime): String = if (opt.isDefined) opt.format_Hms else "…"
-
-    dep.text = s"${optString(ti.departurePoint)}  ${optDate(ti.etd)} / ${optDate(ti.atd)}"
-    arr.text = s"${optString(ti.arrivalPoint)}  ${optDate(ti.eta)} / ${optDate(ti.ata)}"
+    dep.text = s"${optString(ti.departurePoint)}:  ${optDate(ti.etd)} / ${optDate(ti.atd)}"
+    arr.text = s"${optString(ti.arrivalPoint)}:  ${optDate(ti.eta)} / ${optDate(ti.ata)}"
     acType.text = s"${optString(ti.trackCategory)} ${optString(ti.trackType)}"
   }
 }

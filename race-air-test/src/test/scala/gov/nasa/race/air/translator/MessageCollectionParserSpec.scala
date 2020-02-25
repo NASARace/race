@@ -16,11 +16,11 @@
  */
 package gov.nasa.race.air.translator
 
+import gov.nasa.race.air.SfdpsTracks
 import gov.nasa.race.test.RaceSpec
 import gov.nasa.race.util.FileUtils.fileContentsAsUTF8String
 import org.scalatest.flatspec.AnyFlatSpec
 
-import scala.collection.Seq
 
 /**
   * reg test for SFDPSParser
@@ -36,10 +36,21 @@ class MessageCollectionParserSpec extends AnyFlatSpec with RaceSpec {
     val translator = new MessageCollectionParser(createConfig("buffer-size = 100000"))
     val res = translator.translate(xmlMsg)
     res match {
-      case Some(list:Seq[_]) =>
+      case Some(list:SfdpsTracks) =>
         list.foreach { println }
         assert(list.size == nFlights)
         println(s"all $nFlights valid FlightObjects accounted for (HBAL476 has no altitude)")
+        // sanity check
+        list.find( _.cs == "HBAL475") match {
+          case Some(t) =>
+            println(s"checking position of HBAL475 (34.904444 -92.485833): ${t.position}")
+            val eps = 0.000001
+            // should be at 34.904444 -92.485833
+            assert( expectWithin(t.position.latDeg, 34.904444, eps))
+            assert( expectWithin(t.position.lonDeg, -92.485833, eps))
+            println("Ok")
+          case None => fail("no HBAL475 entry found")
+        }
       case other => fail(s"failed to parse messages, result=$other")
     }
   }

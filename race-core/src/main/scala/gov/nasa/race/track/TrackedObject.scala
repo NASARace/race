@@ -18,6 +18,7 @@ package gov.nasa.race.track
 
 import gov.nasa.race.IdentifiableObject
 import gov.nasa.race.common.AssocSeq
+import gov.nasa.race.uom.DateTime
 import gov.nasa.race.util.StringUtils
 
 import scala.reflect.{ClassTag, classTag}
@@ -91,6 +92,17 @@ trait TrackedObject extends IdentifiableObject with TrackPoint with MovingObject
   def tempCS = if (hasTempCS) cs else TrackedObject.tempCS(id)
   def getOldCS: Option[String] = amendments.find(_.isInstanceOf[ChangedCS]).map(_.asInstanceOf[ChangedCS].oldCS)
 
+}
+
+/**
+  * a track that has an associated plan, which at least contains information about where it
+  * came from and where it is going to
+  */
+trait PlannedTrack {
+  def departurePoint: String
+  def departureDate: DateTime
+  def arrivalPoint: String
+  def arrivalDate: DateTime
 }
 
 trait TrackedObjects[+T <: TrackedObject] extends AssocSeq[T,String]
