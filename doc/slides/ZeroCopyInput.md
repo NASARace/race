@@ -70,12 +70,16 @@ SGT Inc, NASA Ames Research Center
   per-byte charAt(i) iteration
 * huge temporary objects (SWIM messages can be > 100kB)
 
+<img src="../images/import-msg.svg" class="center scale60">
+
 
 ## Solution: Translating Import Actors
 
 * network buffers usually byte arrays with utf-8 text
 * can be directly used to parse/translate if translation is
   done sync
+
+<img src="../images/syn-import-trans.svg" class="center scale60">
 
 
 ## Optimization Results

@@ -25,7 +25,7 @@ object SlicePathMatcher {
   def compileSpec (pathSpec: String, sep: Byte): Array[CharSeqByteSlice] = {
 
     def elemSlice (s: CharSeqByteSlice, iLast: Int, i: Int): CharSeqByteSlice = {
-      val ss = s.createSubSequence(iLast,i)
+      val ss = s.createSubSequence(iLast,(i-iLast))
       if (ss == MatchOneLevel) MatchOneLevel
       else if (ss == MatchNLevels) MatchNLevels
       else ss
