@@ -111,7 +111,7 @@ class TDP3 (_millis: Long, _lat: Double, _lon: Double, _alt: Double)
   * public root interface for trajectories
   *
   * note that implementation does not imply mutability, storage (direct, compressed, local)
-  * or coverage (full, trace). We only use a abstract TrackPoint result type
+  * or coverage (full, trace). We only use an abstract TrackPoint result type here
   */
 trait Trajectory extends TDataSource[N3,TDP3] {
 

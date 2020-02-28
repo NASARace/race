@@ -28,8 +28,10 @@ object LatLon {
   @inline def apply (lat: Angle, lon: Angle): LatLon = new LatLon( encode(lat,lon))
 
   /**
-    * encode lat lon Double values in degrees to a 64 bit Long, preserving 6 decimal places, which gives us
-    * about 10cm accuracy (see http://www.dupuis.me/node/35)
+    * double lat/lon encoding using the algorithm described in http://www.dupuis.me/node/35 that
+    * stores lat/lon values in a 360*180 (64000: 2 bytes) grid with 7 digit offset precision
+    * (9999999: 3 bytes) in each direction, which fits into a single 2+3+3=8 byte word. The resulting
+    * position accuracy is about 10cm, which is sufficient for the purpose of tracking aircraft
     */
   final def encode (lat: Angle, lon: Angle): Long = {
     val latDeg = lat.toDegrees
