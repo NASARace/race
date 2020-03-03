@@ -17,6 +17,7 @@
 
 package gov.nasa.race
 
+import gov.nasa.race.common._
 import gov.nasa.race.uom.Angle._
 import gov.nasa.race.uom.Length._
 import gov.nasa.race.uom._
@@ -40,7 +41,13 @@ package object geo {
   final val RE_FLATTENING = ( RE_E - RE_N ) / RE_E
   final val INV_RE_FLATTENING = 298.257223563
   final val E_ECC = 2.0 * RE_FLATTENING - RE_FLATTENING * RE_FLATTENING
-  final val E2 = (RE_E*RE_E - RE_N*RE_N)/(RE_E*RE_E) // squared eccentricity
+  final val E2 = (RE_E*RE_E - RE_N*RE_N)/(RE_E*RE_E) // squared eccentricity: 0.0066943799901413165
+
+  // geometric names for ellipoids
+  final val A = RE_E
+  final val A2 = RE_E2
+  final val B = RE_N
+  final val AB2 = RE_E2 * RE_N2
 
   final val NM_DEG = NM * 60.0
   def angularDistance (l: Length) = Degrees(l / NM_DEG)
@@ -51,4 +58,18 @@ package object geo {
 
   case class XYPos (x: Length, y: Length)
 
+  //--- WGS84 based elliptic functions
+
+  @inline def meridionalCurvatureRadius (lat: Angle): Double = AB2 / Math.pow( squared(A*Cos(lat)) + squared(B*Sin(lat)), 1.5)
+
+  @inline def parallelCurvatureRadius (lat: Angle): Double = A2 / Math.sqrt(squared(A*Cos(lat)) + squared(B*Sin(lat)))
+  @inline def parallelRadius (lat: Angle): Double = parallelCurvatureRadius(lat) * Cos(lat)
+
+  @inline def metersPerParallelDeg(lat: Angle): Length = Meters(parallelRadius(lat) * Angle.DegreesInRadian)
+  @inline def metersPerMeridianDeg(lat: Angle): Length = Meters(meridionalCurvatureRadius(lat) * Angle.DegreesInRadian)
+
+  final val CONTIG_US_CENTER_LAT = Degrees(39.8333333)
+  final val CONTIG_US_CENTER_LON = Degrees(-98.583333)
+
+  // -> 6 digit lat/lon is accurate to ~11cm,~8cm at mean US lat
 }

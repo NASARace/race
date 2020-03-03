@@ -40,9 +40,10 @@ package object common {
 
   // all functions here have to start with lower case so that we can use upper case
   // in value classes such as .uom.Length (overriding does not work there because of type erasure)
-  @inline def squared (d: Double) = d*d
-  @inline def cubed (d: Double) = d*d*d
-  @inline def sin2 (d: Double) = {
+  @inline def squareRoot (d: Double): Double = Math.sqrt(d)
+  @inline def squared (d: Double): Double = d*d
+  @inline def cubed (d: Double): Double = d*d*d
+  @inline def sin2 (d: Double): Double = {
     val x = sin(d)
     x*x
   }
@@ -70,6 +71,8 @@ package object common {
     def round_3 = Math.round(d * 1000.0) / 1000.0
     def round_4 = Math.round(d * 10000.0) / 10000.0
     def round_5 = Math.round(d * 100000.0) / 100000.0
+    def round_6 = Math.round(d * 1000000.0) / 1000000.0
+    def round_7 = Math.round(d * 10000000.0) / 10000000.0
   }
 
   final val UndefinedDouble = Double.NaN

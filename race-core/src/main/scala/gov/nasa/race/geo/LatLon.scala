@@ -29,9 +29,9 @@ object LatLon {
 
   /**
     * double lat/lon encoding using the algorithm described in http://www.dupuis.me/node/35 that
-    * stores lat/lon values in a 360*180 (64000: 2 bytes) grid with 7 digit offset precision
-    * (9999999: 3 bytes) in each direction, which fits into a single 2+3+3=8 byte word. The resulting
-    * position accuracy is about 10cm, which is sufficient for the purpose of tracking aircraft
+    * stores lat/lon values in a 360*180 (64000: 2 bytes) grid with 24bit offset precision
+    * (3 bytes) in each direction, which fits into a single 2+3+3=8 byte word. The resulting
+    * position accuracy is 1852m*60/, which is sufficient for the purpose of tracking aircraft
     */
   final def encode (lat: Angle, lon: Angle): Long = {
     val latDeg = lat.toDegrees

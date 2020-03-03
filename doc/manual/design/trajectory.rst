@@ -12,10 +12,11 @@ amount of time (e.g. to monitor live data).
 
 To that end, RACE provides a comprehensive infrastructure that allows to choose the most suitable
 trajectory implementation for a given task but hides implementation details from clients by
-using high level interfaces (traits) to access them. The top interface types are `Trajectory` to
-read and `MutTrajectory` to write/extend trajectory data.
+using high level interfaces (traits) to access them. The top interface types are ``Trajectory`` to
+read and ``MutTrajectory`` to write/extend trajectory data.
 
 There are three major dimensions of trajectory refinement:
+
 * storage model
 * mutability
 * scope
@@ -34,30 +35,32 @@ Storage
 -------
 Storage of trajectory points mostly reflects the required position accuracy. While storage models
 can be extended, RACE comes with three default storage models:
+
 * accurate
 * compressed
 * offset-based
 
-Accurate trajectories store latitude and longitude as `double` floating point values and hence
+**Accurate** trajectories store latitude and longitude as ``double`` floating point values and hence
 require the most memory of our storage models.
 
-Compressed trajectories use an `algorithm <http://www.dupuis.me/node/35>`_ that stores lat/lon
+**Compressed** trajectories use an `algorithm <http://www.dupuis.me/node/35>`_ that stores lat/lon
 values in a 360*180 (64000: 2 bytes) grid with 7 digit offset precision (9999999: 3 bytes) in
 each direction, which fits into a single 2+3+3=8 byte word providing ~10cm accuracy.
 
-Offset based trajectories use a geographic reference point and a 64bit reference time to store
+**Offset-based** trajectories use a geographic reference point and a 64bit reference time to store
 trajectory points as float/int offsets to those reference values. This storage model is therefore
 only usable for trajectories that span less than 24d.
 
 Mutability
 ----------
 Trajectories can be either immutable of mutable, the latter one being represented by the
-`MutTrajectory` interface that defines methods to add trajectory points.
+``MutTrajectory`` interface that defines methods to add trajectory points.
 
 Scope
 -----
 Trajectory scope describes the time interval that is covered in the stored data. RACE supports two
 scopes:
+
 * full
 * trace
 
@@ -79,9 +82,10 @@ Surrounding Infrastructure
 Since most RACE trajectories represent un-synchronized irregular time series a common trajectory
 related task is interpolation, to obtain corresponding time points in sets of relevant trajectories.
 
-`Trajectory` therefore implements a 3-dimensional `TDataSource` interface that enables the use
-of RACE's `TInterpolant` infrastructure for abstract interpolation. RACE currently comes with two
+``Trajectory`` therefore implements a 3-dimensional ``TDataSource`` interface that enables the use
+of RACE's ``TInterpolant`` infrastructure for abstract interpolation. RACE currently comes with two
 implementations:
+
 * simple linear interpolation
 * rational spline based interpolation using the FloaterHormann_ algorithm
 

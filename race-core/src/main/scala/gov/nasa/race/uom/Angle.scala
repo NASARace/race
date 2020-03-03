@@ -50,18 +50,20 @@ object Angle {
   def fromVxVy (vx: Speed, vy: Speed) = Radians(normalizeRadians2Pi(Math.atan2(vx.d, vy.d)))
 
   //--- utilities
-  @inline def normalizeRadians (d: Double) = d - π*2 * Math.floor((d + π) / (π*2)) // -π..π
-  @inline def normalizeRadians2Pi (d: Double) = if (d<0) d % TwoPi + TwoPi else d % TwoPi  // 0..2π
-  @inline def normalizeDegrees (d: Double) =  if (d < 0) d % 360 + 360 else d % 360 // 0..360
-  @inline def normalizeDegrees180 (d: Double) = {
+  @inline def normalizeRadians (d: Double): Double = d - TwoPi * Math.floor((d + π) / TwoPi) // -π..π
+  @inline def normalizeRadians2Pi (d: Double): Double = if (d<0) d % TwoPi + TwoPi else d % TwoPi  // 0..2π
+  @inline def normalizeDegrees (d: Double): Double =  if (d < 0) d % 360 + 360 else d % 360 // 0..360
+  @inline def normalizeDegrees180 (d: Double): Double = {
     var nd = d % 360.0
     nd = (nd + 360.0) % 360.0
     if (nd > 180.0) nd -= 360.0
     nd
   }
-  @inline def normalizedDegreesToRadians (d: Double) = normalizeDegrees(d) * DegreesInRadian
+  @inline def normalizedDegreesToRadians (d: Double): Double = normalizeDegrees(d) * DegreesInRadian
 
-  @inline def absDiff(a1: Angle, a2: Angle) = {
+  @inline def degreesToRadians (deg: Double): Double = deg * DegreesInRadian
+
+  @inline def absDiff(a1: Angle, a2: Angle): Angle = {
     val d1 = normalizeRadians2Pi(a1.d)
     val d2 = normalizeRadians2Pi(a2.d)
     val dd = abs(d1 - d2)
@@ -72,17 +74,17 @@ object Angle {
   // note we have to use upper case here because we otherwise get ambiguity errors when
   // importing both Angle._ and Math._ versions. This is a consequence of using a AnyVal Angle
 
-  @inline def Sin(a:Angle) = sin(a.d)
-  @inline def Sin2(a:Angle) = Sin(a)`²`
-  @inline def Cos(a:Angle) = cos(a.d)
-  @inline def Cos2(a:Angle) = Cos(a)`²`
-  @inline def Tan(a:Angle) = tan(a.d)
-  @inline def Tan2(a:Angle) = Tan(a)`²`
+  @inline def Sin(a:Angle): Double = sin(a.d)
+  @inline def Sin2(a:Angle): Double = Sin(a)`²`
+  @inline def Cos(a:Angle): Double = cos(a.d)
+  @inline def Cos2(a:Angle): Double = Cos(a)`²`
+  @inline def Tan(a:Angle): Double = tan(a.d)
+  @inline def Tan2(a:Angle): Double = Tan(a)`²`
 
 
   //--- Angle constructors
-  @inline def Degrees (d: Double) = new Angle(d * DegreesInRadian)
-  @inline def Radians (d: Double) = new Angle(d)
+  @inline def Degrees (d: Double): Angle = new Angle(d * DegreesInRadian)
+  @inline def Radians (d: Double): Angle = new Angle(d)
 
   implicit class AngleConstructor (val d: Double) extends AnyVal {
     @inline def degrees = Degrees(d)
