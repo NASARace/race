@@ -22,7 +22,7 @@ import java.time._
 import java.util.Locale
 
 import gov.nasa.race._
-import gov.nasa.race.common.inlined.ByteSlice
+import gov.nasa.race.common.ByteSlice
 import gov.nasa.race.util.SeqUtils
 
 import scala.collection.mutable.ArrayBuffer

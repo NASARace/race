@@ -20,8 +20,7 @@ import java.awt.image.{BufferedImage, DataBuffer, IndexColorModel}
 
 import com.typesafe.config.Config
 import gov.nasa.race.air.{PrecipImage, PrecipImageStore}
-import gov.nasa.race.common.inlined.ByteSlice
-import gov.nasa.race.common.{AsciiBuffer, CharSeqByteSlice, ConstAsciiSlice, MutAsciiSlice, SliceSplitter, UTF8XmlPullParser2}
+import gov.nasa.race.common.{AsciiBuffer, ByteSlice, CharSeqByteSlice, ConstAsciiSlice, MutAsciiSlice, SliceSplitter, UTF8XmlPullParser2}
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.config.{ConfigurableTranslator, NoConfig}
 import gov.nasa.race.geo.GeoPosition

@@ -19,7 +19,7 @@ package gov.nasa.race.air.translator
 import gov.nasa.race.config.ConfigurableTranslator
 import gov.nasa.race.IdentifiableObject
 import gov.nasa.race.air.{SfdpsTrack, SfdpsTracks}
-import gov.nasa.race.common._
+import gov.nasa.race.common.{ByteSlice, _}
 import gov.nasa.race.config._
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.geo.GeoPosition
@@ -30,7 +30,6 @@ import gov.nasa.race.uom.Speed._
 import gov.nasa.race.uom._
 import gov.nasa.race.uom.DateTime
 import com.typesafe.config.Config
-import gov.nasa.race.common.inlined.ByteSlice
 
 import scala.collection.Seq
 

@@ -7,34 +7,49 @@ import org.scalatest.flatspec.AnyFlatSpec
 
 class LatLonSpec extends AnyFlatSpec with RaceSpec {
 
-  final val eps = 0.000001
-  final val nSuccessful = 100
+  @inline def round_7(d: Double): Double = Math.round(d * 10000000.0) / 10000000.0
 
-  //--- continental US
+  final val eps = 0.0000001
+  final val nSuccessful = 10000
+
+  //--- continental US with 7 digits precision (SFDPS: 6, ADS-B: 5)
   val positions: Gen[GeoPosition] = for {
     φ <- Gen.choose(10.0, 60.0)
     λ <- Gen.choose(-140.0, -40.0)
-  } yield GeoPosition(Degrees(φ), Degrees(λ))
+  } yield GeoPosition(Degrees(round_7(φ)), Degrees(round_7(λ)))
 
   "LatLon values" should "reproduce lat/lon degrees within NAS to 6 digits" in {
+    println("----------------- test LatLon accuracy")
+    var avgAbsLatErr: Double = 0.0
+    var avgAbsLonErr: Double = 0.0
+    var t, t0: Long = 0
+
     forAll (positions, minSuccessful(nSuccessful)) { p =>
       val lat = p.φ
       val lon = p.λ
 
-      val latLon = LatLon(lat,lon)
+      t0 = System.nanoTime
+      val latLon = LatLon(lat,lon)  // encode
 
-      val llat = latLon.lat
-      val llon = latLon.lon
+      val llat = latLon.lat         // decode
+      val llon = latLon.lon         //  -"-
+      t += System.nanoTime - t0
 
       val dlat = lat - llat
       val dlon = lon - llon
 
-      println(f"lat: ${lat.toDegrees}%.7f - ${llat.toDegrees}%.7f -> e: ${dlat.toDegrees}%.7f,   lon: ${lon.toDegrees}%12.7f - ${llon.toDegrees}%12.7f -> e: ${dlon.toDegrees}%.7f")
+      avgAbsLatErr += Math.abs(dlat.toDegrees)
+      avgAbsLonErr += Math.abs(dlon.toDegrees)
+
+      //println(f"lat: ${lat.toDegrees}%.7f - ${llat.toDegrees}%.7f -> e: ${dlat.toDegrees}%+.8f,   lon: ${lon.toDegrees}%12.7f - ${llon.toDegrees}%12.7f -> e: ${dlon.toDegrees}%+.8f")
 
       assert(Math.abs(dlat.toDegrees) < eps)
       assert(Math.abs(dlon.toDegrees) < eps)
     }
 
-    println(s"passed $nSuccessful tests")
+    avgAbsLatErr /= nSuccessful
+    avgAbsLonErr /= nSuccessful
+
+    println(s"passed $nSuccessful tests: avg errors = ($avgAbsLatErr,$avgAbsLonErr), t=$t")
   }
 }

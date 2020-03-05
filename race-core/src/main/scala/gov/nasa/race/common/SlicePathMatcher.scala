@@ -16,8 +16,6 @@
  */
 package gov.nasa.race.common
 
-import gov.nasa.race.common.inlined.RangeStack
-
 object SlicePathMatcher {
   final val MatchOneLevel = ConstUtf8Slice("*")
   final val MatchNLevels = ConstUtf8Slice("**")

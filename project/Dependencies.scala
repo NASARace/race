@@ -65,20 +65,20 @@ object Dependencies {
   // val breezeNative = "org.scalanlp" %% "breeze-natives" % "0.13.2"
 
   //--- scalaTest
-  val scalaTest = "org.scalatest" %% "scalatest" % "3.2.0-M2"
+  val scalaTest = "org.scalatest" %% "scalatest" % "3.2.0-M3"
   val flexmarkAll = "com.vladsch.flexmark" % "flexmark-all" % "0.35.10" // should be a scalaTest dependency but 3.1.0-SNAP13 is missing it
   val scalaTestPlus = "org.scalatestplus" %% "scalatestplus-scalacheck" % "3.1.0.0-RC2"
 
   val pegDown = "org.pegdown" % "pegdown" % "1.6.0" % Test
 
   //--- scalaCheck
-  val scalaCheck = "org.scalacheck" %% "scalacheck" % "1.14.2" % Test
+  val scalaCheck = "org.scalacheck" %% "scalacheck" % "1.14.3" % Test
 
   val defaultLibs =  Seq(logback,typesafeConfig)
   val defaultTestLibs = Seq(scalaTest,scalaTestPlus,flexmarkAll,scalaCheck,pegDown)
 
   // Apache Avro serialization (for archiving/unarchiving)
-  val avro = "org.apache.avro" % "avro" % "1.9.1"
+  val avro = "org.apache.avro" % "avro" % "1.9.2"
 
   // scodec
   //val scodecBits = "org.scodec" %% "scodec-bits" % "1.1.5"
@@ -87,7 +87,7 @@ object Dependencies {
   //val scodecAll = Seq(scodecBits, scodecCore)
 
   //--- circe Json parsing (only used for -test benchmarks)
-  val circeVersion = "0.12.3"
+  val circeVersion = "0.13.0"
   val circeCore = "io.circe" %% "circe-core" % circeVersion
   val circeGeneric = "io.circe" %% "circe-generic" % circeVersion
   val circeParser = "io.circe" %% "circe-parser" % circeVersion
@@ -100,7 +100,7 @@ object Dependencies {
   //.. and possibly extensions for Tree and jfreechart
 
   //--- RSyntaxTextArea (TextEditor with syntax support)
-  val rsTextArea = "com.fifesoft" % "rsyntaxtextarea" % "3.0.4"
+  val rsTextArea = "com.fifesoft" % "rsyntaxtextarea" % "3.0.8"
 
   //--- the jfreechart plot and chart lib
   val jfreeChart = "org.jfree" % "jfreechart" % "1.5.0"
@@ -114,7 +114,7 @@ object Dependencies {
   val argon2 = "de.mkammerer" % "argon2-jvm" % "2.6"
 
   //--- Akka
-  val akkaVersion = "2.6.1"
+  val akkaVersion = "2.6.3"
   val akkaOrg = "com.typesafe.akka"
 
   val akkaActor = akkaOrg %% "akka-actor" % akkaVersion
@@ -164,7 +164,7 @@ object Dependencies {
   val newKafkaClients = "org.apache.kafka" % "kafka-clients" % "2.2.1"
 
   //--- Kafka (make sure to add log4j to kafkaServer dependencies
-  val kafka = "org.apache.kafka" % "kafka_2.12" % "2.3.1" excludeAll(
+  val kafka = "org.apache.kafka" %% "kafka" % "2.4.0" excludeAll(
   //val kafka = "org.apache.kafka" %% "kafka" % "1.0.1" excludeAll(
     //ExclusionRule(organization = "log4j", name="log4j"),
     //ExclusionRule(organization = "org.slf4j", name = "slf4j-log4j12")

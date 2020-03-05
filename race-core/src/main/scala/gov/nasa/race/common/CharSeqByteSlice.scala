@@ -20,8 +20,6 @@ import java.util.function.IntConsumer
 import java.util.stream.{IntStream, StreamSupport}
 import java.util.{NoSuchElementException, PrimitiveIterator, Spliterator, Spliterators}
 
-import gov.nasa.race.common.inlined.{ByteSlice, MutByteSlice}
-
 import scala.annotation.switch
 
 object ConstCharSequences {

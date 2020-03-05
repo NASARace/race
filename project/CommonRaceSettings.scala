@@ -17,10 +17,16 @@ object CommonRaceSettings {
         scalacOptions ++= Seq("-unchecked", "-deprecation", "-feature"
           , "-target:9"
           //, "-opt-warnings"
-          , "-opt:l:method"   // enables all intra-method optimizations
-          , "-opt:l:inline"               // use only for local inlining and select classes or we break incremental compilation
+          , "-opt:l:method"               // enables all intra-method optimizations
+          , "-opt:l:inline"
+          // NOTE - apart from 'sources' this should be used sparingly since it (transitively) breaks incremental compilation
           , "-opt-inline-from:<sources>"
-          , "-opt-inline-from:**.inlined.**"  //  - " -
+          , "-opt-inline-from:gov.nasa.race.common.Slice"
+          , "-opt-inline-from:gov.nasa.race.common.RangeStack"
+          , "-opt-inline-from:gov.nasa.race.common.RichDouble"
+          , "-opt-inline-from:gov.nasa.race.geo.LatLon"
+          , "-opt-inline-from:gov.nasa.race.uom.Angle"
+          , "-opt-inline-from:gov.nasa.race.uom.Length"
         ),
         resolvers ++= Dependencies.dependencyResolvers,
 

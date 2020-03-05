@@ -16,7 +16,6 @@
  */
 package gov.nasa.race.common
 
-import gov.nasa.race.common.inlined.{ByteSlice, MutByteSlice, MutRawByteSlice}
 
 /**
   * an iterator over sub-slices that are delimited by byte constants

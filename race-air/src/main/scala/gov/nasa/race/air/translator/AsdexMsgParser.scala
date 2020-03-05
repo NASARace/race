@@ -21,8 +21,7 @@ import java.lang.Double.isFinite
 import com.typesafe.config.Config
 import gov.nasa.race.air.AsdexTrack._
 import gov.nasa.race.air.{AsdexTrack, AsdexTracks}
-import gov.nasa.race.common.inlined.ByteSlice
-import gov.nasa.race.common.{ASCII8Internalizer, AsciiBuffer, ConstAsciiSlice, Internalizer, Parser, UTF8XmlPullParser2}
+import gov.nasa.race.common.{ASCII8Internalizer, AsciiBuffer, ByteSlice, ConstAsciiSlice, Internalizer, Parser, UTF8XmlPullParser2}
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.config.{ConfigurableTranslator, NoConfig}
 import gov.nasa.race.geo.GeoPosition

@@ -14,11 +14,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package gov.nasa.race.common.inlined
+package gov.nasa.race.common
 
 import java.io.OutputStream
-
-import gov.nasa.race.common.IntRange
 
 /**
   * generic base type for an immutable byte array range object

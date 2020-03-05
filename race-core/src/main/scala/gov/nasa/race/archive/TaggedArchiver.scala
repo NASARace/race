@@ -21,8 +21,7 @@ import java.util
 
 import com.typesafe.config.Config
 import gov.nasa.race.common.ConfigurableStreamCreator._
-import gov.nasa.race.common.inlined.{ByteSlice, MutRawByteSlice}
-import gov.nasa.race.common.{AsciiBuffer, MutAsciiSlice, MutCharSeqByteSlice, Parser, StringDataBuffer, Utf8Buffer}
+import gov.nasa.race.common.{AsciiBuffer, ByteSlice, MutAsciiSlice, MutCharSeqByteSlice, MutRawByteSlice, Parser, StringDataBuffer, Utf8Buffer}
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.uom.DateTime
 import gov.nasa.race.uom.DateTime._

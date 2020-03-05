@@ -16,7 +16,6 @@
  */
 package gov.nasa.race.common
 
-import gov.nasa.race.common.inlined._
 import gov.nasa.race.util.JUtils
 
 /**

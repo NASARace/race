@@ -27,7 +27,7 @@ import gov.nasa.race.uom.{Angle, AngleArray, DateTime, DateArray, DeltaDateArray
   *
   * Time values are stored as offsets to the initial TrackPoint, which limits durations to <24d
   * Altitude is stored as Float meters (~7 digits give cm accuracy for flight altitudes < 99,999m)
-  * lat/lon encoding uses the algorithm from (see http://www.dupuis.me/node/35), which has ~10cm accuracy
+  * lat/lon encoding uses the .geo.LatLon encoding, which is accurate to about ~1cm
   *
   * all indices are 0-based array offsets
   */

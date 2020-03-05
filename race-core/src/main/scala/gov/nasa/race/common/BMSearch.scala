@@ -19,8 +19,6 @@ package gov.nasa.race.common
 
 import java.util.{Arrays => JArrays}
 
-import gov.nasa.race.common.inlined.ByteSlice
-
 import scala.annotation.tailrec
 
 

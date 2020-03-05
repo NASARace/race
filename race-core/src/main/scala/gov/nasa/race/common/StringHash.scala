@@ -19,8 +19,6 @@ package gov.nasa.race.common
 import gov.nasa.race.util.StringUtils
 import java.security.MessageDigest
 
-import gov.nasa.race.common.inlined.ByteSlice
-
 
 /**
   * create MD5 checksums for Strings

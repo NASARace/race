@@ -22,61 +22,60 @@ import gov.nasa.race.uom.Angle._
 import scala.collection.mutable.ArrayBuffer
 
 object LatLon {
-  final val eps = 0.00000000001
-  final val frac = 10000000.0
+  //--- redundant to Angle but we want to inline
+  @inline val Pi = Math.PI
+  @inline val TwoPi = Math.PI * 2
+  @inline val HalfPi = Math.PI / 2
+  @inline val DegreesInRadian = Pi / 180.0
 
-  @inline def apply (lat: Angle, lon: Angle): LatLon = new LatLon( encode(lat,lon))
+  @inline def degreesToRadians (deg: Double): Double = deg * DegreesInRadian
+  @inline def radiansToDegrees (rad: Double): Double = rad / DegreesInRadian
+  @inline def normalizeRadians2Pi (d: Double): Double = if (d<0) d % TwoPi + TwoPi else d % TwoPi  // 0..2π
 
-  /**
-    * double lat/lon encoding using the algorithm described in http://www.dupuis.me/node/35 that
-    * stores lat/lon values in a 360*180 (64000: 2 bytes) grid with 24bit offset precision
-    * (3 bytes) in each direction, which fits into a single 2+3+3=8 byte word. The resulting
-    * position accuracy is 1852m*60/, which is sufficient for the purpose of tracking aircraft
-    */
-  final def encode (lat: Angle, lon: Angle): Long = {
-    val latDeg = lat.toDegrees
-    val lonDeg = lon.toDegrees
 
-    val lonDegʹ = if (lonDeg == 180.0) lonDeg - eps else if (lonDeg == -180.0) lonDeg + eps else lonDeg
+  @inline final val LAT_RES: Double = 0xffffffffL.toDouble / Pi      // [0,pi] => [0,0xffffffff]
+  @inline final val LON_RES: Double = 0xffffffffL.toDouble / TwoPi  // [0,2pi] => [0,0xffffffff]
 
-    val dlon = 180.0 + (if (lonDegʹ < -180.0) lonDegʹ + 360.0 else if (lonDegʹ > 180.0) lonDegʹ - 360.0 else lonDegʹ)
-    val dlat = 90.0 + (if (latDeg < -90.0) latDeg + 180.0 else if (latDeg > 90.0) latDeg - 180.0 else latDeg)
+  @inline def apply (lat: Angle, lon: Angle): LatLon = {
+    new LatLon(encodeRadians(lat.toRadians,lon.toRadians))
+  }
 
-    val grid = dlat.toInt * 360 + dlon.toInt
-    val ilon = ((dlon - dlon.toInt) * frac).toInt
-    val ilat = ((dlat - dlat.toInt) * frac).toInt
+  @inline def fromDegrees (latDeg: Double, lonDeg: Double): LatLon = {
+    new LatLon( encodeRadians(Angle.degreesToRadians(latDeg),Angle.degreesToRadians(lonDeg)))
+  }
 
-    var l: Long = 0
-    l =  ((ilat >> 16) & 0xff) ; l <<= 8    // 56
-    l += ((ilon >> 16) & 0xff) ; l <<= 16   // 48
-    l += (ilat & 0xffff)       ; l <<= 16   // 32
-    l += (ilon & 0xffff)       ; l <<= 16   // 16
-    l += (grid & 0xffff)                    // 0
+  @inline def encodeRadians (latRad: Double, lonRad: Double): Long = {
+    val lat = normalizeRadians2Pi(latRad)
+    val lon = normalizeRadians2Pi(lonRad)
 
-    l
+    (lat * LAT_RES).round << 32 | (lon * LON_RES).round
   }
 }
 import gov.nasa.race.geo.LatLon._
 
 /**
-  * value class that encodes a geo position given as latitude and longitude
+  * value class that encodes a geo position given as Angle values (Double) into a single
+  * 64bit fixed point value, which preserves 7 digits (corresponding to 1cm) of lat/lon
+  * (mapping [0, 2pi] to [0, 4,294,967,295]
   *
   * This is not a uom quantity but is used closely with Angle and Length, and hence might be used
   * as the basis for GeoPosition in the future
   */
 class LatLon protected[geo] (val l: Long) extends AnyVal {
 
-  def lat: Angle = {
-    val grid = (l & 0xffff).toInt
-    val ilat = ((l >> 32) & 0xffff) + (((l >> 56) & 0xff).toInt << 16)
-    Degrees( (grid / 360) + (ilat.toDouble / frac) - 90.0)
+  @inline def lat: Angle = {
+    val r = (l>>32)/LAT_RES
+    Radians(if (r > Pi) r - Pi else r)
   }
+  @inline def latDeg: Double = lat.toDegrees
+  @inline def latDeg7: Double = Math.round(lat.toDegrees * 10000000.0) / 10000000.0
 
-  def lon: Angle = {
-    val grid = (l & 0xffff).toInt
-    val ilon = ((l >> 16) & 0xffff) + (((l >> 48) & 0xff).toInt << 16)
-    Degrees( (grid % 360) + (ilon.toDouble / frac) - 180.0)
+  @inline def lon: Angle = {
+    val r = (l & 0xffffffffL)/LON_RES
+    Radians(if (r > Pi) r - LatLon.TwoPi else r)
   }
+  @inline def lonDeg: Double = lon.toDegrees
+  @inline def lonDeg7: Double = Math.round(lon.toDegrees * 10000000.0) / 10000000.0
 }
 
 // delegating iterator is unfortunately 3x slower due to indirection

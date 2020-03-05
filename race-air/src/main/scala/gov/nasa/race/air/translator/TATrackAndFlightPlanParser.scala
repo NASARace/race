@@ -18,8 +18,7 @@ package gov.nasa.race.air.translator
 
 import com.typesafe.config.Config
 import gov.nasa.race.air.{FlightPlan, TaisTrack, TaisTracks}
-import gov.nasa.race.common.inlined.ByteSlice
-import gov.nasa.race.common.{ASCII8Internalizer, AsciiBuffer, ConstAsciiSlice, Parser, UTF8XmlPullParser2, Utf8Slice}
+import gov.nasa.race.common.{ASCII8Internalizer, AsciiBuffer, ByteSlice, ConstAsciiSlice, Parser, UTF8XmlPullParser2, Utf8Slice}
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.config.{ConfigurableTranslator, NoConfig}
 import gov.nasa.race.geo.{GeoPosition, XYPos}

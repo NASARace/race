@@ -16,8 +16,6 @@
  */
 package gov.nasa.race.common
 
-import gov.nasa.race.common.inlined.ByteSlice
-
 import scala.collection.mutable
 
 /**

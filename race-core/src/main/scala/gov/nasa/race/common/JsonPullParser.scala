@@ -18,8 +18,6 @@ package gov.nasa.race.common
 
 import java.io.PrintStream
 
-import gov.nasa.race.common.inlined.{ByteSlice, RangeStack}
-
 import scala.annotation.switch
 import scala.collection.mutable.Stack
 

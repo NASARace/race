@@ -19,8 +19,7 @@ package gov.nasa.race.air.translator
 import com.typesafe.config.Config
 import gov.nasa.race.IdentifiableObject
 import gov.nasa.race.air.{TfmTrack, TfmTracks}
-import gov.nasa.race.common.inlined.ByteSlice
-import gov.nasa.race.common.{AsciiBuffer, ConstAsciiSlice, Parser, UTF8XmlPullParser2}
+import gov.nasa.race.common.{AsciiBuffer, ByteSlice, ConstAsciiSlice, Parser, UTF8XmlPullParser2}
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.config.{ConfigurableTranslator, NoConfig}
 import gov.nasa.race.geo.GeoPosition

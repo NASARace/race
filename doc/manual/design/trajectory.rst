@@ -43,9 +43,10 @@ can be extended, RACE comes with three default storage models:
 **Accurate** trajectories store latitude and longitude as ``double`` floating point values and hence
 require the most memory of our storage models.
 
-**Compressed** trajectories use an `algorithm <http://www.dupuis.me/node/35>`_ that stores lat/lon
-values in a 360*180 (64000: 2 bytes) grid with 7 digit offset precision (9999999: 3 bytes) in
-each direction, which fits into a single 2+3+3=8 byte word providing ~10cm accuracy.
+**Compressed** trajectories store latitude and longitude pairs as fix point values in 64bit,
+preserving about 7 degree decimals (corresponding to ~1cm accuracy). Use this storage model if
+a large number of un-bounded trajectories are recorded. Note that accuracy depends on latitude
+(largest errors at equator).
 
 **Offset-based** trajectories use a geographic reference point and a 64bit reference time to store
 trajectory points as float/int offsets to those reference values. This storage model is therefore
@@ -93,5 +94,4 @@ For this purpose, trajectory implementations have to provide a conversion from t
 to abstract, timed `TDP3` data points.
 
 .. _FloaterHormann: https://www.inf.usi.ch/hormann/papers/Floater.2007.BRI.pdf
-.. _lat/lon compression: http://www.dupuis.me/node/35
 

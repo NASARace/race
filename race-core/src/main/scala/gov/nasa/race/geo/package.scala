@@ -60,13 +60,13 @@ package object geo {
 
   //--- WGS84 based elliptic functions
 
-  @inline def meridionalCurvatureRadius (lat: Angle): Double = AB2 / Math.pow( squared(A*Cos(lat)) + squared(B*Sin(lat)), 1.5)
+  def meridionalCurvatureRadius (lat: Angle): Double = AB2 / Math.pow( squared(A*Cos(lat)) + squared(B*Sin(lat)), 1.5)
 
-  @inline def parallelCurvatureRadius (lat: Angle): Double = A2 / Math.sqrt(squared(A*Cos(lat)) + squared(B*Sin(lat)))
-  @inline def parallelRadius (lat: Angle): Double = parallelCurvatureRadius(lat) * Cos(lat)
+  def parallelCurvatureRadius (lat: Angle): Double = A2 / Math.sqrt(squared(A*Cos(lat)) + squared(B*Sin(lat)))
+  def parallelRadius (lat: Angle): Double = parallelCurvatureRadius(lat) * Cos(lat)
 
-  @inline def metersPerParallelDeg(lat: Angle): Length = Meters(parallelRadius(lat) * Angle.DegreesInRadian)
-  @inline def metersPerMeridianDeg(lat: Angle): Length = Meters(meridionalCurvatureRadius(lat) * Angle.DegreesInRadian)
+  def metersPerParallelDeg(lat: Angle): Length = Meters(parallelRadius(lat) * Angle.DegreesInRadian)
+  def metersPerMeridianDeg(lat: Angle): Length = Meters(meridionalCurvatureRadius(lat) * Angle.DegreesInRadian)
 
   final val CONTIG_US_CENTER_LAT = Degrees(39.8333333)
   final val CONTIG_US_CENTER_LON = Degrees(-98.583333)

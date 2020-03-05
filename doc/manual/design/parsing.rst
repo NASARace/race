@@ -28,7 +28,7 @@ RACE uses its own PullParser_ infrastructure to minimize temporary objects and r
 time, providing explicit control over object construction for parse results.
 
 The distinguishing factor of RACE pull parsers is that lexical constructs such as tags or values are
-reported as mutable, pre-allocated ``gov.nasa.race.common.inlined.ByteSlice`` objects, which
+reported as mutable, pre-allocated ``gov.nasa.race.common.ByteSlice`` objects, which
 represent ranges into utf-8 byte arrays and support efficient comparison by means of inlining (the
 RACE build process is configured to inline contents of package ``gov.nasa.race.common.inlined``).
 Only in case of relevance are slice values converted into Strings or parsed into primitive values
@@ -281,7 +281,7 @@ e.g. in cases that have several clients requiring the same input.
 ByteSlice hierarchy
 -------------------
 Although they can be used independently for many string processing tasks,
-``gov.nasa.race.common.inlined.ByteSlice`` objects are a central element of RACE parsers.
+``gov.nasa.race.common.ByteSlice`` objects are a central element of RACE parsers.
 To that end RACE includes a hierarchy of related types:
 
 .. image:: ../images/slice.svg
