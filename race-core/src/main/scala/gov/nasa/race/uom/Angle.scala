@@ -407,13 +407,11 @@ final class DeltaAngleArrayBuffer protected[uom] (protected[uom] val data: Array
   }
 }
 
-class OnlineAngleStats extends SampleStats[Angle] {
-  protected val stats = new OnlineSampleStats
-
-  @inline def += (a: Angle): Unit = stats += a.toRadians
-  @inline def mean: Angle = Radians(stats.mean)
-  @inline def variance: Double = stats.variance
-  @inline def numberOfSamples: Int = stats.numberOfSamples
-  @inline def min: Angle = Radians(stats.min)
-  @inline def max: Angle = Radians(stats.max)
+class AngleStats extends SampleStats[Angle] with OnlineSampleStatsImplD {
+  @inline def addSample (v: Angle): Unit = addSampleD(v.toRadians)
+  @inline def mean: Angle = Radians(_mean)
+  @inline def min: Angle = Radians(_min)
+  @inline def max: Angle = Radians(_max)
+  @inline def isMinimum (v: Angle): Boolean = v.toRadians <= _min
+  @inline def isMaximum (v: Angle): Boolean = v.toRadians >= _max
 }

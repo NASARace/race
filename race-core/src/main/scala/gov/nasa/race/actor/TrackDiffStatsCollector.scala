@@ -91,9 +91,9 @@ class TrackDiffStatsCollector (val config: Config) extends StatsCollectorActor {
           pw.print(f"${td.distance2DStats.max.toRoundedMeters}%7d ")
           pw.print(f"${td.distance2DStats.min.toRoundedMeters}%7d ")
           pw.print(f"${td.distance2DStats.mean.toRoundedMeters}%7d  ")
-          pw.print(f"${td.distance2DStats.variance}%10.2f    ")
+          pw.print(f"${td.distance2DStats.sampleVariance}%10.2f    ")
           pw.print(f"${td.angleDiffStats.mean.toRoundedDegrees}%4d  ")
-          pw.print(f"${td.angleDiffStats.variance}%10.2f")
+          pw.print(f"${td.angleDiffStats.sampleVariance}%10.2f")
           pw.println
         }
       }
@@ -115,9 +115,9 @@ class TrackDiffStatsCollector (val config: Config) extends StatsCollectorActor {
         <maxDistance uom="meters">{td.distance2DStats.max.toRoundedMeters}</maxDistance>
         <minDistance uom="meters">{td.distance2DStats.min.toRoundedMeters}</minDistance>
         <avgDistance uom="meters">{td.distance2DStats.mean.toRoundedMeters}</avgDistance>
-        <varDistance>{td.distance2DStats.variance}</varDistance>
+        <varDistance>{td.distance2DStats.sampleVariance}</varDistance>
         <avgAngle  uom="degrees">{td.angleDiffStats.mean.toRoundedDegrees}</avgAngle>
-        <varAngle>{td.angleDiffStats.variance}</varAngle>
+        <varAngle>{td.angleDiffStats.sampleVariance}</varAngle>
       </track>
     }
   }

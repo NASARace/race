@@ -20,7 +20,7 @@ import scala.concurrent.duration.Duration
 import Math._
 
 import gov.nasa.race._
-import gov.nasa.race.common.{OnlineSampleStats, SampleStats}
+import gov.nasa.race.common.{OnlineSampleStatsImplD, SampleStats}
 import gov.nasa.race.util.ArrayUtils
 
 import scala.collection.mutable.ArrayBuffer
@@ -418,16 +418,11 @@ final class DeltaLengthArrayBuffer protected[uom] (protected[uom] val data: Arra
   }
 }
 
-class OnlineLengthStats extends SampleStats[Length] {
-  protected val stats = new OnlineSampleStats
-
-  @inline def += (l: Length): Unit = stats += l.toMeters
-  @inline def mean: Length = Meters(stats.mean)
-  @inline def variance: Double = stats.variance
-  @inline def numberOfSamples: Int = stats.numberOfSamples
-  @inline def min: Length = Meters(stats.min)
-  @inline def max: Length = Meters(stats.max)
-
-  @inline def isMinimum: Boolean = stats.isNewMinimum
-  @inline def isMaximum: Boolean = stats.isNewMaximum
+class LengthStats extends SampleStats[Length] with OnlineSampleStatsImplD {
+  @inline def addSample (l: Length): Unit = addSampleD(l.toMeters)
+  @inline def mean: Length = Meters(_mean)
+  @inline def min: Length = Meters(_min)
+  @inline def max: Length = Meters(_max)
+  @inline def isMinimum (l: Length): Boolean = l.toMeters <= _min
+  @inline def isMaximum (l: Length): Boolean = l.toMeters >= _max
 }

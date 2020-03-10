@@ -19,7 +19,7 @@ package gov.nasa.race.trajectory
 import gov.nasa.race.common.Nat.N3
 import gov.nasa.race.common.{SampleStats, TInterpolant}
 import gov.nasa.race.geo.GeoPosition
-import gov.nasa.race.uom.{Angle, DateTime, Length, OnlineAngleStats, OnlineLengthStats, Time}
+import gov.nasa.race.uom.{Angle, DateTime, Length, AngleStats, LengthStats, Time}
 
 object TrajectoryDiff {
 
@@ -48,9 +48,9 @@ object TrajectoryDiff {
 
     val refIntr = getInterpolant(refTrajectory)
 
-    val dist2DStats = new OnlineLengthStats
-    val altDiffStats = new OnlineLengthStats
-    val angleDiffStats = new OnlineAngleStats
+    val dist2DStats = new LengthStats
+    val altDiffStats = new LengthStats
+    val angleDiffStats = new AngleStats
 
     val pMax = new TDP3
     val pRefMax = new TDP3
@@ -61,12 +61,13 @@ object TrajectoryDiff {
       if (areaFilter(p) && refTrajectory.includesDate(p.epochMillis)) {
         val pRef = refIntr.eval(p.millis)
         if (areaFilter(pRef)) {
-          dist2DStats += computeDistance2D(pRef, p)
-          if (dist2DStats.isMaximum) {
+          val dist = computeDistance2D(pRef, p)
+          dist2DStats += dist
+          if (dist2DStats.isMaximum(dist)) {
             pMax.update(p)
             pRefMax.update(pRef)
           }
-          if (dist2DStats.isMinimum) {
+          if (dist2DStats.isMinimum(dist)) {
             pMin.update(p)
             pRefMin.update(pRef)
           }

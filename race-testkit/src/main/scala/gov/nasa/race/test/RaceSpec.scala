@@ -95,6 +95,8 @@ trait RaceSpec extends Suite with Matchers with OptionValues with Inside with Sc
     }
   }
 
+  // NOTE - these are just predicates, they don't throw exceptions
+
   def expectException[T: ClassTag] (f: => Unit): Boolean = {
     try { f } catch {
       case t: T => return true
