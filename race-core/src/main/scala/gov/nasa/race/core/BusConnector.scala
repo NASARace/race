@@ -39,7 +39,5 @@ class BusConnector (val bus: Bus) extends Actor with ActorLogging {
 
     case RemotePublish(event) =>    // inbound publish
       bus.publish(event)
-
-    case rc: RollCall => rc.answer(self) // generic response
   }
 }

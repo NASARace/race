@@ -22,6 +22,7 @@ import akka.actor._
 import akka.pattern.AskSupport
 import akka.util.Timeout
 import com.typesafe.config.{Config, ConfigException}
+import gov.nasa.race._
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.Messages._
 import gov.nasa.race.util.NetUtils._
@@ -31,9 +32,14 @@ import gov.nasa.race.uom.DateTime
 
 import scala.collection.immutable.ListMap
 import scala.collection.{Seq, mutable}
-import java.util.concurrent.{LinkedBlockingQueue,TimeUnit}
+import java.util.concurrent.{LinkedBlockingQueue, TimeUnit}
+
+import gov.nasa.race.util.ThreadUtils
+
 import scala.concurrent.duration._
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.language.postfixOps
+
 
 
 // these are only exchanged between masters during remote actor creation
@@ -41,6 +47,8 @@ import scala.language.postfixOps
 case class RemoteConnectionRequest (requestingMaster: ActorRef)
 case object RemoteConnectionAccept
 case object RemoteConnectionReject
+
+case object HeartBeat
 
 /**
   * the master for a RaceActorSystem
@@ -75,6 +83,9 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ImplicitActorLogging
 
   info(s"master created: ${self.path}")
 
+  var heartBeatScheduler: Option[Cancellable] = None
+  var heartBeatCount: Int = 0
+
   //--- convenience funcs
   def name = self.path.name
   def simClock = ras.simClock
@@ -101,6 +112,9 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ImplicitActorLogging
     */
   override def receive: Receive = {
     case RemoteConnectionRequest(remoteMaster) => onRemoteConnectionRequest(remoteMaster)
+
+    case HeartBeat => onHeartBeat
+    case msg: PingRaceActorResponse => onPingRaceActorResponse(sender, msg)
 
     case RaceCreate => onRaceCreate
     case RaceInitialize => onRaceInitialize
@@ -143,7 +157,8 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ImplicitActorLogging
       simClock.resume
       sender ! RaceAck
 
-    case Terminated(aref) => // TODO - how to react to death watch notification?
+    case Terminated(aref) => // death watch event
+      ifSome(actors.get(aref)){ _.isUnresponsive = true }
 
     case deadLetter: DeadLetter => // TODO - do we need to react to DeadLetters?
   }
@@ -483,7 +498,8 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ImplicitActorLogging
   protected val remoteContexts = mutable.Map.empty[UrlString,RaceContext]
 
   def initializeRaceActors = {
-    for ((actorRef,actorConfig) <- actors){
+    for ((actorRef,actorData) <- actors){
+      val actorConfig = actorData.actorConfig
       val actorName = actorRef.path.name
       val isOptional = isOptionalActor(actorConfig)
       val initTimeout = Timeout(actorConfig.getFiniteDurationOrElse("init-timeout",ras.defaultActorTimeout))
@@ -500,19 +516,6 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ImplicitActorLogging
         case TimedOut => initFailed(s"initialization timeout for $actorName", isOptional)
         case other => initFailed(s"invalid initialization response from $actorName: $other", isOptional)
       }(initTimeout)
-      checkLiveness(actorRef)
-    }
-  }
-
-  def checkLiveness (actorRef: ActorRef) = {
-    askForResult( actorRef ? PingRaceActor()) {
-      case PingRaceActor(tSent,tReceived) => // all Ok
-      case TimedOut =>
-        error(s"no PingRaceActor response from ${actorRef.path}, check handleMessage() for match-all clause")
-        throw new RaceInitializeException(s"initialized ${actorRef.path} is unresponsive")
-      case other =>
-        error(s"invalid PingRaceActor response from ${actorRef.path}")
-        throw new RaceInitializeException("invalid PingRaceActor response")
     }
   }
 
@@ -552,6 +555,7 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ImplicitActorLogging
         simClock.resume
         startSatellites
         startRaceActors
+        startHeartBeatMonitor
         requester ! RaceStarted
       } catch {
         case t: Throwable =>
@@ -573,7 +577,8 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ImplicitActorLogging
   }
 
   def startRaceActors = {
-    for ((actorRef,actorConfig) <- actors){
+    for ((actorRef,actorData) <- actors){
+      val actorConfig = actorData.actorConfig
       if (isSupervised(actorRef)) { // this does not include remote lookups
         val isOptional = isOptionalActor(actorConfig)
         val startTimeout = Timeout(actorConfig.getFiniteDurationOrElse("start-timeout",ras.defaultActorTimeout))
@@ -603,6 +608,13 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ImplicitActorLogging
     }
   }
 
+  def startHeartBeatMonitor: Unit = {
+    val heartBeat = ras.heartBeatInterval
+    if (heartBeat.length > 0) {
+      heartBeatScheduler = Some(context.system.scheduler.scheduleWithFixedDelay(Duration.Zero, heartBeat, self, HeartBeat))
+    }
+  }
+
   //--- actor pause
 
   def onRacePause = executeProtected {
@@ -614,7 +626,8 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ImplicitActorLogging
   }
 
   def pauseRaceActors = {
-    for ((actorRef,actorConfig) <- actors){
+    for ((actorRef,actorData) <- actors){
+      val actorConfig = actorData.actorConfig
       val isOptional = isOptionalActor(actorConfig)
       val pauseTimeout = Timeout(actorConfig.getFiniteDurationOrElse("pause-timeout",ras.defaultActorTimeout))
 
@@ -652,7 +665,8 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ImplicitActorLogging
   }
 
   def resumeRaceActors = {
-    for ((actorRef,actorConfig) <- actors){
+    for ((actorRef,actorData) <- actors){
+      val actorConfig = actorData.actorConfig
       val isOptional = isOptionalActor(actorConfig)
       val resumeTimeout = Timeout(actorConfig.getFiniteDurationOrElse("resume-timeout",ras.defaultActorTimeout))
 
@@ -682,6 +696,7 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ImplicitActorLogging
   //--- actor termination
 
   private def shutdown = {
+    terminateHeartBeat
     terminateRaceActors
     terminateSatellites
   }
@@ -707,33 +722,36 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ImplicitActorLogging
   }
 
   def terminateRaceActors: Unit = { // terminate in reverse order of creation
-    setUnrespondingTerminatees( actors.foldRight (Seq.empty[(ActorRef,Config)]) { (e, leftOverActors) =>
-      val (actorRef,actorConfig) = e
-      info(s"sending TerminateRaceActor to ${actorRef.path}")
-      askForResult(actorRef ? TerminateRaceActor(self)) {
-        case RaceActorTerminated => // all fine, actor did shut down
-          info(s"got RaceActorTerminated from ${actorRef.path.name}")
-          stopRaceActor(actorRef) // stop it so that name becomes available again
-          leftOverActors
-        case RaceActorTerminateIgnored =>
-          info(s"got RaceActorTerminateIgnored from ${actorRef.path.name}")
-          leftOverActors
+    setUnrespondingTerminatees( actors.foldRight (Seq.empty[(ActorRef,ActorMetaData)]) { (e, leftOverActors) =>
+      val (actorRef, actorData) = e
+      if (!actorData.isUnresponsive) { // pointless to send a TerminateRaceActor - it is already dead
+        val actorConfig = actorData.actorConfig
+        info(s"sending TerminateRaceActor to ${actorRef.path}")
+        askForResult(actorRef ? TerminateRaceActor(self)) {
+          case RaceActorTerminated => // all fine, actor did shut down
+            info(s"got RaceActorTerminated from ${actorRef.path.name}")
+            stopRaceActor(actorRef) // stop it so that name becomes available again
+            leftOverActors
+          case RaceActorTerminateIgnored =>
+            info(s"got RaceActorTerminateIgnored from ${actorRef.path.name}")
+            leftOverActors
 
           //--- failures
-        case RaceActorTerminateFailed(reason) =>
-          warning(s"RaceActorTerminate of ${actorRef.path.name} failed: $reason")
-          (actorRef -> actorConfig) +: leftOverActors
-        case TimedOut =>
-          warning(s"no TerminateRaceActor response from ${actorRef.path.name}")
-          (actorRef -> actorConfig) +: leftOverActors
-        case other => // illegal response
-          warning(s"got unknown TerminateRaceActor response from ${actorRef.path.name}")
-          (actorRef -> actorConfig) +: leftOverActors
-      }
+          case RaceActorTerminateFailed(reason) =>
+            warning(s"RaceActorTerminate of ${actorRef.path.name} failed: $reason")
+            (actorRef -> actorData) +: leftOverActors
+          case TimedOut =>
+            warning(s"no TerminateRaceActor response from ${actorRef.path.name}")
+            (actorRef -> actorData) +: leftOverActors
+          case other => // illegal response
+            warning(s"got unknown TerminateRaceActor response from ${actorRef.path.name}")
+            (actorRef -> actorData) +: leftOverActors
+        }
+      } else leftOverActors
     })
   }
 
-  def setUnrespondingTerminatees(unresponding: Seq[(ActorRef,Config)]): Unit = {
+  def setUnrespondingTerminatees(unresponding: Seq[(ActorRef,ActorMetaData)]): Unit = {
     ras.actors = ListMap.from(unresponding)
   }
 
@@ -755,7 +773,51 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ImplicitActorLogging
     }
   }
 
+  def terminateHeartBeat: Unit = {
+    ifSome(heartBeatScheduler) { sched =>
+      sched.cancel
+      heartBeatScheduler = None
+    }
+  }
+
   def onRaceResetClock (originator: ActorRef, date: DateTime, tScale: Double) = {
     actors.foreach( _._1 ! SyncWithRaceClock)
+  }
+
+  def onHeartBeat: Unit = {
+    if (ras.isLive){
+      for ((actorRef,actorData) <- actors){
+        val lastPingTime = actorData.lastPingTime
+        if (lastPingTime > 0) { // did we already ping this actor?
+          val pingResponse = actorData.lastPingResponse
+          if (pingResponse == null || pingResponse.tReceivedNanos < lastPingTime) {
+            // TODO - this should follow the supervisor policy, i.e. try to re-create the actor
+            // TODO - this actor will not respond to TerminateRequests anymore, don't send one
+            if (isOptionalActor(actorData.actorConfig)){
+              warning(s"actor not responsive: ${actorRef.path}")
+            } else {
+              error(s"actor not responsive: ${actorRef.path}, shutting down")
+              ThreadUtils.execAsync(ras.terminate)
+            }
+            context.stop(actorRef) // make sure Akka doesn't schedule this actor anymore
+            actorData.isUnresponsive = true
+          } else {
+            actorData.latencyStats.addSample(pingResponse.tReceivedNanos - lastPingTime)
+          }
+        }
+
+        //--- record and send the next ping
+        actorData.lastPingTime = System.nanoTime
+        actorRef ! PingRaceActor
+      }
+      heartBeatCount += 1
+      info(s"heartbeat: $heartBeatCount")
+    }
+  }
+
+  def onPingRaceActorResponse (actorRef: ActorRef, msg: PingRaceActorResponse): Unit = {
+    ifSome(actors.get(actorRef)) { actorData =>
+      actorData.lastPingResponse = msg
+    }
   }
 }

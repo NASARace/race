@@ -41,7 +41,7 @@ class BucketCounterSpec extends AnyFlatSpec with RaceSpec {
 
       var xd: Double = 0
       for (i <- 0 until n) xd += squared(population(i) - mean)
-      val variance = if (n>1) xd / (n-1) else 0.0
+      val variance = if (n>1) xd / n else 0.0
 
       sampleSet.addSample(v)
       print(f"v=$v, n=${sampleSet.numberOfSamples}, m=${sampleSet.mean}%5.3f, s2=${sampleSet.variance}%5.3f")

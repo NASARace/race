@@ -72,7 +72,12 @@ object Messages {
   /** liveness check */
   case object ProcessRaceActor extends RaceSystemMessage
   case object RaceActorProcessed extends RaceSystemMessage
-  case class PingRaceActor (tSentNanos: Long=System.nanoTime(), tReceivedNanos: Long=0) extends RaceSystemMessage
+
+  // we could eliminate the reply latency (which tests the Master) by using an ephemeral data structure
+  // but this would not work with remote actors
+  case object PingRaceActor extends RaceSystemMessage
+  case class PingRaceActorResponse (msgCount: Long, tReceivedNanos: Long = System.nanoTime )
+
   case object RequestRaceActorCapabilities extends RaceSystemMessage
 
   /** discrete time mode (note this does support actor local time) */
@@ -187,8 +192,6 @@ object Messages {
 
 
   case class SetTimeout (msg: Any, duration: FiniteDuration) extends RaceSystemMessage
-
-  case class ChildNodeRollCall (originator: ActorRef, parent: Option[RollCall] = None) extends RollCall
 
   case class DelayedAction(originator: ActorRef, action: ()=>Unit)
 }

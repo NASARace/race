@@ -45,6 +45,7 @@ trait RaceActor extends Actor with ImplicitActorLogging {
   val localRaceContext: RaceContext = RaceActorSystem(system).localRaceContext
   var status = Initializing
   var raceContext: RaceContext = null  // set during InitializeRaceActor
+  var nMsgs: Long = 0 // processed live messages
   
   if (supervisor == localMaster) { // means we are a toplevel RaceActor
     info(s"registering toplevel actor $self")
@@ -88,6 +89,7 @@ trait RaceActor extends Actor with ImplicitActorLogging {
   // do the initialization. This guarantees that concrete actor code cannot access
   // un-initialized fields
   override def receive = {
+    case PingRaceActor => sender ! PingRaceActorResponse(nMsgs)
     case RequestRaceActorCapabilities => sender ! capabilities
     case InitializeRaceActor(raceContext,actorConf) => handleInitializeRaceActor(raceContext,actorConf)
     case TerminateRaceActor(originator) => handleTerminateRaceActor(originator)
@@ -115,8 +117,10 @@ trait RaceActor extends Actor with ImplicitActorLogging {
     }
   }
 
-  def receiveLive = { // chained message processing
-    handleMessage orElse handleSystemMessage
+
+
+  def receiveLive: Receive = { // chained message processing
+    (handleMessage orElse handleSystemMessage) andThen( _ => nMsgs += 1)
   }
 
   /**
@@ -131,6 +135,7 @@ trait RaceActor extends Actor with ImplicitActorLogging {
     case null => // ignore
   }
 
+  // NOTE - make sure we don't match on case class companion objects - the compiler would not warn!
   def handleSystemMessage: Receive = {
     case InitializeRaceActor(rc,actorConf) => handleLiveInitializeRaceActor(rc, actorConf)
     case StartRaceActor(originator) => handleStartRaceActor(originator)
@@ -139,11 +144,9 @@ trait RaceActor extends Actor with ImplicitActorLogging {
     case TerminateRaceActor(originator) => handleTerminateRaceActor(originator)
 
     case ProcessRaceActor => sender ! RaceActorProcessed
-    case msg:PingRaceActor => sender ! msg.copy(tReceivedNanos=System.nanoTime())
-    case RequestRaceActorCapabilities => sender ! capabilities
+    case PingRaceActor => handlePingRaceActor(sender)
 
-    case rc: ChildNodeRollCall => answerChildNodes(rc)
-    case rc: RollCall => rc.answer(self) // generic response
+    case RequestRaceActorCapabilities => sender ! capabilities
 
     case SetLogLevel(newLevel) => logLevel = newLevel
 
@@ -190,6 +193,10 @@ trait RaceActor extends Actor with ImplicitActorLogging {
     } catch {
       case ex: Throwable => sender ! RaceActorStartFailed(ex.getMessage)
     }
+  }
+
+  def handlePingRaceActor (originator: ActorRef) = {
+    originator ! PingRaceActorResponse(nMsgs, System.nanoTime)
   }
 
   def handlePauseRaceActor  (originator: ActorRef) = {
@@ -291,10 +298,6 @@ trait RaceActor extends Actor with ImplicitActorLogging {
   def onTerminateRaceActor(originator: ActorRef): Boolean = true
 
   def onSyncWithRaceClock: Boolean = true
-
-  def answerChildNodes (rc: ChildNodeRollCall) = {
-    rc.answer(self -> ChildNode(self,Set.empty))
-  }
 
   def loadClass[T] (clsName: String, clsType: Class[T]): Class[_ <:T] = {
     ClassLoaderUtils.loadClass(context.system, clsName, clsType)

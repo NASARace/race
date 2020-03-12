@@ -31,16 +31,16 @@ import gov.nasa.race.common.SettableClock
 import gov.nasa.race.common.Status._
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.Messages._
+import gov.nasa.race.uom.DateTime
 import gov.nasa.race.util.FileUtils._
 import gov.nasa.race.util.NetUtils._
-import gov.nasa.race.util.{ClassLoaderUtils, DateTimeUtils, ThreadUtils}
-import gov.nasa.race.uom.DateTime
+import gov.nasa.race.util.{ClassLoaderUtils, ThreadUtils}
 
-import scala.jdk.CollectionConverters._
 import scala.collection.concurrent.TrieMap
-import scala.collection.immutable.{ListMap,Set,Map}
+import scala.collection.immutable.{ListMap, Map, Set}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
+import scala.jdk.CollectionConverters._
 import scala.language.postfixOps
 
 
@@ -112,6 +112,10 @@ class RaceActorSystem(val config: Config) extends LogController with VerifiableA
   var wallStartTime = wallClockStartTime(false) // will be re-evaluated during launch
   val delayLaunch = config.getBooleanOrElse("delay-launch", false)
 
+  //--- monitoring intervals (0 means we don't check)
+  val heartBeatInterval: FiniteDuration = config.getFiniteDurationOrElse("heartbeat-interval", 0.seconds)
+  val heartBeatStatistics: Boolean = config.getBooleanOrElse("heartbeat-statistics", false)
+
   //--- specific timeouts
   val defaultSystemTimeout: FiniteDuration = config.getFiniteDurationOrElse("system-timeout",timeout.duration*2)
   val defaultActorTimeout: FiniteDuration = config.getFiniteDurationOrElse("actor-timeout",timeout.duration)
@@ -140,7 +144,7 @@ class RaceActorSystem(val config: Config) extends LogController with VerifiableA
   var actorCapabilities = Map.empty[ActorRef,RaceActorCapabilities]
   var commonCapabilities = RaceActorCapabilities.AllCapabilities  // to quickly check if operations such as clock reset are permitted
 
-  var actors = ListMap.empty[ActorRef, Config]
+  var actors = ListMap.empty[ActorRef, ActorMetaData]
 
   // remote RAS book keeping
   var usedRemoteMasters = Map.empty[UrlString, ActorRef] // the remote masters we use (via our remote actors)
@@ -169,7 +173,7 @@ class RaceActorSystem(val config: Config) extends LogController with VerifiableA
   // called by actor ctors during instantiation
   def registerActor (actorRef: ActorRef, actorConf: Config, actorCaps: RaceActorCapabilities) = {
     info(s"register actor ${actorRef.path.name}")
-    actors = actors + (actorRef -> actorConf)
+    actors = actors + (actorRef -> new ActorMetaData(actorConf))
     actorCapabilities = actorCapabilities + (actorRef -> actorCaps)
     commonCapabilities = commonCapabilities.intersection(actorCaps)
   }
@@ -320,6 +324,8 @@ class RaceActorSystem(val config: Config) extends LogController with VerifiableA
     if (isLive) {
       info(s"universe $name terminating..")
       status = Terminating
+
+      if (heartBeatStatistics) showHeartBeatStatistics
 
       askVerifiableForResult(master, RaceTerminate) {
         case RaceTerminated =>
@@ -532,12 +538,13 @@ class RaceActorSystem(val config: Config) extends LogController with VerifiableA
   // NOTE - this performs a sync query
   def showActors = {
     for (((actorRef, _), i) <- actors.zipWithIndex) {
-      print(f"  $i%2d: ${actorRef.path} ")
+      print(f"  $i%2d: ${actorRef.path}%30s ")
 
-      askForResult(actorRef ? PingRaceActor()) {
-        case PingRaceActor(tSent, tReceived) =>
+      val pingTime = System.nanoTime
+      askForResult(actorRef ? PingRaceActor) {
+        case PingRaceActorResponse(nMsgs, tReceived) =>
           val tReturned = System.nanoTime()
-          println(f"  ${tReceived - tSent}ns / ${tReturned - tReceived}ns")
+          println(f"response times:  ${tReceived - pingTime}%8d, ${tReturned - tReceived}%8d [ns], msgs: $nMsgs%8d")
         case TimedOut => println("  TIMEOUT")
         case other => println("  INVALID RESPONSE")
       }
@@ -557,6 +564,37 @@ class RaceActorSystem(val config: Config) extends LogController with VerifiableA
           if (cause != null) cause.printStackTrace else x.printStackTrace
 
         case _ => t.printStackTrace
+      }
+    }
+  }
+
+  def showHeartBeatStatistics: Unit = {
+    if (heartBeatInterval.length == 0) {
+      println("no actor statistics available (set heartbeat-interval in config)")
+
+    } else {
+      println(" actor statistics:                                        latency [μsec]")
+      println(" #                          actor    msgCount       N    min    max    avg        σ")
+      println("-- ------------------------------   ---------   ----- ------ ------ ------ --------")
+
+      for (((actorRef, actorData), i) <- actors.zipWithIndex) {
+        print(f"$i%2d ${actorRef.path.name}%30s   ")
+        val lastResponse = actorData.lastPingResponse
+        val stats = actorData.latencyStats
+
+        if (lastResponse != null) {
+          print(f"${lastResponse.msgCount}%9d   ")
+          if (stats.numberOfSamples > 1) {
+            val μsMin = (stats.min + 500)/1000
+            val μsMax = (stats.max + 500)/1000
+            val μsAvg = (stats.mean + 500)/1000
+            val σ = Math.sqrt(stats.variance / 1e6)
+
+            print(f"${stats.numberOfSamples}%5d $μsMin%6d $μsMax%6d $μsAvg%6d $σ%8.2f")
+          }
+
+        }
+        println
       }
     }
   }

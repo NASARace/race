@@ -92,7 +92,7 @@ object TestRaceActorSystem {
         remoteContexts.clear()
     }
 
-    override def setUnrespondingTerminatees(unresponding: Seq[(ActorRef,Config)]) = {}
+    override def setUnrespondingTerminatees(unresponding: Seq[(ActorRef,ActorMetaData)]) = {}
     override def stopRaceActor (actorRef: ActorRef) = {}
   }
 }
@@ -107,7 +107,7 @@ class TestRaceActorSystem (name: String) extends RaceActorSystem(createTestConfi
   override def stoppedRaceActor (actorRef: ActorRef) = {} // leave cleanup for reset
 
   def addTestActor (actorRef: ActorRef, conf: Config): Unit = {
-    actors = actors + (actorRef -> conf)
+    actors = actors + (actorRef -> new ActorMetaData(conf))
     master ! WatchRaceActor(actorRef)
   }
 
@@ -118,7 +118,7 @@ class TestRaceActorSystem (name: String) extends RaceActorSystem(createTestConfi
       case other => throw new RuntimeException(s"invalid master reset response $other")
     }
 
-    actors = ListMap.empty[ActorRef,Config]
+    actors = ListMap.empty[ActorRef,ActorMetaData]
     usedRemoteMasters = Map.empty[String,ActorRef]
     bus.asInstanceOf[TestBus].reset
 
