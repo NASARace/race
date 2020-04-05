@@ -27,6 +27,8 @@ import gov.nasa.race.util.ArrayUtils
 trait PublishingRaceActor extends RaceActor {
   var writeTo: Array[String] = Array.empty
 
+  def writeToAsString = writeTo.mkString(",")
+
   override def onInitializeRaceActor(raceContext: RaceContext, actorConf: Config) = {
     writeTo = actorConf.getStrings("write-to")
     super.onInitializeRaceActor(raceContext, actorConf)

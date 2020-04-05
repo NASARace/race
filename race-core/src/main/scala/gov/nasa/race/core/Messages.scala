@@ -52,7 +52,7 @@ object Messages {
 
   /** set RaceContext and do runtime initialization of RaceActors */
   case class InitializeRaceActor (raceContext: RaceContext, actorConfig: Config) extends RaceSystemMessage
-  case object RaceActorInitialized extends RaceSystemMessage
+  case class RaceActorInitialized (caps: RaceActorCapabilities) extends RaceSystemMessage
   case class RaceActorInitializeFailed (reason: String="unknown") extends RaceSystemMessage
 
   /** inform RaceActor of simulation start */
@@ -73,12 +73,20 @@ object Messages {
   case object ProcessRaceActor extends RaceSystemMessage
   case object RaceActorProcessed extends RaceSystemMessage
 
-  // we could eliminate the reply latency (which tests the Master) by using an ephemeral data structure
-  // but this would not work with remote actors
-  case object PingRaceActor extends RaceSystemMessage
-  case class PingRaceActorResponse (msgCount: Long, tReceivedNanos: Long = System.nanoTime )
+  // sent to parent after actor got stopped
+  case object RaceActorStopped extends RaceSystemMessage
 
-  case object RequestRaceActorCapabilities extends RaceSystemMessage
+  // note we need to separate ping and response to support remote actors, as opposed to using a
+  // ephemeral message that is completed by the child actor.
+  // The statsCollector is optional. If it is set the ping receiver should send the response to both
+  // the sender and the collector. Note that we don't need to pass the originator to the collector
+  // since the actor hierarchy is visible from the sender actorref path.
+  case class PingRaceActor (sentNanos: Long, statsCollector: ActorRef = ActorRef.noSender) extends RaceSystemMessage
+  case class PingRaceActorResponse (receivedNanos: Long, latencyNanos: Long, msgCount: Long)
+
+  // the sync on demand version that lets actors report themselves. Mostly for debugging
+  case class ShowRaceActor (sentNanos: Long)
+  case object ShowRaceActorResponse
 
   /** discrete time mode (note this does support actor local time) */
   case object PollStepTime extends RaceSystemMessage  // master -> actors
@@ -104,18 +112,18 @@ object Messages {
   case class RaceRetry(e:Any) // to-reprocess a message
 
   //--- RaceActorSystem control messages (RaceActorSystem <-> Master <-> remoteMaster)
-  case object RaceCreate                // RAS -> Master
-  case object RaceCreated               // Master -> RAS
-  case class  RaceCreateFailed (reason: Any) // Master -> RAS
+  protected[core] case object RaceCreate                // RAS -> Master
+  protected[core] case object RaceCreated               // Master -> RAS
+  protected[core] case class  RaceCreateFailed (reason: Any) // Master -> RAS
 
-  case object RaceInitialize            // RAS -> Master
-  case object RaceInitialized           // Master -> RAS
-  case class RaceInitializeFailed (reason: Any)  // Master -> RAS
+  protected[core] case object RaceInitialize            // RAS -> Master
+  protected[core] case class RaceInitialized (commonCapabilities: RaceActorCapabilities) // Master -> RAS
+  protected[core] case class RaceInitializeFailed (reason: Any)  // Master -> RAS
 
-  case object RaceStart                 // RAS -> Master
-  case class RemoteRaceStart (remoteMaster: ActorRef, simTime: DateTime, timeScale: Double) // Master -> remote Master
-  case object RaceStarted               // Master -> RAS, remote Master -> Master
-  case class RaceStartFailed (reason: Any) // Master -> RAS
+  protected[core] case object RaceStart                 // RAS -> Master
+  protected[core] case class RemoteRaceStart (remoteMaster: ActorRef, simTime: DateTime, timeScale: Double) // Master -> remote Master
+  protected[core] case object RaceStarted               // Master -> RAS, remote Master -> Master
+  protected[core] case class RaceStartFailed (reason: Any) // Master -> RAS
 
   case object RacePause
   case object RacePaused
@@ -125,9 +133,13 @@ object Messages {
   case object RaceResumed
   case class RaceResumeFailed (reason: Any)
 
-  case object RaceTerminate             // RAS -> Master
-  case class RemoteRaceTerminate (remoteMaster: ActorRef) // Master -> RemoteMaster
-  case object RaceTerminated            // Master -> RAS, remote Master -> Master
+  case object RaceShow                                  // RAS -> Master (on demand)
+  case object RaceShowCompleted                         // Master -> RAS
+
+  protected[core] case object RaceTerminate             // RAS -> Master
+  protected[core] case class RemoteRaceTerminate (remoteMaster: ActorRef) // Master -> RemoteMaster
+  protected[core] case object RaceTerminated            // Master -> RAS, remote Master -> Master
+  protected[core] case object RaceTerminateFailed       // Master -> RAS
 
   case class RaceResetClock (originator: ActorRef,d: DateTime,tScale: Double) // originator -> Master
   case object RaceClockReset            // Master -> originator

@@ -141,7 +141,7 @@ class WorldWindFrame (config: Config, raceView: RaceViewer) extends AppFrame {
     listenTo(worldPanel.mouse.clicks, worldPanel.keys)
     reactions += {
       case MousePressed( c, pos, _, _, true) => popup.show(worldPanel, pos.x,pos.y)
-      case KeyPressed(_, Key.F, _, _) => println("@@@ toggle fullscreen")
+      case KeyPressed(_, Key.F, _, _) => //println("@@@ toggle fullscreen")
     }
 
     //--- the menubar // we don't use one as long as there is just a single item - too much space

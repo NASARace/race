@@ -71,7 +71,7 @@ object RaceActorSystem { // aka RAS
   }
 
   def shutdownLiveSystems = {
-    liveSystems.values.foreach(_.terminate)
+    liveSystems.values.foreach(_.terminateActors)
   }
 
   private var isRunningEmbedded = false
@@ -130,7 +130,11 @@ class RaceActorSystem(val config: Config) extends LogController with VerifiableA
 
   val showExceptions = config.getBooleanOrElse("show-exceptions",false)
 
-  loadSystemProperties
+  // remote RAS book keeping
+  var usedRemoteMasters = Map.empty[UrlString, ActorRef] // the remote masters we use (via our remote actors)
+  var usingRemoteMasters = Set.empty[ActorRef] // the remote masters that use us (some of our actors are their remotes)
+
+  loadSystemProperties // (some of) which can be directly set from the config
 
   addLiveSystem(this)
   system.whenTerminated.foreach( _ => removeLiveSystem(this))
@@ -138,18 +142,10 @@ class RaceActorSystem(val config: Config) extends LogController with VerifiableA
   RaceLogger.logController = this
   debug(s"initializing RaceActorSystem for config:\n${showConfig(config)})")
 
-  // updated by RaceActor ctor during creation - use only typesafe values here
-  // TODO - consolidate
+  // updated during initialization with caps that are supported by all actors
+  var commonCapabilities = RaceActorCapabilities.AllCapabilities
 
-  var actorCapabilities = Map.empty[ActorRef,RaceActorCapabilities]
-  var commonCapabilities = RaceActorCapabilities.AllCapabilities  // to quickly check if operations such as clock reset are permitted
-
-  var actors = ListMap.empty[ActorRef, ActorMetaData]
-
-  // remote RAS book keeping
-  var usedRemoteMasters = Map.empty[UrlString, ActorRef] // the remote masters we use (via our remote actors)
-  var usingRemoteMasters = Set.empty[ActorRef] // the remote masters that use us (some of our actors are their remotes)
-
+  // the one actor to rule them all
   val master = system.actorOf(Props(getMasterClass, this), name)
   waitForActor(master) {
     case e =>
@@ -168,17 +164,9 @@ class RaceActorSystem(val config: Config) extends LogController with VerifiableA
     throw new RaceInitializeException("race actor system did not initialize")
   }
 
-  // done with initialization
+  // from here on the driver takes over and (at some point) calls startActors
 
-  // called by actor ctors during instantiation
-  def registerActor (actorRef: ActorRef, actorConf: Config, actorCaps: RaceActorCapabilities) = {
-    info(s"register actor ${actorRef.path.name}")
-    actors = actors + (actorRef -> new ActorMetaData(actorConf))
-    actorCapabilities = actorCapabilities + (actorRef -> actorCaps)
-    commonCapabilities = commonCapabilities.intersection(actorCaps)
-  }
-
-  //--- those can be overridden by subclasses
+  //--- end of initialization
 
   def loadSystemProperties: Unit = {
     // load from file
@@ -255,13 +243,15 @@ class RaceActorSystem(val config: Config) extends LogController with VerifiableA
     info(s"scheduling termination of universe $name at $date")
     val dur = FiniteDuration(date.toEpochMillis - System.currentTimeMillis(), MILLISECONDS)
     system.scheduler.scheduleOnce(dur, new Runnable {
-      override def run: Unit = terminate
+      override def run: Unit = terminateActors
     })
   }
 
-  def createRaceContext(master: ActorRef, bus: Bus): RaceContext = RaceContext(master, bus)
+  protected[this] def createRaceContext(master: ActorRef, bus: Bus): RaceContext = RaceContext(master, bus)
 
   def getActorConfigs = config.getOptionalConfigList("actors")
+
+  //--- the state transition methods
 
   def createActors = {
     info(s"creating actors of universe $name ..")
@@ -275,25 +265,33 @@ class RaceActorSystem(val config: Config) extends LogController with VerifiableA
     }(createTimeout)
   }
 
-  def initializeActors = {
+  def initializeActors: Boolean = {
     info(s"initializing actors of universe $name ..")
     askVerifiableForResult(master, RaceInitialize) {
-      case RaceInitialized =>
+      case RaceInitialized(commonCaps) =>
         status = Initialized
+        commonCapabilities = commonCaps
         info(s"universe $name initialized")
-      case RaceInitializeFailed(reason) => abort(s"initializing universe $name failed with: $reason")
-      case TimedOut => abort(s"initializing universe $name timed out")
-      case e => abort(s"invalid response initializing universe $name: $e")
+        true
+      case RaceInitializeFailed(reason) =>
+        abort(s"initializing universe $name failed with: $reason")
+        false
+      case TimedOut =>
+        abort(s"initializing universe $name timed out")
+        false
+      case e =>
+        abort(s"invalid response initializing universe $name: $e")
+        false
     }(initTimeout)
   }
 
   def abort (msg: String): Unit = {
     error(msg)
-    terminate
+    terminateActors
   }
 
   // called by RACE driver (TODO enforce or verify)
-  def startActors = {
+  def startActors: Boolean = {
     if (status == Initialized) {
       if (simClock.wallEndTime.isDefined) scheduleTermination(simClock.wallEndTime)
 
@@ -303,16 +301,21 @@ class RaceActorSystem(val config: Config) extends LogController with VerifiableA
         case RaceStarted =>
           status = Running
           info(s"universe $name running")
-        case RaceStartFailed(reason) => abort(s"starting universe $name failed: $reason")
-        case TimedOut => abort(s"starting universe $name timed out")
-        case e => abort(s"invalid response starting universe $name: $e")
+          true
+        case RaceStartFailed(reason) =>
+          abort(s"starting universe $name failed: $reason")
+          false
+        case TimedOut =>
+          abort(s"starting universe $name timed out")
+          false
+        case e =>
+          abort(s"invalid response starting universe $name: $e")
+          false
       }(startTimeout)
-    } else warning(s"universe $name cannot be started in state $status")
-  }
-
-  def stoppedRaceActor(actorRef: ActorRef): Unit = {
-    info(s"unregister stopped ${actorRef.path}")
-    actors = actors - actorRef
+    } else {
+      warning(s"universe $name cannot be started in state $status")
+      false
+    }
   }
 
   /**
@@ -320,17 +323,18 @@ class RaceActorSystem(val config: Config) extends LogController with VerifiableA
     * called by RACE driver (TODO enforce or verify)
     * NOTE - this can't be called from a receive method of an actor since it would hang
     */
-  def terminate: Boolean = {
+  def terminateActors: Boolean = {
     if (isLive) {
       info(s"universe $name terminating..")
       status = Terminating
-
-      if (heartBeatStatistics) showHeartBeatStatistics
 
       askVerifiableForResult(master, RaceTerminate) {
         case RaceTerminated =>
           raceTerminated
           true
+        case RaceTerminateFailed =>
+          warning(s"$name termination failed")
+          false
         case TimedOut =>
           warning(s"universe $name termination timeout")
           false
@@ -360,69 +364,73 @@ class RaceActorSystem(val config: Config) extends LogController with VerifiableA
 
   //--- actor requests affecting the whole RAS
 
-  def pause: Boolean = {
-    info(s"universe $name pausing..")
+  def pauseActors: Boolean = {
+    if (commonCapabilities.supportsPauseResume) {
+      if (status == Running) {
+        info(s"universe $name pausing..")
 
-    askVerifiableForResult(master, RacePause) {
-      case RacePaused =>
-        info(s"universe $name paused at ${simClock.dateTime}")
-        status = Paused
-        simClock.stop
-        true
-      case RacePauseFailed(reason) =>
-        warning(s"universe $name pause failed: $reason")
+        askVerifiableForResult(master, RacePause) {
+          case RacePaused =>
+            info(s"universe $name paused at ${simClock.dateTime}")
+            status = Paused
+            simClock.stop
+            true
+          case RacePauseFailed(reason) =>
+            warning(s"universe $name pause failed: $reason")
+            false
+          case TimedOut =>
+            warning(s"universe $name pause timeout")
+            false
+          case other =>
+            warning(s"universe $name got unexpected RacePause reply: $other")
+            false
+        }
+      } else {
+        warning(s"universe $name not running, ignore pause")
         false
-      case TimedOut =>
-        warning(s"universe $name pause timeout")
-        false
-      case other =>
-        warning(s"universe $name got unexpected RacePause reply: $other")
-        false
+      }
+    } else {
+      warning("ignoring pause request: universe does not support pause/resume")
+      false
     }
   }
 
-  def requestPause (actorRef: ActorRef) = {
-    if (isRunning){
-      if (isManagedActor(actorRef)) {
-        if (commonCapabilities.supportsPauseResume){
-          ThreadUtils.execAsync(pause)
-        } else warning("ignoring pause request: universe does not support pause/resume")
-      } else warning(s"ignoring pause request: unknown actor ${actorRef.path}")
-    } else warning("ignoring pause request: universe not running")
-  }
+  def resumeActors: Boolean = {
+    if (commonCapabilities.supportsPauseResume) {
+      if (status == Paused) {
+        info(s"universe $name resuming..")
 
-  def resume: Boolean = {
-    info(s"universe $name resuming..")
-
-    askVerifiableForResult(master, RaceResume) {
-      case RaceResumed =>
-        info(s"universe $name resumed at ${simClock.dateTime}")
-        status = Running
-        simClock.resume
-        true
-      case RaceResumeFailed(reason) =>
-        warning(s"universe $name resume failed: $reason")
+        askVerifiableForResult(master, RaceResume) {
+          case RaceResumed =>
+            info(s"universe $name resumed at ${simClock.dateTime}")
+            status = Running
+            simClock.resume
+            true
+          case RaceResumeFailed(reason) =>
+            warning(s"universe $name resume failed: $reason")
+            false
+          case TimedOut =>
+            warning(s"universe $name resume timeout")
+            false
+          case other =>
+            warning(s"universe $name got unexpected RaceResume reply: $other")
+            false
+        }
+      } else {
+        warning(s"universe $name not paused, ignore resume")
         false
-      case TimedOut =>
-        warning(s"universe $name resume timeout")
-        false
-      case other =>
-        warning(s"universe $name got unexpected RaceResume reply: $other")
-        false
+      }
+    } else {
+      warning("ignoring resume request: universe does not support pause/resume")
+      false
     }
-  }
-
-  def requestResume (actorRef: ActorRef) = {
-    if (isStopped && isManagedActor(actorRef) && commonCapabilities.supportsPauseResume) {
-      ThreadUtils.execAsync(resume)
-    } else warning(s"universe ignoring resume request from ${actorRef.path}")
   }
 
   def requestTermination(actorRef: ActorRef) = {
     if (!isTerminating) { // avoid recursive termination
-      if ((allowSelfTermination && isManagedActor(actorRef)) || (allowRemoteTermination && isRemoteActor(actorRef))) {
+      if ((allowSelfTermination) || (allowRemoteTermination && isRemoteActor(actorRef))) {
         // make sure we don't hang if this is called from a receive method
-        ThreadUtils.execAsync(terminate)
+        ThreadUtils.execAsync(terminateActors)
       }
       else warning(s"universe ignoring termination request from ${actorRef.path}")
     }
@@ -506,8 +514,6 @@ class RaceActorSystem(val config: Config) extends LogController with VerifiableA
   final val systemPrefix = s"akka://$name" // <2do> check managed remote actor paths
   def isRemoteActor(actorRef: ActorRef) = !actorRef.path.toString.startsWith(systemPrefix)
 
-  def isManagedActor(actorRef: ActorRef) = actors.contains(actorRef)
-
   /**
    * hard shutdown command issued from outside the RaceActorSystem
    * NOTE - this might loose data since actors are not processing their terminateRaceActor()
@@ -535,19 +541,11 @@ class RaceActorSystem(val config: Config) extends LogController with VerifiableA
 
   //--- state query & display
 
-  // NOTE - this performs a sync query
+  // NOTE - this performs a sync query, use sparingly at runtime
   def showActors = {
-    for (((actorRef, _), i) <- actors.zipWithIndex) {
-      print(f"  $i%2d: ${actorRef.path}%30s ")
-
-      val pingTime = System.nanoTime
-      askForResult(actorRef ? PingRaceActor) {
-        case PingRaceActorResponse(nMsgs, tReceived) =>
-          val tReturned = System.nanoTime()
-          println(f"response times:  ${tReceived - pingTime}%8d, ${tReturned - tReceived}%8d [ns], msgs: $nMsgs%8d")
-        case TimedOut => println("  TIMEOUT")
-        case other => println("  INVALID RESPONSE")
-      }
+    askForResult( master ? RaceShow) {
+      case RaceShowCompleted => // all ok
+      case _ => warning("show actor request failed")
     }
   }
 
@@ -568,6 +566,7 @@ class RaceActorSystem(val config: Config) extends LogController with VerifiableA
     }
   }
 
+  /* move to dedicated actor
   def showHeartBeatStatistics: Unit = {
     if (heartBeatInterval.length == 0) {
       println("no actor statistics available (set heartbeat-interval in config)")
@@ -598,4 +597,5 @@ class RaceActorSystem(val config: Config) extends LogController with VerifiableA
       }
     }
   }
+   */
 }

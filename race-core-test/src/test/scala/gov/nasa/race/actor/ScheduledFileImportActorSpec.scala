@@ -39,12 +39,8 @@ class ScheduledFileImportActorSpec extends RaceActorSpec with AnyWordSpecLike {
     "publish all scheduled messages" in {
       runRaceActorSystem(Logging.WarningLevel) {
         val testSchedule = baseResourceFile("schedule.xml")
-        val conf = s"""
-              name = "fileImporter"
-              schedule = "${testSchedule.getPath}"
-              write-to = "testChannel"
-          """
-        val actor = addTestActor(classOf[ScheduledFileImportActor], "scheduler", createConfig(conf))
+        val conf = createTestConfig("schedule"->testSchedule.getPath, "write-to"->"testChannel")
+        addTestActor[ScheduledFileImportActor]("scheduler", conf)
 
         printTestActors
         initializeTestActors

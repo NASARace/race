@@ -27,7 +27,8 @@ import akka.util.Timeout
   * The recipient cannot just check the sender since the ask pattern makes use
   * of temporary actors.
   *
-  * NOTE - this is not recursive, we can only ask one result at a time
+  * NOTE - this is not recursive, we can only ask one result at a time, i.e. this is a
+  * synchronous construct
   */
 trait VerifiableAsker {
   // private store for what we have asked

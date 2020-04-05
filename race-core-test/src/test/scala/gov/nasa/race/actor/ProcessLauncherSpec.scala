@@ -42,13 +42,14 @@ class ProcessLauncherSpec  extends RaceActorSpec with AnyWordSpecLike {
         logFile.delete // make sure a previous one is gone
 
         val scalaVer = Properties.versionNumberString.substring(0,4)
-        val launcher = addTestActor( classOf[ProcessLauncher], "launcher", createConfig(
+
+        val conf = createConfig(
           s"""process-name = "java"
-            |process-args = ["-XshowSettings", "-classpath", "race-core-test/target/scala-${scalaVer}/test-classes", "ExternalProc"]
-            |logfile = ${logFile.getPath}
-            |ensureKill = true
-          """.stripMargin
-        ))
+              process-args = ["-XshowSettings", "-classpath", "race-core-test/target/scala-${scalaVer}/test-classes", "ExternalProc"]
+              logfile = ${logFile.getPath}
+              ensureKill = true
+          """)
+        addTestActor[ProcessLauncher]("launcher",conf)
 
         printTestActors
         initializeTestActors

@@ -93,6 +93,6 @@ object RemoteMain extends MainBase with RemoteProtocolLaunchee {
 
   override def processTerminateCmd = {
     println("RemoteMain terminating")
-    universes foreach { _.terminate }
+    universes foreach { _.terminateActors }
   }
 }

@@ -65,7 +65,7 @@ class RetryRaceActorSpec extends RaceActorSpec with AnyWordSpecLike {
   "a RetryRaceActor" must {
     "process messages in the order in which they were received, regardless of retries" in {
       runRaceActorSystem(Logging.WarningLevel) {
-        val aRef = addTestActor(classOf[TestRetryActor1], "retryActor", NoConfig)
+        val aRef = addTestActor[TestRetryActor1]("retryActor").self
 
         printTestActors
         initializeTestActors

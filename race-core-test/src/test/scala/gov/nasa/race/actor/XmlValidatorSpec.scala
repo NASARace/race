@@ -36,14 +36,13 @@ class XmlValidatorSpec extends RaceActorSpec with AnyFlatSpecLike {
       val invalidMessage = FileUtils.fileContentsAsUTF8String(baseResourceFile("invalid.xml"))
       val validMessage = FileUtils.fileContentsAsUTF8String(baseResourceFile("valid.xml"))
 
-      val conf = s"""
-              name = "validator"
+      val conf = createConfig(s"""
               schemas = [ "${schemaFile.getPath}" ]
               read-from = "/input"
               write-to-pass = "/accepted"
               write-to-fail = "/rejected"
-          """
-      val actor = addTestActor(classOf[XmlValidator], "validator", createConfig(conf))
+          """)
+      addTestActor[XmlValidator]("validator", conf)
 
       printTestActors
       initializeTestActors

@@ -62,7 +62,7 @@ trait MainBase {
    * override this to interactively control behavior
    */
   def shutDown(ras: RaceActorSystem): Unit = {
-    if (!ras.terminate) { // try graceful termination first
+    if (!ras.terminateActors) { // try graceful termination first
       ras.kill
     }
   }

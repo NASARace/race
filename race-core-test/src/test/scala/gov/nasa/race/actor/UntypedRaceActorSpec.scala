@@ -32,12 +32,8 @@ class UntypedRaceActorSpec extends RaceActorSpec with AnyFlatSpecLike {
   "a test.TestJavaRaceActor" should "respond with PONG when receiving PING messages" in {
     runRaceActorSystem(Logging.InfoLevel) {
 
-      val conf = s"""
-              name = "javaActor"
-              read-from = "/input"
-              write-to = "/output"
-          """
-      val actor = addTestActor(classOf[TestJavaRaceActor], "javaActor", createConfig(conf))
+      val conf = createTestConfig( "read-from"->"/input", "write-to"->"/output")
+      addTestActor[TestJavaRaceActor]("javaActor", conf)
       var gotResponse = false;
 
       printTestActors

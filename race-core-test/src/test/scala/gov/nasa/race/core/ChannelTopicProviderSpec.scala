@@ -44,7 +44,7 @@ object ChannelTopicProviderSpec {
 
     override def onStartRaceActor(originator: ActorRef) = {
       println(s"$name scheduling ticks")
-      timer = scheduler.schedule(1.second,1.second,self,Tick)
+      timer = scheduler.scheduleWithFixedDelay(1.second,1.second,self,Tick)
       super.onStartRaceActor(originator)
     }
 
@@ -158,8 +158,8 @@ class ChannelTopicProviderSpec extends RaceActorSpec with AnyWordSpecLike {
   "a provider-subscriber chain" must {
     "start and stop publishing messages on demand" in {
       runRaceActorSystem(Logging.WarningLevel) {
-        val server = addTestActor(classOf[TestServer], "server", createConfig("write-to = testChannel"))
-        val client = addTestActor(classOf[TestClient], "client", createConfig("read-from = testChannel"))
+        val server = addTestActor[TestServer]("server", "write-to"->"testChannel")
+        val client = addTestActor[TestClient]("client", "read-from"->"testChannel")
 
         printTestActors
         initializeTestActors
@@ -168,8 +168,8 @@ class ChannelTopicProviderSpec extends RaceActorSpec with AnyWordSpecLike {
         Thread.sleep(6000)
         terminateTestActors
 
-        assert(actor(server).n == N)
-        assert(actor(client).n == N)
+        assert(server.n == N)
+        assert(client.n == N)
       }
     }
   }
@@ -177,10 +177,11 @@ class ChannelTopicProviderSpec extends RaceActorSpec with AnyWordSpecLike {
   "a provider-translator-subscriber chain" must {
     "start and stop publishing messages transitively on demand" in {
       runRaceActorSystem(Logging.WarningLevel) {
-        val server = addTestActor(classOf[TestServer], "server", createConfig("write-to= testString"))
-        val translator = addTestActor(classOf[TestTranslator], "translator",
-          createConfig("read-from= testString, write-to= testSome"))
-        val client = addTestActor(classOf[TestClient], "client", createConfig("read-from= testSome"))
+        val server = addTestActor[TestServer]("server", "write-to"->"testString")
+        val translator = addTestActor[TestTranslator]("translator",
+                                                      "read-from"->"testString",
+                                                      "write-to"->"testSome")
+        val client = addTestActor[TestClient]("client", "read-from"->"testSome")
 
         printTestActors
         initializeTestActors
@@ -189,9 +190,9 @@ class ChannelTopicProviderSpec extends RaceActorSpec with AnyWordSpecLike {
         Thread.sleep(6000)
         terminateTestActors
 
-        assert(actor(server).n == N)
-        assert(actor(translator).n == N)
-        assert(actor(client).n == N)
+        assert(server.n == N)
+        assert(translator.n == N)
+        assert(client.n == N)
       }
     }
   }

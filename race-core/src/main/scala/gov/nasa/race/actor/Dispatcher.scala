@@ -21,7 +21,7 @@ import akka.actor.ActorRef
 import com.typesafe.config.{Config, ConfigValueFactory}
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.Messages.BusEvent
-import gov.nasa.race.core.{ParentRaceActor, RaceActorRec, RaceContext, SubscribingRaceActor}
+import gov.nasa.race.core.{ParentRaceActor, RaceContext, SubscribingRaceActor}
 
 /**
   * an actor that does round-robin dispatch to a number of child actors it creates
@@ -39,6 +39,8 @@ class Dispatcher (val config: Config) extends SubscribingRaceActor with ParentRa
 
   val replication = config.getIntOrElse("replication",3)
   val workerConfig = config.getConfig("worker")
+
+  val workers = new Array[ActorRef](replication) // that is redundant with ParentRaceActor but we need speed
   var next = 0
 
   createWorkers(workerConfig,replication)
@@ -46,8 +48,8 @@ class Dispatcher (val config: Config) extends SubscribingRaceActor with ParentRa
 
   override def handleMessage = {
     case e: BusEvent =>
-      debug(s"dispatching to ${children(next).path.name}")
-      childActorRef(next) ! e
+      debug(s"dispatching to ${workers(next).path.name}")
+      workers(next) ! e
       next = (next + 1) % replication
   }
 
@@ -59,7 +61,7 @@ class Dispatcher (val config: Config) extends SubscribingRaceActor with ParentRa
       val actorConf = config.withValue("name", ConfigValueFactory.fromAnyRef(actorName))
       info(s"instantiating worker actor $actorName")
       val actorRef = instantiateActor(actorName, actorConf)
-      addChild(RaceActorRec(actorRef, actorConf))
+      workers(i) = actorRef
     }
   }
 }

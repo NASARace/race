@@ -17,6 +17,8 @@
 
 package gov.nasa.race.test
 
+import java.util.concurrent.LinkedBlockingQueue
+
 import akka.actor._
 import akka.event.Logging
 import akka.event.Logging.LogLevel
@@ -24,27 +26,37 @@ import akka.pattern.ask
 import akka.testkit.{TestActorRef, TestKit}
 import akka.util.Timeout
 import com.typesafe.config.{Config, ConfigFactory, ConfigValueFactory}
-import gov.nasa.race.common.Status._
 import gov.nasa.race.core.Messages._
-import gov.nasa.race.core.{Bus, MasterActor, RaceActor, RaceActorSystem, TimedOut, _}
+import gov.nasa.race.core.{Bus, MasterActor, RaceActor, RaceActorSystem, _}
 import gov.nasa.race.uom.DateTime
 import org.scalatest.BeforeAndAfterAll
 
-import scala.collection.immutable.ListMap
-import scala.collection.Seq
-import scala.collection.immutable.Map
-import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
-import scala.reflect.ClassTag
+import scala.concurrent.{Await, Future}
+import scala.reflect._
+import scala.jdk.CollectionConverters._
 
 object TestRaceActorSystem {
   def createTestConfig(name: String): Config = {
-    ConfigFactory.empty.withValue("name", ConfigValueFactory.fromAnyRef(name))
+    ConfigFactory.empty
+      .withValue("name", ConfigValueFactory.fromAnyRef(name))
+      .withValue("akka.loggers", ConfigValueFactory.fromIterable(Seq("gov.nasa.race.core.RaceLogger").asJava))
+  }
+
+  def createTestConfig(value: (String,String)*): Config = {
+    value.foldLeft(ConfigFactory.empty){ (conf, e) =>
+      conf.withValue(e._1, ConfigValueFactory.fromAnyRef(e._2))
+    }
   }
 
   case object ResetMaster
   case object MasterReset
-  case class WatchRaceActor(actorRef:ActorRef)
+  case object MasterResetFailed
+
+  // use this if you want actors to be instantiated by the Master
+  protected [test] case class AddTestActor (ctorConf: Config)
+  protected [test] case class TestActorAdded (actor: Actor)
+  protected [test] case class AddTestActorFailed (ex: Throwable)
 
   /**
     * a Bus for actor system tests that is fully functional except of remoting
@@ -53,6 +65,8 @@ object TestRaceActorSystem {
     def reset = channelSubscriptions.clear()
   }
 
+
+
   /**
     * this differs from a normal MasterActor by keeping RaceActors alive
     * and registered until the TestActorSystem is reset, otherwise we would
@@ -60,40 +74,43 @@ object TestRaceActorSystem {
     * exception if actorRef is already terminated)
     * This means we (a) have to delay 'ras.actors' update and (b) avoid
     * stop() upon TerminateRaceActor processing
-    * Also note that we don't create the tested actors, i.e. we don't supervise,
-    * but we do death-watch them
     */
   class TestMaster (ras: RaceActorSystem) extends MasterActor(ras) {
-    var waiterForTerminated: Option[ActorRef] = None
 
     override def receive = {
       testReceive.orElse(super.receive)
     }
 
-    // we don't supervise the test actors, but we still start them
-    override def isSupervised (actorRef: ActorRef) = true
-
     def testReceive: Receive = {
-      case WatchRaceActor(actorRef) =>
-        context.watch(actorRef) // we are not supervising test actors, but start death watch
-
-      case akka.actor.Terminated(actorRef) =>
-        ras.actors = ras.actors - actorRef
-        if (ras.actors.isEmpty) waiterForTerminated.map( _ ! MasterReset)
 
       case ResetMaster =>
-        for ((actorRef,_) <- ras.actors) {
-          context.stop(actorRef) // will cause Terminated messages to the master
+        if (hasChildActors) terminateRaceActors
+        if (noMoreChildren) {
+          sender ! MasterReset
+        } else {
+          sender ! MasterResetFailed
         }
 
-        if (ras.actors.isEmpty) sender ! MasterReset
-        else waiterForTerminated = Some(sender)
+      case AddTestActor(actorConfig) =>
+        try {
+          val actorName = actorConfig.getString("name")
+          val clsName = actorConfig.getString("class")
+          val actorCls = ras.classLoader.loadClass(clsName)
+          val createActor = getActorCtor(actorCls, actorConfig)
 
-        remoteContexts.clear()
+          info(s"creating $actorName ..")
+          val sync = new LinkedBlockingQueue[Either[Throwable, ActorRef]](1)
+          val props = getActorProps(createActor, sync)
+
+          val actorRef = TestActorRef[Actor](props, self, actorName)(context.system)
+          addChildActorRef(actorRef, actorConfig)
+          context.watch(actorRef)
+
+          sender ! TestActorAdded(actorRef.underlyingActor)
+        } catch {
+          case x: Throwable => sender ! AddTestActorFailed(x)
+        }
     }
-
-    override def setUnrespondingTerminatees(unresponding: Seq[(ActorRef,ActorMetaData)]) = {}
-    override def stopRaceActor (actorRef: ActorRef) = {}
   }
 }
 import gov.nasa.race.test.TestRaceActorSystem._
@@ -104,26 +121,7 @@ class TestRaceActorSystem (name: String) extends RaceActorSystem(createTestConfi
   override def createBus (sys: ActorSystem) = new TestBus(sys)
   override def getMasterClass = classOf[TestMaster]
   override def raceTerminated = {} // we don't terminate before all tests are done
-  override def stoppedRaceActor (actorRef: ActorRef) = {} // leave cleanup for reset
 
-  def addTestActor (actorRef: ActorRef, conf: Config): Unit = {
-    actors = actors + (actorRef -> new ActorMetaData(conf))
-    master ! WatchRaceActor(actorRef)
-  }
-
-  def reset = {
-    askForResult(master ? ResetMaster) {
-      case MasterReset => // done
-      case TimedOut => throw new RuntimeException("master reset timed out")
-      case other => throw new RuntimeException(s"invalid master reset response $other")
-    }
-
-    actors = ListMap.empty[ActorRef,ActorMetaData]
-    usedRemoteMasters = Map.empty[String,ActorRef]
-    bus.asInstanceOf[TestBus].reset
-
-    status = Initializing
-  }
 }
 
 object RaceActorSpec {
@@ -165,6 +163,11 @@ abstract class RaceActorSpec (tras: TestRaceActorSystem) extends TestKit(tras.sy
   def bus = tras.bus
 
   def ras: TestRaceActorSystem = tras
+  def master: ActorRef = tras.master
+
+  // forwards so that we don't have to import separately
+  def createTestConfig(name: String): Config = TestRaceActorSystem.createTestConfig(name)
+  def createTestConfig(value: (String,String)*): Config = TestRaceActorSystem.createTestConfig(value:_*)
 
   def runRaceActorSystem(level: LogLevel=Logging.WarningLevel) (f: => Any) = {
     setLogLevel(level)
@@ -177,19 +180,38 @@ abstract class RaceActorSpec (tras: TestRaceActorSystem) extends TestKit(tras.sy
     }
   }
 
-  def reset = tras.reset
-
-  def addTestActor[T <: RaceActor: ClassTag] (actorCls: Class[T], name: String, ctorConf: Config): TestActorRef[T] = {
-    val ctorConfig = ctorConf.withValue("name", ConfigValueFactory.fromAnyRef(name))
-    addTestActor(actorCls, name, ctorConfig, ctorConfig)
+  def reset: Unit = {
+    askForResult( master ? ResetMaster){
+      case MasterReset => // Ok
+      case MasterResetFailed => fail("reset test master failed")
+    }
   }
 
-  def addTestActor[T <: RaceActor: ClassTag] (actorCls: Class[T], name: String,
-                                              ctorConf: Config, initConfig: Config): TestActorRef[T] = {
-    val ctorConfig = ctorConf.withValue("name", ConfigValueFactory.fromAnyRef(name))
-    val actorRef = TestActorRef[T](Props(actorCls,ctorConfig),name)
-    tras.addTestActor(actorRef,initConfig)
-    actorRef
+  /**
+    * synchronously create and return a actor reference which is a proper child
+    * and hence is supervised by master
+    * Note: we have to resort to down-casting here since we can't match messages with generic types
+    */
+  def addTestActor[T <:RaceActor: ClassTag](name: String, ctorConf: Config): T = {
+    val conf = ctorConf
+      .withValue("name", ConfigValueFactory.fromAnyRef(name))
+      .withValue("class", ConfigValueFactory.fromAnyRef(classTag[T].toString))
+
+    val actor = askForResult( master ? AddTestActor(conf)) {
+      case TestActorAdded(actor) => actor
+      case AddTestActorFailed(exception) =>
+        exception.printStackTrace
+        fail(s"creating test actor failed with $exception")
+      case x =>
+        fail(s"adding actor ref for $name failed with $x")
+    }
+
+    if (classTag[T].runtimeClass eq actor.getClass) actor.asInstanceOf[T]
+    else fail(s"wrong actor class, expected: ${classTag[T]}, got ${actor.getClass}")
+  }
+
+  def addTestActor[T <:RaceActor: ClassTag](name: String, confOpts: (String,String)*): T = {
+    addTestActor(name,createTestConfig(confOpts:_*))
   }
 
   override def afterAll: Unit = {
@@ -197,36 +219,37 @@ abstract class RaceActorSpec (tras: TestRaceActorSystem) extends TestKit(tras.sy
     TestKit.shutdownActorSystem(system)
   }
 
-  def actor[T <: RaceActor: ClassTag] (tref: TestActorRef[T]) = tref.underlyingActor
-
   def setLogLevel (level: LogLevel) = system.eventStream.setLogLevel(level)
 
   def initializeTestActors = {
     println("------------- initializing test actors")
-    tras.initializeActors
+    if (!tras.initializeActors){
+      fail("failed to initialize test actors")
+    }
   }
 
   def startTestActors (simTime: DateTime) = {
     println(s"------------- starting test actors at $simTime")
-    tras.startActors
+    if (!tras.startActors){
+      fail("failed to start test actors")
+    }
   }
 
   def terminateTestActors = {
     println("------------- terminating test actors")
-    tras.terminate
+    if (!tras.terminateActors){
+      fail("failed to terminate test actors")
+    }
   }
 
   def printTestActors = {
     println(s"------------- test actors of actor system: $system")
-    for (((actorRef,initConf),i) <- tras.actors.zipWithIndex) {
-      val actor = actorRef.asInstanceOf[TestActorRef[_]].underlyingActor
-      println(f"  ${i+1}%2d: ${actorRef.path} : ${actor.getClass.getName}")
-    }
+    tras.showActors
   }
 
   def printBusSubscriptions = {
     println(s"------------- bus subscriptions for actor system: $system")
-    println(tras.showChannels)
+    tras.showChannels
   }
 
   def sleep (millis: Int): Unit = {

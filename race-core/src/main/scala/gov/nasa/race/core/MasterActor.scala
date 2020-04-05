@@ -17,6 +17,8 @@
 
 package gov.nasa.race.core
 
+import java.util.concurrent.{LinkedBlockingQueue, TimeUnit}
+
 import akka.actor.SupervisorStrategy.Stop
 import akka.actor._
 import akka.pattern.AskSupport
@@ -25,19 +27,15 @@ import com.typesafe.config.{Config, ConfigException}
 import gov.nasa.race._
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.Messages._
+import gov.nasa.race.uom.DateTime
 import gov.nasa.race.util.NetUtils._
 import gov.nasa.race.util.StringUtils._
-import gov.nasa.race.util.ThreadUtils._
-import gov.nasa.race.uom.DateTime
-
-import scala.collection.immutable.ListMap
-import scala.collection.{Seq, mutable}
-import java.util.concurrent.{LinkedBlockingQueue, TimeUnit}
-
 import gov.nasa.race.util.ThreadUtils
+import gov.nasa.race.util.ThreadUtils._
 
-import scala.concurrent.duration._
+import scala.collection.mutable
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.duration._
 import scala.language.postfixOps
 
 
@@ -79,19 +77,19 @@ case object HeartBeat
   *
   * TODO - streamline local/remote instantiation and registration
   */
-class MasterActor (ras: RaceActorSystem) extends Actor with ImplicitActorLogging with AskSupport {
+class MasterActor (ras: RaceActorSystem) extends Actor with ParentActor {
 
   info(s"master created: ${self.path}")
 
   var heartBeatScheduler: Option[Cancellable] = None
   var heartBeatCount: Int = 0
 
+  var waiterForTerminated: Option[ActorRef] = None
+
   //--- convenience funcs
   def name = self.path.name
   def simClock = ras.simClock
-  def actors = ras.actors
   def usedRemoteMasters = ras.usedRemoteMasters
-  def actorRefs = ras.actors.keys
   def localContext = ras.localRaceContext
 
   //context.system.eventStream.subscribe(self, classOf[DeadLetter])
@@ -121,18 +119,10 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ImplicitActorLogging
     case RaceStart => onRaceStart
     case RemoteRaceStart (remoteMaster: ActorRef, simTime: DateTime, timeScale: Double) => onRemoteRaceStart(remoteMaster,simTime,timeScale)
 
-    case msg:SetLogLevel => actorRefs.foreach(_ ! msg) // just forward
+    case msg:SetLogLevel => sendToChildren(msg) // just forward
 
     case RacePause => onRacePause
     case RaceResume => onRaceResume
-
-    case RacePauseRequest =>
-      info(s"master $name got RacePauseRequest from $sender")
-      ras.requestPause(sender)
-
-    case RaceResumeRequest =>
-      info(s"master $name got RaceResumeRequest from $sender")
-      ras.requestResume(sender)
 
     case RaceTerminateRequest => // from some actor, let the RAS decide
       info(s"master $name got RaceTerminateRequest from $sender")
@@ -157,8 +147,13 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ImplicitActorLogging
       simClock.resume
       sender ! RaceAck
 
-    case Terminated(aref) => // death watch event
-      ifSome(actors.get(aref)){ _.isUnresponsive = true }
+    case Terminated(actorRef) => // Akka death watch event
+      removeChildActorRef(actorRef)
+
+    case RaceActorStopped => // from postStop hook of RaceActors
+     stoppedChildActorRef(sender)
+
+    case RaceShow => showActors(sender) // debug dump
 
     case deadLetter: DeadLetter => // TODO - do we need to react to DeadLetters?
   }
@@ -194,29 +189,53 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ImplicitActorLogging
     }
   }
 
-  //--- creation of RaceActors
+  //--- aux functions
 
-  def onRaceCreate = executeProtected {
-    if (ras.isVerifiedSenderOf(RaceCreate)) {
-      try {
-        createRaceActors
-        sender ! RaceCreated // only gets sent out if there was no exception
-      } catch {
-        case x: Throwable => sender ! RaceCreateFailed(x)
-      }
-    } else {
-      warning(s"RaceCreate request from $sender ignored")
-    }
+  def isOptionalActor (actorConfig: Config) = actorConfig.getBooleanOrElse("optional", false)
+
+  def getTimeout(conf: Config, key: String): Timeout = {
+    if (conf.hasPath(key)) Timeout(conf.getFiniteDuration(key)) else timeout
   }
 
-  def createRaceActors = {
-    ras.getActorConfigs.foreach(getActor)
+  //--- creation of RaceActors
+
+  // this is in an ask pattern sent from the RAS
+  def onRaceCreate = executeProtected {
+    val originator = sender
+
+    if (ras.isVerifiedSenderOf(RaceCreate)) {
+      try {
+        ras.getActorConfigs.foreach { actorConf =>
+          val actorName = actorConf.getString("name")
+          info(s"creating $actorName")
+
+          getActor(actorConf) match {
+            case Some(actorRef) =>
+              addChildActorRef(actorRef,actorConf)
+              context.watch(actorRef)
+            case None =>
+              error(s"creation of $actorName failed without exception")
+              originator ! RaceCreateFailed("actor construction failed without exception: $actorName")
+          }
+        }
+        // all accounted for
+        originator ! RaceCreated // only gets sent out if there was no exception
+      } catch {
+        case x: Throwable => originator ! RaceCreateFailed(x)
+      }
+    } else {
+      warning(s"RaceCreate request from $originator ignored")
+    }
   }
 
   def getActor (actorConfig: Config): Option[ActorRef] = {
     val actorName = actorConfig.getString("name")
 
     actorConfig.getOptionalString("remote") match {
+
+      case None => // local actor, the dominant case
+        instantiateLocalActor(actorConfig)
+
       case Some(remoteUri) => // remote actor
         val isOptional = actorConfig.getBooleanOrElse("optional", false)
         val remoteUniverseName = userInUrl(remoteUri).get
@@ -235,153 +254,11 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ImplicitActorLogging
             }
           }
         }
-        getRemoteActor(actorName,remoteUniverseName,remoteUri,actorConfig).map(registerRemoteActor(_,actorConfig))
-
-      case None => // local actor
-        instantiateLocalActor(actorConfig)
+        getRemoteActor(actorName,remoteUniverseName,remoteUri,actorConfig)
     }
   }
 
-  def registerRemoteActor (aRef: ActorRef, actorConfig: Config): ActorRef = {
-    askForResult( aRef ? RequestRaceActorCapabilities ) {
-      case caps: RaceActorCapabilities =>
-        ras.registerActor(aRef, actorConfig, caps)
-        aRef
-      case TimedOut =>
-        error(s"request for remote actor capabilities timed out: $aRef")
-        throw new RaceException("no actor capabilities")
-    }
-  }
-
-  def isConflictingHost (remoteUri: String): Boolean = {
-    val loc = stringTail(remoteUri,'@')
-    usedRemoteMasters.exists(e => loc == stringTail(e._1,'@'))
-  }
-
-  def lookupRemoteMaster (remoteUniverseName: String, remoteUri: String, isOptional: Boolean): Option[ActorRef] = {
-    val path = s"$remoteUri/user/$remoteUniverseName"
-    info(s"looking up remote actor system $path")
-    val sel = context.actorSelection(path)
-    // two step process: (1) obtain the reference for a remote master, (2) p2p check if it is accepting the connection
-    askForResult (sel ? Identify(path)) {
-      case ActorIdentity(path: String, Some(actorRef:ActorRef)) =>
-        info(s"found master for remote actor system: ${actorRef.path}")
-        if (isRemoteConnectionAcceptedBy(actorRef)) {
-          info(s"remote master accepted connection request: ${actorRef.path}")
-          Some(actorRef)
-        } else {
-          warning(s"remote master did not accept connection request: ${actorRef.path}")
-          None
-        }
-      case ActorIdentity(path: String, None) =>
-        if (isOptional) {
-          warning(s"no optional remote actor system: $remoteUri")
-          None
-        } else {
-          error(s"no remote actor system: $remoteUri")
-          throw new RaceException("satellite not found")
-        }
-      case TimedOut => // timeout is always an error since it indicates a network or satellite problem
-        error(s"timeout for remote actor system: $remoteUri")
-        throw new RaceException("satellite response timeout")
-    }
-  }
-
-  def isRemoteConnectionAcceptedBy(remoteMaster: ActorRef): Boolean = {
-    askForResult (remoteMaster ? RemoteConnectionRequest(self)) {
-      case RemoteConnectionAccept => true
-      case RemoteConnectionReject => false
-      case TimedOut => false
-    }
-  }
-
-  def getRemoteActor(actorName: String, remoteUniverseName: String, remoteUri: String, actorConfig: Config): Option[ActorRef] = {
-    val path = s"$remoteUri/user/$remoteUniverseName/$actorName"
-    info(s"looking up remote actor $path")
-    val sel = context.actorSelection(path)
-    askForResult(sel ? Identify(path)) {
-      case ActorIdentity(path: String, r@Some(actorRef:ActorRef)) =>
-        info(s"response from remote $path")
-        context.watch(actorRef) // we can't supervise it anymore, but we can deathwatch
-        r
-      case ActorIdentity(path: String, None) => None
-        if (actorConfig.hasPath("class")) {
-          instantiateRemoteActor(actorConfig)
-
-        } else { // if there is no class, we can't instantiate
-          if (actorConfig.getBooleanOrElse("optional", false)) {
-            warning(s"ignoring optional remote $path")
-            None
-          } else {
-            error(s"cannot instantiate remote because of missing class $path")
-            throw new RaceException("missing remote actor ")
-          }
-        }
-    }
-  }
-
-  def instantiateRemoteActor (actorConfig: Config): Option[ActorRef] = {
-    val actorName = actorConfig.getString("name")
-    try {
-      val clsName = actorConfig.getClassName("class")
-      val actorCls = ras.classLoader.loadClass(clsName)
-
-      info(s"creating remote $actorName")
-      val aRef = context.actorOf(Props(actorCls, actorConfig), actorName)
-      Some(aRef)
-
-    } catch {
-      case t: Throwable =>
-        if (isOptionalActor(actorConfig)) {
-          warning(s"optional remote $actorName did not instantiate: $t")
-          None
-        } else {
-          throw new RaceInitializeException(s"non-optional remote $actorName failed with: $t")
-        }
-    }
-  }
-
-  def isOptionalActor (actorConfig: Config) = actorConfig.getBooleanOrElse("optional", false)
-
-  /**
-    * find a suitable actor constructor, which is either taking a Config argument or
-    * no arguments at all. Raise a RaceInitializeException if none is found
-    */
-  protected def getActorCtor (actorCls: Class[_], actorConfig: Config): () => Actor = {
-    try {
-      val confCtor = actorCls.getConstructor(classOf[Config])
-      () => { confCtor.newInstance(actorConfig).asInstanceOf[Actor] }
-    } catch {
-      case _: NoSuchMethodException =>
-        try {
-          val defCtor = actorCls.getConstructor()
-          () => { defCtor.newInstance().asInstanceOf[Actor] }
-        } catch {
-          case _: NoSuchMethodException =>
-            throw new RaceInitializeException(s"no suitable constructor in ${actorCls.getName}")
-        }
-    }
-  }
-
-  /**
-    * create Props to construct an actor. Note that we need to use the Props constructor that
-    * takes a creator function argument so that we can sync on the actor construction and
-    * know if there was an exception in the respective ctor
-    */
-  protected def getActorProps (ctor: ()=>Actor, sync: LinkedBlockingQueue[Either[Throwable,ActorRef]]) = {
-    Props( creator = {
-      try {
-        val a = ctor()
-        sync.put(Right(a.self))
-        a
-      } catch {
-        case t: Throwable =>
-          ras.reportException(t)
-          sync.put(Left(t))
-          throw t
-      }
-    })
-  }
+  //--- local actor creation
 
   /**
     * this is the workhorse for actor construction
@@ -444,7 +321,6 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ImplicitActorLogging
 
           case Right(ar) => // success, we could check actorRef equality here
             info(s"actor $actorName created")
-            context.watch(aref) // start death watch
             Some(aref)
         }
       }
@@ -464,32 +340,148 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ImplicitActorLogging
     }
   }
 
-  def getTimeout(conf: Config, key: String): Timeout = {
-    if (conf.hasPath(key)) Timeout(conf.getFiniteDuration(key)) else timeout
+  /**
+    * find a suitable actor constructor, which is either taking a Config argument or
+    * no arguments at all. Raise a RaceInitializeException if none is found
+    */
+  protected def getActorCtor (actorCls: Class[_], actorConfig: Config): () => Actor = {
+    try {
+      val confCtor = actorCls.getConstructor(classOf[Config])
+      () => { confCtor.newInstance(actorConfig).asInstanceOf[Actor] }
+    } catch {
+      case _: NoSuchMethodException =>
+        try {
+          val defCtor = actorCls.getConstructor()
+          () => { defCtor.newInstance().asInstanceOf[Actor] }
+        } catch {
+          case _: NoSuchMethodException =>
+            throw new RaceInitializeException(s"no suitable constructor in ${actorCls.getName}")
+        }
+    }
+  }
+
+  /**
+    * create Props to construct an actor. Note that we need to use the Props constructor that
+    * takes a creator function argument so that we can sync on the actor construction and
+    * know if there was an exception in the respective ctor
+    */
+  protected def getActorProps (ctor: ()=>Actor, sync: LinkedBlockingQueue[Either[Throwable,ActorRef]]) = {
+    Props( creator = {
+      try {
+        val a = ctor()
+        sync.put(Right(a.self))
+        a
+      } catch {
+        case t: Throwable =>
+          ras.reportException(t)
+          sync.put(Left(t))
+          throw t
+      }
+    })
+  }
+
+  //--- remote actor creation/lookup
+
+  def getRemoteActor(actorName: String, remoteUniverseName: String, remoteUri: String, actorConfig: Config): Option[ActorRef] = {
+    val path = s"$remoteUri/user/$remoteUniverseName/$actorName"
+    info(s"looking up remote actor $path")
+    val sel = context.actorSelection(path)
+    askForResult(sel ? Identify(path)) {
+      case ActorIdentity(path: String, r@Some(actorRef:ActorRef)) =>
+        info(s"response from remote $path")
+        r
+      case ActorIdentity(path: String, None) => None
+        if (actorConfig.hasPath("class")) {
+          instantiateRemoteActor(actorConfig)
+
+        } else { // if there is no class, we can't instantiate
+          if (actorConfig.getBooleanOrElse("optional", false)) {
+            warning(s"ignoring optional remote $path")
+            None
+          } else {
+            error(s"cannot instantiate remote because of missing class $path")
+            throw new RaceException("missing remote actor ")
+          }
+        }
+    }
+  }
+
+  def instantiateRemoteActor (actorConfig: Config): Option[ActorRef] = {
+    val actorName = actorConfig.getString("name")
+    try {
+      val clsName = actorConfig.getClassName("class")
+      val actorCls = ras.classLoader.loadClass(clsName)
+
+      info(s"creating remote $actorName")
+      val aRef = context.actorOf(Props(actorCls, actorConfig), actorName)
+      Some(aRef)
+
+    } catch {
+      case t: Throwable =>
+        if (isOptionalActor(actorConfig)) {
+          warning(s"optional remote $actorName did not instantiate: $t")
+          None
+        } else {
+          throw new RaceInitializeException(s"non-optional remote $actorName failed with: $t")
+        }
+    }
+  }
+
+  def isConflictingHost (remoteUri: String): Boolean = {
+    val loc = stringTail(remoteUri,'@')
+    usedRemoteMasters.exists(e => loc == stringTail(e._1,'@'))
+  }
+
+  def lookupRemoteMaster (remoteUniverseName: String, remoteUri: String, isOptional: Boolean): Option[ActorRef] = {
+    val path = s"$remoteUri/user/$remoteUniverseName"
+    info(s"looking up remote actor system $path")
+    val sel = context.actorSelection(path)
+    // two step process: (1) obtain the reference for a remote master, (2) p2p check if it is accepting the connection
+    askForResult (sel ? Identify(path)) {
+      case ActorIdentity(path: String, Some(actorRef:ActorRef)) =>
+        info(s"found master for remote actor system: ${actorRef.path}")
+        if (isRemoteConnectionAcceptedBy(actorRef)) {
+          info(s"remote master accepted connection request: ${actorRef.path}")
+          Some(actorRef)
+        } else {
+          warning(s"remote master did not accept connection request: ${actorRef.path}")
+          None
+        }
+      case ActorIdentity(path: String, None) =>
+        if (isOptional) {
+          warning(s"no optional remote actor system: $remoteUri")
+          None
+        } else {
+          error(s"no remote actor system: $remoteUri")
+          throw new RaceException("satellite not found")
+        }
+      case TimedOut => // timeout is always an error since it indicates a network or satellite problem
+        error(s"timeout for remote actor system: $remoteUri")
+        throw new RaceException("satellite response timeout")
+    }
+  }
+
+  def isRemoteConnectionAcceptedBy(remoteMaster: ActorRef): Boolean = {
+    askForResult (remoteMaster ? RemoteConnectionRequest(self)) {
+      case RemoteConnectionAccept => true
+      case RemoteConnectionReject => false
+      case TimedOut => false
+    }
   }
 
   //--- actor initialization
-
-  protected def initFailed(msg: String, isOptionalActor: Boolean, cause: Option[Throwable]=None) = {
-    if (isOptionalActor) {
-      warning(msg)
-    } else {
-      error(msg)
-      throw new RaceInitializeException(msg, cause.getOrElse(null))
-    }
-  }
 
   def onRaceInitialize = executeProtected {
     if (ras.isVerifiedSenderOf(RaceInitialize)) {
       val requester = sender // store before we send out / receive new messages
       try {
-        initializeRaceActors
-        sender ! RaceInitialized
+        val commonCaps = initializeRaceActors
+        sender ! RaceInitialized(commonCaps)
       } catch {
         case x: Throwable =>
           //x.printStackTrace // TODO - exceptions should be loggable to a file
           requester ! RaceInitializeFailed(x)
-          // shutdown is initiated by the sender
+        // shutdown is initiated by the sender
       }
     } else warning(s"RaceInitialize request from $sender ignored")
   }
@@ -497,9 +489,12 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ImplicitActorLogging
   // cache to be only used during actor initialization
   protected val remoteContexts = mutable.Map.empty[UrlString,RaceContext]
 
-  def initializeRaceActors = {
-    for ((actorRef,actorData) <- actors){
-      val actorConfig = actorData.actorConfig
+  def initializeRaceActors: RaceActorCapabilities = {
+    var commonCaps = RaceActorCapabilities.AllCapabilities
+
+    actors.foreach { actorData =>
+      val actorRef = actorData.actorRef
+      val actorConfig = actorData.config
       val actorName = actorRef.path.name
       val isOptional = isOptionalActor(actorConfig)
       val initTimeout = Timeout(actorConfig.getFiniteDurationOrElse("init-timeout",ras.defaultActorTimeout))
@@ -511,11 +506,26 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ImplicitActorLogging
 
       info(s"sending InitializeRaceActor to $actorName")
       askForResult(actorRef ? InitializeRaceActor(raceContext, actorConfig)) {
-        case RaceActorInitialized => info(s"received RaceInitialized from $actorName")
+        case RaceActorInitialized(actorCaps) =>
+          info(s"received RaceInitialized from $actorName")
+          commonCaps = commonCaps.intersection(actorCaps)
+
+          //--- these are all causing exceptions if this is not an optional actor
         case RaceActorInitializeFailed(reason) => initFailed(s"initialization of $actorName failed: $reason", isOptional)
         case TimedOut => initFailed(s"initialization timeout for $actorName", isOptional)
         case other => initFailed(s"invalid initialization response from $actorName: $other", isOptional)
       }(initTimeout)
+    }
+
+    commonCaps
+  }
+
+  protected def initFailed(msg: String, isOptionalActor: Boolean, cause: Option[Throwable]=None) = {
+    if (isOptionalActor) {
+      warning(msg)
+    } else {
+      error(msg)
+      throw new RaceInitializeException(msg, cause.getOrElse(null))
     }
   }
 
@@ -577,11 +587,13 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ImplicitActorLogging
   }
 
   def startRaceActors = {
-    for ((actorRef,actorData) <- actors){
-      val actorConfig = actorData.actorConfig
+    processChildren { actorData =>
+      val actorRef = actorData.actorRef
+      val actorConfig = actorData.config
+
       if (isSupervised(actorRef)) { // this does not include remote lookups
         val isOptional = isOptionalActor(actorConfig)
-        val startTimeout = Timeout(actorConfig.getFiniteDurationOrElse("start-timeout",ras.defaultActorTimeout))
+        val startTimeout = Timeout(actorConfig.getFiniteDurationOrElse("start-timeout", ras.defaultActorTimeout))
 
         info(s"sending StartRaceActor to ${actorRef.path.name}..")
         askForResult(actorRef ? StartRaceActor(self)) {
@@ -618,16 +630,28 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ImplicitActorLogging
   //--- actor pause
 
   def onRacePause = executeProtected {
-    if (ras.isVerifiedSenderOf(RacePause)) {
-      info(s"master $name got RacePause, halting actors")
-      pauseRaceActors
-      sender ! RacePaused
-    } else warning(s"RacePause request from $sender ignored")
+    if (ras.commonCapabilities.supportsPauseResume){
+      if (ras.isRunning) {
+        info(s"master $name got RacePause, halting actors")
+        pauseRaceActors
+        sender ! RacePaused
+      } else warning(s"master $name ignoring RacePause, system not running")
+    } else warning(s"master $name ignoring RacePause, system does not support pause/resume")
   }
 
-  def pauseRaceActors = {
-    for ((actorRef,actorData) <- actors){
-      val actorConfig = actorData.actorConfig
+  protected def pauseRaceActors = {
+    def pauseFailed(msg: String, isOptionalActor: Boolean, cause: Option[Throwable]=None) = {
+      if (isOptionalActor) {
+        warning(msg)
+      } else {
+        error(msg)
+        throw new RacePauseException(msg, cause.getOrElse(null))
+      }
+    }
+
+    processChildren { actorData =>
+      val actorRef = actorData.actorRef
+      val actorConfig = actorData.config
       val isOptional = isOptionalActor(actorConfig)
       val pauseTimeout = Timeout(actorConfig.getFiniteDurationOrElse("pause-timeout",ras.defaultActorTimeout))
 
@@ -636,37 +660,41 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ImplicitActorLogging
         case RaceActorPaused =>
           info(s"${actorRef.path.name} is paused")
         case RaceActorPauseFailed(reason) =>
-          startFailed(s"pause of ${actorRef.path.name} failed: $reason", isOptional)
+          pauseFailed(s"pause of ${actorRef.path.name} failed: $reason", isOptional)
         case TimedOut =>
-          startFailed(s"pausing ${actorRef.path} timed out", isOptional)
+          pauseFailed(s"pausing ${actorRef.path} timed out", isOptional)
         case other => // illegal response
-          startFailed(s"got unknown PauseRaceActor response from ${actorRef.path.name}",isOptional)
+          pauseFailed(s"got unknown PauseRaceActor response from ${actorRef.path.name}",isOptional)
       }(pauseTimeout)
     }
   }
 
-  protected def pauseFailed(msg: String, isOptionalActor: Boolean, cause: Option[Throwable]=None) = {
-    if (isOptionalActor) {
-      warning(msg)
-    } else {
-      error(msg)
-      throw new RacePauseException(msg, cause.getOrElse(null))
-    }
-  }
 
   //--- actor resume
 
   def onRaceResume = executeProtected {
-    if (ras.isVerifiedSenderOf(RaceResume)) {
-      info(s"master $name got RaceResume, resuming actors")
-      resumeRaceActors
-      sender ! RaceResumed
-    } else warning(s"RaceResume request from $sender ignored")
+    if (ras.commonCapabilities.supportsPauseResume){
+      if (ras.isPaused) {
+        info(s"master $name got RaceResume, resuming actors")
+        resumeRaceActors
+        sender ! RaceResumed
+      } else warning(s"master $name ignoring RaceResume, system not paused")
+    } else warning(s"master $name ignoring RaceResume, system does not support pause/resume")
   }
 
-  def resumeRaceActors = {
-    for ((actorRef,actorData) <- actors){
-      val actorConfig = actorData.actorConfig
+  protected def resumeRaceActors = {
+    def resumeFailed(msg: String, isOptionalActor: Boolean, cause: Option[Throwable]=None) = {
+      if (isOptionalActor) {
+        warning(msg)
+      } else {
+        error(msg)
+        throw new RaceResumeException(msg, cause.getOrElse(null))
+      }
+    }
+
+    processChildren { actorData =>
+      val actorRef = actorData.actorRef
+      val actorConfig = actorData.config
       val isOptional = isOptionalActor(actorConfig)
       val resumeTimeout = Timeout(actorConfig.getFiniteDurationOrElse("resume-timeout",ras.defaultActorTimeout))
 
@@ -675,37 +703,31 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ImplicitActorLogging
         case RaceActorResumed =>
           info(s"${actorRef.path.name} is resumed")
         case RaceActorResumeFailed(reason) =>
-          startFailed(s"resuming ${actorRef.path.name} failed: $reason", isOptional)
+          resumeFailed(s"resuming ${actorRef.path.name} failed: $reason", isOptional)
         case TimedOut =>
-          startFailed(s"resuming ${actorRef.path} timed out", isOptional)
+          resumeFailed(s"resuming ${actorRef.path} timed out", isOptional)
         case other => // illegal response
-          startFailed(s"got unknown ResumeRaceActor response from ${actorRef.path.name}",isOptional)
+          resumeFailed(s"got unknown ResumeRaceActor response from ${actorRef.path.name}",isOptional)
       }(resumeTimeout)
     }
   }
 
-  protected def resumeFailed(msg: String, isOptionalActor: Boolean, cause: Option[Throwable]=None) = {
-    if (isOptionalActor) {
-      warning(msg)
-    } else {
-      error(msg)
-      throw new RaceResumeException(msg, cause.getOrElse(null))
-    }
-  }
+
 
   //--- actor termination
 
   private def shutdown = {
     terminateHeartBeat
-    terminateRaceActors
     terminateSatellites
+    terminateRaceActors
   }
 
   def onRaceTerminate = executeProtected {
     if (ras.isVerifiedSenderOf(RaceTerminate)) {
       info(s"master $name got RaceTerminate, shutting down")
+      waiterForTerminated = Some(sender)
       shutdown
-      sender ! RaceTerminated
+
     } else warning(s"RaceTerminate request from $sender ignored")
   }
 
@@ -721,42 +743,15 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ImplicitActorLogging
     } else warning(s"RemoteRaceTerminate from unknown remote master: $remoteMaster")
   }
 
-  def terminateRaceActors: Unit = { // terminate in reverse order of creation
-    setUnrespondingTerminatees( actors.foldRight (Seq.empty[(ActorRef,ActorMetaData)]) { (e, leftOverActors) =>
-      val (actorRef, actorData) = e
-      if (!actorData.isUnresponsive) { // pointless to send a TerminateRaceActor - it is already dead
-        val actorConfig = actorData.actorConfig
-        info(s"sending TerminateRaceActor to ${actorRef.path}")
-        askForResult(actorRef ? TerminateRaceActor(self)) {
-          case RaceActorTerminated => // all fine, actor did shut down
-            info(s"got RaceActorTerminated from ${actorRef.path.name}")
-            stopRaceActor(actorRef) // stop it so that name becomes available again
-            leftOverActors
-          case RaceActorTerminateIgnored =>
-            info(s"got RaceActorTerminateIgnored from ${actorRef.path.name}")
-            leftOverActors
+  def terminateRaceActors: Unit = {
+    terminateAndRemoveRaceActors
 
-          //--- failures
-          case RaceActorTerminateFailed(reason) =>
-            warning(s"RaceActorTerminate of ${actorRef.path.name} failed: $reason")
-            (actorRef -> actorData) +: leftOverActors
-          case TimedOut =>
-            warning(s"no TerminateRaceActor response from ${actorRef.path.name}")
-            (actorRef -> actorData) +: leftOverActors
-          case other => // illegal response
-            warning(s"got unknown TerminateRaceActor response from ${actorRef.path.name}")
-            (actorRef -> actorData) +: leftOverActors
-        }
-      } else leftOverActors
-    })
-  }
-
-  def setUnrespondingTerminatees(unresponding: Seq[(ActorRef,ActorMetaData)]): Unit = {
-    ras.actors = ListMap.from(unresponding)
-  }
-
-  def stopRaceActor (actorRef: ActorRef): Unit =  {
-    context.stop(actorRef) // finishes current and discards all pending, then calls postStop
+    waiterForTerminated match {
+      case Some(actorRef) =>
+        if (noMoreChildren) actorRef ! RaceTerminated
+        else actorRef ! RaceTerminateFailed
+      case None => // nothing to report
+    }
   }
 
   def terminateSatellites = {
@@ -781,43 +776,58 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ImplicitActorLogging
   }
 
   def onRaceResetClock (originator: ActorRef, date: DateTime, tScale: Double) = {
-    actors.foreach( _._1 ! SyncWithRaceClock)
+    sendToChildren(SyncWithRaceClock)
   }
 
   def onHeartBeat: Unit = {
     if (ras.isLive){
-      for ((actorRef,actorData) <- actors){
-        val lastPingTime = actorData.lastPingTime
+      processRespondingChildren { actorData =>
+        val actorRef = actorData.actorRef
+        val lastPingTime = actorData.pingNanos
         if (lastPingTime > 0) { // did we already ping this actor?
-          val pingResponse = actorData.lastPingResponse
-          if (pingResponse == null || pingResponse.tReceivedNanos < lastPingTime) {
+          val pingResponse = actorData.receivedNanos
+          if (pingResponse < lastPingTime) { // it did not respond to last ping
             // TODO - this should follow the supervisor policy, i.e. try to re-create the actor
-            // TODO - this actor will not respond to TerminateRequests anymore, don't send one
-            if (isOptionalActor(actorData.actorConfig)){
+            if (isOptionalActor(actorData.config)){
               warning(s"actor not responsive: ${actorRef.path}")
             } else {
               error(s"actor not responsive: ${actorRef.path}, shutting down")
-              ThreadUtils.execAsync(ras.terminate)
+              ThreadUtils.execAsync(ras.terminateActors)
             }
             context.stop(actorRef) // make sure Akka doesn't schedule this actor anymore
             actorData.isUnresponsive = true
-          } else {
-            actorData.latencyStats.addSample(pingResponse.tReceivedNanos - lastPingTime)
           }
         }
 
         //--- record and send the next ping
-        actorData.lastPingTime = System.nanoTime
-        actorRef ! PingRaceActor
+        val now = System.nanoTime
+        actorRef ! PingRaceActor(now)
+        actorData.pingNanos = now
       }
+
       heartBeatCount += 1
       info(s"heartbeat: $heartBeatCount")
     }
   }
 
   def onPingRaceActorResponse (actorRef: ActorRef, msg: PingRaceActorResponse): Unit = {
-    ifSome(actors.get(actorRef)) { actorData =>
-      actorData.lastPingResponse = msg
+    processChildRef(actorRef) { actorData=>
+      actorData.receivedNanos = msg.receivedNanos
     }
   }
+
+  def showActors (requester: ActorRef): Unit = {
+    println(f"actors of system ${self.path}:")
+    actors.foreach { actorData =>
+      val actorRef = actorData.actorRef
+      askForResult(actorRef ? ShowRaceActor(System.nanoTime)) {
+        case ShowRaceActorResponse => // all Ok, next
+        case TimedOut => println(f"  ${actorRef.path.name}%50s : UNRESPONSIVE")
+        case other => println(f"  ${actorRef.path.name}%50s : wrong response ($other)")
+      }
+    }
+    requester ! RaceShowCompleted
+  }
+
+  override def system: ActorSystem = ras.system
 }

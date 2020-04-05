@@ -189,7 +189,10 @@ object Dependencies {
 
 
   //--- publishable WorldWindJava version
-  val worldwindPcm = "com.github.pcmehlitz" % "worldwind-pcm" % "2.1.0.198"
+  val worldwindPcm = "com.github.pcmehlitz" % "worldwind-pcm" % "2.1.0.198" excludeAll(
+    //ExclusionRule(organization = "org.jogamp.jogl"),
+    //ExclusionRule(organization = "org.jogamp.gluegen")
+  )
 
 
   //--- this is used from build.sbt to add dependency resolvers

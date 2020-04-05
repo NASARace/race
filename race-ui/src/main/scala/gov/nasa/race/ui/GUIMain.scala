@@ -165,7 +165,7 @@ class GUIMain extends AppFrame with MainBase {
   def stopUniverse: Boolean = {
     ras foreach { universe =>
       infoMessage(s"shutting down universe ${universe.name}...")
-      if (universe.terminate) infoMessage(s"universe ${universe.name} terminated")
+      if (universe.terminateActors) infoMessage(s"universe ${universe.name} terminated")
       else alertMessage(s"universe ${universe.name} failed to terminate")
     }
     true

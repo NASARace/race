@@ -98,9 +98,9 @@ class TestActor (val config: Config) extends SubscribingRaceActor with Publishin
       println(s"## $name erroneously handling $other")
   }
 
-  override def handlePingRaceActor (originator: ActorRef): Unit = {
+  override def handlePingRaceActor (originator: ActorRef, sentNanos: Long, statsCollector: ActorRef) = {
     if (!config.getBooleanOrElse("ignore-heartbeat", false)) {
-      super.handlePingRaceActor(originator)
+      super.handlePingRaceActor(originator, sentNanos, statsCollector)
     }
   }
 

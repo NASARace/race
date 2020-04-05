@@ -29,19 +29,18 @@ import gov.nasa.race._
 import gov.nasa.race.common.Stats
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.Messages.BusEvent
-import gov.nasa.race.core.{ParentContext, RaceActorRec, SubscribingRaceActor}
-import gov.nasa.race.util.FileUtils
+import gov.nasa.race.core.{ParentActor, SubscribingRaceActor}
+import gov.nasa.race.util.{ClassLoaderUtils, FileUtils}
 
 import scala.collection.mutable.{SortedMap => MSortedMap}
 import scala.concurrent.duration._
 import scalatags.Text.all.{head => htmlHead, _}
-
 import HtmlStats._
 
 /**
   * server routes to display statistics
   */
-class HttpStatsReporter (val parent: ParentContext, val config: Config) extends RaceRouteInfo {
+class HttpStatsReporter (val parent: ParentActor, val config: Config) extends RaceRouteInfo {
 
   val refreshRate = config.getFiniteDurationOrElse("refresh", 5.seconds)
   val cssClass = config.getStringOrElse("css-class", "race")
@@ -52,7 +51,7 @@ class HttpStatsReporter (val parent: ParentContext, val config: Config) extends 
 
   var httpContent = HttpContent(blankPage,noResources)
 
-  parent.addChild(RaceActorRec(parent.actorOf(Props(new RouteActor(config)),"statsRoute"),config))
+  parent.addChildActor("statsRoute", config, Props(new RouteActor(config)))
 
   def blankPage = {
     html(
@@ -70,9 +69,10 @@ class HttpStatsReporter (val parent: ParentContext, val config: Config) extends 
 
   class RouteActor (val config: Config) extends SubscribingRaceActor {
     val title = config.getStringOrElse("title", "Statistics")
-    val formatters: Seq[HtmlStatsFormatter] = config.getConfigSeq("formatters").flatMap ( conf =>
-      parent.newInstance[HtmlStatsFormatter](conf.getString("class"),Array(classOf[Config]),Array(conf))
-    )
+    val formatters: Seq[HtmlStatsFormatter] = config.getConfigSeq("formatters").flatMap { conf =>
+      val clsName = conf.getString("class")
+      ClassLoaderUtils.newInstance[HtmlStatsFormatter](system,clsName, Array(classOf[Config]), Array(conf))
+    }
     val topics = MSortedMap.empty[String, Stats]
 
     info("$name created")

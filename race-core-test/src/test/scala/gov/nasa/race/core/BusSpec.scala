@@ -35,7 +35,7 @@ object BusSpec {
   class TestPublisher (val config: Config) extends PublishingRaceActor {
     override def handleMessage = {
       case PublishTest(msg) =>
-        println(s"$name publishing $msg to channel $writeTo")
+        println(s"$name publishing $msg to channel [$writeToAsString]")
         publish(msg)
     }
   }
@@ -57,11 +57,12 @@ import gov.nasa.race.core.BusSpec._
   */
 class BusSpec extends RaceActorSpec with AnyWordSpecLike {
   val testChannel = "testChannel"
+  val logLevel = Logging.WarningLevel
 
   "a RaceActorSystem bus" must {
     "dispatch published messages to a RaceActorSpec probe" in {
-      runRaceActorSystem(Logging.WarningLevel) {
-        val publisher = addTestActor(classOf[TestPublisher], "publisher", createConfig(s"write-to = $testChannel"))
+      runRaceActorSystem(logLevel) {
+        val publisher = addTestActor[TestPublisher]("publisher", "write-to"->testChannel).self
 
         printTestActors
         initializeTestActors
@@ -83,20 +84,20 @@ class BusSpec extends RaceActorSpec with AnyWordSpecLike {
 
   "a RaceActorSystem bus" must {
     "dispatch published messages to subscribed RaceActors" in {
-      runRaceActorSystem(Logging.WarningLevel) {
-        val publisher = addTestActor(classOf[TestPublisher], "publisher", createConfig(s"write-to = $testChannel"))
-        val subscriber = addTestActor(classOf[TestSubscriber], "subscriber", createConfig(s"read-from = $testChannel"))
+      runRaceActorSystem(logLevel) {
+        val publisherRef = addTestActor[TestPublisher]("publisher", "write-to"->testChannel).self
+        val subscriber = addTestActor[TestSubscriber]("subscriber", "read-from"->testChannel)
 
         printTestActors
         initializeTestActors
         startTestActors(DateTime.now)
 
-        publisher ! PublishTest(TestMessage(42))
+        publisherRef ! PublishTest(TestMessage(42))
 
         sleep(1000)
         terminateTestActors
 
-        assert(actor(subscriber).gotIt)
+        assert(subscriber.gotIt)
       }
     }
   }

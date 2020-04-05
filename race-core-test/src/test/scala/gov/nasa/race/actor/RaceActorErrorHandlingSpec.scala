@@ -23,6 +23,7 @@ import com.typesafe.config.Config
 import gov.nasa.race.core.RaceActor
 import gov.nasa.race.test.RaceActorSpec
 import gov.nasa.race.uom.DateTime
+import gov.nasa.race.config.NoConfig
 import org.scalatest.flatspec.AnyFlatSpecLike
 
 object RaceActorErrorHandlingSpec {
@@ -56,17 +57,16 @@ class RaceActorErrorHandlingSpec extends RaceActorSpec with AnyFlatSpecLike {
   "master actor" should "detect and report exceptions during RaceActor handleMessage execution" in {
     runRaceActorSystem(Logging.InfoLevel) {
 
-      val conf = """name = "crasher" """
-      val actor = addTestActor(classOf[MessageCrasher], "crasher", createConfig(conf))
+      val actorRef = addTestActor[MessageCrasher]("crasher").self
 
       printTestActors
       initializeTestActors
       startTestActors(DateTime.now)
 
-      actor ! CrashNow
+      actorRef ! CrashNow
 
       // actor should be inactive after it crashed
-      actor ! NeverProcess
+      actorRef ! NeverProcess
       sleep(100)
       assert(neverProcessed)
 
@@ -76,17 +76,14 @@ class RaceActorErrorHandlingSpec extends RaceActorSpec with AnyFlatSpecLike {
 
   "master actor" should "detect and report exceptions during (sync) onStartRaceActor execution" in {
     runRaceActorSystem(Logging.InfoLevel) {
+      expectToFail {
+        addTestActor[StartCrasher]("crasher")
 
-      val conf = """name = "crasher" """
-      val actor = addTestActor(classOf[StartCrasher], "crasher", createConfig(conf))
-
-      printTestActors
-      initializeTestActors
-      startTestActors(DateTime.now)
-
-      assert( !ras.isRunning)
-
-      terminateTestActors
+        printTestActors
+        initializeTestActors
+        startTestActors(DateTime.now)
+        terminateTestActors
+      }
     }
   }
 }

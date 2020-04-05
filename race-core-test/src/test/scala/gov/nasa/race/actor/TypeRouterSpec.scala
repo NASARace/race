@@ -35,20 +35,22 @@ class TypeRouterSpec extends RaceActorSpec with AnyFlatSpecLike {
 
   "a TypeRouter actor" should "publish incoming messages to the right channels" in {
     runRaceActorSystem(Logging.WarningLevel) {
-      val conf =
+      val conf = createConfig(  // name and class are automatically added
         s"""
-           | name = "router"
-           | read-from = ["/input"]
+           | read-from = "/input"
            | routes = [
            |   { type = "java.lang.String", write-to = ["/strings"] },
            |   { type = "${classOf[Foo].getName}", write-to = ["/foos"] }
            | ]
-         """.stripMargin
+         """.stripMargin)
 
-      val actor = addTestActor(classOf[TypeRouter], "router", createConfig(conf))
+      addTestActor[TypeRouter]("router",conf)
+      initializeTestActors
 
       printTestActors
-      initializeTestActors
+      printBusSubscriptions
+
+      sleep(1000)
       startTestActors(DateTime.now)
 
       var stringIn = "I am a String"

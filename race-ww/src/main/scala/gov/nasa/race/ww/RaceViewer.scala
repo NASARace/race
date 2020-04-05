@@ -23,7 +23,7 @@ import java.util.concurrent.Semaphore
 import akka.actor.Props
 import com.typesafe.config.Config
 import gov.nasa.race.config.ConfigUtils._
-import gov.nasa.race.core.{RaceActor, RaceActorRec, error, info}
+import gov.nasa.race.core.{RaceActor, error, info}
 import gov.nasa.race.swing._
 import gov.nasa.race.swing.Redrawable
 import gov.nasa.race.swing.Style._
@@ -179,9 +179,9 @@ class RaceViewer(viewerActor: RaceViewerActor) extends DeferredEyePositionListen
       semaphore.release()
       actor
     }
-    val actorRef = viewerActor.context.actorOf(Props(instantiateActor),name)
+    val actorRef = viewerActor.actorOf(Props(instantiateActor),name)
     semaphore.acquire()    // block until (1) got executed
-    viewerActor.addChild(RaceActorRec(actorRef,actor.config))
+    viewerActor.addChildActorRef(actorRef,actor.config)
     actor
   }
 

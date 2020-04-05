@@ -22,14 +22,14 @@ import akka.http.scaladsl.server.Directives._
 import com.typesafe.config.Config
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.Messages.BusEvent
-import gov.nasa.race.core.{ParentContext, RaceActorRec, SubscribingRaceActor}
+import gov.nasa.race.core.{ParentActor, SubscribingRaceActor}
 
 import scalatags.Text.all.{head => htmlHead, _}
 
 /**
   * a simple statically configured test route without actor
   */
-class TestRouteInfo (val parent: ParentContext, val config: Config) extends RaceRouteInfo {
+class TestRouteInfo (val parent: ParentActor, val config: Config) extends RaceRouteInfo {
   val request = config.getStringOrElse("request", "test")
   val response = config.getStringOrElse("response", "Hello from RACE")
 
@@ -42,7 +42,7 @@ class TestRouteInfo (val parent: ParentContext, val config: Config) extends Race
   }
 }
 
-class TestAuthorized (val parent: ParentContext, val config: Config) extends AuthorizedRaceRoute {
+class TestAuthorized (val parent: ParentActor, val config: Config) extends AuthorizedRaceRoute {
   val request = config.getStringOrElse("request", "secret")
   var count = 0
   def page = html(
@@ -67,7 +67,7 @@ class TestAuthorized (val parent: ParentContext, val config: Config) extends Aut
 /**
   * a test route that uses a script for dynamic data update
   */
-class TestRefresh (val parent: ParentContext, val config: Config) extends RaceRouteInfo {
+class TestRefresh (val parent: ParentActor, val config: Config) extends RaceRouteInfo {
 
   class RouteActor (val config: Config) extends SubscribingRaceActor {
     info("$name created")
@@ -77,7 +77,7 @@ class TestRefresh (val parent: ParentContext, val config: Config) extends RaceRo
     }
   }
 
-  parent.addChild(RaceActorRec(parent.actorOf(Props(new RouteActor(config)),"refreshRoute"),config))
+  parent.addChildActor("refreshRoute", config, Props(new RouteActor(config)))
 
   var data = "?" // to be set by actor
 

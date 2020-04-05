@@ -18,8 +18,8 @@
 package gov.nasa.race.core
 
 import akka.actor._
-import akka.util.Timeout
 import com.typesafe.config.{Config, ConfigException}
+import gov.nasa.race._
 import gov.nasa.race.common
 import gov.nasa.race.common.Status._
 import gov.nasa.race.config.ConfigUtils._
@@ -41,22 +41,18 @@ trait RaceActor extends Actor with ImplicitActorLogging {
   // this is the constructor config that has to be provided by the concrete RaceActor
   val config: Config
 
-  val capabilities: RaceActorCapabilities = getCapabilities
+  var capabilities: RaceActorCapabilities = getCapabilities
   val localRaceContext: RaceContext = RaceActorSystem(system).localRaceContext
   var status = Initializing
   var raceContext: RaceContext = null  // set during InitializeRaceActor
   var nMsgs: Long = 0 // processed live messages
-  
-  if (supervisor == localMaster) { // means we are a toplevel RaceActor
-    info(s"registering toplevel actor $self")
-    raceActorSystem.registerActor(self, config, capabilities)
-  } else {
-    info(s"created second tier actor $self")
-  }
+
+  // invariants that might cause allocation
+  val name = self.path.name
+  val pathString = self.path.toString
+  val level = self.path.elements.size
 
   //--- convenience aliases
-  @inline final def name = self.path.name
-  @inline final def pathString = self.path.toString
   @inline final def system = context.system
   @inline final def scheduler = context.system.scheduler
 
@@ -76,21 +72,21 @@ trait RaceActor extends Actor with ImplicitActorLogging {
 
   @inline final def timeScale: Double = raceActorSystem.timeScale
 
-  // override if different
+  // this is called in response to RaceActorInitialize
   def getCapabilities: RaceActorCapabilities = {
     import RaceActorCapabilities._
     val caps = if (config.getBooleanOrElse("optional", false)) IsOptional else NoCapabilities
     caps + IsAutomatic + SupportsSimTime + SupportsSimTimeReset + SupportsPauseResume
   }
 
-  override def postStop = RaceActorSystem(context.system).stoppedRaceActor(self)
+  override def postStop = supervisor ! RaceActorStopped
 
   // pre-init behavior which doesn't branch into concrete actor code before we
   // do the initialization. This guarantees that concrete actor code cannot access
   // un-initialized fields
   override def receive = {
-    case PingRaceActor => sender ! PingRaceActorResponse(nMsgs)
-    case RequestRaceActorCapabilities => sender ! capabilities
+    case PingRaceActor(sentNanos: Long, statsCollector: ActorRef) => handlePingRaceActor(sender,sentNanos,statsCollector)
+    case ShowRaceActor(sentNanos: Long) => handleShowRaceActor(sender,sentNanos)
     case InitializeRaceActor(raceContext,actorConf) => handleInitializeRaceActor(raceContext,actorConf)
     case TerminateRaceActor(originator) => handleTerminateRaceActor(originator)
     //case msg: PingRaceActor => sender ! msg.copy(tReceivedNanos=System.nanoTime())
@@ -107,7 +103,7 @@ trait RaceActor extends Actor with ImplicitActorLogging {
       if (onInitializeRaceActor(rctx, actorConf)) {
         info("initialized")
         status = Initialized
-        sender ! RaceActorInitialized
+        sender ! RaceActorInitialized(capabilities)
       } else {
         warning("initialize rejected")
         sender ! RaceActorInitializeFailed("rejected")
@@ -144,9 +140,9 @@ trait RaceActor extends Actor with ImplicitActorLogging {
     case TerminateRaceActor(originator) => handleTerminateRaceActor(originator)
 
     case ProcessRaceActor => sender ! RaceActorProcessed
-    case PingRaceActor => handlePingRaceActor(sender)
+    case PingRaceActor(sentNanos,statsCollector) => handlePingRaceActor(sender,sentNanos,statsCollector)
 
-    case RequestRaceActorCapabilities => sender ! capabilities
+    case ShowRaceActor(sentNanos) => handleShowRaceActor(sender,sentNanos) // response processed sync
 
     case SetLogLevel(newLevel) => logLevel = newLevel
 
@@ -163,7 +159,7 @@ trait RaceActor extends Actor with ImplicitActorLogging {
         raceContext = rc
         if (onReInitializeRaceActor(rc, actorConf)){
           info("reinitialized")
-          sender ! RaceActorInitialized
+          sender ! RaceActorInitialized(capabilities)
         } else {
           warning("initialize rejected")
           sender ! RaceActorInitializeFailed("rejected")
@@ -174,7 +170,7 @@ trait RaceActor extends Actor with ImplicitActorLogging {
     } else {
       // no point re-initializing same context - maybe we should raise an exception
       warning("ignored re-initialization from same context")
-      sender ! RaceActorInitialized
+      sender ! RaceActorInitialized(capabilities)
     }
   }
 
@@ -195,8 +191,19 @@ trait RaceActor extends Actor with ImplicitActorLogging {
     }
   }
 
-  def handlePingRaceActor (originator: ActorRef) = {
-    originator ! PingRaceActorResponse(nMsgs, System.nanoTime)
+  def handlePingRaceActor (originator: ActorRef, sentNanos: Long, statsCollector: ActorRef) = {
+    val now = System.nanoTime
+    val response = PingRaceActorResponse(now, now - sentNanos, nMsgs)
+
+    originator ! response // liveness monitoring
+    if (statsCollector ne ActorRef.noSender) statsCollector ! response // stats collection
+  }
+
+  def handleShowRaceActor (originator: ActorRef, sentNanos: Long): Unit = {
+    val latency: Long = System.nanoTime - sentNanos
+    repeat(level){ print("  ")}
+    println(f"${name}%50s : $latency%6d,  $nMsgs%8d")
+    originator ! ShowRaceActorResponse
   }
 
   def handlePauseRaceActor  (originator: ActorRef) = {
@@ -244,6 +251,7 @@ trait RaceActor extends Actor with ImplicitActorLogging {
 
   def handleTerminateRaceActor (originator: ActorRef) = {
     info(s"got TerminateRaceActor from ${originator.path}")
+
     if (isMandatoryTermination(originator)){
       try {
         status = Terminating

@@ -108,4 +108,14 @@ trait RaceSpec extends Suite with Matchers with OptionValues with Inside with Sc
   def expectWithin (v: Double, vExpected: Double, eps: Double): Boolean = {
     Math.abs(v - vExpected) <= eps
   }
+
+  def expectToFail (f: => Unit): Unit = {
+    try {
+      f
+    } catch {
+      case _:org.scalatest.exceptions.TestFailedException => return // we expected that..
+      case other:Throwable => fail(s"not a TestFailedException: $other") // no failure is a fail
+    }
+    fail("test was expected to fail")
+  }
 }

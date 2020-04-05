@@ -93,8 +93,4 @@ package object core {
         None
     }
   }
-
-  /** basically a tuple with actorRef/config info which can act as a stand-in for a plain ActorRef */
-  case class RaceActorRec(actorRef: ActorRef, config: Config)
-  implicit def raRec2Ref (raRec: RaceActorRec): ActorRef = raRec.actorRef
 }

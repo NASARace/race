@@ -29,7 +29,7 @@ import akka.stream.{ActorMaterializer, Materializer}
 import com.typesafe.config.{Config, ConfigException}
 import gov.nasa.race._
 import gov.nasa.race.config.ConfigUtils._
-import gov.nasa.race.core.{ParentContext, ParentRaceActor, RaceInitializeException}
+import gov.nasa.race.core.{ParentActor, ParentRaceActor, RaceInitializeException}
 import gov.nasa.race.util.{CryptUtils, FileUtils}
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -130,7 +130,7 @@ class HttpServer (val config: Config) extends ParentRaceActor {
       val routeName = routeConf.getString("name")
       val routeClsName = routeConf.getString("class")
       info(s"creating route '$routeName': $routeClsName")
-      newInstance[RaceRouteInfo](routeClsName,Array(classOf[ParentContext],classOf[Config]),Array(this,routeConf)) match {
+      newInstance[RaceRouteInfo](routeClsName,Array(classOf[ParentActor],classOf[Config]),Array(this,routeConf)) match {
         case Some(ri) =>
           info(s"adding route '$routeName'")
           if (ri.shouldUseHttps && !connectionContext.isSecure){

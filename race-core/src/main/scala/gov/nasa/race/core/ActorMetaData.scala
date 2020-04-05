@@ -16,21 +16,14 @@
  */
 package gov.nasa.race.core
 
+import akka.actor.ActorRef
 import com.typesafe.config.Config
-import gov.nasa.race.common.LongStats
-import gov.nasa.race.core.Messages.PingRaceActorResponse
 
 /**
-  * housekeeping meta-data for top level RaceActors
-  *
-  * NOTE - in a live RAS this is only to be used by Master for now,
-  * otherwise we would have to synchronize
+  * housekeeping meta-data to manage child actors
   */
-class ActorMetaData(val actorConfig: Config) {
-
-  var lastPingTime: Long = 0
-  var lastPingResponse: PingRaceActorResponse = null
+class ActorMetaData(val actorRef: ActorRef, val config: Config) {
+  var pingNanos: Long = 0 // when did we last send a ping
+  var receivedNanos: Long = 0 // when actor process last ping
   var isUnresponsive: Boolean = false // this needs to be set explicitly to avoid blocking a pre-start termination
-
-  val latencyStats = new LongStats // msg.tReceiveNanos - msg.tSendNanos
 }

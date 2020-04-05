@@ -16,34 +16,11 @@
  */
 package gov.nasa.race.core
 
-import akka.actor.{ActorRef, ActorSystem, Props}
+import akka.actor.ActorRef
 import akka.pattern.ask
 import com.typesafe.config.Config
 import gov.nasa.race.core.Messages._
 
-import scala.collection.mutable.ArrayBuffer
-import scala.reflect.ClassTag
-
-
-/**
-  * pure interface that hides parent actor details from child actor creation context
-  */
-trait ParentContext {
-  def name: String
-  def system: ActorSystem
-  def self: ActorRef
-
-  //--- actor instantiation
-  def instantiateActor (actorName: String, actorConfig: Config): ActorRef
-  def actorOf(props: Props, name: String): ActorRef
-
-  // general instantiation
-  def newInstance[T: ClassTag](clsName: String,
-                               argTypes: Array[Class[_]]=null, args: Array[Object]=null): Option[T]
-  // and probably some more..
-
-  def addChild (raRec: RaceActorRec): Unit
-}
 
 /**
   * a RaceActor that itself creates and manages a set of RaceActor children
@@ -51,11 +28,59 @@ trait ParentContext {
   * the main purpose of this trait is to keep a list of child actor infos (actorRef and config), and
   * to manage the state callbacks for them (init,start,termination)
   */
-trait ParentRaceActor extends RaceActor with ParentContext {
-  val children: ArrayBuffer[RaceActorRec] = new ArrayBuffer[RaceActorRec]
+trait ParentRaceActor extends RaceActor with ParentActor {
+
+  override def handleSystemMessage: Receive = {
+    case RaceActorStopped => stoppedChildActorRef(sender)  // only parents receive these
+    case msg: PingRaceActorResponse => handlePingRaceActorResponse(sender, msg)
+    case otherMsg => super.handleSystemMessage(otherMsg)
+  }
+
+  // this is the exception from the rule that handleXX only call the overridable onXX methods
+  // since we normally do not want actors to do anything but to instantly return the message
+  override def handlePingRaceActor (originator: ActorRef, sentNanos: Long, statsCollector: ActorRef) = {
+    super.handlePingRaceActor(originator,sentNanos,statsCollector) // respond yourself first
+
+    // TODO - this needs to check unresponsive children !
+    processRespondingChildren { actorData =>
+      val actorRef = actorData.actorRef
+      actorRef ! PingRaceActor(System.nanoTime, statsCollector)
+    }
+  }
+
+  def handlePingRaceActorResponse (actorRef: ActorRef, msg: PingRaceActorResponse): Unit = {
+    processChildRef(actorRef) { actorData=>
+      actorData.receivedNanos = msg.receivedNanos
+    }
+  }
+
+  override def handleShowRaceActor (originator: ActorRef, sentNanos: Long): Unit = {
+    @inline def _indent (lvl: Int): Unit = {
+      var i=0
+      while (i < lvl) { print("  "); i+= 1 }
+    }
+
+    val latency: Long = System.nanoTime - sentNanos
+    _indent(level)
+    println(f"${name}%50s : $latency%6d,  $nMsgs%8d")
+
+    actors.foreach { actorData =>
+      val actorRef = actorData.actorRef
+      askForResult(actorRef ? ShowRaceActor(System.nanoTime)) {
+        case ShowRaceActorResponse => // all Ok, next
+        case TimedOut =>
+          _indent(level+1)
+          println(f"${actorRef.path.name}%50s : UNRESPONSIVE")
+        case other =>
+          _indent(level+1)
+          println(f"${actorRef.path.name}%50s : wrong response ($other)")
+      }
+    }
+
+    originator ! ShowRaceActorResponse
+  }
 
   override def onInitializeRaceActor(rc: RaceContext, actorConf: Config) = {
-    // TODO - shouldn't we delegate to super before forwarding to children?
     if (initializeChildActors(rc,actorConf)) {
       super.onInitializeRaceActor(rc, actorConf)
     } else false
@@ -74,39 +99,27 @@ trait ParentRaceActor extends RaceActor with ParentContext {
   }
 
   override def onTerminateRaceActor(originator: ActorRef) = {
-    if (terminateChildActors) {
+    if (terminateAndRemoveRaceActors) {
       super.onTerminateRaceActor(originator)
     } else false
   }
   // TODO - add onRestart and onPause forwarding
 
   def initializeChildActors (rc: RaceContext, actorConf: Config): Boolean = {
-    // we can't use askChildren because we need a different message object for each of them
-    !children.exists { e=> !askChild(e,InitializeRaceActor(rc,e.config),RaceActorInitialized) }
-  }
-
-  def startChildActors: Boolean = askChildren(StartRaceActor(self),RaceActorStarted)
-
-  def terminateChildActors: Boolean = askChildrenReverse(TerminateRaceActor(self),RaceActorTerminated)
-
-  def askChild (actorRef: ActorRef, question: Any, answer: Any): Boolean = {
-    askForResult (actorRef ? question){
-      case `answer` => true
-      case TimedOut => warning(s"dependent actor timed out: ${actorRef.path.name}"); false
+    askChildren(()=>InitializeRaceActor(rc,actorConf)){
+      case RaceActorInitialized(caps) =>
+        capabilities = capabilities.intersection(caps)
+        true
+      case other =>
+        false
     }
   }
-  def askChildren (question: Any, answer: Any): Boolean = !children.exists(!askChild(_,question,answer))
 
-  def askChildrenReverse (question: Any, answer: Any): Boolean = {
-    for ( cr <- children.reverseIterator ){
-      if (!askChild(cr,question,answer)) return false
+  def startChildActors: Boolean = {
+    askChildren(()=>StartRaceActor(self)){
+      case RaceActorStarted => true
+      case _ => false
     }
-    true
   }
 
-  def actorOf(props: Props, name: String): ActorRef = context.actorOf(props,name)
-
-  def addChild (raRec: RaceActorRec): Unit = children += raRec
-
-  @inline def childActorRef (i: Int) = children(i).actorRef
 }
