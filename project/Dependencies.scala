@@ -49,13 +49,13 @@ object Dependencies {
   val scalaParser = "org.scala-lang.modules" %% "scala-parser-combinators" % "1.1.2"
 
   //--- scala-xml
-  val scalaXml = "org.scala-lang.modules" %% "scala-xml" % "1.2.0"
+  val scalaXml = "org.scala-lang.modules" %% "scala-xml" % "1.3.0"
 
   //--- new scala reflection (TypeTags etc.)
   val scalaReflect =  "org.scala-lang" % "scala-reflect" % CommonRaceSettings.scalaVer
 
   //--- scalaTags HTML generator
-  val scalaTags = "com.lihaoyi" %% "scalatags" % "0.7.0"
+  val scalaTags = "com.lihaoyi" %% "scalatags" % "0.8.6"
 
   //--- scala automatic resource management (https://github.com/jsuereth/scala-arm)
   //val scalaArm = "com.jsuereth" %% "scala-arm" % "2.0"
@@ -65,7 +65,7 @@ object Dependencies {
   // val breezeNative = "org.scalanlp" %% "breeze-natives" % "0.13.2"
 
   //--- scalaTest
-  val scalaTest = "org.scalatest" %% "scalatest" % "3.2.0-M3"
+  val scalaTest = "org.scalatest" %% "scalatest" % "3.3.0-SNAP2"
   val flexmarkAll = "com.vladsch.flexmark" % "flexmark-all" % "0.35.10" // should be a scalaTest dependency but 3.1.0-SNAP13 is missing it
   val scalaTestPlus = "org.scalatestplus" %% "scalatestplus-scalacheck" % "3.1.0.0-RC2"
 
@@ -100,7 +100,7 @@ object Dependencies {
   //.. and possibly extensions for Tree and jfreechart
 
   //--- RSyntaxTextArea (TextEditor with syntax support)
-  val rsTextArea = "com.fifesoft" % "rsyntaxtextarea" % "3.0.8"
+  val rsTextArea = "com.fifesoft" % "rsyntaxtextarea" % "3.1.0"
 
   //--- the jfreechart plot and chart lib
   val jfreeChart = "org.jfree" % "jfreechart" % "1.5.0"
@@ -114,7 +114,7 @@ object Dependencies {
   val argon2 = "de.mkammerer" % "argon2-jvm" % "2.6"
 
   //--- Akka
-  val akkaVersion = "2.6.3"
+  val akkaVersion = "2.6.4"
   val akkaOrg = "com.typesafe.akka"
 
   val akkaActor = akkaOrg %% "akka-actor" % akkaVersion
@@ -130,7 +130,7 @@ object Dependencies {
 
 
   //--- ActiveMQ
-  val amqVersion = "5.15.11"
+  val amqVersion = "5.15.12"
   val amqOrg = "org.apache.activemq"
   val amqBroker = amqOrg % "activemq-broker" % amqVersion
 
@@ -149,7 +149,7 @@ object Dependencies {
   val log4jOverSlf4j = "org.slf4j" % "log4j-over-slf4j" % "2.0.0-alpha1"
 
   //--- ZooKeeper
-  val zookeeper = "org.apache.zookeeper" % "zookeeper" % "3.5.6" excludeAll(
+  val zookeeper = "org.apache.zookeeper" % "zookeeper" % "3.6.0" excludeAll(
     ExclusionRule(organization = "log4j", name="log4j"),
     ExclusionRule(organization = "org.slf4j", name = "slf4j-log4j12")
   )
@@ -164,7 +164,7 @@ object Dependencies {
   val newKafkaClients = "org.apache.kafka" % "kafka-clients" % "2.2.1"
 
   //--- Kafka (make sure to add log4j to kafkaServer dependencies
-  val kafka = "org.apache.kafka" %% "kafka" % "2.4.0" excludeAll(
+  val kafka = "org.apache.kafka" %% "kafka" % "2.4.1" excludeAll(
   //val kafka = "org.apache.kafka" %% "kafka" % "1.0.1" excludeAll(
     //ExclusionRule(organization = "log4j", name="log4j"),
     //ExclusionRule(organization = "org.slf4j", name = "slf4j-log4j12")
