@@ -25,10 +25,16 @@ import scala.swing.Frame
 
 
 /**
- * platform specific functions (keep it low)
- *
- * <2do> if we ever encounter high frequency ops we should turn this into a factory & interface
- */
+  * platform specific functions (keep it small!)
+  *
+  * the fullscreen support requires a separate gov.nasa.race.swing.MacOSHelper class
+  * (which uses com.apple.eawt.* to work around a nasty fullscreen bug with Java 9+ - see
+  * comments in MacOSHelper source). Since this class can only be built on macOS we
+  * cannot keep it in the sources and provide a pre-built jar as a un-managed dependency that
+  * is only used in case we run RACE on macOS (com.apple.eawt does not export the
+  * required classes and cross-module reflection is not allowed on Java 9+)
+  *
+  */
 object Platform {
   final val osName = Symbol(System.getProperty("os.name"))
   final val OS_X = Symbol("Mac OS X")
@@ -39,15 +45,11 @@ object Platform {
   final val javaVersion: Int = getJavaVersion
   final val os: Symbol = getOS
 
+  private var fullScreenWindow: AWTWindow = _
+
   def getJavaVersion: Int = {
     val s = System.getProperty("java.version")
-    if (s.startsWith("1.8")) 8
-    else if (s.startsWith("9")) 9
-    else if (s.startsWith("10")) 10
-    else if (s.startsWith("11")) 11
-    else if (s.startsWith("12")) 12
-    else if (s.startsWith("13")) 13
-    else throw new RuntimeException(s"unknown Java version $s")
+    if (s.startsWith("1.8")) 8 else Integer.parseInt(s)
   }
 
   def getOS: Symbol = {
@@ -90,17 +92,18 @@ object Platform {
   def enableFullScreen (frame: Frame) = {
     if (getScreenDevice.isFullScreenSupported) {
       if (isMacOS) {
-        enableOSXFullScreen(frame)
+        MacOSHelper.enableMacOSFullScreen(frame.peer)
       } else {
         // not required
       }
     }
   }
 
-  def requestFullScreen (frame: AWTFrame) = {
+  def requestToggleFullScreen(frame: AWTFrame) = {
 
     if (isMacOS) {
-      requestOSXFullScreen(frame)
+      MacOSHelper.requestToggleMacOSFullScreen(frame)
+      if (fullScreenWindow == null) fullScreenWindow = frame else fullScreenWindow = null
 
     } else {
       // this is supposed to be the portable Java way to request fullscreen but
@@ -111,43 +114,25 @@ object Platform {
       val device = getScreenDevice
 
       if (device.isFullScreenSupported) {
-        if (frame != null) {
+
+        if (fullScreenWindow == null) { // set this frame fullscreen
+          fullScreenWindow = frame
           try {
             device.setFullScreenWindow(frame)
           } catch {
             case _:Throwable => device.setFullScreenWindow(null)
           }
-        } else {
-          device.setFullScreenWindow(null) // nothing else we can do if this fails
+
+        } else { // reset fullscreen
+          fullScreenWindow = null
+          try {
+            device.setFullScreenWindow(null)
+          } catch {
+            case _:Throwable => // nothing we can do
+          }
         }
       }
     }
-  }
 
-  // OS X specifics (note these cause "illegal reflective access" warnings under Java > 8 and
-  // should be avoided
-
-  def enableOSXFullScreen(frame: Frame): Unit = {
-    try {
-      val utilCls = Class.forName("com.apple.eawt.FullScreenUtilities")
-      val method = utilCls.getMethod("setWindowCanFullScreen", classOf[AWTWindow], java.lang.Boolean.TYPE)
-      method.invoke(utilCls, frame.peer, java.lang.Boolean.TRUE);
-    } catch {
-      case x: Throwable => println(x)
-    }
-  }
-
-  def requestOSXFullScreen (frame: AWTFrame): Unit = {
-    try {
-      val appClass = Class.forName("com.apple.eawt.Application")
-      val getApplication = appClass.getMethod("getApplication")
-      val application = getApplication.invoke(appClass)
-
-      val requestToggleFulLScreen = application.getClass().getMethod("requestToggleFullScreen", classOf[AWTWindow])
-      requestToggleFulLScreen.invoke(application, frame)
-    } catch {
-      case x: Throwable =>
-            // ignore - on 10.14.6 this causes a NPE when trying to get out of fullscreen
-    }
   }
 }

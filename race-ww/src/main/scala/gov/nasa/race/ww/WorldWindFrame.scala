@@ -74,8 +74,8 @@ class WorldWindFrame (config: Config, raceView: RaceViewer) extends AppFrame {
 
   size = config.getDimensionOrElse("size", (1400, 1000)) // set size no matter what
   if (config.getBooleanOrElse("fullscreen", false)) {
-    setFullScreen(true)
-    popupFullScreenMI.selected = true
+    toggleFullScreen
+    popupFullScreenMI.selected = !popupFullScreenMI.selected
   }
 
   def getInitialEyePosition: Position = {
@@ -129,7 +129,7 @@ class WorldWindFrame (config: Config, raceView: RaceViewer) extends AppFrame {
     val popup = new PopupMenu()
 
     popupFullScreenMI = new CheckMenuItem("").styled()
-    popupFullScreenMI.action = scala.swing.Action("fullscreen") { setFullScreen(popupFullScreenMI.selected) }
+    popupFullScreenMI.action = scala.swing.Action("fullscreen") { toggleFullScreen }
     popupFullScreenMI.selected = config.getBooleanOrElse("fullscreen", false)
     popup.contents += popupFullScreenMI
 

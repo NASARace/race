@@ -83,19 +83,6 @@ class AppFrame extends Frame {
     }
   }
 
-  def setFullScreen (b: Boolean): Unit = {
-    if (b) {
-      Platform.requestFullScreen(this.peer)
-    } else {
-      Platform.requestFullScreen(null)
-    }
-  }
+  def toggleFullScreen: Unit = Platform.requestToggleFullScreen(this.peer)
 
-  def toggleFullScreen: Unit = {
-    if (Platform.isFullScreen) {
-      Platform.requestFullScreen(null)
-    } else {
-      Platform.requestFullScreen(this.peer)
-    }
-  }
 }
