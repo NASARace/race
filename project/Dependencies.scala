@@ -189,7 +189,7 @@ object Dependencies {
 
 
   //--- publishable WorldWindJava version
-  val worldwindPcm = "com.github.pcmehlitz" % "worldwind-pcm" % "2.1.0.199"
+  val worldwindPcm = "com.github.pcmehlitz" % "worldwind-pcm" % "2.1.0.202"
 
 
   //--- this is used from build.sbt to add dependency resolvers
