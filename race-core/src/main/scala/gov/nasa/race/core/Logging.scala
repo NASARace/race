@@ -100,9 +100,13 @@ object RaceLogger {
   private var logWriter: PrintWriter = null
 
   def createDefaultLogAppender: LogAppender = {
-    val host = System.getProperty("log.console.host")
-    val portSpec = System.getProperty("log.console.port")
-    if (host != null && portSpec != null){
+    // we need to take these from the environment/properties so that we can log before Akka is initialized
+    var host = System.getProperty("log.console.host")
+    var portSpec = System.getProperty("log.console.port")
+    if (host != null || portSpec != null){
+      if (host == null) host = "127.0.0.1"       // default is localhost
+      if (portSpec == null) portSpec = "20002"   // default is 20002
+
       try {
         val port = Integer.parseInt(portSpec)
         logSocket = new Socket(host, port)
@@ -113,7 +117,7 @@ object RaceLogger {
         case t: Throwable => ConsoleIO.printlnErr(s"[ERROR] failed to open log socket: ${t.getMessage}")
       }
     }
-    new StdioAppender
+    new StdioAppender // fallback in case we didn't configure log host/port
   }
 
   def getConfigLogLevel (sys: ActorSystem, optLevel: Option[String]): Option[LogLevel] = {

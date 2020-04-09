@@ -50,7 +50,7 @@ trait RaceActor extends Actor with ImplicitActorLogging {
   // invariants that might cause allocation
   val name = self.path.name
   val pathString = self.path.toString
-  val level = self.path.elements.size
+  val level = self.path.elements.size - 2 // count out /user and master
 
   //--- convenience aliases
   @inline final def system = context.system
@@ -195,14 +195,25 @@ trait RaceActor extends Actor with ImplicitActorLogging {
     val now = System.nanoTime
     val response = PingRaceActorResponse(now, now - sentNanos, nMsgs)
 
-    originator ! response // liveness monitoring
-    if (statsCollector ne ActorRef.noSender) statsCollector ! response // stats collection
+    originator ! response // this is for liveness control (unless originator is also collector)
+    if ((statsCollector ne ActorRef.noSender) && (statsCollector ne originator)) {
+      statsCollector ! response // this is for statistics purposes
+    }
+  }
+
+  def showActor (actorName: String, actorLevel: Int): Unit = {
+    repeat(actorLevel){ print("  ")}
+    print(actorName)
+    var n = actorLevel*2 + actorName.length
+    while (n < 60) { print(' '); n += 1 }
+  }
+  def showActorState (latency: Long, procMsgs: Long): Unit = {
+    println(f"   ${latency/1000}%8d   $procMsgs%8d")
   }
 
   def handleShowRaceActor (originator: ActorRef, sentNanos: Long): Unit = {
-    val latency: Long = System.nanoTime - sentNanos
-    repeat(level){ print("  ")}
-    println(f"${name}%50s : $latency%6d,  $nMsgs%8d")
+    showActor(name,level)
+    showActorState( System.nanoTime - sentNanos, nMsgs)
     originator ! ShowRaceActorResponse
   }
 

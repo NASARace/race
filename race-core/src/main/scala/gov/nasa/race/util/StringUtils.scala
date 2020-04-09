@@ -233,4 +233,15 @@ object StringUtils {
   }
 
   val hexChars = Array ('0','1','2','3','4','5','6','7','8','9','a','b','c','d','e','f')
+
+  def countOccurrences (s: String, c: Char): Int = {
+    val len = s.length
+    var i = 0
+    var n = 0
+    while (i < len) {
+      if (s.charAt(i) == c) n += 1
+      i += 1
+    }
+    n
+  }
 }

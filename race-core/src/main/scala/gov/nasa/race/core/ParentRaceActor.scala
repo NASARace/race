@@ -16,7 +16,7 @@
  */
 package gov.nasa.race.core
 
-import akka.actor.ActorRef
+import akka.actor.{ActorRef, Terminated}
 import akka.pattern.ask
 import com.typesafe.config.Config
 import gov.nasa.race.core.Messages._
@@ -30,11 +30,14 @@ import gov.nasa.race.core.Messages._
   */
 trait ParentRaceActor extends RaceActor with ParentActor {
 
-  override def handleSystemMessage: Receive = {
+  def handleParentSystemMessage: Receive = {
     case RaceActorStopped => stoppedChildActorRef(sender)  // only parents receive these
     case msg: PingRaceActorResponse => handlePingRaceActorResponse(sender, msg)
-    case otherMsg => super.handleSystemMessage(otherMsg)
+    case Terminated(actorRef) => // Akka death watch event
+      removeChildActorRef(actorRef)
   }
+
+  override def handleSystemMessage: Receive = handleParentSystemMessage orElse super.handleSystemMessage
 
   // this is the exception from the rule that handleXX only call the overridable onXX methods
   // since we normally do not want actors to do anything but to instantly return the message
@@ -55,25 +58,19 @@ trait ParentRaceActor extends RaceActor with ParentActor {
   }
 
   override def handleShowRaceActor (originator: ActorRef, sentNanos: Long): Unit = {
-    @inline def _indent (lvl: Int): Unit = {
-      var i=0
-      while (i < lvl) { print("  "); i+= 1 }
-    }
-
-    val latency: Long = System.nanoTime - sentNanos
-    _indent(level)
-    println(f"${name}%50s : $latency%6d,  $nMsgs%8d")
+    showActor(name,level)
+    showActorState(System.nanoTime - sentNanos, nMsgs)
 
     actors.foreach { actorData =>
       val actorRef = actorData.actorRef
       askForResult(actorRef ? ShowRaceActor(System.nanoTime)) {
         case ShowRaceActorResponse => // all Ok, next
         case TimedOut =>
-          _indent(level+1)
-          println(f"${actorRef.path.name}%50s : UNRESPONSIVE")
+          showActor(actorRef.path.name, level+1)
+          println(" : UNRESPONSIVE")
         case other =>
-          _indent(level+1)
-          println(f"${actorRef.path.name}%50s : wrong response ($other)")
+          showActor(actorRef.path.name, level+1)
+          println(s" : wrong response ($other)")
       }
     }
 

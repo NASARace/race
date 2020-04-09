@@ -114,7 +114,7 @@ class RaceActorSystem(val config: Config) extends LogController with VerifiableA
 
   //--- monitoring intervals (0 means we don't check)
   val heartBeatInterval: FiniteDuration = config.getFiniteDurationOrElse("heartbeat-interval", 0.seconds)
-  val heartBeatStatistics: Boolean = config.getBooleanOrElse("heartbeat-statistics", false)
+  val heartBeatReport: Int = config.getIntOrElse("heartbeat-report", 0) // report every nth heartbeat
 
   //--- specific timeouts
   val defaultSystemTimeout: FiniteDuration = config.getFiniteDurationOrElse("system-timeout",timeout.duration*2)

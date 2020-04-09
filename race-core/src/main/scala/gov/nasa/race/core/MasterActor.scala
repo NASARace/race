@@ -21,7 +21,6 @@ import java.util.concurrent.{LinkedBlockingQueue, TimeUnit}
 
 import akka.actor.SupervisorStrategy.Stop
 import akka.actor._
-import akka.pattern.AskSupport
 import akka.util.Timeout
 import com.typesafe.config.{Config, ConfigException}
 import gov.nasa.race._
@@ -85,12 +84,15 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ParentActor {
   var heartBeatCount: Int = 0
 
   var waiterForTerminated: Option[ActorRef] = None
+  val statsReporter: Option[ActorStatsReporter] = createStatsReporter
 
   //--- convenience funcs
   def name = self.path.name
   def simClock = ras.simClock
   def usedRemoteMasters = ras.usedRemoteMasters
   def localContext = ras.localRaceContext
+  override def system: ActorSystem = ras.system
+
 
   //context.system.eventStream.subscribe(self, classOf[DeadLetter])
 
@@ -772,6 +774,7 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ParentActor {
     ifSome(heartBeatScheduler) { sched =>
       sched.cancel
       heartBeatScheduler = None
+      ifSome(statsReporter){ _.terminate }
     }
   }
 
@@ -781,6 +784,8 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ParentActor {
 
   def onHeartBeat: Unit = {
     if (ras.isLive){
+      val reporter = if (statsReporter.isDefined) self else ActorRef.noSender
+
       processRespondingChildren { actorData =>
         val actorRef = actorData.actorRef
         val lastPingTime = actorData.pingNanos
@@ -796,17 +801,22 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ParentActor {
             }
             context.stop(actorRef) // make sure Akka doesn't schedule this actor anymore
             actorData.isUnresponsive = true
+            ifSome(statsReporter){ sp=> sp.setUnresponsive(actorRef) }
           }
         }
 
         //--- record and send the next ping
         val now = System.nanoTime
-        actorRef ! PingRaceActor(now)
+        actorRef ! PingRaceActor(now,reporter)
         actorData.pingNanos = now
       }
 
       heartBeatCount += 1
       info(s"heartbeat: $heartBeatCount")
+
+      ifSome(statsReporter){ sp=>
+        if (heartBeatCount % ras.heartBeatReport == 0) sp.report
+      }
     }
   }
 
@@ -814,20 +824,31 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ParentActor {
     processChildRef(actorRef) { actorData=>
       actorData.receivedNanos = msg.receivedNanos
     }
+
+    ifSome(statsReporter){ _.processPingActorResponse(actorRef,msg) }
   }
 
   def showActors (requester: ActorRef): Unit = {
     println(f"actors of system ${self.path}:")
+    println("  name                                                         lat [μs]       msgs")
+    println("  ----------------------------------------------------------   --------     ------")
     actors.foreach { actorData =>
       val actorRef = actorData.actorRef
       askForResult(actorRef ? ShowRaceActor(System.nanoTime)) {
         case ShowRaceActorResponse => // all Ok, next
-        case TimedOut => println(f"  ${actorRef.path.name}%50s : UNRESPONSIVE")
-        case other => println(f"  ${actorRef.path.name}%50s : wrong response ($other)")
+        case TimedOut => println(s"  ${actorRef.path.name} : UNRESPONSIVE")
+        case other => println(s"  ${actorRef.path.name} : wrong response ($other)")
       }
     }
     requester ! RaceShowCompleted
   }
 
-  override def system: ActorSystem = ras.system
+  def createStatsReporter: Option[ActorStatsReporter] = {
+    if (ras.heartBeatReport > 0) {
+      if (ras.heartBeatInterval.toMillis > 0) {
+        return Some(new ConsoleActorStatsReporter) // TODO - make this configurable
+      } else warning("option 'heartbeat-report' ignored - no 'heartbeat-interval' set")
+    }
+    None
+  }
 }

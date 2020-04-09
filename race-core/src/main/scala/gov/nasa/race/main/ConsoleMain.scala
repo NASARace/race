@@ -109,7 +109,6 @@ trait ConsoleMainBase extends MainBase {
   }
 
   def showActors(ras: RaceActorSystem): Unit = {
-    println(s"actors of universe ${ras.name}:")
     ras.showActors
   }
 
