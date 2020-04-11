@@ -432,6 +432,8 @@ trait RaceActor extends Actor with ImplicitActorLogging {
 
   @inline final def isLoggingEnabled (testLevel: LogLevel) = testLevel <= logLevel
 
+  // note also this is somewhat redundant to the LogClient trait but we need a per-actor log level, not per-adapter
+
   @inline final def debug(msg: => String): Unit = if (DebugLevel <= logLevel) system.eventStream.publish(Debug(pathString,getClass,msg))
   @inline final def info(msg: => String): Unit = if (InfoLevel <= logLevel) system.eventStream.publish(Info(pathString,getClass,msg))
   @inline final def warning(msg: => String): Unit = if (WarningLevel <= logLevel) system.eventStream.publish(Warning(pathString,getClass,msg))

@@ -17,10 +17,10 @@
 package gov.nasa.race.core
 
 import java.io.PrintStream
-import java.net.Socket
 
 import akka.actor.ActorRef
-import gov.nasa.race.common.ActorStats
+import akka.event.LoggingAdapter
+import gov.nasa.race.common.{ActorStats, SocketServer}
 import gov.nasa.race.core.Messages.PingRaceActorResponse
 import gov.nasa.race.util.ConsoleIO
 
@@ -39,51 +39,23 @@ object ActorStatsOrdering extends Ordering[ActorStats] {
 
 /**
   * object to continuously report actor stats in a console
-  *
-  * can be configured to report remotely by setting system properties `stat.console.host` and
-  * `stat.console.port`
-  *
-  * fixme - this should be a server - use ServerSocket
   */
-class ConsoleActorStatsReporter extends ActorStatsReporter {
+class ConsoleActorStatsReporter (val port: Option[Int])
+                                (implicit val log: LoggingAdapter) extends ActorStatsReporter
+                                                                with SocketServer {
 
   implicit val ord: Ordering[ActorStats] = ActorStatsOrdering
 
-  protected[this] var statStream: PrintStream = System.out
-  protected[this] var statSocket: Socket = null
+  def service: String = "actor stats reporting"
+  def fallbackStream: Option[PrintStream] = Some(System.out)
+
+  def _info(msg: => String): Unit = info(msg)
+  def _warning(msg: => String): Unit = warning(msg)
+  def _error(msg: => String): Unit = error(msg)
 
   protected[this] val actorStats = mutable.HashMap.empty[ActorRef,ActorStats]
   protected[this] val reportList = mutable.SortedSet.empty[ActorStats]
 
-  initializeStream
-
-  protected def initializeStream: Unit = {
-    // we could take this from our config since we are not going to report stats before
-    // Akka is initialized but we rather keep it consistent with logging
-    var host = System.getProperty("stat.console.host")
-    var portSpec = System.getProperty("stat.console.port")
-
-    if (host != null || portSpec != null) {
-      if (host == null) host = "127.0.0.1" // default localhost
-      if (portSpec == null) portSpec = "50005" // default port
-
-      try {
-        val port = Integer.parseInt(portSpec)
-        statSocket = new Socket(host, port)
-        statStream = new PrintStream(statSocket.getOutputStream, true)
-
-      } catch {
-        case t: Throwable =>
-          ConsoleIO.printlnErr(s"[ERROR] failed to open stat socket: ${t.getMessage}")
-          // restore fallbacks
-          if (statSocket != null) {
-            statSocket.close
-            statSocket = null
-          }
-          statStream = System.out
-      }
-    }
-  }
 
   //--- those are the two public methods
 
@@ -101,51 +73,48 @@ class ConsoleActorStatsReporter extends ActorStatsReporter {
   }
 
   def report: Unit = {
-    val out = statStream
 
-    def indent (lvl: Int): Int = {
+    def indent (ps: PrintStream, lvl: Int): Int = {
       var i=0
-      while (i<lvl) { out.print("  "); i+= 1 }
+      while (i<lvl) { ps.print("  "); i+= 1 }
       lvl * 2
     }
 
-    reportList.clear
-    actorStats.foreach{ e => reportList.addOne(e._2) }
+    ifConnected { ps =>
 
-    out.print(ConsoleIO.ClearScreen)
+      reportList.clear
+      actorStats.foreach { e => reportList.addOne(e._2) }
 
-    out.print(ConsoleIO.infoColor)
-    out.println("                                                                             latency [μs]")
-    out.println("name                                                     msgs       hb      avg    min    max     sigma")
-    out.println("--------------------------------------------------   --------   ------   ------ ------ ------   -------")
-    out.print(ConsoleIO.resetColor)
+      ps.print(ConsoleIO.ClearScreen)
+      ps.print(ConsoleIO.infoColor)
+      ps.println("                                                                             latency [μs]")
+      ps.println("name                                                     msgs       hb      avg    min    max     sigma")
+      ps.println("--------------------------------------------------   --------   ------   ------ ------ ------   -------")
+      ps.print(ConsoleIO.resetColor)
 
-    reportList.foreach { as =>
-      if (as.isUnresponsive) out.print(ConsoleIO.errorColor)
+      reportList.foreach { as =>
+        if (as.isUnresponsive) ps.print(ConsoleIO.errorColor)
 
-      var n = indent(as.level)
-      out.print(as.name)
-      n += as.name.length
-      while (n < 50) { out.print(' '); n += 1}
+        var n = indent(ps, as.level)
+        ps.print(as.name)
+        n += as.name.length
+        while (n < 50) {
+          ps.print(' ');
+          n += 1
+        }
 
-      val stats = as.latencyStats
-      out.print(f"   ${as.msgCount}%8d")
-      out.print(f"   ${stats.numberOfSamples}%6d")
-      out.print(f"   ${stats.mean / 1000}%6d")
-      out.print(f" ${stats.min / 1000}%6d")
-      out.print(f" ${stats.max / 1000}%6d")
-      out.print(f"   ${stats.sigma / 1000000}%7.2f")
-      out.println
+        val stats = as.latencyStats
+        ps.print(f"   ${as.msgCount}%8d")
+        ps.print(f"   ${stats.numberOfSamples}%6d")
+        ps.print(f"   ${stats.mean / 1000}%6d")
+        ps.print(f" ${stats.min / 1000}%6d")
+        ps.print(f" ${stats.max / 1000}%6d")
+        ps.print(f"   ${stats.sigma / 1000000}%7.2f")
+        ps.println
 
-      if (as.isUnresponsive) out.print(ConsoleIO.resetColor)
+        if (as.isUnresponsive) ps.print(ConsoleIO.resetColor)
+      }
     }
   }
 
-  def terminate: Unit = {
-    if (statSocket != null) {
-      statSocket.close
-      statSocket = null
-      statStream = System.out
-    }
-  }
 }

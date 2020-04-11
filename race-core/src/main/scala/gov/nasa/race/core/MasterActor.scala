@@ -846,7 +846,7 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ParentActor {
   def createStatsReporter: Option[ActorStatsReporter] = {
     if (ras.heartBeatReport > 0) {
       if (ras.heartBeatInterval.toMillis > 0) {
-        return Some(new ConsoleActorStatsReporter) // TODO - make this configurable
+        return Some(new ConsoleActorStatsReporter(ras.heartBeatPort)) // TODO - make this configurable
       } else warning("option 'heartbeat-report' ignored - no 'heartbeat-interval' set")
     }
     None
