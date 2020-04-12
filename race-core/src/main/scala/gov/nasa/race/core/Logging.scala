@@ -17,13 +17,14 @@
 
 package gov.nasa.race.core
 
-import java.io.PrintWriter
+import java.io.{PrintStream, PrintWriter}
 import java.net.Socket
 
 import akka.actor.{Actor, ActorRef, ActorSystem}
 import akka.dispatch.RequiresMessageQueue
 import akka.event.LoggerMessageQueueSemantics
 import akka.event.Logging._
+import gov.nasa.race.common.SocketServer
 import gov.nasa.race.util.ConsoleIO
 
 /**
@@ -96,29 +97,8 @@ object RaceLogger {
    */
   private var logActor: ActorRef = _
 
-  private var logSocket: Socket = null
-  private var logWriter: PrintWriter = null
 
-  def createDefaultLogAppender: LogAppender = {
-    // we need to take these from the environment/properties so that we can log before Akka is initialized
-    var host = System.getProperty("log.console.host")
-    var portSpec = System.getProperty("log.console.port")
-    if (host != null || portSpec != null){
-      if (host == null) host = "127.0.0.1"       // default is localhost
-      if (portSpec == null) portSpec = "20002"   // default is 20002
-
-      try {
-        val port = Integer.parseInt(portSpec)
-        logSocket = new Socket(host, port)
-        logWriter = new PrintWriter(logSocket.getOutputStream, true)
-        System.clearProperty("logback.configurationFile") // otherwise we might get logback output from 3rd party code
-        return new PrintWriterAppender(logWriter)
-      } catch {
-        case t: Throwable => ConsoleIO.printlnErr(s"[ERROR] failed to open log socket: ${t.getMessage}")
-      }
-    }
-    new StdioAppender // fallback in case we didn't configure log host/port
-  }
+  def createDefaultLogAppender: LogAppender = new ConsoleAppender
 
   def getConfigLogLevel (sys: ActorSystem, optLevel: Option[String]): Option[LogLevel] = {
     val logBus = sys.eventStream
@@ -163,8 +143,7 @@ object RaceLogger {
       logAppender.appendInfo("RACE logging terminated")
     }
 
-    if (logWriter != null) logWriter.close
-    if (logSocket != null) logSocket.close
+    logAppender.terminate
   }
 }
 import gov.nasa.race.core.RaceLogger._
@@ -199,6 +178,8 @@ trait LogAppender {
   def appendWarning (s: String): Unit
   def appendInfo (s: String): Unit
   def appendDebug (s: String): Unit
+
+  def terminate: Unit = {}
 }
 
 /**
@@ -216,4 +197,58 @@ class PrintWriterAppender (out: PrintWriter) extends LogAppender {
   override def appendWarning (s: String) = out.println(s)
   override def appendInfo (s: String) = out.println(s)
   override def appendDebug (s: String) = out.println(s)
+}
+
+/**
+  * appender that writes synchronized to a stream which can be backet by a server port
+  */
+class ConsoleAppender extends LogAppender with SocketServer {
+
+  override def service: String = "logging service"
+
+  override def port: Option[Int] = {
+    val portSpec = System.getProperty("log-port")
+    if (portSpec != null){
+      try {
+        val port = Integer.parseInt(portSpec)
+        Some(port)
+      } catch {
+        case _:Throwable =>
+          _warning(s"error parsing log port $portSpec, fall back to stdout")
+          None
+      }
+    } else None
+  }
+
+  override def fallbackStream: Option[PrintStream] = Some(System.out)
+
+  //--- those are for ConsoleServer related log messages so we have to fallback to something that works
+  override def _info(msg: => String): Unit = System.out.println(msg)
+  override def _warning(msg: => String): Unit = System.err.println(msg)
+  override def _error(msg: => String): Unit = System.err.println(msg)
+
+  //--- LogAppender interface
+
+  private var curClr: String = null
+
+  @inline private def printColoredOn(ps: PrintStream, s: String, ansiClr: String): Unit = {
+    if (ansiClr != curClr) {
+      curClr = ansiClr
+      ps.print(ansiClr)
+    }
+    ps.println(s)
+  }
+
+  override def appendError(s: String): Unit = ifConnected( printColoredOn(_,s,scala.Console.RED))
+  override def appendWarning(s: String): Unit = ifConnected( printColoredOn(_,s,scala.Console.YELLOW))
+  override def appendInfo(s: String): Unit = ifConnected( printColoredOn(_,s,scala.Console.RESET))
+  override def appendDebug(s: String): Unit = ifConnected( printColoredOn(_,s,scala.Console.RESET))
+
+  override def terminate: Unit = {
+    ifConnected { ps =>
+      ps.print(scala.Console.RESET)
+      ps.flush
+    }
+    super.terminate
+  }
 }

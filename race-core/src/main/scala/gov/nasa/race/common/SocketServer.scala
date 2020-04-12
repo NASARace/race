@@ -62,6 +62,7 @@ trait SocketServer  {
             var ssock: ServerSocket = null
             try {
               ssock = new ServerSocket(p)
+              _info(s"$service listening on port $p")
               do { //--------------------------------------------------------- begin connection loop
                 sock = ssock.accept // this blocks until a client connects
                 syncId = portSync
