@@ -83,6 +83,10 @@ object ConfigUtils {
     def getVaultStringOrElse (key: String, defaultValue: String): String = ConfigVault.getStringOrElse(key,defaultValue)
     def getOptionalVaultString (key: String): Option[String] = ConfigVault.getOptionalString(key)
 
+    // getVaultableX are used to access config options that can have values referring to
+    // vault entries (the values are strings consisting of a '??' marker followed by the
+    // respective vault key name)
+
     def getVaultableString(key: String): String = {
       val s = conf.getString(key)
       if (s.startsWith(CRYPT_MARKER)) {

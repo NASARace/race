@@ -21,19 +21,25 @@ import java.io.File
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.model.headers.{HttpCookie, `Set-Cookie`}
 import akka.http.scaladsl.server.Directives.{entity, _}
-import akka.http.scaladsl.server.Route
+import akka.http.scaladsl.server.{Route, StandardRoute}
 import com.typesafe.config.Config
 import gov.nasa.race.config.ConfigUtils._
+import gov.nasa.race.core.ParentActor
 import gov.nasa.race.util.ClassUtils
 
-import scalatags.Text.all.{span, head=>htmlHead, _}
+import scala.concurrent.duration._
+import scalatags.Text.all.{span, head => htmlHead, _}
 import scalatags.Text.attrs.{name => nameAttr}
 
 /**
-  * base type for route infos, which consist of a akka.http Route and
-  * an optional (child) RaceActor
+  * base type for route infos, which consist of a akka.http Route and an optional RaceActor
+  * to collect data used for the associated response content
+  *
+  * concrete RaceRouteInfo implementations have to provide a constructor that takes 2 args:
+  *     (parent: ParentActor, config: Config)
   */
 trait RaceRouteInfo {
+  val parent: ParentActor
   val config: Config
   def route: Route
 
@@ -41,6 +47,133 @@ trait RaceRouteInfo {
   def internalRoute = route
 
   def shouldUseHttps = false
+
+  def debug(f: => String) = gov.nasa.race.core.debug(f)(parent.log)
+  def info(f: => String) = gov.nasa.race.core.info(f)(parent.log)
+  def warning(f: => String) = gov.nasa.race.core.warning(f)(parent.log)
+  def error(f: => String) = gov.nasa.race.core.error(f)(parent.log)
+}
+
+/**
+  * common parts of interactive and automatic RACE routes that require user authorization
+  *
+  * we use a server-encrypted password store to keep a challenge-response token that is part
+  * of each request (https get) - the request is only accepted if it includes a cookie that
+  * was transmitted in the previous response
+  */
+trait AuthRaceRoute extends RaceRouteInfo {
+
+  val sessionCookieName = config.getStringOrElse("cookie-name", "ARR")
+  val cookieDomain = config.getOptionalString("cookie-domain")
+  val cookiePath = config.getOptionalString("cookie-path")
+  val expiresAfterMillis = config.getFiniteDurationOrElse("expires-after", 10.minutes).toMillis
+
+  val loginPath = name + "-login"
+  val logoutPath = name + "-logout"
+
+  // this will throw an exception if user-auth file does not exist
+  val userAuth: UserAuth = UserAuth(new File(config.getVaultableStringOrElse("user-auth", ".passwd")), expiresAfterMillis)
+
+
+  override final def shouldUseHttps = true // we transmit passwords so this has to be encrypted
+
+  //--- logout is not interactive
+
+  def logoutRoute: Route = {
+    path(logoutPath) {
+      respondWithHeader(new `Set-Cookie`(new HttpCookie(sessionCookieName, "", Some(DateTime.now - 10)))) {
+        optionalCookie(sessionCookieName) {
+          case Some(namedCookie) =>
+            userAuth.crs.removeEntry(namedCookie.value) match {
+              case Some(user) =>
+                info(s"logout for '${user.uid}' accepted")
+                complete("user logged out")
+
+              case None => completeWithFailure(StatusCodes.Forbidden, "no active session")
+            }
+          case None => completeWithFailure(StatusCodes.Forbidden, s"no user authorization for logout")
+        }
+      }
+    }
+  }
+
+  def completeWithFailure (status: StatusCode, reason: String): Route = {
+    warning(s"response failed: $reason ($status)")
+    complete(status, reason)
+  }
+
+  protected def createSessionCookie (value: String): HttpCookie = {
+    // default is we only set domain and path if they were configured, and otherwise leave
+    // it to the client to choose them if missing (acknowledging that the server might be behind
+    // a load balancing front end and hence not known to the client)
+    // override if domain or path should be hardwired
+    new HttpCookie(sessionCookieName, value, domain = cookieDomain, path = cookiePath, secure = true)
+  }
+}
+
+/**
+  * a RaceRouteInfo that assumes a {auto-login, data, ..., auto-logout} sequence without
+  * manual interaction (hence no redirection or login/logout dialogs and resources)
+  *
+  * user authentication and session validation are the same as for manual auth
+  */
+trait AutoAuthorizedRaceRoute extends AuthRaceRoute {
+
+  override def internalRoute = {
+    route ~ loginRoute ~ logoutRoute
+  }
+
+  def completeAuthorized(requiredRole: String)(createResponseContent: => HttpEntity.Strict): Route = {
+    extractMatchedPath { requestUri =>
+      cookie(sessionCookieName) { namedCookie =>
+        userAuth.crs.replaceExistingEntry(namedCookie.value, requiredRole) match {
+          case Right(newToken) =>
+            respondWithHeader(new `Set-Cookie`(createSessionCookie(newToken))) {
+              complete(createResponseContent)
+            }
+          case Left(rejection) =>
+            complete(StatusCodes.Forbidden, s"invalid session token: $rejection")
+        }
+      } ~ complete(StatusCodes.Forbidden, "no user authorization found")
+    }
+  }
+
+  /**
+    * a login without retries or redirects
+    */
+  def loginRoute: Route = {
+    post {
+      path(loginPath) {
+        entity(as[FormData]) { e =>
+          val validRequestResponse = for (
+            uid <- e.fields.get("u");
+            pw <- e.fields.get("p")
+          ) yield {
+            if (userAuth.isLoggedIn(uid)) {
+              warning(s"attempted login of '$uid' despite active session")
+              complete(StatusCodes.Forbidden, "user is logged in")
+
+            } else {
+              userAuth.login(uid, pw.toCharArray) match {
+                case Some(newToken) => // accept
+                  respondWithHeader(new `Set-Cookie`(createSessionCookie(newToken))) {
+                    info(s"login for '$uid' accepted")
+                    complete(StatusCodes.OK, "user accepted")
+                  }
+
+                case None => // reject
+                  complete(StatusCodes.Forbidden, "unknown user or wrong password")
+              }
+            }
+          }
+
+          validRequestResponse getOrElse {
+            complete(StatusCodes.BadRequest, "invalid request")
+          }
+        }
+      }
+    }
+  }
 }
 
 /**
@@ -50,21 +183,14 @@ trait RaceRouteInfo {
   * NOTE: UserAuth objects are shared if they refer to the same password file, which
   * has to exist or instantiation of the route is throwing an exception
   */
-trait AuthorizedRaceRoute extends RaceRouteInfo {
-  // this will throw an exception if user-auth file does not exist
-  val userAuth: UserAuth = UserAuth(new File(config.getVaultableStringOrElse("user-auth", ".passwd")))
+trait AuthorizedRaceRoute extends AuthRaceRoute {
 
-  val loginPath = name + "-login"
-  val logoutPath = name + "-logout"
-
+  //--- resources used in login dialog
   val cssPath = loginPath + ".css"
   val cssData = loginCSS
   val avatarPath = "login-users.svg"
   val avatarData = avatarImage
 
-  val sessionCookieName = "oatmeal"
-
-  override final def shouldUseHttps = true
 
   override def internalRoute = {
     route ~ loginRoute ~ resourceRoute ~ logoutRoute
@@ -79,25 +205,30 @@ trait AuthorizedRaceRoute extends RaceRouteInfo {
             uid <- e.fields.get("u");
             pw <- e.fields.get("p")
           ) yield {
-            userAuth.login(uid,pw.toCharArray) match {
-              case Some(newToken) =>
-                val response = html(
-                  header(meta(httpEquiv := "refresh", content := s"0; url=$requestUri")),
-                  body( "if not redirected automatically, follow ",
-                    a(href:=requestUri)("this link to get back")
-                  )
-                )
-                respondWithHeader(new `Set-Cookie`(new HttpCookie(sessionCookieName, newToken))) {
-                  complete(HttpEntity(ContentTypes.`text/html(UTF-8)`, response.render))
-                }
+            if (userAuth.isLoggedIn(uid)) {
+              complete(StatusCodes.Forbidden, "user is logged in")
 
-              case None => // unknown user or invalid pw
-                userAuth.remainingLoginAttempts(uid) match {
-                  case -1 => completeLogin(requestUri, Some("unknown user id"))
-                  case 0 => complete(StatusCodes.Forbidden, "user has exceeded login attempts")
-                  case 1 => completeLogin(requestUri, Some(s"invalid password, ONLY 1 ATTEMPT LEFT!"))
-                  case n => completeLogin(requestUri, Some(s"invalid password, $n attempts remaining"))
-                }
+            } else {
+              userAuth.login(uid, pw.toCharArray) match {
+                case Some(newToken) =>
+                  val response = html(
+                    header(meta(httpEquiv := "refresh", content := s"0; url=$requestUri")),
+                    body("if not redirected automatically, follow ",
+                      a(href := requestUri)("this link to get back")
+                    )
+                  )
+                  respondWithHeader(new `Set-Cookie`(createSessionCookie(newToken))) {
+                    complete(HttpEntity(ContentTypes.`text/html(UTF-8)`, response.render))
+                  }
+
+                case None => // unknown user or invalid pw
+                  userAuth.remainingLoginAttempts(uid) match {
+                    case -1 => completeLogin(requestUri, Some("unknown user id"))
+                    case 0 => complete(StatusCodes.Forbidden, "user has exceeded login attempts")
+                    case 1 => completeLogin(requestUri, Some(s"invalid password, ONLY 1 ATTEMPT LEFT!"))
+                    case n => completeLogin(requestUri, Some(s"invalid password, $n attempts remaining"))
+                  }
+              }
             }
           }
 
@@ -105,14 +236,6 @@ trait AuthorizedRaceRoute extends RaceRouteInfo {
             complete(StatusCodes.BadRequest, "invalid request")
           }
         }
-      }
-    }
-  }
-
-  def logoutRoute: Route = {
-    path(logoutPath) {
-      respondWithHeader(new `Set-Cookie`(new HttpCookie(sessionCookieName, "", Some(DateTime.now - 10)))) {
-        completeLogout
       }
     }
   }
@@ -146,15 +269,7 @@ trait AuthorizedRaceRoute extends RaceRouteInfo {
     complete(StatusCodes.Unauthorized, HttpEntity(ContentTypes.`text/html(UTF-8)`, page))
   }
 
-  def completeLogout: Route = {
-    cookie(sessionCookieName) { namedCookie =>
-      if (userAuth.crs.removeEntry(namedCookie.value)) {
-        complete("user logged out")
-      } else {
-        complete("no active session")
-      }
-    }
-  }
+
 
   //--- HTML artifacts
 

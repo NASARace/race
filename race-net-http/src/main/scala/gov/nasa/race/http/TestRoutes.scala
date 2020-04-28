@@ -42,6 +42,22 @@ class TestRouteInfo (val parent: ParentActor, val config: Config) extends RaceRo
   }
 }
 
+class TestAutoAuthorized (val parent: ParentActor, val config: Config) extends AutoAuthorizedRaceRoute {
+  val request = config.getStringOrElse("request", "autoSecret")
+  var count = 0
+
+  override def route = {
+    path(request) {
+      get {
+        completeAuthorized(User.UserRole){
+          count += 1
+          HttpEntity(ContentTypes.`application/json`, s"""{ "count": $count }""")
+        }
+      }
+    }
+  }
+}
+
 class TestAuthorized (val parent: ParentActor, val config: Config) extends AuthorizedRaceRoute {
   val request = config.getStringOrElse("request", "secret")
   var count = 0

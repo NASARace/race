@@ -94,7 +94,7 @@ class ArrowIcon (val direction: Direction,
     }
 
     g.setColor(strokeColor)
-    if (strokeWidth > 1) g.setStroke(new BasicStroke((strokeWidth)))
+    if (strokeWidth > 1) g.setStroke(new BasicStroke((strokeWidth.toFloat)))
     g.draw(shape)
 
     image
@@ -109,14 +109,14 @@ class ArrowIcon (val direction: Direction,
 
   def createShape = {
     // (0,0) is upper left
-    val size2 = size / 2
-    val y = size / 4
+    val size2 = (size / 2).toFloat
+    val y = (size / 4).toFloat
     val w = size2 * 2 - 1 // needs to be odd
 
     val shape = new Path2D.Float
     shape.moveTo( 1,         y)             // left origin
     shape.lineTo( 1+w,       y)             // right
-    shape.lineTo( size2,     size -1)       // bottom
+    shape.lineTo( size2,     size -1.0)       // bottom
     shape.lineTo( 1,         y)             // and close
     shape
   }

@@ -21,9 +21,13 @@ import java.util.Base64
 
 /**
   * a map that keeps track of (token -> User) pairs. Tokens can be thought of as single request
-  * passwords, i.e. each accepted challenge returns a new one
+  * passwords, i.e. each accepted challenge returns a new one. We also keep track of when the
+  * last token was issued so that we can check if it is expired
   *
   * Used e.g. for user auth in RESTful APIs (to obtain Cookie values)
+  *
+  * Note that we currently just support one login per user, i.e. the same user cannot be logged in
+  * in several roles
   */
 class ChallengeResponseSequence (val byteLength: Int = 64, val expiresAfterMillis: Long=1000*300) {
   private var map: Map[String,(User,Long)] = Map.empty
@@ -31,6 +35,28 @@ class ChallengeResponseSequence (val byteLength: Int = 64, val expiresAfterMilli
   val encoder = Base64.getEncoder
   val random = new SecureRandom
   private val buf = new Array[Byte](byteLength)
+
+  /**
+    * reverse lookup to see if a given uid has a valid token entry, which means the user did
+    * a proper login and has not logged out yet.
+    * Note this is not efficient since it is O(N)
+    */
+  def entryForUid (uid: String): Option[(User,Long)] = {
+    map.foreach { e =>
+      if (e._2._1.uid == uid) return Some(e._2)
+    }
+    None
+  }
+
+  def isLoggedIn (uid: String): Boolean = {
+    map.foreach { e =>
+      val user = e._2._1
+      if (user.uid == uid) { // found user but check if last token has expired (user forgot to log out)
+        return ((System.currentTimeMillis - e._2._2)) < expiresAfterMillis
+      }
+    }
+    false // no entry for uid
+  }
 
   def addNewEntry (user: User): String = synchronized {
     random.nextBytes(buf)
@@ -45,10 +71,13 @@ class ChallengeResponseSequence (val byteLength: Int = 64, val expiresAfterMilli
     map.size < n
   }
 
-  def removeEntry (oldToken: String): Boolean = synchronized {
-    val n = map.size
-    map = map - oldToken
-    map.size < n
+  def removeEntry (oldToken: String): Option[User] = synchronized {
+    map.get(oldToken) match {
+      case Some(e) =>
+        map = map - oldToken
+        Some(e._1)
+      case None => None
+    }
   }
 
   private def isExpired(t: Long): Boolean = (System.currentTimeMillis - t) > expiresAfterMillis

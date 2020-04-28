@@ -104,7 +104,7 @@ package object common {
 
   @inline def mind(a: Double, b: Double): Double = Math.min(a,b)
   @inline def mind(a: Double, b: Double, c: Double): Double = Math.min( Math.min(a,b), c)
-  @inline def mind(a: Double, b: Double, c: Double, d: Long): Double = Math.min( Math.min( Math.min(a,b),c), d)
+  @inline def mind(a: Double, b: Double, c: Double, d: Double): Double = Math.min( Math.min( Math.min(a,b),c), d)
 
   @inline def maxl(a: Long, b: Long): Long = Math.max(a,b)
   @inline def maxl(a: Long, b: Long, c: Long): Long = Math.max( Math.max(a,b), c)
@@ -112,7 +112,7 @@ package object common {
 
   @inline def maxd(a: Double, b: Double): Double = Math.max(a,b)
   @inline def maxd(a: Double, b: Double, c: Double): Double = Math.max( Math.max(a,b), c)
-  @inline def maxd(a: Double, b: Double, c: Double, d: Long): Double = Math.max( Math.max( Math.max(a,b), c), d)
+  @inline def maxd(a: Double, b: Double, c: Double, d: Double): Double = Math.max( Math.max( Math.max(a,b), c), d)
 
   @inline def constrainTo (d: Double, dMin: Double, dMax: Double): Double = {
     if (d < dMin) dMin

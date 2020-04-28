@@ -38,7 +38,7 @@ class SmoothingExtrapolator (ΔtAverage: FiniteDuration = 1.second,     // avera
   private var tlast: Long = -1    // previous observation time in msec
   private var Δtlast: Double = 0  // in sec
 
-  private final val tscale = 10.0 ** Math.round(Math.log10(ΔtAverage.toMillis))
+  private final val tscale = 10.0 ** Math.round(Math.log10(ΔtAverage.toMillis.toDouble)).toDouble
 
   private var α: Double = α0  // level smoothing factor [0..1]
   private var γ: Double = γ0  // trend smoothing factor [0..1]
@@ -97,7 +97,7 @@ class SmoothingVectorExtrapolator (dim: Int,                                 // 
   private var tlast: Long = -1 // previous observation time in msec
   private var Δtlast: Double = 0 // in sec
 
-  private final val tscale = 10.0 ** Math.round(Math.log10(ΔtAverage.toMillis))
+  private final val tscale = 10.0 ** Math.round(Math.log10(ΔtAverage.toMillis.toDouble)).toDouble
 
   private var α: Array[Double] = Array.fill(dim)(α0)  // level smoothing factor [0..1]
   private var γ: Array[Double] = Array.fill(dim)(γ0)  // trend smoothing factor [0..1]

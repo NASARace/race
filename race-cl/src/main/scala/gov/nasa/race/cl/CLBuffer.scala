@@ -241,7 +241,7 @@ trait CLIntBuffer extends CLByteBuffer {
 }
 trait CLFloatBuffer extends CLByteBuffer {
   def apply (i: Int): Float = buf.getFloat(i*4)
-  def update (i: Int, v: Int): Unit = buf.putFloat(i*4, v)
+  def update (i: Int, v: Int): Unit = buf.putFloat(i*4, v.toFloat)
   override def length: Int = buf.capacity / 4
   def put(a: Array[Float]): Unit = buf.asFloatBuffer.put(a,0,a.length)
   def put(a: Array[Float], off: Int, len: Int): Unit = buf.asFloatBuffer.put(a,off,len)

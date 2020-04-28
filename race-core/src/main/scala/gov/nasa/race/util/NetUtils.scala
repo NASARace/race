@@ -64,6 +64,33 @@ object NetUtils {
 
   def isLocalhost(hostname: String) = hostname == "localhost" || hostname == "127.0.0.1"
 
+  def isHostInDomain (hostName: String, domainName: String): Boolean = {
+    if (hostName.endsWith(domainName)) {
+      if (hostName.length == domainName.length) {
+        true
+      } else {
+        hostName.charAt(hostName.length - domainName.length -1) == '.'
+      }
+    } else {
+      false
+    }
+  }
+
+  def isPathInParent (path: String, parent: String): Boolean = {
+    if (path.startsWith(parent)) {
+      if (path.length == parent.length) {
+        true
+      } else {
+        if (parent.charAt(parent.length-1) == '/' && path.charAt(parent.length-1) == '/'){
+          true
+        } else {
+          path.charAt(parent.length) == '/'
+        }
+      }
+    } else {
+      false
+    }
+  }
 
   //--- socket functions
 

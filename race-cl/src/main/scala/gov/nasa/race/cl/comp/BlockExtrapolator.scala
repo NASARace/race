@@ -58,7 +58,7 @@ class BlockExtrapolator (val maxEntries: Int,             // maximum number of e
   final val outRecordLength = 8 + 16*nStates  // tLast + (s,m)*nStates
   final val inRecordLength = 8*nStates     // state estimates
 
-  final val tScale = 10.0 ** Math.round(Math.log10(ΔtAverage.toMillis))
+  final val tScale = 10.0 ** Math.round(Math.log10(ΔtAverage.toMillis.toDouble)).toDouble
 
   var topIndex = -1 // highest used index
   var freeList = List.empty[Int]

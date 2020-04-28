@@ -153,7 +153,7 @@ class SbsReplayActor(val config: Config) extends Replayer[SBSReader] with Period
 
   override def createReader = new DropCheckSBSReader(config) // note this is called during ReplayActor init so don't rely on SBSReplayActor ctor
 
-  val dropAfter = Milliseconds(config.getFiniteDurationOrElse("drop-after", Duration.Zero).toMillis) // this is sim-time. Zero means don't check for drop
+  val dropAfter = Milliseconds(config.getFiniteDurationOrElse("drop-after", Duration.Zero).toMillis.toInt) // this is sim-time. Zero means don't check for drop
   override def startScheduler = if (dropAfter.nonZero) super.startScheduler  // only start scheduler if we have drop checks
   override def defaultTickInterval = 30.seconds  // wall clock time
   override def onRaceTick: Unit = reader.dropStale(updatedSimTime,dropAfter) // FIXME

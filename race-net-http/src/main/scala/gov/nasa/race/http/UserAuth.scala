@@ -19,14 +19,17 @@ package gov.nasa.race.http
 import java.io.File
 
 object UserAuth {
+  // we keep a map of currently loaded files so that we don't end in force fights if
+  // two clients use the same password file. This is critical since we use
+  // challenge/response token sequences for authenticated routes
   private var map: Map[File,UserAuth] = Map.empty
 
-  def apply(userFile: File): UserAuth = {
+  def apply(userFile: File, expiresAfterMillis: Long): UserAuth = {
     map.get(userFile) match {
       case Some(userAuth) => userAuth
       case None =>
         if (userFile.isFile) { // add a new entry
-          val userAuth = new UserAuth(new PasswordStore(userFile),new ChallengeResponseSequence)
+          val userAuth = new UserAuth(new PasswordStore(userFile),new ChallengeResponseSequence(64,expiresAfterMillis))
           map = map + (userFile -> userAuth)
           userAuth
         } else {
@@ -44,4 +47,6 @@ case class UserAuth (pwStore: PasswordStore, crs: ChallengeResponseSequence) {
   @inline def login (uid: String, pw: Array[Char]): Option[String] = pwStore.verify(uid,pw).map(crs.addNewEntry)
 
   def remainingLoginAttempts(uid: String) = pwStore.remainingLoginAttempts(uid)
+
+  def isLoggedIn (uid: String): Boolean = crs.isLoggedIn(uid)
 }

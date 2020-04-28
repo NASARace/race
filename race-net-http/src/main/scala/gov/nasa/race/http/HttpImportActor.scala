@@ -32,11 +32,11 @@ import gov.nasa.race._
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.Messages.{BusEvent, RaceTick}
 import gov.nasa.race.core.{PeriodicRaceActor, PublishingRaceActor, RaceContext, SubscribingRaceActor}
-import gov.nasa.race.util.StringUtils
+import gov.nasa.race.util.{NetUtils, StringUtils}
 
 import scala.annotation.tailrec
 import scala.collection.mutable
-import scala.collection.mutable.{Map => MMap}
+import scala.collection.mutable.{ArrayBuffer, Map => MMap}
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future, TimeoutException}
 
@@ -61,24 +61,67 @@ object HttpImportActor {
   }
 }
 
-case class PendingRequest (id: Int, request: HttpRequest, responseFuture: Future[HttpResponse])
+/**
+  * utility construct to keep track of requests and associated futures
+  */
+case class PendingRequest (id: Int, request: HttpRequest, responseFuture: Future[HttpResponse]) {
+  override def toString: String = s"${request.method} ${request.uri}"
+}
+
+/**
+  * utility construct to store cookies received in responses
+  */
+case class SetCookie (domain: String, path: String, name: String, private var _value: String) {
+  private var _cookieHdr: Cookie = Cookie(name,_value)
+
+  def cookieHdr = _cookieHdr
+
+  def value = _value
+  def value_= (newVal: String): Unit = {
+    _value = newVal
+    _cookieHdr = Cookie(name,newVal)
+  }
+
+  /**
+    * this is used to find out if we have to add an existing SetCookie or just update its value
+    * There is no domain or path expansion check - only cookies that had the same selectors are updated
+    */
+  @inline def isSame (cookieDomain: String, cookiePath: String, cookieName: String): Boolean = {
+    (domain == cookieDomain) && (path == cookiePath) && (name == cookieName)
+  }
+
+  /**
+    * this is used to check if a SetCookie should be sent with a request to a given uri
+    */
+  def isMatching (uri: Uri): Boolean = {
+    val reqHost = uri.authority.host.address
+    val reqPath = uri.path.toString
+
+    NetUtils.isHostInDomain(reqHost,domain) && NetUtils.isPathInParent(reqPath,path)
+  }
+}
 
 /**
   * import actor that publishes responses for configured, potentially periodic http requests
+  *
+  * This actor is supposed to be used for a single site so that we can have (optional) login/logout
+  * requests and also keep track of which cookies to include in requests
   */
 class HttpImportActor (val config: Config) extends PublishingRaceActor
                                    with SubscribingRaceActor  with PeriodicRaceActor {
   import akka.pattern.pipe
   import context.dispatcher
 
+  val responseTimeout: FiniteDuration = config.getFiniteDurationOrElse("response-timeout", 5.seconds)
+
   val loginRequest: Option[HttpRequest] = config.getOptionalConfig("login-request").flatMap(HttpRequestBuilder.get)
+  val logoutRequest: Option[HttpRequest] = config.getOptionalConfig("logout-request").flatMap(HttpRequestBuilder.get)
+
   var waitForLoginResponse = loginRequest.isDefined
   var nRequests: Int = 0
 
-  // domain -> reverse-path -> name -> value
-  // can change with every response so we keep it mutable
-  // safe to be mutable since it is only accessed from inside this actor
-  val cookieMap: MMap[String, MMap[Path, MMap[String,Cookie]]] = MMap.empty
+  // populated by 'Set-Cookie' header entries in responses
+  val setCookies: ArrayBuffer[SetCookie] = ArrayBuffer.empty
 
   // do we allow several pending requests
   val coalesce: Boolean = config.getBooleanOrElse("coalesce", true)
@@ -109,14 +152,21 @@ class HttpImportActor (val config: Config) extends PublishingRaceActor
   // if no explicit interval is set this is a one-time request
   override def defaultTickInterval: FiniteDuration = 0.seconds
 
-  def sendRequest (request: HttpRequest) = {
+  def sendReq (request: HttpRequest): PendingRequest = {
     val req = addRequestCookies(request)
-    info(s"sending http request to ${req.uri.authority}${req.uri.path}") // don't log credentials!
+    info(s"sending http request to ${req.uri}") // don't log credentials!
     val responseFuture: Future[HttpResponse] = http.singleRequest(req, settings = clientSettings)
     nRequests += 1
-    val pr = PendingRequest(nRequests,request,responseFuture)
+    PendingRequest(nRequests,req,responseFuture)
+  }
+
+  def sendRequest (request: HttpRequest) = {
+    val pr = sendReq(request)
     pendingRequests += pr
-    responseFuture.map( resp=> (pr,resp)).pipeTo(self)
+    pr.responseFuture.map{ resp=>
+      pendingRequests -= pr
+      (pr,resp)
+    }.pipeTo(self)
   }
 
   def sendRequests = {
@@ -127,37 +177,40 @@ class HttpImportActor (val config: Config) extends PublishingRaceActor
     }
   }
 
-  def addRequestCookies (request: HttpRequest): HttpRequest = {
-    val cookies = getMatchingCookies(request.uri)
-    if (cookies.nonEmpty) request.mapHeaders( hdrs => cookies ++ hdrs) else request
+  def updateSetCookies (cookie: HttpCookie, req: PendingRequest): Unit = {
+    val domain = cookie.domain.getOrElse(req.request.uri.authority.host.toString)
+    val path = cookie.path.getOrElse("/")
+    val name = cookie.name
+    val value = cookie.value
+
+    var i=0
+    while (i < setCookies.length) {
+      val sc = setCookies(i)
+      if (sc.isSame(domain,path,name)) { // existing one - just update the value
+        sc.value = value
+        info(f"updated cookie value $domain:$path:$name =  $value%20.20s..")
+        return
+      }
+      i += 1
+    }
+
+    info(f"added cookie value $domain:$path:$name =  $value%20.20s..")
+    setCookies += SetCookie(domain,path,name,value)
   }
 
-  // find the longest matching path
-  def getMatchingCookies (uri: Uri): List[Cookie] = {
-    @tailrec def lookup (pathMap: MMap[Path, MMap[String,Cookie]], p: Path): List[Cookie] = {
-      pathMap.get(p) match {
-        case Some(cookies) => cookies.values.toList
-        case None => if (p.isEmpty) List.empty else lookup(pathMap,p.tail)
+
+  def addRequestCookies (request: HttpRequest): HttpRequest = {
+    var reqWithCookies = request
+    val uri = request.uri
+
+    setCookies.foreach { sc=>
+      if (sc.isMatching(uri)) {
+        info(f"adding request cookie ${sc.domain}:${sc.path}:${sc.name} =  ${sc.value}%20.20s..")
+        reqWithCookies = reqWithCookies.withHeaders(sc.cookieHdr)
       }
     }
 
-    if (cookieMap.isEmpty) {
-      List.empty  // no cookies at all
-
-    } else {
-      cookieMap.get(uri.authority.host.address) match {
-        case Some(pathMap) =>
-          if (pathMap.size == 1 && pathMap.contains(RootPath)){ // all-matcher, no need to iterate
-            pathMap(RootPath).values.toList
-
-          } else {
-            // note we store paths in reverse so that we can iterate with tail
-            lookup(pathMap, uri.path.reverse)
-          }
-
-        case None => List.empty // no cookies for this domain
-      }
-    }
+    reqWithCookies
   }
 
   override def onRaceTick: Unit = sendRequests
@@ -168,59 +221,51 @@ class HttpImportActor (val config: Config) extends PublishingRaceActor
     case BusEvent(_,SendNewHttpRequest(request),_) =>
       if (isLive) sendRequest(request)
 
-    case (pr:PendingRequest, resp@HttpResponse(code, headers, entity, _)) =>
-      pendingRequests -= pr
-
-      if (code == StatusCodes.OK) {
-        if (isLive) {
-          headers.foreach { h =>
-            h match {
-              case `Set-Cookie`(cookie) =>
-                for (
-                  domain <- cookie.domain;
-                  path <- cookie.path
-                ) {
-                  val name = cookie.name
-                  val value = cookie.value
-                  val cookieHdr = Cookie(name, value)
-
-                  val domainMap = cookieMap.getOrElseUpdate(domain, MMap.empty)
-                  val pathMap = domainMap.getOrElseUpdate(Path(path).reverse, MMap.empty)
-                  pathMap += (name -> cookieHdr)
-                  info(f"adding cookie for $domain$path: $name=$value%20.20s..")
-                }
-              case other => debug(s"ignored http header: $other")
-            }
-          }
-
-          if (waitForLoginResponse) {
-            waitForLoginResponse = false
-            firstRequest
-
-          } else {
-            entity.dataBytes.runFold(ByteString(""))(_ ++ _).foreach { processResponseData }
-          }
-
-        } else { // not alive, discard
-          resp.discardEntityBytes()
-        }
-
-      } else { // request failed
-        warning("Request failed, response code: " + code)
-        if (log.isDebugEnabled) {
-          entity.dataBytes.runFold(ByteString(""))(_ ++ _).foreach { body =>
-            debug(f"response: ${body.utf8String}%40.40s..")
-          }
-        } else {
-          resp.discardEntityBytes()
-        }
-      }
+    case (pr:PendingRequest, resp:HttpResponse) =>
+      processResponse(pr, resp)
 
     case Failure(reason) =>
       info(s"request failed for reason: $reason") // should this be a warning?
   }
 
-  // override if we need to publish translated objects
+  protected def processResponse (req: PendingRequest, resp: HttpResponse): Unit = {
+    if (resp.status == StatusCodes.OK) {
+      if (isLive) {
+        resp.headers.foreach { h =>
+          h match {
+            case `Set-Cookie`(cookie) => updateSetCookies(cookie,req)
+            case other => debug(s"ignored http header: $other")
+          }
+        }
+
+        if (waitForLoginResponse && isLive) {
+          waitForLoginResponse = false
+          scheduleRequests
+
+        } else {
+          resp.entity.dataBytes.runFold(ByteString(""))(_ ++ _).foreach { processResponseData }
+        }
+
+      } else { // not alive, discard
+        resp.discardEntityBytes()
+      }
+
+    } else { // request failed
+      warning("Request failed, response code: " + resp.status)
+      if (log.isDebugEnabled) {
+        resp.entity.dataBytes.runFold(ByteString(""))(_ ++ _).foreach { body =>
+          debug(f"response: ${body.utf8String}%40.40s..")
+        }
+      } else {
+        resp.discardEntityBytes()
+      }
+    }
+  }
+
+  /**
+    * this is the main extension point for publishing
+    * override to translate the body data synchronously, which can also avoid copying the content
+    */
   protected def processResponseData(body: ByteString): Unit = {
     if (publishAsBytes) {
       val msg = body.toArray
@@ -257,34 +302,56 @@ class HttpImportActor (val config: Config) extends PublishingRaceActor
           waitForLoginResponse = true
           sendRequest(req)
 
-        case None => firstRequest
+        case None => scheduleRequests
       }
     }
   }
 
-  def firstRequest = {
+  def scheduleRequests = {
     if (tickInterval.length > 0) {
       if (requests.nonEmpty) startScheduler // otherwise there is no point scheduling
     } else {
-      requests.foreach(sendRequest)
+      requests.foreach(sendRequest) // send data request(s) once
     }
   }
 
   override def onTerminateRaceActor(originator: ActorRef): Boolean = {
-    stopScheduler
-    pendingRequests.foreach { pr =>
-      info(s"dropping pending request ${pr.request.method} : ${pr.request.uri}")
-      pr.request.discardEntityBytes(materializer)
-      pr.responseFuture.onComplete{ _.get.discardEntityBytes() }
 
-      try {
-        Await.ready(pr.responseFuture, 3.seconds) // give akka some time to complete
-      } catch {
-        case x: TimeoutException => // nothing we can do
+    def waitForPending (pr: PendingRequest): Unit = {
+      info(s"waiting for pending request $pr")
+
+      waitForCompletion(pr.responseFuture, responseTimeout) {
+        warning(s"pending requests did not complete in $responseTimeout, discarding")
+        pr.request.discardEntityBytes(materializer)
+        pr.responseFuture.onComplete{ _.get.discardEntityBytes() }
       }
     }
+
+    stopScheduler // no more new data requests
+
+    //--- finish/drop pending requests
+    pendingRequests.foreach(waitForPending)
     pendingRequests.clear
+
+    // logout is different - make sure it is processed here because we might not come back to handleMessage
+    ifSome(logoutRequest) { r =>
+      val pr = sendReq(r)
+      pr.responseFuture.onComplete { tr =>
+        if (tr.isSuccess) processResponse(pr, tr.get)
+      }
+      waitForPending(pr)
+    }
+
     HttpImportActor.unregisterLive(this)
     super.onTerminateRaceActor(originator)
+  }
+
+  def waitForCompletion(reqFuture: Future[HttpResponse], to: FiniteDuration)(failAction: =>Unit): Unit = {
+    try {
+      Await.ready(reqFuture, to) // give akka some time to complete
+    } catch {
+      case x: TimeoutException => // nothing we can do
+        failAction
+    }
   }
 }

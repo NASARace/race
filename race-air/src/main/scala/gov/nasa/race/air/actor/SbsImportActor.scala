@@ -90,7 +90,7 @@ class SbsDataAcquisitionThread(socket: Socket, bufLen: Int, dropDuration: Finite
                                updateFunc: TrackedObject=>Boolean,
                                dropFunc: (String,String,DateTime,Time)=>Unit) extends SocketDataAcquisitionThread(socket) {
 
-  val dropAfter = Milliseconds(dropDuration.toMillis)
+  val dropAfter = Milliseconds(dropDuration.toMillis.toInt)
   val checkAfter = dropAfter/2
   var lastDropCheck = UndefinedDateTime
 

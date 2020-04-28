@@ -81,7 +81,7 @@ class RaceWWView extends BasicOrbitView {
 
   def computeBoundaryElevation: Double = RE/sin(α) - RE  // spherical approximation
 
-  def computeMaxDepthBufferDist: Double = (1L << dc.getGLRuntimeCapabilities.getDepthBits) -1
+  def computeMaxDepthBufferDist: Double = (1L << dc.getGLRuntimeCapabilities.getDepthBits) -1.0
 
   /**
     *

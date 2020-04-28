@@ -70,7 +70,7 @@ trait HtmlTimeSeriesStats[O <: Dated,E <: TSEntryData[O]] extends TimeSeriesStat
       case Some(bc) if bc.numberOfSamples > 0 =>
         def dataset = {
           val ds = new XYSeries("updates")
-          bc.processBuckets { (i, count) => ds.add(Math.round(i * bc.bucketSize / 1000), count) }
+          bc.processBuckets { (i, count) => ds.add(Math.round(i * bc.bucketSize / 1000).toDouble, count) }
           val sc = new XYSeriesCollection
           sc.addSeries(ds)
           new XYBarDataset(sc, 10.0)

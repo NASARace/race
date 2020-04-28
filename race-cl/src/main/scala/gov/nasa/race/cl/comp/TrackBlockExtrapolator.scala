@@ -65,7 +65,7 @@ class TrackBlockExtrapolator (val queue: CLCommandQueue,
                               val α0: Double,                  // level seed
                               val γ0: Double                   // trend seed
                              ) {
-  val tScale = 10.0 ** Math.round(Math.log10(ΔtAverage.toMillis))
+  val tScale = 10.0 ** Math.round(Math.log10(ΔtAverage.toMillis.toDouble)).toDouble
   var topIndex = -1 // highest used block record index (blocks are dense - we move the highest entry upon removal)
 
   val seBuffer = queue.context.createMappedRecordBuffer(maxTracks, new TrackSERecord(_))

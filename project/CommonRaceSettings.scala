@@ -7,7 +7,7 @@ import sbt.{Keys, StdoutOutput, _}
   */
 object CommonRaceSettings {
 
-  val scalaVer = "2.13.1" // keep it as a ordinary var for libs that are Scala version dependent (e.g. scala-reflect)
+  val scalaVer = "2.13.2" // keep it as a ordinary var for libs that are Scala version dependent (e.g. scala-reflect)
 
   lazy val commonRaceSettings =
       PluginSettings.pluginSettings ++
@@ -17,17 +17,16 @@ object CommonRaceSettings {
         scalacOptions ++= Seq("-unchecked", "-deprecation", "-feature"
           , "-target:9"
           //, "-opt-warnings"
-//!!! scalac 2.13.1 optimizer does not work with JDK13+ (see #11671) - reinstate when 2.13.2 becomes available
-//          , "-opt:l:method"               // enables all intra-method optimizations
-//          , "-opt:l:inline"
+          , "-opt:l:method"               // enables all intra-method optimizations
+          , "-opt:l:inline"
           // NOTE - apart from 'sources' this should be used sparingly since it (transitively) breaks incremental compilation
-//          , "-opt-inline-from:<sources>"
-//          , "-opt-inline-from:gov.nasa.race.common.Slice"
-//          , "-opt-inline-from:gov.nasa.race.common.RangeStack"
-//          , "-opt-inline-from:gov.nasa.race.common.RichDouble"
-//          , "-opt-inline-from:gov.nasa.race.geo.LatLon"
-//          , "-opt-inline-from:gov.nasa.race.uom.Angle"
-//          , "-opt-inline-from:gov.nasa.race.uom.Length"
+          , "-opt-inline-from:<sources>"
+          , "-opt-inline-from:gov.nasa.race.common.Slice"
+          , "-opt-inline-from:gov.nasa.race.common.RangeStack"
+          , "-opt-inline-from:gov.nasa.race.common.RichDouble"
+          , "-opt-inline-from:gov.nasa.race.geo.LatLon"
+          , "-opt-inline-from:gov.nasa.race.uom.Angle"
+          , "-opt-inline-from:gov.nasa.race.uom.Length"
         ),
         resolvers ++= Dependencies.dependencyResolvers,
 

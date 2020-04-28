@@ -55,7 +55,7 @@ object Dependencies {
   val scalaReflect =  "org.scala-lang" % "scala-reflect" % CommonRaceSettings.scalaVer
 
   //--- scalaTags HTML generator
-  val scalaTags = "com.lihaoyi" %% "scalatags" % "0.8.6"
+  val scalaTags = "com.lihaoyi" %% "scalatags" % "0.9.0"
 
   //--- scala automatic resource management (https://github.com/jsuereth/scala-arm)
   //val scalaArm = "com.jsuereth" %% "scala-arm" % "2.0"
@@ -111,7 +111,7 @@ object Dependencies {
   val jsch = "com.jcraft" % "jsch" % "0.1.55"
 
   //--- argon2 based password hashes ()
-  val argon2 = "de.mkammerer" % "argon2-jvm" % "2.6"
+  val argon2 = "de.mkammerer" % "argon2-jvm" % "2.7"
 
   //--- Akka
   val akkaVersion = "2.6.4"

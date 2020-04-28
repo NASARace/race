@@ -457,7 +457,7 @@ trait ConfiguredTSStatsCollector[K,O <: Dated,E <: TSEntryData[O],S <: TSStatsDa
   def createBuckets: Option[BucketCounter] =  if (bucketCount > 0) {
     val dtMin = config.getFiniteDurationOrElse("dt-min",0.seconds).toMillis
     val dtMax = config.getFiniteDurationOrElse("dt-max",dropAfter).toMillis
-    Some( new BucketCounter(dtMin,dtMax,bucketCount))
+    Some( new BucketCounter(dtMin.toDouble,dtMax.toDouble,bucketCount))
   } else None
 }
 
