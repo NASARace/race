@@ -30,6 +30,7 @@ class FHTInterpolant1Spec extends AnyFlatSpec with RaceSpec with TInterpolant1Te
   val ε: Double = 1e-3
   checkError = true
 
+  @inline def rad(deg: Long): Double = deg.toDouble * Math.PI / 180.0
   @inline def rad(deg: Double): Double = deg * Math.PI / 180.0
 
   def gen (ts: Array[Long], vs: Array[Double]): TInterpolant[N1,TDataPoint1] = new FHTInterpolant1(ts,vs)

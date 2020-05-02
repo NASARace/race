@@ -24,8 +24,3 @@ doc/reports/
 bin/
 conf
 *.crypt
-keystore
-*.ks
-*.jks
-*.p12
-.passwd

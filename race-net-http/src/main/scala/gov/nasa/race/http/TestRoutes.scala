@@ -74,7 +74,9 @@ class TestAuthorized (val parent: ParentActor, val config: Config) extends Autho
     path(request) {
       get {
         count += 1
-        completeAuthorized(User.UserRole, HttpEntity(ContentTypes.`text/html(UTF-8)`, page.render))
+        completeAuthorized(User.UserRole){
+          HttpEntity(ContentTypes.`text/html(UTF-8)`, page.render)
+        }
       }
     }
   }

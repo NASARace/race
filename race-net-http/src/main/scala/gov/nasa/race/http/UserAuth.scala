@@ -29,7 +29,7 @@ object UserAuth {
       case Some(userAuth) => userAuth
       case None =>
         if (userFile.isFile) { // add a new entry
-          val userAuth = new UserAuth(new PasswordStore(userFile),new ChallengeResponseSequence(64,expiresAfterMillis))
+          val userAuth = new UserAuth(new PasswordStore(userFile),new SessionTokenStore(64,expiresAfterMillis))
           map = map + (userFile -> userAuth)
           userAuth
         } else {
@@ -43,10 +43,14 @@ object UserAuth {
 /**
   * aggregation of objects used for user authentication
   */
-case class UserAuth (pwStore: PasswordStore, crs: ChallengeResponseSequence) {
-  @inline def login (uid: String, pw: Array[Char]): Option[String] = pwStore.verify(uid,pw).map(crs.addNewEntry)
+case class UserAuth (passwords: PasswordStore, sessionTokens: SessionTokenStore) {
+  @inline def login (uid: String, pw: Array[Char]): Option[String] = passwords.verify(uid,pw).map(sessionTokens.addNewEntry)
 
-  def remainingLoginAttempts(uid: String) = pwStore.remainingLoginAttempts(uid)
+  def remainingLoginAttempts(uid: String) = passwords.remainingLoginAttempts(uid)
 
-  def isLoggedIn (uid: String): Boolean = crs.isLoggedIn(uid)
+  def isLoggedIn (uid: String): Boolean = sessionTokens.isLoggedIn(uid)
+
+  def nextSessionToken(lastToken: String, role: String): Either[String,String] = {
+    sessionTokens.replaceExistingEntry(lastToken,role)
+  }
 }

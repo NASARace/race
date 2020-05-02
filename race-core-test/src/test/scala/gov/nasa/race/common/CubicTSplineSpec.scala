@@ -24,6 +24,7 @@ import org.scalatest.flatspec.AnyFlatSpec
   */
 class CubicTSplineSpec extends AnyFlatSpec with RaceSpec {
 
+  @inline def rad(deg: Long): Double = deg.toDouble * Math.PI / 180.0
   @inline def rad(deg: Double): Double = deg * Math.PI / 180.0
 
   "a CubicT1Spline" should "approximate known functions" in {

@@ -29,7 +29,7 @@ import java.util.Base64
   * Note that we currently just support one login per user, i.e. the same user cannot be logged in
   * in several roles
   */
-class ChallengeResponseSequence (val byteLength: Int = 64, val expiresAfterMillis: Long=1000*300) {
+class SessionTokenStore(val byteLength: Int = 64, val expiresAfterMillis: Long=1000*300) {
   private var map: Map[String,(User,Long)] = Map.empty
 
   val encoder = Base64.getEncoder

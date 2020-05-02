@@ -41,7 +41,7 @@ class LinTInterpolant3Spec extends AnyFlatSpec with RaceSpec {
     }
   }
 
-
+  @inline def rad(deg: Long): Double = deg.toDouble * Math.PI / 180.0
   @inline def rad(deg: Double): Double = deg * Math.PI / 180.0
 
   def fx (t: Long): Double = sin(rad(t))

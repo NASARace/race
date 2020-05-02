@@ -1,0 +1,179 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<svg width="100%" height="100%" version="1.1" viewBox="96.60116 81.93961 1018.61 399.3587" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <filter id="shadow1" width="150%" height="150%">
+      <feGaussianBlur in="SourceAlpha" result="blur" stdDeviation="3" />
+      <feOffset dx="3" dy="3" in="blur" result="offsetBlur" />
+      <feMerge>
+        <feMergeNode in="offsetBlur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+  </defs>
+  <marker id="marker1" markerUnits="strokeWidth" orient="auto" refX="-17.25881" refY="0" markerWidth="18.90871" markerHeight="14.34432" viewBox="-17.90871 -7.172162 18.90871 14.34432">
+    <path d="M-16.90871 -6.172162 L0 0 L-16.90871 6.17216 Z " fill="none" stroke="#000000" stroke-opacity="1" />
+  </marker>
+  <marker id="marker2" markerUnits="strokeWidth" orient="auto" refX="-7.52078" refY="0" markerWidth="9.89073" markerHeight="7.760683" viewBox="-8.89073 -3.880342 9.89073 7.760683">
+    <path d="M-7.89073 -2.880342 L0 0 L-7.89073 2.880341 Z " fill="#000000" fill-opacity="1" stroke="#000000" stroke-opacity="1" />
+  </marker>
+  <marker id="marker3" markerUnits="strokeWidth" orient="auto" refX="-7.52078" refY="0" markerWidth="9.89073" markerHeight="7.760683" viewBox="-8.89073 -3.880342 9.89073 7.760683">
+    <path d="M-7.89073 -2.880342 L0 0 L-7.89073 2.880341 Z " fill="#000000" fill-opacity="1" stroke="#000000" stroke-opacity="1" />
+  </marker>
+  <marker id="marker4" markerUnits="strokeWidth" orient="auto" refX="-7.52078" refY="0" markerWidth="9.89073" markerHeight="7.760683" viewBox="-8.89073 -3.880342 9.89073 7.760683">
+    <path d="M-7.89073 -2.880342 L0 0 L-7.89073 2.880341 Z " fill="#000000" fill-opacity="1" stroke="#000000" stroke-opacity="1" />
+  </marker>
+  <marker id="marker5" markerUnits="strokeWidth" orient="auto" refX="-7.52078" refY="0" markerWidth="9.89073" markerHeight="7.760683" viewBox="-8.89073 -3.880342 9.89073 7.760683">
+    <path d="M-7.89073 -2.880342 L0 0 L-7.89073 2.880341 Z " fill="#000000" fill-opacity="1" stroke="#000000" stroke-opacity="1" />
+  </marker>
+  <marker id="marker6" markerUnits="strokeWidth" orient="auto" refX="-5.208829" refY="0" markerWidth="9.89073" markerHeight="7.760683" viewBox="-8.89073 -3.880342 9.89073 7.760683">
+    <path d="M-7.89073 -2.880342 L0 0 L-7.89073 2.880341 L-5.6 -2.447838E-07 Z " fill="#0000FE" fill-opacity="1" stroke="#0000FE" stroke-opacity="1" />
+  </marker>
+  <marker id="marker7" markerUnits="strokeWidth" orient="auto" refX="-17.25881" refY="0" markerWidth="18.90871" markerHeight="14.34432" viewBox="-17.90871 -7.172162 18.90871 14.34432">
+    <path d="M-16.90871 -6.172162 L0 0 L-16.90871 6.17216 Z " fill="none" stroke="#000000" stroke-opacity="1" />
+  </marker>
+  <marker id="marker8" markerUnits="strokeWidth" orient="auto" refX="-5.208829" refY="0" markerWidth="9.89073" markerHeight="7.760683" viewBox="-8.89073 -3.880342 9.89073 7.760683">
+    <path d="M-7.89073 -2.880342 L0 0 L-7.89073 2.880341 L-5.6 -2.447838E-07 Z " fill="#0000FE" fill-opacity="1" stroke="#0000FE" stroke-opacity="1" />
+  </marker>
+  <marker id="marker9" markerUnits="strokeWidth" orient="auto" refX="-5.208829" refY="0" markerWidth="9.89073" markerHeight="7.760683" viewBox="-8.89073 -3.880342 9.89073 7.760683">
+    <path d="M-7.89073 -2.880342 L0 0 L-7.89073 2.880341 L-5.6 -2.447838E-07 Z " fill="#0000FE" fill-opacity="1" stroke="#0000FE" stroke-opacity="1" />
+  </marker>
+  <marker id="marker10" markerUnits="strokeWidth" orient="auto" refX="-5.208829" refY="0" markerWidth="9.89073" markerHeight="7.760683" viewBox="-8.89073 -3.880342 9.89073 7.760683">
+    <path d="M-7.89073 -2.880342 L0 0 L-7.89073 2.880341 L-5.6 -2.447838E-07 Z " fill="#0000FE" fill-opacity="1" stroke="#0000FE" stroke-opacity="1" />
+  </marker>
+  <marker id="marker11" markerUnits="strokeWidth" orient="auto" refX="-5.208829" refY="0" markerWidth="9.89073" markerHeight="7.760683" viewBox="-8.89073 -3.880342 9.89073 7.760683">
+    <path d="M-7.89073 -2.880342 L0 0 L-7.89073 2.880341 L-5.6 -2.447838E-07 Z " fill="#0000FE" fill-opacity="1" stroke="#0000FE" stroke-opacity="1" />
+  </marker>
+  <marker id="marker12" markerUnits="strokeWidth" orient="auto" refX="-5.208829" refY="0" markerWidth="9.89073" markerHeight="7.760683" viewBox="-8.89073 -3.880342 9.89073 7.760683">
+    <path d="M-7.89073 -2.880342 L0 0 L-7.89073 2.880341 L-5.6 -2.447838E-07 Z " fill="#0000FE" fill-opacity="1" stroke="#0000FE" stroke-opacity="1" />
+  </marker>
+  <g id="layer1" inkscape:label="Layer 1" inkscape:groupmode="layer">
+    <rect x="575.0778" y="160.296" width="147.9726" height="86.13714" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" filter="url(#shadow1)" />
+    <text x="583.1696" y="177.0857" font-size="13" fill="#000000" fill-opacity="1" font-family="Helvetica" font-weight="bold" font-style="normal">AuthorizedRaceRoute</text>
+    <g>
+      <rect x="420.0084" y="168.5784" width="117.9188" height="69.57221" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" filter="url(#shadow1)" />
+      <text x="451.7147" y="185.3682" font-size="13" fill="#000000" fill-opacity="1" font-family="Helvetica" font-weight="bold" font-style="normal">UserAuth</text>
+      <text x="430.2072" y="199.864" font-size="12" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">passwords
+</text>
+      <text x="430.2072" y="214.864" font-size="12" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">sessions
+</text>
+      <text x="430.2072" y="229.864" font-size="12" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">nextSessionToken()</text>
+    </g>
+    <rect x="267.511" y="105.0023" width="107.1449" height="81.13135" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" filter="url(#shadow1)" />
+    <text x="275.7617" y="121.792" font-size="13" fill="#000000" fill-opacity="1" font-family="Helvetica" font-weight="bold" font-style="normal">PasswordStore</text>
+    <rect x="226.9032" y="224.2539" width="147.0821" height="80.87393" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" filter="url(#shadow1)" />
+    <text x="242.2399" y="241.0437" font-size="13" fill="#000000" fill-opacity="1" font-family="Helvetica" font-weight="bold" font-style="normal">SessionTokenStore</text>
+    <g>
+      <g>
+        <g>
+          <path d="M165.5894 124.1803 L165.5894 166.9556 Q173.734 174.0847 198.1676 174.0847 Q222.601 174.0847 230.7456 166.9556 L230.7456 124.1803 Z " opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" />
+          <text x="172.3237" y="147.1661" font-size="12" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">encrypted
+</text>
+          <text x="170.5571" y="162.1661" font-size="12" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">passwords</text>
+          <ellipse cx="198.1675" cy="124.1803" rx="32.57813" ry="7.12921" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" />
+        </g>
+      </g>
+    </g>
+    <text x="749.0954" y="122.1176" font-size="12" fill="#0000FE" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">completeAuthorized (role)(createResponse) {
+</text>
+    <text x="749.0954" y="136.1176" font-size="12" fill="#0000FE" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">  … 
+</text>
+    <text x="749.0954" y="150.1176" font-size="12" fill="#0000FE" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">  cookie(cookieName){ c=&gt;
+</text>
+    <text x="749.0954" y="164.1176" font-size="12" fill="#0000FE" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">    auth.nextSessionToken(role,c.value) match {
+</text>
+    <text x="749.0954" y="178.1176" font-size="12" fill="#0000FE" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">      case Right(newToken) =&gt;
+</text>
+    <text x="749.0954" y="192.1176" font-size="12" fill="#0000FE" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">         respondWithHeader(
+</text>
+    <text x="749.0954" y="206.1176" font-size="12" fill="#0000FE" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">                 SetCookie(cookieName,newToken) { 
+</text>
+    <text x="749.0954" y="220.1176" font-size="12" fill="#0000FE" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">             complete(..createResponse)
+</text>
+    <text x="749.0954" y="234.1176" font-size="12" fill="#0000FE" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">      case Left(failure) =&gt; 
+</text>
+    <g>
+      <text x="242.3796" y="258.0047" font-size="12" fill="#7F7F7F" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">token  user  expiration</text>
+      <rect x="235.0788" y="243.7504" width="129.8985" height="50.93361" opacity="1" stroke="#7F7F7F" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+      <line x1="235.7624" y1="263.9652" x2="364.9028" y2="263.9652" opacity="1" stroke="#7F7F7F" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+      <line x1="273.5944" y1="243.5708" x2="273.5944" y2="294.7933" opacity="1" stroke="#7F7F7F" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+      <line x1="304.1466" y1="243.4111" x2="304.1466" y2="294.6335" opacity="1" stroke="#7F7F7F" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+      <line x1="235.6026" y1="279.4309" x2="364.743" y2="279.4309" opacity="1" stroke="#7F7F7F" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    </g>
+    <g>
+      <rect x="275.907" y="125.916" width="89.18715" height="50.93361" opacity="1" stroke="#7F7F7F" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+      <line x1="276.5907" y1="146.1308" x2="365.4343" y2="146.1308" opacity="1" stroke="#7F7F7F" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+      <line x1="330.4265" y1="125.7008" x2="330.4265" y2="176.9233" opacity="1" stroke="#7F7F7F" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+      <line x1="276.4308" y1="161.5966" x2="364.6808" y2="161.5966" opacity="1" stroke="#7F7F7F" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+      <text x="283.3257" y="140.1703" font-size="12" fill="#7F7F7F" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">pw-hash  user</text>
+    </g>
+    <text x="585.7761" y="192.9167" font-size="12" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">auth, cookieName
+</text>
+    <text x="585.7761" y="207.9167" font-size="12" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">completeAuthorized()
+</text>
+    <text x="585.7761" y="222.9167" font-size="12" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">completeLogin()
+</text>
+    <text x="585.7761" y="237.9167" font-size="12" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">completeLogout()</text>
+    <rect x="587.759" y="84.93961" width="125.4306" height="49.78619" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" filter="url(#shadow1)" />
+    <text x="599.0176" y="101.7294" font-size="13" fill="#000000" fill-opacity="1" font-family="Helvetica" font-weight="bold" font-style="normal">&lt;RaceRouteInfo&gt;</text>
+    <text x="599.1026" y="115.7194" font-size="12" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">config
+</text>
+    <text x="599.1026" y="130.7194" font-size="12" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">route()</text>
+    <line x1="649.7134" y1="160.296" x2="649.8237" y2="152.9825" marker-end="url(#marker1)" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    <line x1="574.5095" y1="205.3976" x2="546.4461" y2="204.8004" marker-end="url(#marker2)" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    <line x1="420.0084" y1="181.7813" x2="382.6575" y2="168.1083" marker-end="url(#marker3)" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    <line x1="419.2673" y1="215.2261" x2="381.8517" y2="230.8018" marker-end="url(#marker4)" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    <line x1="230.7456" y1="145.5679" x2="258.9903" y2="145.5679" marker-end="url(#marker5)" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    <text x="328.4559" y="346.5638" font-size="12" fill="#0000FE" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">nextSessionToken (token,role) {
+</text>
+    <text x="328.4559" y="360.5638" font-size="12" fill="#0000FE" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">  sessions.get(token) match {
+</text>
+    <text x="328.4559" y="374.5638" font-size="12" fill="#0000FE" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">    case Some(user,exp) =&gt;
+</text>
+    <text x="328.4559" y="388.5638" font-size="12" fill="#0000FE" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">       if (user.hasRole(role) &amp;&amp; notExpired(exp)){
+</text>
+    <text x="328.4559" y="402.5638" font-size="12" fill="#0000FE" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">          val newToken = sessions.computeNewToken
+</text>
+    <text x="328.4559" y="416.5638" font-size="12" fill="#0000FE" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">          sessions.replace(token, newToken, newExp)
+</text>
+    <text x="328.4559" y="430.5638" font-size="12" fill="#0000FE" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">          Right(newToken)
+</text>
+    <text x="328.4559" y="444.5638" font-size="12" fill="#0000FE" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">       } else Left(…)
+</text>
+    <text x="328.4559" y="458.5638" font-size="12" fill="#0000FE" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">    case None =&gt; Left(“not logged in”)
+</text>
+    <text x="328.4559" y="472.5638" font-size="12" fill="#0000FE" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">  }
+</text>
+    <path d="M503.7741 234.0253 C503.2384 267.1509 492.4007 297.4357 461.9146 322.528" marker-end="url(#marker6)" opacity="1" stroke="#0000FE" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="4,4" fill-opacity="0" />
+    <rect x="576.9568" y="285.4649" width="144.2146" height="49.78619" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" filter="url(#shadow1)" />
+    <text x="593.2687" y="302.2547" font-size="13" fill="#000000" fill-opacity="1" font-family="Helvetica" font-weight="bold" font-style="normal">SomeSecureRoute</text>
+    <line x1="649.064" y1="285.4649" x2="649.064" y2="264.6919" marker-end="url(#marker7)" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    <text x="593.2763" y="322.7237" font-size="12" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">route()</text>
+    <text x="749.4496" y="288.3973" font-size="12" fill="#0000FE" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">override route() {
+</text>
+    <text x="749.4496" y="302.3973" font-size="12" fill="#0000FE" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">  path(“data”) {
+</text>
+    <text x="749.4496" y="316.3973" font-size="12" fill="#0000FE" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">    get {
+</text>
+    <text x="749.4496" y="330.3973" font-size="12" fill="#0000FE" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">      completeAuthorized(requiredRole) {
+</text>
+    <text x="749.4496" y="344.3973" font-size="12" fill="#0000FE" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">          new HttpResponse(… data.render)
+</text>
+    <text x="749.4496" y="358.3973" font-size="12" fill="#0000FE" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">  …</text>
+    <path d="M638.3867 319.2357 C681.4369 326.4384 722.0501 317.4033 740.7114 298.1839" marker-end="url(#marker8)" opacity="1" stroke="#0000FE" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="4,4" fill-opacity="0" />
+    <path d="M703.2997 211.8384 C728.5824 214.3035 747.5543 202.7806 760.8992 191.0976" marker-end="url(#marker9)" opacity="1" stroke="#0000FE" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="4,4" fill-opacity="0" />
+    <g>
+      <text x="106.4559" y="301.3355" font-size="12" fill="#0000FE" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">request cookie</text>
+      <path d="M176.2546 306.4704 C206.4628 334.6371 189.4197 360.3737 175.5457 369.3013" marker-end="url(#marker10)" opacity="1" stroke="#0000FE" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+      <text x="108.7916" y="385.0089" font-size="12" fill="#0000FE" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">respone cookie</text>
+      <text x="256.6292" y="346.567" font-size="12" fill="#0000FE" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">failure</text>
+      <path d="M176.2401 306.8089 C189.6311 316.3536 215.246 339.5682 244.4953 341.6636" marker-end="url(#marker11)" opacity="1" stroke="#0000FE" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+      <text x="183.8009" y="341.4408" font-size="12" fill="#0000FE" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">=</text>
+      <text x="230.7614" y="337.1075" font-size="12" fill="#0000FE" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">≠</text>
+      <rect x="160.1127" y="312.2276" width="77.23537" height="17.13064" opacity="1" fill="#FFFFFF" fill-opacity="0.8110057" />
+      <text x="165.0907" y="326.3265" font-size="12" fill="#0000FE" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">currentToken</text>
+      <rect x="152.5841" y="345.9199" width="77.23534" height="17.13064" opacity="1" fill="#FFFFFF" fill-opacity="0.8110057" />
+      <text x="165.3317" y="360.0189" font-size="12" fill="#0000FE" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">nextToken</text>
+      <path d="M132.9105 372.0877 C100.265 357.8963 102.5913 332.5243 119.8755 312.9337" marker-end="url(#marker12)" opacity="1" stroke="#0000FE" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+    </g>
+  </g>
+</svg>

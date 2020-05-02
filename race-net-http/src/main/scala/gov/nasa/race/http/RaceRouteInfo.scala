@@ -41,9 +41,13 @@ import scalatags.Text.attrs.{name => nameAttr}
 trait RaceRouteInfo {
   val parent: ParentActor
   val config: Config
+  val name = config.getStringOrElse("name", getClass.getSimpleName)
+
+  // this is the main function that defines the public routes
   def route: Route
 
-  val name = config.getStringOrElse("name", getClass.getSimpleName)
+  // this can extend public routes with private ones used from within server responses  (such
+  // as login routes used from within data request responses)
   def internalRoute = route
 
   def shouldUseHttps = false
@@ -84,7 +88,7 @@ trait AuthRaceRoute extends RaceRouteInfo {
       respondWithHeader(new `Set-Cookie`(new HttpCookie(sessionCookieName, "", Some(DateTime.now - 10)))) {
         optionalCookie(sessionCookieName) {
           case Some(namedCookie) =>
-            userAuth.crs.removeEntry(namedCookie.value) match {
+            userAuth.sessionTokens.removeEntry(namedCookie.value) match {
               case Some(user) =>
                 info(s"logout for '${user.uid}' accepted")
                 complete("user logged out")
@@ -126,7 +130,7 @@ trait AutoAuthorizedRaceRoute extends AuthRaceRoute {
   def completeAuthorized(requiredRole: String)(createResponseContent: => HttpEntity.Strict): Route = {
     extractMatchedPath { requestUri =>
       cookie(sessionCookieName) { namedCookie =>
-        userAuth.crs.replaceExistingEntry(namedCookie.value, requiredRole) match {
+        userAuth.nextSessionToken(namedCookie.value, requiredRole) match {
           case Right(newToken) =>
             respondWithHeader(new `Set-Cookie`(createSessionCookie(newToken))) {
               complete(createResponseContent)
@@ -250,13 +254,13 @@ trait AuthorizedRaceRoute extends AuthRaceRoute {
     }
   }
 
-  def completeAuthorized(requiredRole: String, m: => HttpEntity.Strict): Route = {
+  def completeAuthorized(requiredRole: String)(createResponseContent: => HttpEntity.Strict): Route = {
     extractMatchedPath { requestUri =>
       cookie(sessionCookieName) { namedCookie =>
-        userAuth.crs.replaceExistingEntry(namedCookie.value, requiredRole) match {
+        userAuth.nextSessionToken(namedCookie.value, requiredRole) match {
           case Right(newToken) =>
             respondWithHeader(new `Set-Cookie`(new HttpCookie(sessionCookieName, newToken))) {
-              complete(m)
+              complete(createResponseContent)
             }
           case Left(rejection) => completeLogin(requestUri.toString, Some(rejection))
         }

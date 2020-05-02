@@ -48,7 +48,7 @@ object Platform {
   private var fullScreenWindow: AWTWindow = _
 
   def getJavaVersion: Int = {
-    val s = System.getProperty("java.version")
+    val s = System.getProperty("java.specification.version")
     if (s.startsWith("1.8")) 8 else Integer.parseInt(s)
   }
 

@@ -76,10 +76,11 @@ SGT Inc, NASA Ames Research Center
 ## Solution: Translating Import Actors
 
 * network buffers usually byte arrays with utf-8 text
-* can be directly used to parse/translate if translation is
-  done sync
+* ⟹ buffer can be directly used to synchronously parse/translate
+* pro: no temp object creation/copying
+* contra: message retrieval and translation not parallel
 
-<img src="../images/syn-import-trans.svg" class="center scale60">
+<img src="../images/syn-import-trans.svg" class="center scale50">
 
 
 ## Optimization Results
@@ -93,4 +94,5 @@ SGT Inc, NASA Ames Research Center
   large temporary input message objects ("go directly from byte buffer to TrackedObject")
 * zero copy translation drastically reduces number of temporary objects
 * less generic (actor complexity, no text-level tasks)
+* gain if cost(temp object,message) > cost(translation)
 * does not scale that well if translation is too expensive to keep up with arrival rate

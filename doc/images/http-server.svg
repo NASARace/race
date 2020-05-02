@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<svg width="100%" height="100%" version="1.1" viewBox="442.6693 259.2048 808.3624 424.1103" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape" xmlns="http://www.w3.org/2000/svg">
+<svg width="100%" height="100%" version="1.1" viewBox="485.189 223.7717 765.0552 459.5434" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape" xmlns="http://www.w3.org/2000/svg">
   <defs>
     <filter id="shadow1" width="150%" height="150%">
       <feGaussianBlur in="SourceAlpha" result="blur" stdDeviation="2" />
@@ -34,30 +34,42 @@
   <marker id="marker8" markerUnits="strokeWidth" orient="auto" refX="-13.60705" refY="0" markerWidth="15.52697" markerHeight="11.87546" viewBox="-14.52697 -5.937729 15.52697 11.87546">
     <path d="M-13.52697 -4.937729 L0 0 L-13.52697 4.937728 Z " fill="none" stroke="#7F7F7F" stroke-opacity="1" />
   </marker>
+  <marker id="marker9" markerUnits="strokeWidth" orient="auto" refX="-13.60705" refY="0" markerWidth="15.52697" markerHeight="11.87546" viewBox="-14.52697 -5.937729 15.52697 11.87546">
+    <path d="M-13.52697 -4.937729 L0 0 L-13.52697 4.937728 Z " fill="none" stroke="#7F7F7F" stroke-opacity="1" />
+  </marker>
+  <marker id="marker10" markerUnits="strokeWidth" orient="auto" refX="-6.303525" refY="0" markerWidth="8.763483" markerHeight="6.937729" viewBox="-7.763484 -3.468865 8.763483 6.937729">
+    <path d="M-6.763484 -2.468865 L0 0 L-6.763484 2.468864 Z " fill="#000000" fill-opacity="1" stroke="#000000" stroke-opacity="1" />
+  </marker>
+  <marker id="marker11" markerUnits="strokeWidth" orient="auto" refX="6.303525" refY="0" markerWidth="8.763483" markerHeight="6.937729" viewBox="-1 -3.468865 8.763483 6.937729">
+    <path d="M6.763484 2.468864 L0 0 L6.763484 -2.468865 Z " fill="#000000" fill-opacity="1" stroke="#000000" stroke-opacity="1" />
+  </marker>
+  <marker id="marker12" markerUnits="strokeWidth" orient="auto" refX="-6.303525" refY="0" markerWidth="8.763483" markerHeight="6.937729" viewBox="-7.763484 -3.468865 8.763483 6.937729">
+    <path d="M-6.763484 -2.468865 L0 0 L-6.763484 2.468864 Z " fill="#000000" fill-opacity="1" stroke="#000000" stroke-opacity="1" />
+  </marker>
   <g id="layer1" inkscape:label="Layer 1" inkscape:groupmode="layer">
     <rect x="687.4017" y="325.9843" width="340.1575" height="198.4252" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" filter="url(#shadow1)" />
     <text x="828.8037" y="341.9441" font-size="12" fill="#000000" fill-opacity="1" font-family="Helvetica" font-weight="bold" font-style="normal">HttpServer</text>
-    <text x="449.6693" y="467.6106" font-size="10" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">actors = [ ...
+    <text x="492.189" y="488.8704" font-size="10" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">actors = [ ...
 </text>
-    <text x="449.6693" y="479.6106" font-size="10" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">  { name = "httpServer"
+    <text x="492.189" y="500.8704" font-size="10" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">  { name = "httpServer"
 </text>
-    <text x="449.6693" y="491.6106" font-size="10" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">    class = ".http.HttpServer"
+    <text x="492.189" y="512.8704" font-size="10" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">    class = ".http.HttpServer"
 </text>
-    <text x="449.6693" y="503.6106" font-size="10" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">    host = "localhost"
+    <text x="492.189" y="524.8704" font-size="10" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">    host = "localhost"
 </text>
-    <text x="449.6693" y="515.6106" font-size="10" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">    port = "8080"
+    <text x="492.189" y="536.8704" font-size="10" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">    port = "8080"
 </text>
-    <text x="449.6693" y="527.6106" font-size="10" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">    routes = [
+    <text x="492.189" y="548.8704" font-size="10" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">    routes = [
 </text>
-    <text x="449.6693" y="539.6106" font-size="10" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">      { name = "statsReporter"
+    <text x="492.189" y="560.8704" font-size="10" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">      { name = "statsReporter"
 </text>
-    <text x="449.6693" y="551.6106" font-size="10" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">        class = ".http.HttpStatsReporter"
+    <text x="492.189" y="572.8704" font-size="10" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">        class = ".http.HttpStatsReporter"
 </text>
-    <text x="449.6693" y="563.6106" font-size="10" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">        read-from = "/stats"
+    <text x="492.189" y="584.8704" font-size="10" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">        read-from = "/stats"
 </text>
-    <text x="449.6693" y="575.6106" font-size="10" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">        refresh = 10s
+    <text x="492.189" y="596.8704" font-size="10" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">        refresh = 10s
 </text>
-    <text x="449.6693" y="587.6106" font-size="10" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">     ...
+    <text x="492.189" y="608.8704" font-size="10" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">     ...
 </text>
     <text x="959.9056" y="573.9098" font-size="10" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">def route: Route = {
 </text>
@@ -86,21 +98,21 @@
     <line x1="1112.599" y1="517.3229" x2="1112.599" y2="482.1068" marker-end="url(#marker2)" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
     <path d="M1140.945 446.4568 L1190.551 446.4568 L1190.551 403.9371 L971.3881 403.9371" marker-end="url(#marker3)" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="4,4" fill-opacity="0" />
     <text x="1113.951" y="534.7496" font-size="12" fill="#000000" fill-opacity="1" font-family="Helvetica" font-weight="normal" font-style="normal">message bus</text>
-    <text x="1120.143" y="498.2502" font-size="12" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">data</text>
+    <text x="1120.536" y="498.2502" font-size="12" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">data</text>
     <line x1="687.4017" y1="347.2441" x2="1027.559" y2="347.2441" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
     <path d="M800.7875 481.8898 L900.0001 481.8898 L900.0001 461.1518" marker-end="url(#marker4)" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="4,4" fill-opacity="0" />
     <path d="M885.8269 439.3701 L793.7009 439.3701 L793.7009 425.4138" marker-end="url(#marker5)" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
     <path d="M885.8269 396.8504 L1204.725 396.8504 L1204.725 488.9764 L1041.732 488.9764 L1041.732 418.1103 L885.8269 418.1103 Z " opacity="1" stroke="#7C88FE" stroke-opacity="0.3965761" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="2,2" fill="#9EFFEB" fill-opacity="0.4001416" />
-    <path d="M588.189 382.6772 L864.567 382.6772 L864.567 432.2835 L985.0395 432.2835 L985.0395 453.5434 L588.189 453.5434 Z " opacity="1" stroke="#FB4F50" stroke-opacity="0.3956323" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="2,2" fill="#F9FEAF" fill-opacity="0.3973888" />
-    <text x="513.4488" y="623.5161" font-size="10" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">def onStartRaceActor(..) = {
+    <path d="M630.7087 382.6772 L864.567 382.6772 L864.567 432.2835 L985.0395 432.2835 L985.0395 453.5434 L630.7087 453.5434 Z " opacity="1" stroke="#FB4F50" stroke-opacity="0.3956323" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#F9FEAF" fill-opacity="0.3973888" />
+    <text x="555.9685" y="630.6027" font-size="10" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">def onStartRaceActor(..) = {
 </text>
-    <text x="513.4488" y="635.5161" font-size="10" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">    binding = httpExt.bindAndHandle(route,host,port,..)</text>
-    <path d="M694.4883 552.756 L744.0946 552.756 L744.0946 489.1934" marker-end="url(#marker6)" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
-    <text x="1116.338" y="584.356" font-size="12" fill="#FF0000" fill-opacity="1" font-family="Helvetica" font-weight="normal" font-style="normal">“http://race/statistics”</text>
-    <rect x="985.0395" y="262.2048" width="85.03938" height="21.25985" opacity="1" stroke="#7F7F7F" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" filter="url(#shadow1)" />
-    <text x="1001.548" y="279.4347" font-size="12" fill="#7F7F7F" fill-opacity="1" font-family="Helvetica" font-weight="normal" font-style="normal">RaceActor</text>
-    <line x1="1027.559" y1="311.8111" x2="1027.559" y2="298.0717" marker-end="url(#marker7)" opacity="1" stroke="#7F7F7F" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
-    <path d="M857.4804 325.9843 L857.4804 311.8111 L1112.599 311.8111 L1112.599 418.1103" opacity="1" stroke="#7F7F7F" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+    <text x="555.9685" y="642.6027" font-size="10" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">    binding = httpExt.bindAndHandle(route,host,port,..)</text>
+    <path d="M602.3623 538.5828 L744.0946 538.5828 L744.0946 489.1934" marker-end="url(#marker6)" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+    <text x="1106.044" y="577.2693" font-size="12" fill="#FF0000" fill-opacity="1" font-family="Helvetica" font-weight="normal" font-style="normal">GET http://race/statistics</text>
+    <rect x="985.0395" y="226.7717" width="85.03938" height="21.25985" opacity="1" stroke="#7F7F7F" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" filter="url(#shadow1)" />
+    <text x="1001.548" y="244.0016" font-size="12" fill="#7F7F7F" fill-opacity="1" font-family="Helvetica" font-weight="normal" font-style="normal">RaceActor</text>
+    <line x1="1027.559" y1="269.2914" x2="1027.559" y2="262.6386" marker-end="url(#marker7)" opacity="1" stroke="#7F7F7F" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    <path d="M857.4804 283.4646 L857.4804 269.2914 L1112.599 269.2914 L1112.599 411.0237" opacity="1" stroke="#7F7F7F" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
     <text x="697.7008" y="369.6683" font-size="12" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">routeInfos: Seq[RaceRouteInfo]
 </text>
     <text x="697.7008" y="384.6683" font-size="12" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">
@@ -116,14 +128,14 @@
     <text x="704.7874" y="462.621" font-size="12" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">
 </text>
     <text x="704.7874" y="477.621" font-size="12" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">createRouteInfos()</text>
-    <text x="616.3042" y="399.4938" font-size="12" fill="#FF0000" fill-opacity="1" font-family="Helvetica" font-weight="normal" font-style="normal">Route
+    <text x="655.5723" y="414.893" font-size="12" fill="#FF0000" fill-opacity="1" font-family="Helvetica" font-weight="normal" font-style="normal">Route
 </text>
-    <text x="597.2935" y="414.4937" font-size="12" fill="#FF0000" fill-opacity="1" font-family="Helvetica" font-weight="normal" font-style="normal">Management</text>
+    <text x="636.5615" y="429.893" font-size="12" fill="#FF0000" fill-opacity="1" font-family="Helvetica" font-weight="normal" font-style="normal">Management</text>
     <rect x="1055.906" y="411.0237" width="113.3858" height="56.69292" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" filter="url(#shadow1)" />
     <text x="1081.933" y="426.9835" font-size="12" fill="#000000" fill-opacity="1" font-family="Helvetica" font-weight="bold" font-style="normal">RouteActor</text>
     <text x="1066.205" y="447.621" font-size="12" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">renderPage()
 </text>
-    <text x="1066.205" y="462.621" font-size="12" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">handleMessage(</text>
+    <text x="1066.205" y="462.621" font-size="12" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">handleMessage()</text>
     <text x="1142.796" y="371.1473" font-size="12" fill="#0000FF" fill-opacity="1" font-family="Helvetica" font-weight="normal" font-style="normal">Content
 </text>
     <text x="1128.79" y="386.1473" font-size="12" fill="#0000FF" fill-opacity="1" font-family="Helvetica" font-weight="normal" font-style="normal">Management</text>
@@ -135,5 +147,21 @@
     <line x1="836.2206" y1="566.9292" x2="949.6064" y2="566.9292" opacity="1" stroke="#7F7F7F" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
     <text x="846.5197" y="582.2667" font-size="12" fill="#7F7F7F" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">route()</text>
     <line x1="1070.079" y1="517.3229" x2="1183.465" y2="517.3229" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="3" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    <rect x="800.7875" y="284.3555" width="120.4725" height="21.25985" opacity="1" stroke="#7F7F7F" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" filter="url(#shadow1)" />
+    <text x="810.3274" y="301.5854" font-size="12" fill="#7F7F7F" fill-opacity="1" font-family="Helvetica" font-weight="normal" font-style="normal">&lt;ParentRaceActor&gt;</text>
+    <line x1="857.3067" y1="326.1237" x2="857.3067" y2="319.796" marker-end="url(#marker9)" opacity="1" stroke="#7F7F7F" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    <text x="620.6038" y="378.8441" font-size="12" fill="#000000" fill-opacity="1" font-family="Helvetica" font-weight="bold" font-style="normal">akka-http</text>
+    <line x1="581.1024" y1="403.9371" x2="623.4052" y2="403.9371" marker-end="url(#marker10)" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    <line x1="588.4059" y1="432.2835" x2="630.7087" y2="432.2835" marker-start="url(#marker11)" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    <g>
+      <g>
+        <path d="M579.4433 377.53 C573.0812 375.9521 566.643 377.758 562.1983 381.6808 C559.8761 379.0972 556.7317 377.1032 552.9603 376.1678 C543.2538 373.7604 533.2544 379.1042 530.6536 388.0886 C530.4625 388.7488 530.4121 389.4127 530.3096 390.0729 C521.5685 389.2319 513.2048 394.297 510.8582 402.4031 C508.533 410.4351 512.9206 418.6479 520.8066 422.0247 C520.3779 422.8853 519.9782 423.7715 519.7044 424.7175 C517.1036 433.7017 522.8826 442.9376 532.5889 445.3448 C537.3431 446.5241 542.1476 445.8317 546.136 443.7761 C548.334 448.1286 552.4324 451.632 557.8349 452.9717 C565.543 454.8836 573.3649 451.8552 577.5878 446.0506 C579.2983 447.1714 581.1997 448.0986 583.3413 448.63 C593.048 451.0372 603.0258 445.688 605.6266 436.7037 C606.9343 432.1857 606.125 427.6139 603.7641 423.8667 C606.1006 421.8046 607.9295 419.1924 608.8257 416.0969 C611.4266 407.1122 605.6478 397.8765 595.9412 395.4691 C594.9195 395.2158 593.896 395.0732 592.877 394.9865 C593.481 387.0968 588.0026 379.653 579.4433 377.53 Z " opacity="1" stroke="#BFBFBF" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="round" stroke-dasharray="none" fill-opacity="0" />
+      </g>
+    </g>
+    <text x="567.7682" y="420.2975" font-size="12" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">Http</text>
+    <text x="583.964" y="399.0376" font-size="12" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">request</text>
+    <text x="579.5255" y="445.5641" font-size="12" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">response</text>
+    <path d="M921.3412 296.1801 L1063.074 296.1801 L1062.997 403.7202" marker-end="url(#marker12)" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+    <text x="934.6134" y="306.4893" font-size="10" fill="#7F7F7F" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">childActor</text>
   </g>
 </svg>

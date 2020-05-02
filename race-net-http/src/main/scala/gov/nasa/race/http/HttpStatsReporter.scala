@@ -80,6 +80,10 @@ class HttpStatsReporter (val parent: ParentActor, val config: Config) extends Ra
     override def handleMessage = {
       case BusEvent(_, stats: Stats, _) =>
         topics += stats.topic -> stats
+
+        // WATCH OUT - this could be a race with the encapsulating RaceRouteInfo, which is
+        // executed from within a different actor. In this case we have a single reader (the RRI)
+        // and a single writer (this RouteActor) so we are safe
         httpContent = renderPage
     }
 
