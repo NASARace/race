@@ -72,6 +72,13 @@ lazy val raceNetHttp = createProject("race-net-http", commonSettings).
 
 lazy val raceSwing = createProject("race-swing", commonSettings).
   dependsOn(raceCore).
+  settings(
+    Compile / packageBin / mappings += {
+      // we have to add this classfile explicitly since it has to be pre-compiled on macOS
+      (baseDirectory.value / "lib" / "gov/nasa/race/swing/MacOSHelper.class") -> "gov/nasa/race/swing/MacOSHelper.class"
+    },
+    Compile / unmanagedClasspath += baseDirectory.value / "lib"
+  ).
   addLibraryDependencies(akkaActor,scalaSwing,rsTextArea)
 
 lazy val raceAir = createProject("race-air", commonSettings).

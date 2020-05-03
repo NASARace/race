@@ -8,8 +8,12 @@ rm -f *.jar
 rm -rf gov
 
 javac --add-exports java.desktop/com.apple.eawt=ALL-UNNAMED --target 9 --source 9 -d . MacOSHelper.java
-jar --create --file macoshelper.jar gov
+#jar --create --file macoshelper.jar gov
 
-rm -f *.class
-rm -rf gov
+# NOTE - we now add the *.class explicitly to the race-swing / Compile / unmanagedClasspath
+# and to race-swing / Compile / packageBin / mappings
+# so that dependent projects no longer have to explicitly include a unmanaged macoshelper.jar
+
+#rm -f *.class
+#rm -rf gov
 
