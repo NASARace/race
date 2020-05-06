@@ -33,14 +33,14 @@ trait SubscribingRaceActor extends RaceActor {
   def addSubscription (channel: String) = { readFrom = readFrom :+ channel }
   def addSubscriptions (channels: Seq[String]) = { readFrom  = readFrom ++ channels }
 
-  override def onInitializeRaceActor(raceContext: RaceContext, actorConf: Config) = {
+  override def onInitializeRaceActor(raceContext: RaceContext, actorConf: Config): Boolean = {
     readFrom = actorConf.getStrings("read-from")
     readFrom.foreach { channel => busFor(channel).subscribe(self,channel) }
     super.onInitializeRaceActor(raceContext,actorConf)
   }
 
   // we add new channels and (re-)subscribe to everything since old channels might now be global
-  override def onReInitializeRaceActor(raceContext: RaceContext, actorConf: Config) = {
+  override def onReInitializeRaceActor(raceContext: RaceContext, actorConf: Config): Boolean = {
     val newChannels = actorConf.getStrings("read-from")
     // re-subscription is benign in case we already were subscribed (bus keeps subscribers as sets)
     readFrom = ArrayUtils.addUniques(readFrom, newChannels)

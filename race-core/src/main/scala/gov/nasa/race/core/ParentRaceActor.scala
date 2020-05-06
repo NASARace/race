@@ -102,8 +102,8 @@ trait ParentRaceActor extends RaceActor with ParentActor {
   }
   // TODO - add onRestart and onPause forwarding
 
-  def initializeChildActors (rc: RaceContext, actorConf: Config): Boolean = {
-    askChildren(()=>InitializeRaceActor(rc,actorConf)){
+  def initializeChildActors (rc: RaceContext, parentConf: Config): Boolean = {
+    askChildren((amd)=>InitializeRaceActor(rc,amd.config)){
       case RaceActorInitialized(caps) =>
         capabilities = capabilities.intersection(caps)
         true
@@ -113,7 +113,7 @@ trait ParentRaceActor extends RaceActor with ParentActor {
   }
 
   def startChildActors: Boolean = {
-    askChildren(()=>StartRaceActor(self)){
+    askChildren((_)=>StartRaceActor(self)){
       case RaceActorStarted => true
       case _ => false
     }

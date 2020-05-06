@@ -158,6 +158,9 @@ trait ConfigurableRenderingLayer extends RaceLayer {
   * visible in the associated types
   */
 trait SubscribingRaceLayer extends RaceLayer with AkkaSwingBridge {
+  // TODO - re-evaluate if we really still need to keep an actor reference to handle dynamic
+  //  subscriptions and obtain events. Since this trait is a main extension point it is a bit
+  //  dangerous with respect to layer implementations that break actor encapsulation
   val actor: RaceLayerActor = raceViewer.createActor(name){ createLayerActor }
 
   var updateCount = 0// to keep track of number of changes

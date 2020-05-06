@@ -18,18 +18,24 @@ package gov.nasa.race.http
 
 import java.io.File
 
+import akka.actor.{ActorRef, Props}
+import akka.http.scaladsl.marshalling.ToResponseMarshallable
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.model.headers.{HttpCookie, `Set-Cookie`}
 import akka.http.scaladsl.server.Directives.{entity, _}
 import akka.http.scaladsl.server.{Route, StandardRoute}
+import akka.util.ByteString
 import com.typesafe.config.Config
+import gov.nasa.race.common.ByteSlice
 import gov.nasa.race.config.ConfigUtils._
-import gov.nasa.race.core.ParentActor
+import gov.nasa.race.core.{ParentActor, SubscribingRaceActor}
 import gov.nasa.race.util.ClassUtils
 
 import scala.concurrent.duration._
 import scalatags.Text.all.{span, head => htmlHead, _}
 import scalatags.Text.attrs.{name => nameAttr}
+
+import scala.reflect.ClassTag
 
 /**
   * base type for route infos, which consist of a akka.http Route and an optional RaceActor
@@ -339,4 +345,33 @@ trait AuthorizedRaceRoute extends AuthRaceRoute {
       case None => Array[Byte](0)
     }
   }
+}
+
+/**
+  * a RaceRouteInfo that has an associated RaceRouteActor which sets the published content
+  * from information received via RACE channel messages
+  */
+trait SubscribingRaceRoute [T] extends RaceRouteInfo {
+
+  protected val actorRef = createActor
+
+  // BEWARE - can be called by the actor at any time during route evaluation, sync appropriately
+  def setData (newData: T): Unit
+
+  // to be provided by concrete type
+  protected def instantiateActor: RaceRouteActor[T]
+
+  protected def createActor: ActorRef = {
+    val aRef = parent.actorOf(Props(instantiateActor), name)
+    parent.addChildActorRef(aRef,config)
+    aRef
+  }
+}
+
+/**
+  * actor base type that is associated with a SubscribingRaceRoute and produces the data that is
+  * used as the response content
+  */
+trait RaceRouteActor[T] extends SubscribingRaceActor {
+  val route: SubscribingRaceRoute[T] // to be set by ctor
 }

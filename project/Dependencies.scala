@@ -55,7 +55,7 @@ object Dependencies {
   val scalaReflect =  "org.scala-lang" % "scala-reflect" % CommonRaceSettings.scalaVer
 
   //--- scalaTags HTML generator
-  val scalaTags = "com.lihaoyi" %% "scalatags" % "0.9.0"
+  val scalaTags = "com.lihaoyi" %% "scalatags" % "0.9.1"
 
   //--- scala automatic resource management (https://github.com/jsuereth/scala-arm)
   //val scalaArm = "com.jsuereth" %% "scala-arm" % "2.0"
@@ -100,7 +100,7 @@ object Dependencies {
   //.. and possibly extensions for Tree and jfreechart
 
   //--- RSyntaxTextArea (TextEditor with syntax support)
-  val rsTextArea = "com.fifesoft" % "rsyntaxtextarea" % "3.1.0"
+  val rsTextArea = "com.fifesoft" % "rsyntaxtextarea" % "3.1.1"
 
   //--- the jfreechart plot and chart lib
   val jfreeChart = "org.jfree" % "jfreechart" % "1.5.0"
@@ -114,7 +114,7 @@ object Dependencies {
   val argon2 = "de.mkammerer" % "argon2-jvm" % "2.7"
 
   //--- Akka
-  val akkaVersion = "2.6.4"
+  val akkaVersion = "2.6.5"
   val akkaOrg = "com.typesafe.akka"
 
   val akkaActor = akkaOrg %% "akka-actor" % akkaVersion
@@ -149,7 +149,7 @@ object Dependencies {
   val log4jOverSlf4j = "org.slf4j" % "log4j-over-slf4j" % "2.0.0-alpha1"
 
   //--- ZooKeeper
-  val zookeeper = "org.apache.zookeeper" % "zookeeper" % "3.6.0" excludeAll(
+  val zookeeper = "org.apache.zookeeper" % "zookeeper" % "3.6.1" excludeAll(
     ExclusionRule(organization = "log4j", name="log4j"),
     ExclusionRule(organization = "org.slf4j", name = "slf4j-log4j12")
   )
@@ -164,7 +164,7 @@ object Dependencies {
   val newKafkaClients = "org.apache.kafka" % "kafka-clients" % "2.2.1"
 
   //--- Kafka (make sure to add log4j to kafkaServer dependencies
-  val kafka = "org.apache.kafka" %% "kafka" % "2.4.1" excludeAll(
+  val kafka = "org.apache.kafka" %% "kafka" % "2.5.0" excludeAll(
   //val kafka = "org.apache.kafka" %% "kafka" % "1.0.1" excludeAll(
     //ExclusionRule(organization = "log4j", name="log4j"),
     //ExclusionRule(organization = "org.slf4j", name = "slf4j-log4j12")

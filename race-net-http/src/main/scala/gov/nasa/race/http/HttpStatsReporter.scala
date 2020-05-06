@@ -18,8 +18,6 @@ package gov.nasa.race.http
 
 import java.io.File
 
-import akka.actor.Props
-import akka.http.scaladsl.marshalling.ToResponseMarshallable
 import akka.http.scaladsl.model.StatusCodes._
 import akka.http.scaladsl.model.{ContentTypes, HttpEntity}
 import akka.http.scaladsl.server.Directives.{complete, _}
@@ -29,18 +27,25 @@ import gov.nasa.race._
 import gov.nasa.race.common.Stats
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.Messages.BusEvent
-import gov.nasa.race.core.{ParentActor, SubscribingRaceActor}
+import gov.nasa.race.core.{ParentActor, RaceContext}
+import gov.nasa.race.http.HtmlStats._
 import gov.nasa.race.util.{ClassLoaderUtils, FileUtils}
+import scalatags.Text.all.{content, head => htmlHead, _}
 
-import scala.collection.mutable.{SortedMap => MSortedMap}
+import scala.collection.immutable.SortedMap
 import scala.concurrent.duration._
-import scalatags.Text.all.{head => htmlHead, _}
-import HtmlStats._
+
+object HttpStatsReporter {
+  type Data = SortedMap[String,Stats]
+  val emptyData: Data = SortedMap.empty[String,Stats]
+}
+import gov.nasa.race.http.HttpStatsReporter._
 
 /**
   * server routes to display statistics
   */
-class HttpStatsReporter (val parent: ParentActor, val config: Config) extends RaceRouteInfo {
+class HttpStatsReporter (val parent: ParentActor, val config: Config)
+          extends SubscribingRaceRoute[Data] {
 
   val refreshRate = config.getFiniteDurationOrElse("refresh", 5.seconds)
   val cssClass = config.getStringOrElse("css-class", "race")
@@ -49,70 +54,18 @@ class HttpStatsReporter (val parent: ParentActor, val config: Config) extends Ra
     FileUtils.resourceContentsAsUTF8String(getClass,cssPath)
   }
 
-  var httpContent = HttpContent(blankPage,noResources)
-
-  parent.addChildActor("statsRoute", config, Props(new RouteActor(config)))
-
-  def blankPage = {
-    html(
-      htmlHeader,
-      body(cls := cssClass)(
-        p("no statistics yet..")
-      )
-    ).toString()
+  val title = config.getStringOrElse("title", "Statistics")
+  val formatters: Seq[HtmlStatsFormatter] = config.getConfigSeq("formatters").flatMap { conf =>
+    val clsName = conf.getString("class")
+    ClassLoaderUtils.newInstance[HtmlStatsFormatter](parent.system,clsName, Array(classOf[Config]), Array(conf))
   }
 
-  def htmlHeader =  htmlHead(
-    meta(httpEquiv := "refresh", content := s"${refreshRate.toSeconds}"),
-    link(rel := "stylesheet", href := "race.css")
-  )
+  var httpContent = HttpContent(blankPage,noResources)
 
-  class RouteActor (val config: Config) extends SubscribingRaceActor {
-    val title = config.getStringOrElse("title", "Statistics")
-    val formatters: Seq[HtmlStatsFormatter] = config.getConfigSeq("formatters").flatMap { conf =>
-      val clsName = conf.getString("class")
-      ClassLoaderUtils.newInstance[HtmlStatsFormatter](system,clsName, Array(classOf[Config]), Array(conf))
-    }
-    val topics = MSortedMap.empty[String, Stats]
+  //--- the interface methods to provide
 
-    info("$name created")
-
-    override def handleMessage = {
-      case BusEvent(_, stats: Stats, _) =>
-        topics += stats.topic -> stats
-
-        // WATCH OUT - this could be a race with the encapsulating RaceRouteInfo, which is
-        // executed from within a different actor. In this case we have a single reader (the RRI)
-        // and a single writer (this RouteActor) so we are safe
-        httpContent = renderPage
-    }
-
-    def renderPage: HttpContent = {
-      val topicArtifacts = getTopicArtifacts
-
-      val page = html(
-        htmlHeader,
-        body(cls := cssClass)(
-          h1(title),
-          topicArtifacts.map(_.html)
-        )
-      ).toString
-
-      val resources = topicArtifacts.foldLeft(noResources)( (acc,t) => acc ++ t.resources )
-
-      HttpContent(page,resources)
-    }
-
-    def getTopicArtifacts: Seq[HtmlArtifacts] = topics.values.toSeq.flatMap(getHtml)
-
-    def getHtml (stats: Stats): Option[HtmlArtifacts] = {
-      firstFlatMapped(formatters)(_.toHtml(stats)).orElse {
-        stats match {
-          case htmlStats: HtmlStats => Some(htmlStats.toHtml)
-          case _ => None // give up, we don't know how to turn this into HTML
-        }
-      }
-    }
+  override protected def instantiateActor: RaceRouteActor[SortedMap[String,Stats]] = {
+    new HttpStatsReportActor(config,this)
   }
 
   override def route: Route = {
@@ -135,5 +88,68 @@ class HttpStatsReporter (val parent: ParentActor, val config: Config) extends Ra
         }
       }
     }
+  }
+
+  override def setData (newData: Data): Unit = {
+    httpContent = renderPage(newData) // generated from data
+  }
+
+  //--- content generation
+
+  def blankPage = {
+    html(
+      htmlHeader,
+      body(cls := cssClass)(
+        p("no statistics yet..")
+      )
+    ).toString()
+  }
+
+  def htmlHeader =  htmlHead(
+    meta(httpEquiv := "refresh", content := s"${refreshRate.toSeconds}"),
+    link(rel := "stylesheet", href := "race.css")
+  )
+
+  def getTopicArtifacts(data: Data): Seq[HtmlArtifacts] = data.values.toSeq.flatMap(getHtml)
+
+  def getHtml (stats: Stats): Option[HtmlArtifacts] = {
+    firstFlatMapped(formatters)(_.toHtml(stats)).orElse {
+      stats match {
+        case htmlStats: HtmlStats => Some(htmlStats.toHtml)
+        case _ => None // give up, we don't know how to turn this into HTML
+      }
+    }
+  }
+
+  def renderPage (data: Data): HttpContent = {
+    val topicArtifacts = getTopicArtifacts(data)
+
+    val page = html(
+      htmlHeader,
+      body(cls := cssClass)(
+        h1(title),
+        topicArtifacts.map(_.html)
+      )
+    ).toString
+
+    val resources = topicArtifacts.foldLeft(noResources)( (acc,t) => acc ++ t.resources )
+
+    HttpContent(page,resources)
+  }
+}
+
+/**
+  * actor that obtains Stats data from RACE bus and updates associated HttpStatsReporter
+  */
+class HttpStatsReportActor (val config: Config, val route: SubscribingRaceRoute[Data])
+                                                                 extends RaceRouteActor[Data] {
+  var topics: Data = emptyData
+
+  info(s"$name created")
+
+  override def handleMessage = {
+    case BusEvent(_, stats: Stats, _) =>
+      topics = topics + (stats.topic -> stats)
+      route.setData(topics)
   }
 }

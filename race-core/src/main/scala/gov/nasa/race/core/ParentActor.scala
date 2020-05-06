@@ -92,14 +92,14 @@ trait ParentActor extends Actor with ImplicitActorLogging with AskSupport {
     actorRefMap.clear
   }
 
-  protected[this] def askChild (actorRef: ActorRef, q: ()=>Any)(p: PartialFunction[Any,Boolean]): Boolean = {
-    askForResult( actorRef ? q())(p)
+  protected[this] def askChild (actorRef: ActorRef, q: (ActorMetaData)=>Any)(p: PartialFunction[Any,Boolean]): Boolean = {
+    askForResult( actorRef ? q(actorRefMap(actorRef)))(p)
   }
-  protected[this] def askChildren (q: ()=>Any)(p: PartialFunction[Any,Boolean]): Boolean = {
+  protected[this] def askChildren (q: (ActorMetaData)=>Any)(p: PartialFunction[Any,Boolean]): Boolean = {
     !actors.exists(e=> !askChild(e.actorRef, q)(p))
   }
 
-  protected[this] def removePassingChildren (q: ()=>Any)(p: PartialFunction[Any,Boolean]): Unit = {
+  protected[this] def removePassingChildren (q: (ActorMetaData)=>Any)(p: PartialFunction[Any,Boolean]): Unit = {
     var i = 0
     while (i < actors.length) {
       val ad = actors(i)
