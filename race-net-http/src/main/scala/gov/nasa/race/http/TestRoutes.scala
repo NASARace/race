@@ -17,13 +17,13 @@
 package gov.nasa.race.http
 
 import akka.actor.Props
+import akka.http.scaladsl.model.ws.TextMessage
 import akka.http.scaladsl.model.{ContentTypes, HttpEntity}
 import akka.http.scaladsl.server.Directives._
 import com.typesafe.config.Config
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.Messages.BusEvent
 import gov.nasa.race.core.{ParentActor, SubscribingRaceActor}
-
 import scalatags.Text.all.{head => htmlHead, _}
 
 /**
@@ -134,5 +134,27 @@ class TestRefresh (val parent: ParentActor, val config: Config) extends RaceRout
         }
       }
     }
+  }
+}
+
+class TestPusher (val parent: ParentActor, val config: Config) extends PushWSRaceRoute {
+
+  override def instantiateActor = new TestPushActor(config,this)
+
+  override def route = {
+    get {
+      path("data") {
+        completeWithPushWS
+      }
+    }
+  }
+}
+
+class TestPushActor (val config: Config, val route: PushWSRaceRoute) extends PushWSRaceRouteActor {
+  override def handleMessage = {
+    case BusEvent(_,content:Any,_)  =>
+      val text = content.toString
+      //info(s"pushing '$text'")
+      push(TextMessage.Strict(text))
   }
 }

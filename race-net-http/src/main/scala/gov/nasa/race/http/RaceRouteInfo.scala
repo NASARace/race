@@ -22,10 +22,13 @@ import akka.actor.{ActorRef, Props}
 import akka.http.scaladsl.marshalling.ToResponseMarshallable
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.model.headers.{HttpCookie, `Set-Cookie`}
+import akka.http.scaladsl.model.ws.{Message, TextMessage}
 import akka.http.scaladsl.server.Directives.{entity, _}
 import akka.http.scaladsl.server.{Route, StandardRoute}
+import akka.stream.{Materializer, OverflowStrategy}
+import akka.stream.scaladsl.{Keep, Sink, Source, SourceQueue}
 import akka.util.ByteString
-import com.typesafe.config.Config
+import com.typesafe.config.{Config, ConfigException}
 import gov.nasa.race.common.ByteSlice
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.{ParentActor, SubscribingRaceActor}
@@ -347,6 +350,8 @@ trait AuthorizedRaceRoute extends AuthRaceRoute {
   }
 }
 
+//--- basic RaceActor interfacing to obtain response data
+
 /**
   * a RaceRouteInfo that has an associated RaceRouteActor which sets the published content
   * from information received via RACE channel messages
@@ -371,7 +376,70 @@ trait SubscribingRaceRoute [T] extends RaceRouteInfo {
 /**
   * actor base type that is associated with a SubscribingRaceRoute and produces the data that is
   * used as the response content
+  *
+  * implementations have to call setData(T) in response to receiving channel messages, i.e. from
+  * somewhere within their handleMessage overrides
   */
 trait RaceRouteActor[T] extends SubscribingRaceActor {
   val route: SubscribingRaceRoute[T] // to be set by ctor
+}
+
+//--- websocket interface to push from RaceActor
+
+/**
+  * a RaceRoute that completes with a WebSocket to which messages are pushed from an
+  * associated actor that received data from RACE channels and turns them into web socket Messages
+  */
+trait PushWSRaceRoute extends RaceRouteInfo {
+
+  val srcBufSize = config.getIntOrElse("source-queue", 16)
+  val srcPolicy = config.getStringOrElse( "source-policy", "dropTail") match {
+    case "dropHead" => OverflowStrategy.dropHead
+    case "dropNew" => OverflowStrategy.dropNew
+    case "dropTail" => OverflowStrategy.dropTail
+    case "dropBuffer" => OverflowStrategy.dropBuffer
+    case "fail" => OverflowStrategy.fail
+    case other => throw new ConfigException.Generic(s"unsupported source buffer overflow strategy: $other")
+  }
+
+  final implicit val materializer: Materializer = Materializer.matFromSystem(parent.system)
+  // we need a materialized, non-transient SourceQueue so that we don't have to create actor sources per
+  // completed route. To that end we create the WS source from a fan-out publisher we create here
+  val (queue,pub) = Source.queue[Message](srcBufSize,srcPolicy).toMat(Sink.asPublisher(fanout=true))(Keep.both).run()
+
+  protected val actorRef = createActor
+
+  protected def instantiateActor: PushWSRaceRouteActor
+
+  protected def createActor: ActorRef = {
+    val aRef = parent.actorOf(Props(instantiateActor), name)
+    parent.addChildActorRef(aRef,config)
+    aRef
+  }
+
+  def queue (m: Message): Unit = {
+    queue.offer(m)
+  }
+
+  protected def completeWithPushWS: Route = {
+    extractUpgradeToWebSocket { upgrade =>
+      complete( upgrade.handleMessagesWithSinkSource(Sink.ignore, Source.fromPublisher(pub)))
+    }
+  }
+}
+
+/**
+  * actor base type that is associated with a PushWSRaceRoute and pushes content it receives through RACE channels to
+  * external websocket clients.
+  * 
+  * Note this is one actor per PushWSRaceRoute instance, not per materialized route (=request). While we also could
+  * do that it could result in gazillions of short-living, dynamically created/terminated SubscribingRaceActors, which
+  * runs against our normal RaceActor convention
+  */
+trait PushWSRaceRouteActor extends SubscribingRaceActor {
+  val route: PushWSRaceRoute // to be set by ctor
+
+  protected def push (m: Message): Unit = {
+    route.queue(m)
+  }
 }
