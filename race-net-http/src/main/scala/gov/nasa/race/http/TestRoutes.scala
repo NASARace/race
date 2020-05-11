@@ -144,7 +144,7 @@ class TestPusher (val parent: ParentActor, val config: Config) extends PushWSRac
   override def route = {
     get {
       path("data") {
-        completeWithPushWS
+        promoteToWebSocket
       }
     }
   }
@@ -154,7 +154,11 @@ class TestPushActor (val config: Config, val route: PushWSRaceRoute) extends Pus
   override def handleMessage = {
     case BusEvent(_,content:Any,_)  =>
       val text = content.toString
-      //info(s"pushing '$text'")
-      push(TextMessage.Strict(text))
+      info(s"pushing bus message '$text'")
+      push(TextMessage(text))
+
+    case text: String =>
+      info(s"pushing string message '$text'")
+      push(TextMessage(text))
   }
 }

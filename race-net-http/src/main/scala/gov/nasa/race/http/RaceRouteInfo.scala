@@ -18,6 +18,7 @@ package gov.nasa.race.http
 
 import java.io.File
 
+import akka.NotUsed
 import akka.actor.{ActorRef, Props}
 import akka.http.scaladsl.marshalling.ToResponseMarshallable
 import akka.http.scaladsl.model._
@@ -25,8 +26,8 @@ import akka.http.scaladsl.model.headers.{HttpCookie, `Set-Cookie`}
 import akka.http.scaladsl.model.ws.{Message, TextMessage}
 import akka.http.scaladsl.server.Directives.{entity, _}
 import akka.http.scaladsl.server.{Route, StandardRoute}
-import akka.stream.{Materializer, OverflowStrategy}
-import akka.stream.scaladsl.{Keep, Sink, Source, SourceQueue}
+import akka.stream.{ActorAttributes, Materializer, OverflowStrategy, Supervision}
+import akka.stream.scaladsl.{Flow, Keep, Sink, Source, SourceQueue, SourceQueueWithComplete}
 import akka.util.ByteString
 import com.typesafe.config.{Config, ConfigException}
 import gov.nasa.race.common.ByteSlice
@@ -38,7 +39,9 @@ import scala.concurrent.duration._
 import scalatags.Text.all.{span, head => htmlHead, _}
 import scalatags.Text.attrs.{name => nameAttr}
 
+import scala.concurrent.Future
 import scala.reflect.ClassTag
+import scala.util.{Failure, Success}
 
 /**
   * base type for route infos, which consist of a akka.http Route and an optional RaceActor
@@ -402,10 +405,10 @@ trait PushWSRaceRoute extends RaceRouteInfo {
     case other => throw new ConfigException.Generic(s"unsupported source buffer overflow strategy: $other")
   }
 
-  final implicit val materializer: Materializer = Materializer.matFromSystem(parent.system)
-  // we need a materialized, non-transient SourceQueue so that we don't have to create actor sources per
-  // completed route. To that end we create the WS source from a fan-out publisher we create here
-  val (queue,pub) = Source.queue[Message](srcBufSize,srcPolicy).toMat(Sink.asPublisher(fanout=true))(Keep.both).run()
+  //final implicit val materializer: Materializer = Materializer.matFromSystem(parent.context.system)
+  final implicit val materializer: Materializer = Materializer.createMaterializer(parent.context)
+
+  private var connections: List[SourceQueueWithComplete[Message]] = List.empty
 
   protected val actorRef = createActor
 
@@ -417,21 +420,66 @@ trait PushWSRaceRoute extends RaceRouteInfo {
     aRef
   }
 
-  def queue (m: Message): Unit = {
-    queue.offer(m)
+  import scala.concurrent.ExecutionContext.Implicits.global
+
+  /**
+    * called by associated actor
+    * BEWARE - this is executed from a different thread
+    */
+  def push(m: Message): Unit = {
+    implicit val ec = scala.concurrent.ExecutionContext.global
+    val cs = this.connections
+
+    for (connection <- cs) {
+      connection.offer(m).onComplete { res=>
+        res match {
+          case Success(_) => // all good (TODO should we check for Enqueued here?)
+          case Failure(_) =>
+            info(s"dropping connection")
+            connections = cs.filter( _ ne connection)
+        }
+      }
+    }
   }
 
-  protected def completeWithPushWS: Route = {
-    extractUpgradeToWebSocket { upgrade =>
-      complete( upgrade.handleMessagesWithSinkSource(Sink.ignore, Source.fromPublisher(pub)))
+  /**
+    * handle incoming message
+    * override in subclasses if incoming messages need to be processed - default is doing nothing
+    * note this executes in a synchronized context
+    */
+  protected def handleIncoming (m: Message): Unit = {
+    info(s"ignoring incoming message $m")
+  }
+
+  /**
+    * non-overridable wrappwr for user overridable handleIncoming(m)
+    * this has to be synchronized since it can be called concurrently
+    */
+  private def processInbound (m: Message): Unit = {
+    synchronized {
+      handleIncoming(m)
     }
+  }
+
+  /**
+    * complete routes that create web-sockets with this call
+    */
+  protected def promoteToWebSocket: Route = {
+    val inbound: Sink[Message,Any] = Sink.foreach(processInbound)
+    val outbound: Source[Message,SourceQueueWithComplete[Message]] = Source.queue(srcBufSize,srcPolicy)
+    val flow = Flow.fromSinkAndSourceCoupledMat(inbound,outbound)( (_,outBoundMat) => {
+      connections ::= outBoundMat
+      NotUsed
+    })
+
+    handleWebSocketMessages(flow)
   }
 }
 
 /**
   * actor base type that is associated with a PushWSRaceRoute and pushes content it receives through RACE channels to
   * external websocket clients.
-  * 
+  *
   * Note this is one actor per PushWSRaceRoute instance, not per materialized route (=request). While we also could
   * do that it could result in gazillions of short-living, dynamically created/terminated SubscribingRaceActors, which
   * runs against our normal RaceActor convention
@@ -440,6 +488,6 @@ trait PushWSRaceRouteActor extends SubscribingRaceActor {
   val route: PushWSRaceRoute // to be set by ctor
 
   protected def push (m: Message): Unit = {
-    route.queue(m)
+    route.push(m)
   }
 }
