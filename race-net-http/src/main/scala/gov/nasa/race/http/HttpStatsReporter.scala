@@ -18,6 +18,7 @@ package gov.nasa.race.http
 
 import java.io.File
 
+import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.StatusCodes._
 import akka.http.scaladsl.model.{ContentTypes, HttpEntity}
 import akka.http.scaladsl.server.Directives.{complete, _}
@@ -141,7 +142,7 @@ class HttpStatsReporter (val parent: ParentActor, val config: Config)
 /**
   * actor that obtains Stats data from RACE bus and updates associated HttpStatsReporter
   */
-class HttpStatsReportActor (val config: Config, val route: SubscribingRaceRoute[Data])
+class HttpStatsReportActor (val config: Config, val routeInfo: SubscribingRaceRoute[Data])
                                                                  extends RaceRouteActor[Data] {
   var topics: Data = emptyData
 
@@ -150,6 +151,6 @@ class HttpStatsReportActor (val config: Config, val route: SubscribingRaceRoute[
   override def handleMessage = {
     case BusEvent(_, stats: Stats, _) =>
       topics = topics + (stats.topic -> stats)
-      route.setData(topics)
+      routeInfo.setData(topics)
   }
 }

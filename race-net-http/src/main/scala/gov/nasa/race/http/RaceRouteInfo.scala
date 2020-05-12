@@ -17,30 +17,26 @@
 package gov.nasa.race.http
 
 import java.io.File
+import java.net.InetSocketAddress
 
 import akka.NotUsed
 import akka.actor.{ActorRef, Props}
-import akka.http.scaladsl.marshalling.ToResponseMarshallable
+import akka.http.scaladsl.Http
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.model.headers.{HttpCookie, `Set-Cookie`}
-import akka.http.scaladsl.model.ws.{Message, TextMessage}
+import akka.http.scaladsl.model.ws.Message
 import akka.http.scaladsl.server.Directives.{entity, _}
-import akka.http.scaladsl.server.{Route, StandardRoute}
-import akka.stream.{ActorAttributes, Materializer, OverflowStrategy, Supervision}
-import akka.stream.scaladsl.{Flow, Keep, Sink, Source, SourceQueue, SourceQueueWithComplete}
-import akka.util.ByteString
+import akka.http.scaladsl.server.Route
+import akka.stream.scaladsl.{Flow, Sink, Source, SourceQueueWithComplete}
+import akka.stream.{Materializer, OverflowStrategy}
 import com.typesafe.config.{Config, ConfigException}
-import gov.nasa.race.common.ByteSlice
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.{ParentActor, SubscribingRaceActor}
 import gov.nasa.race.util.ClassUtils
-
-import scala.concurrent.duration._
 import scalatags.Text.all.{span, head => htmlHead, _}
 import scalatags.Text.attrs.{name => nameAttr}
 
-import scala.concurrent.Future
-import scala.reflect.ClassTag
+import scala.concurrent.duration._
 import scala.util.{Failure, Success}
 
 /**
@@ -55,12 +51,12 @@ trait RaceRouteInfo {
   val config: Config
   val name = config.getStringOrElse("name", getClass.getSimpleName)
 
-  // this is the main function that defines the public routes
+  // this is the main function that defines the public (user) routes
   def route: Route
 
   // this can extend public routes with private ones used from within server responses  (such
   // as login routes used from within data request responses)
-  def internalRoute = route
+  def completeRoute: Route = route
 
   def shouldUseHttps = false
 
@@ -135,7 +131,7 @@ trait AuthRaceRoute extends RaceRouteInfo {
   */
 trait AutoAuthorizedRaceRoute extends AuthRaceRoute {
 
-  override def internalRoute = {
+  override def completeRoute = {
     route ~ loginRoute ~ logoutRoute
   }
 
@@ -208,7 +204,7 @@ trait AuthorizedRaceRoute extends AuthRaceRoute {
   val avatarData = avatarImage
 
 
-  override def internalRoute = {
+  override def completeRoute = {
     route ~ loginRoute ~ resourceRoute ~ logoutRoute
   }
 
@@ -384,10 +380,12 @@ trait SubscribingRaceRoute [T] extends RaceRouteInfo {
   * somewhere within their handleMessage overrides
   */
 trait RaceRouteActor[T] extends SubscribingRaceActor {
-  val route: SubscribingRaceRoute[T] // to be set by ctor
+  val routeInfo: SubscribingRaceRoute[T] // to be set by ctor
 }
 
 //--- websocket interface to push from RaceActor
+
+case class WebSocketConnection (queue: SourceQueueWithComplete[Message], remoteAddr: InetSocketAddress)
 
 /**
   * a RaceRoute that completes with a WebSocket to which messages are pushed from an
@@ -408,7 +406,7 @@ trait PushWSRaceRoute extends RaceRouteInfo {
   //final implicit val materializer: Materializer = Materializer.matFromSystem(parent.context.system)
   final implicit val materializer: Materializer = Materializer.createMaterializer(parent.context)
 
-  private var connections: List[SourceQueueWithComplete[Message]] = List.empty
+  private var connections: List[WebSocketConnection] = List.empty
 
   protected val actorRef = createActor
 
@@ -420,23 +418,20 @@ trait PushWSRaceRoute extends RaceRouteInfo {
     aRef
   }
 
-  import scala.concurrent.ExecutionContext.Implicits.global
-
   /**
     * called by associated actor
-    * BEWARE - this is executed from a different thread
+    * NOTE - this is executed from the actor thread and can modify connections so we have to synchronize
     */
-  def push(m: Message): Unit = {
+  def push(m: Message): Unit = synchronized {
     implicit val ec = scala.concurrent.ExecutionContext.global
-    val cs = this.connections
 
-    for (connection <- cs) {
-      connection.offer(m).onComplete { res=>
+    for (conn <- connections) {
+      conn.queue.offer(m).onComplete { res=>
         res match {
           case Success(_) => // all good (TODO should we check for Enqueued here?)
           case Failure(_) =>
-            info(s"dropping connection")
-            connections = cs.filter( _ ne connection)
+            info(s"dropping connection: ${conn.remoteAddr}")
+            connections = connections.filter( _ ne conn)
         }
       }
     }
@@ -463,16 +458,22 @@ trait PushWSRaceRoute extends RaceRouteInfo {
 
   /**
     * complete routes that create web-sockets with this call
+    * NOTE - this might execute overlapping with push(), hence we synchronize
     */
   protected def promoteToWebSocket: Route = {
-    val inbound: Sink[Message,Any] = Sink.foreach(processInbound)
-    val outbound: Source[Message,SourceQueueWithComplete[Message]] = Source.queue(srcBufSize,srcPolicy)
-    val flow = Flow.fromSinkAndSourceCoupledMat(inbound,outbound)( (_,outBoundMat) => {
-      connections ::= outBoundMat
-      NotUsed
-    })
 
-    handleWebSocketMessages(flow)
+    headerValueByType[RealRemoteAddress](()) { remoteAddrHdr =>
+      val remoteAddress = remoteAddrHdr.address
+      val inbound: Sink[Message,Any] = Sink.foreach(processInbound)
+      val outbound: Source[Message,SourceQueueWithComplete[Message]] = Source.queue(srcBufSize,srcPolicy)
+
+      val flow = Flow.fromSinkAndSourceCoupledMat(inbound, outbound)((_, outBoundMat) => synchronized {
+          connections ::= WebSocketConnection(outBoundMat, remoteAddress)
+          NotUsed
+      })
+      info(s"promoting to websocket connection: $remoteAddress")
+      handleWebSocketMessages(flow)
+    }
   }
 }
 

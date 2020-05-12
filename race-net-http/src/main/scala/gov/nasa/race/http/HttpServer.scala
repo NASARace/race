@@ -22,9 +22,11 @@ import java.security.{KeyStore, SecureRandom}
 import javax.net.ssl.{KeyManagerFactory, SSLContext, TrustManagerFactory}
 import akka.actor.ActorRef
 import akka.http.scaladsl.Http.ServerBinding
+import akka.http.scaladsl.model.HttpRequest
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
 import akka.http.scaladsl.{ConnectionContext, Http}
+import akka.stream.scaladsl.{Sink, Source}
 import akka.stream.{ActorMaterializer, Materializer}
 import com.typesafe.config.{Config, ConfigException}
 import gov.nasa.race._
@@ -51,19 +53,21 @@ class HttpServer (val config: Config) extends ParentRaceActor {
 
   val host = config.getStringOrElse("host", "localhost")
   val port = config.getIntOrElse("port", 8080)
+  val interface = config.getStringOrElse( "interface", "0.0.0.0")
   val serverTimeout = config.getFiniteDurationOrElse("server-timeout", 5.seconds)
+  val logIncoming = config.getBooleanOrElse("log-incoming", false)
 
   val httpExt = Http()(system)
   val connectionContext: ConnectionContext = getConnectionContext
 
   val routeInfos = createRouteInfos
-
   val route = createRoutes
+
   var binding: Option[Future[ServerBinding]] = None
 
   def createRoutes = {
-    val route = concat(routeInfos.map(_.internalRoute):_*)
-    if (config.getBooleanOrElse("log-incoming", false)) logRoute(route) else route
+    val route = concat(routeInfos.map(_.completeRoute):_*)
+    if (logIncoming) logRoute(route) else route
   }
 
   def logRoute (contentRoute: Route): Route = {
@@ -111,17 +115,26 @@ class HttpServer (val config: Config) extends ParentRaceActor {
   }
 
   override def onStartRaceActor(originator: ActorRef) = {
-    binding = Some(httpExt.bindAndHandle(route, host, port, connectionContext))
-    info(s"$name serving on http://$host:$port")
+    val serverSource: Source[Http.IncomingConnection,Future[Http.ServerBinding]] = httpExt.bind(interface,port,connectionContext)
+    val bindingFuture: Future[Http.ServerBinding] = serverSource.to(Sink.foreach { connection =>
+      val finalRoute = mapRequest(req => req.addHeader(RealRemoteAddress(connection))) { route }
+
+      info(s"accepted new connection from: ${connection.remoteAddress}")
+      connection.handleWith(finalRoute)
+    }).run()
+    binding = Some(bindingFuture)
+
+    info(s"server listening on port: $port")
     super.onStartRaceActor(originator)
   }
 
   override def onTerminateRaceActor(originator: ActorRef) = {
     ifSome(binding) { f =>
-      f.flatMap(_.unbind())
-      Await.ready(f, serverTimeout)
+      // f.flatMap(_.unbind())
+      Await.result(f, 10.seconds).terminate(hardDeadline = 3.seconds)
     }
-    info(s"$name stopped serving")
+
+    info(s"$name stopped serving port: $port")
     super.onTerminateRaceActor(originator)
   }
 

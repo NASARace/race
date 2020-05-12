@@ -17,6 +17,7 @@
 package gov.nasa.race.http
 
 import akka.actor.Props
+import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.ws.TextMessage
 import akka.http.scaladsl.model.{ContentTypes, HttpEntity}
 import akka.http.scaladsl.server.Directives._
