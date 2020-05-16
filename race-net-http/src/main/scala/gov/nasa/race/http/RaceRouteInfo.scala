@@ -29,6 +29,7 @@ import akka.http.scaladsl.server.Directives.{entity, _}
 import akka.http.scaladsl.server.Route
 import akka.stream.scaladsl.{Flow, Sink, Source, SourceQueueWithComplete}
 import akka.stream.{Materializer, OverflowStrategy}
+import akka.util.ByteString
 import com.typesafe.config.{Config, ConfigException}
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.{ParentActor, RaceDataConsumer, SubscribingRaceActor}
@@ -466,14 +467,30 @@ trait PushWSRaceRoute extends WSRaceRouteInfo with RaceDataConsumer {
   */
 trait ProtocolWSRaceRoute extends WSRaceRouteInfo {
 
-  protected def handleMessage (inMsg: Message): Iterable[Message]
+  // concrete type provides the partial function for messages that are handled
+  protected val handleMessage: PartialFunction[Message,Iterable[Message]]
+
+  // the rest is automatically consumed and ignored
+  protected def discardMessage (m: Message): Iterable[Message] = {
+    info(s"ignored incoming message: $m")
+    m match {
+      case tm: TextMessage => tm.textStream.runWith(Sink.ignore)
+      case bm: BinaryMessage => bm.dataStream.runWith(Sink.ignore)
+    }
+    Nil
+  }
+
+  //val pingMsg: Message = BinaryMessage.Strict(ByteString.empty) // TODO only a simulated Ping frame that is not transparent
+
+  protected val flow = Flow[Message].mapConcat { m=>
+    handleMessage.applyOrElse(m, discardMessage)
+  }
+    // .keepAlive(1.second, () => pingMsg)  // TDDO should go in route configuration
 
   protected def promoteToWebSocket: Route = {
     extractMatchedPath { requestUri =>
       headerValueByType[RealRemoteAddress](()) { remoteAddrHdr =>
         val remoteAddress = remoteAddrHdr.address
-
-        val flow = Flow[Message].mapConcat(handleMessage)
 
         info(s"promoting $requestUri to websocket connection for remote: $remoteAddress")
         handleWebSocketMessages(flow)

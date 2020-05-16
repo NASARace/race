@@ -25,6 +25,7 @@ import akka.http.scaladsl.Http.ServerBinding
 import akka.http.scaladsl.model.HttpRequest
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
+import akka.http.scaladsl.settings.ServerSettings
 import akka.http.scaladsl.{ConnectionContext, Http}
 import akka.stream.scaladsl.{Sink, Source}
 import akka.stream.{ActorMaterializer, Materializer}
@@ -55,10 +56,12 @@ class HttpServer (val config: Config) extends ParentRaceActor {
   val port = config.getIntOrElse("port", 8080)
   val interface = config.getStringOrElse( "interface", "0.0.0.0")
   val serverTimeout = config.getFiniteDurationOrElse("server-timeout", 5.seconds)
+  val wsKeepAliveInterval = config.getOptionalFiniteDuration("ws-keep-alive")
   val logIncoming = config.getBooleanOrElse("log-incoming", false)
 
   val httpExt = Http()(system)
   val connectionContext: ConnectionContext = getConnectionContext
+  val serverSettings: ServerSettings = getServerSettings
 
   val routeInfos = createRouteInfos
   val route = createRoutes
@@ -114,8 +117,19 @@ class HttpServer (val config: Config) extends ParentRaceActor {
     }
   }
 
+  def getServerSettings = {
+    var settings = ServerSettings(system)
+    ifSome(wsKeepAliveInterval){ dur=>
+      val newWsSettings = settings.websocketSettings.withPeriodicKeepAliveMaxIdle(dur)
+      settings = settings.withWebsocketSettings(newWsSettings)
+    }
+    //... and potentially more
+    settings
+  }
+
   override def onStartRaceActor(originator: ActorRef) = {
-    val serverSource: Source[Http.IncomingConnection,Future[Http.ServerBinding]] = httpExt.bind(interface,port,connectionContext)
+    val serverSource: Source[Http.IncomingConnection,Future[Http.ServerBinding]] =
+      httpExt.bind(interface,port,connectionContext,serverSettings)
     val bindingFuture: Future[Http.ServerBinding] = serverSource.to(Sink.foreach { connection =>
 
       // we add the connection data to the route-accessible HttpRequest headers so that we can

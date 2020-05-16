@@ -200,16 +200,11 @@ class TestAuthorizedPusher (val parent: ParentActor, val config: Config) extends
 
 class EchoService (val parent: ParentActor, val config: Config) extends ProtocolWSRaceRoute {
 
-  override def handleMessage(inMsg: Message): immutable.Iterable[Message] = {
-    inMsg match {
-      case tm: TextMessage =>
-        TextMessage(Source.single("Echo [") ++ tm.textStream ++ Source.single("]")) :: Nil
-
-      case bm: BinaryMessage =>
-        // ignore binary messages but drain content to avoid the stream being clogged
-        bm.dataStream.runWith(Sink.ignore)
-        Nil
-    }
+  override protected val handleMessage = {
+    case tm: TextMessage.Strict =>
+      val msgText = tm.text
+      info(s"route $name processing incoming: $msgText")
+      TextMessage(Source.single(s"Echo [$msgText]")) :: Nil
   }
 
   override def route: Route = {
