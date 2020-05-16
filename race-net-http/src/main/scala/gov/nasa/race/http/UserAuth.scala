@@ -53,4 +53,8 @@ case class UserAuth (passwords: PasswordStore, sessionTokens: SessionTokenStore)
   def nextSessionToken(lastToken: String, role: String): Either[String,String] = {
     sessionTokens.replaceExistingEntry(lastToken,role)
   }
+
+  def matchesSessionToken (lastToken: String, role: String, expirationLimit: Long = sessionTokens.expiresAfterMillis): Either[String,String] = {
+    sessionTokens.matchesExistingEntry(lastToken,role,expirationLimit)
+  }
 }

@@ -24,19 +24,20 @@ import akka.actor.{ActorRef, Props}
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.model.headers.{HttpCookie, `Set-Cookie`}
-import akka.http.scaladsl.model.ws.Message
+import akka.http.scaladsl.model.ws.{BinaryMessage, Message, TextMessage}
 import akka.http.scaladsl.server.Directives.{entity, _}
 import akka.http.scaladsl.server.Route
 import akka.stream.scaladsl.{Flow, Sink, Source, SourceQueueWithComplete}
 import akka.stream.{Materializer, OverflowStrategy}
 import com.typesafe.config.{Config, ConfigException}
 import gov.nasa.race.config.ConfigUtils._
-import gov.nasa.race.core.{ParentActor, SubscribingRaceActor}
+import gov.nasa.race.core.{ParentActor, RaceDataConsumer, SubscribingRaceActor}
 import gov.nasa.race.util.ClassUtils
 import scalatags.Text.all.{span, head => htmlHead, _}
 import scalatags.Text.attrs.{name => nameAttr}
 
 import scala.concurrent.duration._
+import scala.collection.immutable.Iterable
 import scala.util.{Failure, Success}
 
 /**
@@ -91,6 +92,8 @@ trait AuthRaceRoute extends RaceRouteInfo {
 
   //--- logout is not interactive
 
+  // TODO - should we check for expiration here? If so, what to do with web socket promotions?
+
   def logoutRoute: Route = {
     path(logoutPath) {
       respondWithHeader(new `Set-Cookie`(new HttpCookie(sessionCookieName, "", Some(DateTime.now - 10)))) {
@@ -129,7 +132,7 @@ trait AuthRaceRoute extends RaceRouteInfo {
   *
   * user authentication and session validation are the same as for manual auth
   */
-trait AutoAuthorizedRaceRoute extends AuthRaceRoute {
+trait PreAuthorizedRaceRoute extends AuthRaceRoute {
 
   override def completeRoute = {
     route ~ loginRoute ~ logoutRoute
@@ -355,43 +358,27 @@ trait AuthorizedRaceRoute extends AuthRaceRoute {
   * a RaceRouteInfo that has an associated RaceRouteActor which sets the published content
   * from information received via RACE channel messages
   */
-trait SubscribingRaceRoute [T] extends RaceRouteInfo {
+trait SubscribingRaceRoute extends RaceRouteInfo with RaceDataConsumer
 
-  protected val actorRef = createActor
-
-  // BEWARE - can be called by the actor at any time during route evaluation, sync appropriately
-  def setData (newData: T): Unit
-
-  // to be provided by concrete type
-  protected def instantiateActor: RaceRouteActor[T]
-
-  protected def createActor: ActorRef = {
-    val aRef = parent.actorOf(Props(instantiateActor), name)
-    parent.addChildActorRef(aRef,config)
-    aRef
-  }
-}
-
-/**
-  * actor base type that is associated with a SubscribingRaceRoute and produces the data that is
-  * used as the response content
-  *
-  * implementations have to call setData(T) in response to receiving channel messages, i.e. from
-  * somewhere within their handleMessage overrides
-  */
-trait RaceRouteActor[T] extends SubscribingRaceActor {
-  val routeInfo: SubscribingRaceRoute[T] // to be set by ctor
-}
 
 //--- websocket interface to push from RaceActor
 
-case class WebSocketConnection (queue: SourceQueueWithComplete[Message], remoteAddr: InetSocketAddress)
+/**
+  * root type for WebSocket RaceRouteInfos
+  */
+trait WSRaceRouteInfo extends RaceRouteInfo {
+  final implicit val materializer: Materializer = Materializer.createMaterializer(parent.context)
+
+  protected def promoteToWebSocket: Route
+}
+
+case class WebSocketPushConnection(queue: SourceQueueWithComplete[Message], remoteAddr: InetSocketAddress)
 
 /**
   * a RaceRoute that completes with a WebSocket to which messages are pushed from an
   * associated actor that received data from RACE channels and turns them into web socket Messages
   */
-trait PushWSRaceRoute extends RaceRouteInfo {
+trait PushWSRaceRoute extends WSRaceRouteInfo with RaceDataConsumer {
 
   val srcBufSize = config.getIntOrElse("source-queue", 16)
   val srcPolicy = config.getStringOrElse( "source-policy", "dropTail") match {
@@ -403,32 +390,17 @@ trait PushWSRaceRoute extends RaceRouteInfo {
     case other => throw new ConfigException.Generic(s"unsupported source buffer overflow strategy: $other")
   }
 
-  //final implicit val materializer: Materializer = Materializer.matFromSystem(parent.context.system)
-  final implicit val materializer: Materializer = Materializer.createMaterializer(parent.context)
+  private var connections: List[WebSocketPushConnection] = List.empty
 
-  private var connections: List[WebSocketConnection] = List.empty
-
-  protected val actorRef = createActor
-
-  protected def instantiateActor: PushWSRaceRouteActor
-
-  protected def createActor: ActorRef = {
-    val aRef = parent.actorOf(Props(instantiateActor), name)
-    parent.addChildActorRef(aRef,config)
-    aRef
-  }
-
-  /**
-    * called by associated actor
-    * NOTE - this is executed from the actor thread and can modify connections so we have to synchronize
-    */
-  def push(m: Message): Unit = synchronized {
+  protected def push (m: Message): Unit = {
     implicit val ec = scala.concurrent.ExecutionContext.global
 
     for (conn <- connections) {
       conn.queue.offer(m).onComplete { res=>
         res match {
           case Success(_) => // all good (TODO should we check for Enqueued here?)
+            info(s"pushing message $m to ${conn.remoteAddr}")
+
           case Failure(_) =>
             info(s"dropping connection: ${conn.remoteAddr}")
             connections = connections.filter( _ ne conn)
@@ -436,6 +408,14 @@ trait PushWSRaceRoute extends RaceRouteInfo {
       }
     }
   }
+
+  /**
+    * called by associated actor
+    * NOTE - this is executed from the actor thread and can modify connections so we have to synchronize
+    */
+    def setData (data: Any): Unit = synchronized {
+      push(TextMessage.Strict(data.toString))
+    }
 
   /**
     * handle incoming message
@@ -461,34 +441,74 @@ trait PushWSRaceRoute extends RaceRouteInfo {
     * NOTE - this might execute overlapping with push(), hence we synchronize
     */
   protected def promoteToWebSocket: Route = {
+    extractMatchedPath { requestUri =>
+      headerValueByType[RealRemoteAddress](()) { remoteAddrHdr =>
+        val remoteAddress = remoteAddrHdr.address
+        val inbound: Sink[Message, Any] = Sink.foreach(processInbound)
+        val outbound: Source[Message, SourceQueueWithComplete[Message]] = Source.queue(srcBufSize, srcPolicy)
 
-    headerValueByType[RealRemoteAddress](()) { remoteAddrHdr =>
-      val remoteAddress = remoteAddrHdr.address
-      val inbound: Sink[Message,Any] = Sink.foreach(processInbound)
-      val outbound: Source[Message,SourceQueueWithComplete[Message]] = Source.queue(srcBufSize,srcPolicy)
-
-      val flow = Flow.fromSinkAndSourceCoupledMat(inbound, outbound)((_, outBoundMat) => synchronized {
-          connections ::= WebSocketConnection(outBoundMat, remoteAddress)
+        val flow = Flow.fromSinkAndSourceCoupledMat(inbound, outbound)((_, outBoundMat) => synchronized {
+          connections ::= WebSocketPushConnection(outBoundMat, remoteAddress)
           NotUsed
-      })
-      info(s"promoting to websocket connection: $remoteAddress")
-      handleWebSocketMessages(flow)
+        })
+        info(s"promoting $requestUri to websocket connection for remote: $remoteAddress")
+        handleWebSocketMessages(flow)
+      }
     }
   }
 }
 
 /**
-  * actor base type that is associated with a PushWSRaceRoute and pushes content it receives through RACE channels to
-  * external websocket clients.
+  * a websocket RaceRouteInfo that uses a request/response websocket message protocol
   *
-  * Note this is one actor per PushWSRaceRoute instance, not per materialized route (=request). While we also could
-  * do that it could result in gazillions of short-living, dynamically created/terminated SubscribingRaceActors, which
-  * runs against our normal RaceActor convention
+  * Note that each response can consist of a number of messages that are sent back, but each interaction
+  * starts with a client request
   */
-trait PushWSRaceRouteActor extends SubscribingRaceActor {
-  val route: PushWSRaceRoute // to be set by ctor
+trait ProtocolWSRaceRoute extends WSRaceRouteInfo {
 
-  protected def push (m: Message): Unit = {
-    route.push(m)
+  protected def handleMessage (inMsg: Message): Iterable[Message]
+
+  protected def promoteToWebSocket: Route = {
+    extractMatchedPath { requestUri =>
+      headerValueByType[RealRemoteAddress](()) { remoteAddrHdr =>
+        val remoteAddress = remoteAddrHdr.address
+
+        val flow = Flow[Message].mapConcat(handleMessage)
+
+        info(s"promoting $requestUri to websocket connection for remote: $remoteAddress")
+        handleWebSocketMessages(flow)
+      }
+    }
+  }
+}
+
+/**
+  * a route that supports web socket promotion from within a user-authenticated context
+  *
+  * note we only check but do not update the session token (there is no HttpResponse we could use to transmit
+  * a new token value), and we provide an additional config option to specify a shorter expiration. This is based
+  * on the model that the promotion request is automated (via script) from within a previous (authorized) response
+  * content, i.e. the request should happen soon after we sent out that response
+  *
+  * note also that AuthRaceRoute does not check for session token expiration on logout requests, which in case
+  * of responses that open web sockets would probably fail since those are usually long-running content used to
+  * display pushed data
+  */
+trait AuthorizedWSRoute extends WSRaceRouteInfo with AuthorizedRaceRoute {
+
+  val promoWithinMillis: Long = config.getFiniteDurationOrElse("promotion-within", 10.seconds).toMillis
+
+  protected def promoteAuthorizedToWebSocket (requiredRole: String): Route = {
+    extractMatchedPath { requestUri =>
+      cookie(sessionCookieName) { namedCookie =>
+        userAuth.matchesSessionToken(namedCookie.value, requiredRole) match {
+          case Right(_) =>
+            promoteToWebSocket
+
+          case Left(rejection) =>
+            complete(StatusCodes.Forbidden, s"invalid session token: $rejection")
+        }
+      } ~ complete(StatusCodes.Forbidden, "no user authorization found")
+    }
   }
 }

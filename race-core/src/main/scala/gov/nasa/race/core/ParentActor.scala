@@ -46,6 +46,8 @@ trait ParentActor extends Actor with ImplicitActorLogging with AskSupport {
   def hasChildActors: Boolean = !actors.isEmpty
   def noMoreChildren: Boolean = actors.isEmpty
 
+  def isChildActor (aref: ActorRef): Boolean = actorRefMap.contains(aref)
+
   //--- actor instantiation, addition and removal
   def actorOf(props: Props, name: String): ActorRef = context.actorOf(props,name)
 

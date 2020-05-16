@@ -48,7 +48,7 @@ class ControlClockPanel (raceView: RaceViewer, config: Option[Config]=None) exte
   val stopIcon = Images.getScaledIcon("stop-red-16x16.png")
   val playIcon = Images.getScaledIcon("play-green-16x16.png")
   val pauseIcon = Images.getScaledIcon("pause-yellow-16x16.png")
-  def pauseResumeIcon = if (raceView.isStopped) playIcon else pauseIcon
+  def pauseResumeIcon = if (raceView.isPaused) playIcon else pauseIcon
 
   val stopButton = new Button(){
     action = Action(""){ raceView.requestRaceTermination }

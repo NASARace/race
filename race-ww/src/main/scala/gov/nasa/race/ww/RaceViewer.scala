@@ -404,13 +404,15 @@ class RaceViewer(viewerActor: RaceViewerActor) extends DeferredEyePositionListen
   def getInViewChecker = InViewChecker(wwd)
 
   //--- race control ops
-  def isStopped = viewerActor.raceActorSystem.isStopped
+  def isPaused = viewerActor.isPaused
 
-  def requestRacePause = viewerActor.sendPauseRequest
-  def requestRaceResume = viewerActor.sendResumeRequest
-  def requestRaceTermination = viewerActor.sendTerminationRequest
+  def requestRacePause = viewerActor.requestPause
+  def requestRaceResume = viewerActor.requestResume
+  def requestRaceTermination = viewerActor.requestTermination
 
-  def requestPauseResume = if (isStopped) requestRaceResume else requestRacePause
+  def requestPauseResume = {
+    if (isPaused) requestRaceResume else requestRacePause
+  }
 
   // the callback notifications
   def onRaceStarted: Unit = foreachPanel(_.onRaceStarted)

@@ -103,8 +103,6 @@ object Messages {
   case object RaceActorTerminateIgnored extends RaceSystemMessage
   case class RaceActorTerminateFailed (reason: String="unknown") extends RaceSystemMessage
 
-  case object RacePauseRequest
-  case object RaceResumeRequest
   case object RaceTerminateRequest  // ras internal termination request: RaceActor -> Master
 
   case object RaceAck extends RaceSystemMessage // generic acknowledgement
@@ -125,11 +123,13 @@ object Messages {
   protected[core] case object RaceStarted               // Master -> RAS, remote Master -> Master
   protected[core] case class RaceStartFailed (reason: Any) // Master -> RAS
 
-  case object RacePause
+  protected[core] case object RacePause                 // RAS -> Master
+  case object RacePauseRequest                          // toplevel RA -> Master
   case object RacePaused
   case class RacePauseFailed (reason: Any)
 
-  case object RaceResume
+  protected[core] case object RaceResume                // RAS -> Master
+  case object RaceResumeRequest                         // toplevel RA -> Master
   case object RaceResumed
   case class RaceResumeFailed (reason: Any)
 

@@ -123,13 +123,13 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ParentActor {
 
     case msg:SetLogLevel => sendToChildren(msg) // just forward
 
-    case RacePause => onRacePause
-    case RaceResume => onRaceResume
+    case RacePauseRequest => onRacePauseRequest(sender)
+    case RacePause => onRacePause(sender)
 
-    case RaceTerminateRequest => // from some actor, let the RAS decide
-      info(s"master $name got RaceTerminateRequest from $sender")
-      ras.requestTermination(sender)
+    case RaceResumeRequest => onRaceResumeRequest(sender)
+    case RaceResume => onRaceResume(sender)
 
+    case RaceTerminateRequest => onRaceTerminateRequest(sender)
     case RaceTerminate => onRaceTerminate
     case RemoteRaceTerminate (remoteMaster: ActorRef) => onRemoteRaceTerminate(remoteMaster)
 
@@ -540,7 +540,7 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ParentActor {
 
 
   // check if this is an actor we know about (is part of our RAS)
-  def isManaged (actorRef: ActorRef) = actors.contains(actorRef)
+  def isManaged (actorRef: ActorRef) = isChildActor(actorRef)
 
   // check if this is an actor we created
   def isSupervised (actorRef: ActorRef) = context.child(actorRef.path.name).isDefined
@@ -631,16 +631,6 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ParentActor {
 
   //--- actor pause
 
-  def onRacePause = executeProtected {
-    if (ras.commonCapabilities.supportsPauseResume){
-      if (ras.isRunning) {
-        info(s"master $name got RacePause, halting actors")
-        pauseRaceActors
-        sender ! RacePaused
-      } else warning(s"master $name ignoring RacePause, system not running")
-    } else warning(s"master $name ignoring RacePause, system does not support pause/resume")
-  }
-
   protected def pauseRaceActors = {
     def pauseFailed(msg: String, isOptionalActor: Boolean, cause: Option[Throwable]=None) = {
       if (isOptionalActor) {
@@ -660,7 +650,7 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ParentActor {
       info(s"sending PauseRaceActor to ${actorRef.path.name}..")
       askForResult(actorRef ? PauseRaceActor(self)) {
         case RaceActorPaused =>
-          info(s"${actorRef.path.name} is paused")
+          //info(s"${actorRef.path.name} is paused")
         case RaceActorPauseFailed(reason) =>
           pauseFailed(s"pause of ${actorRef.path.name} failed: $reason", isOptional)
         case TimedOut =>
@@ -671,18 +661,36 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ParentActor {
     }
   }
 
+  def onRacePause (originator: ActorRef) = executeProtected {
+    if (ras.commonCapabilities.supportsPauseResume){
+      if (ras.isRunning) {
+        info(s"master $name got RacePause, halting actors")
+        try {
+          pauseRaceActors
+          ras.setPaused
+          originator ! RacePaused
+        } catch {
+          case x: RacePauseException =>
+            originator ! RacePauseFailed(x.getMessage)
+        }
+      } else warning(s"master $name ignoring RacePause, system not running")
+    } else warning(s"master $name ignoring RacePause, system does not support pause/resume")
+  }
+
+  /**
+    * RequestPause response - note this has to come from a registered toplevel actor
+    */
+  protected def onRacePauseRequest(originator: ActorRef): Unit = {
+      if (ras.isRunning){
+        if (isManaged(originator)) {
+          if (ras.commonCapabilities.supportsPauseResume){
+            onRacePause(originator)
+          } else warning("ignoring pause request: universe does not support pause/resume")
+        } else warning(s"ignoring pause request: unknown actor ${originator.path}")
+      } else warning("ignoring pause request: universe not running")
+  }
 
   //--- actor resume
-
-  def onRaceResume = executeProtected {
-    if (ras.commonCapabilities.supportsPauseResume){
-      if (ras.isPaused) {
-        info(s"master $name got RaceResume, resuming actors")
-        resumeRaceActors
-        sender ! RaceResumed
-      } else warning(s"master $name ignoring RaceResume, system not paused")
-    } else warning(s"master $name ignoring RaceResume, system does not support pause/resume")
-  }
 
   protected def resumeRaceActors = {
     def resumeFailed(msg: String, isOptionalActor: Boolean, cause: Option[Throwable]=None) = {
@@ -703,7 +711,7 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ParentActor {
       info(s"sending ResumeRaceActor to ${actorRef.path.name}..")
       askForResult(actorRef ? ResumeRaceActor(self)) {
         case RaceActorResumed =>
-          info(s"${actorRef.path.name} is resumed")
+          //info(s"${actorRef.path.name} is resumed")
         case RaceActorResumeFailed(reason) =>
           resumeFailed(s"resuming ${actorRef.path.name} failed: $reason", isOptional)
         case TimedOut =>
@@ -714,7 +722,34 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ParentActor {
     }
   }
 
+  def onRaceResume (originator: ActorRef) = executeProtected {
+    if (ras.commonCapabilities.supportsPauseResume){
+      if (ras.isPaused) {
+        info(s"master $name got RaceResume, resuming actors")
+        try {
+          resumeRaceActors
+          ras.setResumed
+          originator ! RaceResumed
+        } catch {
+          case x: RaceResumeException =>
+            originator ! RaceResumeFailed(x.getMessage)
+        }
+      } else warning(s"master $name ignoring RaceResume, system not paused")
+    } else warning(s"master $name ignoring RaceResume, system does not support pause/resume")
+  }
 
+  /**
+    * RequestResume response - note this has to come from a registered toplevel actor
+    */
+  protected def onRaceResumeRequest(originator: ActorRef): Unit = {
+    if (ras.isPaused){
+      if (isManaged(originator)) {
+        if (ras.commonCapabilities.supportsPauseResume){
+          onRaceResume(originator)
+        } else warning("ignoring resume request: universe does not support pause/resume")
+      } else warning(s"ignoring resume request: unknown actor ${originator.path}")
+    } else warning("ignoring resume request: universe not paused")
+  }
 
   //--- actor termination
 
@@ -777,6 +812,15 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ParentActor {
       ifSome(statsReporter){ _.terminate }
     }
   }
+
+  def onRaceTerminateRequest (originator: ActorRef): Unit = {
+    if (ras.isLive) {
+      if (isManaged(originator)) {
+        ras.requestTermination(originator)
+      } else warning(s"ignoring terminate request: unknown actor ${originator.path}")
+    } else warning("ignoring termination request: universe not live")
+  }
+
 
   def onRaceResetClock (originator: ActorRef, date: DateTime, tScale: Double) = {
     sendToChildren(SyncWithRaceClock)

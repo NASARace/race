@@ -18,14 +18,18 @@ package gov.nasa.race.http
 
 import akka.actor.Props
 import akka.http.scaladsl.Http
-import akka.http.scaladsl.model.ws.TextMessage
+import akka.http.scaladsl.model.ws.{BinaryMessage, Message, TextMessage}
 import akka.http.scaladsl.model.{ContentTypes, HttpEntity}
 import akka.http.scaladsl.server.Directives._
+import akka.http.scaladsl.server.Route
+import akka.stream.scaladsl.{Sink, Source}
 import com.typesafe.config.Config
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.Messages.BusEvent
 import gov.nasa.race.core.{ParentActor, SubscribingRaceActor}
 import scalatags.Text.all.{head => htmlHead, _}
+
+import scala.collection.immutable
 
 /**
   * a simple statically configured test route without actor
@@ -43,7 +47,7 @@ class TestRouteInfo (val parent: ParentActor, val config: Config) extends RaceRo
   }
 }
 
-class TestAutoAuthorized (val parent: ParentActor, val config: Config) extends AutoAuthorizedRaceRoute {
+class TestPreAuthorized(val parent: ParentActor, val config: Config) extends PreAuthorizedRaceRoute {
   val request = config.getStringOrElse("request", "autoSecret")
   var count = 0
 
@@ -62,6 +66,7 @@ class TestAutoAuthorized (val parent: ParentActor, val config: Config) extends A
 class TestAuthorized (val parent: ParentActor, val config: Config) extends AuthorizedRaceRoute {
   val request = config.getStringOrElse("request", "secret")
   var count = 0
+
   def page = html(
     body(
       p(s"the supersecret answer #$count to the ultimate question of life, the universe and everything is:"),
@@ -86,29 +91,22 @@ class TestAuthorized (val parent: ParentActor, val config: Config) extends Autho
 /**
   * a test route that uses a script for dynamic data update
   */
-class TestRefresh (val parent: ParentActor, val config: Config) extends RaceRouteInfo {
+class TestRefresh (val parent: ParentActor, val config: Config) extends SubscribingRaceRoute {
 
-  class RouteActor (val config: Config) extends SubscribingRaceActor {
-    info("$name created")
+  private var data: String = "?" // to be set by actor
 
-    override def handleMessage = {
-      case BusEvent(_,msg,_) => data = msg.toString
-    }
+  override def setData(newData: Any): Unit = {
+    data = newData.toString
   }
-
-  parent.addChildActor("refreshRoute", config, Props(new RouteActor(config)))
-
-  var data = "?" // to be set by actor
 
   val page = html(
     htmlHead(
       script(raw("""
-                var refresher = setInterval(loadData,5000);
-
                 function loadData(){
                   var req = new XMLHttpRequest();
                   req.onreadystatechange = function() {
                     if (this.readyState == 4 && this.status == 200) {
+                      console.log("new data: " + req.responseText);
                       document.getElementById('data').innerHTML = req.responseText;
                     } else if (this.status == 404){
                       clearInterval(refresher)
@@ -119,7 +117,7 @@ class TestRefresh (val parent: ParentActor, val config: Config) extends RaceRout
                 }
         """))
     ),
-    body(onload:="refresher()")(
+    body(onload:="setInterval(loadData,5000);")(
       h1("RACE Data Reload Test"),
       div(id:="data")(data)
     )
@@ -140,8 +138,6 @@ class TestRefresh (val parent: ParentActor, val config: Config) extends RaceRout
 
 class TestPusher (val parent: ParentActor, val config: Config) extends PushWSRaceRoute {
 
-  override def instantiateActor = new TestPushActor(config,this)
-
   override def route = {
     get {
       path("data") {
@@ -151,15 +147,76 @@ class TestPusher (val parent: ParentActor, val config: Config) extends PushWSRac
   }
 }
 
-class TestPushActor (val config: Config, val route: PushWSRaceRoute) extends PushWSRaceRouteActor {
-  override def handleMessage = {
-    case BusEvent(_,content:Any,_)  =>
-      val text = content.toString
-      info(s"pushing bus message '$text'")
-      push(TextMessage(text))
+class TestAuthorizedPusher (val parent: ParentActor, val config: Config) extends PushWSRaceRoute with AuthorizedWSRoute {
 
-    case text: String =>
-      info(s"pushing string message '$text'")
-      push(TextMessage(text))
+  val page = html(
+    htmlHead(
+      script(raw("""
+         function websock_test() {
+            if ("WebSocket" in window) {
+               console.log("WebSocket is supported by your Browser!");
+               var ws = new WebSocket("wss://localhost:8080/ws");
+
+               ws.onopen = function() {
+                  ws.send("Hi server!");
+                  console.log("message is sent...");
+               };
+
+               ws.onmessage = function (evt) {
+                  var received_msg = evt.data;
+                  document.getElementById("data").innerHTML = received_msg;
+                  console.log("got message: " + received_msg);
+               };
+
+               ws.onclose = function() {
+                  console.log("connection is closed...");
+               };
+            } else {
+               console.log("WebSocket NOT supported by your Browser!");
+            }
+         }
+      """)
+      )
+    ),
+    body(onload:="websock_test()")(
+      h1("RACE WebSocket Test"),
+      div(id:="data")("no data yet..")
+    )
+  )
+
+  override def route: Route = {
+    get {
+      path("data") {
+        completeAuthorized(User.UserRole){
+          HttpEntity(ContentTypes.`text/html(UTF-8)`, page.render)
+        }
+      } ~ path("ws") {
+        promoteAuthorizedToWebSocket(User.UserRole)
+      }
+    }
+  }
+
+}
+
+class EchoService (val parent: ParentActor, val config: Config) extends ProtocolWSRaceRoute {
+
+  override def handleMessage(inMsg: Message): immutable.Iterable[Message] = {
+    inMsg match {
+      case tm: TextMessage =>
+        TextMessage(Source.single("Echo [") ++ tm.textStream ++ Source.single("]")) :: Nil
+
+      case bm: BinaryMessage =>
+        // ignore binary messages but drain content to avoid the stream being clogged
+        bm.dataStream.runWith(Sink.ignore)
+        Nil
+    }
+  }
+
+  override def route: Route = {
+    get {
+      path("echo") {
+        promoteToWebSocket
+      }
+    }
   }
 }

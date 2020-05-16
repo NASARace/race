@@ -365,6 +365,19 @@ class RaceActorSystem(val config: Config) extends LogController with VerifiableA
 
   //--- actor requests affecting the whole RAS
 
+  protected[core] def setPaused: Unit = {
+    status = Paused
+    simClock.stop
+  }
+
+  protected[core] def setResumed: Unit = {
+    status = Running
+    simClock.resume
+  }
+
+  /**
+    * to be used from a non-actor context
+    */
   def pauseActors: Boolean = {
     if (commonCapabilities.supportsPauseResume) {
       if (status == Running) {
@@ -373,8 +386,6 @@ class RaceActorSystem(val config: Config) extends LogController with VerifiableA
         askVerifiableForResult(master, RacePause) {
           case RacePaused =>
             info(s"universe $name paused at ${simClock.dateTime}")
-            status = Paused
-            simClock.stop
             true
           case RacePauseFailed(reason) =>
             warning(s"universe $name pause failed: $reason")
@@ -396,6 +407,9 @@ class RaceActorSystem(val config: Config) extends LogController with VerifiableA
     }
   }
 
+  /**
+    * to be used from a non-actor context
+    */
   def resumeActors: Boolean = {
     if (commonCapabilities.supportsPauseResume) {
       if (status == Paused) {
@@ -404,8 +418,6 @@ class RaceActorSystem(val config: Config) extends LogController with VerifiableA
         askVerifiableForResult(master, RaceResume) {
           case RaceResumed =>
             info(s"universe $name resumed at ${simClock.dateTime}")
-            status = Running
-            simClock.resume
             true
           case RaceResumeFailed(reason) =>
             warning(s"universe $name resume failed: $reason")

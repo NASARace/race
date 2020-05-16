@@ -20,7 +20,7 @@ package gov.nasa.race.ww
 import akka.actor.ActorRef
 import com.typesafe.config.Config
 import gov.nasa.race._
-import gov.nasa.race.core.Messages.{RacePauseRequest, RaceResumeRequest, RaceTerminateRequest}
+import gov.nasa.race.core.Messages.{RacePause, RacePauseRequest, RaceResumeRequest, RaceTerminateRequest}
 import gov.nasa.race.core.{ContinuousTimeRaceActor, RaceContext, _}
 import gov.nasa.race.swing._
 
@@ -90,11 +90,5 @@ class RaceViewerActor(val config: Config) extends ContinuousTimeRaceActor
 
     super.onTerminateRaceActor(originator)
   }
-
-  def sendTerminationRequest: Unit = if (!raceActorSystem.isTerminating) master ! RaceTerminateRequest
-
-  def sendPauseRequest: Unit = if (raceActorSystem.isRunning) master ! RacePauseRequest
-
-  def sendResumeRequest: Unit = if (raceActorSystem.isPaused) master ! RaceResumeRequest
 }
 

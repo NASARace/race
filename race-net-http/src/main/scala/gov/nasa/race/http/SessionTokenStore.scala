@@ -80,15 +80,34 @@ class SessionTokenStore(val byteLength: Int = 64, val expiresAfterMillis: Long=1
     }
   }
 
-  private def isExpired(t: Long): Boolean = (System.currentTimeMillis - t) > expiresAfterMillis
+  private def isExpired(t: Long, expirationLimit: Long): Boolean = (System.currentTimeMillis - t) > expirationLimit
 
   def replaceExistingEntry(oldToken: String, role: String = User.AnyRole): Either[String,String] = synchronized {
     map.get(oldToken) match {
       case Some((user,t)) =>
-        if (!isExpired(t)) {
+        if (!isExpired(t,expiresAfterMillis)) {
           if (user.hasRole(role)) {
             map = map - oldToken
             Right(addNewEntry(user))
+          } else Left("insufficient user role") // insufficient role
+        } else Left("expired session") // expired
+      case None => Left("unknown user") // not a known oldToken
+    }
+  }
+
+  /**
+    * this only checks if this is the current token value but does not replace the entry
+    *
+    * Note we support overriding the expiration limit to support cases like automated web socket promotion
+    * from response content we serve, i.e. cases where the server knows the follow up request should arrive
+    * much quicker than normal interaction and hence warrants a shorter expiration limit
+    */
+  def matchesExistingEntry(token: String, role: String = User.AnyRole, expirationLimit: Long = expiresAfterMillis): Either[String,String] = synchronized {
+    map.get(token) match {
+      case Some((user,t)) =>
+        if (!isExpired(t,expirationLimit)) {
+          if (user.hasRole(role)) {
+            Right(token) // we don't replace the token
           } else Left("insufficient user role") // insufficient role
         } else Left("expired session") // expired
       case None => Left("unknown user") // not a known oldToken

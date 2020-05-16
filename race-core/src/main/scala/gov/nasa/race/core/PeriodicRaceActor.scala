@@ -79,6 +79,16 @@ trait PeriodicRaceActor extends RaceActor {
     super.onStartRaceActor(originator)
   }
 
+  override def onPauseRaceActor(originator: ActorRef): Boolean = {
+    stopScheduler
+    super.onPauseRaceActor(originator)
+  }
+
+  override def onResumeRaceActor(originator: ActorRef): Boolean = {
+    startScheduler
+    super.onResumeRaceActor(originator)
+  }
+
   override def onTerminateRaceActor(originator: ActorRef) = {
     stopScheduler
     super.onTerminateRaceActor(originator)

@@ -117,6 +117,9 @@ class HttpServer (val config: Config) extends ParentRaceActor {
   override def onStartRaceActor(originator: ActorRef) = {
     val serverSource: Source[Http.IncomingConnection,Future[Http.ServerBinding]] = httpExt.bind(interface,port,connectionContext)
     val bindingFuture: Future[Http.ServerBinding] = serverSource.to(Sink.foreach { connection =>
+
+      // we add the connection data to the route-accessible HttpRequest headers so that we can
+      // create the route once (during construction) and don't have to re-create it for each new connection
       val finalRoute = mapRequest(req => req.addHeader(RealRemoteAddress(connection))) { route }
 
       info(s"accepted new connection from: ${connection.remoteAddress}")

@@ -149,6 +149,12 @@ trait RaceActor extends Actor with ImplicitActorLogging {
     case SyncWithRaceClock => handleSyncWithRaceClock
     case SetTimeout(msg,duration) => context.system.scheduler.scheduleOnce(duration, self, msg)
 
+    case RacePaused => handleRacePaused(sender) // master reply for a RacePauseRequest (only the requester gets this)
+    case RacePauseFailed(details: Any) => handleRacePauseFailed(sender,details)
+
+    case RaceResumed => handleRaceResumed(sender)
+    case RaceResumeFailed(details: Any) => handleRaceResumeFailed(sender,details)
+
     case other => warning(s"unhandled system message $other")
   }
 
@@ -234,6 +240,24 @@ trait RaceActor extends Actor with ImplicitActorLogging {
     }
   }
 
+  def handleRacePaused (originator: ActorRef): Unit = {
+    info(s"got RacePaused from $originator")
+    if (originator == master) {
+      onRacePaused
+    } else {
+      warning(s"RacePaused ignored - sender is not master")
+    }
+  }
+
+  def handleRacePauseFailed(originator: ActorRef, details: Any): Unit = {
+    info(s"got RacePauseFailed($details) from $originator")
+    if (originator == master) {
+      onRacePauseFailed(details)
+    } else {
+      warning(s"RacePauseFailed ignored - sender is not master")
+    }
+  }
+
   def handleResumeRaceActor  (originator: ActorRef) = {
     info(s"got ResumeRaceActor from: ${originator.path}")
     try {
@@ -248,6 +272,24 @@ trait RaceActor extends Actor with ImplicitActorLogging {
       }
     } catch {
       case ex: Throwable => sender ! RaceActorResumeFailed(ex.getMessage)
+    }
+  }
+
+  def handleRaceResumed (originator: ActorRef): Unit = {
+    info(s"got RaceResumed from $originator")
+    if (originator == master) {
+      onRaceResumed
+    } else {
+      warning(s"RaceResumed ignored - sender is not master")
+    }
+  }
+
+  def handleRaceResumeFailed(originator: ActorRef, details: Any): Unit = {
+    info(s"got RaceResumeFailed($details) from $originator")
+    if (originator == master) {
+      onRaceResumeFailed(details)
+    } else {
+      warning(s"RaceResumeFailed ignored - sender is not master")
     }
   }
 
@@ -317,6 +359,19 @@ trait RaceActor extends Actor with ImplicitActorLogging {
   def onTerminateRaceActor(originator: ActorRef): Boolean = true
 
   def onSyncWithRaceClock: Boolean = true
+
+  def requestPause: Unit = master ! RacePauseRequest
+  def onRacePaused: Unit = {} // override if we are a valid requester
+  def onRacePauseFailed(details: Any) = {}
+
+  def requestResume: Unit = master ! RaceResumeRequest
+  def onRaceResumed: Unit = {} // override if we are a valid requester
+  def onRaceResumeFailed(details: Any): Unit = {}
+
+  def requestTermination: Unit = master ! RaceTerminateRequest // there is no feedback message for this
+
+  def isPaused: Boolean = raceActorSystem.isPaused
+  def isRunning: Boolean = raceActorSystem.isRunning
 
   def loadClass[T] (clsName: String, clsType: Class[T]): Class[_ <:T] = {
     ClassLoaderUtils.loadClass(context.system, clsName, clsType)
