@@ -322,6 +322,11 @@ object ConfigUtils {
     def getFiniteDurationOrElse (key: String, fallback: FiniteDuration) = getWithFallback(key,fallback)(getFiniteDuration(key))
     def getOptionalFiniteDuration (key: String): Option[FiniteDuration] = getOptional(key)( getFiniteDuration(key) )
 
+    def getExistingDir (key: String): File = {
+      val dir = new File(conf.getString(key))
+      if (dir.isDirectory) dir else throw new ConfigException.Generic(s"directory not found: $dir")
+    }
+
     def getExistingDirOrElse (key: String, fallbackAction: =>File): File = {
       try {
         val dir = new File(conf.getString(key))
@@ -335,7 +340,7 @@ object ConfigUtils {
       val file = new File(conf.getString(key))
       if (file.isFile && file.length() > 0) {
         file
-      } else throw new ConfigException.Generic(s"invalid server keystore path")
+      } else throw new ConfigException.Generic(s"file not found: $file")
     }
 
     def getOptionalFile (key: String): Option[File] = {

@@ -46,15 +46,19 @@ object UserAuth {
 case class UserAuth (passwords: PasswordStore, sessionTokens: SessionTokenStore) {
   @inline def login (uid: String, pw: Array[Char]): Option[String] = passwords.verify(uid,pw).map(sessionTokens.addNewEntry)
 
+  @inline def authenticate (uid: String, pw: Array[Char]): Option[User] = passwords.verify(uid,pw)
+
   def remainingLoginAttempts(uid: String) = passwords.remainingLoginAttempts(uid)
 
   def isLoggedIn (uid: String): Boolean = sessionTokens.isLoggedIn(uid)
 
-  def nextSessionToken(lastToken: String, role: String): Either[String,String] = {
+  def nextSessionToken(lastToken: String, role: String): NextTokenResult = {
     sessionTokens.replaceExistingEntry(lastToken,role)
   }
 
-  def matchesSessionToken (lastToken: String, role: String, expirationLimit: Long = sessionTokens.expiresAfterMillis): Either[String,String] = {
+  def matchesSessionToken (lastToken: String, role: String, expirationLimit: Long = sessionTokens.expiresAfterMillis): MatchTokenResult = {
     sessionTokens.matchesExistingEntry(lastToken,role,expirationLimit)
   }
+
+  def removeEntry (oldToken: String): Option[User] = sessionTokens.removeEntry(oldToken)
 }

@@ -82,16 +82,18 @@ class SessionTokenStore(val byteLength: Int = 64, val expiresAfterMillis: Long=1
 
   private def isExpired(t: Long, expirationLimit: Long): Boolean = (System.currentTimeMillis - t) > expirationLimit
 
-  def replaceExistingEntry(oldToken: String, role: String = User.AnyRole): Either[String,String] = synchronized {
+  def replaceExistingEntry(oldToken: String, role: String = User.AnyRole): NextTokenResult = synchronized {
     map.get(oldToken) match {
       case Some((user,t)) =>
         if (!isExpired(t,expiresAfterMillis)) {
           if (user.hasRole(role)) {
             map = map - oldToken
-            Right(addNewEntry(user))
-          } else Left("insufficient user role") // insufficient role
-        } else Left("expired session") // expired
-      case None => Left("unknown user") // not a known oldToken
+            NextToken(addNewEntry(user))
+          } else NextTokenFailure("insufficient user role") // insufficient role
+        } else NextTokenFailure("expired session") // expired
+
+      case None =>
+        NextTokenFailure("unknown user") // not a known oldToken
     }
   }
 
@@ -102,15 +104,33 @@ class SessionTokenStore(val byteLength: Int = 64, val expiresAfterMillis: Long=1
     * from response content we serve, i.e. cases where the server knows the follow up request should arrive
     * much quicker than normal interaction and hence warrants a shorter expiration limit
     */
-  def matchesExistingEntry(token: String, role: String = User.AnyRole, expirationLimit: Long = expiresAfterMillis): Either[String,String] = synchronized {
+  def matchesExistingEntry(token: String, role: String = User.AnyRole, expirationLimit: Long = expiresAfterMillis): MatchTokenResult = synchronized {
     map.get(token) match {
       case Some((user,t)) =>
         if (!isExpired(t,expirationLimit)) {
           if (user.hasRole(role)) {
-            Right(token) // we don't replace the token
-          } else Left("insufficient user role") // insufficient role
-        } else Left("expired session") // expired
-      case None => Left("unknown user") // not a known oldToken
+            TokenMatched // we don't replace the token
+          } else MatchTokenFailure("insufficient user role") // insufficient role
+        } else MatchTokenFailure("expired session") // expired
+      case None => MatchTokenFailure("unknown user") // not a known oldToken
     }
   }
 }
+
+
+sealed trait AuthTokenResult
+sealed class TokenFailure (val reason: String)  extends AuthTokenResult { // can't be a case class since we have to extend
+}
+object TokenFailure {
+  def unapply(o: TokenFailure): Option[String] = Some(o.reason)
+}
+
+sealed trait NextTokenResult extends AuthTokenResult
+case class NextToken(token: String) extends NextTokenResult
+case class NextTokenFailure (override val reason: String) extends TokenFailure(reason) with NextTokenResult
+
+sealed trait MatchTokenResult extends AuthTokenResult
+case object TokenMatched extends MatchTokenResult
+case class MatchTokenFailure (override val reason: String) extends TokenFailure(reason) with MatchTokenResult
+
+

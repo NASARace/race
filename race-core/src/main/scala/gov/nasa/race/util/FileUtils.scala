@@ -29,6 +29,7 @@ import java.util.zip.{CRC32, GZIPInputStream, GZIPOutputStream}
 import scala.io.BufferedSource
 import StringUtils._
 import gov.nasa.race._
+import gov.nasa.race.uom.DateTime
 
 import scala.annotation.tailrec
 import scala.collection.immutable.HashSet
@@ -124,6 +125,11 @@ object FileUtils {
     if (i < 0) "" else fn.substring(i+1)
   }
   def getExtension (file: File): String = getExtension(file.getName)
+
+  def hasExtension (fn: String): Boolean = fn.lastIndexOf('.') >= 0
+  def hasExtension (file: File): Boolean = hasExtension(file.getName)
+
+  def lastModification (file: File): DateTime = DateTime.ofEpochMillis(file.lastModified)
 
   def inputStreamFor (f: File, bufLen: Int): Option[InputStream] = {
     if (f.canRead) {
