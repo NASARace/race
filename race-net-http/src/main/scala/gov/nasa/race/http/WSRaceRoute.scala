@@ -61,19 +61,21 @@ trait PushWSRaceRoute extends WSRaceRoute with RaceDataConsumer {
 
   private var connections: List[WebSocketPushConnection] = List.empty
 
-  protected def push (m: Message): Unit = {
+  protected def push (m: Message): Unit = synchronized {
+    connections.foreach(pushTo(_,m))
+  }
+
+  protected def pushTo( conn: WebSocketPushConnection, m: Message): Unit = synchronized {
     implicit val ec = scala.concurrent.ExecutionContext.global
 
-    for (conn <- connections) {
-      conn.queue.offer(m).onComplete { res=>
-        res match {
-          case Success(_) => // all good (TODO should we check for Enqueued here?)
-            info(s"pushing message $m to ${conn.remoteAddr}")
+    conn.queue.offer(m).onComplete { res=>
+      res match {
+        case Success(_) => // all good (TODO should we check for Enqueued here?)
+          info(s"pushing message $m to ${conn.remoteAddr}")
 
-          case Failure(_) =>
-            info(s"dropping connection: ${conn.remoteAddr}")
-            connections = connections.filter( _ ne conn)
-        }
+        case Failure(_) =>
+          info(s"dropping connection: ${conn.remoteAddr}")
+          connections = connections.filter( _ ne conn)
       }
     }
   }
@@ -82,7 +84,7 @@ trait PushWSRaceRoute extends WSRaceRoute with RaceDataConsumer {
     * called by associated actor
     * NOTE - this is executed from the actor thread and can modify connections so we have to synchronize
     */
-  def setData (data: Any): Unit = synchronized {
+  def setData (data: Any): Unit = {
     push(TextMessage.Strict(data.toString))
   }
 
@@ -99,10 +101,16 @@ trait PushWSRaceRoute extends WSRaceRoute with RaceDataConsumer {
     * non-overridable wrappwr for user overridable handleIncoming(m)
     * this has to be synchronized since it can be called concurrently
     */
-  private def processInbound (m: Message): Unit = {
-    synchronized {
-      handleIncoming(m)
-    }
+  private def processInbound (m: Message): Unit = synchronized {
+    handleIncoming(m)
+  }
+
+  /**
+    * override in concrete routes to push initial data etc.
+    * Use pushTo
+    */
+  protected def initializeConnection (conn: WebSocketPushConnection): Unit = {
+    // nothing here
   }
 
   /**
@@ -117,7 +125,9 @@ trait PushWSRaceRoute extends WSRaceRoute with RaceDataConsumer {
         val outbound: Source[Message, SourceQueueWithComplete[Message]] = Source.queue(srcBufSize, srcPolicy)
 
         val flow = Flow.fromSinkAndSourceCoupledMat(inbound, outbound)((_, outBoundMat) => synchronized {
-          connections ::= WebSocketPushConnection(outBoundMat, remoteAddress)
+          val newConn = WebSocketPushConnection(outBoundMat, remoteAddress)
+          initializeConnection(newConn)
+          connections ::= newConn
           NotUsed
         })
         info(s"promoting $requestUri to websocket connection for remote: $remoteAddress")

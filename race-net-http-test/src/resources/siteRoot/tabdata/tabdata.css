@@ -1,0 +1,111 @@
+/**
+  CSS trickery for scrollable tables with sticky column/row th's and highlighting of rows/columns
+  when hovering with the mouse over corresponding th nodes
+
+  Note this does require some Javascript to set/remove respective class attributes of highlighted cells.
+  *:hover::before/after does not help if the div height is not constant and known since it would change
+  scrollbar thumb lengths
+**/
+
+div {
+--max-lines: 10;
+--cell-height: 1.5em;
+--cell-width: 7em;
+--scrollbar-width: 0.5em;
+
+--div-width: 100vw;
+--div-height: calc(var(--max-lines)*var(--cell-height));
+
+  max-width: var(--div-width);
+  max-height: var(--div-height);
+  padding: 0;
+  margin: 0;
+  position: relative;
+  overflow: auto;
+  border: 1px solid #404040;
+  display: inline-block; /* this does not properly limit max-width to browser viewport when browser is resized */
+}
+
+::-webkit-scrollbar-track {
+  width: calc(var(--scrollbar-width) + 2px);
+  height: calc(var(--scrollbar-width) + 2px);
+  background-color: rgba(255,255,255,0.2);  /* does not work */
+}
+::-webkit-scrollbar-thumb {
+  width: var(--scrollbar-width);
+  height: var(--scrollbar-width);
+  border-radius: 3px;
+  background-color: rgba(0,0,0,0.2);
+}
+
+table {
+--th-background: #eaeaea;
+--th-color: black;
+--hover-color: rgba(0,200,0, 0.2);
+
+  position: relative;
+  border-collapse: separate;
+  border-spacing: 0px;
+}
+
+td, th {
+  padding: 0.25em;
+  height:  var(--cell-height);
+  text-align: right;
+  color: #000;
+  background-clip: padding-box;
+}
+
+
+td {
+  font-family: monospace;
+  position: relative;
+  min-width:  var(--cell-width);
+  max-width:  var(--cell-width);
+  border-right: 1px solid lightgray;
+  border-bottom: 1px solid lightgray;
+  z-index: 1;
+}
+
+thead th {
+  position: -webkit-sticky; /* for Safari */
+  position: sticky;
+  min-width: var(--cell-width);
+  max-width: var(--cell-width);
+  top: 0;
+  color: var(--th-color);
+  background-color: var(--th-background);
+  background-clip: padding-box;
+  border-bottom: 1px solid black;
+  border-right: 1px solid lightgray;
+  z-index: 3;
+}
+
+th.selected, td.selected {
+  background-color: var(--hover-color);
+  cursor: cell;
+}
+
+thead th:first-child {
+  left: 0;
+  z-index: 4;
+  min-width: 0;
+  width: auto;
+  border-right: 1px solid black;
+  border-bottom: 1px solid black;
+}
+
+tbody th {
+  position: -webkit-sticky; /* for Safari */
+  position: sticky;
+  left: 0;
+  min-width: 0;
+  width: auto;
+  text-align: left;
+  color: var(--th-color);
+  background-color: var(--th-background);
+  background-clip: padding-box;
+  border-right: 1px solid black;
+  border-bottom: 1px solid lightgray;
+  z-index: 2;
+}
