@@ -2,6 +2,9 @@
   CSS trickery for scrollable tables with sticky column/row th's and highlighting of rows/columns
   when hovering with the mouse over corresponding th nodes
 
+  Note that relative cell length units have to be 'rem' since we use different fonts for
+  th, th.dtg and td
+
   Note this does require some Javascript to set/remove respective class attributes of highlighted cells.
   *:hover::before/after does not help if the div height is not constant and known since it would change
   scrollbar thumb lengths
@@ -9,16 +12,18 @@
 
 div {
 --max-lines: 10;
---cell-height: 1.5em;
---cell-width: 7em;
+--cell-height: 1.4rem;
+--cell-padding: 0.2rem;
+--cell-width: 7rem;
 --scrollbar-width: 0.5em;
 
 --div-width: 100vw;
 --div-height: calc(var(--max-lines)*var(--cell-height));
 
+  box-sizing: border-box;
   max-width: var(--div-width);
   max-height: var(--div-height);
-  padding: 0;
+  padding-right: 0.9em; /* to account for scroll bar width */
   margin: 0;
   position: relative;
   overflow: auto;
@@ -46,10 +51,12 @@ table {
   position: relative;
   border-collapse: separate;
   border-spacing: 0px;
+  padding: 0;
 }
 
 td, th {
-  padding: 0.25em;
+  padding: var(--cell-padding);
+  min-width:  var(--cell-width);
   height:  var(--cell-height);
   text-align: right;
   color: #000;
@@ -60,8 +67,6 @@ td, th {
 td {
   font-family: monospace;
   position: relative;
-  min-width:  var(--cell-width);
-  max-width:  var(--cell-width);
   border-right: 1px solid lightgray;
   border-bottom: 1px solid lightgray;
   z-index: 1;
@@ -70,18 +75,29 @@ td {
 thead th {
   position: -webkit-sticky; /* for Safari */
   position: sticky;
-  min-width: var(--cell-width);
-  max-width: var(--cell-width);
   top: 0;
+  cursor: cell;
   color: var(--th-color);
   background-color: var(--th-background);
   background-clip: padding-box;
-  border-bottom: 1px solid black;
+  border-bottom: 0px none;
   border-right: 1px solid lightgray;
   z-index: 3;
 }
 
-th.selected, td.selected {
+thead th.dtg {
+  height: 0.8rem;
+  color: blue;
+  position: -webkit-sticky; /* for Safari */
+  position: sticky;
+  top: calc(var(--cell-height) + 2 * var(--cell-padding));  /* relative to scrolled container (div) */
+  font-family: monospace;
+  font-size: small;
+  font-weight: normal;
+  border-bottom: 1px solid black;
+}
+
+.selected {
   background-color: var(--hover-color);
   cursor: cell;
 }
@@ -92,7 +108,6 @@ thead th:first-child {
   min-width: 0;
   width: auto;
   border-right: 1px solid black;
-  border-bottom: 1px solid black;
 }
 
 tbody th {

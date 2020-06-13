@@ -58,6 +58,22 @@ function initTable() {
     row.appendChild(cell);
   }
 
+  //--- update times
+  row = thead.insertRow(1);
+  row.setAttribute("id", "dtgs");
+
+  cell = document.createElement('th'); // blank
+  cell.setAttribute("class", "dtg");
+  row.appendChild(cell);
+
+  for (i=0; i<providers.length; i++){
+    cell = document.createElement('th');
+    cell.setAttribute("class", "dtg");
+    cell.setAttribute("onmouseenter", `selectColumn(${i+1});`);
+    cell.setAttribute("onmouseleave", `unselectColumn(${i+1});`);
+    row.appendChild(cell);
+  }
+
   //--- initialize table body
   var tbody = document.createElement("tbody");
   tbody.setAttribute("id","table_body");
@@ -95,14 +111,28 @@ function setData() {
   }
 }
 
-function setColumnData (i, values) {
-  var table = document.getElementById('my_table');
+function timeString(date) {
+  var h = ('0' + date.getHours()).slice(-2);
+  var m = ('0' + date.getMinutes()).slice(-2);
+  var s = ('0' + date.getSeconds()).slice(-2);
 
+  return h + ':' + m + ':' + s;
+}
+
+function setColumnData (i, date, values) {
+  var tbody = document.getElementById('table_body');
+  var trDtgs = document.getElementById('dtgs');
   var i1 = i + 1;
+
+  trDtgs.childNodes[i1].innerHTML = timeString(date);
+
   for (j=0; j<fields.length; j++){
+    var tr = tbody.childNodes[j];
     var v = values[fields[j]];
     if (v){
-      table.rows[j+1].cells[i1].innerHTML = v;
+      tr.childNodes[i1].innerHTML = v;
+    } else {
+      tr.childNodes[i1].innerHTML = "";
     }
   }
 }
@@ -168,14 +198,17 @@ function readWebsocket() {
       var msgType = msg.msgType;
 
       if (msgType == 'ProviderData') {
-        var providerName = msg.providerName;
+        var providerName = msg.name;
+        var date = new Date(msg.date);
         var fieldValues = msg.fieldValues;
 
         if (fieldValues){
           data[providerName] = fieldValues;
           if ((fields.length > 0) && (providers.length > 0)){
             var i = column(providerName);
-            if (i>=0) setColumnData(i, fieldValues);
+            if (i>=0) {
+              setColumnData(i, date, fieldValues);
+            }
           }
         }
 
@@ -212,5 +245,5 @@ function readWebsocket() {
 function setWidth() {
   var newWidth = document.body.clientWidth;
   var div = document.getElementById("scroll_container");
-  div.style.maxWidth = `${newWidth}px`;
+  div.style['max-width'] = `${newWidth}px`;
 }

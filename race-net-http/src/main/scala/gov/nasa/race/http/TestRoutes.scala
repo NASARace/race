@@ -29,6 +29,7 @@ import gov.nasa.race.common.JsonWriter
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.Messages.BusEvent
 import gov.nasa.race.core.{DataConsumerRaceActor, ParentActor, PeriodicRaceActor, RaceDataConsumer, SubscribingRaceActor}
+import gov.nasa.race.uom.DateTime
 import scalatags.Text.all.{head => htmlHead, _}
 
 import scala.collection.{immutable, mutable}
@@ -224,7 +225,7 @@ class EchoService (val parent: ParentActor, val config: Config) extends Protocol
 object TabDataService {
   case class FieldCatalog (fields: Seq[String])
   case class ProviderList (names: Seq[String])
-  case class Provider (name: String, var fieldValues: Map[String,Int])
+  case class Provider (name: String, var date: DateTime, var fieldValues: Map[String,Int])
 
   // the (ordered) fields catalog
   val fieldCatalog = FieldCatalog(Seq("field_1", "field_2", "field_3", "field_4", "field_5", "field_6", "field_7", "field_8", "field_9"))
@@ -241,15 +242,15 @@ class TabDataServiceActor (_dc: RaceDataConsumer, _conf: Config) extends DataCon
   var nextProviderIdx = 0
 
   val data = Array(
-    Provider("provider_1", Map(("field_1",1100), ("field_3",1300), ("field_8",1800))),
-    Provider("provider_2", Map(("field_3",2300), ("field_4",2400), ("field_6",2600))),
-    Provider("provider_3", Map(("field_1",3100), ("field_2",3200), ("field_5",3500), ("field_8",3800))),
-    Provider("provider_4", Map(("field_1",4100), ("field_3",4300), ("field_4",4400), ("field_6",4600), ("field_7",4700))),
-    Provider("provider_5", Map(("field_2",5200), ("field_4",5400), ("field_7",5700), ("field_8",5800))),
-    Provider("provider_6", Map(("field_5",6500), ("field_6",6600), ("field_7",6700), ("field_9",6900))),
-    Provider("provider_7", Map(("field_2",7200), ("field_4",7400), ("field_7",7700))),
-    Provider("provider_8", Map(("field_3",8300), ("field_4",8400), ("field_9",8900))),
-    Provider("provider_9", Map(("field_2",9200), ("field_3",9300), ("field_4",9400), ("field_5",9500), ("field_6",9600), ("field_8",9800)))
+    Provider("provider_1", DateTime.now, Map(("field_1",1100), ("field_3",1300), ("field_8",1800))),
+    Provider("provider_2", DateTime.now, Map(("field_3",2300), ("field_4",2400), ("field_6",2600))),
+    Provider("provider_3", DateTime.now, Map(("field_1",3100), ("field_2",3200), ("field_5",3500), ("field_8",3800))),
+    Provider("provider_4", DateTime.now, Map(("field_1",4100), ("field_3",4300), ("field_4",4400), ("field_6",4600), ("field_7",4700))),
+    Provider("provider_5", DateTime.now, Map(("field_2",5200), ("field_4",5400), ("field_7",5700), ("field_8",5800))),
+    Provider("provider_6", DateTime.now, Map(("field_5",6500), ("field_6",6600), ("field_7",6700), ("field_9",6900))),
+    Provider("provider_7", DateTime.now, Map(("field_2",7200), ("field_4",7400), ("field_7",7700))),
+    Provider("provider_8", DateTime.now, Map(("field_3",8300), ("field_4",8400), ("field_9",8900))),
+    Provider("provider_9", DateTime.now, Map(("field_2",9200), ("field_3",9300), ("field_4",9400), ("field_5",9500), ("field_6",9600), ("field_8",9800)))
   )
 
   // the (ordered) provider list
@@ -269,6 +270,7 @@ class TabDataServiceActor (_dc: RaceDataConsumer, _conf: Config) extends DataCon
   override def onRaceTick: Unit = {
     if (nextProviderIdx >=0 && nextProviderIdx < data.length) {
       val provider = data(nextProviderIdx)
+      provider.date = DateTime.now
       provider.fieldValues = provider.fieldValues.map( e=> (e._1, e._2+1))
       nextProviderIdx = (nextProviderIdx + 1) % providerList.names.length
 
@@ -318,7 +320,8 @@ class TabDataService (parent: ParentActor, config: Config) extends SiteRoute(par
     writer.clear
       .beginObject
       .writeStringMember("msgType","ProviderData")
-      .writeStringMember("providerName",provider.name)
+      .writeStringMember("name",provider.name)
+      .writeLongMember("date", provider.date.toEpochMillis)
       .writeMemberName("fieldValues")
       .writeIntMembers(provider.fieldValues)
       .endObject
