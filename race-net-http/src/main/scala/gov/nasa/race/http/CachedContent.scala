@@ -26,7 +26,7 @@ import gov.nasa.race.util.FileUtils
   * aggregate container for cached content
   * this has to contain all elements we might need for completing a HttpRequest (entity plus respective headers)
   */
-case class CachedContent (siteRoot: File, relPath: String, file: File, isTokenIncrement: Boolean, entity:HttpEntity.Strict) {
+case class CachedContent (siteRoot: File, requestPrefix: String, relPath: String, file: File, isTokenIncrement: Boolean, entity:HttpEntity.Strict) {
   val lastMod: DateTime = FileUtils.lastModification(file)
   val location: Option[String] = getLocation // in case siteDir + relPath is not the file path
 
@@ -34,6 +34,6 @@ case class CachedContent (siteRoot: File, relPath: String, file: File, isTokenIn
 
   def getLocation: Option[String] = {
     val loc = file.getPath.substring(siteRoot.getPath.length)
-    if (loc != relPath) Some(loc) else None
+    if (loc != relPath) Some(s"/$requestPrefix$loc") else None
   }
 }

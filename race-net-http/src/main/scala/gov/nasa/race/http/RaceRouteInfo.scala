@@ -18,7 +18,7 @@ package gov.nasa.race.http
 
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.server.Directives._
-import akka.http.scaladsl.server.Route
+import akka.http.scaladsl.server.{PathMatchers, Route}
 import com.typesafe.config.Config
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.{ParentActor, RaceDataConsumer}
@@ -34,7 +34,9 @@ trait RaceRouteInfo {
   val parent: ParentActor
   val config: Config
   val name = config.getStringOrElse("name", getClass.getSimpleName)
-  val requestPrefix: String = config.getStringOrElse("request-prefix","")
+
+  val requestPrefix: String = config.getStringOrElse("request-prefix", name)
+  val requestPrefixMatcher = PathMatchers.separateOnSlashes(requestPrefix)
 
   // this is the main function that defines the public (user) routes
   def route: Route

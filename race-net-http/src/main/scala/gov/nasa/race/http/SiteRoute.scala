@@ -83,44 +83,47 @@ class SiteRoute (val parent: ParentActor, val config: Config) extends RaceRouteI
   // override if this is a session token checkpoint
   protected def isTokenIncrement (uri: String, file: File): Boolean = false
 
-  protected def createContent (uri: String, file: File, entity: HttpEntity.Strict): CachedContent = {
-    val cc = CachedContent(siteRoot,uri,file,isTokenIncrement(uri,file),entity)
-    if (cacheContent) contentCache += uri -> cc
+  protected def createContent (path: String, file: File, entity: HttpEntity.Strict): CachedContent = {
+    val cc = CachedContent(siteRoot, requestPrefix, path,file,isTokenIncrement(path,file),entity)
+    if (cacheContent) contentCache += path -> cc
     cc
   }
 
-  protected def loadContent (uri: String): Option[CachedContent] = {
+  protected def loadContent (path: String): Option[CachedContent] = {
     for (
-      file <- findExistingFile(siteRoot,uri);
+      file <- findExistingFile(siteRoot,path);
       entity <- createEntity(file)
     ) yield {
-      createContent(uri,file,entity)
+      createContent(path,file,entity)
     }
   }
 
-  protected def getContent (uri: String): Option[CachedContent] = {
-    contentCache.get(uri) match {
+  protected def getContent (path: String): Option[CachedContent] = {
+    contentCache.get(path) match {
       case res@Some(cachedContent) =>
-        if (cachedContent.isOutdated) loadContent(uri) else res
+        if (cachedContent.isOutdated) loadContent(path) else res
 
-      case None => loadContent(uri)
+      case None => loadContent(path)
     }
   }
 
   def siteRoute: Route = {
     extractUri { uri =>
-      pathPrefix(requestPrefix) {
-        getContent(uri.path.toString()) match {
-          case Some(cachedContent) =>
-            cachedContent.location match {
-              case Some(loc) =>
-                respondWithHeader(new Location(uri.copy(path = Path(loc)))) {
-                  complete( StatusCodes.SeeOther, cachedContent.entity)
-                }
-              case None => complete( StatusCodes.OK, cachedContent.entity)
-            }
+      pathPrefix(requestPrefixMatcher) {
+        extractUnmatchedPath { path =>
+          getContent(path.toString) match {
+            case Some(cachedContent) =>
+              cachedContent.location match {
+                case Some(loc) =>
+                  val lh = new Location(uri.copy(path = Path(loc)))
+                  respondWithHeader(lh) {
+                    complete( StatusCodes.SeeOther, cachedContent.entity)
+                  }
+                case None => complete( StatusCodes.OK, cachedContent.entity)
+              }
 
-          case None => complete( StatusCodes.NotFound, s"$uri not found")
+            case None => complete( StatusCodes.NotFound, s"$uri not found")
+          }
         }
       }
     }
@@ -157,31 +160,33 @@ class AuthorizedSiteRoute (parent: ParentActor, config: Config) extends SiteRout
     }
 
     extractUri { uri =>
-      pathPrefix(requestPrefix) {
-        val requestPath = uri.path.toString
-        if (requestPath.last == '/') {
-          complete(StatusCodes.BadRequest, s"directory access not supported: $requestPath")
+      pathPrefix(requestPrefixMatcher) {
+        extractUnmatchedPath { path =>
+          val relPath = path.toString
+          if (relPath.nonEmpty && relPath.last == '/') {
+            complete(StatusCodes.BadRequest, s"directory access not supported: $relPath")
 
-        } else {
-          getContent(requestPath) match {
-            case Some(cachedContent) =>
-              optionalCookie(sessionCookieName) { opt =>
-                opt match {
-                  case Some(namedCookie) =>
-                    authenticate(cachedContent, namedCookie.value) match {
-                      case NextToken(newToken) =>   // we have a new session cookie, set it in the header
-                        setCookie(createSessionCookie(newToken)) {
-                          completeWithCachedContent(cachedContent, uri)
-                        }
-                      case TokenMatched => completeWithCachedContent(cachedContent, uri) // no need to set new session cookie
-                      case TokenFailure(reason) => completeLogin(Some(requestPath), Some(reason)) // session token was rejected
-                    }
+          } else {
+            getContent(relPath) match {
+              case Some(cachedContent) =>
+                optionalCookie(sessionCookieName) { opt =>
+                  opt match {
+                    case Some(namedCookie) =>
+                      authenticate(cachedContent, namedCookie.value) match {
+                        case NextToken(newToken) => // we have a new session cookie, set it in the header
+                          setCookie(createSessionCookie(newToken)) {
+                            completeWithCachedContent(cachedContent, uri)
+                          }
+                        case TokenMatched => completeWithCachedContent(cachedContent, uri) // no need to set new session cookie
+                        case TokenFailure(reason) => completeLogin(Some(uri.toString), Some(reason)) // session token was rejected
+                      }
 
-                  case None => completeLogin(Some(requestPath))  // no session token yet
+                    case None => completeLogin(Some(uri.toString)) // no session token yet
+                  }
                 }
-              }
 
-            case None => complete(StatusCodes.NotFound, s"$uri not found")
+              case None => complete(StatusCodes.NotFound, s"$uri not found")
+            }
           }
         }
       }

@@ -16,34 +16,30 @@
  */
 package gov.nasa.race.http
 
-import akka.actor.{ActorRef, Props}
-import akka.http.scaladsl.Http
-import akka.http.scaladsl.model.ws.{BinaryMessage, Message, TextMessage}
+import akka.actor.ActorRef
+import akka.http.scaladsl.model.ws.TextMessage
 import akka.http.scaladsl.model.{ContentTypes, HttpEntity}
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.{PathMatchers, Route}
-import akka.stream.scaladsl.{Sink, Source}
+import akka.stream.scaladsl.Source
 import com.typesafe.config.Config
-import gov.nasa.race._
 import gov.nasa.race.common.JsonWriter
 import gov.nasa.race.config.ConfigUtils._
-import gov.nasa.race.core.Messages.BusEvent
-import gov.nasa.race.core.{DataConsumerRaceActor, ParentActor, PeriodicRaceActor, RaceDataConsumer, SubscribingRaceActor}
+import gov.nasa.race.core.{DataConsumerRaceActor, ParentActor, PeriodicRaceActor, RaceDataConsumer}
 import gov.nasa.race.uom.DateTime
 import scalatags.Text.all.{head => htmlHead, _}
 
-import scala.collection.{immutable, mutable}
+import scala.collection.mutable
 
 /**
   * a simple statically configured test route without actor
   */
 class TestRouteInfo (val parent: ParentActor, val config: Config) extends RaceRouteInfo {
-  val request = config.getStringOrElse("request", "test")
   val response = config.getStringOrElse("response", "Hello from RACE")
 
   override def route = {
-    path(request) {
-      get {
+    get {
+      path(requestPrefixMatcher) {
         complete(HttpEntity(ContentTypes.`text/html(UTF-8)`, response))
       }
     }
@@ -51,12 +47,11 @@ class TestRouteInfo (val parent: ParentActor, val config: Config) extends RaceRo
 }
 
 class TestPreAuthorized(val parent: ParentActor, val config: Config) extends PreAuthorizedRaceRoute {
-  val request = config.getStringOrElse("request", "autoSecret")
   var count = 0
 
   override def route = {
-    path(request) {
-      get {
+    get {
+      path(requestPrefixMatcher) {
         completeAuthorized(User.UserRole){
           count += 1
           HttpEntity(ContentTypes.`application/json`, s"""{ "count": $count }""")
@@ -67,7 +62,6 @@ class TestPreAuthorized(val parent: ParentActor, val config: Config) extends Pre
 }
 
 class TestAuthorized (val parent: ParentActor, val config: Config) extends AuthorizedRaceRoute {
-  val request = config.getStringOrElse("request", "secret")
   var count = 0
 
   def page = html(
@@ -80,8 +74,8 @@ class TestAuthorized (val parent: ParentActor, val config: Config) extends Autho
   )
 
   override def route = {
-    path(request) {
-      get {
+    get {
+      path(requestPrefixMatcher) {
         count += 1
         completeAuthorized(User.UserRole){
           HttpEntity(ContentTypes.`text/html(UTF-8)`, page.render)
@@ -104,7 +98,7 @@ class TestRefresh (val parent: ParentActor, val config: Config) extends Subscrib
 
   val page = html(
     htmlHead(
-      script(raw("""
+      script(raw(s"""
                 function loadData(){
                   var req = new XMLHttpRequest();
                   req.onreadystatechange = function() {
@@ -115,7 +109,7 @@ class TestRefresh (val parent: ParentActor, val config: Config) extends Subscrib
                       clearInterval(refresher)
                     }
                   };
-                  req.open('GET', 'refresh/data', true);
+                  req.open('GET', '$requestPrefix/data', true);
                   req.send();
                 }
         """))
@@ -128,7 +122,7 @@ class TestRefresh (val parent: ParentActor, val config: Config) extends Subscrib
 
   def route = {
     get {
-      pathPrefix("refresh") {
+      pathPrefix(requestPrefixMatcher) {
         path("data") {
           complete(HttpEntity(ContentTypes.`text/html(UTF-8)`, data))
         } ~ pathEnd {
@@ -143,7 +137,7 @@ class TestPusher (val parent: ParentActor, val config: Config) extends PushWSRac
 
   override def route = {
     get {
-      path("data") {
+      path(requestPrefixMatcher) {
         promoteToWebSocket
       }
     }
@@ -154,11 +148,11 @@ class TestAuthorizedPusher (val parent: ParentActor, val config: Config) extends
 
   val page = html(
     htmlHead(
-      script(raw("""
+      script(raw(s"""
          function websock_test() {
             if ("WebSocket" in window) {
                console.log("WebSocket is supported by your Browser!");
-               var ws = new WebSocket("wss://localhost:8080/ws");
+               var ws = new WebSocket("wss://localhost:8080/$requestPrefix/ws");
 
                ws.onopen = function() {
                   ws.send("Hi server!");
@@ -189,12 +183,14 @@ class TestAuthorizedPusher (val parent: ParentActor, val config: Config) extends
 
   override def route: Route = {
     get {
-      path("data") {
-        completeAuthorized(User.UserRole){
-          HttpEntity(ContentTypes.`text/html(UTF-8)`, page.render)
+      pathPrefix(requestPrefixMatcher) {
+        pathEnd {
+          completeAuthorized(User.UserRole) {
+            HttpEntity(ContentTypes.`text/html(UTF-8)`, page.render)
+          }
+        } ~ path("ws") {
+          promoteAuthorizedToWebSocket(User.UserRole)
         }
-      } ~ path("ws") {
-        promoteAuthorizedToWebSocket(User.UserRole)
       }
     }
   }
@@ -212,7 +208,7 @@ class EchoService (val parent: ParentActor, val config: Config) extends Protocol
 
   override def route: Route = {
     get {
-      path("echo") {
+      path(requestPrefixMatcher) {
         promoteToWebSocket
       }
     }

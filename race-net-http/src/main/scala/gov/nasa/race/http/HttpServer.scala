@@ -84,8 +84,10 @@ class HttpServer (val config: Config) extends ParentRaceActor {
 
   def getConnectionContext: ConnectionContext = {
     if (config.getBooleanOrElse("use-https", false)) {
+      info("server using https:// protocol")
       ConnectionContext.https(getSSLContext, None,None,None,None,None)
     } else {
+      info("server using http:// protocol")
       httpExt.defaultServerHttpContext
     }
   }
@@ -141,8 +143,15 @@ class HttpServer (val config: Config) extends ParentRaceActor {
     }).run()
     binding = Some(bindingFuture)
 
-    info(s"server listening on port: $port")
+    info(s"serving requests: $requestSpec")
+
     super.onStartRaceActor(originator)
+  }
+
+  def requestSpec: String = {
+    val protocol = if (connectionContext.isSecure) "https" else "http"
+    val rps = routeInfos.map(_.requestPrefix).mkString(",")
+    s"$protocol://$host:$port/{$rps}"
   }
 
   override def onTerminateRaceActor(originator: ActorRef) = {

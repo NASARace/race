@@ -15,7 +15,7 @@ div {
 --cell-height: 1.4rem;
 --cell-padding: 0.2rem;
 --cell-width: 7rem;
---scrollbar-width: 0.5em;
+--scrollbar-width: 0.5rem;
 
 --div-width: 100vw;
 --div-height: calc(var(--max-lines)*var(--cell-height));
@@ -23,12 +23,16 @@ div {
   box-sizing: border-box;
   max-width: var(--div-width);
   max-height: var(--div-height);
-  padding-right: 0.9em; /* to account for scroll bar width */
+  padding-right: 0.9rem;  /* to account for scroll bar width - scrollbar is only inside div for firefox and safari */
   margin: 0;
   position: relative;
   overflow: auto;
   border: 1px solid #404040;
   display: inline-block; /* this does not properly limit max-width to browser viewport when browser is resized */
+}
+
+div.chrome { /* chrome has scrollbar outside div */
+  padding-right: 0;
 }
 
 ::-webkit-scrollbar-track {

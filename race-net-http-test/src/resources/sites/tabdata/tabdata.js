@@ -32,10 +32,20 @@ var data = {};
 
 function init() {
   setWidth(); // to properly set max div-width
+  setBrowserSpecifics();
+
   if ((fields.length > 0) && (providers.length > 0)) initTable();
   setData();
 
   readWebsocket();
+}
+
+//--- the part we would like to avoid (and never can)
+
+function setBrowserSpecifics() {
+  if (navigator.userAgent.search("Chrome") >= 0){
+    document.getElementById("scroll_container").classList.add("chrome")
+  }
 }
 
 //--- initialization of table structure
@@ -150,6 +160,9 @@ function selectColumn(i) {
   var cell = document.getElementById("column_names").childNodes[i];
   cell.setAttribute("class", "selected");
 
+  cell = document.getElementById("dtgs").childNodes[i];
+  cell.classList.add("selected");
+
   var tbody = document.getElementById("table_body");
   for (row of tbody.childNodes){
     cell = row.childNodes[i];
@@ -160,6 +173,9 @@ function selectColumn(i) {
 function unselectColumn(i) {
   var cell = document.getElementById("column_names").childNodes[i];
   cell.removeAttribute("class", "selected");
+
+  cell = document.getElementById("dtgs").childNodes[i];
+  cell.classList.remove("selected");
 
   var tbody = document.getElementById("table_body");
   for (row of tbody.childNodes){
