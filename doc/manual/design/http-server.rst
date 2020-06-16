@@ -114,8 +114,8 @@ directive that is used instead of ``complete`` when defining the route::
 
     ...
     override def route = {
-      path("secretData") {
-        get {
+      get {
+        path("secretData") {
           completeAuthorized(User.UserRole){
             generateResponse
           }
@@ -160,11 +160,103 @@ transmitted in the login request data respective routes have to use https.
 
 This user authentication protocol is also supported by the HttpImportActor_
 
+
+WebSocket Support
+-----------------
+RaceRoutes support the WebSocketAPI_ by means of a number of the ``PushWSRaceRoute``, ``ProtocolWSRaceRoute`` and
+``AuthorizedWSRoute`` which provide a ``promoteToWebSocket()`` method that can be used from within concrete ``route()``
+implementations like this::
+
+    ...
+    override def route = {
+      get {
+        path("ws") {
+          promoteToWebSocket
+        }
+      }
+    }
+
+RACE web sockets come in two flavors: *push mode* and *protocol mode*:
+
+**Push mode** sends the same data to all connected clients, supporting per-client initialization by means of overriding
+a ``initializeConnection()`` method in respective route implementations, which mix in ``PushWSRaceRoute`` and normally
+use associated ``DataConsumerRaceActors`` to collect data to publish from configured RACE channels. Such actors use
+the ``PushWSRaceRoute.setData()`` method to initiate publishing. Note that this method has to take care of proper
+synchronization in case the data to be pushed is not invariant as the actor and the route object execute in different
+threads. It is up to individual routes to decide where/if RACE data gets translated into published content (such
+as HTML documents), but convention is to use invariant, representation agnostic data as ``setData()`` arguments.
+perform the translation once in the respective RaceRouteInfo from within that ``setData()`` implementation and then
+serve that cached content from within the ``route()`` implementation
+
+In **protocol mode** the server route responds individually to client requests that are issued as messages sent through
+an established web socket connection. The route implementation has to provide a ``handleMessage`` partial function that
+defines the protocol. A simple echo service works like this::
+
+    ...
+    override protected val handleMessage: PartialFunction[Message,Iterable[Message]] = {
+      case tm: TextMessage.Strict =>
+        val msgText = tm.text
+        TextMessage(Source.single(s"Echo [$msgText]")) :: Nil
+    }
+
+
+
+Serving Mixed Static and Dynamic Content
+----------------------------------------
+The ``SiteRoute`` and ``AuthorizedSiteRoute`` traits can be used to serve content that uses a mix of dynamic
+(RACE-generated) and static (externally generated) data stored in the file system. The configuration looks like this::
+
+    ...
+    actors = [...
+      { name = "httpServer"
+        class = "gov.nasa.race.http.HttpServer"
+
+        host = "localhost"
+        port = "8080"
+
+        routes = [
+          { name = "tabdata"
+            class = "gov.nasa.race.http.TabDataService" // SiteRoute implementor
+
+            request-prefix = "tabdata" // URL path prefix for requests
+            site-root = "race-net-http-test/src/resources/sites/tabdata" // root dir of static content
+          ...
+
+The ``site-root`` directly points to the root dir where respective route files can be found, to support
+configurations that serve content kept outside of RACE. Note that ``request-prefix`` (which defaults to the ``name``
+value) and ``site-root`` can be different.
+
+
+Test Routes
+-----------
+To test network connection and client compatibility the ``race-net-http`` module provides a number of generic
+RacRouteInfo examples:
+
+- ``TestRouteInfo`` serves a single configurable response in response to a GET. Clients can be browsers or
+  command line utilities such as ``curl``. The ``http-server.conf`` configuration shows how to use this route
+  (via ``https://localhost:8080/hello`` requests)
+- ``TestAuthorized`` is an example that requires interactive user authentication by means of a browser client. The
+  server will automatically respond with a login dialog the first time the user requests that page. The
+  ``http-server.conf`` includes a ``https://localhost:8080/secret`` route to demonstrate.
+- ``TestPreAuthorized`` requires automated login via a POST with respective user credentials before accessing the
+  content. Use ``http-server.conf`` together with a ``gov.nasa.race.http.HttpImportActor`` (e.g. ``preauth-client.conf``)
+  to run
+- ``TestPusher`` and ``TestAuthorizedPusher`` are websocket examples to be used with the ``ws-server.conf`` and
+  ``ws-auth-server.conf`` configurations. The first one can be used with a web socket command line client such as
+  ``wscat``, the second one requires a browser to enter user credentials. As the names imply both examples push data
+  from RACE to all connected clients
+- ``EchoService`` (and ``ws-echo,conf``) is an examples that shows how to use connection specific request/response,
+  as opposed to push mode which sends the same data to all connected clients
+- ``TabDataService`` is the most comprehensive example that shows how to use RACE to serve a site which
+  uses websockets to push dynamic data to connected clients. This works with normal browser clients (using http)
+
+
 .. _HTTP: https://tools.ietf.org/html/rfc2616
 .. _HTTPS: https://en.wikipedia.org/wiki/HTTPS
 .. _AkkaHttp: https://doc.akka.io/docs/akka-http/current/scala/http/
 .. _DSL: https://doc.akka.io/docs/akka-http/current/scala/http/routing-dsl/index.html
 .. _ScalaTags: http://www.lihaoyi.com/scalatags/
 .. _WebSockets: https://doc.akka.io/docs/akka-http/current/server-side/websocket-support.html
+.. _WebSocketAPI: https://developer.mozilla.org/en-US/docs/Web/API/WebSockets_API
 .. _X.509 certificate: https://lightbend.github.io/ssl-config/CertificateGeneration.html
 .. _keytool: https://docs.oracle.com/javase/8/docs/technotes/tools/unix/keytool.html

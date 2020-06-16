@@ -31,6 +31,13 @@ import scalatags.Text.all.{head => htmlHead, _}
 
 import scala.collection.mutable
 
+/*
+ * a collection of generic test routes that can be used to test network connection and client compatibility.
+ * We keep this in race-net-http instead of the -test module so that network connection can be checked without
+ * the need for a full RACE installation
+ */
+
+
 /**
   * a simple statically configured test route without actor
   */
@@ -46,6 +53,9 @@ class TestRouteInfo (val parent: ParentActor, val config: Config) extends RaceRo
   }
 }
 
+/**
+  * test route that requires automated user authentication by means of login POST requests
+  */
 class TestPreAuthorized(val parent: ParentActor, val config: Config) extends PreAuthorizedRaceRoute {
   var count = 0
 
@@ -61,6 +71,9 @@ class TestPreAuthorized(val parent: ParentActor, val config: Config) extends Pre
   }
 }
 
+/**
+  * test route that serves a page which requires manual user authentication
+  */
 class TestAuthorized (val parent: ParentActor, val config: Config) extends AuthorizedRaceRoute {
   var count = 0
 
@@ -86,7 +99,7 @@ class TestAuthorized (val parent: ParentActor, val config: Config) extends Autho
 }
 
 /**
-  * a test route that uses a script for dynamic data update
+  * a test route that uses a periodically run script for data update via XMLHttpRequest calls
   */
 class TestRefresh (val parent: ParentActor, val config: Config) extends SubscribingRaceRoute {
 
@@ -133,6 +146,9 @@ class TestRefresh (val parent: ParentActor, val config: Config) extends Subscrib
   }
 }
 
+/**
+  * test route that pushes data to all connections
+  */
 class TestPusher (val parent: ParentActor, val config: Config) extends PushWSRaceRoute {
 
   override def route = {
@@ -144,6 +160,10 @@ class TestPusher (val parent: ParentActor, val config: Config) extends PushWSRac
   }
 }
 
+/**
+  * test route that serves a user authorized page which uses a web socket to receive data pushed by the server
+  * to all connections
+  */
 class TestAuthorizedPusher (val parent: ParentActor, val config: Config) extends PushWSRaceRoute with AuthorizedWSRoute {
 
   val page = html(
@@ -194,9 +214,11 @@ class TestAuthorizedPusher (val parent: ParentActor, val config: Config) extends
       }
     }
   }
-
 }
 
+/**
+  * test route that uses a web socket to echo messages
+  */
 class EchoService (val parent: ParentActor, val config: Config) extends ProtocolWSRaceRoute {
 
   override protected val handleMessage = {
