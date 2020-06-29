@@ -121,11 +121,11 @@ class ParallelApproachAnalyzer (val config: Config) extends SubscribingRaceActor
     val it1 = tr1.reverseIterator(tr2.tRight, tr2.tRight - maxConvergeDuration, convergeInterval)
 
     if (it1.hasNext && it2.hasNext){
-      var p = it1.next
+      var p = it1.next()
       var lastLat1 = p.φ
       var lastLon1 = p.λ
 
-      p = it2.next
+      p = it2.next()
       var lastLat2 = p.φ
       var lastLon2 = p.λ
 
@@ -136,14 +136,14 @@ class ParallelApproachAnalyzer (val config: Config) extends SubscribingRaceActor
       var stop = false
 
       while (!stop && it1.hasNext && it2.hasNext) {
-        p = it1.next
+        p = it1.next()
         val lat1 = p.φ
         val lon1 = p.λ
         val alt1 = p.altitude
         val hdg1 = Euclidean.heading(lat1,lon1, lastLat1,lastLon1)
 
 
-        p = it2.next
+        p = it2.next()
         val lat2 = p.φ
         val lon2 = p.λ
         val alt2 = p.altitude

@@ -76,7 +76,7 @@ class SettableBAOStream (size: Int) extends ByteArrayOutputStream(size) {
         i += 1
         j += 1
       }
-      println
+      println()
     }
   }
 }

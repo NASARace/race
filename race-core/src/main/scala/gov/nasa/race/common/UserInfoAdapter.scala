@@ -121,8 +121,8 @@ class ConsoleUserInfoAdapter extends UserInfoAdapter {
 
   override def promptYesNo(message: String): Boolean = {
     print(s"$msgColor$message [y/n]$resetColor ")
-    Console.flush
-    StdIn.readLine match {
+    Console.flush()
+    StdIn.readLine() match {
       case "y" | "Y" => true
       case _ => false
     }
@@ -130,7 +130,7 @@ class ConsoleUserInfoAdapter extends UserInfoAdapter {
 
   override def showMessage(message: String): Unit = {
     print(s"$msgColor$message$resetColor ")
-    Console.flush
+    Console.flush()
   }
 
   override def promptKeyboardInteractive (destination: String, name: String, instruction: String,

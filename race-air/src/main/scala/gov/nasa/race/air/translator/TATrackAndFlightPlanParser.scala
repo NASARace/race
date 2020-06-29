@@ -270,7 +270,7 @@ class TATrackAndFlightPlanParser(val config: Config=NoConfig)  extends UTF8XmlPu
 
   // we combine the tracon id with the trackNum in order to get a global (unique) TATrack identifier
   def getUniqueTrackId (srcId: String, trackNum: String, acid: String): String = {
-    idBuf.clear
+    idBuf.clear()
     idBuf += srcId
     idBuf += '-'
     idBuf += trackNum

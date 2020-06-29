@@ -61,6 +61,7 @@ table {
 td, th {
   padding: var(--cell-padding);
   min-width:  var(--cell-width);
+  max-width:  var(--cell-width);
   height:  var(--cell-height);
   text-align: right;
   color: #000;
@@ -106,6 +107,45 @@ thead th.dtg {
   cursor: cell;
 }
 
+input.field {
+  text-align: right;
+  background-color: rgb(255,255,225);
+  width:  calc(var(--cell-width) - 0.4rem);
+  border: 1px solid lightgray;
+}
+
+input.field.focused {
+  background-color: rgb(255,255,180);
+  border: 1px solid red;
+}
+
+input.field.modified {
+  color: red;
+}
+
+input.field.modified.conflict {
+  background-color: rgb(255,180,180);
+}
+
+input.field.reported {
+  color: green;
+}
+
+.button:hover {
+  background-color: rgba(0,0,255,0.1);
+}
+
+.button:active {
+  background-color: rgba(0,0,255,0.3);
+  /* box-shadow: 3px 3px #404040; */
+  /* transform: translate(2px,2px); */
+}
+
+td.editable {
+  color: blue;
+  padding: 0.2rem;
+}
+
 thead th:first-child {
   left: 0;
   z-index: 4;
@@ -127,4 +167,11 @@ tbody th {
   border-right: 1px solid black;
   border-bottom: 1px solid lightgray;
   z-index: 2;
+}
+
+div.toolbar {
+  padding: 0.3rem;
+  background-clip: border-box;
+  background-color: #eaeaea;
+  border-right: 1px solid black;
 }

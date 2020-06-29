@@ -34,7 +34,7 @@ trait InputStreamLineTokenizer {
         return list.reverse
       } else if (c == ',') {
         list = sb.toString :: list
-        sb.clear
+        sb.clear()
       } else {
         sb += c.toChar
       }

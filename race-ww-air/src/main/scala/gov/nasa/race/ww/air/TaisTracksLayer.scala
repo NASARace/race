@@ -188,7 +188,7 @@ class TaisTracksLayer(val raceViewer: RaceViewer, val config: Config) extends Mo
 
   def processResult (res: AMOSelection.Result[TRACON]): Unit = {
     res match {
-      case AMOSelection.NoneSelected(_) => reset
+      case AMOSelection.NoneSelected(_) => reset()
       case AMOSelection.OneSelected(Some(tracon:TRACON)) => selectTracon(tracon)
       case _ => // ignore
     }
@@ -237,12 +237,12 @@ class TaisTracksLayer(val raceViewer: RaceViewer, val config: Config) extends Mo
 
   def gotoTracon(tracon: TRACON) = {
     if (tracon == TRACON.NoTracon) {
-      reset
+      reset()
     } else {
       selTracon match {
         case Some(`tracon`) => // nothing, we already show it
         case Some(lastTracon) =>
-          reset
+          reset()
           setTracon(tracon)
         case None =>
           setTracon(tracon)

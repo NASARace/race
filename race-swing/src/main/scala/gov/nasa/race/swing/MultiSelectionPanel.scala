@@ -140,6 +140,6 @@ object MultiSelectionPanel {
       )(processSelection).defaultStyled
     }.styled("topLevel")
 
-    top.open
+    top.open()
   }
 }

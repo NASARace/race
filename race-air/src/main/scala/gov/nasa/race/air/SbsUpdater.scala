@@ -185,7 +185,7 @@ class SbsUpdater(updateFunc: TrackedObject=>Boolean,
           nRemoved += 1
 
           if (nRemoved > acCache.size / 10) {
-            acCache.repack
+            acCache.repack()
             nRemoved = 0
           }
         }

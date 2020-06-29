@@ -47,14 +47,14 @@ class MixedNumberTokenIterator (r: Reader) extends StreamTokenizer(r) with Strea
   def nextShort() = next().toShort
   def nextInt() = next().toInt
   def nextLong() = next().toLong
-  def nextFloat() = next.toFloat
+  def nextFloat() = next().toFloat
   def nextDouble() = next()
 
   // note - this isn't very efficient so use the explicit versions outside of generic contexts
   def nextNumber[T <:AnyVal :TypeTag](): T = {
     val t = typeOf[T]
     if (t <:< typeOf[Byte]) nextByte().asInstanceOf[T]
-    else if (t <:< typeOf[Short]) nextShort.asInstanceOf[T]
+    else if (t <:< typeOf[Short]) nextShort().asInstanceOf[T]
     else if (t <:< typeOf[Int]) nextInt().asInstanceOf[T]
     else if (t <:< typeOf[Long]) nextLong().asInstanceOf[T]
     else if (t <:< typeOf[Float]) nextFloat().asInstanceOf[T]

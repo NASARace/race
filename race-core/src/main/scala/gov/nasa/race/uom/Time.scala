@@ -154,7 +154,7 @@ final class TimeArray protected[uom] (protected[uom] val data: Array[Int]) {
   class Iter extends Iterator[Time] {
     private var i = 0
     def hasNext: Boolean = i < data.length
-    def next: Time = {
+    def next(): Time = {
       if (i >= data.length) throw new NoSuchElementException
       val j = i
       i += 1
@@ -164,7 +164,7 @@ final class TimeArray protected[uom] (protected[uom] val data: Array[Int]) {
   class ReverseIter extends Iterator[Time] {
     private var i = data.length-1
     def hasNext: Boolean = i >= 0
-    def next: Time = {
+    def next(): Time = {
       if (i <0) throw new NoSuchElementException
       val j = i
       i -= 1
@@ -214,7 +214,7 @@ final class TimeArrayBuffer protected[uom] (protected[uom] val data: ArrayBuffer
   class Iter extends Iterator[Time] {
     private var i = 0
     def hasNext: Boolean = i < data.size
-    def next: Time = {
+    def next(): Time = {
       if (i >= data.length) throw new NoSuchElementException
       val j = i
       i += 1
@@ -224,7 +224,7 @@ final class TimeArrayBuffer protected[uom] (protected[uom] val data: ArrayBuffer
   class ReverseIter extends Iterator[Time] {
     private var i = data.size-1
     def hasNext: Boolean = i >= 0
-    def next: Time = {
+    def next(): Time = {
       if (i <0) throw new NoSuchElementException
       val j = i
       i -= 1

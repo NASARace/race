@@ -51,7 +51,7 @@ object HttpImportActor {
     if (liveInstances.decrementAndGet == 0) {
       try {
         //a.materializer.shutdown
-        Await.ready(a.http.shutdownAllConnectionPools, 10.seconds)
+        Await.ready(a.http.shutdownAllConnectionPools(), 10.seconds)
       } catch {
         case _:java.util.concurrent.TimeoutException =>
           a.warning("shutting down Http pool timed out")
@@ -331,7 +331,7 @@ class HttpImportActor (val config: Config) extends PublishingRaceActor
 
     //--- finish/drop pending requests
     pendingRequests.foreach(waitForPending)
-    pendingRequests.clear
+    pendingRequests.clear()
 
     // logout is different - make sure it is processed here because we might not come back to handleMessage
     ifSome(logoutRequest) { r =>

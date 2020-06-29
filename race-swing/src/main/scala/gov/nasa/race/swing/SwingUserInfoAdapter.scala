@@ -45,7 +45,7 @@ trait SwingUserInfoAdapter extends UserInfoAdapter {
     var canceled = false
     val entries: Array[TextField] = echos.map( if (_) new TextField(15) else new PasswordField(15))
     val okButton = new Button(Action("Ok"){ dialog.close() })
-    val cancelButton = new Button(Action("Cancel") { canceled = true; dialog.close })
+    val cancelButton = new Button(Action("Cancel") { canceled = true; dialog.close() })
     val buttons = new FlowPanel(FlowPanel.Alignment.Trailing)(cancelButton, okButton)
 
     dialog.contents = new GBPanel {
@@ -74,7 +74,7 @@ trait SwingUserInfoAdapter extends UserInfoAdapter {
     val entryField = new PasswordField()
     entryField.action = Action("Enter") { storeAction(entryField.password); dialog.close() }
     val okButton = new Button(Action("Ok"){ storeAction(entryField.password); dialog.close() })
-    val cancelButton = new Button(Action("Cancel") { dialog.close })
+    val cancelButton = new Button(Action("Cancel") { dialog.close() })
     val buttons = new FlowPanel(FlowPanel.Alignment.Trailing)(cancelButton, okButton)
 
     dialog.title = prompt

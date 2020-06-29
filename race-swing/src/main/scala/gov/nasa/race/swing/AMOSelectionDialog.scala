@@ -92,7 +92,7 @@ class AMOSelectionDialog[T:ClassTag] ( dialogTitle: String,
         closeWithResult(OneSelected(Some(t))) // shortcut for select-and-close
       } else {
         selItem = Some(t)
-        listView.repaint
+        listView.repaint()
       }
   }
 
@@ -112,11 +112,11 @@ class AMOSelectionDialog[T:ClassTag] ( dialogTitle: String,
   modal = true
   def closeWithResult (res: AMOSelection.Result[T]): Unit = {
     result = res
-    close
+    close()
   }
 
   def process: AMOSelection.Result[T] = {
-    open
+    open()
     result
   }
 }

@@ -7,9 +7,20 @@
         <script src="tabdata.js" type="application/javascript"></script>
     </head>
 
-    <body onload="init();" onresize="setWidth();">
+    <body onload="init();" onresize="setWidth();" ununload="shutdown();">
 
-    <h2>Example of dynamically updated table</h2>
+    <h2>Provider Data</h2>
+
+        <div class="toolbar">
+            <label for="uid">user:</label>
+            <input type="text" id="uid"/>
+            <label for="pw">password:</label>
+            <input type="password" id="pw" onkeyup="identifyUser(event);"/>
+            <!-- will be enabled once we have editable fields that were changed by user -->
+            <input type="button" id="editButton" class="button" value="Edit" onclick="setEditable();"/>
+            <input type="button" id="sendButton" class="button" value="Send Changes" onclick="sendChanges();" disabled/>
+            <input type="button" id="readOnlyButton" class="button" value="ReadOnly" onclick="setReadOnly();" disabled/>
+        </div>
 
         <div id="scroll_container">
             <table id="my_table">

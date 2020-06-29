@@ -169,7 +169,7 @@ object LengthArray {
 private[uom] class LengthIter (data: Seq[Double], first: Int, last: Int) extends Iterator[Length] {
   private var i = first
   def hasNext: Boolean = (i <= last)
-  def next: Length = {
+  def next(): Length = {
     val j = i
     if (j > last) throw new NoSuchElementException
     i += 1
@@ -180,7 +180,7 @@ private[uom] class LengthIter (data: Seq[Double], first: Int, last: Int) extends
 private[uom] class ReverseLengthIter (data: Seq[Double], first: Int, last: Int) extends Iterator[Length] {
   private var i = first
   def hasNext: Boolean = (i >= last)
-  def next: Length = {
+  def next(): Length = {
     val j = i
     if (j < last) throw new NoSuchElementException
     i -= 1
@@ -291,7 +291,7 @@ final class LengthArrayBuffer protected[uom] (protected[uom] val data: ArrayBuff
 private[uom] class DeltaLengthIter (data: Seq[Float], first: Int, last: Int, ref: Length) extends Iterator[Length] {
   private var i = first
   def hasNext: Boolean = (i <= last)
-  def next: Length = {
+  def next(): Length = {
     val j = i
     if (j > last) throw new NoSuchElementException
     i += 1
@@ -302,7 +302,7 @@ private[uom] class DeltaLengthIter (data: Seq[Float], first: Int, last: Int, ref
 private[uom] class ReverseDeltaLengthIter (data: Seq[Float], first: Int, last: Int, ref: Length) extends Iterator[Length] {
   private var i = first
   def hasNext: Boolean = (i >= last)
-  def next: Length = {
+  def next(): Length = {
     val j = i
     if (j < last) throw new NoSuchElementException
     i -= 1

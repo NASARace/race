@@ -44,7 +44,7 @@ trait AuthRaceRoute extends RaceRouteInfo {
 
   // override if we have a more specific cookie parameters
   val sessionCookieName = config.getStringOrElse("cookie-name", "ARR")
-  val cookieDomain = config.getOptionalString("cookie-domain")
+  val cookieDomain: Option[String] = config.getOptionalString("cookie-domain")
   def cookiePath: Option[String] = Some(config.getStringOrElse("cookie-path","/"))
 
   val expiresAfterMillis = config.getFiniteDurationOrElse("expires-after", 10.minutes).toMillis
@@ -95,7 +95,11 @@ trait AuthRaceRoute extends RaceRouteInfo {
                                      dom: Option[String] = cookieDomain,
                                      pth: Option[String] = cookiePath,
                                      exp: Option[DT] = cookieExpirationDate): HttpCookie = {
-    new HttpCookie(name = sessionCookieName, value = cookieValue, domain = dom, path = pth, expires = exp, secure = true)
+    var cookie = HttpCookie(sessionCookieName,cookieValue)
+    dom.foreach( ds=> cookie = cookie.withDomain(ds))
+    pth.foreach( ps=> cookie = cookie.withPath(ps))
+    exp.foreach( dt=> cookie = cookie.withExpires(dt))
+    cookie
   }
 }
 

@@ -316,7 +316,7 @@ class AsdexMsgParser(val config: Config=NoConfig) extends UTF8XmlPullParser2
 
   // if we keep tracks for different airports in the same map we need to have global ids
   def getUniqueTrackId (srcId: String, trackId: String, acid: String): String = {
-    idBuf.clear
+    idBuf.clear()
     idBuf += srcId
     idBuf += trackId
 
@@ -339,7 +339,7 @@ class FullAsdexMsgParser(_config: Config=NoConfig) extends AsdexMsgParser(_confi
   override protected def setAirport (airportId: String) = {
     if (airportId != lastAirport) {
       lastAirport = airportId
-      lastTracks.clear
+      lastTracks.clear()
     }
     airportId
   }

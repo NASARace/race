@@ -110,11 +110,11 @@ class RaceViewer(viewerActor: RaceViewerActor) extends DeferredEyePositionListen
   ifInstanceOf[RaceWWViewController](wwdView.getViewInputHandler){_.attachToRaceView(this)}
 
   if (!initTimedOut){
-    frame.open
+    frame.open()
     viewController.initialize
     panels.foreach{ e => frame.initializePanel(e._2) }
   } else {
-    frame.dispose
+    frame.dispose()
   }
 
   //---- end initialization, from here on we need to be thread safe
@@ -123,7 +123,7 @@ class RaceViewer(viewerActor: RaceViewerActor) extends DeferredEyePositionListen
   def displayable = frame.displayable
   def simClock = viewerActor.simClock
   def updatedSimTime = viewerActor.updatedSimTime
-  def close = frame.close
+  def close = frame.close()
 
   // WWD accessors
   def eyePosition = wwdView.getEyePosition
@@ -398,8 +398,8 @@ class RaceViewer(viewerActor: RaceViewerActor) extends DeferredEyePositionListen
     if (config.hasPath("layer-categories")) config.getStringList("layer-categories").asScala.toSet else default
   }
 
-  def redraw = redrawManager.redraw
-  def redrawNow = redrawManager.redrawNow
+  def redraw = redrawManager.redraw()
+  def redrawNow = redrawManager.redrawNow()
 
   def getInViewChecker = InViewChecker(wwd)
 

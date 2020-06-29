@@ -214,7 +214,7 @@ class CliArgs (val title: String) {
             if (!it.hasNext) {
               return _fail(s"no value for command line argument $key")
             } else {
-              a.executeAction(it.next)
+              a.executeAction(it.next())
             }
 
           case other =>
@@ -229,12 +229,12 @@ class CliArgs (val title: String) {
                   ai match {
                     case ai:FreeArg1 =>
                       ai.executeAction(arg)
-                      if (it.hasNext) arg = it.next else break
+                      if (it.hasNext) arg = it.next() else break()
                     case ai: FreeArgN =>
                       val args = ArrayBuffer(arg)
                       args.appendAll(it)
                       ai.executeAction(args.toArray)
-                      break
+                      break()
                   }
                 }
               }
@@ -255,7 +255,7 @@ class CliArgs (val title: String) {
     else if (optInfos.length == 1) print(" <option>")
     if (argInfos.length > 1) print(" <arg>..")
     else if (argInfos.length == 1) print( " <arg>")
-    println
+    println()
     if (optInfos.length > 0){
       println("options:")
       optInfos.foreach(_.show)

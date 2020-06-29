@@ -359,7 +359,7 @@ class RaceActorSystem(val config: Config) extends LogController with VerifiableA
     RaceLogger.terminate(system)
 
     if (!isRunningEmbedded) {
-      system.terminate  // don't terminate if running in a MultiJvm test
+      system.terminate()  // don't terminate if running in a MultiJvm test
     }
   }
 
@@ -535,7 +535,7 @@ class RaceActorSystem(val config: Config) extends LogController with VerifiableA
     info(s"universe $name killed")
     status = common.Status.Terminated // there is no coming back from here
     RaceLogger.terminate(system)
-    system.terminate
+    system.terminate()
   }
 
   override def logLevel: LogLevel = RaceLogger.getConfigLogLevel(system,

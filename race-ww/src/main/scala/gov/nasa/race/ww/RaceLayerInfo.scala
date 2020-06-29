@@ -55,8 +55,8 @@ trait RaceLayerInfo {
   var wwd: WorldWindow = _
   var wwdRedrawManager: RedrawManager = _
 
-  def redraw = if (wwdRedrawManager != null) wwdRedrawManager.redraw
-  def redrawNow = if (wwdRedrawManager != null) wwdRedrawManager.redrawNow
+  def redraw = if (wwdRedrawManager != null) wwdRedrawManager.redraw()
+  def redrawNow = if (wwdRedrawManager != null) wwdRedrawManager.redrawNow()
 
   def initializeLayer (wwd: WorldWindow, wwdRedrawManager: RedrawManager): Unit = {
     this.wwd = wwd

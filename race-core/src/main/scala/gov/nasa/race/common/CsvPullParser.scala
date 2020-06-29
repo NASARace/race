@@ -42,7 +42,7 @@ abstract class CsvPullParser {
   def clear: Unit = {
     idx = 0
     limit = 0
-    value.clear
+    value.clear()
     nValues = 0
   }
 
@@ -56,7 +56,7 @@ abstract class CsvPullParser {
     var i = idx
     var iStart = -1
 
-    value.clearRange
+    value.clearRange()
 
     if (i >= limit || isRecordSeparator(data(i))) return false
 

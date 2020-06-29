@@ -79,14 +79,14 @@ trait RaceActor extends Actor with ImplicitActorLogging {
     caps + IsAutomatic + SupportsSimTime + SupportsSimTimeReset + SupportsPauseResume
   }
 
-  override def postStop = supervisor ! RaceActorStopped
+  override def postStop() = supervisor ! RaceActorStopped
 
   // pre-init behavior which doesn't branch into concrete actor code before we
   // do the initialization. This guarantees that concrete actor code cannot access
   // un-initialized fields
   override def receive = {
-    case PingRaceActor(sentNanos: Long, statsCollector: ActorRef) => handlePingRaceActor(sender,sentNanos,statsCollector)
-    case ShowRaceActor(sentNanos: Long) => handleShowRaceActor(sender,sentNanos)
+    case PingRaceActor(sentNanos: Long, statsCollector: ActorRef) => handlePingRaceActor(sender(),sentNanos,statsCollector)
+    case ShowRaceActor(sentNanos: Long) => handleShowRaceActor(sender(),sentNanos)
     case InitializeRaceActor(raceContext,actorConf) => handleInitializeRaceActor(raceContext,actorConf)
     case TerminateRaceActor(originator) => handleTerminateRaceActor(originator)
     //case msg: PingRaceActor => sender ! msg.copy(tReceivedNanos=System.nanoTime())
@@ -103,13 +103,13 @@ trait RaceActor extends Actor with ImplicitActorLogging {
       if (onInitializeRaceActor(rctx, actorConf)) {
         info("initialized")
         status = Initialized
-        sender ! RaceActorInitialized(capabilities)
+        sender() ! RaceActorInitialized(capabilities)
       } else {
         warning("initialize rejected")
-        sender ! RaceActorInitializeFailed("rejected")
+        sender() ! RaceActorInitializeFailed("rejected")
       }
     } catch {
-      case ex: Throwable => sender ! RaceActorInitializeFailed(ex.getMessage)
+      case ex: Throwable => sender() ! RaceActorInitializeFailed(ex.getMessage)
     }
   }
 
@@ -139,21 +139,21 @@ trait RaceActor extends Actor with ImplicitActorLogging {
     case ResumeRaceActor(originator) => handleResumeRaceActor(originator)
     case TerminateRaceActor(originator) => handleTerminateRaceActor(originator)
 
-    case ProcessRaceActor => sender ! RaceActorProcessed
-    case PingRaceActor(sentNanos,statsCollector) => handlePingRaceActor(sender,sentNanos,statsCollector)
+    case ProcessRaceActor => sender() ! RaceActorProcessed
+    case PingRaceActor(sentNanos,statsCollector) => handlePingRaceActor(sender(),sentNanos,statsCollector)
 
-    case ShowRaceActor(sentNanos) => handleShowRaceActor(sender,sentNanos) // response processed sync
+    case ShowRaceActor(sentNanos) => handleShowRaceActor(sender(),sentNanos) // response processed sync
 
     case SetLogLevel(newLevel) => logLevel = newLevel
 
     case SyncWithRaceClock => handleSyncWithRaceClock
     case SetTimeout(msg,duration) => context.system.scheduler.scheduleOnce(duration, self, msg)
 
-    case RacePaused => handleRacePaused(sender) // master reply for a RacePauseRequest (only the requester gets this)
-    case RacePauseFailed(details: Any) => handleRacePauseFailed(sender,details)
+    case RacePaused => handleRacePaused(sender()) // master reply for a RacePauseRequest (only the requester gets this)
+    case RacePauseFailed(details: Any) => handleRacePauseFailed(sender(),details)
 
-    case RaceResumed => handleRaceResumed(sender)
-    case RaceResumeFailed(details: Any) => handleRaceResumeFailed(sender,details)
+    case RaceResumed => handleRaceResumed(sender())
+    case RaceResumeFailed(details: Any) => handleRaceResumeFailed(sender(),details)
 
     case other => warning(s"unhandled system message $other")
   }
@@ -165,18 +165,18 @@ trait RaceActor extends Actor with ImplicitActorLogging {
         raceContext = rc
         if (onReInitializeRaceActor(rc, actorConf)){
           info("reinitialized")
-          sender ! RaceActorInitialized(capabilities)
+          sender() ! RaceActorInitialized(capabilities)
         } else {
           warning("initialize rejected")
-          sender ! RaceActorInitializeFailed("rejected")
+          sender() ! RaceActorInitializeFailed("rejected")
         }
       } catch {
-        case ex: Throwable => sender ! RaceActorInitializeFailed(ex.getMessage)
+        case ex: Throwable => sender() ! RaceActorInitializeFailed(ex.getMessage)
       }
     } else {
       // no point re-initializing same context - maybe we should raise an exception
       warning("ignored re-initialization from same context")
-      sender ! RaceActorInitialized(capabilities)
+      sender() ! RaceActorInitialized(capabilities)
     }
   }
 
@@ -187,13 +187,13 @@ trait RaceActor extends Actor with ImplicitActorLogging {
       if (success){
         status = Running
         info("started")
-        sender ! RaceActorStarted
+        sender() ! RaceActorStarted
       } else {
         warning("start rejected")
-        sender ! RaceActorStartFailed("rejected")
+        sender() ! RaceActorStartFailed("rejected")
       }
     } catch {
-      case ex: Throwable => sender ! RaceActorStartFailed(ex.getMessage)
+      case ex: Throwable => sender() ! RaceActorStartFailed(ex.getMessage)
     }
   }
 
@@ -230,13 +230,13 @@ trait RaceActor extends Actor with ImplicitActorLogging {
       if (success){
         status = Paused
         info("paused")
-        sender ! RaceActorPaused
+        sender() ! RaceActorPaused
       } else {
         warning("pause rejected")
-        sender ! RaceActorPauseFailed("rejected")
+        sender() ! RaceActorPauseFailed("rejected")
       }
     } catch {
-      case ex: Throwable => sender ! RaceActorPauseFailed(ex.getMessage)
+      case ex: Throwable => sender() ! RaceActorPauseFailed(ex.getMessage)
     }
   }
 
@@ -265,13 +265,13 @@ trait RaceActor extends Actor with ImplicitActorLogging {
       if (success){
         status = Running
         info("resumed")
-        sender ! RaceActorResumed
+        sender() ! RaceActorResumed
       } else {
         warning("resume rejected")
-        sender ! RaceActorResumeFailed("rejected")
+        sender() ! RaceActorResumeFailed("rejected")
       }
     } catch {
-      case ex: Throwable => sender ! RaceActorResumeFailed(ex.getMessage)
+      case ex: Throwable => sender() ! RaceActorResumeFailed(ex.getMessage)
     }
   }
 
@@ -312,19 +312,19 @@ trait RaceActor extends Actor with ImplicitActorLogging {
           info("terminated")
           status = common.Status.Terminated
           // note that we don't stop this actor - that is the responsibility of the master/ras
-          sender ! RaceActorTerminated
+          sender() ! RaceActorTerminated
         } else {
           warning("terminate rejected")
-          sender ! RaceActorTerminateFailed("rejected")
+          sender() ! RaceActorTerminateFailed("rejected")
         }
       } catch {
         case x: Throwable =>
           x.printStackTrace()
-          sender ! RaceActorTerminateFailed(x.toString)
+          sender() ! RaceActorTerminateFailed(x.toString)
       }
     } else {
       info("ignored remote TerminateRaceActor")
-      sender ! RaceActorTerminateIgnored
+      sender() ! RaceActorTerminateIgnored
     }
   }
 

@@ -96,7 +96,7 @@ class LayerListPanel (raceView: RaceViewer, config: Option[Config]=None)
             raceView.layerChanged(layer)
           }
         }
-        listView.repaint
+        listView.repaint()
       }
       raceView.trackUserAction { updateLayerInfoPanel(getFirstSelected) }
   }
@@ -132,7 +132,7 @@ class LayerListPanel (raceView: RaceViewer, config: Option[Config]=None)
   def changeLayer (name: String, enable: Boolean) = {
     layerInfoList.find(name).foreach { layer =>
       layer.setEnabled(enable)
-      listView.repaint
+      listView.repaint()
     }
   }
 }

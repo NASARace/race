@@ -114,7 +114,7 @@ object Dependencies {
   val argon2 = "de.mkammerer" % "argon2-jvm" % "2.7"
 
   //--- Akka
-  val akkaVersion = "2.6.5"
+  val akkaVersion = "2.6.6"
   val akkaOrg = "com.typesafe.akka"
 
   val akkaActor = akkaOrg %% "akka-actor" % akkaVersion
@@ -124,7 +124,7 @@ object Dependencies {
   val akkaTestkit = akkaOrg %% "akka-testkit" % akkaVersion
   val akkaMultiNodeTestkit = akkaOrg %% "akka-multi-node-testkit" % akkaVersion // % "test,multi-jvm"
 
-  val akkaHttp = akkaOrg %% "akka-http" % "10.1.12"
+  val akkaHttp = akkaOrg %% "akka-http" % "10.2.0-RC1"
 
   val akkaAll = Seq(akkaActor)
 

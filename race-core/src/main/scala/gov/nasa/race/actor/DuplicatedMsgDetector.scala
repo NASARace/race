@@ -54,7 +54,7 @@ class DuplicatedMsgDetector (val config: Config) extends StatsCollectorActor wit
     if (sdb == null) {
       sdb = new Utf8Buffer(minCapacity)
     } else {
-      sdb.clear
+      sdb.clear()
     }
     sdb
   }

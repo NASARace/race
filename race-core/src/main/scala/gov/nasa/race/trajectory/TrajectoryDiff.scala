@@ -110,7 +110,7 @@ object TrajectoryDiff {
     val it = intr.iterator(trajectory.getFirstDate.toEpochMillis, trajectory.getLastDate.toEpochMillis, dt.toMillis)
 
     while (it.hasNext) {
-      val p = it.next
+      val p = it.next()
       val d = Math.abs(computeDistance(pos, p).toMeters)
       if (d < dMin) { // distance decreasing
         dMin = d
@@ -138,10 +138,10 @@ object TrajectoryDiff {
     val posLon = pos.λ.toDegrees
 
     val it = trajectory.iterator(new TDP3)
-    val pLast = it.next.clone
+    val pLast = it.next().clone
 
     while (it.hasNext) {
-      val p = it.next
+      val p = it.next()
 
       val avgLat = (p._0 + pLast._0) / 2
       val cfx = cos(rad(avgLat)) // x (lon) correction factor to make lat/lon units equidistant

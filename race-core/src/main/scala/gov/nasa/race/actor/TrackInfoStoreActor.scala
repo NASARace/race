@@ -98,8 +98,8 @@ class TrackInfoStoreActor (val config: Config) extends ChannelTopicProvider with
 
     case RequestTrackInfo(cs) => // a direct, one-time request
       store.get(cs) match {
-        case Some(tInfo) => sender ! tInfo
-        case None => sender ! NoSuchTrackInfo(cs)
+        case Some(tInfo) => sender() ! tInfo
+        case None => sender() ! NoSuchTrackInfo(cs)
       }
   }
 

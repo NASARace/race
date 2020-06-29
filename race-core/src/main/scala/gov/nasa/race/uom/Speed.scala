@@ -125,7 +125,7 @@ object SpeedArray {
 private[uom] class SpeedIter (data: Seq[Double], first: Int, last: Int) extends Iterator[Speed] {
   private var i = first
   def hasNext: Boolean = (i <= last)
-  def next: Speed = {
+  def next(): Speed = {
     val j = i
     if (j > last) throw new NoSuchElementException
     i += 1
@@ -136,7 +136,7 @@ private[uom] class SpeedIter (data: Seq[Double], first: Int, last: Int) extends 
 private[uom] class ReverseSpeedIter (data: Seq[Double], first: Int, last: Int) extends Iterator[Speed] {
   private var i = first
   def hasNext: Boolean = (i >= last)
-  def next: Speed = {
+  def next(): Speed = {
     val j = i
     if (j < last) throw new NoSuchElementException
     i -= 1

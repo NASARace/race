@@ -51,10 +51,10 @@ object RedrawManager {
 abstract class RedrawManager (val wwd: Redrawable) {
 
   // schedule a redraw within a instance specific time frame
-  def redraw: Unit
+  def redraw(): Unit
 
   // only the generic version - override if it has to sync with redraw()
-  def redrawNow: Unit = wwd.redrawNow()
+  def redrawNow(): Unit = wwd.redrawNow()
 }
 
 /**
@@ -75,7 +75,7 @@ class SlidingTimeFramePolicy (wwd: Redrawable, val minDelay: Long=300, val maxDe
   protected var pending: Option[Future[Any]] = None
   @volatile protected var lastTime: Long = 0 // epoch millis of most recent request
 
-  def redraw: Unit = {
+  def redraw(): Unit = {
     lastTime = System.currentTimeMillis
     synchronized {
       if (pending == None) {
@@ -115,12 +115,12 @@ class ContinuousOnDemandPolicy (wwd: Redrawable, val startDelay: Int = 500, val 
   timer.setCoalesce(true)
   timer.start
 
-  def redraw: Unit = pendingRequest = true
+  def redraw(): Unit = pendingRequest = true
 
-  override def redrawNow = {
+  override def redrawNow() = {
     pendingRequest = false
     lastRedraw = System.currentTimeMillis
-    wwd.redrawNow
+    wwd.redrawNow()
   }
 
   override def actionPerformed(actionEvent: ActionEvent): Unit = {
@@ -129,7 +129,7 @@ class ContinuousOnDemandPolicy (wwd: Redrawable, val startDelay: Int = 500, val 
     if (pendingRequest || (t-lastRedraw)>maxDelay){
       pendingRequest = false
       lastRedraw = t
-      wwd.redraw
+      wwd.redraw()
     }
   }
 }

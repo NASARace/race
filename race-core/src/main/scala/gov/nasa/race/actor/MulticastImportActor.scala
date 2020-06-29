@@ -77,7 +77,7 @@ class MulticastImportActor (val config: Config) extends FilteringPublisher {
   }
 
   override def onTerminateRaceActor(originator: ActorRef) = {
-    ifSome(publishScheduler){ _.cancel }
+    ifSome(publishScheduler){ _.cancel() }
     receiverThread.interrupt
     super.onTerminateRaceActor(originator)
   }
@@ -89,7 +89,7 @@ class MulticastImportActor (val config: Config) extends FilteringPublisher {
   def publishStoredItems = publishItems.synchronized {
     if (publishItems.nonEmpty) {
       publishItems.values.foreach(publishFiltered)
-      publishItems.clear
+      publishItems.clear()
     }
   }
 

@@ -116,7 +116,7 @@ abstract class XmlPullParser2  {
 
         } else { // end tag
           if (isTopTag(tag)) {
-            path.pop
+            path.pop()
             state = if (path.isEmpty) finishedState else nextState
           } else {
             throw new XmlParseException(s"unbalanced end tag '$tag'")
@@ -224,7 +224,7 @@ abstract class XmlPullParser2  {
       // tag is still valid
       _isStartTag = false
       _wasEmptyElementTag = true
-      path.pop
+      path.pop()
 
       state = if (path.isEmpty) finishedState else contentState
 
@@ -276,14 +276,14 @@ abstract class XmlPullParser2  {
   protected def clear: Unit = {
     idx = 0
     state = tagState
-    path.clear
-    contentStrings.clear
+    path.clear()
+    contentStrings.clear()
     _isStartTag = false
     _wasEmptyElementTag = false
-    tag.clear
-    attrName.clear
-    attrValue.clear
-    rawContent.clear
+    tag.clear()
+    attrName.clear()
+    attrValue.clear()
+    rawContent.clear()
   }
 
   //--- public methods

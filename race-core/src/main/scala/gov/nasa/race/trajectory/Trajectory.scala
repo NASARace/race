@@ -163,15 +163,15 @@ trait Trajectory extends TDataSource[N3,TDP3] {
 
   def foreach (f: (TrackPoint)=>Unit): Unit = {
     val it = iterator
-    while (it.hasNext) f(it.next)
+    while (it.hasNext) f(it.next())
   }
   def foreach (p: MutTrajectoryPoint)(f: (TrackPoint)=>Unit): Unit = {
     val it = iterator(p)
-    while (it.hasNext) f(it.next)
+    while (it.hasNext) f(it.next())
   }
   def foreach (p: TDP3)(f: (TDP3)=>Unit): Unit = {
     val it = iterator(p)
-    while (it.hasNext) f(it.next)
+    while (it.hasNext) f(it.next())
   }
 
   def reverseIterator: Iterator[TrackPoint]
@@ -180,15 +180,15 @@ trait Trajectory extends TDataSource[N3,TDP3] {
 
   def foreachReverse (f: (TrackPoint)=>Unit): Unit = {
     val it = reverseIterator
-    while (it.hasNext) f(it.next)
+    while (it.hasNext) f(it.next())
   }
   def foreachReverse (p: MutTrajectoryPoint)(f: (TrackPoint)=>Unit): Unit = {
     val it = reverseIterator(p)
-    while (it.hasNext) f(it.next)
+    while (it.hasNext) f(it.next())
   }
   def foreachReverse (p: TDP3)(f: (TDP3)=>Unit): Unit = {
     val it = reverseIterator(p)
-    while (it.hasNext) f(it.next)
+    while (it.hasNext) f(it.next())
   }
 
   def copyToArrays (t: DateArray, lat: AngleArray, lon: AngleArray, alt: LengthArray): Unit

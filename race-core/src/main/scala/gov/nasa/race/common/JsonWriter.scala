@@ -58,8 +58,8 @@ class JsonWriter (jsonType: ElementType = JsonWriter.RawElements, initSize: Int 
 
   protected def initialize: Unit = {
     needsSep = false
-    buf.clear
-    elementStack.clear
+    buf.clear()
+    elementStack.clear()
 
     jsonType match {
       case JsonWriter.ObjectType => beginObject

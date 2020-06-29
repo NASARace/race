@@ -237,7 +237,7 @@ trait Replayer [T <: ArchiveReader] extends ContinuousTimeRaceActor
             scheduler.scheduleOnce(dtMillis milliseconds, self, r)
           }
         }
-        pendingMsgs.clear
+        pendingMsgs.clear()
       }
       if (nScheduled == 0) {
         // we didn't re-schedule a sent message - schedule the next one if there is nothing pending

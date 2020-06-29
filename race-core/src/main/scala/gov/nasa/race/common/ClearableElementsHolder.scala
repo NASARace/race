@@ -31,7 +31,7 @@ trait ClearableElementsHolder[T <: Clearable] {
 
   def clearElements: Unit = {
     if (elements != null && reuseElements) {
-      elements.clear
+      elements.clear()
     } else {
       elements = createElements
     }

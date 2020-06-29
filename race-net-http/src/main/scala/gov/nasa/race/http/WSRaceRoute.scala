@@ -88,21 +88,22 @@ trait PushWSRaceRoute extends WSRaceRoute with RaceDataConsumer {
     push(TextMessage.Strict(data.toString))
   }
 
+  protected def discardMessage (m: Message): Unit = {
+    m match {
+      case tm: TextMessage => tm.textStream.runWith(Sink.ignore)
+      case bm: BinaryMessage => bm.dataStream.runWith(Sink.ignore)
+    }
+  }
+
   /**
     * handle incoming message
     * override in subclasses if incoming messages need to be processed - default is doing nothing
     * note this executes in a synchronized context
     */
-  protected def handleIncoming (m: Message): Unit = {
+  protected def handleIncoming (m: Message): Iterable[Message] = {
     info(s"ignoring incoming message $m")
-  }
-
-  /**
-    * non-overridable wrappwr for user overridable handleIncoming(m)
-    * this has to be synchronized since it can be called concurrently
-    */
-  private def processInbound (m: Message): Unit = synchronized {
-    handleIncoming(m)
+    discardMessage(m)
+    Nil
   }
 
   /**
@@ -119,17 +120,20 @@ trait PushWSRaceRoute extends WSRaceRoute with RaceDataConsumer {
     */
   protected def promoteToWebSocket: Route = {
     extractMatchedPath { requestUri =>
-      headerValueByType[RealRemoteAddress](()) { remoteAddrHdr =>
+      headerValueByType(classOf[RealRemoteAddress]) { remoteAddrHdr =>
         val remoteAddress = remoteAddrHdr.address
-        val inbound: Sink[Message, Any] = Sink.foreach(processInbound)
-        val outbound: Source[Message, SourceQueueWithComplete[Message]] = Source.queue(srcBufSize, srcPolicy)
 
-        val flow = Flow.fromSinkAndSourceCoupledMat(inbound, outbound)((_, outBoundMat) => synchronized {
-          val newConn = WebSocketPushConnection(outBoundMat, remoteAddress)
-          initializeConnection(newConn)
-          connections ::= newConn
-          NotUsed
-        })
+        val (outboundMat,outbound) = Source.queue[Message](srcBufSize, srcPolicy).preMaterialize()
+        val newConn = WebSocketPushConnection(outboundMat, remoteAddress)
+        initializeConnection(newConn)
+        connections ::= newConn
+
+        val inbound: Sink[Message, Any] = Sink.foreach{ inMsg =>
+          handleIncoming(inMsg).foreach( outMsg => pushTo(newConn,outMsg))
+        }
+
+        val flow = Flow.fromSinkAndSourceCoupled(inbound, outbound)
+
         info(s"promoting $requestUri to websocket connection for remote: $remoteAddress")
         handleWebSocketMessages(flow)
       }
@@ -158,16 +162,17 @@ trait ProtocolWSRaceRoute extends WSRaceRoute {
     Nil
   }
 
+  // TODO - keep alive in config causes https://github.com/akka/akka/issues/28926
   //val pingMsg: Message = BinaryMessage.Strict(ByteString.empty) // TODO only a simulated Ping frame that is not transparent
 
   protected val flow = Flow[Message].mapConcat { m=>
     handleMessage.applyOrElse(m, discardMessage)
   }
-  // .keepAlive(1.second, () => pingMsg)  // TDDO should go in route configuration
+  // .keepAlive(1.second, () => pingMsg)  // TDDO should go into route configuration
 
   protected def promoteToWebSocket: Route = {
     extractMatchedPath { requestUri =>
-      headerValueByType[RealRemoteAddress](()) { remoteAddrHdr =>
+      headerValueByType(classOf[RealRemoteAddress]) { remoteAddrHdr =>
         val remoteAddress = remoteAddrHdr.address
 
         info(s"promoting $requestUri to websocket connection for remote: $remoteAddress")

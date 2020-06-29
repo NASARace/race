@@ -50,13 +50,13 @@ class SliceSplitter (var sep: Byte, var src: ByteSlice) extends Iterator[ByteSli
   /**
     * note that consecutive separator chars are reported as empty slices
     */
-  def next: ByteSlice = next(subSlice)
+  def next(): ByteSlice = next(subSlice)
 
   /**
     * alternative accessor that uses a caller provided slice object
     */
   def next[T<:MutByteSlice] (slice: T): T = {
-    slice.clear
+    slice.clear()
     val bs = src.data
     val limit = this.limit
     var i = idx

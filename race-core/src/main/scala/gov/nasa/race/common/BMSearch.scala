@@ -55,7 +55,7 @@ class BMSearch (val pattern: Array[Byte], val patternOffset: Int, val patternLen
     if (sdb == null) {
       sdb = new AsciiBuffer( Math.max(minLen,8192))
     } else {
-      sdb.clear
+      sdb.clear()
     }
     sdb
   }

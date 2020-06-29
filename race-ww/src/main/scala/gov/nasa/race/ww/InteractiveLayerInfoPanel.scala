@@ -294,7 +294,7 @@ class InteractiveLayerInfoPanel[T <: LayerObject](override val layer: Interactiv
 
   // notification that track entry attributes have been changed externally
   def updateEntryAttributes = {
-    listView.repaint
+    listView.repaint()
     updateMatchOptions
   }
 

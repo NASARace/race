@@ -56,7 +56,7 @@ class CollapsiblePanel extends GBPanel {
       _ match {
         case c:Collapsible if c.title == title =>
           c.setContent(child)
-          child.repaint
+          child.repaint()
           true
         case _ => false
       }

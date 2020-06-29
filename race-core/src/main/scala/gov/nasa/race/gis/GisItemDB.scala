@@ -726,8 +726,8 @@ abstract class GisItemDB[T <: GisItem: ClassTag] (data: ByteBuffer) {
     def getMaxDistance: Length = maxDistance
 
     private[GisItemDB]  def clear: Unit = {
-      itemOffs.clear
-      dists.clear
+      itemOffs.clear()
+      dists.clear()
     }
 
     private[GisItemDB]  def canContain(d: Double): Boolean = d <= maxDist2

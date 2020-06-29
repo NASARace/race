@@ -100,7 +100,7 @@ abstract class ConfigurableKafkaConsumer (val config: Config) {
     // NOTE - recs can apparently change asynchronously, hence we cannot allocate a value array and then
     // iterate over recs to fill it
     val recs = consumer.poll(pollTimeoutMs)
-    valueBuffer.clear
+    valueBuffer.clear()
     if (!recs.isEmpty) {
       val it = recs.iterator
       while (it.hasNext) valueBuffer += it.next.value

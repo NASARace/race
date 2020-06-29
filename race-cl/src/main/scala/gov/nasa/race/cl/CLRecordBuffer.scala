@@ -69,11 +69,11 @@ trait CLRecordBuffer extends CLBuffer {
   def dump (n: Int=16): Unit = {
     for (i <- 0 until buf.limit) {
       if (i > 0) {
-        if (i % n == 0) println else  print(' ')
+        if (i % n == 0) println() else  print(' ')
       }
       print(f"${buf.get(i)}%02x")
     }
-    println
+    println()
   }
 }
 

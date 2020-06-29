@@ -61,7 +61,7 @@ class TrkReader extends DataStreamReader {
   val magic = Array[Byte]('T','R','K')
 
   override def read(dis: DataInputStream): Option[Any] = {
-    tracks.clear
+    tracks.clear()
     if (matchBytes(dis,magic)) {
       val nTracks = dis.readUnsignedByte
       repeat(nTracks) {

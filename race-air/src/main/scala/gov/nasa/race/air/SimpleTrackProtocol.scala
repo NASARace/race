@@ -108,7 +108,7 @@ class SimpleTrackReader extends DataStreamReader {
   val list = new ArrayBuffer[Any] // buffer for results
 
   def read (dis: DataInputStream): Option[Any] = {
-    list.clear
+    list.clear()
     try {
       dis.readShort match {
         case TrackMsg => readTrackMsg(dis,list)

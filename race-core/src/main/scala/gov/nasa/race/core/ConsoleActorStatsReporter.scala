@@ -82,7 +82,7 @@ class ConsoleActorStatsReporter (val port: Option[Int])
 
     ifConnected { ps =>
 
-      reportList.clear
+      reportList.clear()
       actorStats.foreach { e => reportList.addOne(e._2) }
 
       ps.print(ConsoleIO.ClearScreen)

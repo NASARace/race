@@ -350,7 +350,7 @@ class XPlaneActor (val config: Config) extends PublishingRaceActor
     }
 
     publishTerminated(rpos)
-    ifSome(publishScheduler) {_.cancel}
+    ifSome(publishScheduler) {_.cancel()}
   }
 
   def isConnected: Boolean = xplaneState eq Connected
@@ -401,7 +401,7 @@ class XPlaneActor (val config: Config) extends PublishingRaceActor
 
   override def onTerminateRaceActor(originator: ActorRef) = {
     xplaneState = Aborted
-    ifSome(publishScheduler){ _.cancel }
+    ifSome(publishScheduler){ _.cancel() }
     ifSome(proximityThread){ _.interrupt } // it might wait for proximities
 
     socket.close() // this will unblock threads that are in socket.receive

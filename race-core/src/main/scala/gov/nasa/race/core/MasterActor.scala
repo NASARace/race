@@ -102,7 +102,7 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ParentActor {
     }
   }
 
-  def isLegitimateRequest(msg: Any): Boolean = ras.isVerifiedSenderOf(msg) || ras.isKnownRemoteMaster(sender)
+  def isLegitimateRequest(msg: Any): Boolean = ras.isVerifiedSenderOf(msg) || ras.isKnownRemoteMaster(sender())
 
   /**
     *   master message processing
@@ -114,7 +114,7 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ParentActor {
     case RemoteConnectionRequest(remoteMaster) => onRemoteConnectionRequest(remoteMaster)
 
     case HeartBeat => onHeartBeat
-    case msg: PingRaceActorResponse => onPingRaceActorResponse(sender, msg)
+    case msg: PingRaceActorResponse => onPingRaceActorResponse(sender(), msg)
 
     case RaceCreate => onRaceCreate
     case RaceInitialize => onRaceInitialize
@@ -123,13 +123,13 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ParentActor {
 
     case msg:SetLogLevel => sendToChildren(msg) // just forward
 
-    case RacePauseRequest => onRacePauseRequest(sender)
-    case RacePause => onRacePause(sender)
+    case RacePauseRequest => onRacePauseRequest(sender())
+    case RacePause => onRacePause(sender())
 
-    case RaceResumeRequest => onRaceResumeRequest(sender)
-    case RaceResume => onRaceResume(sender)
+    case RaceResumeRequest => onRaceResumeRequest(sender())
+    case RaceResume => onRaceResume(sender())
 
-    case RaceTerminateRequest => onRaceTerminateRequest(sender)
+    case RaceTerminateRequest => onRaceTerminateRequest(sender())
     case RaceTerminate => onRaceTerminate
     case RemoteRaceTerminate (remoteMaster: ActorRef) => onRemoteRaceTerminate(remoteMaster)
 
@@ -141,21 +141,21 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ParentActor {
       // TODO - this needs to be unified with SyncWithRaceClock
     case SyncSimClock(dateTime: DateTime, timeScale: Double) =>
       simClock.reset(dateTime,timeScale)
-      sender ! RaceAck
+      sender() ! RaceAck
     case StopSimClock =>
       simClock.stop
-      sender ! RaceAck
+      sender() ! RaceAck
     case ResumeSimClock =>
       simClock.resume
-      sender ! RaceAck
+      sender() ! RaceAck
 
     case Terminated(actorRef) => // Akka death watch event
       removeChildActorRef(actorRef)
 
     case RaceActorStopped => // from postStop hook of RaceActors
-     stoppedChildActorRef(sender)
+     stoppedChildActorRef(sender())
 
-    case RaceShow => showActors(sender) // debug dump
+    case RaceShow => showActors(sender()) // debug dump
 
     case deadLetter: DeadLetter => // TODO - do we need to react to DeadLetters?
   }
@@ -184,10 +184,10 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ParentActor {
     info(s"received remote connection request from: ${remoteMaster.path}")
     if (ras.acceptsRemoteConnectionRequest(remoteMaster)) {
       info(s"accepted remote connection request from: ${remoteMaster.path}")
-      sender ! RemoteConnectionAccept
+      sender() ! RemoteConnectionAccept
     } else {
       warning(s"rejected remote connection request from: ${remoteMaster.path}")
-      sender ! RemoteConnectionReject
+      sender() ! RemoteConnectionReject
     }
   }
 
@@ -203,7 +203,7 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ParentActor {
 
   // this is in an ask pattern sent from the RAS
   def onRaceCreate = executeProtected {
-    val originator = sender
+    val originator = sender()
 
     if (ras.isVerifiedSenderOf(RaceCreate)) {
       try {
@@ -475,17 +475,17 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ParentActor {
 
   def onRaceInitialize = executeProtected {
     if (ras.isVerifiedSenderOf(RaceInitialize)) {
-      val requester = sender // store before we send out / receive new messages
+      val requester = sender() // store before we send out / receive new messages
       try {
         val commonCaps = initializeRaceActors
-        sender ! RaceInitialized(commonCaps)
+        sender() ! RaceInitialized(commonCaps)
       } catch {
         case x: Throwable =>
           //x.printStackTrace // TODO - exceptions should be loggable to a file
           requester ! RaceInitializeFailed(x)
         // shutdown is initiated by the sender
       }
-    } else warning(s"RaceInitialize request from $sender ignored")
+    } else warning(s"RaceInitialize request from ${sender()} ignored")
   }
 
   // cache to be only used during actor initialization
@@ -562,7 +562,7 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ParentActor {
     */
   def onRaceStart = executeProtected {
     if (ras.isVerifiedSenderOf(RaceStart)) {
-      val requester = sender
+      val requester = sender()
       try {
         simClock.resume
         startSatellites
@@ -574,7 +574,7 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ParentActor {
           requester ! RaceStartFailed(t)
           // shutdown is initiated by requester
       }
-    } else warning(s"RaceStart request from $sender ignored")
+    } else warning(s"RaceStart request from ${sender()} ignored")
   }
 
   // TODO this should detect cycles
@@ -584,7 +584,7 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ParentActor {
       simClock.reset(simTime,timeScale).resume
       startSatellites
       startRaceActors
-      sender ! RaceStarted
+      sender() ! RaceStarted
     } else warning(s"RemoteRaceStart from unknown remote master: $remoteMaster")
   }
 
@@ -762,10 +762,10 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ParentActor {
   def onRaceTerminate = executeProtected {
     if (ras.isVerifiedSenderOf(RaceTerminate)) {
       info(s"master $name got RaceTerminate, shutting down")
-      waiterForTerminated = Some(sender)
+      waiterForTerminated = Some(sender())
       shutdown
 
-    } else warning(s"RaceTerminate request from $sender ignored")
+    } else warning(s"RaceTerminate request from ${sender()} ignored")
   }
 
   def onRemoteRaceTerminate (remoteMaster: ActorRef) = executeProtected {
@@ -776,7 +776,7 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ParentActor {
       } else {
         warning(s"RemoteRaceTerminate from $remoteMaster ignored")
       }
-      sender ! RaceTerminated
+      sender() ! RaceTerminated
     } else warning(s"RemoteRaceTerminate from unknown remote master: $remoteMaster")
   }
 
@@ -807,7 +807,7 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ParentActor {
 
   def terminateHeartBeat: Unit = {
     ifSome(heartBeatScheduler) { sched =>
-      sched.cancel
+      sched.cancel()
       heartBeatScheduler = None
       ifSome(statsReporter){ _.terminate }
     }

@@ -252,7 +252,7 @@ package object race {
   /** loop with index over all elements returned by an iterator */
   def forIterator[T] (it: Iterator[T]) (f: (T,Int)=>Unit): Unit = {
     @tailrec def _nextCycle (i: Int): Unit = {
-      f(it.next,i)
+      f(it.next(),i)
       if (it.hasNext) _nextCycle(i+1)
     }
     if (it.hasNext) _nextCycle(0)

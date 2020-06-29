@@ -69,7 +69,7 @@ trait ConsoleMainBase extends MainBase {
     */
   def runUniverses(universes: Seq[RaceActorSystem], delayStart: Boolean): Unit = {
     val vmShutdownHook = addShutdownHook(universes.foreach(shutDown)) // ctrl-C (user) termination
-    RaceActorSystem.addTerminationListener(() => systemExit)
+    RaceActorSystem.addTerminationListener(() => systemExit())
 
     if (!delayStart) universes.foreach { ras => if (!ras.delayLaunch) launch(ras) }
 
@@ -97,7 +97,7 @@ trait ConsoleMainBase extends MainBase {
 
       case "9" | "exit" => // don't use System.exit here, it would break MultiNodeJVM tests
         removeShutdownHook(vmShutdownHook)
-        RaceActorSystem.removeTerminationListener(() => systemExit)
+        RaceActorSystem.removeTerminationListener(() => systemExit())
         universes.foreach(shutDown)
     }
   }

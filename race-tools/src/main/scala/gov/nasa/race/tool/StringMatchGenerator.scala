@@ -100,7 +100,7 @@ class PrefixTree {
       for (i <- 0 until level) print(' ')
       print(value)
       if (isWord) print(s" ('$fullValue')")
-      println
+      println()
       for (n <- firstChild) {
         n.dumpNode(level + value.length)
       }
@@ -289,7 +289,7 @@ object StringMatchGenerator {
   def processUp (node: PrefixTree#Node): Unit = {
     val level = node.level
     print(s"${indent(level)}    }")
-    if (!node.hasNextSibling) println
+    if (!node.hasNextSibling) println()
   }
 
 
@@ -333,13 +333,13 @@ object StringMatchGenerator {
     println("      matchBytes(bs,0,bs.length)")
     println("    }")
     println("  }")
-    println
+    println()
     println("  def matchBytes(data: Array[Byte], off: Int, len: Int): Unit = {")
-    println
+    println()
     tree.walkDF(generateProcessor) // placeholders for element processing
-    println
+    println()
     tree.walkDF(generateMatcher) // defines the local (inlined) matcher funcs
-    println
+    println()
     tree.walkDFWrapped(processDown,processUp) // generates the nested branch expressions
     println("  }")
 
@@ -385,13 +385,13 @@ object StringMatchGenerator {
     println("      matchChars(s.toCharArray,0,s.length)")
     println("    }")
     println("  }")
-    println
+    println()
     println("  def matchChars(data: Array[Char], off: Int, len: Int): Unit = {")
-    println
+    println()
     tree.walkDF(generateProcessor) // placeholders for element processing
-    println
+    println()
     tree.walkDF(generateMatcher) // defines the local (inlined) matcher funcs
-    println
+    println()
     tree.walkDFWrapped(processDown,processUp) // generates the nested branch expressions
     println("  }")
 

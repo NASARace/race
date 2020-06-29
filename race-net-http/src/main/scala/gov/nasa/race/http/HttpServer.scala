@@ -27,7 +27,7 @@ import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
 import akka.http.scaladsl.settings.ServerSettings
 import akka.http.scaladsl.{ConnectionContext, Http}
-import akka.stream.scaladsl.{Sink, Source}
+import akka.stream.scaladsl.{Flow, Sink, Source}
 import akka.stream.{ActorMaterializer, Materializer}
 import com.typesafe.config.{Config, ConfigException}
 import gov.nasa.race._
@@ -132,14 +132,14 @@ class HttpServer (val config: Config) extends ParentRaceActor {
   override def onStartRaceActor(originator: ActorRef) = {
     val serverSource: Source[Http.IncomingConnection,Future[Http.ServerBinding]] =
       httpExt.bind(interface,port,connectionContext,serverSettings)
-    val bindingFuture: Future[Http.ServerBinding] = serverSource.to(Sink.foreach { connection =>
 
+    val bindingFuture: Future[Http.ServerBinding] = serverSource.to(Sink.foreach { connection: Http.IncomingConnection =>
       // we add the connection data to the route-accessible HttpRequest headers so that we can
       // create the route once (during construction) and don't have to re-create it for each new connection
-      val finalRoute = mapRequest(req => req.addHeader(RealRemoteAddress(connection))) { route }
+      val finalRoute: Route = mapRequest(req => req.addHeader(RealRemoteAddress(connection))) { route }
 
       info(s"accepted new connection from: ${connection.remoteAddress}")
-      connection.handleWith(finalRoute)
+      connection.handleWith( Route.toFlow(finalRoute)(system))
     }).run()
     binding = Some(bindingFuture)
 

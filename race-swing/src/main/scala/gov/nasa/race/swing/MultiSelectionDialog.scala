@@ -104,7 +104,7 @@ class MultiSelectionDialog[T:ClassTag] ( dialogTitle: String,
       } else  if (renderPanel.isToggle(pos)) {
         if (selItems.contains(t)) selItems = selItems.filter(_ != t)
         else selItems = candidates.filter(a => selItems.contains(a) || a == t) // maintain order
-        listView.repaint
+        listView.repaint()
       }
   }
 
@@ -126,11 +126,11 @@ class MultiSelectionDialog[T:ClassTag] ( dialogTitle: String,
 
   protected def closeWithResult(res: MultiSelection.Result[T]): Unit = {
     result = res
-    close
+    close()
   }
 
   def process: MultiSelection.Result[T] = {
-    open
+    open()
     result
   }
 }

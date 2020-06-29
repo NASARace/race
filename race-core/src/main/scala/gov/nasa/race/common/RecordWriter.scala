@@ -118,7 +118,7 @@ trait DenseRecordWriter[+R <: BufferRecord] extends RecordWriter[R] {
         lockRec(index) {
           if (indexMap.size == 1) {
             clear(0)
-            indexMap.clear
+            indexMap.clear()
 
           } else {
             val lastIndex = indexMap.size - 1

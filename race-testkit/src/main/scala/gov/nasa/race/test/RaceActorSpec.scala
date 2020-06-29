@@ -86,9 +86,9 @@ object TestRaceActorSystem {
       case ResetMaster =>
         if (hasChildActors) terminateRaceActors
         if (noMoreChildren) {
-          sender ! MasterReset
+          sender() ! MasterReset
         } else {
-          sender ! MasterResetFailed
+          sender() ! MasterResetFailed
         }
 
       case AddTestActor(actorConfig) =>
@@ -106,9 +106,9 @@ object TestRaceActorSystem {
           addChildActorRef(actorRef, actorConfig)
           context.watch(actorRef)
 
-          sender ! TestActorAdded(actorRef.underlyingActor)
+          sender() ! TestActorAdded(actorRef.underlyingActor)
         } catch {
-          case x: Throwable => sender ! AddTestActorFailed(x)
+          case x: Throwable => sender() ! AddTestActorFailed(x)
         }
     }
   }
@@ -134,7 +134,7 @@ object RaceActorSpec {
     var waiterForExpect: Option[ActorRef] = None
 
     def receive: Receive = {
-      case Expect => waiterForExpect = Some(sender)
+      case Expect => waiterForExpect = Some(sender())
 
       case msg =>
         if (assertion.isDefinedAt(msg)){
@@ -214,7 +214,7 @@ abstract class RaceActorSpec (tras: TestRaceActorSystem) extends TestKit(tras.sy
     addTestActor(name,createTestConfig(confOpts:_*))
   }
 
-  override def afterAll: Unit = {
+  override def afterAll(): Unit = {
     println("\nshutting down TestKit actor system\n")
     TestKit.shutdownActorSystem(system)
   }

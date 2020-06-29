@@ -41,7 +41,7 @@ class RangeStack (var capacity: Int) {
     capacity = newCapacity
   }
 
-  @inline final def clear: Unit = {
+  @inline final def clear(): Unit = {
     top = -1
   }
 
@@ -52,7 +52,7 @@ class RangeStack (var capacity: Int) {
     lengths(top) = len
   }
 
-  @inline final def pop: Unit = {
+  @inline final def pop(): Unit = {
     if (top >= 0) {
       top -= 1
     }

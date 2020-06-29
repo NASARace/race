@@ -31,8 +31,8 @@ import gov.nasa.race.core.Messages._
 trait ParentRaceActor extends RaceActor with ParentActor {
 
   def handleParentSystemMessage: Receive = {
-    case RaceActorStopped => stoppedChildActorRef(sender)  // only parents receive these
-    case msg: PingRaceActorResponse => handlePingRaceActorResponse(sender, msg)
+    case RaceActorStopped => stoppedChildActorRef(sender())  // only parents receive these
+    case msg: PingRaceActorResponse => handlePingRaceActorResponse(sender(), msg)
     case Terminated(actorRef) => // Akka death watch event
       removeChildActorRef(actorRef)
   }

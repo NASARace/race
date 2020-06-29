@@ -146,7 +146,7 @@ abstract class RemoteLauncher extends MainBase with RemoteProtocolLauncher {
   def installShutdownHook = {
     val thread = new Thread {
       override def run(): Unit = {
-        monitorThread.terminate
+        monitorThread.terminate()
         liveSessions.foreach( e => e._2.disconnect)
         log.flush()
         log.close()
@@ -165,7 +165,7 @@ abstract class RemoteLauncher extends MainBase with RemoteProtocolLauncher {
   protected val monitorThread = new MonitorThread()(liveSessions.nonEmpty)(checkForTerminatedSessions)
 
   def startMonitoringSessions = monitorThread.start
-  def stopMonitoringSessions = monitorThread.terminate
+  def stopMonitoringSessions = monitorThread.terminate()
 
   def incSessionCount: Int = synchronized {
     sessionCount += 1

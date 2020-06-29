@@ -150,7 +150,7 @@ trait TaggedTextArchiveWriter extends TaggedArchiveWriter {
       case slice: ByteSlice =>
         entryData.setFrom(slice)
       case _ =>
-        entryData.clear
+        entryData.clear()
     }
   }
 }

@@ -173,7 +173,7 @@ object KafkaServer {
 
     Runtime.getRuntime().addShutdownHook(new Thread() {
       override def run() = {
-        kafkaServerStartable.shutdown
+        kafkaServerStartable.shutdown()
         zkFactory.shutdown
         if (cliOpts.clean) cleanDirs
       }
@@ -181,8 +181,8 @@ object KafkaServer {
 
     val thread = new Thread {
       override def run: Unit = {
-        kafkaServerStartable.startup
-        kafkaServerStartable.awaitShutdown
+        kafkaServerStartable.startup()
+        kafkaServerStartable.awaitShutdown()
 
         zkFactory.shutdown
         if (cliOpts.clean) cleanDirs
@@ -211,7 +211,7 @@ object KafkaServer {
         repeatMenu
       case "9" =>
         println("shutting down Kafka..")
-        kafkaServerStartable.shutdown
+        kafkaServerStartable.shutdown()
         //System.exit(0)
     }
   }

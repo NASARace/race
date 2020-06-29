@@ -52,9 +52,9 @@ object ManagedResource {
 
   // specializations for standard cleanup methods
   // Note those need () args or otherwise Java methods won't match
-  def ensureClose[A <: {def close(): Unit}] (create: => A) = new ManagedResource(create,(r:A)=>r.close)
-  def ensureRelease[A <: {def release(): Unit}] (create: => A) = new ManagedResource(create,(r:A)=>r.release)
-  def ensureDispose[A <: {def dispose(): Unit}] (create: => A) = new ManagedResource(create,(r:A)=>r.dispose)
+  def ensureClose[A <: {def close(): Unit}] (create: => A) = new ManagedResource(create,(r:A)=>r.close())
+  def ensureRelease[A <: {def release(): Unit}] (create: => A) = new ManagedResource(create,(r:A)=>r.release())
+  def ensureDispose[A <: {def dispose(): Unit}] (create: => A) = new ManagedResource(create,(r:A)=>r.dispose())
 }
 
 class ManagedResource[R] (create: =>R, cleanUp: R=>Unit) {

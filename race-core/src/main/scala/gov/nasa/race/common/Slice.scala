@@ -108,6 +108,8 @@ trait ByteSlice {
 
   @inline def getIntRange: IntRange = IntRange(off,len)
 
+  def toByteArray: Array[Byte] = data.clone
+
   def copyDataRange (copyOff: Int, copyLen: Int): Array[Byte] = {
     val a = createNewArray(copyLen)
     System.arraycopy(data,copyOff,a,0,copyLen)
@@ -129,13 +131,13 @@ trait MutByteSlice extends ByteSlice {
   var off: Int
   var len: Int
 
-  @inline def clear: Unit = {
+  @inline def clear(): Unit = {
     data = null
     off = 0
     len = 0
   }
 
-  @inline def clearRange: Unit = {
+  @inline def clearRange(): Unit = {
     off = 0
     len = 0
   }

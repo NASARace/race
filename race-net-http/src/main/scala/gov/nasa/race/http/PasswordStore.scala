@@ -65,7 +65,7 @@ class PasswordStore (val file: File) {
 
   protected def load (is: InputStream): Unit = {
     val src = new BufferedSource(is)
-    for (line: String <- src.getLines) {
+    for (line: String <- src.getLines()) {
       var i0 = line.indexOf(':')
       if (i0 > 0) {
         val uid = line.substring(0, i0)

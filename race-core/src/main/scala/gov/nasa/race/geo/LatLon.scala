@@ -89,7 +89,7 @@ final class LatLonArray protected[geo] (protected[geo] val data: Array[Long]) {
   class Iter extends Iterator[LatLon] {
     private var i = 0
     def hasNext: Boolean = i < data.length
-    def next: LatLon = {
+    def next(): LatLon = {
       if (i >= data.length) throw new NoSuchElementException
       val j = i
       i += 1
@@ -99,7 +99,7 @@ final class LatLonArray protected[geo] (protected[geo] val data: Array[Long]) {
   class ReverseIter extends Iterator[LatLon] {
     private var i = data.length-1
     def hasNext: Boolean = i >= 0
-    def next: LatLon = {
+    def next(): LatLon = {
       if (i <0) throw new NoSuchElementException
       val j = i
       i -= 1
@@ -152,7 +152,7 @@ final class LatLonArrayBuffer protected[geo] (protected[geo] val data: ArrayBuff
   class Iter extends Iterator[LatLon] {
     private var i = 0
     def hasNext: Boolean = i < data.size
-    def next: LatLon = {
+    def next(): LatLon = {
       if (i >= data.size) throw new NoSuchElementException
       val j = i
       i += 1
@@ -162,7 +162,7 @@ final class LatLonArrayBuffer protected[geo] (protected[geo] val data: ArrayBuff
   class ReverseIter extends Iterator[LatLon] {
     private var i = data.size-1
     def hasNext: Boolean = i >= 0
-    def next: LatLon = {
+    def next(): LatLon = {
       if (i <0) throw new NoSuchElementException
       val j = i
       i -= 1

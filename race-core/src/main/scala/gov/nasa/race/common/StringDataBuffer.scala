@@ -39,7 +39,7 @@ trait StringDataBuffer extends CharSeqByteSlice {
     len
   }
 
-  def clear: Unit = len = 0
+  def clear(): Unit = len = 0
 
   protected def ensureCapacity (newCapacity: Int): Array[Byte] = {
     if (newCapacity > data.length) {

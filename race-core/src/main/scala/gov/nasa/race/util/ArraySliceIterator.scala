@@ -28,7 +28,7 @@ class ArraySliceIterator[E] (array: Array[E], i0: Int, i1: Int) extends Iterator
   if (i0 < 0 || i0 >= array.length || i1 < 0 || i1 > array.length) throw new IllegalArgumentException
 
   override def hasNext: Boolean = i < i1
-  override def next: E = {
+  override def next(): E = {
     if (i < i1) {
       val e = array(i)
       i += 1

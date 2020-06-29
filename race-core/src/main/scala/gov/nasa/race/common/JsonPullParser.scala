@@ -18,8 +18,9 @@ package gov.nasa.race.common
 
 import java.io.PrintStream
 
-import scala.annotation.switch
-import scala.collection.mutable.Stack
+import scala.annotation.{switch, tailrec}
+import scala.collection.mutable
+import scala.collection.mutable.{ArrayBuffer, Stack}
 
 //--- examples:
 // true
@@ -32,6 +33,8 @@ import scala.collection.mutable.Stack
 class JsonParseException (msg: String) extends RuntimeException(msg)
 
 object JsonPullParser {
+
+  //--- type system for explicit parsing of Json token streams
   sealed abstract trait JsonParseResult {
     def isDefined: Boolean = true
     def isScalarValue: Boolean = false
@@ -70,6 +73,7 @@ abstract class JsonPullParser {
   protected val path = new RangeStack(32)  // member (slice) stack
   protected val env = Stack.empty[State]   // state stack
 
+  def dataAsString: String = new String(data,0,limit) // use sparingly - this defeats the purpose
 
   sealed abstract class State {
     def parseNextValue: JsonParseResult = NoValue
@@ -84,8 +88,8 @@ abstract class JsonPullParser {
       var i0 = idx
 
       if (data(i0) == '}') {
-        if (path.nonEmpty) path.pop
-        env.pop
+        if (path.nonEmpty) path.pop()
+        env.pop()
         if (env.isEmpty) { // done
           state = endState
           // no need to change idx
@@ -170,7 +174,7 @@ abstract class JsonPullParser {
       var i0 = idx
 
       if (data(i0) == ']') {
-        env.pop
+        env.pop()
         if (env.isEmpty) { // done
           state = endState
           ArrayEnd
@@ -245,7 +249,7 @@ abstract class JsonPullParser {
       val data = JsonPullParser.this.data
       val i0 = idx
 
-      member.clear // no member
+      member.clear() // no member
       state = endState // done
 
       if (data(i0) == '"') {  // string value, could be "true","false" or "null"
@@ -314,8 +318,8 @@ abstract class JsonPullParser {
   @inline final def isDone = state ==  endState
 
   @inline final def parseNextValue: JsonParseResult = {
-    member.clearRange
-    value.clearRange
+    member.clearRange()
+    value.clearRange()
     state.parseNextValue
   }
 
@@ -334,6 +338,97 @@ abstract class JsonPullParser {
 
   def parseScalarMember (name: ByteSlice): Boolean = {
     isInObject && parseNextValue.isScalarValue && member == name
+  }
+
+  /**
+    * parses all members of the current object, calling the provided function for each member until the end of
+    * the object is reached or the function calls skipToEnfOfCurrentLevel.
+    * This has to be called from within an object state.
+    * The provided function can directly use the 'member' and 'value' slices but has to parse array and object
+    * values itself - we do not parse recursively here
+    */
+  def parseObjectMembers (f: (JsonParseResult)=>Unit): Boolean = {
+
+    if (isInObject) {
+      val lvl = env.size-1
+      var res = parseNextValue
+
+      while (env.size > lvl && res != NoValue){
+        f(res) // parses ONE member value
+        res = parseNextValue
+      }
+
+      true
+    } else false
+  }
+
+  def parseMembersOfObject (name: ByteSlice) (f: (JsonParseResult)=>Unit): Boolean = {
+    (readNextMemberValue(name) == ObjectStart) && parseObjectMembers(f)
+  }
+
+  def parseArrayElements (f: JsonParseResult=>Unit): Boolean = {
+    if (isInArray){
+      val lvl = env.size-1
+      var res = parseNextValue
+
+      while (env.size > lvl && res != NoValue){
+        f(res) // parses ONE element value
+        res = parseNextValue
+      }
+      true
+    } else false
+  }
+
+  def parseElementsOfArray (name: ByteSlice) (f: (JsonParseResult)=>Unit): Boolean = {
+    (readNextMemberValue(name) == ArrayStart) && parseArrayElements(f)
+  }
+
+  /**
+    * translate everything into a generic data structure, which
+    */
+  def parseJsonValue: Option[JsonValue] = {
+    var top: JsonValue = null
+
+    def _addToContainer (c: JsonContainer, v: JsonValue): Unit = {
+      c match {
+        case null => top = v
+        case a: JsonArray => a += v
+        case o: JsonObject => o += (member.toString, v)
+      }
+    }
+
+    def _parseContainer (c: JsonContainer): Unit = {
+      var cNext = c
+      while (true) {
+        parseNextValue match {
+          case ArrayStart =>
+            val v = new JsonArray
+            _addToContainer(c,v)
+            _parseContainer(v)
+
+          case ObjectStart =>
+            val v = new JsonObject
+            _addToContainer(c,v)
+            _parseContainer(v)
+
+          case _:ScalarValue =>
+            if (isQuotedValue) {
+              _addToContainer(c,JsonString(value.toString))
+            }  else {
+              if (value == nullValue) _addToContainer(c,JsonNull)
+              else if (value == trueValue) _addToContainer(c,JsonBoolean(true))
+              else if (value == falseValue) _addToContainer(c,JsonBoolean(false))
+              else _addToContainer(c, if (value.contains('.')) JsonDouble(value.toDouble) else JsonLong(value.toLong))
+              // TODO - check for NumberFormatExceptions
+            }
+
+          case NoValue | ArrayEnd | ObjectEnd => return
+        }
+      }
+    }
+
+    _parseContainer(null)
+    if (top != null) Some(top) else None
   }
 
   //--- those can throw exceptions that have to be handled in the caller
@@ -397,7 +492,7 @@ abstract class JsonPullParser {
     if (readNextMemberValue(name) == ObjectStart) {
       val endLevel = level
       f // this is supposed to call parseNextValue on ALL members of object (possibly skipping some)
-      if (notDone && (level != endLevel || parseNextValue != ObjectEnd)) throw new JsonParseException("object not parsed correctly: $name")
+      if (notDone && (level != endLevel || parseNextValue != ObjectEnd)) throw new JsonParseException(s"object not parsed correctly: $name")
     } else throw new JsonParseException(s"not an object value for '$member'")
   }
   @inline final def readObject(f: =>Unit): Unit = readMemberObject(MutUtf8Slice.empty)(f)
@@ -476,13 +571,13 @@ abstract class JsonPullParser {
     value.data = newData
   }
 
-  protected def clear: Unit = {
+  protected def clear(): Unit = {
     idx = 0
     limit = 0
-    path.clear
-    env.clear
-    member.clear
-    value.clear
+    path.clear()
+    env.clear()
+    member.clear()
+    value.clear()
     state = null
   }
 
@@ -567,7 +662,7 @@ abstract class JsonPullParser {
       if (isScalarValue) {
         if (isQuotedValue) print(s"""$value""") else print(value.toString)
       }
-      println
+      println()
     }
 
     parseAllValues {
@@ -628,7 +723,7 @@ abstract class JsonPullParser {
   */
 class StringJsonPullParser extends JsonPullParser {
   def initialize (s: String): Boolean = {
-    clear
+    clear()
     setData(s.getBytes)
 
     idx = seekStart
@@ -645,7 +740,7 @@ class BufferedStringJsonPullParser (initBufSize: Int = 8192) extends JsonPullPar
 
   def initialize (s: String): Boolean = {
     bb.encode(s)
-    clear
+    clear()
     setData(bb.data, bb.len)
 
     idx = seekStart
@@ -662,7 +757,7 @@ class BufferedASCIIStringJsonPullParser (initBufSize: Int = 8192) extends JsonPu
 
   def initialize (s: String): Boolean = {
     bb.encode(s)
-    clear
+    clear()
     setData(bb.data, bb.len)
 
     idx = seekStart
@@ -675,7 +770,7 @@ class BufferedASCIIStringJsonPullParser (initBufSize: Int = 8192) extends JsonPu
   */
 class UTF8JsonPullParser extends JsonPullParser {
   def initialize (bs: Array[Byte], limit: Int): Boolean = {
-    clear
+    clear()
     setData(bs,limit)
 
     idx = seekStart

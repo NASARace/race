@@ -163,7 +163,7 @@ object AngleArray {
 private[uom] class AngleIter (data: Seq[Double], first: Int, last: Int) extends Iterator[Angle] {
   private var i = first
   def hasNext: Boolean = (i <= last)
-  def next: Angle = {
+  def next(): Angle = {
     val j = i
     if (j > last) throw new NoSuchElementException
     i += 1
@@ -174,7 +174,7 @@ private[uom] class AngleIter (data: Seq[Double], first: Int, last: Int) extends 
 private[uom] class ReverseAngleIter (data: Seq[Double], first: Int, last: Int) extends Iterator[Angle] {
   private var i = first
   def hasNext: Boolean = (i >= last)
-  def next: Angle = {
+  def next(): Angle = {
     val j = i
     if (j < last) throw new NoSuchElementException
     i -= 1
@@ -279,7 +279,7 @@ final class AngleArrayBuffer protected[uom] (protected[uom] val data: ArrayBuffe
 private[uom] class DeltaAngleIter (data: Seq[Float], first: Int, last: Int, ref: Angle) extends Iterator[Angle] {
   private var i = first
   def hasNext: Boolean = (i <= last)
-  def next: Angle = {
+  def next(): Angle = {
     val j = i
     if (j > last) throw new NoSuchElementException
     i += 1
@@ -290,7 +290,7 @@ private[uom] class DeltaAngleIter (data: Seq[Float], first: Int, last: Int, ref:
 private[uom] class ReverseDeltaAngleIter (data: Seq[Float], first: Int, last: Int, ref: Angle) extends Iterator[Angle] {
   private var i = first
   def hasNext: Boolean = (i >= last)
-  def next: Angle = {
+  def next(): Angle = {
     val j = i
     if (j < last) throw new NoSuchElementException
     i -= 1

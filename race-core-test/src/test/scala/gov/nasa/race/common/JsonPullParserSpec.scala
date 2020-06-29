@@ -16,6 +16,7 @@
  */
 package gov.nasa.race.common
 
+import gov.nasa.race.common.JsonValueConverters._
 import gov.nasa.race.test.RaceSpec
 import org.scalatest.flatspec.AnyFlatSpec
 
@@ -87,7 +88,8 @@ class JsonPullParserSpec extends AnyFlatSpec with RaceSpec {
     val s = """ { "foo": 42, "bar" : [{"baz": 42.42}, {"baz": 41.41}]} """
     val p = new MyObjectParser
 
-    println(s"parsing: '$s'")
+    println
+    println(s"-- parsing: '$s'")
     if (p.initialize(s)) {
       println(p.readMyObject)
     }
@@ -106,7 +108,8 @@ class JsonPullParserSpec extends AnyFlatSpec with RaceSpec {
       res
     }
 
-    println(s"parsing: '$s'")
+    println
+    println(s"-- parsing: '$s'")
 
     println("-- 2nd value of each sub-array:")
     var n = 0
@@ -141,6 +144,62 @@ class JsonPullParserSpec extends AnyFlatSpec with RaceSpec {
         n += 1
         p.matchArrayEnd
       }
+    }
+  }
+
+  "a JsonPullParser" should "support object member parsing" in {
+    val _foo_ = ConstAsciiSlice("foo")
+    val _fortyTwo_ = ConstAsciiSlice("fortyTwo")
+    val _who_ = ConstAsciiSlice("who")
+
+    val s = """{ "foo": { "num": 1, "who": "someFoo", "skipMe": "true" }, "fortyTwo": 42 }"""
+    val p = new StringJsonPullParser
+
+    println
+    println(s"-- parsing 'foo' object up to member 'skipMe' in: '$s':")
+    if (p.initialize(s)){
+      p.matchObjectStart
+      assert (p.parseMembersOfObject(_foo_) { res =>
+        if (res.isScalarValue) {
+          println(s"foo.${p.member} = ${p.value}")
+
+          if (p.member =:= "num") {
+            assert(p.value.toInt == 1)
+          }
+          if (p.member =:= "who") {
+            assert(p.value =:= "someFoo")
+            p.skipToEndOfCurrentLevel
+          }
+        }
+      })
+
+      assert(p.parseScalarMember(_fortyTwo_))
+    }
+  }
+
+  "a JsonPullParser" should "support parsing into generic JsonValue structure" in {
+    val jsonIn = JsonObject(
+      "one"->JsonDouble(42.1),
+      "two"->JsonArray(1,2,3),
+      "three"->JsonObject(
+        "a"->1,
+        "b"->2
+      ),
+      "four"->JsonString("whatever")
+    )
+    val sIn = jsonIn.toString
+
+    println
+    println(s"-- parsing json object '$sIn'")
+    val p = new StringJsonPullParser
+    p.initialize(sIn)
+
+    p.parseJsonValue match {
+      case Some(jsonOut) =>
+        val sOut = jsonOut.toString
+        println(s"  -> $sOut")
+        assert( sOut == sIn)
+      case None => fail("failed to parse")
     }
   }
 }

@@ -107,6 +107,6 @@ object AMOSelectionPanel {
       )(processSelection).defaultStyled
     }.styled("topLevel")
 
-    top.open
+    top.open()
   }
 }

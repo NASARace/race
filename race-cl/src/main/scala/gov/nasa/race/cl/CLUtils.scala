@@ -48,7 +48,7 @@ object CLUtils {
   @inline def checkCLError(eb: IntBuffer): Unit = checkCLError(eb.get(0))
 
   implicit class CLErrCheck (val ec: Int) extends AnyVal {
-    @inline def ?(): Unit = checkCLError(ec)
+    @inline def ? : Unit = checkCLError(ec)
   }
 
   //--- syntactic sugar for buffer access

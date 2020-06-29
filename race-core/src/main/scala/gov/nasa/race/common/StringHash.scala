@@ -38,7 +38,7 @@ class MD5Checksum (bufSize: Int=1024) {
     if (sdb == null) {
       sdb = new Utf8Buffer(Math.max(s.length,bufSize))
     } else {
-      sdb.clear
+      sdb.clear()
     }
     val bs = sdb
     bs += s

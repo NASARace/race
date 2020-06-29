@@ -21,6 +21,8 @@ import java.util.stream.{IntStream, StreamSupport}
 import java.util.{NoSuchElementException, PrimitiveIterator, Spliterator, Spliterators}
 
 import scala.annotation.switch
+import scala.language.implicitConversions
+
 
 object ConstCharSequences {
   final val True = ConstAsciiSlice("true")
@@ -41,6 +43,11 @@ trait CharSeqByteSlice extends ByteSlice with CharSequence {
   def length: Int // in chars!
   def charAt (i: Int): Char
   def subSequence(start: Int, end: Int): CharSequence
+
+  // non-allocating chars comparison
+  def =:= (s: String): Boolean
+
+  def contains (c: Char): Boolean
 
   // same as String (utf-8)
   override def hashCode: Int = {
@@ -388,6 +395,32 @@ trait Utf8Slice extends CharSeqByteSlice {
     decoder.utf16Char
   }
 
+  override def contains (c: Char): Boolean = {
+    var i = 0
+    val n = length
+    reset
+    while (i<n){
+      if (decoder.utf16Char == c) return true
+      decoder = decoder.next(data,limit)
+      i += 1
+    }
+    false
+  }
+
+  override def =:= (s: String): Boolean = {
+    val n = s.length
+    var i = 0
+    if (n == length) {
+      reset
+      while (i < n) {
+        if (decoder.utf16Char != s.charAt(i)) return false
+        decoder = decoder.next(data,limit)
+        i += 1
+      }
+      true
+    } else false
+  }
+
   // start and end a char indices
   override def subSequence(start: Int, end: Int): CharSequence = {
     if (start < 0) throw new IndexOutOfBoundsException(s"negative start char index $start out of bounds")
@@ -425,6 +458,8 @@ object ConstUtf8Slice {
   def apply (bs: Array[Byte]) = new ConstUtf8Slice(bs,0,bs.length)
   def apply (bs: Array[Byte], off: Int, len: Int) = new ConstUtf8Slice(bs,off,len)
   def apply (cs: CharSeqByteSlice) = new ConstUtf8Slice(cs.data,cs.off,cs.len)
+
+  implicit def stringToConstUtf8Slice (s: String): ConstUtf8Slice = apply(s)
 }
 
 /**
@@ -497,6 +532,28 @@ trait AsciiSlice extends CharSeqByteSlice {
 
   @inline final def charAt(i: Int): Char = (data(i+off) & 0xff).toChar
 
+  override def contains (c: Char): Boolean = {
+    val n = len
+    var i = 0
+    while (i<n){
+      if (charAt(i) == c) return true
+      i += 1
+    }
+    false
+  }
+
+  override def =:= (s: String): Boolean = {
+    val n = s.length
+    var i=0
+    if (len == n) {
+      while (i<n){
+        if (s.charAt(i) != charAt(i)) return false
+        i += 1
+      }
+      true
+    } else false
+  }
+
   override def chars: IntStream = {
     StreamSupport.intStream(
       () => Spliterators.spliterator(new ASCIICharIterator(data,off,off+len), len, Spliterator.ORDERED),
@@ -523,10 +580,12 @@ trait AsciiSlice extends CharSeqByteSlice {
 object ConstAsciiSlice {
   def apply (bs: Array[Byte]) = new ConstAsciiSlice(bs,0,bs.length)
 
-  def apply (s: String) = {
+  def apply (s: String): ConstAsciiSlice = {
     val data = s.getBytes
     new ConstAsciiSlice(data,0,data.length)
   }
+
+  implicit def stringToConstAsciiSlice(s: String): ConstAsciiSlice = apply(s)
 }
 
 /**

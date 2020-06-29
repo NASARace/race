@@ -60,7 +60,7 @@ class DataConsumerRaceActor(val dataConsumer: RaceDataConsumer, val config: Conf
   def setData(newData: Any) = dataConsumer.setData(newData)
 
   /**
-    * the generic implementation just forwards everything to the client
+    * the generic implementation just forwards everything we receive from our 'read-from' channels to the client
     * override if concrete actor type has to consolidate data
     */
   override def handleMessage = {

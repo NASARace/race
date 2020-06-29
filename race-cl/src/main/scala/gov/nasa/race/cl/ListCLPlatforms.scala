@@ -32,7 +32,7 @@ object ListCLPlatforms {
       println("  extensions: ")
       platform.extensions.foreach{ e=> println(s"                       $e")}
       println(s"  number of devices:   ${platform.devices.length}")
-      println
+      println()
 
       platform.devices.foreach { device =>
         println(f"------ device ${platform.index},${device.index}: [0x${device.id}%X]")
@@ -54,7 +54,7 @@ object ListCLPlatforms {
         println(s"  little endian:     ${device.isLittleEndian}")
         println("  extensions: ")
         device.extensions.foreach{ e=> println(s"                     $e")}
-        println
+        println()
       }
     }
   }

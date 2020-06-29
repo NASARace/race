@@ -567,7 +567,7 @@ object TrackTool {
               nTP += 1
               if (tps.size >= maxPartEntries) {
                 partitions.add(writePartition(partFile(tmpDir,partitions.size), schema, tps))
-                tps.clear
+                tps.clear()
               }
             }
           }

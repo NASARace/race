@@ -172,7 +172,7 @@ class WorldWindFrame (config: Config, raceView: RaceViewer) extends AppFrame {
   def showConsolePanels(setVisible: Boolean) = {
     if (consoleWrapper.visible != setVisible) {
       consoleWrapper.visible = setVisible
-      top.revalidate
+      top.revalidate()
 
       worldPanel.reInit // required for OS X to adapt the GLCanvas size & position
 

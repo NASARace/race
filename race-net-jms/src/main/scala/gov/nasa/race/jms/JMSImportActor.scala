@@ -292,8 +292,8 @@ trait TranslatingJMSImportActor extends JMSImportActor {
   override protected def processMessage (msg: Message): Unit = {
     publishFiltered(translate(msg))
     // avoid memory leaks
-    sdb.clear
-    bsSlice.clear
+    sdb.clear()
+    bsSlice.clear()
   }
 }
 

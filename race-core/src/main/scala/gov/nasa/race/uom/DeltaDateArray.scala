@@ -28,7 +28,7 @@ final class DeltaDateArray protected[uom] (protected[uom] val elapsed: TimeArray
   class Iter extends Iterator[DateTime] {
     private var i = 0
     def hasNext: Boolean = i < elapsed.length
-    def next: DateTime = {
+    def next(): DateTime = {
       if (i >= elapsed.length) throw new NoSuchElementException
       val j = i
       i += 1
@@ -38,7 +38,7 @@ final class DeltaDateArray protected[uom] (protected[uom] val elapsed: TimeArray
   class ReverseIter extends Iterator[DateTime] {
     private var i = elapsed.length-1
     def hasNext: Boolean = i >= 0
-    def next: DateTime = {
+    def next(): DateTime = {
       if (i <0) throw new NoSuchElementException
       val j = i
       i -= 1
@@ -122,7 +122,7 @@ final class DeltaDateArrayBuffer protected[uom] (protected[uom] val elapsed: Tim
   class Iter extends Iterator[DateTime] {
     private var i = 0
     def hasNext: Boolean = i < elapsed.size
-    def next: DateTime = {
+    def next(): DateTime = {
       if (i >= elapsed.size) throw new NoSuchElementException
       val j = i
       i += 1
@@ -132,7 +132,7 @@ final class DeltaDateArrayBuffer protected[uom] (protected[uom] val elapsed: Tim
   class ReverseIter extends Iterator[DateTime] {
     private var i = elapsed.size-1
     def hasNext: Boolean = i >= 0
-    def next: DateTime = {
+    def next(): DateTime = {
       if (i <0) throw new NoSuchElementException
       val j = i
       i -= 1

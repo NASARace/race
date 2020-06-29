@@ -126,7 +126,7 @@ trait UOMDoubleArrayBuffer[T] {
   @inline def length: Int = data.length
   @inline def size: Int = length
   @inline def isEmpty: Boolean = length == 0
-  @inline def clear: Unit = data.clear
+  @inline def clear: Unit = data.clear()
 
   protected def toDoubleArray (quot: Double): Array[Double] = {
     val a = data.toArray

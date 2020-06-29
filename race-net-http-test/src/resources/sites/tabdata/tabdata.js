@@ -1,44 +1,14 @@
-/** static test data
-var fields = [ 'item_1', 'item_2', 'item_3', 'item_4', 'item_5', 'item_6', 'item_7', 'item_8', 'item_9', 'item_10' ];
-
-var providers = [ 'provider_A','provider_B','provider_C','provider_D','provider_E','provider_F','provider_G','provider_H',
-                  'provider_I','provider_J','provider_K','provider_L','provider_M','provider_N' ];
-
-var data = {
-  provider_A: { name: 'provider_A', item_1: 10, item_2: 20, item_3: 30, item_4: 40, item_5: 50, item_6: 60, item_7: 70, item_8: 80, item_9: 90, item_10: 100 },
-  provider_B: { name: 'provider_B', item_1: 10, item_2: 20, item_3: 30, item_4: 40, item_5: 50, item_6: 60, item_7: 70, item_8: 80, item_9: 90, item_10: 100 },
-  provider_C: { name: 'provider_C', item_1: 10, item_2: 20, item_3: 30, item_4: 40, item_5: 50, item_6: 60, item_7: 70, item_8: 80, item_9: 90, item_10: 100 },
-  provider_D: { name: 'provider_D', item_1: 10, item_2: 20, item_3: 30, item_4: 40, item_5: 50, item_6: 60, item_7: 70, item_8: 80, item_9: 90, item_10: 100 },
-  provider_E: { name: 'provider_E', item_1: 10, item_2: 20, item_3: 30, item_4: 40, item_5: 50, item_6: 60, item_7: 70, item_8: 80, item_9: 90, item_10: 100 },
-  provider_F: { name: 'provider_F', item_1: 10, item_2: 20, item_3: 30, item_4: 40, item_5: 50, item_6: 60, item_7: 70, item_8: 80, item_9: 90, item_10: 100 },
-  provider_G: { name: 'provider_G', item_1: 10, item_2: 20, item_3: 30, item_4: 40, item_5: 50, item_6: 60, item_7: 70, item_8: 80, item_9: 90, item_10: 100 },
-  provider_H: { name: 'provider_H', item_1: 10, item_2: 20, item_3: 30, item_4: 40, item_5: 50, item_6: 60, item_7: 70, item_8: 80, item_9: 90, item_10: 100 },
-  provider_I: { name: 'provider_I', item_1: 10, item_2: 20, item_3: 30, item_4: 40, item_5: 50, item_6: 60, item_7: 70, item_8: 80, item_9: 90, item_10: 100 },
-  provider_J: { name: 'provider_J', item_1: 10, item_2: 20, item_3: 30, item_4: 40, item_5: 50, item_6: 60, item_7: 70, item_8: 80, item_9: 90, item_10: 100 },
-  provider_K: { name: 'provider_K', item_1: 10, item_2: 20, item_3: 30, item_4: 40, item_5: 50, item_6: 60, item_7: 70, item_8: 80, item_9: 90, item_10: 100 },
-  provider_L: { name: 'provider_L', item_1: 10, item_2: 20, item_3: 30, item_4: 40, item_5: 50, item_6: 60, item_7: 70, item_8: 80, item_9: 90, item_10: 100 },
-  provider_M: { name: 'provider_M', item_1: 10, item_2: 20, item_3: 30, item_4: 40, item_5: 50, item_6: 60, item_7: 70, item_8: 80, item_9: 90, item_10: 100 },
-  provider_N: { name: 'provider_N', item_1: 10, item_2: 20, item_3: 30, item_4: 40, item_5: 50, item_6: 60, item_7: 70, item_8: 80, item_9: 90, item_10: 100 }
-};
-**/
 
 //--- global data set by web socket handler
 
 var fields = [];
 var providers = [];
-var data = {};
+var data = {}; // map providerName -> Provider{name,rev,date,fieldValues}
 
-//--- onLoad callback
+var modifiedFields = new Set();
 
-function init() {
-  setWidth(); // to properly set max div-width
-  setBrowserSpecifics();
+var ws = {}; // will be set by initWebSocket()
 
-  if ((fields.length > 0) && (providers.length > 0)) initTable();
-  setData();
-
-  readWebsocket();
-}
 
 //--- the part we would like to avoid (and never can)
 
@@ -46,6 +16,28 @@ function setBrowserSpecifics() {
   if (navigator.userAgent.search("Chrome") >= 0){
     document.getElementById("scroll_container").classList.add("chrome")
   }
+}
+
+function isEmpty(str) {
+    return (!str || 0 === str.length);
+}
+
+function toUtf8Array(str) {
+  var utf8 = [];
+  for (var i=0; i < str.length; i++) {
+    var c = str.charCodeAt(i);
+    if (c < 0x80) utf8.push(c);
+    else if (c < 0x800) {
+      utf8.push(0xc0 | (c >> 6), 0x80 | (c & 0x3f));
+    } else if (c < 0xd800 || c >= 0xe000) {
+      utf8.push(0xe0 | (c >> 12), 0x80 | ((c>>6) & 0x3f),  0x80 | (c & 0x3f));
+    } else {
+        i++;
+        c = ((c & 0x3ff)<<10) | (str.charCodeAt(i) & 0x3ff)
+        utf8.push(0xf0 | (c >>18), 0x80 | ((c>>12) & 0x3f), 0x80 | ((c>>6) & 0x3f), 0x80 | (c & 0x3f));
+    }
+  }
+  return utf8;
 }
 
 //--- initialization of table structure
@@ -112,11 +104,54 @@ function initTable() {
   table.appendChild(tbody);
 }
 
+function setFieldsEditable(fieldMap) {
+  var tbody = document.getElementById('table_body');
+  var hasEditableFields = false;
+
+  for (i=0; i<providers.length; i++) {
+    var provider = providers[i];
+    var fieldPattern = fieldMap[provider];
+    if (fieldPattern) {
+      var regex = new RegExp(fieldPattern);
+      for (j=0; j<fields.length; j++){
+        var field = fields[j];
+        if (regex.test(field)) {
+          var tr = tbody.childNodes[j];
+          var cell = tr.childNodes[i+1];
+          var value = data[provider].fieldValues[field];
+          if (!value) value = "";
+
+          var input = document.createElement('input');
+          input.setAttribute("type", "text");
+          input.setAttribute("class", "field");
+          input.setAttribute("onfocus", "setFieldFocused(event);");
+          input.setAttribute("onblur", "setFieldBlurred(event);");
+          input.setAttribute("onkeyup", "setFieldModified(event);");
+          input.value = value;
+
+          cell.innerHTML = null;
+          cell.classList.add("editable");
+          cell.appendChild(input);
+
+          hasEditableFields = true;
+        }
+      }
+    }
+  }
+
+  if (hasEditableFields) {
+    document.getElementById("editButton").disabled = true;
+    document.getElementById("sendButton").disabled = false;
+    document.getElementById("readOnlyButton").disabled = false;
+  }
+}
+
 function setData() {
   for (i=0; i<providers.length; i++){
-    var values = data[providers[i]];
-    if (values){
-      setColumnData(i,values);
+    var provider = data[providers[i]];
+    if (provider){
+    console.log(provider);
+      setColumnData(i,provider);
     }
   }
 }
@@ -129,20 +164,27 @@ function timeString(date) {
   return h + ':' + m + ':' + s;
 }
 
-function setColumnData (i, date, values) {
+function setColumnData (i, provider) {
   var tbody = document.getElementById('table_body');
   var trDtgs = document.getElementById('dtgs');
   var i1 = i + 1;
+  var values = provider.fieldValues
 
-  trDtgs.childNodes[i1].innerHTML = timeString(date);
+  trDtgs.childNodes[i1].innerHTML = timeString(provider.date);
 
   for (j=0; j<fields.length; j++){
     var tr = tbody.childNodes[j];
     var v = values[fields[j]];
-    if (v){
-      tr.childNodes[i1].innerHTML = v;
+    var cell = tr.childNodes[i1];
+    if (cell.firstChild && cell.firstChild.nodeName == "INPUT") { // we are editing this
+      var input = cell.firstChild;
+      if (modifiedFields.has(input)){ // we already changed it - flag conflict
+        input.classList.add("conflict");
+      }
+      input.classList.remove("reported");
+      input.value = v ? v : "";
     } else {
-      tr.childNodes[i1].innerHTML = "";
+      cell.textContent = v ? v : "";
     }
   }
 }
@@ -153,6 +195,22 @@ function column (providerName) {
   }
   return -1;
 }
+
+function processCells (cellFunc){
+  var tbody = document.getElementById("table_body");
+
+  for (i=0; i<fields.length; i++) {
+    var field = fields[i];
+    var row = tbody.childNodes[i];
+    for (j=0; j<providers.length; j++){
+      var provider = providers[j];
+      var cell = row.childNodes[j+1];
+
+      cellFunc( cell, providers[j], fields[i]);
+    }
+  }
+}
+
 
 //--- column/row highlighting
 
@@ -200,36 +258,35 @@ function unselectRow(i) {
 
 //--- dynamic data acquisition and processing
 
-function readWebsocket() {
+function initWebSocket() {
   if ("WebSocket" in window) {
-    var ws = new WebSocket("ws://localhost:8080/tabdata/ws");
+    ws = new WebSocket("ws://localhost:8080/tabdata/ws");
 
     ws.onopen = function() {
-      ws.send("Hi server!");
-      console.log("message is sent...");
+      console.log(`websocket ${ws} opened`);
     };
 
     ws.onmessage = function (evt) {
-      var msg = JSON.parse(evt.data);
-      var msgType = msg.msgType;
+      console.log("@@@ got " + evt.data.toString());
+      var msg = JSON.parse(evt.data.toString());
+      var msgType = Object.keys(msg)[0];  // first member name
 
-      if (msgType == 'ProviderData') {
-        var providerName = msg.name;
-        var date = new Date(msg.date);
-        var fieldValues = msg.fieldValues;
+      if (msgType == "providerData") { // {msgType,date,<provider>{}}
+        var provider = msg.providerData;
+        provider.date = new Date(provider.date) // convert epoch into Date object
 
-        if (fieldValues){
-          data[providerName] = fieldValues;
+        if (provider.fieldValues){
+          data[provider.name] = provider;
           if ((fields.length > 0) && (providers.length > 0)){
-            var i = column(providerName);
+            var i = column(provider.name);
             if (i>=0) {
-              setColumnData(i, date, fieldValues);
+              setColumnData(i, provider);
             }
           }
         }
 
-      } else if (msgType == "FieldCatalog") {
-        var fieldNames = msg.fields;
+      } else if (msgType == "fieldCatalog") {  // {fields[]}
+        var fieldNames = msg.fieldCatalog;
         if (fieldNames) {
           fields = fieldNames;
           if (providers.length > 0)  {
@@ -238,8 +295,8 @@ function readWebsocket() {
           }
         }
 
-      } else if (msgType == "ProviderNames") {
-        var providerNames = msg.providers;
+      } else if (msgType == "providerCatalog") { // {providers[]}
+        var providerNames = msg.providerCatalog;
         if (providerNames) {
           providers = providerNames;
           if (fields.length > 0)  {
@@ -247,19 +304,154 @@ function readWebsocket() {
             setData();
           }
         }
+
+      } else if (msgType == "userPermissions") { // {uid,permissions{}}
+        var usrPerm = msg.userPermissions
+        var uid = usrPerm.uid; // TODO - should we check if that is the current user? Not critical since update has to be checked by server anyways
+        setFieldsEditable(usrPerm.permissions);
       }
     };
 
     ws.onclose = function() {
-      console.log("connection is closed...");
+      console.log(`websocket ${ws} closed`);
     };
+
+
   } else {
     console.log("WebSocket NOT supported by your Browser!");
   }
 }
 
+//--- outgoing messages
+
+function sendRequestUserPermissions (uid,pw){
+  if (ws) {
+    if (isEmpty(uid) || isEmpty(pw)) {
+      alert("please enter user id and password and try again");
+    } else {
+      ws.send(`{"requestUserPermissions":{"${uid}":[${toUtf8Array(pw).join(',')}]}}`);
+    }
+  }
+}
+
+function sendProviderChange (uid,pw,changeDate,provider,changedFields) {
+  if (ws) {
+    var msg = `{"providerChange":{"${uid}":[${toUtf8Array(pw).join(',')}],"date":${changeDate},"${provider}":{${changedFields}}}}`;
+    console.log(`@@@ sending: ${msg}`);
+    ws.send(msg);
+  }
+}
+
+//--- browser window changes
+
 function setWidth() {
   var newWidth = document.body.clientWidth;
   var div = document.getElementById("scroll_container");
   div.style['max-width'] = `${newWidth}px`;
+}
+
+//--- user input callbacks
+
+
+function identifyUser(event) {
+  if (event.key=="Enter") {
+    setEditable();
+  }
+}
+
+function setEditable() {
+  var uid=document.getElementById("uid").value;
+  var pw = document.getElementById("pw").value;
+  sendRequestUserPermissions(uid,pw);
+}
+
+function setReadOnly() {
+  document.getElementById("pw").value = null;
+  document.getElementById("sendButton").disabled = true;
+  document.getElementById("editButton").disabled = false;
+  document.getElementById("readOnlyButton").disabled = true;
+
+  processCells( (cell,provider,field) => {
+    if (cell.firstChild) {
+      var value = data[provider].fieldValues[field];
+      cell.textContent = value; // this also removes the input child element
+      cell.classList.remove("editable");
+    }
+  });
+
+  modifiedFields.clear();
+}
+
+function setFieldFocused (event) {
+  var input = event.target;
+  input.classList.add("focused");
+}
+
+function setFieldBlurred (event) {
+  var input = event.target;
+  input.classList.remove("focused");
+}
+
+function setFieldModified(event) {
+  var input = event.target;
+  if (!input.classList.contains("modified")){
+    input.classList.add("modified");
+
+    modifiedFields.add(input);
+  }
+}
+
+function sendChanges() {
+  if (modifiedFields.size == 0){
+    alert("no modified fields yet - nothing to send");
+
+  } else {
+    var tbody = document.getElementById("table_body");
+
+    for (i=0; i<providers.length; i++){
+      var provider = providers[i];
+      var acc = "";
+
+      for (j=0; j<fields.length; j++){
+        var field = fields[j];
+        var row = tbody.childNodes[j];
+        var cell = row.childNodes[i+1];
+        var input = cell.firstChild;
+        if (modifiedFields.has(input)){
+          if (acc.length > 0) acc += ",";
+          acc += `"${field}":${input.value}`
+          input.classList.remove("modified");
+          input.classList.remove("conflict");
+          input.classList.add("reported");
+          modifiedFields.delete(input);
+        }
+      }
+
+      if (acc.length > 0) {
+        var uid=document.getElementById("uid").value;
+        var pw = document.getElementById("pw").value;
+        var date = Date.now();
+        sendProviderChange(uid,pw,date,provider,acc);
+      }
+    }
+  }
+}
+
+//--- onLoad callback
+
+function init() {
+  setWidth(); // to properly set max div-width
+  setBrowserSpecifics();
+
+  if ((fields.length > 0) && (providers.length > 0)) initTable();
+  setData();
+
+  initWebSocket();
+}
+
+//--- onunload callback
+function shutdown() {
+  if (ws) {
+    ws.close();
+  }
 }

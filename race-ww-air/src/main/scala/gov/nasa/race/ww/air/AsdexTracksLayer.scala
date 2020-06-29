@@ -217,7 +217,7 @@ class AsdexTracksLayer (val raceViewer: RaceViewer, val config: Config)
     if (acceptSrc(tracks.assoc)){
       incUpdateCount
       updateTracks(tracks)
-      wwdRedrawManager.redraw
+      wwdRedrawManager.redraw()
     }
   }
 

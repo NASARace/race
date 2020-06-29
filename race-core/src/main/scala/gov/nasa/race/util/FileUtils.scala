@@ -85,7 +85,7 @@ object FileUtils {
   def withLines (file: File)(f: String=>Unit) = {
     val src = new BufferedSource(new FileInputStream(file))
     try {
-      for (line <- src.getLines) {
+      for (line <- src.getLines()) {
         f(line)
       }
     } finally {
@@ -195,7 +195,7 @@ object FileUtils {
 
   def getLines(pathName: String): Iterator[String] = {
     inputStreamFor(pathName,4096) match {
-      case Some(is) => new BufferedSource(is).getLines
+      case Some(is) => new BufferedSource(is).getLines()
       case None => Iterator.empty
     }
   }

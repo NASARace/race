@@ -471,7 +471,7 @@ class TrackPairEventLayer(val raceViewer: RaceViewer, val config: Config)
         symbolLevels.triggerInCurrentLevel(entry) // this sets rendering attributes
     }
 
-    wwdRedrawManager.redraw
+    wwdRedrawManager.redraw()
     // the layerInfo panel does update periodically on its own
     //if (entryPanel.isShowing(entry)) entryPanel.update
   }

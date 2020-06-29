@@ -124,7 +124,7 @@ object GreatCircle {
 
       print(", ")
       if (deg > 0 && ((deg+1) % 5 == 0)) {
-        println
+        println()
         print("  ")
       }
     }

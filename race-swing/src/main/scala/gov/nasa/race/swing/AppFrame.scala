@@ -56,7 +56,7 @@ class AppFrame extends Frame {
   // causes a SEGV if we dispose prematurely
   peer.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE)
 
-  override def close = {
+  override def close(): Unit = {
     def _closing = {
       closing = true
       visible = false
@@ -64,7 +64,7 @@ class AppFrame extends Frame {
       //Toolkit.getDefaultToolkit.getSystemEventQueue.postEvent(new WindowEvent(peer, WindowEvent.WINDOW_CLOSING))
       //peer.dispatchEvent(new WindowEvent(peer, WindowEvent.WINDOW_CLOSING))
       
-      if (Platform.javaVersion == 8 || !Platform.isMacOS) dispose // this causes segfaults on Java 10/MacOS but without we get X11Util complaints on Java 8/Linux
+      if (Platform.javaVersion == 8 || !Platform.isMacOS) dispose() // this causes segfaults on Java 10/MacOS but without we get X11Util complaints on Java 8/Linux
     }
 
     if (!closing) {

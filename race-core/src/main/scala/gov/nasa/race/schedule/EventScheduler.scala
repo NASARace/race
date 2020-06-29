@@ -117,7 +117,7 @@ trait EventScheduler {
     }
   }
 
-  def purgeEvents () = {
+  def purgeEvents = {
     lock.synchronized {
       relQueue.clear()
       absQueue.clear()
@@ -125,7 +125,7 @@ trait EventScheduler {
   }
 
 
-  private def processNextEvent () = {
+  private def processNextEvent() = {
     try {
       val nextEvent = absQueue.dequeue()
       val delay = nextEvent.millisFromNow
@@ -178,17 +178,17 @@ trait EventScheduler {
               lock.synchronized {
                 if (absQueue.isEmpty) {
                   if (keepAlive){
-                    completionSignal.signal
+                    completionSignal.signal()
                     lock.wait(10000)
                   } else {
                     terminate = true
                   }
                 }
               }
-              processNextEvent
+              processNextEvent()
             }
             thread = null
-            completionSignal.signal
+            completionSignal.signal()
           }
         }
         thread.setDaemon(true)

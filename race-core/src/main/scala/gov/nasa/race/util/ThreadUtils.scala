@@ -162,7 +162,7 @@ object ThreadUtils {
 
     //--- the public API
     def wakeUp() = _signal.signal()
-    def terminate = {
+    def terminate() = {
       _done = true
       this.interrupt()
     }

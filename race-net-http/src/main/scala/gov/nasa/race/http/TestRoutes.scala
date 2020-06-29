@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, United States Government, as represented by the
+ * Copyright (c) 2020, United States Government, as represented by the
  * Administrator of the National Aeronautics and Space Administration.
  * All rights reserved.
  *
@@ -16,20 +16,15 @@
  */
 package gov.nasa.race.http
 
-import akka.actor.ActorRef
 import akka.http.scaladsl.model.ws.TextMessage
 import akka.http.scaladsl.model.{ContentTypes, HttpEntity}
 import akka.http.scaladsl.server.Directives._
-import akka.http.scaladsl.server.{PathMatchers, Route}
+import akka.http.scaladsl.server.Route
 import akka.stream.scaladsl.Source
 import com.typesafe.config.Config
-import gov.nasa.race.common.JsonWriter
 import gov.nasa.race.config.ConfigUtils._
-import gov.nasa.race.core.{DataConsumerRaceActor, ParentActor, PeriodicRaceActor, RaceDataConsumer}
-import gov.nasa.race.uom.DateTime
+import gov.nasa.race.core.ParentActor
 import scalatags.Text.all.{head => htmlHead, _}
-
-import scala.collection.mutable
 
 /*
  * a collection of generic test routes that can be used to test network connection and client compatibility.
@@ -238,146 +233,4 @@ class EchoService (val parent: ParentActor, val config: Config) extends Protocol
 }
 
 
-//--- example of a site that dynamically updates data with a web socket
 
-object TabDataService {
-  case class FieldCatalog (fields: Seq[String])
-  case class ProviderList (names: Seq[String])
-  case class Provider (name: String, var date: DateTime, var fieldValues: Map[String,Int])
-
-  // the (ordered) fields catalog
-  val fieldCatalog = FieldCatalog(Seq("field_1", "field_2", "field_3", "field_4", "field_5", "field_6", "field_7", "field_8", "field_9"))
-
-}
-
-/**
-  * the actor that collects/computes the model (data) and reports it to its data consumer RaceRouteInfo
-  * this should not be concerned about any RaceRouteInfo specifics (clients, data formats etc.)
-  */
-class TabDataServiceActor (_dc: RaceDataConsumer, _conf: Config) extends DataConsumerRaceActor(_dc,_conf)
-                                                                                       with PeriodicRaceActor {
-  import TabDataService._
-  var nextProviderIdx = 0
-
-  val data = Array(
-    Provider("provider_1", DateTime.now, Map(("field_1",1100), ("field_3",1300), ("field_8",1800))),
-    Provider("provider_2", DateTime.now, Map(("field_3",2300), ("field_4",2400), ("field_6",2600))),
-    Provider("provider_3", DateTime.now, Map(("field_1",3100), ("field_2",3200), ("field_5",3500), ("field_8",3800))),
-    Provider("provider_4", DateTime.now, Map(("field_1",4100), ("field_3",4300), ("field_4",4400), ("field_6",4600), ("field_7",4700))),
-    Provider("provider_5", DateTime.now, Map(("field_2",5200), ("field_4",5400), ("field_7",5700), ("field_8",5800))),
-    Provider("provider_6", DateTime.now, Map(("field_5",6500), ("field_6",6600), ("field_7",6700), ("field_9",6900))),
-    Provider("provider_7", DateTime.now, Map(("field_2",7200), ("field_4",7400), ("field_7",7700))),
-    Provider("provider_8", DateTime.now, Map(("field_3",8300), ("field_4",8400), ("field_9",8900))),
-    Provider("provider_9", DateTime.now, Map(("field_2",9200), ("field_3",9300), ("field_4",9400), ("field_5",9500), ("field_6",9600), ("field_8",9800)))
-  )
-
-  // the (ordered) provider list
-  val providerList = ProviderList(data.map(_.name).toIndexedSeq)
-
-  override def onStartRaceActor(originator: ActorRef): Boolean = {
-
-    // set the initial data
-    setData(fieldCatalog)
-    setData(providerList)
-    data.foreach(setData)
-
-    super.onStartRaceActor(originator)
-  }
-
-  // periodically mutate the next provider
-  override def onRaceTick: Unit = {
-    if (nextProviderIdx >=0 && nextProviderIdx < data.length) {
-      val provider = data(nextProviderIdx)
-      provider.date = DateTime.now
-      provider.fieldValues = provider.fieldValues.map( e=> (e._1, e._2+1))
-      nextProviderIdx = (nextProviderIdx + 1) % providerList.names.length
-
-      setData(provider)
-    } else warning(s"data index out of range: $nextProviderIdx")
-  }
-}
-
-/**
-  * the RaceRouteInfo that serves the content to display and update Provider data
-  */
-class TabDataService (parent: ParentActor, config: Config) extends SiteRoute(parent,config)
-                                                 with PushWSRaceRoute with RaceDataConsumer {
-  import TabDataService._
-
-  val wsPath = s"$requestPrefix/ws"
-  val wsPathMatcher = PathMatchers.separateOnSlashes(wsPath)
-
-  val writer = new JsonWriter
-
-  // we store the data in a format that is ready to send
-  var fieldCatalog: Option[TextMessage] = None
-  var providerList: Option[TextMessage] = None
-  val providerData = mutable.Map.empty[String,TextMessage]
-
-  def serializeProviderList (providerList: ProviderList): String = {
-    writer.clear
-      .beginObject
-      .writeStringMember("msgType","ProviderNames")
-      .writeMemberName("providers")
-      .writeStringValues(providerList.names)
-      .endObject
-      .toJson
-  }
-
-  def serializeFieldCatalog (fieldCatalog: FieldCatalog): String = {
-    writer.clear
-      .beginObject
-      .writeStringMember("msgType","FieldCatalog")
-      .writeMemberName("fields")
-      .writeStringValues(fieldCatalog.fields)
-      .endObject
-      .toJson
-  }
-
-  def serializeProvider (provider: Provider): String = {
-    writer.clear
-      .beginObject
-      .writeStringMember("msgType","ProviderData")
-      .writeStringMember("name",provider.name)
-      .writeLongMember("date", provider.date.toEpochMillis)
-      .writeMemberName("fieldValues")
-      .writeIntMembers(provider.fieldValues)
-      .endObject
-      .toJson
-  }
-
-  override protected def instantiateActor: DataConsumerRaceActor = new TabDataServiceActor(this,config)
-
-  override def setData (data:Any): Unit = {
-    data match {
-      case p: Provider =>
-        val msg = TextMessage(serializeProvider(p))
-        providerData.put(p.name,msg)
-        push(msg)
-
-      case p: ProviderList =>
-        val msg = TextMessage(serializeProviderList(p))
-        providerList = Some(msg)
-        push(msg)
-
-      case c: FieldCatalog =>
-        val msg = TextMessage(serializeFieldCatalog(c))
-        fieldCatalog = Some(msg)
-        push(msg)
-    }
-  }
-
-  override def route: Route = {
-    get {
-      path(wsPathMatcher) {
-        promoteToWebSocket
-      }
-    } ~ siteRoute
-  }
-
-  override protected def initializeConnection (conn: WebSocketPushConnection): Unit = {
-    fieldCatalog.foreach( pushTo(conn,_))
-    providerList.foreach( pushTo(conn,_))
-    providerData.foreach( e=> pushTo(conn,e._2))
-  }
-}

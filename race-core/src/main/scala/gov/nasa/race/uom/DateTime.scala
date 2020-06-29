@@ -538,7 +538,7 @@ final class DateArray protected[uom] (protected[uom] val data: Array[Long]) {
   class Iter extends Iterator[DateTime] {
     private var i = 0
     def hasNext: Boolean = i < data.length
-    def next: DateTime = {
+    def next(): DateTime = {
       if (i >= data.length) throw new NoSuchElementException
       val j = i
       i += 1
@@ -548,7 +548,7 @@ final class DateArray protected[uom] (protected[uom] val data: Array[Long]) {
   class ReverseIter extends Iterator[DateTime] {
     private var i = data.length-1
     def hasNext: Boolean = i >= 0
-    def next: DateTime = {
+    def next(): DateTime = {
       if (i <0) throw new NoSuchElementException
       val j = i
       i -= 1
@@ -607,7 +607,7 @@ final class DateArrayBuffer protected[uom] (protected[uom] val data: ArrayBuffer
   class Iter extends Iterator[DateTime] {
     private var i = 0
     def hasNext: Boolean = i < data.size
-    def next: DateTime = {
+    def next(): DateTime = {
       if (i >= data.length) throw new NoSuchElementException
       val j = i
       i += 1
@@ -617,7 +617,7 @@ final class DateArrayBuffer protected[uom] (protected[uom] val data: ArrayBuffer
   class ReverseIter extends Iterator[DateTime] {
     private var i = data.size-1
     def hasNext: Boolean = i >= 0
-    def next: DateTime = {
+    def next(): DateTime = {
       if (i <0) throw new NoSuchElementException
       val j = i
       i -= 1

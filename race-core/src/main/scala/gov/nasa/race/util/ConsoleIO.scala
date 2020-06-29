@@ -118,12 +118,12 @@ object ConsoleIO {
 
       action // action to be performed synchronously before each menu input prompt
       print(s"\n$menuColor$prompt$resetColor")
-      scala.Console.flush
+      scala.Console.flush()
 
       if (t eq menuStack.last.thread){        // (5) critical branch (5|8)
         globalLock.unlock                     // (6)
         do {
-          input = StdIn.readLine              // (7) block reader
+          input = StdIn.readLine()            // (7) block reader
         } while (loopReader(t))
 
       } else {                                // (8)
@@ -151,7 +151,7 @@ object ConsoleIO {
     menuStack = menuStack.tail                // (13)
     if (!menuStack.isEmpty && (t ne menuStack.head.thread)){
       print(s"\n$menuColor${menuStack.head.prompt}$resetColor")
-      scala.Console.flush
+      scala.Console.flush()
     }
     globalLock.unlock                         // (14)
   }
@@ -159,9 +159,9 @@ object ConsoleIO {
   //--- other utility functions
   private def _prompt(msg:String,emptyAction: => Option[String]): Option[String] = {
     print(s"$menuColor$msg$resetColor")
-    scala.Console.flush
+    scala.Console.flush()
 
-    val inp = StdIn.readLine
+    val inp = StdIn.readLine()
     if (inp.length == 0) emptyAction else Some(inp)
   }
 
@@ -170,16 +170,16 @@ object ConsoleIO {
 
   def promptPassword(msg: String): Option[Array[Char]] = {
     print(s"$menuColor$msg$resetColor")
-    scala.Console.flush
+    scala.Console.flush()
     val pw = jConsole.readPassword()
     if (pw.length == 0) None else Some(pw)
   }
 
   private def _promptInt (msg: String, emptyAction: => Option[Int]): Option[Int] = {
     print(s"$menuColor$msg$resetColor")
-    scala.Console.flush
+    scala.Console.flush()
 
-    val inp = StdIn.readLine
+    val inp = StdIn.readLine()
     if (inp.length == 0) {
       emptyAction
     } else {

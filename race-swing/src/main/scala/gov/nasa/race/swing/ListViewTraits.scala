@@ -36,7 +36,7 @@ trait SelectionPreserving[A] extends ListView[A] {
       peer.setSelectedIndices(selIndices)
       if (topIdx < listData.size) peer.ensureIndexIsVisible(topIdx)
     }
-    repaint // but we still need to repaint in case render data inside items has changed
+    repaint() // but we still need to repaint in case render data inside items has changed
   }
 
   private def getNewSelectionIndices(oldItems: Seq[A], newItems: Seq[A]): Array[Int] = {
@@ -74,7 +74,7 @@ trait VisibilityBounding[A] extends ListView[A] {
     if (n > _maxVisibleRows) n = _maxVisibleRows
     if (visibleRowCount != n) {
       visibleRowCount = n
-      revalidate
+      revalidate()
     }
   }
 

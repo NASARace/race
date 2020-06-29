@@ -90,8 +90,8 @@ trait ParentActor extends Actor with ImplicitActorLogging with AskSupport {
     * BEWARE - only use this if the system is terminated
     */
   protected[this] def clear: Unit = {
-    actors.clear
-    actorRefMap.clear
+    actors.clear()
+    actorRefMap.clear()
   }
 
   protected[this] def askChild (actorRef: ActorRef, q: (ActorMetaData)=>Any)(p: PartialFunction[Any,Boolean]): Boolean = {
