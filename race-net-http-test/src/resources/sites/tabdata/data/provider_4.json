@@ -1,0 +1,16 @@
+{
+  "id": "provider_4",
+  "rev": 1,
+  "date": "2020-06-29T16:06:04.000",
+  "fieldValues": {
+    "/cat_A/field_1": 41,
+    "/cat_A/field_2": 42,
+    "/cat_A/field_3": 43,
+    "/cat_B/field_1": 410,
+    "/cat_B/field_2": 420,
+    "/cat_C/field_1": 4100,
+    "/cat_C/field_2": 4200,
+    "/cat_C/field_3": 4300,
+    "/cat_C/field_4": 4400
+  }
+}

@@ -134,11 +134,32 @@ class JsonWriter (jsonType: ElementType = JsonWriter.RawElements, initSize: Int 
     buf.append('}');
     armSeparator
   }
-  def writeObject (f: =>Unit): JsonWriter = {
+  @inline def writeObject (f: JsonWriter=>Unit): JsonWriter = {
     beginObject
-    f
+    f(this)
     endObject
   }
+  def writeMemberObject (memberName: String)( f: JsonWriter=>Unit): JsonWriter = {
+    writeMemberName(memberName)
+    writeObject(f)
+  }
+  def writeIntMembersMember (memberName: String, it: Iterable[(String,Int)]): JsonWriter = {
+    writeMemberName(memberName)
+    writeIntMembers(it)
+  }
+  def writeLongMembersMember (memberName: String, it: Iterable[(String,Long)]): JsonWriter = {
+    writeMemberName(memberName)
+    writeLongMembers(it)
+  }
+  def writeDoubleMembersMember (memberName: String, it: Iterable[(String,Double)]): JsonWriter = {
+    writeMemberName(memberName)
+    writeDoubleMembers(it)
+  }
+  def writeStringMembersMember (memberName: String, it: Iterable[(String,String)]): JsonWriter = {
+    writeMemberName(memberName)
+    writeStringMembers(it)
+  }
+
 
   @inline final def beginArray: JsonWriter = {
     checkSeparator
@@ -151,10 +172,30 @@ class JsonWriter (jsonType: ElementType = JsonWriter.RawElements, initSize: Int 
     pop(ArrayType)
     armSeparator
   }
-  def writeArray (f: =>Unit): JsonWriter = {
+  @inline def writeArray (f: JsonWriter=>Unit): JsonWriter = {
     beginArray
-    f
+    f(this)
     endArray
+  }
+  def writeArrayMember(memberName: String)(f: JsonWriter=>Unit): JsonWriter = {
+    writeMemberName(memberName)
+    writeArray(f)
+  }
+  def writeStringArrayMember(memberName: String, it: Iterable[String]): JsonWriter = {
+    writeMemberName(memberName)
+    writeStringValues(it)
+  }
+  def writeIntArrayMember(memberName: String, it: Iterable[Int]): JsonWriter = {
+    writeMemberName(memberName)
+    writeIntValues(it)
+  }
+  def writeLongArrayMember(memberName: String, it: Iterable[Long]): JsonWriter = {
+    writeMemberName(memberName)
+    writeLongValues(it)
+  }
+  def writeDoubleArrayMember(memberName: String, it: Iterable[Double]): JsonWriter = {
+    writeMemberName(memberName)
+    writeDoubleValues(it)
   }
 
   //--- basic writes

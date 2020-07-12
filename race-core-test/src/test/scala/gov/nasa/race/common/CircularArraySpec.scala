@@ -42,7 +42,7 @@ class CircularArraySpec extends AnyFlatSpec with RaceSpec {
       print(s"$e ")
       assert(e == i)
     }
-    println
+    println()
 
     print("reverse: ")
     val rev = a.reverseIterator
@@ -52,7 +52,7 @@ class CircularArraySpec extends AnyFlatSpec with RaceSpec {
       print(s"$e ")
       assert(e == i)
     }
-    println
+    println()
   }
 
   "a CircularArray" should "store the last N items after a wrap around" in {
@@ -70,22 +70,22 @@ class CircularArraySpec extends AnyFlatSpec with RaceSpec {
     var i = 6
     val fwd = a.iterator
     while (fwd.hasNext) {
-      val e = fwd.next
+      val e = fwd.next()
       print(f"$e%2d ")
       assert(e == i)
       i += 1
     }
-    println
+    println()
 
     print("reverse: ")
     i = 10
     val rev = a.reverseIterator
     while (rev.hasNext) {
-      val e = rev.next
+      val e = rev.next()
       print(f"$e%2d ")
       assert(e == i)
       i -= 1
     }
-    println
+    println()
   }
 }

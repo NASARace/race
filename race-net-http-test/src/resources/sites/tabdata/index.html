@@ -9,20 +9,32 @@
 
     <body onload="init();" onresize="setWidth();" ununload="shutdown();">
 
-    <h2>Provider Data</h2>
+        <h2>Provider Data</h2>
 
-        <div class="toolbar">
+        <div id="editTools" class="toolbar">
             <label for="uid">user:</label>
             <input type="text" id="uid"/>
-            <label for="pw">password:</label>
+            <label for="pw">passwd:</label>
             <input type="password" id="pw" onkeyup="identifyUser(event);"/>
             <!-- will be enabled once we have editable fields that were changed by user -->
-            <input type="button" id="editButton" class="button" value="Edit" onclick="setEditable();"/>
-            <input type="button" id="sendButton" class="button" value="Send Changes" onclick="sendChanges();" disabled/>
-            <input type="button" id="readOnlyButton" class="button" value="ReadOnly" onclick="setReadOnly();" disabled/>
+            <input type="button" id="editButton" class="button" value="edit" onclick="setEditable();"/>
+            <input type="button" id="sendButton" class="button" value="send" onclick="sendChanges();" disabled/>
+            <input type="button" id="readOnlyButton" class="button" value="reset" onclick="setReadOnly();" disabled/>
+            <span id="msg" class="infoblock"></span>
+        </div>
+        <div id="displayTools" class="toolbar">
+            <label for="providerFilter">provider:</label>
+            <input type="text" id="providerFilter" />
+            <label for="fieldFilter">field:</label>
+            <input type="text" id="fieldFilter" />
+            <input type="button" id="filterButton" class="button" value="filter" onclick="setFilters();"/>
+            <input type="button" id="resetFilterButton" class="button" value="reset" onclick="clearFilters();"/>
+            <label for="lines">lines:</label>
+            <input type="number" id="lines" min="10" max="100"/>
+            <span id="info" class="infoblock"></span>
         </div>
 
-        <div id="scroll_container">
+        <div id="scrollContainer">
             <table id="my_table">
                 <!-- dynamically populated -->
             </table>

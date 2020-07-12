@@ -21,6 +21,7 @@ import java.awt.{Color, Font}
 import java.io.File
 
 import com.typesafe.config._
+import gov.nasa.race.core.RaceException
 import gov.nasa.race.geo.GeoPosition
 import gov.nasa.race.uom.{Angle, DateTime, Length, Speed}
 import gov.nasa.race.uom.Angle._
@@ -349,6 +350,12 @@ object ConfigUtils {
       } catch {
         case _: ConfigException.Missing => None
       }
+    }
+
+    def translateFile[T] (key: String)(f: Array[Byte]=>Option[T]): Option[T] = {
+      val file = getNonEmptyFile(key)
+      val bytes = FileUtils.fileContentsAsBytes(file).get // if not found or empty we don't get here
+      f(bytes)
     }
 
     final val unitNumberRE = """^([-+]?\d*\.?\d+(?:[eE][-+]?\d+)?)([a-zA-Z/]+)?$""".r

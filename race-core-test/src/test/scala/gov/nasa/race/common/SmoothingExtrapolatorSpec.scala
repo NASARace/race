@@ -68,7 +68,7 @@ class SmoothingExtrapolatorSpec extends AnyFlatSpec with RaceSpec {
 
     println("\n------------- checking strictly monotonic decreasing estimates")
 
-    for ((line,i) <- data.getLines.zipWithIndex){
+    for ((line,i) <- data.getLines().zipWithIndex){
       line match {
         case ignoredLine(cmt) => // ignore
 

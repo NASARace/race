@@ -39,7 +39,7 @@ import io.circe.{Json, parser}
   *    ]
   * }
   */
-object OpenskyBenchmark {
+object OpenSkyBenchmark {
 
   var nRounds = 10000
 
@@ -96,21 +96,21 @@ object OpenskyBenchmark {
     val p = new UTF8JsonPullParser
 
     def readState: FlightPos = {
-      p.matchArrayStart
-      val icao = p.readQuotedValue.intern
-      val cs = p.readQuotedValue.intern
-      p.skip(1)
-      val timePos = p.readUnQuotedValue.toLong
-      p.skip(1)
-      val lon = p.readUnQuotedValue.toDouble
-      val lat = p.readUnQuotedValue.toDouble
-      val alt = p.readUnQuotedValue.toDoubleOrNaN
-      p.skip(1)
-      val spd = p.readUnQuotedValue.toDouble
-      val hdg = p.readUnQuotedValue.toDouble
-      val vr = p.readUnQuotedValue.toDoubleOrNaN
-      p.skipToEndOfCurrentLevel
-      p.matchArrayEnd
+      p.ensureNextIsArrayStart()
+      val icao = p.readQuotedValue().intern
+      val cs = p.readQuotedValue().intern
+      p.skipInCurrentLevel(1)
+      val timePos = p.readUnQuotedValue().toLong
+      p.skipInCurrentLevel(1)
+      val lon = p.readUnQuotedValue().toDouble
+      val lat = p.readUnQuotedValue().toDouble
+      val alt = p.readUnQuotedValue().toDoubleOrNaN
+      p.skipInCurrentLevel(1)
+      val spd = p.readUnQuotedValue().toDouble
+      val hdg = p.readUnQuotedValue().toDouble
+      val vr = p.readUnQuotedValue().toDoubleOrNaN
+      p.skipToEndOfCurrentLevel()
+      p.ensureNextIsArrayEnd()
 
       n += 1
       //println(f" $n%2d:  '$icao%10s', '$cs%10s', $timePos%12d,  ($lat%10.5f, $lon%10.5f), $alt%7.2f, $spd%5.2f, $hdg%3.0f, $vr%5.2f")
@@ -123,12 +123,12 @@ object OpenskyBenchmark {
     measure(nRounds){
       p.initialize(msg)
 
-      p.matchObjectStart
+      p.ensureNextIsObjectStart()
       val t = p.readUnQuotedMember(_time_).toLong
-      p.readMemberArray(_states_){
+      p.foreachInNextArrayMember(_states_){
         readState
       }
-      p.matchObjectEnd
+      p.ensureNextIsObjectEnd()
     }
     println(s"  done - $n items parsed")
   }

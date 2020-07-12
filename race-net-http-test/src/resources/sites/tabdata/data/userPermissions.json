@@ -1,0 +1,12 @@
+{
+  "rev": 1,
+  "users": {
+    "gonzo": [
+      { "providerPattern": "provider_2", "fieldPattern": ".*" },
+      { "providerPattern": "provider_4", "fieldPattern": "field_1" }
+    ],
+    "igor": [
+      { "providerPattern": "provider_3", "fieldPattern": "field_1|field_2" }
+    ]
+  }
+}

@@ -49,8 +49,8 @@ class TInterpolant3Spec extends AnyFlatSpec with RaceSpec {
     val it1 = r1.reverseTailIterator(tEnd, 20000, 2000)
     val it2 = r2.reverseTailIterator(tEnd, 20000, 2000)
     while (it1.hasNext && it2.hasNext){
-      val TDataPoint3(t, x1, y1, z1) = it1.next
-      val TDataPoint3(_, x2, y2, z2) = it2.next
+      val TDataPoint3(t, x1, y1, z1) = it1.next()
+      val TDataPoint3(_, x2, y2, z2) = it2.next()
 
       val vx = fx(t)
       val vy = fy(t)

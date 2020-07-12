@@ -35,22 +35,41 @@ class JsonParseException (msg: String) extends RuntimeException(msg)
 object JsonPullParser {
 
   //--- type system for explicit parsing of Json token streams
-  sealed abstract trait JsonParseResult {
+
+  sealed trait JsonParseResult {
     def isDefined: Boolean = true
     def isScalarValue: Boolean = false
-  }
-  sealed abstract trait AggregateStart extends JsonParseResult
-  sealed abstract trait AggregateEnd extends JsonParseResult
-  sealed abstract trait ScalarValue extends JsonParseResult {
-    override def isScalarValue: Boolean = true
+    def isAggregateDelimiter: Boolean = false
   }
 
-  case object ObjectStart extends AggregateStart
+  sealed trait AggregateDelimiter extends JsonParseResult {
+    override def isAggregateDelimiter = true
+    def isStartBracket: Boolean
+  }
+  sealed trait AggregateStart extends AggregateDelimiter {
+    override def isStartBracket = true
+    def endDelimiter: AggregateEnd
+  }
+  sealed trait AggregateEnd extends AggregateDelimiter {
+    override def isStartBracket = false
+  }
+
+  case object ObjectStart extends AggregateStart {
+    override def endDelimiter: AggregateEnd = ObjectEnd
+  }
   case object ObjectEnd extends AggregateEnd
-  case object ArrayStart extends AggregateStart
+
+  case object ArrayStart extends AggregateStart {
+    override def endDelimiter: AggregateEnd = ArrayEnd
+  }
   case object ArrayEnd extends AggregateEnd
+
+  sealed trait ScalarValue extends JsonParseResult {
+    override def isScalarValue: Boolean = true
+  }
   case object QuotedValue extends ScalarValue
   case object UnQuotedValue extends ScalarValue
+
   case object NoValue extends JsonParseResult {
     override def isDefined: Boolean = false
   }
@@ -62,8 +81,16 @@ object JsonPullParser {
 
 /**
   * a pull parser for regular JSON, modeled after the XmlPullParser2
+  *
+  * this parser supports three APIs with increasing level of abstraction:
+  *
+  * (1) low level stream
+  *
+  * (2) mid level readXX functions returning Scala types
+  *
+  * (3) high level parsing into a JsonValue structure (AST)
   */
-abstract class JsonPullParser {
+abstract class JsonPullParser extends LogWriter with Thrower {
   import JsonPullParser._
 
   protected var data: Array[Byte] = Array.empty[Byte]  // the (abstract) data (UTF-8), might grow
@@ -72,18 +99,37 @@ abstract class JsonPullParser {
 
   protected val path = new RangeStack(32)  // member (slice) stack
   protected val env = Stack.empty[State]   // state stack
+  protected var lastResult: JsonParseResult = NoValue // needs to be protected to ensure integrity
 
+  override def exception(msg: String) = new JsonParseException(msg)
+
+  //--- mostly for debugging
   def dataAsString: String = new String(data,0,limit) // use sparingly - this defeats the purpose
+  def getLastResult: JsonParseResult = lastResult
+  def getIdx: Int = idx
+  def dumpEnv: Unit = println(s"""env = [${env.mkString(",")}]""")
+  def envDepth: Int = env.size
+  def dumpNext(): JsonParseResult = {
+    val res = readNext()
+    println(s"""($res, [${env.mkString(",")}]) => "$member": "$value")""")
+    res
+  }
+  def assertNext (res: JsonParseResult, depth: Int, m: String, v: String): Unit = {
+    assert(dumpNext() == res)
+    assert(env.size == depth)
+    assert(member =:= m)
+    assert(value =:= v)
+  }
 
   sealed abstract class State {
-    def parseNextValue: JsonParseResult = NoValue
+    def readNext(): JsonParseResult = NoValue
     override def toString: String = getClass.getSimpleName
   }
 
   class ObjectState extends State {
 
     // idx is on opening '{' , preceding ',' or closing '}'
-    override def parseNextValue: JsonParseResult = {
+    override def readNext(): JsonParseResult = {
       val data = JsonPullParser.this.data
       var i0 = idx
 
@@ -96,23 +142,23 @@ abstract class JsonPullParser {
           ObjectEnd
         } else { // end of nested object
           state = env.top
-          idx = skipWs(i0 + 1)
+          idx = skipWsChecked(i0 + 1)
           ObjectEnd
         }
 
       } else {
         data(i0) match {
           case ',' | '{' => i0 = skipWs(i0+1)
-          case _ => throw new JsonParseException(s"expected start of member at '.. ${context(i0)} ..'")
+          case _ => throw exception(s"expected start of member at '.. ${context(i0)} ..'")
         }
 
-        if (data(i0) != '"') throw new JsonParseException(s"member name expected at ${context(i0)}")
+        if (data(i0) != '"') throw exception(s"member name expected at ${context(i0)}")
         i0 += 1
         var i1 = skipToEndOfString(i0)
         member.setRange(i0, i1-i0)
 
         i0 = skipWs(i1+1)
-        if (data(i0) != ':') throw new JsonParseException(s"':' expected after member name at ${context(i0)}")
+        if (data(i0) != ':') throw exception(s"':' expected after member name at ${context(i0)}")
 
         i0 = skipWs(i0+1)
         data(i0) match {
@@ -160,7 +206,7 @@ abstract class JsonPullParser {
   }
 
   class InitialObjectState extends ObjectState {
-    override def parseNextValue: JsonParseResult = {
+    override def readNext(): JsonParseResult = {
       state = objState
       ObjectStart
     }
@@ -169,7 +215,7 @@ abstract class JsonPullParser {
   class ArrayState extends State {
 
     // idx is on opening '[' , preceding ',' or closing ']'
-    override def parseNextValue: JsonParseResult = {
+    override def readNext(): JsonParseResult = {
       val data = JsonPullParser.this.data
       var i0 = idx
 
@@ -181,14 +227,14 @@ abstract class JsonPullParser {
 
         } else { // end of nested array
           state = env.top
-          idx = skipWs(i0 + 1)
+          idx = skipWsChecked(i0 + 1)
           ArrayEnd
         }
 
       } else {
         data(i0) match {
           case ',' | '[' => i0 = skipWs(i0 + 1)
-          case _ => throw new JsonParseException(s"expected start of array element at '.. ${context(i0)} ..'")
+          case _ => throw exception(s"expected start of array element at '.. ${context(i0)} ..'")
         }
 
         data(i0) match {
@@ -236,7 +282,7 @@ abstract class JsonPullParser {
   }
 
   class InitialArrayState extends ArrayState {
-    override def parseNextValue: JsonParseResult = {
+    override def readNext(): JsonParseResult = {
       state = arrState
       ArrayStart
     }
@@ -245,7 +291,7 @@ abstract class JsonPullParser {
   class ValState extends State { // single value
 
     // idx is on first char of value
-    override def parseNextValue: JsonParseResult = {
+    override def readNext(): JsonParseResult = {
       val data = JsonPullParser.this.data
       val i0 = idx
 
@@ -266,7 +312,7 @@ abstract class JsonPullParser {
   }
 
   class EndState extends State {
-    override def parseNextValue: JsonParseResult = NoValue
+    override def readNext(): JsonParseResult = NoValue
   }
 
   protected final val initObjState = new InitialObjectState
@@ -280,7 +326,7 @@ abstract class JsonPullParser {
 
   var isQuotedValue = false
 
-  val member = MutUtf8Slice.empty
+  val member = MutUtf8Slice.empty  // member name of last value (if any)
   val value = MutUtf8Slice.empty   // holds primitive values (String,number,bool,null)
 
 
@@ -311,81 +357,266 @@ abstract class JsonPullParser {
     (data(idx) == ']' && arrLevel == env.size)
   }
 
-  @inline final def elementHasMoreValues: Boolean = idx < limit && data(idx) == ','
+  @inline final def aggregateHasMoreValues: Boolean = idx < limit && data(idx) == ',' // FIXME - does not hold for first element
 
   @inline final def notDone = state != endState
 
   @inline final def isDone = state ==  endState
 
-  @inline final def parseNextValue: JsonParseResult = {
+  /**
+    * this is the low level API workhorse - read the next JsonValue, setting member, value and lastResult accordingly
+    */
+  @inline final def readNext(): JsonParseResult = {
     member.clearRange()
     value.clearRange()
-    state.parseNextValue
-  }
-
-  final def readNextMemberValue (name: ByteSlice): JsonParseResult = {
-    val res = parseNextValue
-    if (name.len > 0 && name != member) throw new JsonParseException(s"expected member $name got $member")
+    val res = state.readNext()
+    lastResult = res
     res
   }
 
-  def parseAllValues (pf: PartialFunction[JsonParseResult,Unit]): Unit = {
+  final def readNextMember(name: ByteSlice): JsonParseResult = {
+    val res = readNext()
+    if (name.len > 0 && name != member) throw exception(s"expected member $name got $member")
+    res
+  }
+
+  def matchNext(pf: PartialFunction[JsonParseResult,Unit]): Unit = {
     while (notDone){
-      val v = parseNextValue
+      val v = readNext()
       if (v.isDefined) pf.apply(v) else return
     }
   }
 
-  def parseScalarMember (name: ByteSlice): Boolean = {
-    isInObject && parseNextValue.isScalarValue && member == name
+  //--- mid level API - parse into standard Scala types
+
+  //--- read and check result without returning anything, throwing exceptions if there is a mis-match
+
+  @inline final def ensureNext(expected: JsonParseResult): Unit = {
+    val res = readNext()
+    if (res != expected) throw exception(s"expected '${expected.getClass.getSimpleName}' got '${res.getClass.getSimpleName}'")
+  }
+  @inline final def ensureNextIsObjectStart(): Unit = ensureNext(ObjectStart)
+  @inline final def ensureNextIsObjectEnd() = ensureNext(ObjectEnd)
+  @inline final def ensureNextIsArrayStart() = ensureNext(ArrayStart)
+  @inline final def ensureNextIsArrayEnd() = ensureNext(ArrayEnd)
+
+
+  @inline final def readMemberName(): Utf8Slice = {
+    readNext()
+    member
   }
 
-  /**
-    * parses all members of the current object, calling the provided function for each member until the end of
-    * the object is reached or the function calls skipToEnfOfCurrentLevel.
-    * This has to be called from within an object state.
-    * The provided function can directly use the 'member' and 'value' slices but has to parse array and object
-    * values itself - we do not parse recursively here
-    */
-  def parseObjectMembers (f: (JsonParseResult)=>Unit): Boolean = {
-
-    if (isInObject) {
-      val lvl = env.size-1
-      var res = parseNextValue
-
-      while (env.size > lvl && res != NoValue){
-        f(res) // parses ONE member value
-        res = parseNextValue
-      }
-
-      true
-    } else false
+  @inline final def readObjectMemberName(): Utf8Slice = {
+    val res = readNext()
+    if (res != ObjectStart || member.isEmpty) throw exception("expected object member, got '${res.getClass.getSimpleName}'")
+    member
   }
 
-  def parseMembersOfObject (name: ByteSlice) (f: (JsonParseResult)=>Unit): Boolean = {
-    (readNextMemberValue(name) == ObjectStart) && parseObjectMembers(f)
+  @inline final def readArrayMemberName(): Utf8Slice = {
+    val res = readNext()
+    if (res != ArrayStart || member.isEmpty) throw exception("expected array member, got '${res.getClass.getSimpleName}'")
+    member
   }
 
-  def parseArrayElements (f: JsonParseResult=>Unit): Boolean = {
-    if (isInArray){
-      val lvl = env.size-1
-      var res = parseNextValue
-
-      while (env.size > lvl && res != NoValue){
-        f(res) // parses ONE element value
-        res = parseNextValue
-      }
-      true
-    } else false
+  @inline final def readQuotedValue(): Utf8Slice = {
+    if (readNext() == QuotedValue) value else throw exception(s"not a quoted value: '$value'")
+  }
+  @inline final def readQuotedMember(name: ByteSlice): Utf8Slice = {
+    val res = readNext()
+    if (member != name) throw new JsonParseException(s"expected member '$name' got '$member'")
+    if (res == QuotedValue) value else throw exception(s"not a quoted value: '$value'")
   }
 
-  def parseElementsOfArray (name: ByteSlice) (f: (JsonParseResult)=>Unit): Boolean = {
-    (readNextMemberValue(name) == ArrayStart) && parseArrayElements(f)
+  @inline final def readUnQuotedValue(): Utf8Slice = {
+    if (readNext() == UnQuotedValue) value else throw exception(s"not a un-quoted value: ''$value''")
+  }
+  @inline final def readUnQuotedMember(name: ByteSlice): Utf8Slice = {
+    val res = readNext()
+    if (member != name) throw new JsonParseException(s"expected member '$name' got '$member'")
+    if (res == UnQuotedValue) value else throw exception(s"not a un-quoted value: ''$value''")
   }
 
-  /**
-    * translate everything into a generic data structure, which
-    */
+  //--- those read and check the result type, returning a Boolean that can be used for conditional parsing
+
+  @inline final def isNextScalarMember(name: ByteSlice): Boolean = {
+    isInObject && readNext().isScalarValue && member == name
+  }
+
+  @inline final def isNextQuotedMember(name: ByteSlice): Boolean = {
+    isNextScalarMember(name) && isQuotedValue
+  }
+  @inline final def isNextUnQuotedMember(name: ByteSlice): Boolean = {
+    isNextScalarMember(name) && !isQuotedValue
+  }
+
+  @inline final def isNextArrayStart(): Boolean = readNext() == ArrayStart
+  @inline final def isNextArrayStartMember(name: ByteSlice): Boolean = (readNext() == ArrayStart && member == name)
+
+  @inline final def isNextObjectStart(): Boolean = readNext() == ObjectStart
+  @inline final def isNextObjectStartMember(name: ByteSlice): Boolean = (readNext() == ObjectStart && member == name)
+
+  // if the test fails use 'isScalarValue', 'isQuotedValue', 'isInObject', 'isInArray' to further check without advancing
+
+  //--- these loop over all child elements, calling the provided function for each of them
+
+  def foreachInAggregate(res: JsonParseResult, expected: AggregateStart)(f: =>Unit): Unit = {
+    if (res == expected) {
+      val endLevel = level
+      do {
+        f // this is supposed to parse ONE element of the container
+      } while (notDone && (level >= endLevel && aggregateHasMoreValues))
+      ensureNext(expected.endDelimiter)
+    } else throw exception(s"expected '${expected.getClass.getSimpleName}' got '${res.getClass.getSimpleName}'")
+  }
+
+  // if we are asking for a known member name
+  @inline final def foreachInNextArrayMember(name: ByteSlice)(f: =>Unit): Unit = foreachInAggregate(readNextMember(name),ArrayStart)(f)
+
+  // if we don't care for the member name
+  @inline final def foreachInNextArray(f: =>Unit): Unit = foreachInAggregate(readNext(),ArrayStart)(f)
+
+  // if we are already in the array, e.g. after a readNextMemberName()
+  @inline final def foreachInCurrentArray(f: =>Unit): Unit = foreachInAggregate(lastResult,ArrayStart)(f)
+
+  // if we are asking for a known member name
+  @inline final def foreachInNextObjectMember(name: ByteSlice)(f: =>Unit): Unit = foreachInAggregate(readNextMember(name),ObjectStart)(f)
+
+  // if we don't care for the member name
+  @inline final def foreachInNextObject(f: =>Unit): Unit = foreachInAggregate(readNext(),ObjectStart)(f)
+
+  // if we are already in the object, e.g. after a readNextMemberName()
+  @inline final def foreachInCurrentObject(f: =>Unit): Unit = foreachInAggregate(lastResult,ObjectStart)(f)
+
+
+  //--- the provided function loops itself, i.e. processes the whole element (or a prefix thereof)
+
+  def readAggregate[T](res: JsonParseResult, expected: AggregateStart)(f: => T): T = {
+    if (res == expected) {
+      val endLevel = level
+      val res = f // parse whatever is required from this element (can be multiple items)
+      if (level >= endLevel) skipToEndOfLevel(endLevel) // skip the rest if the provided function was not exhaustive
+      ensureNext(expected.endDelimiter)
+      res
+    } else throw exception(s"expected '${expected.getClass.getSimpleName}' got '${res.getClass.getSimpleName}'")
+  }
+
+  @inline final def readNextObjectMember[T](name: ByteSlice)(f: =>T): T = readAggregate(readNextMember(name), ObjectStart)(f)
+  @inline final def readNextObject[T](f: =>T): T = readAggregate(readNext(), ObjectStart)(f)
+  @inline final def readCurrentObject[T](f: =>T): T = readAggregate(lastResult, ObjectStart)(f)
+
+  @inline final def readNextArrayMember[T](name: ByteSlice)(f: =>T): T = readAggregate(readNextMember(name), ArrayStart)(f)
+  @inline final def readNextArray[T](f: =>T): T = readAggregate(readNext(), ArrayStart)(f)
+  @inline final def readCurrentArray[T](f: =>T): T = readAggregate(lastResult, ArrayStart)(f)
+
+  //--- those are purely for side effects of the provided funtion - TODO - do we need these
+  @inline final def processNextArrayMember(name: ByteSlice)(f: =>Unit): Unit = readAggregate(readNextMember(name), ArrayStart)(f)
+  @inline final def processNextArray(f: =>Unit): Unit = readAggregate(readNext(), ArrayStart)(f)
+  @inline final def processCurrentArray(f: =>Unit): Unit = readAggregate(lastResult, ArrayStart)(f)
+
+  @inline final def processNextObjectMember(name: ByteSlice)(f: =>Unit): Unit = readAggregate(readNextMember(name), ObjectStart)(f)
+  @inline final def processNextObject(f: =>Unit): Unit = readAggregate(readNext(), ObjectStart)(f)
+  @inline final def processCurrentObject(f: =>Unit): Unit = readAggregate(lastResult, ObjectStart)(f)
+
+
+  //--- reading arrays into provided mutable collection
+
+  def readNextArrayMemberInto[U,T <:mutable.Growable[U]](name: ByteSlice, collection: T)(f: =>U): T = {
+    foreachInNextArrayMember(name){ collection.addOne(f) };
+    collection
+  }
+  def readNextArrayInto[U,T <:mutable.Growable[U]](collection: T)(f: =>U): T = {
+    foreachInNextArray{ collection.addOne(f) };
+    collection
+  }
+  def readCurrentArrayInto[U,T <:mutable.Growable[U]](collection: T)(f: =>U): T = {
+    foreachInCurrentArray{ collection.addOne(f) };
+    collection
+  }
+
+  //--- specialized cases for reading arrays of same-type values
+
+  //--- byte elements
+  def readNextByteArrayMemberInto[T <:mutable.Growable[Byte]](name: ByteSlice, collection: T): T = {
+    foreachInNextArrayMember(name)(collection.addOne(readUnQuotedValue().toByte)); collection
+  }
+  def readNextByteArrayInto[T <:mutable.Growable[Byte]](collection: T): T = {
+    foreachInNextArray(collection.addOne(readUnQuotedValue().toByte)); collection
+  }
+  def readCurrentByteArrayInto[T <:mutable.Growable[Byte]](collection: T): T = {
+    foreachInCurrentArray(collection.addOne(readUnQuotedValue().toByte)); collection
+  }
+
+  //--- Int elements
+  def readNextIntArrayMemberInto[T <:mutable.Growable[Int]](name: ByteSlice, collection: T): T = {
+    foreachInNextArrayMember(name)(collection.addOne(readUnQuotedValue().toInt)); collection
+  }
+  def readNextIntArrayInto[T <:mutable.Growable[Int]](collection: T): T = {
+    foreachInNextArray(collection.addOne(readUnQuotedValue().toInt)); collection
+  }
+  def readCurrentIntArrayInto[T <:mutable.Growable[Int]](collection: T): T = {
+    foreachInCurrentArray(collection.addOne(readUnQuotedValue().toInt)); collection
+  }
+
+  //--- Long elements
+  def readNextLongArrayMemberInto[T <:mutable.Growable[Long]](name: ByteSlice, collection: T): T = {
+    foreachInNextArrayMember(name)(collection.addOne(readUnQuotedValue().toLong)); collection
+  }
+  def readNextLongArrayInto[T <:mutable.Growable[Long]](collection: T): T = {
+    foreachInNextArray(collection.addOne(readUnQuotedValue().toLong)); collection
+  }
+  def readCurrentLongArrayInto[T <:mutable.Growable[Long]](collection: T): T = {
+    foreachInCurrentArray(collection.addOne(readUnQuotedValue().toLong)); collection
+  }
+
+  //--- Double elements
+  def readNextDoubleArrayMemberInto[T <:mutable.Growable[Double]](name: ByteSlice, collection: T): T = {
+    foreachInNextArrayMember(name)(collection.addOne(readUnQuotedValue().toDouble)); collection
+  }
+  def readNextDoubleArrayInto[T <:mutable.Growable[Double]](collection: T): T = {
+    foreachInNextArray(collection.addOne(readUnQuotedValue().toDouble)); collection
+  }
+  def readCurrentDoubleArrayInto[T <:mutable.Growable[Double]](collection: T): T = {
+    foreachInCurrentArray(collection.addOne(readUnQuotedValue().toDouble)); collection
+  }
+
+  //--- String elements
+  def readNextStringArrayMemberInto[T <:mutable.Growable[String]](name: ByteSlice, collection: T): T = {
+    foreachInNextArrayMember(name)(collection.addOne(readQuotedValue().toString)); collection
+  }
+  def readNextStringArrayInto[T <:mutable.Growable[String]](collection: T): T = {
+    foreachInNextArray(collection.addOne(readQuotedValue().toString)); collection
+  }
+  def readCurrentStringArrayInto[T <:mutable.Growable[String]](collection: T): T = {
+    foreachInCurrentArray(collection.addOne(readQuotedValue().toString)); collection
+  }
+
+  //--- read object members into mutable maps, using member names as keys and returning populated map
+
+  def readNextObjectMemberInto[V,C <:mutable.Map[String,V]](name: ByteSlice, collection: C)(f: =>(String,V)): C = {
+    foreachInNextObjectMember(name) {
+      val (k,v) = f
+      collection.addOne(k -> v)
+    }
+    collection
+  }
+  def readNextObjectInto[V,C <:mutable.Map[String,V]](collection: C)(f: =>(String,V)): C = {
+    foreachInNextObject {
+      val (k,v) = f
+      collection.addOne(k -> v)
+    }
+    collection
+  }
+  def readCurrentObjectInto[V,C <:mutable.Map[String,V]](collection: C)(f: =>(String,V)): C = {
+    foreachInCurrentObject {
+      val (k,v) = f
+      collection.addOne(k -> v)
+    }
+    collection
+  }
+
+
+  //--- high level interface - parse everything into a JsonValue tree (AST)
+
   def parseJsonValue: Option[JsonValue] = {
     var top: JsonValue = null
 
@@ -400,7 +631,7 @@ abstract class JsonPullParser {
     def _parseContainer (c: JsonContainer): Unit = {
       var cNext = c
       while (true) {
-        parseNextValue match {
+        readNext() match {
           case ArrayStart =>
             val v = new JsonArray
             _addToContainer(c,v)
@@ -428,119 +659,41 @@ abstract class JsonPullParser {
     }
 
     _parseContainer(null)
-    if (top != null) Some(top) else None
+    Option(top)
   }
 
-  //--- those can throw exceptions that have to be handled in the caller
+  //--- skip over content
 
-  @inline final def matchObjectStart = {
-    if (parseNextValue != ObjectStart) throw new JsonParseException("not on object start")
+  // this consumes the end delimiter
+  def skipPastAggregate(): Unit = {
+    skipToEndOfCurrentLevel()
+    readNext() // we know it's the right delimiter
   }
 
-  @inline final def matchObjectEnd = {
-    if (parseNextValue != ObjectEnd) throw new JsonParseException("not on object end")
-  }
-
-  @inline final def matchArrayStart = {
-    if (parseNextValue != ArrayStart) throw new JsonParseException("not on array start")
-  }
-
-  @inline final def matchArrayEnd = {
-    if (parseNextValue != ArrayEnd) throw new JsonParseException("not on array end")
-  }
-
-  @inline final def readQuotedValue: Utf8Slice = {
-    if (parseNextValue == QuotedValue) value else throw new JsonParseException(s"not a quoted value: '$value'")
-  }
-  @inline final def readQuotedMember(name: ByteSlice): Utf8Slice = {
-    val res = parseNextValue
-    if (member != name) throw new JsonParseException(s"expected member '$name' got '$member'")
-    if (res == QuotedValue) value else throw new JsonParseException(s"not a quoted value: '$value'")
-  }
-
-  @inline final def readUnQuotedValue: Utf8Slice = {
-    if (parseNextValue == UnQuotedValue) value else throw new JsonParseException(s"not a un-quoted value: ''$value''")
-  }
-  @inline final def readUnQuotedMember(name: ByteSlice): Utf8Slice = {
-    val res = parseNextValue
-    if (member != name) throw new JsonParseException(s"expected member '$name' got '$member'")
-    if (res == UnQuotedValue) value else throw new JsonParseException(s"not a un-quoted value: ''$value''")
-  }
-
-  @inline final def parseArrayStart: Boolean = parseNextValue == ArrayStart
-  @inline final def parseMemberArrayStart(name: ByteSlice): Boolean = (parseNextValue == ArrayStart && member == name)
-
-  @inline final def parseObjectStart: Boolean = parseNextValue == ObjectStart
-  @inline final def parseMemberObjectStart(name: ByteSlice): Boolean = (parseNextValue == ObjectStart && member == name)
-
-
-  def readMemberArray(name: ByteSlice)(f: =>Unit): Unit = {
-    if (readNextMemberValue(name) == ArrayStart) {
-      val endLevel = level
-      do {
-        f // this is supposed to parse ONE array element
-      } while (notDone && (level >= endLevel && elementHasMoreValues))
-      if (parseNextValue != ArrayEnd) throw new JsonParseException(s"invalid array termination for $name")
-    } else {
-      if (!value.isNullValue) throw new JsonParseException(s"not an array value for '$member'")
-    }
-  }
-  @inline final def readArray (f: => Unit): Unit = readMemberArray(MutUtf8Slice.empty)(f)
-
-
-  def readMemberObject(name: ByteSlice)(f: =>Unit): Unit = {
-    if (readNextMemberValue(name) == ObjectStart) {
-      val endLevel = level
-      f // this is supposed to call parseNextValue on ALL members of object (possibly skipping some)
-      if (notDone && (level != endLevel || parseNextValue != ObjectEnd)) throw new JsonParseException(s"object not parsed correctly: $name")
-    } else throw new JsonParseException(s"not an object value for '$member'")
-  }
-  @inline final def readObject(f: =>Unit): Unit = readMemberObject(MutUtf8Slice.empty)(f)
-
+  // note this does NOT consume the end delimiter
   def skipToEndOfLevel (lvl0: Int): Unit = {
-    var lvl = env.size
+    val curLevel = env.size
+    var lvl = curLevel
     val tgtLevel = if (isLevelStart) lvl0+1 else lvl0
     var i = idx
 
     while (true) {
       if (data(i) == '"') i = skipToEndOfString(i+1)
       if (i < limit) {
-        (data(i): @switch) match {
+        val b = data(i)
+        (b: @switch) match {
           case '{' | '[' =>
             lvl += 1
           case '}' | ']' =>
+            if (lvl < curLevel) { // if we go below where we started we have to clean up env and path
+              if (b == '}' && path.nonEmpty) path.pop()
+              state = popEnv()
+            }
             lvl -= 1
-            if (lvl < tgtLevel) { idx = i; return }
-          case _ =>
-        }
-        i += 1
-      } else { idx = i; return }
-    }
-  }
 
-  @inline def skipToEndOfCurrentLevel = skipToEndOfLevel(env.size)
-
-  def skip (nValues: Int): Unit = {
-    var lvl = env.size
-    val tgtLevel = if (isLevelStart) lvl+1 else lvl
-    var remaining = nValues
-    var i = if (data(idx)==',') idx+1 else idx
-
-    while (true) {
-      if (data(i) == '"') i = skipToEndOfString(i+1)
-      if (i < limit) {
-        (data(i): @switch) match {
-          case '{' | '[' =>
-            lvl += 1
-          case '}' | ']' =>
-            lvl -= 1
-            if (lvl < tgtLevel) { idx = i; return }
-          case ',' =>
-            if (lvl == tgtLevel) {
-              remaining -= 1
-              if (remaining == 0) {
-                idx = i; return
-              } else remaining -= 1
+            if (lvl < tgtLevel) {
+              idx = i
+              return
             }
           case _ =>
         }
@@ -549,10 +702,36 @@ abstract class JsonPullParser {
     }
   }
 
+  @inline def skipToEndOfCurrentLevel() = skipToEndOfLevel(env.size)
+
+  @inline def skipToEndOfParentLevel(): Unit = {
+    if (level > 0) skipToEndOfLevel(level-1) else skipToEndOfLevel(level)
+  }
+
+  def skipInCurrentLevel (nValues: Int): Unit = {
+    var nRemaining = nValues
+
+    while (nRemaining > 0 && !isLevelEnd) {
+      readNext() match {
+        case _:ScalarValue =>
+          nRemaining -= 1
+        case _:AggregateStart =>
+          nRemaining -= 1
+          skipPastAggregate()
+        case _ =>
+      }
+    }
+  }
+
   //--- internal methods
 
+  final protected def popEnv(): State = {
+    env.pop()
+    if (env.isEmpty) endState else env.top
+  }
+
   @inline final protected def checkMember (name: ByteSlice): Unit = {
-    if (member != name) throw new JsonParseException(s"expected member '$name' got '$member'")
+    if (member != name) throw exception(s"expected member '$name' got '$member'")
   }
 
   def context (i: Int, len: Int = 20): String = {
@@ -579,6 +758,7 @@ abstract class JsonPullParser {
     member.clear()
     value.clear()
     state = null
+    lastResult = NoValue
   }
 
   @inline protected final def isWs (c: Byte): Boolean = {
@@ -626,7 +806,7 @@ abstract class JsonPullParser {
     i
   }
 
-  protected def seekStart: Int = {
+  protected def seekStart(): Int = {
     val data = this.data
 
     var i = skipWs(0)
@@ -665,7 +845,7 @@ abstract class JsonPullParser {
       println()
     }
 
-    parseAllValues {
+    matchNext {
       case ArrayStart => printValue("ArrayStart")
       case ArrayEnd => printValue("ArrayEnd")
       case ObjectStart => printValue("ObjectStart")
@@ -683,7 +863,7 @@ abstract class JsonPullParser {
     def printMember = if (member.nonEmpty) ps.print(s""""$member": """)
 
     while (true) {
-      parseNextValue match {
+      readNext() match {
         case ArrayStart =>
           printIndent
           printMember
@@ -710,7 +890,7 @@ abstract class JsonPullParser {
           printIndent
           printMember
           if (isQuotedValue) ps.print(s""""$value"""") else ps.print(value)
-          if (elementHasMoreValues) ps.println(',') else ps.println
+          if (aggregateHasMoreValues) ps.println(',') else ps.println
 
         case NoValue => return
       }
@@ -726,7 +906,7 @@ class StringJsonPullParser extends JsonPullParser {
     clear()
     setData(s.getBytes)
 
-    idx = seekStart
+    idx = seekStart()
     idx >= 0
   }
 }
@@ -743,7 +923,7 @@ class BufferedStringJsonPullParser (initBufSize: Int = 8192) extends JsonPullPar
     clear()
     setData(bb.data, bb.len)
 
-    idx = seekStart
+    idx = seekStart()
     idx >= 0
   }
 }
@@ -760,7 +940,7 @@ class BufferedASCIIStringJsonPullParser (initBufSize: Int = 8192) extends JsonPu
     clear()
     setData(bb.data, bb.len)
 
-    idx = seekStart
+    idx = seekStart()
     idx >= 0
   }
 }
@@ -773,7 +953,7 @@ class UTF8JsonPullParser extends JsonPullParser {
     clear()
     setData(bs,limit)
 
-    idx = seekStart
+    idx = seekStart()
     idx >= 0
   }
 

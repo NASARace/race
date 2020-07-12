@@ -53,7 +53,7 @@ class TestRetryActor1 (val config: Config) extends RetryRaceActor {
       }
 
     case Done =>
-      if (processingOrder.size == M) sender ! Done
+      if (processingOrder.size == M) sender() ! Done
   }
 }
 

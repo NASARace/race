@@ -53,7 +53,7 @@ class FHTInterpolant1Spec extends AnyFlatSpec with RaceSpec with TInterpolant1Te
 
   def checkLinearIteration (it: Iterator[TDataPoint1]): Unit = {
     while (it.hasNext){
-      val p = it.next
+      val p = it.next()
       println(p)
       p._0 shouldBe( p.millis * 10.0 +- 0.0000001)
     }

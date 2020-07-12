@@ -57,22 +57,22 @@ class OpenSkyParser extends UTF8JsonPullParser with MutSrcTracksHolder[FlightPos
   override def createElements = new FlightPosSeqImpl(100)
 
   def parse (msg: Array[Byte], lim: Int): FlightPosSeq = {
-    def parseState: Unit = {
-      matchArrayStart
-      val icao = readQuotedValue.intern
-      val cs = readQuotedValue.intern
-      skip(1)
-      val timePos = readUnQuotedValue.toLong
-      skip(1)
-      val lon = readUnQuotedValue.toDoubleOrNaN
-      val lat = readUnQuotedValue.toDoubleOrNaN
-      val alt = readUnQuotedValue.toDoubleOrNaN
-      skip(1)
-      val spd = readUnQuotedValue.toDoubleOrNaN
-      val hdg = readUnQuotedValue.toDoubleOrNaN
-      val vr = readUnQuotedValue.toDoubleOrNaN
-      skipToEndOfCurrentLevel
-      matchArrayEnd
+    def parseState(): Unit = {
+      ensureNextIsArrayStart()
+      val icao = readQuotedValue().intern
+      val cs = readQuotedValue().intern
+      skipInCurrentLevel(1)
+      val timePos = readUnQuotedValue().toLong
+      skipInCurrentLevel(1)
+      val lon = readUnQuotedValue().toDoubleOrNaN
+      val lat = readUnQuotedValue().toDoubleOrNaN
+      val alt = readUnQuotedValue().toDoubleOrNaN
+      skipInCurrentLevel(1)
+      val spd = readUnQuotedValue().toDoubleOrNaN
+      val hdg = readUnQuotedValue().toDoubleOrNaN
+      val vr = readUnQuotedValue().toDoubleOrNaN
+      skipToEndOfCurrentLevel()
+      ensureNextIsArrayEnd()
 
       //println(f" $n%2d:  '$icao%10s', '$cs%10s', $timePos%12d,  ($lat%10.5f, $lon%10.5f), $alt%7.2f, $spd%5.2f, $hdg%3.0f, $vr%5.2f")
 
@@ -87,12 +87,12 @@ class OpenSkyParser extends UTF8JsonPullParser with MutSrcTracksHolder[FlightPos
     clearElements
 
     if (initialize(msg,lim)){
-      matchObjectStart
+      ensureNextIsObjectStart()
       val t = readUnQuotedMember(_time_).toLong
-      readMemberArray(_states_){
-        parseState
+      foreachInNextArrayMember(_states_){
+        parseState()
       }
-      matchObjectEnd
+      ensureNextIsObjectEnd()
     }
 
     elements

@@ -459,7 +459,23 @@ object ConstUtf8Slice {
   def apply (bs: Array[Byte], off: Int, len: Int) = new ConstUtf8Slice(bs,off,len)
   def apply (cs: CharSeqByteSlice) = new ConstUtf8Slice(cs.data,cs.off,cs.len)
 
+  @inline def utf8 (s: String): ConstUtf8Slice = apply(s)
+
   implicit def stringToConstUtf8Slice (s: String): ConstUtf8Slice = apply(s)
+
+  implicit class ConstUtf8Interpolator (sc: StringContext) {
+    def utf8 (subs: Any*): ConstUtf8Slice = {
+      val pit = sc.parts.iterator
+      val sit = subs.iterator
+      val sb = new java.lang.StringBuilder(pit.next())
+      while(sit.hasNext) {
+        sb.append(sit.next().toString)
+        sb.append(pit.next())
+      }
+      val bytes = sb.toString.getBytes
+      new ConstUtf8Slice(bytes,0,bytes.length)
+    }
+  }
 }
 
 /**
@@ -498,6 +514,16 @@ class MutUtf8Slice (var data: Array[Byte], var off: Int, var len: Int) extends U
   }
 
   def trimSelf: Unit = super.trimSelf(' ')
+
+  override def clear(): Unit = {
+    super.clear()
+    charLength = 0
+  }
+
+  override def clearRange(): Unit = {
+    super.clearRange()
+    charLength = 0
+  }
 }
 
 
@@ -578,14 +604,30 @@ trait AsciiSlice extends CharSeqByteSlice {
 }
 
 object ConstAsciiSlice {
-  def apply (bs: Array[Byte]) = new ConstAsciiSlice(bs,0,bs.length)
+  @inline def apply (bs: Array[Byte]) = new ConstAsciiSlice(bs,0,bs.length)
 
-  def apply (s: String): ConstAsciiSlice = {
+  @inline def apply (s: String): ConstAsciiSlice = {
     val data = s.getBytes
     new ConstAsciiSlice(data,0,data.length)
   }
 
+  @inline def asc (s:String): ConstAsciiSlice = apply(s)
+
   implicit def stringToConstAsciiSlice(s: String): ConstAsciiSlice = apply(s)
+
+  implicit class ConstAsciiInterpolator (sc: StringContext) {
+    def asc (subs: Any*): ConstAsciiSlice = {
+      val pit = sc.parts.iterator
+      val sit = subs.iterator
+      val sb = new java.lang.StringBuilder(pit.next())
+      while(sit.hasNext) {
+        sb.append(sit.next().toString)
+        sb.append(pit.next())
+      }
+      val bytes = sb.toString.getBytes
+      new ConstAsciiSlice(bytes,0,bytes.length)
+    }
+  }
 }
 
 /**

@@ -94,7 +94,7 @@ class FixParser extends StringJsonPullParser {
     }
 
     def parseFix: Unit = {
-      matchObjectStart
+      ensureNextIsObjectStart()
       val fixId = readQuotedMember(_fix_identifier_).toString
       val state = readQuotedMember(_state_).intern
 
@@ -110,17 +110,17 @@ class FixParser extends StringJsonPullParser {
         case _ => println(s"invalid fix description for id=$fixId: '$descr'")
       }
 
-      matchObjectEnd
+      ensureNextIsObjectEnd()
     }
 
     if (initialize(input)){
-      matchObjectStart
+      ensureNextIsObjectStart()
       val totalRows = readUnQuotedMember(_totalrows_).toInt
       val totalDisplayRows = readUnQuotedMember(_totaldisplayrows_).toInt
-      readMemberArray(_data_) {
+      foreachInNextArrayMember(_data_) {
         parseFix
       }
-      matchObjectEnd
+      ensureNextIsObjectEnd()
     }
     list
   }

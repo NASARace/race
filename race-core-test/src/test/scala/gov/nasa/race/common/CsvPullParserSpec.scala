@@ -62,7 +62,7 @@ class CsvPullParserSpec extends AnyFlatSpec with RaceSpec {
           print(p.value)
           if (p.hasMoreValues) print(',')
         }
-        println
+        println()
       }
     }
   }

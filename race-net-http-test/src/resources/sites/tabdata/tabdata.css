@@ -10,8 +10,8 @@
   scrollbar thumb lengths
 **/
 
-div {
---max-lines: 10;
+div#scrollContainer {
+--max-lines: 15;
 --cell-height: 1.4rem;
 --cell-padding: 0.2rem;
 --cell-width: 7rem;
@@ -45,6 +45,14 @@ div.chrome { /* chrome has scrollbar outside div */
   height: var(--scrollbar-width);
   border-radius: 3px;
   background-color: rgba(0,0,0,0.2);
+}
+
+.float_left {
+  float: left;
+}
+
+.float_right {
+  float: right;
 }
 
 table {
@@ -107,6 +115,43 @@ thead th.dtg {
   cursor: cell;
 }
 
+tr.header {
+  background-color: var(--th-background);
+}
+
+div.toolbar {
+  min-width: 30rem;
+  width: 100%;
+  margin-right: 1rem;
+  margin-bottom: 0.5rem;
+  padding: 0.3rem;
+  box-sizing: border-box;
+  background-clip: border-box;
+  background-color: #eaeaea;
+  position: relative;
+  display: inline-block;
+  border: 1px solid #404040;
+}
+
+span.infoblock {
+  margin-left: 2rem;
+  display: inline-block;
+  float: right;
+  text-align: right;
+  color: green;
+  /* font-size: small; */
+}
+
+label {
+  display: inline-block;
+  width: 4rem;
+  text-align: right;
+}
+
+input#lines {
+  width: 2.5rem;
+}
+
 input.field {
   text-align: right;
   background-color: rgb(255,255,225);
@@ -160,6 +205,7 @@ tbody th {
   left: 0;
   min-width: 0;
   width: auto;
+  white-space: nowrap;
   text-align: left;
   color: var(--th-color);
   background-color: var(--th-background);
@@ -167,11 +213,4 @@ tbody th {
   border-right: 1px solid black;
   border-bottom: 1px solid lightgray;
   z-index: 2;
-}
-
-div.toolbar {
-  padding: 0.3rem;
-  background-clip: border-box;
-  background-color: #eaeaea;
-  border-right: 1px solid black;
 }
