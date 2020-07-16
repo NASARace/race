@@ -599,6 +599,15 @@ abstract class JsonPullParser extends LogWriter with Thrower {
     }
     collection
   }
+  def readSomeNextObjectMemberInto[V,C <:mutable.Map[String,V]](name: ByteSlice, collection: C)(f: =>Option[(String,V)]): C = {
+    foreachInNextObjectMember(name) {
+      f match {
+        case Some((k,v)) => collection.addOne(k -> v)
+        case None => // skip
+      }
+    }
+    collection
+  }
   def readNextObjectInto[V,C <:mutable.Map[String,V]](collection: C)(f: =>(String,V)): C = {
     foreachInNextObject {
       val (k,v) = f
@@ -606,10 +615,28 @@ abstract class JsonPullParser extends LogWriter with Thrower {
     }
     collection
   }
+  def readSomeNextObjectInto[V,C <:mutable.Map[String,V]](collection: C)(f: =>Option[(String,V)]): C = {
+    foreachInNextObject {
+      f match {
+        case Some((k,v)) => collection.addOne(k -> v)
+        case None => // skip
+      }
+    }
+    collection
+  }
   def readCurrentObjectInto[V,C <:mutable.Map[String,V]](collection: C)(f: =>(String,V)): C = {
     foreachInCurrentObject {
       val (k,v) = f
       collection.addOne(k -> v)
+    }
+    collection
+  }
+  def readSomeCurrentObjectInto[V,C <:mutable.Map[String,V]](collection: C)(f: =>Option[(String,V)]): C = {
+    foreachInCurrentObject {
+      f match {
+        case Some((k,v)) => collection.addOne(k -> v)
+        case None => // skip
+      }
     }
     collection
   }

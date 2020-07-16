@@ -85,6 +85,30 @@ object DateTimeUtils {
 
   def timeTag(d: FiniteDuration): Long = System.currentTimeMillis() / (d.toMillis)
 
+  // Scala's Duration.create(s) is not permissive enough - it expects String input and only recognizes one unit
+  val infRE = """[iI]nf|[nN]ever""".r
+  val zeroRE = """[zZ]ero""".r
+
+  val daysRE = """(\d+)d(?:$|\s|ay)""".r
+  val hoursRE = """(\d+)h(?:$|\s|our)""".r
+  val minutesRE = """(\d+)m(?:$|\s|in)""".r
+  val secondsRE = """(\d+)s(?:$|\s|ec)""".r
+  val millisRE = """(\d+)m(?:s$|s\s|sec|illi)""".r
+
+  def parseDuration (durSpec: CharSequence): Duration = {
+    var ns: Long = 0
+
+    if (zeroRE.findFirstIn(durSpec).isDefined) return Duration.Zero
+    if (infRE.findFirstIn(durSpec).isDefined) return Duration.Inf
+
+    daysRE.findFirstMatchIn(durSpec).map(_.group(1)).foreach( ns += _.toLong * 86400000000000L)
+    hoursRE.findFirstMatchIn(durSpec).map(_.group(1)).foreach( ns += _.toLong * 3600000000000L)
+    minutesRE.findFirstMatchIn(durSpec).map(_.group(1)).foreach( ns += _.toLong * 60000000000L)
+    secondsRE.findFirstMatchIn(durSpec).map(_.group(1)).foreach( ns += _.toLong * 1000000000L)
+    millisRE.findFirstMatchIn(durSpec).map(_.group(1)).foreach( ns += _.toLong * 1000000L)
+
+    Duration.fromNanos(ns)
+  }
 
   //--- epoch dissection
 

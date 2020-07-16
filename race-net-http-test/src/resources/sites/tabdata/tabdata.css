@@ -10,7 +10,7 @@
   scrollbar thumb lengths
 **/
 
-div#scrollContainer {
+body {
 --max-lines: 15;
 --cell-height: 1.4rem;
 --cell-padding: 0.2rem;
@@ -20,6 +20,14 @@ div#scrollContainer {
 --div-width: 100vw;
 --div-height: calc(var(--max-lines)*var(--cell-height));
 
+--th-background: #eaeaea;
+--th-color: black;
+--hover-color: rgba(0,200,0, 0.2);
+
+  font-family: arial;
+}
+
+div#tableContainer {
   box-sizing: border-box;
   max-width: var(--div-width);
   max-height: var(--div-height);
@@ -47,6 +55,8 @@ div.chrome { /* chrome has scrollbar outside div */
   background-color: rgba(0,0,0,0.2);
 }
 
+/* general classes */
+
 .float_left {
   float: left;
 }
@@ -55,11 +65,15 @@ div.chrome { /* chrome has scrollbar outside div */
   float: right;
 }
 
-table {
---th-background: #eaeaea;
---th-color: black;
---hover-color: rgba(0,200,0, 0.2);
+.selected {
+  background-color: var(--hover-color);
+  cursor: cell;
+}
 
+
+/* table elements */
+
+table {
   position: relative;
   border-collapse: separate;
   border-spacing: 0px;
@@ -75,7 +89,6 @@ td, th {
   color: #000;
   background-clip: padding-box;
 }
-
 
 td {
   font-family: monospace;
@@ -110,18 +123,120 @@ thead th.dtg {
   border-bottom: 1px solid black;
 }
 
-.selected {
-  background-color: var(--hover-color);
-  cursor: cell;
+td.editable {
+  color: blue;
+  padding: 0.2rem;
+}
+
+thead th:first-child {
+  left: 0;
+  z-index: 4;
+  min-width: 0;
+  width: auto;
+  border-right: 1px solid black;
+}
+
+tbody th {
+  position: -webkit-sticky; /* for Safari */
+  position: sticky;
+  left: 0;
+  min-width: 0;
+  width: auto;
+  white-space: nowrap;
+  text-align: left;
+  font-weight: normal;
+  font-size: 90%;
+  color: var(--th-color);
+  background-color: var(--th-background);
+  background-clip: padding-box;
+  border-right: 1px solid black;
+  border-bottom: 1px solid lightgray;
+  z-index: 2;
 }
 
 tr.header {
   background-color: var(--th-background);
 }
 
+tr.header td {
+  color: blue;
+}
+
+/* in-box text input labels */
+
+.input-group {
+  position: relative;
+  display: inline-block;
+}
+
+.input-text {
+  padding: 10px 2px 2px 5px;
+  width: 7rem;
+  height: 1.5rem;
+  border: 1px solid lightgray;
+  font-size: 90%;
+}
+
+.input-label {
+  position: absolute;
+  top: 1px;
+  left: 3px;
+  font-size: 12px;
+  color: gray;
+  text-align: left;
+}
+
+input.num {
+  width: 2.5rem;
+}
+
+/* title bar */
+
+div.titlebar {
+  padding: 1rem;
+}
+
+label.title-label {
+  display: inline-block;
+  text-align: right;
+  width: 6rem;
+  font-size: normal;
+}
+
+span.title-text {
+  text-align: left;
+  font-size: larger;
+  font-weight: 600;
+}
+
+/* other controls */
+
+div#logContainer {
+  box-sizing: border-box;
+  padding: 3px 0.9rem 3px 3px;  /* to account for scroll bar width - scrollbar is only inside div for firefox and safari */
+  width: 40rem;
+  min-height: 4rem;
+  max-height: 4rem;
+  margin: 1rem 0 0 0;
+  position: relative;
+  overflow: auto;
+  border: 1px solid #404040;
+
+  /* display: inline-block;  */
+}
+
+span.log-time {
+  font-family: monospace;
+  color: blue;
+  padding-right: 0.5rem;
+}
+
+span.log-msg {
+  font-size: small;
+}
+
 div.toolbar {
-  min-width: 30rem;
-  width: 100%;
+  /* width: 100%; */
   margin-right: 1rem;
   margin-bottom: 0.5rem;
   padding: 0.3rem;
@@ -133,13 +248,12 @@ div.toolbar {
   border: 1px solid #404040;
 }
 
-span.infoblock {
-  margin-left: 2rem;
-  display: inline-block;
-  float: right;
-  text-align: right;
+div.infoblock {
+  padding: 3px;
+  min-height: 1rem;
+  min-width: 1rem;
   color: green;
-  /* font-size: small; */
+  font-size: small;
 }
 
 label {
@@ -148,9 +262,23 @@ label {
   text-align: right;
 }
 
-input#lines {
-  width: 2.5rem;
+.button {
+  height: 1.6rem;
+  font-size: 90%;
+  vertical-align: middle;
 }
+
+.button:hover {
+  background-color: rgba(0,0,255,0.1);
+}
+
+.button:active {
+  background-color: rgba(0,0,255,0.3);
+  /* box-shadow: 3px 3px #404040; */
+  /* transform: translate(2px,2px); */
+}
+
+/* cell editing text inputs */
 
 input.field {
   text-align: right;
@@ -176,41 +304,4 @@ input.field.reported {
   color: green;
 }
 
-.button:hover {
-  background-color: rgba(0,0,255,0.1);
-}
 
-.button:active {
-  background-color: rgba(0,0,255,0.3);
-  /* box-shadow: 3px 3px #404040; */
-  /* transform: translate(2px,2px); */
-}
-
-td.editable {
-  color: blue;
-  padding: 0.2rem;
-}
-
-thead th:first-child {
-  left: 0;
-  z-index: 4;
-  min-width: 0;
-  width: auto;
-  border-right: 1px solid black;
-}
-
-tbody th {
-  position: -webkit-sticky; /* for Safari */
-  position: sticky;
-  left: 0;
-  min-width: 0;
-  width: auto;
-  white-space: nowrap;
-  text-align: left;
-  color: var(--th-color);
-  background-color: var(--th-background);
-  background-clip: padding-box;
-  border-right: 1px solid black;
-  border-bottom: 1px solid lightgray;
-  z-index: 2;
-}

@@ -20,7 +20,10 @@ import java.util.function.IntConsumer
 import java.util.stream.{IntStream, StreamSupport}
 import java.util.{NoSuchElementException, PrimitiveIterator, Spliterator, Spliterators}
 
+import gov.nasa.race.util.DateTimeUtils
+
 import scala.annotation.switch
+import scala.concurrent.duration.Duration
 import scala.language.implicitConversions
 
 
@@ -165,11 +168,10 @@ trait CharSeqByteSlice extends ByteSlice with CharSequence {
     n
   }
 
+  @inline final def isDigit(b: Byte): Boolean = b >= '0' && b <= '9'
+  @inline final def digitValue(b: Byte): Int = b - '0'
+
   def toLong: Long = {
-
-    @inline def isDigit(b: Byte): Boolean = b >= '0' && b <= '9'
-    @inline def digitValue(b: Byte): Int = b - '0'
-
     var i = off
     val iMax = i + len
     val bs = this.data
@@ -203,6 +205,31 @@ trait CharSeqByteSlice extends ByteSlice with CharSequence {
     }
 
     n
+  }
+
+  /**
+    * return if this is a (potentially signed) number and it has exactly one '.'
+    */
+  def isRationalNumber: Boolean = {
+    var i = off
+    val iMax = i + len
+    val bs = this.data
+    var isRational = false
+
+    if (bs(i) == '-' || bs(i) == '+') i += 1 // skip over optional sign
+
+    while (i < iMax) {
+      val b = bs(i)
+      if (b == '.') {
+        if (isRational) return false // two '.'
+        isRational = true
+      } else {
+        if (!isDigit(b)) return false;
+      }
+      i += 1
+    }
+
+    isRational
   }
 
   def toInt: Int = {
@@ -350,6 +377,10 @@ trait CharSeqByteSlice extends ByteSlice with CharSequence {
   // trim leading and trailing double quotes and replace escape sequences
   def literalToString: String = toEscString(off+1,len-2)
 
+  def toDuration: Duration = {
+    DateTimeUtils.parseDuration(this)
+  }
+
   // to be provided by concrete type
   def createSubSequence (subOff: Int, subLen: Int): CharSeqByteSlice
 }
@@ -421,14 +452,16 @@ trait Utf8Slice extends CharSeqByteSlice {
     } else false
   }
 
-  // start and end a char indices
+  // NOTE start and end are char indices
   override def subSequence(start: Int, end: Int): CharSequence = {
     if (start < 0) throw new IndexOutOfBoundsException(s"negative start char index $start out of bounds")
     if (end < start) throw new IndexOutOfBoundsException(s"end char index $end lower than start index $start")
 
     reset
     val iMax = off+len
-    var biStart = 0
+    var biStart = off
+    var biEnd = 0
+
     while (nci < start){
       checkBounds(start)
       biStart = decoder.nextByteIndex
@@ -438,10 +471,10 @@ trait Utf8Slice extends CharSeqByteSlice {
 
     while (nci < end) {
       checkBounds(end)
+      biEnd = decoder.nextByteIndex
       decoder = decoder.next(data,iMax)
       nci += 1
     }
-    val biEnd = decoder.nextByteIndex
 
     reset
     createSubSequence(biStart, biEnd-biStart)

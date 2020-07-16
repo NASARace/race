@@ -224,6 +224,12 @@ class JsonWriter (jsonType: ElementType = JsonWriter.RawElements, initSize: Int 
     this
   }
 
+  @inline final def writeUnQuotedValue(s: String): JsonWriter = {
+    checkAndArmSeparator
+    buf.append(s)
+    this
+  }
+
   @inline final def writeInt (v: Int): JsonWriter = {
     checkAndArmSeparator
     buf.append(v);

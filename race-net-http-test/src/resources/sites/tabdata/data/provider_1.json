@@ -7,8 +7,8 @@
     "/cat_A/field_2": 12,
     "/cat_A/field_3": 13,
 
-    "/cat_B/field_1": 110,
-    "/cat_B/field_2": 120,
+    "/cat_B/field_1": 110.0,
+    "/cat_B/field_2": 120.0,
 
     "/cat_C/field_1": 1100,
     "/cat_C/field_2": 1200,

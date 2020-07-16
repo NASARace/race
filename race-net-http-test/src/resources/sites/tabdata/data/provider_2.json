@@ -6,8 +6,10 @@
     "/cat_A/field_1": 21,
     "/cat_A/field_2": 22,
     "/cat_A/field_3": 23,
-    "/cat_B/field_1": 210,
-    "/cat_B/field_2": 220,
+
+    "/cat_B/field_1": 210.21,
+    "/cat_B/field_2": 220.22,
+
     "/cat_C/field_1": 2100,
     "/cat_C/field_2": 2200,
     "/cat_C/field_3": 2300,

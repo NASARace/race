@@ -25,7 +25,7 @@ import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.{PathMatchers, Route}
 import com.typesafe.config.Config
 import gov.nasa.race.common.ConstAsciiSlice.asc
-import gov.nasa.race.common.{BufferedStringJsonPullParser, JsonParseException, JsonWriter, UTF8JsonPullParser}
+import gov.nasa.race.common.{BufferedStringJsonPullParser, CharSeqByteSlice, JsonParseException, JsonWriter, UTF8JsonPullParser}
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.Messages.BusEvent
 import gov.nasa.race.core.{DataConsumerRaceActor, ParentActor, RaceDataConsumer, RaceException}
@@ -33,9 +33,10 @@ import gov.nasa.race.http.TabDataService._
 import gov.nasa.race.uom.DateTime
 import gov.nasa.race.util.FileUtils
 
-import scala.collection.immutable.Iterable
+import scala.collection.immutable.{Iterable, ListMap}
 import scala.collection.mutable.ArrayBuffer
 import scala.collection.{immutable, mutable}
+import scala.concurrent.duration.Duration
 
 /*
  * a generic web application service that pushes provider data to connected clients through a web socket
@@ -50,35 +51,106 @@ import scala.collection.{immutable, mutable}
 object TabDataService {
 
   //--- internal data model
-  sealed trait FieldType {
-    def typeName: String
-  }
-  case object IntegerFieldType extends FieldType {
-    def typeName = "int"
-  }
-  case object RationalFieldType extends FieldType {
-    def typeName = "rat"
-  }
 
   sealed trait FieldValue {
     def toLong: Long
     def toDouble: Double
+    def toJson: String
   }
-  case class IntegerField (value: Long) extends FieldValue {
+  case class LongValue(value: Long) extends FieldValue {
     def toLong: Long = value
     def toDouble: Double = value.toDouble
+    def toJson = value.toString
   }
-  case class RationalField (value: Double) extends FieldValue {
+  case class DoubleValue(value: Double) extends FieldValue {
     def toLong: Long = Math.round(value)
     def toDouble: Double = value
+    def toJson = value.toString
   }
 
-  case class Field (id: String, fieldType: FieldType, info: String, header: Option[String])
-  case class Provider (id: String, info: String)
+  sealed trait Field {
+    val id: String
+    val info: String
+    val header: Option[String]
 
-  case class FieldCatalog (rev: Int, fields: Seq[Field])
-  case class ProviderCatalog (rev: Int, providers: Seq[Provider])
-  case class ProviderData(id: String, rev: Int, date: DateTime, fieldValues: immutable.Map[String,Int])
+    def valueFrom(bs: CharSeqByteSlice): FieldValue
+    def typeName: String
+
+    def serializeTo (w:JsonWriter): Unit = {
+      w.writeObject { w=>
+        w.writeStringMember("id", id)
+        w.writeStringMember("info", info)
+        w.writeStringMember("type", typeName)
+        header.foreach( w.writeStringMember("header", _))
+      }
+    }
+  }
+  sealed trait FieldType {
+    def instantiate (id: String, info: String, header: Option[String]): Field
+    def typeName: String
+  }
+
+  object LongField extends FieldType {
+    def instantiate (id: String, info: String, header: Option[String]): Field = LongField(id,info,header)
+    def typeName: String = "integer"
+  }
+  case class LongField (id: String, info: String, header: Option[String]) extends Field {
+    def valueFrom (bs: CharSeqByteSlice) = LongValue(bs.toLong)
+    def typeName = LongField.typeName
+  }
+
+  object DoubleField extends FieldType {
+    def instantiate (id: String, info: String, header: Option[String]): Field = DoubleField(id,info,header)
+    def typeName: String = "rational"
+  }
+  case class DoubleField (id: String, info: String, header: Option[String]) extends Field {
+    def valueFrom (bs: CharSeqByteSlice) = DoubleValue(bs.toDouble)
+    def typeName = DoubleField.typeName
+  }
+
+  case class Provider (id: String, info: String, update: Duration) {
+    def serializeTo (w: JsonWriter): Unit = {
+      w.writeObject { w=>
+        w.writeStringMember("id", id)
+        w.writeStringMember("info", info)
+        w.writeLongMember("update", update.toMillis)
+      }
+    }
+  }
+
+  case class FieldCatalog (title: String, rev: Int, fields: ListMap[String,Field]) {
+    def serializeTo (w: JsonWriter): Unit = {
+      w.clear.writeObject( _
+        .writeMemberObject("fieldCatalog") { _
+          .writeStringMember("title", title)
+          .writeIntMember("rev", rev)
+          .writeArrayMember("fields"){ w=>
+            for (field <- fields.valuesIterator){
+              field.serializeTo(w)
+            }
+          }
+        }
+      )
+    }
+  }
+
+  case class ProviderCatalog (title: String, rev: Int, providers: ListMap[String,Provider]) {
+    def serializeTo (w: JsonWriter): Unit = {
+      w.clear.writeObject(
+        _.writeMemberObject("providerCatalog") {
+          _.writeStringMember("title", title)
+            .writeIntMember("rev", rev)
+            .writeArrayMember("providers") { w =>
+              for (provider <- providers.valuesIterator) {
+                provider.serializeTo(w)
+              }
+            }
+        }
+      )
+    }
+  }
+
+  case class ProviderData(id: String, rev: Int, date: DateTime, fieldValues: immutable.Map[String,FieldValue])
 
   type PermSpec = (String,String)  // regular expressons for provider- and related field- patterns
   type Perms = Seq[PermSpec]
@@ -87,24 +159,29 @@ object TabDataService {
   //--- incoming message types
   sealed trait IncomingMessage
   case class RequestUserPermissions (uid: String, pw: Array[Byte]) extends IncomingMessage
-  case class ProviderChange (uid: String, pw: Array[Byte], date: DateTime, provider: String, fieldValues: Seq[(String,Int)]) extends IncomingMessage
+  case class ProviderChange (uid: String, pw: Array[Byte], date: DateTime, provider: String, fieldValues: Seq[(String,FieldValue)]) extends IncomingMessage
 }
 
-class FieldCatalogParser extends UTF8JsonPullParser {
+object FieldCatalogParser {
   //--- lexical constants
+  private val _title_     = asc("title")
   private val _rev_       = asc("rev")
   private val _fields_    = asc("fields")
   private val _id_        = asc("id")
   private val _type_      = asc("type")
-  private val _integer_   = asc(IntegerFieldType.typeName)
-  private val _rational_  = asc(RationalFieldType.typeName)
+  private val _integer_   = asc(LongField.typeName)
+  private val _rational_  = asc(DoubleField.typeName)
   private val _info_      = asc("info")
   private val _header_    = asc("header")
+}
+
+class FieldCatalogParser extends UTF8JsonPullParser {
+  import FieldCatalogParser._
 
   private def readFieldType (): FieldType = {
     val v = readQuotedMember(_type_)
-    if (v == _integer_) IntegerFieldType
-    else if (v == _rational_) RationalFieldType
+    if (v == _integer_) LongField
+    else if (v == _rational_) DoubleField
     else throw exception(s"unknown field type: $v")
   }
 
@@ -122,17 +199,21 @@ class FieldCatalogParser extends UTF8JsonPullParser {
     initialize(buf)
     try {
       readNextObject {
+        val title = readQuotedMember(_title_).toString
         val rev = readUnQuotedMember(_rev_).toInt
-        val fields = readNextArrayMemberInto(_fields_,new ArrayBuffer[Field]){
-          readNextObject {
+
+        var fields = ListMap.empty[String,Field]
+        foreachInNextArrayMember(_fields_) {
+          val field = readNextObject {
             val id = readQuotedMember(_id_).toString
             val fieldType = readFieldType()
             val info = readQuotedMember(_info_).toString
             val header = readOptionalHeader()
-            Field(id,fieldType,info,header)
+            fieldType.instantiate(id,info,header)
           }
-        }.toSeq
-        Some(FieldCatalog(rev,fields))
+          fields = fields + (field.id -> field)
+        }
+        Some(FieldCatalog(title,rev,fields))
       }
     } catch {
       case x: JsonParseException =>
@@ -142,26 +223,37 @@ class FieldCatalogParser extends UTF8JsonPullParser {
   }
 }
 
-class ProviderCatalogParser extends UTF8JsonPullParser {
+object ProviderCatalogParser {
   //--- lexical constants
+  private val _title_     = asc("title")
   private val _rev_ = asc("rev")
   private val _providers_ = asc("providers")
   private val _id_ = asc("id")
   private val _info_ = asc("info")
+  private val _update_ = asc("update")
+}
+
+class ProviderCatalogParser extends UTF8JsonPullParser {
+  import ProviderCatalogParser._
 
   def parse (buf: Array[Byte]): Option[ProviderCatalog] = {
     initialize(buf)
     try {
       readNextObject {
+        val title = readQuotedMember(_title_).toString
         val rev = readUnQuotedMember(_rev_).toInt
-        val providers = readNextArrayMemberInto(_providers_,new ArrayBuffer[Provider]){
+
+        var providers = ListMap.empty[String,Provider]
+        foreachInNextArrayMember(_providers_) {
           readNextObject {
             val id = readQuotedMember(_id_).toString
             val info = readQuotedMember(_info_).toString
-            Provider(id, info)
+            val update = readQuotedMember(_update_)
+            val provider = Provider(id, info, update.toDuration)
+            providers = providers + (id -> provider)
           }
-        }.toSeq
-        Some(ProviderCatalog(rev,providers))
+        }
+        Some(ProviderCatalog(title,rev,providers))
       }
 
     } catch {
@@ -172,7 +264,7 @@ class ProviderCatalogParser extends UTF8JsonPullParser {
   }
 }
 
-class ProviderDataParser extends UTF8JsonPullParser {
+class ProviderDataParser (fieldCatalog: FieldCatalog) extends UTF8JsonPullParser {
   private val _id_ = asc("id")
   private val _rev_ = asc("rev")
   private val _date_ = asc("date")
@@ -186,9 +278,13 @@ class ProviderDataParser extends UTF8JsonPullParser {
       val id = readQuotedMember(_id_).toString
       val rev = readUnQuotedMember(_rev_).toInt
       val date = DateTime.parseYMDT(readQuotedMember(_date_))
-      val fieldValues = readNextObjectMemberInto[Int,mutable.Map[String,Int]](_fieldValues_,mutable.Map.empty){
-        val value = readUnQuotedValue().toInt
-        (member.toString,value)
+      val fieldValues = readSomeNextObjectMemberInto[FieldValue,mutable.Map[String,FieldValue]](_fieldValues_,mutable.Map.empty){
+        val v = readUnQuotedValue()
+        val fieldId = member.toString
+        fieldCatalog.fields.get(fieldId) match {
+          case Some(field) => Some((fieldId,field.valueFrom(v)))
+          case None => warning(s"skipping unknown field $fieldId"); None
+        }
       }.toMap
 
       Some(ProviderData(id,rev,date,fieldValues))
@@ -238,7 +334,7 @@ class UserPermissionsParser extends UTF8JsonPullParser {
 /**
   * parser for messages received from websocket clients
   */
-class IncomingMessageParser extends BufferedStringJsonPullParser {
+class IncomingMessageParser (fieldCatalog: FieldCatalog, providerCatalog: ProviderCatalog) extends BufferedStringJsonPullParser {
   //--- lexical constants
   private val _date_ = asc("date")
   private val _requestUserPermissions_ = asc("requestUserPermissions")
@@ -272,17 +368,22 @@ class IncomingMessageParser extends BufferedStringJsonPullParser {
     Some(RequestUserPermissions(uid,pw))
   }
 
-  // {"providerChange":{  "<uid>":[byte..], "date":<long>, "<provider>":{ "<field>": <int>, .. }}
+  // {"providerChange":{  "<uid>":[byte..], "date":<long>, "<provider>":{ "<field>": <value>, .. }}
   def parseProviderChange (msg: String): Option[ProviderChange] = {
-    var fieldValues: Seq[(String,Int)] = Seq.empty
+    var fieldValues = Seq.empty[(String,FieldValue)]
 
     val uid = readArrayMemberName().toString
     val pw = readCurrentByteArrayInto(new ArrayBuffer[Byte]).toArray
     val date = DateTime.ofEpochMillis(readUnQuotedMember(_date_).toLong)
     val providerName = readObjectMemberName().toString
+    // TODO - we could check for valid providers here
     foreachInCurrentObject {
-      val n = readUnQuotedValue().toInt
-      fieldValues = fieldValues :+ (member.toString,n)
+      val v = readUnQuotedValue()
+      val fieldId = member.toString
+      fieldCatalog.fields.get(fieldId) match {
+        case Some(field) => fieldValues = fieldValues :+ (fieldId -> field.valueFrom(v))
+        case None => warning(s"skipping unknown field $fieldId")
+      }
     }
 
     Some(ProviderChange(uid,pw,date,providerName,fieldValues))
@@ -300,7 +401,7 @@ class TabDataServiceActor (_dc: RaceDataConsumer, _conf: Config) extends DataCon
 
   var fieldCatalog: FieldCatalog = readFieldCatalog
   var providerCatalog: ProviderCatalog = readProviderCatalog
-  val providerData = readProviderData
+  val providerData = readProviderData(fieldCatalog,providerCatalog)
 
   //--- actor interface
 
@@ -342,15 +443,15 @@ class TabDataServiceActor (_dc: RaceDataConsumer, _conf: Config) extends DataCon
     }
   }
 
-  def readProviderData: mutable.Map[String,ProviderData] = {
+  def readProviderData (fCatalog: FieldCatalog, pCatalog: ProviderCatalog): mutable.Map[String,ProviderData] = {
     val map = mutable.Map.empty[String,ProviderData]
 
     val dataDir = config.getExistingDir("provider-data")
-    for (p <- providerCatalog.providers) {
-      val id = p.id
+    for (p <- pCatalog.providers) {
+      val id = p._1
       val f = new File(dataDir, s"$id.json")
       if (f.isFile) {
-        val parser = new ProviderDataParser
+        val parser = new ProviderDataParser(fCatalog)
         parser.setLogging(info,warning,error)
         parser.parse(FileUtils.fileContentsAsBytes(f).get) match {
           case Some(providerData) =>
@@ -360,7 +461,7 @@ class TabDataServiceActor (_dc: RaceDataConsumer, _conf: Config) extends DataCon
         }
       } else {
         warning(s"no provider data for '$id'")
-        map += id -> ProviderData(id,0,DateTime.now,Map.empty[String,Int])
+        map += id -> ProviderData(id,0,DateTime.now,Map.empty[String,FieldValue])
       }
     }
 
@@ -374,10 +475,12 @@ class TabDataServiceActor (_dc: RaceDataConsumer, _conf: Config) extends DataCon
         var fv = p.fieldValues
 
         for (e <- change.fieldValues) {
-          val fieldName = e._1
-          if (fieldCatalog.fields.find( _.id == fieldName).isDefined) { // is it a field we know
-            fv = fv + (fieldName -> e._2)
-            nChanged += 1
+          val fieldId = e._1
+          fieldCatalog.fields.get(fieldId) match {
+            case Some(field) =>
+              fv = fv + (fieldId -> e._2)
+              nChanged += 1
+            case None => warning(s"ignoring unknown field change $fieldId")
           }
         }
         if (nChanged > 0){
@@ -403,9 +506,11 @@ class TabDataService (parent: ParentActor, config: Config) extends SiteRoute(par
   val wsPath = s"$requestPrefix/ws"
   val wsPathMatcher = PathMatchers.separateOnSlashes(wsPath)
 
-  val parser = new IncomingMessageParser
-  parser.setLogging(info,warning,error)
+  var parser: Option[IncomingMessageParser] = None // we can't parse until we have catalogs
   val writer = new JsonWriter
+
+  var providerCatalog: Option[ProviderCatalog] = None
+  var fieldCatalog: Option[FieldCatalog] = None
 
   // we store the data in a format that is ready to send
   var fieldCatalogMessage: Option[TextMessage] = None
@@ -424,37 +529,13 @@ class TabDataService (parent: ParentActor, config: Config) extends SiteRoute(par
   }
 
   def serializeFieldCatalog (fieldCatalog: FieldCatalog): String = {
-    writer.clear.writeObject( _
-      .writeMemberObject("fieldCatalog") { _
-        .writeIntMember("rev", fieldCatalog.rev)
-        .writeArrayMember("fields"){ w=>
-          for (field <- fieldCatalog.fields){
-            w.beginObject
-            w.writeStringMember("id",field.id)
-            w.writeStringMember("info", field.info)
-            w.writeStringMember("type", field.fieldType.typeName)
-            field.header.foreach( w.writeStringMember("header",_))
-            w.endObject
-          }
-        }
-      }
-    ).toJson
+    fieldCatalog.serializeTo(writer)
+    writer.toJson
   }
 
   def serializeProviderCatalog (providerCatalog: ProviderCatalog): String = {
-    writer.clear.writeObject( _
-      .writeMemberObject("providerCatalog") { _
-        .writeIntMember("rev", providerCatalog.rev)
-        .writeArrayMember("providers"){ w=>
-          for (provider <- providerCatalog.providers){
-            w.beginObject
-            w.writeStringMember("id", provider.id)
-            w.writeStringMember("info", provider.info)
-            w.endObject
-          }
-        }
-      }
-    ).toJson
+    providerCatalog.serializeTo(writer)
+    writer.toJson
   }
 
   def serializeProviderData (providerData: ProviderData): String = {
@@ -463,7 +544,12 @@ class TabDataService (parent: ParentActor, config: Config) extends SiteRoute(par
         .writeStringMember("id", providerData.id)
         .writeIntMember("rev", providerData.rev)
         .writeLongMember("date", providerData.date.toEpochMillis)
-        .writeIntMembersMember("fieldValues", providerData.fieldValues)
+        .writeMemberObject("fieldValues") { w =>
+          providerData.fieldValues.foreach { fv =>
+            w.writeMemberName(fv._1)
+            w.writeUnQuotedValue(fv._2.toJson)
+          }
+        }
       }
     ).toJson
   }
@@ -479,6 +565,18 @@ class TabDataService (parent: ParentActor, config: Config) extends SiteRoute(par
 
   override protected def instantiateActor: DataConsumerRaceActor = new TabDataServiceActor(this,config)
 
+  protected def createIncomingMessageParser: Option[IncomingMessageParser] = {
+    for ( fc <- fieldCatalog; pc <- providerCatalog) yield {
+      val p = new IncomingMessageParser(fc,pc)
+      p.setLogging(info,warning,error)
+      p
+    }
+  }
+
+  /**
+    * this is called from our actor
+    * NOTE this is executed async - avoid data races
+    */
   override def setData (data:Any): Unit = {
     data match {
       case p: ProviderData =>
@@ -486,14 +584,18 @@ class TabDataService (parent: ParentActor, config: Config) extends SiteRoute(par
         providerDataMessage.put(p.id,msg)
         push(msg)
 
-      case p: ProviderCatalog =>
-        val msg = TextMessage(serializeProviderCatalog(p))
+      case c: ProviderCatalog =>
+        val msg = TextMessage(serializeProviderCatalog(c))
+        providerCatalog = Some(c)
         providerCatalogMessage = Some(msg)
+        parser = createIncomingMessageParser
         push(msg)
 
       case c: FieldCatalog =>
         val msg = TextMessage(serializeFieldCatalog(c))
+        fieldCatalog = Some(c)
         fieldCatalogMessage = Some(msg)
+        parser = createIncomingMessageParser
         push(msg)
     }
   }
@@ -501,19 +603,28 @@ class TabDataService (parent: ParentActor, config: Config) extends SiteRoute(par
   override protected def handleIncoming (m: Message): Iterable[Message] = {
     m match {
       case tm: TextMessage.Strict =>
-        parser.parse(tm.text) match {
-          case Some(RequestUserPermissions(uid,pw)) =>
-            // TODO - pw ignored for now
-            val perms = userPermissions.users.getOrElse(uid,Seq.empty[PermSpec])
-            TextMessage(serializeUserPermissions(uid,perms)) :: Nil
+        parser match {
+          case Some(p) =>
+            p.parse(tm.text) match {
+              case Some(RequestUserPermissions(uid,pw)) =>
+                // TODO - pw ignored for now
+                val perms = userPermissions.users.getOrElse(uid,Seq.empty[PermSpec])
+                TextMessage(serializeUserPermissions(uid,perms)) :: Nil
 
-          case Some(pc@ProviderChange(uid,pw,date,provider,fieldValues)) =>
-            // TODO - check user credentials and permissions
-            actorRef ! pc // we send the ProviderChange to our actor, which manages the data model and reports changes back for publishing
+              case Some(pc@ProviderChange(uid,pw,date,provider,fieldValues)) =>
+                // TODO - check user credentials and permissions
+                actorRef ! pc // we send the ProviderChange to our actor, which manages the data model and reports changes back for publishing
+                Nil
+
+              case _ =>
+                warning(s"ignoring unknown incoming message ${tm.text}")
+                Nil
+            }
+          case None =>
+            warning("ignoring incoming message - no catalogs yet")
             Nil
-
-          case _ => Nil
         }
+
 
       case _ =>
         super.handleIncoming(m)

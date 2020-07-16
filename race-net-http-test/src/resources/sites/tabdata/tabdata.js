@@ -1,10 +1,10 @@
 
 //--- global data set by web socket handler
 
-var fieldCatalog = {};      // { rev:n, fields:[ {id:"s",info:"s" <,header:"s">}.. ] }
+var fieldCatalog = {};      // { title:"s", rev:n, fields:[ {id:"s",info:"s" <,header:"s">}.. ] }
 var fields = [];            // fieldCatalog.fields to display
 
-var providerCatalog = {};   // { rev:n, providers:[ {id:"s",info:"s"}.. ] }
+var providerCatalog = {};   // { title:"s", rev:n, providers:[ {id:"s",info:"s",update:n}.. ] }
 var providers = [];         // providerCatalog.providers to display
 
 var data = {};              // { <providerId>: {id:"s",rev:n,date:Date,fieldValues:{<fieldId>:n,...} } }
@@ -14,12 +14,13 @@ var modifiedFields = new Set();
 
 var ws = {}; // will be set by initWebSocket()
 
+var maxLines = 0;           // we get the default from the css
 
 //--- the part we would like to avoid (and never can)
 
 function setBrowserSpecifics() {
   if (navigator.userAgent.search("Chrome") >= 0){
-    document.getElementById("scroll_container").classList.add("chrome")
+    document.getElementById("tableContainer").classList.add("chrome")
   }
 }
 
@@ -57,6 +58,35 @@ function removeAllChildren (elem) {
   while (elem.firstChild){
     elem.removeChild(elem.firstChild);
   }
+}
+
+function timeString(date) {
+  var h = ('0' + date.getHours()).slice(-2);
+  var m = ('0' + date.getMinutes()).slice(-2);
+  var s = ('0' + date.getSeconds()).slice(-2);
+
+  return h + ':' + m + ':' + s;
+}
+
+function log (msg) {
+  var sc = document.getElementById("logContainer");
+  var logEntry = document.createElement("div");
+
+  var span = document.createElement("span");
+  span.classList.add("log-time");
+  span.textContent = timeString(new Date());
+  logEntry.appendChild(span);
+
+  span = document.createElement("span");
+  span.classList.add("log-msg");
+  span.textContent = msg;
+  logEntry.appendChild(span);
+
+  sc.insertBefore(logEntry, sc.firstChild);
+}
+
+function info (msg) {
+  document.getElementById("info").textContent = msg;
 }
 
 //--- initialization of table structure
@@ -248,14 +278,6 @@ function setData() {
   }
 }
 
-function timeString(date) {
-  var h = ('0' + date.getHours()).slice(-2);
-  var m = ('0' + date.getMinutes()).slice(-2);
-  var s = ('0' + date.getSeconds()).slice(-2);
-
-  return h + ':' + m + ':' + s;
-}
-
 function setColumnData (i, providerData) {
   var tbody = document.getElementById('table_body');
   var trDtgs = document.getElementById('dtgs');
@@ -265,20 +287,40 @@ function setColumnData (i, providerData) {
   trDtgs.childNodes[i1].textContent = timeString(providerData.date);
 
   for (var j=0; j<fields.length; j++){
+    var field = fields[j];
     var tr = tbody.childNodes[j];
-    var v = values[fields[j].id];
+    var v = displayValue( field, fieldCatalog.fields, values);
     var cell = tr.childNodes[i1];
-    if (cell.firstChild && cell.firstChild.nodeName == "INPUT") { // we are editing this
+
+    if (cell.firstChild && cell.firstChild.nodeName == "INPUT") { // input cell - we are editing this
       var input = cell.firstChild;
       if (modifiedFields.has(input)){ // we already changed it - flag conflict
         input.classList.add("conflict");
       }
       input.classList.remove("reported");
-      input.value = v ? v : "";
-    } else {
-      cell.textContent = v ? v : "";
+      input.value = v;
+
+    } else { // just a display cell
+      cell.textContent = v;
     }
   }
+}
+
+function formatValue (field,v) {
+  if (v == undefined) return "";
+  if (field.type == "rational" && Number.isInteger(v)) return v.toFixed(1);
+  return v;
+}
+
+function displayValue (field, fieldList, fieldValues) {
+  var v = fieldValues[field.id];
+  if (field.header){
+    if (field.header == "summarize") v = formatValue( field, sumField(field, fieldList, fieldValues));
+    else v = "";
+  } else {
+    v = formatValue(field,v);
+  }
+  return v;
 }
 
 function column (providerName) {
@@ -313,10 +355,33 @@ function filterFields () {
   }
 }
 
+function fieldIdPrefix (field) {
+  if (field.id.endsWith('/')) {
+    return field.id;
+  } else {
+    return field.id + '/';
+  }
+}
+
+// we keep the fieldList variable so that we can use this for all catalog fields or just the displayed ones
+function sumField (field, fieldList, fieldValues) {
+  var sum = 0;
+  var i = fieldList.indexOf(field);
+  if (i >= 0){
+    var idPrefix = fieldIdPrefix(field);
+    for (i++; i<fieldList.length; i++) {
+      var f = fieldList[i];
+      if (f.id.startsWith(idPrefix) && !f.header) {
+        sum += fieldValues[f.id];
+      } else break;
+    }
+  }
+  return sum;
+}
+
 function expandField (i) {
   var field = fields[i];
-  var idPrefix = field.id;
-  if (!idPrefix.endsWith('/')) idPrefix += '/';
+  var idPrefix = fieldIdPrefix(field);
   var k = i+1;
 
   if (field.isCollapsed) { // expand - add all children
@@ -352,10 +417,6 @@ function filterProviders () {
   }
 }
 
-function showEditMessage (txt) {
-  document.getElementById("msg").textContent = txt;
-}
-
 //--- column/row highlighting
 
 function highlightColumn (i, isSelected) {
@@ -367,12 +428,12 @@ function highlightColumn (i, isSelected) {
     idCell.classList.add("selected");
     dtgCell.classList.add("selected");
     for (var row of tbody.childNodes) row.childNodes[i].classList.add("selected")
-    document.getElementById("info").textContent = providers[i-1].info;
+    info(providers[i-1].info);
   } else {
     idCell.classList.remove("selected");
     dtgCell.classList.remove("selected");
     for (var row of tbody.childNodes) row.childNodes[i].classList.remove("selected")
-    document.getElementById("info").textContent = null;
+    info(null);
   }
 }
 
@@ -380,10 +441,10 @@ function highlightRow (i, isSelected) {
   var row = document.getElementById("table_body").childNodes[i];
   if (isSelected) {
     for (var cell of row.childNodes) cell.setAttribute("class", "selected");
-    document.getElementById("info").textContent = fields[i].info;
+    info(fields[i].info);
   } else {
     for (var cell of row.childNodes) cell.removeAttribute("class", "selected");
-    document.getElementById("info").textContent = null;
+    info(null);
   }
 }
 
@@ -414,6 +475,8 @@ function initWebSocket() {
         providerData.date = new Date(providerData.date) // convert epoch into Date object
 
         if (providerData.fieldValues){
+          if (data[providerData.id]) log(`${providerData.id} data updated`);
+
           data[providerData.id] = providerData;
           if ((fields.length > 0) && (providers.length > 0)){
             var i = column(providerData.id);
@@ -428,6 +491,8 @@ function initWebSocket() {
         if (catalog) {
           fieldCatalog = catalog;
           fields = filterFields();
+
+          document.getElementById("datasetTitle").textContent = fieldCatalog.title
           if (hasProviders())  {
             initTable();
             setData();
@@ -439,6 +504,8 @@ function initWebSocket() {
         if (catalog) {
           providerCatalog = catalog;
           providers = filterProviders();
+
+          document.getElementById("sourceTitle").textContent = providerCatalog.title
           if (hasFields())  {
             initTable();
             setData();
@@ -451,8 +518,9 @@ function initWebSocket() {
         var uid = usrPerm.uid; // TODO - should we check if that is the current user? Not critical since update has to be checked by server anyways
         if (usrPerm.permissions) {
           setFieldsEditable(usrPerm.permissions);
+          log(`enter edit mode for user ${uid}`)
         } else {
-          showEditMessage("user has no edit permissions");
+          log(`reject edit mode for user ${uid}`);
         }
       }
     };
@@ -483,6 +551,7 @@ function sendProviderChange (uid,pw,changeDate,provider,changedFields) {
   if (ws) {
     var msg = `{"providerChange":{"${uid}":[${toUtf8Array(pw).join(',')}],"date":${changeDate},"${provider.id}":{${changedFields}}}}`;
     ws.send(msg);
+    log(`sent data changes for ${provider.id}`);
   }
 }
 
@@ -490,7 +559,7 @@ function sendProviderChange (uid,pw,changeDate,provider,changedFields) {
 
 function setWidth() {
   var newWidth = document.body.clientWidth;
-  var div = document.getElementById("scrollContainer");
+  var div = document.getElementById("tableContainer");
   div.style['max-width'] = `${newWidth}px`;
 }
 
@@ -527,14 +596,16 @@ function setReadOnly() {
 
   processCells( (cell,provider,field) => {
     if (cell.firstChild) {
-      var value = data[provider.id].fieldValues[field.id];
-      cell.textContent = value; // this also removes the input child element
+      var values = data[provider.id].fieldValues;
+      var v = displayValue( field, fieldCatalog.fields, values);
+      cell.textContent = v; // this also removes the input child element
       cell.classList.remove("editable");
     }
   });
 
   modifiedFields.clear();
   inEditMode = false;
+  log("exit edit mode");
 }
 
 function setFieldFocused (event) {
@@ -616,11 +687,51 @@ function clearFilters () {
   setData();
 }
 
+function setDisplayLines () {
+  var nLines = document.getElementById("lines").value;
+  if (nLines && displayLines != nLines) {
+    maxLines = nLines;
+    document.body.style.setProperty("--max-lines",maxLines);
+  }
+}
+
+function enterDisplayLines () {
+  if (event.key=="Enter") setDisplayLines();
+}
+
+function checkOutdatedProviders() {
+  console.log("@@ check outdated")
+}
+
+function setCheckInterval () {
+  var v = document.getElementById("checkInterval").value;
+  var checkInterval = parseInt(v);
+  if (checkInterval && checkInterval > 0) {
+    setInterval( checkOutdatedProviders, checkInterval * 1000);
+  } else {
+    clearInterval();
+  }
+}
+
+function enterCheckInterval (event) {
+  if (event.key=="Enter") setCheckInterval();
+}
+
+function setDisplay () {
+  setDisplayLines();
+  setCheckInterval();
+}
+
+function resetDisplay () {
+}
+
 //--- onLoad callback
 
 function init() {
   setWidth(); // to properly set max div-width
   setBrowserSpecifics();
+
+  initDefaultValues();
 
   if (hasFields() && hasProviders()){
      initTable();
@@ -628,6 +739,13 @@ function init() {
   }
 
   initWebSocket();
+  log("view initialized");
+}
+
+function initDefaultValues (e) {
+  maxLines = parseInt(getComputedStyle(document.body).getPropertyValue("--max-lines"));
+  console.log("@@ displayLines: " + maxLines);
+  document.getElementById("lines").value = maxLines;
 }
 
 //--- onunload callback
