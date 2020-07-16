@@ -216,7 +216,7 @@ The ``SiteRoute`` and ``AuthorizedSiteRoute`` traits can be used to serve conten
 
         routes = [
           { name = "tabdata"
-            class = "gov.nasa.race.http.TabDataService" // SiteRoute implementor
+            class = "gov.nasa.race.http.tabdata.TabDataService" // SiteRoute implementor
 
             request-prefix = "tabdata" // URL path prefix for requests
             site-root = "race-net-http-test/src/resources/sites/tabdata" // root dir of static content

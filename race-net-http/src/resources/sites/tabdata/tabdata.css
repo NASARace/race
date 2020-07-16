@@ -30,13 +30,15 @@ body {
 div#tableContainer {
   box-sizing: border-box;
   max-width: var(--div-width);
-  max-height: var(--div-height);
+  /* max-height: fit-content; */ /* how do set this from content height ? */
+  height: var(--div-height);
   padding-right: 0.9rem;  /* to account for scroll bar width - scrollbar is only inside div for firefox and safari */
   margin: 0;
   position: relative;
   overflow: auto;
   border: 1px solid #404040;
   display: inline-block; /* this does not properly limit max-width to browser viewport when browser is resized */
+  resize: vertical;
 }
 
 div.chrome { /* chrome has scrollbar outside div */
@@ -216,12 +218,12 @@ div#logContainer {
   padding: 3px 0.9rem 3px 3px;  /* to account for scroll bar width - scrollbar is only inside div for firefox and safari */
   width: 40rem;
   min-height: 4rem;
-  max-height: 4rem;
+  /* max-height: 4rem; */
   margin: 1rem 0 0 0;
   position: relative;
   overflow: auto;
   border: 1px solid #404040;
-
+  resize: both;
   /* display: inline-block;  */
 }
 
