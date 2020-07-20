@@ -2,17 +2,17 @@
   "title": "Sample Data Set",
   "rev": 1,
   "fields": [
-    { "id": "/cat_A",         "type": "integer", "info": "this is category A", "header": "summarize" },
-    { "id": "/cat_A/field_1", "type": "integer", "info": "this is field 1 in category A" },
+    { "id": "/cat_A",         "type": "integer", "info": "this is category A", "attrs": ["header"], "formula": "(sum `/cat_A/.+`)" },
+    { "id": "/cat_A/field_1", "type": "integer", "info": "this is field 1 in category A", "min": 10, "max": 100 },
     { "id": "/cat_A/field_2", "type": "integer", "info": "this is field 2 in category A" },
     { "id": "/cat_A/field_3", "type": "integer", "info": "this is field 3 in category A" },
 
-    { "id": "/cat_B",         "type": "rational", "info": "this is category B", "header": "summarize" },
-    { "id": "/cat_B/field_1", "type": "rational", "info": "this is field 1 in category B" },
+    { "id": "/cat_B",         "type": "rational", "info": "this is category B", "attrs": ["header", "locked"], "formula": "(sum `/cat_B/.+`)"},
+    { "id": "/cat_B/field_1", "type": "rational", "info": "this is field 1 in category B", "min":  100.0 },
     { "id": "/cat_B/field_2", "type": "rational", "info": "this is field 2 in category B" },
 
-    { "id": "/cat_C",         "type": "integer", "info": "this is category C", "header": "blank" },
-    { "id": "/cat_C/field_1", "type": "integer", "info": "this is field 1 in category C" },
+    { "id": "/cat_C",         "type": "integer", "info": "this is category C", "attrs": ["header"] },
+    { "id": "/cat_C/field_1", "type": "integer", "info": "this is field 1 in category C (total of field_2 changes)", "formula": "(acc /cat_C/field_2)" },
     { "id": "/cat_C/field_2", "type": "integer", "info": "this is field 2 in category C" },
     { "id": "/cat_C/field_3", "type": "integer", "info": "this is field 3 in category C" },
     { "id": "/cat_C/field_4", "type": "integer", "info": "this is field 4 in category C" }

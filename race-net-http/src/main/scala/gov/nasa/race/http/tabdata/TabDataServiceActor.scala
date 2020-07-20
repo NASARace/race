@@ -26,7 +26,6 @@ import gov.nasa.race.uom.DateTime
 import gov.nasa.race.util.FileUtils
 import gov.nasa.race.config.ConfigUtils._
 
-
 import scala.collection.mutable
 
 /**
@@ -40,6 +39,13 @@ class TabDataServiceActor (_dc: RaceDataConsumer, _conf: Config) extends DataCon
   var fieldCatalog: FieldCatalog = readFieldCatalog
   var providerCatalog: ProviderCatalog = readProviderCatalog
   val providerData = readProviderData(fieldCatalog,providerCatalog)
+
+  val updater: UpdatePolicy = new PhasedInOrderUpdater(fieldCatalog.fields) // TODO - should updater be configurable?
+  updater.setLogging(info,warning,error)
+
+  fieldCatalog.compileWithFunctions(FieldExpression.functions) // TODO - function library should be configurable
+  initializeProviderData
+
 
   //--- actor interface
 
@@ -106,25 +112,29 @@ class TabDataServiceActor (_dc: RaceDataConsumer, _conf: Config) extends DataCon
     map
   }
 
+  def initializeProviderData: Unit = {
+    providerData.foreach { pe=>
+      val pd = pe._2
+      val fv = pd.fieldValues
+      val fvʹ = updater.initialize(fv)
+
+      if (fv ne fvʹ){
+        val pdʹ = pd.copy(rev = pd.rev+1,fieldValues=fvʹ)
+        providerData.update(pdʹ.id, pdʹ) // we don't setData() before start
+      }
+    }
+  }
+
   def updateProvider (change: ProviderChange): Unit = {
     providerData.get(change.provider) match {
-      case Some(p) => // is it a provider we know
-        var nChanged = 0
-        var fv = p.fieldValues
+      case Some(pd) => // is it a provider we know
+        val fv = pd.fieldValues
+        val fvʹ = updater.update(fv,change.fieldValues)
 
-        for (e <- change.fieldValues) {
-          val fieldId = e._1
-          fieldCatalog.fields.get(fieldId) match {
-            case Some(field) =>
-              fv = fv + (fieldId -> e._2)
-              nChanged += 1
-            case None => warning(s"ignoring unknown field change $fieldId")
-          }
-        }
-        if (nChanged > 0){
-          val pʹ = p.copy(rev = p.rev+1,date=change.date,fieldValues=fv)
-          providerData.update(pʹ.id, pʹ)
-          setData(pʹ)
+        if (fv ne fvʹ){
+          val pdʹ = pd.copy(rev = pd.rev+1,date=change.date,fieldValues=fvʹ)
+          providerData.update(pdʹ.id, pdʹ)
+          setData(pdʹ)
         }
 
       case None => // unknown provider

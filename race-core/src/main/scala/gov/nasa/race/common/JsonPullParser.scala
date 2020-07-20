@@ -436,6 +436,26 @@ abstract class JsonPullParser extends LogWriter with Thrower {
     if (res == UnQuotedValue) value else throw exception(s"not a un-quoted value: ''$value''")
   }
 
+  final def readOptionalUnQuotedMember(name: ByteSlice): Option[Utf8Slice] = {
+    val i0 = idx; val s0 = state
+    if (!isLevelEnd && isNextScalarMember(name)) {
+      Some(value)
+    } else {
+      idx = i0; state = s0
+      None
+    }
+  }
+
+  final def readOptionalQuotedMember(name: ByteSlice): Option[Utf8Slice] = {
+    val i0 = idx; val s0 = state
+    if (!isLevelEnd && isNextScalarMember(name)) {
+      Some(value)
+    } else {
+      idx = i0; state = s0
+      None
+    }
+  }
+
   //--- those read and check the result type, returning a Boolean that can be used for conditional parsing
 
   @inline final def isNextScalarMember(name: ByteSlice): Boolean = {
@@ -533,6 +553,21 @@ abstract class JsonPullParser extends LogWriter with Thrower {
     collection
   }
 
+  def readOptionalArrayMemberInto[U,T <:mutable.Growable[U]](name: ByteSlice, collection: =>T)(f: =>U): Option[T] = {
+    val i0 = idx
+    val s0 = state
+    if (!isLevelEnd && isNextArrayStartMember(name)) {
+      val c = collection
+      foreachInCurrentArray{ c.addOne(f) };
+      Some(c)
+
+    } else {
+      idx = i0 // backtrack
+      state = s0
+      None
+    }
+  }
+
   //--- specialized cases for reading arrays of same-type values
 
   //--- byte elements
@@ -590,6 +625,10 @@ abstract class JsonPullParser extends LogWriter with Thrower {
     foreachInCurrentArray(collection.addOne(readQuotedValue().toString)); collection
   }
 
+  def readOptionalStringArrayMemberInto[T <:mutable.Growable[String]](name: ByteSlice, collection: =>T): Option[T] = {
+    readOptionalArrayMemberInto(name,collection){ readQuotedValue().toString }
+  }
+
   //--- read object members into mutable maps, using member names as keys and returning populated map
 
   def readNextObjectMemberInto[V,C <:mutable.Map[String,V]](name: ByteSlice, collection: C)(f: =>(String,V)): C = {
@@ -599,6 +638,25 @@ abstract class JsonPullParser extends LogWriter with Thrower {
     }
     collection
   }
+
+  def readOptionalObjectMemberInto[V,C <:mutable.Map[String,V]](name: ByteSlice, collection: =>C)(f: =>(String,V)): Option[C] = {
+    val i0 = idx
+    val s0 = state
+    if (!isLevelEnd && isNextObjectStartMember(name)) {
+      val c = collection
+      foreachInCurrentObject {
+        val (k,v) = f
+        c.addOne(k -> v)
+      }
+      Some(c)
+
+    } else {
+      idx = i0 // backtrack
+      state = s0
+      None
+    }
+  }
+
   def readSomeNextObjectMemberInto[V,C <:mutable.Map[String,V]](name: ByteSlice, collection: C)(f: =>Option[(String,V)]): C = {
     foreachInNextObjectMember(name) {
       f match {
@@ -608,6 +666,7 @@ abstract class JsonPullParser extends LogWriter with Thrower {
     }
     collection
   }
+
   def readNextObjectInto[V,C <:mutable.Map[String,V]](collection: C)(f: =>(String,V)): C = {
     foreachInNextObject {
       val (k,v) = f
@@ -615,6 +674,7 @@ abstract class JsonPullParser extends LogWriter with Thrower {
     }
     collection
   }
+
   def readSomeNextObjectInto[V,C <:mutable.Map[String,V]](collection: C)(f: =>Option[(String,V)]): C = {
     foreachInNextObject {
       f match {

@@ -16,10 +16,12 @@
  */
 package gov.nasa.race.http.tabdata
 
+import gov.nasa.race._
 import gov.nasa.race.common.ConstAsciiSlice.asc
-import gov.nasa.race.common.{CharSeqByteSlice, JsonParseException, JsonWriter, UTF8JsonPullParser}
+import gov.nasa.race.common.{CharSeqByteSlice, JsonParseException, JsonWriter, UTF8JsonPullParser, Utf8Slice}
 
 import scala.collection.immutable.ListMap
+import scala.collection.mutable.ArrayBuffer
 
 /**
   * the root type for field instances
@@ -27,60 +29,104 @@ import scala.collection.immutable.ListMap
 sealed trait Field {
   val id: String
   val info: String
-  val header: Option[String]
 
+  val attrs: Seq[String]  // extensible set of boolean options
+  val min: Option[FieldValue]
+  val max: Option[FieldValue]
+
+  //--- those are only internal, i.e. are not sent to the client
+  val formula: Option[String] // we have to store the source since we can't compile before we have all fields
+  protected var fexpr: Option[FieldExpression] = None // the compiled formula
+  protected var dependencies: Set[String] = Set.empty // the fields fexpr depends on (if any)
+
+  val isLocked: Boolean = attrs.contains("locked") // can only be updated through formula
+
+  def valueToString (fv: FieldValue): String
   def valueFrom(bs: CharSeqByteSlice): FieldValue
   def typeName: String
+  def hasFormula: Boolean = formula.isDefined
 
   def serializeTo (w:JsonWriter): Unit = {
     w.writeObject { w=>
       w.writeStringMember("id", id)
       w.writeStringMember("info", info)
       w.writeStringMember("type", typeName)
-      header.foreach( w.writeStringMember("header", _))
+
+      // optional parts required by the client
+      if (attrs.nonEmpty) w.writeStringArrayMember("attrs", attrs)
+      ifSome(min) {v=>  w.writeUnQuotedMember("min", valueToString(v)) }
+      ifSome(max) {v=>  w.writeUnQuotedMember("max", valueToString(v)) }
+      ifSome(formula) {v=> w.writeStringMember("formula", v) }
     }
   }
+
+  def compileWith (parser: FieldExpressionParser): Unit = {
+    ifSome(formula){ src=>
+      parser.parseAll(parser.expr, src) match {
+        case parser.Success(fe: FieldExpression,_) =>
+          fexpr = Some(fe)
+          dependencies = fe.dependencies(Set.empty[String])
+        case parser.Failure(msg,_) => throw new RuntimeException(s"formula of $id failed to compile: $msg")
+        case parser.Error(msg,_) => throw new RuntimeException(s"error compiling formula of $id: $msg")
+      }
+    }
+  }
+
+  def hasDependencies: Boolean = dependencies.nonEmpty
+  def containsDependency (dep: String): Boolean = dependencies.contains(dep)
+
+  def evalWith (ctx: EvalContext): Option[FieldValue] = fexpr.map(_.eval(ctx))
 }
 
 /**
   * field instantiation factory interface
   */
 sealed trait FieldType {
-  def instantiate (id: String, info: String, header: Option[String]): Field
+  def instantiate (id: String, info: String,
+                   attrs: Seq[String] = Seq.empty,
+                   min: Option[FieldValue] = None,
+                   max: Option[FieldValue] = None,
+                   formula: Option[String] = None): Field
   def typeName: String
 }
 
 //--- Long fields
 
 object LongField extends FieldType {
-  def instantiate (id: String, info: String, header: Option[String]): Field = LongField(id,info,header)
+  def instantiate (id: String, info: String,
+                   attrs: Seq[String], min: Option[FieldValue], max: Option[FieldValue],
+                   formula: Option[String]): Field = LongField(id,info,attrs,min,max,formula)
   def typeName: String = "integer"
 }
 
 /**
   * Field implementation for Long values
   */
-case class LongField (id: String, info: String, header: Option[String]) extends Field {
+case class LongField (id: String, info: String, attrs: Seq[String], min: Option[FieldValue], max: Option[FieldValue], formula: Option[String]) extends Field {
   def valueFrom (bs: CharSeqByteSlice) = LongValue(bs.toLong)
   def typeName = LongField.typeName
+  def valueToString (fv: FieldValue): String = fv.toLong.toString
 }
 
 //--- Double fields
 
 object DoubleField extends FieldType {
-  def instantiate (id: String, info: String, header: Option[String]): Field = DoubleField(id,info,header)
+  def instantiate (id: String, info: String,
+                   attrs: Seq[String], min: Option[FieldValue], max: Option[FieldValue],
+                   formula: Option[String]): Field = DoubleField(id,info,attrs,min,max,formula)
   def typeName: String = "rational"
 }
 
 /**
   * Field implementation for Double values
   */
-case class DoubleField (id: String, info: String, header: Option[String]) extends Field {
+case class DoubleField (id: String, info: String, attrs: Seq[String], min: Option[FieldValue], max: Option[FieldValue], formula: Option[String]) extends Field {
   def valueFrom (bs: CharSeqByteSlice) = DoubleValue(bs.toDouble)
   def typeName = DoubleField.typeName
+  def valueToString (fv: FieldValue): String = fv.toDouble.toString
 }
 
-//--- catalog
+//--- field catalog
 
 /**
   * versioned, named and ordered list of field specs
@@ -99,6 +145,15 @@ case class FieldCatalog (title: String, rev: Int, fields: ListMap[String,Field])
       }
     )
   }
+
+  def compileWithFunctions (functions: Map[String,FunFactory]): Unit = {
+    val parser = new FieldExpressionParser(fields,functions)
+
+    fields.foreach { fe=>
+      val field = fe._2
+      field.compileWith(parser)
+    }
+  }
 }
 
 object FieldCatalogParser {
@@ -111,7 +166,10 @@ object FieldCatalogParser {
   private val _integer_   = asc(LongField.typeName)
   private val _rational_  = asc(DoubleField.typeName)
   private val _info_      = asc("info")
-  private val _header_    = asc("header")
+  private val _attrs_     = asc("attrs")
+  private val _min_       = asc("min")
+  private val _max_       = asc("max")
+  private val _formula_   = asc("formula")
 }
 
 /**
@@ -127,14 +185,8 @@ class FieldCatalogParser extends UTF8JsonPullParser {
     else throw exception(s"unknown field type: $v")
   }
 
-  private def readOptionalHeader (): Option[String] = {
-    if (!isLevelEnd && isNextScalarMember(_header_)) {
-      if (!isQuotedValue) throw exception("illegal header value")
-      // TODO - should we check the value here?
-      Some(value.toString)
-    } else {
-      None
-    }
+  private def readLimitValue (s: Utf8Slice): FieldValue = {
+    if (s.isRationalNumber) DoubleValue(s.toDouble) else LongValue(s.toLong)
   }
 
   def parse (buf: Array[Byte]): Option[FieldCatalog] = {
@@ -150,8 +202,14 @@ class FieldCatalogParser extends UTF8JsonPullParser {
             val id = readQuotedMember(_id_).toString
             val fieldType = readFieldType()
             val info = readQuotedMember(_info_).toString
-            val header = readOptionalHeader()
-            fieldType.instantiate(id,info,header)
+
+            //--- these are all optional
+            val attrs = readOptionalStringArrayMemberInto(_attrs_,ArrayBuffer.empty[String]).map(_.toSeq).getOrElse(Seq.empty[String])
+            val min = readOptionalUnQuotedMember(_min_).map(readLimitValue)
+            val max = readOptionalUnQuotedMember(_max_).map(readLimitValue)
+            val formula = readOptionalQuotedMember(_formula_).map(_.toString)
+
+            fieldType.instantiate(id,info,attrs,min,max,formula)
           }
           fields = fields + (field.id -> field)
         }

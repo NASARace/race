@@ -160,7 +160,7 @@ tr.header {
   background-color: var(--th-background);
 }
 
-tr.header td {
+tr.computed td {
   color: blue;
 }
 

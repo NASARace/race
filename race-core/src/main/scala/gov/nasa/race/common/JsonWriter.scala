@@ -282,6 +282,12 @@ class JsonWriter (jsonType: ElementType = JsonWriter.RawElements, initSize: Int 
     armSeparator
   }
 
+  def writeUnQuotedMember (k: String, v: String): JsonWriter = {
+    writeMemberName(k)
+    writeUnQuotedValue(v)
+    armSeparator
+  }
+
   @inline final def += (v: String): JsonWriter = writeString(v)
   @inline final def += (v: Boolean): JsonWriter = writeBoolean(v)
   @inline final def += (v: Int): JsonWriter = writeInt(v)

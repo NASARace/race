@@ -89,6 +89,18 @@ function info (msg) {
   document.getElementById("info").textContent = msg;
 }
 
+function isHeader(field) {
+  return (field.attrs && field.attrs.includes("header"));
+}
+
+function isLocked(field) {
+  return (field.attrs && field.attrs.includes("locked"));
+}
+
+function isComputed(field) {
+  return field.hasOwnProperty("formula");
+}
+
 //--- initialization of table structure
 
 function initTable() {
@@ -143,27 +155,23 @@ function initTBody () {
   var tbody = document.createElement("tbody");
   tbody.setAttribute("id","table_body");
 
-  var stripLevel = 0;
-
   for (var i=0; i<fields.length; i++){
     var field = fields[i];
     var level = fieldLevel(field.id);
-
-    if (level <= stripLevel)  stripLevel = level - 1;
-    tbody.appendChild( initFieldRow(field, i, stripLevel));
-    if (field.header)  stripLevel = level;
+    tbody.appendChild( initFieldRow(field, i, level-1));
   }
   return tbody;
 }
 
 function initFieldRow (field, idx, stripLevel) {
-  var fieldHeader = field.header;
-
   var row = document.createElement('tr');
 
-  if (fieldHeader) {
+  if (isHeader(field)) {
     row.classList.add("header");
-    row.setAttribute("headerType", fieldHeader);
+  }
+
+  if (isComputed(field)) {
+    row.classList.add("computed");
   }
 
   cell = document.createElement('th');
@@ -250,7 +258,7 @@ function setFieldsEditable (permissions) {
     if (providerPatterns.find( r=> r.test(provider.id))) { // only iterate over fields for providers that have at least one match
       for (var j=0; j<fields.length; j++){
         var field = fields[j];
-        if (!field.header) {
+        if (!isLocked(field)) {
           var tr = tbody.childNodes[j];
           var cell = tr.childNodes[i+1];
           if (checkEditableCell(cell,provider,providerPatterns,field,fieldPatterns)) hasEditableFields = true;
@@ -313,14 +321,7 @@ function formatValue (field,v) {
 }
 
 function displayValue (field, fieldList, fieldValues) {
-  var v = fieldValues[field.id];
-  if (field.header){
-    if (field.header == "summarize") v = formatValue( field, sumField(field, fieldList, fieldValues));
-    else v = "";
-  } else {
-    v = formatValue(field,v);
-  }
-  return v;
+  return formatValue(field, fieldValues[field.id]);
 }
 
 function column (providerName) {
@@ -361,22 +362,6 @@ function fieldIdPrefix (field) {
   } else {
     return field.id + '/';
   }
-}
-
-// we keep the fieldList variable so that we can use this for all catalog fields or just the displayed ones
-function sumField (field, fieldList, fieldValues) {
-  var sum = 0;
-  var i = fieldList.indexOf(field);
-  if (i >= 0){
-    var idPrefix = fieldIdPrefix(field);
-    for (i++; i<fieldList.length; i++) {
-      var f = fieldList[i];
-      if (f.id.startsWith(idPrefix) && !f.header) {
-        sum += fieldValues[f.id];
-      } else break;
-    }
-  }
-  return sum;
 }
 
 function expandField (i) {
@@ -449,7 +434,7 @@ function highlightRow (i, isSelected) {
 }
 
 function clickRow (i) {
-  if (fields[i].header) {
+  if (isHeader(fields[i])) {
     expandField(i);
   }
 }
