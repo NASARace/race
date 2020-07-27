@@ -24,7 +24,7 @@ body {
 --th-color: black;
 --hover-color: rgba(0,200,0, 0.2);
 
-  font-family: arial;
+  font-family: sans-serif; /* arial; */
 }
 
 div#tableContainer {
@@ -100,6 +100,19 @@ td {
   z-index: 1;
 }
 
+thead th.local, td.local {
+  border-left: 2px solid lightgray;
+  border-right: 2px solid lightgray;
+  background-color: rgb(180,245,245);
+}
+
+tbody td.local {
+  border-left: 2px solid lightgray;
+  border-right: 2px solid lightgray;
+  background-color: rgba(0,224,224,0.2);
+}
+
+
 thead th {
   position: -webkit-sticky; /* for Safari */
   position: sticky;
@@ -123,6 +136,11 @@ thead th.dtg {
   font-size: small;
   font-weight: normal;
   border-bottom: 1px solid black;
+}
+
+td.alert {
+  color: red;
+  font-weight: bold;
 }
 
 td.editable {
@@ -287,6 +305,8 @@ input.field {
   background-color: rgb(255,255,225);
   width:  calc(var(--cell-width) - 0.4rem);
   border: 1px solid lightgray;
+  font-family: monospace;
+  font-size: small;
 }
 
 input.field.focused {

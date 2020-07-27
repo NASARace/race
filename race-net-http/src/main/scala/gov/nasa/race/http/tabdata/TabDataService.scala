@@ -55,9 +55,11 @@ class TabDataService (parent: ParentActor, config: Config) extends SiteRoute(par
   // we store the data in a format that is ready to send
   var fieldCatalogMessage: Option[TextMessage] = None
   var providerCatalogMessage: Option[TextMessage] = None
+  val localProviderMessage = TextMessage(serializeLocalProvider)
   val providerDataMessage = MutMap.empty[String,TextMessage]
 
   val userPermissions: UserPermissions = readUserPermissions
+
 
   def readUserPermissions: UserPermissions = {
     val parser = new UserPermissionsParser
@@ -91,6 +93,12 @@ class TabDataService (parent: ParentActor, config: Config) extends SiteRoute(par
           }
         }
       }
+    ).toJson
+  }
+
+  def serializeLocalProvider: String = {
+    writer.clear.writeObject( _
+      .writeStringMember("localProvider", config.getString("local-provider"))
     ).toJson
   }
 
@@ -180,6 +188,7 @@ class TabDataService (parent: ParentActor, config: Config) extends SiteRoute(par
   }
 
   override protected def initializeConnection (conn: WebSocketPushConnection): Unit = {
+    pushTo(conn,localProviderMessage)
     fieldCatalogMessage.foreach( pushTo(conn,_))
     providerCatalogMessage.foreach( pushTo(conn,_))
     providerDataMessage.foreach(e=> pushTo(conn,e._2))

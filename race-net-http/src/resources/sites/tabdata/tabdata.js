@@ -1,6 +1,8 @@
 
 //--- global data set by web socket handler
 
+var localProvider = "";     // the name of the local provider
+
 var fieldCatalog = {};      // { title:"s", rev:n, fields:[ {id:"s",info:"s" <,header:"s">}.. ] }
 var fields = [];            // fieldCatalog.fields to display
 
@@ -89,16 +91,23 @@ function info (msg) {
   document.getElementById("info").textContent = msg;
 }
 
-function isHeader(field) {
+function isHeader (field) {
   return (field.attrs && field.attrs.includes("header"));
 }
 
-function isLocked(field) {
+function isLocked (field) {
   return (field.attrs && field.attrs.includes("locked"));
 }
 
-function isComputed(field) {
+function isComputed (field) {
   return field.hasOwnProperty("formula");
+}
+
+function localProviderIndex() {
+  for (i=0; i<providers.length; i++) {
+    if (providers[i].id == localProvider) return i;
+  }
+  return -1;
 }
 
 //--- initialization of table structure
@@ -107,8 +116,29 @@ function initTable() {
   var table = document.getElementById('my_table');
   removeAllChildren(table);  // in case one of the catalogs got updated
 
+  //table.appendChild( initColGroup());
   table.appendChild( initTHead());
   table.appendChild( initTBody());
+}
+
+function initColGroup() {
+  var colGroup = document.createElement('colgroup');
+
+  var col = document.createElement("col"); // the field id row
+  col.classList.add("field");
+  colGroup.appendChild(col);
+
+  for (var i=0; i<providers.length; i++){
+    var provider = providers[i];
+
+    col = document.createElement("col");
+    if (provider.id == localProvider) {
+      col.classList.add("local");
+    }
+    colGroup.appendChild(col);
+  }
+
+  return colGroup;
 }
 
 function initTHead() {
@@ -126,7 +156,9 @@ function initTHead() {
     cell = document.createElement('th');
     cell.setAttribute("onmouseenter", `highlightColumn(${i+1},true)`);
     cell.setAttribute("onmouseleave", `highlightColumn(${i+1},false)`);
+    if (provider.id == localProvider)   cell.classList.add("local");
     cell.textContent = provider.id;
+
     row.appendChild(cell);
   }
 
@@ -135,16 +167,20 @@ function initTHead() {
   row.setAttribute("id", "dtgs");
 
   cell = document.createElement('th'); // blank
-  cell.setAttribute("class", "dtg");
+  cell.classList.add("dtg");
   row.appendChild(cell);
 
   for (var i=0; i<providers.length; i++){
+    provider = providers[i];
+
     // no content yet (will be set when we get a providerData), just create cell
     cell = document.createElement('th');
-    cell.setAttribute("class", "dtg");
+    cell.classList.add("dtg");
     cell.setAttribute("onmouseenter", `highlightColumn(${i+1},true)`);
     cell.setAttribute("onmouseleave", `highlightColumn(${i+1},false)`);
+    if (provider.id == localProvider)   cell.classList.add("local");
     cell.textContent = "00:00:00"
+
     row.appendChild(cell);
   }
 
@@ -193,6 +229,7 @@ function initFieldRow (field, idx, stripLevel) {
   for (var p of providers){
     // no data yet, will be set when we get a providerData message
     cell = document.createElement('td');
+    if (p.id == localProvider) cell.classList.add("local");
     row.appendChild(cell);
   }
   return row;
@@ -226,8 +263,7 @@ function checkEditableCell (cell,provider,providerPatterns,field,fieldPatterns) 
   for (var i=0; i<providerPatterns.length;i++) {  // note there can be more than one providerPattern match
     if (providerPatterns[i].test(provider.id)) {
       if (fieldPatterns[i].test(field.id)) {
-        var value = data[provider.id].fieldValues[field.id];
-        if (!value) value = "";
+        var value = formatValue( field, data[provider.id].fieldValues[field.id]);
 
         var input = document.createElement('input');
         input.setAttribute("type", "text");
@@ -238,7 +274,6 @@ function checkEditableCell (cell,provider,providerPatterns,field,fieldPatterns) 
         input.value = value;
 
         cell.innerHTML = null;
-        cell.classList.add("editable");
         cell.appendChild(input);
         return true; // we only set it editable once
       }
@@ -286,6 +321,14 @@ function setData() {
   }
 }
 
+function checkRange (field,value,cell) {
+  if (outsideRange(field,value)){
+    cell.classList.add("alert");
+  } else {
+    cell.classList.remove("alert");
+  }
+}
+
 function setColumnData (i, providerData) {
   var tbody = document.getElementById('table_body');
   var trDtgs = document.getElementById('dtgs');
@@ -308,10 +351,16 @@ function setColumnData (i, providerData) {
       input.classList.remove("reported");
       input.value = v;
 
-    } else { // just a display cell
+    } else { // just a display cell but flag values outside range
       cell.textContent = v;
+      checkRange(field,values[field.id],cell);
     }
   }
+}
+
+function outsideRange (field, fieldValue) {
+  if (field.min && fieldValue < field.min) return true;
+  if (field.max && fieldValue > field.max) return true;
 }
 
 function formatValue (field,v) {
@@ -412,25 +461,54 @@ function highlightColumn (i, isSelected) {
   if (isSelected) {
     idCell.classList.add("selected");
     dtgCell.classList.add("selected");
-    for (var row of tbody.childNodes) row.childNodes[i].classList.add("selected")
-    info(providers[i-1].info);
+    for (var row of tbody.childNodes) {
+      row.childNodes[i].classList.add("selected");
+    }
+    showProviderInfo(providers[i-1]);
   } else {
     idCell.classList.remove("selected");
     dtgCell.classList.remove("selected");
-    for (var row of tbody.childNodes) row.childNodes[i].classList.remove("selected")
+    for (var row of tbody.childNodes) {
+      row.childNodes[i].classList.remove("selected");
+    }
     info(null);
   }
+}
+
+function showProviderInfo (provider) {
+  var txt = provider.info;
+  info(txt);
 }
 
 function highlightRow (i, isSelected) {
   var row = document.getElementById("table_body").childNodes[i];
   if (isSelected) {
-    for (var cell of row.childNodes) cell.setAttribute("class", "selected");
-    info(fields[i].info);
+    for (var cell of row.childNodes) {
+      cell.classList.add( "selected");
+    }
+    showFieldInfo(fields[i]);
   } else {
-    for (var cell of row.childNodes) cell.removeAttribute("class", "selected");
+    for (var cell of row.childNodes) {
+      cell.classList.remove("selected");
+    }
     info(null);
   }
+}
+
+function showFieldInfo (field) {
+  var txt = field.info;
+  if (field.min || field.max){
+    txt += ".         [";
+    if (field.min) txt += field.min;
+    txt += ' , '
+    if (field.max) txt += field.max;
+    txt += ']';
+  }
+  if (field.formula) {
+    txt += ".         \=";
+    txt += field.formula;
+  }
+  info(txt);
 }
 
 function clickRow (i) {
@@ -471,7 +549,8 @@ function initWebSocket() {
           }
         }
 
-      } else if (msgType == "fieldCatalog") {  // {fieldCatalog:{rev:n,fields:[{id:"s",info:"s" <,header:"s">}..]}}
+      }
+      else if (msgType == "fieldCatalog") {  // {fieldCatalog:{rev:n,fields:[{id:"s",info:"s" <,header:"s">}..]}}
         var catalog = msg.fieldCatalog;
         if (catalog) {
           fieldCatalog = catalog;
@@ -484,7 +563,8 @@ function initWebSocket() {
           }
         }
 
-      } else if (msgType == "providerCatalog") { // {providerCatalog:{ rev:n, providers:[ {id:"s",info:"s"}.. ]}}
+      }
+      else if (msgType == "providerCatalog") { // {providerCatalog:{ rev:n, providers:[ {id:"s",info:"s"}.. ]}}
         var catalog = msg.providerCatalog;
         if (catalog) {
           providerCatalog = catalog;
@@ -497,7 +577,8 @@ function initWebSocket() {
           }
         }
 
-      } else if (msgType == "userPermissions") { // {uid,permissions{}}
+      }
+      else if (msgType == "userPermissions") { // {uid,permissions{}}
         var usrPerm = msg.userPermissions
         console.log(JSON.stringify(usrPerm));
         var uid = usrPerm.uid; // TODO - should we check if that is the current user? Not critical since update has to be checked by server anyways
@@ -507,6 +588,9 @@ function initWebSocket() {
         } else {
           log(`reject edit mode for user ${uid}`);
         }
+      }
+      else if (msgType == "localProvider") {
+        localProvider = msg.localProvider;
       }
     };
 
@@ -584,7 +668,7 @@ function setReadOnly() {
       var values = data[provider.id].fieldValues;
       var v = displayValue( field, fieldCatalog.fields, values);
       cell.textContent = v; // this also removes the input child element
-      cell.classList.remove("editable");
+      checkRange(field,values[field.id],cell);
     }
   });
 
