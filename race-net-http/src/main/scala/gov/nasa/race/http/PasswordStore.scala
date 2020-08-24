@@ -18,6 +18,7 @@ package gov.nasa.race.http
 
 import java.io._
 
+import akka.parboiled2.util.Base64
 import de.mkammerer.argon2.Argon2Factory
 import gov.nasa.race.util.CryptUtils
 
@@ -112,6 +113,7 @@ class PasswordStore (val file: File) {
     map.size < n
   }
 
+  // check if explicitly provided uid and password match our store
   def verify (uid: String, pw: Array[Char]): Option[User] = {
     try {
       map.get(uid) match {
@@ -133,6 +135,17 @@ class PasswordStore (val file: File) {
     } finally {
       CryptUtils.erase(pw,' ')
     }
+  }
+
+  // this is a Base64.rfc2045 encoded 'user:password' string
+  def verifyBasic (token: String): Option[User] = {
+    val uidpw = new String(Base64.rfc2045.decode(token))
+    val idx = uidpw.indexOf(':')
+    if (idx > 0){
+      val uid = uidpw.substring(0,idx)
+      val pw = uidpw.substring(idx+1).toCharArray
+      verify(uid,pw)
+    } else None // invalid token
   }
 
   def hasExceededLoginAttempts(uid: String): Boolean = {

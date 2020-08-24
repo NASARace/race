@@ -1,12 +1,12 @@
 
 //--- global data set by web socket handler
 
-var localProvider = "";     // the name of the local provider
+var siteId = "";     // the name of the local provider
 
-var fieldCatalog = {};      // { title:"s", rev:n, fields:[ {id:"s",info:"s" <,header:"s">}.. ] }
+var fieldCatalog = {};      // { id:"s", info:"s", date:Date, fields:[ {id:"s",info:"s" <,header:"s">}.. ] }
 var fields = [];            // fieldCatalog.fields to display
 
-var providerCatalog = {};   // { title:"s", rev:n, providers:[ {id:"s",info:"s",update:n}.. ] }
+var providerCatalog = {};   // { id:"s", info:"s", date:Date, providers:[ {id:"s",info:"s",update:n}.. ] }
 var providers = [];         // providerCatalog.providers to display
 
 var data = {};              // { <providerId>: {id:"s",rev:n,date:Date,fieldValues:{<fieldId>:n,...} } }
@@ -87,6 +87,27 @@ function log (msg) {
   sc.insertBefore(logEntry, sc.firstChild);
 }
 
+function nameOfPath (path) {
+  var i = path.lastIndexOf('/');
+  if (i >= 0) {
+    if (i == path.length - 1) return ''; // ends with '/' - no name
+    return path.substring(i+1);
+  } else {
+    return path; // no path elements
+  }
+}
+
+function parentOfPath (path) {
+  var i = path.lastIndexOf('/');
+  if (i > 0) {
+    return path.substring(0,i);
+  } else if (i == 0) {
+    return "/";
+  } else {
+    return "";
+  }
+}
+
 function info (msg) {
   document.getElementById("info").textContent = msg;
 }
@@ -99,13 +120,17 @@ function isLocked (field) {
   return (field.attrs && field.attrs.includes("locked"));
 }
 
+function isHidden (field) {
+  return (field.attrs && field.attrs.includes("hidden"));
+}
+
 function isComputed (field) {
   return field.hasOwnProperty("formula");
 }
 
-function localProviderIndex() {
+function siteIdIndex() {
   for (i=0; i<providers.length; i++) {
-    if (providers[i].id == localProvider) return i;
+    if (providers[i].id == siteId) return i;
   }
   return -1;
 }
@@ -132,7 +157,7 @@ function initColGroup() {
     var provider = providers[i];
 
     col = document.createElement("col");
-    if (provider.id == localProvider) {
+    if (provider.id == siteId) {
       col.classList.add("local");
     }
     colGroup.appendChild(col);
@@ -156,8 +181,8 @@ function initTHead() {
     cell = document.createElement('th');
     cell.setAttribute("onmouseenter", `highlightColumn(${i+1},true)`);
     cell.setAttribute("onmouseleave", `highlightColumn(${i+1},false)`);
-    if (provider.id == localProvider)   cell.classList.add("local");
-    cell.textContent = provider.id;
+    if (provider.id == siteId)   cell.classList.add("local");
+    cell.textContent = nameOfPath(provider.id);
 
     row.appendChild(cell);
   }
@@ -178,7 +203,7 @@ function initTHead() {
     cell.classList.add("dtg");
     cell.setAttribute("onmouseenter", `highlightColumn(${i+1},true)`);
     cell.setAttribute("onmouseleave", `highlightColumn(${i+1},false)`);
-    if (provider.id == localProvider)   cell.classList.add("local");
+    if (provider.id == siteId)   cell.classList.add("local");
     cell.textContent = "00:00:00"
 
     row.appendChild(cell);
@@ -229,7 +254,7 @@ function initFieldRow (field, idx, stripLevel) {
   for (var p of providers){
     // no data yet, will be set when we get a providerData message
     cell = document.createElement('td');
-    if (p.id == localProvider) cell.classList.add("local");
+    if (p.id == siteId) cell.classList.add("local");
     row.appendChild(cell);
   }
   return row;
@@ -333,7 +358,7 @@ function setColumnData (i, providerData) {
   var tbody = document.getElementById('table_body');
   var trDtgs = document.getElementById('dtgs');
   var i1 = i + 1;
-  var values = providerData.fieldValues
+  var values = providerData.fieldValues;
 
   trDtgs.childNodes[i1].textContent = timeString(providerData.date);
 
@@ -363,8 +388,9 @@ function outsideRange (field, fieldValue) {
   if (field.max && fieldValue > field.max) return true;
 }
 
-function formatValue (field,v) {
-  if (v == undefined) return "";
+function formatValue (field,fv) {
+  if (fv == undefined) return "";
+  var v = fv.value;
   if (field.type == "rational" && Number.isInteger(v)) return v.toFixed(1);
   return v;
 }
@@ -399,9 +425,9 @@ function filterFields () {
   var pattern = document.getElementById("fieldFilter").value;
   if (pattern) {
     var regex = new RegExp(pattern);
-    return fieldCatalog.fields.filter( f => regex.test(f.id));
+    return fieldCatalog.fields.filter( f => regex.test(f.id) && !isHidden(f));
   } else {
-    return Array.from(fieldCatalog.fields);  // make sure we don't modify the original
+    return fieldCatalog.fields.filter( f => !isHidden(f))
   }
 }
 
@@ -505,7 +531,7 @@ function showFieldInfo (field) {
     txt += ']';
   }
   if (field.formula) {
-    txt += ".         \=";
+    txt += ".         =";
     txt += field.formula;
   }
   info(txt);
@@ -520,9 +546,18 @@ function clickRow (i) {
 
 //--- dynamic data acquisition and processing
 
+function getWsUrl() {
+  var loc = document.location;
+  var prot = (loc.protocol == "https:") ? "wss://" : "ws://";
+
+  return (prot + loc.host + parentOfPath(loc.pathname) + "/ws");
+}
+
 function initWebSocket() {
   if ("WebSocket" in window) {
-    ws = new WebSocket("ws://localhost:8080/tabdata/ws");
+    var wsUrl = getWsUrl();
+    //console.log("@@@ wsUrl = " + wsUrl);
+    ws = new WebSocket(wsUrl);
 
     ws.onopen = function() {
       console.log(`websocket ${ws} opened`);
@@ -556,7 +591,7 @@ function initWebSocket() {
           fieldCatalog = catalog;
           fields = filterFields();
 
-          document.getElementById("datasetTitle").textContent = fieldCatalog.title
+          document.getElementById("datasetTitle").textContent = `${fieldCatalog.id} : ${fieldCatalog.info}`
           if (hasProviders())  {
             initTable();
             setData();
@@ -570,7 +605,7 @@ function initWebSocket() {
           providerCatalog = catalog;
           providers = filterProviders();
 
-          document.getElementById("sourceTitle").textContent = providerCatalog.title
+          document.getElementById("sourceTitle").textContent = `${providerCatalog.id} : ${providerCatalog.info}`
           if (hasFields())  {
             initTable();
             setData();
@@ -589,8 +624,9 @@ function initWebSocket() {
           log(`reject edit mode for user ${uid}`);
         }
       }
-      else if (msgType == "localProvider") {
-        localProvider = msg.localProvider;
+      else if (msgType == "siteId") {
+        siteId = msg.siteId;
+        document.getElementById("siteId").textContent = siteId
       }
     };
 
@@ -616,9 +652,9 @@ function sendRequestUserPermissions (uid,pw){
   }
 }
 
-function sendProviderChange (uid,pw,changeDate,provider,changedFields) {
+function sendUserChange (uid,pw,changeDate,provider,changedFields) {
   if (ws) {
-    var msg = `{"providerChange":{"${uid}":[${toUtf8Array(pw).join(',')}],"date":${changeDate},"${provider.id}":{${changedFields}}}}`;
+    var msg = `{"userChange":{"${uid}":[${toUtf8Array(pw).join(',')}],"date":${changeDate},"providerCatalogId":"${providerCatalog.id}","fieldCatalogId":"${fieldCatalog.id}","siteId":"${siteId}","${provider.id}":{${changedFields}}}}`;
     ws.send(msg);
     log(`sent data changes for ${provider.id}`);
   }
@@ -730,7 +766,7 @@ function sendChanges() {
         }
 
         if (acc.length > 0) {
-          sendProviderChange(uid,pw,Date.now(),provider,acc);
+          sendUserChange(uid,pw,Date.now(),provider,acc);
         }
       }
     }
@@ -813,7 +849,6 @@ function init() {
 
 function initDefaultValues (e) {
   maxLines = parseInt(getComputedStyle(document.body).getPropertyValue("--max-lines"));
-  console.log("@@ displayLines: " + maxLines);
   document.getElementById("lines").value = maxLines;
 }
 

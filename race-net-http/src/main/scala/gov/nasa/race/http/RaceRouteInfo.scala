@@ -16,12 +16,16 @@
  */
 package gov.nasa.race.http
 
+import akka.actor.ActorRef
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.{PathMatchers, Route}
 import com.typesafe.config.Config
 import gov.nasa.race.config.ConfigUtils._
-import gov.nasa.race.core.{ParentActor, RaceDataConsumer}
+import gov.nasa.race.core.{ParentActor, RaceDataClient}
+
+import scala.concurrent.duration._
+import scala.concurrent.{Await, Future}
 
 /**
   * base type for route infos, which consist of a akka.http Route and an optional RaceActor
@@ -57,6 +61,13 @@ trait RaceRouteInfo {
   def info(f: => String) = gov.nasa.race.core.info(f)(parent.log)
   def warning(f: => String) = gov.nasa.race.core.warning(f)(parent.log)
   def error(f: => String) = gov.nasa.race.core.error(f)(parent.log)
+
+
+  def getActorRef (actorName: String): ActorRef = {
+    val sel = parent.context.actorSelection(s"*/$actorName")
+    val future: Future[ActorRef] = sel.resolveOne(1.second)
+    Await.result(future,1.second) // this throws a ActorNotFound or TimedoutException if it does not succeed
+  }
 }
 
 
@@ -64,7 +75,7 @@ trait RaceRouteInfo {
   * a RaceRouteInfo that has an associated RaceRouteActor which sets the published content
   * from information received via RACE channel messages
   */
-trait SubscribingRaceRoute extends RaceRouteInfo with RaceDataConsumer
+trait SubscribingRaceRoute extends RaceRouteInfo with RaceDataClient
 
 
 

@@ -129,6 +129,10 @@ object ConfigUtils {
       }
     }
 
+    def getOptionalVaultableChars (key: String): Option[Array[Char]] = {
+      getOptionalVaultableString(key).map( _.toCharArray)
+    }
+
     def getStringOrElse(key: String, fallback: String) = getWithFallback(key,fallback)(conf.getString(key))
     def getOptionalString(key: String): Option[String] = getOptional(key)(conf.getString(key))
 
@@ -168,6 +172,7 @@ object ConfigUtils {
         case _: ConfigException.Missing => Array.empty[String]
       }
     }
+
     def getStrings (key: String): Array[String] = {
       try {
         toArray(conf.getStringList(key))

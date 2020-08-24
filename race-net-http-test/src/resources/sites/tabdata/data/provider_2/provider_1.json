@@ -1,14 +1,14 @@
 {
   "id": "provider_1",
-  "date": "2020-06-29T16:06:01.000",
+  "date": "2020-06-29T16:06:00.000",
   "providerCatalogId": "/providers/region1",
   "fieldCatalogId": "/fields/sds1",
   "fieldValues": {
-    "/cat_A/field_1": 9,
+    "/cat_A/field_1": 8,
     "/cat_A/field_2": 12,
     "/cat_A/field_3": 13,
 
-    "/cat_B/field_1": 110.0,
+    "/cat_B/field_1": 109.0,
     "/cat_B/field_2": 120.0,
 
     "/cat_C/field_1": 1100,

@@ -16,7 +16,9 @@
  */
 package gov.nasa.race.http
 
-import akka.http.scaladsl.model.ws.TextMessage
+import java.net.InetSocketAddress
+
+import akka.http.scaladsl.model.ws.{Message, TextMessage}
 import akka.http.scaladsl.model.{ContentTypes, HttpEntity}
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
@@ -25,6 +27,8 @@ import com.typesafe.config.Config
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.ParentActor
 import scalatags.Text.all.{head => htmlHead, _}
+
+import scala.collection.immutable.Iterable
 
 /*
  * a collection of generic test routes that can be used to test network connection and client compatibility.
@@ -100,7 +104,7 @@ class TestRefresh (val parent: ParentActor, val config: Config) extends Subscrib
 
   private var data: String = "?" // to be set by actor
 
-  override def setData(newData: Any): Unit = {
+  override def receiveData(newData: Any): Unit = {
     data = newData.toString
   }
 
@@ -220,7 +224,7 @@ class EchoService (val parent: ParentActor, val config: Config) extends Protocol
     case tm: TextMessage.Strict =>
       val msgText = tm.text
       info(s"route $name processing incoming: $msgText")
-      TextMessage(Source.single(s"Echo [$msgText]")) :: Nil
+      TextMessage.Strict(s"Echo [$msgText]") :: Nil
   }
 
   override def route: Route = {
@@ -233,4 +237,28 @@ class EchoService (val parent: ParentActor, val config: Config) extends Protocol
 }
 
 
+/**
+  * a self-authenticated web socket service without other content
+  *
+  * this service echos incoming messages to the requester and otherwise periodically pushes data to all connections
+  */
+class AuthorizedEchoPushService (val parent: ParentActor, val config: Config) extends PushWSRaceRoute with BasicAuthorizedWSRoute {
 
+  override protected def handleIncoming (remoteAddr: InetSocketAddress, m: Message): Iterable[Message] = m match {
+    case tm: TextMessage.Strict =>
+      val msgText = tm.text
+      info(s"echo incoming: '$msgText' from $remoteAddr")
+      TextMessage.Strict(s"Echo [$msgText]") :: Nil
+    case other =>
+      info(s"incoming message ignored: $other")
+      Nil
+  }
+
+  override def route: Route = {
+    get {
+      path(requestPrefixMatcher) {
+        promoteAuthorizedToWebSocket(User.UserRole)
+      }
+    }
+  }
+}

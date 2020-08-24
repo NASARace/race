@@ -28,7 +28,7 @@ import gov.nasa.race._
 import gov.nasa.race.common.Stats
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.Messages.BusEvent
-import gov.nasa.race.core.{DataConsumerRaceActor, ParentActor, RaceContext}
+import gov.nasa.race.core.{DataClientRaceActor, ParentActor, RaceContext}
 import gov.nasa.race.http.HtmlStats._
 import gov.nasa.race.util.{ClassLoaderUtils, FileUtils}
 import scalatags.Text.all.{content, head => htmlHead, _}
@@ -57,7 +57,7 @@ class HttpStatsReporter (val parent: ParentActor, val config: Config) extends Su
 
   //--- the interface methods to provide
 
-  override protected def instantiateActor: DataConsumerRaceActor = {
+  override protected def instantiateActor: DataClientRaceActor = {
     new HttpStatsReportActor(this, config)
   }
 
@@ -83,7 +83,7 @@ class HttpStatsReporter (val parent: ParentActor, val config: Config) extends Su
     }
   }
 
-  override def setData (data: Any): Unit = {
+  override def receiveData(data: Any): Unit = {
     data match {
       case newContent: HttpContent => httpContent = newContent // generated from data
       case _ => // ignore anything that is not
@@ -104,7 +104,7 @@ class HttpStatsReporter (val parent: ParentActor, val config: Config) extends Su
   * this is where we create the dynamic content so that we don't have to synchronize
   */
 class HttpStatsReportActor (routeInfo: SubscribingRaceRoute, config: Config)
-                                                                 extends DataConsumerRaceActor(routeInfo, config) {
+                                                                 extends DataClientRaceActor(routeInfo, config) {
 
   //--- content creation options
   val refreshRate = config.getFiniteDurationOrElse("refresh", 5.seconds)
@@ -123,7 +123,7 @@ class HttpStatsReportActor (routeInfo: SubscribingRaceRoute, config: Config)
   override def handleMessage = {
     case BusEvent(_, stats: Stats, _) =>
       topics = topics + (stats.topic -> stats)
-      routeInfo.setData(renderPage(topics))
+      routeInfo.receiveData(renderPage(topics))
   }
 
   //--- content creation

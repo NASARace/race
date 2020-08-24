@@ -17,6 +17,7 @@
 package gov.nasa.race.http.tabdata
 
 import gov.nasa.race.test.RaceSpec
+import gov.nasa.race.uom.DateTime
 import org.scalatest.flatspec.AnyFlatSpec
 
 import scala.collection.immutable.ListMap
@@ -27,6 +28,8 @@ import scala.collection.immutable.ListMap
 class FieldExpressionSpec extends AnyFlatSpec with RaceSpec {
 
   //--- test data
+
+  implicit val date = DateTime.now
 
   val f1 = LongField.instantiate("f1", "this is editable field 1")
   val f2 = LongField.instantiate("f2", "this is editable field 2")
@@ -70,7 +73,7 @@ class FieldExpressionSpec extends AnyFlatSpec with RaceSpec {
 
     println(s"\n#-- simple function: '$formula'")
     val expr = parse(p,formula)
-    evalFor(new SimpleEvalContext(f3,fieldValues), expr)
+    evalFor(new SimpleEvalContext(f3,fieldValues,date), expr)
 
     val deps = expr.dependencies()
     println(s"  dependencies: $deps")
@@ -83,7 +86,7 @@ class FieldExpressionSpec extends AnyFlatSpec with RaceSpec {
 
     println(s"\n#-- function with field ref pattern: '$formula'")
     val expr = parse(p,formula)
-    evalFor(new SimpleEvalContext(f3,fieldValues), expr)
+    evalFor(new SimpleEvalContext(f3,fieldValues,date), expr)
   }
 
 
@@ -93,7 +96,7 @@ class FieldExpressionSpec extends AnyFlatSpec with RaceSpec {
 
     println(s"\n--- nested function: '$formula'")
     val expr = parse(p,formula)
-    evalFor(new SimpleEvalContext(f3,fieldValues), expr)
+    evalFor(new SimpleEvalContext(f3,fieldValues,date), expr)
 
     val deps = expr.dependencies()
     println(s"  dependencies: $deps")
@@ -106,7 +109,7 @@ class FieldExpressionSpec extends AnyFlatSpec with RaceSpec {
 
     println(s"\n--- nested function: '$formula'")
     val expr = parse(p,formula)
-    evalFor(new SimpleEvalContext(f3,fieldValues), expr)
+    evalFor(new SimpleEvalContext(f3,fieldValues,date), expr)
     // TBD now update the fieldValues and re-eval
 
     val deps = expr.dependencies()

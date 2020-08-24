@@ -23,12 +23,10 @@ import gov.nasa.race.core.Messages.BusEvent
 
 /**
   * an interface for a non-actor object that needs to obtain data from an associated second tier actor that
-  * is effectively a bus probe. The DataClient instantiates this actor and hence could break encapsulation, so
-  * care has to be taken to
-  *
-  * The DataClient context includes a ParentActor which is used to supervise
+  * is essentially a bus interface. The DataClient instantiates this actor and hence could break encapsulation, so
+  * care has to be taken to avoid data races inside of setData() implementations
   */
-trait RaceDataConsumer {
+trait RaceDataClient {
   val parent: ParentActor
   val config: Config
   val name: String
@@ -36,7 +34,7 @@ trait RaceDataConsumer {
   protected val actorRef = createActor
 
   // can be overridden by concrete type if data consolidation is required from the actor
-  protected def instantiateActor: DataConsumerRaceActor = new DataConsumerRaceActor(this,config)
+  protected def instantiateActor: DataClientRaceActor = new DataClientRaceActor(this,config)
 
   protected def createActor: ActorRef = {
     val aRef = parent.actorOf(Props(instantiateActor), name)
@@ -49,22 +47,28 @@ trait RaceDataConsumer {
     * NOTE - this method is directly called by an associated actor and hence has to provide appropriate synchronization
     * in case DataClient and DataClientRaceActor do not execute in the same thread
     */
-  def setData (newData: Any): Unit
+  def receiveData(data: Any): Unit
+
+  def publishData(data: Any): Unit = actorRef ! PublishRaceData(data)
 }
 
-/**
-  *
-  */
-class DataConsumerRaceActor(val dataConsumer: RaceDataConsumer, val config: Config) extends SubscribingRaceActor {
+case class PublishRaceData (data: Any)
 
-  def setData(newData: Any) = dataConsumer.setData(newData)
+/**
+  * generic second tier (automatically created) actor that forwards received messages to a non-actor object
+  */
+class DataClientRaceActor(val dataClient: RaceDataClient, val config: Config) extends SubscribingRaceActor with PublishingRaceActor {
+
+  def setClientData(newData: Any) = dataClient.receiveData(newData)
 
   /**
     * the generic implementation just forwards everything we receive from our 'read-from' channels to the client
     * override if concrete actor type has to consolidate data
     */
   override def handleMessage = {
-    case BusEvent(_, data: Any, _) => setData(data)
-    case msg: String => setData(msg)  // mostly for testing purposes
+    case BusEvent(_, data: Any, _) => setClientData(data)
+    case msg: String => setClientData(msg)  // mostly for testing purposes
+
+    case PublishRaceData(data) => publish(data)
   }
 }

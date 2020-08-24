@@ -21,29 +21,31 @@ import gov.nasa.race.test.RaceSpec
 import gov.nasa.race.util.FileUtils
 import org.scalatest.flatspec.AnyFlatSpec
 
-class FieldSpec extends AnyFlatSpec with RaceSpec {
+/**
+  * reg test for Provider data types
+  */
+class ProviderSpec extends AnyFlatSpec with RaceSpec {
 
+  "a ProviderCatalogParser" should "read ProviderCatalog from JSON source" in {
+    val input = FileUtils.fileContentsAsString("race-net-http-test/src/resources/sites/tabdata/data/providerCatalog.json").get
 
-  "a FieldCatalogParser" should "read FieldCatalog from JSON source" in {
-    val input = FileUtils.fileContentsAsString("race-net-http-test/src/resources/sites/tabdata/data/fieldCatalog.json").get
-
-    val parser = new FieldCatalogParser
+    val parser = new ProviderCatalogParser
 
     println(s"#-- parsing: $input")
 
     parser.parse(input.getBytes) match {
-      case Some(cat:FieldCatalog) =>
+      case Some(cat:ProviderCatalog) =>
         println("\n  -> result:")
 
         println(s"catalog id:  ${cat.id}")
         println(s"catalog date: ${cat.date}")
-        println("fields:")
-        cat.fields.foreach { e=>
+        println("providers:")
+        cat.providers.foreach { e=>
           val (id,field) = e
           println(s"  '$id': $field")
         }
 
-        assert( cat.fields.size == 12)
+        assert( cat.providers.size == 9)
 
         val w = new JsonWriter
         w.format(true)
@@ -52,7 +54,7 @@ class FieldSpec extends AnyFlatSpec with RaceSpec {
         println("\n  -> client JSON:")
         println(w.toJson)
 
-      case _ => fail("failed to parse field catalog")
+      case _ => fail("failed to parse provider catalog")
     }
   }
 }

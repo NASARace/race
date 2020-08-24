@@ -19,6 +19,7 @@ package gov.nasa.race.core
 
 import java.io.FileInputStream
 import java.lang.reflect.InvocationTargetException
+import java.util.concurrent.TimeoutException
 
 import akka.actor._
 import akka.event.Logging.LogLevel
@@ -39,6 +40,7 @@ import gov.nasa.race.util.{ClassLoaderUtils, ThreadUtils}
 import scala.collection.concurrent.TrieMap
 import scala.collection.immutable.{ListMap, Map, Set}
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
 import scala.jdk.CollectionConverters._
 import scala.language.postfixOps
@@ -251,6 +253,32 @@ class RaceActorSystem(val config: Config) extends LogController with VerifiableA
   protected[this] def createRaceContext(master: ActorRef, bus: Bus): RaceContext = RaceContext(master, bus)
 
   def getActorConfigs = config.getOptionalConfigList("actors")
+
+  /**
+    * this searches for named (toplevel) actors in this system
+    *
+    * note this actor already has to be instantiated when calling this function hence we don't use normal (and
+    * potentially longer) actor timeouts
+    */
+  def getOptionalRaceActorRef (actorName: String): Option[ActorRef] = {
+    val sel = system.actorSelection(s"/user/$name/$actorName")
+    val future: Future[ActorRef] = sel.resolveOne(1.second)
+    try {
+      Some(Await.result(future,1.second))
+    } catch {
+      case _: ActorNotFound  => None
+      case _: TimeoutException => None
+    }
+  }
+
+  /**
+    * mandatory RaceActor lookup
+    */
+  def getRaceActorRef (actorName: String): ActorRef = {
+    val sel = system.actorSelection(s"/user/$name/$actorName")
+    val future: Future[ActorRef] = sel.resolveOne(1.second)
+    Await.result(future,1.second) // this throws a ActorNotFound or TimedoutException if it does not succeed
+  }
 
   //--- the state transition methods
 

@@ -45,6 +45,11 @@ class RangeStack (var capacity: Int) {
     top = -1
   }
 
+  @inline final def dropRight (n: Int): RangeStack = {
+    if (n <= top) top -= n else top = -1
+    this
+  }
+
   @inline final def push (off: Int, len: Int): Unit = {
     top += 1
     if (top >= capacity) grow(capacity*2)

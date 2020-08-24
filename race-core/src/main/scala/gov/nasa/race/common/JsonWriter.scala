@@ -17,8 +17,13 @@
 package gov.nasa.race.common
 
 import gov.nasa.race.common.ImplicitGenerics._
+import gov.nasa.race.uom.DateTime
 
 import scala.collection.mutable.ArrayBuffer
+
+trait JsonSerializable {
+  def serializeTo (writer: JsonWriter): Unit
+}
 
 object JsonWriter {
   sealed trait ElementType
@@ -46,6 +51,8 @@ import JsonWriter._
   * is still possible to produce invalid JSON
   *
   * Note that instances are not supposed to be thread safe
+  *
+  * TODO - add formatting option
   */
 class JsonWriter (jsonType: ElementType = JsonWriter.RawElements, initSize: Int = 4096) {
 
@@ -53,6 +60,9 @@ class JsonWriter (jsonType: ElementType = JsonWriter.RawElements, initSize: Int 
   protected var needsSep: Boolean = false
 
   protected val elementStack: ArrayBuffer[ElementType] = ArrayBuffer.empty
+
+  protected var pretty: Boolean = false // format with indented lines
+  protected var useReadableDateTime: Boolean = false // write DateTime as readable string
 
   initialize
 
@@ -65,6 +75,28 @@ class JsonWriter (jsonType: ElementType = JsonWriter.RawElements, initSize: Int 
       case JsonWriter.ObjectType => beginObject
       case JsonWriter.ArrayType => beginArray
       case JsonWriter.RawElements => // no toplevel delimiters added
+    }
+  }
+
+  def format (printFormatted: Boolean): Boolean = {
+    val prev = pretty
+    pretty = printFormatted
+    prev
+  }
+  def readableDateTime (printReadable: Boolean) : Boolean = {
+    val prev = useReadableDateTime
+    useReadableDateTime = true
+    prev
+  }
+
+  protected final def indent: Unit = {
+    var i = 0
+    while (i < elementStack.size) { buf.append("  "); i += 1 }
+  }
+  @inline protected final def newLine: Unit = {
+    if (pretty) {
+      buf.append("\n")
+      indent
     }
   }
 
@@ -118,6 +150,11 @@ class JsonWriter (jsonType: ElementType = JsonWriter.RawElements, initSize: Int 
     if (elementStack.nonEmpty && (elementStack.last ne t)) throw new RuntimeException("invalid JSON environment")
   }
 
+  def toJson (o: JsonSerializable): String = {
+    o.serializeTo(this)
+    toJson
+  }
+
   def toJson: String = {
     closeOpenEnvironments
     buf.toString
@@ -131,6 +168,7 @@ class JsonWriter (jsonType: ElementType = JsonWriter.RawElements, initSize: Int 
   }
   @inline final def endObject: JsonWriter = {
     pop(ObjectType)
+    newLine
     buf.append('}');
     armSeparator
   }
@@ -139,23 +177,23 @@ class JsonWriter (jsonType: ElementType = JsonWriter.RawElements, initSize: Int 
     f(this)
     endObject
   }
-  def writeMemberObject (memberName: String)( f: JsonWriter=>Unit): JsonWriter = {
+  def writeMemberObject (memberName: CharSequence)( f: JsonWriter=>Unit): JsonWriter = {
     writeMemberName(memberName)
     writeObject(f)
   }
-  def writeIntMembersMember (memberName: String, it: Iterable[(String,Int)]): JsonWriter = {
+  def writeIntMembersMember (memberName: CharSequence, it: Iterable[(String,Int)]): JsonWriter = {
     writeMemberName(memberName)
     writeIntMembers(it)
   }
-  def writeLongMembersMember (memberName: String, it: Iterable[(String,Long)]): JsonWriter = {
+  def writeLongMembersMember (memberName: CharSequence, it: Iterable[(String,Long)]): JsonWriter = {
     writeMemberName(memberName)
     writeLongMembers(it)
   }
-  def writeDoubleMembersMember (memberName: String, it: Iterable[(String,Double)]): JsonWriter = {
+  def writeDoubleMembersMember (memberName: CharSequence, it: Iterable[(String,Double)]): JsonWriter = {
     writeMemberName(memberName)
     writeDoubleMembers(it)
   }
-  def writeStringMembersMember (memberName: String, it: Iterable[(String,String)]): JsonWriter = {
+  def writeStringMembersMember (memberName: CharSequence, it: Iterable[(String,String)]): JsonWriter = {
     writeMemberName(memberName)
     writeStringMembers(it)
   }
@@ -168,8 +206,9 @@ class JsonWriter (jsonType: ElementType = JsonWriter.RawElements, initSize: Int 
     disarmSeparator
   }
   @inline final def endArray: JsonWriter = {
-    buf.append(']');
     pop(ArrayType)
+    newLine
+    buf.append(']');
     armSeparator
   }
   @inline def writeArray (f: JsonWriter=>Unit): JsonWriter = {
@@ -177,23 +216,23 @@ class JsonWriter (jsonType: ElementType = JsonWriter.RawElements, initSize: Int 
     f(this)
     endArray
   }
-  def writeArrayMember(memberName: String)(f: JsonWriter=>Unit): JsonWriter = {
+  def writeArrayMember(memberName: CharSequence)(f: JsonWriter=>Unit): JsonWriter = {
     writeMemberName(memberName)
     writeArray(f)
   }
-  def writeStringArrayMember(memberName: String, it: Iterable[String]): JsonWriter = {
+  def writeStringArrayMember(memberName: CharSequence, it: Iterable[String]): JsonWriter = {
     writeMemberName(memberName)
     writeStringValues(it)
   }
-  def writeIntArrayMember(memberName: String, it: Iterable[Int]): JsonWriter = {
+  def writeIntArrayMember(memberName: CharSequence, it: Iterable[Int]): JsonWriter = {
     writeMemberName(memberName)
     writeIntValues(it)
   }
-  def writeLongArrayMember(memberName: String, it: Iterable[Long]): JsonWriter = {
+  def writeLongArrayMember(memberName: CharSequence, it: Iterable[Long]): JsonWriter = {
     writeMemberName(memberName)
     writeLongValues(it)
   }
-  def writeDoubleArrayMember(memberName: String, it: Iterable[Double]): JsonWriter = {
+  def writeDoubleArrayMember(memberName: CharSequence, it: Iterable[Double]): JsonWriter = {
     writeMemberName(memberName)
     writeDoubleValues(it)
   }
@@ -207,7 +246,7 @@ class JsonWriter (jsonType: ElementType = JsonWriter.RawElements, initSize: Int 
     } else this
   }
 
-  @inline final def writeString (s: String): JsonWriter = {
+  @inline final def writeString (s: CharSequence): JsonWriter = {
     checkAndArmSeparator
     buf.append('"')
     buf.append(s)
@@ -215,16 +254,17 @@ class JsonWriter (jsonType: ElementType = JsonWriter.RawElements, initSize: Int 
     this
   }
 
-  @inline final def writeMemberName (name: String): JsonWriter = {
+  @inline final def writeMemberName (name: CharSequence): JsonWriter = {
     checkEnvironment(ObjectType)
     checkAndDisarmSeparator
+    newLine
     buf.append('"')
     buf.append(name)
     buf.append("\":")
     this
   }
 
-  @inline final def writeUnQuotedValue(s: String): JsonWriter = {
+  @inline final def writeUnQuotedValue(s: CharSequence): JsonWriter = {
     checkAndArmSeparator
     buf.append(s)
     this
@@ -252,40 +292,48 @@ class JsonWriter (jsonType: ElementType = JsonWriter.RawElements, initSize: Int 
   }
   @inline final def writeNull: JsonWriter = { writeString("null"); this }
 
-  def writeBooleanMember (k: String, v: Boolean): JsonWriter = {
+  def writeBooleanMember (k: CharSequence, v: Boolean): JsonWriter = {
     writeMemberName(k)
     writeBoolean(v)
     armSeparator
   }
 
-  def writeIntMember (k: String, v: Int): JsonWriter = {
+  def writeIntMember (k: CharSequence, v: Int): JsonWriter = {
     writeMemberName(k)
     writeInt(v)
     armSeparator
   }
 
-  def writeLongMember (k: String, v: Long): JsonWriter = {
+  def writeLongMember (k: CharSequence, v: Long): JsonWriter = {
     writeMemberName(k)
     writeLong(v)
     armSeparator
   }
 
-  def writeDoubleMember (k: String, v: Double): JsonWriter = {
+  def writeDoubleMember (k: CharSequence, v: Double): JsonWriter = {
     writeMemberName(k)
     writeDouble(v)
     armSeparator
   }
 
-  def writeStringMember (k: String, v: String): JsonWriter = {
+  def writeStringMember (k: CharSequence, v: String): JsonWriter = {
     writeMemberName(k)
     writeString(v)
     armSeparator
   }
 
-  def writeUnQuotedMember (k: String, v: String): JsonWriter = {
+  def writeUnQuotedMember (k: CharSequence, v: String): JsonWriter = {
     writeMemberName(k)
     writeUnQuotedValue(v)
     armSeparator
+  }
+
+  def writeDateTimeMember (memberName: CharSequence, dt: DateTime): JsonWriter = {
+    if (useReadableDateTime) {
+      writeStringMember(memberName, dt.toString)
+    } else {
+      writeLongMember(memberName, dt.toEpochMillis)
+    }
   }
 
   @inline final def += (v: String): JsonWriter = writeString(v)
@@ -411,6 +459,7 @@ class JsonWriter (jsonType: ElementType = JsonWriter.RawElements, initSize: Int 
   def writeValues[T](it: Iterable[T])(implicit adapter: JsonAdapter[T]): JsonWriter = {
     beginArray
     for (v <- it) {
+      newLine
       write(v)
     }
     endArray

@@ -16,17 +16,17 @@
  */
 package gov.nasa.race.http
 
+import java.io.File
 import java.net.InetSocketAddress
-import akka.NotUsed
+
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.model.ws.{BinaryMessage, Message, TextMessage}
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
-import akka.stream.scaladsl.{Flow, Sink, Source, SourceQueueWithComplete}
-import akka.stream.{Materializer, OverflowStrategy}
-import com.typesafe.config.ConfigException
+import akka.stream.Materializer
+import akka.stream.scaladsl.{Flow, Sink, SourceQueueWithComplete}
 import gov.nasa.race.config.ConfigUtils._
-import gov.nasa.race.core.RaceDataConsumer
+import gov.nasa.race.core.RaceDataClient
 
 import scala.collection.immutable.Iterable
 import scala.concurrent.duration._
@@ -41,42 +41,38 @@ trait WSRaceRoute extends RaceRouteInfo {
   protected def promoteToWebSocket: Route
 }
 
-case class WebSocketPushConnection(queue: SourceQueueWithComplete[Message], remoteAddr: InetSocketAddress)
-
 /**
   * a RaceRoute that completes with a WebSocket to which messages are pushed from an
   * associated actor that received data from RACE channels and turns them into web socket Messages
   */
-trait PushWSRaceRoute extends WSRaceRoute with RaceDataConsumer {
+trait PushWSRaceRoute extends WSRaceRoute with SourceQueueOwner with RaceDataClient {
 
-  val srcBufSize = config.getIntOrElse("source-queue", 16)
-  val srcPolicy = config.getStringOrElse( "source-policy", "dropTail") match {
-    case "dropHead" => OverflowStrategy.dropHead
-    case "dropNew" => OverflowStrategy.dropNew
-    case "dropTail" => OverflowStrategy.dropTail
-    case "dropBuffer" => OverflowStrategy.dropBuffer
-    case "fail" => OverflowStrategy.fail
-    case other => throw new ConfigException.Generic(s"unsupported source buffer overflow strategy: $other")
-  }
+  protected var connections: Map[InetSocketAddress,SourceQueueWithComplete[Message]] = Map.empty
 
-  private var connections: List[WebSocketPushConnection] = List.empty
+  def hasConnections: Boolean = connections.nonEmpty
 
   protected def push (m: Message): Unit = synchronized {
-    connections.foreach(pushTo(_,m))
+    connections.foreach (e => pushTo(e._1,e._2, m))
   }
 
-  protected def pushTo( conn: WebSocketPushConnection, m: Message): Unit = synchronized {
+  protected def pushTo(remoteAddr: InetSocketAddress, queue: SourceQueueWithComplete[Message], m: Message): Unit = synchronized {
     implicit val ec = scala.concurrent.ExecutionContext.global
 
-    conn.queue.offer(m).onComplete { res=>
+    queue.offer(m).onComplete { res=>
       res match {
         case Success(_) => // all good (TODO should we check for Enqueued here?)
-          info(s"pushing message $m to ${conn.remoteAddr}")
+          info(s"pushing message $m to $remoteAddr")
 
         case Failure(_) =>
-          info(s"dropping connection: ${conn.remoteAddr}")
-          connections = connections.filter( _ ne conn)
+          info(s"dropping connection: $remoteAddr")
+          connections = connections.filter( e => e._1 ne remoteAddr)
       }
+    }
+  }
+
+  protected def pushToFiltered (m: Message)( f: InetSocketAddress=>Boolean): Unit = synchronized {
+    connections.foreach { e=>
+      if (f(e._1)) pushTo(e._1, e._2,m)
     }
   }
 
@@ -84,7 +80,7 @@ trait PushWSRaceRoute extends WSRaceRoute with RaceDataConsumer {
     * called by associated actor
     * NOTE - this is executed from the actor thread and can modify connections so we have to synchronize
     */
-  def setData (data: Any): Unit = {
+  def receiveData(data: Any): Unit = {
     push(TextMessage.Strict(data.toString))
   }
 
@@ -100,7 +96,7 @@ trait PushWSRaceRoute extends WSRaceRoute with RaceDataConsumer {
     * override in subclasses if incoming messages need to be processed - default is doing nothing
     * note this executes in a synchronized context
     */
-  protected def handleIncoming (m: Message): Iterable[Message] = {
+  protected def handleIncoming (remoteAddr: InetSocketAddress, m: Message): Iterable[Message] = {
     info(s"ignoring incoming message $m")
     discardMessage(m)
     Nil
@@ -110,7 +106,7 @@ trait PushWSRaceRoute extends WSRaceRoute with RaceDataConsumer {
     * override in concrete routes to push initial data etc.
     * Use pushTo
     */
-  protected def initializeConnection (conn: WebSocketPushConnection): Unit = {
+  protected def initializeConnection (remoteAddr: InetSocketAddress, queue: SourceQueueWithComplete[Message]): Unit = {
     // nothing here
   }
 
@@ -123,13 +119,13 @@ trait PushWSRaceRoute extends WSRaceRoute with RaceDataConsumer {
       headerValueByType(classOf[RealRemoteAddress]) { remoteAddrHdr =>
         val remoteAddress = remoteAddrHdr.address
 
-        val (outboundMat,outbound) = Source.queue[Message](srcBufSize, srcPolicy).preMaterialize()
-        val newConn = WebSocketPushConnection(outboundMat, remoteAddress)
-        initializeConnection(newConn)
-        connections ::= newConn
+        val (outboundMat,outbound) = createPreMaterializedSourceQueue
+        val newConn = (remoteAddress, outboundMat)
+        initializeConnection(remoteAddress,outboundMat)
+        connections = connections + newConn
 
         val inbound: Sink[Message, Any] = Sink.foreach{ inMsg =>
-          handleIncoming(inMsg).foreach( outMsg => pushTo(newConn,outMsg))
+          handleIncoming(remoteAddress, inMsg).foreach( outMsg => pushTo(remoteAddress, outboundMat,outMsg))
         }
 
         val flow = Flow.fromSinkAndSourceCoupled(inbound, outbound)
@@ -186,6 +182,9 @@ trait ProtocolWSRaceRoute extends WSRaceRoute {
 /**
   * a route that supports web socket promotion from within a user-authenticated context
   *
+  * use this authorization if the websocket is embedded in some other protected content, i.e. we have a cookie-based
+  * per-request authentication.
+  *
   * note we only check but do not update the session token (there is no HttpResponse we could use to transmit
   * a new token value), and we provide an additional config option to specify a shorter expiration. This is based
   * on the model that the promotion request is automated (via script) from within a previous (authorized) response
@@ -214,3 +213,38 @@ trait AuthorizedWSRoute extends WSRaceRoute with AuthorizedRaceRoute {
   }
 }
 
+/**
+  * a route that supports authorized web socket promotion outside of other authorized content
+  *
+  * use this authorization if the client directly requests the web socket and nothing else, i.e. we have only one
+  * point of authentication, and the client uses akka-http BasicHttpCredentials (in extraHeaders)
+  */
+trait BasicAuthorizedWSRoute extends WSRaceRoute {
+
+  val pwStore: PasswordStore = createPwStore
+
+  def createPwStore: PasswordStore = {
+    val fname = config.getVaultableString("user-auth")
+    val file = new File(fname)
+    if (file.isFile) {
+      new PasswordStore(file)
+    } else throw new RuntimeException("user-auth not found")
+  }
+
+  protected def promoteAuthorizedToWebSocket (requiredRole: String): Route = {
+    extractCredentials { cred =>
+      cred match {
+        case Some(credentials) =>
+          pwStore.verifyBasic(credentials.token) match {
+            case Some(user) =>
+              info(s"promoting to web socket for authorized user ${user.uid}")
+              promoteToWebSocket
+            case None =>
+              complete(StatusCodes.Forbidden, "unknown user credentials")
+          }
+        case None =>
+          complete(StatusCodes.Forbidden, "no user credentials")
+      }
+    }
+  }
+}

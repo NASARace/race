@@ -16,6 +16,8 @@
  */
 package gov.nasa.race.http.tabdata
 
+import gov.nasa.race.uom.DateTime
+
 import scala.collection.immutable.ListMap
 import scala.util.matching.Regex
 import scala.util.parsing.combinator._
@@ -28,16 +30,22 @@ object FieldExpression {
 }
 
 /*
- sum( `/cat_A/.+`)
- acc( /cat_B/field )
- mul( /cat_A/x, sub(/cat_B/y,/cat_X/z) )
+  examples:
+     sum( `/cat_A/.+`)
+     acc( /cat_B/field )
+     mul( /cat_A/x, sub(/cat_B/y,/cat_X/z) )
 
-   expr ::=  const | fieldRef | fun
-   fun ::= '(' funId funArgs ')'
-   funArgs ::= { fun | const | fieldRef | fieldRefPattern }
-   const ::= integer | rational
+  syntax:
+     expr ::=  const | fieldRef | fun
+     fun ::= '(' funId funArgs ')'
+     funArgs ::= { fun | const | fieldRef | fieldRefPattern }
+     const ::= integer | rational
  */
 
+/**
+  * parser for s-expr like field expressions
+  * Note we can only compile once those once we know all fields of a given catalog, i.e. in a second phase
+  */
 class FieldExpressionParser (fields: ListMap[String,Field], functions: Map[String,FunFactory]) extends RegexParsers {
 
   //--- tokens
@@ -87,11 +95,12 @@ class FieldExpressionParser (fields: ListMap[String,Field], functions: Map[Strin
 
 //--- the AST elements
 /**
-  * what is needed to get FieldValues from a FieldValueSource
+  * what is needed from the environment to evaluate FieldExpressions
   */
 trait EvalContext {
   def contextField: Field
   def fieldValues: Map[String,FieldValue]
+  def date: DateTime
 
   def contextFieldValue: FieldValue = fieldValues.get(contextField.id) match {
     case Some(fv) => fv
@@ -102,12 +111,17 @@ trait EvalContext {
 /**
   * mostly for stand-alone debugging purposes
   */
-class SimpleEvalContext (var contextField: Field, var fieldValues: Map[String,FieldValue]) extends EvalContext
+class SimpleEvalContext (var contextField: Field, var fieldValues: Map[String,FieldValue], var date: DateTime) extends EvalContext
 
 trait FieldExpression extends Any {
   def eval (implicit ctx: EvalContext): FieldValue
 
   def dependencies (acc: Set[String] = Set.empty[String]): Set[String]
+}
+
+case object UndefinedFieldExpression extends FieldExpression {
+  def eval (implicit ctx: EvalContext): FieldValue = UndefinedValue
+  def dependencies (acc: Set[String] = Set.empty[String]): Set[String] = acc
 }
 
 case class FieldRef (id: String) extends FieldExpression {
@@ -128,12 +142,12 @@ trait ConstFieldExpression extends FieldExpression {
 }
 
 case class LongConst (value: Long) extends ConstFieldExpression {
-  def eval (implicit ctx: EvalContext): FieldValue = LongValue(value)
+  def eval (implicit ctx: EvalContext): FieldValue = LongValue(value)(DateTime.UndefinedDateTime)
   override def toString: String = value.toString
 }
 
 case class DoubleConst (value: Double) extends ConstFieldExpression {
-  def eval (implicit ctx: EvalContext): FieldValue = DoubleValue(value)
+  def eval (implicit ctx: EvalContext): FieldValue = DoubleValue(value)(DateTime.UndefinedDateTime)
   override def toString: String = value.toString
 }
 
@@ -182,6 +196,7 @@ class Sum (val args: Seq[FieldExpression]) extends Fun {
   val id = Sum.id
 
   def eval (implicit ctx: EvalContext): FieldValue = {
+    implicit val date = ctx.date
     args.foldLeft[FieldValue](LongValue(0))( (sum,fvs) => sum + fvs.eval(ctx) )
   }
 }
@@ -193,6 +208,7 @@ object Max extends FunFactory with AnyArity {
 class Max (val args: Seq[FieldExpression]) extends Fun {
   val id = Max.id
   def eval (implicit ctx: EvalContext): FieldValue = {
+    implicit val date = ctx.date
     args.foldLeft[FieldValue](LongValue(0))( (max,fvs) => {
       val v = fvs.eval(ctx)
       if (v > max) v else max
@@ -210,6 +226,7 @@ object Acc extends FunFactory with Arity1 {
 class Acc (val args: Seq[FieldExpression]) extends Fun {
   val id = Acc.id
   def eval (implicit ctx: EvalContext): FieldValue = {
+    implicit val date = ctx.date
     ctx.contextFieldValue + args(0).eval(ctx)
   }
 }

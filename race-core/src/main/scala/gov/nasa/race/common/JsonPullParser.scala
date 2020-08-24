@@ -18,6 +18,8 @@ package gov.nasa.race.common
 
 import java.io.PrintStream
 
+import gov.nasa.race.uom.DateTime
+
 import scala.annotation.{switch, tailrec}
 import scala.collection.mutable
 import scala.collection.mutable.{ArrayBuffer, Stack}
@@ -93,6 +95,28 @@ object JsonPullParser {
 abstract class JsonPullParser extends LogWriter with Thrower {
   import JsonPullParser._
 
+  class ParserState {
+    val _idx = idx
+    val _state = state
+    val _pathSize = path.size
+    val _envSize = env.size
+    val _lastResult = lastResult
+
+    def restore(): Unit = {
+      idx = _idx
+      state = _state
+      if (path.size > _pathSize) {
+        var i = path.size - _pathSize
+        while (i > 0) { path.pop(); i -= 1 }
+      }
+      if (env.size > _envSize) {
+        var i = env.size - _envSize
+        while (i > 0) { env.pop(); i -= 1 }
+      }
+      lastResult = _lastResult
+    }
+  }
+
   protected var data: Array[Byte] = Array.empty[Byte]  // the (abstract) data (UTF-8), might grow
   protected var limit: Int = 0
   protected var idx = 0 // points to the next unprocessed byte in data
@@ -104,7 +128,14 @@ abstract class JsonPullParser extends LogWriter with Thrower {
   override def exception(msg: String) = new JsonParseException(msg)
 
   //--- mostly for debugging
-  def dataAsString: String = new String(data,0,limit) // use sparingly - this defeats the purpose
+  // use sparingly - those allocate and hence defeat our purpose
+  def dataAsString: String = new String(data,0,limit)
+  def dataContext (i0: Int, len: Int=24): String = {
+    val maxLen = Math.min(len,limit-i0)
+    val s = new String(data,i0,maxLen)
+    if (i0 + maxLen < limit) s + "..." else s
+  }
+
   def getLastResult: JsonParseResult = lastResult
   def getIdx: Int = idx
   def dumpEnv: Unit = println(s"""env = [${env.mkString(",")}]""")
@@ -423,7 +454,7 @@ abstract class JsonPullParser extends LogWriter with Thrower {
   }
   @inline final def readQuotedMember(name: ByteSlice): Utf8Slice = {
     val res = readNext()
-    if (member != name) throw new JsonParseException(s"expected member '$name' got '$member'")
+    if (member != name) throw exception(s"expected member '$name' got '$member'")
     if (res == QuotedValue) value else throw exception(s"not a quoted value: '$value'")
   }
 
@@ -432,26 +463,69 @@ abstract class JsonPullParser extends LogWriter with Thrower {
   }
   @inline final def readUnQuotedMember(name: ByteSlice): Utf8Slice = {
     val res = readNext()
-    if (member != name) throw new JsonParseException(s"expected member '$name' got '$member'")
+    if (member != name) throw exception(s"expected member '$name' got '$member'")
     if (res == UnQuotedValue) value else throw exception(s"not a un-quoted value: ''$value''")
   }
 
   final def readOptionalUnQuotedMember(name: ByteSlice): Option[Utf8Slice] = {
-    val i0 = idx; val s0 = state
+    val ps = new ParserState
+
     if (!isLevelEnd && isNextScalarMember(name)) {
       Some(value)
     } else {
-      idx = i0; state = s0
+      ps.restore()
       None
     }
   }
 
   final def readOptionalQuotedMember(name: ByteSlice): Option[Utf8Slice] = {
-    val i0 = idx; val s0 = state
+    val ps = new ParserState
+
     if (!isLevelEnd && isNextScalarMember(name)) {
       Some(value)
     } else {
-      idx = i0; state = s0
+      ps.restore()
+      None
+    }
+  }
+
+  /**
+    * return next named DateTime member
+    * this is the exception from the rule that we return values as slices since we accept
+    * both ISO string such as "2020-06-29T16:06:01.000" and Long epoch values, i.e. clients
+    * would have to check for UnQuotedValue and QuotedValue parse results
+    */
+
+  final def readDateTime (): DateTime = {
+    readNext() match {
+      case UnQuotedValue => DateTime.ofEpochMillis(value.toLong)
+      case QuotedValue => DateTime.parseYMDT(value)
+      case _ => throw exception(s"not a valid DateTime spec: ''$value''")
+    }
+  }
+
+  final def readDateTimeMember (name: ByteSlice): DateTime = {
+    val res = readNext()
+    if (member != name) throw exception(s"expected member '$name' got '$member'")
+
+    if (res == UnQuotedValue) {
+      DateTime.ofEpochMillis(value.toLong)
+    } else if (res == QuotedValue) {
+      DateTime.parseYMDT(value)
+    } else throw exception(s"not a valid DateTime spec: ''$value''")
+  }
+
+  final def readOptionalDateTimeMember (name: ByteSlice): Option[DateTime] = {
+    val ps = new ParserState
+
+    if (!isLevelEnd && isNextScalarMember(name)) {
+      if (lastResult == UnQuotedValue) {
+        Some(DateTime.ofEpochMillis(value.toLong))
+      } else {
+        Some(DateTime.parseYMDT(value))
+      }
+    } else {
+      ps.restore()
       None
     }
   }
@@ -483,7 +557,7 @@ abstract class JsonPullParser extends LogWriter with Thrower {
     if (res == expected) {
       val endLevel = level
       do {
-        f // this is supposed to parse ONE element of the container
+        f // this is supposed to parse/process ONE element of the container
       } while (notDone && (level >= endLevel && aggregateHasMoreValues))
       ensureNext(expected.endDelimiter)
     } else throw exception(s"expected '${expected.getClass.getSimpleName}' got '${res.getClass.getSimpleName}'")
@@ -537,6 +611,16 @@ abstract class JsonPullParser extends LogWriter with Thrower {
   @inline final def processNextObject(f: =>Unit): Unit = readAggregate(readNext(), ObjectStart)(f)
   @inline final def processCurrentObject(f: =>Unit): Unit = readAggregate(lastResult, ObjectStart)(f)
 
+  def readOptionalObjectMember[T](name: ByteSlice)(f: =>T): Option[T] = {
+    val ps = new ParserState
+
+    if (!isLevelEnd && isNextObjectStartMember(name)) {
+      Some(readCurrentObject(f))
+    } else {
+      ps.restore()
+      None
+    }
+  }
 
   //--- reading arrays into provided mutable collection
 
@@ -554,16 +638,15 @@ abstract class JsonPullParser extends LogWriter with Thrower {
   }
 
   def readOptionalArrayMemberInto[U,T <:mutable.Growable[U]](name: ByteSlice, collection: =>T)(f: =>U): Option[T] = {
-    val i0 = idx
-    val s0 = state
+    val ps = new ParserState
+
     if (!isLevelEnd && isNextArrayStartMember(name)) {
       val c = collection
       foreachInCurrentArray{ c.addOne(f) };
       Some(c)
 
     } else {
-      idx = i0 // backtrack
-      state = s0
+      ps.restore()
       None
     }
   }
@@ -631,7 +714,7 @@ abstract class JsonPullParser extends LogWriter with Thrower {
 
   //--- read object members into mutable maps, using member names as keys and returning populated map
 
-  def readNextObjectMemberInto[V,C <:mutable.Map[String,V]](name: ByteSlice, collection: C)(f: =>(String,V)): C = {
+  def readNextObjectMemberInto[V,C <:mutable.Growable[(String,V)]](name: ByteSlice, collection: C)(f: =>(String,V)): C = {
     foreachInNextObjectMember(name) {
       val (k,v) = f
       collection.addOne(k -> v)
@@ -639,9 +722,9 @@ abstract class JsonPullParser extends LogWriter with Thrower {
     collection
   }
 
-  def readOptionalObjectMemberInto[V,C <:mutable.Map[String,V]](name: ByteSlice, collection: =>C)(f: =>(String,V)): Option[C] = {
-    val i0 = idx
-    val s0 = state
+  def readOptionalObjectMemberInto[V,C <:mutable.Growable[(String,V)]](name: ByteSlice, collection: =>C)(f: =>(String,V)): Option[C] = {
+    val ps = new ParserState
+
     if (!isLevelEnd && isNextObjectStartMember(name)) {
       val c = collection
       foreachInCurrentObject {
@@ -651,13 +734,12 @@ abstract class JsonPullParser extends LogWriter with Thrower {
       Some(c)
 
     } else {
-      idx = i0 // backtrack
-      state = s0
+      ps.restore()
       None
     }
   }
 
-  def readSomeNextObjectMemberInto[V,C <:mutable.Map[String,V]](name: ByteSlice, collection: C)(f: =>Option[(String,V)]): C = {
+  def readSomeNextObjectMemberInto[V,C <:mutable.Growable[(String,V)]](name: ByteSlice, collection: C)(f: =>Option[(String,V)]): C = {
     foreachInNextObjectMember(name) {
       f match {
         case Some((k,v)) => collection.addOne(k -> v)
@@ -667,7 +749,7 @@ abstract class JsonPullParser extends LogWriter with Thrower {
     collection
   }
 
-  def readNextObjectInto[V,C <:mutable.Map[String,V]](collection: C)(f: =>(String,V)): C = {
+  def readNextObjectInto[V,C <:mutable.Growable[(String,V)]](collection: C)(f: =>(String,V)): C = {
     foreachInNextObject {
       val (k,v) = f
       collection.addOne(k -> v)
@@ -675,7 +757,7 @@ abstract class JsonPullParser extends LogWriter with Thrower {
     collection
   }
 
-  def readSomeNextObjectInto[V,C <:mutable.Map[String,V]](collection: C)(f: =>Option[(String,V)]): C = {
+  def readSomeNextObjectInto[V,C <:mutable.Growable[(String,V)]](collection: C)(f: =>Option[(String,V)]): C = {
     foreachInNextObject {
       f match {
         case Some((k,v)) => collection.addOne(k -> v)
@@ -684,14 +766,14 @@ abstract class JsonPullParser extends LogWriter with Thrower {
     }
     collection
   }
-  def readCurrentObjectInto[V,C <:mutable.Map[String,V]](collection: C)(f: =>(String,V)): C = {
+  def readCurrentObjectInto[V,C <:mutable.Growable[(String,V)]](collection: C)(f: =>(String,V)): C = {
     foreachInCurrentObject {
       val (k,v) = f
       collection.addOne(k -> v)
     }
     collection
   }
-  def readSomeCurrentObjectInto[V,C <:mutable.Map[String,V]](collection: C)(f: =>Option[(String,V)]): C = {
+  def readSomeCurrentObjectInto[V,C <:mutable.Growable[(String,V)]](collection: C)(f: =>Option[(String,V)]): C = {
     foreachInCurrentObject {
       f match {
         case Some((k,v)) => collection.addOne(k -> v)
@@ -983,7 +1065,21 @@ abstract class JsonPullParser extends LogWriter with Thrower {
       }
     }
   }
+
+  def parseMessageSet (pf: PartialFunction[ByteSlice,Option[Any]]): Option[Any] = {
+    try {
+      ensureNextIsObjectStart() // all messages are objects
+      pf(readObjectMemberName()) // it's up to the provided pf to decide what to do with unknown messages
+    } catch {
+      case x: JsonParseException =>
+        //x.printStackTrace
+        warning(s"ignoring malformed incoming message '${dataContext(0, 20)}' : ${x.getMessage}")
+        None
+    }
+  }
 }
+
+//--- concrete JsonPullParser classes (although most are further derived from some of these)
 
 /**
   * unbuffered JsonPullParser processing String input
@@ -996,16 +1092,25 @@ class StringJsonPullParser extends JsonPullParser {
     idx = seekStart()
     idx >= 0
   }
+
+  def parseMessageSet (s: String)(pf: PartialFunction[ByteSlice,Option[Any]]): Option[Any] = {
+    if (initialize(s)) {
+      super.parseMessageSet(pf)
+    } else {
+      warning(s"parser did not initialize for '${dataContext(0,20)}'")
+      None
+    }
+  }
 }
 
 /**
   * buffered JsonPullParser processing String input
   */
-class BufferedStringJsonPullParser (initBufSize: Int = 8192) extends JsonPullParser {
+class BufferedStringJsonPullParser (initBufSize: Int = 8192) extends StringJsonPullParser {
 
   protected val bb = new Utf8Buffer(initBufSize)
 
-  def initialize (s: String): Boolean = {
+  override def initialize (s: String): Boolean = {
     bb.encode(s)
     clear()
     setData(bb.data, bb.len)
@@ -1018,11 +1123,11 @@ class BufferedStringJsonPullParser (initBufSize: Int = 8192) extends JsonPullPar
 /**
   * buffered JsonPullParser processing ASCII String input
   */
-class BufferedASCIIStringJsonPullParser (initBufSize: Int = 8192) extends JsonPullParser {
+class BufferedASCIIStringJsonPullParser (initBufSize: Int = 8192) extends StringJsonPullParser {
 
   protected val bb = new AsciiBuffer(initBufSize)
 
-  def initialize (s: String): Boolean = {
+  override def initialize (s: String): Boolean = {
     bb.encode(s)
     clear()
     setData(bb.data, bb.len)
@@ -1045,4 +1150,15 @@ class UTF8JsonPullParser extends JsonPullParser {
   }
 
   def initialize (bs: Array[Byte]): Boolean = initialize(bs,bs.length)
+
+  def parseMessageSet (bs: Array[Byte], lim: Int= -1)(pf: PartialFunction[ByteSlice,Option[Any]]): Option[Any] = {
+    val limit = if (lim < 0) bs.length else lim
+
+    if (initialize(bs,limit)) {
+      super.parseMessageSet(pf)
+    } else {
+      warning(s"parser did not initialize for '${dataContext(0,20)}'")
+      None
+    }
+  }
 }

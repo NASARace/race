@@ -16,25 +16,32 @@
  */
 package gov.nasa.race.http.tabdata
 
+import gov.nasa.race.common.{JsonSerializable, JsonWriter}
+import gov.nasa.race.uom.DateTime
+
 
 /**
   * root type for field values
   *
-  * Note this has to be a universal trait since we have value classes extending it
+  * FieldValue objects are invariant
   */
-sealed trait FieldValue {
+sealed trait FieldValue extends JsonSerializable {
+
   def toLong: Long
   def toDouble: Double
   def toJson: String
   def isDefined: Boolean = true
+  def date: DateTime
+
+  def serializeTo (w: JsonWriter): Unit
 
   // note those should automatically promote to DoubleValue if one of the operands is
-  def + (term: FieldValue): FieldValue
-  def - (term: FieldValue): FieldValue
-  def * (factor: FieldValue): FieldValue
-  def / (factor: FieldValue): FieldValue
+  def + (term: FieldValue)(implicit date: DateTime): FieldValue
+  def - (term: FieldValue)(implicit date: DateTime): FieldValue
+  def * (factor: FieldValue)(implicit date: DateTime): FieldValue
+  def / (factor: FieldValue)(implicit date: DateTime): FieldValue
 
-  def neg: FieldValue
+  def neg(implicit date: DateTime): FieldValue
   def sgn: Int
 
   def < (fv: FieldValue): Boolean
@@ -43,37 +50,57 @@ sealed trait FieldValue {
   def >= (fv: FieldValue): Boolean
 }
 
-case class LongValue (value: Long) extends FieldValue {
+/**
+  * a FieldValue for which we record at which time it was created
+  *
+  * DatedFieldValue containers are state-based CRDTs - the FieldValue with the latest change date wins.
+  * If the date is equal the conflict is resolved in terms of the containing ProviderData and change site
+  */
+sealed abstract class DatedFieldValue (val date: DateTime) extends FieldValue
+
+/**
+  * a scalar FieldValue that holds a Long value
+  */
+case class LongValue (value: Long)(implicit date: DateTime) extends DatedFieldValue(date) {
   def toLong: Long = value
   def toDouble: Double = value.toDouble
   def toJson = value.toString
 
-  def neg = LongValue(-value)
+  override def toString: String = s"LongValue(value:$value,date:$date)"
+
+  def neg(implicit date: DateTime) = LongValue(-value)
   def sgn: Int = if (value < 0) -1 else if (value > 0) 1 else 0
 
+  def serializeTo (w: JsonWriter): Unit = {
+    w.beginObject
+    w.writeLongMember("value", value)
+    if (date.isDefined) w.writeDateTimeMember("date", date)
+    w.endObject
+  }
+
   //--- arithmetic ops
-  def + (term: FieldValue): FieldValue = {
+  def + (term: FieldValue)(implicit date: DateTime): FieldValue = {
     term match {
       case LongValue(n) => LongValue(value + n)
       case DoubleValue(d) => DoubleValue(value.toDouble + d)
       case UndefinedValue => this
     }
   }
-  def - (term: FieldValue): FieldValue = {
+  def - (term: FieldValue)(implicit date: DateTime): FieldValue = {
     term match {
       case LongValue(n) => LongValue(value - n)
       case DoubleValue(d) => DoubleValue(value.toDouble - d)
       case UndefinedValue => this
     }
   }
-  def * (factor: FieldValue): FieldValue = {
+  def * (factor: FieldValue)(implicit date: DateTime): FieldValue = {
     factor match {
       case LongValue(n) => LongValue(value * n)
       case DoubleValue(d) => DoubleValue(value.toDouble * d)
       case UndefinedValue => LongValue(0)
     }
   }
-  def / (factor: FieldValue): FieldValue = {
+  def / (factor: FieldValue)(implicit date: DateTime): FieldValue = {
     factor match {
       case LongValue(n) =>
         if (n == 0) {
@@ -125,20 +152,32 @@ case class LongValue (value: Long) extends FieldValue {
   }
 }
 
-case class DoubleValue (value: Double) extends FieldValue {
+/**
+  * a scalar FieldValue that holds a Double value
+  */
+case class DoubleValue (value: Double)(implicit date: DateTime) extends DatedFieldValue(date) {
   def toLong: Long = Math.round(value)
   def toDouble: Double = value
   def toJson = value.toString
 
-  def neg = DoubleValue(-value)
+  override def toString: String = s"DoubleValue(value:$value,date:$date)"
+
+  def serializeTo (w: JsonWriter): Unit = {
+    w.beginObject
+    w.writeDoubleMember("value", value)
+    if (date.isDefined) w.writeDateTimeMember("date", date)
+    w.endObject
+  }
+
+  def neg(implicit date: DateTime) = DoubleValue(-value)
   def sgn: Int = if (value < 0) -1 else if (value > 0) 1 else 0
 
   //--- arithmetic ops
-  def + (term: FieldValue): FieldValue = DoubleValue(value + term.toDouble)
-  def - (term: FieldValue): FieldValue = DoubleValue(value - term.toDouble)
-  def * (factor: FieldValue): FieldValue = DoubleValue(value * factor.toDouble)
+  def + (term: FieldValue)(implicit date: DateTime): FieldValue = DoubleValue(value + term.toDouble)
+  def - (term: FieldValue)(implicit date: DateTime): FieldValue = DoubleValue(value - term.toDouble)
+  def * (factor: FieldValue)(implicit date: DateTime): FieldValue = DoubleValue(value * factor.toDouble)
 
-  def / (factor: FieldValue): FieldValue = {
+  def / (factor: FieldValue)(implicit date: DateTime): FieldValue = {
     val d = factor.toDouble
     if (d == 0) {
       if (value < 0) DoubleValue(Double.NegativeInfinity)
@@ -159,20 +198,26 @@ case class DoubleValue (value: Double) extends FieldValue {
   * not sure this pseudo value has the right semantics if we just assume '0' - depends on the context
   */
 case object UndefinedValue extends FieldValue {
+  override val date = DateTime.UndefinedDateTime
+
   def toLong: Long = 0
   def toDouble: Double = 0.0
   def toJson = "undefined"
   override def isDefined: Boolean = false
 
-  def neg = this
+  def serializeTo (w: JsonWriter): Unit = {
+    w.writeUnQuotedValue("undefined")
+  }
+
+  def neg(implicit date: DateTime) = this
   def sgn: Int = 0
 
   //--- arithmetic ops
-  def + (term: FieldValue): FieldValue = term
-  def - (term: FieldValue): FieldValue = term.neg
-  def * (factor: FieldValue): FieldValue = this
+  def + (term: FieldValue)(implicit date: DateTime): FieldValue = term
+  def - (term: FieldValue)(implicit date: DateTime): FieldValue = term.neg
+  def * (factor: FieldValue)(implicit date: DateTime): FieldValue = this
 
-  def / (factor: FieldValue): FieldValue = {
+  def / (factor: FieldValue)(implicit date: DateTime): FieldValue = {
     factor.sgn match {
       case -1 => DoubleValue(Double.NegativeInfinity)
       case 0 => DoubleValue(Double.NaN)

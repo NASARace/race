@@ -52,7 +52,15 @@ object Time {
     new Time(h * MillisInHour + m * MillisInMinute + (s * 1000).toInt )
   }
 
-  def parse(spec: String): Time = new Time( Duration.parse(spec).toMillis.toInt)
+  // this parses ISO 8601 (e.g. "PT24H")
+  def parse(spec: CharSequence): Time = new Time( Duration.parse(spec).toMillis.toInt)
+
+  def parseHHmmss (spec: CharSequence): Time = {
+    spec match {
+      case DateTimeUtils.hhmmssRE(hh,mm,ss) => HMS(hh.toInt, mm.toInt, ss.toInt)
+      case _ => throw new RuntimeException(s"not a valid HH:mm:ss time spec: $spec")
+    }
+  }
 
   def unapply(t: Time): Option[(Int,Int,Int,Int)] = {
     val millis = t.millis

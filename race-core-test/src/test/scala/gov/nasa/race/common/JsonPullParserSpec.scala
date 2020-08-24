@@ -379,4 +379,51 @@ class JsonPullParserSpec extends AnyFlatSpec with RaceSpec {
     println(res)
     assert(res.users.size == 2)
   }
+
+  //--- optional member parsing
+
+  "a JsonPullParser" should "support optional members" in {
+    val input =
+      """
+         {
+           "title": "Sample Data Set",
+           "fields": [
+              { "id": "/cat_A", "attrs": ["blah"], "formula": {"src": "(sum `/cat_A/.+`)" } },
+              { "id": "/cat_A/field_1"}
+           ]
+         }"""
+
+
+    println(s"\n#-- parsing optional members in:\n$input")
+
+    var nFields = 0
+
+    val p = new StringJsonPullParser
+    p.initialize(input)
+    p.readNextObject {
+      val title = p.readQuotedMember(asc("title")).toString
+      p.foreachInNextArrayMember(asc("fields")) {
+        val field = p.readNextObject {
+          val id = p.readQuotedMember(asc("id")).toString
+          val attrs = p.readOptionalStringArrayMemberInto(asc("attrs"),ArrayBuffer.empty[String]).map(_.toSeq).getOrElse(Seq.empty[String])
+          if (nFields == 0) assert (attrs.nonEmpty) else assert (attrs.isEmpty)
+
+          val min = p.readOptionalUnQuotedMember(asc("min")).map(_.toInt)
+          assert(!min.isDefined)
+
+          val formula = p.readOptionalObjectMember(asc("formula")) {
+            val src = p.readQuotedMember(asc("src")).toString
+            val site = p.readOptionalQuotedMember(asc("site"))
+            (src,site)
+          }
+          if (nFields == 0) assert (formula.isDefined) else assert (!formula.isDefined)
+          (id,attrs,min,formula)
+        }
+        nFields += 1
+        println(s"field = $field")
+      }
+    }
+
+    assert (nFields == 2)
+  }
 }

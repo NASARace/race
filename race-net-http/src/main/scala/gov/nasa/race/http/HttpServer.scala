@@ -16,26 +16,19 @@
  */
 package gov.nasa.race.http
 
-import java.io.FileInputStream
-import java.security.{KeyStore, SecureRandom}
-
-import javax.net.ssl.{KeyManagerFactory, SSLContext, TrustManagerFactory}
 import akka.actor.ActorRef
 import akka.http.scaladsl.Http.ServerBinding
-import akka.http.scaladsl.model.HttpRequest
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
 import akka.http.scaladsl.settings.ServerSettings
 import akka.http.scaladsl.{ConnectionContext, Http}
-import akka.stream.scaladsl.{Flow, Sink, Source}
-import akka.stream.{ActorMaterializer, Materializer}
-import com.typesafe.config.{Config, ConfigException}
+import akka.stream.Materializer
+import akka.stream.scaladsl.{Sink, Source}
+import com.typesafe.config.Config
 import gov.nasa.race._
 import gov.nasa.race.config.ConfigUtils._
-import gov.nasa.race.core.{ParentActor, ParentRaceActor, RaceInitializeException}
-import gov.nasa.race.util.{CryptUtils, FileUtils}
+import gov.nasa.race.core.{ParentActor, ParentRaceActor}
 
-import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
 
@@ -49,26 +42,24 @@ import scala.concurrent.{Await, Future}
   * This actor itself does not yet subscribe from or publish to RACE channels, but we might add control and/or
   * stats channels in the future
   */
-class HttpServer (val config: Config) extends ParentRaceActor {
+class HttpServer (val config: Config) extends ParentRaceActor with SSLContextUser {
   final implicit val materializer: Materializer = Materializer.matFromSystem(context.system)
 
   val host = config.getStringOrElse("host", "localhost")
   val port = config.getIntOrElse("port", 8080)
   val interface = config.getStringOrElse( "interface", "0.0.0.0")
+
   val serverTimeout = config.getFiniteDurationOrElse("server-timeout", 5.seconds)
   val wsKeepAliveInterval = config.getOptionalFiniteDuration("ws-keep-alive")
   val logIncoming = config.getBooleanOrElse("log-incoming", false)
 
-  val httpExt = Http()(system)
-  val connectionContext: ConnectionContext = getConnectionContext
-  val serverSettings: ServerSettings = getServerSettings
-
   val routeInfos = createRouteInfos
   val route = createRoutes
 
+  val useSSL = checkSSL(routeInfos)
   var binding: Option[Future[ServerBinding]] = None
 
-  def createRoutes = {
+  def createRoutes: Route = {
     val route = concat(routeInfos.map(_.completeRoute):_*)
     if (logIncoming) logRoute(route) else route
   }
@@ -82,43 +73,6 @@ class HttpServer (val config: Config) extends ParentRaceActor {
     }
   }
 
-  def getConnectionContext: ConnectionContext = {
-    if (config.getBooleanOrElse("use-https", false)) {
-      info("server using https:// protocol")
-      ConnectionContext.https(getSSLContext, None,None,None,None,None)
-    } else {
-      info("server using http:// protocol")
-      httpExt.defaultServerHttpContext
-    }
-  }
-
-  def getSSLContext: SSLContext = {
-    val ksPathName = config.getVaultableStringOrElse("server-keystore", "server.ks")
-    FileUtils.existingNonEmptyFile(ksPathName) match {
-      case Some(ksFile) =>
-        val pw: Array[Char] = config.getVaultableString("server-keystore-pw").toCharArray
-
-        val ksType = config.getStringOrElse("server-keystore-type", CryptUtils.keyStoreType(ksPathName))
-        val ks: KeyStore = KeyStore.getInstance(ksType)
-        ks.load(new FileInputStream(ksFile),pw)
-
-        val keyManagerFactory: KeyManagerFactory = KeyManagerFactory.getInstance("SunX509")
-        keyManagerFactory.init(ks, pw)
-        CryptUtils.erase(pw, ' ')
-
-        val tmf: TrustManagerFactory = TrustManagerFactory.getInstance("SunX509")
-        tmf.init(ks)
-
-        val sslContext: SSLContext = SSLContext.getInstance("TLS")
-        sslContext.init(keyManagerFactory.getKeyManagers, tmf.getTrustManagers, new SecureRandom)
-
-        sslContext
-
-      case None =>
-        throw new ConfigException.Generic("invalid server keystore")
-    }
-  }
-
   def getServerSettings = {
     var settings = ServerSettings(system)
     ifSome(wsKeepAliveInterval){ dur=>
@@ -129,9 +83,30 @@ class HttpServer (val config: Config) extends ParentRaceActor {
     settings
   }
 
+  def createServerSource: Source[Http.IncomingConnection,Future[Http.ServerBinding]] = {
+    val httpExt = Http()(system)
+    val ss = getServerSettings
+
+    if (useSSL) {
+      info(s"server using https:// protocol on port: $port")
+      getSSLContext("server-keystore") match {
+        case Some(sslContext) =>
+          info(s"using SSL configuration from 'server-keystore'")
+          val ctx = ConnectionContext.httpsServer( () => sslContext.createSSLEngine())
+          httpExt.newServerAt(interface,port).withSettings(ss).enableHttps(ctx).connectionSource()
+
+        case None =>
+          info("insufficient SSL configuration, falling back to default")
+          httpExt.newServerAt(interface,port).withSettings(ss).connectionSource()
+      }
+    } else {
+      info(s"server using http:// protocol on port: $port")
+      httpExt.newServerAt(interface,port).withSettings(ss).connectionSource()
+    }
+  }
+
   override def onStartRaceActor(originator: ActorRef) = {
-    val serverSource: Source[Http.IncomingConnection,Future[Http.ServerBinding]] =
-      httpExt.bind(interface,port,connectionContext,serverSettings)
+    val serverSource: Source[Http.IncomingConnection,Future[Http.ServerBinding]] = createServerSource
 
     val bindingFuture: Future[Http.ServerBinding] = serverSource.to(Sink.foreach { connection: Http.IncomingConnection =>
       // we add the connection data to the route-accessible HttpRequest headers so that we can
@@ -149,7 +124,7 @@ class HttpServer (val config: Config) extends ParentRaceActor {
   }
 
   def requestSpec: String = {
-    val protocol = if (connectionContext.isSecure) "https" else "http"
+    val protocol = if (useSSL) "https" else "http"
     val rps = routeInfos.map(_.requestPrefix).mkString(",")
     s"$protocol://$host:$port/{$rps}"
   }
@@ -172,9 +147,6 @@ class HttpServer (val config: Config) extends ParentRaceActor {
       newInstance[RaceRouteInfo](routeClsName,Array(classOf[ParentActor],classOf[Config]),Array(this,routeConf)) match {
         case Some(ri) =>
           info(s"adding route '$routeName'")
-          if (ri.shouldUseHttps && !connectionContext.isSecure){
-            warning(s"use of AuthorizedRaceRoute '$routeName' without secure connectionContext (set 'use-https=true')")
-          }
           seq :+ ri
 
         case None =>
@@ -182,6 +154,10 @@ class HttpServer (val config: Config) extends ParentRaceActor {
           throw new RuntimeException(s"error instantiating route $routeName")
       }
     }
+  }
+
+  def checkSSL (ris: Seq[RaceRouteInfo]): Boolean = {
+    config.getBooleanOrElse("use-https", ris.exists( _.shouldUseHttps))
   }
 }
 

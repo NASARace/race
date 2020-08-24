@@ -79,6 +79,9 @@ trait RaceActor extends Actor with ImplicitActorLogging {
     caps + IsAutomatic + SupportsSimTime + SupportsSimTimeReset + SupportsPauseResume
   }
 
+  def getRaceActorRef (actorName: String): ActorRef = raceActorSystem.getRaceActorRef(name)
+  def getOptionalRaceActorRef (actorName: String): Option[ActorRef] = raceActorSystem.getOptionalRaceActorRef(name)
+
   override def postStop() = supervisor ! RaceActorStopped
 
   // pre-init behavior which doesn't branch into concrete actor code before we

@@ -21,38 +21,42 @@ import gov.nasa.race.test.RaceSpec
 import gov.nasa.race.util.FileUtils
 import org.scalatest.flatspec.AnyFlatSpec
 
-class FieldSpec extends AnyFlatSpec with RaceSpec {
+/**
+  * reg test for ProviderData
+  */
+class ProviderDataSpec extends AnyFlatSpec with RaceSpec {
 
+  val resourcePath = "race-net-http-test/src/resources/sites/tabdata/data"
 
-  "a FieldCatalogParser" should "read FieldCatalog from JSON source" in {
-    val input = FileUtils.fileContentsAsString("race-net-http-test/src/resources/sites/tabdata/data/fieldCatalog.json").get
+  "a ProviderDataParser" should "read ProviderData from JSON source" in {
+    val input = FileUtils.fileContentsAsString(s"$resourcePath/provider_1.json").get
+    val fc = new FieldCatalogParser().parse(FileUtils.fileContentsAsString(s"$resourcePath/fieldCatalog.json").get.getBytes).get
 
-    val parser = new FieldCatalogParser
-
+    val parser = new ProviderDataParser(fc)
     println(s"#-- parsing: $input")
 
     parser.parse(input.getBytes) match {
-      case Some(cat:FieldCatalog) =>
+      case Some(d:ProviderData) =>
         println("\n  -> result:")
-
-        println(s"catalog id:  ${cat.id}")
-        println(s"catalog date: ${cat.date}")
-        println("fields:")
-        cat.fields.foreach { e=>
-          val (id,field) = e
-          println(s"  '$id': $field")
+        println(s"providerId:     ${d.providerId}")
+        println(s"fieldCatalogId: ${d.fieldCatalogId}")
+        println(s"date:           ${d.date}")
+        println("fieldValues:")
+        fc.fields.keys.foreach { id=>
+          d.fieldValues.get(id) match {
+            case Some(v) => println(s"  $id: $v")
+            case None =>    println(s"  $id: -")
+          }
         }
-
-        assert( cat.fields.size == 12)
 
         val w = new JsonWriter
         w.format(true)
         w.readableDateTime(true)
-        cat.serializeTo(w)
+        d.serializeOrderedTo(w, fc.fields)
         println("\n  -> client JSON:")
         println(w.toJson)
 
-      case _ => fail("failed to parse field catalog")
+      case _ => fail("failed to parse provider data")
     }
   }
 }

@@ -1,7 +1,8 @@
 {
   "id": "provider_2",
-  "rev": 1,
   "date": "2020-06-29T16:06:02.000",
+  "providerCatalogId": "/providers/region1",
+  "fieldCatalogId": "/fields/sds1",
   "fieldValues": {
     "/cat_A/field_1": 8,
     "/cat_A/field_2": 22,
