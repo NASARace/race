@@ -195,7 +195,7 @@ class TfmTrackInfoParser2(val config: Config=NoConfig) extends UTF8XmlPullParser
       while (parseNextAttr) {
         if (attrName == etdType) {
           if (attrValue == estimated) isEstimate = true
-        } else if (attrName == timeValue) dt = DateTime.parseYMDT(attrValue)
+        } else if (attrName == timeValue) dt = DateTime.parseYMDTSlice(attrValue)
       }
 
       if (isEstimate) etd = dt else atd = dt
@@ -208,7 +208,7 @@ class TfmTrackInfoParser2(val config: Config=NoConfig) extends UTF8XmlPullParser
         if (attrName == etaType) {
           if (attrValue == actual) isEstimate = false
         } else if (attrName == timeValue) {
-          dt = DateTime.parseYMDT(attrValue)
+          dt = DateTime.parseYMDTSlice(attrValue)
         }
       }
 
@@ -224,7 +224,7 @@ class TfmTrackInfoParser2(val config: Config=NoConfig) extends UTF8XmlPullParser
       @inline def process_nxce$aircraftId = if (cs == null) cs = readInternedStringContent
       @inline def process_nxce$arrivalPoint = if (arrArpt == null) parseElement(arrivalAirport)
       @inline def process_nxce$departurePoint = if (depArpt == null) parseElement(departureAirport)
-      @inline def process_nxce$igtd = atd = DateTime.parseYMDT(readSliceContent)  // initial gate time of departure (TODO not sure if we should use this as a etd or atd proxy)
+      @inline def process_nxce$igtd = atd = DateTime.parseYMDTSlice(readSliceContent)  // initial gate time of departure (TODO not sure if we should use this as a etd or atd proxy)
       @inline def process_nxce$waypoint = readWaypoint
       @inline def process_nxcm$etd = readEtd
       @inline def process_nxcm$eta = readEta

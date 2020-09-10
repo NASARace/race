@@ -1,0 +1,24 @@
+{
+  "id": "/formulas/region1/integrator",
+  "info": "column formulas for integrator node",
+  "date": "2020-06-28T12:00:00.000",
+
+  "columnlist": "/providers/region1",
+  "rowlist": "/data/sds1",
+
+  "columns": {
+    "/providers/region1/summary": {
+      "/data/cat_A/field_1": { "src": "(avgl ../provider*@.)" },
+      "/data/cat_A/field_2": { "src": "(avgl ../provider*@.)" },
+      "/data/cat_A/field_3": { "src": "(avgl ../provider*@.)" },
+      "/data/cat_A":         { "src": "(suml ./*)" },
+
+      "/data/cat_B/field_1": { "src": "(maxd ../provider*@.)" },
+      "/data/cat_B/field_2": { "src": "(maxd ../provider*@.)" },
+      "/data/cat_B":         { "src": "(sumd ./*)" },
+
+      "/data/cat_C/field_2": { "src": "(suml ../provider*@.)" },
+      "/data/cat_C":         { "src": "(accl ./field_2)" }
+    }
+  }
+}

@@ -16,10 +16,12 @@
  */
 package gov.nasa.race.common
 
+import java.nio.file.Path
 import java.util.function.IntConsumer
 import java.util.stream.{IntStream, StreamSupport}
 import java.util.{NoSuchElementException, PrimitiveIterator, Spliterator, Spliterators}
 
+import gov.nasa.race.uom.DateTime
 import gov.nasa.race.util.DateTimeUtils
 
 import scala.annotation.switch
@@ -207,6 +209,22 @@ trait CharSeqByteSlice extends ByteSlice with CharSequence {
     n
   }
 
+  def isInteger: Boolean = {
+    var i = off
+    val iMax = i + len
+    val bs = this.data
+
+    if (bs(i) == '-' || bs(i) == '+') i += 1 // skip over optional sign
+
+    while (i < iMax) {
+      val b = bs(i)
+      if (b < '0' || b > '9') return false
+      i += 1
+    }
+
+    true
+  }
+
   /**
     * return if this is a (potentially signed) number and it has exactly one '.'
     */
@@ -380,6 +398,12 @@ trait CharSeqByteSlice extends ByteSlice with CharSequence {
   def toDuration: Duration = {
     DateTimeUtils.parseDuration(this)
   }
+
+  def toDateTime: DateTime = {
+    if (isInteger) DateTime.ofEpochMillis(toLong) else DateTime.parseISO(this)
+  }
+
+  def toPath: Path = Path.of(toString)
 
   // to be provided by concrete type
   def createSubSequence (subOff: Int, subLen: Int): CharSeqByteSlice

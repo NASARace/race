@@ -24,3 +24,8 @@ doc/reports/
 bin/
 conf
 *.crypt
+.bloop
+.metals
+**/metals.sbt
+*.code-workspace
+

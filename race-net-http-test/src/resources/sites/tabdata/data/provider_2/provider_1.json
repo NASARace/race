@@ -1,19 +1,19 @@
 {
   "id": "provider_1",
   "date": "2020-06-29T16:06:00.000",
-  "providerCatalogId": "/providers/region1",
-  "fieldCatalogId": "/fields/sds1",
-  "fieldValues": {
-    "/cat_A/field_1": 8,
-    "/cat_A/field_2": 12,
-    "/cat_A/field_3": 13,
+  "columnlist": "/providers/region1",
+  "rowlist": "/rows/sds1",
+  "rows": {
+    "/data/cat_A/field_1": 8,
+    "/data/cat_A/field_2": 12,
+    "/data/cat_A/field_3": 13,
 
-    "/cat_B/field_1": 109.0,
-    "/cat_B/field_2": 120.0,
+    "/data/cat_B/field_1": 109.0,
+    "/data/cat_B/field_2": 120.0,
 
-    "/cat_C/field_1": 1100,
-    "/cat_C/field_2": 1200,
-    "/cat_C/field_3": 1300,
-    "/cat_C/field_4": 1400
+    "/data/cat_C/field_1": 1100,
+    "/data/cat_C/field_2": 1200,
+    "/data/cat_C/field_3": 1300,
+    "/data/cat_C/field_4": 1400
   }
 }

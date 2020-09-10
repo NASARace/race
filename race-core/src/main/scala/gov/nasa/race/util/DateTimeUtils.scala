@@ -29,6 +29,8 @@ object DateTimeUtils {
 
   val hhmmssRE = """(\d+):(\d+):(\d+)""".r
 
+  val durationRE = """(\d+) *([hsm]|hour|hours|minute|minutes|sec|second|seconds|ms|msec|millis|millisecond|milliseconds|ns|nsec|nanos|nanosecond|nanoseconds)""".r
+
   // parses dtg groups such as "2016/03/18,13:02:44.458"
 
   val iso8601PeriodRE = """(P.+)""".r
@@ -37,6 +39,22 @@ object DateTimeUtils {
 
   @inline def toHHMMSS(d: FiniteDuration): (Int, Int, Int) = (d.toHours.toInt, (d.toMinutes % 60).toInt, (d.toSeconds % 60).toInt)
 
+  def timeBaseToMillis (tbase: String): Long = {
+    tbase match {
+      case "h" | "hour" | "hours" => 360000
+      case "m" | "minute" | "minutes" => 60000
+      case "s" | "sec" | "second" | "seconds" => 1000
+      case "ms" | "msec" | "millis" | "millisecond" | "milliseconds" => 1
+      case _ => throw new IllegalArgumentException(s"unsupported time base: $tbase")
+    }
+  }
+
+  def durationMillis (spec: CharSequence): Long = {
+    spec match {
+      case durationRE(n,tbase) => n.toLong * timeBaseToMillis(tbase)
+      case _ => Duration(spec.toString).toMillis
+    }
+  }
 
   def durationMillisToHMMSS (millis: Long): String = {
     val s = ((millis / 1000) % 60).toInt

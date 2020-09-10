@@ -27,6 +27,7 @@ import akka.stream.Materializer
 import akka.stream.scaladsl.{Flow, Sink, SourceQueueWithComplete}
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.RaceDataClient
+import gov.nasa.race.ifSome
 
 import scala.collection.immutable.Iterable
 import scala.concurrent.duration._
@@ -53,6 +54,12 @@ trait PushWSRaceRoute extends WSRaceRoute with SourceQueueOwner with RaceDataCli
 
   protected def push (m: Message): Unit = synchronized {
     connections.foreach (e => pushTo(e._1,e._2, m))
+  }
+
+  protected def pushTo (remoteAddr: InetSocketAddress, m: Message): Unit = synchronized {
+    ifSome(connections.get(remoteAddr)) { queue=>
+      pushTo(remoteAddr,queue,m)
+    }
   }
 
   protected def pushTo(remoteAddr: InetSocketAddress, queue: SourceQueueWithComplete[Message], m: Message): Unit = synchronized {

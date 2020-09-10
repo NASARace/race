@@ -287,7 +287,7 @@ class JsonWriter (jsonType: ElementType = JsonWriter.RawElements, initSize: Int 
   }
   @inline final def writeBoolean (v: Boolean): JsonWriter = {
     checkAndArmSeparator
-    buf.append(if (v) "true" else "false")
+    buf.append(if (v) "\"true\"" else "\"false\"")
     this
   }
   @inline final def writeNull: JsonWriter = { writeString("null"); this }
@@ -350,12 +350,21 @@ class JsonWriter (jsonType: ElementType = JsonWriter.RawElements, initSize: Int 
 
   //--- AnyVal iterables
 
+  def writeFormatted (newFormat: Boolean)(f: => Unit): JsonWriter = {
+    val prev = format(false)
+    f
+    format(prev)
+    this
+  }
+
   def writeStringValues (it: Iterable[String]): JsonWriter = {
-    beginArray
-    for (v <- it){
-      writeString(v)
+    writeFormatted(false) {
+      beginArray
+      for (v <- it) {
+        writeString(v)
+      }
+      endArray
     }
-    endArray
   }
 
   def writeStringMembers (it: Iterable[(String,String)]): JsonWriter = {
@@ -368,11 +377,13 @@ class JsonWriter (jsonType: ElementType = JsonWriter.RawElements, initSize: Int 
   }
 
   def writeBooleanValues (it: Iterable[Boolean]): JsonWriter = {
-    beginArray
-    for (v <- it){
-      writeBoolean(v)
+    writeFormatted(false) {
+      beginArray
+      for (v <- it) {
+        writeBoolean(v)
+      }
+      endArray
     }
-    endArray
   }
 
   def writeBooleanMembers (it: Iterable[(String,Boolean)]): JsonWriter = {
@@ -385,11 +396,13 @@ class JsonWriter (jsonType: ElementType = JsonWriter.RawElements, initSize: Int 
   }
 
   def writeIntValues (it: Iterable[Int]): JsonWriter = {
-    beginArray
-    for (v <- it){
-      writeInt(v)
+    writeFormatted(false) {
+      beginArray
+      for (v <- it) {
+        writeInt(v)
+      }
+      endArray
     }
-    endArray
   }
 
   def writeIntMembers (it: Iterable[(String,Int)]): JsonWriter = {
@@ -402,11 +415,13 @@ class JsonWriter (jsonType: ElementType = JsonWriter.RawElements, initSize: Int 
   }
 
   def writeLongValues (it: Iterable[Long]): JsonWriter = {
-    beginArray
-    for (v <- it){
-      writeLong(v)
+    writeFormatted(false) {
+      beginArray
+      for (v <- it) {
+        writeLong(v)
+      }
+      endArray
     }
-    endArray
   }
 
   def writeLongMembers (it: Iterable[(String,Long)]): JsonWriter = {
@@ -419,11 +434,13 @@ class JsonWriter (jsonType: ElementType = JsonWriter.RawElements, initSize: Int 
   }
 
   def writeDoubleValues (it: Iterable[Double]): JsonWriter = {
-    beginArray
-    for (v <- it){
-      writeDouble(v)
+    writeFormatted(false) {
+      beginArray
+      for (v <- it) {
+        writeDouble(v)
+      }
+      endArray
     }
-    endArray
   }
 
   def writeDoubleMembers (it: Iterable[(String,Double)]): JsonWriter = {

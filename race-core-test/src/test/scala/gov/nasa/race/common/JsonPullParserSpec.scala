@@ -426,4 +426,42 @@ class JsonPullParserSpec extends AnyFlatSpec with RaceSpec {
 
     assert (nFields == 2)
   }
+
+  "a JsonPullParser" should "parse empty objects" in {
+    val input =
+      """
+         { "foo":{} ,
+           "bar": 42
+         }
+      """
+    println(s"\n#-- parsing empty object member in:\n$input")
+
+    val p = new StringJsonPullParser
+    p.initialize(input)
+    p.readNextObject {
+      p.foreachInNextObjectMember(asc("foo")) {
+        fail("this should not be executed - object has no members!")
+      }
+      assert( p.readUnQuotedMember(asc("bar")).toInt == 42)
+    }
+    println("Ok.")
+  }
+
+  "a JsonPullParser" should "parse empty arrays" in {
+    val input =
+      """
+         { "foo": [ ],"bar": 42 }
+      """
+    println(s"\n#-- parsing empty array member in:\n$input")
+
+    val p = new StringJsonPullParser
+    p.initialize(input)
+    p.readNextObject {
+      p.foreachInNextArrayMember(asc("foo")) {
+        fail("this should not be executed - array has no elements!")
+      }
+      assert( p.readUnQuotedMember(asc("bar")).toInt == 42)
+    }
+    println("Ok.")
+  }
 }

@@ -16,8 +16,10 @@
  */
 package gov.nasa.race.http.tabdata
 
+import java.nio.file.Path
+
 import gov.nasa.race.common.ConstAsciiSlice.asc
-import gov.nasa.race.common.{ConstAsciiSlice, JsonPullParser, JsonSerializable, JsonWriter}
+import gov.nasa.race.common.{ConstAsciiSlice, JsonPullParser, JsonSerializable, JsonWriter, UnixPath}
 import gov.nasa.race.uom.DateTime
 
 import scala.collection.mutable
@@ -26,73 +28,81 @@ import scala.collection.mutable
   * the mostly static data for a site, for internal distribution
   * this is the minimum data each client / server needs
   */
-case class Node(id: String,
-                fieldCatalog: FieldCatalog,
-                providerCatalog: ProviderCatalog,
-                upstreamId: Option[String]
-                ) {
+case class Node ( id: Path,
+                  rowList: RowList,
+                  columnList: ColumnList,
+                  upstreamId: Option[Path]
+                 ) {
 
-  def isKnownProvider (id: String): Boolean = providerCatalog.providers.contains(id)
-  def isKnownField (id: String): Boolean = fieldCatalog.fields.contains(id)
+  def isKnownColumn(id: Path): Boolean = columnList.columns.contains(id)
+  def isKnownRow(id: Path): Boolean = rowList.rows.contains(id)
 
-  def isProviderCatalogUpToDate (ss: NodeState): Boolean = {
-    providerCatalog.id == ss.providerCatalogId && providerCatalog.date == ss.providerCatalogDate
+  def isColumnListUpToDate(ss: NodeState): Boolean = {
+    columnList.id == ss.columnListId && columnList.date == ss.columnListDate
   }
 
-  def isFieldCatalogUpToDate (ss: NodeState): Boolean = {
-    fieldCatalog.id == ss.fieldCatalogId && fieldCatalog.date == ss.fieldCatalogDate
+  def isRowListUpToDate(ss: NodeState): Boolean = {
+    rowList.id == ss.rowListId && rowList.date == ss.rowListDate
   }
 
-  def isLocal (testId: String): Boolean = id == testId
-  def isUpstream (testId: String): Boolean = upstreamId.isDefined && upstreamId.get == testId
+  def isLocal (p: Path): Boolean = id == p
+  def isUpstream (p: Path): Boolean = upstreamId.isDefined && upstreamId.get == p
+
+  def sendChangeUp (columnId: Path): Boolean = {
+    true
+  }
 }
 
 
 object NodeState {
   //--- lexical constants
-  val _nodeState_ : ConstAsciiSlice = asc("siteState")
+  val _nodeState_ : ConstAsciiSlice = asc("nodeState")
   val _nodeId_ : ConstAsciiSlice = asc("id")
-  val _fieldCatalogId_ : ConstAsciiSlice = asc("fieldCatalogId")
-  val _fieldCatalogDate_ : ConstAsciiSlice = asc("fieldCatalogDate")
-  val _providerCatalogId_ : ConstAsciiSlice = asc("providerCatalogId")
-  val _providerCatalogDate_ : ConstAsciiSlice = asc("providerCatalogDate")
-  val _providerDataDates_ : ConstAsciiSlice = asc("providerDataDates")
+  val _rowListId_ : ConstAsciiSlice = asc("rowListId")
+  val _rowListDate_ : ConstAsciiSlice = asc("rowListDate")
+  val _columnListId_ : ConstAsciiSlice = asc("columnListId")
+  val _columnListDate_ : ConstAsciiSlice = asc("columnListDate")
+  val _columnDataDates_ : ConstAsciiSlice = asc("columnDataDates")
 }
 
 /**
   * site specific snapshot of local catalog and provider data dates (last modifications)
   */
-case class NodeState(siteId: String,
-                     fieldCatalogId: String, fieldCatalogDate: DateTime,
-                     providerCatalogId: String, providerCatalogDate: DateTime,
-                     providerDataDates: Seq[(String,DateTime)]
+case class NodeState(nodeId: Path,
+                     rowListId: Path, rowListDate: DateTime,
+                     columnListId: Path, columnListDate: DateTime,
+                     columnDataDates: Seq[(Path,DateTime)]
                      ) extends JsonSerializable {
   import NodeState._
 
-  def this (nodeId: String, fieldCatalog: FieldCatalog, providerCatalog: ProviderCatalog, providerData: collection.Map[String,ProviderData]) = this(
+  def this (nodeId: Path, rowList: RowList, columnList: ColumnList, columnData: collection.Map[Path,ColumnData]) = this(
     nodeId,
-    fieldCatalog.id,fieldCatalog.date,
-    providerCatalog.id,providerCatalog.date,
-    providerCatalog.orderedEntries(providerData).map(e=> (e._1,e._2.date))
+    rowList.id,rowList.date,
+    columnList.id,columnList.date,
+    columnList.orderedEntries(columnData).map(e=> (e._1,e._2.date))
   )
 
-  def this (node: Node, providerData: collection.Map[String,ProviderData]) = this(
-    node.id, node.fieldCatalog, node.providerCatalog, providerData
+  def this (node: Node, providerData: collection.Map[Path,ColumnData]) = this(
+    node.id, node.rowList, node.columnList, providerData
+  )
+
+  def this (node: Node, cdds: Seq[(Path,DateTime)]) = this(
+    node.id, node.rowList.id, node.rowList.date, node.columnList.id, node.columnList.date, cdds
   )
 
 
   def serializeTo (w: JsonWriter): Unit = {
     w.clear.writeObject {_
       .writeMemberObject(_nodeState_) {_
-        .writeStringMember(_nodeId_, siteId)
-        .writeStringMember(_fieldCatalogId_, fieldCatalogId)
-        .writeDateTimeMember(_fieldCatalogDate_, fieldCatalogDate)
-        .writeStringMember(_providerCatalogId_, providerCatalogId)
-        .writeDateTimeMember(_providerCatalogDate_, providerCatalogDate)
+        .writeStringMember(_nodeId_, nodeId.toString)
+        .writeStringMember(_rowListId_, rowListId.toString)
+        .writeDateTimeMember(_rowListDate_, rowListDate)
+        .writeStringMember(_columnListId_, columnListId.toString)
+        .writeDateTimeMember(_columnListDate_, columnListDate)
 
-        .writeMemberObject(_providerDataDates_) { w =>
-          providerDataDates.foreach { e =>
-            w.writeDateTimeMember(e._1, e._2)
+        .writeMemberObject(_columnDataDates_) { w =>
+          columnDataDates.foreach { e =>
+            w.writeDateTimeMember(e._1.toString, e._2)
           }
         }
       }
@@ -101,31 +111,31 @@ case class NodeState(siteId: String,
 }
 
 /**
-  * parser mixin for SiteState
+  * parser mixin for NodeState
   */
 trait NodeStateParser extends JsonPullParser {
   import NodeState._
 
   def parseSiteState: Option[NodeState] = {
     readNextObjectMember(_nodeState_) {
-      parseSiteStateBody
+      parseNodeStateBody
     }
   }
 
-  def parseSiteStateBody: Option[NodeState] = {
-    val siteId = readQuotedMember(_nodeId_).toString
-    val fieldCatalogId = readQuotedMember(_fieldCatalogId_).toString
-    val fieldCatalogDate = readDateTimeMember(_fieldCatalogDate_)
-    val providerCatalogId = readQuotedMember(_providerCatalogId_).toString
-    val providerCatalogDate = readDateTimeMember(_providerCatalogDate_)
+  def parseNodeStateBody: Option[NodeState] = {
+    val siteId = UnixPath(readQuotedMember(_nodeId_))
+    val rowListId = UnixPath(readQuotedMember(_rowListId_))
+    val rowListDate = readDateTimeMember(_rowListDate_)
+    val columnListId = UnixPath(readQuotedMember(_columnListId_))
+    val columnListDate = readDateTimeMember(_columnListDate_)
 
-    val providerDataDates = readSomeNextObjectMemberInto[DateTime, mutable.Buffer[(String, DateTime)]](_providerDataDates_, mutable.Buffer.empty) {
-      val providerDate = readDateTime()
-      val providerId = member.toString
-      Some( (providerId -> providerDate) )
+    val columnDataDates = readSomeNextObjectMemberInto[Path,DateTime, mutable.Buffer[(Path, DateTime)]](_columnDataDates_, mutable.Buffer.empty) {
+      val columnDataDate = readDateTime()
+      val columnId = UnixPath(member)
+      Some( (columnId -> columnDataDate) )
     }.toSeq
 
-    Some(NodeState(siteId, fieldCatalogId, fieldCatalogDate, providerCatalogId, providerCatalogDate, providerDataDates))
+    Some(NodeState(siteId, rowListId, rowListDate, columnListId, columnListDate, columnDataDates))
   }
 
 }

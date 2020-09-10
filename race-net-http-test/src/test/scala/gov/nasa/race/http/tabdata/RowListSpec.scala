@@ -21,38 +21,40 @@ import gov.nasa.race.test.RaceSpec
 import gov.nasa.race.util.FileUtils
 import org.scalatest.flatspec.AnyFlatSpec
 
-class FieldSpec extends AnyFlatSpec with RaceSpec {
+/**
+  * reg test for Row/RowList/Parser
+  */
+class RowListSpec extends AnyFlatSpec with RaceSpec {
 
+  "a RowListParser" should "translate a JSON source" in {
+    val input = FileUtils.fileContentsAsString("race-net-http-test/src/resources/sites/tabdata/data/rowList.json").get
 
-  "a FieldCatalogParser" should "read FieldCatalog from JSON source" in {
-    val input = FileUtils.fileContentsAsString("race-net-http-test/src/resources/sites/tabdata/data/fieldCatalog.json").get
-
-    val parser = new FieldCatalogParser
+    val parser = new RowListParser
 
     println(s"#-- parsing: $input")
 
     parser.parse(input.getBytes) match {
-      case Some(cat:FieldCatalog) =>
+      case Some(list:RowList) =>
         println("\n  -> result:")
 
-        println(s"catalog id:  ${cat.id}")
-        println(s"catalog date: ${cat.date}")
-        println("fields:")
-        cat.fields.foreach { e=>
-          val (id,field) = e
-          println(s"  '$id': $field")
+        println(s"list id:  ${list.id}")
+        println(s"list date: ${list.date}")
+        println("rows:")
+        list.rows.foreach { e=>
+          val (id,row) = e
+          println(s"  '$id': $row")
         }
 
-        assert( cat.fields.size == 12)
+        assert( list.rows.size == 12)
 
         val w = new JsonWriter
         w.format(true)
         w.readableDateTime(true)
-        cat.serializeTo(w)
+        list.serializeTo(w)
         println("\n  -> client JSON:")
         println(w.toJson)
 
-      case _ => fail("failed to parse field catalog")
+      case _ => fail("failed to parse row list")
     }
   }
 }

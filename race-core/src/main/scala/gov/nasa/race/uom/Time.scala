@@ -16,13 +16,13 @@
  */
 package gov.nasa.race.uom
 
-import java.time.Duration
+import java.time.{Duration => JDuration}
 
 import gov.nasa.race.MaybeUndefined
 import gov.nasa.race.util.DateTimeUtils
 
 import scala.collection.mutable.ArrayBuffer
-import scala.concurrent.duration.FiniteDuration
+import scala.concurrent.duration.{Duration, FiniteDuration}
 import scala.language.implicitConversions
 
 class TimeException (msg: String) extends RuntimeException(msg)
@@ -53,12 +53,20 @@ object Time {
   }
 
   // this parses ISO 8601 (e.g. "PT24H")
-  def parse(spec: CharSequence): Time = new Time( Duration.parse(spec).toMillis.toInt)
+  def parse(spec: CharSequence): Time = new Time( JDuration.parse(spec).toMillis.toInt)
 
   def parseHHmmss (spec: CharSequence): Time = {
     spec match {
       case DateTimeUtils.hhmmssRE(hh,mm,ss) => HMS(hh.toInt, mm.toInt, ss.toInt)
       case _ => throw new RuntimeException(s"not a valid HH:mm:ss time spec: $spec")
+    }
+  }
+
+  def parseDuration (spec: CharSequence): Time = {
+    spec match {
+      case DateTimeUtils.hhmmssRE(hh,mm,ss) => HMS(hh.toInt, mm.toInt, ss.toInt)
+      case DateTimeUtils.durationRE(n,tbase) => Milliseconds((n.toLong * DateTimeUtils.timeBaseToMillis(tbase)).toInt)
+      case _ => new Time( JDuration.parse(spec).toMillis.toInt)  // fall back to ISO
     }
   }
 

@@ -54,17 +54,22 @@ object JsonPullParser {
   }
   sealed trait AggregateEnd extends AggregateDelimiter {
     override def isStartBracket = false
+    def char: Byte
   }
 
   case object ObjectStart extends AggregateStart {
     override def endDelimiter: AggregateEnd = ObjectEnd
   }
-  case object ObjectEnd extends AggregateEnd
+  case object ObjectEnd extends AggregateEnd {
+    override def char = '}'
+  }
 
   case object ArrayStart extends AggregateStart {
     override def endDelimiter: AggregateEnd = ArrayEnd
   }
-  case object ArrayEnd extends AggregateEnd
+  case object ArrayEnd extends AggregateEnd {
+    override def char = ']'
+  }
 
   sealed trait ScalarValue extends JsonParseResult {
     override def isScalarValue: Boolean = true
@@ -164,6 +169,9 @@ abstract class JsonPullParser extends LogWriter with Thrower {
       val data = JsonPullParser.this.data
       var i0 = idx
 
+      val c = data(i0)
+      if (c == ',' || c == '{') i0 = skipWs(i0+1)
+
       if (data(i0) == '}') {
         if (path.nonEmpty) path.pop()
         env.pop()
@@ -178,11 +186,6 @@ abstract class JsonPullParser extends LogWriter with Thrower {
         }
 
       } else {
-        data(i0) match {
-          case ',' | '{' => i0 = skipWs(i0+1)
-          case _ => throw exception(s"expected start of member at '.. ${context(i0)} ..'")
-        }
-
         if (data(i0) != '"') throw exception(s"member name expected at ${context(i0)}")
         i0 += 1
         var i1 = skipToEndOfString(i0)
@@ -250,6 +253,9 @@ abstract class JsonPullParser extends LogWriter with Thrower {
       val data = JsonPullParser.this.data
       var i0 = idx
 
+      val c = data(i0)
+      if (c == ',' || c == '[') i0 = skipWs(i0 + 1)
+
       if (data(i0) == ']') {
         env.pop()
         if (env.isEmpty) { // done
@@ -263,11 +269,6 @@ abstract class JsonPullParser extends LogWriter with Thrower {
         }
 
       } else {
-        data(i0) match {
-          case ',' | '[' => i0 = skipWs(i0 + 1)
-          case _ => throw exception(s"expected start of array element at '.. ${context(i0)} ..'")
-        }
-
         data(i0) match {
           //--- new environment
           case '{' => // element value is object
@@ -388,7 +389,20 @@ abstract class JsonPullParser extends LogWriter with Thrower {
     (data(idx) == ']' && arrLevel == env.size)
   }
 
-  @inline final def aggregateHasMoreValues: Boolean = idx < limit && data(idx) == ',' // FIXME - does not hold for first element
+  @inline final def aggregateHasMoreValues: Boolean = {
+    // FIXME - does not hold for first element
+    idx < limit && data(idx) == ','
+  }
+
+  @inline final def peek: Byte = {
+    if (idx < limit) data(idx) else 0
+  }
+
+  final def peekNext: Byte = {
+    var i = idx+1
+    while (i < limit && data(i) <= ' ') i += 1
+    if (i < limit) data(i) else 0
+  }
 
   @inline final def notDone = state != endState
 
@@ -499,7 +513,7 @@ abstract class JsonPullParser extends LogWriter with Thrower {
   final def readDateTime (): DateTime = {
     readNext() match {
       case UnQuotedValue => DateTime.ofEpochMillis(value.toLong)
-      case QuotedValue => DateTime.parseYMDT(value)
+      case QuotedValue => DateTime.parseYMDTSlice(value)
       case _ => throw exception(s"not a valid DateTime spec: ''$value''")
     }
   }
@@ -511,7 +525,7 @@ abstract class JsonPullParser extends LogWriter with Thrower {
     if (res == UnQuotedValue) {
       DateTime.ofEpochMillis(value.toLong)
     } else if (res == QuotedValue) {
-      DateTime.parseYMDT(value)
+      DateTime.parseYMDTSlice(value)
     } else throw exception(s"not a valid DateTime spec: ''$value''")
   }
 
@@ -522,7 +536,7 @@ abstract class JsonPullParser extends LogWriter with Thrower {
       if (lastResult == UnQuotedValue) {
         Some(DateTime.ofEpochMillis(value.toLong))
       } else {
-        Some(DateTime.parseYMDT(value))
+        Some(DateTime.parseYMDTSlice(value))
       }
     } else {
       ps.restore()
@@ -553,12 +567,15 @@ abstract class JsonPullParser extends LogWriter with Thrower {
 
   //--- these loop over all child elements, calling the provided function for each of them
 
+  // FIXME - this does not handle empty aggregates
   def foreachInAggregate(res: JsonParseResult, expected: AggregateStart)(f: =>Unit): Unit = {
     if (res == expected) {
-      val endLevel = level
-      do {
-        f // this is supposed to parse/process ONE element of the container
-      } while (notDone && (level >= endLevel && aggregateHasMoreValues))
+      if (peekNext != expected.endDelimiter.char) {
+        val endLevel = level
+        do {
+          f // this is supposed to parse/process ONE element of the container
+        } while (notDone && (level >= endLevel && aggregateHasMoreValues))
+      }
       ensureNext(expected.endDelimiter)
     } else throw exception(s"expected '${expected.getClass.getSimpleName}' got '${res.getClass.getSimpleName}'")
   }
@@ -739,7 +756,7 @@ abstract class JsonPullParser extends LogWriter with Thrower {
     }
   }
 
-  def readSomeNextObjectMemberInto[V,C <:mutable.Growable[(String,V)]](name: ByteSlice, collection: C)(f: =>Option[(String,V)]): C = {
+  def readSomeNextObjectMemberInto[K,V,C <:mutable.Growable[(K,V)]](name: ByteSlice, collection: C)(f: =>Option[(K,V)]): C = {
     foreachInNextObjectMember(name) {
       f match {
         case Some((k,v)) => collection.addOne(k -> v)
@@ -749,7 +766,7 @@ abstract class JsonPullParser extends LogWriter with Thrower {
     collection
   }
 
-  def readNextObjectInto[V,C <:mutable.Growable[(String,V)]](collection: C)(f: =>(String,V)): C = {
+  def readNextObjectInto[K,V,C <:mutable.Growable[(K,V)]](collection: C)(f: =>(K,V)): C = {
     foreachInNextObject {
       val (k,v) = f
       collection.addOne(k -> v)
@@ -757,7 +774,7 @@ abstract class JsonPullParser extends LogWriter with Thrower {
     collection
   }
 
-  def readSomeNextObjectInto[V,C <:mutable.Growable[(String,V)]](collection: C)(f: =>Option[(String,V)]): C = {
+  def readSomeNextObjectInto[K,V,C <:mutable.Growable[(K,V)]](collection: C)(f: =>Option[(K,V)]): C = {
     foreachInNextObject {
       f match {
         case Some((k,v)) => collection.addOne(k -> v)
@@ -766,14 +783,14 @@ abstract class JsonPullParser extends LogWriter with Thrower {
     }
     collection
   }
-  def readCurrentObjectInto[V,C <:mutable.Growable[(String,V)]](collection: C)(f: =>(String,V)): C = {
+  def readCurrentObjectInto[K,V,C <:mutable.Growable[(K,V)]](collection: C)(f: =>(K,V)): C = {
     foreachInCurrentObject {
       val (k,v) = f
       collection.addOne(k -> v)
     }
     collection
   }
-  def readSomeCurrentObjectInto[V,C <:mutable.Growable[(String,V)]](collection: C)(f: =>Option[(String,V)]): C = {
+  def readSomeCurrentObjectInto[K,V,C <:mutable.Growable[(K,V)]](collection: C)(f: =>Option[(K,V)]): C = {
     foreachInCurrentObject {
       f match {
         case Some((k,v)) => collection.addOne(k -> v)

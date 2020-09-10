@@ -1,12 +1,16 @@
 {
-  "rev": 1,
+  "id": "/providers/region1/integrator",
+  "date": "2020-06-29T16:06:02.000",
+
+  "columnlist": "/providers/region1",
+  "rowlist": "/rows/sd1",
+
   "users": {
-    "gonzo": [
-      { "providerPattern": "provider_2", "fieldPattern": ".*" },
-      { "providerPattern": "provider_4", "fieldPattern": "field_1" }
+    "thor": [
+      { "columnPattern": "**/provider_1", "rowPattern": "**" }
     ],
     "igor": [
-      { "providerPattern": "provider_3", "fieldPattern": "field_1|field_2" }
+      { "columnPattern": "**/provider_3", "rowPattern": "**/{field_1,field_2}" }
     ]
   }
 }

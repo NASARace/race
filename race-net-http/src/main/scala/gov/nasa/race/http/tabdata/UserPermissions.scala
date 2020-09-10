@@ -16,9 +16,12 @@
  */
 package gov.nasa.race.http.tabdata
 
+import java.nio.file.Path
+
 import gov.nasa.race.common.ConstAsciiSlice.asc
-import gov.nasa.race.common.{JsonParseException, UTF8JsonPullParser}
+import gov.nasa.race.common.{JsonParseException, UTF8JsonPullParser, UnixPath}
 import gov.nasa.race.http.tabdata.UserPermissions.{PermSpec, Perms}
+import gov.nasa.race.uom.DateTime
 
 import scala.collection.mutable.ArrayBuffer
 import scala.collection.{immutable, mutable}
@@ -26,40 +29,51 @@ import scala.collection.{immutable, mutable}
 object UserPermissions {
   type PermSpec = (String,String)  // regular expressons for provider- and related field- patterns
   type Perms = Seq[PermSpec]
+
+  val _id_        = asc("id")
+  val _date_      = asc("date")
+  val _columnListId_ = asc("columnlist")
+  val _rowListId_ = asc("rowlist")
+  val _users_ = asc("users")
+  val _columnPattern_ = asc("columnPattern")
+  val _rowPattern_ = asc("rowPattern")
 }
 
 /**
   * class to hold provider/field patterns for known users that specify which fields a user can edit
   */
-case class UserPermissions (rev: Int, users: immutable.Map[String,Perms])
+case class UserPermissions (id: Path, date: DateTime, columnListId: Path, rowListId: Path, users: immutable.Map[String,Perms])
 
 /**
   * JSON parser for user permissions
   */
 class UserPermissionsParser extends UTF8JsonPullParser {
-  private val _rev_ = asc("rev")
-  private val _users_ = asc("users")
-  private val _providerPattern_ = asc("providerPattern")
-  private val _fieldPattern_ = asc("fieldPattern")
+  import UserPermissions._
 
   def parse (buf: Array[Byte]): Option[UserPermissions] = {
     initialize(buf)
 
     try {
       ensureNextIsObjectStart()
-      val rev = readUnQuotedMember(_rev_).toInt
+
+      val id = UnixPath.intern(readQuotedMember(_id_))
+      val date = readDateTimeMember(_date_)
+
+      val columnListId = UnixPath.intern(readQuotedMember(_columnListId_))
+      val rowListId = UnixPath.intern(readQuotedMember(_rowListId_))
+
       val users = readNextObjectMemberInto[Perms,mutable.Map[String,Perms]](_users_,mutable.Map.empty){
         val user = readArrayMemberName().toString
         val perms = readCurrentArrayInto(ArrayBuffer.empty[PermSpec]) {
           readNextObject {
-            val providerPattern = readQuotedMember(_providerPattern_).toString
-            val fieldPattern = readQuotedMember(_fieldPattern_).toString
+            val providerPattern = readQuotedMember(_columnPattern_).toString
+            val fieldPattern = readQuotedMember(_rowPattern_).toString
             (providerPattern, fieldPattern)
           }
         }.toSeq
         (user,perms)
       }.toMap
-      Some(UserPermissions(rev,users))
+      Some(UserPermissions(id,date,columnListId,rowListId,users))
 
     } catch {
       case x: JsonParseException =>

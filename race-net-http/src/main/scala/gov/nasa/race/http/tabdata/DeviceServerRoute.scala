@@ -18,6 +18,7 @@
 package gov.nasa.race.http.tabdata
 
 import java.net.InetSocketAddress
+import java.nio.file.Path
 
 import akka.http.scaladsl.model.ws.{Message, TextMessage}
 import akka.http.scaladsl.server.Directives._
@@ -25,11 +26,12 @@ import akka.http.scaladsl.server.{PathMatchers, Route}
 import akka.stream.scaladsl.SourceQueueWithComplete
 import com.typesafe.config.Config
 import gov.nasa.race.common.ConstAsciiSlice.asc
-import gov.nasa.race.common.{BufferedStringJsonPullParser, JsonWriter}
+import gov.nasa.race.common.{BufferedStringJsonPullParser, JsonWriter, UnixPath}
 import gov.nasa.race.config.ConfigUtils._
-import gov.nasa.race.core.{ParentActor, RaceDataClient, RaceException}
+import gov.nasa.race.core.{PROVIDER_CHANNEL, ParentActor, RaceDataClient, RaceException}
 import gov.nasa.race.http.tabdata.UserPermissions.{PermSpec, Perms}
 import gov.nasa.race.http.{PushWSRaceRoute, SiteRoute}
+import gov.nasa.race.{ifSome, withSomeOrElse}
 import gov.nasa.race.uom.DateTime
 
 import scala.collection.immutable.Iterable
@@ -40,7 +42,7 @@ import scala.collection.mutable.{ArrayBuffer, Map => MutMap}
   */
 case class RequestUserPermissions (uid: String, pw: Array[Byte])
 
-case class UserChange(uid: String, pw: Array[Byte], change: ProviderDataChange)
+case class UserChange(uid: String, pw: Array[Byte], change: ColumnDataChange)
 
 /**
   * the RaceRouteInfo that serves the content to display and update Provider data
@@ -54,7 +56,6 @@ case class UserChange(uid: String, pw: Array[Byte], change: ProviderDataChange)
   */
 class DeviceServerRoute(parent: ParentActor, config: Config) extends SiteRoute(parent,config)
                                                            with PushWSRaceRoute with RaceDataClient {
-
   /**
     * JSON parser for incoming device messages
     */
@@ -62,9 +63,9 @@ class DeviceServerRoute(parent: ParentActor, config: Config) extends SiteRoute(p
     //--- lexical constants
     private val _date_ = asc("date")
     private val _requestUserPermissions_ = asc("requestUserPermissions")
-    private val _providerCatalogId_ = asc("providerCatalogId")
-    private val _fieldCatalogId_ = asc("fieldCatalogId")
-    private val _siteId_ = asc("siteId")
+    private val _columnListId_ = asc("columnListId")
+    private val _rowListId_ = asc("rowListId")
+    private val _nodeId_ = asc("nodeId")
     private val _userChange_ = asc("userChange")
 
     def parse (msg: String): Option[Any] = parseMessageSet(msg) {
@@ -83,27 +84,29 @@ class DeviceServerRoute(parent: ParentActor, config: Config) extends SiteRoute(p
 
     // {"providerChange":{  "<uid>":[byte..], "date":<long>, "providerCatalogId": "s", "fieldCatalogId": "s", "siteId": "s", "<provider>":{ "<field>": <value>, .. }}
     def parseUserChange(msg: String): Option[UserChange] = {
-      var fieldValues = Seq.empty[(String,FieldValue)]
+      var cellValues = Seq.empty[(Path,CellValue)]
 
       val uid = readArrayMemberName().toString
       val pw = readCurrentByteArrayInto(new ArrayBuffer[Byte]).toArray
       val date = DateTime.ofEpochMillis(readUnQuotedMember(_date_).toLong)
-      val providerCatalogId = readQuotedMember(_providerCatalogId_).toString
-      val fieldCatalogId = readQuotedMember(_fieldCatalogId_).toString
-      val siteId = readQuotedMember(_siteId_).toString
-      val providerId = readObjectMemberName().toString
+
+      val columnListId = UnixPath.intern(readQuotedMember(_columnListId_))
+      val rowListId = UnixPath.intern(readQuotedMember(_rowListId_))
+      val nodeId = UnixPath.intern(readQuotedMember(_nodeId_))
+      val columnId = UnixPath.intern(readObjectMemberName())
       // TODO - we could check for valid providers here
+
       foreachInCurrentObject {
         val v = readUnQuotedValue()
-        val fieldId = member.toString
-        site.fieldCatalog.fields.get(fieldId) match {
-          case Some(field) => fieldValues = fieldValues :+ (fieldId -> field.valueFrom(v)(date))
-          case None => warning(s"skipping unknown field $fieldId")
+        val rowId = UnixPath.intern(member)
+        site.rowList.get(rowId) match {
+          case Some(row) => cellValues = cellValues :+ (rowId -> row.valueFrom(v)(date))
+          case None => warning(s"skipping unknown field $rowId")
         }
       }
 
-      val pdc = ProviderDataChange(providerId,date,providerCatalogId,fieldCatalogId,siteId,fieldValues)
-      Some(UserChange(uid,pw,pdc))
+      val cdc = ColumnDataChange(columnId,nodeId,date,cellValues)
+      Some(UserChange(uid,pw,cdc))
     }
   }
 
@@ -116,10 +119,10 @@ class DeviceServerRoute(parent: ParentActor, config: Config) extends SiteRoute(p
   var site: Option[Node] = None
 
   // cache for messages sent to devices
-  var fieldCatalogMessage: Option[TextMessage] = None
-  var providerCatalogMessage: Option[TextMessage] = None
+  var rowListMessage: Option[TextMessage] = None
+  var columnListMessage: Option[TextMessage] = None
   var siteIdMessage: Option[TextMessage] = None
-  val providerDataMessages = MutMap.empty[String,TextMessage]
+  val columnDataMessages = MutMap.empty[Path,TextMessage]
 
   val userPermissions: UserPermissions = readUserPermissions
 
@@ -132,8 +135,8 @@ class DeviceServerRoute(parent: ParentActor, config: Config) extends SiteRoute(p
     }
   }
 
-  def serializeSiteId (id: String): String = {
-    writer.clear.writeObject( _.writeStringMember("siteId", id)).toJson
+  def serializeSiteId (id: Path): String = {
+    writer.clear.writeObject( _.writeStringMember("siteId", id.toString)).toJson
   }
 
   def serializeUserPermissions (user: String, perms: Perms): String = {
@@ -163,34 +166,46 @@ class DeviceServerRoute(parent: ParentActor, config: Config) extends SiteRoute(p
         site = Some(s)
         parser = createIncomingMessageParser
         siteIdMessage = Some( TextMessage(serializeSiteId(s.id)))
-        fieldCatalogMessage = Some( TextMessage(writer.toJson(s.fieldCatalog)))
-        providerCatalogMessage = Some( TextMessage(writer.toJson(s.providerCatalog)))
+        rowListMessage = Some( TextMessage(writer.toJson(s.rowList)))
+        columnListMessage = Some( TextMessage(writer.toJson(s.columnList)))
         info(s"device server '${s.id}' ready to accept connections")
 
       //--- data changes
-      case fc: FieldCatalog =>
-        site = site.map( _.copy(fieldCatalog=fc))
+      case rl: RowList =>
+        site = site.map( _.copy(rowList=rl))
         parser = createIncomingMessageParser
-        val msg = TextMessage(writer.toJson(fc))
-        fieldCatalogMessage = Some(msg)
+        val msg = TextMessage(writer.toJson(rl))
+        rowListMessage = Some(msg)
         push(msg)
-        if (hasConnections) info(s"device server pushing new field catalog '${fc.id}'")
+        if (hasConnections) info(s"device server pushing new field catalog '${rl.id}'")
 
-      case pc: ProviderCatalog =>
-        site = site.map( _.copy(providerCatalog=pc))
+      case cl: ColumnList =>
+        site = site.map( _.copy(columnList=cl))
         parser = createIncomingMessageParser
-        val msg = TextMessage(writer.toJson(pc))
-        providerCatalogMessage = Some(msg)
+        val msg = TextMessage(writer.toJson(cl))
+        columnListMessage = Some(msg)
         push(msg)
-        if (hasConnections) info(s"device server pushing new provider catalog '${pc.id}'")
+        if (hasConnections) info(s"device server pushing new provider catalog '${cl.id}'")
 
-      case pd: ProviderData =>
-        val msg = TextMessage(writer.toJson(pd))
-        providerDataMessages.put( pd.providerId, msg)
+      case cd: ColumnData =>
+        val msg = TextMessage(writer.toJson(cd))
+        columnDataMessages.put( cd.id, msg)
         push(msg)
-        if (hasConnections) info(s"device server pushing new provider data for '${pd.providerId}'")
+        if (hasConnections) info(s"device server pushing new provider data for '${cd.id}'")
 
       case other => // ignore
+    }
+  }
+
+  protected def isAcceptChange(cdc: ColumnDataChange): Boolean = {
+    withSomeOrElse( site, false) { site=>
+      val nodeId = site.id
+      val targetId = cdc.columnId
+
+      withSomeOrElse( site.columnList.get(targetId),false) { col=>
+        // sender counts as ourselves since each node is responsible for devices it serves
+        col.updateFilter.receiveFromDevice(nodeId,targetId)
+      }
     }
   }
 
@@ -205,9 +220,13 @@ class DeviceServerRoute(parent: ParentActor, config: Config) extends SiteRoute(p
                 val perms = userPermissions.users.getOrElse(uid,Seq.empty[PermSpec])
                 TextMessage(serializeUserPermissions(uid,perms)) :: Nil
 
-              case Some(pc@UserChange(uid,pw,pdc:ProviderDataChange)) =>
+              case Some(pc@UserChange(uid,pw,cdc:ColumnDataChange)) =>
                 // TODO - check user credentials and permissions
-                publishData(pdc) // the service
+                if (isAcceptChange(cdc)) {
+                  publishData(cdc) // the service
+                } else {
+                  warning(s"incoming CDC rejected by column filter ${tm.text}")
+                }
                 Nil
 
               case _ =>
@@ -234,9 +253,9 @@ class DeviceServerRoute(parent: ParentActor, config: Config) extends SiteRoute(p
 
   override protected def initializeConnection (remoteAddr: InetSocketAddress, queue: SourceQueueWithComplete[Message]): Unit = {
     siteIdMessage.foreach( pushTo(remoteAddr, queue ,_))
-    fieldCatalogMessage.foreach( pushTo(remoteAddr, queue ,_))
-    providerCatalogMessage.foreach( pushTo(remoteAddr, queue, _))
-    providerDataMessages.foreach(e=> pushTo(remoteAddr, queue, e._2))
+    rowListMessage.foreach( pushTo(remoteAddr, queue ,_))
+    columnListMessage.foreach( pushTo(remoteAddr, queue, _))
+    columnDataMessages.foreach(e=> pushTo(remoteAddr, queue, e._2))
   }
 
 }

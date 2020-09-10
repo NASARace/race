@@ -112,30 +112,59 @@ tbody td.local {
   background-color: rgba(0,224,224,0.2);
 }
 
-
 thead th {
-  position: -webkit-sticky; /* for Safari */
-  position: sticky;
-  top: 0;
-  cursor: cell;
-  color: var(--th-color);
   background-color: var(--th-background);
   background-clip: padding-box;
-  border-bottom: 0px none;
   border-right: 1px solid lightgray;
   z-index: 3;
 }
 
+
+thead th.info {
+  position: -webkit-sticky; /* for Safari */
+  position: sticky;
+  top: 0;  /* relative to scrolled container (div) */
+  font-size: small;
+  font-weight: normal;
+  text-align: left;
+  border-bottom: 1px solid black;
+}
+
+thead th.name {
+  position: -webkit-sticky; /* for Safari */
+  position: sticky;
+  top: calc(var(--cell-height) + 2 * var(--cell-padding) + 1px);  /* -- with info row */
+  /* top: 0;  -- without info row */
+  border-bottom: 0px none;
+  cursor: cell;
+}
+
 thead th.dtg {
-  height: 0.8rem;
+  height: 0.9rem;
   color: blue;
   position: -webkit-sticky; /* for Safari */
   position: sticky;
-  top: calc(var(--cell-height) + 2 * var(--cell-padding));  /* relative to scrolled container (div) */
+  top: calc(2* var(--cell-height) + 4* var(--cell-padding) + 1px); /* -- with info row */
+  /* top: calc(var(--cell-height) + 2 * var(--cell-padding)); -- without info row */
+  cursor: cell;
   font-family: monospace;
   font-size: small;
   font-weight: normal;
   border-bottom: 1px solid black;
+}
+
+/* this needs to be defined *after* the other th classes to override */
+thead th.label {
+  position: -webkit-sticky; /* for Safari */
+  position: sticky;
+  left: 0;
+  text-align: right;
+  font-family: sans-serif;
+  color: grey;
+  font-size: small;
+  font-weight: normal;
+  cursor: default;
+  z-index: 4;
 }
 
 td.alert {
@@ -220,13 +249,13 @@ label.title-label {
   display: inline-block;
   text-align: right;
   width: 6rem;
-  font-size: normal;
+  font-size: small;
 }
 
 span.title-text {
   text-align: left;
-  font-size: larger;
-  font-weight: 600;
+  font-size: large;
+  font-weight: 500;
 }
 
 /* other controls */
@@ -286,6 +315,9 @@ label {
   height: 1.6rem;
   font-size: 90%;
   vertical-align: middle;
+  border-width: 2px;
+  /* box-shadow: 3px 3px #404040; */
+  /* transform: translate(2px,2px); */
 }
 
 .button:hover {
@@ -294,13 +326,11 @@ label {
 
 .button:active {
   background-color: rgba(0,0,255,0.3);
-  /* box-shadow: 3px 3px #404040; */
-  /* transform: translate(2px,2px); */
 }
 
 /* cell editing text inputs */
 
-input.field {
+input.cell {
   text-align: right;
   background-color: rgb(255,255,225);
   width:  calc(var(--cell-width) - 0.4rem);
@@ -309,20 +339,20 @@ input.field {
   font-size: small;
 }
 
-input.field.focused {
+input.cell.focused {
   background-color: rgb(255,255,180);
   border: 1px solid red;
 }
 
-input.field.modified {
+input.cell.modified {
   color: red;
 }
 
-input.field.modified.conflict {
+input.cell.modified.conflict {
   background-color: rgb(255,180,180);
 }
 
-input.field.reported {
+input.cell.reported {
   color: green;
 }
 

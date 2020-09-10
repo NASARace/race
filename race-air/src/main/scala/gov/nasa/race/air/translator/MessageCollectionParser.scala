@@ -216,7 +216,7 @@ class MessageCollectionParser(val config: Config=NoConfig) extends UTF8XmlPullPa
 
         @inline def process_position = {
           if (tagHasParent(_enRoute)) {
-            if (parseAttr(_positionTime)) date = DateTime.parseYMDT(attrValue)
+            if (parseAttr(_positionTime)) date = DateTime.parseYMDTSlice(attrValue)
           }
         }
 
@@ -240,7 +240,7 @@ class MessageCollectionParser(val config: Config=NoConfig) extends UTF8XmlPullPa
         def process_actual = {
           if (tagHasParent(_runwayTime)) {
             if (parseAttr(_time)) {
-              val d = DateTime.parseYMDT(attrValue)
+              val d = DateTime.parseYMDTSlice(attrValue)
               if (loc == LOC_DEPARTURE) {
                 departureDate = d
               } else if (loc == LOC_ARRIVAL) {
@@ -254,7 +254,7 @@ class MessageCollectionParser(val config: Config=NoConfig) extends UTF8XmlPullPa
         def process_estimated = {
           if (tagHasParent(_runwayTime)) {
             if (loc == LOC_ARRIVAL) {
-              if (parseAttr(_time)) arrivalDate = DateTime.parseYMDT(attrValue)
+              if (parseAttr(_time)) arrivalDate = DateTime.parseYMDTSlice(attrValue)
             }
             // there should be no estimated departure dates - this is a flight in progress
           }

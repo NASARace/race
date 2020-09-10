@@ -113,8 +113,12 @@ object Dependencies {
   //--- argon2 based password hashes ()
   val argon2 = "de.mkammerer" % "argon2-jvm" % "2.7"
 
+
+  //--- jimfs - simple in-memory file system to enforce platform independent paths
+  val jimfs = "com.google.jimfs" % "jimfs" % "1.1"
+
   //--- Akka
-  val akkaVersion = "2.6.8"
+  val akkaVersion = "2.6.9"
   val akkaOrg = "com.typesafe.akka"
 
   val akkaActor = akkaOrg %% "akka-actor" % akkaVersion

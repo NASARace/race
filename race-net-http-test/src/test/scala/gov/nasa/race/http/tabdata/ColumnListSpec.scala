@@ -24,37 +24,37 @@ import org.scalatest.flatspec.AnyFlatSpec
 /**
   * reg test for Provider data types
   */
-class ProviderSpec extends AnyFlatSpec with RaceSpec {
+class ColumnListSpec extends AnyFlatSpec with RaceSpec {
 
-  "a ProviderCatalogParser" should "read ProviderCatalog from JSON source" in {
-    val input = FileUtils.fileContentsAsString("race-net-http-test/src/resources/sites/tabdata/data/providerCatalog.json").get
+  "a ColumnListParser" should "translate a JSON source" in {
+    val input = FileUtils.fileContentsAsString("race-net-http-test/src/resources/sites/tabdata/data/columnList.json").get
 
-    val parser = new ProviderCatalogParser
+    val parser = new ColumnListParser
 
     println(s"#-- parsing: $input")
 
     parser.parse(input.getBytes) match {
-      case Some(cat:ProviderCatalog) =>
+      case Some(list:ColumnList) =>
         println("\n  -> result:")
 
-        println(s"catalog id:  ${cat.id}")
-        println(s"catalog date: ${cat.date}")
-        println("providers:")
-        cat.providers.foreach { e=>
-          val (id,field) = e
-          println(s"  '$id': $field")
+        println(s"list id:  ${list.id}")
+        println(s"list date: ${list.date}")
+        println("columns:")
+        list.columns.foreach { e=>
+          val (id,col) = e
+          println(s"  '$id': $col")
         }
 
-        assert( cat.providers.size == 9)
+        assert( list.columns.size == 10)
 
         val w = new JsonWriter
         w.format(true)
         w.readableDateTime(true)
-        cat.serializeTo(w)
+        list.serializeTo(w)
         println("\n  -> client JSON:")
         println(w.toJson)
 
-      case _ => fail("failed to parse provider catalog")
+      case _ => fail("failed to parse column list")
     }
   }
 }

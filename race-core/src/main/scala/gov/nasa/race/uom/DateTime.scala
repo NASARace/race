@@ -56,18 +56,18 @@ object DateTime {
     else new Time((b.millis - a.millis).toInt)
   }
 
-  def parse(spec: String, dtf: DateTimeFormatter): DateTime = {
+  def parse(spec: CharSequence, dtf: DateTimeFormatter): DateTime = {
     val inst = Instant.from(dtf.parse(spec))
     new DateTime(inst.toEpochMilli)
   }
 
-  @inline def parseISO (spec: String): DateTime = parse(spec, DateTimeFormatter.ISO_DATE_TIME)
+  @inline def parseISO (spec: CharSequence): DateTime = parse(spec, DateTimeFormatter.ISO_DATE_TIME)
 
   // examples: "2017-08-08T00:44:12Z" "2018-01-02T10:20:01.234+03:30[US/Pacific]"
 
   val YMDT_RE = """(\d{4})[\/-](\d{1,2})[\/-](\d{1,2})[ ,T](\d{1,2}):(\d{1,2}):(\d{1,2})(?:\.(\d{1,9}))? ?(?:([+-]\d{1,2})(?:\:(\d{1,2})))? ?\[?([\w\/]+)?+\]?""".r
 
-  def parseYMDT(spec: String): DateTime = {
+  def parseYMDT(spec: CharSequence): DateTime = {
     spec match {
       case YMDT_RE(year,month,day,hour,min,sec,secFrac, offHour,offMin,zId) =>
         val zoneId = getZoneId(zId,offHour,offMin)
@@ -113,7 +113,7 @@ object DateTime {
   //--- slice based parsing
   // TODO - use the component extractors to avoid redundancy
 
-  def parseYMDT (slice: ByteSlice): DateTime = parseYMDT(slice.data, slice.off, slice.len)
+  def parseYMDTSlice(slice: ByteSlice): DateTime = parseYMDT(slice.data, slice.off, slice.len)
 
   def parseYMDT(bs: Array[Byte], off: Int, len: Int): DateTime = {
     var i = off

@@ -124,6 +124,33 @@ package object common {
     if (!(d < dMin || d > dMax)) f
   }
 
+  // note these only flatten Seq[_], not Array objects (which still just count as 1)
+  def flatSize1 (s: Seq[_]): Int = {
+    var n = 0
+    s.foreach {
+      case seq: Seq[_] => n += seq.size
+      case _ => n += 1
+    }
+    n
+  }
+
+  def flatten1 (seq: Seq[_]): Seq[_] = {
+    seq.flatMap {
+      case seq1: Seq[_] => seq1
+      case arr1: Array[_] => arr1
+      case other => Some(other)
+    }
+  }
+
+  def flatSize (s: Seq[_]): Int = {
+    var n = 0
+    s.foreach {
+      case seq: Seq[_] => n += flatSize(seq)
+      case _ => n += 1
+    }
+    n
+  }
+
   // something that can be turned into XML
   trait XmlSource {
     def toXML: xml.Node

@@ -135,7 +135,7 @@ class TfmDataServiceParser(val config: Config=NoConfig) extends UTF8XmlPullParse
         @inline def process_arrArpt = arrArpt = attrValue.intern
         @inline def process_depArpt = depArpt = attrValue.intern
         @inline def process_flightRef = flightRef = attrValue.intern
-        @inline def process_sourceTimeStamp = date = DateTime.parseYMDT(attrValue)
+        @inline def process_sourceTimeStamp = date = DateTime.parseYMDTSlice(attrValue)
         @inline def process_sourceFacility = source = attrValue.intern
 
         @inline def match_a = { len>=1 && data(off)==97 }
@@ -268,7 +268,7 @@ class TfmDataServiceParser(val config: Config=NoConfig) extends UTF8XmlPullParse
                 if (attrName == etaType){
                   if (!(attrValue == actualValue)) return
                 } else if (attrName == timeValue) {
-                  if (date.isUndefined) date =  DateTime.parseYMDT(attrValue)
+                  if (date.isUndefined) date =  DateTime.parseYMDTSlice(attrValue)
                   if (lat.isUndefined) lat = Angle0
                   if (lon.isUndefined) lon = Angle0
                 }
@@ -310,7 +310,7 @@ class TfmDataServiceParser(val config: Config=NoConfig) extends UTF8XmlPullParse
 
       def readNextWPDate: DateTime = {
         if (parseAttr(timeValue)) {
-          DateTime.parseYMDT(attrValue)
+          DateTime.parseYMDTSlice(attrValue)
         } else DateTime.UndefinedDateTime
       }
 

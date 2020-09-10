@@ -1,0 +1,324 @@
+/*
+ * Copyright (c) 2020, United States Government, as represented by the
+ * Administrator of the National Aeronautics and Space Administration.
+ * All rights reserved.
+ *
+ * The RACE - Runtime for Airspace Concept Evaluation platform is licensed
+ * under the Apache License, Version 2.0 (the "License"); you may not use
+ * this file except in compliance with the License. You may obtain a copy
+ * of the License at http://www.apache.org/licenses/LICENSE-2.0.
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package gov.nasa.race.http.tabdata
+
+import gov.nasa.race.common.{JsonSerializable, JsonWriter}
+import gov.nasa.race.uom.DateTime
+
+
+/**
+  * root type for cell values
+  *
+  * Cell objects are invariant
+  */
+sealed abstract class CellValue(val date: DateTime) extends JsonSerializable {
+  def valueToString: String
+  def toJson: String
+  def isDefined: Boolean = true
+  def serializeTo (w: JsonWriter): Unit
+
+  def undefinedCellValue: UndefinedCellValue
+}
+
+trait CellTyped {
+  val cellType: Class[_]
+}
+
+/**
+  * root type for a cell that is not defined
+  */
+trait UndefinedCellValue extends CellValue {
+  override def valueToString: String = ""
+  override def toJson = "undefined"
+  override def isDefined: Boolean = false
+  override def serializeTo (w: JsonWriter): Unit = w.writeUnQuotedValue("undefined")
+}
+
+/**
+  * a cell value that supports numeric operations
+  */
+trait NumCellValue extends CellValue {
+  type This <: NumCellValue
+
+  def toLong: Long
+  def toDouble: Double
+
+  // TODO - should this preserve the this.type?
+  def +(term: NumCellValue)(implicit date: DateTime): NumCellValue
+  def -(term: NumCellValue)(implicit date: DateTime): NumCellValue
+  def *(factor: NumCellValue)(implicit date: DateTime): NumCellValue
+  def /(factor: NumCellValue)(implicit date: DateTime): NumCellValue
+
+  def neg(implicit date: DateTime): This
+  def sgn: Int
+
+  def < (fv: NumCellValue): Boolean
+  def <= (fv: NumCellValue): Boolean
+  def > (fv: NumCellValue): Boolean
+  def >= (fv: NumCellValue): Boolean
+}
+
+/**
+  * undefined numeric cell value
+  * TODO - not sure about the comparison operators
+  */
+trait UndefinedNumCellValue extends  UndefinedCellValue with NumCellValue {
+
+  //--- arithmetic ops
+  override def *(factor: NumCellValue)(implicit date: DateTime): NumCellValue = this
+
+  override def /(factor: NumCellValue)(implicit date: DateTime): NumCellValue = {
+    factor.sgn match {
+      case -1 => DoubleCellValue(Double.NegativeInfinity)
+      case 0 => DoubleCellValue(Double.NaN)
+      case 1 => DoubleCellValue(Double.PositiveInfinity)
+    }
+  }
+
+  override def < (fv: NumCellValue): Boolean = {
+    fv match {
+      case LongCellValue(n) => 0 < n
+      case DoubleCellValue(d) => 0 < d
+    }
+  }
+  override def <= (fv: NumCellValue): Boolean  = {
+    fv match {
+      case LongCellValue(n) => 0 <= n
+      case DoubleCellValue(d) => 0 <= d
+    }
+  }
+  override def > (fv: NumCellValue): Boolean = {
+    fv match {
+      case LongCellValue(n) => 0 > n
+      case DoubleCellValue(d) => 0 > d
+    }
+  }
+  override def >= (fv: NumCellValue): Boolean = {
+    fv match {
+      case LongCellValue(n) => 0 >= n
+      case DoubleCellValue(d) => 0 >= d
+    }
+  }
+}
+
+object LongCellValue {
+  val cellType = classOf[LongCellValue]
+}
+
+/**
+  * a scalar Cell that holds a Long value
+  */
+case class LongCellValue(value: Long)(implicit date: DateTime) extends CellValue(date) with NumCellValue {
+  type This = LongCellValue
+
+  def toLong: Long = value
+  def toDouble: Double = value.toDouble
+  def toJson = value.toString
+  def valueToString = value.toString
+
+  override def undefinedCellValue: UndefinedCellValue = UndefinedLongCellValue
+  override def toString: String = s"LongValue(value:$value,date:$date)"
+
+  def neg(implicit date: DateTime) = LongCellValue(-value)
+  def sgn: Int = if (value < 0) -1 else if (value > 0) 1 else 0
+
+  def serializeTo (w: JsonWriter): Unit = {
+    w.beginObject
+    w.writeLongMember("value", value)
+    if (date.isDefined) w.writeDateTimeMember("date", date)
+    w.endObject
+  }
+
+  //--- arithmetic ops
+  def +(term: NumCellValue)(implicit date: DateTime): NumCellValue = {
+    term match {
+      case LongCellValue(n) => LongCellValue(value + n)
+      case DoubleCellValue(d) => DoubleCellValue(value.toDouble + d)
+    }
+  }
+  def -(term: NumCellValue)(implicit date: DateTime): NumCellValue = {
+    term match {
+      case LongCellValue(n) => LongCellValue(value - n)
+      case DoubleCellValue(d) => DoubleCellValue(value.toDouble - d)
+    }
+  }
+  def *(factor: NumCellValue)(implicit date: DateTime): NumCellValue = {
+    factor match {
+      case LongCellValue(n) => LongCellValue(value * n)
+      case DoubleCellValue(d) => DoubleCellValue(value.toDouble * d)
+    }
+  }
+  def /(factor: NumCellValue)(implicit date: DateTime): NumCellValue = {
+    factor match {
+      case LongCellValue(n) =>
+        if (n == 0) {
+          if (value < 0) DoubleCellValue(Double.NegativeInfinity)
+          else if (value > 0) DoubleCellValue(Double.PositiveInfinity)
+          else DoubleCellValue(Double.NaN)
+        } else {
+          LongCellValue(value / n)  // TODO - should we promote to Double here?
+        }
+      case _ =>
+        val d = factor.toDouble
+        if (d == 0) {
+          if (value < 0) DoubleCellValue(Double.NegativeInfinity)
+          else if (value > 0) DoubleCellValue(Double.PositiveInfinity)
+          else DoubleCellValue(Double.NaN)
+        } else {
+          DoubleCellValue(value / d)
+        }
+    }
+  }
+
+  def < (fv: NumCellValue): Boolean = {
+    fv match {
+      case LongCellValue(n) => value < n
+      case DoubleCellValue(d) => value.toDouble < d
+    }
+  }
+  def <= (fv: NumCellValue): Boolean = {
+    fv match {
+      case LongCellValue(n) => value <= n
+      case DoubleCellValue(d) => value.toDouble <= d
+    }
+  }
+  def > (fv: NumCellValue): Boolean = {
+    fv match {
+      case LongCellValue(n) => value > n
+      case DoubleCellValue(d) => value.toDouble > d
+    }
+  }
+  def >= (fv: NumCellValue): Boolean = {
+    fv match {
+      case LongCellValue(n) => value >= n
+      case DoubleCellValue(d) => value.toDouble >= d
+    }
+  }
+}
+
+object UndefinedLongCellValue extends LongCellValue(0)(DateTime.Date0) with UndefinedNumCellValue {
+  override def neg(implicit date: DateTime) = this
+}
+
+object DoubleCellValue {
+  val cellType = classOf[DoubleCellValue]
+}
+
+/**
+  * a scalar cell that holds a Double value
+  */
+case class DoubleCellValue(value: Double)(implicit date: DateTime) extends CellValue(date) with NumCellValue {
+  type This = DoubleCellValue
+
+  def toLong: Long = Math.round(value)
+  def toDouble: Double = value
+  def toJson = value.toString
+  def valueToString = value.toString
+
+  override def undefinedCellValue: UndefinedCellValue = UndefinedDoubleCellValue
+  override def toString: String = s"DoubleValue(value:$value,date:$date)"
+
+  def serializeTo (w: JsonWriter): Unit = {
+    w.beginObject
+    w.writeDoubleMember("value", value)
+    if (date.isDefined) w.writeDateTimeMember("date", date)
+    w.endObject
+  }
+
+  def neg(implicit date: DateTime) = DoubleCellValue(-value)
+  def sgn: Int = if (value < 0) -1 else if (value > 0) 1 else 0
+
+  //--- arithmetic ops
+  def +(term: NumCellValue)(implicit date: DateTime): NumCellValue = DoubleCellValue(value + term.toDouble)
+  def -(term: NumCellValue)(implicit date: DateTime): NumCellValue = DoubleCellValue(value - term.toDouble)
+  def *(factor: NumCellValue)(implicit date: DateTime): NumCellValue = DoubleCellValue(value * factor.toDouble)
+
+  def /(factor: NumCellValue)(implicit date: DateTime): NumCellValue = {
+    val d = factor.toDouble
+    if (d == 0) {
+      if (value < 0) DoubleCellValue(Double.NegativeInfinity)
+      else if (value > 0) DoubleCellValue(Double.PositiveInfinity)
+      else DoubleCellValue(Double.NaN)
+    } else {
+      DoubleCellValue(value / d)
+    }
+  }
+
+  def < (fv: NumCellValue): Boolean = value < fv.toDouble
+  def <= (fv: NumCellValue): Boolean = value <= fv.toDouble
+  def > (fv: NumCellValue): Boolean = value > fv.toDouble
+  def >= (fv: NumCellValue): Boolean = value >= fv.toDouble
+}
+
+object UndefinedDoubleCellValue extends DoubleCellValue(0.0)(DateTime.Date0) with UndefinedNumCellValue {
+  override def neg(implicit date: DateTime) = this
+}
+
+/**
+  * scalar cell that holds a Boolean value
+  */
+
+object BooleanCellValue{
+  val cellType = classOf[BooleanCellValue]
+}
+
+case class BooleanCellValue(value: Boolean)(implicit date: DateTime) extends CellValue(date) {
+  override def valueToString: String = value.toString
+
+  override def toJson: String = if (value) "\"true\"" else "\"false\""
+  override def undefinedCellValue: UndefinedCellValue = UndefinedBooleanCellValue
+
+  override def serializeTo(w: JsonWriter): Unit = {
+    w.beginObject
+    w.writeBooleanMember("value", value)
+    if (date.isDefined) w.writeDateTimeMember("date", date)
+    w.endObject
+  }
+
+  def toBoolean: Boolean = value
+
+  def &&(other: BooleanCellValue)(implicit date: DateTime): BooleanCellValue = BooleanCellValue(value && other.toBoolean)
+  def ||(other: BooleanCellValue)(implicit date: DateTime): BooleanCellValue = BooleanCellValue(value || other.toBoolean)
+  def unary_! (implicit date: DateTime): BooleanCellValue = BooleanCellValue(!value)
+
+}
+
+object UndefinedBooleanCellValue extends BooleanCellValue(false)(DateTime.Date0) with UndefinedCellValue
+
+/**
+  * string cell
+  */
+
+object StringCellValue {
+  val cellType = classOf[StringCellValue]
+}
+
+case class StringCellValue (value: String)(implicit date: DateTime) extends CellValue(date){
+  override def valueToString: String = value
+
+  override def toJson: String = "\"" + value + '"'
+  override def undefinedCellValue: UndefinedCellValue = UndefinedStringCellValue
+
+  override def serializeTo(w: JsonWriter): Unit = {
+    w.beginObject
+    w.writeStringMember("value", value)
+    if (date.isDefined) w.writeDateTimeMember("date", date)
+    w.endObject
+  }
+}
+
+object UndefinedStringCellValue extends StringCellValue("")(DateTime.Date0) with UndefinedCellValue
