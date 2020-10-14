@@ -34,12 +34,13 @@ class ColumnDataSpec extends AnyFlatSpec with RaceSpec {
 
   val resourcePath = "race-net-http-test/src/resources/sites/tabdata/data"
 
-  val rl = "/rows/sds1"
+  val rl = "/data"
   val rows = Seq(
     LongRow(p"$rl/cat_A", "this is the cat_A header"),
     LongRow(p"$rl/cat_A/field_1", "this is the cat_A field 1"),
     LongRow(p"$rl/cat_A/field_2", "this is the cat_A field 2"),
     LongRow(p"$rl/cat_A/field_3", "this is the cat_A field 3"),
+    LongListRow(p"$rl/cat_A/field_4", "this is the cat_A field 4"),
 
     DoubleRow(p"$rl/cat_B", "this is the cat_B header"),
     DoubleRow(p"$rl/cat_B/field_1", "this is the cat_B field 1"),
@@ -49,7 +50,7 @@ class ColumnDataSpec extends AnyFlatSpec with RaceSpec {
     LongRow(p"$rl/cat_C/field_1", "this is the cat_C field 1"),
     LongRow(p"$rl/cat_C/field_2", "this is the cat_C field 2"),
     LongRow(p"$rl/cat_C/field_3", "this is the cat_C field 3"),
-    LongRow(p"$rl/cat_C/field_3", "this is the cat_C field 3")
+    LongRow(p"$rl/cat_C/field_4", "this is the cat_C field 4")
   )
 
   val rowList = RowList (
@@ -60,7 +61,7 @@ class ColumnDataSpec extends AnyFlatSpec with RaceSpec {
   )
 
   "a ProviderDataParser" should "read ProviderData from JSON source" in {
-    val input = FileUtils.fileContentsAsString(s"$resourcePath/provider_1.json").get
+    val input = FileUtils.fileContentsAsString(s"$resourcePath/provider_2.json").get
 
     val parser = new ColumnDataParser(rowList)
     println(s"#-- parsing: $input")

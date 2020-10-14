@@ -16,9 +16,19 @@
  */
 package gov.nasa.race.http.tabdata
 
-import gov.nasa.race.common.{JsonSerializable, JsonWriter}
+import gov.nasa.race.common.ConstAsciiSlice.asc
+import gov.nasa.race.common.JsonPullParser.{ArrayStart, ObjectStart, QuotedValue, UnQuotedValue}
+import gov.nasa.race.common.{JsonPullParser, JsonSerializable, JsonWriter}
 import gov.nasa.race.uom.DateTime
 
+import scala.collection.mutable.ArrayBuffer
+
+
+object CellValue {
+  val _value_ = asc("value")
+  val _date_ = asc("date")
+}
+import CellValue._
 
 /**
   * root type for cell values
@@ -26,9 +36,12 @@ import gov.nasa.race.uom.DateTime
   * Cell objects are invariant
   */
 sealed abstract class CellValue(val date: DateTime) extends JsonSerializable {
+  type This
+
   def valueToString: String
   def toJson: String
   def isDefined: Boolean = true
+
   def serializeTo (w: JsonWriter): Unit
 
   def undefinedCellValue: UndefinedCellValue
@@ -117,6 +130,21 @@ trait UndefinedNumCellValue extends  UndefinedCellValue with NumCellValue {
 
 object LongCellValue {
   val cellType = classOf[LongCellValue]
+
+  // we already parsed the row-id and the parser is at the start of a {"value"..} object or an un-quoted value
+  def parseFrom (p: JsonPullParser)(implicit date: DateTime): LongCellValue = p.getLastResult match {
+    case ObjectStart =>
+      val v = p.readUnQuotedMember(_value_).toLong
+      val d = p.readOptionalDateTimeMember(_date_).getOrElse(date)
+      p.skipPastAggregate()
+      LongCellValue(v)(d)
+
+    case UnQuotedValue =>
+      val v = p.value.toLong
+      LongCellValue(v)
+
+    case _ => throw p.exception("expected integer value or value object")
+  }
 }
 
 /**
@@ -216,6 +244,20 @@ object UndefinedLongCellValue extends LongCellValue(0)(DateTime.Date0) with Unde
 
 object DoubleCellValue {
   val cellType = classOf[DoubleCellValue]
+
+  def parseFrom (p: JsonPullParser)(implicit date: DateTime): DoubleCellValue = p.getLastResult match {
+    case ObjectStart =>
+      val v = p.readUnQuotedMember(_value_).toDouble
+      val d = p.readOptionalDateTimeMember(_date_).getOrElse(date)
+      p.skipPastAggregate()
+      DoubleCellValue(v)(d)
+
+    case UnQuotedValue =>
+      val v = p.value.toDouble
+      DoubleCellValue(v)
+
+    case _ => throw p.exception("expected rational value or value object")
+  }
 }
 
 /**
@@ -272,8 +314,22 @@ object UndefinedDoubleCellValue extends DoubleCellValue(0.0)(DateTime.Date0) wit
   * scalar cell that holds a Boolean value
   */
 
-object BooleanCellValue{
+object BooleanCellValue {
   val cellType = classOf[BooleanCellValue]
+
+  def parseFrom (p: JsonPullParser)(implicit date: DateTime): BooleanCellValue = p.getLastResult match {
+    case ObjectStart =>
+      val v = p.readQuotedMember(_value_).toBoolean
+      val d = p.readOptionalDateTimeMember(_date_).getOrElse(date)
+      p.skipPastAggregate()
+      BooleanCellValue(v)(d)
+
+    case QuotedValue =>
+      val v = p.value.toBoolean
+      BooleanCellValue(v)
+
+    case _ => throw p.exception("expected boolean value or value object")
+  }
 }
 
 case class BooleanCellValue(value: Boolean)(implicit date: DateTime) extends CellValue(date) {
@@ -305,6 +361,20 @@ object UndefinedBooleanCellValue extends BooleanCellValue(false)(DateTime.Date0)
 
 object StringCellValue {
   val cellType = classOf[StringCellValue]
+
+  def parseFrom (p: JsonPullParser)(implicit date: DateTime): StringCellValue = p.getLastResult match {
+    case ObjectStart =>
+      val v = p.readQuotedMember(_value_).toString
+      val d = p.readOptionalDateTimeMember(_date_).getOrElse(date)
+      p.skipPastAggregate()
+      StringCellValue(v)(d)
+
+    case QuotedValue =>
+      val v = p.value.toString
+      StringCellValue(v)
+
+    case _ => throw p.exception("expected string value or value object")
+  }
 }
 
 case class StringCellValue (value: String)(implicit date: DateTime) extends CellValue(date){
@@ -322,3 +392,112 @@ case class StringCellValue (value: String)(implicit date: DateTime) extends Cell
 }
 
 object UndefinedStringCellValue extends StringCellValue("")(DateTime.Date0) with UndefinedCellValue
+
+//--- array cell values
+
+trait ListCellValue[T] {
+  type This <: ListCellValue[T]
+  val value: Array[T]
+
+  def apply(i: Int): T
+  def length: Int
+  def append (v: T)(implicit date: DateTime): This
+  def appendBounded(v: T, maxLength: Int)(implicit date: DateTime): This
+  def pushBounded(v: T, maxLength: Int)(implicit date: DateTime): This
+  def foreach (f:T=>Unit): Unit = value.foreach(f)
+  def foldLeft[B](z:B)(f: (B,T)=>B): B = value.foldLeft(z)(f)
+  //... and more to follow
+}
+
+/**
+  * Long list
+  */
+object LongListCellValue {
+  val cellType = classOf[LongListCellValue]
+
+  def parseFrom (p: JsonPullParser)(implicit date: DateTime): LongListCellValue = p.getLastResult match {
+    case ObjectStart =>
+      val v = p.readNextLongArrayMemberInto(_value_, ArrayBuffer.empty[Long]).toArray
+      val d = p.readOptionalDateTimeMember(_date_).getOrElse(date)
+      p.skipPastAggregate()
+      LongListCellValue(v)(d)
+
+    case ArrayStart =>
+      val v = p.readCurrentLongArrayInto(ArrayBuffer.empty[Long]).toArray
+      LongListCellValue(v)
+
+    case _ => throw p.exception("expected integer array value or value object")
+  }
+}
+
+case class LongListCellValue (value: Array[Long])(implicit date: DateTime) extends CellValue(date) with ListCellValue[Long] {
+  type This = LongListCellValue
+
+  override def valueToString: String = value.mkString("[",",","]")
+  override def toJson: String = valueToString
+  override def undefinedCellValue: UndefinedCellValue = UndefinedLongListCellValue
+
+  override def toString: String = {
+    s"LongListCellValue(value:$valueToString,date:$date)"
+  }
+
+  override def serializeTo (w: JsonWriter): Unit = {
+    w.beginObject
+    w.writeLongArrayMember("value",value)
+    if (date.isDefined) w.writeDateTimeMember("date", date)
+    w.endObject
+  }
+
+  override def apply (i: Int): Long = value(i)
+  override def length: Int = value.length
+
+  override def equals(o: Any): Boolean = {
+    if (o.isInstanceOf[LongListCellValue]) {
+      val other = o.asInstanceOf[LongListCellValue]
+      if (date != other.date) return false
+
+      val len = value.length
+      val ov = other.value
+      if (len != ov.length) return false
+      var i = 0
+      while (i < len) {
+        if (value(i) != ov(i)) return false
+        i += 1
+      }
+      true
+    } else false
+  }
+
+  override def append (v: Long)(implicit date: DateTime): LongListCellValue = {
+    val vs = new Array[Long](value.length+1)
+    System.arraycopy(value,0,vs,0,value.length)
+    vs(vs.length-1) = v
+    LongListCellValue(vs)(date)
+  }
+
+  override def appendBounded(v: Long, maxLength: Int)(implicit date: DateTime): LongListCellValue = {
+    val len = Math.min(maxLength, value.length+1)
+    val vs = new Array[Long](len)
+    if (value.length >= maxLength) {
+      System.arraycopy(value,value.length - maxLength+1,vs,0,maxLength-1)
+    } else {
+      System.arraycopy(value,0,vs,0,value.length)
+    }
+    vs(vs.length-1) = v
+    LongListCellValue(vs)(date)
+  }
+
+  override def pushBounded(v: Long, maxLength: Int)(implicit date: DateTime): LongListCellValue = {
+    val len = Math.min(maxLength, value.length+1)
+    val vs = new Array[Long](len)
+    if (value.length >= maxLength) {
+      System.arraycopy(value,0,vs,1,maxLength-1)
+    } else {
+      System.arraycopy(value,0,vs,1,value.length)
+    }
+    vs(0) = v
+    LongListCellValue(vs)(date)
+  }
+}
+
+object UndefinedLongListCellValue extends LongListCellValue(Array.empty[Long])(DateTime.Date0) with UndefinedCellValue

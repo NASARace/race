@@ -53,20 +53,22 @@ class CellExpressionSpec extends AnyFlatSpec with RaceSpec {
   val r2 = DoubleRow(p"$rlid/r2", "this is editable field 2")
   val r3 = DoubleRow(p"$rlid/r3", "this is computed field 3")
   val r4 = LongRow(p"$rlid/r4", "this is editable field 4")
+  val r5 = LongListRow(p"$rlid/r5", "this is auto field 5")
 
 
   val rowList = RowList(
     p"$rlid",
     "sample data set",
     DateTime.parseYMDT("2020-06-28T12:00:00.000"),
-    Seq(r1,r2,r3,r4).foldLeft(ListMap.empty[Path,AnyRow])((acc, r) => acc + (r.id -> r))
+    Seq(r1,r2,r3,r4,r5).foldLeft(ListMap.empty[Path,AnyRow])((acc, r) => acc + (r.id -> r))
   )
 
   val cellValues: ListMap[Path,CellValue] = ListMap(
     p"$rlid/r1" -> LongCellValue(42),
     p"$rlid/r2" -> DoubleCellValue(0.42),
     // we leave f3 undefined
-    p"$rlid/r4" -> LongCellValue(43)
+    p"$rlid/r4" -> LongCellValue(43),
+    p"$rlid/r5" -> LongListCellValue(Array(43,41))
   )
 
   val funcLib = new BasicFunctionLibrary
@@ -102,7 +104,7 @@ class CellExpressionSpec extends AnyFlatSpec with RaceSpec {
 
   "a CellExpressionParser" should "parse a simple function formula into a CellExpression that can be evaluated" in {
     val p = new CellExpressionParser(columnList,rowList,funcLib)
-    val formula = "(sumd ../r1 ../r2)"
+    val formula = "(rsum ../r1 ../r2)"
 
     println(s"\n#-- function with explicit column-local cell references: '$formula'")
 
@@ -122,7 +124,7 @@ class CellExpressionSpec extends AnyFlatSpec with RaceSpec {
 
   "a CellExpressionParser" should "parse a function formula with cell patterns" in {
     val p = new CellExpressionParser(columnList,rowList,funcLib)
-    val formula = "(sumd ../r{1,2})"
+    val formula = "(rsum ../r{1,2})"
 
     println(s"\n#-- function with cell pattern: '$formula'")
 
@@ -142,7 +144,7 @@ class CellExpressionSpec extends AnyFlatSpec with RaceSpec {
 
   "a CellExpressionParser" should "parse a function formula with column reference patterns" in {
     val p = new CellExpressionParser(columnList,rowList,funcLib)
-    val formula = "(avgl ../c{1,2}@.)"
+    val formula = "(iavg ../c{1,2}@.)"
 
     println(s"\n#-- function with column pattern: '$formula'")
 
@@ -162,7 +164,7 @@ class CellExpressionSpec extends AnyFlatSpec with RaceSpec {
 
   "a CellExpressionParser" should "parse a nested formula" in {
     val p = new CellExpressionParser(columnList,rowList,funcLib)
-    val formula = "(sumd ../r2 (maxl ../r{1,4}) -0.42)"
+    val formula = "(rsum ../r2 (imax ../r{1,4}) -0.42)"
 
     println(s"\n#-- function with nested expression args: '$formula'")
 
@@ -182,7 +184,7 @@ class CellExpressionSpec extends AnyFlatSpec with RaceSpec {
 
   "a CellExpressionParser" should "parse a self-referential cell func" in {
     val p = new CellExpressionParser(columnList,rowList,funcLib)
-    val formula = "(accl ../r1)"
+    val formula = "(iacc ../r1)"
 
     println(s"\n#-- function with self-reference: '$formula'")
 
@@ -202,4 +204,43 @@ class CellExpressionSpec extends AnyFlatSpec with RaceSpec {
     assert(deps.size == 1) // r1
   }
 
+  "a CellExpressionParser" should "parse array pushn func" in {
+    val p = new CellExpressionParser(columnList,rowList,funcLib)
+
+    val formula = "(ilpushn ../r4 2)"
+    val expr: CellExpression[LongListCellValue] = compile(p, c1,r5, formula)
+
+    println(s"\n#-- array pushn function: '$formula'")
+    val ctx = new BasicEvalContext( columnList, rowList, mutable.Map(c1.id -> cellValues))
+    ctx.setEvalDate(DateTime.parseYMDT("2020-09-10T16:30:00"))
+    ctx.setCurrentColumn(c1)
+
+    ctx.setCurrentRow(r5)
+    val res: LongListCellValue = evalFor(ctx,expr)
+    assert(res.value(0) == 43 && res.length == 2)
+
+    val deps = expr.dependencies()
+    println(s"  dependencies: $deps")
+    assert(deps.size == 1) // r4
+  }
+
+  "a CellExpressionParser" should "parse array avg func" in {
+    val p = new CellExpressionParser(columnList,rowList,funcLib)
+
+    val formula = "(ilavg ../r5)"
+    val expr: CellExpression[LongCellValue] = compile(p, c1,r1, formula)
+
+    println(s"\n#-- array avg function: '$formula'")
+    val ctx = new BasicEvalContext( columnList, rowList, mutable.Map(c1.id -> cellValues))
+    ctx.setEvalDate(DateTime.parseYMDT("2020-09-10T16:30:00"))
+    ctx.setCurrentColumn(c1)
+
+    ctx.setCurrentRow(r1)
+    val res: LongCellValue = evalFor(ctx,expr)
+    assert(res.value == 42)
+
+    val deps = expr.dependencies()
+    println(s"  dependencies: $deps")
+    assert(deps.size == 1) // r4
+  }
 }

@@ -25,13 +25,12 @@ import gov.nasa.race.common.{BufferedStringJsonPullParser, JsonWriter}
 import gov.nasa.race.core.Messages.BusEvent
 import gov.nasa.race.http.{WSAdapterActor, WsMessageReader, WsMessageWriter}
 import gov.nasa.race.uom.DateTime
-import gov.nasa.race.{ifSome, withSomeOrElse}
 
 /**
   * the upstream websocket adapter for tabdata
   * this connects to the upstream ServerRoute
   */
-class TabDataAdapterActor (override val config: Config) extends WSAdapterActor(config) {
+class UpstreamConnectorActor(override val config: Config) extends WSAdapterActor(config) {
 
   var parser: Option[IncomingMessageParser] = None  // can't be set before we have our Node info
 

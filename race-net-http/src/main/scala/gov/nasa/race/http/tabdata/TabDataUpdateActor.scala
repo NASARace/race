@@ -24,6 +24,7 @@ import gov.nasa.race.common.{JsonWriter, UnixPath}
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.Messages.BusEvent
 import gov.nasa.race.core.{PublishingRaceActor, RaceContext, RaceException, SubscribingRaceActor}
+import gov.nasa.race.ifSome
 import gov.nasa.race.uom.DateTime
 import gov.nasa.race.util.FileUtils
 
@@ -71,15 +72,17 @@ class TabDataUpdateActor(val config: Config) extends SubscribingRaceActor with P
 
   //--- the data model
   val nodeId: Path = UnixPath.intern(config.getString("node-id"))
-  var rowList: RowList = readRowList
-  var columnList: ColumnList = readColumnList
-  var formulaList: FormulaList = readFormulaList
-  val funcLib: CellFunctionLibrary = getConfigurableOrElse("functions")(new BasicFunctionLibrary)
-  val columnData: mutable.Map[Path,ColumnData] = readColumnData(rowList,columnList)
-
   val upstreamId: Option[Path] = config.getOptionalString("upstream-id").map(UnixPath.intern) // TODO - do we need this here?
 
-  formulaList.compileOn(nodeId,columnList,rowList,funcLib)
+  var rowList: RowList = readRowList
+  var columnList: ColumnList = readColumnList
+  val columnData: mutable.Map[Path,ColumnData] = readColumnData(rowList,columnList)
+
+  var formulaList: Option[FormulaList] = readFormulaList
+  val funcLib: CellFunctionLibrary = getConfigurableOrElse("functions")(new BasicFunctionLibrary)
+
+
+  ifSome(formulaList){_.compileOn(nodeId,columnList,rowList,funcLib)}
   initColumnData
 
   // for debugging purposes
@@ -114,30 +117,33 @@ class TabDataUpdateActor(val config: Config) extends SubscribingRaceActor with P
 
   //--- data model init
 
-  protected def readList[T](key: String)(f: Array[Byte]=>Option[T]): T = {
+  protected def readList[T](key: String)(f: Array[Byte]=>Option[T]): Option[T] = {
     info(s"reading $key from file ${config.getString(key)}")
-    config.translateFile(key)(f) match {
-      case Some(list) => list
-      case None => throw new RaceException(s"error parsing $key")
+    config.translateFile(key)(f)
+  }
+
+  def readRowList: RowList = {
+    readList[RowList]("row-list") { input =>
+      val parser = new RowListParser
+      parser.setLogging(info, warning, error)
+      parser.parse(input)
+    }.getOrElse( throw new RuntimeException("missing or invalid row-list"))
+  }
+
+  def readColumnList: ColumnList = {
+    readList[ColumnList]("column-list"){ input=>
+      val parser = new ColumnListParser
+      parser.setLogging(info,warning,error)
+      parser.parse(input)
+    }.getOrElse( throw new RuntimeException("missing or invalid column-list"))
+  }
+
+  def readFormulaList: Option[FormulaList] = {
+    readList[FormulaList]("formula-list"){ input=>
+      val parser = new FormulaListParser
+      parser.setLogging(info,warning,error)
+      parser.parse(input)
     }
-  }
-
-  def readRowList: RowList = readList[RowList]("row-list") { input =>
-    val parser = new RowListParser
-    parser.setLogging(info, warning, error)
-    parser.parse(input)
-  }
-
-  def readColumnList: ColumnList = readList[ColumnList]("column-list"){ input=>
-    val parser = new ColumnListParser
-    parser.setLogging(info,warning,error)
-    parser.parse(input)
-  }
-
-  def readFormulaList: FormulaList = readList[FormulaList]("formula-list"){ input=>
-    val parser = new FormulaListParser
-    parser.setLogging(info,warning,error)
-    parser.parse(input)
   }
 
   def readColumnData (rowList: RowList, columnList: ColumnList): mutable.Map[Path,ColumnData] = {
@@ -197,22 +203,23 @@ class TabDataUpdateActor(val config: Config) extends SubscribingRaceActor with P
     * eval undefined cells for which we have formulas
     */
   def initColumnData: Unit = {
-    formulaList.foreach { fe =>
-      val pCol = fe._1
-      val formulas = fe._2  // the formulas for this column
+    ifSome(formulaList) {
+      _.foreachEntry { fe =>
+        val pCol = fe._1
+        val formulas = fe._2 // the formulas for this column
 
-      columnList.get(pCol) match {
-        case Some(col: Column) => // a column we know
-          setCurrentColumn(col)
-          evalCurrentColumn(formulas, DateTime.now) { formula=> !currentCellValue.isDefined && formula.canEvaluateIn(this)}
+        columnList.get(pCol) match {
+          case Some(col: Column) => // a column we know
+            setCurrentColumn(col)
+            evalCurrentColumn(formulas, DateTime.now) { formula => !currentCellValue.isDefined && formula.canEvaluateIn(this) }
 
-          if (hasChangedCells) {
-            columnData += (pCol -> columnDataFromCurrentCells)
-            // nothing to publish yet, this is called during init
-            println(s"@@@ $pCol eval => ${columnData(pCol)}")
-          }
+            if (hasChangedCells) {
+              columnData += (pCol -> columnDataFromCurrentCells)
+              // nothing to publish yet, this is called during init
+            }
 
-        case None => // nothing to compute
+          case None => // nothing to compute
+        }
       }
     }
   }
@@ -263,11 +270,13 @@ class TabDataUpdateActor(val config: Config) extends SubscribingRaceActor with P
               applyChangesToCurrentColumn(cdc.cells)
 
               if (hasChangedCells) {
-                clearChangedCells
-                val evalDate = if (cdc.changeNodeId == nodeId) cdc.date else DateTime.now
-                evalCurrentColumn(formulaList.getColumnFormulas(pCdc), evalDate) { _.hasUpdatedDependencies(this) }
-                updateAndPublishColumnData( columnDataFromCurrentCells)
-                distributeColumnDataChanges(cdc,changedCellSeq,evalDate) // publish ColumnDataChanges to other processes/nodes
+                ifSome(formulaList){ fl=>
+                  clearChangedCells
+                  val evalDate = if (cdc.changeNodeId == nodeId) cdc.date else DateTime.now
+                  evalCurrentColumn(fl.getColumnFormulas(pCdc), evalDate) { _.hasUpdatedDependencies(this) }
+                  updateAndPublishColumnData( columnDataFromCurrentCells)
+                  distributeColumnDataChanges(cdc,changedCellSeq,evalDate) // publish ColumnDataChanges to other processes/nodes
+                }
                 true
 
               } else {
@@ -307,22 +316,24 @@ class TabDataUpdateActor(val config: Config) extends SubscribingRaceActor with P
   }
 
   def updateOtherColumnData (cdc: ColumnDataChange): Unit = {
-    formulaList.foreach { fe =>
-      val (pCol,formulas) = fe
-      if (pCol != cdc.columnId) { // for all but the CDC column, which was already handled
-        columnList.get(pCol) match {
-          case Some(col: Column) => // a column we know
-            val evalTime = DateTime.now
-            setCurrentColumn(col)
-            evalCurrentColumn(formulas, evalTime) { _.hasUpdatedDependencies(this) }
-            if (hasChangedCells) {
-              updateAndPublishColumnData(columnDataFromCurrentCells)
-              // distribute as our own CDC
-              val ownCdc = ColumnDataChange(pCol, nodeId, evalTime, changedCellSeq)
-              distributeColumnDataChanges(ownCdc, Seq.empty, evalTime)
-            }
+    ifSome(formulaList){ fl=>
+      fl.foreachEntry { fe =>
+        val (pCol,formulas) = fe
+        if (pCol != cdc.columnId) { // for all but the CDC column, which was already handled
+          columnList.get(pCol) match {
+            case Some(col: Column) => // a column we know
+              val evalTime = DateTime.now
+              setCurrentColumn(col)
+              evalCurrentColumn(formulas, evalTime) { _.hasUpdatedDependencies(this) }
+              if (hasChangedCells) {
+                updateAndPublishColumnData(columnDataFromCurrentCells)
+                // distribute as our own CDC
+                val ownCdc = ColumnDataChange(pCol, nodeId, evalTime, changedCellSeq)
+                distributeColumnDataChanges(ownCdc, Seq.empty, evalTime)
+              }
 
-          case None => // ignore unknown column
+            case None => // ignore unknown column
+          }
         }
       }
     }

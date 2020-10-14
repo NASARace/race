@@ -75,6 +75,7 @@ trait BooleanExpr extends CellExpression[BooleanCellValue]
 
 trait StringExpr extends CellExpression[StringCellValue]
 
+trait LongListExpr extends CellExpression[LongListCellValue]
 
 /**
   * parser for s-expr like cell expressions
@@ -264,6 +265,8 @@ case class BooleanCellRef (col: Path, row: Path) extends CellRef[BooleanCellValu
 
 case class StringCellRef (col: Path, row: Path) extends CellRef[StringCellValue] with StringExpr
 
+case class LongListCellRef (col: Path, row: Path) extends CellRef[LongListCellValue] with LongListExpr
+
 /**
   * constant expression
   */
@@ -285,6 +288,11 @@ case class DoubleConst (value: Double) extends ConstCellExpression[DoubleCellVal
 case class BooleanConst (value: Boolean) extends ConstCellExpression[BooleanCellValue] with BooleanExpr {
   def eval (implicit ctx: EvalContext): BooleanCellValue = BooleanCellValue(value)(DateTime.UndefinedDateTime)
   override def toString: String = value.toString
+}
+
+case class LongListConst (value: Array[Long]) extends ConstCellExpression[LongListCellValue] with LongListExpr {
+  def eval (implicit ctx: EvalContext): LongListCellValue = LongListCellValue(value)(DateTime.UndefinedDateTime)
+  override def toString: String = value.mkString(",")
 }
 
 /**
@@ -310,3 +318,5 @@ trait LongFunc extends NumFunc[LongCellValue] with LongExpr
 trait DoubleFunc extends NumFunc[DoubleCellValue] with DoubleExpr
 
 trait BooleanFunc extends CellFunction[BooleanCellValue] with BooleanExpr
+
+trait LongListFunc extends CellFunction[LongListCellValue] with LongListExpr

@@ -9,7 +9,7 @@
     { "id": "../provider_1", "info": "this is provider 1", "send": "<none>", "receive": "<up>", "check": "1h" },
 
     { "id": "../provider_2", "info": "this node",          "send": "<up>",   "receive": "<up>,<self>", "check": "1m" },
-    { "id": "../provider_3", "info": "this is provider 3", "send": "<up>",   "receive": "<up>,<self>", "node": "provider_2" },
+    { "id": "../provider_3", "info": "this is provider 3", "send": "<up>",   "receive": "<up>,<self>", "node": "../provider_2" },
 
     { "id": "../provider_4", "info": "this is provider 4", "send": "<none>", "receive": "<up>", "check": "1h" },
     { "id": "../provider_5", "info": "this is provider 5", "send": "<none>", "receive": "<up>", "check": "5m" },

@@ -97,7 +97,7 @@ class FormulaList (val id: Path, val info: String, val date: DateTime, val colum
 
   def getColumnFormulas(pCol: Path): ListMap[Path,AnyCellFormula] = columnFormulas.getOrElse(pCol,ListMap.empty)
 
-  def foreach[U] (f: ((Path,ListMap[Path,AnyCellFormula]))=>U): Unit = columnFormulas.foreach(f)
+  def foreachEntry[U](f: ((Path,ListMap[Path,AnyCellFormula]))=>U): Unit = columnFormulas.foreach(f)
 }
 
 object FormulaList {

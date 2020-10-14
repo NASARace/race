@@ -6,7 +6,8 @@
   "rows": {
     "/data/cat_A/field_1": 10,
     "/data/cat_A/field_2": {"value": 22, "date": "2020-06-29T16:06:02.000"},
-    "/data/cat_A/field_3": {"value": 23, "date": "2020-06-29T16:06:02.000"},
+    "/data/cat_A/field_3": {"value":  9, "date": "2020-06-29T16:06:02.000"},
+    "/data/cat_A/field_4": [ 10, 8 ],
 
     "/data/cat_B/field_1": {"value": 210.21, "date": "2020-06-29T16:06:02.000"},
     "/data/cat_B/field_2": {"value": 220.22, "date": "2020-06-29T16:06:02.000"},

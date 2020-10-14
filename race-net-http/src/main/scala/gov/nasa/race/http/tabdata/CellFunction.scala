@@ -109,6 +109,10 @@ trait HomogenousDomain {
   def argTypeAt (idx: Int) = argType
 }
 
+trait BooleanDomain extends HomogenousDomain {
+  val argType = classOf[BooleanCellValue]
+}
+
 trait NumDomain extends HomogenousDomain {
   val argType = classOf[NumCellValue]
 }
@@ -119,6 +123,10 @@ trait LongDomain extends HomogenousDomain {
 
 trait DoubleDomain extends HomogenousDomain {
   val argType = classOf[DoubleCellValue]
+}
+
+trait LongListDomain extends HomogenousDomain {
+  val argType = classOf[LongListCellValue]
 }
 
 //--- common co-domains
@@ -139,6 +147,9 @@ trait BooleanCoDomain {
   val returnType = classOf[BooleanCellValue]
 }
 
+trait LongListCoDomain {
+  val returnType = classOf[LongListCellValue]
+}
 
 /**
   * a default FunctionLibrary
@@ -148,12 +159,12 @@ class BasicFunctionLibrary extends CellFunctionLibrary {
   /**
     * a function that accepts any number of LongCell args and returns the sum as a rounded LongCell
     */
-  object suml extends CellFunctionFactory with LongCoDomain with LongDomain with AnyArity {
-    def apply (args: Seq[AnyCellExpression]) = new suml(args.asInstanceOf[Seq[LongExpr]])
+  object isum extends CellFunctionFactory with LongCoDomain with LongDomain with AnyArity {
+    def apply (args: Seq[AnyCellExpression]) = new isum(args.asInstanceOf[Seq[LongExpr]])
   }
-  add(suml)
+  add(isum)
 
-  class suml(val args: Seq[LongExpr]) extends LongFunc with AnyArityDeps {
+  class isum(val args: Seq[LongExpr]) extends LongFunc with AnyArityDeps {
     def eval (implicit ctx: EvalContext): LongCellValue = {
       LongCellValue(args.foldLeft(0L){ (acc, ce) => acc + ce.eval.toLong })(ctx.evalDate)
     }
@@ -163,12 +174,12 @@ class BasicFunctionLibrary extends CellFunctionLibrary {
   /**
     * a function that accepts any number of NumExpr args and returns the sum as a DoubleCell
     */
-  object sumd extends CellFunctionFactory with DoubleCoDomain with NumDomain with AnyArity {
-    def apply (args: Seq[AnyCellExpression]) = new sumd(args.asInstanceOf[Seq[AnyNumExpr]])
+  object rsum extends CellFunctionFactory with DoubleCoDomain with NumDomain with AnyArity {
+    def apply (args: Seq[AnyCellExpression]) = new rsum(args.asInstanceOf[Seq[AnyNumExpr]])
   }
-  add(sumd)
+  add(rsum)
 
-  class sumd(val args: Seq[AnyNumExpr]) extends DoubleFunc with AnyArityDeps {
+  class rsum(val args: Seq[AnyNumExpr]) extends DoubleFunc with AnyArityDeps {
     def eval (implicit ctx: EvalContext) = {
       DoubleCellValue(args.foldLeft(0.0){ (acc, ce) => acc + ce.eval.toDouble })(ctx.evalDate)
     }
@@ -178,12 +189,12 @@ class BasicFunctionLibrary extends CellFunctionLibrary {
   /**
     * a function that accepts any number of LongExpr args and returns the maximum as a rounded LongCell
     */
-  object maxl extends CellFunctionFactory with LongCoDomain with LongDomain with AnyArity {
-    def apply (args: Seq[AnyCellExpression]) = new maxl(args.asInstanceOf[Seq[LongExpr]])
+  object imax extends CellFunctionFactory with LongCoDomain with LongDomain with AnyArity {
+    def apply (args: Seq[AnyCellExpression]) = new imax(args.asInstanceOf[Seq[LongExpr]])
   }
-  add(maxl)
+  add(imax)
 
-  class maxl(val args: Seq[LongExpr]) extends LongFunc with AnyArityDeps {
+  class imax(val args: Seq[LongExpr]) extends LongFunc with AnyArityDeps {
     def eval (implicit ctx: EvalContext) = {
       LongCellValue(args.foldLeft(Long.MinValue){ (max, ce) =>
         val n = ce.eval.toLong
@@ -196,12 +207,12 @@ class BasicFunctionLibrary extends CellFunctionLibrary {
   /**
     * a function that accepts any number of DoubleExpr args and returns the maximum as a DoubleCell
     */
-  object maxd extends CellFunctionFactory with DoubleCoDomain with NumDomain with AnyArity {
-    def apply (args: Seq[AnyCellExpression]) = new maxd(args.asInstanceOf[Seq[AnyNumExpr]])
+  object rmax extends CellFunctionFactory with DoubleCoDomain with NumDomain with AnyArity {
+    def apply (args: Seq[AnyCellExpression]) = new rmax(args.asInstanceOf[Seq[AnyNumExpr]])
   }
-  add(maxd)
+  add(rmax)
 
-  class maxd(val args: Seq[AnyNumExpr]) extends DoubleFunc with AnyArityDeps {
+  class rmax(val args: Seq[AnyNumExpr]) extends DoubleFunc with AnyArityDeps {
     def eval (implicit ctx: EvalContext) = {
       DoubleCellValue(args.foldLeft(Double.MinValue){ (max, ce) =>
         val n = ce.eval.toDouble
@@ -215,12 +226,12 @@ class BasicFunctionLibrary extends CellFunctionLibrary {
     * a function that calculates averages
     */
 
-  object avgl extends CellFunctionFactory with LongCoDomain with LongDomain with AnyArity {
-    def apply (args: Seq[AnyCellExpression]) = new avgl(args.asInstanceOf[Seq[LongExpr]])
+  object iavg extends CellFunctionFactory with LongCoDomain with LongDomain with AnyArity {
+    def apply (args: Seq[AnyCellExpression]) = new iavg(args.asInstanceOf[Seq[LongExpr]])
   }
-  add(avgl)
+  add(iavg)
 
-  class avgl(val args: Seq[LongExpr]) extends LongFunc with AnyArityDeps {
+  class iavg(val args: Seq[LongExpr]) extends LongFunc with AnyArityDeps {
     def eval (implicit ctx: EvalContext) = {
       val sum = args.foldLeft(0.0){ (acc, ce) => acc + ce.eval.toDouble }
       LongCellValue((sum/args.size).round)(ctx.evalDate)
@@ -228,12 +239,12 @@ class BasicFunctionLibrary extends CellFunctionLibrary {
     def argExprs = args
   }
 
-  object avgd extends CellFunctionFactory with DoubleCoDomain with NumDomain with AnyArity {
-    def apply (args: Seq[AnyCellExpression]) = new avgd(args.asInstanceOf[Seq[AnyNumExpr]])
+  object ravg extends CellFunctionFactory with DoubleCoDomain with NumDomain with AnyArity {
+    def apply (args: Seq[AnyCellExpression]) = new ravg(args.asInstanceOf[Seq[AnyNumExpr]])
   }
-  add(avgd)
+  add(ravg)
 
-  class avgd(val args: Seq[AnyNumExpr]) extends DoubleFunc with AnyArityDeps {
+  class ravg(val args: Seq[AnyNumExpr]) extends DoubleFunc with AnyArityDeps {
     def eval (implicit ctx: EvalContext) = {
       val sum = args.foldLeft(0.0){ (acc, ce) => acc + ce.eval.toDouble }
       DoubleCellValue(sum/args.size)(ctx.evalDate)
@@ -244,12 +255,12 @@ class BasicFunctionLibrary extends CellFunctionLibrary {
   /**
     * a function that accepts one LongExpr argument and adds it to the currently evaluated cell
     */
-  object accl extends CellFunctionFactory with LongCoDomain with LongDomain with Arity1 {
-    def apply (args: Seq[AnyCellExpression]) = new accl(args.head.asInstanceOf[LongExpr])
+  object iacc extends CellFunctionFactory with LongCoDomain with LongDomain with Arity1 {
+    def apply (args: Seq[AnyCellExpression]) = new iacc(args.head.asInstanceOf[LongExpr])
   }
-  add(accl)
+  add(iacc)
 
-  class accl(val arg0: LongExpr) extends LongFunc with Arity1Deps {
+  class iacc(val arg0: LongExpr) extends LongFunc with Arity1Deps {
     def eval (implicit ctx: EvalContext) = {
       LongCellValue(ctx.currentCellValue.asInstanceOf[LongCellValue].toLong + arg0.eval.toLong)(ctx.evalDate)
     }
@@ -259,12 +270,12 @@ class BasicFunctionLibrary extends CellFunctionLibrary {
   /**
     * a function that accepts one DoubleExpr argument and adds it to the currently evaluated cell
     */
-  object accd extends CellFunctionFactory with DoubleCoDomain with DoubleDomain with Arity1 {
-    def apply (args: Seq[AnyCellExpression]) = new accd(args.head.asInstanceOf[DoubleExpr])
+  object racc extends CellFunctionFactory with DoubleCoDomain with DoubleDomain with Arity1 {
+    def apply (args: Seq[AnyCellExpression]) = new racc(args.head.asInstanceOf[DoubleExpr])
   }
-  add(accd)
+  add(racc)
 
-  class accd(val arg0: DoubleExpr) extends DoubleFunc with Arity1Deps {
+  class racc(val arg0: DoubleExpr) extends DoubleFunc with Arity1Deps {
     def eval (implicit ctx: EvalContext) = {
       DoubleCellValue(ctx.currentCellValue.asInstanceOf[DoubleCellValue].toDouble + arg0.eval.toDouble)(ctx.evalDate)
     }
@@ -274,7 +285,7 @@ class BasicFunctionLibrary extends CellFunctionLibrary {
   /**
     * a function that takes a BooleanExpr and two LongExpr and returns the second or third eval based on the cond expr
     */
-  object ifl extends CellFunctionFactory with LongCoDomain with Arity3 {
+  object iif extends CellFunctionFactory with LongCoDomain with Arity3 {
     def argTypeAt (argIdx: Int): Class[_] = {
       argIdx match {
         case 0 => classOf[BooleanCellValue]
@@ -283,11 +294,11 @@ class BasicFunctionLibrary extends CellFunctionLibrary {
       }
     }
 
-    def apply (args: Seq[AnyCellExpression]) = new ifl(args(0).asInstanceOf[BooleanExpr], args(1).asInstanceOf[LongExpr], args(2).asInstanceOf[LongExpr])
+    def apply (args: Seq[AnyCellExpression]) = new iif(args(0).asInstanceOf[BooleanExpr], args(1).asInstanceOf[LongExpr], args(2).asInstanceOf[LongExpr])
   }
-  add(ifl)
+  add(iif)
 
-  class ifl (val arg0: BooleanExpr, val arg1: LongExpr, val arg2: LongExpr) extends LongFunc  with Arity3Deps {
+  class iif(val arg0: BooleanExpr, val arg1: LongExpr, val arg2: LongExpr) extends LongFunc  with Arity3Deps {
     def eval (implicit ctx: EvalContext) = {
       if (arg0.eval.toBoolean) {
         arg1.eval
@@ -312,4 +323,44 @@ class BasicFunctionLibrary extends CellFunctionLibrary {
     }
     def argExprs = Seq(arg0,arg1)
   }
+
+  // ... and more comparisons
+
+  //--- array functions
+
+  /**
+    * push a LongCellValue into a stack of a bounded size
+    */
+  object ilpushn extends CellFunctionFactory with LongListCoDomain with LongDomain with Arity2 {
+    def apply (args: Seq[AnyCellExpression]) = new ilpushn(args.head.asInstanceOf[LongExpr], args.last.asInstanceOf[LongExpr])
+  }
+  add(ilpushn)
+
+  class ilpushn (val arg0: LongExpr, val arg1: LongExpr) extends LongListFunc with Arity2Deps {
+    def eval (implicit ctx: EvalContext): LongListCellValue = {
+      val curCv = ctx.currentCellValue.asInstanceOf[LongListCellValue]
+      curCv.pushBounded( arg0.eval(ctx).value, arg1.eval(ctx).value.toInt)(ctx.evalDate)
+    }
+    def argExprs = Seq(arg0,arg1)
+  }
+
+  /**
+    * compute the average of a LongListCellValue
+    */
+  object ilavg extends CellFunctionFactory with LongCoDomain with LongListDomain with Arity1 {
+    def apply (args: Seq[AnyCellExpression]) = new ilavg(args.head.asInstanceOf[LongListExpr])
+  }
+  add(ilavg)
+
+  class ilavg (val arg0: LongListExpr) extends LongFunc with Arity1Deps {
+    def eval (implicit ctx: EvalContext): LongCellValue = {
+      val laCv = arg0.eval(ctx)
+      val avg: Long = laCv.foldLeft(0L)( (acc,v) => acc + v) / laCv.length
+      LongCellValue(avg)(ctx.evalDate)
+    }
+
+    def argExprs = Seq(arg0)
+  }
 }
+
+

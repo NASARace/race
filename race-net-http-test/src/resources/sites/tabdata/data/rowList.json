@@ -9,7 +9,8 @@
     { "id": "/data/cat_A",         "type": "integer", "info": "this is category A", "attrs": ["header"] },
     { "id": "/data/cat_A/field_1", "type": "integer", "info": "this is field 1 in category A" },
     { "id": "/data/cat_A/field_2", "type": "integer", "info": "this is field 2 in category A" },
-    { "id": "/data/cat_A/field_3", "type": "integer", "info": "this is field 3 in category A" },
+    { "id": "/data/cat_A/field_3", "type": "integer", "info": "average of last 4 field_1 values" },
+    { "id": "/data/cat_A/field_4", "type": "integer[]", "info":  "rolling history of field 1", "attrs": ["hidden"] },
 
     { "id": "/data/cat_B",         "type": "rational", "info": "this is category B", "attrs": ["header", "locked"] },
     { "id": "/data/cat_B/field_1", "type": "rational", "info": "this is field 1 in category B" },

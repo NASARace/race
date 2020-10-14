@@ -37,7 +37,8 @@ import scala.util.{Failure, Success}
   * root type for WebSocket RaceRouteInfos
   */
 trait WSRaceRoute extends RaceRouteInfo {
-  final implicit val materializer: Materializer = Materializer.createMaterializer(parent.context)
+  implicit val materializer: Materializer = HttpServer.materializer
+  implicit val ec = HttpServer.ec // scala.concurrent.ExecutionContext.global
 
   protected def promoteToWebSocket: Route
 }
@@ -63,8 +64,6 @@ trait PushWSRaceRoute extends WSRaceRoute with SourceQueueOwner with RaceDataCli
   }
 
   protected def pushTo(remoteAddr: InetSocketAddress, queue: SourceQueueWithComplete[Message], m: Message): Unit = synchronized {
-    implicit val ec = scala.concurrent.ExecutionContext.global
-
     queue.offer(m).onComplete { res=>
       res match {
         case Success(_) => // all good (TODO should we check for Enqueued here?)

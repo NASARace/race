@@ -31,6 +31,7 @@ object Row {
   val _info_      = asc("info")
   val _type_      = asc("type")
   val _integer_   = asc(LongRow.typeName)
+  val _integerList_ = asc(LongListRow.typeName)
   val _rational_  = asc(DoubleRow.typeName)
   val _boolean_   = asc(BooleanRow.typeName)
   val _string_    = asc(StringRow.typeName)
@@ -70,6 +71,8 @@ sealed trait Row[+T <: CellValue] extends JsonSerializable with CellTyped with P
       if (attrs.nonEmpty) w.writeStringArrayMember(_attrs_, attrs)
     }
   }
+
+  def parseValueFrom (p: JsonPullParser)(implicit date: DateTime): T // this is not for parsing Rows but for parsing ColumnData
 }
 
 trait RowParser extends JsonPullParser {
@@ -83,6 +86,7 @@ trait RowParser extends JsonPullParser {
       else if (v == _boolean_) BooleanRow
       else if (v == _string_) StringRow
       else if (v == _header_) HeaderRow
+      else if (v == _integerList_) LongListRow
       else throw exception(s"unknown field type: $v")
     }
 
@@ -122,8 +126,8 @@ case class LongRow(id: Path, info: String, attrs: Seq[String] = Seq.empty) exten
   def typeName = LongRow.typeName
   def valueToString (fv: CellValue): String = fv.valueToString
   def undefinedCellValue: CellValue = UndefinedLongCellValue
-
   def createRef (col: Path): CellRef[LongCellValue] = LongCellRef(col,id)
+  def parseValueFrom (p: JsonPullParser)(implicit date: DateTime): LongCellValue = LongCellValue.parseFrom(p)(date)
 }
 
 
@@ -144,8 +148,8 @@ case class DoubleRow(id: Path, info: String, attrs: Seq[String] = Seq.empty) ext
   def typeName = DoubleRow.typeName
   def valueToString (fv: CellValue): String = fv.valueToString
   def undefinedCellValue: CellValue = UndefinedDoubleCellValue
-
   def createRef (col: Path): CellRef[DoubleCellValue] = DoubleCellRef(col,id)
+  def parseValueFrom (p: JsonPullParser)(implicit date: DateTime): DoubleCellValue = DoubleCellValue.parseFrom(p)(date)
 }
 
 //--- Boolean rows
@@ -162,8 +166,8 @@ case class BooleanRow(id: Path, info: String, attrs: Seq[String] = Seq.empty) ex
   def typeName = BooleanRow.typeName
   def valueToString (fv: CellValue): String = fv.valueToString
   def undefinedCellValue: CellValue = UndefinedBooleanCellValue
-
   def createRef (col: Path): CellRef[BooleanCellValue] = BooleanCellRef(col,id)
+  def parseValueFrom (p: JsonPullParser)(implicit date: DateTime): BooleanCellValue = BooleanCellValue.parseFrom(p)(date)
 }
 
 //--- String rows
@@ -180,8 +184,8 @@ case class StringRow(id: Path, info: String, attrs: Seq[String] = Seq.empty) ext
   def typeName = StringRow.typeName
   def valueToString (fv: CellValue): String = fv.valueToString
   def undefinedCellValue: CellValue = UndefinedStringCellValue
-
   def createRef (col: Path): CellRef[StringCellValue] = StringCellRef(col,id)
+  def parseValueFrom (p: JsonPullParser)(implicit date: DateTime): StringCellValue = StringCellValue.parseFrom(p)(date)
 }
 
 //--- a non-editable (empty) String row
@@ -200,8 +204,26 @@ case class HeaderRow (id: Path, info: String, attrs: Seq[String] = Seq.empty) ex
   def typeName = HeaderRow.typeName
   def valueToString (fv: CellValue): String = "" // always empty
   def undefinedCellValue: CellValue = UndefinedStringCellValue
-
   def createRef (col: Path): CellRef[StringCellValue] = StringCellRef(col,id)
+  def parseValueFrom (p: JsonPullParser)(implicit date: DateTime): StringCellValue = StringCellValue.parseFrom(p)(date)
+}
+
+//--- LongList row
+
+object LongListRow extends RowFactory {
+  def instantiate (id: Path, info: String, attrs: Seq[String]): LongListRow = LongListRow(id,info,attrs)
+  def typeName: String = "integer[]"
+}
+
+case class LongListRow (id: Path, info: String, attrs: Seq[String] = Seq.empty) extends Row[LongListCellValue] {
+  val cellType = classOf[LongListCellValue]
+
+  def valueFrom (bs: CharSeqByteSlice)(implicit date: DateTime): LongListCellValue = UndefinedLongListCellValue
+  def typeName = LongListRow.typeName
+  def valueToString (fv: CellValue): String = fv.toString
+  def undefinedCellValue: CellValue = UndefinedLongListCellValue
+  def createRef (col: Path): CellRef[LongListCellValue] = LongListCellRef(col,id)
+  def parseValueFrom (p: JsonPullParser)(implicit date: DateTime): LongListCellValue = LongListCellValue.parseFrom(p)(date)
 }
 
 //--- field catalog

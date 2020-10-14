@@ -101,15 +101,23 @@ td {
 }
 
 thead th.local, td.local {
-  border-left: 2px solid lightgray;
-  border-right: 2px solid lightgray;
-  background-color: rgb(180,245,245);
+  border-left: 1px solid lightgray;
+  border-right: 1px solid lightgray;
+  background-color: rgb(180,250,250);
+}
+
+thead th.local.selected, td.local.selected {
+  background-color: rgba(0,240,140, 0.4);
 }
 
 tbody td.local {
-  border-left: 2px solid lightgray;
-  border-right: 2px solid lightgray;
-  background-color: rgba(0,224,224,0.2);
+  border-left: 1px solid lightgray;
+  border-right: 1px solid lightgray;
+  background-color: rgb(180,250,250);
+}
+
+tbody th.local.selected, td.local.selected {
+  background-color: rgba(0,240,140, 0.4);
 }
 
 thead th {

@@ -52,13 +52,16 @@ class TabDataUpdateActorSpec extends RaceActorSpec with AnyFlatSpecLike {
       initializeTestActors
       startTestActors(DateTime.now)
 
-      val date = DateTime.now
+      implicit val date = DateTime.now
       val originator = p"/providers/region1/provider_2"
       val cdc = ColumnDataChange(
         originator,
         originator,
         date,
-        Seq( p"/data/cat_B/field_2" -> DoubleCellValue(1000.0)(date))
+        Seq(
+          p"/data/cat_A/field_1" -> LongCellValue(20),
+          p"/data/cat_B/field_2" -> DoubleCellValue(1000.0)
+        )
       )
 
       println(s"--- column data of $node pre CDC")

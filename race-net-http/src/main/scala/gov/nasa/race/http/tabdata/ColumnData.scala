@@ -128,38 +128,19 @@ class ColumnDataParser(rowList: RowList) extends UTF8JsonPullParser {
 
   def parse (buf: Array[Byte]): Option[ColumnData] = {
     var latestChange = DateTime.Date0 // to hold the latest fieldValue change date (if all specified)
-    val valueSlice = MutAsciiSlice.empty
 
     // we parse both explicit
-    //     "<rowId>": { "value": <num> [, "date": <epoch-ms>] }
+    //     "<rowId>": { "value": <num>|<sting>|<array> [, "date": <epoch-ms>] }
     // and implicit
-    //     "<rowId>": <num>
+    //     "<rowId>": <num>|<sting>|<array>
     // if no date is specified we use the parseDate to instantiate FieldValues
     def readCell(rowListId: Path, defaultDate: DateTime): Option[(Path,CellValue)] = {
-      var rowId: Path = null
-      var d: DateTime = DateTime.UndefinedDateTime
-
-      readNext() match {
-        case ObjectStart =>
-          rowId = rowListId.resolve( UnixPath.intern(member))
-          valueSlice.setFrom(readUnQuotedMember(_value_))  // TODO - this should also handle arrays
-          d = readOptionalDateTimeMember(_date_).getOrElse(defaultDate)
-
-          //ensureNextIsObjectEnd()
-          skipPastAggregate()
-
-        case UnQuotedValue =>
-          rowId = rowListId.resolve( UnixPath.intern(member))
-          valueSlice.setFrom(value)
-          d = defaultDate
-
-        case _ => throw exception(s"invalid value for row '$member'")
-      }
-
-      rowList.rows.get(rowId) match {
+      val rowId = rowListId.resolve( UnixPath.intern(readMemberName()))
+      rowList.get(rowId) match {
         case Some(row) =>
-          if (d > latestChange) latestChange = d
-          Some( (rowId, row.valueFrom(valueSlice)(d)) )
+          val cv = row.parseValueFrom(this)(defaultDate)
+          if (cv.date > latestChange) latestChange = cv.date
+          Some((rowId,cv))
         case None =>
           warning(s"skipping unknown row $rowId")
           None

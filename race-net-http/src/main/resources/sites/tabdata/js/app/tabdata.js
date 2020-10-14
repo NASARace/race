@@ -205,6 +205,10 @@ function isComputed (row) {
   return row.hasOwnProperty("formula");
 }
 
+function isSiteColumn (col) {
+  return (col.id == siteId || col.node == siteId);
+}
+
 function siteIdIndex() {
   for (i=0; i<columns.length; i++) {
     if (columns[i].id == siteId) return i;
@@ -285,7 +289,7 @@ function createColumnNameRow () {
 
     cell = document.createElement('th');
     cell.classList.add("name");
-    if (column.id == siteId)   cell.classList.add("local");
+    if (isSiteColumn(column))   cell.classList.add("local");
 
     cell.setAttribute("onmouseenter", `main.highlightColumn(${i+1},true)`);
     cell.setAttribute("onmouseleave", `main.highlightColumn(${i+1},false)`);
@@ -311,7 +315,7 @@ function createColumnUpdateRow () {
     // no content yet (will be set when we get a columnData), just create cell
     cell = document.createElement('th');
     cell.classList.add("dtg");
-    if (column.id == siteId)   cell.classList.add("local");
+    if (isSiteColumn(column))   cell.classList.add("local");
 
     cell.setAttribute("onmouseenter", `main.highlightColumn(${i+1},true)`);
     cell.setAttribute("onmouseleave", `main.highlightColumn(${i+1},false)`);
@@ -361,7 +365,7 @@ function initRow (row, idx) {
   for (var p of columns){
     // no data yet, will be set when we get a columnData message
     cell = document.createElement('td');
-    if (p.id == siteId) cell.classList.add("local");
+    if (isSiteColumn(p)) cell.classList.add("local");
     tr.appendChild(cell);
   }
   return tr;
@@ -472,10 +476,17 @@ function outsideRange (row, rowValue) {
   if (row.max && rowValue > row.max) return true;
 }
 
+function formatArray (v) {
+  var s = JSON.stringify(v);
+  if (s.length > 15) return "[..]";
+  return s;
+}
+
 function formatValue (row,fv) {
   if (fv == undefined) return "";
   var v = fv.value;
   if (row.type == "rational" && Number.isInteger(v)) return v.toFixed(1);
+  if (row.type.endsWith("[]")) return formatArray(v);
   return v;
 }
 

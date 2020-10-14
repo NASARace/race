@@ -124,15 +124,12 @@ class DeviceServerRoute(parent: ParentActor, config: Config) extends SiteRoute(p
   var siteIdMessage: Option[TextMessage] = None
   val columnDataMessages = MutMap.empty[Path,TextMessage]
 
-  val userPermissions: UserPermissions = readUserPermissions
+  val userPermissions: Option[UserPermissions] = readUserPermissions
 
-  def readUserPermissions: UserPermissions = {
+  def readUserPermissions: Option[UserPermissions] = {
     val parser = new UserPermissionsParser
     parser.setLogging(info,warning,error)
-    config.translateFile("user-permissions")(parser.parse) match {
-      case Some(userPermissions) => userPermissions
-      case None => throw new RaceException("error parsing user-permissions")
-    }
+    config.translateFile("user-permissions")(parser.parse)
   }
 
   def serializeSiteId (id: Path): String = {
@@ -216,9 +213,15 @@ class DeviceServerRoute(parent: ParentActor, config: Config) extends SiteRoute(p
           case Some(p) =>
             p.parse(tm.text) match {
               case Some(RequestUserPermissions(uid,pw)) =>
-                // TODO - pw ignored for now
-                val perms = userPermissions.users.getOrElse(uid,Seq.empty[PermSpec])
-                TextMessage(serializeUserPermissions(uid,perms)) :: Nil
+                userPermissions match {
+                  case Some(userPerms) =>
+                    // TODO - pw ignored for now
+                    val perms = userPerms.users.getOrElse(uid,Seq.empty[PermSpec])
+                    TextMessage(serializeUserPermissions(uid,perms)) :: Nil
+                  case None =>
+                    warning("no user-permissions set, editing rejected")
+                    Nil
+                }
 
               case Some(pc@UserChange(uid,pw,cdc:ColumnDataChange)) =>
                 // TODO - check user credentials and permissions

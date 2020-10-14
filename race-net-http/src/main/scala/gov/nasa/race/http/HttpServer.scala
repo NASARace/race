@@ -16,7 +16,7 @@
  */
 package gov.nasa.race.http
 
-import akka.actor.ActorRef
+import akka.actor.{ActorRef, ActorSystem, ClassicActorSystemProvider}
 import akka.http.scaladsl.Http.ServerBinding
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
@@ -30,8 +30,14 @@ import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.{ParentActor, ParentRaceActor}
 
 import scala.concurrent.duration._
-import scala.concurrent.{Await, Future}
+import scala.concurrent.{Await, ExecutionContext, Future}
 
+object HttpServer {
+  val asys: ActorSystem = ActorSystem("http") //context.system
+  implicit val asp: ClassicActorSystemProvider = asys
+  implicit val materializer: Materializer = Materializer.matFromSystem(asys)
+  implicit val ec: ExecutionContext = asys.getDispatcher
+}
 
 /**
   * an actor that represents a configurable http server
@@ -43,7 +49,7 @@ import scala.concurrent.{Await, Future}
   * stats channels in the future
   */
 class HttpServer (val config: Config) extends ParentRaceActor with SSLContextUser {
-  final implicit val materializer: Materializer = Materializer.matFromSystem(context.system)
+  import HttpServer._
 
   val host = config.getStringOrElse("host", "localhost")
   val port = config.getIntOrElse("port", 8080)
@@ -115,7 +121,7 @@ class HttpServer (val config: Config) extends ParentRaceActor with SSLContextUse
 
       info(s"accepted new connection from: ${connection.remoteAddress}")
       connection.handleWith( Route.toFlow(finalRoute)(system))
-    }).run()
+    }).run() //.map(_.addToCoordinatedShutdown(hardTerminationDeadline = 8.seconds))
     binding = Some(bindingFuture)
 
     info(s"serving requests: $requestSpec")
@@ -131,8 +137,9 @@ class HttpServer (val config: Config) extends ParentRaceActor with SSLContextUse
 
   override def onTerminateRaceActor(originator: ActorRef) = {
     ifSome(binding) { f =>
-      // f.flatMap(_.unbind())
-      Await.result(f, 10.seconds).terminate(hardDeadline = 3.seconds)
+      f.flatMap(_.unbind())
+      //Await.result(f, 9.seconds).terminate(hardDeadline = 10.seconds)
+      //asys.terminate()
     }
 
     info(s"$name stopped serving port: $port")
