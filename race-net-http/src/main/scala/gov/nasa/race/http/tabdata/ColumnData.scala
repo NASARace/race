@@ -236,12 +236,12 @@ trait ColumnDataChangeParser extends JsonPullParser {
     def readCell(): Option[(Path,CellValue)] = {
       val rowId = UnixPath.intern(readObjectMemberName())
       valueSlice.setFrom(readUnQuotedMember(_value_)) // TODO this should also handle arrays
-      val date = readDateTimeMember(_date_)
+      implicit val date = readDateTimeMember(_date_)
       skipPastAggregate()
 
-      node.rowList.rows.get(rowId) match {
-        case Some(field) =>
-          Some(rowId -> field.valueFrom(valueSlice)(date))
+      node.rowList.get(rowId) match {
+        case Some(row) =>
+          Some(rowId -> row.parseValueFrom(this))
         case None =>
           warning(s"unknown field '$rowId' in providerDataChange message ignored")
           None

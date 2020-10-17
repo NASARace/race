@@ -54,7 +54,6 @@ sealed trait Row[+T <: CellValue] extends JsonSerializable with CellTyped with P
   val isLocked: Boolean = attrs.contains("locked") // if set the field can only be updated through formula eval
 
   def valueToString (fv: CellValue): String
-  def valueFrom(bs: CharSeqByteSlice)(implicit date: DateTime): CellValue
   def typeName: String
   def undefinedCellValue: CellValue
 
@@ -122,7 +121,6 @@ object LongRow extends RowFactory {
 case class LongRow(id: Path, info: String, attrs: Seq[String] = Seq.empty) extends NumRow[LongCellValue] {
   val cellType = classOf[LongCellValue]
 
-  def valueFrom (bs: CharSeqByteSlice)(implicit date: DateTime) = LongCellValue(bs.toLong)
   def typeName = LongRow.typeName
   def valueToString (fv: CellValue): String = fv.valueToString
   def undefinedCellValue: CellValue = UndefinedLongCellValue
@@ -144,7 +142,6 @@ object DoubleRow extends RowFactory {
 case class DoubleRow(id: Path, info: String, attrs: Seq[String] = Seq.empty) extends NumRow[DoubleCellValue] {
   val cellType = classOf[DoubleCellValue]
 
-  def valueFrom (bs: CharSeqByteSlice)(implicit date: DateTime) = DoubleCellValue(bs.toDouble)
   def typeName = DoubleRow.typeName
   def valueToString (fv: CellValue): String = fv.valueToString
   def undefinedCellValue: CellValue = UndefinedDoubleCellValue
@@ -162,7 +159,6 @@ object BooleanRow extends RowFactory {
 case class BooleanRow(id: Path, info: String, attrs: Seq[String] = Seq.empty) extends Row[BooleanCellValue] {
   val cellType = classOf[BooleanCellValue]
 
-  def valueFrom (bs: CharSeqByteSlice)(implicit date: DateTime) = BooleanCellValue(bs.toBoolean)
   def typeName = BooleanRow.typeName
   def valueToString (fv: CellValue): String = fv.valueToString
   def undefinedCellValue: CellValue = UndefinedBooleanCellValue
@@ -180,7 +176,6 @@ object StringRow extends RowFactory {
 case class StringRow(id: Path, info: String, attrs: Seq[String] = Seq.empty) extends Row[StringCellValue] {
   val cellType = classOf[StringCellValue]
 
-  def valueFrom (bs: CharSeqByteSlice)(implicit date: DateTime) = StringCellValue(bs.toString)
   def typeName = StringRow.typeName
   def valueToString (fv: CellValue): String = fv.valueToString
   def undefinedCellValue: CellValue = UndefinedStringCellValue
@@ -200,7 +195,6 @@ object HeaderRow extends RowFactory {
 case class HeaderRow (id: Path, info: String, attrs: Seq[String] = Seq.empty) extends Row[StringCellValue] {
   val cellType = classOf[StringCellValue]
 
-  def valueFrom (bs: CharSeqByteSlice)(implicit date: DateTime): StringCellValue = UndefinedStringCellValue
   def typeName = HeaderRow.typeName
   def valueToString (fv: CellValue): String = "" // always empty
   def undefinedCellValue: CellValue = UndefinedStringCellValue
@@ -218,7 +212,6 @@ object LongListRow extends RowFactory {
 case class LongListRow (id: Path, info: String, attrs: Seq[String] = Seq.empty) extends Row[LongListCellValue] {
   val cellType = classOf[LongListCellValue]
 
-  def valueFrom (bs: CharSeqByteSlice)(implicit date: DateTime): LongListCellValue = UndefinedLongListCellValue
   def typeName = LongListRow.typeName
   def valueToString (fv: CellValue): String = fv.toString
   def undefinedCellValue: CellValue = UndefinedLongListCellValue

@@ -54,7 +54,7 @@ case class UserChange(uid: String, pw: Array[Byte], change: ColumnDataChange)
   *   - provider catalog: defines the ordered set of providers for which data can be recorded
   *   - {provider-data}: maps from field ids to Int values for each provider
   */
-class DeviceServerRoute(parent: ParentActor, config: Config) extends SiteRoute(parent,config)
+class UserServerRoute(parent: ParentActor, config: Config) extends SiteRoute(parent,config)
                                                            with PushWSRaceRoute with RaceDataClient {
   /**
     * JSON parser for incoming device messages
@@ -88,7 +88,7 @@ class DeviceServerRoute(parent: ParentActor, config: Config) extends SiteRoute(p
 
       val uid = readArrayMemberName().toString
       val pw = readCurrentByteArrayInto(new ArrayBuffer[Byte]).toArray
-      val date = DateTime.ofEpochMillis(readUnQuotedMember(_date_).toLong)
+      implicit val date = DateTime.ofEpochMillis(readUnQuotedMember(_date_).toLong)
 
       val columnListId = UnixPath.intern(readQuotedMember(_columnListId_))
       val rowListId = UnixPath.intern(readQuotedMember(_rowListId_))
@@ -97,10 +97,11 @@ class DeviceServerRoute(parent: ParentActor, config: Config) extends SiteRoute(p
       // TODO - we could check for valid providers here
 
       foreachInCurrentObject {
-        val v = readUnQuotedValue()
-        val rowId = UnixPath.intern(member)
+        val rowId = UnixPath.intern(readMemberName())
         site.rowList.get(rowId) match {
-          case Some(row) => cellValues = cellValues :+ (rowId -> row.valueFrom(v)(date))
+          case Some(row) =>
+            val v = row.parseValueFrom(this)
+            cellValues = cellValues :+ (rowId -> v)
           case None => warning(s"skipping unknown field $rowId")
         }
       }

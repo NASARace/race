@@ -19,17 +19,19 @@ package gov.nasa.race.http.tabdata
 import java.io.File
 import java.nio.file.Path
 
+import akka.actor.ActorRef
 import com.typesafe.config.Config
-import gov.nasa.race.common.{JsonWriter, UnixPath}
+import gov.nasa.race.common.UnixPath
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.Messages.BusEvent
-import gov.nasa.race.core.{PublishingRaceActor, RaceContext, RaceException, SubscribingRaceActor}
+import gov.nasa.race.core.{ContinuousTimeRaceActor, PeriodicRaceActor, PublishingRaceActor, RaceContext, RaceException, SubscribingRaceActor}
 import gov.nasa.race.ifSome
 import gov.nasa.race.uom.DateTime
 import gov.nasa.race.util.FileUtils
 
 import scala.collection.immutable.ListMap
 import scala.collection.mutable
+import scala.concurrent.duration.{DurationInt, FiniteDuration}
 
 object TabDataUpdateActor {
 
@@ -68,8 +70,8 @@ object TabDataUpdateActor {
   * this actor should not be concerned about up- or downStream connections, connection-types (such as web sockets) or
   * serialization formats (JSON)
   */
-class TabDataUpdateActor(val config: Config) extends SubscribingRaceActor with PublishingRaceActor with EvalContext {
-
+class TabDataUpdateActor(val config: Config) extends SubscribingRaceActor with PublishingRaceActor
+                                               with ContinuousTimeRaceActor with PeriodicRaceActor with EvalContext {
   //--- the data model
   val nodeId: Path = UnixPath.intern(config.getString("node-id"))
   val upstreamId: Option[Path] = config.getOptionalString("upstream-id").map(UnixPath.intern) // TODO - do we need this here?
@@ -102,6 +104,8 @@ class TabDataUpdateActor(val config: Config) extends SubscribingRaceActor with P
 
   //--- actor interface
 
+  override def defaultTickInterval: FiniteDuration = 30.seconds
+
   override def onInitializeRaceActor(raceContext: RaceContext, actorConf: Config): Boolean = {
     if (super.onInitializeRaceActor(raceContext,actorConf)) {
       val site = Node(nodeId, rowList, columnList, upstreamId)
@@ -109,6 +113,22 @@ class TabDataUpdateActor(val config: Config) extends SubscribingRaceActor with P
       columnData.foreach(e => publish(e._2)) // publish the dynamic data
       true
     } else false
+  }
+
+  override def onStartRaceActor (originator: ActorRef): Boolean = {
+    if (super.onStartRaceActor(originator)) {
+      ifSome(formulaList) { fl=>
+        if (fl.hasAnyTimeTrigger) {
+          fl.armTriggeredAt(simTime)
+          startScheduler  // TODO - what about checks. We might need the scheduler for more than one reason
+        }
+      }
+      true
+    } else false
+  }
+
+  override def onRaceTick: Unit = {
+    checkTimeTriggeredFormulas()
   }
 
   override def handleMessage: Receive = {
@@ -177,7 +197,8 @@ class TabDataUpdateActor(val config: Config) extends SubscribingRaceActor with P
   //--- data model update
 
   /**
-    * evaluate the given column with the given set of row formulas
+    * evaluate the given column with the given set of dependency-triggered row formulas
+    * exclude time-triggered formulas from evaluation (they are evaluated separately)
     * the result is obtained via our EvalContext implementation
     */
   def evalCurrentColumn(formulas: ListMap[Path,AnyCellFormula], date: DateTime)(cellUpdateCond: AnyCellFormula=>Boolean): Unit = {
@@ -187,14 +208,16 @@ class TabDataUpdateActor(val config: Config) extends SubscribingRaceActor with P
       val rowId = e._1
       val formula = e._2
 
-      rowList.get(rowId) match {
-        case Some(row) =>
-          setCurrentRow(row)
-          if (cellUpdateCond(formula)) {
-            val cellVal = formula.evalWith(this)
-            setCurrentCellValue(cellVal)
-          }
-        case None => warning(s"unknown row: $rowId")
+      if (!formula.hasTimeTrigger) {
+        rowList.get(rowId) match {
+          case Some(row) =>
+            setCurrentRow(row)
+            if (cellUpdateCond(formula)) {
+              val cellVal = formula.evalWith(this)
+              setCurrentCellValue(cellVal)
+            }
+          case None => warning(s"unknown row: $rowId")
+        }
       }
     }
   }
@@ -245,6 +268,20 @@ class TabDataUpdateActor(val config: Config) extends SubscribingRaceActor with P
   }
 
   /**
+    * main entry point for periodic checks of formulas that are time triggered
+    * Note that we just create and then process (local) ColumnDataChanges from triggered formulas, to make sure
+    * we process all changes consistently
+    */
+  def checkTimeTriggeredFormulas(): Unit = {
+    val date = updatedSimTime
+    setEvalDate(date)
+
+    ifSome(formulaList){ fl=>
+      fl.evalTriggeredWith(this).foreach(processColumnDataChange)
+    }
+  }
+
+  /**
     * main entry point for both local and remote data changes
     *
     * we split changes in external/own (eval) and report them as separate CDCs (with potentially different
@@ -272,7 +309,7 @@ class TabDataUpdateActor(val config: Config) extends SubscribingRaceActor with P
               if (hasChangedCells) {
                 ifSome(formulaList){ fl=>
                   clearChangedCells
-                  val evalDate = if (cdc.changeNodeId == nodeId) cdc.date else DateTime.now
+                  val evalDate = if (cdc.changeNodeId == nodeId) cdc.date else simTime
                   evalCurrentColumn(fl.getColumnFormulas(pCdc), evalDate) { _.hasUpdatedDependencies(this) }
                   updateAndPublishColumnData( columnDataFromCurrentCells)
                   distributeColumnDataChanges(cdc,changedCellSeq,evalDate) // publish ColumnDataChanges to other processes/nodes
@@ -322,7 +359,7 @@ class TabDataUpdateActor(val config: Config) extends SubscribingRaceActor with P
         if (pCol != cdc.columnId) { // for all but the CDC column, which was already handled
           columnList.get(pCol) match {
             case Some(col: Column) => // a column we know
-              val evalTime = DateTime.now
+              val evalTime = simTime
               setCurrentColumn(col)
               evalCurrentColumn(formulas, evalTime) { _.hasUpdatedDependencies(this) }
               if (hasChangedCells) {

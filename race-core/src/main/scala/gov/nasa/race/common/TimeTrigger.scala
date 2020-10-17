@@ -64,6 +64,7 @@ trait TimeTrigger {
   }
 
   def toSpecString: String
+  override def toString: String = s"${getClass.getSimpleName}($toSpecString)"
 }
 
 class TimeOfDayTrigger (val timeOfDay: Time) extends TimeTrigger {

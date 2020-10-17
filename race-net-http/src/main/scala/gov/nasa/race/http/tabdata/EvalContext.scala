@@ -38,6 +38,7 @@ import scala.collection.mutable.ArrayBuffer
 trait EvalContext {
 
   // the data model interface
+  def nodeId: Path
   def columnList: ColumnList
   def rowList: RowList
   def getColumnCells (pCol: Path): Map[Path,CellValue]
@@ -117,9 +118,10 @@ trait EvalContext {
 /**
   * mostly for testing purposes, by-passing ColumnData
   */
-class BasicEvalContext (val columnList: ColumnList,
-                        val rowList: RowList,
-                        val columnData: mutable.Map[Path,Map[Path,CellValue]]
+class BasicEvalContext ( val nodeId: Path,
+                         val columnList: ColumnList,
+                         val rowList: RowList,
+                         val columnData: mutable.Map[Path,Map[Path,CellValue]]
                        ) extends EvalContext {
 
   def getColumnCells (pCol: Path): Map[Path,CellValue] = columnData.getOrElse(pCol, Map.empty)

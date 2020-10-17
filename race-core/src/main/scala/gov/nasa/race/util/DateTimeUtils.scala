@@ -29,7 +29,7 @@ object DateTimeUtils {
 
   val hhmmssRE = """(\d+):(\d+):(\d+)""".r
 
-  val durationRE = """(\d+) *([hsm]|hour|hours|minute|minutes|sec|second|seconds|ms|msec|millis|millisecond|milliseconds|ns|nsec|nanos|nanosecond|nanoseconds)""".r
+  val durationRE = """(\d+) *([hsm]|hour|hours|min|minute|minutes|sec|second|seconds|ms|msec|millis|millisecond|milliseconds|ns|nsec|nanos|nanosecond|nanoseconds)""".r
 
   // parses dtg groups such as "2016/03/18,13:02:44.458"
 
@@ -42,7 +42,7 @@ object DateTimeUtils {
   def timeBaseToMillis (tbase: String): Long = {
     tbase match {
       case "h" | "hour" | "hours" => 360000
-      case "m" | "minute" | "minutes" => 60000
+      case "m" | "min" | "minute" | "minutes" => 60000
       case "s" | "sec" | "second" | "seconds" => 1000
       case "ms" | "msec" | "millis" | "millisecond" | "milliseconds" => 1
       case _ => throw new IllegalArgumentException(s"unsupported time base: $tbase")

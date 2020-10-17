@@ -376,7 +376,8 @@ function checkEditableCell (cell,column,columnPatterns,row,rowPatterns) {
   for (var i=0; i<columnPatterns.length;i++) {  // note there can be more than one columnPattern match
     if (columnPatterns[i].test(column.id)) {
       if (rowPatterns[i].test(row.id)) {
-        var value = formatValue( row, data[column.id].rows[row.id]);
+        //var value = formatValue( row, data[column.id].rows[row.id]);
+        var value = editValue( row, data[column.id].rows[row.id]);
 
         var input = document.createElement('input');
         input.setAttribute("type", "text");
@@ -453,7 +454,7 @@ function setColumnData (i, columnData) {
   for (var j=0; j<rows.length; j++){
     var row = rows[j];
     var tr = tbody.childNodes[j];
-    var v = displayValue( row, rowList.rows, values);
+    
     var cell = tr.childNodes[i1];
 
     if (cell.firstChild && cell.firstChild.nodeName == "INPUT") { // input cell - we are editing this
@@ -462,10 +463,10 @@ function setColumnData (i, columnData) {
         input.classList.add("conflict");
       }
       input.classList.remove("reported");
-      input.value = v;
+      input.value = editValue(row,values[row.id]);
 
     } else { // just a display cell but flag values outside range
-      cell.textContent = v;
+      cell.textContent = displayValue( row, rowList.rows, values);
       checkRange(row,values[row.id],cell);
     }
   }
@@ -482,16 +483,23 @@ function formatArray (v) {
   return s;
 }
 
-function formatValue (row,fv) {
-  if (fv == undefined) return "";
-  var v = fv.value;
+function formatValue (row,cv) {
+  if (cv == undefined) return "";
+  var v = cv.value;
   if (row.type == "rational" && Number.isInteger(v)) return v.toFixed(1);
   if (row.type.endsWith("[]")) return formatArray(v);
   return v;
 }
 
+// used to display readOnly cells
 function displayValue (row, rowList, rowValues) {
   return formatValue(row, rowValues[row.id]);
+}
+
+// used to initialize input elements
+function editValue (row, cv) {
+  if (cv == undefined) return "";
+  return JSON.stringify(cv.value);
 }
 
 function columnIndex (columnName) {

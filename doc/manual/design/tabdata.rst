@@ -105,6 +105,8 @@ updates parent (since child nodes can still operate without parent connection). 
 the parent updates child (since the child could only have gotten these from the parent anyways). This
 still needs to handle parent hotswap
 
+All automated changes (import actors and time triggered formulas) are CDC generators, i.e. they just
+inject CDCs into the update process.
 
 Refs
 ----

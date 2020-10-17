@@ -28,4 +28,4 @@ conf
 .metals
 **/metals.sbt
 *.code-workspace
-
+.bsp

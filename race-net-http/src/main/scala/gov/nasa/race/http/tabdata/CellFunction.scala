@@ -267,6 +267,38 @@ class BasicFunctionLibrary extends CellFunctionLibrary {
     def argExprs = Seq(arg0)
   }
 
+  //--- setter functions
+
+  /**
+    * set current cell from provided integer expression
+    */
+  object iset extends CellFunctionFactory with LongCoDomain with LongDomain with Arity1 {
+    def apply (args: Seq[AnyCellExpression]) = new iset(args.head.asInstanceOf[LongExpr])
+  }
+  add(iset)
+
+  class iset(val arg0: LongExpr) extends LongFunc with Arity1Deps {
+    def eval (implicit ctx: EvalContext) = {
+      LongCellValue(arg0.eval.toLong)(ctx.evalDate)
+    }
+    def argExprs = Seq(arg0)
+  }
+
+  /**
+    * set current cell from provided long expression
+    */
+  object rset extends CellFunctionFactory with DoubleCoDomain with DoubleDomain with Arity1 {
+    def apply (args: Seq[AnyCellExpression]) = new rset(args.head.asInstanceOf[DoubleExpr])
+  }
+  add(rset)
+
+  class rset(val arg0: DoubleExpr) extends DoubleFunc with Arity1Deps {
+    def eval (implicit ctx: EvalContext) = {
+      DoubleCellValue(arg0.eval.toDouble)(ctx.evalDate)
+    }
+    def argExprs = Seq(arg0)
+  }
+
   /**
     * a function that accepts one DoubleExpr argument and adds it to the currently evaluated cell
     */
