@@ -56,7 +56,7 @@ case class ColumnData (id: Path,
   def get (pRow: Path): Option[CellValue] = rows.get(pRow)
 
   private def _serializeTo (w: JsonWriter)(valueSerializer: JsonWriter=>Unit): Unit = {
-    w.clear.writeObject( _
+    w.clear().writeObject( _
       .writeMemberObject("columnData") { _
         .writeStringMember(_id_, id.toString)
         .writeDateTimeMember(_date_, date)
@@ -130,7 +130,7 @@ class ColumnDataParser(rowList: RowList) extends UTF8JsonPullParser {
     var latestChange = DateTime.Date0 // to hold the latest fieldValue change date (if all specified)
 
     // we parse both explicit
-    //     "<rowId>": { "value": <num>|<sting>|<array> [, "date": <epoch-ms>] }
+    //     "<rowId>": { "value": <num>|<string>|<array> [, "date": <epoch-ms>] }
     // and implicit
     //     "<rowId>": <num>|<sting>|<array>
     // if no date is specified we use the parseDate to instantiate FieldValues
@@ -197,7 +197,7 @@ case class ColumnDataChange(columnId: Path,
 
   /** order of fieldValues should not matter */
   def serializeTo (w: JsonWriter): Unit = {
-    w.clear.writeObject { _
+    w.clear().writeObject { _
       .writeMemberObject(_columnDataChange_) { _
         .writeStringMember(_columnId_, columnId.toString)
         .writeStringMember(_changeNodeId_, changeNodeId.toString)
@@ -231,38 +231,28 @@ trait ColumnDataChangeParser extends JsonPullParser {
   }
 
   def parseColumnDataChangeBody: Option[ColumnDataChange] = {
-    val valueSlice = MutAsciiSlice.empty
-
-    def readCell(): Option[(Path,CellValue)] = {
+    def readCell (defaultDate: DateTime): Option[(Path,CellValue)] = {
       val rowId = UnixPath.intern(readObjectMemberName())
-      valueSlice.setFrom(readUnQuotedMember(_value_)) // TODO this should also handle arrays
-      implicit val date = readDateTimeMember(_date_)
-      skipPastAggregate()
 
       node.rowList.get(rowId) match {
         case Some(row) =>
-          Some(rowId -> row.parseValueFrom(this))
+          Some(rowId -> row.parseValueFrom(this)(defaultDate))
         case None =>
           warning(s"unknown field '$rowId' in providerDataChange message ignored")
           None
       }
     }
 
-    try {
+    tryParse( x=> warning(s"malformed providerDataChange: ${x.getMessage}") ) {
       val columnId = UnixPath.intern(readQuotedMember(_columnId_))
       val changeNodeId = UnixPath.intern(readQuotedMember(_changeNodeId_))
       val date = readDateTimeMember(_date_)
 
       val cells = readSomeNextObjectMemberInto[Path,CellValue,mutable.Buffer[(Path,CellValue)]](_cells_,mutable.Buffer.empty){
-        readCell()
+        readCell(date)
       }.toSeq
 
-      Some(ColumnDataChange(columnId,changeNodeId,date,cells))
-
-    } catch {
-      case x: JsonParseException =>
-        warning(s"malformed providerDataChange: ${x.getMessage}")
-        None
+      ColumnDataChange(columnId,changeNodeId,date,cells)
     }
   }
 }

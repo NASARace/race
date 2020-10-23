@@ -17,7 +17,7 @@ object CommonRaceSettings {
         scalacOptions ++= Seq("-unchecked", "-deprecation", "-feature"
           , "-target:9"
           //, "-opt-warnings"
-
+/*
           , "-opt:l:method"               // enables all intra-method optimizations
           , "-opt:l:inline"
           // NOTE - apart from 'sources' this should be used sparingly since it (transitively) breaks incremental compilation
@@ -28,6 +28,7 @@ object CommonRaceSettings {
           , "-opt-inline-from:gov.nasa.race.geo.LatLon"
           , "-opt-inline-from:gov.nasa.race.uom.Angle"
           , "-opt-inline-from:gov.nasa.race.uom.Length"
+*/
         ),
         resolvers ++= Dependencies.dependencyResolvers,
 

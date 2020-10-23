@@ -98,7 +98,7 @@ case class ColumnList (id: Path, info: String, date: DateTime, columns: ListMap[
   import ColumnList._
 
   def serializeTo (w: JsonWriter): Unit = {
-    w.clear.writeObject(
+    w.clear().writeObject(
       _.writeMemberObject(_columnList_) {
         _.writeStringMember(_id_, id.toString)
           .writeStringMember(_info_, info)

@@ -132,6 +132,16 @@ abstract class JsonPullParser extends LogWriter with Thrower {
 
   override def exception(msg: String) = new JsonParseException(msg)
 
+  def tryParse[T](err: JsonParseException=>Unit)(f: =>T): Option[T] = {
+    try {
+      Some(f)
+    } catch {
+      case x: JsonParseException =>
+        err(x)
+        None
+    }
+  }
+
   //--- mostly for debugging
   // use sparingly - those allocate and hence defeat our purpose
   def dataAsString: String = new String(data,0,limit)

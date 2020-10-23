@@ -21,7 +21,7 @@
       "/data/cat_B":         { "src": "(rsum ./*)" },
 
       "/data/cat_C/field_2": { "src": "(isum ../provider*@.)" },
-      "/data/cat_C":         { "src": "(iacc ./field_2)" }
+      "/data/cat_C":         { "src": "(iinc ./field_2)" }
     }
   }
 }

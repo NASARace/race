@@ -24,6 +24,14 @@ var ws = {}; // will be set by initWebSocket()
 
 var maxLines = 0;           // we get the default from the css
 
+var maxIdleEditMillis = 150000;  // after which we switch back into r/o mode
+
+//--- the number formatters to use for display
+var intFormatter = Intl.NumberFormat(utils.language());
+var intRatFormatter = Intl.NumberFormat(utils.language(),{minimumFractionDigits:1});
+var ratFormatter = Intl.NumberFormat(utils.language(),{compactFormat: "short"}); // the default number formatter
+var ratIntFormatter = Intl.NumberFormat(utils.language(),{maximumFractionDigits:0});
+
 
 //--- exported functions (used by main module)
 
@@ -65,6 +73,8 @@ export function setEditable() {
 }
 
 export function setReadOnly() {
+  setInactiveChecks(null);
+
   document.getElementById("pw").value = null;
   document.getElementById("sendButton").disabled = true;
   document.getElementById("editButton").disabled = false;
@@ -421,6 +431,26 @@ function setRowsEditable (permissions) {
     document.getElementById("sendButton").disabled = false;
     document.getElementById("readOnlyButton").disabled = false;
     inEditMode = true;
+    setInactiveChecks(setReadOnly,maxIdleEditMillis);
+  }
+}
+
+function setInactiveChecks (action,maxIdleMillis = 150000) {
+  var time;
+
+  if (action) {
+    document.addEventListener('mousemove', resetIdleTimer);
+    document.addEventListener('keypress', resetIdleTimer);
+    document.getElementById("tableContainer").addEventListener('scroll', resetIdleTimer);
+  } else {
+    document.removeEventListener('mousemove', resetIdleTimer);
+    document.removeEventListener('keypress', resetIdleTimer);
+    document.getElementById("tableContainer").removeEventListener('scroll', resetIdleTimer);
+  }
+
+  function resetIdleTimer() {
+    clearTimeout(time);
+    time = setTimeout(action, maxIdleMillis)
   }
 }
 
@@ -486,8 +516,19 @@ function formatArray (v) {
 function formatValue (row,cv) {
   if (cv == undefined) return "";
   var v = cv.value;
-  if (row.type == "rational" && Number.isInteger(v)) return v.toFixed(1);
+
+  if (row.type == "integer") {
+    if (Number.isInteger(v)) return intFormatter.format(v);
+    else return ratIntFormatter.format(v);
+  }
+
+  if (row.type == "rational"){
+    if (Number.isInteger(v)) return intRatFormatter.format(v); 
+    else return ratFormatter.format(v);
+  }
+
   if (row.type.endsWith("[]")) return formatArray(v);
+
   return v;
 }
 
@@ -678,6 +719,7 @@ export function clickRow (i) {
     expandRow(i);
   }
 }
+
 
 //--- incoming messages
 

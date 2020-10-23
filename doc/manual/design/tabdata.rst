@@ -21,6 +21,7 @@ Requirements
 ------------
   - sub-tree stays (downwards) functional after upstream connection is lost
   - re-synchronization of data once sub-tree is reconnected to upstream
+  - end-to-end connection loss detection and recovery (resync if upstream server process goes down)
   - (node hot swap tolerant)
   - minimal external network infrastructure required (only upstream node is exposed)
   - minimize network traffic (push)
@@ -68,6 +69,10 @@ questionable: this would either require a uniform view across peers or some non-
 Nodes can own several columns. Consequently, each column has a optional 'node' attribute to link to the main/node id
 ?? what about nodes that only show/export columns other than the node name? Could be handled through 'attrs'
 
+Formulas and constraints are kept separate from Column/RowList to enable per-site settings.
+
+In general we try to share as much common config between nodes as possible, hence we factor config
+
 
 Update Semantics
 ----------------
@@ -107,6 +112,17 @@ still needs to handle parent hotswap
 
 All automated changes (import actors and time triggered formulas) are CDC generators, i.e. they just
 inject CDCs into the update process.
+
+
+Security Concept
+----------------
+Node is dedicated server machine with restricted physical access and minimal service profile (attack angle). All data
+is stored on the node server. The only site network facing access points are the tabdata URLs (no other data served).
+
+All communication between nodes and user clients is using websockets over (encrypted) https
+
+User client r/o access can be authenticated. Edit access is authenticated with per-user field access.
+
 
 Refs
 ----

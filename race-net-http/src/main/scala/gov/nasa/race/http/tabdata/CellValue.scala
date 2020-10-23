@@ -45,6 +45,8 @@ sealed abstract class CellValue(val date: DateTime) extends JsonSerializable {
   def serializeTo (w: JsonWriter): Unit
 
   def undefinedCellValue: UndefinedCellValue
+
+  def valueEquals (other: CellValue): Boolean
 }
 
 trait CellTyped {
@@ -157,6 +159,10 @@ case class LongCellValue(value: Long)(implicit date: DateTime) extends CellValue
   def toDouble: Double = value.toDouble
   def toJson = value.toString
   def valueToString = value.toString
+
+  def valueEquals (other: CellValue): Boolean = {
+    other.isInstanceOf[LongCellValue] && other.asInstanceOf[LongCellValue].value == value
+  }
 
   override def undefinedCellValue: UndefinedCellValue = UndefinedLongCellValue
   override def toString: String = s"LongValue(value:$value,date:$date)"
@@ -271,6 +277,10 @@ case class DoubleCellValue(value: Double)(implicit date: DateTime) extends CellV
   def toJson = value.toString
   def valueToString = value.toString
 
+  def valueEquals (other: CellValue): Boolean = {
+    other.isInstanceOf[DoubleCellValue] && other.asInstanceOf[DoubleCellValue].value == value
+  }
+
   override def undefinedCellValue: UndefinedCellValue = UndefinedDoubleCellValue
   override def toString: String = s"DoubleValue(value:$value,date:$date)"
 
@@ -335,6 +345,10 @@ object BooleanCellValue {
 case class BooleanCellValue(value: Boolean)(implicit date: DateTime) extends CellValue(date) {
   override def valueToString: String = value.toString
 
+  def valueEquals (other: CellValue): Boolean = {
+    other.isInstanceOf[BooleanCellValue] && other.asInstanceOf[BooleanCellValue].value == value
+  }
+
   override def toJson: String = if (value) "\"true\"" else "\"false\""
   override def undefinedCellValue: UndefinedCellValue = UndefinedBooleanCellValue
 
@@ -379,6 +393,10 @@ object StringCellValue {
 
 case class StringCellValue (value: String)(implicit date: DateTime) extends CellValue(date){
   override def valueToString: String = value
+
+  def valueEquals (other: CellValue): Boolean = {
+    other.isInstanceOf[StringCellValue] && other.asInstanceOf[StringCellValue].value == value
+  }
 
   override def toJson: String = "\"" + value + '"'
   override def undefinedCellValue: UndefinedCellValue = UndefinedStringCellValue
@@ -451,20 +469,22 @@ case class LongListCellValue (value: Array[Long])(implicit date: DateTime) exten
   override def apply (i: Int): Long = value(i)
   override def length: Int = value.length
 
-  override def equals(o: Any): Boolean = {
-    if (o.isInstanceOf[LongListCellValue]) {
+  def valueEquals (o: CellValue): Boolean = {
+    if (o.isInstanceOf[LongListCellValue]){
       val other = o.asInstanceOf[LongListCellValue]
-      if (date != other.date) return false
-
       val len = value.length
       val ov = other.value
       if (len != ov.length) return false
       var i = 0
-      while (i < len) {
-        if (value(i) != ov(i)) return false
-        i += 1
-      }
-      true
+      while ((i < len) && (value(i) == ov(i))) i += 1
+      (i == len)
+    } else false
+  }
+
+  override def equals(o: Any): Boolean = {
+    if (o.isInstanceOf[LongListCellValue]) {
+      val other = o.asInstanceOf[LongListCellValue]
+      (date == other.date) && valueEquals(other)
     } else false
   }
 

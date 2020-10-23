@@ -134,11 +134,11 @@ class UserServerRoute(parent: ParentActor, config: Config) extends SiteRoute(par
   }
 
   def serializeSiteId (id: Path): String = {
-    writer.clear.writeObject( _.writeStringMember("siteId", id.toString)).toJson
+    writer.clear().writeObject( _.writeStringMember("siteId", id.toString)).toJson
   }
 
   def serializeUserPermissions (user: String, perms: Perms): String = {
-    writer.clear.writeObject( _
+    writer.clear().writeObject( _
       .writeMemberObject( "userPermissions") { _
         .writeStringMember("uid", user)
         .writeStringMembersMember("permissions", perms)

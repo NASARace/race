@@ -237,7 +237,7 @@ case class RowList (id: Path, info: String, date: DateTime, rows: ListMap[Path,A
   import RowList._
 
   def serializeTo (w: JsonWriter): Unit = {
-    w.clear.writeObject( _
+    w.clear().writeObject( _
       .writeMemberObject(_rowList_) { _
         .writeStringMember(_id_, id.toString)
         .writeStringMember(_info_, info)

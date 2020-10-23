@@ -27,8 +27,8 @@ import akka.http.scaladsl.server.{PathMatchers, Route}
 import akka.stream.scaladsl.SourceQueueWithComplete
 import com.typesafe.config.Config
 import gov.nasa.race.common.ConstAsciiSlice.asc
-import gov.nasa.race.common.{BufferedStringJsonPullParser, JsonParseException, JsonWriter}
-import gov.nasa.race.core.{ParentActor, RaceDataClient}
+import gov.nasa.race.common.{BufferedStringJsonPullParser, JsonParseException, JsonWriter, SyncJsonWriter}
+import gov.nasa.race.core.{ContinuousTimeRaceActor, ParentActor, RaceDataClient}
 import gov.nasa.race.http.{PushWSRaceRoute, SiteRoute}
 import gov.nasa.race.{ifSome, withSomeOrElse}
 import gov.nasa.race.uom.DateTime
@@ -48,7 +48,10 @@ class NodeServerRoute(val parent: ParentActor, val config: Config) extends PushW
   val wsPathMatcher = PathMatchers.separateOnSlashes(wsPath)
 
   protected var parser: Option[IncomingMessageParser] = None
-  val writer = new JsonWriter
+
+  // writers are not thread safe - we use separate ones to avoid blocking
+  val outgoingWriter = new JsonWriter // to serialize messages we get from our service actor and send out async
+  val incomingWriter = new JsonWriter // to serialize sync responses from our Source (akka-http actors)
 
   var site: Option[Node] = None
   var columnData: Map[Path,ColumnData] = Map.empty
@@ -70,24 +73,24 @@ class NodeServerRoute(val parent: ParentActor, val config: Config) extends PushW
       case rl: RowList => // those are local or upstream catalog changes
         site = site.map( _.copy(rowList=rl))
         parser = Some(new IncomingMessageParser(site.get))
-        push(TextMessage.Strict(writer.toJson(rl)))
+        push(TextMessage.Strict(outgoingWriter.toJson(rl)))
         info(s"pushing new field catalog ${rl.id}")
 
       case cl: ColumnList =>
         site = site.map( _.copy(columnList=cl))
         parser = Some(new IncomingMessageParser(site.get))
-        push(TextMessage.Strict(writer.toJson(cl)))
+        push(TextMessage.Strict(outgoingWriter.toJson(cl)))
         info(s"pushing new provider catalog ${cl.id}")
 
       case cd: ColumnData => // new local or remote providerData -> just update our own map
         columnData = columnData + (cd.id -> cd)
 
       case cdc: ColumnDataChange =>
-        pushChange(cdc)
+        pushChange(cdc, outgoingWriter)
     }
   }
 
-  def pushChange (cdc: ColumnDataChange): Unit = {
+  def pushChange (cdc: ColumnDataChange, writer: JsonWriter): Unit = {
     ifSome(site) { site=>
       val targetId = cdc.columnId
 
@@ -97,8 +100,10 @@ class NodeServerRoute(val parent: ParentActor, val config: Config) extends PushW
         // this only sends to connected nodes to which we export this column
         remoteNodes.foreach { e=>
           val (remoteAddr,remoteId) = e
-          if (col.updateFilter.sendToDownStream(remoteId)) {
-            pushTo(remoteAddr,m)
+          if (cdc.changeNodeId != remoteId) { // we don't send it back to where it came from
+            if (col.updateFilter.sendToDownStream(remoteId)) {
+              pushTo(remoteAddr, m)
+            }
           }
         }
       }
@@ -112,6 +117,7 @@ class NodeServerRoute(val parent: ParentActor, val config: Config) extends PushW
 
   /**
     * this is what we receive through the websocket (from connected providers)
+    * BEWARE - this is executed in a different (akka-http) thread. Use incomingWriter for sync responses
     */
   override protected def handleIncoming (remoteAddr: InetSocketAddress, m: Message): Iterable[Message] = {
     m match {
@@ -119,6 +125,7 @@ class NodeServerRoute(val parent: ParentActor, val config: Config) extends PushW
         parseIncoming(tm) match {
           case Some(ns: NodeState) => handleNodeState(remoteAddr, ns)
           case Some(cdc: ColumnDataChange) => handleColumnDataChange(remoteAddr, tm, cdc)
+          case Some(ping: Ping) => handlePing(ping, remoteAddr)
           case _ => Nil // ignore all other
         }
 
@@ -151,7 +158,7 @@ class NodeServerRoute(val parent: ParentActor, val config: Config) extends PushW
                 if (col.updateFilter.sendToDownStream(remoteNodeId)) {
                   // we send this even if there are no changes, which indicates to remote that their cd.date is outdated
                   val cdc = ColumnDataChange(colId, site.id, cd.date, cd.changesSince(colDate))
-                  response = TextMessage.Strict(writer.toJson(cdc)) +: response
+                  response = TextMessage.Strict(incomingWriter.toJson(cdc)) +: response
                 }
 
               } else if (colDate > cd.date) { // remote data is newer - store for request if we receive this col from this downstream node
@@ -169,7 +176,7 @@ class NodeServerRoute(val parent: ParentActor, val config: Config) extends PushW
 
         if (updateRequests.nonEmpty) {
           // send own NS first so that we get the remote data before processing our changes
-          TextMessage.Strict(writer.toJson(new NodeState(site,updateRequests))) +: response
+          TextMessage.Strict(incomingWriter.toJson(new NodeState(site,updateRequests))) +: response
         } else {
           response
         }.reverse
@@ -194,7 +201,7 @@ class NodeServerRoute(val parent: ParentActor, val config: Config) extends PushW
       case None =>
         warning(s"ignoring change from unknown sender $remoteAddr: $cdc")
     }
-    Nil
+    Nil // no sync reply
   }
 
   def isOutdatedChange (cdc: ColumnDataChange): Boolean = {
@@ -219,6 +226,23 @@ class NodeServerRoute(val parent: ParentActor, val config: Config) extends PushW
     }
   }
 
+  def handlePing (ping: Ping, remoteAddr: InetSocketAddress): Iterable[Message] = {
+    withSomeOrElse(site,Seq.empty[Message]){ node=>
+      withSomeOrElse(remoteNodes.get(remoteAddr),Seq.empty[Message]){ remoteId=>
+        if (remoteId == ping.sender && node.id == ping.receiver) {
+          info(s"responding to ping from $remoteId")
+          val pongTime = DateTime.now // TODO - do we need simTime here? This is not an actor
+          val pongMsg = TextMessage.Strict(incomingWriter.toJson(Pong(pongTime,ping)))
+          Seq(pongMsg)
+        } else {
+          warning(s"wrong ping ignored: $ping")
+          Nil
+        }
+      }
+    }
+  }
+
+
   override def route: Route = {
     get {
       path(wsPathMatcher) {
@@ -236,10 +260,11 @@ class NodeServerRoute(val parent: ParentActor, val config: Config) extends PushW
     * the parser for incoming messages. Note this is from trusted/checked connections
     */
   class IncomingMessageParser (val node: Node) extends BufferedStringJsonPullParser
-                                                            with ColumnDataChangeParser with NodeStateParser {
+                                                            with ColumnDataChangeParser with NodeStateParser with PingParser {
     def parse(msg: String): Option[Any] = parseMessageSet(msg) {
       case ColumnDataChange._columnDataChange_ => parseColumnDataChangeBody
       case NodeState._nodeState_ => parseNodeStateBody
+      case Ping._ping_ => parsePingBody
       case other => warning(s"ignoring unknown message type '$other'"); None
     }
   }

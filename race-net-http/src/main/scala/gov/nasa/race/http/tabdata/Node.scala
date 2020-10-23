@@ -92,7 +92,7 @@ case class NodeState(nodeId: Path,
 
 
   def serializeTo (w: JsonWriter): Unit = {
-    w.clear.writeObject {_
+    w.clear().writeObject {_
       .writeMemberObject(_nodeState_) {_
         .writeStringMember(_nodeId_, nodeId.toString)
         .writeStringMember(_rowListId_, rowListId.toString)

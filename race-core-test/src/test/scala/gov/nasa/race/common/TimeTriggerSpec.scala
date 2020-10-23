@@ -23,22 +23,28 @@ import org.scalatest.flatspec.AnyFlatSpec
 class TimeTriggerSpec extends AnyFlatSpec with RaceSpec {
 
   "a SinceTrigger" should "properly fire" in {
-    val tt = TimeTrigger("2s")
+    val tt = TimeTrigger("2s") // this should be a SinceTrigger
 
     println(s"-- check pass-fire-pass of $tt")
     tt.armCheck(DateTime.now)
 
+    assert( tt.check(DateTime.now)) // first armed check always fires
+    println("SinceTrigger init fire")
+    Thread.sleep(100)
     assert( !tt.check(DateTime.now))
     Thread.sleep(2500)
     assert( tt.check(DateTime.now))
     println("SinceTrigger fired")
     Thread.sleep(100)
     assert( !tt.check(DateTime.now))
+    Thread.sleep(2000)
+    assert( tt.check(DateTime.now))
+    println("SinceTrigger fired again")
   }
 
   "a TimeTrigger" should "properly fire" in {
     val t = DateTime.now + Time.Milliseconds(1000)
-    val tt = TimeTrigger(t.format_Hms)
+    val tt = TimeTrigger(t.format_Hms) // this should be a TimeOfDayTrigger
 
     println(s"-- check pass-fire-pass of $tt")
     tt.armCheck(DateTime.now)
@@ -50,4 +56,5 @@ class TimeTriggerSpec extends AnyFlatSpec with RaceSpec {
     Thread.sleep(100)
     assert( !tt.check(DateTime.now))
   }
+
 }

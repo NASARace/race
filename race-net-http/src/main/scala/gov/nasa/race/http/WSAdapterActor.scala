@@ -16,6 +16,8 @@
  */
 package gov.nasa.race.http
 
+import java.lang.Thread.sleep
+
 import akka.Done
 import akka.actor.{ActorRef, Cancellable}
 import akka.http.scaladsl.model.headers.{Authorization, BasicHttpCredentials}
@@ -98,6 +100,7 @@ class WSAdapterActor (val config: Config) extends FilteringPublisher with Subscr
   var queue: Option[SourceQueueWithComplete[Message]] = None // set during RaceStart
   var isConnected: Boolean = false
 
+  // watch out - these are NOT thread safe
   val reader: WsMessageReader = createReader
   val writer: WsMessageWriter = createWriter
 
@@ -106,6 +109,11 @@ class WSAdapterActor (val config: Config) extends FilteringPublisher with Subscr
   // default behavior is to check for configured readers/writers or otherwise just pass data as strings
   protected def createReader = getConfigurableOrElse[WsMessageReader]("reader")(DefaultWsMessageReader)
   protected def createWriter = getConfigurableOrElse[WsMessageWriter]("writer")(DefaultWsMessageWriter)
+
+  // override if we need to reset or drop connection if there is a send failure
+  protected def handleSendFailure(msg: String): Unit = {
+    warning(msg)
+  }
 
   /**
     * override if messages should be filtered or translated
@@ -117,20 +125,21 @@ class WSAdapterActor (val config: Config) extends FilteringPublisher with Subscr
 
   protected def processOutgoingMessage (o: Any): Unit = {
     ifSome(queue) { q => // no need to translate anything if we are not connected
-      writer.write(o) match {
-        case Some(msg) =>
-          q.offer(msg).onComplete { res =>
-            res match {
-              case Success(_) => // all good (TODO should we check for Enqueued here?)
-                info(s"message sent: $msg")
+      writer.synchronized {
+        writer.write(o) match {
+          case Some(msg) =>
+            q.offer(msg).onComplete { res =>
+              res match {
+                case Success(_) => // all good (TODO should we check for Enqueued here?)
+                  info(s"message sent: $msg")
 
-              case Failure(_) =>
-                warning(s"message send failed: $msg")
-                // TODO - should we reset isConnected and queue here?
+                case Failure(_) =>
+                  handleSendFailure(s"message send failed: $msg")
+              }
             }
-          }
-        case None =>
-          info(s"ignore outgoing $o")
+          case None =>
+            info(s"ignore outgoing $o")
+        }
       }
     }
   }
@@ -213,12 +222,47 @@ class WSAdapterActor (val config: Config) extends FilteringPublisher with Subscr
     }
   }
 
+  def reconnect(): Unit = {
+    if (isConnected) {
+      info("trying to reconnect")
+      ifSome(queue) { q =>
+        q.complete()
+        queue = None
+      }
+      isConnected = false
+      retrySchedule = Some(scheduler.scheduleOnce(retryInterval, self, RetryConnect))
+    }
+  }
+
+  def waitForDisconnect (nRetries: Int): Unit = {
+    val sleepMillis = 500
+    var i=0
+    while (i < nRetries) {
+      if (isConnected) sleep(sleepMillis)
+      i += 1
+    }
+    if (isConnected) {
+      warning(s"no disconnect in ${i * sleepMillis} ms")
+    } else {
+      info("disconnected")
+    }
+  }
+
+  def disconnect(): Unit = {
+    retrySchedule.foreach( _.cancel())
+
+    // TODO - is this the right way to explicitly close a web socket connection from a akka-http client?
+    ifSome(queue){ _.complete() }
+  }
+
   override def onStartRaceActor(originator: ActorRef): Boolean = {
     connect && super.onStartRaceActor(originator)
   }
 
   override def onTerminateRaceActor(originator: ActorRef): Boolean = {
-    retrySchedule.foreach( _.cancel())
+    disconnect()
+    waitForDisconnect(5)
+
     super.onTerminateRaceActor(originator)
   }
 

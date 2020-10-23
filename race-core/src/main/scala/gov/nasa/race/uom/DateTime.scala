@@ -51,6 +51,14 @@ object DateTime {
     new DateTime(zdt.getLong(ChronoField.INSTANT_SECONDS) * 1000 + ms)
   }
 
+  @inline def max (a: DateTime, b: DateTime): DateTime = {
+    if (a.millis > b.millis) a else b
+  }
+
+  @inline def min (a: DateTime, b: DateTime): DateTime = {
+    if (a.millis > b.millis) b else a
+  }
+
   def timeBetween (a: DateTime, b: DateTime): Time = {
     if (a.millis >= b.millis) new Time((a.millis - b.millis).toInt)
     else new Time((b.millis - a.millis).toInt)
@@ -416,6 +424,11 @@ class DateTime protected[uom](val millis: Long) extends AnyVal
 
   def getTimeOfDay: Time = new Time((millis % Time.MillisInDay).toInt)
   def getLocalTimeOfDay: Time = new Time(((millis + LocalOffsetMillis) % Time.MillisInDay).toInt)
+
+  def atTimeOfDay (td: Time): DateTime = new DateTime( millis - (millis % Time.MillisInDay) + td.millis)
+  def atLastHour: DateTime = new DateTime( millis - (millis % Time.MillisInHour))
+  def atLastMinute: DateTime = new DateTime( millis - (millis % Time.MillisInMinute))
+  def atLastSecond: DateTime = new DateTime( millis - (millis % 1000))
 
   // unfortunately we can't overload '-' because of erasure
   @inline def timeUntil(d: DateTime): Time = new Time((d.millis - millis).toInt)

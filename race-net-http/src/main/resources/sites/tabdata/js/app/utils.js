@@ -87,6 +87,11 @@ export function top (stack) {
   }
 }
 
+export function language() {
+  return navigator.language || navigator.languages[0];
+}
+
+
 
 //--- page content but not data related - used by other app modules
 

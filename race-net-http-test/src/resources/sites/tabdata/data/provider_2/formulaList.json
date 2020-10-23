@@ -14,9 +14,9 @@
       "/data/cat_A/field_3":   { "src":  "(ilavg ../field_4)" },
 
       "/data/cat_B":           { "src":  "(rsum ./*)"},
-      "/data/cat_B/field_2":   { "src":  "(rset ../field_1)", "trigger": "90 sec" },
+      "/data/cat_B/field_2":   { "src":  "(rset ../field_1)", "trigger": "60 sec" },
 
-      "/data/cat_C":           { "src":  "(iacc ./field_2)"}
+      "/data/cat_C":           { "src":  "(iinc ./field_2)"}
     }
   }
 }

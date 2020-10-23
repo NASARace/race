@@ -122,7 +122,7 @@ class JsonWriter (jsonType: ElementType = JsonWriter.RawElements, initSize: Int 
   }
 
   def length: Int = buf.length
-  def clear: JsonWriter = { initialize; this }
+  def clear(): JsonWriter = { initialize; this }
 
   @inline final def push (t: ElementType): Unit = {
     elementStack += t
@@ -130,7 +130,7 @@ class JsonWriter (jsonType: ElementType = JsonWriter.RawElements, initSize: Int 
 
   @inline final def pop(t: ElementType): Unit = {
     if (elementStack.isEmpty || (elementStack.last ne t)) {
-      throw new RuntimeException(s"malformed JSON nesting")
+      throw new RuntimeException(s"malformed JSON nesting: '${buf.toString}'")
     } else {
       elementStack.remove(elementStack.length-1)
     }
@@ -159,6 +159,9 @@ class JsonWriter (jsonType: ElementType = JsonWriter.RawElements, initSize: Int 
     closeOpenEnvironments
     buf.toString
   }
+
+  // for debugging purposes
+  def snapshot: String = buf.toString
 
   @inline final def beginObject: JsonWriter = {
     checkSeparator
@@ -513,6 +516,14 @@ class JsonWriter (jsonType: ElementType = JsonWriter.RawElements, initSize: Int 
       writeSelf(e._2)
     }
     endObject
+  }
+}
+
+class SyncJsonWriter (jsonType: ElementType = JsonWriter.RawElements, initSize: Int = 4096)
+        extends JsonWriter(jsonType, initSize) {
+
+  override def toJson (o: JsonSerializable): String = synchronized {
+    super.toJson(o)
   }
 }
 

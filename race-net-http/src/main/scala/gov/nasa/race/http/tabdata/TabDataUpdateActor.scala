@@ -27,6 +27,7 @@ import gov.nasa.race.core.Messages.BusEvent
 import gov.nasa.race.core.{ContinuousTimeRaceActor, PeriodicRaceActor, PublishingRaceActor, RaceContext, RaceException, SubscribingRaceActor}
 import gov.nasa.race.ifSome
 import gov.nasa.race.uom.DateTime
+import gov.nasa.race.uom.Time.Milliseconds
 import gov.nasa.race.util.FileUtils
 
 import scala.collection.immutable.ListMap
@@ -247,14 +248,22 @@ class TabDataUpdateActor(val config: Config) extends SubscribingRaceActor with P
     }
   }
 
-  def applyChangesToCurrentColumn (changedCells: Seq[Cell]): Unit = {
-    changedCells.foreach { cell =>
+  def applyChangesToCurrentColumn (cdc: ColumnDataChange): Unit = {
+    cdc.cells.foreach { cell =>
       val (pRow, newCellValue) = cell
       rowList.get(pRow) match {
         case Some(row) =>
           setCurrentRow(row)
-          if (currentCellValue.date < newCellValue.date) {
+          if (currentCellValue.date < newCellValue.date) { // change is newer - update
             setCurrentCellValue(newCellValue)
+
+          } else if (currentCellValue.date == newCellValue.date) {  // same date - only set if value differs
+            if (!currentCellValue.valueEquals(newCellValue)) {
+              setCurrentCellValue(newCellValue)
+            }
+
+          } else { // our own is newer - report
+            warning(s"ignoring outdated cell value $pRow: ${newCellValue.valueToString}")
           }
         case None => info(s"ignore change to unknown row $pRow")
       }
@@ -277,7 +286,10 @@ class TabDataUpdateActor(val config: Config) extends SubscribingRaceActor with P
     setEvalDate(date)
 
     ifSome(formulaList){ fl=>
-      fl.evalTriggeredWith(this).foreach(processColumnDataChange)
+      fl.evalTriggeredWith(this).foreach { cdc =>
+        info(s"time triggered change: $cdc")
+        processColumnDataChange(cdc)
+      }
     }
   }
 
@@ -296,60 +308,47 @@ class TabDataUpdateActor(val config: Config) extends SubscribingRaceActor with P
   def updateChangeColumnData (cdc: ColumnDataChange): Boolean = {
     val pCdc = cdc.columnId
 
-    //--- first, apply and publish the CDC changes and eval changes that might be triggered by them
     columnList.get(pCdc) match { // a known column
       case Some(col) =>
         columnData.get(pCdc) match {
           case Some(cd) =>
+            // TODO - should we do this if the cdc.changeNodeId is our node?
             info(s"update column '$pCdc' with $cdc")
-            if (cd.date < cdc.date) {
-              setCurrentColumn(col)
-              applyChangesToCurrentColumn(cdc.cells)
 
-              if (hasChangedCells) {
-                ifSome(formulaList){ fl=>
-                  clearChangedCells
-                  val evalDate = if (cdc.changeNodeId == nodeId) cdc.date else simTime
-                  evalCurrentColumn(fl.getColumnFormulas(pCdc), evalDate) { _.hasUpdatedDependencies(this) }
-                  updateAndPublishColumnData( columnDataFromCurrentCells)
-                  distributeColumnDataChanges(cdc,changedCellSeq,evalDate) // publish ColumnDataChanges to other processes/nodes
-                }
-                true
+            setCurrentColumn(col)
+            applyChangesToCurrentColumn(cdc) // this only overwrites older cell values
 
-              } else {
-                if (cd.date < cdc.date) {
-                  updateAndPublishColumnData( cd.copy(date = cdc.date))
-                  // TODO - should we distribute this to other nodes?
-                }
-                false
+            if (hasChangedCells) {
+              ifSome(formulaList){ fl=>
+                clearChangedCells
+                val evalDate = if (cdc.changeNodeId == nodeId) cdc.date else simTime
+                evalCurrentColumn(fl.getColumnFormulas(pCdc), evalDate) { _.hasUpdatedDependencies(this) }
+                updateAndPublishColumnData( columnDataFromCurrentCells)
+                distributeColumnDataChanges(cdc,changedCellSeq,evalDate) // publish ColumnDataChanges to other processes/nodes
               }
+              true
 
-            } else { // our data is newer or same date
-
-              if (cd.date > cdc.date) { // ours is newer, send CDC
-                warning(s"outdated change of $pCdc")
-                val updates = cd.changesSince(cdc.date)
-                if (updates.nonEmpty) {
-                  publish(ColumnDataChange(pCdc,nodeId,cd.date,updates))
-                }
-
-              } else { // same date - check if these were our changes
-                if (cdc.changeNodeId == nodeId) { // this is our data, check
-                  val diffs = cd.differingCellValues(cdc)
-                  if (diffs.nonEmpty) {
-                    warning(s"feedback cell values of $pCdc differ: $diffs")
-                  } else {
-                    info(s"change feedback confirmed: $pCdc")
-                  }
-                }
+            } else {
+              // no changed cells but we still might have to update the CD time
+              if (cd.date < cdc.date) {
+                updateAndPublishColumnData( cd.copy(date = cdc.date))
+                // TODO - should we distribute this to other nodes?
               }
-
-              false // we didn't change our cell values
+              false
             }
+
           case None => error(s"no ColumnData for column $pCdc"); false
         }
       case None => info(s"ignoring ColumnDataChange for unknown column $pCdc"); false
     }
+  }
+
+  /**
+    * get update date for a new CDC, which has to be > cd.date in order to de-conflict
+    */
+  def dependencyUpdateTime (col: Column, date: DateTime): DateTime = {
+    val cd = columnData(col.id)
+    if (cd.date >= date) cd.date + Milliseconds(1) else date
   }
 
   def updateOtherColumnData (cdc: ColumnDataChange): Unit = {
@@ -359,14 +358,15 @@ class TabDataUpdateActor(val config: Config) extends SubscribingRaceActor with P
         if (pCol != cdc.columnId) { // for all but the CDC column, which was already handled
           columnList.get(pCol) match {
             case Some(col: Column) => // a column we know
-              val evalTime = simTime
+              val eDate = dependencyUpdateTime(col,simTime)
               setCurrentColumn(col)
-              evalCurrentColumn(formulas, evalTime) { _.hasUpdatedDependencies(this) }
+              evalCurrentColumn(formulas, eDate) { _.hasUpdatedDependencies(this) }
               if (hasChangedCells) {
                 updateAndPublishColumnData(columnDataFromCurrentCells)
                 // distribute as our own CDC
-                val ownCdc = ColumnDataChange(pCol, nodeId, evalTime, changedCellSeq)
-                distributeColumnDataChanges(ownCdc, Seq.empty, evalTime)
+                val ownCdc = ColumnDataChange(pCol, nodeId, evalDate, changedCellSeq)
+
+                distributeColumnDataChanges(ownCdc, Seq.empty, evalDate)
               }
 
             case None => // ignore unknown column
