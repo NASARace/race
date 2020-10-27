@@ -49,6 +49,7 @@ sealed trait Row[+T <: CellValue] extends JsonSerializable with CellTyped with P
 
   val id: Path
   val info: String
+  val updateFilter: UpdateFilter
   val attrs: Seq[String]  // extensible set of boolean options
 
   val isLocked: Boolean = attrs.contains("locked") // if set the field can only be updated through formula eval
@@ -74,10 +75,10 @@ sealed trait Row[+T <: CellValue] extends JsonSerializable with CellTyped with P
   def parseValueFrom (p: JsonPullParser)(implicit date: DateTime): T // this is not for parsing Rows but for parsing ColumnData
 }
 
-trait RowParser extends JsonPullParser {
+trait RowParser extends JsonPullParser with UpdateFilterParser {
   import Row._
 
-  def parseRow (listId: Path): AnyRow = {
+  def parseRow (rowListId: Path, columnListId: Option[Path]=None): AnyRow = {
     def readRowType(): RowFactory = {
       val v = readQuotedMember(_type_)
       if (v == _integer_) LongRow
@@ -89,12 +90,13 @@ trait RowParser extends JsonPullParser {
       else throw exception(s"unknown field type: $v")
     }
 
-    val id = listId.resolve(UnixPath.intern(readQuotedMember(_id_)))
+    val id = rowListId.resolve(UnixPath.intern(readQuotedMember(_id_)))
     val rowFactory = readRowType()
     val info = readQuotedMember(_info_).toString
+    val updateFilter = parseUpdateFilter(columnListId,UpdateFilter.sendReceiveAll)
     val attrs = readOptionalStringArrayMemberInto(_attrs_,ArrayBuffer.empty[String]).map(_.toSeq).getOrElse(Seq.empty[String])
 
-    rowFactory.instantiate(id,info,attrs)
+    rowFactory.instantiate(id,info,updateFilter,attrs)
   }
 }
 
@@ -104,21 +106,21 @@ trait NumRow [+T <: NumCellValue] extends Row[T]
   * field instantiation factory interface
   */
 sealed trait RowFactory {
-  def instantiate (id: Path, info: String, attrs: Seq[String] = Seq.empty): AnyRow
+  def instantiate (id: Path, info: String, updateFilter: UpdateFilter, attrs: Seq[String] = Seq.empty): AnyRow
   def typeName: String
 }
 
 //--- Long rows
 
 object LongRow extends RowFactory {
-  def instantiate (id: Path, info: String, attrs: Seq[String]): LongRow = LongRow(id,info,attrs)
+  def instantiate (id: Path, info: String, updateFilter: UpdateFilter, attrs: Seq[String]): LongRow = LongRow(id,info,updateFilter,attrs)
   def typeName: String = "integer"
 }
 
 /**
   * Field implementation for Long values
   */
-case class LongRow(id: Path, info: String, attrs: Seq[String] = Seq.empty) extends NumRow[LongCellValue] {
+case class LongRow(id: Path, info: String, updateFilter: UpdateFilter = UpdateFilter.sendReceiveAll, attrs: Seq[String] = Seq.empty) extends NumRow[LongCellValue] {
   val cellType = classOf[LongCellValue]
 
   def typeName = LongRow.typeName
@@ -132,14 +134,14 @@ case class LongRow(id: Path, info: String, attrs: Seq[String] = Seq.empty) exten
 //--- Double rows
 
 object DoubleRow extends RowFactory {
-  def instantiate (id: Path, info: String, attrs: Seq[String]): DoubleRow = DoubleRow(id,info,attrs)
+  def instantiate (id: Path, info: String, updateFilter: UpdateFilter, attrs: Seq[String]): DoubleRow = DoubleRow(id,info,updateFilter,attrs)
   def typeName: String = "rational"
 }
 
 /**
   * Field implementation for Double values
   */
-case class DoubleRow(id: Path, info: String, attrs: Seq[String] = Seq.empty) extends NumRow[DoubleCellValue] {
+case class DoubleRow(id: Path, info: String, updateFilter: UpdateFilter = UpdateFilter.sendReceiveAll, attrs: Seq[String] = Seq.empty) extends NumRow[DoubleCellValue] {
   val cellType = classOf[DoubleCellValue]
 
   def typeName = DoubleRow.typeName
@@ -152,11 +154,11 @@ case class DoubleRow(id: Path, info: String, attrs: Seq[String] = Seq.empty) ext
 //--- Boolean rows
 
 object BooleanRow extends RowFactory {
-  def instantiate (id: Path, info: String, attrs: Seq[String]): BooleanRow = BooleanRow(id,info,attrs)
+  def instantiate (id: Path, info: String, updateFilter: UpdateFilter, attrs: Seq[String]): BooleanRow = BooleanRow(id,info,updateFilter,attrs)
   def typeName: String = "boolean"
 }
 
-case class BooleanRow(id: Path, info: String, attrs: Seq[String] = Seq.empty) extends Row[BooleanCellValue] {
+case class BooleanRow(id: Path, info: String, updateFilter: UpdateFilter = UpdateFilter.sendReceiveAll, attrs: Seq[String] = Seq.empty) extends Row[BooleanCellValue] {
   val cellType = classOf[BooleanCellValue]
 
   def typeName = BooleanRow.typeName
@@ -169,11 +171,11 @@ case class BooleanRow(id: Path, info: String, attrs: Seq[String] = Seq.empty) ex
 //--- String rows
 
 object StringRow extends RowFactory {
-  def instantiate (id: Path, info: String, attrs: Seq[String]): StringRow = StringRow(id,info,attrs)
+  def instantiate (id: Path, info: String, updateFilter: UpdateFilter, attrs: Seq[String]): StringRow = StringRow(id,info,updateFilter,attrs)
   def typeName: String = "string"
 }
 
-case class StringRow(id: Path, info: String, attrs: Seq[String] = Seq.empty) extends Row[StringCellValue] {
+case class StringRow(id: Path, info: String, updateFilter: UpdateFilter = UpdateFilter.sendReceiveAll, attrs: Seq[String] = Seq.empty) extends Row[StringCellValue] {
   val cellType = classOf[StringCellValue]
 
   def typeName = StringRow.typeName
@@ -188,11 +190,11 @@ case class StringRow(id: Path, info: String, attrs: Seq[String] = Seq.empty) ext
 // TODO - maybe we should throw an exception if somebody tries to set to retrieve HeaderCells
 
 object HeaderRow extends RowFactory {
-  def instantiate (id: Path, info: String, attrs: Seq[String]): HeaderRow = HeaderRow(id,info,attrs)
+  def instantiate (id: Path, info: String, updateFilter: UpdateFilter, attrs: Seq[String]): HeaderRow = HeaderRow(id,info,updateFilter,attrs)
   def typeName: String = "header"
 }
 
-case class HeaderRow (id: Path, info: String, attrs: Seq[String] = Seq.empty) extends Row[StringCellValue] {
+case class HeaderRow (id: Path, info: String, updateFilter: UpdateFilter = UpdateFilter.sendReceiveAll, attrs: Seq[String] = Seq.empty) extends Row[StringCellValue] {
   val cellType = classOf[StringCellValue]
 
   def typeName = HeaderRow.typeName
@@ -205,11 +207,11 @@ case class HeaderRow (id: Path, info: String, attrs: Seq[String] = Seq.empty) ex
 //--- LongList row
 
 object LongListRow extends RowFactory {
-  def instantiate (id: Path, info: String, attrs: Seq[String]): LongListRow = LongListRow(id,info,attrs)
+  def instantiate (id: Path, info: String, updateFilter: UpdateFilter, attrs: Seq[String]): LongListRow = LongListRow(id,info,updateFilter,attrs)
   def typeName: String = "integer[]"
 }
 
-case class LongListRow (id: Path, info: String, attrs: Seq[String] = Seq.empty) extends Row[LongListCellValue] {
+case class LongListRow (id: Path, info: String, updateFilter: UpdateFilter = UpdateFilter.sendReceiveAll, attrs: Seq[String] = Seq.empty) extends Row[LongListCellValue] {
   val cellType = classOf[LongListCellValue]
 
   def typeName = LongListRow.typeName
@@ -259,9 +261,9 @@ case class RowList (id: Path, info: String, date: DateTime, rows: ListMap[Path,A
   def foreach[U] (f: ((Path,AnyRow))=>U): Unit = rows.foreach(f)
 
   def orderedEntries[T] (map: collection.Map[Path,T]): Seq[(Path,T)] =  {
-    rows.foldLeft(Seq.empty[(Path,T)]) { (acc, e) =>
+    rows.foldRight(Seq.empty[(Path,T)]) { (e,acc) =>
       map.get(e._1) match {
-        case Some(t) => acc :+ (e._1, t)
+        case Some(t) => (e._1, t) +: acc
         case None => acc // provider not in map
       }
     }
@@ -293,23 +295,23 @@ case class RowList (id: Path, info: String, date: DateTime, rows: ListMap[Path,A
 /**
   * JSON parser for FieldCatalogs
   */
-class RowListParser extends UTF8JsonPullParser with RowParser {
+class RowListParser (columnListId: Option[Path]=None) extends UTF8JsonPullParser with RowParser {
   import RowList._
 
   def parse (buf: Array[Byte]): Option[RowList] = {
     initialize(buf)
     try {
       readNextObject {
-        val id = UnixPath.intern(readQuotedMember(_id_))
+        val rowListId = UnixPath.intern(readQuotedMember(_id_))
         val info = readQuotedMember(_info_).toString
         val date = readDateTimeMember(_date_)
 
         var rows = ListMap.empty[Path,AnyRow]
         foreachInNextArrayMember(_rows_) {
-          val row = readNextObject(parseRow(id))
+          val row = readNextObject( parseRow( rowListId,columnListId) )
           rows = rows + (row.id -> row)
         }
-        Some(RowList( id, info, date, rows))
+        Some(RowList( rowListId, info, date, rows))
       }
     } catch {
       case x: JsonParseException =>

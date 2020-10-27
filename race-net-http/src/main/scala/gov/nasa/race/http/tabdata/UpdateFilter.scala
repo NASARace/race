@@ -33,11 +33,13 @@ object UpdateFilter {
   val _target_ = asc("<target>")  // id of change item
 
   // default is we send to upstream and we receive local or from upstream
-  val defaultFilter = new UpdateFilter("<up>", "<self>,<up>")
+  val sendUpReceiveLocalUp = new UpdateFilter("<up>", "<self>,<up>")
+
+  val sendReceiveAll = new UpdateFilter("<all>","<all>")
+  val localOnly = new UpdateFilter("<none>", "<self>")
 }
 
 import UpdateFilter._
-
 
 class UpdateFilter(val sendSpec: String, val receiveSpec: String, resolver: Option[Path]=None) extends JsonSerializable  {
 
@@ -129,7 +131,7 @@ class UpdateFilter(val sendSpec: String, val receiveSpec: String, resolver: Opti
 
 trait UpdateFilterParser extends JsonPullParser {
 
-  def parseUpdateFilter(resolveId: Path, defFilter: UpdateFilter = defaultFilter): UpdateFilter = {
+  def parseUpdateFilter(resolveId: Option[Path], defFilter: UpdateFilter = sendUpReceiveLocalUp): UpdateFilter = {
     var sendSpec = defFilter.sendSpec
     var receiveSpec = defFilter.receiveSpec
 
@@ -144,7 +146,7 @@ trait UpdateFilterParser extends JsonPullParser {
     if ((sendSpec eq defFilter.sendSpec) && (receiveSpec eq defFilter.receiveSpec)) {
       defFilter // nothing specified
     } else {
-      new UpdateFilter(sendSpec,receiveSpec,Some(resolveId))
+      new UpdateFilter(sendSpec,receiveSpec,resolveId)
     }
   }
 }

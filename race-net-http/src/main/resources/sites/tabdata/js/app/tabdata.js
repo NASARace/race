@@ -580,7 +580,7 @@ function filterRows () {
 
 /**
  * set display label and indentation level properties for each row object
- * This function could also add articial header rows, i.e. could return a different
+ * This function could also add artificial header rows, i.e. could return a different
  * row array than what we pass in
  */
 function displayRows (filteredRows) {
@@ -623,7 +623,7 @@ function expandRow (i) {
     var allRows = rowList.rows;
     for ( var j = allRows.indexOf(row)+1; j < allRows.length; j++){
       var f = allRows[j];
-      if (f.id.startsWith(idPrefix)) {
+      if (!isHidden(f) && f.id.startsWith(idPrefix)) {
         rows.splice(k,0,f);
         k += 1;
       } else break;

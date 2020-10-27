@@ -22,6 +22,8 @@ import scala.collection.immutable.ListMap
 import gov.nasa.race.common.JsonPullParser
 import gov.nasa.race.common.ByteSlice
 import gov.nasa.race.common.ConstAsciiSlice.asc
+import gov.nasa.race.uom.DateTime
+
 import scala.collection.mutable
 
 /**
@@ -33,7 +35,11 @@ import scala.collection.mutable
   */
 package object tabdata {
 
+  //--- aliases
   type Cell = (Path,CellValue)
+  type PathDate = (Path,DateTime)
+  type RowDate = PathDate
+  type ColumnDate = PathDate
 
   type AnyRow = Row[_ <: CellValue]
   type AnyCellRef = CellRef[_ <: CellValue]
@@ -56,4 +62,9 @@ package object tabdata {
       readOptionalStringArrayMemberInto(name,mutable.ArrayBuffer.empty[String]).map(_.toSeq).getOrElse(Seq.empty[String])
     }
   }
+
+  /**
+    * indicates changes of a nodes (columns) connection
+    */
+  case class NodeReachabilityChange(id: Path, isOnline: Boolean)
 }

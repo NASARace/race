@@ -77,9 +77,10 @@ class TabDataUpdateActor(val config: Config) extends SubscribingRaceActor with P
   val nodeId: Path = UnixPath.intern(config.getString("node-id"))
   val upstreamId: Option[Path] = config.getOptionalString("upstream-id").map(UnixPath.intern) // TODO - do we need this here?
 
-  var rowList: RowList = readRowList
   var columnList: ColumnList = readColumnList
-  val columnData: mutable.Map[Path,ColumnData] = readColumnData(rowList,columnList)
+  var rowList: RowList = readRowList(columnList)
+  val columnData: mutable.Map[Path,ColumnData] = readColumnData(columnList, rowList)
+  val reachableNodes: mutable.Set[Path] = mutable.Set(nodeId) // our own node is always reachable
 
   var formulaList: Option[FormulaList] = readFormulaList
   val funcLib: CellFunctionLibrary = getConfigurableOrElse("functions")(new BasicFunctionLibrary)
@@ -134,6 +135,7 @@ class TabDataUpdateActor(val config: Config) extends SubscribingRaceActor with P
 
   override def handleMessage: Receive = {
     case BusEvent(_, pdc:ColumnDataChange, _) => processColumnDataChange(pdc)
+    case BusEvent(_, nrc: NodeReachabilityChange, _) => processNodeReachabilityChange(nrc)
   }
 
   //--- data model init
@@ -143,9 +145,9 @@ class TabDataUpdateActor(val config: Config) extends SubscribingRaceActor with P
     config.translateFile(key)(f)
   }
 
-  def readRowList: RowList = {
+  def readRowList (columnList: ColumnList): RowList = {
     readList[RowList]("row-list") { input =>
-      val parser = new RowListParser
+      val parser = new RowListParser(Some(columnList.id))
       parser.setLogging(info, warning, error)
       parser.parse(input)
     }.getOrElse( throw new RuntimeException("missing or invalid row-list"))
@@ -167,7 +169,7 @@ class TabDataUpdateActor(val config: Config) extends SubscribingRaceActor with P
     }
   }
 
-  def readColumnData (rowList: RowList, columnList: ColumnList): mutable.Map[Path,ColumnData] = {
+  def readColumnData(columnList: ColumnList, rowList: RowList): mutable.Map[Path,ColumnData] = {
     val map = mutable.Map.empty[Path,ColumnData]
 
     val dataDir = config.getExistingDir("column-data")
@@ -313,7 +315,7 @@ class TabDataUpdateActor(val config: Config) extends SubscribingRaceActor with P
         columnData.get(pCdc) match {
           case Some(cd) =>
             // TODO - should we do this if the cdc.changeNodeId is our node?
-            info(s"update column '$pCdc' with $cdc")
+            info(s"update column '$pCdc' with \n$cdc")
 
             setCurrentColumn(col)
             applyChangesToCurrentColumn(cdc) // this only overwrites older cell values
@@ -420,5 +422,10 @@ class TabDataUpdateActor(val config: Config) extends SubscribingRaceActor with P
     */
   def isValidChange (cdc: ColumnDataChange): Boolean = {
     ((cdc.changeNodeId == nodeId ) || isUpstream(cdc.changeNodeId) || isColumn(cdc.changeNodeId))
+  }
+
+  def processNodeReachabilityChange (nrc: NodeReachabilityChange): Unit = {
+    if (nrc.isOnline) reachableNodes += nrc.id
+    else reachableNodes -= nrc.id
   }
 }

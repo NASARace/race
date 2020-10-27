@@ -37,7 +37,7 @@ import scala.reflect.{ClassTag, classTag}
  * message (remoting - esp. including making the Bus accessible for remote RaceActors),
  * Bus subscription, simulation start and actor termination
  */
-trait RaceActor extends Actor with ImplicitActorLogging {
+trait RaceActor extends Actor with ImplicitActorLogging with Loggable {
   // this is the constructor config that has to be provided by the concrete RaceActor
   val config: Config
 

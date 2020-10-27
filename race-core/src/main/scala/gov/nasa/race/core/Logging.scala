@@ -32,10 +32,10 @@ import gov.nasa.race.util.ConsoleIO
   */
 trait RaceLogFormatter {
   //--- the default implementations
-  def format (e: Error): String   = s"[ERR]  ${e.logSource}: ${e.message}"
-  def format (e: Warning): String = s"[WARN] ${e.logSource}: ${e.message}"
-  def format (e: Info): String    = s"[INFO] ${e.logSource}: ${e.message}"
-  def format (e: Debug): String   = s"[DBG]  ${e.logSource}: ${e.message}"
+  def format (e: Error): String   = s"\n[ERR]  ${e.logSource}: ${e.message}"
+  def format (e: Warning): String = s"\n[WARN] ${e.logSource}: ${e.message}"
+  def format (e: Info): String    = s"\n[INFO] ${e.logSource}: ${e.message}"
+  def format (e: Debug): String   = s"\n[DBG]  ${e.logSource}: ${e.message}"
 }
 
 
@@ -251,4 +251,14 @@ class ConsoleAppender extends LogAppender with SocketServer {
     }
     super.terminate
   }
+}
+
+/**
+  * something that can log messages
+  */
+trait Loggable {
+  def debug(f: => String): Unit
+  def info(f: => String): Unit
+  def warning(f: => String): Unit
+  def error(f: => String): Unit
 }

@@ -100,11 +100,66 @@ case class ColumnData (id: Path,
     (id == other.id)
   }
 
-  def changesSince (refDate: DateTime): Seq[(Path,CellValue)] = {
+  def cellDates: Seq[RowDate] = {
+    rows.foldRight(Seq.empty[RowDate]){ (e,acc)=> (e._1 -> e._2.date) +: acc }
+  }
+
+  def orderedCellDates (rowList: RowList): Seq[RowDate] = {
+    rowList.orderedEntries(rows).foldRight(Seq.empty[RowDate]){ (e,acc)=> (e._1 -> e._2.date) +: acc }
+  }
+
+  def changesSince (refDate: DateTime): Seq[Cell] = {
     rows.foldLeft(Seq.empty[(Path,CellValue)]) { (acc, e) =>
       val cv = e._2
       if (cv.date > refDate) e +: acc else acc
     }
+  }
+
+  def newerOwnCells (otherCellDates: Seq[RowDate], addMissing: Boolean): Seq[Cell] = {
+    val newerOwnCells = mutable.Buffer.empty[Cell]
+    val seenRows = mutable.Set.empty[Path]
+
+    otherCellDates.foreach { e =>
+      val (rowId, rowDate) = e
+      seenRows += rowId
+
+      rows.get(rowId) match {
+        case Some(cv: CellValue) =>
+          if (cv.date > rowDate) {
+            newerOwnCells += (rowId -> cv)
+          }
+        case None =>
+      }
+    }
+
+    if (addMissing) {
+      rows.foreach { e =>
+        val (rowId, cv) = e
+        if (!seenRows.contains(rowId)) {
+          newerOwnCells += (rowId -> cv)
+        }
+      }
+    }
+
+    newerOwnCells.toSeq
+  }
+
+  def outdatedOwnCells (otherCellDates: Seq[RowDate]): Seq[RowDate] = {
+    val outdatedOwnCells = mutable.Buffer.empty[RowDate]
+    otherCellDates.foreach { e =>
+      val (rowId, rowDate) = e
+
+      rows.get(rowId) match {
+        case Some(cv: CellValue) =>
+          if (cv.date < rowDate) {
+            outdatedOwnCells += (rowId -> cv.date)
+          }
+        case None =>
+          outdatedOwnCells += (rowId -> DateTime.Date0)
+      }
+    }
+
+    outdatedOwnCells.toSeq
   }
 
   def differingCellValues (cdc: ColumnDataChange): Seq[(Path,CellValue,CellValue)] = {
@@ -113,6 +168,15 @@ case class ColumnData (id: Path,
       rows.get(rid) match {
         case Some(cv) => if (!cv.equals(rcv)) (rid,cv,rcv) +: delta else delta
         case None => (rid,rcv.undefinedCellValue,rcv) +: delta
+      }
+    }
+  }
+
+  def orderedTimeStamps (rowList: RowList): Seq[(Path,DateTime)] = {
+    rowList.rows.foldRight(Seq.empty[(Path,DateTime)]) { (e,acc) =>
+      rows.get(e._1) match {
+        case Some(cv) => (e._1 -> cv.date) +: acc
+        case None => acc
       }
     }
   }
@@ -213,6 +277,10 @@ case class ColumnDataChange(columnId: Path,
       }
     }
   }
+
+  def filter (f: Path=>Boolean): ColumnDataChange = copy(cells = cells.filter( cell=> f(cell._1)))
+
+  def nonEmpty: Boolean = cells.nonEmpty
 }
 
 /**

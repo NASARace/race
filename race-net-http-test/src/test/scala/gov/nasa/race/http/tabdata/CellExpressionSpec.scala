@@ -108,7 +108,7 @@ class CellExpressionSpec extends AnyFlatSpec with RaceSpec {
 
     println(s"\n#-- function with explicit column-local cell references: '$formula'")
 
-    val ctx = new BasicEvalContext( columnList, rowList, mutable.Map(c1.id -> cellValues))
+    val ctx = new BasicEvalContext( p"thisNode", columnList, rowList, mutable.Map(c1.id -> cellValues))
     ctx.setEvalDate(DateTime.parseYMDT("2020-09-10T16:30:00"))
     ctx.setCurrentColumn(c1)
     ctx.setCurrentRow(r3)
@@ -128,7 +128,7 @@ class CellExpressionSpec extends AnyFlatSpec with RaceSpec {
 
     println(s"\n#-- function with cell pattern: '$formula'")
 
-    val ctx = new BasicEvalContext( columnList, rowList, mutable.Map(c1.id -> cellValues))
+    val ctx = new BasicEvalContext( p"thisNode", columnList, rowList, mutable.Map(c1.id -> cellValues))
     ctx.setEvalDate(DateTime.parseYMDT("2020-09-10T16:30:00"))
     ctx.setCurrentColumn(c1)
     ctx.setCurrentRow(r3)
@@ -148,7 +148,7 @@ class CellExpressionSpec extends AnyFlatSpec with RaceSpec {
 
     println(s"\n#-- function with column pattern: '$formula'")
 
-    val ctx = new BasicEvalContext( columnList, rowList, mutable.Map(c1.id -> cellValues, c2.id -> cellValues))
+    val ctx = new BasicEvalContext( p"thisNode", columnList, rowList, mutable.Map(c1.id -> cellValues, c2.id -> cellValues))
     ctx.setEvalDate(DateTime.parseYMDT("2020-09-10T16:30:00"))
     ctx.setCurrentColumn(c3)
     ctx.setCurrentRow(r1)
@@ -168,7 +168,7 @@ class CellExpressionSpec extends AnyFlatSpec with RaceSpec {
 
     println(s"\n#-- function with nested expression args: '$formula'")
 
-    val ctx = new BasicEvalContext( columnList, rowList, mutable.Map(c1.id -> cellValues))
+    val ctx = new BasicEvalContext( p"thisNode", columnList, rowList, mutable.Map(c1.id -> cellValues))
     ctx.setEvalDate(DateTime.parseYMDT("2020-09-10T16:30:00"))
     ctx.setCurrentColumn(c1)
     ctx.setCurrentRow(r3)
@@ -184,11 +184,11 @@ class CellExpressionSpec extends AnyFlatSpec with RaceSpec {
 
   "a CellExpressionParser" should "parse a self-referential cell func" in {
     val p = new CellExpressionParser(columnList,rowList,funcLib)
-    val formula = "(iacc ../r1)"
+    val formula = "(iinc ../r1)"
 
     println(s"\n#-- function with self-reference: '$formula'")
 
-    val ctx = new BasicEvalContext( columnList, rowList, mutable.Map(c1.id -> cellValues))
+    val ctx = new BasicEvalContext( p"thisNode", columnList, rowList, mutable.Map(c1.id -> cellValues))
     ctx.setEvalDate(DateTime.parseYMDT("2020-09-10T16:30:00"))
     ctx.setCurrentColumn(c1)
     ctx.setCurrentRow(r4)
@@ -211,7 +211,7 @@ class CellExpressionSpec extends AnyFlatSpec with RaceSpec {
     val expr: CellExpression[LongListCellValue] = compile(p, c1,r5, formula)
 
     println(s"\n#-- array pushn function: '$formula'")
-    val ctx = new BasicEvalContext( columnList, rowList, mutable.Map(c1.id -> cellValues))
+    val ctx = new BasicEvalContext( p"thisNode", columnList, rowList, mutable.Map(c1.id -> cellValues))
     ctx.setEvalDate(DateTime.parseYMDT("2020-09-10T16:30:00"))
     ctx.setCurrentColumn(c1)
 
@@ -231,7 +231,7 @@ class CellExpressionSpec extends AnyFlatSpec with RaceSpec {
     val expr: CellExpression[LongCellValue] = compile(p, c1,r1, formula)
 
     println(s"\n#-- array avg function: '$formula'")
-    val ctx = new BasicEvalContext( columnList, rowList, mutable.Map(c1.id -> cellValues))
+    val ctx = new BasicEvalContext( p"thisNode", columnList, rowList, mutable.Map(c1.id -> cellValues))
     ctx.setEvalDate(DateTime.parseYMDT("2020-09-10T16:30:00"))
     ctx.setCurrentColumn(c1)
 

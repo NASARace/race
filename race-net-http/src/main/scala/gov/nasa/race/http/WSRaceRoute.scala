@@ -19,6 +19,7 @@ package gov.nasa.race.http
 import java.io.File
 import java.net.InetSocketAddress
 
+import akka.Done
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.model.ws.{BinaryMessage, Message, TextMessage}
 import akka.http.scaladsl.server.Directives._
@@ -30,8 +31,9 @@ import gov.nasa.race.core.RaceDataClient
 import gov.nasa.race.ifSome
 
 import scala.collection.immutable.Iterable
+import scala.concurrent.Future
 import scala.concurrent.duration._
-import scala.util.{Failure, Success}
+import scala.util.{Failure, Success, Try}
 
 /**
   * root type for WebSocket RaceRouteInfos
@@ -117,6 +119,14 @@ trait PushWSRaceRoute extends WSRaceRoute with SourceQueueOwner with RaceDataCli
   }
 
   /**
+    * override if concrete routes need to do more cleanup
+    */
+  protected def handleConnectionLoss (remoteAddress: InetSocketAddress, cause: Try[Done]): Unit = {
+    connections = connections.filter( e=> e._1 != remoteAddress)
+    info(s"connection closed: $remoteAddress")
+  }
+
+  /**
     * complete routes that create web-sockets with this call
     * NOTE - this might execute overlapping with push(), hence we synchronize
     */
@@ -129,6 +139,9 @@ trait PushWSRaceRoute extends WSRaceRoute with SourceQueueOwner with RaceDataCli
         val newConn = (remoteAddress, outboundMat)
         initializeConnection(remoteAddress,outboundMat)
         connections = connections + newConn
+
+        val completionFuture: Future[Done] = outboundMat.watchCompletion()
+        completionFuture.onComplete { handleConnectionLoss(remoteAddress,_) } // TODO does this handle passive network failures?
 
         val inbound: Sink[Message, Any] = Sink.foreach{ inMsg =>
           handleIncoming(remoteAddress, inMsg).foreach( outMsg => pushTo(remoteAddress, outboundMat,outMsg))

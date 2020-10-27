@@ -27,6 +27,7 @@ import gov.nasa.race.core.{ContinuousTimeRaceActor, PeriodicRaceActor}
 import gov.nasa.race.http.{WSAdapterActor, WsMessageReader, WsMessageWriter}
 import gov.nasa.race.uom.DateTime
 
+import scala.collection.mutable
 import scala.concurrent.duration.{DurationInt, FiniteDuration}
 
 /**
@@ -101,6 +102,8 @@ class UpstreamConnectorActor(override val config: Config) extends WSAdapterActor
     info("disconnecting")
     super.disconnect()
 
+    for (node <- site; upstreamId <- node.upstreamId){ publish(NodeReachabilityChange(upstreamId,false)) }
+
     lastPingTime = DateTime.UndefinedDateTime
     lastPongTime = DateTime.UndefinedDateTime
     nPings = 0
@@ -164,38 +167,21 @@ class UpstreamConnectorActor(override val config: Config) extends WSAdapterActor
     }
   }
 
-  // we handle this here and don't publish to any channel
+  /**
+    * this is the upstream response to our own NodeState
+    */
   def processUpstreamNodeState (ns: NodeState): Unit = {
     for (site <- site; upstreamId <- site.upstreamId) {
       if (ns.nodeId == upstreamId) {
         isRegistered = true
         startScheduler // now that we are registered with upstream we can schedule Pings
+        publish(NodeReachabilityChange(upstreamId,true))
 
-        var updateRequests = Seq.empty[(Path,DateTime)]
+        def sendTo (col: Column): Boolean = col.updateFilter.sendToUpStream(ns.nodeId)
+        def receiveFrom (col: Column): Boolean = col.updateFilter.receiveFromUpStream(ns.nodeId)
 
-        ns.columnDataDates.foreach {e=>
-          val (colId, colDate) = e
-
-          columnData.get(colId) match {
-            case Some(cd) =>
-              val col = site.columnList(colId) // if we have a CD it also means we have a column for it
-              if (colDate < cd.date) { // our data is newer - send change if we send this col to upstream
-                if (col.updateFilter.sendToUpStream(ns.nodeId)) {
-                  processOutgoingMessage(ColumnDataChange(colId, site.id, cd.date, cd.changesSince(colDate))) // send right away
-                }
-              } else if (colDate > cd.date) { // upstream is newer - send own NodeState
-                if (col.updateFilter.receiveFromUpStream(ns.nodeId)) {
-                  updateRequests = (colId -> cd.date) +: updateRequests
-                }
-              }
-            case None =>
-              warning(s"no data for column $colId")
-          }
-        }
-
-        if (updateRequests.nonEmpty){
-          processOutgoingMessage(new NodeState(site,updateRequests.reverse))
-        }
+        val nodeStateResponder = new NodeStateResponder(site,columnData,this, sendTo, receiveFrom)
+        nodeStateResponder.getNodeStateReplies(ns).foreach( processOutgoingMessage)
 
       } else {
         warning(s"ignoring NodeState of non-upstream node ${ns.nodeId}")
@@ -203,21 +189,24 @@ class UpstreamConnectorActor(override val config: Config) extends WSAdapterActor
     }
   }
 
-  def sendOwnNodeState: Boolean = {
+  def sendOwnNodeState: Unit = {
     for (node <- site; upstreamId <- node.upstreamId) {
-      val upstreamReceives = columnData.foldRight(Seq.empty[(Path, DateTime)]) { (e,acc) =>
-        val (colId, cd) = e
+      val extCDs = mutable.Buffer.empty[ColumnDate]
+      val locCDs = mutable.Buffer.empty[(Path,Seq[RowDate])]
+
+      node.columnList.orderedEntries(columnData).foreach { e=>
+        val (colId,cd) = e
         val col = node.columnList(colId)
         if (col.updateFilter.receiveFromUpStream(upstreamId)) {
-          (colId -> cd.date) +: acc
-        } else acc
+          if (col.node == node.id) locCDs += (colId -> cd.orderedCellDates(node.rowList))
+          else extCDs += (colId -> cd.date)
+        }
       }
 
-      if (upstreamReceives.nonEmpty) {
-        processOutgoingMessage(new NodeState(node, upstreamReceives))
+      if (extCDs.nonEmpty || locCDs.nonEmpty) {
+        processOutgoingMessage( new NodeState(node,extCDs.toSeq,locCDs.toSeq))
       }
     }
-    true
   }
 
   def processUpstreamPong (pong: Pong): Unit = {

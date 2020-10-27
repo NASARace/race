@@ -19,6 +19,7 @@ package gov.nasa.race.http.tabdata
 import java.net.InetSocketAddress
 import java.nio.file.Path
 
+import akka.Done
 import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.model.ws.{Message, TextMessage}
@@ -34,7 +35,9 @@ import gov.nasa.race.{ifSome, withSomeOrElse}
 import gov.nasa.race.uom.DateTime
 
 import scala.collection.immutable.Iterable
+import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
+import scala.util.Try
 
 /**
   * the route that handles ColumnData synchronization from/to child node clients through a websocket
@@ -115,7 +118,24 @@ class NodeServerRoute(val parent: ParentActor, val config: Config) extends PushW
   protected def isLocal (id: Path): Boolean = site.isDefined && site.get.isLocal(id)
   protected def isUpstream (id: Path): Boolean = site.isDefined && site.get.isUpstream(id)
 
-  /**
+  override protected def handleConnectionLoss (remoteAddress: InetSocketAddress, cause: Try[Done]): Unit = {
+    remoteNodes.get(remoteAddress) match {
+      case Some(remoteId) =>
+        publishData(NodeReachabilityChange(remoteId,false))
+        remoteNodes = remoteNodes - remoteAddress
+      case None =>
+        warning(s"ignoring connection loss to un-registered remote address: $remoteAddress")
+    }
+
+    super.handleConnectionLoss(remoteAddress,cause) // call this no matter what since super type does its own cleanup
+  }
+
+  protected def isNodeReachable (id: Path): Boolean = {
+    // TODO - we might turn this into a set for O(1) lookup
+    remoteNodes.exists( e=> e._2 == id)
+  }
+
+    /**
     * this is what we receive through the websocket (from connected providers)
     * BEWARE - this is executed in a different (akka-http) thread. Use incomingWriter for sync responses
     */
@@ -138,48 +158,18 @@ class NodeServerRoute(val parent: ParentActor, val config: Config) extends PushW
     */
   def handleNodeState (remoteAddr: InetSocketAddress, ns: NodeState): Iterable[Message] = {
     val remoteNodeId = ns.nodeId
-    remoteNodes = remoteNodes + (remoteAddr -> remoteNodeId)
+    remoteNodes = remoteNodes + (remoteAddr -> remoteNodeId)  // assoc should not change until connection is lost
+    publishData(NodeReachabilityChange(remoteNodeId,true)) // let other actors know remote node is online
 
-    withSomeOrElse(site, Seq.empty[Message]){ site=>
-      info(s"processing remote NodeState: $ns")
+    def sendTo (col: Column): Boolean = col.updateFilter.sendToDownStream(remoteNodeId)
+    def receiveFrom (col: Column): Boolean = col.updateFilter.receiveFromDownStream(remoteNodeId,col.node)
 
-      if (site.isKnownColumn(remoteNodeId)) {
-        var updateRequests = Seq.empty[(Path,DateTime)]
-        var response = Seq.empty[Message]
+    withSomeOrElse(site, Seq.empty[Message]){ node=>
+      info(s"processing remote NodeState: \n$ns")
 
-        ns.columnDataDates.foreach { e=>
-          val (colId, colDate) = e
-
-          columnData.get(colId) match {
-            case Some(cd) =>
-              val col = site.columnList(colId)  // if we have a CD it also means we have a column for it
-
-              if (colDate < cd.date) { // our data is newer - send change if we send this col to this downstream node
-                if (col.updateFilter.sendToDownStream(remoteNodeId)) {
-                  // we send this even if there are no changes, which indicates to remote that their cd.date is outdated
-                  val cdc = ColumnDataChange(colId, site.id, cd.date, cd.changesSince(colDate))
-                  response = TextMessage.Strict(incomingWriter.toJson(cdc)) +: response
-                }
-
-              } else if (colDate > cd.date) { // remote data is newer - store for request if we receive this col from this downstream node
-                if (col.updateFilter.receiveFromDownStream(remoteNodeId,col.node)) {
-                  updateRequests = (colId -> cd.date) +: updateRequests
-                }
-              }
-
-            case None => // we don't know this remote column
-              warning(s"no data for column ${e._1}")
-          }
-        }
-
-        // TODO - what about CDs we export to remote that are not in the NS? (indicates outdated CLs)
-
-        if (updateRequests.nonEmpty) {
-          // send own NS first so that we get the remote data before processing our changes
-          TextMessage.Strict(incomingWriter.toJson(new NodeState(site,updateRequests))) +: response
-        } else {
-          response
-        }.reverse
+      if (node.isKnownColumn(remoteNodeId)) {
+        val nodeStateResponder = new NodeStateResponder(node,columnData,this, sendTo, receiveFrom)
+        nodeStateResponder.getNodeStateReplies(ns).map( o=> TextMessage.Strict(incomingWriter.toJson(o)))
 
       } else {
         warning(s"rejecting NodeState from unknown node $remoteNodeId")
@@ -212,15 +202,16 @@ class NodeServerRoute(val parent: ParentActor, val config: Config) extends PushW
   }
 
   def isAcceptedChange(senderNodeId: Path, cdc: ColumnDataChange): Boolean = {
-    withSomeOrElse(site,false) { site=>
+    withSomeOrElse(site,false) { node=>
       val targetId = cdc.columnId
 
       if (cdc.changeNodeId != senderNodeId) {
         // TODO - what about nodes that report several columns?
         false
       } else {
-        withSomeOrElse(site.columnList.get(targetId), false) { col =>
-          col.updateFilter.receiveFromDownStream(senderNodeId, targetId) && !isOutdatedChange(cdc)
+        withSomeOrElse(node.columnList.get(targetId), false) { col =>
+          //col.updateFilter.receiveFromDownStream(senderNodeId, targetId) && !isOutdatedChange(cdc)
+          col.updateFilter.receiveFromDownStream(senderNodeId, targetId)
         }
       }
     }

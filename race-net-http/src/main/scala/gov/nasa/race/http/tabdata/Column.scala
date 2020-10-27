@@ -43,7 +43,7 @@ case class Column (id: Path, info: String, updateFilter: UpdateFilter, node: Pat
               extends PathObject with JsonSerializable {
   import Column._
 
-  def this (id: Path) = this(id,s"this is column $id", UpdateFilter.defaultFilter, id, Seq.empty[String], None)
+  def this (id: Path) = this(id,s"this is column $id", UpdateFilter.sendUpReceiveLocalUp, id, Seq.empty[String], None)
 
   private def _serializeTo (w: JsonWriter, listId: Path): Unit = {
     w.writeObject { w=>
@@ -69,7 +69,7 @@ trait ColumnParser extends JsonPullParser with UpdateFilterParser with AttrsPars
   def parseColumn (listId: Path): Column = {
     val id = listId.resolve(UnixPath.intern(readQuotedMember(_id_))).normalize
     val info = readQuotedMember(_info_).toString
-    val updateFilter = parseUpdateFilter(listId)
+    val updateFilter = parseUpdateFilter(Some(listId))
     val nodeId = readOptionalQuotedMember(_node_) match {
       case Some(ps) => listId.resolve(UnixPath.intern(ps)).normalize
       case None => id
@@ -120,11 +120,22 @@ case class ColumnList (id: Path, info: String, date: DateTime, columns: ListMap[
   def foreach[U] (f: ((Path,Column))=>U): Unit = columns.foreach(f)
 
   def orderedEntries[T] (map: collection.Map[Path,T]): Seq[(Path,T)] =  {
-    columns.foldLeft(Seq.empty[(Path,T)]) { (acc, e) =>
+    columns.foldRight(Seq.empty[(Path,T)]) { (e,acc) =>
       map.get(e._1) match {
-        case Some(t) => acc :+ (e._1, t)
+        case Some(t) => (e._1, t) +: acc
         case None => acc // provider not in map
       }
+    }
+  }
+
+  def filteredEntries[T] (map: collection.Map[Path,T])(f: Column=>Boolean): Seq[(Path,T)] =  {
+    columns.foldLeft(Seq.empty[(Path,T)]) { (acc, e) =>
+      if (f(e._2)) {
+        map.get(e._1) match {
+          case Some(t) => acc :+ (e._1, t)
+          case None => acc // provider not in map
+        }
+      } else acc
     }
   }
 

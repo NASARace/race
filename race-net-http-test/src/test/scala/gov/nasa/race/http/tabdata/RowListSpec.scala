@@ -45,7 +45,7 @@ class RowListSpec extends AnyFlatSpec with RaceSpec {
           println(s"  '$id': $row")
         }
 
-        assert( list.rows.size == 13)
+        assert( list.rows.size == 14)
 
         val w = new JsonWriter
         w.format(true)
