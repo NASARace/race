@@ -93,19 +93,26 @@ class NodeServerRoute(val parent: ParentActor, val config: Config) extends PushW
     }
   }
 
+  // TODO - this is not very efficient if we don't filter rows. We might move the filtering at least into the serializer
   def pushChange (cdc: ColumnDataChange, writer: JsonWriter): Unit = {
-    ifSome(site) { site=>
+    ifSome(site) { node=>
       val targetId = cdc.columnId
 
-      ifSome( site.columnList.get(targetId)) { col=>
-        val m = TextMessage.Strict(writer.toJson(cdc))
-
-        // this only sends to connected nodes to which we export this column
+      ifSome( node.columnList.get(targetId)) { col=>
         remoteNodes.foreach { e=>
           val (remoteAddr,remoteId) = e
           if (cdc.changeNodeId != remoteId) { // we don't send it back to where it came from
             if (col.updateFilter.sendToDownStream(remoteId)) {
-              pushTo(remoteAddr, m)
+              val filteredCdc = cdc.filter { r=>
+                node.rowList.get(r) match {
+                  case Some(row) => row.updateFilter.sendToDownStream(remoteId)
+                  case None => false // unknown row
+                }
+              }
+              if (filteredCdc.nonEmpty) {
+                val m = TextMessage.Strict(writer.toJson(filteredCdc))
+                pushTo(remoteAddr, m)
+              }
             }
           }
         }
@@ -161,14 +168,17 @@ class NodeServerRoute(val parent: ParentActor, val config: Config) extends PushW
     remoteNodes = remoteNodes + (remoteAddr -> remoteNodeId)  // assoc should not change until connection is lost
     publishData(NodeReachabilityChange(remoteNodeId,true)) // let other actors know remote node is online
 
-    def sendTo (col: Column): Boolean = col.updateFilter.sendToDownStream(remoteNodeId)
-    def receiveFrom (col: Column): Boolean = col.updateFilter.receiveFromDownStream(remoteNodeId,col.node)
+    def sendColumn (col: Column): Boolean = col.updateFilter.sendToDownStream(remoteNodeId)
+    def receiveColumn (col: Column): Boolean = col.updateFilter.receiveFromDownStream(remoteNodeId,col.node)
+    def sendRow (col: Column, row: AnyRow): Boolean = row.updateFilter.sendToDownStream(remoteNodeId)
+    def receiveRow (col: Column, row: AnyRow): Boolean = row.updateFilter.receiveFromDownStream(remoteNodeId, col.node)
 
     withSomeOrElse(site, Seq.empty[Message]){ node=>
       info(s"processing remote NodeState: \n$ns")
 
       if (node.isKnownColumn(remoteNodeId)) {
-        val nodeStateResponder = new NodeStateResponder(node,columnData,this, sendTo, receiveFrom)
+        val nodeStateResponder = new NodeStateResponder(node,columnData,this,
+                                                        sendColumn, receiveColumn, sendRow, receiveRow)
         nodeStateResponder.getNodeStateReplies(ns).map( o=> TextMessage.Strict(incomingWriter.toJson(o)))
 
       } else {
@@ -179,19 +189,26 @@ class NodeServerRoute(val parent: ParentActor, val config: Config) extends PushW
   }
 
   def handleColumnDataChange (remoteAddr: InetSocketAddress, m: Message, cdc: ColumnDataChange): Iterable[Message] = {
-    remoteNodes.get(remoteAddr) match {
-      case Some(senderNode) =>
-        if (isAcceptedChange(senderNode,cdc)) {
-          //pushToFiltered (m) (_ != remoteAddr) // send original change to all other providers
-          publishData (cdc) // update our own service actor (which might result in receiveData callbacks if we add field evals)
-
-        } else {
-          warning (s"rejected change: $cdc")
-        }
-      case None =>
-        warning(s"ignoring change from unknown sender $remoteAddr: $cdc")
+    for (node <- site) {
+      remoteNodes.get(remoteAddr) match {
+        case Some(senderNode) =>
+          node.columnList.get(cdc.changeNodeId) match {
+            case Some(col) =>
+              if (col.updateFilter.receiveFromDownStream(cdc.changeNodeId, cdc.columnId)) {
+                val filteredCdc = cdc.filter { r=>
+                  node.rowList.get(r) match {
+                    case Some(row) => row.updateFilter.receiveFromDownStream(cdc.changeNodeId, cdc.columnId)
+                    case None => false // unknown row
+                  }
+                }
+                if (filteredCdc.nonEmpty) publishData(filteredCdc)
+              }
+            case None => warning(s"change for unknown column ${cdc.columnId} ignored")
+          }
+        case None => warning(s"ignoring change from unknown sender $remoteAddr: $cdc")
+      }
     }
-    Nil // no sync reply
+    Nil // we don't reply anything here
   }
 
   def isOutdatedChange (cdc: ColumnDataChange): Boolean = {

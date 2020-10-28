@@ -175,7 +175,7 @@ class UserServerRoute(parent: ParentActor, config: Config) extends SiteRoute(par
         val msg = TextMessage(writer.toJson(rl))
         rowListMessage = Some(msg)
         push(msg)
-        if (hasConnections) info(s"device server pushing new field catalog '${rl.id}'")
+        if (hasConnections) info(s"user server pushing new field catalog '${rl.id}'")
 
       case cl: ColumnList =>
         site = site.map( _.copy(columnList=cl))
@@ -183,13 +183,13 @@ class UserServerRoute(parent: ParentActor, config: Config) extends SiteRoute(par
         val msg = TextMessage(writer.toJson(cl))
         columnListMessage = Some(msg)
         push(msg)
-        if (hasConnections) info(s"device server pushing new provider catalog '${cl.id}'")
+        if (hasConnections) info(s"user server pushing new provider catalog '${cl.id}'")
 
       case cd: ColumnData =>
         val msg = TextMessage(writer.toJson(cd))
         columnDataMessages.put( cd.id, msg)
         push(msg)
-        if (hasConnections) info(s"device server pushing new provider data for '${cd.id}'")
+        if (hasConnections) info(s"user server pushing new provider data for '${cd.id}'")
 
       case other => // ignore
     }

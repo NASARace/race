@@ -34,8 +34,11 @@ import scala.collection.mutable
   */
 class NodeStateResponder (node: Node, columnData: Map[Path,ColumnData],
                           logger: Loggable,
-                          sendTo: Column => Boolean,
-                          receiveFrom: Column => Boolean) {
+                          sendColumn: Column => Boolean,
+                          receiveColumn: Column => Boolean,
+                          sendRow: (Column,AnyRow) => Boolean,
+                          receiveRow: (Column,AnyRow) => Boolean
+                         ) {
 
   /**
     * the exported function for which we exist
@@ -48,8 +51,8 @@ class NodeStateResponder (node: Node, columnData: Map[Path,ColumnData],
       val locOutdated = mutable.Buffer.empty[(Path,Seq[RowDate])]
       val updates = mutable.Buffer.empty[(Path,Seq[Cell])]
 
-      processExternalColumnDates( node, remoteNodeId, ns.externalColumnDates, extOutdated, updates)
-      processLocalColumnDates( node, remoteNodeId, ns.localColumnDates, locOutdated, updates)
+      processExternalColumnDates( node, remoteNodeId, ns.readOnlyColumns, extOutdated, updates)
+      processLocalColumnDates( node, remoteNodeId, ns.readWriteColumns, locOutdated, updates)
 
       // TODO - what about CDs we export to remote that are not in the NS? (indicates outdated CLs)
 
@@ -81,12 +84,13 @@ class NodeStateResponder (node: Node, columnData: Map[Path,ColumnData],
           val col = node.columnList(colId)  // if we have a CD it also means we have a column for it
 
           if (colDate < cd.date) { // our data is newer
-            if (sendTo(col)) {
-              newerOwn += (colId -> cd.changesSince(colDate))
+            if (sendColumn(col)) {
+              val cells = cd.changesSince(colDate).filter( cell=> sendRow(col, node.rowList(cell._1)))
+              if (cells.nonEmpty) newerOwn += (colId -> cells)
             }
 
           } else if (colDate > cd.date) { // remote data is newer
-            if (receiveFrom(col)) {
+            if (receiveColumn(col)) {
               outdatedOwn += (colId -> cd.date)
             }
           }
@@ -106,13 +110,13 @@ class NodeStateResponder (node: Node, columnData: Map[Path,ColumnData],
         case Some(cd) =>
           val col = node.columnList(colId) // if we have a CD it also means we have a column for it
 
-          if (sendTo(col)) {
-            val noc = cd.newerOwnCells(rowDates, addMissing = true)
+          if (sendColumn(col)) {
+            val noc = cd.newerOwnCells(rowDates, addMissing = true).filter( cell=> sendRow(col,node.rowList(cell._1)))
             if (noc.nonEmpty) newerOwn += (colId -> noc)
           }
 
-          if (receiveFrom(col)) {
-            val ooc = cd.outdatedOwnCells(rowDates)
+          if (receiveColumn(col)) {
+            val ooc = cd.outdatedOwnCells(rowDates).filter( rd=> receiveRow(col,node.rowList(rd._1)))
             if (ooc.nonEmpty) outdatedOwn += (colId -> ooc)
           }
 

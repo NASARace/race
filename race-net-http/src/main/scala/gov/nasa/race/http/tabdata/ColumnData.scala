@@ -278,8 +278,10 @@ case class ColumnDataChange(columnId: Path,
     }
   }
 
+  // TODO - this is not very efficient for large change sets
   def filter (f: Path=>Boolean): ColumnDataChange = copy(cells = cells.filter( cell=> f(cell._1)))
 
+  def size: Int = cells.size
   def nonEmpty: Boolean = cells.nonEmpty
 }
 

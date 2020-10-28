@@ -139,7 +139,7 @@ class UpstreamConnectorActor(override val config: Config) extends WSAdapterActor
   override def processIncomingMessage (msg: Message): Unit = {
     reader.read(msg) match {
       case Some(ns: NodeState) => processUpstreamNodeState(ns)
-      case Some(cdc: ColumnDataChange) => publishFiltered(cdc)
+      case Some(cdc: ColumnDataChange) => processUpstreamColumnDataChange(cdc)
       case Some(pong: Pong) => processUpstreamPong(pong)
       case Some(other) => warning(s"ignoring incoming upstream message $other")
       case None => // ignore
@@ -167,24 +167,61 @@ class UpstreamConnectorActor(override val config: Config) extends WSAdapterActor
     }
   }
 
+  def processUpstreamColumnDataChange (rawCdc: ColumnDataChange): Unit = {
+    for (node <- site; upstreamId <- node.upstreamId) {
+      node.columnList.get(rawCdc.columnId) match {
+        case Some(col) =>
+          if (col.updateFilter.receiveFromUpStream(upstreamId)) {
+            val cdc = rawCdc.filter { r =>
+              node.rowList.get(r) match {
+                case Some(row) => row.updateFilter.receiveFromUpStream(upstreamId)
+                case None => false
+              }
+            }
+            if (cdc.nonEmpty) publishFiltered(cdc)
+          }
+        case None => // ignore
+      }
+    }
+  }
+
   /**
     * this is the upstream response to our own NodeState
     */
   def processUpstreamNodeState (ns: NodeState): Unit = {
-    for (site <- site; upstreamId <- site.upstreamId) {
+    for (node <- site; upstreamId <- node.upstreamId) {
       if (ns.nodeId == upstreamId) {
         isRegistered = true
         startScheduler // now that we are registered with upstream we can schedule Pings
         publish(NodeReachabilityChange(upstreamId,true))
 
-        def sendTo (col: Column): Boolean = col.updateFilter.sendToUpStream(ns.nodeId)
-        def receiveFrom (col: Column): Boolean = col.updateFilter.receiveFromUpStream(ns.nodeId)
+        def sendColumn (col: Column): Boolean = col.updateFilter.sendToUpStream(upstreamId)
+        def receiveColumn (col: Column): Boolean = col.updateFilter.receiveFromUpStream(upstreamId)
+        def sendRow (col: Column, row: AnyRow) = row.updateFilter.sendToUpStream(upstreamId)
+        def receiveRow (col: Column, row: AnyRow): Boolean = row.updateFilter.receiveFromUpStream(upstreamId)
 
-        val nodeStateResponder = new NodeStateResponder(site,columnData,this, sendTo, receiveFrom)
+        val nodeStateResponder = new NodeStateResponder(node,columnData,this,
+                                                        sendColumn, receiveColumn, sendRow, receiveRow)
         nodeStateResponder.getNodeStateReplies(ns).foreach( processOutgoingMessage)
 
       } else {
         warning(s"ignoring NodeState of non-upstream node ${ns.nodeId}")
+      }
+    }
+  }
+
+  def processUpstreamPong (pong: Pong): Unit = {
+    for (node <- site; upstreamId <- node.upstreamId) {
+      if (isConnected) {
+        val ping = pong.ping
+        if (ping.request != nPings) warning(s"out of order pong: $pong")
+        if (ping.sender != node.id) warning(s"not our request: $pong")
+        if (ping.receiver != upstreamId) warning( s"not our upstream: $pong")
+        lastPongTime = pong.date
+
+        val dt = pong.date - ping.date
+        if (dt.toMillis < 0) warning(s"negative round trip time: $pong")
+        info(s"ping response time from upstream: $dt")
       }
     }
   }
@@ -209,19 +246,16 @@ class UpstreamConnectorActor(override val config: Config) extends WSAdapterActor
     }
   }
 
-  def processUpstreamPong (pong: Pong): Unit = {
+  def sendColumnDataChange (rawCdc: ColumnDataChange): Unit = {
     for (node <- site; upstreamId <- node.upstreamId) {
-      if (isConnected) {
-        val ping = pong.ping
-        if (ping.request != nPings) warning(s"out of order pong: $pong")
-        if (ping.sender != node.id) warning(s"not our request: $pong")
-        if (ping.receiver != upstreamId) warning( s"not our upstream: $pong")
-        lastPongTime = pong.date
-
-        val dt = pong.date - ping.date
-        if (dt.toMillis < 0) warning(s"negative round trip time: $pong")
-        info(s"ping response time from upstream: $dt")
+      val cdc = rawCdc.filter { r =>
+        node.rowList.get(r) match {
+          case Some(row) => row.updateFilter.sendToUpStream(upstreamId)
+          case None => false
+        }
       }
+
+      if (cdc.nonEmpty) processOutgoingMessage(cdc)
     }
   }
 
@@ -243,7 +277,7 @@ class UpstreamConnectorActor(override val config: Config) extends WSAdapterActor
       columnData = columnData + (cd.id -> cd)
 
     case BusEvent(_,cdc: ColumnDataChange,_) =>
-      processOutgoingMessage(cdc)
+      sendColumnDataChange(cdc)
 
     case RetryConnect =>
       if (connect) sendOwnNodeState

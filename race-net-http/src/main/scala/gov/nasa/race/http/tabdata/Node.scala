@@ -62,8 +62,8 @@ object NodeState {
   val _rowListDate_ : ConstAsciiSlice = asc("rowListDate")
   val _columnListId_ : ConstAsciiSlice = asc("columnListId")
   val _columnListDate_ : ConstAsciiSlice = asc("columnListDate")
-  val _externalColumnDates_ : ConstAsciiSlice = asc("externalColumnDates")
-  val _localColumnDates_ : ConstAsciiSlice = asc("localColumnDates")
+  val _readOnlyColumns_ : ConstAsciiSlice = asc("readOnlyColumns")
+  val _readWriteColumns_ : ConstAsciiSlice = asc("readWriteColumns")
 }
 
 /**
@@ -76,8 +76,8 @@ object NodeState {
 case class NodeState(nodeId: Path,
                      rowListId: Path, rowListDate: DateTime,
                      columnListId: Path, columnListDate: DateTime,
-                     externalColumnDates: Seq[ColumnDate], // for external columns we only need the CD date
-                     localColumnDates: Seq[(Path,Seq[RowDate])] // for local columns we need the CD row dates
+                     readOnlyColumns: Seq[ColumnDate], // for external columns we only need the CD date
+                     readWriteColumns: Seq[(Path,Seq[RowDate])] // for local columns we need the CD row dates
                      ) extends JsonSerializable {
   import NodeState._
 
@@ -117,15 +117,15 @@ case class NodeState(nodeId: Path,
         .writeDateTimeMember(_columnListDate_, columnListDate)
 
         // "externalColumns": { "<colId>": <date>, ... }
-        .writeMemberObject(_externalColumnDates_) { w =>
-          externalColumnDates.foreach { e =>
+        .writeMemberObject(_readOnlyColumns_) { w =>
+          readOnlyColumns.foreach { e =>
             w.writeDateTimeMember(e._1.toString, e._2)
           }
         }
 
         // "localColumns": { "<colId>": { "<rowId>": <date>, ... } }
-        .writeMemberObject(_localColumnDates_) { w =>
-          localColumnDates.foreach { e=>
+        .writeMemberObject(_readWriteColumns_) { w =>
+          readWriteColumns.foreach { e=>
             val (colId,rowDates) = e
             w.writeMemberObject(colId.toString) { w=>
               rowDates.foreach { cvd =>
@@ -159,14 +159,14 @@ trait NodeStateParser extends JsonPullParser {
     val columnListDate = readDateTimeMember(_columnListDate_)
 
     // "externalColumns": { "<colId>": <date>, ... }
-    val externalColumnDates = readSomeNextObjectMemberInto[Path,DateTime, mutable.Buffer[(Path, DateTime)]](_externalColumnDates_, mutable.Buffer.empty) {
+    val externalColumnDates = readSomeNextObjectMemberInto[Path,DateTime, mutable.Buffer[(Path, DateTime)]](_readOnlyColumns_, mutable.Buffer.empty) {
       val columnDataDate = readDateTime()
       val columnId = UnixPath.intern(member)
       Some( (columnId -> columnDataDate) )
     }.toSeq
 
     // "localColumns": { "<colId>": { "<rowId>": <date>, ... } }
-    val localColumnDates = readSomeNextObjectMemberInto[Path,Seq[PathDate], mutable.Buffer[(Path,Seq[RowDate])]](_localColumnDates_, mutable.Buffer.empty) {
+    val localColumnDates = readSomeNextObjectMemberInto[Path,Seq[PathDate], mutable.Buffer[(Path,Seq[RowDate])]](_readWriteColumns_, mutable.Buffer.empty) {
       val columnId = UnixPath.intern(readMemberName())
       val rowDates = readSomeCurrentObjectInto[Path,DateTime, mutable.Buffer[PathDate]](mutable.Buffer.empty) {
         val rowDataDate = readDateTime()

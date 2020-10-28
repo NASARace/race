@@ -63,8 +63,8 @@ class NodeStateSpec extends AnyFlatSpec with RaceSpec {
     }
     println(ns)
     assert(ns.nodeId == UnixPath("/providers/region1/provider_2"))
-    assert(ns.externalColumnDates.size == 3)
-    assert(ns.localColumnDates.size == 2)
+    assert(ns.readOnlyColumns.size == 3)
+    assert(ns.readWriteColumns.size == 2)
     println("Ok.")
   }
 }
