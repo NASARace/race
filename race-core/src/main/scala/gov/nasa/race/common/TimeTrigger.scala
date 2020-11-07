@@ -27,9 +27,12 @@ object TimeTrigger {
 
   def apply (spec: CharSequence): TimeTrigger = {
     spec match {
-      case "H" => new HourlyTrigger()
-      case "m" => new MinutelyTrigger()
-      case "s" => new SecondlyTrigger()
+      case "H" => new HourlyTrigger()  // every hour
+      case "m" => new MinutelyTrigger() // every minute
+      case "s" => new SecondlyTrigger() // every second
+      case "<never>" => NoTrigger  // never triggered
+      case "<always>" => AlwaysTrigger // triggered on each check
+
       case DateTimeUtils.hhmmssRE(hh,mm,ss) => new TimeOfDayTrigger(HMS(hh.toInt, mm.toInt, ss.toInt))
       case _ => new SinceTrigger( Milliseconds(DateTimeUtils.durationMillis(spec).toInt))
     }
@@ -122,7 +125,16 @@ class SecondlyTrigger (nSeconds: Int = 1) extends SinceTrigger(Time.Seconds(nSec
 object NoTrigger extends TimeTrigger {
   def checkFiring(date: DateTime): Boolean = false
   override def armCheck (startDate: DateTime): Unit = {}
-  def toSpecString: String = ""
+  def toSpecString: String = "<never>"
+}
+
+/**
+  * a singleton TimeTrigger that always fires if it is armed
+  */
+object AlwaysTrigger extends TimeTrigger {
+  def checkFiring(date: DateTime): Boolean = armed
+  override def armCheck (startDate: DateTime): Unit = { armed = true }
+  def toSpecString: String = "<always>"
 }
 
 // .. TODO add DayTrigger, DayOfMonthTrigger and more

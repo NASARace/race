@@ -95,7 +95,7 @@ trait TaggedArchiveWriter extends ArchiveWriter {
   protected def writeEntryHeader(date: DateTime, length: Int): Unit = {
     oStream.write(LF)
     oStream.write(SOH)
-    writeHex8(date.timeSince(refDate).toMillis)
+    writeHex8(date.timeSince(refDate).toMillis.toInt)  // TODO - change to Hex16 (but don't break existing archives)
     oStream.write(FS)
     writeHex8(length)
     oStream.write(EOH)

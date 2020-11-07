@@ -55,6 +55,7 @@ package object core {
   case class ChildNode(actorRef: ActorRef, children: Set[ChildNode])
 
   //--- logging utilities - use this to avoid superfluous string interpolation
+  // NOTE - these do not work per object (actor etc.), only per system
   def debug(msg: => String)(implicit log: LoggingAdapter): Unit = if (log.isDebugEnabled) log.debug(msg)
   def info(msg: => String)(implicit log: LoggingAdapter): Unit = if (log.isInfoEnabled) log.info(msg)
   def warning(msg: => String)(implicit log: LoggingAdapter): Unit = if (log.isWarningEnabled) log.warning(msg)

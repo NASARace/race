@@ -19,8 +19,7 @@ package gov.nasa.race.http.tabdata
 import java.nio.file.Path
 
 import gov.nasa.race.common.ConstAsciiSlice.asc
-import gov.nasa.race.common.JsonPullParser.{ObjectStart, UnQuotedValue}
-import gov.nasa.race.common.{ConstAsciiSlice, JsonParseException, JsonPullParser, JsonSerializable, JsonWriter, MutAsciiSlice, UTF8JsonPullParser, UnixPath}
+import gov.nasa.race.common.{ConstAsciiSlice, JsonParseException, JsonPullParser, JsonSerializable, JsonWriter, UTF8JsonPullParser, UnixPath}
 import gov.nasa.race.uom.DateTime
 
 import scala.collection.{immutable, mutable}
@@ -35,7 +34,7 @@ object ColumnData {
   val _value_ = asc("value")
   val _date_ = asc("date")
 }
-import ColumnData._
+import gov.nasa.race.http.tabdata.ColumnData._
 
 /**
   * instance type of a provider that holds field values
@@ -108,14 +107,14 @@ case class ColumnData (id: Path,
     rowList.orderedEntries(rows).foldRight(Seq.empty[RowDate]){ (e,acc)=> (e._1 -> e._2.date) +: acc }
   }
 
-  def changesSince (refDate: DateTime): Seq[Cell] = {
+  def changesSince (refDate: DateTime, prioritizeOwn: Boolean=false): Seq[Cell] = {
     rows.foldLeft(Seq.empty[(Path,CellValue)]) { (acc, e) =>
       val cv = e._2
-      if (cv.date > refDate) e +: acc else acc
+      if (cv.date > refDate || (prioritizeOwn && (cv.date == refDate))) e +: acc else acc
     }
   }
 
-  def newerOwnCells (otherCellDates: Seq[RowDate], addMissing: Boolean): Seq[Cell] = {
+  def newerOwnCells (otherCellDates: Seq[RowDate], addMissing: Boolean, prioritizeOwn: Boolean): Seq[Cell] = {
     val newerOwnCells = mutable.Buffer.empty[Cell]
     val seenRows = mutable.Set.empty[Path]
 
@@ -125,7 +124,7 @@ case class ColumnData (id: Path,
 
       rows.get(rowId) match {
         case Some(cv: CellValue) =>
-          if (cv.date > rowDate) {
+          if ((cv.date > rowDate) || (prioritizeOwn && (cv.date == rowDate))) {
             newerOwnCells += (rowId -> cv)
           }
         case None =>
@@ -144,14 +143,14 @@ case class ColumnData (id: Path,
     newerOwnCells.toSeq
   }
 
-  def outdatedOwnCells (otherCellDates: Seq[RowDate]): Seq[RowDate] = {
+  def outdatedOwnCells (otherCellDates: Seq[RowDate], prioritizeOther: Boolean): Seq[RowDate] = {
     val outdatedOwnCells = mutable.Buffer.empty[RowDate]
     otherCellDates.foreach { e =>
       val (rowId, rowDate) = e
 
       rows.get(rowId) match {
         case Some(cv: CellValue) =>
-          if (cv.date < rowDate) {
+          if ((cv.date < rowDate) || (prioritizeOther && (cv.date == rowDate))) {
             outdatedOwnCells += (rowId -> cv.date)
           }
         case None =>
@@ -327,3 +326,7 @@ trait ColumnDataChangeParser extends JsonPullParser {
   }
 }
 
+/**
+  * column-wise cell constraint violations
+  */
+case class ColumnDataConstraintViolations(columnId: Path, date: DateTime, cells: Seq[(Path,BooleanCellFormula)])

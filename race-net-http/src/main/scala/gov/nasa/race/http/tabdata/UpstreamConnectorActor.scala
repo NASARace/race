@@ -191,18 +191,20 @@ class UpstreamConnectorActor(override val config: Config) extends WSAdapterActor
   def processUpstreamNodeState (ns: NodeState): Unit = {
     for (node <- site; upstreamId <- node.upstreamId) {
       if (ns.nodeId == upstreamId) {
-        isRegistered = true
-        startScheduler // now that we are registered with upstream we can schedule Pings
-        publish(NodeReachabilityChange(upstreamId,true))
-
         def sendColumn (col: Column): Boolean = col.updateFilter.sendToUpStream(upstreamId)
         def receiveColumn (col: Column): Boolean = col.updateFilter.receiveFromUpStream(upstreamId)
         def sendRow (col: Column, row: AnyRow) = row.updateFilter.sendToUpStream(upstreamId)
         def receiveRow (col: Column, row: AnyRow): Boolean = row.updateFilter.receiveFromUpStream(upstreamId)
 
-        val nodeStateResponder = new NodeStateResponder(node,columnData,this,
-                                                        sendColumn, receiveColumn, sendRow, receiveRow)
-        nodeStateResponder.getNodeStateReplies(ns).foreach( processOutgoingMessage)
+        if (ns.readOnlyColumns.nonEmpty || ns.readWriteColumns.nonEmpty) {
+          val nodeStateResponder = new NodeStateResponder(node, columnData, this,
+                                                          sendColumn, receiveColumn, sendRow, receiveRow)
+          nodeStateResponder.getNodeStateReplies(ns).foreach(processOutgoingMessage)
+        }
+
+        isRegistered = true
+        startScheduler // now that we are registered with upstream we can schedule Pings
+        publish(NodeReachabilityChange(upstreamId,true)) // this indicates the sync with upstream is complete
 
       } else {
         warning(s"ignoring NodeState of non-upstream node ${ns.nodeId}")
@@ -219,7 +221,7 @@ class UpstreamConnectorActor(override val config: Config) extends WSAdapterActor
         if (ping.receiver != upstreamId) warning( s"not our upstream: $pong")
         lastPongTime = pong.date
 
-        val dt = pong.date - ping.date
+        val dt = pong.date.timeSince(ping.date)
         if (dt.toMillis < 0) warning(s"negative round trip time: $pong")
         info(s"ping response time from upstream: $dt")
       }

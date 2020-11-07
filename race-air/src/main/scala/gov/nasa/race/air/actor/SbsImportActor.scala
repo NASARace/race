@@ -94,7 +94,7 @@ class SbsDataAcquisitionThread(socket: Socket, bufLen: Int, dropDuration: Finite
   val checkAfter = dropAfter/2
   var lastDropCheck = UndefinedDateTime
 
-  socket.setSoTimeout(dropAfter.toMillis) // value of 0 means no timeout (indefinite wait)
+  socket.setSoTimeout(dropAfter.toMillis.toInt) // value of 0 means no timeout (indefinite wait)
 
   @inline final def recordLimit(bs: Array[Byte], len: Int): Int = {
     var i = len-1
@@ -111,7 +111,7 @@ class SbsDataAcquisitionThread(socket: Socket, bufLen: Int, dropDuration: Finite
 
     @inline def dropCheck: Unit = {
       val tNow = DateTime.now
-      if (tNow - lastDropCheck >= checkAfter) {
+      if (tNow.timeSince(lastDropCheck) >= checkAfter) {
         updater.dropStale(tNow,dropAfter)
         lastDropCheck = tNow
       }

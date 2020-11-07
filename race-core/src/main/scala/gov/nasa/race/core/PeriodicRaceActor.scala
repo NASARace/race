@@ -107,6 +107,8 @@ trait PeriodicRaceActor extends RaceActor {
     }
   }
 
+  def isSchedulerStarted: Boolean = schedule.isDefined
+
   override def commitSuicide (errMsg: String) = {
     stopScheduler
     super.commitSuicide(errMsg)

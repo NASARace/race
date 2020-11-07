@@ -37,7 +37,7 @@ import scala.reflect.{ClassTag, classTag}
  * message (remoting - esp. including making the Bus accessible for remote RaceActors),
  * Bus subscription, simulation start and actor termination
  */
-trait RaceActor extends Actor with ImplicitActorLogging with Loggable {
+trait RaceActor extends Actor with ImplicitActorLogging with ConfigLoggable {
   // this is the constructor config that has to be provided by the concrete RaceActor
   val config: Config
 
@@ -49,11 +49,10 @@ trait RaceActor extends Actor with ImplicitActorLogging with Loggable {
 
   // invariants that might cause allocation
   val name = self.path.name
-  val pathString = self.path.toString
   val level = self.path.elements.size - 2 // count out /user and master
 
   //--- convenience aliases
-  @inline final def system = context.system
+  @inline final def system: ActorSystem = context.system
   @inline final def scheduler = context.system.scheduler
 
   @inline final def bus = raceContext.bus
@@ -474,28 +473,6 @@ trait RaceActor extends Actor with ImplicitActorLogging with Loggable {
   def initTimeout = _getTimeout("init-timeout")
   def startTimeout = _getTimeout("start-timeout")
 
-  //--- per actor configurable logging
-
-  // note that we effectively bypass the Akka LoggingAdapter here since we want to use our own configuration
-  // Unfortunately, Akka does not easily support per-actor log levels.
-  // This might cause unwanted log events in case Akka system classes do the same trick, bypassing the LoggingAdapter and
-  // directly publishing to the event stream.
-  // note also that per-actor logging only works if the RaceActor APIs are used, not the LoggingAdapter (which does
-  // filtering on its own)
-  // TODO - this is brittle, it depends on Akka's logging internals and our own logger configuration (see RaceLogger)
-  import akka.event.Logging._
-
-  var logLevel: LogLevel = RaceLogger.getConfigLogLevel(system, config.getOptionalString("loglevel")).
-    getOrElse(RaceActorSystem(system).logLevel)
-
-  @inline final def isLoggingEnabled (testLevel: LogLevel) = testLevel <= logLevel
-
-  // note also this is somewhat redundant to the LogClient trait but we need a per-actor log level, not per-adapter
-
-  @inline final def debug(msg: => String): Unit = if (DebugLevel <= logLevel) system.eventStream.publish(Debug(pathString,getClass,msg))
-  @inline final def info(msg: => String): Unit = if (InfoLevel <= logLevel) system.eventStream.publish(Info(pathString,getClass,msg))
-  @inline final def warning(msg: => String): Unit = if (WarningLevel <= logLevel) system.eventStream.publish(Warning(pathString,getClass,msg))
-  @inline final def error(msg: => String): Unit = if (ErrorLevel <= logLevel) system.eventStream.publish(Error(pathString,getClass,msg))
 }
 
 

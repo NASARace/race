@@ -24,6 +24,7 @@ import akka.actor.{Actor, ActorRef, ActorSystem}
 import akka.dispatch.RequiresMessageQueue
 import akka.event.LoggerMessageQueueSemantics
 import akka.event.Logging._
+import com.typesafe.config.Config
 import gov.nasa.race.common.SocketServer
 import gov.nasa.race.util.ConsoleIO
 
@@ -254,11 +255,45 @@ class ConsoleAppender extends LogAppender with SocketServer {
 }
 
 /**
-  * something that can log messages
+  * something that can log messages in 4 different levels
   */
 trait Loggable {
   def debug(f: => String): Unit
   def info(f: => String): Unit
   def warning(f: => String): Unit
   def error(f: => String): Unit
+}
+
+/**
+  * a Loggable that can be configured
+  *
+  * note that we effectively bypass the Akka LoggingAdapter here since we want to use our own configuration
+  * Unfortunately, Akka does not easily support per-actor log levels.
+  * This might cause unwanted log events in case Akka system classes do the same trick, bypassing the LoggingAdapter and
+  * directly publishing to the event stream.
+  *
+  * note also that per-actor logging only works if the RaceActor APIs are used, not the LoggingAdapter (which does
+  * filtering on its own)
+  *
+  * TODO - this is brittle, it depends on Akka's logging internals and our own logger configuration (see RaceLogger)
+  */
+trait ConfigLoggable extends Loggable {
+  import akka.event.Logging._
+  import gov.nasa.race.config.ConfigUtils._
+
+  def config: Config
+  def system: ActorSystem
+  def name: String
+
+  var logLevel: LogLevel = RaceLogger.getConfigLogLevel(system, config.getOptionalString("loglevel")).
+    getOrElse(RaceActorSystem(system).logLevel)
+
+  @inline final def isLoggingEnabled (testLevel: LogLevel) = testLevel <= logLevel
+
+  // note also this is somewhat redundant to the LogClient trait but we need a per-actor log level, not per-adapter
+
+  @inline final def debug(msg: => String): Unit = if (DebugLevel <= logLevel) system.eventStream.publish(Debug(name,getClass,msg))
+  @inline final def info(msg: => String): Unit = if (InfoLevel <= logLevel) system.eventStream.publish(Info(name,getClass,msg))
+  @inline final def warning(msg: => String): Unit = if (WarningLevel <= logLevel) system.eventStream.publish(Warning(name,getClass,msg))
+  @inline final def error(msg: => String): Unit = if (ErrorLevel <= logLevel) system.eventStream.publish(Error(name,getClass,msg))
 }

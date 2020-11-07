@@ -91,6 +91,10 @@ export function language() {
   return navigator.language || navigator.languages[0];
 }
 
+export function swapClass (element, oldCls, newCls) {
+  element.classList.remove(oldCls);
+  element.classList.add(newCls);
+}
 
 
 //--- page content but not data related - used by other app modules

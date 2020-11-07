@@ -46,7 +46,7 @@ export function initTabData() {
      setData();
   }
 
-  ws = initWebSocket(handleMessage);
+  ws = initWebSocket(handleWsOpen, handleWsMessage, handleWsClose);
   utils.log("view initialized");
 }
 
@@ -723,8 +723,54 @@ export function clickRow (i) {
 
 //--- incoming messages
 
+function handleWsOpen (evt) {
+  var status = document.getElementById("status");
+  status.classList.add("ok");
+  status.value = "connected";
+}
+
+function handleWsClose (evt) {
+  var status = document.getElementById("status");
+  utils.swapClass(status,"ok","alert");
+  status.value = "disconnected";
+
+  checkForReconnect();
+}
+
+var maxReconnectAttempts = 15;
+var reconnectAttempt = 1;
+
+function checkForReconnect () {
+  if (reconnectAttempt >= maxReconnectAttempts) {
+    document.getElementById("status").value = "no server";
+    return;
+  } else {
+    document.getElementById("status").value = "server check " + reconnectAttempt;
+    reconnectAttempt += 1;
+  }
+
+  const req = new XMLHttpRequest();
+  const url = utils.parentOfPath(document.URL);
+  req.open("GET", url);
+  req.send();
+
+  //req.onerror = (e) => {
+  //  console.log("server unresponsive: " + JSON.stringify(e));
+  //}
+  console.log("trying to reconnect.. " + reconnectAttempt);
+
+  req.onreadystatechange = (e) => {
+    if (req.status == 200) {
+      console.log("reconnected - reloading document");
+      location.reload();
+    } else {
+      setTimeout(checkForReconnect, 5000);
+    }
+  }
+}
+
 // the websocket message handler (msg is the payload data object of the websocket message)
-function handleMessage(msg) {
+function handleWsMessage(msg) {
   //console.log(JSON.stringify(msg));
   var msgType = Object.keys(msg)[0];  // first member name
   //console.log(JSON.stringify(msg));
@@ -829,6 +875,7 @@ export function setRowBlurred (event) {
 
 export function setRowModified(event) {
   var input = event.target;
+
   if (!input.classList.contains("modified")){
     input.classList.add("modified");
 

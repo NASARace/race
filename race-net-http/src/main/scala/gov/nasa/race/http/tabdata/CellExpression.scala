@@ -87,8 +87,8 @@ class CellExpressionParser (columnList: ColumnList, rowList: RowList, funLib: Ce
   class CRBuffer (initCapacity: Int = 8) extends ArrayBuffer[AnyCellRef](initCapacity)
   class CEBuffer (initCapacity: Int = 8) extends ArrayBuffer[AnyCellExpression](initCapacity)
 
-  private var compiledColumn: Column = null
-  private var compiledRow: AnyRow = null
+  protected var compiledColumn: Column = null
+  protected var compiledRow: AnyRow = null
 
   private def _matchRows (rowSpec: String): Seq[Path] = {
     if (UnixPath.isCurrent(rowSpec)) {
@@ -232,7 +232,9 @@ class CellExpressionParser (columnList: ColumnList, rowList: RowList, funLib: Ce
       case Success(ce: AnyCellExpression,_) =>
         if (row.cellType == ce.cellType) {
           ce.asInstanceOf[CellExpression[T]]
-        } else sys.error(s"formula has wrong expression type (expected ${row.cellType.getSimpleName} found ${ce.cellType.getSimpleName})")
+        } else {
+          sys.error(s"formula has wrong expression type (expected ${row.cellType.getSimpleName} found ${ce.cellType.getSimpleName})")
+        }
       case Failure(msg,_) => sys.error(s"formula '$src' failed to compile: $msg")
       case Error(msg,_) => sys.error(s"error compiling formula '$src': $msg")
       case other => sys.error(s"unexpected parse result: $other")

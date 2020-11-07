@@ -431,12 +431,11 @@ class DateTime protected[uom](val millis: Long) extends AnyVal
   def atLastSecond: DateTime = new DateTime( millis - (millis % 1000))
 
   // unfortunately we can't overload '-' because of erasure
-  @inline def timeUntil(d: DateTime): Time = new Time((d.millis - millis).toInt)
+  @inline def timeUntil(d: DateTime): Time = new Time((d.millis - millis))
   def :-> (d: DateTime): Time = timeUntil(d)
 
-  @inline def timeSince(d: DateTime): Time = new Time((millis - d.millis).toInt)
-  def <-: (d: DateTime): Time = timeSince(d)
-  @inline def - (d: DateTime): Time = new Time((millis - d.millis).toInt)
+  @inline def timeSince(d: DateTime): Time = new Time((millis - d.millis))
+  @inline def <-: (d: DateTime): Time = timeSince(d)
 
   @inline def + (t: Time): DateTime = new DateTime(millis + t.millis)
   @inline def - (t: Time): DateTime = new DateTime(millis - t.millis)

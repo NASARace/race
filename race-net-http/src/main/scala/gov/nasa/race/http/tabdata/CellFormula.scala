@@ -20,6 +20,7 @@ import java.nio.file.Path
 
 import gov.nasa.race.common.ConstAsciiSlice.asc
 import gov.nasa.race.common.{JsonParseException, TimeTrigger, UTF8JsonPullParser, UnixPath}
+import gov.nasa.race.http.tabdata.FormulaList.FormulaSpecs
 import gov.nasa.race.uom.DateTime
 
 import scala.collection.immutable.ListMap
@@ -52,6 +53,10 @@ class CellFormula [+T <: CellValue](val src: String, val triggerSrc: Option[Stri
     dependencies.exists(ctx.cell(_).date > curDate)
   }
 
+  def hasNewerDependencies (ctx: EvalContext, date: DateTime): Boolean = {
+    dependencies.exists(ctx.cell(_).date > date)
+  }
+
   //--- time triggered formulas
 
   def hasTimeTrigger: Boolean = trigger.isDefined
@@ -68,9 +73,8 @@ class CellFormula [+T <: CellValue](val src: String, val triggerSrc: Option[Stri
 /**
   * a named collection of (columnPattern -> (rowPattern -> cellFormula)) specs
   */
-class FormulaList (val id: Path, val info: String, val date: DateTime, val columnListId: Path, val rowListId: Path,
-                   val formulaSpecs: Seq[(String,Seq[(String,(String,Option[String]))])]
-                  ) {
+class CellValueFormulaList(val id: Path, val info: String, val date: DateTime, val columnListId: Path, val rowListId: Path,
+                           val formulaSpecs: Seq[(String,Seq[(String,(String,Option[String]))])] ) {
 
   // an ordered map of ordered maps: { col -> { row -> formula } }
   protected var columnFormulas: ListMap[Path,ListMap[Path,AnyCellFormula]] = ListMap.empty
@@ -90,7 +94,7 @@ class FormulaList (val id: Path, val info: String, val date: DateTime, val colum
       if (cols.nonEmpty) {
         cols.foreach { col =>
           var tts = Seq.empty[(AnyRow,AnyCellFormula)]
-          var forms = ListMap.empty[Path,AnyCellFormula]
+          var formulas = ListMap.empty[Path,AnyCellFormula]
 
           rowFormulaSrcs.foreach { e =>
             val rowSpec = rowList.resolvePathSpec(e._1)
@@ -102,7 +106,7 @@ class FormulaList (val id: Path, val info: String, val date: DateTime, val colum
                 val ce = compiler.compile(col,row,src)
                 val cf = new CellFormula(src,ts,ce)
 
-                forms = forms + (row.id -> cf)
+                formulas = formulas + (row.id -> cf)
                 if (cf.hasTimeTrigger) {
                    tts = tts :+ (row,cf)
                 }
@@ -116,7 +120,7 @@ class FormulaList (val id: Path, val info: String, val date: DateTime, val colum
           }
 
           //forms.foreach { e=> println(s"${e._1} : ${e._2.ce}")}
-          columnFormulas = columnFormulas + (col.id -> forms)
+          columnFormulas = columnFormulas + (col.id -> formulas)
         }
       }
     }
@@ -160,15 +164,19 @@ object FormulaList {
   val _columns_   = asc("columns")
   val _src_       = asc("src")
   val _trigger_   = asc("trigger")
+
+  type FormulaSpecs = (String , Seq[(String , (String,Option[String]))])
 }
 
 /**
   * a parser for json representations of CellFormulaList instances
   */
-class FormulaListParser extends UTF8JsonPullParser {
+trait FormulaListParser[T] extends UTF8JsonPullParser {
   import FormulaList._
 
-  def parse (buf: Array[Byte]): Option[FormulaList] = {
+  def createList (id: Path, info: String, date: DateTime, columnListId: Path, rowListId: Path, formulaSpecs: Seq[FormulaSpecs]): T
+
+  def parse (buf: Array[Byte]): Option[T] = {
     initialize(buf)
 
     try {
@@ -180,7 +188,7 @@ class FormulaListParser extends UTF8JsonPullParser {
         val columnListId = UnixPath.intern(readQuotedMember(_columnListId_))
         val rowListId = UnixPath.intern(readQuotedMember(_rowListId_))
 
-        val formulaSpecs = readNextObjectMemberInto(_columns_, ArrayBuffer.empty[(String,Seq[(String,(String,Option[String]))])]) {
+        val formulaSpecs = readNextObjectMemberInto(_columns_, ArrayBuffer.empty[FormulaSpecs]) {
           val colSpec = readObjectMemberName().toString
           val formulas = readCurrentObjectInto(ArrayBuffer.empty[(String,(String,Option[String]))]) {
             val rowSpec = readObjectMemberName().toString
@@ -193,7 +201,7 @@ class FormulaListParser extends UTF8JsonPullParser {
           (colSpec,formulas)
         }.toSeq
 
-        Some(new FormulaList(id,info,date, columnListId, rowListId, formulaSpecs))
+        Some(createList(id,info,date, columnListId, rowListId, formulaSpecs))
       }
     } catch {
       case x: JsonParseException =>
@@ -201,5 +209,11 @@ class FormulaListParser extends UTF8JsonPullParser {
         warning(s"malformed rowList: ${x.getMessage}")
         None
     }
+  }
+}
+
+class CellValueFormulaListParser extends FormulaListParser[CellValueFormulaList] {
+  def createList (id: Path, info: String, date: DateTime, columnListId: Path, rowListId: Path, formulaSpecs: Seq[FormulaSpecs]) = {
+    new CellValueFormulaList(id,info,date, columnListId, rowListId, formulaSpecs)
   }
 }

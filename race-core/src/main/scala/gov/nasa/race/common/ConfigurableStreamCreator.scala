@@ -42,7 +42,7 @@ object ConfigurableStreamCreator {
     }
   }
 
-  def createOutputStream (conf: Config, defaultPathName:String = DefaultPathName): OutputStream = {
+  def createOutputStream (conf: Config, key: String, defaultPathName:String): OutputStream = {
     var pathName = conf.getStringOrElse(PathNameKey,defaultPathName)
     val appendMode = conf.getBooleanOrElse("append", false)
     val bufSize = conf.getIntOrElse(BufSizeKey, 4096)
@@ -56,6 +56,10 @@ object ConfigurableStreamCreator {
 
     val fs = new FileOutputStream(file, appendMode)
     if (compressedMode) new GZIPOutputStream(fs,bufSize) else new BufferedOutputStream( fs, bufSize)
+  }
+
+  def createOutputStream (conf: Config, defaultPathName:String = DefaultPathName): OutputStream = {
+    createOutputStream(conf, PathNameKey, defaultPathName)
   }
 
   // this is here to keep keys consistent

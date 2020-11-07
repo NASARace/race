@@ -44,10 +44,12 @@ package object tabdata {
   type AnyRow = Row[_ <: CellValue]
   type AnyCellRef = CellRef[_ <: CellValue]
   type AnyCellExpression = CellExpression[_ <: CellValue]
+  type BooleanCellExpression = CellExpression[BooleanCellValue]
   type AnyNumExpr = NumExpr[_ <: NumCellValue]
   type AnyConstCellExpression = ConstCellExpression[_ <: CellValue]
   type AnyCellFunction = CellFunction[_ <: CellValue]
   type AnyCellFormula = CellFormula[_ <: CellValue]
+  type BooleanCellFormula = CellFormula[BooleanCellValue]
   type Formulas = Map[Path,AnyCellFormula]
 
   trait PathObject {

@@ -1,0 +1,15 @@
+{
+  "id": "/formulas/region1/provider",
+  "info": "column formulas for provider node",
+  "date": "2020-06-28T12:00:00.000",
+
+  "columnlist": "/providers/region1",
+  "rowlist": "/rows/sd1",
+
+  "columns": {
+    "/providers/region1/provider_2": {
+      "/data/cat_A/field_1":   { "src": "(within . 8 12)" },
+      "/data/cat_A/field_2":   { "src": "(olderM . 1)", "trigger": "<always>" }
+    }
+  }
+}

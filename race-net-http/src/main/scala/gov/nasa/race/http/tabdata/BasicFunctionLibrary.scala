@@ -16,6 +16,8 @@
  */
 package gov.nasa.race.http.tabdata
 
+import gov.nasa.race.uom.Time
+
 /**
   * an extensible default FunctionLibrary
   *
@@ -213,6 +215,40 @@ class BasicFunctionLibrary extends CellFunctionLibrary {
     def argExprs = Seq(arg0,arg1,arg2)
   }
 
+  //--- logical functions
+
+  /**
+    * a function that takes two BooleanExprs and returns a BooleanCell based on conjunction (with short circuit eval)
+    */
+  object and extends CellFunctionFactory with BooleanCoDomain with BooleanDomain with Arity2 {
+    def apply (args: Seq[AnyCellExpression]) = new and(args.head.asInstanceOf[BooleanExpr], args.last.asInstanceOf[BooleanExpr])
+  }
+  add(and)
+
+  class and (val arg0: BooleanExpr, val arg1: BooleanExpr) extends BooleanFunc with Arity2Deps {
+    def eval (implicit ctx: EvalContext): BooleanCellValue = {
+      BooleanCellValue(arg0.eval.value && arg1.eval.value)(ctx.evalDate)
+    }
+    def argExprs = Seq(arg0,arg1)
+  }
+
+  /**
+    * a function that takes two BooleanExprs and returns a BooleanCell based on conjunction (with short circuit eval)
+    */
+  object or extends CellFunctionFactory with BooleanCoDomain with BooleanDomain with Arity2 {
+    def apply (args: Seq[AnyCellExpression]) = new or(args.head.asInstanceOf[BooleanExpr], args.last.asInstanceOf[BooleanExpr])
+  }
+  add(or)
+
+  class or (val arg0: BooleanExpr, val arg1: BooleanExpr) extends BooleanFunc with Arity2Deps {
+    def eval (implicit ctx: EvalContext): BooleanCellValue = {
+      BooleanCellValue(arg0.eval.value || arg1.eval.value)(ctx.evalDate)
+    }
+    def argExprs = Seq(arg0,arg1)
+  }
+
+  //--- value comparison functions
+
   /**
     * a function that takes two NumExprs and returns a BooleanCell based on if the first arg eval > second arg eval
     */
@@ -228,7 +264,131 @@ class BasicFunctionLibrary extends CellFunctionLibrary {
     def argExprs = Seq(arg0,arg1)
   }
 
+  /**
+    * a function that takes two NumExprs and returns a BooleanCell based on if the first arg eval >= second arg eval
+    */
+  object ge extends CellFunctionFactory with BooleanCoDomain with NumDomain with Arity2 {
+    def apply (args: Seq[AnyCellExpression]) = new ge(args.head.asInstanceOf[AnyNumExpr], args.last.asInstanceOf[AnyNumExpr])
+  }
+  add(ge)
+
+  class ge (val arg0: AnyNumExpr, val arg1: AnyNumExpr) extends BooleanFunc with Arity2Deps {
+    def eval (implicit ctx: EvalContext): BooleanCellValue = {
+      BooleanCellValue(arg0.eval >= arg1.eval)(ctx.evalDate)
+    }
+    def argExprs = Seq(arg0,arg1)
+  }
+
+  /**
+    * a function that takes two NumExprs and returns a BooleanCell based on if the first arg eval < second arg eval
+    */
+  object lt extends CellFunctionFactory with BooleanCoDomain with NumDomain with Arity2 {
+    def apply (args: Seq[AnyCellExpression]) = new lt(args.head.asInstanceOf[AnyNumExpr], args.last.asInstanceOf[AnyNumExpr])
+  }
+  add(lt)
+
+  class lt (val arg0: AnyNumExpr, val arg1: AnyNumExpr) extends BooleanFunc with Arity2Deps {
+    def eval (implicit ctx: EvalContext): BooleanCellValue = {
+      BooleanCellValue(arg0.eval < arg1.eval)(ctx.evalDate)
+    }
+    def argExprs = Seq(arg0,arg1)
+  }
+
+  /**
+    * a function that takes two NumExprs and returns a BooleanCell based on if the first arg eval < second arg eval
+    */
+  object le extends CellFunctionFactory with BooleanCoDomain with NumDomain with Arity2 {
+    def apply (args: Seq[AnyCellExpression]) = new le(args.head.asInstanceOf[AnyNumExpr], args.last.asInstanceOf[AnyNumExpr])
+  }
+  add(le)
+
+  class le (val arg0: AnyNumExpr, val arg1: AnyNumExpr) extends BooleanFunc with Arity2Deps {
+    def eval (implicit ctx: EvalContext): BooleanCellValue = {
+      BooleanCellValue(arg0.eval <= arg1.eval)(ctx.evalDate)
+    }
+    def argExprs = Seq(arg0,arg1)
+  }
+
+  /**
+    * a function that takes three NumExprs and returns a BooleanCell based on if the first arg eval is within the [arg1,arg2] interval
+    */
+  object within extends CellFunctionFactory with BooleanCoDomain with NumDomain with Arity3 {
+    def apply (args: Seq[AnyCellExpression]) = new within(args(0).asInstanceOf[AnyNumExpr], args(1).asInstanceOf[AnyNumExpr], args(2).asInstanceOf[AnyNumExpr])
+  }
+  add(within)
+
+  class within (val arg0: AnyNumExpr, val arg1: AnyNumExpr, val arg2: AnyNumExpr) extends BooleanFunc with Arity3Deps {
+    def eval (implicit ctx: EvalContext): BooleanCellValue = {
+      val v0 = arg0.eval
+      BooleanCellValue((v0 >= arg1.eval) && (v0 <= arg2.eval))(ctx.evalDate)
+    }
+    def argExprs = Seq(arg0,arg1,arg2)
+  }
+
+  /**
+    * a function that takes three NumExprs and returns a BooleanCell based on if the first arg eval is outside the [arg1,arg2] interval
+    */
+  object outside extends CellFunctionFactory with BooleanCoDomain with NumDomain with Arity3 {
+    def apply (args: Seq[AnyCellExpression]) = new outside(args(0).asInstanceOf[AnyNumExpr], args(1).asInstanceOf[AnyNumExpr], args(2).asInstanceOf[AnyNumExpr])
+  }
+  add(outside)
+
+  class outside (val arg0: AnyNumExpr, val arg1: AnyNumExpr, val arg2: AnyNumExpr) extends BooleanFunc with Arity3Deps {
+    def eval (implicit ctx: EvalContext): BooleanCellValue = {
+      val v0 = arg0.eval
+      BooleanCellValue((v0 < arg1.eval) || (v0 > arg2.eval))(ctx.evalDate)
+    }
+    def argExprs = Seq(arg0,arg1,arg2)
+  }
+
   // ... and more comparisons
+
+  //--- time functions
+
+  /**
+    * a function that returns a BooleanCell if eval date - arg0.date > arg1 (in minutes)
+    */
+  object olderS extends CellFunctionFactory with BooleanCoDomain with NumDomain with Arity2 {
+    def apply (args: Seq[AnyCellExpression]) = new olderS(args.head, args.last.asInstanceOf[AnyNumExpr])
+  }
+  add(olderS)
+
+  class olderS(val arg0: AnyCellExpression, val arg1: AnyNumExpr) extends BooleanFunc with Arity2Deps {
+    def eval (implicit ctx: EvalContext): BooleanCellValue = {
+      BooleanCellValue(ctx.evalDate.timeSince(arg0.eval.date) > Time.Seconds(arg1.eval.toLong))(ctx.evalDate)
+    }
+    def argExprs = Seq(arg0,arg1)
+  }
+
+  /**
+    * a function that returns a BooleanCell if eval date - arg0.date > arg1 (in minutes)
+    */
+  object olderM extends CellFunctionFactory with BooleanCoDomain with NumDomain with Arity2 {
+    def apply (args: Seq[AnyCellExpression]) = new olderM(args.head, args.last.asInstanceOf[AnyNumExpr])
+  }
+  add(olderM)
+
+  class olderM(val arg0: AnyCellExpression, val arg1: AnyNumExpr) extends BooleanFunc with Arity2Deps {
+    def eval (implicit ctx: EvalContext): BooleanCellValue = {
+      BooleanCellValue(ctx.evalDate.timeSince(arg0.eval.date) > Time.Minutes(arg1.eval.toLong))(ctx.evalDate)
+    }
+    def argExprs = Seq(arg0,arg1)
+  }
+
+  /**
+    * a function that returns a BooleanCell if eval date - arg0.date > arg1 (in hours)
+    */
+  object olderH extends CellFunctionFactory with BooleanCoDomain with NumDomain with Arity2 {
+    def apply (args: Seq[AnyCellExpression]) = new olderH(args.head, args.last.asInstanceOf[AnyNumExpr])
+  }
+  add(olderH)
+
+  class olderH (val arg0: AnyCellExpression, val arg1: AnyNumExpr) extends BooleanFunc with Arity2Deps {
+    def eval (implicit ctx: EvalContext): BooleanCellValue = {
+      BooleanCellValue(ctx.evalDate.timeSince(arg0.eval.date) > Time.Hours(arg1.eval.toLong))(ctx.evalDate)
+    }
+    def argExprs = Seq(arg0,arg1)
+  }
 
   //--- array functions
 

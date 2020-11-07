@@ -98,13 +98,13 @@ class FHTInterpolant[N<:Nat,T<:TDataPoint[N]](override val src: TDataSource[N,T]
     }
   }
 
-  def iterator (tStart: Long, tEnd: Long, dt: Int): Iterator[T] = {
+  def iterator (tStart: Long, tEnd: Long, dt: Long): Iterator[T] = {
     def exact (t: Long, i: Int): T = { src.getDataPoint(i,res); res }
     def approx (tPrev: Long, t: Long, tNext: Long, i: Int): T = interpolate(t,min(t-tPrev, tNext-t))
     new ForwardIterator(tStart, tEnd, dt)(exact)(approx)
   }
 
-  def reverseIterator (tEnd: Long, tStart: Long, dt: Int): Iterator[T] = {
+  def reverseIterator (tEnd: Long, tStart: Long, dt: Long): Iterator[T] = {
     def exact (t: Long, i: Int): T = { src.getDataPoint(i,res); res }
     def approx (tPrev: Long, t: Long, tNext: Long, i: Int): T = interpolate(t,min(t-tPrev, tNext-t))
     new ReverseIterator(tEnd, tStart, dt)(exact)(approx)

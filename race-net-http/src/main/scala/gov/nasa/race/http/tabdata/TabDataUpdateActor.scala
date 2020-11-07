@@ -77,16 +77,25 @@ class TabDataUpdateActor(val config: Config) extends SubscribingRaceActor with P
   val nodeId: Path = UnixPath.intern(config.getString("node-id"))
   val upstreamId: Option[Path] = config.getOptionalString("upstream-id").map(UnixPath.intern) // TODO - do we need this here?
 
+  // this is lazily set once after startup, to make sure we don't overwrite upstream data during a NodeState sync
+  // if this is a restarted node. If there is no upstreamId defined we consider ourselves synced
+  var isUpstreamSynced: Boolean = !upstreamId.isDefined
+
   var columnList: ColumnList = readColumnList
   var rowList: RowList = readRowList(columnList)
   val columnData: mutable.Map[Path,ColumnData] = readColumnData(columnList, rowList)
   val reachableNodes: mutable.Set[Path] = mutable.Set(nodeId) // our own node is always reachable
 
-  var formulaList: Option[FormulaList] = readFormulaList
   val funcLib: CellFunctionLibrary = getConfigurableOrElse("functions")(new BasicFunctionLibrary)
 
-
+  // the optional formulas that change cell values
+  val formulaList: Option[CellValueFormulaList] = readCellValueFormulaList
   ifSome(formulaList){_.compileOn(nodeId,columnList,rowList,funcLib)}
+
+  // the optional formulas that are used to check cell values (and dates)
+  val constraintList: Option[CellConstraintFormulaList] = readCellConstraintFormulaList
+  ifSome(constraintList){_.compileOn(nodeId,columnList,rowList,funcLib)}
+
   initColumnData
 
   // for debugging purposes
@@ -119,10 +128,18 @@ class TabDataUpdateActor(val config: Config) extends SubscribingRaceActor with P
 
   override def onStartRaceActor (originator: ActorRef): Boolean = {
     if (super.onStartRaceActor(originator)) {
+      val startDate = currentSimTime
+
       ifSome(formulaList) { fl=>
         if (fl.hasAnyTimeTrigger) {
-          fl.armTriggeredAt(simTime)
-          startScheduler  // TODO - what about checks. We might need the scheduler for more than one reason
+          fl.armTriggeredAt(startDate)
+          startScheduler
+        }
+      }
+      ifSome(constraintList) { cl=>
+        if (cl.hasAnyTimeTrigger){
+          cl.armTriggeredAt(startDate)
+          if (!isSchedulerStarted) startScheduler
         }
       }
       true
@@ -134,15 +151,18 @@ class TabDataUpdateActor(val config: Config) extends SubscribingRaceActor with P
   }
 
   override def handleMessage: Receive = {
-    case BusEvent(_, pdc:ColumnDataChange, _) => processColumnDataChange(pdc)
+    case BusEvent(_, cdc:ColumnDataChange, _) => processColumnDataChange(cdc)
     case BusEvent(_, nrc: NodeReachabilityChange, _) => processNodeReachabilityChange(nrc)
   }
 
   //--- data model init
 
   protected def readList[T](key: String)(f: Array[Byte]=>Option[T]): Option[T] = {
-    info(s"reading $key from file ${config.getString(key)}")
-    config.translateFile(key)(f)
+    val pn = config.getOptionalString(key)
+    if (pn.isDefined) {
+      info(s"translating file ${pn.get}")
+      config.translateFile(key)(f)
+    } else None
   }
 
   def readRowList (columnList: ColumnList): RowList = {
@@ -161,9 +181,17 @@ class TabDataUpdateActor(val config: Config) extends SubscribingRaceActor with P
     }.getOrElse( throw new RuntimeException("missing or invalid column-list"))
   }
 
-  def readFormulaList: Option[FormulaList] = {
-    readList[FormulaList]("formula-list"){ input=>
-      val parser = new FormulaListParser
+  def readCellValueFormulaList: Option[CellValueFormulaList] = {
+    readList[CellValueFormulaList]("formula-list"){ input=>
+      val parser = new CellValueFormulaListParser
+      parser.setLogging(info,warning,error)
+      parser.parse(input)
+    }
+  }
+
+  def readCellConstraintFormulaList: Option[CellConstraintFormulaList] = {
+    readList[CellConstraintFormulaList]("constraint-list"){ input=>
+      val parser = new CellConstraintFormulaListParser
       parser.setLogging(info,warning,error)
       parser.parse(input)
     }
@@ -172,7 +200,7 @@ class TabDataUpdateActor(val config: Config) extends SubscribingRaceActor with P
   def readColumnData(columnList: ColumnList, rowList: RowList): mutable.Map[Path,ColumnData] = {
     val map = mutable.Map.empty[Path,ColumnData]
 
-    val dataDir = config.getExistingDir("column-data")
+    val dataDir = config.getExistingDir("data-dir")
     for (p <- columnList.columns) {
       val col = p._2
       val colName = col.name
@@ -202,9 +230,11 @@ class TabDataUpdateActor(val config: Config) extends SubscribingRaceActor with P
   /**
     * evaluate the given column with the given set of dependency-triggered row formulas
     * exclude time-triggered formulas from evaluation (they are evaluated separately)
-    * the result is obtained via our EvalContext implementation
+    * the result is obtained via our EvalContext implementation and the evaluation action is provided by the caller
     */
-  def evalCurrentColumn(formulas: ListMap[Path,AnyCellFormula], date: DateTime)(cellUpdateCond: AnyCellFormula=>Boolean): Unit = {
+  def evalCurrentColumn[T<:CellValue](formulas: ListMap[Path,CellFormula[T]], date: DateTime)
+                                          (cellUpdateCond: CellFormula[T]=>Boolean)
+                                          (evalAction: (CellFormula[T],T)=>Unit): Unit = {
     setEvalDate(date)
 
     formulas.foreach { e =>
@@ -215,9 +245,8 @@ class TabDataUpdateActor(val config: Config) extends SubscribingRaceActor with P
         rowList.get(rowId) match {
           case Some(row) =>
             setCurrentRow(row)
-            if (cellUpdateCond(formula)) {
-              val cellVal = formula.evalWith(this)
-              setCurrentCellValue(cellVal)
+            if (cellUpdateCond( formula)) {
+              evalAction( formula, formula.evalWith(this))
             }
           case None => warning(s"unknown row: $rowId")
         }
@@ -237,7 +266,9 @@ class TabDataUpdateActor(val config: Config) extends SubscribingRaceActor with P
         columnList.get(pCol) match {
           case Some(col: Column) => // a column we know
             setCurrentColumn(col)
-            evalCurrentColumn(formulas, DateTime.now) { formula => !currentCellValue.isDefined && formula.canEvaluateIn(this) }
+            evalCurrentColumn(formulas, DateTime.now)
+                             { !currentCellValue.isDefined && _.canEvaluateIn(this) }
+                             { (formula,cv) => setCurrentCellValue(cv) }
 
             if (hasChangedCells) {
               columnData += (pCol -> columnDataFromCurrentCells)
@@ -282,18 +313,58 @@ class TabDataUpdateActor(val config: Config) extends SubscribingRaceActor with P
     * main entry point for periodic checks of formulas that are time triggered
     * Note that we just create and then process (local) ColumnDataChanges from triggered formulas, to make sure
     * we process all changes consistently
+    *
+    * note that we don't time-trigger formulas if we have an upstream and the NodeState protocol exchange hasn't been
+    * completed yet, or otherwise we might overwrite newer upstream data if this is a re-synchronizing client
     */
   def checkTimeTriggeredFormulas(): Unit = {
-    val date = updatedSimTime
-    setEvalDate(date)
+    if (isUpstreamSynced) {
+      val date = updatedSimTime
+      setEvalDate(date)
 
-    ifSome(formulaList){ fl=>
-      fl.evalTriggeredWith(this).foreach { cdc =>
-        info(s"time triggered change: $cdc")
-        processColumnDataChange(cdc)
+      ifSome(formulaList) { fl =>
+        fl.evalTriggeredWith(this).foreach { cdc =>
+          info(s"time triggered change: $cdc")
+          processColumnDataChange(cdc)
+        }
+      }
+
+      ifSome(constraintList) { cl=>
+        cl.evalTriggeredWith(this).foreach { cdcv=>
+          info(s"time triggered constraint violation: $cdcv")
+        }
       }
     }
   }
+
+  def processConstraintEval (formula: CellFormula[BooleanCellValue], cv: BooleanCellValue): Unit = {
+    if (!cv.value) {
+      //println(s"@@@ contraint violated: ${currentColumn.id} @ ${currentRow.id} : ${currentCellValue.valueToString} ? ${formula.src}")
+    }
+  }
+
+  protected var lastValueCheck: DateTime = DateTime.Date0
+
+  def checkCellValueConstraints: Unit = {
+    ifSome(constraintList){ cl=>
+      cl.foreachEntry { fe =>
+        val (pCol,formulas) = fe
+        columnList.get(pCol) match {
+          case Some(col: Column) => // a column we know
+            setCurrentColumn(col)
+            evalCurrentColumn(formulas, simTime)
+                             { _.hasNewerDependencies(this, lastValueCheck) }
+                             { processConstraintEval }
+
+          case None => // ignore unknown column
+        }
+      }
+
+      lastValueCheck = currentSimTime
+    }
+  }
+
+
 
   /**
     * main entry point for both local and remote data changes
@@ -304,6 +375,7 @@ class TabDataUpdateActor(val config: Config) extends SubscribingRaceActor with P
   def processColumnDataChange(cdc: ColumnDataChange): Unit = {
     if (updateChangeColumnData(cdc)) {
       updateOtherColumnData(cdc)
+      checkCellValueConstraints
     }
   }
 
@@ -324,7 +396,9 @@ class TabDataUpdateActor(val config: Config) extends SubscribingRaceActor with P
               ifSome(formulaList){ fl=>
                 clearChangedCells
                 val evalDate = if (cdc.changeNodeId == nodeId) cdc.date else simTime
-                evalCurrentColumn(fl.getColumnFormulas(pCdc), evalDate) { _.hasUpdatedDependencies(this) }
+                evalCurrentColumn(fl.getColumnFormulas(pCdc), evalDate)
+                                 { _.hasUpdatedDependencies(this) }
+                                 { (formula,cv) => setCurrentCellValue(cv) }
                 updateAndPublishColumnData( columnDataFromCurrentCells)
                 distributeColumnDataChanges(cdc,changedCellSeq,evalDate) // publish ColumnDataChanges to other processes/nodes
               }
@@ -362,7 +436,9 @@ class TabDataUpdateActor(val config: Config) extends SubscribingRaceActor with P
             case Some(col: Column) => // a column we know
               val eDate = dependencyUpdateTime(col,simTime)
               setCurrentColumn(col)
-              evalCurrentColumn(formulas, eDate) { _.hasUpdatedDependencies(this) }
+              evalCurrentColumn(formulas, eDate)
+                                { _.hasUpdatedDependencies(this) }
+                                { (formula,cv) => setCurrentCellValue(cv) }
               if (hasChangedCells) {
                 updateAndPublishColumnData(columnDataFromCurrentCells)
                 // distribute as our own CDC
@@ -425,7 +501,18 @@ class TabDataUpdateActor(val config: Config) extends SubscribingRaceActor with P
   }
 
   def processNodeReachabilityChange (nrc: NodeReachabilityChange): Unit = {
-    if (nrc.isOnline) reachableNodes += nrc.id
-    else reachableNodes -= nrc.id
+    if (nrc.isOnline) {
+      reachableNodes += nrc.id
+      info(s"node ${nrc.id} is online")
+
+      if (upstreamId.isDefined && upstreamId.get == nrc.id) isUpstreamSynced = true
+
+    } else {
+      reachableNodes -= nrc.id
+      info(s"node ${nrc.id} is offline")
+      // note we don't reset upstreamSynced here or we block time triggered formulas from evaluating as long
+      // as this node is still running and not reconnected. This does not violate consistency because in this
+      // case we assume we are the authoriative source of our columns
+    }
   }
 }

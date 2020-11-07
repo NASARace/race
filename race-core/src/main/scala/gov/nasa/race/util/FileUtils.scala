@@ -93,6 +93,24 @@ object FileUtils {
     }
   }
 
+  def setFileContents (path: Path, newContents: CharSequence): Boolean = {
+    import StandardOpenOption._
+    try {
+      Files.writeString(path,newContents,CREATE,TRUNCATE_EXISTING,WRITE) // should we maybe SYNC here?
+      true
+    } catch {
+      case x: Throwable => false
+    }
+  }
+
+  def setFileContents (pathName: String, newContents: CharSequence): Boolean = {
+    setFileContents( FileSystems.getDefault.getPath(pathName), newContents)
+  }
+
+  def setFileContents (file: File, newContents: CharSequence): Boolean = {
+    setFileContents( file.toPath, newContents)
+  }
+
   def existingFile(pathName: String): Option[File] = existingFile(new File(pathName))
 
   def existingFile(file: File, ext: String = null): Option[File] = {
@@ -385,6 +403,27 @@ object FileUtils {
   }
 
   val DefaultOpenWrite: Set[OpenOption] = HashSet(StandardOpenOption.WRITE,StandardOpenOption.CREATE,StandardOpenOption.TRUNCATE_EXISTING)
+
+  def rotate (pathName: String, max: Int): Unit = {
+    var n = max
+    var pn = s"$pathName.$n"
+    var f = new File(pn)
+    var fLast = f
+
+    if (f.isFile) f.delete()
+    n -= 1
+
+    while (n > 0) {
+      pn = s"$pathName.$n"
+      f = new File(pn)
+      if (f.isFile) f.renameTo(fLast)
+      fLast = f
+      n -= 1
+    }
+
+    f = new File(pathName)
+    if (f.isFile) f.renameTo(fLast)
+  }
 }
 
 class BufferedFileWriter (val file: File, val bufferSize: Int, val append: Boolean) extends CharArrayWriter(bufferSize) {

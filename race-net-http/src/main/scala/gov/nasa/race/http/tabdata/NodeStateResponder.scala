@@ -57,14 +57,14 @@ class NodeStateResponder (node: Node, columnData: Map[Path,ColumnData],
       // TODO - what about CDs we export to remote that are not in the NS? (indicates outdated CLs)
 
       val replies = mutable.ArrayBuffer.empty[JsonSerializable]
-      if (extOutdated.nonEmpty || locOutdated.nonEmpty) { // send own NodeState
-        replies += new NodeState(node, extOutdated.toSeq, locOutdated.toSeq)
-      }
 
       updates.foreach { e=>
         val (colId,cells) = e
         replies += ColumnDataChange( colId, node.id, columnData(colId).date, cells)
       }
+
+      // we send the own NodeState last as the handshake terminator (even if there are no outdated own CDs)
+      replies += new NodeState(node, extOutdated.toSeq, locOutdated.toSeq)
 
       replies.toSeq
 
@@ -85,6 +85,7 @@ class NodeStateResponder (node: Node, columnData: Map[Path,ColumnData],
 
           if (colDate < cd.date) { // our data is newer
             if (sendColumn(col)) {
+              // this is not our data, so we don't include cells that have the same time stamp
               val cells = cd.changesSince(colDate).filter( cell=> sendRow(col, node.rowList(cell._1)))
               if (cells.nonEmpty) newerOwn += (colId -> cells)
             }
@@ -94,6 +95,7 @@ class NodeStateResponder (node: Node, columnData: Map[Path,ColumnData],
               outdatedOwn += (colId -> cd.date)
             }
           }
+          // since we only receive and don't modify this CD equal timestamps are treated as up-to-date
 
         case None => // we don't know this remote column
           logger.warning(s"unknown column ${e._1}")
@@ -109,14 +111,16 @@ class NodeStateResponder (node: Node, columnData: Map[Path,ColumnData],
       columnData.get(colId) match {
         case Some(cd) =>
           val col = node.columnList(colId) // if we have a CD it also means we have a column for it
+          val prioritizeOwn = col.node == node.id
+          val addMissing = true
 
           if (sendColumn(col)) {
-            val noc = cd.newerOwnCells(rowDates, addMissing = true).filter( cell=> sendRow(col,node.rowList(cell._1)))
+            val noc = cd.newerOwnCells(rowDates, addMissing, prioritizeOwn).filter( cell=> sendRow(col,node.rowList(cell._1)))
             if (noc.nonEmpty) newerOwn += (colId -> noc)
           }
 
           if (receiveColumn(col)) {
-            val ooc = cd.outdatedOwnCells(rowDates).filter( rd=> receiveRow(col,node.rowList(rd._1)))
+            val ooc = cd.outdatedOwnCells(rowDates, !prioritizeOwn).filter( rd=> receiveRow(col,node.rowList(rd._1)))
             if (ooc.nonEmpty) outdatedOwn += (colId -> ooc)
           }
 

@@ -24,7 +24,7 @@ import org.scalatest.flatspec.AnyFlatSpec
 /**
   * reg tests for CellFormula, FormulaList/Parser and CellExpressionParser
   */
-class FormulaListSpec extends AnyFlatSpec with RaceSpec {
+class CellValueFormulaListSpec extends AnyFlatSpec with RaceSpec {
 
   "a ColumnListParser" should "read a JSON source" in {
     val formulaSrc = FileUtils.fileContentsAsString("race-net-http-test/src/resources/sites/tabdata/data/formulaList.json").get
@@ -57,7 +57,7 @@ class FormulaListSpec extends AnyFlatSpec with RaceSpec {
 
     val columnList: ColumnList = getList("columnList")(new ColumnListParser().parse(columnListSrc.getBytes))
     val rowList: RowList = getList("rowList")(new RowListParser().parse(rowListSrc.getBytes))
-    val formulaList: FormulaList = getList("formulaList")(new FormulaListParser().parse(formulaSrc.getBytes))
+    val formulaList: CellValueFormulaList = getList("formulaList")(new FormulaListParser().parse(formulaSrc.getBytes))
     val nodeId = UnixPath("/providers/region1/integrator")
     val funcLib = new BasicFunctionLibrary
     val selColPath = UnixPath("/providers/region1/summary")

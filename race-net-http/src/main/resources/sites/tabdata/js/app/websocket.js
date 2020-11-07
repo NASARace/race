@@ -1,13 +1,14 @@
 import * as utils from './utils.js';
 
-export function initWebSocket(messageHandler) {
+export function initWebSocket(openHandler,messageHandler,closeHandler) {
   if ("WebSocket" in window) {
     var wsUrl = getWsUrl();
     //console.log("@@@ wsUrl = " + wsUrl);
     var ws = new WebSocket(wsUrl);
 
-    ws.onopen = function() {
+    ws.onopen = function (evt) {
       console.log(`websocket ${ws} opened`);
+      openHandler(evt);
     };
 
     ws.onmessage = function (evt) {
@@ -16,8 +17,9 @@ export function initWebSocket(messageHandler) {
       messageHandler(msg);
     }
 
-    ws.onclose = function() {
+    ws.onclose = function (evt) {
       console.log(`websocket ${ws} closed`);
+      closeHandler(evt);
     };
 
     return ws;

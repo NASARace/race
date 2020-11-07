@@ -65,7 +65,7 @@ class LinTInterpolant [N<:Nat,T<:TDataPoint[N]](override val src: TDataSource[N,
     } else extrapolateLeft(t)
   }
 
-  def iterator (tStart: Long, tEnd: Long, dt: Int): Iterator[T] = {
+  def iterator (tStart: Long, tEnd: Long, dt: Long): Iterator[T] = {
     def exact (t: Long, i: Int): T = { src.getDataPoint(i,a); a }
     def approx (tPrev: Long, t: Long, tNext: Long, i: Int): T = {
       if (i >= 0) {
@@ -75,7 +75,7 @@ class LinTInterpolant [N<:Nat,T<:TDataPoint[N]](override val src: TDataSource[N,
     new ForwardIterator(tStart, tEnd, dt)(exact)(approx)
   }
 
-  def reverseIterator (tEnd: Long, tStart: Long, dt: Int): Iterator[T] = {
+  def reverseIterator (tEnd: Long, tStart: Long, dt: Long): Iterator[T] = {
     def exact (t: Long, i: Int): T = { src.getDataPoint(i,a); a }
     def approx (tPrev: Long, t: Long, tNext: Long, i: Int): T = {
       if (i >= 0) {

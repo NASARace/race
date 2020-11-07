@@ -22,7 +22,7 @@ import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.{PathMatchers, Route}
 import com.typesafe.config.Config
 import gov.nasa.race.config.ConfigUtils._
-import gov.nasa.race.core.{Loggable, ParentActor, RaceDataClient}
+import gov.nasa.race.core.{ConfigLoggable, Loggable, ParentActor, RaceDataClient}
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
@@ -34,10 +34,14 @@ import scala.concurrent.{Await, Future}
   * concrete RaceRouteInfo implementations have to provide a constructor that takes 2 args:
   *     (parent: ParentActor, config: Config)
   */
-trait RaceRouteInfo extends Loggable {
+trait RaceRouteInfo extends ConfigLoggable {
   val parent: ParentActor
   val config: Config
   val name = config.getStringOrElse("name", getClass.getSimpleName)
+
+  // we need these for the ConfigLoggable mixin
+  val pathName = s"${parent.name}/$name"
+  def system = parent.system
 
   val requestPrefix: String = config.getStringOrElse("request-prefix", name)
   val requestPrefixMatcher = PathMatchers.separateOnSlashes(requestPrefix)
@@ -56,12 +60,6 @@ trait RaceRouteInfo extends Loggable {
       complete(StatusCodes.NotFound, s"document $uri not found")
     }
   }
-
-  def debug(f: => String): Unit = gov.nasa.race.core.debug(f)(parent.log)
-  def info(f: => String): Unit = gov.nasa.race.core.info(f)(parent.log)
-  def warning(f: => String): Unit = gov.nasa.race.core.warning(f)(parent.log)
-  def error(f: => String): Unit = gov.nasa.race.core.error(f)(parent.log)
-
 
   def getActorRef (actorName: String): ActorRef = {
     val sel = parent.context.actorSelection(s"*/$actorName")

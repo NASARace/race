@@ -336,6 +336,19 @@ label {
   background-color: rgba(0,0,255,0.3);
 }
 
+/* online status */
+
+input#status {
+  background-color: lightgray;
+  color: black;
+}
+input#status.alert {
+  background-color: #ffcccc;
+}
+input#status.ok {
+  background-color: #ccffcc;
+}
+
 /* cell editing text inputs */
 
 input.cell {

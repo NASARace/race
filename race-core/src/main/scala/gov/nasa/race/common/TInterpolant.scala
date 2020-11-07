@@ -107,7 +107,7 @@ abstract class TInterpolant[N<:Nat,T<:TDataPoint[N]](val src: TDataSource[N,T]) 
 
   //--- iterator support
 
-  protected[this] class ForwardIterator[T] (tStart: Long, tEnd: Long, dt: Int)
+  protected[this] class ForwardIterator[T] (tStart: Long, tEnd: Long, dt: Long)
                                            (exact: (Long,Int)=>T)
                                            (approx: (Long,Long,Long,Int)=>T) extends Iterator[T] {
     var iPrev = findLeftIndex(tStart)
@@ -137,7 +137,7 @@ abstract class TInterpolant[N<:Nat,T<:TDataPoint[N]](val src: TDataSource[N,T]) 
     }
   }
 
-  protected[this] class ReverseIterator[T] (tEnd: Long, tStart: Long, dt: Int)
+  protected[this] class ReverseIterator[T] (tEnd: Long, tStart: Long, dt: Long)
                                            (exact: (Long,Int)=>T)
                                            (approx: (Long,Long,Long,Int)=>T) extends Iterator[T] {
     var iPrev = findLeftIndex(tEnd)
@@ -167,17 +167,17 @@ abstract class TInterpolant[N<:Nat,T<:TDataPoint[N]](val src: TDataSource[N,T]) 
     }
   }
 
-  def iterator (tStart: Long, tEnd: Long, dt: Int): Iterator[T]
+  def iterator (tStart: Long, tEnd: Long, dt: Long): Iterator[T]
 
-  def reverseIterator (tEnd: Long, tStart: Long, dt: Int): Iterator[T]
+  def reverseIterator (tEnd: Long, tStart: Long, dt: Long): Iterator[T]
 
-  def reverseTailDurationIterator (dur: Long, dt: Int): Iterator[T] = {
+  def reverseTailDurationIterator (dur: Long, dt: Long): Iterator[T] = {
     val tEnd = tRight
     val tStart = tEnd - dur
     reverseIterator(tEnd,tStart,dt)
   }
 
-  def reverseTailIterator (tEnd: Long, dur: Long, dt: Int): Iterator[T] = {
+  def reverseTailIterator (tEnd: Long, dur: Long, dt: Long): Iterator[T] = {
     val tStart = tEnd - dur
     reverseIterator(tEnd,tStart,dt)
   }
