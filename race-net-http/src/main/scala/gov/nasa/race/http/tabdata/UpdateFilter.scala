@@ -16,10 +16,8 @@
  */
 package gov.nasa.race.http.tabdata
 
-import java.nio.file.{Path, PathMatcher}
-
 import gov.nasa.race.common.ConstAsciiSlice.asc
-import gov.nasa.race.common.{AllMatcher, JsonPullParser, JsonSerializable, JsonWriter, NoneMatcher, UnixPath}
+import gov.nasa.race.common.{JsonPullParser, JsonSerializable, JsonWriter, PathIdentifier}
 import gov.nasa.race.ifSome
 
 object UpdateFilter {
@@ -41,17 +39,23 @@ object UpdateFilter {
 
 import UpdateFilter._
 
-class UpdateFilter(val sendSpec: String, val receiveSpec: String, resolver: Option[Path]=None) extends JsonSerializable  {
+/**
+  * objects to filter how rows (cell values) are send and received upstream and downstream
+  */
+class UpdateFilter(val sendSpec: String, val receiveSpec: String, resolverId: String) extends JsonSerializable  {
+  import PathIdentifier._
+
+  def this (absSendSpec: String, absReceiveSpec: String) = this (absSendSpec, absReceiveSpec, null)
 
   protected var sendUp = false
   protected var sendDown = false
-  protected var sendMatcher: PathMatcher = NoneMatcher
+  protected var sendMatcher: Matcher = noneMatcher
 
   protected var receiveUp = false
   protected var receiveDown = false
   protected var receiveSelf = false
   protected var receiveTarget = false
-  protected var receiveMatcher: PathMatcher = NoneMatcher
+  protected var receiveMatcher: Matcher = noneMatcher
 
   parseSendSpec(sendSpec)
   parseReceiveSpec(receiveSpec)
@@ -61,16 +65,9 @@ class UpdateFilter(val sendSpec: String, val receiveSpec: String, resolver: Opti
     w.writeStringMember(_receive_, receiveSpec)
   }
 
-  def resolvePattern (s: String): PathMatcher = {
-    resolver match {
-      case Some(p) => UnixPath.globMatcher(UnixPath.resolvePattern(p,s))
-      case None => UnixPath.globMatcher(s)
-    }
-  }
-
   protected def parseSendSpec (spec: String): Unit = {
     sendUp = false; sendDown = false
-    sendMatcher = NoneMatcher
+    sendMatcher = noneMatcher
 
     spec.split(",").foreach {
       case "<up>" => sendUp = true
@@ -79,7 +76,7 @@ class UpdateFilter(val sendSpec: String, val receiveSpec: String, resolver: Opti
       case "<none>" => // the default
       case s =>
         if (s.nonEmpty && s.charAt(0) != '<') {
-          sendMatcher = resolvePattern(s)
+          sendMatcher = globMatcher(resolve(s, resolverId))
         } else {
           throw new RuntimeException(s"unsupported send filter option: $s")
         }
@@ -88,7 +85,7 @@ class UpdateFilter(val sendSpec: String, val receiveSpec: String, resolver: Opti
 
   protected def parseReceiveSpec (spec: String): Unit = {
     receiveUp = false; receiveDown = false; receiveSelf = false; receiveTarget = false
-    receiveMatcher = NoneMatcher
+    receiveMatcher = noneMatcher
 
     spec.split(",").foreach {
       case "<up>" => receiveUp = true
@@ -99,39 +96,39 @@ class UpdateFilter(val sendSpec: String, val receiveSpec: String, resolver: Opti
       case "<target>" => receiveTarget = true
       case s =>
         if (s.nonEmpty && s.charAt(0) != '<') {
-          receiveMatcher = resolvePattern(s)
+          receiveMatcher = globMatcher(resolve(s,resolverId))
         } else {
           throw new RuntimeException(s"unsupported receive filter option: $s")
         }
     }
   }
 
-  def sendToUpStream (upstreamId: Path): Boolean = {
+  def sendToUpStream (upstreamId: String): Boolean = {
     sendUp | sendMatcher.matches(upstreamId)
   }
 
-  def sendToDownStream (downStreamId: Path): Boolean = {
+  def sendToDownStream (downStreamId: String): Boolean = {
     sendDown | sendMatcher.matches(downStreamId)
   }
 
-  def receiveFromUpStream (upstreamId: Path): Boolean = {
+  def receiveFromUpStream (upstreamId: String): Boolean = {
     receiveUp | receiveMatcher.matches(upstreamId)
   }
 
-  def receiveFromDownStream (downStreamId: Path, targetId: Path): Boolean = {
+  def receiveFromDownStream (downStreamId: String, targetId: String): Boolean = {
     receiveDown |
       (receiveTarget && downStreamId == targetId) |
       receiveMatcher.matches(downStreamId)
   }
 
-  def receiveFromDevice (nodeId: Path, targetId: Path): Boolean = {
+  def receiveFromDevice (nodeId: String, targetId: String): Boolean = {
     receiveSelf && nodeId == targetId
   }
 }
 
 trait UpdateFilterParser extends JsonPullParser {
 
-  def parseUpdateFilter(resolveId: Option[Path], defFilter: UpdateFilter = sendUpReceiveLocalUp): UpdateFilter = {
+  def parseUpdateFilter(resolveId: String, defFilter: UpdateFilter = sendUpReceiveLocalUp): UpdateFilter = {
     var sendSpec = defFilter.sendSpec
     var receiveSpec = defFilter.receiveSpec
 

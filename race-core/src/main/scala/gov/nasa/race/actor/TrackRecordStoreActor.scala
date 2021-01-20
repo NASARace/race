@@ -39,7 +39,7 @@ class TrackRecordStoreActor (val config: Config) extends SubscribingRaceActor wi
     new TrackRecordWriter(NoConfig)
   }
 
-  override def onRaceTick: Unit = writer.store
+  override def onRaceTick(): Unit = writer.store
 
   override def handleMessage: Receive = {
     case BusEvent(_,track: TrackedObject,_) =>

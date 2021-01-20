@@ -119,18 +119,16 @@ class SessionTokenStore(val byteLength: Int = 64, val expiresAfterMillis: Long=1
 
 
 sealed trait AuthTokenResult
-sealed class TokenFailure (val reason: String)  extends AuthTokenResult { // can't be a case class since we have to extend
-}
-object TokenFailure {
-  def unapply(o: TokenFailure): Option[String] = Some(o.reason)
+trait TokenFailure extends AuthTokenResult { // can't be a case class since we have to extend
+  def reason: String
 }
 
 sealed trait NextTokenResult extends AuthTokenResult
 case class NextToken(token: String) extends NextTokenResult
-case class NextTokenFailure (override val reason: String) extends TokenFailure(reason) with NextTokenResult
+case class NextTokenFailure (reason: String) extends TokenFailure with NextTokenResult
 
 sealed trait MatchTokenResult extends AuthTokenResult
 case object TokenMatched extends MatchTokenResult
-case class MatchTokenFailure (override val reason: String) extends TokenFailure(reason) with MatchTokenResult
+case class MatchTokenFailure (reason: String) extends TokenFailure with MatchTokenResult
 
 

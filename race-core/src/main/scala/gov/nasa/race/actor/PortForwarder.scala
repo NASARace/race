@@ -106,7 +106,7 @@ class PortForwarder (val config: Config) extends PeriodicRaceActor {
     super.onTerminateRaceActor(originator)
   }
 
-  override def onRaceTick: Unit = {
+  override def onRaceTick(): Unit = {
     checkConnected
   }
 

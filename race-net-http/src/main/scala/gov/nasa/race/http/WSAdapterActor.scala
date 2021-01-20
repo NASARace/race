@@ -101,14 +101,19 @@ class WSAdapterActor (val config: Config) extends FilteringPublisher with Subscr
   var isConnected: Boolean = false
 
   // watch out - these are NOT thread safe
-  val reader: WsMessageReader = createReader
-  val writer: WsMessageWriter = createWriter
+  protected var reader: WsMessageReader = createReader
+  protected var writer: WsMessageWriter = createWriter
 
   //--- end init
 
+
   // default behavior is to check for configured readers/writers or otherwise just pass data as strings
+
   protected def createReader = getConfigurableOrElse[WsMessageReader]("reader")(DefaultWsMessageReader)
   protected def createWriter = getConfigurableOrElse[WsMessageWriter]("writer")(DefaultWsMessageWriter)
+
+  def setReader (newReader: WsMessageReader): Unit = reader = newReader
+  def setWriter (newWriter: WsMessageWriter): Unit = writer = newWriter
 
   // override if we need to reset or drop connection if there is a send failure
   protected def handleSendFailure(msg: String): Unit = {
@@ -172,7 +177,13 @@ class WSAdapterActor (val config: Config) extends FilteringPublisher with Subscr
     }
   }
 
-  def connect: Boolean = {
+  //--- connection/disconnection callbacks - override in subclasses
+  def onConnect(): Unit = {}
+  def onDisconnect(): Unit = {}
+
+  def connect(): Future[Done.type] = {
+    if (isConnected) return Future { Done } // we don't treat this an an error
+
     val inbound: Sink[Message,Future[Done]] = Sink.foreach( processIncomingMessage)
     val outbound: Source[Message, SourceQueueWithComplete[Message]] = createSourceQueue
     val flow: Flow[Message,Message,(Future[Done],SourceQueueWithComplete[Message])] = Flow.fromSinkAndSourceCoupledMat(inbound,outbound)(Keep.both)
@@ -185,12 +196,14 @@ class WSAdapterActor (val config: Config) extends FilteringPublisher with Subscr
 
     closed.foreach { _ =>
       info(s"connection to $wsUrl closed by server")
+      onDisconnect()
       isConnected = false
     }
 
-    val connected: Future[Done.type] = upgradeResponse.map { upgrade =>
+    upgradeResponse.map { upgrade =>
       if (upgrade.response.status == StatusCodes.SwitchingProtocols) {
         info(s"websocket connected: $wsUrl")
+        onConnect()
         isConnected = true
         Done
       } else {
@@ -199,9 +212,13 @@ class WSAdapterActor (val config: Config) extends FilteringPublisher with Subscr
         throw new RuntimeException(s"websocket connection to $wsUrl failed with: ${upgrade.response.status}")
       }
     }
+  }
+
+  def waitForConnection(): Boolean = {
+    val connected = connect()
 
     try {
-      Await.result(connected, 10.seconds)
+      Await.result(connected, 5.seconds)
       if (isConnected) {
        true
       } else {
@@ -229,6 +246,7 @@ class WSAdapterActor (val config: Config) extends FilteringPublisher with Subscr
         q.complete()
         queue = None
       }
+      onDisconnect()
       isConnected = false
       retrySchedule = Some(scheduler.scheduleOnce(retryInterval, self, RetryConnect))
     }
@@ -251,12 +269,12 @@ class WSAdapterActor (val config: Config) extends FilteringPublisher with Subscr
   def disconnect(): Unit = {
     retrySchedule.foreach( _.cancel())
 
-    // TODO - is this the right way to explicitly close a web socket connection from a akka-http client?
+    // TODO - is this the right way to explicitly close a web socket connection from an akka-http client?
     ifSome(queue){ _.complete() }
   }
 
   override def onStartRaceActor(originator: ActorRef): Boolean = {
-    connect && super.onStartRaceActor(originator)
+    waitForConnection() && super.onStartRaceActor(originator)
   }
 
   override def onTerminateRaceActor(originator: ActorRef): Boolean = {
@@ -268,7 +286,7 @@ class WSAdapterActor (val config: Config) extends FilteringPublisher with Subscr
 
   override def handleMessage: Receive = {
     case BusEvent(sel,msg,sender) => processOutgoingMessage(msg)
-    case RetryConnect => connect
+    case RetryConnect => waitForConnection()
   }
 
 }

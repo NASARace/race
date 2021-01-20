@@ -49,7 +49,7 @@ object TaskSettings {
 
     //--- edit file (input example, not functional yet)
     edit := EditTask( editor.value, EditTask.pathParser.parsed),
-    connectInput in edit := true,
+    //connectInput in edit := true,
     editor := EditTask.defaultEditor,
     aggregate in edit := false,
 

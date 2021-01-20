@@ -23,8 +23,9 @@ Requirements
   - re-synchronization of data once sub-tree is reconnected to upstream
   - end-to-end connection loss detection and recovery (resync if upstream server process goes down)
   - (node hot swap tolerant)
-  - minimal external network infrastructure required (only upstream node is exposed)
+  - minimal external network infrastructure required (only upstream node ip address is required)
   - minimize network traffic (push)
+  - all network data is exchanged in standard (PE independent) format: Json
   - secure (encrypted protocols, sub-tree locality of node authorizations) 
   - conflict-free (state CRDT) -> hierarchy/location aware conflict resolution
   - schemas can be extended/swapped, data can be morphed at runtime
@@ -73,6 +74,10 @@ Formulas and constraints are kept separate from Column/RowList to enable per-sit
 
 In general we try to share as much common config between nodes as possible, hence we factor config
 
+<TODO> should CD be re-usable in different Column/RowLists ? If so they should not store either list id mandatorily
+(shared CDs would need absolute Column/Row ids). Having relative CD ids that are resolved through list ids is not
+the same as using absolute ids since lists might have their own namespaces (e.g. task specific groups of providers
+collecting the same/overlapping data)
 
 Update Semantics
 ----------------

@@ -16,142 +16,289 @@
  */
 package gov.nasa.race.http.tabdata
 
-import java.nio.file.Path
-
+import gov.nasa.race.{Failure, Result, ResultValue, Success, SuccessValue, ifSome}
 import gov.nasa.race.common.ConstAsciiSlice.asc
-import gov.nasa.race.common.{JsonParseException, TimeTrigger, UTF8JsonPullParser, UnixPath}
-import gov.nasa.race.http.tabdata.FormulaList.FormulaSpecs
+import gov.nasa.race.common.{JsonParseException, PathIdentifier, TimeTrigger, UTF8JsonPullParser}
+import gov.nasa.race.http.tabdata.FormulaList.CellValueFormulaSpec
 import gov.nasa.race.uom.DateTime
 
-import scala.collection.immutable.ListMap
+import scala.collection.immutable.SeqMap
 import scala.collection.mutable.ArrayBuffer
+import scala.reflect.ClassTag
+import scala.util.parsing.combinator._
 
-/**
-  * object managing CellExpressions and associated cell dependencies
-  */
-class CellFormula [+T <: CellValue](val src: String, val triggerSrc: Option[String], val ce: CellExpression[T]) {
 
-  private val dependencies: Set[CellRef[_]] = ce.dependencies()
-  private val trigger: Option[TimeTrigger] = triggerSrc.map(TimeTrigger.apply)
-
-  def evalWith (ctx: EvalContext): T = ce.eval(ctx)
-  def hasDependencies: Boolean = dependencies.nonEmpty
-  def dependsOn (cref: CellRef[_]): Boolean = dependencies.contains(cref)
-
-  def dependsOnAny (pCol: Path, cells: scala.collection.Seq[Cell]): Boolean = {
-    cells.exists { c=>
-      dependencies.exists(cr => cr.col == pCol && cr.row == c._1)
-    }
-  }
-
-  def canEvaluateIn (ctx: EvalContext): Boolean = {
-    dependencies.forall(ctx.cell(_).isDefined)
-  }
-
-  def hasUpdatedDependencies (ctx: EvalContext): Boolean = {
-    val curDate = ctx.currentCellValue.date
-    dependencies.exists(ctx.cell(_).date > curDate)
-  }
-
-  def hasNewerDependencies (ctx: EvalContext, date: DateTime): Boolean = {
-    dependencies.exists(ctx.cell(_).date > date)
-  }
-
-  //--- time triggered formulas
-
-  def hasTimeTrigger: Boolean = trigger.isDefined
-
-  def isTriggeredAt (d: DateTime): Boolean = {
-    trigger.isDefined && trigger.get.check(d)
-  }
-
-  def armTrigger (refDate: DateTime): Unit = {
-    if (trigger.isDefined) trigger.get.armCheck(refDate)
+object CellFormula {
+  def compile (src: String, compiledRow: Row[_], compiledColumn: Column,
+               node: Node, funLib: CellFunctionLibrary): ResultValue[CellFormula[_]] = {
+    val parser = new CellFormulaParser(node, compiledColumn, compiledRow, funLib)
+    parser.compile(src).flatMap( compiledRow.formula(src,_))
   }
 }
 
 /**
-  * a named collection of (columnPattern -> (rowPattern -> cellFormula)) specs
+  * base type for CellExpressions that are compiled from textual representations in the context of given
+  * ColumnList, RowList and Column/Row instances
+  *
+  * note that the compiled CellExpression objects are not shared between different column/row combinations even if
+  * the src is the same
   */
-class CellValueFormulaList(val id: Path, val info: String, val date: DateTime, val columnListId: Path, val rowListId: Path,
-                           val formulaSpecs: Seq[(String,Seq[(String,(String,Option[String]))])] ) {
+abstract class CellFormula[T: ClassTag] extends CellExpression[T] {
+  val src: String
+  val expr: CellExpression[T]
 
-  // an ordered map of ordered maps: { col -> { row -> formula } }
-  protected var columnFormulas: ListMap[Path,ListMap[Path,AnyCellFormula]] = ListMap.empty
+  val dependencies: Set[CellRef[_]] = expr.dependencies(Set.empty[CellRef[_]])
 
-  // a list of [(col,[row->tt-formula])] entries
-  protected var triggeredFormulas: Seq[(Column, Seq[(AnyRow,AnyCellFormula)])] = Seq.empty
+  /**
+    * does ctx have defined values for all our dependencies
+    */
+  def canEvaluateIn (ctx: EvalContext): Boolean = {
+    !dependencies.exists( cr=> ctx.getCellValue(cr.colId,cr.rowId).isEmpty )
+  }
 
-  def compileOn (nodeId: Path, columnList: ColumnList, rowList: RowList, funcLib: CellFunctionLibrary): Unit = {
-    val compiler = new CellExpressionParser(columnList,rowList,funcLib)
+  /**
+    * has any of our dependencies been changed in ctx
+    */
+  def hasUpdatedDependencies (ctx: EvalContext): Boolean = {
+    ctx.existsChange { (colId,row,cv) => dependencies.contains(row.cellRef(colId)) }
+  }
 
-    formulaSpecs.foreach { e=>
-      val colSpec = e._1
-      val rowFormulaSrcs = e._2
 
-      val cols = columnList.getMatchingColumns(nodeId,colSpec)
+  def computeCellValue (ctx: EvalContext): CellValue[T] = expr.computeCellValue(ctx)
 
-      if (cols.nonEmpty) {
-        cols.foreach { col =>
-          var tts = Seq.empty[(AnyRow,AnyCellFormula)]
-          var formulas = ListMap.empty[Path,AnyCellFormula]
+  //--- time triggered formulas  (TODO - should this be a sub-type)
 
-          rowFormulaSrcs.foreach { e =>
-            val rowSpec = rowList.resolvePathSpec(e._1)
-            val (src,ts) = e._2
+  protected var timerSrc: Option[String] = None
+  protected var timer: Option[TimeTrigger] = timerSrc.map(TimeTrigger.apply)
 
-            val rows = rowList.getMatchingRows(rowSpec)
-            if (rows.nonEmpty) {
-              rows.foreach { row =>
-                val ce = compiler.compile(col,row,src)
-                val cf = new CellFormula(src,ts,ce)
+  def setTimer(src: String): Unit = {
+    timerSrc = Some(src)
+    timer = Some(TimeTrigger(src))
+  }
 
-                formulas = formulas + (row.id -> cf)
-                if (cf.hasTimeTrigger) {
-                   tts = tts :+ (row,cf)
-                }
-              }
+  def hasTimeTrigger: Boolean = timer.isDefined
+
+  def isTriggeredAt (d: DateTime): Boolean = {
+    timer.isDefined && timer.get.check(d)
+  }
+
+  def armTimer(refDate: DateTime): Unit = {
+    if (timer.isDefined) timer.get.armCheck(refDate)
+  }
+
+  def dependsOnAny (changes: Iterable[CellRef[_]]): Boolean = changes.exists( dependencies.contains)
+
+}
+
+case class IntegerCellFormula(src: String, expr: IntegerExpression) extends CellFormula[Long] with IntegerExpression {
+  def eval (ctx: EvalContext): Long = expr.eval(ctx)
+  override def computeCellValue (ctx: EvalContext): IntegerCellValue = expr.computeCellValue(ctx)
+}
+
+case class RealCellFormula (src: String, expr: RealExpression) extends CellFormula[Double] with RealExpression {
+  def eval (ctx: EvalContext): Double = expr.evalToReal(ctx)
+  override def computeCellValue (ctx: EvalContext): RealCellValue = expr.computeCellValue(ctx)
+}
+
+case class BoolCellFormula (src: String, expr: BoolExpression) extends CellFormula[Boolean] with BoolExpression {
+  def eval (ctx: EvalContext): Boolean = expr.eval(ctx)
+  override def computeCellValue (ctx: EvalContext): BoolCellValue = expr.computeCellValue(ctx)
+}
+
+case class StringCellFormula (src: String, expr: StringExpression) extends CellFormula[String] with StringExpression {
+  def eval (ctx: EvalContext): String = expr.eval(ctx)
+  override def computeCellValue (ctx: EvalContext): StringCellValue = expr.computeCellValue(ctx)
+}
+
+case class IntegerListCellFormula (src: String, expr: IntegerListExpression) extends CellFormula[IntegerList] with IntegerListExpression {
+  def eval (ctx: EvalContext): IntegerList = expr.eval(ctx)
+  override def computeCellValue (ctx: EvalContext): IntegerListCellValue = expr.computeCellValue(ctx)
+}
+
+case class RealListCellFormula (src: String, expr: RealListExpression) extends CellFormula[RealList] with RealListExpression {
+  def eval (ctx: EvalContext): RealList = expr.evalToRealList(ctx)
+  override def computeCellValue (ctx: EvalContext): RealListCellValue = expr.computeCellValue(ctx)
+}
+
+//----------------- combinator parser for s-expr cell expression sources
+
+/**
+  * a combinator parser for CellExpressions specified as s-exprs
+  *
+  * examples:
+  *     (IntSum /a/\*)
+  *     (IntPushN . /a/x 2)
+  *
+  * CellRefs can be specified as glob patterns ('*' is only escaped because of scaladoc and can be used directly),
+  * which are expanded into matching Seq[CellRef]
+  *
+  * '.' refers to the column / row id this formula is compiled for
+  */
+abstract class CellExpressionParser (funLib: CellFunctionLibrary) extends DebugRegexParsers {
+
+  // we need types we can match on
+  class CRBuffer (initCapacity: Int = 8) extends ArrayBuffer[CellRef[_]](initCapacity)
+  class CEBuffer (initCapacity: Int = 8) extends ArrayBuffer[CellExpression[_]](initCapacity)
+
+  //--- provided by concrete class
+  protected def _matchRows (rowSpec: String): Seq[String]
+  protected def _matchColumns (colSpec: String): Seq[String]
+  protected def _cellRef (colPath: String, rowPath: String): CellRef[_]
+
+  //--- tokens
+  def integer: Parser[IntegerCellValueConst]    = """-?\d+""".r ^^ { s=> IntegerCellValueConst(s.toLong) }
+  def real: Parser[RealCellValueConst] = """-?\d*\.\d+""".r ^^ { s=> RealCellValueConst(s.toDouble) }
+  def bool: Parser[BoolCellValueConst] = "true|false".r ^^ { s=> BoolCellValueConst(s.toBoolean) }
+  def string: Parser[StringCellValueConst] = """\".*\"""".r ^^ { s=> StringCellValueConst(s.substring(1,s.length-2)) }
+
+  def funId: Parser[String] = """[A-Z][0-9A-Za-z_]*""".r ^^ { _.intern }
+  def pathSpec: Parser[String] = """[a-zA-Z0-9_/.*?!{},\[\]]+""".r
+  def path: Parser[String] = """[a-zA-Z/][a-zA-Z/_0-9]*""".r ^^ { _.intern }
+
+  def const: Parser[CellValueConst[_]] = integer | real | bool | string
+
+  // a single explicit CellRef
+  def cellRef: Parser[CellRef[_]]     = path ~ opt( "::" ~> path) ^^ {
+    case pRow ~ None => _cellRef(".", pRow)
+    case pCol ~ Some(pRow) => _cellRef(pCol, pRow)
+  }
+
+  // a (potential) sequence of CellRefs which can be produced from patterns
+  // note this has to be type checked in the caller context
+  def cellRefSpec: Parser[CRBuffer] = {
+    pathSpec ~ opt( "::" ~> pathSpec) ^^ {
+      case rowSpec ~ None =>
+        val paths = _matchRows(rowSpec)
+        paths.foldLeft(new CRBuffer(paths.length))( (acc,p) => {
+          acc += _cellRef(".",p)
+        })
+      case colSpec ~ Some(rowSpec) =>
+        val cols = _matchColumns(colSpec)
+        val rows = _matchRows(rowSpec)
+        val paths = new CRBuffer(cols.size * rows.size)
+        cols.foreach(c => rows.foreach { r =>
+          paths += _cellRef(c,r)
+        })
+        paths
+    }
+  }
+
+  def funArgs: Parser[CEBuffer] = {
+    val argBuf = new CEBuffer
+    rep( const | cellRefSpec | funCall ).map { args =>
+      args.foreach {
+        case cfCall: CellFunctionCall[_] => argBuf += cfCall
+        case cvConst: CellValueConst[_] => argBuf += cvConst
+        case crs: CRBuffer => argBuf ++= crs
+      }
+      argBuf
+    }
+  }
+
+  def funCall: Parser[CellFunctionCall[_]] = {
+    ("(" ~> funId ~ funArgs <~ ")") >> {
+      case id ~ args =>
+        funLib.get(id) match {
+          case Some(fun) =>
+            fun.genCall(args.toSeq) match {
+              case Right(cfCall) => success(cfCall)
+              case Left(errMsg) => err(errMsg)
             }
-          }
-
-          if (tts.nonEmpty) {
-            triggeredFormulas = triggeredFormulas :+ (col -> tts)
-            tts = Seq.empty[(AnyRow,AnyCellFormula)]
-          }
-
-          //forms.foreach { e=> println(s"${e._1} : ${e._2.ce}")}
-          columnFormulas = columnFormulas + (col.id -> formulas)
+          case None => err(s"unknown function $id")
         }
+    }
+  }
+
+  // no cell patterns or lists - we need a single CellExpression
+  def expr: Parser[CellExpression[_]] = funCall | const | cellRef
+
+  /**
+    * this is the public entry - note this does not yet check or adapt type compatibility with compiledRow
+    */
+  def compile (src: String): ResultValue[CellExpression[_]] = {
+    parseAll(expr, src) match {
+        // Success, Failure and Error are unfortunately path dependent types we cannot rename
+      case this.Success(ce: CellExpression[_],_) => SuccessValue(ce)
+      case this.Failure(msg,_) => gov.nasa.race.Failure(s"formula '$src' failed to compile: $msg")
+      case this.Error(msg,_) => gov.nasa.race.Failure(s"error compiling formula '$src': $msg")
+      case other => throw sys.error(s"parse result $other can't happen") // bogus compiler warning ?
+    }
+  }
+}
+
+class CellFormulaParser(node: Node, compiledColumn: Column, compiledRow: Row[_], funLib: CellFunctionLibrary) extends CellExpressionParser(funLib) {
+
+  protected def _matchRows (rowSpec: String): Seq[String] = {
+    val rowList = node.rowList
+
+    if (rowSpec == ".") {
+      Seq(compiledRow.id)
+    } else {
+      val rs = PathIdentifier.resolve(rowSpec,compiledRow.id,rowList.id)
+      if (PathIdentifier.isGlobPattern(rowSpec)) {
+        rowList.matching(rowSpec).map(_.id).toSeq
+      } else {
+        if (rowList.contains(rs)) Seq(rs) else sys.error(s"reference of unknown row $rs")
       }
     }
   }
 
-  def getColumnFormulas(pCol: Path): ListMap[Path,AnyCellFormula] = columnFormulas.getOrElse(pCol,ListMap.empty)
+  protected def _matchColumns (colSpec: String): Seq[String] = {
+    val columnList = node.columnList
 
-  def foreachEntry[U](f: ((Path,ListMap[Path,AnyCellFormula]))=>U): Unit = columnFormulas.foreach(f)
+    if (colSpec == ".") {
+      Seq(compiledColumn.id)
 
-  def hasAnyTimeTrigger: Boolean = triggeredFormulas.nonEmpty
-
-  def timeTriggeredColumnFormulas: Seq[(Column, Seq[(AnyRow,AnyCellFormula)])] = triggeredFormulas
-
-  def evalTriggeredWith (ctx: EvalContext): Seq[ColumnDataChange] = {
-    timeTriggeredColumnFormulas.foldLeft(Seq.empty[ColumnDataChange]){ (cdcs,ce)=>
-      val (col,tfs) = ce
-      val changes = tfs.foldLeft(Seq.empty[(Path,CellValue)]){ (changes,pe)=>
-        val (row,cf) = pe
-        if (cf.isTriggeredAt(ctx.evalDate)) {
-          val cv = cf.evalWith(ctx)
-          changes :+ (row.id -> cv)
-        } else changes
+    } else {
+      val cs = PathIdentifier.resolve(colSpec, compiledColumn.id,columnList.id)
+      if (PathIdentifier.isGlobPattern(colSpec)) {
+        columnList.matching(colSpec).map(_.id).toSeq
+      } else {
+        if (columnList.contains(cs)) Seq(cs) else sys.error(s"reference of unknown column $cs")
       }
-      if (changes.nonEmpty) {
-        cdcs :+ ColumnDataChange( col.id, ctx.nodeId, ctx.evalDate, changes)
-      } else cdcs
     }
   }
 
-  def armTriggeredAt (refDate: DateTime): Unit = {
-    timeTriggeredColumnFormulas.foreach( _._2.foreach( _._2.armTrigger(refDate)))
+  protected def _cellRef (colPath: String, rowPath: String): CellRef[_] = {
+    val rowList = node.rowList
+    val columnList = node.columnList
+
+    val row = if (rowPath == ".") {
+      compiledRow
+    } else {
+      rowList.get( PathIdentifier.resolve(rowPath, compiledRow.id, rowList.id)) match {
+        case Some(row) => row
+        case None => sys.error(s"reference of unknown row: $rowPath")
+      }
+    }
+
+    val col = if (colPath == ".") {
+      compiledColumn
+    } else {
+      columnList.get( PathIdentifier.resolve(colPath, compiledColumn.id, columnList.id)) match {
+        case Some(col) => col
+        case None => sys.error(s"reference of unknown column $colPath")
+      }
+    }
+
+    row.cellRef(col.id)
+  }
+}
+
+/**
+  * helper to trace combinator parser rule invocation
+  */
+trait DebugRegexParsers extends RegexParsers {
+  class Wrap[+T](name:String,parser:Parser[T]) extends Parser[T] {
+    def apply(in: Input): ParseResult[T] = {
+      val first = in.first
+      val pos = in.pos
+      val offset = in.offset
+      val t = parser.apply(in)
+      println(name+".apply for token "+first+
+        " at position "+pos+" offset "+offset+" returns "+t)
+      t
+    }
   }
 }
 
@@ -164,33 +311,173 @@ object FormulaList {
   val _columns_   = asc("columns")
   val _src_       = asc("src")
   val _trigger_   = asc("trigger")
+  val _constraints_ = asc("constraints")
 
-  type FormulaSpecs = (String , Seq[(String , (String,Option[String]))])
+  type FormulaSrcs = (String,Option[String])   // formula sources: (expr, opt time-trigger)
+
+  type CellValueFormulaSpec = (String, Seq[(String,FormulaSrcs)])
+  type ConstraintFormulaSpec = (String,String,FormulaSrcs)
+}
+
+trait FormulaList {
+  def compileWith (node: Node,funcLib: CellFunctionLibrary): Result
+}
+
+/**
+  * a named collection of (columnPattern -> (rowPattern -> cellFormula)) specs
+  * that is used to compute new CellValues (either dependency value- or time-triggered)
+  */
+class CellValueFormulaList (val id: String, val info: String, val date: DateTime, val formulaSpecs: Seq[CellValueFormulaSpec]) extends FormulaList {
+
+  // an ordered map of ordered maps: { col -> { row -> formula } }
+  protected var valueTriggeredFormulas: SeqMap[String,SeqMap[String,CellFormula[_]]] = SeqMap.empty
+
+  // a list of [(col,[row -> tt-formula])] entries
+  protected var timeTriggeredFormulas: Seq[(Column, Seq[(Row[_],CellFormula[_])])] = Seq.empty
+
+  def nonEmpty: Boolean = valueTriggeredFormulas.nonEmpty || timeTriggeredFormulas.nonEmpty
+
+  def compileWith(node: Node, funcLib: CellFunctionLibrary): Result = {
+    formulaSpecs.foreach { e=>
+      val colSpec = e._1
+      val rowFormulaSrcs = e._2
+      val columnList = node.columnList
+      val rowList = node.rowList
+
+      val cols = columnList.matching(colSpec)
+
+      if (cols.nonEmpty) {
+        cols.foreach { col =>
+          var tts = Seq.empty[(Row[_],CellFormula[_])]
+          var formulas = SeqMap.empty[String,CellFormula[_]]
+
+          rowFormulaSrcs.foreach { e =>
+            val rowSpec = PathIdentifier.resolve(e._1, rowList.id)
+            val (exprSrc,timerSpec) = e._2
+
+            val rows = rowList.matching(rowSpec)
+            if (rows.nonEmpty) {
+              rows.foreach { row =>
+                CellFormula.compile(exprSrc,row,col,node,funcLib) match {
+                  case SuccessValue(cf) =>
+                    formulas = formulas + (row.id -> cf)
+
+                    ifSome(timerSpec){ cf.setTimer }
+                    if (cf.hasTimeTrigger) {
+                      tts = tts :+ (row,cf)
+                    }
+
+                  case e@Failure(err) => return e // bail out - formula did not compile
+                }
+              }
+            }
+          }
+
+          if (tts.nonEmpty) {
+            timeTriggeredFormulas = timeTriggeredFormulas :+ (col -> tts)
+            tts = Seq.empty[(Row[_],CellFormula[_])]
+
+          } else {
+            valueTriggeredFormulas = valueTriggeredFormulas + (col.id -> formulas)
+          }
+        }
+      }
+    }
+
+    Success // no error
+  }
+
+  def getColumnFormulas(pCol: String): SeqMap[String,CellFormula[_]] = valueTriggeredFormulas.getOrElse(pCol,SeqMap.empty)
+
+  // iterate column-wise in order of formulaList definition
+  def foreachValueTriggeredColumn(f: (String,SeqMap[String,CellFormula[_]])=>Unit): Unit ={
+    valueTriggeredFormulas.foreach { e=>
+      val colId = e._1
+      val formulas = e._2
+      f(colId,formulas)
+    }
+  }
+
+  def foreachTimeTriggeredColumn (f: (Column,Seq[(Row[_],CellFormula[_])])=>Unit): Unit ={
+    timeTriggeredColumnFormulas.foreach { e=>
+      val col = e._1
+      val formulas = e._2
+      f(col,formulas)
+    }
+  }
+
+  def hasAnyTimeTrigger: Boolean = timeTriggeredFormulas.nonEmpty
+
+  def timeTriggeredColumnFormulas: Seq[(Column, Seq[(Row[_],CellFormula[_])])] = timeTriggeredFormulas
+
+  def evaluateValueTriggeredFormulas (ctx: EvalContext) (action: (ColId,Seq[CellPair])=>Unit): Unit = {
+    valueTriggeredFormulas.foreach { e =>
+      val colId = e._1
+      val formulas = e._2
+
+      val changes = formulas.foldLeft(Seq.empty[CellPair]) { (acc, re) => // we have to process in order of definition
+        val rowId = re._1
+        val cf = re._2
+
+        if (cf.canEvaluateIn(ctx) && cf.hasUpdatedDependencies(ctx)) {
+          val cv = cf.computeCellValue(ctx)
+          acc :+ (rowId -> cv)   // TODO - not efficient if there are many time triggered changes (which is probably rare)
+        } else acc
+      }
+
+      if (changes.nonEmpty) {
+        action(colId, changes)
+      }
+    }
+  }
+
+  def evaluateTimeTriggeredFormulas (ctx: EvalContext) (action: (ColId,Seq[CellPair])=>Unit): Unit = {
+    timeTriggeredColumnFormulas.foreach { e=>
+      val col = e._1
+      val formulas = e._2
+
+      val changes = formulas.foldLeft(Seq.empty[CellPair]) { (acc,re)=>  // we have to process in order of definition
+        val row = re._1
+        val cf = re._2
+        if (cf.isTriggeredAt(ctx.evalDate) && cf.canEvaluateIn(ctx)) {
+          val cv = cf.computeCellValue(ctx)
+          acc :+ (row.id -> cv)   // TODO - not efficient if there are many time triggered changes (which is probably rare)
+        } else acc
+      }
+
+      if (changes.nonEmpty) {
+        action(col.id, changes)
+      }
+    }
+  }
+
+  def armTriggeredAt (refDate: DateTime): Unit = {
+    timeTriggeredColumnFormulas.foreach( _._2.foreach( _._2.armTimer(refDate)))
+  }
+}
+
+trait FormulaListParser[T] extends UTF8JsonPullParser {
+  def parse (buf: Array[Byte]): Option[T]
 }
 
 /**
   * a parser for json representations of CellFormulaList instances
   */
-trait FormulaListParser[T] extends UTF8JsonPullParser {
+class CellValueFormulaListParser extends FormulaListParser[CellValueFormulaList] {
   import FormulaList._
 
-  def createList (id: Path, info: String, date: DateTime, columnListId: Path, rowListId: Path, formulaSpecs: Seq[FormulaSpecs]): T
-
-  def parse (buf: Array[Byte]): Option[T] = {
+  def parse (buf: Array[Byte]): Option[CellValueFormulaList] = {
     initialize(buf)
 
     try {
       readNextObject {
-        val id = UnixPath.intern(readQuotedMember(_id_))
+        val id = readQuotedMember(_id_).toString
         val info = readQuotedMember(_info_).toString
         val date = readDateTimeMember(_date_)
 
-        val columnListId = UnixPath.intern(readQuotedMember(_columnListId_))
-        val rowListId = UnixPath.intern(readQuotedMember(_rowListId_))
-
-        val formulaSpecs = readNextObjectMemberInto(_columns_, ArrayBuffer.empty[FormulaSpecs]) {
+        val formulaSpecs = readNextObjectMemberInto(_columns_, ArrayBuffer.empty[CellValueFormulaSpec]) {
           val colSpec = readObjectMemberName().toString
-          val formulas = readCurrentObjectInto(ArrayBuffer.empty[(String,(String,Option[String]))]) {
+          val formulas = readCurrentObjectInto(ArrayBuffer.empty[(String,FormulaSrcs)]) {
             val rowSpec = readObjectMemberName().toString
             val formulaSrc = readQuotedMember(_src_).toString
             val triggerSrc = readOptionalQuotedMember(_trigger_).map(_.toString)
@@ -201,19 +488,13 @@ trait FormulaListParser[T] extends UTF8JsonPullParser {
           (colSpec,formulas)
         }.toSeq
 
-        Some(createList(id,info,date, columnListId, rowListId, formulaSpecs))
+        Some( new CellValueFormulaList(id,info,date, formulaSpecs))
       }
     } catch {
       case x: JsonParseException =>
         x.printStackTrace()
-        warning(s"malformed rowList: ${x.getMessage}")
+        warning(s"malformed cell value formula list: ${x.getMessage}")
         None
     }
-  }
-}
-
-class CellValueFormulaListParser extends FormulaListParser[CellValueFormulaList] {
-  def createList (id: Path, info: String, date: DateTime, columnListId: Path, rowListId: Path, formulaSpecs: Seq[FormulaSpecs]) = {
-    new CellValueFormulaList(id,info,date, columnListId, rowListId, formulaSpecs)
   }
 }

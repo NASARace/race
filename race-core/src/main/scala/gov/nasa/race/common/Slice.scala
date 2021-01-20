@@ -35,8 +35,8 @@ trait ByteSlice {
   def off: Int
   def len: Int  // can't use length as it clashes with CharSequence.length (in chars)
 
-  @inline final def isEmpty: Boolean = len == 0
-  @inline final def nonEmpty: Boolean = len > 0
+  def isEmpty: Boolean = len == 0
+  def nonEmpty: Boolean = len > 0
 
   @inline final def limit: Int = off + len
 

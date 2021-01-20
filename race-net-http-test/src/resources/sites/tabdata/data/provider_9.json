@@ -1,9 +1,6 @@
 {
-  "id": "provider_9",
+  "id": "/providers/region1/provider_9",
   "date": "2020-06-29T16:06:09.000",
-
-  "columnlist": "/providers/region1",
-  "rowlist": "/rows/sds1",
 
   "rows": {
     "/data/cat_A/field_1": 91,

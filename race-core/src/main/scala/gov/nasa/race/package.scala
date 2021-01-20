@@ -462,23 +462,74 @@ package object race {
     def isUndefined: Boolean  = !isDefined
   }
 
-  // a more specialized form of scala.util.Try that only needs to discriminate between success or failure (with explanation)
-  // assuming that operations succeed more often than fail and hence not require object allocation on success
-  sealed abstract class Result {
-    def failed: Boolean
-    @inline final def succeeded: Boolean = !failed
 
-    def ifSuccess(f: => Unit): Result
-    def ifFailure(f: => Unit): Result
+  /**
+    * a computation with a generic success value and a common failure type, which is just a failure message.
+    * This is a specialized and more intuitive Either[String,+T]
+    */
+  sealed trait ResultValue[+T] {
+    //--- the abstract data model (avoid allocation for the purpose of testing results)
+    def failed: Boolean
+    def failure: Failure
+    def get: T
+
+    //--- specialized interface
+    def succeeded: Boolean = !failed
+
+    def ifSuccess (f: =>Unit): Unit = if (!failed) f
+    def ifSuccess (f: T=>Unit): Unit = if (!failed) f(get)
+
+    def ifFailed (f: =>Unit): Unit = if (failed) f
+    def ifFailed (f: String=>Unit): Unit = if (failed) f(failure.msg)  // use this also to turn failure into exceptions
+
+    //--- standard functional interface
+    def foreach (f: T=>Unit): Unit = if (!failed) f(get)
+    def map[U] (f: T=>U): ResultValue[U] = if (!failed) SuccessValue(f(get)) else failure
+    def flatMap[U] (f: T=>ResultValue[U]): ResultValue[U] = if (!failed) f(get) else failure
+    // isEmpty, nonEmpty would be a bit non-intuitive with Result
   }
+
+  /**
+    * value carrying success instances
+    */
+  case class SuccessValue[+T] (value: T) extends ResultValue[T] {
+    def failed: Boolean = false
+    def failure: Failure = throw new NoSuchElementException("result did succeed")
+    def get: T = value
+  }
+
+
+  /**
+    * a ResultValue without a value - just indicates if a computation did succeed
+    * This is a specialized and more intuitive Option[String]
+    */
+  sealed trait Result {
+    def failed: Boolean
+    def ifSuccess (f: =>Unit): Unit = if (!failed) f
+    def ifFailed (f: =>Unit): Unit = if (failed) f
+    def ifFailed (f: String=>Unit): Unit
+  }
+
+  /**
+    * singleton for successful Results without value. Just indicates a computation did succeed
+    */
   object Success extends Result {
-    override def failed = false
-    override def ifSuccess(f: => Unit) =  { f; this }
-    override def ifFailure(f: => Unit) = this
+    def failed: Boolean = false
+    def failure: Failure = throw new NoSuchElementException("result did succeed")
+    def get: Nothing = throw new NoSuchElementException("result has no value")
+    def ifFailed (f: String=>Unit): Unit = {}
   }
-  case class Failure(reason: String) extends Result {
-    override def failed = true
-    override def ifSuccess(f: => Unit) = this // do nothing
-    override def ifFailure(f: => Unit) = { f; this }
+
+  /**
+    * common failure type shared by all Results. Just holds an error message
+    */
+  case class Failure (msg: String) extends Result with ResultValue[Nothing] {
+    def failed: Boolean = true
+    def failure: Failure = this
+    def get: Nothing = throw new NoSuchElementException("result did fail")
+    override def ifSuccess (f: =>Unit): Unit = {}
+    override def ifFailed (f: =>Unit): Unit = f
+    override def ifFailed (f: String=>Unit): Unit = f(msg)
   }
+
 }

@@ -16,113 +16,164 @@
  */
 package gov.nasa.race.http.tabdata
 
-import java.nio.file.Path
-
-import gov.nasa.race.common.UnixPath
 import gov.nasa.race.uom.DateTime
+import gov.nasa.race.{Failure, Result, Success}
 
-import scala.collection.mutable
+import scala.collection.immutable.Map
 import scala.collection.mutable.ArrayBuffer
-
+import scala.reflect.{ClassTag, classTag}
 
 /**
-  * aggregate that contains what is needed from the environment to evaluate CellExpressions
+  * abstraction of the data model used to evaluate CellExpressions and to create CellValues
   *
-  * changes are processed by column
-  * TODO - shall we make EvalContext re-usable over several columns?
+  * note this interface is used for both read and write operations so that changes can be accumulated before
+  * they are published
   *
-  * this is an internal, non-threadsafe object which is mutated during processing of a CDC.
-  * After the CDC has been processed, cells contains the new values for the respective column,
-  * and changes contains a list of the changed FieldValues/Field paths
+  * note also that it is up to the implementor to handle undefined cell values for valid row ids so that we can
+  * support sparse cell value containers
   */
 trait EvalContext {
+  def id: String         // where we evaluate
 
-  // the data model interface
-  def nodeId: Path
-  def columnList: ColumnList
+  def evalDate: DateTime // used to create new CellValue instancesds
   def rowList: RowList
-  def getColumnCells (pCol: Path): Map[Path,CellValue]
 
-  private var _evalDate: DateTime = DateTime.UndefinedDateTime // timestamp to use for new Cell values
-
-  // our internal data for sequential column/row changes
-  private var _currentColumn: Column = null // currently changed column
-  private var _currentRow: AnyRow = null       // currently changed row
-
-  private var _currentCells: Map[Path,CellValue] = Map.empty // currently changed Cells ColumnData
-  private val _changedCells = new ArrayBuffer[Cell].empty  // accumulated changes of currentCells, in order
-
-  def haveCurrentCellsChanged: Boolean = (_currentCells.nonEmpty && (_currentCells ne getColumnCells(_currentColumn.id)))
-  def hasChangedCells: Boolean = _changedCells.nonEmpty
-  def clearChangedCells: Unit = _changedCells.clear()
-
-  def currentCells: Map[Path,CellValue] = _currentCells
-  def changedCells: scala.collection.Seq[Cell] = _changedCells
-  def changedCellSeq: Seq[Cell] = _changedCells.toSeq
-
-  def setEvalDate (d: DateTime): Unit = _evalDate = d
-  def evalDate: DateTime = _evalDate
-
-  def setCurrentColumn (col: Column): Unit = {
-    if (columnList.contains(col.id)) {
-      _currentColumn = col
-      _currentRow = null
-      _currentCells = getColumnCells(col.id)
-      _changedCells.clear()
-    } else throw new IllegalArgumentException(s"not a valid column: ${col.id}")
-  }
-
-  def currentColumn: Column = _currentColumn
-  def currentRow: Row[_] = _currentRow
-
-  def setCurrentRow (row: AnyRow): Unit = {
-    if (rowList.contains(row.id)) {
-      _currentRow = row
-    } else throw new IllegalArgumentException(s"not a valid row: ${row.id}")
-  }
-
-  def setCurrentCellValue (newValue: CellValue): Unit = {
-    if (_currentRow == null) throw new RuntimeException("uninitialized EvalContext")
-    val cell = (_currentRow.id -> newValue)
-    _currentCells = _currentCells + cell
-    _changedCells += cell
-  }
-
-  def currentCellValue: CellValue = {
-    if (_currentRow == null) throw new RuntimeException("uninitialized EvalContext")
-
-    _currentCells.get(_currentRow.id) match {
-      case Some(c) => c
-      case None => _currentRow.undefinedCellValue
-    }
-  }
-
-  def columnDataFromCurrentCells: ColumnData = ColumnData(_currentColumn.id, _evalDate, columnList.id, rowList.id, _currentCells)
+  //--- methods to keep track of changes
+  def addChange (colId: String, row: Row[_], cv: CellValue[_]): Unit
+  def hasChanges: Boolean
+  def clearChanges(): Unit
+  def foreachChange (f: (String,Row[_],CellValue[_])=>Unit): Unit
+  def existsChange (f: (String,Row[_],CellValue[_])=>Boolean): Boolean
+  def foldLeftChanges [T] (acc: T)(f: (T, String,Row[_],CellValue[_])=>T): T
+  def foldRightChanges [T] (acc: T)(f: (T, String,Row[_],CellValue[_])=>T): T
 
   /**
-    * note that the CellExpression compiler should already have normalized path references
+    * cell value getter
     */
-  def cell (c: Path, r: Path): CellValue = {
-    if (UnixPath.isCurrent(c) || c == _currentColumn.id) { // current column - look up value in currentCells
-      if (UnixPath.isCurrent(r)) currentCellValue
-      else _currentCells.getOrElse(_currentRow.resolve(r), _currentRow.undefinedCellValue)
+  def getCellValue (colId: String, rowId: String): Option[CellValue[_]]  // abstract accessor for CellValues
+  def getCellValue (cellRef: CellRef[_]): Option[CellValue[_]] = getCellValue(cellRef.colId, cellRef.rowId)
 
-    } else { // not the current column
-      getColumnCells(_currentColumn.resolve(c)).getOrElse(_currentRow.resolve(r), _currentRow.undefinedCellValue)
+  def getColumnData(colId: String): Option[ColumnData]
+
+
+  //--- generic convenience methods
+  // use these in a context that has already checked colId/rowId against ColumnList/RowList instances
+
+  def cellValue (colId: String, rowId: String): CellValue[_] = {
+    getCellValue(colId, rowId).getOrElse( throw new NoSuchElementException(s"$colId:$rowId"))
+  }
+
+  def typedCellValue [T <: CellValue[_] :ClassTag] (colId: String, rowId: String): T = {
+    cellValue(colId,rowId) match {
+      case cv:T => cv
+      case _ => throw new RuntimeException(s"invalid row type: '$rowId' not a ${classTag[T].runtimeClass.getSimpleName} row")
     }
   }
 
-  def cell (cref: CellRef[_]): CellValue = cell(cref.col,cref.row)
+  def cellValues (colId: String): ColumnData = {
+    getColumnData(colId) match {
+      case Some(cd) => cd
+      case _ => throw new NoSuchElementException(s"unknown column $colId")
+    }
+  }
+
+  def hasCellValue (colId: String, rowId: String): Boolean = {
+    getCellValue(colId, rowId) match {
+      case Some(_: UndefinedCellValue[_]) | None => false
+      case _ => true
+    }
+  }
+  def hasCellValue (cellRef: CellRef[_]): Boolean = hasCellValue(cellRef.colId, cellRef.rowId)
+
+  def getTypedCellValue [T <: CellValue[_] :ClassTag] (colId: String, rowId: String): Option[T] = {
+    getCellValue(colId,rowId) match {
+      case Some(cv: T) => Some(cv)
+      case _ => None
+    }
+  }
 }
 
-/**
-  * mostly for testing purposes, by-passing ColumnData
-  */
-class BasicEvalContext ( val nodeId: Path,
-                         val columnList: ColumnList,
-                         val rowList: RowList,
-                         val columnData: mutable.Map[Path,Map[Path,CellValue]]
-                       ) extends EvalContext {
 
-  def getColumnCells (pCol: Path): Map[Path,CellValue] = columnData.getOrElse(pCol, Map.empty)
+/**
+  * a mutable EvalContext that keeps ColumnDatas in a var that holds an immutable ColumnData map
+  *
+  * we keep this separate from Node so that we can batch-mutate and assess changes before they are published
+  *
+  * note we do use the ColumnData property that valid rowIds always return (possibly undefined) cell values, only
+  * invalid rowIds can cause NoSuchElementExceptions
+  */
+trait MutableEvalContext extends EvalContext {
+
+  var columnDatas: Map[String,ColumnData]  // this is what gets mutated (in addition to evalDate)
+
+  protected val changes: ArrayBuffer[(String,Row[_],CellValue[_])] = ArrayBuffer.empty
+
+  def addChange (colId: String, row: Row[_], cv: CellValue[_]): Unit = {
+    val newChange = new Tuple3[String,Row[_],CellValue[_]](colId,row,cv)
+    changes += newChange // compiler does not recognize tuple construction otherwise
+  }
+  def hasChanges: Boolean = changes.nonEmpty
+  def clearChanges(): Unit = changes.clear()
+  def foreachChange (f: (String,Row[_],CellValue[_])=>Unit): Unit = changes.foreach( e=> f(e._1,e._2,e._3))
+  def existsChange (f: (String,Row[_],CellValue[_])=>Boolean): Boolean = changes.exists( e=> f(e._1,e._2,e._3))
+  def foldLeftChanges [T] (acc: T)(f: (T, String,Row[_],CellValue[_])=>T): T = changes.foldLeft(acc)( (acc,e)=> f(acc,e._1,e._2,e._3) )
+  def foldRightChanges [T] (acc: T)(f: (T, String,Row[_],CellValue[_])=>T): T = changes.foldRight(acc)( (e,acc)=> f(acc,e._1,e._2,e._3) )
+
+  override def cellValue (colId: String, rowId: String): CellValue[_] = columnDatas.get(colId) match {
+    case Some(cd) => cd(rowList(rowId))
+    case None => throw new NoSuchElementException(s"unknown column $colId")
+  }
+
+  override def getCellValue(colId: String, rowId: String): Option[CellValue[_]] = {
+    columnDatas.get(colId).flatMap( _.get(rowId))
+  }
+
+  override def getColumnData(colId: String): Option[ColumnData] = columnDatas.get(colId)
+
+  // override if we have to keep track of changes
+  protected def updateColumnData (oldCd: ColumnData, changedCvs: Seq[(String,CellValue[_])]): ColumnData = {
+    oldCd.updateCvs(rowList,changedCvs,evalDate)
+  }
+
+  def setCellValues (colId: String, changedCvs: Seq[(String,CellValue[_])]): Result = {
+    columnDatas.get(colId) match {
+      case Some(oldCd) =>
+        try {
+          val newCd = oldCd.updateCvs(rowList, changedCvs, evalDate, addChange)
+          if (newCd ne oldCd) {
+            columnDatas = columnDatas + (colId -> newCd)
+            Success
+          } else Failure(s"rejected outdated cell values $changedCvs")
+        } catch {
+          case x: Throwable => Failure(x.getMessage)
+        }
+
+      case None => Failure(s"invalid column $colId")
+    }
+  }
+
+  def setCellValue (colId: String, rowId: String, cv: CellValue[_]): Result = {
+    columnDatas.get(colId) match {
+      case Some(oldCd) =>
+        try {
+          val newCd = oldCd.updateCv(rowList, rowId,cv,evalDate, addChange)
+          if (newCd ne oldCd) {
+            columnDatas = columnDatas + (colId -> newCd)
+            Success
+          } else Failure(s"rejected outdated cell value $rowId: $cv")
+        } catch {
+          case x: Throwable => Failure(x.getMessage)
+        }
+
+      case None => Failure(s"invalid column $colId")
+    }
+  }
+}
+
+
+/**
+  * basic RecordingEvalContext implementation
+  */
+class BasicEvalContext (val id: String, val rowList: RowList, var evalDate: DateTime, var columnDatas: Map[String,ColumnData]) extends MutableEvalContext {
+  def this (node: Node, evalDate: DateTime) = this(node.id, node.rowList, evalDate, node.columnDatas)
 }

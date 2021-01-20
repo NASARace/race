@@ -16,10 +16,8 @@
  */
 package gov.nasa.race.http.tabdata
 
-import java.nio.file.Path
-
 import gov.nasa.race.common.ConstAsciiSlice.asc
-import gov.nasa.race.common.{JsonPullParser, JsonSerializable, JsonWriter, UnixPath}
+import gov.nasa.race.common.{JsonPullParser, JsonSerializable, JsonWriter}
 import gov.nasa.race.uom.DateTime
 
 object Ping {
@@ -38,7 +36,7 @@ import Ping._
   * note that we keep track of time and serial number, to detect out-of-order or missed responses
   * note also that we record requester and target so that end points can detect invalid requests and handle DoS attacks
   */
-case class Ping (sender: Path, receiver: Path, request: Int, date: DateTime) extends JsonSerializable {
+case class Ping (sender: String, receiver: String, request: Int, date: DateTime) extends JsonSerializable {
 
   def serializeEmbedded (w: JsonWriter): Unit = {
     w.writeMemberObject(_ping_) { _
@@ -62,8 +60,8 @@ trait PingParser extends JsonPullParser {
   }
 
   def readPingBody: Ping = {
-    val sender = UnixPath.intern(readQuotedMember(_sender_))
-    val receiver = UnixPath.intern(readQuotedMember(_receiver_))
+    val sender = readQuotedMember(_sender_).intern
+    val receiver = readQuotedMember(_receiver_).intern
     val request = readUnQuotedMember(_request_).toInt
     val date = readDateTimeMember(_date_)
     Ping(sender, receiver, request, date)

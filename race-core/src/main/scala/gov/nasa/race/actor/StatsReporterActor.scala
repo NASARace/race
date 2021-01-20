@@ -62,7 +62,7 @@ trait StatsReporterActor extends SubscribingRaceActor with PeriodicRaceActor {
   override def defaultTickInterval = 2300.milliseconds
   override def defaultTickDelay = 2300.milliseconds
 
-  override def onRaceTick: Unit = {
+  override def onRaceTick(): Unit = {
     if (hasNewStats) {
       val t = System.currentTimeMillis
       if (lastStatsMillis > 0) {

@@ -169,7 +169,7 @@ class TrackStatsCollector (val config: Config) extends StatsCollectorActor {
     sources.foreach( e=> e._2.checkExpirations(stats,curSimMillis,dropAfterMillis))
   }
 
-  override def onRaceTick: Unit = {
+  override def onRaceTick(): Unit = {
     checkExpirations
     publishSnapshot
   }

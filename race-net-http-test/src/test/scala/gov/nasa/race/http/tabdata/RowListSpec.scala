@@ -29,7 +29,7 @@ class RowListSpec extends AnyFlatSpec with RaceSpec {
   "a RowListParser" should "translate a JSON source" in {
     val input = FileUtils.fileContentsAsString("race-net-http-test/src/resources/sites/tabdata/data/rowList.json").get
 
-    val parser = new RowListParser
+    val parser = new RowListParser("/providers/region1")
 
     println(s"#-- parsing: $input")
 
@@ -41,7 +41,8 @@ class RowListSpec extends AnyFlatSpec with RaceSpec {
         println(s"list date: ${list.date}")
         println("rows:")
         list.rows.foreach { e=>
-          val (id,row) = e
+          val id = e._1
+          val row = e._2
           println(s"  '$id': $row")
         }
 

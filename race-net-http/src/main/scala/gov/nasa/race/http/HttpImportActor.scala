@@ -213,7 +213,7 @@ class HttpImportActor (val config: Config) extends PublishingRaceActor
     reqWithCookies
   }
 
-  override def onRaceTick: Unit = sendRequests
+  override def onRaceTick(): Unit = sendRequests
 
   override def handleMessage = {
     case BusEvent(_,SendHttpRequest,_) => sendRequests

@@ -36,28 +36,28 @@ class ColumnDataSpec extends AnyFlatSpec with RaceSpec {
 
   val rl = "/data"
   val rows = Seq(
-    LongRow(p"$rl/cat_A", "this is the cat_A header"),
-    LongRow(p"$rl/cat_A/field_1", "this is the cat_A field 1"),
-    LongRow(p"$rl/cat_A/field_2", "this is the cat_A field 2"),
-    LongRow(p"$rl/cat_A/field_3", "this is the cat_A field 3"),
-    LongListRow(p"$rl/cat_A/field_4", "this is the cat_A field 4"),
+    IntegerRow("$rl/cat_A", "this is the cat_A header", UpdateFilter.localOnly),
+    IntegerRow("$rl/cat_A/field_1", "this is the cat_A field 1", UpdateFilter.localOnly),
+    IntegerRow("$rl/cat_A/field_2", "this is the cat_A field 2", UpdateFilter.localOnly),
+    IntegerRow("$rl/cat_A/field_3", "this is the cat_A field 3", UpdateFilter.localOnly),
+    IntegerListRow("$rl/cat_A/field_4", "this is the cat_A field 4", UpdateFilter.localOnly),
 
-    DoubleRow(p"$rl/cat_B", "this is the cat_B header"),
-    DoubleRow(p"$rl/cat_B/field_1", "this is the cat_B field 1"),
-    DoubleRow(p"$rl/cat_B/field_2", "this is the cat_B field 2"),
+    RealRow("$rl/cat_B", "this is the cat_B header", UpdateFilter.localOnly),
+    RealRow("$rl/cat_B/field_1", "this is the cat_B field 1", UpdateFilter.localOnly),
+    RealRow("$rl/cat_B/field_2", "this is the cat_B field 2", UpdateFilter.localOnly),
 
-    LongRow(p"$rl/cat_C", "this is the cat_C header"),
-    LongRow(p"$rl/cat_C/field_1", "this is the cat_C field 1"),
-    LongRow(p"$rl/cat_C/field_2", "this is the cat_C field 2"),
-    LongRow(p"$rl/cat_C/field_3", "this is the cat_C field 3"),
-    LongRow(p"$rl/cat_C/field_4", "this is the cat_C field 4")
+    IntegerRow("$rl/cat_C", "this is the cat_C header", UpdateFilter.localOnly),
+    IntegerRow("$rl/cat_C/field_1", "this is the cat_C field 1", UpdateFilter.localOnly),
+    IntegerRow("$rl/cat_C/field_2", "this is the cat_C field 2", UpdateFilter.localOnly),
+    IntegerRow("$rl/cat_C/field_3", "this is the cat_C field 3", UpdateFilter.localOnly),
+    IntegerRow("$rl/cat_C/field_4", "this is the cat_C field 4", UpdateFilter.localOnly)
   )
 
   val rowList = RowList (
-    p"$rl",
+    "$rl",
     "Sample Data Set",
     DateTime.parseYMDT("2020-06-28T12:00:00.000"),
-    rows.foldLeft(ListMap.empty[Path,AnyRow])( (acc,r) => acc + (r.id -> r))
+    rows.foldLeft(ListMap.empty[String,Row[_]])( (acc,r) => acc + (r.id -> r))
   )
 
   "a ProviderDataParser" should "read ProviderData from JSON source" in {

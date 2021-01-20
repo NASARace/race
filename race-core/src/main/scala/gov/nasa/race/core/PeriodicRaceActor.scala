@@ -51,12 +51,12 @@ trait PeriodicRaceActor extends RaceActor {
   var schedule: Option[Cancellable] = None
 
   def handleRaceTick: Receive = {
-    case RaceTick => onRaceTick
+    case RaceTick => onRaceTick()
   }
 
   override def handleSystemMessage: Receive = handleRaceTick orElse super.handleSystemMessage
 
-  def onRaceTick: Unit = {
+  def onRaceTick(): Unit = {
     info("received RaceTick at")
   }
 

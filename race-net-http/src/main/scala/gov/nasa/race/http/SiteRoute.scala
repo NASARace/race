@@ -178,7 +178,7 @@ class AuthorizedSiteRoute (parent: ParentActor, config: Config) extends SiteRout
                             completeWithCachedContent(cachedContent, uri)
                           }
                         case TokenMatched => completeWithCachedContent(cachedContent, uri) // no need to set new session cookie
-                        case TokenFailure(reason) => completeLogin(Some(uri.toString), Some(reason)) // session token was rejected
+                        case f:TokenFailure => completeLogin(Some(uri.toString), Some(f.reason)) // session token was rejected
                       }
 
                     case None => completeLogin(Some(uri.toString)) // no session token yet

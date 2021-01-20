@@ -40,7 +40,7 @@ class FPosStatsCollector (val config: Config)
   }
   override def createTSEntryData (t: Long, fpos: FlightPos) = new TSEntryData(t,fpos)
 
-  override def onRaceTick: Unit = {
+  override def onRaceTick(): Unit = {
     // we do our own flight dropped handling since we also check upon first report
     checkDropped
     publish(statsSnapshot)

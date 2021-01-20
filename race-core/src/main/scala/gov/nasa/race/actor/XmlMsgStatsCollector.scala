@@ -100,7 +100,7 @@ class XmlMsgStatsCollector (val config: Config) extends StatsCollectorActor {
     false
   }
 
-  override def onRaceTick: Unit = {
+  override def onRaceTick(): Unit = {
     if (reportEmptyStats || msgStats.nonEmpty) publish(snapshot)
   }
 

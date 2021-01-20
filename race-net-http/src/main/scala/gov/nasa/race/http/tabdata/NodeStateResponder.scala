@@ -16,13 +16,9 @@
  */
 package gov.nasa.race.http.tabdata
 
-import java.nio.file.Path
-
 import gov.nasa.race.common.JsonSerializable
 import gov.nasa.race.core.Loggable
-import gov.nasa.race.withSomeOrElse
 
-import scala.collection.immutable.Iterable
 import scala.collection.mutable
 
 /**
@@ -30,65 +26,77 @@ import scala.collection.mutable
   *   - one own NodeState for outdated local ColumnData, and
   *   - ColumnDataChanges for each ColumnData that is outdated on remote
   *
-  * this class essentially implements the NodeState sync protocol
+  * this class essentially implements the NodeState sync protocol, which needs to be factored out since it is used
+  * by both the UpstreamConnectorActor and the NodeServerRoute.
+  *
+  * Sync is always initiated by the child node since the server does not (need to) know child node IP addresses
+  *
   */
-class NodeStateResponder (node: Node, columnData: Map[Path,ColumnData],
+class NodeStateResponder (node: Node,
                           logger: Loggable,
                           sendColumn: Column => Boolean,
                           receiveColumn: Column => Boolean,
-                          sendRow: (Column,AnyRow) => Boolean,
-                          receiveRow: (Column,AnyRow) => Boolean
+                          sendRow: (Column,Row[_]) => Boolean,
+                          receiveRow: (Column,Row[_]) => Boolean
                          ) {
 
   /**
+    * get the series of replies that are required to sync the external NodeState with our own data
     * the exported function for which we exist
     */
-  def getNodeStateReplies (ns: NodeState): Seq[JsonSerializable] = {
-    val remoteNodeId = ns.nodeId
+  def getNodeStateReplies (extNodeState: NodeState): Seq[JsonSerializable] = {
+    if (node.isKnownColumn(extNodeState.nodeId)) {
+      val extOutdated = mutable.Buffer.empty[ColumnDatePair]
+      val locOutdated = mutable.Buffer.empty[(String,Seq[RowDatePair])]
+      val cdRowsToSend = mutable.Buffer.empty[(String,Seq[CellPair])]
 
-    if (node.isKnownColumn(remoteNodeId)) {
-      val extOutdated = mutable.Buffer.empty[ColumnDate]
-      val locOutdated = mutable.Buffer.empty[(Path,Seq[RowDate])]
-      val updates = mutable.Buffer.empty[(Path,Seq[Cell])]
-
-      processExternalColumnDates( node, remoteNodeId, ns.readOnlyColumns, extOutdated, updates)
-      processLocalColumnDates( node, remoteNodeId, ns.readWriteColumns, locOutdated, updates)
+      processExternalReadOnlyCDs( node, extNodeState,        extOutdated, cdRowsToSend)
+      processExternalReadWriteCdRows( node, extNodeState,    locOutdated, cdRowsToSend)
 
       // TODO - what about CDs we export to remote that are not in the NS? (indicates outdated CLs)
 
       val replies = mutable.ArrayBuffer.empty[JsonSerializable]
 
-      updates.foreach { e=>
+      cdRowsToSend.foreach { e=>
         val (colId,cells) = e
-        replies += ColumnDataChange( colId, node.id, columnData(colId).date, cells)
+        replies += ColumnDataChange( colId, node.id, node.columnDatas(colId).date, cells)
       }
 
       // we send the own NodeState last as the handshake terminator (even if there are no outdated own CDs)
-      replies += new NodeState(node, extOutdated.toSeq, locOutdated.toSeq)
+      replies += NodeState(node, extOutdated.toSeq, locOutdated.toSeq)
 
       replies.toSeq
 
     } else {
-      logger.warning(s"rejecting NodeState from unknown node $remoteNodeId")
+      logger.warning(s"rejecting NodeState from unknown node ${extNodeState.nodeId}")
       Seq.empty[JsonSerializable]
     }
   }
 
-  protected def processExternalColumnDates (node: Node, remoteNodeId: Path, externalColumnDates: Seq[ColumnDate],
-                                            outdatedOwn: mutable.Buffer[ColumnDate], newerOwn: mutable.Buffer[(Path,Seq[Cell])]): Unit = {
-    externalColumnDates.foreach { e=>
+
+  /**
+    * for the given external readonly CD dates, accumulate the set of outdated own CDs and newer own CD rows to send
+    *
+    * since the other side only receives those CDs it is enough to go row-by-row for the outdated external CDs we
+    * write and send to the external
+    */
+  protected def processExternalReadOnlyCDs(node: Node, extNodeState: NodeState,
+                                           //-- output
+                                           outdatedOwn: mutable.Buffer[ColumnDatePair],
+                                           cdRowsToSend: mutable.Buffer[(String,Seq[CellPair])]): Unit = {
+    extNodeState.readOnlyColumns.foreach { e=>
       val (colId, colDate) = e
 
-      columnData.get(colId) match {
+      node.columnDatas.get(colId) match {
         case Some(cd) =>
           val col = node.columnList(colId)  // if we have a CD it also means we have a column for it
 
           if (colDate < cd.date) { // our data is newer
-            if (sendColumn(col)) {
-              // this is not our data, so we don't include cells that have the same time stamp
-              val cells = cd.changesSince(colDate).filter( cell=> sendRow(col, node.rowList(cell._1)))
-              if (cells.nonEmpty) newerOwn += (colId -> cells)
+            if (sendColumn(col)) { // this is a column we write so we have to reply with all newer rows
+              val cells = cd.changesSince(colDate,false).filter( cell=> sendRow(col, node.rowList(cell._1))) // TODO - equal date prioritization ?
+              if (cells.nonEmpty) cdRowsToSend += (colId -> cells)
             }
+            // otherwise we only receive this column and in this case the other node will send updates to our NodeState reply
 
           } else if (colDate > cd.date) { // remote data is newer
             if (receiveColumn(col)) {
@@ -103,20 +111,25 @@ class NodeStateResponder (node: Node, columnData: Map[Path,ColumnData],
     }
   }
 
-  protected def processLocalColumnDates (node: Node, remoteNodeId: Path, localColumnDates: Seq[(Path,Seq[RowDate])],
-                                         outdatedOwn: mutable.Buffer[(Path,Seq[RowDate])], newerOwn: mutable.Buffer[(Path,Seq[Cell])]): Unit = {
-    localColumnDates.foreach { e=>
+  /**
+    * for the given external read-write CD rows, accumulate the set of outdated own CDs and newer own CD rows to send
+    */
+  protected def processExternalReadWriteCdRows(node: Node, extNodeState: NodeState,
+                                               //-- output
+                                               outdatedOwn: mutable.Buffer[(String,Seq[RowDatePair])],
+                                               cdRowsToSend: mutable.Buffer[(String,Seq[CellPair])]): Unit = {
+    extNodeState.readWriteColumns.foreach { e=>
       val (colId,rowDates) = e
 
-      columnData.get(colId) match {
+      node.columnDatas.get(colId) match {
         case Some(cd) =>
           val col = node.columnList(colId) // if we have a CD it also means we have a column for it
-          val prioritizeOwn = col.node == node.id
+          val prioritizeOwn = col.node == node.id // do we own this column
           val addMissing = true
 
           if (sendColumn(col)) {
             val noc = cd.newerOwnCells(rowDates, addMissing, prioritizeOwn).filter( cell=> sendRow(col,node.rowList(cell._1)))
-            if (noc.nonEmpty) newerOwn += (colId -> noc)
+            if (noc.nonEmpty) cdRowsToSend += (colId -> noc)
           }
 
           if (receiveColumn(col)) {

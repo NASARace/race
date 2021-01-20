@@ -91,21 +91,22 @@ trait DenseRecordWriter[+R <: BufferRecord] extends RecordWriter[R] {
     indexMap.get(key) match {
       case Some(index) =>
         lockRec(index){
-          set(index, o, false).ifSuccess {
-            updateDate(date)
-          }
+          val res = set(index,o,false)
+          res.ifSuccess { updateDate(date) }
+          res
         }
 
       case None =>
         if (indexMap.size < maxRecords) {
           val index = indexMap.size
           lockRec(index) {
-            set(index, o, true).ifSuccess {
+            val res = set(index, o, true)
+            res.ifSuccess {
               indexMap += key -> index
-
               updateDate(date)
               updateRecCount
             }
+            res
           }
 
         } else Failure("max number of records exceeded")

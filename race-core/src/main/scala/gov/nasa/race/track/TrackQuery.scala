@@ -169,8 +169,7 @@ class TrackQueryParser(val ctx: TrackQueryContext)  extends RegexParsers {
   }
 
   def timeSpec: Parser[Query] = "t" ~ ("<" | ">") ~ DURATION ^^ {
-    case _ ~ "<" ~ dur => new WithinDurationFilter(dur)
-    case _ ~ ">" ~ dur => new OutsideDurationFilter(dur)
+    case _ ~ op ~ dur => if (op == "<") new WithinDurationFilter(dur) else new OutsideDurationFilter(dur)
   }
 
   //... TODO - and more to follow

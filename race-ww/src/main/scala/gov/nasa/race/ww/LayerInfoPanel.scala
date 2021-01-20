@@ -108,10 +108,12 @@ class SharedLayerInfoPanel extends BasicLayerInfoPanel {
   * cause runtime exceptions by creating the layer before creating their data
   */
 class StaticLayerInfoPanel (val layer: RaceLayer, val nItems: Int) extends BasicLayerInfoPanel {
-  val fields = new LayerInfoFields {
+  class StaticLayerInfoFields extends LayerInfoFields {
     val itemsLabel  = addField("num items:", "…")
     setContents
-  }.styled()
+  }
+
+  val fields = new StaticLayerInfoFields().styled()
 
   contents += fields
 
@@ -123,12 +125,13 @@ import scala.concurrent.duration._
 
 class DynamicLayerInfoPanel (val layer: SubscribingRaceLayer) extends BasicLayerInfoPanel
                                                               with AncestorObservable {
-
-  val fields = new LayerInfoFields {
+  class DynamicLayerInfoFields extends LayerInfoFields {
     val itemsLabel  = addField("num items:", "…")
     val updateLabel = addField("msg/sec:", "…")
     setContents
-  }.styled()
+  }
+
+  val fields = new DynamicLayerInfoFields().styled()
 
   contents += fields
   setBasicLayerFields

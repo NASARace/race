@@ -3,13 +3,8 @@
   "info": "column formulas for provider node",
   "date": "2020-06-28T12:00:00.000",
 
-  "columnlist": "/providers/region1",
-  "rowlist": "/rows/sd1",
-
-  "columns": {
-    "/providers/region1/provider_2": {
-      "/data/cat_A/field_1":   { "src": "(within . 8 12)" },
-      "/data/cat_A/field_2":   { "src": "(olderM . 1)", "trigger": "<always>" }
-    }
-  }
+  "constraints": [
+    { "id": "field_1-range", "info": "field_1 out of range [8..12]", "src": "(within provider_2::/data/cat_A/field_1 8 12)" },
+    { "id": "field_2-actuality", "info": "last field_2 update older than 2min", "src": "(olderThanMinutes provider_2::/data/cat_A/field_2 2)", "trigger": "<always>" }
+  ]
 }

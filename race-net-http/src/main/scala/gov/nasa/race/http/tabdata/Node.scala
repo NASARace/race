@@ -16,26 +16,30 @@
  */
 package gov.nasa.race.http.tabdata
 
-import java.nio.file.Path
-
 import gov.nasa.race.common.ConstAsciiSlice.asc
-import gov.nasa.race.common.{ConstAsciiSlice, JsonPullParser, JsonSerializable, JsonWriter, UnixPath}
+import gov.nasa.race.common.{ConstAsciiSlice, JsonPullParser, JsonSerializable, JsonWriter}
 import gov.nasa.race.uom.DateTime
 
 import scala.collection.mutable
 
 /**
-  * the mostly static data for a site, for internal distribution
-  * this is the minimum data each client / server needs
+  * the data model for each node, consisting of invariant (start-time) data such as the column/rowList(s) and the
+  * variable columnData for each of the columnList entries
+  *
+  * note that Node objects are invariant so that they can be passed around between actors. Mutators for columnData
+  * therefore have to return new Node objects
+  *
+  * we keep all the data in one structure so that actors do not have to handle transient (partial) initialization states
   */
-case class Node ( id: Path,
-                  rowList: RowList,
-                  columnList: ColumnList,
-                  upstreamId: Option[Path]
-                 ) {
+case class Node (id: String,
+                 upstreamId: Option[String],
+                 columnList: ColumnList,
+                 rowList: RowList, // TODO - is this the union of column rowLists ?
+                 columnDatas: Map[String,ColumnData]
+                ) {
 
-  def isKnownColumn(id: Path): Boolean = columnList.columns.contains(id) || (upstreamId.isDefined && upstreamId.get == id)
-  def isKnownRow(id: Path): Boolean = rowList.rows.contains(id)
+  def isKnownColumn(id: String): Boolean = columnList.columns.contains(id) || (upstreamId.isDefined && upstreamId.get == id)
+  def isKnownRow(id: String): Boolean = rowList.rows.contains(id)
 
   def isColumnListUpToDate(ss: NodeState): Boolean = {
     columnList.id == ss.columnListId && columnList.date == ss.columnListDate
@@ -45,11 +49,47 @@ case class Node ( id: Path,
     rowList.id == ss.rowListId && rowList.date == ss.rowListDate
   }
 
-  def isLocal (p: Path): Boolean = id == p
-  def isUpstream (p: Path): Boolean = upstreamId.isDefined && upstreamId.get == p
+  def isLocal (p: String): Boolean = id == p
+  def isUpstream (p: String): Boolean = upstreamId.isDefined && upstreamId.get == p
 
-  def sendChangeUp (columnId: Path): Boolean = {
+  def sendChangeUp (columnId: String): Boolean = {
     true
+  }
+
+  def cellValue (colId: String, rowId: String): CellValue[_] = columnDatas(colId)(rowList(rowId))
+
+  def apply (colId: String): ColumnData = columnDatas(colId)
+  def get (colId: String): Option[ColumnData] = columnDatas.get(colId)
+  def get (colId: String, rowId: String): Option[CellValue[_]] = get(colId).flatMap( _.get(rowId))
+
+  def getEvalContext (date: DateTime = DateTime.UndefinedDateTime): EvalContext = new BasicEvalContext(id,rowList,date,columnDatas)
+
+  def update (cd: ColumnData): Node = copy(columnDatas= columnDatas + (cd.id -> cd))
+
+  //--- debugging
+  def dumpColumnData: Unit = {
+    print("row                  |")
+    columnList.foreach( col=> print(f"${col.id}%15.15s |") )
+    println()
+    print("---------------------+") // row name
+    var i = columnList.size
+    while (i > 0) { print("----------------+"); i-= 1 }
+    println()
+
+    rowList.foreach { row =>
+      print(f"${row.id}%-20.20s |")
+      columnList.foreach { col =>
+        columnDatas.get(col.id) match {
+          case Some(cd) =>
+            cd.get(row.id) match {
+              case Some(cv) =>  print(f"${cv.valueToString}%15.15s |")
+              case None => print("              - |")
+            }
+          case None => print("              - |")
+        }
+      }
+      println()
+    }
   }
 }
 
@@ -64,48 +104,37 @@ object NodeState {
   val _columnListDate_ : ConstAsciiSlice = asc("columnListDate")
   val _readOnlyColumns_ : ConstAsciiSlice = asc("readOnlyColumns")
   val _readWriteColumns_ : ConstAsciiSlice = asc("readWriteColumns")
+
+  def apply (node: Node, externalColumnDates: Seq[ColumnDatePair], localColumnDates: Seq[(String,Seq[RowDatePair])]) = {
+    new NodeState(node.id,
+      node.rowList.id,
+      node.rowList.date,
+      node.columnList.id,
+      node.columnList.date,
+      externalColumnDates,
+      localColumnDates)
+  }
 }
 
 /**
   * site specific snapshot of local catalog and provider data dates (last modifications)
   *
-  * we distinguish between external and local columns. The former we don't write on this node and hence only
-  * get them through our upstream (hence a single update date will suffice). The locals could be modified
-  * concurrently between us and upstream, hence we need the cell dates
+  * we distinguish between external and locally modified columns. The former we don't write on this node and hence only
+  * get them through our upstream (a single update date will suffice to determine what the external needs to send to
+  * update).
+  * The ColumnData rows we produce ourselves could be modified concurrently between us and upstream, hence we need the
+  * cell dates, i.e. check row-by-row
+  *
+  * this class and (our own) Node is basically the data model for node synchronization, the dynamic part of it being
+  * factored out into NodeStateResponder
   */
-case class NodeState(nodeId: Path,
-                     rowListId: Path, rowListDate: DateTime,
-                     columnListId: Path, columnListDate: DateTime,
-                     readOnlyColumns: Seq[ColumnDate], // for external columns we only need the CD date
-                     readWriteColumns: Seq[(Path,Seq[RowDate])] // for local columns we need the CD row dates
+case class NodeState(nodeId: String,
+                     rowListId: String, rowListDate: DateTime,
+                     columnListId: String, columnListDate: DateTime,
+                     readOnlyColumns: Seq[ColumnDatePair], // for external columns we only need the CD date
+                     readWriteColumns: Seq[(String,Seq[RowDatePair])] // for locally written  columns we need the CD row dates
                      ) extends JsonSerializable {
   import NodeState._
-
-  def this (nodeId: Path, rowList: RowList, columnList: ColumnList, columnData: collection.Map[Path,ColumnData]) = this(
-    nodeId,
-    rowList.id,rowList.date,
-    columnList.id,columnList.date,
-    columnList.filteredEntries(columnData)(_.node != nodeId).map( e=> (e._1,e._2.date) ),
-    columnList.filteredEntries(columnData)(_.node == nodeId).map( e=>(e._1, e._2.orderedTimeStamps(rowList)) )
-  )
-
-  def this (node: Node, columnData: collection.Map[Path,ColumnData]) = this(
-    node.id,
-    node.rowList,
-    node.columnList,
-    columnData
-  )
-
-  def this (node: Node, externalColumnDates: Seq[ColumnDate], localColumnDates: Seq[(Path,Seq[RowDate])]) = this(
-    node.id,
-    node.rowList.id,
-    node.rowList.date,
-    node.columnList.id,
-    node.columnList.date,
-    externalColumnDates,
-    localColumnDates
-  )
-
 
   def serializeTo (w: JsonWriter): Unit = {
     w.clear().writeObject {_
@@ -152,25 +181,25 @@ trait NodeStateParser extends JsonPullParser {
   }
 
   def parseNodeStateBody: Option[NodeState] = {
-    val siteId = UnixPath(readQuotedMember(_nodeId_))
-    val rowListId = UnixPath(readQuotedMember(_rowListId_))
+    val siteId = readQuotedMember(_nodeId_).toString
+    val rowListId = readQuotedMember(_rowListId_).toString
     val rowListDate = readDateTimeMember(_rowListDate_)
-    val columnListId = UnixPath(readQuotedMember(_columnListId_))
+    val columnListId = readQuotedMember(_columnListId_).toString
     val columnListDate = readDateTimeMember(_columnListDate_)
 
     // "externalColumns": { "<colId>": <date>, ... }
-    val externalColumnDates = readSomeNextObjectMemberInto[Path,DateTime, mutable.Buffer[(Path, DateTime)]](_readOnlyColumns_, mutable.Buffer.empty) {
+    val externalColumnDates = readSomeNextObjectMemberInto[String,DateTime, mutable.Buffer[ColumnDatePair]](_readOnlyColumns_, mutable.Buffer.empty) {
       val columnDataDate = readDateTime()
-      val columnId = UnixPath.intern(member)
+      val columnId = member.toString
       Some( (columnId -> columnDataDate) )
     }.toSeq
 
     // "localColumns": { "<colId>": { "<rowId>": <date>, ... } }
-    val localColumnDates = readSomeNextObjectMemberInto[Path,Seq[PathDate], mutable.Buffer[(Path,Seq[RowDate])]](_readWriteColumns_, mutable.Buffer.empty) {
-      val columnId = UnixPath.intern(readMemberName())
-      val rowDates = readSomeCurrentObjectInto[Path,DateTime, mutable.Buffer[PathDate]](mutable.Buffer.empty) {
+    val localColumnDates = readSomeNextObjectMemberInto[String,Seq[ColumnDatePair], mutable.Buffer[(String,Seq[RowDatePair])]](_readWriteColumns_, mutable.Buffer.empty) {
+      val columnId = readMemberName().toString
+      val rowDates = readSomeCurrentObjectInto[String,DateTime, mutable.Buffer[RowDatePair]](mutable.Buffer.empty) {
         val rowDataDate = readDateTime()
-        val rowId = UnixPath.intern(member)
+        val rowId = member.toString
         Some(rowId -> rowDataDate)
       }.toSeq
       Some(columnId -> rowDates)

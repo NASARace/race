@@ -124,7 +124,7 @@ trait PreAuthorizedRaceRoute extends AuthRaceRoute {
             setCookie(createSessionCookie(newToken)) {
               complete(createResponseContent)
             }
-          case TokenFailure(rejection) =>
+          case NextTokenFailure(rejection) =>
             complete(StatusCodes.Forbidden, s"invalid session token: $rejection")
         }
       } ~ complete(StatusCodes.Forbidden, "no user authorization found")
@@ -237,7 +237,7 @@ trait AuthorizedRaceRoute extends AuthRaceRoute {
           case Some(namedCookie) =>
             userAuth.matchesSessionToken(namedCookie.value, User.UserRole) match {
               case TokenMatched => complete(StatusCodes.Forbidden, "already logged in")
-              case TokenFailure(rejection) => completeLogin(None, Some(rejection))
+              case MatchTokenFailure(rejection) => completeLogin(None, Some(rejection))
             }
           case None => completeLogin(None)
         }
@@ -314,7 +314,7 @@ trait AuthorizedRaceRoute extends AuthRaceRoute {
             setCookie(createSessionCookie(newToken)) {
               complete( statusCode, createContent)
             }
-          case TokenFailure(rejection) => completeLogin(Some(requestUri.toString), Some(rejection))
+          case NextTokenFailure(rejection) => completeLogin(Some(requestUri.toString), Some(rejection))
         }
       } ~ completeLogin(Some(requestUri.toString))
     }

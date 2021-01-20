@@ -115,10 +115,21 @@ trait RaceActor extends Actor with ImplicitActorLogging with ConfigLoggable {
     }
   }
 
+  protected var userMessageHandler: Receive = handleMessage
 
+  /**
+    * this corresponds to the low level Akka become() for RACE user messages
+    */
+  protected def swapUserMessageHandler (newHandler: Receive): Unit = {
+    info("swapping user message handler")
+    userMessageHandler = newHandler
+  }
 
+  /**
+    * this should not be overridden to ensure consistent user- and system-message handling
+    */
   def receiveLive: Receive = { // chained message processing
-    (handleMessage orElse handleSystemMessage) andThen( _ => nMsgs += 1)
+    (userMessageHandler orElse handleSystemMessage) andThen(_ => nMsgs += 1)
   }
 
   /**
@@ -374,6 +385,7 @@ trait RaceActor extends Actor with ImplicitActorLogging with ConfigLoggable {
 
   def isPaused: Boolean = raceActorSystem.isPaused
   def isRunning: Boolean = raceActorSystem.isRunning
+  def isTerminating: Boolean = raceActorSystem.isTerminating
 
   def loadClass[T] (clsName: String, clsType: Class[T]): Class[_ <:T] = {
     ClassLoaderUtils.loadClass(context.system, clsName, clsType)
@@ -458,11 +470,13 @@ trait RaceActor extends Actor with ImplicitActorLogging with ConfigLoggable {
     throw new RuntimeException(s"constructor failed: $errMsg")
   }
 
-  def scheduleNow (interval: FiniteDuration, msg: Any) : Option[Cancellable] = {
-    Some(scheduler.scheduleWithFixedDelay(0.seconds, interval, self, msg))
+  def scheduleRecurring (interval: FiniteDuration, msg: Any) : Cancellable = {
+    scheduler.scheduleWithFixedDelay(0.seconds, interval, self, msg)
   }
 
-  def scheduleOnce (dur: FiniteDuration)(f: =>Unit) = scheduler.scheduleOnce(dur)(f)
+  def scheduleOnceIn (delay: FiniteDuration, msg: Any): Cancellable = scheduler.scheduleOnce(delay,self,msg)
+
+  def scheduleOnce (delay: FiniteDuration)(f: =>Unit): Cancellable = scheduler.scheduleOnce(delay)(f)
 
   def delay (d: FiniteDuration, action: ()=>Unit): Option[Cancellable] = Some(scheduler.scheduleOnce(d,self,DelayedAction(self,action)))
 

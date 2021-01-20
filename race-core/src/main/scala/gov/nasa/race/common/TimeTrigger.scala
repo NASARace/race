@@ -25,6 +25,7 @@ import gov.nasa.race.util.DateTimeUtils
   */
 object TimeTrigger {
 
+  // minimalistic parser
   def apply (spec: CharSequence): TimeTrigger = {
     spec match {
       case "H" => new HourlyTrigger()  // every hour

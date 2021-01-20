@@ -34,7 +34,7 @@ class TestPublisher (val config: Config) extends PublishingRaceActor with Period
   var n = 0
 
 
-  override def onRaceTick = {
+  override def onRaceTick(): Unit = {
     val msg = if (count) {
       n += 1
       s"$message-$n"

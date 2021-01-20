@@ -43,10 +43,10 @@ object Dependencies {
   val logback = "ch.qos.logback" % "logback-classic" %  "1.3.0-alpha5" // "1.2.3"
 
   //--- Typesafe config
-  val typesafeConfig = "com.typesafe" % "config" % "1.4.0"  // akka still depends on 1.3.3
+  val typesafeConfig = "com.typesafe" % "config" % "1.4.1"  // akka still depends on 1.3.3
 
   //--- Scala parser combinators (https://github.com/scala/scala-parser-combinators)
-  val scalaParser = "org.scala-lang.modules" %% "scala-parser-combinators" % "1.1.2"
+  val scalaParser = "org.scala-lang.modules" %% "scala-parser-combinators" % "1.2.0-M1"
 
   //--- scala-xml
   val scalaXml = "org.scala-lang.modules" %% "scala-xml" % "1.3.0"
@@ -55,7 +55,7 @@ object Dependencies {
   val scalaReflect =  "org.scala-lang" % "scala-reflect" % CommonRaceSettings.scalaVer
 
   //--- scalaTags HTML generator
-  val scalaTags = "com.lihaoyi" %% "scalatags" % "0.9.1"
+  val scalaTags = "com.lihaoyi" %% "scalatags" % "0.9.2"
 
   //--- scala automatic resource management (https://github.com/jsuereth/scala-arm)
   //val scalaArm = "com.jsuereth" %% "scala-arm" % "2.0"
@@ -72,13 +72,13 @@ object Dependencies {
   val pegDown = "org.pegdown" % "pegdown" % "1.6.0" % Test
 
   //--- scalaCheck
-  val scalaCheck = "org.scalacheck" %% "scalacheck" % "1.14.3" % Test
+  val scalaCheck = "org.scalacheck" %% "scalacheck" % "1.15.2" % Test
 
   val defaultLibs =  Seq(logback,typesafeConfig)
   val defaultTestLibs = Seq(scalaTest,scalaTestPlus,flexmarkAll,scalaCheck,pegDown)
 
   // Apache Avro serialization (for archiving/unarchiving)
-  val avro = "org.apache.avro" % "avro" % "1.9.2"
+  val avro = "org.apache.avro" % "avro" % "1.10.1"
 
   // scodec
   //val scodecBits = "org.scodec" %% "scodec-bits" % "1.1.5"
@@ -95,7 +95,7 @@ object Dependencies {
   val circeAll = Seq(circeCore,circeGeneric,circeParser)
 
   //--- scala-swing
-  val scalaSwing = "org.scala-lang.modules" %% "scala-swing" % "2.1.1"
+  val scalaSwing = "org.scala-lang.modules" %% "scala-swing" % "3.0.0"
   //val swingx = "org.swinglabs.swingx" % "swingx-core" % "1.6.5-1"
   //.. and possibly extensions for Tree and jfreechart
 
@@ -103,7 +103,7 @@ object Dependencies {
   val rsTextArea = "com.fifesoft" % "rsyntaxtextarea" % "3.1.1"
 
   //--- the jfreechart plot and chart lib
-  val jfreeChart = "org.jfree" % "jfreechart" % "1.5.0"
+  val jfreeChart = "org.jfree" % "jfreechart" % "1.5.2"
 
   //--- pure Java implementation of ssh2 (http://www.jcraft.com/jsch/)
   // NOTE this has to be a known version and verified instance so that we don't
@@ -111,14 +111,14 @@ object Dependencies {
   val jsch = "com.jcraft" % "jsch" % "0.1.55"
 
   //--- argon2 based password hashes ()
-  val argon2 = "de.mkammerer" % "argon2-jvm" % "2.7"
+  val argon2 = "de.mkammerer" % "argon2-jvm" % "2.9"
 
 
   //--- jimfs - simple in-memory file system to enforce platform independent paths
-  val jimfs = "com.google.jimfs" % "jimfs" % "1.1"
+  val jimfs = "com.google.jimfs" % "jimfs" % "1.2"
 
   //--- Akka
-  val akkaVersion = "2.6.9"
+  val akkaVersion = "2.6.11"
   val akkaOrg = "com.typesafe.akka"
 
   val akkaActor = akkaOrg %% "akka-actor" % akkaVersion
@@ -128,13 +128,13 @@ object Dependencies {
   val akkaTestkit = akkaOrg %% "akka-testkit" % akkaVersion
   val akkaMultiNodeTestkit = akkaOrg %% "akka-multi-node-testkit" % akkaVersion // % "test,multi-jvm"
 
-  val akkaHttp = akkaOrg %% "akka-http" % "10.2.0"
+  val akkaHttp = akkaOrg %% "akka-http" % "10.2.3"
 
   val akkaAll = Seq(akkaActor)
 
 
   //--- ActiveMQ
-  val amqVersion = "5.15.12"
+  val amqVersion = "5.16.0"
   val amqOrg = "org.apache.activemq"
   val amqBroker = amqOrg % "activemq-broker" % amqVersion
 
@@ -153,7 +153,7 @@ object Dependencies {
   val log4jOverSlf4j = "org.slf4j" % "log4j-over-slf4j" % "2.0.0-alpha1"
 
   //--- ZooKeeper
-  val zookeeper = "org.apache.zookeeper" % "zookeeper" % "3.6.1" excludeAll(
+  val zookeeper = "org.apache.zookeeper" % "zookeeper" % "3.6.2" excludeAll(
     ExclusionRule(organization = "log4j", name="log4j"),
     ExclusionRule(organization = "org.slf4j", name = "slf4j-log4j12")
   )
@@ -168,7 +168,7 @@ object Dependencies {
   val newKafkaClients = "org.apache.kafka" % "kafka-clients" % "2.2.1"
 
   //--- Kafka (make sure to add log4j to kafkaServer dependencies
-  val kafka = "org.apache.kafka" %% "kafka" % "2.5.0" excludeAll(
+  val kafka = "org.apache.kafka" %% "kafka" % "2.7.0" excludeAll(
   //val kafka = "org.apache.kafka" %% "kafka" % "1.0.1" excludeAll(
     //ExclusionRule(organization = "log4j", name="log4j"),
     //ExclusionRule(organization = "org.slf4j", name = "slf4j-log4j12")

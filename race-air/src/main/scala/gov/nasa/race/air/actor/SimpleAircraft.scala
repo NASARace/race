@@ -46,7 +46,7 @@ class SimpleAircraft (val config: Config) extends ContinuousTimeRaceActor
   var heading = Degrees(config.getDouble("heading"))
   var vr = Speed.Speed0
 
-  override def onRaceTick: Unit = {
+  override def onRaceTick(): Unit = {
     if (!simClock.isStopped) {  // TODO - should be in base type
       updatePos
       publish(new FlightPos(id, cs, pos, speed, heading, vr, simTime))

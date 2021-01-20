@@ -224,8 +224,8 @@ trait AuthorizedWSRoute extends WSRaceRoute with AuthorizedRaceRoute {
           case TokenMatched =>
             promoteToWebSocket
 
-          case TokenFailure(rejection) =>
-            complete(StatusCodes.Forbidden, s"invalid session token: $rejection")
+          case f:TokenFailure =>
+            complete(StatusCodes.Forbidden, s"invalid session token: ${f.reason}")
         }
       } ~ complete(StatusCodes.Forbidden, "no user authorization found")
     }

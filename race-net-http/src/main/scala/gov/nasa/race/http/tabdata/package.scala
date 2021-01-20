@@ -16,12 +16,8 @@
  */
 package gov.nasa.race.http
 
-import java.nio.file.Path
-
-import scala.collection.immutable.ListMap
 import gov.nasa.race.common.JsonPullParser
 import gov.nasa.race.common.ByteSlice
-import gov.nasa.race.common.ConstAsciiSlice.asc
 import gov.nasa.race.uom.DateTime
 
 import scala.collection.mutable
@@ -35,29 +31,14 @@ import scala.collection.mutable
   */
 package object tabdata {
 
-  //--- aliases
-  type Cell = (Path,CellValue)
-  type PathDate = (Path,DateTime)
-  type RowDate = PathDate
-  type ColumnDate = PathDate
+  // to improve signature readability
+  type ColId = String
+  type RowId = String
 
-  type AnyRow = Row[_ <: CellValue]
-  type AnyCellRef = CellRef[_ <: CellValue]
-  type AnyCellExpression = CellExpression[_ <: CellValue]
-  type BooleanCellExpression = CellExpression[BooleanCellValue]
-  type AnyNumExpr = NumExpr[_ <: NumCellValue]
-  type AnyConstCellExpression = ConstCellExpression[_ <: CellValue]
-  type AnyCellFunction = CellFunction[_ <: CellValue]
-  type AnyCellFormula = CellFormula[_ <: CellValue]
-  type BooleanCellFormula = CellFormula[BooleanCellValue]
-  type Formulas = Map[Path,AnyCellFormula]
-
-  trait PathObject {
-    val id: Path
-
-    def name: String = id.getFileName.toString
-    def parentName: String = id.getParent.toString
-  }
+  type RowDatePair = (String,DateTime)
+  type ColumnDatePair = (String,DateTime)
+  type CellPair = (String,CellValue[_])
+  type CellIdPair = (String,String)
 
   trait AttrsParser extends JsonPullParser {
     def readAttrs (name: ByteSlice): Seq[String] = {
@@ -68,5 +49,5 @@ package object tabdata {
   /**
     * indicates changes of a nodes (columns) connection
     */
-  case class NodeReachabilityChange(id: Path, isOnline: Boolean)
+  case class NodeReachabilityChange(id: String, isOnline: Boolean)
 }

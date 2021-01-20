@@ -44,6 +44,8 @@ import gov.nasa.race.common.ConstCharSequences._
   */
 trait CharSeqByteSlice extends ByteSlice with CharSequence {
 
+  override def isEmpty: Boolean = len == 0 // make sure we don't pick up the CharSequence default method, which would cause a compile error
+
   // the char accessors
   def length: Int // in chars!
   def charAt (i: Int): Char
@@ -419,6 +421,8 @@ trait Utf8Slice extends CharSeqByteSlice {
   protected var nci = Int.MaxValue // next char index
   protected var decoder = new UTFx.UTF8Decoder(0)
   protected var charLength = -1  // computed on demand
+
+  @inline def constCopy: ConstUtf8Slice = new ConstUtf8Slice(data,off,len)
 
   @inline private def checkBounds (i: Int): Boolean = {
     if (decoder.isEnd) throw new IndexOutOfBoundsException(s"char index $i out of bounds")

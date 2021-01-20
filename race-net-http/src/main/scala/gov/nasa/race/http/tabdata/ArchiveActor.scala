@@ -17,7 +17,6 @@
 package gov.nasa.race.http.tabdata
 
 import java.io.{File, OutputStream}
-import java.nio.file.Path
 
 import akka.actor.ActorRef
 import com.typesafe.config.Config
@@ -36,13 +35,13 @@ import scala.concurrent.duration.{DurationInt, FiniteDuration}
   *
   * TODO - not very efficient, too much copying
   */
-class TabDataArchiveActor (val config: Config) extends SubscribingRaceActor
+class ArchiveActor(val config: Config) extends SubscribingRaceActor
                                         with ContinuousTimeRaceActor with PeriodicRaceActor {
 
   val dataDir = config.getExistingDir("data-dir")
 
-  var columnData: mutable.Map[Path,ColumnData] = mutable.Map.empty
-  var changedColumns: mutable.Set[Path] = mutable.Set.empty
+  var columnData: mutable.Map[String,ColumnData] = mutable.Map.empty
+  var changedColumns: mutable.Set[String] = mutable.Set.empty
 
   val jsonWriter = new JsonWriter()
 
@@ -58,7 +57,7 @@ class TabDataArchiveActor (val config: Config) extends SubscribingRaceActor
     ConfigurableStreamCreator.createOutputStream(config,"change-log", logPath)
   }
 
-  override def onRaceTick: Unit = saveChangedColumnData
+  override def onRaceTick(): Unit = saveChangedColumnData
 
   override def onTerminateRaceActor(originator: ActorRef): Boolean = {
     logWriter.close
@@ -83,7 +82,7 @@ class TabDataArchiveActor (val config: Config) extends SubscribingRaceActor
 
   def saveChangedColumnData: Unit = {
     changedColumns.foreach { colId =>
-      val f = new File(dataDir, s"${colId.getFileName}.json") // TODO - should we use full column paths
+      val f = new File(dataDir, s"$colId.json") // TODO - should we use full column paths
       columnData.get(colId) match {
         case Some(cd) =>
           if (!FileUtils.setFileContents(f, jsonWriter.toJson(cd))) {

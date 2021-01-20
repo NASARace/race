@@ -18,9 +18,8 @@
 package gov.nasa.race.http.tabdata
 
 import java.nio.file.Path
-
 import gov.nasa.race.common.ConstAsciiSlice.asc
-import gov.nasa.race.common.{JsonParseException, JsonPullParser, JsonSerializable, JsonWriter, TimeTrigger, UTF8JsonPullParser, UnixPath}
+import gov.nasa.race.common.{Glob, JsonParseException, JsonPullParser, JsonSerializable, JsonWriter, PathIdentifier, TimeTrigger, UTF8JsonPullParser, UnixPath}
 import gov.nasa.race.uom.DateTime
 
 import scala.collection.immutable.ListMap
@@ -33,45 +32,40 @@ object Column {
   val _node_      = asc("node")
   val _attrs_     = asc("attrs")
   val _check_     = asc("check")
+
+  def apply (id: String): Column = new Column(id,s"this is column $id", UpdateFilter.sendUpReceiveLocalUp, id, Seq.empty[String], None)
 }
 
 
 /**
   * class representing the *description* of a provider (field owner)
   */
-case class Column (id: Path, info: String, updateFilter: UpdateFilter, node: Path, attrs: Seq[String], check: Option[TimeTrigger])
-              extends PathObject with JsonSerializable {
+case class Column (id: String, info: String, updateFilter: UpdateFilter, node: String, attrs: Seq[String], check: Option[TimeTrigger])
+              extends JsonSerializable {
   import Column._
 
-  def this (id: Path) = this(id,s"this is column $id", UpdateFilter.sendUpReceiveLocalUp, id, Seq.empty[String], None)
-
-  private def _serializeTo (w: JsonWriter, listId: Path): Unit = {
+  def serializeTo (w: JsonWriter): Unit = {
     w.writeObject { w=>
-      w.writeStringMember(_id_, if (listId != null) listId.relativize(id).toString else id.toString)
+      w.writeStringMember(_id_, id)
       w.writeStringMember(_info_, info)
       updateFilter.serializeTo(w)
-      if (node != id) w.writeStringMember(_node_, if (listId != null) listId.relativize(node).toString else node.toString)
+      if (node != id) w.writeStringMember(_node_, node)
       if (attrs.nonEmpty) w.writeStringArrayMember(_attrs_, attrs)
       check.foreach( tt=> w.writeStringMember(_check_, tt.toSpecString))
     }
   }
-
-  def serializeTo (w: JsonWriter) = _serializeTo(w,null)
-  def serializeRelativeTo (w: JsonWriter, parentPath: Path) = _serializeTo(w,parentPath)
-
-  def resolve (p: Path): Path = id.resolve(p)
 }
 
 
 trait ColumnParser extends JsonPullParser with UpdateFilterParser with AttrsParser {
   import Column._
 
-  def parseColumn (listId: Path): Column = {
-    val id = listId.resolve(UnixPath.intern(readQuotedMember(_id_))).normalize
+  def parseColumn (listId: String): Column = {
+    val id = PathIdentifier.resolve(readQuotedMember(_id_),listId)
     val info = readQuotedMember(_info_).toString
-    val updateFilter = parseUpdateFilter(Some(listId))
+    val updateFilter = parseUpdateFilter(listId)
     val nodeId = readOptionalQuotedMember(_node_) match {
-      case Some(ps) => listId.resolve(UnixPath.intern(ps)).normalize
+      case Some(ps) => PathIdentifier.resolve(ps, listId)
       case None => id
     }
     val attrs = readAttrs (_attrs_)
@@ -89,12 +83,17 @@ object ColumnList {
   val _columns_ = asc("columns")
   val _id_ = asc("id")
   val _info_ = asc("info")
+
+  def apply (id: String, date: DateTime, columns: Column*): ColumnList = {
+    val cols = columns.foldLeft(ListMap.empty[String,Column])( (acc,col) => acc + (col.id -> col))
+    new ColumnList(id, s"this is column list $id", date, cols)
+  }
 }
 
 /**
   * class representing a versioned, named and ordered collection of Column specs
   */
-case class ColumnList (id: Path, info: String, date: DateTime, columns: ListMap[Path,Column]) extends JsonSerializable {
+case class ColumnList (id: String, info: String, date: DateTime, columns: ListMap[String,Column]) extends JsonSerializable {
   import ColumnList._
 
   def serializeTo (w: JsonWriter): Unit = {
@@ -114,13 +113,13 @@ case class ColumnList (id: Path, info: String, date: DateTime, columns: ListMap[
 
   //--- (some) list/map forwarders
   def size: Int = columns.size
-  def apply (p: Path): Column = columns(p)
-  def get (p: Path): Option[Column] = columns.get(p)
-  def contains (p: Path): Boolean = columns.contains(p)
-  def foreach[U] (f: ((Path,Column))=>U): Unit = columns.foreach(f)
+  def apply (p: String): Column = columns(p)
+  def get (p: String): Option[Column] = columns.get(p)
+  def contains (p: String): Boolean = columns.contains(p)
+  def foreach[U] (f: (Column)=>Unit): Unit = columns.foreach( e=> f(e._2))
 
-  def orderedEntries[T] (map: collection.Map[Path,T]): Seq[(Path,T)] =  {
-    columns.foldRight(Seq.empty[(Path,T)]) { (e,acc) =>
+  def orderedEntries[T] (map: collection.Map[String,T]): Seq[(String,T)] =  {
+    columns.foldRight(Seq.empty[(String,T)]) { (e,acc) =>
       map.get(e._1) match {
         case Some(t) => (e._1, t) +: acc
         case None => acc // provider not in map
@@ -128,8 +127,8 @@ case class ColumnList (id: Path, info: String, date: DateTime, columns: ListMap[
     }
   }
 
-  def filteredEntries[T] (map: collection.Map[Path,T])(f: Column=>Boolean): Seq[(Path,T)] =  {
-    columns.foldLeft(Seq.empty[(Path,T)]) { (acc, e) =>
+  def filteredEntries[T] (map: collection.Map[String,T])(f: Column=>Boolean): Seq[(String,T)] =  {
+    columns.foldLeft(Seq.empty[(String,T)]) { (acc, e) =>
       if (f(e._2)) {
         map.get(e._1) match {
           case Some(t) => acc :+ (e._1, t)
@@ -139,29 +138,9 @@ case class ColumnList (id: Path, info: String, date: DateTime, columns: ListMap[
     }
   }
 
-  def getMatchingColumns (nodePath: Path, colSpec: String): Seq[Column] = {
-    if (UnixPath.isCurrent(colSpec)) {
-      columns.get(nodePath).toList
-    } else {
-      if (UnixPath.isPattern(colSpec)) {
-        val pm = UnixPath.matcher(colSpec)
-        columns.foldLeft(ArrayBuffer.empty[Column]){ (acc,e) =>
-          if (pm.matches(e._1)) acc += e._2 else acc
-        }.toSeq
-
-      } else {
-        val p = nodePath.resolve(UnixPath(colSpec))
-        columns.get(p).toList
-      }
-    }
-  }
-
-  def resolvePathSpec (colSpec: String): String = {
-    if (UnixPath.isAbsolutePathSpec(colSpec)) {
-      colSpec
-    } else {
-      id.toString + '/' + colSpec
-    }
+  def matching (globPattern: String): Iterable[Column] = {
+    val regex = Glob.glob2Regex(globPattern)
+    columns.foldRight(Seq.empty[Column]){ (e,list) => if (regex.matches(e._1)) e._2 +: list else list }
   }
 }
 
@@ -175,11 +154,11 @@ class ColumnListParser extends UTF8JsonPullParser with ColumnParser {
     initialize(buf)
     try {
       readNextObject {
-        val id = UnixPath.intern(readQuotedMember(_id_))
+        val id = readQuotedMember(_id_).toString
         val info = readQuotedMember(_info_).toString
         val date = readDateTimeMember(_date_)
 
-        var columns = ListMap.empty[Path,Column]
+        var columns = ListMap.empty[String,Column]
         foreachInNextArrayMember(_columns_) {
           readNextObject {
             val col = parseColumn(id)

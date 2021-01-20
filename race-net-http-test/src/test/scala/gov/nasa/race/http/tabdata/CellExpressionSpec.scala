@@ -16,16 +16,15 @@
  */
 package gov.nasa.race.http.tabdata
 
-import java.nio.file.Path
+import gov.nasa.race.{Failure, SuccessValue}
 
-import gov.nasa.race.common.TimeTrigger
 import gov.nasa.race.test.RaceSpec
 import gov.nasa.race.uom.DateTime
-import gov.nasa.race.common.UnixPath.PathHelper
 import org.scalatest.flatspec.AnyFlatSpec
 
 import scala.collection.immutable.ListMap
 import scala.collection.mutable
+import scala.reflect.{ClassTag, classTag}
 
 /**
   * reg test for FieldExpression parsing and evaluation
@@ -34,58 +33,63 @@ class CellExpressionSpec extends AnyFlatSpec with RaceSpec {
 
   //--- test data
 
-  implicit val date = DateTime.now
+  val date = DateTime.parseYMDT("2020-06-28T12:00:00.000")
+  val validChangeDate = DateTime.parseYMDT("2020-09-10T16:30:00")
 
-  val clid = "/columns"
-  val c1 = new Column(p"$clid/c1")
-  val c2 = new Column(p"$clid/c2")
-  val c3 = new Column(p"$clid/c3")
-
-  val columnList = ColumnList(
-    p"$clid",
-    "sample column list",
-    DateTime.parseYMDT("2020-06-28T12:00:00.000"),
-    Seq(c1,c2,c3).foldLeft(ListMap.empty[Path,Column])( (acc,c) => acc + (c.id -> c))
+  val columnList = ColumnList("/providers", date,
+    Column("/providers/c1"),
+    Column("/providers/c2"),
+    Column("/providers/c3")
   )
 
-  val rlid = "/rows"
-  val r1 = LongRow(p"$rlid/r1", "this is editable field 1")
-  val r2 = DoubleRow(p"$rlid/r2", "this is editable field 2")
-  val r3 = DoubleRow(p"$rlid/r3", "this is computed field 3")
-  val r4 = LongRow(p"$rlid/r4", "this is editable field 4")
-  val r5 = LongListRow(p"$rlid/r5", "this is auto field 5")
-
-
-  val rowList = RowList(
-    p"$rlid",
-    "sample data set",
-    DateTime.parseYMDT("2020-06-28T12:00:00.000"),
-    Seq(r1,r2,r3,r4,r5).foldLeft(ListMap.empty[Path,AnyRow])((acc, r) => acc + (r.id -> r))
+  val rowList = RowList("/data", date,
+    Row("/data/r1")("integer"),
+    Row("/data/r2")("real"),
+    Row("/data/r3")("real"),
+    Row("/data/r4")("integer"),
+    Row("/data/r5")("integerList")
   )
 
-  val cellValues: ListMap[Path,CellValue] = ListMap(
-    p"$rlid/r1" -> LongCellValue(42),
-    p"$rlid/r2" -> DoubleCellValue(0.42),
-    // we leave f3 undefined
-    p"$rlid/r4" -> LongCellValue(43),
-    p"$rlid/r5" -> LongListCellValue(Array(43,41))
+  val cds = ColumnData.cdMap(
+    ColumnData("/providers/c1",date,
+      "/data/r1" -> IntegerCellValue(42,date),
+      "/data/r2" -> RealCellValue(0.42,date),
+      // we leave f3 undefined
+      "/data/r4" -> IntegerCellValue(43,date),
+      "/data/r5" -> IntegerListCellValue(IntegerList(43,41), date)
+    ),
+    ColumnData("/providers/c2",date,
+      "/data/r1" -> IntegerCellValue(43,date),
+      "/data/r2" -> RealCellValue(0.43,date)
+    )
   )
 
-  val funcLib = new BasicFunctionLibrary
+  val node = Node("provider",None,columnList,rowList,cds)
+
+  val funcLib = new CellFunctionLibrary
 
   println("#-- data:")
   println("\n  rows:")
-  rowList.foreach(e => println(s"  ${e._1} : ${e._2}"))
+  rowList.foreach(row => println(s"  $row"))
   println("\n  values:")
-  cellValues.foreach(e => println(s"  ${e._1} = ${e._2}"))
+  cds("/providers/c1").foreachOrdered(rowList) { (id,cv) => println(s"  $id = $cv") }
 
   //--- aux funcs
 
-  def compile [T <: CellValue](parser: CellExpressionParser, col: Column, row: Row[T], formula: String): CellExpression[T] = {
+  def compile [T :ClassTag](parser: CellExpressionParser, formula: String): T = {
     try {
-      val ce = parser.compile(col,row,formula)
-      println("success: " + ce)
-      ce
+      parser.compile(formula) match {
+        case SuccessValue(ce) =>
+          if (classTag[T].runtimeClass.isAssignableFrom(ce.getClass)) {
+            println("success: " + ce)
+            ce.asInstanceOf[T]
+          } else {
+            fail(s"wrong CellExpression type: ${ce.getClass}")
+          }
+        case Failure(msg) =>
+          fail(s"compilation failed with $msg")
+      }
+
     } catch {
       case x: Throwable =>
         x.printStackTrace()
@@ -94,153 +98,131 @@ class CellExpressionSpec extends AnyFlatSpec with RaceSpec {
     }
   }
 
-  def evalFor [T <: CellValue](ctx: EvalContext, expr: CellExpression[T]): T = {
+  def evalFor [T](ctx: EvalContext, expr: CellExpression[T]): T = {
     val res = expr.eval(ctx)
-    println(s" --> ${ctx.currentRow.id} = $res")
+    println(s" -->  $res")
     res
   }
 
   //--- the tests
 
   "a CellExpressionParser" should "parse a simple function formula into a CellExpression that can be evaluated" in {
-    val p = new CellExpressionParser(columnList,rowList,funcLib)
-    val formula = "(rsum ../r1 ../r2)"
+    val p = new CellFormulaParser(node,columnList("/providers/c1"),rowList("/data/r3"),funcLib)
+    val formula = "(RealSum r1 r2)"  // r1 is integer
 
     println(s"\n#-- function with explicit column-local cell references: '$formula'")
 
-    val ctx = new BasicEvalContext( p"thisNode", columnList, rowList, mutable.Map(c1.id -> cellValues))
-    ctx.setEvalDate(DateTime.parseYMDT("2020-09-10T16:30:00"))
-    ctx.setCurrentColumn(c1)
-    ctx.setCurrentRow(r3)
+    val ctx = new BasicEvalContext( node, validChangeDate)
 
-    val expr: CellExpression[DoubleCellValue] = compile(p, c1,r3, formula)
-    val res: DoubleCellValue = evalFor(ctx, expr)
-    assert(res.value == 42.42)
+    val expr: RealExpression = compile(p, formula)
+    val v: Double = evalFor(ctx, expr)
+    assert(v == 42.42)
 
     val deps = expr.dependencies()
     println(s"  dependencies: $deps")
-    assert(deps.size == 2) // f1,f2
+    assert(deps.size == 2) // r1, r2
   }
 
   "a CellExpressionParser" should "parse a function formula with cell patterns" in {
-    val p = new CellExpressionParser(columnList,rowList,funcLib)
-    val formula = "(rsum ../r{1,2})"
+    val p = new CellFormulaParser(node,columnList("/providers/c1"),rowList("/data/r3"),funcLib)
+    val formula = "(RealSum r{1,2})"
 
     println(s"\n#-- function with cell pattern: '$formula'")
 
-    val ctx = new BasicEvalContext( p"thisNode", columnList, rowList, mutable.Map(c1.id -> cellValues))
-    ctx.setEvalDate(DateTime.parseYMDT("2020-09-10T16:30:00"))
-    ctx.setCurrentColumn(c1)
-    ctx.setCurrentRow(r3)
+    val ctx = new BasicEvalContext( node, validChangeDate)
 
-    val expr: CellExpression[DoubleCellValue] = compile(p, c1,r3, formula)
-    val res: DoubleCellValue = evalFor(ctx, expr)
-    assert(res.value == 42.42)
+    val expr: RealExpression = compile(p, formula)
+    val v: Double = evalFor(ctx, expr)
+    assert(v == 42.42)
 
     val deps = expr.dependencies()
     println(s"  dependencies: $deps")
-    assert(deps.size == 2) // f1,f2
+    assert(deps.size == 2) // r1, r2
   }
 
   "a CellExpressionParser" should "parse a function formula with column reference patterns" in {
-    val p = new CellExpressionParser(columnList,rowList,funcLib)
-    val formula = "(iavg ../c{1,2}@.)"
+    val p = new CellFormulaParser(node,columnList("/providers/c1"),rowList("/data/r1"),funcLib)
+    val formula = "(IntAvgReal c{1,2}::.)"
 
     println(s"\n#-- function with column pattern: '$formula'")
 
-    val ctx = new BasicEvalContext( p"thisNode", columnList, rowList, mutable.Map(c1.id -> cellValues, c2.id -> cellValues))
-    ctx.setEvalDate(DateTime.parseYMDT("2020-09-10T16:30:00"))
-    ctx.setCurrentColumn(c3)
-    ctx.setCurrentRow(r1)
+    val ctx = new BasicEvalContext( node, validChangeDate)
 
-    val expr: CellExpression[LongCellValue] = compile(p, c3,r1, formula)
-    val res: LongCellValue = evalFor(ctx, expr)
-    assert(res.value == 42)
+    val expr: RealExpression = compile(p, formula)
+    val v: Double = evalFor(ctx,expr)
+    assert(v == 42.5)
 
     val deps = expr.dependencies()
     println(s"  dependencies: $deps")
-    assert(deps.size == 2) // f1,f2
+    assert(deps.size == 2) // c1::r1, c2::r1
   }
 
   "a CellExpressionParser" should "parse a nested formula" in {
-    val p = new CellExpressionParser(columnList,rowList,funcLib)
-    val formula = "(rsum ../r2 (imax ../r{1,4}) -0.42)"
+    val p = new CellFormulaParser(node,columnList("/providers/c1"),rowList("/data/r3"),funcLib)
+    val formula = "(RealSum r2 (IntMax r{1,4}) -0.42)"
 
     println(s"\n#-- function with nested expression args: '$formula'")
 
-    val ctx = new BasicEvalContext( p"thisNode", columnList, rowList, mutable.Map(c1.id -> cellValues))
-    ctx.setEvalDate(DateTime.parseYMDT("2020-09-10T16:30:00"))
-    ctx.setCurrentColumn(c1)
-    ctx.setCurrentRow(r3)
+    val ctx = new BasicEvalContext( node, validChangeDate)
 
-    val expr: CellExpression[DoubleCellValue] = compile(p, c1,r3, formula)
-    val res: DoubleCellValue = evalFor(ctx, expr)
-    assert(res.value == 43.0)
+    val expr: RealExpression = compile(p, formula)
+    val v: Double = evalFor(ctx, expr)
+    assert(v == 43.0)
 
     val deps = expr.dependencies()
     println(s"  dependencies: $deps")
     assert(deps.size == 3) // r1,r2,r4
   }
 
-  "a CellExpressionParser" should "parse a self-referential cell func" in {
-    val p = new CellExpressionParser(columnList,rowList,funcLib)
-    val formula = "(iinc ../r1)"
+  "a CellExpressionParser" should "parse a heterogeneous cell func" in {
+    val p = new CellFormulaParser(node,columnList("/providers/c1"),rowList("/data/r1"),funcLib)
+    val formula = "(IntCellInc . 1)"
 
-    println(s"\n#-- function with self-reference: '$formula'")
+    println(s"\n#-- function with cell-reference: '$formula'")
 
-    val ctx = new BasicEvalContext( p"thisNode", columnList, rowList, mutable.Map(c1.id -> cellValues))
-    ctx.setEvalDate(DateTime.parseYMDT("2020-09-10T16:30:00"))
-    ctx.setCurrentColumn(c1)
-    ctx.setCurrentRow(r4)
+    val ctx = new BasicEvalContext( node, validChangeDate)
 
-    val expr: CellExpression[LongCellValue] = compile(p, c1,r4, formula)
-    val res: LongCellValue = evalFor(ctx, expr)
-    assert(res.value == 85)
-    ctx.setCurrentCellValue(res)
-    assert(ctx.currentCells(r4.id).asInstanceOf[LongCellValue].toLong == 85)
+    val expr: IntegerExpression = compile(p, formula)
+    val v = evalFor(ctx, expr)
+    assert(v == 43)
 
     val deps = expr.dependencies()
     println(s"  dependencies: $deps")
     assert(deps.size == 1) // r1
   }
 
-  "a CellExpressionParser" should "parse array pushn func" in {
-    val p = new CellExpressionParser(columnList,rowList,funcLib)
+  "a CellExpressionParser" should "parse array push func" in {
+    val p = new CellFormulaParser(node,columnList("/providers/c1"),rowList("/data/r5"),funcLib)
 
-    val formula = "(ilpushn ../r4 2)"
-    val expr: CellExpression[LongListCellValue] = compile(p, c1,r5, formula)
+    val formula = "(IntListCellPushN r5 r4 2)"
+    val expr: IntegerListExpression = compile(p, formula)
 
     println(s"\n#-- array pushn function: '$formula'")
-    val ctx = new BasicEvalContext( p"thisNode", columnList, rowList, mutable.Map(c1.id -> cellValues))
-    ctx.setEvalDate(DateTime.parseYMDT("2020-09-10T16:30:00"))
-    ctx.setCurrentColumn(c1)
 
-    ctx.setCurrentRow(r5)
-    val res: LongListCellValue = evalFor(ctx,expr)
-    assert(res.value(0) == 43 && res.length == 2)
+    val ctx = new BasicEvalContext( node, validChangeDate)
+
+    val v: IntegerList = evalFor(ctx,expr)
+    assert(v(0) == 43 && v(1) == 43 && v.length == 2)
 
     val deps = expr.dependencies()
     println(s"  dependencies: $deps")
-    assert(deps.size == 1) // r4
+    assert(deps.size == 2) // r4
   }
 
   "a CellExpressionParser" should "parse array avg func" in {
-    val p = new CellExpressionParser(columnList,rowList,funcLib)
+    val p = new CellFormulaParser(node,columnList("/providers/c1"),rowList("/data/r4"),funcLib)
 
-    val formula = "(ilavg ../r5)"
-    val expr: CellExpression[LongCellValue] = compile(p, c1,r1, formula)
+    val formula = "(IntListCellAvgInt r5)"
+    val expr: IntegerExpression = compile(p, formula)
 
     println(s"\n#-- array avg function: '$formula'")
-    val ctx = new BasicEvalContext( p"thisNode", columnList, rowList, mutable.Map(c1.id -> cellValues))
-    ctx.setEvalDate(DateTime.parseYMDT("2020-09-10T16:30:00"))
-    ctx.setCurrentColumn(c1)
+    val ctx = new BasicEvalContext( node, validChangeDate)
 
-    ctx.setCurrentRow(r1)
-    val res: LongCellValue = evalFor(ctx,expr)
-    assert(res.value == 42)
+    val v = evalFor(ctx,expr)
+    assert(v == 42)
 
     val deps = expr.dependencies()
     println(s"  dependencies: $deps")
-    assert(deps.size == 1) // r4
+    assert(deps.size == 1) // r5
   }
 }

@@ -147,7 +147,7 @@ class ProcessLauncher (val config: Config) extends PeriodicRaceActor {
     }
   }
 
-  override def onRaceTick: Unit = {
+  override def onRaceTick(): Unit = {
     checkAlive
   }
 }

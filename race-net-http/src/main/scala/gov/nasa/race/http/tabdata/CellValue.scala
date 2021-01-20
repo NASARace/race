@@ -18,18 +18,291 @@ package gov.nasa.race.http.tabdata
 
 import gov.nasa.race.common.ConstAsciiSlice.asc
 import gov.nasa.race.common.JsonPullParser.{ArrayStart, ObjectStart, QuotedValue, UnQuotedValue}
-import gov.nasa.race.common.{JsonPullParser, JsonSerializable, JsonWriter}
+import gov.nasa.race.common.{ByteSlice, JsonPullParser, JsonSerializable, JsonWriter, Utf8Slice}
 import gov.nasa.race.uom.DateTime
 
 import scala.collection.mutable.ArrayBuffer
+import scala.reflect.{ClassTag, classTag}
 
 
 object CellValue {
   val _value_ = asc("value")
   val _date_ = asc("date")
+
+   /*
+    * cell values can either be specified as {"value": .. "date": ..} objects or as simple quoted/unquoted values that
+    * use the provided default date
+    */
+
+  def parseUnQuotedValueFrom[T,U <: CellValue[T]] (p: JsonPullParser, date: DateTime, toValue: Utf8Slice=>T, createCellValue: (T,DateTime)=>U) : U = {
+    p.getLastResult match {
+      case JsonPullParser.ObjectStart =>
+        val v = toValue(p.readUnQuotedMember(_value_))
+        val d = p.readOptionalDateTimeMember(_date_).getOrElse(date)
+        p.skipPastAggregate()
+        createCellValue(v,d)
+
+      case JsonPullParser.UnQuotedValue =>
+        val v = toValue(p.value)
+        createCellValue(v,date)
+
+      case _ => throw p.exception("expected unquoted value or value object")
+    }
+  }
+
+  def parseQuotedValueFrom[T,U <: CellValue[T]] (p: JsonPullParser, date: DateTime, toValue: Utf8Slice=>T, createCellValue: (T,DateTime)=>U) : U = {
+    p.getLastResult match {
+      case JsonPullParser.ObjectStart =>
+        val v = toValue(p.readQuotedMember(_value_))
+        val d = p.readOptionalDateTimeMember(_date_).getOrElse(date)
+        p.skipPastAggregate()
+        createCellValue(v,d)
+
+      case JsonPullParser.QuotedValue =>
+        val v = toValue(p.value)
+        createCellValue(v,date)
+
+      case _ => throw p.exception("expected quoted value or value object")
+    }
+  }
+
+  def parseArrayValueFrom[E,T <: ListCellValue[_]] (p: JsonPullParser, defaultDate: DateTime,
+                                                readElements: =>Array[E], createCellValue: (Array[E],DateTime)=>T) : T = {
+    p.getLastResult match {
+      case JsonPullParser.ObjectStart =>
+        p.readArrayMemberName(_value_)
+        val es = readElements
+        val d = p.readOptionalDateTimeMember(_date_).getOrElse(defaultDate)
+        p.skipPastAggregate()
+        createCellValue(es,d)
+
+      case JsonPullParser.ArrayStart =>
+        val es = readElements
+        createCellValue(es,defaultDate)
+
+      case _ => throw p.exception("expected array value or value object")
+    }
+  }
 }
 import CellValue._
 
+
+/**
+  * invariant content of cells, consisting of a generic value and associated date (which is used for conflict resolution)
+  *
+  * note this has to be an abstract class since Scala 2 does not support bounds on trait type parameters
+  */
+abstract class CellValue[T: ClassTag] {
+  val value: T
+  val date: DateTime
+
+  def isDefined: Boolean = true
+  def cellType: Class[_] = classTag[T].runtimeClass
+
+  def valueToString: String = value.toString
+  def serializeTo (w: JsonWriter): Unit
+  def toJson: String
+
+  def undefinedCellValue: UndefinedCellValue[T]
+}
+
+/**
+  * mixin for undefined CellValue functions
+  */
+trait UndefinedCellValue[T] extends CellValue[T] {
+  self: CellValue[T] =>
+  override def isDefined: Boolean = false
+
+  override def valueToString: String = ""
+
+  override def toJson = "undefined"
+  override def serializeTo (w: JsonWriter): Unit = w.writeUnQuotedValue(toJson)
+}
+
+/**
+  * a CellValue that holds numeric values
+  * note that we don't lift numeric operations since accessing the readonly value from the outside is perfectly fine
+  */
+abstract class NumCellValue[T: ClassTag](implicit num: math.Numeric[T]) extends CellValue[T] {
+  def toReal: Double = num.toDouble(value)
+  def toInteger: Long = num.toLong(value)
+
+  override def toJson: String = valueToString
+  override def serializeTo (w: JsonWriter): Unit = w.writeUnQuotedValue(toJson)
+}
+
+/**
+  * value type root for CellValues holding lists
+  * note that we can't directly use arrays since we need to be able to type match on the value
+  */
+abstract class CVList[E: ClassTag] {
+  type This <: CVList[E]
+  val elements: Array[E]
+
+  def elementType: Class[_] = classTag[E].runtimeClass
+  def copyWithElements (es: Array[E]): This
+
+  // forwarded methods (hopefully inlined by the VM)
+  def apply(i: Int): E = elements(i)
+  def length: Int = elements.length
+
+  def foreach (f:E=>Unit): Unit = elements.foreach(f)
+  def foldLeft[B](z:B)(f: (B,E)=>B): B = elements.foldLeft(z)(f)
+  def foldRight[B](z:B)(f: (E,B)=>B): B = elements.foldRight(z)(f)
+
+  def append(v: E): This = copyWithElements(elements.appended(v))
+
+  def drop (n: Int): This = copyWithElements(elements.drop(n))
+  def dropRight (n: Int): This = copyWithElements(elements.dropRight(n))
+
+  def appendBounded(v: E, maxLength: Int): This = {
+    if (elements.length < maxLength) {
+      copyWithElements(elements.appended(v))
+    } else {
+      val es = elements.clone()
+      System.arraycopy(es, 1, es, 0, es.length-1)
+      es(length-1) = v
+      copyWithElements(es)
+    }
+  }
+
+  def prependBounded(v: E, maxLength: Int): This = {
+    if (elements.length < maxLength) {
+      copyWithElements(elements.prepended(v))
+    } else {
+      val es = elements.clone()
+      System.arraycopy(es, 0, es, 1, es.length-1)
+      es(0) = v
+      copyWithElements(es)
+    }
+  }
+
+  def sameElements (es: collection.IterableOnce[E]): Boolean = elements.sameElements(es)
+
+  def valueToString: String = elements.mkString("[",",","]")
+  override def toString: String = valueToString
+
+  def serializeTo (w: JsonWriter): Unit
+
+  //... and more to follow
+}
+
+/**
+  * a CellValue list type for numeric elements
+  */
+abstract class NumCVList[E: ClassTag](implicit num: math.Numeric[E]) extends CVList[E] {
+  def sum: E = elements.sum
+  def avg: Double = num.toDouble(sum) / (elements.length)
+  def min: E = elements.min
+  def max: E = elements.max
+
+  // generic versions - override for matching concrete element types
+  def toIntegerArray: Array[Long] = elements.map(num.toLong)
+  def toRealArray: Array[Double] = elements.map(num.toDouble)
+
+  //... and more to follow
+}
+
+//--- concrete CVList types (*not* CellValues) - we need to be able to pattern match on them
+
+object IntegerList {
+  def apply (vs: Long*): IntegerList = new IntegerList(Array[Long](vs:_*))
+}
+case class IntegerList (elements: Array[Long]) extends NumCVList[Long] {
+  type This = IntegerList
+  override def copyWithElements (es: Array[Long]): This = IntegerList(es)
+  override def serializeTo (w: JsonWriter): Unit = w.writeArray( _.writeLongValues(elements))
+}
+
+object RealList {
+  def apply (vs: Double*): RealList = new RealList(Array[Double](vs:_*))
+}
+case class RealList (elements: Array[Double]) extends NumCVList[Double] {
+  type This = RealList
+  override def copyWithElements (es: Array[Double]): This = RealList(es)
+  override def serializeTo (w: JsonWriter): Unit = w.writeArray( _.writeDoubleValues(elements))
+}
+
+abstract class ListCellValue[T <: CVList[_] : ClassTag] extends CellValue[T] {
+  def toJson: String = value.elements.mkString("[", ",", "]")
+  def serializeTo (w: JsonWriter): Unit = value.serializeTo(w)
+}
+
+//--- concrete CellValue types (they always come in pairs of a CV case class and an object for the respective undefined value
+
+//--- scalar CVs
+
+object IntegerCellValue {
+  def parseValueFrom (p: JsonPullParser, defaultDate: DateTime) = parseUnQuotedValueFrom(p,defaultDate,_.toLong,apply)
+}
+case class IntegerCellValue(value: Long, date: DateTime) extends NumCellValue[Long] {
+  override def undefinedCellValue = UndefinedIntegerCellValue
+}
+object UndefinedIntegerCellValue extends IntegerCellValue(0, DateTime.UndefinedDateTime) with UndefinedCellValue[Long]
+
+
+object RealCellValue {
+  def parseValueFrom (p: JsonPullParser, date: DateTime) = parseUnQuotedValueFrom(p,date,_.toDouble,apply)
+}
+case class RealCellValue(value: Double, date: DateTime) extends NumCellValue[Double] {
+  override def undefinedCellValue = UndefinedRealCellValue
+}
+object UndefinedRealCellValue extends RealCellValue(0.0, DateTime.UndefinedDateTime) with UndefinedCellValue[Double]
+
+
+object BoolCellValue {
+  def parseValueFrom (p: JsonPullParser, date: DateTime) = parseUnQuotedValueFrom(p,date,_.toBoolean,apply)
+}
+case class BoolCellValue (value: Boolean, date: DateTime) extends CellValue[Boolean] {
+  override def toJson: String = value.toString
+  override def serializeTo (w: JsonWriter): Unit = w.writeBoolean(value)
+  override def undefinedCellValue = UndefinedBoolCellValue
+
+}
+object UndefinedBoolCellValue extends BoolCellValue(false, DateTime.UndefinedDateTime) with UndefinedCellValue[Boolean]
+
+
+object StringCellValue {
+  def parseValueFrom (p: JsonPullParser, date: DateTime) = parseQuotedValueFrom(p,date,_.toString,apply)
+}
+case class StringCellValue (value: String, date: DateTime) extends CellValue[String] {
+  override def toJson: String = "\"" + value + '"'
+  override def serializeTo (w: JsonWriter): Unit = w.writeString(value)
+  override def undefinedCellValue = UndefinedStringCellValue
+}
+object UndefinedStringCellValue extends StringCellValue("", DateTime.UndefinedDateTime) with UndefinedCellValue[String]
+
+
+//--- list CVs
+
+object IntegerListCellValue {
+  def parseValueFrom (p: JsonPullParser, date: DateTime) = parseArrayValueFrom(p,date,
+    p.readCurrentLongArrayInto(ArrayBuffer.empty[Long]).toArray,
+    (es: Array[Long],d: DateTime) => IntegerListCellValue( IntegerList(es),d)
+  )
+}
+case class IntegerListCellValue (value: IntegerList, date: DateTime) extends ListCellValue[IntegerList] {
+  def this (es: Array[Long], date: DateTime) = this(IntegerList(es),date)
+  override def undefinedCellValue = UndefinedIntegerListCellValue
+}
+object UndefinedIntegerListCellValue extends IntegerListCellValue(Array.empty[Long], DateTime.UndefinedDateTime) with UndefinedCellValue[IntegerList]
+
+object RealListCellValue {
+  def parseValueFrom (p: JsonPullParser, date: DateTime) = parseArrayValueFrom(p,date,
+    p.readCurrentDoubleArrayInto(ArrayBuffer.empty[Double]).toArray,
+    (es: Array[Double],d: DateTime) => RealListCellValue( RealList(es),d)
+  )
+}
+case class RealListCellValue (value: RealList, date: DateTime) extends ListCellValue[RealList] {
+  def this (es: Array[Double], date: DateTime) = this(RealList(es),date)
+  override def undefinedCellValue = UndefinedRealListCellValue
+}
+object UndefinedRealListCellValue extends RealListCellValue(Array.empty[Double], DateTime.UndefinedDateTime) with UndefinedCellValue[RealList]
+
+
+
+
+/*
 /**
   * root type for cell values
   *
@@ -521,3 +794,6 @@ case class LongListCellValue (value: Array[Long])(implicit date: DateTime) exten
 }
 
 object UndefinedLongListCellValue extends LongListCellValue(Array.empty[Long])(DateTime.Date0) with UndefinedCellValue
+
+
+ */

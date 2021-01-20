@@ -16,9 +16,6 @@
  */
 package gov.nasa.race.http.tabdata
 
-import java.nio.file.Path
-
-import akka.actor.ActorRef
 import akka.http.scaladsl.model.ws.{Message, TextMessage}
 import com.typesafe.config.Config
 import gov.nasa.race.common.{BufferedStringJsonPullParser, JsonWriter}
@@ -31,37 +28,17 @@ import scala.collection.mutable
 import scala.concurrent.duration.{DurationInt, FiniteDuration}
 
 /**
-  * the upstream websocket adapter for tabdata
-  * this connects to the upstream ServerRoute
+  * the upstream websocket adapter that connects to the upstream server running a NodeServerRoute
+  *
+  * this actor implements the client side of the synchronization protocol, which has to guarantee
+  *〖
+  *   - minimal network configuration (only respective upstream address needs to be known a priori)
+  *   - client node therefore initiates sync with server
+  *   - client actively monitors server node connection to keep websocket alive and ensure proper server response
+  * 〗
   */
 class UpstreamConnectorActor(override val config: Config) extends WSAdapterActor(config)
                                             with PeriodicRaceActor with ContinuousTimeRaceActor {
-
-  var parser: Option[IncomingMessageParser] = None  // can't be set before we have our Node info
-
-  var site: Option[Node] = None
-  var columnData: Map[Path,ColumnData] = Map.empty
-
-  var isRegistered: Boolean = false  // did we already receive our upstream NodeState
-
-  // liveness and QoS data
-  var nPings: Int = 0
-  var lastPingTime: DateTime = DateTime.UndefinedDateTime
-  var lastPongTime: DateTime = DateTime.UndefinedDateTime
-
-
-  override def defaultTickInterval: FiniteDuration = 30.seconds // normal timeout for websockets is 60 sec
-
-  class IncomingMessageParser (val node: Node) extends BufferedStringJsonPullParser
-                                                   with ColumnDataChangeParser with NodeStateParser with PongParser {
-    def parse(msg: String): Option[Any] = parseMessageSet(msg) {
-      case ColumnDataChange._columnDataChange_ => parseColumnDataChangeBody
-      case NodeState._nodeState_ => parseNodeStateBody
-      case Ping._pong_ => parsePongBody
-      case other => warning(s"ignoring unknown message type '$other'"); None
-    }
-  }
-
   class TabDataWriter extends WsMessageWriter {
     val jw = new JsonWriter
 
@@ -78,44 +55,80 @@ class UpstreamConnectorActor(override val config: Config) extends WSAdapterActor
   class TabDataReader extends WsMessageReader {
     override def read(m: Message): Option[Any] = {
       m match {
-        case tm: TextMessage.Strict => parser.flatMap(_.parse(tm.text))
+        case tm: TextMessage.Strict => state.parseIncomingMessage(tm.text)
         case _ => None // ignore
       }
     }
   }
 
-  override def createWriter: WsMessageWriter = new TabDataWriter
-  override def createReader: WsMessageReader = new TabDataReader
+  /**
+    * state specific RaceActor/WSAdapterActor behavior
+    */
+  trait InternalConnectorState {
+    //--- RaceActor
+    def handleMessage: Receive
+    def onRaceTick(): Unit
+    def onConnect(): Unit
+    def onDisconnect(): Unit
 
-  // there is no point scheduling before we are connected /and/ registered (NodeStates have been exchanged)
-  override def startScheduler: Unit = {
-    if (isRegistered) super.startScheduler
+    //--- WSAdapterActor
+    def processIncomingMessage (msg: Message): Unit // what we do with parsed incoming messages
+
+    //--- UpstreamConnectorActor
+    def parseIncomingMessage (msg: String): Option[Any]  // what incoming messages we parse
   }
 
-  override def onRaceTick: Unit = {
-    if (isRegistered){
-      pingUpstream
+  /**
+    * a state in which we are connected and have a node. We monitor the connection and parse all incoming messages
+    */
+  trait ConnectedState extends InternalConnectorState {
+    def upstreamId: String
+    def node: Node
+
+    // since this is run per message we need to cache and buffer to avoid allocation
+    class IncomingMessageParser extends BufferedStringJsonPullParser
+                                with ColumnDataChangeParser with NodeStateParser with PongParser {
+      override def rowList = node.rowList
+
+      def parse (msg: String): Option[Any] = parseMessageSet(msg) {
+        case ColumnDataChange._columnDataChange_ => parseColumnDataChangeBody
+        case NodeState._nodeState_ => parseNodeStateBody
+        case Ping._pong_ => parsePongBody
+        case other => warning(s"ignoring unknown message type '$other'"); None
+      }
     }
-  }
 
-  override def disconnect(): Unit = {
-    info("disconnecting")
-    super.disconnect()
+    val parser = new IncomingMessageParser
 
-    for (node <- site; upstreamId <- node.upstreamId){ publish(NodeReachabilityChange(upstreamId,false)) }
+    //--- liveness and QoS data
+    var nPings: Int = 0
+    var lastPingTime: DateTime = DateTime.UndefinedDateTime
+    var lastPongTime: DateTime = DateTime.UndefinedDateTime
 
-    lastPingTime = DateTime.UndefinedDateTime
-    lastPongTime = DateTime.UndefinedDateTime
-    nPings = 0
-    isRegistered = false
-  }
+    override def onConnect(): Unit = warning(s"ignoring onConnect since already connected")
 
-  def pingUpstream: Unit = {
-    for ( node <- site; upstreamId <- node.upstreamId) {
+    override def onDisconnect(): Unit = {
+      publish( NodeReachabilityChange(upstreamId,false) )
+
+      lastPingTime = DateTime.UndefinedDateTime
+      lastPongTime = DateTime.UndefinedDateTime
+      nPings = 0
+
+      state = if (isTerminating) new TerminatedState else new ReconnectingState(upstreamId, node)
+    }
+
+    override def onRaceTick(): Unit = pingUpstream
+
+    override def parseIncomingMessage (msg: String): Option[Any] = parser.parse(msg)
+
+    /**
+      * we do active pings for the dual purpose of (1) keep the web socket alive w/o overly aggressive global config,
+      * and (2) to ensure end-to-end connection with the corresponding upstream NodeServerRoute HttpServer actor
+      */
+    def pingUpstream: Unit = {
       if (lastPongTime < lastPingTime) { // means we have not gotten a reply during the last ping cycle
         warning(s"no response for last ping at $lastPingTime, trying to reconnect")
-        disconnect()
-        reconnect()
+        disconnect() // this will result in a onDisconnect call, which causes a state transition
 
       } else {
         nPings += 1
@@ -124,57 +137,32 @@ class UpstreamConnectorActor(override val config: Config) extends WSAdapterActor
         processOutgoingMessage(ping)
       }
     }
-  }
 
-  override protected def handleSendFailure(msg: String): Unit = {
-    warning(msg)
-    disconnect()
-    reconnect()
-  }
+    /**
+      * connection check response
+      */
+    def processUpstreamPong (pong: Pong): Unit = {
+      val ping = pong.ping
+      if (ping.request != nPings) warning(s"out of order pong: $pong")
+      if (ping.sender != node.id) warning(s"not our request: $pong")
+      if (ping.receiver != upstreamId) warning( s"not our upstream: $pong")
+      lastPongTime = pong.date
 
-  // we override both incoming and outgoing processing functions to filter
-  // based on message type and own state. This could also be done in the writer but that seems to obfuscated
-  // since readers/writers should only be concerned about serialization/deserialization
-
-  override def processIncomingMessage (msg: Message): Unit = {
-    reader.read(msg) match {
-      case Some(ns: NodeState) => processUpstreamNodeState(ns)
-      case Some(cdc: ColumnDataChange) => processUpstreamColumnDataChange(cdc)
-      case Some(pong: Pong) => processUpstreamPong(pong)
-      case Some(other) => warning(s"ignoring incoming upstream message $other")
-      case None => // ignore
+      val dt = pong.date.timeSince(ping.date)
+      if (dt.toMillis < 0) warning(s"negative round trip time: $pong")
+      info(s"ping response time from upstream: $dt")
     }
-  }
 
-  override protected def processOutgoingMessage (o: Any): Unit = {
-    for (node <- site; upstreamId <- node.upstreamId) {
-      o match {
-        case ns: NodeState =>
-          if (ns.nodeId == node.id) super.processOutgoingMessage(ns) // we only send our own
-
-        case cdc: ColumnDataChange =>
-          node.columnList.get(cdc.columnId) match {
-            case Some(col) =>
-              if (col.updateFilter.sendToUpStream(upstreamId)) super.processOutgoingMessage(cdc)
-            case None => warning(s"change of unknown column not sent to upstream: ${cdc.columnId}")
-          }
-
-        case ping: Ping =>
-          super.processOutgoingMessage(ping)
-
-        case _ => // ignore - not an event we send out
-      }
-    }
-  }
-
-  def processUpstreamColumnDataChange (rawCdc: ColumnDataChange): Unit = {
-    for (node <- site; upstreamId <- node.upstreamId) {
+    /**
+      * this is a CDC we receive from the upstream socket
+      */
+    def processUpstreamColumnDataChange (rawCdc: ColumnDataChange): Unit = {
       node.columnList.get(rawCdc.columnId) match {
         case Some(col) =>
-          if (col.updateFilter.receiveFromUpStream(upstreamId)) {
+          if (col.updateFilter.receiveFromUpStream(node.upstreamId.get)) {
             val cdc = rawCdc.filter { r =>
               node.rowList.get(r) match {
-                case Some(row) => row.updateFilter.receiveFromUpStream(upstreamId)
+                case Some(row) => row.updateFilter.receiveFromUpStream(node.upstreamId.get)
                 case None => false
               }
             }
@@ -186,25 +174,99 @@ class UpstreamConnectorActor(override val config: Config) extends WSAdapterActor
   }
 
   /**
-    * this is the upstream response to our own NodeState
+    * in this state we don't parse or process any messages to/from upstream but just wait for the
+    * internal node message to arrive, which triggers a state change
+    *
+    * this state should only be active between RaceInitialize and RaceStart
     */
-  def processUpstreamNodeState (ns: NodeState): Unit = {
-    for (node <- site; upstreamId <- node.upstreamId) {
+  class InitialState extends InternalConnectorState {
+    override def handleMessage: Receive = {
+      case BusEvent(_,newNode: Node,_) => setNode(newNode)
+      case _ => // ignore
+    }
+
+    def setNode (newNode: Node): Unit = {
+      if (newNode.upstreamId.isDefined) {
+        val upstreamId = newNode.upstreamId.get
+        if (isConnected) {
+          state = new SynchronizingState(upstreamId, newNode)
+        } else {
+          state = new ReconnectingState(upstreamId, newNode)
+        }
+      }
+    }
+
+    //--- we don't process anything else
+    override def onRaceTick(): Unit = {}
+    override def onConnect(): Unit = {}
+    override def onDisconnect(): Unit = {}
+    override def processIncomingMessage (msg: Message): Unit = {}
+    override def parseIncomingMessage (msg: String): Option[Any] = None
+  }
+
+  /**
+    * this is what we enter once we are connected and have a node. This sends the own NodeState and processes the upstream replies
+    * We do not send out CDCs from the bus yet, which we shouldn't receive from the bus until we published that
+    * the upstream node is connected and synced
+    */
+  class SynchronizingState (val upstreamId: String, var node: Node) extends ConnectedState {
+
+    info(s"starting upstream synchronization with: $upstreamId")
+
+    override def handleMessage: Receive = {
+      case BusEvent(_,newNode: Node,_) => node = newNode
+      case BusEvent(_,cdc: ColumnDataChange,_) => // we don't need to process this since Node messages contain those changes
+      case _ => // ignore
+    }
+
+    override def onConnect(): Unit = sendOwnNodeState
+
+    def sendOwnNodeState: Unit = {
+      val extCDs = mutable.Buffer.empty[ColumnDatePair]
+      val locCDs = mutable.Buffer.empty[(String,Seq[RowDatePair])]
+
+      node.columnList.orderedEntries(node.columnDatas).foreach { e=>
+        val (colId,cd) = e
+        val col = node.columnList(colId)
+        if (col.updateFilter.receiveFromUpStream(node.upstreamId.get)) {
+          if (col.node == node.id) locCDs += (colId -> cd.orderedCellDates(node.rowList))
+          else extCDs += (colId -> cd.date)
+        }
+      }
+
+      if (extCDs.nonEmpty || locCDs.nonEmpty) {
+        processOutgoingMessage( NodeState(node,extCDs.toSeq,locCDs.toSeq))
+      }
+    }
+
+    override def processIncomingMessage(msg: Message): Unit = {
+      reader.read(msg) match {
+        case Some(ns: NodeState) => processUpstreamNodeState(ns)
+        case Some(cdc: ColumnDataChange) => processUpstreamColumnDataChange(cdc)
+        case Some(pong: Pong) => processUpstreamPong(pong)
+        case Some(other) => warning(s"ignoring incoming upstream message $other")
+        case None => // ignore
+      }
+    }
+
+    /**
+      * this is the upstream response to our own NodeState
+      */
+    def processUpstreamNodeState (ns: NodeState): Unit = {
       if (ns.nodeId == upstreamId) {
         def sendColumn (col: Column): Boolean = col.updateFilter.sendToUpStream(upstreamId)
         def receiveColumn (col: Column): Boolean = col.updateFilter.receiveFromUpStream(upstreamId)
-        def sendRow (col: Column, row: AnyRow) = row.updateFilter.sendToUpStream(upstreamId)
-        def receiveRow (col: Column, row: AnyRow): Boolean = row.updateFilter.receiveFromUpStream(upstreamId)
+        def sendRow (col: Column, row: Row[_]): Boolean = row.updateFilter.sendToUpStream(upstreamId)
+        def receiveRow (col: Column, row: Row[_]): Boolean = row.updateFilter.receiveFromUpStream(upstreamId)
 
         if (ns.readOnlyColumns.nonEmpty || ns.readWriteColumns.nonEmpty) {
-          val nodeStateResponder = new NodeStateResponder(node, columnData, this,
-                                                          sendColumn, receiveColumn, sendRow, receiveRow)
+          val nodeStateResponder = new NodeStateResponder(node, UpstreamConnectorActor.this,
+            sendColumn, receiveColumn, sendRow, receiveRow)
           nodeStateResponder.getNodeStateReplies(ns).foreach(processOutgoingMessage)
         }
 
-        isRegistered = true
         startScheduler // now that we are registered with upstream we can schedule Pings
-        publish(NodeReachabilityChange(upstreamId,true)) // this indicates the sync with upstream is complete
+        publish( NodeReachabilityChange(upstreamId,true)) // this indicates the sync with upstream is complete
 
       } else {
         warning(s"ignoring NodeState of non-upstream node ${ns.nodeId}")
@@ -212,76 +274,113 @@ class UpstreamConnectorActor(override val config: Config) extends WSAdapterActor
     }
   }
 
-  def processUpstreamPong (pong: Pong): Unit = {
-    for (node <- site; upstreamId <- node.upstreamId) {
-      if (isConnected) {
-        val ping = pong.ping
-        if (ping.request != nPings) warning(s"out of order pong: $pong")
-        if (ping.sender != node.id) warning(s"not our request: $pong")
-        if (ping.receiver != upstreamId) warning( s"not our upstream: $pong")
-        lastPongTime = pong.date
+  /**
+    * connected state after NodeState sync. This is the mode in which we send and receive CDCs
+    */
+  class SynchronizedState (val upstreamId: String, var node: Node) extends ConnectedState {
 
-        val dt = pong.date.timeSince(ping.date)
-        if (dt.toMillis < 0) warning(s"negative round trip time: $pong")
-        info(s"ping response time from upstream: $dt")
-      }
+    info(s"synchronized with upstream: $upstreamId")
+
+    override def handleMessage: Receive = {
+      case BusEvent(_,newNode: Node,_) => node = newNode
+      case BusEvent(_,cdc: ColumnDataChange,_) => sendColumnDataChange(cdc)
+      case _ => // ignore
     }
-  }
 
-  def sendOwnNodeState: Unit = {
-    for (node <- site; upstreamId <- node.upstreamId) {
-      val extCDs = mutable.Buffer.empty[ColumnDate]
-      val locCDs = mutable.Buffer.empty[(Path,Seq[RowDate])]
+    def sendColumnDataChange (rawCdc: ColumnDataChange): Unit = {
+      if (rawCdc.changeNodeId != node.id) return  // ? what about child node changes
 
-      node.columnList.orderedEntries(columnData).foreach { e=>
-        val (colId,cd) = e
-        val col = node.columnList(colId)
-        if (col.updateFilter.receiveFromUpStream(upstreamId)) {
-          if (col.node == node.id) locCDs += (colId -> cd.orderedCellDates(node.rowList))
-          else extCDs += (colId -> cd.date)
-        }
-      }
-
-      if (extCDs.nonEmpty || locCDs.nonEmpty) {
-        processOutgoingMessage( new NodeState(node,extCDs.toSeq,locCDs.toSeq))
-      }
-    }
-  }
-
-  def sendColumnDataChange (rawCdc: ColumnDataChange): Unit = {
-    for (node <- site; upstreamId <- node.upstreamId) {
       val cdc = rawCdc.filter { r =>
         node.rowList.get(r) match {
-          case Some(row) => row.updateFilter.sendToUpStream(upstreamId)
+          case Some(row) => row.updateFilter.sendToUpStream(node.upstreamId.get)
           case None => false
         }
       }
 
       if (cdc.nonEmpty) processOutgoingMessage(cdc)
     }
+
+    override def processIncomingMessage (msg: Message): Unit = {
+      reader.read(msg) match {
+        case Some(cdc: ColumnDataChange) => processUpstreamColumnDataChange(cdc)
+        case Some(pong: Pong) => processUpstreamPong(pong)
+        case Some(other) => warning(s"ignoring incoming upstream message $other")
+        case None => // ignore
+      }
+    }
   }
+
+  /**
+    * disconnected state in which we only keep track of node changes and periodically try to reconnect, which would
+    * trigger a new upstream synchronization
+    */
+  class ReconnectingState (val upstreamId: String, var node: Node) extends InternalConnectorState {
+
+    info(s"trying to reconnect with upstream: $upstreamId")
+
+    override def handleMessage: Receive = {
+      case BusEvent(_,newNode: Node,_) => node = newNode
+      case RetryConnect => reconnect()
+      case _ => // ignore
+    }
+
+    override def onRaceTick(): Unit = connect() // if successful it will result in a onConnect call
+
+    override def onConnect(): Unit = {
+      state = new SynchronizingState(upstreamId,node)
+    }
+
+    override def onDisconnect(): Unit = {}
+
+    //--- no incoming messages
+    override def parseIncomingMessage(msg: String): Option[Any] = None
+    override def processIncomingMessage(msg: Message): Unit = {}
+  }
+
+  /**
+    * end state in which we don't try to reconnect and ignore incoming and outgoing messages
+    */
+  class TerminatedState extends InternalConnectorState {
+
+    info(s"disconnected from upstream")
+
+    override def handleMessage: Receive = {
+      case _ => // ignore
+    }
+
+    override def onRaceTick(): Unit = {}
+    override def onConnect(): Unit = {}
+    override def onDisconnect(): Unit = {}
+    override def processIncomingMessage(msg: Message): Unit = {}
+    override def parseIncomingMessage(msg: String): Option[Any] = None
+  }
+
+  //--- begin actor implementation
+
+  var state: InternalConnectorState = new InitialState
+
+  override def defaultTickInterval: FiniteDuration = 30.seconds // normal timeout for websockets is 60 sec
+
+  //--- those are hardwired
+  override def createWriter: WsMessageWriter = new TabDataWriter
+  override def createReader: WsMessageReader = new TabDataReader
 
   //--- standard RaceActor callbacks
 
-  override def onStartRaceActor(originator: ActorRef): Boolean = {
-    if (super.onStartRaceActor(originator)) {
-      if (isConnected) sendOwnNodeState
-      true
-    } else false
+  override def handleMessage: Receive = state.handleMessage
+
+  override def onRaceTick(): Unit = state.onRaceTick()
+
+  //--- WSAdapterActor overrides
+
+  override protected def handleSendFailure(msg: String): Unit = {
+    warning(msg)
+    disconnect()
+    reconnect()
   }
 
-  override def handleMessage: Receive = {
-    case BusEvent(_,s: Node,_) =>
-      site = Some(s)
-      parser = Some(new IncomingMessageParser(s))
+  override def onConnect(): Unit = state.onConnect()
+  override def onDisconnect(): Unit = state.onDisconnect()
+  override protected def processIncomingMessage (msg: Message): Unit = state.processIncomingMessage(msg)
 
-    case BusEvent(_, cd: ColumnData, _) => // new local or remote providerData -> just update our own map
-      columnData = columnData + (cd.id -> cd)
-
-    case BusEvent(_,cdc: ColumnDataChange,_) =>
-      sendColumnDataChange(cdc)
-
-    case RetryConnect =>
-      if (connect) sendOwnNodeState
-  }
 }

@@ -3,20 +3,17 @@
   "info": "column formulas for provider node",
   "date": "2020-06-28T12:00:00.000",
 
-  "columnlist": "/providers/region1",
-  "rowlist": "/rows/sd1",
-
   "columns": {
     ".": {
-      "/data/cat_A":           { "src":  "(isum ./field_{1,2})"},
+      "/data/cat_A":           { "src":  "(IntSum ./field_{1,2})"},
 
-      "/data/cat_A/field_4":   { "src":  "(ilpushn ../field_1 3)" },
-      "/data/cat_A/field_3":   { "src":  "(ilavg ../field_4)" },
+      "/data/cat_A/field_4":   { "src":  "(IntListCellPushN ../field_1 3)" },
+      "/data/cat_A/field_3":   { "src":  "(IntListCellAvgInt ../field_4)" },
 
-      "/data/cat_B":           { "src":  "(rsum ./*)"},
-      "/data/cat_B/field_2":   { "src":  "(rset ../field_1)", "trigger": "60 sec" },
+      "/data/cat_B":           { "src":  "(RealSum ./*)"},
+      "/data/cat_B/field_2":   { "src":  "(RealSet ../field_1)", "trigger": "60 sec" },
 
-      "/data/cat_C":           { "src":  "(iinc ./field_2)"}
+      "/data/cat_C":           { "src":  "(IntCellInc ./field_2 1)"}
     }
   }
 }

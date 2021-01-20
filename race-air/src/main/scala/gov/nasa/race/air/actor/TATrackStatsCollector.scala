@@ -63,7 +63,7 @@ class TATrackStatsCollector (val config: Config) extends StatsCollectorActor wit
 
   val tracons = MHashMap.empty[String, TACollector]
 
-  override def onRaceTick: Unit = {
+  override def onRaceTick(): Unit = {
     tracons.foreach { e => e._2.checkDropped }
     publish(snapshot)
   }

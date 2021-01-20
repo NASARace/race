@@ -46,7 +46,7 @@ trait TrackDropper extends PublishingRaceActor with ContinuousTimeRaceActor with
   val dropAfterMillis = config.getFiniteDurationOrElse("drop-after", 60.seconds).toMillis // this is sim time
   override def defaultTickInterval = 30.seconds  // wall clock time
 
-  override def onRaceTick: Unit = removeStaleTracks
+  override def onRaceTick(): Unit = removeStaleTracks
 
   /** likely to be overridden/replaced */
   def handleFPosDropperMessage: Receive = {

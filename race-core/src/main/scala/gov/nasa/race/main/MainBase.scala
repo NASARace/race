@@ -132,7 +132,7 @@ trait MainBase {
     ifSome(o.logConsoleURI) { uri =>
       val (host, port) = HostPortRE.findFirstIn(uri) match {
         case Some(HostPortRE(host, p)) => (host, if (p == null) DefaultLogConsolePort else p)
-        case None => (DefaultLogConsoleHost, DefaultLogConsolePort)
+        case _ => (DefaultLogConsoleHost, DefaultLogConsolePort)
       }
       System.setProperty("log.console.host", host)
       System.setProperty("log.console.port", port)

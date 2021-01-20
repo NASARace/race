@@ -32,7 +32,7 @@ class CellValueFormulaListSpec extends AnyFlatSpec with RaceSpec {
     println("--- parsing formulas from:")
     println(formulaSrc)
 
-    val parser = new FormulaListParser
+    val parser = new CellValueFormulaListParser
     parser.parse(formulaSrc.getBytes) match {
       case Some(formulaList) =>
         println("success")
@@ -56,18 +56,19 @@ class CellValueFormulaListSpec extends AnyFlatSpec with RaceSpec {
     val formulaSrc = FileUtils.fileContentsAsString("race-net-http-test/src/resources/sites/tabdata/data/formulaList.json").get
 
     val columnList: ColumnList = getList("columnList")(new ColumnListParser().parse(columnListSrc.getBytes))
-    val rowList: RowList = getList("rowList")(new RowListParser().parse(rowListSrc.getBytes))
-    val formulaList: CellValueFormulaList = getList("formulaList")(new FormulaListParser().parse(formulaSrc.getBytes))
-    val nodeId = UnixPath("/providers/region1/integrator")
-    val funcLib = new BasicFunctionLibrary
-    val selColPath = UnixPath("/providers/region1/summary")
+    val rowList: RowList = getList("rowList")(new RowListParser(columnList.id).parse(rowListSrc.getBytes))
+    val formulaList: CellValueFormulaList = getList("formulaList")(new CellValueFormulaListParser().parse(formulaSrc.getBytes))
+    val nodeId = "/providers/region1/integrator"
+    val node = Node(nodeId,None,columnList,rowList,Map.empty[String,ColumnData])
+    val funcLib = new CellFunctionLibrary
+    val selColPath = "/providers/region1/summary"
 
-    formulaList.compileOn(nodeId,columnList,rowList,funcLib)
+    formulaList.compileWith(node,funcLib)
 
     println(s"cell expressions of column '$selColPath'")
     val summaryFormulas = formulaList.getColumnFormulas(selColPath)
-    summaryFormulas.foreach {e=>
-      println(s" '${e._1}' : ${e._2.ce}")
+    summaryFormulas.foreach { e=>
+      println(s" '${e._1}' : ${e._2.expr}")
     }
   }
 }

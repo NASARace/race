@@ -472,6 +472,12 @@ abstract class JsonPullParser extends LogWriter with Thrower {
     if (res != ArrayStart || member.isEmpty) throw exception("expected array member, got '${res.getClass.getSimpleName}'")
     member
   }
+  @inline final def readArrayMemberName(name: ByteSlice): Utf8Slice = {
+    val res = readNext()
+    if (member != name) throw exception(s"expected member '$name' got '$member'")
+    if (res != ArrayStart || member.isEmpty) throw exception("expected array member, got '${res.getClass.getSimpleName}'")
+    member
+  }
 
   @inline final def readQuotedValue(): Utf8Slice = {
     if (readNext() == QuotedValue) value else throw exception(s"not a quoted value: '$value'")

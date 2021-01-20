@@ -59,7 +59,7 @@ class DuplicatedMsgDetector (val config: Config) extends StatsCollectorActor wit
     sdb
   }
 
-  override def onRaceTick: Unit = {
+  override def onRaceTick(): Unit = {
     if (reportEmptyStats || catStatsData.nonEmpty || msgStatsData.nonEmpty) publish(snapshot)
     purgeOldChecksums
   }

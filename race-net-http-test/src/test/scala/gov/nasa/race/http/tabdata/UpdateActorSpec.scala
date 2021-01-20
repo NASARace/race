@@ -27,7 +27,7 @@ import org.scalatest.flatspec.AnyFlatSpecLike
 /**
   * reg test for TabDataServiceActor
   */
-class TabDataUpdateActorSpec extends RaceActorSpec with AnyFlatSpecLike {
+class UpdateActorSpec extends RaceActorSpec with AnyFlatSpecLike {
 
   val dataDir = "race-net-http-test/src/resources/sites/tabdata/data"
 
@@ -46,43 +46,44 @@ class TabDataUpdateActorSpec extends RaceActorSpec with AnyFlatSpecLike {
   "a TabDataServiceActor" should "read columnList, rowList, formulaList and columnData during creation" in {
     runRaceActorSystem(Logging.InfoLevel) {
 
-      val node: TabDataUpdateActor = addTestActor[TabDataUpdateActor]("tdsa", integratorConfig)
+      val actor: UpdateActor = addTestActor[UpdateActor]("tdsa", integratorConfig)
 
       printTestActors
       initializeTestActors
       startTestActors(DateTime.now)
 
-      implicit val date = DateTime.now
-      val originator = p"/providers/region1/provider_2"
+      val date = DateTime.now
+      val originator = "/providers/region1/provider_2"
+
       val cdc = ColumnDataChange(
         originator,
         originator,
         date,
         Seq(
-          p"/data/cat_A/field_1" -> LongCellValue(20),
-          p"/data/cat_B/field_2" -> DoubleCellValue(1000.0)
+          "/data/cat_A/field_1" -> IntegerCellValue(20, date),
+          "/data/cat_B/field_2" -> RealCellValue(1000.0,date)
         )
       )
 
-      println(s"--- column data of $node pre CDC")
-      TabDataUpdateActor.dumpColumnData(node.columnList, node.rowList, node.columnData)
+      println(s"--- column data of $actor pre CDC")
+      actor.getNode.dumpColumnData
 
       println(s"\n--- sending CDC $cdc\n")
       publish("/in", cdc)
       sleep(1000)
 
-      println(s"--- column data of $node post CDC")
-      TabDataUpdateActor.dumpColumnData(node.columnList, node.rowList, node.columnData)
+      println(s"--- column data of $actor post CDC")
+      actor.getNode.dumpColumnData
 
-      node.getCell(p"/providers/region1/provider_2", p"/data/cat_B/field_2") match {
+      actor.getNode.get("/providers/region1/provider_2", "/data/cat_B/field_2") match {
         case Some(cv) =>
           cv match {
-            case dcv:DoubleCellValue =>
-              println(s"\n--- [provider_2@cat_B/field_2] = $dcv")
-              assert( dcv.toDouble == 1000.0)
+            case rcv:RealCellValue =>
+              println(s"\n--- [provider_2@cat_B/field_2] = $rcv")
+              assert( rcv.value == 1000.0)
             case _ => fail("wrong cell value type: $cv")
           }
-        case None => fail("updated cell value [provider_2@cat_B/field_2] not found")
+        case None => fail("updated cell value [provider_2::cat_B/field_2] not found")
       }
 
       terminateTestActors
