@@ -18,7 +18,6 @@ package gov.nasa.race.air.actor
 
 import java.io.IOException
 import java.net.{Socket, SocketTimeoutException}
-
 import akka.actor.ActorRef
 import com.typesafe.config.Config
 import gov.nasa.race.actor.{SocketDataAcquisitionThread, SocketImporter}
@@ -34,6 +33,7 @@ import gov.nasa.race.uom.DateTime._
 import gov.nasa.race.uom.Time._
 import gov.nasa.race.uom.{DateTime, Time}
 
+import java.time.ZoneId
 import scala.annotation.tailrec
 import scala.concurrent.duration._
 
@@ -73,7 +73,7 @@ trait SbsImporter extends ChannelTopicProvider {
 /**
   * the data acquisition thread of the SBSImportActor
   *
-  * this thread reads the socket data and triggers drio checks. Parsing data and detecting stale flights is
+  * this thread reads the socket data and triggers drop checks. Parsing data and detecting stale flights is
   * delegated to an SBSUpdater
   *
   * note that we only perform dropChecks if there is a non-zero dropDuration, and only sync
@@ -86,7 +86,9 @@ trait SbsImporter extends ChannelTopicProvider {
   * and hence would miss a check is handled by setting a timeout on the socket read (our blocking point).
   * Note that with update cycles around 1s it is most unlikely we ever run into such a socket timeout.
   */
-class SbsDataAcquisitionThread(socket: Socket, bufLen: Int, dropDuration: FiniteDuration,
+class SbsDataAcquisitionThread(socket: Socket, bufLen: Int,
+                               defaultZone: ZoneId,
+                               dropDuration: FiniteDuration,
                                updateFunc: TrackedObject=>Boolean,
                                dropFunc: (String,String,DateTime,Time)=>Unit) extends SocketDataAcquisitionThread(socket) {
 
@@ -105,7 +107,7 @@ class SbsDataAcquisitionThread(socket: Socket, bufLen: Int, dropDuration: Finite
   override def run: Unit = {
     val buf = new Array[Byte](bufLen)
     val in = socket.getInputStream
-    val updater = new SbsUpdater(updateFunc,dropFunc)
+    val updater = new SbsUpdater(updateFunc,dropFunc,defaultZone)
 
     lastDropCheck = DateTime.now
 
@@ -178,7 +180,9 @@ class SbsImportActor(val config: Config) extends SbsImporter with SocketImporter
   override def defaultPort: Int = 30003
 
   override def createDataAcquisitionThread (sock: Socket): Option[SocketDataAcquisitionThread] = {
-    Some(new SbsDataAcquisitionThread(sock, initBufferSize, dropAfter, publishTrack, dropTrack))
+    // if we import from a dump1090 process we need to be able to explicitly set the timezone
+    val defaultZone = config.getMappedStringOrElse("default-zone", ZoneId.of, ZoneId.systemDefault)
+    Some(new SbsDataAcquisitionThread(sock, initBufferSize, defaultZone, dropAfter, publishTrack, dropTrack))
   }
 
   def publishTrack (track: TrackedObject): Boolean = {
