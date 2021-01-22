@@ -22,8 +22,6 @@ import gov.nasa.race.test.RaceSpec
 import gov.nasa.race.uom.DateTime
 import org.scalatest.flatspec.AnyFlatSpec
 
-import scala.collection.immutable.ListMap
-import scala.collection.mutable
 import scala.reflect.{ClassTag, classTag}
 
 /**
@@ -84,7 +82,7 @@ class CellExpressionSpec extends AnyFlatSpec with RaceSpec {
             println("success: " + ce)
             ce.asInstanceOf[T]
           } else {
-            fail(s"wrong CellExpression type: ${ce.getClass}")
+            fail(s"wrong CellExpression type: ${ce.getClass}, expecting: ${classTag[T].runtimeClass}")
           }
         case Failure(msg) =>
           fail(s"compilation failed with $msg")
@@ -114,7 +112,7 @@ class CellExpressionSpec extends AnyFlatSpec with RaceSpec {
 
     val ctx = new BasicEvalContext( node, validChangeDate)
 
-    val expr: RealExpression = compile(p, formula)
+    val expr = compile[RealExpression](p, formula)
     val v: Double = evalFor(ctx, expr)
     assert(v == 42.42)
 
@@ -131,7 +129,7 @@ class CellExpressionSpec extends AnyFlatSpec with RaceSpec {
 
     val ctx = new BasicEvalContext( node, validChangeDate)
 
-    val expr: RealExpression = compile(p, formula)
+    val expr = compile[RealExpression](p, formula)
     val v: Double = evalFor(ctx, expr)
     assert(v == 42.42)
 
@@ -144,11 +142,11 @@ class CellExpressionSpec extends AnyFlatSpec with RaceSpec {
     val p = new CellFormulaParser(node,columnList("/providers/c1"),rowList("/data/r1"),funcLib)
     val formula = "(IntAvgReal c{1,2}::.)"
 
-    println(s"\n#-- function with column pattern: '$formula'")
+    println(s"\n#-- function with column pattern: '$formula' for ${rowList("/data/r1").getClass}")
 
     val ctx = new BasicEvalContext( node, validChangeDate)
 
-    val expr: RealExpression = compile(p, formula)
+    val expr = compile[RealExpression](p, formula)
     val v: Double = evalFor(ctx,expr)
     assert(v == 42.5)
 
@@ -165,7 +163,7 @@ class CellExpressionSpec extends AnyFlatSpec with RaceSpec {
 
     val ctx = new BasicEvalContext( node, validChangeDate)
 
-    val expr: RealExpression = compile(p, formula)
+    val expr = compile[RealExpression](p, formula)
     val v: Double = evalFor(ctx, expr)
     assert(v == 43.0)
 
@@ -182,7 +180,7 @@ class CellExpressionSpec extends AnyFlatSpec with RaceSpec {
 
     val ctx = new BasicEvalContext( node, validChangeDate)
 
-    val expr: IntegerExpression = compile(p, formula)
+    val expr = compile[IntegerExpression](p, formula)
     val v = evalFor(ctx, expr)
     assert(v == 43)
 
@@ -193,12 +191,11 @@ class CellExpressionSpec extends AnyFlatSpec with RaceSpec {
 
   "a CellExpressionParser" should "parse array push func" in {
     val p = new CellFormulaParser(node,columnList("/providers/c1"),rowList("/data/r5"),funcLib)
-
     val formula = "(IntListCellPushN r5 r4 2)"
-    val expr: IntegerListExpression = compile(p, formula)
 
     println(s"\n#-- array pushn function: '$formula'")
 
+    val expr = compile[IntegerListExpression](p, formula)
     val ctx = new BasicEvalContext( node, validChangeDate)
 
     val v: IntegerList = evalFor(ctx,expr)
@@ -211,11 +208,11 @@ class CellExpressionSpec extends AnyFlatSpec with RaceSpec {
 
   "a CellExpressionParser" should "parse array avg func" in {
     val p = new CellFormulaParser(node,columnList("/providers/c1"),rowList("/data/r4"),funcLib)
-
     val formula = "(IntListCellAvgInt r5)"
-    val expr: IntegerExpression = compile(p, formula)
 
     println(s"\n#-- array avg function: '$formula'")
+
+    val expr = compile[IntegerExpression](p, formula)
     val ctx = new BasicEvalContext( node, validChangeDate)
 
     val v = evalFor(ctx,expr)

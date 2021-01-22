@@ -127,7 +127,7 @@ case class RealListCellFormula (src: String, expr: RealListExpression) extends C
   *
   * examples:
   *     (IntSum /a/\*)
-  *     (IntPushN . /a/x 2)
+  *     (IntListPushN . /a/x 2)
   *
   * CellRefs can be specified as glob patterns ('*' is only escaped because of scaladoc and can be used directly),
   * which are expanded into matching Seq[CellRef]
@@ -147,7 +147,7 @@ abstract class CellExpressionParser (funLib: CellFunctionLibrary) extends DebugR
 
   //--- tokens
   def integer: Parser[IntegerCellValueConst]    = """-?\d+""".r ^^ { s=> IntegerCellValueConst(s.toLong) }
-  def real: Parser[RealCellValueConst] = """-?\d*\.\d+""".r ^^ { s=> RealCellValueConst(s.toDouble) }
+  def real: Parser[RealCellValueConst] = """-?\d+\.\d+""".r ^^ { s=> RealCellValueConst(s.toDouble) }
   def bool: Parser[BoolCellValueConst] = "true|false".r ^^ { s=> BoolCellValueConst(s.toBoolean) }
   def string: Parser[StringCellValueConst] = """\".*\"""".r ^^ { s=> StringCellValueConst(s.substring(1,s.length-2)) }
 
@@ -155,7 +155,7 @@ abstract class CellExpressionParser (funLib: CellFunctionLibrary) extends DebugR
   def pathSpec: Parser[String] = """[a-zA-Z0-9_/.*?!{},\[\]]+""".r
   def path: Parser[String] = """[a-zA-Z/][a-zA-Z/_0-9]*""".r ^^ { _.intern }
 
-  def const: Parser[CellValueConst[_]] = integer | real | bool | string
+  def const: Parser[CellValueConst[_]] = real | integer | bool | string
 
   // a single explicit CellRef
   def cellRef: Parser[CellRef[_]]     = path ~ opt( "::" ~> path) ^^ {

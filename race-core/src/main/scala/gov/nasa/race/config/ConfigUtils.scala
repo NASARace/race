@@ -49,6 +49,7 @@ object ConfigUtils {
       case _: ConfigException.Missing => fallback
     }
   }
+
   def getOptional[T] (key: String)(f: => T): Option[T] = {
     try {
       Some(f)
@@ -77,6 +78,14 @@ object ConfigUtils {
     def hasPaths (key: String*): Boolean = {
       for (k <- key) if (!conf.hasPath(k)) return false
       true
+    }
+
+    def getMappedStringOrElse[T] (key: String, f: String=>T, default: =>T): T = {
+      try {
+        f( conf.getString(key))
+      }catch {
+        case _: ConfigException.Missing => default
+      }
     }
 
     //--- these are just convenience forwarders so that we don't have to import ConfigVault everywhere

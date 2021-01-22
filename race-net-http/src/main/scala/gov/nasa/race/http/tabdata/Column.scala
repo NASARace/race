@@ -139,7 +139,7 @@ case class ColumnList (id: String, info: String, date: DateTime, columns: ListMa
   }
 
   def matching (globPattern: String): Iterable[Column] = {
-    val regex = Glob.glob2Regex(globPattern)
+    val regex = Glob.resolvedGlob2Regex(globPattern, id)
     columns.foldRight(Seq.empty[Column]){ (e,list) => if (regex.matches(e._1)) e._2 +: list else list }
   }
 }

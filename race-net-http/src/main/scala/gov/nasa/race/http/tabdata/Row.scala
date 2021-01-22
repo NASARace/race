@@ -270,7 +270,7 @@ case class RowList (id: String, info: String, date: DateTime, rows: immutable.Se
   }
 
   def matching (globPattern: String): Iterable[Row[_]] = {
-    val regex = Glob.glob2Regex(globPattern)
+    val regex = Glob.resolvedGlob2Regex(globPattern, id)
     rows.foldRight(Seq.empty[Row[_]]){ (e,list) => if (regex.matches(e._1)) e._2 +: list else list }
   }
 

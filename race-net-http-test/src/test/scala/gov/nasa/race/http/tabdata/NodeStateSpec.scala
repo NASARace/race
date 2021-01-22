@@ -33,12 +33,12 @@ class NodeStateSpec extends AnyFlatSpec with RaceSpec {
         "rowListDate": 1593370800000,
         "columnListId": "/providers/region1/provider_2",
         "columnListDate": 1593370800000,
-        "externalColumnDates": {
+        "readOnlyColumns": {
           "/providers/region1/summary": 0,
           "/providers/region1/provider_1": 1593471960000,
           "/providers/region1/provider_4": 1593471964000
         },
-        "localColumnDates": {
+        "readWriteColumns": {
           "/providers/region1/provider_2": {
             "/data/cat_A": 1603752518526,
             "/data/cat_A/field_1": 1593471962500,
@@ -62,7 +62,7 @@ class NodeStateSpec extends AnyFlatSpec with RaceSpec {
       parser.parseNodeState.get
     }
     println(ns)
-    assert(ns.nodeId == UnixPath("/providers/region1/provider_2"))
+    assert(ns.nodeId == "/providers/region1/provider_2")
     assert(ns.readOnlyColumns.size == 3)
     assert(ns.readWriteColumns.size == 2)
     println("Ok.")

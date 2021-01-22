@@ -145,14 +145,14 @@ case class NodeState(nodeId: String,
         .writeStringMember(_columnListId_, columnListId.toString)
         .writeDateTimeMember(_columnListDate_, columnListDate)
 
-        // "externalColumns": { "<colId>": <date>, ... }
+        // "readOnlyColumns": { "<colId>": <date>, ... }
         .writeMemberObject(_readOnlyColumns_) { w =>
           readOnlyColumns.foreach { e =>
             w.writeDateTimeMember(e._1.toString, e._2)
           }
         }
 
-        // "localColumns": { "<colId>": { "<rowId>": <date>, ... } }
+        // "readWriteColumns": { "<colId>": { "<rowId>": <date>, ... } }
         .writeMemberObject(_readWriteColumns_) { w =>
           readWriteColumns.foreach { e=>
             val (colId,rowDates) = e

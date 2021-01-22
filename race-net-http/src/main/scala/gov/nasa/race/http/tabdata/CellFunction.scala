@@ -133,7 +133,7 @@ trait HeterogenousDomain extends Domain {
 }
 
 trait IntegerDomain extends Domain {
-  def checkArgTypesError (args: Seq[CellExpression[_]]): Option[String] = checkArgTypes[Long](args)
+  def checkArgTypesError (args: Seq[CellExpression[_]]): Option[String] = checkArgTypes[IntegerExpression](args)
 
   def evaluateArgs (ctx: EvalContext, args: Seq[CellExpression[_]]): Seq[Long] = {
     args.map( _.asInstanceOf[IntegerExpression].evalToInteger(ctx))
@@ -145,7 +145,7 @@ trait IntegerDomain extends Domain {
 }
 
 trait RealDomain extends Domain {
-  def checkArgTypesError (args: Seq[CellExpression[_]]): Option[String] = checkArgTypeCond(args)( c=> c == classOf[Double] || c == classOf[Long])
+  def checkArgTypesError (args: Seq[CellExpression[_]]): Option[String] = checkArgTypes[NumExpression[_]](args)
 
   def evaluateArgs (ctx: EvalContext, args: Seq[CellExpression[_]]): Seq[Double] = {
     args.map( _.asInstanceOf[NumExpression[_]].evalToReal(ctx))
@@ -157,7 +157,7 @@ trait RealDomain extends Domain {
 }
 
 trait BoolDomain extends Domain {
-  def checkArgTypesError (args: Seq[CellExpression[_]]): Option[String] = checkArgTypes[Boolean](args)
+  def checkArgTypesError (args: Seq[CellExpression[_]]): Option[String] = checkArgTypes[BoolExpression](args)
 
   def evaluateArgs (ctx: EvalContext, args: Seq[CellExpression[_]]): Seq[Boolean] = {
     args.map( _.asInstanceOf[BoolExpression].eval(ctx))
@@ -169,7 +169,7 @@ trait BoolDomain extends Domain {
 }
 
 trait StringDomain extends Domain {
-  def checkArgTypesError (args: Seq[CellExpression[_]]): Option[String] = checkArgTypes[String](args)
+  def checkArgTypesError (args: Seq[CellExpression[_]]): Option[String] = checkArgTypes[StringExpression](args)
 
   def evaluateArgs (ctx: EvalContext, args: Seq[CellExpression[_]]): Seq[String] = {
     args.map( _.asInstanceOf[StringExpression].eval(ctx))
@@ -181,7 +181,7 @@ trait StringDomain extends Domain {
 }
 
 trait IntegerListDomain extends Domain {
-  def checkArgTypesError (args: Seq[CellExpression[_]]): Option[String] = checkArgTypes[IntegerList](args)
+  def checkArgTypesError (args: Seq[CellExpression[_]]): Option[String] = checkArgTypes[IntegerListExpression](args)
 
   def evaluateArgs (ctx: EvalContext, args: Seq[CellExpression[_]]): Seq[IntegerList] = {
     args.map( _.asInstanceOf[IntegerListExpression].eval(ctx))
@@ -193,7 +193,7 @@ trait IntegerListDomain extends Domain {
 }
 
 trait RealListDomain extends Domain {
-  def checkArgTypesError (args: Seq[CellExpression[_]]): Option[String] = checkArgTypes[RealList](args)
+  def checkArgTypesError (args: Seq[CellExpression[_]]): Option[String] = checkArgTypes[RealListExpression](args)
 
   def evaluateArgs (ctx: EvalContext, args: Seq[CellExpression[_]]): Seq[RealList] = {
     args.map( _.asInstanceOf[RealListExpression].eval(ctx))

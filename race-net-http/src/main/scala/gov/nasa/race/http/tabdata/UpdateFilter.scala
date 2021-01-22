@@ -60,6 +60,8 @@ class UpdateFilter(val sendSpec: String, val receiveSpec: String, resolverId: St
   parseSendSpec(sendSpec)
   parseReceiveSpec(receiveSpec)
 
+  override def toString: String = s"{send: {src: '$sendSpec', up: $sendUp}, receive: {src: '$receiveSpec', up: $receiveUp, down: $receiveDown, self: $receiveSelf, target: $receiveTarget}}"
+
   def serializeTo (w: JsonWriter): Unit = {
     w.writeStringMember(_send_, sendSpec)
     w.writeStringMember(_receive_, receiveSpec)
@@ -90,7 +92,7 @@ class UpdateFilter(val sendSpec: String, val receiveSpec: String, resolverId: St
     spec.split(",").foreach {
       case "<up>" => receiveUp = true
       case "<down>" => receiveDown = true
-      case "<all>" => receiveUp = true; receiveDown = true
+      case "<all>" => receiveUp = true; receiveDown = true; receiveSelf = true; receiveTarget = true
       case "<none>" => // the default
       case "<self>" => receiveSelf = true
       case "<target>" => receiveTarget = true

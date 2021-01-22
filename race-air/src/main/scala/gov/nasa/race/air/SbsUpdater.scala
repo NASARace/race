@@ -9,6 +9,7 @@ import gov.nasa.race.uom.DateTime._
 import gov.nasa.race.uom.{Angle, DateTime, Speed, Time}
 import gov.nasa.race.uom.Speed._
 
+import java.time.ZoneId
 import scala.collection.mutable
 
 
@@ -52,7 +53,9 @@ import scala.collection.mutable
   *  see also http://mode-s.org/decode/
   */
 class SbsUpdater(updateFunc: TrackedObject=>Boolean,
-                 dropFunc: (String,String,DateTime,Time)=>Unit) extends UTF8CsvPullParser {
+                 dropFunc: (String,String,DateTime,Time)=>Unit,
+                 defaultZone: ZoneId = ZoneId.systemDefault()
+                ) extends UTF8CsvPullParser {
   /**
     * aux object to store aircraft info we get from type 1,4 MSG records
     * that is required to fill in the missing FlightPos fields when receiving a type 3 MSG
@@ -90,7 +93,7 @@ class SbsUpdater(updateFunc: TrackedObject=>Boolean,
     def readDate: DateTime = {
       val dateRange = readNextValue.getIntRange
       val timeRange = readNextValue.getIntRange
-      DateTime.parseYMDT(data,dateRange.offset,dateRange.length+timeRange.length+1)
+      DateTime.parseYMDTBytes(data,dateRange.offset,dateRange.length+timeRange.length+1, defaultZone)
     }
 
     while (notDone && skipToNextRecord) {

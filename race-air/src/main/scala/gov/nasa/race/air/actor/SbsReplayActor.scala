@@ -17,7 +17,6 @@
 package gov.nasa.race.air.actor
 
 import java.io.InputStream
-
 import com.typesafe.config.Config
 import gov.nasa.race.actor.Replayer
 import gov.nasa.race.air.SbsUpdater
@@ -29,6 +28,7 @@ import gov.nasa.race.track.{TrackDropped, TrackedObject}
 import gov.nasa.race.uom.Time._
 import gov.nasa.race.uom.{DateTime, Time}
 
+import java.time.ZoneId
 import scala.concurrent.duration._
 
 /**
@@ -39,13 +39,15 @@ import scala.concurrent.duration._
   *
   * note that the primary ctor allows testing outside of an actor context
   */
-class SBSReader (val iStream: InputStream, val pathName: String="<unknown>", bufLen: Int) extends ArchiveReader {
+class SBSReader (val iStream: InputStream, val pathName: String="<unknown>", bufLen: Int, defaultZone: ZoneId) extends ArchiveReader {
 
   def this(conf: Config) = this(createInputStream(conf), // this takes care of optional compression
                                 configuredPathName(conf),
-                                conf.getIntOrElse("buffer-size",4096)) // size has to hold at least 2 records
+                                conf.getIntOrElse("buffer-size",4096),
+                                conf.getMappedStringOrElse("default-zone", ZoneId.of, ZoneId.systemDefault)
+                               ) // size has to hold at least 2 records
 
-  class SbsArchiveUpdater extends SbsUpdater(updateTrack,dropTrack) {
+  class SbsArchiveUpdater extends SbsUpdater(updateTrack,dropTrack, defaultZone) {
     override protected def acquireMoreData: Boolean = refillBuf
   }
 

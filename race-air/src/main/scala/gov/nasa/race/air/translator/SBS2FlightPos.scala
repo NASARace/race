@@ -29,6 +29,7 @@ import gov.nasa.race.uom.Angle._
 import gov.nasa.race.uom.Speed._
 import gov.nasa.race.uom.DateTime
 
+import java.time.ZoneId
 import scala.annotation.tailrec
 import scala.collection.concurrent.TrieMap
 
@@ -68,14 +69,14 @@ object SBS2FlightPos {
     @inline def setTrack (s: String) = if (s != null) track = s
     @inline def setVr (s: String) = if (s != null) vr = s
 
-    def tryToFlightPos : Option[FlightPos] = {
+    def tryToFlightPos (defaultZone: ZoneId) : Option[FlightPos] = {
       if (cs !=null && posDtg !=null && lat !=null && lon !=null && speed !=null && alt !=null && track !=null) {
         val fpos = new FlightPos(icao24, cs,
           GeoPosition(Degrees(lat.toDouble), Degrees(lon.toDouble), Feet(alt.toDouble)),
           Knots(speed.toDouble),
           Degrees(track.toDouble),
           FeetPerMinute(vr.toDouble),
-          DateTime.parseYMDT(posDtg))
+          DateTime.parseYMDT(posDtg, defaultZone))
         if (oldCS != null) fpos.amend(ChangedCS(oldCS))
         Some(fpos)
       } else None
@@ -138,6 +139,10 @@ class SBS2FlightPos (val config: Config=NoConfig) extends ConfigurableTranslator
   import SBS2FlightPos._
 
   var useTempCS = if (config != null) config.getBooleanOrElse("temp-cs",false) else false
+  val defaultZone = {
+    val zid = if (config != null) config.getStringOrElse("default-zone", null) else null
+    if (zid == null) ZoneId.systemDefault() else ZoneId.of(zid)
+  }
 
   override def translate(src: Any): Option[Any] = {
     src match {
@@ -202,7 +207,7 @@ class SBS2FlightPos (val config: Config=NoConfig) extends ConfigurableTranslator
               val cs = nextFields(1,i0)
               if (cs != acInfo.cs) { // don't return a flight pos unless we have a changed cs
                 acInfo.setCS(cs) // watch out - dump1090 has trailing spaces
-                acInfo.tryToFlightPos
+                acInfo.tryToFlightPos(defaultZone)
               } else None
 
             case '3' =>  // airborne position message, report if we already got id and velocity
@@ -216,7 +221,7 @@ class SBS2FlightPos (val config: Config=NoConfig) extends ConfigurableTranslator
               acInfo.setLat(nextFields(1,i0))
               acInfo.setLon(nextFields(1,i0))
               // we ignore the rest for now
-              acInfo.tryToFlightPos
+              acInfo.tryToFlightPos(defaultZone)
 
 
             case '4' => // airborne velocity, just update

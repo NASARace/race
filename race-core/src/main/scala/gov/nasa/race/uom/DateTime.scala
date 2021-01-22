@@ -75,10 +75,10 @@ object DateTime {
 
   val YMDT_RE = """(\d{4})[\/-](\d{1,2})[\/-](\d{1,2})[ ,T](\d{1,2}):(\d{1,2}):(\d{1,2})(?:\.(\d{1,9}))? ?(?:([+-]\d{1,2})(?:\:(\d{1,2})))? ?\[?([\w\/]+)?+\]?""".r
 
-  def parseYMDT(spec: CharSequence): DateTime = {
+  def parseYMDT(spec: CharSequence, defaultZone: ZoneId = ZoneId.systemDefault): DateTime = {
     spec match {
       case YMDT_RE(year,month,day,hour,min,sec,secFrac, offHour,offMin,zId) =>
-        val zoneId = getZoneId(zId,offHour,offMin)
+        val zoneId = getZoneId(zId,offHour,offMin, defaultZone)
 
         val y = Integer.parseInt(year)
         val M = Integer.parseInt(month)
@@ -95,11 +95,11 @@ object DateTime {
     }
   }
 
-  def getZoneId (zid: String, offHour: String, offMin: String): ZoneId = {
+  def getZoneId (zid: String, offHour: String, offMin: String, defaultZone: ZoneId): ZoneId = {
     if (offHour == null) {
-      if (zid == null) ZoneId.systemDefault else ZoneId.of(zid)
+      if (zid == null) defaultZone else ZoneId.of(zid)
 
-    } else { // zone name is ignored
+    } else { // zone name is ignored, use explicit offset
       val h = Integer.parseInt(offHour)
       val m = if (offMin == null) 0 else if (h < 0) -Integer.parseInt(offMin) else Integer.parseInt(offMin)
       ZoneId.ofOffset("", ZoneOffset.ofHoursMinutes(h, m))
@@ -121,9 +121,9 @@ object DateTime {
   //--- slice based parsing
   // TODO - use the component extractors to avoid redundancy
 
-  def parseYMDTSlice(slice: ByteSlice): DateTime = parseYMDT(slice.data, slice.off, slice.len)
+  def parseYMDTSlice(slice: ByteSlice, defaultZone: ZoneId = ZoneId.systemDefault()): DateTime = parseYMDTBytes(slice.data, slice.off, slice.len,defaultZone)
 
-  def parseYMDT(bs: Array[Byte], off: Int, len: Int): DateTime = {
+  def parseYMDTBytes(bs: Array[Byte], off: Int, len: Int, defaultZone: ZoneId = ZoneId.systemDefault()): DateTime = {
     var i = off
     val iMax = off + len
 
@@ -160,7 +160,7 @@ object DateTime {
     var S = 0
     var offH = 0
     var offMin = 0
-    var zoneId: ZoneId = ZoneId.systemDefault
+    var zoneId: ZoneId = defaultZone
 
     i = off+19
     if (i < iMax) {
