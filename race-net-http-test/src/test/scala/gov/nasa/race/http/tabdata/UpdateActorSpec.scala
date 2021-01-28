@@ -20,9 +20,12 @@ import akka.event.Logging
 import com.typesafe.config.Config
 import gov.nasa.race.common.UnixPath
 import gov.nasa.race.common.UnixPath.PathHelper
+import gov.nasa.race.core.Messages.BusEvent
 import gov.nasa.race.test.RaceActorSpec
 import gov.nasa.race.uom.DateTime
 import org.scalatest.flatspec.AnyFlatSpecLike
+
+import scala.concurrent.duration.DurationInt
 
 /**
   * reg test for TabDataServiceActor
@@ -37,9 +40,10 @@ class UpdateActorSpec extends RaceActorSpec with AnyFlatSpecLike {
       | node-id = "/providers/region1/integrator"
       | column-list = "$dataDir/columnList.json"
       | row-list = "$dataDir/rowList.json"
-      | formula-list = "$dataDir/formulaList.json"
-      | column-data = "$dataDir"
+      | value-formulas = "$dataDir/formulaList.json"
+      | data-dir = "$dataDir"
       | read-from = "/in"
+      | write-to = "/out"
       |""".stripMargin
   )
 
@@ -66,25 +70,39 @@ class UpdateActorSpec extends RaceActorSpec with AnyFlatSpecLike {
       )
 
       println(s"--- column data of $actor pre CDC")
-      actor.getNode.dumpColumnData
+      actor.getNode.printColumnData()
+
+      var currentNode: Node = null
 
       println(s"\n--- sending CDC $cdc\n")
-      publish("/in", cdc)
-      sleep(1000)
+      expectBusMsg("/out", 2.seconds, publish("/in", cdc)) {
 
-      println(s"--- column data of $actor post CDC")
-      actor.getNode.dumpColumnData
+        case BusEvent(_, node: Node, _) => // this has to come first
+          println(s"\n--- got Node message on /out: ")
+          node.printColumnData()
 
-      actor.getNode.get("/providers/region1/provider_2", "/data/cat_B/field_2") match {
-        case Some(cv) =>
-          cv match {
-            case rcv:RealCellValue =>
-              println(s"\n--- [provider_2@cat_B/field_2] = $rcv")
-              assert( rcv.value == 1000.0)
-            case _ => fail("wrong cell value type: $cv")
+          // this should have the values from the CDC
+          node.get("/providers/region1/provider_2", "/data/cat_B/field_2") match {
+            case Some(cv) =>
+              cv match {
+                case rcv:RealCellValue =>
+                  println("checking updated provider_2 data..")
+                  println(s"\n--- [provider_2::cat_B/field_2] = $rcv")
+                  assert( rcv.value == 1000.0)
+                case _ => fail("wrong cell value type: $cv")
+              }
+            case None => fail("updated cell value [provider_2::cat_B/field_2] not found")
           }
-        case None => fail("updated cell value [provider_2::cat_B/field_2] not found")
+
+          currentNode = node
+
+        case BusEvent(_, cdcOut: ColumnDataChange, _) =>
+          println(s"\n--- got CDC on /out: $cdc")
+          if (actor.getNode ne currentNode) fail(s"current actor node was not broadcasted")
+
+        case BusEvent(_,msg,_) => fail(s"unexpected msg on /out: $msg")
       }
+
 
       terminateTestActors
     }

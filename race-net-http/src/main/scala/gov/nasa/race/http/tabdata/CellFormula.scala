@@ -234,9 +234,9 @@ class CellFormulaParser(node: Node, compiledColumn: Column, compiledRow: Row[_],
     if (rowSpec == ".") {
       Seq(compiledRow.id)
     } else {
-      val rs = PathIdentifier.resolve(rowSpec,compiledRow.id,rowList.id)
-      if (PathIdentifier.isGlobPattern(rowSpec)) {
-        rowList.matching(rowSpec).map(_.id).toSeq
+      val rs = PathIdentifier.resolve(rowSpec,compiledRow.id)
+      if (PathIdentifier.isGlobPattern(rs)) {
+        rowList.matching(rs).map(_.id).toSeq
       } else {
         if (rowList.contains(rs)) Seq(rs) else sys.error(s"reference of unknown row $rs")
       }
@@ -250,9 +250,9 @@ class CellFormulaParser(node: Node, compiledColumn: Column, compiledRow: Row[_],
       Seq(compiledColumn.id)
 
     } else {
-      val cs = PathIdentifier.resolve(colSpec, compiledColumn.id,columnList.id)
-      if (PathIdentifier.isGlobPattern(colSpec)) {
-        columnList.matching(colSpec).map(_.id).toSeq
+      val cs = PathIdentifier.resolve(colSpec, compiledColumn.id)
+      if (PathIdentifier.isGlobPattern(cs)) {
+        columnList.matching(cs).map(_.id).toSeq
       } else {
         if (columnList.contains(cs)) Seq(cs) else sys.error(s"reference of unknown column $cs")
       }
@@ -266,7 +266,7 @@ class CellFormulaParser(node: Node, compiledColumn: Column, compiledRow: Row[_],
     val row = if (rowPath == ".") {
       compiledRow
     } else {
-      rowList.get( PathIdentifier.resolve(rowPath, compiledRow.id, rowList.id)) match {
+      rowList.get( PathIdentifier.resolve(rowPath, compiledRow.id)) match {
         case Some(row) => row
         case None => sys.error(s"reference of unknown row: $rowPath")
       }
@@ -275,7 +275,7 @@ class CellFormulaParser(node: Node, compiledColumn: Column, compiledRow: Row[_],
     val col = if (colPath == ".") {
       compiledColumn
     } else {
-      columnList.get( PathIdentifier.resolve(colPath, compiledColumn.id, columnList.id)) match {
+      columnList.get( PathIdentifier.resolve(colPath, compiledColumn.id)) match {
         case Some(col) => col
         case None => sys.error(s"reference of unknown column $colPath")
       }
@@ -315,7 +315,7 @@ object FormulaList {
 
   type FormulaSrcs = (String,Option[String])   // formula sources: (expr, opt time-trigger)
 
-  type CellValueFormulaSpec = (String, Seq[(String,FormulaSrcs)])
+  type CellValueFormulaSpec = (String, Seq[(String,FormulaSrcs)])  // colId, {row,srcs}
   type ConstraintFormulaSpec = (String,String,FormulaSrcs)
 }
 
@@ -344,12 +344,12 @@ class CellValueFormulaList (val id: String, val info: String, val date: DateTime
       val columnList = node.columnList
       val rowList = node.rowList
 
-      val cols = columnList.matching(colSpec)
+      val cols = columnList.matching(PathIdentifier.resolve(colSpec,node.id))
 
       if (cols.nonEmpty) {
         cols.foreach { col =>
-          var tts = Seq.empty[(Row[_],CellFormula[_])]
-          var formulas = SeqMap.empty[String,CellFormula[_]]
+          var tfs = Seq.empty[(Row[_],CellFormula[_])]
+          var vfs = SeqMap.empty[String,CellFormula[_]]
 
           rowFormulaSrcs.foreach { e =>
             val rowSpec = PathIdentifier.resolve(e._1, rowList.id)
@@ -360,25 +360,28 @@ class CellValueFormulaList (val id: String, val info: String, val date: DateTime
               rows.foreach { row =>
                 CellFormula.compile(exprSrc,row,col,node,funcLib) match {
                   case SuccessValue(cf) =>
-                    formulas = formulas + (row.id -> cf)
+
 
                     ifSome(timerSpec){ cf.setTimer }
                     if (cf.hasTimeTrigger) {
-                      tts = tts :+ (row,cf)
+                      tfs = tfs :+ (row,cf)
+                    } else {
+                      vfs = vfs + (row.id -> cf)
                     }
 
-                  case e@Failure(err) => return e // bail out - formula did not compile
+                  case e@Failure(err) =>
+                    return e // bail out - formula did not compile
                 }
               }
             }
           }
 
-          if (tts.nonEmpty) {
-            timeTriggeredFormulas = timeTriggeredFormulas :+ (col -> tts)
-            tts = Seq.empty[(Row[_],CellFormula[_])]
+          if (tfs.nonEmpty) {
+            timeTriggeredFormulas = timeTriggeredFormulas :+ (col -> tfs)
+          }
 
-          } else {
-            valueTriggeredFormulas = valueTriggeredFormulas + (col.id -> formulas)
+          if (vfs.nonEmpty) {
+            valueTriggeredFormulas = valueTriggeredFormulas + (col.id -> vfs) // ???? mutually exclusive ???
           }
         }
       }
@@ -454,6 +457,18 @@ class CellValueFormulaList (val id: String, val info: String, val date: DateTime
   def armTriggeredAt (refDate: DateTime): Unit = {
     timeTriggeredColumnFormulas.foreach( _._2.foreach( _._2.armTimer(refDate)))
   }
+
+  //--- debugging
+
+  def printFormulaSpecs(): Unit = {
+    println(s"CellValueFormulaList: '$id'")
+    formulaSpecs.foreach { ce=>
+      println(s"  column: '${ce._1}'")
+      ce._2.foreach { re=>
+        println(s"    cell: '${re._1}' := ${re._2}")
+      }
+    }
+  }
 }
 
 trait FormulaListParser[T] extends UTF8JsonPullParser {
@@ -466,19 +481,23 @@ trait FormulaListParser[T] extends UTF8JsonPullParser {
 class CellValueFormulaListParser extends FormulaListParser[CellValueFormulaList] {
   import FormulaList._
 
+  /**
+    * this only creates the CvFL with specs. It does not yet compile the expr sources and hence does not need to
+    * know CL and RL (i.e. the Node)
+    */
   def parse (buf: Array[Byte]): Option[CellValueFormulaList] = {
     initialize(buf)
 
     try {
       readNextObject {
-        val id = readQuotedMember(_id_).toString
+        val id = readQuotedMember(_id_).toString  // for the formula list
         val info = readQuotedMember(_info_).toString
         val date = readDateTimeMember(_date_)
 
         val formulaSpecs = readNextObjectMemberInto(_columns_, ArrayBuffer.empty[CellValueFormulaSpec]) {
-          val colSpec = readObjectMemberName().toString
+          val colSpec = readObjectMemberName().toString  // can be a pattern (expanded during compilation)
           val formulas = readCurrentObjectInto(ArrayBuffer.empty[(String,FormulaSrcs)]) {
-            val rowSpec = readObjectMemberName().toString
+            val rowSpec = readObjectMemberName().toString // can be a pattern (expanded during compilation)
             val formulaSrc = readQuotedMember(_src_).toString
             val triggerSrc = readOptionalQuotedMember(_trigger_).map(_.toString)
 

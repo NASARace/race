@@ -48,7 +48,7 @@ class ConstraintFormulaParser (node: Node, funLib: CellFunctionLibrary) extends 
   protected def _matchRows (rowSpec: String): Seq[String] = {
     val rowList = node.rowList
 
-    val rs = PathIdentifier.resolve(rowSpec,rowList.id,rowList.id)
+    val rs = PathIdentifier.resolve(rowSpec,rowList.id)
     if (PathIdentifier.isGlobPattern(rowSpec)) {
       rowList.matching(rowSpec).map(_.id).toSeq
     } else {
@@ -63,7 +63,7 @@ class ConstraintFormulaParser (node: Node, funLib: CellFunctionLibrary) extends 
       Seq(node.id)
 
     } else {
-      val cs = PathIdentifier.resolve(colSpec, node.id, columnList.id)
+      val cs = PathIdentifier.resolve(colSpec, columnList.id)
       if (PathIdentifier.isGlobPattern(colSpec)) {
         columnList.matching(colSpec).map(_.id).toSeq
       } else {
@@ -77,7 +77,7 @@ class ConstraintFormulaParser (node: Node, funLib: CellFunctionLibrary) extends 
     val columnList = node.columnList
 
     val row =
-      rowList.get( PathIdentifier.resolve(rowPath, rowList.id, rowList.id)) match {
+      rowList.get( PathIdentifier.resolve(rowPath, rowList.id)) match {
         case Some(row) => row
         case None => sys.error(s"reference of unknown row: $rowPath")
       }
@@ -85,7 +85,7 @@ class ConstraintFormulaParser (node: Node, funLib: CellFunctionLibrary) extends 
     val col = if (colPath == ".") {
       columnList(node.id)
     } else {
-      columnList.get( PathIdentifier.resolve(colPath, node.id, columnList.id)) match {
+      columnList.get( PathIdentifier.resolve(colPath, columnList.id)) match {
         case Some(col) => col
         case None => sys.error(s"reference of unknown column $colPath")
       }
@@ -128,38 +128,51 @@ class ConstraintFormulaList (val id: String, val info: String, val date: DateTim
     Success
   }
 
-  def evaluateValueTriggeredFormulas (ctx: EvalContext)(action: ConstraintFormula=>Unit): Unit = {
+  def evaluateValueTriggeredFormulas (ctx: EvalContext)(action: (ConstraintFormula,Boolean)=>Unit): Unit = {
     valueTriggeredFormulas.foreach { cf=>
-      if (cf.canEvaluateIn(ctx) && cf.hasUpdatedDependencies(ctx) && cf.eval(ctx)) action(cf)
+      if (cf.canEvaluateIn(ctx) && cf.hasUpdatedDependencies(ctx)) action(cf,cf.eval(ctx))
     }
   }
 
-  def evaluateTimeTriggeredFormulas (ctx: EvalContext)(action: ConstraintFormula=>Unit): Unit = {
+  def evaluateTimeTriggeredFormulas (ctx: EvalContext)(action: (ConstraintFormula,Boolean)=>Unit): Unit = {
     timeTriggeredFormulas.foreach { cf=>
-      if (cf.canEvaluateIn(ctx) && cf.isTriggeredAt(ctx.evalDate) && cf.eval(ctx)) action(cf)
+      if (cf.canEvaluateIn(ctx) && cf.isTriggeredAt(ctx.evalDate)) action(cf,cf.eval(ctx))
     }
   }
+
+
+  //--- debugging
+
+  def printValueTriggeredFormulaExprs(): Unit = valueTriggeredFormulas.foreach { f=> println(s"formula ${f.id} := ${f.expr}") }
+  def printTimeTriggeredFormulaExprs(): Unit = timeTriggeredFormulas.foreach { f=> println(s"formula ${f.id} := ${f.expr}") }
+
 }
 
 class ConstraintFormulaListParser extends FormulaListParser[ConstraintFormulaList] {
 
+  /**
+    * this only parses the specs and does not yet compile the formula exprs, hence it does not need to know
+    * the node (CL, RL) yet
+    */
   def parse (buf: Array[Byte]): Option[ConstraintFormulaList] = {
     initialize(buf)
 
     try {
       readNextObject {
-        val id = readQuotedMember(_id_).toString
+        val id = readQuotedMember(_id_).toString  // list id
         val info = readQuotedMember(_info_).toString
         val date = readDateTimeMember(_date_)
 
         val formulaSpecs = readNextArrayMemberInto(_constraints_, ArrayBuffer.empty[ConstraintFormulaSpec]) {
-          val formulaId = readQuotedMember(_id_).toString
-          val formulaInfo = readQuotedMember(_info_).toString
-          val exprSrc = readQuotedMember(_src_).toString
-          val triggerSrc = readOptionalQuotedMember(_trigger_).map(_.toString)
+          readNextObject[ConstraintFormulaSpec] {
+            val formulaId = readQuotedMember(_id_).toString
+            val formulaInfo = readQuotedMember(_info_).toString
+            val exprSrc = readQuotedMember(_src_).toString
+            val triggerSrc = readOptionalQuotedMember(_trigger_).map(_.toString)
 
-          skipPastAggregate()
-          (formulaId, formulaInfo, (exprSrc, triggerSrc))
+            (formulaId, formulaInfo, (exprSrc, triggerSrc))
+          }
+
         }.toSeq
 
         Some(new ConstraintFormulaList(id, info, date, formulaSpecs))

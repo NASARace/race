@@ -55,33 +55,66 @@ object PathIdentifier {
     val len = path.length
     var i = len - 1
 
-    if (i > 1) {
-      if (path.charAt(i) == '/') i -= 1
-      while (i >= 0 && path.charAt(i) != '/') i -= 1
-      path.subSequence(0,i).toString
-    } else if (i == 0) {
-      if (path.charAt(i) == '/') path.toString else ""
-    } else {
-      ""
+    while (i >= 0) {
+      if (path.charAt(i) == '/') {
+        return if (len == 1) "" else path.subSequence(0,i).toString
+      }
+      i -= 1
     }
+    ""
   }
 
-  def resolve (pattern: CharSequence, baseId: String): String = resolve(pattern,baseId,baseId)
+  def name (path: CharSequence): String = {
+    val len = path.length
+    var i = len - 1
 
-  def resolve (pattern: CharSequence, curId: String, baseId: String): String = {
-    if (baseId != null && baseId.nonEmpty) {
-      if (pattern == ".") {
-        curId
-      } else if (pattern == "..") {
-        parent(curId)
-      } else {
-        if (pattern.charAt(0) == '/') {
-          pattern.toString
-        } else {
-          if (baseId.charAt(baseId.length - 1) == '/') baseId + pattern else baseId + '/' + pattern
+    while (i >= 0) {
+      if (path.charAt(i) == '/') {
+        return if (len == 1) "" else path.subSequence(i+1, len).toString
+      }
+      i -= 1
+    }
+    path.toString
+  }
+
+  /**
+    * this assumes pattern is already canonical, i.e. there is either a single '.' path prefix or potentially
+    * multiple '..' prefixes, but nothing like "./.././blah" or "a/../b"
+    */
+  def resolve (pattern: CharSequence, baseId: String): String = {
+    val len = pattern.length
+    @inline def peekChar (i: Int): Char = if (i < len) pattern.charAt(i) else 0
+
+    //--- corner cases
+    if (len == 0) return baseId
+    if (baseId == null || baseId.isEmpty) return pattern.toString
+
+    var c = pattern.charAt(0)
+    if (c == '/') return pattern.toString                       // /<pattern>  - already absolute
+
+    if (c == '.') {
+      if (len == 1) return baseId                               // single .
+
+      c = pattern.charAt(1)
+      if (c == '/') return baseId + pattern.subSequence(1, len) // ./<pattern>
+
+      if (c == '.') {
+        if (len == 2) return parent(baseId)                     // single ..
+
+        c = pattern.charAt(2)
+        if (c == '/') {
+          var p = parent(baseId)
+          var i = 2
+          while (peekChar(i + 1) == '.' && peekChar(i + 2) == '.' && peekChar(i + 3) == '/') {
+            i += 3
+            p = parent(p)
+          }
+          return p + pattern.subSequence(i, len)               // {../}<pattern>
         }
       }
-    } else pattern.toString
+    }
+
+    baseId + '/' + pattern  // relative path, prepend baseId
   }
 
 

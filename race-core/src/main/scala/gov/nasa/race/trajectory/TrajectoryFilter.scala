@@ -40,7 +40,7 @@ abstract class TrajectoryFilter (val traj: MutTrajectory) {
 }
 
 class TimeFilter (t: MutTrajectory, dt: Time) extends TrajectoryFilter(t) {
-  protected var lastDate: DateTime = ofEpochMillis(Long.MinValue) // make sure the first append passes
+  protected var lastDate: DateTime = DateTime.Date0 // don't use UndefinedDateTime as timeUntil/Since would overflow
 
   override def append (date: DateTime, lat: Angle, lon: Angle, alt: Length): Unit = {
     if (lastDate.timeUntil(date) >= dt) {

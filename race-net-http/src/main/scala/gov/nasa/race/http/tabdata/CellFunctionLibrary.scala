@@ -24,6 +24,7 @@ import gov.nasa.race.uom.{DateTime, Time}
 class CellFunctionLibrary() {
   val funcLib: Map[String,CellFunction[_]] = registerFuncs(
     IntMin,IntMax,IntSum,IntAvg,IntAvgReal, IntCellInc,
+    IntWithin,
     RealMin,RealMax,RealSum,RealAvg, RealSet,
     AsInteger,AsReal,
     IntListCellPushN, IntListCellAvgInt, IntListCellAvgReal,
@@ -75,6 +76,15 @@ object IntCellInc extends CellFunction[Long] with Arity2 with HeterogenousDomain
     val v: Long = args(0).asInstanceOf[IntegerCellRef].eval(ctx)
     val inc: Long = args(1).asInstanceOf[IntegerExpression].eval(ctx)
     v + inc
+  }
+}
+
+object IntWithin extends CellFunction[Boolean] with Arity3 with IntegerDomain with BoolCoDomain {
+  def eval (ctx: EvalContext, args: Seq[CellExpression[_]]): Boolean = {
+    val v: Long = args(0).asInstanceOf[IntegerExpression].eval(ctx)
+    val vMin: Long = args(1).asInstanceOf[IntegerExpression].eval(ctx)
+    val vMax: Long = args(2).asInstanceOf[IntegerExpression].eval(ctx)
+    v >= vMin && v <= vMax
   }
 }
 
@@ -178,5 +188,8 @@ object AsInteger extends CellFunction[Long] with Arity1 with RealDomain with Int
 object AsReal extends CellFunction[Double] with Arity1 with IntegerDomain with RealCoDomain {
   def eval (ctx: EvalContext, args: Seq[CellExpression[_]]): Double = evaluateArg(ctx,args(0)).toDouble
 }
+
+
+
 
 //... and many more

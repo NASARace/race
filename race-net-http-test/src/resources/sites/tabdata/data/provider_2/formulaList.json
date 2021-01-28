@@ -7,13 +7,13 @@
     ".": {
       "/data/cat_A":           { "src":  "(IntSum ./field_{1,2})"},
 
-      "/data/cat_A/field_4":   { "src":  "(IntListCellPushN ../field_1 3)" },
+      "/data/cat_A/field_4":   { "src":  "(IntListCellPushN . ../field_1 3)" },
       "/data/cat_A/field_3":   { "src":  "(IntListCellAvgInt ../field_4)" },
 
       "/data/cat_B":           { "src":  "(RealSum ./*)"},
       "/data/cat_B/field_2":   { "src":  "(RealSet ../field_1)", "trigger": "60 sec" },
 
-      "/data/cat_C":           { "src":  "(IntCellInc ./field_2 1)"}
+      "/data/cat_C":           { "src":  "(IntCellInc . ./field_2)"}
     }
   }
 }

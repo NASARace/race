@@ -16,7 +16,6 @@
  */
 package gov.nasa.race.http.tabdata
 
-import gov.nasa.race.common.UnixPath
 import gov.nasa.race.test.RaceSpec
 import gov.nasa.race.util.FileUtils
 import org.scalatest.flatspec.AnyFlatSpec
@@ -24,51 +23,57 @@ import org.scalatest.flatspec.AnyFlatSpec
 /**
   * reg tests for CellFormula, FormulaList/Parser and CellExpressionParser
   */
-class CellValueFormulaListSpec extends AnyFlatSpec with RaceSpec {
+class CellValueFormulaListSpec extends AnyFlatSpec with RaceSpec with NodeDependentTest {
+
 
   "a ColumnListParser" should "read a JSON source" in {
-    val formulaSrc = FileUtils.fileContentsAsString("race-net-http-test/src/resources/sites/tabdata/data/formulaList.json").get
+    val nodeId = "/providers/region1/provider_2"
+    val dataDir = "race-net-http-test/src/resources/sites/tabdata/data/provider_2"
 
-    println("--- parsing formulas from:")
+    val node = getNode(nodeId, dataDir)
+    val formulaSrc = FileUtils.fileContentsAsString(dataDir + "/formulaList.json").get
+
+    println("\n--- parsing cell value formulas from:")
     println(formulaSrc)
 
     val parser = new CellValueFormulaListParser
     parser.parse(formulaSrc.getBytes) match {
       case Some(formulaList) =>
-        println("success")
+        println("success:")
+        formulaList.printFormulaSpecs()
       case other => fail("failed to parse formulaList.json")
     }
   }
 
-  "a CellExpressionParser" should "compile a FormulaList agains a given Column and RowList" in {
+  "a CellExpressionParser" should "compile a FormulaList against a given Column and RowList" in {
 
-    def getList[T] (listName: String)(f: => Option[T]): T = {
-      f match {
-        case Some(list) => list
-        case None => fail(s"failed to parse $listName")
-      }
-    }
-
-    println("--- compiling formulas")
-
-    val columnListSrc = FileUtils.fileContentsAsString("race-net-http-test/src/resources/sites/tabdata/data/columnList.json").get
-    val rowListSrc = FileUtils.fileContentsAsString("race-net-http-test/src/resources/sites/tabdata/data/rowList.json").get
-    val formulaSrc = FileUtils.fileContentsAsString("race-net-http-test/src/resources/sites/tabdata/data/formulaList.json").get
-
-    val columnList: ColumnList = getList("columnList")(new ColumnListParser().parse(columnListSrc.getBytes))
-    val rowList: RowList = getList("rowList")(new RowListParser(columnList.id).parse(rowListSrc.getBytes))
-    val formulaList: CellValueFormulaList = getList("formulaList")(new CellValueFormulaListParser().parse(formulaSrc.getBytes))
     val nodeId = "/providers/region1/integrator"
-    val node = Node(nodeId,None,columnList,rowList,Map.empty[String,ColumnData])
+    val dataDir = "race-net-http-test/src/resources/sites/tabdata/data"
+    val node = getNode(nodeId, dataDir)
     val funcLib = new CellFunctionLibrary
-    val selColPath = "/providers/region1/summary"
 
-    formulaList.compileWith(node,funcLib)
+    println("\n--- compiling cell value formulas")
 
-    println(s"cell expressions of column '$selColPath'")
-    val summaryFormulas = formulaList.getColumnFormulas(selColPath)
-    summaryFormulas.foreach { e=>
-      println(s" '${e._1}' : ${e._2.expr}")
+    val formulaSrc = FileUtils.fileContentsAsString(dataDir + "/formulaList.json").get
+    val parser = new CellValueFormulaListParser
+    parser.parse(formulaSrc.getBytes) match {
+      case Some(formulaList) =>
+        println("formula sources:")
+        formulaList.printFormulaSpecs()
+
+        val selColPath = "/providers/region1/summary"
+        println(s"compiling formula expressions for column: $selColPath")
+        formulaList.compileWith(node,funcLib)
+
+        println(s"cell expressions of column '$selColPath'")
+        val summaryFormulas = formulaList.getColumnFormulas(selColPath)
+        summaryFormulas.foreach { e=>
+          println(s" '${e._1}' : ${e._2.expr}")
+        }
+
+      case other => fail("failed to compile formulaList.json")
     }
   }
+
+  //... add evaluation tests
 }

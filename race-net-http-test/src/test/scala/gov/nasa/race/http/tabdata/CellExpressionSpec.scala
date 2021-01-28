@@ -105,8 +105,8 @@ class CellExpressionSpec extends AnyFlatSpec with RaceSpec {
   //--- the tests
 
   "a CellExpressionParser" should "parse a simple function formula into a CellExpression that can be evaluated" in {
-    val p = new CellFormulaParser(node,columnList("/providers/c1"),rowList("/data/r3"),funcLib)
-    val formula = "(RealSum r1 r2)"  // r1 is integer
+    val p = new CellFormulaParser(node, columnList("/providers/c1"), rowList("/data/r3"),funcLib)
+    val formula = "(RealSum ../r1 ../r2)"  // r1 is integer
 
     println(s"\n#-- function with explicit column-local cell references: '$formula'")
 
@@ -122,8 +122,8 @@ class CellExpressionSpec extends AnyFlatSpec with RaceSpec {
   }
 
   "a CellExpressionParser" should "parse a function formula with cell patterns" in {
-    val p = new CellFormulaParser(node,columnList("/providers/c1"),rowList("/data/r3"),funcLib)
-    val formula = "(RealSum r{1,2})"
+    val p = new CellFormulaParser(node, columnList("/providers/c1"), rowList("/data/r3"),funcLib)
+    val formula = "(RealSum ../r{1,2})"
 
     println(s"\n#-- function with cell pattern: '$formula'")
 
@@ -139,8 +139,8 @@ class CellExpressionSpec extends AnyFlatSpec with RaceSpec {
   }
 
   "a CellExpressionParser" should "parse a function formula with column reference patterns" in {
-    val p = new CellFormulaParser(node,columnList("/providers/c1"),rowList("/data/r1"),funcLib)
-    val formula = "(IntAvgReal c{1,2}::.)"
+    val p = new CellFormulaParser(node, columnList("/providers/c1"), rowList("/data/r1"),funcLib)
+    val formula = "(IntAvgReal ../c{1,2}::.)"
 
     println(s"\n#-- function with column pattern: '$formula' for ${rowList("/data/r1").getClass}")
 
@@ -156,8 +156,8 @@ class CellExpressionSpec extends AnyFlatSpec with RaceSpec {
   }
 
   "a CellExpressionParser" should "parse a nested formula" in {
-    val p = new CellFormulaParser(node,columnList("/providers/c1"),rowList("/data/r3"),funcLib)
-    val formula = "(RealSum r2 (IntMax r{1,4}) -0.42)"
+    val p = new CellFormulaParser(node, columnList("/providers/c1"), rowList("/data/r3"),funcLib)
+    val formula = "(RealSum ../r2 (IntMax ../r{1,4}) -0.42)"
 
     println(s"\n#-- function with nested expression args: '$formula'")
 
@@ -173,7 +173,7 @@ class CellExpressionSpec extends AnyFlatSpec with RaceSpec {
   }
 
   "a CellExpressionParser" should "parse a heterogeneous cell func" in {
-    val p = new CellFormulaParser(node,columnList("/providers/c1"),rowList("/data/r1"),funcLib)
+    val p = new CellFormulaParser(node, columnList("/providers/c1"), rowList("/data/r1"),funcLib)
     val formula = "(IntCellInc . 1)"
 
     println(s"\n#-- function with cell-reference: '$formula'")
@@ -189,9 +189,9 @@ class CellExpressionSpec extends AnyFlatSpec with RaceSpec {
     assert(deps.size == 1) // r1
   }
 
-  "a CellExpressionParser" should "parse array push func" in {
-    val p = new CellFormulaParser(node,columnList("/providers/c1"),rowList("/data/r5"),funcLib)
-    val formula = "(IntListCellPushN r5 r4 2)"
+  "a CellExpressionParser" should "parse array push funcs with . paths" in {
+    val p = new CellFormulaParser(node, columnList("/providers/c1"), rowList("/data/r5"),funcLib)
+    val formula = "(IntListCellPushN . ../r4 2)"
 
     println(s"\n#-- array pushn function: '$formula'")
 
@@ -207,8 +207,8 @@ class CellExpressionSpec extends AnyFlatSpec with RaceSpec {
   }
 
   "a CellExpressionParser" should "parse array avg func" in {
-    val p = new CellFormulaParser(node,columnList("/providers/c1"),rowList("/data/r4"),funcLib)
-    val formula = "(IntListCellAvgInt r5)"
+    val p = new CellFormulaParser(node, columnList("/providers/c1"), rowList("/data/r4"),funcLib)
+    val formula = "(IntListCellAvgInt ../r5)"
 
     println(s"\n#-- array avg function: '$formula'")
 
@@ -221,5 +221,47 @@ class CellExpressionSpec extends AnyFlatSpec with RaceSpec {
     val deps = expr.dependencies()
     println(s"  dependencies: $deps")
     assert(deps.size == 1) // r5
+  }
+
+  "a CellExpressionParser" should "detect arity errors" in {
+    val p = new CellFormulaParser(node, columnList("/providers/c1"), rowList("/data/r5"),funcLib)
+    val formula = "(IntListCellPushN ../r5 3)"
+
+    println(s"\n#--- invalid function arguments (arity) for formula: '$formula'")
+
+    try {
+      p.compile(formula) match {
+        case SuccessValue(ce) =>
+          fail(s"compiler failed to detect error and produced expr: $ce")
+        case Failure(msg) =>
+          println(s"  Ok, compiler detected error: '$msg")
+      }
+    } catch {
+      case x: Throwable =>
+        x.printStackTrace()
+        println("compile failed with " + x)
+        fail(x.getMessage)
+    }
+  }
+
+  "a CellExpressionParser" should "detect argument type errors" in {
+    val p = new CellFormulaParser(node, columnList("/providers/c1"), rowList("/data/r5"),funcLib)
+    val formula = "(IntListCellPushN ../r4 ../r5 3)"
+
+    println(s"\n#--- invalid function arguments (type) for formula: '$formula'")
+
+    try {
+      p.compile(formula) match {
+        case SuccessValue(ce) =>
+          fail(s"compiler failed to detect error and produced expr: $ce")
+        case Failure(msg) =>
+          println(s"  Ok, compiler detected error: '$msg")
+      }
+    } catch {
+      case x: Throwable =>
+        x.printStackTrace()
+        println("compile failed with " + x)
+        fail(x.getMessage)
+    }
   }
 }

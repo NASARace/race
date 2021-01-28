@@ -244,4 +244,14 @@ object StringUtils {
     }
     n
   }
+
+  def maxSuffix (s: CharSequence, n: Int): String = {
+    val len = s.length()
+    if (len <= n) s.toString else s"…${s.subSequence(len-n,len)}"
+  }
+
+  def maxPrefix (s: CharSequence, n: Int): String = {
+    val len = s.length()
+    if (len <= n) s.toString else s"${s.subSequence(0,n)}…"
+  }
 }

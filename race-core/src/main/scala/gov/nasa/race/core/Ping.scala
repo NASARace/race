@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package gov.nasa.race.http.tabdata
+package gov.nasa.race.core
 
 import gov.nasa.race.common.ConstAsciiSlice.asc
 import gov.nasa.race.common.{JsonPullParser, JsonSerializable, JsonWriter}
@@ -27,8 +27,19 @@ object Ping {
   val _receiver_ = asc("receiver")
   val _request_ = asc("request")
   val _date_ = asc("date")
+
+  val PingRE = """\s*\{\s*"ping":\s*\{\s*"sender":\s*"(.*)",\s*"receiver":\s*"(.*)",\s*"request":\s*(\d+),\s*"date":\s*(\d+)\s*\}\s*\}""".r
+
+  // convenience method in case we don't already have a PingParser
+  def ifPing(s: String)(action: Ping=>Unit): Unit = {
+    s match {
+      case PingRE(pinger,ponger,request,pingDtg) =>
+        val ping = Ping(pinger,ponger,request.toInt,DateTime.ofEpochMillis(pingDtg.toLong))
+        action(ping)
+    }
+  }
 }
-import Ping._
+import gov.nasa.race.core.Ping._
 
 /**
   * QoS check for connection and end point actors
@@ -68,6 +79,20 @@ trait PingParser extends JsonPullParser {
   }
 }
 
+object Pong {
+  val PongRE = """\s*\{\s*"pong":\s*\{\s*"date":\s*(\d+),\s*"ping":\s*\{\s*"sender":\s*"(.*)",\s*"receiver":\s*"(.*)",\s*"request":\s*(\d+),\s*"date":\s*(\d+)\s*\}\s*\}\s*\}""".r
+
+  // convenience method in case we don't have a PongParser at hand
+  def ifPong(s: String)(action: Pong=>Unit): Unit = {
+    s match {
+      case PongRE(pongDtg,pinger,ponger,request,pingDtg) =>
+        val ping = Ping(pinger,ponger,request.toInt,DateTime.ofEpochMillis(pingDtg.toLong))
+        val pong = Pong(DateTime.ofEpochMillis(pongDtg.toLong),ping)
+        action(pong)
+    }
+  }
+}
+
 /**
   * response to QoS check
   *
@@ -87,6 +112,8 @@ case class Pong(date: DateTime, ping: Ping) extends JsonSerializable {
 }
 
 trait PongParser extends JsonPullParser with PingParser {
+
+  // this assumes the '{"pong:"' prefix has already been parsed
   def parsePongBody: Option[Pong] = {
     tryParse(x=> warning(s"malformed ping response: ${x.getMessage}")) {
       readCurrentObject {

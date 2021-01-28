@@ -18,7 +18,6 @@ package gov.nasa.race.http.tabdata
 
 import java.net.InetSocketAddress
 import java.nio.file.Path
-
 import akka.Done
 import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.server.Directives._
@@ -29,7 +28,7 @@ import akka.stream.scaladsl.SourceQueueWithComplete
 import com.typesafe.config.Config
 import gov.nasa.race.common.ConstAsciiSlice.asc
 import gov.nasa.race.common.{BufferedStringJsonPullParser, JsonParseException, JsonWriter, SyncJsonWriter}
-import gov.nasa.race.core.{ContinuousTimeRaceActor, ParentActor, RaceDataClient}
+import gov.nasa.race.core.{ContinuousTimeRaceActor, ParentActor, Ping, PingParser, Pong, RaceDataClient}
 import gov.nasa.race.http.{PushWSRaceRoute, SiteRoute}
 import gov.nasa.race.{ifSome, withSomeOrElse}
 import gov.nasa.race.uom.DateTime
@@ -127,7 +126,7 @@ class NodeServerRoute(val parent: ParentActor, val config: Config) extends PushW
   protected def isLocal (id: String): Boolean = node.isDefined && node.get.isLocal(id)
   protected def isUpstream (id: String): Boolean = node.isDefined && node.get.isUpstream(id)
 
-  override protected def handleConnectionLoss (remoteAddress: InetSocketAddress, cause: Try[Done]): Unit = {
+  override protected def handleConnectionLoss (remoteAddress: InetSocketAddress, cause: Any): Unit = {
     remoteNodes.get(remoteAddress) match {
       case Some(remoteId) =>
         publishData(NodeReachabilityChange(remoteId,false))

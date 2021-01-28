@@ -27,7 +27,7 @@ import org.scalatest.flatspec.AnyFlatSpec
   * reg test for LossyTrajectory
   */
 class MutCompressedTrajectorySpec extends AnyFlatSpec with RaceSpec {
-
+/*
   "a init sized MutCompressedTrajectory" should "contain approximate values of entries in right order" in {
     val data = Array(
       (1, 37.62000,-122.38000, 3000.0),
@@ -93,6 +93,8 @@ class MutCompressedTrajectorySpec extends AnyFlatSpec with RaceSpec {
       i += 1
     }
   }
+
+ */
 
   "a time filtered CompressedTrackPath" should "only store entries with minimum time spacing" in {
     val data = Array(

@@ -26,8 +26,9 @@ import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext.Implicits.global
 
 /**
-  * a RaceActor that receives periodic RaceCheck messages, which should be processed
-  * by its handleMessage().
+  * a RaceActor that receives periodic RaceTick messages, which should be processed by overridden onRaceTick() callbacks.
+  *
+  * note - if onStartRaceActor is not overridden it will start the scheduler according to the tick-interval setting
   */
 trait PeriodicRaceActor extends RaceActor {
   sealed abstract class SchedulePolicy

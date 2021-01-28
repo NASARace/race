@@ -30,7 +30,7 @@ object TypeRouterSpec {
 /**
   * regression test for TypeRouter actor
   */
-class TypeRouterSpec extends RaceActorSpec with AnyFlatSpecLike {
+class fTypeRouterSpec extends RaceActorSpec with AnyFlatSpecLike {
   import TypeRouterSpec._
 
   "a TypeRouter actor" should "publish incoming messages to the right channels" in {

@@ -27,9 +27,9 @@ import com.typesafe.config.Config
 import gov.nasa.race.common.ConstAsciiSlice.asc
 import gov.nasa.race.common.{BufferedStringJsonPullParser, JsonWriter, PathIdentifier, UnixPath}
 import gov.nasa.race.config.ConfigUtils._
-import gov.nasa.race.core.{PROVIDER_CHANNEL, ParentActor, RaceDataClient, RaceException}
+import gov.nasa.race.core.{DataClientRaceActor, PROVIDER_CHANNEL, ParentActor, Ping, Pong, PongParser, RaceDataClient, RaceException}
 import gov.nasa.race.http.tabdata.UserPermissions.{PermSpec, Perms}
-import gov.nasa.race.http.{PushWSRaceRoute, SiteRoute}
+import gov.nasa.race.http.{MonitoredPushWSRaceRoute, PushWSRaceRoute, SiteRoute}
 import gov.nasa.race.{ifSome, withSomeOrElse}
 import gov.nasa.race.uom.DateTime
 
@@ -48,11 +48,12 @@ case class UserChange(uid: String, pw: Array[Byte], change: ColumnDataChange)
   * generate CDCs to modify ColumnData that is owned by this node
   */
 class UserServerRoute (parent: ParentActor, config: Config) extends SiteRoute(parent,config)
-                                                           with PushWSRaceRoute with RaceDataClient {
+                                                            with MonitoredPushWSRaceRoute with RaceDataClient {
+
   /**
     * JSON parser for incoming device messages
     */
-  class IncomingMessageParser (node: Node) extends BufferedStringJsonPullParser {
+  class IncomingMessageParser (node: Node) extends BufferedStringJsonPullParser with PongParser {
     //--- lexical constants
     private val _date_ = asc("date")
     private val _requestUserPermissions_ = asc("requestUserPermissions")
@@ -64,6 +65,7 @@ class UserServerRoute (parent: ParentActor, config: Config) extends SiteRoute(pa
     def parse (msg: String): Option[Any] = parseMessageSet(msg) {
       case `_requestUserPermissions_` => parseRequestUserPermissions(msg)
       case `_userChange_` => parseUserChange(msg)
+      case Ping._pong_ => parsePong(msg)
       case m => warning(s"ignoring unknown message '$m''"); None
     }
 
@@ -104,6 +106,10 @@ class UserServerRoute (parent: ParentActor, config: Config) extends SiteRoute(pa
 
       val cdc = ColumnDataChange(columnId,node.id,date,cellValues)
       Some(UserChange(uid,pw,cdc))
+    }
+
+    def parsePong (msg: String): Option[Pong] = {
+      parsePongBody
     }
   }
 
@@ -150,6 +156,8 @@ class UserServerRoute (parent: ParentActor, config: Config) extends SiteRoute(pa
     }
   }
 
+  //--- RaceDataClient interface
+
   /**
     * this is what we get from our DataClient actor from the RACE bus
     * NOTE this is executed async - avoid data races
@@ -158,17 +166,28 @@ class UserServerRoute (parent: ParentActor, config: Config) extends SiteRoute(pa
     data match {
       case n: Node =>  // this is for our internal purposes
         node = Some(n)
+
         if (!parser.isDefined) { // one time initialization
           parser = createIncomingMessageParser
           siteIdMessage = Some(TextMessage(serializeSiteId(n.id)))
           rowListMessage = Some(TextMessage(writer.toJson(n.rowList)))
           columnListMessage = Some(TextMessage(writer.toJson(n.columnList)))
+          n.columnDatas.foreach { e=>
+            columnDataMessages.put(e._1, TextMessage(writer.toJson(e._2)))
+          }
+
           info(s"device server '${n.id}' ready to accept connections")
         }
 
       case cdc: ColumnDataChange =>
         // we should already have gotten the respective Node message
         ifSome(node) { n=>
+          val msg = TextMessage(writer.toJson(cdc))
+          if (hasConnections) {
+            push(msg)
+          }
+
+          /*
           n.columnDatas.get(cdc.columnId) match {
             case Some(cd) =>
               val msg = TextMessage(writer.toJson(cd))
@@ -180,6 +199,7 @@ class UserServerRoute (parent: ParentActor, config: Config) extends SiteRoute(pa
             case None =>
               warning(s"unknown column for CDC: ${cdc.columnId}")
           }
+           */
         }
 
       case other => // ignore other messages
@@ -225,6 +245,11 @@ class UserServerRoute (parent: ParentActor, config: Config) extends SiteRoute(pa
                 } else {
                   warning(s"incoming CDC rejected by column filter ${tm.text}")
                 }
+                Nil
+
+              case Some(pong:Pong) =>
+                info(s"got pong from $remoteAddr: $pong")
+                handlePong(remoteAddr,pong)
                 Nil
 
               case _ =>

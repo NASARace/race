@@ -17,8 +17,9 @@
 package gov.nasa.race.http.tabdata
 
 import gov.nasa.race.common.ConstAsciiSlice.asc
-import gov.nasa.race.common.{ConstAsciiSlice, JsonPullParser, JsonSerializable, JsonWriter}
+import gov.nasa.race.common.{ConstAsciiSlice, JsonPullParser, JsonSerializable, JsonWriter, PathIdentifier}
 import gov.nasa.race.uom.DateTime
+import gov.nasa.race.util.StringUtils
 
 import scala.collection.mutable
 
@@ -67,9 +68,9 @@ case class Node (id: String,
   def update (cd: ColumnData): Node = copy(columnDatas= columnDatas + (cd.id -> cd))
 
   //--- debugging
-  def dumpColumnData: Unit = {
+  def printColumnData(): Unit = {
     print("row                  |")
-    columnList.foreach( col=> print(f"${col.id}%15.15s |") )
+    columnList.foreach { col=> print(f"${PathIdentifier.name(col.id)}%15.15s |") }
     println()
     print("---------------------+") // row name
     var i = columnList.size
@@ -77,7 +78,7 @@ case class Node (id: String,
     println()
 
     rowList.foreach { row =>
-      print(f"${row.id}%-20.20s |")
+      print(f"${StringUtils.maxSuffix(row.id,20)}%-20.20s |")
       columnList.foreach { col =>
         columnDatas.get(col.id) match {
           case Some(cd) =>

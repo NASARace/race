@@ -85,7 +85,6 @@ export function setReadOnly() {
       var values = data[column.id].rows;
       var v = displayValue( row, rowList.rows, values);
       cell.textContent = v; // this also removes the input child element
-      checkRange(row,values[row.id],cell);
     }
   });
 
@@ -465,14 +464,6 @@ function setData() {
   }
 }
 
-function checkRange (row,value,cell) {
-  if (outsideRange(row,value)){
-    cell.classList.add("alert");
-  } else {
-    cell.classList.remove("alert");
-  }
-}
-
 function setColumnData (i, columnData) {
   var tbody = document.getElementById('table_body');
   var trDtgs = document.getElementById('column_dtgs');
@@ -497,14 +488,8 @@ function setColumnData (i, columnData) {
 
     } else { // just a display cell but flag values outside range
       cell.textContent = displayValue( row, rowList.rows, values);
-      checkRange(row,values[row.id],cell);
     }
   }
-}
-
-function outsideRange (row, rowValue) {
-  if (row.min && rowValue < row.min) return true;
-  if (row.max && rowValue > row.max) return true;
 }
 
 function formatArray (v) {
@@ -522,7 +507,7 @@ function formatValue (row,cv) {
     else return ratIntFormatter.format(v);
   }
 
-  if (row.type == "rational"){
+  if (row.type == "real"){
     if (Number.isInteger(v)) return intRatFormatter.format(v); 
     else return ratFormatter.format(v);
   }
@@ -775,15 +760,33 @@ function handleWsMessage(msg) {
   var msgType = Object.keys(msg)[0];  // first member name
   //console.log(JSON.stringify(msg));
 
-  if (msgType == "columnData") handleColumnData( msg.columnData);
+  if (msgType == "columnDataChange") handleColumnDataChange(msg.columnDataChange);
+  else if (msgType == "columnData") handleColumnData( msg.columnData);
   else if (msgType == "rowList") handleRowList( msg.rowList);
   else if (msgType == "columnList") handleColumnList( msg.columnList);
   else if (msgType == "userPermissions") handleUserPermissions( msg.userPermissions);
   else if (msgType == "siteId")  handleSiteId( msg.siteId);
+  else if (msgType == "ping") handlePing( msg.ping);
   else utils.log(`ignoring unknown message type ${msgType}`);
 };
 
-// {columnData:{id:"s",rev:n,date:n,rows:[<rowName>:n]}
+// { columnDataChange: { columnId:"s", changeNodeId:"s", date:n, changedValues: { <rowId>: { value:X,date:n } ... }}}
+function handleColumnDataChange (cdc) {
+  //console.log(JSON.stringify(cdc));
+  var i = columnIndex(cdc.columnId);
+  if (i >= 0) {
+    var cd = data[cdc.columnId];
+    cd.date = new Date(cdc.date)
+    var cvs = cdc.changedValues
+    Object.keys(cvs).forEach( function (rowId,idx) {
+      var cv = cvs[rowId];
+      cd.rows[rowId] = cv;
+    });
+    setColumnData(i, cd);
+  }
+}
+
+// {columnData:{id:"s",rev:n,date:n,rows:[<rowId>:n]}
 function handleColumnData (columnData) {
   columnData.date = new Date(columnData.date) // convert epoch into Date object
 
@@ -839,6 +842,11 @@ function handleUserPermissions (usrPerm) {
 function handleSiteId (id) {
   siteId = id;
   document.getElementById("siteId").textContent = id;
+}
+
+function handlePing (ping) {
+  var reply = `{"pong":{"date":${Date.now()},"ping":${JSON.stringify(ping)}}}`;
+  ws.send(reply);
 }
 
 //--- outgoing messages

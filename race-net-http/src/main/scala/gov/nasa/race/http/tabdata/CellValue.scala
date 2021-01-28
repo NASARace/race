@@ -100,8 +100,8 @@ abstract class CellValue[T: ClassTag] {
   def cellType: Class[_] = classTag[T].runtimeClass
 
   def valueToString: String = value.toString
+  def toJson: String = s"""{"value:"$valueToString,"date:"${date.toEpochMillis}}"""
   def serializeTo (w: JsonWriter): Unit
-  def toJson: String
 
   def undefinedCellValue: UndefinedCellValue[T]
 }
@@ -128,7 +128,10 @@ abstract class NumCellValue[T: ClassTag](implicit num: math.Numeric[T]) extends 
   def toInteger: Long = num.toLong(value)
 
   override def toJson: String = valueToString
-  override def serializeTo (w: JsonWriter): Unit = w.writeUnQuotedValue(toJson)
+  override def serializeTo (w: JsonWriter): Unit = w.writeObject( w=> {
+    w.writeUnQuotedMember("value",valueToString)
+    w.writeLongMember("date",date.toEpochMillis)
+  })
 }
 
 /**
@@ -182,7 +185,6 @@ abstract class CVList[E: ClassTag] {
   def valueToString: String = elements.mkString("[",",","]")
   override def toString: String = valueToString
 
-  def serializeTo (w: JsonWriter): Unit
 
   //... and more to follow
 }
@@ -211,7 +213,7 @@ object IntegerList {
 case class IntegerList (elements: Array[Long]) extends NumCVList[Long] {
   type This = IntegerList
   override def copyWithElements (es: Array[Long]): This = IntegerList(es)
-  override def serializeTo (w: JsonWriter): Unit = w.writeArray( _.writeLongValues(elements))
+
 }
 
 object RealList {
@@ -220,12 +222,10 @@ object RealList {
 case class RealList (elements: Array[Double]) extends NumCVList[Double] {
   type This = RealList
   override def copyWithElements (es: Array[Double]): This = RealList(es)
-  override def serializeTo (w: JsonWriter): Unit = w.writeArray( _.writeDoubleValues(elements))
 }
 
 abstract class ListCellValue[T <: CVList[_] : ClassTag] extends CellValue[T] {
-  def toJson: String = value.elements.mkString("[", ",", "]")
-  def serializeTo (w: JsonWriter): Unit = value.serializeTo(w)
+
 }
 
 //--- concrete CellValue types (they always come in pairs of a CV case class and an object for the respective undefined value
@@ -237,6 +237,10 @@ object IntegerCellValue {
 }
 case class IntegerCellValue(value: Long, date: DateTime) extends NumCellValue[Long] {
   override def undefinedCellValue = UndefinedIntegerCellValue
+  override def serializeTo (w: JsonWriter): Unit = w.writeObject( w=> {
+    w.writeLongMember("value",value)
+    w.writeLongMember("date",date.toEpochMillis)
+  })
 }
 object UndefinedIntegerCellValue extends IntegerCellValue(0, DateTime.UndefinedDateTime) with UndefinedCellValue[Long]
 
@@ -246,6 +250,10 @@ object RealCellValue {
 }
 case class RealCellValue(value: Double, date: DateTime) extends NumCellValue[Double] {
   override def undefinedCellValue = UndefinedRealCellValue
+  override def serializeTo (w: JsonWriter): Unit = w.writeObject( w=> {
+    w.writeDoubleMember("value",value)
+    w.writeLongMember("date",date.toEpochMillis)
+  })
 }
 object UndefinedRealCellValue extends RealCellValue(0.0, DateTime.UndefinedDateTime) with UndefinedCellValue[Double]
 
@@ -254,8 +262,11 @@ object BoolCellValue {
   def parseValueFrom (p: JsonPullParser, date: DateTime) = parseUnQuotedValueFrom(p,date,_.toBoolean,apply)
 }
 case class BoolCellValue (value: Boolean, date: DateTime) extends CellValue[Boolean] {
-  override def toJson: String = value.toString
-  override def serializeTo (w: JsonWriter): Unit = w.writeBoolean(value)
+  override def valueToString: String = value.toString
+  override def serializeTo (w: JsonWriter): Unit = w.writeObject( w=> {
+    w.writeBooleanMember("value",value)
+    w.writeLongMember("date",date.toEpochMillis)
+  })
   override def undefinedCellValue = UndefinedBoolCellValue
 
 }
@@ -266,8 +277,11 @@ object StringCellValue {
   def parseValueFrom (p: JsonPullParser, date: DateTime) = parseQuotedValueFrom(p,date,_.toString,apply)
 }
 case class StringCellValue (value: String, date: DateTime) extends CellValue[String] {
-  override def toJson: String = "\"" + value + '"'
-  override def serializeTo (w: JsonWriter): Unit = w.writeString(value)
+  override def valueToString: String = "\"" + value + '"'
+  override def serializeTo (w: JsonWriter): Unit = w.writeObject( w=> {
+    w.writeStringMember("value",value)
+    w.writeLongMember("date",date.toEpochMillis)
+  })
   override def undefinedCellValue = UndefinedStringCellValue
 }
 object UndefinedStringCellValue extends StringCellValue("", DateTime.UndefinedDateTime) with UndefinedCellValue[String]
@@ -284,6 +298,10 @@ object IntegerListCellValue {
 case class IntegerListCellValue (value: IntegerList, date: DateTime) extends ListCellValue[IntegerList] {
   def this (es: Array[Long], date: DateTime) = this(IntegerList(es),date)
   override def undefinedCellValue = UndefinedIntegerListCellValue
+  override def serializeTo (w: JsonWriter): Unit = w.writeObject( w=> {
+    w.writeLongArrayMember("value",value.elements)
+    w.writeLongMember("date",date.toEpochMillis)
+  })
 }
 object UndefinedIntegerListCellValue extends IntegerListCellValue(Array.empty[Long], DateTime.UndefinedDateTime) with UndefinedCellValue[IntegerList]
 
@@ -296,6 +314,10 @@ object RealListCellValue {
 case class RealListCellValue (value: RealList, date: DateTime) extends ListCellValue[RealList] {
   def this (es: Array[Double], date: DateTime) = this(RealList(es),date)
   override def undefinedCellValue = UndefinedRealListCellValue
+  override def serializeTo (w: JsonWriter): Unit = w.writeObject( w=> {
+    w.writeDoubleArrayMember("value",value.elements)
+    w.writeLongMember("date",date.toEpochMillis)
+  })
 }
 object UndefinedRealListCellValue extends RealListCellValue(Array.empty[Double], DateTime.UndefinedDateTime) with UndefinedCellValue[RealList]
 

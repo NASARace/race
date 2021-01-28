@@ -18,16 +18,18 @@ package gov.nasa.race.http.tabdata
 
 import akka.actor.ActorRef
 import com.typesafe.config.Config
+import gov.nasa.race.common.PathIdentifier
 import gov.nasa.race.config.ConfigUtils.ConfigWrapper
 import gov.nasa.race.core.Messages.BusEvent
 import gov.nasa.race.core.{ContinuousTimeRaceActor, PeriodicRaceActor, PublishingRaceActor, RaceContext, RaceException, SubscribingRaceActor}
 import gov.nasa.race.uom.DateTime
 import gov.nasa.race.util.FileUtils
-import gov.nasa.race.{Failure, Success}
+import gov.nasa.race.{Failure, Success, ifSome}
 
 import java.io.File
 import scala.collection.mutable
 import scala.concurrent.duration.{DurationInt, FiniteDuration}
+import scala.language.existentials
 
 /**
   * the actor that initializes and updates the local Node data
@@ -39,11 +41,12 @@ class UpdateActor (val config: Config) extends SubscribingRaceActor with Publish
 
   val funcLib: CellFunctionLibrary = getConfigurableOrElse("functions")(new CellFunctionLibrary)
 
-  val cvFormulaList: CellValueFormulaList = readCellValueFormulaList(node,funcLib)
-  val constraintFormulaList: ConstraintFormulaList = readConstraintFormulaList(node,funcLib)
+  val cvFormulaList: Option[CellValueFormulaList] = readCellValueFormulaList(node,funcLib)
+  val constraintFormulaList: Option[ConstraintFormulaList] = readConstraintFormulaList(node,funcLib)
 
   val ctx: BasicEvalContext = new BasicEvalContext(node.id, node.rowList, DateTime.UndefinedDateTime, node.columnDatas) // this is a mutable object
 
+  initColumnData()  // this computes missing cells
 
   override def defaultTickInterval: FiniteDuration = 30.seconds
 
@@ -60,9 +63,11 @@ class UpdateActor (val config: Config) extends SubscribingRaceActor with Publish
 
   override def onStartRaceActor (originator: ActorRef): Boolean = {
     if (super.onStartRaceActor(originator)) {
-      if (cvFormulaList.hasAnyTimeTrigger) {
-        cvFormulaList.armTriggeredAt(currentSimTime)
-        startScheduler
+      ifSome(cvFormulaList) { fl=>
+        if (fl.hasAnyTimeTrigger) {
+          fl.armTriggeredAt(currentSimTime)
+          startScheduler
+        }
       }
       true
     } else false
@@ -120,27 +125,27 @@ class UpdateActor (val config: Config) extends SubscribingRaceActor with Publish
     val dataDir = config.getExistingDir("data-dir")
     for (p <- columnList.columns) {
       val col = p._2
-      val colId = col.id
-      val f = new File(dataDir, s"$colId.json")
-      info(s"reading column data for '$colId' from $f")
+      val colName = PathIdentifier.name(col.id)
+      val f = new File(dataDir, s"$colName.json")
+      info(s"reading column data for '$colName' from $f")
       if (f.isFile) {
         val parser = new ColumnDataParser(rowList)
         parser.setLogging(info,warning,error)
         parser.parse(FileUtils.fileContentsAsBytes(f).get) match {
-          case Some(columnData) => map += colId -> columnData
+          case Some(cd) => map += col.id -> cd
           case None => throw new RaceException(f"error parsing column data in $f")
         }
       } else {
-        warning(s"no column data for '$colId'")
+        warning(s"no column data for '$colName'")
         // init with Date0 so that we always try to update from remote
-        map += colId -> ColumnData(col.id,DateTime.Date0,Map.empty[String,CellValue[_]])
+        map += col.id -> ColumnData(col.id,DateTime.Date0,Map.empty[String,CellValue[_]])
       }
     }
 
     map.toMap
   }
 
-  def parseFormulas[T <: FormulaList](key: String, parser: FormulaListParser[T]): T = {
+  def parseFormulas[T <: FormulaList](node: Node, key: String, parser: FormulaListParser[T]): Option[T] = {
     readList[T](key){ input=>
       parser.setLogging(info,warning,error)
       parser.parse(input).map { fList=>
@@ -149,15 +154,15 @@ class UpdateActor (val config: Config) extends SubscribingRaceActor with Publish
           case Success => fList
         }
       }
-    }.getOrElse( throw new RuntimeException("invalid $key"))
+    }
   }
 
-  def readCellValueFormulaList (node: Node, funcLib: CellFunctionLibrary): CellValueFormulaList = {
-    parseFormulas("value-formulas", new CellValueFormulaListParser)
+  def readCellValueFormulaList (node: Node, funcLib: CellFunctionLibrary): Option[CellValueFormulaList] = {
+    parseFormulas( node, "value-formulas", new CellValueFormulaListParser)
   }
 
-  def readConstraintFormulaList (node: Node, funcLib: CellFunctionLibrary): ConstraintFormulaList = {
-    parseFormulas("constraint-formulas", new ConstraintFormulaListParser)
+  def readConstraintFormulaList (node: Node, funcLib: CellFunctionLibrary): Option[ConstraintFormulaList] = {
+    parseFormulas( node, "constraint-formulas", new ConstraintFormulaListParser)
   }
 
   //--- data modification
@@ -171,12 +176,14 @@ class UpdateActor (val config: Config) extends SubscribingRaceActor with Publish
   }
 
   def updateAndPublish (colId: String, changeNodeId: String, cvs: Seq[CellPair]): Unit = {
-    val cd = ctx.cellValues(colId)
-    updateNode(cd)
+    ctx.setCellValues(colId, cvs).ifSuccess {
+      val cd = ctx.cellValues(colId)
+      updateNode(cd)
 
-    if (cvs.nonEmpty) {
-      val cdc = ColumnDataChange(colId, changeNodeId, ctx.evalDate, cvs)
-      publish(cdc)
+      if (cvs.nonEmpty) {
+        val cdc = ColumnDataChange(colId, changeNodeId, ctx.evalDate, cvs)
+        publish(cdc)
+      }
     }
   }
 
@@ -189,27 +196,29 @@ class UpdateActor (val config: Config) extends SubscribingRaceActor with Publish
     * eval undefined cells for which we have formulas that have all their dependencies satisfied (which might be
     * recursive, so execute in order of formulaList definition).
     */
-  def initColumnData: Unit = {
+  def initColumnData(): Unit = {
     ctx.evalDate = DateTime.now
     var newCds = node.columnDatas
 
-    cvFormulaList.foreachValueTriggeredColumn { (colId,formulas) =>
-      ctx.clearChanges()
+    ifSome(cvFormulaList) { fl=>
+      fl.foreachValueTriggeredColumn { (colId,formulas) =>
+        ctx.clearChanges()
 
-      formulas.foreach { e=>
-        val rowId = e._1
-        val formula: CellFormula[_] = e._2
+        formulas.foreach { e=>
+          val rowId = e._1
+          val formula: CellFormula[_] = e._2
 
-        if (!ctx.hasCellValue(colId,rowId)) { // we don't have a value for this row yet..
-          if (formula.canEvaluateIn(ctx)) {   //   ..but we have values for all its dependencies
-            val cv = formula.computeCellValue(ctx)
-            ctx.setCellValue(colId,rowId,cv)
+          if (!ctx.hasCellValue(colId,rowId)) { // we don't have a value for this row yet..
+            if (formula.canEvaluateIn(ctx)) {   //   ..but we have values for all its dependencies
+              val cv = formula.computeCellValue(ctx)
+              ctx.setCellValue(colId,rowId,cv)
+            }
           }
         }
-      }
 
-      if (ctx.hasChanges) {
-        newCds = newCds + (colId -> ctx.cellValues(colId))
+        if (ctx.hasChanges) {
+          newCds = newCds + (colId -> ctx.cellValues(colId))
+        }
       }
     }
 
@@ -247,8 +256,7 @@ class UpdateActor (val config: Config) extends SubscribingRaceActor with Publish
     ctx.setCellValues(colId, cdc.changedValues) match {
       case Success =>
         val cvs = ctx.foldRightChanges(Seq.empty[(String,CellValue[_])]){ (list,_,row,cv)=>
-          val e = new Tuple2[String,CellValue[_]](row.id, cv)
-          e +: list
+          (row.id, cv) +: list
         }
         updateAndPublish(colId,cdc.changeNodeId,cvs)
         true
@@ -259,30 +267,41 @@ class UpdateActor (val config: Config) extends SubscribingRaceActor with Publish
     }
   }
 
-  def reportConstraintViolation (cf: ConstraintFormula): Unit = {
-    println(s"violated constraint formula: $cf")
+  def reportConstraintViolation (cf: ConstraintFormula, res: Boolean): Unit = {
+    if (!res) println(s"violated constraint formula: $cf")
   }
 
   def evaluateValueTriggeredFormulas (cdc: ColumnDataChange): Unit = {
-    ctx.evalDate = updatedSimTime
-    cvFormulaList.evaluateValueTriggeredFormulas(ctx)(updateAndPublishOwnChange)
-    if (ctx.hasChanges) constraintFormulaList.evaluateValueTriggeredFormulas(ctx)(reportConstraintViolation)
+    ifSome(cvFormulaList) { vfl=>
+      ctx.evalDate = updatedSimTime
+      vfl.evaluateValueTriggeredFormulas(ctx)(updateAndPublishOwnChange)
+
+      if (ctx.hasChanges) {
+        ifSome(constraintFormulaList) { cfl=>
+          cfl.evaluateValueTriggeredFormulas(ctx)(reportConstraintViolation)
+        }
+      }
+    }
   }
 
   def processTimeTriggeredFormulas(): Unit = {
-
     // TODO - make sure we don't evaluate until we are synced with (optional) upstream
 
     ctx.columnDatas = node.columnDatas
     ctx.evalDate = updatedSimTime
     ctx.clearChanges()
 
-    cvFormulaList.evaluateTimeTriggeredFormulas(ctx)(updateAndPublishOwnChange)
-    if (ctx.hasChanges) {
-      cvFormulaList.evaluateValueTriggeredFormulas(ctx)(updateAndPublishOwnChange)
-      constraintFormulaList.evaluateValueTriggeredFormulas(ctx)(reportConstraintViolation)
+    ifSome(cvFormulaList) { fl=>
+      fl.evaluateTimeTriggeredFormulas(ctx)(updateAndPublishOwnChange)
+
+      if (ctx.hasChanges) {
+        fl.evaluateValueTriggeredFormulas(ctx)(updateAndPublishOwnChange)
+        ifSome(constraintFormulaList) { cfl=> cfl.evaluateValueTriggeredFormulas(ctx)(reportConstraintViolation) }
+      }
     }
 
-    constraintFormulaList.evaluateTimeTriggeredFormulas(ctx)(reportConstraintViolation)
+    ifSome(constraintFormulaList) { fl =>
+      fl.evaluateTimeTriggeredFormulas(ctx)(reportConstraintViolation)
+    }
   }
 }

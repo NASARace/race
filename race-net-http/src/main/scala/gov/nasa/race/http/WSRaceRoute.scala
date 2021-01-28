@@ -18,7 +18,6 @@ package gov.nasa.race.http
 
 import java.io.File
 import java.net.InetSocketAddress
-
 import akka.Done
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.model.ws.{BinaryMessage, Message, TextMessage}
@@ -26,11 +25,15 @@ import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
 import akka.stream.Materializer
 import akka.stream.scaladsl.{Flow, Sink, SourceQueueWithComplete}
+import gov.nasa.race.common.{BufferedStringJsonPullParser, JsonWriter}
 import gov.nasa.race.config.ConfigUtils._
-import gov.nasa.race.core.RaceDataClient
+import gov.nasa.race.core.{Ping, Pong, PongParser, RaceDataClient}
 import gov.nasa.race.ifSome
+import gov.nasa.race.uom.Time.Seconds
+import gov.nasa.race.uom.{DateTime, Time}
 
 import scala.collection.immutable.Iterable
+import scala.collection.mutable.{Map => MutMap}
 import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.util.{Failure, Success, Try}
@@ -121,9 +124,9 @@ trait PushWSRaceRoute extends WSRaceRoute with SourceQueueOwner with RaceDataCli
   /**
     * override if concrete routes need to do more cleanup
     */
-  protected def handleConnectionLoss (remoteAddress: InetSocketAddress, cause: Try[Done]): Unit = {
+  protected def handleConnectionLoss (remoteAddress: InetSocketAddress, cause: Any): Unit = {
     connections = connections.filter( e=> e._1 != remoteAddress)
-    info(s"connection closed: $remoteAddress")
+    info(s"connection closed: $remoteAddress, cause: $cause")
   }
 
   /**
@@ -153,6 +156,67 @@ trait PushWSRaceRoute extends WSRaceRoute with SourceQueueOwner with RaceDataCli
         handleWebSocketMessages(flow)
       }
     }
+  }
+}
+
+
+/**
+  * a WSRaceRoute that periodically pings its connections and closes the ones that don't respond properly
+  * note this also can be used to keep the WS alive if we own the client
+  */
+trait MonitoredPushWSRaceRoute extends PushWSRaceRoute {
+
+  protected var nPings = 0
+  protected val pingWriter = new JsonWriter(JsonWriter.RawElements, 512)
+
+  protected var monitorInterval: Time = Seconds(30)
+  protected val pingResponses: MutMap[InetSocketAddress, DateTime] = MutMap.empty
+
+  val monitorThread = new Thread {
+    setDaemon(true)
+
+    override def run(): Unit = {
+      while (true) {
+        checkLiveConnections()
+        Thread.sleep(monitorInterval.toMillis)
+      }
+    }
+  }
+
+  monitorThread.start
+
+  def checkLiveConnections(): Unit = synchronized {
+    val now = DateTime.now
+    val pingMsg = TextMessage(pingWriter.toJson(Ping(name, "client", nPings + 1, now)))
+
+    connections.foreach { con =>
+      val ipAddr = con._1
+      info(s"pinging connection $ipAddr")
+      pushTo(ipAddr, pingMsg)
+
+      pingResponses.get(ipAddr) match {
+        case Some(dtg) =>
+          if (now.timeSince(dtg) > monitorInterval) { // no response
+            handleConnectionLoss(ipAddr, "no ping response")
+          }
+        case None => // new connection, add initial pseudo-entry
+          pingResponses += ipAddr -> DateTime.Date0
+      }
+    }
+    nPings += 1
+  }
+
+  override protected def handleConnectionLoss (remoteAddress: InetSocketAddress, cause: Any): Unit = synchronized {
+    pingResponses -= remoteAddress
+    super.handleConnectionLoss(remoteAddress,cause)
+  }
+
+    // we don't provide a handleIncoming() implementation that processes Pongs since instances already have
+  // a parser that can be easily extended and might have to react specifically. If there is no specialized handling
+  // it can just call  the following handlePong()
+
+  def handlePong (ipAddr: InetSocketAddress, pong: Pong): Unit = synchronized {
+    pingResponses += (ipAddr -> DateTime.now)  // we use our local time instead of the pong reply to account for clock skew (user clients might not be synced)
   }
 }
 

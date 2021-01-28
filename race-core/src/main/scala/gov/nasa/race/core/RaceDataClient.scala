@@ -72,3 +72,4 @@ class DataClientRaceActor(val dataClient: RaceDataClient, val config: Config) ex
     case PublishRaceData(data) => publish(data)
   }
 }
+
