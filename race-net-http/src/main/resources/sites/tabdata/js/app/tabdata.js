@@ -464,7 +464,21 @@ function setData() {
   }
 }
 
-function setColumnData (i, columnData) {
+function setCell (cell, row, values) {
+  if (cell.firstChild && cell.firstChild.nodeName == "INPUT") { // input cell - we are editing this
+    var input = cell.firstChild;
+    if (modifiedRows.has(input)){ // we already changed it - flag conflict
+      input.classList.add("conflict");
+    }
+    input.classList.remove("reported");
+    input.value = editValue(row,values[row.id]);
+
+  } else { // just a display cell but flag values outside range
+    cell.textContent = displayValue( row, rowList.rows, values);
+  }
+}
+
+function setColumnData (i, columnData, filterRow) {
   var tbody = document.getElementById('table_body');
   var trDtgs = document.getElementById('column_dtgs');
   var i1 = i + 1;
@@ -474,21 +488,12 @@ function setColumnData (i, columnData) {
 
   for (var j=0; j<rows.length; j++){
     var row = rows[j];
+    if (filterRow && !filterRow(row)) continue;
+
     var tr = tbody.childNodes[j];
-    
     var cell = tr.childNodes[i1];
 
-    if (cell.firstChild && cell.firstChild.nodeName == "INPUT") { // input cell - we are editing this
-      var input = cell.firstChild;
-      if (modifiedRows.has(input)){ // we already changed it - flag conflict
-        input.classList.add("conflict");
-      }
-      input.classList.remove("reported");
-      input.value = editValue(row,values[row.id]);
-
-    } else { // just a display cell but flag values outside range
-      cell.textContent = displayValue( row, rowList.rows, values);
-    }
+    setCell(cell, row, values);
   }
 }
 
@@ -777,12 +782,15 @@ function handleColumnDataChange (cdc) {
   if (i >= 0) {
     var cd = data[cdc.columnId];
     cd.date = new Date(cdc.date)
-    var cvs = cdc.changedValues
-    Object.keys(cvs).forEach( function (rowId,idx) {
+    var cvs = cdc.changedValues;
+    var changedRowIds = Object.keys(cvs);
+
+    changedRowIds.forEach( function (rowId,idx) {
       var cv = cvs[rowId];
       cd.rows[rowId] = cv;
     });
-    setColumnData(i, cd);
+
+    setColumnData(i, cd, function(row) { return cvs.hasOwnProperty(row.id); });
   }
 }
 
