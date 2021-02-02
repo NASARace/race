@@ -18,6 +18,9 @@ package gov.nasa.race.http.tabdata
 
 import scala.reflect.{ClassTag, classTag}
 
+trait NamedFunction {
+  def name: String
+}
 
 /**
   * abstract base for function objects that can be type-checked
@@ -25,7 +28,7 @@ import scala.reflect.{ClassTag, classTag}
   * note these can be shared between different CellFunctionCalls (the corresponding CellExpressions that also
   * capture respective arguments), i.e. we only need a singleton per CellFunction
   */
-abstract class CellFunction[T: ClassTag] {
+abstract class CellFunction[T: ClassTag] extends NamedFunction {
   def returnType: Class[_] = classTag[T].runtimeClass
 
   def name: String = {
@@ -34,7 +37,8 @@ abstract class CellFunction[T: ClassTag] {
     if (s.charAt(len-1) == '$') s.substring(0, len-1) else s
   }
 
-  def checkArgError (args: Seq[CellExpression[_]]): Option[String] = checkArityError(args.size).orElse(checkArgTypesError(args))
+  def checkArgError (args: Seq[CellExpression[_]]): Option[String] = checkArityError(args.size).orElse( checkArgTypesError(args))
+
   def checkArityError(nArgs: Int): Option[String] // -> Arity trait
   def checkArgTypesError(args: Seq[CellExpression[_]]): Option[String]  // -> Domain trait
 
@@ -51,19 +55,27 @@ abstract class CellFunction[T: ClassTag] {
 
 //------------ arity traits
 
-trait Arity1 {
-  def checkArityError (nArgs: Int): Option[String] = if (nArgs != 1) Some(s"expected one argument, got $nArgs") else None
+trait Arity1 extends NamedFunction {
+  def checkArityError (nArgs: Int): Option[String] = if (nArgs != 1) Some(s"function $name expects one argument, got $nArgs") else None
 }
 
-trait Arity2 {
-  def checkArityError (nArgs: Int): Option[String] = if (nArgs != 2) Some(s"expected two arguments, got $nArgs") else None
+trait ArityGe1 extends NamedFunction {
+  def checkArityError (nArgs: Int): Option[String] = if (nArgs < 1) Some(s"function $name expects at least one argument, got $nArgs") else None
 }
 
-trait Arity3 {
-  def checkArityError (nArgs: Int): Option[String] = if (nArgs != 3) Some(s"expected three arguments, got $nArgs") else None
+trait Arity2 extends NamedFunction {
+  def checkArityError (nArgs: Int): Option[String] = if (nArgs != 2) Some(s"function $name expects two arguments, got $nArgs") else None
 }
 
-trait ArityN {
+trait Arity3 extends NamedFunction {
+  def checkArityError (nArgs: Int): Option[String] = if (nArgs != 3) Some(s"function $name expects three arguments, got $nArgs") else None
+}
+
+trait ArityGe2 extends NamedFunction {
+  def checkArityError (nArgs: Int): Option[String] = if (nArgs < 2) Some(s"function $name expects at least two arguments, got $nArgs") else None
+}
+
+trait ArityN extends NamedFunction  {
   def checkArityError (nArgs: Int): Option[String] = None
 }
 
@@ -95,17 +107,17 @@ trait RealListCoDomain extends CellFunction[RealList] {
 
 //------------ domain traits
 
-trait Domain {
+trait Domain extends NamedFunction {
 
   def checkArgTypes[E: ClassTag](args: Seq[CellExpression[_]]): Option[String] = {
-    args.find( a=> !classTag[E].runtimeClass.isAssignableFrom(a.getClass)).map( a=> s"argument $a not a ${classTag[E]} instance")
+    args.find( a=> !classTag[E].runtimeClass.isAssignableFrom(a.getClass)).map( a=> s"function '$name' argument '$a' not a ${classTag[E]} instance")
   }
 
   def checkArgTypeCond (args: Seq[CellExpression[_]])(f: Class[_]=>Boolean): Option[String] = {
     var i=1
     args.foreach { ce =>
       val ceType = ce.cellType
-      if (!f(ceType)) return Some(s"incompatible argument $i of type ${ceType}")
+      if (!f(ceType)) return Some(s"function '$name' has incompatible argument $i of type ${ceType}")
       i += 1
     }
     None
@@ -116,7 +128,7 @@ trait HeterogenousDomain extends Domain {
 
   //--- convenience functions for custom arg type checks
   def checkArgType[E: ClassTag](e: CellExpression[_]): Option[String] = {
-    if (classTag[E].runtimeClass.isAssignableFrom(e.getClass)) None else Some(s"argument $e not a ${classTag[E]} instance")
+    if (classTag[E].runtimeClass.isAssignableFrom(e.getClass)) None else Some(s"function '$name' argument '$e' not a ${classTag[E]} instance")
   }
 
   def checkArgTypes1[E1: ClassTag](args: Seq[CellExpression[_]]): Option[String] = checkArgType[E1](args(0))

@@ -48,7 +48,7 @@ case class UserChange(uid: String, pw: Array[Byte], change: ColumnDataChange)
   * generate CDCs to modify ColumnData that is owned by this node
   */
 class UserServerRoute (parent: ParentActor, config: Config) extends SiteRoute(parent,config)
-                                                            with MonitoredPushWSRaceRoute with RaceDataClient {
+                                                            with PushWSRaceRoute with RaceDataClient {
 
   /**
     * JSON parser for incoming device messages
@@ -249,7 +249,7 @@ class UserServerRoute (parent: ParentActor, config: Config) extends SiteRoute(pa
 
               case Some(pong:Pong) =>
                 info(s"got pong from $remoteAddr: $pong")
-                handlePong(remoteAddr,pong)
+                //handlePong(remoteAddr,pong)  // user level ping/pong does not seem to work
                 Nil
 
               case _ =>

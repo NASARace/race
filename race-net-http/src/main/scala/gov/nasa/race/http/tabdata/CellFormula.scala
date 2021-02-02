@@ -175,11 +175,18 @@ abstract class CellExpressionParser (funLib: CellFunctionLibrary) extends DebugR
       case colSpec ~ Some(rowSpec) =>
         val cols = _matchColumns(colSpec)
         val rows = _matchRows(rowSpec)
+
         val paths = new CRBuffer(cols.size * rows.size)
         cols.foreach(c => rows.foreach { r =>
           paths += _cellRef(c,r)
         })
         paths
+    }
+  }
+
+  def cellRefs: Parser[Set[CellRef[_]]] = {
+    repsep( cellRefSpec, ",").map { crs=>
+      crs.foldLeft( Set.empty[CellRef[_]])( (acc,crb)=> acc ++ crb )
     }
   }
 
@@ -213,7 +220,7 @@ abstract class CellExpressionParser (funLib: CellFunctionLibrary) extends DebugR
   def expr: Parser[CellExpression[_]] = funCall | const | cellRef
 
   /**
-    * this is the public entry - note this does not yet check or adapt type compatibility with compiledRow
+    * this is the public entry - note this does not yet check or adapt type compatibility
     */
   def compile (src: String): ResultValue[CellExpression[_]] = {
     parseAll(expr, src) match {
@@ -221,6 +228,15 @@ abstract class CellExpressionParser (funLib: CellFunctionLibrary) extends DebugR
       case this.Success(ce: CellExpression[_],_) => SuccessValue(ce)
       case this.Failure(msg,_) => gov.nasa.race.Failure(s"formula '$src' failed to compile: $msg")
       case this.Error(msg,_) => gov.nasa.race.Failure(s"error compiling formula '$src': $msg")
+      case other => throw sys.error(s"parse result $other can't happen") // bogus compiler warning ?
+    }
+  }
+
+  def parseCellRefs (src: String): ResultValue[Set[CellRef[_]]] = {
+    parseAll(cellRefs,src) match {
+      case this.Success(crs: Set[CellRef[_]],_) => SuccessValue(crs)
+      case this.Failure(msg,_) => gov.nasa.race.Failure(s"cellRef list '$src' failed to compile: $msg")
+      case this.Error(msg,_) => gov.nasa.race.Failure(s"error compiling cellRef list '$src': $msg")
       case other => throw sys.error(s"parse result $other can't happen") // bogus compiler warning ?
     }
   }
@@ -306,17 +322,12 @@ object FormulaList {
   val _id_        = asc("id")
   val _info_      = asc("info")
   val _date_      = asc("date")
-  val _columnListId_ = asc("columnlist")
-  val _rowListId_ = asc("rowlist")
   val _columns_   = asc("columns")
   val _src_       = asc("src")
   val _trigger_   = asc("trigger")
-  val _constraints_ = asc("constraints")
 
   type FormulaSrcs = (String,Option[String])   // formula sources: (expr, opt time-trigger)
-
   type CellValueFormulaSpec = (String, Seq[(String,FormulaSrcs)])  // colId, {row,srcs}
-  type ConstraintFormulaSpec = (String,String,FormulaSrcs)
 }
 
 trait FormulaList {

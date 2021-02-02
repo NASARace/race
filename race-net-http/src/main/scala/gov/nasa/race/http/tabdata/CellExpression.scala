@@ -34,6 +34,13 @@ abstract class CellExpression[T: ClassTag] {
 
   def eval (ctx: EvalContext): T  // compute the raw value
 
+  // override the ones that are supported
+  def evalToInteger (ctx: EvalContext): Long = throw new RuntimeException(s"${this.getClass.getName} cannot eval to integer type")
+  def evalToReal (ctx: EvalContext): Double = throw new RuntimeException(s"${this.getClass.getName} cannot eval to real type")
+  def evalToBool (ctx: EvalContext): Boolean = throw new RuntimeException(s"${this.getClass.getName} cannot eval to boolean type")
+  def evalToString (ctx: EvalContext): String = throw new RuntimeException(s"${this.getClass.getName} cannot eval to string type")
+
+
   def computeCellValue (ctx: EvalContext): CellValue[T] // compute the raw value and wrap it into a CellValue
 
   def dependencies (acc: Set[CellRef[_]] = Set.empty[CellRef[_]]): Set[CellRef[_]] = acc
@@ -45,52 +52,44 @@ trait NumExpression[T] extends CellExpression[T] {
 }
 
 trait IntegerExpression extends NumExpression[Long] {
-  def evalToReal (ctx: EvalContext): Double = eval(ctx).toDouble
-  def evalToInteger(ctx: EvalContext): Long = eval(ctx)
+  override def evalToReal (ctx: EvalContext): Double = eval(ctx).toDouble
+  override def evalToInteger(ctx: EvalContext): Long = eval(ctx)
   def computeCellValue (ctx: EvalContext): IntegerCellValue = IntegerCellValue(eval(ctx),ctx.evalDate)
 }
 
 trait RealExpression extends NumExpression[Double] {
-  def evalToReal (ctx: EvalContext): Double = eval(ctx)
-  def evalToInteger(ctx: EvalContext): Long = eval(ctx).toLong
+  override def evalToReal (ctx: EvalContext): Double = eval(ctx)
+  override def evalToInteger(ctx: EvalContext): Long = eval(ctx).toLong
   def computeCellValue (ctx: EvalContext): RealCellValue = RealCellValue(eval(ctx),ctx.evalDate)
 }
 
 trait BoolExpression extends CellExpression[Boolean] {
+  override def evalToBool(ctx: EvalContext): Boolean = eval(ctx)
   def computeCellValue (ctx: EvalContext): BoolCellValue = BoolCellValue(eval(ctx),ctx.evalDate)
 }
 
 trait StringExpression extends CellExpression[String] {
+  override def evalToString (ctx: EvalContext): String = eval(ctx)
   def computeCellValue (ctx: EvalContext): StringCellValue = StringCellValue(eval(ctx),ctx.evalDate)
 }
 
 //--- list expression types
 
 trait NumListExpression[T] extends CellExpression[T] {
-
   def evalToIntegerList (ctx: EvalContext): IntegerList
-  def evalToInteger (ctx: EvalContext): Array[Long]
-
   def evalToRealList (ctx: EvalContext): RealList
-  def evalToReal (ctx: EvalContext): Array[Double]
 }
 
 trait IntegerListExpression extends CellExpression[IntegerList] with NumListExpression[IntegerList] {
   def evalToIntegerList (ctx: EvalContext): IntegerList = eval(ctx)
-  def evalToInteger (ctx: EvalContext): Array[Long] = eval(ctx).elements
-
   def evalToRealList (ctx: EvalContext): RealList = RealList(evalToReal(ctx))
-  def evalToReal (ctx: EvalContext): Array[Double] = eval(ctx).elements.map(_.toDouble)
 
   def computeCellValue (ctx: EvalContext): IntegerListCellValue = IntegerListCellValue(eval(ctx),ctx.evalDate)
 }
 
 trait RealListExpression extends CellExpression[RealList] with NumListExpression[RealList] {
   def evalToIntegerList (ctx: EvalContext): IntegerList = IntegerList(evalToInteger(ctx))
-  def evalToInteger (ctx: EvalContext): Array[Long] = eval(ctx).elements.map(_.toLong)
-
   def evalToRealList (ctx: EvalContext): RealList = eval(ctx)
-  def evalToReal (ctx: EvalContext): Array[Double] = eval(ctx).elements
 
   def computeCellValue (ctx: EvalContext): RealListCellValue = RealListCellValue(eval(ctx),ctx.evalDate)
 }

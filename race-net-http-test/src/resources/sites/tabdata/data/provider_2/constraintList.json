@@ -1,10 +1,32 @@
 {
-  "id": "/formulas/region1/provider",
+  "id": "/constraints/region1/provider",
   "info": "column formulas for provider node",
   "date": "2020-06-28T12:00:00.000",
 
-  "constraints": [
-    { "id": "field_1-range", "info": "field_1 out of range [8..12]", "src": "(IntWithin ../provider_2::/data/cat_A/field_1 8 12)" },
-    { "id": "field_2-actuality", "info": "last field_2 update older than 2min", "src": "(OlderThanMinutes ../provider_2::/data/cat_A/field_2 2)", "trigger": "<always>" }
-  ]
+  "constraints": {
+    ".": {
+      "local-cat_A/field_1-range": {
+        "info": "field_1 out of range [8..12]",
+        "src": "(IntOutside /data/cat_A/field_1 8 12)",
+        "level": 3,
+        "mark": "/data/cat_A/field_1"
+      },
+
+      "cat_A/field_1-total": {
+        "info": "total of all cat_A/field_1 > 80",
+        "src": "(IntGt (IntSum ../*::/data/cat_A/field_1) 80)",
+        "level": 2
+      }
+    },
+
+    "../*": {
+      "cat_A/field_2-actuality": {
+        "info": "last field_2 update is older than 2min",
+        "src": "(OlderThanMinutes /data/cat_A/field_2 2)",
+        "level": 2,
+        "trigger": "<always>",
+        "mark": "/data/cat_A/field_2"
+      }
+    }
+  }
 }

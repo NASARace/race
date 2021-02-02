@@ -19,16 +19,28 @@ package gov.nasa.race.http.tabdata
 import gov.nasa.race.common.{JsonParseException, PathIdentifier, UTF8JsonPullParser}
 import gov.nasa.race.uom.DateTime
 import FormulaList._
+import gov.nasa.race.common.ConstAsciiSlice.asc
 import gov.nasa.race.{Failure, Result, ResultValue, Success, SuccessValue, ifSome}
 
 import scala.collection.mutable.ArrayBuffer
 
 object ConstraintFormula {
-  def compile (id: String, info: String, src: String, node: Node, funLib: CellFunctionLibrary): ResultValue[ConstraintFormula] = {
-    val parser = new ConstraintFormulaParser(node, funLib)
+  def compile (baseCol: Column, id: String, info: String, src: String, level: Int, mark: Option[String], node: Node, funLib: CellFunctionLibrary): ResultValue[ConstraintFormula] = {
+    val parser = new ConstraintFormulaParser(node, baseCol, funLib)
     parser.compile(src).flatMap { expr =>
-      if (expr.isInstanceOf[BoolExpression]) SuccessValue( new ConstraintFormula(id,info,src,expr.asInstanceOf[BoolExpression]))
-      else Failure("constraint not a boolean cell formula")
+      if (expr.isInstanceOf[BoolExpression]) {
+        val assoc = mark match {
+          case Some(crSpecs) =>
+            parser.parseCellRefs(crSpecs) match {
+              case SuccessValue(crs) => crs
+              case err@Failure(msg) => return err
+            }
+          case None => Set.empty[CellRef[_]]
+        }
+
+        SuccessValue( new ConstraintFormula(id,info,src,expr.asInstanceOf[BoolExpression],level,assoc))
+
+      } else Failure("constraint not a boolean cell formula")
     }
   }
 }
@@ -36,14 +48,14 @@ object ConstraintFormula {
 /**
   * a CellFormula that is used to check cell value properties
   */
-case class ConstraintFormula (id: String, info: String, src: String,  expr: BoolExpression) extends CellFormula[Boolean] {
+case class ConstraintFormula (id: String, info: String, src: String,  expr: BoolExpression, level: Int, assoc: Set[CellRef[_]]) extends CellFormula[Boolean] {
   def eval (ctx: EvalContext): Boolean = expr.eval(ctx)
 }
 
 /**
   * a specialized CellExpressionParser for expressions that are not compiled in the context of a given column or row
   */
-class ConstraintFormulaParser (node: Node, funLib: CellFunctionLibrary) extends CellExpressionParser(funLib) {
+class ConstraintFormulaParser (node: Node, columnBase: Column, funLib: CellFunctionLibrary) extends CellExpressionParser(funLib) {
 
   protected def _matchRows (rowSpec: String): Seq[String] = {
     val rowList = node.rowList
@@ -60,12 +72,13 @@ class ConstraintFormulaParser (node: Node, funLib: CellFunctionLibrary) extends 
     val columnList = node.columnList
 
     if (colSpec == ".'") {
-      Seq(node.id)
+      Seq(columnBase.id)
 
     } else {
-      val cs = PathIdentifier.resolve(colSpec, columnList.id)
-      if (PathIdentifier.isGlobPattern(colSpec)) {
-        columnList.matching(colSpec).map(_.id).toSeq
+      val cs = PathIdentifier.resolve(colSpec, columnBase.id)
+
+      if (PathIdentifier.isGlobPattern(cs)) {
+        columnList.matching(cs).map(_.id).toSeq
       } else {
         if (columnList.contains(cs)) Seq(cs) else sys.error(s"reference of unknown column $cs")
       }
@@ -85,7 +98,7 @@ class ConstraintFormulaParser (node: Node, funLib: CellFunctionLibrary) extends 
     val col = if (colPath == ".") {
       columnList(node.id)
     } else {
-      columnList.get( PathIdentifier.resolve(colPath, columnList.id)) match {
+      columnList.get( PathIdentifier.resolve(colPath, columnBase.id)) match {
         case Some(col) => col
         case None => sys.error(s"reference of unknown column $colPath")
       }
@@ -95,11 +108,32 @@ class ConstraintFormulaParser (node: Node, funLib: CellFunctionLibrary) extends 
   }
 }
 
+object ConstraintFormulaList {
+
+  val _level_     = asc("level")
+  val _mark_      = asc("mark")
+  val _constraints_ = asc("constraints")
+
+  val defaultLevel = 2
+
+  // this uses the same syntax as CellFormulaList specs but with different meaning - the base-column-spec can be a pattern that
+  // matches multiple columns, which causes replication of the formula for all matching columns. This enables a single definition
+  // that applies to each matching column.
+
+  // constraint formulas are not 1:1 associated with cells and hence do not have a mandatory single row id. Constraint formulas do have
+  // an id simple for identification. However, each formula spec can have a optional 'mark' spec that contains a glob pattern identifying
+  // cells (potentially across columns) that are associated with this formula. This does not necessarily have to be the set of dependencies
+
+  type ConstraintFormulaSpec = (String,String,Int,Option[String],Option[String])   // formula spec: (info, expr, level, [time-trigger], [mark-cells])
+  type FormulaSpec = (String, Seq[(String,ConstraintFormulaSpec)])  // (base-column-spec, {(formula-id, formula-spec)})
+}
+import ConstraintFormulaList._
+
 
 /**
   * a list of value and time triggered ConstraintFormulas that represent data model properties
   */
-class ConstraintFormulaList (val id: String, val info: String, val date: DateTime, val formulaSpecs: Seq[ConstraintFormulaSpec]) extends FormulaList {
+class ConstraintFormulaList (val id: String, val info: String, val date: DateTime, val formulaSpecs: Seq[FormulaSpec]) extends FormulaList {
 
   protected var valueTriggeredFormulas = Seq.empty[ConstraintFormula]
   protected var timeTriggeredFormulas = Seq.empty[ConstraintFormula]
@@ -108,17 +142,23 @@ class ConstraintFormulaList (val id: String, val info: String, val date: DateTim
     var vFormulas = ArrayBuffer.empty[ConstraintFormula]
     val tFormulas = ArrayBuffer.empty[ConstraintFormula]
 
-    formulaSpecs.foreach { fs =>
-      val cfId = fs._1
-      val cfInfo = fs._2
-      val (exprSrc, timerSpec) = fs._3
+    formulaSpecs.foreach { e =>
+      val colPattern = PathIdentifier.resolve(e._1,node.id)
+      val specs = e._2
 
-      ConstraintFormula.compile(cfId,cfInfo,exprSrc,node,funcLib) match {
-        case SuccessValue(cf) =>
-          ifSome(timerSpec){ cf.setTimer }
-          if (cf.hasTimeTrigger) tFormulas += cf else vFormulas += cf
+      node.columnList.matching(colPattern).foreach { baseCol=>
+        specs.foreach { fs=>
+          val (fidBase,(finfo,src,level,timeTrigger,mark)) = fs
+          val fid = s"${baseCol.id}::$fidBase"
 
-        case e@Failure(msg) => e // short circuit
+          ConstraintFormula.compile(baseCol,fid,finfo,src,level,mark,node,funcLib) match {
+            case SuccessValue(cf) =>
+              ifSome(timeTrigger){ cf.setTimer }
+              if (cf.hasTimeTrigger) tFormulas += cf else vFormulas += cf
+
+            case e@Failure(msg) => return e // short circuit
+          }
+        }
       }
     }
 
@@ -159,28 +199,32 @@ class ConstraintFormulaListParser extends FormulaListParser[ConstraintFormulaLis
 
     try {
       readNextObject {
-        val id = readQuotedMember(_id_).toString  // list id
+        val id = readQuotedMember(_id_).toString  // for the formula list
         val info = readQuotedMember(_info_).toString
         val date = readDateTimeMember(_date_)
 
-        val formulaSpecs = readNextArrayMemberInto(_constraints_, ArrayBuffer.empty[ConstraintFormulaSpec]) {
-          readNextObject[ConstraintFormulaSpec] {
-            val formulaId = readQuotedMember(_id_).toString
+        val formulaSpecs = readNextObjectMemberInto(_constraints_, ArrayBuffer.empty[FormulaSpec]) {
+          val colSpec = readObjectMemberName().toString  // can be a pattern (expanded during compilation)
+          val formulas = readCurrentObjectInto(ArrayBuffer.empty[(String,ConstraintFormulaSpec)]) {
+            val formulaId = readObjectMemberName().toString // can be a pattern (expanded during compilation)
             val formulaInfo = readQuotedMember(_info_).toString
-            val exprSrc = readQuotedMember(_src_).toString
+            val formulaSrc = readQuotedMember(_src_).toString
+            val level = readUnQuotedMember(_level_).toInt
             val triggerSrc = readOptionalQuotedMember(_trigger_).map(_.toString)
+            val mark = readOptionalQuotedMember(_mark_).map(_.toString)
 
-            (formulaId, formulaInfo, (exprSrc, triggerSrc))
-          }
-
+            skipPastAggregate()
+            (formulaId,(formulaInfo,formulaSrc,level,triggerSrc,mark))
+          }.toSeq
+          (colSpec,formulas)
         }.toSeq
 
-        Some(new ConstraintFormulaList(id, info, date, formulaSpecs))
+        Some( new ConstraintFormulaList(id,info,date, formulaSpecs))
       }
     } catch {
       case x: JsonParseException =>
         x.printStackTrace()
-        warning(s"malformed constraint list: ${x.getMessage}")
+        warning(s"malformed constraint formula list: ${x.getMessage}")
         None
     }
   }

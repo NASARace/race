@@ -24,7 +24,7 @@ import org.scalatest.flatspec.AnyFlatSpec
 
 class ConstraintFormulaListSpec extends AnyFlatSpec with RaceSpec with NodeDependentTest {
 
-  val nodeId = "provider_2"
+  val nodeId = "/providers/region1/provider_2"
   val dataDir = "race-net-http-test/src/resources/sites/tabdata/data/provider_2"
 
   "a ConstraintFormulaListParser" should "parse a known source" in {
@@ -57,7 +57,7 @@ class ConstraintFormulaListSpec extends AnyFlatSpec with RaceSpec with NodeDepen
 
         val date = DateTime.now
         val ctx = new BasicEvalContext( node, date)
-        val cv = IntegerCellValue(11,date)
+        val cv = IntegerCellValue(42,date)
         val cid = "/providers/region1/provider_2"
         val rid = "/data/cat_A/field_1"
 
@@ -68,8 +68,7 @@ class ConstraintFormulaListSpec extends AnyFlatSpec with RaceSpec with NodeDepen
 
         var constraintVerified = false
         cfl.evaluateValueTriggeredFormulas(ctx){ (f,res)=>
-          assert(f.id == "field_1-range")
-          println(s"value of $rid should be within range for '${f.src}'")
+          println(s"evaluating ${f.id} (${f.info}) -> $res")
           assert(res == true)
           constraintVerified = true
         }

@@ -9,20 +9,22 @@
 
     <body onload="main.init();" onresize="main.setWidth();" ununload="main.shutdown();">
 
-        <div class="titlebar">
-            <div>
-                <label class="title-label">Node:</label>
-                <span id="siteId" class="title-text">?</span>
+        <p>
+            <div class="titlebar">
+                <div class="input-group">
+                    <label class="input-label" for="siteId">site:</label>
+                    <input class="input-text" type="text" id="siteId" readonly/>
+                </div>
+                <div class="input-group">
+                    <label class="input-label" for="columnListId">columns:</label>
+                    <input class="input-text" type="text" id="columnListId" readonly/>
+                </div>
+                <div class="input-group">
+                    <label class="input-label" for="rowListId">rows:</label>
+                    <input class="input-text" type="text" id="rowListId" readonly/>
+                </div>
             </div>
-            <div>
-                <label class="title-label">Columns:</label>
-                <span id="sourceTitle" class="title-text">?</span>
-            </div>
-            <div>
-                <label class="title-label">Data Set:</label>
-                <span id="datasetTitle" class="title-text">?</span>
-            </div>
-        </div>
+        </p>
 
         <div id="editTools" class="toolbar">
             <div class="input-group">

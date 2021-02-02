@@ -96,6 +96,11 @@ export function swapClass (element, oldCls, newCls) {
   element.classList.add(newCls);
 }
 
+export function setAndFitToText (textInputElement, text, minLength) {
+  var len = text.length;
+  textInputElement.value = text;
+  if (len > minLength) textInputElement.style["width"] = `${len}rem`;
+}
 
 //--- page content but not data related - used by other app modules
 

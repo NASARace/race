@@ -794,6 +794,7 @@ function handleColumnDataChange (cdc) {
   }
 }
 
+
 // {columnData:{id:"s",rev:n,date:n,rows:[<rowId>:n]}
 function handleColumnData (columnData) {
   columnData.date = new Date(columnData.date) // convert epoch into Date object
@@ -811,12 +812,18 @@ function handleColumnData (columnData) {
   }
 }
 
+function handleSiteId (id) {
+  siteId = id;
+  utils.setAndFitToText( document.getElementById("siteId"), id, 7);
+}
+
 // {rowList:{rev:n,rows:[{id:"s",info:"s" <,header:"s">}..]}}
 function handleRowList (newRowList) {
   rowList = newRowList;
   rows = displayRows(filterRows());
 
-  document.getElementById("datasetTitle").textContent = `${rowList.id} : ${rowList.info}`
+  utils.setAndFitToText( document.getElementById("rowListId"), rowList.id, 7);
+
   if (hasColumns())  {
     initTable();
     setData();
@@ -828,7 +835,8 @@ function handleColumnList (newColumnList) {
   columnList = newColumnList;
   columns = filterColumns();
 
-  document.getElementById("sourceTitle").textContent = `${columnList.id} : ${columnList.info}`
+  utils.setAndFitToText( document.getElementById("columnListId"), columnList.id, 7);
+
   if (hasRows())  {
     initTable();
     setData();
@@ -845,11 +853,6 @@ function handleUserPermissions (usrPerm) {
   } else {
     utils.log(`reject edit mode for user ${uid}`);
   }
-}
-
-function handleSiteId (id) {
-  siteId = id;
-  document.getElementById("siteId").textContent = id;
 }
 
 function handlePing (ping) {
