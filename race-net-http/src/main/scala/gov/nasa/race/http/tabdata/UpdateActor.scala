@@ -268,7 +268,7 @@ class UpdateActor (val config: Config) extends SubscribingRaceActor with Publish
   }
 
   def reportConstraintViolation (cf: ConstraintFormula, res: Boolean): Unit = {
-    if (!res) println(s"violated constraint formula: $cf")
+    if (!res) println(s"violated constraint formula: ${cf.id}: ${cf.info}")
   }
 
   def evaluateValueTriggeredFormulas (cdc: ColumnDataChange): Unit = {

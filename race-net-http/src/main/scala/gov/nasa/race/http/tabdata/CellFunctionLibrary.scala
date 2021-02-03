@@ -29,7 +29,7 @@ class CellFunctionLibrary() {
     RealWithin,RealOutside,RealGt,RealLt,RealIf,
     AsInteger,AsReal,
     IntListCellPushN, IntListCellAvgInt, IntListCellAvgReal,
-    OlderThanHours,OlderThanMinutes,
+    OlderThanHours,OlderThanMinutes, NewerThanHours, NewerThanMinutes,
     Not,And,Or
   )
 
@@ -258,9 +258,22 @@ class OutdatedCheck (f: Long=>Time) extends CellFunction[Boolean] with Actuality
   }
 }
 
+class UpdatedCheck (f: Long=>Time) extends CellFunction[Boolean] with ActualityFunction with BoolCoDomain {
+  def eval (ctx: EvalContext, args: Seq[CellExpression[_]]): Boolean = {
+    val cv: CellValue[_] = args(0).asInstanceOf[CellRef[_]].evalToCellValue(ctx)
+    val maxAge: Time = f(args(1).asInstanceOf[IntegerExpression].eval(ctx))
+    val age: Time = DateTime.now.timeSince(cv.date)
+    age <= maxAge
+  }
+}
+
 object OlderThanMinutes extends OutdatedCheck (Time.Minutes)
 
+object NewerThanMinutes extends UpdatedCheck (Time.Minutes)
+
 object OlderThanHours extends OutdatedCheck (Time.Hours)
+
+object NewerThanHours extends UpdatedCheck (Time.Hours)
 
 
 //--- type conversion

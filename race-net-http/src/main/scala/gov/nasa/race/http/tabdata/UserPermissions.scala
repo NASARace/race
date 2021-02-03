@@ -16,11 +16,8 @@
  */
 package gov.nasa.race.http.tabdata
 
-import java.nio.file.Path
-
 import gov.nasa.race.common.ConstAsciiSlice.asc
-import gov.nasa.race.common.{JsonParseException, UTF8JsonPullParser, UnixPath}
-import gov.nasa.race.http.tabdata.UserPermissions.{PermSpec, Perms}
+import gov.nasa.race.common.{JsonParseException, UTF8JsonPullParser}
 import gov.nasa.race.uom.DateTime
 
 import scala.collection.mutable.ArrayBuffer
@@ -38,17 +35,20 @@ object UserPermissions {
   val _columnPattern_ = asc("columnPattern")
   val _rowPattern_ = asc("rowPattern")
 }
+import UserPermissions._
+
 
 /**
   * class to hold provider/field patterns for known users that specify which fields a user can edit
+  *
+  * TODO - maybe this should support multiple column/row lists by means of pattern specs
   */
-case class UserPermissions (id: Path, date: DateTime, columnListId: Path, rowListId: Path, users: immutable.Map[String,Perms])
+case class UserPermissions (id: String, date: DateTime, columnListId: String, rowListId: String, users: immutable.Map[String,Perms])
 
 /**
   * JSON parser for user permissions
   */
 class UserPermissionsParser extends UTF8JsonPullParser {
-  import UserPermissions._
 
   def parse (buf: Array[Byte]): Option[UserPermissions] = {
     initialize(buf)
@@ -56,11 +56,11 @@ class UserPermissionsParser extends UTF8JsonPullParser {
     try {
       ensureNextIsObjectStart()
 
-      val id = UnixPath.intern(readQuotedMember(_id_))
+      val id = readQuotedMember(_id_).intern
       val date = readDateTimeMember(_date_)
 
-      val columnListId = UnixPath.intern(readQuotedMember(_columnListId_))
-      val rowListId = UnixPath.intern(readQuotedMember(_rowListId_))
+      val columnListId = readQuotedMember(_columnListId_).intern
+      val rowListId = readQuotedMember(_rowListId_).intern
 
       val users = readNextObjectMemberInto[Perms,mutable.Map[String,Perms]](_users_,mutable.Map.empty){
         val user = readArrayMemberName().toString

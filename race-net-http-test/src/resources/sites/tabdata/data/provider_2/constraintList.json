@@ -6,8 +6,8 @@
   "constraints": {
     ".": {
       "local-cat_A/field_1-range": {
-        "info": "field_1 out of range [8..12]",
-        "src": "(IntOutside /data/cat_A/field_1 8 12)",
+        "info": "field_1 within [8..12]",
+        "src": "(IntWithin /data/cat_A/field_1 8 12)",
         "level": 3,
         "mark": "/data/cat_A/field_1"
       },
@@ -21,8 +21,8 @@
 
     "../*": {
       "cat_A/field_2-actuality": {
-        "info": "last field_2 update is older than 2min",
-        "src": "(OlderThanMinutes /data/cat_A/field_2 2)",
+        "info": "last field_2 update not older than 2min",
+        "src": "(NewerThanMinutes /data/cat_A/field_2 2)",
         "level": 2,
         "trigger": "<always>",
         "mark": "/data/cat_A/field_2"

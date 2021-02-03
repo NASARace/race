@@ -463,19 +463,19 @@ abstract class JsonPullParser extends LogWriter with Thrower {
 
   @inline final def readObjectMemberName(): Utf8Slice = {
     val res = readNext()
-    if (res != ObjectStart || member.isEmpty) throw exception("expected object member, got '${res.getClass.getSimpleName}'")
+    if (res != ObjectStart || member.isEmpty) throw exception(s"expected object member, got '${res.getClass.getSimpleName}'")
     member
   }
 
   @inline final def readArrayMemberName(): Utf8Slice = {
     val res = readNext()
-    if (res != ArrayStart || member.isEmpty) throw exception("expected array member, got '${res.getClass.getSimpleName}'")
+    if (res != ArrayStart || member.isEmpty) throw exception(s"expected array member, got '${res.getClass.getSimpleName}'")
     member
   }
   @inline final def readArrayMemberName(name: ByteSlice): Utf8Slice = {
     val res = readNext()
     if (member != name) throw exception(s"expected member '$name' got '$member'")
-    if (res != ArrayStart || member.isEmpty) throw exception("expected array member, got '${res.getClass.getSimpleName}'")
+    if (res != ArrayStart || member.isEmpty) throw exception(s"expected array member, got '${res.getClass.getSimpleName}'")
     member
   }
 

@@ -874,7 +874,7 @@ function sendRequestUserPermissions (uid,pw){
 
 function sendUserChange (uid,pw,changeDate,column,changedRows) {
   if (ws) {
-    var msg = `{"userChange":{"${uid}":[${utils.toUtf8Array(pw).join(',')}],"date":${changeDate},"columnListId":"${columnList.id}","rowListId":"${rowList.id}","nodeId":"${siteId}","${column.id}":{${changedRows}}}}`;
+    var msg = `{"userChange":{"${uid}":[${utils.toUtf8Array(pw).join(',')}],"date":${changeDate},"columnListId":"${columnList.id}","rowListId":"${rowList.id}","${column.id}":{${changedRows}}}}`;
     ws.send(msg);
     utils.log(`sent data changes for ${column.id}`);
   }

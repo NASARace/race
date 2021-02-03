@@ -47,6 +47,8 @@ object ConstraintFormula {
 
 /**
   * a CellFormula that is used to check cell value properties
+  *
+  * if a formula evaluates to false we report the property as violated
   */
 case class ConstraintFormula (id: String, info: String, src: String,  expr: BoolExpression, level: Int, assoc: Set[CellRef[_]]) extends CellFormula[Boolean] {
   def eval (ctx: EvalContext): Boolean = expr.eval(ctx)
@@ -156,7 +158,8 @@ class ConstraintFormulaList (val id: String, val info: String, val date: DateTim
               ifSome(timeTrigger){ cf.setTimer }
               if (cf.hasTimeTrigger) tFormulas += cf else vFormulas += cf
 
-            case e@Failure(msg) => return e // short circuit
+            case e@Failure(msg) =>
+              return e // short circuit
           }
         }
       }

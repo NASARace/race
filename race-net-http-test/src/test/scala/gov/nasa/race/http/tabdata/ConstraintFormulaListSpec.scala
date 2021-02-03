@@ -69,7 +69,7 @@ class ConstraintFormulaListSpec extends AnyFlatSpec with RaceSpec with NodeDepen
         var constraintVerified = false
         cfl.evaluateValueTriggeredFormulas(ctx){ (f,res)=>
           println(s"evaluating ${f.id} (${f.info}) -> $res")
-          assert(res == true)
+          assert(res == false)
           constraintVerified = true
         }
         assert(constraintVerified)
