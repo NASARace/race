@@ -35,8 +35,9 @@ import scala.collection.mutable
 case class Node (id: String,
                  upstreamId: Option[String],
                  columnList: ColumnList,
-                 rowList: RowList, // TODO - is this the union of column rowLists ?
-                 columnDatas: Map[String,ColumnData]
+                 rowList: RowList,
+                 columnDatas: Map[String,ColumnData],
+                 violatedConstraints: Set[ConstraintFormula] = Set.empty
                 ) {
 
   def isKnownColumn(id: String): Boolean = columnList.columns.contains(id) || (upstreamId.isDefined && upstreamId.get == id)
@@ -66,6 +67,29 @@ case class Node (id: String,
   def getEvalContext (date: DateTime = DateTime.UndefinedDateTime): EvalContext = new BasicEvalContext(id,rowList,date,columnDatas)
 
   def update (cd: ColumnData): Node = copy(columnDatas= columnDatas + (cd.id -> cd))
+
+  //--- tracking constraint violations
+
+  def hasConstraintViolations: Boolean = violatedConstraints.nonEmpty
+
+  def hasConstraintViolation (cf: ConstraintFormula): Boolean = violatedConstraints.contains(cf)
+
+  def getViolatedConstraints (colId: String, rowId: String): Seq[ConstraintFormula] = {
+    violatedConstraints.foldLeft(Seq.empty[ConstraintFormula]) { (acc,cf) =>
+      if (cf.assoc.exists( cr=> cr.colId == colId && cr.rowId == rowId)) cf +: acc else acc
+    }.sortWith( (a,b) => a.level > b.level)
+  }
+
+  def setConstraintViolation (cf: ConstraintFormula): Node = {
+    if (violatedConstraints.contains(cf)) this else copy(violatedConstraints= violatedConstraints + cf)
+  }
+
+  def resetConstraintViolation (cf: ConstraintFormula): Node = {
+    if (violatedConstraints.contains(cf)) copy(violatedConstraints= violatedConstraints - cf) else this
+  }
+
+  def foreachConstraintViolation (action: ConstraintFormula=>Unit): Unit = violatedConstraints.foreach(action)
+
 
   //--- debugging
   def printColumnData(): Unit = {

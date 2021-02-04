@@ -58,7 +58,7 @@ basic types:
   - formulas (level)
   - functionLibrary
 
-  - Node (id + lists)
+  - Node (id + lists + data + violated constraints)
 
 Column and Row Ids are (java.nio.file) Paths, which are potentially resolved through column/rowList Ids
 in case they are relative. Reason for path keys (global addressing scheme) is that different row/colLists 
@@ -87,6 +87,8 @@ Update Semantics
     or evaluation triggers (time)
   - publishing controlled by local sender config
   - acceptance of changes depends on local receiver config
+  - if update/change events are reflected in the current node instance the new node has to be published first
+    (current node should always show updates/changes in case the recipient needs to create summaries on demand)
 
 
 CDC date is used to set high watermark, to detect races (t-cdc < t-last)

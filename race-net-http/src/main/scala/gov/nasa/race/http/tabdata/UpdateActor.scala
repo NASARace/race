@@ -28,6 +28,7 @@ import gov.nasa.race.{Failure, Success, ifSome}
 
 import java.io.File
 import scala.collection.mutable
+import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.duration.{DurationInt, FiniteDuration}
 import scala.language.existentials
 
@@ -43,6 +44,10 @@ class UpdateActor (val config: Config) extends SubscribingRaceActor with Publish
 
   val cvFormulaList: Option[CellValueFormulaList] = readCellValueFormulaList(node,funcLib)
   val constraintFormulaList: Option[ConstraintFormulaList] = readConstraintFormulaList(node,funcLib)
+
+  //--- to accumulate constraint changes due to value or time triggered data changes
+  val newViolations = ArrayBuffer.empty[ConstraintFormula]
+  val newResolved = ArrayBuffer.empty[ConstraintFormula]
 
   val ctx: BasicEvalContext = new BasicEvalContext(node.id, node.rowList, DateTime.UndefinedDateTime, node.columnDatas) // this is a mutable object
 
@@ -189,6 +194,13 @@ class UpdateActor (val config: Config) extends SubscribingRaceActor with Publish
 
   def updateAndPublishOwnChange (colId: String, cvs: Seq[CellPair]): Unit = updateAndPublish(colId,node.id,cvs)
 
+  def publishConstraintChange(): Unit = {
+    if (newViolations.nonEmpty || newResolved.nonEmpty) {
+      publish(node) // current violations are stored in the node, publish this first to ensure it is always consistent with change messages
+      publish( ConstraintChange( currentSimTime, newViolations.toSeq, newResolved.toSeq))
+    }
+  }
+
   //--- mutation
 
   /**
@@ -240,9 +252,14 @@ class UpdateActor (val config: Config) extends SubscribingRaceActor with Publish
     ctx.columnDatas = node.columnDatas
     ctx.clearChanges()
 
+    newViolations.clear()
+    newResolved.clear()
+
     if (setChangedColumnData(cdc)) {
       evaluateValueTriggeredFormulas(cdc)
       //checkCellValueConstraints
+
+      publishConstraintChange()
     }
   }
 
@@ -267,8 +284,20 @@ class UpdateActor (val config: Config) extends SubscribingRaceActor with Publish
     }
   }
 
-  def reportConstraintViolation (cf: ConstraintFormula, res: Boolean): Unit = {
-    if (!res) println(s"violated constraint formula: ${cf.id}: ${cf.info}")
+  def processConstraintEval(cf: ConstraintFormula, date: DateTime, isSatisfied: Boolean): Unit = {
+    val wasViolated = node.hasConstraintViolation(cf)
+    
+    if (isSatisfied == wasViolated) { // means we have a change
+      if (!isSatisfied) {
+        info(s"new constraint violation: ${cf.id}: ${cf.info}")
+        newViolations += cf
+        node = node.setConstraintViolation(cf)
+      } else {
+        info(s"resolved constraint violation: ${cf.id}: ${cf.info}")
+        newResolved += cf
+        node = node.resetConstraintViolation(cf)
+      }
+    }
   }
 
   def evaluateValueTriggeredFormulas (cdc: ColumnDataChange): Unit = {
@@ -278,7 +307,7 @@ class UpdateActor (val config: Config) extends SubscribingRaceActor with Publish
 
       if (ctx.hasChanges) {
         ifSome(constraintFormulaList) { cfl=>
-          cfl.evaluateValueTriggeredFormulas(ctx)(reportConstraintViolation)
+          cfl.evaluateValueTriggeredFormulas(ctx)(processConstraintEval)
         }
       }
     }
@@ -291,17 +320,19 @@ class UpdateActor (val config: Config) extends SubscribingRaceActor with Publish
     ctx.evalDate = updatedSimTime
     ctx.clearChanges()
 
+    newViolations.clear()
+    newResolved.clear()
+
     ifSome(cvFormulaList) { fl=>
       fl.evaluateTimeTriggeredFormulas(ctx)(updateAndPublishOwnChange)
 
       if (ctx.hasChanges) {
         fl.evaluateValueTriggeredFormulas(ctx)(updateAndPublishOwnChange)
-        ifSome(constraintFormulaList) { cfl=> cfl.evaluateValueTriggeredFormulas(ctx)(reportConstraintViolation) }
+        ifSome(constraintFormulaList) { _.evaluateValueTriggeredFormulas(ctx)(processConstraintEval) }
       }
     }
 
-    ifSome(constraintFormulaList) { fl =>
-      fl.evaluateTimeTriggeredFormulas(ctx)(reportConstraintViolation)
-    }
+    ifSome(constraintFormulaList) { _.evaluateTimeTriggeredFormulas(ctx)(processConstraintEval) }
+    publishConstraintChange()
   }
 }

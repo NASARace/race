@@ -16,6 +16,8 @@
  */
 package gov.nasa.race.http.tabdata
 
+import gov.nasa.race.common.{JsonSerializable, JsonWriter}
+
 import scala.reflect.{ClassTag, classTag}
 
 /**

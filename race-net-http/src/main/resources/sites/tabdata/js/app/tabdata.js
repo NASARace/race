@@ -18,6 +18,7 @@ var columns = [];         // columnList.columns to display
 
 var data = {};              // { <columnId>: {id:"s",rev:n,date:Date,rows:{<rowId>:n,...} } }
 
+var isConnected = false;
 var inEditMode = false; var modifiedRows = new Set();
 
 var ws = {}; // will be set by initWebSocket()
@@ -714,12 +715,15 @@ export function clickRow (i) {
 //--- incoming messages
 
 function handleWsOpen (evt) {
+  isConnected = true;
   var status = document.getElementById("status");
   status.classList.add("ok");
   status.value = "connected";
+  reconnectAttempt = 1;
 }
 
 function handleWsClose (evt) {
+  isConnected = false;
   var status = document.getElementById("status");
   utils.swapClass(status,"ok","alert");
   status.value = "disconnected";
@@ -731,30 +735,32 @@ var maxReconnectAttempts = 15;
 var reconnectAttempt = 1;
 
 function checkForReconnect () {
-  if (reconnectAttempt >= maxReconnectAttempts) {
-    document.getElementById("status").value = "no server";
-    return;
-  } else {
-    document.getElementById("status").value = "server check " + reconnectAttempt;
-    reconnectAttempt += 1;
-  }
-
-  const req = new XMLHttpRequest();
-  const url = utils.parentOfPath(document.URL);
-  req.open("GET", url);
-  req.send();
-
-  //req.onerror = (e) => {
-  //  console.log("server unresponsive: " + JSON.stringify(e));
-  //}
-  console.log("trying to reconnect.. " + reconnectAttempt);
-
-  req.onreadystatechange = (e) => {
-    if (req.status == 200) {
-      console.log("reconnected - reloading document");
-      location.reload();
+  if (!isConnected) {
+    if (reconnectAttempt >= maxReconnectAttempts) {
+      document.getElementById("status").value = "no server";
+      return;
     } else {
-      setTimeout(checkForReconnect, 5000);
+      document.getElementById("status").value = "server check " + reconnectAttempt;
+      reconnectAttempt += 1;
+    }
+
+    const req = new XMLHttpRequest();
+    const url = utils.parentOfPath(document.URL);
+    req.open("GET", url);
+    req.send();
+
+    //req.onerror = (e) => {
+    //  console.log("server unresponsive: " + JSON.stringify(e));
+    //}
+    console.log("trying to reconnect.. " + reconnectAttempt);
+
+    req.onreadystatechange = (e) => {
+      if (req.status == 200) {
+        console.log("reconnected - reloading document");
+        location.reload();
+      } else {
+        setTimeout(checkForReconnect, 5000);
+      }
     }
   }
 }
@@ -771,6 +777,8 @@ function handleWsMessage(msg) {
   else if (msgType == "columnList") handleColumnList( msg.columnList);
   else if (msgType == "userPermissions") handleUserPermissions( msg.userPermissions);
   else if (msgType == "siteId")  handleSiteId( msg.siteId);
+  else if (msgType == "constraintChange") handleConstraintChange(msg.constraintChange);
+  else if (msgType == "constraintViolations") handleConstraintViolations(msg.constraintViolations);
   else if (msgType == "ping") handlePing( msg.ping);
   else utils.log(`ignoring unknown message type ${msgType}`);
 };
@@ -794,6 +802,13 @@ function handleColumnDataChange (cdc) {
   }
 }
 
+function handleConstraintChange (cc) {
+  console.log(JSON.stringify(cc));
+}
+
+function handleConstraintViolations (cvs) {
+  console.log(JSON.stringify(cvs));
+}
 
 // {columnData:{id:"s",rev:n,date:n,rows:[<rowId>:n]}
 function handleColumnData (columnData) {

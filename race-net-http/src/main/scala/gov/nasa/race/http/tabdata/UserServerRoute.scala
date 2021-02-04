@@ -17,22 +17,21 @@
 
 package gov.nasa.race.http.tabdata
 
-import java.net.InetSocketAddress
-import java.nio.file.Path
 import akka.http.scaladsl.model.ws.{Message, TextMessage}
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.{PathMatchers, Route}
 import akka.stream.scaladsl.SourceQueueWithComplete
 import com.typesafe.config.Config
 import gov.nasa.race.common.ConstAsciiSlice.asc
-import gov.nasa.race.common.{BufferedStringJsonPullParser, JsonWriter, PathIdentifier, UnixPath}
+import gov.nasa.race.common.{BufferedStringJsonPullParser, JsonWriter, PathIdentifier}
 import gov.nasa.race.config.ConfigUtils._
-import gov.nasa.race.core.{DataClientRaceActor, PROVIDER_CHANNEL, ParentActor, Ping, Pong, PongParser, RaceDataClient, RaceException}
+import gov.nasa.race.core.{ParentActor, Ping, Pong, PongParser, RaceDataClient}
 import gov.nasa.race.http.tabdata.UserPermissions.{PermSpec, Perms}
-import gov.nasa.race.http.{MonitoredPushWSRaceRoute, PushWSRaceRoute, SiteRoute}
-import gov.nasa.race.{ifSome, withSomeOrElse}
+import gov.nasa.race.http.{PushWSRaceRoute, SiteRoute}
 import gov.nasa.race.uom.DateTime
+import gov.nasa.race.{ifSome, withSomeOrElse}
 
+import java.net.InetSocketAddress
 import scala.collection.immutable.Iterable
 import scala.collection.mutable.{ArrayBuffer, Map => MutMap}
 
@@ -126,6 +125,7 @@ class UserServerRoute (parent: ParentActor, config: Config) extends SiteRoute(pa
   var columnListMessage: Option[TextMessage] = None
   var siteIdMessage: Option[TextMessage] = None
   val columnDataMessages = MutMap.empty[String,TextMessage]
+  var constraintMessage: Option[TextMessage] = None
 
   val userPermissions: Option[UserPermissions] = readUserPermissions
 
@@ -166,6 +166,7 @@ class UserServerRoute (parent: ParentActor, config: Config) extends SiteRoute(pa
     data match {
       case n: Node =>  // this is for our internal purposes
         node = Some(n)
+        constraintMessage = generateConstraintMessage(n)
 
         if (!parser.isDefined) { // one time initialization
           parser = createIncomingMessageParser
@@ -183,9 +184,7 @@ class UserServerRoute (parent: ParentActor, config: Config) extends SiteRoute(pa
         // we should already have gotten the respective Node message
         ifSome(node) { n=>
           val msg = TextMessage(writer.toJson(cdc))
-          if (hasConnections) {
-            push(msg)
-          }
+          if (hasConnections) push(msg)
 
           /*
           n.columnDatas.get(cdc.columnId) match {
@@ -202,8 +201,25 @@ class UserServerRoute (parent: ParentActor, config: Config) extends SiteRoute(pa
            */
         }
 
+      case cc: ConstraintChange =>
+        ifSome(node) { n=>
+          val msg = TextMessage(writer.toJson(cc))
+          if (hasConnections) push(msg)
+        }
+
       case other => // ignore other messages
     }
+  }
+
+  def generateConstraintMessage (n: Node): Option[TextMessage] = {
+    if (n.hasConstraintViolations) {
+      val msg = writer.clear().writeObject { _
+        .writeMemberObject("violatedConstraints") { w=>
+          n.foreachConstraintViolation( _.serializeAsMemberObjectTo(w) )
+        }
+      }.toJson
+      Some(TextMessage(msg))
+    } else None
   }
 
   protected def isAcceptChange(cdc: ColumnDataChange): Boolean = {
@@ -279,6 +295,7 @@ class UserServerRoute (parent: ParentActor, config: Config) extends SiteRoute(pa
     rowListMessage.foreach( pushTo(remoteAddr, queue ,_))
     columnListMessage.foreach( pushTo(remoteAddr, queue, _))
     columnDataMessages.foreach(e=> pushTo(remoteAddr, queue, e._2))
+    constraintMessage.foreach( pushTo(remoteAddr, queue, _))
   }
 
 }

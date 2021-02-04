@@ -16,7 +16,7 @@
  */
 package gov.nasa.race.http.tabdata
 
-import gov.nasa.race.common.{JsonParseException, PathIdentifier, UTF8JsonPullParser}
+import gov.nasa.race.common.{JsonParseException, JsonWriter, PathIdentifier}
 import gov.nasa.race.uom.DateTime
 import FormulaList._
 import gov.nasa.race.common.ConstAsciiSlice.asc
@@ -43,6 +43,15 @@ object ConstraintFormula {
       } else Failure("constraint not a boolean cell formula")
     }
   }
+
+  //--- lexical constants
+  val _info_ = asc("info")
+  val _level_ = asc("level")
+  val _date_ = asc("date")
+  val _value_ = asc("value")
+  val _cells_ = asc("cells")
+  val _col_ = asc("col")
+  val _row_ = asc("row")
 }
 
 /**
@@ -52,6 +61,21 @@ object ConstraintFormula {
   */
 case class ConstraintFormula (id: String, info: String, src: String,  expr: BoolExpression, level: Int, assoc: Set[CellRef[_]]) extends CellFormula[Boolean] {
   def eval (ctx: EvalContext): Boolean = expr.eval(ctx)
+
+  def serializeAsMemberObjectTo (w: JsonWriter): Unit = {
+    w.writeMemberObject(id) { _
+      .writeStringMember(ConstraintFormula._info_, info)
+      .writeIntMember(ConstraintFormula._level_, level)
+      .writeArrayMember(ConstraintFormula._cells_) { w=>
+        assoc.foreach { cr=>
+          w.writeObject { _
+            .writeStringMember(ConstraintFormula._col_, cr.colId)
+            .writeStringMember(ConstraintFormula._row_, cr.rowId)
+          }
+        }
+      }
+    }
+  }
 }
 
 /**
@@ -171,15 +195,15 @@ class ConstraintFormulaList (val id: String, val info: String, val date: DateTim
     Success
   }
 
-  def evaluateValueTriggeredFormulas (ctx: EvalContext)(action: (ConstraintFormula,Boolean)=>Unit): Unit = {
+  def evaluateValueTriggeredFormulas (ctx: EvalContext)(action: (ConstraintFormula,DateTime,Boolean)=>Unit): Unit = {
     valueTriggeredFormulas.foreach { cf=>
-      if (cf.canEvaluateIn(ctx) && cf.hasUpdatedDependencies(ctx)) action(cf,cf.eval(ctx))
+      if (cf.canEvaluateIn(ctx) && cf.hasUpdatedDependencies(ctx)) action(cf, ctx.evalDate, cf.eval(ctx))
     }
   }
 
-  def evaluateTimeTriggeredFormulas (ctx: EvalContext)(action: (ConstraintFormula,Boolean)=>Unit): Unit = {
+  def evaluateTimeTriggeredFormulas (ctx: EvalContext)(action: (ConstraintFormula,DateTime,Boolean)=>Unit): Unit = {
     timeTriggeredFormulas.foreach { cf=>
-      if (cf.canEvaluateIn(ctx) && cf.isTriggeredAt(ctx.evalDate)) action(cf,cf.eval(ctx))
+      if (cf.canEvaluateIn(ctx) && cf.isTriggeredAt(ctx.evalDate)) action(cf, ctx.evalDate, cf.eval(ctx))
     }
   }
 
