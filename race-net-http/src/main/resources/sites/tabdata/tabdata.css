@@ -94,6 +94,7 @@ td, th {
 
 td {
   font-family: monospace;
+  font-weight:normal;
   position: relative;
   border-right: 1px solid lightgray;
   border-bottom: 1px solid lightgray;
@@ -118,6 +119,19 @@ tbody td.local {
 
 tbody th.local.selected, td.local.selected {
   background-color: rgba(0,240,140, 0.4);
+}
+
+tbody td.constraintLevel_1 {
+  color: rgb(219, 88, 0);
+  font-weight: normal;
+}
+tbody td.constraintLevel_2 {
+  color: rgb(214, 0, 0);
+  font-weight: bold;
+}
+tbody td.constraintLevel_3 {
+  color: rgb(255, 0, 0);
+  font-weight: bolder;
 }
 
 thead th {
@@ -280,7 +294,7 @@ div#logContainer {
   padding: 3px 0.9rem 3px 3px;  /* to account for scroll bar width - scrollbar is only inside div for firefox and safari */
   width: 40rem;
   min-height: 4rem;
-  /* max-height: 4rem; */
+  max-height: 20rem;
   margin: 1rem 0 0 0;
   position: relative;
   overflow: auto;
@@ -384,4 +398,7 @@ input.cell.reported {
   color: green;
 }
 
+input.id {
+  min-width: 20rem;
+}
 

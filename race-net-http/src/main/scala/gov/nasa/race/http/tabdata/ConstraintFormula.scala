@@ -45,6 +45,7 @@ object ConstraintFormula {
   }
 
   //--- lexical constants
+  val _id_ = asc("id")
   val _info_ = asc("info")
   val _level_ = asc("level")
   val _date_ = asc("date")
@@ -63,14 +64,17 @@ case class ConstraintFormula (id: String, info: String, src: String,  expr: Bool
   def eval (ctx: EvalContext): Boolean = expr.eval(ctx)
 
   def serializeAsMemberObjectTo (w: JsonWriter): Unit = {
-    w.writeMemberObject(id) { _
-      .writeStringMember(ConstraintFormula._info_, info)
-      .writeIntMember(ConstraintFormula._level_, level)
-      .writeArrayMember(ConstraintFormula._cells_) { w=>
-        assoc.foreach { cr=>
-          w.writeObject { _
-            .writeStringMember(ConstraintFormula._col_, cr.colId)
-            .writeStringMember(ConstraintFormula._row_, cr.rowId)
+    w.writeMemberObject(id) { w=>
+      w.writeStringMember(ConstraintFormula._info_, info)
+      w.writeIntMember(ConstraintFormula._level_, level)
+
+      if (assoc.nonEmpty) {
+        w.writeArrayMember(ConstraintFormula._cells_) { w =>
+          assoc.foreach { cr =>
+            w.writeObject { _
+              .writeStringMember(ConstraintFormula._col_, cr.colId)
+              .writeStringMember(ConstraintFormula._row_, cr.rowId)
+            }
           }
         }
       }

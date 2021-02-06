@@ -286,7 +286,7 @@ class UpdateActor (val config: Config) extends SubscribingRaceActor with Publish
 
   def processConstraintEval(cf: ConstraintFormula, date: DateTime, isSatisfied: Boolean): Unit = {
     val wasViolated = node.hasConstraintViolation(cf)
-    
+
     if (isSatisfied == wasViolated) { // means we have a change
       if (!isSatisfied) {
         info(s"new constraint violation: ${cf.id}: ${cf.info}")

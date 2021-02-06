@@ -18,6 +18,9 @@ var columns = [];         // columnList.columns to display
 
 var data = {};              // { <columnId>: {id:"s",rev:n,date:Date,rows:{<rowId>:n,...} } }
 
+var violatedConstraints = {}; // map of all current constraint violations: id -> cInfo
+var cellConstraints = new WeakMap();  // assoc map of violated constraints associated with a cell: cell -> cInfo
+
 var isConnected = false;
 var inEditMode = false; var modifiedRows = new Set();
 
@@ -144,11 +147,11 @@ export function setFilters () {
 }
 
 export function clearFilters () {
-  columns = columnList.columns;
   document.getElementById("columnFilter").value = "";
-
-  rows = displayRows(rowList.rows);
   document.getElementById("rowFilter").value = "";
+
+  columns = columnList.columns;
+  rows = displayRows(filterRows());
 
   initTable();
   setData();
@@ -369,14 +372,19 @@ function initRow (row, idx) {
   var rowLabel = row.label;
   if (row.isCollapsed) rowLabel += " …";
   cell.textContent = rowLabel;
-
+  
   tr.appendChild(cell);
 
+  var colIdx = 0;
   for (var p of columns){
     // no data yet, will be set when we get a columnData message
-    cell = document.createElement('td');
+    var cell = document.createElement('td');
+    cellConstraints.set( cell, []);  // our own property to keep track of associated constraints that are violated
+    cell.setAttribute("onclick", `main.clickCell(event,${colIdx},${idx})`);
+
     if (isSiteColumn(p)) cell.classList.add("local");
     tr.appendChild(cell);
+    colIdx += 1;
   }
   return tr;
 }
@@ -454,6 +462,33 @@ function setInactiveChecks (action,maxIdleMillis = 150000) {
   }
 }
 
+function setCellConstraint (cr, cInfo, isAdd) {
+  var tbody = document.getElementById('table_body');
+  var colId = cr.col;
+  var rowId = cr.row;
+  var level = cInfo.level;
+
+  var colIdx = columnIndex(colId)+1;
+  if (colIdx >= 1) {
+    var rowIdx = rowIndex(rowId);
+    if (rowIdx >= 0) {
+      var tr = tbody.childNodes[rowIdx];
+      var cell = tr.childNodes[colIdx];
+      var constraintCls = "constraintLevel_" + level;
+      var ccs = cellConstraints.get(cell);
+      
+      if (isAdd) {
+        cell.classList.add(constraintCls);
+        ccs.push(cInfo);
+      } else {
+        cell.classList.remove(constraintCls);
+        var idx = ccs.findIndex( (ci) => ci.id == cInfo.id );
+        if (idx >= 0) ccs.splice(idx,1);
+      }
+    }
+  }
+}
+
 function setData() {
   if (columns.length > 0 && rows.length > 0) {
     for (var i=0; i<columns.length; i++){
@@ -474,7 +509,7 @@ function setCell (cell, row, values) {
     input.classList.remove("reported");
     input.value = editValue(row,values[row.id]);
 
-  } else { // just a display cell but flag values outside range
+  } else { // just a display cell
     cell.textContent = displayValue( row, rowList.rows, values);
   }
 }
@@ -534,9 +569,16 @@ function editValue (row, cv) {
   return JSON.stringify(cv.value);
 }
 
-function columnIndex (columnName) {
+function columnIndex (colId) {
   for (var i=0; i<columns.length; i++){
-    if (columns[i].id == columnName) return i;
+    if (columns[i].id == colId) return i;
+  }
+  return -1;
+}
+
+function rowIndex (rowId) {
+  for (var i=0; i<rows.length; i++) {
+    if (rows[i].id == rowId) return i;
   }
   return -1;
 }
@@ -711,6 +753,30 @@ export function clickRow (i) {
   }
 }
 
+function displayConstraints (ccs) {
+  var msg = "";
+  if (ccs && ccs.length > 0) {
+    msg = "violated:"
+    for (var i=0; i < ccs.length; i++) {
+      if (i > 0) msg += ",";
+      msg += ccs[i].info;
+    }
+  }
+
+  return msg;
+}
+
+function displayCell (col,row) {
+  return `${utils.nameOfPath(col.id)}::${row.id}`;
+}
+
+export function clickCell (event, colIdx, rowIdx) {
+  var v = event.target.textContent;
+  var cr = displayCell(columns[colIdx], rows[rowIdx]);
+  var cs = displayConstraints(cellConstraints.get(event.target));
+
+  utils.info( ` [${cr}] = ${v} ${cs}`);
+}
 
 //--- incoming messages
 
@@ -737,6 +803,7 @@ var reconnectAttempt = 1;
 function checkForReconnect () {
   if (!isConnected) {
     if (reconnectAttempt >= maxReconnectAttempts) {
+      console.log("giving up, no server");
       document.getElementById("status").value = "no server";
       return;
     } else {
@@ -802,12 +869,42 @@ function handleColumnDataChange (cdc) {
   }
 }
 
-function handleConstraintChange (cc) {
-  console.log(JSON.stringify(cc));
+function handleConstraintChange (cc) {  
+  if (cc.hasOwnProperty("resolved")) {
+    var resolved = cc.resolved;
+    for (var id in resolved) {
+      var cInfo = resolved[id];
+      cInfo.id = id;
+      if (cInfo.hasOwnProperty("cells")) {
+        cInfo.cells.forEach(  (cr) => setCellConstraint( cr, cInfo, false) );
+      }
+      delete violatedConstraints[id];
+      utils.log("resolved: " + cInfo.id);
+    }
+  }
+
+  if (cc.hasOwnProperty("violated")) {
+    var violated = cc.violated;
+    for (var id in violated) {
+      var cInfo = violated[id];
+      cInfo.id = id; // add the id for reverse lookup
+      if (cInfo.hasOwnProperty("cells")) {
+        cInfo.cells.forEach(  (cr) => setCellConstraint( cr, cInfo, true) );
+      }
+      violatedConstraints[id] = cInfo;
+      utils.log("violated: " + cInfo.id);
+    }
+  }
 }
 
 function handleConstraintViolations (cvs) {
-  console.log(JSON.stringify(cvs));
+  //console.log(JSON.stringify(cvs));
+  for (const prop in cvs) {
+    if (cvs.hasOwnProperty(prop)){
+      cvs[prop].id = prop;
+    }
+  }
+  violatedConstraints = cvs;
 }
 
 // {columnData:{id:"s",rev:n,date:n,rows:[<rowId>:n]}
@@ -829,7 +926,8 @@ function handleColumnData (columnData) {
 
 function handleSiteId (id) {
   siteId = id;
-  utils.setAndFitToText( document.getElementById("siteId"), id, 7);
+  document.getElementById("siteId").value = id;
+  //utils.setAndFitToText( document.getElementById("siteId"), id, 7);
 }
 
 // {rowList:{rev:n,rows:[{id:"s",info:"s" <,header:"s">}..]}}
@@ -837,7 +935,8 @@ function handleRowList (newRowList) {
   rowList = newRowList;
   rows = displayRows(filterRows());
 
-  utils.setAndFitToText( document.getElementById("rowListId"), rowList.id, 7);
+  document.getElementById("rowListId").value = rowList.id;
+  //utils.setAndFitToText( document.getElementById("rowListId"), rowList.id, 7);
 
   if (hasColumns())  {
     initTable();
@@ -850,7 +949,8 @@ function handleColumnList (newColumnList) {
   columnList = newColumnList;
   columns = filterColumns();
 
-  utils.setAndFitToText( document.getElementById("columnListId"), columnList.id, 7);
+  document.getElementById("columnListId").value = columnList.id
+  //utils.setAndFitToText( document.getElementById("columnListId"), columnList.id, 7);
 
   if (hasRows())  {
     initTable();
@@ -914,6 +1014,11 @@ export function setRowModified(event) {
     input.classList.add("modified");
 
     modifiedRows.add(input);
+  }
+
+  if (event.keyCode == 13) {
+    sendChanges();
+    if (event.getModifierState("Control")) setReadOnly();
   }
 }
 

@@ -89,6 +89,9 @@ main.setRowBlurred = function setRowBlurred(event) {
   tabdata.setRowBlurred(event);
 }
 
+main.clickCell = function clickCell (event,colIdx,rowIdx) {
+  tabdata.clickCell(event,colIdx,rowIdx);
+}
 
 window.main = main; // make it global so that we can reference from HTML
 

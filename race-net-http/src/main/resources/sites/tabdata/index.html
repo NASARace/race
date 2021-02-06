@@ -13,15 +13,15 @@
             <div class="titlebar">
                 <div class="input-group">
                     <label class="input-label" for="siteId">site:</label>
-                    <input class="input-text" type="text" id="siteId" readonly/>
+                    <input class="input-text id" type="text" id="siteId" readonly/>
                 </div>
                 <div class="input-group">
                     <label class="input-label" for="columnListId">columns:</label>
-                    <input class="input-text" type="text" id="columnListId" readonly/>
+                    <input class="input-text id" type="text" id="columnListId" readonly/>
                 </div>
                 <div class="input-group">
                     <label class="input-label" for="rowListId">rows:</label>
-                    <input class="input-text" type="text" id="rowListId" readonly/>
+                    <input class="input-text id" type="text" id="rowListId" readonly/>
                 </div>
             </div>
         </p>
@@ -37,7 +37,7 @@
             </div>
             <!-- will be enabled once we have editable rows that were changed by user -->
             <input type="button" id="editButton" class="button" value="edit" onclick="main.setEditable();"/>
-            <input type="button" id="sendButton" class="button" value="save" onclick="main.sendChanges();" disabled/>
+            <input type="button" id="sendButton" class="button" value="publish" onclick="main.sendChanges();" disabled/>
             <input type="button" id="readOnlyButton" class="button" value="endEdit" onclick="main.setReadOnly();" disabled/>
         </div>
 
