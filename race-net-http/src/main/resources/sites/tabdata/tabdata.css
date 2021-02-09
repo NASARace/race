@@ -18,7 +18,7 @@ body {
 --scrollbar-width: 0.5rem;
 
 --div-width: 100vw;
---div-height: calc(var(--max-lines)*var(--cell-height));
+--div-height: calc(var(--max-lines) * (var(--cell-height) + var(--cell-padding)));
 
 --th-background: #eaeaea;
 --th-color: black;

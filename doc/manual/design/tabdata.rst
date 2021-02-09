@@ -1,8 +1,8 @@
 TabData - A Reference Implementation for Robust Hierarchical Data Reporting
 ===========================================================================
 
-Modeled as a tree of nodes, each node containing a *device server* for interactive data access within
-a local network and a *node server* for child nodes. Both server actors use websockets transmitting
+Modeled as a tree of nodes, each node containing a *user server* for interactive data access within
+a local network and a *node server* for child node sync. Both server actors use websockets transmitting
 JSON to
 
   - support data push
@@ -19,7 +19,7 @@ Tasks
 
 Requirements
 ------------
-  - sub-tree stays (downwards) functional after upstream connection is lost
+  - disconnected sub-tree and rest of tree (upstream, peers) functional after upstream connection is lost
   - re-synchronization of data once sub-tree is reconnected to upstream
   - end-to-end connection loss detection and recovery (resync if upstream server process goes down)
   - (node hot swap tolerant)
@@ -43,32 +43,39 @@ analogy is spreadsheet/table with hierarchical, typed rows and column-wise updat
 row type system is provided as a parameter (rowList) so that it can be replaced/morphed/extended.
 Data is kept in maps.
 
-basic types:
+basic types (invariant so that they can be shared by concurrent processors):
+  - Column (provider,record)
   - Row (field)
   - CellValue (val + change-date)
-  - CellRef
-  - CellExpression (formula)
-  - Column (provider,record)
-  - ColumnData
-  - ColumnDataChange
-
-  - ColumnList (level)
-  - RowList (global, level, local)
-  - cellConstraints (global, level, local)
-  - formulas (level)
-  - functionLibrary
-
+  - ColumnData : CD
+  - ColumnDataChange : CDC
   - Node (id + lists + data + violated constraints)
+  - NodeState : NS
 
-Column and Row Ids are (java.nio.file) Paths, which are potentially resolved through column/rowList Ids
+  - CellRef
+  - CellExpression (compiled formula) : CE
+  - functionLibrary (list of valid CE functions)
+
+configured (from JSON files):
+  - ColumnList
+  - RowList
+  - formulas (row-type formulas: value- and time-triggered)
+  - cellConstraints (boolean formulas: value- and time-triggered)
+
+Each column is associated with one node (but each node can own several columns). Column data can only be updated from
+that node or from upstream (goal setting). There should not be any row that is automatically (value triggered)
+updated by both. Conflicting updates are resolved by update time stamp. There should not be any purely value
+triggered update loop between column owner and upstream (-> implementation requirements).
+
+Column and Row Ids are paths, which are potentially resolved through column/rowList or node Ids
 in case they are relative. Reason for path keys (global addressing scheme) is that different row/colLists 
 can reference the same logical entities/data
  
-?? Configs (lists) should support generic (site independent) specification to enable centralized update
+<TODO> Configs (lists) should support generic (site independent) specification to enable centralized update
 questionable: this would either require a uniform view across peers or some non-intuitive syntax for shared config
 
 Nodes can own several columns. Consequently, each column has a optional 'node' attribute to link to the main/node id
-?? what about nodes that only show/export columns other than the node name? Could be handled through 'attrs'
+<TODO> what about nodes that only show/export columns other than the node name? Could be handled through 'attrs'
 
 Formulas and constraints are kept separate from Column/RowList to enable per-site settings.
 
@@ -79,8 +86,8 @@ In general we try to share as much common config between nodes as possible, henc
 the same as using absolute ids since lists might have their own namespaces (e.g. task specific groups of providers
 collecting the same/overlapping data)
 
-Update Semantics
-----------------
+Update Semantics / Computational Model
+--------------------------------------
   - updated one provider at a time (column)
   - first PDC values
   - then ordered formulas (can depend on other providers) that have changed dependencies (FV)
@@ -120,6 +127,8 @@ still needs to handle parent hotswap
 All automated changes (import actors and time triggered formulas) are CDC generators, i.e. they just
 inject CDCs into the update process.
 
+<TODO> how to distinguish accidental feedback loops from intentional ones (valid: goal update from upstream causing
+local change, causing upstream goal update). Purely value triggered formulas?
 
 Security Concept
 ----------------

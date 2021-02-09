@@ -175,7 +175,7 @@ export function setCheckInterval () {
 
 export function setDisplayLines () {
   var nLines = document.getElementById("lines").value;
-  if (nLines && displayLines != nLines) {
+  if (nLines && maxLines != nLines) {
     maxLines = nLines;
     document.body.style.setProperty("--max-lines",maxLines);
   }

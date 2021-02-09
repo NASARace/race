@@ -4,7 +4,7 @@
   "date": "2020-06-28T12:00:00.000",
 
   "columns": [
-    { "id": "summary",    "info": "summary for region1",  "send": "<up>,provider_2" },
+    { "id": "summary",    "info": "summary for region1",  "send": "<up>,provider_2", "node": "integrator" },
     { "id": "provider_1", "info": "this is provider 1",   "send": "<down>", "receive": "<target>", "check": "1h" },
     { "id": "provider_2", "info": "this is provider 2",   "send": "<down>", "receive": "<target>", "check": "1m" },
     { "id": "provider_3", "info": "this is provider 3",   "send": "<down>", "receive": "<target>", "node": "provider_2" },

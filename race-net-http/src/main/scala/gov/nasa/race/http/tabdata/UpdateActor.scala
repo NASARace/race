@@ -84,7 +84,7 @@ class UpdateActor (val config: Config) extends SubscribingRaceActor with Publish
 
   override def handleMessage: Receive = {
     case BusEvent(_, cdc:ColumnDataChange, _) => processColumnDataChange(cdc)
-    //case BusEvent(_, nrc: NodeReachabilityChange, _) => processNodeReachabilityChange(nrc)
+    case BusEvent(_, nrc: NodeReachabilityChange, _) => processNodeReachabilityChange(nrc)
   }
 
   //--- initialization
@@ -334,5 +334,10 @@ class UpdateActor (val config: Config) extends SubscribingRaceActor with Publish
 
     ifSome(constraintFormulaList) { _.evaluateTimeTriggeredFormulas(ctx)(processConstraintEval) }
     publishConstraintChange()
+  }
+
+  def processNodeReachabilityChange (nrc: NodeReachabilityChange): Unit = {
+    info(s"got $nrc")
+    // TODO
   }
 }

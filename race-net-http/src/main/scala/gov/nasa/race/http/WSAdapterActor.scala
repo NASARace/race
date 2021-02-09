@@ -273,8 +273,22 @@ class WSAdapterActor (val config: Config) extends FilteringPublisher with Subscr
     ifSome(queue){ _.complete() }
   }
 
+  /**
+    * override this if we don't want to automatically connect upon RaceStart
+    */
+  def isReadyToConnect: Boolean = true
+
+  /**
+    * note it does not mean we are already connected if this returns true
+    * use onConnect() to trigger and post-connection processing
+    */
   override def onStartRaceActor(originator: ActorRef): Boolean = {
-    waitForConnection() && super.onStartRaceActor(originator)
+    if (super.onStartRaceActor(originator)) {
+      if (isReadyToConnect) {
+        connect()
+        true
+      } else true
+    } else false
   }
 
   override def onTerminateRaceActor(originator: ActorRef): Boolean = {

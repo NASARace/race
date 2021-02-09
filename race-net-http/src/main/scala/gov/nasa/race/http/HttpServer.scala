@@ -98,7 +98,11 @@ class HttpServer (val config: Config) extends ParentRaceActor with SSLContextUse
       getSSLContext("server-keystore") match {
         case Some(sslContext) =>
           info(s"using SSL configuration from 'server-keystore'")
-          val ctx = ConnectionContext.httpsServer( () => sslContext.createSSLEngine())
+          val ctx = ConnectionContext.httpsServer( () => {
+            val sslEngine = sslContext.createSSLEngine()
+            sslEngine.setUseClientMode(false)
+            sslEngine
+          })
           httpExt.newServerAt(interface,port).withSettings(ss).enableHttps(ctx).connectionSource()
 
         case None =>
