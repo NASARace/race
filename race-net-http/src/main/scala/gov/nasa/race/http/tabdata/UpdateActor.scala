@@ -38,6 +38,9 @@ import scala.language.existentials
 class UpdateActor (val config: Config) extends SubscribingRaceActor with PublishingRaceActor
                                                               with ContinuousTimeRaceActor with PeriodicRaceActor {
 
+  val nodeId: String = config.getString("node-id")
+  val upstreamId: Option[String] = config.getOptionalString("upstream-id")
+
   var node = initializeNode // node objects are immutable
 
   val funcLib: CellFunctionLibrary = getConfigurableOrElse("functions")(new CellFunctionLibrary)
@@ -90,9 +93,6 @@ class UpdateActor (val config: Config) extends SubscribingRaceActor with Publish
   //--- initialization
 
   def initializeNode: Node = {
-    val nodeId: String = config.getString("node-id")
-    val upstreamId: Option[String] = config.getOptionalString("upstream-id")
-
     val columnList: ColumnList = readColumnList
     val rowList: RowList = readRowList(columnList)
     val colDatas: Map[String,ColumnData] = readColumnData(columnList,rowList)
@@ -110,7 +110,7 @@ class UpdateActor (val config: Config) extends SubscribingRaceActor with Publish
 
   def readColumnList: ColumnList = {
     readList[ColumnList]("column-list"){ input=>
-      val parser = new ColumnListParser
+      val parser = new ColumnListParser(nodeId)
       parser.setLogging(info,warning,error)
       parser.parse(input)
     }.getOrElse( throw new RuntimeException("missing or invalid column-list"))
@@ -180,19 +180,27 @@ class UpdateActor (val config: Config) extends SubscribingRaceActor with Publish
     }
   }
 
+  // ctx is already changed
   def updateAndPublish (colId: String, changeNodeId: String, cvs: Seq[CellPair]): Unit = {
+    if (cvs.nonEmpty) {
+      val cd = ctx.cellValues(colId)
+      updateNode(cd)
+
+      val cdc = ColumnDataChange(colId, changeNodeId, ctx.evalDate, cvs)
+      publish(cdc)
+    }
+  }
+
+  // ctx has not been changed yet
+  def setAndPublishOwnChange(colId: String, cvs: Seq[CellPair]): Unit = {
     ctx.setCellValues(colId, cvs).ifSuccess {
       val cd = ctx.cellValues(colId)
       updateNode(cd)
 
-      if (cvs.nonEmpty) {
-        val cdc = ColumnDataChange(colId, changeNodeId, ctx.evalDate, cvs)
-        publish(cdc)
-      }
+      val cdc = ColumnDataChange(colId, node.id, ctx.evalDate, cvs)
+      publish(cdc)
     }
   }
-
-  def updateAndPublishOwnChange (colId: String, cvs: Seq[CellPair]): Unit = updateAndPublish(colId,node.id,cvs)
 
   def publishConstraintChange(): Unit = {
     if (newViolations.nonEmpty || newResolved.nonEmpty) {
@@ -257,8 +265,6 @@ class UpdateActor (val config: Config) extends SubscribingRaceActor with Publish
 
     if (setChangedColumnData(cdc)) {
       evaluateValueTriggeredFormulas(cdc)
-      //checkCellValueConstraints
-
       publishConstraintChange()
     }
   }
@@ -303,7 +309,7 @@ class UpdateActor (val config: Config) extends SubscribingRaceActor with Publish
   def evaluateValueTriggeredFormulas (cdc: ColumnDataChange): Unit = {
     ifSome(cvFormulaList) { vfl=>
       ctx.evalDate = updatedSimTime
-      vfl.evaluateValueTriggeredFormulas(ctx)(updateAndPublishOwnChange)
+      vfl.evaluateValueTriggeredFormulas(ctx)(setAndPublishOwnChange)
 
       if (ctx.hasChanges) {
         ifSome(constraintFormulaList) { cfl=>
@@ -324,10 +330,10 @@ class UpdateActor (val config: Config) extends SubscribingRaceActor with Publish
     newResolved.clear()
 
     ifSome(cvFormulaList) { fl=>
-      fl.evaluateTimeTriggeredFormulas(ctx)(updateAndPublishOwnChange)
+      fl.evaluateTimeTriggeredFormulas(ctx)(setAndPublishOwnChange)
 
       if (ctx.hasChanges) {
-        fl.evaluateValueTriggeredFormulas(ctx)(updateAndPublishOwnChange)
+        fl.evaluateValueTriggeredFormulas(ctx)(setAndPublishOwnChange)
         ifSome(constraintFormulaList) { _.evaluateValueTriggeredFormulas(ctx)(processConstraintEval) }
       }
     }

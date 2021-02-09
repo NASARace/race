@@ -66,11 +66,15 @@ class UpstreamConnectorActor(override val config: Config) extends WSAdapterActor
     * state specific RaceActor/WSAdapterActor behavior
     */
   trait InternalConnectorState {
-    //--- RaceActor
-    def handleMessage: Receive
-    def onRaceTick(): Unit
-    def onConnect(): Unit
-    def onDisconnect(): Unit
+    //--- state specific message handlers - default is to ignore everything
+    def handleNode (newNode: Node): Unit = { info("node message ignored") }
+    def handleColumnDataChange (cdc: ColumnDataChange): Unit = { info("ColumnDataChange message ignored") }
+    def handleConstraintChange (cc: ConstraintChange): Unit = { info("constraintChange ignored") }
+    def handleRetryConnect (): Unit = { info("RetryConnect ignored") }
+
+    def onRaceTick(): Unit = {}
+    def onConnect(): Unit = {}
+    def onDisconnect(): Unit = {}
 
     //--- WSAdapterActor
     def isReadyToConnect: Boolean
@@ -80,8 +84,8 @@ class UpstreamConnectorActor(override val config: Config) extends WSAdapterActor
     def parseIncomingMessage (msg: String): Option[Any]  // what incoming messages we parse
 
     def switchToState (newState: InternalConnectorState): Unit = {
+      info(s"switching state from ${this.getClass.getSimpleName} to ${newState.getClass.getSimpleName}")
       state = newState
-      swapUserMessageHandler(state.handleMessage)
     }
   }
 
@@ -209,14 +213,9 @@ class UpstreamConnectorActor(override val config: Config) extends WSAdapterActor
     val isReadyToConnect = false // we handle connection ourselves
     var node: Option[Node] = None
 
-    override def handleMessage: Receive = {
-      case BusEvent(_,newNode: Node,_) => setNode(newNode)
-      case BusEvent(_,cdc: ColumnDataChange,_) => // not yet connected/synchronized - ignore
-    }
-
-    def setNode (newNode: Node): Unit = {
+    override def handleNode (newNode: Node): Unit = {
       if (newNode.upstreamId.isDefined) {
-        node = Some(newNode)
+        node = Some(newNode) // we are not switching state yet
       } else {
         warning(s"no upstream id configured, ignoring Node update")
       }
@@ -249,10 +248,7 @@ class UpstreamConnectorActor(override val config: Config) extends WSAdapterActor
 
     override def isReadyToConnect = !isConnected  // only connect if we aren't already
 
-    override def handleMessage: Receive = {
-      case BusEvent(_,newNode: Node,_) => node = newNode
-      case BusEvent(_,_: ColumnDataChange,_) => // we don't need to process outgoing CDCs yet (CDC is already reflected in node)
-    }
+    override def handleNode (newNode: Node): Unit =  node = newNode
 
     def sendOwnNodeState: Unit = {
       val extCDs = mutable.Buffer.empty[ColumnDatePair]
@@ -305,13 +301,15 @@ class UpstreamConnectorActor(override val config: Config) extends WSAdapterActor
 
     info(s"synchronized with upstream: $upstreamId")
 
-    override def handleMessage: Receive = {
-      case BusEvent(_,newNode: Node,_) => node = newNode
-      case BusEvent(_,cdc: ColumnDataChange,_) => sendColumnDataChange(cdc)
+    override def handleNode (newNode: Node): Unit = {
+      node = newNode
     }
 
-    def sendColumnDataChange (rawCdc: ColumnDataChange): Unit = {
-      if (rawCdc.changeNodeId != node.id) return  // ? what about child node changes
+    override def handleColumnDataChange (rawCdc: ColumnDataChange): Unit = {
+      if (rawCdc.changeNodeId != node.id) {
+        warning(s"rejected sending foreign CDC from ${rawCdc.changeNodeId} to upstream")
+        return
+      }
 
       val cdc = rawCdc.filter { r =>
         node.rowList.get(r) match {
@@ -343,10 +341,9 @@ class UpstreamConnectorActor(override val config: Config) extends WSAdapterActor
 
     info(s"trying to reconnect with upstream: $upstreamId")
 
-    override def handleMessage: Receive = {
-      case BusEvent(_,newNode: Node,_) => node = newNode
-      case RetryConnect => reconnect()
-    }
+    override def handleNode (newNode: Node): Unit = node = newNode
+
+    override def handleRetryConnect(): Unit = reconnect()
 
     override def onRaceTick(): Unit = connect() // if successful it will result in a onConnect call
 
@@ -369,8 +366,6 @@ class UpstreamConnectorActor(override val config: Config) extends WSAdapterActor
 
     info(s"connection disabled")
 
-    override def handleMessage: Receive = PartialFunction.empty[Any,Unit] // we don't process any messages
-
     override def onRaceTick(): Unit = {}
     override def onConnect(): Unit = {}
     override def onDisconnect(): Unit = {}
@@ -382,8 +377,6 @@ class UpstreamConnectorActor(override val config: Config) extends WSAdapterActor
 
   var state: InternalConnectorState = new InitialState
 
-  swapUserMessageHandler(state.handleMessage)
-
   override def defaultTickInterval: FiniteDuration = 30.seconds // normal timeout for websockets is 60 sec
 
   //--- those are hardwired
@@ -393,6 +386,13 @@ class UpstreamConnectorActor(override val config: Config) extends WSAdapterActor
   //--- standard RaceActor callbacks
 
   override def onRaceTick(): Unit = state.onRaceTick()
+
+  override def handleMessage: Receive = {
+    case BusEvent(_,newNode: Node,_) => state.handleNode(newNode)
+    case BusEvent(_,cdc: ColumnDataChange,_) => state.handleColumnDataChange(cdc)
+    case BusEvent(_,cc:ConstraintChange,_) => state.handleConstraintChange(cc)
+    case RetryConnect => state.handleRetryConnect()
+  }
 
   //--- WSAdapterActor overrides
 

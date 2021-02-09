@@ -166,18 +166,19 @@ class UserServerRoute (parent: ParentActor, config: Config) extends SiteRoute(pa
     data match {
       case n: Node =>  // this is for our internal purposes
         node = Some(n)
-        constraintMessage = generateConstraintMessage(n)
 
         if (!parser.isDefined) { // one time initialization
           parser = createIncomingMessageParser
           siteIdMessage = Some(TextMessage(serializeSiteId(n.id)))
           rowListMessage = Some(TextMessage(writer.toJson(n.rowList)))
           columnListMessage = Some(TextMessage(writer.toJson(n.columnList)))
-          n.columnDatas.foreach { e=>
-            columnDataMessages.put(e._1, TextMessage(writer.toJson(e._2)))
-          }
 
           info(s"device server '${n.id}' ready to accept connections")
+        }
+
+        constraintMessage = generateConstraintMessage(n)
+        n.columnDatas.foreach { e=>
+          columnDataMessages.put(e._1, TextMessage(writer.toJson(e._2)))
         }
 
       case cdc: ColumnDataChange =>

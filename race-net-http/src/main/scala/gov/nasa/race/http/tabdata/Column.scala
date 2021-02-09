@@ -38,7 +38,11 @@ object Column {
 
 
 /**
-  * class representing the *description* of a provider (field owner)
+  * class representing a data provider (field owner). Note that each column is uniquely associated to one node, but
+  * nodes can own several columns
+  *
+  * TODO - shall we keep the optional check time trigger? This overlaps with ConstraintFormulas but those cannot (yet)
+  * handle whole CD attributes, only cells. The CD date is sort of a builtin, automated attribute, not a regular row
   */
 case class Column (id: String, info: String, updateFilter: UpdateFilter, node: String, attrs: Seq[String], check: Option[TimeTrigger])
               extends JsonSerializable {
@@ -60,12 +64,12 @@ case class Column (id: String, info: String, updateFilter: UpdateFilter, node: S
 trait ColumnParser extends JsonPullParser with UpdateFilterParser with AttrsParser {
   import Column._
 
-  def parseColumn (listId: String): Column = {
-    val id = PathIdentifier.resolve(readQuotedMember(_id_),listId)
+  def parseColumn (resolverId: String): Column = {
+    val id = PathIdentifier.resolve(readQuotedMember(_id_),resolverId)
     val info = readQuotedMember(_info_).toString
-    val updateFilter = parseUpdateFilter(listId)
+    val updateFilter = parseUpdateFilter(resolverId)
     val nodeId = readOptionalQuotedMember(_node_) match {
-      case Some(ps) => PathIdentifier.resolve(ps, listId)
+      case Some(ps) => PathIdentifier.resolve(ps, resolverId)
       case None => id
     }
     val attrs = readAttrs (_attrs_)
@@ -147,7 +151,7 @@ case class ColumnList (id: String, info: String, date: DateTime, columns: ListMa
 /**
   * parser for provider specs
   */
-class ColumnListParser extends UTF8JsonPullParser with ColumnParser {
+class ColumnListParser (nodeId: String) extends UTF8JsonPullParser with ColumnParser {
   import ColumnList._
 
   def parse (buf: Array[Byte]): Option[ColumnList] = {
@@ -161,7 +165,7 @@ class ColumnListParser extends UTF8JsonPullParser with ColumnParser {
         var columns = ListMap.empty[String,Column]
         foreachInNextArrayMember(_columns_) {
           readNextObject {
-            val col = parseColumn(id)
+            val col = parseColumn(nodeId)
             columns = columns + (col.id -> col)
           }
         }

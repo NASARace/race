@@ -94,7 +94,7 @@ class UpdateFilter(val sendSpec: String, val receiveSpec: String, resolverId: St
       case "<down>" => receiveDown = true
       case "<all>" => receiveUp = true; receiveDown = true; receiveSelf = true; receiveTarget = true
       case "<none>" => // the default
-      case "<self>" => receiveSelf = true
+      case "<self>" | "." => receiveSelf = true
       case "<target>" => receiveTarget = true
       case s =>
         if (s.nonEmpty && s.charAt(0) != '<') {
