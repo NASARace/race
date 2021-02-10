@@ -67,10 +67,10 @@ class UpstreamConnectorActor(override val config: Config) extends WSAdapterActor
     */
   trait InternalConnectorState {
     //--- state specific message handlers - default is to ignore everything
-    def handleNode (newNode: Node): Unit = { info("node message ignored") }
-    def handleColumnDataChange (cdc: ColumnDataChange): Unit = { info("ColumnDataChange message ignored") }
-    def handleConstraintChange (cc: ConstraintChange): Unit = { info("constraintChange ignored") }
-    def handleRetryConnect (): Unit = { info("RetryConnect ignored") }
+    def handleNode (newNode: Node): Unit = {}
+    def handleColumnDataChange (cdc: ColumnDataChange): Unit = {}
+    def handleConstraintChange (cc: ConstraintChange): Unit = {}
+    def handleRetryConnect (): Unit = {}
 
     def onRaceTick(): Unit = {}
     def onConnect(): Unit = {}

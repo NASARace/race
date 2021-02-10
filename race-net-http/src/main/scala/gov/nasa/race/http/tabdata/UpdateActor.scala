@@ -151,10 +151,10 @@ class UpdateActor (val config: Config) extends SubscribingRaceActor with Publish
   }
 
   def parseFormulas[T <: FormulaList](node: Node, key: String, parser: FormulaListParser[T]): Option[T] = {
-    readList[T](key){ input=>
-      parser.setLogging(info,warning,error)
-      parser.parse(input).map { fList=>
-        fList.compileWith(node,funcLib) match {
+    readList[T](key) { input =>
+      parser.setLogging(info, warning, error)
+      parser.parse(input).map { fList =>
+        fList.compileWith(node, funcLib) match {
           case Failure(err) => throw new RuntimeException(s"error compiling $key: $err")
           case Success => fList
         }

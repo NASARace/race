@@ -42,8 +42,8 @@ trait NodeDependentTest {
   }
 
   def getNode(nodeId: String, dataDir: String): Node = {
-    val columnList = new ColumnListParser().parse(fileContentsAsBytes(dataDir + "/columnList.json")).get
-    val rowList = new RowListParser(columnList.id).parse(fileContentsAsBytes(dataDir + "/rowList.json")).get
+    val columnList = new ColumnListParser(nodeId).parse(fileContentsAsBytes(dataDir + "/columnList.json")).get
+    val rowList = new RowListParser(columnList.id).parse(fileContentsAsBytes(dataDir + "/rowList.json.json")).get
     val cds = getColumnData(dataDir, columnList, rowList)
 
     Node(nodeId, None, columnList, rowList, cds)

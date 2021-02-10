@@ -169,7 +169,7 @@ class NodeServerRoute(val parent: ParentActor, val config: Config) extends PushW
     remoteNodes = remoteNodes + (remoteAddr -> remoteNodeId)  // assoc should not change until connection is lost
     publishData(NodeReachabilityChange(remoteNodeId,true)) // let other actors know remote node is online
 
-    def sendColumn (col: Column): Boolean = col.updateFilter.sendToDownStream(remoteNodeId)
+    def sendColumn (col: Column): Boolean =  col.updateFilter.sendToDownStream(remoteNodeId)
     def receiveColumn (col: Column): Boolean = col.updateFilter.receiveFromDownStream(remoteNodeId,col.node)
     def sendRow (col: Column, row: Row[_]): Boolean = row.updateFilter.sendToDownStream(remoteNodeId)
     def receiveRow (col: Column, row: Row[_]): Boolean = row.updateFilter.receiveFromDownStream(remoteNodeId, col.node)

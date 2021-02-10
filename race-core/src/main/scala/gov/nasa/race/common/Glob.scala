@@ -20,6 +20,8 @@ import scala.util.matching.Regex
 
 /**
   * utility object to convert Unix glob patterns into Regex instances
+  *
+  * TODO - still missing '..' path expansion and general !(..) negation
   */
 object Glob {
 
@@ -32,10 +34,14 @@ object Glob {
     while (i < len) {
       val c = glob.charAt(i)
       c match {
-        case '!' | '$' | '(' | ')' | '+' | '.' | '^' | '/' =>   buf += '\\'; buf += c
+        case '!' | '$' | '(' | ')' | '+' | '.' | '^' | '/' =>
+          buf += '\\'
+          buf += c
         case '?' => buf += '.'
         case '{' => buf += '('; inAltGroup = true
         case '}' => buf += ')'; inAltGroup = false
+        case '[' => i = copyCharSetAt(glob,i,buf)
+
         case ',' => if (inAltGroup) buf += '|' else buf += c
         case '*' =>
           val i0 = i
@@ -59,6 +65,28 @@ object Glob {
 
     buf += '$'
     new Regex(buf.toString())
+  }
+
+  // char set specs don't need to be translated and they don't nest so they can be copied literally
+  def copyCharSetAt (glob: CharSequence, i0: Int, buf: StringBuilder): Int = {
+    var i = i0+1
+    val len = glob.length()
+
+    buf += '['
+    var c = glob.charAt(i)
+    if (c == '!') c = '^' // use '^' for regex charset negation
+
+    while (i < len && c != ']') {
+      buf += c
+      i += 1
+      if (c == '\\') {
+        buf += glob.charAt(i)
+        i += 1
+      }
+      c  = glob.charAt(i)
+    }
+    buf += ']'
+    i
   }
 
   @inline def isStartingGlobChar (c: Char): Boolean = {
@@ -150,6 +178,9 @@ object Glob {
           buf += ')'
           inAltGroup = false
           popResolveLevel()
+
+        case '[' =>
+          i = copyCharSetAt(glob,i,buf) // FIXME - what if the charset includes a '/' and hence only conditionally resolves?
 
         case '*' =>
           val i0 = i

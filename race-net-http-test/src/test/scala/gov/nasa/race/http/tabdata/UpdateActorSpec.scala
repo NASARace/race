@@ -39,7 +39,7 @@ class UpdateActorSpec extends RaceActorSpec with AnyFlatSpecLike {
       | name = "tdsa"
       | node-id = "/providers/region1/integrator"
       | column-list = "$dataDir/columnList.json"
-      | row-list = "$dataDir/rowList.json"
+      | row-list = "$dataDir/rowList.json.json"
       | value-formulas = "$dataDir/formulaList.json"
       | data-dir = "$dataDir"
       | read-from = "/in"
@@ -47,7 +47,7 @@ class UpdateActorSpec extends RaceActorSpec with AnyFlatSpecLike {
       |""".stripMargin
   )
 
-  "a TabDataServiceActor" should "read columnList, rowList, formulaList and columnData during creation" in {
+  "a TabDataServiceActor" should "read columnList, rowList.json, formulaList and columnData during creation" in {
     runRaceActorSystem(Logging.InfoLevel) {
 
       val actor: UpdateActor = addTestActor[UpdateActor]("tdsa", integratorConfig)

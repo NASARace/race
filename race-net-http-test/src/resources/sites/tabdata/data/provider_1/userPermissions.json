@@ -1,0 +1,13 @@
+{
+  "id": "/providers/region1/provider_1",
+  "date": "2020-06-29T16:06:02.000",
+
+  "columnlist": "/providers/region1/provider_1",
+  "rowlist": "/rows/sd1",
+
+  "users": {
+    "frodo": [
+      { "columnPattern": "**/provider_1", "rowPattern": "**" }
+    ]
+  }
+}

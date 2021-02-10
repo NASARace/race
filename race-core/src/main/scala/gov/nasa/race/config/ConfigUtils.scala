@@ -367,9 +367,11 @@ object ConfigUtils {
     }
 
     def translateFile[T] (key: String)(f: Array[Byte]=>Option[T]): Option[T] = {
-      val file = getNonEmptyFile(key)
-      val bytes = FileUtils.fileContentsAsBytes(file).get // if not found or empty we don't get here
-      f(bytes)
+      val file = new File(conf.getString(key))
+
+      if (file.isFile && file.length() > 0) {
+        f( FileUtils.fileContentsAsBytes(file).get)
+      } else None
     }
 
     final val unitNumberRE = """^([-+]?\d*\.?\d+(?:[eE][-+]?\d+)?)([a-zA-Z/]+)?$""".r

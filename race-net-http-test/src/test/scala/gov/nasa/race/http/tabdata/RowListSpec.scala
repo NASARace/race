@@ -27,7 +27,7 @@ import org.scalatest.flatspec.AnyFlatSpec
 class RowListSpec extends AnyFlatSpec with RaceSpec {
 
   "a RowListParser" should "translate a JSON source" in {
-    val input = FileUtils.fileContentsAsString("race-net-http-test/src/resources/sites/tabdata/data/rowList.json").get
+    val input = FileUtils.fileContentsAsString("race-net-http-test/src/resources/sites/tabdata/data/rowList.json.json").get
 
     val parser = new RowListParser("/providers/region1")
 
