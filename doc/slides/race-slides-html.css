@@ -199,3 +199,25 @@ img.scale95 {
 img.scale100 {
     height: 100vh;
 }
+
+img.back {
+   z-index: -1;
+}
+
+
+img.up5 {
+  position: relative;
+  top: -5vh;
+}
+img.up10 {
+  position: relative;
+  top: -10vh;
+}
+img.up15 {
+  position: relative;
+  top: -15vh;
+}
+img.up20 {
+  position: relative;
+  top: -20vh;
+}

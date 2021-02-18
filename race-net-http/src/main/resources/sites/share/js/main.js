@@ -1,0 +1,98 @@
+import * as share from './app/share.js';
+
+/**
+  * the main module that is directly referenced from the page
+  *
+  * this should not contain any export functions or data used by other modules
+  */
+
+const main = {}
+
+//--- onload callback
+main.init = function init() {
+  share.initTabData();
+}
+
+//--- onunload callback
+main.shutdown = function shutdown() {
+  share.shutdownTabData();
+}
+
+//--- resize callback
+main.setWidth = function setWidth() {
+  share.setWidth();
+}
+
+main.identifyUser = function identifyUser(event) {
+  if (event.key=="Enter") {
+    share.setEditable();
+  }
+}
+
+main.setEditable = function setEditable() {
+  share.setEditable();
+}
+
+main.setReadOnly = function setReadOnly() {
+  share.setReadOnly();
+}
+
+main.sendChanges = function sendChanges() {
+  share.sendChanges();
+}
+
+main.setFilters = function setFilters() {
+  share.setFilters();
+}
+
+main.clearFilters = function clearFilters() {
+  share.clearFilters();
+}
+
+main.enterDisplayLines = function enterDisplayLines(event) {
+  if (event.key=="Enter") share.setDisplayLines();
+}
+
+main.enterCheckInterval = function enterCheckInterval(event) {
+  if (event.key=="Enter") share.setCheckInterval();
+}
+
+main.setDisplay = function setDisplay() {
+  share.setDisplayLines();
+  share.setCheckInterval();
+}
+
+main.resetDisplay = function resetDisplay() {
+}
+
+main.highlightRow = function highlightRow(idx,isSelected) {
+  share.highlightRow(idx,isSelected);
+}
+
+main.highlightColumn = function highlightColumn(idx,isSelected) {
+  share.highlightColumn(idx,isSelected);
+}
+
+main.clickRow = function clickRow(idx) {
+  share.clickRow(idx);
+}
+
+main.setRowFocused = function setRowFocused(event) {
+  share.setRowFocused(event);
+}
+
+main.setRowModified = function setRowModified(event) {
+  share.setRowModified(event);
+}
+
+main.setRowBlurred = function setRowBlurred(event) {
+  share.setRowBlurred(event);
+}
+
+main.clickCell = function clickCell (event,colIdx,rowIdx) {
+  share.clickCell(event,colIdx,rowIdx);
+}
+
+window.main = main; // make it global so that we can reference from HTML
+
+

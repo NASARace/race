@@ -1,9 +1,19 @@
 TabData - A Reference Implementation for Robust Hierarchical Data Reporting
 ===========================================================================
 
+system specification through
+
+  - use case(s)
+  - data model
+  - computational model
+  - system components
+  - message protocols (JSON) between nodes and devices
+
+
 Modeled as a tree of nodes, each node containing a *user server* for interactive data access within
-a local network and a *node server* for child node sync. Both server actors use websockets transmitting
-JSON to
+a local network, upstream connector for parent node sync and a *node server* for child node sync.
+
+Both server actors use websockets transmitting JSON to
 
   - support data push
   - minimize network configuration Requirements

@@ -50,7 +50,7 @@ class PortForwarder (val config: Config) extends PeriodicRaceActor {
   // number of un-answered alive msgs before disconnect
   val aliveMaxCount = config.getIntOrElse("alive-maxcount", 1)
   val strictHostKey = config.getBooleanOrElse("strict-hostkey", false) // should probably default to true
-  val authPrefs = config.getStringOrElse("authentications", "gssapi-with-mic,publickey,keyboard-interactive,password")
+  val authPrefs = config.getStringOrElse("authentications", "gssapi-with-mic.krb5,publickey,keyboard-interactive,password")
 
   val user = config.getVaultableStringOrElse("user", System.getProperty("user.name"))
   val host = config.getVaultableString("host")

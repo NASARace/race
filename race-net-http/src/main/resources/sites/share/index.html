@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+
+<html>
+    <head>
+        <meta charset="UTF-8">
+        <link rel="stylesheet" type="text/css" href="share.css">
+        <script type="module" src="js/main.js" ></script>
+    </head>
+
+    <body onload="main.init();" onresize="main.setWidth();" ununload="main.shutdown();">
+
+        <p>
+            <div class="titlebar">
+                <div class="input-group">
+                    <label class="input-label" for="siteId">site:</label>
+                    <input class="input-text id" type="text" id="siteId" readonly/>
+                </div>
+                <div class="input-group">
+                    <label class="input-label" for="columnListId">columns:</label>
+                    <input class="input-text id" type="text" id="columnListId" readonly/>
+                </div>
+                <div class="input-group">
+                    <label class="input-label" for="rowListId">rows:</label>
+                    <input class="input-text id" type="text" id="rowListId" readonly/>
+                </div>
+            </div>
+        </p>
+
+        <div id="editTools" class="toolbar">
+            <div class="input-group">
+                <label class="input-label" for="uid">user:</label>
+                <input class="input-text" type="text" id="uid"/>
+            </div>
+            <div class="input-group">
+                <label class="input-label" for="pw">passwd:</label>
+                <input class="input-text" type="password" id="pw" onkeyup="main.identifyUser(event);"/>
+            </div>
+            <!-- will be enabled once we have editable rows that were changed by user -->
+            <input type="button" id="editButton" class="button" value="edit" onclick="main.setEditable();"/>
+            <input type="button" id="sendButton" class="button" value="publish" onclick="main.sendChanges();" disabled/>
+            <input type="button" id="readOnlyButton" class="button" value="endEdit" onclick="main.setReadOnly();" disabled/>
+        </div>
+
+        <div id="filterTools" class="toolbar">
+            <div class="input-group">
+                <label class="input-label" for="columnFilter">column:</label>
+                <input class="input-text" type="text" id="columnFilter" />
+            </div>
+            <div class="input-group">
+                <label class="input-label" for="rowFilter">row:</label>
+                <input class="input-text" type="text" id="rowFilter"/>
+            </div>
+            <input type="button" id="filterButton" class="button" value="filter" onclick="main.setFilters();"/>
+            <input type="button" id="resetFilterButton" class="button" value="reset" onclick="main.clearFilters();"/>
+        </div>
+
+        <div id="displayTools" class = "toolbar">
+            <div class="input-group">
+                <label class="input-label" for="lines">lines:</label>
+                <input class="input-text num" type="number" id="lines" onkeyup="main.enterDisplayLines(event)"/>
+            </div>
+            <div class="input-group">
+                <label class="input-label" for="checkInterval">check:</label>
+                <input class="input-text num" type="number" id="checkInterval" onkeyup="main.enterCheckInterval(event)"/>
+            </div>
+            <input type="button" id="setDisplayButton" class="button" value="set" onclick="main.setDisplay()"/>
+            <input type="button" id="resetDisplayButton" class="button" value="reset" onclick="main.resetDisplay()"/>
+        </div>
+
+        <div id="statusTools" class="toolbar">
+            <div class="input-group">
+                <label class="input-label" for="status">status:</label>
+                <input class="input-text" type="text" id="status" disabled/>
+            </div>
+        </div>
+
+        <div id="tableContainer">
+            <table id="my_table">
+                <!-- dynamically populated -->
+            </table>
+        </div>
+
+        <div id="logContainer">
+
+        </div>
+
+    </body>
+</html>
