@@ -1,4 +1,4 @@
-# SHARe
+# SHARE
 
 System for Hierarchical Ad hoc Reporting </br>
 
@@ -15,8 +15,8 @@ NASA Ames Research Center
 * task/incident related hierarchical reporting across heterogenous, isolated org entities (providers)
 * rapid, non-disruptive rollout/tear down
 * dynamic provider- and data sets
-* fail-operational network
-<img src="../images/share-problem.svg" class="up10 back center scale80">
+* fail-operational
+<img src="../images/share-problem.svg" class="center up50 back scale80">
   
 
 ## Key Requirements
@@ -30,18 +30,18 @@ NASA Ames Research Center
 
 
 ## Solution
-* ad hoc overlay using dedicated, pre-configured *SHARE* nodes inside provider networks
+* ad hoc overlay using dedicated, pre-configured *SHARE nodes* inside provider networks
 <img src="../images/share-adhoc.svg" class="center scale80">
 
 
-## Node Functions
-* uniform node design
-* server for provider-internal data display and entry (user interface)
-* server for potential sub-nodes
-* all function categories optional (configured)
+## Node
+* uniform node design (same SW, different config files)
+* 4 optional functions: user-server, node-server, node-client, provider-import
+* provider-local data display and entry through user-server (browser)
+* sync with upstream and downstream through node-server/node-client
 * all external communication JSON over websockets (encrypted, host-/user-auth)
 * all file formats JSON
-<img src="../images/share-node-functions.svg" class="center up5 back scale65">
+<img src="../images/share-node-functions.svg" class="center up50 back scale65">
   
 
 ## Data Model and Flow
@@ -59,12 +59,11 @@ NASA Ames Research Center
   
 
 ## Formulas
-* for time-and value- triggered cell value computation
-* for intra- and inter-column properties
-* simple s-expr over cell refs (glob expansion) and extensible function libraries
+<img src="../images/share-formulas.svg" class="center scale90">
+
 
 ## Detailed Data Synchronization
-<img src="../images/share-sync.svg" class="center scale90">
+<img src="../images/share-sync.svg" class="center scale80">
   
 
 ## Web Client

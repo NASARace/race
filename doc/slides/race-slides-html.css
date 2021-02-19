@@ -8,13 +8,25 @@ body {
     font-family: Arial, sans-serif;
 }
 
-div.slide {
-    display: block;
-    /* height: 97vh; */
-    /* padding: 10px; */
-    height: 100vh;
-    padding: 0 10px 0 10px;
-    /* border: 1px solid black; */
+/*---------------------------- print support -----------------------------*/
+@media print {
+  div.slide {
+      display: block;
+      height: 100vh;
+      page-break-before: always;
+      padding: 0 10px 0 10px;
+  }
+}
+
+@media screen {
+  div.slide {
+      display: block;
+      /* height: 97vh; */
+      /* padding: 10px; */
+      height: 100vh;
+      padding: 0 10px 0 10px;
+      /* border: 1px solid black; */
+  }
 }
 
 .title h1 {
@@ -114,6 +126,7 @@ code {
     color: Blue;
 }
 
+
 /*---------------------------- content image classes -----------------------------*/
 img.left {
     float: left;
@@ -205,19 +218,12 @@ img.back {
 }
 
 
-img.up5 {
+img.up50 {
   position: relative;
-  top: -5vh;
+  top: -50pt;
 }
-img.up10 {
+img.up100 {
   position: relative;
-  top: -10vh;
+  top: -100pt;
 }
-img.up15 {
-  position: relative;
-  top: -15vh;
-}
-img.up20 {
-  position: relative;
-  top: -20vh;
-}
+

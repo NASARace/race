@@ -93,7 +93,7 @@ function scrollToSlide (idx) {
     if (idx == 0) {
       window.scrollTo(0,0);
     } else {
-      slides[idx].scrollIntoView({block: "start", inline: "nearest", behavior: "smooth"});
+      slides[idx].scrollIntoView({behavior: "smooth", block: "start", inline: "nearest"});
     }
 
     curIdx = idx;
@@ -101,10 +101,20 @@ function scrollToSlide (idx) {
   }
 }
 
-document.onkeypress = function (e) {
-  var kc = e.which
-  if (kc == 13){  // Enter: next slide, Shift+Enter: prev slide
+document.addEventListener("keydown", e => {
+  var kc = e.keyCode;
+
+  if (kc == 13 || kc == 32){  // Enter: next slide, Shift+Enter: prev slide
     scrollToSlide( e.shiftKey ? curIdx-1 : curIdx+1);
+    e.preventDefault();
+  }
+  else if (kc == 33) {
+    scrollToSlide( curIdx - 1);
+    e.preventDefault();
+  }
+  else if (kc == 34) {
+    scrollToSlide( curIdx + 1);
+    e.preventDefault();
   }
   else if (kc == 102) { // 'f' toggle full screen
     toggleFullScreen();
@@ -127,4 +137,4 @@ document.onkeypress = function (e) {
       scrollToSlide(idx);
     }
   }
-};
+});
