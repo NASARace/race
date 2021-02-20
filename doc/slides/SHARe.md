@@ -16,7 +16,7 @@ NASA Ames Research Center
 * rapid, non-disruptive rollout/tear down
 * dynamic provider- and data sets
 * fail-operational
-<img src="../images/share-problem.svg" class="center up50 back scale80">
+<img src="../images/share-problem.svg" class="center up75 back scale80">
   
 
 ## Key Requirements
@@ -34,7 +34,7 @@ NASA Ames Research Center
 <img src="../images/share-adhoc.svg" class="center scale80">
 
 
-## Node
+## SHARE Node
 * uniform node design (same SW, different config files)
 * 4 optional functions: user-server, node-server, node-client, provider-import
 * provider-local data display and entry through user-server (browser)
@@ -44,7 +44,7 @@ NASA Ames Research Center
 <img src="../images/share-node-functions.svg" class="center up50 back scale65">
   
 
-## Data Model and Flow
+## Conceptual Data Model and Flow
 * distributed, replicated, filtered spreadsheet with typed rows (int,real,bool,string,intList,realList)
 * columns owned by providers (write access)
 * cells hold value and time
@@ -52,6 +52,14 @@ NASA Ames Research Center
 * supports formulas (value- and time triggered)
 * sync through connector upstream node
 <img src="../images/share-flow.svg" class="center scale50">
+
+
+## SHARE Data Update
+* configured (semi-) static structure: **ColumnList**, **RowList** 
+* dynamic data: **ColumnData** (morphable key-value maps)
+* change stimulus: **ColumnDataChange**, time-triggered formulas
+* complete state snapshot: invariant **Node** object
+<img src="../images/share-dm.svg" class="center scale70">
 
 
 ## Detailed Data Model
@@ -62,7 +70,15 @@ NASA Ames Research Center
 <img src="../images/share-formulas.svg" class="center scale90">
 
 
-## Detailed Data Synchronization
+## Data Resynchronization Protocol
+* based on column ownership (provider node) and ColumnData dates
+* dates transmitted with *NodeState* message (per-CD for ext. columns, per-cell for own)
+* newer own data transmitted with normal *ColumnDataChange* messages
+* protocol can run in cycles until fixpoint is reached, i.e. does not need to halt local op
+<img src="../images/share-sp.svg" class="center scale70">
+
+
+## Detailed Data Resynchronization
 <img src="../images/share-sync.svg" class="center scale80">
   
 
@@ -89,9 +105,10 @@ NASA Ames Research Center
   
 
 ## TBD
-* demo
-* NTP 
-* runtime RL/CL swap
+* demo / presentation slides
+* NTP implementation for clock sync
+* runtime RowList/ColumnList swap
 * user auth (pw change)
 * more clients (Flutter)
-* specs (variants)
+* specs (variants, Fret?)
+* global monitoring (Mesa?)

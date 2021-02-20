@@ -222,6 +222,10 @@ img.up50 {
   position: relative;
   top: -50pt;
 }
+img.up75 {
+  position: relative;
+  top: -75pt;
+}
 img.up100 {
   position: relative;
   top: -100pt;
