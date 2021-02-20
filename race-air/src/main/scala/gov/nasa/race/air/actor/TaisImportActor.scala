@@ -28,9 +28,12 @@ trait TRACONTopicIdMapper {
   def topicIdsOf(t: Any): Seq[String] = {
     t match {
       case tracon: TRACON => Seq(tracon.id)
-      case tracons: TRACONs => tracons.map(_.id)
-      case traconId: String => if (TRACON.tracons.contains(traconId)) Seq(traconId) else Seq.empty[String]
-      case traconIds: Seq[_] => traconIds.map(_.toString).filter(TRACON.tracons.contains)
+      case id: String => TRACON.getId(id).toList
+      case ids: Seq[_] => ids.flatMap( _ match {
+          case t: TRACON => Some(t.id)
+          case s: String => TRACON.getId(s)
+          case _ => None
+        }).toList
       case _ => Seq.empty[String]
     }
   }

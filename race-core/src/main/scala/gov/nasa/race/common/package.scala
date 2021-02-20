@@ -200,4 +200,8 @@ package object common {
     def parse (bs: Array[Byte], off: Int, length: Int): Option[Any]
     def parse (bs: ByteSlice): Option[Any] = parse(bs.data, bs.off, bs.len)
   }
+
+  // common group ids
+  final val NoneId = "<none>"
+  final val AllId = "<all>"
 }

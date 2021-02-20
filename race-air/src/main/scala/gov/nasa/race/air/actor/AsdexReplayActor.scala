@@ -29,8 +29,11 @@ import gov.nasa.race.core.AccumulatingTopicIdProvider
   */
 class AsdexReplayActor(val config: Config) extends Replayer[ArchiveReader]
                     with AccumulatingTopicIdProvider with AirportTopicMapper {
+
   class FilteringAsdexMsgParser extends FullAsdexMsgParser {
-    override protected def filterAirport (airportId: String) = !servedTopicIds.contains(airportId)
+    override protected def filterAirport (airportId: String) = {
+      !matchesAnyServedTopicId(airportId)
+    }
   }
 
   class AsdexMsgReader(conf: Config) extends ConfiguredTAReader(conf) {

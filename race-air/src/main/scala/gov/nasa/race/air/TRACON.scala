@@ -16,7 +16,7 @@
  */
 package gov.nasa.race.air
 
-import gov.nasa.race.common.ContactInfo
+import gov.nasa.race.common.{AllId, ContactInfo, NoneId}
 import gov.nasa.race.geo.{GeoPosition, GeoPositioned}
 
 import scala.collection.immutable.SortedMap
@@ -90,16 +90,31 @@ object TRACON {
 
   val tracons = traconList.foldLeft(SortedMap.empty[String,TRACON]) { (m, a) => m + (a.id -> a) }
 
+  //--- pseudo TRACONs
+
   // can be used for selection lists to reset selection
-  final val NoTracon = new TRACON("<none>", "", "", "", GeoPosition.undefinedPos) {
+  final val NoTracon = new TRACON(NoneId, "", "", "", GeoPosition.undefinedPos) {
     override def isMatching (s: String): Boolean = false
     override def isMatching (r: Regex): Boolean = false
+    override def matchesNone: Boolean = true
   }
 
-  final val AnyTracon = new TRACON("<any>", "", "", "", GeoPosition.undefinedPos) {
+  final val AnyTracon = new TRACON(AllId, "", "", "", GeoPosition.undefinedPos) {
     override def isMatching (s: String): Boolean = true
     override def isMatching (r: Regex): Boolean = true
-  }}
+    override def matchesAny: Boolean = true
+  }
+
+  def get(s: String): Option[TRACON] = {
+    tracons.get(s).orElse {
+      if (s == NoneId) Some(NoTracon)
+      else if (s == AllId) Some(AnyTracon)
+      else None
+    }
+  }
+
+  def getId (s: String): Option[String] = get(s).map(_.id)
+}
 
 /**
   * represents TRACONs (Terminal Radar Approach Control facilities)
@@ -109,6 +124,16 @@ class TRACON(val id: String, val name: String, val state: String, val area: Stri
 
   def isMatching (s: String): Boolean = s.equals(id)
   def isMatching (r: Regex): Boolean = r.matches(id)
+
+  def matchesAny: Boolean = false
+  def matchesNone: Boolean = false
+
+  override def equals(other: Any): Boolean = {
+    other match {
+      case o: TRACON => id == o.id
+      case _ => false
+    }
+  }
 }
 
 // matchable Seq type for TRACONs

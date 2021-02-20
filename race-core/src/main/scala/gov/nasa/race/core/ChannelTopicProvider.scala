@@ -20,6 +20,7 @@ package gov.nasa.race.core
 import akka.actor.{ActorRef, Terminated}
 import com.typesafe.config.Config
 import gov.nasa.race._
+import gov.nasa.race.common.AllId
 import gov.nasa.race.core.Messages._
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.util.StringUtils
@@ -382,7 +383,6 @@ trait TransitiveChannelTopicProvider extends ChannelTopicProvider with ChannelTo
   * on both ends (which is suboptimal)
   */
 trait AccumulatingTopicIdProvider extends ChannelTopicProvider {
-  val AllId = "<all>"
 
   val topicKey: String = "served-topics" // override if config should use a more specific name
 

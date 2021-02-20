@@ -16,6 +16,7 @@
  */
 package gov.nasa.race.air
 
+import gov.nasa.race.common.{AllId, NoneId}
 import gov.nasa.race.geo.{GeoPosition, GeoPositioned}
 
 import scala.collection.immutable.SortedMap
@@ -63,9 +64,6 @@ object ARTCC {
 
   //--- pseudo ARTCCs to allow more efficient filtering
 
-  final val NoneId = "<none>"
-  final val AllId = "<all>"
-
   final val NoARTCC = new ARTCC(NoneId,"","","", GeoPosition.undefinedPos) {
     override def isMatching (s: String): Boolean = false
     override def isMatching (r: Regex): Boolean = false
@@ -84,9 +82,11 @@ object ARTCC {
       else None
     }
   }
+
+  def getId (s: String): Option[String] = get(s).map(_.id)
 }
 
-class ARTCC (val id: String, val name: String, val state: String, val area: String, val position: GeoPosition) extends GeoPositioned {
+case class ARTCC (id: String, name: String, state: String, area: String, position: GeoPosition) extends GeoPositioned {
   def isMatching (s: String): Boolean = id == s
   def isMatching (r: Regex): Boolean = r.matches(id)
 
@@ -102,4 +102,5 @@ class ARTCC (val id: String, val name: String, val state: String, val area: Stri
   def matchesNone: Boolean = false
 }
 
+// if we need to match on a Seq type
 trait ARTCCs extends Seq[ARTCC]

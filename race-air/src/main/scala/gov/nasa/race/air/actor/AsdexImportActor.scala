@@ -27,10 +27,13 @@ import javax.jms.Message
 
 trait AirportTopicMapper {
   def topicIdsOf(t: Any): Seq[String] = t match {
-    case airport: Airport => Seq(airport.id)
-    case airports: Airports => airports.map(_.id)
-    case airportId: String => if (Airport.asdexAirports.contains(airportId)) Seq(airportId) else Seq.empty[String]
-    case airportIds: Seq[_] => airportIds.map(_.toString).filter(Airport.asdexAirports.contains)
+    case a: Airport => Seq(a.id)
+    case id: String => Airport.getId(id).toList
+    case ids: Seq[_] => ids.flatMap( _ match {
+      case a: Airport => Some(a.id)
+      case s: String => Airport.getId(s)
+      case _ => None
+    }).toList
     case _ => Seq.empty[String]
   }
 }

@@ -32,7 +32,7 @@ class TaisReplayActor(val config: Config) extends Replayer[ArchiveReader]
 
   class FilteringTATrackAndFlightPlanParser extends TATrackAndFlightPlanParser {
     override protected def filterSrc (traconId: String) = {
-      !servedTopicIds.contains(traconId)
+      !matchesAnyServedTopicId(traconId)
     }
   }
 

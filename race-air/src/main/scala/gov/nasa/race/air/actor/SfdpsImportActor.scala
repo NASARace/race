@@ -31,9 +31,12 @@ trait ARTCCTopicIdMapper {
   def topicIdsOf(t: Any): Seq[String] = {
     t match {
       case artcc: ARTCC => Seq(artcc.id)
-      case artccs: ARTCCs => artccs.map(_.id) // we could check if size > 1
-      case id: String => if (ARTCC.artccs.contains(id)) Seq(id) else Seq.empty[String]
-      case ids: Seq[_] => ids.map(_.toString).filter(ARTCC.artccs.contains)
+      case id: String => ARTCC.getId(id).toList
+      case ids: Seq[_] => ids.flatMap( _ match {
+        case a: ARTCC => Some(a.id)
+        case s: String => ARTCC.getId(s)
+        case _ => None
+      }).toList
       case _ => Seq.empty[String]
     }
   }

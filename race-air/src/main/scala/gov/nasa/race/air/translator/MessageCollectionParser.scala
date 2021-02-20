@@ -342,7 +342,7 @@ class MessageCollectionParser(val config: Config=NoConfig) extends UTF8XmlPullPa
       }
     }
 
-    // this is a SFDPS specific quirk - there is no src attribute in the MessageCollection elem,
+    // this is an SFDPS specific quirk - there is no src attribute in the MessageCollection elem,
     // but all flight childElements have the same src attr - we have to dig it out from the first one
     if (parseAttr(_centre)) src = attrValue.intern
     if (artccId == null) { // first src spec in this MessageCollection

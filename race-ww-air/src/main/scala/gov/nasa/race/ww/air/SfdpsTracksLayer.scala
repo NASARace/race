@@ -17,10 +17,10 @@
 package gov.nasa.race.ww.air
 
 import java.awt.Color
-
 import akka.actor.Actor.Receive
 import com.typesafe.config.Config
 import gov.nasa.race.air.{ARTCC, SfdpsTrack, SfdpsTracks}
+import gov.nasa.race.common.AllId
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.Messages.BusEvent
 import gov.nasa.race.geo.GeoPositioned
@@ -95,7 +95,7 @@ class SfdpsTracksLayer(val raceViewer: RaceViewer, val config: Config) extends M
           selPanel.updateSelection(selARTCCs)
           Some(artcc)
         } else {
-          if (id == ARTCC.AllId){
+          if (id == AllId){
             selARTCCs = Seq(ARTCC.AnyARTCC)
             selPanel.updateSelection(selARTCCs)
             Some(ARTCC.AnyARTCC)

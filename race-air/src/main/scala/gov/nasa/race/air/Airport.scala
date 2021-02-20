@@ -17,6 +17,7 @@
 
 package gov.nasa.race.air
 
+import gov.nasa.race.common.{AllId, NoneId}
 import gov.nasa.race.geo.{GeoPosition, GeoPositioned}
 import gov.nasa.race.uom._
 
@@ -85,15 +86,29 @@ object Airport {
   val airportNames = allAirports.keySet.toSeq
 
   // can be used for airport selection lists, to reset the selection
-  final val NoAirport = new Airport("<none>","no airport","",GeoPosition.fromDegreesAndFeet(0,0,0),false){
+
+
+  final val NoAirport = new Airport(NoneId,"no airport","",GeoPosition.fromDegreesAndFeet(0,0,0),false){
     override def isMatching (s: String): Boolean = false
     override def isMatching (r: Regex): Boolean = false
+    override def matchesNone: Boolean = true
   }
 
-  final val AnyAirport = new Airport("<any>","any airport","",GeoPosition.fromDegreesAndFeet(0,0,0),false){
+  final val AnyAirport = new Airport(AllId,"any airport","",GeoPosition.fromDegreesAndFeet(0,0,0),false){
     override def isMatching (s: String): Boolean = true
     override def isMatching (r: Regex): Boolean = true
+    override def matchesAny: Boolean = true
   }
+
+  def get(s: String): Option[Airport] = {
+    allAirports.get(s).orElse {
+      if (s == NoneId) Some(NoAirport)
+      else if (s == AllId) Some(AnyAirport)
+      else None
+    }
+  }
+
+  def getId (s: String): Option[String] = get(s).map(_.id)
 }
 
 /**
@@ -108,6 +123,16 @@ class Airport (val id: String,
 
   def isMatching (s: String): Boolean = s.equals(id)
   def isMatching (r: Regex): Boolean = r.matches(id)
+
+  def matchesAny: Boolean = false
+  def matchesNone: Boolean = false
+
+  override def equals(other: Any): Boolean = {
+    other match {
+      case o: Airport => id == o.id
+      case _ => false
+    }
+  }
 }
 
 // matchable Seq type for Airports
