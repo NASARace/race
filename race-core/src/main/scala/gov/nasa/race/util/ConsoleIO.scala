@@ -17,13 +17,17 @@
 
 package gov.nasa.race.util
 
+import com.typesafe.config.Config
+import gov.nasa.race.config.ConfigUtils.ConfigWrapper
+import gov.nasa.race.core.RaceActorSystem
+
 import java.io.File
 import java.util.concurrent.locks.ReentrantLock
-
 import gov.nasa.race.util.FileUtils._
 import gov.nasa.race.util.StringUtils._
 import gov.nasa.race.util.ThreadUtils._
 
+import scala.collection.mutable
 import scala.io.StdIn
 
 /**
@@ -57,6 +61,52 @@ object ConsoleIO {
   // types
   type MenuFunc =  PartialFunction[String, Any]
 
+  /**
+    * a configured (programmatically constructed) MenuFunc that can be used as a shortcut to send messages to actors.
+    * Configuration looks like this:
+    *   menu = [
+    *     { key = "1"                   // menu item key
+    *       text = "cut connection"     // menu item text
+    *       actor = "upstreamConnector" // the actor name the msg is sent to
+    *       msg = "cut"                 // the command string that is sent to actor
+    *       continue = true|false       // optional, default is false (i.e. menu exits after command got executed)
+    *     }, ...
+    *   ]
+    *
+    * the cmdSpecs parameter value can be obtained from the containing config by means of config.getConfigSeq(key)
+    */
+  class AppMenu (ras: RaceActorSystem, cmdSpecs: Seq[Config]) extends MenuFunc {
+    case class Cmd (key: String, text: String, actorName: String, msg: String, cont: Boolean) {
+      def execute(): Any = {
+        ras.send(actorName,msg)
+        if (cont) repeatMenu else exitMenu
+      }
+
+      override def toString: String = key + ':' + text
+    }
+
+    val cmds: mutable.LinkedHashMap[String,Cmd] = cmdSpecs.foldLeft(new mutable.LinkedHashMap[String,Cmd]) { (acc, c) =>
+      val key = c.getString("key")
+      val text = c.getString("text")
+      val actor = c.getString("actor")
+      val msg = c.getString("msg")
+      val cont = c.getBooleanOrElse("continue", false)
+      acc += key -> Cmd(key,text,actor,msg,cont)
+    }
+
+    val prompt: String = cmds.values.mkString("enter app command [", ", ", "]\n")
+
+    //--- the PartialFunction implementation
+
+    override def apply (v: String): Any = {
+      cmds.get(v) match {
+        case Some(cmd) => cmd.execute()
+        case None => exitMenu
+      }
+    }
+
+    override def isDefinedAt(key: String): Boolean = cmds.contains(key)
+  }
 
   class MenuCall (val prompt: String, val cmds: MenuFunc, val thread: Thread)
 
@@ -66,6 +116,7 @@ object ConsoleIO {
 
   // constants
   final val repeatMenu = "REPEAT_MENU"
+  final val exitMenu = "EXIT_MENU"
   final val menuColor = scala.Console.CYAN
   final val errorColor = scala.Console.RED
   final val infoColor = scala.Console.WHITE
@@ -102,6 +153,8 @@ object ConsoleIO {
     }
     false
   }
+
+  def menu (m: AppMenu): Unit = menu(m.prompt)(m)
 
   def menu (prompt: String, action: =>Any = {})(cmds: MenuFunc): Unit = {
     var again = false

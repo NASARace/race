@@ -16,16 +16,19 @@
  */
 package gov.nasa.race.http.share
 
+import akka.Done
 import akka.actor.ActorRef
 import akka.http.scaladsl.model.ws.{Message, TextMessage}
 import com.typesafe.config.Config
 import gov.nasa.race.common.{BufferedStringJsonPullParser, JsonWriter}
 import gov.nasa.race.core.Messages.BusEvent
 import gov.nasa.race.core.{ContinuousTimeRaceActor, PeriodicRaceActor, Ping, Pong, PongParser}
+import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.http.{WSAdapterActor, WsMessageReader, WsMessageWriter}
 import gov.nasa.race.uom.DateTime
 
 import scala.collection.mutable
+import scala.concurrent.Future
 import scala.concurrent.duration.{DurationInt, FiniteDuration}
 
 /**
@@ -376,6 +379,9 @@ class UpstreamConnectorActor(override val config: Config) extends WSAdapterActor
 
   override def defaultTickInterval: FiniteDuration = 30.seconds // normal timeout for websockets is 60 sec
 
+  val simMode = config.getBooleanOrElse("sim-mode", false)  // do we allow to simulate connection loss
+  var cutCon: Boolean = false
+
   //--- those are hardwired
   override def createWriter: WsMessageWriter = new ShareWriter
   override def createReader: WsMessageReader = new ShareReader
@@ -389,6 +395,10 @@ class UpstreamConnectorActor(override val config: Config) extends WSAdapterActor
     case BusEvent(_,cdc: ColumnDataChange,_) => state.handleColumnDataChange(cdc)
     case BusEvent(_,cc:ConstraintChange,_) => state.handleConstraintChange(cc)
     case RetryConnect => state.handleRetryConnect()
+
+      //--- simulation and debug
+    case "cut" => cutConnection
+    case "restore" => restoreConnection
   }
 
   //--- WSAdapterActor overrides
@@ -411,4 +421,25 @@ class UpstreamConnectorActor(override val config: Config) extends WSAdapterActor
   override def onDisconnect(): Unit = state.onDisconnect()
   override protected def processIncomingMessage (msg: Message): Unit = state.processIncomingMessage(msg)
 
+
+  //--- sim / debug support
+
+  def cutConnection: Unit = {
+    info(s"simulating connection loss")
+    cutCon = true
+    if (isConnected) disconnect()
+  }
+
+  def restoreConnection: Unit = {
+    info(s"simulating restored connection")
+    cutCon = false
+  }
+
+  override def connect(): Future[Done.type] = {
+    if (cutCon) {
+      Future { Done }
+    } else {
+      super.connect()
+    }
+  }
 }

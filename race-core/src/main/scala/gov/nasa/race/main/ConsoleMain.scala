@@ -73,7 +73,7 @@ trait ConsoleMainBase extends MainBase {
 
     if (!delayStart) universes.foreach { ras => if (!ras.delayLaunch) launch(ras) }
 
-    menu("enter command [1:show universes, 2:show actors, 3:show channels, 4:send message, 5:set loglevel, 7: pause/resume, 8:start, 9:exit]\n") {
+    menu("enter sys command [1:show universes, 2:show actors, 3:show channels, 4:send message, 5:set loglevel, 6:app menu, 7: pause/resume, 8:start, 9:exit]\n") {
       case "1" | "universes" => showUniverses(universes)
         repeatMenu
 
@@ -87,6 +87,9 @@ trait ConsoleMainBase extends MainBase {
         repeatMenu
 
       case "5" | "log" => runOnSelectedUniverse(universes) { setLogLevel }
+        repeatMenu
+
+      case "6" | "app" => runOnSelectedUniverse(universes) { appMenu }
         repeatMenu
 
       case "7" | "pause" | "resume" => runOnSelectedUniverse(universes) { pauseResume }
@@ -118,6 +121,14 @@ trait ConsoleMainBase extends MainBase {
   }
 
   final val channelPattern = """\| *(\S+)""".r
+
+
+  def appMenu (ras: RaceActorSystem): Unit = {
+    ras.appMenu match {
+      case Some(m) => menu(m)
+      case None => println(s"universe ${ras.name} has no app menu")
+    }
+  }
 
   /**
     * for testing purposes

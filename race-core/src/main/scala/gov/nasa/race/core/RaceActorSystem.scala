@@ -20,7 +20,6 @@ package gov.nasa.race.core
 import java.io.FileInputStream
 import java.lang.reflect.InvocationTargetException
 import java.util.concurrent.TimeoutException
-
 import akka.actor._
 import akka.event.Logging.LogLevel
 import akka.event.LoggingAdapter
@@ -33,6 +32,7 @@ import gov.nasa.race.common.Status._
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.Messages._
 import gov.nasa.race.uom.DateTime
+import gov.nasa.race.util.ConsoleIO.AppMenu
 import gov.nasa.race.util.FileUtils._
 import gov.nasa.race.util.NetUtils._
 import gov.nasa.race.util.{ClassLoaderUtils, ThreadUtils}
@@ -132,6 +132,12 @@ class RaceActorSystem(val config: Config) extends LogController with VerifiableA
   val allowSelfTermination = config.getBooleanOrElse("self-termination", true)
 
   val showExceptions = config.getBooleanOrElse("show-exceptions",false)
+
+  // optional configured app menu for this actor system
+  val appMenu: Option[AppMenu] = {
+    val cmdSpecs = config.getConfigSeq("menu")
+    if (cmdSpecs.nonEmpty) Some(new AppMenu(this, cmdSpecs)) else None
+  }
 
   // remote RAS book keeping
   var usedRemoteMasters = Map.empty[UrlString, ActorRef] // the remote masters we use (via our remote actors)
@@ -578,7 +584,9 @@ class RaceActorSystem(val config: Config) extends LogController with VerifiableA
 
   def publish(channel: String, msg: Any) = bus.publish(BusEvent(channel, msg, master))
 
-  def send(path: String, msg: Any) = system.actorSelection(path) ! msg
+  def send(actorName: String, msg: Any) = {
+    system.actorSelection(s"/user/$name/$actorName") ! msg
+  }
 
   //--- state query & display
 
