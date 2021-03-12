@@ -75,7 +75,7 @@ and (optionally) ``logout-request`` options::
           uri = "https://localhost:8080/secretData-login"
           entity = {
             type = "application/x-www-form-urlencoded"
-            content = "u=someUser&p=supersecret" // this would normally go into the vault
+            content = "u=someUser&nid=supersecret" // this would normally go into the vault
           }
         }
 

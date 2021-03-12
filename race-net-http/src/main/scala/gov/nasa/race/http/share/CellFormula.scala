@@ -23,6 +23,7 @@ import gov.nasa.race.http.share.FormulaList.CellValueFormulaSpec
 import gov.nasa.race.uom.DateTime
 
 import scala.collection.immutable.SeqMap
+import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 import scala.reflect.ClassTag
 import scala.util.parsing.combinator._
@@ -62,7 +63,6 @@ abstract class CellFormula[T: ClassTag] extends CellExpression[T] {
   def hasUpdatedDependencies (ctx: EvalContext): Boolean = {
     ctx.existsChange { (colId,row,cv) => dependencies.contains(row.cellRef(colId)) }
   }
-
 
   def computeCellValue (ctx: EvalContext): CellValue[T] = expr.computeCellValue(ctx)
 
@@ -242,6 +242,10 @@ abstract class CellExpressionParser (funLib: CellFunctionLibrary) extends DebugR
   }
 }
 
+/**
+  * combinator parser for cell expressions to compute cell values.
+  * here we always have the context of column and row this formula applies to
+  */
 class CellFormulaParser(node: Node, compiledColumn: Column, compiledRow: Row[_], funLib: CellFunctionLibrary) extends CellExpressionParser(funLib) {
 
   protected def _matchRows (rowSpec: String): Seq[String] = {
@@ -318,16 +322,18 @@ trait DebugRegexParsers extends RegexParsers {
   }
 }
 
-object FormulaList {
-  val _id_        = asc("id")
-  val _info_      = asc("info")
-  val _date_      = asc("date")
-  val _columns_   = asc("columns")
-  val _src_       = asc("src")
-  val _trigger_   = asc("trigger")
+object FormulaList extends JsonConstants {
+  val CV_FORMULA_LIST  = asc("cellValueFormulaList")
+  val CONSTRAINT_FORMULA_LIST = asc("constraintFormulaList")
+  val FORMULAS     = asc("formulas")
+  val COL_ID       = asc("columnId")
+  val ROW_ID       = asc("rowId")
+  val SRC          = asc("src")
+  val TRIGGER      = asc("trigger")
 
   type FormulaSrcs = (String,Option[String])   // formula sources: (expr, opt time-trigger)
-  type CellValueFormulaSpec = (String, Seq[(String,FormulaSrcs)])  // colId, {row,srcs}
+  type RowFormulaSpec = (String,FormulaSrcs)  // rowId,srcs
+  type CellValueFormulaSpec = (String, Seq[RowFormulaSpec])  // colId, {row,srcs}
 }
 
 trait FormulaList {
@@ -492,6 +498,64 @@ trait FormulaListParser[T] extends UTF8JsonPullParser {
 class CellValueFormulaListParser extends FormulaListParser[CellValueFormulaList] {
   import FormulaList._
 
+  def readRowFormulaSpecs (): Seq[RowFormulaSpec] = {
+    val specs = mutable.Buffer.empty[RowFormulaSpec]
+
+    foreachElementInCurrentArray {
+      var rowId: String = null
+      var src: String = null
+      var trigger: Option[String] = None
+
+      foreachMemberInCurrentObject {
+        case ROW_ID => rowId = quotedValue.intern
+        case SRC => src = quotedValue.toString
+        case TRIGGER => trigger = Some(quotedValue.toString)
+      }
+
+      specs += (rowId -> (src, trigger))
+    }
+
+    specs.toSeq
+  }
+
+  def readColumnSpecs(): Seq[CellValueFormulaSpec] = {
+    val specs = mutable.Buffer.empty[CellValueFormulaSpec]
+
+    foreachElementInCurrentArray {
+      val spec = readCurrentObject {
+        var colId: String = null
+        var rowFormulaSpecs = Seq.empty[RowFormulaSpec]
+
+        foreachMemberInCurrentObject {
+          case COL_ID => colId = quotedValue.toString
+          case FORMULAS => rowFormulaSpecs = readCurrentArray( readRowFormulaSpecs() )
+        }
+        (colId -> rowFormulaSpecs)
+      }
+      specs += spec
+    }
+    specs.toSeq
+  }
+
+  def readCellValueFormulaList(): CellValueFormulaList = {
+    readCurrentObject {
+      var id: String = null
+      var info: String = ""
+      var date: DateTime = DateTime.UndefinedDateTime
+      var columnSpecs = Seq.empty[CellValueFormulaSpec]
+
+      foreachMemberInCurrentObject {
+        case ID => id = quotedValue.toString
+        case INFO => info = quotedValue.toString
+        case DATE => date = dateTimeValue
+        case COLUMNS => columnSpecs = readCurrentArray( readColumnSpecs() )
+      }
+
+      if (id == null) throw exception("missing 'id' in cellValueFormulaList")
+      new CellValueFormulaList( id,info,date, columnSpecs)
+    }
+  }
+
   /**
     * this only creates the CvFL with specs. It does not yet compile the expr sources and hence does not need to
     * know CL and RL (i.e. the Node)
@@ -501,24 +565,7 @@ class CellValueFormulaListParser extends FormulaListParser[CellValueFormulaList]
 
     try {
       readNextObject {
-        val id = readQuotedMember(_id_).toString  // for the formula list
-        val info = readQuotedMember(_info_).toString
-        val date = readDateTimeMember(_date_)
-
-        val formulaSpecs = readNextObjectMemberInto(_columns_, ArrayBuffer.empty[CellValueFormulaSpec]) {
-          val colSpec = readObjectMemberName().toString  // can be a pattern (expanded during compilation)
-          val formulas = readCurrentObjectInto(ArrayBuffer.empty[(String,FormulaSrcs)]) {
-            val rowSpec = readObjectMemberName().toString // can be a pattern (expanded during compilation)
-            val formulaSrc = readQuotedMember(_src_).toString
-            val triggerSrc = readOptionalQuotedMember(_trigger_).map(_.toString)
-
-            skipPastAggregate()
-            (rowSpec,(formulaSrc,triggerSrc))
-          }.toSeq
-          (colSpec,formulas)
-        }.toSeq
-
-        Some( new CellValueFormulaList(id,info,date, formulaSpecs))
+        Some( readNextObjectMember(CV_FORMULA_LIST){ readCellValueFormulaList() } )
       }
     } catch {
       case x: JsonParseException =>

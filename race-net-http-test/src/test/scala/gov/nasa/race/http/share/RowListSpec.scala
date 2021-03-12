@@ -29,7 +29,7 @@ class RowListSpec extends AnyFlatSpec with RaceSpec {
   "a RowListParser" should "translate a JSON source" in {
     val input = FileUtils.fileContentsAsString("race-net-http-test/src/resources/sites/share/data/rowList.json").get
 
-    val parser = new RowListParser("/providers/region1")
+    val parser = new RowListParser("/nodes/coordinator")
 
     println(s"#-- parsing: $input")
 

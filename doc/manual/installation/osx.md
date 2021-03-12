@@ -13,7 +13,7 @@ to see which Java versions are installed on the machine. If there is a 1.8 Java,
 set `JAVA_HOME` in `~/.profile` accordingly. Close and reopen terminal window,
 and re-check Java version.
 
-If no Java 1.8 is installed on the machine, get it from [Oracle's download site][jdk]
+If no Java 1.8 is installed on the machine, get it from [Oracle's download node][jdk]
 
 ## 2. Install SBT
 Check if SBT is installed

@@ -17,20 +17,15 @@
 package gov.nasa.race.http.share
 
 import gov.nasa.race.common.ConstAsciiSlice.asc
-import gov.nasa.race.common.{ConstAsciiSlice, JsonParseException, JsonPullParser, JsonSerializable, JsonWriter, PathIdentifier, UTF8JsonPullParser}
+import gov.nasa.race.common.{ConstAsciiSlice, JsonParseException, JsonPullParser, JsonSerializable, JsonWriter, UTF8JsonPullParser}
 import gov.nasa.race.uom.DateTime
 
-import scala.collection.{immutable, mutable}
+import scala.collection.mutable
 
 
-object ColumnData {
+object ColumnData extends JsonConstants {
   //--- lexical constants
-  val _id_ = asc("id") // the provider id
-  val _rows_ = asc("rows")
-  val _columnListId_ = asc("columnlist")
-  val _rowListId_ = asc("rowlist")
-  val _value_ = asc("value")
-  val _date_ = asc("date")
+  val COLUMN_DATA = asc("columnData")
 
   // callback to record changed cell values
   type CVRecordFunc = (ColId,Row[_],CellValue[_])=>Unit
@@ -82,10 +77,10 @@ case class ColumnData (id: String, date: DateTime, values: Map[String,CellValue[
 
   private def _serializeTo (w: JsonWriter)(valueSerializer: JsonWriter=>Unit): Unit = {
     w.clear().writeObject( _
-      .writeMemberObject("columnData") { _
-        .writeStringMember(_id_, id.toString)
-        .writeDateTimeMember(_date_, date)
-        .writeMemberObject(_rows_) { w => valueSerializer(w) }
+      .writeObject("columnData") { _
+        .writeStringMember(ID, id.toString)
+        .writeDateTimeMember(DATE, date)
+        .writeObject(ROWS) { w => valueSerializer(w) }
       }
     )
   }
@@ -309,58 +304,72 @@ case class ColumnData (id: String, date: DateTime, values: Map[String,CellValue[
   * TODO - this should have a map of FieldCatalogs as ctor args so that we can check against the right fields based on
   * what is specified in the PD
   */
-class ColumnDataParser(rowList: RowList) extends UTF8JsonPullParser {
+class ColumnDataParser (rowList: RowList) extends UTF8JsonPullParser {
 
-  def parse (buf: Array[Byte]): Option[ColumnData] = {
-    var latestChange = DateTime.Date0 // to hold the latest fieldValue change date (if all specified)
+  def fillInDefaultDates(map: Map[String,CellValue[_]], date: DateTime): Map[String,CellValue[_]] = {
+    map.map( e=> if (e._2.date.isUndefined) (e._1 -> e._2.copyWithDate(date)) else e )
+  }
 
-    // we parse both explicit
-    //     "<rowId>": { "value": <num>|<string>|<array> [, "date": <epoch-ms>] }
-    // and implicit
-    //     "<rowId>": <num>|<sting>|<array>
-    // if no date is specified we use the parseDate to instantiate FieldValues
-    def readCell(defaultDate: DateTime): Option[(String,CellValue[_])] = {
-      val rowId = readMemberName().intern
+  def readRows(defaultDate: DateTime): Map[String,CellValue[_]] = {
+    var latestChange = DateTime.Date0
+    var map = Map.empty[String,CellValue[_]]
+
+    foreachInCurrentObject {
+      val rowId = member.intern
       rowList.get(rowId) match {
         case Some(row) =>
           val cv = row.parseValueFrom(this)(defaultDate)
           if (cv.date > latestChange) latestChange = cv.date
-          Some((rowId,cv))
+          map = map + (rowId -> cv)
         case None =>
-          warning(s"skipping unknown row $rowId")
-          None
+          warning(s"skipping unknown row $rowId") // we don't treat this as an error since the RowList might have changed
       }
     }
 
+    map
+  }
+
+  def readColumnData(): ColumnData = {
+    var id: String = null
+    var date: DateTime = DateTime.UndefinedDateTime
+    var checkDates: Boolean = false
+    var rows: Map[String,CellValue[_]] = Map.empty
+
+    foreachMemberInCurrentObject {
+      case ID => id = quotedValue.toString
+      case DATE => date = dateTimeValue
+      case ROWS =>
+        if (date.isUndefined) checkDates = true
+        rows = readCurrentObject( readRows(date) )
+    }
+    if (id == null) throw exception("missing id in columnData")
+    if (!date.isDefined) throw exception("missing date in columnData")
+    if (checkDates) rows = fillInDefaultDates(rows,date)
+
+    ColumnData(id, date, rows)
+  }
+
+  def parse (buf: Array[Byte]): Option[ColumnData] = {
     initialize(buf)
 
     try {
-      ensureNextIsObjectStart()
-      val id = readQuotedMember(_id_).intern
-      val date = readDateTimeMember(_date_)
-
-      val cells = readSomeNextObjectMemberInto[String,CellValue[_],mutable.Map[String,CellValue[_]]](_rows_,mutable.Map.empty){
-        readCell(date)
-      }.toMap
-
-      Some(ColumnData(id,latestChange,cells)) // use latestChange as the date to make sure it is consistent
-
+      readNextObject {
+        Some( readNextObjectMember(COLUMN_DATA) { readColumnData() } )
+      }
     } catch {
       case x: JsonParseException =>
-        warning(s"malformed providerData: ${x.getMessage}")
+        warning(s"malformed columnList: ${x.getMessage}")
         None
     }
   }
 }
 
-object ColumnDataChange {
+object ColumnDataChange extends JsonConstants {
   // lexical constants for serialization/deserialization of ProviderDataChange objects
-  val _columnDataChange_ : ConstAsciiSlice = asc("columnDataChange")
-  val _columnId_ : ConstAsciiSlice = asc("columnId") // the provider id
-  val _date_ : ConstAsciiSlice = asc("date")
-  val _changeNodeId_ : ConstAsciiSlice = asc("changeNodeId")
-  val _changedValues_ : ConstAsciiSlice = asc("changedValues")
-  val _value_ : ConstAsciiSlice = asc("value")
+  val COLUMN_DATA_CHANGE : ConstAsciiSlice = asc("columnDataChange")
+  val COLUMN_ID : ConstAsciiSlice = asc("columnId") // the provider id
+  val CHANGE_NODE_ID : ConstAsciiSlice = asc("changeNodeId")
+  val CHANGED_VALUES : ConstAsciiSlice = asc("changedValues")
 }
 
 /**
@@ -379,11 +388,11 @@ case class ColumnDataChange(columnId: String,
   /** order of fieldValues should not matter */
   def serializeTo (w: JsonWriter): Unit = {
     w.clear().writeObject { _
-      .writeMemberObject(_columnDataChange_) { _
-        .writeStringMember(_columnId_, columnId.toString)
-        .writeStringMember(_changeNodeId_, changeNodeId.toString)
-        .writeDateTimeMember(_date_, date)
-        .writeMemberObject(_changedValues_) { w =>
+      .writeObject(COLUMN_DATA_CHANGE) { _
+        .writeStringMember(COLUMN_ID, columnId.toString)
+        .writeStringMember(CHANGE_NODE_ID, changeNodeId.toString)
+        .writeDateTimeMember(DATE, date)
+        .writeObject(CHANGED_VALUES) { w =>
           changedValues.foreach { fv =>
             w.writeMemberName(fv._1.toString)
             val wasFormatted = w.format(false) // print this dense no matter what
@@ -405,41 +414,70 @@ case class ColumnDataChange(columnId: String,
 /**
   * a parser for ProviderDataChange messages
   * note this is a trait so that we can compose parsers for specific message sets
+  *
+  * note also that CDCs can be sent by external devices or processes so we should not rely on a specific
+  * ordering of members
   */
 trait ColumnDataChangeParser extends JsonPullParser {
   import ColumnDataChange._
 
   def rowList: RowList // to be provided by concrete type
 
-  def parseColumnDataChange: Option[ColumnDataChange] = {
-    readNextObjectMember(_columnDataChange_) {
-      parseColumnDataChangeBody
-    }
+  def fillInDates (cvs: Seq[CellPair], date: DateTime): Seq[CellPair] = {
+    cvs.map( e=> if (e._2.date.isDefined) e else (e._1 -> e._2.copyWithDate(date)))
   }
 
-  def parseColumnDataChangeBody: Option[ColumnDataChange] = {
-    def readCell (defaultDate: DateTime): Option[(String,CellValue[_])] = {
-      val rowId = readObjectMemberName().intern
+  def readChangedValues(date: DateTime): Seq[CellPair] = {
+    var cvs = mutable.Buffer.empty[CellPair]
 
+    foreachInCurrentObject {
+      val rowId = member.intern
       rowList.get(rowId) match {
-        case Some(row) =>
-          Some(rowId -> row.parseValueFrom(this)(defaultDate))
-        case None =>
-          warning(s"unknown field '$rowId' in providerDataChange message ignored")
-          None
+        case Some(row) => cvs += (rowId -> row.parseValueFrom(this)(date))
+        case None => warning(s"unknown row '$rowId' in columnDataChange message ignored")
       }
     }
 
-    tryParse( x=> warning(s"malformed providerDataChange: ${x.getMessage}") ) {
-      val columnId = readQuotedMember(_columnId_).intern
-      val changeNodeId = readQuotedMember(_changeNodeId_).intern
-      val date = readDateTimeMember(_date_)
+    cvs.toSeq
+  }
 
-      val cells = readSomeNextObjectMemberInto[String,CellValue[_],mutable.Buffer[(String,CellValue[_])]](_changedValues_,mutable.Buffer.empty){
-        readCell(date)
-      }.toSeq
+  // the 'columnDataChange' member name has already been parsed
+  def parseColumnDataChange(): Option[ColumnDataChange] = {
+    var columnId: String = null
+    var changeNodeId: String = null
+    var date: DateTime = DateTime.UndefinedDateTime
+    var cvs = Seq.empty[CellPair]
+    var checkDates = false
 
-      ColumnDataChange(columnId,changeNodeId,date,cells)
+    tryParse( x=> warning(s"malformed columnDataChange: ${x.getMessage}") ) {
+      foreachMemberInCurrentObject {
+        case COLUMN_ID => columnId = quotedValue.intern
+        case CHANGE_NODE_ID => changeNodeId = quotedValue.intern
+        case DATE => date = dateTimeValue
+        case CHANGED_VALUES =>
+          checkDates = date.isDefined
+          cvs = readCurrentObject( readChangedValues(date))
+      }
+
+      if (columnId == null) throw exception(s"missing '$COLUMN_ID' in columnDataChange")
+      if (changeNodeId == null) throw exception(s"missing '$CHANGE_NODE_ID' in columnDataChange")
+      if (date.isUndefined) throw exception(s"missing '$DATE' in columnDataChange")
+      if (checkDates) cvs = fillInDates(cvs,date)
+
+      ColumnDataChange(columnId,changeNodeId,date,cvs)
+    }
+  }
+
+  def parse (): Option[ColumnDataChange] = {
+    try {
+      readNextObject {
+        readNextObjectMember(COLUMN_DATA_CHANGE){ parseColumnDataChange() }
+      }
+    } catch {
+      case x: JsonParseException =>
+        warning(s"malformed columnDataChange: ${x.getMessage}")
+        //x.printStackTrace()
+        None
     }
   }
 }

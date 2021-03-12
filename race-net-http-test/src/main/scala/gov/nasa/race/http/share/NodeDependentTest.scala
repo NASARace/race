@@ -28,7 +28,10 @@ trait NodeDependentTest {
       if (f.isFile) {
         val parser = new ColumnDataParser(rowList)
         parser.parse(fileContentsAsBytes(f.getPath)) match {
-          case Some(cd) => map += col.id -> cd
+          case Some(cd) =>
+            if (cd.id == col.id) map += col.id -> cd
+            else throw new RaceException(s"CD with unknown column ${cd.id} in $f")
+
           case None => throw new RaceException(f"error parsing column data in $f")
         }
       } else {
@@ -42,11 +45,12 @@ trait NodeDependentTest {
   }
 
   def getNode(nodeId: String, dataDir: String): Node = {
+    val nodeList = new NodeListParser().parse(fileContentsAsBytes(dataDir + "/nodeList.json")).get
     val columnList = new ColumnListParser(nodeId).parse(fileContentsAsBytes(dataDir + "/columnList.json")).get
-    val rowList = new RowListParser(columnList.id).parse(fileContentsAsBytes(dataDir + "/rowList.json")).get
+    val rowList = new RowListParser(nodeId).parse(fileContentsAsBytes(dataDir + "/rowList.json")).get
     val cds = getColumnData(dataDir, columnList, rowList)
 
-    Node(nodeId, None, columnList, rowList, cds)
+    Node(None, nodeList,columnList,rowList, cds)
   }
 
 }

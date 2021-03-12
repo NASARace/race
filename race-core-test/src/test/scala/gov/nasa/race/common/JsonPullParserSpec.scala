@@ -464,4 +464,51 @@ class JsonPullParserSpec extends AnyFlatSpec with RaceSpec {
     }
     println("Ok.")
   }
+
+  "a JsonPullParser" should "support un-ordered parsing of object members" in {
+    //--- lexical constants (can't be Strings)
+    val ID = asc("id")
+    val INFO = asc("info")
+    val HOST = asc("host")
+    val PORT = asc("port")
+    val IP = asc("ip")
+
+    val input =
+      """
+      { "id":  "../communicator",
+        "info": "this is the upstream communicator",
+        "host": "localhost",
+        "port": 8000,
+        "ip": "255.255.255.255" }
+      """
+
+    println(s"\n #-- parsing object members un-ordered in $input")
+
+    val p = new StringJsonPullParser
+    p.initialize(input)
+    val res = p.readNextObject {
+      var id: String = null
+      var info: String = null
+      var host: String = null
+      var port: Int = -1
+      var ip: String = null
+
+      p.foreachMemberInCurrentObject {
+        case ID   => id = p.quotedValue.toString
+        case INFO => info = p.quotedValue.toString
+        case HOST => host = p.quotedValue.toString
+        case PORT => port = p.unQuotedValue.toInt
+        case IP   => ip = p.quotedValue.toString
+      }
+      (id,info,host,port,ip) // this would return an object created from
+    }
+
+    println(s"   -> $res")
+
+    res._1 shouldBe("../communicator")
+    res._2 shouldBe("this is the upstream communicator")
+    res._3 shouldBe("localhost")
+    res._4 shouldBe(8000)
+    res._5 shouldBe("255.255.255.255")
+  }
 }

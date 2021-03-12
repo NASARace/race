@@ -16,60 +16,80 @@
  */
 package gov.nasa.race.http.share
 
-
 import gov.nasa.race.{Failure, ResultValue, SuccessValue}
 import gov.nasa.race.common.ConstAsciiSlice.asc
-import gov.nasa.race.common.{Glob, JsonParseException, JsonPullParser, JsonSerializable, JsonWriter, PathIdentifier, UTF8JsonPullParser}
+import gov.nasa.race.common.{CharSeqByteSlice, Glob, Internalizer, JsonParseException, JsonPullParser, JsonSerializable, JsonWriter, PathIdentifier, UTF8JsonPullParser}
+import gov.nasa.race.http.share.NodeMatcher.{allMatcher, noneMatcher}
 import gov.nasa.race.uom.DateTime
 
 import scala.collection.mutable.ArrayBuffer
-
-object RowConst {
-  //--- lexical constants
-  val _type_        = asc("type")
-  val _id_          = asc("id")
-  val _info_        = asc("info")
-  val _integer_     = asc("integer")
-  val _real_        = asc("real")
-  val _integerList_ = asc("integerList")
-  val _realList_    = asc("realList")
-  val _boolean_     = asc("boolean")
-  val _string_      = asc("string")
-  val _header_      = asc("header")
-  val _attrs_       = asc("attrs")
-}
-import RowConst._
-
-import scala.collection.{SeqMap, immutable}
+import scala.collection.immutable.SeqMap
 import scala.reflect.{ClassTag, classTag}
 
-object Row {
-  def apply (id: String)(rowType: String, info: String = s"this is row $id", updateFilter: UpdateFilter = UpdateFilter.localOnly, attrs: Seq[String] = Seq.empty): Row[_] = {
+object Row extends JsonConstants {
+  //--- lexical constants
+  val T_integer = "integer"
+  val T_real = "real"
+  val T_boolean = "boolean"
+  val T_string = "string"
+  val T_integerList = "integerList"
+  val T_realList = "realList"
+
+  val TYPE = asc("type")
+  val INTEGER = asc(T_integer)
+  val REAL = asc(T_real)
+  val BOOLEAN = asc(T_boolean)
+  val STRING = asc(T_string)
+  val INTEGER_LIST = asc(T_integerList)
+  val REAL_LIST = asc(T_realList)
+
+  def apply (id: String)(rowType: String,
+                         info: String = s"this is row $id",
+                         send: NodeMatcher = allMatcher,
+                         receive: NodeMatcher = allMatcher,
+                         attrs: Seq[String] = Seq.empty): Row[_] = {
     rowType match {
         // builtin types
-      case "integer" => IntegerRow(id,info,updateFilter,attrs)
-      case "real" => RealRow(id,info,updateFilter,attrs)
-      case "boolean" => BoolRow(id,info,updateFilter,attrs)
-      case "string" => StringRow(id,info,updateFilter,attrs)
-      case "integerList" => IntegerListRow(id,info,updateFilter,attrs)
-      case "realList" => RealListRow(id,info,updateFilter,attrs)
+      case T_integer => IntegerRow(id,info,send,receive,attrs)
+      case T_real => RealRow(id,info,send,receive,attrs)
+      case T_boolean => BoolRow(id,info,send,receive,attrs)
+      case T_string => StringRow(id,info,send,receive,attrs)
+      case T_integerList => IntegerListRow(id,info,send,receive,attrs)
+      case T_realList => RealListRow(id,info,send,receive,attrs)
         // ..we might add an extensible registry for user defined types here (akin to reference types)
+      case other => throw new IllegalArgumentException(s"unknown row type: $other")
     }
   }
+
+  // mostly for testing
+  def integerRow(id: String ): Row[_] = Row(id)(T_integer)
+  def realRow(id: String ): Row[_] = Row(id)(T_real)
+  def booleanRow(id: String ): Row[_] = Row(id)(T_boolean)
+  def stringRow(id: String ): Row[_] = Row(id)(T_string)
+  def integerListRow(id: String): Row[_] = Row(id)(T_integerList)
+  def realListRow(id: String): Row[_] = Row(id)(T_realList)
+
+  // this is on top of respective Column send/receive matchers so default can be allMatcher
+  val defaultSendMatcher = allMatcher
+  val defaultReceiveMatcher = allMatcher
 }
 
 /**
   * abstraction of rows
   * mostly holds the cell value type and acts as a factory for objects that depend on this type
+  *
+  * note this can't be a trait in Scala 2 since we need the ClassTag on the type parameter to access its runtime class
   */
 abstract class Row[T: ClassTag] extends JsonSerializable {
+  import Row._
 
   def cellType: Class[_] = classTag[T].runtimeClass
   val typeName: String
 
   val id: String
   val info: String
-  val updateFilter: UpdateFilter
+  val send: NodeMatcher
+  val receive: NodeMatcher
   val attrs: Seq[String]  // extensible set of symbolic attributes
 
   val isLocked: Boolean = attrs.contains("locked") // if set the field can only be updated through formula eval
@@ -83,11 +103,12 @@ abstract class Row[T: ClassTag] extends JsonSerializable {
 
   def serializeTo (w:JsonWriter): Unit = {
     w.writeObject { w=>
-      w.writeStringMember(_id_, id)
-      w.writeStringMember(_info_, info)
-      w.writeStringMember(_type_, typeName)
-
-      if (attrs.nonEmpty) w.writeStringArrayMember(_attrs_, attrs)
+      w.writeStringMember(ID, id)
+      w.writeStringMember(INFO, info)
+      w.writeStringMember(TYPE, typeName)
+      if (receive != defaultReceiveMatcher) w.writeStringMember(RECEIVE, receive.pattern)
+      if (send != defaultSendMatcher) w.writeStringMember(SEND, send.pattern)
+      if (attrs.nonEmpty) w.writeStringArray(ATTRS, attrs)
     }
   }
 }
@@ -95,17 +116,28 @@ abstract class Row[T: ClassTag] extends JsonSerializable {
 /**
   * mixin for a JsonPullParser to read Rows
   */
-trait RowParser extends JsonPullParser with UpdateFilterParser {
-  import RowConst._
+trait RowParser extends JsonPullParser with NodeMatcherParser with AttrsParser {
+  import Row._
 
-  def parseRow (rowListId: String, columnListId: String): Row[_] = {
-    val id = PathIdentifier.resolve(readQuotedMember(_id_),rowListId)
-    val rowType = readQuotedMember(_type_).toString
-    val info = readQuotedMember(_info_).toString
-    val updateFilter = parseUpdateFilter(columnListId,UpdateFilter.sendReceiveAll)
-    val attrs = readOptionalStringArrayMemberInto(_attrs_,ArrayBuffer.empty[String]).map(_.toSeq).getOrElse(Seq.empty[String])
+  def readRow(nodeId: String): Row[_] = {  // TODO - do we need list ids ??
+    var id: String = null
+    var info: String = ""
+    var rowType: String = null
+    var send: NodeMatcher = defaultSendMatcher
+    var receive: NodeMatcher = defaultReceiveMatcher  // 'target' doesn't make sense here, we don't have a suitable context
+    var attrs = Seq.empty[String]
 
-    Row(id)(rowType,info,updateFilter,attrs)
+    foreachMemberInCurrentObject {
+      case ID => id = quotedValue.intern
+      case INFO => info = quotedValue.toString
+      case TYPE => rowType = quotedValue.toString
+      case SEND => send = readNodeMatcher(quotedValue,nodeId)
+      case RECEIVE => receive = readNodeMatcher(quotedValue,nodeId)
+      case ATTRS => attrs = readAttrs()
+    }
+
+    if (id == null) throw exception("missing 'id' in row spec")
+    Row(id)(rowType,info,send,receive,attrs)
   }
 }
 
@@ -114,8 +146,8 @@ trait RowParser extends JsonPullParser with UpdateFilterParser {
 /**
   * Row holding Integer values (mapping to Long)
   */
-case class IntegerRow(id: String, info: String, updateFilter: UpdateFilter = UpdateFilter.localOnly, attrs: Seq[String] = Seq.empty) extends Row[Long] {
-  val typeName = _integer_.toString
+case class IntegerRow(id: String, info: String, send: NodeMatcher, receive: NodeMatcher, attrs: Seq[String]) extends Row[Long] {
+  val typeName = Row.T_integer
 
   override def undefinedCellValue: CellValue[Long] = UndefinedIntegerCellValue
   override def cellRef (colId: String): IntegerCellRef = IntegerCellRef(colId, id)
@@ -127,14 +159,14 @@ case class IntegerRow(id: String, info: String, updateFilter: UpdateFilter = Upd
     }
   }
 
-  override def parseValueFrom (p: JsonPullParser)(implicit date: DateTime) = IntegerCellValue.parseValueFrom(p,date)
+  override def parseValueFrom (p: JsonPullParser)(implicit date: DateTime) = IntegerCellValue.readCellValue(p,date)
 }
 
 /**
   * Row holding Real values (mapping to Double)
   */
-case class RealRow (id: String, info: String, updateFilter: UpdateFilter = UpdateFilter.localOnly, attrs: Seq[String] = Seq.empty) extends Row[Double] {
-  val typeName = _real_.toString
+case class RealRow (id: String, info: String, send: NodeMatcher, receive: NodeMatcher, attrs: Seq[String]) extends Row[Double] {
+  val typeName = Row.T_real
 
   override def undefinedCellValue: CellValue[Double] = UndefinedRealCellValue
   override def cellRef (colId: String): RealCellRef = RealCellRef(colId, id)
@@ -146,14 +178,14 @@ case class RealRow (id: String, info: String, updateFilter: UpdateFilter = Updat
     }
   }
 
-  override def parseValueFrom (p: JsonPullParser)(implicit date: DateTime) = RealCellValue.parseValueFrom(p,date)
+  override def parseValueFrom (p: JsonPullParser)(implicit date: DateTime) = RealCellValue.readCellValue(p,date)
 }
 
 /**
   * Row holding Boolean values
   */
-case class BoolRow (id: String, info: String, updateFilter: UpdateFilter = UpdateFilter.localOnly, attrs: Seq[String] = Seq.empty) extends Row[Boolean] {
-  val typeName = _boolean_.toString
+case class BoolRow (id: String, info: String, send: NodeMatcher, receive: NodeMatcher, attrs: Seq[String]) extends Row[Boolean] {
+  val typeName = Row.T_boolean
 
   override def undefinedCellValue: CellValue[Boolean] = UndefinedBoolCellValue
   override def cellRef (colId: String): BoolCellRef = BoolCellRef(colId, id)
@@ -165,14 +197,14 @@ case class BoolRow (id: String, info: String, updateFilter: UpdateFilter = Updat
     }
   }
 
-  override def parseValueFrom (p: JsonPullParser)(implicit date: DateTime) = BoolCellValue.parseValueFrom(p,date)
+  override def parseValueFrom (p: JsonPullParser)(implicit date: DateTime) = BoolCellValue.readCellValue(p,date)
 }
 
 /**
   * Row holding String values
   */
-case class StringRow (id: String, info: String, updateFilter: UpdateFilter = UpdateFilter.localOnly, attrs: Seq[String] = Seq.empty) extends Row[String] {
-  val typeName = _string_.toString
+case class StringRow (id: String, info: String, send: NodeMatcher, receive: NodeMatcher, attrs: Seq[String]) extends Row[String] {
+  val typeName = Row.T_string
 
   override def undefinedCellValue: CellValue[String] = UndefinedStringCellValue
   override def cellRef (colId: String): StringCellRef = StringCellRef(colId, id)
@@ -184,14 +216,14 @@ case class StringRow (id: String, info: String, updateFilter: UpdateFilter = Upd
     }
   }
 
-  override def parseValueFrom (p: JsonPullParser)(implicit date: DateTime) = StringCellValue.parseValueFrom(p,date)
+  override def parseValueFrom (p: JsonPullParser)(implicit date: DateTime) = StringCellValue.readCellValue(p,date)
 }
 
 /**
   * Row holding IntegerList values
   */
-case class IntegerListRow (id: String, info: String, updateFilter: UpdateFilter = UpdateFilter.localOnly, attrs: Seq[String] = Seq.empty) extends Row[IntegerList] {
-  val typeName = _integerList_.toString
+case class IntegerListRow (id: String, info: String, send: NodeMatcher, receive: NodeMatcher, attrs: Seq[String]) extends Row[IntegerList] {
+  val typeName = Row.T_integerList
 
   override def undefinedCellValue: CellValue[IntegerList] = UndefinedIntegerListCellValue
   override def cellRef (colId: String): IntegerListCellRef = IntegerListCellRef(colId, id)
@@ -203,14 +235,14 @@ case class IntegerListRow (id: String, info: String, updateFilter: UpdateFilter 
     }
   }
 
-  override def parseValueFrom (p: JsonPullParser)(implicit date: DateTime) = IntegerListCellValue.parseValueFrom(p,date)
+  override def parseValueFrom (p: JsonPullParser)(implicit date: DateTime) = IntegerListCellValue.readCellValue(p,date)
 }
 
 /**
   * Row holding RealList values
   */
-case class RealListRow (id: String, info: String, updateFilter: UpdateFilter = UpdateFilter.localOnly, attrs: Seq[String] = Seq.empty) extends Row[RealList] {
-  val typeName = _realList_.toString
+case class RealListRow (id: String, info: String, send: NodeMatcher, receive: NodeMatcher, attrs: Seq[String]) extends Row[RealList] {
+  val typeName = Row.T_realList
 
   override def undefinedCellValue: CellValue[RealList] = UndefinedRealListCellValue
   override def cellRef (colId: String): RealListCellRef = RealListCellRef(colId, id)
@@ -222,25 +254,21 @@ case class RealListRow (id: String, info: String, updateFilter: UpdateFilter = U
     }
   }
 
-  override def parseValueFrom (p: JsonPullParser)(implicit date: DateTime) = RealListCellValue.parseValueFrom(p,date)
+  override def parseValueFrom (p: JsonPullParser)(implicit date: DateTime) = RealListCellValue.readCellValue(p,date)
 }
 
 
-object RowList {
+object RowList extends JsonConstants {
   //--- lexical constants
-  val _rowList_   = asc("rowList")
-  val _id_        = asc("id")
-  val _info_      = asc("info")
-  val _date_      = asc("date")
-  val _rows_      = asc("rows")
+  val ROW_LIST   = asc("rowList")
 
   def apply (id: String, date: DateTime, rows: Row[_]*): RowList = new RowList( id, s"this is row list $id", date, SeqMap( rows.map( r=> r.id -> r):_*))
 }
 
 /**
-  * ordered map of Rows
+  * class representing a versioned, named and ordered collection of Row specs
   */
-case class RowList (id: String, info: String, date: DateTime, rows: immutable.SeqMap[String,Row[_]]) extends JsonSerializable {
+case class RowList (id: String, info: String, date: DateTime, rows: SeqMap[String,Row[_]]) extends JsonSerializable {
   import RowList._
 
   def getUndefinedValue(id: String): Option[CellValue[_]] = rows.get(id).map(_.undefinedCellValue)
@@ -309,11 +337,11 @@ case class RowList (id: String, info: String, date: DateTime, rows: immutable.Se
 
   def serializeTo (w: JsonWriter): Unit = {
     w.clear().writeObject( _
-      .writeMemberObject(_rowList_) { _
-        .writeStringMember(_id_, id)
-        .writeStringMember(_info_, info)
-        .writeDateTimeMember(_date_, date)
-        .writeArrayMember(_rows_){ w=>
+      .writeObject(ROW_LIST) { _
+        .writeStringMember(ID, id)
+        .writeStringMember(INFO, info)
+        .writeDateTimeMember(DATE, date)
+        .writeArray(ROWS){ w=>
           for (row <- rows.valuesIterator){
             row.serializeTo(w)
           }
@@ -324,29 +352,49 @@ case class RowList (id: String, info: String, date: DateTime, rows: immutable.Se
 }
 
 /**
-  * JSON parser for FieldCatalogs
+  * JSON parser for RowLists
   */
-class RowListParser (columnListId: String) extends UTF8JsonPullParser with RowParser {
+class RowListParser (nodeId: String) extends UTF8JsonPullParser with RowParser {
   import RowList._
+
+  def readRows(): SeqMap[String,Row[_]] = {
+    var map = SeqMap.empty[String,Row[_]]
+    foreachElementInCurrentArray {
+      val row = readCurrentObject( readRow(nodeId) )
+      map = map + (row.id -> row)
+    }
+    map
+  }
+
+  def readRowList(): RowList = {
+    readCurrentObject {
+      var id: String = null
+      var info: String = null
+      var date: DateTime = DateTime.UndefinedDateTime
+      var rows = SeqMap.empty[String,Row[_]]
+
+      foreachMemberInCurrentObject {
+        case ID => id = quotedValue.toString
+        case INFO => info = quotedValue.toString
+        case DATE => date = dateTimeValue
+        case ROWS => rows = readCurrentArray( readRows() )
+      }
+
+      if (id == null) throw exception("missing 'id' in rowList")
+      RowList(id,info,date,rows)
+    }
+  }
 
   def parse (buf: Array[Byte]): Option[RowList] = {
     initialize(buf)
     try {
       readNextObject {
-        val rowListId = readQuotedMember(_id_).toString
-        val info = readQuotedMember(_info_).toString
-        val date = readDateTimeMember(_date_)
-
-        var rows = SeqMap.empty[String,Row[_]]
-        foreachInNextArrayMember(_rows_) {
-          val row = readNextObject( parseRow( rowListId,columnListId) )
-          rows = rows + (row.id -> row)
-        }
-        Some(RowList( rowListId, info, date, rows))
+        Some( readNextObjectMember(ROW_LIST){ readRowList() } )
       }
     } catch {
       case x: JsonParseException =>
         warning(s"malformed rowList: ${x.getMessage}")
+        //x.printStackTrace()
         None
     }
   }

@@ -29,9 +29,9 @@ class ColumnListSpec extends AnyFlatSpec with RaceSpec {
   "a ColumnListParser" should "translate a JSON source" in {
     val input = FileUtils.fileContentsAsString("race-net-http-test/src/resources/sites/share/data/columnList.json").get
 
-    val parser = new ColumnListParser("/providers/region1/integrator")
+    val parser = new ColumnListParser("/nodes/coordinator")
 
-    println(s"#-- parsing: $input")
+    println(s"#-- parsing columnList: $input")
 
     parser.parse(input.getBytes) match {
       case Some(list:ColumnList) =>

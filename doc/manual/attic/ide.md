@@ -18,8 +18,8 @@ following procedure has been tested with Eclipse 4.5.0 (Mars):
      RACE was installed in `~/projects/smartnas/race`, choose `~/projects/smartnas`
      as workspace)
   4. make sure the [ScalaIDE for Eclipse plugin][scalaide] is installed. At the
-     time of this writing, the respective Eclipse update site is:
-     "http://download.scala-ide.org/sdk/lithium/e44/scala211/stable/site"
+     time of this writing, the respective Eclipse update node is:
+     "http://download.scala-ide.org/sdk/lithium/e44/scala211/stable/node"
      restart Eclipse after you installed the plugin
   5. import RACE into Eclipse:
 

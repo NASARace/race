@@ -62,9 +62,9 @@ The ``gov.nasa.race.http.Test{RouteInfo,Authorized,Refresh}`` examples show how 
       var count = 0
       def page = html(
         body(
-          p(s"the supersecret answer #$count to the ultimate question of life, the universe and everything is:"),
-          p(b("42")),
-          p("(I always knew there was something wrong with the universe)"),
+          nid(s"the supersecret answer #$count to the ultimate question of life, the universe and everything is:"),
+          nid(b("42")),
+          nid("(I always knew there was something wrong with the universe)"),
           logoutLink
         )
       )
@@ -219,12 +219,12 @@ The ``SiteRoute`` and ``AuthorizedSiteRoute`` traits can be used to serve conten
             class = "gov.nasa.race.http.tabdata.TabDataService" // SiteRoute implementor
 
             request-prefix = "tabdata" // URL path prefix for requests
-            site-root = "race-net-http-test/src/resources/sites/tabdata" // root dir of static content
+            node-root = "race-net-http-test/src/resources/sites/tabdata" // root dir of static content
           ...
 
-The ``site-root`` directly points to the root dir where respective route files can be found, to support
+The ``node-root`` directly points to the root dir where respective route files can be found, to support
 configurations that serve content kept outside of RACE. Note that ``request-prefix`` (which defaults to the ``name``
-value) and ``site-root`` can be different.
+value) and ``node-root`` can be different.
 
 
 Test Routes
@@ -247,7 +247,7 @@ RacRouteInfo examples:
   from RACE to all connected clients
 - ``EchoService`` (and ``ws-echo,conf``) is an examples that shows how to use connection specific request/response,
   as opposed to push mode which sends the same data to all connected clients
-- ``TabDataService`` is the most comprehensive example that shows how to use RACE to serve a site which
+- ``TabDataService`` is the most comprehensive example that shows how to use RACE to serve a node which
   uses websockets to push dynamic data to connected clients. This works with normal browser clients (using http)
 
 

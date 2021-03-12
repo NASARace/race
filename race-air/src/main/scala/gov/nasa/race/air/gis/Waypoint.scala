@@ -123,7 +123,12 @@ case class Waypoint(name: String,
                     landingSite: Option[String],
                     navaidType: Int,
                     freq: Float
-                   ) extends GisItem
+                   ) extends GisItem {
+  override def addStrings (db: GisItemDBFactory[_]): Unit = {
+    db.addString(name)
+    if (landingSite.isDefined) db.addString(landingSite.get)
+  }
+}
 
 class WaypointDB (data: ByteBuffer) extends GisItemDB[Waypoint](data) {
 
@@ -184,9 +189,6 @@ object WaypointDB extends GisItemDBFactory[Waypoint](76) {
               s"$name@$landingSite"
           } else name
           keySet += key
-
-          addString(key)
-          addString(landingSite)
 
           val wp = new Waypoint(key,pos,typeFlag,magVar.toFloat, optLandingSite,navaidFlag,getWpFreq(freq))
           addItem( wp)

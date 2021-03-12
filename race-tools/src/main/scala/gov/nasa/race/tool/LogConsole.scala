@@ -37,7 +37,7 @@ object LogConsole {
     var configFile: Option[File] =None
 
     opt0("-f","--log-to-file")("log to tmp/race/log"){logToFile=true}
-    opt1("-p","--port")("<portNumber>","port to listen on"){a=> port=parseInt(a)}
+    opt1("-nid","--port")("<portNumber>","port to listen on"){a=> port=parseInt(a)}
     arg1("<configFile>","console configuration file"){a=> configFile=parseExistingFileOption(a)}
   }
 

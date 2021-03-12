@@ -81,13 +81,13 @@ Column and Row Ids are paths, which are potentially resolved through column/rowL
 in case they are relative. Reason for path keys (global addressing scheme) is that different row/colLists 
 can reference the same logical entities/data
  
-<TODO> Configs (lists) should support generic (site independent) specification to enable centralized update
+<TODO> Configs (lists) should support generic (node independent) specification to enable centralized update
 questionable: this would either require a uniform view across peers or some non-intuitive syntax for shared config
 
 Nodes can own several columns. Consequently, each column has a optional 'node' attribute to link to the main/node id
 <TODO> what about nodes that only show/export columns other than the node name? Could be handled through 'attrs'
 
-Formulas and constraints are kept separate from Column/RowList to enable per-site settings.
+Formulas and constraints are kept separate from Column/RowList to enable per-node settings.
 
 In general we try to share as much common config between nodes as possible, hence we factor config
 
@@ -143,7 +143,7 @@ local change, causing upstream goal update). Purely value triggered formulas?
 Security Concept
 ----------------
 Node is dedicated server machine with restricted physical access and minimal service profile (attack angle). All data
-is stored on the node server. The only site network facing access points are the tabdata URLs (no other data served).
+is stored on the node server. The only node network facing access points are the tabdata URLs (no other data served).
 
 All communication between nodes and user clients is using websockets over (encrypted) https
 

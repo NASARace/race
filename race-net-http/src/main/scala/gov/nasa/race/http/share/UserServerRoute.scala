@@ -23,7 +23,7 @@ import akka.http.scaladsl.server.{PathMatchers, Route}
 import akka.stream.scaladsl.SourceQueueWithComplete
 import com.typesafe.config.Config
 import gov.nasa.race.common.ConstAsciiSlice.asc
-import gov.nasa.race.common.{BufferedStringJsonPullParser, JsonWriter, PathIdentifier}
+import gov.nasa.race.common.{BufferedStringJsonPullParser, JsonSerializable, JsonWriter, PathIdentifier}
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.{ParentActor, Ping, Pong, PongParser, RaceDataClient}
 import gov.nasa.race.http.share.UserPermissions.{PermSpec, Perms}
@@ -64,7 +64,7 @@ class UserServerRoute (parent: ParentActor, config: Config) extends SiteRoute(pa
     def parse (msg: String): Option[Any] = parseMessageSet(msg) {
       case `_requestUserPermissions_` => parseRequestUserPermissions(msg)
       case `_userChange_` => parseUserChange(msg)
-      case Ping._pong_ => parsePong(msg)
+      case Ping.PONG => parsePong(msg)
       case m => warning(s"ignoring unknown message '$m''"); None
     }
 
@@ -107,9 +107,7 @@ class UserServerRoute (parent: ParentActor, config: Config) extends SiteRoute(pa
       Some(UserChange(uid,pw,cdc))
     }
 
-    def parsePong (msg: String): Option[Pong] = {
-      parsePongBody
-    }
+    def parsePong (msg: String): Option[Pong] = parsePong()
   }
 
   val wsPath = s"$requestPrefix/ws"
@@ -141,9 +139,9 @@ class UserServerRoute (parent: ParentActor, config: Config) extends SiteRoute(pa
 
   def serializeUserPermissions (user: String, perms: Perms): String = {
     writer.clear().writeObject( _
-      .writeMemberObject( "userPermissions") { _
+      .writeObject( "userPermissions") { _
         .writeStringMember("uid", user)
-        .writeStringMembersMember("permissions", perms)
+        .writeStringMembersObject("permissions", perms)
       }
     ).toJson
   }
@@ -202,35 +200,39 @@ class UserServerRoute (parent: ParentActor, config: Config) extends SiteRoute(pa
            */
         }
 
-      case cc: ConstraintChange =>
-        ifSome(node) { n=>
-          val msg = TextMessage(writer.toJson(cc))
-          if (hasConnections) push(msg)
-        }
+      case cc: ConstraintChange => pushMsg(cc)
+
+      case nrc: ColumnReachabilityChange => pushMsg(nrc)
 
       case other => // ignore other messages
     }
   }
 
+  def pushMsg (o: JsonSerializable): Unit = {
+    ifSome(node) { n=>
+      val msg = TextMessage(writer.toJson(o))
+      if (hasConnections) push(msg)
+    }
+  }
+
+  /**
+    * this is just a ConstraintChange message with only a 'violated' part for the ones that are
+    */
   def generateConstraintMessage (n: Node): Option[TextMessage] = {
     if (n.hasConstraintViolations) {
-      val msg = writer.clear().writeObject { _
-        .writeMemberObject("violatedConstraints") { w=>
-          n.foreachConstraintViolation( _.serializeAsMemberObjectTo(w) )
-        }
-      }.toJson
+      val msg = writer.clear().toJson(n.currentConstraintViolations)
       Some(TextMessage(msg))
     } else None
   }
 
   protected def isAcceptChange(cdc: ColumnDataChange): Boolean = {
-    withSomeOrElse( node, false) { site=>
-      val nodeId = site.id
+    withSomeOrElse( node, false) { node=>
+      val nodeId = node.id
       val targetId = cdc.columnId
 
-      withSomeOrElse( site.columnList.get(targetId),false) { col=>
+      withSomeOrElse( node.columnList.get(targetId),false) { col=>
         // sender counts as ourselves since each node is responsible for devices it serves
-        col.updateFilter.receiveFromDevice(nodeId,targetId)
+        col.receive.matches(nodeId,targetId,node)
       }
     }
   }

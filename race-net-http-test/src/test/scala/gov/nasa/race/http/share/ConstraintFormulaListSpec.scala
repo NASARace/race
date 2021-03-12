@@ -24,8 +24,8 @@ import org.scalatest.flatspec.AnyFlatSpec
 
 class ConstraintFormulaListSpec extends AnyFlatSpec with RaceSpec with NodeDependentTest {
 
-  val nodeId = "/providers/region1/provider_2"
-  val dataDir = "race-net-http-test/src/resources/sites/share/data/provider_2"
+  val nodeId = "/nodes/node_2"
+  val dataDir = "race-net-http-test/src/resources/sites/share/data/node_2"
 
   "a ConstraintFormulaListParser" should "parse a known source" in {
 
@@ -58,7 +58,7 @@ class ConstraintFormulaListSpec extends AnyFlatSpec with RaceSpec with NodeDepen
         val date = DateTime.now
         val ctx = new BasicEvalContext( node, date)
         val cv = IntegerCellValue(42,date)
-        val cid = "/providers/region1/provider_2"
+        val cid = "/columns/column_2"
         val rid = "/data/cat_A/field_1"
 
         println(s"changing cell $cid::$rid to $cv")

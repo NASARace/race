@@ -1,18 +1,22 @@
 {
-  "id": "/providers/region1",
-  "info": "providers in region 1",
-  "date": "2020-06-28T12:00:00.000",
+  "columnList": {
+    "id": "/coordinator/columns",
+    "info": "known columns for node coordinator",
+    "date": "2020-06-28T12:00:00.000",
 
-  "columns": [
-    { "id": "../summary",    "info": "summary for region1",  "send": "<up>,../provider_2", "node": "." },
-    { "id": "../provider_1", "info": "this is provider 1",   "send": "<down>", "receive": "<target>", "check": "1h" },
-    { "id": "../provider_2", "info": "this is provider 2",   "send": "<down>", "receive": "<target>", "check": "1m" },
-    { "id": "../provider_3", "info": "this is provider 3",   "send": "<down>", "receive": "<target>", "node": "../provider_2" },
-    { "id": "../provider_4", "info": "this is provider 4",   "send": "<down>", "receive": "<target>", "check": "1h" },
-    { "id": "../provider_5", "info": "this is provider 5",   "send": "<down>", "receive": "<target>", "check": "5m" },
-    { "id": "../provider_6", "info": "this is provider 6",   "send": "<down>", "receive": "<target>"                },
-    { "id": "../provider_7", "info": "this is provider 7",   "send": "../provider_[!1]", "receive": "<target>" },
-    { "id": "../provider_8", "info": "this is provider 8",   "send": "../provider_[!1]", "receive": "<target>" },
-    { "id": "../provider_9", "info": "this is provider 9",   "send": "../provider_[!1]", "receive": "<target>" }
-  ]
+    "columns": [
+      { "id": "/columns/summary",  "info": "summary column",     "receive": "<owner>", "send": "<up>,../node_2",         "owner": "." },
+      { "id": "/columns/column_1", "info": "this is column_1",   "receive": "<owner>", "send": "<down>",                 "owner": "../node_1" },
+
+      { "id": "/columns/column_2", "info": "this is column_2",   "receive": "<owner>,<self>", "send": "<down>",          "owner": "../node_2" },
+      { "id": "/columns/column_3", "info": "this is column_3",   "receive": "<owner>", "send": "<down>",                 "owner": "../node_2" },
+
+      { "id": "/columns/column_4", "info": "this is column_4",   "receive": "<owner>", "send": "<down>",                 "owner": "../node_3" },
+      { "id": "/columns/column_5", "info": "this is column_5",   "receive": "<owner>", "send": "<down>",                 "owner": "../node_4" },
+      { "id": "/columns/column_6", "info": "this is column_6",   "receive": "<owner>", "send": "<down>",                 "owner": "../node_5" },
+      { "id": "/columns/column_7", "info": "this is column_7",   "receive": "<owner>", "send": "../node_[!1]",           "owner": "../node_6" },
+      { "id": "/columns/column_8", "info": "this is column_8",   "receive": "<owner>", "send": "../node_[!1]",           "owner": "../node_7" },
+      { "id": "/columns/column_9", "info": "this is column_9",   "receive": "<owner>", "send": "../node_[!1]",           "owner": "../node_8" }
+    ]
+  }
 }

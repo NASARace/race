@@ -1,0 +1,18 @@
+{
+  "userPermissions": {
+    "id": "/node_1/userPermissions",
+    "date": "2020-06-29T16:06:02.000",
+
+    "columnlist": "/node_1/columnList",
+    "rowlist": "/node_1/rowList",
+
+    "users": {
+      "frodo": [
+        {
+          "columnPattern": "**/column_1",
+          "rowPattern": "**"
+        }
+      ]
+    }
+  }
+}

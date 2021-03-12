@@ -1,0 +1,23 @@
+{
+  "cellValueFormulaList": {
+    "id": "/formulas/region1/provider",
+    "info": "column formulas for provider node",
+    "date": "2020-06-28T12:00:00.000",
+
+    "columns": [
+      { "columnId": ".",
+        "formulas": [
+          { "rowId": "/data/cat_A", "src":  "(IntSum ./field_{1,2})" },
+
+          { "rowId": "/data/cat_A/field_4", "src": "(IntListCellPushN . ../field_1 3)" },
+          { "rowId": "/data/cat_A/field_3", "src": "(IntListCellAvgInt ../field_4)" },
+
+          { "rowId": "/data/cat_B",         "src": "(RealSum ./*)" },
+          { "rowId": "/data/cat_B/field_2", "src": "(RealSet ../field_1)", "trigger": "60 sec" },
+
+          { "rowId": "/data/cat_C",         "src": "(IntCellInc . ./field_2)" }
+        ]
+      }
+    ]
+  }
+}

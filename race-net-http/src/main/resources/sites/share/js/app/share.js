@@ -845,7 +845,6 @@ function handleWsMessage(msg) {
   else if (msgType == "userPermissions") handleUserPermissions( msg.userPermissions);
   else if (msgType == "siteId")  handleSiteId( msg.siteId);
   else if (msgType == "constraintChange") handleConstraintChange(msg.constraintChange);
-  else if (msgType == "constraintViolations") handleConstraintViolations(msg.constraintViolations);
   else if (msgType == "ping") handlePing( msg.ping);
   else utils.log(`ignoring unknown message type ${msgType}`);
 };
@@ -870,6 +869,8 @@ function handleColumnDataChange (cdc) {
 }
 
 function handleConstraintChange (cc) {  
+  if (cc.reset) violatedConstraints = {}
+
   if (cc.hasOwnProperty("resolved")) {
     var resolved = cc.resolved;
     for (var id in resolved) {
@@ -895,16 +896,6 @@ function handleConstraintChange (cc) {
       utils.log("violated: " + cInfo.id);
     }
   }
-}
-
-function handleConstraintViolations (cvs) {
-  //console.log(JSON.stringify(cvs));
-  for (const prop in cvs) {
-    if (cvs.hasOwnProperty(prop)){
-      cvs[prop].id = prop;
-    }
-  }
-  violatedConstraints = cvs;
 }
 
 // {columnData:{id:"s",rev:n,date:n,rows:[<rowId>:n]}

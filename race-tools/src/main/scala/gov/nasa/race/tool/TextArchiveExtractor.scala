@@ -47,7 +47,7 @@ object TextArchiveExtractor {
     opt1("--end-time")("<timespec>", "end time for messages to extract") { s =>
       endTime = parseTimeMillis(s)
     }
-    opt1("-p", "--pattern")("<regex>", "regular expression(s) to match") { s=>
+    opt1("-nid", "--pattern")("<regex>", "regular expression(s) to match") { s=>
       patterns = new Regex(s) +: patterns
     }
     opt0("-a")("find all matches (default is to stop after first match") {

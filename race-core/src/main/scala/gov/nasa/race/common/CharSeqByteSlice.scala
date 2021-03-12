@@ -52,7 +52,7 @@ trait CharSeqByteSlice extends ByteSlice with CharSequence {
   def subSequence(start: Int, end: Int): CharSequence
 
   // non-allocating chars comparison
-  def =:= (s: String): Boolean
+  def =:=(s: CharSequence): Boolean
 
   def contains (c: Char): Boolean
 
@@ -71,14 +71,33 @@ trait CharSeqByteSlice extends ByteSlice with CharSequence {
     h
   }
 
+  override def equals (o: Any): Boolean = {
+    o match {
+        // unfortunately we can't widen this to general CharSequence since it wouldn't be symmetric: String.equals(CSBS) != CSBS.equals(String)
+      case csbs: CharSeqByteSlice => this =:= csbs
+      case _ => false
+    }
+  }
+
+  def equalsCharSequence (cs: CharSequence): Boolean = {
+    if (length == cs.length()) {
+      var i = 0
+      while (i<len) {
+        if (charAt(i) != cs.charAt(i)) return false
+        i += 1
+      }
+      true
+    } else false
+  }
+
   @inline def equalsString (s: String): Boolean = {
     val sbs = s.getBytes // BAD - this is allocating
     (len == sbs.length) && equalsData(sbs,0)
   }
 
   @inline def equalsString (s: String, buf: Utf8Buffer): Boolean = {
-    val len = buf.encode(s)
-    (len == len) && equalsData(buf.data,0)
+    val l = buf.encode(s)
+    (len == l) && equalsData(buf.data,0)
   }
 
   /**
@@ -466,7 +485,7 @@ trait Utf8Slice extends CharSeqByteSlice {
     false
   }
 
-  override def =:= (s: String): Boolean = {
+  override def =:=(s: CharSequence): Boolean = {
     val n = s.length
     var i = 0
     if (n == length) {
@@ -629,7 +648,7 @@ trait AsciiSlice extends CharSeqByteSlice {
     false
   }
 
-  override def =:= (s: String): Boolean = {
+  override def =:=(s: CharSequence): Boolean = {
     val n = s.length
     var i=0
     if (len == n) {

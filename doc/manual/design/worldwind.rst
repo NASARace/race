@@ -72,7 +72,7 @@ viewer changes such as eye position and layer selection to a global channel, and
 to this channel to update the local display with remote viewer changes. This is a powerful basis
 to implement applications such as situation rooms because it
 
-- supports control of synchronization aspects at the local site
+- supports control of synchronization aspects at the local node
 - requires minimal data transfer for updates
 - is robust in terms of re-synchronization
 

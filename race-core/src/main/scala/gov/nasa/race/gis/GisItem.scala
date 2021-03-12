@@ -29,4 +29,6 @@ trait GisItem {
   def ecef: XyzPos = Datum.wgs84ToECEF(pos)
   def hash: Int = name.hashCode
   def ecefDistanceTo(xyz: XyzPos): Length = ecef.distanceTo(xyz)
+
+  def addStrings (db: GisItemDBFactory[_]): Unit
 }

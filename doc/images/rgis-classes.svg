@@ -163,7 +163,7 @@
 </text>
     <text x="499" y="830.1531" font-size="12" fill="#000000" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">…
 </text>
-    <text x="499" y="844.1531" font-size="12" fill="#000000" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">val (site,dist) = landingSites.getNearestItem(pos)</text>
+    <text x="499" y="844.1531" font-size="12" fill="#000000" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">val (node,dist) = landingSites.getNearestItem(pos)</text>
     <path d="M423 765 L423 549 L494.262 549" marker-end="url(#marker9)" opacity="1" stroke="#0000FE" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
   </g>
 </svg>

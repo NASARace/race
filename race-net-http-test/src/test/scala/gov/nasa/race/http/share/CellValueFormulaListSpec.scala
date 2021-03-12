@@ -27,8 +27,8 @@ class CellValueFormulaListSpec extends AnyFlatSpec with RaceSpec with NodeDepend
 
 
   "a ColumnListParser" should "read a JSON source" in {
-    val nodeId = "/providers/region1/provider_2"
-    val dataDir = "race-net-http-test/src/resources/sites/share/data/provider_2"
+    val nodeId = "/nodes/node_2"
+    val dataDir = "race-net-http-test/src/resources/sites/share/data/node_2"
 
     val node = getNode(nodeId, dataDir)
     val formulaSrc = FileUtils.fileContentsAsString(dataDir + "/formulaList.json").get
@@ -47,7 +47,7 @@ class CellValueFormulaListSpec extends AnyFlatSpec with RaceSpec with NodeDepend
 
   "a CellExpressionParser" should "compile a FormulaList against a given Column and RowList" in {
 
-    val nodeId = "/providers/region1/integrator"
+    val nodeId = "/nodes/coordinator"
     val dataDir = "race-net-http-test/src/resources/sites/share/data"
     val node = getNode(nodeId, dataDir)
     val funcLib = new CellFunctionLibrary
@@ -61,7 +61,7 @@ class CellValueFormulaListSpec extends AnyFlatSpec with RaceSpec with NodeDepend
         println("formula sources:")
         formulaList.printFormulaSpecs()
 
-        val selColPath = "/providers/region1/summary"
+        val selColPath = "/columns/summary"
         println(s"compiling formula expressions for column: $selColPath")
         formulaList.compileWith(node,funcLib)
 

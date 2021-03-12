@@ -1,0 +1,18 @@
+{
+  "columnData": {
+    "id": "/columns/column_2",
+    "date": "2020-06-29T16:06:02.000",
+    "rows": {
+      "/data/cat_A/field_1": 8,
+      "/data/cat_A/field_2": 22,
+      "/data/cat_A/field_3": 7,
+      "/data/cat_A/field_4": [8, 6],
+      "/data/cat_B/field_1": 210.21,
+      "/data/cat_B/field_2": 220.22,
+      "/data/cat_C/field_1": 2100,
+      "/data/cat_C/field_2": 2200,
+      "/data/cat_C/field_3": 2300,
+      "/data/cat_C/field_4": 2400
+    }
+  }
+}

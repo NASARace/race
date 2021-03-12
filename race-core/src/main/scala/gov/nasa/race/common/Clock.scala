@@ -21,6 +21,9 @@ import gov.nasa.race.uom.{DateTime,Time}
 
 import scala.concurrent.duration._
 
+object Clock {
+  val wallClock = new Clock()
+}
 
 /**
   * time keeping utility that can be used to track simulation time, supporting

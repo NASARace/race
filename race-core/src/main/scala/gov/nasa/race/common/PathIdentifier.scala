@@ -25,24 +25,51 @@ import scala.util.matching.Regex
 object PathIdentifier {
 
   //--- match support for identifier (not sure this belongs here)
+
   trait Matcher {
     def pattern: String
     def matches (id: CharSequence): Boolean
+
+    //--- combinators
+    def or (m: Matcher): Matcher = OrMatcher(s"$pattern,${m.pattern}", this, m)
+    def and (m: Matcher): Matcher = AndMatcher(s"$pattern + ${m.pattern}", this, m)
   }
 
-  class RegexMatcher (val pattern: String, regex: Regex) extends Matcher {
+  case class OrMatcher(pattern: String, head: Matcher, tail: Matcher) extends Matcher {
+    override def matches (id: CharSequence): Boolean =  head.matches(id) || tail.matches(id)
+  }
+
+  case class AndMatcher(pattern: String, head: Matcher, tail: Matcher) extends Matcher {
+    override def matches (id: CharSequence): Boolean =  head.matches(id) && tail.matches(id)
+  }
+
+  case class RegexMatcher (pattern: String, regex: Regex) extends Matcher {
     def matches (id: CharSequence): Boolean = regex.matches(id)
   }
+
+  case class StringMatcher (pattern: String) extends Matcher {
+    def matches (id: CharSequence): Boolean = pattern.equals(id)
+  }
+
+  //--- singletons
 
   object allMatcher extends Matcher {
     def pattern = "<all>"
     def matches (id: CharSequence): Boolean = true
+
+    override def or (m: Matcher): Matcher = this // no point to have alternatives to <all>
+    override def and (m: Matcher): Matcher = m // <all> always matches
   }
 
   object noneMatcher extends Matcher {
     def pattern = "<none>"
     def matches (id: CharSequence): Boolean = false
+
+    override def or (m: Matcher): Matcher = m
+    override def and (m: Matcher): Matcher = this // <none> never matches
   }
+
+  //--- constructors
 
   def globMatcher (pattern: String): Matcher = new RegexMatcher( pattern, Glob.glob2Regex(pattern))
 
@@ -112,6 +139,13 @@ object PathIdentifier {
           return p + pattern.subSequence(i, len)               // {../}<pattern>
         }
       }
+    } else if (c == '*') {
+      if (len >1) {
+        c = pattern.charAt(2)
+        if (c == '*') return pattern.toString
+      }
+
+      return baseId + pattern
     }
 
     baseId + '/' + pattern  // relative path, prepend baseId

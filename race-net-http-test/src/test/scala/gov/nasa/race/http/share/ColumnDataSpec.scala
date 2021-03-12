@@ -17,9 +17,9 @@
 package gov.nasa.race.http.share
 
 import java.nio.file.Path
-
-import gov.nasa.race.common.JsonWriter
+import gov.nasa.race.common.{JsonWriter, StringJsonPullParser}
 import gov.nasa.race.common.UnixPath.PathHelper
+import gov.nasa.race.http.share.Row.{integerListRow, integerRow, realRow}
 import gov.nasa.race.test.RaceSpec
 import gov.nasa.race.uom.DateTime
 import gov.nasa.race.util.FileUtils
@@ -33,35 +33,31 @@ import scala.collection.immutable.ListMap
 class ColumnDataSpec extends AnyFlatSpec with RaceSpec {
 
   val resourcePath = "race-net-http-test/src/resources/sites/share/data"
-
+  val date = DateTime.parseYMDT("2020-06-28T12:00:02.000")
   val rl = "/data"
-  val rows = Seq(
-    IntegerRow(s"$rl/cat_A", "this is the cat_A header", UpdateFilter.localOnly),
-    IntegerRow(s"$rl/cat_A/field_1", "this is the cat_A field 1", UpdateFilter.localOnly),
-    IntegerRow(s"$rl/cat_A/field_2", "this is the cat_A field 2", UpdateFilter.localOnly),
-    IntegerRow(s"$rl/cat_A/field_3", "this is the cat_A field 3", UpdateFilter.localOnly),
-    IntegerListRow(s"$rl/cat_A/field_4", "this is the cat_A field 4", UpdateFilter.localOnly),
 
-    RealRow(s"$rl/cat_B", "this is the cat_B header", UpdateFilter.localOnly),
-    RealRow(s"$rl/cat_B/field_1", "this is the cat_B field 1", UpdateFilter.localOnly),
-    RealRow(s"$rl/cat_B/field_2", "this is the cat_B field 2", UpdateFilter.localOnly),
+  val rowList = RowList (rl, date,
 
-    IntegerRow(s"$rl/cat_C", "this is the cat_C header", UpdateFilter.localOnly),
-    IntegerRow(s"$rl/cat_C/field_1", "this is the cat_C field 1", UpdateFilter.localOnly),
-    IntegerRow(s"$rl/cat_C/field_2", "this is the cat_C field 2", UpdateFilter.localOnly),
-    IntegerRow(s"$rl/cat_C/field_3", "this is the cat_C field 3", UpdateFilter.localOnly),
-    IntegerRow(s"$rl/cat_C/field_4", "this is the cat_C field 4", UpdateFilter.localOnly)
+    integerRow(s"$rl/cat_A"),
+    integerRow(s"$rl/cat_A/field_1"),
+    integerRow(s"$rl/cat_A/field_2"),
+    integerRow(s"$rl/cat_A/field_3"),
+    integerListRow(s"$rl/cat_A/field_4"),
+
+    realRow(s"$rl/cat_B"),
+    realRow(s"$rl/cat_B/field_1"),
+    realRow(s"$rl/cat_B/field_2"),
+
+    integerRow(s"$rl/cat_C"),
+    integerRow(s"$rl/cat_C/field_1"),
+    integerRow(s"$rl/cat_C/field_2"),
+    integerRow(s"$rl/cat_C/field_3"),
+    integerRow(s"$rl/cat_C/field_4")
   )
 
-  val rowList = RowList (
-    rl,
-    "Sample Data Set",
-    DateTime.parseYMDT("2020-06-28T12:00:00.000"),
-    rows.foldLeft(ListMap.empty[String,Row[_]])( (acc,r) => acc + (r.id -> r))
-  )
-
-  "a ProviderDataParser" should "read ProviderData from JSON source" in {
-    val input = FileUtils.fileContentsAsString(s"$resourcePath/provider_2.json").get
+  "a ColumnDataParser" should "read ColumnData from JSON source" in {
+    // make sure that is a CD with mixed default and explicit CV dates
+    val input = FileUtils.fileContentsAsString(s"$resourcePath/column_2.json").get
 
     val parser = new ColumnDataParser(rowList)
     println(s"#-- parsing: $input")
@@ -78,6 +74,49 @@ class ColumnDataSpec extends AnyFlatSpec with RaceSpec {
         println(w.toJson)
 
       case _ => fail("failed to parse provider data")
+    }
+  }
+
+  "a ColumnDataChangeParser" should "read known ColumnDataChange messages" in {
+    val input =
+      """ {
+            "columnDataChange": {
+              "columnId": "/columns/c1",
+              "changeNodeId": "/nodes/originator",
+              "date": "2020-06-28T12:00:02.000",
+              "changedValues": {
+                "/data/cat_A/field_1": 42,
+                "/data/cat_A/field_4": [ 4200, 4300 ],
+                "/data/cat_B/field_1": 42.42
+              }
+            }
+         }
+      """
+
+    class CDCParser (val rowList: RowList) extends StringJsonPullParser with ColumnDataChangeParser
+
+    println(s"#-- parsing: $input")
+
+    val parser = new CDCParser(rowList)
+    parser.initialize(input)
+    parser.parse() match {
+      case Some(cdc) =>
+        println(s"-- parsed:\n   $cdc")
+        assert(cdc.columnId == "/columns/c1")
+        assert(cdc.changeNodeId == "/nodes/originator")
+        assert(cdc.changedValues.size == 3)
+
+        val w = new JsonWriter
+        w.format(true)
+        w.readableDateTime(true)
+
+        val cdcMsg = w.toJson(cdc)
+        println("\n-- generated columnDataChange message: ")
+        println(cdcMsg)
+
+        println("\nOk.")
+
+      case None => fail("failed to parse CDC source")
     }
   }
 }

@@ -16,11 +16,12 @@
  */
 package gov.nasa.race.http
 
-import gov.nasa.race.common.JsonPullParser
-import gov.nasa.race.common.ByteSlice
+import gov.nasa.race.common.ConstAsciiSlice.asc
+import gov.nasa.race.common.{ByteSlice, JsonPullParser}
 import gov.nasa.race.uom.DateTime
 
 import scala.collection.mutable
+import scala.collection.mutable.ArrayBuffer
 
 /**
   * generic application framework for a hierarchical reporting system with self-replicating data views
@@ -37,17 +38,34 @@ package object share {
 
   type RowDatePair = (String,DateTime)
   type ColumnDatePair = (String,DateTime)
+
   type CellPair = (String,CellValue[_])
   type CellIdPair = (String,String)
 
   trait AttrsParser extends JsonPullParser {
-    def readAttrs (name: ByteSlice): Seq[String] = {
-      readOptionalStringArrayMemberInto(name,mutable.ArrayBuffer.empty[String]).map(_.toSeq).getOrElse(Seq.empty[String])
+    def readAttrs(): Seq[String] = {
+      readCurrentStringArrayInto(ArrayBuffer.empty[String]).toSeq
     }
   }
 
   /**
-    * indicates changes of a nodes (columns) connection
+    * collection of JSON member names used by various JsonPullParser and JsonSerializable types
+    *
+    * Note these have to be stable names so that they can be used without backquoting in partial functions
     */
-  case class NodeReachabilityChange(id: String, isOnline: Boolean)
+  trait JsonConstants {
+    val ID = asc("id")
+    val INFO = asc("info")
+    val DATE = asc("date")
+    val ATTRS = asc("attrs")
+
+    val SEND = asc("send")
+    val RECEIVE = asc("receive")
+    val ROWS = asc("rows")
+    val COLUMNS = asc("columns")
+    val VALUE = asc("value")
+  }
+
+  // event to indicate we have selected an upstream
+  case class SelectUpstream (id: Option[String])
 }

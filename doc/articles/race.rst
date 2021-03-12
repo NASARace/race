@@ -514,7 +514,7 @@ eye position and layer selection to a global Bus channel, and conversely subscri
 display with remote viewer changes. This type of viewer synchronization is superior to generic, application-unaware
 screen sharing because it:
 
-    * supports fine grained, extensible control of synchronization aspects at the local site,
+    * supports fine grained, extensible control of synchronization aspects at the local node,
     * is robust in terms of re-synchronization (supports mute and tolerates lost connections),
     * lets users dynamically select the remote viewer(s) to synchronize with,
     * requires minimal data transfer between viewers (no high volume input events or large images have to be transmitted).

@@ -180,23 +180,23 @@ class JsonWriter (jsonType: ElementType = JsonWriter.RawElements, initSize: Int 
     f(this)
     endObject
   }
-  def writeMemberObject (memberName: CharSequence)( f: JsonWriter=>Unit): JsonWriter = {
+  def writeObject(memberName: CharSequence)(f: JsonWriter=>Unit): JsonWriter = {
     writeMemberName(memberName)
     writeObject(f)
   }
-  def writeIntMembersMember (memberName: CharSequence, it: Iterable[(String,Int)]): JsonWriter = {
+  def writeIntMembersObject(memberName: CharSequence, it: Iterable[(String,Int)]): JsonWriter = {
     writeMemberName(memberName)
     writeIntMembers(it)
   }
-  def writeLongMembersMember (memberName: CharSequence, it: Iterable[(String,Long)]): JsonWriter = {
+  def writeLongMembersObject(memberName: CharSequence, it: Iterable[(String,Long)]): JsonWriter = {
     writeMemberName(memberName)
     writeLongMembers(it)
   }
-  def writeDoubleMembersMember (memberName: CharSequence, it: Iterable[(String,Double)]): JsonWriter = {
+  def writeDoubleMembersObject(memberName: CharSequence, it: Iterable[(String,Double)]): JsonWriter = {
     writeMemberName(memberName)
     writeDoubleMembers(it)
   }
-  def writeStringMembersMember (memberName: CharSequence, it: Iterable[(String,String)]): JsonWriter = {
+  def writeStringMembersObject(memberName: CharSequence, it: Iterable[(String,String)]): JsonWriter = {
     writeMemberName(memberName)
     writeStringMembers(it)
   }
@@ -219,23 +219,23 @@ class JsonWriter (jsonType: ElementType = JsonWriter.RawElements, initSize: Int 
     f(this)
     endArray
   }
-  def writeArrayMember(memberName: CharSequence)(f: JsonWriter=>Unit): JsonWriter = {
+  def writeArray(memberName: CharSequence)(f: JsonWriter=>Unit): JsonWriter = {
     writeMemberName(memberName)
     writeArray(f)
   }
-  def writeStringArrayMember(memberName: CharSequence, it: Iterable[String]): JsonWriter = {
+  def writeStringArray(memberName: CharSequence, it: Iterable[String]): JsonWriter = {
     writeMemberName(memberName)
     writeStringValues(it)
   }
-  def writeIntArrayMember(memberName: CharSequence, it: Iterable[Int]): JsonWriter = {
+  def writeIntArray(memberName: CharSequence, it: Iterable[Int]): JsonWriter = {
     writeMemberName(memberName)
     writeIntValues(it)
   }
-  def writeLongArrayMember(memberName: CharSequence, it: Iterable[Long]): JsonWriter = {
+  def writeLongArray(memberName: CharSequence, it: Iterable[Long]): JsonWriter = {
     writeMemberName(memberName)
     writeLongValues(it)
   }
-  def writeDoubleArrayMember(memberName: CharSequence, it: Iterable[Double]): JsonWriter = {
+  def writeDoubleArray(memberName: CharSequence, it: Iterable[Double]): JsonWriter = {
     writeMemberName(memberName)
     writeDoubleValues(it)
   }

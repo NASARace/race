@@ -6,7 +6,7 @@ BINDIR=target/c/bin
 LIBDIR=target/c/lib
 
 os := $(shell uname -s)
-arch := $(shell uname -p)
+arch := $(shell uname -nid)
 
 LIBNAME=lib$(NAME)-$(os)-$(arch)
 
@@ -21,9 +21,9 @@ splash:
 	@echo "==== running $(MAKE_COMMAND) in $(PWD)"
 
 init_dirs:
-	@mkdir -p $(LIBDIR)
-	@mkdir -p $(BINDIR)
-	@mkdir -p $(OBJDIR)
+	@mkdir -nid $(LIBDIR)
+	@mkdir -nid $(BINDIR)
+	@mkdir -nid $(OBJDIR)
 
 clean:
 	@echo "==== running $(MAKE_COMMAND) clean in $(PWD)"

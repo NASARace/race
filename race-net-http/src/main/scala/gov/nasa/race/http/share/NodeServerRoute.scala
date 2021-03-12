@@ -41,23 +41,24 @@ import scala.util.Try
 /**
   * the route that handles ColumnData synchronization from/to child node clients through a websocket
   *
-  * note that we don't register clients (child nodes) or send our NodeState to them before they send us
-  * their NodeState (at (re-)start, after connecting). This is to ensure 〖 minimal network config 〗since the
+  * note that we don't register clients (child nodes) or send our NodeDates to them before they send us
+  * their NodeDates (at (re-)start, after connecting). This is to ensure 〖 minimal network config 〗since the
   * server does not need to know client IP addresses a priori
   */
-class NodeServerRoute(val parent: ParentActor, val config: Config) extends PushWSRaceRoute with RaceDataClient {
+class NodeServerRoute(val parent: ParentActor, val config: Config)
+                                        extends PushWSRaceRoute with RaceDataClient with NodeDatesResponder {
 
   /**
-    * the parser for incoming messages. Note this is from trusted/checked connections
+    * the parser for incoming (web socket) messages. Note this is from trusted/checked connections
     */
   class IncomingMessageParser (val node: Node) extends BufferedStringJsonPullParser
-                                              with ColumnDataChangeParser with NodeStateParser with PingParser {
+                                              with ColumnDataChangeParser with NodeDatesParser with PingParser {
     def rowList = node.rowList
 
     def parse(msg: String): Option[Any] = parseMessageSet(msg) {
-      case ColumnDataChange._columnDataChange_ => parseColumnDataChangeBody
-      case NodeState._nodeState_ => parseNodeStateBody
-      case Ping._ping_ => parsePingBody
+      case ColumnDataChange.COLUMN_DATA_CHANGE => parseColumnDataChange()
+      case NodeDates.NODE_DATES => parseNodeDates()
+      case Ping.PING => parsePing()
       case other => warning(s"ignoring unknown message type '$other'"); None
     }
   }
@@ -103,10 +104,10 @@ class NodeServerRoute(val parent: ParentActor, val config: Config) extends PushW
         remoteNodes.foreach { e=>
           val (remoteAddr,remoteId) = e
           if (cdc.changeNodeId != remoteId) { // we don't send it back to where it came from
-            if (col.updateFilter.sendToDownStream(remoteId)) {
+            if (col.send.matches(node.id,targetId,node)) {
               val filteredCdc = cdc.filter { r=>
                 node.rowList.get(r) match {
-                  case Some(row) => row.updateFilter.sendToDownStream(remoteId)
+                  case Some(row) => row.send.matches(node.id,targetId,node)
                   case None => false // unknown row
                 }
               }
@@ -123,14 +124,17 @@ class NodeServerRoute(val parent: ParentActor, val config: Config) extends PushW
 
   protected def parseIncoming (tm: TextMessage.Strict): Option[Any] = parser.flatMap( _.parse(tm.text))
   protected def isKnownColumn (id: String): Boolean = node.isDefined && node.get.columnList.columns.contains(id)
-  protected def isLocal (id: String): Boolean = node.isDefined && node.get.isLocal(id)
-  protected def isUpstream (id: String): Boolean = node.isDefined && node.get.isUpstream(id)
+  protected def isLocal (id: String): Boolean = node.isDefined && node.get.isOwnNode(id)
+  protected def isUpstream (id: String): Boolean = node.isDefined && node.get.isUpstreamNode(id)
 
   override protected def handleConnectionLoss (remoteAddress: InetSocketAddress, cause: Any): Unit = {
     remoteNodes.get(remoteAddress) match {
-      case Some(remoteId) =>
-        publishData(NodeReachabilityChange(remoteId,false))
-        remoteNodes = remoteNodes - remoteAddress
+      case Some(remoteNodeId) =>
+        ifSome(node) { node=>
+          publishData( NodeReachabilityChange.offline(remoteNodeId, node.currentDateTime))
+          remoteNodes = remoteNodes - remoteAddress
+        }
+
       case None =>
         warning(s"ignoring connection loss to un-registered remote address: $remoteAddress")
     }
@@ -151,9 +155,10 @@ class NodeServerRoute(val parent: ParentActor, val config: Config) extends PushW
     m match {
       case tm: TextMessage.Strict =>
         parseIncoming(tm) match {
-          case Some(ns: NodeState) => handleNodeState(remoteAddr, ns)
+          case Some(ns: NodeDates) => handleNodeDates(remoteAddr, ns)
           case Some(cdc: ColumnDataChange) => handleColumnDataChange(remoteAddr, tm, cdc)
           case Some(ping: Ping) => handlePing(ping, remoteAddr)
+          case Some(crc: ColumnReachabilityChange) => Nil // TODO - this would be for downStream columns of the remote
           case _ => Nil // ignore all other
         }
 
@@ -162,49 +167,48 @@ class NodeServerRoute(val parent: ParentActor, val config: Config) extends PushW
   }
 
   /**
-    * a downstream node sent us its NodeState - send newer changes and own (filtered) NodeState back
+    * a downstream node sent us its NodeDates - register, send newer changes and own (filtered) NodeDates back
+    *
+    * once we get this we know the downStreamNode is online. We can't use the websocket connection for this since
+    * that only gives us the remoteAddr but not the nodeId
     */
-  def handleNodeState (remoteAddr: InetSocketAddress, ns: NodeState): Iterable[Message] = {
-    val remoteNodeId = ns.nodeId
-    remoteNodes = remoteNodes + (remoteAddr -> remoteNodeId)  // assoc should not change until connection is lost
-    publishData(NodeReachabilityChange(remoteNodeId,true)) // let other actors know remote node is online
+  def handleNodeDates (remoteAddr: InetSocketAddress, nd: NodeDates): Iterable[Message] = {
+    for (node <- node) {
+      val remoteNodeId = nd.nodeId
+      node.nodeList.downstreamNodes.get(remoteNodeId) match {
+        case Some(nodeInfo) =>
+          if (nodeInfo.addrMask.matchesInetAddress(remoteAddr.getAddress)) {
+            remoteNodes = remoteNodes + (remoteAddr -> remoteNodeId)  // assoc should not change until connection is lost
+            publishData( NodeReachabilityChange.online(remoteNodeId, node.currentDateTime))
 
-    def sendColumn (col: Column): Boolean =  col.updateFilter.sendToDownStream(remoteNodeId)
-    def receiveColumn (col: Column): Boolean = col.updateFilter.receiveFromDownStream(remoteNodeId,col.node)
-    def sendRow (col: Column, row: Row[_]): Boolean = row.updateFilter.sendToDownStream(remoteNodeId)
-    def receiveRow (col: Column, row: Row[_]): Boolean = row.updateFilter.receiveFromDownStream(remoteNodeId, col.node)
+            return getNodeDatesReplies(node,remoteNodeId,nd,this).map(o=> TextMessage.Strict(incomingWriter.toJson(o)))
 
-    withSomeOrElse(node, Seq.empty[Message]){ node=>
-      info(s"processing remote NodeState: \n$ns")
-
-      if (node.isKnownColumn(remoteNodeId)) {
-        val nodeStateResponder = new NodeStateResponder(node,this, sendColumn, receiveColumn, sendRow, receiveRow)
-        nodeStateResponder.getNodeStateReplies(ns).map( o=> TextMessage.Strict(incomingWriter.toJson(o)))
-
-      } else {
-        warning(s"rejecting NodeState from unknown node $remoteNodeId")
-        Seq.empty[Message]
+          } else warning(s"ignoring nodeDates from downstream node $remoteNodeId with invalid address $remoteAddr")
+        case None => warning(s"ignoring nodeDates from unknown downstream node $remoteNodeId")
       }
     }
+    Nil
   }
 
   def handleColumnDataChange (remoteAddr: InetSocketAddress, m: Message, cdc: ColumnDataChange): Iterable[Message] = {
     for (node <- node) {
       remoteNodes.get(remoteAddr) match {
-        case Some(senderNode) =>
-          node.columnList.get(cdc.changeNodeId) match {
-            case Some(col) =>
-              if (col.updateFilter.receiveFromDownStream(cdc.changeNodeId, cdc.columnId)) {
-                val filteredCdc = cdc.filter { r=>
-                  node.rowList.get(r) match {
-                    case Some(row) => row.updateFilter.receiveFromDownStream(cdc.changeNodeId, cdc.columnId)
-                    case None => false // unknown row
+        case Some(senderNodeId) =>
+          //if (senderNodeId == cdc.changeNodeId) {
+            node.columnList.get(cdc.columnId) match {
+              case Some(col) =>
+                if (col.receive.matches(cdc.changeNodeId, col.owner, node)) {
+                  val filteredCdc = cdc.filter { r =>
+                    node.rowList.get(r) match {
+                      case Some(row) => row.receive.matches(senderNodeId, col.id, node)
+                      case None => false // unknown row
+                    }
                   }
+                  if (filteredCdc.nonEmpty) publishData(filteredCdc)
                 }
-                if (filteredCdc.nonEmpty) publishData(filteredCdc)
-              }
-            case None => warning(s"change for unknown column ${cdc.columnId} ignored")
-          }
+              case None => warning(s"change for unknown column ${cdc.columnId} ignored")
+            }
+          //} else warning(s"sender is not originator")
         case None => warning(s"ignoring change from unknown sender $remoteAddr: $cdc")
       }
     }
@@ -229,8 +233,7 @@ class NodeServerRoute(val parent: ParentActor, val config: Config) extends PushW
         false
       } else {
         withSomeOrElse(node.columnList.get(targetId), false) { col =>
-          //col.updateFilter.receiveFromDownStream(senderNodeId, targetId) && !isOutdatedChange(cdc)
-          col.updateFilter.receiveFromDownStream(senderNodeId, targetId)
+          col.receive.matches( senderNodeId, col.id, node)
         }
       }
     }
@@ -241,7 +244,7 @@ class NodeServerRoute(val parent: ParentActor, val config: Config) extends PushW
       withSomeOrElse(remoteNodes.get(remoteAddr),Seq.empty[Message]){ remoteId=>
         if (remoteId == ping.sender && node.id == ping.receiver) {
           info(s"responding to ping from $remoteId")
-          val pongTime = DateTime.now // TODO - do we need simTime here? This is not an actor
+          val pongTime = DateTime.now // this is wall clock, not simTime
           val pongMsg = TextMessage.Strict(incomingWriter.toJson(Pong(pongTime,ping)))
           Seq(pongMsg)
         } else {
@@ -251,7 +254,6 @@ class NodeServerRoute(val parent: ParentActor, val config: Config) extends PushW
       }
     }
   }
-
 
   override def route: Route = {
     get {

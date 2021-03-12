@@ -140,7 +140,7 @@ trait PreAuthorizedRaceRoute extends AuthRaceRoute {
         entity(as[FormData]) { e =>
           val validRequestResponse = for (
             uid <- e.fields.get("u");
-            pw <- e.fields.get("p")
+            pw <- e.fields.get("nid")
           ) yield {
             if (userAuth.isLoggedIn(uid)) {
               warning(s"attempted login of '$uid' despite active session")
@@ -196,7 +196,7 @@ trait AuthorizedRaceRoute extends AuthRaceRoute {
             if (userAuth.isLoggedIn(uid)) {
               complete(StatusCodes.Forbidden, "user is already logged in")
             } else {
-              formFields("p") { pw =>
+              formFields("nid") { pw =>
                 userAuth.login(uid, pw.toCharArray) match {
                   case Some(newToken) =>
                     val response = if (requestUri.nonEmpty) {
@@ -286,7 +286,7 @@ trait AuthorizedRaceRoute extends AuthRaceRoute {
         entity(as[FormData]) { e =>
           val validRequestResponse = for (
             uid <- e.fields.get("u");
-            pw <- e.fields.get("p")
+            pw <- e.fields.get("nid")
           ) yield {
             userAuth.authenticate(uid,pw.toCharArray) match {
               case Some(user) =>
@@ -361,7 +361,7 @@ trait AuthorizedRaceRoute extends AuthRaceRoute {
               tr(
                 td(cls:="labelCell")(b("Password")),
                 td(
-                  input(tpe:="password",nameAttr:="p",placeholder:="Enter Password",
+                  input(tpe:="password",nameAttr:="nid",placeholder:="Enter Password",
                     required:=true,autocomplete:="on")
                 )
               )

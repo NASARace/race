@@ -19,12 +19,12 @@ Sources are kept under the ``doc/`` subdirectory, separated into::
 
     doc/
         images/  : (shared) images and diagrams (SVG files)
-        manual/  : user manual (web site)
+        manual/  : user manual (web node)
         slides/  : presentations (HTML based slide shows)
 
 To generate output, the RACE build system includes the following SBT commands
 
-- ``mkManual`` - translates the manual (web site) pages
+- ``mkManual`` - translates the manual (web node) pages
 - ``mkSlides`` - translates the slides
 - ``mkDoc`` - translates both manual and slides
 
@@ -40,7 +40,7 @@ Output is generated under the ``target/doc/`` directory::
             slides/
                 <slide-html-pages>..
 
-Note that manual (site) sources are lifted up to ``target/doc``, which mostly serves the purpose of being able to
+Note that manual (node) sources are lifted up to ``target/doc``, which mostly serves the purpose of being able to
 link to slides, and slides being able to share the same images.
 
 To view locally, use your favorite browsers "open file" command and point it to the respective *.html page, e.g.

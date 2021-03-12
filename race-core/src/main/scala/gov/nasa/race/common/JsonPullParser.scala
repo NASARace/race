@@ -92,10 +92,11 @@ object JsonPullParser {
   * this parser supports three APIs with increasing level of abstraction:
   *
   * (1) low level stream
-  *
   * (2) mid level readXX functions returning Scala types
-  *
   * (3) high level parsing into a JsonValue structure (AST)
+  *
+  * TODO - the mid-level API needs substantial cleanup. Much of it seems to deal with sequential parsing of
+  * JSON objects, which is against the spec (json objects are unordered collections ala Map)
   */
 abstract class JsonPullParser extends LogWriter with Thrower {
   import JsonPullParser._
@@ -130,7 +131,7 @@ abstract class JsonPullParser extends LogWriter with Thrower {
   protected val env = Stack.empty[State]   // state stack
   protected var lastResult: JsonParseResult = NoValue // needs to be protected to ensure integrity
 
-  override def exception(msg: String) = new JsonParseException(msg)
+  override def exception(msg: String) = new JsonParseException(s"$msg around '${dataContext(idx)}'")
 
   def tryParse[T](err: JsonParseException=>Unit)(f: =>T): Option[T] = {
     try {
@@ -147,8 +148,10 @@ abstract class JsonPullParser extends LogWriter with Thrower {
   def dataAsString: String = new String(data,0,limit)
   def dataContext (i0: Int, len: Int=24): String = {
     val maxLen = Math.min(len,limit-i0)
-    val s = new String(data,i0,maxLen)
-    if (i0 + maxLen < limit) s + "..." else s
+    var s = new String(data,i0,maxLen)
+    if (i0 > 0) s = "..." + s
+    if (i0 + maxLen < limit) s = s + "..."
+    s
   }
 
   def getLastResult: JsonParseResult = lastResult
@@ -376,6 +379,9 @@ abstract class JsonPullParser extends LogWriter with Thrower {
 
   def level: Int = env.size
 
+  @inline final def quotedValue: Utf8Slice = if (value.nonEmpty && isQuotedValue) value else throw exception("not a quoted value")
+  @inline final def unQuotedValue: Utf8Slice = if (value.nonEmpty && !isQuotedValue) value else throw exception("not an unQuoted value")
+
   @inline final def isScalarValue: Boolean = value.nonEmpty
 
   @inline final def isInObject: Boolean = (state == objState || state == initObjState)
@@ -519,6 +525,17 @@ abstract class JsonPullParser extends LogWriter with Thrower {
     }
   }
 
+  //--- DateTime parsing
+
+  def dateTimeValue: DateTime = {
+    if (value.nonEmpty) {
+      if (isQuotedValue) DateTime.parseYMDTSlice(value)
+      else DateTime.ofEpochMillis(value.toLong)
+    } else {
+      throw exception("expected DateTime value")
+    }
+  }
+
   /**
     * return next named DateTime member
     * this is the exception from the rule that we return values as slices since we accept
@@ -592,7 +609,7 @@ abstract class JsonPullParser extends LogWriter with Thrower {
           f // this is supposed to parse/process ONE element of the container
         } while (notDone && (level >= endLevel && aggregateHasMoreValues))
       }
-      ensureNext(expected.endDelimiter)
+      ensureNext(expected.endDelimiter) // this consumes the end delimiter
     } else throw exception(s"expected '${expected.getClass.getSimpleName}' got '${res.getClass.getSimpleName}'")
   }
 
@@ -602,8 +619,16 @@ abstract class JsonPullParser extends LogWriter with Thrower {
   // if we don't care for the member name
   @inline final def foreachInNextArray(f: =>Unit): Unit = foreachInAggregate(readNext(),ArrayStart)(f)
 
-  // if we are already in the array, e.g. after a readNextMemberName()
-  @inline final def foreachInCurrentArray(f: =>Unit): Unit = foreachInAggregate(lastResult,ArrayStart)(f)
+  /**
+    * apply the given function to each element in the current array
+    * note the function only processes the CURRENT element (i.e. should not call readNext())
+    */
+  final def foreachElementInCurrentArray (f: =>Unit): Unit = {
+    foreachInAggregate(lastResult,ArrayStart) {
+      readNext()
+      f
+    }
+  }
 
   // if we are asking for a known member name
   @inline final def foreachInNextObjectMember(name: ByteSlice)(f: =>Unit): Unit = foreachInAggregate(readNextMember(name),ObjectStart)(f)
@@ -611,9 +636,28 @@ abstract class JsonPullParser extends LogWriter with Thrower {
   // if we don't care for the member name
   @inline final def foreachInNextObject(f: =>Unit): Unit = foreachInAggregate(readNext(),ObjectStart)(f)
 
-  // if we are already in the object, e.g. after a readNextMemberName()
-  @inline final def foreachInCurrentObject(f: =>Unit): Unit = foreachInAggregate(lastResult,ObjectStart)(f)
+  /**
+    * apply the given function to each member in the current object
+    * note the function only processes the CURRENT member (i.e. should not call readNext())
+    */
+  final def foreachInCurrentObject(f: =>Unit): Unit = {
+    foreachInAggregate(lastResult,ObjectStart) {
+      readNext()
+      f
+    }
+  }
 
+  /**
+    * apply the given partial function to each member in the current object
+    * members for which the partial function is not defined are ignored
+    * note the function only processes the CURRENT member (i.e. should not call readNext())
+    */
+  final def foreachMemberInCurrentObject (f: PartialFunction[CharSeqByteSlice,Unit]): Unit = {
+    foreachInAggregate(lastResult, ObjectStart) {
+      readNext()
+      f.applyOrElse(member, (_:CharSequence) => {})
+    }
+  }
 
   //--- the provided function loops itself, i.e. processes the whole element (or a prefix thereof)
 
@@ -621,8 +665,10 @@ abstract class JsonPullParser extends LogWriter with Thrower {
     if (res == expected) {
       val endLevel = level
       val res = f // parse whatever is required from this element (can be multiple items)
-      if (level >= endLevel) skipToEndOfLevel(endLevel) // skip the rest if the provided function was not exhaustive
-      ensureNext(expected.endDelimiter)
+      if (level >= endLevel) {   // skip the rest if the provided function was not exhaustive
+        skipToEndOfLevel(endLevel)
+        ensureNext(expected.endDelimiter)
+      }
       res
     } else throw exception(s"expected '${expected.getClass.getSimpleName}' got '${res.getClass.getSimpleName}'")
   }
@@ -666,7 +712,7 @@ abstract class JsonPullParser extends LogWriter with Thrower {
     collection
   }
   def readCurrentArrayInto[U,T <:mutable.Growable[U]](collection: T)(f: =>U): T = {
-    foreachInCurrentArray{ collection.addOne(f) };
+    foreachElementInCurrentArray{ collection.addOne(f) };
     collection
   }
 
@@ -675,7 +721,7 @@ abstract class JsonPullParser extends LogWriter with Thrower {
 
     if (!isLevelEnd && isNextArrayStartMember(name)) {
       val c = collection
-      foreachInCurrentArray{ c.addOne(f) };
+      foreachElementInCurrentArray{ c.addOne(f) };
       Some(c)
 
     } else {
@@ -694,7 +740,7 @@ abstract class JsonPullParser extends LogWriter with Thrower {
     foreachInNextArray(collection.addOne(readUnQuotedValue().toByte)); collection
   }
   def readCurrentByteArrayInto[T <:mutable.Growable[Byte]](collection: T): T = {
-    foreachInCurrentArray(collection.addOne(readUnQuotedValue().toByte)); collection
+    foreachElementInCurrentArray(collection.addOne(unQuotedValue.toByte)); collection
   }
 
   //--- Int elements
@@ -705,7 +751,7 @@ abstract class JsonPullParser extends LogWriter with Thrower {
     foreachInNextArray(collection.addOne(readUnQuotedValue().toInt)); collection
   }
   def readCurrentIntArrayInto[T <:mutable.Growable[Int]](collection: T): T = {
-    foreachInCurrentArray(collection.addOne(readUnQuotedValue().toInt)); collection
+    foreachElementInCurrentArray(collection.addOne(unQuotedValue.toInt)); collection
   }
 
   //--- Long elements
@@ -716,7 +762,7 @@ abstract class JsonPullParser extends LogWriter with Thrower {
     foreachInNextArray(collection.addOne(readUnQuotedValue().toLong)); collection
   }
   def readCurrentLongArrayInto[T <:mutable.Growable[Long]](collection: T): T = {
-    foreachInCurrentArray(collection.addOne(readUnQuotedValue().toLong)); collection
+    foreachElementInCurrentArray(collection.addOne(unQuotedValue.toLong)); collection
   }
 
   //--- Double elements
@@ -727,7 +773,7 @@ abstract class JsonPullParser extends LogWriter with Thrower {
     foreachInNextArray(collection.addOne(readUnQuotedValue().toDouble)); collection
   }
   def readCurrentDoubleArrayInto[T <:mutable.Growable[Double]](collection: T): T = {
-    foreachInCurrentArray(collection.addOne(readUnQuotedValue().toDouble)); collection
+    foreachElementInCurrentArray(collection.addOne(unQuotedValue.toDouble)); collection
   }
 
   //--- String elements
@@ -738,7 +784,7 @@ abstract class JsonPullParser extends LogWriter with Thrower {
     foreachInNextArray(collection.addOne(readQuotedValue().toString)); collection
   }
   def readCurrentStringArrayInto[T <:mutable.Growable[String]](collection: T): T = {
-    foreachInCurrentArray(collection.addOne(readQuotedValue().toString)); collection
+    foreachElementInCurrentArray(collection.addOne(quotedValue.toString)); collection
   }
 
   def readOptionalStringArrayMemberInto[T <:mutable.Growable[String]](name: ByteSlice, collection: =>T): Option[T] = {

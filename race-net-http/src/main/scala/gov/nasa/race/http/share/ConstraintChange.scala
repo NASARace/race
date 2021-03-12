@@ -24,6 +24,7 @@ import gov.nasa.race.uom.DateTime
 object ConstraintChange {
   val _constraintChange_ = asc("constraintChange")
   val _date_ = asc("date")
+  val _reset_ = asc("reset")
   val _violated_ = asc("violated")
   val _resolved_ = asc("resolved")
 }
@@ -32,14 +33,15 @@ import ConstraintChange._
 /**
   * object that is used to publish changes in ConstraintFormula evaluations
   */
-case class ConstraintChange (date: DateTime, violated: Seq[ConstraintFormula], resolved: Seq[ConstraintFormula]) extends JsonSerializable {
+case class ConstraintChange (date: DateTime, reset: Boolean, violated: Seq[ConstraintFormula], resolved: Seq[ConstraintFormula]) extends JsonSerializable {
 
   override def serializeTo (w: JsonWriter): Unit = {
     w.clear().writeObject { _
-      .writeMemberObject(_constraintChange_) { w=>
+      .writeObject(_constraintChange_) { w=>
         w.writeDateTimeMember(_date_, date)
-        if (violated.nonEmpty) w.writeMemberObject(_violated_)( w=> violated.foreach( _.serializeAsMemberObjectTo(w)) )
-        if (resolved.nonEmpty) w.writeMemberObject(_resolved_)( w=> resolved.foreach( _.serializeAsMemberObjectTo(w)) )
+        w.writeBooleanMember(_reset_, reset)
+        if (violated.nonEmpty) w.writeObject(_violated_)(w=> violated.foreach( _.serializeAsMemberObjectTo(w)) )
+        if (resolved.nonEmpty) w.writeObject(_resolved_)(w=> resolved.foreach( _.serializeAsMemberObjectTo(w)) )
       }
     }
   }

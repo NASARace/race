@@ -94,6 +94,11 @@ case class LandingSite (name: String, // cid
   override def toString: String = {
     s"""LandingSite("$name",$pos,"$descr",${LandingSite.lsType(lsType)},${LandingSite.lsAccess(lsAccess)},$magVar})"""
   }
+
+  override def addStrings (db: GisItemDBFactory[_]): Unit = {
+    db.addString(name)
+    db.addString(descr)
+  }
 }
 
 class LandingSiteDB (data: ByteBuffer) extends GisItemDB[LandingSite](data) {
@@ -144,9 +149,6 @@ object LandingSiteDB extends GisItemDBFactory[LandingSite](72) {
 
           val typeFlag = getLsType(cat)
           val accessFlag = getLsAccess(access)
-
-          addString(name)
-          addString(descr)
 
           //--- populate the waypoint list
           addItem( LandingSite(name,pos,descr,typeFlag,accessFlag,magVar.toFloat))

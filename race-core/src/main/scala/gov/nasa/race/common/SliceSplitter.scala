@@ -33,14 +33,16 @@ class SliceSplitter (var sep: Byte, var src: ByteSlice) extends Iterator[ByteSli
 
   def this (sep: Byte) = this(sep, MutRawByteSlice.empty)
 
-  def setSource(newSrc: ByteSlice): Unit = {
+  def setSource(newSrc: ByteSlice): SliceSplitter = {
     src = newSrc
     idx = src.off
     limit = src.off + src.len
+    this
   }
 
-  def setSeparator (newSep: Byte): Unit = {
+  def setSeparator (newSep: Byte): SliceSplitter = {
     sep = newSep
+    this
   }
 
   final def hasNext: Boolean = {
@@ -76,6 +78,18 @@ class SliceSplitter (var sep: Byte, var src: ByteSlice) extends Iterator[ByteSli
       slice
     } else {
       throw new NoSuchElementException
+    }
+  }
+
+  def foreach[T<:MutByteSlice] (slice: T)(f: T=>Unit): Unit = {
+    while (hasNext){
+      f(next(slice))
+    }
+  }
+
+  def foreachMatch[T<:MutByteSlice] (slice: T)(pf: PartialFunction[T,Unit]): Unit = {
+    while (hasNext){
+      pf(next(slice))
     }
   }
 }

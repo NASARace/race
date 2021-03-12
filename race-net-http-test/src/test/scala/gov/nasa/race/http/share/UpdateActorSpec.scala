@@ -34,10 +34,10 @@ class UpdateActorSpec extends RaceActorSpec with AnyFlatSpecLike {
 
   val dataDir = "race-net-http-test/src/resources/sites/share/data"
 
-  val integratorConfig: Config = createConfig(
+  val actorConf: Config = createConfig(
     s"""
-      | name = "tdsa"
-      | node-id = "/providers/region1/integrator"
+      | name = "updater"
+      | node-list = "$dataDir/nodeList.json"
       | column-list = "$dataDir/columnList.json"
       | row-list = "$dataDir/rowList.json"
       | value-formulas = "$dataDir/formulaList.json"
@@ -50,18 +50,17 @@ class UpdateActorSpec extends RaceActorSpec with AnyFlatSpecLike {
   "an UpdateActor" should "read columnList, rowList.json, formulaList and columnData during creation" in {
     runRaceActorSystem(Logging.InfoLevel) {
 
-      val actor: UpdateActor = addTestActor[UpdateActor]("tdsa", integratorConfig)
+      val actor: UpdateActor = addTestActor[UpdateActor]("updater", actorConf)
 
       printTestActors
       initializeTestActors
       startTestActors(DateTime.now)
 
       val date = DateTime.now
-      val originator = "/providers/region1/provider_2"
 
       val cdc = ColumnDataChange(
-        originator,
-        originator,
+        "/columns/column_2",
+        "/nodes/node_2",
         date,
         Seq(
           "/data/cat_A/field_1" -> IntegerCellValue(20, date),
@@ -70,7 +69,7 @@ class UpdateActorSpec extends RaceActorSpec with AnyFlatSpecLike {
       )
 
       println(s"--- column data of $actor pre CDC")
-      actor.getNode.printColumnData()
+      actor.node.printColumnData()
 
       var currentNode: Node = null
 
@@ -82,23 +81,23 @@ class UpdateActorSpec extends RaceActorSpec with AnyFlatSpecLike {
           node.printColumnData()
 
           // this should have the values from the CDC
-          node.get("/providers/region1/provider_2", "/data/cat_B/field_2") match {
+          node.get("/columns/column_2", "/data/cat_B/field_2") match {
             case Some(cv) =>
               cv match {
                 case rcv:RealCellValue =>
-                  println("checking updated provider_2 data..")
-                  println(s"\n--- [provider_2::cat_B/field_2] = $rcv")
+                  println("checking updated column_2 data..")
+                  println(s"\n--- [column_2::cat_B/field_2] = $rcv")
                   assert( rcv.value == 1000.0)
                 case _ => fail("wrong cell value type: $cv")
               }
-            case None => fail("updated cell value [provider_2::cat_B/field_2] not found")
+            case None => fail("updated cell value [column_2::cat_B/field_2] not found")
           }
 
           currentNode = node
 
         case BusEvent(_, cdcOut: ColumnDataChange, _) =>
           println(s"\n--- got CDC on /out: $cdc")
-          if (actor.getNode ne currentNode) fail(s"current actor node was not broadcasted")
+          if (actor.node ne currentNode) fail(s"current actor node was not broadcasted")
 
         case BusEvent(_,msg,_) => fail(s"unexpected msg on /out: $msg")
       }

@@ -2,7 +2,7 @@ RACE GIS Support
 ================
 
 RACE applications often require access to geographic databases in order to process tracks. Typical
-examples are tasks such as finding the nearest landing site for a given aircraft position, or
+examples are tasks such as finding the nearest landing node for a given aircraft position, or
 to generate a trajectory from a flight plan that consists of waypoint names.
 
 Most of these databases are semi-static, i.e. the data only changes periodically and is immutable

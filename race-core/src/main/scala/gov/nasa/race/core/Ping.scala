@@ -21,12 +21,12 @@ import gov.nasa.race.common.{JsonPullParser, JsonSerializable, JsonWriter}
 import gov.nasa.race.uom.DateTime
 
 object Ping {
-  val _ping_ = asc("ping")
-  val _pong_ = asc("pong")
-  val _sender_ = asc("sender")
-  val _receiver_ = asc("receiver")
-  val _request_ = asc("request")
-  val _date_ = asc("date")
+  val PING = asc("ping")
+  val PONG = asc("pong")
+  val SENDER = asc("sender")
+  val RECEIVER = asc("receiver")
+  val REQUEST = asc("request")
+  val DATE = asc("date")
 
   val PingRE = """\s*\{\s*"ping":\s*\{\s*"sender":\s*"(.*)",\s*"receiver":\s*"(.*)",\s*"request":\s*(\d+),\s*"date":\s*(\d+)\s*\}\s*\}""".r
 
@@ -50,11 +50,11 @@ import gov.nasa.race.core.Ping._
 case class Ping (sender: String, receiver: String, request: Int, date: DateTime) extends JsonSerializable {
 
   def serializeEmbedded (w: JsonWriter): Unit = {
-    w.writeMemberObject(_ping_) { _
-      .writeStringMember(_sender_,sender.toString)
-      .writeStringMember(_receiver_,receiver.toString)
-      .writeIntMember(_request_,request)
-      .writeDateTimeMember(_date_, date)
+    w.writeObject(PING) { _
+      .writeStringMember(SENDER,sender.toString)
+      .writeStringMember(RECEIVER,receiver.toString)
+      .writeIntMember(REQUEST,request)
+      .writeDateTimeMember(DATE, date)
     }
   }
 
@@ -64,18 +64,20 @@ case class Ping (sender: String, receiver: String, request: Int, date: DateTime)
 }
 
 trait PingParser extends JsonPullParser {
-  def parsePingBody: Option[Ping] = {
-    tryParse( x=> warning(s"malformed ping request: ${x.getMessage}")) {
-      readCurrentObject { readPingBody }
+  def readPing(): Ping = {
+    readCurrentObject {
+      val sender = readQuotedMember(SENDER).intern
+      val receiver = readQuotedMember(RECEIVER).intern
+      val request = readUnQuotedMember(REQUEST).toInt
+      val date = readDateTimeMember(DATE)
+      Ping(sender, receiver, request, date)
     }
   }
 
-  def readPingBody: Ping = {
-    val sender = readQuotedMember(_sender_).intern
-    val receiver = readQuotedMember(_receiver_).intern
-    val request = readUnQuotedMember(_request_).toInt
-    val date = readDateTimeMember(_date_)
-    Ping(sender, receiver, request, date)
+  def parsePing(): Option[Ping] = {
+    tryParse( x=> warning(s"malformed ping request: ${x.getMessage}")) {
+      readPing()
+    }
   }
 }
 
@@ -103,8 +105,8 @@ case class Pong(date: DateTime, ping: Ping) extends JsonSerializable {
 
   def serializeTo (w: JsonWriter): Unit = {
     w.clear().writeObject { _
-      .writeMemberObject(_pong_){ w=>
-        w.writeDateTimeMember(_date_, date)
+      .writeObject(PONG){ w=>
+        w.writeDateTimeMember(DATE, date)
         ping.serializeEmbedded(w)
       }
     }
@@ -114,11 +116,11 @@ case class Pong(date: DateTime, ping: Ping) extends JsonSerializable {
 trait PongParser extends JsonPullParser with PingParser {
 
   // this assumes the '{"pong:"' prefix has already been parsed
-  def parsePongBody: Option[Pong] = {
+  def parsePong(): Option[Pong] = {
     tryParse(x=> warning(s"malformed ping response: ${x.getMessage}")) {
       readCurrentObject {
-        val date = readDateTimeMember(_date_)
-        val ping = readNextObjectMember(_ping_) { readPingBody }
+        val date = readDateTimeMember(DATE)
+        val ping = readNextObjectMember(PING) { readPing() }
         Pong(date, ping)
       }
     }

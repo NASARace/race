@@ -1,0 +1,17 @@
+{
+  "columnList": {
+    "id": "/provider_1/columnList",
+    "info": "columns for provider_1",
+    "date": "2020-06-28T12:00:00.000",
+
+    "columns": [
+      { "id": "/columns/column_1", "info": "data for this node", "receive": "<owner>,<up>", "send": "<up>", "owner": "." },
+
+      { "id": "/columns/column_2", "info": "this is provider 2", "receive": "<up>", "send": "<none>", "owner": "../node_2" },
+      { "id": "/columns/column_3", "info": "this is provider 3", "receive": "<up>", "send": "<none>", "owner": "../node_2" },
+      { "id": "/columns/column_4", "info": "this is provider 4", "receive": "<up>", "send": "<none>", "owner": "../node_3" },
+      { "id": "/columns/column_5", "info": "this is provider 5", "receive": "<up>", "send": "<none>", "owner": "../node_4" },
+      { "id": "/columns/column_6", "info": "this is provider 6", "receive": "<up>", "send": "<none>", "owner": "../node_5" }
+    ]
+  }
+}

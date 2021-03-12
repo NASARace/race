@@ -67,6 +67,7 @@ object Internalizer {
 
   @inline final def get (bs: Array[Byte], off: Int, len: Int): String = getMurmurHashed(MurmurHash64.hashBytes(bs,off,len), bs,off,len)
   @inline final def get (slice: ByteSlice): String = get(slice.data,slice.off,slice.len)
+  @inline final def get (bs: Array[Byte]): String = get(bs, 0, bs.length)
 
   def getMurmurHashed (hash: Long, cs: Array[Char], off: Int, len: Int): String = synchronized {
     if (len == 0) return emptyString
@@ -169,7 +170,6 @@ object ASCII8Internalizer {
   }
 
   @inline def get (cs: Array[Char], off: Int, len: Int): String = getASCII8Hashed(ASCII8Hash64.hashChars(cs,off,len), cs,off,len)
-
 
   def get (s: String): String = {
     if (s.length > 8) {

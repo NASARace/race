@@ -156,13 +156,15 @@ abstract class GisItemDBFactory[T <: GisItem: ClassTag] (val itemSize: Int) {
     addString(schema)
   }
 
-  protected def addString (s: String): Boolean = {
+  def addString (s: String): Boolean = {
     val n = strMap.size
     strMap.getOrElseUpdate(s, n)
     strMap.size > n
   }
 
   protected def addItem (e: T): Unit = {
+    e.addStrings(this)
+
     items += e
     xyzPos += e.ecef
   }

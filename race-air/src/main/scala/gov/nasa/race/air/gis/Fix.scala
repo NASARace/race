@@ -18,8 +18,7 @@ package gov.nasa.race.air.gis
 
 import java.io.File
 import java.nio.ByteBuffer
-
-import gov.nasa.race.common.{ConstAsciiSlice, JsonPullParser, StringJsonPullParser}
+import gov.nasa.race.common.{ConstAsciiSlice, JsonParseException, JsonPullParser, StringJsonPullParser}
 import gov.nasa.race.geo.GeoPosition
 import gov.nasa.race.gis.{GisItem, GisItemDB, GisItemDBFactory}
 import gov.nasa.race.uom.Angle.Degrees
@@ -27,7 +26,7 @@ import gov.nasa.race.uom.DateTime
 import gov.nasa.race.uom.Length.Feet
 import gov.nasa.race.util.{ConsoleIO, FileUtils, NetUtils}
 
-import scala.collection.Seq
+import scala.collection.{Seq, mutable}
 import scala.collection.mutable.ArrayBuffer
 import scala.util.Either
 
@@ -40,9 +39,14 @@ case class Fix (name: String,
                ) extends GisItem {
   override def toString: String = {
     navaid match {
-      case Some(s) => s"""Fix("$name",${pos.toGenericString2D},"$s""""
+      case Some(s) => s"""Fix("$name",${pos.toGenericString2D},"$s")"""
       case None => s"""Fix("$name",${pos.toGenericString2D})"""
     }
+  }
+
+  override def addStrings (db: GisItemDBFactory[_]): Unit = {
+    db.addString(name)
+    if (navaid.isDefined) db.addString(navaid.get)
   }
 }
 
@@ -74,55 +78,83 @@ case class Fix (name: String,
   *   }
   */
 class FixParser extends StringJsonPullParser {
-  import JsonPullParser._
 
   val DescrRE = """(?:(.+)\s+)?(\d+)-(\d+)-(\d+.\d+)(N|S)\s+(\d+)-(\d+)-(\d+.\d+)(E|W)""".r
 
-  val _totalrows_ = ConstAsciiSlice("totalrows")
-  val _totaldisplayrows_ = ConstAsciiSlice("totaldisplayrows")
-  val _data_ = ConstAsciiSlice("data")
-  val _fix_identifier_ = ConstAsciiSlice("fix_identifier")
-  val _description_ = ConstAsciiSlice("description")
-  val _state_ = ConstAsciiSlice("state")
+  val TOTAL_ROWS = ConstAsciiSlice("totalrows")
+  val TOTAL_DISPLAY_ROWS = ConstAsciiSlice("totaldisplayrows")
+  val DATA = ConstAsciiSlice("data")
+  val FIX_ID = ConstAsciiSlice("fix_identifier")
+  val DESCRIPTION = ConstAsciiSlice("description")
+  val STATE = ConstAsciiSlice("state")
+
+
+  def getDeg (d: Int, m: Int, s: Double, dir: String): Double = {
+    val x = d.toDouble + (m/60.0) + (s/3600.0)
+    if (dir == "W" || dir == "S") -x else x
+  }
+
+  def readFix(): Option[Fix] = {
+    var id: String = null
+    var state: String = null
+    var pos: GeoPosition = null
+    var navaid: Option[String] = None
+
+    foreachMemberInCurrentObject {
+      case FIX_ID => id = quotedValue.toString
+      case STATE => state = quotedValue.intern  // there aren't that many
+      case DESCRIPTION =>
+        quotedValue match {
+          case DescrRE(nav, slatDeg, slatMin, slatSec, slatDir, slonDeg, slonMin, slonSec, slonDir) =>
+            val lat = getDeg(slatDeg.toInt, slatMin.toInt, slatSec.toDouble, slatDir)
+            val lon = getDeg(slonDeg.toInt, slonMin.toInt, slonSec.toDouble, slonDir)
+
+            pos = GeoPosition.fromDegrees(lat, lon)
+            navaid = Option(nav)
+
+          case _ => // ignore, we don't have a position
+        }
+    }
+
+    if (id != null && pos != null) {
+      Some( Fix(id,pos,navaid) )
+    } else {
+      None
+    }
+  }
+
+  def readFixes(): Seq[Fix] = {
+    val buf = mutable.Buffer.empty[Fix]
+    foreachElementInCurrentArray {
+      readCurrentObject( readFix() ) match {
+        case Some(fix) => buf += fix
+        case None =>
+      }
+    }
+    buf.toSeq
+  }
 
   def parse (input: String): Seq[Fix] = {
-    var list: ArrayBuffer[Fix] = ArrayBuffer.empty[Fix]
+    var data = Seq.empty[Fix]
 
-    def getDeg (d: Int, m: Int, s: Double, dir: String): Double = {
-      var x = d.toDouble + (m/60.0) + (s/3600.0)
-      if (dir == "W" || dir == "S") -x else x
-    }
+    if (initialize(input)) {
+      try {
+        readNextObject {
+          var totalRows: Int = 0
+          var totalDisplayRows = 0
 
-    def parseFix: Unit = {
-      ensureNextIsObjectStart()
-      val fixId = readQuotedMember(_fix_identifier_).toString
-      val state = readQuotedMember(_state_).intern
-
-      val descr = readQuotedMember(_description_).toString  // not very efficient but this is a offline tool
-      descr match {
-        case DescrRE(nav, slatDeg, slatMin, slatSec, slatDir, slonDeg, slonMin, slonSec, slonDir) =>
-          val lat = getDeg(slatDeg.toInt, slatMin.toInt, slatSec.toDouble, slatDir)
-          val lon = getDeg(slonDeg.toInt, slonMin.toInt, slonSec.toDouble, slonDir)
-          val pos = GeoPosition.fromDegrees(lat, lon)
-          val navaid = Option(nav)
-          list += Fix(fixId,pos,navaid)
-
-        case _ => println(s"invalid fix description for id=$fixId: '$descr'")
+          foreachMemberInCurrentObject {
+            case TOTAL_ROWS =>  totalRows = unQuotedValue.toInt
+            case TOTAL_DISPLAY_ROWS => totalDisplayRows = unQuotedValue.toInt
+            case DATA => data = readCurrentArray( readFixes() )
+          }
+        }
+      } catch {
+        case x: JsonParseException => // should warn here but this also terminates on "{ "aadata": [] }"
       }
-
-      ensureNextIsObjectEnd()
     }
 
-    if (initialize(input)){
-      ensureNextIsObjectStart()
-      val totalRows = readUnQuotedMember(_totalrows_).toInt
-      val totalDisplayRows = readUnQuotedMember(_totaldisplayrows_).toInt
-      foreachInNextArrayMember(_data_) {
-        parseFix
-      }
-      ensureNextIsObjectEnd()
-    }
-    list
+    data
   }
 }
 
@@ -156,10 +188,10 @@ object FixDB extends GisItemDBFactory[Fix](60) {
       println(s"retrieving fixes from $url..")
       do {
         ConsoleIO.line(s"read $n fixes")
-        val params = s"dataType=LIDFIXESWAYPOINTS&length=1000&sortcolumn=fix_identifier&sortdir=asc&start=$n$extraParams"
+        val params = s"dataType=LIDFIXESWAYPOINTS&start=$n&length=1000&sortcolumn=fix_identifier&sortdir=asc$extraParams"
         NetUtils.blockingHttpsPost(url,params) match {
           case Right(json) =>
-            val fixes = parser.parse(json)
+            val fixes: Seq[Fix] = parser.parse(json)
             fixes.foreach(addItem)
             r = fixes.size
           case Left(err) => println(s"aborting with error: $err")

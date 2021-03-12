@@ -18,13 +18,13 @@ package gov.nasa.race.http.share
 
 import akka.actor.ActorRef
 import com.typesafe.config.Config
-import gov.nasa.race.common.PathIdentifier
+import gov.nasa.race.common.{Clock, PathIdentifier}
 import gov.nasa.race.config.ConfigUtils.ConfigWrapper
 import gov.nasa.race.core.Messages.BusEvent
 import gov.nasa.race.core.{ContinuousTimeRaceActor, PeriodicRaceActor, PublishingRaceActor, RaceContext, RaceException, SubscribingRaceActor}
 import gov.nasa.race.uom.DateTime
 import gov.nasa.race.util.FileUtils
-import gov.nasa.race.{Failure, Success, ifSome}
+import gov.nasa.race.{Failure, Success, ifNull, ifSome}
 
 import java.io.File
 import scala.collection.mutable
@@ -32,14 +32,14 @@ import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.duration.{DurationInt, FiniteDuration}
 import scala.language.existentials
 
+
 /**
   * the actor that initializes and updates the local Node data
+  *
+  * NOTE this actor has to come last in the config so that other actors are already subscribed to our output channel
   */
 class UpdateActor (val config: Config) extends SubscribingRaceActor with PublishingRaceActor
                                                               with ContinuousTimeRaceActor with PeriodicRaceActor {
-
-  val nodeId: String = config.getString("node-id")
-  val upstreamId: Option[String] = config.getOptionalString("upstream-id")
 
   var node = initializeNode // node objects are immutable
 
@@ -58,7 +58,8 @@ class UpdateActor (val config: Config) extends SubscribingRaceActor with Publish
 
   override def defaultTickInterval: FiniteDuration = 30.seconds
 
-  def getNode: Node = node  // for debugging purposes
+  def nodeId: String = node.id
+  def upstreamId: Option[String] = node.upstreamId
 
   //--- RACE callbacks
 
@@ -87,17 +88,22 @@ class UpdateActor (val config: Config) extends SubscribingRaceActor with Publish
 
   override def handleMessage: Receive = {
     case BusEvent(_, cdc:ColumnDataChange, _) => processColumnDataChange(cdc)
+    case BusEvent(_, nrc: ColumnReachabilityChange, _) => processColumnReachability(nrc)
     case BusEvent(_, nrc: NodeReachabilityChange, _) => processNodeReachabilityChange(nrc)
+    case BusEvent(_, su: SelectUpstream, _) => processSelectUpstream(su)
   }
 
   //--- initialization
 
   def initializeNode: Node = {
-    val columnList: ColumnList = readColumnList
-    val rowList: RowList = readRowList(columnList)
-    val colDatas: Map[String,ColumnData] = readColumnData(columnList,rowList)
+    val nodeList: NodeList = readNodeList
+    val nodeId = nodeList.self.id
 
-    Node(nodeId,upstreamId,columnList,rowList,colDatas)
+    val columnList: ColumnList = readColumnList(nodeId)
+    val rowList: RowList = readRowList(nodeId)
+    val colDatas: Map[String, ColumnData] = readColumnData(columnList, rowList)
+
+    Node(None, nodeList, columnList, rowList, colDatas, simClock)
   }
 
   protected def readList[T](key: String)(f: Array[Byte]=>Option[T]): Option[T] = {
@@ -108,7 +114,15 @@ class UpdateActor (val config: Config) extends SubscribingRaceActor with Publish
     } else None
   }
 
-  def readColumnList: ColumnList = {
+  def readNodeList: NodeList = {
+    readList[NodeList]("node-list"){ input=>
+      val parser = new NodeListParser()
+      parser.setLogging(info,warning,error)
+      parser.parse(input)
+    }.getOrElse( throw new RuntimeException("missing or invalid node-list"))
+  }
+
+  def readColumnList (nodeId: String): ColumnList = {
     readList[ColumnList]("column-list"){ input=>
       val parser = new ColumnListParser(nodeId)
       parser.setLogging(info,warning,error)
@@ -116,9 +130,9 @@ class UpdateActor (val config: Config) extends SubscribingRaceActor with Publish
     }.getOrElse( throw new RuntimeException("missing or invalid column-list"))
   }
 
-  def readRowList (columnList: ColumnList): RowList = {
+  def readRowList (nodeId: String): RowList = {
     readList[RowList]("row-list") { input =>
-      val parser = new RowListParser(columnList.id)
+      val parser = new RowListParser(nodeId)
       parser.setLogging(info, warning, error)
       parser.parse(input)
     }.getOrElse( throw new RuntimeException("missing or invalid row-list"))
@@ -137,7 +151,9 @@ class UpdateActor (val config: Config) extends SubscribingRaceActor with Publish
         val parser = new ColumnDataParser(rowList)
         parser.setLogging(info,warning,error)
         parser.parse(FileUtils.fileContentsAsBytes(f).get) match {
-          case Some(cd) => map += col.id -> cd
+          case Some(cd) =>
+            if (cd.id == col.id) map += col.id -> cd
+            else error(s"CD with unknown column ${cd.id} in $f")
           case None => throw new RaceException(f"error parsing column data in $f")
         }
       } else {
@@ -172,7 +188,21 @@ class UpdateActor (val config: Config) extends SubscribingRaceActor with Publish
 
   //--- data modification
 
-  def updateNode (cd: ColumnData): Unit = {
+  def updateNodeWithUpstream (newUpstream: Option[String]): Unit = {
+    if (node.upstreamId != newUpstream) {
+      node = node.copy(upstreamId = newUpstream)
+      publish(node)
+    }
+  }
+
+  def updateNodeWithOnlineColumns (newOnlineColumns: Set[String]): Unit = {
+    if (node.onlineColumns != newOnlineColumns) {
+      node = node.copy(onlineColumns = newOnlineColumns)
+      publish(node)
+    }
+  }
+
+  def updateNodeWithColumnData (cd: ColumnData): Unit = {
     val colId = cd.id
     if (node.columnDatas(colId) ne cd) {
       node = node.copy(columnDatas = node.columnDatas + (colId -> cd))
@@ -184,7 +214,7 @@ class UpdateActor (val config: Config) extends SubscribingRaceActor with Publish
   def updateAndPublish (colId: String, changeNodeId: String, cvs: Seq[CellPair]): Unit = {
     if (cvs.nonEmpty) {
       val cd = ctx.cellValues(colId)
-      updateNode(cd)
+      updateNodeWithColumnData(cd)
 
       val cdc = ColumnDataChange(colId, changeNodeId, ctx.evalDate, cvs)
       publish(cdc)
@@ -195,7 +225,7 @@ class UpdateActor (val config: Config) extends SubscribingRaceActor with Publish
   def setAndPublishOwnChange(colId: String, cvs: Seq[CellPair]): Unit = {
     ctx.setCellValues(colId, cvs).ifSuccess {
       val cd = ctx.cellValues(colId)
-      updateNode(cd)
+      updateNodeWithColumnData(cd)
 
       val cdc = ColumnDataChange(colId, node.id, ctx.evalDate, cvs)
       publish(cdc)
@@ -205,7 +235,7 @@ class UpdateActor (val config: Config) extends SubscribingRaceActor with Publish
   def publishConstraintChange(): Unit = {
     if (newViolations.nonEmpty || newResolved.nonEmpty) {
       publish(node) // current violations are stored in the node, publish this first to ensure it is always consistent with change messages
-      publish( ConstraintChange( currentSimTime, newViolations.toSeq, newResolved.toSeq))
+      publish( ConstraintChange( node.currentDateTime, false, newViolations.toSeq, newResolved.toSeq))
     }
   }
 
@@ -217,7 +247,7 @@ class UpdateActor (val config: Config) extends SubscribingRaceActor with Publish
     * recursive, so execute in order of formulaList definition).
     */
   def initColumnData(): Unit = {
-    ctx.evalDate = DateTime.now
+    ctx.evalDate = node.currentDateTime
     var newCds = node.columnDatas
 
     ifSome(cvFormulaList) { fl=>
@@ -342,8 +372,52 @@ class UpdateActor (val config: Config) extends SubscribingRaceActor with Publish
     publishConstraintChange()
   }
 
+  /**
+    * this is a change in upstream or downstream columns while the relaying node is still online
+    * Note - depending on column visibility - reachability is a transient property (the upstream from which we
+    * get a peer provider might be online, but the upstream might have lost connection to the peer)
+    */
+  def processColumnReachability (cr: ColumnReachabilityChange): Unit = {
+    info(s"ColumnReachabilityChange: $cr")
+
+    // TBD
+  }
+
+  /**
+    * this is a change in node reachability we detected locally (either from NR or UC)
+    */
   def processNodeReachabilityChange (nrc: NodeReachabilityChange): Unit = {
-    info(s"got $nrc")
-    // TODO
+    val extNodeId = nrc.nodeId
+
+    if (node.isKnownNode(extNodeId)) {
+      val changedColIds = node.columnList.columnIdsOwnedBy(extNodeId)
+
+      if (nrc.isOnline) {
+        updateNodeWithOnlineColumns(node.onlineColumns ++ changedColIds)
+        publish(ColumnReachabilityChange.online(node.id, nrc.date, changedColIds))
+      } else {
+        updateNodeWithOnlineColumns(node.onlineColumns -- changedColIds)
+        publish(ColumnReachabilityChange.offline(node.id, nrc.date, changedColIds))
+      }
+
+    } else {
+      warning(s"ignoring reachability change of unknown node: $extNodeId")
+    }
+  }
+
+  /**
+    * notification that the upstream connector has selected a new upstream node
+    */
+  def processSelectUpstream (su: SelectUpstream): Unit = {
+    if (su.id.isDefined){
+      if (node.nodeList.upstreamNodes.get(su.id.get).isDefined){
+        updateNodeWithUpstream(su.id)
+      } else {
+        warning(s"rejected unknown upstream selection '${su.id.get}''")
+        updateNodeWithUpstream(None)
+      }
+    } else {
+      updateNodeWithUpstream(None)
+    }
   }
 }

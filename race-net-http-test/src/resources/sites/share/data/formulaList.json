@@ -1,22 +1,26 @@
 {
-  "id": "/formulas/region1/integrator",
-  "info": "column formulas for integrator node",
-  "date": "2020-06-28T12:00:00.000",
+  "cellValueFormulaList": {
+    "id": "/coordinator/valueFormulas",
+    "info": "cell value formulas for coordinator node",
+    "date": "2020-06-28T12:00:00.000",
 
-  "columns": {
-    "/providers/region1/summary": {
-      "/data/cat_A/field_1": { "src": "(IntAvg ../provider*::.)" },
-      "/data/cat_A/field_2": { "src": "(IntAvg ../provider*::.)" },
-      "/data/cat_A/field_4": { "src": "(IntListCellPushN . ../field_1 3)" },
-      "/data/cat_A/field_3": { "src": "(IntListCellAvgInt ../field_4)" },
-      "/data/cat_A":         { "src": "(IntSum field_{1,2})" },
+    "columns": [
+      { "columnId": "/providers/region1/summary",
+        "formulas": [
+          { "rowId": "/data/cat_A/field_1",   "src": "(IntAvg ../provider*::.)" },
+          { "rowId": "/data/cat_A/field_2",   "src": "(IntAvg ../provider*::.)" },
+          { "rowId": "/data/cat_A/field_4",   "src": "(IntListCellPushN . ../field_1 3)" },
+          { "rowId": "/data/cat_A/field_3",   "src": "(IntListCellAvgInt ../field_4)" },
+          { "rowId": "/data/cat_A"        ,   "src": "(IntSum field_{1,2})" },
 
-      "/data/cat_B/field_1": { "src": "(RealMax ../provider*::.)" },
-      "/data/cat_B/field_2": { "src": "(RealMax ../provider*::.)" },
-      "/data/cat_B":         { "src": "(RealSum ./*)" },
+          { "rowId": "/data/cat_B/field_1",   "src": "(RealMax ../provider*::.)" },
+          { "rowId": "/data/cat_B/field_2",   "src": "(RealMax ../provider*::.)" },
+          { "rowId": "/data/cat_B"        ,   "src": "(RealSum ./*)" },
 
-      "/data/cat_C/field_2": { "src": "(IntSum ../provider*::.)" },
-      "/data/cat_C":         { "src": "(IntCellInc field_2 1)" }
-    }
+          { "rowId": "/data/cat_C/field_2",   "src": "(IntSum ../provider*::.)" },
+          { "rowId": "/data/cat_C"        ,   "src": "(IntCellInc field_2 1)" }
+        ]
+      }
+    ]
   }
 }

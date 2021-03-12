@@ -1,16 +1,18 @@
 {
-  "id": "/providers/region1/integrator",
-  "date": "2020-06-29T16:06:02.000",
+  "userPermissions": {
+    "id": "/coordinator/userPermissions",
+    "date": "2020-06-29T16:06:02.000",
 
-  "columnlist": "/providers/region1",
-  "rowlist": "/rows/sd1",
+    "columnlist": "/coordinator/columnList",
+    "rowlist": "/coordinator/rowList",
 
-  "users": {
-    "thor": [
-      { "columnPattern": "**/provider_1", "rowPattern": "**" }
-    ],
-    "igor": [
-      { "columnPattern": "**/provider_3", "rowPattern": "**/{field_1,field_2}" }
-    ]
+    "users": {
+      "thor": [
+        { "columnPattern": "**/column_1", "rowPattern": "**" }
+      ],
+      "igor": [
+        { "columnPattern": "**/column_3", "rowPattern": "**/{field_1,field_2}" }
+      ]
+    }
   }
 }

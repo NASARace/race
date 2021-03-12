@@ -16,8 +16,8 @@
  */
 package gov.nasa.race.http.share
 
+import gov.nasa.race.http.share.Row.{integerListRow, integerRow, realRow}
 import gov.nasa.race.{Failure, SuccessValue}
-
 import gov.nasa.race.test.RaceSpec
 import gov.nasa.race.uom.DateTime
 import org.scalatest.flatspec.AnyFlatSpec
@@ -34,43 +34,58 @@ class CellExpressionSpec extends AnyFlatSpec with RaceSpec {
   val date = DateTime.parseYMDT("2020-06-28T12:00:00.000")
   val validChangeDate = DateTime.parseYMDT("2020-09-10T16:30:00")
 
-  val columnList = ColumnList("/providers", date,
-    Column("/providers/c1"),
-    Column("/providers/c2"),
-    Column("/providers/c3")
+  val nodeList = NodeList("/nodes", date,
+    self = NodeInfo("/nodes/n1")
   )
 
-  val rowList = RowList("/data", date,
-    Row("/data/r1")("integer"),
-    Row("/data/r2")("real"),
-    Row("/data/r3")("real"),
-    Row("/data/r4")("integer"),
-    Row("/data/r5")("integerList")
+  val C1 = "/columns/c1"
+  val C2 = "/columns/c2"
+  val C3 = "/columns/c3"
+
+  val columnList = ColumnList("/columns", date,
+    Column(C1),
+    Column(C2),
+    Column(C3)
+  )
+
+  val R1 = "/rows/r1"
+  val R2 = "/rows/r2"
+  val R3 = "/rows/r3"
+  val R4 = "/rows/r4"
+  val R5 = "/rows/r5"
+
+  val rowList = RowList("/rows", date,
+    integerRow(R1),
+    realRow(R2),
+    realRow(R3),
+    integerRow(R4),
+    integerListRow(R5)
   )
 
   val cds = ColumnData.cdMap(
-    ColumnData("/providers/c1",date,
-      "/data/r1" -> IntegerCellValue(42,date),
-      "/data/r2" -> RealCellValue(0.42,date),
-      // we leave f3 undefined
-      "/data/r4" -> IntegerCellValue(43,date),
-      "/data/r5" -> IntegerListCellValue(IntegerList(43,41), date)
+    ColumnData( C1,date,
+      R1 -> IntegerCellValue(42,date),
+      R2 -> RealCellValue(0.42,date),
+      // we leave r3 undefined
+      R4 -> IntegerCellValue(43,date),
+      R5 -> IntegerListCellValue(IntegerList(43,41), date)
     ),
-    ColumnData("/providers/c2",date,
-      "/data/r1" -> IntegerCellValue(43,date),
-      "/data/r2" -> RealCellValue(0.43,date)
+    ColumnData( C2,date,
+      R1 -> IntegerCellValue(43,date),
+      R2 -> RealCellValue(0.43,date)
     )
   )
 
-  val node = Node("provider",None,columnList,rowList,cds)
+  val node = Node(None, nodeList,columnList,rowList,cds)
 
   val funcLib = new CellFunctionLibrary
+
 
   println("#-- data:")
   println("\n  rows:")
   rowList.foreach(row => println(s"  $row"))
   println("\n  values:")
-  cds("/providers/c1").foreachOrdered(rowList) { (id,cv) => println(s"  $id = $cv") }
+  cds("/columns/c1").foreachOrdered(rowList) { (id,cv) => println(s"  $id = $cv") }
 
   //--- aux funcs
 
@@ -105,7 +120,7 @@ class CellExpressionSpec extends AnyFlatSpec with RaceSpec {
   //--- the tests
 
   "a CellExpressionParser" should "parse a simple function formula into a CellExpression that can be evaluated" in {
-    val p = new CellFormulaParser(node, columnList("/providers/c1"), rowList("/data/r3"),funcLib)
+    val p = new CellFormulaParser(node, columnList(C1), rowList(R3),funcLib)
     val formula = "(RealSum ../r1 ../r2)"  // r1 is integer
 
     println(s"\n#-- function with explicit column-local cell references: '$formula'")
@@ -122,7 +137,7 @@ class CellExpressionSpec extends AnyFlatSpec with RaceSpec {
   }
 
   "a CellExpressionParser" should "parse a function formula with cell patterns" in {
-    val p = new CellFormulaParser(node, columnList("/providers/c1"), rowList("/data/r3"),funcLib)
+    val p = new CellFormulaParser(node, columnList(C1), rowList(R3),funcLib)
     val formula = "(RealSum ../r{1,2})"
 
     println(s"\n#-- function with cell pattern: '$formula'")
@@ -139,10 +154,10 @@ class CellExpressionSpec extends AnyFlatSpec with RaceSpec {
   }
 
   "a CellExpressionParser" should "parse a function formula with column reference patterns" in {
-    val p = new CellFormulaParser(node, columnList("/providers/c1"), rowList("/data/r1"),funcLib)
+    val p = new CellFormulaParser(node, columnList(C1), rowList(R1),funcLib)
     val formula = "(IntAvgReal ../c{1,2}::.)"
 
-    println(s"\n#-- function with column pattern: '$formula' for ${rowList("/data/r1").getClass}")
+    println(s"\n#-- function with column pattern: '$formula' for ${rowList(R1).getClass}")
 
     val ctx = new BasicEvalContext( node, validChangeDate)
 
@@ -156,7 +171,7 @@ class CellExpressionSpec extends AnyFlatSpec with RaceSpec {
   }
 
   "a CellExpressionParser" should "parse a nested formula" in {
-    val p = new CellFormulaParser(node, columnList("/providers/c1"), rowList("/data/r3"),funcLib)
+    val p = new CellFormulaParser(node, columnList(C1), rowList(R3),funcLib)
     val formula = "(RealSum ../r2 (IntMax ../r{1,4}) -0.42)"
 
     println(s"\n#-- function with nested expression args: '$formula'")
@@ -173,7 +188,7 @@ class CellExpressionSpec extends AnyFlatSpec with RaceSpec {
   }
 
   "a CellExpressionParser" should "parse a heterogeneous cell func" in {
-    val p = new CellFormulaParser(node, columnList("/providers/c1"), rowList("/data/r1"),funcLib)
+    val p = new CellFormulaParser(node, columnList(C1), rowList(R1),funcLib)
     val formula = "(IntCellInc . 1)"
 
     println(s"\n#-- function with cell-reference: '$formula'")
@@ -190,7 +205,7 @@ class CellExpressionSpec extends AnyFlatSpec with RaceSpec {
   }
 
   "a CellExpressionParser" should "parse array push funcs with . paths" in {
-    val p = new CellFormulaParser(node, columnList("/providers/c1"), rowList("/data/r5"),funcLib)
+    val p = new CellFormulaParser(node, columnList(C1), rowList(R5),funcLib)
     val formula = "(IntListCellPushN . ../r4 2)"
 
     println(s"\n#-- array pushn function: '$formula'")
@@ -207,7 +222,7 @@ class CellExpressionSpec extends AnyFlatSpec with RaceSpec {
   }
 
   "a CellExpressionParser" should "parse array avg func" in {
-    val p = new CellFormulaParser(node, columnList("/providers/c1"), rowList("/data/r4"),funcLib)
+    val p = new CellFormulaParser(node, columnList(C1), rowList(R4),funcLib)
     val formula = "(IntListCellAvgInt ../r5)"
 
     println(s"\n#-- array avg function: '$formula'")
@@ -224,7 +239,7 @@ class CellExpressionSpec extends AnyFlatSpec with RaceSpec {
   }
 
   "a CellExpressionParser" should "detect arity errors" in {
-    val p = new CellFormulaParser(node, columnList("/providers/c1"), rowList("/data/r5"),funcLib)
+    val p = new CellFormulaParser(node, columnList(C1), rowList(R5),funcLib)
     val formula = "(IntListCellPushN ../r5 3)"
 
     println(s"\n#--- invalid function arguments (arity) for formula: '$formula'")
@@ -245,7 +260,7 @@ class CellExpressionSpec extends AnyFlatSpec with RaceSpec {
   }
 
   "a CellExpressionParser" should "detect argument type errors" in {
-    val p = new CellFormulaParser(node, columnList("/providers/c1"), rowList("/data/r5"),funcLib)
+    val p = new CellFormulaParser(node, columnList(C1), rowList(R5),funcLib)
     val formula = "(IntListCellPushN ../r4 ../r5 3)"
 
     println(s"\n#--- invalid function arguments (type) for formula: '$formula'")
