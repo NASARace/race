@@ -29,11 +29,19 @@ package object config {
 
   def emptyConfig = ConfigFactory.empty
 
-  // something that has a 'config' object with a 'name' entry
-  trait NamedConfigurable {
-    val config: Config
+  /**
+    * most abstract interface of something that can be configured
+    */
+  trait Configurable {
+    def config: Config
+  }
+
+  /**
+    * something that has a 'config' object with a 'name' entry
+    */
+  trait NamedConfigurable extends Configurable {
     // we can't use ConfigConversions, this is toplevel
-    val name = try { config.getString("name") } catch { case _: Throwable => getDefaultName }
+    def name = try { config.getString("name") } catch { case _: Throwable => getDefaultName }
 
     // override if there is a more specific default name
     def getDefaultName = getClass.getName
@@ -46,4 +54,5 @@ package object config {
   trait ConfigurableFilter extends Filter[Any] with NamedConfigurable
 
   trait ConfigValueMapper extends Translator[Any, ConfigValue] with NamedConfigurable
+
 }

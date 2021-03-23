@@ -35,6 +35,8 @@ object Column extends JsonConstants {
 /**
   * class representing a data provider (field owner). Note that each column is uniquely associated to one node, but
   * nodes can own several columns
+  *
+  * note that owner can be an abstract name (<up>,<self>,..) which has to be resolved through a Node object
   */
 case class Column (id: String, info: String, owner: String, send: NodeMatcher, receive: NodeMatcher, attrs: Seq[String])
               extends JsonSerializable {
@@ -50,8 +52,6 @@ case class Column (id: String, info: String, owner: String, send: NodeMatcher, r
       if (attrs.nonEmpty) w.writeStringArray(ATTRS, attrs)
     }
   }
-
-  def isOwnedBy (nodeId: CharSequence): Boolean = owner == nodeId
 }
 
 
@@ -71,7 +71,9 @@ trait ColumnParser extends JsonPullParser with NodeMatcherParser  with AttrsPars
       case INFO => info = quotedValue.toString
       case SEND => send = readNodeMatcher(quotedValue,nodeId)
       case RECEIVE => receive = readNodeMatcher(quotedValue,nodeId)
-      case OWNER => owner = PathIdentifier.resolve(quotedValue.toString, nodeId)
+      case OWNER => // preserve abstract names
+        val ownerSpec = quotedValue.toString
+        owner = if (ownerSpec.startsWith("<")) ownerSpec else PathIdentifier.resolve(quotedValue.toString, nodeId)
       case ATTRS => attrs = readCurrentArray( readAttrs() )
     }
 
@@ -144,14 +146,6 @@ case class ColumnList (id: String, info: String, date: DateTime, columns: SeqMap
     val regex = Glob.resolvedGlob2Regex(globPattern, id)
     columns.foldRight(Seq.empty[Column]){ (e,list) => if (regex.matches(e._1)) e._2 +: list else list }
   }
-
-  def columnsOwnedBy (nodeId: String): Seq[Column] = {
-    columns.foldRight(Seq.empty[Column]){ (e,list) => if (e._2.owner == nodeId) e._2 +: list else list }
-  }
-
-  def columnIdsOwnedBy (nodeId: String): Seq[String] = {
-    columns.foldRight(Seq.empty[String]){ (e,list) => if (e._2.owner == nodeId) e._1 +: list else list }
-  }
 }
 
 /**
@@ -203,57 +197,39 @@ class ColumnListParser (nodeId: String) extends UTF8JsonPullParser with ColumnPa
 }
 
 
-
 /**
-  * columnReachabilityChange: { nodeId: <id>, date: <epoch>, online: <bool>, columns: [ <id>...] }
+  * columnReachabilityChange: { nodeId: <id>, date: <epoch>, isOnline: <bool>, columns: [ <id>...] }
   */
 
 object ColumnReachabilityChange {
-  val _columnReachabilityChange_ = asc("columnReachabilityChange")
-  val _nodeId_ = asc("nodeId")
-  val _date_ = asc("date")
-  val _online_ = asc("online")
-  val _columns_ = asc("columns")
-
-  val _onlineColumns_ = asc("onlineColumns")
+  val COL_REACHABILITY_CHANGE = asc("columnReachabilityChange")
+  val NODE_ID = asc("nodeId")
+  val DATE = asc("date")
+  val IS_ONLINE = asc("isOnline")
+  val COLUMNS = asc("columns")
 
   def online (nodeId: String, date: DateTime, newOnlines: Seq[String]) = ColumnReachabilityChange(nodeId,date,true,newOnlines)
   def offline (nodeId: String, date: DateTime, newOfflines: Seq[String]) = ColumnReachabilityChange(nodeId,date,false,newOfflines)
 }
-import gov.nasa.race.http.share.ColumnReachabilityChange._
 
 
 /**
-  * a snapshot of online columns of the respective node
+  * indicates bulk change of column isOnline status of the respective node
   */
-case class OnlineColumns (nodeId: String, date: DateTime, columns: Seq[String]) extends JsonSerializable {
-  override def serializeTo(w: JsonWriter): Unit = {
-    w.clear().writeObject { _
-      .writeObject(_onlineColumns_) { _
-        .writeStringMember(_nodeId_, nodeId)
-        .writeDateTimeMember(_date_, date)
-        .writeStringArray(_columns_, columns)
-      }
-    }
-  }
-}
-
-/**
-  * indicates change of column online status of the respective node
-  */
-case class ColumnReachabilityChange ( nodeId: String,        // the node that reports the change
-                                      date: DateTime,        // the date when the change happened (simTime)
-                                      online: Boolean,       // do columns become online or offline
-                                      columns: Seq[String]   // the columns that change reachability
+case class ColumnReachabilityChange (nodeId: String, // the node that reports the change
+                                     date: DateTime, // the date when the change happened (simTime)
+                                     isOnline: Boolean, // do columns become online or offline
+                                     columns: Seq[String] // the columns that change reachability
                                     ) extends JsonSerializable {
+  import gov.nasa.race.http.share.ColumnReachabilityChange._
 
   override def serializeTo(w: JsonWriter): Unit = {
     w.clear().writeObject { _
-      .writeObject(_columnReachabilityChange_) { _
-        .writeStringMember(_nodeId_, nodeId)
-        .writeDateTimeMember(_date_, date)
-        .writeBooleanMember(_online_, online)
-        .writeStringArray(_columns_, columns)
+      .writeObject(COL_REACHABILITY_CHANGE) { _
+        .writeStringMember(NODE_ID, nodeId)
+        .writeDateTimeMember(DATE, date)
+        .writeBooleanMember(IS_ONLINE, isOnline)
+        .writeStringArray(COLUMNS, columns)
       }
     }
   }

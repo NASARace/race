@@ -5,7 +5,7 @@
     "date": "2020-06-28T12:00:00.000",
 
     "columns": [
-      { "id": "/columns/summary",  "info": "summary column",     "receive": "<owner>", "send": "<up>,../node_2",         "owner": "." },
+      { "id": "/columns/summary",  "info": "summary column",     "receive": "<owner>", "send": "<up>,../node_2",         "owner": "<self>" },
       { "id": "/columns/column_1", "info": "this is column_1",   "receive": "<owner>", "send": "<down>",                 "owner": "../node_1" },
 
       { "id": "/columns/column_2", "info": "this is column_2",   "receive": "<owner>,<self>", "send": "<down>",          "owner": "../node_2" },

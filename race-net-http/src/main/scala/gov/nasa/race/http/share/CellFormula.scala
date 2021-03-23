@@ -361,45 +361,36 @@ class CellValueFormulaList (val id: String, val info: String, val date: DateTime
       val columnList = node.columnList
       val rowList = node.rowList
 
-      val cols = columnList.matching(PathIdentifier.resolve(colSpec,node.id))
+      columnList.matching(colSpec).foreach { col =>
+        var tfs = Seq.empty[(Row[_],CellFormula[_])]
+        var vfs = SeqMap.empty[String,CellFormula[_]]
 
-      if (cols.nonEmpty) {
-        cols.foreach { col =>
-          var tfs = Seq.empty[(Row[_],CellFormula[_])]
-          var vfs = SeqMap.empty[String,CellFormula[_]]
+        rowFormulaSrcs.foreach { e =>
+          val rowSpec = e._1
+          val (exprSrc,timerSpec) = e._2
 
-          rowFormulaSrcs.foreach { e =>
-            val rowSpec = PathIdentifier.resolve(e._1, rowList.id)
-            val (exprSrc,timerSpec) = e._2
-
-            val rows = rowList.matching(rowSpec)
-            if (rows.nonEmpty) {
-              rows.foreach { row =>
-                CellFormula.compile(exprSrc,row,col,node,funcLib) match {
-                  case SuccessValue(cf) =>
-
-
-                    ifSome(timerSpec){ cf.setTimer }
-                    if (cf.hasTimeTrigger) {
-                      tfs = tfs :+ (row,cf)
-                    } else {
-                      vfs = vfs + (row.id -> cf)
-                    }
-
-                  case e@Failure(err) =>
-                    return e // bail out - formula did not compile
+          rowList.matching(rowSpec).foreach { row =>
+            CellFormula.compile(exprSrc,row,col,node,funcLib) match {
+              case SuccessValue(cf) =>
+                ifSome(timerSpec){ cf.setTimer }
+                if (cf.hasTimeTrigger) {
+                  tfs = tfs :+ (row,cf)
+                } else {
+                  vfs = vfs + (row.id -> cf)
                 }
-              }
+
+              case e@Failure(err) =>
+                return e // bail out - formula did not compile
             }
           }
+        }
 
-          if (tfs.nonEmpty) {
-            timeTriggeredFormulas = timeTriggeredFormulas :+ (col -> tfs)
-          }
+        if (tfs.nonEmpty) {
+          timeTriggeredFormulas = timeTriggeredFormulas :+ (col -> tfs)
+        }
 
-          if (vfs.nonEmpty) {
-            valueTriggeredFormulas = valueTriggeredFormulas + (col.id -> vfs) // ???? mutually exclusive ???
-          }
+        if (vfs.nonEmpty) {
+          valueTriggeredFormulas = valueTriggeredFormulas + (col.id -> vfs) // ???? mutually exclusive ???
         }
       }
     }

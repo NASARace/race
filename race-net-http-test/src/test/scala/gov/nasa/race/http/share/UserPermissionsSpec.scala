@@ -23,11 +23,11 @@ import org.scalatest.flatspec.AnyFlatSpec
 /**
   * reg test for UserPermissions
   */
-class UserPermissionSpec extends AnyFlatSpec with RaceSpec {
+class UserPermissionsSpec extends AnyFlatSpec with RaceSpec {
 
   "a UserPermissionParser" should "parse a know UserPermission source" in {
     val input = FileUtils.fileContentsAsString("race-net-http-test/src/resources/sites/share/data/node_2/userPermissions.json").get
-    val parser = new UserPermissionParser
+    val parser = new UserPermissionsParser
 
     println(s"#-- parsing: $input")
 
@@ -40,7 +40,7 @@ class UserPermissionSpec extends AnyFlatSpec with RaceSpec {
         val perms = up.getPermissions("gonzo")
         println(perms)
         assert( perms.size == 1)
-        assert( perms.colRE.matches("/some/column_2"))
+        assert( perms.head.colRE.matches("/some/column_2"))
 
       case _ => fail("failed to parse userPermissions")
     }

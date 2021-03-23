@@ -124,3 +124,40 @@ export function log (msg) {
 export function info (msg) {
   document.getElementById("info").textContent = msg;
 }
+
+//--- CSS conversions
+
+const lengthConverters = {
+  //--- absolute sizes
+  'px': value => value,
+  'cm': value => value * 38,
+  'mm': value => value * 3.8,
+  'q': value => value * 0.95,
+  'in': value => value * 96,
+  'pc': value => value * 16,
+  'pt': value => value * 1.333333,
+
+  //--- relative sizes
+  'rem': value => value * parseFloat( getComputedStyle( document.documentElement ).fontSize ),
+  'em': value => value * parseFloat( getComputedStyle( target ).fontSize ),
+  'vw': value => value / 100 * window.innerWidth,
+  'vh': value => value / 100 * window.innerHeight
+};
+
+const lengthPattern = new RegExp( `^ *([\-\+]?(?:\\d+(?:\\.\\d+)?))(px|cm|mm|q|in|pc|pt|rem|em|vw|vh)$`, 'i' );
+
+
+export function convertCSSsizeToPx (cssValue, target) {
+  target = target || document.body;
+
+  const matches = cssValue.match( lengthPattern );
+
+  if (matches) {
+      const value = Number( matches[1]);  // the number part of the match
+      const unit = matches[2].toLocaleLowerCase();  // the unit part of the match
+      const conv = lengthConverters[unit];
+      if (conv) return conv(value);
+  }
+
+  return cssValue;
+}

@@ -103,7 +103,7 @@ class UpdateActor (val config: Config) extends SubscribingRaceActor with Publish
     val rowList: RowList = readRowList(nodeId)
     val colDatas: Map[String, ColumnData] = readColumnData(columnList, rowList)
 
-    Node(None, nodeList, columnList, rowList, colDatas, simClock)
+    Node(nodeList, columnList, rowList, colDatas, None, simClock)
   }
 
   protected def readList[T](key: String)(f: Array[Byte]=>Option[T]): Option[T] = {
@@ -195,9 +195,9 @@ class UpdateActor (val config: Config) extends SubscribingRaceActor with Publish
     }
   }
 
-  def updateNodeWithOnlineColumns (newOnlineColumns: Set[String]): Unit = {
-    if (node.onlineColumns != newOnlineColumns) {
-      node = node.copy(onlineColumns = newOnlineColumns)
+  def updateNodeWithOnlines (newOnlineNodes: Set[String]): Unit = {
+    if (node.onlineNodes != newOnlineNodes) {
+      node = node.copy(onlineNodes = newOnlineNodes)
       publish(node)
     }
   }
@@ -373,9 +373,9 @@ class UpdateActor (val config: Config) extends SubscribingRaceActor with Publish
   }
 
   /**
-    * this is a change in upstream or downstream columns while the relaying node is still online
+    * this is a change in upstream or downstream columns while the relaying node is still isOnline
     * Note - depending on column visibility - reachability is a transient property (the upstream from which we
-    * get a peer provider might be online, but the upstream might have lost connection to the peer)
+    * get a peer provider might be isOnline, but the upstream might have lost connection to the peer)
     */
   def processColumnReachability (cr: ColumnReachabilityChange): Unit = {
     info(s"ColumnReachabilityChange: $cr")
@@ -384,20 +384,23 @@ class UpdateActor (val config: Config) extends SubscribingRaceActor with Publish
   }
 
   /**
-    * this is a change in node reachability we detected locally (either from NR or UC)
+    * this is a change in node reachability we detected locally (either from NSR or UC)
+    * this is vetting the reported node is online and indeed changes reachability
     */
   def processNodeReachabilityChange (nrc: NodeReachabilityChange): Unit = {
     val extNodeId = nrc.nodeId
 
     if (node.isKnownNode(extNodeId)) {
-      val changedColIds = node.columnList.columnIdsOwnedBy(extNodeId)
+      val isOnline = node.onlineNodes.contains(extNodeId)
+      if (isOnline != nrc.isOnline) {
+        val newOnlines = if (isOnline) node.onlineNodes - extNodeId else node.onlineNodes + extNodeId
+        updateNodeWithOnlines(newOnlines)
+        publish(nrc)
 
-      if (nrc.isOnline) {
-        updateNodeWithOnlineColumns(node.onlineColumns ++ changedColIds)
-        publish(ColumnReachabilityChange.online(node.id, nrc.date, changedColIds))
-      } else {
-        updateNodeWithOnlineColumns(node.onlineColumns -- changedColIds)
-        publish(ColumnReachabilityChange.offline(node.id, nrc.date, changedColIds))
+        // we also publish this as a ColumnReachabilityChange
+        val affectedColumnIds = node.columnIdsOwnedBy(extNodeId)
+        val crc = ColumnReachabilityChange( extNodeId, nrc.date, nrc.isOnline, affectedColumnIds)
+        publish(crc)
       }
 
     } else {

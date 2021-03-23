@@ -37,6 +37,8 @@ object NodeMatcher {
   object noneMatcher extends NodeMatcher {
     def pattern = "<none>"
     def matches(sourceNodeId: CharSequence, targetColumnId: CharSequence, node: Node): Boolean = false
+
+    override def or (m: NodeMatcher): NodeMatcher = m
   }
 
   object upMatcher extends NodeMatcher {

@@ -24,7 +24,7 @@ import scala.collection.mutable
 /**
   * object that responds to remote NodeDates messages with a sequence of
   *   - N ColumnDataChanges for each ColumnData that is outdated on remote
-  *   - 1 ColumnReachabilityChange for currently online columns
+  *   - 1 ColumnReachabilityChange for currently isOnline columns
   *   - 1 NodeDates for outdated local ColumnData
   *
   * this class essentially implements the NodeDates sync protocol, which needs to be factored out since it is used
@@ -112,6 +112,10 @@ trait NodeDatesResponder {
       }
     }
 
+    def onlineColumnIds: Seq[String] = {
+      node.onlineColumns.filter( col=> col.send.matches(extNodeId,col.owner,node)).map(_.id)
+    }
+
 
     if (node.isKnownColumn(extNodeDates.nodeId)) {
       // this computes the reply data
@@ -127,7 +131,7 @@ trait NodeDatesResponder {
         replies += ColumnDataChange( colId, node.id, node.columnDatas(colId).date, cells)
       }
 
-      replies += node.currentColumnReachability
+      replies += ColumnReachabilityChange.online(node.id, node.currentDateTime, onlineColumnIds)
 
       // we send the own NodeDates last as the handshake terminator (even if there are no outdated own CDs)
       replies += NodeDates(node, extOutdated.toSeq, ownOutdated.toSeq)

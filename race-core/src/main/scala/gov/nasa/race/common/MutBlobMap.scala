@@ -54,7 +54,7 @@ trait Blob {
   *
   * NOTE - instances are not thread safe (we use a cached query object)
   */
-class BlobMap [T] {
+class MutBlobMap [T] {
 
   private class ConstBlob (val data: Array[Byte], override val hashCode: Int) extends Blob {
     def this (bs: Array[Byte]) = this(bs.clone, OATHash.hash(bs))

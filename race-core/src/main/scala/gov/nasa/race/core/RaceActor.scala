@@ -23,6 +23,7 @@ import gov.nasa.race._
 import gov.nasa.race.common
 import gov.nasa.race.common.Status._
 import gov.nasa.race.config.ConfigUtils._
+import gov.nasa.race.config.{NamedConfigurable, SubConfigurable}
 import gov.nasa.race.core.Messages.{InitializeRaceActor, StartRaceActor, _}
 import gov.nasa.race.util.ClassLoaderUtils
 
@@ -37,7 +38,7 @@ import scala.reflect.{ClassTag, classTag}
  * message (remoting - esp. including making the Bus accessible for remote RaceActors),
  * Bus subscription, simulation start and actor termination
  */
-trait RaceActor extends Actor with ImplicitActorLogging with ConfigLoggable {
+trait RaceActor extends Actor with ImplicitActorLogging with NamedConfigurable with SubConfigurable with ConfigLoggable {
   // this is the constructor config that has to be provided by the concrete RaceActor
   val config: Config
 
@@ -48,7 +49,7 @@ trait RaceActor extends Actor with ImplicitActorLogging with ConfigLoggable {
   var nMsgs: Long = 0 // processed live messages
 
   // invariants that might cause allocation
-  val name = self.path.name
+  override val name = config.getStringOrElse("name", self.path.name)
   val level = self.path.elements.size - 2 // count out /user and master
 
   //--- convenience aliases
@@ -70,6 +71,8 @@ trait RaceActor extends Actor with ImplicitActorLogging with ConfigLoggable {
   @inline final def isOptional = config.getBooleanOrElse("optional", false)
 
   @inline final def timeScale: Double = raceActorSystem.timeScale
+
+  override def clAnchor: Any = system // override SubConfigurable to use the ActorSystem as the ClassLoader anchor object
 
   // this is called in response to RaceActorInitialize
   def getCapabilities: RaceActorCapabilities = {
@@ -389,53 +392,6 @@ trait RaceActor extends Actor with ImplicitActorLogging with ConfigLoggable {
 
   def loadClass[T] (clsName: String, clsType: Class[T]): Class[_ <:T] = {
     ClassLoaderUtils.loadClass(context.system, clsName, clsType)
-  }
-  def newInstance[T: ClassTag](clsName: String,
-                               argTypes: Array[Class[_]]=null, args: Array[Object]=null): Option[T] = {
-    ClassLoaderUtils.newInstance( context.system, clsName, argTypes, args)
-  }
-
-  // NOTE: apparently Scala 2.12.x does not infer the type parameter from the call context, which can lead
-  // to runtime exceptions. Specify the generic type explicitly!
-
-  def configurable[T: ClassTag](conf: Config): Option[T] = {
-    val clsName = conf.getString("class")
-    info(s"instantiating $clsName")
-    newInstance[T](clsName, Array(classOf[Config]), Array(conf))
-  }
-
-  /**
-    * try to instantiate the requested type from a sub-config that includes a 'class' setting
-    * if there is no sub-config but a string, use that as class name
-    * if there is no sub-config or string, fallback to arg-less instantiation of the requested type
-    *
-    * note - see above comments reg. inferred type parameter
-    */
-  def configurable[T: ClassTag](key: String): Option[T] = {
-    try {
-      config.getOptionalConfig(key) match {
-        case Some(conf) =>
-          newInstance(conf.getString("class"),Array(classOf[Config]),Array(conf))
-
-        case None => // no entry for this key
-          // arg-less ctor is just a fallback - this will fail if the requested type is abstract
-          Some(ClassLoaderUtils.newInstanceOf(classTag[T].runtimeClass))
-      }
-    } catch {
-      case _: ConfigException.WrongType => // we have an entry but it is not a Config
-        // try if the entry is a string and use it as class name to instantiate, pass in actor config as arg
-        // (this supports old-style, non-sub-config format)
-        newInstance(config.getString(key), Array(classOf[Config]), Array(config))
-
-      case _: Throwable => None
-    }
-  }
-  /** use this if the instantiation is mandatory */
-  def getConfigurable[T: ClassTag](key: String): T = configurable(key).get
-  def getConfigurableOrElse[T: ClassTag](key: String)(f: => T): T = configurable(key).getOrElse(f)
-
-  def getConfigurables[T: ClassTag](key: String): Array[T] = {
-    config.getConfigArray(key).map( conf=> newInstance(conf.getString("class"),Array(classOf[Config]),Array(conf)).get)
   }
 
   def instantiateActor (actorName: String, actorConfig: Config): ActorRef = {

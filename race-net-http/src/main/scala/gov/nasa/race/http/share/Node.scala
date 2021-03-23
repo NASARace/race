@@ -24,6 +24,12 @@ import gov.nasa.race.util.StringUtils
 import scala.collection.immutable.{ListMap, SeqMap}
 import scala.collection.mutable.ArrayBuffer
 
+object Node {
+  def apply (nl: NodeList, cl: ColumnList, rl: RowList, cds: Map[String,ColumnData], up: Option[String] = None, clk: Clock = Clock.wallClock): Node  = {
+    new Node( nl, cl, rl, cds, up, clk, Set.empty[ConstraintFormula], Set(nl.self.id))
+  }
+}
+
 /**
   * the data model for each node, consisting of invariant (start-time) data such as the column/rowList(s) and the
   * variable columnData for each of the columnList entries
@@ -36,8 +42,7 @@ import scala.collection.mutable.ArrayBuffer
   *
   * we keep all the data in one structure so that actors do not have to handle transient (partial) initialization states
   */
-case class Node ( upstreamId: Option[String],  // the currently selected upstream (there can only be one)
-
+case class Node (
                   //--- semi-static config lists
                   nodeList: NodeList,
                   columnList: ColumnList,
@@ -46,10 +51,11 @@ case class Node ( upstreamId: Option[String],  // the currently selected upstrea
                   //--- variable data
                   columnDatas: Map[String,ColumnData],
 
-                  //--- variable non-data state
-                  clock: Clock = Clock.wallClock,
-                  violatedConstraints: Set[ConstraintFormula] = Set.empty,
-                  onlineColumns: Set[String] = Set.empty
+                  //--- variable state
+                  upstreamId: Option[String],  // the currently selected upstream (there can only be one)
+                  clock: Clock,
+                  violatedConstraints: Set[ConstraintFormula],
+                  onlineNodes: Set[String]
                 ) {
 
   val id = nodeList.self.id
@@ -102,27 +108,84 @@ case class Node ( upstreamId: Option[String],  // the currently selected upstrea
     ConstraintChange(currentDateTime, true, violatedConstraints.toSeq, Seq.empty[ConstraintFormula])
   }
 
-  //--- tracking online status of columns - note this is for columns, not nodes
-
-  def hasOnlineColumns: Boolean = onlineColumns.nonEmpty
-
-  def isOnlineColumn (id: String): Boolean = onlineColumns.contains(id)
-
-  def updatedOnlineColumns (newOnlines: Iterable[String], newOfflines: Iterable[String]): Set[String] = {
-    (onlineColumns ++ newOnlines) -- newOfflines
-  }
-
-  def foreachOnlineColumn (action: Column=>Unit) = {
-    columnList.foreach { col=>
-      if (onlineColumns.contains(col.id)) action(col)
+  def foreachOrderedColumnData (f: ColumnData=> Unit): Unit = {
+    columnList.columns.foreach { e=>
+      columnDatas.get(e._1) match {
+        case Some(cd) => f(cd)
+        case None =>
+      }
     }
   }
 
-  def currentColumnReachability: OnlineColumns = {
-    OnlineColumns(id, currentDateTime, onlineColumns.toSeq)
+  def foreachOrderedRow (cd: ColumnData)(f: (Row[_],CellValue[_])=>Unit): Unit = {
+    rowList.rows.foreach { e=>
+      cd.get(e._1) match {
+        case Some(cv) => f(e._2,cv)
+        case None =>
+      }
+    }
+  }
+
+  //--- column ownership (this needs to be here to support abstract owners)
+
+  def isColumnOwner(col: Column, nodeId: String): Boolean = {
+    col.owner match {
+      case "<self>" | "." => nodeId == id
+      case "<up>" => upstreamId.isDefined && nodeId == upstreamId.get
+      case owner => nodeId == owner
+    }
+  }
+
+  def columnOwner (col: Column): String = {
+    col.owner match {
+      case "<self>"  | "." => id
+      case "<up>" => if (upstreamId.isDefined) upstreamId.get else "<up>"
+      case owner => owner
+    }
+  }
+
+  def columnsOwnedBy (nodeId: String): Seq[Column] = {
+    columnList.columns.foldRight(Seq.empty[Column]){ (e,acc) =>
+      val col = e._2
+      if (isColumnOwner(col, nodeId)) col +: acc else acc
+    }
+  }
+
+  def columnIdsOwnedBy (nodeId: String): Seq[String] = {
+    columnList.columns.foldRight(Seq.empty[String]){ (e,acc) =>
+      val col = e._2
+      if (isColumnOwner(col, nodeId)) col.id +: acc else acc
+    }
+  }
+
+  //--- reachability
+
+  /**
+    * the inverse of our onlineNodes member
+    */
+  def offlineNodes: Seq[String] = {
+    val offlinePeers = nodeList.peerNodes.keys.filterNot( onlineNodes.contains )
+    val offlineDownstreams = nodeList.downstreamNodes.keys.filterNot( onlineNodes.contains )
+    val offlineUpstream = if (upstreamId.isDefined && !onlineNodes.contains(upstreamId.get)) Seq(upstreamId.get) else Seq.empty
+    offlineUpstream ++ offlineDownstreams ++ offlinePeers
+  }
+
+  def onlineColumns : Seq[Column] = {
+    columnList.columns.foldRight(Seq.empty[Column]){ (e,acc) =>
+      val col = e._2
+      if (onlineNodes.contains(columnOwner(col))) col +: acc else acc
+    }
+  }
+
+  def onlineColumnIds : Seq[String] = {
+    columnList.columns.foldRight(Seq.empty[String]){ (e,acc) =>
+      val ownerId = columnOwner(e._2)
+      if (onlineNodes.contains(ownerId)) e._1 +: acc else acc
+    }
   }
 
   //--- debugging
+
   def printColumnData(): Unit = {
     print("row                  |")
     columnList.foreach { col=> print(f"${PathIdentifier.name(col.id)}%15.15s |") }
@@ -448,10 +511,19 @@ object NodeReachabilityChange {
 }
 
 /**
-  * this is an internal message sent from NodeServerRoute or UpstreamConnectorActor, to be turned into
-  * Node updates and ColumnReachabilityChange events emitted by the UpdateActor.
+  * a connectivity change detected by NodeServerRoute or UpstreamConnectorActor
   *
-  * Note that node reachability changes one node at a time (as opposed to column reachability).
-  * We don't need Json support for this since it is only processed locally inside of a SHARE node
+  * note this changes one node at a time
   */
-case class NodeReachabilityChange (nodeId: String, date: DateTime, isOnline: Boolean)
+case class NodeReachabilityChange (nodeId: String, date: DateTime, isOnline: Boolean) extends JsonSerializable {
+
+  override def serializeTo(w: JsonWriter): Unit = {
+    w.clear().writeObject { _
+      .writeObject("nodeReachabilityChange") {_
+        .writeStringMember("nodeId", nodeId)
+        .writeDateTimeMember("date", date)
+        .writeBooleanMember("isOnline", isOnline)
+      }
+    }
+  }
+}

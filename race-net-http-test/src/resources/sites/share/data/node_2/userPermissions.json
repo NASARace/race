@@ -3,22 +3,19 @@
     "id": "/node_2/userPermissions",
     "date": "2020-06-29T16:06:02.000",
 
-    "columnlist": "/node_2/columnsList",
-    "rowlist": "/node_2/rowList",
-
-    "users": {
-      "gonzo": [
-        {
-          "columnPattern": "**/column_2",
-          "rowPattern": "**"
-        }
-      ],
-      "igor": [
-        {
-          "columnPattern": "**/column_3",
-          "rowPattern": "**/{field_1,field_2}"
-        }
-      ]
-    }
+    "userEntries": [
+      {
+        "uidPattern": "gonzo",
+        "permissions": [
+          { "columnPattern": "**/column_2", "rowPattern": "**" }
+        ]
+      },
+      {
+        "uidPattern": "igor",
+        "permissions": [
+          { "columnPattern": "**/column_3", "rowPattern": "**/{field_1,field_2}" }
+        ]
+      }
+    ]
   }
 }

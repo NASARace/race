@@ -49,22 +49,6 @@ main.clearFilters = function clearFilters() {
   share.clearFilters();
 }
 
-main.enterDisplayLines = function enterDisplayLines(event) {
-  if (event.key=="Enter") share.setDisplayLines();
-}
-
-main.enterCheckInterval = function enterCheckInterval(event) {
-  if (event.key=="Enter") share.setCheckInterval();
-}
-
-main.setDisplay = function setDisplay() {
-  share.setDisplayLines();
-  share.setCheckInterval();
-}
-
-main.resetDisplay = function resetDisplay() {
-}
-
 main.highlightRow = function highlightRow(idx,isSelected) {
   share.highlightRow(idx,isSelected);
 }

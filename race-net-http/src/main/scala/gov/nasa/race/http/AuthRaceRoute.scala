@@ -397,7 +397,7 @@ trait AuthorizedRaceRoute extends AuthRaceRoute {
   }
 
   def avatarImage: Array[Byte] = {
-    ClassUtils.getResourceAsBytes(getClass,"users.svg") match {
+    ClassUtils.getResourceAsBytes(getClass,"userEntries.svg") match {
       case Some(imgData) => imgData
       case None => Array[Byte](0)
     }

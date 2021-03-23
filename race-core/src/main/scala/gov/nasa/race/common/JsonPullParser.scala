@@ -1145,7 +1145,7 @@ abstract class JsonPullParser extends LogWriter with Thrower {
     }
   }
 
-  def parseMessageSet (pf: PartialFunction[ByteSlice,Option[Any]]): Option[Any] = {
+  def parseMessageSet[T](default: =>T) (pf: PartialFunction[ByteSlice,T]): T = {
     try {
       ensureNextIsObjectStart() // all messages are objects
       pf(readObjectMemberName()) // it's up to the provided pf to decide what to do with unknown messages
@@ -1153,7 +1153,7 @@ abstract class JsonPullParser extends LogWriter with Thrower {
       case x: JsonParseException =>
         //x.printStackTrace
         warning(s"ignoring malformed incoming message '${dataContext(0, 20)}' : ${x.getMessage}")
-        None
+        default
     }
   }
 }
@@ -1172,12 +1172,12 @@ class StringJsonPullParser extends JsonPullParser {
     idx >= 0
   }
 
-  def parseMessageSet (s: String)(pf: PartialFunction[ByteSlice,Option[Any]]): Option[Any] = {
+  def parseMessageSet[T] (s: String, default: =>T)(pf: PartialFunction[ByteSlice,T]): T = {
     if (initialize(s)) {
-      super.parseMessageSet(pf)
+      super.parseMessageSet(default)(pf)
     } else {
       warning(s"parser did not initialize for '${dataContext(0,20)}'")
-      None
+      default
     }
   }
 }
@@ -1229,15 +1229,4 @@ class UTF8JsonPullParser extends JsonPullParser {
   }
 
   def initialize (bs: Array[Byte]): Boolean = initialize(bs,bs.length)
-
-  def parseMessageSet (bs: Array[Byte], lim: Int= -1)(pf: PartialFunction[ByteSlice,Option[Any]]): Option[Any] = {
-    val limit = if (lim < 0) bs.length else lim
-
-    if (initialize(bs,limit)) {
-      super.parseMessageSet(pf)
-    } else {
-      warning(s"parser did not initialize for '${dataContext(0,20)}'")
-      None
-    }
-  }
 }

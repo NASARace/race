@@ -8,15 +8,15 @@ import * as utils from './utils.js';
 
 //--- module globals (not exported)
 
-var siteId = "";     // the name of the local column
+var siteIds = {};     // nodeId, upstreamId (if any), userId (if authenticated route)
 
 var rowList = {};      // { id:"s", info:"s", date:Date, rows:[ {id:"s",info:"s" <,header:"s">}.. ] }
-var rows = [];            // rowList.rows to display
+var rows = [];         // rowList.rows to display
 
 var columnList = {};   // { id:"s", info:"s", date:Date, columns:[ {id:"s",info:"s",update:n}.. ] }
-var columns = [];         // columnList.columns to display
+var columns = [];      // columnList.columns to display
 
-var data = {};              // { <columnId>: {id:"s",rev:n,date:Date,rows:{<rowId>:n,...} } }
+var data = {};         // { <columnId>: {id:"s",rev:n,date:Date,rows:{<rowId>:n,...} } }
 
 var violatedConstraints = {}; // map of all current constraint violations: id -> cInfo
 var cellConstraints = new WeakMap();  // assoc map of violated constraints associated with a cell: cell -> cInfo
@@ -36,6 +36,10 @@ var intRatFormatter = Intl.NumberFormat(utils.language(),{minimumFractionDigits:
 var ratFormatter = Intl.NumberFormat(utils.language(),{compactFormat: "short"}); // the default number formatter
 var ratIntFormatter = Intl.NumberFormat(utils.language(),{maximumFractionDigits:0});
 
+
+function nodeId () {
+  if (siteIds) return siteIds.nodeId; else return undefined;
+}
 
 //--- exported functions (used by main module)
 
@@ -62,16 +66,15 @@ export function shutdownTabData() {
 
 export function setEditable() {
   if (inEditMode) {
-    alert("please set readOnly before requesting new user permissions");
+    alert("already in edit mode");
 
   } else {
     var uid = document.getElementById("uid").value;
-    var pw = document.getElementById("pw").value;
 
-    if (utils.isEmpty(uid) || utils.isEmpty(pw)) {
-      alert("please enter user credentials before requesting edit permissions");
+    if (utils.isEmpty(uid)) {
+      alert("please enter user id before requesting edit permissions");
     } else {
-      sendRequestUserPermissions(uid,pw);
+      sendRequestUserPermissions(uid);
     }
   }
 }
@@ -79,7 +82,6 @@ export function setEditable() {
 export function setReadOnly() {
   setInactiveChecks(null);
 
-  document.getElementById("pw").value = null;
   document.getElementById("sendButton").disabled = true;
   document.getElementById("editButton").disabled = false;
   document.getElementById("readOnlyButton").disabled = true;
@@ -94,6 +96,10 @@ export function setReadOnly() {
 
   modifiedRows.clear();
   inEditMode = false;
+
+  var uid = document.getElementById("uid").value;
+  sendEndEdit(uid);
+  
   utils.log("exit edit mode");
 }
 
@@ -103,9 +109,8 @@ export function sendChanges() {
 
   } else {
     var uid=document.getElementById("uid").value;
-    var pw = document.getElementById("pw").value;
 
-    if (utils.isEmpty(uid) || utils.isEmpty(pw)) {
+    if (utils.isEmpty(uid)) {
       alert("please enter user credentials before sending changes");
 
     } else {
@@ -131,7 +136,7 @@ export function sendChanges() {
         }
 
         if (acc.length > 0) {
-          sendUserChange(uid,pw,Date.now(),column,acc);
+          sendUserChange(uid,Date.now(),column,acc);
         }
       }
     }
@@ -163,24 +168,6 @@ export function setWidth() {
   div.style['max-width'] = `${newWidth}px`;
 }
 
-export function setCheckInterval () {
-  var v = document.getElementById("checkInterval").value;
-  var checkInterval = parseInt(v);
-  if (checkInterval && checkInterval > 0) {
-    setInterval( checkOutdatedColumns, checkInterval * 1000);
-  } else {
-    clearInterval();
-  }
-}
-
-export function setDisplayLines () {
-  var nLines = document.getElementById("lines").value;
-  if (nLines && maxLines != nLines) {
-    maxLines = nLines;
-    document.body.style.setProperty("--max-lines",maxLines);
-  }
-}
-
 //--- internal functions
 
 function setBrowserSpecifics() {
@@ -190,8 +177,13 @@ function setBrowserSpecifics() {
 }
 
 function initDefaultValues (e) {
-  maxLines = parseInt(getComputedStyle(document.body).getPropertyValue("--max-lines"));
-  document.getElementById("lines").value = maxLines;
+  var h = window.innerHeight;
+
+  var cssVal = getComputedStyle(document.body).getPropertyValue("--cell-height");
+  var ch = utils.convertCSSsizeToPx(cssVal);
+
+  //maxLines = parseInt(getComputedStyle(document.body).getPropertyValue("--max-lines"));
+  maxLines = Math.trunc((h * 0.6) / ch) - 2; 
 }
 
 function hasRows() {
@@ -219,14 +211,7 @@ function isComputed (row) {
 }
 
 function isSiteColumn (col) {
-  return (col.id == siteId || col.node == siteId);
-}
-
-function siteIdIndex() {
-  for (i=0; i<columns.length; i++) {
-    if (columns[i].id == siteId) return i;
-  }
-  return -1;
+  return (col.owner == nodeId);
 }
 
 //--- initialization of table structure
@@ -251,7 +236,7 @@ function initColGroup() {
     var column = columns[i];
 
     col = document.createElement("col");
-    if (column.id == siteId) {
+    if (column.id == nodeId) {
       col.classList.add("local");
     }
     colGroup.appendChild(col);
@@ -416,8 +401,14 @@ function checkEditableCell (cell,column,columnPatterns,row,rowPatterns) {
 
 function setRowsEditable (permissions) {
   var tbody = document.getElementById('table_body');
-  var columnPatterns = Object.keys(permissions).map( p => glob.glob2regexp(p));
-  var rowPatterns = Object.values(permissions).map( p => glob.glob2regexp(p));
+  var columnPatterns = [];
+  var rowPatterns = [];
+
+  permissions.forEach( (p) => {
+    columnPatterns.push( glob.glob2regexp(p.colPattern)); 
+    rowPatterns.push( glob.glob2regexp(p.rowPattern)); 
+  });
+
   var hasEditableRows = false;
 
   for (var i=0; i<columns.length; i++) {
@@ -511,6 +502,19 @@ function setCell (cell, row, values) {
 
   } else { // just a display cell
     cell.textContent = displayValue( row, rowList.rows, values);
+  }
+}
+
+function setOnlineStatus (colId, isOnline) {
+  var colIdx = columnIndex(colId);
+
+  if (colIdx >= 0) {
+    var trDtgs = document.getElementById('column_dtgs');
+    if (isOnline) {
+      trDtgs.childNodes[colIdx+1].classList.add("online");
+    } else {
+      trDtgs.childNodes[colIdx+1].classList.remove("online");
+    }
   }
 }
 
@@ -836,16 +840,18 @@ function checkForReconnect () {
 function handleWsMessage(msg) {
   //console.log(JSON.stringify(msg));
   var msgType = Object.keys(msg)[0];  // first member name
-  //console.log(JSON.stringify(msg));
 
   if (msgType == "columnDataChange") handleColumnDataChange(msg.columnDataChange);
-  else if (msgType == "columnData") handleColumnData( msg.columnData);
-  else if (msgType == "rowList") handleRowList( msg.rowList);
+  else if (msgType == "siteIds")  handleSiteIds( msg.siteIds);
   else if (msgType == "columnList") handleColumnList( msg.columnList);
-  else if (msgType == "userPermissions") handleUserPermissions( msg.userPermissions);
-  else if (msgType == "siteId")  handleSiteId( msg.siteId);
+  else if (msgType == "rowList") handleRowList( msg.rowList);
+  else if (msgType == "columnData") handleColumnData( msg.columnData);
+  else if (msgType == "onlineColumns") handleOnlineColumns(msg.onlineColumns);
   else if (msgType == "constraintChange") handleConstraintChange(msg.constraintChange);
-  else if (msgType == "ping") handlePing( msg.ping);
+  else if (msgType == "nodeReachabilityChange") handleNodeReachabilityChange(msg.handleNodeReachabilityChange);
+  else if (msgType == "columnReachabilityChange") handleColumnReachabilityChange(msg.columnReachabilityChange);
+  else if (msgType == "userPermissions") handleUserPermissions( msg.userPermissions);
+  else if (msgType == "changeRejected") handleChangeRejected (msg.changeRejected);
   else utils.log(`ignoring unknown message type ${msgType}`);
 };
 
@@ -855,7 +861,7 @@ function handleColumnDataChange (cdc) {
   var i = columnIndex(cdc.columnId);
   if (i >= 0) {
     var cd = data[cdc.columnId];
-    cd.date = new Date(cdc.date)
+    cd.date = new Date(cdc.date);
     var cvs = cdc.changedValues;
     var changedRowIds = Object.keys(cvs);
 
@@ -869,6 +875,7 @@ function handleColumnDataChange (cdc) {
 }
 
 function handleConstraintChange (cc) {  
+  //console.log(JSON.stringify(cc))
   if (cc.reset) violatedConstraints = {}
 
   if (cc.hasOwnProperty("resolved")) {
@@ -876,8 +883,8 @@ function handleConstraintChange (cc) {
     for (var id in resolved) {
       var cInfo = resolved[id];
       cInfo.id = id;
-      if (cInfo.hasOwnProperty("cells")) {
-        cInfo.cells.forEach(  (cr) => setCellConstraint( cr, cInfo, false) );
+      if (cInfo.hasOwnProperty("assoc")) {
+        cInfo.assoc.forEach(  (cr) => setCellConstraint( cr, cInfo, false) );
       }
       delete violatedConstraints[id];
       utils.log("resolved: " + cInfo.id);
@@ -889,13 +896,22 @@ function handleConstraintChange (cc) {
     for (var id in violated) {
       var cInfo = violated[id];
       cInfo.id = id; // add the id for reverse lookup
-      if (cInfo.hasOwnProperty("cells")) {
-        cInfo.cells.forEach(  (cr) => setCellConstraint( cr, cInfo, true) );
+      if (cInfo.hasOwnProperty("assoc")) {
+        cInfo.assoc.forEach(  (cr) => setCellConstraint( cr, cInfo, true) );
       }
       violatedConstraints[id] = cInfo;
       utils.log("violated: " + cInfo.id);
     }
   }
+}
+
+// we just log these - the UI changes happens when we process the corresponding CRC
+function handleNodeReachabilityChange (nrc) {
+  if (nrc.isOnline) utils.log("node online: " + nrc.nodeId); else utils.log("node offline: " + nrc.nodeId);
+}
+
+function handleColumnReachabilityChange (crc) {
+  crc.columns.forEach( (colId) => { setOnlineStatus(colId, crc.isOnline); });
 }
 
 // {columnData:{id:"s",rev:n,date:n,rows:[<rowId>:n]}
@@ -915,10 +931,17 @@ function handleColumnData (columnData) {
   }
 }
 
-function handleSiteId (id) {
-  siteId = id;
-  document.getElementById("siteId").value = id;
-  //utils.setAndFitToText( document.getElementById("siteId"), id, 7);
+function handleSiteIds (newSiteIds) {
+  siteIds = newSiteIds
+  
+  document.getElementById("nodeId").value = siteIds.nodeId;
+  document.getElementById("upstreamId").value = siteIds.upstreamId ? siteIds.upstreamId : "";
+
+  if (siteIds.userId) { // that means we can't change it - user authentication was required for the route
+    var input = document.getElementById("uid");
+    input.value = siteIds.userId;
+    input.classList.add("readonly");
+  }
 }
 
 // {rowList:{rev:n,rows:[{id:"s",info:"s" <,header:"s">}..]}}
@@ -953,36 +976,47 @@ function handleColumnList (newColumnList) {
 function handleUserPermissions (usrPerm) {
   //console.log(JSON.stringify(usrPerm));
   var uid = usrPerm.uid; // TODO - should we check if that is the current user? Not critical since update has to be checked by server anyways
-  if (usrPerm.permissions) {
+  if (usrPerm.permissions.length > 0) {
     setRowsEditable(usrPerm.permissions);
     utils.log(`enter edit mode for user ${uid}`)
   } else {
-    utils.log(`reject edit mode for user ${uid}`);
+    var msg = `no edit permissions for user ${uid}`
+    alert(msg);
+    utils.log(msg);
   }
 }
 
-function handlePing (ping) {
-  var reply = `{"pong":{"date":${Date.now()},"ping":${JSON.stringify(ping)}}}`;
-  ws.send(reply);
+function handleChangeRejected (cr) {
+  var msg = `change from user '${cr.uid}' rejected: ${cr.reason}`
+  alert(msg);
+  utils.log(msg);
 }
+
 
 //--- outgoing messages
 
-function sendRequestUserPermissions (uid,pw){
+function sendRequestUserPermissions (uid){
   if (ws) {
-    if (utils.isEmpty(uid) || utils.isEmpty(pw)) {
-      alert("please enter user id and password and try again");
+    if (utils.isEmpty(uid)) {
+      alert("please enter user id and try again");
     } else {
-      ws.send(`{"requestUserPermissions":{"${uid}":[${utils.toUtf8Array(pw).join(',')}]}}`);
+      ws.send(`{"requestEdit": { "uid": "${uid}" }}`);
     }
   }
 }
 
-function sendUserChange (uid,pw,changeDate,column,changedRows) {
+function sendUserChange (uid,changeDate,column,changedRows) {
   if (ws) {
-    var msg = `{"userChange":{"${uid}":[${utils.toUtf8Array(pw).join(',')}],"date":${changeDate},"columnListId":"${columnList.id}","rowListId":"${rowList.id}","${column.id}":{${changedRows}}}}`;
+    var msg = `{"userChange":{ "uid": "${uid}","columnId": "${column.id}", "date":${changeDate}, "changedValues":{${changedRows}}}}`;
     ws.send(msg);
     utils.log(`sent data changes for ${column.id}`);
+  }
+}
+
+function sendEndEdit (uid) {
+  if (ws) {
+    var msg = `{"endEdit":{"uid": "${uid}"}}`;
+    ws.send(msg);
   }
 }
 
@@ -1013,6 +1047,3 @@ export function setRowModified(event) {
   }
 }
 
-function checkOutdatedColumns() {
-  console.log("@@ check outdated")
-}

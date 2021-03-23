@@ -5,7 +5,7 @@
     "date": "2020-06-28T12:00:00.000",
 
     "columns": [
-      { "columnId":  ".",
+      { "columnId":  "/columns/column_{2,3}",
         "formulas": [
           { "rowId": "/data/cat_A",         "src": "(IntSum ./field_{1,2})" },
           { "rowId": "/data/cat_A/field_4", "src": "(IntListCellPushN . ../field_1 3)" },

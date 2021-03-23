@@ -5,12 +5,12 @@
     "date": "2020-06-28T12:00:00.000",
 
     "columns": [
-      { "id": "/columns/summary",    "info": "summary column",  "receive": "<owner>", "send": "<none>"   , "owner": "../coordinator" },
+      { "id": "/columns/summary",    "info": "summary column",  "receive": "<owner>", "send": "<none>"   , "owner": "<up>" },
 
       { "id": "/columns/column_1", "info": "this is column 1",  "receive": "<up>", "send": "<none>"      , "owner": "../node_1" },
 
-      { "id": "/columns/column_2", "info": "this is column 2",  "receive": "<owner>,<up>", "send": "<up>", "owner": "."  },
-      { "id": "/columns/column_3", "info": "this is column 3",  "receive": "<owner>,<up>", "send": "<up>", "owner": "." },
+      { "id": "/columns/column_2", "info": "this is column 2",  "receive": "<owner>,<up>", "send": "<up>", "owner": "<self>"  },
+      { "id": "/columns/column_3", "info": "this is column 3",  "receive": "<owner>,<up>", "send": "<up>", "owner": "<self>" },
 
       { "id": "/columns/column_4", "info": "this is column 4",  "receive": "<up>", "send": "<none>"      , "owner": "../node_3"},
       { "id": "/columns/column_5", "info": "this is column 5",  "receive": "<up>", "send": "<none>"      , "owner": "../node_4"},

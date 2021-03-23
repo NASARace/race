@@ -22,6 +22,7 @@ import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.{PathMatchers, Route}
 import com.typesafe.config.Config
 import gov.nasa.race.config.ConfigUtils._
+import gov.nasa.race.config.SubConfigurable
 import gov.nasa.race.core.{ConfigLoggable, Loggable, ParentActor, RaceDataClient}
 
 import scala.concurrent.duration._
@@ -34,7 +35,7 @@ import scala.concurrent.{Await, Future}
   * concrete RaceRouteInfo implementations have to provide a constructor that takes 2 args:
   *     (parent: ParentActor, config: Config)
   */
-trait RaceRouteInfo extends ConfigLoggable {
+trait RaceRouteInfo extends SubConfigurable with ConfigLoggable {
   val parent: ParentActor
   val config: Config
   val name = config.getStringOrElse("name", getClass.getSimpleName)
@@ -42,6 +43,8 @@ trait RaceRouteInfo extends ConfigLoggable {
   // we need these for the ConfigLoggable mixin
   val pathName = s"${parent.name}/$name"
   def system = parent.system
+
+  override def clAnchor: Any = system
 
   val requestPrefix: String = config.getStringOrElse("request-prefix", name)
   val requestPrefixMatcher = PathMatchers.separateOnSlashes(requestPrefix)

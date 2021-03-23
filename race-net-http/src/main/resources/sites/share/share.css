@@ -163,7 +163,7 @@ thead th.name {
 
 thead th.dtg {
   height: 0.9rem;
-  color: blue;
+  /* color: blue; */
   position: -webkit-sticky; /* for Safari */
   position: sticky;
   top: calc(2* var(--cell-height) + 4* var(--cell-padding) + 1px); /* -- with info row */
@@ -173,6 +173,10 @@ thead th.dtg {
   font-size: small;
   font-weight: normal;
   border-bottom: 1px solid black;
+}
+
+thead th.online {
+  color: green;
 }
 
 /* this needs to be defined *after* the other th classes to override */
@@ -257,8 +261,10 @@ tr.computed td {
   text-align: left;
 }
 
-input.num {
-  width: 2.5rem;
+.readonly {
+  background-color: #f2f2f2;
+  color: blue;
+  font-style: italic;
 }
 
 /* title bar */

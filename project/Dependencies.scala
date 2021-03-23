@@ -55,7 +55,7 @@ object Dependencies {
   val scalaReflect =  "org.scala-lang" % "scala-reflect" % CommonRaceSettings.scalaVer
 
   //--- scalaTags HTML generator
-  val scalaTags = "com.lihaoyi" %% "scalatags" % "0.9.2"
+  val scalaTags = "com.lihaoyi" %% "scalatags" % "0.9.3"
 
   //--- scala automatic resource management (https://github.com/jsuereth/scala-arm)
   //val scalaArm = "com.jsuereth" %% "scala-arm" % "2.0"
@@ -72,13 +72,13 @@ object Dependencies {
   val pegDown = "org.pegdown" % "pegdown" % "1.6.0" % Test
 
   //--- scalaCheck
-  val scalaCheck = "org.scalacheck" %% "scalacheck" % "1.15.2" % Test
+  val scalaCheck = "org.scalacheck" %% "scalacheck" % "1.15.3" % Test
 
   val defaultLibs =  Seq(logback,typesafeConfig)
   val defaultTestLibs = Seq(scalaTest,scalaTestPlus,flexmarkAll,scalaCheck,pegDown)
 
   // Apache Avro serialization (for archiving/unarchiving)
-  val avro = "org.apache.avro" % "avro" % "1.10.1"
+  val avro = "org.apache.avro" % "avro" % "1.10.2"
 
   // scodec
   //val scodecBits = "org.scodec" %% "scodec-bits" % "1.1.5"
@@ -100,10 +100,10 @@ object Dependencies {
   //.. and possibly extensions for Tree and jfreechart
 
   //--- RSyntaxTextArea (TextEditor with syntax support)
-  val rsTextArea = "com.fifesoft" % "rsyntaxtextarea" % "3.1.1"
+  val rsTextArea = "com.fifesoft" % "rsyntaxtextarea" % "3.1.2"
 
   //--- the jfreechart plot and chart lib
-  val jfreeChart = "org.jfree" % "jfreechart" % "1.5.2"
+  val jfreeChart = "org.jfree" % "jfreechart" % "1.5.3"
 
   //--- pure Java implementation of ssh2 (http://www.jcraft.com/jsch/)
   // NOTE this has to be a known version and verified instance so that we don't
@@ -111,14 +111,17 @@ object Dependencies {
   val jsch = "com.jcraft" % "jsch" % "0.1.55"
 
   //--- argon2 based password hashes ()
-  val argon2 = "de.mkammerer" % "argon2-jvm" % "2.9"
+  val argon2 = "de.mkammerer" % "argon2-jvm" % "2.9.1"
 
+  //--- webauthn (FIDO2) server library (note this creates a transitive BouncyCastle dependency)
+  val webauthn = "com.yubico" % "webauthn-server-core" % "1.8.0"
+  // val webauthnattest = "com.yubico" % "webauthn-server-attestation" % "1.7.0" % "runtime" 
 
   //--- jimfs - simple in-memory file system to enforce platform independent paths
   val jimfs = "com.google.jimfs" % "jimfs" % "1.2"
 
   //--- Akka
-  val akkaVersion = "2.6.12"
+  val akkaVersion = "2.6.13"
   val akkaOrg = "com.typesafe.akka"
 
   val akkaActor = akkaOrg %% "akka-actor" % akkaVersion
@@ -128,13 +131,13 @@ object Dependencies {
   val akkaTestkit = akkaOrg %% "akka-testkit" % akkaVersion
   val akkaMultiNodeTestkit = akkaOrg %% "akka-multi-node-testkit" % akkaVersion // % "test,multi-jvm"
 
-  val akkaHttp = akkaOrg %% "akka-http" % "10.2.3"
+  val akkaHttp = akkaOrg %% "akka-http" % "10.2.4"
 
   val akkaAll = Seq(akkaActor)
 
 
   //--- ActiveMQ
-  val amqVersion = "5.16.0"
+  val amqVersion = "5.16.1"
   val amqOrg = "org.apache.activemq"
   val amqBroker = amqOrg % "activemq-broker" % amqVersion
 

@@ -50,7 +50,7 @@ trait NodeDependentTest {
     val rowList = new RowListParser(nodeId).parse(fileContentsAsBytes(dataDir + "/rowList.json")).get
     val cds = getColumnData(dataDir, columnList, rowList)
 
-    Node(None, nodeList,columnList,rowList, cds)
+    Node(nodeList,columnList,rowList, cds)
   }
 
 }

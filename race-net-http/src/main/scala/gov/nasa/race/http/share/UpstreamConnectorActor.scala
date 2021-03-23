@@ -105,7 +105,7 @@ class UpstreamConnectorActor(override val config: Config) extends WSAdapterActor
                                 with ColumnDataChangeParser with NodeDatesParser with PongParser {
       override def rowList = node.rowList
 
-      def parse (msg: String): Option[Any] = parseMessageSet(msg) {
+      def parse (msg: String): Option[Any] = parseMessageSet[Option[Any]](msg, None) {
         case ColumnDataChange.COLUMN_DATA_CHANGE => parseColumnDataChange()
         case NodeDates.NODE_DATES => parseNodeDates()
         case Ping.PONG => parsePong()

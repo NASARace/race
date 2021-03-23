@@ -48,6 +48,8 @@ object ConstraintFormula extends JsonConstants {
   val SRC         = asc("src")
   val TRIGGER     = asc("trigger")
   val ASSOC       = asc("assoc")
+  val COL         = asc("col")
+  val ROW         = asc("row")
 }
 
 /**
@@ -66,15 +68,13 @@ case class ConstraintFormula (id: String, info: String, src: String,  expr: Bool
       w.writeStringMember(SRC,src)
       w.writeIntMember(LEVEL, level)
 
-      if (assoc.nonEmpty) {
-        val sb = new StringBuilder
-        assoc.foreach { cr=>
-          if (sb.size > 0) sb.append(',')
-          sb.append(cr.colId)
-          sb.append(':')
-          sb.append(cr.rowId)
+      w.writeArray(ASSOC) { w=>
+        assoc.foreach { cr =>
+          w.writeObject { w =>
+            w.writeStringMember(COL, cr.colId)
+            w.writeStringMember(ROW, cr.rowId)
+          }
         }
-        w.writeStringMember(ASSOC,sb.toString())
       }
     }
   }

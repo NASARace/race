@@ -74,17 +74,17 @@ object ClassLoaderUtils {
     return getClass.getClassLoader
   }
 
-  def loadClass[T] (key: Any, name: String, clsType: Class[T]): Class[_ <:T] = {
-    val cl = clMap.getOrElse(key, getClass.getClassLoader)
+  def loadClass[T] (clAnchor: Any, name: String, clsType: Class[T]): Class[_ <:T] = {
+    val cl = clMap.getOrElse(clAnchor, getClass.getClassLoader)
     val clsName = if (name.startsWith(".")) "gov.nasa.race" + name else name
     cl.loadClass(clsName).asSubclass(clsType)
   }
 
   // <2do> should we try to match on argument supertypes and/or subsets?
-  def newInstance[T: ClassTag](key: Any, clsName: String,
+  def newInstance[T: ClassTag](clAnchor: Any, clsName: String,
                                argTypes: Array[Class[_]], args: Array[_ <:AnyRef]): Option[T] = {
     try {
-      val cls = loadClass(key,clsName,classTag[T].runtimeClass)
+      val cls = loadClass(clAnchor,clsName,classTag[T].runtimeClass)
       if (args == null || args.isEmpty){
         // if no extra args, fall back to default ctor
         Some(newInstanceOf[T](cls))

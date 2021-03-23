@@ -76,7 +76,7 @@ class CellExpressionSpec extends AnyFlatSpec with RaceSpec {
     )
   )
 
-  val node = Node(None, nodeList,columnList,rowList,cds)
+  val node = Node( nodeList,columnList,rowList,cds)
 
   val funcLib = new CellFunctionLibrary
 

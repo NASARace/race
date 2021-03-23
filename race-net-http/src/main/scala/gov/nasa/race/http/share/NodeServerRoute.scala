@@ -55,7 +55,7 @@ class NodeServerRoute(val parent: ParentActor, val config: Config)
                                               with ColumnDataChangeParser with NodeDatesParser with PingParser {
     def rowList = node.rowList
 
-    def parse(msg: String): Option[Any] = parseMessageSet(msg) {
+    def parse(msg: String): Option[Any] = parseMessageSet[Option[Any]](msg,None) {
       case ColumnDataChange.COLUMN_DATA_CHANGE => parseColumnDataChange()
       case NodeDates.NODE_DATES => parseNodeDates()
       case Ping.PING => parsePing()
@@ -169,8 +169,8 @@ class NodeServerRoute(val parent: ParentActor, val config: Config)
   /**
     * a downstream node sent us its NodeDates - register, send newer changes and own (filtered) NodeDates back
     *
-    * once we get this we know the downStreamNode is online. We can't use the websocket connection for this since
-    * that only gives us the remoteAddr but not the nodeId
+    * once we get this we know the downStreamNode is isOnline. We can't use the websocket connection for this since
+    * that only gives us the clientAddr but not the nodeId
     */
   def handleNodeDates (remoteAddr: InetSocketAddress, nd: NodeDates): Iterable[Message] = {
     for (node <- node) {
