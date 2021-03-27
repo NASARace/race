@@ -19,6 +19,14 @@ package gov.nasa.race.http
 import gov.nasa.race.{Result, Success}
 import java.net.InetSocketAddress
 
+trait AuthClient {
+  def sendRegistrationRequest (clientAddr: InetSocketAddress, msg: String): Unit
+  def completeRegistration (uid: String, clientAddr: InetSocketAddress, result: Result): Unit
+
+  def sendAuthenticationRequest (clientAddr: InetSocketAddress, msg: String): Unit
+  def completeAuthentication (uid: String, clientAddr: InetSocketAddress, result: Result): Unit
+}
+
 /**
   * interface to be used by HttpServer RouteInfos to abstract configurable user authentication policies such
   * as W3Cs webauthn
@@ -29,17 +37,10 @@ import java.net.InetSocketAddress
   */
 trait Authenticator {
 
-  type CallbackFunction = (String,InetSocketAddress,Result)=>Unit
-
   /**
-    * called from the authenticator to make the server send a message to the client
+    * process message received from client, return value indicating if the message was consumed or not
     */
-  def sendToClient (clientAddress: InetSocketAddress, msg: String): Unit
-
-  /**
-    * called by the server to let the authenticator process replies from the client
-    */
-  def receiveFromClient (clientAddress: InetSocketAddress, msg: String): Unit
+  def processClientMessage (clientAddress: InetSocketAddress, msg: String): Boolean
 
   /**
     * called by the server to test if user is registered
@@ -49,30 +50,23 @@ trait Authenticator {
   /**
     * called by the server to start registration
     */
-  def register (uid: String, clientAddress: InetSocketAddress, callBack: CallbackFunction): Unit
-
-  /**
-    * called by the server to test if user is authenticated
-    */
-  def isUserAuthenticated (uid: String, clientAddress: InetSocketAddress): Boolean
+  def register (uid: String, clientAddress: InetSocketAddress, authClient: AuthClient): Unit
 
   /**
     * called by the server to start authentication
     */
-  def authenticate (uid: String, clientAddress: InetSocketAddress, callBack: CallbackFunction): Unit
+  def authenticate (uid: String, clientAddress: InetSocketAddress, authClient: AuthClient): Unit
+
 
   /**
-    * convenience method that uses registration as fallback for authentication
+    * convenience method that checks if a user is already registered, and if so starts authentication. If not,
+    * it starts registration. Successful registration is considered to be authenticated
     */
-  def identifyUser (uid: String, clientAddr: InetSocketAddress, authCallback: CallbackFunction, regCallback: CallbackFunction): Unit = {
-    if (!isUserAuthenticated(uid,clientAddr)) {
-      if (!isUserRegistered(uid,clientAddr)) {
-        register(uid,clientAddr,regCallback)
-      } else {
-        authenticate(uid,clientAddr,authCallback)
-      }
+  def identifyUser (uid: String, clientAddress: InetSocketAddress, authClient: AuthClient): Unit = {
+    if (isUserRegistered(uid,clientAddress)) {
+      authenticate( uid, clientAddress, authClient)
     } else {
-      authCallback(uid,clientAddr,Success) // user is already authenticated
+      register( uid, clientAddress, authClient)
     }
   }
 }
@@ -83,14 +77,16 @@ trait Authenticator {
   */
 object NoAuthenticator extends Authenticator {
 
-  // nothing to send
-  def sendToClient (clientAddress: InetSocketAddress, msg: String): Unit = {}
-  def receiveFromClient (clientAddress: InetSocketAddress, msg: String): Unit = {}
+  def processClientMessage (clientAddres: InetSocketAddress, msg: String): Boolean = false // we don't consume any client messages
 
   def isUserRegistered (uid: String, clientAddress: InetSocketAddress): Boolean = true
-  def register (uid: String, clientAddress: InetSocketAddress, callBack: (String,InetSocketAddress,Result)=>Unit): Unit = callBack(uid,clientAddress,Success)
 
-  def isUserAuthenticated (uid: String, clientAddress: InetSocketAddress): Boolean = true
-  def authenticate (uid: String, clientAddress: InetSocketAddress, callBack: (String,InetSocketAddress,Result)=>Unit): Unit = callBack(uid,clientAddress,Success)
+  def register (uid: String, clientAddress: InetSocketAddress, authClient: AuthClient): Unit = {
+    authClient.completeRegistration(uid,clientAddress,Success)
+  }
+
+  def authenticate (uid: String, clientAddress: InetSocketAddress, authClient: AuthClient): Unit = {
+    authClient.completeAuthentication(uid,clientAddress,Success)
+  }
 
 }

@@ -27,7 +27,8 @@ import gov.nasa.race.common.ConstAsciiSlice.asc
 import gov.nasa.race.common.{BufferedStringJsonPullParser, JsonParseException, JsonSerializable, JsonWriter}
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.{ParentActor, RaceDataClient}
-import gov.nasa.race.http.{Authenticator, NoAuthenticator, PushWSRaceRoute, SiteRoute}
+import gov.nasa.race.http.{AuthClient, Authenticator, NoAuthenticator, PushWSRaceRoute, SiteRoute}
+import gov.nasa.race.http.webauthn.WebAuthnAuthenticator
 import gov.nasa.race.uom.DateTime
 
 import java.net.InetSocketAddress
@@ -55,7 +56,7 @@ class UserServerRoute (parent: ParentActor, config: Config) extends SiteRoute(pa
     * JSON parser for incoming device messages
     * note that we directly execute respective actions instead of just translating JSON into scala
     */
-  class IncomingMessageHandler extends BufferedStringJsonPullParser {
+  class IncomingMessageHandler extends BufferedStringJsonPullParser with AuthClient {
     //--- lexical constants
     private val REQUEST_EDIT = asc("requestEdit")
     private val USER_CHANGE = asc("userChange")
@@ -68,11 +69,52 @@ class UserServerRoute (parent: ParentActor, config: Config) extends SiteRoute(pa
 
     setLogging(info,warning,error)  // delegate this to our enclosing RouteInfo
 
+    //--- AuthClient interface
+
+    // we don't discriminate between registration and authentication - a successful registration is
+    // considered to be a valid authentication
+    def completeIdentification (uid: String, clientAddr: InetSocketAddress, res: Result): Unit = {
+      res match {
+        case Success =>
+          val perms = userPermissions.getPermissions(uid)
+          if (perms.nonEmpty) {
+            val es = EditSession(uid,clientAddr,perms)
+            info(s"start $es")
+            editSessions += (clientAddr -> es)
+          }
+          pushTo( clientAddr, TextMessage(UserPermissions.serializePermissions(writer, uid, perms)))
+
+        case Failure(msg) => warning(s"user identification failed: $msg")
+      }
+    }
+
+    override def sendRegistrationRequest (clientAddr: InetSocketAddress, msg: String): Unit = {
+      val wrappedMsg = s"""{"publicKeyCredentialCreationOptions": $msg}"""
+      pushTo(clientAddr, TextMessage(wrappedMsg))
+    }
+
+    override def completeRegistration (uid: String, clientAddr: InetSocketAddress, result: Result): Unit = {
+      completeIdentification(uid, clientAddr, result)
+    }
+
+    override def sendAuthenticationRequest (clientAddr: InetSocketAddress, msg: String): Unit = {
+      val wrappedMsg = s"""{"publicKeyCredentialRequestOptions": $msg}"""
+      pushTo(clientAddr, TextMessage(wrappedMsg))
+    }
+
+    override def completeAuthentication (uid: String, clientAddr: InetSocketAddress, result: Result): Unit = {
+      completeIdentification(uid, clientAddr, result)
+    }
+
+    //--- message processing
+
     def process (clientAddr: InetSocketAddress, msg: String): Iterable[Message] = parseMessageSet[Iterable[Message]](msg, Nil) {
       case REQUEST_EDIT => processRequestEdit(clientAddr,msg)
       case USER_CHANGE => processUserChange(clientAddr,msg)
       case END_EDIT => processEndEdit(clientAddr,msg)
-      case m => warning(s"ignoring unknown message '$m''"); Nil
+      case m =>
+        if (!authenticator.processClientMessage(clientAddr,msg)) warning(s"ignoring unknown message '$m''")
+        Nil
     }
 
     /**
@@ -88,31 +130,19 @@ class UserServerRoute (parent: ParentActor, config: Config) extends SiteRoute(pa
         }
 
         if (uid != null) {
-          authenticator.identifyUser(uid,clientAddr,finishedIdentification,finishedIdentification)
+          editSessions.get(clientAddr) match {
+            case Some(session) => // ignore, we already hava an active edit session from this location
+            case None => authenticator.identifyUser( uid, clientAddr, this)
+          }
+
         } else {
-          warning(s"malformed requestEdit message: $msg")
+          warning(s"incomplete requestEdit message, missing uid: $msg")
         }
       } catch {
         case x: JsonParseException => warning(s"ignoring malformed requestEdit message: ${x.getMessage}")
       }
 
       Nil
-    }
-
-    // we don't discriminate between registration and authentication, assuming the authenticator handles that for us
-    def finishedIdentification (uid: String, clientAddr: InetSocketAddress, res: Result): Unit = {
-      res match {
-        case Success =>
-          val perms = userPermissions.getPermissions(uid)
-          if (perms.nonEmpty) {
-            val es = EditSession(uid,clientAddr,perms)
-            info(s"start $es")
-            editSessions += (uid -> es)
-          }
-          pushTo( clientAddr, TextMessage(UserPermissions.serializePermissions(writer, uid, perms)))
-
-        case Failure(msg) => warning(s"user identification failed: $msg")
-      }
     }
 
     /**
@@ -158,10 +188,10 @@ class UserServerRoute (parent: ParentActor, config: Config) extends SiteRoute(pa
           }
 
           if (uid != null && changedValues.nonEmpty && checkUserDate(date, userDate)) {
-            editSessions.get(uid) match {
+            editSessions.get(clientAddr) match {
               case Some(es) =>
-                if (clientAddr == es.clientAddr) {
-                  val permCvs = filterPermittedChanges(columnId,changedValues,es)
+                if (uid == es.uid) {
+                  val permCvs = filterPermittedChanges(columnId, changedValues, es)
                   if (permCvs.nonEmpty) {
                     // TODO - this could also reject if any of the changes are not permitted
                     if (permCvs ne changedValues) {
@@ -169,7 +199,7 @@ class UserServerRoute (parent: ParentActor, config: Config) extends SiteRoute(pa
                     }
                     publishData(ColumnDataChange(columnId, nid, date, permCvs))
                   } else warning(s"insufficient user permissions for $msg")
-                } else warning(s"userChange for open edit session $es from wrong address: $clientAddr")
+                } else warning(s"ignoring changes from non-authenticated user: $msg")
 
               case None =>
                 warning(s"userChange without open editSession ($uid, $clientAddr)")
@@ -197,12 +227,10 @@ class UserServerRoute (parent: ParentActor, config: Config) extends SiteRoute(pa
         }
 
         if (uid != null) {
-          editSessions.get(uid) match {
+          editSessions.get(clientAddr) match {
             case Some(es) =>
-              if (clientAddr == es.clientAddr) {
-                info(s"end $es")
-                editSessions -= uid
-              } else warning(s"attempt to end edit session $es from wrong client $clientAddr")
+              info(s"end $es")
+              editSessions -= clientAddr
             case None =>
               warning(s"attempt to end non-existing edit session for user '$uid'")
           }
@@ -218,7 +246,7 @@ class UserServerRoute (parent: ParentActor, config: Config) extends SiteRoute(pa
   val wsPath = s"$requestPrefix/ws"
   val wsPathMatcher = PathMatchers.separateOnSlashes(wsPath)
 
-  val authenticator: Authenticator = getConfigurableOrElse[Authenticator]("authenticator")(NoAuthenticator)
+  val authenticator: Authenticator = getConfigurableOrElse[Authenticator]("authenticator")(new WebAuthnAuthenticator) // (NoAuthenticator)
 
   val clientHandler = new IncomingMessageHandler // we can't parse until we have catalogs
   clientHandler.setLogging(info,warning,error)
@@ -228,7 +256,7 @@ class UserServerRoute (parent: ParentActor, config: Config) extends SiteRoute(pa
 
   var node: Option[Node] = None // we get this from the UpdateActor upon initialization
 
-  val editSessions: mutable.Map[String,EditSession] = mutable.Map.empty
+  val editSessions: mutable.Map[InetSocketAddress,EditSession] = mutable.Map.empty  // clientAddr -> editSession
 
   def readUserPermissions: UserPermissions = {
     val parser = new UserPermissionsParser

@@ -99,7 +99,7 @@ export function setReadOnly() {
 
   var uid = document.getElementById("uid").value;
   sendEndEdit(uid);
-  
+
   utils.log("exit edit mode");
 }
 
@@ -852,6 +852,11 @@ function handleWsMessage(msg) {
   else if (msgType == "columnReachabilityChange") handleColumnReachabilityChange(msg.columnReachabilityChange);
   else if (msgType == "userPermissions") handleUserPermissions( msg.userPermissions);
   else if (msgType == "changeRejected") handleChangeRejected (msg.changeRejected);
+
+  // webauthn messages
+  else if (msgType == "publicKeyCredentialCreationOptions") handleWebauthnReg(msg.publicKeyCredentialCreationOptions);
+  else if (msgType == "publicKeyCredentialRequestOptions") handleWebauthnAuth(msg.publicKeyCredentialRequestOptions);
+
   else utils.log(`ignoring unknown message type ${msgType}`);
 };
 
@@ -992,6 +997,33 @@ function handleChangeRejected (cr) {
   utils.log(msg);
 }
 
+function handleWebauthnReg (pkcCreateOptions) {
+  console.log(JSON.stringify(pkcCreateOptions));
+
+  navigator.credentials.create(pkcCreateOptions).then(
+    (credential) => {
+      console.log(JSON.stringify(credential));
+      ws.send(credential);
+    },
+    (reason) => {
+      alert("credential creation rejected: " + reason);
+    }
+  );
+}
+
+function handleWebauthnAuth (pkcRequestOptions) {
+  console.log(JSON.stringify(pkcRequestOptions));
+
+  navigator.credentials.get(pkcRequestOptions).then(
+    (credential) => {
+      console.log(JSON.stringify(credential));
+      ws.send(credential);
+    },
+    (reason) => {
+      alert("credential request rejected: " + reason);
+    }
+  );
+}
 
 //--- outgoing messages
 
