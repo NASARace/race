@@ -17,6 +17,7 @@
 package gov.nasa.race.http
 
 import gov.nasa.race.{Result, Success}
+import gov.nasa.race.common.LogWriter
 import java.net.InetSocketAddress
 
 trait AuthClient {

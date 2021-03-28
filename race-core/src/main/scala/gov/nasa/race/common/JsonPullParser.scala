@@ -1148,11 +1148,11 @@ abstract class JsonPullParser extends LogWriter with Thrower {
   def parseMessageSet[T](default: =>T) (pf: PartialFunction[ByteSlice,T]): T = {
     try {
       ensureNextIsObjectStart() // all messages are objects
-      pf(readObjectMemberName()) // it's up to the provided pf to decide what to do with unknown messages
+      pf(readMemberName()) // it's up to the provided pf to decide what to do with unknown messages
     } catch {
       case x: JsonParseException =>
         //x.printStackTrace
-        warning(s"ignoring malformed incoming message '${dataContext(0, 20)}' : ${x.getMessage}")
+        warning(s"ignoring malformed message '${dataContext(0, 20)}' : ${x.getMessage}")
         default
     }
   }

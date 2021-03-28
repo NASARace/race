@@ -166,7 +166,7 @@ thead th.dtg {
   /* color: blue; */
   position: -webkit-sticky; /* for Safari */
   position: sticky;
-  top: calc(2* var(--cell-height) + 4* var(--cell-padding) + 1px); /* -- with info row */
+  top: calc(2* var(--cell-height) + 4* var(--cell-padding)); /* -- with info row */
   /* top: calc(var(--cell-height) + 2 * var(--cell-padding)); -- without info row */
   cursor: cell;
   font-family: monospace;

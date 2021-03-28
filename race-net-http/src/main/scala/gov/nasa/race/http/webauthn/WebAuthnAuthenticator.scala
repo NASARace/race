@@ -21,7 +21,7 @@ import com.fasterxml.jackson.databind.{ObjectMapper, SerializationFeature}
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module
 import com.typesafe.config.Config
 import com.yubico.webauthn.{AssertionRequest, AssertionResult, FinishAssertionOptions, FinishRegistrationOptions, RegisteredCredential, RegistrationResult, RelyingParty, StartAssertionOptions, StartRegistrationOptions}
-import com.yubico.webauthn.data.{AuthenticatorAssertionResponse, AuthenticatorAttestationResponse, ByteArray, ClientAssertionExtensionOutputs, ClientRegistrationExtensionOutputs, PublicKeyCredential, PublicKeyCredentialCreationOptions, PublicKeyCredentialDescriptor, RelyingPartyIdentity, UserIdentity}
+import com.yubico.webauthn.data.{AttestationConveyancePreference, AuthenticatorAssertionResponse, AuthenticatorAttachment, AuthenticatorAttestationResponse, AuthenticatorSelectionCriteria, ByteArray, ClientAssertionExtensionOutputs, ClientRegistrationExtensionOutputs, PublicKeyCredential, PublicKeyCredentialCreationOptions, PublicKeyCredentialDescriptor, RelyingPartyIdentity, UserIdentity, UserVerificationRequirement}
 import com.yubico.webauthn.exception.{AssertionFailedException, RegistrationFailedException}
 import gov.nasa.race.{Failure, ResultValue, Success, SuccessValue}
 import gov.nasa.race.config.ConfigUtils.ConfigWrapper
@@ -29,9 +29,10 @@ import gov.nasa.race.config.NoConfig
 import gov.nasa.race.http.{AuthClient, Authenticator}
 
 import java.io.IOException
-import java.net.{InetAddress, InetSocketAddress}
+import java.net.InetSocketAddress
 import java.util.Optional
 import scala.collection.mutable.{Map, Set}
+import scala.jdk.CollectionConverters._
 import scala.util.Random
 
 /**
@@ -92,15 +93,31 @@ class WebAuthnAuthenticator(config: Config = NoConfig) extends Authenticator {
       .registerModule(new Jdk8Module())
   }
 
+  def getAuthenticatorSelectionCriteria: AuthenticatorSelectionCriteria = {
+    AuthenticatorSelectionCriteria.builder
+      .authenticatorAttachment(AuthenticatorAttachment.CROSS_PLATFORM)
+      //.authenticatorAttachment(Optional.of(AuthenticatorAttachment.CROSS_PLATFORM))
+      .requireResidentKey(false)
+      .userVerification(UserVerificationRequirement.PREFERRED)
+      .build
+  }
+
+  def getAttestationConveyancePreference: AttestationConveyancePreference = {
+    AttestationConveyancePreference.DIRECT
+  }
+
   def initRelyingParty: RelyingParty = {
     val rpId = RelyingPartyIdentity.builder
-      .id( config.getStringOrElse("rp-id", InetAddress.getLocalHost.getHostName))
+      .id( config.getStringOrElse("rp-id", "localhost" /*InetAddress.getLocalHost.getHostName */)) // ??? where to get the hostname
       .name(config.getStringOrElse("rp-name", "share"))
       .build
 
     RelyingParty.builder
       .identity(rpId)
       .credentialRepository(credentialStore)
+      .allowOriginSubdomain(true)
+      .origins(Set("http://localhost:8082").asJava)  // FIXME - this is a hack!
+      .attestationConveyancePreference(getAttestationConveyancePreference)
       .build
   }
 
@@ -111,7 +128,7 @@ class WebAuthnAuthenticator(config: Config = NoConfig) extends Authenticator {
   //--- registration request
 
   // note this has to make sure uid cannot be derived from the returned value
-  def createUserHandle: ByteArray = new ByteArray( random.nextBytes(64))
+  def createUserHandle: ByteArray = new ByteArray( random.nextBytes(32))
 
   def createUserIdentity (uid: String): UserIdentity = {
     UserIdentity.builder
@@ -124,6 +141,7 @@ class WebAuthnAuthenticator(config: Config = NoConfig) extends Authenticator {
   def createRegistrationRequestOptions (userIdentity: UserIdentity): PublicKeyCredentialCreationOptions = {
     val opts = StartRegistrationOptions.builder
       .user(userIdentity)
+      .authenticatorSelection( getAuthenticatorSelectionCriteria)
       .build
 
     relyingParty.startRegistration(opts)
@@ -207,6 +225,7 @@ class WebAuthnAuthenticator(config: Config = NoConfig) extends Authenticator {
   //--- Authenticator interface
 
   protected def completeRegistration (pendingRequest: PendingRegistrationRequest, msg: String): Boolean = {
+    val authClient = pendingRequest.authClient
     val uid = pendingRequest.uid
     val clientAddress = pendingRequest.clientAddress
 
@@ -219,18 +238,21 @@ class WebAuthnAuthenticator(config: Config = NoConfig) extends Authenticator {
             val cred = createRegisteredCredential(pkc,result,userIdentity)
 
             credentialStore.addCredential(uid,pkcd,cred)
-            pendingRequest.authClient.completeRegistration( uid, clientAddress, Success)
+            authClient.completeRegistration( uid, clientAddress, Success)
 
           case fail: Failure =>
-            pendingRequest.authClient.completeRegistration( uid, clientAddress, fail)
+            authClient.completeRegistration( uid, clientAddress, fail)
         }
         true
 
-      case Failure(msg) => false // message not consumed
+      case Failure(msg) =>
+        //authClient.warning(s"failed to parse pkc: $msg")
+        false // message not consumed
     }
   }
 
   protected def completeAssertion (pendingRequest: PendingAssertionRequest, msg: String): Boolean = {
+    val authClient = pendingRequest.authClient
     val uid = pendingRequest.uid
     val clientAddress = pendingRequest.clientAddress
 
@@ -238,14 +260,16 @@ class WebAuthnAuthenticator(config: Config = NoConfig) extends Authenticator {
       case SuccessValue(pkc) =>
         createAssertionResult(pendingRequest.request, pkc) match {
           case SuccessValue(result) =>
-            pendingRequest.authClient.completeAuthentication(uid, clientAddress, Success)
+            authClient.completeAuthentication(uid, clientAddress, Success)
 
           case fail: Failure =>
-            pendingRequest.authClient.completeAuthentication(uid, clientAddress, fail)
+            authClient.completeAuthentication(uid, clientAddress, fail)
         }
         true
 
-      case Failure(msg) => false // message not consumed
+      case Failure(msg) => 
+        //authClient.warning(s"failed to parse pkc: $msg")
+        false // message not consumed
     }
   }
 

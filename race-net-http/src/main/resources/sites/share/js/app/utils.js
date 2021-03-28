@@ -26,6 +26,18 @@ export function toUtf8Array(str) {
   return utf8;
 }
 
+export function base64URLEncode (byteArray) {
+  return btoa(Array.from(new Uint8Array(byteArray)).map(val => {
+    return String.fromCharCode(val);
+  }).join('')).replace(/\+/g, '-').replace(/\//g, '_').replace(/\=/g, '');
+}
+
+export function base64URLDecode (b64urlstring) {
+  return new Uint8Array(atob(b64urlstring.replace(/-/g, '+').replace(/_/g, '/')).split('').map(val => {
+    return val.charCodeAt(0);
+  }));
+}
+
 export function removeAllChildren (elem) {
   while (elem.firstChild){
     elem.removeChild(elem.firstChild);

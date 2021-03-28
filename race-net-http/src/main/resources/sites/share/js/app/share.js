@@ -801,7 +801,7 @@ function handleWsClose (evt) {
   checkForReconnect();
 }
 
-var maxReconnectAttempts = 15;
+var maxReconnectAttempts = 5;
 var reconnectAttempt = 1;
 
 function checkForReconnect () {
@@ -997,30 +997,52 @@ function handleChangeRejected (cr) {
   utils.log(msg);
 }
 
-function handleWebauthnReg (pkcCreateOptions) {
-  console.log(JSON.stringify(pkcCreateOptions));
-
-  navigator.credentials.create(pkcCreateOptions).then(
-    (credential) => {
-      console.log(JSON.stringify(credential));
-      ws.send(credential);
+// a PublicKeyCredential does not have own enumerable properties hence JSON.stringify() would return {}
+// Plus we need to turn Uint8Arrays back into base64URL encoded strings
+function pkcToObject (pkc) {
+  return {
+    type: pkc.type,
+    id: pkc.id,
+    response: {
+      attestationObject: utils.base64URLEncode(pkc.response.attestationObject),
+      clientDataJSON: utils.base64URLEncode(pkc.response.clientDataJSON)
     },
-    (reason) => {
-      alert("credential creation rejected: " + reason);
+    clientExtensionResults: pkc.getClientExtensionResults()
+  };
+}
+
+
+function handleWebauthnReg (pkcCreateOptions) {
+  //console.log(JSON.stringify(pkcCreateOptions));
+
+  // convert the random strings from base64URL back into Uint8Arrays - the CredentialContainer will otherwise reject
+  pkcCreateOptions.user.id = utils.base64URLDecode(pkcCreateOptions.user.id);
+  pkcCreateOptions.challenge = utils.base64URLDecode(pkcCreateOptions.challenge);
+
+  navigator.credentials.create({publicKey: pkcCreateOptions}).then(
+    credential => { // this should be a PublicKeyCredential
+      credential = pkcToObject(credential);
+      var msg = JSON.stringify(credential);
+      
+      //console.log("------------- key response:"); console.log(msg);
+      ws.send(msg);
+    },
+    failure => {
+      alert("credential creation rejected: " + failure);
     }
   );
 }
 
 function handleWebauthnAuth (pkcRequestOptions) {
-  console.log(JSON.stringify(pkcRequestOptions));
+  //console.log(JSON.stringify(pkcRequestOptions));
 
-  navigator.credentials.get(pkcRequestOptions).then(
-    (credential) => {
+  navigator.credentials.get({publicKey: pkcRequestOptions}).then(
+    credential => {
       console.log(JSON.stringify(credential));
       ws.send(credential);
     },
-    (reason) => {
-      alert("credential request rejected: " + reason);
+    failure => {
+      alert("credential request rejected: " + failure);
     }
   );
 }
