@@ -23,17 +23,17 @@ import java.net.{Inet4Address, Inet6Address, InetAddress}
   *
   * TODO - this should support all valid textual representations for Inet4 and Inet6Address objects
   */
-object InetAddressMask {
+object InetAddressMatcher {
 
-  def apply (inetAddr: InetAddress): InetAddressMask = {
+  def apply (inetAddr: InetAddress): InetAddressMatcher = {
     inetAddr match {
-      case ip4: Inet4Address => Inet4AddressMask(ip4.getAddress)
-      case ip6: Inet6Address => Inet6AddressMask(ip6.getAddress)
+      case ip4: Inet4Address => Inet4AddressMatcher(ip4.getAddress)
+      case ip6: Inet6Address => Inet6AddressMatcher(ip6.getAddress)
       case other => throw new RuntimeException(s"unknown InetAddress type: $other")
     }
   }
 
-  def apply (s: String): InetAddressMask = {
+  def apply (s: String): InetAddressMatcher = {
     def readU8 (e: String): Int = {
       val m = e.toInt
       if (m > 255 || m < 0) throw new NumberFormatException(s"not a valid Inet4Address mask: $s")
@@ -46,6 +46,15 @@ object InetAddressMask {
       m
     }
 
+    //--- known address classes with singleton matchers
+    if (s == "loopback") return loopbackMatcher
+    else if (s == "link") return linkLocalMatcher
+    else if (s == "site") return siteLocalMatcher
+    else if (s == "all") return allMatcher
+    else if (s == "none") return noneMatcher
+
+    //--- explicit mask
+    // TODO not sure this makes sense for Inet6 with max /64 prefix and dynamic random host part
     val es = if (s.indexOf('.') >= 0) {
       s.split("\\.")
     } else if (s.indexOf(':') >= 0) {
@@ -61,7 +70,7 @@ object InetAddressMask {
       val b3 = readU8(es(3)).toByte
 
       val bs = Array(b0,b1,b2,b3)
-      Inet4AddressMask(bs)
+      Inet4AddressMatcher(bs)
 
     } else if (es.size == 8) {
       val s0 = readU16(es(0)).toShort
@@ -83,7 +92,7 @@ object InetAddressMask {
         ((s6 >> 8) & 0xff).toByte, (s6 & 0xff).toByte,
         ((s7 >> 8) & 0xff).toByte, (s7 & 0xff).toByte
       )
-      Inet6AddressMask(bs)
+      Inet6AddressMatcher(bs)
 
     } else {
       throw new RuntimeException(s"not a valid Inet4Address or Inet6Address mask: $s")
@@ -92,23 +101,38 @@ object InetAddressMask {
 
   //--- singletons that don't need to compare anything
 
-  object all4Matcher extends InetAddressMask {
+  object loopbackMatcher extends InetAddressMatcher {
+    val maskBytes = Array(0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,1)
+    override def matchesInetAddress (ipAddr: InetAddress): Boolean = ipAddr.isLoopbackAddress
+  }
+
+  object linkLocalMatcher extends InetAddressMatcher {
+    val maskBytes = Array(0xfe.toByte,0x80.toByte,-1,-1,-1,-1,-1,-1, -1,-1,-1,-1,-1,-1,-1,-1)
+    override def matchesInetAddress (ipAddr: InetAddress): Boolean = ipAddr.isLinkLocalAddress
+  }
+
+  object siteLocalMatcher extends InetAddressMatcher {
+    val maskBytes = Array(0xfc.toByte,0x00.toByte,-1,-1,-1,-1,-1,-1, -1,-1,-1,-1,-1,-1,-1,-1)
+    override def matchesInetAddress (ipAddr: InetAddress): Boolean = ipAddr.isSiteLocalAddress
+  }
+
+  object all4Matcher extends InetAddressMatcher {
     val maskBytes = Array(-1,-1,-1,-1)
     override def matchesInetAddress (ipAddr: InetAddress): Boolean = ipAddr.isInstanceOf[Inet4Address]
   }
 
-  object all6Matcher extends InetAddressMask {
+  object all6Matcher extends InetAddressMatcher {
     val maskBytes = Array(-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1)
     override def matchesInetAddress (ipAddr: InetAddress): Boolean = ipAddr.isInstanceOf[Inet6Address]
   }
 
-  object allMatcher extends InetAddressMask {
+  object allMatcher extends InetAddressMatcher {
     val maskBytes = Array(-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1)
     override def matchesInetAddress (ipAddr: InetAddress): Boolean = true
   }
 
   // no real point discriminating for ip type, it doesn't match anyways
-  object noneMatcher extends InetAddressMask {
+  object noneMatcher extends InetAddressMatcher {
     val maskBytes = Array(0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0)
     override def matchesInetAddress (ipAddr: InetAddress): Boolean = false
   }
@@ -116,7 +140,7 @@ object InetAddressMask {
   // TODO - add local and loopback matchers
 }
 
-trait InetAddressMask {
+trait InetAddressMatcher {
   val maskBytes: Array[Byte]
 
   def matchesInetAddress (ipAddr: InetAddress): Boolean = {
@@ -137,7 +161,7 @@ trait InetAddressMask {
 /**
   * a byte mask that can check InetAddresses
   */
-case class Inet4AddressMask (maskBytes: Array[Byte]) extends InetAddressMask {
+case class Inet4AddressMatcher(maskBytes: Array[Byte]) extends InetAddressMatcher {
   override def toString: String = {
     val sb = new StringBuffer
     var i = 0
@@ -150,7 +174,7 @@ case class Inet4AddressMask (maskBytes: Array[Byte]) extends InetAddressMask {
   }
 }
 
-case class Inet6AddressMask (maskBytes: Array[Byte]) extends InetAddressMask {
+case class Inet6AddressMatcher(maskBytes: Array[Byte]) extends InetAddressMatcher {
   override def toString: String = {
     val sb = new StringBuffer
     var i = 0

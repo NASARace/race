@@ -20,12 +20,20 @@ import gov.nasa.race.{Result, Success}
 import gov.nasa.race.common.LogWriter
 import java.net.InetSocketAddress
 
+/**
+  * some object using an Authenticator. This object is responsible for communicating with the client, validating
+  * uids and maintaining sessions.
+  *
+  * Note that we require uids to be validated by the AuthClient *before* starting identification
+  */
 trait AuthClient {
   def sendRegistrationRequest (clientAddr: InetSocketAddress, msg: String): Unit
   def completeRegistration (uid: String, clientAddr: InetSocketAddress, result: Result): Unit
 
   def sendAuthenticationRequest (clientAddr: InetSocketAddress, msg: String): Unit
   def completeAuthentication (uid: String, clientAddr: InetSocketAddress, result: Result): Unit
+
+  def alertUser (clientAddr: InetSocketAddress, msg: String): Unit
 }
 
 /**
@@ -36,7 +44,7 @@ trait AuthClient {
   * a multi-threaded environment we want to avoid additional async processing and just use a sync call chain, assuming
   * all of the Authenticator code executes within the using construct (RouteInfo)
   */
-trait Authenticator {
+trait Authenticator extends LogWriter {
 
   /**
     * process message received from client, return value indicating if the message was consumed or not
@@ -49,25 +57,29 @@ trait Authenticator {
   def isUserRegistered (uid: String, clientAddress: InetSocketAddress): Boolean
 
   /**
-    * called by the server to start registration
+    * called by the server to start registration, after making sure uid is valid for registration
     */
-  def register (uid: String, clientAddress: InetSocketAddress, authClient: AuthClient): Unit
+  def register (uid: String, conn: SocketConnection, authClient: AuthClient): Unit
 
   /**
-    * called by the server to start authentication
+    * called by the server to start authentication, after making sure uid is valid for authentication
     */
-  def authenticate (uid: String, clientAddress: InetSocketAddress, authClient: AuthClient): Unit
+  def authenticate (uid: String, conn: SocketConnection, authClient: AuthClient): Unit
 
+  // override if we have to do cleanup
+  def terminate: Unit = {}
 
   /**
     * convenience method that checks if a user is already registered, and if so starts authentication. If not,
     * it starts registration. Successful registration is considered to be authenticated
+    *
+    * server has to make sure uid is valid before calling this method
     */
-  def identifyUser (uid: String, clientAddress: InetSocketAddress, authClient: AuthClient): Unit = {
-    if (isUserRegistered(uid,clientAddress)) {
-      authenticate( uid, clientAddress, authClient)
+  def identifyUser (uid: String, conn: SocketConnection, authClient: AuthClient): Unit = {
+    if (isUserRegistered(uid,conn.remoteAddress)) {
+      authenticate( uid, conn, authClient)
     } else {
-      register( uid, clientAddress, authClient)
+      register( uid, conn, authClient)
     }
   }
 }
@@ -82,12 +94,12 @@ object NoAuthenticator extends Authenticator {
 
   def isUserRegistered (uid: String, clientAddress: InetSocketAddress): Boolean = true
 
-  def register (uid: String, clientAddress: InetSocketAddress, authClient: AuthClient): Unit = {
-    authClient.completeRegistration(uid,clientAddress,Success)
+  def register (uid: String, conn: SocketConnection, authClient: AuthClient): Unit = {
+    authClient.completeRegistration(uid,conn.remoteAddress,Success)
   }
 
-  def authenticate (uid: String, clientAddress: InetSocketAddress, authClient: AuthClient): Unit = {
-    authClient.completeAuthentication(uid,clientAddress,Success)
+  def authenticate (uid: String, conn: SocketConnection, authClient: AuthClient): Unit = {
+    authClient.completeAuthentication(uid,conn.remoteAddress,Success)
   }
 
 }

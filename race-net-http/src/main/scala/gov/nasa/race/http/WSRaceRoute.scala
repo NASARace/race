@@ -107,7 +107,7 @@ trait PushWSRaceRoute extends WSRaceRoute with SourceQueueOwner with RaceDataCli
     * override in subclasses if incoming messages need to be processed - default is doing nothing
     * note this executes in a synchronized context
     */
-  protected def handleIncoming (remoteAddr: InetSocketAddress, m: Message): Iterable[Message] = {
+  protected def handleIncoming (conn: SocketConnection, m: Message): Iterable[Message] = {
     info(s"ignoring incoming message $m")
     discardMessage(m)
     Nil
@@ -117,7 +117,7 @@ trait PushWSRaceRoute extends WSRaceRoute with SourceQueueOwner with RaceDataCli
     * override in concrete routes to push initial data etc.
     * Use pushTo
     */
-  protected def initializeConnection (remoteAddr: InetSocketAddress, queue: SourceQueueWithComplete[Message]): Unit = {
+  protected def initializeConnection (conn: SocketConnection, queue: SourceQueueWithComplete[Message]): Unit = {
     // nothing here
   }
 
@@ -135,19 +135,19 @@ trait PushWSRaceRoute extends WSRaceRoute with SourceQueueOwner with RaceDataCli
     */
   protected def promoteToWebSocket: Route = {
     extractMatchedPath { requestUri =>
-      headerValueByType(classOf[RealRemoteAddress]) { remoteAddrHdr =>
-        val remoteAddress = remoteAddrHdr.address
+      headerValueByType(classOf[IncomingConnectionHeader]) { sockConn =>
+        val remoteAddress = sockConn.remoteAddress
 
         val (outboundMat,outbound) = createPreMaterializedSourceQueue
         val newConn = (remoteAddress, outboundMat)
-        initializeConnection(remoteAddress,outboundMat)
+        initializeConnection(sockConn,outboundMat)
         connections = connections + newConn
 
         val completionFuture: Future[Done] = outboundMat.watchCompletion()
         completionFuture.onComplete { handleConnectionLoss(remoteAddress,_) } // TODO does this handle passive network failures?
 
         val inbound: Sink[Message, Any] = Sink.foreach{ inMsg =>
-          handleIncoming(remoteAddress, inMsg).foreach( outMsg => pushTo(remoteAddress, outboundMat,outMsg))
+          handleIncoming(sockConn, inMsg).foreach(outMsg => pushTo(remoteAddress, outboundMat,outMsg))
         }
 
         val flow = Flow.fromSinkAndSourceCoupled(inbound, outbound)
@@ -251,8 +251,8 @@ trait ProtocolWSRaceRoute extends WSRaceRoute {
 
   protected def promoteToWebSocket: Route = {
     extractMatchedPath { requestUri =>
-      headerValueByType(classOf[RealRemoteAddress]) { remoteAddrHdr =>
-        val remoteAddress = remoteAddrHdr.address
+      headerValueByType(classOf[IncomingConnectionHeader]) { remoteAddrHdr =>
+        val remoteAddress = remoteAddrHdr.remoteAddress
 
         info(s"promoting $requestUri to websocket connection for remote: $remoteAddress")
         handleWebSocketMessages(flow)

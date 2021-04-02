@@ -65,6 +65,10 @@ case class UserPermissions (id: String, date: DateTime, userEntries: Seq[UserEnt
       if (e.uidPattern.matches(uid)) (e.permissions ++: acc) else acc
     }
   }
+
+  def isKnownUser (uid: String): Boolean = {
+    userEntries.exists( _.uidPattern.matches(uid))
+  }
 }
 
 /**

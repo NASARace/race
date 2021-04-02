@@ -27,7 +27,7 @@ import gov.nasa.race.common.ConstAsciiSlice.asc
 import gov.nasa.race.common.{BufferedStringJsonPullParser, JsonParseException, JsonSerializable, JsonWriter}
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.{ParentActor, RaceDataClient}
-import gov.nasa.race.http.{AuthClient, Authenticator, NoAuthenticator, PushWSRaceRoute, SiteRoute}
+import gov.nasa.race.http.{AuthClient, Authenticator, HttpServer, NoAuthenticator, PushWSRaceRoute, SiteRoute, SocketConnection}
 import gov.nasa.race.http.webauthn.WebAuthnAuthenticator
 import gov.nasa.race.uom.DateTime
 
@@ -67,9 +67,11 @@ class UserServerRoute (parent: ParentActor, config: Config) extends SiteRoute(pa
     private val DATE = asc("date")
     private val CHANGED_VALUES = asc("changedValues")
 
-    setLogging(info,warning,error)  // delegate this to our enclosing RouteInfo
-
     //--- AuthClient interface
+
+    def alertUser (clientAddr: InetSocketAddress, msg: String): Unit = {
+      pushTo(clientAddr, TextMessage(s"""{"alert":{"text":"$msg"}}"""))
+    }
 
     // we don't discriminate between registration and authentication - a successful registration is
     // considered to be a valid authentication
@@ -84,12 +86,13 @@ class UserServerRoute (parent: ParentActor, config: Config) extends SiteRoute(pa
           }
           pushTo( clientAddr, TextMessage(UserPermissions.serializePermissions(writer, uid, perms)))
 
-        case Failure(msg) => warning(s"user identification failed: $msg")
+        case Failure(msg) =>
+          warning(s"user identification failed: $msg")
       }
     }
 
     override def sendRegistrationRequest (clientAddr: InetSocketAddress, msg: String): Unit = {
-      val wrappedMsg = s"""{"publicKeyCredentialCreationOptions": $msg}"""
+      val wrappedMsg = s"""{"credentialCreate": $msg}"""
       pushTo(clientAddr, TextMessage(wrappedMsg))
     }
 
@@ -98,7 +101,7 @@ class UserServerRoute (parent: ParentActor, config: Config) extends SiteRoute(pa
     }
 
     override def sendAuthenticationRequest (clientAddr: InetSocketAddress, msg: String): Unit = {
-      val wrappedMsg = s"""{"publicKeyCredentialRequestOptions": $msg}"""
+      val wrappedMsg = s"""{"credentialGet": $msg}"""
       pushTo(clientAddr, TextMessage(wrappedMsg))
     }
 
@@ -108,12 +111,12 @@ class UserServerRoute (parent: ParentActor, config: Config) extends SiteRoute(pa
 
     //--- message processing
 
-    def process (clientAddr: InetSocketAddress, msg: String): Iterable[Message] = parseMessageSet[Iterable[Message]](msg, Nil) {
-      case REQUEST_EDIT => processRequestEdit(clientAddr,msg)
-      case USER_CHANGE => processUserChange(clientAddr,msg)
-      case END_EDIT => processEndEdit(clientAddr,msg)
+    def process (conn: SocketConnection, msg: String): Iterable[Message] = parseMessageSet[Iterable[Message]](msg, Nil) {
+      case REQUEST_EDIT => processRequestEdit(conn,msg)
+      case USER_CHANGE => processUserChange(conn.remoteAddress,msg)
+      case END_EDIT => processEndEdit(conn.remoteAddress,msg)
       case m =>
-        if (!authenticator.processClientMessage(clientAddr,msg)) warning(s"ignoring unknown message '$m''")
+        if (!authenticator.processClientMessage(conn.remoteAddress,msg)) warning(s"ignoring unknown message '$m''")
         Nil
     }
 
@@ -122,7 +125,9 @@ class UserServerRoute (parent: ParentActor, config: Config) extends SiteRoute(pa
       * format: { "requestEdit": { "uid": "<userId>" } }
       * this might kick off user authentication in case this was not an authenticated route
       */
-    def processRequestEdit(clientAddr: InetSocketAddress, msg: String): Iterable[Message] = {
+    def processRequestEdit(conn: SocketConnection, msg: String): Iterable[Message] = {
+      val clientAddr = conn.remoteAddress
+
       try {
         var uid: String = null
         foreachMemberInCurrentObject {
@@ -132,10 +137,17 @@ class UserServerRoute (parent: ParentActor, config: Config) extends SiteRoute(pa
         if (uid != null) {
           editSessions.get(clientAddr) match {
             case Some(session) => // ignore, we already hava an active edit session from this location
-            case None => authenticator.identifyUser( uid, clientAddr, this)
+            case None =>
+              if (isValidUid(uid)) {
+                authenticator.identifyUser(uid, conn, this)
+              } else {
+                alertUser(clientAddr, s"unknown user '$uid'")
+                warning(s"invalid uid rejected: $msg")
+              }
           }
 
         } else {
+          alertUser(clientAddr, "please provide userName")
           warning(s"incomplete requestEdit message, missing uid: $msg")
         }
       } catch {
@@ -246,7 +258,8 @@ class UserServerRoute (parent: ParentActor, config: Config) extends SiteRoute(pa
   val wsPath = s"$requestPrefix/ws"
   val wsPathMatcher = PathMatchers.separateOnSlashes(wsPath)
 
-  val authenticator: Authenticator = getConfigurableOrElse[Authenticator]("authenticator")(new WebAuthnAuthenticator) // (NoAuthenticator)
+  val authenticator: Authenticator = getConfigurableOrElse[Authenticator]("authenticator")(NoAuthenticator)
+  authenticator.setLogging(info,warning,error) // let the authenticator use our logging
 
   val clientHandler = new IncomingMessageHandler // we can't parse until we have catalogs
   clientHandler.setLogging(info,warning,error)
@@ -265,7 +278,11 @@ class UserServerRoute (parent: ParentActor, config: Config) extends SiteRoute(pa
   }
 
   def activeUid (clientAddr: InetSocketAddress): Option[String] = {
-    None // TODO - get from potential auth route connect
+    editSessions.get(clientAddr).map(_.uid)
+  }
+
+  def isValidUid (uid: String): Boolean = {
+    userPermissions.isKnownUser(uid)
   }
 
   //--- various Node accessors
@@ -319,7 +336,7 @@ class UserServerRoute (parent: ParentActor, config: Config) extends SiteRoute(pa
 
   /**
     * we report column reachability so that clients do not have to map nodes to columns
-    * to initialize we just send a CRC with the current online columns
+    * to onRaceInitialized we just send a CRC with the current online columns
     */
   def getReachabilityMessage: Option[Message] = {
     node match {
@@ -364,9 +381,9 @@ class UserServerRoute (parent: ParentActor, config: Config) extends SiteRoute(pa
   /**
     * this is what we get from user devices through their web sockets
     */
-  override protected def handleIncoming (clientAddr: InetSocketAddress, m: Message): Iterable[Message] = {
+  override protected def handleIncoming (conn: SocketConnection, m: Message): Iterable[Message] = {
     m match {
-      case tm: TextMessage.Strict => clientHandler.process(clientAddr,tm.text)
+      case tm: TextMessage.Strict => clientHandler.process(conn,tm.text)
       case _ => Nil
     }
   }
@@ -383,7 +400,9 @@ class UserServerRoute (parent: ParentActor, config: Config) extends SiteRoute(pa
     * we could cache the less likely changed messages (siteIds,CL,RL) but it is not clear if that buys much
     * in case there are frequent changes and a low number of isOnline clients
     */
-  override protected def initializeConnection (clientAddr: InetSocketAddress, queue: SourceQueueWithComplete[Message]): Unit = {
+  override protected def initializeConnection (conn: SocketConnection, queue: SourceQueueWithComplete[Message]): Unit = {
+    val clientAddr = conn.remoteAddress
+
     getSiteIdsMessage(clientAddr).foreach( pushTo(clientAddr, queue ,_))
     getColumnListMessage.foreach( pushTo(clientAddr, queue, _))
     getRowListMessage.foreach( pushTo(clientAddr, queue ,_))
@@ -392,4 +411,8 @@ class UserServerRoute (parent: ParentActor, config: Config) extends SiteRoute(pa
     getReachabilityMessage.foreach( pushTo(clientAddr, queue, _))
   }
 
+  override def onRaceTerminated (server: HttpServer): Boolean = {
+    authenticator.terminate // the authenticator might have to close files etc
+    true
+  }
 }

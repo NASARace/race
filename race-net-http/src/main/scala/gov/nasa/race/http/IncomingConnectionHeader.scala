@@ -22,10 +22,19 @@ import java.net.InetSocketAddress
 import akka.http.scaladsl.Http.IncomingConnection
 import akka.http.scaladsl.model.headers.CustomHeader
 
-object RealRemoteAddress {
-  val name = "gov.nasa.race.http.RealRemoteAddress"
+/**
+  * an interface object that pairs a remote with a local InetSocketAddress
+  */
+trait SocketConnection {
+  def remoteAddress: InetSocketAddress
+  def localAddress: InetSocketAddress
+  def isSSL: Boolean
+}
 
-  def apply (conn: IncomingConnection) = new RealRemoteAddress(conn.remoteAddress)
+object IncomingConnectionHeader {
+  val name = "gov.nasa.race.http.IncomingConnectionHeader"
+
+  def apply (conn: IncomingConnection, isSSL: Boolean) = new IncomingConnectionHeader(conn.remoteAddress, conn.localAddress, isSSL)
 }
 
 /**
@@ -37,11 +46,11 @@ object RealRemoteAddress {
   *
   * TODO this should extend ModeledCustomHeader so that headerValueByType directive usages become less convoluted
   */
-class RealRemoteAddress (val address: InetSocketAddress) extends CustomHeader {
-  override def name: String = RealRemoteAddress.name
+class IncomingConnectionHeader(val remoteAddress: InetSocketAddress, val localAddress: InetSocketAddress, val isSSL: Boolean) extends CustomHeader with SocketConnection {
+  override def name: String = IncomingConnectionHeader.name
   override def lowercaseName: String = name.toLowerCase
 
-  override def value: String = address.toString
+  override def value: String = remoteAddress.toString // ?? do we need to factor in localAddress?
 
   // this is just a header to make connection data available in routes, it is neither in- nor outbound
   override def renderInRequests: Boolean = false

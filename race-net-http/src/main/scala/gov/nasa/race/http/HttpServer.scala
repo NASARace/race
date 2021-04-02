@@ -27,7 +27,7 @@ import akka.stream.scaladsl.{Sink, Source}
 import com.typesafe.config.Config
 import gov.nasa.race._
 import gov.nasa.race.config.ConfigUtils._
-import gov.nasa.race.core.{ParentActor, ParentRaceActor}
+import gov.nasa.race.core.{ParentActor, ParentRaceActor, RaceContext}
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, Future}
@@ -115,22 +115,26 @@ class HttpServer (val config: Config) extends ParentRaceActor with SSLContextUse
     }
   }
 
+  override def onInitializeRaceActor(rc: RaceContext, actorConf: Config): Boolean = {
+    routeInfos.forall( _.onRaceInitialized(this)) && super.onInitializeRaceActor(rc, actorConf)
+  }
+
   override def onStartRaceActor(originator: ActorRef) = {
     val serverSource: Source[Http.IncomingConnection,Future[Http.ServerBinding]] = createServerSource
 
     val bindingFuture: Future[Http.ServerBinding] = serverSource.to(Sink.foreach { connection: Http.IncomingConnection =>
       // we add the connection data to the route-accessible HttpRequest headers so that we can
       // create the route once (during construction) and don't have to re-create it for each new connection
-      val finalRoute: Route = mapRequest(req => req.addHeader(RealRemoteAddress(connection))) { route }
+      val finalRoute: Route = mapRequest(req => req.addHeader(IncomingConnectionHeader(connection, useSSL))) { route }
 
-      info(s"accepted new connection from: ${connection.remoteAddress}")
+      info(s"accepted new connection from: ${connection.remoteAddress} to: ${connection.localAddress}(${connection.localAddress.getHostName})")
       connection.handleWith( Route.toFlow(finalRoute)(system))
     }).run() //.map(_.addToCoordinatedShutdown(hardTerminationDeadline = 8.seconds))
     binding = Some(bindingFuture)
 
-    info(s"serving requests: $requestSpec")
 
-    super.onStartRaceActor(originator)
+    info(s"serving requests: $requestSpec")
+    routeInfos.forall( _.onRaceStarted(this)) && super.onStartRaceActor(originator)
   }
 
   def requestSpec: String = {
@@ -140,14 +144,16 @@ class HttpServer (val config: Config) extends ParentRaceActor with SSLContextUse
   }
 
   override def onTerminateRaceActor(originator: ActorRef) = {
-    ifSome(binding) { f =>
-      f.flatMap(_.unbind())
-      //Await.result(f, 9.seconds).terminate(hardDeadline = 10.seconds)
-      //asys.terminate()
-    }
+    if (routeInfos.forall(_.onRaceTerminated(this))){
+      ifSome(binding) { f =>
+        info(s"$name stopped serving port: $port")
+        f.flatMap(_.unbind())
+        //Await.result(f, 9.seconds).terminate(hardDeadline = 10.seconds)
+        //asys.terminate()
+      }
 
-    info(s"$name stopped serving port: $port")
-    super.onTerminateRaceActor(originator)
+      super.onTerminateRaceActor(originator)
+    } else false
   }
 
   def createRouteInfos: Seq[RaceRouteInfo] = {

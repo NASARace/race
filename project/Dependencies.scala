@@ -94,6 +94,11 @@ object Dependencies {
 
   val circeAll = Seq(circeCore,circeGeneric,circeParser)
 
+  //--- jackson (used by http-net Webauthn library)
+  val jacksonCore = "com.fasterxml.jackson.core" % "jackson-core" % "2.12.2"
+  val jacksonScala = "com.fasterxml.jackson.module" %% "jackson-module-scala" % "2.12.2"
+  val jacksonAll = Seq(jacksonCore,jacksonScala)
+
   //--- scala-swing
   val scalaSwing = "org.scala-lang.modules" %% "scala-swing" % "3.0.0"
   //val swingx = "org.swinglabs.swingx" % "swingx-core" % "1.6.5-1"

@@ -17,7 +17,7 @@
 package gov.nasa.race.http.share
 
 import gov.nasa.race.common.ConstAsciiSlice.asc
-import gov.nasa.race.common.{Clock, ConstAsciiSlice, InetAddressMask, JsonParseException, JsonPullParser, JsonSerializable, JsonWriter, PathIdentifier, UTF8JsonPullParser}
+import gov.nasa.race.common.{Clock, ConstAsciiSlice, InetAddressMatcher, JsonParseException, JsonPullParser, JsonSerializable, JsonWriter, PathIdentifier, UTF8JsonPullParser}
 import gov.nasa.race.uom.DateTime
 import gov.nasa.race.util.StringUtils
 
@@ -224,7 +224,7 @@ object NodeInfo extends JsonConstants {
 
   // for testing purposes
   def apply (id: String): NodeInfo = {
-    new NodeInfo(id, s"this is node $id", "", -1, InetAddressMask.allMatcher)
+    new NodeInfo(id, s"this is node $id", "", -1, InetAddressMatcher.allMatcher)
   }
 }
 
@@ -232,7 +232,7 @@ object NodeInfo extends JsonConstants {
   * what we can store about a node
   * Note that host,port and addrMask are only used if we directly communicate with this node
   */
-case class NodeInfo (id: String, info: String, host: String, port: Int, addrMask: InetAddressMask) extends JsonSerializable {
+case class NodeInfo (id: String, info: String, host: String, port: Int, addrMask: InetAddressMatcher) extends JsonSerializable {
   import NodeInfo._
 
   def serializeTo (w: JsonWriter): Unit = {
@@ -241,7 +241,7 @@ case class NodeInfo (id: String, info: String, host: String, port: Int, addrMask
       w.writeStringMember(INFO,info)
       if (host.nonEmpty) w.writeStringMember(HOST,host)
       if (port >= 0) w.writeIntMember(PORT,port)
-      if (addrMask ne InetAddressMask.allMatcher) w.writeStringMember(ADDR_MASK,addrMask.toString)
+      if (addrMask ne InetAddressMatcher.allMatcher) w.writeStringMember(ADDR_MASK,addrMask.toString)
     }
   }
 }
@@ -258,14 +258,14 @@ trait NodeInfoParser extends JsonPullParser {
     var info: String = ""
     var host: String = ""
     var port: Int = -1
-    var addrMask: InetAddressMask = InetAddressMask.allMatcher
+    var addrMask: InetAddressMatcher = InetAddressMatcher.allMatcher
 
     foreachMemberInCurrentObject {
       case ID   => id = quotedValue.toString
       case INFO => info = quotedValue.toString
       case HOST => host = quotedValue.toString
       case PORT => port = unQuotedValue.toInt
-      case ADDR_MASK   => addrMask = InetAddressMask(quotedValue.toString)
+      case ADDR_MASK   => addrMask = InetAddressMatcher(quotedValue.toString)
     }
 
     NodeInfo(id,info,host,port,addrMask)

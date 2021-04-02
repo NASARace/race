@@ -244,10 +244,10 @@ class EchoService (val parent: ParentActor, val config: Config) extends Protocol
   */
 class AuthorizedEchoPushService (val parent: ParentActor, val config: Config) extends PushWSRaceRoute with BasicAuthorizedWSRoute {
 
-  override protected def handleIncoming (remoteAddr: InetSocketAddress, m: Message): Iterable[Message] = m match {
+  override protected def handleIncoming (conn: SocketConnection, m: Message): Iterable[Message] = m match {
     case tm: TextMessage.Strict =>
       val msgText = tm.text
-      info(s"echo incoming: '$msgText' from $remoteAddr")
+      info(s"echo incoming: '$msgText' from ${conn.remoteAddress}")
       TextMessage.Strict(s"Echo [$msgText]") :: Nil
     case other =>
       info(s"incoming message ignored: $other")

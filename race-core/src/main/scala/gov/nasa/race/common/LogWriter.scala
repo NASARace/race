@@ -25,15 +25,21 @@ trait LogWriter {
   // log levels to determine if the message string should be generated
   type LogFunc = (=>String)=>Unit
 
-  protected var info: LogFunc    = msg => println(s"INFO: $msg")
-  protected var warning: LogFunc = msg => println(s"WARN: $msg")
-  protected var error: LogFunc   = msg => println(s"ERROR: $msg")
+  // change is protected
+  protected var _info: LogFunc    = msg => println(s"INFO: $msg")
+  protected var _warning: LogFunc = msg => println(s"WARN: $msg")
+  protected var _error: LogFunc   = msg => println(s"ERROR: $msg")
 
   def setLogging (infoLogger: LogFunc, warningLogger: LogFunc, errorLogger: LogFunc): Unit = {
-    info = infoLogger
-    warning = warningLogger
-    error = errorLogger
+    _info = infoLogger
+    _warning = warningLogger
+    _error = errorLogger
   }
+
+  // invocation is public
+  def info (f: =>String): Unit = _info(f)
+  def warning(f: =>String): Unit = _warning(f)
+  def error(f: =>String): Unit = _error(f)
 }
 
 /**

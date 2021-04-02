@@ -49,6 +49,11 @@ trait RaceRouteInfo extends SubConfigurable with ConfigLoggable {
   val requestPrefix: String = config.getStringOrElse("request-prefix", name)
   val requestPrefixMatcher = PathMatchers.separateOnSlashes(requestPrefix)
 
+  private var _isHttps = false // this is what the server chooses and tells us during initialization
+  def isHttps = _isHttps
+
+  def shouldUseHttps = false  // this is what tells the server if we need https
+
   // this is the main function that defines the public (user) routes
   def route: Route
 
@@ -56,7 +61,7 @@ trait RaceRouteInfo extends SubConfigurable with ConfigLoggable {
   // (such as login/logout and common asset routes)
   def completeRoute: Route = route
 
-  def shouldUseHttps = false
+  def protocol: String = if (_isHttps || shouldUseHttps) "https://" else "http://"
 
   def notFoundRoute: Route = {
     extractUri { uri =>
@@ -68,6 +73,23 @@ trait RaceRouteInfo extends SubConfigurable with ConfigLoggable {
     val sel = parent.context.actorSelection(s"*/$actorName")
     val future: Future[ActorRef] = sel.resolveOne(1.second)
     Await.result(future,1.second) // this throws a ActorNotFound or TimedoutException if it does not succeed
+  }
+
+  //--- RouteInfo specific init/start/termination hooks
+
+  def onRaceInitialized(server: HttpServer): Boolean = {
+    _isHttps = server.useSSL
+    true
+  }
+
+  // override in concrete types if we have to change modes etc
+  def onRaceStarted(server: HttpServer): Boolean = {
+    true
+  }
+
+  // override in concrete types if we have to do cleanup
+  def onRaceTerminated(server: HttpServer): Boolean = {
+    true
   }
 }
 

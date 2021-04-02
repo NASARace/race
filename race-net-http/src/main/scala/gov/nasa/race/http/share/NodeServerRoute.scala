@@ -29,7 +29,7 @@ import com.typesafe.config.Config
 import gov.nasa.race.common.ConstAsciiSlice.asc
 import gov.nasa.race.common.{BufferedStringJsonPullParser, JsonParseException, JsonWriter, SyncJsonWriter}
 import gov.nasa.race.core.{ContinuousTimeRaceActor, ParentActor, Ping, PingParser, Pong, RaceDataClient}
-import gov.nasa.race.http.{PushWSRaceRoute, SiteRoute}
+import gov.nasa.race.http.{PushWSRaceRoute, SiteRoute, SocketConnection}
 import gov.nasa.race.{ifSome, withSomeOrElse}
 import gov.nasa.race.uom.DateTime
 
@@ -151,7 +151,9 @@ class NodeServerRoute(val parent: ParentActor, val config: Config)
     * this is what we receive through the websocket (from connected providers)
     * BEWARE - this is executed in a different (akka-http) thread. Use incomingWriter for sync responses
     */
-  override protected def handleIncoming (remoteAddr: InetSocketAddress, m: Message): Iterable[Message] = {
+  override protected def handleIncoming (conn: SocketConnection, m: Message): Iterable[Message] = {
+    val remoteAddr = conn.remoteAddress
+
     m match {
       case tm: TextMessage.Strict =>
         parseIncoming(tm) match {
@@ -162,7 +164,7 @@ class NodeServerRoute(val parent: ParentActor, val config: Config)
           case _ => Nil // ignore all other
         }
 
-      case _ => super.handleIncoming(remoteAddr, m)
+      case _ => super.handleIncoming(conn, m)
     }
   }
 

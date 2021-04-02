@@ -841,6 +841,7 @@ function handleWsMessage(msg) {
   //console.log(JSON.stringify(msg));
   var msgType = Object.keys(msg)[0];  // first member name
 
+  // app specific data
   if (msgType == "columnDataChange") handleColumnDataChange(msg.columnDataChange);
   else if (msgType == "siteIds")  handleSiteIds( msg.siteIds);
   else if (msgType == "columnList") handleColumnList( msg.columnList);
@@ -853,12 +854,21 @@ function handleWsMessage(msg) {
   else if (msgType == "userPermissions") handleUserPermissions( msg.userPermissions);
   else if (msgType == "changeRejected") handleChangeRejected (msg.changeRejected);
 
+  // general server notifications
+  else if (msgType == "alert") handleAlert(msg.alert);
+
   // webauthn messages
-  else if (msgType == "publicKeyCredentialCreationOptions") handleWebauthnReg(msg.publicKeyCredentialCreationOptions);
-  else if (msgType == "publicKeyCredentialRequestOptions") handleWebauthnAuth(msg.publicKeyCredentialRequestOptions);
+  else if (msgType == "credentialCreate") handleWebauthnReg(msg.credentialCreate);
+  else if (msgType == "credentialGet") handleWebauthnAuth(msg.credentialGet.publicKeyCredentialRequestOptions);
 
   else utils.log(`ignoring unknown message type ${msgType}`);
 };
+
+// { alert: { text:"s", log:<b>}}
+function handleAlert (alertMsg){
+  alert(alertMsg.text);
+  if (alertMsg.log) utils.log(alertMsg.log);
+}
 
 // { columnDataChange: { columnId:"s", changeNodeId:"s", date:n, changedValues: { <rowId>: { value:X,date:n } ... }}}
 function handleColumnDataChange (cdc) {
@@ -999,7 +1009,8 @@ function handleChangeRejected (cr) {
 
 // a PublicKeyCredential does not have own enumerable properties hence JSON.stringify() would return {}
 // Plus we need to turn Uint8Arrays back into base64URL encoded strings
-function pkcToObject (pkc) {
+function createPkcToObject (pkc) {
+  console.log(pkc);
   return {
     type: pkc.type,
     id: pkc.id,
@@ -1021,7 +1032,7 @@ function handleWebauthnReg (pkcCreateOptions) {
 
   navigator.credentials.create({publicKey: pkcCreateOptions}).then(
     credential => { // this should be a PublicKeyCredential
-      credential = pkcToObject(credential);
+      credential = createPkcToObject(credential);
       var msg = JSON.stringify(credential);
       
       //console.log("------------- key response:"); console.log(msg);
@@ -1033,13 +1044,37 @@ function handleWebauthnReg (pkcCreateOptions) {
   );
 }
 
+function getPkcToObject (pkc) {
+  console.log(pkc);
+  return {
+    type: pkc.type,
+    id: pkc.id,
+    response: {
+      authenticatorData: utils.base64URLEncode(pkc.response.authenticatorData),
+      clientDataJSON: utils.base64URLEncode(pkc.response.clientDataJSON),
+      signature: utils.base64URLEncode(pkc.response.signature),
+      userHandle: null // make the server look it up through uid/cached request - we don't want to give any assoc in the reply
+    },
+    clientExtensionResults: pkc.getClientExtensionResults()
+  };
+}
+
 function handleWebauthnAuth (pkcRequestOptions) {
-  //console.log(JSON.stringify(pkcRequestOptions));
+  console.log(JSON.stringify(pkcRequestOptions));
+
+  // convert the random strings from base64URL back into Uint8Arrays - the CredentialContainer will otherwise reject
+  pkcRequestOptions.challenge = utils.base64URLDecode(pkcRequestOptions.challenge);
+  for (const c of pkcRequestOptions.allowCredentials) {
+    c.id = utils.base64URLDecode(c.id);
+  }
 
   navigator.credentials.get({publicKey: pkcRequestOptions}).then(
     credential => {
-      console.log(JSON.stringify(credential));
-      ws.send(credential);
+      credential = getPkcToObject(credential);
+      var msg = JSON.stringify(credential);
+
+      //console.log("------------- key response:"); console.log(msg);
+      ws.send(msg);
     },
     failure => {
       alert("credential request rejected: " + failure);
