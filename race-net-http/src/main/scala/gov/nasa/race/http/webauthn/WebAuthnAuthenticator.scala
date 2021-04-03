@@ -147,24 +147,30 @@ class WebAuthnAuthenticator(config: Config = NoConfig) extends Authenticator {
 
   def createRp (conn: SocketConnection, credentialStore: CredentialStore, authConstr: AuthConstraints): RelyingParty = {
     val protocol = if (conn.isSSL) "https://" else "http://"
-    val rpHostName = protocol + authConstr.rpId.getOrElse(conn.localAddress.getHostName)
+    val rpHostName = authConstr.rpId.getOrElse(conn.localAddress.getHostName)
     val rpAppName = authConstr.rpName.getOrElse(config.getString("name"))
+
+    // this is a bit weird - if this is not using SSL the hostname would be rejected by the webauthn lib so we have to
+    // add an explicit 'origins' option
+    val origins: Set[String] = if (authConstr.origins.nonEmpty) {
+      Set.from(authConstr.origins)
+    } else {
+      Set( protocol + rpHostName)
+    }
 
     val rpId = RelyingPartyIdentity.builder
       .id(rpHostName)
       .name(rpAppName)
       .build
 
-    val rpb = RelyingParty.builder
+    RelyingParty.builder
       .identity(rpId)
       .credentialRepository(credentialStore)
       .attestationConveyancePreference(getAttestationConveyancePreference)
       .allowOriginSubdomain(true)
       .allowOriginPort(true)
-
-    if (authConstr.origins.nonEmpty) rpb.origins(Set.from(authConstr.origins).asJava)
-
-    rpb.build
+      .origins( origins.asJava)
+      .build
   }
 
   def serializeToJson (o: AnyRef): String = objectMapper.synchronized {

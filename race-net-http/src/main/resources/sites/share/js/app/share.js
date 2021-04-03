@@ -1010,7 +1010,6 @@ function handleChangeRejected (cr) {
 // a PublicKeyCredential does not have own enumerable properties hence JSON.stringify() would return {}
 // Plus we need to turn Uint8Arrays back into base64URL encoded strings
 function createPkcToObject (pkc) {
-  console.log(pkc);
   return {
     type: pkc.type,
     id: pkc.id,
@@ -1034,8 +1033,6 @@ function handleWebauthnReg (pkcCreateOptions) {
     credential => { // this should be a PublicKeyCredential
       credential = createPkcToObject(credential);
       var msg = JSON.stringify(credential);
-      
-      //console.log("------------- key response:"); console.log(msg);
       ws.send(msg);
     },
     failure => {
@@ -1045,7 +1042,6 @@ function handleWebauthnReg (pkcCreateOptions) {
 }
 
 function getPkcToObject (pkc) {
-  console.log(pkc);
   return {
     type: pkc.type,
     id: pkc.id,
@@ -1060,7 +1056,7 @@ function getPkcToObject (pkc) {
 }
 
 function handleWebauthnAuth (pkcRequestOptions) {
-  console.log(JSON.stringify(pkcRequestOptions));
+  //console.log(JSON.stringify(pkcRequestOptions));
 
   // convert the random strings from base64URL back into Uint8Arrays - the CredentialContainer will otherwise reject
   pkcRequestOptions.challenge = utils.base64URLDecode(pkcRequestOptions.challenge);
@@ -1072,8 +1068,6 @@ function handleWebauthnAuth (pkcRequestOptions) {
     credential => {
       credential = getPkcToObject(credential);
       var msg = JSON.stringify(credential);
-
-      //console.log("------------- key response:"); console.log(msg);
       ws.send(msg);
     },
     failure => {
