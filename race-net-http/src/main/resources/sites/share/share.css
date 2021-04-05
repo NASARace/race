@@ -280,19 +280,6 @@ div.titlebar {
   display: inline-block;
 }
 
-label.title-label {
-  display: inline-block;
-  text-align: right;
-  width: 6rem;
-  font-size: small;
-}
-
-span.title-text {
-  text-align: left;
-  font-size: large;
-  font-weight: 500;
-}
-
 /* other controls */
 
 div#logContainer {
@@ -300,7 +287,7 @@ div#logContainer {
   padding: 3px 0.9rem 3px 3px;  /* to account for scroll bar width - scrollbar is only inside div for firefox and safari */
   width: 40rem;
   min-height: 4rem;
-  max-height: 20rem;
+  max-height: 10rem;
   margin: 1rem 0 0 0;
   position: relative;
   overflow: auto;
@@ -376,6 +363,12 @@ input#status.ok {
   background-color: #ccffcc;
 }
 
+/* edit session status */
+
+input#uid.active {
+  background-color: #ccffcc;
+}
+
 /* cell editing text inputs */
 
 input.cell {
@@ -405,6 +398,7 @@ input.cell.reported {
 }
 
 input.id {
-  min-width: 20rem;
+  min-width: 10rem;
+  max-width: 20rem;
 }
 

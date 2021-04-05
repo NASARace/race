@@ -67,7 +67,7 @@ trait Authenticator extends LogWriter {
   def authenticate (uid: String, conn: SocketConnection, authClient: AuthClient): Unit
 
   // override if we have to do cleanup
-  def terminate: Unit = {}
+  def terminate(): Unit = {}
 
   /**
     * convenience method that checks if a user is already registered, and if so starts authentication. If not,

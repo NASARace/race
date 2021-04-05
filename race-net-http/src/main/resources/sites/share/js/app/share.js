@@ -82,6 +82,7 @@ export function setEditable() {
 export function setReadOnly() {
   setInactiveChecks(null);
 
+  document.getElementById("uid").classList.remove("active");
   document.getElementById("sendButton").disabled = true;
   document.getElementById("editButton").disabled = false;
   document.getElementById("readOnlyButton").disabled = true;
@@ -856,10 +857,11 @@ function handleWsMessage(msg) {
 
   // general server notifications
   else if (msgType == "alert") handleAlert(msg.alert);
+  else if (msgType == "terminateEdit") handleTerminateEdit(msg.terminateEdit);
 
   // webauthn messages
-  else if (msgType == "credentialCreate") handleWebauthnReg(msg.credentialCreate);
-  else if (msgType == "credentialGet") handleWebauthnAuth(msg.credentialGet.publicKeyCredentialRequestOptions);
+  else if (msgType == "webauthnCreate") handleWebauthnReg(msg.webauthnCreate);
+  else if (msgType == "webauthnGet") handleWebauthnAuth(msg.webauthnGet.publicKeyCredentialRequestOptions);
 
   else utils.log(`ignoring unknown message type ${msgType}`);
 };
@@ -868,6 +870,12 @@ function handleWsMessage(msg) {
 function handleAlert (alertMsg){
   alert(alertMsg.text);
   if (alertMsg.log) utils.log(alertMsg.log);
+}
+
+function handleTerminateEdit (terminateMsg) {
+  alert(terminateMsg.reason);
+  utils.log("server terminated edit: " + terminateMsg.reason);
+  setReadOnly();
 }
 
 // { columnDataChange: { columnId:"s", changeNodeId:"s", date:n, changedValues: { <rowId>: { value:X,date:n } ... }}}
@@ -992,6 +1000,8 @@ function handleUserPermissions (usrPerm) {
   //console.log(JSON.stringify(usrPerm));
   var uid = usrPerm.uid; // TODO - should we check if that is the current user? Not critical since update has to be checked by server anyways
   if (usrPerm.permissions.length > 0) {
+    document.getElementById("uid").classList.add("active");
+
     setRowsEditable(usrPerm.permissions);
     utils.log(`enter edit mode for user ${uid}`)
   } else {

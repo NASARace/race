@@ -100,6 +100,8 @@ object Time {
   }
 
   implicit def toFiniteDuration (t: Time): FiniteDuration = t.toFiniteDuration
+
+  implicit def fromFiniteDuration (d: FiniteDuration): Time = Milliseconds(d.toMillis)
 }
 import Time._
 

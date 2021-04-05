@@ -24,17 +24,18 @@ import akka.stream.scaladsl.SourceQueueWithComplete
 import com.typesafe.config.Config
 import gov.nasa.race.{Failure, Result, Success}
 import gov.nasa.race.common.ConstAsciiSlice.asc
-import gov.nasa.race.common.{BufferedStringJsonPullParser, JsonParseException, JsonSerializable, JsonWriter}
+import gov.nasa.race.common.{BatchedTimeoutMap, BufferedStringJsonPullParser, JsonParseException, JsonSerializable, JsonWriter, TimeoutSubject}
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.{ParentActor, RaceDataClient}
 import gov.nasa.race.http.{AuthClient, Authenticator, HttpServer, NoAuthenticator, PushWSRaceRoute, SiteRoute, SocketConnection}
-import gov.nasa.race.http.webauthn.WebAuthnAuthenticator
-import gov.nasa.race.uom.DateTime
+import gov.nasa.race.uom.Time.Milliseconds
+import gov.nasa.race.uom.{DateTime, Time}
 
 import java.net.InetSocketAddress
 import scala.collection.immutable.Iterable
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
+import scala.concurrent.duration.DurationInt
 
 
 /**
@@ -48,9 +49,17 @@ import scala.collection.mutable.ArrayBuffer
 class UserServerRoute (parent: ParentActor, config: Config) extends SiteRoute(parent,config)
                                                             with PushWSRaceRoute with RaceDataClient {
   /**
-    * what we need to keep track of EditRequests
+    * what we need to keep track of EditRequests - userChange messages are only valid between a requestEdit and
+    * endEdit, up to a configurable inactive timeout that is reset upon each userChange
     */
-  case class EditSession (uid: String, clientAddr: InetSocketAddress, perms: Seq[CellSpec])
+  case class EditSession (uid: String, clientAddr: InetSocketAddress, perms: Seq[CellSpec]) extends TimeoutSubject {
+    val timeout: Time = editSessions.checkInterval - Milliseconds(50)
+
+    def timeoutExpired(): Unit = {
+      terminateEdit(clientAddr,"inactive edit session timeout")
+      warning(s"edit session for user $uid on $clientAddr expired")
+    }
+  }
 
   /**
     * JSON parser for incoming device messages
@@ -69,9 +78,7 @@ class UserServerRoute (parent: ParentActor, config: Config) extends SiteRoute(pa
 
     //--- AuthClient interface
 
-    def alertUser (clientAddr: InetSocketAddress, msg: String): Unit = {
-      pushTo(clientAddr, TextMessage(s"""{"alert":{"text":"$msg"}}"""))
-    }
+    def alertUser (clientAddr: InetSocketAddress, msg: String): Unit = UserServerRoute.this.alertUser(clientAddr,msg)
 
     // we don't discriminate between registration and authentication - a successful registration is
     // considered to be a valid authentication
@@ -92,8 +99,7 @@ class UserServerRoute (parent: ParentActor, config: Config) extends SiteRoute(pa
     }
 
     override def sendRegistrationRequest (clientAddr: InetSocketAddress, msg: String): Unit = {
-      val wrappedMsg = s"""{"credentialCreate": $msg}"""
-      pushTo(clientAddr, TextMessage(wrappedMsg))
+      pushTo(clientAddr, TextMessage(msg))
     }
 
     override def completeRegistration (uid: String, clientAddr: InetSocketAddress, result: Result): Unit = {
@@ -101,8 +107,7 @@ class UserServerRoute (parent: ParentActor, config: Config) extends SiteRoute(pa
     }
 
     override def sendAuthenticationRequest (clientAddr: InetSocketAddress, msg: String): Unit = {
-      val wrappedMsg = s"""{"credentialGet": $msg}"""
-      pushTo(clientAddr, TextMessage(wrappedMsg))
+      pushTo(clientAddr, TextMessage(msg))
     }
 
     override def completeAuthentication (uid: String, clientAddr: InetSocketAddress, result: Result): Unit = {
@@ -203,6 +208,7 @@ class UserServerRoute (parent: ParentActor, config: Config) extends SiteRoute(pa
             editSessions.get(clientAddr) match {
               case Some(es) =>
                 if (uid == es.uid) {
+                  es.resetExpiration() // reset timeout base
                   val permCvs = filterPermittedChanges(columnId, changedValues, es)
                   if (permCvs.nonEmpty) {
                     // TODO - this could also reject if any of the changes are not permitted
@@ -269,7 +275,8 @@ class UserServerRoute (parent: ParentActor, config: Config) extends SiteRoute(pa
 
   var node: Option[Node] = None // we get this from the UpdateActor upon initialization
 
-  val editSessions: mutable.Map[InetSocketAddress,EditSession] = mutable.Map.empty  // clientAddr -> editSession
+  // a timeout checked map for (clientAddr -> EditSession) pairs
+  val editSessions: BatchedTimeoutMap[InetSocketAddress,EditSession] = new BatchedTimeoutMap(config.getFiniteDurationOrElse("edit-timeout", 5.minutes))
 
   def readUserPermissions: UserPermissions = {
     val parser = new UserPermissionsParser
@@ -295,6 +302,14 @@ class UserServerRoute (parent: ParentActor, config: Config) extends SiteRoute(pa
   def nodeId: Option[String] = node.map(_.id)
 
   //--- client message constructors
+
+  def alertUser (clientAddr: InetSocketAddress, msg: String): Unit = {
+    pushTo(clientAddr, TextMessage(s"""{"alert":{"text":"$msg"}}"""))
+  }
+
+  def terminateEdit (clientAddr: InetSocketAddress, reason: String): Unit = {
+    pushTo(clientAddr, TextMessage(s"""{"terminateEdit":{"reason":"$reason"}}"""))
+  }
 
   def getSiteIdsMessage (clientAddr: InetSocketAddress): Option[Message] = {
     node.map { n=>
@@ -412,7 +427,8 @@ class UserServerRoute (parent: ParentActor, config: Config) extends SiteRoute(pa
   }
 
   override def onRaceTerminated (server: HttpServer): Boolean = {
-    authenticator.terminate // the authenticator might have to close files etc
+    editSessions.terminate()
+    authenticator.terminate() // the authenticator might have to close files etc
     true
   }
 }

@@ -23,10 +23,11 @@ import com.typesafe.config.Config
 import com.yubico.webauthn.data._
 import com.yubico.webauthn.exception.{AssertionFailedException, RegistrationFailedException}
 import com.yubico.webauthn._
-import gov.nasa.race.common.InetAddressMatcher
+import gov.nasa.race.common.{BatchedTimeoutMap, InetAddressMatcher, TimeoutSubject}
 import gov.nasa.race.config.ConfigUtils.ConfigWrapper
 import gov.nasa.race.config.NoConfig
 import gov.nasa.race.http.{AuthClient, Authenticator, SocketConnection}
+import gov.nasa.race.uom.Time
 import gov.nasa.race.{Failure, ResultValue, Success, SuccessValue}
 
 import java.io.{File, IOException}
@@ -34,6 +35,7 @@ import java.net.{InetAddress, InetSocketAddress}
 import java.security.SecureRandom
 import java.util.Optional
 import scala.collection.mutable.Map
+import scala.concurrent.duration.{DurationInt, FiniteDuration}
 import scala.jdk.CollectionConverters._
 
 /**
@@ -44,7 +46,7 @@ class WebAuthnAuthenticator(config: Config = NoConfig) extends Authenticator {
   type RegistrationPkc = PublicKeyCredential[AuthenticatorAttestationResponse, ClientRegistrationExtensionOutputs]
   type AssertionPkc = PublicKeyCredential[AuthenticatorAssertionResponse, ClientAssertionExtensionOutputs]
 
-  sealed trait PendingRequest {
+  sealed trait PendingRequest extends TimeoutSubject {
     val rp: RelyingParty
     val uid: String
     val clientAddress: InetSocketAddress
@@ -59,6 +61,13 @@ class WebAuthnAuthenticator(config: Config = NoConfig) extends Authenticator {
           (challenge == other.challenge) && (uid == other.uid) && (clientAddress == other.clientAddress)
         case _ => false
       }
+    }
+
+    val timeout: Time = requestTimeout
+
+    def timeoutExpired(): Unit = {
+      authClient.alertUser(clientAddress, "authentication request timed out, please retry")
+      warning(s"pending authentication request from '$uid' on $clientAddress timed out")
     }
   }
 
@@ -108,7 +117,11 @@ class WebAuthnAuthenticator(config: Config = NoConfig) extends Authenticator {
     InetAddressMatcher.allMatcher, InetAddressMatcher.allMatcher)
   val authRps: Map[InetAddress, RelyingParty] = Map.empty
 
-  val pendingRequests: Map[InetSocketAddress,PendingRequest] = Map.empty  // clientAddr -> request : note there is only one at a time from the same port
+  val requestTimeout: FiniteDuration = config.getFiniteDurationOrElse("timeout", 1.minute)
+
+  // clientAddr -> request : note there is only one at a time from the same port
+  // we increase the timeout for user auth to accommodate for network delay
+  val pendingRequests = new BatchedTimeoutMap[InetSocketAddress,PendingRequest](requestTimeout + 200.milliseconds)
 
   loadCredentials()
 
@@ -194,7 +207,7 @@ class WebAuthnAuthenticator(config: Config = NoConfig) extends Authenticator {
     }
   }
 
-  override def terminate: Unit = {
+  override def terminate(): Unit = {
     if (credentialStore.hasChanged) storeCredentials()
   }
 
@@ -219,6 +232,7 @@ class WebAuthnAuthenticator(config: Config = NoConfig) extends Authenticator {
     val opts = StartRegistrationOptions.builder
       .user(userIdentity)
       .authenticatorSelection( getAuthenticatorSelectionCriteria)
+      .timeout(requestTimeout.toMillis)
       .build
 
     rp.startRegistration(opts)
@@ -273,6 +287,7 @@ class WebAuthnAuthenticator(config: Config = NoConfig) extends Authenticator {
   def createAssertionRequest (rp: RelyingParty, uid: String): AssertionRequest = {
     rp.startAssertion(StartAssertionOptions.builder
         .username(Optional.of(uid))
+        .timeout(requestTimeout.toMillis)
         .build
     )
   }
@@ -372,6 +387,10 @@ class WebAuthnAuthenticator(config: Config = NoConfig) extends Authenticator {
     credentialStore.isUsernameRegistered(uid)
   }
 
+  def createRegistrationMessage(request: PublicKeyCredentialCreationOptions): String = {
+    s"""{"webauthnCreate":${serializeToJson(request)}}"""
+  }
+
   override def register (uid: String, conn: SocketConnection, authClient: AuthClient): Unit = {
     val clientAddress = conn.remoteAddress
 
@@ -383,7 +402,8 @@ class WebAuthnAuthenticator(config: Config = NoConfig) extends Authenticator {
           val userIdentity = createUserIdentity(uid)
           val request = createRegistrationRequestOptions(rp, userIdentity)
           pendingRequests += (clientAddress -> PendingRegistrationRequest(rp, uid, clientAddress, request, authClient))
-          authClient.sendRegistrationRequest(clientAddress, serializeToJson(request))
+          authClient.sendRegistrationRequest(clientAddress, createRegistrationMessage(request))
+
         } else {
           val msg = s"user '$uid' already trying to register"
           authClient.alertUser(clientAddress,msg)
@@ -401,6 +421,10 @@ class WebAuthnAuthenticator(config: Config = NoConfig) extends Authenticator {
     }
   }
 
+  def createAuthenticationMessage (request: AssertionRequest): String = {
+    s"""{"webauthnGet":${serializeToJson(request)}}"""
+  }
+
   override def authenticate (uid: String, conn: SocketConnection, authClient: AuthClient): Unit = {
     val clientAddress = conn.remoteAddress
 
@@ -411,7 +435,8 @@ class WebAuthnAuthenticator(config: Config = NoConfig) extends Authenticator {
         if (!pendingRequests.contains(clientAddress)) {
           val request = createAssertionRequest( rp, uid)
           pendingRequests += (clientAddress -> PendingAssertionRequest( rp, uid, clientAddress, request, authClient))
-          authClient.sendAuthenticationRequest(clientAddress, serializeToJson(request))
+          authClient.sendAuthenticationRequest(clientAddress, createAuthenticationMessage(request))
+
         } else {
           val msg = s"user '$uid' already trying to log in"
           authClient.alertUser(clientAddress,msg)

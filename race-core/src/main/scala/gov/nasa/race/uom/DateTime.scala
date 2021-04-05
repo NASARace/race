@@ -64,6 +64,8 @@ object DateTime {
     else new Time((b.millis - a.millis).toInt)
   }
 
+  def timeSince (d: DateTime): Time = now.timeSince(d)
+
   def parse(spec: CharSequence, dtf: DateTimeFormatter): DateTime = {
     val inst = Instant.from(dtf.parse(spec))
     new DateTime(inst.toEpochMilli)
