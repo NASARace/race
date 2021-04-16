@@ -16,8 +16,9 @@
  */
 package gov.nasa.race.http
 
-import java.net.InetSocketAddress
+import akka.actor.Actor.Receive
 
+import java.net.InetSocketAddress
 import akka.http.scaladsl.model.ws.{Message, TextMessage}
 import akka.http.scaladsl.model.{ContentTypes, HttpEntity}
 import akka.http.scaladsl.server.Directives._
@@ -104,8 +105,8 @@ class TestRefresh (val parent: ParentActor, val config: Config) extends Subscrib
 
   private var data: String = "?" // to be set by actor
 
-  override def receiveData(newData: Any): Unit = {
-    data = newData.toString
+  override def receiveData: Receive = {
+    case newData: Any => data = newData.toString
   }
 
   val page = html(

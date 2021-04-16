@@ -46,7 +46,7 @@ trait NodeDatesResponder {
     val cdRowsToSend = mutable.Buffer.empty[(String,Seq[CellPair])]
 
     // for the given external readonly CD dates, accumulate the set of outdated own CDs and newer own CD rows to send.
-    // since the other side only receives those CDs it is enough to go row-by-row for the outdated external CDs we
+    // since the other side only receives those CDs we only have to go row-by-row for the outdated external CDs we
     // write and send to the external
     def processExternalReadOnlyCDs(): Unit = {
       extNodeDates.readOnlyColumns.foreach { e=>
@@ -117,7 +117,7 @@ trait NodeDatesResponder {
     }
 
 
-    if (node.isKnownColumn(extNodeDates.nodeId)) {
+    if (node.isKnownNode(extNodeDates.nodeId)) {
       // this computes the reply data
       processExternalReadOnlyCDs()
       processExternalReadWriteCdRows()

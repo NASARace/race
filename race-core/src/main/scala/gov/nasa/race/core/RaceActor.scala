@@ -89,7 +89,7 @@ trait RaceActor extends Actor with ImplicitActorLogging with NamedConfigurable w
   // pre-init behavior which doesn't branch into concrete actor code before we
   // do the initialization. This guarantees that concrete actor code cannot access
   // un-initialized fields
-  override def receive = {
+  override def receive: Receive = {
     case PingRaceActor(sentNanos: Long, statsCollector: ActorRef) => handlePingRaceActor(sender(),sentNanos,statsCollector)
     case ShowRaceActor(sentNanos: Long) => handleShowRaceActor(sender(),sentNanos)
     case InitializeRaceActor(raceContext,actorConf) => handleInitializeRaceActor(raceContext,actorConf)
@@ -104,7 +104,7 @@ trait RaceActor extends Actor with ImplicitActorLogging with NamedConfigurable w
     info("got InitializeRaceActor")
     try {
       raceContext = rctx
-      context.become(receiveLive)
+      context.become(receiveLive, true)
       if (onInitializeRaceActor(rctx, actorConf)) {
         info("initialized")
         status = Initialized
@@ -121,7 +121,7 @@ trait RaceActor extends Actor with ImplicitActorLogging with NamedConfigurable w
   protected var userMessageHandler: Receive = handleMessage
 
   /**
-    * this corresponds to the low level Akka become() for RACE user messages
+    * this corresponds to the low level Akka become() but just for RACE user messages
     */
   protected def swapUserMessageHandler (newHandler: Receive): Unit = {
     info("swapping user message handler")
@@ -170,6 +170,12 @@ trait RaceActor extends Actor with ImplicitActorLogging with NamedConfigurable w
 
     case RaceResumed => handleRaceResumed(sender())
     case RaceResumeFailed(details: Any) => handleRaceResumeFailed(sender(),details)
+
+      // this is an exception to the rule that system messages are sent directly and not through configured channels
+      // we use a BusEvent since the originator does not know the identities of potential responders and the main purpose
+      // is to make sure that whatever the originator published before has been processed
+    case BusEvent(_, req: SyncRequest, _) => handleSyncRequest(req)
+    case SyncResponse(responder, responderType, request) => handleSyncResponse(responder, responderType, request)
 
     case other => warning(s"unhandled system message $other")
   }
@@ -352,6 +358,16 @@ trait RaceActor extends Actor with ImplicitActorLogging with NamedConfigurable w
     }
   }
 
+  def handleSyncRequest (req: SyncRequest): Unit = {
+    if (req.responderType.isEmpty || req.responderType.get.isAssignableFrom(getClass)) {
+      if (onSyncRequest(req.originator)) req.originator ! SyncResponse(self, getClass, req)
+    }
+  }
+
+  def handleSyncResponse (responder: ActorRef, responderType: Class[_], req: SyncRequest): Unit = {
+    if (self == req.originator) onSyncResponse(responder, responderType, req.tag: Any)
+  }
+
   //--- the general system message callbacks
 
   // note that RaceActor itself does not depend on overrides properly calling super.onXX(), all the
@@ -383,6 +399,10 @@ trait RaceActor extends Actor with ImplicitActorLogging with NamedConfigurable w
   def requestResume: Unit = master ! RaceResumeRequest
   def onRaceResumed: Unit = {} // override if we are a valid requester
   def onRaceResumeFailed(details: Any): Unit = {}
+
+  // if this returns true we respond to this request
+  def onSyncRequest (originator: ActorRef): Boolean = true
+  def onSyncResponse (responder: ActorRef, responderType: Class[_], tag: Any): Unit = {}
 
   def requestTermination: Unit = master ! RaceTerminateRequest // there is no feedback message for this
 

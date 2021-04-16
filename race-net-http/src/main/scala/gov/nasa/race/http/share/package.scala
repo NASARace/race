@@ -66,6 +66,6 @@ package object share {
     val VALUE = asc("value")
   }
 
-  // event to indicate we have selected an upstream
+  // event to indicate we have selected an upstream. Sent from UpstreamConnector, processed by Updater to update Node
   case class SelectUpstream (id: Option[String])
 }

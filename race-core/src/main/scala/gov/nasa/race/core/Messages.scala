@@ -105,7 +105,7 @@ object Messages {
 
   case object RaceTerminateRequest  // ras internal termination request: RaceActor -> Master
 
-  case object RaceAck extends RaceSystemMessage // generic acknowledgement
+  case object RaceAck extends RaceSystemMessage // generic acknowledgement, sent directly
   case object RaceTick extends RaceSystemMessage // used to trigger periodic actions
   case class RaceRetry(e:Any) // to-reprocess a message
 
@@ -206,4 +206,18 @@ object Messages {
   case class SetTimeout (msg: Any, duration: FiniteDuration) extends RaceSystemMessage
 
   case class DelayedAction(originator: ActorRef, action: ()=>Unit)
+
+
+  //--- user level ack request/response
+
+  /**
+    * this is sent as a BusEvent payload. The originator can tag the request to map replies to requests
+    * if a responderType is provided only respectively typed actors are supposed to reply
+    */
+  case class SyncRequest(originator: ActorRef, tag: Any, responderType: Option[Class[_]] = None)
+
+  /**
+    * this is sent directly from the responder to the originator, adding the responder type
+    */
+  case class SyncResponse(responder: ActorRef, responderClass: Class[_], request: SyncRequest)
 }

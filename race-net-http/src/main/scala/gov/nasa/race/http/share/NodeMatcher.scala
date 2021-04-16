@@ -63,10 +63,9 @@ object NodeMatcher {
   object ownerMatcher extends NodeMatcher {
     def pattern = "<owner>"
     def matches(sourceNodeId: CharSequence, targetColumnId: CharSequence, node: Node): Boolean = {
-      node.columnList.get(targetColumnId.toString) match {
-        case Some(col) => col.owner == sourceNodeId
-        case None => false
-      }
+      if (targetColumnId == "<self>") sourceNodeId == node.id
+      else if (targetColumnId == "<up>" && node.upstreamId.isDefined) sourceNodeId == node.upstreamId.get
+      else targetColumnId == sourceNodeId
     }
   }
 

@@ -17,6 +17,8 @@
 
 package gov.nasa.race.core
 
+import akka.actor.SupervisorStrategy.{Resume, Stop}
+
 import java.io.FileInputStream
 import java.lang.reflect.InvocationTargetException
 import java.util.concurrent.TimeoutException
@@ -647,4 +649,35 @@ class RaceActorSystem(val config: Config) extends LogController with VerifiableA
     }
   }
    */
+
+  //--- failure handling
+
+  /*
+   * only control the child actor that caused the ruckus
+   * we can't safely re-start child RaceActors since this would require a proper Initialize/Start sequence or
+   * otherwise the original message 'receive' is restored and we get all sort of pre-init errors so we keep it
+   * consistent between Master and ParentRaceActors
+   */
+  def defaultSupervisorStrategy: SupervisorStrategy = {
+    OneForOneStrategy(maxNrOfRetries = 10, withinTimeRange = 1.minute) {
+
+        // if we encounter an initialization problem we disable this actor
+        // TODO - maybe we should just shut down here
+      case aix: ActorInitializationException =>
+        reportException(aix)
+        error(aix.getMessage)
+        Stop
+
+        // all other exceptions we just report but keep the actor state, trying to go on as long as possible
+      case x: Throwable =>
+        reportException(x)
+        error(x.getMessage)
+        Resume
+
+      //case _: ArithmeticException      => Resume
+      //case _: NullPointerException     => Restart
+      //case _: IllegalArgumentException => Stop
+      //case _: Exception                => Escalate
+    }
+  }
 }

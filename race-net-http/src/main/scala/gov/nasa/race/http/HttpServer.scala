@@ -27,7 +27,7 @@ import akka.stream.scaladsl.{Sink, Source}
 import com.typesafe.config.Config
 import gov.nasa.race._
 import gov.nasa.race.config.ConfigUtils._
-import gov.nasa.race.core.{ParentActor, ParentRaceActor, RaceContext}
+import gov.nasa.race.core.{ParentActor, ParentRaceActor, RaceContext, SubscribingRaceActor}
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, Future}
@@ -48,12 +48,8 @@ object HttpServer {
   * This actor itself does not yet subscribe from or publish to RACE channels, but we might add control and/or
   * stats channels in the future
   */
-class HttpServer (val config: Config) extends ParentRaceActor with SSLContextUser {
+class HttpServer (val config: Config) extends ParentRaceActor with SubscribingRaceActor with SSLContextUser {
   import HttpServer._
-
-  val host = config.getStringOrElse("host", "localhost")
-  val port = config.getIntOrElse("port", 8080)
-  val interface = config.getStringOrElse( "interface", "0.0.0.0")
 
   val serverTimeout = config.getFiniteDurationOrElse("server-timeout", 5.seconds)
   val wsKeepAliveInterval = config.getOptionalFiniteDuration("ws-keep-alive")
@@ -64,6 +60,10 @@ class HttpServer (val config: Config) extends ParentRaceActor with SSLContextUse
 
   val useSSL = checkSSL(routeInfos)
   var binding: Option[Future[ServerBinding]] = None
+
+  // override in subclasses if those get set dynmically during init
+  def getInterface: String = config.getStringOrElse( "interface", "0.0.0.0") // all interfaces
+  def getPort: Int = config.getIntOrElse("port", 8080)
 
   def createRoutes: Route = {
     val route = concat(routeInfos.map(_.completeRoute):_*)
@@ -92,6 +92,9 @@ class HttpServer (val config: Config) extends ParentRaceActor with SSLContextUse
   def createServerSource: Source[Http.IncomingConnection,Future[Http.ServerBinding]] = {
     val httpExt = Http()(system)
     val ss = getServerSettings
+
+    val interface = getInterface
+    val port = getPort
 
     if (useSSL) {
       info(s"server using https:// protocol on port: $port")
@@ -140,20 +143,21 @@ class HttpServer (val config: Config) extends ParentRaceActor with SSLContextUse
   def requestSpec: String = {
     val protocol = if (useSSL) "https" else "http"
     val rps = routeInfos.map(_.requestPrefix).mkString(",")
-    s"$protocol://$host:$port/{$rps}"
+    s"$protocol://$getInterface:$getPort/{$rps}"
   }
 
-  override def onTerminateRaceActor(originator: ActorRef) = {
+  override def onTerminateRaceActor(originator: ActorRef): Boolean = {
     if (routeInfos.forall(_.onRaceTerminated(this))){
       ifSome(binding) { f =>
-        info(s"$name stopped serving port: $port")
+        info(s"$name stopped serving port: $getPort")
         f.flatMap(_.unbind())
         //Await.result(f, 9.seconds).terminate(hardDeadline = 10.seconds)
         //asys.terminate()
       }
 
       super.onTerminateRaceActor(originator)
-    } else false
+
+    } else false  // routes did not properly terminate
   }
 
   def createRouteInfos: Seq[RaceRouteInfo] = {

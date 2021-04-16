@@ -18,7 +18,7 @@ package gov.nasa.race.core
 
 import com.typesafe.config.Config
 import gov.nasa.race.config.ConfigUtils._
-import gov.nasa.race.core.Messages.BusEvent
+import gov.nasa.race.core.Messages.{BusEvent, SyncRequest}
 import gov.nasa.race.util.ArrayUtils
 
 /**
@@ -57,6 +57,10 @@ trait PublishingRaceActor extends RaceActor {
   def publishBusEvent (otherChannel: String, e: BusEvent): Unit = {
     val be = if (e.channel == otherChannel) e else e.copy(channel=otherChannel)
     busFor(otherChannel).publish(be)
+  }
+
+  def publishSyncRequest (tag: Any, responderType: Option[Class[_]] = None): Unit = {
+    publish(SyncRequest(self,tag, responderType))
   }
 
   def hasPublishingChannels = writeTo.nonEmpty

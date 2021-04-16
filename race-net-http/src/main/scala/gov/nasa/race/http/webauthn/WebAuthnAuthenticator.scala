@@ -146,12 +146,24 @@ class WebAuthnAuthenticator(config: Config = NoConfig) extends Authenticator {
   }
 
   def getAuthenticatorSelectionCriteria: AuthenticatorSelectionCriteria = {
-    AuthenticatorSelectionCriteria.builder
-      .authenticatorAttachment(AuthenticatorAttachment.CROSS_PLATFORM)
-      //.authenticatorAttachment(Optional.of(AuthenticatorAttachment.CROSS_PLATFORM))
-      .requireResidentKey(false)
-      .userVerification(UserVerificationRequirement.PREFERRED)
-      .build
+    val builder = AuthenticatorSelectionCriteria.builder
+
+    config.getStringOrElse( "authenticator-attachment", "any") match {
+      case "cross"    => builder.authenticatorAttachment( AuthenticatorAttachment.CROSS_PLATFORM)
+      case "platform" => builder.authenticatorAttachment( AuthenticatorAttachment.PLATFORM)
+      case "any" => // skip
+    }
+
+    config.getStringOrElse("user-verification", "any") match {
+      case "preferred"   => builder.userVerification( UserVerificationRequirement.PREFERRED)
+      case "required"    => builder.userVerification( UserVerificationRequirement.REQUIRED)
+      case "discouraged" => builder.userVerification( UserVerificationRequirement.DISCOURAGED)
+      case "any" => // skip
+    }
+
+    builder.requireResidentKey(config.getBooleanOrElse("resident-key", false))
+
+    builder.build
   }
 
   def getAttestationConveyancePreference: AttestationConveyancePreference = {

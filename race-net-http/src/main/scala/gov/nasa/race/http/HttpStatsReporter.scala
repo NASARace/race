@@ -16,8 +16,9 @@
  */
 package gov.nasa.race.http
 
-import java.io.File
+import akka.actor.Actor.Receive
 
+import java.io.File
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.StatusCodes._
 import akka.http.scaladsl.model.{ContentTypes, HttpEntity}
@@ -83,11 +84,9 @@ class HttpStatsReporter (val parent: ParentActor, val config: Config) extends Su
     }
   }
 
-  override def receiveData(data: Any): Unit = {
-    data match {
-      case newContent: HttpContent => httpContent = newContent // generated from data
-      case _ => // ignore anything that is not
-    }
+  override def receiveData: Receive = {
+    case newContent: HttpContent => httpContent = newContent // generated from data
+    case _ => // ignore anything that is not
   }
 
   def blankPage = {

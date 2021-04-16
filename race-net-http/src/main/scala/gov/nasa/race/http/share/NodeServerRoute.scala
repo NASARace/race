@@ -19,6 +19,7 @@ package gov.nasa.race.http.share
 import java.net.InetSocketAddress
 import java.nio.file.Path
 import akka.Done
+import akka.actor.Actor.Receive
 import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.model.ws.{Message, TextMessage}
@@ -37,6 +38,10 @@ import scala.collection.immutable.Iterable
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 import scala.util.Try
+
+object NodeServerRoute {
+  val requestPrefix = "share-integrator"
+}
 
 /**
   * the route that handles ColumnData synchronization from/to child node clients through a websocket
@@ -75,24 +80,24 @@ class NodeServerRoute(val parent: ParentActor, val config: Config)
   var node: Option[Node] = None // our data
   var remoteNodes: Map[InetSocketAddress,String] = Map.empty
 
+  override def getRequestPrefix = NodeServerRoute.requestPrefix  // it's hardwired
+
   /**
     * this is what we get from our RaceDataClient actor, i.e. what we receive from the RACE bus
     *
     * NOTE this is executed async - avoid data races
     */
-  override def receiveData (data:Any): Unit = {
-    data match {
-      case newNode: Node =>
-        node = Some(newNode)
-        if (!parser.isDefined) {
-          parser = Some(new IncomingMessageParser(newNode))
-          info(s"node server '${newNode.id}' ready to accept connections")
-        }
-        // no need to send anything since we still get CDCs for changes and node sync is initiated by child nodes
+  override def receiveData: Receive = {
+    case newNode: Node =>
+      node = Some(newNode)
+      if (!parser.isDefined) {
+        parser = Some(new IncomingMessageParser(newNode))
+        info(s"node server '${newNode.id}' ready to accept connections")
+      }
+      // no need to send anything since we still get CDCs for changes and node sync is initiated by child nodes
 
-      case cdc: ColumnDataChange =>
-        pushChange(cdc, outgoingWriter)
-    }
+    case cdc: ColumnDataChange =>
+      pushChange(cdc, outgoingWriter)
   }
 
   // TODO - this is not very efficient if we don't filter rows. We might move the filtering at least into the serializer

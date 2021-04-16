@@ -16,6 +16,7 @@
  */
 package gov.nasa.race.core
 
+import akka.actor.Actor.Receive
 import akka.actor.{ActorRef, Props}
 import com.typesafe.config.Config
 import gov.nasa.race.config.ConfigUtils._
@@ -44,14 +45,20 @@ trait RaceDataClient {
 
   /**
     * to be provided by concrete type
-    * NOTE - this method is directly called by an associated actor and hence has to provide appropriate synchronization
+    *
+    * NOTE - this partial function is directly called by an associated actor and hence has to provide appropriate synchronization
     * in case DataClient and DataClientRaceActor do not execute in the same thread
     */
-  def receiveData(data: Any): Unit
+  def receiveData: Receive
 
-  def publishData(data: Any): Unit = actorRef ! PublishRaceData(data)
+  def publishData(data: Any): Unit = {
+    actorRef ! PublishRaceData(data)
+  }
 }
 
+/**
+  * wrapper for something the DataClient wants to publish through its DataClientRaceActor
+  */
 case class PublishRaceData (data: Any)
 
 /**
@@ -59,16 +66,25 @@ case class PublishRaceData (data: Any)
   */
 class DataClientRaceActor(val dataClient: RaceDataClient, val config: Config) extends SubscribingRaceActor with PublishingRaceActor {
 
-  def setClientData(newData: Any) = dataClient.receiveData(newData)
+  def handleDataClientMatchError(a:Any): Unit = {}
+
+  /**
+    * inform the dataClient of data received from the bus
+    * account for partial receiveData implementations (otherwise causing match errors that would stop the actor)
+    */
+  def setClientData (newData: Any): Unit = {
+    dataClient.receiveData.applyOrElse(newData, handleDataClientMatchError)
+  }
 
   /**
     * the generic implementation just forwards everything we receive from our 'read-from' channels to the client
     * override if concrete actor type has to consolidate data
     */
-  override def handleMessage = {
+  override def handleMessage: Receive = {
     case BusEvent(_, data: Any, _) => setClientData(data)
     case msg: String => setClientData(msg)  // mostly for testing purposes
 
+      // we get this directly from our dataClient to publish on our write-to channel
     case PublishRaceData(data) => publish(data)
   }
 }

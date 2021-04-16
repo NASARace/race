@@ -17,6 +17,7 @@
 
 package gov.nasa.race.http.share
 
+import akka.actor.Actor.Receive
 import akka.http.scaladsl.model.ws.{Message, TextMessage}
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.{PathMatchers, Route}
@@ -371,18 +372,14 @@ class UserServerRoute (parent: ParentActor, config: Config) extends SiteRoute(pa
     * this is what we get from our DataClient actor from the RACE bus
     * NOTE this is executed async - avoid data races
     */
-  override def receiveData(data:Any): Unit = {
-    data match {
-      case n: Node => node = Some(n) // this is just our internal data
+  override def receiveData: Receive = {
+    case n: Node => node = Some(n) // this is just our internal data
 
-        //--- those go directly out to connected clients
-      case cdc: ColumnDataChange => pushMsg(cdc)
-      case cc: ConstraintChange => pushMsg(cc)
-      case nrc: NodeReachabilityChange => pushMsg(nrc)
-      case crc: ColumnReachabilityChange => pushMsg(crc)
-
-      case _ => // ignore other messages
-    }
+      //--- those go directly out to connected clients
+    case cdc: ColumnDataChange => pushMsg(cdc)
+    case cc: ConstraintChange => pushMsg(cc)
+    case nrc: NodeReachabilityChange => pushMsg(nrc)
+    case crc: ColumnReachabilityChange => pushMsg(crc)
   }
 
   def pushMsg (o: JsonSerializable): Unit = synchronized {

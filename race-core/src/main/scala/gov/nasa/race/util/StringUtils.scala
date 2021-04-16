@@ -254,4 +254,6 @@ object StringUtils {
     val len = s.length()
     if (len <= n) s.toString else s"${s.subSequence(0,n)}…"
   }
+
+  def getNonEmptyOrElse (s: String, f: =>String): String = if (s != null && s.nonEmpty) s else f
 }

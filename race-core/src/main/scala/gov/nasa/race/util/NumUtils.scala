@@ -56,4 +56,6 @@ object NumUtils {
 
   @inline def longToHexPadded (n: Long, bs: Array[Byte]): Boolean = longToHexPadded(n,bs,bs.length)
 
+  def getPositiveIntOrElse (n: Int, f: =>Int): Int = if (n >=0) n else f
+
 }

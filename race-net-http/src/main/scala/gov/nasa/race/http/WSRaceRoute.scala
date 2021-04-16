@@ -19,6 +19,7 @@ package gov.nasa.race.http
 import java.io.File
 import java.net.InetSocketAddress
 import akka.Done
+import akka.actor.Actor.Receive
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.model.ws.{BinaryMessage, Message, TextMessage}
 import akka.http.scaladsl.server.Directives._
@@ -69,15 +70,13 @@ trait PushWSRaceRoute extends WSRaceRoute with SourceQueueOwner with RaceDataCli
   }
 
   protected def pushTo(remoteAddr: InetSocketAddress, queue: SourceQueueWithComplete[Message], m: Message): Unit = synchronized {
-    queue.offer(m).onComplete { res=>
-      res match {
-        case Success(_) => // all good (TODO should we check for Enqueued here?)
-          info(s"pushing message $m to $remoteAddr")
+    queue.offer(m).onComplete {
+      case Success(_) => // all good (TODO should we check for Enqueued here?)
+        info(s"pushing message $m to $remoteAddr")
 
-        case Failure(_) =>
-          info(s"dropping connection: $remoteAddr")
-          connections = connections.filter( e => e._1 ne remoteAddr)
-      }
+      case Failure(_) =>
+        info(s"dropping connection: $remoteAddr")
+        connections = connections.filter( e => e._1 ne remoteAddr)
     }
   }
 
@@ -91,8 +90,11 @@ trait PushWSRaceRoute extends WSRaceRoute with SourceQueueOwner with RaceDataCli
     * called by associated actor
     * NOTE - this is executed from the actor thread and can modify connections so we have to synchronize
     */
-  def receiveData(data: Any): Unit = {
-    push(TextMessage.Strict(data.toString))
+  def receiveData: Receive = {
+    case data =>
+      synchronized {
+        push(TextMessage.Strict(data.toString))
+      }
   }
 
   protected def discardMessage (m: Message): Unit = {

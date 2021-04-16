@@ -260,7 +260,8 @@ case class ColumnData (id: String, date: DateTime, values: Map[String,CellValue[
 
       values.get(rowId) match {
         case Some(cv: CellValue[_]) =>
-          if ((cv.date < rowDate) || (prioritizeOther && (cv.date == rowDate))) {
+          if ((cv.date < rowDate) /* || (prioritizeOther && (cv.date == rowDate)) */) {
+            // TODO - adding same time rows is not really helpful since the clocks are probably not synced to the same msec
             outdatedOwnCells += (rowId -> cv.date)
           }
         case _ =>

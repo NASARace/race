@@ -46,13 +46,15 @@ trait RaceRouteInfo extends SubConfigurable with ConfigLoggable {
 
   override def clAnchor: Any = system
 
-  val requestPrefix: String = config.getStringOrElse("request-prefix", name)
+  val requestPrefix: String = getRequestPrefix
   val requestPrefixMatcher = PathMatchers.separateOnSlashes(requestPrefix)
 
   private var _isHttps = false // this is what the server chooses and tells us during initialization
   def isHttps = _isHttps
 
   def shouldUseHttps = false  // this is what tells the server if we need https
+
+  def getRequestPrefix: String = config.getStringOrElse("request-prefix", name)
 
   // this is the main function that defines the public (user) routes
   def route: Route

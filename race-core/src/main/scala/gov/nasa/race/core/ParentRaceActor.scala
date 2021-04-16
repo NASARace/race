@@ -16,10 +16,13 @@
  */
 package gov.nasa.race.core
 
-import akka.actor.{ActorRef, Terminated}
+import akka.actor.SupervisorStrategy.Stop
+import akka.actor.{ActorInitializationException, ActorRef, OneForOneStrategy, Terminated}
 import akka.pattern.ask
 import com.typesafe.config.Config
 import gov.nasa.race.core.Messages._
+
+import scala.concurrent.duration.DurationInt
 
 
 /**
@@ -29,6 +32,8 @@ import gov.nasa.race.core.Messages._
   * to manage the state callbacks for them (init,start,termination)
   */
 trait ParentRaceActor extends RaceActor with ParentActor {
+
+  override val supervisorStrategy = raceActorSystem.defaultSupervisorStrategy
 
   def handleParentSystemMessage: Receive = {
     case RaceActorStopped => stoppedChildActorRef(sender())  // only parents receive these

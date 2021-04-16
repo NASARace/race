@@ -162,21 +162,7 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ParentActor {
 
   //--- failure strategy
 
-  override val supervisorStrategy = OneForOneStrategy(maxNrOfRetries = 10, withinTimeRange = 1 minute) {
-    case aix: ActorInitializationException =>
-      ras.reportException(aix)
-      error(aix.getMessage)
-      Stop
-    case x: Throwable =>
-      ras.reportException(x)
-      error(x.getMessage)
-      Stop
-
-    //case _: ArithmeticException      => Resume
-    //case _: NullPointerException     => Restart
-    //case _: IllegalArgumentException => Stop
-    //case _: Exception                => Escalate
-  }
+  override val supervisorStrategy = ras.defaultSupervisorStrategy
 
   //--- remote connection management
 

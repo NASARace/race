@@ -126,7 +126,7 @@ object Dependencies {
   val jimfs = "com.google.jimfs" % "jimfs" % "1.2"
 
   //--- Akka
-  val akkaVersion = "2.6.13"
+  val akkaVersion = "2.6.14"
   val akkaOrg = "com.typesafe.akka"
 
   val akkaActor = akkaOrg %% "akka-actor" % akkaVersion

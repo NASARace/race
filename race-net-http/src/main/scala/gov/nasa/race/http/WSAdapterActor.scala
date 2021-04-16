@@ -16,25 +16,23 @@
  */
 package gov.nasa.race.http
 
-import java.lang.Thread.sleep
-
 import akka.Done
 import akka.actor.{ActorRef, Cancellable}
 import akka.http.scaladsl.model.headers.{Authorization, BasicHttpCredentials}
-import akka.http.scaladsl.model.ws.{BinaryMessage, Message, TextMessage, WebSocketRequest}
+import akka.http.scaladsl.model.ws._
 import akka.http.scaladsl.model.{HttpHeader, StatusCodes}
 import akka.http.scaladsl.{ConnectionContext, Http}
 import akka.stream.Materializer
 import akka.stream.scaladsl.{Flow, Keep, Sink, Source, SourceQueueWithComplete}
-import com.typesafe.config.Config
-import gov.nasa.race._
 import gov.nasa.race.actor.FilteringPublisher
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.Messages.BusEvent
 import gov.nasa.race.core.SubscribingRaceActor
 
+import java.lang.Thread.sleep
+import scala.collection.mutable.{Map => MutMap}
+import scala.concurrent.Future
 import scala.concurrent.duration._
-import scala.concurrent.{Await, Future, TimeoutException}
 import scala.util.{Failure, Success}
 
 /**
@@ -74,38 +72,45 @@ object DefaultWsMessageWriter extends WsMessageWriter {
   }
 }
 
+/**
+  * this message can also be sent by external actors
+  */
+case class WsConnectRequest (uri: String)
 
 
 /**
-  * actor that connects to a websocket server, sends messages received from the bus to it and publishes
+  * actor trait that connects to a websocket server, sends messages received from the bus to it and publishes
   * websocket messages it gets from the server
+  *
+  * note that concrete types have to call one of the connect(..) methods explicitly (e.g. during
+  * onStartRaceActor) - this trait does not have any assumption as to when clients/subtypes are ready
   */
-class WSAdapterActor (val config: Config) extends FilteringPublisher with SubscribingRaceActor
-                                                                    with SourceQueueOwner with SSLContextUser {
-
-  case object RetryConnect
+trait WSAdapterActor extends FilteringPublisher with SubscribingRaceActor
+                                       with SourceQueueOwner with SSLContextUser {
+  //--- internal messages
+  case class WsConnectSuccess (uri: String, queue: SourceQueueWithComplete[Message])
+  case class WsConnectFailure (uri: String, cause: String)
+  case class WsClosed (uri: String)
+  case class WsCheckConnection (uri: String, dur: FiniteDuration)
 
   implicit val materializer: Materializer = Materializer.matFromSystem(context.system) // ?? do we want a shared materializer
   implicit val ec = scala.concurrent.ExecutionContext.global
 
   val http = Http(context.system)
 
-  val wsUrl = config.getVaultableString("ws-url")
-  val retryInterval = config.getFiniteDurationOrElse("retry-interval", 0.seconds) // 0 means we don't reconnect
-  var retrySchedule: Option[Cancellable] = None
-
-  val webSocketRequest = getWebSocketRequest
-  val connectionContext = getConnectionContext
-
-  var queue: Option[SourceQueueWithComplete[Message]] = None // set during RaceStart
-  var isConnected: Boolean = false
-
   // watch out - these are NOT thread safe
   protected var reader: WsMessageReader = createReader
   protected var writer: WsMessageWriter = createWriter
 
+  protected var connection: Option[WsConnectSuccess] = None
+  @inline final def isConnected: Boolean = connection.isDefined
+  @inline final def isConnectedTo (uri: String): Boolean = connection.isDefined && connection.get.uri == uri
+
+  protected val connectionChecks: MutMap[String,Cancellable] = MutMap.empty
+
   //--- end init
 
+  protected def getWsUri: Option[String] = config.getOptionalString("ws-uri")
 
   // default behavior is to check for configured readers/writers or otherwise just pass data as strings
 
@@ -120,6 +125,15 @@ class WSAdapterActor (val config: Config) extends FilteringPublisher with Subscr
     warning(msg)
   }
 
+  def cancelConnectionCheckFor (uri: String): Unit = {
+    connectionChecks.get(uri) match {
+      case Some(cancellable) =>
+        cancellable.cancel()
+        connectionChecks -= uri
+      case None => // nothing scheduled
+    }
+  }
+
   /**
     * override if messages should be filtered or translated
     */
@@ -129,18 +143,17 @@ class WSAdapterActor (val config: Config) extends FilteringPublisher with Subscr
   }
 
   protected def processOutgoingMessage (o: Any): Unit = {
-    ifSome(queue) { q => // no need to translate anything if we are not connected
+    if (isConnected){
+      val q = connection.get.queue
       writer.synchronized {
         writer.write(o) match {
           case Some(msg) =>
-            q.offer(msg).onComplete { res =>
-              res match {
-                case Success(_) => // all good (TODO should we check for Enqueued here?)
-                  info(s"message sent: $msg")
+            q.offer(msg).onComplete {
+              case Success(_) => // all good (TODO should we check for Enqueued here?)
+                info(s"message sent: $msg")
 
-                case Failure(_) =>
-                  handleSendFailure(s"message send failed: $msg")
-              }
+              case Failure(_) =>
+                handleSendFailure(s"message send failed: $msg")
             }
           case None =>
             info(s"ignore outgoing $o")
@@ -149,7 +162,136 @@ class WSAdapterActor (val config: Config) extends FilteringPublisher with Subscr
     }
   }
 
-  def getWebSocketRequest: WebSocketRequest = {
+  //--- connection/disconnection notifications - override in subclasses
+  def onConnect(): Unit = {}
+  def onDisconnect(): Unit = {}
+  def onConnectFailed (uri: String, cause: String): Unit = {}
+  def onConnectTimeout(uri: String, dur: FiniteDuration): Unit = {}
+
+
+  override def onTerminateRaceActor(originator: ActorRef): Boolean = {
+    connectionChecks.foreach( _._2.cancel())
+    connectionChecks.clear()
+
+    disconnect()
+
+    super.onTerminateRaceActor(originator)
+  }
+
+  def handleWsMessage: Receive = {
+    //case BusEvent(sel,msg,sender) => processOutgoingMessage(msg)
+
+    //--- internal messages
+    case m:WsConnectSuccess => handleWsConnectSuccess(m)
+    case m:WsConnectFailure => handleWsConnectFailure(m)
+    case m:WsClosed => handleWsClosed(m)
+    case WsConnectRequest(uri) => connect(uri)
+    case m:WsCheckConnection => handleWsCheckConnection(m)
+  }
+
+  def handleWsConnectSuccess(msg: WsConnectSuccess): Unit = {
+    if (!isConnected) {
+      cancelConnectionCheckFor(msg.uri)
+
+      info(s"websocket connected: ${msg.uri}")
+      // set this before the connection notification
+      connection = Some(msg)
+      onConnect()
+
+    } else { // this request did loose out to another one, cancel it
+      info(s"ignoring fallback connection to ${msg.uri}")
+      msg.queue.complete()
+    }
+  }
+
+  def handleWsConnectFailure (msg: WsConnectFailure): Unit = {
+    if (!isConnected) {
+      warning(s"websocket connect to ${msg.uri} failed: ${msg.cause}")
+      cancelConnectionCheckFor(msg.uri)
+      onConnectFailed(msg.uri, msg.cause)
+    } else {
+      info(s"ignoring websock connection failure to ${msg.uri}")
+    }
+  }
+
+  def handleWsClosed (msg: WsClosed): Unit = {
+    if (isConnectedTo(msg.uri)) {
+      info(s"connection to ${msg.uri} closed")
+      onDisconnect()
+      connection = None // set this *after* notification
+    } // else this wasn't the selected request - ignore
+  }
+
+  def handleWsCheckConnection (msg: WsCheckConnection): Unit = {
+    if (!isConnectedTo(msg.uri)) {
+      warning(s"websocket connect to ${msg.uri} timed out in ${msg.dur}")
+      onConnectTimeout(msg.uri, msg.dur)
+    }
+  }
+
+  /**
+    * convenience method that use a configured or sub-type provided URI
+    */
+  def connect(): Unit = {
+    if (!isConnected) {
+      getWsUri match {
+        case Some(uri) => connect(uri)
+        case None => warning("connect request ignored - no web socket uri")
+      }
+    } else warning(s"connect request ignored - already connected to ${connection.get.uri}")
+  }
+
+  /**
+    * subtypes should also override onConnectionDeadline(uri)
+    */
+  def connectWithCheck (uri: String, dur: FiniteDuration): Unit = {
+    info(s"trying to connect to $uri with timeout $dur")
+    connect(uri)
+    connectionChecks += (uri -> scheduler.scheduleOnce(dur,self,WsCheckConnection(uri,dur)))
+  }
+
+  /**
+    * this is the main method of WsAdapterActor that sends the WebSocketRequest
+    *
+    * it has to be called explicitly by concrete types, e.g. from their onStartRaceActor
+    */
+  def connect (uri: String): Unit = {
+    if (isConnected) {
+      warning(s"connect request to $uri ignored - already connected to ${connection.get.uri}")
+      return
+    }
+
+    val inbound: Sink[Message,Future[Done]] = Sink.foreach( processIncomingMessage)
+    val outbound: Source[Message, SourceQueueWithComplete[Message]] = createSourceQueue
+    val flow: Flow[Message,Message,(Future[Done],SourceQueueWithComplete[Message])] = Flow.fromSinkAndSourceCoupledMat(inbound,outbound)(Keep.both)
+
+    val webSocketRequest = getWebSocketRequest(uri)
+    val connectionContext = getConnectionContext(uri)
+
+    info(s"trying to connect to $uri ...")
+    val (future: Future[WebSocketUpgradeResponse], (closed: Future[Done],qMat: SourceQueueWithComplete[Message])) =
+      http.singleWebSocketRequest(webSocketRequest,flow,connectionContext=connectionContext)
+
+    closed.foreach( _ => self ! WsClosed(uri))
+
+    future.onComplete {
+      case Success(wsUpgradeResponse) =>
+        wsUpgradeResponse match {
+          case ValidUpgrade(response, _) =>
+            if (response.status == StatusCodes.SwitchingProtocols) { // success
+              self ! WsConnectSuccess(uri,qMat)
+            } else {
+              self ! WsConnectFailure(uri,s"response status: ${response.status}")
+            }
+          case InvalidUpgradeResponse(response,cause) =>
+            self ! WsConnectFailure(uri,cause)
+        }
+      case Failure(x) =>
+        self ! WsConnectFailure(uri,x.getMessage)
+    }
+  }
+
+  def getWebSocketRequest (wsUri: String) : WebSocketRequest = {
     var xhdrs = Seq.empty[HttpHeader]
     for (
       uid <- config.getOptionalVaultableString("uid");
@@ -158,18 +300,17 @@ class WSAdapterActor (val config: Config) extends FilteringPublisher with Subscr
       xhdrs = Seq(Authorization(BasicHttpCredentials(uid,pw)))
     }
 
-    WebSocketRequest(wsUrl,extraHeaders=xhdrs)
+    WebSocketRequest(wsUri,extraHeaders=xhdrs)
   }
 
-  def getConnectionContext: ConnectionContext = {
-    if (wsUrl.startsWith("wss://")) {
-
+  def getConnectionContext (wsUri: String): ConnectionContext = {
+    if (wsUri.startsWith("wss://")) {
       getSSLContext("client-keystore") match {
         case Some(sslContext) =>
-          info(s"using SSL config from client-keystore for $wsUrl")
+          info(s"using SSL config from client-keystore for $wsUri")
           ConnectionContext.httpsClient(sslContext)
         case None => // nothing to set, we go with the default (or what is configured for Akka)
-          info(s"using default connection context for $wsUrl")
+          info(s"using default connection context for $wsUri")
           http.defaultClientHttpsContext
       }
     } else {
@@ -177,130 +318,11 @@ class WSAdapterActor (val config: Config) extends FilteringPublisher with Subscr
     }
   }
 
-  //--- connection/disconnection callbacks - override in subclasses
-  def onConnect(): Unit = {}
-  def onDisconnect(): Unit = {}
-
-  def connect(): Future[Done.type] = {
-    if (isConnected) return Future { Done } // we don't treat this an an error
-
-    val inbound: Sink[Message,Future[Done]] = Sink.foreach( processIncomingMessage)
-    val outbound: Source[Message, SourceQueueWithComplete[Message]] = createSourceQueue
-    val flow: Flow[Message,Message,(Future[Done],SourceQueueWithComplete[Message])] = Flow.fromSinkAndSourceCoupledMat(inbound,outbound)(Keep.both)
-
-    retrySchedule = None
-
-    info(s"trying to connect to $wsUrl ...")
-    val (upgradeResponse, (closed,qMat)) = http.singleWebSocketRequest(webSocketRequest,flow,connectionContext=connectionContext)
-    queue = Some(qMat)
-
-    closed.foreach { _ =>
-      info(s"connection to $wsUrl closed by server")
-      onDisconnect()
-      isConnected = false
-    }
-
-    upgradeResponse.map { upgrade =>
-      if (upgrade.response.status == StatusCodes.SwitchingProtocols) {
-        info(s"websocket connected: $wsUrl")
-        onConnect()
-        isConnected = true
-        Done
-      } else {
-        //error(s"connection failed with ${upgrade.response.status}")
-        // TODO we should also report the response entity here
-        throw new RuntimeException(s"websocket connection to $wsUrl failed with: ${upgrade.response.status}")
-      }
-    }
-  }
-
-  def waitForConnection(): Boolean = {
-    val connected = connect()
-
-    try {
-      Await.result(connected, 5.seconds)
-      if (isConnected) {
-       true
-      } else {
-        error(s"start failed - no connection to $wsUrl")
-        false // should be already reported
-      }
-    } catch {
-      case t: Throwable =>
-        if (retryInterval.toMillis > 0) {
-          queue = None
-          warning(s"websocket connection to $wsUrl failed: ${t.getMessage}, retry in $retryInterval")
-          retrySchedule = Some(scheduler.scheduleOnce(retryInterval, self, RetryConnect))
-          true
-        } else {
-          error(s"websocket connection to $wsUrl failed: $t")
-          false
-        }
-    }
-  }
-
-  def reconnect(): Unit = {
-    if (isConnected) {
-      info("trying to reconnect")
-      ifSome(queue) { q =>
-        q.complete()
-        queue = None
-      }
-      onDisconnect()
-      isConnected = false
-      retrySchedule = Some(scheduler.scheduleOnce(retryInterval, self, RetryConnect))
-    }
-  }
-
-  def waitForDisconnect (nRetries: Int): Unit = {
-    val sleepMillis = 500
-    var i=0
-    while (i < nRetries) {
-      if (isConnected) sleep(sleepMillis)
-      i += 1
-    }
-    if (isConnected) {
-      warning(s"no disconnect in ${i * sleepMillis} ms")
-    } else {
-      info("disconnected")
-    }
-  }
-
   def disconnect(): Unit = {
-    retrySchedule.foreach( _.cancel())
-
-    // TODO - is this the right way to explicitly close a web socket connection from an akka-http client?
-    ifSome(queue){ _.complete() }
+    if (isConnected) {
+      info(s"disconnecting ${connection.get.uri}")
+      connection.get.queue.complete()
+      // TODO - should we clear 'connection' here or defer it to the handleWsClose (in which case we have to call onDisconnect notifications here)
+    }
   }
-
-  /**
-    * override this if we don't want to automatically connect upon RaceStart
-    */
-  def isReadyToConnect: Boolean = true
-
-  /**
-    * note it does not mean we are already connected if this returns true
-    * use onConnect() to trigger and post-connection processing
-    */
-  override def onStartRaceActor(originator: ActorRef): Boolean = {
-    if (super.onStartRaceActor(originator)) {
-      if (isReadyToConnect) {
-        connect()
-        true
-      } else true
-    } else false
-  }
-
-  override def onTerminateRaceActor(originator: ActorRef): Boolean = {
-    disconnect()
-    waitForDisconnect(5)
-
-    super.onTerminateRaceActor(originator)
-  }
-
-  override def handleMessage: Receive = {
-    case BusEvent(sel,msg,sender) => processOutgoingMessage(msg)
-    case RetryConnect => waitForConnection()
-  }
-
 }

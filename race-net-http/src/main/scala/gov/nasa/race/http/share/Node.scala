@@ -72,6 +72,9 @@ case class Node (
   def isOwnNode (nid: CharSequence): Boolean = id == nid
   def isUpstreamNode (nid: CharSequence): Boolean = upstreamId.isDefined && upstreamId.get == nid
 
+  def getUpstreamNodeInfo: Option[NodeInfo] =  upstreamId.flatMap(nodeList.upstreamNodes.get)
+
+
   def cellValue (colId: String, rowId: String): CellValue[_] = columnDatas(colId)(rowList(rowId))
 
   def apply (colId: String): ColumnData = columnDatas(colId)
@@ -218,13 +221,14 @@ case class Node (
   */
 object NodeInfo extends JsonConstants {
   //--- lexical constants
+  val PROTOCOL = asc("protocol")
   val HOST = asc("host")
   val PORT = asc("port")
   val ADDR_MASK = asc("addrMask")
 
   // for testing purposes
   def apply (id: String): NodeInfo = {
-    new NodeInfo(id, s"this is node $id", "", -1, InetAddressMatcher.allMatcher)
+    new NodeInfo(id, s"this is node $id", "", -1, "http", InetAddressMatcher.allMatcher)
   }
 }
 
@@ -232,7 +236,7 @@ object NodeInfo extends JsonConstants {
   * what we can store about a node
   * Note that host,port and addrMask are only used if we directly communicate with this node
   */
-case class NodeInfo (id: String, info: String, host: String, port: Int, addrMask: InetAddressMatcher) extends JsonSerializable {
+case class NodeInfo (id: String, info: String, host: String, port: Int, protocol: String, addrMask: InetAddressMatcher) extends JsonSerializable {
   import NodeInfo._
 
   def serializeTo (w: JsonWriter): Unit = {
@@ -241,8 +245,30 @@ case class NodeInfo (id: String, info: String, host: String, port: Int, addrMask
       w.writeStringMember(INFO,info)
       if (host.nonEmpty) w.writeStringMember(HOST,host)
       if (port >= 0) w.writeIntMember(PORT,port)
+      if (protocol.nonEmpty) w.writeStringMember(PROTOCOL,protocol)
       if (addrMask ne InetAddressMatcher.allMatcher) w.writeStringMember(ADDR_MASK,addrMask.toString)
     }
+  }
+
+  def getUri: Option[String] = {
+    if (host.nonEmpty) {
+      val sb = new StringBuilder
+
+      if (protocol.nonEmpty) {
+        sb.append(protocol)
+        if (!protocol.endsWith("://")) sb.append("://")
+      }
+
+      sb.append(host)
+
+      if (port >= 0) {
+        sb.append(':')
+        sb.append(port)
+      }
+
+      Some(sb.toString())
+
+    }  else None // no URI without at least a host spec
   }
 }
 
@@ -258,17 +284,19 @@ trait NodeInfoParser extends JsonPullParser {
     var info: String = ""
     var host: String = ""
     var port: Int = -1
+    var protocol: String = ""
     var addrMask: InetAddressMatcher = InetAddressMatcher.allMatcher
 
     foreachMemberInCurrentObject {
-      case ID   => id = quotedValue.toString
+      case ID   => id = quotedValue.toString  // has to be explicit since we can't resolve without assuming member order
       case INFO => info = quotedValue.toString
       case HOST => host = quotedValue.toString
       case PORT => port = unQuotedValue.toInt
+      case PROTOCOL => protocol = quotedValue.intern
       case ADDR_MASK   => addrMask = InetAddressMatcher(quotedValue.toString)
     }
 
-    NodeInfo(id,info,host,port,addrMask)
+    NodeInfo(id,info,host,port,protocol,addrMask)
   }
 }
 
@@ -487,7 +515,7 @@ trait NodeDatesParser extends JsonPullParser {
   // the member name has already been parsed
   def parseNodeDates(): Option[NodeDates] = {
     tryParse( x=> warning(s"malformed nodeDates: ${x.getMessage}") ) {
-      readNextObject {
+      readCurrentObject {
         var nodeId: String = null
         var roColumnDates = Seq.empty[ColumnDatePair]
         var rwColumnDates = Seq.empty[(String, Seq[RowDatePair])]
