@@ -16,6 +16,7 @@
  */
 package gov.nasa.race.http.share
 
+import gov.nasa.race.common.ConstAsciiSlice.asc
 import gov.nasa.race.common.{BufferedStringJsonPullParser, UnixPath}
 import gov.nasa.race.test.RaceSpec
 import org.scalatest.flatspec.AnyFlatSpec
@@ -29,12 +30,12 @@ class NodeDatesSpec extends AnyFlatSpec with RaceSpec {
     """{
       "nodeDates": {
         "id": "/nodes/node_2",
-        "readOnlyColumns": {
+        "columnDataDates": {
           "/columns/summary": 0,
           "/columns/column_1": 1593471960000,
           "/columns/column_4": 1593471964000
         },
-        "readWriteColumns": {
+        "columnDataRowDates": {
           "/columns/column_2": {
             "/data/cat_A": 1603752518526,
             "/data/cat_A/field_1": 1593471962500,
@@ -55,12 +56,14 @@ class NodeDatesSpec extends AnyFlatSpec with RaceSpec {
     val parser = new NSParser
     parser.initialize(input)
     val ns = parser.readNextObject {
-      parser.parseNodeDates().get
+      parser.readNextObjectMember(asc("nodeDates")) {
+        parser.parseNodeDates().get
+      }
     }
     println(ns)
     assert(ns.nodeId == "/nodes/node_2")
-    assert(ns.readOnlyColumns.size == 3)
-    assert(ns.readWriteColumns.size == 2)
+    assert(ns.columnDataDates.size == 3)
+    assert(ns.columnDataRowDates.size == 2)
     println("Ok.")
   }
 }

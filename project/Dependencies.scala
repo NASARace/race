@@ -55,7 +55,7 @@ object Dependencies {
   val scalaReflect =  "org.scala-lang" % "scala-reflect" % CommonRaceSettings.scalaVer
 
   //--- scalaTags HTML generator
-  val scalaTags = "com.lihaoyi" %% "scalatags" % "0.9.3"
+  val scalaTags = "com.lihaoyi" %% "scalatags" % "0.9.4"
 
   //--- scala automatic resource management (https://github.com/jsuereth/scala-arm)
   //val scalaArm = "com.jsuereth" %% "scala-arm" % "2.0"
@@ -116,7 +116,7 @@ object Dependencies {
   val jsch = "com.jcraft" % "jsch" % "0.1.55"
 
   //--- argon2 based password hashes ()
-  val argon2 = "de.mkammerer" % "argon2-jvm" % "2.9.1"
+  val argon2 = "de.mkammerer" % "argon2-jvm" % "2.10.1"
 
   //--- webauthn (FIDO2) server library (note this creates a transitive BouncyCastle dependency)
   val webauthn = "com.yubico" % "webauthn-server-core" % "1.8.0"
@@ -161,7 +161,7 @@ object Dependencies {
   val log4jOverSlf4j = "org.slf4j" % "log4j-over-slf4j" % "2.0.0-alpha1"
 
   //--- ZooKeeper
-  val zookeeper = "org.apache.zookeeper" % "zookeeper" % "3.6.2" excludeAll(
+  val zookeeper = "org.apache.zookeeper" % "zookeeper" % "3.7.0" excludeAll(
     ExclusionRule(organization = "log4j", name="log4j"),
     ExclusionRule(organization = "org.slf4j", name = "slf4j-log4j12")
   )

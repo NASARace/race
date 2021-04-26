@@ -786,6 +786,11 @@ abstract class JsonPullParser extends LogWriter with Thrower {
   def readCurrentStringArrayInto[T <:mutable.Growable[String]](collection: T): T = {
     foreachElementInCurrentArray(collection.addOne(quotedValue.toString)); collection
   }
+  def readCurrentStringArray(): Seq[String] = {
+    val buf = mutable.Buffer.empty[String]
+    foreachElementInCurrentArray(buf.addOne(quotedValue.toString))
+    buf.toSeq
+  }
 
   def readOptionalStringArrayMemberInto[T <:mutable.Growable[String]](name: ByteSlice, collection: =>T): Option[T] = {
     readOptionalArrayMemberInto(name,collection){ readQuotedValue().toString }

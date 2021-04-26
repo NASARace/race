@@ -88,9 +88,12 @@ class UpdateActor (val config: Config) extends SubscribingRaceActor with Publish
 
   override def handleMessage: Receive = {
     case BusEvent(_, cdc:ColumnDataChange, _) => processColumnDataChange(cdc)
-    case BusEvent(_, nrc: ColumnReachabilityChange, _) => processColumnReachability(nrc)
     case BusEvent(_, nrc: NodeReachabilityChange, _) => processNodeReachabilityChange(nrc)
-    case BusEvent(_, su: SelectUpstream, _) => processSelectUpstream(su)
+    case BusEvent(_, uc: UpstreamChange, _) => processUpstreamChange(uc)
+
+    //--- simulation and debugging
+    case "showOnlineNodes" => node.printOnlineNodes()
+    case "showColumnData" => node.printColumnData()
   }
 
   //--- initialization
@@ -196,7 +199,7 @@ class UpdateActor (val config: Config) extends SubscribingRaceActor with Publish
   }
 
   def updateNodeWithOnlines (newOnlineNodes: Set[String]): Unit = {
-    if (node.onlineNodes != newOnlineNodes) {
+    if (node.onlineNodes ne newOnlineNodes) {
       node = node.copy(onlineNodes = newOnlineNodes)
       publish(node)
     }
@@ -373,54 +376,32 @@ class UpdateActor (val config: Config) extends SubscribingRaceActor with Publish
   }
 
   /**
-    * this is a change in upstream or downstream columns while the relaying node is still isOnline
-    * Note - depending on column visibility - reachability is a transient property (the upstream from which we
-    * get a peer provider might be isOnline, but the upstream might have lost connection to the peer)
-    */
-  def processColumnReachability (cr: ColumnReachabilityChange): Unit = {
-    info(s"ColumnReachabilityChange: $cr")
-
-    // TBD
-  }
-
-  /**
     * this is a change in node reachability we detected locally (either from NSR or UC)
     * this is vetting the reported node is online and indeed changes reachability
     */
   def processNodeReachabilityChange (nrc: NodeReachabilityChange): Unit = {
-    val extNodeId = nrc.nodeId
-
-    if (node.isKnownNode(extNodeId)) {
-      val isOnline = node.onlineNodes.contains(extNodeId)
-      if (isOnline != nrc.isOnline) {
-        val newOnlines = if (isOnline) node.onlineNodes - extNodeId else node.onlineNodes + extNodeId
-        updateNodeWithOnlines(newOnlines)
-        publish(nrc)
-
-        // we also publish this as a ColumnReachabilityChange
-        val affectedColumnIds = node.columnIdsOwnedBy(extNodeId)
-        val crc = ColumnReachabilityChange( extNodeId, nrc.date, nrc.isOnline, affectedColumnIds)
-        publish(crc)
-      }
-
-    } else {
-      warning(s"ignoring reachability change of unknown node: $extNodeId")
+    val newOnlineNodes = node.onlineNodes ++ nrc.online -- nrc.offline
+    if (newOnlineNodes ne node.onlineNodes) {
+      updateNodeWithOnlines(newOnlineNodes)
+      // TODO - should we echo the known-node filtered NRC here ?
+      publish(nrc)
     }
   }
 
   /**
-    * notification that the upstream connector has selected a new upstream node
+    * notification that the upstream connector has selected a new upstream node or lost connection to the current one
     */
-  def processSelectUpstream (su: SelectUpstream): Unit = {
-    if (su.id.isDefined){
-      if (node.nodeList.upstreamNodes.get(su.id.get).isDefined){
-        updateNodeWithUpstream(su.id)
-      } else {
-        warning(s"rejected unknown upstream selection '${su.id.get}''")
-        updateNodeWithUpstream(None)
-      }
+  def processUpstreamChange(uc: UpstreamChange): Unit = {
+    if (uc.isOnline) {
+      updateNodeWithUpstream(Some(uc.id))
+      publish(uc)
     } else {
-      updateNodeWithUpstream(None)
+      if (node.isUpstreamId(uc.id)) {
+        updateNodeWithUpstream(None)
+        publish(uc)
+      } else {
+        warning(s"ignoring upstreamChange for non-selected node: $uc")
+      }
     }
   }
 }

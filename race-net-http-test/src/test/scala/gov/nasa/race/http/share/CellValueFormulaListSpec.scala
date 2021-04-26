@@ -48,7 +48,7 @@ class CellValueFormulaListSpec extends AnyFlatSpec with RaceSpec with NodeDepend
   "a CellExpressionParser" should "compile a FormulaList against a given Column and RowList" in {
 
     val nodeId = "/nodes/coordinator"
-    val dataDir = "race-net-http-test/src/resources/sites/share/data"
+    val dataDir = "race-net-http-test/src/resources/sites/share/data//coordinator"
     val node = getNode(nodeId, dataDir)
     val funcLib = new CellFunctionLibrary
 

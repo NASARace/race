@@ -62,13 +62,13 @@ case class ConstraintFormula (id: String, info: String, src: String,  expr: Bool
   def eval (ctx: EvalContext): Boolean = expr.eval(ctx)
 
   def serializeAsMemberObjectTo (w: JsonWriter): Unit = {
-    w.writeObject(id) { w=>
+    w.writeObjectMember(id) { w=>
       w.writeStringMember(ID,id)
       w.writeStringMember(INFO, info)
       w.writeStringMember(SRC,src)
       w.writeIntMember(LEVEL, level)
 
-      w.writeArray(ASSOC) { w=>
+      w.writeArrayMember(ASSOC) { w=>
         assoc.foreach { cr =>
           w.writeObject { w =>
             w.writeStringMember(COL, cr.colId)

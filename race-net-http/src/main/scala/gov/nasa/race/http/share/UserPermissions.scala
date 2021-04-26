@@ -33,9 +33,9 @@ object UserPermissions extends JsonConstants {
 
   def serializePermissions (w: JsonWriter, uid: String, perms: Seq[CellSpec]): String = {
     w.clear().writeObject( _
-      .writeObject( "userPermissions") { _
+      .writeObjectMember( "userPermissions") { _
         .writeStringMember("uid", uid)
-        .writeArray("permissions"){ w=>
+        .writeArrayMember("permissions"){ w=>
           perms.foreach { p=>
             w.writeObject { _
               .writeStringMember("colPattern", p.colPattern)

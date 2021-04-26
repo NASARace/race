@@ -18,129 +18,74 @@ package gov.nasa.race.http.share
 
 import gov.nasa.race.common.JsonSerializable
 import gov.nasa.race.core.Loggable
+import gov.nasa.race.uom.DateTime
 
 import scala.collection.mutable
 
 /**
-  * object that responds to remote NodeDates messages with a sequence of
-  *   - N ColumnDataChanges for each ColumnData that is outdated on remote
-  *   - 1 ColumnReachabilityChange for currently isOnline columns
-  *   - 1 NodeDates for outdated local ColumnData
-  *
-  * this class essentially implements the NodeDates sync protocol, which needs to be factored out since it is used
-  * by both the UpstreamConnectorActor and the NodeServerRoute.
-  *
-  * Sync is always initiated by the child node since the server does not (need to) know child node IP addresses
+  * mix-in that computes ColumnDataChanges for external NodeDates objects
   *
   */
 trait NodeDatesResponder {
 
-  /**
-    * get the series of replies that are required to sync the external NodeDates with our own data
-    * the exported function for which we exist
-    */
-  def getNodeDatesReplies (node: Node, extNodeId: String, extNodeDates: NodeDates, logger: Loggable): Seq[JsonSerializable] = {
-    //-- where we collect the reply data
-    val extOutdated = mutable.Buffer.empty[ColumnDatePair] // CDs outdated on the remote node
-    val ownOutdated = mutable.Buffer.empty[(String,Seq[RowDatePair])] // CD rows outdated on the local node
-    val cdRowsToSend = mutable.Buffer.empty[(String,Seq[CellPair])]
-
-    // for the given external readonly CD dates, accumulate the set of outdated own CDs and newer own CD rows to send.
-    // since the other side only receives those CDs we only have to go row-by-row for the outdated external CDs we
-    // write and send to the external
-    def processExternalReadOnlyCDs(): Unit = {
-      extNodeDates.readOnlyColumns.foreach { e=>
-        val (colId, colDate) = e
-
-        node.columnDatas.get(colId) match {
-          case Some(cd) =>
-            val col = node.columnList(colId)  // if we have a CD it also means we have a column for it
-
-            if (colDate < cd.date) { // our data is newer
-              if (col.send.matches(extNodeId,col.owner,node)) { // this is a column we write so we have to reply with all newer rows
-                val cells = cd.changesSince(colDate,false).filter { cell=>
-                  val row = node.rowList(cell._1)
-                  row.send.matches(extNodeId, col.owner, node)
-                } // TODO - equal date prioritization ?
-                if (cells.nonEmpty) cdRowsToSend += (colId -> cells)
-              }
-              // otherwise we only receive this column and in this case the other node will send updates to our NodeDates reply
-
-            } else if (colDate > cd.date) { // remote data is newer
-              if (col.receive.matches(extNodeId,col.owner,node)) {
-                extOutdated += (colId -> cd.date)
-              }
+  def getColumnDataChange (extNodeId: String, colId: String, extDate: DateTime)(implicit node: Node): Option[ColumnDataChange] = {
+    node.columnList.get(colId).flatMap { col=>
+      if (col.isSentTo(extNodeId)) {
+        node.columnDatas.get(colId).flatMap { cd=>
+          val cvs = cd.filteredCellPairs{ (rowId,cv) =>
+            node.rowList.get(rowId) match {
+              case Some(row) => (cv.date > extDate) && row.isSentTo(extNodeId)(node,col)
+              case None => false // unknown row
             }
-          // since we only receive and don't modify this CD equal timestamps are treated as up-to-date
-
-          case None => // we don't know this remote column
-            logger.warning(s"unknown column ${e._1}")
+          }
+          if (cvs.nonEmpty) Some( ColumnDataChange(colId, node.id, cd.date, cvs) ) else None
         }
-      }
+      } else None // we don't send this column to extNodeId
     }
+  }
 
-    // for the given external read-write CD rows, accumulate the set of outdated own CDs and newer own CD rows to send
-    def processExternalReadWriteCdRows(): Unit = {
-      extNodeDates.readWriteColumns.foreach { e=>
-        val (colId,rowDates) = e
+  def getColumnDataRowChange (extNodeId: String, colId: String, extCvDates: Seq[(String,DateTime)])(implicit node: Node): Option[ColumnDataChange] = {
+    node.columnList.get(colId).flatMap { col=>
+      if (col.isSentTo(extNodeId)) {
+        node.columnDatas.get(colId).flatMap { cd=>
+          val seenRows = mutable.Set.empty[String]
+          val cvs = mutable.Buffer.empty[CellPair]
 
-        node.columnDatas.get(colId) match {
-          case Some(cd) =>
-            val col = node.columnList(colId) // if we have a CD it also means we have a column for it
-            val prioritizeOwn = col.owner == node.id  // it's our column
-            val addMissing = true
+          //--- add external node CVs that are outdated
+          extCvDates.foreach { e=>
+            val rowId = e._1
+            val extDate = e._2
+            seenRows += rowId
 
-            if (col.send.matches(extNodeId,col.owner,node)) {
-              val noc = cd.newerOwnCells(rowDates, addMissing, prioritizeOwn).filter { cell=>
-                val row = node.rowList(cell._1)
-                row.send.matches(extNodeId,col.owner,node)
+            node.rowList.get(rowId).foreach { row=>
+              cd.get(rowId).foreach { cv=>
+                  if (cv.date > extDate && row.isSentTo(extNodeId)(node,col)) cvs += (rowId -> cv)
               }
-              if (noc.nonEmpty) cdRowsToSend += (colId -> noc)
             }
+          }
 
-            if (col.receive.matches(extNodeId,col.owner,node)) {
-              val ooc = cd.outdatedOwnCells(rowDates, !prioritizeOwn).filter { rd=>
-                val row = node.rowList(rd._1)
-                row.receive.matches(extNodeId,col.owner,node)
+          //--- add external node CVs that are missing
+          cd.foreach { (rowId,cv) =>
+            if (!seenRows.contains(rowId)) {
+              node.rowList.get(rowId).foreach { row=>
+                if (row.isSentTo(extNodeId)(node,col)) cvs += (rowId -> cv)
               }
-              if (ooc.nonEmpty) ownOutdated += (colId -> ooc)
             }
+          }
 
-          case None => // we don't know this remote column
-            logger.warning(s"unknown column ${e._1}")
+          if (cvs.nonEmpty) Some( ColumnDataChange(colId, node.id, cd.date, cvs.toSeq) ) else None
         }
-      }
+      } else None // we don't send this column to extNodeId
     }
+  }
 
-    def onlineColumnIds: Seq[String] = {
-      node.onlineColumns.filter( col=> col.send.matches(extNodeId,col.owner,node)).map(_.id)
-    }
+  def getColumnDataChanges (extNodeDates: NodeDates, node: Node): Seq[ColumnDataChange] = {
+    val newerOwn: mutable.Buffer[ColumnDataChange] = mutable.Buffer.empty
+    val extNodeId = extNodeDates.nodeId
 
+    extNodeDates.columnDataDates.foreach( e=> getColumnDataChange(extNodeId,e._1,e._2)(node).foreach(newerOwn.addOne))
+    extNodeDates.columnDataRowDates.foreach( e=> getColumnDataRowChange(extNodeId,e._1,e._2)(node).foreach(newerOwn.addOne))
 
-    if (node.isKnownNode(extNodeDates.nodeId)) {
-      // this computes the reply data
-      processExternalReadOnlyCDs()
-      processExternalReadWriteCdRows()
-
-      // TODO - what about CDs we export to remote that are not in the NS? (indicates outdated CLs)
-
-      val replies = mutable.ArrayBuffer.empty[JsonSerializable] // we send json objects
-
-      cdRowsToSend.foreach { e=>
-        val (colId,cells) = e
-        replies += ColumnDataChange( colId, node.id, node.columnDatas(colId).date, cells)
-      }
-
-      replies += ColumnReachabilityChange.online(node.id, node.currentDateTime, onlineColumnIds)
-
-      // we send the own NodeDates last as the handshake terminator (even if there are no outdated own CDs)
-      replies += NodeDates(node, extOutdated.toSeq, ownOutdated.toSeq)
-
-      replies.toSeq
-
-    } else {
-      logger.warning(s"rejecting NodeDates from unknown node ${extNodeDates.nodeId}")
-      Seq.empty[JsonSerializable]
-    }
+    newerOwn.toSeq
   }
 }

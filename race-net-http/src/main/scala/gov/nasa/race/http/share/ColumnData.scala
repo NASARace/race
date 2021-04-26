@@ -77,10 +77,10 @@ case class ColumnData (id: String, date: DateTime, values: Map[String,CellValue[
 
   private def _serializeTo (w: JsonWriter)(valueSerializer: JsonWriter=>Unit): Unit = {
     w.clear().writeObject( _
-      .writeObject("columnData") { _
+      .writeObjectMember("columnData") { _
         .writeStringMember(ID, id.toString)
         .writeDateTimeMember(DATE, date)
-        .writeObject(ROWS) { w => valueSerializer(w) }
+        .writeObjectMember(ROWS) { w => valueSerializer(w) }
       }
     )
   }
@@ -193,13 +193,16 @@ case class ColumnData (id: String, date: DateTime, values: Map[String,CellValue[
 
   /**
     * return Seq of cell pairs changed since a reference date
-    * note - result not ordered
     */
   def changesSince (refDate: DateTime, prioritizeOwn: Boolean): Seq[CellPair] = {
-    values.foldLeft(Seq.empty[CellPair]) { (acc, e) =>
+    values.foldRight(Seq.empty[CellPair]) { (e,acc) =>
       val ownCv = e._2
       if (ownCv.date > refDate || (prioritizeOwn && (ownCv.date == refDate))) e +: acc else acc
     }
+  }
+
+  def filteredCellPairs (p: (String,CellValue[_])=>Boolean): Seq[CellPair] = {
+    values.foldRight(Seq.empty[CellPair]) { (e,acc) => if (p(e._1,e._2)) e +: acc else acc }
   }
 
   /**
@@ -389,11 +392,11 @@ case class ColumnDataChange(columnId: String,
   /** order of fieldValues should not matter */
   def serializeTo (w: JsonWriter): Unit = {
     w.clear().writeObject { _
-      .writeObject(COLUMN_DATA_CHANGE) { _
+      .writeObjectMember(COLUMN_DATA_CHANGE) { _
         .writeStringMember(COLUMN_ID, columnId.toString)
         .writeStringMember(CHANGE_NODE_ID, changeNodeId.toString)
         .writeDateTimeMember(DATE, date)
-        .writeObject(CHANGED_VALUES) { w =>
+        .writeObjectMember(CHANGED_VALUES) { w =>
           changedValues.foreach { fv =>
             w.writeMemberName(fv._1.toString)
             val wasFormatted = w.format(false) // print this dense no matter what

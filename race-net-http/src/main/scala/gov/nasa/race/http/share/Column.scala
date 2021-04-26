@@ -49,9 +49,26 @@ case class Column (id: String, info: String, owner: String, send: NodeMatcher, r
       w.writeStringMember(OWNER,owner)
       w.writeStringMember(RECEIVE, receive.pattern)
       w.writeStringMember(SEND, send.pattern)
-      if (attrs.nonEmpty) w.writeStringArray(ATTRS, attrs)
+      if (attrs.nonEmpty) w.writeStringArrayMember(ATTRS, attrs)
     }
   }
+
+  /**
+    * serialize without send/receive filters, only id, info and owner
+    */
+  def shortSerializeTo (w: JsonWriter): Unit = {
+    w.writeObject { w=>
+      w.writeStringMember(ID, id)
+      w.writeStringMember(INFO, info)
+      w.writeStringMember(OWNER,owner)
+      if (attrs.nonEmpty) w.writeStringArrayMember(ATTRS, attrs)
+    }
+  }
+
+  def isSentTo (nodeId: String)(implicit node: Node): Boolean = send.matches(nodeId)(node,Some(owner))
+  def isReceivedFrom (nodeId: String)(implicit node: Node): Boolean = receive.matches(nodeId)(node,Some(owner))
+
+  def isOnlyReceivedFromUpstream: Boolean = receive eq NodeMatcher.upMatcher
 }
 
 
@@ -100,20 +117,23 @@ object ColumnList extends JsonConstants {
 case class ColumnList (id: String, info: String, date: DateTime, columns: SeqMap[String,Column]) extends JsonSerializable {
   import ColumnList._
 
-  def serializeTo (w: JsonWriter): Unit = {
+  def _serializeTo (w: JsonWriter)(serializeColumn: (Column,JsonWriter)=>Unit): Unit = {
     w.clear().writeObject(
-      _.writeObject(COLUMN_LIST) {
+      _.writeObjectMember(COLUMN_LIST) {
         _.writeStringMember(ID, id.toString)
           .writeStringMember(INFO, info)
           .writeDateTimeMember(DATE, date)
-          .writeArray(COLUMNS) { w =>
+          .writeArrayMember(COLUMNS) { w =>
             for (col <- columns.valuesIterator) {
-              col.serializeTo(w)
+              serializeColumn(col,w)
             }
           }
       }
     )
   }
+
+  def serializeTo (w: JsonWriter): Unit = _serializeTo(w)( (col,w) => col.serializeTo(w))
+  def shortSerializeTo (w: JsonWriter): Unit = _serializeTo(w)( (col,w) => col.shortSerializeTo(w))
 
   //--- (some) list/map forwarders
   def size: Int = columns.size
@@ -146,6 +166,7 @@ case class ColumnList (id: String, info: String, date: DateTime, columns: SeqMap
     val regex = Glob.resolvedGlob2Regex(globPattern, id)
     columns.foldRight(Seq.empty[Column]){ (e,list) => if (regex.matches(e._1)) e._2 +: list else list }
   }
+
 }
 
 /**
@@ -198,12 +219,12 @@ class ColumnListParser (nodeId: String) extends UTF8JsonPullParser with ColumnPa
 
 
 /**
-  * columnReachabilityChange: { nodeId: <id>, date: <epoch>, isOnline: <bool>, columns: [ <id>...] }
+  * columnReachabilityChange: { id: <id>, date: <epoch>, isOnline: <bool>, columns: [ <id>...] }
   */
 
 object ColumnReachabilityChange {
   val COL_REACHABILITY_CHANGE = asc("columnReachabilityChange")
-  val NODE_ID = asc("nodeId")
+  val NODE_ID = asc("id")
   val DATE = asc("date")
   val IS_ONLINE = asc("isOnline")
   val COLUMNS = asc("columns")
@@ -225,11 +246,11 @@ case class ColumnReachabilityChange (nodeId: String, // the node that reports th
 
   override def serializeTo(w: JsonWriter): Unit = {
     w.clear().writeObject { _
-      .writeObject(COL_REACHABILITY_CHANGE) { _
+      .writeObjectMember(COL_REACHABILITY_CHANGE) { _
         .writeStringMember(NODE_ID, nodeId)
         .writeDateTimeMember(DATE, date)
         .writeBooleanMember(IS_ONLINE, isOnline)
-        .writeStringArray(COLUMNS, columns)
+        .writeStringArrayMember(COLUMNS, columns)
       }
     }
   }

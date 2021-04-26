@@ -17,7 +17,7 @@
 package gov.nasa.race.http
 
 import gov.nasa.race.common.ConstAsciiSlice.asc
-import gov.nasa.race.common.{ByteSlice, JsonPullParser}
+import gov.nasa.race.common.{ByteSlice, JsonPullParser, JsonSerializable, JsonWriter}
 import gov.nasa.race.uom.DateTime
 
 import scala.collection.mutable
@@ -64,8 +64,25 @@ package object share {
     val ROWS = asc("rows")
     val COLUMNS = asc("columns")
     val VALUE = asc("value")
+
+    val NODE_IDS = asc("nodeIds")
+    val IS_ONLINE = asc("isOnline")
   }
 
-  // event to indicate we have selected an upstream. Sent from UpstreamConnector, processed by Updater to update Node
-  case class SelectUpstream (id: Option[String])
+  object UpstreamChange {
+    def online (id: String) = UpstreamChange(id,true)
+    def offline (id: String) = UpstreamChange(id,false)
+  }
+
+  // event to indicate we have a new upstream selection. if isOnline == false we don't have an upstream connection
+  case class UpstreamChange (id: String, isOnline: Boolean) extends JsonSerializable {
+    def serializeTo (w: JsonWriter): Unit = {
+      w.clear().writeObject {_
+        .writeObjectMember("upstreamChange") {_
+          .writeStringMember("id", id)
+          .writeBooleanMember("isOnline", isOnline)
+        }
+      }
+    }
+  }
 }

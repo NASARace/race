@@ -25,12 +25,12 @@ main.setWidth = function setWidth() {
 
 main.identifyUser = function identifyUser(event) {
   if (event.key=="Enter") {
-    share.setEditable();
+    share.requestUserPermissions();
   }
 }
 
 main.setEditable = function setEditable() {
-  share.setEditable();
+  share.requestUserPermissions();
 }
 
 main.setReadOnly = function setReadOnly() {
@@ -73,8 +73,12 @@ main.setRowBlurred = function setRowBlurred(event) {
   share.setRowBlurred(event);
 }
 
+main.highlightCell = function highlightCell(event,colIdx,rowIdx,isSelected) {
+  share.highlightCell(event,colIdx,rowIdx,isSelected);
+}
+
 main.clickCell = function clickCell (event,colIdx,rowIdx) {
-  share.clickCell(event,colIdx,rowIdx);
+  share.showCellInfo(event,colIdx,rowIdx);
 }
 
 window.main = main; // make it global so that we can reference from HTML

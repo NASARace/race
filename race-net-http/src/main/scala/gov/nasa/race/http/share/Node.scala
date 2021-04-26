@@ -22,6 +22,7 @@ import gov.nasa.race.uom.DateTime
 import gov.nasa.race.util.StringUtils
 
 import scala.collection.immutable.{ListMap, SeqMap}
+import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 
 object Node {
@@ -70,7 +71,7 @@ case class Node (
   def isKnownRow(rid: String): Boolean = rowList.rows.contains(rid)
 
   def isOwnNode (nid: CharSequence): Boolean = id == nid
-  def isUpstreamNode (nid: CharSequence): Boolean = upstreamId.isDefined && upstreamId.get == nid
+  def isUpstreamId(nid: CharSequence): Boolean = upstreamId.isDefined && upstreamId.get == nid
 
   def getUpstreamNodeInfo: Option[NodeInfo] =  upstreamId.flatMap(nodeList.upstreamNodes.get)
 
@@ -131,12 +132,23 @@ case class Node (
 
   //--- column ownership (this needs to be here to support abstract owners)
 
+  def isOwnColumn(colId: String): Boolean = {
+    columnList.columns.get(colId) match {
+      case Some(col) => isColumnOwner(col,id)
+      case None => false
+    }
+  }
+
   def isColumnOwner(col: Column, nodeId: String): Boolean = {
     col.owner match {
       case "<self>" | "." => nodeId == id
       case "<up>" => upstreamId.isDefined && nodeId == upstreamId.get
       case owner => nodeId == owner
     }
+  }
+
+  def columnOwner (colId: String): Option[String] = {
+    columnList.get(colId).map(columnOwner)
   }
 
   def columnOwner (col: Column): String = {
@@ -159,6 +171,77 @@ case class Node (
       val col = e._2
       if (isColumnOwner(col, nodeId)) col.id +: acc else acc
     }
+  }
+
+  //--- send/receive filters
+
+  def foreachColumnReceivedFrom (nodeId: String)(f: Column=>Unit): Unit = {
+    columnList.columns.foreach { e=>
+      val col = e._2
+      if (col.isReceivedFrom(nodeId)(this)) f(col)
+    }
+  }
+
+  def columnsReceivedFrom (nodeId: String): Seq[Column] = {
+    columnList.columns.foldRight(Seq.empty[Column]) { (e,acc)=>
+      val col = e._2
+      if (col.isReceivedFrom(nodeId)(this)) col +: acc else acc
+    }
+  }
+
+  def columnsSentTo (nodeId: String): Seq[Column] = {
+    columnList.columns.foldRight(Seq.empty[Column]) { (e,acc)=>
+      val col = e._2
+      if (col.isSentTo(nodeId)(this)) col +: acc else acc
+    }
+  }
+
+  def foreachRowSentTo (nodeId: String, col: Column)(f: Row[_]=>Unit): Unit = {
+    rowList.rows.foreach { e=>
+      val row = e._2
+      if (row.isSentTo(nodeId)(this,col)) f(row)
+    }
+  }
+
+  def columnRowsSentTo (nodeId: String, col: Column): Seq[Row[_]] = {
+    if (col.isSentTo(nodeId)(this)) {
+      rowList.rows.foldRight( Seq.empty[Row[_]]) { (e,acc)=>
+        val row = e._2
+        if (row.isSentTo(nodeId)(this,col)) row +: acc else acc
+      }
+    } else Seq.empty[Row[_]]
+  }
+
+  //--- node date creation
+
+  def nodeDatesFor (nodeId: String, date: DateTime = currentDateTime): NodeDates = {
+    val columnDataDates = mutable.Buffer.empty[ColumnDatePair]
+    val columnDataRowDates = mutable.Buffer.empty[(String,Seq[RowDatePair])]
+
+    foreachColumnReceivedFrom(nodeId) { col=>
+      if (col.isSentTo(nodeId)(this)) { // both id and we write this data, we need CD row dates
+        columnDatas.get(col.id) match {
+          case Some(cd) =>
+            val rdps = mutable.Buffer.empty[RowDatePair]
+            foreachRowSentTo(nodeId, col) { row=>
+              cd.get(row.id) match {
+                case Some(cv) => rdps += (row.id -> cv.date)
+                case None => rdps += (row.id -> DateTime.Date0)
+              }
+            }
+            columnDataRowDates += (col.id -> rdps.toSeq)
+          case None =>
+            columnDataRowDates += (col.id -> columnRowsSentTo(nodeId,col).map( row=> (row.id, DateTime.Date0)))
+        }
+      } else { // we only receive this column, CD date will suffice
+        columnDatas.get(col.id) match {
+          case Some(cd) => columnDataDates += (col.id -> cd.date)
+          case None => columnDataDates += (col.id -> DateTime.Date0)
+        }
+      }
+    }
+
+    NodeDates( id, date, columnDataDates.toSeq, columnDataRowDates.toSeq)
   }
 
   //--- reachability
@@ -187,31 +270,70 @@ case class Node (
     }
   }
 
+  def onlineColumnIdsFor (nodeId: String): Seq[String] = {
+    columnList.columns.foldRight(Seq.empty[String]){ (e,acc) =>
+      val col = e._2
+      if (onlineNodes.contains(resolveOwner(col.owner)) && col.isSentTo(nodeId)(this)) col.id +: acc else acc
+    }
+  }
+
+  def onlineDownstreamIds: Seq[String] = nodeList.downstreamIds.filter( onlineNodes.contains)
+
+  /**
+    * filter reachability changes we receive from upstream to our defined peer nodes
+    * this happens in the UC
+    */
+  def getPeerReachabilityChange (nrc: NodeReachabilityChange): Option[NodeReachabilityChange] = nrc.filter(nodeList.peerNodes.contains)
+
+
+  /**
+    * filter reachabilityChanges to downstream nodes
+    * this happens in the NSR
+    */
+  def getDownstreamReachabilityChange (nrc: NodeReachabilityChange): Option[NodeReachabilityChange] = nrc.filter(nodeList.downstreamNodes.contains)
+
+  def onlinePeerIds: Seq[String] = nodeList.peerIds.filter( onlineNodes.contains)
+
+  //--- misc
+
+  def resolveOwner (owner: String): String = {
+    if (owner == "<self>" || owner == ".") id
+    else if (owner == "<up>") upstreamId.getOrElse("")
+    else owner
+  }
+
   //--- debugging
 
   def printColumnData(): Unit = {
-    print("row                  |")
-    columnList.foreach { col=> print(f"${PathIdentifier.name(col.id)}%15.15s |") }
+    print("row                  │")
+    columnList.foreach { col=> print(f"${PathIdentifier.name(col.id)}%15.15s │") }
     println()
-    print("---------------------+") // row name
-    var i = columnList.size
-    while (i > 0) { print("----------------+"); i-= 1 }
+    print("━━━━━━━━━━━━━━━━━━━━━┿")
+    var i = columnList.size-1
+    while (i > 0) { print("━━━━━━━━━━━━━━━━┿"); i-= 1 }
+    print("━━━━━━━━━━━━━━━━┥")
     println()
 
     rowList.foreach { row =>
-      print(f"${StringUtils.maxSuffix(row.id,20)}%-20.20s |")
+      print(f"${StringUtils.maxSuffix(row.id,20)}%-20.20s │")
+
       columnList.foreach { col =>
         columnDatas.get(col.id) match {
           case Some(cd) =>
             cd.get(row.id) match {
-              case Some(cv) =>  print(f"${cv.valueToString}%15.15s |")
-              case None => print("              - |")
+              case Some(cv) =>  print(f"${cv.valueToString}%15.15s │")
+              case None => print("              - │")
             }
-          case None => print("              - |")
+          case None => print("              - │")
         }
       }
       println()
     }
+  }
+
+  def printOnlineNodes(): Unit = {
+    println("online nodes")
+    onlineNodes.foreach(n=> println(s"  $n"))
   }
 }
 
@@ -247,6 +369,16 @@ case class NodeInfo (id: String, info: String, host: String, port: Int, protocol
       if (port >= 0) w.writeIntMember(PORT,port)
       if (protocol.nonEmpty) w.writeStringMember(PROTOCOL,protocol)
       if (addrMask ne InetAddressMatcher.allMatcher) w.writeStringMember(ADDR_MASK,addrMask.toString)
+    }
+  }
+
+  /**
+    * serialize without connectivity data, only id and info
+    */
+  def shortSerializeTo (w: JsonWriter): Unit = {
+    w.writeObject { _ =>
+      w.writeStringMember(ID,id)
+      w.writeStringMember(INFO,info)
     }
   }
 
@@ -341,33 +473,41 @@ import NodeList._
     upstreamNodes.contains(nid) || peerNodes.contains(nid) || downstreamNodes.contains(nid) || (nid == id)
   }
 
-  def downStreamIds: Seq[String] = downstreamNodes.keys.toSeq
+  def downstreamIds: Seq[String] = downstreamNodes.keys.toSeq
 
-  def serializeTo (w: JsonWriter): Unit = {
+  def peerIds: Seq[String] = peerNodes.keys.toSeq
+
+  def _serializeTo (w: JsonWriter)(serializeNodeInfo: (NodeInfo,JsonWriter)=>Unit): Unit = {
     w.clear().writeObject { _
-      .writeObject(NODE_LIST) { _
+      .writeObjectMember(NODE_LIST) { _
         .writeStringMember(ID, id)
         .writeStringMember(INFO, info)
         .writeDateTimeMember(DATE, date)
-        .writeObject(SELF){ w=> self.serializeTo(w) }
-        .writeArray(UPSTREAM) { w =>
+
+        .writeMember(SELF){ w=>
+          serializeNodeInfo(self,w)
+        }
+        .writeArrayMember(UPSTREAM) { w =>
           for (nodeInfo <- upstreamNodes.valuesIterator) {
-            nodeInfo.serializeTo(w)
+            serializeNodeInfo(nodeInfo,w)
           }
         }
-        .writeArray(PEER) { w =>
+        .writeArrayMember(PEER) { w =>
           for (nodeInfo <- peerNodes.valuesIterator) {
-            nodeInfo.serializeTo(w)
+            serializeNodeInfo(nodeInfo,w)
           }
         }
-        .writeArray(DOWNSTREAM) { w =>
+        .writeArrayMember(DOWNSTREAM) { w =>
           for (nodeInfo <- downstreamNodes.valuesIterator) {
-            nodeInfo.serializeTo(w)
+            serializeNodeInfo(nodeInfo,w)
           }
         }
       }
     }
   }
+
+  def serializeTo (w: JsonWriter): Unit = _serializeTo(w)( (ni,w)=> ni.serializeTo(w))
+  def shortSerializeTo (w: JsonWriter): Unit = _serializeTo(w)( (ni,w)=> ni.shortSerializeTo(w))
 }
 
 class NodeListParser extends UTF8JsonPullParser with NodeInfoParser {
@@ -428,50 +568,47 @@ object NodeDates extends JsonConstants {
   //--- lexical constants
   val NODE_DATES : ConstAsciiSlice = asc("nodeDates")
 
-  val RO_COLUMNS : ConstAsciiSlice = asc("readOnlyColumns")
-  val RW_COLUMNS : ConstAsciiSlice = asc("readWriteColumns")
+  val RO_COLUMNS : ConstAsciiSlice = asc("columnDataDates")
+  val RW_COLUMNS : ConstAsciiSlice = asc("columnDataRowDates")
 
   def apply (node: Node, externalColumnDates: Seq[ColumnDatePair], localColumnDates: Seq[(String,Seq[RowDatePair])]) = {
-    new NodeDates(node.id, externalColumnDates, localColumnDates)
+    new NodeDates(node.id, node.currentDateTime, externalColumnDates, localColumnDates)
   }
 }
 
 /**
-  * site specific snapshot of local catalog and provider data dates (last modifications)
+  * receiver specific snapshot of ColumnData and ColumnData row dates
   *
-  * we distinguish between external and locally modified columns. The former we don't write on this node and hence only
-  * get them through our upstream (a single update date will suffice to determine what the external needs to send to
-  * update).
-  * The ColumnData rows we produce ourselves could be modified concurrently between us and upstream, hence we need the
-  * cell dates, i.e. check row-by-row
+  * for Columns we only send to the external node we just need the (high watermark) ColumnData date
   *
-  * this class and (our own) Node is basically the data model for node synchronization, the dynamic part of it being
-  * factored out into NodeDatesResponder
+  * for Columns we both send to and receive from the external node we need the row dates of the ColumnData
   */
-case class NodeDates ( nodeId: String,
-                       readOnlyColumns: Seq[ColumnDatePair], // for external columns we only need the CD date
-                       readWriteColumns: Seq[(String,Seq[RowDatePair])] // for locally written columns we need the CD row dates
+case class NodeDates (nodeId: String,
+                      date: DateTime,
+                      columnDataDates: Seq[ColumnDatePair],
+                      columnDataRowDates: Seq[(String,Seq[RowDatePair])]
                      ) extends JsonSerializable {
   import NodeDates._
 
   def serializeTo (w: JsonWriter): Unit = {
     w.clear().writeObject {_
-      .writeObject(NODE_DATES) {_
+      .writeObjectMember(NODE_DATES) {_
         .writeStringMember(ID, nodeId)
+        .writeDateTimeMember(DATE, date)
 
-        // "readOnlyColumns": { "<column-id>": <date>, ... }
-        .writeObject(RO_COLUMNS) { w =>
-          readOnlyColumns.foreach { e =>
+        // "columnDataDates": { "<column-id>": <date>, ... }
+        .writeObjectMember(RO_COLUMNS) { w =>
+          columnDataDates.foreach { e =>
             w.writeDateTimeMember(e._1, e._2)
           }
         }
 
-        // "readWriteColumns": { "<column-id>": { "<row-id>": <date>, ... }, ... }
-        .writeObject(RW_COLUMNS) { w =>
-          readWriteColumns.foreach { e =>
+        // "columnDataRowDates": { "<column-id>": { "<row-id>": <date>, ... }, ... }
+        .writeObjectMember(RW_COLUMNS) { w =>
+          columnDataRowDates.foreach { e =>
             val (colId,rowDates) = e
 
-            w.writeObject(colId) { w=>
+            w.writeObjectMember(colId) { w=>
               rowDates.foreach { cvd =>
                 w.writeDateTimeMember(cvd._1, cvd._2)
               }
@@ -517,40 +654,86 @@ trait NodeDatesParser extends JsonPullParser {
     tryParse( x=> warning(s"malformed nodeDates: ${x.getMessage}") ) {
       readCurrentObject {
         var nodeId: String = null
+        var date = DateTime.UndefinedDateTime
         var roColumnDates = Seq.empty[ColumnDatePair]
         var rwColumnDates = Seq.empty[(String, Seq[RowDatePair])]
 
         foreachMemberInCurrentObject {
           case ID => nodeId = quotedValue.toString
+          case DATE => date = dateTimeValue
           case RO_COLUMNS => roColumnDates = readCurrentObject( readROcolumns() )
           case RW_COLUMNS => rwColumnDates = readCurrentObject( readRWColumns() )
         }
 
         if (nodeId == null) throw exception("no node id")
-        NodeDates(nodeId, roColumnDates, rwColumnDates)
+        NodeDates(nodeId, date, roColumnDates, rwColumnDates)
       }
     }
   }
 }
 
-object NodeReachabilityChange {
-  def online (nodeId: String, date: DateTime) = NodeReachabilityChange( nodeId, date, true)
-  def offline (nodeId: String, date: DateTime) = NodeReachabilityChange( nodeId, date, false)
+object NodeReachabilityChange extends JsonConstants {
+  def online (date: DateTime, nodeId: String) = NodeReachabilityChange( date, Seq(nodeId), Seq.empty[String])
+  def online (date: DateTime, nodeIds: Seq[String]) = NodeReachabilityChange( date, nodeIds, Seq.empty[String])
+
+  def offline (date: DateTime, nodeId: String) = NodeReachabilityChange( date, Seq.empty[String], Seq(nodeId))
+  def offline (date: DateTime, nodeIds: Seq[String]) = NodeReachabilityChange( date, Seq.empty[String], nodeIds)
+
+  val NODE_REACHABILITY_CHANGE = asc("nodeReachabilityChange")
+  val ONLINE = asc("online")
+  val OFFLINE = asc("offline")
 }
 
 /**
   * a connectivity change detected by NodeServerRoute or UpstreamConnectorActor
   *
-  * note this changes one node at a time
+  * the NSR sends its online downstreams to the UC as part of the sync protocol.
+  * the USR sends it to devices in case we establish/loose upstream connection
   */
-case class NodeReachabilityChange (nodeId: String, date: DateTime, isOnline: Boolean) extends JsonSerializable {
+case class NodeReachabilityChange (date: DateTime, online: Seq[String], offline: Seq[String]) extends JsonSerializable {
+  import NodeReachabilityChange._
 
   override def serializeTo(w: JsonWriter): Unit = {
     w.clear().writeObject { _
-      .writeObject("nodeReachabilityChange") {_
-        .writeStringMember("nodeId", nodeId)
-        .writeDateTimeMember("date", date)
-        .writeBooleanMember("isOnline", isOnline)
+      .writeObjectMember(NODE_REACHABILITY_CHANGE) { w=>
+        w.writeDateTimeMember(DATE, date)
+        if (online.nonEmpty) w.writeStringArrayMember(ONLINE, online)
+        if (offline.nonEmpty) w.writeStringArrayMember(OFFLINE, offline)
+      }
+    }
+  }
+
+  def filter (p: String=>Boolean): Option[NodeReachabilityChange] = {
+    val filteredOnline = online.filter(p)
+    val filteredOffline = offline.filter(p)
+
+    if (filteredOnline.isEmpty && filteredOffline.isEmpty) None  // nothing left after filter
+    else if ((filteredOnline eq online) && (filteredOffline eq offline)) Some(this) // no changes
+    else  Some(NodeReachabilityChange(date,filteredOnline,filteredOffline))
+  }
+
+  def isEmpty: Boolean = online.isEmpty && offline.isEmpty
+
+  def isSingleOnlineChange (nodeId: String): Boolean = offline.isEmpty && ((online.size == 1) && online.head == nodeId)
+}
+
+trait NodeReachabilityChangeParser extends JsonPullParser {
+  import NodeReachabilityChange._
+
+  def parseNodeReachabilityChange(): Option[NodeReachabilityChange] = {
+    tryParse( x=> warning(s"malformed nodeReachabilityChange: ${x.getMessage}")) {
+      readCurrentObject {
+        var date = DateTime.UndefinedDateTime
+        var online = Seq.empty[String]
+        var offline = Seq.empty[String]
+
+        foreachMemberInCurrentObject {
+          case DATE => date = dateTimeValue
+          case ONLINE => online = readCurrentStringArray()
+          case OFFLINE => offline = readCurrentStringArray()
+        }
+
+        NodeReachabilityChange(date,online,offline)
       }
     }
   }

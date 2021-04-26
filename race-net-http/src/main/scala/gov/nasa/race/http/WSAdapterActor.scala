@@ -272,7 +272,7 @@ trait WSAdapterActor extends FilteringPublisher with SubscribingRaceActor
     val (future: Future[WebSocketUpgradeResponse], (closed: Future[Done],qMat: SourceQueueWithComplete[Message])) =
       http.singleWebSocketRequest(webSocketRequest,flow,connectionContext=connectionContext)
 
-    closed.foreach( _ => self ! WsClosed(uri))
+    closed.onComplete( _ => self ! WsClosed(uri))
 
     future.onComplete {
       case Success(wsUpgradeResponse) =>
@@ -321,7 +321,7 @@ trait WSAdapterActor extends FilteringPublisher with SubscribingRaceActor
   def disconnect(): Unit = {
     if (isConnected) {
       info(s"disconnecting ${connection.get.uri}")
-      connection.get.queue.complete()
+      connection.get.queue.complete()  // this should trigger the closed future and result in a WsClose
       // TODO - should we clear 'connection' here or defer it to the handleWsClose (in which case we have to call onDisconnect notifications here)
     }
   }

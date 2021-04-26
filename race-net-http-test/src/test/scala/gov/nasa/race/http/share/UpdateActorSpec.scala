@@ -32,7 +32,7 @@ import scala.concurrent.duration.DurationInt
   */
 class UpdateActorSpec extends RaceActorSpec with AnyFlatSpecLike {
 
-  val dataDir = "race-net-http-test/src/resources/sites/share/data"
+  val dataDir = "race-net-http-test/src/resources/sites/share/data/coordinator"
 
   val actorConf: Config = createConfig(
     s"""

@@ -136,8 +136,9 @@ class UpstreamConnectorActor (val config: Config) extends PeriodicRaceActor with
     override def onConnect(): Unit = {
       for (n <- node; ni <- candidate) {
         val upstreamId = ni.id
-        publish( NodeReachabilityChange.online(upstreamId, n.currentDateTime))
-        publish( SelectUpstream(Some(upstreamId)))
+        val nrc = NodeReachabilityChange.online(n.currentDateTime, upstreamId)
+        publish( NodeReachabilityChange.online(n.currentDateTime, upstreamId))
+        publish( UpstreamChange(upstreamId,true))
         switchToState( new ConnectedState(upstreamId, n))
       }
     }
@@ -154,12 +155,13 @@ class UpstreamConnectorActor (val config: Config) extends PeriodicRaceActor with
 
     // since this is run per message we need to cache and buffer to avoid allocation
     class IncomingMessageParser extends BufferedStringJsonPullParser
-                                with ColumnDataChangeParser with NodeDatesParser with PongParser {
+                                with ColumnDataChangeParser with NodeDatesParser with NodeReachabilityChangeParser with PongParser {
       override def rowList = node.rowList
 
       def parse (msg: String): Option[Any] = parseMessageSet[Option[Any]](msg, None) {
         case ColumnDataChange.COLUMN_DATA_CHANGE => parseColumnDataChange()
         case NodeDates.NODE_DATES => parseNodeDates()
+        case NodeReachabilityChange.NODE_REACHABILITY_CHANGE => parseNodeReachabilityChange()
         case Ping.PONG => parsePong()
         case other => warning(s"ignoring unknown message type '$other'"); None
       }
@@ -193,29 +195,15 @@ class UpstreamConnectorActor (val config: Config) extends PeriodicRaceActor with
     }
 
     def sendOwnNodeDates: Unit = {
-      val roCDs = mutable.Buffer.empty[ColumnDatePair]
-      val rwCDs = mutable.Buffer.empty[(String,Seq[RowDatePair])]
-
-      node.columnList.orderedEntries(node.columnDatas).foreach { e=>
-        val (colId,cd) = e
-        val col = node.columnList(colId)
-
-        // if both upstream and we as the owner are valid receive sources this is a RW column
-        if (col.receive.matches( upstreamId, col.owner, node) && col.receive.matches( node.id, col.owner, node)) {
-          rwCDs += (colId -> cd.orderedCellDates(node.rowList))  // both can write - we need row dates
-        } else {
-          roCDs += (colId -> cd.date) // only one can write, CD date is enough
-        }
-      }
-
-      if (roCDs.nonEmpty || rwCDs.nonEmpty) {
-        processOutgoingMessage( NodeDates(node,roCDs.toSeq,rwCDs.toSeq))
-      }
+      processOutgoingMessage(node.nodeDatesFor(upstreamId))
     }
 
     override def onDisconnect(): Unit = {
-      publish( SelectUpstream(None))
-      publish( NodeReachabilityChange.offline(upstreamId, node.currentDateTime))
+      // this should be the same sequence as InitialNode.onConnect
+      val date = node.currentDateTime
+      publish( NodeReachabilityChange.offline( date, upstreamId))
+      publish( NodeReachabilityChange.offline( date, node.onlinePeerIds)) // all our peers are now offline
+      publish( UpstreamChange(upstreamId,false))
 
       lastPingTime = DateTime.UndefinedDateTime
       lastPongTime = DateTime.UndefinedDateTime
@@ -240,7 +228,7 @@ class UpstreamConnectorActor (val config: Config) extends PeriodicRaceActor with
               if (node.isColumnOwner(col, node.id)) {
                 val cdc = rawCdc.filter { r => // but we might have to filter rows
                   node.rowList.get(r) match {
-                    case Some(row) => row.send.matches(upstreamId,col.owner,node)
+                    case Some(row) => row.isSentTo(upstreamId)(node,col)
                     case None => false
                   }
                 }
@@ -251,13 +239,6 @@ class UpstreamConnectorActor (val config: Config) extends PeriodicRaceActor with
             case None => warning(s"ignoring CDC for unknown column: $rawCdc")
           }
         }
-      }
-    }
-
-    override def handleColumnReachabilityChange (crc: ColumnReachabilityChange): Unit = {
-      // only send if this didn't come from upstream and we report respective columns
-      if (crc.nodeId != upstreamId) {
-        // TODO - filter here
       }
     }
 
@@ -302,10 +283,11 @@ class UpstreamConnectorActor (val config: Config) extends PeriodicRaceActor with
       reader.read(msg) match {
         case Some(nd: NodeDates) => processUpstreamNodeDates(nd)
         case Some(cdc: ColumnDataChange) => processUpstreamColumnDataChange(cdc)
-        case Some(cr: ColumnReachabilityChange) => processUpstreamColumnReachability(cr)
+        case Some(nrc: NodeReachabilityChange) => processUpstreamNodeReachability(nrc)
         case Some(pong: Pong) => processUpstreamPong(pong)
+
         case Some(other) => warning(s"ignoring incoming upstream message $other")
-        case None => // ignore
+        case None => // ignore, didn't parse
       }
     }
 
@@ -316,24 +298,18 @@ class UpstreamConnectorActor (val config: Config) extends PeriodicRaceActor with
       */
     def processUpstreamNodeDates(nd: NodeDates): Unit = {
       if (nd.nodeId == upstreamId) {
-        if (nd.readOnlyColumns.nonEmpty || nd.readWriteColumns.nonEmpty) {
-          getNodeDatesReplies( node, nd.nodeId, nd,UpstreamConnectorActor.this).foreach {
-            processOutgoingMessage
-          }
-        }
+        getColumnDataChanges(nd,node).foreach(processOutgoingMessage) // send the CDCs with our more up-to-date data
+
       } else {
         warning(s"ignoring NodeDates of non-upstream node ${nd.nodeId}")
       }
     }
 
-    def processUpstreamColumnReachability (cr: ColumnReachabilityChange): Boolean = {
-      if (cr.nodeId == upstreamId) {
-        publish(cr)  // we just relay it to the UpdateActor
-        true
-      } else {
-        warning(s"ignoring ColumnReachabilityChange of non-upstream node ${cr.nodeId}")
-        false
-      }
+    /**
+      * publish our online/offline peer changes
+      */
+    def processUpstreamNodeReachability (nrc: NodeReachabilityChange): Unit = {
+      node.getPeerReachabilityChange(nrc).foreach(publish)
     }
 
     /**
@@ -342,10 +318,10 @@ class UpstreamConnectorActor (val config: Config) extends PeriodicRaceActor with
     def processUpstreamColumnDataChange (rawCdc: ColumnDataChange): Unit = {
       node.columnList.get(rawCdc.columnId) match {
         case Some(col) =>
-          if (col.receive.matches( upstreamId, col.owner, node)) {
+          if (col.isReceivedFrom(upstreamId)(node)) {
             val cdc = rawCdc.filter { r =>
               node.rowList.get(r) match {
-                case Some(row) => row.receive.matches(rawCdc.changeNodeId, col.owner, node)
+                case Some(row) => row.isReceivedFrom(upstreamId)(node,col)
                 case None => false
               }
             }
@@ -384,7 +360,8 @@ class UpstreamConnectorActor (val config: Config) extends PeriodicRaceActor with
     override def handleNode (newNode: Node): Unit = node = newNode  // we just update the node
 
     override def onConnect(): Unit = {
-      publish( SelectUpstream(Some(upstreamId)))
+      publish( NodeReachabilityChange.online(node.currentDateTime, upstreamId))
+      publish( UpstreamChange.online(upstreamId))
       switchToState( new ConnectedState(upstreamId,node))
     }
 
@@ -427,10 +404,11 @@ class UpstreamConnectorActor (val config: Config) extends PeriodicRaceActor with
   def handleUCMessage: Receive = {
     case BusEvent(_,newNode: Node,_) => state.handleNode(newNode)
     case BusEvent(_,cdc: ColumnDataChange,_) => state.handleColumnDataChange(cdc)
-    case BusEvent(_,crc: ColumnReachabilityChange,_) => state.handleColumnReachabilityChange(crc)
     case BusEvent(_,cc:ConstraintChange,_) => state.handleConstraintChange(cc)
+    case BusEvent(_,_ :NodeReachabilityChange,_) => // ignore, we don't process these
+    case BusEvent(_,_:UpstreamChange,_) => // ignore, we are producing these
 
-      //--- simulation and debug
+      //--- simulation and debugging
     case "cut" => cutConnection
     case "restore" => restoreConnection
   }

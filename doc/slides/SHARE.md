@@ -36,11 +36,10 @@ NASA Ames Research Center
 
 ## SHARE Node
 * uniform node design (same SW, different config files)
-* 4 optional functions: user-server, node-server, node-client, provider-import
+* 4 optional functions: user-server, node-server, node-client, provider-import/export
 * provider-local data display and entry through user-server (browser)
 * sync with upstream and downstream through node-server/node-client
-* all external communication JSON over websockets (encrypted, host-/user-auth)
-* all file formats JSON
+* upstream/downstream/user clients: JSON over websockets (allowing non-RACE/SHARE endpoints)
 <img src="../images/share-node-functions.svg" class="center up50 back scale65">
   
 

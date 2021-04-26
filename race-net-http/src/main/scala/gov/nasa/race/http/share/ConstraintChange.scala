@@ -32,16 +32,17 @@ import ConstraintChange._
 
 /**
   * object that is used to publish changes in ConstraintFormula evaluations
+  * this is only sent from the USR to connected devices, hence we don't need a parser
   */
 case class ConstraintChange (date: DateTime, reset: Boolean, violated: Seq[ConstraintFormula], resolved: Seq[ConstraintFormula]) extends JsonSerializable {
 
   override def serializeTo (w: JsonWriter): Unit = {
     w.clear().writeObject { _
-      .writeObject(_constraintChange_) { w=>
+      .writeObjectMember(_constraintChange_) { w=>
         w.writeDateTimeMember(_date_, date)
         w.writeBooleanMember(_reset_, reset)
-        if (violated.nonEmpty) w.writeObject(_violated_)(w=> violated.foreach( _.serializeAsMemberObjectTo(w)) )
-        if (resolved.nonEmpty) w.writeObject(_resolved_)(w=> resolved.foreach( _.serializeAsMemberObjectTo(w)) )
+        if (violated.nonEmpty) w.writeObjectMember(_violated_)(w=> violated.foreach( _.serializeAsMemberObjectTo(w)) )
+        if (resolved.nonEmpty) w.writeObjectMember(_resolved_)(w=> resolved.foreach( _.serializeAsMemberObjectTo(w)) )
       }
     }
   }

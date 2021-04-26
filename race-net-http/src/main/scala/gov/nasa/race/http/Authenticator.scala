@@ -36,6 +36,10 @@ trait AuthClient {
   def alertUser (clientAddr: InetSocketAddress, msg: String): Unit
 }
 
+object Authenticator {
+  val noAuthenticator = new NoAuthenticator
+}
+
 /**
   * interface to be used by HttpServer RouteInfos to abstract configurable user authentication policies such
   * as W3Cs webauthn
@@ -84,11 +88,10 @@ trait Authenticator extends LogWriter {
   }
 }
 
-
 /**
   * no authentication required
   */
-object NoAuthenticator extends Authenticator {
+class NoAuthenticator extends Authenticator {
 
   def processClientMessage (clientAddres: InetSocketAddress, msg: String): Boolean = false // we don't consume any client messages
 
@@ -101,5 +104,4 @@ object NoAuthenticator extends Authenticator {
   def authenticate (uid: String, conn: SocketConnection, authClient: AuthClient): Unit = {
     authClient.completeAuthentication(uid,conn.remoteAddress,Success)
   }
-
 }

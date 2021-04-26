@@ -50,7 +50,7 @@ import gov.nasa.race.core.Ping._
 case class Ping (sender: String, receiver: String, request: Int, date: DateTime) extends JsonSerializable {
 
   def serializeEmbedded (w: JsonWriter): Unit = {
-    w.writeObject(PING) { _
+    w.writeObjectMember(PING) { _
       .writeStringMember(SENDER,sender.toString)
       .writeStringMember(RECEIVER,receiver.toString)
       .writeIntMember(REQUEST,request)
@@ -105,7 +105,7 @@ case class Pong(date: DateTime, ping: Ping) extends JsonSerializable {
 
   def serializeTo (w: JsonWriter): Unit = {
     w.clear().writeObject { _
-      .writeObject(PONG){ w=>
+      .writeObjectMember(PONG){ w=>
         w.writeDateTimeMember(DATE, date)
         ping.serializeEmbedded(w)
       }

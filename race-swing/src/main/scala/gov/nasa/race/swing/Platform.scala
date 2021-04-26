@@ -60,7 +60,7 @@ object Platform {
     else UnknownOS
   }
 
-  def isMacOS = os eq OS_X
+  def isMacOS = os eq OS_X  // TODO - revisit this since it runs into "not exported" IllegalAccessExceptions for com.apple.eawt
   def isJava8 = javaVersion == 8
 
   def useScreenMenuBar = {

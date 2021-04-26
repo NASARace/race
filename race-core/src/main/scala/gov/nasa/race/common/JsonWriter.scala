@@ -150,6 +150,11 @@ class JsonWriter (jsonType: ElementType = JsonWriter.RawElements, initSize: Int 
     if (elementStack.nonEmpty && (elementStack.last ne t)) throw new RuntimeException("invalid JSON environment")
   }
 
+  def toJson (f: JsonWriter=>Unit): String = {
+    f(this)
+    toJson
+  }
+
   def toJson (o: JsonSerializable): String = {
     o.serializeTo(this)
     toJson
@@ -180,7 +185,7 @@ class JsonWriter (jsonType: ElementType = JsonWriter.RawElements, initSize: Int 
     f(this)
     endObject
   }
-  def writeObject(memberName: CharSequence)(f: JsonWriter=>Unit): JsonWriter = {
+  def writeObjectMember(memberName: CharSequence)(f: JsonWriter=>Unit): JsonWriter = {
     writeMemberName(memberName)
     writeObject(f)
   }
@@ -219,23 +224,23 @@ class JsonWriter (jsonType: ElementType = JsonWriter.RawElements, initSize: Int 
     f(this)
     endArray
   }
-  def writeArray(memberName: CharSequence)(f: JsonWriter=>Unit): JsonWriter = {
+  def writeArrayMember(memberName: CharSequence)(f: JsonWriter=>Unit): JsonWriter = {
     writeMemberName(memberName)
     writeArray(f)
   }
-  def writeStringArray(memberName: CharSequence, it: Iterable[String]): JsonWriter = {
+  def writeStringArrayMember(memberName: CharSequence, it: Iterable[String]): JsonWriter = {
     writeMemberName(memberName)
     writeStringValues(it)
   }
-  def writeIntArray(memberName: CharSequence, it: Iterable[Int]): JsonWriter = {
+  def writeIntArrayMember(memberName: CharSequence, it: Iterable[Int]): JsonWriter = {
     writeMemberName(memberName)
     writeIntValues(it)
   }
-  def writeLongArray(memberName: CharSequence, it: Iterable[Long]): JsonWriter = {
+  def writeLongArrayMember(memberName: CharSequence, it: Iterable[Long]): JsonWriter = {
     writeMemberName(memberName)
     writeLongValues(it)
   }
-  def writeDoubleArray(memberName: CharSequence, it: Iterable[Double]): JsonWriter = {
+  def writeDoubleArrayMember(memberName: CharSequence, it: Iterable[Double]): JsonWriter = {
     writeMemberName(memberName)
     writeDoubleValues(it)
   }
@@ -290,10 +295,10 @@ class JsonWriter (jsonType: ElementType = JsonWriter.RawElements, initSize: Int 
   }
   @inline final def writeBoolean (v: Boolean): JsonWriter = {
     checkAndArmSeparator
-    buf.append(if (v) "\"true\"" else "\"false\"")
+    buf.append(if (v) "true" else "false")
     this
   }
-  @inline final def writeNull: JsonWriter = { writeString("null"); this }
+  @inline final def writeNull: JsonWriter = { buf.append("null"); this }
 
   def writeBooleanMember (k: CharSequence, v: Boolean): JsonWriter = {
     writeMemberName(k)
@@ -337,6 +342,12 @@ class JsonWriter (jsonType: ElementType = JsonWriter.RawElements, initSize: Int 
     } else {
       writeLongMember(memberName, dt.toEpochMillis)
     }
+  }
+
+  def writeMember (k: CharSequence)(f: JsonWriter=>Unit): JsonWriter = {
+    writeMemberName(k)
+    f(this)
+    armSeparator
   }
 
   @inline final def += (v: String): JsonWriter = writeString(v)

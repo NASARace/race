@@ -108,9 +108,22 @@ abstract class Row[T: ClassTag] extends JsonSerializable {
       w.writeStringMember(TYPE, typeName)
       if (receive != defaultReceiveMatcher) w.writeStringMember(RECEIVE, receive.pattern)
       if (send != defaultSendMatcher) w.writeStringMember(SEND, send.pattern)
-      if (attrs.nonEmpty) w.writeStringArray(ATTRS, attrs)
+      if (attrs.nonEmpty) w.writeStringArrayMember(ATTRS, attrs)
     }
   }
+
+  // serialize without send/receive info
+  def shortSerializeTo (w: JsonWriter): Unit = {
+    w.writeObject { w=>
+      w.writeStringMember(ID, id)
+      w.writeStringMember(INFO, info)
+      w.writeStringMember(TYPE, typeName)
+      if (attrs.nonEmpty) w.writeStringArrayMember(ATTRS, attrs)
+    }
+  }
+
+  def isSentTo (nodeId: String)(implicit node: Node, col: Column): Boolean = send.matches(nodeId)(node,Some(col.owner))
+  def isReceivedFrom (nodeId: String)(implicit node: Node, col: Column): Boolean = receive.matches(nodeId)(node,Some(col.owner))
 }
 
 /**
@@ -335,20 +348,23 @@ case class RowList (id: String, info: String, date: DateTime, rows: SeqMap[Strin
     }
   }
 
-  def serializeTo (w: JsonWriter): Unit = {
+  def _serializeTo (w: JsonWriter)(serializeRow: (Row[_],JsonWriter)=>Unit): Unit = {
     w.clear().writeObject( _
-      .writeObject(ROW_LIST) { _
+      .writeObjectMember(ROW_LIST) { _
         .writeStringMember(ID, id)
         .writeStringMember(INFO, info)
         .writeDateTimeMember(DATE, date)
-        .writeArray(ROWS){ w=>
+        .writeArrayMember(ROWS){ w=>
           for (row <- rows.valuesIterator){
-            row.serializeTo(w)
+            serializeRow(row, w)
           }
         }
       }
     )
   }
+
+  def serializeTo (w: JsonWriter): Unit = _serializeTo(w)( (row,w) => row.serializeTo(w))
+  def shortSerializeTo (w: JsonWriter): Unit = _serializeTo(w)( (row,w) => row.shortSerializeTo(w))
 }
 
 /**

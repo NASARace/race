@@ -301,7 +301,7 @@ case class IntegerListCellValue (value: IntegerList, date: DateTime) extends Lis
   def this (es: Array[Long], date: DateTime) = this(IntegerList(es),date)
   override def undefinedCellValue = UndefinedIntegerListCellValue
   override def serializeTo (w: JsonWriter): Unit = w.writeObject( w=> {
-    w.writeLongArray("value",value.elements)
+    w.writeLongArrayMember("value",value.elements)
     w.writeLongMember("date",date.toEpochMillis)
   })
   override def copyWithDate (newDate: DateTime) = copy(date = newDate)
@@ -319,7 +319,7 @@ case class RealListCellValue (value: RealList, date: DateTime) extends ListCellV
   def this (es: Array[Double], date: DateTime) = this(RealList(es),date)
   override def undefinedCellValue = UndefinedRealListCellValue
   override def serializeTo (w: JsonWriter): Unit = w.writeObject( w=> {
-    w.writeDoubleArray("value",value.elements)
+    w.writeDoubleArrayMember("value",value.elements)
     w.writeLongMember("date",date.toEpochMillis)
   })
   override def copyWithDate (newDate: DateTime) = copy(date = newDate)

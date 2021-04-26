@@ -11,7 +11,7 @@ import org.scalatest.flatspec.AnyFlatSpec
 class NodeListSpec extends AnyFlatSpec with RaceSpec {
 
   "a NodeListParser" should "read a known nodeList.json" in {
-    val input = FileUtils.fileContentsAsString("race-net-http-test/src/resources/sites/share/data/nodeList.json").get
+    val input = FileUtils.fileContentsAsString("race-net-http-test/src/resources/sites/share/data/coordinator/nodeList.json").get
     val parser = new NodeListParser
 
     println(s"#-- parsing nodeList: $input")

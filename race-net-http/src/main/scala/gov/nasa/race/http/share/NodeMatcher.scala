@@ -29,61 +29,68 @@ import gov.nasa.race.common.{CharSeqByteSlice, JsonPullParser, MutUtf8Slice, Sli
   */
 object NodeMatcher {
 
+  //--- singleton matchers
+
   object allMatcher extends NodeMatcher {
     def pattern = "<all>"
-    def matches(sourceNodeId: CharSequence, targetColumnId: CharSequence, node: Node): Boolean = true
+    def matches (testNodeId: CharSequence) (implicit node: Node, ownerNodeId: Option[String]=None): Boolean = true
   }
 
   object noneMatcher extends NodeMatcher {
     def pattern = "<none>"
-    def matches(sourceNodeId: CharSequence, targetColumnId: CharSequence, node: Node): Boolean = false
+    def matches (testNodeId: CharSequence) (implicit node: Node, ownerNodeId: Option[String]=None): Boolean = false
 
     override def or (m: NodeMatcher): NodeMatcher = m
   }
 
   object upMatcher extends NodeMatcher {
     def pattern = "<up>"
-    def matches(sourceNodeId: CharSequence, targetColumnId: CharSequence, node: Node): Boolean = {
-      node.upstreamId.isDefined && sourceNodeId == node.upstreamId.get
+    def matches (testNodeId: CharSequence) (implicit node: Node, ownerNodeId: Option[String]=None): Boolean = {
+      node.upstreamId.isDefined && testNodeId == node.upstreamId.get
     }
   }
 
   object downMatcher extends NodeMatcher {
     def pattern = "<down>"
-    def matches(sourceNodeId: CharSequence, targetColumnId: CharSequence, node: Node): Boolean = {
-      node.nodeList.downstreamNodes.contains(sourceNodeId.toString)
+    def matches (testNodeId: CharSequence) (implicit node: Node, ownerNodeId: Option[String]=None): Boolean = {
+      node.nodeList.downstreamNodes.contains(testNodeId.toString)
     }
   }
 
   object selfMatcher extends NodeMatcher {
     def pattern = "<self>"
-    def matches(sourceNodeId: CharSequence, targetColumnId: CharSequence, node: Node): Boolean = node.id == sourceNodeId
+    def matches (testNodeId: CharSequence) (implicit node: Node, ownerNodeId: Option[String]=None): Boolean = node.id == testNodeId
   }
 
   object ownerMatcher extends NodeMatcher {
     def pattern = "<owner>"
-    def matches(sourceNodeId: CharSequence, targetColumnId: CharSequence, node: Node): Boolean = {
-      if (targetColumnId == "<self>") sourceNodeId == node.id
-      else if (targetColumnId == "<up>" && node.upstreamId.isDefined) sourceNodeId == node.upstreamId.get
-      else targetColumnId == sourceNodeId
+    def matches (testNodeId: CharSequence) (implicit node: Node, ownerNodeId: Option[String]): Boolean = {
+      ownerNodeId match {
+        case Some(id) =>
+          if (id == "<self>" || id == ".") testNodeId == node.id
+          else if (id == "<up>" && node.upstreamId.isDefined) testNodeId == node.upstreamId.get
+          else id == testNodeId
+        case None => false
+      }
     }
   }
 
   //... perhaps more in the future
 
-  //--- those we have to create per-use
+  //--- instance matchers
 
   case class PatternMatcher (matcher: Matcher) extends NodeMatcher {
     def pattern = matcher.pattern
-    def matches(sourceNodeId: CharSequence, targetColumnId: CharSequence, node: Node): Boolean = matcher.matches(sourceNodeId)
+    def matches (testNodeId: CharSequence) (implicit node: Node, ownerNodeId: Option[String]=None): Boolean  = matcher.matches(testNodeId)
   }
 
   case class OrMatcher(pattern: String, head: NodeMatcher, tail: NodeMatcher) extends NodeMatcher {
-    override def matches(sourceNodeId: CharSequence, targetColumnId: CharSequence, node: Node): Boolean =  {
-      head.matches(sourceNodeId, targetColumnId, node) || tail.matches(sourceNodeId, targetColumnId, node)
+    def matches (testNodeId: CharSequence) (implicit node: Node, ownerNodeId: Option[String]=None): Boolean =  {
+      head.matches( testNodeId) || tail.matches( testNodeId)
     }
   }
 
+  //--- the matcher spec keywords
   val NONE = asc("<none>")
   val UP = asc("<up>")
   val DOWN = asc("<down>")
@@ -101,12 +108,23 @@ trait NodeMatcher {
   def pattern: String
 
   /**
-    * @param sourceNodeId - node id from where the change request originated
-    * @param targetColumnId - the target column owner for the change request
-    * @param node - the match context (node/column/rowLists)
-    * @return
+    * matcher for node ids that supports the following specifications:
+    *   - lexical id pattern (glob)
+    *   - <owner> testNodeId matches the column owner node id
+    *   - <self> testNodeId matches context node id
+    *   - <up> testNodeId matches the current context node upstreamId
+    *   - <down> testNodeId is in context node downstream ids
+    *
+    * @param testNodeId - node id from where the change request originated
+    * @param node - the match context Node
+    * @param ownerNodeId - optional owner node id, if undefined matching against <owner> spec will fail
+    * @return - true if testNodeId matches the NodeMatcher specification
     */
-  def matches(sourceNodeId: CharSequence, targetColumnId: CharSequence, node: Node): Boolean
+  def matches (testNodeId: CharSequence) (implicit node: Node, ownerNodeId: Option[String]=None): Boolean
+
+  def matchesInColumn (testNodeId: CharSequence, columnId: String) (implicit node: Node): Boolean = {
+    matches(testNodeId)(node, node.columnOwner(columnId))
+  }
 
   def or (m: NodeMatcher): NodeMatcher = OrMatcher(s"$pattern,${m.pattern}", this, m)
 }

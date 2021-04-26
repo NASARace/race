@@ -8,21 +8,26 @@ import * as utils from './utils.js';
 
 //--- module globals (not exported)
 
-var siteIds = {};     // nodeId, upstreamId (if any), userId (if authenticated route)
+var uid = null;        // session-fixed UID
+var nodeList = {};     // nodeId, upstreamId (if any)
 
 var rowList = {};      // { id:"s", info:"s", date:Date, rows:[ {id:"s",info:"s" <,header:"s">}.. ] }
 var rows = [];         // rowList.rows to display
 
-var columnList = {};   // { id:"s", info:"s", date:Date, columns:[ {id:"s",info:"s",update:n}.. ] }
+var columnList = {};   // { id:"s", info:"s", date:Date, columns:[ {id:"s",info:"s"}.. ] }
 var columns = [];      // columnList.columns to display
 
-var data = {};         // { <columnId>: {id:"s",rev:n,date:Date,rows:{<rowId>:n,...} } }
+var data = {};         // { <columnId>: {id:"s", date:Date, rows:{<rowId>:n,...} } }
 
+var upstreamId = undefined;
 var violatedConstraints = {}; // map of all current constraint violations: id -> cInfo
 var cellConstraints = new WeakMap();  // assoc map of violated constraints associated with a cell: cell -> cInfo
+var onlineNodes = new Set();
 
 var isConnected = false;
-var inEditMode = false; var modifiedRows = new Set();
+
+var inEditMode = false; 
+var modifiedRows = new Set();
 
 var ws = {}; // will be set by initWebSocket()
 
@@ -38,7 +43,7 @@ var ratIntFormatter = Intl.NumberFormat(utils.language(),{maximumFractionDigits:
 
 
 function nodeId () {
-  if (siteIds) return siteIds.nodeId; else return undefined;
+  return nodeList ? nodeList.self.id : undefined;
 }
 
 //--- exported functions (used by main module)
@@ -64,7 +69,8 @@ export function shutdownTabData() {
   }
 }
 
-export function setEditable() {
+// this only requests user permissions from the server
+export function requestUserPermissions() {
   if (inEditMode) {
     alert("already in edit mode");
 
@@ -79,10 +85,21 @@ export function setEditable() {
   }
 }
 
+// end the edit mode
 export function setReadOnly() {
+
+  if (modifiedRows.size > 0) { // if we still have un-published changes give user a chance to send them
+    if (confirm("send modified rows")) sendChanges();
+  }
+
   setInactiveChecks(null);
 
-  document.getElementById("uid").classList.remove("active");
+  const elem = document.getElementById("uid");
+  elem.classList.remove("active");
+  elem.disabled = false;  // make it editable again
+
+  const uid = elem.value;
+
   document.getElementById("sendButton").disabled = true;
   document.getElementById("editButton").disabled = false;
   document.getElementById("readOnlyButton").disabled = true;
@@ -98,7 +115,6 @@ export function setReadOnly() {
   modifiedRows.clear();
   inEditMode = false;
 
-  var uid = document.getElementById("uid").value;
   sendEndEdit(uid);
 
   utils.log("exit edit mode");
@@ -112,6 +128,7 @@ export function sendChanges() {
     var uid=document.getElementById("uid").value;
 
     if (utils.isEmpty(uid)) {
+      // this should not happen - the input was disabled when we entered edit mode
       alert("please enter user credentials before sending changes");
 
     } else {
@@ -211,8 +228,19 @@ function isComputed (row) {
   return row.hasOwnProperty("formula");
 }
 
-function isSiteColumn (col) {
-  return (col.owner == nodeId);
+function isLocalColumn (col) {
+  return isColumnOwnedBy(col,nodeId());
+}
+
+function isColumnOwnedBy (col, nid) {
+  return (col.owner == nid) || (col.owner == "<self>" && nid == nodeId()) || (col.owner == "<up>" && nid == upstreamId);
+}
+
+function isColumnOnline (col) {
+  for (const n of onlineNodes.values()) {
+    if (isColumnOwnedBy(col,n)) return true;
+  }
+  return false;
 }
 
 //--- initialization of table structure
@@ -288,7 +316,7 @@ function createColumnNameRow () {
 
     cell = document.createElement('th');
     cell.classList.add("name");
-    if (isSiteColumn(column))   cell.classList.add("local");
+    if (isLocalColumn(column))   cell.classList.add("local");
 
     cell.setAttribute("onmouseenter", `main.highlightColumn(${i+1},true)`);
     cell.setAttribute("onmouseleave", `main.highlightColumn(${i+1},false)`);
@@ -314,7 +342,7 @@ function createColumnUpdateRow () {
     // no content yet (will be set when we get a columnData), just create cell
     cell = document.createElement('th');
     cell.classList.add("dtg");
-    if (isSiteColumn(column))   cell.classList.add("local");
+    if (isLocalColumn(column))   cell.classList.add("local");
 
     cell.setAttribute("onmouseenter", `main.highlightColumn(${i+1},true)`);
     cell.setAttribute("onmouseleave", `main.highlightColumn(${i+1},false)`);
@@ -366,9 +394,12 @@ function initRow (row, idx) {
     // no data yet, will be set when we get a columnData message
     var cell = document.createElement('td');
     cellConstraints.set( cell, []);  // our own property to keep track of associated constraints that are violated
-    cell.setAttribute("onclick", `main.clickCell(event,${colIdx},${idx})`);
+    
+    //cell.setAttribute("onclick", `main.clickCell(event,${colIdx},${idx})`);
+    cell.setAttribute("onmouseenter", `main.highlightCell(event,${colIdx},${idx},true)`);
+    cell.setAttribute("onmouseleave", `main.highlightCell(event,${colIdx},${idx},false)`);
 
-    if (isSiteColumn(p)) cell.classList.add("local");
+    if (isLocalColumn(p)) cell.classList.add("local");
     tr.appendChild(cell);
     colIdx += 1;
   }
@@ -506,7 +537,8 @@ function setCell (cell, row, values) {
   }
 }
 
-function setOnlineStatus (colId, isOnline) {
+// change online status of a single column
+function setColumnOnlineStatus (colId, isOnline) {
   var colIdx = columnIndex(colId);
 
   if (colIdx >= 0) {
@@ -517,6 +549,11 @@ function setOnlineStatus (colId, isOnline) {
       trDtgs.childNodes[colIdx+1].classList.remove("online");
     }
   }
+}
+
+// set online stati of all columns according to onlineNodes
+function updateColumnOnlineStatus () {
+  columns.forEach( col=> setColumnOnlineStatus(col.id,isColumnOnline(col)));
 }
 
 function setColumnData (i, columnData, filterRow) {
@@ -775,12 +812,21 @@ function displayCell (col,row) {
   return `${utils.nameOfPath(col.id)}::${row.id}`;
 }
 
-export function clickCell (event, colIdx, rowIdx) {
+
+export function showCellInfo (event, colIdx, rowIdx) {
   var v = event.target.textContent;
   var cr = displayCell(columns[colIdx], rows[rowIdx]);
   var cs = displayConstraints(cellConstraints.get(event.target));
 
   utils.info( ` [${cr}] = ${v} ${cs}`);
+}
+
+export function highlightCell (event,colIdx,rowIdx,isSelected) {
+  if (isSelected) {
+    showCellInfo(event,colIdx,rowIdx);
+  } else {
+    utils.info('');
+  }
 }
 
 //--- incoming messages
@@ -842,29 +888,31 @@ function handleWsMessage(msg) {
   //console.log(JSON.stringify(msg));
   var msgType = Object.keys(msg)[0];  // first member name
 
-  // app specific data
-  if (msgType == "columnDataChange") handleColumnDataChange(msg.columnDataChange);
-  else if (msgType == "siteIds")  handleSiteIds( msg.siteIds);
-  else if (msgType == "columnList") handleColumnList( msg.columnList);
-  else if (msgType == "rowList") handleRowList( msg.rowList);
-  else if (msgType == "columnData") handleColumnData( msg.columnData);
-  else if (msgType == "onlineColumns") handleOnlineColumns(msg.onlineColumns);
-  else if (msgType == "constraintChange") handleConstraintChange(msg.constraintChange);
-  else if (msgType == "nodeReachabilityChange") handleNodeReachabilityChange(msg.handleNodeReachabilityChange);
-  else if (msgType == "columnReachabilityChange") handleColumnReachabilityChange(msg.columnReachabilityChange);
-  else if (msgType == "userPermissions") handleUserPermissions( msg.userPermissions);
-  else if (msgType == "changeRejected") handleChangeRejected (msg.changeRejected);
+  switch (msgType) {
+    //--- app specific messages
+    case "columnDataChange": handleColumnDataChange(msg.columnDataChange); break;
+    case "nodeList": handleNodeList( msg.nodeList); break;
+    case "columnList": handleColumnList( msg.columnList); break;
+    case "rowList": handleRowList( msg.rowList); break;
+    case "columnData": handleColumnData( msg.columnData); break;
+    case "constraintChange": handleConstraintChange(msg.constraintChange); break;
+    case "nodeReachabilityChange": handleNodeReachabilityChange(msg.nodeReachabilityChange); break;
+    case "upstreamChange": handleUpstreamChange(msg.upstreamChange); break;
+    case "setUser": handleSetUser(msg.setUser); break;
+    case "userPermissions": handleUserPermissions( msg.userPermissions); break;
+    case "changeRejected": handleChangeRejected (msg.changeRejected); break;
 
-  // general server notifications
-  else if (msgType == "alert") handleAlert(msg.alert);
-  else if (msgType == "terminateEdit") handleTerminateEdit(msg.terminateEdit);
+    //--- general server notifications
+    case "alert": handleAlert(msg.alert); break;
+    case "terminateEdit": handleTerminateEdit(msg.terminateEdit); break;
 
-  // webauthn messages
-  else if (msgType == "webauthnCreate") handleWebauthnReg(msg.webauthnCreate);
-  else if (msgType == "webauthnGet") handleWebauthnAuth(msg.webauthnGet.publicKeyCredentialRequestOptions);
+    //--- webauthn messages
+    case "webauthnCreate": handleWebauthnReg(msg.webauthnCreate); break;
+    case "webauthnGet": handleWebauthnAuth(msg.webauthnGet.publicKeyCredentialRequestOptions); break;
 
-  else utils.log(`ignoring unknown message type ${msgType}`);
-};
+    default: utils.log(`ignoring unknown message type ${msgType}`);
+  }
+}
 
 // { alert: { text:"s", log:<b>}}
 function handleAlert (alertMsg){
@@ -928,14 +976,13 @@ function handleConstraintChange (cc) {
   }
 }
 
-// we just log these - the UI changes happens when we process the corresponding CRC
 function handleNodeReachabilityChange (nrc) {
-  if (nrc.isOnline) utils.log("node online: " + nrc.nodeId); else utils.log("node offline: " + nrc.nodeId);
+  //console.log(JSON.stringify(nrc));
+  if (nrc.online) nrc.online.forEach( id=> onlineNodes.add(id));
+  if (nrc.offline) nrc.offline.forEach( id=> onlineNodes.delete(id));
+  updateColumnOnlineStatus();
 }
 
-function handleColumnReachabilityChange (crc) {
-  crc.columns.forEach( (colId) => { setOnlineStatus(colId, crc.isOnline); });
-}
 
 // {columnData:{id:"s",rev:n,date:n,rows:[<rowId>:n]}
 function handleColumnData (columnData) {
@@ -954,17 +1001,36 @@ function handleColumnData (columnData) {
   }
 }
 
-function handleSiteIds (newSiteIds) {
-  siteIds = newSiteIds
+function handleNodeList (newNodeList) {
+  nodeList = newNodeList
   
-  document.getElementById("nodeId").value = siteIds.nodeId;
-  document.getElementById("upstreamId").value = siteIds.upstreamId ? siteIds.upstreamId : "";
+  document.getElementById("nodeId").value = nodeList.self.id;
 
-  if (siteIds.userId) { // that means we can't change it - user authentication was required for the route
-    var input = document.getElementById("uid");
-    input.value = siteIds.userId;
-    input.classList.add("readonly");
+  // TODO - maybe show peer connectivity
+}
+
+// if we get this it means it's fixed (route was authenticated)
+function handleSetUser (user) {
+  if (user.id) {
+    var elem = document.getElementById("uid");
+    elem.value = user.id;
+    elem.classList.add("readonly");
   }
+}
+
+function handleUpstreamChange (upstreamChange) {
+  console.log(JSON.stringify(upstreamChange));
+  const elem = document.getElementById("upstreamId");
+  if (upstreamChange.isOnline) {
+    upstreamId = upstreamChange.id;
+    elem.value = upstreamId;
+    utils.log(`connected to upstream ${upstreamChange.id}`);
+  } else {
+    upstreamId = undefined;
+    elem.value = "";
+    utils.log("no upstream connection");
+  }
+  updateColumnOnlineStatus();
 }
 
 // {rowList:{rev:n,rows:[{id:"s",info:"s" <,header:"s">}..]}}
@@ -1000,10 +1066,16 @@ function handleUserPermissions (usrPerm) {
   //console.log(JSON.stringify(usrPerm));
   var uid = usrPerm.uid; // TODO - should we check if that is the current user? Not critical since update has to be checked by server anyways
   if (usrPerm.permissions.length > 0) {
-    document.getElementById("uid").classList.add("active");
+    const elem = document.getElementById("uid");
+    if (elem.value == uid) {
+      elem.classList.add("active");
+      elem.disabled = true; // lock it until we are done
 
-    setRowsEditable(usrPerm.permissions);
-    utils.log(`enter edit mode for user ${uid}`)
+      setRowsEditable(usrPerm.permissions);
+      utils.log(`enter edit mode for user ${uid}`);
+    } else {
+      alert("user id changed, please authorize again");
+    }
   } else {
     var msg = `no edit permissions for user ${uid}`
     alert(msg);
@@ -1016,6 +1088,8 @@ function handleChangeRejected (cr) {
   alert(msg);
   utils.log(msg);
 }
+
+//--- webauthn messages
 
 // a PublicKeyCredential does not have own enumerable properties hence JSON.stringify() would return {}
 // Plus we need to turn Uint8Arrays back into base64URL encoded strings

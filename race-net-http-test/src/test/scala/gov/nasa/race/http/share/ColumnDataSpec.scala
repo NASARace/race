@@ -32,7 +32,7 @@ import scala.collection.immutable.ListMap
   */
 class ColumnDataSpec extends AnyFlatSpec with RaceSpec {
 
-  val resourcePath = "race-net-http-test/src/resources/sites/share/data"
+  val resourcePath = "race-net-http-test/src/resources/sites/share/data/coordinator"
   val date = DateTime.parseYMDT("2020-06-28T12:00:02.000")
   val rl = "/data"
 

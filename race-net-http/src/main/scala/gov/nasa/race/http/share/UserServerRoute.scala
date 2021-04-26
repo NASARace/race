@@ -265,7 +265,7 @@ class UserServerRoute (parent: ParentActor, config: Config) extends SiteRoute(pa
   val wsPath = s"$requestPrefix/ws"
   val wsPathMatcher = PathMatchers.separateOnSlashes(wsPath)
 
-  val authenticator: Authenticator = getConfigurableOrElse[Authenticator]("authenticator")(NoAuthenticator)
+  val authenticator: Authenticator = getConfigurableOrElse[Authenticator]("authenticator")(Authenticator.noAuthenticator)
   authenticator.setLogging(info,warning,error) // let the authenticator use our logging
 
   val clientHandler = new IncomingMessageHandler // we can't parse until we have catalogs
@@ -312,22 +312,19 @@ class UserServerRoute (parent: ParentActor, config: Config) extends SiteRoute(pa
     pushTo(clientAddr, TextMessage(s"""{"terminateEdit":{"reason":"$reason"}}"""))
   }
 
-  def getSiteIdsMessage (clientAddr: InetSocketAddress): Option[Message] = {
-    node.map { n=>
-      val msg = writer.clear().writeObject { _
-        .writeObject("siteIds") { w=>
-          w.writeStringMember("nodeId", n.id)
-          for (upId <- n.upstreamId) w.writeStringMember("upstreamId", upId)
-          for (uid <- activeUid(clientAddr)) w.writeStringMember("uid", uid)
-        }
-      }.toJson
-      TextMessage(msg)
-    }
+  def getSessionUIDMessage: Option[Message] = {
+    None // TODO - this should check for an inherited UID from a authorized route (which fixes the UID)
   }
 
-  def getColumnListMessage: Option[Message] = node.map( n=> TextMessage(writer.clear().toJson(n.columnList)))
+  // we use short serialization without connectivity info and send/receive filters (browser client shouldn't know)
 
-  def getRowListMessage: Option[Message] = node.map( n=> TextMessage(writer.clear().toJson(n.rowList)))
+  def getNodeListMessage: Option[Message] = {
+    node.map( n=> TextMessage(writer.clear().toJson( n.nodeList.shortSerializeTo)) )
+  }
+
+  def getColumnListMessage: Option[Message] = node.map( n=> TextMessage(writer.clear().toJson( n.columnList.shortSerializeTo)))
+
+  def getRowListMessage: Option[Message] = node.map( n=> TextMessage(writer.clear().toJson( n.rowList.shortSerializeTo)))
 
   def getColumnDataMessages: Seq[Message] = {
     node match {
@@ -340,29 +337,24 @@ class UserServerRoute (parent: ParentActor, config: Config) extends SiteRoute(pa
     }
   }
 
-  /**
-    * this is just a ConstraintChange message with only a 'violated' part for the ones that are
-    */
-  def getConstraintsMessage: Option[Message] = {
-    node match {
-      case Some(n) if n.hasConstraintViolations => Some(TextMessage(writer.clear().toJson(n.currentConstraintViolations)))
-      case _ => None
-    }
+  def getInitialUpstreamMessage: Option[Message] = {
+    node.flatMap( n=> n.upstreamId.map( upId=> TextMessage(writer.toJson(UpstreamChange.online(upId)))))
   }
 
   /**
-    * we report column reachability so that clients do not have to map nodes to columns
-    * to onRaceInitialized we just send a CRC with the current online columns
+    * this is just a ConstraintChange message that only has a 'violated' part
     */
-  def getReachabilityMessage: Option[Message] = {
+  def getInitialConstraintsMessage: Option[Message] = {
+    node.flatMap( n=> if (n.hasConstraintViolations) Some(TextMessage(writer.toJson(n.currentConstraintViolations))) else None)
+  }
+
+  /**
+    * this is an NRC with our current online nodes
+    */
+  def getInitialNodeReachabilityMessages: Seq[Message] = {
     node match {
-      case Some(n) =>
-        val onlineColumnIds = n.onlineColumnIds
-        if (onlineColumnIds.nonEmpty) {
-          val crc = ColumnReachabilityChange.online( n.id, currentDateTime, onlineColumnIds)
-          Some(TextMessage(writer.clear().toJson(crc)))
-        } else None
-      case _ => None
+      case Some(n) => Seq(TextMessage.Strict(writer.toJson( NodeReachabilityChange.online( n.currentDateTime, n.onlineNodes.toSeq))))
+      case _ => Nil
     }
   }
 
@@ -373,13 +365,13 @@ class UserServerRoute (parent: ParentActor, config: Config) extends SiteRoute(pa
     * NOTE this is executed async - avoid data races
     */
   override def receiveData: Receive = {
-    case n: Node => node = Some(n) // this is just our internal data
+    case n: Node => node = Some(n)
 
       //--- those go directly out to connected clients
     case cdc: ColumnDataChange => pushMsg(cdc)
     case cc: ConstraintChange => pushMsg(cc)
     case nrc: NodeReachabilityChange => pushMsg(nrc)
-    case crc: ColumnReachabilityChange => pushMsg(crc)
+    case uc: UpstreamChange => pushMsg(uc)
   }
 
   def pushMsg (o: JsonSerializable): Unit = synchronized {
@@ -414,13 +406,19 @@ class UserServerRoute (parent: ParentActor, config: Config) extends SiteRoute(pa
     */
   override protected def initializeConnection (conn: SocketConnection, queue: SourceQueueWithComplete[Message]): Unit = {
     val clientAddr = conn.remoteAddress
+    def pushMsg (msg: Option[Message]) = msg.foreach( pushTo(clientAddr, queue, _))
+    def pushMsgs (msgs: Seq[Message]) = msgs.foreach( pushTo(clientAddr, queue, _))
 
-    getSiteIdsMessage(clientAddr).foreach( pushTo(clientAddr, queue ,_))
-    getColumnListMessage.foreach( pushTo(clientAddr, queue, _))
-    getRowListMessage.foreach( pushTo(clientAddr, queue ,_))
-    getColumnDataMessages.foreach( pushTo(clientAddr, queue, _))
-    getConstraintsMessage.foreach( pushTo(clientAddr, queue, _))
-    getReachabilityMessage.foreach( pushTo(clientAddr, queue, _))
+    pushMsg( getSessionUIDMessage)
+    pushMsg( getNodeListMessage)
+    pushMsg( getColumnListMessage)
+    pushMsg( getRowListMessage)
+
+    pushMsgs(getColumnDataMessages)
+
+    pushMsgs(getInitialNodeReachabilityMessages)
+    pushMsg( getInitialUpstreamMessage)
+    pushMsg( getInitialConstraintsMessage)
   }
 
   override def onRaceTerminated (server: HttpServer): Boolean = {
