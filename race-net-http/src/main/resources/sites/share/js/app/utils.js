@@ -108,6 +108,20 @@ export function swapClass (element, oldCls, newCls) {
   element.classList.add(newCls);
 }
 
+export function toggleClass (element, cls) {
+  if (element) {
+    if (element.classList.contains(cls)) element.classList.remove(cls);
+    else element.classList.add(cls);
+  }
+}
+
+export function setClass (element, cls, isSet) {
+  if (element) {
+    if (isSet) element.classList.add(cls);
+    else element.classList.remove(cls);
+  }
+}
+
 export function setAndFitToText (textInputElement, text, minLength) {
   var len = text.length;
   textInputElement.value = text;

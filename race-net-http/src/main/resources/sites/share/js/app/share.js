@@ -9,7 +9,7 @@ import * as utils from './utils.js';
 //--- module globals (not exported)
 
 var uid = null;        // session-fixed UID
-var nodeList = {};     // nodeId, upstreamId (if any)
+var nodeList = {};     // { ... "upstream": [{ "id": <s>, "info": <s>}, ..], "peer": [..], "downstream": [..] }
 
 var rowList = {};      // { id:"s", info:"s", date:Date, rows:[ {id:"s",info:"s" <,header:"s">}.. ] }
 var rows = [];         // rowList.rows to display
@@ -48,8 +48,7 @@ function nodeId () {
 
 //--- exported functions (used by main module)
 
-export function initTabData() {
-  setWidth(); // to properly set max div-width
+export function init() {
   setBrowserSpecifics();
 
   initDefaultValues();
@@ -180,11 +179,6 @@ export function clearFilters () {
   setData();
 }
 
-export function setWidth() {
-  var newWidth = document.body.clientWidth;
-  var div = document.getElementById("tableContainer");
-  div.style['max-width'] = `${newWidth}px`;
-}
 
 //--- internal functions
 
@@ -241,6 +235,39 @@ function isColumnOnline (col) {
     if (isColumnOwnedBy(col,n)) return true;
   }
   return false;
+}
+
+//--- initialization of nodeLists structure
+
+function initNodeLists() {
+  var nlRoot = document.getElementById("nodeListContainer");
+  utils.removeAllChildren(nlRoot);
+  initNodeList("upstream", nodeList.upstream, nlRoot);
+  initNodeList("peer", nodeList.peer, nlRoot);
+  initNodeList("downstream", nodeList.downstream, nlRoot);
+}
+
+function initNodeList(name, list, rootElement) {
+  if (list && list.length > 0) {
+    const listElem = document.createElement('div');
+    listElem.classList.add('nodelist');
+    listElem.setAttribute('id', name);
+
+    const label = document.createElement('span');
+    label.classList.add('nodelist-label');
+    label.textContent = name;
+    listElem.appendChild(label);
+
+    for (const nodeInfo of list.values()) {
+      const elem = document.createElement('span');
+      elem.classList.add('nodename');
+      elem.setAttribute('id', nodeInfo.id);
+      elem.textContent = utils.nameOfPath(nodeInfo.id);
+      listElem.appendChild(elem);
+    }
+
+    rootElement.appendChild(listElem);
+  }
 }
 
 //--- initialization of table structure
@@ -978,8 +1005,13 @@ function handleConstraintChange (cc) {
 
 function handleNodeReachabilityChange (nrc) {
   //console.log(JSON.stringify(nrc));
-  if (nrc.online) nrc.online.forEach( id=> onlineNodes.add(id));
-  if (nrc.offline) nrc.offline.forEach( id=> onlineNodes.delete(id));
+  if (nrc.online) nrc.online.forEach( id=> {
+    onlineNodes.add(id);
+    utils.setClass( document.getElementById(id), 'connected', true);
+  });
+  if (nrc.offline) nrc.offline.forEach( id=> {
+    utils.setClass( document.getElementById(id), 'connected', false);
+  });
   updateColumnOnlineStatus();
 }
 
@@ -1006,7 +1038,7 @@ function handleNodeList (newNodeList) {
   
   document.getElementById("nodeId").value = nodeList.self.id;
 
-  // TODO - maybe show peer connectivity
+  initNodeLists();
 }
 
 // if we get this it means it's fixed (route was authenticated)

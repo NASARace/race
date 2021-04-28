@@ -24,16 +24,19 @@ body {
 --th-color: black;
 --hover-color: rgba(0,200,0, 0.2);
 
+--active-color: rgb(0,140,0);
+--active-background-color: rgb(204,255,204);
+
   font-family: sans-serif; /* arial; */
 }
 
 div#tableContainer {
   box-sizing: border-box;
-  max-width: var(--div-width);
   /* max-height: fit-content; */ /* how do set this from content height ? */
+  width: 100%;
+
   height: var(--div-height);
   padding-right: 0.9rem;  /* to account for scroll bar width - scrollbar is only inside div for firefox and safari */
-  margin: 0;
   position: relative;
   overflow: auto;
   border: 1px solid #404040;
@@ -176,7 +179,7 @@ thead th.dtg {
 }
 
 thead th.online {
-  color: green;
+  color: var(--active-color);
 }
 
 /* this needs to be defined *after* the other th classes to override */
@@ -237,22 +240,18 @@ tr.computed td {
   color: blue;
 }
 
-/* in-box text input labels */
+/* nodelists */
 
-.input-group {
+div.nodelist {
   position: relative;
-  display: inline-block;
-}
-
-.input-text {
-  padding: 10px 2px 2px 5px;
-  width: 7rem;
-  height: 1.5rem;
+  margin: 3px 0px 3px 0px;
   border: 1px solid lightgray;
-  font-size: 90%;
+  padding: 12px 2px 2px 2px;
+  background-color: #f2f2f2;
 }
 
-.input-label {
+span.nodelist-label {
+  display: inline-block;
   position: absolute;
   top: 1px;
   left: 3px;
@@ -261,23 +260,65 @@ tr.computed td {
   text-align: left;
 }
 
-.readonly {
+span.nodename {
+  display: inline-block;
+  min-width: 5rem;
+  margin: 2px 2px 2px 2px;
+  padding: 5px 2px 2px 2px;
+  font-size: 90%;
+  color: blue;
+  font-style: italic;
+}
+
+span.connected {
+  /* background-color: #ccffcc; */
+  color: var(--active-color);
+}
+
+/* in-box text input labels */
+
+div.input-group {
+  position: relative;
+  display: inline-block;
+}
+
+label.input-label {
+  position: absolute;
+  top: 1px;
+  left: 3px;
+  font-size: 12px;
+  color: gray;
+  text-align: left;
+}
+
+input.input-text {
+  padding: 10px 2px 2px 5px;
+  width: 7rem;
+  height: 1.5rem;
+  border: 1px solid lightgray;
+  font-size: 90%;
+}
+
+input.readonly {
   background-color: #f2f2f2;
   color: blue;
   font-style: italic;
 }
 
+
+
 /* title bar */
 
 div.titlebar {
-  margin-right: 1rem;
   margin-bottom: 0.5rem;
   padding: 0.3rem;
   background-clip: border-box;
   background-color: #eaeaea;
-  position: relative;
   border: 1px solid #404040;
+/*
+  position: relative;
   display: inline-block;
+  */
 }
 
 /* other controls */
@@ -285,14 +326,14 @@ div.titlebar {
 div#logContainer {
   box-sizing: border-box;
   padding: 3px 0.9rem 3px 3px;  /* to account for scroll bar width - scrollbar is only inside div for firefox and safari */
-  width: 40rem;
+  /* width: 40rem; */
   min-height: 4rem;
   max-height: 10rem;
   margin: 1rem 0 0 0;
   position: relative;
   overflow: auto;
   border: 1px solid #404040;
-  resize: both;
+  resize: vertical;
   /* display: inline-block;  */
 }
 
@@ -314,9 +355,10 @@ div.toolbar {
   box-sizing: border-box;
   background-clip: border-box;
   background-color: #eaeaea;
+  border: 1px solid #404040;
+
   position: relative;
   display: inline-block;
-  border: 1px solid #404040;
 }
 
 div.infoblock {

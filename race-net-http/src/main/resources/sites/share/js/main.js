@@ -10,7 +10,7 @@ const main = {}
 
 //--- onload callback
 main.init = function init() {
-  share.initTabData();
+  share.init();
 }
 
 //--- onunload callback
@@ -18,10 +18,6 @@ main.shutdown = function shutdown() {
   share.shutdownTabData();
 }
 
-//--- resize callback
-main.setWidth = function setWidth() {
-  share.setWidth();
-}
 
 main.identifyUser = function identifyUser(event) {
   if (event.key=="Enter") {

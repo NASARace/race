@@ -7,28 +7,30 @@
         <script type="module" src="js/main.js" ></script>
     </head>
 
-    <body onload="main.init();" onresize="main.setWidth();" ununload="main.shutdown();">
+    <body onload="main.init();" ununload="main.shutdown();">
 
-        <p>
-            <div class="titlebar">
-                <div class="input-group">
-                    <label class="input-label" for="nodeId">node:</label>
-                    <input class="input-text id readonly" type="text" id="nodeId" readonly/>
-                </div>
-                <div class="input-group">
-                    <label class="input-label" for="upstreamId">upstream:</label>
-                    <input class="input-text id readonly" type="text" id="upstreamId" readonly/>
-                </div>
-                <div class="input-group">
-                    <label class="input-label" for="columnListId">columns:</label>
-                    <input class="input-text id readonly" type="text" id="columnListId" readonly/>
-                </div>
-                <div class="input-group">
-                    <label class="input-label" for="rowListId">rows:</label>
-                    <input class="input-text id readonly" type="text" id="rowListId" readonly/>
-                </div>
+        <div class="titlebar">
+            <div class="input-group">
+                <label class="input-label" for="nodeId">node:</label>
+                <input class="input-text id readonly" type="text" id="nodeId" readonly/>
             </div>
-        </p>
+            <div class="input-group">
+                <label class="input-label" for="upstreamId">upstream:</label>
+                <input class="input-text id readonly" type="text" id="upstreamId" readonly/>
+            </div>
+            <div class="input-group">
+                <label class="input-label" for="columnListId">columns:</label>
+                <input class="input-text id readonly" type="text" id="columnListId" readonly/>
+            </div>
+            <div class="input-group">
+                <label class="input-label" for="rowListId">rows:</label>
+                <input class="input-text id readonly" type="text" id="rowListId" readonly/>
+            </div>
+        </div>
+
+        <div id="nodeListContainer" class="titlebar">
+            <!-- dynamically populated -->
+        </div>
 
         <div id="editTools" class="toolbar">
             <div class="input-group">
@@ -67,7 +69,7 @@
         </div>
 
         <div id="logContainer">
-
+            <!-- dynamically populated -->
         </div>
 
     </body>
