@@ -64,6 +64,7 @@ package object share {
     val ROWS = asc("rows")
     val COLUMNS = asc("columns")
     val VALUE = asc("value")
+    val VALUES = asc("values")
 
     val NODE_IDS = asc("nodeIds")
     val IS_ONLINE = asc("isOnline")

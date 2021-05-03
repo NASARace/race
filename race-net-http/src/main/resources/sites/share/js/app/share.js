@@ -106,8 +106,7 @@ export function setReadOnly() {
   processCells( (cell,column,row) => {
     if (cell.firstChild) {
       var values = data[column.id].rows;
-      var v = displayValue( row, rowList.rows, values);
-      cell.textContent = v; // this also removes the input child element
+      setDisplayCell( cell, row, values[row.id]);
     }
   });
 
@@ -141,14 +140,14 @@ export function sendChanges() {
           var row = rows[j];
           var tr = tbody.childNodes[j];
           var cell = tr.childNodes[i+1];
-          var input = cell.firstChild;
-          if (modifiedRows.has(input)){
+          var editElem = cell.firstChild;
+          if (modifiedRows.has(editElem)){
             if (acc.length > 0) acc += ",";
-            acc += `"${row.id}":${input.value}`
-            input.classList.remove("modified");
-            input.classList.remove("conflict");
-            input.classList.add("reported");
-            modifiedRows.delete(input);
+            acc += `"${row.id}":${changedRowValue(row,editElem)}`
+            editElem.classList.remove("modified");
+            editElem.classList.remove("conflict");
+            editElem.classList.add("reported");
+            modifiedRows.delete(editElem);
           }
         }
 
@@ -157,6 +156,18 @@ export function sendChanges() {
         }
       }
     }
+  }
+}
+
+function changedRowValue (row, editElem) {
+  switch (row.type) {
+    case "integer":
+    case "real":
+    case "boolean":
+      return editElem.value;
+
+    default:
+      return JSON.stringify(editElem.value);
   }
 }
 
@@ -438,19 +449,7 @@ function checkEditableCell (cell,column,columnPatterns,row,rowPatterns) {
   for (var i=0; i<columnPatterns.length;i++) {  // note there can be more than one columnPattern match
     if (columnPatterns[i].test(column.id)) {
       if (rowPatterns[i].test(row.id)) {
-        //var value = formatValue( row, data[column.id].rows[row.id]);
-        var value = editValue( row, data[column.id].rows[row.id]);
-
-        var input = document.createElement('input');
-        input.setAttribute("type", "text");
-        input.setAttribute("class", "cell");
-        input.setAttribute("onfocus", "main.setRowFocused(event)");
-        input.setAttribute("onblur", "main.setRowBlurred(event)");
-        input.setAttribute("onkeyup", "main.setRowModified(event)");
-        input.value = value;
-
-        cell.innerHTML = null;
-        cell.appendChild(input);
+        setEditCell(cell,row, data[column.id].rows[row.id]);
         return true; // we only set it editable once
       }
     }
@@ -551,16 +550,16 @@ function setData() {
 }
 
 function setCell (cell, row, values) {
-  if (cell.firstChild && cell.firstChild.nodeName == "INPUT") { // input cell - we are editing this
-    var input = cell.firstChild;
-    if (modifiedRows.has(input)){ // we already changed it - flag conflict
-      input.classList.add("conflict");
+  if (cell.firstChild) { // we are edting this
+    var editElem = cell.firstChild;
+    if (modifiedRows.has(editElem)){ // we already changed it - flag conflict
+      editElem.classList.add("conflict");
     }
-    input.classList.remove("reported");
-    input.value = editValue(row,values[row.id]);
+    editElem.classList.remove("reported");
+    editElem.value = editValue(row,values[row.id]);
 
   } else { // just a display cell
-    cell.textContent = displayValue( row, rowList.rows, values);
+    setDisplayCell(cell, row, values[row.id]);
   }
 }
 
@@ -608,34 +607,139 @@ function formatArray (v) {
   return s;
 }
 
-function formatValue (row,cv) {
-  if (cv == undefined) return "";
-  var v = cv.value;
+// set contents of a readonly cell
+function setDisplayCell (cell, row, cv) {
+  utils.removeAllChildren(cell);
 
-  if (row.type == "integer") {
-    if (Number.isInteger(v)) return intFormatter.format(v);
-    else return ratIntFormatter.format(v);
+  if (cv == undefined) {
+    cell.innerText = "";
+
+  } else {
+    var v = cv.value;
+
+    switch (row.type) {
+      case "string":
+        cell.innerText = v;
+        break;
+
+      case "boolean":
+        cell.innerText = v ? "true" : "false";
+        break;
+
+      case "integer":
+        cell.innerText = Number.isInteger(v) ? intFormatter.format(v) : ratIntFormatter.format(v);
+        break;
+
+      case "real": 
+        cell.innerText = Number.isInteger(v) ? intRatFormatter.format(v) : ratFormatter.format(v);
+        break;
+
+      case "link":
+        var a = document.createElement("a");
+        a.href = v;
+        a.target = "_blank";
+        a.innerText = "<link>";
+        cell.appendChild(a);
+        break;
+
+      case "integerList":
+      case "realList":
+        cell.innerText = formatArray(v);
+        break;
+
+      default:
+        cell.innerText = "?";  // unknown type
+    }
   }
-
-  if (row.type == "real"){
-    if (Number.isInteger(v)) return intRatFormatter.format(v); 
-    else return ratFormatter.format(v);
-  }
-
-  if (row.type.endsWith("[]")) return formatArray(v);
-
-  return v;
 }
 
-// used to display readOnly cells
-function displayValue (row, rowList, rowValues) {
-  return formatValue(row, rowValues[row.id]);
+function setEditCell (cell, row, cv) {
+  utils.removeAllChildren(cell);
+
+  switch (row.type) {
+    case "string":
+    case "link":
+      setCellEditor(cell,row,formatStringValue(cv));
+      break;
+
+    case "boolean":
+      setChoiceCell(cell, ["true","false"], formatStringValue(cv));
+      break;
+
+    case "integer":
+      setCellEditor(cell,row,formatIntegerValue(cv));
+      break;
+
+    case "real": 
+      setCellEditor(cell,row,formatRealValue(cv));
+      break;
+
+    case "integerList":
+    case "realList":
+      setTextInputCell(cell,formatJsonValue(cv));
+      break;
+
+    default:
+      setTextInputCell(cell,formatJsonValue(cv)); // ?? should we issue a warning here
+  }
 }
 
-// used to initialize input elements
-function editValue (row, cv) {
-  if (cv == undefined) return "";
-  return JSON.stringify(cv.value);
+function setCellEditor (cell,row,v) {
+  if (row.values && row.values.length > 0) setChoiceCell(cell,row.values,v); else setTextInputCell(cell,v);
+}
+
+function formatStringValue (cv) {
+  return cv ? cv.value : '';
+}
+
+function formatIntegerValue (cv) {
+  return cv ? (Number.isInteger(cv.value) ? intFormatter.format(cv.value) : ratIntFormatter.format(cv.value)) : '';
+}
+
+function formatRealValue (cv) {
+  return cv ? (Number.isInteger(cv.value) ? intRatFormatter.format(cv.value) : ratFormatter.format(cv.value)) : '';
+}
+
+function formatJsonValue (cv) {
+  return cv ? JSON.stringify(cv.value) : '';
+}
+
+function setCellEditorAttributes (editElem) {
+  editElem.setAttribute("class", "cell");
+  editElem.setAttribute("onfocus", "main.setRowFocused(event)");
+  editElem.setAttribute("onblur", "main.setRowBlurred(event)");
+  editElem.setAttribute("onchange", "main.setRowModified(event)");
+}
+
+function setTextInputCell (cell, v) {
+  var input = document.createElement('input');
+  input.setAttribute("type", "text");
+  setCellEditorAttributes(input);
+  input.value = v;
+
+  cell.appendChild(input);
+}
+
+function setChoiceCell (cell, rowValues, v) {
+  var select = document.createElement('select');
+  setCellEditorAttributes(select);
+  select.value = v;
+
+  //--- undefined option
+  var opt = document.createElement('option');
+  opt.value = '';
+  opt.text = '-';
+  if (v == '') opt.select = true;
+  select.appendChild(opt);
+
+  //--- row defined options
+  for (const vs of rowValues) {
+    opt = document.createElement('option');
+    opt.text = vs;
+    if (v == vs) opt.selected = true;
+    select.appendChild(opt);
+  }
+  cell.appendChild(select);
 }
 
 function columnIndex (colId) {
@@ -1232,12 +1336,12 @@ export function setRowBlurred (event) {
 }
 
 export function setRowModified(event) {
-  var input = event.target;
+  var editElem = event.target;
 
-  if (!input.classList.contains("modified")){
-    input.classList.add("modified");
+  if (!editElem.classList.contains("modified")){
+    editElem.classList.add("modified");
 
-    modifiedRows.add(input);
+    modifiedRows.add(editElem);
   }
 
   if (event.keyCode == 13) {
@@ -1246,3 +1350,20 @@ export function setRowModified(event) {
   }
 }
 
+//--- auxiliary data display
+
+function showDataWindow (title, data) {
+  var win = window.open("", title, "toolbar=no,location=no,status=no,menubar=no,scrollbars=yes,resizable=yes,width=600,height=600");
+
+  var json = JSON.stringify(data,null,4);
+  var content = `<pre style="word-wrap: break-word; white-space: pre-wrap;">${json}</pre>`;
+  win.document.body.innerHTML = content;
+}
+
+export function showColumnList () {
+  showDataWindow(`ColumnList: ${columnList.id}`, columnList);
+}
+
+export function showRowList () {
+  showDataWindow(`RowList: ${rowList.id}`, rowList);
+}

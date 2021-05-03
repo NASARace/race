@@ -110,6 +110,11 @@ case class StringCellFormula (src: String, expr: StringExpression) extends CellF
   override def computeCellValue (ctx: EvalContext): StringCellValue = expr.computeCellValue(ctx)
 }
 
+case class LinkCellFormula (src: String, expr: LinkExpression) extends CellFormula[String] with LinkExpression {
+  def eval (ctx: EvalContext): String = expr.eval(ctx)
+  override def computeCellValue (ctx: EvalContext): LinkCellValue = expr.computeCellValue(ctx)
+}
+
 case class IntegerListCellFormula (src: String, expr: IntegerListExpression) extends CellFormula[IntegerList] with IntegerListExpression {
   def eval (ctx: EvalContext): IntegerList = expr.eval(ctx)
   override def computeCellValue (ctx: EvalContext): IntegerListCellValue = expr.computeCellValue(ctx)

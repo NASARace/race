@@ -413,30 +413,33 @@ input#uid.active {
 
 /* cell editing text inputs */
 
-input.cell {
-  text-align: right;
+.cell {
   background-color: rgb(255,255,225);
-  width:  calc(var(--cell-width) - 0.4rem);
-  border: 1px solid lightgray;
-  font-family: monospace;
-  font-size: small;
 }
 
-input.cell.focused {
+.cell.focused {
   background-color: rgb(255,255,180);
   border: 1px solid red;
 }
 
-input.cell.modified {
+.cell.modified {
   color: red;
 }
 
-input.cell.modified.conflict {
+.cell.modified.conflict {
   background-color: rgb(255,180,180);
 }
 
-input.cell.reported {
+.cell.reported {
   color: green;
+}
+
+input[type=text].cell {
+  text-align: right;
+  width:  calc(var(--cell-width) - 0.4rem);
+  border: 1px solid lightgray;
+  font-family: monospace;
+  font-size: small;
 }
 
 input.id {

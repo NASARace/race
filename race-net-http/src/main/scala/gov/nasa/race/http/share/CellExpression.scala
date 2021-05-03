@@ -75,6 +75,11 @@ trait StringExpression extends CellExpression[String] {
   def computeCellValue (ctx: EvalContext): StringCellValue = StringCellValue(eval(ctx),ctx.evalDate)
 }
 
+trait LinkExpression extends CellExpression[String] {
+  override def evalToString (ctx: EvalContext): String = eval(ctx)
+  def computeCellValue (ctx: EvalContext): LinkCellValue = LinkCellValue(eval(ctx),ctx.evalDate)
+}
+
 //--- list expression types
 
 trait NumListExpression[T] extends CellExpression[T] {
@@ -123,6 +128,10 @@ case class BoolCellRef (colId: String, rowId: String) extends CellRef[Boolean] w
 
 case class StringCellRef (colId: String, rowId: String) extends CellRef[String] with StringExpression {
   override def eval(ctx: EvalContext): String = ctx.typedCellValue[StringCellValue](colId,rowId).value
+}
+
+case class LinkCellRef (colId: String, rowId: String) extends CellRef[String] with StringExpression {
+  override def eval(ctx: EvalContext): String = ctx.typedCellValue[LinkCellValue](colId,rowId).value
 }
 
 case class IntegerListCellRef (colId: String, rowId: String) extends CellRef[IntegerList] with IntegerListExpression {

@@ -14,7 +14,12 @@
       "/data/cat_C/field_1": {"value":1100,  "date": "2020-06-29T16:06:00.000"},
       "/data/cat_C/field_2": {"value":1200,  "date": "2020-06-29T16:06:00.000"},
       "/data/cat_C/field_3": {"value":1300,  "date": "2020-06-29T16:06:00.000"},
-      "/data/cat_C/field_4": {"value":1400,  "date": "2020-06-29T16:06:00.000"}
+      "/data/cat_C/field_4": {"value":1400,  "date": "2020-06-29T16:06:00.000"},
+
+      "/data/link":          {"value": "testpage.html", "date": "2020-06-29T16:06:00.000"},
+      "/data/bool":          {"value": true, "date": "2020-06-29T16:06:00.000"},
+      "/data/str_choice":    {"value": "two", "date": "2020-06-29T16:06:00.000"},
+      "/data/int_choice":    {"value": 3, "date": "2020-06-29T16:06:00.000"}
     }
   }
 }

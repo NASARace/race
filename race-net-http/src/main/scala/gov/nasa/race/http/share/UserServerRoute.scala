@@ -169,7 +169,6 @@ class UserServerRoute (parent: ParentActor, config: Config) extends SiteRoute(pa
       * NOTE - we use our own time stamp for result objects since we can't rely on client machine clock sync
       */
     def processUserChange(clientAddr: InetSocketAddress, msg: String): Iterable[Message] = {
-
       def checkUserDate (date: DateTime, userDate: DateTime): Boolean = {
         true // TBD - compare if within eps of currentDateTime
       }

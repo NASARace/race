@@ -271,22 +271,37 @@ case class BoolCellValue (value: Boolean, date: DateTime) extends CellValue[Bool
 }
 object UndefinedBoolCellValue extends BoolCellValue(BoolCellValue.undefinedValue, DateTime.UndefinedDateTime) with UndefinedCellValue[Boolean]
 
+//--- string based cell values
+
+abstract class StringBasedCellValue extends CellValue[String] {
+  override def valueToString: String = "\"" + value + '"'
+
+  override def serializeTo (w: JsonWriter): Unit = w.writeObject( w=> {
+    w.writeStringMember("value",value)
+    w.writeLongMember("date",date.toEpochMillis)
+  })
+}
 
 object StringCellValue {
   def undefinedValue: String = ""
   def readCellValue (p: JsonPullParser, date: DateTime) = readScalarCellValue(p,date,undefinedValue,_.quotedValue.toString,apply)
 }
-case class StringCellValue (value: String, date: DateTime) extends CellValue[String] {
-  override def valueToString: String = "\"" + value + '"'
-  override def serializeTo (w: JsonWriter): Unit = w.writeObject( w=> {
-    w.writeStringMember("value",value)
-    w.writeLongMember("date",date.toEpochMillis)
-  })
+case class StringCellValue (value: String, date: DateTime) extends StringBasedCellValue {
   override def undefinedCellValue = UndefinedStringCellValue
   override def copyWithDate (newDate: DateTime) = copy(date = newDate)
 }
 object UndefinedStringCellValue extends StringCellValue(StringCellValue.undefinedValue, DateTime.UndefinedDateTime) with UndefinedCellValue[String]
 
+
+object LinkCellValue {
+  def undefinedValue: String = ""
+  def readCellValue (p: JsonPullParser, date: DateTime) = readScalarCellValue(p,date,undefinedValue,_.quotedValue.toString,apply)
+}
+case class LinkCellValue (value: String, date: DateTime) extends StringBasedCellValue {
+  override def undefinedCellValue = UndefinedLinkCellValue
+  override def copyWithDate (newDate: DateTime) = copy(date = newDate)
+}
+object UndefinedLinkCellValue extends LinkCellValue(LinkCellValue.undefinedValue, DateTime.UndefinedDateTime) with UndefinedCellValue[String]
 
 //--- list CVs
 

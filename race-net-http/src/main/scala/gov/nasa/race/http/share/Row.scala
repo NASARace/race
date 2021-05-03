@@ -24,6 +24,7 @@ import gov.nasa.race.uom.DateTime
 
 import scala.collection.mutable.ArrayBuffer
 import scala.collection.immutable.SeqMap
+import scala.collection.mutable
 import scala.reflect.{ClassTag, classTag}
 
 object Row extends JsonConstants {
@@ -32,6 +33,7 @@ object Row extends JsonConstants {
   val T_real = "real"
   val T_boolean = "boolean"
   val T_string = "string"
+  val T_link = "link"
   val T_integerList = "integerList"
   val T_realList = "realList"
 
@@ -40,6 +42,7 @@ object Row extends JsonConstants {
   val REAL = asc(T_real)
   val BOOLEAN = asc(T_boolean)
   val STRING = asc(T_string)
+  val LINK = asc(T_link)
   val INTEGER_LIST = asc(T_integerList)
   val REAL_LIST = asc(T_realList)
 
@@ -47,13 +50,15 @@ object Row extends JsonConstants {
                          info: String = s"this is row $id",
                          send: NodeMatcher = allMatcher,
                          receive: NodeMatcher = allMatcher,
-                         attrs: Seq[String] = Seq.empty): Row[_] = {
+                         attrs: Seq[String] = Seq.empty,
+                         values: Seq[String] = Seq.empty): Row[_] = {
     rowType match {
         // builtin types
-      case T_integer => IntegerRow(id,info,send,receive,attrs)
-      case T_real => RealRow(id,info,send,receive,attrs)
+      case T_integer => IntegerRow(id,info,send,receive,attrs,parseIntegerValues(values))
+      case T_real => RealRow(id,info,send,receive,attrs,parseRealValues(values))
       case T_boolean => BoolRow(id,info,send,receive,attrs)
-      case T_string => StringRow(id,info,send,receive,attrs)
+      case T_string => StringRow(id,info,send,receive,attrs,values)
+      case T_link => LinkRow(id,info,send,receive,attrs)
       case T_integerList => IntegerListRow(id,info,send,receive,attrs)
       case T_realList => RealListRow(id,info,send,receive,attrs)
         // ..we might add an extensible registry for user defined types here (akin to reference types)
@@ -61,11 +66,16 @@ object Row extends JsonConstants {
     }
   }
 
+  def parseIntegerValues (specs: Seq[String]): Seq[Long] = specs.map(java.lang.Long.parseLong)
+  def parseRealValues (specs: Seq[String]): Seq[Double] = specs.map(java.lang.Double.parseDouble)
+
+
   // mostly for testing
   def integerRow(id: String ): Row[_] = Row(id)(T_integer)
   def realRow(id: String ): Row[_] = Row(id)(T_real)
   def booleanRow(id: String ): Row[_] = Row(id)(T_boolean)
   def stringRow(id: String ): Row[_] = Row(id)(T_string)
+  def linkRow(id: String): Row[_] = Row(id)(T_link)
   def integerListRow(id: String): Row[_] = Row(id)(T_integerList)
   def realListRow(id: String): Row[_] = Row(id)(T_realList)
 
@@ -73,6 +83,8 @@ object Row extends JsonConstants {
   val defaultSendMatcher = allMatcher
   val defaultReceiveMatcher = allMatcher
 }
+import Row._
+
 
 /**
   * abstraction of rows
@@ -81,7 +93,6 @@ object Row extends JsonConstants {
   * note this can't be a trait in Scala 2 since we need the ClassTag on the type parameter to access its runtime class
   */
 abstract class Row[T: ClassTag] extends JsonSerializable {
-  import Row._
 
   def cellType: Class[_] = classTag[T].runtimeClass
   val typeName: String
@@ -101,6 +112,8 @@ abstract class Row[T: ClassTag] extends JsonSerializable {
 
   def parseValueFrom (p: JsonPullParser)(implicit date: DateTime): CellValue[T] // this is not for parsing Rows but for parsing ColumnData values
 
+  def serializeValuesTo (w: JsonWriter): Unit = {} // override in concrete Row types that support value sets
+
   def serializeTo (w:JsonWriter): Unit = {
     w.writeObject { w=>
       w.writeStringMember(ID, id)
@@ -109,6 +122,7 @@ abstract class Row[T: ClassTag] extends JsonSerializable {
       if (receive != defaultReceiveMatcher) w.writeStringMember(RECEIVE, receive.pattern)
       if (send != defaultSendMatcher) w.writeStringMember(SEND, send.pattern)
       if (attrs.nonEmpty) w.writeStringArrayMember(ATTRS, attrs)
+      serializeValuesTo(w)
     }
   }
 
@@ -119,6 +133,7 @@ abstract class Row[T: ClassTag] extends JsonSerializable {
       w.writeStringMember(INFO, info)
       w.writeStringMember(TYPE, typeName)
       if (attrs.nonEmpty) w.writeStringArrayMember(ATTRS, attrs)
+      serializeValuesTo(w)
     }
   }
 
@@ -132,6 +147,16 @@ abstract class Row[T: ClassTag] extends JsonSerializable {
 trait RowParser extends JsonPullParser with NodeMatcherParser with AttrsParser {
   import Row._
 
+  def readValues(): Seq[String] = {
+    val buf = mutable.Buffer.empty[String]
+    foreachElementInCurrentArray {
+      if (isScalarValue) {
+        buf += value.toString
+      } else exception(s"non-scalar value enumeration")
+    }
+    buf.toSeq
+  }
+
   def readRow(nodeId: String): Row[_] = {  // TODO - do we need list ids ??
     var id: String = null
     var info: String = ""
@@ -139,6 +164,7 @@ trait RowParser extends JsonPullParser with NodeMatcherParser with AttrsParser {
     var send: NodeMatcher = defaultSendMatcher
     var receive: NodeMatcher = defaultReceiveMatcher  // 'target' doesn't make sense here, we don't have a suitable context
     var attrs = Seq.empty[String]
+    var values = Seq.empty[String]
 
     foreachMemberInCurrentObject {
       case ID => id = quotedValue.intern
@@ -147,19 +173,19 @@ trait RowParser extends JsonPullParser with NodeMatcherParser with AttrsParser {
       case SEND => send = readNodeMatcher(quotedValue,nodeId)
       case RECEIVE => receive = readNodeMatcher(quotedValue,nodeId)
       case ATTRS => attrs = readAttrs()
+      case VALUES => values = readValues() // we have to report values as a string collection since we can't rely on having a type yet
     }
 
     if (id == null) throw exception("missing 'id' in row spec")
-    Row(id)(rowType,info,send,receive,attrs)
+    Row(id)(rowType,info,send,receive,attrs,values)
   }
 }
 
 //--- concrete Row types
-
 /**
   * Row holding Integer values (mapping to Long)
   */
-case class IntegerRow(id: String, info: String, send: NodeMatcher, receive: NodeMatcher, attrs: Seq[String]) extends Row[Long] {
+case class IntegerRow(id: String, info: String, send: NodeMatcher, receive: NodeMatcher, attrs: Seq[String], values: Seq[Long]) extends Row[Long] {
   val typeName = Row.T_integer
 
   override def undefinedCellValue: CellValue[Long] = UndefinedIntegerCellValue
@@ -167,18 +193,19 @@ case class IntegerRow(id: String, info: String, send: NodeMatcher, receive: Node
 
   override def formula (src: String, ce: CellExpression[_]): ResultValue[IntegerCellFormula] = {
     ce match {
-      case intExpr: IntegerExpression => SuccessValue(IntegerCellFormula(src,intExpr))
+      case expr: IntegerExpression => SuccessValue(IntegerCellFormula(src,expr))
       case other => Failure(s"cell expression of type ${other.getClass.getSimpleName} not compatible with ${getClass.getSimpleName}")
     }
   }
 
   override def parseValueFrom (p: JsonPullParser)(implicit date: DateTime) = IntegerCellValue.readCellValue(p,date)
+  override def serializeValuesTo (w: JsonWriter): Unit = if (values.nonEmpty) w.writeLongArrayMember(VALUES,values)
 }
 
 /**
   * Row holding Real values (mapping to Double)
   */
-case class RealRow (id: String, info: String, send: NodeMatcher, receive: NodeMatcher, attrs: Seq[String]) extends Row[Double] {
+case class RealRow (id: String, info: String, send: NodeMatcher, receive: NodeMatcher, attrs: Seq[String], values: Seq[Double]) extends Row[Double] {
   val typeName = Row.T_real
 
   override def undefinedCellValue: CellValue[Double] = UndefinedRealCellValue
@@ -192,6 +219,7 @@ case class RealRow (id: String, info: String, send: NodeMatcher, receive: NodeMa
   }
 
   override def parseValueFrom (p: JsonPullParser)(implicit date: DateTime) = RealCellValue.readCellValue(p,date)
+  override def serializeValuesTo (w: JsonWriter): Unit = if (values.nonEmpty) w.writeDoubleArrayMember(VALUES,values)
 }
 
 /**
@@ -205,7 +233,7 @@ case class BoolRow (id: String, info: String, send: NodeMatcher, receive: NodeMa
 
   override def formula (src: String, ce: CellExpression[_]): ResultValue[BoolCellFormula] = {
     ce match {
-      case boolExpr: BoolExpression => SuccessValue(BoolCellFormula(src,boolExpr))
+      case expr: BoolExpression => SuccessValue(BoolCellFormula(src,expr))
       case other => Failure(s"cell expression of type ${other.getClass.getSimpleName} not compatible with ${getClass.getSimpleName}")
     }
   }
@@ -216,7 +244,7 @@ case class BoolRow (id: String, info: String, send: NodeMatcher, receive: NodeMa
 /**
   * Row holding String values
   */
-case class StringRow (id: String, info: String, send: NodeMatcher, receive: NodeMatcher, attrs: Seq[String]) extends Row[String] {
+case class StringRow (id: String, info: String, send: NodeMatcher, receive: NodeMatcher, attrs: Seq[String], values: Seq[String]) extends Row[String] {
   val typeName = Row.T_string
 
   override def undefinedCellValue: CellValue[String] = UndefinedStringCellValue
@@ -224,12 +252,33 @@ case class StringRow (id: String, info: String, send: NodeMatcher, receive: Node
 
   override def formula (src: String, ce: CellExpression[_]): ResultValue[StringCellFormula] = {
     ce match {
-      case strExpr: StringExpression => SuccessValue(StringCellFormula(src,strExpr))
+      case expr: StringExpression => SuccessValue(StringCellFormula(src,expr))
       case other => Failure(s"cell expression of type ${other.getClass.getSimpleName} not compatible with ${getClass.getSimpleName}")
     }
   }
 
   override def parseValueFrom (p: JsonPullParser)(implicit date: DateTime) = StringCellValue.readCellValue(p,date)
+  override def serializeValuesTo (w: JsonWriter): Unit = if (values.nonEmpty) w.writeStringArrayMember(VALUES,values)
+}
+
+/**
+  * Row holding HTML link value
+  */
+case class LinkRow (id: String, info: String, send: NodeMatcher, receive: NodeMatcher, attrs: Seq[String]) extends Row[String] {
+  val typeName = Row.T_link
+
+  override def undefinedCellValue: CellValue[String] = UndefinedLinkCellValue
+  override def cellRef (colId: String): LinkCellRef = LinkCellRef(colId, id)
+
+  // TODO - should we allow
+  override def formula (src: String, ce: CellExpression[_]): ResultValue[LinkCellFormula] = {
+    ce match {
+      case expr: LinkExpression => SuccessValue(LinkCellFormula(src,expr))
+      case other => Failure(s"cell expression of type ${other.getClass.getSimpleName} not compatible with ${getClass.getSimpleName}")
+    }
+  }
+
+  override def parseValueFrom (p: JsonPullParser)(implicit date: DateTime) = LinkCellValue.readCellValue(p,date)
 }
 
 /**
@@ -243,7 +292,7 @@ case class IntegerListRow (id: String, info: String, send: NodeMatcher, receive:
 
   override def formula (src: String, ce: CellExpression[_]): ResultValue[IntegerListCellFormula] = {
     ce match {
-      case intListExpr: IntegerListExpression => SuccessValue(IntegerListCellFormula(src,intListExpr))
+      case expr: IntegerListExpression => SuccessValue(IntegerListCellFormula(src,expr))
       case other => Failure(s"cell expression of type ${other.getClass.getSimpleName} not compatible with ${getClass.getSimpleName}")
     }
   }
@@ -262,7 +311,7 @@ case class RealListRow (id: String, info: String, send: NodeMatcher, receive: No
 
   override def formula (src: String, ce: CellExpression[_]): ResultValue[RealListCellFormula] = {
     ce match {
-      case listExpr: RealListExpression => SuccessValue(RealListCellFormula(src,listExpr))
+      case expr: RealListExpression => SuccessValue(RealListCellFormula(src,expr))
       case other => Failure(s"cell expression of type ${other.getClass.getSimpleName} not compatible with ${getClass.getSimpleName}")
     }
   }

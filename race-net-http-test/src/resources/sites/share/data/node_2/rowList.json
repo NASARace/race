@@ -21,7 +21,9 @@
       { "id": "/data/cat_C/field_1", "type": "integer", "info": "this is field 1 in category C (total of field_2 changes)" },
       { "id": "/data/cat_C/field_2", "type": "integer", "info": "this is field 2 in category C" },
       { "id": "/data/cat_C/field_3", "type": "integer", "info": "this is field 3 in category C" },
-      { "id": "/data/cat_C/field_4", "type": "integer", "info": "this is field 4 in category C" }
+      { "id": "/data/cat_C/field_4", "type": "integer", "info": "this is field 4 in category C" },
+
+      { "id": "/data/link", "type":  "link", "info":  "this is a link row", "attrs": ["hidden"] }
     ]
   }
 }

@@ -77,6 +77,14 @@ main.clickCell = function clickCell (event,colIdx,rowIdx) {
   share.showCellInfo(event,colIdx,rowIdx);
 }
 
+main.showColumnList = function showColumnList (event) {
+  share.showColumnList();
+}
+
+main.showRowList = function showRowList (event) {
+  share.showRowList();
+}
+
 window.main = main; // make it global so that we can reference from HTML
 
 

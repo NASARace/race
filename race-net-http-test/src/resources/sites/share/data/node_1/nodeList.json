@@ -14,10 +14,7 @@
       { "id": "../node_2", "info": "this is the node_2 node" },
       { "id": "../node_3", "info": "this is the node_3 node" },
       { "id": "../node_4", "info": "this is the node_4 node" },
-      { "id": "../node_5", "info": "this is the node_5 node" },
-      { "id": "../node_6", "info": "this is the node_6 node" },
-      { "id": "../node_7", "info": "this is the node_7 node" },
-      { "id": "../node_8", "info": "this is the node_8 node" }
+      { "id": "../node_5", "info": "this is the node_5 node" }
     ],
 
     "downstream": []
