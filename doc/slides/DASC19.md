@@ -9,7 +9,7 @@ NASA Ames Research Center
 </p>
 
 ## Slides
-@:toc root="#currentDocument".
+@:navigationTree { entries = [ { target = "#" } ] }
 
 ## What is RACE?
 * started as a distributed LVC simulation framework in 2015

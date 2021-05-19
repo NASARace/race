@@ -4,7 +4,7 @@
         <meta charset="UTF-8"/>
         <title>RACE</title>
 
-        <link href="{{config.rootPath}}/race-slides-html.css" rel="stylesheet"/>
+        <link href="${laika.rootPath}/race-slides-html.css" rel="stylesheet"/>
     </head>
 
     <body>
@@ -12,9 +12,9 @@
         <div class="stopwatch" id="timer">00:00</div>
         <div class="slide title">
             <!-- additional divs inserted by renderer extension -->
-            {{document.content}}
+            ${cursor.currentDocument.content}
         </div>
     </body>
 
-    <script src="{{config.rootPath}}/race-slides.js"></script>
+    <script src="${laika.rootPath}/race-slides.js"></script>
 </html>

@@ -9,7 +9,7 @@ building airspace simulations faster and better with actors
 SGT Inc, NASA Ames Research Center
 
 ## Slides
-@:toc root="#currentDocument".
+@:navigationTree { entries = [ { target = "#" } ] }
 
 ## Targeted Application Domain
 * event driven (originally LVC simulations)

@@ -65,7 +65,7 @@ object Dependencies {
   // val breezeNative = "org.scalanlp" %% "breeze-natives" % "0.13.2"
 
   //--- scalaTest
-  val scalaTest = "org.scalatest" %% "scalatest" % "3.3.0-SNAP2"
+  val scalaTest = "org.scalatest" %% "scalatest" % "3.3.0-SNAP3"
   val flexmarkAll = "com.vladsch.flexmark" % "flexmark-all" % "0.35.10" // should be a scalaTest dependency but 3.1.0-SNAP13 is missing it
   val scalaTestPlus = "org.scalatestplus" %% "scalatestplus-scalacheck" % "3.1.0.0-RC2"
 
@@ -131,6 +131,7 @@ object Dependencies {
 
   val akkaActor = akkaOrg %% "akka-actor" % akkaVersion
   val akkaRemote = akkaOrg %% "akka-remote" % akkaVersion
+  val akkaCluster = akkaOrg %% "akka-cluster" % akkaVersion // e.g. for multi-jvm testing
   val akkaSlf4j = akkaOrg %% "akka-slf4j" % akkaVersion
 
   val akkaTestkit = akkaOrg %% "akka-testkit" % akkaVersion
@@ -139,6 +140,12 @@ object Dependencies {
   val akkaHttp = akkaOrg %% "akka-http" % "10.2.4"
 
   val akkaAll = Seq(akkaActor)
+
+  //--- Aeron (for akka-remote)
+  val aeronDriver =  "io.aeron" % "aeron-driver" % "1.32.0"
+  val aeronClient = "io.aeron" % "aeron-client" % "1.32.0"
+
+  val akkaRemoting = Seq(akkaRemote,aeronDriver,aeronClient)
 
 
   //--- ActiveMQ
@@ -160,27 +167,29 @@ object Dependencies {
   val log4j = "org.apache.logging.log4j" % "log4j" % "2.10.0"
   val log4jOverSlf4j = "org.slf4j" % "log4j-over-slf4j" % "2.0.0-alpha1"
 
-  //--- ZooKeeper
-  val zookeeper = "org.apache.zookeeper" % "zookeeper" % "3.7.0" excludeAll(
-    ExclusionRule(organization = "log4j", name="log4j"),
-    ExclusionRule(organization = "org.slf4j", name = "slf4j-log4j12")
-  )
-
   //--- Kafka client (this is all we need for importing/exporting)
   // note that clients are NOT upward compatible, i.e. a new client doesn't work with an old server
   // (the new server with old client is supposedly fine). Since there are many old servers out there, we can't
   // use the latest client yet
 
-  // note - we can't move to 1.1.0 yet since it breaks KafkaServer (again)
-  val kafkaClients = "org.apache.kafka" % "kafka-clients" % "0.9.0.0"
-  val newKafkaClients = "org.apache.kafka" % "kafka-clients" % "2.2.1"
+  val kafkaClients = "org.apache.kafka" % "kafka-clients" % "2.8.0"  
+  //  excludeAll(
+  //     ExclusionRule(organization = "log4j", name="log4j"),
+  //     ExclusionRule(organization = "org.slf4j", name = "slf4j-log4j12")
+  //   )
+    
+  //--- Kafka broker for testing support (make sure to add log4j to kafkaServer dependencies)
+  val kafka = "org.apache.kafka" %% "kafka" % "2.8.0"
+  //  excludeAll(
+  //    ExclusionRule(organization = "log4j", name="log4j"),
+  //    ExclusionRule(organization = "org.slf4j", name = "slf4j-log4j12")
+  //  )
 
-  //--- Kafka (make sure to add log4j to kafkaServer dependencies
-  val kafka = "org.apache.kafka" %% "kafka" % "2.7.0" excludeAll(
-  //val kafka = "org.apache.kafka" %% "kafka" % "1.0.1" excludeAll(
-    //ExclusionRule(organization = "log4j", name="log4j"),
-    //ExclusionRule(organization = "org.slf4j", name = "slf4j-log4j12")
-  )
+  // also for testing support
+  val kafkaTools = "org.apache.kafka" % "kafka-tools" % "2.8.0"
+  val kafkaRaft = "org.apache.kafka" % "kafka-raft" % "2.8.0"
+
+  val kafkaAll = Seq(kafka,kafkaRaft,kafkaTools) 
 
   //--- DDS Java 5 PSM
   // add implementation libraries and settings in local-build.sbt - this is only an abstract interface for compilation

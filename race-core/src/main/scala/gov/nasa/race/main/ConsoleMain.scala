@@ -71,9 +71,13 @@ trait ConsoleMainBase extends MainBase {
     val vmShutdownHook = addShutdownHook(universes.foreach(shutDown)) // ctrl-C (user) termination
     RaceActorSystem.addTerminationListener(() => systemExit())
 
-    if (!delayStart) universes.foreach { ras => if (!ras.delayLaunch) launch(ras) }
+    if (!delayStart) universes.foreach { ras =>
+      if (!ras.delayLaunch) {
+        launch(ras)
+      }
+    }
 
-    menu("enter sys command [1:show universes, 2:show actors, 3:show channels, 4:send message, 5:set loglevel, 6:app menu, 7: pause/resume, 8:start, 9:exit]\n") {
+    menu("enter command [1:show universes, 2:show actors, 3:show channels, 4:send message, 5:set loglevel, 6:app menu, 7: pause/resume, 8:start, 9:exit]\n") {
       case "1" | "universes" => showUniverses(universes)
         repeatMenu
 
@@ -99,9 +103,11 @@ trait ConsoleMainBase extends MainBase {
         repeatMenu
 
       case "9" | "exit" => // don't use System.exit here, it would break MultiNodeJVM tests
-        removeShutdownHook(vmShutdownHook)
-        RaceActorSystem.removeTerminationListener(() => systemExit())
-        universes.foreach(shutDown)
+        if (!RaceActorSystem.isTerminating) {  // don't trip a termination that is already in progress
+          //removeShutdownHook(vmShutdownHook)
+          RaceActorSystem.removeTerminationListener(() => systemExit())
+          universes.foreach(shutDown)
+        }
     }
   }
 

@@ -17,9 +17,9 @@
 package gov.nasa.race.kafka
 
 import java.util.Properties
-
 import com.typesafe.config.Config
 import gov.nasa.race.config.ConfigUtils._
+import gov.nasa.race.ifSome
 import org.apache.kafka.clients.producer.{KafkaProducer, ProducerRecord}
 import org.apache.kafka.common.serialization.{Serializer, StringSerializer => KStringSerializer}
 
@@ -37,18 +37,32 @@ abstract class ConfigurableKafkaProducer (val config: Config) {
   def keySerializerClass: Class[_ <: Serializer[KeyType]]
   def valueSerializerClass: Class[_ <: Serializer[ValueType]]
 
+  val groupId = config.getStringOrElse("group-id", defaultGroupId)
+  val clientId = config.getStringOrElse("client-id", defaultClientId)
   val topicName = config.getStringOrElse("kafka-topic", "")  // there can only be one
+
   val producer: KafkaProducer[KeyType,ValueType] = createProducer
 
-  def send(msg: Any): Unit = producer.send(producerRecord(msg))
+  def defaultGroupId: String = "race-producer"
+  def defaultClientId: String = getClass.getSimpleName + hashCode()
+
+  def close (): Unit = {
+    producer.close()
+  }
+
+  def send(msg: Any): Unit = {
+    producer.send(producerRecord(msg))
+  }
 
   def producerRecord (msg: Any): ProducerRecord[KeyType,ValueType]
 
   def createProducer: KafkaProducer[KeyType,ValueType] = {
     val p = new Properties
-    p.put("bootstrap.servers", config.getStringOrElse("bootstrap-servers", "127.0.0.1:9092"))
+    p.put("bootstrap.servers", config.getStringOrElse("bootstrap-servers", "localhost:9092"))
     p.put("key.serializer", keySerializerClass.getName)
     p.put("value.serializer", valueSerializerClass.getName)
+    p.put("group.id", groupId)
+    p.put("client.id", clientId)
 
     new KafkaProducer(p)
   }

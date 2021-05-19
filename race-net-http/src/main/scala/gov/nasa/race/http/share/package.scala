@@ -69,21 +69,4 @@ package object share {
     val NODE_IDS = asc("nodeIds")
     val IS_ONLINE = asc("isOnline")
   }
-
-  object UpstreamChange {
-    def online (id: String) = UpstreamChange(id,true)
-    def offline (id: String) = UpstreamChange(id,false)
-  }
-
-  // event to indicate we have a new upstream selection. if isOnline == false we don't have an upstream connection
-  case class UpstreamChange (id: String, isOnline: Boolean) extends JsonSerializable {
-    def serializeTo (w: JsonWriter): Unit = {
-      w.clear().writeObject {_
-        .writeObjectMember("upstreamChange") {_
-          .writeStringMember("id", id)
-          .writeBooleanMember("isOnline", isOnline)
-        }
-      }
-    }
-  }
 }

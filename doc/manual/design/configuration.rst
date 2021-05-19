@@ -91,7 +91,7 @@ actors by means of special APIs. The top element of a vault configuration file h
 Please refer to the `Using Encrypted Configurations`_ section for a description of related tools
 and commands to create vaults and/or keystores.
 
-
+.. _RaceActor: raceactors.rst
 .. _TypesafeConfig: https://github.com/typesafehub/config
 .. _HOCON: https://github.com/typesafehub/config/blob/master/HOCON.md
 .. _JSON: http://json.org/

@@ -17,9 +17,13 @@
 
 package gov.nasa.race.kafka
 
+import akka.actor.ActorRef
 import com.typesafe.config.Config
 import gov.nasa.race.core.Messages.BusEvent
-import gov.nasa.race.core.SubscribingRaceActor
+import gov.nasa.race.core.{RaceContext, SubscribingRaceActor}
+import gov.nasa.race.ifSome
+
+import scala.concurrent.duration.DurationInt
 
 /**
   * a RaceActor that sends received messages to a Kafka broker
@@ -29,17 +33,27 @@ import gov.nasa.race.core.SubscribingRaceActor
   */
 class KafkaExportActor(val config: Config) extends SubscribingRaceActor {
 
-  val producer: ConfigurableKafkaProducer = createProducer(config.getConfig("producer"))
+  var producer: Option[ConfigurableKafkaProducer] = None
 
-  def createProducer(conf: Config) = {
-    val prod = newInstance[ConfigurableKafkaProducer](conf.getString("class"), Array(classOf[Config]), Array(conf)).get
-    info(s"instantiated producer ${prod.getClass.getName}")
-    prod
+  override def onInitializeRaceActor(rc: RaceContext, actorConf: Config) = {
+    producer = createProducer(actorConf.getConfig("producer"))
+    super.onInitializeRaceActor(rc,actorConf)
+  }
+
+  override def onTerminateRaceActor(originator: ActorRef): Boolean = {
+    ifSome(producer) { _.close() }
+    super.onTerminateRaceActor(originator)
+  }
+
+  def createProducer(conf: Config): Option[ConfigurableKafkaProducer] = {
+    newInstance[ConfigurableKafkaProducer](conf.getString("class"), Array(classOf[Config]), Array(conf))
   }
 
   override def handleMessage: Receive = {
     case BusEvent(_,msg,_) =>
-      info(s"${name} sending: $msg")
-      producer.send(msg)
+      ifSome(producer) { p=>
+        info(s"${name} sending: $msg")
+        p.send(msg)
+      }
   }
 }

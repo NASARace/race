@@ -8,7 +8,7 @@ NASA Ames Research Center
 </p>
 
 ## Slides
-@:toc root="#currentDocument".
+@:navigationTree { entries = [ { target = "#" } ] }
 
 
 ## Problem
@@ -40,7 +40,7 @@ NASA Ames Research Center
 * provider-local data display and entry through user-server (browser)
 * sync with upstream and downstream through node-server/node-client
 * upstream/downstream/user clients: JSON over websockets (allowing non-RACE/SHARE endpoints)
-<img src="../images/share-node-functions.svg" class="center up50 back scale65">
+<img src="../images/share-node-functions.svg" class="center back scale55">
   
 
 ## Conceptual Data Model and Flow

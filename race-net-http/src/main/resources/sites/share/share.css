@@ -415,6 +415,7 @@ input#uid.active {
 
 .cell {
   background-color: rgb(255,255,225);
+  border: 1px solid lightgray;
 }
 
 .cell.focused {
@@ -437,7 +438,6 @@ input#uid.active {
 input[type=text].cell {
   text-align: right;
   width:  calc(var(--cell-width) - 0.4rem);
-  border: 1px solid lightgray;
   font-family: monospace;
   font-size: small;
 }

@@ -17,17 +17,19 @@
 package gov.nasa.race.kafka
 
 import java.util.Properties
-
+import java.time.{Duration => JDuration}
 import com.typesafe.config.Config
 import gov.nasa.race._
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.util.ClassUtils
 import gov.nasa.race.util._
 import org.apache.kafka.clients.consumer.KafkaConsumer
+import org.apache.kafka.common.errors.WakeupException
 import org.apache.kafka.common.serialization.{Deserializer, StringDeserializer => KStringDeserializer}
 
 import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.duration._
+import scala.jdk.DurationConverters._
 import scala.reflect._
 
 object ConsumerState extends Enumeration {
@@ -57,16 +59,15 @@ abstract class ConfigurableKafkaConsumer (val config: Config) {
   def valueDeserializer: ClassTag[_ <: Deserializer[ValueType]]
 
   val topicNames = config.getStringList("kafka-topics") // keep as java List
-  val groupId = config.getStringOrElse("group-id", "race")
+  val groupId = config.getStringOrElse("group-id", defaultGroupId)
   val clientId = config.getStringOrElse("client-id", defaultClientId)
-  val pollTimeoutMs = config.getFiniteDurationOrElse("poll-timeout", 1.hour).toMillis
+  val pollTimeout: JDuration = config.getFiniteDurationOrElse("poll-timeout", 1.hour).toJava
 
   val consumer: KafkaConsumer[KeyType,ValueType] = createConsumer
   var state = ConsumerState.Created
 
-  def defaultClientId = {
-    config.getStringOrElse("name", getClass.getSimpleName + hashCode())
-  }
+  def defaultGroupId: String = "race-consumer"
+  def defaultClientId: String = getClass.getSimpleName + hashCode()
 
   def subscribe: Boolean = {
     // consumer.subscribe(topicNames)  // would be as simple as that if Kafka would be more concerned about not breaking APIs
@@ -96,19 +97,28 @@ abstract class ConfigurableKafkaConsumer (val config: Config) {
   // (the old one was an ellipsis method whereas the new one takes a Collection<TopicPartition> arg)
   //def seekToEnd = foreachInJavaIterable(consumer.assignment())( consumer.seekToEnd(_))
 
-  def fillValueBuffer: Int = {
+  def fillValueBuffer(): Int = {
     // NOTE - recs can apparently change asynchronously, hence we cannot allocate a value array and then
     // iterate over recs to fill it
-    val recs = consumer.poll(pollTimeoutMs)
-    valueBuffer.clear()
-    if (!recs.isEmpty) {
-      val it = recs.iterator
-      while (it.hasNext) valueBuffer += it.next.value
+    try {
+      val recs = consumer.poll(pollTimeout)
+      valueBuffer.clear()
+      if (!recs.isEmpty) {
+        val it = recs.iterator
+        while (it.hasNext) valueBuffer += it.next.value
+      }
+      valueBuffer.size
+    } catch {
+      case _:WakeupException => 0
     }
-    valueBuffer.size
   }
 
-  def close = {
+  // this is the thread safe way to get a KafkaConsumer out of a long poll
+  def wakeUp(): Unit = {
+    consumer.wakeup()
+  }
+
+  def close() = {
     consumer.unsubscribe
     consumer.close
     state = ConsumerState.Closed
@@ -119,7 +129,7 @@ abstract class ConfigurableKafkaConsumer (val config: Config) {
 
   def createConsumer: KafkaConsumer[KeyType,ValueType] = {
     val p = new Properties
-    p.put("bootstrap.servers", config.getStringOrElse("bootstrap-servers", "127.0.0.1:9092"))
+    p.put("bootstrap.servers", config.getStringOrElse("bootstrap-servers", "localhost:9092"))
     p.put("key.deserializer", keyDeserializer.runtimeClass.getName)
     p.put("value.deserializer", valueDeserializer.runtimeClass.getName)
 

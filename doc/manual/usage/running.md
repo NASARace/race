@@ -16,7 +16,7 @@ line, e.g.
 
     > ./race config/local/aircraft.conf
   
-The main argument is the [configuration file](configuration.html) to run, which defines which actors
+The main argument is the [configuration file][Race Configuration] to run, which defines which actors
 to run, and how these actors are connected.
 
 Executing `./race --help` will list the supported command line options, of which the following ones
@@ -25,7 +25,7 @@ are particularly of interest
 `--delay` - initialize, but wait for an explicit user command to start the simulation run
 
 `--vault <path> [--keystore <path> [--alias <keyname>]]` - this allows the use of configuration
-files with [encrypted values](encryption.html) (e.g. for values such as passwords). Without a
+files with [encrypted values][Using Encrypted Configurations] (e.g. for values such as passwords). Without a
 `--keystore` specification, the user will be prompted for a vault password. If there is a
 keystore/alias argument, the user will be prompted for the keystore password and the vault will
 be decrypted with the key (alias) that is stored in it. If any of the passwords are not valid,
@@ -46,4 +46,4 @@ You can terminate RACE at any time by entering '9'. Hitting the `<enter>` key wi
 
 To run RACE on a remote machine, use the `gov.nasa.race.remote.ConsoleRemoteLauncher` or the 
 `gov.nasa.race.remote.RemoteLauncherServer`. This is further explained in 
-[launching RACE remotely](../design/remotelauncher.html)
+[launching RACE remotely][RemoteLauncher]

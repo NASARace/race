@@ -17,92 +17,53 @@
 
 package gov.nasa.race.kafka
 
-import java.io.{File, FileInputStream}
-import java.net.InetSocketAddress
+import java.io.{File, FileInputStream, FileOutputStream, PrintStream}
+import java.lang.Thread.State._
 import java.util.Properties
-
-import kafka.admin.TopicCommand
-import kafka.admin.TopicCommand.TopicCommandOptions
-import kafka.metrics.KafkaMetricsReporter
-import kafka.server.{KafkaConfig, KafkaServerStartable}
-import kafka.utils.VerifiableProperties
-import org.apache.kafka.clients.admin.AdminClient
-
-/** 1.1.x
-import kafka.zk.KafkaZkClient
-import kafka.zookeeper.ZooKeeperClient
-import org.apache.kafka.common.utils.Time
-**/
-import org.apache.zookeeper.server.{NIOServerCnxnFactory, ZooKeeperServer}
-import gov.nasa.race._
+import kafka.Kafka
+import org.apache.kafka.common.Uuid
+import kafka.tools.StorageTool
+import kafka.admin.{ConsumerGroupCommand, TopicCommand}
 
 import scala.io.StdIn
+import gov.nasa.race._
 import gov.nasa.race.main.CliArgs
 import gov.nasa.race.util.ConsoleIO._
-import gov.nasa.race.util.FileUtils
+import gov.nasa.race.util.{FileUtils, StringUtils, ThreadUtils}
+import org.apache.kafka.common.utils.Exit
+
+import scala.collection.mutable
+
 /**
-  * driver to run a Kafka server plus embedded Zookeeper server from the command line
+  * driver to run a simple Kafka server in Kraft mode (i.e. without Zookeeper) and provide a
+  * menu to interactively control it (e.g. to add,list,delete topics)
   *
-  * for test purposes only
+  * This is for testing purposes only, to simplify having to set up a Kafka cluster. Since this has been very sensitive
+  * to Kafka changes in the past we use the respective Kafka main() methods, but within the same process. This means
+  * we have to make sure the respective tools run embedded, i.e. don't terminate the JVM upon exit (Kafka has Exit
+  * methods that have to be overridden for that purpose) and have a properly set up file system (config and kafka log dir).
+  *
+  * Since Kafka needs to have its (populated) log.dirs directory anyways there is little use trying to avoid file system
+  * access for the config file, which would force us to forego calling its main() methods and rely on access to methods
+  * called from within there (which has changed in the past). If there is no explicit --config option given we therefore
+  * generate a default config file from class resources and put it in the kafka log dir
+  *
+  * Since there is always a physical kafka config file we drop overriding the dir and the bootstrap server from
+  * command line options. Use the --config option to override if the defaults (tmp/kafka and localhost:9092) are not
+  * suitable
   */
-
 object KafkaServer {
-
-  final val KAFKA_DIR = "tmp/kafka"
-  final val ZK_DIR = "tmp/zk"
 
   class Opts extends CliArgs ("kafkaserver") {
     var configFile: Option[File] = None
-    var dir: Option[File] = None
     var clean: Boolean = false
-    var port: Option[Int] = None
-    var id: Option[String] = None
     var topic: Option[String] = None
     var show = false
 
-    opt1("--config")("<pathName>",s"config file (default=${configFile.toString}"){ a=> configFile = parseExistingFileOption(a)}
-    opt1("-d","--dir")("<pathName>","data directory") { a=> dir = parseDirOption(a) }
+    opt1("--config")("<pathName>",s"config file"){ a=> configFile = parseExistingFileOption(a)}
     opt0("-c","--clean")(s"clean data before/after running"){ clean = true }
-    opt1("-p", "--port")("<portNumber>","server port") { a=> port = Some(parseInt(a))}
-    opt1("--id")("<name>","server id") { a=> id = Some(a) }
     opt1("-t","--topic")( "<topicName>","create topic") { a=> topic = Some(a) }
     opt0("--show")("show server properties"){ show = true }
-  }
-
-  def getKafkaProperties (opts: Opts): Properties = {
-    val props = new Properties
-
-    val is = opts.configFile match {
-      case Some(file) => new FileInputStream(file)
-      case None => getClass.getResourceAsStream("/kafka-server.properties")
-    }
-    props.load(is)
-    is.close()
-
-    // mix in command line overrides
-    ifSome(opts.dir){ d => props.put("log.dirs",d) }
-    ifSome(opts.id){ name => props.put("broker.id",name)}
-    ifSome(opts.port){ port => props.put("port",s"$port")}
-
-    // check if we have a log.dirs entry
-    if (props.get("log.dirs") == null) {
-      props.put("log.dirs", KAFKA_DIR)
-    }
-
-    if (opts.show) {
-      println(s"------- accumulated kafka server properties:")
-      println(props)
-      println("-------")
-    }
-
-    props
-  }
-
-  def setOptionalProp (props: Properties, k: String, v: String): Unit = {
-    if (v != null){
-      println(s"setting from command line $k=$v")
-      props.put(k, v)
-    }
   }
 
   def setSystemProperties (opts: Opts) = {
@@ -111,27 +72,47 @@ object KafkaServer {
     //System.setProperty("com.sun.management.jmxremote.authenticate", "false")
     //System.setProperty("com.sun.management.jmxremote.ssl", "false")
     System.setProperty("com.sun.management.jmxremote.local.only", "true")
-
-    System.setProperty("kafka.logs.dir", "tmp/kafka-logs")
   }
 
-  def cleanDirs = {
-    println("resetting Kafka and Zookeeper dirs")
-    FileUtils.deleteRecursively(new File(KAFKA_DIR))
-    FileUtils.deleteRecursively(new File(ZK_DIR))
+  def getDefaultServerProperties: Properties = {
+    val props = new Properties()
+    props.load(getClass.getClassLoader.getResourceAsStream("kafka-server.properties"))
+    props
   }
 
-  def checkLogDirs (props: Properties) = {
-    // we take the first one as our kafka root dir
-    for (path <- props.getProperty("log.dirs").split(",")) {
-      val logDir = new File(path)
-      if (!logDir.isDirectory){
-        if (!logDir.mkdirs){
-          println(s"ERROR - could not create Kafka data directory $path, terminating")
-          System.exit(1)
-        }
+  def getPropertiesFromFile (kConfFile: File): Properties = {
+    val props = new Properties()
+    props.load( new FileInputStream(kConfFile))
+    props
+  }
+
+  def writePropertiesFile (file: File, props: Properties): Unit = {
+    if (file.isFile) file.delete()
+    props.store(new FileOutputStream(file),"generated Kafka properties")
+  }
+
+  // this parses "PLAINTEXT://localhost:9092 .." values of the server config
+  val serverRE = ".*://([^, ]+)".r
+
+  // this tries to read the bootstrapServer from the 'advertised.listeners' property of the server config
+  def getBootstrapServerFromProps (props: Properties): Option[String] = {
+    val adListeners = props.getProperty("advertised.listeners")
+    if (adListeners != null) {
+      serverRE.findFirstMatchIn(adListeners) match {
+        case Some(m) => Some(m.group(1))
+        case None => None
       }
-    }
+    } else None
+  }
+
+  def getKafkaDirFromProps (props: Properties): Option[File] = {
+    val pn = props.getProperty("log.dirs")
+    if (pn != null) Some(new File(pn)) else None
+  }
+
+  def cleanDirs (kafkaDir: File) = {
+    println(s"resetting Kafka dir: $kafkaDir")
+    FileUtils.deleteRecursively(kafkaDir)
   }
 
   def main (args: Array[String]): Unit = {
@@ -139,87 +120,164 @@ object KafkaServer {
     System.setProperty("org.slf4j.simpleLogger.defaultLogLevel","WARN")
 
     val cliOpts = CliArgs(args)(new Opts).getOrElse(return)
-
-    val props = getKafkaProperties(cliOpts)
-    checkLogDirs(props)
     setSystemProperties(cliOpts)
 
-    if (cliOpts.clean) cleanDirs
-
-    //--- zookeeper
-    val zkDir = new File(ZK_DIR)
-    val zkServer = new ZooKeeperServer(zkDir,zkDir,2000)
-    val zkFactory = new NIOServerCnxnFactory()
-    zkFactory.configure(new InetSocketAddress(2181),5000)
-    // unfortunately we can't set a ZKShutdownHandler because the class is not public, hence we will get an error on startup
-
-    zkFactory.startup(zkServer)
-    Thread.sleep(500)
-
-    /** 1.1.x
-    val time = Time.SYSTEM
-    val zooKeeperClient: ZooKeeperClient = new ZooKeeperClient(props.get("zookeeper.connect").toString,
-                                                               30000, 30000, Int.MaxValue, time,"","")
-    val zkClient: KafkaZkClient = { // KafkaZkClient is not public
-      //new KafkaZkClient(zooKeeperClient,false,time)
-      val ctor = Class.forName("kafka.zk.KafkaZkClient").getConstructor(classOf[ZooKeeperClient],classOf[Boolean],classOf[Time])
-      ctor.newInstance(zooKeeperClient,java.lang.Boolean.FALSE,time).asInstanceOf[KafkaZkClient]
-    **/
-
-    //--- Kafka
-    val serverConfig = new KafkaConfig(props) // ?? fails under 1.1.0: can't find org/apache/kafka/common/Reconfigurable ??
-    KafkaMetricsReporter.startReporters(new VerifiableProperties(props))
-    val kafkaServerStartable = new KafkaServerStartable(serverConfig)
-
-    Runtime.getRuntime().addShutdownHook(new Thread() {
-      override def run() = {
-        kafkaServerStartable.shutdown()
-        zkFactory.shutdown
-        if (cliOpts.clean) cleanDirs
-      }
-    })
-
-    val thread = new Thread {
-      override def run: Unit = {
-        kafkaServerStartable.startup()
-        kafkaServerStartable.awaitShutdown()
-
-        zkFactory.shutdown
-        if (cliOpts.clean) cleanDirs
-      }
+    val serverProps = cliOpts.configFile match {
+      case Some(file) => getPropertiesFromFile(file)
+      case None => getDefaultServerProperties
     }
-    thread.start()
+
+    val kafkaDir = getKafkaDirFromProps(serverProps).getOrElse(new File("tmp/kafka"))
+    val bootstrapServer = getBootstrapServerFromProps(serverProps).getOrElse("localhost:9092")
+
+    if (cliOpts.clean) cleanDirs(kafkaDir)
+    kafkaDir.mkdirs()
+
+    val propFile = cliOpts.configFile.getOrElse {
+      val file = new File(kafkaDir,"kafka-server.properties")
+      writePropertiesFile(file,serverProps)
+      file
+    }
+
+    // this is to prevent Kafka utils/tools main() methods to terminate the JVM
+    Exit.setExitProcedure((statusCode: Int, message: String) => {})
+
+    //--- generate cluster id
+    val uuid = Uuid.randomUuid().toString
+
+    //--- format storage dirs
+    runKafkaExecutable {
+      StorageTool.main( Array("format", "-t", uuid, "--config", propFile.getCanonicalPath))
+    }
+
+    //--- start server
+    val serverThread = ThreadUtils.startDaemon {
+      startServer(propFile, bootstrapServer)
+    }
+
+    waitForServerThread(serverThread)
+
+    //--- (optionally) create topics
+    ifSome(cliOpts.topic){ topicName => createTopic(topicName,propFile,bootstrapServer)}
+
+    runCommandLoop(propFile, bootstrapServer)
+  }
+
+  // yet another quirk - StorageTool uses a wrapper around import org.apache.kafka.common.utils.Exit that throws an
+  // AssertionError if the real Exit.exit returns (which is fully in its rights)
+  def runKafkaExecutable (f: =>Unit): Unit = {
+    try f
+    catch {
+      case x: AssertionError => // ignore, it's the kafka.utils.Exit wrapper rejecting valid kafka.common.utils.Exit behavior
+        //x.printStackTrace()
+    }
+  }
+
+  def startServer (configFile: File, bootstrapServer: String): Unit = {
+    runKafkaExecutable {
+      val args = Array(configFile.getCanonicalPath)
+
+      println(s"Kafka started with config: ${StringUtils.mkSepString(args,',')}")
+      println(s"listening on $bootstrapServer")
+      Kafka.main( args) // this does not return until the server is shut down or the JVM exits
+    }
+  }
+
+  def waitForServerThread (serverThread: Thread): Unit = {
     Thread.sleep(1000)
+    while ( {val state = serverThread.getState; state != WAITING && state != TERMINATED}){
+      Thread.sleep(1000)
+    }
+    if (serverThread.getState == TERMINATED) {
+      println("server did terminate prematurely, exiting")
+      System.exit(1)
+    }
+  }
 
-    ifSome(cliOpts.topic){ topicName => createTopic(topicName,"1","1")}
-
-    menu("enter command [1:listTopics, 2:createTopic, 9:exit]:\n") {
+  def runCommandLoop (configFile: File, bootstrapServer: String): Unit = {
+    menu("enter command [1:listTopics, 2:createTopic, 3:describeTopic, 4:deleteTopic, 5:listConsumers, 9:exit]:\n") {
       case "1" =>
-        //TopicCommand.listTopics(zkClient,new TopicCommandOptions(Array[String]()))
-        TopicCommand.main(Array("--list", "--zookeeper", props.get("zookeeper.connect").toString))
+        listTopics(bootstrapServer)
         repeatMenu
 
       case "2" =>
         val topic = StdIn.readLine("  enter topic name:\n")
         if (topic != "") {
-          var partitions = StdIn.readLine("  enter number of partitions (default=1):\n")
-          if (partitions == "") partitions = "1"
-          var replicationFactor = StdIn.readLine("  enter replication factor (default=1):\n")
-          if (replicationFactor == "") replicationFactor = "1"
-          createTopic(topic, partitions, replicationFactor)
+          createTopic(topic,configFile,bootstrapServer)
         }
         repeatMenu
+
+      case "3" =>
+        val topic = StdIn.readLine("  enter topic name:\n")
+        if (topic != "") {
+          describeTopic(topic, bootstrapServer)
+        }
+        repeatMenu
+
+      case "4" =>
+        val topic = StdIn.readLine("  enter topic name:\n")
+        if (topic != "") {
+          deleteTopic(topic, bootstrapServer)
+        }
+        repeatMenu
+
+      case "5" =>
+        listConsumers(bootstrapServer)
+        repeatMenu
+
+      //.. and possibly more
+
       case "9" =>
         println("shutting down Kafka..")
-        kafkaServerStartable.shutdown()
-        //System.exit(0)
+        System.exit(0)
     }
   }
 
-  def createTopic (topic: String, partitions: String, replicationFactor: String) = {
-    TopicCommand.main(Array("--create",
-                            "--replication-factor", replicationFactor,
-                            "--partitions", partitions,
-                            "--topic", topic))
+  def createTopic (topic: String, configFile: File, bootstrapServer: String): Unit = {
+    runKafkaExecutable {
+      TopicCommand.main( Array(
+        "--create",
+        "--topic", topic,
+        "--bootstrap-server", bootstrapServer
+      ))
+    }
+  }
+
+  def listTopics (bootstrapServer: String): Unit = {
+    runKafkaExecutable {
+      TopicCommand.main( Array(
+        "--list",
+        "--bootstrap-server", bootstrapServer
+      ))
+    }
+  }
+
+  def describeTopic (topic: String, bootstrapServer: String): Unit = {
+    runKafkaExecutable {
+      TopicCommand.main(Array(
+        "--describe",
+        "--topic", topic,
+        "--bootstrap-server", bootstrapServer
+      ))
+    }
+  }
+
+  def deleteTopic (topic: String, bootstrapServer: String): Unit = {
+    runKafkaExecutable {
+      TopicCommand.main(Array(
+        "--delete",
+        "--topic", topic,
+        "--bootstrap-server", bootstrapServer
+      ))
+    }
+  }
+
+  def listConsumers (bootstrapServer: String): Unit = {
+    runKafkaExecutable {
+      ConsumerGroupCommand.main(Array(
+        "--list",
+        "--bootstrap-server", bootstrapServer
+      ))
+    }
   }
 }

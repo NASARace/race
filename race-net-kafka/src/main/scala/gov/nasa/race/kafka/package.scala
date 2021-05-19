@@ -39,5 +39,4 @@ package gov.nasa.race
   * the race-net-kafka-test project
   */
 package object kafka {
-
 }

@@ -3,7 +3,7 @@ making it visible
 
 
 ## Slides
-@:toc root="#currentDocument".
+@:navigationTree { entries = [ { target = "#" } ] }
 
 
 ## Symbiosis - the best of two worlds

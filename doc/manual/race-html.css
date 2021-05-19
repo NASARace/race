@@ -39,6 +39,10 @@ dt {
     margin-top: 0.6em;
 }
 
+.anchor-link {
+    display: none;
+}
+
 .navbar {
     position: absolute;
     top: 0;
@@ -106,13 +110,7 @@ p.doctitle {
    padding: 2px 5px 2px 0;
 }
 
-.globaltoc p.toc.level1 {
-   padding-top: 0.5em;
-   margin: 0 0 0.3em 0;
-   border-bottom: 1px solid LightGray;
-}
-
-.toc a {
+nav-list. a {
    display: block;
    overflow: hidden;
    white-space: nowrap;
@@ -129,9 +127,36 @@ p.doctitle {
    white-space: nowrap;
 }
 
-.toc ul li {
+.toc li {
    list-style: none;
    padding-bottom: 0.2em;
+}
+
+.toc.pagetoc .level1 {
+   padding-top: 0.7em;
+   font-size: 100%;
+   margin: 0 0 0 0;
+}
+
+.toc.pagetoc .level2 {
+   font-size: 90%;
+   margin: 0 0 0 0.6em;
+}
+
+.toc.globaltoc .nav-header {
+   padding-top: 0.7em;
+   margin: 0 0 0.3em 0;
+   border-bottom: 1px solid LightGray;
+}
+
+.toc.globaltoc .nav-list .level2 {
+   font-size: 100%;
+   margin: 0 0 0 0.6em;
+}
+
+.toc.globaltoc .nav-list .level3 {
+   font-size: 90%;
+   margin: 0 0 0 1.4em;
 }
 
 /*------------------------------------------------------------- main ------*/

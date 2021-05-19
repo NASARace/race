@@ -195,7 +195,6 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ParentActor {
       try {
         ras.getActorConfigs.foreach { actorConf =>
           val actorName = actorConf.getString("name")
-          info(s"creating $actorName")
 
           getActor(actorConf) match {
             case Some(actorRef) =>

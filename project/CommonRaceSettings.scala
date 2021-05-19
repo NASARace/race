@@ -32,10 +32,11 @@ object CommonRaceSettings {
         ),
         resolvers ++= Dependencies.dependencyResolvers,
 
-        fork in run := true,
+        run / fork := true,
+        Test / fork := true,
         outputStrategy := Some(StdoutOutput),
         cleanFiles += baseDirectory.value / "tmp",
-        Keys.connectInput in run := true
+        run / Keys.connectInput := true
       )
 
   //import com.typesafe.sbt.pgp.PgpKeys.{publishLocalSigned, publishSigned}  // requires sbt-pgp plugin
@@ -51,6 +52,6 @@ object CommonRaceSettings {
 
     // we can't add publishSigned and publishLocalSigned here to avoid created Ivys/ and poms/
     // files since this would require sgt-pgp to be imported, which is only the case on publishing machines
-    skip in publish := true
+    publish / skip := true
   )
 }

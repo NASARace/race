@@ -5,14 +5,13 @@ import RaceBuild._
 import Dependencies._
 import CommonRaceSettings._
 
-import com.typesafe.sbt.SbtMultiJvm.MultiJvmKeys._
+ThisBuild / shellPrompt := { state => "[" + Project.extract(state).currentRef.project + "]> " }
 
-
-shellPrompt in ThisBuild := { state => "[" + Project.extract(state).currentRef.project + "]> " }
+enablePlugins(LaikaPlugin)
 
 lazy val commonSettings = commonRaceSettings ++ Seq(
   organization := "gov.nasa.race",
-  version := "1.7.0"
+  version := "1.8.0"
 )
 
 lazy val testSettings = commonSettings ++ noPublishSettings  // test projects don't publish artifacts
@@ -27,8 +26,7 @@ lazy val root = createRootProject("race").
     commonSettings,
     Defaults.itSettings,
     commands ++= LaikaCommands.commands,
-    aggregate in MultiJvm := false,
-    mainClass in Compile := Some("gov.nasa.race.main.ConsoleMain"),
+    Compile / mainClass := Some("gov.nasa.race.main.ConsoleMain"),
     noPublishSettings // root does not publish any artifacts
   ).
   addLibraryDependencies(slf4jSimple,akkaSlf4j)  // in case somebody wants to configure SLF4J logging
@@ -40,7 +38,7 @@ lazy val root = createRootProject("race").
 lazy val raceCore = createProject("race-core", commonSettings).
   enablePlugins(JavaAppPackaging,LauncherJarPlugin).
   settings(
-    mainClass in Compile := Some("gov.nasa.race.main.ConsoleMain")
+    Compile / mainClass := Some("gov.nasa.race.main.ConsoleMain")
   ).
   addLibraryDependencies(akkaActor,akkaRemote,typesafeConfig,scalaReflect,jsch,scalaXml,avro,jimfs)
 
@@ -48,7 +46,7 @@ lazy val raceLauncher = createProject("race-launcher", commonSettings).
   dependsOn(raceCore).
   enablePlugins(JavaAppPackaging,LauncherJarPlugin).
   settings(
-    mainClass in Compile := Some("gov.nasa.race.remote.ConsoleRemoteLauncher")
+    Compile / mainClass := Some("gov.nasa.race.remote.ConsoleRemoteLauncher")
   ).
   addLibraryDependencies(typesafeConfig)
 
@@ -109,7 +107,7 @@ lazy val raceTools = createProject("race-tools", commonSettings).
   enablePlugins(JavaAppPackaging,ClasspathJarPlugin).
   dependsOn(raceCore,raceNetHttp,raceAir).
   settings(
-    mainClass in Compile := Some("gov.nasa.race.tool.CryptConfig")).
+    Compile / mainClass := Some("gov.nasa.race.tool.CryptConfig")).
   addLibraryDependencies(logback,avro)
 
 lazy val raceSpace = createProject("race-space", commonSettings).
@@ -127,19 +125,15 @@ lazy val raceAdapter = createProject("race-adapter", commonSettings).
 //--- test projects - no artifacts, only used to test this repository
 
 lazy val raceTestKitTest = createTestProject("race-testkit-test", testSettings).
-  enablePlugins(MultiJvmPlugin).
-  dependsOn(raceCore,raceTestKit).
-  configs(MultiJvm)
+  dependsOn(raceCore,raceTestKit)
 
 lazy val raceCoreTest = createTestProject("race-core-test", testSettings).
   dependsOn(raceCore,raceTestKit)
 
 lazy val raceNetJMSTest = createTestProject("race-net-jms-test", testSettings).
-  enablePlugins(MultiJvmPlugin).
   dependsOn(raceNetJMS,raceTestKit).
-  configs(MultiJvm).
   settings(
-    mainClass in Compile := Some("gov.nasa.race.jms.JMSServer")
+    Compile / mainClass := Some("gov.nasa.race.jms.JMSServer")
   ).
   addLibraryDependencies(logback,akkaSlf4j,akkaRemote)
 
@@ -147,22 +141,19 @@ lazy val raceNetHttpTest = createTestProject("race-net-http-test", testSettings)
   dependsOn(raceNetHttp,raceTestKit)
 
 lazy val raceNetKafkaTest = createTestProject("race-net-kafka-test", testSettings).
-  enablePlugins(JavaAppPackaging,MultiJvmPlugin).
+  enablePlugins(JavaAppPackaging).
   dependsOn(raceNetKafka,raceTestKit).
-  configs(MultiJvm).
   settings(
-    mainClass in Compile := Some("gov.nasa.race.kafka.KafkaServer"),
-    dependencyOverrides += newKafkaClients
+    Compile / mainClass := Some("gov.nasa.race.kafka.KafkaServer")
   ).
-  addLibraryDependencies(slf4jSimple,log4jOverSlf4j,zookeeper,newKafkaClients,kafka).
-  addTestLibraryDependencies(akkaSlf4j)
+  addLibraryDependencies(slf4jSimple,log4jOverSlf4j,kafkaAll).
+  addTestLibraryDependencies(akkaMultiNodeTestkit,akkaRemoting,akkaSlf4j)
 
 lazy val raceNetDDSTest = createTestProject("race-net-dds-test", testSettings).
-  enablePlugins(JavaAppPackaging,MultiJvmPlugin).
+  enablePlugins(JavaAppPackaging).
   dependsOn(raceNetDDS,raceTestKit,raceAir).
-  configs(MultiJvm).
   settings(
-    mainClass in Compile := Some("gov.nasa.race.dds.DDSServer")
+    Compile / mainClass := Some("gov.nasa.race.dds.DDSServer")
   )
 
 lazy val raceCLTest = createTestProject("race-cl-test", testSettings).

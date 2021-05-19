@@ -17,9 +17,9 @@
 
 import java.io.{PrintWriter, FileInputStream, InputStreamReader, File}
 
-import com.typesafe.sbt.SbtMultiJvm.MultiJvmKeys._
 import sbt._
 import sbt.Keys._
+import RaceBuild.NodeTest
 
 import scala.collection.immutable.ListMap
 import scala.io.Source
@@ -76,14 +76,14 @@ object ReCov {
   val taskSettings = Seq(
     //--- task definition/
 
-    // (this could also be achieved with   "addCommandAlias("recov", ";test;recovQuick")" in build.sbt
+    // (this could also be achieved with   "addCommandAlias("recov", ";test;recovQuick")" / build.sbt
 
     recov := {
       // note - .value only works for non-Unit tasks, otherwise we need to use dependOn(..)
       executeTests.all(ScopeFilter(inAnyProject,inConfigurations(Test))).value
 
       val allSources = sources.all(ScopeFilter(inAggregates(ThisProject,includeRoot=true),
-                                               inConfigurations(Compile, Test, MultiJvm))).value.flatten
+                                               inConfigurations(Compile, Test, NodeTest))).value.flatten
       val reqSrcs = requirementSources.value
       val report = requirementReport.value
 
@@ -92,7 +92,7 @@ object ReCov {
 
     recovQuick := {
       val allSources = sources.all(ScopeFilter(inAggregates(ThisProject,includeRoot=true),
-                                               inConfigurations(Compile, Test, MultiJvm))).value.flatten
+                                               inConfigurations(Compile, Test, NodeTest))).value.flatten
       val reqSrcs = requirementSources.value
       val report = requirementReport.value
 
@@ -100,8 +100,8 @@ object ReCov {
     },
 
     //--- supporting settings
-    aggregate in recov := false,
-    aggregate in recovQuick := false,
+    aggregate / recov := false,
+    aggregate / recovQuick := false,
 
     requirementReport := new File("doc/reports/requirements-coverage.md"),
     requirementSources := List[File]()

@@ -37,7 +37,8 @@ class KafkaImportActor (val config: Config) extends FilteringPublisher {
   val flushOnStart = config.getBooleanOrElse("flush-on-start", true)
 
   var consumer: Option[ConfigurableKafkaConsumer] = None // defer init since Kafka topics might be from remote config
-  var terminate = false
+  @volatile var terminate = false
+  @volatile var listening = false
 
   val thread = ThreadUtils.daemon {
     ifSome(consumer) { c =>
@@ -55,12 +56,15 @@ class KafkaImportActor (val config: Config) extends FilteringPublisher {
 
       while (!terminate) {
         try {
-          if (c.fillValueBuffer > 0) c.valueBuffer.foreach(publishFiltered)
+          listening = true
+          if (c.fillValueBuffer() > 0) {
+            c.valueBuffer.foreach(publishFiltered)
+          }
         } catch {
           case x:Throwable if !terminate => error(s"exception during Kafka read: ${x.getMessage}")
         }
       }
-      c.close
+      c.close()
     }
   }
 
@@ -73,7 +77,13 @@ class KafkaImportActor (val config: Config) extends FilteringPublisher {
   override def onStartRaceActor(originator: ActorRef) = {
     ifSome(consumer) { c =>
       if (c.subscribe) {
-        thread.start
+        info(s"subscribed to Kafka topics: ${c.topicNames}")
+        thread.start()
+
+        // apparently there is a race condition in the innards of KafkaConsumer if auto.offset.reset=latest and
+        // we have a new group/concurrent producers
+        //Thread.sleep(2000)
+
       } else {
         warning("Kafka topic subscription failed")
       }
@@ -83,7 +93,11 @@ class KafkaImportActor (val config: Config) extends FilteringPublisher {
 
   override def onTerminateRaceActor(originator: ActorRef) = {
     terminate = true
-    if (thread.isAlive) thread.interrupt()
+    while (thread.isAlive) {
+      ifSome(consumer){ _.wakeUp() }
+      Thread.sleep(100)
+    }
+
     super.onTerminateRaceActor(originator)
   }
 

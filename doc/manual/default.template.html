@@ -4,13 +4,13 @@
         <meta charset="UTF-8"/>
         <title>RACE</title>
 
-        <link href="{{config.rootPath}}/race-html.css" rel="stylesheet"/>
+        <link href="${laika.rootPath}/race-html.css" rel="stylesheet"/>
     </head>
 
     <body>
         <div class="navbar">
             <div class=""banner>
-                <a href="index.html" ><img class="logo" src="{{config.rootPath}}/images/race128.png"></a>
+                <a href="${laika.rootPath}/index.html" ><img class="logo" src="${laika.rootPath}/images/race128.png"></a>
                 <p class="doctitle">RACE Manual</p>
             </div>
             <br/>
@@ -21,16 +21,20 @@
                     <li><span class="toc level2"><a href="http://nasarace.github.io/race">Website</a></span></li>
                 </ul>
             </div>
-            <div class="pagetoc">
-                @:toc title="Page" root="#currentDocument" depth=2.
+            <div class="toc pagetoc">
+                <p class="title">Page</p>
+                @:navigationTree {
+                    entries = [ { target = "#", depth = 2 } ]
+                }
             </div>
-            <div class="globaltoc">
-                @:toc title="Site" root="#rootTree" depth=2.
+            <div class="toc globaltoc">
+                <p class="title">Site</p>
+                @:navigationTree { entries = [ { target = "/", depth = 3 } ] }
             </div>
         </div>
 
         <div class="main">
-            {{document.content}}
+            ${cursor.currentDocument.content}
         </div>
 
     </body>

@@ -11,7 +11,7 @@ SGT Inc, NASA Ames Research Center
 
 
 ## Slides
-@:toc root="#currentDocument".
+@:navigationTree { entries = [ { target = "#" } ] }
 
 ## Outline
 more *show*, less *tell*:

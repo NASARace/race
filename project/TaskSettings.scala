@@ -45,21 +45,21 @@ object TaskSettings {
   lazy val taskSettings = Seq(
     //--- unix tree command (listing what is under current src/)
     tree := TreeTask(sourceDirectory.value),
-    aggregate in tree := false,
+    tree / aggregate := false,
 
     //--- edit file (input example, not functional yet)
     edit := EditTask( editor.value, EditTask.pathParser.parsed),
     //connectInput in edit := true,
     editor := EditTask.defaultEditor,
-    aggregate in edit := false,
+    edit / aggregate := false,
 
     //--- print working dir
     pwd := withReturn(baseDirectory.value.getPath)(println),
-    aggregate in pwd := false,
+    pwd / aggregate := false,
 
     //--- execute shell cmds from within SBT
     sh := ShTask(spaceDelimited("<arg>").parsed),
-    aggregate in sh := false,
+    sh / aggregate := false,
 
     //--- compile Avro schemas
     avroCompileSchemaCmd := AvroTask.defaultCompileCmd,
@@ -78,7 +78,7 @@ object TaskSettings {
     //--- Laika wrappers
 
     //--- test settings
-    testOptions in Test ++= Seq(
+    Test / testOptions ++= Seq(
       Tests.Argument(TestFrameworks.ScalaTest, "-oD"),  // print times
       Tests.Argument(TestFrameworks.ScalaTest, "-oS"),  // short stack traces
 

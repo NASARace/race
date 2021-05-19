@@ -3,7 +3,7 @@ Run RACE Remotely
 
 
 ## Slides
-@:toc root="#currentDocument".
+@:navigationTree { entries = [ { target = "#" } ] }
 
 
 ## RemoteLauncher - one sentence purpose

@@ -119,13 +119,27 @@ object RaceBuild /*extends Build */ {
     Project(id, file(id)).settings(initSettings)
   }
 
+  // the config that executes tests in src/node-test/..
+  lazy val NodeTest = config("node-test") extend(Test)
+
   def createTestProject(pathName: String, initSettings: Seq[Def.Setting[_]]): Project = {
     val path = file(pathName)
-    Project(pathName, path).settings(
-      initSettings,
-      publish := {},
-      publishLocal := {}
-      //fork in Test := true,
+    Project(pathName, path)
+      .configs(NodeTest)
+      //.settings( inConfig(NodeTest)(Defaults.testTasks) : _*)
+      .settings(
+        initSettings,
+        publish := {},
+        publishLocal := {},
+
+        //fork in Test := true,
+
+        // the NodeTest settings - note that we need to execute in fork mode
+        inConfig(NodeTest)(Defaults.testSettings),
+        NodeTest / parallelExecution := false,
+        NodeTest / sourceDirectory := baseDirectory.value / "src" / "node-test",
+        NodeTest / scalaSource := baseDirectory.value / "src" / "node-test" / "scala",
+        NodeTest / fork := true // we need to run this in fork mode to pick up the classpath
     )
   }
 

@@ -35,15 +35,17 @@ object PluginSettings {
   import laika.sbt.LaikaPlugin
   import laika.sbt.LaikaPlugin.autoImport._
   val laikaSettings = LaikaPlugin.projectSettings ++ Seq(
-    sourceDirectories in Laika := Seq(file("doc/manual")),
-    target in Laika := target.value / "doc",
+    Laika / sourceDirectories := Seq(file("doc/manual")),
+    Laika / target := target.value / "doc",
     laikaIncludePDF := false,
     laikaIncludeAPI := false, // not yet
-    excludeFilter in Laika := new FileFilter {
+    Laika / excludeFilter := new FileFilter {
       override def accept(file:File): Boolean = Seq("attic","slides").contains(file.getName)
     },
-    laikaConfig := LaikaConfig(rawContent=true),
-    aggregate in Laika := false
+
+    laikaConfig := LaikaConfig.defaults.withRawContent, // this would be the new reference
+
+    Laika / aggregate := false
   )
 
   //----------------------------------------------------------------------------------

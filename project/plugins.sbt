@@ -17,13 +17,8 @@ addSbtPlugin("com.typesafe.sbt" % "sbt-native-packager" % "1.7.6")
 // single executable (uber) jar assembly: https://github.com/sbt/sbt-assembly
 //addSbtPlugin("com.eed3si9n" % "sbt-assembly" % "0.14.6")
 
-// multi-jvm testing: https://github.com/sbt/sbt-multi-jvm
-// this is current;y broken as 0.4.0 does not seem to work with scalatest (no tests found)
-addSbtPlugin("com.typesafe.sbt" % "sbt-multi-jvm" % "0.4.0")
-
 // document site generation with Laika: https://github.com/planet42/Laika
-//addSbtPlugin("org.planet42" % "laika-sbt" % "0.17.0")
-addSbtPlugin("org.planet42" % "laika-sbt" % "0.9.0")
+addSbtPlugin("org.planet42" % "laika-sbt" % "0.17.1")
 
 // find latest versions of dependencies
 addSbtPlugin("org.jmotor.sbt" % "sbt-dependency-updates" % "1.2.1")

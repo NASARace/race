@@ -61,6 +61,7 @@ object RaceActorSystem { // aka RAS
   def removeAllTerminationListeners = terminationListeners = Set.empty[() => Unit]
 
   def hasLiveSystems = liveSystems.nonEmpty
+  def isTerminating = liveSystems.exists(e=> e._2.isTerminating)
   def numberOfLiveSystems = liveSystems.size
   def addLiveSystem(race: RaceActorSystem) = liveSystems += (race.system -> race)
   def removeLiveSystem(race: RaceActorSystem) = {
@@ -200,11 +201,12 @@ class RaceActorSystem(val config: Config) extends LogController with VerifiableA
     wallStartTime = wallClockStartTime(true)
     if (wallStartTime.isDefined) {
       scheduleStart(wallStartTime)
+      true
+
     } else {
       startActors
+      status == Running
     }
-
-    status == Started
   }
 
   def createActorSystem(name: String, conf: Config): ActorSystem = ActorSystem(name, config)

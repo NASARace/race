@@ -326,12 +326,15 @@ object FileUtils {
 
   def filename(path: String) = (new File(path)).getName
 
-  def deleteRecursively(file: File): Unit = {
-    if (file.isDirectory) {
-      file.listFiles.foreach(deleteRecursively)
-    }
-    if (file.exists && !file.delete) {
-      throw new Exception(s"deleteRecursively ${file.getAbsolutePath} failed")
+  def deleteRecursively(f: File): Unit = {
+    if (f.isDirectory) {
+      f.listFiles.foreach(deleteRecursively)
+      if (!f.delete) {
+        throw new Exception(s"failed to delete directory: ${f.getAbsolutePath}")
+      }
+
+    } else if (f.isFile && !f.delete) {
+      throw new Exception(s"failed to delete file: ${f.getAbsolutePath}")
     }
   }
 

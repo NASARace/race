@@ -15,10 +15,12 @@
  * limitations under the License.
  */
 
-import java.io.File
+import laika.ast.Path.Root
 
+import java.io.File
 import laika.sbt.LaikaPlugin.autoImport._
 import laika.ast._
+import laika.rewrite.link.LinkConfig
 import sbt._
 import sbt.{Command, FileFilter, Project}
 import sbt.Keys._
@@ -28,28 +30,36 @@ object LaikaCommands {
   def manualCmd (state: State): State = {
     val extracted = Project extract state
     import extracted._
-    runTask(laikaSite in Laika,
+    runTask(Laika / laikaSite,
       appendWithoutSession(Seq(
-        sourceDirectories in Laika := Seq(new File("doc/manual")),
-        target in laikaSite := target.value / "doc",
-        laikaConfig := LaikaConfig(rawContent=true),
-        excludeFilter in Laika := new FileFilter {
+        Laika / sourceDirectories := Seq(new File("doc/manual")),
+        laikaSite / target := target.value / "doc",
+
+        laikaConfig := LaikaConfig.defaults
+          .withRawContent
+          .withConfigValue(LinkConfig(excludeFromValidation = Seq(Root / "slides"))),
+
+        Laika / excludeFilter := new FileFilter {
           override def accept(file:File): Boolean = Seq("attic", "slides", "articles").contains(file.getName)
         }
       ),state))._1
   }
   def mkManual = Command.command("mkManual") { manualCmd }
 
+
   def slidesCmd (state: State): State = {
     val extracted = Project extract state
     import extracted._
-    runTask(laikaSite in Laika,
+    runTask(Laika / laikaSite,
       appendWithoutSession(Seq(
-        sourceDirectories in Laika := Seq(new File("doc/slides")),
-        target in laikaSite := target.value / "doc" / "slides",
-        laikaConfig := LaikaConfig(rawContent=true),
-        laikaExtensions += laikaHtmlRenderer { out =>
-          { case Section(hdr@Header(2, _, _), content, _) => out << "</div><div class=\"slide\">" << hdr << content }
+        Laika / sourceDirectories := Seq(new File("doc/slides")),
+        laikaSite / target := target.value / "doc" / "slides",
+        laikaConfig := LaikaConfig.defaults.withRawContent, // this would be the new reference
+
+        // this adds proper div wrappers around slide-pages, which are only marked by headers in the input source
+        laikaExtensions += laikaHtmlRenderer {
+          case (fmt, Header(2,content,opt)) =>
+            s"""</div><div class=\"slide\">${fmt.element("h2",opt,content)}"""
         }
       ), state))._1
   }
@@ -58,10 +68,10 @@ object LaikaCommands {
   def articlesCmd (state: State): State = {
     val extracted = Project extract state
     import extracted._
-    runTask(laikaSite in Laika,
+    runTask(Laika / laikaSite,
       appendWithoutSession(Seq(
-        sourceDirectories in Laika := Seq(new File("doc/articles")),
-        target in laikaSite := target.value / "doc" / "articles"
+        Laika / sourceDirectories := Seq(new File("doc/articles")),
+        laikaSite / target := target.value / "doc" / "articles"
       ),state))._1
   }
   def mkArticles = Command.command("mkArticles") { articlesCmd }

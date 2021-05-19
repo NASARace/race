@@ -198,6 +198,10 @@ object StringUtils {
     i
   }
 
+  // to work around the annoying string interpolation restriction
+  def mkSepString (a: Array[Any], sep: Char): String = a.mkString(sep.toString)
+  def mkSepString (a: Seq[Any], sep: Char): String = a.mkString(sep.toString)
+
   def mkQuotedCharString (a: Array[Byte], maxLen: Int): String = {
     val sb = new StringBuffer
     val n = Math.min(a.length, maxLen)

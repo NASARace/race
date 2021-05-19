@@ -20,13 +20,53 @@ package gov.nasa.race.test
 import akka.remote.testconductor.RoleName
 import akka.remote.testkit._
 import akka.testkit.ImplicitSender
+import com.typesafe.config.ConfigFactory
 import org.scalatest.{BeforeAndAfterAll, Suite}
 import org.scalatest.matchers.should.Matchers
 
 import scala.concurrent.duration.FiniteDuration
 
+abstract class RaceMultiNodeConfig extends MultiNodeConfig {
+  // we use the otherwise frowned upon Java serialization for multi-node testing to minimize additional test dependencies
+  commonConfig(ConfigFactory.parseString("""
 
-abstract class RaceMultiNodeSpec (config: MultiNodeConfig) extends MultiNodeSpec(config)
+    # multi-jvm testing uses remoting, which requires more configuration
+    akka {
+      actor {
+        # we use otherwise frowned-upon Java serialization to avoid additional test dependencies (there are already enough)
+        warn-about-java-serializer-usage = "off"
+        allow-java-serialization = "on"
+
+        # provider=remote is possible, but prefer cluster (according to doc 'remote' is low level)
+        #provider = cluster
+        provider = remote
+      }
+      remote {
+        artery {
+          transport = tcp # See Selecting a transport below
+          canonical.hostname = "127.0.0.1"
+          canonical.port = 0
+        }
+      }
+      cluster {
+        downing-provider-class = "akka.cluster.sbr.SplitBrainResolverProvider"
+      }
+      akka.log-dead-letters-during-shutdown = "off"
+    }
+    """).withFallback(ConfigFactory.load()))
+}
+
+/*
+    akka.remote.artery.canonical.hostname = "127.0.0.1"
+    akka.remote.artery.canonical.port = 0
+    akka.cluster.seed-nodes = [
+      "akka://ClusterSystem@127.0.0.1:25251",
+      "akka://ClusterSystem@127.0.0.1:25252"
+    ]
+    akka.cluster.downing-provider-class = "akka.cluster.sbr.SplitBrainResolverProvider"
+ */
+
+abstract class RaceMultiNodeSpec (config: RaceMultiNodeConfig) extends MultiNodeSpec(config)
     with MultiNodeSpecCallbacks with Matchers with Suite with BeforeAndAfterAll
     with ImplicitSender with RaceSpec {
 
@@ -43,8 +83,9 @@ abstract class RaceMultiNodeSpec (config: MultiNodeConfig) extends MultiNodeSpec
   }
 
   def sendMsg (role: RoleName, msg: Any) = {
-    info(s"${myself.name} sending ${msg} to ${role.name}")
-    system.actorSelection(node(role) / "system" / "testActor-1") ! msg
+    //info(s"${myself.name} sending ${msg} to ${role.name}")
+    val remoteRef = system.actorSelection(node(role) / "system" / "testActor-1")
+    remoteRef ! msg
   }
 
   override def enterBarrier (name: String*): Unit = {

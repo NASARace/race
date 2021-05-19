@@ -9,7 +9,7 @@ avoid wasting heap on pre-requisites<br/>
 SGT Inc, NASA Ames Research Center
 
 ## Slides
-@:toc root="#currentDocument".
+@:navigationTree { entries = [ { target = "#" } ] }
 
 
 ## Problem
