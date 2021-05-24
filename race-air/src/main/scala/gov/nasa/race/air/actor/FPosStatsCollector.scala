@@ -64,5 +64,11 @@ class FlightPosStatsData extends TSStatsData[FlightPos,TSEntryData[FlightPos]] {
     else Duplicate
   }
 
-  override def toXML = <flightPositions>{xmlFields}</flightPositions>
+  override def toXML: String = {
+    s"""    <flightPositions>
+       $xmlBasicTSStatsData
+       $xmlBasicTSStatsFindings
+       $xmlSamples
+    </flightPositions>"""
+  }
 }

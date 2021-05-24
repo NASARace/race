@@ -18,7 +18,6 @@
 package gov.nasa.race.core
 
 import akka.actor.{Actor, ActorLogging}
-import gov.nasa.race.core.Messages.{RemotePublish, RemoteSubscribe, RemoteUnsubscribe}
 
 /**
   * a RACE specific system actor that serves as an interface for external actor clients which cannot

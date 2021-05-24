@@ -26,7 +26,6 @@ import gov.nasa.race.{Dated, _}
 
 import scala.collection.mutable.{HashMap => MHashMap}
 import scala.concurrent.duration._
-import scala.xml.NodeSeq
 
 object TSStatsData {
 
@@ -207,33 +206,38 @@ trait TSStatsData[O <: Dated,E <: TSEntryData[O]] extends Cloneable with XmlSour
   //--- XML representation
 
   def xmlBasicTSStatsData = {
-    <updates>{nUpdates}</updates>
-      <active>{nActive}</active>
-      <minActive>{minActive}</minActive>
-      <maxActive>{maxActive}</maxActive>
-      <completed>{completed}</completed>
-      <dtMin>{dtMin}</dtMin>
-      <dtMax>{dtMax}</dtMax>
+    s"""    <updates>$nUpdates</updates>
+      <active>$nActive</active>
+      <minActive>$minActive</minActive>
+      <maxActive>$maxActive</maxActive>
+      <completed>$completed</completed>
+      <dtMin>$dtMin</dtMin>
+      <dtMax>$dtMax</dtMax>"""
   }
 
-  def xmlBasicTSStatsFindings = {
-    <stale>{stale}</stale>
-      <dropped>{dropped}</dropped>
-      <blackout>{blackout}</blackout>
-      <outOfOrder>{outOfOrder}</outOfOrder>
-      <duplicates>{duplicate}</duplicates>
-      <ambiguous>{ambiguous}</ambiguous>
+  def xmlBasicTSStatsFindings: String = {
+    s"""     <stale>$stale</stale>
+      <dropped>$dropped</dropped>
+      <blackout>$blackout</blackout>
+      <outOfOrder>$outOfOrder</outOfOrder>
+      <duplicates>$duplicate</duplicates>
+      <ambiguous>$ambiguous</ambiguous>"""
   }
 
   def xmlSamples = buckets match {
     case Some(bc) => bc.toXML
-    case None => NodeSeq.Empty
+    case None => ""
   }
 
-  def xmlFields = xmlBasicTSStatsData ++ xmlBasicTSStatsFindings ++ xmlSamples
 
   // override if there are additional fields
-  def toXML = <series>{xmlFields}</series>
+  def toXML = {
+    s"""    <series>
+       $xmlBasicTSStatsData
+       $xmlBasicTSStatsFindings
+       $xmlSamples
+    </series>"""
+  }
 }
 
 class TimeSeriesStats[O <: Dated,E <: TSEntryData[O]](val topic: String,
@@ -265,7 +269,7 @@ class TimeSeriesStats[O <: Dated,E <: TSEntryData[O]](val topic: String,
     pw.println
   }
 
-  override def xmlData = data.toXML
+  override def xmlData: String = data.toXML
 }
 
 trait BasicTimeSeriesStats[O <: Dated] extends TimeSeriesStats[O,TSEntryData[O]]
@@ -454,10 +458,14 @@ trait ConfiguredTSStatsCollector[K,O <: Dated,E <: TSEntryData[O],S <: TSStatsDa
 
   def bucketCount: Int = config.getIntOrElse("bucket-count",0) // default is we don't collect sample distributions
 
-  def createBuckets: Option[BucketCounter] =  if (bucketCount > 0) {
-    val dtMin = config.getFiniteDurationOrElse("dt-min",0.seconds).toMillis
-    val dtMax = config.getFiniteDurationOrElse("dt-max",dropAfter).toMillis
-    Some( new BucketCounter(dtMin.toDouble,dtMax.toDouble,bucketCount))
-  } else None
+  def createBuckets: Option[BucketCounter] = {
+    if (bucketCount > 0) {
+      val dtMin = config.getFiniteDurationOrElse("dt-min",0.seconds).toMillis
+      val dtMax = config.getFiniteDurationOrElse("dt-max",dropAfter).toMillis
+      Some( new BucketCounter(dtMin.toDouble,dtMax.toDouble,bucketCount))
+    } else {
+      None
+    }
+  }
 }
 

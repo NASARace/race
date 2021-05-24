@@ -21,7 +21,7 @@ addSbtPlugin("com.typesafe.sbt" % "sbt-native-packager" % "1.7.6")
 addSbtPlugin("org.planet42" % "laika-sbt" % "0.17.1")
 
 // find latest versions of dependencies
-addSbtPlugin("org.jmotor.sbt" % "sbt-dependency-updates" % "1.2.1")
+addSbtPlugin("org.jmotor.sbt" % "sbt-dependency-updates" % "1.2.2")
 
 //--- publishing support (needs to be in global on publishing machine)
 

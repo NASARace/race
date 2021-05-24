@@ -17,11 +17,9 @@
 package gov.nasa.race.actor
 
 import java.io.{File, FileWriter, PrintWriter}
-
-import akka.actor.ActorRef
 import com.typesafe.config.Config
 import gov.nasa.race._
-import gov.nasa.race.common.{PrintStats, PrintStatsFormatter, Stats}
+import gov.nasa.race.common.{PrintStats, PrintStatsFormatter, Stats, StringXmlPullParser2}
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.Messages.{BusEvent, RaceTick}
 import gov.nasa.race.core.{PeriodicRaceActor, PublishingRaceActor, RaceInitializeException, SubscribingRaceActor}
@@ -30,7 +28,6 @@ import gov.nasa.race.util.{BufferedFileWriter, ConsoleIO, FileUtils, StringUtils
 
 import scala.collection.mutable.{SortedMap => MSortedMap}
 import scala.concurrent.duration._
-import scala.xml.PrettyPrinter
 
 /**
   * a mix-in for Stats reporter actors
@@ -183,9 +180,7 @@ class FileStatsReporter (val config: Config) extends PrintStatsReporterActor {
 class XMLStatsReporter (val config: Config) extends StatsReporterActor with PublishingRaceActor {
   val pathName = config.getOptionalString("pathname")
 
-  val pretty = if (config.getBooleanOrElse("prettify",false)) {
-    Some(new PrettyPrinter(config.getIntOrElse("pretty-columns",140), config.getIntOrElse("pretty-indent",2)))
-  } else None
+  val prettify = config.getBooleanOrElse("prettify",false)
 
   def save (msg: String) = {
     ifSome(pathName) { pn =>
@@ -196,11 +191,14 @@ class XMLStatsReporter (val config: Config) extends StatsReporterActor with Publ
   }
 
   override def report = {
-    val xml = <statisticsReport>{topics.values.map(_.toXML)}</statisticsReport>
-    val msg = pretty match {
-      case Some(pp) => pp.format(xml)
-      case None => xml.toString
-    }
+    val xml = s"""<statisticsReport>${topics.values.map(_.toXML).mkString(" ")}</statisticsReport>"""
+
+    val msg = if (prettify) {  // FIXME - this is awfully inefficient
+      val parser = new StringXmlPullParser2
+      parser.initialize(xml)
+      parser.format
+    } else xml
+
     save(msg)
     publish(msg)
   }

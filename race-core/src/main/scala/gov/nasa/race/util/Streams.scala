@@ -169,11 +169,17 @@ class SettableDOStream(baos: SettableBAOStream) extends DataOutputStream(baos) {
 /**
   * a ByteArrayInputStream that gives us control over buffer position
   */
-class SettableBAIStream (buf: Array[Byte]) extends ByteArrayInputStream(buf) {
+class SettableBAIStream (bs: Array[Byte]) extends ByteArrayInputStream(bs) {
 
+  def this () = this(Array.empty[Byte])
   def this (size: Int) = this(new Array[Byte](size))
 
   def position = pos
+
+  def setBuffer (newBuf: Array[Byte]): Unit = {
+    buf = newBuf
+    pos = 0
+  }
 
   def setPosition(newPos: Int) = {
     if (newPos >= 0 && newPos < buf.length) {

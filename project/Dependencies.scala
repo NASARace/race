@@ -46,10 +46,7 @@ object Dependencies {
   val typesafeConfig = "com.typesafe" % "config" % "1.4.1"  // akka still depends on 1.3.3
 
   //--- Scala parser combinators (https://github.com/scala/scala-parser-combinators)
-  val scalaParser = "org.scala-lang.modules" %% "scala-parser-combinators" % "1.2.0-M1"
-
-  //--- scala-xml
-  val scalaXml = "org.scala-lang.modules" %% "scala-xml" % "1.3.0"
+  val scalaParser = "org.scala-lang.modules" %% "scala-parser-combinators" % "1.2.0-RC2" // "2.0.0" collides with typesafe:ssl-config-core
 
   //--- new scala reflection (TypeTags etc.)
   val scalaReflect =  "org.scala-lang" % "scala-reflect" % CommonRaceSettings.scalaVer
@@ -72,7 +69,7 @@ object Dependencies {
   val pegDown = "org.pegdown" % "pegdown" % "1.6.0" % Test
 
   //--- scalaCheck
-  val scalaCheck = "org.scalacheck" %% "scalacheck" % "1.15.3" % Test
+  val scalaCheck = "org.scalacheck" %% "scalacheck" % "1.15.4" % Test
 
   val defaultLibs =  Seq(logback,typesafeConfig)
   val defaultTestLibs = Seq(scalaTest,scalaTestPlus,flexmarkAll,scalaCheck,pegDown)
@@ -95,8 +92,8 @@ object Dependencies {
   val circeAll = Seq(circeCore,circeGeneric,circeParser)
 
   //--- jackson (used by http-net Webauthn library)
-  val jacksonCore = "com.fasterxml.jackson.core" % "jackson-core" % "2.12.2"
-  val jacksonScala = "com.fasterxml.jackson.module" %% "jackson-module-scala" % "2.12.2"
+  val jacksonCore = "com.fasterxml.jackson.core" % "jackson-core" % "2.12.3" // latest collides with acca-cluster/remote
+  val jacksonScala = "com.fasterxml.jackson.module" %% "jackson-module-scala" % "2.12.3"
   val jacksonAll = Seq(jacksonCore,jacksonScala)
 
   //--- scala-swing
@@ -119,8 +116,7 @@ object Dependencies {
   val argon2 = "de.mkammerer" % "argon2-jvm" % "2.10.1"
 
   //--- webauthn (FIDO2) server library (note this creates a transitive BouncyCastle dependency)
-  val webauthn = "com.yubico" % "webauthn-server-core" % "1.8.0"
-  // val webauthnattest = "com.yubico" % "webauthn-server-attestation" % "1.7.0" % "runtime" 
+  val webauthn = "com.yubico" % "webauthn-server-core" % "1.9.1-RC2"
 
   //--- jimfs - simple in-memory file system to enforce platform independent paths
   val jimfs = "com.google.jimfs" % "jimfs" % "1.2"
@@ -131,25 +127,23 @@ object Dependencies {
 
   val akkaActor = akkaOrg %% "akka-actor" % akkaVersion
   val akkaRemote = akkaOrg %% "akka-remote" % akkaVersion
+  val akkaJackson = akkaOrg %% "akka-serialization-jackson" % akkaVersion
   val akkaCluster = akkaOrg %% "akka-cluster" % akkaVersion // e.g. for multi-jvm testing
   val akkaSlf4j = akkaOrg %% "akka-slf4j" % akkaVersion
-
   val akkaTestkit = akkaOrg %% "akka-testkit" % akkaVersion
-  val akkaMultiNodeTestkit = akkaOrg %% "akka-multi-node-testkit" % akkaVersion // % "test,multi-jvm"
-
   val akkaHttp = akkaOrg %% "akka-http" % "10.2.4"
 
   val akkaAll = Seq(akkaActor)
 
   //--- Aeron (for akka-remote)
-  val aeronDriver =  "io.aeron" % "aeron-driver" % "1.32.0"
-  val aeronClient = "io.aeron" % "aeron-client" % "1.32.0"
+  val aeronDriver =  "io.aeron" % "aeron-driver" % "1.33.1"
+  val aeronClient = "io.aeron" % "aeron-client" % "1.33.1"
 
-  val akkaRemoting = Seq(akkaRemote,aeronDriver,aeronClient)
+  val akkaRemoting = Seq(akkaRemote,akkaJackson,aeronDriver,aeronClient,jacksonCore,jacksonScala)
 
 
   //--- ActiveMQ
-  val amqVersion = "5.16.1"
+  val amqVersion = "5.16.2"
   val amqOrg = "org.apache.activemq"
   val amqBroker = amqOrg % "activemq-broker" % amqVersion
 

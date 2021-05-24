@@ -197,7 +197,13 @@ class TATrackStatsData  (val src: String) extends TSStatsData[TaisTrack,TATrackE
     }
   }
 
-  override def toXML = <center src={src}>{xmlBasicTSStatsData ++ xmlBasicTSStatsFindings ++ xmlSamples}</center>
+  override def toXML = {
+    s"""    <center src="$src">
+       $xmlBasicTSStatsData
+       $xmlBasicTSStatsFindings
+       $xmlSamples
+    </center>"""
+  }
 }
 
 class TATrackStats(val topic: String, val source: String, val takeMillis: Long, val elapsedMillis: Long,
@@ -240,7 +246,11 @@ class TATrackStats(val topic: String, val source: String, val takeMillis: Long, 
     pw.print(f"   $nDropped%7d $nBlackout%7d $nOutOfOrder%7d $nDuplicates%7d $nAmbiguous%7d   $nNoTime%7d")
   }
 
-  override def xmlData = <taTrackStats>{traconStats.map( _.toXML)}</taTrackStats>
+  override def xmlData: String = {
+    s"""    <taTrackStats>
+      ${traconStats.map( _.toXML).mkString("\n      ")}
+    </taTrackStats>"""
+  }
 }
 
 class TATrackStatsFormatter (conf: Config) extends PrintStatsFormatter {

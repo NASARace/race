@@ -22,7 +22,7 @@ import scala.annotation.tailrec
   * base trait for sample statistics
   */
 trait SampleStats[T <: AnyVal] {
-  protected var _n: Int = 0
+  protected var _n: Int
 
   def numberOfSamples: Int = _n
 
@@ -58,7 +58,7 @@ trait SampleStats[T <: AnyVal] {
 // These methods have to be defined in concrete classes or it will cause name conflicts
 
 trait OnlineSampleStatsImpl {
-  protected var _n: Int
+  protected var _n: Int = 0
   protected var _mean: Double = 0
   protected var s: Double = 0
 
@@ -98,13 +98,15 @@ trait OnlineSampleStatsImplD extends OnlineSampleStatsImpl with XmlSource {
     if (x > _max) _max = x
   }
 
-  def toXML = <samples>
-    <count>{_n}</count>
-    <min>{_min}</min>
-    <max>{_max}</max>
-    <mean>{_mean}</mean>
-    <variance>{variance}</variance>
-  </samples>
+  def toXML: String = {
+    s"""    <samples>
+      <count>${_n}</count>
+      <min>${_min}</min>
+      <max>${_max}</max>
+      <mean>${_mean}</mean>
+      <variance>$variance</variance>
+    </samples>"""
+  }
 }
 
 /**
@@ -126,13 +128,15 @@ trait OnlineSampleStatsImplJ extends OnlineSampleStatsImpl with XmlSource {
     if (x > _max) _max = x
   }
 
-  def toXML = <samples>
-    <count>{_n}</count>
-    <min>{_min}</min>
-    <max>{_max}</max>
-    <mean>{_mean}</mean>
-    <variance>{variance}</variance>
-  </samples>
+  def toXML: String = {
+    s"""    <samples>
+      <count>${_n}</count>
+      <min>${_min}</min>
+      <max>${_max}</max>
+      <mean>${_mean}</mean>
+      <variance>$variance</variance>
+    </samples>"""
+  }
 }
 
 /**

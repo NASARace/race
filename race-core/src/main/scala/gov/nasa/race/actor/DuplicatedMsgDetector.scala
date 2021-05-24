@@ -128,11 +128,11 @@ class DupStatsData(val classifier: String) extends XmlSource with Cloneable {
 
   def snapshot = super.clone.asInstanceOf[DupStatsData]
 
-  override def toXML = {
-    <dup classifier={classifier}>
-      <count>{count}</count>
-      <rate>{dtMillis}</rate>
-    </dup>
+  override def toXML: String = {
+    s"""<dup classifier="$classifier">
+      <count>$count</count>
+      <rate>$dtMillis</rate>
+    </dup>"""
   }
 }
 
@@ -163,10 +163,14 @@ class DuplicateMsgStats(val topic: String, val source: String, val takeMillis: L
     printStats(pw,"match category",matchStats)
   }
 
-  override def xmlData = {
-    <dupStats>
-      <msgs>{msgStats.map(_.toXML)}</msgs>
-      <matches>{matchStats.map(_.toXML)}</matches>
-    </dupStats>
+  override def xmlData: String = {
+    s"""<dupStats>
+      <msgs>
+         ${msgStats.map(_.toXML).mkString("\n")}
+      </msgs>
+      <matches>
+         ${matchStats.map(_.toXML).mkString("\n")}
+      </matches>
+    </dupStats>"""
   }
 }

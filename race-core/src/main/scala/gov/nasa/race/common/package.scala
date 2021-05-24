@@ -153,7 +153,7 @@ package object common {
 
   // something that can be turned into XML
   trait XmlSource {
-    def toXML: xml.Node
+    def toXML: String
   }
 
   // a wrapper for generic sources (abbreviated because there are already a gazillion of 'Source' types in other packages)

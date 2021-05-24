@@ -84,17 +84,21 @@ case class MsgStatsDataSnapshot(
   patterns: Array[PatternStatsData] // regex pattern matches
 ) extends XmlSource {
 
-  override def toXML = {
-    <msg name={msgName}>
-      <count>{count}</count>
-      <bytes>{byteSize}</bytes>
-      <avgMsgPerSec>{f"$avgMsgPerSec%.1f"}</avgMsgPerSec>
-      <peakMsgPerSec>{f"$peakMsgPerSec%.1f"}</peakMsgPerSec>
-      <avgBytesPerSec>{f"$avgBytesPerSec%.0f"}</avgBytesPerSec>
-      <peakBytesPerSec>{f"$peakBytesPerSec%.0f"}</peakBytesPerSec>
-      <paths>{paths.map(_.toXML)}</paths>
-      <patterns>{patterns.map(_.toXML)}</patterns>
-    </msg>
+  override def toXML: String = {
+    f"""    <msg name="$msgName">
+      <count>$count</count>
+      <bytes>$byteSize</bytes>
+      <avgMsgPerSec>${avgMsgPerSec%.1f}</avgMsgPerSec>
+      <peakMsgPerSec>${peakMsgPerSec%.1f}</peakMsgPerSec>
+      <avgBytesPerSec>${avgBytesPerSec%.0f}</avgBytesPerSec>
+      <peakBytesPerSec>${peakBytesPerSec%.0f}</peakBytesPerSec>
+      <paths>
+        ${paths.map(_.toXML).mkString("\n        ")}
+      </paths>
+      <patterns>
+        ${patterns.map(_.toXML).mkString("\n        ")}
+      </patterns>
+    </msg>"""
   }
 }
 
@@ -141,5 +145,5 @@ class MsgStats(val topic: String, val source: String, val takeMillis: Long, val 
     }
   }
 
-  override def xmlData = <msgStats>{messages.map(_.toXML)}</msgStats>
+  override def xmlData = s"""<msgStats>${messages.map(_.toXML).mkString("")}</msgStats>"""
 }

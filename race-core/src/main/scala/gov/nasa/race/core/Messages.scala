@@ -137,7 +137,6 @@ object Messages {
   case object RaceShowCompleted                         // Master -> RAS
 
   protected[core] case object RaceTerminate             // RAS -> Master
-  protected[core] case class RemoteRaceTerminate (remoteMaster: ActorRef) // Master -> RemoteMaster
   protected[core] case object RaceTerminated            // Master -> RAS, remote Master -> Master
   protected[core] case object RaceTerminateFailed       // Master -> RAS
 
@@ -157,11 +156,6 @@ object Messages {
   case class Subscribe (channel: String)
   case class Unsubscribe (channel: String)
   case class Publish (channel: String, msg: Any)
-
-  //--- messages to support remote bus subscribers/publishers, processed by BusConnector
-  case class RemoteSubscribe (actorRef: ActorRef, channel: Channel) extends RaceSystemMessage // -> master
-  case class RemoteUnsubscribe (actorRef: ActorRef, channel: Channel)  extends RaceSystemMessage // -> master
-  case class RemotePublish (msg: ChannelMessage) extends RaceSystemMessage
 
 
   //--- dynamic channel provider lookup & response

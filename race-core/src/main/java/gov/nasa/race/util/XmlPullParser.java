@@ -17,6 +17,7 @@
 
 package gov.nasa.race.util;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.PrintStream;
 import java.nio.ByteBuffer;
@@ -696,6 +697,14 @@ public class XmlPullParser implements XmlPullParserIfc {
         }
       }
     }
+  }
+
+  public String format () {
+    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    PrintStream ps = new PrintStream(baos);
+    printOn(ps);
+    ps.flush();
+    return baos.toString();
   }
 
   public void printFileOn (File file, PrintStream ps) {

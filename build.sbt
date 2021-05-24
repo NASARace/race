@@ -40,7 +40,7 @@ lazy val raceCore = createProject("race-core", commonSettings).
   settings(
     Compile / mainClass := Some("gov.nasa.race.main.ConsoleMain")
   ).
-  addLibraryDependencies(akkaActor,akkaRemote,typesafeConfig,scalaReflect,jsch,scalaXml,avro,jimfs)
+  addLibraryDependencies(akkaActor,akkaRemoting,typesafeConfig,scalaReflect,jsch,avro,jimfs)
 
 lazy val raceLauncher = createProject("race-launcher", commonSettings).
   dependsOn(raceCore).
@@ -98,7 +98,7 @@ lazy val raceCL = createProject("race-cl", commonSettings).
 
 lazy val raceTestKit = createProject("race-testkit", commonSettings).
   dependsOn(raceCore).
-  addLibraryDependencies(defaultTestLibs,akkaActor,akkaTestkit,akkaMultiNodeTestkit)
+  addLibraryDependencies(defaultTestLibs,akkaActor,akkaTestkit)
 
 lazy val raceUI = createProject("race-ui", commonSettings).
   dependsOn(raceCore,raceSwing)
@@ -147,7 +147,7 @@ lazy val raceNetKafkaTest = createTestProject("race-net-kafka-test", testSetting
     Compile / mainClass := Some("gov.nasa.race.kafka.KafkaServer")
   ).
   addLibraryDependencies(slf4jSimple,log4jOverSlf4j,kafkaAll).
-  addTestLibraryDependencies(akkaMultiNodeTestkit,akkaRemoting,akkaSlf4j)
+  addTestLibraryDependencies(akkaRemoting,akkaSlf4j)
 
 lazy val raceNetDDSTest = createTestProject("race-net-dds-test", testSettings).
   enablePlugins(JavaAppPackaging).

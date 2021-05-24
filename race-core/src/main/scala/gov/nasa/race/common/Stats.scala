@@ -18,8 +18,6 @@ package gov.nasa.race.common
 
 import java.io.PrintWriter
 
-import scala.xml.NodeSeq
-
 /**
   * the generic container for statistics. This can be sent as a message, as long as
   * the snapshot element type is serializable
@@ -32,12 +30,12 @@ trait Stats extends Cloneable with XmlSource {
 
   //--- XML generation interface
   def toXML = {
-    <stats topic={topic} source={source} takeMillis={takeMillis.toString} elapsedMillis={elapsedMillis.toString}>
-      {xmlData}
-    </stats>
+    s"""    <stats topic="$topic" source="$source" takeMillis="$takeMillis" elapsedMillis="$elapsedMillis">
+      $xmlData
+    </stats>"""
   }
   // override for stats child elements
-  def xmlData: xml.NodeSeq = NodeSeq.Empty
+  def xmlData: String = ""
 }
 
 /**
@@ -63,10 +61,10 @@ class PatternStatsData(val pattern: String) extends XmlSource with Cloneable {
 
   def snapshot = super.clone.asInstanceOf[PatternStatsData]
 
-  override def toXML = {
-    <match>
-      <pattern>{pattern}</pattern>
-      <count>{count}</count>
-    </match>
+  override def toXML: String = {
+    s"""    <match>
+      <pattern>$pattern</pattern>
+      <count>$count</count>
+    </match>"""
   }
 }

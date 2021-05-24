@@ -39,12 +39,6 @@ import scala.language.postfixOps
 
 
 
-// these are only exchanged between masters during remote actor creation
-// note - we can't use protected or objects because that would not match between different processes
-case class RemoteConnectionRequest (requestingMaster: ActorRef)
-case object RemoteConnectionAccept
-case object RemoteConnectionReject
-
 case object HeartBeat
 
 /**

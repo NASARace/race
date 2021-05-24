@@ -29,7 +29,6 @@ import gov.nasa.race.trajectory.TrajectoryDiff
 import gov.nasa.race.uom.{Angle, Length}
 
 import scala.collection.mutable.{HashMap => MutHashMap}
-import scala.xml.Elem
 
 class TrackDiffStatsCollector (val config: Config) extends StatsCollectorActor {
 
@@ -99,26 +98,28 @@ class TrackDiffStatsCollector (val config: Config) extends StatsCollectorActor {
       }
     }
 
-    override def toXML: Elem = {
-      <trackDiff area={topic} tracks={trackDiffs.size.toString}>
-        <maxDistance uom="meters">{maxDistance.toRoundedMeters}</maxDistance>
-        <minDistance uom="meters">{minDistance.toRoundedMeters}</minDistance>
-        <avgDistance uom="meters">{avgDistance.toRoundedMeters}</avgDistance>
-        <avgAngle  uom="degrees">{avgAngle.toRoundedDegrees}</avgAngle>
-        <tracks>{trackDiffs.map(tpeToXML)}</tracks>
-      </trackDiff>
+    override def toXML: String = {
+      s"""      <trackDiff area="$topic" tracks="$trackDiffs.size">
+        <maxDistance uom="meters">${maxDistance.toRoundedMeters}</maxDistance>
+        <minDistance uom="meters">${minDistance.toRoundedMeters}</minDistance>
+        <avgDistance uom="meters">${avgDistance.toRoundedMeters}</avgDistance>
+        <avgAngle uom="degrees">${avgAngle.toRoundedDegrees}</avgAngle>
+        <tracks>
+           ${trackDiffs.map(tpeToXML).mkString("\n        ")}
+        </tracks>
+      </trackDiff>"""
     }
 
-    def tpeToXML (e: TrackPairEvent): Elem = {
+    def tpeToXML (e: TrackPairEvent): String = {
       val td = e.extraData.asInstanceOf[TrajectoryDiff]
-      <track id={e.id} time={e.date.toString}>
-        <maxDistance uom="meters">{td.distance2DStats.max.toRoundedMeters}</maxDistance>
-        <minDistance uom="meters">{td.distance2DStats.min.toRoundedMeters}</minDistance>
-        <avgDistance uom="meters">{td.distance2DStats.mean.toRoundedMeters}</avgDistance>
-        <varDistance>{td.distance2DStats.sampleVariance}</varDistance>
-        <avgAngle  uom="degrees">{td.angleDiffStats.mean.toRoundedDegrees}</avgAngle>
-        <varAngle>{td.angleDiffStats.sampleVariance}</varAngle>
-      </track>
+      s"""      <track id="${e.id}" time="${e.date}">
+        <maxDistance uom="meters">${td.distance2DStats.max.toRoundedMeters}</maxDistance>
+        <minDistance uom="meters">${td.distance2DStats.min.toRoundedMeters}</minDistance>
+        <avgDistance uom="meters">${td.distance2DStats.mean.toRoundedMeters}</avgDistance>
+        <varDistance>${td.distance2DStats.sampleVariance}</varDistance>
+        <avgAngle uom="degrees">${td.angleDiffStats.mean.toRoundedDegrees}</avgAngle>
+        <varAngle>${td.angleDiffStats.sampleVariance}</varAngle>
+      </track>"""
     }
   }
 

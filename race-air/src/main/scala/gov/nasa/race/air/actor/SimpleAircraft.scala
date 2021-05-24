@@ -17,14 +17,12 @@
 
 package gov.nasa.race.air.actor
 
-import akka.actor.ActorRef
 import com.typesafe.config.Config
 import gov.nasa.race.air.FlightPos
-import gov.nasa.race.core.Messages.RaceTick
-import gov.nasa.race.core.{ContinuousTimeRaceActor, PeriodicRaceActor, PublishingRaceActor, SubscribingRaceActor}
 import gov.nasa.race.config.ConfigUtils._
-import gov.nasa.race.geo.GreatCircle._
+import gov.nasa.race.core.{ContinuousTimeRaceActor, PeriodicRaceActor, PublishingRaceActor, SubscribingRaceActor}
 import gov.nasa.race.geo.GeoPosition
+import gov.nasa.race.geo.GreatCircle._
 import gov.nasa.race.uom.Angle._
 import gov.nasa.race.uom.Length._
 import gov.nasa.race.uom.Speed._

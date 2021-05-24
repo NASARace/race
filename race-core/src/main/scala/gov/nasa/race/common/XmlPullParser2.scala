@@ -16,9 +16,8 @@
  */
 package gov.nasa.race.common
 
-import java.io.PrintStream
+import java.io.{ByteArrayOutputStream, PrintStream}
 import java.nio.charset.StandardCharsets
-
 import gov.nasa.race.uom.DateTime
 
 import scala.annotation.switch
@@ -641,6 +640,13 @@ abstract class XmlPullParser2  {
     new String(data, i0, i1-i0)
   }
 
+  def format: String = {
+    val baos = new ByteArrayOutputStream
+    val ps = new PrintStream(baos)
+    printOn(ps)
+    ps.flush()
+    baos.toString
+  }
 
   def printOn (ps: PrintStream): Unit = {
     def printIndent: Unit = {

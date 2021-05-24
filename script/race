@@ -9,11 +9,11 @@ DIR="$(dirname $SOURCE)"
 SCRIPT=$DIR/../target/universal/stage/bin/race
 
 # workaround for outdated JOGL distribution which is not Java 9 aware
-JAVA_OPTS="$JAVA_OPTS --add-opens java.desktop/sun.awt=ALL-UNNAMED"
+export JAVA_OPTS="$JAVA_OPTS --add-opens java.desktop/sun.awt=ALL-UNNAMED"
 
 # workaround for broken Java fullscreen support on macOS
 if [[ "$OSTYPE" == darwin* ]]; then
-  JAVA_OPTS="$JAVA_OPTS --add-opens java.desktop/com.apple.eawt=ALL-UNNAMED"
+  export JAVA_OPTS="$JAVA_OPTS --add-opens java.desktop/com.apple.eawt=ALL-UNNAMED"
 fi
  
 
