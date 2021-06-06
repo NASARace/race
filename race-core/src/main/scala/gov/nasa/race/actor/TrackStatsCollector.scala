@@ -24,7 +24,7 @@ import com.typesafe.config.Config
 import gov.nasa.race._
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.common.{PrintStats, Stats}
-import gov.nasa.race.core.Messages.{BusEvent, RaceTick}
+import gov.nasa.race.core.{BusEvent, RaceTick}
 import gov.nasa.race.track.{TrackListMessage, TrackTerminationMessage, TrackedObject}
 import gov.nasa.race.uom.DateTime
 

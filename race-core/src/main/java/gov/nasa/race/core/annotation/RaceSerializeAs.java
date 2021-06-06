@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, United States Government, as represented by the
+ * Copyright (c) 2021, United States Government, as represented by the
  * Administrator of the National Aeronautics and Space Administration.
  * All rights reserved.
  *
@@ -14,21 +14,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package gov.nasa.race.common
+package gov.nasa.race.core.annotation;
 
-import akka.actor.ActorRef
-import gov.nasa.race.util.StringUtils
+import gov.nasa.race.core.SerializableMessage;
+
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
+
+@Target({ElementType.TYPE})
+@Retention(RetentionPolicy.RUNTIME)
 
 /**
-  * object to keep track of actor statistics
-  */
-class ActorStats (val actorRef: ActorRef) {
-  val pathString = actorRef.path.toStringWithoutAddress
-  val name = actorRef.path.name
-  val level = StringUtils.countOccurrences( pathString, '/') - 3 // e.g. /user/aircraft-ww/GeoViewer
-
-  val latencyStats = new LongStats
-  var msgCount: Long = 0
-
-  var isUnresponsive: Boolean = false
+ * runtime annotation to look up/create the serializable representation of the annotated type
+ */
+public @interface RaceSerializeAs {
+  Class<? extends SerializableMessage> value();
 }

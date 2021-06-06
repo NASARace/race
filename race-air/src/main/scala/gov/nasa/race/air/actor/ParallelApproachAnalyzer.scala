@@ -20,7 +20,7 @@ import com.typesafe.config.Config
 import gov.nasa.race.common.Nat.N3
 import gov.nasa.race.common.{FHTInterpolant, TInterpolant}
 import gov.nasa.race.config.ConfigUtils._
-import gov.nasa.race.core.Messages.BusEvent
+import gov.nasa.race.core.BusEvent
 import gov.nasa.race.core.{PublishingRaceActor, SubscribingRaceActor}
 import gov.nasa.race.geo.{Euclidean, GeoPosition}
 import gov.nasa.race.track.{TrackDropped, TrackPairEvent, TrackTerminationMessage, TrackedObject, TrackedObjectExtrapolator}

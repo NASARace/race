@@ -19,7 +19,7 @@ package gov.nasa.race.actor
 
 import com.typesafe.config.Config
 import gov.nasa.race._
-import gov.nasa.race.core.Messages.{BusEvent, ChannelTopicRequest}
+import gov.nasa.race.core.{BusEvent, ChannelTopicRequest}
 import gov.nasa.race.core._
 
 /**

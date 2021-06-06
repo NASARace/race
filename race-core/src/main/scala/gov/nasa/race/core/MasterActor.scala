@@ -17,29 +17,18 @@
 
 package gov.nasa.race.core
 
-import java.util.concurrent.{LinkedBlockingQueue, TimeUnit}
-
-import akka.actor.SupervisorStrategy.Stop
 import akka.actor._
 import akka.util.Timeout
 import com.typesafe.config.{Config, ConfigException}
-import gov.nasa.race._
 import gov.nasa.race.config.ConfigUtils._
-import gov.nasa.race.core.Messages._
 import gov.nasa.race.uom.DateTime
 import gov.nasa.race.util.NetUtils._
 import gov.nasa.race.util.StringUtils._
-import gov.nasa.race.util.ThreadUtils
 import gov.nasa.race.util.ThreadUtils._
 
+import java.util.concurrent.{LinkedBlockingQueue, TimeUnit}
 import scala.collection.mutable
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.duration._
 import scala.language.postfixOps
-
-
-
-case object HeartBeat
 
 /**
   * the master for a RaceActorSystem
@@ -70,15 +59,11 @@ case object HeartBeat
   *
   * TODO - streamline local/remote instantiation and registration
   */
-class MasterActor (ras: RaceActorSystem) extends Actor with ParentActor {
+class MasterActor (ras: RaceActorSystem) extends Actor with ParentActor with MonitorActor {
 
   info(s"master created: ${self.path}")
 
-  var heartBeatScheduler: Option[Cancellable] = None
-  var heartBeatCount: Int = 0
-
   var waiterForTerminated: Option[ActorRef] = None
-  val statsReporter: Option[ActorStatsReporter] = createStatsReporter
 
   //--- convenience funcs
   def name = self.path.name
@@ -87,6 +72,7 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ParentActor {
   def localContext = ras.localRaceContext
   override def system: ActorSystem = ras.system
 
+  def config = ras.config
 
   //context.system.eventStream.subscribe(self, classOf[DeadLetter])
 
@@ -104,11 +90,8 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ParentActor {
     *   make sure we catch any exceptions - the master is the one actor that is not allowed to crash, it
     *   has to stay responsive
     */
-  override def receive: Receive = {
+  def handleMasterMessages: Receive = {
     case RemoteConnectionRequest(remoteMaster) => onRemoteConnectionRequest(remoteMaster)
-
-    case HeartBeat => onHeartBeat
-    case msg: PingRaceActorResponse => onPingRaceActorResponse(sender(), msg)
 
     case RaceCreate => onRaceCreate
     case RaceInitialize => onRaceInitialize
@@ -146,13 +129,15 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ParentActor {
     case Terminated(actorRef) => // Akka death watch event
       removeChildActorRef(actorRef)
 
-    case RaceActorStopped => // from postStop hook of RaceActors
+    case RaceActorStopped() => // from postStop hook of RaceActors
      stoppedChildActorRef(sender())
 
-    case RaceShow => showActors(sender()) // debug dump
+    case RaceShow => report(System.out, false) // print actor tree
 
     case deadLetter: DeadLetter => // TODO - do we need to react to DeadLetters?
   }
+
+  def receive: Receive = handleMasterMessages.orElse( handleActorMonitorMessages)
 
   //--- failure strategy
 
@@ -164,10 +149,10 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ParentActor {
     info(s"received remote connection request from: ${remoteMaster.path}")
     if (ras.acceptsRemoteConnectionRequest(remoteMaster)) {
       info(s"accepted remote connection request from: ${remoteMaster.path}")
-      sender() ! RemoteConnectionAccept
+      sender() ! RemoteConnectionAccept()
     } else {
       warning(s"rejected remote connection request from: ${remoteMaster.path}")
-      sender() ! RemoteConnectionReject
+      sender() ! RemoteConnectionReject()
     }
   }
 
@@ -444,8 +429,8 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ParentActor {
 
   def isRemoteConnectionAcceptedBy(remoteMaster: ActorRef): Boolean = {
     askForResult (remoteMaster ? RemoteConnectionRequest(self)) {
-      case RemoteConnectionAccept => true
-      case RemoteConnectionReject => false
+      case _:RemoteConnectionAccept => true
+      case _:RemoteConnectionReject => false
       case TimedOut => false
     }
   }
@@ -491,6 +476,10 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ParentActor {
           info(s"received RaceInitialized from $actorName")
           commonCaps = commonCaps.intersection(actorCaps)
 
+          // note this does not start monitoring yet, just registers the actor and its automatically created children
+          // actor should at this point have created its stable child actors
+          registerMonitoredActor(ras.pathPrefix, actorRef)
+
           //--- these are all causing exceptions if this is not an optional actor
         case RaceActorInitializeFailed(reason) => initFailed(s"initialization of $actorName failed: $reason", isOptional)
         case TimedOut => initFailed(s"initialization timeout for $actorName", isOptional)
@@ -517,14 +506,6 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ParentActor {
     RaceContext(self,busIfc)
   }
 
-
-  // check if this is an actor we know about (is part of our RAS)
-  def isManaged (actorRef: ActorRef) = isChildActor(actorRef)
-
-  // check if this is an actor we created
-  def isSupervised (actorRef: ActorRef) = context.child(actorRef.path.name).isDefined
-
-
   //--- actor start
 
   protected def startFailed(msg: String, isOptionalActor: Boolean, cause: Option[Throwable]=None) = {
@@ -546,8 +527,7 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ParentActor {
         simClock.resume
         startSatellites
         startRaceActors
-        startHeartBeatMonitor
-        requester ! RaceStarted
+        requester ! RaceStarted()
       } catch {
         case t: Throwable =>
           requester ! RaceStartFailed(t)
@@ -556,14 +536,17 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ParentActor {
     } else warning(s"RaceStart request from ${sender()} ignored")
   }
 
-  // TODO this should detect cycles
+  /**
+    * notification that a remote RAS that uses local actors via lookup has started
+    */
   def onRemoteRaceStart (remoteMaster: ActorRef, simTime: DateTime, timeScale: Double) = executeProtected {
+    // TODO this should detect cycles
     if (ras.isKnownRemoteMaster(remoteMaster)) {
       info(s"master $name got RemoteRaceStart at $simTime")
       simClock.reset(simTime,timeScale).resume
       startSatellites
       startRaceActors
-      sender() ! RaceStarted
+      sender() ! RaceStarted()
     } else warning(s"RemoteRaceStart from unknown remote master: $remoteMaster")
   }
 
@@ -578,7 +561,7 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ParentActor {
 
         info(s"sending StartRaceActor to ${actorRef.path.name}..")
         askForResult(actorRef ? StartRaceActor(self)) {
-          case RaceActorStarted =>
+          case RaceActorStarted() =>
             info(s"${actorRef.path.name} is running")
           case RaceActorStartFailed(reason) =>
             startFailed(s"start of ${actorRef.path.name} failed: $reason", isOptional)
@@ -589,22 +572,17 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ParentActor {
         }(startTimeout)
       }
     }
+
+    startMonitoring()
   }
 
   def startSatellites = {
     ras.usedRemoteMasters.values.foreach { remoteMaster =>
       info(s"starting satellite ${remoteMaster.path}")
       askForResult( remoteMaster ? RemoteRaceStart(self, simClock.dateTime, simClock.timeScale)) {
-        case RaceStarted => info(s"satellite started: ${remoteMaster.path}")
+        case RaceStarted() => info(s"satellite started: ${remoteMaster.path}")
         case TimedOut => throw new RuntimeException(s"failed to start satellite ${remoteMaster.path}")
       }
-    }
-  }
-
-  def startHeartBeatMonitor: Unit = {
-    val heartBeat = ras.heartBeatInterval
-    if (heartBeat.length > 0) {
-      heartBeatScheduler = Some(context.system.scheduler.scheduleWithFixedDelay(Duration.Zero, heartBeat, self, HeartBeat))
     }
   }
 
@@ -733,9 +711,9 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ParentActor {
   //--- actor termination
 
   private def shutdown = {
-    terminateHeartBeat
-    terminateSatellites
-    terminateRaceActors
+    stopMonitoring()
+    terminateRaceActors()
+    terminateSatellites()
   }
 
   def onRaceTerminate = executeProtected {
@@ -750,45 +728,37 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ParentActor {
   def onRemoteRaceTerminate (remoteMaster: ActorRef) = executeProtected {
     if (ras.isKnownRemoteMaster(remoteMaster)) {
       if (ras.allowRemoteTermination) {
-        info(s"master $name got RemoteRaceTerminate, shutting down")
-        shutdown
+        info(s"got RemoteRaceTerminate from $remoteMaster, shutting down")
+        ras.requestTermination(remoteMaster)
       } else {
-        warning(s"RemoteRaceTerminate from $remoteMaster ignored")
+        info(s"got RemoteRaceTerminate from $remoteMaster but remote termination not configured")
       }
-      sender() ! RaceTerminated
-    } else warning(s"RemoteRaceTerminate from unknown remote master: $remoteMaster")
+      sender() ! RaceTerminated()
+    } else warning(s"RemoteRaceTerminate from unknown remote master $remoteMaster ignored")
   }
 
-  def terminateRaceActors: Unit = {
+  def terminateRaceActors(): Unit = {
     terminateAndRemoveRaceActors
 
     waiterForTerminated match {
       case Some(actorRef) =>
-        if (noMoreChildren) actorRef ! RaceTerminated
+        if (noMoreChildren) actorRef ! RaceTerminated()
         else actorRef ! RaceTerminateFailed
       case None => // nothing to report
     }
   }
 
-  def terminateSatellites = {
+  def terminateSatellites() = {
     ras.usedRemoteMasters.values.foreach { remoteMaster =>
       info(s"terminating satellite ${remoteMaster.path}")
       askForResult(remoteMaster ? RemoteRaceTerminate(self)) {
-        case RaceTerminated =>
+        case RaceTerminated() =>
           info(s"got RaceTerminated from satellite ${remoteMaster.path}")
-        case RaceAck =>
+        case RaceAck() =>
           info(s"got RaceAck termination response from satellite ${remoteMaster.path}")
         case TimedOut =>
           warning(s"satellite ${remoteMaster.path} termination timeout")
       }
-    }
-  }
-
-  def terminateHeartBeat: Unit = {
-    ifSome(heartBeatScheduler) { sched =>
-      sched.cancel()
-      heartBeatScheduler = None
-      ifSome(statsReporter){ _.terminate }
     }
   }
 
@@ -805,73 +775,4 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ParentActor {
     sendToChildren(SyncWithRaceClock)
   }
 
-  def onHeartBeat: Unit = {
-    if (ras.isLive){
-      val reporter = if (statsReporter.isDefined) self else ActorRef.noSender
-
-      processRespondingChildren { actorData =>
-        val actorRef = actorData.actorRef
-        val lastPingTime = actorData.pingNanos
-        if (lastPingTime > 0) { // did we already ping this actor?
-          val pingResponse = actorData.receivedNanos
-          if (pingResponse < lastPingTime) { // it did not respond to last ping
-            // TODO - this should follow the supervisor policy, i.e. try to re-create the actor
-            if (isOptionalActor(actorData.config)){
-              warning(s"actor not responsive: ${actorRef.path}")
-            } else {
-              error(s"actor not responsive: ${actorRef.path}, shutting down")
-              ThreadUtils.execAsync(ras.terminateActors)
-            }
-            context.stop(actorRef) // make sure Akka doesn't schedule this actor anymore
-            actorData.isUnresponsive = true
-            ifSome(statsReporter){ sp=> sp.setUnresponsive(actorRef) }
-          }
-        }
-
-        //--- record and send the next ping
-        val now = System.nanoTime
-        actorRef ! PingRaceActor(now,reporter)
-        actorData.pingNanos = now
-      }
-
-      heartBeatCount += 1
-      info(s"heartbeat: $heartBeatCount")
-
-      ifSome(statsReporter){ sp=>
-        if (heartBeatCount % ras.heartBeatReport == 0) sp.report
-      }
-    }
-  }
-
-  def onPingRaceActorResponse (actorRef: ActorRef, msg: PingRaceActorResponse): Unit = {
-    processChildRef(actorRef) { actorData=>
-      actorData.receivedNanos = msg.receivedNanos
-    }
-
-    ifSome(statsReporter){ _.processPingActorResponse(actorRef,msg) }
-  }
-
-  def showActors (requester: ActorRef): Unit = {
-    println(f"actors of system ${self.path}:")
-    println("  name                                                         lat [μs]       msgs")
-    println("  ----------------------------------------------------------   --------     ------")
-    actors.foreach { actorData =>
-      val actorRef = actorData.actorRef
-      askForResult(actorRef ? ShowRaceActor(System.nanoTime)) {
-        case ShowRaceActorResponse => // all Ok, next
-        case TimedOut => println(s"  ${actorRef.path.name} : UNRESPONSIVE")
-        case other => println(s"  ${actorRef.path.name} : wrong response ($other)")
-      }
-    }
-    requester ! RaceShowCompleted
-  }
-
-  def createStatsReporter: Option[ActorStatsReporter] = {
-    if (ras.heartBeatReport > 0) {
-      if (ras.heartBeatInterval.toMillis > 0) {
-        return Some(new ConsoleActorStatsReporter(ras.heartBeatPort)) // TODO - make this configurable
-      } else warning("option 'heartbeat-report' ignored - no 'heartbeat-interval' set")
-    }
-    None
-  }
 }

@@ -25,7 +25,7 @@ import com.typesafe.config.Config
 import gov.nasa.race._
 import gov.nasa.race.actor.ReplayActor
 import gov.nasa.race.config.ConfigUtils._
-import gov.nasa.race.core.Messages.ChannelTopicRequest
+import gov.nasa.race.core.ChannelTopicRequest
 import gov.nasa.race.core.RaceActorCapabilities._
 import gov.nasa.race.core.{ChannelTopicProvider, RaceContext}
 import gov.nasa.race.geo.GeoPosition

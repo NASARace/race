@@ -22,7 +22,7 @@ import gov.nasa.race.air.FlightPos
 import gov.nasa.race.common.TSStatsData.{Ambiguous, Duplicate, Sameness}
 import gov.nasa.race.common.{TSEntryData, TSStatsData}
 import gov.nasa.race.core.ClockAdjuster
-import gov.nasa.race.core.Messages.{BusEvent, RaceTick}
+import gov.nasa.race.core.{BusEvent, RaceTick}
 import gov.nasa.race.track.TrackCompleted
 
 /**

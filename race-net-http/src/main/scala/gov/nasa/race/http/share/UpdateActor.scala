@@ -20,7 +20,7 @@ import akka.actor.ActorRef
 import com.typesafe.config.Config
 import gov.nasa.race.common.{Clock, PathIdentifier}
 import gov.nasa.race.config.ConfigUtils.ConfigWrapper
-import gov.nasa.race.core.Messages.BusEvent
+import gov.nasa.race.core.BusEvent
 import gov.nasa.race.core.{ContinuousTimeRaceActor, PeriodicRaceActor, PublishingRaceActor, RaceContext, RaceException, SubscribingRaceActor}
 import gov.nasa.race.uom.DateTime
 import gov.nasa.race.util.FileUtils

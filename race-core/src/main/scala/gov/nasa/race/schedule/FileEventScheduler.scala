@@ -18,11 +18,20 @@
 package gov.nasa.race.schedule
 
 import java.io._
-
 import gov.nasa.race._
+import gov.nasa.race.common.ConstAsciiSlice.asc
+import gov.nasa.race.common.{UTF8XmlPullParser2, XmlPullParser2}
+import gov.nasa.race.schedule.FileEventScheduler.SCHEDULE
 import gov.nasa.race.util.DateTimeUtils._
 import gov.nasa.race.util.{FileUtils, XmlAttrProcessor, XmlPullParser}
 import gov.nasa.race.uom.{DateTime, Time}
+
+object FileEventScheduler {
+  val SCHEDULE = asc("schedule")
+  val EVENT = asc("event")
+  val WHEN = asc("when")
+  val FILE = asc("file")
+}
 
 /**
  * a EventScheduler that processes files
@@ -32,30 +41,34 @@ import gov.nasa.race.uom.{DateTime, Time}
  *     <event when="date-or-duration" file="pathname"/>
  *   </schedule>
  */
-class FileEventScheduler (val action: (File)=>Unit) extends XmlPullParser with XmlAttrProcessor with EventScheduler {
+class FileEventScheduler (val action: (File)=>Unit) extends UTF8XmlPullParser2 with EventScheduler {
+  import FileEventScheduler._
 
-  def loadSchedule (scheduleSpec: Array[Char]): Unit = {
+  def loadSchedule (scheduleSpec: Array[Byte]): Unit = {
     initialize(scheduleSpec)
 
-    while (parseNextElement()) {
-      if (isStartElement) {
+    while (parseNextTag) {
+      if (isStartTag) {
         tag match {
-          case "schedule" => // new schedule
-          case "event" =>
+          case SCHEDULE => // new schedule
+
+          case EVENT =>
             var pathName: String = null
             var timeSpec: String = null
 
-            processAttributes {
-              case "when" => timeSpec = value
-              case "file" => pathName = value
+            while (parseNextAttr) {
+              attrName match {
+                case WHEN => timeSpec = attrValue.toString
+                case FILE => pathName = attrValue.toString
+              }
             }
 
             if (pathName != null && timeSpec != null) {
               ifSome(FileUtils.existingNonEmptyFile(pathName)) { f =>
                 timeSpec match {
-                  case hhmmssRE(hh,mm,ss) => schedule(Time.HMS(hh.toInt,mm.toInt,ss.toInt))(action(f))
-                  case iso8601PeriodRE(s) => schedule(Time.parse(s))(action(f))
-                  case dateTimeRE(s) => schedule(DateTime.parseYMDT(s))(action(f))
+                  case hhmmssRE(hh,mm,ss) => scheduleAfter(Time.HMS(hh.toInt,mm.toInt,ss.toInt))(action(f))
+                  case iso8601PeriodRE(s) => scheduleAfter(Time.parse(s))(action(f))
+                  case dateTimeRE(s) => scheduleAt(DateTime.parseYMDT(s))(action(f))
                 }
               }
             }
@@ -63,7 +76,8 @@ class FileEventScheduler (val action: (File)=>Unit) extends XmlPullParser with X
       }
     }
   }
-  def loadSchedule (scheduleSpec: String): Unit = loadSchedule(scheduleSpec.toCharArray)
-  def loadSchedule (scheduleSpec: File): Unit = ifSome (FileUtils.fileContentsAsChars(scheduleSpec)) { loadSchedule }
+
+  def loadSchedule (scheduleSpec: String): Unit = loadSchedule(scheduleSpec.getBytes)
+  def loadSchedule (scheduleSpec: File): Unit = ifSome (FileUtils.fileContentsAsBytes(scheduleSpec)) { loadSchedule }
 
 }

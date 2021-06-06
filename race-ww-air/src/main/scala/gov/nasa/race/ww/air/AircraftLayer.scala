@@ -20,7 +20,7 @@ package gov.nasa.race.ww.air
 import akka.actor.Actor.Receive
 import com.typesafe.config.Config
 import gov.nasa.race.air.{AirLocator, TrackedAircraft, TrackedAircraftSeq}
-import gov.nasa.race.core.Messages.BusEvent
+import gov.nasa.race.core.BusEvent
 import gov.nasa.race.track.TrackTerminationMessage
 import gov.nasa.race.ww._
 import gov.nasa.race.ww.track.ModelTrackLayer

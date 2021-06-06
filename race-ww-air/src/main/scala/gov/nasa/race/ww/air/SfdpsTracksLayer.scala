@@ -22,7 +22,7 @@ import com.typesafe.config.Config
 import gov.nasa.race.air.{ARTCC, SfdpsTrack, SfdpsTracks}
 import gov.nasa.race.common.AllId
 import gov.nasa.race.config.ConfigUtils._
-import gov.nasa.race.core.Messages.BusEvent
+import gov.nasa.race.core.BusEvent
 import gov.nasa.race.geo.GeoPositioned
 import gov.nasa.race.swing._
 import gov.nasa.race.swing.Style._

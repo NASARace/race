@@ -17,7 +17,7 @@
 package gov.nasa.race.actor
 
 import akka.event.Logging
-import gov.nasa.race.core.Messages._
+import gov.nasa.race.core._
 import gov.nasa.race.test.RaceActorSpec
 import gov.nasa.race.util.FileUtils
 import gov.nasa.race.uom.DateTime

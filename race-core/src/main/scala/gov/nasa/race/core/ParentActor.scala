@@ -19,7 +19,7 @@ package gov.nasa.race.core
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.pattern.{AskSupport, ask}
 import com.typesafe.config.Config
-import gov.nasa.race.core.Messages.{PingRaceActor, RaceActorTerminateFailed, RaceActorTerminateIgnored, RaceActorTerminated, TerminateRaceActor}
+import gov.nasa.race.core.{PingRaceActor, RaceActorTerminateFailed, RaceActorTerminateReject, RaceActorTerminated, TerminateRaceActor}
 
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
@@ -29,7 +29,7 @@ import scala.collection.mutable.ArrayBuffer
   * have to be an actor but can be a construct such as a RaceRouteInfo
   *
   * Note this mostly factors out functions shared by Master and ParentRaceActor and hence is not
-  * assuming the parent is a RaceActor. The children however are
+  * assuming this is a RaceActor itself. The children however are
   */
 trait ParentActor extends Actor with ImplicitActorLogging with AskSupport {
 
@@ -51,6 +51,11 @@ trait ParentActor extends Actor with ImplicitActorLogging with AskSupport {
   //--- actor instantiation, addition and removal
   def actorOf(props: Props, name: String): ActorRef = context.actorOf(props,name)
 
+  // check if this is an actor we know about (is part of our RAS)
+  def isManaged (actorRef: ActorRef) = isChildActor(actorRef)
+
+  // check if this is an actor we created
+  def isSupervised (actorRef: ActorRef) = context.child(actorRef.path.name).isDefined
   // and probably some more..
 
   def addChildActorRef (actorRef: ActorRef, actorConf: Config): Unit = {
@@ -69,6 +74,7 @@ trait ParentActor extends Actor with ImplicitActorLogging with AskSupport {
       case Some(actorData) => {
         val idx = actors.indexOf(actorData)
         if (idx >= 0) actors.remove(idx)
+        context.unwatch(actorRef)
       }
       case None => // ignore
     }
@@ -152,34 +158,41 @@ trait ParentActor extends Actor with ImplicitActorLogging with AskSupport {
 
   //--- RaceActor specific message protocols
 
+  def nameOf( aRef: ActorRef): String = s"""'${aRef.path.name}'"""
+
   /**
     * this is a parent function that only works for children that are RaceActors and hence
     * implement the termination message protocol
+    * Note that we only do a termination round trip to actors we supervise, otherwise we just remove
+    * the actorRef from our list of children
     */
   protected[this] def terminateAndRemoveRaceActors: Boolean = {
     processChildrenReverse { actorData =>
       val actorRef = actorData.actorRef
+
       if (!actorData.isUnresponsive) { // no use to terminate otherwise
-        info(s"sending TerminateRaceActor to ${actorRef.path.name}")
+        info(s"sending TerminateRaceActor to ${nameOf(actorRef)}")
 
         askForResult(actorRef ? TerminateRaceActor(self)) {
-          case RaceActorTerminated => // all fine, actor did shut down
-            info(s"got RaceActorTerminated from ${actorRef.path.name}")
-            context.stop(actorRef) // stop it so that name becomes available again
+          case RaceActorTerminated() => // all fine, actor did shut down
+            info(s"got RaceActorTerminated from ${nameOf(actorRef)}")
+            if (isSupervised(actorRef)) {
+              context.stop(actorRef) // stop it so that name becomes available again
+            }
             // note we still should remove the actorRef here since the Terminate is processed async
             removeChildActorRef(actorRef)
 
           //--- rejects
-          case RaceActorTerminateIgnored =>
-            info(s"got RaceActorTerminateIgnored from ${actorRef.path.name}")
+          case RaceActorTerminateReject() =>
+            info(s"got RaceActorTerminateIgnored from ${nameOf(actorRef)}")
 
           //--- failures
           case RaceActorTerminateFailed(reason) =>
-            warning(s"RaceActorTerminate of ${actorRef.path.name} failed: $reason")
+            warning(s"RaceActorTerminate of ${nameOf(actorRef)} failed: $reason")
           case TimedOut =>
-            warning(s"no TerminateRaceActor response from ${actorRef.path.name}")
+            warning(s"no TerminateRaceActor response from ${nameOf(actorRef)}")
           case other => // illegal response
-            warning(s"got unknown TerminateRaceActor response from ${actorRef.path.name}")
+            warning(s"got unknown TerminateRaceActor response from ${nameOf(actorRef)}")
         }
       }
     }
@@ -187,19 +200,19 @@ trait ParentActor extends Actor with ImplicitActorLogging with AskSupport {
     actors.isEmpty
   }
 
-  //--- ping processing
+  //--- actor monitoring
 
-  protected[this] def pingActors (statsCollector: ActorRef): Unit = {
+  def registerChildren (registrar: ActorRef, queryPath: String): Unit = {
     processChildren { actorData =>
-      // don't need to reset receiveNanos
-      actorData.actorRef ! PingRaceActor(System.nanoTime,statsCollector)
+      actorData.actorRef ! RegisterRaceActor(registrar, queryPath)
     }
   }
 
-  protected[this] def processPingResponse (childRef: ActorRef, latencyNanos: Long, msgCount: Long): Unit = {
-    actorRefMap.get(childRef) match {
-      case Some(actorData) => actorData.receivedNanos = System.nanoTime
-      case None => // ignore (maybe we should warn)
+  //--- debugging
+
+  def printChildren(): Unit = {
+    actors.foreach { actorData=>
+      println(actorData.actorRef.path)
     }
   }
 }

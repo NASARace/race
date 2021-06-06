@@ -28,7 +28,7 @@ import com.typesafe.config.Config
 import gov.nasa.race._
 import gov.nasa.race.common.Stats
 import gov.nasa.race.config.ConfigUtils._
-import gov.nasa.race.core.Messages.BusEvent
+import gov.nasa.race.core.BusEvent
 import gov.nasa.race.core.{DataClientRaceActor, ParentActor, RaceContext}
 import gov.nasa.race.http.HtmlStats._
 import gov.nasa.race.util.{ClassLoaderUtils, FileUtils}

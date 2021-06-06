@@ -21,7 +21,7 @@ import gov.nasa.race.actor.FlatFilteringPublisher
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.air.{ARTCC, ARTCCs, SfdpsTracks}
 import gov.nasa.race.air.translator.MessageCollectionParser
-import gov.nasa.race.core.Messages.ChannelTopicRequest
+import gov.nasa.race.core.ChannelTopicRequest
 import gov.nasa.race.core.{AccumulatingTopicIdProvider, ChannelTopicProvider}
 import gov.nasa.race.jms.{JMSImportActor, TranslatingJMSImportActor}
 import gov.nasa.race.track.TrackCompleted

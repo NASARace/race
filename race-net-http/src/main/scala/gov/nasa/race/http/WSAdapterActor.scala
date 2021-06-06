@@ -26,7 +26,7 @@ import akka.stream.Materializer
 import akka.stream.scaladsl.{Flow, Keep, Sink, Source, SourceQueueWithComplete}
 import gov.nasa.race.actor.FilteringPublisher
 import gov.nasa.race.config.ConfigUtils._
-import gov.nasa.race.core.Messages.BusEvent
+import gov.nasa.race.core.BusEvent
 import gov.nasa.race.core.SubscribingRaceActor
 
 import java.lang.Thread.sleep

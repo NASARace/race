@@ -342,7 +342,7 @@ class JsonPullParserSpec extends AnyFlatSpec with RaceSpec {
       val users = readNextObjectMemberInto[Perms,mutable.Map[String,Perms]](_users_,mutable.Map.empty){
         val user = readArrayMemberName().toString
         val perms = readCurrentArrayInto(ArrayBuffer.empty[PermSpec]) {
-          readNextObject {
+          readCurrentObject {
             val providerPattern = readQuotedMember(_providerPattern_).toString
             val fieldPattern = readQuotedMember(_fieldPattern_).toString
             (providerPattern, fieldPattern)

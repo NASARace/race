@@ -22,7 +22,7 @@ import akka.actor.Actor.Receive
 import com.typesafe.config.Config
 import gov.nasa.race.air.{AirLocator, Airport, AsdexTrack, AsdexTracks}
 import gov.nasa.race.config.ConfigUtils._
-import gov.nasa.race.core.Messages.BusEvent
+import gov.nasa.race.core.BusEvent
 import gov.nasa.race.geo.{GeoPosition, GreatCircle}
 import gov.nasa.race.ifSome
 import gov.nasa.race.swing.Style._

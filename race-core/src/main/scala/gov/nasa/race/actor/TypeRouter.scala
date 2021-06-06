@@ -20,7 +20,7 @@ import com.typesafe.config.Config
 import gov.nasa.race._
 import gov.nasa.race.core.{PublishingRaceActor, SubscribingRaceActor}
 import gov.nasa.race.config.ConfigUtils._
-import gov.nasa.race.core.Messages.BusEvent
+import gov.nasa.race.core.BusEvent
 
 import scala.annotation.tailrec
 

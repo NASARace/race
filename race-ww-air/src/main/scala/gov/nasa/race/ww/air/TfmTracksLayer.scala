@@ -22,7 +22,7 @@ import java.awt.Color
 import akka.actor.Actor.Receive
 import com.typesafe.config.Config
 import gov.nasa.race.air.{AirLocator, TfmTrack, TfmTracks}
-import gov.nasa.race.core.Messages.BusEvent
+import gov.nasa.race.core.BusEvent
 import gov.nasa.race.ww.{Images, RaceViewer}
 import gov.nasa.race.ww.track.TrackLayer
 

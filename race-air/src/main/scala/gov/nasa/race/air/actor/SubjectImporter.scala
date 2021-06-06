@@ -21,7 +21,7 @@ import com.typesafe.config.{Config, ConfigFactory}
 import gov.nasa.race._
 import gov.nasa.race.actor.FilteringPublisher
 import gov.nasa.race.config.ConfigurableFilter
-import gov.nasa.race.core.Messages.{ChannelTopicAccept, ChannelTopicRelease, ChannelTopicRequest}
+import gov.nasa.race.core.{ChannelTopicAccept, ChannelTopicRelease, ChannelTopicRequest}
 import gov.nasa.race.core.ChannelTopicProvider
 
 import scala.collection.mutable.ArrayBuffer

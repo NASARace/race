@@ -104,7 +104,7 @@ trait ConsoleMainBase extends MainBase {
 
       case "9" | "exit" => // don't use System.exit here, it would break MultiNodeJVM tests
         if (!RaceActorSystem.isTerminating) {  // don't trip a termination that is already in progress
-          //removeShutdownHook(vmShutdownHook)
+          removeShutdownHook(vmShutdownHook)
           RaceActorSystem.removeTerminationListener(() => systemExit())
           universes.foreach(shutDown)
         }
@@ -118,12 +118,12 @@ trait ConsoleMainBase extends MainBase {
   }
 
   def showActors(ras: RaceActorSystem): Unit = {
-    ras.showActors
+    ras.showActors()
   }
 
   def showChannels(ras: RaceActorSystem): Unit = {
     println(s"channels of universe ${ras.name}:")
-    ras.showChannels
+    ras.showChannels()
   }
 
   final val channelPattern = """\| *(\S+)""".r

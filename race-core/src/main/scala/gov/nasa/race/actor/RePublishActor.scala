@@ -17,7 +17,7 @@
 package gov.nasa.race.actor
 
 import com.typesafe.config.Config
-import gov.nasa.race.core.Messages.BusEvent
+import gov.nasa.race.core.BusEvent
 import gov.nasa.race.core.{PublishingRaceActor, RaceContext, SubscribingRaceActor}
 import gov.nasa.race.util.ArrayUtils
 

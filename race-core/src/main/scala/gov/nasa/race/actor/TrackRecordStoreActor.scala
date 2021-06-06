@@ -20,7 +20,7 @@ import akka.actor.ActorRef
 import com.typesafe.config.Config
 import gov.nasa.race.common.{BufferRecord, RecordWriter}
 import gov.nasa.race.config._
-import gov.nasa.race.core.Messages.{BusEvent, RaceTick}
+import gov.nasa.race.core.{BusEvent, RaceTick}
 import gov.nasa.race.core.{ContinuousTimeRaceActor, PeriodicRaceActor, SubscribingRaceActor}
 import gov.nasa.race.track._
 

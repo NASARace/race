@@ -17,7 +17,7 @@
 package gov.nasa.race.actor
 
 import akka.event.Logging
-import gov.nasa.race.core.Messages.BusEvent
+import gov.nasa.race.core.BusEvent
 import gov.nasa.race.test.RaceActorSpec
 import gov.nasa.race.uom.DateTime
 import org.scalatest.flatspec.AnyFlatSpecLike

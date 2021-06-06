@@ -145,6 +145,15 @@ object ConfigUtils {
     def getStringOrElse(key: String, fallback: String) = getWithFallback(key,fallback)(conf.getString(key))
     def getOptionalString(key: String): Option[String] = getOptional(key)(conf.getString(key))
 
+    def getOverridableStringOrElse (key: String, fallback: String): String = {
+      val sysProp = System.getProperty(key.replace('-', '.'))
+      if (sysProp != null) {
+        sysProp
+      } else {
+        getStringOrElse( key, fallback)
+      }
+    }
+
     def getFloatOrElse(key: String, fallback: Float) = getWithFallback(key,fallback)( conf.getDouble(key).toFloat )
     def getOptionalFloat(key: String): Option[Float] = getOptional(key)( conf.getDouble(key).toFloat )
 
@@ -166,6 +175,15 @@ object ConfigUtils {
 
     def getIntOrElse(key: String, fallback: Int) = getWithFallback(key,fallback)(conf.getInt(key))
     def getOptionalInt(key: String): Option[Int] = getOptional(key)( conf.getInt(key) )
+
+    def getOverridableIntOrElse (key: String, fallback: Int): Int = {
+      val sysProp = System.getProperty(key.replace('-', '.'))
+      if (sysProp != null) {
+        Integer.parseInt(sysProp)
+      } else {
+        getIntOrElse( key, fallback)
+      }
+    }
 
     def getStringSeq (key: String): Seq[String] = {
       try {
@@ -334,8 +352,17 @@ object ConfigUtils {
     def getOptionalGeoPosition(key: String): Option[GeoPosition] = getOptional(key)(getGeoPosition(key))
 
     def getFiniteDuration (key: String): FiniteDuration = conf.getDuration(key).toMillis.milliseconds
-    def getFiniteDurationOrElse (key: String, fallback: FiniteDuration) = getWithFallback(key,fallback)(getFiniteDuration(key))
+    def getFiniteDurationOrElse (key: String, fallback: FiniteDuration): FiniteDuration = getWithFallback(key,fallback)(getFiniteDuration(key))
     def getOptionalFiniteDuration (key: String): Option[FiniteDuration] = getOptional(key)( getFiniteDuration(key) )
+
+    def getOverridableDurationOrElse (key: String, fallback: FiniteDuration): FiniteDuration = {
+      val sysProp = System.getProperty(key.replace('-', '.'))
+      if (sysProp != null) {
+        Duration.create(sysProp).asInstanceOf[FiniteDuration]
+      } else {
+        getFiniteDurationOrElse( key, fallback)
+      }
+    }
 
     def getExistingDir (key: String): File = {
       val dir = new File(conf.getString(key))

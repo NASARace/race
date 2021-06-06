@@ -20,7 +20,7 @@ package gov.nasa.race.actor
 import akka.actor.ActorRef
 import com.typesafe.config.Config
 import gov.nasa.race.config.ConfigUtils._
-import gov.nasa.race.core.Messages.RaceTick
+import gov.nasa.race.core.RaceTick
 import gov.nasa.race.core.{PeriodicRaceActor, PublishingRaceActor}
 
 

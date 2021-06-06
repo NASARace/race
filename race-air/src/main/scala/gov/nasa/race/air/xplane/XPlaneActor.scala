@@ -27,7 +27,7 @@ import gov.nasa.race.air.xplane.XPlaneCodec.RPOS
 import gov.nasa.race.air.{ExtendedFlightPos, TrackedAircraft}
 import gov.nasa.race.common.Status
 import gov.nasa.race.config.ConfigUtils._
-import gov.nasa.race.core.Messages.BusEvent
+import gov.nasa.race.core.BusEvent
 import gov.nasa.race.core.{PublishingRaceActor, SubscribingRaceActor, _}
 import gov.nasa.race.geo.{GeoPosition, GeoPositioned}
 import gov.nasa.race.track.{TrackDropped, TrackTerminationMessage, TrackedObject}

@@ -23,7 +23,7 @@ import java.io.PrintWriter
 import com.typesafe.config.Config
 import gov.nasa.race._
 import gov.nasa.race.common.{PrintStats, Stats}
-import gov.nasa.race.core.Messages.{BusEvent, RaceTick}
+import gov.nasa.race.core.{BusEvent, RaceTick}
 import gov.nasa.race.track.TrackPairEvent
 import gov.nasa.race.trajectory.TrajectoryDiff
 import gov.nasa.race.uom.{Angle, Length}

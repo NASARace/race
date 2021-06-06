@@ -18,7 +18,7 @@
 package gov.nasa.race.actor
 
 import com.typesafe.config.Config
-import gov.nasa.race.core.Messages.ChannelTopicRequest
+import gov.nasa.race.core.ChannelTopicRequest
 import gov.nasa.race.core._
 
 /**

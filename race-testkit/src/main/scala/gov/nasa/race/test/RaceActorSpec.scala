@@ -18,7 +18,6 @@
 package gov.nasa.race.test
 
 import java.util.concurrent.LinkedBlockingQueue
-
 import akka.actor._
 import akka.event.Logging
 import akka.event.Logging.LogLevel
@@ -26,8 +25,7 @@ import akka.pattern.ask
 import akka.testkit.{TestActorRef, TestKit}
 import akka.util.Timeout
 import com.typesafe.config.{Config, ConfigFactory, ConfigValueFactory}
-import gov.nasa.race.core.Messages._
-import gov.nasa.race.core.{Bus, MasterActor, RaceActor, RaceActorSystem, _}
+import gov.nasa.race.core.{Bus, BusEvent, MasterActor, RaceActor, RaceActorSystem, RaceShow, askForResult}
 import gov.nasa.race.uom.DateTime
 import org.scalatest.BeforeAndAfterAll
 
@@ -52,11 +50,12 @@ object TestRaceActorSystem {
   case object ResetMaster
   case object MasterReset
   case object MasterResetFailed
+  case object PrintTestActors
 
   // use this if you want actors to be instantiated by the Master
-  protected [test] case class AddTestActor (ctorConf: Config)
-  protected [test] case class TestActorAdded (actor: Actor)
-  protected [test] case class AddTestActorFailed (ex: Throwable)
+  case class AddTestActor (ctorConf: Config)
+  case class TestActorAdded (actor: Actor)
+  case class AddTestActorFailed (ex: Throwable)
 
   /**
     * a Bus for actor system tests that is fully functional except of remoting
@@ -84,7 +83,7 @@ object TestRaceActorSystem {
     def testReceive: Receive = {
 
       case ResetMaster =>
-        if (hasChildActors) terminateRaceActors
+        if (hasChildActors) terminateRaceActors()
         if (noMoreChildren) {
           sender() ! MasterReset
         } else {
@@ -110,6 +109,8 @@ object TestRaceActorSystem {
         } catch {
           case x: Throwable => sender() ! AddTestActorFailed(x)
         }
+
+      case PrintTestActors => printChildren()
     }
   }
 }
@@ -122,6 +123,7 @@ class TestRaceActorSystem (name: String) extends RaceActorSystem(createTestConfi
   override def getMasterClass = classOf[TestMaster]
   override def raceTerminated = {} // we don't terminate before all tests are done
 
+  def printTestActors(): Unit = master ! PrintTestActors
 }
 
 object RaceActorSpec {
@@ -160,6 +162,7 @@ abstract class RaceActorSpec (tras: TestRaceActorSystem) extends TestKit(tras.sy
 
   def this() = this(new TestRaceActorSystem("TestRaceActor"))
 
+  implicit val timeout = Timeout(5.seconds)
   def bus = tras.bus
 
   def ras: TestRaceActorSystem = tras
@@ -244,12 +247,12 @@ abstract class RaceActorSpec (tras: TestRaceActorSystem) extends TestKit(tras.sy
 
   def printTestActors = {
     println(s"------------- test actors of actor system: $system")
-    tras.showActors
+    tras.printTestActors()
   }
 
   def printBusSubscriptions = {
     println(s"------------- bus subscriptions for actor system: $system")
-    tras.showChannels
+    tras.showChannels()
   }
 
   def sleep (millis: Int): Unit = {
@@ -287,11 +290,5 @@ abstract class RaceActorSpec (tras: TestRaceActorSystem) extends TestKit(tras.sy
     bus.publish(BusEvent(channel,msg,originator))
   }
 
-  def processMessages (actorRef: ActorRef, timeout: FiniteDuration) = {
-    val future = actorRef.ask(ProcessRaceActor)(Timeout(timeout))
-    Await.result(future,timeout) match {
-      case RaceActorProcessed =>
-    }
-  }
 }
 

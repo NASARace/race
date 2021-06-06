@@ -14,24 +14,58 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package gov.nasa.race.common
+package gov.nasa.race.core
 
 import akka.actor.{ActorRef, ExtendedActorSystem}
 import akka.serialization.{Serialization, Serializer}
+import gov.nasa.race.common.OATHash
+import gov.nasa.race.core.BusEvent
 import gov.nasa.race.util.SettableBAIStream
 
 import java.io.{ByteArrayOutputStream, DataInputStream, DataOutputStream}
-import scala.reflect.{ClassTag, classTag}
-
+import scala.collection.mutable
+import scala.reflect.ClassTag
 
 /**
-  * base class for an Akka serializer that only handles instances of a single type T
-  * this implementation favors minimizing allocation and 3rd party library dependencies
+  * root type for objects that can be serialized/deserialized by means of a configured Akka serializer
+  */
+trait SerializableMessage {
+  /**
+    * turn instance into a BusEvent that can be processed inside the local RACE system
+    */
+  def toBusEvent: BusEvent
+}
+
+/**
+  * trait to retrieve an implementor representation that has a configured Akka serializer, e.g.
+  *    ...
+  *    akka {
+  *      actor {
+  *        serializers { ..
+  *          xySerializer = "<serializer-classname>" .. }
+  *        serialization-bindings {
+  *          "<xy-classname>" = xySerializer .. }
+  */
+trait AkkaSerializable {
+  /**
+    * turn implementor into a SerializableMessage that preserves channel, sender-ActorRef and payload object
+    */
+  def toMessage (channel: Channel, sender: ActorRef): SerializableMessage
+}
+
+/**
+  * base class for an Akka serializer that only handles instances of a single type T.
+  * This implementation favors minimizing allocation and 3rd party library dependencies
   *
   * Note that serializers are instantiated by Akka via reflection from two different ctors
   *  - parameterless
   *  - a single ExtendedActorSystem parameter
   * we assume the concrete class provides the second so that we can also serialize ActorRefs
+  *
+  * Note also that we do not include any payload type information in the serialized output, i.e. de-serializers have
+  * to know a-priori about the input format. This seems justified since Akka serializer instances handle both serialization
+  * and de-serialization in the same class, and we mostly assume single-type serializers. In cases where we have
+  * to handle target type alternatives the manifest has to be used to discriminate between such alternatives
   */
 abstract class AkkaSerializer (system: ExtendedActorSystem) extends Serializer {
   val initCapacity: Int = 256 // override if we know the max size of objects to serialize
@@ -74,6 +108,38 @@ abstract class AkkaSerializer (system: ExtendedActorSystem) extends Serializer {
   @inline final def readFloat(): Float = dis.readFloat()
   @inline final def readDouble(): Double = dis.readDouble()
   @inline final def readActorRef(): ActorRef = system.provider.resolveActorRef(dis.readUTF())
+
+  //--- serializing/de-serializing collections
+
+  def writeItems[T] (items: Iterable[T]) (writeItem: T=>Unit): Unit = {
+    dos.writeInt(items.size)
+    items.foreach(writeItem)
+  }
+
+  def readItems[T](readItem: ()=>T): Seq[T] = {
+    var n = dis.readInt()
+    if (n < 0 || n > 10000) throw new RuntimeException(s"deserialization size constraints violated: $n")
+    val items = new mutable.ArrayBuffer[T](n)
+    while (n > 0) {
+      items += readItem()
+    }
+    items.toSeq
+  }
+
+  def writeMap[K,V] (map: Map[K,V]) (writeEntry: ((K,V))=>Unit): Unit = {
+    dos.writeInt(map.size)
+    map.foreach(writeEntry)
+  }
+
+  def readMap[K,V](readEntry: ()=>(K,V)): Map[K,V] = {
+    var n = dis.readInt()
+    if (n < 0 || n > 10000) throw new RuntimeException(s"deserialization size constraints violated: $n")
+    val map = mutable.Map[K,V]()
+    while (n > 0) {
+      map += readEntry()
+    }
+    map.toMap
+  }
 }
 
 abstract class MultiTypeAkkaSerializer (system: ExtendedActorSystem) extends AkkaSerializer(system) {
@@ -96,6 +162,8 @@ abstract class MultiTypeAkkaSerializer (system: ExtendedActorSystem) extends Akk
 
 /**
   * base class for an Akka serializer that only handles instances of a single type T and therefore does not need a manifest
+  *
+  * SingleTypeAkkaSerializers basically use the serializer id to identify the target type
   */
 abstract class SingleTypeAkkaSerializer [T <: AnyRef :ClassTag] (system: ExtendedActorSystem) extends AkkaSerializer(system) {
 

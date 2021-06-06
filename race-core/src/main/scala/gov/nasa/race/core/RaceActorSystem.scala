@@ -32,7 +32,7 @@ import gov.nasa.race._
 import gov.nasa.race.common.SettableClock
 import gov.nasa.race.common.Status._
 import gov.nasa.race.config.ConfigUtils._
-import gov.nasa.race.core.Messages._
+import gov.nasa.race.core._
 import gov.nasa.race.uom.DateTime
 import gov.nasa.race.util.ConsoleIO.AppMenu
 import gov.nasa.race.util.FileUtils._
@@ -112,15 +112,12 @@ class RaceActorSystem(val config: Config) extends LogController with VerifiableA
   val classLoader = ClassLoaderUtils.setRaceClassloader(system, config.getOptionalString("classpath"))
   val bus = createBus(system)
 
+  val pathPrefix = s"/$name"
+
   //--- clock initialization and delays
   val simClock = createSimClock
   var wallStartTime = wallClockStartTime(false) // will be re-evaluated during launch
   val delayLaunch = config.getBooleanOrElse("delay-launch", false)
-
-  //--- monitoring intervals (0 means we don't check)
-  val heartBeatInterval: FiniteDuration = config.getFiniteDurationOrElse("heartbeat-interval", 0.seconds)
-  val heartBeatReport: Int = config.getIntOrElse("heartbeat-report", 0) // report every nth heartbeat
-  val heartBeatPort: Option[Int] = config.getOptionalInt("heartbeat-port") // where to log if we report
 
   //--- specific timeouts
   val defaultSystemTimeout: FiniteDuration = config.getFiniteDurationOrElse("system-timeout",timeout.duration*2)
@@ -337,7 +334,7 @@ class RaceActorSystem(val config: Config) extends LogController with VerifiableA
       info(s"starting actors of universe $name ..")
       status = Started
       askVerifiableForResult(master, RaceStart) {
-        case RaceStarted =>
+        case RaceStarted() =>
           status = Running
           info(s"universe $name running")
           true
@@ -368,7 +365,7 @@ class RaceActorSystem(val config: Config) extends LogController with VerifiableA
       status = Terminating
 
       askVerifiableForResult(master, RaceTerminate) {
-        case RaceTerminated =>
+        case RaceTerminated() =>
           raceTerminated
           true
         case RaceTerminateFailed =>
@@ -594,15 +591,11 @@ class RaceActorSystem(val config: Config) extends LogController with VerifiableA
 
   //--- state query & display
 
-  // NOTE - this performs a sync query, use sparingly at runtime
-  def showActors = {
-    askForResult( master ? RaceShow) {
-      case RaceShowCompleted => // all ok
-      case _ => warning("show actor request failed")
-    }
+  def showActors() = {
+    master ! RaceShow
   }
 
-  def showChannels = {
+  def showChannels() = {
     println(bus.showChannelSubscriptions)
   }
 
@@ -618,39 +611,6 @@ class RaceActorSystem(val config: Config) extends LogController with VerifiableA
       }
     }
   }
-
-  /* move to dedicated actor
-  def showHeartBeatStatistics: Unit = {
-    if (heartBeatInterval.length == 0) {
-      println("no actor statistics available (set heartbeat-interval in config)")
-
-    } else {
-      println(" actor statistics:                                        latency [μsec]")
-      println(" #                          actor    msgCount       N    min    max    avg        σ")
-      println("-- ------------------------------   ---------   ----- ------ ------ ------ --------")
-
-      for (((actorRef, actorData), i) <- actors.zipWithIndex) {
-        print(f"$i%2d ${actorRef.path.name}%30s   ")
-        val lastResponse = actorData.lastPingResponse
-        val stats = actorData.latencyStats
-
-        if (lastResponse != null) {
-          print(f"${lastResponse.msgCount}%9d   ")
-          if (stats.numberOfSamples > 1) {
-            val μsMin = (stats.min + 500)/1000
-            val μsMax = (stats.max + 500)/1000
-            val μsAvg = (stats.mean + 500)/1000
-            val σ = Math.sqrt(stats.variance / 1e6)
-
-            print(f"${stats.numberOfSamples}%5d $μsMin%6d $μsMax%6d $μsAvg%6d $σ%8.2f")
-          }
-
-        }
-        println
-      }
-    }
-  }
-   */
 
   //--- failure handling
 

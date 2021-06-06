@@ -19,7 +19,7 @@ package gov.nasa.race.actor
 
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.config.ConfigurableFilter
-import gov.nasa.race.core.Messages.BusEvent
+import gov.nasa.race.core.BusEvent
 import gov.nasa.race.core._
 
 import scala.collection.Seq

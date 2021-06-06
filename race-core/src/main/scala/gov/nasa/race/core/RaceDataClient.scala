@@ -20,7 +20,7 @@ import akka.actor.Actor.Receive
 import akka.actor.{ActorRef, Props}
 import com.typesafe.config.Config
 import gov.nasa.race.config.ConfigUtils._
-import gov.nasa.race.core.Messages.BusEvent
+import gov.nasa.race.core.BusEvent
 
 /**
   * an interface for a non-actor object that needs to obtain data from an associated second tier actor that

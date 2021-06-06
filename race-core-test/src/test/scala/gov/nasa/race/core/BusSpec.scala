@@ -17,7 +17,6 @@
 
 package gov.nasa.race.core
 
-import Messages._
 import akka.event.Logging
 import com.typesafe.config.Config
 import gov.nasa.race.test.RaceActorSpec

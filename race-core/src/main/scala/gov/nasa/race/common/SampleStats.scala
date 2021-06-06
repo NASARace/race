@@ -19,12 +19,15 @@ package gov.nasa.race.common
 import scala.annotation.tailrec
 
 /**
-  * base trait for sample statistics
+  * base trait for sample statistics that incrementally keep track of min,max,mean,sigma of a dynamic sample set
   */
 trait SampleStats[T <: AnyVal] {
   protected var _n: Int
 
   def numberOfSamples: Int = _n
+
+  def isEmpty: Boolean = _n == 0
+  def nonEmpty: Boolean = _n > 0
 
   //--- note these all have to be valid sample values
   def min: T

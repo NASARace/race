@@ -20,7 +20,7 @@ package gov.nasa.race.ww
 import akka.actor.ActorRef
 import com.typesafe.config.Config
 import gov.nasa.race._
-import gov.nasa.race.core.Messages.{RacePause, RacePauseRequest, RaceResumeRequest, RaceTerminateRequest}
+import gov.nasa.race.core.{RacePause, RacePauseRequest, RaceResumeRequest, RaceTerminateRequest}
 import gov.nasa.race.core.{ContinuousTimeRaceActor, RaceContext, _}
 import gov.nasa.race.swing._
 

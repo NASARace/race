@@ -24,7 +24,7 @@ import gov.nasa.race.actor.{SocketDataAcquisitionThread, SocketImporter}
 import gov.nasa.race.air.SbsUpdater
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.ChannelTopicProvider
-import gov.nasa.race.core.Messages.ChannelTopicRequest
+import gov.nasa.race.core.ChannelTopicRequest
 import gov.nasa.race.core.RaceActorCapabilities._
 import gov.nasa.race.geo.GeoPosition
 import gov.nasa.race.ifSome

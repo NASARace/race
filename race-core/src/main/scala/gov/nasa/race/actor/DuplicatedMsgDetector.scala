@@ -22,7 +22,7 @@ import com.typesafe.config.Config
 import gov.nasa.race._
 import gov.nasa.race.common.{MD5Checksum, MsgMatcher, PrintStats, StringDataBuffer, Utf8Buffer, XmlSource, XmlTopElementParser}
 import gov.nasa.race.config.ConfigUtils._
-import gov.nasa.race.core.Messages.BusEvent
+import gov.nasa.race.core.BusEvent
 
 import scala.collection.mutable.{SortedMap => MSortedMap}
 import scala.concurrent.duration._

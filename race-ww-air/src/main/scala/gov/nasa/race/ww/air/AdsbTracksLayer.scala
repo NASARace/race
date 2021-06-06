@@ -21,7 +21,7 @@ import com.typesafe.config.Config
 import gov.nasa.race.air.TrackedAircraft
 import gov.nasa.race.air.actor.AdsbStation
 import gov.nasa.race.config.ConfigUtils._
-import gov.nasa.race.core.Messages.BusEvent
+import gov.nasa.race.core.BusEvent
 import gov.nasa.race.{geo, _}
 import gov.nasa.race.swing.Style._
 import gov.nasa.race.swing.{DynamicSelectionPanel, IdAndNamePanel}

@@ -20,10 +20,13 @@ import akka.actor.ActorRef
 import com.typesafe.config.Config
 
 /**
-  * housekeeping meta-data to manage child actors
+  * housekeeping meta-data to manage child actors within parent
   */
 class ActorMetaData(val actorRef: ActorRef, val config: Config) {
+
   var pingNanos: Long = 0 // when did we last send a ping
   var receivedNanos: Long = 0 // when actor process last ping
+  var nMsgs: Long = 0 // the last processed message count
+
   var isUnresponsive: Boolean = false // this needs to be set explicitly to avoid blocking a pre-start termination
 }

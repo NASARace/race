@@ -22,7 +22,7 @@ import java.awt.image.BufferedImage
 import gov.nasa.race._
 import gov.nasa.race.common.{Query, ThresholdLevel, ThresholdLevelList}
 import gov.nasa.race.config.ConfigUtils._
-import gov.nasa.race.core.Messages._
+import gov.nasa.race.core._
 import gov.nasa.race.geo.{GeoPositioned, GreatCircle}
 import gov.nasa.race.swing.Style._
 import gov.nasa.race.track.{TrackTerminationMessage, _}

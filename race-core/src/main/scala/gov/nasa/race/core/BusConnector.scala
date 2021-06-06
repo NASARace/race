@@ -18,6 +18,7 @@
 package gov.nasa.race.core
 
 import akka.actor.{Actor, ActorLogging}
+import gov.nasa.race.core.{RemoteSubscribe, RemoteUnsubscribe}
 
 /**
   * a RACE specific system actor that serves as an interface for external actor clients which cannot
@@ -36,7 +37,7 @@ class BusConnector (val bus: Bus) extends Actor with ActorLogging {
     case RemoteUnsubscribe(remoteActor,channel) =>
       bus.unsubscribe(remoteActor, channel)
 
-    case RemotePublish(event) =>    // inbound publish
-      bus.publish(event)
+    case msg: SerializableMessage => // the remotely published messages
+      bus.publish(msg.toBusEvent)
   }
 }

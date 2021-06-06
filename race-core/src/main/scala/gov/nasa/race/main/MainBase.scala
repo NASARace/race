@@ -77,8 +77,13 @@ trait MainBase {
     try {
       getUniverseConfigs(configFiles, logLevel).map(new RaceActorSystem(_))
     } catch {
+      case cnfx: ClassNotFoundException =>
+        ConsoleIO.printlnErr(s"class not found: ${cnfx.getMessage}")
+        Seq.empty[RaceActorSystem]
+
       case t:Throwable =>
-        ConsoleIO.printlnErr(t.getMessage)
+        //t.printStackTrace()
+        ConsoleIO.printlnErr(t.toString)
         Seq.empty[RaceActorSystem]
     }
   }

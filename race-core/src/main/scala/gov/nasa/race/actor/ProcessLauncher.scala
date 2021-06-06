@@ -25,7 +25,7 @@ import com.typesafe.config.Config
 
 import gov.nasa.race._
 import gov.nasa.race.config.ConfigUtils._
-import gov.nasa.race.core.Messages.RaceTick
+import gov.nasa.race.core.RaceTick
 import gov.nasa.race.core._
 
 

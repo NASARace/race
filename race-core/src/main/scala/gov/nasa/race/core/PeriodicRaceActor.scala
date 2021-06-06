@@ -19,7 +19,6 @@ package gov.nasa.race.core
 import akka.actor.{ActorRef, Cancellable}
 import com.typesafe.config.Config
 import gov.nasa.race.config.ConfigUtils._
-import gov.nasa.race.core.Messages.RaceTick
 import gov.nasa.race.ifSome
 
 import scala.concurrent.duration._

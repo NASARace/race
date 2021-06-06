@@ -30,7 +30,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 
 /**
-  * a RaceActor that reads a XML based schedule and imports the referenced
+  * a RaceActor that reads an XML based schedule and imports the referenced
   * file contents at the specified wall-clock times
   *
   * TODO - this should be extended to sim clock time

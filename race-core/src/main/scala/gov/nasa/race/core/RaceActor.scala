@@ -24,7 +24,7 @@ import gov.nasa.race.common
 import gov.nasa.race.common.Status._
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.config.{NamedConfigurable, SubConfigurable}
-import gov.nasa.race.core.Messages.{InitializeRaceActor, StartRaceActor, _}
+import gov.nasa.race.core.{InitializeRaceActor, StartRaceActor, _}
 import gov.nasa.race.util.ClassLoaderUtils
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -84,17 +84,14 @@ trait RaceActor extends Actor with ImplicitActorLogging with NamedConfigurable w
   def getRaceActorRef (actorName: String): ActorRef = raceActorSystem.getRaceActorRef(name)
   def getOptionalRaceActorRef (actorName: String): Option[ActorRef] = raceActorSystem.getOptionalRaceActorRef(name)
 
-  override def postStop() = supervisor ! RaceActorStopped
+  override def postStop() = supervisor ! RaceActorStopped()
 
   // pre-init behavior which doesn't branch into concrete actor code before we
   // do the initialization. This guarantees that concrete actor code cannot access
   // un-initialized fields
   override def receive: Receive = {
-    case PingRaceActor(sentNanos: Long, statsCollector: ActorRef) => handlePingRaceActor(sender(),sentNanos,statsCollector)
-    case ShowRaceActor(sentNanos: Long) => handleShowRaceActor(sender(),sentNanos)
     case InitializeRaceActor(raceContext,actorConf) => handleInitializeRaceActor(raceContext,actorConf)
     case TerminateRaceActor(originator) => handleTerminateRaceActor(originator)
-    //case msg: PingRaceActor => sender ! msg.copy(tReceivedNanos=System.nanoTime())
 
     case msg => info(f"ignored in pre-init mode: $msg%30.30s..")
   }
@@ -155,20 +152,18 @@ trait RaceActor extends Actor with ImplicitActorLogging with NamedConfigurable w
     case ResumeRaceActor(originator) => handleResumeRaceActor(originator)
     case TerminateRaceActor(originator) => handleTerminateRaceActor(originator)
 
-    case ProcessRaceActor => sender() ! RaceActorProcessed
-    case PingRaceActor(sentNanos,statsCollector) => handlePingRaceActor(sender(),sentNanos,statsCollector)
-
-    case ShowRaceActor(sentNanos) => handleShowRaceActor(sender(),sentNanos) // response processed sync
+    case RegisterRaceActor(registrar,parentQueryPath) => handleRegisterRaceActor(registrar,parentQueryPath)
+    case PingRaceActor(heartBeat,tPing) => handlePingRaceActor(heartBeat,tPing)
 
     case SetLogLevel(newLevel) => logLevel = newLevel
 
     case SyncWithRaceClock => handleSyncWithRaceClock
     case SetTimeout(msg,duration) => context.system.scheduler.scheduleOnce(duration, self, msg)
 
-    case RacePaused => handleRacePaused(sender()) // master reply for a RacePauseRequest (only the requester gets this)
+    case RacePaused() => handleRacePaused(sender()) // master reply for a RacePauseRequest (only the requester gets this)
     case RacePauseFailed(details: Any) => handleRacePauseFailed(sender(),details)
 
-    case RaceResumed => handleRaceResumed(sender())
+    case RaceResumed() => handleRaceResumed(sender())
     case RaceResumeFailed(details: Any) => handleRaceResumeFailed(sender(),details)
 
       // this is an exception to the rule that system messages are sent directly and not through configured channels
@@ -177,8 +172,17 @@ trait RaceActor extends Actor with ImplicitActorLogging with NamedConfigurable w
     case BusEvent(_, req: SyncRequest, _) => handleSyncRequest(req)
     case SyncResponse(responder, responderType, request) => handleSyncResponse(responder, responderType, request)
 
+      //--- log request for this actor
+    case RaceLogInfo(msg) => info(msg)
+    case RaceLogWarning(msg) => warning(msg)
+    case RaceLogError(msg) => error(msg)
+
     case other => warning(s"unhandled system message $other")
   }
+
+  // NOTE - when handling system messages that are processed synchronously by respective MasterActors we
+  // have to send replies to "sender() ! .." instead of "originator ! .." since the reply is processed by a
+  // temporary system actor as part of the Ask pattern
 
   def handleLiveInitializeRaceActor (rc: RaceContext, actorConf: Config) = {
     if (rc != raceContext) {
@@ -202,47 +206,43 @@ trait RaceActor extends Actor with ImplicitActorLogging with NamedConfigurable w
     }
   }
 
+  def isValidStartOriginator (originator: ActorRef): Boolean = {
+    if (context.parent == originator) return true // parent is always imperative
+
+    if (RaceActorSystem(system).isKnownRemoteMaster(originator)) return true
+
+    false
+  }
+
   def handleStartRaceActor  (originator: ActorRef) = {
     info(s"got StartRaceActor from: ${originator.path}")
-    try {
-      val success = if (status == Running) onReStartRaceActor(originator) else onStartRaceActor(originator)
-      if (success){
-        status = Running
-        info("started")
-        sender() ! RaceActorStarted
-      } else {
-        warning("start rejected")
-        sender() ! RaceActorStartFailed("rejected")
+    if (isValidStartOriginator(originator)) {
+      try {
+        val success = if (status == Running) onReStartRaceActor(originator) else onStartRaceActor(originator)
+        if (success) {
+          status = Running
+          info("started")
+          sender() ! RaceActorStarted()
+        } else {
+          warning("start rejected")
+          sender() ! RaceActorStartFailed("rejected")
+        }
+      } catch {
+        case ex: Throwable => sender() ! RaceActorStartFailed(ex.getMessage)
       }
-    } catch {
-      case ex: Throwable => sender() ! RaceActorStartFailed(ex.getMessage)
+    } else {
+      warning(s"ignoring StartRaceActor from $originator")
     }
   }
 
-  def handlePingRaceActor (originator: ActorRef, sentNanos: Long, statsCollector: ActorRef) = {
-    val now = System.nanoTime
-    val response = PingRaceActorResponse(now, now - sentNanos, nMsgs)
-
-    originator ! response // this is for liveness control (unless originator is also collector)
-    if ((statsCollector ne ActorRef.noSender) && (statsCollector ne originator)) {
-      statsCollector ! response // this is for statistics purposes
-    }
+  // automatic response, no overridable "onX" method here
+  def handleRegisterRaceActor (registrar: ActorRef, parentQueryPath: String): Unit = {
+    registrar ! RaceActorRegistered(parentQueryPath + '/' + name)
   }
 
-  def showActor (actorName: String, actorLevel: Int): Unit = {
-    repeat(actorLevel){ print("  ")}
-    print(actorName)
-    var n = actorLevel*2 + actorName.length
-    while (n < 60) { print(' '); n += 1 }
-  }
-  def showActorState (latency: Long, procMsgs: Long): Unit = {
-    println(f"   ${latency/1000}%8d   $procMsgs%8d")
-  }
-
-  def handleShowRaceActor (originator: ActorRef, sentNanos: Long): Unit = {
-    showActor(name,level)
-    showActorState( System.nanoTime - sentNanos, nMsgs)
-    originator ! ShowRaceActorResponse
+  // automatic response, no overridable "onX" method here
+  def handlePingRaceActor (heartBeat: Long, tPing: Long): Unit = {
+    sender() ! RaceActorPong(heartBeat, tPing, nMsgs)
   }
 
   def handlePauseRaceActor  (originator: ActorRef) = {
@@ -252,7 +252,7 @@ trait RaceActor extends Actor with ImplicitActorLogging with NamedConfigurable w
       if (success){
         status = Paused
         info("paused")
-        sender() ! RaceActorPaused
+        sender() ! RaceActorPaused()
       } else {
         warning("pause rejected")
         sender() ! RaceActorPauseFailed("rejected")
@@ -287,7 +287,7 @@ trait RaceActor extends Actor with ImplicitActorLogging with NamedConfigurable w
       if (success){
         status = Running
         info("resumed")
-        sender() ! RaceActorResumed
+        sender() ! RaceActorResumed()
       } else {
         warning("resume rejected")
         sender() ! RaceActorResumeFailed("rejected")
@@ -315,10 +315,18 @@ trait RaceActor extends Actor with ImplicitActorLogging with NamedConfigurable w
     }
   }
 
-  def isMandatoryTermination (originator: ActorRef): Boolean = {
-    context.parent == originator ||  // parent is always imperative
-    RaceActorSystem(system).isTerminating || // whole system is going down
-    config.getBooleanOrElse("remote-termination",false)  // remote termination explicitly allowed
+  def isValidTerminateOriginator(originator: ActorRef): Boolean = {
+    if (context.parent == originator) return true // parent terminate is always imperative
+
+    val ras = RaceActorSystem(system)
+
+    if (ras.isTerminating) return true // the whole system is shutting down
+
+    if (ras.isKnownRemoteMaster(originator)) { // if this is a remote master check if config allows remote termination
+     return config.getBooleanOrElse("remote-termination",true)
+    }
+
+    false
   }
 
   def isLive = status.id < Terminating.id
@@ -327,14 +335,14 @@ trait RaceActor extends Actor with ImplicitActorLogging with NamedConfigurable w
   def handleTerminateRaceActor (originator: ActorRef) = {
     info(s"got TerminateRaceActor from ${originator.path}")
 
-    if (isMandatoryTermination(originator)){
+    if (isValidTerminateOriginator(originator)){
       try {
         status = Terminating
         if (onTerminateRaceActor(originator)) {
           info("terminated")
           status = common.Status.Terminated
           // note that we don't stop this actor - that is the responsibility of the master/ras
-          sender() ! RaceActorTerminated
+          sender() ! RaceActorTerminated()
         } else {
           warning("terminate rejected")
           sender() ! RaceActorTerminateFailed("rejected")
@@ -346,7 +354,7 @@ trait RaceActor extends Actor with ImplicitActorLogging with NamedConfigurable w
       }
     } else {
       info("ignored remote TerminateRaceActor")
-      sender() ! RaceActorTerminateIgnored
+      sender() ! RaceActorTerminateReject()
     }
   }
 

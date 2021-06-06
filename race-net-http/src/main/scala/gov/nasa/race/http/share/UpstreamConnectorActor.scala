@@ -21,7 +21,7 @@ import akka.actor.{ActorRef, Cancellable}
 import akka.http.scaladsl.model.ws.{Message, TextMessage}
 import com.typesafe.config.Config
 import gov.nasa.race.common.{BufferedStringJsonPullParser, JsonWriter}
-import gov.nasa.race.core.Messages.{BusEvent, SyncRequest}
+import gov.nasa.race.core.{BusEvent, SyncRequest}
 import gov.nasa.race.core.{ContinuousTimeRaceActor, PeriodicRaceActor, Ping, Pong, PongParser}
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.http.{WSAdapterActor, WsConnectRequest, WsMessageReader, WsMessageWriter}

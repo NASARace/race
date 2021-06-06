@@ -27,7 +27,7 @@ import gov.nasa.race.air.TaisTrack
 import gov.nasa.race.common.TSStatsData.{Ambiguous, Duplicate, Extension, Sameness}
 import gov.nasa.race.common._
 import gov.nasa.race.core.ClockAdjuster
-import gov.nasa.race.core.Messages.{BusEvent, RaceTick}
+import gov.nasa.race.core.{BusEvent, RaceTick}
 import gov.nasa.race.http.{HtmlArtifacts, HtmlStats, HtmlStatsFormatter}
 
 import scala.collection.mutable.{HashMap => MHashMap}

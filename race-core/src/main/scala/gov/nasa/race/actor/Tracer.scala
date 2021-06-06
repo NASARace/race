@@ -17,7 +17,7 @@
 package gov.nasa.race.actor
 
 import gov.nasa.race.config.ConfigUtils._
-import gov.nasa.race.core.Messages.BusEvent
+import gov.nasa.race.core.BusEvent
 import gov.nasa.race.core.SubscribingRaceActor
 import gov.nasa.race.track.{TrackTerminationMessage, TrackedObject}
 import gov.nasa.race.trajectory.{CompressedTrace, MutTrajectory}

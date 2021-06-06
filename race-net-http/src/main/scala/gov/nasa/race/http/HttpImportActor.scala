@@ -30,7 +30,7 @@ import akka.util.ByteString
 import com.typesafe.config.Config
 import gov.nasa.race._
 import gov.nasa.race.config.ConfigUtils._
-import gov.nasa.race.core.Messages.{BusEvent, RaceTick}
+import gov.nasa.race.core.{BusEvent, RaceTick}
 import gov.nasa.race.core.{PeriodicRaceActor, PublishingRaceActor, RaceContext, SubscribingRaceActor}
 import gov.nasa.race.util.{NetUtils, StringUtils}
 

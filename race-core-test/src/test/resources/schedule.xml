@@ -1,4 +1,4 @@
 <schedule>
-    <event when="00:00:02" file="race-core-test/src/test/resources/message1"/>
-    <event when="00:00:04" file="race-core-test/src/test/resources/message2"/>
+    <event when="00:00:02" file="src/test/resources/message1"/>
+    <event when="00:00:04" file="src/test/resources/message2"/>
 </schedule>

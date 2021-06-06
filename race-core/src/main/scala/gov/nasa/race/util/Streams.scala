@@ -179,6 +179,7 @@ class SettableBAIStream (bs: Array[Byte]) extends ByteArrayInputStream(bs) {
   def setBuffer (newBuf: Array[Byte]): Unit = {
     buf = newBuf
     pos = 0
+    count = newBuf.length
   }
 
   def setPosition(newPos: Int) = {

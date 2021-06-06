@@ -25,7 +25,7 @@ import com.typesafe.config.Config
 import gov.nasa.race._
 import gov.nasa.race.common.Query
 import gov.nasa.race.config.ConfigUtils._
-import gov.nasa.race.core.Messages.{BusEvent, DelayedAction}
+import gov.nasa.race.core.{BusEvent, DelayedAction}
 import gov.nasa.race.core._
 import gov.nasa.race.swing.AkkaSwingBridge
 import gov.nasa.race.ww.EventAction.EventAction

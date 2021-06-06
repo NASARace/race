@@ -24,7 +24,7 @@ import akka.actor.ActorRef
 import gov.nasa.race._
 import gov.nasa.race.common.{DataStreamReader, DataStreamWriter}
 import gov.nasa.race.config.ConfigUtils._
-import gov.nasa.race.core.Messages.{BusEvent, RacePauseRequest, RaceResumeRequest}
+import gov.nasa.race.core.{BusEvent, RacePauseRequest, RaceResumeRequest}
 import gov.nasa.race.core.{ContinuousTimeRaceActor, PublishingRaceActor, RaceException, SubscribingRaceActor}
 import gov.nasa.race.util.{SettableDIStream, SettableDOStream, ThreadUtils}
 

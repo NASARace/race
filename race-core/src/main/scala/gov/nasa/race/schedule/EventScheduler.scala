@@ -42,8 +42,8 @@ class AbsSchedulerEvent (val when: DateTime, action: => Any) extends SchedulerEv
 }
 
 object SchedulerEvent {
-  def apply(after: Time)(action: => Any) = new RelSchedulerEvent(after,action)
-  def apply(when: DateTime)(action: => Any) = new AbsSchedulerEvent(when,action)
+  def after(after: Time)(action: => Any) = new RelSchedulerEvent(after,action)
+  def at(when: DateTime)(action: => Any) = new AbsSchedulerEvent(when,action)
 
   implicit val relOrdering = new Ordering[RelSchedulerEvent] {
     def compare (a: RelSchedulerEvent, b: RelSchedulerEvent): Int = b.after.compare(a.after)
@@ -76,13 +76,13 @@ trait EventScheduler {
   // the queue that will be processed
   private val absQueue = new mutable.PriorityQueue[AbsSchedulerEvent]()
 
-  def schedule (after: Time)(action: =>Any) = scheduleEvent( SchedulerEvent(after)(action))
+  def scheduleAfter (after: Time)(action: =>Any): Unit = scheduleEvent( SchedulerEvent.after(after)(action))
 
-  def scheduleEvent (newEvent: RelSchedulerEvent) = {
+  def scheduleEvent (newEvent: RelSchedulerEvent): Unit = {
     lock.synchronized {
       if (thread != null){
         absQueue += newEvent.toAbsSchedulerEvent(DateTime.now)
-        lock.notify // schedule thread already running
+        lock.notify() // schedule thread already running
       } else {
         relQueue += newEvent
       }
@@ -94,14 +94,14 @@ trait EventScheduler {
       if (thread != null){
         val now = DateTime.now
         for (re <- newEvents) absQueue += re.toAbsSchedulerEvent(now)
-        lock.notify
+        lock.notify()
       } else {
         relQueue ++= newEvents
       }
     }
   }
 
-  def schedule (when: DateTime)(action: => Any) = scheduleEvent( SchedulerEvent(when)(action))
+  def scheduleAt (when: DateTime)(action: => Any): Unit = scheduleEvent( SchedulerEvent.at(when)(action))
 
   def scheduleEvent (newEvent: AbsSchedulerEvent) = {
     lock.synchronized {

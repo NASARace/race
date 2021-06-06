@@ -20,7 +20,7 @@ package gov.nasa.race.core
 import akka.actor.{ActorRef, Cancellable}
 import akka.event.Logging
 import com.typesafe.config.Config
-import gov.nasa.race.core.Messages._
+import gov.nasa.race.core._
 import gov.nasa.race.test.RaceActorSpec
 import gov.nasa.race.uom.DateTime
 import org.scalatest.wordspec.AnyWordSpecLike

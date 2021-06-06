@@ -23,7 +23,7 @@ import com.typesafe.config.Config
 import gov.nasa.race.air.{AirLocator, Airport, TaisTrack, TaisTracks, TRACON}
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.ChannelTopicSubscriber
-import gov.nasa.race.core.Messages.BusEvent
+import gov.nasa.race.core.BusEvent
 import gov.nasa.race.geo.GreatCircle
 import gov.nasa.race.ifSome
 import gov.nasa.race.swing._

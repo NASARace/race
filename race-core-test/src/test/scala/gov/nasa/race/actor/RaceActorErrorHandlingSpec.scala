@@ -28,16 +28,14 @@ import org.scalatest.flatspec.AnyFlatSpecLike
 
 object RaceActorErrorHandlingSpec {
   object CrashNow
-  object NeverProcess
+  object ProcessThis
 
-  var neverProcessed = true
+  var thisProcessed = false
 
   class MessageCrasher(val config: Config) extends RaceActor {
     override def handleMessage = {
       case CrashNow => throw new RuntimeException("I'm crashing in handleMessage")
-      case NeverProcess =>
-        println("THIS SHOULD NEVER GET EXECUTED!")
-        neverProcessed = false
+      case ProcessThis => thisProcessed = true
     }
   }
 
@@ -65,10 +63,10 @@ class RaceActorErrorHandlingSpec extends RaceActorSpec with AnyFlatSpecLike {
 
       actorRef ! CrashNow
 
-      // actor should be inactive after it crashed
-      actorRef ! NeverProcess
+      // actor should still be running since we have a RESUME supervisor strategy
+      actorRef ! ProcessThis
       sleep(100)
-      assert(neverProcessed)
+      assert(thisProcessed)
 
       terminateTestActors
     }

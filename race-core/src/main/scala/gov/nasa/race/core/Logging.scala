@@ -19,13 +19,12 @@ package gov.nasa.race.core
 
 import java.io.{PrintStream, PrintWriter}
 import java.net.Socket
-
 import akka.actor.{Actor, ActorRef, ActorSystem}
 import akka.dispatch.RequiresMessageQueue
 import akka.event.LoggerMessageQueueSemantics
 import akka.event.Logging._
 import com.typesafe.config.Config
-import gov.nasa.race.common.SocketServer
+import gov.nasa.race.common.{ClientSocketPrinter, ServerSocketPrinter}
 import gov.nasa.race.util.ConsoleIO
 
 /**
@@ -200,36 +199,36 @@ class PrintWriterAppender (out: PrintWriter) extends LogAppender {
   override def appendDebug (s: String) = out.println(s)
 }
 
-/**
-  * appender that writes synchronized to a stream which can be backet by a server port
-  */
-class ConsoleAppender extends LogAppender with SocketServer {
+object ConsoleAppender {
+  val defaultPort = 2551
+  val defaultHost = "localhost"
 
-  override def service: String = "logging service"
-
-  override def port: Option[Int] = {
-    val portSpec = System.getProperty("log-port")
-    if (portSpec != null){
-      try {
-        val port = Integer.parseInt(portSpec)
-        Some(port)
-      } catch {
-        case _:Throwable =>
-          _warning(s"error parsing log port $portSpec, fall back to stdout")
-          None
-      }
-    } else None
+  def getLoggingHost: String = {
+    val hostSpec = System.getProperty("log.host")
+    if (hostSpec != null) hostSpec else defaultHost
   }
 
-  override def fallbackStream: Option[PrintStream] = Some(System.out)
+  def getLoggingPort: Int = {
+    val portSpec = System.getProperty("log.port") // we don't have a config yet, only Java system properties
+    if (portSpec != null){
+      try {
+        Integer.parseInt(portSpec)
+      } catch {
+        case _:Throwable =>
+          System.err.println(s"invalid log.port specification '$portSpec', falling back to $defaultPort")
+          defaultPort
+      }
+    } else defaultPort
+  }
+}
 
-  //--- those are for ConsoleServer related log messages so we have to fallback to something that works
-  override def _info(msg: => String): Unit = System.out.println(msg)
-  override def _warning(msg: => String): Unit = System.err.println(msg)
-  override def _error(msg: => String): Unit = System.err.println(msg)
-
-  //--- LogAppender interface
-
+/**
+  * appender that writes synchronized to a stream which can be configured to write to a server port
+  */
+class ConsoleAppender extends ClientSocketPrinter("consoleLogging",
+                                                  ConsoleAppender.getLoggingHost,
+                                                  ConsoleAppender.getLoggingPort,
+                                                  SystemLoggable) with LogAppender {
   private var curClr: String = null
 
   @inline private def printColoredOn(ps: PrintStream, s: String, ansiClr: String): Unit = {
@@ -240,13 +239,15 @@ class ConsoleAppender extends LogAppender with SocketServer {
     ps.println(s)
   }
 
-  override def appendError(s: String): Unit = ifConnected( printColoredOn(_,s,scala.Console.RED))
-  override def appendWarning(s: String): Unit = ifConnected( printColoredOn(_,s,scala.Console.YELLOW))
-  override def appendInfo(s: String): Unit = ifConnected( printColoredOn(_,s,scala.Console.RESET))
-  override def appendDebug(s: String): Unit = ifConnected( printColoredOn(_,s,scala.Console.RESET))
+  //--- LogAppender interface
+
+  override def appendError(s: String): Unit = withPrintStreamOrElse(System.out)( printColoredOn(_,s,scala.Console.RED))
+  override def appendWarning(s: String): Unit = withPrintStreamOrElse(System.out)( printColoredOn(_,s,scala.Console.YELLOW))
+  override def appendInfo(s: String): Unit = withPrintStreamOrElse(System.out)( printColoredOn(_,s,scala.Console.RESET))
+  override def appendDebug(s: String): Unit = withPrintStreamOrElse(System.out)( printColoredOn(_,s,scala.Console.RESET))
 
   override def terminate: Unit = {
-    ifConnected { ps =>
+    withPrintStreamOrElse(System.out) { ps =>
       ps.print(scala.Console.RESET)
       ps.flush
     }
@@ -262,6 +263,16 @@ trait Loggable {
   def info(f: => String): Unit
   def warning(f: => String): Unit
   def error(f: => String): Unit
+}
+
+/**
+  * if we need a bootstrap Loggable without config
+  */
+object SystemLoggable extends Loggable {
+  def debug(f: => String): Unit = {} // ignored
+  def info(f: => String): Unit = System.out.println(f)
+  def warning(f: => String): Unit = System.err.println(f)
+  def error(f: => String): Unit = System.err.println(f)
 }
 
 /**

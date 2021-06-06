@@ -32,8 +32,8 @@ public class TestJavaRaceActor extends PubSubRaceActorBase {
 
   @Override
   public boolean onHandleMessage (Object m){
-    if (m instanceof Messages.BusEvent) {
-      Messages.BusEvent e = (Messages.BusEvent)m;
+    if (m instanceof BusEvent) {
+      BusEvent e = (BusEvent)m;
       Object payload = e.msg();
 
       if (payload instanceof String) {

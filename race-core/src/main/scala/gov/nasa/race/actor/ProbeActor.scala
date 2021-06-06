@@ -25,7 +25,7 @@ import gov.nasa.race._
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.config.ConfigurableTranslator
 import gov.nasa.race.common.ConfigurableStreamCreator.{configuredPathName, createOutputStream}
-import gov.nasa.race.core.Messages.BusEvent
+import gov.nasa.race.core.BusEvent
 import gov.nasa.race.core.{ChannelTopicSubscriber, SubscribingRaceActor}
 import gov.nasa.race.util.{ConsoleIO, SoundUtils}
 

@@ -20,8 +20,9 @@ import akka.actor.SupervisorStrategy.Stop
 import akka.actor.{ActorInitializationException, ActorRef, OneForOneStrategy, Terminated}
 import akka.pattern.ask
 import com.typesafe.config.Config
-import gov.nasa.race.core.Messages._
+import gov.nasa.race.core._
 
+import scala.collection.mutable
 import scala.concurrent.duration.DurationInt
 
 
@@ -36,50 +37,16 @@ trait ParentRaceActor extends RaceActor with ParentActor {
   override val supervisorStrategy = raceActorSystem.defaultSupervisorStrategy
 
   def handleParentSystemMessage: Receive = {
-    case RaceActorStopped => stoppedChildActorRef(sender())  // only parents receive these
-    case msg: PingRaceActorResponse => handlePingRaceActorResponse(sender(), msg)
-    case Terminated(actorRef) => // Akka death watch event
-      removeChildActorRef(actorRef)
+    case RaceActorStopped() => stoppedChildActorRef(sender())  // only parents receive these
+    case Terminated(actorRef) => removeChildActorRef(actorRef) // Akka death watch event
   }
 
   override def handleSystemMessage: Receive = handleParentSystemMessage orElse super.handleSystemMessage
 
-  // this is the exception from the rule that handleXX only call the overridable onXX methods
-  // since we normally do not want actors to do anything but to instantly return the message
-  override def handlePingRaceActor (originator: ActorRef, sentNanos: Long, statsCollector: ActorRef) = {
-    super.handlePingRaceActor(originator,sentNanos,statsCollector) // respond yourself first
-
-    // TODO - this needs to check unresponsive children !
-    processRespondingChildren { actorData =>
-      val actorRef = actorData.actorRef
-      actorRef ! PingRaceActor(System.nanoTime, statsCollector)
-    }
-  }
-
-  def handlePingRaceActorResponse (actorRef: ActorRef, msg: PingRaceActorResponse): Unit = {
-    processChildRef(actorRef) { actorData=>
-      actorData.receivedNanos = msg.receivedNanos
-    }
-  }
-
-  override def handleShowRaceActor (originator: ActorRef, sentNanos: Long): Unit = {
-    showActor(name,level)
-    showActorState(System.nanoTime - sentNanos, nMsgs)
-
-    actors.foreach { actorData =>
-      val actorRef = actorData.actorRef
-      askForResult(actorRef ? ShowRaceActor(System.nanoTime)) {
-        case ShowRaceActorResponse => // all Ok, next
-        case TimedOut =>
-          showActor(actorRef.path.name, level+1)
-          println(" : UNRESPONSIVE")
-        case other =>
-          showActor(actorRef.path.name, level+1)
-          println(s" : wrong response ($other)")
-      }
-    }
-
-    originator ! ShowRaceActorResponse
+  override def handleRegisterRaceActor (registrar: ActorRef, parentQueryPath: String): Unit = {
+    val ownQueryPath = parentQueryPath + '/' + name
+    registrar ! RaceActorRegistered(ownQueryPath)
+    registerChildren(registrar, ownQueryPath)
   }
 
   override def onInitializeRaceActor(rc: RaceContext, actorConf: Config) = {
@@ -119,8 +86,10 @@ trait ParentRaceActor extends RaceActor with ParentActor {
 
   def startChildActors: Boolean = {
     askChildren((_)=>StartRaceActor(self)){
-      case RaceActorStarted => true
-      case _ => false
+      case RaceActorStarted() => true
+      case other =>
+        warning(s"unexpected StartRaceActor response from ${sender()}: $other")
+        false
     }
   }
 

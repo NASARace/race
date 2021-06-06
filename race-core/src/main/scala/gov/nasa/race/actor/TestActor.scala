@@ -20,7 +20,7 @@ import akka.actor.ActorRef
 import com.typesafe.config.Config
 import gov.nasa.race._
 import gov.nasa.race.config.ConfigUtils._
-import gov.nasa.race.core.Messages.BusEvent
+import gov.nasa.race.core.BusEvent
 import gov.nasa.race.core.{PublishingRaceActor, RaceContext, SubscribingRaceActor}
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -98,9 +98,9 @@ class TestActor (val config: Config) extends SubscribingRaceActor with Publishin
       println(s"## $name erroneously handling $other")
   }
 
-  override def handlePingRaceActor (originator: ActorRef, sentNanos: Long, statsCollector: ActorRef) = {
+  override def handlePingRaceActor (heartBeat: Long, tPing: Long): Unit = {
     if (!config.getBooleanOrElse("ignore-heartbeat", false)) {
-      super.handlePingRaceActor(originator, sentNanos, statsCollector)
+      super.handlePingRaceActor(heartBeat, tPing)
     }
   }
 

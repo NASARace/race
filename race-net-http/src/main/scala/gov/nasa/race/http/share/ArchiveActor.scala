@@ -23,7 +23,7 @@ import com.typesafe.config.Config
 import gov.nasa.race.archive.TaggedStringArchiveWriter
 import gov.nasa.race.common.{ConfigurableStreamCreator, JsonWriter}
 import gov.nasa.race.config.ConfigUtils.ConfigWrapper
-import gov.nasa.race.core.Messages.BusEvent
+import gov.nasa.race.core.BusEvent
 import gov.nasa.race.core.{ContinuousTimeRaceActor, PeriodicRaceActor, SubscribingRaceActor}
 import gov.nasa.race.util.FileUtils
 

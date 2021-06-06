@@ -19,7 +19,7 @@ package gov.nasa.race.actor
 import akka.actor.ActorRef
 import com.typesafe.config.Config
 import gov.nasa.race._
-import gov.nasa.race.core.Messages.{BusEvent, ChannelTopicAccept, ChannelTopicRelease, ChannelTopicRequest}
+import gov.nasa.race.core.{BusEvent, ChannelTopicAccept, ChannelTopicRelease, ChannelTopicRequest}
 import gov.nasa.race.track._
 import gov.nasa.race.core.{ChannelTopicProvider, RaceContext, SubscribingRaceActor}
 import gov.nasa.race.config.ConfigUtils._

@@ -19,7 +19,7 @@ package gov.nasa.race.kafka
 
 import akka.actor.ActorRef
 import com.typesafe.config.Config
-import gov.nasa.race.core.Messages.BusEvent
+import gov.nasa.race.core.BusEvent
 import gov.nasa.race.core.{RaceContext, SubscribingRaceActor}
 import gov.nasa.race.ifSome
 

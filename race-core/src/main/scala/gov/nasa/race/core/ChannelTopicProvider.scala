@@ -21,7 +21,7 @@ import akka.actor.{ActorRef, Terminated}
 import com.typesafe.config.Config
 import gov.nasa.race._
 import gov.nasa.race.common.AllId
-import gov.nasa.race.core.Messages._
+import gov.nasa.race.core._
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.util.StringUtils
 
@@ -63,6 +63,7 @@ trait ChannelTopicSubscriber extends SubscribingRaceActor {
   def requestChannelTopic(channelTopic: ChannelTopic):Unit = {
     pendingRequests += channelTopic
     info(s"$name sending request for $channelTopic")
+
     // this needs to publish a BusSysEvent to prevent user handlers from interfering
     busFor(channelTopic.channel).publish( BusSysEvent(PROVIDER_CHANNEL,ChannelTopicRequest(channelTopic,self), self))
   }

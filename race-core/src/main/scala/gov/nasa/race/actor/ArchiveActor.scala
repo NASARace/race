@@ -20,7 +20,7 @@ package gov.nasa.race.actor
 import akka.actor.ActorRef
 import com.typesafe.config.Config
 import gov.nasa.race.archive.ArchiveWriter
-import gov.nasa.race.core.Messages._
+import gov.nasa.race.core._
 import gov.nasa.race.core._
 
 /**

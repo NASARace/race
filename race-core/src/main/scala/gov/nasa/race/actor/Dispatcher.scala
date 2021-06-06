@@ -20,7 +20,7 @@ package gov.nasa.race.actor
 import akka.actor.ActorRef
 import com.typesafe.config.{Config, ConfigValueFactory}
 import gov.nasa.race.config.ConfigUtils._
-import gov.nasa.race.core.Messages.BusEvent
+import gov.nasa.race.core.BusEvent
 import gov.nasa.race.core.{ParentRaceActor, RaceContext, SubscribingRaceActor}
 
 /**

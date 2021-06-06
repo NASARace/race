@@ -18,7 +18,7 @@ package gov.nasa.race.core
 
 import com.typesafe.config.Config
 import gov.nasa.race.config.ConfigUtils._
-import gov.nasa.race.core.Messages.{BusEvent, SyncRequest}
+import gov.nasa.race.core.{BusEvent, SyncRequest}
 import gov.nasa.race.util.ArrayUtils
 
 /**
@@ -45,9 +45,12 @@ trait PublishingRaceActor extends RaceActor {
     writeTo.foreach { publish(_,msg) }
   }
 
-  def publish (channel: String, msg: Any): Unit = {
-    busFor(channel).publish( BusEvent(channel,msg,self))
+  @inline def publish (channel: String, msg: Any): Unit = {
+    //busFor(channel).publish( BusEvent(channel,msg,self))
+    busFor(channel).publish(channel, msg, self)
   }
+
+  //--- in case we can reuse the same BusEvent
 
   def publishBusEvent (e: BusEvent): Unit = {
     writeTo.foreach { publishBusEvent(_,e) }
@@ -58,6 +61,7 @@ trait PublishingRaceActor extends RaceActor {
     val be = if (e.channel == otherChannel) e else e.copy(channel=otherChannel)
     busFor(otherChannel).publish(be)
   }
+
 
   def publishSyncRequest (tag: Any, responderType: Option[Class[_]] = None): Unit = {
     publish(SyncRequest(self,tag, responderType))

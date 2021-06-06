@@ -199,7 +199,7 @@ for a configured aircraft::
     import akka.actor.ActorRef
     import com.typesafe.config.Config
     import gov.nasa.race.air.FlightPos
-    import gov.nasa.race.core.Messages.RaceTick
+    import gov.nasa.race.core.RaceTick
     import gov.nasa.race.core.{ContinuousTimeRaceActor, PeriodicRaceActor, PublishingRaceActor, SubscribingRaceActor}
     import gov.nasa.race.geo.GreatCircle._
     import gov.nasa.race.geo.LatLonPos

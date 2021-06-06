@@ -28,7 +28,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import gov.nasa.race._
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.common.{DataStreamReader, Status}
-import gov.nasa.race.core.Messages.Publish
+import gov.nasa.race.core.Publish
 import gov.nasa.race.util.{SettableDIStream, ThreadUtils}
 
 /**

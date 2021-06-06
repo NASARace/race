@@ -793,7 +793,7 @@ abstract class JsonPullParser extends LogWriter with Thrower {
   }
 
   def readOptionalStringArrayMemberInto[T <:mutable.Growable[String]](name: ByteSlice, collection: =>T): Option[T] = {
-    readOptionalArrayMemberInto(name,collection){ readQuotedValue().toString }
+    readOptionalArrayMemberInto(name,collection){ quotedValue.toString }
   }
 
   //--- read object members into mutable maps, using member names as keys and returning populated map
