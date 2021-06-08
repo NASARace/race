@@ -107,6 +107,8 @@ import gov.nasa.race.http.share.NodeMatcher._
 trait NodeMatcher {
   def pattern: String
 
+  override def toString(): String = pattern
+
   /**
     * matcher for node ids that supports the following specifications:
     *   - lexical id pattern (glob)

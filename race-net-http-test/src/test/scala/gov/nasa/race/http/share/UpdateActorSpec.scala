@@ -22,6 +22,7 @@ import gov.nasa.race.common.UnixPath
 import gov.nasa.race.common.UnixPath.PathHelper
 import gov.nasa.race.core.BusEvent
 import gov.nasa.race.test.RaceActorSpec
+import gov.nasa.race.test.RaceActorSpec.Continue
 import gov.nasa.race.uom.DateTime
 import org.scalatest.flatspec.AnyFlatSpecLike
 
@@ -32,7 +33,7 @@ import scala.concurrent.duration.DurationInt
   */
 class UpdateActorSpec extends RaceActorSpec with AnyFlatSpecLike {
 
-  val dataDir = "race-net-http-test/src/resources/sites/share/data/coordinator"
+  val dataDir = "src/resources/sites/share/data/coordinator"
 
   val actorConf: Config = createConfig(
     s"""
@@ -71,9 +72,7 @@ class UpdateActorSpec extends RaceActorSpec with AnyFlatSpecLike {
       println(s"--- column data of $actor pre CDC")
       actor.node.printColumnData()
 
-      var currentNode: Node = null
-
-      println(s"\n--- sending CDC $cdc\n")
+      println(s"\n--- sending CDC $cdc\n") // note this also triggers formulas so we get several node/CDC messages on the bus
       expectBusMsg("/out", 2.seconds, publish("/in", cdc)) {
 
         case BusEvent(_, node: Node, _) => // this has to come first
@@ -93,11 +92,12 @@ class UpdateActorSpec extends RaceActorSpec with AnyFlatSpecLike {
             case None => fail("updated cell value [column_2::cat_B/field_2] not found")
           }
 
-          currentNode = node
+          Continue // we still need to see the ColumnDataChange
 
-        case BusEvent(_, cdcOut: ColumnDataChange, _) =>
+        case BusEvent(_, cdcOut: ColumnDataChange, _) => // the delta message has to come second
           println(s"\n--- got CDC on /out: $cdc")
-          if (actor.node ne currentNode) fail(s"current actor node was not broadcasted")
+          assert(cdcOut.columnId == cdc.columnId)
+          assert(cdcOut.changedValues == cdc.changedValues)
 
         case BusEvent(_,msg,_) => fail(s"unexpected msg on /out: $msg")
       }

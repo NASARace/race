@@ -26,7 +26,7 @@ import org.scalatest.flatspec.AnyFlatSpec
 class UserPermissionsSpec extends AnyFlatSpec with RaceSpec {
 
   "a UserPermissionParser" should "parse a know UserPermission source" in {
-    val input = FileUtils.fileContentsAsString("race-net-http-test/src/resources/sites/share/data/node_2/userPermissions.json").get
+    val input = FileUtils.fileContentsAsString("src/resources/sites/share/data/node_2/userPermissions.json").get
     val parser = new UserPermissionsParser
 
     println(s"#-- parsing: $input")

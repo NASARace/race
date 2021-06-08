@@ -101,7 +101,7 @@ class CLxSpec extends AnyFlatSpec with RaceSpec {
           print(s"${cBuf(i)},")
           i += 1
         }
-        println
+        println()
       }
     }
   }

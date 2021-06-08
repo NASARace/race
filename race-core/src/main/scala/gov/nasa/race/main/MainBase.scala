@@ -56,7 +56,13 @@ trait MainBase {
     thread
   }
 
-  def removeShutdownHook (hook: Thread) = Runtime.getRuntime.removeShutdownHook(hook)
+  def removeShutdownHook (hook: Thread) = {
+    try {
+      Runtime.getRuntime.removeShutdownHook(hook)
+    } catch {
+      case isx: IllegalStateException => // ignore (shutdown already in progress)
+    }
+  }
 
   /**
    * override this to interactively control behavior

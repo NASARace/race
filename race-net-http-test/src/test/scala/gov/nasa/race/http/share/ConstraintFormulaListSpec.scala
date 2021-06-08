@@ -25,7 +25,7 @@ import org.scalatest.flatspec.AnyFlatSpec
 class ConstraintFormulaListSpec extends AnyFlatSpec with RaceSpec with NodeDependentTest {
 
   val nodeId = "/nodes/node_2"
-  val dataDir = "race-net-http-test/src/resources/sites/share/data/node_2"
+  val dataDir = "src/resources/sites/share/data/node_2"
 
   "a ConstraintFormulaListParser" should "parse a known source" in {
 

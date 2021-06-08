@@ -99,9 +99,14 @@ class JMSExportActor(val config: Config) extends SubscribingRaceActor {
     info(s"terminating $name")
 
     conn = conn match {
-      case Some(LiveConnection(connection,_,_)) =>
+      case Some(LiveConnection(connection,session,producer)) =>
         info(s"closing connection for $name")
-        connection.close()
+
+        if (!isTerminating) { // otherwise the broker shutdown hooks will do it for us and we might trip them
+          session.close()
+          connection.stop()
+          //connection.close()
+        }
         removeClient(this)
         None
       case None => None // ignore

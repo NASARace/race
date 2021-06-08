@@ -48,8 +48,10 @@ import scala.language.postfixOps
 class XPlaneActor (val config: Config) extends PublishingRaceActor
                                        with SubscribingRaceActor with ContinuousTimeRaceActor with GeoPositioned {
   val MaxPacketLength: Int = 1024
-  val BeaconGroup = "239.255.1.1"
-  val BeaconPort = 49707
+
+  val netIfc = NetworkInterface.getByName( config.getString("multicast-interface"))
+  val beaconGroup = config.getStringOrElse("beacon-group", "239.255.1.1")
+  val beaconPort = config.getIntOrElse("beacon-port", 49707)
 
   //--- xplane actor specific state
   sealed trait XPlaneState
@@ -221,14 +223,14 @@ class XPlaneActor (val config: Config) extends PublishingRaceActor
   def findXplaneBeacon: Unit = {
 
     val packet = new DatagramPacket(new Array[Byte](MaxPacketLength),MaxPacketLength)
-    val becnAddr = InetAddress.getByName(BeaconGroup)  // fixed multicast group for X-Plane BECN messages
-    val socket = new MulticastSocket(BeaconPort) // fixed multicast port for X-Plane BECN messages
+    val sockAddr = new InetSocketAddress( InetAddress.getByName(beaconGroup), beaconPort)  // fixed multicast group for X-Plane BECN messages
+    val socket = new MulticastSocket(beaconPort) // fixed multicast port for X-Plane BECN messages
 
     try {
-      socket.joinGroup(becnAddr)
+      socket.joinGroup(sockAddr, netIfc)
     } catch {
       case x:Exception => // multicast disabled in network config, try fallback
-        warning(s"multicast on $BeaconGroup:$BeaconPort not enabled (check firewall), fall back to configured xplane-host")
+        warning(s"multicast on $beaconGroup:$beaconPort not enabled (check firewall), fall back to configured xplane-host")
         findConfiguredXplane
         return
     }
@@ -237,7 +239,7 @@ class XPlaneActor (val config: Config) extends PublishingRaceActor
 
     while (xplaneState eq Searching){
       if (!waitForResponse(socket,packet){}) {
-        warning(s"no data on multicast $BeaconGroup:$BeaconPort (check network config), fall back to configured xplane-host")
+        warning(s"no data on multicast $beaconGroup:$beaconPort (check network config), fall back to configured xplane-host")
         findConfiguredXplane
         return
       }

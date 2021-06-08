@@ -16,15 +16,13 @@
  */
 package gov.nasa.race.actor
 
-import java.net.{DatagramPacket, InetAddress, MulticastSocket}
-
+import java.net.{DatagramPacket, InetAddress, InetSocketAddress, MulticastSocket, NetworkInterface}
 import akka.actor.{ActorRef, Cancellable}
 import com.typesafe.config.Config
 
 import scala.concurrent.duration._
 import scala.collection.mutable.{HashMap => MHashMap}
 import scala.concurrent.ExecutionContext.Implicits.global
-
 import gov.nasa.race._
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.common.{DataStreamReader, Status}
@@ -43,8 +41,10 @@ class MulticastImportActor (val config: Config) extends FilteringPublisher {
   val MaxMsgLen: Int = 1600
 
   //--- this is using multicast so we need a group ip address /port
-  val groupAddr = InetAddress.getByName(config.getStringOrElse("group-address", "239.0.0.42"))
+  val netIfc = NetworkInterface.getByName( config.getString("multicast-interface"))
+  val groupAddr = InetAddress.getByName( config.getString("group-address"))
   val groupPort = config.getIntOrElse("group-port", 4242)
+  val sockAddr = new InetSocketAddress(groupAddr,groupPort)
 
   val reader: DataStreamReader = createReader
 
@@ -127,7 +127,7 @@ class MulticastImportActor (val config: Config) extends FilteringPublisher {
     }
 
     try {
-      socket.joinGroup(groupAddr)
+      socket.joinGroup(sockAddr,netIfc)
 
       if (publishInterval.length > 0 && !sameItems) {
         info(s"starting publish scheduler $publishInterval")
@@ -149,7 +149,7 @@ class MulticastImportActor (val config: Config) extends FilteringPublisher {
         }
       }
     } finally {
-      socket.leaveGroup(groupAddr)
+      socket.leaveGroup(sockAddr,netIfc)
       socket.close
     }
   }

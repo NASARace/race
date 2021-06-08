@@ -132,7 +132,7 @@ object RaceActorSpec {
   case object Continue // returned by assertion to indicate we expect more
   case object Success
 
-  class BusProbe(assertion: PartialFunction[Any,Any]) extends Actor {
+  class BusProbe (assertion: PartialFunction[Any,Any]) extends Actor {
     var waiterForExpect: Option[ActorRef] = None
 
     def receive: Receive = {
@@ -143,9 +143,14 @@ object RaceActorSpec {
           assertion(msg) match {
             case Continue => // msg was accepted but go on - we expect more
             case _ => // we count that as "expectation met"
-              waiterForExpect.map( _ ! Success)
+              context.become(receiveDone, true) // but there might be more to come (if we just stop we might get deadletters)
+              waiterForExpect.foreach( _ ! Success)
           }
         }
+    }
+
+    def receiveDone: Receive = {
+      case _ => // we don't care anymore
     }
   }
 }

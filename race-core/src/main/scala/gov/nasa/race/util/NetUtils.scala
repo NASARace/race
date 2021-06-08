@@ -22,12 +22,12 @@ import java.lang.{StringBuilder => JStringBuilder}
 import java.net._
 import java.security.cert.X509Certificate
 import java.security.{KeyStore, SecureRandom}
-
 import javax.net.SocketFactory
 import javax.net.ssl._
 import gov.nasa.race._
 
 import scala.annotation.tailrec
+import scala.jdk.CollectionConverters.EnumerationHasAsScala
 
 /**
  * common networking related functions
@@ -247,5 +247,71 @@ object NetUtils {
     }
 
     blockingHttpsPost(urlString,buf.toString)
+  }
+
+  def getMulticastNetworkInterface (ifcSpec: Option[String], addrSpec: Option[String], ipSpec: Byte = '*'): NetworkInterface = {
+    def check (ifc: NetworkInterface): NetworkInterface = {
+      if (!ifc.isUp) throw new RuntimeException(s"interface not up: ${ifc.getName()}")
+      if (!ifc.supportsMulticast()) throw new RuntimeException(s"interface does not support multicast: ${ifc.getName()}")
+      ifc
+    }
+
+    if (ifcSpec.isDefined) {
+      // use the interface that is specified but check if it is up, supports multicast and bound to the optional address
+      val ifc = check( NetworkInterface.getByName(ifcSpec.get))
+
+      if (addrSpec.isDefined) {
+        val addr = InetAddress.getByName(addrSpec.get)
+        for (ia <- ifc.getInetAddresses().asScala) {
+          if (ia == addr) return ifc
+        }
+        throw new RuntimeException(s"interface $ifcSpec not bound to address $addr")
+
+      } else { // no address spec
+        ifc
+      }
+
+    } else { // no interface spec, look up the first match
+      if (addrSpec.isDefined) { // group address specified - look for an interface that is bound to it
+        val addr = InetAddress.getByName(addrSpec.get)
+        NetworkInterface.networkInterfaces().forEach { ifc=>
+          if (ifc.supportsMulticast()) {
+            for (ia <- ifc.getInetAddresses().asScala) {
+              if (ia == addr) return check(ifc)
+            }
+          }
+        }
+        throw new RuntimeException(s"no multicast interface found for address: $addr")
+
+      } else { // no interface and no address spec - use first multicast interface that is up, not p2p and not loopback
+        NetworkInterface.networkInterfaces().forEach { ifc=>
+          if (ifc.isUp && !ifc.isPointToPoint && !ifc.isLoopback) return ifc
+        }
+        throw new RuntimeException("no suitable multicast interface found")
+      }
+    }
+  }
+
+  def getMulticastInetAddress (addrSpec: Option[String], ifc: NetworkInterface, ipSpec: Byte = '*'): InetAddress = {
+    if (ifc.supportsMulticast()) {
+      if (addrSpec.isDefined) {
+        val addr = InetAddress.getByName(addrSpec.get)
+        for (ia <- ifc.getInetAddresses().asScala) {
+          if (ia == addr) return addr
+        }
+        throw new RuntimeException(s"address $addrSpec not bound to interface ${ifc.getName()}")
+
+      } else { // no address specified - use first one of provided interface
+        for (ia <- ifc.getInetAddresses().asScala) {
+          if (ipSpec == '*' ||
+            (ipSpec == 4 && ia.isInstanceOf[Inet4Address]) ||
+            (ipSpec == 6 && ia.isInstanceOf[Inet6Address])) return ia
+        }
+        throw new RuntimeException(s"no suitable address bound to interface ${ifc.getName()}")
+      }
+
+    } else {
+      throw new RuntimeException(s"interface ${ifc.getName()} does not support multicast")
+    }
   }
 }
