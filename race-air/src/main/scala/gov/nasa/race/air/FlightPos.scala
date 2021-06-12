@@ -17,13 +17,11 @@
 
 package gov.nasa.race.air
 
-import akka.actor.{ActorRef, ExtendedActorSystem}
+import akka.actor.ExtendedActorSystem
 import com.typesafe.config.Config
 import gov.nasa.race.archive._
 import gov.nasa.race.common.ConfigurableStreamCreator._
-import gov.nasa.race.core.BusEvent
-import gov.nasa.race.core.annotation.RaceSerializeAs
-import gov.nasa.race.core.{AkkaSerializable, Channel, SerializableMessage, SingleTypeAkkaSerializer}
+import gov.nasa.race.core.SingleTypeAkkaSerializer
 import gov.nasa.race.geo.GeoPosition
 import gov.nasa.race.track.TrackedObject.TrackProblem
 import gov.nasa.race.track.{MutSrcTracks, TrackedObject}
@@ -49,7 +47,6 @@ object FlightPos {
   * in-flight state consisting of geographic position, altitude, speed and bearing
   * note that we intentionally don't use a case class here so that we can provide structural extensibility
   */
-@RaceSerializeAs(classOf[SerializableFlightPosMessage])
 class FlightPos (val id: String,
                  val cs: String,
                  val position: GeoPosition,
@@ -58,7 +55,7 @@ class FlightPos (val id: String,
                  val vr: Speed,
                  val date: DateTime,
                  val status: Int = 0
-                ) extends TrackedAircraft with AkkaSerializable {
+                ) extends TrackedAircraft {
 
   def this (id:String, pos: GeoPosition, spd: Speed, hdg: Angle, vr: Speed, dtg: DateTime) =
     this(id, TrackedObject.tempCS(id), pos,spd,hdg,vr,dtg)
@@ -77,8 +74,6 @@ class FlightPos (val id: String,
         vr == other.vr && date == other.date && status == other.status
     } else false
   }
-
-  def toMessage(channel: Channel, sender: ActorRef) = SerializableFlightPosMessage(channel, this, sender)
 }
 
 /**
@@ -261,33 +256,17 @@ trait FlightPosSeq extends TrackedAircraftSeq[FlightPos]
 class FlightPosSeqImpl (initSize: Int) extends MutSrcTracks[FlightPos](initSize) with FlightPosSeq
 
 
-
 //--- Akka serializer support
-
-/**
-  * this is the class that is used to look up the corresponding AkkaSerializer. It has to be retrievable either
-  * from the respective payload object itself (via AkkaSerializable implementation) or as a @RaceSerializer class annotation
-  */
-case class SerializableFlightPosMessage (channel: Channel, msg: FlightPos, sender: ActorRef) extends SerializableMessage {
-  def toBusEvent: BusEvent = BusEvent(channel,msg,sender)
-}
 
 /**
   * Akka serialization support for FlightPos objects
   * this implementation favors minimizing allocation and absence of 3rd party library dependencies.
-  *
-  * NOTE - the serialization has to be flat, we can only serialize referenced objects that are directly supported
-  * by the AkkaSerializer interface (e.g. String and ActorRef)
   */
-class FlightPosSerializer (system: ExtendedActorSystem) extends SingleTypeAkkaSerializer[SerializableFlightPosMessage](system) {
+class FlightPosSerializer (system: ExtendedActorSystem) extends SingleTypeAkkaSerializer[FlightPos](system) {
   override val initCapacity: Int = 64
 
-  override def serialize (e: SerializableFlightPosMessage): Unit = {
-    val fpos = e.msg
+  override def serialize (fpos: FlightPos): Unit = {
     val pos = fpos.position
-
-    writeUTF(e.channel)
-    writeActorRef(e.sender)
 
     writeUTF(fpos.id)
     writeUTF(fpos.cs)
@@ -301,10 +280,7 @@ class FlightPosSerializer (system: ExtendedActorSystem) extends SingleTypeAkkaSe
     writeInt(fpos.status)
   }
 
-  override def deserialize (): SerializableFlightPosMessage = {
-    val channel = readUTF()
-    val senderRef = readActorRef()
-
+  override def deserialize (): FlightPos = {
     val id  = readUTF()
     val cs  = readUTF()
     val lat = readDouble()
@@ -316,18 +292,14 @@ class FlightPosSerializer (system: ExtendedActorSystem) extends SingleTypeAkkaSe
     val epochMs = readLong()
     val status = readInt()
 
-    SerializableFlightPosMessage(
-      channel,
-      new FlightPos(
-        id,cs,
-        GeoPosition.fromDegreesAndMeters(lat,lon,alt),
-        MetersPerSecond(spd),
-        Degrees(hdg),
-        MetersPerSecond(vr),
-        DateTime.ofEpochMillis(epochMs),
-        status
-      ),
-      senderRef
+    new FlightPos(
+      id,cs,
+      GeoPosition.fromDegreesAndMeters(lat,lon,alt),
+      MetersPerSecond(spd),
+      Degrees(hdg),
+      MetersPerSecond(vr),
+      DateTime.ofEpochMillis(epochMs),
+      status
     )
   }
 }

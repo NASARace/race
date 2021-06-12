@@ -20,8 +20,6 @@ package gov.nasa.race.core
 import akka.actor.{ActorRef, ActorSystem}
 import akka.event.{ActorEventBus, Logging, SubchannelClassification}
 import akka.util.Subclassification
-import gov.nasa.race.core._
-import gov.nasa.race.core.annotation.RaceSerializeAs
 
 import scala.collection.concurrent.{TrieMap, Map => CMap}
 
@@ -32,16 +30,14 @@ import scala.collection.concurrent.{TrieMap, Map => CMap}
 trait BusInterface {
   def subscribe (subscriber: ActorRef, to: String): Boolean
   def unsubscribe (subscriber: ActorRef, from: String): Boolean
-
-  def publish (msg: ChannelMessage): Unit // TODO - deprecated
-  def publish (channel: Channel, msg: Any, sender: ActorRef): Unit
+  def publish (msg: ChannelMessage): Unit
 }
 
 /**
  * the bus interface for remote actors, which cannot directly get a bus
  * via contructor or InitializeRaceActor message arguments since the Bus
  * is not serializable - remote actors have to publish to the bus through a
- * `connectorRef` proxy on the remote system
+ * `connectorRef` proxy.
  */
 case class RemoteBusInterface (val masterRef: ActorRef, val connectorRef: ActorRef) extends BusInterface {
 
@@ -58,41 +54,13 @@ case class RemoteBusInterface (val masterRef: ActorRef, val connectorRef: ActorR
     true
   }
 
-  def publish (channel: Channel, msg: Any, sender: ActorRef): Unit = {
-    msg match {
-      case as: AkkaSerializable => // the straight forward case - type knows itself how to get a serializable representation
-        connectorRef ! as.toMessage(channel,sender)
-
-      case _ =>
-        // check if type has a RaceSerializeAs annotation - this instantiates via reflection and therefore is slower
-        val srcClass = msg.getClass
-        val ann = srcClass.getAnnotation(classOf[RaceSerializeAs])
-        if (ann != null) {
-          val tgtClass = ann.value()
-          try {
-            val ctor = tgtClass.getDeclaredConstructor(classOf[Channel], srcClass, classOf[ActorRef])
-            val serializableMsg = ctor.newInstance(channel,msg,sender)
-            connectorRef ! serializableMsg
-          } catch {
-            case _:NoSuchMethodException => sender ! RaceLogWarning(s"no serializable constructor: ${tgtClass.getName}")
-            case x:Throwable => sender ! RaceLogError(s"error creating serializable: $x")
-          }
-
-        } else {
-          // fallback - at least we can let the sender report that we can't send this to a remote RACE
-          sender ! RaceLogWarning(s"msg not an AkkaSerializable: ${srcClass.getName}")
-        }
-    }
-  }
-
-  // FIXME - deprecated
   def publish (msg: ChannelMessage) = {
-    //connectorRef ! RemotePublish(msg)
+    connectorRef ! msg  // connectorRef is remote so msg will be serialized by Akka
   }
 }
 
 /**
- * the bus implementation of the local ActorSystem
+ * the bus implementation of a live universe (master) system
  *
  * <2do> SubchannelClassification doesn't have a query mechanism for subscriptions (private),
  * so we might have to either create our own cache here or extend the trait
@@ -133,10 +101,6 @@ class Bus (val system: ActorSystem) extends ActorEventBus with SubchannelClassif
     }
 
     super.unsubscribe(sub, from)
-  }
-
-  def publish (channel: Channel, msg: Any, sender: ActorRef): Unit = {
-    publish(BusEvent(channel,msg,sender))
   }
 
   def publish(event: Event, subscriber: Subscriber): Unit = {

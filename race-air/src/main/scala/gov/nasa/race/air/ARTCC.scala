@@ -100,6 +100,8 @@ case class ARTCC (id: String, name: String, state: String, area: String, positio
 
   def matchesAny: Boolean = false
   def matchesNone: Boolean = false
+
+  override def toString(): String = id
 }
 
 // if we need to match on a Seq type

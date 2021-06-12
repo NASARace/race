@@ -36,8 +36,15 @@ in which certain components have to be synchronized (e.g. displays), and for sys
 which external systems can only be accessed at a certain physical location. RACE instances can also
 be started and controlled remotely.
 
+The core of RACE does not care about the specific nature of the *events* it processes, although it
+comes with support for generic *TrackedObjects* and *Trajectories* (i.e. time series for moving objects).
+*Event processing* in this context is also generic - it is up to the applications to provide and select the
+components that process the relevant events. While this can include distributing events to external clients
+via various protocols and formats RACE is not a message broker ala Kafka_ or ActiveMQ_. RACE is a framework
+to build applications from clients of such event sources.
+
 The underlying *application model* is a reactive, distributed, event based system. The computational
-model employed by RACE to process such events is the well known Actor_ programming model, which
+model employed by RACE to process events is the well known Actor_ programming model, which
 uses dedicated objects (aka *actors*) that only communicate through asynchronous messages and don't
 share internal state. This has a profound impact on how RACE can make use of massive concurrency
 without burdening the developer with explicit synchronization, which is otherwise notoriously hard
@@ -66,4 +73,6 @@ the overhead that is required for developing new ``RaceActors``.
 .. _Akka: http://akka.io/
 .. _HOCON: https://github.com/typesafehub/config/blob/master/HOCON.md
 .. _Scala: http://www.scala-lang.org/
+.. _Kafka: https://kafka.apache.org/
+.. _ActiveMQ: https://activemq.apache.org/
 

@@ -606,14 +606,14 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ParentActor with Mon
 
       info(s"sending PauseRaceActor to ${actorRef.path.name}..")
       askForResult(actorRef ? PauseRaceActor(self)) {
-        case RaceActorPaused =>
+        case RaceActorPaused() =>
           //info(s"${actorRef.path.name} is paused")
         case RaceActorPauseFailed(reason) =>
           pauseFailed(s"pause of ${actorRef.path.name} failed: $reason", isOptional)
         case TimedOut =>
           pauseFailed(s"pausing ${actorRef.path} timed out", isOptional)
         case other => // illegal response
-          pauseFailed(s"got unknown PauseRaceActor response from ${actorRef.path.name}",isOptional)
+          pauseFailed(s"got unknown PauseRaceActor response from ${actorRef.path.name}: $other",isOptional)
       }(pauseTimeout)
     }
   }
@@ -625,7 +625,7 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ParentActor with Mon
         try {
           pauseRaceActors
           ras.setPaused
-          originator ! RacePaused
+          originator ! RacePaused()
         } catch {
           case x: RacePauseException =>
             originator ! RacePauseFailed(x.getMessage)
@@ -667,14 +667,14 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ParentActor with Mon
 
       info(s"sending ResumeRaceActor to ${actorRef.path.name}..")
       askForResult(actorRef ? ResumeRaceActor(self)) {
-        case RaceActorResumed =>
+        case RaceActorResumed() =>
           //info(s"${actorRef.path.name} is resumed")
         case RaceActorResumeFailed(reason) =>
           resumeFailed(s"resuming ${actorRef.path.name} failed: $reason", isOptional)
         case TimedOut =>
           resumeFailed(s"resuming ${actorRef.path} timed out", isOptional)
         case other => // illegal response
-          resumeFailed(s"got unknown ResumeRaceActor response from ${actorRef.path.name}",isOptional)
+          resumeFailed(s"got unknown ResumeRaceActor response from ${actorRef.path.name}: $other",isOptional)
       }(resumeTimeout)
     }
   }
@@ -686,7 +686,7 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ParentActor with Mon
         try {
           resumeRaceActors
           ras.setResumed
-          originator ! RaceResumed
+          originator ! RaceResumed()
         } catch {
           case x: RaceResumeException =>
             originator ! RaceResumeFailed(x.getMessage)

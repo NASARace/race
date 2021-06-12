@@ -25,24 +25,10 @@ import gov.nasa.race.uom.DateTime
 import scala.concurrent.duration.FiniteDuration
 
 
-
 /** a message type that is processed by RaceActor.handleSystemMessage */
 trait RaceSystemMessage
 
 trait RemoteRaceSystemMessage extends RaceSystemMessage
-
-/** a message type that can be published on a Bus channel */
-trait ChannelMessage {
-  def channel: String
-  def msg: Any
-  def sender: ActorRef
-}
-
-/** a user ChannelMessage */
-case class BusEvent (channel: String, msg: Any, sender: ActorRef) extends ChannelMessage
-
-/** a system ChannelMessage */
-case class BusSysEvent (channel: String, msg: Any, sender: ActorRef) extends ChannelMessage with RaceSystemMessage
 
 
 //--- remote RAS control messages

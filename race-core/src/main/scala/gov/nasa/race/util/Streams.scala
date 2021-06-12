@@ -18,6 +18,7 @@
 package gov.nasa.race.util
 
 import java.io.{ByteArrayInputStream, ByteArrayOutputStream, DataInputStream, DataOutputStream, EOFException, IOException, InputStream, OutputStream}
+import java.nio.ByteBuffer
 import java.util.zip.GZIPInputStream
 
 /**
@@ -167,6 +168,29 @@ class SettableDOStream(baos: SettableBAOStream) extends DataOutputStream(baos) {
 }
 
 /**
+  * a DataOutputStream that can change the underlying OutputStream
+  */
+class SettableDataOutputStream (os: OutputStream) extends DataOutputStream(os) {
+  def setOutputStream (newOut: OutputStream, closePrevious: Boolean = false): Unit = {
+    if (closePrevious) out.close()
+    out = newOut
+  }
+
+  def getOutputStream: OutputStream = out
+}
+
+/**
+  * a DataInputStream that can change the underlying InputStream
+  */
+class SettableDataInputStream (is: InputStream) extends DataInputStream(is) {
+  def setInputStream (newIn: InputStream): Unit = {
+    in = newIn
+  }
+
+  def getInputStream: InputStream = in
+}
+
+/**
   * a ByteArrayInputStream that gives us control over buffer position
   */
 class SettableBAIStream (bs: Array[Byte]) extends ByteArrayInputStream(bs) {
@@ -193,6 +217,7 @@ class SettableBAIStream (bs: Array[Byte]) extends ByteArrayInputStream(bs) {
 
   def getBuffer = buf
   def getCapacity = buf.length
+  def getRemainingByteBuffer(): ByteBuffer = ByteBuffer.wrap(bs,pos,count-pos)
 }
 
 class SettableDIStream(bais: SettableBAIStream) extends DataInputStream(bais) {

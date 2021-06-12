@@ -173,6 +173,15 @@ object ConfigUtils {
     def getBooleanOrElse(key: String, fallback: Boolean) = getWithFallback(key,fallback)(conf.getBoolean(key))
     def getOptionalBoolean(key: String): Option[Boolean] = getOptional(key)( conf.getBoolean(key) )
 
+    def getOverridableBooleanOrElse (key: String, fallback: Boolean): Boolean = {
+      val sysProp = System.getProperty(key.replace('-', '.'))
+      if (sysProp != null) {
+        sysProp.equalsIgnoreCase("true")
+      } else {
+        getBooleanOrElse( key, fallback)
+      }
+    }
+
     def getIntOrElse(key: String, fallback: Int) = getWithFallback(key,fallback)(conf.getInt(key))
     def getOptionalInt(key: String): Option[Int] = getOptional(key)( conf.getInt(key) )
 

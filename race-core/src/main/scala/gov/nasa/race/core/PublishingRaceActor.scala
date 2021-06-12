@@ -46,8 +46,7 @@ trait PublishingRaceActor extends RaceActor {
   }
 
   @inline def publish (channel: String, msg: Any): Unit = {
-    //busFor(channel).publish( BusEvent(channel,msg,self))
-    busFor(channel).publish(channel, msg, self)
+    busFor(channel).publish( BusEvent(channel, msg, self))
   }
 
   //--- in case we can reuse the same BusEvent

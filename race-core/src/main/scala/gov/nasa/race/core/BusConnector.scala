@@ -37,7 +37,7 @@ class BusConnector (val bus: Bus) extends Actor with ActorLogging {
     case RemoteUnsubscribe(remoteActor,channel) =>
       bus.unsubscribe(remoteActor, channel)
 
-    case msg: SerializableMessage => // the remotely published messages
-      bus.publish(msg.toBusEvent)
+    case e: BusEvent => // the remotely published messages
+      bus.publish(e)
   }
 }

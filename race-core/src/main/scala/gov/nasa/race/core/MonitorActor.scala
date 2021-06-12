@@ -63,6 +63,7 @@ trait MonitorActor  extends Actor with ImplicitActorLogging with ConfigLoggable 
 
   val monitorInterval = config.getOverridableDurationOrElse("monitor-interval", Duration.Zero) // default 0 - no monitoring
   val monitorPort = config.getOverridableIntOrElse("monitor-port", 2552)
+  val monitorSys = config.getOverridableBooleanOrElse( "monitor-sys", false)
   var monitorSchedule: Option[Cancellable] = None
   var ssp: Option[ServerSocketPrinter] = None
 
@@ -236,7 +237,7 @@ trait MonitorActor  extends Actor with ImplicitActorLogging with ConfigLoggable 
     }
     ps.println
 
-    //reportJVM(ps,false)
+    if (monitorSys) reportJVM(ps,false)
   }
 
   //--- (experimental) JVM monitoring

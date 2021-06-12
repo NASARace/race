@@ -24,7 +24,8 @@ import java.nio.file.{FileSystems, StandardOpenOption}
 /**
   * InputStream that wraps generic ByteBuffers
   */
-class ByteBufferInputStream (val buf: ByteBuffer) extends InputStream {
+class ByteBufferInputStream (bb: ByteBuffer) extends InputStream {
+  protected var buf: ByteBuffer = bb
 
   override def read: Int = if (!buf.hasRemaining) -1 else buf.get & 0xff
 
@@ -37,6 +38,21 @@ class ByteBufferInputStream (val buf: ByteBuffer) extends InputStream {
     } else -1 // reached end
   }
 }
+
+/**
+  * a ByteBufferInputStream that can change the underlying ByteBuffer
+  */
+class SettableByteBufferInputStream (bb: ByteBuffer) extends ByteBufferInputStream(bb) {
+
+  def this () = this(emptyByteBuffer)
+
+  def setByteBuffer (newBuffer: ByteBuffer): Unit = {
+    buf = newBuffer
+  }
+
+  def getByteBuffer: ByteBuffer = buf
+}
+
 
 /**
   * InputStream that wraps a sliding memory mapped window of a file

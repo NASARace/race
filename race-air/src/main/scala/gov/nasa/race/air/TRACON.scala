@@ -134,6 +134,8 @@ class TRACON(val id: String, val name: String, val state: String, val area: Stri
       case _ => false
     }
   }
+
+  override def toString(): String = id
 }
 
 // matchable Seq type for TRACONs

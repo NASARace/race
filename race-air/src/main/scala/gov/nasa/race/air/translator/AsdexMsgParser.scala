@@ -81,7 +81,11 @@ class AsdexMsgParser(val config: Config=NoConfig) extends UTF8XmlPullParser2
 
 
   def parse (bs: Array[Byte], off: Int, length: Int): Option[Any] = {
-    parseTracks(bs,off,length)
+    try {
+      parseTracks(bs, off, length)
+    } catch {
+      case x: Throwable => x.printStackTrace()
+    }
     if (airportId != null && elements.nonEmpty) Some(elements) else None
   }
 

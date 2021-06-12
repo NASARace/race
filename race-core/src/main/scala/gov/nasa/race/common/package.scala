@@ -19,6 +19,7 @@ package gov.nasa.race
 
 import gov.nasa.race.common.ByteSlice
 
+import java.nio.ByteBuffer
 import scala.annotation.tailrec
 import scala.collection.Seq
 import scala.language.implicitConversions
@@ -151,6 +152,14 @@ package object common {
     n
   }
 
+  /**
+    * utility for match cases that have to rely on AnyRef elements but loose the element type because of type erasure
+    * TODO - are there any Iterable[_<:AnyVal] instances ?
+    */
+  def foreachRef (it: Iterable[_])(f: AnyRef=>Unit): Unit = {
+    it.asInstanceOf[Iterable[_<:AnyRef]].foreach(f)
+  }
+
   // something that can be turned into XML
   trait XmlSource {
     def toXML: String
@@ -204,4 +213,6 @@ package object common {
   // common group ids
   final val NoneId = "<none>"
   final val AllId = "<all>"
+
+  val emptyByteBuffer = ByteBuffer.allocate(0)
 }

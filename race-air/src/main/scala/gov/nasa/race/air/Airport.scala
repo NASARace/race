@@ -133,6 +133,8 @@ class Airport (val id: String,
       case _ => false
     }
   }
+
+  override def toString(): String = id
 }
 
 // matchable Seq type for Airports

@@ -17,9 +17,8 @@
 package gov.nasa.race.core
 
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
-import akka.pattern.{AskSupport, ask}
+import akka.pattern.AskSupport
 import com.typesafe.config.Config
-import gov.nasa.race.core.{PingRaceActor, RaceActorTerminateFailed, RaceActorTerminateReject, RaceActorTerminated, TerminateRaceActor}
 
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer

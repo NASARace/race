@@ -50,7 +50,14 @@ object CryptConfig extends CryptApp {
   override def encrypt (file: File, cipher: Cipher, deleteWhenDone: Boolean): Unit = {
     try {
       println(s"encrypting configuration file $file...")
-      val conf = ConfigFactory.parseFile(file)
+
+      val userProps = ConfigUtils.createConfig(
+        "user.home" -> System.getProperty("user.home"),
+        "user.dir" -> System.getProperty("user.dir"),
+        "user.name" -> System.getProperty("user.name")
+      )
+
+      val conf = ConfigFactory.parseFile(file).resolveWith(userProps)
       var econf = conf
 
       for (e <- conf.entrySet.asScala) {

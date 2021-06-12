@@ -57,6 +57,8 @@ class PortForwarder (val config: Config) extends PeriodicRaceActor {
   val forwardL = config.getOptionalVaultableString("forward")
   val forwardR = config.getOptionalVaultableString("reverse-forward")
 
+  setSystemProperties()
+
   val jsch = new JSch
   val session = jsch.getSession(user, host)
 
@@ -88,6 +90,16 @@ class PortForwarder (val config: Config) extends PeriodicRaceActor {
       info("connected and forwarding")
     } else failDuringConstruction(s"failed to connect as $user@$host")
   } else  failDuringConstruction("no forwards specified")
+
+  def setSystemProperties (): Unit = {
+    // if there is no krb5.conf in one of the usual places (/etc) then login with Java's Kerberos GSS API will fail
+    //     (see https://docs.oracle.com/en/java/javase/16/security/kerberos-requirements.html)
+    // Check if there are application configured fallbacks and set system properties accordingly
+    // NOTE - if there is no standard krb5.conf then these overrides should come from the vault for added security
+    config.getOptionalVaultableString("krb5.conf").foreach( s=> System.setProperty("java.security.krb5.conf", s))
+    config.getOptionalVaultableString("krb5.realm").foreach( s=> System.setProperty("java.security.krb5.realm", s))
+    config.getOptionalVaultableString("krb5.kdc").foreach( s=> System.setProperty("java.security.krb5.kdc", s))
+  }
 
   def setPortForward (spec: String, action: String, f: (Int,String,Int)=>Unit) = {
     spec.split("[,; ]+").foreach {
