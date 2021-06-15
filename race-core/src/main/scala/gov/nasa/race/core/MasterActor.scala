@@ -115,6 +115,8 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ParentActor with Mon
       onRaceResetClock(originator,d,tScale) // RAS changed simClock, inform actors
 
     //--- inter RAS time management
+    case RemoteClockReset (date,timeScale) => onRemoteClockReset(sender(), date, timeScale)
+
       // TODO - this needs to be unified with SyncWithRaceClock
     case SyncSimClock(dateTime: DateTime, timeScale: Double) =>
       simClock.reset(dateTime,timeScale)
@@ -149,11 +151,15 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ParentActor with Mon
     info(s"received remote connection request from: ${remoteMaster.path}")
     if (ras.acceptsRemoteConnectionRequest(remoteMaster)) {
       info(s"accepted remote connection request from: ${remoteMaster.path}")
-      sender() ! RemoteConnectionAccept()
+      sender() ! RemoteConnectionAccept(ras.localCapabilities)
     } else {
       warning(s"rejected remote connection request from: ${remoteMaster.path}")
       sender() ! RemoteConnectionReject()
     }
+  }
+
+  def onRemoteClockReset (requester: ActorRef, date: DateTime, timeScale: Double): Unit = {
+    ras.requestSimClockReset(requester,date,timeScale)
   }
 
   //--- aux functions
@@ -174,14 +180,19 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ParentActor with Mon
       try {
         ras.getActorConfigs.foreach { actorConf =>
           val actorName = actorConf.getString("name")
+          val isOptional = actorConf.getBooleanOrElse("optional", false)
 
-          getActor(actorConf) match {
+          getActor(actorConf, isOptional) match {
             case Some(actorRef) =>
               addChildActorRef(actorRef,actorConf)
               context.watch(actorRef)
             case None =>
-              error(s"creation of $actorName failed without exception")
-              originator ! RaceCreateFailed(s"actor construction failed without exception: $actorName")
+              if (!isOptional) {
+                error(s"creation of $actorName failed without exception")
+                originator ! RaceCreateFailed(s"actor construction failed without exception: $actorName")
+              } else {
+                warning(s"ignoring missing optional $actorName")
+              }
           }
         }
         // all accounted for
@@ -194,7 +205,7 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ParentActor with Mon
     }
   }
 
-  def getActor (actorConfig: Config): Option[ActorRef] = {
+  def getActor (actorConfig: Config, isOptional: Boolean): Option[ActorRef] = {
     val actorName = actorConfig.getString("name")
 
     actorConfig.getOptionalString("remote") match {
@@ -203,7 +214,6 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ParentActor with Mon
         instantiateLocalActor(actorConfig)
 
       case Some(remoteUri) => // remote actor
-        val isOptional = actorConfig.getBooleanOrElse("optional", false)
         val remoteUniverseName = userInUrl(remoteUri).get
         if (usedRemoteMasters.get(remoteUri).isEmpty) {
           if (isConflictingHost(remoteUri)){
@@ -213,9 +223,8 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ParentActor with Mon
             }
             else throw new RaceException("conflicting host of $remoteUri")
           } else {
-            lookupRemoteMaster(remoteUniverseName, remoteUri, isOptional) match {
-              case Some(remoteMasterRef) =>
-                ras.usedRemoteMasters = usedRemoteMasters + (remoteUri -> remoteMasterRef)
+            lookupRemoteMaster( remoteUniverseName, remoteUri, isOptional) match {
+              case Some((remoteMasterRef,caps)) => ras.addUsedRemote( remoteUri, remoteMasterRef, caps)
               case None => return None // no (optional) satellite, nothing to look up or start
             }
           }
@@ -398,7 +407,7 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ParentActor with Mon
     usedRemoteMasters.exists(e => loc == stringTail(e._1,'@'))
   }
 
-  def lookupRemoteMaster (remoteUniverseName: String, remoteUri: String, isOptional: Boolean): Option[ActorRef] = {
+  def lookupRemoteMaster (remoteUniverseName: String, remoteUri: String, isOptional: Boolean): Option[(ActorRef,RaceActorCapabilities)] = {
     val path = s"$remoteUri/user/$remoteUniverseName"
     info(s"looking up remote actor system $path")
     val sel = context.actorSelection(path)
@@ -406,12 +415,13 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ParentActor with Mon
     askForResult (sel ? Identify(path)) {
       case ActorIdentity(path: String, Some(actorRef:ActorRef)) =>
         info(s"found master for remote actor system: ${actorRef.path}")
-        if (isRemoteConnectionAcceptedBy(actorRef)) {
-          info(s"remote master accepted connection request: ${actorRef.path}")
-          Some(actorRef)
-        } else {
-          warning(s"remote master did not accept connection request: ${actorRef.path}")
-          None
+        checkRemoteConnectionAccept(actorRef) match {
+          case Some(caps) =>
+            info(s"remote master accepted connection request: ${actorRef.path} with caps: $caps")
+            Some(actorRef -> caps)
+          case None =>
+            warning(s"remote master did not accept connection request: ${actorRef.path}")
+            None
         }
       case ActorIdentity(path: String, None) =>
         if (isOptional) {
@@ -427,11 +437,11 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ParentActor with Mon
     }
   }
 
-  def isRemoteConnectionAcceptedBy(remoteMaster: ActorRef): Boolean = {
+  def checkRemoteConnectionAccept(remoteMaster: ActorRef): Option[RaceActorCapabilities] = {
     askForResult (remoteMaster ? RemoteConnectionRequest(self)) {
-      case _:RemoteConnectionAccept => true
-      case _:RemoteConnectionReject => false
-      case TimedOut => false
+      case RemoteConnectionAccept(caps) => Some(caps)
+      case RemoteConnectionReject() => None
+      case TimedOut => None
     }
   }
 
@@ -619,7 +629,7 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ParentActor with Mon
   }
 
   def onRacePause (originator: ActorRef) = executeProtected {
-    if (ras.commonCapabilities.supportsPauseResume){
+    if (ras.localCapabilities.supportsPauseResume){
       if (ras.isRunning) {
         info(s"master $name got RacePause, halting actors")
         try {
@@ -640,7 +650,7 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ParentActor with Mon
   protected def onRacePauseRequest(originator: ActorRef): Unit = {
       if (ras.isRunning){
         if (isManaged(originator)) {
-          if (ras.commonCapabilities.supportsPauseResume){
+          if (ras.localCapabilities.supportsPauseResume){
             onRacePause(originator)
           } else warning("ignoring pause request: universe does not support pause/resume")
         } else warning(s"ignoring pause request: unknown actor ${originator.path}")
@@ -680,7 +690,7 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ParentActor with Mon
   }
 
   def onRaceResume (originator: ActorRef) = executeProtected {
-    if (ras.commonCapabilities.supportsPauseResume){
+    if (ras.localCapabilities.supportsPauseResume){
       if (ras.isPaused) {
         info(s"master $name got RaceResume, resuming actors")
         try {
@@ -701,7 +711,7 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ParentActor with Mon
   protected def onRaceResumeRequest(originator: ActorRef): Unit = {
     if (ras.isPaused){
       if (isManaged(originator)) {
-        if (ras.commonCapabilities.supportsPauseResume){
+        if (ras.localCapabilities.supportsPauseResume){
           onRaceResume(originator)
         } else warning("ignoring resume request: universe does not support pause/resume")
       } else warning(s"ignoring resume request: unknown actor ${originator.path}")

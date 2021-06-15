@@ -35,10 +35,15 @@ class RemoteConnectionRequestSerializer (system: ExtendedActorSystem) extends Si
   override def deserialize(): RemoteConnectionRequest = RemoteConnectionRequest(readActorRef())
 }
 
-// RemoteConnectionAccept ()
+// RemoteConnectionAccept (caps: RaceActorCapabilities)
 class RemoteConnectionAcceptSerializer (system: ExtendedActorSystem) extends SingleTypeAkkaSerializer[RemoteConnectionAccept](system) {
-  override def serialize(t: RemoteConnectionAccept): Unit = {}
-  override def deserialize(): RemoteConnectionAccept = RemoteConnectionAccept()
+  override def serialize(t: RemoteConnectionAccept): Unit = {
+    writeLong(t.capabilities.toLong)
+  }
+  override def deserialize(): RemoteConnectionAccept = {
+    val caps = new RaceActorCapabilities(readLong())
+    RemoteConnectionAccept(caps)
+  }
 }
 
 // RemoteConnectionReject ()
@@ -46,6 +51,20 @@ class RemoteConnectionRejectSerializer (system: ExtendedActorSystem) extends Sin
   override def serialize(t: RemoteConnectionReject): Unit = {}
   override def deserialize(): RemoteConnectionReject = RemoteConnectionReject()
 }
+
+// RemoteClockReset (date: DateTime, timeScale: Double)
+class RemoteClockResetSerializer (system: ExtendedActorSystem) extends SingleTypeAkkaSerializer[RemoteClockReset](system) {
+  override def serialize(t: RemoteClockReset): Unit = {
+    writeDateTime(t.date)
+    writeDouble(t.timeScale)
+  }
+  override def deserialize(): RemoteClockReset = {
+    val date = readDateTime()
+    val timeScale = readDouble()
+    RemoteClockReset(date,timeScale)
+  }
+}
+
 
 // RemoteRaceStart (remoteMaster: ActorRef, simTime: DateTime, timeScale: Double)
 class RemoteRaceStartSerializer (system: ExtendedActorSystem) extends SingleTypeAkkaSerializer[RemoteRaceStart](system) {
@@ -106,8 +125,8 @@ class InitializeRaceActorSerializer (system: ExtendedActorSystem) extends Single
 // RaceActorInitialized (caps: RaceActorCapabilities)
 //    RaceActorCapabilities (caps: Int)
 class RaceActorInitializedSerializer (system: ExtendedActorSystem) extends SingleTypeAkkaSerializer[RaceActorInitialized](system) {
-  override def serialize(t: RaceActorInitialized): Unit = writeInt(t.caps.caps)
-  override def deserialize(): RaceActorInitialized = RaceActorInitialized(RaceActorCapabilities(readInt()))
+  override def serialize(t: RaceActorInitialized): Unit = writeLong(t.caps.caps)
+  override def deserialize(): RaceActorInitialized = RaceActorInitialized(RaceActorCapabilities(readLong()))
 }
 
 // RaceActorInitializeFailed (reason: String)
@@ -350,6 +369,10 @@ class RaceActorStoppedSerializer (system: ExtendedActorSystem) extends SingleTyp
   override def serialize(t: RaceActorStopped): Unit = {}
   override def deserialize(): RaceActorStopped = RaceActorStopped()
 }
+
+
+
+// RemoteClockReset (date: DateTime,timeScale: Double)
 
 // RaceClockReset()
 class RaceClockResetSerializer (system: ExtendedActorSystem) extends SingleTypeAkkaSerializer[RaceClockReset](system) {

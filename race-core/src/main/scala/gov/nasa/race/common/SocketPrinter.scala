@@ -125,7 +125,7 @@ class ServerSocketPrinter (service: String, firstPort: Int, nPorts: Int, log: Lo
             reConnect.acquire // wait until we are told to listen again
           }
         } else {
-          log.warning(s"$service did not find free port in range $firstPort+$nPorts, network service disabled")
+          log.warning(s"$service did not find free port in range $firstPort+$nPorts")
         }
 
       } catch {
@@ -170,7 +170,7 @@ class ClientSocketPrinter (service: String, val host: String, port: Int, log: Lo
           reConnect.acquire // this blocks until we are told to re-connect
         }
       } catch {
-        case cx: ConnectException => log.warning(s"$service cannot connect to $host:$port, network service disabled")
+        case cx: ConnectException => log.warning(s"$service cannot connect to $host:$port")
         case x: IOException => log.error(s"$service failed with $x")
 
       } finally {

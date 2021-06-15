@@ -432,13 +432,20 @@ trait ColumnDataChangeParser extends JsonPullParser {
   }
 
   def readChangedValues(date: DateTime): Seq[CellPair] = {
-    var cvs = mutable.Buffer.empty[CellPair]
+    val cvs = mutable.Buffer.empty[CellPair]
 
     foreachInCurrentObject {
       val rowId = member.intern
       rowList.get(rowId) match {
         case Some(row) => cvs += (rowId -> row.parseValueFrom(this)(date))
-        case None => warning(s"unknown row '$rowId' in columnDataChange message ignored")
+        case None =>
+          warning(s"unknown row '$rowId' in columnDataChange message ignored")
+          if (isLevelStart) {
+            readNext()
+            skipToEndOfCurrentLevel()
+          } else {
+            readNext()
+          }
       }
     }
 

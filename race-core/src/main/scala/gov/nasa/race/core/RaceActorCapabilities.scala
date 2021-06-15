@@ -29,14 +29,14 @@ object RaceActorCapabilities {
 
   //... and more to follow
 
-  final val AllCapabilities = new RaceActorCapabilities(0xffffffff)
+  final val AllCapabilities = new RaceActorCapabilities(0xffffffffffffffffL)
   final val NoCapabilities = new RaceActorCapabilities(0)
 }
 
 /**
   * a bit set that contains capabilities of a RaceActor
   */
-case class RaceActorCapabilities (caps: Int) extends AnyVal {
+case class RaceActorCapabilities (caps: Long) extends AnyVal {
   import RaceActorCapabilities._
 
   def has(rac: RaceActorCapabilities) = (caps & rac.caps) != 0
@@ -56,6 +56,8 @@ case class RaceActorCapabilities (caps: Int) extends AnyVal {
   @inline def supportsSimTimeReset = (caps & SupportsSimTimeReset.caps) != 0
   @inline def supportsPauseResume = (caps & SupportsPauseResume.caps) != 0
   @inline def supportsDiscreteTime = (caps & SupportsDiscreteTime.caps) != 0
+
+  def toLong: Long = caps
 
   override def toString = {
     val sb = new StringBuffer("{")

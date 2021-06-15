@@ -35,13 +35,17 @@ trait RemoteRaceSystemMessage extends RaceSystemMessage
 // these are only exchanged between masters during remote actor creation
 // note that we can't use singleton objects here since we need
 case class RemoteConnectionRequest (requestingMaster: ActorRef) extends RemoteRaceSystemMessage
-case class RemoteConnectionAccept () extends RemoteRaceSystemMessage
+case class RemoteConnectionAccept (capabilities: RaceActorCapabilities) extends RemoteRaceSystemMessage
 case class RemoteConnectionReject () extends RemoteRaceSystemMessage
 case class RemoteRaceTerminate (remoteMaster: ActorRef)  extends RemoteRaceSystemMessage // Master -> RemoteMaster
 
 //--- messages to support remote bus subscribers/publishers, remoteActor -> BusConnector
 case class RemoteSubscribe (actorRef: ActorRef, channel: Channel) extends RemoteRaceSystemMessage
 case class RemoteUnsubscribe (actorRef: ActorRef, channel: Channel) extends RemoteRaceSystemMessage
+
+//--- remote clock changes
+case class RemoteClockReset (date: DateTime,timeScale: Double) extends RemoteRaceSystemMessage
+
 
 //--- RaceActor system messages (processed by core RaceActor traits)
 // each of the system messages has an associated callback function of the same (lowercase)

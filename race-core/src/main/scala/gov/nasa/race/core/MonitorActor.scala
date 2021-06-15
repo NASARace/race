@@ -226,9 +226,9 @@ trait MonitorActor  extends Actor with ImplicitActorLogging with ConfigLoggable 
     }
 
     ps.print(ConsoleIO.infoColor)
-    ps.println("                                                                                ping-latency [μs]")
-    ps.println("name                                                               msgs     beat      avg    min    max     sigma")
-    ps.println("------------------------------------------------------------   --------   ------   ------ ------ ------   -------")
+    ps.println("                                                                      ping-latency [μs]")
+    ps.println("name                                           msgs     beat      avg    min    max    sigma   location"  )
+    ps.println("----------------------------------------   --------   ------   ------ ------ ------  -------   ---------------------")
     ps.print(ConsoleIO.resetColor)
 
     reportList.foreach { as =>
@@ -238,14 +238,7 @@ trait MonitorActor  extends Actor with ImplicitActorLogging with ConfigLoggable 
       ps.print(as.name)
       n += as.name.length
 
-      n += spaceNext(25-n)
-      ifSome(remoteLoc(as.actorRef)) { loc=>
-        ps.print("  ")
-        ps.print(loc)
-        n += loc.length + 2
-      }
-
-      n += spaceNext(60-n)
+      n += spaceNext(40-n)
       val stats = as.latencyStats
       if (stats.nonEmpty) {
         ps.print(f"   ${as.msgCount}%8d")
@@ -253,10 +246,17 @@ trait MonitorActor  extends Actor with ImplicitActorLogging with ConfigLoggable 
         ps.print(f"   ${stats.mean / 1000}%6d")
         ps.print(f" ${stats.min / 1000}%6d")
         ps.print(f" ${stats.max / 1000}%6d")
-        ps.print(f"   ${stats.sigma / 1000000}%7.2f")
+        ps.print(f"  ${stats.sigma / 1000000}%7.2f")
       } else {
-        ps.print("          0        0        -      -      -         -")
+        ps.print("          0        0        -      -      -        -")
       }
+
+      ps.print("   ")
+      remoteLoc(as.actorRef) match {
+        case Some(loc) => ps.print(loc)
+        case None => ps.print("local")
+      }
+
       if (as.isUnresponsive) ps.print(ConsoleIO.resetColor)
       ps.println
     }

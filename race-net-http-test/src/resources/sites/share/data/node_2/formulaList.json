@@ -12,7 +12,7 @@
           { "rowId": "/data/cat_A/field_3", "src": "(IntListCellAvgInt ../field_4)" },
 
           { "rowId": "/data/cat_B",         "src": "(RealSum ./*)" },
-          { "rowId": "/data/cat_B/field_2", "src": "(RealSet ../field_1)", "trigger": "60 sec" },
+          { "rowId": "/data/cat_B/field_2", "src": "(RealSet ../field_1)", "trigger": "5 min" },
 
           { "rowId": "/data/cat_C",         "src": "(IntCellInc . ./field_2)"}
         ]

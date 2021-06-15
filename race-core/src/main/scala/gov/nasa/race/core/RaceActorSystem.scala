@@ -143,6 +143,10 @@ class RaceActorSystem(val config: Config) extends LogController with VerifiableA
   var usedRemoteMasters = Map.empty[UrlString, ActorRef] // the remote masters we use (via our remote actors)
   var usingRemoteMasters = Set.empty[ActorRef] // the remote masters that use us (some of our actors are their remotes)
 
+  // updated during initialization with caps that are supported by all actors (intersection)
+  var localCapabilities = RaceActorCapabilities.AllCapabilities
+  var remoteCapabilities = RaceActorCapabilities.AllCapabilities
+
   loadSystemProperties // (some of) which can be directly set from the config
 
   addLiveSystem(this)
@@ -150,9 +154,6 @@ class RaceActorSystem(val config: Config) extends LogController with VerifiableA
 
   RaceLogger.logController = this
   debug(s"initializing RaceActorSystem for config:\n${showConfig(config)})")
-
-  // updated during initialization with caps that are supported by all actors
-  var commonCapabilities = RaceActorCapabilities.AllCapabilities
 
   // the one actor to rule them all
   val master = system.actorOf(Props(getMasterClass, this), name)
@@ -306,7 +307,7 @@ class RaceActorSystem(val config: Config) extends LogController with VerifiableA
     askVerifiableForResult(master, RaceInitialize) {
       case RaceInitialized(commonCaps) =>
         status = Initialized
-        commonCapabilities = commonCaps
+        localCapabilities = commonCaps
         info(s"universe $name initialized")
         true
       case RaceInitializeFailed(reason) =>
@@ -414,7 +415,7 @@ class RaceActorSystem(val config: Config) extends LogController with VerifiableA
     * to be used from a non-actor context
     */
   def pauseActors: Boolean = {
-    if (commonCapabilities.supportsPauseResume) {
+    if (localCapabilities.supportsPauseResume) {
       if (status == Running) {
         info(s"universe $name pausing..")
 
@@ -446,7 +447,7 @@ class RaceActorSystem(val config: Config) extends LogController with VerifiableA
     * to be used from a non-actor context
     */
   def resumeActors: Boolean = {
-    if (commonCapabilities.supportsPauseResume) {
+    if (localCapabilities.supportsPauseResume) {
       if (status == Paused) {
         info(s"universe $name resuming..")
 
@@ -484,16 +485,21 @@ class RaceActorSystem(val config: Config) extends LogController with VerifiableA
     }
   }
 
+  def supportsSimClockReset: Boolean = {
+    localCapabilities.supportsSimTimeReset && remoteCapabilities.supportsSimTimeReset
+  }
+
   /**
     * some actor asks for a simClock reset
-    * TODO - this does not yet handle remote RAS
     */
   def requestSimClockReset(requester: ActorRef, date: DateTime, tScale: Double): Boolean = {
     if (isLive) {
-      if (commonCapabilities.supportsSimTimeReset) {
+      // clock reset needs to be supported locally and remotely
+      if (supportsSimClockReset) {
         info(s"sim clock reset on behalf of ${requester.path.name} to ($date,$tScale)")
         simClock.reset(date, tScale)
         master ! RaceResetClock(requester,date,tScale)
+        usedRemoteMasters.values.foreach( remoteMaster=> remoteMaster ! RemoteClockReset(date,tScale))
         true
       } else {
         warning(s"universe $name rejected sim clock reset (insufficient actor capabilities)")
@@ -504,7 +510,7 @@ class RaceActorSystem(val config: Config) extends LogController with VerifiableA
 
   def setTimescale (tScale: Double): Boolean = {
     if (isLive) {
-      if (commonCapabilities.supportsSimTimeReset) {
+      if (localCapabilities.supportsSimTimeReset) {
         info(s"set sim clock timescale to: $tScale")
         val date = simClock.dateTime
         simClock.reset(date,tScale)
@@ -522,7 +528,7 @@ class RaceActorSystem(val config: Config) extends LogController with VerifiableA
 
   def pauseResume: Boolean = {
     if (isLive) {
-      if (commonCapabilities.supportsPauseResume) {
+      if (localCapabilities.supportsPauseResume) {
         if (simClock.isStopped) {
           info("resuming sim clock")
           simClock.resume
@@ -561,6 +567,11 @@ class RaceActorSystem(val config: Config) extends LogController with VerifiableA
 
   final val systemPrefix = s"akka://$name" // <2do> check managed remote actor paths
   def isRemoteActor(actorRef: ActorRef) = !actorRef.path.toString.startsWith(systemPrefix)
+
+  def addUsedRemote (remoteUri: String, remoteMaster: ActorRef, caps: RaceActorCapabilities): Unit = {
+    usedRemoteMasters = usedRemoteMasters + (remoteUri -> remoteMaster)
+    remoteCapabilities = remoteCapabilities.intersection(caps)
+  }
 
   /**
    * hard shutdown command issued from outside the RaceActorSystem

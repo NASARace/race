@@ -1,20 +1,20 @@
 {
   "nodeList": {
-    "id": "/nodeList/node_1",
+    "id": "/node_1/nodeList",
     "info": "known nodes for /node_1",
     "date": "2020-06-28T12:00:00.000",
 
     "self": { "id": "/nodes/node_1", "info": "this is the node_1 node" },
 
     "upstream": [
-      { "id": "../coordinator", "info": "this is the upstream coordinator", "host": "localhost", "port": 8000, "addrMask": "255.255.255.255" }
+      { "id": "/nodes/coordinator", "info": "this is the upstream coordinator", "host": "localhost", "port": 7898, "protocol": "ws", "addrMask": "all" }
     ],
 
-    "peers": [
-      { "id": "../node_2", "info": "this is the node_2 node" },
-      { "id": "../node_3", "info": "this is the node_3 node" },
-      { "id": "../node_4", "info": "this is the node_4 node" },
-      { "id": "../node_5", "info": "this is the node_5 node" }
+    "peer": [
+      { "id": "/nodes/node_2", "info": "this is the node_2 node" },
+      { "id": "/nodes/node_3", "info": "this is the node_3 node" },
+      { "id": "/nodes/node_4", "info": "this is the node_4 node" },
+      { "id": "/nodes/node_5", "info": "this is the node_5 node" }
     ],
 
     "downstream": []

@@ -550,7 +550,7 @@ function setData() {
 }
 
 function setCell (cell, row, values) {
-  if (cell.firstChild) { // we are edting this
+  if (cell.firstChild instanceof HTMLInputElement) { // we are editing this
     var editElem = cell.firstChild;
     if (modifiedRows.has(editElem)){ // we already changed it - flag conflict
       editElem.classList.add("conflict");
@@ -1059,7 +1059,7 @@ function handleTerminateEdit (terminateMsg) {
 
 // { columnDataChange: { columnId:"s", changeNodeId:"s", date:n, changedValues: { <rowId>: { value:X,date:n } ... }}}
 function handleColumnDataChange (cdc) {
-  //console.log(JSON.stringify(cdc));
+  // console.log(JSON.stringify(cdc));
   var i = columnIndex(cdc.columnId);
   if (i >= 0) {
     var cd = data[cdc.columnId];
