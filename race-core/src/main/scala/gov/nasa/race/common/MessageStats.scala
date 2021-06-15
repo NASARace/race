@@ -115,16 +115,16 @@ class MsgStats(val topic: String, val source: String, val takeMillis: Long, val 
       var peakBps = 0.0
       var byteSize = 0L
 
-      pw.println("     count     msg/s    peak    byte/s    peak      size     avg   msg")
-      pw.println("----------   ------- -------   ------- -------   ------- -------   --------------------------------------")
+      pw.println("     count     msg/s    peak    byte/s    peak        size     avg   msg")
+      pw.println("----------   ------- -------   ------- -------   --------- -------   ---------------------------------------")
       for (m <- messages) {
         val bps = FileUtils.sizeString(Math.round(m.avgBytesPerSec))
         val bpsPeak = FileUtils.sizeString(Math.round(m.peakBytesPerSec))
         val memSize = FileUtils.sizeString(m.byteSize)
         val avgMemSize = FileUtils.sizeString((m.byteSize / m.count).toInt)
-        pw.println(f"${m.count}%10d   ${m.avgMsgPerSec}%7.0f ${m.peakMsgPerSec}%7.0f   $bps%7s $bpsPeak%7s   $memSize%7s $avgMemSize%7s   ${m.msgName}%s")
-        m.paths.foreach( e => pw.println(f"${e.count}%68d ${StringUtils.capLength(e.pattern)(40)}%s"))
-        m.patterns.foreach( e => pw.println(f"${e.count}%68d ${StringUtils.capLength(e.pattern)(40)}%s"))
+        pw.println(f"${m.count}%10d   ${m.avgMsgPerSec}%7.0f ${m.peakMsgPerSec}%7.0f   $bps%7s $bpsPeak%7s   $memSize%9s $avgMemSize%7s   ${m.msgName}%s")
+        m.paths.foreach( e => pw.println(f"${e.count}%80d ${StringUtils.capLength(e.pattern)(30)}%s"))
+        m.patterns.foreach( e => pw.println(f"${e.count}%80d ${StringUtils.capLength(e.pattern)(30)}%s"))
         count += m.count
         avgMps += m.avgMsgPerSec
         peakMps += m.peakMsgPerSec
@@ -139,8 +139,8 @@ class MsgStats(val topic: String, val source: String, val takeMillis: Long, val 
         val memSize = FileUtils.sizeString(byteSize)
         val avgMemSize = if (count > 0) FileUtils.sizeString((byteSize / count).toInt) else 0
 
-        pw.println("----------   ------- -------   ------- -------   ------- -------")
-        pw.println(f"${count}%10d   ${avgMps}%7.0f ${peakMps}%7.0f   $bps%7s $bpsPeak%7s   $memSize%7s $avgMemSize%7s")
+        pw.println("----------   ------- -------   ------- -------   --------- -------")
+        pw.println(f"${count}%10d   ${avgMps}%7.0f ${peakMps}%7.0f   $bps%7s $bpsPeak%7s   $memSize%9s $avgMemSize%7s")
       }
     }
   }
