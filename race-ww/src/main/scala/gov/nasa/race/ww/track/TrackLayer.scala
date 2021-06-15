@@ -335,7 +335,7 @@ trait TrackLayer[T <:TrackedObject] extends SubscribingRaceLayer
 
   //--- track entry attribute management. Note we have to guard against recursive calls by checking for attr change
 
-  override def changeObject(objectId: String, action: LayerObjectAction) = {
+  override def changeObject(objectId: String, action: LayerObjectAction): Unit = {
     ifSome(trackEntries.get(objectId)) { e =>
       action match {
         case LayerObjectAction.Select       => selectTrackEntry(e)
@@ -427,6 +427,7 @@ trait TrackLayer[T <:TrackedObject] extends SubscribingRaceLayer
 
     case BusEvent(_,fInfo:TrackInfo,_) => entryPanel.setTrackInfo(fInfo)
     case BusEvent(_,csChange:TrackCsChanged,_) => // todo
+
     case DelayedAction(_,action) => action()
   }
 }

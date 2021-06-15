@@ -168,7 +168,7 @@ class TaisTracksLayer(val raceViewer: RaceViewer, val config: Config) extends Mo
     * this has to be implemented in the concrete RaceLayer. It is executed in the
     * event dispatcher
     */
-  override def handleMessage: Receive = {
+  def handleTaisTracksLayerMessage: Receive = {
     case BusEvent(_, track: TaisTrack, _) => handleTATrack(track)
     case BusEvent(_, tracks: TaisTracks, _) => handleTATracks(tracks)
     case BusEvent(_, term: TrackTerminationMessage, _) =>
@@ -177,6 +177,9 @@ class TaisTracksLayer(val raceViewer: RaceViewer, val config: Config) extends Mo
         case None => // nothing to drop
       }
   }
+
+  override def handleMessage = handleTaisTracksLayerMessage orElse super.handleMessage
+
 
   def showTraconSymbol (tracon: TRACON) = {
     addRenderable(new TraconSymbol(tracon,this))

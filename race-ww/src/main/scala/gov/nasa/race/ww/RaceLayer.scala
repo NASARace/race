@@ -84,7 +84,7 @@ abstract class RaceLayer extends RenderableLayer with RaceLayerInfo {
 
   //--- object attribute change
 
-  def changeObject(objectId: String, action: LayerObjectAction) = {}
+  def changeObject(objectId: String, action: LayerObjectAction): Unit = {}
 
   // called in response to a WW SelectHandler notification if object is interactively picked
   // NOTE this is only called for the layer that owns the picked renderable

@@ -69,7 +69,7 @@ trait SfdpsFilteringPublisher extends FlatFilteringPublisher {
   * note that we can't hardwire the JMS config (authentication, URI, topic etc) since SWIM access might vary
   */
 class FilteringSfdpsImportActor(config: Config) extends JMSImportActor(config) with TranslatingJMSImportActor
-                                          with SfdpsFilteringPublisher with AccumulatingTopicIdProvider {
+                                          with SfdpsFilteringPublisher with AccumulatingTopicIdProvider with ARTCCTopicIdMapper {
 
   class FilteringMessageCollectionParser extends MessageCollectionParser {
     override protected def filterSrc (srcId: String) = !matchesAnyServedTopicId(srcId)

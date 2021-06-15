@@ -64,8 +64,8 @@ trait ChannelTopicSubscriber extends SubscribingRaceActor {
     pendingRequests += channelTopic
     info(s"$name sending request for $channelTopic")
 
-    // this needs to publish a BusSysEvent to prevent user handlers from interfering
-    busFor(channelTopic.channel).publish( BusEvent(PROVIDER_CHANNEL,ChannelTopicRequest(channelTopic,self), self))
+    // NOTE this needs to publish a BusSysEvent to prevent user handlers that process BusEvents from interfering
+    busFor(channelTopic.channel).publish( BusSysEvent(PROVIDER_CHANNEL,ChannelTopicRequest(channelTopic,self), self))
   }
 
   def request(channel: Channel, topic: Topic):Unit = requestChannelTopic(ChannelTopic(channel,topic))
@@ -112,7 +112,7 @@ trait ChannelTopicSubscriber extends SubscribingRaceActor {
 
   override def handleSystemMessage: Receive = handleCTSubscriberMessage orElse super.handleSystemMessage
 
-  def processResponse (response: ChannelTopicResponse) = {
+  def processResponse (response: ChannelTopicResponse): Unit = {
     val channelTopic = response.channelTopic
     if (pendingRequests.contains(channelTopic)) {
       if (isResponseAccepted(response)) {
@@ -232,7 +232,7 @@ trait ChannelTopicProvider extends PublishingRaceActor {
   }
 
   def handleCTProviderMessage: Receive = {
-    case BusEvent(PROVIDER_CHANNEL,request: ChannelTopicRequest,_) => processRequest(request)
+    case BusSysEvent(PROVIDER_CHANNEL,request: ChannelTopicRequest,_) => processRequest(request)
     case accept: ChannelTopicAccept => processAccept(accept)
     case release: ChannelTopicRelease => processRelease(release)
     case Terminated(client) => clients.filterInPlace( release => release.client != client)
@@ -260,14 +260,14 @@ trait ChannelTopicProvider extends PublishingRaceActor {
   /**
     * now we have a live client for the requested ChannelTopic
     */
-  def processAccept(accept: ChannelTopicAccept) = {
+  def processAccept(accept: ChannelTopicAccept): Unit = {
     info(s"$name got $accept")
     clients += accept.toRelease
     context.watch(accept.client)
     gotAccept(accept) // just a notification, we can't reject it anymore
   }
 
-  def processRelease(release: ChannelTopicRelease) = {
+  def processRelease(release: ChannelTopicRelease): Unit = {
     info(s"$name got $release")
     clients -= release
     context.unwatch(release.client)
@@ -275,8 +275,8 @@ trait ChannelTopicProvider extends PublishingRaceActor {
   }
 
   //--- those can be overridden in case the concrete provider has to perform its own house keeping
-  def gotAccept (accept: ChannelTopicAccept) = {}
-  def gotRelease (release: ChannelTopicRelease) = {}
+  def gotAccept (accept: ChannelTopicAccept): Unit = {}
+  def gotRelease (release: ChannelTopicRelease): Unit = {}
 }
 
 /**
@@ -292,7 +292,7 @@ trait TransitiveChannelTopicProvider extends ChannelTopicProvider with ChannelTo
   val acceptForwards = MutableMap.empty[ChannelTopic,ChannelTopicResponse]    // requester.accept -> provider.accept
 
   def handleTransitiveCTProviderMessage: Receive = {
-    case BusEvent(PROVIDER_CHANNEL, request: ChannelTopicRequest, _) => processRequest(request)
+    case BusSysEvent(PROVIDER_CHANNEL, request: ChannelTopicRequest, _) => processRequest(request)
     case response: ChannelTopicResponse => processResponse(response)
     case accept: ChannelTopicAccept => processAccept(accept)
     case release: ChannelTopicRelease => processRelease(release)
@@ -333,7 +333,7 @@ trait TransitiveChannelTopicProvider extends ChannelTopicProvider with ChannelTo
     * we get a ChannelProviderAccept from one of the notified requesters. Store acceptable providers so that we
     * can accept one of them once we get an accept from a notified requester ourselves
     */
-  override def processResponse (response: ChannelTopicResponse) = {
+  override def processResponse (response: ChannelTopicResponse): Unit = {
     val rspChannelTopic = response.channelTopic
     responseForwards.get(rspChannelTopic) match {
       case Some(reqs) =>
@@ -347,7 +347,7 @@ trait TransitiveChannelTopicProvider extends ChannelTopicProvider with ChannelTo
     }
   }
 
-  override def processAccept (accept: ChannelTopicAccept) = {
+  override def processAccept (accept: ChannelTopicAccept): Unit = {
     super.processAccept(accept)
 
     val channelTopic = accept.channelTopic
@@ -360,7 +360,7 @@ trait TransitiveChannelTopicProvider extends ChannelTopicProvider with ChannelTo
     }
   }
 
-  override def processRelease (rel: ChannelTopicRelease) = {
+  override def processRelease (rel: ChannelTopicRelease): Unit = {
     val outChannelTopic = rel.channelTopic
     outInMap.get(outChannelTopic) match {
       case Some(inChannelTopic) =>
@@ -400,8 +400,7 @@ trait AccumulatingTopicIdProvider extends ChannelTopicProvider {
   }
 
   // this basically defines if we accept a topic - return None if not
-  // FIXME - this is called twice, during request and accept processing. Avoid allocation in
-  // the request
+  // FIXME - this is called twice, during request and accept processing. Avoid allocation in the request
   def topicIdsOf(t: Any): Seq[String]
 
   def matchesAnyServedTopicId (id: String): Boolean = {
@@ -422,7 +421,7 @@ trait AccumulatingTopicIdProvider extends ChannelTopicProvider {
     } else false // channel not supported
   }
 
-  override def gotAccept (accept: ChannelTopicAccept) = {
+  override def gotAccept (accept: ChannelTopicAccept): Unit = {
     ifSome(accept.channelTopic.topic) { t =>
       topicIdsOf(t).foreach { id =>
         info(s"got channeltopic accept for topic: $id")
@@ -432,7 +431,7 @@ trait AccumulatingTopicIdProvider extends ChannelTopicProvider {
     }
   }
 
-  override def gotRelease (release: ChannelTopicRelease) = {
+  override def gotRelease (release: ChannelTopicRelease): Unit = {
     ifSome(release.channelTopic.topic) { t =>
       topicIdsOf(t).foreach { id =>
         info(s"got channeltopic release for topic: $id")

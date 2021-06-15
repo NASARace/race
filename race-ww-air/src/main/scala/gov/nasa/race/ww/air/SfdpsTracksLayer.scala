@@ -163,11 +163,7 @@ class SfdpsTracksLayer(val raceViewer: RaceViewer, val config: Config) extends M
       selARTCCs.size match {
         case 0 => false
         case 1 => selARTCCs(0).isMatching(src) // avoid iterator
-        case _ =>
-          selARTCCs.foreach { a =>
-            if (a.isMatching(src)) return true // short circuit iteration
-          }
-          false
+        case _ => selARTCCs.exists( _.isMatching(src))
       }
     } else true
   }

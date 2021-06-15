@@ -34,20 +34,35 @@ trait ChannelMessage {
   */
 case class BusEvent (channel: String, msg: Any, sender: ActorRef) extends ChannelMessage
 
+/**
+  * we need another type for system events posted to channels that are not matched in user event handlers
+  */
+case class BusSysEvent (channel: String, msg: Any, sender: ActorRef) extends ChannelMessage
 
-class BusEventSerializer  (system: ExtendedActorSystem) extends SingleTypeAkkaSerializer[BusEvent](system) {
 
-  def serialize (e: BusEvent): Unit = {
+//--- serializer support
+
+trait ChannelMessageSerializer [T <: ChannelMessage] extends AkkaSerializer {
+  def createChannelMessage (channel: String, msg: Any, sender: ActorRef): T
+
+  def serialize (e: T): Unit = {
     writeUTF(e.channel)
     writeActorRef(e.sender)
     writeEmbedded(e.msg)
   }
 
-  def deserialize (): BusEvent = {
+  def deserialize (): T = {
     val channel = readUTF()
     val sender = readActorRef()
     val msg = readEmbeddedRef()
-
-    BusEvent(channel,msg,sender) // note this might not preserve the original msg type if it was an Iterable (e.g. Seq)
+    createChannelMessage(channel,msg,sender)
   }
+}
+
+class BusEventSerializer  (system: ExtendedActorSystem) extends SingleTypeAkkaSerializer[BusEvent](system) with ChannelMessageSerializer[BusEvent] {
+  def createChannelMessage (channel: String, msg: Any, sender: ActorRef) = BusEvent(channel,msg,sender)
+}
+
+class BusSysEventSerializer  (system: ExtendedActorSystem) extends SingleTypeAkkaSerializer[BusSysEvent](system) with ChannelMessageSerializer[BusSysEvent] {
+  def createChannelMessage (channel: String, msg: Any, sender: ActorRef) = BusSysEvent(channel,msg,sender)
 }
