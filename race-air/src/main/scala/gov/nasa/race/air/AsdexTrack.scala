@@ -17,7 +17,9 @@
 
 package gov.nasa.race.air
 
+import akka.actor.ExtendedActorSystem
 import gov.nasa.race.common._
+import gov.nasa.race.core.{AkkaSerializer, SingleTypeAkkaSerializer}
 import gov.nasa.race.geo.GeoPosition
 import gov.nasa.race.track.{TrackedObject, TrackedObjects}
 import gov.nasa.race.uom.{DateTime, _}
@@ -76,5 +78,61 @@ object AsdexTracks {
   // there is no concrete immutable Seq type we can extend?
   val empty: AsdexTracks = new ArrayBuffer[AsdexTrack](0) with AsdexTracks {
     override def assoc: String = ""
+  }
+}
+
+class AsdexTracksImpl(assoc: String, elems: Array[AsdexTrack]) extends AssocSeqImpl(assoc,elems) with AsdexTracks
+
+
+//--- serializer support
+
+trait AsdexTrackSer extends AkkaSerializer {
+  def serializeAsdexTrack (t: AsdexTrack): Unit = {
+    writeUTF(t.id)
+    writeUTF(t.cs)
+    writeGeoPosition(t.position)
+    writeSpeed(t.speed)
+    writeAngle(t.heading)
+    writeSpeed(t.vr)
+    writeDateTime(t.date)
+    writeInt(t.status)
+
+    writeUTF(t.src)
+    writeUTF( t.acType.getOrElse(""))
+  }
+
+  def deserializeAsdexTrack (): AsdexTrack = {
+    val id  = readUTF()
+    val cs  = readUTF()
+    val pos = readGeoPosition()
+    val spd = readSpeed()
+    val hdg = readAngle()
+    val vr  = readSpeed()
+    val date = readDateTime()
+    val status = readInt()
+
+    val src = readUTF()
+    val act = readUTF()
+    val acType = if (act.isEmpty) None else Some(act)
+
+    AsdexTrack(id,cs,pos,spd,hdg,vr,date,status,src,acType)
+  }
+}
+
+class AsdexTrackSerializer (system: ExtendedActorSystem) extends SingleTypeAkkaSerializer[AsdexTrack](system) with AsdexTrackSer {
+  override def serialize(t: AsdexTrack): Unit = serializeAsdexTrack(t)
+  override def deserialize(): AsdexTrack = deserializeAsdexTrack()
+}
+
+class AsdexTracksSerializer (system: ExtendedActorSystem) extends SingleTypeAkkaSerializer[AsdexTracks](system) with AsdexTrackSer {
+  override def serialize(t: AsdexTracks): Unit = {
+    writeUTF(t.assoc)
+    writeItems(t)(serializeAsdexTrack)
+  }
+
+  override def deserialize(): AsdexTracks = {
+    val assoc = readUTF()
+    val tracks = readItems(deserializeAsdexTrack)
+    new AsdexTracksImpl(assoc,tracks)
   }
 }

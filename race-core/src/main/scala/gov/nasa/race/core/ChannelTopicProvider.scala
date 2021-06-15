@@ -65,7 +65,7 @@ trait ChannelTopicSubscriber extends SubscribingRaceActor {
     info(s"$name sending request for $channelTopic")
 
     // this needs to publish a BusSysEvent to prevent user handlers from interfering
-    busFor(channelTopic.channel).publish( BusSysEvent(PROVIDER_CHANNEL,ChannelTopicRequest(channelTopic,self), self))
+    busFor(channelTopic.channel).publish( BusEvent(PROVIDER_CHANNEL,ChannelTopicRequest(channelTopic,self), self))
   }
 
   def request(channel: Channel, topic: Topic):Unit = requestChannelTopic(ChannelTopic(channel,topic))
@@ -232,7 +232,7 @@ trait ChannelTopicProvider extends PublishingRaceActor {
   }
 
   def handleCTProviderMessage: Receive = {
-    case BusSysEvent(PROVIDER_CHANNEL,request: ChannelTopicRequest,_) => processRequest(request)
+    case BusEvent(PROVIDER_CHANNEL,request: ChannelTopicRequest,_) => processRequest(request)
     case accept: ChannelTopicAccept => processAccept(accept)
     case release: ChannelTopicRelease => processRelease(release)
     case Terminated(client) => clients.filterInPlace( release => release.client != client)
@@ -292,7 +292,7 @@ trait TransitiveChannelTopicProvider extends ChannelTopicProvider with ChannelTo
   val acceptForwards = MutableMap.empty[ChannelTopic,ChannelTopicResponse]    // requester.accept -> provider.accept
 
   def handleTransitiveCTProviderMessage: Receive = {
-    case BusSysEvent(PROVIDER_CHANNEL, request: ChannelTopicRequest, _) => processRequest(request)
+    case BusEvent(PROVIDER_CHANNEL, request: ChannelTopicRequest, _) => processRequest(request)
     case response: ChannelTopicResponse => processResponse(response)
     case accept: ChannelTopicAccept => processAccept(accept)
     case release: ChannelTopicRelease => processRelease(release)

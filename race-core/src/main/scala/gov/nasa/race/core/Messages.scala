@@ -88,7 +88,7 @@ case object NoStepTime extends RaceSystemMessage // passive actors -> master
 case class SetStepTime (tSendMillis: Long) extends RaceSystemMessage // master -> selected actor
 
 /** sim clock change notifications */
-case object SyncWithRaceClock extends RaceSystemMessage // master -> actors
+case class SyncWithRaceClock() extends RaceSystemMessage // master -> actors
 
 /** inform RaceActor of termination */
 case class TerminateRaceActor (originator: ActorRef) extends RaceSystemMessage
@@ -141,8 +141,8 @@ case class SetLogLevel (newLevel: LogLevel) extends RaceSystemMessage
 // time keeping between actor systems
 trait ClockMessage extends RaceSystemMessage
 case class SyncSimClock (date: DateTime, timeScale: Double) extends ClockMessage
-case object StopSimClock extends ClockMessage
-case object ResumeSimClock extends ClockMessage
+case class StopSimClock() extends ClockMessage
+case class ResumeSimClock() extends ClockMessage
 
 // dynamic subscriptions
 case class Subscribe (channel: String)

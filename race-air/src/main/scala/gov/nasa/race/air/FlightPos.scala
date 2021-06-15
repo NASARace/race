@@ -20,8 +20,9 @@ package gov.nasa.race.air
 import akka.actor.ExtendedActorSystem
 import com.typesafe.config.Config
 import gov.nasa.race.archive._
+import gov.nasa.race.common.AssocSeqImpl
 import gov.nasa.race.common.ConfigurableStreamCreator._
-import gov.nasa.race.core.SingleTypeAkkaSerializer
+import gov.nasa.race.core.{AkkaSerializer, SingleTypeAkkaSerializer}
 import gov.nasa.race.geo.GeoPosition
 import gov.nasa.race.track.TrackedObject.TrackProblem
 import gov.nasa.race.track.{MutSrcTracks, TrackedObject}
@@ -253,53 +254,61 @@ trait FlightPosSeq extends TrackedAircraftSeq[FlightPos]
 /**
   * mutable implementation of FlightPosSeq
   */
-class FlightPosSeqImpl (initSize: Int) extends MutSrcTracks[FlightPos](initSize) with FlightPosSeq
+class MutFlightPosSeqImpl(initSize: Int) extends MutSrcTracks[FlightPos](initSize) with FlightPosSeq
+
+/**
+  * immutable FlightPosSeq
+  */
+class FlightPosSeqImpl(assoc: String, elems: Array[FlightPos]) extends AssocSeqImpl(assoc,elems) with FlightPosSeq
 
 
 //--- Akka serializer support
+
+trait FlightPosSer extends AkkaSerializer {
+  def serializeFlightPos (fpos: FlightPos): Unit = {
+    writeUTF(fpos.id)
+    writeUTF(fpos.cs)
+    writeGeoPosition(fpos.position)
+    writeSpeed(fpos.speed)
+    writeAngle(fpos.heading)
+    writeSpeed(fpos.vr)
+    writeDateTime(fpos.date)
+    writeInt(fpos.status)
+  }
+
+  def deserializeFlightPos (): FlightPos = {
+    val id  = readUTF()
+    val cs  = readUTF()
+    val pos = readGeoPosition()
+    val spd = readSpeed()
+    val hdg = readAngle()
+    val vr  = readSpeed()
+    val date = readDateTime()
+    val status = readInt()
+
+    new FlightPos(id, cs, pos, spd, hdg, vr, date, status)
+  }
+}
 
 /**
   * Akka serialization support for FlightPos objects
   * this implementation favors minimizing allocation and absence of 3rd party library dependencies.
   */
-class FlightPosSerializer (system: ExtendedActorSystem) extends SingleTypeAkkaSerializer[FlightPos](system) {
+class FlightPosSerializer (system: ExtendedActorSystem) extends SingleTypeAkkaSerializer[FlightPos](system) with FlightPosSer {
   override val initCapacity: Int = 64
+  override def serialize (fpos: FlightPos): Unit = serializeFlightPos(fpos)
+  override def deserialize (): FlightPos = deserializeFlightPos()
+}
 
-  override def serialize (fpos: FlightPos): Unit = {
-    val pos = fpos.position
-
-    writeUTF(fpos.id)
-    writeUTF(fpos.cs)
-    writeDouble(pos.φ.toDegrees)
-    writeDouble(pos.λ.toDegrees)
-    writeDouble(pos.altitude.toMeters)
-    writeDouble(fpos.speed.toMetersPerSecond)
-    writeDouble(fpos.heading.toDegrees)
-    writeDouble(fpos.vr.toMetersPerSecond)
-    writeLong(fpos.date.toEpochMillis)
-    writeInt(fpos.status)
+class FlightPosSeqSerializer (system: ExtendedActorSystem) extends SingleTypeAkkaSerializer[FlightPosSeq](system) with FlightPosSer {
+  override def serialize(t: FlightPosSeq): Unit = {
+    writeUTF(t.assoc)
+    writeItems(t)(serializeFlightPos)
   }
 
-  override def deserialize (): FlightPos = {
-    val id  = readUTF()
-    val cs  = readUTF()
-    val lat = readDouble()
-    val lon = readDouble()
-    val alt = readDouble()
-    val spd = readDouble()
-    val hdg = readDouble()
-    val vr  = readDouble()
-    val epochMs = readLong()
-    val status = readInt()
-
-    new FlightPos(
-      id,cs,
-      GeoPosition.fromDegreesAndMeters(lat,lon,alt),
-      MetersPerSecond(spd),
-      Degrees(hdg),
-      MetersPerSecond(vr),
-      DateTime.ofEpochMillis(epochMs),
-      status
-    )
+  override def deserialize(): FlightPosSeq = {
+    val assoc = readUTF()
+    val items = readItems(deserializeFlightPos)
+    new FlightPosSeqImpl(assoc,items)
   }
 }

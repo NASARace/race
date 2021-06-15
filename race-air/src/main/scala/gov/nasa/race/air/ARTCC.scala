@@ -16,7 +16,9 @@
  */
 package gov.nasa.race.air
 
+import akka.actor.ExtendedActorSystem
 import gov.nasa.race.common.{AllId, NoneId}
+import gov.nasa.race.core.SingleTypeAkkaSerializer
 import gov.nasa.race.geo.{GeoPosition, GeoPositioned}
 
 import scala.collection.immutable.SortedMap
@@ -106,3 +108,19 @@ case class ARTCC (id: String, name: String, state: String, area: String, positio
 
 // if we need to match on a Seq type
 trait ARTCCs extends Seq[ARTCC]
+
+//--- serialization
+
+class ARTCCSerializer (system: ExtendedActorSystem) extends SingleTypeAkkaSerializer[ARTCC](system) {
+  override def serialize(t: ARTCC): Unit = {
+    writeUTF(t.id)
+  }
+
+  override def deserialize(): ARTCC = {
+    val id = readUTF()
+    ARTCC.get(id) match {
+      case Some(artcc) => artcc
+      case None => throw new RuntimeException(s"unknown ARTCC: $id")
+    }
+  }
+}

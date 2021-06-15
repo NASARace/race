@@ -21,7 +21,8 @@ package gov.nasa.race.ww
   * race-ww specific messages
   */
 
-import gov.nasa.worldwind.geom.Position
+import akka.actor.ExtendedActorSystem
+import gov.nasa.race.core.SingleTypeAkkaSerializer
 
 //--- sync messages - note these are likely to go to remote actors and hence have to serialize
 
@@ -37,6 +38,62 @@ case class ViewChanged (lat: Double,
                                   v.animationHint )
 }
 
+class ViewChangedSerializer (system: ExtendedActorSystem) extends SingleTypeAkkaSerializer[ViewChanged](system) {
+  override def serialize(v: ViewChanged): Unit = {
+    writeDouble(v.lat)
+    writeDouble(v.lon)
+    writeDouble(v.zoom)
+    writeDouble(v.heading)
+    writeDouble(v.pitch)
+    writeDouble(v.roll)
+    writeUTF(v.hint)
+  }
+
+  override def deserialize(): ViewChanged = {
+    val lat = readDouble()
+    val lon = readDouble()
+    val zoom = readDouble()
+    val heading = readDouble()
+    val pitch = readDouble()
+    val roll = readDouble()
+    val hint = readUTF()
+
+    ViewChanged(lat,lon,zoom,heading,pitch,roll,hint)
+  }
+}
+
+
 case class LayerChanged (name: String, enabled: Boolean)
 
+class LayerChangedSerializer (system: ExtendedActorSystem) extends SingleTypeAkkaSerializer[LayerChanged](system) {
+  override def serialize(t: LayerChanged): Unit = {
+    writeUTF(t.name)
+    writeBoolean(t.enabled)
+  }
+
+  override def deserialize(): LayerChanged = {
+    val name = readUTF()
+    val enabled = readBoolean()
+
+    LayerChanged(name,enabled)
+  }
+}
+
+
 case class ObjectChanged (name: String, layerName: String, action: String)
+
+class ObjectChangedSerializer (system: ExtendedActorSystem) extends SingleTypeAkkaSerializer[ObjectChanged](system) {
+  override def serialize(t: ObjectChanged): Unit = {
+    writeUTF(t.name)
+    writeUTF(t.layerName)
+    writeUTF(t.action)
+  }
+
+  override def deserialize(): ObjectChanged = {
+    val name = readUTF()
+    val layerName = readUTF()
+    val action = readUTF()
+
+    ObjectChanged(name,layerName,action)
+  }
+}

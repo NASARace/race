@@ -16,13 +16,15 @@
  */
 package gov.nasa.race.air
 
-import java.io.{OutputStream, PrintStream}
+import akka.actor.ExtendedActorSystem
 
+import java.io.{OutputStream, PrintStream}
 import com.typesafe.config.Config
 import gov.nasa.race.archive.{ArchiveWriter, CSVArchiveWriter}
 import gov.nasa.race.common._
 import gov.nasa.race.common.CSVInputStream
 import gov.nasa.race.common.ConfigurableStreamCreator.{configuredPathName, createOutputStream}
+import gov.nasa.race.core.{AkkaSerializer, SingleTypeAkkaSerializer}
 import gov.nasa.race.geo.{GeoPosition, XYPos}
 import gov.nasa.race.uom.{Angle, DateTime, Length, Speed}
 
@@ -177,7 +179,9 @@ class TaisTrackCSVReader(in: CSVInputStream) {
   }
 }
 
-// a matchable collection type of TATrack objects reported by the same TRACON
+/**
+  * a matchable collection type of TATrack objects reported by the same TRACON
+  */
 trait TaisTracks extends TrackedAircraftSeq[TaisTrack] {
   @inline final def traconId: String = assoc
 }
@@ -187,3 +191,64 @@ object TaisTracks {
     override def assoc: String = ""
   }
 }
+
+class TaisTracksImpl(assoc: String, elems: Array[TaisTrack]) extends AssocSeqImpl(assoc,elems) with TaisTracks
+
+
+//--- serializer support
+
+trait TaisTrackSer extends AkkaSerializer {
+  def serializeTaisTrack (t: TaisTrack): Unit = {
+    writeUTF(t.id)
+    writeUTF(t.cs)
+    writeGeoPosition(t.position)
+    writeSpeed(t.speed)
+    writeAngle(t.heading)
+    writeSpeed(t.vr)
+    writeDateTime(t.date)
+    writeInt(t.status)
+
+    writeUTF(t.src)
+    writeInt(t.trackNum)
+    writeXYPos(t.xyPos)
+    writeUTF(t.beaconCode)
+    // TODO - still need the optional FlightPlan
+  }
+
+  def deserializeTaisTrack (): TaisTrack = {
+    val id  = readUTF()
+    val cs  = readUTF()
+    val pos = readGeoPosition()
+    val spd = readSpeed()
+    val hdg = readAngle()
+    val vr  = readSpeed()
+    val date = readDateTime()
+    val status = readInt()
+
+    val src = readUTF()
+    val trackNum = readInt()
+    val xyPos = readXYPos()
+    val beaconCode = readUTF()
+
+    TaisTrack(id,cs,pos,hdg,spd,vr,date,status,src,trackNum,xyPos,beaconCode, None)
+  }
+}
+
+class TaisTrackSerializer (system: ExtendedActorSystem) extends SingleTypeAkkaSerializer[TaisTrack](system) with TaisTrackSer {
+  override def serialize(t: TaisTrack): Unit = serializeTaisTrack(t)
+  override def deserialize(): TaisTrack = deserializeTaisTrack()
+}
+
+class TaisTracksSerializer (system: ExtendedActorSystem) extends SingleTypeAkkaSerializer[TaisTracks](system) with TaisTrackSer {
+  override def serialize(t: TaisTracks): Unit = {
+    writeUTF(t.assoc)
+    writeItems(t)(serializeTaisTrack)
+  }
+
+  override def deserialize(): TaisTracks = {
+    val assoc = readUTF()
+    val tracks = readItems(deserializeTaisTrack)
+    new TaisTracksImpl(assoc,tracks)
+  }
+}
+

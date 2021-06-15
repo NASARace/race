@@ -90,15 +90,13 @@ class LayerListPanel (raceView: RaceViewer, config: Option[Config]=None)
   reactions += {
     case MouseClicked(`listView`,pos,mod,clicks,triggerPopup) =>
       if (layerInfoRenderer.checkBox.bounds.contains(pos.x,0)) {
-        raceView.trackUserAction {
-          listView.selection.items.foreach { layer =>
-            layer.toggleEnabled
-            raceView.layerChanged(layer)
-          }
+        listView.selection.items.foreach { layer =>
+          layer.toggleEnabled
+          raceView.layerChanged(layer)
         }
         listView.repaint()
       }
-      raceView.trackUserAction { updateLayerInfoPanel(getFirstSelected) }
+      updateLayerInfoPanel(getFirstSelected)
   }
 
   val toolTipController = new ToolTipController(raceView.wwd, layerInfoList.tooltipAnnotationLayer)

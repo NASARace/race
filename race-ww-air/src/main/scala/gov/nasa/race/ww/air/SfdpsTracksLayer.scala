@@ -86,7 +86,7 @@ class SfdpsTracksLayer(val raceViewer: RaceViewer, val config: Config) extends M
 
   //--- end init
 
-  override def mapTopic (to: Option[Any]): Option[Any] = {
+  override def mapTopic (to: Option[AnyRef]): Option[AnyRef] = {
     to match {
       case Some(id: String) =>
         if (ARTCC.artccs.contains(id)) {

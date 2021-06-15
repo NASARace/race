@@ -50,8 +50,8 @@ class SyncPanel (raceView: RaceViewer, config: Option[Config]=None)
   var syncChannel: Option[String] = None
 
   //--- configurable synchronization animation speed
-  val syncGotoTime = raceView.config.getIntOrElse("sync-goto", 2000)
-  val syncZoomTime = raceView.config.getIntOrElse("sync-zoom", 500)
+  val syncGotoTime = raceView.config.getIntOrElse("sync-goto", 1000)
+  val syncZoomTime = raceView.config.getIntOrElse("sync-zoom", 300)
   val syncCenterClickTime = raceView.config.getIntOrElse("sync-centerclick", 1000)
   val syncCenterDragTime = raceView.config.getIntOrElse("sync-centerdrag", 500)
 
@@ -94,8 +94,10 @@ class SyncPanel (raceView: RaceViewer, config: Option[Config]=None)
     case SelectionChanged(`channelCombo`) => setSyncChannel
   }
 
-  val outboundBlackout = 300 // max millis since last user input during which we send out eyePos changes
-  val inboundBlackout = 1000 // min millis since last user input until we process external changes
+  var isRemoteViewChange = false
+  var isRemoteLayerChange = false
+  var isRemoteObjectChange = false
+
   val readyTimer = new SwingTimer(2.seconds,false)
   readyTimer.whenExpired {
     if (syncChannel.isDefined) readyLED.on
@@ -112,34 +114,38 @@ class SyncPanel (raceView: RaceViewer, config: Option[Config]=None)
   def sendObjectChange = syncChannel.isDefined && outObject.selected
   def receiveObjectChange = syncChannel.isDefined && inObject.selected
 
-  def isLocalChange = raceView.millisSinceLastUserAction < outboundBlackout
-
   //--- EyePosListener
   // this is called when our view has a changed eyePos. Only send it out
   // if there was recent user input (i.e. the user initiated the change)
   override def viewChanged (viewGoal: ViewGoal) = {
-    if (sendEyePos && isLocalChange) {
+    if (sendEyePos && !isRemoteViewChange) {
       syncChannel.foreach { channel =>
         info(s"outbound view change: $viewGoal")
         publish(new ViewChanged(viewGoal))
       }
     }
+
+    isRemoteViewChange = false
   }
 
   //--- LayerListener
   override def layerChanged (layer: Layer) = {
-    if (sendLayerChange && isLocalChange) {
+    if (sendLayerChange && !isRemoteLayerChange) {
       info(s"outbound layer change: ${layer.getName} enabled: ${layer.isEnabled}")
       publish(LayerChanged(layer.getName, layer.isEnabled))
     }
+
+    isRemoteLayerChange = false
   }
 
   //--- ObjectListener
   override def objectChanged (obj: LayerObject, action: LayerObjectAction) = {
-    if (sendObjectChange && isLocalChange) {
+    if (sendObjectChange && !isRemoteObjectChange) {
       info(s"outbound object change: ${obj.id} $action")
       publish(ObjectChanged(obj.id,obj.layer.getName,action.toString))
     }
+
+    isRemoteObjectChange = false
   }
 
   def handleMessage = {
@@ -152,7 +158,8 @@ class SyncPanel (raceView: RaceViewer, config: Option[Config]=None)
   // change the view eyePos if there was no recent user input
   def handleViewChanged (lat: Double, lon: Double, alt: Double,
                            pitch: Double, heading: Double, roll: Double, animationHint: String) = {
-    if (receiveEyePos && raceView.millisSinceLastUserAction > inboundBlackout) { // otherwise user input has priority
+    if (receiveEyePos) {
+      isRemoteViewChange = true
       val pos = new Position(Angle.fromDegreesLatitude(lat), Angle.fromDegreesLongitude(lon), 0)
       info(s"inbound eyepos: $pos")
       // Note that we can't use the specific remote (source) animation because we might have changed the
@@ -179,6 +186,7 @@ class SyncPanel (raceView: RaceViewer, config: Option[Config]=None)
 
   def handleLayerChanged (name: String, enable: Boolean) = {
     if (receiveLayerChange) {
+      isRemoteLayerChange = true
       info(s"inbound layer change: '$name' enabled: $enable")
       raceView.changeLayer(name, enable)
     }
@@ -186,6 +194,7 @@ class SyncPanel (raceView: RaceViewer, config: Option[Config]=None)
 
   def handleObjectChanged (id: String, layerName: String, actionName: String) = {
     if (receiveObjectChange) {
+      isRemoteObjectChange = true
       info(s"inbound object change: $layerName($id) $actionName")
       ifSome(LayerObjectAction.get(actionName)) { action =>
         raceView.changeObject(id,layerName,action)

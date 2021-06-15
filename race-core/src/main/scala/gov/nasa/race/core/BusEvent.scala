@@ -26,12 +26,13 @@ trait ChannelMessage {
   def sender: ActorRef
 }
 
-/** a user ChannelMessage */
+/**
+  * a message sent through a bus channel
+  *
+  * NOTE - the 'msg' payload has to be a matchable type since it is used in the handleMessage PFs
+  * (and also needs a serializer in case this BusEvent might get sent to a remote actor)
+  */
 case class BusEvent (channel: String, msg: Any, sender: ActorRef) extends ChannelMessage
-
-/** a system ChannelMessage */
-// TODO - get rid of it so that we don't need another serializer
-case class BusSysEvent (channel: String, msg: Any, sender: ActorRef) extends ChannelMessage with RaceSystemMessage
 
 
 class BusEventSerializer  (system: ExtendedActorSystem) extends SingleTypeAkkaSerializer[BusEvent](system) {
@@ -45,8 +46,8 @@ class BusEventSerializer  (system: ExtendedActorSystem) extends SingleTypeAkkaSe
   def deserialize (): BusEvent = {
     val channel = readUTF()
     val sender = readActorRef()
-    val msg = readEmbedded()
+    val msg = readEmbeddedRef()
 
-    BusEvent(channel,msg,sender)
+    BusEvent(channel,msg,sender) // note this might not preserve the original msg type if it was an Iterable (e.g. Seq)
   }
 }

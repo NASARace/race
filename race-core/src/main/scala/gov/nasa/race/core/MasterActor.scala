@@ -181,7 +181,7 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ParentActor with Mon
               context.watch(actorRef)
             case None =>
               error(s"creation of $actorName failed without exception")
-              originator ! RaceCreateFailed("actor construction failed without exception: $actorName")
+              originator ! RaceCreateFailed(s"actor construction failed without exception: $actorName")
           }
         }
         // all accounted for
@@ -772,7 +772,7 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ParentActor with Mon
 
 
   def onRaceResetClock (originator: ActorRef, date: DateTime, tScale: Double) = {
-    sendToChildren(SyncWithRaceClock)
+    sendToChildren(SyncWithRaceClock())
   }
 
 }

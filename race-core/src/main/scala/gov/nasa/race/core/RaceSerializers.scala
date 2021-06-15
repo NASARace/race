@@ -225,6 +225,65 @@ class RaceActorTerminateFailedSerializer (system: ExtendedActorSystem) extends S
   override def deserialize(): RaceActorTerminateFailed = RaceActorTerminateFailed(readUTF())
 }
 
+//--- channel subscription
+
+class RemoteSubscribeSerializer (system: ExtendedActorSystem) extends SingleTypeAkkaSerializer[RemoteSubscribe](system) {
+  override def serialize(t: RemoteSubscribe): Unit = {
+    writeActorRef(t.actorRef)
+    writeUTF(t.channel)
+  }
+  override def deserialize(): RemoteSubscribe = {
+    val actorRef = readActorRef()
+    val channel = readUTF()
+    RemoteSubscribe(actorRef,channel)
+  }
+}
+
+class RemoteUnsubscribeSerializer (system: ExtendedActorSystem) extends SingleTypeAkkaSerializer[RemoteUnsubscribe](system) {
+  override def serialize(t: RemoteUnsubscribe): Unit = {
+    writeActorRef(t.actorRef)
+    writeUTF(t.channel)
+  }
+  override def deserialize(): RemoteUnsubscribe = {
+    val actorRef = readActorRef()
+    val channel = readUTF()
+    RemoteUnsubscribe(actorRef,channel)
+  }
+}
+
+//--- clock
+
+// SyncWithRaceClock
+class SyncWithRaceClockSerializer (system: ExtendedActorSystem) extends SingleTypeAkkaSerializer[SyncWithRaceClock](system) {
+  override def serialize(t: SyncWithRaceClock): Unit = {}
+  override def deserialize(): SyncWithRaceClock = SyncWithRaceClock()
+}
+
+// SyncSimClock (date: DateTime, timeScale: Double)
+class SyncSimClockSerializer (system: ExtendedActorSystem) extends SingleTypeAkkaSerializer[SyncSimClock](system) {
+  override def serialize(t: SyncSimClock): Unit = {
+    writeDateTime(t.date)
+    writeDouble(t.timeScale)
+  }
+  override def deserialize(): SyncSimClock = {
+    val date = readDateTime()
+    val timeScale = readDouble()
+    SyncSimClock(date,timeScale)
+  }
+}
+
+// StopSimClock()
+class StopSimClockSerializer (system: ExtendedActorSystem) extends SingleTypeAkkaSerializer[StopSimClock](system) {
+  override def serialize(t: StopSimClock): Unit = {}
+  override def deserialize(): StopSimClock = StopSimClock()
+}
+
+// ResumeSimClock()
+class ResumeSimClockSerializer (system: ExtendedActorSystem) extends SingleTypeAkkaSerializer[ResumeSimClock](system) {
+  override def serialize(t: ResumeSimClock): Unit = {}
+  override def deserialize(): ResumeSimClock = ResumeSimClock()
+}
+
 //--- liveness and QoS
 
 // RegisterRaceActor (registrar: ActorRef, parentQueryPath: String)
@@ -302,6 +361,74 @@ class RaceClockResetSerializer (system: ExtendedActorSystem) extends SingleTypeA
 class RaceClockResetFailedSerializer (system: ExtendedActorSystem) extends SingleTypeAkkaSerializer[RaceClockResetFailed](system) {
   override def serialize(t: RaceClockResetFailed): Unit = {}
   override def deserialize(): RaceClockResetFailed = RaceClockResetFailed()
+}
+
+
+//--- ChannelTopic support
+
+trait ChannelTopicSerializer extends AkkaSerializer {
+  def writeChannelTopic (ct: ChannelTopic): Unit = {
+    writeUTF(ct.channel)
+    if (writeIsDefined(ct.topic)) writeEmbeddedRef(ct.topic.get)
+  }
+
+  def readChannelTopic(): ChannelTopic = {
+    val channel = readUTF()
+    val topic: Topic = if (readIsDefined()) Some(readEmbeddedRef()) else None
+    ChannelTopic(channel,topic)
+  }
+}
+
+// ChannelTopicRequest (channelTopic: ChannelTopic, requester: ActorRef)
+class ChannelTopicRequestSerializer (system: ExtendedActorSystem) extends SingleTypeAkkaSerializer[ChannelTopicRequest](system) with ChannelTopicSerializer {
+  override def serialize(t: ChannelTopicRequest): Unit = {
+    writeActorRef(t.requester)
+    writeChannelTopic(t.channelTopic)
+  }
+  override def deserialize(): ChannelTopicRequest = {
+    val requester = readActorRef()
+    val ct = readChannelTopic()
+    ChannelTopicRequest(ct,requester)
+  }
+}
+
+// ChannelTopicResponse (channelTopic: ChannelTopic, provider: ActorRef)
+class ChannelTopicResponseSerializer (system: ExtendedActorSystem) extends SingleTypeAkkaSerializer[ChannelTopicResponse](system) with ChannelTopicSerializer {
+  override def serialize(t: ChannelTopicResponse): Unit = {
+    writeActorRef(t.provider)
+    writeChannelTopic(t.channelTopic)
+  }
+  override def deserialize(): ChannelTopicResponse = {
+    val provider = readActorRef()
+    val ct = readChannelTopic()
+    ChannelTopicResponse(ct,provider)
+  }
+}
+
+// ChannelTopicAccept (channelTopic: ChannelTopic, client: ActorRef)
+class ChannelTopicAcceptSerializer (system: ExtendedActorSystem) extends SingleTypeAkkaSerializer[ChannelTopicAccept](system) with ChannelTopicSerializer {
+  override def serialize(t: ChannelTopicAccept): Unit = {
+    writeActorRef(t.client)
+    writeChannelTopic(t.channelTopic)
+  }
+  override def deserialize(): ChannelTopicAccept = {
+    val client = readActorRef()
+    val ct = readChannelTopic()
+    ChannelTopicAccept(ct,client)
+  }
+}
+
+// ChannelTopicRelease (channelTopic: ChannelTopic, client: ActorRef)
+class ChannelTopicReleaseSerializer (system: ExtendedActorSystem) extends SingleTypeAkkaSerializer[ChannelTopicRelease](system) with ChannelTopicSerializer {
+  override def serialize(t: ChannelTopicRelease): Unit = {
+    writeActorRef(t.client)
+    writeChannelTopic(t.channelTopic)
+  }
+  override def deserialize(): ChannelTopicRelease = {
+    val client = readActorRef()
+    val ct = readChannelTopic()
+    ChannelTopicRelease(ct,client)
+  }
 }
 
 //---------------------- TODO - and more...

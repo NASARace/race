@@ -304,16 +304,6 @@ class RaceViewer(viewerActor: RaceViewerActor) extends DeferredEyePositionListen
     viewListeners.foreach(_.viewChanged(viewController.viewGoal))
   }
 
-  //--- track local (panel) user actions, used to avoid sync resonance
-  var lastUserAction: Long = 0
-  def trackUserAction(f: =>Unit) = {
-    lastUserAction = System.currentTimeMillis() // make sure we update before we call the action
-    f
-  }
-  def millisSinceLastUserAction = {
-    Math.min(System.currentTimeMillis - lastUserAction, viewController.millisSinceLastUserInput)
-  }
-
   //--- view (eye position) transitions
 
   // this does not animate and hence is the fast way to change the eye. Use for objects that have to stay at the

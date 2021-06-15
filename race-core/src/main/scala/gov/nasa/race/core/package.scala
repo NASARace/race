@@ -45,7 +45,7 @@ package object core {
 
   // common type aliases
   type Channel = String
-  type Topic = Option[Any]
+  type Topic = Option[AnyRef]
   type Client = ActorRef
   type Provider = ActorRef
 

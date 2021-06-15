@@ -165,11 +165,11 @@ class InteractiveLayerInfoPanel[T <: LayerObject](override val layer: Interactiv
     case ButtonClicked(`displaySelectedRb`) => layer.filterLayerObjectDisplay(Some(selectionDisplayFilter))
 
     case MousePressed(`listView`,p,_,_,true) => popUpMenu.show(listView,p.x,p.y)
-    case MouseClicked(`listView`,_,_,2,false) => raceViewer.trackUserAction { lastSelectedMatch.foreach(layer.doubleClickLayerObject) }
+    case MouseClicked(`listView`,_,_,2,false) => lastSelectedMatch.foreach(layer.doubleClickLayerObject)
 
-    case ButtonClicked(`pathCb`) => raceViewer.trackUserAction { setSelectedAttr(LayerObjectAttribute.Path,pathCb.selected) }
-    case ButtonClicked(`infoCb`) => raceViewer.trackUserAction { setSelectedAttr(LayerObjectAttribute.Info,infoCb.selected) }
-    case ButtonClicked(`markCb`) => raceViewer.trackUserAction { setSelectedAttr(LayerObjectAttribute.Mark,markCb.selected) }
+    case ButtonClicked(`pathCb`) => setSelectedAttr(LayerObjectAttribute.Path,pathCb.selected)
+    case ButtonClicked(`infoCb`) => setSelectedAttr(LayerObjectAttribute.Info,infoCb.selected)
+    case ButtonClicked(`markCb`) => setSelectedAttr(LayerObjectAttribute.Mark,markCb.selected)
   }
 
   val matchDisplayFilter: T=>Boolean = (f) => matchList.contains(f)

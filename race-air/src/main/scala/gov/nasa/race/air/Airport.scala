@@ -17,7 +17,9 @@
 
 package gov.nasa.race.air
 
+import akka.actor.ExtendedActorSystem
 import gov.nasa.race.common.{AllId, NoneId}
+import gov.nasa.race.core.SingleTypeAkkaSerializer
 import gov.nasa.race.geo.{GeoPosition, GeoPositioned}
 import gov.nasa.race.uom._
 
@@ -139,3 +141,20 @@ class Airport (val id: String,
 
 // matchable Seq type for Airports
 trait Airports extends Seq[Airport]
+
+
+//--- serialization
+
+class AirportSerializer (system: ExtendedActorSystem) extends SingleTypeAkkaSerializer[Airport](system) {
+  override def serialize(t: Airport): Unit = {
+    writeUTF(t.id)
+  }
+
+  override def deserialize(): Airport = {
+    val id = readUTF()
+    Airport.get(id) match {
+      case Some(airport) => airport
+      case None => throw new RuntimeException(s"unknown airport: $id")
+    }
+  }
+}

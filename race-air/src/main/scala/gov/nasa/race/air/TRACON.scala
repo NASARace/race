@@ -16,7 +16,9 @@
  */
 package gov.nasa.race.air
 
+import akka.actor.ExtendedActorSystem
 import gov.nasa.race.common.{AllId, ContactInfo, NoneId}
+import gov.nasa.race.core.SingleTypeAkkaSerializer
 import gov.nasa.race.geo.{GeoPosition, GeoPositioned}
 
 import scala.collection.immutable.SortedMap
@@ -140,3 +142,18 @@ class TRACON(val id: String, val name: String, val state: String, val area: Stri
 
 // matchable Seq type for TRACONs
 trait TRACONs extends Seq[TRACON]
+
+//--- serialization support
+class TRACONSerializer (system: ExtendedActorSystem) extends SingleTypeAkkaSerializer[TRACON](system) {
+  override def serialize(t: TRACON): Unit = {
+    writeUTF(t.id)
+  }
+
+  override def deserialize(): TRACON = {
+    val id = readUTF()
+    TRACON.get(id) match {
+      case Some(tracon) => tracon
+      case None => throw new RuntimeException(s"unknown TRACON: $id")
+    }
+  }
+}

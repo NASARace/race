@@ -126,7 +126,7 @@ class AsdexTracksLayer (val raceViewer: RaceViewer, val config: Config)
 
   def showAirportSymbols = Airport.airportList.foreach(showAirportSymbol)
 
-  override def mapTopic (to: Option[Any]): Option[Any] = {
+  override def mapTopic (to: Option[AnyRef]): Option[AnyRef] = {
     to match {
       case Some(id: String) => selAirport = Airport.asdexAirports.get(id)
       case _ => // ignore
@@ -155,7 +155,7 @@ class AsdexTracksLayer (val raceViewer: RaceViewer, val config: Config)
     }
   }
 
-  def selectAirport (a: Airport) = raceViewer.trackUserAction(gotoAirport(a))
+  def selectAirport (a: Airport) = gotoAirport(a)
 
   def lookupAirport (pos: GeoPosition, dist: Length): Option[Airport] = {
     Airport.asdexAirports.find( e=> GreatCircle.distance(pos, e._2.position) < dist).map(_._2)

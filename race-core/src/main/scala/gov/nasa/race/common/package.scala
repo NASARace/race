@@ -194,13 +194,7 @@ package object common {
     def error (msg: String): Unit // error report function
     def getMatchingItems(query: String, items: Iterable[T]): Iterable[T]
   }
-
-  /**
-    * a Seq that is associated with a non-element value
-    */
-  trait AssocSeq [+T,U] extends Seq[T] {
-    def assoc: U
-  }
+  
 
   /**
     * something that can parse byte array data

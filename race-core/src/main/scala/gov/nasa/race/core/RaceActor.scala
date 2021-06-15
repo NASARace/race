@@ -157,7 +157,7 @@ trait RaceActor extends Actor with ImplicitActorLogging with NamedConfigurable w
 
     case SetLogLevel(newLevel) => logLevel = newLevel
 
-    case SyncWithRaceClock => handleSyncWithRaceClock
+    case SyncWithRaceClock() => handleSyncWithRaceClock
     case SetTimeout(msg,duration) => context.system.scheduler.scheduleOnce(duration, self, msg)
 
     case RacePaused() => handleRacePaused(sender()) // master reply for a RacePauseRequest (only the requester gets this)

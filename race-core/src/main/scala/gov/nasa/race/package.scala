@@ -306,14 +306,14 @@ package object race {
     } else map
   }
 
-  @tailrec def repeat(nTimes: Int)(f: => Any): Unit = {
+  @tailrec def repeat(nTimes: Int)(f: => Unit): Unit = {
     if (nTimes > 0) {
       f
       repeat(nTimes - 1)(f)
     }
   }
 
-  @tailrec def repeatUpTo(nTimes: Int)(cond: => Boolean)(f: => Any): Boolean = {
+  @tailrec def repeatUpTo(nTimes: Int)(cond: => Boolean)(f: => Unit): Boolean = {
     if (nTimes == 0) {
       false
     } else {
@@ -324,7 +324,7 @@ package object race {
     }
   }
 
-  @tailrec def loopFromTo(i: Int, i1: Int) (f: Int=>Any): Unit = {
+  @tailrec def loopFromTo(i: Int, i1: Int) (f: Int=>Unit): Unit = {
     if (i < i1) {
       f(i)
       loopFromTo(i+1,i1)(f)

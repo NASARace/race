@@ -190,6 +190,16 @@ trait MonitorActor  extends Actor with ImplicitActorLogging with ConfigLoggable 
     }
   }
 
+  val RemotePathRE = "akka://(.+@.*:\\d+)/.*".r
+
+  def remoteLoc (aRef: ActorRef): Option[String] = {
+    aRef.path.toString match {
+      case RemotePathRE(loc) => Some(loc)
+      case _ => None
+    }
+
+  }
+
   def report (ps: PrintStream, clearScreen: Boolean): Unit = {
     // TODO - doesn't handle long paths (>50 chars) yet
 
@@ -199,6 +209,17 @@ trait MonitorActor  extends Actor with ImplicitActorLogging with ConfigLoggable 
       lvl * 2
     }
 
+    def spaceNext (n: Int): Int = {
+      if (n > 0) {
+        var i = 0
+        while (i < n) {
+          print(' ')
+          i += 1
+        }
+        n
+      } else 0
+    }
+
     if (clearScreen) {
       ps.print(ConsoleIO.ClearScreen)
       ps.println(f"monitored actors of RaceActorSystem: $name%-30.30s             at: ${lastQueryDate.formatLocal_yMd_Hms}\n")
@@ -206,8 +227,8 @@ trait MonitorActor  extends Actor with ImplicitActorLogging with ConfigLoggable 
 
     ps.print(ConsoleIO.infoColor)
     ps.println("                                                                                ping-latency [μs]")
-    ps.println("name                                                     msgs     beat      avg    min    max     sigma")
-    ps.println("--------------------------------------------------   --------   ------   ------ ------ ------   -------")
+    ps.println("name                                                               msgs     beat      avg    min    max     sigma")
+    ps.println("------------------------------------------------------------   --------   ------   ------ ------ ------   -------")
     ps.print(ConsoleIO.resetColor)
 
     reportList.foreach { as =>
@@ -216,11 +237,15 @@ trait MonitorActor  extends Actor with ImplicitActorLogging with ConfigLoggable 
       var n = indent(ps, as.level)
       ps.print(as.name)
       n += as.name.length
-      while (n < 50) {
-        ps.print(' ');
-        n += 1
+
+      n += spaceNext(25-n)
+      ifSome(remoteLoc(as.actorRef)) { loc=>
+        ps.print("  ")
+        ps.print(loc)
+        n += loc.length + 2
       }
 
+      n += spaceNext(60-n)
       val stats = as.latencyStats
       if (stats.nonEmpty) {
         ps.print(f"   ${as.msgCount}%8d")

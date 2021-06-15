@@ -54,6 +54,7 @@ class RaceWWViewController extends OrbitViewInputHandler {
 
   val viewGoal = new ViewGoal // the goal of a view transition
 
+
   val viewChangeNotifier = DeferredEDTAction(300,900) {
     if (raceViewer != null) raceViewer.notifyViewChanged
   }
@@ -278,7 +279,10 @@ class RaceWWViewController extends OrbitViewInputHandler {
         raceViewer.redrawNow
         viewChangeNotifier.schedule
         true
-      } else false // process normally
+
+      } else { // no modifier pressed
+        false   // process normally
+      }
 
     } else true // no rotation
   }
@@ -340,7 +344,7 @@ class RaceWWViewController extends OrbitViewInputHandler {
     super.changeZoom(view,animControl,change,attrib)
     viewGoal.setAnimationHint(Zoom)
     // the animators end zoom is dynamically extended, hence we have to increase initial latency
-    viewChangeNotifier.schedule(1000)
+    viewChangeNotifier.schedule(500)
   }
 
   /**

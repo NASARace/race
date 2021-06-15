@@ -18,7 +18,7 @@
 package gov.nasa.race.air.translator
 
 import com.typesafe.config.Config
-import gov.nasa.race.air.{FlightPos, FlightPosSeq, FlightPosSeqImpl}
+import gov.nasa.race.air.{FlightPos, FlightPosSeq, MutFlightPosSeqImpl}
 import gov.nasa.race.common.{ConstAsciiSlice, UTF8JsonPullParser, Utf8Buffer}
 import gov.nasa.race.config.{ConfigurableTranslator, NoConfig}
 import gov.nasa.race.config.ConfigUtils._
@@ -52,9 +52,9 @@ import OpenSkyParser._
   *
   * this parser returns (potentially empty) FlightPos lists
   */
-class OpenSkyParser extends UTF8JsonPullParser with MutSrcTracksHolder[FlightPos,FlightPosSeqImpl] {
+class OpenSkyParser extends UTF8JsonPullParser with MutSrcTracksHolder[FlightPos,MutFlightPosSeqImpl] {
 
-  override def createElements = new FlightPosSeqImpl(100)
+  override def createElements = new MutFlightPosSeqImpl(100)
 
   def parse (msg: Array[Byte], lim: Int): FlightPosSeq = {
     def parseState(): Unit = {

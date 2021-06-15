@@ -113,7 +113,7 @@ class TaisTracksLayer(val raceViewer: RaceViewer, val config: Config) extends Mo
   panel.contents.insert(1, selPanel)
 
   // this is used to map configured tracon names into tracons during onStartRaceActor exec
-  override def mapTopic (to: Option[Any]): Option[Any] = {
+  override def mapTopic (to: Option[AnyRef]): Option[AnyRef] = {
     to match {
       case Some(traconId: String) => selTracon = TRACON.tracons.get(traconId)
       case _ => // ignore
@@ -184,7 +184,7 @@ class TaisTracksLayer(val raceViewer: RaceViewer, val config: Config) extends Mo
 
   def showTraconSymbols = TRACON.traconList.foreach(showTraconSymbol)
 
-  def selectTracon(tracon: TRACON) = raceViewer.trackUserAction(gotoTracon(tracon))
+  def selectTracon(tracon: TRACON) = gotoTracon(tracon)
 
   def processResult (res: AMOSelection.Result[TRACON]): Unit = {
     res match {

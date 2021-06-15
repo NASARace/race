@@ -61,12 +61,12 @@ abstract class InteractiveLayerObjectPanel[T <: LayerObject, U <: FieldPanel](va
 
   listenTo(focusCb,pathCb,contourCb,infoCb,markCb, dismissBtn.mouse.clicks)
   reactions += {
-    case ButtonClicked(`focusCb`)  => userAction { layer.focusLayerObject(_,focusCb.selected) }
-    case ButtonClicked(`pathCb`)   => userAction { layer.setLayerObjectAttribute(_,LayerObjectAttribute.Path,pathCb.selected) }
-    case ButtonClicked(`contourCb`) => userAction { layer.setLayerObjectAttribute(_,LayerObjectAttribute.Contour,contourCb.selected) }
-    case ButtonClicked(`infoCb`)   => userAction { layer.setLayerObjectAttribute(_,LayerObjectAttribute.Info,infoCb.selected) }
-    case ButtonClicked(`markCb`)   => userAction { layer.setLayerObjectAttribute(_,LayerObjectAttribute.Mark,markCb.selected) }
-    case MouseClicked(`dismissBtn`,_,_,_,_) => userAction { dismissPanel }
+    case ButtonClicked(`focusCb`)  => ifSome(entry) { layer.focusLayerObject(_,focusCb.selected) }
+    case ButtonClicked(`pathCb`)   => ifSome(entry) { layer.setLayerObjectAttribute(_,LayerObjectAttribute.Path,pathCb.selected) }
+    case ButtonClicked(`contourCb`) => ifSome(entry) { layer.setLayerObjectAttribute(_,LayerObjectAttribute.Contour,contourCb.selected) }
+    case ButtonClicked(`infoCb`)   => ifSome(entry) { layer.setLayerObjectAttribute(_,LayerObjectAttribute.Info,infoCb.selected) }
+    case ButtonClicked(`markCb`)   => ifSome(entry) { layer.setLayerObjectAttribute(_,LayerObjectAttribute.Mark,markCb.selected) }
+    case MouseClicked(`dismissBtn`,_,_,_,_) => dismissPanel
   }
 
   override def getToolBar: Option[ToolBar] = {
@@ -75,9 +75,6 @@ abstract class InteractiveLayerObjectPanel[T <: LayerObject, U <: FieldPanel](va
     tb.peer.setFloatable(false)
     Some(tb)
   }
-
-  def userAction(f: T=>Unit): Unit = ifSome(entry){ e=> raceView.trackUserAction( f(e)) }
-  def userAction(f: =>Unit): Unit = raceView.trackUserAction( f)
 
   def raceView: RaceViewer = layer.raceViewer
 

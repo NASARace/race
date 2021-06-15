@@ -17,6 +17,9 @@
 
 package gov.nasa.race.air
 
+import akka.actor.ExtendedActorSystem
+import gov.nasa.race.common.{ArraySeqImpl, AssocSeqImpl}
+import gov.nasa.race.core.{AkkaSerializer, SingleTypeAkkaSerializer}
 import gov.nasa.race.uom.DateTime
 import gov.nasa.race.geo.{GeoPosition, GreatCircle}
 import gov.nasa.race.track.TrackedObject
@@ -24,16 +27,8 @@ import gov.nasa.race.uom.Angle._
 import gov.nasa.race.uom._
 
 import scala.collection.Seq
+import scala.collection.immutable.ArraySeq
 import scala.collection.mutable.ArrayBuffer
-
-/**
-  * matchable type for a collection of TFMTracks
-  */
-trait TfmTracks extends Seq[TfmTrack]
-
-object TfmTracks {
-  val empty = new ArrayBuffer[TfmTrack](0) with TfmTracks
-}
 
 
 /**
@@ -55,4 +50,63 @@ case class TfmTrack(id: String,
   def vr = Speed.UndefinedSpeed // not in current data model
 
   override def source: Option[String] = Some(src)
+}
+
+/**
+  * matchable type for a collection of TFMTracks
+  */
+trait TfmTracks extends Seq[TfmTrack]
+
+object TfmTracks {
+  val empty = new ArrayBuffer[TfmTrack](0) with TfmTracks
+}
+
+class TfmTracksImpl (elems: Array[TfmTrack]) extends ArraySeqImpl[TfmTrack](elems) with TfmTracks
+
+//--- serializer support
+
+trait TfmTrackSer extends AkkaSerializer {
+  def serializeTfmTrack (t: TfmTrack): Unit = {
+    writeUTF(t.id)
+    writeUTF(t.cs)
+    writeGeoPosition(t.position)
+    writeSpeed(t.speed)
+    writeDateTime(t.date)
+    writeInt(t.status)
+
+    writeUTF(t.src)
+    if (writeIsDefined(t.nextPos)) writeGeoPosition(t.nextPos.get)
+    writeDateTime(t.nextDate)
+  }
+
+  def deserializeTfmTrack (): TfmTrack = {
+    val id  = readUTF()
+    val cs  = readUTF()
+    val pos = readGeoPosition()
+    val spd = readSpeed()
+    val date = readDateTime()
+    val status = readInt()
+
+    val src = readUTF()
+    val nextPos = if (readIsDefined()) Some(readGeoPosition()) else None
+    val nextDate = readDateTime()
+
+    TfmTrack(id,cs,pos,spd,date,status,src,nextPos,nextDate)
+  }
+}
+
+class TfmTrackSerializer (system: ExtendedActorSystem) extends SingleTypeAkkaSerializer[TfmTrack](system) with TfmTrackSer {
+  override def serialize(t: TfmTrack): Unit = serializeTfmTrack(t)
+  override def deserialize(): TfmTrack = deserializeTfmTrack()
+}
+
+class TfmTracksSerializer (system: ExtendedActorSystem) extends SingleTypeAkkaSerializer[TfmTracks](system) with TfmTrackSer {
+  override def serialize(t: TfmTracks): Unit = {
+    writeItems(t)(serializeTfmTrack)
+  }
+
+  override def deserialize(): TfmTracks = {
+    val tracks = readItems(deserializeTfmTrack)
+    new TfmTracksImpl(tracks)
+  }
 }
