@@ -104,7 +104,7 @@ export function setReadOnly() {
   document.getElementById("readOnlyButton").disabled = true;
 
   processCells( (cell,column,row) => {
-    if (cell.firstChild) {
+    if (isEditorCell(cell)) {
       var values = data[column.id].rows;
       setDisplayCell( cell, row, values[row.id]);
     }
@@ -246,6 +246,10 @@ function isColumnOnline (col) {
     if (isColumnOwnedBy(col,n)) return true;
   }
   return false;
+}
+
+function isEditorCell (cell) {
+  return (cell.firstChild instanceof HTMLInputElement);
 }
 
 //--- initialization of nodeLists structure
@@ -550,7 +554,7 @@ function setData() {
 }
 
 function setCell (cell, row, values) {
-  if (cell.firstChild instanceof HTMLInputElement) { // we are editing this
+  if (isEditorCell(cell)) { // we are editing this
     var editElem = cell.firstChild;
     if (modifiedRows.has(editElem)){ // we already changed it - flag conflict
       editElem.classList.add("conflict");

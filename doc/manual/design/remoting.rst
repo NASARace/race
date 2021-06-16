@@ -19,7 +19,7 @@ Dedicated Communication Actors
 Location Transparency
 ---------------------
 
-.. image:: images/loc-trans.svg
+.. image:: ../images/loc-trans.svg
     :class: center scale50
     :alt: Location Transparent Actors
 
@@ -44,9 +44,9 @@ by means of its Akka serializer id (that is transparently sent by Akka).
 
 
 
-:: _Akka Clusters: https://doc.akka.io/docs/akka/current/typed/index-cluster.html
-:: _Akka Remoting: https://doc.akka.io/docs/akka/current/remoting-artery.html
-:: _Akka Serialization: https://doc.akka.io/docs/akka/current/serialization.html
-:: _Java Serialization: https://docs.oracle.com/en/java/javase/16/docs/specs/serialization/
-:: _Java Security Guidelines: https://www.oracle.com/java/technologies/javase/seccodeguide.html
-:: _Perils of Java Deserialization: https://community.microfocus.com/cyberres/fortify/f/fortify-discussions/317555/the-perils-of-java-deserialization
+.. _Akka Clusters: https://doc.akka.io/docs/akka/current/typed/index-cluster.html
+.. _Akka Remoting: https://doc.akka.io/docs/akka/current/remoting-artery.html
+.. _Akka Serialization: https://doc.akka.io/docs/akka/current/serialization.html
+.. _Java Serialization: https://docs.oracle.com/en/java/javase/16/docs/specs/serialization/
+.. _Java Security Guidelines: https://www.oracle.com/java/technologies/javase/seccodeguide.html
+.. _Perils of Java Deserialization: https://community.microfocus.com/cyberres/fortify/f/fortify-discussions/317555/the-perils-of-java-deserialization

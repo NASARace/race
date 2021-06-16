@@ -72,6 +72,13 @@ p.standout {
     font-weight: bolder;
 }
 
+div.cmd {
+    font-size: 60%;
+    font-family: Courier;
+    color: Gray;
+    margin-top: 1rem;
+}
+
 .slide ul {
     list-style-type: disc;
 }
@@ -85,12 +92,9 @@ p.standout {
     margin-bottom: 0.3em;
 }
 
-.toc ul {
+ul.nav-list {
     list-style-type: decimal;
     font-size: 60%;
-}
-
-.toc a {
     text-decoration: none;
 }
 
@@ -230,4 +234,11 @@ img.up100 {
   position: relative;
   top: -100pt;
 }
-
+img.up125 {
+  position: relative;
+  top: -125pt;
+}
+img.up150 {
+  position: relative;
+  top: -150pt;
+}

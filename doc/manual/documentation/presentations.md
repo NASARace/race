@@ -36,6 +36,10 @@ was presented at DASC 2016
 [Analyzing Airspace Data with RACE][dasc19] is a showcase and reflection about lessons learned during application
 development with RACE, presented at DASC 2019
 
+[SHARE][share] describes the System for Hierarchical Ad hoc Reporting (SHARE) built with RACE actors
+
+[RACE by Example][RaceByExample] is a collection of examples with associated config files to run them
+
 [raceviewer]: ../slides/RaceViewer.html
 [remotelauncher]: ../slides/RemoteLauncher.html
 [race-ww]: ../slides/RACE_WorldWind.html
@@ -44,4 +48,5 @@ development with RACE, presented at DASC 2019
 [connect]: ../slides/Connectivity.html
 [race10]: ../slides/RACEin10.html
 [dasc19]: ../slides/DASC19.html
-
+[share]: ../slides/SHARE.html
+[RaceByExample]: ../slides/RaceByExample.html

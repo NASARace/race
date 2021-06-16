@@ -85,6 +85,9 @@ object AkkaSerializer {
   * to know a-priori about the input format. This seems justified since Akka serializer instances handle both serialization
   * and de-serialization in the same class, and we mostly assume single-type serializers. In cases where we have
   * to handle target type alternatives the manifest has to be used to discriminate between such alternatives
+  *
+  * TODO - check if mixing in ByteBufferSerializer in a synchronized context is not tripping Akka
+  * if the ByteBuffer is from a pool and there are system locks held while the user serializer processes it
   */
 abstract class AkkaSerializer (system: ExtendedActorSystem) extends Serializer with ByteBufferSerializer {
 
