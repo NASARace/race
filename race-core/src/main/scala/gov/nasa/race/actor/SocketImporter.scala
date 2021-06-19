@@ -18,25 +18,26 @@ package gov.nasa.race.actor
 
 import java.net.Socket
 import java.util.concurrent.atomic.AtomicBoolean
-
 import akka.actor.ActorRef
 import com.typesafe.config.Config
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.{RaceActor, RaceContext}
 import gov.nasa.race.ifSome
 
+import java.io.IOException
+
 /**
   * root type for socket data acquisition threads
   */
-abstract class SocketDataAcquisitionThread(socket: Socket) extends Thread {
-
-  var isDone: AtomicBoolean = new AtomicBoolean(false)
+abstract class SocketDataAcquisitionThread(name: String) extends Thread(name) {
+  protected var isDone: AtomicBoolean = new AtomicBoolean(false)
 
   setDaemon(true) // data acquisition threads are always daemons
 
   // this can be called from the outside and has to be thread safe
   def terminate: Unit = {
     isDone.set(true)
+    if (isAlive && !isDone.get) interrupt()
   }
 }
 
@@ -52,6 +53,7 @@ trait SocketImporter extends RaceActor {
   var socket: Option[Socket] = None
   var thread: Option[SocketDataAcquisitionThread] = None
 
+
   //--- override in concrete types
   protected def createDataAcquisitionThread (sock: Socket): Option[SocketDataAcquisitionThread]
   protected def defaultHost: String = "localhost"
@@ -64,6 +66,7 @@ trait SocketImporter extends RaceActor {
 
       thread = createDataAcquisitionThread(sock)
       if (thread.isDefined) super.onInitializeRaceActor(rc, actorConf) else {
+        sock.close()
         error("failed to create data acquisition thread")
         false
       }
@@ -89,11 +92,42 @@ trait SocketImporter extends RaceActor {
     }
 
     ifSome(socket) { sock =>
-      sock.shutdownInput
       sock.close // this should interrupt blocked socket reads in the data acquisition thread
       socket = None
     }
 
     super.onTerminateRaceActor(originator)
+  }
+
+  /**
+    * this is a last ditch effort to recover from closed Socket streams
+    *
+    * Note it is the callers responsibility to re-initialize streams and initialize the server (if there is some
+    * connection protocol involved)
+    */
+  def reconnect(): Boolean = {
+    if (!isTerminating) {
+      socket = None
+
+      ifSome(socket) { sock =>
+        try {
+          sock.close()
+        } catch {
+          case iox: IOException => // ignore, we are going to retry anyway
+        }
+      }
+
+      try {
+        val newSock = new Socket(host, port)
+        if (newSock.isConnected) {
+          socket = Some(newSock)
+          true
+        } else false // couldn't reconnect
+      } catch {
+        case iox: IOException =>
+          warning(s"reconnecting socket failed: $iox")
+          false
+      }
+    } else false
   }
 }

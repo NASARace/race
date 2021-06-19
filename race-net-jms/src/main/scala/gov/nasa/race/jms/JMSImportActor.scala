@@ -85,9 +85,10 @@ object JMSImportActor {
 
       if (clients.contains(importer)) {
         if (clients.size == 1) {
+          importer.info(s"closing connection to $brokerURI ..")
           connection.stop()
           connection.close()
-          importer.info(s"closed connection to $brokerURI")
+          importer.info(s"connection to $brokerURI closed")
           connections = connections - brokerURI
         } else {
           connections = connections + (brokerURI -> (e - importer))
@@ -253,6 +254,7 @@ class JMSImportActor(val config: Config) extends FilteringPublisher {
   override def onTerminateRaceActor(originator: ActorRef) = {
     info(s"closing session")
     try {
+      consumer.foreach(_.close())
       session.foreach(_.close())
       connection.foreach( releaseConnection(this,_))
     } catch {

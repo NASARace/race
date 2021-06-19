@@ -748,7 +748,7 @@ class MasterActor (ras: RaceActorSystem) extends Actor with ParentActor with Mon
   }
 
   def terminateRaceActors(): Unit = {
-    terminateAndRemoveRaceActors
+    terminateAndRemoveRaceActors(ras.terminateTimeout)
 
     waiterForTerminated match {
       case Some(actorRef) =>

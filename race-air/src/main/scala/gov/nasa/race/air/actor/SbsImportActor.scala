@@ -16,8 +16,8 @@
  */
 package gov.nasa.race.air.actor
 
-import java.io.IOException
-import java.net.{Socket, SocketTimeoutException}
+import java.io.{IOException, InputStream}
+import java.net.{Socket, SocketException, SocketTimeoutException}
 import akka.actor.ActorRef
 import com.typesafe.config.Config
 import gov.nasa.race.actor.{SocketDataAcquisitionThread, SocketImporter}
@@ -70,95 +70,7 @@ trait SbsImporter extends ChannelTopicProvider {
 }
 
 
-/**
-  * the data acquisition thread of the SBSImportActor
-  *
-  * this thread reads the socket data and triggers drop checks. Parsing data and detecting stale flights is
-  * delegated to an SBSUpdater
-  *
-  * note that we only perform dropChecks if there is a non-zero dropDuration, and only sync
-  * either from a socket read timeout or after a successful read if the checkInterval is exceeded.
-  * This saves us not only map synchronization but also additional context switches
-  *
-  * since drops are not latency critical we do not use a timer to trigger the drop checks but rather perform
-  * them sync after detecting that the dropDuration since the last check was exceeded. This also saves us
-  * from the need to synchronize messages in the underlying updater. The case that we don't get any data anymore
-  * and hence would miss a check is handled by setting a timeout on the socket read (our blocking point).
-  * Note that with update cycles around 1s it is most unlikely we ever run into such a socket timeout.
-  */
-class SbsDataAcquisitionThread(socket: Socket, bufLen: Int,
-                               defaultZone: ZoneId,
-                               dropDuration: FiniteDuration,
-                               updateFunc: TrackedObject=>Boolean,
-                               dropFunc: (String,String,DateTime,Time)=>Unit) extends SocketDataAcquisitionThread(socket) {
 
-  val dropAfter = Milliseconds(dropDuration.toMillis.toInt)
-  val checkAfter = dropAfter/2
-  var lastDropCheck = UndefinedDateTime
-
-  socket.setSoTimeout(dropAfter.toMillis.toInt) // value of 0 means no timeout (indefinite wait)
-
-  @inline final def recordLimit(bs: Array[Byte], len: Int): Int = {
-    var i = len-1
-    while (i>=0 && bs(i) != 10) i -= 1
-    i+1
-  }
-
-  override def run: Unit = {
-    val buf = new Array[Byte](bufLen)
-    val in = socket.getInputStream
-    val updater = new SbsUpdater(updateFunc,dropFunc,defaultZone)
-
-    lastDropCheck = DateTime.now
-
-    @inline def dropCheck: Unit = {
-      val tNow = DateTime.now
-      if (tNow.timeSince(lastDropCheck) >= checkAfter) {
-        updater.dropStale(tNow,dropAfter)
-        lastDropCheck = tNow
-      }
-    }
-
-    @tailrec @inline def read (buf: Array[Byte], startIdx: Int, maxLen: Int): Int = {
-      try {
-        in.read(buf,startIdx,maxLen)
-      } catch {
-        case to: SocketTimeoutException =>
-          if (checkAfter.nonZero) dropCheck
-          read(buf,startIdx,maxLen)
-      }
-    }
-
-    try {
-      var limit = read(buf,0,buf.length)
-
-      while (!isDone.get && limit >= 0) {
-        var recLimit = recordLimit(buf,limit)
-
-        while (recLimit == 0) { // no single record in buffer, try to read more
-          val nMax = buf.length - limit
-          if (nMax <= 0) throw new RuntimeException(s"no linefeed within $buf.length bytes")
-          limit += read(buf,limit,nMax) // append - no need to move contents
-          recLimit = recordLimit(buf,limit)
-        }
-
-        if (updater.initialize(buf,recLimit)) updater.parse
-        dropCheck
-
-        if (recLimit < limit){ // last record is incomplete
-          val nRemaining = limit - recLimit
-          System.arraycopy(buf,recLimit,buf,0,nRemaining)
-          limit = nRemaining + read(buf,nRemaining,buf.length - nRemaining)
-
-        } else { // last read record is complete
-          limit = read(buf, 0, buf.length)
-        }
-      }
-    } catch {
-      case x:IOException => // ? should we make a reconnection effort here?
-    }
-  }
-}
 
 
 /**
@@ -172,17 +84,200 @@ class SbsDataAcquisitionThread(socket: Socket, bufLen: Int,
   */
 class SbsImportActor(val config: Config) extends SbsImporter with SocketImporter {
 
+  /**
+    * the data acquisition thread of the SBSImportActor
+    *
+    * this thread reads the socket data and triggers drop checks. Parsing data and detecting stale flights is
+    * delegated to an SBSUpdater
+    *
+    * note that we only perform dropChecks if there is a non-zero dropDuration, and only sync
+    * either from a socket read timeout or after a successful read if the checkInterval is exceeded.
+    * This saves us not only map synchronization but also additional context switches
+    *
+    * since drops are not latency critical we do not use a timer to trigger the drop checks but rather perform
+    * them sync after detecting that the dropDuration since the last check was exceeded. This also saves us
+    * from the need to synchronize messages in the underlying updater. The case that we don't get any data anymore
+    * and hence would miss a check is handled by setting a timeout on the socket read (our blocking point).
+    * Note that with update cycles around 1s it is most unlikely we ever run into such a socket timeout.
+    */
+  class SbsDataAcquisitionThread(name: String,
+                                 bufLen: Int,
+                                 defaultZone: ZoneId,
+                                 dropDuration: FiniteDuration,
+                                 updateFunc: TrackedObject=>Boolean,
+                                 dropFunc: (String,String,DateTime,Time)=>Unit) extends SocketDataAcquisitionThread(name) {
+
+    val dropAfter = Milliseconds(dropDuration.toMillis.toInt)
+    val checkAfter = dropAfter/2
+    var lastDropCheck = UndefinedDateTime
+
+    val updater = new SbsUpdater(updateFunc,dropFunc,defaultZone)
+    var in: InputStream = null
+
+    // consecutive failure counts
+    var reconnects: Int = 0
+    var updateFailures: Int = 0
+
+    initSocket()
+
+    def initSocket(): Unit = {
+      ifSome(socket) { sock=>
+        sock.setSoTimeout(dropAfter.toMillis.toInt) // value of 0 means no timeout (indefinite wait)
+        in = sock.getInputStream
+      }
+    }
+
+    def dropCheck (): Unit = {
+      val tNow = DateTime.now
+      if (tNow.timeSince(lastDropCheck) >= checkAfter) {
+        updater.dropStale(tNow,dropAfter)
+        lastDropCheck = tNow
+      }
+    }
+
+    // this either returns a positive number of bytes read or throws an exception
+    def read (buf: Array[Byte], startIdx: Int, maxLen: Int): Int = {
+      while (true) {
+        try {
+          val n = in.read(buf, startIdx, maxLen) // <<< this blocks until soTimeout is exceeded
+          if (n > 0) {
+            return n
+          } else {
+            if (n < 0) {
+              // not sure how this happens but it does (on sketchy networks). No use trying to keep the buffer since
+              // the socket streams are going to be reset so we just escalate
+              throw new IOException("socket input stream closed")
+            }
+          }
+
+        } catch {
+          case _: SocketTimeoutException =>  // no new data yet but we still have to check drops
+            if (checkAfter.nonZero) dropCheck()
+        }
+      }
+      0
+    }
+
+    @inline final def recordLimit(bs: Array[Byte], len: Int): Int = {
+      var i = len-1
+      while (i>=0 && bs(i) != 10) i -= 1
+      i+1
+    }
+
+    def runUpdater (buf: Array[Byte], len: Int): Boolean = {
+      try {
+        if (updater.initialize(buf, len)) {
+          updater.parse
+        }
+        dropCheck()
+        updateFailures = 0 // updater worked, reset failure count
+        true // success
+
+      } catch {
+        case x: Throwable =>
+          if (updateFailures < maxUpdateFailures) {
+            updateFailures += 1
+            warning(s"detected socket acquisition thread update failure $updateFailures: $x")
+            true // updater failed but we still try again
+          } else {
+            warning(s"max consecutive update failure count exceeded, terminating socket acquisition thread")
+            false // updater failed permanently
+          }
+      }
+    }
+
+    def processSocketInput (f: =>Boolean): Boolean = {
+      try {
+        f
+      } catch {
+        case _: IOException =>
+          if (!isDone.get || !isTerminating) {
+            if (reconnects < maxReconnects) {
+              reconnects += 1
+              warning("reconnecting socket acquisition thread..")
+
+              if (reconnect()) {
+                initSocket()
+                info("socket acquisition thread reconnected")
+                true // go on, it seems the network has recovered
+
+              } else {
+                warning(s"socket acquisition thread reconnect $reconnects failed, trying again..")
+                Thread.sleep(300) // give the network some time to recover
+                true // network failure, but try once more
+              }
+            } else {
+              warning(s"max reconnect attempts exceeded, terminating socket acquisition thread")
+              false // permanent network failure, bail out
+            }
+          } else false // we are done
+      }
+    }
+
+    override def run: Unit = {
+      info("socket acquisition thread started")
+
+      try {
+        val buf = new Array[Byte](bufLen)
+        var limit = 0
+        lastDropCheck = DateTime.now
+
+        if (!processSocketInput{
+          limit = read(buf, 0, buf.length)
+          true
+        }) return
+
+        while (!isDone.get) {
+          var recLimit = recordLimit(buf, limit)
+
+          if (!processSocketInput {
+            while (recLimit == 0) { // no single record in buffer, try to read more
+              val nMax = buf.length - limit
+              if (nMax <= 0) throw new RuntimeException(s"no linefeed within $buf.length bytes")
+              limit += read(buf, limit, nMax) // append - no need to move contents
+              recLimit = recordLimit(buf, limit)
+            }
+            reconnects = 0 // successful socket read, reset error count
+
+            // we have input - run the updater
+            if (!runUpdater(buf, recLimit)) {
+              false // stop - no point reading input if we can't process it
+
+            } else {
+              if (recLimit < limit) { // last record was incomplete, append to buffer until full
+                val nRemaining = limit - recLimit
+                System.arraycopy(buf, recLimit, buf, 0, nRemaining)
+                limit = nRemaining + read(buf, nRemaining, buf.length - nRemaining)
+
+              } else { // last read record was complete, refill buffer from start
+                limit = read(buf, 0, buf.length)
+              }
+              true // go on
+            }
+          }) return
+        }
+      } finally {
+        info("socket acquisition thread terminated")
+      }
+    }
+  }
+
+
   // this is a wall time actor
   override def getCapabilities = super.getCapabilities - SupportsPauseResume - SupportsSimTimeReset
 
-  val dropAfter = config.getFiniteDurationOrElse("drop-after", Duration.Zero) // Zero means don't check for drop
+  val dropAfter = config.getFiniteDurationOrElse("drop-after", 10.seconds) // Zero means don't check for drop
+
+  // those are both consecutive failure counts handled by the acquisition thread
+  val maxReconnects: Int = config.getIntOrElse("max-reconnects", 5)
+  val maxUpdateFailures: Int = config.getIntOrElse("max-update-failures", 5)
 
   override def defaultPort: Int = 30003
 
   override def createDataAcquisitionThread (sock: Socket): Option[SocketDataAcquisitionThread] = {
     // if we import from a dump1090 process we need to be able to explicitly set the timezone
     val defaultZone = config.getMappedStringOrElse("default-zone", ZoneId.of, ZoneId.systemDefault)
-    Some(new SbsDataAcquisitionThread(sock, initBufferSize, defaultZone, dropAfter, publishTrack, dropTrack))
+    Some(new SbsDataAcquisitionThread(s"$name-input", initBufferSize, defaultZone, dropAfter, publishTrack, dropTrack))
   }
 
   def publishTrack (track: TrackedObject): Boolean = {

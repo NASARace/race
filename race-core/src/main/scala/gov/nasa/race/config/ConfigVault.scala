@@ -17,30 +17,36 @@
 
 package gov.nasa.race.config
 
-import java.io.File
+import java.io.{ByteArrayInputStream, File, InputStreamReader}
 import javax.crypto.Cipher
-
 import com.typesafe.config.{Config, ConfigException, ConfigFactory}
 import gov.nasa.race.util.CryptUtils
 import gov.nasa.race.util.FileUtils._
 
 /**
- * singleton to manage encrypted config options such as user credentials and URIs
- *
- * We use a single, non-archived, encrypted configuration file (AKA "vault")
- * containing string entries that are under a top level "secret" object, such as
- *
- * {{{
- *   secret {
- *     x.y.password = "12345"
- *   }
- * }}}
- *
- * Vault files can be created with the `gov.nasa.race.tools.CryptConfig` tool.
- *
- * <2do> vaults should be instances so that we can have different ones (system, apps).
- * We should just make sure the system vault can only be set once from main
- */
+  * singleton to manage encrypted config options such as user credentials and URIs
+  *
+  * We use a single, non-archived, encrypted configuration file (AKA "vault")
+  * containing string entries that are under a top level "secret" object, such as
+  *
+  * {{{
+  *   secret {
+  *     x.y.password = "12345"
+  *   }
+  * }}}
+  *
+  * Vaults can only contain string values as we keep the values encrypted, i.e. only de-crypt when the value is queried
+  *
+  * Vault files can be created with the `gov.nasa.race.tools.CryptConfig` tool.
+  *
+  * while the main purpose of vaults is to factor out sensitive, machine/user specific configuration from public
+  * RACE configs and keep related data in properly access restricted files, vaults should also be encrypted. We do
+  * support unencrypted vaults but those should obviously not be used in a context that involves confidential
+  * information such as user credentials
+  *
+  * <2do> vaults should be instances so that we can have different ones (system, apps).
+  * We should just make sure the system vault can only be set once from main
+  */
 object ConfigVault {
   final val Root = "secret."
 
@@ -58,34 +64,47 @@ object ConfigVault {
     initialized = true
   }
 
-  /**
-   * the initialization for interactive environments, which will prompt
-   * the user for a pass phrase if the cipher is not set
-   */
-  private def initialize: Boolean = {
+  private def isEncryptedVault: Boolean = {
+    configVault.getName.endsWith(".crypt")
+  }
+
+
+  private def initializeUnencrypted: Boolean = {
     checkAndSetInitialized
+
+    config = fileContentsAsBytes(configVault) match {
+      case None => none(s"config vault not found: $configVault")
+      case Some(bs) => initializeFromBytes(bs)
+    }
+
+    config.isDefined
+  }
+
+  private def initializeEncrypted: Boolean = {
+    checkAndSetInitialized
+
     if (cipher.isEmpty) cipher = CryptUtils.getDecryptionCipher
 
     config = cipher match {
-      case None => none("no pass phrase entered, config vault disabled")
+      case None =>
+        none("no pass phrase entered, config vault disabled")
       case Some(c) =>
         fileContentsAsBytes(configVault) match {
           case None => none(s"config vault not found: $configVault")
-          case Some(bs) =>
-            try {
-              val conf = ConfigFactory.parseString(new String(c.doFinal(bs)))
-              if (conf.hasPath("secret")) {
-                Some(conf)
-              } else {
-                none("vault rejected, does not have a 'secret' element")
-              }
-            } catch {
-              case t: Throwable => none("error decrypting config vault, no vault set")
-            }
+          case Some(bs) => initializeFromBytes(c.doFinal(bs))
         }
     }
 
     config.isDefined
+  }
+
+  private def initializeFromBytes( bs: Array[Byte]): Option[Config] = {
+    val conf = ConfigFactory.parseReader(new InputStreamReader(new ByteArrayInputStream(bs)))
+    if (conf.hasPath("secret")) {
+      Some(conf)
+    } else {
+      none("vault rejected, does not have a 'secret' element")
+    }
   }
 
   /**
@@ -100,7 +119,25 @@ object ConfigVault {
 
     configVault = vaultFile
     cipher = CryptUtils.getDecryptionCipher(pass)
-    initialize
+    initializeEncrypted
+  }
+
+  def initializeInteractive (vaultFile: File, getPass: ()=>Option[Array[Char]]): Boolean = {
+    // TODO - add AccessController.checkPermissions() here
+
+    configVault = vaultFile
+
+    if (isEncryptedVault) {
+      val pass = getPass()
+      if (pass.isEmpty) return false  // we do need a password or we can't proceed
+      cipher = CryptUtils.getDecryptionCipher(pass.get)
+      java.util.Arrays.fill(pass.get, ' ') // we are done with the pw
+
+      initializeEncrypted
+
+    } else {
+      initializeUnencrypted
+    }
   }
 
   def initialize(vaultFile: File, ciph: Cipher): Boolean = {
@@ -108,7 +145,7 @@ object ConfigVault {
 
     configVault = vaultFile
     cipher = Some(ciph)
-    initialize
+    initializeEncrypted
   }
 
   /**
@@ -126,7 +163,7 @@ object ConfigVault {
 
   private var configVault: File = new File(System.getProperty("race.crypt", "conf.crypt"))
 
-  // 2do - this should check for known/registered client classes
+  // TODO - this should check for known/registered client classes
   // we should only hand out un-encrypted values to known, signed classes since there is
   // no guarantee the client will not store the value, obtain the config data for another
   // actor, or subclasses an actor that uses encryption
@@ -135,7 +172,7 @@ object ConfigVault {
     // TODO - add AccessController.checkPermissions() here
     config match {
       case None => throw new ConfigException.Missing(key)
-      case Some(conf) => CryptUtils.decrypt64(conf.getString(Root + key), cipher.get) // might throw ConfigException.Missing
+      case Some(conf) => _getValue(conf,key)
     }
   }
 
@@ -145,7 +182,7 @@ object ConfigVault {
       case None => defaultValue
       case Some(conf) =>
         try {
-          CryptUtils.decrypt64(conf.getString(Root + key), cipher.get)
+          _getValue(conf,key)
         } catch {
           case x: ConfigException.Missing => defaultValue
         }
@@ -158,10 +195,17 @@ object ConfigVault {
       case None => None
       case Some(conf) =>
         try {
-          Some(CryptUtils.decrypt64(conf.getString(Root + key), cipher.get))
+          Some(_getValue(conf,key))
         } catch {
           case x: ConfigException.Missing => None
         }
+    }
+  }
+
+  @inline private def _getValue (cnf: Config, k: String): String = {
+    cipher match {
+      case Some(c) => CryptUtils.decrypt64(cnf.getString(Root + k), c)
+      case None => cnf.getString(Root + k)
     }
   }
 }

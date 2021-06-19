@@ -18,6 +18,7 @@ package gov.nasa.race.core
 
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.pattern.AskSupport
+import akka.util.Timeout
 import com.typesafe.config.Config
 
 import scala.collection.mutable
@@ -165,7 +166,7 @@ trait ParentActor extends Actor with ImplicitActorLogging with AskSupport {
     * Note that we only do a termination round trip to actors we supervise, otherwise we just remove
     * the actorRef from our list of children
     */
-  protected[this] def terminateAndRemoveRaceActors: Boolean = {
+  protected[this] def terminateAndRemoveRaceActors (implicit timeout: Timeout): Boolean = {
     processChildrenReverse { actorData =>
       val actorRef = actorData.actorRef
 

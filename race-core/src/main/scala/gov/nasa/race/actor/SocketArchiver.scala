@@ -70,7 +70,7 @@ trait SocketArchiver extends SocketImporter {
   // override if there is a subclass specific hardwired writer
   protected def createWriter: SocketArchiveWriter = new DefaultSocketArchiveWriter
 
-  class DataAcquisitionThread (socket: Socket, bufLen: Int) extends SocketDataAcquisitionThread(socket) {
+  class DataAcquisitionThread (socket: Socket, bufLen: Int) extends SocketDataAcquisitionThread(s"$name-input") {
 
     override def run: Unit = {
       val buf = new Array[Byte](bufLen)

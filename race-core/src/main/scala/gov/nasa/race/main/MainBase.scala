@@ -158,6 +158,7 @@ trait MainBase {
 
   //--- vault initialization
 
+
   def initConfigVault (opts: MainOpts): Boolean = {
     var success: Boolean = false
     ifSome(opts.vault) { vaultFile =>
@@ -171,12 +172,9 @@ trait MainBase {
           cipher <- CryptUtils.getDecryptionCipher(key)
         ) success = ConfigVault.initialize(vaultFile,cipher)
 
-      } else { // ask for the vault key
-        ifSome(ConsoleIO.promptPassword(s"enter password for config vault $vaultFile: ")) { pw=>
-          try {
-            success = ConfigVault.initialize(vaultFile,pw)
-          } finally { JArrays.fill(pw,' ') }
-        }
+      } else { // interactive case - ask for the vault key (if needed)
+        def getPass(): Option[Array[Char]] = ConsoleIO.promptPassword(s"enter password for config vault $vaultFile: ")
+        success = ConfigVault.initializeInteractive(vaultFile,getPass)
       }
     } orElse {
       success = true // no vault to initialize

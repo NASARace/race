@@ -61,7 +61,7 @@ object RaceActorSystem { // aka RAS
   def removeAllTerminationListeners = terminationListeners = Set.empty[() => Unit]
 
   def hasLiveSystems = liveSystems.nonEmpty
-  def isTerminating = liveSystems.exists(e=> e._2.isTerminating)
+  def isTerminating = liveSystems.nonEmpty && liveSystems.exists(e=> e._2.isTerminating)
   def numberOfLiveSystems = liveSystems.size
   def addLiveSystem(race: RaceActorSystem) = liveSystems += (race.system -> race)
   def removeLiveSystem(race: RaceActorSystem) = {
@@ -125,6 +125,7 @@ class RaceActorSystem(val config: Config) extends LogController with VerifiableA
   val createTimeout = Timeout(config.getFiniteDurationOrElse("create-timeout", defaultSystemTimeout))
   val initTimeout = Timeout(config.getFiniteDurationOrElse("init-timeout", defaultSystemTimeout))
   val startTimeout = Timeout(config.getFiniteDurationOrElse("start-timeout", defaultSystemTimeout))
+  val terminateTimeout = Timeout(config.getFiniteDurationOrElse("terminate-timeout", 30.seconds))
 
   // do we allow external (remote) termination
   val allowRemoteTermination = config.getBooleanOrElse("remote-termination", false)
@@ -375,7 +376,7 @@ class RaceActorSystem(val config: Config) extends LogController with VerifiableA
         case TimedOut =>
           warning(s"universe $name termination timeout")
           false
-      }
+      }(terminateTimeout)
     } else { // nothing to shut down
       true
     }

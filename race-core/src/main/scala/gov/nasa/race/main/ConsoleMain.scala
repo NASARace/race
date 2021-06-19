@@ -102,11 +102,14 @@ trait ConsoleMainBase extends MainBase {
       case "8" | "start" => universes.foreach(launch)
         repeatMenu
 
-      case "9" | "exit" => // don't use System.exit here, it would break MultiNodeJVM tests
-        if (!RaceActorSystem.isTerminating) {  // don't trip a termination that is already in progress
-          removeShutdownHook(vmShutdownHook)
-          RaceActorSystem.removeTerminationListener(() => systemExit())
-          universes.foreach(shutDown)
+      case "9" | "exit" =>
+        if (RaceActorSystem.hasLiveSystems){     // don't use System.exit here, it would break MultiNodeJVM tests
+          if (!RaceActorSystem.isTerminating) {  // don't trip a termination that is already in progress
+            println("terminating..")
+            //removeShutdownHook(vmShutdownHook)
+            RaceActorSystem.removeTerminationListener(() => systemExit())
+            universes.foreach(shutDown)
+          }
         }
     }
   }

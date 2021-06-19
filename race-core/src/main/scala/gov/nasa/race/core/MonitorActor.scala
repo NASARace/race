@@ -213,7 +213,7 @@ trait MonitorActor  extends Actor with ImplicitActorLogging with ConfigLoggable 
       if (n > 0) {
         var i = 0
         while (i < n) {
-          print(' ')
+          ps.print(' ')
           i += 1
         }
         n
