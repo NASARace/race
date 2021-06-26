@@ -66,29 +66,29 @@ NASA Ames Research Center
 * imports SWIM messages (SFDPS,TFM-DATA,TAIS,ASDE-X,ITWS) and local ADS-B
 * up to 1000 msg/sec, 4500 simultaneous flights
 * RaceViewerActor uses embedded NASA WorldWind for geospatial display
-<div class="cmd">./race --vault ../conf.crypt config/air/swim-all-sbs-ww.conf</div>
 
-<img src="../images/swim-sbs-all-ww.svg" class="left scale50">
-<img src="../images/race-nas.png" class="right scale50">
+<div>
+  <img src="../images/swim-sbs-all-ww.svg" class="left scale50">
+  <img src="../images/race-nas.png" class="right scale50">
+</div>
+<kbd>console 1: ./race --vault ../conf.crypt config/air/swim-all-sbs-ww.conf</kbd>
 
 ## Example 2: (re)Play it Again
 * only import actors are replaced with replay actors
 * everything else stays the same
-<div class="cmd">./race -Darchive=../data/all-080717-1744 config/air/swim-all-sbs-replay-ww.conf</div>
 
 <img src="../images/source-swap.svg" class="center scale40">
+<kbd>console 1: ./race -Darchive=../data/all-080717-1744 config/air/swim-all-sbs-replay-ww.conf</kbd>
 
 
 ## Example 3: Now With Remote Actors - Location Transparency
 * actors are *location transparent* - can be moved to different RACE processes
 * can exchange data- (SWIM) and control- messages (viewer sync)
 
-<div class="cmd">./race config/remote-lookup/satellite1-replay.conf</div>
-<div class="cmd">./race config/remote-lookup/satellite2-replay.conf</div>
-<div class="cmd">./race  -Dmonitor.interval=15s -Darchive=../data/all-080717-1744/sfdps.ta.gz config/remote-lookup/master-replay-ww.conf</div>
-
 <img src="../images/loc-trans.svg" class="center scale45">
-
+<kbd>console 1: ./race config/remote-lookup/satellite1-replay.conf</kbd>
+<kbd>console 2: ./race config/remote-lookup/satellite2-replay.conf</kbd>
+<kbd>console 3: ./race  -Dmonitor.interval=15s -Darchive=../data/all-080717-1744/sfdps.ta.gz config/remote-lookup/master-replay-ww.conf</kbd>
 
 ## Example 4: What Data - SWIM Message Statistics
 * RACE more than a data visualizer

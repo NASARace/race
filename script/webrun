@@ -1,0 +1,9 @@
+#!/bin/bash
+
+CMD=race-tools/src/main/rust/webrun/target/release/webrun
+
+if [ -x $CMD ]; then
+  $CMD $@
+else
+  echo "$CMD does not exist, please run 'cargo build --release' from within race-tools/src/main/rust/webrun"
+fi

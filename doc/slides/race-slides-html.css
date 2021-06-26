@@ -72,11 +72,8 @@ p.standout {
     font-weight: bolder;
 }
 
-div.cmd {
-    font-size: 60%;
-    font-family: Courier;
-    color: Gray;
-    margin-top: 1rem;
+div.spacer {
+    width: 100%;
 }
 
 .slide ul {
@@ -130,21 +127,40 @@ code {
     color: Blue;
 }
 
+kbd {
+    display: block;
+    cursor: pointer;
+    font-size: 60%;
+    color: gray;
+}
+
+kbd.running {
+    color: Green;
+}
+
 
 /*---------------------------- content image classes -----------------------------*/
+
+/* left and right have to be wrapped into a div */
+
 img.left {
-    float: left;
-    margin: 15px 15px 15px 15px;
+    /*float: left;*/
+    display: inline-block;
+    /*padding: 1rem 2rem 0 1rem; */
+    margin: 15px auto 15px 15px;
+}
+
+img.right {
+    /*float: right;*/
+    display: inline-block;
+    /* padding: 1rem 1rem 0 2rem; */
+    margin: 15px 15px 15px auto;
 }
 
 img.center {
     display: block;
+    /*padding: 1rem 1rem 0 1rem; */
     margin: 15px auto 15px auto;
-}
-
-img.right {
-    float: right;
-    margin: 15px 15px 15px 15px;
 }
 
 img.alignTop {

@@ -29,3 +29,5 @@ conf
 **/metals.sbt
 *.code-workspace
 .bsp
+*.lock
+

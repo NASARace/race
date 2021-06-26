@@ -1,0 +1,10 @@
+#!/bin/bash
+
+PROG=servedoc
+CMD=race-tools/src/main/rust/$PROG/target/release/$PROG
+
+if [ -x $CMD ]; then
+  $CMD $@
+else
+  echo "$CMD does not exist, please run 'cargo build --release' from within race-tools/src/main/rust/$PROG"
+fi

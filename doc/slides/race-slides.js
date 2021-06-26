@@ -13,8 +13,46 @@ var t = 0;
 var timed = false
 var slideshow = false
 
+const webRunBasePort = 4000;
+
 var slideCounter = document.getElementById('counter');
 showCounter();
+setKbdHandlers();
+
+
+function setKbdHandlers() {
+  for (let elem of document.getElementsByTagName("kbd")) {
+    elem.addEventListener( "click", function(e) {
+
+      var match = elem.textContent.match(/^console (\d+): *(.+) *$/);
+      var consoleNumber = parseInt(match[1]);
+      var cmd = match[2];
+      
+      sendWebRunRequest(elem, consoleNumber, cmd);
+      return false;
+    }, false);
+  }
+}
+
+function sendWebRunRequest (elem, consoleNumber, cmd) {
+  var port = webRunBasePort + consoleNumber;
+  var request = new XMLHttpRequest();
+
+  request.onload = function () {
+    if (request.responseText == "done") {
+      elem.classList.remove("running");
+    }
+  }
+
+  request.open( "POST", `http://localhost:${port}/run`, true);
+  request.setRequestHeader( "Content-Type", "text/plain;charset=UTF-8");
+  request.send(cmd);
+
+  //console.log(`http://localhost:${port}/run {${cmd}}`);
+
+  elem.classList.add("running");
+}
+
 
 function toggleFullScreen() {
   if (!isFullScreen){
