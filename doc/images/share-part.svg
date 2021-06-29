@@ -1,0 +1,50 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<svg width="100%" height="100%" version="1.1" viewBox="224.5888 123.0338 1096.268 212.5532" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <filter id="shadow1" width="150%" height="150%">
+      <feGaussianBlur in="SourceAlpha" result="blur" stdDeviation="5" />
+      <feOffset dx="5" dy="5" in="blur" result="offsetBlur" />
+      <feMerge>
+        <feMergeNode in="offsetBlur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+  </defs>
+  <g id="layer1">
+    <ellipse cx="865.5027" cy="265.5" rx="67.5" ry="40.5" opacity="1" stroke="#D3D3D3" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFCC4" fill-opacity="1" />
+    <ellipse cx="716.9979" cy="220.6519" rx="117.882" ry="60.60745" opacity="1" stroke="#D3D3D3" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFCC4" fill-opacity="1" transform="rotate(314 716.9979 220.6519)" />
+    <ellipse cx="376.0888" cy="232.9177" rx="148.5" ry="99" opacity="1" stroke="#D3D3D3" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFCC4" fill-opacity="1" />
+    <rect x="317.5888" y="142.9177" width="81" height="45" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" filter="url(#shadow1)" />
+    <text x="322.9013" y="171.3736" font-size="14" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">coordinator</text>
+    <rect x="245.5888" y="232.9177" width="81" height="45" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" filter="url(#shadow1)" />
+    <text x="266.7812" y="261.3736" font-size="14" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">node 1</text>
+    <rect x="425.5888" y="232.9177" width="81" height="45" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" filter="url(#shadow1)" />
+    <text x="445.8174" y="261.3736" font-size="14" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">node 2</text>
+    <line x1="340.0888" y1="187.9177" x2="304.0888" y2="232.9177" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    <line x1="385.0888" y1="187.9177" x2="439.0888" y2="232.9177" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    <rect x="717.0027" y="153" width="81" height="45" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" filter="url(#shadow1)" />
+    <text x="722.3152" y="181.4559" font-size="14" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">coordinator</text>
+    <rect x="645.002" y="243" width="81" height="45" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" filter="url(#shadow1)" />
+    <text x="666.1944" y="271.4559" font-size="14" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">node 1</text>
+    <rect x="825.0027" y="243" width="81" height="45" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" filter="url(#shadow1)" />
+    <text x="845.2312" y="271.4559" font-size="14" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">node 2</text>
+    <line x1="739.5025" y1="198" x2="703.5022" y2="243" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    <line x1="784.5027" y1="198" x2="838.5027" y2="243" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    <text x="790.6277" y="230.7485" font-size="32" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">✂︎</text>
+    <g>
+      <path d="M547.6055 218.5137 L573.1874 218.5137 L573.1874 205.7227 L598.7697 231.3047 L573.1874 256.8867 L573.1874 244.0957 L547.6055 244.0957 Z " opacity="1" stroke="#FB0106" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FDAFAE" fill-opacity="1" />
+    </g>
+    <g>
+      <path d="M947.4102 217.0372 L972.9921 217.0372 L972.9921 204.2461 L998.5744 229.8281 L972.9921 255.4102 L972.9921 242.6191 L947.4102 242.6191 Z " opacity="1" stroke="#FB0106" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FDAFAE" fill-opacity="1" />
+    </g>
+    <ellipse cx="1169.357" cy="233.5871" rx="148.5" ry="99" opacity="1" stroke="#D3D3D3" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFCC4" fill-opacity="1" />
+    <rect x="1110.858" y="143.5871" width="81" height="45" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" filter="url(#shadow1)" />
+    <text x="1116.17" y="172.0429" font-size="14" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">coordinator</text>
+    <rect x="1038.857" y="233.5871" width="81" height="45" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" filter="url(#shadow1)" />
+    <text x="1060.05" y="262.0429" font-size="14" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">node 1</text>
+    <rect x="1218.859" y="233.5871" width="81" height="45" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" filter="url(#shadow1)" />
+    <text x="1239.087" y="262.0429" font-size="14" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">node 2</text>
+    <line x1="1133.358" y1="188.5871" x2="1097.357" y2="233.5871" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    <line x1="1178.358" y1="188.5871" x2="1232.359" y2="233.5871" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+  </g>
+</svg>

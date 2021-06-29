@@ -17,17 +17,17 @@ const webRunBasePort = 4000;
 
 var slideCounter = document.getElementById('counter');
 showCounter();
-setKbdHandlers();
+setRunHandlers();
+setSrvText();
+setSlideSelectors();
 
 
-function setKbdHandlers() {
-  for (let elem of document.getElementsByTagName("kbd")) {
+function setRunHandlers() {
+  for (let elem of document.getElementsByClassName("run")) {
     elem.addEventListener( "click", function(e) {
-
-      var match = elem.textContent.match(/^console (\d+): *(.+) *$/);
+      var match = elem.textContent.match(/^(\d):\s*(.+)\s*$/);
       var consoleNumber = parseInt(match[1]);
       var cmd = match[2];
-      
       sendWebRunRequest(elem, consoleNumber, cmd);
       return false;
     }, false);
@@ -51,6 +51,42 @@ function sendWebRunRequest (elem, consoleNumber, cmd) {
   //console.log(`http://localhost:${port}/run {${cmd}}`);
 
   elem.classList.add("running");
+}
+
+function setSrvText() {
+  for (let elem of document.getElementsByClassName("srv")) {
+    if (elem.nodeName == "A") {
+      var link = elem.getAttribute("href");
+      if (link) {
+        elem.textContent = link;
+      }
+    }
+  }
+}
+
+
+
+
+function setSlideSelectors() {
+  var navList = document.getElementsByClassName("nav-list")[0];
+  if (navList) {
+    var children = navList.children;
+    for (var i=0; i < children.length; i++) {
+      var clickTo = function(idx) {
+        return function curried () {
+          curIdx = idx;
+          showCounter();
+          console.log("set cur = " + curIdx);
+        }
+      }
+
+      var childElem = children[i];
+      var anchorElem = childElem.firstChild;
+      if (anchorElem && anchorElem.tagName == "A"){
+        anchorElem.addEventListener( "click",  clickTo(i));
+      }
+    }
+  }
 }
 
 

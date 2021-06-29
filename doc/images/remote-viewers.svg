@@ -1,0 +1,156 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<svg width="100%" height="100%" version="1.1" viewBox="-58.00003 1.000036 1168 502.5381" style="background-color:#FFFFFF" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <filter id="shadow1" width="150%" height="150%">
+      <feGaussianBlur in="SourceAlpha" result="blur" stdDeviation="5" />
+      <feOffset dx="5" dy="5" in="blur" result="offsetBlur" />
+      <feMerge>
+        <feMergeNode in="offsetBlur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+  </defs>
+  <marker id="marker1" markerUnits="strokeWidth" orient="auto" refX="-11.17254" refY="0" markerWidth="13.27247" markerHeight="10.22955" viewBox="-12.27247 -5.114774 13.27247 10.22955">
+    <path d="M-11.27247 -4.114774 L0 0 L-11.27247 4.114773 Z " fill="#000000" fill-opacity="1" stroke="#000000" stroke-opacity="1" />
+  </marker>
+  <marker id="marker2" markerUnits="strokeWidth" orient="auto" refX="11.17254" refY="0" markerWidth="13.27247" markerHeight="10.22955" viewBox="-1 -5.114774 13.27247 10.22955">
+    <path d="M11.27247 4.114773 L0 0 L11.27247 -4.114774 Z " fill="#000000" fill-opacity="1" stroke="#000000" stroke-opacity="1" />
+  </marker>
+  <marker id="marker3" markerUnits="strokeWidth" orient="auto" refX="-11.17254" refY="0" markerWidth="13.27247" markerHeight="10.22955" viewBox="-12.27247 -5.114774 13.27247 10.22955">
+    <path d="M-11.27247 -4.114774 L0 0 L-11.27247 4.114773 Z " fill="#000000" fill-opacity="1" stroke="#000000" stroke-opacity="1" />
+  </marker>
+  <marker id="marker4" markerUnits="strokeWidth" orient="auto" refX="11.17254" refY="0" markerWidth="13.27247" markerHeight="10.22955" viewBox="-1 -5.114774 13.27247 10.22955">
+    <path d="M11.27247 4.114773 L0 0 L11.27247 -4.114774 Z " fill="#000000" fill-opacity="1" stroke="#000000" stroke-opacity="1" />
+  </marker>
+  <marker id="marker5" markerUnits="strokeWidth" orient="auto" refX="-11.17254" refY="0" markerWidth="13.27247" markerHeight="10.22955" viewBox="-12.27247 -5.114774 13.27247 10.22955">
+    <path d="M-11.27247 -4.114774 L0 0 L-11.27247 4.114773 Z " fill="#000000" fill-opacity="1" stroke="#000000" stroke-opacity="1" />
+  </marker>
+  <marker id="marker6" markerUnits="strokeWidth" orient="auto" refX="-11.17254" refY="0" markerWidth="13.27247" markerHeight="10.22955" viewBox="-12.27247 -5.114774 13.27247 10.22955">
+    <path d="M-11.27247 -4.114774 L0 0 L-11.27247 4.114773 Z " fill="#000000" fill-opacity="1" stroke="#000000" stroke-opacity="1" />
+  </marker>
+  <marker id="marker7" markerUnits="strokeWidth" orient="auto" refX="11.17254" refY="0" markerWidth="13.27247" markerHeight="10.22955" viewBox="-1 -5.114774 13.27247 10.22955">
+    <path d="M11.27247 4.114773 L0 0 L11.27247 -4.114774 Z " fill="#000000" fill-opacity="1" stroke="#000000" stroke-opacity="1" />
+  </marker>
+  <marker id="marker8" markerUnits="strokeWidth" orient="auto" refX="-11.17254" refY="0" markerWidth="13.27247" markerHeight="10.22955" viewBox="-12.27247 -5.114774 13.27247 10.22955">
+    <path d="M-11.27247 -4.114774 L0 0 L-11.27247 4.114773 Z " fill="#000000" fill-opacity="1" stroke="#000000" stroke-opacity="1" />
+  </marker>
+  <marker id="marker9" markerUnits="strokeWidth" orient="auto" refX="11.17254" refY="0" markerWidth="13.27247" markerHeight="10.22955" viewBox="-1 -5.114774 13.27247 10.22955">
+    <path d="M11.27247 4.114773 L0 0 L11.27247 -4.114774 Z " fill="#000000" fill-opacity="1" stroke="#000000" stroke-opacity="1" />
+  </marker>
+  <marker id="marker10" markerUnits="strokeWidth" orient="auto" refX="-11.17254" refY="0" markerWidth="13.27247" markerHeight="10.22955" viewBox="-12.27247 -5.114774 13.27247 10.22955">
+    <path d="M-11.27247 -4.114774 L0 0 L-11.27247 4.114773 Z " fill="#000000" fill-opacity="1" stroke="#000000" stroke-opacity="1" />
+  </marker>
+  <g id="layer1">
+    <rect x="523.5347" y="402.5811" width="202.3047" height="97.95701" rx="18" ry="18" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FDFCC2" fill-opacity="1" />
+    <rect x="523.5349" y="258.5816" width="202.3047" height="97.95701" rx="18" ry="18" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FDFCC2" fill-opacity="1" />
+    <rect x="523.5352" y="68.582" width="202.3047" height="97.957" rx="18" ry="18" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FDFCC2" fill-opacity="1" />
+    <rect x="210.0821" y="129.0625" width="209.125" height="321.3711" rx="18" ry="18" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FDFCC2" fill-opacity="1" />
+    <rect x="279" y="153" width="108" height="72" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" filter="url(#shadow1)" />
+    <text x="294.8833" y="195.6449" font-size="22" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">importer</text>
+    <rect x="279" y="252" width="108" height="72" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" filter="url(#shadow1)" />
+    <text x="298.8364" y="294.6449" font-size="22" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">viewer1</text>
+    <rect x="279" y="351" width="108" height="72" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" filter="url(#shadow1)" />
+    <text x="297.4883" y="393.6449" font-size="22" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">viewer2</text>
+    <line x1="234" y1="109.9766" x2="234" y2="459.9102" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="6" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    <line x1="279" y1="189" x2="246.1725" y2="189" marker-end="url(#marker1)" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    <line x1="246.1725" y1="288" x2="266.8275" y2="288" marker-start="url(#marker2)" marker-end="url(#marker3)" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    <line x1="246.1725" y1="387" x2="266.8275" y2="387" marker-start="url(#marker4)" marker-end="url(#marker5)" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    <text x="-51.00003" y="165.9" font-size="14" fill="#0000FE" fill-opacity="1" font-family="Monaco" font-weight="normal" font-style="normal">name = “master”
+</text>
+    <text x="-51.00003" y="184.9" font-size="14" fill="#0000FE" fill-opacity="1" font-family="Monaco" font-weight="normal" font-style="normal">actors = [
+</text>
+    <text x="-51.00003" y="203.9" font-size="14" fill="#0000FE" fill-opacity="1" font-family="Monaco" font-weight="normal" font-style="normal">  { name = “importer”
+</text>
+    <text x="-51.00003" y="222.9" font-size="14" fill="#0000FE" fill-opacity="1" font-family="Monaco" font-weight="normal" font-style="normal">    class = “..”
+</text>
+    <text x="-51.00003" y="241.9" font-size="14" fill="#0000FE" fill-opacity="1" font-family="Monaco" font-weight="normal" font-style="normal">    write-to: “/data” ..},
+</text>
+    <text x="-51.00003" y="260.9" font-size="14" fill="#0000FE" fill-opacity="1" font-family="Monaco" font-weight="normal" font-style="normal">
+</text>
+    <text x="-51.00003" y="279.9" font-size="14" fill="#0000FE" fill-opacity="1" font-family="Monaco" font-weight="normal" font-style="normal">  { name = “viewer1”
+</text>
+    <text x="-51.00003" y="298.9" font-size="14" fill="#0000FE" fill-opacity="1" font-family="Monaco" font-weight="normal" font-style="normal">    class = “..”
+</text>
+    <text x="-51.00003" y="317.9" font-size="14" fill="#0000FE" fill-opacity="1" font-family="Monaco" font-weight="normal" font-style="normal">    ..read-from: “/data” ..},
+</text>
+    <text x="-51.00003" y="336.9" font-size="14" fill="#0000FE" fill-opacity="1" font-family="Monaco" font-weight="normal" font-style="normal">
+</text>
+    <text x="-51.00003" y="355.9" font-size="14" fill="#0000FE" fill-opacity="1" font-family="Monaco" font-weight="normal" font-style="normal">  { name = “viewer2”
+</text>
+    <text x="-51.00003" y="374.9" font-size="14" fill="#0000FE" fill-opacity="1" font-family="Monaco" font-weight="normal" font-style="normal">    class = “..”
+</text>
+    <text x="-51.00003" y="393.9" font-size="14" fill="#0000FE" fill-opacity="1" font-family="Monaco" font-weight="normal" font-style="normal">    ..read-from: “/data” ..}
+</text>
+    <text x="215.4156" y="90.78358" font-size="22" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">/data</text>
+    <rect x="603" y="81" width="108" height="72" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" filter="url(#shadow1)" />
+    <text x="618.8833" y="123.6449" font-size="22" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">importer</text>
+    <rect x="603" y="270" width="108" height="72" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" filter="url(#shadow1)" />
+    <text x="622.8364" y="312.6449" font-size="22" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">viewer1</text>
+    <rect x="603" y="414" width="108" height="72" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" filter="url(#shadow1)" />
+    <text x="621.4883" y="456.6449" font-size="22" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">viewer2</text>
+    <line x1="540" y1="81" x2="540" y2="486" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="6" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    <line x1="603" y1="117" x2="552.1725" y2="117" marker-end="url(#marker6)" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    <line x1="552.1725" y1="306" x2="590.8274" y2="306" marker-start="url(#marker7)" marker-end="url(#marker8)" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    <line x1="552.1725" y1="450" x2="590.8274" y2="450" marker-start="url(#marker9)" marker-end="url(#marker10)" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    <g>
+      <g>
+        <path d="M581.0889 127.9234 C578.9987 128.3924 576.8832 127.8548 575.4225 126.6881 C574.6594 127.4567 573.6266 128.0492 572.387 128.3283 C569.1977 129.0444 565.9119 127.4544 565.0574 124.7802 C564.9949 124.5857 564.9783 124.3868 564.9444 124.1901 C562.0723 124.4417 559.324 122.9341 558.5529 120.5229 C557.789 118.1324 559.2305 115.6891 561.8218 114.6849 C561.681 114.4286 561.5496 114.1633 561.46 113.882 C560.6053 111.2098 562.5042 108.4626 565.6937 107.7442 C567.2555 107.3942 568.8342 107.6001 570.1448 108.2109 C570.8671 106.916 572.2136 105.8752 573.9885 105.4748 C576.5214 104.9075 579.0916 105.8088 580.479 107.5361 C581.0412 107.2021 581.6663 106.9251 582.3697 106.7673 C585.5594 106.0514 588.838 107.6435 589.6923 110.3155 C590.1219 111.6606 589.8561 113.0218 589.0806 114.1359 C589.8482 114.7489 590.4492 115.5269 590.7436 116.4486 C591.598 119.1205 589.6994 121.8681 586.51 122.5841 C586.1743 122.6595 585.8379 122.703 585.5032 122.7282 C585.7015 125.0754 583.9015 127.292 581.0889 127.9234 Z " opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="round" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="0.7589129" />
+      </g>
+    </g>
+    <text x="759" y="21.90003" font-size="14" fill="#0000FE" fill-opacity="1" font-family="Monaco" font-weight="normal" font-style="normal">name = “master”
+</text>
+    <text x="759" y="40.90003" font-size="14" fill="#0000FE" fill-opacity="1" font-family="Monaco" font-weight="normal" font-style="normal">actors = [
+</text>
+    <text x="759" y="59.90003" font-size="14" fill="#0000FE" fill-opacity="1" font-family="Monaco" font-weight="normal" font-style="normal">  { name = “importer”
+</text>
+    <text x="759" y="78.90003" font-size="14" fill="#0000FE" fill-opacity="1" font-family="Monaco" font-weight="normal" font-style="normal">    class = “..”
+</text>
+    <text x="759" y="97.90003" font-size="14" fill="#0000FE" fill-opacity="1" font-family="Monaco" font-weight="normal" font-style="normal">    write-to: “/data” ..},
+</text>
+    <text x="759" y="116.9" font-size="14" fill="#0000FE" fill-opacity="1" font-family="Monaco" font-weight="normal" font-style="normal">
+</text>
+    <text x="759" y="135.9" font-size="14" fill="#0000FE" fill-opacity="1" font-family="Monaco" font-weight="normal" font-style="normal">  { name = “viewer1”
+</text>
+    <text x="759" y="154.9" font-size="14" fill="#0000FE" fill-opacity="1" font-family="Monaco" font-weight="normal" font-style="normal">    remote = “tcp://host/satellite1..”},
+</text>
+    <text x="759" y="173.9" font-size="14" fill="#0000FE" fill-opacity="1" font-family="Monaco" font-weight="normal" font-style="normal">
+</text>
+    <text x="759" y="192.9" font-size="14" fill="#0000FE" fill-opacity="1" font-family="Monaco" font-weight="normal" font-style="normal">  { name = “viewer2”
+</text>
+    <text x="759" y="211.9" font-size="14" fill="#0000FE" fill-opacity="1" font-family="Monaco" font-weight="normal" font-style="normal">    remote = “tcp://host/satellite2..”}
+</text>
+    <g>
+      <path d="M441 277.5 L474.5 277.5 L474.5 265 L508 290 L474.5 315 L474.5 302.5 L441 302.5 Z " opacity="1" stroke="#FB0106" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FDC2B9" fill-opacity="1" />
+    </g>
+    <text x="758.9999" y="273.9001" font-size="14" fill="#0000FE" fill-opacity="1" font-family="Monaco" font-weight="normal" font-style="normal">name = “satellite1”
+</text>
+    <text x="758.9999" y="292.9001" font-size="14" fill="#0000FE" fill-opacity="1" font-family="Monaco" font-weight="normal" font-style="normal">actors = [
+</text>
+    <text x="758.9999" y="311.9001" font-size="14" fill="#0000FE" fill-opacity="1" font-family="Monaco" font-weight="normal" font-style="normal">  { name = “viewer1”
+</text>
+    <text x="758.9999" y="330.9001" font-size="14" fill="#0000FE" fill-opacity="1" font-family="Monaco" font-weight="normal" font-style="normal">    class = “…” 
+</text>
+    <text x="758.9999" y="349.9001" font-size="14" fill="#0000FE" fill-opacity="1" font-family="Monaco" font-weight="normal" font-style="normal">    read-from = “/data”
+</text>
+    <text x="758.9999" y="368.9001" font-size="14" fill="#0000FE" fill-opacity="1" font-family="Monaco" font-weight="normal" font-style="normal">    ..}
+</text>
+    <text x="758.9999" y="387.9001" font-size="14" fill="#0000FE" fill-opacity="1" font-family="Monaco" font-weight="normal" font-style="normal">]</text>
+    <text x="758.9999" y="444.9001" font-size="14" fill="#0000FE" fill-opacity="1" font-family="Monaco" font-weight="normal" font-style="normal">name = “satellite2”
+</text>
+    <text x="758.9999" y="463.9001" font-size="14" fill="#0000FE" fill-opacity="1" font-family="Monaco" font-weight="normal" font-style="normal">actors = [
+</text>
+    <text x="758.9999" y="482.9001" font-size="14" fill="#0000FE" fill-opacity="1" font-family="Monaco" font-weight="normal" font-style="normal">  { name = “viewer2” ..</text>
+    <g>
+      <g>
+        <path d="M577.5885 316.4245 C575.4983 316.8935 573.3828 316.3558 571.9221 315.1892 C571.159 315.9578 570.1262 316.5504 568.8866 316.8295 C565.6973 317.5456 562.4115 315.9555 561.5569 313.2812 C561.4945 313.0867 561.4779 312.8878 561.444 312.6911 C558.5719 312.9427 555.8236 311.4351 555.0525 309.0238 C554.2886 306.6332 555.7301 304.1898 558.3214 303.1856 C558.1806 302.9293 558.0493 302.664 557.9595 302.3826 C557.1049 299.7104 559.0038 296.9631 562.1933 296.2447 C563.7551 295.8947 565.3339 296.1006 566.6444 296.7114 C567.3667 295.4164 568.7132 294.3756 570.4882 293.9751 C573.021 293.4079 575.5912 294.3092 576.9786 296.0365 C577.5408 295.7025 578.1659 295.4255 578.8693 295.2678 C582.059 294.5518 585.3375 296.144 586.192 298.8161 C586.6215 300.1612 586.3558 301.5224 585.5802 302.6366 C586.3478 303.2496 586.9489 304.0276 587.2432 304.9493 C588.0976 307.6213 586.199 310.369 583.0096 311.0851 C582.674 311.1605 582.3375 311.204 582.0028 311.2292 C582.2012 313.5764 580.4011 315.7931 577.5885 316.4245 Z " opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="round" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="0.7589129" />
+      </g>
+    </g>
+    <g>
+      <g>
+        <path d="M577.5882 460.428 C575.498 460.8971 573.3825 460.3594 571.9219 459.1928 C571.1588 459.9614 570.126 460.554 568.8864 460.8331 C565.697 461.5492 562.4112 459.9591 561.5567 457.2848 C561.4942 457.0903 561.4777 456.8914 561.4437 456.6947 C558.5717 456.9463 555.8234 455.4387 555.0522 453.0273 C554.2883 450.6368 555.7298 448.1934 558.3212 447.1891 C558.1803 446.9329 558.049 446.6675 557.9593 446.3862 C557.1046 443.7139 559.0035 440.9666 562.193 440.2483 C563.7548 439.8983 565.3336 440.1041 566.6441 440.7149 C567.3664 439.42 568.7129 438.3792 570.4879 437.9787 C573.0207 437.4114 575.5909 438.3128 576.9783 440.0401 C577.5405 439.7061 578.1656 439.429 578.869 439.2714 C582.0588 438.5554 585.3373 440.1476 586.1917 442.8196 C586.6212 444.1648 586.3555 445.5259 585.58 446.6402 C586.3475 447.2532 586.9485 448.0312 587.2429 448.9529 C588.0973 451.6249 586.1987 454.3725 583.0093 455.0886 C582.6736 455.164 582.3373 455.2076 582.0025 455.2327 C582.2009 457.58 580.4009 459.7966 577.5882 460.428 Z " opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="round" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="0.7589129" />
+      </g>
+    </g>
+    <line x1="747" y1="405" x2="1062" y2="405" opacity="1" stroke="#0000FE" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="8,4,2,4" />
+    <line x1="747" y1="234" x2="1062" y2="234" opacity="1" stroke="#0000FE" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="8,4,2,4" />
+  </g>
+</svg>

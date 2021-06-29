@@ -1,0 +1,64 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<svg width="100%" height="100%" version="1.1" viewBox="177 128 843 487" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns="http://www.w3.org/2000/svg">
+  <defs />
+  <g id="layer1">
+    <rect x="184" y="433.9989" width="810" height="27" opacity="1" fill="#E6E6E6" fill-opacity="1" />
+    <rect x="182" y="289.9994" width="810" height="27" opacity="1" fill="#E6E6E6" fill-opacity="1" />
+    <rect x="180" y="131" width="810" height="27" opacity="1" fill="#E6E6E6" fill-opacity="1" />
+    <text x="192" y="155.2" font-size="12" fill="#000000" fill-opacity="1" font-family="Monaco" font-weight="normal" font-style="normal">1. En Route (SFDPS) Message Statistics [/swim/sfdps]                                                00:02:00
+</text>
+    <text x="192" y="171.2" font-size="12" fill="#000000" fill-opacity="1" font-family="Monaco" font-weight="normal" font-style="normal">     count     msg/s    peak    byte/s    peak        size     avg   msg
+</text>
+    <text x="192" y="187.2" font-size="12" fill="#000000" fill-opacity="1" font-family="Monaco" font-weight="normal" font-style="normal">----------   ------- -------   ------- -------   --------- -------   ---------------------------------------
+</text>
+    <text x="192" y="203.2" font-size="12" fill="#000000" fill-opacity="1" font-family="Monaco" font-weight="normal" font-style="normal">        41         0       1    115 kB  255 kB     13.0 MB  326 kB   FDPSMsg
+</text>
+    <text x="192" y="219.2" font-size="12" fill="#000000" fill-opacity="1" font-family="Monaco" font-weight="normal" font-style="normal">      9023        75     110   23.8 MB 35.1 MB      2.8 GB  324 kB   ns5:MessageCollection
+</text>
+    <text x="192" y="235.2" font-size="12" fill="#000000" fill-opacity="1" font-family="Monaco" font-weight="normal" font-style="normal">                                                                           63795 **/flight
+</text>
+    <text x="192" y="251.2" font-size="12" fill="#000000" fill-opacity="1" font-family="Monaco" font-weight="normal" font-style="normal">         8         0       1     24 kB  189 kB      2.5 MB  326 kB   ns7:AIXMBasicMessage
+</text>
+    <text x="192" y="267.2" font-size="12" fill="#000000" fill-opacity="1" font-family="Monaco" font-weight="normal" font-style="normal">----------   ------- -------   ------- -------   --------- -------
+</text>
+    <text x="192" y="283.2" font-size="12" fill="#000000" fill-opacity="1" font-family="Monaco" font-weight="normal" font-style="normal">      9072        75     112   23.9 MB 35.5 MB      2.8 GB  324 kB
+</text>
+    <text x="192" y="299.2" font-size="12" fill="#000000" fill-opacity="1" font-family="Monaco" font-weight="normal" font-style="normal">
+</text>
+    <text x="192" y="315.2" font-size="12" fill="#000000" fill-opacity="1" font-family="Monaco" font-weight="normal" font-style="normal">2. TRACON (TAIS) Message Statistics [/swim/tais]                                                    00:02:00
+</text>
+    <text x="192" y="331.2" font-size="12" fill="#000000" fill-opacity="1" font-family="Monaco" font-weight="normal" font-style="normal">     count     msg/s    peak    byte/s    peak        size     avg   msg
+</text>
+    <text x="192" y="347.2" font-size="12" fill="#000000" fill-opacity="1" font-family="Monaco" font-weight="normal" font-style="normal">----------   ------- -------   ------- -------   --------- -------   ---------------------------------------
+</text>
+    <text x="192" y="363.2" font-size="12" fill="#000000" fill-opacity="1" font-family="Monaco" font-weight="normal" font-style="normal">       296         2       5     82 kB  168 kB      9.6 MB   33 kB   ns2:TAStatus
+</text>
+    <text x="192" y="379.2" font-size="12" fill="#000000" fill-opacity="1" font-family="Monaco" font-weight="normal" font-style="normal">     48110       400     575   13.1 MB 18.0 MB      1.5 GB   33 kB   ns2:TATrackAndFlightPlan
+</text>
+    <text x="192" y="395.2" font-size="12" fill="#000000" fill-opacity="1" font-family="Monaco" font-weight="normal" font-style="normal">                                                                          348264 **/record/track
+</text>
+    <text x="192" y="411.2" font-size="12" fill="#000000" fill-opacity="1" font-family="Monaco" font-weight="normal" font-style="normal">----------   ------- -------   ------- -------   --------- -------
+</text>
+    <text x="192" y="427.2" font-size="12" fill="#000000" fill-opacity="1" font-family="Monaco" font-weight="normal" font-style="normal">     48406       403     580   13.1 MB 18.1 MB      1.5 GB   33 kB
+</text>
+    <text x="192" y="443.2" font-size="12" fill="#000000" fill-opacity="1" font-family="Monaco" font-weight="normal" font-style="normal">
+</text>
+    <text x="192" y="459.2" font-size="12" fill="#000000" fill-opacity="1" font-family="Monaco" font-weight="normal" font-style="normal">3. Airport (ASDE-X) Message Statistics [/swim/asdex]                                                00:02:00
+</text>
+    <text x="192" y="475.2" font-size="12" fill="#000000" fill-opacity="1" font-family="Monaco" font-weight="normal" font-style="normal">     count     msg/s    peak    byte/s    peak        size     avg   msg
+</text>
+    <text x="192" y="491.2" font-size="12" fill="#000000" fill-opacity="1" font-family="Monaco" font-weight="normal" font-style="normal">----------   ------- -------   ------- -------   --------- -------   ---------------------------------------
+</text>
+    <text x="192" y="507.2" font-size="12" fill="#000000" fill-opacity="1" font-family="Monaco" font-weight="normal" font-style="normal">       519         4      10    146 kB  287 kB     17.1 MB   34 kB   ns2:SafetyLogicHoldBar
+</text>
+    <text x="192" y="523.2" font-size="12" fill="#000000" fill-opacity="1" font-family="Monaco" font-weight="normal" font-style="normal">       123         1       2     35 kB   92 kB      4.1 MB   34 kB   ns2:SurfaceMovementEventMessage
+</text>
+    <text x="192" y="539.2" font-size="12" fill="#000000" fill-opacity="1" font-family="Monaco" font-weight="normal" font-style="normal">     32868       273     405    9.1 MB 12.7 MB      1.1 GB   34 kB   ns2:asdexMsg
+</text>
+    <text x="192" y="555.2" font-size="12" fill="#000000" fill-opacity="1" font-family="Monaco" font-weight="normal" font-style="normal">                                                                          264241 **/positionReport
+</text>
+    <text x="192" y="571.2" font-size="12" fill="#000000" fill-opacity="1" font-family="Monaco" font-weight="normal" font-style="normal">----------   ------- -------   ------- -------   --------- -------
+</text>
+    <text x="192" y="587.2" font-size="12" fill="#000000" fill-opacity="1" font-family="Monaco" font-weight="normal" font-style="normal">     33510       279     418    9.3 MB 13.1 MB      1.1 GB   34 kB</text>
+  </g>
+</svg>

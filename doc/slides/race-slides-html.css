@@ -127,15 +127,23 @@ code {
     color: Blue;
 }
 
-kbd {
+
+
+div.run {
     display: block;
     cursor: pointer;
     font-size: 60%;
+    font-family: monospace;
     color: gray;
 }
 
-kbd.running {
+div.running {
     color: Green;
+}
+
+a.srv {
+    font-size: 60%;
+    color: gray;
 }
 
 
@@ -143,18 +151,21 @@ kbd.running {
 
 /* left and right have to be wrapped into a div */
 
+
 img.left {
     /*float: left;*/
     display: inline-block;
+    vertical-align: middle;
     /*padding: 1rem 2rem 0 1rem; */
-    margin: 15px auto 15px 15px;
+    margin: 15px 30px 15px 15px;
 }
 
 img.right {
     /*float: right;*/
     display: inline-block;
+    vertical-align: middle;
     /* padding: 1rem 1rem 0 2rem; */
-    margin: 15px 15px 15px auto;
+    margin: 15px 15px 15px 30px;
 }
 
 img.center {
