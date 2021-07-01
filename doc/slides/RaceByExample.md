@@ -178,7 +178,8 @@ goal: automatically detect parallel approaches that are angled-in exceeding
 
 ## Sharing Data - Application
 * can be incorporated into any RACE application
-* turn RACE applications into Web Application servers
+* turns RACE applications into Web Application servers
+* data model can include discrete event updates (counters) and streams (links)
 
 <div>
   <img src="../images/share-actors.svg" class="left scale65"/>

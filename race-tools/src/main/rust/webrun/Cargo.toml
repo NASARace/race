@@ -14,3 +14,4 @@ opt-level = 'z'  # Optimize for size.
 tokio = { version = "1", features = ["full"] }
 warp = "0.3"
 bytes = "1"
+structopt = "0.3"

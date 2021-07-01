@@ -44,11 +44,11 @@ function sendWebRunRequest (elem, consoleNumber, cmd) {
     }
   }
 
+  console.log(`http://localhost:${port}/run {${cmd}}`);
+
   request.open( "POST", `http://localhost:${port}/run`, true);
   request.setRequestHeader( "Content-Type", "text/plain;charset=UTF-8");
   request.send(cmd);
-
-  //console.log(`http://localhost:${port}/run {${cmd}}`);
 
   elem.classList.add("running");
 }

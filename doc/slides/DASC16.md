@@ -53,7 +53,7 @@ SGT Inc, NASA Ames Research Center
 </pre>
 
 ## RaceActors
-<img src="../images/actor-states.svg" class="right scale50">
+<img src="../images/actor-states.svg" class="rightFloat scale45">
 
 * specialized Akka actors
 * implement underlying state model in library classes
@@ -63,6 +63,7 @@ SGT Inc, NASA Ames Research Center
     + initialization
     + start
     + termination
+    
 * concrete RaceActors mostly just define (user-) message handler
 * communicate through (configured) _channels_ (publish/subscribe)
 * support _location transparency_ (can be distributed across network)

@@ -168,6 +168,11 @@ img.right {
     margin: 15px 15px 15px 30px;
 }
 
+img.rightFloat {
+    float: right;
+    display: inline-block;
+}
+
 img.center {
     display: block;
     /*padding: 1rem 1rem 0 1rem; */

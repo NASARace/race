@@ -42,6 +42,11 @@ object TaskSettings {
   lazy val makeCmd = settingKey[String]("command to run make")
   lazy val makefile = settingKey[String]("name of Makefile")
 
+  lazy val cargoBuild = inputKey[Unit]("run 'cargo build' in current project")
+  lazy val cargoBuildRelease = inputKey[Unit]("run 'cargo build --release' in current project")
+  lazy val cargoClean = inputKey[Unit]("run 'cargo clean' in current project")
+
+
   lazy val taskSettings = Seq(
     //--- unix tree command (listing what is under current src/)
     tree := TreeTask(sourceDirectory.value),
@@ -74,6 +79,11 @@ object TaskSettings {
     makefile := MakeTask.defaultMakefile,
     make := MakeTask.makeAll(makeCmd.value,baseDirectory.value,makefile.value),
     makeClean := MakeTask.makeClean(makeCmd.value,baseDirectory.value,makefile.value),
+
+    //--- cargo tasks (Rust build tool)
+    cargoBuild := CargoTask.cargoBuild( baseDirectory.value, CargoTask.pathParser.parsed),
+    cargoBuildRelease := CargoTask.cargoBuildRelease( baseDirectory.value, CargoTask.pathParser.parsed),
+    cargoClean := CargoTask.cargoClean( baseDirectory.value, CargoTask.pathParser.parsed),
 
     //--- Laika wrappers
 

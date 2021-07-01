@@ -118,8 +118,10 @@ goal: automatically detect parallel approaches that are angled-in exceeding
 * left shows TCAS display of simulator flight FDZ001 - live flight XY333 shown as alert
 * right shows RACE viewer with LoS event between simulated (FDZ001) and live (XY333) flight
 
+<div>
 <img src="../images/fdz-output-a.png" class="left scale35">
 <img src="../images/fdz-output-b.png" class="right scale35">
+</div>
 
 
 ## (4) Loss of Separation - Implementation & Lessons

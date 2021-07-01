@@ -18,6 +18,19 @@
 use warp::Filter;
 use warp::path::FullPath;
 use std::fs;
+use structopt::StructOpt;
+
+#[derive(Clone,Debug,StructOpt)]
+struct Opt {
+    #[structopt(long,default_value="8080")]
+    port: u16,
+
+    #[structopt(short,long)]
+    verbose: bool,
+
+    #[structopt(long,default_value="target/doc")]
+    root: String,
+}
 
 
 /// simple web server to serve target/doc contents on port 8080
@@ -28,64 +41,68 @@ use std::fs;
 
 #[tokio::main]
 async fn main() {
-    let root = "target/doc";
+    let opt = Opt::from_args();
+    let root = opt.root;
+    let port = opt.port;
 
-    let routes = warp::fs::dir(root)
-      .or( warp::path::full().map(move |fp: FullPath| {
-          let fps = fp.as_str();
-          let p = root.to_string() + fps;
-
-          if let Ok(metadata) = fs::metadata(p.as_str()) {
-              if metadata.is_dir() {
-                  let mut response = init_response(&fps);
-                  for entry in fs::read_dir(p.as_str()).unwrap() {
-                    if let Ok(entry) = entry {
-
-                        let path_buf = entry.path();
-                        let path = path_buf.as_path();
-    
-                        if let Ok(metadata) = entry.metadata() {
-                            if let Some(fname) = path.file_name() {
-                                if let Some(fname) = fname.to_str() {
-                                    if metadata.is_file() {
-                                        if let Some(ext) = path.extension() {
-                                            if ext == "html" {
-                                                add_link(&mut response, "📄️ ", &fps, &fname);
+    let routes = warp::fs::dir(root.clone())
+        .or(warp::path::full().map( move |fp: FullPath| {
+                let fps = fp.as_str();
+                let p = format!("{}{}", root, fps);
+        
+                if let Ok(metadata) = fs::metadata(p.as_str()) {
+                    if metadata.is_dir() {
+                        let mut response = init_response(&fps);
+                        for entry in fs::read_dir(p.as_str()).unwrap() {
+                            if let Ok(entry) = entry {
+        
+                                let path_buf = entry.path();
+                                let path = path_buf.as_path();
+            
+                                if let Ok(metadata) = entry.metadata() {
+                                    if let Some(fname) = path.file_name() {
+                                        if let Some(fname) = fname.to_str() {
+                                            if metadata.is_file() {
+                                                if let Some(ext) = path.extension() {
+                                                    if ext == "html" {
+                                                        add_link(&mut response, "📄️ ", &fps, &fname);
+                                                    }
+                                                }
+                                            } else if metadata.is_dir() {
+                                                add_link(&mut response, "📁️ ", &fps, &fname);  // \u{1f4c1}
                                             }
                                         }
-                                    } else if metadata.is_dir() {
-                                        add_link(&mut response, "📁️ ", &fps, &fname);  // \u{1f4c1}
                                     }
                                 }
                             }
                         }
+                        finish_response(&mut response);
+                        warp::reply::html(response)
+        
+                    } else {
+                        warp::reply::html( format!("can't access {}", p.as_str()))
+                        //warp::reply::with_status( format!("can't access {}", p.as_str()), warp::http::StatusCode::FORBIDDEN)  // otherwise warp::fs::dir() should have served it
                     }
+                } else {
+                    warp::reply::html( format!("don't know about {}", p.as_str()))
+                    //warp::reply::with_status( format!("don't know about {}", p.as_str()), warp::http::StatusCode::NOT_FOUND)
                 }
-                finish_response(&mut response);
-                warp::reply::html(response)
-
-              } else {
-                  warp::reply::html( format!("can't access {}", p.as_str()))
-                  //warp::reply::with_status( format!("can't access {}", p.as_str()), warp::http::StatusCode::FORBIDDEN)  // otherwise warp::fs::dir() should have served it
-              }
-          } else {
-              warp::reply::html( format!("don't know about {}", p.as_str()))
-              //warp::reply::with_status( format!("don't know about {}", p.as_str()), warp::http::StatusCode::NOT_FOUND)
-          }
-      }));
+            })
+        );
 
     let log = warp::log::custom(|info| {
         println!("{} {} -> {}", info.method(), info.path(), info.status())
     });
 
-    println!("serving target/doc on http://localhost:8080");
+    println!("serving target/doc on http://localhost:{}", port);
     println!("(terminate with ctrl-C)");
 
-    warp::serve(routes.with(log))
-    .run(([127, 0, 0, 1], 8080))
-    .await;
+    if opt.verbose {
+        warp::serve( routes.with(log) ).run(([127, 0, 0, 1], port)).await
+    } else {
+        warp::serve( routes ).run(([127, 0, 0, 1], port)).await
+    }
 }
-
 
 fn init_response (path: &str) -> String {
     let mut s = String::new();

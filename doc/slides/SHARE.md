@@ -16,7 +16,7 @@ NASA Ames Research Center
 * rapid, non-disruptive rollout/tear down
 * dynamic provider- and data sets
 * fail-operational
-<img src="../images/share-problem.svg" class="center up75 back scale80">
+<img src="../images/share-problem.svg" class="center up75 back scale70">
   
 
 ## Key Requirements
@@ -31,7 +31,7 @@ NASA Ames Research Center
 
 ## Solution
 * ad hoc overlay using dedicated, pre-configured *SHARE nodes* inside provider networks
-<img src="../images/share-adhoc.svg" class="center scale80">
+<img src="../images/share-adhoc.svg" class="center scale75">
 
 
 ## SHARE Node
