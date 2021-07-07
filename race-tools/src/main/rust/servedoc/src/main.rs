@@ -15,6 +15,9 @@
  * limitations under the License.
  */
 
+#[macro_use]
+extern crate lazy_static;
+
 use warp::Filter;
 use warp::path::FullPath;
 use std::fs;
@@ -32,6 +35,9 @@ struct Opt {
     root: String,
 }
 
+lazy_static! {
+    static ref OPT: Opt = Opt::from_args();
+}
 
 /// simple web server to serve target/doc contents on port 8080
 /// start from repository root dir
@@ -41,14 +47,10 @@ struct Opt {
 
 #[tokio::main]
 async fn main() {
-    let opt = Opt::from_args();
-    let root = opt.root;
-    let port = opt.port;
-
-    let routes = warp::fs::dir(root.clone())
+    let routes = warp::fs::dir(OPT.root.as_str())
         .or(warp::path::full().map( move |fp: FullPath| {
                 let fps = fp.as_str();
-                let p = format!("{}{}", root, fps);
+                let p = format!("{}{}", OPT.root, fps);
         
                 if let Ok(metadata) = fs::metadata(p.as_str()) {
                     if metadata.is_dir() {
@@ -94,13 +96,13 @@ async fn main() {
         println!("{} {} -> {}", info.method(), info.path(), info.status())
     });
 
-    println!("serving target/doc on http://localhost:{}", port);
+    println!("serving target/doc on http://localhost:{}", OPT.port);
     println!("(terminate with ctrl-C)");
 
-    if opt.verbose {
-        warp::serve( routes.with(log) ).run(([127, 0, 0, 1], port)).await
+    if OPT.verbose {
+        warp::serve( routes.with(log) ).run(([127, 0, 0, 1], OPT.port)).await
     } else {
-        warp::serve( routes ).run(([127, 0, 0, 1], port)).await
+        warp::serve( routes ).run(([127, 0, 0, 1], OPT.port)).await
     }
 }
 

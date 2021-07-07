@@ -15,6 +15,8 @@
  * limitations under the License.
  */
 
+#[macro_use]
+extern crate lazy_static;
 
 use warp::Filter;
 use bytes::Bytes;
@@ -44,10 +46,15 @@ struct Opt {
     base_port: u16,
 
     #[structopt(short,long,default_value="1")]
-      console: u16,
+    console: u16,
     
     #[structopt(short,long)]
     verbose: bool
+}
+
+lazy_static! {
+    static ref OPT: Opt = Opt::from_args();
+    static ref PORT: u16 = OPT.base_port + OPT.console;
 }
 
 static HOST: &str = "localhost";
@@ -56,19 +63,13 @@ static PATH: &str = "run";
 
 #[tokio::main]
 async fn main() {
-  let opt = Opt::from_args();
-  let verbose = opt.verbose;
-  let console_n = opt.console;
-  let port: u16 = opt.base_port + console_n;
-
   let cors = warp::cors()
     //.allow_any_origin() // this would allow us to run slides from the file system but leaves webrun wide open
     .allow_origin( ORIGIN)  // note this means we have to run slides through servedoc
     .allow_headers(vec!["content-type"])
     .allow_methods(vec!["POST"]);
 
-
-  print_prompt(verbose,console_n, ORIGIN,  HOST, port, PATH);
+  print_prompt();
 
   // POST /run {body: "<prog> <arg>.."}
   let run_request = warp::post()
@@ -88,22 +89,22 @@ async fn main() {
         .status()
         .expect("command failed to start");
 
-      print_prompt(verbose, console_n, ORIGIN, HOST, port, PATH);
+      print_prompt();
       "done" // what we return to the client
     });
 
   warp::serve(run_request.with(cors))
-      .run(([127, 0, 0, 1], port))
+      .run(([127, 0, 0, 1], *PORT))
       .await;
 }
 
-fn print_prompt (verbose: bool, console_n: u16, origin: &str, host: &str, port: u16, path: &str) {
+fn print_prompt () {
   print!("{}", CLEAR_SCREEN);
-  if verbose {
+  if OPT.verbose {
     println!("{}{}console {} - waiting for POST command from {} on http://{}:{}/{} (terminate with ctrl-C)..{}", 
-              RESET_STYLES,REVERSED, console_n, origin, host, port, path, RESET_STYLES);
+              RESET_STYLES,REVERSED, OPT.console, ORIGIN, HOST, *PORT, PATH, RESET_STYLES);
     
   } else {
-    println!("{}{}console {} - waiting for command..{}", RESET_STYLES,REVERSED, console_n, RESET_STYLES);
+    println!("{}{}console {} - waiting for command..{}", RESET_STYLES,REVERSED, OPT.console, RESET_STYLES);
   }
 }

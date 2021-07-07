@@ -21,7 +21,7 @@ import sbt.complete._
 import sbt.complete.DefaultParsers._
 
 /**
-  * task to run the Rust cargo build command in the current project
+  * task to run the Rust's 'cargo' build command in the current project
   *
   * Note this requires a Rust tool chain to be installed, e.g. via 'rustup' - see https://rustup.rs/
   */
