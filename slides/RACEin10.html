@@ -21,22 +21,25 @@
             <p>~</p>
             <p><a href="https://ti.arc.nasa.gov/profile/pcmehlitz/" rel="author">Peter.C.Mehlitz</a><br/>
             SGT Inc, NASA Ames Research Center</p>
-            </div><div class="slide">
-            <h2 id="what-is-race" class="section">What is RACE?</h2><p>framework to build event driven applications that</p><ul>
+            </div><div class="slide"><h2 id="what-is-race" class="section">What is RACE?</h2>
+            <p>framework to build event driven applications that</p>
+            <ul>
               <li>can import/export from/to external systems - <strong>connectivity</strong></li>
               <li>can process high event rate and data volume - <strong>scalability</strong></li>
               <li>have extensible set of concurrent, low overhead components</li>
               <li>support distributed and massively concurrent operation</li>
-            </ul><img src="../images/lvc-sim.svg" class="center scale40">
-            </div><div class="slide">
-            <h2 id="actors---basic-race-components" class="section">Actors - Basic RACE Components</h2><ul>
+            </ul>
+            <img src="../images/lvc-sim.svg" class="center scale40">
+            </div><div class="slide"><h2 id="actors-basic-race-components" class="section">Actors - Basic RACE Components</h2>
+            <ul>
               <li>well known concurrency programming model since 1973 (Hewitt et al)</li>
               <li><em>Actors</em> are objects that communicate only through async messages<br>
               ⟹ no shared state</li>
               <li>objects process messages one-at-a-time ⟹ sequential code</li>
-            </ul><img src="../images/actor.svg" class="center scale50">
-            </div><div class="slide">
-            <h2 id="actor-systems---configuration" class="section">Actor Systems - Configuration</h2><ul>
+            </ul>
+            <img src="../images/actor.svg" class="center scale50">
+            </div><div class="slide"><h2 id="actor-systems-configuration" class="section">Actor Systems - Configuration</h2>
+            <ul>
               <li>
                 <p>RACE actor systems are JSON configured graphs</p>
                 <ul>
@@ -44,23 +47,26 @@
                   <li>edges are pub/sub (bus) channels through which actors communicate</li>
                 </ul>
               </li>
-            </ul><img src="../images/race-dataflow.svg" class="center scale40">
-            </div><div class="slide">
-            <h2 id="race---implementation" class="section">RACE - Implementation</h2><ul>
+            </ul>
+            <img src="../images/race-dataflow.svg" class="center scale40">
+            </div><div class="slide"><h2 id="race-implementation" class="section">RACE - Implementation</h2>
+            <ul>
               <li><em>Master</em> actor: initialization, supervision and termination of configured actors</li>
               <li>can model time</li>
               <li>local and global (network) bus</li>
-            </ul><img src="../images/race-overview-2.svg" class="center scale60">
-            </div><div class="slide">
-            <h2 id="example-1---live-recorded-nas-visualization" class="section">Example 1 - Live/Recorded NAS Visualization</h2><ul>
+            </ul>
+            <img src="../images/race-overview-2.svg" class="center scale60">
+            </div><div class="slide"><h2 id="example-1-live-recorded-nas-visualization" class="section">Example 1 - Live/Recorded NAS Visualization</h2>
+            <ul>
               <li>full NextGen SWIM (System Wide Information Management) import</li>
               <li>500+ incoming  network msg/sec (mostly JMS)</li>
               <li>real time ADS-B import from local antenna</li>
               <li>visualization with NASA WorldWind</li>
-            </ul><p><img src="../images/swim-sbs-all-ww.svg" class="left scale50">
+            </ul>
+            <p><img src="../images/swim-sbs-all-ww.svg" class="left scale50">
             <img src="../images/race-viewer.svg" class="right scale45"></p>
-            </div><div class="slide">
-            <h2 id="example-2---swim-analysis" class="section">Example 2 - SWIM Analysis</h2><ul>
+            </div><div class="slide"><h2 id="example-2-swim-analysis" class="section">Example 2 - SWIM Analysis</h2>
+            <ul>
               <li>
                 <p>used to analyze and verify SWIM data:</p>
                 <ul>
@@ -70,16 +76,18 @@
                   <li>detect track update anomalies (out-of-order,ambiguous,dropped,..)</li>
                 </ul>
               </li>
-            </ul><p><img src="../images/ts-anomaly-content.svg" class="left scale40">
+            </ul>
+            <p><img src="../images/ts-anomaly-content.svg" class="left scale40">
             <img src="../images/ts-anomaly-temp.svg" class="right scale40"></p>
-            </div><div class="slide">
-            <h2 id="example-3---lvc-simulation" class="section">Example 3 - LVC Simulation</h2><ul>
+            </div><div class="slide"><h2 id="example-3-lvc-simulation" class="section">Example 3 - LVC Simulation</h2>
+            <ul>
               <li>import live and (interactively) simulated tracks</li>
               <li>detect and send proximities to simulator</li>
               <li>detect NMACs of live tracks caused by simulator</li>
-            </ul><img src="../images/lvc-example.svg" class="center scale60">
-            </div><div class="slide">
-            <h2 id="tl-dr" class="section">TL;DR</h2><ul>
+            </ul>
+            <img src="../images/lvc-example.svg" class="center scale60">
+            </div><div class="slide"><h2 id="tl-dr" class="section">TL;DR</h2>
+            <ul>
               <li>RACE is a actor based application framework</li>
               <li>primary design goals: scalability and extensibility</li>
               <li>can be used as a library (from external projects)</li>

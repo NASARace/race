@@ -19,28 +19,27 @@
             {Peter.C.Mehlitz, Dimitra.Giannakopoulou, Nastaran.Shafiei}@nasa.gov<br/>
             NASA Ames Research Center
             </p>
-            </div><div class="slide">
-            <h2 id="slides" class="section">Slides</h2><div class="toc">
-              <ul>
-                <li><span class="toc level1"><a href="#slides">Slides</a></span></li>
-                <li><span class="toc level1"><a href="#what-is-race">What is RACE?</a></span></li>
-                <li><span class="toc level1"><a href="#race-implementation">RACE Implementation</a></span></li>
-                <li><span class="toc level1"><a href="#presented-example-applications">Presented Example Applications</a></span></li>
-                <li><span class="toc level1"><a href="#common-tasks-of-example-applications">Common Tasks of Example Applications</a></span></li>
-                <li><span class="toc level1"><a href="#1-detecting-temporal-inconsistencies-in-swim-messages">(1) Detecting Temporal Inconsistencies in SWIM Messages</a></span></li>
-                <li><span class="toc level1"><a href="#1-temporal-inconsistencies---implementation-lessons">(1) Temporal Inconsistencies - Implementation &amp; Lessons</a></span></li>
-                <li><span class="toc level1"><a href="#2-detecting-unsafe-parallel-approach-trajectories">(2) Detecting Unsafe Parallel Approach Trajectories</a></span></li>
-                <li><span class="toc level1"><a href="#2-parallel-approach---implementation-lessons">(2) Parallel Approach - Implementation &amp; Lessons</a></span></li>
-                <li><span class="toc level1"><a href="#3-detecting-deviations-between-tracking-systems">(3) Detecting Deviations between Tracking Systems</a></span></li>
-                <li><span class="toc level1"><a href="#3-track-deviation---implementation-lessons">(3) Track Deviation - Implementation &amp; Lessons</a></span></li>
-                <li><span class="toc level1"><a href="#4-detecting-loss-of-separation">(4) Detecting Loss of Separation</a></span></li>
-                <li><span class="toc level1"><a href="#4-loss-of-separation---output">(4) Loss of Separation - Output</a></span></li>
-                <li><span class="toc level1"><a href="#4-loss-of-separation---implementation-lessons">(4) Loss of Separation - Implementation &amp; Lessons</a></span></li>
-                <li><span class="toc level1"><a href="#conclusions">Conclusions</a></span></li>
-              </ul>
-            </div>
-            </div><div class="slide">
-            <h2 id="what-is-race" class="section">What is RACE?</h2><ul>
+            </div><div class="slide"><h2 id="slides" class="section">Slides</h2>
+            <ul class="nav-list">
+              <li class="level1 active"><a href="#">Analyzing Airspace Data with RACE</a></li>
+              <li class="level2"><a href="#slides">Slides</a></li>
+              <li class="level2"><a href="#what-is-race">What is RACE?</a></li>
+              <li class="level2"><a href="#race-implementation">RACE Implementation</a></li>
+              <li class="level2"><a href="#presented-example-applications">Presented Example Applications</a></li>
+              <li class="level2"><a href="#common-tasks-of-example-applications">Common Tasks of Example Applications</a></li>
+              <li class="level2"><a href="#_1-detecting-temporal-inconsistencies-in-swim-messages">(1) Detecting Temporal Inconsistencies in SWIM Messages</a></li>
+              <li class="level2"><a href="#_1-temporal-inconsistencies-implementation-lessons">(1) Temporal Inconsistencies - Implementation &amp; Lessons</a></li>
+              <li class="level2"><a href="#_2-detecting-unsafe-parallel-approach-trajectories">(2) Detecting Unsafe Parallel Approach Trajectories</a></li>
+              <li class="level2"><a href="#_2-parallel-approach-implementation-lessons">(2) Parallel Approach - Implementation &amp; Lessons</a></li>
+              <li class="level2"><a href="#_3-detecting-deviations-between-tracking-systems">(3) Detecting Deviations between Tracking Systems</a></li>
+              <li class="level2"><a href="#_3-track-deviation-implementation-lessons">(3) Track Deviation - Implementation &amp; Lessons</a></li>
+              <li class="level2"><a href="#_4-detecting-loss-of-separation">(4) Detecting Loss of Separation</a></li>
+              <li class="level2"><a href="#_4-loss-of-separation-output">(4) Loss of Separation - Output</a></li>
+              <li class="level2"><a href="#_4-loss-of-separation-implementation-lessons">(4) Loss of Separation - Implementation &amp; Lessons</a></li>
+              <li class="level2"><a href="#conclusions">Conclusions</a></li>
+            </ul>
+            </div><div class="slide"><h2 id="what-is-race" class="section">What is RACE?</h2>
+            <ul>
               <li>started as a distributed LVC simulation framework in 2015
               <img src="../images/lvc-sim.svg" class="center scale35"></li>
               <li>
@@ -53,23 +52,27 @@
                 </ul>
               </li>
             </ul>
-            </div><div class="slide">
-            <h2 id="race-implementation" class="section">RACE Implementation</h2><ul>
+            </div><div class="slide"><h2 id="race-implementation" class="section">RACE Implementation</h2>
+            <ul>
               <li>runs on JVM, programmed in Scala using Akka actor library</li>
               <li>basic building blocks are <strong>actors</strong> - objects that only communicate through messages (processed
               sequentially)</li>
               <li>RACE messages are sent through <strong>channels</strong></li>
               <li>RACE actors/channels runtime configured (JSON), not hardwired</li>
-            </ul><img src="../images/race-design.svg" class="center scale45">
-            </div><div class="slide">
-            <h2 id="presented-example-applications" class="section">Presented Example Applications</h2><p>automatic detection of</p><ul>
+            </ul>
+            <img src="../images/race-design.svg" class="center scale45">
+            </div><div class="slide"><h2 id="presented-example-applications" class="section">Presented Example Applications</h2>
+            <p>automatic detection of</p>
+            <ul>
               <li>(1) temporal inconsistencies in SWIM messages</li>
               <li>(2) unsafe parallel approach trajectories</li>
               <li>(3) trajectory deviations between different reporting systems</li>
               <li>(4) loss of separation between live and simulated aircraft</li>
             </ul>
-            </div><div class="slide">
-            <h2 id="common-tasks-of-example-applications" class="section">Common Tasks of Example Applications</h2><img src="../images/app-tasks.svg" class="center scale25"><p>mapped to dedicated actors</p><ul>
+            </div><div class="slide"><h2 id="common-tasks-of-example-applications" class="section">Common Tasks of Example Applications</h2>
+            <img src="../images/app-tasks.svg" class="center scale25">
+            <p>mapped to dedicated actors</p>
+            <ul>
               <li>import async data messages from external systems</li>
               <li>translate relevant external messages into data model entities</li>
               <li>filtering entities for relevance</li>
@@ -77,15 +80,16 @@
               <li>(opt) export entities to external systems</li>
               <li>report/visualize results</li>
             </ul>
-            </div><div class="slide">
-            <h2 id="1-detecting-temporal-inconsistencies-in-swim-messages" class="section">(1) Detecting Temporal Inconsistencies in SWIM Messages</h2><ul>
+            </div><div class="slide"><h2 id="_1-detecting-temporal-inconsistencies-in-swim-messages" class="section">(1) Detecting Temporal Inconsistencies in SWIM Messages</h2>
+            <ul>
               <li>goal: find anomalies in flight update messages:
               <img src="../images/ts-anomalies.svg" class="alignTop scale35"></li>
               <li>RACE report:
               <img src="../images/tais-stats-output.png" class="alignTop scale40"></li>
             </ul>
-            </div><div class="slide">
-            <h2 id="1-temporal-inconsistencies---implementation-lessons" class="section">(1) Temporal Inconsistencies - Implementation &amp; Lessons</h2><img src="../images/tais-stats-config.svg" class="center scale25"><ul>
+            </div><div class="slide"><h2 id="_1-temporal-inconsistencies-implementation-lessons" class="section">(1) Temporal Inconsistencies - Implementation &amp; Lessons</h2>
+            <img src="../images/tais-stats-config.svg" class="center scale25">
+            <ul>
               <li>only ~140 app specific lines of code (mostly HTML formatting)</li>
               <li>original goal was only XML schema validation - time series analysis added
               after visualization showed anomalies</li>
@@ -93,50 +97,59 @@
               <li>first application to use HTML server for reporting (was running headless
               in private network)</li>
             </ul>
-            </div><div class="slide">
-            <h2 id="2-detecting-unsafe-parallel-approach-trajectories" class="section">(2) Detecting Unsafe Parallel Approach Trajectories</h2><p>goal: automatically detect parallel approaches that are angled-in exceeding 
-            30° heading differences within given distance (causing loss of sight)</p><img src="../images/par-approach-output.png" class="center scale65">
-            </div><div class="slide">
-            <h2 id="2-parallel-approach---implementation-lessons" class="section">(2) Parallel Approach - Implementation &amp; Lessons</h2><img src="../images/par-approach-config.svg" class="center scale30"><ul>
+            </div><div class="slide"><h2 id="_2-detecting-unsafe-parallel-approach-trajectories" class="section">(2) Detecting Unsafe Parallel Approach Trajectories</h2>
+            <p>goal: automatically detect parallel approaches that are angled-in exceeding 
+            30° heading differences within given distance (causing loss of sight)</p>
+            <img src="../images/par-approach-output.png" class="center scale65">
+            </div><div class="slide"><h2 id="_2-parallel-approach-implementation-lessons" class="section">(2) Parallel Approach - Implementation &amp; Lessons</h2>
+            <img src="../images/par-approach-config.svg" class="center scale30">
+            <ul>
               <li>~180 lines of code (approach analyzer)</li>
               <li>quadratic problem: pairwise trajectory comparison of un-synchronized irregular time series</li>
               <li>approach: filter candidates, detect parallel approach point, interpolate and compare traces backwards </li>
               <li>filtering crucial (brute force parallel was limiting extensibility)</li>
               <li>uses generic trajectory infrastructure (traces, extrapolation/interpolation) - more needed</li>
             </ul>
-            </div><div class="slide">
-            <h2 id="3-detecting-deviations-between-tracking-systems" class="section">(3) Detecting Deviations between Tracking Systems</h2><ul>
+            </div><div class="slide"><h2 id="_3-detecting-deviations-between-tracking-systems" class="section">(3) Detecting Deviations between Tracking Systems</h2>
+            <ul>
               <li>how do positions for same flight differ between different input sources
               (ASDE-X, TAIS, SFDPS, direct ADS-B)?</li>
               <li>are differences random or systematic?</li>
-            </ul><img src="../images/trackdiff-output.png" class="center scale55">
-            </div><div class="slide">
-            <h2 id="3-track-deviation---implementation-lessons" class="section">(3) Track Deviation - Implementation &amp; Lessons</h2><img src="../images/trackdiff-config.svg" class="center scale40"><ul>
+            </ul>
+            <img src="../images/trackdiff-output.png" class="center scale55">
+            </div><div class="slide"><h2 id="_3-track-deviation-implementation-lessons" class="section">(3) Track Deviation - Implementation &amp; Lessons</h2>
+            <img src="../images/trackdiff-config.svg" class="center scale40">
+            <ul>
               <li>~180 lines of code (trajectory comparer)</li>
               <li>again motivated by visualization (noticing discrepancies)</li>
               <li>import layer convenient to switch between different input sources</li>
               <li>again pairwise trajectory analysis (selection by same flight id)</li>
               <li>comparison more expensive (interpolation, mean diff, variance for distance + angle)</li>
             </ul>
-            </div><div class="slide">
-            <h2 id="4-detecting-loss-of-separation" class="section">(4) Detecting Loss of Separation</h2><ul>
+            </div><div class="slide"><h2 id="_4-detecting-loss-of-separation" class="section">(4) Detecting Loss of Separation</h2>
+            <ul>
               <li>heterogeneous system: combines live (SWIM) data and external simulators</li>
               <li>RACE used as a data hub that adds analysis (proximities, LoS detection) </li>
-            </ul><img src="../images/fdz-demo.svg" class="center scale65">
-            </div><div class="slide">
-            <h2 id="4-loss-of-separation---output" class="section">(4) Loss of Separation - Output</h2><ul>
+            </ul>
+            <img src="../images/fdz-demo.svg" class="center scale65">
+            </div><div class="slide"><h2 id="_4-loss-of-separation-output" class="section">(4) Loss of Separation - Output</h2>
+            <ul>
               <li>left shows TCAS display of simulator flight FDZ001 - live flight XY333 shown as alert</li>
               <li>right shows RACE viewer with LoS event between simulated (FDZ001) and live (XY333) flight</li>
-            </ul><p><img src="../images/fdz-output-a.png" class="left scale35">
-            <img src="../images/fdz-output-b.png" class="right scale35"></p>
-            </div><div class="slide">
-            <h2 id="4-loss-of-separation---implementation-lessons" class="section">(4) Loss of Separation - Implementation &amp; Lessons</h2><img src="../images/fdz-config.svg" class="center scale45"><ul>
+            </ul>
+            <div>
+            <img src="../images/fdz-output-a.png" class="left scale35">
+            <img src="../images/fdz-output-b.png" class="right scale35">
+            </div>
+            </div><div class="slide"><h2 id="_4-loss-of-separation-implementation-lessons" class="section">(4) Loss of Separation - Implementation &amp; Lessons</h2>
+            <img src="../images/fdz-config.svg" class="center scale45">
+            <ul>
               <li>uses generic native interface layer (memory layout, native library for external simulator)</li>
               <li>highly parallel problem (trajectory extrapolation, sorted proximity calculation)</li>
               <li>larger number of flights would require parallel computation </li>
             </ul>
-            </div><div class="slide">
-            <h2 id="conclusions" class="section">Conclusions</h2><ul>
+            </div><div class="slide"><h2 id="conclusions" class="section">Conclusions</h2>
+            <ul>
               <li>actors are a good programming model for presented applications</li>
               <li>implementation platform (JVM, Scala, Akka) is suitable basis but favors throughput over latency
               (soft realtime)</li>

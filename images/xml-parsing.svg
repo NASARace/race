@@ -1,0 +1,189 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<svg width="100%" height="100%" version="1.1" viewBox="13.79515 -34.9744 900.8201 542.1957" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <filter id="shadow1" width="150%" height="150%">
+      <feGaussianBlur in="SourceAlpha" result="blur" stdDeviation="2" />
+      <feOffset dx="2" dy="2" in="blur" result="offsetBlur" />
+      <feMerge>
+        <feMergeNode in="offsetBlur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+  </defs>
+  <marker id="marker1" markerUnits="strokeWidth" orient="auto" refX="-11.17254" refY="0" markerWidth="13.27247" markerHeight="10.22955" viewBox="-12.27247 -5.114774 13.27247 10.22955">
+    <path d="M-11.27247 -4.114774 L0 0 L-11.27247 4.114773 Z " fill="#000000" fill-opacity="1" stroke="#000000" stroke-opacity="1" />
+  </marker>
+  <marker id="marker2" markerUnits="strokeWidth" orient="auto" refX="-7.52078" refY="0" markerWidth="9.89073" markerHeight="7.760683" viewBox="-8.89073 -3.880342 9.89073 7.760683">
+    <path d="M-7.89073 -2.880342 L0 0 L-7.89073 2.880341 Z " fill="#000000" fill-opacity="1" stroke="#000000" stroke-opacity="1" />
+  </marker>
+  <marker id="marker3" markerUnits="strokeWidth" orient="auto" refX="-7.52078" refY="0" markerWidth="9.89073" markerHeight="7.760683" viewBox="-8.89073 -3.880342 9.89073 7.760683">
+    <path d="M-7.89073 -2.880342 L0 0 L-7.89073 2.880341 Z " fill="#000000" fill-opacity="1" stroke="#000000" stroke-opacity="1" />
+  </marker>
+  <marker id="marker4" markerUnits="strokeWidth" orient="auto" refX="-7.52078" refY="0" markerWidth="9.89073" markerHeight="7.760683" viewBox="-8.89073 -3.880342 9.89073 7.760683">
+    <path d="M-7.89073 -2.880342 L0 0 L-7.89073 2.880341 Z " fill="#000000" fill-opacity="1" stroke="#000000" stroke-opacity="1" />
+  </marker>
+  <marker id="marker5" markerUnits="strokeWidth" orient="auto" refX="-7.52078" refY="0" markerWidth="9.89073" markerHeight="7.760683" viewBox="-8.89073 -3.880342 9.89073 7.760683">
+    <path d="M-7.89073 -2.880342 L0 0 L-7.89073 2.880341 Z " fill="#000000" fill-opacity="1" stroke="#000000" stroke-opacity="1" />
+  </marker>
+  <marker id="marker6" markerUnits="strokeWidth" orient="auto" refX="-7.52078" refY="0" markerWidth="9.89073" markerHeight="7.760683" viewBox="-8.89073 -3.880342 9.89073 7.760683">
+    <path d="M-7.89073 -2.880342 L0 0 L-7.89073 2.880341 Z " fill="#000000" fill-opacity="1" stroke="#000000" stroke-opacity="1" />
+  </marker>
+  <marker id="marker7" markerUnits="strokeWidth" orient="auto" refX="-7.52078" refY="0" markerWidth="9.89073" markerHeight="7.760683" viewBox="-8.89073 -3.880342 9.89073 7.760683">
+    <path d="M-7.89073 -2.880342 L0 0 L-7.89073 2.880341 Z " fill="#000000" fill-opacity="1" stroke="#000000" stroke-opacity="1" />
+  </marker>
+  <marker id="marker8" markerUnits="strokeWidth" orient="auto" refX="-7.52078" refY="0" markerWidth="9.89073" markerHeight="7.760683" viewBox="-8.89073 -3.880342 9.89073 7.760683">
+    <path d="M-7.89073 -2.880342 L0 0 L-7.89073 2.880341 Z " fill="#000000" fill-opacity="1" stroke="#000000" stroke-opacity="1" />
+  </marker>
+  <marker id="marker9" markerUnits="strokeWidth" orient="auto" refX="-7.52078" refY="0" markerWidth="9.89073" markerHeight="7.760683" viewBox="-8.89073 -3.880342 9.89073 7.760683">
+    <path d="M-7.89073 -2.880342 L0 0 L-7.89073 2.880341 Z " fill="#000000" fill-opacity="1" stroke="#000000" stroke-opacity="1" />
+  </marker>
+  <marker id="marker10" markerUnits="strokeWidth" orient="auto" refX="-7.52078" refY="0" markerWidth="9.89073" markerHeight="7.760683" viewBox="-8.89073 -3.880342 9.89073 7.760683">
+    <path d="M-7.89073 -2.880342 L0 0 L-7.89073 2.880341 Z " fill="#000000" fill-opacity="1" stroke="#000000" stroke-opacity="1" />
+  </marker>
+  <marker id="marker11" markerUnits="strokeWidth" orient="auto" refX="-5.208829" refY="0" markerWidth="9.89073" markerHeight="7.760683" viewBox="-8.89073 -3.880342 9.89073 7.760683">
+    <path d="M-7.89073 -2.880342 L0 0 L-7.89073 2.880341 L-5.6 -2.447838E-07 Z " fill="#0000FE" fill-opacity="1" stroke="#0000FE" stroke-opacity="1" />
+  </marker>
+  <marker id="marker12" markerUnits="strokeWidth" orient="auto" refX="-5.208829" refY="0" markerWidth="9.89073" markerHeight="7.760683" viewBox="-8.89073 -3.880342 9.89073 7.760683">
+    <path d="M-7.89073 -2.880342 L0 0 L-7.89073 2.880341 L-5.6 -2.447838E-07 Z " fill="#0000FE" fill-opacity="1" stroke="#0000FE" stroke-opacity="1" />
+  </marker>
+  <marker id="marker13" markerUnits="strokeWidth" orient="auto" refX="-11.17254" refY="0" markerWidth="13.27247" markerHeight="10.22955" viewBox="-12.27247 -5.114774 13.27247 10.22955">
+    <path d="M-11.27247 -4.114774 L0 0 L-11.27247 4.114773 Z " fill="#000000" fill-opacity="1" stroke="#000000" stroke-opacity="1" />
+  </marker>
+  <g id="layer1" inkscape:label="Layer 1" inkscape:groupmode="layer">
+    <g>
+      <rect x="16.79515" y="23.30365" width="374.1866" height="297.1868" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#C0FFF6" fill-opacity="1" filter="url(#shadow1)" />
+      <rect x="180" y="172.9456" width="114.0401" height="14.69605" opacity="1" stroke="#FC7F08" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#F6FBAA" fill-opacity="1" />
+      <rect x="223.2016" y="116.6283" width="143.9592" height="14.69605" opacity="1" stroke="#FC7F08" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#F6FBAA" fill-opacity="1" />
+      <rect x="273.612" y="243.0327" width="44.31729" height="14.69605" opacity="1" stroke="#FC7F08" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#F6FBAA" fill-opacity="1" />
+      <text x="30.00001" y="48.73585" font-size="12" fill="#000000" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">&lt;?xml ..?&gt;
+</text>
+      <text x="30.00001" y="62.73585" font-size="12" fill="#000000" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">&lt;MessageCollection ..&gt;
+</text>
+      <text x="30.00001" y="76.73585" font-size="12" fill="#000000" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">  &lt;flight .. &gt;
+</text>
+      <text x="30.00001" y="90.73585" font-size="12" fill="#000000" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">   &lt;arrival&gt;..&lt;/arrival&gt;
+</text>
+      <text x="30.00001" y="104.7358" font-size="12" fill="#000000" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">    ..
+</text>
+      <text x="30.00001" y="118.7358" font-size="12" fill="#000000" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">    &lt;enRoute&gt;
+</text>
+      <text x="30.00001" y="132.7358" font-size="12" fill="#000000" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">      &lt;position ..posTime="2016-09-20T18:59:40Z"&gt;
+</text>
+      <text x="30.00001" y="146.7358" font-size="12" fill="#000000" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">          ..
+</text>
+      <text x="30.00001" y="160.7358" font-size="12" fill="#000000" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">          &lt;position&gt;
+</text>
+      <text x="30.00001" y="174.7358" font-size="12" fill="#000000" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">             &lt;location&gt;
+</text>
+      <text x="30.00001" y="188.7358" font-size="12" fill="#000000" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">                &lt;pos&gt;36.06 -94.672778&lt;/pos&gt;
+</text>
+      <text x="30.00001" y="202.7358" font-size="12" fill="#000000" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">             &lt;/location&gt;
+</text>
+      <text x="30.00001" y="216.7358" font-size="12" fill="#000000" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">          &lt;/position&gt;
+</text>
+      <text x="30.00001" y="230.7358" font-size="12" fill="#000000" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">      &lt;/position&gt;        
+</text>
+      <text x="30.00001" y="244.7358" font-size="12" fill="#000000" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">    &lt;/enRoute&gt;
+</text>
+      <text x="30.00001" y="258.7358" font-size="12" fill="#000000" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">    &lt;flightIdentification ..acId=“XYZ333” ../&gt;
+</text>
+      <text x="30.00001" y="272.7358" font-size="12" fill="#000000" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">  &lt;/flight&gt;
+</text>
+      <text x="30.00001" y="286.7358" font-size="12" fill="#000000" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">  &lt;flight ..&gt; .. &lt;/flight&gt;
+</text>
+      <text x="30.00001" y="300.7358" font-size="12" fill="#000000" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">  …
+</text>
+      <text x="30.00001" y="314.7358" font-size="12" fill="#000000" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">&lt;/MessageCollection&gt;</text>
+      <text x="344.651" y="43.80752" font-size="12" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">char[]</text>
+    </g>
+    <rect x="436.5052" y="23.2539" width="77.74618" height="25.2609" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#CAFFF8" fill-opacity="1" filter="url(#shadow1)" />
+    <text x="445.8548" y="41.41794" font-size="12" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">msg: String</text>
+    <rect x="438.6465" y="79.52624" width="352.3148" height="25.2609" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#CAFFF8" fill-opacity="1" filter="url(#shadow1)" />
+    <text x="442.6465" y="97.69028" font-size="12" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">byte[]:  ‘&lt;‘,’?’, …</text>
+    <rect x="469.8884" y="137.9989" width="81" height="27" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#CAFFF8" fill-opacity="1" filter="url(#shadow1)" />
+    <text x="483.7156" y="157.0325" font-size="12" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">tag: String</text>
+    <rect x="576.7256" y="137.7578" width="166.0323" height="27" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#CAFFF8" fill-opacity="1" filter="url(#shadow1)" />
+    <text x="580.7256" y="156.7914" font-size="12" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">char[]:  “MessageCollection”</text>
+    <text x="759.16" y="154.633" font-size="26" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">♲</text>
+    <rect x="469.8884" y="182.9988" width="81" height="27" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#CAFFF8" fill-opacity="1" filter="url(#shadow1)" />
+    <text x="483.7156" y="202.0324" font-size="12" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">tag: String</text>
+    <rect x="576.7256" y="182.4745" width="95.33772" height="27" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#CAFFF8" fill-opacity="1" filter="url(#shadow1)" />
+    <text x="580.7256" y="201.5081" font-size="12" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">char[]:  “flight”</text>
+    <text x="759.16" y="202.611" font-size="26" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">♲</text>
+    <rect x="469.8884" y="225.3123" width="81" height="27" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#CAFFF8" fill-opacity="1" filter="url(#shadow1)" />
+    <text x="508.0759" y="244.3459" font-size="12" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">…</text>
+    <rect x="576.7256" y="225.0636" width="113.5163" height="27" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#CAFFF8" fill-opacity="1" filter="url(#shadow1)" />
+    <text x="580.7256" y="244.0972" font-size="12" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">char[]:  …</text>
+    <text x="759.16" y="244.9245" font-size="26" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">♲</text>
+    <rect x="469.8884" y="266.646" width="81" height="27" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#CAFFF8" fill-opacity="1" filter="url(#shadow1)" />
+    <text x="483.0271" y="285.6796" font-size="12" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">attr: String</text>
+    <rect x="576.7256" y="266.3972" width="113.5163" height="27" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#CAFFF8" fill-opacity="1" filter="url(#shadow1)" />
+    <text x="580.7256" y="285.4308" font-size="12" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">char[]: “posTime”</text>
+    <text x="759.16" y="286.2582" font-size="26" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">♲</text>
+    <rect x="469.8884" y="308.9595" width="81" height="27" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#CAFFF8" fill-opacity="1" filter="url(#shadow1)" />
+    <text x="477.9236" y="327.9931" font-size="12" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">value: String</text>
+    <rect x="576.7256" y="308.7108" width="127.3417" height="27" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#CAFFF8" fill-opacity="1" filter="url(#shadow1)" />
+    <text x="580.7256" y="327.7444" font-size="12" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">char[]: “2016-09-…”</text>
+    <rect x="469.8884" y="373.2041" width="81" height="27" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#CAFFF8" fill-opacity="1" filter="url(#shadow1)" />
+    <text x="508.0759" y="392.2377" font-size="12" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">…</text>
+    <rect x="576.7256" y="373.1964" width="113.5163" height="27" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#CAFFF8" fill-opacity="1" filter="url(#shadow1)" />
+    <text x="580.7256" y="392.23" font-size="12" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">char[]:  …</text>
+    <text x="759.16" y="393.0573" font-size="26" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">♲</text>
+    <text x="759.16" y="329.5515" font-size="26" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">♲</text>
+    <text x="689.9644" y="356.8385" font-size="12" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">date: Long</text>
+    <rect x="469.8884" y="419.9171" width="81" height="27" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#CAFFF8" fill-opacity="1" filter="url(#shadow1)" />
+    <text x="483.7156" y="438.9507" font-size="12" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">tag: String</text>
+    <rect x="576.7256" y="419.6339" width="95.33772" height="27" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#CAFFF8" fill-opacity="1" filter="url(#shadow1)" />
+    <text x="580.7256" y="438.6675" font-size="12" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">char[]:  “/flight”</text>
+    <text x="759.16" y="439.7704" font-size="26" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">♲</text>
+    <line x1="673.6198" y1="457.5499" x2="760.739" y2="457.5499" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    <text x="827.1835" y="98.78134" font-size="26" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">♲</text>
+    <g>
+      <rect x="810.1627" y="419.0768" width="99.48924" height="81.62331" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#F3FD99" fill-opacity="1" filter="url(#shadow1)" />
+      <text x="847.0275" y="434.8081" font-size="12" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">Track</text>
+      <text x="818.4056" y="453.1082" font-size="12" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">val id: String
+</text>
+      <text x="818.4056" y="468.1082" font-size="12" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">val date: Long
+</text>
+      <text x="818.4056" y="483.1082" font-size="12" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">val lat: Double
+</text>
+      <text x="818.4056" y="498.1082" font-size="12" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">val lon: Double</text>
+      <line x1="810.3232" y1="436.2045" x2="910.3298" y2="436.2045" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    </g>
+    <line x1="719.3726" y1="367.1924" x2="719.3726" y2="478.1069" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    <line x1="719.9045" y1="478.1069" x2="796.7539" y2="478.1069" marker-end="url(#marker1)" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    <ellipse cx="720.2146" cy="407.3535" rx="10.18474" ry="10.18474" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" />
+    <text x="718.3181" y="412.887" font-size="12" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">+</text>
+    <rect x="469.8884" y="472.3465" width="81" height="27" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#CAFFF8" fill-opacity="1" filter="url(#shadow1)" />
+    <text x="508.0759" y="491.3801" font-size="12" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">…</text>
+    <rect x="576.7256" y="472.3389" width="113.5163" height="27" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#CAFFF8" fill-opacity="1" filter="url(#shadow1)" />
+    <text x="580.7256" y="491.3725" font-size="12" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">char[]:  …</text>
+    <line x1="435.636" y1="29.59209" x2="400.3292" y2="29.59209" marker-end="url(#marker2)" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    <line x1="550.8488" y1="151.0549" x2="568.9016" y2="151.0549" marker-end="url(#marker3)" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    <line x1="551.0305" y1="196.3078" x2="569.0829" y2="196.3078" marker-end="url(#marker4)" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    <line x1="552.192" y1="239.6012" x2="570.2442" y2="239.6012" marker-end="url(#marker5)" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    <line x1="551.3939" y1="280.9349" x2="569.4457" y2="280.9349" marker-end="url(#marker6)" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    <line x1="551.5756" y1="323.2484" x2="569.6272" y2="323.2484" marker-end="url(#marker7)" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    <line x1="551.7573" y1="387.1177" x2="569.8086" y2="387.1177" marker-end="url(#marker8)" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    <line x1="551.939" y1="434.3303" x2="569.99" y2="434.3303" marker-end="url(#marker9)" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    <line x1="552.1208" y1="486.4419" x2="570.1714" y2="486.4419" marker-end="url(#marker10)" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    <path d="M435.5117 35.3303 C349.9436 55.67884 371.8104 82.40897 431.0835 85.53991" marker-end="url(#marker11)" opacity="1" stroke="#0000FE" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" transform="rotate(2 408.3489 60.59886)" />
+    <path d="M439.7238 104.6935 C407.2482 115.2801 400.7569 132.6527 437.859 157.718" marker-end="url(#marker12)" opacity="1" stroke="#0000FE" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+    <text x="396.9256" y="64.8908" font-size="12" fill="#0000FE" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">getBytes()</text>
+    <text x="426.4512" y="127.3559" font-size="12" fill="#0000FE" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">readTag(), readAttr(), readValue()</text>
+    <text x="403.5037" y="354.2017" font-size="15" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">N
+</text>
+    <text x="374.9136" y="372.2017" font-size="15" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">temporary
+</text>
+    <text x="384.4131" y="390.2017" font-size="15" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">objects</text>
+    <text x="864.3696" y="369.6723" font-size="15" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">M
+</text>
+    <text x="837.6399" y="387.6723" font-size="15" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">persistent
+</text>
+    <text x="846.2678" y="405.6723" font-size="15" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">objects</text>
+    <text x="164.6301" y="445.5413" font-size="22" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">N &gt;&gt; M</text>
+    <line x1="425.1335" y1="-18.8301" x2="526.3692" y2="-18.8301" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="3" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    <line x1="478.9572" y1="-15.992" x2="478.9572" y2="12.67886" marker-end="url(#marker13)" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    <text x="545.5734" y="-15.14612" font-size="12" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">msg bus</text>
+  </g>
+</svg>

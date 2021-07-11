@@ -8,13 +8,25 @@ body {
     font-family: Arial, sans-serif;
 }
 
-div.slide {
-    display: block;
-    /* height: 97vh; */
-    /* padding: 10px; */
-    height: 100vh;
-    padding: 0 10px 0 10px;
-    /* border: 1px solid black; */
+/*---------------------------- print support -----------------------------*/
+@media print {
+  div.slide {
+      display: block;
+      height: 100vh;
+      page-break-before: always;
+      padding: 0 10px 0 10px;
+  }
+}
+
+@media screen {
+  div.slide {
+      display: block;
+      /* height: 97vh; */
+      /* padding: 10px; */
+      height: 100vh;
+      padding: 0 10px 0 10px;
+      /* border: 1px solid black; */
+  }
 }
 
 .title h1 {
@@ -60,6 +72,10 @@ p.standout {
     font-weight: bolder;
 }
 
+div.spacer {
+    width: 100%;
+}
+
 .slide ul {
     list-style-type: disc;
 }
@@ -73,12 +89,9 @@ p.standout {
     margin-bottom: 0.3em;
 }
 
-.toc ul {
+ul.nav-list {
     list-style-type: decimal;
     font-size: 60%;
-}
-
-.toc a {
     text-decoration: none;
 }
 
@@ -114,20 +127,56 @@ code {
     color: Blue;
 }
 
+
+
+div.run {
+    display: block;
+    cursor: pointer;
+    font-size: 60%;
+    font-family: monospace;
+    color: gray;
+}
+
+div.running {
+    color: Green;
+}
+
+a.srv {
+    font-size: 60%;
+    color: gray;
+}
+
+
 /*---------------------------- content image classes -----------------------------*/
+
+/* left and right have to be wrapped into a div */
+
+
 img.left {
-    float: left;
-    margin: 15px 15px 15px 15px;
+    /*float: left;*/
+    display: inline-block;
+    vertical-align: middle;
+    /*padding: 1rem 2rem 0 1rem; */
+    margin: 15px 30px 15px 15px;
+}
+
+img.right {
+    /*float: right;*/
+    display: inline-block;
+    vertical-align: middle;
+    /* padding: 1rem 1rem 0 2rem; */
+    margin: 15px 15px 15px 30px;
+}
+
+img.rightFloat {
+    float: right;
+    display: inline-block;
 }
 
 img.center {
     display: block;
+    /*padding: 1rem 1rem 0 1rem; */
     margin: 15px auto 15px auto;
-}
-
-img.right {
-    float: right;
-    margin: 15px 15px 15px 15px;
 }
 
 img.alignTop {
@@ -198,4 +247,30 @@ img.scale95 {
 }
 img.scale100 {
     height: 100vh;
+}
+
+img.back {
+   z-index: -1;
+}
+
+
+img.up50 {
+  position: relative;
+  top: -50pt;
+}
+img.up75 {
+  position: relative;
+  top: -75pt;
+}
+img.up100 {
+  position: relative;
+  top: -100pt;
+}
+img.up125 {
+  position: relative;
+  top: -125pt;
+}
+img.up150 {
+  position: relative;
+  top: -150pt;
 }

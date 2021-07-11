@@ -13,8 +13,82 @@ var t = 0;
 var timed = false
 var slideshow = false
 
+const webRunBasePort = 4000;
+
 var slideCounter = document.getElementById('counter');
 showCounter();
+setRunHandlers();
+setSrvText();
+setSlideSelectors();
+
+
+function setRunHandlers() {
+  for (let elem of document.getElementsByClassName("run")) {
+    elem.addEventListener( "click", function(e) {
+      var match = elem.textContent.match(/^(\d):\s*(.+)\s*$/);
+      var consoleNumber = parseInt(match[1]);
+      var cmd = match[2];
+      sendWebRunRequest(elem, consoleNumber, cmd);
+      return false;
+    }, false);
+  }
+}
+
+function sendWebRunRequest (elem, consoleNumber, cmd) {
+  var port = webRunBasePort + consoleNumber;
+  var request = new XMLHttpRequest();
+
+  request.onload = function () {
+    if (request.responseText == "done") {
+      elem.classList.remove("running");
+    }
+  }
+
+  console.log(`http://localhost:${port}/run {${cmd}}`);
+
+  request.open( "POST", `http://localhost:${port}/run`, true);
+  request.setRequestHeader( "Content-Type", "text/plain;charset=UTF-8");
+  request.send(cmd);
+
+  elem.classList.add("running");
+}
+
+function setSrvText() {
+  for (let elem of document.getElementsByClassName("srv")) {
+    if (elem.nodeName == "A") {
+      var link = elem.getAttribute("href");
+      if (link) {
+        elem.textContent = link;
+      }
+    }
+  }
+}
+
+
+
+
+function setSlideSelectors() {
+  var navList = document.getElementsByClassName("nav-list")[0];
+  if (navList) {
+    var children = navList.children;
+    for (var i=0; i < children.length; i++) {
+      var clickTo = function(idx) {
+        return function curried () {
+          curIdx = idx;
+          showCounter();
+          console.log("set cur = " + curIdx);
+        }
+      }
+
+      var childElem = children[i];
+      var anchorElem = childElem.firstChild;
+      if (anchorElem && anchorElem.tagName == "A"){
+        anchorElem.addEventListener( "click",  clickTo(i));
+      }
+    }
+  }
+}
+
 
 function toggleFullScreen() {
   if (!isFullScreen){
@@ -93,7 +167,7 @@ function scrollToSlide (idx) {
     if (idx == 0) {
       window.scrollTo(0,0);
     } else {
-      slides[idx].scrollIntoView({block: "start", inline: "nearest", behavior: "smooth"});
+      slides[idx].scrollIntoView({behavior: "smooth", block: "start", inline: "nearest"});
     }
 
     curIdx = idx;
@@ -101,10 +175,20 @@ function scrollToSlide (idx) {
   }
 }
 
-document.onkeypress = function (e) {
-  var kc = e.which
-  if (kc == 13){  // Enter: next slide, Shift+Enter: prev slide
+document.addEventListener("keydown", e => {
+  var kc = e.keyCode;
+
+  if (kc == 13 || kc == 32){  // Enter: next slide, Shift+Enter: prev slide
     scrollToSlide( e.shiftKey ? curIdx-1 : curIdx+1);
+    e.preventDefault();
+  }
+  else if (kc == 33) {
+    scrollToSlide( curIdx - 1);
+    e.preventDefault();
+  }
+  else if (kc == 34) {
+    scrollToSlide( curIdx + 1);
+    e.preventDefault();
   }
   else if (kc == 102) { // 'f' toggle full screen
     toggleFullScreen();
@@ -127,4 +211,4 @@ document.onkeypress = function (e) {
       scrollToSlide(idx);
     }
   }
-};
+});

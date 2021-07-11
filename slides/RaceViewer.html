@@ -14,24 +14,23 @@
             <!-- additional divs inserted by renderer extension -->
             <h1 id="raceviewer-infrastructure" class="title">RaceViewer Infrastructure</h1>
             <p>making it visible</p>
-            </div><div class="slide">
-            <h2 id="slides" class="section">Slides</h2><div class="toc">
-              <ul>
-                <li><span class="toc level1"><a href="#slides">Slides</a></span></li>
-                <li><span class="toc level1"><a href="#symbiosis---the-best-of-two-worlds">Symbiosis - the best of two worlds</a></span></li>
-                <li><span class="toc level1"><a href="#race---worldwind-integration">RACE - WorldWind Integration</a></span></li>
-                <li><span class="toc level1"><a href="#big-picture-configurable-extension-points">Big Picture: Configurable Extension Points</a></span></li>
-                <li><span class="toc level1"><a href="#big-picture-zoom-in-on-bridges">Big Picture: Zoom In on Bridges</a></span></li>
-                <li><span class="toc level1"><a href="#race-configuration">RACE Configuration</a></span></li>
-                <li><span class="toc level1"><a href="#data-integration">Data Integration</a></span></li>
-                <li><span class="toc level1"><a href="#data-integration-on-demand---channeltopics">Data Integration on demand - ChannelTopics</a></span></li>
-                <li><span class="toc level1"><a href="#viewer-sync">Viewer Sync</a></span></li>
-                <li><span class="toc level1"><a href="#ui-framework">UI Framework</a></span></li>
-                <li><span class="toc level1"><a href="#build-integration">Build Integration</a></span></li>
-              </ul>
-            </div>
-            </div><div class="slide">
-            <h2 id="symbiosis---the-best-of-two-worlds" class="section">Symbiosis - the best of two worlds</h2><ul>
+            </div><div class="slide"><h2 id="slides" class="section">Slides</h2>
+            <ul class="nav-list">
+              <li class="level1 active"><a href="#">RaceViewer Infrastructure</a></li>
+              <li class="level2"><a href="#slides">Slides</a></li>
+              <li class="level2"><a href="#symbiosis-the-best-of-two-worlds">Symbiosis - the best of two worlds</a></li>
+              <li class="level2"><a href="#race-worldwind-integration">RACE - WorldWind Integration</a></li>
+              <li class="level2"><a href="#big-picture-configurable-extension-points">Big Picture: Configurable Extension Points</a></li>
+              <li class="level2"><a href="#big-picture-zoom-in-on-bridges">Big Picture: Zoom In on Bridges</a></li>
+              <li class="level2"><a href="#race-configuration">RACE Configuration</a></li>
+              <li class="level2"><a href="#data-integration">Data Integration</a></li>
+              <li class="level2"><a href="#data-integration-on-demand-channeltopics">Data Integration on demand - ChannelTopics</a></li>
+              <li class="level2"><a href="#viewer-sync">Viewer Sync</a></li>
+              <li class="level2"><a href="#ui-framework">UI Framework</a></li>
+              <li class="level2"><a href="#build-integration">Build Integration</a></li>
+            </ul>
+            </div><div class="slide"><h2 id="symbiosis-the-best-of-two-worlds" class="section">Symbiosis - the best of two worlds</h2>
+            <ul>
               <li>
                 <p>RACE</p>
                 <ul>
@@ -51,8 +50,8 @@
                 </ul>
               </li>
             </ul>
-            </div><div class="slide">
-            <h2 id="race---worldwind-integration" class="section">RACE - WorldWind Integration</h2><ul>
+            </div><div class="slide"><h2 id="race-worldwind-integration" class="section">RACE - WorldWind Integration</h2>
+            <ul>
               <li>
                 <p>RACE</p>
                 <ul>
@@ -69,15 +68,17 @@
                 </ul>
               </li>
             </ul>
-            </div><div class="slide">
-            <h2 id="big-picture-configurable-extension-points" class="section">Big Picture: Configurable Extension Points</h2><ul>
+            </div><div class="slide"><h2 id="big-picture-configurable-extension-points" class="section">Big Picture: Configurable Extension Points</h2>
+            <ul>
               <li>data: RACE⟷WorldWind ⟹ Layers</li>
               <li>interaction: UI⟷WorldWind/RACE ⟹ Panels</li>
-            </ul><img src="../images/race-ww.svg" class="center scale65">
-            </div><div class="slide">
-            <h2 id="big-picture-zoom-in-on-bridges" class="section">Big Picture: Zoom In on Bridges</h2><img src="../images/race-viewer.svg" class="center scale85">
-            </div><div class="slide">
-            <h2 id="race-configuration" class="section">RACE Configuration</h2><p>using normal RACE actor configuration:</p><pre><code>universe { ..
+            </ul>
+            <img src="../images/race-ww.svg" class="center scale65">
+            </div><div class="slide"><h2 id="big-picture-zoom-in-on-bridges" class="section">Big Picture: Zoom In on Bridges</h2>
+            <img src="../images/race-viewer.svg" class="center scale85">
+            </div><div class="slide"><h2 id="race-configuration" class="section">RACE Configuration</h2>
+            <p>using normal RACE actor configuration:</p>
+            <pre><code>universe { ..
   actors = [
     { name = &quot;simPlane&quot; ..
       write-to = &quot;/flights/sim&quot; .. },
@@ -95,16 +96,17 @@
       panels = [ .. ]
       size = [1400,1000]
       eye { lat = 37.246822 .. }</code></pre>
-            </div><div class="slide">
-            <h2 id="data-integration" class="section">Data Integration</h2><img src="../images/racelayer.svg" class="center scale85">
-            </div><div class="slide">
-            <h2 id="data-integration-on-demand---channeltopics" class="section">Data Integration on demand - ChannelTopics</h2><p>don&#39;t overwhelm UI threads (0.1 sec rule) ⟹ ChannelTopic &quot;producer valves&quot;</p><img src="../images/race-channeltopics.svg" class="center scale75">
-            </div><div class="slide">
-            <h2 id="viewer-sync" class="section">Viewer Sync</h2><img src="../images/raceviewer-sync.svg" class="center scale85">
-            </div><div class="slide">
-            <h2 id="ui-framework" class="section">UI Framework</h2><img src="../images/race-panels.svg" class="center scale85">
-            </div><div class="slide">
-            <h2 id="build-integration" class="section">Build Integration</h2><ul>
+            </div><div class="slide"><h2 id="data-integration" class="section">Data Integration</h2>
+            <img src="../images/racelayer.svg" class="center scale85">
+            </div><div class="slide"><h2 id="data-integration-on-demand-channeltopics" class="section">Data Integration on demand - ChannelTopics</h2>
+            <p>don&#39;t overwhelm UI threads (0.1 sec rule) ⟹ ChannelTopic &quot;producer valves&quot;</p>
+            <img src="../images/race-channeltopics.svg" class="center scale75">
+            </div><div class="slide"><h2 id="viewer-sync" class="section">Viewer Sync</h2>
+            <img src="../images/raceviewer-sync.svg" class="center scale85">
+            </div><div class="slide"><h2 id="ui-framework" class="section">UI Framework</h2>
+            <img src="../images/race-panels.svg" class="center scale85">
+            </div><div class="slide"><h2 id="build-integration" class="section">Build Integration</h2>
+            <ul>
               <li>
                 <p>WorldWind does not (yet) publish build artifacts</p>
               </li>
@@ -118,7 +120,8 @@
               <li>
                 <p>ultimately merge, interim solution: use SBT RootProject</p>
               </li>
-            </ul><pre>
+            </ul>
+            <pre>
   ...
   lazy val wwjProject = RootProject( uri(
               sys.props.getOrElse(&quot;race.wwj_uri&quot;,

@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8"/>
+        <title>RACE</title>
+
+        <link href="../race-html.css" rel="stylesheet"/>
+    </head>
+
+    <body>
+        <div class="navbar">
+            <div class=""banner>
+                <a href="../index.html" ><img class="logo" src="../images/race128.png"></a>
+                <p class="doctitle">RACE Manual</p>
+            </div>
+            <br/>
+            <div class="toc">
+                <p class="title">Project Links</p>
+                <ul>
+                    <li><span class="toc level2"><a href="https://github.com/NASARace/race.git">Repository</a></span></li>
+                    <li><span class="toc level2"><a href="http://nasarace.github.io/race">Website</a></span></li>
+                </ul>
+            </div>
+            <div class="toc pagetoc">
+                <p class="title">Page</p>
+                <ul class="nav-list">
+                  <li class="level1 active"><a href="#">SHARE - System for Hierarchical Ad hoc Reporting</a></li>
+                  <li class="level2"><a href="#use-case">Use Case</a></li>
+                  <li class="level2"><a href="#share-approach">SHARE Approach</a></li>
+                  <li class="level2"><a href="#anatomy-of-a-share-node">Anatomy of a SHARE Node</a></li>
+                  <li class="level2"><a href="#data-update-semantics">Data Update Semantics</a></li>
+                  <li class="level2"><a href="#user-clients">User Clients</a></li>
+                  <li class="level2"><a href="#security-aspects">Security Aspects</a></li>
+                  <li class="level2"><a href="#main-implementation-constructs">Main Implementation Constructs</a></li>
+                  <li class="level2"><a href="#protocols">Protocols</a></li>
+                  <li class="level2"><a href="#future-directions">Future Directions</a></li>
+                </ul>
+            </div>
+            <div class="toc globaltoc">
+                <p class="title">Site</p>
+                <ul class="nav-list">
+                  <li class="level1 nav-header">RACE Manual</li>
+                  <li class="level2"><a href="../index.html">About RACE</a></li>
+                  <li class="level2 nav-header">Installing RACE</li>
+                  <li class="level3"><a href="../installation/prerequisites.html">Prerequisites</a></li>
+                  <li class="level3"><a href="../installation/download.html">Downloading RACE</a></li>
+                  <li class="level3"><a href="../installation/build.html">Building RACE</a></li>
+                  <li class="level3"><a href="../installation/pitfalls.html">Installation Pitfalls</a></li>
+                  <li class="level3"><a href="../installation/osx.html">OS X Specifics</a></li>
+                  <li class="level2 nav-header">Using RACE</li>
+                  <li class="level3"><a href="../usage/running.html">How to Run RACE</a></li>
+                  <li class="level3"><a href="../usage/configuration.html">RACE Configuration</a></li>
+                  <li class="level3"><a href="../usage/encryption.html">Using Encrypted Configurations</a></li>
+                  <li class="level2 nav-header">RACE Design</li>
+                  <li class="level3"><a href="overview.html">Design Overview</a></li>
+                  <li class="level3"><a href="actors.html">Actors</a></li>
+                  <li class="level3"><a href="configuration.html">Runtime Configuration</a></li>
+                  <li class="level3"><a href="raceactors.html">RaceActors</a></li>
+                  <li class="level3"><a href="channeltopics.html">ChannelTopics</a></li>
+                  <li class="level3"><a href="embedded-objects.html">Embedded Objects</a></li>
+                  <li class="level3"><a href="connectivity.html">Connecting External Systems</a></li>
+                  <li class="level3"><a href="remoting.html">Remote RaceActors and Distributed RACE Applications</a></li>
+                  <li class="level3"><a href="remotelauncher.html">RemoteLauncher</a></li>
+                  <li class="level3"><a href="hc.html">Heterogeneous Computing in RACE</a></li>
+                  <li class="level3"><a href="parsing.html">RACE Parsers</a></li>
+                  <li class="level3"><a href="archive-replay.html">Archive and Replay</a></li>
+                  <li class="level3"><a href="timeseries.html">Time Series Analysis</a></li>
+                  <li class="level3"><a href="trajectory.html">Trajectory Infrastructure</a></li>
+                  <li class="level3"><a href="rgis.html">RACE GIS Support</a></li>
+                  <li class="level3"><a href="worldwind.html">WorldWind Viewer</a></li>
+                  <li class="level3"><a href="http-server.html">HttpServer</a></li>
+                  <li class="level3"><a href="http-client.html">HttpImportActor</a></li>
+                  <li class="level3 active"><a href="#">SHARE - System for Hierarchical Ad hoc Reporting</a></li>
+                  <li class="level3"><a href="layers-and-modules.html">Layers and Modules</a></li>
+                  <li class="level3"><a href="directory-structure.html">Directory Structure</a></li>
+                  <li class="level3"><a href="repository.html">Repository Structure</a></li>
+                  <li class="level3"><a href="local-build.html">Local Build Configuration</a></li>
+                  <li class="level3"><a href="dds.html">RACE and DDS</a></li>
+                  <li class="level3"><a href="extproject.html">Using RACE from External Projects</a></li>
+                  <li class="level3"><a href="whyscala.html">Why Scala</a></li>
+                  <li class="level2 nav-header">Documentation</li>
+                  <li class="level3"><a href="../documentation/overview.html">RACE Documentation Overview</a></li>
+                  <li class="level3"><a href="../documentation/presentations.html">Available Slide Presentations</a></li>
+                  <li class="level2 nav-header">Annex</li>
+                  <li class="level3"><a href="../annex/project-log.html">Project Log</a></li>
+                  <li class="level3"><a href="../annex/examples.html">RACE Examples</a></li>
+                  <li class="level3"><a href="../annex/known-problems.html">Known Problems</a></li>
+                  <li class="level3"><a href="../annex/changes.html">Changes</a></li>
+                  <li class="level3"><a href="../annex/todo.html">TODO List</a></li>
+                  <li class="level3"><a href="../annex/learning.html">Learning Resources</a></li>
+                  <li class="level3"><a href="../annex/glossary.html">Glossary</a></li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="main">
+            <h1 id="share-system-for-hierarchical-ad-hoc-reporting" class="title">SHARE - System for Hierarchical Ad hoc Reporting</h1>
+            <p>SHARE is a set of actors and other classes to build <a href="../index.html">RACE</a> applications which distribute and synchronize data across
+            a hierarchical network of <em>SHARE Nodes</em> (RACE processes). While many of the other RACE modules target import and
+            analysis of external data streams such as live airspace data, SHARE can be thought of as extending RACE towards
+            distribution of discrete event data between RACE applications.</p>
+            <p>There are many systems for data synchronization and replication in tightly connected networks. What sets SHARE apart
+            from a networking perspective is that it treats peer nodes as untrusted (avoiding direct communication between them) and
+            regards the network itself (i.e. connectivity) as a critical resource that can fail at any time. Both constraints can be
+            effectively addressed by making explicit use of a hierarchical (tree) network with clear data-ownership separation
+            between nodes. This is typically satisfied by existing organizational structures that are based on hierarchies.</p>
+            <p>A second novel aspect is that SHARE assumes a variable data model and number of participating nodes. Both can change
+            at runtime without disruption of ongoing operation.</p>
+            <p>SHARE tries to strike a balance between a production system that only needs configuration to be turned into
+            a concrete application, and between a platform to experiment with synchronization protocols for distributed systems.
+            SHARE classes are located in the <code>race-net-http</code> module within the <code>gov.nasa.race.http.share</code> package.</p>
+            
+            <h2 id="use-case" class="section"><a class="anchor-link left" href="#use-case"><i class="icofont-laika">&#xef71;</i></a>Use Case</h2>
+            <p>The primary use case is to establish task- or incident specific situational awareness across several participating
+            organizational entites (<em>providers</em>) that are normally not tightly integrated, i.e. don&#39;t have a mechanism in place
+            to automatically share (a flexible, task specific subset of) their internal data.</p>
+            <p>This use case is typical for large scale disaster management.</p>
+            <p>While not essential it is assumed these providers form a hierarchical network with several layers (e.g. county, state
+            and federal), resulting in two-fold synchronization needs:</p>
+            <ul>
+              <li>distribution within a layer (potentially with provider-specific fltering)</li>
+              <li>upstream reporting of data computed from this layer (potentially with layer-specific filtering)</li>
+            </ul>
+            <p>It is further assumed that providers already have their local networks and data bases in place, and those are
+            intentionally  kept private (e.g. for security reasons). Any data sharing with other providers and upstream layers should:</p>
+            <ul>
+              <li>have minimal impact on existing provider networks (should <strong>not</strong> require new/changed software on exisiting machines)</li>
+              <li>allow flexible, provider-specific configuration of what data is shared with other providers</li>
+              <li>be robust against network partitioning, i.e. continue to work within each network partition and re-synchronize upon
+              restored connectivity</li>
+              <li>support both discrete event data (e.g. counters) and streams (e.g. video or telemetry)</li>
+            </ul>
+            <p><img class="center scale60" src="../images/share-problem.svg" alt="sharing data in heterogeneous networks"></p>
+            <p>Existing solutions range from slow and error prone manual update to expensive and inflexible distributed data bases.
+            The most common approach is to provide a per-layer web server, which consitutes a single point of failure, does not
+            support automatic import from existing provider data bases and does not scale across several hierarchy levels.</p>
+            <p>In this use case we mostly target ad hoc disaster response, i.e. on-demand reaction to unforeseen or variable
+            situations that involve already established organizations and systems. This implies that deployment and use of any new
+            systems should be as non-disruptive/-intrusive as possible as participating organizations and related infrastructure
+            are already under stress.</p>
+            <p>We assume medium data set sizes (10-100 fields) and low update rates (&lt;0.1 Hz). Larger volumes could be represented as
+            stream URIs (e.g. for telemetry streams).</p>
+            
+            <h2 id="share-approach" class="section"><a class="anchor-link left" href="#share-approach"><i class="icofont-laika">&#xef71;</i></a>SHARE Approach</h2>
+            <p>The SHARE approach to support this use case is to form an overlay network of dedicated SHARE nodes (henceforth
+            called <em>nodes</em>) that:</p>
+            <ul>
+              <li>represent the reporting network topology (tree)</li>
+              <li>integrate with minimal impact into the existing provider network, i.e. can be deployed and removed without
+              affecting operation of existing provider systems</li>
+              <li>can act as web/application servers within the provider network to support (authenticated) end user interfaces</li>
+              <li>run the same software that is configured with network- and shared data specifications</li>
+            </ul>
+            <p><img class="center scale60" src="../images/share-adhoc.svg" alt="sharing data in heterogeneous networks"></p>
+            <p>Each layer consists of a single <em>coordinator</em> node (at a time) and multiple <em>provider</em> nodes. Both coordinator and
+            providers can change during operation. The primary role of a provider node is to update its own data and report
+            changes to the upstream coordinator. The role of the coordinator is to distribute data changes to the other provider
+            nodes and potentially report to its own upstream coordinator. Each node monitors its connectivity status and
+            synchronizes with other nodes upon (re-)establishing connectivity.</p>
+            <p>The simple tree topology of SHARE networks is a deliberate choice to minimize the need for dedicated network
+            infrastructure and configuration. It is assumed that participating organizations often use public networks to
+            communicate with each other, and already established private networks internally. Although SHARE can support
+            more complex topologies it is supposed to work in a minimal networking environment where each provider only has
+            to know the IP address of its upstream coordinator, and communication between nodes can take place over untrusted
+            networks using well known protocols and ports (https, i.e. with host authentication and encryption).</p>
+            <p>Although this is just a conceptual model (the underlying implementation is a more general key/value store), the
+            basic SHARE data model can be viewed as a replicated, distributed spread sheet where each node owns one or more
+            columns, and each row is uniquely identified and typed.</p>
+            <p>Nodes can change their data in four different ways:</p>
+            <ul>
+              <li>by manual entry via the user interface (through the provider-internal web server of the node)</li>
+              <li>(potentially) by automated import from existing provider systems/data bases</li>
+              <li>value triggered computation (i.e. if other local or remote data changes)</li>
+              <li>time triggered computation (e.g. for periodic reporting) </li>
+            </ul>
+            <p>While every node is responsible for its own data, it is assumed that at least some fields can also be updated by
+            the upstream coordinator. This is mostly to allow for provider-specific goals that are set by the upstream organization,
+            and as a backup in case a provider becomes disconnected and has to report updates through alternative communication
+            channels. Nonetheless, in addition to keeping timestamps for every data change there is a clear priority order
+            of potential change sources that can be used to resolve conflicts.</p>
+            <p>Tracked data (rows) can change during operation without requiring to restart nodes or otherwise interrupt operations.</p>
+            
+            <h2 id="anatomy-of-a-share-node" class="section"><a class="anchor-link left" href="#anatomy-of-a-share-node"><i class="icofont-laika">&#xef71;</i></a>Anatomy of a SHARE Node</h2>
+            <p>Nodes have a uniform design that reflects their four major functions:</p>
+            <ol class="arabic">
+              <li>upstream reporting (if this is not a terminal coordinator)</li>
+              <li>downstream data distribution (if this is a coordinator node)</li>
+              <li>user server (data-display and entry)</li>
+              <li>(potentially) automated provider server data import</li>
+            </ol>
+            <p><img class="center scale50" src="../images/share-node-functions.svg" alt="node functions"></p>
+            <p>The communication with upstream and downstream nodes uses the same message protocols and formats for all SHARE
+            applications: a set of <a href="http://json.org/">JSON</a> messages transmitted over <a href="https://datatracker.ietf.org/doc/html/rfc6455">WebSockets</a>. Although RACE directly supports <a href="remoting.html">Remote Actors</a>
+            this more abstract approach was chosen so that SHARE nodes have a well defined interface allowing alternative, possibly
+            provider specific implementations (e.g. not using RACE/Akka/Scala running on a JVM).</p>
+            <p>The user server is a normal <a href="http-server.html#httpserver">HttpServer</a> that has the function to support data display and entry to/from existing
+            provider devices such as desktops, laptops and tablets. While RACE/SHARE comes with a generic web application that
+            runs on normal web browsers (i.e. is end-user installation free) the <a href="http-server.html#httpserver">HttpServer</a> can be configured with additional
+            routes to support provider and device specific access to SHARE data. This is one of the potential SHARE extension points.
+            Special emphasis is given to end-user installation free clients, i.e. browser-based clients that do not require
+            any modification to existing end user devices.</p>
+            <p>Import from and export to provider servers is highly provider specific. While there are no generic SHARE actors (yet)
+            to support this function this can make use of RACEs extensive <a href="connectivity.html">Data Import and Export Infrastructure</a>. This is the
+            second provider specific extension point.</p>
+            <p>It should be noted that while SHARE nodes <em>can</em> be extended in such provider specific ways there is no need to create
+            these extensions upfront - SHARE has enough generic components to be used off-the-shelf. The main goal here is to lower
+            the barrier of adoption by not requiring any software development prior to deployment, but at the same time enable
+            incremental extension should a provider choose to opt for more automation and customization at a later point.</p>
+            <p>What has to be created prior to deployment of SHARE nodes is application specific configuration in form of text files
+            containing <a href="http://json.org/">JSON</a> data. Namely, each node is configured with a:</p>
+            <ul>
+              <li>NodeList (participating providers and potential coordinators)</li>
+              <li>ColumnList (data ownership of providers)</li>
+              <li>RowList (types and identifiers of shared data sets)</li>
+            </ul>
+            <p>SHARE ultimately will support hot-swap of any of these configuration files, i.e. replacement without affecting ongoing
+            operation. Examples of those lists can be found in <code>race-net-http-test/src/resources/sites/share</code>.</p>
+            <p>What is not reflected in the four mentioned external interfaces is the central component of each SHARE node - an actor
+            that performs all mutations of the node data and triggers outgoing communication by publishing respective data changes.
+            With that the actor schematics of a SHARE application take the following shape:</p>
+            <p><img class="center scale50" src="../images/share-actors.svg" alt="node actors"></p>
+            
+            <h2 id="data-update-semantics" class="section"><a class="anchor-link left" href="#data-update-semantics"><i class="icofont-laika">&#xef71;</i></a>Data Update Semantics</h2>
+            <p>The three semantic aspects of the SHARE data model that warrant further analysis are field value conflict resolution,
+            spatial (horizontl/vertical) variation and temporal variation.</p>
+            
+            <h3 id="conflicts" class="section"><a class="anchor-link left" href="#conflicts"><i class="icofont-laika">&#xef71;</i></a>Conflicts</h3>
+            <p>Since the primary purpose of SHARE is to support data replication it is essential to make sure conflicting values on
+            different nodes do not lead to unspecified system behavior. The concept of a <a href="https://en.wikipedia.org/wiki/Conflict-free_replicated_data_type">Conflict Free Replicated Data Type</a> (CRDT)
+            is therefore central to the SHARE data model.</p>
+            <p>The reference data model assumes there is a clear update prioritization for each data set (column) and field (row).
+            In most cases this means that each data set (column) has a dedicated owner/producer from which values are synchronized
+            across the network, with the possible exception of goal fields that are set by upstream organizations (i.e. taken
+            from the coordinator node).</p>
+            <p>In addition, each field value update is associated with a time stamp. Although this time stamp can also be used to
+            resolve (prioritize) conflicting updates during data synchronization, this should be reserved for special cases
+            in which race conditions are not of concern.</p>
+            
+            <h3 id="spatial-variation" class="section"><a class="anchor-link left" href="#spatial-variation"><i class="icofont-laika">&#xef71;</i></a>Spatial Variation</h3>
+            <p>The second formal aspect of the SHARE data model is horizontal and vertical variation.</p>
+            <p>Horizontally, not every node has to see each of its peer nodes, and even for visible nodes there can be fields that
+            should be hidden.</p>
+            <p>Vertically, the information needs of hierarchy layers usually differ. Usually there are more details at the bottom layers,
+            and more abstraction towards upper layers. This means a mid-layer coordinator probably reports different data upwards
+            than it distributes downwards between its provider nodes.</p>
+            <p>SHARE supports horizontal and vertical data model variation by means of filters that can be attached to both
+            data sets (columns) and fields (rows). The governing principle is that each SHARE node is responsible for selecting
+            which external change it accepts, and which internal changes it sends to up- and/or downstream nodes.</p>
+            
+            <h3 id="temporal-variation" class="section"><a class="anchor-link left" href="#temporal-variation"><i class="icofont-laika">&#xef71;</i></a>Temporal Variation</h3>
+            <p>Data sets and node lists might change during operation. SHARE uses dedicated lists (NodeList, ColumnList, RowList)
+            so that respective information is not hardcoded but configured, and configuration can be replaced during runtime.</p>
+            <p>This also needs to be backed up by data stores (ColumnData collections) that support missing/default values and
+            that are only accessed by the rest of the system through abstract interfaces providing hot-swap capabilities.</p>
+            
+            <h2 id="user-clients" class="section"><a class="anchor-link left" href="#user-clients"><i class="icofont-laika">&#xef71;</i></a>User Clients</h2>
+            <p>User clients are not the main focus of the generic SHARE infrastructure in RACE as they are usually domain-, device-
+            and provider- specific. In order to demonstrate basic use of the system SHARE comes with a generic browser application
+            that implements a view resembling a spreadsheet, with added connectivity status and (authenticated) data editing/publishing:</p>
+            <p><img class="center scale50" src="../images/share-screen.png" alt="node actors"></p>
+            <p>The respective HTML and Javascript assets can be found in <code>race-net-http/src/main/resources/sites/share</code>.</p>
+            <p>The main functionality is in <code>js/app/share.js</code>, which communicates with the <code>UserServerRoute</code> via a web socket
+            to obtain and update the data, which happens through the exchange of a number of JSON messages that implement
+            the user client protocol.</p>
+            <p>This protocol is intentionally kept simple and generic to accommodate future provider- and device- specific clients
+            by just exchanging the static assets in <code>UserServerRoute</code>.</p>
+            
+            <h2 id="security-aspects" class="section"><a class="anchor-link left" href="#security-aspects"><i class="icofont-laika">&#xef71;</i></a>Security Aspects</h2>
+            <p>SHARE considers the following security threats</p>
+            
+            <h3 id="leaks-of-private-provider-data" class="section"><a class="anchor-link left" href="#leaks-of-private-provider-data"><i class="icofont-laika">&#xef71;</i></a>Leaks of private provider data</h3>
+            <p>The motivation for SHARE is that relevant organizations usually have deliberately separated and insulated data bases.
+            A primary concern for adopting organizations is therefore that no private data can leak through SHARE nodes to the
+            outside world. SHARE mitigates this by separating its own data model and store from the organization data base. Each
+            SHARE node only stores and processes what is defined in its own configuration, it does not execute any remote code or
+            generic requests. Import from and export to organization data bases is provider specific and has to be added by that
+            respective organization, i.e. will be subject to internal regulation and reviews. Potential import/export components
+            are actors - separate code units with well defined interfaces to the rest of the system that lend themselves naturally
+            to security audits.</p>
+            <p>Leakage of sensitive provider data that is mapped into the SHARE data model is prevented by restricting SHARE node
+            interfaces. SHARE nodes are supposed to be dedicated, access controlled machines that only have two server functions - to
+            known and authenticated SHARE nodes outside of the organizations network, and to user devices inside of the organization
+            (i.e. within a trusted and access controlled network).</p>
+            <p>Both node- and user- server components can make use of https to provide host authentication. In addition, both
+            server components and the upstream connector can be configured to connect only to known IP addresses.</p>
+            
+            <h3 id="untrusted-networks" class="section"><a class="anchor-link left" href="#untrusted-networks"><i class="icofont-laika">&#xef71;</i></a>Untrusted networks</h3>
+            <p>Inter-node communication in SHARE can use untrusted networks. SHARE nodes are usually configured to use <code>https</code> for
+            all external communication and therefore can assume both host authentication and strong encryption of transmitted content.</p>
+            <p>SHARE nodes do not have any public server function - the only communication with the outside of the organization takes
+            place with a closed set of well known other SHARE nodes. Organization firewalls can be easily configured to reflect such
+            limited and a-priori known connections. Since there are no public services the only DoS attack vector is a compromised
+            SHARE node.</p>
+            
+            <h3 id="compromised-share-node" class="section"><a class="anchor-link left" href="#compromised-share-node"><i class="icofont-laika">&#xef71;</i></a>Compromised SHARE node</h3>
+            <p>SHARE nodes are dedicated machines with no direct user interaction, they are operated in an access controlled
+            environment. Should a node become compromised it can be easily isolated by upstream and downstream nodes, e.g. by
+            putting caps on data volume and by counting receive filter rejections. The <code>UpdateActor</code> also supports automatic
+            data constraint checks to safeguard against malicious or accidental data corruption.</p>
+            
+            <h3 id="un-authorized-user-access" class="section"><a class="anchor-link left" href="#un-authorized-user-access"><i class="icofont-laika">&#xef71;</i></a>Un-authorized user access</h3>
+            <p>User access only happens from within the provider network. The user server ensures authentication for <code>AuthRaceRoute</code>
+            derived routes, which is performed by a configured <code>Authenticator</code> object. The primary implementation for this
+            interface is the <code>WebAuthnAuthenticator</code> which supports password-less user authentication according to the W3C
+            <a href="https://webauthn.io/">WebAuthn</a> standard. Apart from providing better protection than user provided passwords (no shared secrets stored on
+            client and server) it also avoids the vulnerable server infrastructure to reset forgotten or compromised passwords.</p>
+            <p>Both user registration and authentication can be configured to specify valid sub-networks. This also allows to
+            restrict (one time) user registration to the SHARE node itself, which can be used to physically verify user identity
+            and hand out authenticator devices (such as fingerprint readers) from within an access controlled environment.</p>
+            <p>With respect to data update SHARE goes beyond route protection. The user server only accepts data changes for
+            authenticated users who have an active edit session, which has to be explicitly requested and results in selecting a
+            user permission profile. This profile is sent to the client and limits the fields that can be edited through the client
+            user interface. Once the client sends back the changed values the server checks them against the active profile for the
+            respective user. Edit sessions without user interaction expire after a configurable timeout.</p>
+            
+            <h2 id="main-implementation-constructs" class="section"><a class="anchor-link left" href="#main-implementation-constructs"><i class="icofont-laika">&#xef71;</i></a>Main Implementation Constructs</h2>
+            <p>Since SHARE applications make heavy use of the <code>HttpServer</code> and respective web socket support the SHARE specific
+            code is located in the <code>race-net-http</code> module within the <code>gov.nasa.race.http.share</code> package. Tests and example
+            data can be found in <code>race-net-http-test</code>.</p>
+            <p>The main classes representing the generic SHARE data model are <code>Node</code> and <code>NodeList</code>, <code>Column</code> and <code>ColumnList</code>,
+            <code>Row</code> and <code>RowList</code>, <code>CellValue</code> and <code>ColumnData</code>:</p>
+            <p><img class="center scale60" src="../images/share-data.svg" alt="sharing data in heterogeneous networks"></p>
+            <dl>
+              <dt><strong>NodeList</strong></dt>
+              <dd>defines the network as it is seen by the node. This includes the own node name, a list of potential upstream nodes
+              (of which the first responsive one is chosen), a list of peer nodes and a potential list of downstream (child) nodes
+              for which this node acts as the coordinator.</dd>
+              <dt><strong>Column</strong></dt>
+              <dd>is an entity that describes data ownership of nodes and associated incoming/outgoing update filters, i.e. from
+              which other nodes respective <code>ColumnDataChanges</code> are accepted and to which nodes <code>ColumnDataChanges</code> are sent.
+              Each column has a unique identifier.</dd>
+              <dt><strong>ColumnList</strong></dt>
+              <dd>is the configuration object for <code>Columns</code> which is initialized from a textual (JSON) specification.</dd>
+              <dt><strong>Row</strong></dt>
+              <dd>is an entity that describes a data field, which includes a unique identifier, an (implicit) field type such as
+              integer or real, and optional send/receive update filters that can be applied on top of the ones specified for
+              respective <code>Columns</code>. <code>Row</code> is an abstract class with a number of field type specific implementations. As such
+              it is a extension point of SHARE, albeit not a primary one since it does require providing/changing a number of
+              related constructs (especially in the context of <code>Formula</code>/<code>CellExpression</code> support, i.e. scripted field updates).</dd>
+              <dt><strong>RowList</strong></dt>
+              <dd>is the configuration object for <code>Rows</code> that is initialized from a JSON specification.</dd>
+              <dt><strong>CellValue</strong></dt>
+              <dd>contains the (typed) data value of a column/row cell and the time stamp of its last change.</dd>
+              <dt><strong>ColumnData</strong></dt>
+              <dd>holds an immutable map with defined <code>CellValues</code> for a given <code>Column</code> and the time stamp of their last changes.
+              This is the per-column key/value store that holds the live data.</dd>
+              <dt><strong>Node</strong></dt>
+              <dd>is an immutable aggregation of the aforementioned data and the main product published by the <code>UpdateActor</code>.
+              It holds all the information upon which the other actors (UpstreamConnectorActor, NodeServer and user server)
+              rely for their operation. <code>Node</code> makes heavy use of Scala&#39;s time- and space- efficient implementation of immutable
+              data types in order to scale to a high update volumns.<code>Node</code> instances are never sent out to other nodes,
+              they are only published inside of a NODE as simple reference values. This implementation was chosen to avoid
+              initialization state in receiving actors - a <code>Node</code> object holds a consistent snapshot of all static and dynamic
+              data such actors process.</dd>
+            </dl>
+            <p>The primary SHARE messages are <code>NodeDates</code> and <code>ColumnDataChange</code>:</p>
+            <dl>
+              <dt><strong>ColumnDataChange</strong></dt>
+              <dd>this is the central event type that triggers update of the node data model. Is used to report such changes to
+              other actors, nodes and user clients. <code>ColumnDataChange</code> objects contains the originating node, the time stamp
+              and the set of changed <code>CellValues</code>.</dd>
+              <dt><strong>NodeDates</strong></dt>
+              <dd>is a snapshot of all data time stamps of a node. For non-owned columns this is just the single <code>ColumnData</code>
+              time stamp, for owned columns this includes each <code>CellValue</code> time stamp of respective <code>ColumnDatas</code>. This message
+              is used to synchronize SHARE nodes.</dd>
+            </dl>
+            <p>Key actors of SHARE are the <code>UpdateActor</code>, the <code>UpstreamConnectorActor</code> and the ``HttpServer``_:</p>
+            <dl>
+              <dt><strong>UpdateActor</strong></dt>
+              <dd>this is the sole component that is responsible for updating the node internal data model, which creates and
+              publishes new <code>Node</code> objects (representing a snapshot the complete node state), followed by respective
+              <code>ColumnDataChange</code> (CDC) objects that specify the deltas that caused the node state change. This can be triggered
+              by CDCs received from the upstream or downstream nodes, by CDCs reveived from provider server import actors or
+              the user server (interactive data entry), or by value- or time-triggered formulas that are managed by the UpdateActor.</dd>
+            </dl>
+            <p><img class="center scale60" src="../images/share-dm.svg" alt="node actors"></p>
+            <dl>
+              <dt><strong>UpstreamConnectorActor</strong></dt>
+              <dd>connects to the <code>NodeServer</code> of the upstream node through a websocket, hence it is derived from <code>WsAdapterActor</code>.
+              Apart from receiving external CDCs (which are forwarded to the <code>UpdateActor</code>) and reporting own CDCs (received from
+              the <code>UpdateActor</code>) its main purpose is to track the upstream connectivity status and initiate/process data
+              synchronization once connection to the upstream is (re-)established.</dd>
+              <dt><strong>NodeServer</strong></dt>
+              <dd>is the coordinator node counterpart of provider <code>UpstreamConnectorActors</code>. This is just an <code>HttpServer</code>
+              that keeps track of the current <code>Node</code> state (received from the <code>UpdateActor</code>) and normally uses a single
+              <code>NodeServerRoute</code> that implements the downstream communication.</dd>
+            </dl>
+            <p>Since the generic <code>HttpServer</code> delegates application specific communication to configured <code>RaceRouteInfo</code> objects,
+            SHARE provides the following routes:</p>
+            <dl>
+              <dt><strong>NodeServerRoute</strong></dt>
+              <dd>this represents the URL provider node <code>UpstreamConnectorActors</code> use to connect to their upstream coordinator, which
+              maps straight into a web socket that implements the respective coordinator/provider protocols. While there can be
+              several provider-specific routes this is a less likely extension point than <code>UserServerRoute</code>.</dd>
+              <dt><strong>UserServerRoute</strong></dt>
+              <dd>is the extension point for different user clients - each route maps to a device-specific application such as
+              a generic browser HTML document, which upon load opens a web socket to the user server that is responsible for
+              data update.</dd>
+            </dl>
+            
+            <h2 id="protocols" class="section"><a class="anchor-link left" href="#protocols"><i class="icofont-laika">&#xef71;</i></a>Protocols</h2>
+            <p>As mentioned above SHARE is also used as a platform to test synchronization protocols for distributed systems, hence
+            this collection will be extended in the future so support more specialized applications/use cases. Off-the-shelf
+            there are two protocols included for</p>
+            <ul>
+              <li>node (re-)synchronization (implemented in <code>NodeServerRoute</code> and <code>UpstreamConnectorActor</code>)</li>
+              <li>user client synchronization (implemented in <code>UserServerRoute</code> and <code>share.js</code>)</li>
+            </ul>
+            
+            <h3 id="node-synchronization" class="section"><a class="anchor-link left" href="#node-synchronization"><i class="icofont-laika">&#xef71;</i></a>Node Synchronization</h3>
+            <p><img class="right scale60" src="../images/share-nodesync.svg" alt="node synchronization"></p>
+            <p>This protocol is initiated by the downstream node when it detects a working connection to the upstream coordinator,
+            which either happens during start of the downstream node or after a previously lost connection got restored. It starts
+            with the downstream node sending its <code>NodeDates</code>, to which the upstream node responds with zero or more
+            <code>ColumnDataChanges</code> for its <code>ColumnDatas</code> that have newer fields. This is followed by sending the upstream
+            <code>NodeDates</code>, which in turn tells the downstream node which if its <code>ColumnDatas</code> are newer (usually the ones
+            owned by the downstream node) and have to be sent back as <code>ColumnDataChanges</code>.</p>
+            <p>The challenge for this simple protocol is that neither upstream nor downstream node should be blocked while the
+            synchronization takes place, i.e. both nodes potentially process interleaving changes from other sources (e.g.
+            downstream from user clients and upstream from other online child nodes). While this protocol could be run in
+            cycles until a fix point is reached or an endless update loop is detected, data ownership rules and time stamps
+            should avoid this for all but statically detectable cases (e.g. when a change of the sending node triggers a formula
+            in the receiving node that causes an endless loop when respective changes are sent back). Loop detection at
+            runtime is not yet implemented.</p>
+            
+            <h3 id="user-client-synchronization" class="section"><a class="anchor-link left" href="#user-client-synchronization"><i class="icofont-laika">&#xef71;</i></a>User Client Synchronization</h3>
+            <p><img class="right scale25" src="../images/share-UR-webclient.svg" alt="user client protocol"></p>
+            <p>This mostly uses the same JSON messages as inter-node synchronization to initialize and update the user client. The
+            specific part is the client-initiated field update, which has to support user authentication and hence requires a
+            timeout-limited edit mode that is tracked both in the user client and the UserServerRoute.</p>
+            <p>It begins with the client sending an edit request containing a user id, which in all but access constrained environments
+            will in itself trigger an embedded user authentication protocol (SHARE supports and promotes the W3C <a href="https://webauthn.io/">WebAuthn</a> standard
+            using authenticator devices).</p>
+            <p>If the authentication is successful the server sends back a permission profile, which tells the client which fields can
+            be edited by the user and starts a timeout-limited edit mode in both client and server. User changes do update the
+            timeout but do not end the edit session, to allow for bulk changes. The server rejects user changes that are received
+            after the timeout and informs the client accordingly.</p>
+            
+            <h3 id="coordinator-selection" class="section"><a class="anchor-link left" href="#coordinator-selection"><i class="icofont-laika">&#xef71;</i></a>Coordinator Selection</h3>
+            <p>Not yet implemented is a protocol for (re-)selection of a coordinator node - currently a provider node just chooses the
+            first responding coordinator from its node list, which can result in permanent partitions of a SHARE network (providers
+            using different coordinators).</p>
+            <p>There are known leader election algorithms for coordinator candidates such as the <a href="https://raft.github.io/">Raft Consensus Algorithm</a> but care
+            must be taken to meet connectivity constraints such as to avoid fully connected networks over all SHARE nodes (which
+            would require provider nodes to communicate with untrusted peers).</p>
+            <p>Although it does not cause data loss or disruption of local service in disconnected network partitions, the coordinator
+            is still a single point of failure that will need to be addressed in order to increase robustness of a SHARE network.</p>
+            
+            <h2 id="future-directions" class="section"><a class="anchor-link left" href="#future-directions"><i class="icofont-laika">&#xef71;</i></a>Future Directions</h2>
+            <p>SHARE serves a dual role as a production framework and a testbed for distributed systems. For that reason current
+            configuration formats (e.g. for <code>NodeList</code>) support a superset of the current functionality. The following extensions
+            are currently planned:</p>
+            <p><strong>Coordinator election protocol</strong> for partitioned trees  - to sync between live coordinators. This is an adaptation of
+            *the node synchronization protocol that replaces column ownership with node-reachability, based on that each provider
+            *node only uses one coordinator at a time (i.e. partitions are stable)</p>
+            <p><strong>Dynamic row types</strong> - extending the generic data model towards streams for dynamic entity collections such as track lists</p>
+            <p><strong>Hardcoded data model</strong> - high volume/low latency import/export actors might benefit from accessing fields through
+            references instead of symbolic IDs. Those hardcoded models can be encapsulated in derived/specialized <code>UpdateActors</code></p>
+            <p><strong>Alternative user clients</strong> - the current generic browser client is probably the most likely replacement candidate in
+            production systems. Apart from a <a href="https://www.scala-js.org/">ScalaJS</a> based implementation (to avoid polyglot programming) a <a href="https://flutter.dev/">Flutter</a> client
+            is planned as an example for vendor-independent mobile device support</p>
+            <p>Independent of such functional extensions we intend to create formal specifications, security-/safety- cases and
+            separate user documentation for SHARE.</p>
+        </div>
+
+    </body>
+</html>

@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8"/>
+        <title>RACE</title>
+
+        <link href="./race-slides-html.css" rel="stylesheet"/>
+    </head>
+
+    <body>
+        <div class="slidecounter" id="counter">0 / 0</div>
+        <div class="stopwatch" id="timer">00:00</div>
+        <div class="slide title">
+            <!-- additional divs inserted by renderer extension -->
+            <h1 id="share" class="title">SHARE</h1>
+            <p>System for Hierarchical Ad hoc Reporting </br></p>
+            <p class="author">
+            Peter.C.Mehlitz@nasa.gov<br/>
+            NASA Ames Research Center
+            </p>
+            </div><div class="slide"><h2 id="slides" class="section">Slides</h2>
+            <ul class="nav-list">
+              <li class="level1 active"><a href="#">SHARE</a></li>
+              <li class="level2"><a href="#slides">Slides</a></li>
+              <li class="level2"><a href="#problem">Problem</a></li>
+              <li class="level2"><a href="#key-requirements">Key Requirements</a></li>
+              <li class="level2"><a href="#solution">Solution</a></li>
+              <li class="level2"><a href="#share-node">SHARE Node</a></li>
+              <li class="level2"><a href="#conceptual-data-model-and-flow">Conceptual Data Model and Flow</a></li>
+              <li class="level2"><a href="#share-data-update">SHARE Data Update</a></li>
+              <li class="level2"><a href="#detailed-data-model">Detailed Data Model</a></li>
+              <li class="level2"><a href="#formulas">Formulas</a></li>
+              <li class="level2"><a href="#data-resynchronization-protocol">Data Resynchronization Protocol</a></li>
+              <li class="level2"><a href="#detailed-data-resynchronization">Detailed Data Resynchronization</a></li>
+              <li class="level2"><a href="#web-client">Web Client</a></li>
+              <li class="level2"><a href="#provider-data-import-export">Provider Data Import / Export</a></li>
+              <li class="level2"><a href="#actors">Actors</a></li>
+              <li class="level2"><a href="#tbd">TBD</a></li>
+            </ul>
+            </div><div class="slide"><h2 id="problem" class="section">Problem</h2>
+            <ul>
+              <li>task/incident related hierarchical reporting across heterogenous, isolated org entities (providers)</li>
+              <li>rapid, non-disruptive rollout/tear down</li>
+              <li>dynamic provider- and data sets</li>
+              <li>fail-operational
+              <img src="../images/share-problem.svg" class="center up75 back scale70"></li>
+            </ul>
+            </div><div class="slide"><h2 id="key-requirements" class="section">Key Requirements</h2>
+            <ul>
+              <li><strong>non-intrusive</strong>: no modification of provider machines/network, no end user installation</li>
+              <li><strong>fail-operational</strong>: no single point of failure causing data loss</li>
+              <li><strong>self-repairing</strong>: automatic data sync upon (re)connection
+              <img src="../images/share-failop.svg" class="center scale20"></li>
+              <li><strong>flexible</strong>: provider lists and data sets can be modified at runtime without disrupting operation</li>
+              <li><strong>uniform</strong>: can be used across several hierarchy levels</li>
+              <li><strong>extensible</strong>: optional provider specific automation</li>
+            </ul>
+            </div><div class="slide"><h2 id="solution" class="section">Solution</h2>
+            <ul>
+              <li>ad hoc overlay using dedicated, pre-configured <em>SHARE nodes</em> inside provider networks
+              <img src="../images/share-adhoc.svg" class="center scale75"></li>
+            </ul>
+            </div><div class="slide"><h2 id="share-node" class="section">SHARE Node</h2>
+            <ul>
+              <li>uniform node design (same SW, different config files)</li>
+              <li>4 optional functions: user-server, node-server, node-client, provider-import/export</li>
+              <li>provider-local data display and entry through user-server (browser)</li>
+              <li>sync with upstream and downstream through node-server/node-client</li>
+              <li>upstream/downstream/user clients: JSON over websockets (allowing non-RACE/SHARE endpoints)
+              <img src="../images/share-node-functions.svg" class="center back scale55"></li>
+            </ul>
+            </div><div class="slide"><h2 id="conceptual-data-model-and-flow" class="section">Conceptual Data Model and Flow</h2>
+            <ul>
+              <li>distributed, replicated, filtered spreadsheet with typed rows (int,real,bool,string,intList,realList)</li>
+              <li>columns owned by providers (write access)</li>
+              <li>cells hold value and time</li>
+              <li>owner + date resolve conflicts (CRDT)</li>
+              <li>supports formulas (value- and time triggered)</li>
+              <li>sync through connector upstream node
+              <img src="../images/share-flow.svg" class="center scale50"></li>
+            </ul>
+            </div><div class="slide"><h2 id="share-data-update" class="section">SHARE Data Update</h2>
+            <ul>
+              <li>configured (semi-) static structure: <strong>ColumnList</strong>, <strong>RowList</strong> </li>
+              <li>dynamic data: <strong>ColumnData</strong> (morphable key-value maps)</li>
+              <li>change stimulus: <strong>ColumnDataChange</strong>, time-triggered formulas</li>
+              <li>complete state snapshot: invariant <strong>Node</strong> object
+              <img src="../images/share-dm.svg" class="center scale70"></li>
+            </ul>
+            </div><div class="slide"><h2 id="detailed-data-model" class="section">Detailed Data Model</h2>
+            <img src="../images/share-data.svg" class="center scale90">
+            </div><div class="slide"><h2 id="formulas" class="section">Formulas</h2>
+            <img src="../images/share-formulas.svg" class="center scale90">
+            </div><div class="slide"><h2 id="data-resynchronization-protocol" class="section">Data Resynchronization Protocol</h2>
+            <ul>
+              <li>based on column ownership (provider node) and ColumnData dates</li>
+              <li>dates transmitted with <em>NodeState</em> message (per-CD for ext. columns, per-cell for own)</li>
+              <li>newer own data transmitted with normal <em>ColumnDataChange</em> messages</li>
+              <li>protocol can run in cycles until fixpoint is reached, i.e. does not need to halt local op
+              <img src="../images/share-sp.svg" class="center scale70"></li>
+            </ul>
+            </div><div class="slide"><h2 id="detailed-data-resynchronization" class="section">Detailed Data Resynchronization</h2>
+            <img src="../images/share-sync.svg" class="center scale80">
+            </div><div class="slide"><h2 id="web-client" class="section">Web Client</h2>
+            <img src="../images/share-browser.svg" class="center scale90">
+            </div><div class="slide"><h2 id="provider-data-import-export" class="section">Provider Data Import / Export</h2>
+            <ul>
+              <li>utilizing comprehensive RACE Import/Export actor infrastructure</li>
+              <li>this is RACEs native domain (http, JMS, Kafka, sockets, ..., XML, Json, Protobuf, binary, ...)</li>
+              <li>supports soft-realtime with &gt; 1000 msg/sec</li>
+              <li>configured actors that communicate via publish/subscribe channels</li>
+              <li>imports processed as normal ColumnDataChange events</li>
+              <li>can be gradually introduced/extended</li>
+            </ul>
+            <p><img src="../images/import-export.svg" class="left scale40">
+            <img src="../images/swim-sbs-all-ww.svg" class="right scale50"></p>
+            </div><div class="slide"><h2 id="actors" class="section">Actors</h2>
+            <ul>
+              <li>SHARe is generic RACE application</li>
+              <li>using actors as concurrent execution units
+              <img src="../images/share-actors.svg" class="center scale80"></li>
+            </ul>
+            </div><div class="slide"><h2 id="tbd" class="section">TBD</h2>
+            <ul>
+              <li>demo / presentation slides</li>
+              <li>NTP implementation for clock sync</li>
+              <li>runtime RowList/ColumnList swap</li>
+              <li>user auth (pw change)</li>
+              <li>more clients (Flutter)</li>
+              <li>specs (variants, Fret?)</li>
+              <li>global monitoring (Mesa?)</li>
+            </ul>
+        </div>
+    </body>
+
+    <script src="./race-slides.js"></script>
+</html>

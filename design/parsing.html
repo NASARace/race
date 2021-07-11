@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8"/>
+        <title>RACE</title>
+
+        <link href="../race-html.css" rel="stylesheet"/>
+    </head>
+
+    <body>
+        <div class="navbar">
+            <div class=""banner>
+                <a href="../index.html" ><img class="logo" src="../images/race128.png"></a>
+                <p class="doctitle">RACE Manual</p>
+            </div>
+            <br/>
+            <div class="toc">
+                <p class="title">Project Links</p>
+                <ul>
+                    <li><span class="toc level2"><a href="https://github.com/NASARace/race.git">Repository</a></span></li>
+                    <li><span class="toc level2"><a href="http://nasarace.github.io/race">Website</a></span></li>
+                </ul>
+            </div>
+            <div class="toc pagetoc">
+                <p class="title">Page</p>
+                <ul class="nav-list">
+                  <li class="level1 active"><a href="#">RACE Parsers</a></li>
+                  <li class="level2"><a href="#xml">XML</a></li>
+                  <li class="level2"><a href="#json">JSON</a></li>
+                  <li class="level2"><a href="#csv">CSV</a></li>
+                  <li class="level2"><a href="#stringmatchgenerator-tool">StringMatchGenerator tool</a></li>
+                  <li class="level2"><a href="#parser-input">Parser input</a></li>
+                  <li class="level2"><a href="#byteslice-hierarchy">ByteSlice hierarchy</a></li>
+                </ul>
+            </div>
+            <div class="toc globaltoc">
+                <p class="title">Site</p>
+                <ul class="nav-list">
+                  <li class="level1 nav-header">RACE Manual</li>
+                  <li class="level2"><a href="../index.html">About RACE</a></li>
+                  <li class="level2 nav-header">Installing RACE</li>
+                  <li class="level3"><a href="../installation/prerequisites.html">Prerequisites</a></li>
+                  <li class="level3"><a href="../installation/download.html">Downloading RACE</a></li>
+                  <li class="level3"><a href="../installation/build.html">Building RACE</a></li>
+                  <li class="level3"><a href="../installation/pitfalls.html">Installation Pitfalls</a></li>
+                  <li class="level3"><a href="../installation/osx.html">OS X Specifics</a></li>
+                  <li class="level2 nav-header">Using RACE</li>
+                  <li class="level3"><a href="../usage/running.html">How to Run RACE</a></li>
+                  <li class="level3"><a href="../usage/configuration.html">RACE Configuration</a></li>
+                  <li class="level3"><a href="../usage/encryption.html">Using Encrypted Configurations</a></li>
+                  <li class="level2 nav-header">RACE Design</li>
+                  <li class="level3"><a href="overview.html">Design Overview</a></li>
+                  <li class="level3"><a href="actors.html">Actors</a></li>
+                  <li class="level3"><a href="configuration.html">Runtime Configuration</a></li>
+                  <li class="level3"><a href="raceactors.html">RaceActors</a></li>
+                  <li class="level3"><a href="channeltopics.html">ChannelTopics</a></li>
+                  <li class="level3"><a href="embedded-objects.html">Embedded Objects</a></li>
+                  <li class="level3"><a href="connectivity.html">Connecting External Systems</a></li>
+                  <li class="level3"><a href="remoting.html">Remote RaceActors and Distributed RACE Applications</a></li>
+                  <li class="level3"><a href="remotelauncher.html">RemoteLauncher</a></li>
+                  <li class="level3"><a href="hc.html">Heterogeneous Computing in RACE</a></li>
+                  <li class="level3 active"><a href="#">RACE Parsers</a></li>
+                  <li class="level3"><a href="archive-replay.html">Archive and Replay</a></li>
+                  <li class="level3"><a href="timeseries.html">Time Series Analysis</a></li>
+                  <li class="level3"><a href="trajectory.html">Trajectory Infrastructure</a></li>
+                  <li class="level3"><a href="rgis.html">RACE GIS Support</a></li>
+                  <li class="level3"><a href="worldwind.html">WorldWind Viewer</a></li>
+                  <li class="level3"><a href="http-server.html">HttpServer</a></li>
+                  <li class="level3"><a href="http-client.html">HttpImportActor</a></li>
+                  <li class="level3"><a href="share.html">SHARE - System for Hierarchical Ad hoc Reporting</a></li>
+                  <li class="level3"><a href="layers-and-modules.html">Layers and Modules</a></li>
+                  <li class="level3"><a href="directory-structure.html">Directory Structure</a></li>
+                  <li class="level3"><a href="repository.html">Repository Structure</a></li>
+                  <li class="level3"><a href="local-build.html">Local Build Configuration</a></li>
+                  <li class="level3"><a href="dds.html">RACE and DDS</a></li>
+                  <li class="level3"><a href="extproject.html">Using RACE from External Projects</a></li>
+                  <li class="level3"><a href="whyscala.html">Why Scala</a></li>
+                  <li class="level2 nav-header">Documentation</li>
+                  <li class="level3"><a href="../documentation/overview.html">RACE Documentation Overview</a></li>
+                  <li class="level3"><a href="../documentation/presentations.html">Available Slide Presentations</a></li>
+                  <li class="level2 nav-header">Annex</li>
+                  <li class="level3"><a href="../annex/project-log.html">Project Log</a></li>
+                  <li class="level3"><a href="../annex/examples.html">RACE Examples</a></li>
+                  <li class="level3"><a href="../annex/known-problems.html">Known Problems</a></li>
+                  <li class="level3"><a href="../annex/changes.html">Changes</a></li>
+                  <li class="level3"><a href="../annex/todo.html">TODO List</a></li>
+                  <li class="level3"><a href="../annex/learning.html">Learning Resources</a></li>
+                  <li class="level3"><a href="../annex/glossary.html">Glossary</a></li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="main">
+            <h1 id="race-parsers" class="title">RACE Parsers</h1>
+            <p>Most RACE applications require parsing text messages received from external systems such
+            as <a href="https://www.faa.gov/nextgen/programs/swim/">SWIM</a>. Such messages can come at a fairly high rate (e.g. &gt;1000 msg/sec for a collection of
+            SWIM topics) and messages can become quite large (~100kB for single SWIM messages). Since
+            import of messages is usually just a prerequisite for RACE applications that process objects
+            generated from these messages, support for efficient parsing is essential to leave enough CPU
+            cycles and memory for the main actors of the application.</p>
+            <p>The RACE parsing infrastructure is centered around several assumptions:</p>
+            <ul>
+              <li>normally, we only process a subset of message types we receive, and only a subset of
+              the information that is contained in processed messages</li>
+              <li>since the rate of messages can be high, messages can be large and extracted information can be
+              spread across these messages we should avoid creating a large amount of short living objects for
+              the sole purpose of parsing (e.g. String objects for XML tags)</li>
+              <li>our message sources are generally trusted, i.e. XML schema validation is usually not reqiured</li>
+            </ul>
+            <p>For instance, SWIM reports en route flight positions every 12 sec, the number of simultaneous
+            flights can exceed 4000. A flight element contains more than 60 tags of which we only
+            parse 12 in order to generate track objects. This means we can save more than 300 temporary String
+            allocations/sec just for this message type if XML tags are not reported/matched as Strings. Moreover,
+            most of the extracted values are floating point numbers, i.e. are not stored as objects even in case
+            they are relevant.</p>
+            <p>RACE uses its own <a href="http://www.xmlpull.org/history/index.html">PullParser</a> infrastructure to minimize temporary objects and reduce processing
+            time, providing explicit control over object construction for parse results.</p>
+            <p>The distinguishing factor of RACE pull parsers is that lexical constructs such as tags or values are
+            reported as mutable, pre-allocated <code>gov.nasa.race.common.ByteSlice</code> objects, which
+            represent ranges into utf-8 byte arrays and support efficient comparison by means of inlining (the
+            RACE build process is configured to inline contents of package <code>gov.nasa.race.common.inlined</code>).
+            Only in case of relevance are slice values converted into Strings or parsed into primitive values
+            such as <code>Double</code>.</p>
+            <p>To further improve performance of critical parse functions RACE also provides the
+            <code>gov.nasa.race.tool.StringMatchGenerator</code> tool that generates efficient slice matchers which
+            employ prefix factorization and loop unrolling in order to speed up matching against a set of
+            lexical constants such as tag names. While this can significantly increase performance it usually
+            does require manual completion to extract relevant values and reduces extensibility of the
+            respective parser.</p>
+            <p>RACE parser support is avaliable for XML, <a href="http://json.org/">JSON</a> (Javascript object notation) and <a href="https://tools.ietf.org/html/rfc4180">CSV</a> (comma
+            separated values) text formats. The respective classes reside in the <code>gov.nasa.race.common</code>
+            package of module <code>race-core</code>. Concrete parsers have to extend these abstract classes.</p>
+            <p>The following sections show example snippets for each of these text formats.</p>
+            
+            <h2 id="xml" class="section"><a class="anchor-link left" href="#xml"><i class="icofont-laika">&#xef71;</i></a>XML</h2>
+            <p>The following example fragment is from the <code>gov.nasa.race.air.translator.MessageCollection</code>
+            parser that extracts SfdpsTrack objects from SWIm SFDPS MessageCollection messages:</p>
+            <pre><code>class MessageCollectionParser(..) extends UTF8XmlPullParser2 .. {  // (1) class definition
+                                                // (2) lexical constants
+  val _flight_ = ConstAsciiSlice(&quot;flight&quot;)
+  val _enRoute_ = ConstAsciiSlice(&quot;enRoute&quot;)
+  val _positionTime_ = ConstAsciiSlice(&quot;positionTime&quot;)
+  ..
+
+  def parseMessageCollection: Unit = { ..
+      while (parseNextTag) {                     // (3) pull loop
+        if (isStartTag) {
+          if (tag == _flight_) {                 // (4) manual matching
+            parseFlight                          // (5) element parse functions
+        ..
+
+  def parseFlight: Unit = {
+    // values to extract
+    var cs: String = null                        // (6) local value cache
+    var date = DateTime.UndefinedDateTime
+    ..
+
+    def flight (data: Array[Byte], off: Int, len: Int): Unit = {
+      //--------------------------------------- (7) value extractors provided by user
+      @inline def process_flightIdentification = {
+        .. cs = attrValue.intern ..                // (8) direct slice internalizer
+
+      @inline def process_position = {
+        if (tagHasParent(_enRoute_)) {             // (9) element path matcher
+          if (parseAttr(_positionTime_)) {         // (10) attribute matching
+             date = DateTime.parseYMDT(attrValue)  // (11) attribute value extraction
+        ..
+
+
+      //--------------------------------------- (12)  match harness generated by StringMatchGenerator
+      @inline def match_flightIdentification = {len == 20 &amp;&amp; data(off) == 102 &amp;&amp; data(off+1) == 108 &amp;&amp; ..
+      @inline def match_position = {len == 8 &amp;&amp; ..
+
+      if (isStartTag) {
+        if (match_flightIdentification) {
+          process_flightIdentification
+        } else {
+           .. if (match_position) {
+                 process_position
+              ..
+    }
+
+    parseElement(flight)                          // (13) element pull loop
+
+    //--- object creation
+    if (cs != null &amp;&amp; date.isDefined &amp;7 ..) {
+      elements += new SfdpsTrack(cs,date,..)      // (14) parse result
+    ..
+  }</code></pre>
+            <table class="field-list">
+              <colgroup>
+                <col class="field-name"></col>
+                <col class="field-body"></col>
+              </colgroup>
+              <tbody>
+                <tr>
+                  <th>(1):</th>
+                  <td>the concrete parser class is extending either <code>UTF8XmlPullParser2</code> or <code>StringXmlPullParser2</code>,
+                  depending on if the input data is a utf-8 byte array or a String object</td>
+                </tr>
+              </tbody>
+            </table>
+            <table class="field-list">
+              <colgroup>
+                <col class="field-name"></col>
+                <col class="field-body"></col>
+              </colgroup>
+              <tbody>
+                <tr>
+                  <th>(2):</th>
+                  <td>parser implementation usually begins with definition of lexical constants for tag and
+                  attribute names</td>
+                </tr>
+              </tbody>
+            </table>
+            <table class="field-list">
+              <colgroup>
+                <col class="field-name"></col>
+                <col class="field-body"></col>
+              </colgroup>
+              <tbody>
+                <tr>
+                  <th>(3):</th>
+                  <td>shows an explicit pull loop for XML elements (<code>while (parseNextTag)..</code>)</td>
+                </tr>
+              </tbody>
+            </table>
+            <table class="field-list">
+              <colgroup>
+                <col class="field-name"></col>
+                <col class="field-body"></col>
+              </colgroup>
+              <tbody>
+                <tr>
+                  <th>(4):</th>
+                  <td>shows explicit tag matching. While this is efficient for single tests it is not optimal if
+                  we match a number of tags with common prefixes</td>
+                </tr>
+              </tbody>
+            </table>
+            <table class="field-list">
+              <colgroup>
+                <col class="field-name"></col>
+                <col class="field-body"></col>
+              </colgroup>
+              <tbody>
+                <tr>
+                  <th>(5):</th>
+                  <td>since this is a pull parser we can provide methods that parse single elements in order to
+                  improve re-usability and readability of parsers</td>
+                </tr>
+              </tbody>
+            </table>
+            <table class="field-list">
+              <colgroup>
+                <col class="field-name"></col>
+                <col class="field-body"></col>
+              </colgroup>
+              <tbody>
+                <tr>
+                  <th>(6):</th>
+                  <td>element parse functions that generate objects usually start with local variables to cache
+                  extracted element values</td>
+                </tr>
+              </tbody>
+            </table>
+            <table class="field-list">
+              <colgroup>
+                <col class="field-name"></col>
+                <col class="field-body"></col>
+              </colgroup>
+              <tbody>
+                <tr>
+                  <th>(7):</th>
+                  <td>value extractor (<code>process_X</code>) methods are user provided</td>
+                </tr>
+              </tbody>
+            </table>
+            <table class="field-list">
+              <colgroup>
+                <col class="field-name"></col>
+                <col class="field-body"></col>
+              </colgroup>
+              <tbody>
+                <tr>
+                  <th>(8):</th>
+                  <td><code>ByteSlice</code> supports value extractors that avoid temporary allocations, such as direct String
+                  internalizing from slices</td>
+                </tr>
+              </tbody>
+            </table>
+            <table class="field-list">
+              <colgroup>
+                <col class="field-name"></col>
+                <col class="field-body"></col>
+              </colgroup>
+              <tbody>
+                <tr>
+                  <th>(9):</th>
+                  <td>value extractors can disambiguate tags by using element path queries. The XmlPullParser2
+                  keeps track of current element paths</td>
+                </tr>
+              </tbody>
+            </table>
+            <table class="field-list">
+              <colgroup>
+                <col class="field-name"></col>
+                <col class="field-body"></col>
+              </colgroup>
+              <tbody>
+                <tr>
+                  <th>(10):</th>
+                  <td>attribute parsing is optional</td>
+                </tr>
+              </tbody>
+            </table>
+            <table class="field-list">
+              <colgroup>
+                <col class="field-name"></col>
+                <col class="field-body"></col>
+              </colgroup>
+              <tbody>
+                <tr>
+                  <th>(11):</th>
+                  <td>attribute value extraction is also slice based, i.e. works like element value extraction</td>
+                </tr>
+              </tbody>
+            </table>
+            <table class="field-list">
+              <colgroup>
+                <col class="field-name"></col>
+                <col class="field-body"></col>
+              </colgroup>
+              <tbody>
+                <tr>
+                  <th>(12):</th>
+                  <td>performance critical element tag matchers can be generated by the <code>StringMatchGenerator</code>
+                  tool (the match code does not require modification)</td>
+                </tr>
+              </tbody>
+            </table>
+            <table class="field-list">
+              <colgroup>
+                <col class="field-name"></col>
+                <col class="field-body"></col>
+              </colgroup>
+              <tbody>
+                <tr>
+                  <th>(13):</th>
+                  <td><code>parseElement(&lt;match-func&gt;)</code> is a convenience method that provides a pull loop over
+                  child elements</td>
+                </tr>
+              </tbody>
+            </table>
+            <table class="field-list">
+              <colgroup>
+                <col class="field-name"></col>
+                <col class="field-body"></col>
+              </colgroup>
+              <tbody>
+                <tr>
+                  <th>(14):</th>
+                  <td>eventually parse functions create objects (such as <code>SfdpsTrack</code>) that are the result
+                  of parsing the XML message</td>
+                </tr>
+              </tbody>
+            </table>
+            <p>While this parser structure is flexible and efficient for extracting selected values it should be
+            noted that it does not support on-the-fly XML schema validation.</p>
+            
+            <h2 id="json" class="section"><a class="anchor-link left" href="#json"><i class="icofont-laika">&#xef71;</i></a>JSON</h2>
+            <p>The same pull parser infrastructure is also supported for <a href="http://json.org/">JSON</a>. The following is a snippet from
+            <code>gov.nasa.race.air.translator.OpenSkyParser</code> that parses a JSON object containing an array of
+            aircraft state vectors:</p>
+            <pre><code>class OpenSkyParser extends UTF8JsonPullParser .. {
+
+  val _states_ = ConstAsciiSlice(&quot;states&quot;) ..  // lexical constants
+
+  def parse (msg: Array[Byte], lim: Int): .. = {
+    def parseState: Unit = {
+      matchArrayStart
+      val cs = readQuotedValue.intern
+      skip(1)
+      val timePos = readUnQuotedValue.toLong
+      skip(1)
+      ..
+      skipToEndOfCurrentLevel
+      matchArrayEnd
+
+      if (cs.nonEmpty &amp;&amp; ..)
+        elements += new FlightPos(..,cs,..,timePos,..)
+    }
+
+    matchObjectStart
+    ..
+    readMemberArray(_states_){
+      parseState                             // per-element parse function
+    }
+    matchObjectEnd</code></pre>
+            <p>Due to the syntactic nature of JSON there is no generic <code>parseElement</code> but dedicated, type specific
+            pull methods such as <code>match{Object,Array}Start</code> and <code>parse{Un}QuotedValue</code>. Values are also
+            returned as <code>ByteSlice</code> objects, i.e. don&#39;t incur heap overhead. Array element and object member
+            parsing is supported by <code>read{Member}Array</code> and <code>read{Member}Object</code> pull loop functions that
+            are parameterized with element/member parse functions.
+            The JSONPullParser also supports syntactic levels and member key paths (the latter one being of
+            less importance for JSON).</p>
+            
+            <h2 id="csv" class="section"><a class="anchor-link left" href="#csv"><i class="icofont-laika">&#xef71;</i></a>CSV</h2>
+            <p>Although comma separated value formats lack the syntactic structure of XML or JSON, RACE does
+            provide a similar pull parser that makes use of slices in order to minimize temporary object
+            allocation, especially in the context of extracting subsets of values. The following example is
+            from <code>gov.nasa.race.air.SbsUpdater</code>:</p>
+            <pre><code>class SbsUpdater .. extends UTF8CsvPullParser {
+  val _MSG_ = ConstAsciiSlice(&quot;MSG&quot;) ..
+  ..
+  def parse: Unit = {
+    while (skipToNextRecord) {
+      if (readNextValue == _MSG_) {
+          ..
+          skip(2)
+          val icao24 = readNextValue.toHexLong     // (1) mandatory value
+          ..
+          skip(3)
+          val alt = if (parseNextNonEmptyValue)    // (2) optional value
+                   Feet(value.toInt) else UndefinedLength
+          ..
+
+          if (.. alt.isDefined ..)
+          new FlightPos(icao24,..,alt,..)
+      }
+      skipToEndOfRecord
+    }</code></pre>
+            <p>The parser API contains a <code>readNextValue</code> method to return mandatory field slices (1) and
+            a <code>parseNextValue</code> for optional fields (2).</p>
+            
+            <h2 id="stringmatchgenerator-tool" class="section"><a class="anchor-link left" href="#stringmatchgenerator-tool"><i class="icofont-laika">&#xef71;</i></a>StringMatchGenerator tool</h2>
+            <p>A performance critical task for XML parsing is to match tag and attribute names against a set
+            of string constants. While this can be done manually by means of a sequence of tests:</p>
+            <pre><code>val _a1_ = ConstAsciiSlice(&quot;a1&quot;)
+val _a2_ = ConstAsciiSlice(&quot;a2&quot;)
+..
+if (tag == _a1_) ..
+else if (tag == _a2_) ..
+..</code></pre>
+            <p>this ignores common prefixes within a closed set of strings. Factoring such common prefixes is
+            a tedious task and hence RACE includes a <code>gov.nasa.race.tool.StringMatchGenerator</code> application
+            that generates respective sources. The <code>script/smg</code> script can be used to run the tool like this:</p>
+            <pre><code>&gt; script/smg gen a1 a2</code></pre>
+            <p>which will generate the sources to match a data range against &quot;a1&quot; and &quot;a2&quot;:</p>
+            <pre><code>def matchBytes(data: Array[Byte], off: Int, len: Int): Unit = {
+
+  //--- (1) replace with code to process respective matches
+  @inline def process_a1 = println(&quot;a1&quot;)
+  @inline def process_a2 = println(&quot;a2&quot;)
+
+  //--- (2) auto generated matcher code (no need to modify)
+  @inline def match_a = { len&gt;=1 &amp;&amp; data(off)==97 }
+  @inline def match_a1 = { len==2 &amp;&amp; data(off+1)==49 }
+  @inline def match_a2 = { len==2 &amp;&amp; data(off+1)==50 }
+
+  if (match_a) {
+    if (match_a1) {
+      process_a1
+    } else if (match_a2) {
+      process_a2
+    }
+  }
+}</code></pre>
+            <p>The resulting matcher code (<code>match_..</code> and <code>if (match..)..</code> expression) is invariant and can be
+            directly copied into clients, but semantic match actions (<code>process_..</code>) have to be modified.
+            The <code>process_..</code> methods usually extract and store values or call recursive parse functions.</p>
+            <p>Use of the <code>StringMatchGenerator</code> is not without downsides since it reduces readability of parser
+            code. It should be mostly reserved for performance critical parse functions.</p>
+            
+            <h2 id="parser-input" class="section"><a class="anchor-link left" href="#parser-input"><i class="icofont-laika">&#xef71;</i></a>Parser input</h2>
+            <p>All RACE parsers work on utf-8 byte arrays. Consequently, there is a <code>UTF8{Xml,Json,Csv}PullParser</code>
+            class that gets directly initialized with a byte array input. This is the preferred base class for
+            custom parsers since it avoids array allocation and string translation.</p>
+            <p>For String inputs there are buffered and unbuffered parser versions. The buffered parsers use a
+            pre-allocated byte buffer and RACEs UTFx.UTF8Decoder (which is a value class) to convert string
+            chars into utf-8 byte sequences. For efficiency reasons there are specialized <code>ASCIIString</code> versions
+            of string based parsers.</p>
+            <p>Although conversion into utf-8 byte arrays is transparent, the relevant supporting classes of RACE
+            (<code>gov.nasa.race.common.UTFx</code> and <code>gov.nasa.race.common.StringDataBuffer</code>) can be used separately,
+            e.g. in cases that have several clients requiring the same input.</p>
+            
+            <h2 id="byteslice-hierarchy" class="section"><a class="anchor-link left" href="#byteslice-hierarchy"><i class="icofont-laika">&#xef71;</i></a>ByteSlice hierarchy</h2>
+            <p>Although they can be used independently for many string processing tasks,
+            <code>gov.nasa.race.common.ByteSlice</code> objects are a central element of RACE parsers.
+            To that end RACE includes a hierarchy of related types:</p>
+            <p><img class="center scale60" src="../images/slice.svg" alt="ByteSlice types"></p>
+            <p><code>ByteSlice</code> is itself just a trait that provides methods to specify a range within a byte array.
+            It does not define any fields and as such is invariant with respect to the range and source data
+            reference. It should be noted though that it does <em>not</em> guarantee invariant source array contents
+            (byte values). While we could use Scala&#39;s <code>ArraySeq</code> to also enforce invariant data this would
+            require data copies (heap allocations), and the primary purpose of ByteSlice is to avoid such
+            copies.</p>
+            <p>There are two dimensions of ByteSlice refinement - range mutability and semantic meaning
+            of byte values. Mutability of data source, offset and length is reflected in <code>Mut..</code> and
+            <code>Const..</code> variants of concrete ByteSlice classes and is generally self explaining.</p>
+            <p>While there could be other uses, the prevalent semantic meaning of ByteSlice byte values is to
+            represent string data, i.e. text. The primary text encoding format is now <a href="https://en.wikipedia.org/wiki/UTF-8">UTF-8</a> which uses up to
+            four byte values to represent <a href="https://home.unicode.org/">unicode</a> code points. This encoding is reflected in respective
+            <code>Utf8..</code> variants of <code>ByteSlice</code> classes. However, while UTF-8 is byte compatible with the
+            <a href="https://en.wikipedia.org/wiki/ASCII">ASCII</a> character subset, processing general UTF-8 data requires encoding/decoding iteration over
+            respective byte arrays and hence can incur significant runtime overhead (ASCII processing often
+            can be done with simple indexed array element access and low level memory block operations). To
+            that end, we provide specialized <code>Ascii..</code> slice classes that avoid this overhead, especially
+            given that our main target domain (airspace applications) primarily uses ASCII data.</p>
+            <p>The Java ecosystem reflects this fact by means of using the <code>java.lang.CharSequence</code> interface
+            for most text processing tasks, such as regular expression matching. In order to be compatible
+            with this ecosystem the perhaps most important <code>ByteSlice</code> refinement of RACE is the
+            <code>CharSeqByteSlice</code> that provides the required <code>charAt(index)</code> conversion. Since this is our
+            most basic text representation this trait also defines text-to-primitive conversions such as
+            <code>toInt</code> and <code>toDouble</code>.</p>
+            <p>In addition, the <code>intern</code> method allows to efficiently create internalized String objects directly
+            from slices, without resorting to temporary string allocations for the sole purpose of interned
+            string lookup. This is especially important in RACEs primary application domain which features a
+            high number of repetitive messages referring to the same entities (e.g. position update messages
+            using call signs to identify flights). Implementations of this method make use of RACE&#39;s
+            <code>Internalizer</code> and <code>ASCII8Internalizer</code>, the latter one being used for strings with up to 8
+            bytes (that can be directly represented as long values).</p>
+            <p>UTF-8 variants of <code>CharSeqByteSlice</code> use the <code>Utf8Encoder</code>/<code>Utf8Decoder</code> support in
+            <code>gov.nasa.race.common.UTFx</code> for character conversion, which utilizes Scala value classes to
+            store coder state and hence further reduces memory overhead.</p>
+            <p><code>ConstAsciiSlice</code> is the primary representation for lexical constants such as tag names in RACE
+            parsers.</p>
+            <p><code>StringDataBuffer</code> is the main construct to generate ByteSlice objects from Java String objects
+            (or other CharSequences) which encapsulates the dynamically allocated byte arrays to hold the
+            respective text data. There are two main objectives for this type: (1) to enable re-use of the
+            same buffer for successive string conversions (i.e. to avoid per-string object allocation such
+            as <code>String.getBytes</code>), and (2) to provide specialized conversions for ASCII text, which is
+            orders of magnitudes faster than iteration based unicode conversion.</p>
+        </div>
+
+    </body>
+</html>

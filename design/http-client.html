@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8"/>
+        <title>RACE</title>
+
+        <link href="../race-html.css" rel="stylesheet"/>
+    </head>
+
+    <body>
+        <div class="navbar">
+            <div class=""banner>
+                <a href="../index.html" ><img class="logo" src="../images/race128.png"></a>
+                <p class="doctitle">RACE Manual</p>
+            </div>
+            <br/>
+            <div class="toc">
+                <p class="title">Project Links</p>
+                <ul>
+                    <li><span class="toc level2"><a href="https://github.com/NASARace/race.git">Repository</a></span></li>
+                    <li><span class="toc level2"><a href="http://nasarace.github.io/race">Website</a></span></li>
+                </ul>
+            </div>
+            <div class="toc pagetoc">
+                <p class="title">Page</p>
+                <ul class="nav-list">
+                  <li class="level1 active"><a href="#">HttpImportActor</a></li>
+                  <li class="level2"><a href="#encrypted-content">Encrypted Content</a></li>
+                  <li class="level2"><a href="#user-authentication">User Authentication</a></li>
+                </ul>
+            </div>
+            <div class="toc globaltoc">
+                <p class="title">Site</p>
+                <ul class="nav-list">
+                  <li class="level1 nav-header">RACE Manual</li>
+                  <li class="level2"><a href="../index.html">About RACE</a></li>
+                  <li class="level2 nav-header">Installing RACE</li>
+                  <li class="level3"><a href="../installation/prerequisites.html">Prerequisites</a></li>
+                  <li class="level3"><a href="../installation/download.html">Downloading RACE</a></li>
+                  <li class="level3"><a href="../installation/build.html">Building RACE</a></li>
+                  <li class="level3"><a href="../installation/pitfalls.html">Installation Pitfalls</a></li>
+                  <li class="level3"><a href="../installation/osx.html">OS X Specifics</a></li>
+                  <li class="level2 nav-header">Using RACE</li>
+                  <li class="level3"><a href="../usage/running.html">How to Run RACE</a></li>
+                  <li class="level3"><a href="../usage/configuration.html">RACE Configuration</a></li>
+                  <li class="level3"><a href="../usage/encryption.html">Using Encrypted Configurations</a></li>
+                  <li class="level2 nav-header">RACE Design</li>
+                  <li class="level3"><a href="overview.html">Design Overview</a></li>
+                  <li class="level3"><a href="actors.html">Actors</a></li>
+                  <li class="level3"><a href="configuration.html">Runtime Configuration</a></li>
+                  <li class="level3"><a href="raceactors.html">RaceActors</a></li>
+                  <li class="level3"><a href="channeltopics.html">ChannelTopics</a></li>
+                  <li class="level3"><a href="embedded-objects.html">Embedded Objects</a></li>
+                  <li class="level3"><a href="connectivity.html">Connecting External Systems</a></li>
+                  <li class="level3"><a href="remoting.html">Remote RaceActors and Distributed RACE Applications</a></li>
+                  <li class="level3"><a href="remotelauncher.html">RemoteLauncher</a></li>
+                  <li class="level3"><a href="hc.html">Heterogeneous Computing in RACE</a></li>
+                  <li class="level3"><a href="parsing.html">RACE Parsers</a></li>
+                  <li class="level3"><a href="archive-replay.html">Archive and Replay</a></li>
+                  <li class="level3"><a href="timeseries.html">Time Series Analysis</a></li>
+                  <li class="level3"><a href="trajectory.html">Trajectory Infrastructure</a></li>
+                  <li class="level3"><a href="rgis.html">RACE GIS Support</a></li>
+                  <li class="level3"><a href="worldwind.html">WorldWind Viewer</a></li>
+                  <li class="level3"><a href="http-server.html">HttpServer</a></li>
+                  <li class="level3 active"><a href="#">HttpImportActor</a></li>
+                  <li class="level3"><a href="share.html">SHARE - System for Hierarchical Ad hoc Reporting</a></li>
+                  <li class="level3"><a href="layers-and-modules.html">Layers and Modules</a></li>
+                  <li class="level3"><a href="directory-structure.html">Directory Structure</a></li>
+                  <li class="level3"><a href="repository.html">Repository Structure</a></li>
+                  <li class="level3"><a href="local-build.html">Local Build Configuration</a></li>
+                  <li class="level3"><a href="dds.html">RACE and DDS</a></li>
+                  <li class="level3"><a href="extproject.html">Using RACE from External Projects</a></li>
+                  <li class="level3"><a href="whyscala.html">Why Scala</a></li>
+                  <li class="level2 nav-header">Documentation</li>
+                  <li class="level3"><a href="../documentation/overview.html">RACE Documentation Overview</a></li>
+                  <li class="level3"><a href="../documentation/presentations.html">Available Slide Presentations</a></li>
+                  <li class="level2 nav-header">Annex</li>
+                  <li class="level3"><a href="../annex/project-log.html">Project Log</a></li>
+                  <li class="level3"><a href="../annex/examples.html">RACE Examples</a></li>
+                  <li class="level3"><a href="../annex/known-problems.html">Known Problems</a></li>
+                  <li class="level3"><a href="../annex/changes.html">Changes</a></li>
+                  <li class="level3"><a href="../annex/todo.html">TODO List</a></li>
+                  <li class="level3"><a href="../annex/learning.html">Learning Resources</a></li>
+                  <li class="level3"><a href="../annex/glossary.html">Glossary</a></li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="main">
+            <h1 id="httpimportactor" class="title">HttpImportActor</h1>
+            <p>The <code>gov.nasa.race.http.HttpImportActor</code> is a generic <a href="https://tools.ietf.org/html/rfc2616">HTTP</a> client that can periodically run
+            configured web queries and publish the (potentially translated) response data to a RACE channel.
+            To that end the actor configuration uses two options: <code>tick-interval</code> and <code>data-requests</code>:</p>
+            <pre><code>...
+actors = [ ...
+  { name = &quot;testImporter&quot;
+    class = &quot;gov.nasa.race.http.HttpImportActor&quot;
+    write-to = &quot;/output&quot;
+    ..
+    tick-interval = 10s     // how often do we run the query
+    data-requests = [       // query specifications
+      { uri = &quot;http://somehost.com:8080/data&quot; }
+    ]
+    ...</code></pre>
+            <p>Each query specification needs a <code>uri</code> (potentially with query parameters) and can include a
+            HTTP method and entity (type and content).</p>
+            <p>The actor implementation is based on the <a href="https://doc.akka.io/docs/akka-http/current/scala/http/">akka-http</a> library and uses <a href="https://docs.scala-lang.org/overviews/core/futures.html">Scala futures</a> to map server
+            responses back into actor messages. The main actor methhods are <code>sendRequest()</code> and
+            <code>processResponse()</code>. The former is triggered by (periodic) <code>RaceTick</code> messages while the latter is
+            called to process <code>(PendingRequest,HttpResponse)</code> messages that are posted to the actors mailbox
+            when the respective future is completed:</p>
+            <p><img class="center scale90" src="../images/http-importer.svg" alt="server side user authentication"></p>
+            <p><code>HttpImportActor</code> can be extended to override a <code>processResponseData()</code> method that can
+            translate raw content of valid server responses before publishing them to RACE channels.</p>
+            <p>The <code>HttpImportActor</code> is fully compatible with the RACE <a href="http-server.html#httpserver">HttpServer</a>, i.e. it can be used to
+            build distributed RACE applications that communicate through HTTP or HTTPS.</p>
+            
+            <h2 id="encrypted-content" class="section"><a class="anchor-link left" href="#encrypted-content"><i class="icofont-laika">&#xef71;</i></a>Encrypted Content</h2>
+            <p><code>HttpImportActor</code> can use the <a href="https://en.wikipedia.org/wiki/HTTPS">HTTPS</a> protocol for server authentication and content encryption.
+            If the server has a publicly available certificate the only required configuration is
+            the <code>https://...</code> protocol prefix in the query URI(s).</p>
+            <p>For testing purposes or internal networks the truststore can be configured like this:</p>
+            <pre><code>ssl-config {
+  trustManager = {
+    stores = [
+      { path: ../cert/localhost.jks, type: &quot;JKS&quot;, password: &quot;supersecret&quot; }
+      //,{ path: ${java.home}/lib/security/cacerts } # Default trust store
+    ]
+  }
+}</code></pre>
+            <p>Both <code>path</code> and <code>password</code> should be kept in <a href="configuration.html#encrypted-configurations">Encrypted Configurations</a> for production
+            applications.</p>
+            <p>Details of how to create trust stores can be found on <a href="https://lightbend.github.io/ssl-config/CertificateGeneration.html">CertGen</a> and <a href="https://lightbend.github.io/ssl-config/">SSLConfig</a>, RACE includes the
+            <code>script/gen-server-cert.sh</code> and <code>script/gen-ca-cert.sh</code> scripts to automate the process by
+            means of the <a href="https://docs.oracle.com/javase/8/docs/technotes/tools/unix/keytool.html">keytool</a> that is included in JDKs.</p>
+            
+            <h2 id="user-authentication" class="section"><a class="anchor-link left" href="#user-authentication"><i class="icofont-laika">&#xef71;</i></a>User Authentication</h2>
+            <p>If content requires user authentication the configuration has to be extended with <code>login-request</code>
+            and (optionally) <code>logout-request</code> options:</p>
+            <pre><code>...
+actors = [ ...
+  { name = &quot;authorizedImporter&quot;
+    ..
+    login-request = {
+      method = &quot;POST&quot;
+      uri = &quot;https://localhost:8080/secretData-login&quot;
+      entity = {
+        type = &quot;application/x-www-form-urlencoded&quot;
+        content = &quot;u=someUser&amp;nid=supersecret&quot; // this would normally go into the vault
+      }
+    }
+
+    data-requests = ...
+
+    logout-request = {
+      method = &quot;POST&quot;
+      uri = &quot;https://localhost:8080/secretData-logout&quot;
+}</code></pre>
+            <p>As usual, user credentials (<code>content</code> option in above example) should come from <a href="configuration.html#encrypted-configurations">Encrypted Configurations</a>.</p>
+            <p>User authentication implementation is generic, i.e. it uses cookie client management like a normal web
+            browser - the server responds to a valid login request by sending a <code>Set-Cookie</code> response header.
+            The respective cookie is stored by <code>HttpImportActor</code> as a <code>(domain,path,name,value)</code> tuple, and
+            each successive request checks for matching domain- and path-prefixes based on the request URI.
+            Each server response can update or add cookies, which enables single-request authentication (i.e.
+            each cookie value is only good for the next query of an ongoing session and is not stored
+            permanently).</p>
+        </div>
+
+    </body>
+</html>

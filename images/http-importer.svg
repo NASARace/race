@@ -1,0 +1,142 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<svg width="100%" height="100%" version="1.1" viewBox="195.1942 136.4142 753.2654 339.155" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <filter id="shadow1" width="150%" height="150%">
+      <feGaussianBlur in="SourceAlpha" result="blur" stdDeviation="3" />
+      <feOffset dx="3" dy="3" in="blur" result="offsetBlur" />
+      <feMerge>
+        <feMergeNode in="offsetBlur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+  </defs>
+  <marker id="marker1" markerUnits="strokeWidth" orient="auto" refX="11.17254" refY="0" markerWidth="13.27247" markerHeight="10.22955" viewBox="-1 -5.114774 13.27247 10.22955">
+    <path d="M11.27247 4.114773 L0 0 L11.27247 -4.114774 Z " fill="#000000" fill-opacity="1" stroke="#000000" stroke-opacity="1" />
+  </marker>
+  <marker id="marker2" markerUnits="strokeWidth" orient="auto" refX="-11.17254" refY="0" markerWidth="13.27247" markerHeight="10.22955" viewBox="-12.27247 -5.114774 13.27247 10.22955">
+    <path d="M-11.27247 -4.114774 L0 0 L-11.27247 4.114773 Z " fill="#000000" fill-opacity="1" stroke="#000000" stroke-opacity="1" />
+  </marker>
+  <marker id="marker3" markerUnits="strokeWidth" orient="auto" refX="11.17254" refY="0" markerWidth="13.27247" markerHeight="10.22955" viewBox="-1 -5.114774 13.27247 10.22955">
+    <path d="M11.27247 4.114773 L0 0 L11.27247 -4.114774 Z " fill="#000000" fill-opacity="1" stroke="#000000" stroke-opacity="1" />
+  </marker>
+  <marker id="marker4" markerUnits="strokeWidth" orient="auto" refX="-0.6088293" refY="0" markerWidth="9.89073" markerHeight="7.760683" viewBox="-8.89073 -3.880342 9.89073 7.760683">
+    <path d="M-7.89073 -2.880342 L0 0 L-7.89073 2.880341" fill="none" stroke="#0000FE" stroke-opacity="1" />
+  </marker>
+  <marker id="marker5" markerUnits="strokeWidth" orient="auto" refX="-0.6088293" refY="0" markerWidth="9.89073" markerHeight="7.760683" viewBox="-8.89073 -3.880342 9.89073 7.760683">
+    <path d="M-7.89073 -2.880342 L0 0 L-7.89073 2.880341" fill="none" stroke="#0000FE" stroke-opacity="1" />
+  </marker>
+  <marker id="marker6" markerUnits="strokeWidth" orient="auto" refX="-0.6088293" refY="0" markerWidth="9.89073" markerHeight="7.760683" viewBox="-8.89073 -3.880342 9.89073 7.760683">
+    <path d="M-7.89073 -2.880342 L0 0 L-7.89073 2.880341" fill="none" stroke="#0000FE" stroke-opacity="1" />
+  </marker>
+  <marker id="marker7" markerUnits="strokeWidth" orient="auto" refX="-11.17254" refY="0" markerWidth="13.27247" markerHeight="10.22955" viewBox="-12.27247 -5.114774 13.27247 10.22955">
+    <path d="M-11.27247 -4.114774 L0 0 L-11.27247 4.114773 Z " fill="#000000" fill-opacity="1" stroke="#000000" stroke-opacity="1" />
+  </marker>
+  <g id="layer1" inkscape:label="Layer 1" inkscape:groupmode="layer">
+    <rect x="428.9455" y="202.2708" width="165.4473" height="181.9063" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" filter="url(#shadow1)" />
+    <text x="463.4814" y="219.0605" font-size="13" fill="#000000" fill-opacity="1" font-family="Helvetica" font-weight="bold" font-style="normal">HttpImportActor</text>
+    <line x1="633.9276" y1="193.5" x2="633.9276" y2="377.6137" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="4" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    <line x1="618.7188" y1="338.8886" x2="543.1935" y2="338.8886" marker-start="url(#marker1)" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    <g>
+      <ellipse cx="635.1057" cy="402.767" rx="16.2832" ry="16.2832" opacity="1" stroke="#7F7F7F" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" />
+      <line x1="635.1057" y1="402.7671" x2="643.2474" y2="394.6254" opacity="1" stroke="#7F7F7F" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+      <line x1="635.1057" y1="402.7671" x2="635.1057" y2="410.9087" opacity="1" stroke="#7F7F7F" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    </g>
+    <rect x="373.4005" y="320.5022" width="180.875" height="40.88682" rx="18" ry="18" opacity="1" stroke="#FC7F08" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFF9C8" fill-opacity="1" />
+    <text x="377.4005" y="336.2335" font-size="12" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">Akka Http</text>
+    <g>
+      <g>
+        <path d="M298.6765 307.0783 C291.3964 305.4998 284.0288 307.3063 278.9427 311.2303 C276.2853 308.6461 272.687 306.6512 268.3715 305.7155 C257.264 303.3077 245.8216 308.6529 242.8455 317.64 C242.6268 318.3004 242.5691 318.9644 242.4516 319.6248 C232.4492 318.7835 222.8782 323.8503 220.193 331.9587 C217.5321 339.9932 222.5532 348.2085 231.5773 351.5865 C231.0866 352.4473 230.6292 353.3339 230.3158 354.2801 C227.3399 363.2671 233.9527 372.5057 245.06 374.9136 C250.5003 376.0932 255.9982 375.4008 260.5621 373.3443 C263.0773 377.6984 267.7675 381.2028 273.9495 382.5428 C282.7703 384.4553 291.721 381.4259 296.5534 375.6197 C298.5108 376.7408 300.6866 377.6683 303.1373 378.2 C314.2448 380.6078 325.6628 375.257 328.639 366.2702 C330.1354 361.7506 329.2093 357.1775 326.5075 353.429 C329.1811 351.3664 331.2742 348.7532 332.2997 345.6568 C335.276 336.6694 328.6631 327.431 317.5557 325.0229 C316.3862 324.7693 315.2153 324.6267 314.0493 324.5402 C314.7404 316.6479 308.4711 309.2018 298.6765 307.0783 Z " opacity="1" stroke="#BFBFBF" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="round" stroke-dasharray="none" fill-opacity="0" />
+      </g>
+    </g>
+    <text x="295.9769" y="347.8073" font-size="12" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">Http</text>
+    <text x="202.1942" y="153.8752" font-size="10" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">actors = [ ...
+</text>
+    <text x="202.1942" y="165.8752" font-size="10" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">  { name = "httpImporter”
+</text>
+    <text x="202.1942" y="177.8752" font-size="10" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">    class = ..
+</text>
+    <text x="202.1942" y="189.8752" font-size="10" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">    tick-interval = 10s
+</text>
+    <text x="202.1942" y="201.8752" font-size="10" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">    write-to = channel 
+</text>
+    <text x="202.1942" y="213.8752" font-size="10" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">    login-request = …
+</text>
+    <text x="202.1942" y="225.8752" font-size="10" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">    data-requests = [
+</text>
+    <text x="202.1942" y="237.8752" font-size="10" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">      { uri = “http://xyz.com/data” }
+</text>
+    <text x="202.1942" y="249.8752" font-size="10" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">    ]
+</text>
+    <text x="202.1942" y="261.8752" font-size="10" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">    logout-request = …
+</text>
+    <text x="202.1942" y="273.8752" font-size="10" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">     ...
+</text>
+    <text x="439.922" y="240.7251" font-size="12" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">requests
+</text>
+    <text x="439.922" y="255.7251" font-size="12" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">pendingRequests
+</text>
+    <text x="439.922" y="270.7251" font-size="12" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">setCookies</text>
+    <g>
+      <rect x="438.8653" y="274.5204" width="147.9016" height="42.41773" opacity="1" stroke="#7F7F7F" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+      <text x="445.6746" y="288.8251" font-size="10" fill="#7F7F7F" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">domain    path    name    value</text>
+      <line x1="439.8729" y1="290.5015" x2="585.4987" y2="290.5015" opacity="1" stroke="#7F7F7F" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+      <line x1="439.8885" y1="303.9546" x2="585.5142" y2="303.9546" opacity="1" stroke="#7F7F7F" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+      <line x1="485.7408" y1="275.8469" x2="485.7408" y2="317.7819" opacity="1" stroke="#7F7F7F" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+      <line x1="514.5801" y1="275.0548" x2="514.5801" y2="316.9899" opacity="1" stroke="#7F7F7F" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+      <line x1="549.0438" y1="275.0688" x2="549.0438" y2="317.0038" opacity="1" stroke="#7F7F7F" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    </g>
+    <text x="441.9563" y="345.6974" font-size="12" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">processResponse
+</text>
+    <text x="441.9563" y="360.6974" font-size="12" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">sendRequest
+</text>
+    <text x="441.9563" y="375.6974" font-size="12" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">handleMessage</text>
+    <text x="654.6287" y="216.1119" font-size="10" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">def processResponse (req, resp) = {
+</text>
+    <text x="654.6287" y="228.1119" font-size="10" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">  if (resp.status == StatusCodes.OK) {
+</text>
+    <text x="654.6287" y="240.1119" font-size="10" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">    resp.headers.foreach { h =&gt;
+</text>
+    <text x="654.6287" y="252.1119" font-size="10" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">       h match {
+</text>
+    <text x="654.6287" y="264.1119" font-size="10" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">         case `Set-Cookie`(cookie) =&gt;  
+</text>
+    <text x="654.6287" y="276.1119" font-size="10" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">               updateSetCookies(cookie,req)
+</text>
+    <text x="654.6287" y="288.1119" font-size="10" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">       …
+</text>
+    <text x="654.6287" y="300.1119" font-size="10" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">     publish(responseData)</text>
+    <text x="673.3246" y="341.4243" font-size="10" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">def sendRequest (request) = {
+</text>
+    <text x="673.3246" y="353.4243" font-size="10" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">  val req = addRequestCookies(request)
+</text>
+    <text x="673.3246" y="365.4243" font-size="10" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">  val respFuture = hhttp.singleRequest(req)
+</text>
+    <text x="673.3246" y="377.4243" font-size="10" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">  val pr = new PendingRequest(req,respFuture)
+</text>
+    <text x="673.3246" y="389.4243" font-size="10" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">  pendingRequests += pr
+</text>
+    <text x="673.3246" y="401.4243" font-size="10" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">          
+</text>
+    <text x="673.3246" y="413.4243" font-size="10" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">  respFuture.map { resp =&gt;
+</text>
+    <text x="673.3246" y="425.4243" font-size="10" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">    pendingRequests -= pr
+</text>
+    <text x="673.3246" y="437.4243" font-size="10" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">    processResponse(req,resp)
+</text>
+    <text x="673.3246" y="449.4243" font-size="10" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">    (pr,resp)
+</text>
+    <text x="673.3246" y="461.4243" font-size="10" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">  }.pipeTo(self)</text>
+    <text x="326.0142" y="427.8636" font-size="10" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">def handleMessage = {
+</text>
+    <text x="326.0142" y="439.8636" font-size="10" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">  case RaceTick =&gt; sendRequest
+</text>
+    <text x="326.0142" y="451.8636" font-size="10" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">  case (req,resp) =&gt; processResponse(req,resp)</text>
+    <line x1="399.9316" y1="353.1808" x2="322.2815" y2="353.1808" marker-end="url(#marker2)" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    <line x1="402.1064" y1="339.7882" x2="324.4563" y2="339.7882" marker-start="url(#marker3)" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    <path d="M546.057 336.4541 C623.6083 329.7002 649.1139 265.6617 659.868 244.6761" marker-end="url(#marker4)" opacity="1" stroke="#0000FE" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="4,4" fill-opacity="0" />
+    <path d="M525.0295 353.4235 C576.6577 362.3231 628.6054 356.1531 662.5662 340.7368" marker-end="url(#marker5)" opacity="1" stroke="#0000FE" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="4,4" fill-opacity="0" />
+    <path d="M521.4192 376.688 C535.6461 389.6199 519.7579 409.7224 469.2048 419.0934" marker-end="url(#marker6)" opacity="1" stroke="#0000FE" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="4,4" fill-opacity="0" />
+    <text x="624.6572" y="180.432" font-size="12" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">bus</text>
+    <line x1="632.7314" y1="367.4682" x2="557.2061" y2="367.4682" marker-end="url(#marker7)" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+  </g>
+</svg>

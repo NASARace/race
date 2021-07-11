@@ -1,0 +1,62 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<svg width="100%" height="100%" version="1.1" viewBox="235.8398 102.1265 433.1602 256.8735" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <filter id="shadow1" width="150%" height="150%">
+      <feGaussianBlur in="SourceAlpha" result="blur" stdDeviation="5" />
+      <feOffset dx="2" dy="2" in="blur" result="offsetBlur" />
+      <feMerge>
+        <feMergeNode in="offsetBlur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+  </defs>
+  <marker id="marker1" markerUnits="strokeWidth" orient="auto" refX="-5.208829" refY="0" markerWidth="9.89073" markerHeight="7.760683" viewBox="-8.89073 -3.880342 9.89073 7.760683">
+    <path d="M-7.89073 -2.880342 L0 0 L-7.89073 2.880341 L-5.6 -2.447838E-07 Z " fill="#0000FE" fill-opacity="1" stroke="#0000FE" stroke-opacity="1" />
+  </marker>
+  <marker id="marker2" markerUnits="strokeWidth" orient="auto" refX="-5.208829" refY="0" markerWidth="9.89073" markerHeight="7.760683" viewBox="-8.89073 -3.880342 9.89073 7.760683">
+    <path d="M-7.89073 -2.880342 L0 0 L-7.89073 2.880341 L-5.6 -2.447838E-07 Z " fill="#0000FE" fill-opacity="1" stroke="#0000FE" stroke-opacity="1" />
+  </marker>
+  <marker id="marker3" markerUnits="strokeWidth" orient="auto" refX="-5.208829" refY="0" markerWidth="9.89073" markerHeight="7.760683" viewBox="-8.89073 -3.880342 9.89073 7.760683">
+    <path d="M-7.89073 -2.880342 L0 0 L-7.89073 2.880341 L-5.6 -2.447838E-07 Z " fill="#0000FE" fill-opacity="1" stroke="#0000FE" stroke-opacity="1" />
+  </marker>
+  <marker id="marker4" markerUnits="strokeWidth" orient="auto" refX="-11.17254" refY="0" markerWidth="13.27247" markerHeight="10.22955" viewBox="-12.27247 -5.114774 13.27247 10.22955">
+    <path d="M-11.27247 -4.114774 L0 0 L-11.27247 4.114773 Z " fill="#000000" fill-opacity="1" stroke="#000000" stroke-opacity="1" />
+  </marker>
+  <g id="layer1" inkscape:label="Layer 1" inkscape:groupmode="layer">
+    <rect x="342" y="108" width="171" height="54" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" filter="url(#shadow1)" />
+    <text x="400.8799" y="140.5336" font-size="12" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">ZipStream</text>
+    <g>
+      <g>
+        <g>
+          <path d="M238.8398 112.2557 L238.8398 155.031 Q246.9844 162.1602 271.418 162.1602 Q295.8515 162.1602 303.9961 155.031 L303.9961 112.2557 Z " opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" />
+          <text x="253.4697" y="135.2415" font-size="12" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">archive
+</text>
+          <text x="264.9951" y="150.2415" font-size="12" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">file</text>
+          <ellipse cx="271.418" cy="112.2557" rx="32.57813" ry="7.129209" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" />
+        </g>
+      </g>
+    </g>
+    <line x1="351" y1="126" x2="504" y2="126" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    <line x1="351" y1="144" x2="504" y2="144" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    <rect x="369" y="189" width="117" height="45" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" filter="url(#shadow1)" />
+    <text x="412.9854" y="209.5336" font-size="12" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">String
+</text>
+    <text x="412.6748" y="224.5336" font-size="12" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">Buffer</text>
+    <rect x="459" y="189" width="27" height="45" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#BFBFBF" fill-opacity="1" />
+    <rect x="387" y="261" width="72" height="45" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" filter="url(#shadow1)" />
+    <text x="413.1172" y="281.5336" font-size="12" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">Msg
+</text>
+    <text x="408.4854" y="296.5336" font-size="12" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">String</text>
+    <line x1="297" y1="135" x2="353.7912" y2="135" marker-end="url(#marker1)" opacity="1" stroke="#0000FE" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    <path d="M504 135 C567 135 549 180 500.8902 196.0366" marker-end="url(#marker2)" opacity="1" stroke="#0000FE" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+    <path d="M450 225 C513 225 513 261 473.7648 276.6941" marker-end="url(#marker3)" opacity="1" stroke="#0000FE" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+    <text x="534" y="199.1531" font-size="12" fill="#000000" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">&lt;entry time=“..”&gt;
+</text>
+    <text x="534" y="213.1531" font-size="12" fill="#000000" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">  …
+</text>
+    <text x="534" y="227.1531" font-size="12" fill="#000000" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">&lt;/entry&gt;</text>
+    <line x1="423" y1="306" x2="423" y2="329.8275" marker-end="url(#marker4)" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    <line x1="378" y1="342" x2="477" y2="342" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="4" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    <text x="496.6973" y="341.0336" font-size="12" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">msg bus</text>
+  </g>
+</svg>

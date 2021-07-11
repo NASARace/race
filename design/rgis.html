@@ -10,7 +10,7 @@
     <body>
         <div class="navbar">
             <div class=""banner>
-                <a href="index.html" ><img class="logo" src="../images/race128.png"></a>
+                <a href="../index.html" ><img class="logo" src="../images/race128.png"></a>
                 <p class="doctitle">RACE Manual</p>
             </div>
             <br/>
@@ -21,121 +21,77 @@
                     <li><span class="toc level2"><a href="http://nasarace.github.io/race">Website</a></span></li>
                 </ul>
             </div>
-            <div class="pagetoc">
-                <div class="toc">
-                  <p class="title">Page</p>
-                  <ul>
-                    <li><span class="toc level1"><a href="#traits-and-classes">Traits and Classes</a></span></li>
-                    <li><span class="toc level1"><a href="#binary-data-model">Binary Data Model</a></span></li>
-                    <li><span class="toc level1"><a href="#client-api">Client API</a></span></li>
-                    <li><span class="toc level1"><a href="#gisitemdbtool">GisItemDBTool</a></span></li>
-                  </ul>
-                </div>
+            <div class="toc pagetoc">
+                <p class="title">Page</p>
+                <ul class="nav-list">
+                  <li class="level1 active"><a href="#">RACE GIS Support</a></li>
+                  <li class="level2"><a href="#traits-and-classes">Traits and Classes</a></li>
+                  <li class="level2"><a href="#binary-data-model">Binary Data Model</a></li>
+                  <li class="level2"><a href="#client-api">Client API</a></li>
+                  <li class="level2"><a href="#gisitemdbtool">GisItemDBTool</a></li>
+                </ul>
             </div>
-            <div class="globaltoc">
-                <div class="toc">
-                  <p class="title">Site</p>
-                  <ul>
-                    <li><span class="toc level1"><a href="../index.html">About RACE</a></span></li>
-                    <li><span class="toc level1"><a href="../project-log.html">Project Log</a></span></li>
-                    <li>
-                      <p class="toc level1">Installing RACE</p>
-                      <ul>
-                        <li><span class="toc level2"><a href="../installation/prerequisites.html">Prerequisites</a></span></li>
-                        <li><span class="toc level2"><a href="../installation/download.html">Downloading RACE</a></span></li>
-                        <li><span class="toc level2"><a href="../installation/build.html">Building RACE</a></span></li>
-                        <li><span class="toc level2"><a href="../installation/pitfalls.html">Installation Pitfalls</a></span></li>
-                        <li><span class="toc level2"><a href="../installation/osx.html">OS X Specifics</a></span></li>
-                      </ul>
-                    </li>
-                    <li>
-                      <p class="toc level1">Using RACE</p>
-                      <ul>
-                        <li><span class="toc level2"><a href="../usage/running.html">How to Run RACE</a></span></li>
-                        <li><span class="toc level2"><a href="../usage/configuration.html">RACE Configuration</a></span></li>
-                        <li><span class="toc level2"><a href="../usage/encryption.html">Using Encrypted Configurations</a></span></li>
-                      </ul>
-                    </li>
-                    <li>
-                      <p class="toc level1"><a href="../actors.html">Actors</a></p>
-                      <ul>
-                        <li><span class="toc level2"><a href="../actors.html#actor-components-and-properties">Actor Components and Properties</a></span></li>
-                        <li><span class="toc level2"><a href="../actors.html#actor-communication">Actor Communication</a></span></li>
-                      </ul>
-                    </li>
-                    <li>
-                      <p class="toc level1">RACE Design</p>
-                      <ul>
-                        <li><span class="toc level2"><a href="overview.html">Design Overview</a></span></li>
-                        <li><span class="toc level2"><a href="configuration.html">Runtime Configuration</a></span></li>
-                        <li><span class="toc level2"><a href="raceactors.html">RaceActors</a></span></li>
-                        <li><span class="toc level2"><a href="channeltopics.html">ChannelTopics</a></span></li>
-                        <li><span class="toc level2"><a href="embedded-objects.html">Embedded Objects</a></span></li>
-                        <li><span class="toc level2"><a href="connectivity.html">Connecting External Systems</a></span></li>
-                        <li><span class="toc level2 active">RACE GIS Support</span></li>
-                        <li><span class="toc level2"><a href="archive-replay.html">Archive and Replay</a></span></li>
-                        <li><span class="toc level2"><a href="worldwind.html">WorldWind Viewer</a></span></li>
-                        <li><span class="toc level2"><a href="http-server.html">HttpServer</a></span></li>
-                        <li><span class="toc level2"><a href="timeseries.html">Time Series Analysis</a></span></li>
-                        <li><span class="toc level2"><a href="remotelauncher.html">RemoteLauncher</a></span></li>
-                        <li><span class="toc level2"><a href="layers-and-modules.html">Layers and Modules</a></span></li>
-                        <li><span class="toc level2"><a href="directory-structure.html">Directory Structure</a></span></li>
-                        <li><span class="toc level2"><a href="repository.html">Repository Structure</a></span></li>
-                        <li><span class="toc level2"><a href="local-build.html">Local Build Configuration</a></span></li>
-                        <li><span class="toc level2"><a href="dds.html">RACE and DDS</a></span></li>
-                        <li><span class="toc level2"><a href="extproject.html">Using RACE from External Projects</a></span></li>
-                        <li><span class="toc level2"><a href="whyscala.html">Why Scala</a></span></li>
-                      </ul>
-                    </li>
-                    <li>
-                      <p class="toc level1"><a href="../examples.html">RACE Examples</a></p>
-                      <ul>
-                        <li><span class="toc level2"><a href="../examples.html#basic-examples">Basic Examples</a></span></li>
-                        <li><span class="toc level2"><a href="../examples.html#distributed-operation">Distributed Operation</a></span></li>
-                        <li><span class="toc level2"><a href="../examples.html#live-data-import">Live Data Import</a></span></li>
-                        <li><span class="toc level2"><a href="../examples.html#data-replay">Data Replay</a></span></li>
-                      </ul>
-                    </li>
-                    <li>
-                      <p class="toc level1">Documentation</p>
-                      <ul>
-                        <li><span class="toc level2"><a href="../documentation/overview.html">RACE Documentation Overview</a></span></li>
-                        <li><span class="toc level2"><a href="../documentation/presentations.html">Available Slide Presentations</a></span></li>
-                      </ul>
-                    </li>
-                    <li>
-                      <p class="toc level1"><a href="../known-problems.html">Known Problems</a></p>
-                      <ul>
-                        <li><span class="toc level2"><a href="../known-problems.html#problems-with-worldwind-jogl-native-libraries-on-linux">problems with WorldWind/JOGL native libraries on Linux</a></span></li>
-                        <li><span class="toc level2"><a href="../known-problems.html#incompatible-class-file-errors-during-race-startup">incompatible class file errors during RACE startup</a></span></li>
-                        <li><span class="toc level2"><a href="../known-problems.html#kafka-clients">kafka-clients</a></span></li>
-                        <li><span class="toc level2"><a href="../known-problems.html#kafkaserver">KafkaServer</a></span></li>
-                        <li><span class="toc level2"><a href="../known-problems.html#windows-console-output">Windows console output</a></span></li>
-                        <li><span class="toc level2"><a href="../known-problems.html#race-not-starting-because-of-racevieweractor-timeout">RACE not starting because of RaceViewerActor timeout</a></span></li>
-                      </ul>
-                    </li>
-                    <li><span class="toc level1"><a href="../changes.html">Changes</a></span></li>
-                    <li><span class="toc level1"><a href="../todo.html">TODO List</a></span></li>
-                    <li>
-                      <p class="toc level1"><a href="../learning.html">Learning Resources</a></p>
-                      <ul>
-                        <li><span class="toc level2"><a href="../learning.html#scala">Scala</a></span></li>
-                        <li><span class="toc level2"><a href="../learning.html#actors-and-akka">Actors and Akka</a></span></li>
-                        <li><span class="toc level2"><a href="../learning.html#sbt">SBT</a></span></li>
-                        <li><span class="toc level2"><a href="../learning.html#interactive-scala-akka-and-sbt-learning-environment-and-examples">Interactive Scala, Akka and SBT Learning Environment and Examples</a></span></li>
-                        <li><span class="toc level2"><a href="../learning.html#git">Git</a></span></li>
-                      </ul>
-                    </li>
-                    <li><span class="toc level1"><a href="../glossary.html">Glossary</a></span></li>
-                  </ul>
-                </div>
+            <div class="toc globaltoc">
+                <p class="title">Site</p>
+                <ul class="nav-list">
+                  <li class="level1 nav-header">RACE Manual</li>
+                  <li class="level2"><a href="../index.html">About RACE</a></li>
+                  <li class="level2 nav-header">Installing RACE</li>
+                  <li class="level3"><a href="../installation/prerequisites.html">Prerequisites</a></li>
+                  <li class="level3"><a href="../installation/download.html">Downloading RACE</a></li>
+                  <li class="level3"><a href="../installation/build.html">Building RACE</a></li>
+                  <li class="level3"><a href="../installation/pitfalls.html">Installation Pitfalls</a></li>
+                  <li class="level3"><a href="../installation/osx.html">OS X Specifics</a></li>
+                  <li class="level2 nav-header">Using RACE</li>
+                  <li class="level3"><a href="../usage/running.html">How to Run RACE</a></li>
+                  <li class="level3"><a href="../usage/configuration.html">RACE Configuration</a></li>
+                  <li class="level3"><a href="../usage/encryption.html">Using Encrypted Configurations</a></li>
+                  <li class="level2 nav-header">RACE Design</li>
+                  <li class="level3"><a href="overview.html">Design Overview</a></li>
+                  <li class="level3"><a href="actors.html">Actors</a></li>
+                  <li class="level3"><a href="configuration.html">Runtime Configuration</a></li>
+                  <li class="level3"><a href="raceactors.html">RaceActors</a></li>
+                  <li class="level3"><a href="channeltopics.html">ChannelTopics</a></li>
+                  <li class="level3"><a href="embedded-objects.html">Embedded Objects</a></li>
+                  <li class="level3"><a href="connectivity.html">Connecting External Systems</a></li>
+                  <li class="level3"><a href="remoting.html">Remote RaceActors and Distributed RACE Applications</a></li>
+                  <li class="level3"><a href="remotelauncher.html">RemoteLauncher</a></li>
+                  <li class="level3"><a href="hc.html">Heterogeneous Computing in RACE</a></li>
+                  <li class="level3"><a href="parsing.html">RACE Parsers</a></li>
+                  <li class="level3"><a href="archive-replay.html">Archive and Replay</a></li>
+                  <li class="level3"><a href="timeseries.html">Time Series Analysis</a></li>
+                  <li class="level3"><a href="trajectory.html">Trajectory Infrastructure</a></li>
+                  <li class="level3 active"><a href="#">RACE GIS Support</a></li>
+                  <li class="level3"><a href="worldwind.html">WorldWind Viewer</a></li>
+                  <li class="level3"><a href="http-server.html">HttpServer</a></li>
+                  <li class="level3"><a href="http-client.html">HttpImportActor</a></li>
+                  <li class="level3"><a href="share.html">SHARE - System for Hierarchical Ad hoc Reporting</a></li>
+                  <li class="level3"><a href="layers-and-modules.html">Layers and Modules</a></li>
+                  <li class="level3"><a href="directory-structure.html">Directory Structure</a></li>
+                  <li class="level3"><a href="repository.html">Repository Structure</a></li>
+                  <li class="level3"><a href="local-build.html">Local Build Configuration</a></li>
+                  <li class="level3"><a href="dds.html">RACE and DDS</a></li>
+                  <li class="level3"><a href="extproject.html">Using RACE from External Projects</a></li>
+                  <li class="level3"><a href="whyscala.html">Why Scala</a></li>
+                  <li class="level2 nav-header">Documentation</li>
+                  <li class="level3"><a href="../documentation/overview.html">RACE Documentation Overview</a></li>
+                  <li class="level3"><a href="../documentation/presentations.html">Available Slide Presentations</a></li>
+                  <li class="level2 nav-header">Annex</li>
+                  <li class="level3"><a href="../annex/project-log.html">Project Log</a></li>
+                  <li class="level3"><a href="../annex/examples.html">RACE Examples</a></li>
+                  <li class="level3"><a href="../annex/known-problems.html">Known Problems</a></li>
+                  <li class="level3"><a href="../annex/changes.html">Changes</a></li>
+                  <li class="level3"><a href="../annex/todo.html">TODO List</a></li>
+                  <li class="level3"><a href="../annex/learning.html">Learning Resources</a></li>
+                  <li class="level3"><a href="../annex/glossary.html">Glossary</a></li>
+                </ul>
             </div>
         </div>
 
         <div class="main">
             <h1 id="race-gis-support" class="title">RACE GIS Support</h1>
             <p>RACE applications often require access to geographic databases in order to process tracks. Typical
-            examples are tasks such as finding the nearest landing site for a given aircraft position, or
+            examples are tasks such as finding the nearest landing node for a given aircraft position, or
             to generate a trajectory from a flight plan that consists of waypoint names.</p>
             <p>Most of these databases are semi-static, i.e. the data only changes periodically and is immutable
             during a given RACE execution. Items have alphanumeric ids, geographic positions and other fields
@@ -156,7 +112,7 @@
             considered to be a suitable GIS implementation basis since they involve too much overhead
             (transactions, users, memory footprint) and do not efficiently support geographic queries.</p>
             
-            <h2 id="traits-and-classes" class="section">Traits and Classes</h2>
+            <h2 id="traits-and-classes" class="section"><a class="anchor-link left" href="#traits-and-classes"><i class="icofont-laika">&#xef71;</i></a>Traits and Classes</h2>
             <p>RACE GIS uses a different approach. The <code>GisItemDBTool</code> application reads external data (e.g.
             from SQL source files or retrieved via http) and translates it into a programming language
             independent binary format that is stored in regular files. At RACE runtime, those files are
@@ -192,7 +148,7 @@
             </ul>
             <p>An example for such a tripple can be found in <code>gov.nasa.race.air.gis.LandingSite</code>.</p>
             
-            <h2 id="binary-data-model" class="section">Binary Data Model</h2>
+            <h2 id="binary-data-model" class="section"><a class="anchor-link left" href="#binary-data-model"><i class="icofont-laika">&#xef71;</i></a>Binary Data Model</h2>
             <p>The underlying binary data model of RACE GIS is a byte array that is partitioned into 5
             sections: header, string data, item list, key map and kd-tree. The model is programming language
             agnostic and self contained - only internal references are allowed and all references are kept as
@@ -248,7 +204,7 @@
             <p>For details of the id hash map and kd-tree algorithms see <code>gov.nasa.race.gis.GisItemDBFactory</code>
             for creation and <code>gov.nasa.race.gis.GisItemDB</code> for queries.</p>
             
-            <h2 id="client-api" class="section">Client API</h2>
+            <h2 id="client-api" class="section"><a class="anchor-link left" href="#client-api"><i class="icofont-laika">&#xef71;</i></a>Client API</h2>
             <p>The public API supports two major functions: instantiation and queries. Instantiation is usually
             just a plain constructor call of the concrete GisItemDB class:</p>
             <pre><code>val fixDB: FixDB = new FixDB(file)</code></pre>
@@ -322,7 +278,7 @@ while (..) {
             <p>Query examples can be found in the <code>gov.nasa.race.air.gis.FixDBSpec</code> regression test that is
             included in the <code>race-air-test</code> sub-project.</p>
             
-            <h2 id="gisitemdbtool" class="section">GisItemDBTool</h2>
+            <h2 id="gisitemdbtool" class="section"><a class="anchor-link left" href="#gisitemdbtool"><i class="icofont-laika">&#xef71;</i></a>GisItemDBTool</h2>
             <p>The <code>race-tools</code> sub-project includes a <code>gov.nasa.race.tool.GisItemDBTool</code> command line
             application that can be used to create and query <code>GisItemDB</code> databases interactively. The tool
             is also accessible through the <code>script/geodb</code> shell script:</p>

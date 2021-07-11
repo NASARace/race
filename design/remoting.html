@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8"/>
+        <title>RACE</title>
+
+        <link href="../race-html.css" rel="stylesheet"/>
+    </head>
+
+    <body>
+        <div class="navbar">
+            <div class=""banner>
+                <a href="../index.html" ><img class="logo" src="../images/race128.png"></a>
+                <p class="doctitle">RACE Manual</p>
+            </div>
+            <br/>
+            <div class="toc">
+                <p class="title">Project Links</p>
+                <ul>
+                    <li><span class="toc level2"><a href="https://github.com/NASARace/race.git">Repository</a></span></li>
+                    <li><span class="toc level2"><a href="http://nasarace.github.io/race">Website</a></span></li>
+                </ul>
+            </div>
+            <div class="toc pagetoc">
+                <p class="title">Page</p>
+                <ul class="nav-list">
+                  <li class="level1 active"><a href="#">Remote RaceActors and Distributed RACE Applications</a></li>
+                  <li class="level2"><a href="#akka-clusters">Akka Clusters</a></li>
+                  <li class="level2"><a href="#remote-raceactors">Remote RaceActors</a></li>
+                  <li class="level2"><a href="#dedicated-communication-actors">Dedicated Communication Actors</a></li>
+                  <li class="level2"><a href="#serialization">Serialization</a></li>
+                </ul>
+            </div>
+            <div class="toc globaltoc">
+                <p class="title">Site</p>
+                <ul class="nav-list">
+                  <li class="level1 nav-header">RACE Manual</li>
+                  <li class="level2"><a href="../index.html">About RACE</a></li>
+                  <li class="level2 nav-header">Installing RACE</li>
+                  <li class="level3"><a href="../installation/prerequisites.html">Prerequisites</a></li>
+                  <li class="level3"><a href="../installation/download.html">Downloading RACE</a></li>
+                  <li class="level3"><a href="../installation/build.html">Building RACE</a></li>
+                  <li class="level3"><a href="../installation/pitfalls.html">Installation Pitfalls</a></li>
+                  <li class="level3"><a href="../installation/osx.html">OS X Specifics</a></li>
+                  <li class="level2 nav-header">Using RACE</li>
+                  <li class="level3"><a href="../usage/running.html">How to Run RACE</a></li>
+                  <li class="level3"><a href="../usage/configuration.html">RACE Configuration</a></li>
+                  <li class="level3"><a href="../usage/encryption.html">Using Encrypted Configurations</a></li>
+                  <li class="level2 nav-header">RACE Design</li>
+                  <li class="level3"><a href="overview.html">Design Overview</a></li>
+                  <li class="level3"><a href="actors.html">Actors</a></li>
+                  <li class="level3"><a href="configuration.html">Runtime Configuration</a></li>
+                  <li class="level3"><a href="raceactors.html">RaceActors</a></li>
+                  <li class="level3"><a href="channeltopics.html">ChannelTopics</a></li>
+                  <li class="level3"><a href="embedded-objects.html">Embedded Objects</a></li>
+                  <li class="level3"><a href="connectivity.html">Connecting External Systems</a></li>
+                  <li class="level3 active"><a href="#">Remote RaceActors and Distributed RACE Applications</a></li>
+                  <li class="level3"><a href="remotelauncher.html">RemoteLauncher</a></li>
+                  <li class="level3"><a href="hc.html">Heterogeneous Computing in RACE</a></li>
+                  <li class="level3"><a href="parsing.html">RACE Parsers</a></li>
+                  <li class="level3"><a href="archive-replay.html">Archive and Replay</a></li>
+                  <li class="level3"><a href="timeseries.html">Time Series Analysis</a></li>
+                  <li class="level3"><a href="trajectory.html">Trajectory Infrastructure</a></li>
+                  <li class="level3"><a href="rgis.html">RACE GIS Support</a></li>
+                  <li class="level3"><a href="worldwind.html">WorldWind Viewer</a></li>
+                  <li class="level3"><a href="http-server.html">HttpServer</a></li>
+                  <li class="level3"><a href="http-client.html">HttpImportActor</a></li>
+                  <li class="level3"><a href="share.html">SHARE - System for Hierarchical Ad hoc Reporting</a></li>
+                  <li class="level3"><a href="layers-and-modules.html">Layers and Modules</a></li>
+                  <li class="level3"><a href="directory-structure.html">Directory Structure</a></li>
+                  <li class="level3"><a href="repository.html">Repository Structure</a></li>
+                  <li class="level3"><a href="local-build.html">Local Build Configuration</a></li>
+                  <li class="level3"><a href="dds.html">RACE and DDS</a></li>
+                  <li class="level3"><a href="extproject.html">Using RACE from External Projects</a></li>
+                  <li class="level3"><a href="whyscala.html">Why Scala</a></li>
+                  <li class="level2 nav-header">Documentation</li>
+                  <li class="level3"><a href="../documentation/overview.html">RACE Documentation Overview</a></li>
+                  <li class="level3"><a href="../documentation/presentations.html">Available Slide Presentations</a></li>
+                  <li class="level2 nav-header">Annex</li>
+                  <li class="level3"><a href="../annex/project-log.html">Project Log</a></li>
+                  <li class="level3"><a href="../annex/examples.html">RACE Examples</a></li>
+                  <li class="level3"><a href="../annex/known-problems.html">Known Problems</a></li>
+                  <li class="level3"><a href="../annex/changes.html">Changes</a></li>
+                  <li class="level3"><a href="../annex/todo.html">TODO List</a></li>
+                  <li class="level3"><a href="../annex/learning.html">Learning Resources</a></li>
+                  <li class="level3"><a href="../annex/glossary.html">Glossary</a></li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="main">
+            <h1 id="remote-raceactors-and-distributed-race-applications" class="title">Remote RaceActors and Distributed RACE Applications</h1>
+            <p>RACE is meant to be used in a distributed environment, communicating with other nodes across network connections. This
+            communication can happen at three levels:</p>
+            <ul>
+              <li>transparently through <a href="https://doc.akka.io/docs/akka/current/typed/index-cluster.html">Akka Clusters</a></li>
+              <li>transparently between RaceActors in different processes</li>
+              <li>at the application level with dedicated actors that directly encode protocols/formats</li>
+            </ul>
+            <p>Tightly related to the first two modes is the concept of <strong>Location Transparency</strong>. In theory this means the code of
+            an actor should not reflect in which actor system it is running - the location can be chosen based on resource
+            availability, including load distribution. In practice, this is constrained by the cost of serialization for incoming
+            and outgoing messages for respective actors, which for high volume communication can exceed potential gains.</p>
+            
+            <h2 id="akka-clusters" class="section"><a class="anchor-link left" href="#akka-clusters"><i class="icofont-laika">&#xef71;</i></a>Akka Clusters</h2>
+            <p>This is the lowest level of remoting support and - apart from serialization of exchanged messages - only requires
+            <a href="https://doc.akka.io/docs/akka/current/typed/cluster.html#configuration">cluster configuration</a> as it is fully implemented in the Akka framework. Clusters can be used to implement highly
+            reliable systems with <a href="https://doc.akka.io/docs/akka/current/typed/distributed-data.html">distributed data</a> but due to underlying protocols require a high level of connectivity between
+            the nodes within the cluster. There is not yet specific support for Akka clusters within RACE.</p>
+            
+            <h2 id="remote-raceactors" class="section"><a class="anchor-link left" href="#remote-raceactors"><i class="icofont-laika">&#xef71;</i></a>Remote RaceActors</h2>
+            <p>This is the primary remoting support within RACE, which is integrated into the <a href="raceactors.html">RaceActor Model</a>. If the <code>MasterActor</code>
+            during system initialization encounters an actor configuration with a <code>remote</code> option it does not instantiate this
+            actor locally but - depending on if the there is a <code>class</code> specification for this actor - tries to either start
+            or lookup this actor in a remote RaceActorSystem:</p>
+            <ol class="arabic">
+              <li><strong>remote lookup</strong> - if there is no <code>class</code> specification the <code>MasterActor</code> assumes the remote actor is already
+              running within the remote system, tries to obtain its <code>ActorRef</code> and if successful sends its local actor
+              configuration</li>
+              <li><strong>remote start</strong> - if there is a <code>class</code> specification in the local config the <code>MasterActor</code> instantiates the
+              respective actor in the remote system, which already needs to be running. Note this mode is only supported
+              in <a href="https://doc.akka.io/docs/akka/current/index-classic.html">Akka Classic</a> (which is still the basis for RACE) and therefore might be dropped in the future</li>
+            </ol>
+            <p><em>Location Transparency</em> is guaranteed in both cases. Sending messages to remote actors is handled transparently by
+            Akka. Publishing to global RACE channels from remote actors requires a local <code>BusConnector</code> which is created
+            automatically by the <code>MasterActor</code> and acts as a local proxy that manages channel subscription and publication in lieu
+            of the remote. Location transparency therefore becomes just a matter of RACE configuration:</p>
+            <p><img class="center scale60" src="../images/loc-trans.svg" alt="Location Transparent Actors"></p>
+            
+            <h2 id="dedicated-communication-actors" class="section"><a class="anchor-link left" href="#dedicated-communication-actors"><i class="icofont-laika">&#xef71;</i></a>Dedicated Communication Actors</h2>
+            <p>This mode does not strive for location transparency - it uses dedicated communication actors that have full control
+            over network protocols and endpoint lookup. <a href="share.html">SHARE</a> is an example of choosing specialized actors (<code>UpstreamConnectorActor</code>
+            talking to a <code>HttpServer</code>/<code>NodeServerRoute</code>) in order to enable connectivity-based actor modes (e.g. implementing
+            mode specific protocols) and to allow for alternative (non-RACE) implementations of end points.</p>
+            
+            <h2 id="serialization" class="section"><a class="anchor-link left" href="#serialization"><i class="icofont-laika">&#xef71;</i></a>Serialization</h2>
+            <p>Regardless of the remoting level, communication between RaceActors in different processes always involves serialization
+            and de-serialization of exchanged messages. While older RACE versions used generic <a href="https://docs.oracle.com/en/java/javase/16/docs/specs/serialization/">Java Serialization</a> that did not
+            require to identify which message types need to be serialized/deserialized this is now discouraged by Akka for security
+            reasons (see <a href="https://www.oracle.com/java/technologies/javase/seccodeguide.html">Java Security Guidelines</a> and <a href="https://community.microfocus.com/cyberres/fortify/f/fortify-discussions/317555/the-perils-of-java-deserialization">Perils of Java Deserialization</a>).</p>
+            <p>For clusters and remote RaceActors RACE now defaults to a simple <code>java.io.DataOutputStream</code> and <code>DataInputStream</code>
+            based approach that requires RACE configuration in order to whitelist serializable types and associate them with
+            respective <code>gov.nasa.race.core.AkkaSerializers</code> that provide implementations for two basic methods:</p>
+            <pre><code>def toBinary(o: AnyRef): Array[Byte]
+def fromBinary(bytes: Array[Byte], manifest: Option[Class[_]]): AnyRef</code></pre>
+            <p>Serializers for standard RACE system messages can be found in <code>gov.nasa.race.core.RaceSerializers</code> and are generally
+            type specific, i.e. they only handle a single type which is uniquely identified in the receiving RACE system
+            by means of its Akka serializer id (that is transparently sent by Akka).</p>
+        </div>
+
+    </body>
+</html>

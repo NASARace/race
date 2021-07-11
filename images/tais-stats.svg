@@ -1,0 +1,62 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<svg width="100%" height="100%" version="1.1" viewBox="204 136 834 407" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <filter id="shadow1" width="150%" height="150%">
+      <feGaussianBlur in="SourceAlpha" result="blur" stdDeviation="5" />
+      <feOffset dx="5" dy="5" in="blur" result="offsetBlur" />
+      <feMerge>
+        <feMergeNode in="offsetBlur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+  </defs>
+  <g id="layer1">
+    <rect x="207" y="424.9989" width="792" height="27" opacity="1" fill="#E1E1E1" fill-opacity="1" />
+    <rect x="207" y="299.9994" width="792" height="27" opacity="1" fill="#E1E1E1" fill-opacity="1" />
+    <rect x="207" y="139" width="792" height="27" opacity="1" fill="#E1E1E1" fill-opacity="1" />
+    <rect x="524.625" y="441.1172" width="307.5508" height="70.44925" rx="18" ry="18" opacity="1" stroke="#FB0106" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FDFFA3" fill-opacity="1" filter="url(#shadow1)" />
+    <text x="219" y="164.2" font-size="12" fill="#000000" fill-opacity="1" font-family="Monaco" font-weight="normal" font-style="normal">1. Valid TAIS Message Statistics [/swim/tais]                                                       00:04:20
+</text>
+    <text x="219" y="180.2" font-size="12" fill="#000000" fill-opacity="1" font-family="Monaco" font-weight="normal" font-style="normal">     count     msg/s    peak    byte/s    peak        size     avg   msg
+</text>
+    <text x="219" y="196.2" font-size="12" fill="#000000" fill-opacity="1" font-family="Monaco" font-weight="normal" font-style="normal">----------   ------- -------   ------- -------   --------- -------   ---------------------------------------
+</text>
+    <text x="219" y="212.2" font-size="12" fill="#000000" fill-opacity="1" font-family="Monaco" font-weight="normal" font-style="normal">       502         2       4       421     907      107 kB     218   TAStatus
+</text>
+    <text x="219" y="228.2" font-size="12" fill="#000000" fill-opacity="1" font-family="Monaco" font-weight="normal" font-style="normal">    129901       500     657    596 kB  767 kB    151.2 MB    1 kB   TATrackAndFlightPlan
+</text>
+    <text x="219" y="244.2" font-size="12" fill="#000000" fill-opacity="1" font-family="Monaco" font-weight="normal" font-style="normal">                                                                           81447 **/record/flightPlan
+</text>
+    <text x="219" y="260.2" font-size="12" fill="#000000" fill-opacity="1" font-family="Monaco" font-weight="normal" font-style="normal">                                                                          259517 **/record/track
+</text>
+    <text x="219" y="276.2" font-size="12" fill="#000000" fill-opacity="1" font-family="Monaco" font-weight="normal" font-style="normal">----------   ------- -------   ------- -------   --------- -------
+</text>
+    <text x="219" y="292.2" font-size="12" fill="#000000" fill-opacity="1" font-family="Monaco" font-weight="normal" font-style="normal">    130403       502     661    596 kB  768 kB    151.3 MB    1 kB
+</text>
+    <text x="219" y="308.2" font-size="12" fill="#000000" fill-opacity="1" font-family="Monaco" font-weight="normal" font-style="normal">
+</text>
+    <text x="219" y="324.2" font-size="12" fill="#000000" fill-opacity="1" font-family="Monaco" font-weight="normal" font-style="normal">2. Duplicated TAIS Message Statistics [/swim/tais]                                                  00:04:20
+</text>
+    <text x="219" y="340.2" font-size="12" fill="#000000" fill-opacity="1" font-family="Monaco" font-weight="normal" font-style="normal">     count     dup/sec   message
+</text>
+    <text x="219" y="356.2" font-size="12" fill="#000000" fill-opacity="1" font-family="Monaco" font-weight="normal" font-style="normal">----------   ---------   -------------------------------------------
+</text>
+    <text x="219" y="372.2" font-size="12" fill="#000000" fill-opacity="1" font-family="Monaco" font-weight="normal" font-style="normal">       386      60.418   TAStatus
+</text>
+    <text x="219" y="388.2" font-size="12" fill="#000000" fill-opacity="1" font-family="Monaco" font-weight="normal" font-style="normal">      1172      12.158   TATrackAndFlightPlan
+</text>
+    <text x="219" y="404.2" font-size="12" fill="#000000" fill-opacity="1" font-family="Monaco" font-weight="normal" font-style="normal">----------
+</text>
+    <text x="219" y="420.2" font-size="12" fill="#000000" fill-opacity="1" font-family="Monaco" font-weight="normal" font-style="normal">      1558
+</text>
+    <text x="219" y="436.2" font-size="12" fill="#000000" fill-opacity="1" font-family="Monaco" font-weight="normal" font-style="normal">
+</text>
+    <text x="219" y="452.2" font-size="12" fill="#000000" fill-opacity="1" font-family="Monaco" font-weight="normal" font-style="normal">3. TAIS Track Statistics [/tracks]                                                                  00:04:20
+</text>
+    <text x="219" y="468.2" font-size="12" fill="#000000" fill-opacity="1" font-family="Monaco" font-weight="normal" font-style="normal">tracons  v2  v3    tracks   fplan   cmplt   dropped    blck   order     dup   ambig   no-time
+</text>
+    <text x="219" y="484.2" font-size="12" fill="#000000" fill-opacity="1" font-family="Monaco" font-weight="normal" font-style="normal">------- --- ---   ------- ------- -------   ------- ------- ------- ------- -------   -------
+</text>
+    <text x="219" y="500.2" font-size="12" fill="#000000" fill-opacity="1" font-family="Monaco" font-weight="normal" font-style="normal">    116   0   0      7593    1355   11659       663      42     317    5305      23         0</text>
+  </g>
+</svg>

@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8"/>
+        <title>RACE</title>
+
+        <link href="./race-slides-html.css" rel="stylesheet"/>
+    </head>
+
+    <body>
+        <div class="slidecounter" id="counter">0 / 0</div>
+        <div class="stopwatch" id="timer">00:00</div>
+        <div class="slide title">
+            <!-- additional divs inserted by renderer extension -->
+            <h1 id="zero-copy-data-acquisition" class="title">Zero Copy Data Acquisition</h1>
+            <p>avoid wasting heap on pre-requisites<br/></p>
+            <p>~</p>
+            <p><a href="https://ti.arc.nasa.gov/profile/pcmehlitz/" rel="author">Peter.C.Mehlitz</a><br/>
+            SGT Inc, NASA Ames Research Center</p>
+            </div><div class="slide"><h2 id="slides" class="section">Slides</h2>
+            <ul class="nav-list">
+              <li class="level1 active"><a href="#">Zero Copy Data Acquisition</a></li>
+              <li class="level2"><a href="#slides">Slides</a></li>
+              <li class="level2"><a href="#problem">Problem</a></li>
+              <li class="level2"><a href="#example-extracting-track-information-from-swim">Example: Extracting Track Information from SWIM</a></li>
+              <li class="level2"><a href="#solution-slices-instead-of-strings">Solution: Slices instead of Strings</a></li>
+              <li class="level2"><a href="#example-internalizing-strings">Example: Internalizing Strings</a></li>
+              <li class="level2"><a href="#slice-infrastructure">Slice Infrastructure</a></li>
+              <li class="level2"><a href="#example-extracting-replay-messages">Example: Extracting Replay Messages</a></li>
+              <li class="level2"><a href="#solution-tagged-archive-format">Solution: Tagged Archive Format</a></li>
+              <li class="level2"><a href="#problem-large-temporary-input-objects">Problem: Large Temporary Input Objects</a></li>
+              <li class="level2"><a href="#solution-translating-import-actors">Solution: Translating Import Actors</a></li>
+              <li class="level2"><a href="#optimization-results">Optimization Results</a></li>
+              <li class="level2"><a href="#pros-and-cons-of-specialized-input-actors">Pros and Cons of Specialized Input Actors</a></li>
+            </ul>
+            </div><div class="slide"><h2 id="problem" class="section">Problem</h2>
+            <ul>
+              <li>RACE used for production systems with demanding tasks (e.g. trajectory analysis)</li>
+              <li>needs all the CPU cycles and heap memory for those tasks it can get</li>
+              <li>task entities (track objects etc.) translated from large volume text input (JMS,sockets,http)</li>
+              <li>Java text processing infrastructure causes huge amounts of short living objects with
+              char/byte access overhead ⟹ heap pressure </li>
+            </ul>
+            </div><div class="slide"><h2 id="example-extracting-track-information-from-swim" class="section">Example: Extracting Track Information from SWIM</h2>
+            <img src="../images/xml-parsing.svg" class="center scale80">
+            </div><div class="slide"><h2 id="solution-slices-instead-of-strings" class="section">Solution: Slices instead of Strings</h2>
+            <ul>
+              <li>slices as modifiable string objects to process relevant UTF-8 input sequences (avoid temp. Strings)</li>
+              <li>directly provide primitive type conversion (e.g. toDouble) and String internalizing</li>
+              <li>compatible with java.lang.CharSequence (Regex etc.)</li>
+            </ul>
+            <img src="../images/xml-slice-parsing.svg" class="center scale70">
+            </div><div class="slide"><h2 id="example-internalizing-strings" class="section">Example: Internalizing Strings</h2>
+            <ul>
+              <li>needs String in order to retrieve String</li>
+            </ul>
+            <img src="../images/intern.svg" class="center scale65">
+            </div><div class="slide"><h2 id="slice-infrastructure" class="section">Slice Infrastructure</h2>
+            <img src="../images/slice.svg" class="center scale80">
+            </div><div class="slide"><h2 id="example-extracting-replay-messages" class="section">Example: Extracting Replay Messages</h2>
+            <ul>
+              <li>requires buffer to collect payload text (boundary parsing)</li>
+              <li>requires copying buffer into payload strings</li>
+            </ul>
+            <img src="../images/arch-replay-obj.svg" class="center scale60">
+            </div><div class="slide"><h2 id="solution-tagged-archive-format" class="section">Solution: Tagged Archive Format</h2>
+            <ul>
+              <li>fixed headers with payload lengths</li>
+              <li>always know how many bytes to read from compressed stream</li>
+            </ul>
+            <img src="../images/tagged-archive.svg" class="center scale50">
+            </div><div class="slide"><h2 id="problem-large-temporary-input-objects" class="section">Problem: Large Temporary Input Objects</h2>
+            <ul>
+              <li>Strings only created to be handed over to translators</li>
+              <li>translators only extract bytes (for efficient parsing), requiring
+              per-byte charAt(i) iteration</li>
+              <li>huge temporary objects (SWIM messages can be &gt; 100kB)</li>
+            </ul>
+            <img src="../images/import-msg.svg" class="center scale60">
+            </div><div class="slide"><h2 id="solution-translating-import-actors" class="section">Solution: Translating Import Actors</h2>
+            <ul>
+              <li>network buffers usually byte arrays with utf-8 text</li>
+              <li>⟹ buffer can be directly used to synchronously parse/translate</li>
+              <li>pro: no temp object creation/copying</li>
+              <li>contra: message retrieval and translation not parallel</li>
+            </ul>
+            <img src="../images/syn-import-trans.svg" class="center scale50">
+            </div><div class="slide"><h2 id="optimization-results" class="section">Optimization Results</h2>
+            <img src="../images/heap-old-new.png" class="center scale80">
+            </div><div class="slide"><h2 id="pros-and-cons-of-specialized-input-actors" class="section">Pros and Cons of Specialized Input Actors</h2>
+            <ul>
+              <li>combining (network) byte data acquisition and (sync) translation avoids creating
+              large temporary input message objects (&quot;go directly from byte buffer to TrackedObject&quot;)</li>
+              <li>zero copy translation drastically reduces number of temporary objects</li>
+              <li>less generic (actor complexity, no text-level tasks)</li>
+              <li>gain if cost(temp object,message) &gt; cost(translation)</li>
+              <li>does not scale that well if translation is too expensive to keep up with arrival rate</li>
+            </ul>
+        </div>
+    </body>
+
+    <script src="./race-slides.js"></script>
+</html>

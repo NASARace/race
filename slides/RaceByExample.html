@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8"/>
+        <title>RACE</title>
+
+        <link href="./race-slides-html.css" rel="stylesheet"/>
+    </head>
+
+    <body>
+        <div class="slidecounter" id="counter">0 / 0</div>
+        <div class="stopwatch" id="timer">00:00</div>
+        <div class="slide title">
+            <!-- additional divs inserted by renderer extension -->
+            <h1 id="race-by-example" class="title">RACE by Example</h1>
+            <p>website: <a href="http://nasarace.github.io/race">http://nasarace.github.io/race</a>  or <a href="../index.html">local</a><br/>
+            repository: <a href="https://github.com/nasarace/race">https://github.com/nasarace/race</a><br/></p>
+            <p class="author">
+            Peter.C.Mehlitz@nasa.gov<br/>
+            NASA Ames Research Center
+            </p>
+            </div><div class="slide"><h2 id="slides" class="section">Slides</h2>
+            <ul class="nav-list">
+              <li class="level1 active"><a href="#">RACE by Example</a></li>
+              <li class="level2"><a href="#slides">Slides</a></li>
+              <li class="level2"><a href="#where-did-race-come-from">Where did RACE come from?</a></li>
+              <li class="level2"><a href="#application-gamut">Application Gamut</a></li>
+              <li class="level2"><a href="#race-foundation-actor-programming-model">RACE Foundation: Actor Programming Model</a></li>
+              <li class="level2"><a href="#race-implementation-actor-system">RACE Implementation: Actor System</a></li>
+              <li class="level2"><a href="#race-application-design">RACE Application Design</a></li>
+              <li class="level2"><a href="#example-1-data-diversity-and-volumne">Example 1: Data Diversity and Volumne</a></li>
+              <li class="level2"><a href="#example-2-re-play-it-again">Example 2: (re)Play it Again</a></li>
+              <li class="level2"><a href="#example-3-now-with-remote-actors-location-transparency">Example 3: Now With Remote Actors - Location Transparency</a></li>
+              <li class="level2"><a href="#example-4-what-data-swim-message-statistics">Example 4: What Data - SWIM Message Statistics</a></li>
+              <li class="level2"><a href="#example-5-is-there-a-problem-with-the-data">Example 5: Is There a Problem with the Data?</a></li>
+              <li class="level2"><a href="#example-6-properties-can-be-more-complex-parallel-approaches">Example 6: Properties can be more Complex - Parallel Approaches</a></li>
+              <li class="level2"><a href="#example-7-more-complex-properties-trajectory-deviation">Example 7: More Complex Properties - Trajectory Deviation</a></li>
+              <li class="level2"><a href="#race-as-a-hub-connecting-simulators">RACE as a Hub - Connecting Simulators</a></li>
+              <li class="level2"><a href="#example-8-race-as-a-hub-connecting-simulators">Example 8: RACE as a Hub - Connecting Simulators</a></li>
+              <li class="level2"><a href="#sharing-data-across-heterogeneous-organizations">Sharing Data Across Heterogeneous Organizations</a></li>
+              <li class="level2"><a href="#sharing-data-overlay-network-of-race-nodes">Sharing Data - Overlay Network of RACE Nodes</a></li>
+              <li class="level2"><a href="#sharing-data-race-node-functions">Sharing Data - RACE Node Functions</a></li>
+              <li class="level2"><a href="#sharing-data-application">Sharing Data - Application</a></li>
+              <li class="level2"><a href="#example-9-partitioning-the-network-share">Example 9: Partitioning the Network (SHARE)</a></li>
+              <li class="level2"><a href="#tl-dr">TL;DR</a></li>
+            </ul>
+            </div><div class="slide"><h2 id="where-did-race-come-from" class="section">Where did RACE come from?</h2>
+            <ul>
+              <li>
+                <p>started as a distributed LVC simulation framework in 2015
+                <img src="../images/lvc-sim.svg" class="center scale35"/></p>
+              </li>
+              <li>
+                <p>evolved into a general framework for event driven concurrent/distributed applications:</p>
+                <ul>
+                  <li>can import/export from/to external systems - <strong>connectivity</strong></li>
+                  <li>can process high event rate and data volume - <strong>scalability</strong></li>
+                  <li>supports distributed and massively concurrent operation</li>
+                  <li>has batteries included (except Java runtime, SBT build system)</li>
+                </ul>
+              </li>
+            </ul>
+            </div><div class="slide"><h2 id="application-gamut" class="section">Application Gamut</h2>
+            <ul>
+              <li>common theme is parallel computation</li>
+              <li>ranges from distributed/network applications to heterogeneous (GPU/SIMD) computation</li>
+              <li>main focus is concurrent (multithreaded) program domain (without the pitfalls of thread sync)</li>
+              <li>primary components are <em>Actors</em></li>
+            </ul>
+            <img src="../images/parallel-computing.svg" class="center scale40"/>
+            </div><div class="slide"><h2 id="race-foundation-actor-programming-model" class="section">RACE Foundation: Actor Programming Model</h2>
+            <ul>
+              <li>well known concurrency programming model since 1973 (Hewitt et al)</li>
+              <li><em>Actors</em> are objects that communicate only through async messages
+              ⟹ no shared state</li>
+              <li>objects process messages one-at-a-time ⟹ sequential code</li>
+            </ul>
+            <img src="../images/actor.svg" class="center scale55"/>
+            </div><div class="slide"><h2 id="race-implementation-actor-system" class="section">RACE Implementation: Actor System</h2>
+            <ul>
+              <li>runs on JVM, programmed in Scala using Akka actor library</li>
+              <li>RACE = set of communicating actors</li>
+              <li>RACE messages are sent through (logical) publish/subscribe <strong>channels</strong></li>
+              <li>RACE actors/channels are runtime configured (JSON), not hardwired</li>
+            </ul>
+            <img src="../images/race-design.svg" class="center scale45"/>
+            </div><div class="slide"><h2 id="race-application-design" class="section">RACE Application Design</h2>
+            <ul>
+              <li>uniform design - everything is an actor</li>
+              <li>toplevel actors are deterministically created, initialized and terminated
+              by <em>Master</em> actor</li>
+              <li>actors communicate through (configured) bus channels</li>
+            </ul>
+            <img src="../images/race-overview-2.svg" class="center scale55"/>
+            </div><div class="slide"><h2 id="example-1-data-diversity-and-volumne" class="section">Example 1: Data Diversity and Volumne</h2>
+            <ul>
+              <li>live NAS visualization plus local sensors</li>
+              <li>imports SWIM messages (SFDPS,TFM-DATA,TAIS,ASDE-X,ITWS) and local ADS-B</li>
+              <li>up to 1000 msg/sec, 4500 simultaneous flights</li>
+              <li>RaceViewerActor uses embedded NASA WorldWind for geospatial display</li>
+            </ul>
+            <div>
+              <img src="../images/swim-sbs-all-ww.svg" class="left scale45"/>
+              <img src="../images/race-nas.png" class="right scale45"/>
+            </div>
+            <div class="run">1: ./race --vault ../conf.crypt config/air/swim-all-sbs-ww.conf</div>
+            </div><div class="slide"><h2 id="example-2-re-play-it-again" class="section">Example 2: (re)Play it Again</h2>
+            <ul>
+              <li>only import actors are replaced with replay actors</li>
+              <li>everything else stays the same</li>
+            </ul>
+            <p><img src="../images/source-swap.svg" class="center scale40"/>
+            <div class="run">1: ./race -Darchive=../data/all-080717-1744 config/air/swim-all-sbs-replay-ww.conf</div></p>
+            </div><div class="slide"><h2 id="example-3-now-with-remote-actors-location-transparency" class="section">Example 3: Now With Remote Actors - Location Transparency</h2>
+            <ul>
+              <li>actors are <em>location transparent</em> - can be moved to different RACE processes</li>
+              <li>can exchange data- (SWIM) and control- messages (viewer sync)</li>
+            </ul>
+            <p><img src="../images/remote-viewers.svg" class="center scale55"/>
+            <div class="run">1: ./race config/remote-lookup/satellite1-replay.conf</div>
+            <div class="run">2: ./race config/remote-lookup/satellite2-replay.conf</div>
+            <div class="run">3: ./race  -Dmonitor.interval=15s -Darchive=../data/all-080717-1744/sfdps.ta.gz config/remote-lookup/master-replay-ww.conf</div></p>
+            </div><div class="slide"><h2 id="example-4-what-data-swim-message-statistics" class="section">Example 4: What Data - SWIM Message Statistics</h2>
+            <ul>
+              <li>RACE more than a data visualizer</li>
+              <li>example collects live SWIM message statistics</li>
+              <li>serves results as a web page (embedded webserver actor)</li>
+            </ul>
+            <div>
+              <img src="../images/swim-stats-config.svg" class="left scale15"/>
+              <img src="../images/swim-stats.svg" class="right scale50"/>
+            </div>
+            <p><div class="run">1: ./race --vault ../conf.crypt config/air/swim-msg-stats.conf</div><a class="srv" href="http://localhost:8080/race/statistics"></a></p>
+            </div><div class="slide"><h2 id="example-5-is-there-a-problem-with-the-data" class="section">Example 5: Is There a Problem with the Data?</h2>
+            <ul>
+              <li>goal: find anomalies in flight update messages:</li>
+            </ul>
+            <p><img src="../images/ts-anomalies.svg" class="alignTop scale35"/>
+            <div>
+              <img src="../images/tais-stats-config.svg" class="left scale20"/>
+              <img src="../images/tais-stats.svg" class="right scale35"/>
+            </div>
+            <div class="run">1: ./race -Darchive=../data/all-080717-1744/tais.ta.gz config/air/swim-tais-stats-replay.conf</div><a class="srv" href="http://localhost:8080/race/statistics"></a></p>
+            </div><div class="slide"><h2 id="example-6-properties-can-be-more-complex-parallel-approaches" class="section">Example 6: Properties can be more Complex - Parallel Approaches</h2>
+            <p>goal: automatically detect parallel approaches that are angled-in exceeding
+            30° heading differences within given distance (causing loss of sight)</p>
+            <div>
+              <img src="../images/par-approach-config.svg" class="left scale20"/>
+              <img src="../images/par-approach-output.png" class="right scale50"/>
+            </div>
+            <div class="run">1: ./race -Darchive=../data/nct-121918-161829/tais.ta.gz -Dstart-time=2018-12-19T16:32:20.000-08:00 config/air/swim-tais-papr-replay.conf</div>
+            </div><div class="slide"><h2 id="example-7-more-complex-properties-trajectory-deviation" class="section">Example 7: More Complex Properties - Trajectory Deviation</h2>
+            <ul>
+              <li>how do positions for same flight differ between different input sources
+              (ASDE-X, TAIS, SFDPS, direct ADS-B)?</li>
+              <li>are differences random or systematic?</li>
+            </ul>
+            <div>
+              <img src="../images/trackdiff-config.svg" class="left scale25"/>
+              <img src="../images/trackdiff-output.png" class="right scale35"/>
+            </div>
+            <div class="run">1: ./race -Darchive=../data/ACA759-070717-min -Dstart-time=2017-07-08T06:54:30Z config/air/swim-trackdiff-replay.conf</div>
+            </div><div class="slide"><h2 id="race-as-a-hub-connecting-simulators" class="section">RACE as a Hub - Connecting Simulators</h2>
+            <ul>
+              <li>heterogeneous system: combines live (SWIM) data and external simulators</li>
+              <li>RACE used as a data hub that adds analysis (proximities, LoS detection)</li>
+            </ul>
+            <img src="../images/fdz-demo.svg" class="center scale65"/>
+            </div><div class="slide"><h2 id="example-8-race-as-a-hub-connecting-simulators" class="section">Example 8: RACE as a Hub - Connecting Simulators</h2>
+            <img src="../images/fdz-config.svg" class="center scale40"/>
+            <div>
+              <img src="../images/fdz-output-a.png" class="left scale40"/>
+              <img src="../images/fdz-output-b.png" class="right scale40"/>
+            </div>
+            </div><div class="slide"><h2 id="sharing-data-across-heterogeneous-organizations" class="section">Sharing Data Across Heterogeneous Organizations</h2>
+            <ul>
+              <li>initial use case rapid rollout for disaster management</li>
+              <li>applies to many situations where unified data view across organizational entities
+              with intantionally isolated data is required</li>
+            </ul>
+            <img src="../images/share-problem.svg" class="center back scale70"/>
+            </div><div class="slide"><h2 id="sharing-data-overlay-network-of-race-nodes" class="section">Sharing Data - Overlay Network of RACE Nodes</h2>
+            <ul>
+              <li>previous examples use a single RACE as data consumer/analyzer or hub</li>
+              <li>can also be used to create networks of communicating RACE <em>nodes</em> (dedicated
+              machines running RACE)</li>
+            </ul>
+            <img src="../images/share-adhoc.svg" class="center scale75"/>
+            </div><div class="slide"><h2 id="sharing-data-race-node-functions" class="section">Sharing Data - RACE Node Functions</h2>
+            <ul>
+              <li>node interfaces through 4 actor types: user-server, node-server, node-client, provider-import/export</li>
+              <li>org-local data display and entry through user-server (browser interface)</li>
+              <li>sync with upstream and downstream nodes through node-server/node-client</li>
+              <li>upstream/downstream/user clients: JSON over websockets (allowing non-RACE endpoints)</li>
+            </ul>
+            <img src="../images/share-node-functions.svg" class="center scale60"/>
+            </div><div class="slide"><h2 id="sharing-data-application" class="section">Sharing Data - Application</h2>
+            <ul>
+              <li>can be incorporated into any RACE application</li>
+              <li>turns RACE applications into Web Application servers</li>
+              <li>data model can include discrete event updates (counters) and streams (links)</li>
+            </ul>
+            <div>
+              <img src="../images/share-actors.svg" class="left scale65"/>
+              <img src="../images/share-browser.png" class="right scale45"/>
+            </div>
+            </div><div class="slide"><h2 id="example-9-partitioning-the-network-share" class="section">Example 9: Partitioning the Network (SHARE)</h2>
+            <ul>
+              <li>network partitions continue to work locally when disconnected</li>
+              <li>network re-synchronizes when partitions are re-connected</li>
+            </ul>
+            <p><img src="../images/share-part.svg" class="center scale20"/>
+            <div class="run">1: ./race config/net/share-coordinator.conf</div><a class="srv" href="http://localhost:8000/share" target="_blank"></a></p>
+            <p><div class="run">2: ./race config/net/share-node_1.conf</div><a class="srv" href="http://localhost:8001/share" target="_blank"></a></p>
+            <p><div class="run">3: ./race config/net/share-node_2.conf</div><a class="srv" href="http://localhost:8002/share" target="_blank"></a></p>
+            </div><div class="slide"><h2 id="tl-dr" class="section">TL;DR</h2>
+            <ul>
+              <li>RACE is an actor based framework for building distributed and concurrent applications</li>
+              <li>primary design goals: scalability and extensibility</li>
+              <li>can be used as a library (from external projects)</li>
+              <li>used for runtime monitoring, trajectory analysis, simulation, dynamic data web application server,
+              distributed applications,...</li>
+              <li>open sourced under Apache v2</li>
+              <li>written in Scala, based on Akka library</li>
+              <li>~700 files, ~100,000 ncloc</li>
+              <li>developed since 2015</li>
+            </ul>
+        </div>
+    </body>
+
+    <script src="./race-slides.js"></script>
+</html>

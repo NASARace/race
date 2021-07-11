@@ -10,7 +10,7 @@
     <body>
         <div class="navbar">
             <div class=""banner>
-                <a href="index.html" ><img class="logo" src="../images/race128.png"></a>
+                <a href="../index.html" ><img class="logo" src="../images/race128.png"></a>
                 <p class="doctitle">RACE Manual</p>
             </div>
             <br/>
@@ -21,120 +21,77 @@
                     <li><span class="toc level2"><a href="http://nasarace.github.io/race">Website</a></span></li>
                 </ul>
             </div>
-            <div class="pagetoc">
-                <div class="toc">
-                  <p class="title">Page</p>
-                  <ul>
-                    <li><span class="toc level1"><a href="#work--and-dataflow">Work- and Dataflow</a></span></li>
-                    <li><span class="toc level1"><a href="#translation-directives">Translation Directives</a></span></li>
-                    <li><span class="toc level1"><a href="#presentation-material">Presentation Material</a></span></li>
-                  </ul>
-                </div>
+            <div class="toc pagetoc">
+                <p class="title">Page</p>
+                <ul class="nav-list">
+                  <li class="level1 active"><a href="#">RACE Documentation Overview</a></li>
+                  <li class="level2"><a href="#work-and-dataflow">Work- and Dataflow</a></li>
+                  <li class="level2"><a href="#translation-directives">Translation Directives</a></li>
+                  <li class="level2"><a href="#presentation-material">Presentation Material</a></li>
+                  <li class="level2"><a href="#online-demos-from-slides">Online Demos from Slides</a></li>
+                </ul>
             </div>
-            <div class="globaltoc">
-                <div class="toc">
-                  <p class="title">Site</p>
-                  <ul>
-                    <li><span class="toc level1"><a href="../index.html">About RACE</a></span></li>
-                    <li><span class="toc level1"><a href="../project-log.html">Project Log</a></span></li>
-                    <li>
-                      <p class="toc level1">Installing RACE</p>
-                      <ul>
-                        <li><span class="toc level2"><a href="../installation/prerequisites.html">Prerequisites</a></span></li>
-                        <li><span class="toc level2"><a href="../installation/download.html">Downloading RACE</a></span></li>
-                        <li><span class="toc level2"><a href="../installation/build.html">Building RACE</a></span></li>
-                        <li><span class="toc level2"><a href="../installation/pitfalls.html">Installation Pitfalls</a></span></li>
-                        <li><span class="toc level2"><a href="../installation/osx.html">OS X Specifics</a></span></li>
-                      </ul>
-                    </li>
-                    <li>
-                      <p class="toc level1">Using RACE</p>
-                      <ul>
-                        <li><span class="toc level2"><a href="../usage/running.html">How to Run RACE</a></span></li>
-                        <li><span class="toc level2"><a href="../usage/configuration.html">RACE Configuration</a></span></li>
-                        <li><span class="toc level2"><a href="../usage/encryption.html">Using Encrypted Configurations</a></span></li>
-                      </ul>
-                    </li>
-                    <li>
-                      <p class="toc level1"><a href="../actors.html">Actors</a></p>
-                      <ul>
-                        <li><span class="toc level2"><a href="../actors.html#actor-components-and-properties">Actor Components and Properties</a></span></li>
-                        <li><span class="toc level2"><a href="../actors.html#actor-communication">Actor Communication</a></span></li>
-                      </ul>
-                    </li>
-                    <li>
-                      <p class="toc level1">RACE Design</p>
-                      <ul>
-                        <li><span class="toc level2"><a href="../design/overview.html">Design Overview</a></span></li>
-                        <li><span class="toc level2"><a href="../design/configuration.html">Runtime Configuration</a></span></li>
-                        <li><span class="toc level2"><a href="../design/raceactors.html">RaceActors</a></span></li>
-                        <li><span class="toc level2"><a href="../design/channeltopics.html">ChannelTopics</a></span></li>
-                        <li><span class="toc level2"><a href="../design/embedded-objects.html">Embedded Objects</a></span></li>
-                        <li><span class="toc level2"><a href="../design/connectivity.html">Connecting External Systems</a></span></li>
-                        <li><span class="toc level2"><a href="../design/rgis.html">RACE GIS Support</a></span></li>
-                        <li><span class="toc level2"><a href="../design/archive-replay.html">Archive and Replay</a></span></li>
-                        <li><span class="toc level2"><a href="../design/worldwind.html">WorldWind Viewer</a></span></li>
-                        <li><span class="toc level2"><a href="../design/http-server.html">HttpServer</a></span></li>
-                        <li><span class="toc level2"><a href="../design/timeseries.html">Time Series Analysis</a></span></li>
-                        <li><span class="toc level2"><a href="../design/remotelauncher.html">RemoteLauncher</a></span></li>
-                        <li><span class="toc level2"><a href="../design/layers-and-modules.html">Layers and Modules</a></span></li>
-                        <li><span class="toc level2"><a href="../design/directory-structure.html">Directory Structure</a></span></li>
-                        <li><span class="toc level2"><a href="../design/repository.html">Repository Structure</a></span></li>
-                        <li><span class="toc level2"><a href="../design/local-build.html">Local Build Configuration</a></span></li>
-                        <li><span class="toc level2"><a href="../design/dds.html">RACE and DDS</a></span></li>
-                        <li><span class="toc level2"><a href="../design/extproject.html">Using RACE from External Projects</a></span></li>
-                        <li><span class="toc level2"><a href="../design/whyscala.html">Why Scala</a></span></li>
-                      </ul>
-                    </li>
-                    <li>
-                      <p class="toc level1"><a href="../examples.html">RACE Examples</a></p>
-                      <ul>
-                        <li><span class="toc level2"><a href="../examples.html#basic-examples">Basic Examples</a></span></li>
-                        <li><span class="toc level2"><a href="../examples.html#distributed-operation">Distributed Operation</a></span></li>
-                        <li><span class="toc level2"><a href="../examples.html#live-data-import">Live Data Import</a></span></li>
-                        <li><span class="toc level2"><a href="../examples.html#data-replay">Data Replay</a></span></li>
-                      </ul>
-                    </li>
-                    <li>
-                      <p class="toc level1">Documentation</p>
-                      <ul>
-                        <li><span class="toc level2 active">RACE Documentation Overview</span></li>
-                        <li><span class="toc level2"><a href="presentations.html">Available Slide Presentations</a></span></li>
-                      </ul>
-                    </li>
-                    <li>
-                      <p class="toc level1"><a href="../known-problems.html">Known Problems</a></p>
-                      <ul>
-                        <li><span class="toc level2"><a href="../known-problems.html#problems-with-worldwind-jogl-native-libraries-on-linux">problems with WorldWind/JOGL native libraries on Linux</a></span></li>
-                        <li><span class="toc level2"><a href="../known-problems.html#incompatible-class-file-errors-during-race-startup">incompatible class file errors during RACE startup</a></span></li>
-                        <li><span class="toc level2"><a href="../known-problems.html#kafka-clients">kafka-clients</a></span></li>
-                        <li><span class="toc level2"><a href="../known-problems.html#kafkaserver">KafkaServer</a></span></li>
-                        <li><span class="toc level2"><a href="../known-problems.html#windows-console-output">Windows console output</a></span></li>
-                        <li><span class="toc level2"><a href="../known-problems.html#race-not-starting-because-of-racevieweractor-timeout">RACE not starting because of RaceViewerActor timeout</a></span></li>
-                      </ul>
-                    </li>
-                    <li><span class="toc level1"><a href="../changes.html">Changes</a></span></li>
-                    <li><span class="toc level1"><a href="../todo.html">TODO List</a></span></li>
-                    <li>
-                      <p class="toc level1"><a href="../learning.html">Learning Resources</a></p>
-                      <ul>
-                        <li><span class="toc level2"><a href="../learning.html#scala">Scala</a></span></li>
-                        <li><span class="toc level2"><a href="../learning.html#actors-and-akka">Actors and Akka</a></span></li>
-                        <li><span class="toc level2"><a href="../learning.html#sbt">SBT</a></span></li>
-                        <li><span class="toc level2"><a href="../learning.html#interactive-scala-akka-and-sbt-learning-environment-and-examples">Interactive Scala, Akka and SBT Learning Environment and Examples</a></span></li>
-                        <li><span class="toc level2"><a href="../learning.html#git">Git</a></span></li>
-                      </ul>
-                    </li>
-                    <li><span class="toc level1"><a href="../glossary.html">Glossary</a></span></li>
-                  </ul>
-                </div>
+            <div class="toc globaltoc">
+                <p class="title">Site</p>
+                <ul class="nav-list">
+                  <li class="level1 nav-header">RACE Manual</li>
+                  <li class="level2"><a href="../index.html">About RACE</a></li>
+                  <li class="level2 nav-header">Installing RACE</li>
+                  <li class="level3"><a href="../installation/prerequisites.html">Prerequisites</a></li>
+                  <li class="level3"><a href="../installation/download.html">Downloading RACE</a></li>
+                  <li class="level3"><a href="../installation/build.html">Building RACE</a></li>
+                  <li class="level3"><a href="../installation/pitfalls.html">Installation Pitfalls</a></li>
+                  <li class="level3"><a href="../installation/osx.html">OS X Specifics</a></li>
+                  <li class="level2 nav-header">Using RACE</li>
+                  <li class="level3"><a href="../usage/running.html">How to Run RACE</a></li>
+                  <li class="level3"><a href="../usage/configuration.html">RACE Configuration</a></li>
+                  <li class="level3"><a href="../usage/encryption.html">Using Encrypted Configurations</a></li>
+                  <li class="level2 nav-header">RACE Design</li>
+                  <li class="level3"><a href="../design/overview.html">Design Overview</a></li>
+                  <li class="level3"><a href="../design/actors.html">Actors</a></li>
+                  <li class="level3"><a href="../design/configuration.html">Runtime Configuration</a></li>
+                  <li class="level3"><a href="../design/raceactors.html">RaceActors</a></li>
+                  <li class="level3"><a href="../design/channeltopics.html">ChannelTopics</a></li>
+                  <li class="level3"><a href="../design/embedded-objects.html">Embedded Objects</a></li>
+                  <li class="level3"><a href="../design/connectivity.html">Connecting External Systems</a></li>
+                  <li class="level3"><a href="../design/remoting.html">Remote RaceActors and Distributed RACE Applications</a></li>
+                  <li class="level3"><a href="../design/remotelauncher.html">RemoteLauncher</a></li>
+                  <li class="level3"><a href="../design/hc.html">Heterogeneous Computing in RACE</a></li>
+                  <li class="level3"><a href="../design/parsing.html">RACE Parsers</a></li>
+                  <li class="level3"><a href="../design/archive-replay.html">Archive and Replay</a></li>
+                  <li class="level3"><a href="../design/timeseries.html">Time Series Analysis</a></li>
+                  <li class="level3"><a href="../design/trajectory.html">Trajectory Infrastructure</a></li>
+                  <li class="level3"><a href="../design/rgis.html">RACE GIS Support</a></li>
+                  <li class="level3"><a href="../design/worldwind.html">WorldWind Viewer</a></li>
+                  <li class="level3"><a href="../design/http-server.html">HttpServer</a></li>
+                  <li class="level3"><a href="../design/http-client.html">HttpImportActor</a></li>
+                  <li class="level3"><a href="../design/share.html">SHARE - System for Hierarchical Ad hoc Reporting</a></li>
+                  <li class="level3"><a href="../design/layers-and-modules.html">Layers and Modules</a></li>
+                  <li class="level3"><a href="../design/directory-structure.html">Directory Structure</a></li>
+                  <li class="level3"><a href="../design/repository.html">Repository Structure</a></li>
+                  <li class="level3"><a href="../design/local-build.html">Local Build Configuration</a></li>
+                  <li class="level3"><a href="../design/dds.html">RACE and DDS</a></li>
+                  <li class="level3"><a href="../design/extproject.html">Using RACE from External Projects</a></li>
+                  <li class="level3"><a href="../design/whyscala.html">Why Scala</a></li>
+                  <li class="level2 nav-header">Documentation</li>
+                  <li class="level3 active"><a href="#">RACE Documentation Overview</a></li>
+                  <li class="level3"><a href="presentations.html">Available Slide Presentations</a></li>
+                  <li class="level2 nav-header">Annex</li>
+                  <li class="level3"><a href="../annex/project-log.html">Project Log</a></li>
+                  <li class="level3"><a href="../annex/examples.html">RACE Examples</a></li>
+                  <li class="level3"><a href="../annex/known-problems.html">Known Problems</a></li>
+                  <li class="level3"><a href="../annex/changes.html">Changes</a></li>
+                  <li class="level3"><a href="../annex/todo.html">TODO List</a></li>
+                  <li class="level3"><a href="../annex/learning.html">Learning Resources</a></li>
+                  <li class="level3"><a href="../annex/glossary.html">Glossary</a></li>
+                </ul>
             </div>
         </div>
 
         <div class="main">
             <h1 id="race-documentation-overview" class="title">RACE Documentation Overview</h1>
             
-            <h2 id="work--and-dataflow" class="section">Work- and Dataflow</h2>
+            <h2 id="work-and-dataflow" class="section"><a class="anchor-link left" href="#work-and-dataflow"><i class="icofont-laika">&#xef71;</i></a>Work- and Dataflow</h2>
             <p>RACE documentation is created from text files that are distributed with this repository, and translated into
             HTML and PDF by means of the <a href="https://planet42.github.io/Laika/">Laika</a> <a href="http://www.scala-sbt.org/">SBT</a> plugin. Once translated, all content can be viewed locally in a web browser,
             or on the internet through <a href="http://nasarace.github.io/race">http://nasarace.github.io/race</a>.</p>
@@ -145,11 +102,11 @@
             Sources are kept under the <code>doc/</code> subdirectory, separated into:</p>
             <pre><code>doc/
     images/  : (shared) images and diagrams (SVG files)
-    manual/  : user manual (web site)
+    manual/  : user manual (web node)
     slides/  : presentations (HTML based slide shows)</code></pre>
             <p>To generate output, the RACE build system includes the following SBT commands</p>
             <ul>
-              <li><code>mkManual</code> - translates the manual (web site) pages</li>
+              <li><code>mkManual</code> - translates the manual (web node) pages</li>
               <li><code>mkSlides</code> - translates the slides</li>
               <li><code>mkDoc</code> - translates both manual and slides</li>
             </ul>
@@ -162,7 +119,7 @@
         &lt;manual-html-pages&gt;..
         slides/
             &lt;slide-html-pages&gt;..</code></pre>
-            <p>Note that manual (site) sources are lifted up to <code>target/doc</code>, which mostly serves the purpose of being able to
+            <p>Note that manual (node) sources are lifted up to <code>target/doc</code>, which mostly serves the purpose of being able to
             link to slides, and slides being able to share the same images.</p>
             <p>To view locally, use your favorite browsers &quot;open file&quot; command and point it to the respective *.html page, e.g.
             <code>race/target/doc/about.html</code> for the start page of the online manual. Note there is no need to commit before
@@ -172,7 +129,7 @@
             orphan <code>gh-pages</code> branch of the RACE repository that is automatically served by GitHub on
             <a href="http://nasarace.github.io/race">http://nasarace.github.io/race</a>.</p>
             
-            <h2 id="translation-directives" class="section">Translation Directives</h2>
+            <h2 id="translation-directives" class="section"><a class="anchor-link left" href="#translation-directives"><i class="icofont-laika">&#xef71;</i></a>Translation Directives</h2>
             <p>The translation process is controlled by three special files that are looked up within the directory hierarchy of each
             page source</p>
             <ul>
@@ -192,19 +149,19 @@
               to the root directory of the respective documentation type (e.g. <code>manual</code>)</li>
             </ul>
             <p>For instance, a <code>doc/manual/installation/directory.conf</code> file might look like this:</p>
-            <pre><code>title = &quot;Installing RACE&quot;
+            <pre><code>laika.title = &quot;Installing RACE&quot;
 
-navigationOrder = [
+laika.navigationOrder = [
   prerequisites.md
   download.md
   build.md
 ]
 
-rootPath = &quot;..&quot;</code></pre>
+laika.rootPath = &quot;..&quot;</code></pre>
             <p>Please refer to the <a href="https://planet42.github.io/Laika/">Laika</a> documentation for details about the translation process, which supports extensions at
             various different levels.</p>
             
-            <h2 id="presentation-material" class="section">Presentation Material</h2>
+            <h2 id="presentation-material" class="section"><a class="anchor-link left" href="#presentation-material"><i class="icofont-laika">&#xef71;</i></a>Presentation Material</h2>
             <p>RACE also uses markup text files and <a href="https://planet42.github.io/Laika/">Laika</a> to generate slide presentations in HTML. Each presentation is kept in a
             single source file, the level 1 header is the presentation title, each level 2 header represents a single slide:</p>
             <pre><code># My Sample Presentation
@@ -218,16 +175,20 @@ some sub-title
 
 ## Second Slide
 ...</code></pre>
-            <p>Given that slide formatting should be kept simple, markdown (*.md) is usually a more readable and compact source format
-            for slides than reStructuredText.</p>
+            <p>To add a TOC (list of slide links) to the presentation the first slide should include a <em>navigationTree</em>:</p>
+            <pre><code>## Slides
+@:navigationTree { entries = [ { target = &quot;#&quot; } ] }</code></pre>
+            <p>Given that slide formatting should be kept simple, <a href="https://daringfireball.net/projects/markdown/">Markdown</a> (*.md) is usually a more readable and compact source format
+            for slides than <a href="http://docutils.sourceforge.net/rst.html">reStructuredText</a> but it comes with less formatting options. Laika is configured in RACE to support
+            direct (raw) HTML for both input formats.</p>
             <p>Slide shows are translated into single HTML pages that make use of a minimal <code>race-slides.js</code> javascript file
             which implements slide navigation functions. Currently supported commands are</p>
             <ul>
-              <li><enter> - next slide</li>
-              <li><shift-enter> - previous slide</li>
-              <li>&#39;f&#39; - enter full screen (presentation) mode (exit is browser specific, usually <esc>)</li>
-              <li><digit> - go to page 0..9 (&#39;0&#39; being title page)</li>
-              <li><ctrl-digit><digit> - go to pages &gt; 10</li>
+              <li>&lt;enter&gt; - next slide</li>
+              <li>&lt;shift-enter&gt; - previous slide</li>
+              <li>&#39;f&#39; - enter full screen (presentation) mode (exit is browser specific, usually &lt;esc&gt;)</li>
+              <li>&lt;digit&gt; - go to page 0..9 (&#39;0&#39; being title page)</li>
+              <li>&lt;ctrl-digit&gt;&lt;digit&gt; - go to pages &gt; 10</li>
             </ul>
             <p>Images are best included by means of direct <code>&lt;img ..&gt;</code> HTML tags, which can make use of style classes such as
             <code>center</code> and <code>scale60</code> (defined in <code>race-slides.css</code>) to control scaling and horizontal alignment.</p>
@@ -236,6 +197,37 @@ some sub-title
             custom template and CSS files.</p>
             <p>Since slide layout is based on browser <em>view height</em>, and browsers vary in terms of including
             decorations such as menubars, slides are best viewed in fullscreen mode.</p>
+            
+            <h2 id="online-demos-from-slides" class="section"><a class="anchor-link left" href="#online-demos-from-slides"><i class="icofont-laika">&#xef71;</i></a>Online Demos from Slides</h2>
+            <p>The <code>race-tools</code> sub-project includes two command line tools to run interactive demos directly from presentation slides:</p>
+            <p>(1) <strong>serveDoc</strong> is a simple stand-alone webserver that provides content under <code>target/doc</code> as <code>http://localhost:8080</code>
+            (as defaults, both can be set via command line args)</p>
+            <p>(2) <strong>webrun</strong> is a specialized server that waits for POST requests of <code>http://localhost:303x/run</code>, the actual port
+            303x refering to a console number &#39;x&#39; that is provided as a command line argument. Webrun then executes the POST body
+            as a OS command and sends back the result to the requester</p>
+            <p>Slides can make use of these servers by including &quot;run&quot; class elements such as:</p>
+            <pre><code>...
+## Run Demo Slide
+...
+&lt;div class=&quot;run&quot;&gt;1: ./race -Darchive=../data/all-080717-1744 config/air/swim-all-sbs-replay-ww.conf&lt;/div&gt;
+...</code></pre>
+            <p>The element text includes the console number (&quot;<code>1:</code>&quot;) followed by the program and arguments to execute (&quot;<code>./race ...</code>&quot;).</p>
+            <p>With this, the workflow becomes:</p>
+            <ol class="arabic">
+              <li>start <code>script/servedoc</code> from a command prompt</li>
+              <li>start <code>script/webrun --console &lt;n&gt;</code> from a command prompt for each required demo console</li>
+              <li>open a browser on <code>http://localhost:8080/&lt;presentation&gt;</code></li>
+              <li>click on the &quot;run&quot; link in the slide, which will execute the command in the respective webrun console</li>
+            </ol>
+            <p>Please note that slides have to be served by <code>servedoc</code> (or another server) in order to avoid problem with browser
+            specific CORS restrictions.</p>
+            <p>Both tools are small <a href="https://www.rust-lang.org/">Rust</a> programs to minimize the memory footprint during demonstrations, which means they need the
+            Rust toolchain to be installed in order to build them (e.g. via <a href="https://www.rust-lang.org/tools/install">rustup</a>). After Rust installation, the tools can
+            be built from within SBT by executing:</p>
+            <pre><code>[race]&gt; project race-tools
+[race-tools]&gt; cargoBuildRelease webrun
+...
+[race-tools]&gt; cargoBuildRelease servedoc</code></pre>
         </div>
 
     </body>
