@@ -29,7 +29,7 @@ import scala.concurrent.duration._
 object BlockExtrapolatorTest {
 
   val E = 1000 // number of objects
-  val S = 5    // number of states per object (phi,lambda,alt,v,hdg)
+  val S = 8    // number of states per object (phi,lambda,alt,v,hdg,pitch,roll,vr)
   val N = 10   // number of observations per entity
   val R = 1000  // rounds of extrapolation
 
@@ -42,32 +42,28 @@ object BlockExtrapolatorTest {
 
   val src =
     """
-        typedef struct __attribute__ ((packed)) _e_in {
-           long t_last;
-           double s0,m0,  s1,m1,  s2,m2,  s3, m3,  s4, m4;
-        } e_in_t;
+      typedef struct __attribute__ ((packed)) _e_in {
+        long t_last;
+        double8 s;
+        double8 m;
+      } e_in_t;
 
-        typedef struct __attribute__ ((packed)) _e_out {
-          double e0, e1, e2, e3, e4;
-        } e_out_t;
+      typedef struct __attribute__ ((packed)) _e_out {
+        double8 e;
+      } e_out_t;
 
-         __kernel void extrapolate (__global e_in_t* in, __global e_out_t* out, long t, double t_scale) {
+      __kernel void extrapolate (__global e_in_t* in, __global e_out_t* out, long t, double t_scale) {
            unsigned int i = get_global_id(0);
-
            long dt = t - in[i].t_last;
-           out[i].e0 = in[i].s0 + (dt * in[i].m0) / t_scale;
-           out[i].e1 = in[i].s1 + (dt * in[i].m1) / t_scale;
-           out[i].e2 = in[i].s2 + (dt * in[i].m2) / t_scale;
-           out[i].e3 = in[i].s3 + (dt * in[i].m3) / t_scale;
-           out[i].e4 = in[i].s4 + (dt * in[i].m4) / t_scale;
-         }
-      """
+           out[i].e = in[i].s + (dt * in[i].m) / t_scale;
+      }
+    """
 
   def createAndInitBE: BlockExtrapolator = {
-    val be = new BlockExtrapolator(E, 1.millisecond, // max N entries with 5 state vars each
-      Array[Double](0.0, 0.0, 0.0, 0.0, 0.0),
-      Array[Double](0.3, 0.3, 0.3, 0.3, 0.3),
-      Array[Double](0.9, 0.9, 0.9, 0.9, 0.9)
+    val be = new BlockExtrapolator(E, 1.millisecond, // max N entries with 8 state vars each
+      Array[Double](0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0),
+      Array[Double](0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3),
+      Array[Double](0.9, 0.9, 0.9, 0.9, 0.9, 0.9, 0.9, 0.9)
     )
 
     //--- init observation data (values don't matter)
@@ -108,7 +104,7 @@ object BlockExtrapolatorTest {
       val outBuf = context.createByteWBuffer(be.inBuffer)                 >> resources
 
       val prog = context.createAndBuildProgram(src)                       >> resources
-      val kernel = prog.createKernel("extrapolate")                       >> resources
+      val kernel = prog.createKernel("extrapolate")                >> resources
 
       kernel.setArgs(inBuf,outBuf,t,be.tScale)
       queue.enqueueBufferWrite(inBuf)

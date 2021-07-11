@@ -1,6 +1,11 @@
 Project Log
 ===========
 
+**06/15/2021 - RACE v1.8 released on Github**
+    After a long period of internal use this represents the first public update in a long time, not only
+    bringing public RACE on-par with 3rd party dependencies such as JDK, Scala, Akka and many others. This also
+    includes the new HttpServer based SHARE framework for robust hierarchical reporting
+
 **12/31/2016 - RACE artifacts (jars) published on Maven Central**
     Build artifacts (jars) for various RACE modules are now available from Maven Central servers, which
     greatly simplifies to use RACE as a library from 3rd party projects. See `Using RACE from External Projects`_

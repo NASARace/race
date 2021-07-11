@@ -1,0 +1,150 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<svg width="100%" height="100%" version="1.1" viewBox="220 249 620.0001 483" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns="http://www.w3.org/2000/svg">
+  <defs />
+  <marker id="marker1" markerUnits="strokeWidth" orient="auto" refX="-5.086271" refY="0" markerWidth="7.636236" markerHeight="6.114774" viewBox="-6.636236 -3.057387 7.636236 6.114774">
+    <path d="M-5.636236 -2.057387 L0 0 L-5.636236 2.057387 Z " fill="#000000" fill-opacity="1" stroke="#000000" stroke-opacity="1" />
+  </marker>
+  <marker id="marker2" markerUnits="strokeWidth" orient="auto" refX="-5.086271" refY="0" markerWidth="7.636236" markerHeight="6.114774" viewBox="-6.636236 -3.057387 7.636236 6.114774">
+    <path d="M-5.636236 -2.057387 L0 0 L-5.636236 2.057387 Z " fill="#000000" fill-opacity="1" stroke="#000000" stroke-opacity="1" />
+  </marker>
+  <marker id="marker3" markerUnits="strokeWidth" orient="auto" refX="-11.17254" refY="0" markerWidth="13.27247" markerHeight="10.22955" viewBox="-12.27247 -5.114774 13.27247 10.22955">
+    <path d="M-11.27247 -4.114774 L0 0 L-11.27247 4.114773 Z " fill="none" stroke="#000000" stroke-opacity="1" />
+  </marker>
+  <marker id="marker4" markerUnits="strokeWidth" orient="auto" refX="-0.8697562" refY="0" markerWidth="13.27247" markerHeight="10.22955" viewBox="-12.27247 -5.114774 13.27247 10.22955">
+    <path d="M-11.27247 -4.114774 L0 0 L-11.27247 4.114773" fill="none" stroke="#000000" stroke-opacity="1" />
+  </marker>
+  <marker id="marker5" markerUnits="strokeWidth" orient="auto" refX="-5.086271" refY="0" markerWidth="7.636236" markerHeight="6.114774" viewBox="-6.636236 -3.057387 7.636236 6.114774">
+    <path d="M-5.636236 -2.057387 L0 0 L-5.636236 2.057387 Z " fill="#000000" fill-opacity="1" stroke="#000000" stroke-opacity="1" />
+  </marker>
+  <marker id="marker6" markerUnits="strokeWidth" orient="auto" refX="-5.086271" refY="0" markerWidth="7.636236" markerHeight="6.114774" viewBox="-6.636236 -3.057387 7.636236 6.114774">
+    <path d="M-5.636236 -2.057387 L0 0 L-5.636236 2.057387 Z " fill="#000000" fill-opacity="1" stroke="#000000" stroke-opacity="1" />
+  </marker>
+  <marker id="marker7" markerUnits="strokeWidth" orient="auto" refX="-0.8697562" refY="0" markerWidth="13.27247" markerHeight="10.22955" viewBox="-12.27247 -5.114774 13.27247 10.22955">
+    <path d="M-11.27247 -4.114774 L0 0 L-11.27247 4.114773" fill="none" stroke="#000000" stroke-opacity="1" />
+  </marker>
+  <g id="layer1">
+    <rect x="303.7567" y="393.774" width="57.50999" height="15.71584" opacity="1" fill="#FEFF90" fill-opacity="1" />
+    <rect x="311.6481" y="511.3522" width="114.1458" height="15.71584" opacity="1" fill="#FEFF90" fill-opacity="1" />
+    <rect x="311.3021" y="537.8329" width="55.88011" height="15.71584" opacity="1" fill="#FEFF90" fill-opacity="1" />
+    <rect x="391.2903" y="366.9265" width="49.0934" height="15.71584" opacity="1" fill="#FEFF90" fill-opacity="1" />
+    <rect x="309.2322" y="366.3754" width="43.694" height="15.71584" opacity="1" fill="#FEFF90" fill-opacity="1" />
+    <rect x="309.1781" y="339.9806" width="52.57191" height="15.71584" opacity="1" fill="#FEFF90" fill-opacity="1" />
+    <path d="M684 639 L684 621 L441 621 L441 632.9137" marker-end="url(#marker1)" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+    <path d="M441 576 L441 594 L684 594 L684 582.0863" marker-end="url(#marker2)" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+    <line x1="449.4318" y1="607.8791" x2="707.8274" y2="607.8791" marker-end="url(#marker3)" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    <path d="M450 450 L756 450 L756 584.1302" marker-end="url(#marker4)" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="4,4" fill-opacity="0" />
+    <text x="499.6687" y="284.5" font-size="15" fill="#000000" fill-opacity="1" font-family="Helvetica" font-weight="bold" font-style="normal">host</text>
+    <text x="662.6504" y="284.5" font-size="15" fill="#000000" fill-opacity="1" font-family="Helvetica" font-weight="bold" font-style="normal">device</text>
+    <text x="723" y="272.0336" font-size="12" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">- integrated GPU
+</text>
+    <text x="723" y="287.0336" font-size="12" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">- discrete GPU(s)
+</text>
+    <text x="723" y="302.0336" font-size="12" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">- CPU</text>
+    <text x="443.9999" y="287.0336" font-size="12" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">CPU</text>
+    <line x1="603" y1="261" x2="603" y2="693" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="16,8,4,8" />
+    <rect x="486" y="342" width="144" height="342" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="0.7799129" />
+    <text x="524.6309" y="362.5336" font-size="12" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">OpenCL ICD 
+</text>
+    <text x="491.2441" y="377.5336" font-size="12" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">(installable client driver)</text>
+    <line x1="252" y1="306" x2="819" y2="306" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    <text x="488.9999" y="703.0336" font-size="12" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">Nvidia, AMD, Intel, Apple, ..</text>
+    <text x="341.8095" y="325.0336" font-size="12" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">application code</text>
+    <text x="263.9999" y="352.0336" font-size="12" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">1. select ‘platform’ (ICD)
+</text>
+    <text x="263.9999" y="379.0336" font-size="12" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">2. select ‘device’, create </text>
+    <text x="263.9999" y="406.0336" font-size="12" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">3. build ‘kernel(s)’
+</text>
+    <text x="263.9999" y="523.0336" font-size="12" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">4. create ‘command queue(s)’</text>
+    <text x="263.9999" y="550.0336" font-size="12" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">5. create ‘buffer(s)’
+</text>
+    <text x="263.9999" y="586.0336" font-size="12" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">6. init / transfer input buffers</text>
+    <text x="263.9999" y="613.0336" font-size="12" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">7. queue N-dim kernel execution
+</text>
+    <text x="255" y="432.3069" font-size="11" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">“__kernel 
+</text>
+    <text x="255" y="445.3069" font-size="11" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal"> void foo (__global X* x, 
+</text>
+    <text x="255" y="458.3069" font-size="11" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">           int y, ..) {
+</text>
+    <text x="255" y="471.3069" font-size="11" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">    int idx = global_id(0);
+</text>
+    <text x="255" y="484.3069" font-size="11" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal">    … res = f(x[idx]);
+</text>
+    <text x="255" y="497.3069" font-size="11" fill="#0000FF" fill-opacity="1" font-family="Courier" font-weight="normal" font-style="normal"> }” </text>
+    <text x="263.9999" y="641.5336" font-size="12" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">8. request / wait for
+</text>
+    <text x="263.9999" y="656.5336" font-size="12" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">    output buffers
+</text>
+    <path d="M261 567 L252 567 L252 666 L261 666" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+    <g transform="rotate(-90 234.5 614.5)">
+      <text x="224.2422" y="620.0336" font-size="12" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">loop</text>
+    </g>
+    <g>
+      <line x1="504" y1="603" x2="621" y2="603" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+      <line x1="504" y1="612" x2="621" y2="612" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+      <line x1="513" y1="603" x2="513" y2="612" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+      <line x1="522" y1="603" x2="522" y2="612" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+      <line x1="531" y1="603" x2="531" y2="612" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+      <line x1="540" y1="603" x2="540" y2="612" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+      <line x1="549" y1="603" x2="549" y2="612" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+      <line x1="558" y1="603" x2="558" y2="612" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+      <line x1="567" y1="603" x2="567" y2="612" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+      <line x1="576" y1="603" x2="576" y2="612" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+      <line x1="585" y1="603" x2="585" y2="612" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+      <line x1="594" y1="603" x2="594" y2="612" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+      <line x1="603" y1="603" x2="603" y2="612" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+      <line x1="612" y1="603" x2="612" y2="612" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    </g>
+    <g>
+      <rect x="414" y="540" width="54" height="36" opacity="1" stroke="#0000FF" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#D5E8FF" fill-opacity="1" />
+      <line x1="414" y1="549" x2="468" y2="549" opacity="1" stroke="#0000FF" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+      <line x1="414" y1="558" x2="468" y2="558" opacity="1" stroke="#0000FF" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+      <line x1="414" y1="567" x2="468" y2="567" opacity="1" stroke="#0000FF" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    </g>
+    <g>
+      <rect x="657" y="540" width="54" height="36" opacity="1" stroke="#FF0000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#EEC3CA" fill-opacity="1" />
+      <line x1="657" y1="549" x2="711" y2="549" opacity="1" stroke="#FF0000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+      <line x1="657" y1="558" x2="711" y2="558" opacity="1" stroke="#FF0000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+      <line x1="657" y1="567" x2="711" y2="567" opacity="1" stroke="#FF0000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    </g>
+    <g>
+      <rect x="414" y="639" width="54" height="36" opacity="1" stroke="#0000FF" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#D5E8FF" fill-opacity="1" />
+      <line x1="414" y1="648" x2="468" y2="648" opacity="1" stroke="#0000FF" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+      <line x1="414" y1="657" x2="468" y2="657" opacity="1" stroke="#0000FF" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+      <line x1="414" y1="666" x2="468" y2="666" opacity="1" stroke="#0000FF" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    </g>
+    <g>
+      <rect x="657" y="639" width="54" height="36" opacity="1" stroke="#FF0000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#EEC3CA" fill-opacity="1" />
+      <line x1="657" y1="648" x2="711" y2="648" opacity="1" stroke="#FF0000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+      <line x1="657" y1="657" x2="711" y2="657" opacity="1" stroke="#FF0000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+      <line x1="657" y1="666" x2="711" y2="666" opacity="1" stroke="#FF0000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    </g>
+    <rect x="747" y="603" width="54" height="36" opacity="1" stroke="#FF0000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#EEC3CA" fill-opacity="1" />
+    <rect x="738" y="594" width="54" height="36" opacity="1" stroke="#FF0000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#EEC3CA" fill-opacity="1" />
+    <rect x="729" y="585" width="54" height="36" opacity="1" stroke="#FF0000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#EEC3CA" fill-opacity="1" />
+    <text x="740.6768" y="608.5336" font-size="12" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">kernel</text>
+    <path d="M711 558 L738 558 L738 578.9137" marker-end="url(#marker5)" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+    <path d="M738 639 L738 657 L717.0863 657" marker-end="url(#marker6)" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+    <text x="488.9999" y="721.0336" font-size="12" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">OpenCL 1.2, 2.0, ..</text>
+    <rect x="513" y="423" width="72" height="54" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+    <text x="528.084" y="448.0336" font-size="12" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">OpenCL
+</text>
+    <text x="526.5195" y="463.0336" font-size="12" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">compiler</text>
+    <g transform="rotate(40 804.527 572.5273)">
+      <text x="777.5085" y="578.0608" font-size="12" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">workitems</text>
+    </g>
+    <text x="516" y="551.0336" font-size="12" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">- [region] copy
+</text>
+    <text x="516" y="566.0336" font-size="12" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">- [region] map
+</text>
+    <text x="516" y="581.0336" font-size="12" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">- task (kernel)</text>
+    <line x1="783" y1="549" x2="837" y2="594" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    <line x1="774" y1="558" x2="828" y2="603" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" />
+    <text x="669" y="497.0336" font-size="12" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">- global
+</text>
+    <text x="669" y="512.0336" font-size="12" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">- work group
+</text>
+    <text x="669" y="527.0336" font-size="12" fill="#000000" fill-opacity="1" font-family="Arial" font-weight="normal" font-style="normal">- private</text>
+    <line x1="405" y1="351" x2="485.1302" y2="351" marker-end="url(#marker7)" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="4,4" />
+  </g>
+</svg>

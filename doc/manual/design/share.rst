@@ -5,6 +5,15 @@ a hierarchical network of *SHARE Nodes* (RACE processes). While many of the othe
 analysis of external data streams such as live airspace data, SHARE can be thought of as extending RACE towards
 distribution of discrete event data between RACE applications.
 
+There are many systems for data synchronization and replication in tightly connected networks. What sets SHARE apart
+from a networking perspective is that it treats peer nodes as untrusted (avoiding direct communication between them) and
+regards the network itself (i.e. connectivity) as a critical resource that can fail at any time. Both constraints can be
+effectively addressed by making explicit use of a hierarchical (tree) network with clear data-ownership separation
+between nodes. This is typically satisfied by existing organizational structures that are based on hierarchies.
+
+A second novel aspect is that SHARE assumes a variable data model and number of participating nodes. Both can change
+at runtime without disruption of ongoing operation.
+
 SHARE tries to strike a balance between a production system that only needs configuration to be turned into
 a concrete application, and between a platform to experiment with synchronization protocols for distributed systems.
 SHARE classes are located in the ``race-net-http`` module within the ``gov.nasa.race.http.share`` package.
@@ -34,7 +43,7 @@ intentionally  kept private (e.g. for security reasons). Any data sharing with o
 * support both discrete event data (e.g. counters) and streams (e.g. video or telemetry)
 
 .. image:: ../images/share-problem.svg
-    :class: center scale50
+    :class: center scale60
     :alt: sharing data in heterogeneous networks
 
 Existing solutions range from slow and error prone manual update to expensive and inflexible distributed data bases.
@@ -62,7 +71,7 @@ called *nodes*) that:
 * run the same software that is configured with network- and shared data specifications
 
 .. image:: ../images/share-adhoc.svg
-    :class: center scale50
+    :class: center scale60
     :alt: sharing data in heterogeneous networks
 
 Each layer consists of a single *coordinator* node (at a time) and multiple *provider* nodes. Both coordinator and
@@ -81,10 +90,6 @@ networks using well known protocols and ports (https, i.e. with host authenticat
 Although this is just a conceptual model (the underlying implementation is a more general key/value store), the
 basic SHARE data model can be viewed as a replicated, distributed spread sheet where each node owns one or more
 columns, and each row is uniquely identified and typed.
-
-.. image:: ../images/share-data.svg
-    :class: center scale50
-    :alt: sharing data in heterogeneous networks
 
 Nodes can change their data in four different ways:
 
@@ -206,7 +211,7 @@ User clients are not the main focus of the generic SHARE infrastructure in RACE 
 and provider- specific. In order to demonstrate basic use of the system SHARE comes with a generic browser application
 that implements a view resembling a spreadsheet, with added connectivity status and (authenticated) data editing/publishing:
 
-.. image:: ../images/share-browser.svg
+.. image:: ../images/share-screen.png
     :class: center scale50
     :alt: node actors
 
@@ -215,10 +220,6 @@ The respective HTML and Javascript assets can be found in ``race-net-http/src/ma
 The main functionality is in ``js/app/share.js``, which communicates with the ``UserServerRoute`` via a web socket
 to obtain and update the data, which happens through the exchange of a number of JSON messages that implement
 the user client protocol.
-
-.. image:: ../images/share-UR-webclient.svg
-    :class: right scale30
-    :alt: user client protocol
 
 This protocol is intentionally kept simple and generic to accommodate future provider- and device- specific clients
 by just exchanging the static assets in ``UserServerRoute``.
@@ -292,6 +293,10 @@ data can be found in ``race-net-http-test``.
 The main classes representing the generic SHARE data model are ``Node`` and ``NodeList``, ``Column`` and ``ColumnList``,
 ``Row`` and ``RowList``, ``CellValue`` and ``ColumnData``:
 
+.. image:: ../images/share-data.svg
+    :class: center scale65
+    :alt: sharing data in heterogeneous networks
+
 **NodeList**
   defines the network as it is seen by the node. This includes the own node name, a list of potential upstream nodes
   (of which the first responsive one is chosen), a list of peer nodes and a potential list of downstream (child) nodes
@@ -354,7 +359,7 @@ Key actors of SHARE are the ``UpdateActor``, the ``UpstreamConnectorActor`` and 
   the user server (interactive data entry), or by value- or time-triggered formulas that are managed by the UpdateActor.
 
 .. image:: ../images/share-dm.svg
-    :class: center scale50
+    :class: center scale60
     :alt: node actors
 
 **UpstreamConnectorActor**
@@ -393,16 +398,16 @@ there are two protocols included for
 
 Node Synchronization
 ````````````````````
+.. image:: ../images/share-nodesync.svg
+    :class: right scale60
+    :alt: node synchronization
+
 This protocol is initiated by the downstream node when it detects a working connection to the upstream coordinator,
 which either happens during start of the downstream node or after a previously lost connection got restored. It starts
 with the downstream node sending its ``NodeDates``, to which the upstream node responds with zero or more
 ``ColumnDataChanges`` for its ``ColumnDatas`` that have newer fields. This is followed by sending the upstream
 ``NodeDates``, which in turn tells the downstream node which if its ``ColumnDatas`` are newer (usually the ones
 owned by the downstream node) and have to be sent back as ``ColumnDataChanges``.
-
-.. image:: ../images/share-nodesync.svg
-    :class: right scale50
-    :alt: node synchronization
 
 The challenge for this simple protocol is that neither upstream nor downstream node should be blocked while the
 synchronization takes place, i.e. both nodes potentially process interleaving changes from other sources (e.g.
@@ -414,28 +419,67 @@ runtime is not yet implemented.
 
 User Client Synchronization
 ```````````````````````````
-This mostly uses the same JSON messages as inter-node synchronization to initialize and update the user client.
-The specific part is the client-initiated field update, which has to support user authentication and hence requires
-a timeout-limited edit mode that is tracked both in the user client and the UserServerRoute.
-
 .. image:: ../images/share-UR-webclient.svg
-    :class: right scale50
+    :class: right scale30
     :alt: user client protocol
 
-It begins with the
-client sending an edit request containing a user id, which in all but access constrained environments will in itself
-trigger an embedded user authentication protocol (SHARE supports and promotes the W3C WebAuthn_ standard using
-authenticator devices). If the authentication is successful the server sends back a permission profile, which tells
-the client which fields can be edited by the user and starts a timeout-limited edit mode in both client and server.
-User changes do update the timeout but do not end the edit session, to allow for bulk changes. The server rejects
-user changes that are received after the timeout and informs the client accordingly.
+This mostly uses the same JSON messages as inter-node synchronization to initialize and update the user client. The
+specific part is the client-initiated field update, which has to support user authentication and hence requires a
+timeout-limited edit mode that is tracked both in the user client and the UserServerRoute.
+
+It begins with the client sending an edit request containing a user id, which in all but access constrained environments
+will in itself trigger an embedded user authentication protocol (SHARE supports and promotes the W3C WebAuthn_ standard
+using authenticator devices).
+
+If the authentication is successful the server sends back a permission profile, which tells the client which fields can
+be edited by the user and starts a timeout-limited edit mode in both client and server. User changes do update the
+timeout but do not end the edit session, to allow for bulk changes. The server rejects user changes that are received
+after the timeout and informs the client accordingly.
+
+Coordinator Selection
+`````````````````````
+Not yet implemented is a protocol for (re-)selection of a coordinator node - currently a provider node just chooses the
+first responding coordinator from its node list, which can result in permanent partitions of a SHARE network (providers
+using different coordinators).
+
+There are known leader election algorithms for coordinator candidates such as the `Raft Consensus Algorithm`_ but care
+must be taken to meet connectivity constraints such as to avoid fully connected networks over all SHARE nodes (which
+would require provider nodes to communicate with untrusted peers).
+
+Although it does not cause data loss or disruption of local service in disconnected network partitions, the coordinator
+is still a single point of failure that will need to be addressed in order to increase robustness of a SHARE network.
 
 
+Future Directions
+-----------------
+SHARE serves a dual role as a production framework and a testbed for distributed systems. For that reason current
+configuration formats (e.g. for ``NodeList``) support a superset of the current functionality. The following extensions
+are currently planned:
 
-.. _RACE: `About RACE`_
+**Coordinator election protocol** for partitioned trees  - to sync between live coordinators. This is an adaptation of
+*the node synchronization protocol that replaces column ownership with node-reachability, based on that each provider
+*node only uses one coordinator at a time (i.e. partitions are stable)
+
+**Dynamic row types** - extending the generic data model towards streams for dynamic entity collections such as track lists
+
+**Hardcoded data model** - high volume/low latency import/export actors might benefit from accessing fields through
+references instead of symbolic IDs. Those hardcoded models can be encapsulated in derived/specialized ``UpdateActors``
+
+**Alternative user clients** - the current generic browser client is probably the most likely replacement candidate in
+production systems. Apart from a ScalaJS_ based implementation (to avoid polyglot programming) a Flutter_ client
+is planned as an example for vendor-independent mobile device support
+
+Independent of such functional extensions we intend to create formal specifications, security-/safety- cases and
+separate user documentation for SHARE.
+
+
+.. _RACE: ../index.rst
 .. _JSON: http://json.org/
 .. _WebSockets: https://datatracker.ietf.org/doc/html/rfc6455
 .. _Remote Actors: `Remote RaceActors and Distributed RACE Applications`_
-.. _Data Import and Export Infrastructure: `Connecting External Systems`_
+.. _Data Import and Export Infrastructure: connectivity.rst
 .. _Conflict Free Replicated Data Type: https://en.wikipedia.org/wiki/Conflict-free_replicated_data_type
 .. _WebAuthn: https://webauthn.io/
+.. _Raft Consensus Algorithm: https://raft.github.io/
+.. _ScalaJS: https://www.scala-js.org/
+.. _Flutter: https://flutter.dev/

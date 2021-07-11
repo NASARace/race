@@ -20,11 +20,13 @@ h2 {
     font-weight: bold;
     border-bottom: 1px solid LightGray;
     margin: 1.0em 0 0 0;
+    clear: both;
 }
 
 h3 {
     font-size: 120%;
     margin: 0.8em 0 0.4em 0;
+    clear: both;
 }
 
 p {

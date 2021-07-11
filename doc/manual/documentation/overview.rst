@@ -75,15 +75,15 @@ A typical ``directory.conf`` contains three elements
 
 For instance, a ``doc/manual/installation/directory.conf`` file might look like this::
 
-    title = "Installing RACE"
+    laika.title = "Installing RACE"
 
-    navigationOrder = [
+    laika.navigationOrder = [
       prerequisites.md
       download.md
       build.md
     ]
 
-    rootPath = ".."
+    laika.rootPath = ".."
 
 Please refer to the Laika_ documentation for details about the translation process, which supports extensions at
 various different levels.
@@ -107,8 +107,14 @@ single source file, the level 1 header is the presentation title, each level 2 h
     ...
 
 
-Given that slide formatting should be kept simple, markdown (*.md) is usually a more readable and compact source format
-for slides than reStructuredText.
+To add a TOC (list of slide links) to the presentation the first slide should include a *navigationTree*::
+
+    ## Slides
+    @:navigationTree { entries = [ { target = "#" } ] }
+
+Given that slide formatting should be kept simple, Markdown_ (*.md) is usually a more readable and compact source format
+for slides than reStructuredText_ but it comes with less formatting options. Laika is configured in RACE to support
+direct (raw) HTML for both input formats.
 
 Slide shows are translated into single HTML pages that make use of a minimal ``race-slides.js`` javascript file
 which implements slide navigation functions. Currently supported commands are
@@ -129,9 +135,51 @@ custom template and CSS files.
 Since slide layout is based on browser *view height*, and browsers vary in terms of including
 decorations such as menubars, slides are best viewed in fullscreen mode.
 
+Online Demos from Slides
+------------------------
+The ``race-tools`` sub-project includes two command line tools to run interactive demos directly from presentation slides:
+
+(1) **serveDoc** is a simple stand-alone webserver that provides content under ``target/doc`` as ``http://localhost:8080``
+(as defaults, both can be set via command line args)
+
+(2) **webrun** is a specialized server that waits for POST requests of ``http://localhost:303x/run``, the actual port
+303x refering to a console number 'x' that is provided as a command line argument. Webrun then executes the POST body
+as a OS command and sends back the result to the requester
+
+Slides can make use of these servers by including "run" class elements such as::
+
+    ...
+    ## Run Demo Slide
+    ...
+    <div class="run">1: ./race -Darchive=../data/all-080717-1744 config/air/swim-all-sbs-replay-ww.conf</div>
+    ...
+The element text includes the console number ("``1:``") followed by the program and arguments to execute ("``./race ...``").
+
+With this, the workflow becomes:
+
+1. start ``script/servedoc`` from a command prompt
+2. start ``script/webrun --console <n>`` from a command prompt for each required demo console
+3. open a browser on ``http://localhost:8080/<presentation>``
+4. click on the "run" link in the slide, which will execute the command in the respective webrun console
+
+Please note that slides have to be served by ``servedoc`` (or another server) in order to avoid problem with browser
+specific CORS restrictions.
+
+Both tools are small Rust_ programs to minimize the memory footprint during demonstrations, which means they need the
+Rust toolchain to be installed in order to build them (e.g. via rustup_). After Rust installation, the tools can
+be built from within SBT by executing::
+
+   [race]> project race-tools
+   [race-tools]> cargoBuildRelease webrun
+   ...
+   [race-tools]> cargoBuildRelease servedoc
+
+
 .. _SBT: http://www.scala-sbt.org/
 .. _Laika: https://planet42.github.io/Laika/
 .. _SVG: https://www.w3.org/Graphics/SVG/
 .. _Markdown: https://daringfireball.net/projects/markdown/
 .. _reStructuredText:  http://docutils.sourceforge.net/rst.html
 .. _GitHub Pages: https://help.github.com/articles/configuring-a-publishing-source-for-github-pages/
+.. _Rust: https://www.rust-lang.org/
+.. _rustup: https://www.rust-lang.org/tools/install

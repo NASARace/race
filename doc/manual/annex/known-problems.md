@@ -1,26 +1,27 @@
 # Known Problems
 
+## OpenCL on macOS >= 10.14
+Since Apple deprecated OpenCL in macOS 10.14 it has become increasingly unstable on some 2019 15" MacBookPro
+machines, resulting in spurious native errors (CL_DEVICE_NOT_AVAILABLE, "No CVMS service" and others). There is no
+known workaround yet - OpenCL on Apple hardware seems unreliable
+
+## tcp socket failures in wireless networks
+In high data volume import applications such as config/air/swim-all-sbs-ww.conf import threads sometimes seem to
+hang due to underlying socket streams being closed while the socket is still connected. This happened under macOS
+10.15.7 and OpenJDK build 16+36-2231. While actors that directly handle the socket (such as SbsImportActor) should
+now try to reconnect, actors that use 3rd party libraries such as ActiveMQ to obtain input seem to not detect this case
+and stop to import. It seems this only happens when using wireless network connections (not Ethernet)
+
 ## problems with WorldWind/JOGL native libraries on Linux
 Some Linux distributions have JDK packages that cause linker (ld.so) errors when loading
-the native libraries required by WorldWind. So far this could be solved by installing
-the newest JDK versions (>=11) directly from the [OpenJDK] website (JDK can be installed
-in user directories).
+the native libraries required by WorldWind. The remedy is to use https://github.com/pcmehlitz/WorldWindJava-pcm.git
+versions >= 2.1.0.202, which include snapshots of compatible native libraries as unmanaged dependencies
 
 ## incompatible class file errors during RACE startup
 While RACE could still work on Java 1.8, it uses a lot of 3rd party libraries (automatically
 downloaded from Maven Central by SBT) which at this point have been built on newer Java versions
 and hence cause incompatible class file errors during RACE load time. It is therefore recommended
 to always use the latest stable Java/JDK release.
-
-## kafka-clients
-RACE still uses the 0.9 `kafka-clients` libraries (`ConfigurableKafkaConsumer` and
-`ConfigurableKafkaProducer`) because it has to work with 0.9 `kafka` servers. The new 10.x
-`kafka-clients` only work with new 10.x 'kafka' servers.
-
-## KafkaServer
-The `KafkaServer` is only intended to be a testing tool - it provides its own, embedded
-`zookeeper` and a very minimal configuration which can cause unreliable timing behavior. Tests
-(esp. `multi-jvm`) that use this tool should account for such timing by using delays.
 
 ## Windows console output
 The standard Windows 10 console (command prompt) does not enable ANSI terminal sequences (color

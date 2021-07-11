@@ -84,7 +84,7 @@ object Dependencies {
   //val scodecAll = Seq(scodecBits, scodecCore)
 
   //--- circe Json parsing (only used for -test benchmarks)
-  val circeVersion = "0.13.0"
+  val circeVersion = "0.14.1"
   val circeCore = "io.circe" %% "circe-core" % circeVersion
   val circeGeneric = "io.circe" %% "circe-generic" % circeVersion
   val circeParser = "io.circe" %% "circe-parser" % circeVersion
@@ -102,7 +102,7 @@ object Dependencies {
   //.. and possibly extensions for Tree and jfreechart
 
   //--- RSyntaxTextArea (TextEditor with syntax support)
-  val rsTextArea = "com.fifesoft" % "rsyntaxtextarea" % "3.1.2"
+  val rsTextArea = "com.fifesoft" % "rsyntaxtextarea" % "3.1.3"
 
   //--- the jfreechart plot and chart lib
   val jfreeChart = "org.jfree" % "jfreechart" % "1.5.3"
@@ -136,8 +136,8 @@ object Dependencies {
   val akkaAll = Seq(akkaActor)
 
   //--- Aeron (for akka-remote)
-  val aeronDriver =  "io.aeron" % "aeron-driver" % "1.33.1"
-  val aeronClient = "io.aeron" % "aeron-client" % "1.33.1"
+  val aeronDriver =  "io.aeron" % "aeron-driver" % "1.34.0"
+  val aeronClient = "io.aeron" % "aeron-client" % "1.34.0"
 
   val akkaRemoting = Seq(akkaRemote,aeronDriver,aeronClient)
 
