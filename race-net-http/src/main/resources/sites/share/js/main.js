@@ -6,6 +6,11 @@ import * as share from './app/share.js';
   * this should not contain any export functions or data used by other modules
   */
 
+//--- globals
+
+// the websocket authentication handler set by the application
+var wsAuthHandler = undefined  // function (obj): boolean
+
 const main = {}
 
 //--- onload callback
@@ -83,6 +88,12 @@ main.showColumnList = function showColumnList (event) {
 
 main.showRowList = function showRowList (event) {
   share.showRowList();
+}
+
+main.sendAndExitEditMode = function sendAndExitEditMode (event) {
+  if (event.key=="Enter" && event.ctrlKey) {
+    share.sendAndExitEditMode();
+  }
 }
 
 window.main = main; // make it global so that we can reference from HTML

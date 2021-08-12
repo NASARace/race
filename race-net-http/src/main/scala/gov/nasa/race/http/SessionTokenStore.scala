@@ -18,60 +18,47 @@ package gov.nasa.race.http
 
 import java.security.SecureRandom
 import java.util.Base64
+import scala.concurrent.duration.Duration
 
 /**
-  * a map that keeps track of (token -> User) pairs. Tokens can be thought of as single request
+  * a map that keeps track of (token -> user-id,date) pairs. Tokens can be thought of as single request
   * passwords, i.e. each accepted challenge returns a new one. We also keep track of when the
   * last token was issued so that we can check if it is expired
   *
   * Used e.g. for user auth in RESTful APIs (to obtain Cookie values)
   *
-  * Note that we currently just support one login per user, i.e. the same user cannot be logged in
-  * in several roles
+  * Note that we currently just support one login per user id
   */
-class SessionTokenStore(val byteLength: Int = 64, val expiresAfterMillis: Long=1000*300) {
-  private var map: Map[String,(User,Long)] = Map.empty
+class SessionTokenStore(val expiresAfter: Duration, val byteLength: Int = 64) {
+  private var map: Map[String,(String,Long)] = Map.empty
 
   val encoder = Base64.getEncoder
   val random = new SecureRandom
   private val buf = new Array[Byte](byteLength)
 
-  /**
-    * reverse lookup to see if a given uid has a valid token entry, which means the user did
-    * a proper login and has not logged out yet.
-    * Note this is not efficient since it is O(N)
-    */
-  def entryForUid (uid: String): Option[(User,Long)] = {
-    map.foreach { e =>
-      if (e._2._1.uid == uid) return Some(e._2)
-    }
-    None
-  }
-
   def isLoggedIn (uid: String): Boolean = {
     map.foreach { e =>
-      val user = e._2._1
-      if (user.uid == uid) { // found user but check if last token has expired (user forgot to log out)
-        return ((System.currentTimeMillis - e._2._2)) < expiresAfterMillis
+      if (e._2._1 == uid) { // found user but check if last token has expired (user forgot to log out)
+        return ((System.currentTimeMillis - e._2._2)) < expiresAfter.toMillis
       }
     }
     false // no entry for uid
   }
 
-  def addNewEntry (user: User): String = synchronized {
+  def addNewEntry (uid: String): String = synchronized {
     random.nextBytes(buf)
     val newToken = new String(encoder.encode(buf))
-    map = map + (newToken -> (user,System.currentTimeMillis))
+    map = map + (newToken -> (uid,System.currentTimeMillis))
     newToken
   }
 
-  def removeUser (user: User): Boolean = synchronized {
+  def removeUser (uid: String): Boolean = synchronized {
     val n = map.size
-    map = map.filter(e => e._2._1 != user)
+    map = map.filter(e => e._2._1 != uid)
     map.size < n
   }
 
-  def removeEntry (oldToken: String): Option[User] = synchronized {
+  def removeEntry (oldToken: String): Option[String] = synchronized {
     map.get(oldToken) match {
       case Some(e) =>
         map = map - oldToken
@@ -80,17 +67,17 @@ class SessionTokenStore(val byteLength: Int = 64, val expiresAfterMillis: Long=1
     }
   }
 
-  private def isExpired(t: Long, expirationLimit: Long): Boolean = (System.currentTimeMillis - t) > expirationLimit
+  private def isExpired(t: Long): Boolean = (System.currentTimeMillis - t) > expiresAfter.toMillis
 
-  def replaceExistingEntry(oldToken: String, role: String = User.AnyRole): NextTokenResult = synchronized {
+  def replaceExistingEntry(oldToken: String): NextTokenResult = synchronized {
     map.get(oldToken) match {
-      case Some((user,t)) =>
-        if (!isExpired(t,expiresAfterMillis)) {
-          if (user.hasRole(role)) {
-            map = map - oldToken
-            NextToken(addNewEntry(user))
-          } else NextTokenFailure("insufficient user role") // insufficient role
-        } else NextTokenFailure("expired session") // expired
+      case Some((uid,t)) =>
+        if (!isExpired(t)) {
+          map = map - oldToken
+          NextToken(addNewEntry(uid))
+        } else { // expired
+          NextTokenFailure("expired session")
+        }
 
       case None =>
         NextTokenFailure("unknown user") // not a known oldToken
@@ -104,14 +91,14 @@ class SessionTokenStore(val byteLength: Int = 64, val expiresAfterMillis: Long=1
     * from response content we serve, i.e. cases where the server knows the follow up request should arrive
     * much quicker than normal interaction and hence warrants a shorter expiration limit
     */
-  def matchesExistingEntry(token: String, role: String = User.AnyRole, expirationLimit: Long = expiresAfterMillis): MatchTokenResult = synchronized {
+  def matchesExistingEntry(token: String): MatchTokenResult = synchronized {
     map.get(token) match {
       case Some((user,t)) =>
-        if (!isExpired(t,expirationLimit)) {
-          if (user.hasRole(role)) {
-            TokenMatched // we don't replace the token
-          } else MatchTokenFailure("insufficient user role") // insufficient role
-        } else MatchTokenFailure("expired session") // expired
+        if (!isExpired(t)) {
+          TokenMatched // we don't replace the token
+        } else {  // expired
+          MatchTokenFailure("expired session")
+        }
       case None => MatchTokenFailure("unknown user") // not a known oldToken
     }
   }

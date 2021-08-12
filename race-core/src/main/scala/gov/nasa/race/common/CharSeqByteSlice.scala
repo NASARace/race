@@ -448,7 +448,19 @@ trait Utf8Slice extends CharSeqByteSlice {
     true
   }
 
-  def reset: Unit = {
+  def toCharArray: Array[Char] = {
+    val l  = length
+    val a = new Array[Char](l)
+    reset()
+    var i = 0
+    while (i < l) {
+      a(i) = charAt(i)
+      i += 1
+    }
+    a
+  }
+
+  def reset(): Unit = {
     nci = 0
     decoder = UTFx.initUTF8Decoder(data,off)
   }
@@ -463,7 +475,7 @@ trait Utf8Slice extends CharSeqByteSlice {
     val data = this.data
     val limit = this.limit
     if (ci < 0) throw new IndexOutOfBoundsException(s"negative char index $ci out of bounds")
-    if (ci < nci) reset // backstep - we have to start over from the beginning
+    if (ci < nci) reset() // backstep - we have to start over from the beginning
 
     while (nci < ci){
       decoder = decoder.next(data,limit)
@@ -476,7 +488,7 @@ trait Utf8Slice extends CharSeqByteSlice {
   override def contains (c: Char): Boolean = {
     var i = 0
     val n = length
-    reset
+    reset()
     while (i<n){
       if (decoder.utf16Char == c) return true
       decoder = decoder.next(data,limit)
@@ -489,7 +501,7 @@ trait Utf8Slice extends CharSeqByteSlice {
     val n = s.length
     var i = 0
     if (n == length) {
-      reset
+      reset()
       while (i < n) {
         if (decoder.utf16Char != s.charAt(i)) return false
         decoder = decoder.next(data,limit)
@@ -504,7 +516,7 @@ trait Utf8Slice extends CharSeqByteSlice {
     if (start < 0) throw new IndexOutOfBoundsException(s"negative start char index $start out of bounds")
     if (end < start) throw new IndexOutOfBoundsException(s"end char index $end lower than start index $start")
 
-    reset
+    reset()
     val iMax = off+len
     var biStart = off
     var biEnd = 0
@@ -523,7 +535,7 @@ trait Utf8Slice extends CharSeqByteSlice {
       nci += 1
     }
 
-    reset
+    reset()
     createSubSequence(biStart, biEnd-biStart)
   }
 }
@@ -563,7 +575,6 @@ object ConstUtf8Slice {
   * NOTE - this does not guarantee to underlying bytes don't change
   */
 class ConstUtf8Slice (val data: Array[Byte], val off: Int, val len: Int) extends Utf8Slice {
-
   override def createSubSequence(subOff: Int, subLen: Int): ConstUtf8Slice = {
     new ConstUtf8Slice(data, subOff, subLen)
   }
@@ -637,6 +648,16 @@ trait AsciiSlice extends CharSeqByteSlice {
   @inline override def length: Int = len
 
   @inline final def charAt(i: Int): Char = (data(i+off) & 0xff).toChar
+
+  def toCharArray: Array[Char] = {
+    val a = new Array[Char](len)
+    var i = 0
+    while (i < len) {
+      a(i) = charAt(i)
+      i += 1
+    }
+    a
+  }
 
   override def contains (c: Char): Boolean = {
     val n = len

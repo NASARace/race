@@ -19,7 +19,7 @@ package gov.nasa.race
 import akka.http.scaladsl.marshalling.ToResponseMarshallable
 import akka.http.scaladsl.model.HttpRequest
 import akka.http.scaladsl.model.Uri.Path
-
+import akka.http.scaladsl.model.headers.HttpCookie
 import scalatags.generic.TypedTag
 import scalatags.text.{Builder => STBuilder}
 
@@ -34,4 +34,20 @@ package object http {
 
   case object SendHttpRequest
   case class SendNewHttpRequest(request: HttpRequest)
+
+  // akka-http does not support public cookie-to-string rendering
+  def renderToString(cookie: HttpCookie): String = {
+    val sb = new StringBuilder
+
+    sb.append(cookie.name()); sb.append('='); sb.append(cookie.value())
+    cookie.expires.foreach( d=> { sb.append("; Expires="); sb.append(d.toRfc1123DateTimeString) })
+    cookie.maxAge.foreach( d=> { sb.append("; Max-Age="); sb.append(d) })
+    cookie.domain.foreach( d=> { sb.append("; Domain="); sb.append(d) })
+    cookie.path.foreach( p=> { sb.append("; Path="); sb.append(p) })
+    if (cookie.secure()) sb.append("; Secure")
+    if (cookie.httpOnly()) sb.append("; HttpOnly")
+    cookie.sameSite.foreach( p=> { sb.append("; SameSite="); sb.append(p) })
+
+    sb.toString()
+  }
 }

@@ -71,7 +71,7 @@ NASA Ames Research Center
   <img src="../images/swim-sbs-all-ww.svg" class="left scale45"/>
   <img src="../images/race-nas.png" class="right scale45"/>
 </div>
-<div class="run">1: ./race --vault ../conf.crypt config/air/swim-all-sbs-ww.conf</div>
+<div class="run">1: ./race --vault ../conf config/air/swim-all-sbs-ww.conf</div>
 
 ## Example 2: (re)Play it Again
 * only import actors are replaced with replay actors
@@ -100,7 +100,7 @@ NASA Ames Research Center
   <img src="../images/swim-stats-config.svg" class="left scale15"/>
   <img src="../images/swim-stats.svg" class="right scale50"/>
 </div>
-<div class="run">1: ./race --vault ../conf.crypt config/air/swim-msg-stats.conf</div><a class="srv" href="http://localhost:8080/race/statistics"></a>
+<div class="run">1: ./race --vault ../conf config/air/swim-msg-stats.conf</div><a class="srv" href="http://localhost:8080/race/statistics"></a>
 
 
 ## Example 5: Is There a Problem with the Data?
@@ -154,7 +154,7 @@ goal: automatically detect parallel approaches that are angled-in exceeding
 ## Sharing Data Across Heterogeneous Organizations
 * initial use case rapid rollout for disaster management
 * applies to many situations where unified data view across organizational entities
-  with intantionally isolated data is required
+  with intentionally isolated data is required
 
 <img src="../images/share-problem.svg" class="center back scale70"/>
 

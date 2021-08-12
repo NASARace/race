@@ -4,9 +4,8 @@ import Keys._
 object SonatypeSettings {
 
   val sonatypeSettings = Seq(
-    isSnapshot in Global := false,
 
-    pomExtra in Global := {
+    Global / pomExtra := {
       <url>http://nasarace.github.io/race/</url>
         <licenses>
           <license>

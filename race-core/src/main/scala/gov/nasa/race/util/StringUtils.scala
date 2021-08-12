@@ -35,6 +35,17 @@ object StringUtils {
 
   def upToLast (s: String, c: Char) = s.substring(0,s.lastIndexOf(c))
 
+  def upToNth (s: String, c: Char, n: Int): String = {
+    var i=0
+    var idx = -1
+    while (i < n){
+      idx = s.indexOf(c, idx+1)
+      if (idx < 0) return s // no n'th ocurrence of 'c'
+      i += 1
+    }
+    s.substring(0,idx)
+  }
+
   def trimmedSplit(s: String): Seq[String] = ArraySeq.unsafeWrapArray(s.trim.split("[ ,;]+"))
 
   final val hexChar = Array('0','1','2','3','4','5','6','7','8','9','a','b','c','d','e','f')

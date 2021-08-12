@@ -24,6 +24,7 @@ import com.typesafe.config.Config
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.config.SubConfigurable
 import gov.nasa.race.core.{ConfigLoggable, Loggable, ParentActor, RaceDataClient}
+import gov.nasa.race.util.StringUtils
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
@@ -56,6 +57,7 @@ trait RaceRouteInfo extends SubConfigurable with ConfigLoggable {
 
   def getRequestPrefix: String = config.getStringOrElse("request-prefix", name)
 
+
   // this is the main function that defines the public (user) routes
   def route: Route
 
@@ -64,6 +66,11 @@ trait RaceRouteInfo extends SubConfigurable with ConfigLoggable {
   def completeRoute: Route = route
 
   def protocol: String = if (_isHttps || shouldUseHttps) "https://" else "http://"
+
+  // copy scheme, authority and user from request and add the requestPrefix
+  def requestPrefixUrl (requestUrl: String): String = {
+    s"${StringUtils.upToNth(requestUrl, '/', 3)}/$requestPrefix"
+  }
 
   def notFoundRoute: Route = {
     extractUri { uri =>

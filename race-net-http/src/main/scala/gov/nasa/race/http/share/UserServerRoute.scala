@@ -23,12 +23,11 @@ import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.{PathMatchers, Route}
 import akka.stream.scaladsl.SourceQueueWithComplete
 import com.typesafe.config.Config
-import gov.nasa.race.{Failure, Result, Success}
 import gov.nasa.race.common.ConstAsciiSlice.asc
-import gov.nasa.race.common.{BatchedTimeoutMap, BufferedStringJsonPullParser, JsonParseException, JsonSerializable, JsonWriter, TimeoutSubject}
+import gov.nasa.race.common.{BatchedTimeoutMap, BufferedStringJsonPullParser, ByteSlice, JsonParseException, JsonSerializable, JsonWriter, TimeoutSubject}
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.{ParentActor, RaceDataClient}
-import gov.nasa.race.http.{AuthClient, Authenticator, HttpServer, NoAuthenticator, PushWSRaceRoute, SiteRoute, SocketConnection}
+import gov.nasa.race.http._
 import gov.nasa.race.uom.Time.Milliseconds
 import gov.nasa.race.uom.{DateTime, Time}
 
@@ -48,7 +47,8 @@ import scala.concurrent.duration.DurationInt
   * we assume all our clients will get the same data
   */
 class UserServerRoute (parent: ParentActor, config: Config) extends SiteRoute(parent,config)
-                                                            with PushWSRaceRoute with RaceDataClient {
+                                                            with PushWSRaceRoute with RaceDataClient
+                                                            with AuthorizingWSRaceRoute {
   /**
     * what we need to keep track of EditRequests - userChange messages are only valid between a requestEdit and
     * endEdit, up to a configurable inactive timeout that is reset upon each userChange
@@ -66,7 +66,7 @@ class UserServerRoute (parent: ParentActor, config: Config) extends SiteRoute(pa
     * JSON parser for incoming device messages
     * note that we directly execute respective actions instead of just translating JSON into scala
     */
-  class IncomingMessageHandler extends BufferedStringJsonPullParser with AuthClient {
+  class IncomingMessageHandler extends BufferedStringJsonPullParser {
     //--- lexical constants
     private val REQUEST_EDIT = asc("requestEdit")
     private val USER_CHANGE = asc("userChange")
@@ -77,53 +77,44 @@ class UserServerRoute (parent: ParentActor, config: Config) extends SiteRoute(pa
     private val DATE = asc("date")
     private val CHANGED_VALUES = asc("changedValues")
 
-    //--- AuthClient interface
-
     def alertUser (clientAddr: InetSocketAddress, msg: String): Unit = UserServerRoute.this.alertUser(clientAddr,msg)
 
-    // we don't discriminate between registration and authentication - a successful registration is
-    // considered to be a valid authentication
-    def completeIdentification (uid: String, clientAddr: InetSocketAddress, res: Result): Unit = {
-      res match {
-        case Success =>
+    //--- message processing
+
+    def parseMessage(msg: String, conn: SocketConnection): Option[Iterable[Message]] = parseMessage(msg) {
+      case REQUEST_EDIT => Some(processRequestEdit(conn,msg))  // this starts the authMethod protocol
+      case USER_CHANGE => Some(processUserChange(conn.remoteAddress,msg))
+      case END_EDIT => Some(processEndEdit(conn.remoteAddress,msg))
+      case msgTag => processAuthMessage(conn, msgTag).orElse { info(s"ignoring unhandled client message '$msg'"); None }
+    }
+
+    def processAuthMessage (conn: SocketConnection, msgTag: ByteSlice): Option[Iterable[Message]] = {
+      authMethod.processJSONAuthMessage(conn, msgTag, this) match {
+        case Some(AuthResponse.Challenge(msg,_)) =>
+          Some( Seq(TextMessage(msg)))
+
+        case Some(AuthResponse.Accept(uid,authAcceptMsg,_)) =>
+          val clientAddr = conn.remoteAddress
           val perms = userPermissions.getPermissions(uid)
+
           if (perms.nonEmpty) {
             val es = EditSession(uid,clientAddr,perms)
             info(s"start $es")
             editSessions += (clientAddr -> es)
+
+            val userPermissionsMsg = UserPermissions.serializePermissions(writer, uid, perms)
+
+            Some( Seq(TextMessage(authAcceptMsg), TextMessage(userPermissionsMsg)))
+
+          } else { // insufficient permissions
+            Some( Seq( TextMessage(authMethod.rejectAuthMessage("insufficient user permissions"))))
           }
-          pushTo( clientAddr, TextMessage(UserPermissions.serializePermissions(writer, uid, perms)))
 
-        case Failure(msg) =>
-          warning(s"user identification failed: $msg")
+        case Some(AuthResponse.Reject(msg,_)) =>
+          Some( Seq(TextMessage(msg)))
+
+        case None => None
       }
-    }
-
-    override def sendRegistrationRequest (clientAddr: InetSocketAddress, msg: String): Unit = {
-      pushTo(clientAddr, TextMessage(msg))
-    }
-
-    override def completeRegistration (uid: String, clientAddr: InetSocketAddress, result: Result): Unit = {
-      completeIdentification(uid, clientAddr, result)
-    }
-
-    override def sendAuthenticationRequest (clientAddr: InetSocketAddress, msg: String): Unit = {
-      pushTo(clientAddr, TextMessage(msg))
-    }
-
-    override def completeAuthentication (uid: String, clientAddr: InetSocketAddress, result: Result): Unit = {
-      completeIdentification(uid, clientAddr, result)
-    }
-
-    //--- message processing
-
-    def process (conn: SocketConnection, msg: String): Iterable[Message] = parseMessageSet[Iterable[Message]](msg, Nil) {
-      case REQUEST_EDIT => processRequestEdit(conn,msg)
-      case USER_CHANGE => processUserChange(conn.remoteAddress,msg)
-      case END_EDIT => processEndEdit(conn.remoteAddress,msg)
-      case m =>
-        if (!authenticator.processClientMessage(conn.remoteAddress,msg)) warning(s"ignoring unknown message '$m''")
-        Nil
     }
 
     /**
@@ -135,29 +126,20 @@ class UserServerRoute (parent: ParentActor, config: Config) extends SiteRoute(pa
       val clientAddr = conn.remoteAddress
 
       try {
-        var uid: String = null
-        foreachMemberInCurrentObject {
-          case UID => uid = quotedValue.toString
-        }
+        editSessions.get(clientAddr) match {
+          case Some(session) => // ignore, we already have an active edit session from this location
 
-        if (uid != null) {
-          editSessions.get(clientAddr) match {
-            case Some(session) => // ignore, we already hava an active edit session from this location
-            case None =>
-              if (isValidUid(uid)) {
-                authenticator.identifyUser(uid, conn, this)
-              } else {
-                alertUser(clientAddr, s"unknown user '$uid'")
-                warning(s"invalid uid rejected: $msg")
-              }
-          }
-
-        } else {
-          alertUser(clientAddr, "please provide userName")
-          warning(s"incomplete requestEdit message, missing uid: $msg")
+          case None =>
+            val uid: String = quotedValue.toString
+            if (!uid.isEmpty && !isValidUid(uid)) {
+              alertUser(clientAddr, s"unknown user '$uid'")
+            } else {
+              info(s"starting authentication for $clientAddr uid: '$uid'")
+              pushTo(clientAddr, TextMessage(authMethod.startAuthMessage(uid)))
+            }
         }
       } catch {
-        case x: JsonParseException => warning(s"ignoring malformed requestEdit message: ${x.getMessage}")
+        case x: JsonParseException => warning(s"ignoring malformed requestEdit message: '$msg'")
       }
 
       Nil
@@ -263,9 +245,6 @@ class UserServerRoute (parent: ParentActor, config: Config) extends SiteRoute(pa
 
   val wsPath = s"$requestPrefix/ws"
   val wsPathMatcher = PathMatchers.separateOnSlashes(wsPath)
-
-  val authenticator: Authenticator = getConfigurableOrElse[Authenticator]("authenticator")(Authenticator.noAuthenticator)
-  authenticator.setLogging(info,warning,error) // let the authenticator use our logging
 
   val clientHandler = new IncomingMessageHandler // we can't parse until we have catalogs
   clientHandler.setLogging(info,warning,error)
@@ -386,8 +365,12 @@ class UserServerRoute (parent: ParentActor, config: Config) extends SiteRoute(pa
     */
   override protected def handleIncoming (conn: SocketConnection, m: Message): Iterable[Message] = {
     m match {
-      case tm: TextMessage.Strict => clientHandler.process(conn,tm.text)
-      case _ => Nil
+      case tm: TextMessage.Strict =>
+        clientHandler.parseMessage(tm.text, conn) match {
+          case Some(replies) => replies
+          case None => Nil // not handled
+        }
+      case _ => Nil // we don't process streams
     }
   }
 
@@ -422,7 +405,7 @@ class UserServerRoute (parent: ParentActor, config: Config) extends SiteRoute(pa
 
   override def onRaceTerminated (server: HttpServer): Boolean = {
     editSessions.terminate()
-    authenticator.terminate() // the authenticator might have to close files etc
+    authMethod.shutdown() // the authenticator might have to close files etc
     true
   }
 }

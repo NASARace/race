@@ -33,7 +33,7 @@ import scala.collection.mutable
 /**
   * a RaceRouteInfo that uses a cached filesystem to lookup request URIs
   * note this is a class since it can be directly used, although most cases are going to
-  * subclass in order to add specific routes by overriding route (for web sockets etc)
+  * subclass in order to add specific routes by overriding route() (for web sockets etc)
   */
 class SiteRoute (val parent: ParentActor, val config: Config) extends RaceRouteInfo {
 
@@ -115,8 +115,8 @@ class SiteRoute (val parent: ParentActor, val config: Config) extends RaceRouteI
             case Some(cachedContent) =>
               cachedContent.location match {
                 case Some(loc) =>
-                  val lh = new Location(uri.copy(path = Path(loc)))
-                  respondWithHeader(lh) {
+                  val location = new Location(uri.copy(path = Path(loc)))
+                  respondWithHeader(location) {
                     complete( StatusCodes.SeeOther, cachedContent.entity)
                   }
                 case None => complete( StatusCodes.OK, cachedContent.entity)
@@ -133,17 +133,21 @@ class SiteRoute (val parent: ParentActor, val config: Config) extends RaceRouteI
   override def route = siteRoute
 }
 
-class AuthorizedSiteRoute (parent: ParentActor, config: Config) extends SiteRoute(parent,config) with AuthorizedRaceRoute {
+/**
+  * an access-restricted SiteRoute that is authenticated
+  */
+class AuthSiteRoute(parent: ParentActor, config: Config) extends SiteRoute(parent,config) with AuthRaceRoute {
 
   override val cookiePath: Option[String] = Some(config.getStringOrElse("cookie-path", s"/$requestPrefix"))
 
+  // we increment on each access to an html document
   override protected def isTokenIncrement (uri: String, file: File): Boolean = FileUtils.getExtension(file) == "html"
 
-  def authenticate (cachedContent: CachedContent, cookieValue: String): AuthTokenResult = {
+  def getNextSessionToken (cachedContent: CachedContent, cookieValue: String): AuthTokenResult = {
     if (cachedContent.isTokenIncrement) {
-      userAuth.nextSessionToken(cookieValue, User.UserRole)
+      sessions.replaceExistingEntry(cookieValue)
     } else {
-      userAuth.matchesSessionToken(cookieValue,User.UserRole)
+      sessions.matchesExistingEntry(cookieValue)
     }
   }
 
@@ -152,10 +156,10 @@ class AuthorizedSiteRoute (parent: ParentActor, config: Config) extends SiteRout
       cachedContent.location match {
         case Some(loc) =>
           respondWithHeaders(new Location(uri.copy(path = Path(loc)))) {
-            complete(StatusCodes.SeeOther, cachedContent.entity)
+            completeWithCacheHeaders(StatusCodes.SeeOther, cachedContent.entity)
           }
         case None =>
-          complete(StatusCodes.OK, cachedContent.entity)
+          completeWithCacheHeaders(StatusCodes.OK, cachedContent.entity)
       }
     }
 
@@ -172,16 +176,16 @@ class AuthorizedSiteRoute (parent: ParentActor, config: Config) extends SiteRout
                 optionalCookie(sessionCookieName) { opt =>
                   opt match {
                     case Some(namedCookie) =>
-                      authenticate(cachedContent, namedCookie.value) match {
+                      getNextSessionToken(cachedContent, namedCookie.value) match {
                         case NextToken(newToken) => // we have a new session cookie, set it in the header
                           setCookie(createSessionCookie(newToken)) {
                             completeWithCachedContent(cachedContent, uri)
                           }
                         case TokenMatched => completeWithCachedContent(cachedContent, uri) // no need to set new session cookie
-                        case f:TokenFailure => completeLogin(Some(uri.toString), Some(f.reason)) // session token was rejected
+                        case f:TokenFailure => completeWithLogin(uri.toString()) // session token was rejected, force new authentication
                       }
 
-                    case None => completeLogin(Some(uri.toString)) // no session token yet
+                    case None => completeWithLogin(uri.toString()) // no session token yet, enter authentication
                   }
                 }
 

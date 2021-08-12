@@ -20,7 +20,7 @@ import java.io.File
 import java.util
 
 import gov.nasa.race._
-import gov.nasa.race.http.{PasswordStore, User}
+import gov.nasa.race.http.{PwUserStore, User}
 import gov.nasa.race.main.CliArgs
 import gov.nasa.race.util.{ConsoleIO, CryptUtils, StringUtils}
 
@@ -49,7 +49,7 @@ object Passwd {
 
   def main (args: Array[String]): Unit = {
     val opts = CliArgs(args){new Opts}.getOrElse{return}
-    val store = new PasswordStore(opts.file)
+    val store = new PwUserStore(opts.file)
 
     opts.op match {
       case Op.List =>
@@ -77,12 +77,12 @@ object Passwd {
     }
   }
 
-  def saveStore(store: PasswordStore): Unit = {
+  def saveStore(store: PwUserStore): Unit = {
     if (!store.saveFile) ConsoleIO.printlnErr(s"error saving ${store.file}")
     else ConsoleIO.printlnOut(s"${store.file} saved")
   }
 
-  def promptPassword: Option[Array[Char]] = {
+  def promptPassword: Option[Array[Byte]] = {
     for (
       pw1 <- ConsoleIO.promptPassword("enter password: ");
       pw2 <- ConsoleIO.promptPassword("reenter password: ");
@@ -90,6 +90,6 @@ object Passwd {
         ConsoleIO.printlnErr("passwords did not match, abort")
         None
       } else Some(true)
-    ) yield pw1
+    ) yield new String(pw1).getBytes()
   }
 }

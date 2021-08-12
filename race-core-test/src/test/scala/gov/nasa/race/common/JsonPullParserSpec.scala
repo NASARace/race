@@ -17,6 +17,7 @@
 package gov.nasa.race.common
 
 import gov.nasa.race.common.ConstAsciiSlice._
+import gov.nasa.race.common.ConstUtf8Slice.utf8
 import gov.nasa.race.common.JsonValueConverters._
 import gov.nasa.race.test.RaceSpec
 import org.scalatest.flatspec.AnyFlatSpec
@@ -28,7 +29,7 @@ import scala.collection.mutable.ArrayBuffer
   * reg test for JsonPullParser
   */
 class JsonPullParserSpec extends AnyFlatSpec with RaceSpec {
-
+/*
   "a JsonPullParser" should "correctly printout Json source" in {
     val p = new StringJsonPullParser
 
@@ -220,7 +221,6 @@ class JsonPullParserSpec extends AnyFlatSpec with RaceSpec {
     assert(n == 2)
   }
 
-
   "a JsonPullParser" should "support parsing into generic JsonValue structure" in {
     val jsonIn = JsonObject(
       "one"->JsonDouble(42.1),
@@ -246,7 +246,6 @@ class JsonPullParserSpec extends AnyFlatSpec with RaceSpec {
       case None => fail("failed to parse")
     }
   }
-
 
   "a JsonPullParser" should "support mapping arrays" in {
     val _providers_ = asc("providers")
@@ -510,5 +509,52 @@ class JsonPullParserSpec extends AnyFlatSpec with RaceSpec {
     res._3 shouldBe("localhost")
     res._4 shouldBe(8000)
     res._5 shouldBe("255.255.255.255")
+  }
+
+  "nested JsonPullParsers" should "parse message sets" in {
+    val input = """{"authCredentials":[119]}"""
+    println(s"input = $input")
+
+    val AUTH_CREDENTIALS = utf8("authCredentials")
+    var pw: Option[Array[Byte]] = None
+
+    val pOuter = new StringJsonPullParser
+    //val pInner = new StringJsonPullParser
+
+    pw = pOuter.parseMessage(input) {
+      case _ => // the match will consume the first member name but not descend into the value
+        // something that does not parse anything from pOuter...
+        Some(Array[Byte](119))
+
+        /* which typically would be an embedded parser
+        pInner.parseMessage(input){
+          case AUTH_CREDENTIALS =>
+            val buf = ArrayBuffer.empty[Byte]
+            Some(pInner.readCurrentByteArrayInto(buf).toArray)
+        }
+         */
+    }
+
+    println(s"""pw = ${pw.get.mkString("[",",","]")}""")
+    assert( pw.isDefined)
+    assert( pw.get.length == 1)
+    println("Ok.")
+  }
+  */
+
+  "a JsonPullParser" should "read object value strings" in {
+    val objSrc = """{"foo":1,"bar":{"x":0,"y":[42,42,42]},"boo":"fortytwo"}"""
+    val input = s"""{"credentials":$objSrc}"""
+    println(s"input = $input")
+
+    val parser = new StringJsonPullParser
+
+    parser.initialize(input)
+    parser.ensureNextIsObjectStart()
+    parser.readNext()
+    val obj = parser.readObjectValueString()
+
+    println(s"objSrc = '$obj'")
+    obj shouldBe(objSrc)
   }
 }

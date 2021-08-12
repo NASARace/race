@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <!-- those don't do much since HttpHeaders take precedence - use 'no-client-cache' config instead
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate, max-age=0">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    -->
+</head>
+
+<body">
+    <h1>Race Auth SiteRoute Example</h1>
+    <p>if you read this you should be authorized</p>
+    <p>and allowed to see <a href="page2.html">this page</a></p>
+
+    <button type="button" onclick="location.replace('./logout')">Logout</button>
+</body>
+</html>

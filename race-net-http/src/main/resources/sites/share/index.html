@@ -9,6 +9,8 @@
 
     <body onload="main.init();" ununload="main.shutdown();">
 
+        <iframe id="auth" src="auth.html" title="authentication interface" class="mask-overlay hidden"></iframe>
+
         <div class="titlebar">
             <div class="input-group">
                 <label class="input-label" for="nodeId">node:</label>
@@ -35,7 +37,7 @@
         <div id="editTools" class="toolbar">
             <div class="input-group">
                 <label class="input-label" for="uid">user:</label>
-                <input class="input-text" type="text" id="uid" onkeyup="main.identifyUser(event);"/>
+                <input class="input-text" type="text" id="uid" />
             </div>
             <input type="button" id="editButton" class="button" value="edit" onclick="main.setEditable();"/>
             <input type="button" id="sendButton" class="button" value="publish" onclick="main.sendChanges();" disabled/>

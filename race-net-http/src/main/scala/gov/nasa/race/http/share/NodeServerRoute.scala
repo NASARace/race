@@ -60,7 +60,7 @@ class NodeServerRoute(val parent: ParentActor, val config: Config)
                                               with ColumnDataChangeParser with NodeDatesParser with PingParser {
     def rowList = node.rowList
 
-    def parse(msg: String): Option[Any] = parseMessageSet[Option[Any]](msg,None) {
+    def parse(msg: String): Option[Any] = parseMessage(msg) {
       case ColumnDataChange.COLUMN_DATA_CHANGE => parseColumnDataChange()
       case NodeDates.NODE_DATES => parseNodeDates()
       case Ping.PING => parsePing()

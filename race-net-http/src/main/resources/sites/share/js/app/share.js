@@ -74,13 +74,8 @@ export function requestUserPermissions() {
     alert("already in edit mode");
 
   } else {
-    var uid = document.getElementById("uid").value;
-
-    if (utils.isEmpty(uid)) {
-      alert("please enter user id before requesting edit permissions");
-    } else {
-      sendRequestUserPermissions(uid);
-    }
+    var uid = document.getElementById("uid").value;  // uid in request is optional
+    sendRequestUserPermissions(uid);
   }
 }
 
@@ -116,6 +111,12 @@ export function setReadOnly() {
   sendEndEdit(uid);
 
   utils.log("exit edit mode");
+}
+
+// shortcut for send+exit
+export function sendAndExitEditMode () {
+  sendChanges();
+  setReadOnly();
 }
 
 export function sendChanges() {
@@ -560,7 +561,7 @@ function setCell (cell, row, values) {
       editElem.classList.add("conflict");
     }
     editElem.classList.remove("reported");
-    editElem.value = editValue(row,values[row.id]);
+    setEditorValue(editElem,values[row.id]);
 
   } else { // just a display cell
     setDisplayCell(cell, row, values[row.id]);
@@ -713,6 +714,7 @@ function setCellEditorAttributes (editElem) {
   editElem.setAttribute("onfocus", "main.setRowFocused(event)");
   editElem.setAttribute("onblur", "main.setRowBlurred(event)");
   editElem.setAttribute("onchange", "main.setRowModified(event)");
+  editElem.setAttribute("onkeyup", "main.sendAndExitEditMode(event)")
 }
 
 function setTextInputCell (cell, v) {
@@ -744,6 +746,10 @@ function setChoiceCell (cell, rowValues, v) {
     select.appendChild(opt);
   }
   cell.appendChild(select);
+}
+
+function setEditorValue (editElem, v) {
+  // TBD - update the cell editor value
 }
 
 function columnIndex (colId) {
@@ -983,7 +989,7 @@ function handleWsClose (evt) {
   checkForReconnect();
 }
 
-var maxReconnectAttempts = 5;
+var maxReconnectAttempts = 1;
 var reconnectAttempt = 1;
 
 function checkForReconnect () {
@@ -1045,7 +1051,11 @@ function handleWsMessage(msg) {
     case "webauthnCreate": handleWebauthnReg(msg.webauthnCreate); break;
     case "webauthnGet": handleWebauthnAuth(msg.webauthnGet.publicKeyCredentialRequestOptions); break;
 
-    default: utils.log(`ignoring unknown message type ${msgType}`);
+    default:
+      //console.log("checking " + JSON.stringify(msg) + " with " + window.wsAuthHandler);
+      if (!(window.wsAuthHandler && window.wsAuthHandler(ws,msg))) {
+        utils.log(`ignoring unknown message type ${msgType}`);
+      }
   }
 }
 
@@ -1207,15 +1217,16 @@ function handleUserPermissions (usrPerm) {
   var uid = usrPerm.uid; // TODO - should we check if that is the current user? Not critical since update has to be checked by server anyways
   if (usrPerm.permissions.length > 0) {
     const elem = document.getElementById("uid");
-    if (elem.value == uid) {
-      elem.classList.add("active");
-      elem.disabled = true; // lock it until we are done
-
-      setRowsEditable(usrPerm.permissions);
-      utils.log(`enter edit mode for user ${uid}`);
-    } else {
-      alert("user id changed, please authorize again");
+    if (elem.value != uid) {
+      elem.value = uid;
     }
+
+    elem.classList.add("active");
+    elem.disabled = true; // lock it until we are done
+
+    setRowsEditable(usrPerm.permissions);
+    utils.log(`enter edit mode for user ${uid}`);
+
   } else {
     var msg = `no edit permissions for user ${uid}`
     alert(msg);
@@ -1304,11 +1315,7 @@ function handleWebauthnAuth (pkcRequestOptions) {
 
 function sendRequestUserPermissions (uid){
   if (ws) {
-    if (utils.isEmpty(uid)) {
-      alert("please enter user id and try again");
-    } else {
-      ws.send(`{"requestEdit": { "uid": "${uid}" }}`);
-    }
+    ws.send(`{"requestEdit": "${uid}"}`);
   }
 }
 

@@ -20,15 +20,18 @@ import com.fasterxml.jackson.annotation.JsonInclude.Include
 import com.fasterxml.jackson.databind.{ObjectMapper, SerializationFeature}
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module
 import com.typesafe.config.Config
-import com.yubico.webauthn.data._
+import com.yubico.webauthn.{AssertionRequest, AssertionResult, FinishAssertionOptions, FinishRegistrationOptions, RegisteredCredential, RegistrationResult, RelyingParty, StartAssertionOptions, StartRegistrationOptions}
+import com.yubico.webauthn.data.{AttestationConveyancePreference, AuthenticatorAssertionResponse, AuthenticatorAttachment, AuthenticatorAttestationResponse, AuthenticatorSelectionCriteria, ByteArray, ClientAssertionExtensionOutputs, ClientRegistrationExtensionOutputs, PublicKeyCredential, PublicKeyCredentialCreationOptions, PublicKeyCredentialDescriptor, RelyingPartyIdentity, UserIdentity, UserVerificationRequirement}
 import com.yubico.webauthn.exception.{AssertionFailedException, RegistrationFailedException}
-import com.yubico.webauthn._
-import gov.nasa.race.common.{BatchedTimeoutMap, InetAddressMatcher, TimeoutSubject}
+import gov.nasa.race.common.ConstUtf8Slice.utf8
+import gov.nasa.race.{Failure, ResultValue, Success, SuccessValue}
+import gov.nasa.race.common.{BatchedTimeoutMap, ByteSlice, InetAddressMatcher, JsonPullParser, TimeoutSubject}
 import gov.nasa.race.config.ConfigUtils.ConfigWrapper
 import gov.nasa.race.config.NoConfig
-import gov.nasa.race.http.{AuthClient, Authenticator, SocketConnection}
+import gov.nasa.race.http.AuthMethod.scriptNode
+import gov.nasa.race.http.{AuthMethod, AuthResponse, PwUserStore, SocketConnection}
 import gov.nasa.race.uom.Time
-import gov.nasa.race.{Failure, ResultValue, Success, SuccessValue}
+import scalatags.Text.all._
 
 import java.io.{File, IOException}
 import java.net.{InetAddress, InetSocketAddress}
@@ -38,10 +41,17 @@ import scala.collection.mutable.Map
 import scala.concurrent.duration.{DurationInt, FiniteDuration}
 import scala.jdk.CollectionConverters._
 
-/**
-  * Authenticator implementation for W3Cs webauthn standard using (parts of) the Yubico server libraries
-  */
-class WebAuthnAuthenticator(config: Config = NoConfig) extends Authenticator {
+object WebAuthnMethod {
+  val AUTH_START = utf8("authStart")
+  val AUTH_USER = utf8("authUser")
+  val AUTH_CREDENTIALS = utf8("authCredentials")
+
+}
+import WebAuthnMethod._
+
+class WebAuthnMethod (config: Config) extends AuthMethod {
+
+  //--- WebAuthn (FIDO2) implementation
 
   type RegistrationPkc = PublicKeyCredential[AuthenticatorAttestationResponse, ClientRegistrationExtensionOutputs]
   type AssertionPkc = PublicKeyCredential[AuthenticatorAssertionResponse, ClientAssertionExtensionOutputs]
@@ -51,7 +61,6 @@ class WebAuthnAuthenticator(config: Config = NoConfig) extends Authenticator {
     val uid: String
     val clientAddress: InetSocketAddress
     val challenge: ByteArray
-    val authClient: AuthClient
 
     override def hashCode: Int = challenge.hashCode
 
@@ -66,7 +75,6 @@ class WebAuthnAuthenticator(config: Config = NoConfig) extends Authenticator {
     val timeout: Time = requestTimeout
 
     def timeoutExpired(): Unit = {
-      authClient.alertUser(clientAddress, "authentication request timed out, please retry")
       warning(s"pending authentication request from '$uid' on $clientAddress timed out")
     }
   }
@@ -74,18 +82,16 @@ class WebAuthnAuthenticator(config: Config = NoConfig) extends Authenticator {
   case class PendingRegistrationRequest ( rp: RelyingParty,
                                           uid: String,
                                           clientAddress: InetSocketAddress,
-                                          request: PublicKeyCredentialCreationOptions,
-                                          authClient: AuthClient
-                                         ) extends PendingRequest {
+                                          request: PublicKeyCredentialCreationOptions
+                                        ) extends PendingRequest {
     val challenge: ByteArray = request.getChallenge
   }
 
   case class PendingAssertionRequest ( rp: RelyingParty,
                                        uid: String,
                                        clientAddress: InetSocketAddress,
-                                       request: AssertionRequest,
-                                       authClient: AuthClient
-                                      ) extends PendingRequest {
+                                       request: AssertionRequest
+                                     ) extends PendingRequest {
     val challenge: ByteArray = request.getPublicKeyCredentialRequestOptions.getChallenge
   }
 
@@ -99,15 +105,16 @@ class WebAuthnAuthenticator(config: Config = NoConfig) extends Authenticator {
     }
   }
 
-
-
   //--- our own data
 
   val random = new SecureRandom()
   val objectMapper: ObjectMapper = initObjectMapper  // watch out - shared resource, needs to be synchronized
 
-  val pathName = config.getStringOrElse("user-credentials", "userCredentials.json")
-  val credentialStore = new CredentialStore
+  val pathName = config.getVaultableStringOrElse("user-credentials", "userCredentials.json")
+  val credentialStore = new CredentialStore // gets loaded at the end of init if there is an existing file
+
+  // we don't use that for credentials but we might use it to determine if a user can register
+  val users = new PwUserStore(config.getVaultableStringOrElse("users", ".users"))
 
   val regConstraints: AuthConstraints = initAuthConstraints(config.getConfigOrElse("registration", NoConfig),
     InetAddressMatcher.loopbackMatcher, InetAddressMatcher.loopbackMatcher)
@@ -125,6 +132,9 @@ class WebAuthnAuthenticator(config: Config = NoConfig) extends Authenticator {
 
   loadCredentials()
 
+  def isUserRegistered (uid: String, clientAddress: InetSocketAddress): Boolean = {
+    credentialStore.isUsernameRegistered(uid)
+  }
 
   //--- internal initialization (overridable by subclass)
 
@@ -173,7 +183,7 @@ class WebAuthnAuthenticator(config: Config = NoConfig) extends Authenticator {
   def createRp (conn: SocketConnection, credentialStore: CredentialStore, authConstr: AuthConstraints): RelyingParty = {
     val protocol = if (conn.isSSL) "https://" else "http://"
     val rpHostName = authConstr.rpId.getOrElse(conn.localAddress.getHostName)
-    val rpAppName = authConstr.rpName.getOrElse(config.getString("name"))
+    val rpAppName = authConstr.rpName.getOrElse(config.getStringOrElse("name", "race"))
 
     // this is a bit weird - if this is not using SSL the hostname would be rejected by the webauthn lib so we have to
     // add an explicit 'origins' option
@@ -219,7 +229,7 @@ class WebAuthnAuthenticator(config: Config = NoConfig) extends Authenticator {
     }
   }
 
-  override def terminate(): Unit = {
+  override def shutdown(): Unit = {
     if (credentialStore.hasChanged) storeCredentials()
   }
 
@@ -298,9 +308,9 @@ class WebAuthnAuthenticator(config: Config = NoConfig) extends Authenticator {
 
   def createAssertionRequest (rp: RelyingParty, uid: String): AssertionRequest = {
     rp.startAssertion(StartAssertionOptions.builder
-        .username(Optional.of(uid))
-        .timeout(requestTimeout.toMillis)
-        .build
+      .username(Optional.of(uid))
+      .timeout(requestTimeout.toMillis)
+      .build
     )
   }
 
@@ -327,12 +337,8 @@ class WebAuthnAuthenticator(config: Config = NoConfig) extends Authenticator {
     }
   }
 
-  //--- Authenticator interface
-
-  protected def completeRegistration (pendingRequest: PendingRegistrationRequest, msg: String): Boolean = {
-    val authClient = pendingRequest.authClient
+  protected def completeRegistration (pendingRequest: PendingRegistrationRequest, msg: String): AuthResponse = {
     val uid = pendingRequest.uid
-    val clientAddress = pendingRequest.clientAddress
 
     parseRegistrationResponse(msg) match {
       case SuccessValue(pkc) =>  // if the message does not parse we keep the request open
@@ -344,125 +350,248 @@ class WebAuthnAuthenticator(config: Config = NoConfig) extends Authenticator {
 
             credentialStore.addCredential(uid,pkcd,cred)
             storeCredentials() // we do this upon shutdown to avoid lots of file IO
+            info(s"user $uid registered")
+            AuthResponse.Accept(uid, s"""{"accept":"$uid"}""")
 
-            authClient.completeRegistration( uid, clientAddress, Success)
-
-          case fail: Failure =>
-            authClient.alertUser(clientAddress, "registration failed")
-            authClient.completeRegistration( uid, clientAddress, fail)
+          case Failure(msg) =>
+            warning(s"failed to register user: $msg")
+            AuthResponse.Reject(s"""{"reject":"user registration failed"}""")
         }
-        true
 
       case Failure(msg) =>
-        warning(s"failed to parse pkc: $msg")
-        false // message not consumed
+        warning(s"failed to parse registration pkc: $msg")
+        AuthResponse.Reject("""{"reject":"invalid user registration message"}""")
     }
   }
 
-  protected def completeAssertion (pendingRequest: PendingAssertionRequest, msg: String): Boolean = {
-    val authClient = pendingRequest.authClient
+  protected def completeAssertion (pendingRequest: PendingAssertionRequest, msg: String): AuthResponse = {
     val uid = pendingRequest.uid
-    val clientAddress = pendingRequest.clientAddress
 
     parseAssertionResponse(msg) match {
       case SuccessValue(pkc) =>
         createAssertionResult(pendingRequest.rp, pendingRequest.request, pkc) match {
           case SuccessValue(result) =>
-            authClient.completeAuthentication(uid, clientAddress, Success)
+            info(s"user $uid authenticated")
+            AuthResponse.Accept(uid, s"""{"accept":"$uid"}""")
 
           case fail: Failure =>
-            authClient.completeAuthentication(uid, clientAddress, fail)
+            warning(s"failed to authenticate user: $msg")
+            AuthResponse.Reject(s"""{"reject":"user authentication failed"}""")
         }
-        true
 
-      case Failure(msg) => 
-        warning(s"failed to parse pkc: $msg")
-        false // message not consumed
+      case Failure(msg) =>
+        warning(s"failed to parse authentication pkc: $msg")
+        AuthResponse.Reject("""{"reject":"invalid user authentication message"}""")
     }
   }
 
-  override def processClientMessage (clientAddress: InetSocketAddress, msg: String): Boolean = {
-    pendingRequests.get(clientAddress) match { // do we have a pending request for this remoteAddress
-      case Some(pendingRequest) =>
-        val consumed = pendingRequest match {
-          case pr: PendingAssertionRequest => completeAssertion(pr,msg)
-          case pr: PendingRegistrationRequest => completeRegistration(pr,msg)
-        }
-        if (consumed) pendingRequests -= pendingRequest.clientAddress
-        consumed
+  //--- server side of protocol
 
-      case None => false
-    }
-  }
-
-  override def isUserRegistered (uid: String, clientAddress: InetSocketAddress): Boolean = {
-    credentialStore.isUsernameRegistered(uid)
-  }
-
-  def createRegistrationMessage(request: PublicKeyCredentialCreationOptions): String = {
-    s"""{"webauthnCreate":${serializeToJson(request)}}"""
-  }
-
-  override def register (uid: String, conn: SocketConnection, authClient: AuthClient): Unit = {
+  override def processJSONAuthMessage (conn: SocketConnection, msgTag: ByteSlice, parser: JsonPullParser): Option[AuthResponse] = {
     val clientAddress = conn.remoteAddress
 
-    if (regConstraints.matches(conn)) {
-      val rp = regRps.getOrElseUpdate(conn.localAddress.getAddress, createRp(conn,credentialStore,regConstraints))
+    msgTag match {
+      case AUTH_USER =>
+        val uid = parser.quotedValue.toString
 
-      if (!isUserRegistered(uid, clientAddress)) {
         if (!pendingRequests.contains(clientAddress)) {
-          val userIdentity = createUserIdentity(uid)
-          val request = createRegistrationRequestOptions(rp, userIdentity)
-          pendingRequests += (clientAddress -> PendingRegistrationRequest(rp, uid, clientAddress, request, authClient))
-          authClient.sendRegistrationRequest(clientAddress, createRegistrationMessage(request))
+          if (!isUserRegistered(uid, clientAddress)) { // registration
+              if (regConstraints.matches(conn)) {
+                val rp = regRps.getOrElseUpdate(conn.localAddress.getAddress, createRp(conn, credentialStore, regConstraints))
+                val userIdentity = createUserIdentity(uid)
+                val challenge = createRegistrationRequestOptions(rp, userIdentity)
+                pendingRequests += (clientAddress -> PendingRegistrationRequest(rp, uid, clientAddress, challenge))
+                Some(AuthResponse.Challenge( s"""{"publicKeyCredentialCreationOptions":${serializeToJson(challenge)}}"""))
 
-        } else {
-          val msg = s"user '$uid' already trying to register"
-          authClient.alertUser(clientAddress,msg)
-          authClient.completeRegistration(uid, clientAddress, Failure(msg))
+              } else { // registration constraints not satisfied
+                Some(AuthResponse.Reject("""{"reject":"user registration not allowed from this location"}"""))
+              }
+
+          } else { // authentication
+            if (authConstraints.matches(conn)) {
+              val rp = authRps.getOrElseUpdate(conn.localAddress.getAddress, createRp(conn, credentialStore, authConstraints))
+              val challenge = createAssertionRequest( rp, uid)
+              pendingRequests += (clientAddress -> PendingAssertionRequest( rp, uid, clientAddress, challenge))
+              Some(AuthResponse.Challenge( s"""${serializeToJson(challenge)}"""))
+
+            }  else { // authentication constraints not satisfied
+              Some(AuthResponse.Reject("""{"reject":"user authentication not allowed from this location"}"""))
+            }
+          }
+
+        } else { // we already have a pending request from this location
+          Some(AuthResponse.Reject("""{"reject":"pending request from this location"}"""))
         }
-      } else {
-        val msg = s"user '$uid' already registered"
-        authClient.alertUser(clientAddress, msg)
-        authClient.completeRegistration(uid, clientAddress, Failure(msg))
-      }
 
-    } else {
-      authClient.alertUser(clientAddress, "please use designated host for user registration")
-      authClient.completeRegistration(uid, clientAddress, Failure(s"not a valid registration host: ${clientAddress.getAddress}"))
+      case AUTH_CREDENTIALS =>  // client response to challenge - parser is positioned on credential object start
+        val pkc = parser.readObjectValueString() // TODO - not ideal, we should use one parser
+        pendingRequests.get(clientAddress) match { // do we have a pending request for this client
+          case Some(pr:PendingRegistrationRequest) =>
+            pendingRequests -= clientAddress
+            Some(completeRegistration(pr,pkc))
+
+          case Some(pr:PendingAssertionRequest) =>
+            pendingRequests -= clientAddress
+            Some(completeAssertion(pr,pkc))
+
+          case None =>
+            Some(AuthResponse.Reject("""{"reject":"no pending request from this location"}"""))
+        }
     }
   }
 
-  def createAuthenticationMessage (request: AssertionRequest): String = {
-    s"""{"webauthnGet":${serializeToJson(request)}}"""
-  }
+  //--- the client side authenticator protocol
 
-  override def authenticate (uid: String, conn: SocketConnection, authClient: AuthClient): Unit = {
-    val clientAddress = conn.remoteAddress
+  def docRequestScript (requestUrl: String, postUrl: String): String = { s"""
 
-    if (authConstraints.matches(conn)) {
-      val rp = authRps.getOrElseUpdate(conn.localAddress.getAddress, createRp(conn,credentialStore,authConstraints))
+    function authenticate() {
+      let uid = document.getElementById('uid').value;
 
-      if (isUserRegistered(uid, clientAddress)) {
-        if (!pendingRequests.contains(clientAddress)) {
-          val request = createAssertionRequest( rp, uid)
-          pendingRequests += (clientAddress -> PendingAssertionRequest( rp, uid, clientAddress, request, authClient))
-          authClient.sendAuthenticationRequest(clientAddress, createAuthenticationMessage(request))
-
-        } else {
-          val msg = s"user '$uid' already trying to log in"
-          authClient.alertUser(clientAddress,msg)
-          authClient.completeAuthentication(uid, clientAddress, Failure(msg))
+      getResponse({authUser: uid})
+      .then( response => response.json())
+      .then( response => {
+        if (response.publicKeyCredentialCreationOptions) {  // registration
+          handleRegistration(response.publicKeyCredentialCreationOptions);
+        } else if (response.publicKeyCredentialRequestOptions) {  // authentication
+          handleAuthentication(response.publicKeyCredentialRequestOptions);
         }
-      } else {
-        val msg = s"user '$uid' not yet registered"
-        authClient.alertUser(clientAddress,msg)
-        authClient.completeAuthentication(uid, clientAddress, Failure(msg))
+      });
+    }
+
+    function handleRegistration (pkcCreateOptions) {
+      //console.log(JSON.stringify(pkcCreateOptions));
+
+      // convert the random strings from base64URL back into Uint8Arrays - the CredentialContainer will otherwise reject
+      pkcCreateOptions.user.id = base64URLDecode(pkcCreateOptions.user.id);
+      pkcCreateOptions.challenge = base64URLDecode(pkcCreateOptions.challenge);
+
+      navigator.credentials.create( {publicKey: pkcCreateOptions} ).then(  pkc => {
+        getResponse({authCredentials: createPkcObject(pkc)})
+        .then( response => response.json())
+        .then( response => handleFinalServerResponse(response))
+      }, failure => { // navigator.credentials failure
+        alert("credential creation rejected: " + failure);
+      });
+    }
+
+    function handleAuthentication (pkcRequestOptions) {
+      //console.log(JSON.stringify(pkcRequestOptions));
+
+      // convert the random strings from base64URL back into Uint8Arrays - the CredentialContainer will otherwise reject
+      pkcRequestOptions.challenge = base64URLDecode(pkcRequestOptions.challenge);
+      for (const c of pkcRequestOptions.allowCredentials) {
+        c.id = base64URLDecode(c.id);
       }
 
-    } else {
-      authClient.alertUser(clientAddress, "please use valid host for login")
-      authClient.completeRegistration(uid, clientAddress, Failure(s"not a valid authentication host: ${clientAddress.getAddress}"))
+      /// TODO - this throws an InvalidStateException on firefox
+      navigator.credentials.get( {publicKey: pkcRequestOptions} ).then( pkc => {
+        getResponse( {authCredentials:getPkcObject(pkc)})
+        .then( response => response.json())
+        .then( response => handleFinalServerResponse(response))
+      }, failure => {  // navigator.credentials.get failure ??
+        console.trace();
+        alert("credential request rejected: " + failure);
+      });
     }
+
+    function handleFinalServerResponse (msg) {
+      if (msg.accept){ // registration completed successfully (got session cookie in Set-Cookie header)
+        parent.location.replace( '$requestUrl');
+      } else {
+        parent.document.getElementById('auth').style.display='none'
+      }
+    }
+
+    function checkUidEnter(event) {
+      if (event.key=='Enter') authenticate();
+    }
+
+    //--- utilities
+
+    async function getResponse (data) {
+      let request = {method: 'POST', mode: 'cors', cache: 'no-cache', credentials: 'same-origin',
+                     headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data)};
+      return await fetch('/$postUrl', request)
+    }
+
+    function base64URLDecode (b64urlstring) {
+      return new Uint8Array(atob(b64urlstring.replace(/-/g, '+').replace(/_/g, '/')).split('').map(val => {
+        return val.charCodeAt(0);
+      }));
+    }
+
+    function base64URLEncode (byteArray) {
+      return btoa(Array.from(new Uint8Array(byteArray)).map(val => {
+        return String.fromCharCode(val);
+      }).join('')).replace(/\\+/g, '-').replace(/\\//g, '_').replace(/\\=/g, '');
+    }
+
+    function createPkcObject (pkc) {
+      return {
+        type: pkc.type,
+        id: pkc.id,
+        response: {
+          attestationObject: base64URLEncode(pkc.response.attestationObject),
+          clientDataJSON: base64URLEncode(pkc.response.clientDataJSON)
+        },
+        clientExtensionResults: pkc.getClientExtensionResults()
+      };
+    }
+
+    function getPkcObject (pkc) {
+      return {
+        type: pkc.type,
+        id: pkc.id,
+        response: {
+          authenticatorData: base64URLEncode(pkc.response.authenticatorData),
+          clientDataJSON: base64URLEncode(pkc.response.clientDataJSON),
+          signature: base64URLEncode(pkc.response.signature),
+          userHandle: null // make the server look it up through uid/cached request - we don't want to give any assoc in the reply
+        },
+        clientExtensionResults: pkc.getClientExtensionResults()
+      };
+    }
+
+    function alert (msg) {
+      document.getElementById("alert").innerHTML = msg;
+    }
+
+    function checkUidEnter(event) {
+      if (event.key=='Enter') authenticate();
+    }
+    """
   }
+
+  override def authPage(remoteAddress: InetSocketAddress, requestUrl: String, postUrl: String): String = {
+    html(
+      head(
+        link(rel:="stylesheet", tpe:="text/css", href:="/auth.css"),
+        scriptNode( docRequestScript(requestUrl, postUrl)),
+      ),
+      body()(
+        div(cls := "authForeground")(
+          span(cls := "authCancel", title := "Close Modal", cls := "authCancel",
+            onclick := "parent.document.getElementById('auth').style.display='none'")("×"),
+          div(cls := "authImgContainer")(
+            img(src := s"/auth.svg", alt := "Avatar", cls := "authImg")
+          ),
+          div(cls := "authFormContainer")(
+            div(id := "alert", cls := "authAlert")(""),
+            table(style := "border-style: none;")(
+              tr(
+                td(cls := "authLabel")(b("User")),
+                td(style := "width: 99%;")(
+                  input(`type` := "text", id := "uid", placeholder := "Enter Username", required := true,
+                    autofocus := true, cls := "authTextInput", onkeyup:="checkUidEnter(event);")
+                )
+              )
+            ),
+            button(`type` := "button", onclick := "authenticate();", cls := "authButton")("authenticate")
+          )
+        )
+      )
+    ).render
+  }
+
+  override def authPage(remoteAddress: InetSocketAddress): String = ???
 }

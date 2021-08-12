@@ -72,8 +72,8 @@ trait ByteSlice {
 
   // slice data values are the same (but not necessarily the array objects)
   // the important part is inlining the length comparison
-  @inline final def == (other: ByteSlice): Boolean = (len == other.len) && equalsData(other.data,other.off)
-  @inline final def != (other: ByteSlice): Boolean = (len != other.len) || !equalsData(other.data,other.off)
+  @inline final def == (other: ByteSlice): Boolean = (other ne null) && (len == other.len) && equalsData(other.data,other.off)
+  @inline final def != (other: ByteSlice): Boolean = (other eq null) || (len != other.len) || !equalsData(other.data,other.off)
 
 
   // note this returns the absolute index

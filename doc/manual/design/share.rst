@@ -294,7 +294,7 @@ The main classes representing the generic SHARE data model are ``Node`` and ``No
 ``Row`` and ``RowList``, ``CellValue`` and ``ColumnData``:
 
 .. image:: ../images/share-data.svg
-    :class: center scale65
+    :class: center scale60
     :alt: sharing data in heterogeneous networks
 
 **NodeList**
@@ -420,7 +420,7 @@ runtime is not yet implemented.
 User Client Synchronization
 ```````````````````````````
 .. image:: ../images/share-UR-webclient.svg
-    :class: right scale30
+    :class: right scale25
     :alt: user client protocol
 
 This mostly uses the same JSON messages as inter-node synchronization to initialize and update the user client. The

@@ -1,0 +1,14 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<svg width="100%" height="100%" version="1.1" viewBox="447 271.5 78 109.5" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns="http://www.w3.org/2000/svg">
+  <defs />
+  <g id="layer1">
+    <g>
+      <rect x="463.5" y="274.5" width="45" height="62.99997" rx="45" ry="45" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="7" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill-opacity="0" />
+      <rect x="450" y="310.5" width="72" height="67.5" rx="18" ry="18" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="7" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#FFFFFF" fill-opacity="1" />
+      <g>
+        <ellipse cx="486" cy="337.5" rx="8.999931" ry="9.000034" opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#000000" fill-opacity="1" />
+        <path d="M486 337.5 L477.0001 364.5 L494.9999 364.5 Z " opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="none" fill="#000000" fill-opacity="1" />
+      </g>
+    </g>
+  </g>
+</svg>

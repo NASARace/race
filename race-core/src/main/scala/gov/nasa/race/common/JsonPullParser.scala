@@ -16,8 +16,9 @@
  */
 package gov.nasa.race.common
 
-import java.io.PrintStream
+import gov.nasa.race.{Failure, ResultValue, SuccessValue}
 
+import java.io.PrintStream
 import gov.nasa.race.uom.DateTime
 
 import scala.annotation.{switch, tailrec}
@@ -296,7 +297,7 @@ abstract class JsonPullParser extends LogWriter with Thrower {
             ArrayStart
 
           //--- simple values
-          case '"' =>
+          case '"' => // quoted string
             i0 += 1
             val i1 = skipToEndOfString(i0)
             value.setRange(i0, i1-i0)
@@ -318,6 +319,7 @@ abstract class JsonPullParser extends LogWriter with Thrower {
       val data = JsonPullParser.this.data
       var i = i0
       var b = data(i)
+
       while (b != ',' && b != ']' && !isWs(b)) {
         i += 1
         b = data(i)
@@ -379,7 +381,7 @@ abstract class JsonPullParser extends LogWriter with Thrower {
 
   def level: Int = env.size
 
-  @inline final def quotedValue: Utf8Slice = if (value.nonEmpty && isQuotedValue) value else throw exception("not a quoted value")
+  @inline final def quotedValue: Utf8Slice = if (isQuotedValue) value else throw exception("not a quoted value")
   @inline final def unQuotedValue: Utf8Slice = if (value.nonEmpty && !isQuotedValue) value else throw exception("not an unQuoted value")
 
   @inline final def isScalarValue: Boolean = value.nonEmpty
@@ -393,8 +395,8 @@ abstract class JsonPullParser extends LogWriter with Thrower {
     (data(idx) == '}' && objLevel == env.size)
   }
 
-  @inline final def isLevelStart: Boolean = (data(idx)|32) == '{'
-  @inline final def isLevelEnd: Boolean = (data(idx)|32) == '}'
+  @inline final def isLevelStart: Boolean = (data(idx)|32) == '{'          // '[' or '{'
+  @inline final def isLevelEnd: Boolean = (data(idx)|32) == '}'            // ']' or '}'
 
   @inline final def isInArray: Boolean = (state == arrState || state == initArrState)
 
@@ -690,6 +692,15 @@ abstract class JsonPullParser extends LogWriter with Thrower {
   @inline final def processNextObject(f: =>Unit): Unit = readAggregate(readNext(), ObjectStart)(f)
   @inline final def processCurrentObject(f: =>Unit): Unit = readAggregate(lastResult, ObjectStart)(f)
 
+  def readObjectValueString(): String = {
+    if (isObjectValue) {
+      val i0 = idx
+      skipPastAggregate()
+      val i1 = idx
+      new String(data,i0,i1-i0)
+    } else throw exception("not an object")
+  }
+
   def readOptionalObjectMember[T](name: ByteSlice)(f: =>T): Option[T] = {
     val ps = new ParserState
 
@@ -926,8 +937,8 @@ abstract class JsonPullParser extends LogWriter with Thrower {
   // note this does NOT consume the end delimiter
   def skipToEndOfLevel (lvl0: Int): Unit = {
     val curLevel = env.size
-    var lvl = curLevel
-    val tgtLevel = if (isLevelStart) lvl0+1 else lvl0
+    var lvl = if (isLevelStart) curLevel-1 else curLevel
+    val tgtLevel = lvl0 // if (isLevelStart) lvl0+1 else lvl0
     var i = idx
 
     while (true) {
@@ -1012,6 +1023,11 @@ abstract class JsonPullParser extends LogWriter with Thrower {
     value.clear()
     state = null
     lastResult = NoValue
+  }
+
+  protected def clearAll(): Unit = {
+    clear()
+    setData(Array.empty[Byte])
   }
 
   @inline protected final def isWs (c: Byte): Boolean = {
@@ -1150,16 +1166,24 @@ abstract class JsonPullParser extends LogWriter with Thrower {
     }
   }
 
-  def parseMessageSet[T](default: =>T) (pf: PartialFunction[ByteSlice,T]): T = {
-    try {
-      ensureNextIsObjectStart() // all messages are objects
-      pf(readMemberName()) // it's up to the provided pf to decide what to do with unknown messages
-    } catch {
-      case x: JsonParseException =>
-        //x.printStackTrace
-        warning(s"ignoring malformed message '${dataContext(0, 20)}' : ${x.getMessage}")
-        default
-    }
+  def parseNextMemberOrElse[T](default: => Option[T])(pf: PartialFunction[ByteSlice,Option[T]])(implicit ps: ParserState = new ParserState): Option[T] = {
+    if (isInObject) {
+      readMemberName()
+      pf.applyOrElse(member, (_:ByteSlice) => { ps.restore(); default })
+
+    } else throw exception("not in object")
+  }
+
+  /**
+    * evaluate the provided PF for the next member name within the current object
+    * if the PF is not defined for the next member name this backtracks and returns None
+    *
+    * this is useful to process "{ msgType: ... }" messages without throwing exceptions if there is no match
+    *
+    * note the parser has to be in an object (i.e. surrounding "{..}" has to be parsed by caller)
+    */
+  def parseNextMember[T](pf: PartialFunction[ByteSlice,Option[T]])(implicit ps: ParserState = new ParserState): Option[T] = {
+    parseNextMemberOrElse(None)(pf)(ps)
   }
 }
 
@@ -1177,13 +1201,18 @@ class StringJsonPullParser extends JsonPullParser {
     idx >= 0
   }
 
-  def parseMessageSet[T] (s: String, default: =>T)(pf: PartialFunction[ByteSlice,T]): T = {
-    if (initialize(s)) {
-      super.parseMessageSet(default)(pf)
+  def parseMessageOrElse[T](msg: String, default: => Option[T])(pf: PartialFunction[ByteSlice,Option[T]]): Option[T] = {
+    if (initialize(msg)) {
+      implicit val ps = new ParserState
+      readNextObject(super.parseNextMemberOrElse(default)(pf))
     } else {
       warning(s"parser did not initialize for '${dataContext(0,20)}'")
       default
     }
+  }
+
+  def parseMessage[T] (msg: String)(pf: PartialFunction[ByteSlice,Option[T]]): Option[T] = {
+    parseMessageOrElse(msg,None)(pf)
   }
 }
 
@@ -1234,4 +1263,18 @@ class UTF8JsonPullParser extends JsonPullParser {
   }
 
   def initialize (bs: Array[Byte]): Boolean = initialize(bs,bs.length)
+
+  def parseMessageOrElse[T](msg: Array[Byte], default: =>Option[T])(pf: PartialFunction[ByteSlice,Option[T]]): Option[T] = {
+    if (initialize(msg)) {
+      implicit val ps = new ParserState
+      readNextObject( super.parseNextMemberOrElse(default)(pf))
+    } else {
+      warning(s"parser did not initialize for '${dataContext(0,20)}'")
+      default
+    }
+  }
+
+  def parseMessage[T] (msg: Array[Byte])(pf: PartialFunction[ByteSlice,Option[T]]): Option[T] = {
+    parseMessageOrElse(msg,None)(pf)
+  }
 }

@@ -16,76 +16,77 @@
  */
 package gov.nasa.race.http
 
-import java.io.File
-import akka.http.scaladsl.model.headers.HttpCookie
-import akka.http.scaladsl.model.{ContentType, ContentTypes, FormData, HttpCharsets, HttpEntity, MediaTypes, StatusCode, StatusCodes, DateTime => DT}
-import akka.http.scaladsl.server.Directives.{entity, _}
+import akka.http.scaladsl.marshalling.ToEntityMarshaller
+import akka.http.scaladsl.model.headers.{HttpCookie, RawHeader}
+import akka.http.scaladsl.model.{ContentType, ContentTypes, HttpCharsets, HttpEntity, MediaTypes, StatusCode, StatusCodes, Uri, DateTime => DT}
+import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.{PathMatchers, Route}
+import akka.util.ByteString
 import gov.nasa.race.config.ConfigUtils._
-import gov.nasa.race.util.ClassUtils
-import scalatags.Text.all.{span, head => htmlHead, _}
-import scalatags.Text.attrs.{name => nameAttr}
+import gov.nasa.race.config.NoConfig
+import gov.nasa.race.http.webauthn.WebAuthnMethod
+import gov.nasa.race.util.{ClassUtils, StringUtils}
+import scalatags.Text.all._
+
+import java.net.InetSocketAddress
+import scala.collection.mutable
 import scala.concurrent.duration._
 
 
 /**
-  * common parts of interactive and automatic RACE routes that require user authorization
+  * common parts of interactive and automatic RACE routes that require user authentication and authorization
   *
-  * we use a server-encrypted password store to keep a challenge-response token that is part
-  * of each request (https get) - the request is only accepted if it includes a cookie that
-  * was transmitted in the previous response
+  * a request is only accepted if it includes a cookie that was transmitted in the previous response (cookie sequence)
+  * this will make sure the cookie cannot be stolen without noticing, or stolen cookies loose validity quickly
   */
 trait AuthRaceRoute extends RaceRouteInfo {
 
+  //--- login/out paths
   val loginPath: String =  s"$requestPrefix/login"
-  val loginPathMatcher = PathMatchers.separateOnSlashes(loginPath)
   val logoutPath: String = s"$requestPrefix/logout"
+
+  //--- path matchers
+  val loginPathMatcher = PathMatchers.separateOnSlashes(loginPath)
   val logoutPathMatcher = PathMatchers.separateOnSlashes(logoutPath)
 
-  // override if we have a more specific cookie parameters
+  val authPathMatcher = PathMatchers.separateOnSlashes("auth.html")
+  val authSvgPathMatcher = PathMatchers.separateOnSlashes("auth.svg")  // it's a suffix matcher
+  val authCssPathMatcher = PathMatchers.separateOnSlashes("auth.css")
+
+  //--- session cookie management
   val sessionCookieName = config.getStringOrElse("cookie-name", "ARR")
   val cookieDomain: Option[String] = config.getOptionalString("cookie-domain")
   def cookiePath: Option[String] = Some(config.getStringOrElse("cookie-path","/"))
 
-  val expiresAfterMillis = config.getFiniteDurationOrElse("expires-after", 10.minutes).toMillis
-  def cookieExpirationDate: Option[DT] = Some(DT.now + expiresAfterMillis)
+  val useStableCookie = config.getBooleanOrElse("use-stable-cookie", false)
+  val expiresAfter = config.getFiniteDurationOrElse("expires-after", 10.minutes)
+  val noCacheHeaders = Seq(
+    RawHeader("Cache-Control", "no-cache, no-store, must-revalidate, max-age=0"),
+    RawHeader("Pragma", "no-cache"),
+    RawHeader("Expires","0")
+  )
+  // Http headers take precedence over meta tag - this enforces no client side caching and is required to disable the bfcache upon logout
+  def noClientCache = config.getBooleanOrElse("no-client-cache", false)
 
-  // this will throw an exception if user-auth file does not exist
-  val userAuth: UserAuth = UserAuth(new File(config.getVaultableStringOrElse("user-auth", ".passwd")), expiresAfterMillis)
 
+  //--- sessions and user authentication method
+  val sessions: SessionTokenStore = new SessionTokenStore(expiresAfter)
+  val authMethod: AuthMethod = createAuthMethod()
 
-  override final def shouldUseHttps = true // we transmit passwords so this has to be encrypted
+  authMethod.setLogging(info,warning,error)
 
-  //--- logout is not interactive
+  val pendingRequestUrls = mutable.Map.empty[InetSocketAddress,String]
 
-  // TODO - should we check for expiration here? If so, what to do with web socket promotions?
+  override final def shouldUseHttps = true // depending on authMethod we might transmit user credentials
 
-  /**
-    * this does not involve interactions and only succeeds if there is a valid session token
-    */
-  protected def authLogoutRoute: Route = {
-    path(logoutPathMatcher) {
-      optionalCookie(sessionCookieName) {
-        case Some(namedCookie) => // request header has a session cookie - make sure we delete it in the response
-          setCookie(createSessionCookie("deleted", cookieDomain, cookiePath, Some(DT.MinValue))) {
-            userAuth.sessionTokens.removeEntry(namedCookie.value) match {
-              case Some(user) =>
-                info(s"logout for '${user.uid}' accepted")
-                complete("user logged out")
+  def createAuthMethod(): AuthMethod = getConfigurableOrElse[AuthMethod]("auth")(new WebAuthnMethod(NoConfig))
 
-              case None => completeWithFailure(StatusCodes.OK, "no active session") // there is nothing to logout from
-            }
-          }
-        case None => completeWithFailure(StatusCodes.Forbidden, s"no user authorization for logout")
-      }
-    }
-  }
+  def cookieExpirationDate: Option[DT] = Some(DT.now + expiresAfter.toMillis)
 
-  def logoutRoute: Route = authLogoutRoute
+  def isTokenIncrement (requestUri: Uri.Path): Boolean = !useStableCookie
 
-  def completeWithFailure (status: StatusCode, reason: String): Route = {
-    warning(s"response failed: $reason ($status)")
-    complete(status, reason)
+  def targetUrl (requestUrl: String): String = {
+    if (requestUrl.endsWith(loginPath)) requestPrefixUrl(requestUrl) else requestUrl
   }
 
   /**
@@ -101,306 +102,168 @@ trait AuthRaceRoute extends RaceRouteInfo {
     exp.foreach( dt=> cookie = cookie.withExpires(dt))
     cookie
   }
-}
 
-/**
-  * a RaceRouteInfo that assumes a {auto-login, data, ..., auto-logout} sequence without
-  * manual interaction (hence no redirection or login/logout dialogs and resources)
-  *
-  * user authentication and session validation are the same as for manual auth
-  */
-trait PreAuthorizedRaceRoute extends AuthRaceRoute {
-
-  override def completeRoute = {
-    // no need for resources since there are no interactive web pages
-    loginRoute ~ logoutRoute ~ route
-  }
-
-  def completeAuthorized(requiredRole: String)(createResponseContent: => HttpEntity.Strict): Route = {
-    extractMatchedPath { requestUri =>
-      cookie(sessionCookieName) { namedCookie =>
-        userAuth.nextSessionToken(namedCookie.value, requiredRole) match {
-          case NextToken(newToken) =>
-            setCookie(createSessionCookie(newToken)) {
-              complete(createResponseContent)
-            }
-          case NextTokenFailure(rejection) =>
-            complete(StatusCodes.Forbidden, s"invalid session token: $rejection")
-        }
-      } ~ complete(StatusCodes.Forbidden, "no user authorization found")
-    }
-  }
-
-  /**
-    * a login without retries or redirects
-    */
-  def loginRoute: Route = {
-    post {
-      path(loginPathMatcher) {
-        entity(as[FormData]) { e =>
-          val validRequestResponse = for (
-            uid <- e.fields.get("u");
-            pw <- e.fields.get("nid")
-          ) yield {
-            if (userAuth.isLoggedIn(uid)) {
-              warning(s"attempted login of '$uid' despite active session")
-              complete(StatusCodes.Forbidden, "user is logged in")
-
-            } else {
-              userAuth.login(uid, pw.toCharArray) match {
-                case Some(newToken) => // accept
-                  setCookie(createSessionCookie(newToken)) {
-                    info(s"login for '$uid' accepted")
-                    complete(StatusCodes.OK, "user accepted")
-                  }
-
-                case None => // reject
-                  complete(StatusCodes.Forbidden, "unknown user or wrong password")
-              }
-            }
-          }
-
-          validRequestResponse getOrElse {
-            complete(StatusCodes.BadRequest, "invalid request")
-          }
-        }
-      }
-    }
-  }
-}
-
-/**
-  * mixin type for routes that require valid user credentials for routes that
-  * end in a `completeAuthorized` directive
-  *
-  * NOTE: UserAuth objects are shared if they refer to the same password file, which
-  * has to exist or instantiation of the route is throwing an exception
-  */
-trait AuthorizedRaceRoute extends AuthRaceRoute {
-
-  //--- resources used in login dialog
-  val cssPathMatcher = PathMatchers.separateOnSlashes(s"$requestPrefix/auth-style.css")
-  val cssData = loginCSS
-  val avatarPathMatcher = PathMatchers.separateOnSlashes(s"$requestPrefix/auth-avatar.svg")
-  val avatarData = avatarImage
-
-  override def completeRoute: Route = {
-    loginRoute ~ authResourceRoute ~ logoutRoute ~ route
-  }
+  //--- login
 
   def loginRoute: Route = {
+    def httpEntity(contentType: ContentType, content: String) = HttpEntity.Strict(contentType, ByteString(content))
+
     path(loginPathMatcher) {
-      post {
-        formFields("r") { requestUri =>
-          formFields("u") { uid =>
-            if (userAuth.isLoggedIn(uid)) {
-              complete(StatusCodes.Forbidden, "user is already logged in")
-            } else {
-              formFields("nid") { pw =>
-                userAuth.login(uid, pw.toCharArray) match {
-                  case Some(newToken) =>
-                    val response = if (requestUri.nonEmpty) {
-                      html(
-                        header(meta(httpEquiv := "refresh", content := s"0; url=$requestUri")),
-                        body("if not redirected automatically, follow ",
-                          a(href := requestUri)("this link to get back")
-                        )
-                      )
-                    } else {
-                      html(
-                        body("login successful")
-                      )
+      post {  // this is a POST from the client that initiates the authMethod protocol
+        entity(as[String]){ clientMsg =>
+          headerValueByType(classOf[IncomingConnectionHeader]) { conn =>
+            authMethod.processAuthMessage(conn, clientMsg) match {
+              case Some(authResponse) =>
+                authResponse match {
+                  case AuthResponse.Accept(uid, msg, contentType) =>
+                    pendingRequestUrls -= conn.remoteAddress
+                    val sessionToken = sessions.addNewEntry(uid)
+                    val cookie = createSessionCookie(sessionToken)
+                    setCookie(cookie) {
+                      complete(StatusCodes.OK, httpEntity(contentType, msg))
                     }
-                    info(s"user '$uid' logged in")
-                    setCookie(createSessionCookie(newToken)) {
-                      complete(HttpEntity(ContentTypes.`text/html(UTF-8)`, response.render))
-                    }
-
-                  case None => // unknown user or invalid pw
-                    info(s"user '$uid' login failed'")
-                    val req = if (requestUri.isEmpty) None else Some(requestUri)
-                    userAuth.remainingLoginAttempts(uid) match {
-                      case -1 => completeLogin(req, Some("unknown user id"))
-                      case 0 => complete(StatusCodes.Forbidden, "user has exceeded login attempts")
-                      case 1 => completeLogin(req, Some(s"invalid password, ONLY 1 ATTEMPT LEFT!"))
-                      case n => completeLogin(req, Some(s"invalid password, $n attempts remaining"))
-                    }
+                  case AuthResponse.Reject(msg, contentType) =>
+                    pendingRequestUrls -= conn.remoteAddress
+                    complete(StatusCodes.Unauthorized, httpEntity(contentType, msg))
+                  case AuthResponse.Challenge(msg, contentType) => complete(StatusCodes.Accepted, httpEntity(contentType, msg))
                 }
-              }
+              case None => // message not handled by authMethod
+                warning(s"invalid auth request not handled: $clientMsg")
+                complete(StatusCodes.Unauthorized, httpEntity(ContentTypes.`text/plain(UTF-8)`, "invalid authentication request"))
             }
           }
-        } ~ { // incomplete or wrong form data
-          complete(StatusCodes.BadRequest, "invalid login data")
-        }
-      } ~ get { // explicit login page request (GET)
-        optionalCookie(sessionCookieName) {
-          case Some(namedCookie) =>
-            userAuth.matchesSessionToken(namedCookie.value, User.UserRole) match {
-              case TokenMatched => complete(StatusCodes.Forbidden, "already logged in")
-              case MatchTokenFailure(rejection) => completeLogin(None, Some(rejection))
-            }
-          case None => completeLogin(None)
         }
       }
     }
   }
 
-  def authResourceRoute: Route = {
-    get {  // login page resources
-      path(cssPathMatcher) {
-        complete(HttpEntity(ContentType(MediaTypes.`text/css`,HttpCharsets.`UTF-8`), cssData))
-      } ~ path(avatarPathMatcher) {
-        complete(HttpEntity(MediaTypes.`image/svg+xml`, avatarData))
+  def completeWithLogin (requestUrl: String): Route = {
+    headerValueByType(classOf[IncomingConnectionHeader]) { conn =>
+      respondWithHeaders(noCacheHeaders) {
+        val remoteAddress = conn.remoteAddress
+        pendingRequestUrls += remoteAddress -> requestUrl
+        complete(StatusCodes.OK, HttpEntity(ContentTypes.`text/html(UTF-8)`, loginPage(remoteAddress, requestUrl, loginPath)))
       }
     }
   }
+
+  //--- logout
 
   /**
-    * logout request that can be interactively authorized by user credentials if the client does not have a valid session token
-    *
-    * can be used to enforce logout from different sessions/browsers without having to manually delete cookies
-    * in the browser
+    * logout request - this indiscriminately terminates the session that is associated with the request cookie (if any)
+    * and responds with a header that clears the cached/stored client data
     */
-  override def logoutRoute: Route = {
+  def logoutRoute: Route = {
     path(logoutPathMatcher) {
       get {
         optionalCookie(sessionCookieName) {
           case Some(namedCookie) => // there is a cookie in the request header
             // make sure we send a response header that deletes/invalidates the client side session token
-            setCookie(createSessionCookie("deleted", cookieDomain, cookiePath, Some(DT.MinValue))) {
-              userAuth.removeEntry(namedCookie.value) match {
-                case Some(user) => // it is a valid, un-expired session cookie - complete with a response header deleting it in the browser
-                  info(s"logout for '${user.uid}' accepted")
-                  complete("user logged out")
-                case None => complete(StatusCodes.OK, "no active session") // there is nothing to logout from
+            deleteCookie(namedCookie.name) {
+              //setCookie( createSessionCookie("deleted", cookieDomain, cookiePath, Some(DT.MinValue))) {
+              sessions.removeEntry(namedCookie.value) match {
+                case Some(uid) => // it is a valid, un-expired session cookie - complete with a response header deleting it in the browser
+                  info(s"logout for '$uid' accepted")
+                  respondWithHeader( RawHeader("Clear-Site-Data", "*")) {
+                    // NOTE - unless the route was configured with 'no-client-cache = true' this does NOT clear the bfcache
+                    complete(StatusCodes.OK, "user logged out")
+                  }
+                case None =>
+                  respondWithHeader( RawHeader("Clear-Site-Data", "*")) {
+                    complete(StatusCodes.BadRequest, "no active session") // wrong cookie - there is nothing to logout from
+                  }
               }
             }
 
-          case None => // no cookie in the request header, go interacive to find out who is supposed to be logged out
-            extractMatchedPath { requestUri =>
-              completeLogout(Some(requestUri.toString), Some("authorize logout request"))
-            }
-        }
-
-      } ~ post { // interactive logout form response
-        entity(as[FormData]) { e =>
-          val validRequestResponse = for (
-            uid <- e.fields.get("u");
-            pw <- e.fields.get("nid")
-          ) yield {
-            userAuth.authenticate(uid,pw.toCharArray) match {
-              case Some(user) =>
-                userAuth.sessionTokens.removeUser(user)
-                info(s"user $uid logged out")
-                complete(StatusCodes.OK, "user logged out")
-              case None =>
-                completeLogout(None,Some("invalid user credentials"))
-            }
-          }
-
-          validRequestResponse getOrElse {
-            complete(StatusCodes.BadRequest, "invalid request")
-          }
+          case None => // no cookie in the request header, nothing to log out from
+            complete("user not logged in")
         }
       }
     }
   }
 
-  def completeAuthorized(requiredRole: String, statusCode: StatusCode = StatusCodes.OK)(createContent: => HttpEntity.Strict): Route = {
-    extractMatchedPath { requestUri =>
-      cookie(sessionCookieName) { namedCookie =>
-        userAuth.nextSessionToken(namedCookie.value, requiredRole) match {
-          case NextToken(newToken) =>
-            setCookie(createSessionCookie(newToken)) {
-              complete( statusCode, createContent)
-            }
-          case NextTokenFailure(rejection) => completeLogin(Some(requestUri.toString), Some(rejection))
-        }
-      } ~ completeLogin(Some(requestUri.toString))
-    }
-  }
-
-  def completeLogin(requestUri: Option[String], alert: Option[String] = None): Route = {
-    val page = loginPage(loginPath, requestUri, alert).render
-    complete(StatusCodes.Unauthorized, HttpEntity(ContentTypes.`text/html(UTF-8)`, page))
-  }
-
-  def completeLogout(requestUri: Option[String], alert: Option[String] = None): Route = {
-    val page = logoutPage(logoutPath, requestUri, alert).render
-    complete(StatusCodes.Unauthorized, HttpEntity(ContentTypes.`text/html(UTF-8)`, page))
-  }
-
-
-  //--- HTML artifacts
-
-  def authPage (authOp: String, pageText: String, postUri: String, requestUri: Option[String], alert: Option[String]) = html(
-    htmlHead(
-      link(rel:="stylesheet", tpe:="text/css", href:=s"/$requestPrefix/auth-style.css")
-    ),
-    body(onload:="document.getElementById('id01').style.display='block'")(
-      p(pageText),
-      div(id:="id01",cls:="modal")(
-        form(action:=s"/$postUri", cls:="modal-content animate")(
-          span(cls:="close", title:="Close Modal",
-            onclick:="document.getElementById('id01').style.display='none'")("×"),
-          div(cls:="imgcontainer")(
-            img(src:=s"/$requestPrefix/auth-avatar.svg", alt:="Avatar", cls:="avatar")
-          ),
-          div(cls:="container")(
-            alert match {
-              case Some(msg) => p(span(cls:="alert")(msg))
-              case None => ""
-            },
-            table(cls:="noBorder")(
-              tr(
-                td(cls:="labelCell")(b("User")),
-                td(style:="width: 99%;")(
-                  input(tpe:="text",nameAttr:="u",placeholder:="Enter Username",required:=true,autofocus:=true)
-                )
-              ),
-              tr(
-                td(cls:="labelCell")(b("Password")),
-                td(
-                  input(tpe:="password",nameAttr:="nid",placeholder:="Enter Password",
-                    required:=true,autocomplete:="on")
-                )
-              )
-            ),
-            input(tpe:="hidden", nameAttr:="r", value:=requestUri.getOrElse("")),
-            button(tpe:="submit",formmethod:="post")(authOp),
-            span(cls:="psw")(
-              "Forgot ",
-              a(href:="#")("password?")
-            )
-          )
-        )
-      )
-    )
-  )
-
-  def loginPage (postUri: String, requestUri: Option[String], alert: Option[String]) =
-    authPage("Login", "you need to be logged in to access this page", postUri, requestUri, alert)
-
-
-  def logoutPage (postUri: String, requestUri: Option[String], alert: Option[String]) =
-    authPage("Logout", "you need to authenticate to log out", postUri, requestUri, alert)
-
   def logoutLink = a(href:=logoutPath.toString)("logout")
 
-  //--- resources
 
-  def loginCSS: String = {
-    ClassUtils.getResourceAsString(getClass,"login.css") match {
-      case Some(cssText) => cssText
-      case None => ""
+  //--- login resources
+
+  // login content for document requests
+  def loginPage (remoteAddress: InetSocketAddress, requestUrl: String, postUrl: String): String = authMethod.loginPage(remoteAddress,requestUrl,postUrl)
+
+  // content for "auth.html"
+  def authPage(remoteAddress: InetSocketAddress, requestUrl: String, postUrl: String): String = authMethod.authPage(remoteAddress,requestUrl,postUrl)
+
+  def authPage (remoteAddress: InetSocketAddress): String = authMethod.authPage(remoteAddress)
+
+  // content for "auth.css" (linked from "auth.html")
+  def authCSS(): String = authMethod.authCSS()
+
+  // content for "auth.svg" (used by "auth.html")
+  def authSVG(): Array[Byte] = authMethod.authSVG()
+
+  //--- routes and content completions
+
+  override def completeRoute: Route = {
+    loginRoute ~ authResourceRoute ~ logoutRoute ~ route
+  }
+
+  def authResourceRoute: Route = {
+    path(authPathMatcher) {
+      headerValueByType(classOf[IncomingConnectionHeader]) { conn =>
+        val remoteAddress = conn.remoteAddress
+        pendingRequestUrls.get(remoteAddress) match {
+          case Some(requestUrl) => complete(StatusCodes.OK, HttpEntity(ContentTypes.`text/html(UTF-8)`, authPage(remoteAddress, requestUrl, loginPath)))
+          case None =>complete(StatusCodes.OK, HttpEntity(ContentTypes.`text/html(UTF-8)`, authPage(remoteAddress)))
+        }
+      }
+    } ~ path(authCssPathMatcher) {
+      complete(StatusCodes.OK, HttpEntity(ContentType(MediaTypes.`text/css`, HttpCharsets.`UTF-8`), authCSS()))
+    } ~ pathSuffix(authSvgPathMatcher) {
+      complete( StatusCodes.OK, HttpEntity(MediaTypes.`image/svg+xml`, authSVG()))
     }
   }
 
-  def avatarImage: Array[Byte] = {
-    ClassUtils.getResourceAsBytes(getClass,"userEntries.svg") match {
-      case Some(imgData) => imgData
-      case None => Array[Byte](0)
+  def getNextSessionToken (requestUri: Uri.Path, sessionToken: String): AuthTokenResult = {
+    if (isTokenIncrement(requestUri)) {
+      sessions.replaceExistingEntry(sessionToken)
+    } else {
+      sessions.matchesExistingEntry(sessionToken)
+    }
+  }
+
+  /**
+    * the main method to be used by implementors
+    *
+    * TODO - do we need to factor out routes that only support non-interactive user auth ?
+    */
+  def completeAuthorized(statusCode: StatusCode = StatusCodes.OK)(createContent: => HttpEntity.Strict): Route = {
+    extractMatchedPath { requestUrl =>
+      cookie(sessionCookieName) { namedCookie =>
+        getNextSessionToken(requestUrl, namedCookie.value) match {
+          case NextToken(nextToken) =>
+            setCookie(createSessionCookie(nextToken)) {
+              completeWithCacheHeaders( statusCode, createContent)
+            }
+          case TokenMatched =>
+            completeWithCacheHeaders( statusCode, createContent) // no need to set new cookie
+
+          case f:TokenFailure => completeWithLogin(requestUrl.toString())  // invalid session cookie, force new authentication
+        }
+      } ~ completeWithLogin(requestUrl.toString()) // no session cookie yet, start authentication
+    }
+  }
+
+  /**
+    * use this in lieu of complete() if we have to make sure the response is not cached on the client side
+    * (http header takes precedence over meta tags - which are not even handled by some user clients)
+    */
+  def completeWithCacheHeaders[T](status: StatusCode, v: => T)(implicit m: ToEntityMarshaller[T]): Route = {
+    if (noClientCache) {
+      respondWithHeaders( noCacheHeaders) {
+        complete(status,v)
+      }
+    } else {
+      complete(status,v)
     }
   }
 }
-

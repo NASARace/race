@@ -96,7 +96,7 @@ async fn main() {
         println!("{} {} -> {}", info.method(), info.path(), info.status())
     });
 
-    println!("serving target/doc on http://localhost:{}", OPT.port);
+    println!("serving {} on http://localhost:{}", OPT.root, OPT.port);
     println!("(terminate with ctrl-C)");
 
     if OPT.verbose {

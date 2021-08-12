@@ -158,7 +158,7 @@ class UpstreamConnectorActor (val config: Config) extends PeriodicRaceActor with
                                 with ColumnDataChangeParser with NodeDatesParser with NodeReachabilityChangeParser with PongParser {
       override def rowList = node.rowList
 
-      def parse (msg: String): Option[Any] = parseMessageSet[Option[Any]](msg, None) {
+      def parse (msg: String): Option[Any] = parseMessage(msg) {
         case ColumnDataChange.COLUMN_DATA_CHANGE => parseColumnDataChange()
         case NodeDates.NODE_DATES => parseNodeDates()
         case NodeReachabilityChange.NODE_REACHABILITY_CHANGE => parseNodeReachabilityChange()
@@ -340,7 +340,7 @@ class UpstreamConnectorActor (val config: Config) extends PeriodicRaceActor with
     * comes back online in a reasonable amount of time
     */
   class ReconnectingState (val upstreamUri: String, val upstreamId: String, var node: Node) extends InternalConnectorState {
-    var remainingAttempts = 5
+    var remainingAttempts = config.getIntOrElse("max-reconnect", 5)
 
     info(s"entering reconnect state for upstream: $upstreamId $upstreamUri")
 
@@ -354,6 +354,7 @@ class UpstreamConnectorActor (val config: Config) extends PeriodicRaceActor with
       } else {
         warning(s"giving up to reconnect to $upstreamId, falling back to init mode")
         switchToState(new InitialState)
+        state.handleNode(node) // pass on our current node
       }
     }
 
@@ -396,8 +397,8 @@ class UpstreamConnectorActor (val config: Config) extends PeriodicRaceActor with
   override def createWriter: WsMessageWriter = new ShareWriter
   override def createReader: WsMessageReader = new ShareReader
 
-  override def defaultTickInterval: FiniteDuration = 30.seconds
-  override def defaultTickDelay: FiniteDuration = 30.seconds
+  override def defaultTickInterval: FiniteDuration = 10.seconds
+  override def defaultTickDelay: FiniteDuration = 10.seconds
 
   //--- standard RaceActor callbacks
 

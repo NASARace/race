@@ -1,5 +1,6 @@
 package gov.nasa.race.util
 
+import scala.collection.mutable
 import scala.reflect.ClassTag
 
 object ArrayUtils {
@@ -113,5 +114,23 @@ object ArrayUtils {
       i += 1
     }
     i
+  }
+
+  def fill[T](a: Array[T], v: T): Unit = {
+    val len = a.length
+    var i = 0
+    while (i < len){
+      a(i) = v
+      i += 1
+    }
+  }
+
+  def fill[T] (buf: mutable.IndexedBuffer[T], v: T): Unit = {
+    val len = buf.length
+    var i = 0
+    while (i < len){
+      buf(i) = v
+      i += 1
+    }
   }
 }

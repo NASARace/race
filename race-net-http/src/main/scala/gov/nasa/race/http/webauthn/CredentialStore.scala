@@ -45,8 +45,6 @@ import java.io.File
   * ?? according to the WebAuhtn standard credential IDs are supposed to be probabilistically unique
   * (see https://www.w3.org/TR/webauthn/#credential-id)
   *    - why do we need to store sets of uid->RegisteredCredential pairs ?
-  *
-  * TODO - still needs serialization / load/store
   */
 class CredentialStore extends CredentialRepository {
 

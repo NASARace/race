@@ -116,7 +116,7 @@ object Dependencies {
   val argon2 = "de.mkammerer" % "argon2-jvm" % "2.10.1"
 
   //--- webauthn (FIDO2) server library (note this creates a transitive BouncyCastle dependency)
-  val webauthn = "com.yubico" % "webauthn-server-core" % "1.8.0" // "1.9.1-RC2"
+  val webauthn = "com.yubico" % "webauthn-server-core" % "1.10.1" // "1.8.0"
 
   //--- jimfs - simple in-memory file system to enforce platform independent paths
   val jimfs = "com.google.jimfs" % "jimfs" % "1.2"
@@ -204,7 +204,7 @@ object Dependencies {
 
 
   //--- publishable WorldWindJava version
-  val worldwindPcm = "com.github.pcmehlitz" % "worldwind-pcm" % "2.1.0.202"
+  val worldwindPcm = "com.github.pcmehlitz" % "worldwind-pcm" % "2.1.0.206"
 
 
   //--- this is used from build.sbt to add dependency resolvers

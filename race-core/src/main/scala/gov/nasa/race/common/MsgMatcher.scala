@@ -56,7 +56,7 @@ case class MsgMatcher(name: String, patterns: Seq[Regex]) {
   def matchCount (bs: Array[Byte], off: Int, len: Int): Int = {
     cs.set(bs,off,len)
     patterns.foldLeft(0)((acc,p) => {
-      cs.reset
+      cs.reset()
       acc + p.findAllIn(cs).size
     })
   }

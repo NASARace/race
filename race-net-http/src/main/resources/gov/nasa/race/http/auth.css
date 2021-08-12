@@ -1,0 +1,101 @@
+/* styles for auth login content */
+
+.authBackground {
+  display: block;
+  /*position: fixed;*/
+  position: sticky;
+  z-index: 4;
+  left: 0;
+  top: 0;
+  overflow: auto;
+  padding-top: 60px;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0,0,0,0.4);
+}
+
+.authForeground {
+  background-color: #fefefe;
+  margin: 5% auto 15% auto;
+  border: 1px solid #888;
+  width: 30%;
+  position: relative;
+  z-index: 4;
+  -webkit-animation: animatezoom 0.6s;
+  animation: animatezoom 0.6s
+}
+
+@-webkit-keyframes animatezoom {
+  from {-webkit-transform: scale(0)}
+  to {-webkit-transform: scale(1)}
+}
+
+@keyframes animatezoom {
+  from {transform: scale(0)}
+  to {transform: scale(1)}
+}
+
+.authImgContainer {
+  text-align: center;
+  margin: 10px 40px 5px 40px;
+  position: relative;
+}
+
+.authImg {
+  width: 64px;
+}
+
+.authFormContainer {
+  padding: 4px;
+}
+
+.authAlert {
+  color: red;
+}
+
+.authLabel {
+  font-family: sans-serif;
+  font-size: 80%;
+  text-align: right;
+  padding-right: 10px;
+  nowrap;
+}
+
+.authTextInput, .authPwInput {
+  width: 100%;
+  padding: 4px 4px;
+  margin: 4px 0;
+  display: inline-block;
+  border: 1px solid #ccc;
+  box-sizing: border-box;
+  font-size: 80%;
+}
+
+.authButton {
+  background-color: blue;
+  color: white;
+  padding: 14px 20px;
+  margin: 4px 0;
+  border: none;
+  cursor: pointer;
+  width: 100%;
+  font-size: 80%;
+}
+
+.authButton:hover {
+  background-color: DarkSlateBlue;
+}
+
+.authCancel {
+  position: absolute;
+  right: 10px;
+  top: 0;
+  color: #000;
+  font-size: 30px;
+  font-weight: bold;
+}
+
+.authCancel:hover {
+  color: red;
+  cursor: pointer;
+}

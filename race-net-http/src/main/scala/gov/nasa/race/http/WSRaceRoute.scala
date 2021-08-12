@@ -23,17 +23,20 @@ import akka.actor.Actor.Receive
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.model.ws.{BinaryMessage, Message, TextMessage}
 import akka.http.scaladsl.server.Directives._
-import akka.http.scaladsl.server.Route
+import akka.http.scaladsl.server.{PathMatchers, Route}
 import akka.stream.Materializer
 import akka.stream.scaladsl.{Flow, Sink, SourceQueueWithComplete}
 import gov.nasa.race.common.{BufferedStringJsonPullParser, JsonWriter}
 import gov.nasa.race.config.ConfigUtils._
+import gov.nasa.race.config.NoConfig
 import gov.nasa.race.core.{Ping, Pong, PongParser, RaceDataClient}
+import gov.nasa.race.http.webauthn.WebAuthnMethod
 import gov.nasa.race.ifSome
 import gov.nasa.race.uom.Time.Seconds
 import gov.nasa.race.uom.{DateTime, Time}
 
 import scala.collection.immutable.Iterable
+import scala.collection.mutable
 import scala.collection.mutable.{Map => MutMap}
 import scala.concurrent.Future
 import scala.concurrent.duration._
@@ -149,7 +152,13 @@ trait PushWSRaceRoute extends WSRaceRoute with SourceQueueOwner with RaceDataCli
         completionFuture.onComplete { handleConnectionLoss(remoteAddress,_) } // TODO does this handle passive network failures?
 
         val inbound: Sink[Message, Any] = Sink.foreach{ inMsg =>
-          handleIncoming(sockConn, inMsg).foreach(outMsg => pushTo(remoteAddress, outboundMat,outMsg))
+          try {
+            handleIncoming(sockConn, inMsg).foreach(outMsg => {
+              pushTo(remoteAddress, outboundMat, outMsg)
+            })
+          } catch {
+            case t: Throwable => warning(s"error processing incoming websocket message: $t")
+          }
         }
 
         val flow = Flow.fromSinkAndSourceCoupled(inbound, outbound)
@@ -265,10 +274,10 @@ trait ProtocolWSRaceRoute extends WSRaceRoute {
 
 
 /**
-  * a route that supports web socket promotion from within a user-authenticated context
+  * a route that supports web socket promotion from within a user-authorized context
   *
   * use this authorization if the websocket is embedded in some other protected content, i.e. we have a cookie-based
-  * per-request authentication.
+  * per-request authentication and the websocket request comes from an already authenticated document
   *
   * note we only check but do not update the session token (there is no HttpResponse we could use to transmit
   * a new token value), and we provide an additional config option to specify a shorter expiration. This is based
@@ -279,16 +288,18 @@ trait ProtocolWSRaceRoute extends WSRaceRoute {
   * of responses that open web sockets would probably fail since those are usually long-running content used to
   * display pushed data
   */
-trait AuthorizedWSRoute extends WSRaceRoute with AuthorizedRaceRoute {
+trait AuthWSRoute extends WSRaceRoute with AuthRaceRoute {
 
-  val promoWithinMillis: Long = config.getFiniteDurationOrElse("promotion-within", 10.seconds).toMillis
-
-  protected def promoteAuthorizedToWebSocket (requiredRole: String): Route = {
+  protected def promoteAuthorizedToWebSocket (): Route = {
     extractMatchedPath { requestUri =>
       cookie(sessionCookieName) { namedCookie =>
-        userAuth.matchesSessionToken(namedCookie.value, requiredRole) match {
-          case TokenMatched =>
-            promoteToWebSocket
+        getNextSessionToken(requestUri, namedCookie.value) match {
+          case NextToken(nextToken) =>
+            setCookie(createSessionCookie(nextToken)) {  // TODO - check if we can actually set cookies on ws promotion
+              promoteToWebSocket
+            }
+
+          case TokenMatched => promoteToWebSocket
 
           case f:TokenFailure =>
             complete(StatusCodes.Forbidden, s"invalid session token: ${f.reason}")
@@ -300,19 +311,20 @@ trait AuthorizedWSRoute extends WSRaceRoute with AuthorizedRaceRoute {
 
 /**
   * a route that supports authorized web socket promotion outside of other authorized content
+  * This is typically the case if the client is automated
   *
   * use this authorization if the client directly requests the web socket and nothing else, i.e. we have only one
   * point of authentication, and the client uses akka-http BasicHttpCredentials (in extraHeaders)
   */
 trait BasicAuthorizedWSRoute extends WSRaceRoute {
 
-  val pwStore: PasswordStore = createPwStore
+  val pwStore: PwUserStore = createPwStore
 
-  def createPwStore: PasswordStore = {
+  def createPwStore: PwUserStore = {
     val fname = config.getVaultableString("user-auth")
     val file = new File(fname)
     if (file.isFile) {
-      new PasswordStore(file)
+      new PwUserStore(file)
     } else throw new RuntimeException("user-auth not found")
   }
 
@@ -320,7 +332,7 @@ trait BasicAuthorizedWSRoute extends WSRaceRoute {
     extractCredentials { cred =>
       cred match {
         case Some(credentials) =>
-          pwStore.verifyBasic(credentials.token) match {
+          pwStore.getUserForCredentials( credentials) match {
             case Some(user) =>
               info(s"promoting to web socket for authorized user ${user.uid}")
               promoteToWebSocket
@@ -331,5 +343,48 @@ trait BasicAuthorizedWSRoute extends WSRaceRoute {
           complete(StatusCodes.Forbidden, "no user credentials")
       }
     }
+  }
+}
+
+/**
+  * a route that can get promoted to a websocket connection which supports privileged operations, i.e. does
+  * respond to certain incoming client messages by starting a authMethod based protocol
+  *
+  * note it is the responsibility of the concrete type to keep track of sessions
+  *
+  * TODO - note this can't be an AuthRaceRoute since we override a number of its members
+  */
+trait AuthorizingWSRaceRoute extends WSRaceRoute {
+
+  val authPathMatcher = PathMatchers.separateOnSlashes(s"$requestPrefix/auth.html")
+  val authSvgPathMatcher = PathMatchers.separateOnSlashes("auth.svg")  // it's a suffix matcher
+  val authCssPathMatcher = PathMatchers.separateOnSlashes("auth.css")
+
+  val authMethod: AuthMethod = createAuthMethod()
+  authMethod.setLogging(info,warning,error)
+
+  def createAuthMethod(): AuthMethod = getConfigurableOrElse[AuthMethod]("auth")(new WebAuthnMethod(NoConfig))
+
+  def authResourceRoute: Route = {
+    path(authPathMatcher) {
+      headerValueByType(classOf[IncomingConnectionHeader]) { conn =>
+        val remoteAddress = conn.remoteAddress
+        complete(StatusCodes.OK, HttpEntity(ContentTypes.`text/html(UTF-8)`, authPage(remoteAddress)))
+      }
+    } ~ pathSuffix(authCssPathMatcher) {
+      complete(StatusCodes.OK, HttpEntity(ContentType(MediaTypes.`text/css`, HttpCharsets.`UTF-8`), authCSS()))
+    } ~ pathSuffix(authSvgPathMatcher) {
+      complete( StatusCodes.OK, HttpEntity(MediaTypes.`image/svg+xml`, authSVG()))
+    }
+  }
+
+  def authPage (remoteAddress: InetSocketAddress): String = authMethod.authPage(remoteAddress)
+
+  def authCSS(): String = authMethod.authCSS()
+
+  def authSVG(): Array[Byte] = authMethod.authSVG()
+
+  override def completeRoute: Route = {
+    authResourceRoute ~ route
   }
 }

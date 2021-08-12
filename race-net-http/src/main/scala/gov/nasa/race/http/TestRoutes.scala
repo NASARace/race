@@ -53,28 +53,11 @@ class TestRouteInfo (val parent: ParentActor, val config: Config) extends RaceRo
   }
 }
 
-/**
-  * test route that requires automated user authentication by means of login POST requests
-  */
-class TestPreAuthorized(val parent: ParentActor, val config: Config) extends PreAuthorizedRaceRoute {
-  var count = 0
-
-  override def route = {
-    get {
-      path(requestPrefixMatcher) {
-        completeAuthorized(User.UserRole){
-          count += 1
-          HttpEntity(ContentTypes.`application/json`, s"""{ "count": $count }""")
-        }
-      }
-    }
-  }
-}
 
 /**
   * test route that serves a page which requires manual user authentication
   */
-class TestAuthorized (val parent: ParentActor, val config: Config) extends AuthorizedRaceRoute {
+class TestAuthorized (val parent: ParentActor, val config: Config) extends AuthRaceRoute {
   var count = 0
 
   def page = html(
@@ -90,7 +73,7 @@ class TestAuthorized (val parent: ParentActor, val config: Config) extends Autho
     get {
       path(requestPrefixMatcher) {
         count += 1
-        completeAuthorized(User.UserRole){
+        completeAuthorized(){
           HttpEntity(ContentTypes.`text/html(UTF-8)`, page.render)
         }
       }
@@ -164,7 +147,7 @@ class TestPusher (val parent: ParentActor, val config: Config) extends PushWSRac
   * test route that serves a user authorized page which uses a web socket to receive data pushed by the server
   * to all connections
   */
-class TestAuthorizedPusher (val parent: ParentActor, val config: Config) extends PushWSRaceRoute with AuthorizedWSRoute {
+class TestAuthorizedPusher (val parent: ParentActor, val config: Config) extends PushWSRaceRoute with AuthWSRoute {
 
   val page = html(
     htmlHead(
@@ -204,12 +187,12 @@ class TestAuthorizedPusher (val parent: ParentActor, val config: Config) extends
   override def route: Route = {
     get {
       pathPrefix(requestPrefixMatcher) {
-        pathEnd {
-          completeAuthorized(User.UserRole) {
+        pathEnd {  // requesting page that opens websocket
+          completeAuthorized() {
             HttpEntity(ContentTypes.`text/html(UTF-8)`, page.render)
           }
-        } ~ path("ws") {
-          promoteAuthorizedToWebSocket(User.UserRole)
+        } ~ path("ws") { // directly requesting websocket
+          promoteAuthorizedToWebSocket()
         }
       }
     }
