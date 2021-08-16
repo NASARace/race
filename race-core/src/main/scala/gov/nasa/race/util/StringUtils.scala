@@ -46,6 +46,24 @@ object StringUtils {
     s.substring(0,idx)
   }
 
+  def indexOfNth (s: String, c: Char, n: Int): Int = {
+    var remaining = n
+    var i = 0
+    while (remaining > 0) {
+      i = s.indexOf(c, i)
+      if (i < 0) return -1
+      remaining -= 1
+      if (remaining == 0) return i
+      i += 1
+    }
+    -1
+  }
+
+  def fromLast (s: String, c: Char): String = {
+    val i = s.lastIndexOf(c)
+    if (i < 0) s else s.substring(i+1)
+  }
+
   def trimmedSplit(s: String): Seq[String] = ArraySeq.unsafeWrapArray(s.trim.split("[ ,;]+"))
 
   final val hexChar = Array('0','1','2','3','4','5','6','7','8','9','a','b','c','d','e','f')

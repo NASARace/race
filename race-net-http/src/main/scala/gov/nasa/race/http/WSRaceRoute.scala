@@ -18,7 +18,7 @@ package gov.nasa.race.http
 
 import java.io.File
 import java.net.InetSocketAddress
-import akka.Done
+import akka.{Done, NotUsed}
 import akka.actor.Actor.Receive
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.model.ws.{BinaryMessage, Message, TextMessage}
@@ -49,14 +49,21 @@ trait WSRaceRoute extends RaceRouteInfo {
   implicit val materializer: Materializer = HttpServer.materializer
   implicit val ec = HttpServer.ec // scala.concurrent.ExecutionContext.global
 
-  protected def promoteToWebSocket: Route
+  protected def promoteToWebSocket(): Route
 }
+
+trait WSContext {
+  def sockConn: SocketConnection
+}
+
+case class BasicWSContext (sockConn: SocketConnection) extends WSContext
+case class AuthWSContext (sockConn: SocketConnection, sessionToken: String) extends WSContext
 
 /**
   * a RaceRoute that completes with a WebSocket to which messages are pushed from an
   * associated actor that received data from RACE channels and turns them into web socket Messages
   */
-trait PushWSRaceRoute extends WSRaceRoute with SourceQueueOwner with RaceDataClient {
+trait PushWSRaceRoute[T<:WSContext] extends WSRaceRoute with SourceQueueOwner with RaceDataClient {
 
   protected var connections: Map[InetSocketAddress,SourceQueueWithComplete[Message]] = Map.empty
 
@@ -112,7 +119,7 @@ trait PushWSRaceRoute extends WSRaceRoute with SourceQueueOwner with RaceDataCli
     * override in subclasses if incoming messages need to be processed - default is doing nothing
     * note this executes in a synchronized context
     */
-  protected def handleIncoming (conn: SocketConnection, m: Message): Iterable[Message] = {
+  protected def handleIncoming (ctx:T, m: Message): Iterable[Message] = {
     info(s"ignoring incoming message $m")
     discardMessage(m)
     Nil
@@ -122,7 +129,7 @@ trait PushWSRaceRoute extends WSRaceRoute with SourceQueueOwner with RaceDataCli
     * override in concrete routes to push initial data etc.
     * Use pushTo
     */
-  protected def initializeConnection (conn: SocketConnection, queue: SourceQueueWithComplete[Message]): Unit = {
+  protected def initializeConnection (ctx: T, queue: SourceQueueWithComplete[Message]): Unit = {
     // nothing here
   }
 
@@ -134,48 +141,53 @@ trait PushWSRaceRoute extends WSRaceRoute with SourceQueueOwner with RaceDataCli
     info(s"connection closed: $remoteAddress, cause: $cause")
   }
 
-  /**
-    * complete routes that create web-sockets with this call
-    * NOTE - this might execute overlapping with push(), hence we synchronize
-    */
-  protected def promoteToWebSocket: Route = {
+  protected def createFlow(ctx: T): Flow[Message,Message,NotUsed] = {
+    val sockConn = ctx.sockConn
+    val remoteAddress = sockConn.remoteAddress // this is a stable (websocket) address
+
+    val (outboundMat,outbound) = createPreMaterializedSourceQueue
+    val newConn = (remoteAddress, outboundMat)
+    initializeConnection(ctx,outboundMat)
+    connections = connections + newConn
+
+    val completionFuture: Future[Done] = outboundMat.watchCompletion()
+    completionFuture.onComplete { handleConnectionLoss(remoteAddress,_) } // TODO does this handle passive network failures?
+
+    val wsContext = BasicWSContext(sockConn)
+
+    val inbound: Sink[Message, Any] = Sink.foreach{ inMsg =>
+      try {
+        handleIncoming( ctx, inMsg).foreach(outMsg => {
+          pushTo(remoteAddress, outboundMat, outMsg)
+        })
+      } catch {
+        case t: Throwable => warning(s"error processing incoming websocket message: $t")
+      }
+    }
+
+    Flow.fromSinkAndSourceCoupled(inbound, outbound)
+  }
+}
+
+trait BasicPushWSRaceRoute extends PushWSRaceRoute[BasicWSContext] {
+
+  protected def promoteToWebSocket(): Route = {
     extractMatchedPath { requestUri =>
       headerValueByType(classOf[IncomingConnectionHeader]) { sockConn =>
-        val remoteAddress = sockConn.remoteAddress
+        val flow = createFlow(BasicWSContext(sockConn))
 
-        val (outboundMat,outbound) = createPreMaterializedSourceQueue
-        val newConn = (remoteAddress, outboundMat)
-        initializeConnection(sockConn,outboundMat)
-        connections = connections + newConn
-
-        val completionFuture: Future[Done] = outboundMat.watchCompletion()
-        completionFuture.onComplete { handleConnectionLoss(remoteAddress,_) } // TODO does this handle passive network failures?
-
-        val inbound: Sink[Message, Any] = Sink.foreach{ inMsg =>
-          try {
-            handleIncoming(sockConn, inMsg).foreach(outMsg => {
-              pushTo(remoteAddress, outboundMat, outMsg)
-            })
-          } catch {
-            case t: Throwable => warning(s"error processing incoming websocket message: $t")
-          }
-        }
-
-        val flow = Flow.fromSinkAndSourceCoupled(inbound, outbound)
-
-        info(s"promoting $requestUri to websocket connection for remote: $remoteAddress")
+        info(s"promoting $requestUri to websocket connection for remote: ${sockConn.remoteAddress}")
         handleWebSocketMessages(flow)
       }
     }
   }
 }
 
-
 /**
   * a WSRaceRoute that periodically pings its connections and closes the ones that don't respond properly
   * note this also can be used to keep the WS alive if we own the client
   */
-trait MonitoredPushWSRaceRoute extends PushWSRaceRoute {
+trait MonitoredPushWSRaceRoute[T<:WSContext] extends PushWSRaceRoute[T] {
 
   protected var nPings = 0
   protected val pingWriter = new JsonWriter(JsonWriter.RawElements, 512)
@@ -232,10 +244,13 @@ trait MonitoredPushWSRaceRoute extends PushWSRaceRoute {
 }
 
 /**
-  * a websocket RaceRouteInfo that uses a request/response websocket message protocol
+  * a websocket RaceRouteInfo that uses a request/response websocket message protocol which does only rely on
+  * client messages and does not need to access/push from the RACE bus
   *
   * Note that each response can consist of a number of messages that are sent back, but each interaction
   * starts with a client request
+  *
+  * TODO - do we need an auth version of this?
   */
 trait ProtocolWSRaceRoute extends WSRaceRoute {
 
@@ -260,7 +275,7 @@ trait ProtocolWSRaceRoute extends WSRaceRoute {
   }
   // .keepAlive(1.second, () => pingMsg)  // TDDO should go into route configuration
 
-  protected def promoteToWebSocket: Route = {
+  protected def promoteToWebSocket(): Route = {
     extractMatchedPath { requestUri =>
       headerValueByType(classOf[IncomingConnectionHeader]) { remoteAddrHdr =>
         val remoteAddress = remoteAddrHdr.remoteAddress
@@ -288,23 +303,30 @@ trait ProtocolWSRaceRoute extends WSRaceRoute {
   * of responses that open web sockets would probably fail since those are usually long-running content used to
   * display pushed data
   */
-trait AuthWSRoute extends WSRaceRoute with AuthRaceRoute {
+trait AuthorizedPushWSRaceRoute extends PushWSRaceRoute[AuthWSContext] with AuthRaceRoute {
 
-  protected def promoteAuthorizedToWebSocket (): Route = {
+  protected def promoteToWebSocket (): Route = {
+    def completeWithContext(requestUri: Uri.Path, ctx: AuthWSContext): Route = {
+      val flow = createFlow(ctx)
+      info(s"promoting $requestUri to websocket connection for remote: ${ctx.sockConn.remoteAddress}")
+
+      val cookie = createSessionCookie(ctx.sessionToken)
+      setCookie(cookie) {
+        handleWebSocketMessages(flow)
+      }
+    }
+
     extractMatchedPath { requestUri =>
-      cookie(sessionCookieName) { namedCookie =>
-        getNextSessionToken(requestUri, namedCookie.value) match {
-          case NextToken(nextToken) =>
-            setCookie(createSessionCookie(nextToken)) {  // TODO - check if we can actually set cookies on ws promotion
-              promoteToWebSocket
-            }
-
-          case TokenMatched => promoteToWebSocket
-
-          case f:TokenFailure =>
-            complete(StatusCodes.Forbidden, s"invalid session token: ${f.reason}")
-        }
-      } ~ complete(StatusCodes.Forbidden, "no user authorization found")
+      headerValueByType(classOf[IncomingConnectionHeader]) { sockConn =>
+        cookie(sessionCookieName) { namedCookie =>
+          val curToken = namedCookie.value
+          getNextSessionToken(requestUri, curToken) match {
+            case NextToken(nextToken) => completeWithContext( requestUri, AuthWSContext(sockConn,nextToken))
+            case TokenMatched => completeWithContext( requestUri, AuthWSContext(sockConn,curToken))
+            case f: TokenFailure => complete(StatusCodes.Forbidden, s"invalid session token: ${f.reason}")
+          }
+        } ~ complete(StatusCodes.Forbidden, "no user authorization")
+      }
     }
   }
 }
@@ -335,7 +357,7 @@ trait BasicAuthorizedWSRoute extends WSRaceRoute {
           pwStore.getUserForCredentials( credentials) match {
             case Some(user) =>
               info(s"promoting to web socket for authorized user ${user.uid}")
-              promoteToWebSocket
+              promoteToWebSocket()
             case None =>
               complete(StatusCodes.Forbidden, "unknown user credentials")
           }
@@ -352,7 +374,7 @@ trait BasicAuthorizedWSRoute extends WSRaceRoute {
   *
   * note it is the responsibility of the concrete type to keep track of sessions
   *
-  * TODO - note this can't be an AuthRaceRoute since we override a number of its members
+  * TODO - this currently can't be an AuthRaceRoute since it masks a number of its members
   */
 trait AuthorizingWSRaceRoute extends WSRaceRoute {
 

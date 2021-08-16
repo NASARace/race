@@ -96,6 +96,10 @@ main.sendAndExitEditMode = function sendAndExitEditMode (event) {
   }
 }
 
+main.logout = function logout () {
+  share.sendLogout();
+}
+
 window.main = main; // make it global so that we can reference from HTML
 
 

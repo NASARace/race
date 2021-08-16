@@ -30,13 +30,15 @@ import com.typesafe.config.Config
 import gov.nasa.race.common.ConstAsciiSlice.asc
 import gov.nasa.race.common.{BufferedStringJsonPullParser, JsonParseException, JsonSerializable, JsonWriter, SyncJsonWriter}
 import gov.nasa.race.core.{ContinuousTimeRaceActor, ParentActor, Ping, PingParser, Pong, RaceDataClient}
-import gov.nasa.race.http.{PushWSRaceRoute, SiteRoute, SocketConnection}
+import gov.nasa.race.http.{BasicPushWSRaceRoute, BasicWSContext, PushWSRaceRoute, SiteRoute, SocketConnection}
 import gov.nasa.race.{ifSome, withSomeOrElse}
 import gov.nasa.race.uom.DateTime
 
 import scala.collection.immutable.Iterable
 import scala.collection.mutable
 import scala.collection.mutable.{ArrayBuffer, ListBuffer}
+import scala.concurrent.Future
+import scala.concurrent.duration.DurationInt
 import scala.util.Try
 
 object NodeServerRoute {
@@ -51,7 +53,7 @@ object NodeServerRoute {
   * server does not need to know client IP addresses a priori
   */
 class NodeServerRoute(val parent: ParentActor, val config: Config)
-                                        extends PushWSRaceRoute with RaceDataClient with NodeDatesResponder {
+                                        extends BasicPushWSRaceRoute with NodeDatesResponder {
 
   /**
     * the parser for incoming (web socket) messages. Note this is from trusted/checked connections
@@ -170,19 +172,28 @@ class NodeServerRoute(val parent: ParentActor, val config: Config)
     * this is what we receive through the websocket (from connected providers)
     * BEWARE - this is executed in a different (akka-http) thread. Use wsWriter for sync responses
     */
-  override protected def handleIncoming (conn: SocketConnection, m: Message): Iterable[Message] = {
-    val remoteAddr = conn.remoteAddress
+  override protected def handleIncoming (ctx: BasicWSContext, m: Message): Iterable[Message] = {
+    val remoteAddr = ctx.sockConn.remoteAddress
 
     m match {
       case tm: TextMessage.Strict =>
-        parseIncoming(tm) match {
+        val response = parseIncoming(tm) match {
           case Some(ns: NodeDates) => handleNodeDates(remoteAddr, ns)
           case Some(cdc: ColumnDataChange) => handleColumnDataChange(remoteAddr, tm, cdc)
           case Some(ping: Ping) => handlePing(ping, remoteAddr)
           case _ => Nil // ignore all other
         }
+        discardMessage(tm)
+        response
 
-      case _ => super.handleIncoming(conn, m)
+      case tm: TextMessage => // not strict yet, get the content
+        // FIXME - this doesn't discard time outs
+        tm.toStrict(5.seconds).foreach( stm => handleIncoming(ctx, stm))
+        Nil
+
+      case _ =>
+        discardMessage(m)
+        Nil
     }
   }
 
@@ -271,7 +282,7 @@ class NodeServerRoute(val parent: ParentActor, val config: Config)
     get {
       path(wsPathMatcher) {
         if (node.isDefined) {
-          promoteToWebSocket
+          promoteToWebSocket()
         } else {
           complete(StatusCodes.PreconditionFailed, "server not yet initialized")
         }

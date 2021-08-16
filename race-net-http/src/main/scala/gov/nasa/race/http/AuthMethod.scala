@@ -18,7 +18,7 @@ package gov.nasa.race.http
 
 import akka.http.scaladsl.model.{ContentType, ContentTypes}
 import gov.nasa.race.common.{ByteSlice, JsonPullParser, LogWriter, StringJsonPullParser}
-import gov.nasa.race.util.ClassUtils
+import gov.nasa.race.util.{ClassUtils, StringUtils}
 import scalatags.Text
 import scalatags.Text.all._
 
@@ -47,14 +47,141 @@ object AuthMethod {
     }
   }
 
-  val defaultLoginPage: String = {
-    ClassUtils.getResourceAsString(getClass,"login.html") match {
-      case Some(html) => html
-      case None => ""
+  val authFrameStyle = "border:none;width:100%;height:100%;z-index:1;position:fixed;left:0;top:0;background-color: rgba(0,0,0,0.4);"
+
+  def scriptNode (code: String): Text.RawFrag = raw(s"""<script>$code</script>""")
+
+  // TODO - we should handle URLs without scheme and authority
+  def authPathPrefix (requestUrl: String): String = {
+    val i0 = StringUtils.indexOfNth(requestUrl,'/',3)
+    val i1 = requestUrl.lastIndexOf('/')
+
+    if ((i1 == requestUrl.length-1) || (requestUrl.indexOf('.', i1) > 0)) {
+      if (i0 == i1) "" else requestUrl.substring(i0+1,i1)
+    } else {
+      requestUrl.substring(i0+1)
     }
   }
 
-  def scriptNode (code: String): Text.RawFrag = raw(s"""<script>$code</script>""")
+  //--- common script code
+
+  def commonRequestScripting(): String = {
+    """
+      function authCheck(event) {
+        if (event.key=='Enter') authenticate();
+      }
+
+      function authAlert (msg) {
+        let alertElem = document.getElementById("alert");
+        if (alertElem) {
+          alertElem.innerText = msg;
+        } else {
+          alert(msg);
+        }
+      }
+    """
+  }
+
+  def commonDocRequestScripting (requestUrl: String, postUrl: String): String = {
+    s"""
+      ${commonRequestScripting()}
+
+      async function getResponse (data) {
+        let request = {method: 'POST', mode: 'cors', cache: 'no-cache', credentials: 'same-origin',
+          headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data)};
+        return await fetch('/$postUrl', request).then( response => response.json())
+      }
+
+      function finishAuth (msg, requestUrl) {
+        if (msg.accept){ // registration completed successfully (got session cookie in Set-Cookie header)
+          parent.location.replace( requestUrl);
+        } else {
+          parent.document.getElementById('auth').style.display='none'
+        }
+      }
+    """
+  }
+
+  def commonWsRequestScripting(): String = {
+    s"""
+       ${commonRequestScripting()}
+
+        // document global 'wsAuthHandler' hook used by application specific client side websocket handler
+        parent.wsAuthHandler = handleStartAuth;
+
+        var send = noSend;  // the function to send data to the server
+
+        //--- utility functions
+
+        function noSend (data) {
+          console.log("not connected");
+        }
+
+        function handleFinalServerResponse (msg) {
+          switch (Object.keys(msg)[0]) {
+            case "accept":
+              finishAuth();
+              return true;
+
+            case "reject":
+              finishAuth();
+              alert("user authentication rejected: " + msg.reject)
+              return true;
+
+            case "alert":
+              authAlert( msg.alert);
+              return true;
+
+            default:
+              return false;
+          }
+        }
+
+        function finishAuth () {
+          parent.document.getElementById("auth").style.display='none';  // hide auth dialog
+          parent.wsAuthHandler = handleStartAuth;
+          send = noSend;
+        }
+
+        // syntactic sugar - more readable to specify the outgoing message and then the handler (but exec in reverse)
+        function sendAndHandle (data,newHandler) {
+          parent.wsAuthHandler = newHandler;
+          send(data);
+        }
+
+        //--- activate auth UI and respective
+
+        function handleStartAuth (ws,msg) {  // called by the application handler through global 'wsAuthHandler'
+          console.log(msg);
+          if (Object.keys(msg)[0] == "startAuth") {
+            if (parent){
+              let authElem = parent.document.getElementById("auth");
+              if (authElem) {
+                authElem.style.display='block'; // make modal auth layer visible
+                send = function (data) { ws.send(JSON.stringify(data)); }
+
+                const uid = msg.startAuth;
+                if (uid.length > 0) {
+                  let uidElem = document.getElementById('uid');
+                  if (uidElem) uidElem.value = uid;  // use operation supplied uid to init auth layer
+                }
+                return true;  // auth UI active
+
+              } else {
+                Console.log("no auth overlay");
+              }
+            } else {
+              Console.log("no parent document");
+            }
+            alert("authentication failure");
+            return false;
+
+          } else {
+            return false; // message not handled
+          }
+        }
+    """
+  }
 }
 import AuthMethod._
 
@@ -90,7 +217,15 @@ trait AuthMethod extends LogWriter {
     */
   def processJSONAuthMessage (conn: SocketConnection, msgTag: ByteSlice, parser: JsonPullParser): Option[AuthResponse]
 
-  def loginPage (remoteAddress: InetSocketAddress, requestUrl: String, postUrl: String): String = defaultLoginPage
+  def loginPage (remoteAddress: InetSocketAddress, requestUrl: String, postUrl: String): String = {
+    val pathPrefix = authPathPrefix(requestUrl)
+    html(
+      body()(
+        iframe(id:="auth", src:=s"$pathPrefix/auth.html?tgt=$requestUrl", style:=authFrameStyle)(),
+        s"you need to authenticate in order to access $requestUrl"
+      )
+    ).render
+  }
 
   def authPage (remoteAddress: InetSocketAddress, requestUrl: String, postUrl: String): String // the document version
 

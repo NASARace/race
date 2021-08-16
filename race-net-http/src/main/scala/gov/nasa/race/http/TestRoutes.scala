@@ -132,12 +132,12 @@ class TestRefresh (val parent: ParentActor, val config: Config) extends Subscrib
 /**
   * test route that pushes data to all connections
   */
-class TestPusher (val parent: ParentActor, val config: Config) extends PushWSRaceRoute {
+class TestPusher (val parent: ParentActor, val config: Config) extends BasicPushWSRaceRoute {
 
   override def route = {
     get {
       path(requestPrefixMatcher) {
-        promoteToWebSocket
+        promoteToWebSocket()
       }
     }
   }
@@ -147,7 +147,7 @@ class TestPusher (val parent: ParentActor, val config: Config) extends PushWSRac
   * test route that serves a user authorized page which uses a web socket to receive data pushed by the server
   * to all connections
   */
-class TestAuthorizedPusher (val parent: ParentActor, val config: Config) extends PushWSRaceRoute with AuthWSRoute {
+class TestAuthorizedPusher (val parent: ParentActor, val config: Config) extends AuthorizedPushWSRaceRoute {
 
   val page = html(
     htmlHead(
@@ -192,7 +192,7 @@ class TestAuthorizedPusher (val parent: ParentActor, val config: Config) extends
             HttpEntity(ContentTypes.`text/html(UTF-8)`, page.render)
           }
         } ~ path("ws") { // directly requesting websocket
-          promoteAuthorizedToWebSocket()
+          promoteToWebSocket()
         }
       }
     }
@@ -214,7 +214,7 @@ class EchoService (val parent: ParentActor, val config: Config) extends Protocol
   override def route: Route = {
     get {
       path(requestPrefixMatcher) {
-        promoteToWebSocket
+        promoteToWebSocket()
       }
     }
   }
@@ -226,16 +226,18 @@ class EchoService (val parent: ParentActor, val config: Config) extends Protocol
   *
   * this service echos incoming messages to the requester and otherwise periodically pushes data to all connections
   */
-class AuthorizedEchoPushService (val parent: ParentActor, val config: Config) extends PushWSRaceRoute with BasicAuthorizedWSRoute {
+class AuthorizedEchoPushService (val parent: ParentActor, val config: Config) extends BasicPushWSRaceRoute with BasicAuthorizedWSRoute {
 
-  override protected def handleIncoming (conn: SocketConnection, m: Message): Iterable[Message] = m match {
-    case tm: TextMessage.Strict =>
-      val msgText = tm.text
-      info(s"echo incoming: '$msgText' from ${conn.remoteAddress}")
-      TextMessage.Strict(s"Echo [$msgText]") :: Nil
-    case other =>
-      info(s"incoming message ignored: $other")
-      Nil
+  override protected def handleIncoming (ctx: BasicWSContext, m: Message): Iterable[Message] = {
+    m match {
+      case tm: TextMessage.Strict =>
+        val msgText = tm.text
+        info(s"echo incoming: '$msgText' from ${ctx.sockConn.remoteAddress}")
+        TextMessage.Strict(s"Echo [$msgText]") :: Nil
+      case other =>
+        info(s"incoming message ignored: $other")
+        Nil
+    }
   }
 
   override def route: Route = {

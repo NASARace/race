@@ -19,7 +19,7 @@ import com.typesafe.config.Config
 import gov.nasa.race.common.ConstUtf8Slice.utf8
 import gov.nasa.race.common.{BatchedTimeoutMap, ByteSlice, JsonPullParser, StringJsonPullParser, TimeoutSubject}
 import gov.nasa.race.config.ConfigUtils.ConfigWrapper
-import gov.nasa.race.http.AuthMethod.scriptNode
+import gov.nasa.race.http.AuthMethod.{commonDocRequestScripting, scriptNode}
 import gov.nasa.race.uom.Time
 import gov.nasa.race.util.ArrayUtils
 import scalatags.Text.all._
@@ -116,129 +116,70 @@ class PwAuthMethod (config: Config) extends AuthMethod {
 
   //--- the client side of the protocol that is transmitted with the loginElement response
 
-  def docRequestScript (requestUrl: String, postUrl: String): String = { s"""
-    function authenticate() {
-      const uid = document.getElementById('uid').value;
-      const pw = Array.from( new TextEncoder().encode( document.getElementById('pw').value));
+  def docRequestScript (requestUrl: String, postUrl: String): String = {
+    s"""
+      ${AuthMethod.commonDocRequestScripting(requestUrl,postUrl)}
 
-      if (uid.length == 0 || pw.length == 0){
-        document.getElementById('alert').innerText = "please enter non-empty user and password";
-        return;
-      }
+      function authenticate() {
+        const uid = document.getElementById('uid').value;
+        const pw = Array.from( new TextEncoder().encode( document.getElementById('pw').value));
 
-      getResponse( {authUser: uid})
-      .then( response => response.json())
-      .then( serverMsg => {
-        if (uid == serverMsg.requestCredentials) {
-          getResponse({authCredentials: pw})
-          .then( response => response.json())
-          .then( serverMsg => {
-            if (serverMsg.accept) {
-              parent.location.replace( '$requestUrl');
-            } else if (serverMsg.alert) {
-              document.getElementById('alert').innerText = serverMsg.alert;
-            } else if (serverMsg.reject) {
-              let topDoc = parent.document;
-              topDoc.getElementById('auth').style.display='none'
-              topDoc.documentElement.innerHTML = serverMsg.reject;
-            }
-          });
+        if (uid.length == 0 || pw.length == 0){
+          authAlert("please enter non-empty user and password");
+          return;
         }
-      });
-    }
 
-    async function getResponse (data) {
-      let request = {method: 'POST', mode: 'cors', cache: 'no-cache', credentials: 'same-origin',
-                     headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data)};
-      return await fetch('/$postUrl', request)
-    }
+        getResponse( {authUser: uid})
+        .then( serverMsg => {
+          if (uid == serverMsg.requestCredentials) {
+            getResponse({authCredentials: pw})
+            .then( serverMsg => {
+              if (serverMsg.accept) {
+                parent.location.replace( '$requestUrl');
 
-    function checkPwEnter(event) {
-      if (event.key=='Enter') authenticate();
-    }
+              } else if (serverMsg.alert) {
+                authAlert( serverMsg.alert);
+
+              } else if (serverMsg.reject) {
+                let topDoc = parent.document;
+                topDoc.getElementById('auth').style.display='none'
+                topDoc.documentElement.innerHTML = serverMsg.reject;
+              }
+            });
+          }
+        });
+      }
     """
   }
 
   def wsRequestScript (): String = {
     s"""
-        // this assumes a global var 'wsAuthHandler' that is defined in the document
-        parent.wsAuthHandler = handleStartAuth;
+      ${AuthMethod.commonWsRequestScripting()}
 
-        var send = noSend;
+      //--- (response) action triggered by auth dialog
+      function authenticate() {
+        const uid = document.getElementById('uid').value;
+        const pw = Array.from( new TextEncoder().encode( document.getElementById('pw').value));
 
-        function noSend (data) {
-          console.log("not connected");
+        if (uid.length == 0 || pw.length == 0){
+          authAlert("please enter user and password");
+          return;
         }
 
-        //--- server reaction to protected operation request
-        function handleStartAuth (ws,msg) {
-          if (Object.keys(msg)[0] == "startAuth") {
-            parent.document.getElementById("auth").style.display='block'; // make modal auth layer visible
-            send = function (data) { ws.send(JSON.stringify(data)); }
-
-            const uid = msg.startAuth;
-            if (uid.length > 0) document.getElementById('uid').value = uid;  // use operation supplied uid to init auth layer
-
+        sendAndHandle( {authUser: uid}, function (ws,msg) {
+          if (Object.keys(msg)[0] == "requestCredentials") {
+            if (uid == msg.requestCredentials){
+              sendAndHandle( {authCredentials: pw}, function (ws,msg) {
+                return handleFinalServerResponse(msg);
+              });
+            }
             return true;
 
           } else {
             return false; // not handled
           }
-        }
-
-        //--- (response) action triggered by auth dialog
-        function authenticate() {
-          const uid = document.getElementById('uid').value;
-          const pw = Array.from( new TextEncoder().encode( document.getElementById('pw').value));
-
-          if (uid.length == 0 || pw.length == 0){
-            document.getElementById('alert').innerText = "please enter non-empty user and password";
-            return;
-          }
-
-          sendAndHandle( {authUser: uid}, function (ws,msg) {
-            if (Object.keys(msg)[0] == "requestCredentials") {
-              if (uid == msg.requestCredentials){
-
-                sendAndHandle( {authCredentials: pw}, function (ws,msg) {
-                  switch (Object.keys(msg)[0]) {
-                    case "accept": // no further action here - server will start authenticated session
-                      finishAuth();
-                      return true;
-                    case "alert":
-                      document.getElementById('alert').innerText = msg.alert;
-                      return true;
-                    case "reject":
-                      alert("server rejected authentication with: " + msg.reject);
-                      finishAuth();
-                      return true;
-                  }
-                  return false;
-                });
-              }
-              return true;
-
-            } else {
-              return false; // not handled
-            }
-          });
-        }
-
-        function finishAuth() {
-          parent.document.getElementById("auth").style.display='none';  // hide auth dialog
-          parent.wsAuthHandler = handleStartAuth;
-          send = noSend;
-        }
-
-        // syntactic suger - more readable to specify the outgoing message and then the handler (but exec in reverse)
-        function sendAndHandle (data,newHandler) {
-          parent.wsAuthHandler = newHandler;
-          send(data);
-        }
-
-        function checkPwEnter(event) {
-          if (event.key=='Enter') authenticate();
-        }
+        });
+      }
      """
   }
 
@@ -279,7 +220,7 @@ class PwAuthMethod (config: Config) extends AuthMethod {
                 td(cls:="authLabel")("Password"),
                 td(
                   input(`type` := "password", id := "pw", placeholder := "Enter Password", required := true,
-                    autocomplete := "on", onkeyup := "checkPwEnter(event);", cls := "authPwInput")
+                    autocomplete := "on", onkeyup := "authCheck(event);", cls := "authPwInput")
                 )
               )
             ),

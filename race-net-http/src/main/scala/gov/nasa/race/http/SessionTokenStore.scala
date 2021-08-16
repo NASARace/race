@@ -16,9 +16,14 @@
  */
 package gov.nasa.race.http
 
+import gov.nasa.race.uom.DateTime
+
+import java.net.InetSocketAddress
 import java.security.SecureRandom
 import java.util.Base64
 import scala.concurrent.duration.Duration
+
+case class SessionEntry (uid: String, date: DateTime, remoteAddress: InetSocketAddress)
 
 /**
   * a map that keeps track of (token -> user-id,date) pairs. Tokens can be thought of as single request
@@ -29,8 +34,9 @@ import scala.concurrent.duration.Duration
   *
   * Note that we currently just support one login per user id
   */
-class SessionTokenStore(val expiresAfter: Duration, val byteLength: Int = 64) {
-  private var map: Map[String,(String,Long)] = Map.empty
+class SessionTokenStore (val expiresAfter: Duration, val byteLength: Int = 32) {
+
+  private var map: Map[String,SessionEntry] = Map.empty
 
   val encoder = Base64.getEncoder
   val random = new SecureRandom
@@ -38,23 +44,23 @@ class SessionTokenStore(val expiresAfter: Duration, val byteLength: Int = 64) {
 
   def isLoggedIn (uid: String): Boolean = {
     map.foreach { e =>
-      if (e._2._1 == uid) { // found user but check if last token has expired (user forgot to log out)
-        return ((System.currentTimeMillis - e._2._2)) < expiresAfter.toMillis
+      if (e._2.uid == uid) { // found user but check if last token has expired (user forgot to log out)
+        return DateTime.timeSince(e._2.date).toMillis < expiresAfter.toMillis
       }
     }
     false // no entry for uid
   }
 
-  def addNewEntry (uid: String): String = synchronized {
+  def addNewEntry (remoteAddress: InetSocketAddress, uid: String): String = synchronized {
     random.nextBytes(buf)
     val newToken = new String(encoder.encode(buf))
-    map = map + (newToken -> (uid,System.currentTimeMillis))
+    map = map + (newToken -> SessionEntry(uid, DateTime.now, remoteAddress))
     newToken
   }
 
   def removeUser (uid: String): Boolean = synchronized {
     val n = map.size
-    map = map.filter(e => e._2._1 != uid)
+    map = map.filter(e => e._2.uid != uid)
     map.size < n
   }
 
@@ -62,19 +68,19 @@ class SessionTokenStore(val expiresAfter: Duration, val byteLength: Int = 64) {
     map.get(oldToken) match {
       case Some(e) =>
         map = map - oldToken
-        Some(e._1)
+        Some(e.uid)
       case None => None
     }
   }
 
-  private def isExpired(t: Long): Boolean = (System.currentTimeMillis - t) > expiresAfter.toMillis
+  private def isExpired (d: DateTime): Boolean = DateTime.timeSince(d).toMillis > expiresAfter.toMillis
 
   def replaceExistingEntry(oldToken: String): NextTokenResult = synchronized {
     map.get(oldToken) match {
-      case Some((uid,t)) =>
+      case Some(SessionEntry(uid,t,remoteAddress)) =>
         if (!isExpired(t)) {
           map = map - oldToken
-          NextToken(addNewEntry(uid))
+          NextToken(addNewEntry(remoteAddress, uid))
         } else { // expired
           NextTokenFailure("expired session")
         }
@@ -93,7 +99,7 @@ class SessionTokenStore(val expiresAfter: Duration, val byteLength: Int = 64) {
     */
   def matchesExistingEntry(token: String): MatchTokenResult = synchronized {
     map.get(token) match {
-      case Some((user,t)) =>
+      case Some(SessionEntry(uid,t,_)) =>
         if (!isExpired(t)) {
           TokenMatched // we don't replace the token
         } else {  // expired
@@ -102,6 +108,8 @@ class SessionTokenStore(val expiresAfter: Duration, val byteLength: Int = 64) {
       case None => MatchTokenFailure("unknown user") // not a known oldToken
     }
   }
+
+  def apply (token: String): Option[SessionEntry] = map.get(token)
 }
 
 

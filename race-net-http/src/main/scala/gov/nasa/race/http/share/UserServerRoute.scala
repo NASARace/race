@@ -46,9 +46,8 @@ import scala.concurrent.duration.DurationInt
   * messages. However, if we do so it will become harder to later-on add different client profiles. So far,
   * we assume all our clients will get the same data
   */
-class UserServerRoute (parent: ParentActor, config: Config) extends SiteRoute(parent,config)
-                                                            with PushWSRaceRoute with RaceDataClient
-                                                            with AuthorizingWSRaceRoute {
+class UserServerRoute (parent: ParentActor, config: Config) extends AuthSiteRoute(parent,config)
+                                                                   with AuthorizedPushWSRaceRoute {
   /**
     * what we need to keep track of EditRequests - userChange messages are only valid between a requestEdit and
     * endEdit, up to a configurable inactive timeout that is reset upon each userChange
@@ -81,11 +80,14 @@ class UserServerRoute (parent: ParentActor, config: Config) extends SiteRoute(pa
 
     //--- message processing
 
-    def parseMessage(msg: String, conn: SocketConnection): Option[Iterable[Message]] = parseMessage(msg) {
-      case REQUEST_EDIT => Some(processRequestEdit(conn,msg))  // this starts the authMethod protocol
-      case USER_CHANGE => Some(processUserChange(conn.remoteAddress,msg))
-      case END_EDIT => Some(processEndEdit(conn.remoteAddress,msg))
-      case msgTag => processAuthMessage(conn, msgTag).orElse { info(s"ignoring unhandled client message '$msg'"); None }
+    def parseMessage(msg: String, ctx: AuthWSContext): Option[Iterable[Message]] = {
+      val conn = ctx.sockConn
+      parseMessage(msg) {
+        case REQUEST_EDIT => Some(processRequestEdit(ctx,msg))  // this starts the authMethod protocol
+        case USER_CHANGE => Some(processUserChange(conn.remoteAddress,msg))
+        case END_EDIT => Some(processEndEdit(conn.remoteAddress,msg))
+        case msgTag => processAuthMessage(conn, msgTag).orElse { info(s"ignoring unhandled client message '$msg'"); None }
+      }
     }
 
     def processAuthMessage (conn: SocketConnection, msgTag: ByteSlice): Option[Iterable[Message]] = {
@@ -95,19 +97,9 @@ class UserServerRoute (parent: ParentActor, config: Config) extends SiteRoute(pa
 
         case Some(AuthResponse.Accept(uid,authAcceptMsg,_)) =>
           val clientAddr = conn.remoteAddress
-          val perms = userPermissions.getPermissions(uid)
-
-          if (perms.nonEmpty) {
-            val es = EditSession(uid,clientAddr,perms)
-            info(s"start $es")
-            editSessions += (clientAddr -> es)
-
-            val userPermissionsMsg = UserPermissions.serializePermissions(writer, uid, perms)
-
-            Some( Seq(TextMessage(authAcceptMsg), TextMessage(userPermissionsMsg)))
-
-          } else { // insufficient permissions
-            Some( Seq( TextMessage(authMethod.rejectAuthMessage("insufficient user permissions"))))
+          enableUserPermissions(clientAddr,uid) match {
+            case Some(perms) => Some( Seq(TextMessage(authAcceptMsg), TextMessage(perms)))
+            case None => Some( Seq(TextMessage(authMethod.rejectAuthMessage("insufficient user permissions"))))
           }
 
         case Some(AuthResponse.Reject(msg,_)) =>
@@ -117,13 +109,23 @@ class UserServerRoute (parent: ParentActor, config: Config) extends SiteRoute(pa
       }
     }
 
+    def enableUserPermissions (clientAddr: InetSocketAddress, uid: String): Option[String] = {
+      val perms = userPermissions.getPermissions(uid)
+      if (perms.nonEmpty) {
+        val es = EditSession(uid, clientAddr, perms)
+        info(s"start edit $es")
+        editSessions += (clientAddr -> es)
+        Some( UserPermissions.serializePermissions(writer, uid, perms))
+      } else None
+    }
+
     /**
       * process requestEdit message
       * format: { "requestEdit": { "uid": "<userId>" } }
       * this might kick off user authentication in case this was not an authenticated route
       */
-    def processRequestEdit(conn: SocketConnection, msg: String): Iterable[Message] = {
-      val clientAddr = conn.remoteAddress
+    def processRequestEdit(ctx: AuthWSContext, msg: String): Iterable[Message] = {
+      val clientAddr = ctx.sockConn.remoteAddress
 
       try {
         editSessions.get(clientAddr) match {
@@ -133,9 +135,25 @@ class UserServerRoute (parent: ParentActor, config: Config) extends SiteRoute(pa
             val uid: String = quotedValue.toString
             if (!uid.isEmpty && !isValidUid(uid)) {
               alertUser(clientAddr, s"unknown user '$uid'")
+
             } else {
-              info(s"starting authentication for $clientAddr uid: '$uid'")
-              pushTo(clientAddr, TextMessage(authMethod.startAuthMessage(uid)))
+              sessions(ctx.sessionToken) match {
+                case Some(e) =>
+                  if (e.uid == uid) { // no need to ask for the credentials again
+                    enableUserPermissions(clientAddr,uid) match {
+                      case Some(perms) => pushTo(clientAddr, TextMessage(perms))
+                      case None => pushTo(clientAddr, TextMessage("""{"alert":"insufficient user permissions"}"""))
+                    }
+
+                  } else { // edit session for different user - kick off aiuth
+                    info(s"starting authentication for $clientAddr uid: '$uid'")
+                    pushTo(clientAddr, TextMessage(authMethod.startAuthMessage(uid)))
+                  }
+
+                case None => // no login from this address?
+                  info(s"starting authentication for $clientAddr uid: '$uid'")
+                  pushTo(clientAddr, TextMessage(authMethod.startAuthMessage(uid)))
+              }
             }
         }
       } catch {
@@ -243,6 +261,7 @@ class UserServerRoute (parent: ParentActor, config: Config) extends SiteRoute(pa
     }
   }
 
+  val clampUser = config.getBooleanOrElse("clamp-user", true)
   val wsPath = s"$requestPrefix/ws"
   val wsPathMatcher = PathMatchers.separateOnSlashes(wsPath)
 
@@ -290,8 +309,8 @@ class UserServerRoute (parent: ParentActor, config: Config) extends SiteRoute(pa
     pushTo(clientAddr, TextMessage(s"""{"terminateEdit":{"reason":"$reason"}}"""))
   }
 
-  def getSessionUIDMessage: Option[Message] = {
-    None // TODO - this should check for an inherited UID from a authorized route (which fixes the UID)
+  def getSessionUIDMessage (ctx: AuthWSContext): Option[Message] = {
+    sessions(ctx.sessionToken).map( se=> TextMessage(s"""{"setUser":{"uid": "${se.uid}","clamped": $clampUser}}"""))
   }
 
   // we use short serialization without connectivity info and send/receive filters (browser client shouldn't know)
@@ -363,21 +382,23 @@ class UserServerRoute (parent: ParentActor, config: Config) extends SiteRoute(pa
   /**
     * this is what we get from user devices through their web sockets
     */
-  override protected def handleIncoming (conn: SocketConnection, m: Message): Iterable[Message] = {
-    m match {
+  override protected def handleIncoming (ctx: AuthWSContext, m: Message): Iterable[Message] = {
+    val response = m match {
       case tm: TextMessage.Strict =>
-        clientHandler.parseMessage(tm.text, conn) match {
+        clientHandler.parseMessage(tm.text, ctx) match {
           case Some(replies) => replies
           case None => Nil // not handled
         }
       case _ => Nil // we don't process streams
     }
+    discardMessage(m)
+    response
   }
 
   override def route: Route = {
     get {
       path(wsPathMatcher) {
-        promoteToWebSocket
+        promoteToWebSocket()
       }
     } ~ siteRoute
   }
@@ -386,12 +407,12 @@ class UserServerRoute (parent: ParentActor, config: Config) extends SiteRoute(pa
     * we could cache the less likely changed messages (siteIds,CL,RL) but it is not clear if that buys much
     * in case there are frequent changes and a low number of isOnline clients
     */
-  override protected def initializeConnection (conn: SocketConnection, queue: SourceQueueWithComplete[Message]): Unit = {
-    val clientAddr = conn.remoteAddress
+  override protected def initializeConnection (ctx: AuthWSContext, queue: SourceQueueWithComplete[Message]): Unit = {
+    val clientAddr = ctx.sockConn.remoteAddress
     def pushMsg (msg: Option[Message]) = msg.foreach( pushTo(clientAddr, queue, _))
     def pushMsgs (msgs: Seq[Message]) = msgs.foreach( pushTo(clientAddr, queue, _))
 
-    pushMsg( getSessionUIDMessage)
+    pushMsg( getSessionUIDMessage(ctx))
     pushMsg( getNodeListMessage)
     pushMsg( getColumnListMessage)
     pushMsg( getRowListMessage)

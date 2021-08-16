@@ -17,7 +17,7 @@
 package gov.nasa.race.http
 
 import akka.http.scaladsl.marshalling.ToEntityMarshaller
-import akka.http.scaladsl.model.headers.{HttpCookie, RawHeader}
+import akka.http.scaladsl.model.headers.{HttpCookie, RawHeader, SameSite}
 import akka.http.scaladsl.model.{ContentType, ContentTypes, HttpCharsets, HttpEntity, MediaTypes, StatusCode, StatusCodes, Uri, DateTime => DT}
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.{PathMatchers, Route}
@@ -25,7 +25,7 @@ import akka.util.ByteString
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.config.NoConfig
 import gov.nasa.race.http.webauthn.WebAuthnMethod
-import gov.nasa.race.util.{ClassUtils, StringUtils}
+import gov.nasa.race.uom.DateTime
 import scalatags.Text.all._
 
 import java.net.InetSocketAddress
@@ -45,11 +45,11 @@ trait AuthRaceRoute extends RaceRouteInfo {
   val loginPath: String =  s"$requestPrefix/login"
   val logoutPath: String = s"$requestPrefix/logout"
 
-  //--- path matchers
+  //--- path matchers (note that we do not match .html suffixes as neither login nor logout urls should be entered in the browser)
   val loginPathMatcher = PathMatchers.separateOnSlashes(loginPath)
   val logoutPathMatcher = PathMatchers.separateOnSlashes(logoutPath)
 
-  val authPathMatcher = PathMatchers.separateOnSlashes("auth.html")
+  val authPathMatcher = PathMatchers.separateOnSlashes(s"$requestPrefix/auth.html")
   val authSvgPathMatcher = PathMatchers.separateOnSlashes("auth.svg")  // it's a suffix matcher
   val authCssPathMatcher = PathMatchers.separateOnSlashes("auth.css")
 
@@ -75,8 +75,6 @@ trait AuthRaceRoute extends RaceRouteInfo {
 
   authMethod.setLogging(info,warning,error)
 
-  val pendingRequestUrls = mutable.Map.empty[InetSocketAddress,String]
-
   override final def shouldUseHttps = true // depending on authMethod we might transmit user credentials
 
   def createAuthMethod(): AuthMethod = getConfigurableOrElse[AuthMethod]("auth")(new WebAuthnMethod(NoConfig))
@@ -100,10 +98,15 @@ trait AuthRaceRoute extends RaceRouteInfo {
     dom.foreach( ds=> cookie = cookie.withDomain(ds))
     pth.foreach( ps=> cookie = cookie.withPath(ps))
     exp.foreach( dt=> cookie = cookie.withExpires(dt))
+    cookie = cookie.withSameSite(SameSite.Strict)
     cookie
   }
 
   //--- login
+
+  // override if we have to keep track of route specific session data for authorized users
+  def addLoginUser (conn: SocketConnection, uid: String): Unit = {}
+  def removeLoginUser (conn: SocketConnection, uid: String): Unit = {}
 
   def loginRoute: Route = {
     def httpEntity(contentType: ContentType, content: String) = HttpEntity.Strict(contentType, ByteString(content))
@@ -116,15 +119,14 @@ trait AuthRaceRoute extends RaceRouteInfo {
               case Some(authResponse) =>
                 authResponse match {
                   case AuthResponse.Accept(uid, msg, contentType) =>
-                    pendingRequestUrls -= conn.remoteAddress
-                    val sessionToken = sessions.addNewEntry(uid)
+                    addLoginUser(conn,uid)
+
+                    val sessionToken = sessions.addNewEntry( conn.remoteAddress, uid)
                     val cookie = createSessionCookie(sessionToken)
                     setCookie(cookie) {
                       complete(StatusCodes.OK, httpEntity(contentType, msg))
                     }
-                  case AuthResponse.Reject(msg, contentType) =>
-                    pendingRequestUrls -= conn.remoteAddress
-                    complete(StatusCodes.Unauthorized, httpEntity(contentType, msg))
+                  case AuthResponse.Reject(msg, contentType) => complete(StatusCodes.Unauthorized, httpEntity(contentType, msg))
                   case AuthResponse.Challenge(msg, contentType) => complete(StatusCodes.Accepted, httpEntity(contentType, msg))
                 }
               case None => // message not handled by authMethod
@@ -141,7 +143,6 @@ trait AuthRaceRoute extends RaceRouteInfo {
     headerValueByType(classOf[IncomingConnectionHeader]) { conn =>
       respondWithHeaders(noCacheHeaders) {
         val remoteAddress = conn.remoteAddress
-        pendingRequestUrls += remoteAddress -> requestUrl
         complete(StatusCodes.OK, HttpEntity(ContentTypes.`text/html(UTF-8)`, loginPage(remoteAddress, requestUrl, loginPath)))
       }
     }
@@ -156,27 +157,28 @@ trait AuthRaceRoute extends RaceRouteInfo {
   def logoutRoute: Route = {
     path(logoutPathMatcher) {
       get {
-        optionalCookie(sessionCookieName) {
-          case Some(namedCookie) => // there is a cookie in the request header
-            // make sure we send a response header that deletes/invalidates the client side session token
-            deleteCookie(namedCookie.name) {
+        headerValueByType(classOf[IncomingConnectionHeader]) { conn =>
+          optionalCookie(sessionCookieName) {
+            case Some(namedCookie) => // there is a cookie in the request header
+              // make sure we send a response header that deletes/invalidates the client side session token
               //setCookie( createSessionCookie("deleted", cookieDomain, cookiePath, Some(DT.MinValue))) {
               sessions.removeEntry(namedCookie.value) match {
                 case Some(uid) => // it is a valid, un-expired session cookie - complete with a response header deleting it in the browser
+                  removeLoginUser(conn, uid)
                   info(s"logout for '$uid' accepted")
-                  respondWithHeader( RawHeader("Clear-Site-Data", "*")) {
+                  respondWithHeader(RawHeader("Clear-Site-Data", "\"*\"")) {
                     // NOTE - unless the route was configured with 'no-client-cache = true' this does NOT clear the bfcache
                     complete(StatusCodes.OK, "user logged out")
                   }
                 case None =>
-                  respondWithHeader( RawHeader("Clear-Site-Data", "*")) {
+                  respondWithHeader(RawHeader("Clear-Site-Data", "\"*\"")) {
                     complete(StatusCodes.BadRequest, "no active session") // wrong cookie - there is nothing to logout from
                   }
               }
-            }
 
-          case None => // no cookie in the request header, nothing to log out from
-            complete("user not logged in")
+            case None => // no cookie in the request header, nothing to log out from
+              complete("user not logged in")
+          }
         }
       }
     }
@@ -211,10 +213,9 @@ trait AuthRaceRoute extends RaceRouteInfo {
     path(authPathMatcher) {
       headerValueByType(classOf[IncomingConnectionHeader]) { conn =>
         val remoteAddress = conn.remoteAddress
-        pendingRequestUrls.get(remoteAddress) match {
-          case Some(requestUrl) => complete(StatusCodes.OK, HttpEntity(ContentTypes.`text/html(UTF-8)`, authPage(remoteAddress, requestUrl, loginPath)))
-          case None =>complete(StatusCodes.OK, HttpEntity(ContentTypes.`text/html(UTF-8)`, authPage(remoteAddress)))
-        }
+        parameters("tgt"){ requestUrl =>
+          complete(StatusCodes.OK, HttpEntity(ContentTypes.`text/html(UTF-8)`, authPage(remoteAddress, requestUrl, loginPath)))
+        } ~ complete(StatusCodes.OK, HttpEntity(ContentTypes.`text/html(UTF-8)`, authPage(remoteAddress)))
       }
     } ~ path(authCssPathMatcher) {
       complete(StatusCodes.OK, HttpEntity(ContentType(MediaTypes.`text/css`, HttpCharsets.`UTF-8`), authCSS()))

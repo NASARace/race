@@ -442,77 +442,9 @@ class WebAuthnMethod (config: Config) extends AuthMethod {
 
   //--- the client side authenticator protocol
 
-  def docRequestScript (requestUrl: String, postUrl: String): String = { s"""
-
-    function authenticate() {
-      let uid = document.getElementById('uid').value;
-
-      getResponse({authUser: uid})
-      .then( response => response.json())
-      .then( response => {
-        if (response.publicKeyCredentialCreationOptions) {  // registration
-          handleRegistration(response.publicKeyCredentialCreationOptions);
-        } else if (response.publicKeyCredentialRequestOptions) {  // authentication
-          handleAuthentication(response.publicKeyCredentialRequestOptions);
-        }
-      });
-    }
-
-    function handleRegistration (pkcCreateOptions) {
-      //console.log(JSON.stringify(pkcCreateOptions));
-
-      // convert the random strings from base64URL back into Uint8Arrays - the CredentialContainer will otherwise reject
-      pkcCreateOptions.user.id = base64URLDecode(pkcCreateOptions.user.id);
-      pkcCreateOptions.challenge = base64URLDecode(pkcCreateOptions.challenge);
-
-      navigator.credentials.create( {publicKey: pkcCreateOptions} ).then(  pkc => {
-        getResponse({authCredentials: createPkcObject(pkc)})
-        .then( response => response.json())
-        .then( response => handleFinalServerResponse(response))
-      }, failure => { // navigator.credentials failure
-        alert("credential creation rejected: " + failure);
-      });
-    }
-
-    function handleAuthentication (pkcRequestOptions) {
-      //console.log(JSON.stringify(pkcRequestOptions));
-
-      // convert the random strings from base64URL back into Uint8Arrays - the CredentialContainer will otherwise reject
-      pkcRequestOptions.challenge = base64URLDecode(pkcRequestOptions.challenge);
-      for (const c of pkcRequestOptions.allowCredentials) {
-        c.id = base64URLDecode(c.id);
-      }
-
-      /// TODO - this throws an InvalidStateException on firefox
-      navigator.credentials.get( {publicKey: pkcRequestOptions} ).then( pkc => {
-        getResponse( {authCredentials:getPkcObject(pkc)})
-        .then( response => response.json())
-        .then( response => handleFinalServerResponse(response))
-      }, failure => {  // navigator.credentials.get failure ??
-        console.trace();
-        alert("credential request rejected: " + failure);
-      });
-    }
-
-    function handleFinalServerResponse (msg) {
-      if (msg.accept){ // registration completed successfully (got session cookie in Set-Cookie header)
-        parent.location.replace( '$requestUrl');
-      } else {
-        parent.document.getElementById('auth').style.display='none'
-      }
-    }
-
-    function checkUidEnter(event) {
-      if (event.key=='Enter') authenticate();
-    }
-
-    //--- utilities
-
-    async function getResponse (data) {
-      let request = {method: 'POST', mode: 'cors', cache: 'no-cache', credentials: 'same-origin',
-                     headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data)};
-      return await fetch('/$postUrl', request)
-    }
+  def commonWebAuthnScripting(): String = {
+    """
+    //--- webauthn utilities
 
     function base64URLDecode (b64urlstring) {
       return new Uint8Array(atob(b64urlstring.replace(/-/g, '+').replace(/_/g, '/')).split('').map(val => {
@@ -523,7 +455,7 @@ class WebAuthnMethod (config: Config) extends AuthMethod {
     function base64URLEncode (byteArray) {
       return btoa(Array.from(new Uint8Array(byteArray)).map(val => {
         return String.fromCharCode(val);
-      }).join('')).replace(/\\+/g, '-').replace(/\\//g, '_').replace(/\\=/g, '');
+      }).join('')).replace(/\+/g, '-').replace(/\//g, '_').replace(/\=/g, '');
     }
 
     function createPkcObject (pkc) {
@@ -551,22 +483,136 @@ class WebAuthnMethod (config: Config) extends AuthMethod {
         clientExtensionResults: pkc.getClientExtensionResults()
       };
     }
+    """
+  }
 
-    function alert (msg) {
-      document.getElementById("alert").innerHTML = msg;
+  def docRequestScript (requestUrl: String, postUrl: String): String = {
+    s"""
+    ${AuthMethod.commonDocRequestScripting(requestUrl,postUrl)}
+    ${commonWebAuthnScripting()}
+
+    function authenticate() {
+      let uid = document.getElementById('uid').value;
+
+      getResponse( {authUser: uid})
+      .then( response => {
+        if (response.publicKeyCredentialCreationOptions) {  // registration
+          handleRegistration(response.publicKeyCredentialCreationOptions);
+        } else if (response.publicKeyCredentialRequestOptions) {  // authentication
+          handleAuthentication(response.publicKeyCredentialRequestOptions);
+        }
+      });
     }
 
-    function checkUidEnter(event) {
-      if (event.key=='Enter') authenticate();
+    function handleRegistration (pkcCreateOptions) {
+      //console.log(JSON.stringify(pkcCreateOptions));
+
+      // convert the random strings from base64URL back into Uint8Arrays - the CredentialContainer will otherwise reject
+      pkcCreateOptions.user.id = base64URLDecode(pkcCreateOptions.user.id);
+      pkcCreateOptions.challenge = base64URLDecode(pkcCreateOptions.challenge);
+
+      navigator.credentials.create( {publicKey: pkcCreateOptions} ).then(  pkc => {
+        getResponse( {authCredentials: createPkcObject(pkc)} )
+        .then( response => finishAuth(response, '$requestUrl'))
+      }, failure => { // navigator.credentials failure
+        authAlert("credential creation rejected: " + failure);
+      });
+    }
+
+    function handleAuthentication (pkcRequestOptions) {
+      //console.log(JSON.stringify(pkcRequestOptions));
+
+      // convert the random strings from base64URL back into Uint8Arrays - the CredentialContainer will otherwise reject
+      pkcRequestOptions.challenge = base64URLDecode(pkcRequestOptions.challenge);
+      for (const c of pkcRequestOptions.allowCredentials) {
+        c.id = base64URLDecode(c.id);
+      }
+
+      /// TODO - this throws an InvalidStateException on firefox
+      navigator.credentials.get( {publicKey: pkcRequestOptions} ).then( pkc => {
+        getResponse( {authCredentials:getPkcObject(pkc)} )
+        .then( response => finishAuth(response, '$requestUrl'))
+      }, failure => {  // navigator.credentials.get failure ??
+        //console.trace();
+        authAlert("credential request rejected: " + failure);
+      });
+    }
+    """
+  }
+
+  def wsRequestScript(): String = {
+   s"""
+    ${AuthMethod.commonWsRequestScripting()}
+    ${commonWebAuthnScripting()}
+
+    function authenticate() {
+      const uid = document.getElementById('uid').value;
+
+      if (uid.length == 0){
+        authAlert("please enter user");
+        return;
+      }
+
+      sendAndHandle( {authUser: uid}, function (ws,msg) {
+        switch (Object.keys(msg)[0]) {
+          case "publicKeyCredentialCreationOptions":
+            handleRegistration(msg.publicKeyCredentialCreationOptions);
+            return true;
+
+          case "publicKeyCredentialRequestOptions":
+            handleAuthentication(msg.publicKeyCredentialRequestOptions);
+            return true;
+        }
+        return false; // not handled
+      });
+    }
+
+    function handleRegistration (pkcCreateOptions) {
+      //console.log(JSON.stringify(pkcCreateOptions));
+
+      // convert the random strings from base64URL back into Uint8Arrays - the CredentialContainer will otherwise reject
+      pkcCreateOptions.user.id = base64URLDecode(pkcCreateOptions.user.id);
+      pkcCreateOptions.challenge = base64URLDecode(pkcCreateOptions.challenge);
+
+      navigator.credentials.create( {publicKey: pkcCreateOptions} ).then(  pkc => {
+        sendAndHandle( {authCredentials: createPkcObject(pkc)}, function (ws,msg) {
+          return handleFinalServerResponse(msg);
+        })
+      });
+    }
+
+    function handleAuthentication (pkcRequestOptions) {
+      //console.log(JSON.stringify(pkcRequestOptions));
+
+      // convert the random strings from base64URL back into Uint8Arrays - the CredentialContainer will otherwise reject
+      pkcRequestOptions.challenge = base64URLDecode(pkcRequestOptions.challenge);
+      for (const c of pkcRequestOptions.allowCredentials) {
+        c.id = base64URLDecode(c.id);
+      }
+
+      /// TODO - this throws an InvalidStateException on firefox
+      navigator.credentials.get( {publicKey: pkcRequestOptions} ).then( pkc => {
+        sendAndHandle( {authCredentials:getPkcObject(pkc)}, function (ws,msg) {
+          return handleFinalServerResponse(msg);
+        })
+      });
     }
     """
   }
 
   override def authPage(remoteAddress: InetSocketAddress, requestUrl: String, postUrl: String): String = {
+    authPage( docRequestScript(requestUrl, postUrl))
+  }
+
+  override def authPage(remoteAddress: InetSocketAddress): String = {
+    authPage( wsRequestScript())
+  }
+
+  def authPage (script: String): String = {
     html(
       head(
         link(rel:="stylesheet", tpe:="text/css", href:="/auth.css"),
-        scriptNode( docRequestScript(requestUrl, postUrl)),
+        scriptNode( script),
       ),
       body()(
         div(cls := "authForeground")(
@@ -582,7 +628,7 @@ class WebAuthnMethod (config: Config) extends AuthMethod {
                 td(cls := "authLabel")(b("User")),
                 td(style := "width: 99%;")(
                   input(`type` := "text", id := "uid", placeholder := "Enter Username", required := true,
-                    autofocus := true, cls := "authTextInput", onkeyup:="checkUidEnter(event);")
+                    autofocus := true, cls := "authTextInput", onkeyup:="authCheck(event);")
                 )
               )
             ),
@@ -592,6 +638,4 @@ class WebAuthnMethod (config: Config) extends AuthMethod {
       )
     ).render
   }
-
-  override def authPage(remoteAddress: InetSocketAddress): String = ???
 }

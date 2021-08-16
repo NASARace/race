@@ -122,7 +122,8 @@ class SiteRoute (val parent: ParentActor, val config: Config) extends RaceRouteI
                 case None => complete( StatusCodes.OK, cachedContent.entity)
               }
 
-            case None => complete( StatusCodes.NotFound, s"$uri not found")
+            case None =>
+              complete( StatusCodes.NotFound, s"$uri not found")
           }
         }
       }

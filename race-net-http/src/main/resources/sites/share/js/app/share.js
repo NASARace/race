@@ -113,6 +113,10 @@ export function setReadOnly() {
   utils.log("exit edit mode");
 }
 
+export function sendLogout (){
+  location.replace("logout");
+}
+
 // shortcut for send+exit
 export function sendAndExitEditMode () {
   sendChanges();
@@ -1047,16 +1051,26 @@ function handleWsMessage(msg) {
     case "alert": handleAlert(msg.alert); break;
     case "terminateEdit": handleTerminateEdit(msg.terminateEdit); break;
 
-    //--- webauthn messages
-    case "webauthnCreate": handleWebauthnReg(msg.webauthnCreate); break;
-    case "webauthnGet": handleWebauthnAuth(msg.webauthnGet.publicKeyCredentialRequestOptions); break;
-
     default:
       //console.log("checking " + JSON.stringify(msg) + " with " + window.wsAuthHandler);
       if (!(window.wsAuthHandler && window.wsAuthHandler(ws,msg))) {
         utils.log(`ignoring unknown message type ${msgType}`);
       }
   }
+}
+
+function handleSetUser (setUser) {
+  let uid = setUser.uid;
+  let clamped = setUser.clamped;
+
+  let elem = document.getElementById('uid');
+  elem.value = uid;
+  if (clamped) {
+    elem.classList.add("readonly");
+    elem.disabled = true;
+  }
+
+  document.getElementById('logoutButton').disabled = false;
 }
 
 // { alert: { text:"s", log:<b>}}
@@ -1159,14 +1173,6 @@ function handleNodeList (newNodeList) {
   initNodeLists();
 }
 
-// if we get this it means it's fixed (route was authenticated)
-function handleSetUser (user) {
-  if (user.id) {
-    var elem = document.getElementById("uid");
-    elem.value = user.id;
-    elem.classList.add("readonly");
-  }
-}
 
 function handleUpstreamChange (upstreamChange) {
   console.log(JSON.stringify(upstreamChange));
