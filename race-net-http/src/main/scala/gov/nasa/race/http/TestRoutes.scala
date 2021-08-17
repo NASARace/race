@@ -17,6 +17,7 @@
 package gov.nasa.race.http
 
 import akka.actor.Actor.Receive
+import akka.http.scaladsl.model.sse.ServerSentEvent
 
 import java.net.InetSocketAddress
 import akka.http.scaladsl.model.ws.{Message, TextMessage}
@@ -246,5 +247,21 @@ class AuthorizedEchoPushService (val parent: ParentActor, val config: Config) ex
         promoteAuthorizedToWebSocket(User.UserRole)
       }
     }
+  }
+}
+
+class TestSSERoute (val pa: ParentActor, val conf: Config) extends SiteRoute(pa,conf) with PushSSERoute {
+
+  override def route: Route = {
+    get {
+      path( requestPrefix / "stream") {
+        promoteToStream()
+      } ~ siteRoute
+    }
+  }
+
+  override protected def toSSE(msg: Any): Option[ServerSentEvent] = {
+    val s = msg.toString
+    if (s.nonEmpty) Some(ServerSentEvent(s)) else None
   }
 }

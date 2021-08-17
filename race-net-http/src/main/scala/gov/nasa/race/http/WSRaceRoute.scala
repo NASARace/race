@@ -63,7 +63,7 @@ case class AuthWSContext (sockConn: SocketConnection, sessionToken: String) exte
   * a RaceRoute that completes with a WebSocket to which messages are pushed from an
   * associated actor that received data from RACE channels and turns them into web socket Messages
   */
-trait PushWSRaceRoute[T<:WSContext] extends WSRaceRoute with SourceQueueOwner with RaceDataClient {
+trait PushWSRaceRoute[T<:WSContext] extends WSRaceRoute with SourceQueueOwner[Message] with RaceDataClient {
 
   protected var connections: Map[InetSocketAddress,SourceQueueWithComplete[Message]] = Map.empty
 
@@ -152,8 +152,6 @@ trait PushWSRaceRoute[T<:WSContext] extends WSRaceRoute with SourceQueueOwner wi
 
     val completionFuture: Future[Done] = outboundMat.watchCompletion()
     completionFuture.onComplete { handleConnectionLoss(remoteAddress,_) } // TODO does this handle passive network failures?
-
-    val wsContext = BasicWSContext(sockConn)
 
     val inbound: Sink[Message, Any] = Sink.foreach{ inMsg =>
       try {

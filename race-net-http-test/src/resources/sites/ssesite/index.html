@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="UTF-8">
+        <script type="application/javascript">
+            const evtSource = new EventSource("./stream");
+
+            evtSource.onmessage = function(event) {
+              if (event.data.length >0) {
+                document.getElementById("data").textContent = event.data;
+              }
+            }
+        </script>
+    </head>
+
+    <body>
+        <h1>Race SSE Example</h1>
+
+        <div id="data">no data yet</div>
+    </body>
+</html>

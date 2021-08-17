@@ -86,7 +86,7 @@ case class WsConnectRequest (uri: String)
   * onStartRaceActor) - this trait does not have any assumption as to when clients/subtypes are ready
   */
 trait WSAdapterActor extends FilteringPublisher with SubscribingRaceActor
-                                       with SourceQueueOwner with SSLContextUser {
+                                       with SourceQueueOwner[Message] with SSLContextUser {
   //--- internal messages
   case class WsConnectSuccess (uri: String, queue: SourceQueueWithComplete[Message])
   case class WsConnectFailure (uri: String, cause: String)

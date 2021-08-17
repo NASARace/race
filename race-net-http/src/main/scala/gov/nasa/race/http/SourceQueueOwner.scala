@@ -26,7 +26,7 @@ import gov.nasa.race.config.ConfigUtils._
 /**
   * abstract akka stream type that hold a queue source to which we want to explicitly push
   */
-trait SourceQueueOwner {
+trait SourceQueueOwner[T] {
 
   val config: Config
   implicit val materializer: Materializer
@@ -41,8 +41,8 @@ trait SourceQueueOwner {
     case other => throw new ConfigException.Generic(s"unsupported source buffer overflow strategy: $other")
   }
 
-  def createSourceQueue: Source[Message, SourceQueueWithComplete[Message]] = Source.queue[Message](srcBufSize, srcPolicy)
+  def createSourceQueue: Source[T, SourceQueueWithComplete[T]] = Source.queue[T](srcBufSize, srcPolicy)
 
-  def createPreMaterializedSourceQueue: (SourceQueueWithComplete[Message], Source[Message, NotUsed]) = createSourceQueue.preMaterialize()
+  def createPreMaterializedSourceQueue: (SourceQueueWithComplete[T], Source[T, NotUsed]) = createSourceQueue.preMaterialize()
 
 }
