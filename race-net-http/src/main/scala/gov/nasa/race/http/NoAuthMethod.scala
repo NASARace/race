@@ -30,54 +30,89 @@ import java.net.InetSocketAddress
   * USE ONLY FOR TESTING OR DEMOS
   */
 class NoAuthMethod extends StringJsonPullParser with AuthMethod {
-  val AUTH_REQUEST = utf8("authRequest")
-  val authRequestRE = """ *\{ *"authRequest":.*""".r
+  val AUTH_USER = utf8("authUser")
+  val AuthUserRE = """ *\{ *"authUser": *"(.*)" *\}""".r
 
   override def processAuthMessage (conn: SocketConnection, clientMsg: String): Option[AuthResponse] = {
-    if (authRequestRE.matches(clientMsg)) Some(AuthResponse.Accept("*", s"""{"accept":"*"}""")) else None
+    clientMsg match {
+      case AuthUserRE(uid) =>
+        Some(AuthResponse.Accept( uid, s"""{"accept":"$uid"}"""))
+      case _ =>
+        warning(s"ignoring malformed user authentication: '$clientMsg'")
+        Some(AuthResponse.Challenge(s"""{"alert":"invalid user id"}"""))
+    }
   }
 
   override def processJSONAuthMessage (conn: SocketConnection, msgTag: ByteSlice, parser: JsonPullParser): Option[AuthResponse] = {
     msgTag match {
-      case AUTH_REQUEST => Some(AuthResponse.Accept("*", s"""{"accept":"*"}""")) // no need to parse anything
+      case AUTH_USER =>
+        val uid = parser.quotedValue.toString
+        info(s"received auth request for $uid from ${conn.remoteAddress}")
+        Some(AuthResponse.Accept( uid, s"""{"accept":"$uid"}""")) // no need to parse anything
+
       case _ => None
     }
   }
 
-  override def loginPage(remoteAddress: InetSocketAddress, requestUrl: String, postUrl: String): String = {
-    html(
-      head(
-        scriptNode(s"""
-         function authenticate() {
-           getResponse({authRequest:'$requestUrl'})
-           .then( response => response.json())
-           .then( serverMsg => {
-             if (serverMsg.accept) {
-               location.replace( '$requestUrl');
-             } else if (serverMsg.alert) {
-               document.getElementById('alert').innerText = serverMsg.alert;
-             } else if (serverMsg.reject) {
-               document.documentElement.innerHTML = serverMsg.reject;
-             }
-           });
-         }
 
-         async function getResponse (data) {
-           let request = {method: 'POST', mode: 'cors', cache: 'no-cache', credentials: 'same-origin',
-                          headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data)};
-           return await fetch('/$postUrl', request)
-         }
-         """
-        )
-      ),
-      body(onload := s"authenticate();")(
-        p(s"no need to authenticate"),
-      )
-    ).render
+  def docRequestScript (requestUrl: String, postUrl: String): String = {
+    s"""
+      ${AuthMethod.commonDocRequestScripting(requestUrl, postUrl)}
+
+      function authenticate() {
+        const uid = document.getElementById('uid').value;
+
+        if (uid.length == 0){
+          authAlert("please enter non-empty user");
+          return;
+        }
+
+        getResponse( {authUser: uid})
+        .then( serverMsg => {
+          if (serverMsg.accept) {
+            parent.location.replace( '$requestUrl');
+
+          } else if (serverMsg.alert) {
+            authAlert( serverMsg.alert);
+
+          } else if (serverMsg.reject) {
+            let topDoc = parent.document;
+            topDoc.getElementById('auth').style.display='none'
+            topDoc.documentElement.innerHTML = serverMsg.reject;
+          }
+        });
+      }
+    """
   }
 
-  override def authPage(remoteAddress: InetSocketAddress, requestUrl: String, postUrl: String): String = "no authentication required"
+  def wsRequestScript (): String = {
+    s"""
+      ${AuthMethod.commonWsRequestScripting()}
 
-  override def authPage(remoteAddress: InetSocketAddress): String = ???
+      //--- (response) action triggered by auth dialog
+      function authenticate() {
+        const uid = document.getElementById('uid').value;
+
+        if (uid.length == 0){
+          authAlert("please enter user and password");
+          return;
+        }
+
+        sendAndHandle( {authUser: uid}, function (ws,msg) {
+          return handleFinalServerResponse(msg);
+        });
+      }
+    """
+  }
+
+  override def authPage(remoteAddress: InetSocketAddress, requestUrl: String, postUrl: String): String = {
+    authPage( docRequestScript(requestUrl, postUrl))
+  }
+
+  override def authPage(remoteAddress: InetSocketAddress): String = {
+    authPage( wsRequestScript())
+  }
+
+  def authPage (script: String): String = AuthMethod.userAuthPage(script)
 }
 

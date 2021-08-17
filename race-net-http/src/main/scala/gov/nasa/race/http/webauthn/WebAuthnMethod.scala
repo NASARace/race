@@ -608,34 +608,5 @@ class WebAuthnMethod (config: Config) extends AuthMethod {
     authPage( wsRequestScript())
   }
 
-  def authPage (script: String): String = {
-    html(
-      head(
-        link(rel:="stylesheet", tpe:="text/css", href:="/auth.css"),
-        scriptNode( script),
-      ),
-      body()(
-        div(cls := "authForeground")(
-          span(cls := "authCancel", title := "Close Modal", cls := "authCancel",
-            onclick := "parent.document.getElementById('auth').style.display='none'")("×"),
-          div(cls := "authImgContainer")(
-            img(src := s"/auth.svg", alt := "Avatar", cls := "authImg")
-          ),
-          div(cls := "authFormContainer")(
-            div(id := "alert", cls := "authAlert")(""),
-            table(style := "border-style: none;")(
-              tr(
-                td(cls := "authLabel")(b("User")),
-                td(style := "width: 99%;")(
-                  input(`type` := "text", id := "uid", placeholder := "Enter Username", required := true,
-                    autofocus := true, cls := "authTextInput", onkeyup:="authCheck(event);")
-                )
-              )
-            ),
-            button(`type` := "button", onclick := "authenticate();", cls := "authButton")("authenticate")
-          )
-        )
-      )
-    ).render
-  }
+  def authPage (script: String): String = AuthMethod.userAuthPage(script)
 }
