@@ -15,6 +15,7 @@
  * limitations under the License.
  */
 package gov.nasa.race.http
+import akka.http.scaladsl.model.Uri
 import com.typesafe.config.Config
 import gov.nasa.race.common.ConstUtf8Slice.utf8
 import gov.nasa.race.common.{BatchedTimeoutMap, ByteSlice, JsonPullParser, StringJsonPullParser, TimeoutSubject}
@@ -31,6 +32,19 @@ import scala.concurrent.duration.{DurationInt, FiniteDuration}
 object PwAuthMethod {
   val AUTH_USER = utf8("authUser")
   val AUTH_CREDENTIALS = utf8("authCredentials")
+
+  val authInitScript: String = """
+     function initAuth() {
+       let qs = document.location.search;
+       let urlParams = new URLSearchParams(qs);
+
+       let uid = urlParams.get('uid');
+       if (uid) document.getElementById("uid").value=uid;
+
+       let pw = urlParams.get('pw');
+       if (pw) document.getElementById("pw").value=pw;
+     }
+  """
 }
 
 /**
@@ -116,7 +130,7 @@ class PwAuthMethod (config: Config) extends AuthMethod {
 
   //--- the client side of the protocol that is transmitted with the loginElement response
 
-  def docRequestScript (requestUrl: String, postUrl: String): String = {
+  def docRequestScript (requestUrl: Uri, postUrl: String): String = {
     s"""
       ${AuthMethod.commonDocRequestScripting(requestUrl,postUrl)}
 
@@ -184,7 +198,7 @@ class PwAuthMethod (config: Config) extends AuthMethod {
   }
 
   // the authentication iframe content for document requests
-  override def authPage(remoteAddress: InetSocketAddress, requestUrl: String, postUrl: String): String = {
+  override def authPage(remoteAddress: InetSocketAddress, requestPrefix: String, requestUrl: Uri, postUrl: String): String = {
     authPage( docRequestScript(requestUrl, postUrl))
   }
 
@@ -198,8 +212,9 @@ class PwAuthMethod (config: Config) extends AuthMethod {
       head(
         link(rel:="stylesheet", tpe:="text/css", href:="/auth.css"),
         scriptNode( authScript),
+        scriptNode( PwAuthMethod.authInitScript)
       ),
-      body()(
+      body(onload:="initAuth();")(
         div(cls := "authForeground")(
           span(cls := "authCancel", title := "Close Modal", cls := "authCancel",
             onclick := "parent.document.getElementById('auth').style.display='none'")("×"),

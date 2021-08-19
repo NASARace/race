@@ -16,6 +16,7 @@
  */
 package gov.nasa.race.http.webauthn
 
+import akka.http.scaladsl.model.Uri
 import com.fasterxml.jackson.annotation.JsonInclude.Include
 import com.fasterxml.jackson.databind.{ObjectMapper, SerializationFeature}
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module
@@ -486,7 +487,7 @@ class WebAuthnMethod (config: Config) extends AuthMethod {
     """
   }
 
-  def docRequestScript (requestUrl: String, postUrl: String): String = {
+  def docRequestScript (requestUrl: Uri, postUrl: String): String = {
     s"""
     ${AuthMethod.commonDocRequestScripting(requestUrl,postUrl)}
     ${commonWebAuthnScripting()}
@@ -600,7 +601,7 @@ class WebAuthnMethod (config: Config) extends AuthMethod {
     """
   }
 
-  override def authPage(remoteAddress: InetSocketAddress, requestUrl: String, postUrl: String): String = {
+  override def authPage(remoteAddress: InetSocketAddress, requestPrefix: String, requestUrl: Uri, postUrl: String): String = {
     authPage( docRequestScript(requestUrl, postUrl))
   }
 

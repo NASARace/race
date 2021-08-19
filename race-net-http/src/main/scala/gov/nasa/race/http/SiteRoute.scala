@@ -183,10 +183,10 @@ class AuthSiteRoute(parent: ParentActor, config: Config) extends SiteRoute(paren
                             completeWithCachedContent(cachedContent, uri)
                           }
                         case TokenMatched => completeWithCachedContent(cachedContent, uri) // no need to set new session cookie
-                        case f:TokenFailure => completeWithLogin(uri.toString()) // session token was rejected, force new authentication
+                        case f:TokenFailure => completeWithLogin(uri) // session token was rejected, force new authentication
                       }
 
-                    case None => completeWithLogin(uri.toString()) // no session token yet, enter authentication
+                    case None => completeWithLogin(uri) // no session token yet, enter authentication
                   }
                 }
 

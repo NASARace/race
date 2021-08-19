@@ -46,6 +46,11 @@ object StringUtils {
     s.substring(0,idx)
   }
 
+  def upTo (s: String, c: Char): String = {
+    val i = s.indexOf(c)
+    if (i >= 0) s.substring(0,i) else s
+  }
+
   def indexOfNth (s: String, c: Char, n: Int): Int = {
     var remaining = n
     var i = 0

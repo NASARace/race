@@ -16,6 +16,7 @@
  */
 package gov.nasa.race.http
 
+import akka.http.scaladsl.model.Uri
 import gov.nasa.race.common.ConstUtf8Slice.utf8
 import gov.nasa.race.common.{ByteSlice, JsonPullParser, StringJsonPullParser}
 import gov.nasa.race.http.AuthMethod.scriptNode
@@ -55,7 +56,7 @@ class NoAuthMethod extends StringJsonPullParser with AuthMethod {
   }
 
 
-  def docRequestScript (requestUrl: String, postUrl: String): String = {
+  def docRequestScript (requestUrl: Uri, postUrl: String): String = {
     s"""
       ${AuthMethod.commonDocRequestScripting(requestUrl, postUrl)}
 
@@ -105,7 +106,7 @@ class NoAuthMethod extends StringJsonPullParser with AuthMethod {
     """
   }
 
-  override def authPage(remoteAddress: InetSocketAddress, requestUrl: String, postUrl: String): String = {
+  override def authPage(remoteAddress: InetSocketAddress, requestPrefix: String, requestUrl: Uri, postUrl: String): String = {
     authPage( docRequestScript(requestUrl, postUrl))
   }
 

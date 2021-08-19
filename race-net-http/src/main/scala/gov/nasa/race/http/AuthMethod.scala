@@ -16,7 +16,7 @@
  */
 package gov.nasa.race.http
 
-import akka.http.scaladsl.model.{ContentType, ContentTypes}
+import akka.http.scaladsl.model.{ContentType, ContentTypes, Uri}
 import gov.nasa.race.common.{ByteSlice, JsonPullParser, LogWriter, StringJsonPullParser}
 import gov.nasa.race.util.{ClassUtils, StringUtils}
 import scalatags.Text
@@ -82,7 +82,7 @@ object AuthMethod {
     """
   }
 
-  def commonDocRequestScripting (requestUrl: String, postUrl: String): String = {
+  def commonDocRequestScripting (requestUrl: Uri, postUrl: String): String = {
     s"""
       ${commonRequestScripting()}
 
@@ -183,13 +183,24 @@ object AuthMethod {
     """
   }
 
+  val authInitScript: String = """
+     function initAuth() {
+       let qs = document.location.search;
+       let urlParams = new URLSearchParams(qs);
+
+       let uid = urlParams.get('uid');
+       if (uid) document.getElementById("uid").value=uid;
+     }
+  """
+
   def userAuthPage (script: String): String = {
     html(
       head(
         link(rel:="stylesheet", tpe:="text/css", href:="/auth.css"),
         scriptNode( script),
+        scriptNode( AuthMethod.authInitScript)
       ),
-      body()(
+      body(onload:="initAuth();")(
         div(cls := "authForeground")(
           span(cls := "authCancel", title := "Close Modal", cls := "authCancel",
             onclick := "parent.document.getElementById('auth').style.display='none'")("×"),
@@ -212,6 +223,28 @@ object AuthMethod {
         )
       )
     ).render
+  }
+
+  val authQueryRE = "&?auth=\\((.*)\\)$".r
+
+  def authQueryString (requestUrl: Uri): String = {
+    requestUrl.rawQueryString match {
+      case Some(qs) =>
+        authQueryRE.findFirstMatchIn(qs) match {
+          case Some(m) => // extract the auth part
+            val i0 = m.start
+            val aq = m.group(1).toString.replace(',','&')
+            if (i0 ==0) { // 'auth' is only query param
+              Uri.Query( s"tgt=${requestUrl.copy(rawQueryString = None)}&$aq").toString
+            } else {
+              Uri.Query( s"tgt=${requestUrl.withRawQueryString (qs.substring(0,i0))}&$aq").toString
+            }
+
+          case None => Uri.Query(s"tgt=$requestUrl").toString // no auth part - pass the query into tgt
+        }
+
+      case None => Uri.Query(s"tgt=$requestUrl").toString // no query part - just encode the 'tgt=<url>'
+    }
   }
 }
 import AuthMethod._
@@ -248,17 +281,16 @@ trait AuthMethod extends LogWriter {
     */
   def processJSONAuthMessage (conn: SocketConnection, msgTag: ByteSlice, parser: JsonPullParser): Option[AuthResponse]
 
-  def loginPage (remoteAddress: InetSocketAddress, requestUrl: String, postUrl: String): String = {
-    val pathPrefix = authPathPrefix(requestUrl)
+  def loginPage (remoteAddress: InetSocketAddress, requestPrefix: String, requestUrl: Uri, postUrl: String): String = {
     html(
       body()(
-        iframe(id:="auth", src:=s"$pathPrefix/auth.html?tgt=$requestUrl", style:=authFrameStyle)(),
+        iframe(id:="auth", src:=s"$requestPrefix/auth.html?${authQueryString(requestUrl)}", style:=authFrameStyle)(),
         s"you need to authenticate in order to access $requestUrl"
       )
     ).render
   }
 
-  def authPage (remoteAddress: InetSocketAddress, requestUrl: String, postUrl: String): String // the document version
+  def authPage (remoteAddress: InetSocketAddress, requestPrefix: String, requestUrl: Uri, postUrl: String): String // the document version
 
   def authPage (remoteAddress: InetSocketAddress): String // the websock version
 

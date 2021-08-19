@@ -139,7 +139,7 @@ trait AuthRaceRoute extends RaceRouteInfo {
     }
   }
 
-  def completeWithLogin (requestUrl: String): Route = {
+  def completeWithLogin (requestUrl: Uri): Route = {
     headerValueByType(classOf[IncomingConnectionHeader]) { conn =>
       respondWithHeaders(noCacheHeaders) {
         val remoteAddress = conn.remoteAddress
@@ -190,10 +190,10 @@ trait AuthRaceRoute extends RaceRouteInfo {
   //--- login resources
 
   // login content for document requests
-  def loginPage (remoteAddress: InetSocketAddress, requestUrl: String, postUrl: String): String = authMethod.loginPage(remoteAddress,requestUrl,postUrl)
+  def loginPage (remoteAddress: InetSocketAddress, requestUrl: Uri, postUrl: String): String = authMethod.loginPage(remoteAddress,requestPrefix,requestUrl,postUrl)
 
   // content for "auth.html"
-  def authPage(remoteAddress: InetSocketAddress, requestUrl: String, postUrl: String): String = authMethod.authPage(remoteAddress,requestUrl,postUrl)
+  def authPage(remoteAddress: InetSocketAddress, requestUrl: Uri, postUrl: String): String = authMethod.authPage(remoteAddress,requestPrefix,requestUrl,postUrl)
 
   def authPage (remoteAddress: InetSocketAddress): String = authMethod.authPage(remoteAddress)
 
@@ -214,7 +214,7 @@ trait AuthRaceRoute extends RaceRouteInfo {
       headerValueByType(classOf[IncomingConnectionHeader]) { conn =>
         val remoteAddress = conn.remoteAddress
         parameters("tgt"){ requestUrl =>
-          complete(StatusCodes.OK, HttpEntity(ContentTypes.`text/html(UTF-8)`, authPage(remoteAddress, requestUrl, loginPath)))
+          complete(StatusCodes.OK, HttpEntity(ContentTypes.`text/html(UTF-8)`, authPage(remoteAddress, Uri(requestUrl), loginPath)))
         } ~ complete(StatusCodes.OK, HttpEntity(ContentTypes.`text/html(UTF-8)`, authPage(remoteAddress)))
       }
     } ~ path(authCssPathMatcher) {
@@ -238,19 +238,21 @@ trait AuthRaceRoute extends RaceRouteInfo {
     * TODO - do we need to factor out routes that only support non-interactive user auth ?
     */
   def completeAuthorized(statusCode: StatusCode = StatusCodes.OK)(createContent: => HttpEntity.Strict): Route = {
-    extractMatchedPath { requestUrl =>
-      cookie(sessionCookieName) { namedCookie =>
-        getNextSessionToken(requestUrl, namedCookie.value) match {
-          case NextToken(nextToken) =>
-            setCookie(createSessionCookie(nextToken)) {
-              completeWithCacheHeaders( statusCode, createContent)
-            }
-          case TokenMatched =>
-            completeWithCacheHeaders( statusCode, createContent) // no need to set new cookie
+    extractUri { uri =>
+      extractMatchedPath { requestUrl =>
+        cookie(sessionCookieName) { namedCookie =>
+          getNextSessionToken(requestUrl, namedCookie.value) match {
+            case NextToken(nextToken) =>
+              setCookie(createSessionCookie(nextToken)) {
+                completeWithCacheHeaders(statusCode, createContent)
+              }
+            case TokenMatched =>
+              completeWithCacheHeaders(statusCode, createContent) // no need to set new cookie
 
-          case f:TokenFailure => completeWithLogin(requestUrl.toString())  // invalid session cookie, force new authentication
-        }
-      } ~ completeWithLogin(requestUrl.toString()) // no session cookie yet, start authentication
+            case f: TokenFailure => completeWithLogin(uri) // invalid session cookie, force new authentication
+          }
+        } ~ completeWithLogin(uri) // no session cookie yet, start authentication
+      }
     }
   }
 
