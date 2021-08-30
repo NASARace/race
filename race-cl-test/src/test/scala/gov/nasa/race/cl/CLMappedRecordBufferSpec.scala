@@ -17,10 +17,10 @@
 package gov.nasa.race.cl
 
 import java.nio.ByteBuffer
-
 import gov.nasa.race._
 import gov.nasa.race.common.{BufferRecord, CloseStack}
 import gov.nasa.race.test.RaceSpec
+import org.scalatest.Ignore
 import org.scalatest.flatspec.AnyFlatSpec
 
 class TestRecord (buffer: ByteBuffer) extends BufferRecord(20,buffer) {
@@ -35,6 +35,7 @@ class TestRecord (buffer: ByteBuffer) extends BufferRecord(20,buffer) {
 /**
   * unit tests for MappedRecordBuffer
   */
+@Ignore  // unfortunately, as of macOS 10.15.7 OpenCL causes spurious errors in the driver
 class CLMappedRecordBufferSpec extends AnyFlatSpec with RaceSpec {
 
   "a MappedRecordBuffer" should "be directly accessible from both host and device" in {

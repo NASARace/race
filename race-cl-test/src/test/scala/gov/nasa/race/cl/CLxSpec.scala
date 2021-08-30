@@ -19,11 +19,13 @@ package gov.nasa.race.cl
 import gov.nasa.race._
 import gov.nasa.race.common.CloseStack
 import gov.nasa.race.test.RaceSpec
+import org.scalatest.Ignore
 import org.scalatest.flatspec.AnyFlatSpec
 
 /**
   * unit tests for basic gov.nasa.race.cl constructs
   */
+@Ignore  // unfortunately, as of macOS 10.15.7 OpenCL causes spurious errors in the driver
 class CLxSpec extends AnyFlatSpec with RaceSpec {
 
   val src =

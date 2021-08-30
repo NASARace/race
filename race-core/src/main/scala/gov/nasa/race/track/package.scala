@@ -35,16 +35,29 @@ package object track {
 
   trait IdentifiableTrackPoint extends TrackPoint with IdentifiableObject
 
+  /**
+    * object that is a moving 3D point, i.e. has a horizontal and vertical speed vector
+    */
   trait MovingObject {
     def heading: Angle
     def speed: Speed
     def vr: Speed   // vertical rate
   }
 
+  /**
+    * non-point object that has an orientation relative to the horizontal plane
+    * note that pitch and roll default to 0, i.e. have to be overridden if the concrete type sets them
+    */
+  trait AttitudeObject {
+    def pitch: Angle = Angle.UndefinedAngle
+    def roll: Angle = Angle.UndefinedAngle
+  }
+
   class Velocity2D (
     var heading: Angle,
     var speed: Speed
   )
+
 
   /**
     * a mutable Seq of TrackedObjects that can be associated to a common src

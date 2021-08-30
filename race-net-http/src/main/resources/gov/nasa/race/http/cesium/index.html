@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <!-- Include the CesiumJS JavaScript and CSS files -->
+    <script src="https://cesium.com/downloads/cesiumjs/releases/1.84/Build/Cesium/Cesium.js"></script>
+    <link href="https://cesium.com/downloads/cesiumjs/releases/1.84/Build/Cesium/Widgets/widgets.css" rel="stylesheet">
+
+    <!-- our own scripting and styles -->
+    <script src="config.js"></script>
+    <link href="cesiumTracks.css" rel="stylesheet">
+    <script src="cesiumTracks.js"></script>
+</head>
+
+<body onload="initCesium();initWS();" onunload="shutdown();">
+    <div id="cesiumContainer" style="width:100%;height:100%;overflow:hidden;"></div>
+</body>

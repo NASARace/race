@@ -17,10 +17,12 @@
 package gov.nasa.race.track
 
 import gov.nasa.race.IdentifiableObject
-import gov.nasa.race.common.AssocSeq
+import gov.nasa.race.common.ConstAsciiSlice.asc
+import gov.nasa.race.common.{AssocSeq, JsonSerializable, JsonWriter}
 import gov.nasa.race.uom.DateTime
 import gov.nasa.race.util.StringUtils
 
+import java.text.DecimalFormat
 import scala.reflect.{ClassTag, classTag}
 
 object TrackedObject {
@@ -45,6 +47,25 @@ object TrackedObject {
   case class ChangedCS(oldCS: String)
 
   case class TrackProblem(fpos: TrackedObject, lastFpos: TrackedObject, problem: String)
+
+  // lexical constants
+  val ID = asc("id")
+  val LABEL = asc("label")
+  val DATE = asc("date")
+  val LAT = asc("lat")
+  val LON = asc("lon")
+  val ALT = asc("alt")
+  val HDG = asc("hdg")
+  val SPD = asc("spd")
+  val VR = asc("vr")
+  val ROLL = asc("roll")
+  val PITCH = asc("pitch")
+  val STATUS = asc("status")
+
+  val FMT_3_2 = new DecimalFormat("###.##")
+  val FMT_3_5 = new DecimalFormat("###.#####")
+  val FMT_3 = new DecimalFormat("###")
+  val FMT_6 = new DecimalFormat("######")
 }
 
 /**
@@ -55,7 +76,7 @@ object TrackedObject {
   * cases where occasionally associated data (a) should not be type restricted and (b)
   * are set too rarely to waste storage on all TrackObject instances
   */
-trait TrackedObject extends IdentifiableObject with TrackPoint with MovingObject with TrackMessage {
+trait TrackedObject extends IdentifiableObject with TrackPoint with MovingObject with AttitudeObject with TrackMessage with JsonSerializable {
   import TrackedObject._
 
   // generic mechanism to dynamically attach per-event data to track objects
@@ -92,6 +113,56 @@ trait TrackedObject extends IdentifiableObject with TrackPoint with MovingObject
   def tempCS = if (hasTempCS) cs else TrackedObject.tempCS(id)
   def getOldCS: Option[String] = amendments.find(_.isInstanceOf[ChangedCS]).map(_.asInstanceOf[ChangedCS].oldCS)
 
+  //--- JSON formatting
+
+  def serializeFormattedTo (writer: JsonWriter): Unit = {
+    writer
+      .beginObject
+      .writeStringMember(ID, id)
+      .writeStringMember(LABEL, cs)
+      .writeDateTimeMember(DATE, date)
+      .writeUnQuotedMember(LAT, FMT_3_5.format(position.latDeg))
+      .writeUnQuotedMember(LON, FMT_3_5.format(position.lonDeg))
+      .writeUnQuotedMember(ALT, FMT_6.format(position.altMeters))
+      .writeUnQuotedMember(HDG, FMT_3.format(heading.toDegrees))
+      .writeUnQuotedMember(SPD, FMT_3_2.format(speed.toMetersPerSecond))
+
+    if (vr.isDefined) writer.writeUnQuotedMember(VR, FMT_3_2.format(vr.toMetersPerSecond))
+    if (pitch.isDefined) writer.writeUnQuotedMember(PITCH, FMT_3.format(pitch.toDegrees))
+    if (roll.isDefined) writer.writeUnQuotedMember(ROLL, FMT_3.format(roll.toDegrees))
+
+    writer
+      .writeIntMember(STATUS, status)
+      .endObject
+  }
+
+  def serializeFormattedAs (writer: JsonWriter, key: String): Unit = {
+    writer.writeMemberName(key)
+    serializeFormattedTo(writer)
+  }
+
+  def serializeTo (writer: JsonWriter): Unit = {
+    writer
+      .beginObject
+      .writeStringMember(ID, id)
+      .writeStringMember(LABEL, cs)
+      .writeDateTimeMember(DATE, date)
+      .writeDoubleMember(LAT, position.latDeg)
+      .writeDoubleMember(LON, position.lonDeg)
+      .writeDoubleMember(ALT, position.altMeters)
+      .writeDoubleMember(HDG, heading.toDegrees)
+      .writeDoubleMember(SPD, speed.toMetersPerSecond)
+      .writeDoubleMember(VR, vr.toMetersPerSecond)
+      .writeDoubleMember(PITCH, pitch.toDegrees)
+      .writeDoubleMember(ROLL, roll.toDegrees)
+      .writeIntMember(STATUS, status)
+      .endObject
+  }
+
+  def serializeAs (writer: JsonWriter, key: String): Unit = {
+    writer.writeMemberName(key)
+    serializeTo(writer)
+  }
 }
 
 /**
@@ -105,7 +176,28 @@ trait PlannedTrack {
   def arrivalDate: DateTime
 }
 
-trait TrackedObjects[+T <: TrackedObject] extends AssocSeq[T,String]
+trait TrackedObjects[+T <: TrackedObject] extends AssocSeq[T,String] {
+
+  def serializeTo (writer: JsonWriter): Unit = {
+    writer.beginArray
+    foreach( _.serializeTo(writer))
+    writer.endArray
+  }
+  def serializeAs (writer: JsonWriter, key: String): Unit = {
+    writer.writeMemberName(key)
+    serializeTo(writer)
+  }
+
+  def serializeFormattedTo (writer: JsonWriter): Unit = {
+    writer.beginArray
+    foreach( _.serializeFormattedTo(writer))
+    writer.endArray
+  }
+  def serializeFormattedAs (writer: JsonWriter, key: String): Unit = {
+    writer.writeMemberName(key)
+    serializeFormattedTo(writer)
+  }
+}
 
 trait TrackedObjectEnumerator {
   def numberOfTrackedObjects: Int

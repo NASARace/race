@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <script type="application/javascript">
+            const evtSource = new EventSource("./tracks");
+
+            evtSource.onerror = function(err) {
+              console.error("EventSource failed:", err);
+            }
+
+            //--- called if message does not have a type
+            evtSource.onmessage = function(event) {
+              if (event.data.length >0) {
+                document.getElementById("data").textContent = event.data;
+              }
+            }
+
+            //--- only called for "track" typed messages
+            evtSource.addEventListener( "track", function(event) {
+              console.log(event);
+              document.getElementById("type").textContent = "track";
+              if (event.data.length >0) {
+                document.getElementById("data").textContent = event.data;
+              }
+            });
+        </script>
+</head>
+
+<body unload="evtSource.close();">
+<h1>Race Track Example</h1>
+
+<div id="type">no type yet</div>
+<div id="data">no data yet</div>
+</body>
+</html>

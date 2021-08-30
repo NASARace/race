@@ -31,9 +31,6 @@ package object air {
 
   trait TrackedAircraft extends TrackedObject {
 
-    // override if concrete type stores actual values
-    def pitch: Angle = Angle.Angle0
-    def roll: Angle = Angle.Angle0
     def acType: String = "?"
 
     def flightLevel: Int = ((position.altitude.toFeet)/500).toInt * 5

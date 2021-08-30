@@ -29,6 +29,7 @@ import akka.stream.scaladsl.{Source, SourceQueueWithComplete}
 import java.net.InetSocketAddress
 import scala.concurrent.Future
 import scala.util.{Failure, Success}
+import scala.collection.Seq
 
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.RaceDataClient
@@ -51,7 +52,7 @@ trait SSERaceRoute extends RaceRouteInfo {
     // nothing here
   }
 
-  protected def toSSE (msg: Any): Option[ServerSentEvent] // to be provided by client to
+  protected def toSSE (msg: Any): Seq[ServerSentEvent] // to be provided by client to
 }
 
 /**

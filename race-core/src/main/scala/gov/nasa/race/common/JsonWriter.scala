@@ -160,6 +160,12 @@ class JsonWriter (jsonType: ElementType = JsonWriter.RawElements, initSize: Int 
     toJson
   }
 
+  def toNewJson (o: JsonSerializable): String = {
+    clear()
+    o.serializeTo(this)
+    toJson
+  }
+
   def toJson: String = {
     closeOpenEnvironments
     buf.toString
@@ -293,6 +299,11 @@ class JsonWriter (jsonType: ElementType = JsonWriter.RawElements, initSize: Int 
     buf.append(v);
     this
   }
+  @inline final def writeDouble (v: Double, fmt: String): JsonWriter = {
+    checkAndArmSeparator
+    buf.append(String.format(fmt,v));
+    this
+  }
   @inline final def writeBoolean (v: Boolean): JsonWriter = {
     checkAndArmSeparator
     buf.append(if (v) "true" else "false")
@@ -321,6 +332,12 @@ class JsonWriter (jsonType: ElementType = JsonWriter.RawElements, initSize: Int 
   def writeDoubleMember (k: CharSequence, v: Double): JsonWriter = {
     writeMemberName(k)
     writeDouble(v)
+    armSeparator
+  }
+
+  def writeDoubleMember (k: CharSequence, v: Double, fmt: String) = {
+    writeMemberName(k)
+    writeDouble(v,fmt)
     armSeparator
   }
 

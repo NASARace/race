@@ -69,7 +69,7 @@ class TimeoutSpec extends AnyFlatSpec with RaceSpec {
     println(s"    object created at: " + DateTime.now)
     val o = new SomeToS("A", { - => n += 1} )
     Thread.sleep(500)
-    println(s"    object queued at: " + DateTime.now)
+    println(s"    expired object queued at: " + DateTime.now)
     btq += o
     Thread.sleep(500)
     assert(n == 1)
@@ -108,7 +108,7 @@ class TimeoutSpec extends AnyFlatSpec with RaceSpec {
 
   "a IndividualTimeoutMap" should "properly notify subjects" in {
     println("\n##--- testing individual timeouts")
-    var pendingNotifications = 0
+    @volatile var pendingNotifications = 0
 
     val itm = new IndividualTimeoutMap[String,SomeToS]
     val o = new SomeToS("A", { self=>
@@ -120,7 +120,7 @@ class TimeoutSpec extends AnyFlatSpec with RaceSpec {
     pendingNotifications = 1
     println(s"    object queued at: " + DateTime.now)
     itm += o.name -> o
-    Thread.sleep(500)
+    Thread.sleep(300)  // individual timeout is 150ms
     assert( pendingNotifications == 0) // o got notified
     assert( itm.isEmpty)
 

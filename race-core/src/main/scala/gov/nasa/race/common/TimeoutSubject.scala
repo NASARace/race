@@ -44,7 +44,7 @@ trait TimeoutSubject {
     */
   def timeoutExpired(): Unit
 
-  def hasExpired: Boolean = DateTime.timeSince(lastActive) > timeout
+  def hasExpired: Boolean = DateTime.timeSince(lastActive) >= timeout // be aware that timer precision might cause 0 differences
   def resetExpiration(): Unit = lastActive = DateTime.now
 
   def timeRemaining: Time = timeout - DateTime.timeSince(lastActive)
@@ -80,7 +80,7 @@ trait IndividualTimeoutMonitor[K,V <:TimeoutSubject] {
   def size: Int = timeoutSubjects.size
   def isEmpty: Boolean = timeoutSubjects.isEmpty
 
-  protected def addOrUpdate (k: K, v: V): Unit = {
+  protected def addOrUpdate (k: K, v: V): Unit = lock.synchronized {
     if (!v.hasExpired) {
       timeoutSubjects.get(k) match {
         case Some(ec) => // there already was one scheduled - cancel and reschedule

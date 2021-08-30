@@ -26,14 +26,44 @@ import gov.nasa.race.common.{AsciiBuffer, CharSeqByteSlice, ConstAsciiSlice, Mut
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.RaceActorCapabilities._
 import gov.nasa.race.core.{ContinuousTimeRaceActor, RaceContext}
-import javax.jms.{BytesMessage, Connection, JMSException, Message, MessageConsumer, MessageListener, Session, TextMessage, Topic => JMSTopic}
-import org.apache.activemq.ActiveMQConnectionFactory
+
+import javax.jms.{BytesMessage, Connection, ExceptionListener, JMSException, Message, MessageConsumer, MessageListener, Session, TextMessage, Topic => JMSTopic}
+import org.apache.activemq.{ActiveMQConnection, ActiveMQConnectionFactory}
 import org.apache.activemq.command.{Message => AMQMessage}
 import org.apache.activemq.util.ByteSequence
 
 import scala.language.postfixOps
 
 object JMSImportActor {
+
+  class ConnectionExceptionListener (conn: Connection, importer: JMSImportActor) extends ExceptionListener {
+    var nFailures = 0
+    val maxFail = importer.config.getIntOrElse("max-fail", 3)
+
+    override def onException (exception: JMSException): Unit = {
+
+      if (nFailures < maxFail)  {
+        importer.warning(s"JMS connection failed with $exception, trying to reconnect..")
+        exception.printStackTrace()
+
+        // TODO - this should loop if we can detect
+        nFailures += 1
+        Thread.sleep(1000) // TODO - check if we should use scheduler to trigger reconnect from importer
+        conn.start()
+
+        conn match {
+          case amqConn: ActiveMQConnection =>
+            importer.info(s"connection restarted: ${amqConn.isStarted()}")
+          case _ =>
+        }
+
+      } else {
+        importer.warning(s"JMS connection terminally failed with $exception, stopping connection")
+        conn.stop()
+      }
+    }
+  }
+
   // connection objects are shared, this is where the runtime cost is
   // NOTE - RACE is supposed to run as ONE logical user, i.e. we only need valid credentials
   // for the first connection. We do assume all components distributed with RACE share the same
@@ -67,6 +97,7 @@ object JMSImportActor {
     implicit val client = importer.getClass
     ifNotNull(factory.createConnection(config.getVaultableStringOrElse("user", null),
                                        config.getVaultableStringOrElse("pw", null))) { c =>
+      c.setExceptionListener( new ConnectionExceptionListener(c, importer))
       c.setClientID(importer.jmsId)
       c.start()
       connections = connections + (brokerURI -> ConnectionEntry(c, Set(importer)))

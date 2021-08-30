@@ -31,6 +31,7 @@ import gov.nasa.race.core.ParentActor
 import scalatags.Text.all.{head => htmlHead, _}
 
 import scala.collection.immutable.Iterable
+import scala.collection.Seq
 
 /*
  * a collection of generic test routes that can be used to test network connection and client compatibility.
@@ -260,8 +261,8 @@ class TestSSERoute (val pa: ParentActor, val conf: Config) extends SiteRoute(pa,
     }
   }
 
-  override protected def toSSE(msg: Any): Option[ServerSentEvent] = {
+  override protected def toSSE(msg: Any): Seq[ServerSentEvent] = {
     val s = msg.toString
-    if (s.nonEmpty) Some(ServerSentEvent(s)) else None
+    if (s.nonEmpty) Seq(ServerSentEvent(s)) else Seq.empty
   }
 }

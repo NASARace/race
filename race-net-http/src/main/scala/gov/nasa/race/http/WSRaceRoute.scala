@@ -16,9 +16,6 @@
  */
 package gov.nasa.race.http
 
-import java.io.File
-import java.net.InetSocketAddress
-import akka.{Done, NotUsed}
 import akka.actor.Actor.Receive
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.model.ws.{BinaryMessage, Message, TextMessage}
@@ -26,21 +23,22 @@ import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.{PathMatchers, Route}
 import akka.stream.Materializer
 import akka.stream.scaladsl.{Flow, Sink, SourceQueueWithComplete}
-import gov.nasa.race.common.{BufferedStringJsonPullParser, JsonWriter}
+import akka.{Done, NotUsed}
+import gov.nasa.race.common.JsonWriter
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.config.NoConfig
-import gov.nasa.race.core.{Ping, Pong, PongParser, RaceDataClient}
+import gov.nasa.race.core.{Ping, Pong, RaceDataClient}
 import gov.nasa.race.http.webauthn.WebAuthnMethod
 import gov.nasa.race.ifSome
 import gov.nasa.race.uom.Time.Seconds
 import gov.nasa.race.uom.{DateTime, Time}
 
+import java.io.File
+import java.net.InetSocketAddress
 import scala.collection.immutable.Iterable
-import scala.collection.mutable
 import scala.collection.mutable.{Map => MutMap}
 import scala.concurrent.Future
-import scala.concurrent.duration._
-import scala.util.{Failure, Success, Try}
+import scala.util.{Failure, Success}
 
 /**
   * root type for WebSocket RaceRouteInfos
