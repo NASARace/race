@@ -17,7 +17,7 @@
 package gov.nasa.race.http.cesium
 
 import akka.http.scaladsl.model.MediaType.Compressible
-import akka.http.scaladsl.model.{ContentType, ContentTypes, HttpCharsets, HttpEntity, MediaType, MediaTypes}
+import akka.http.scaladsl.model.{ContentType, ContentTypes, HttpCharsets, HttpEntity, MediaType, MediaTypes, Uri}
 import akka.http.scaladsl.model.ws.{Message, TextMessage}
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
@@ -105,7 +105,9 @@ class CesiumTrackRoute (val parent: ParentActor, val config: Config) extends Tra
         info("opening websocket")
         promoteToWebSocket()
       } ~ path("config.js") {
-        complete( HttpEntity( ContentType(MediaTypes.`application/javascript`, HttpCharsets.`UTF-8`), getConfigScript()))
+        extractUri { uri =>
+          complete(HttpEntity(ContentType(MediaTypes.`application/javascript`, HttpCharsets.`UTF-8`), getConfigScript(uri)))
+        }
       } ~ path("cesiumTracks.css") {
         complete(HttpEntity(ContentType(MediaTypes.`text/css`, HttpCharsets.`UTF-8`), getCSS()))
       } ~ path("cesiumTracks.js") {
@@ -142,11 +144,12 @@ class CesiumTrackRoute (val parent: ParentActor, val config: Config) extends Tra
 
   def getContent(): String = CesiumTrackRoute.htmlContent
 
-  def getConfigScript(): String = {
+  def getConfigScript(requestUri: Uri): String = {
+
     s"""
         Cesium.Ion.defaultAccessToken = '$accessToken';
 
-        const wsURL = 'ws://localhost:8080/ws';  // FIXME - should be computed
+        const wsURL = 'ws://${requestUri.authority}/ws';
         const trackColor = Cesium.Color.fromCssColorString('$trackColor');
 
         const trackLabelFont = '$trackLabel';
