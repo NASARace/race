@@ -16,7 +16,8 @@
  */
 package gov.nasa.race.http.cesium
 
-import akka.http.scaladsl.model.{ContentType, ContentTypes, HttpCharsets, HttpEntity, MediaTypes}
+import akka.http.scaladsl.model.MediaType.Compressible
+import akka.http.scaladsl.model.{ContentType, ContentTypes, HttpCharsets, HttpEntity, MediaType, MediaTypes}
 import akka.http.scaladsl.model.ws.{Message, TextMessage}
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
@@ -26,15 +27,16 @@ import gov.nasa.race.core.ParentActor
 import gov.nasa.race.http.{BasicWSContext, TrackWSRoute}
 import gov.nasa.race.uom.Length.Meters
 import gov.nasa.race.config.ConfigUtils.ConfigWrapper
-import gov.nasa.race.util.ClassUtils
+import gov.nasa.race.util.{ClassUtils, FileUtils}
 
 import java.net.InetSocketAddress
+import java.util.Base64
 import scala.collection.immutable.Iterable
 
 object CesiumTrackRoute {
-  val htmlContent = ClassUtils.getResourceAsString(getClass,"index.html").get
-  val cesiumScript = ClassUtils.getResourceAsString(getClass,"cesiumTracks.js").get
-  val cesiumCSS = ClassUtils.getResourceAsString(getClass,"cesiumTracks.css").get
+  val htmlContent = ClassUtils.getResourceAsUtf8String(getClass,"index.html").get
+  val cesiumScript = ClassUtils.getResourceAsUtf8String(getClass,"cesiumTracks.js").get
+  val cesiumCSS = ClassUtils.getResourceAsUtf8String(getClass,"cesiumTracks.css").get
 }
 
 /**
@@ -42,7 +44,35 @@ object CesiumTrackRoute {
   */
 class CesiumTrackRoute (val parent: ParentActor, val config: Config) extends TrackWSRoute {
   val accessToken = config.getVaultableString("access-token")
-  val trackColor = config.getStringOrElse("color", "red");
+
+  //--- graphical track representations
+  val trackColor = config.getStringOrElse("color", "red")
+
+  val trackPoint = config.getIntOrElse("track-point", 5)
+  val trackPointDist = config.getIntOrElse("track-point-dist", 120000) // in meters
+
+  val trackModel = loadTrackModel( config.getStringOrElse("track-model", "track.glb"), trackColor)
+  val trackModelSize = config.getIntOrElse( "track-model-size", 30)  // min size for track model in pixels
+
+  val trackLabel = config.getStringOrElse("track-label", "14px sans-serif")
+  val trackLabelBg = config.getStringOrElse( "track-label-bg", "rgba(255,255,0,0.7)")
+  val trackLabelOffsetX = config.getIntOrElse ("track-label-offset.x", 15)
+  val trackLabelOffsetY = config.getIntOrElse ("track-label-offset.y", 15)
+  val trackLabelDist = config.getIntOrElse("track-label-dist", 200000) // in meters
+
+  val trackInfo = config.getStringOrElse("track-info", "12px sans-serif")
+  val trackInfoOffsetX = config.getIntOrElse ("track-info-offset.x", trackLabelOffsetX)
+  val trackInfoOffsetY = config.getIntOrElse ("track-info-offset.y", 35)
+  val trackInfoDist = config.getIntOrElse("track-info-dist", 80000) // in meters
+
+  def loadTrackModel (fname: String, clrSpec: String): Array[Byte] = {
+    ClassUtils.getResourceAsBytes(getClass, fname) match {
+      case Some(data) => data
+      case None =>
+        warning(s"no model $fname")
+        Array[Byte](0)
+    }
+  }
 
   def sendInitialCameraPosition (remoteAddr: InetSocketAddress, queue: SourceQueueWithComplete[Message]): Unit = {
     // position over center of continental US if nothing specified
@@ -53,7 +83,7 @@ class CesiumTrackRoute (val parent: ParentActor, val config: Config) extends Tra
     val ec = config.getOptionalConfig("eye")
     if (ec.isDefined) {
       val e = ec.get
-      alt = e.getLengthOrElse("altitude", alt)
+      alt = e.getLengthOrElse("alt", alt)
       lat = e.getDoubleOrElse("lat", lat)
       lon = e.getDoubleOrElse("lon", lon)
     }
@@ -80,6 +110,8 @@ class CesiumTrackRoute (val parent: ParentActor, val config: Config) extends Tra
         complete(HttpEntity(ContentType(MediaTypes.`text/css`, HttpCharsets.`UTF-8`), getCSS()))
       } ~ path("cesiumTracks.js") {
         complete( HttpEntity( ContentType(MediaTypes.`application/javascript`, HttpCharsets.`UTF-8`), getScript()))
+      } ~ path( "track.glb") {
+        complete( HttpEntity( ContentType(MediaType.customBinary("model","gltf-binary",Compressible)), getModel()))
       }
     }
   }
@@ -114,12 +146,30 @@ class CesiumTrackRoute (val parent: ParentActor, val config: Config) extends Tra
     s"""
         Cesium.Ion.defaultAccessToken = '$accessToken';
 
-        const wsURL = 'ws://localhost:8080/ws';  // FIXME
-        const trackColor = '$trackColor';
+        const wsURL = 'ws://localhost:8080/ws';  // FIXME - should be computed
+        const trackColor = Cesium.Color.fromCssColorString('$trackColor');
+
+        const trackLabelFont = '$trackLabel';
+        const trackLabelOffset = new Cesium.Cartesian2( $trackLabelOffsetX, $trackLabelOffsetY);
+        const trackLabelBackground = Cesium.Color.fromCssColorString('$trackLabelBg');
+        const trackLabelDC = new Cesium.DistanceDisplayCondition( 0, $trackLabelDist);
+
+        const trackPoint = $trackPoint;
+        const trackPointDC = new Cesium.DistanceDisplayCondition( $trackPointDist, Number.MAX_VALUE);
+
+        const trackModel = 'track.glb';
+        const trackModelSize = $trackModelSize;
+        const trackModelDC = new Cesium.DistanceDisplayCondition( 0, $trackPointDist);
+
+        const trackInfoFont = '$trackInfo';
+        const trackInfoOffset = new Cesium.Cartesian2( $trackInfoOffsetX, $trackInfoOffsetY);
+        const trackInfoDC = new Cesium.DistanceDisplayCondition( 0, $trackInfoDist);
      """
   }
 
   def getScript(): String = CesiumTrackRoute.cesiumScript
 
   def getCSS(): String = CesiumTrackRoute.cesiumCSS
+
+  def getModel(): Array[Byte] = trackModel
 }

@@ -34,7 +34,7 @@ object AuthResponse {
 
 object AuthMethod {
   val defaultAuthCSS: String = {
-    ClassUtils.getResourceAsString(getClass,"auth.css") match {
+    ClassUtils.getResourceAsUtf8String(getClass,"auth.css") match {
       case Some(cssText) => cssText
       case None => ""
     }

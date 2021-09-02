@@ -1,5 +1,6 @@
 var viewer = undefined;
 var ws = undefined;
+var trackInfoDataSource = undefined;
 
 function initCesium() {
    const stamen = new Cesium.OpenStreetMapImageryProvider({
@@ -18,6 +19,9 @@ function initCesium() {
     setCanvasSize();
     window.addEventListener('resize', setCanvasSize);
     viewer.resolutionScale = 2.0;
+
+    trackInfoDataSource = new Cesium.CustomDataSource('trackInfo');
+    viewer.dataSources.add(trackInfoDataSource);
 }
 
     //--- functions
@@ -75,8 +79,8 @@ function handleCameraMessage (camera) {
 }
 
 function handleTrackMessage (track) {
-  //console.log(JSON.stringify(track));
-  //updateTrack(track);
+  console.log(JSON.stringify(track));
+  updateTrack(track);
 }
 
 function handleTrackListMessage (trackList) {
@@ -86,51 +90,97 @@ function shutdown() {
   ws.close();
 }
 
+var entityPrototype = undefined;
+
 function updateTrack (track) {
+    // this can make use of the configured constants from config.js
+
+    let hdg = Cesium.Math.toRadians(track.hdg);
     let pitch = track.pitch ? track.pitch : 0.0;
     let roll = track.roll ? track.roll : 0.0;
 
     let pos = Cesium.Cartesian3.fromDegrees(track.lon, track.lat, track.alt);
-    let hpr = new Cesium.HeadingPitchRoll(track.hdg, pitch, roll);
+    let hpr = Cesium.HeadingPitchRoll.fromDegrees(track.hdg, pitch, roll);
     let orientation = Cesium.Transforms.headingPitchRollQuaternion(pos, hpr);
 
-    let e = new Cesium.Entity({
-        id: track.label,
-        position: pos,
-        orientation: orientation,
+    var e = viewer.entities.getById(track.label);
+    if (e) { // just update position and attitude
+      e.position = pos;
+      e.orientation = orientation;
 
-        point: {
-            pixelSize: 6,
-            color: trackColor,
-            //outlineColor: Cesium.Color.YELLOW,
-            distanceDisplayCondition: new Cesium.DistanceDisplayCondition(60000)
-        },
-        billboard: {
-            image: "./plane.png",
-            alignedAxis: Cesium.Cartesian3.UNIT_Z,
-            rotation: Cesium.Math.toRadians(-hdg),
-            distanceDisplayCondition: new Cesium.DistanceDisplayCondition(1000, 60000)
-        },
-        model: {
-            uri: "./airplane1.glb",
-            color: Cesium.Color.RED,
-            silhouetteColor: Cesium.Color.ORANGE,
-            silhouetteAlpha: 1.0,
-            silhouetteSize: 2.0,
-            distanceDisplayCondition: new Cesium.DistanceDisplayCondition(0, 1000)
-        },
-        label: {
-            text: 'XYZ333',
-            //scale: 0.5,
-            font: "14px sans-serif",
-            fillColor: Cesium.Color.YELLOW,
-            showBackground: true,
-            backgroundColor: new Cesium.Color(0.5, 0.5, 0.5, 0.3), // alpha does not work against model
-            pixelOffset: new Cesium.Cartesian2(25, 25),
-            disableDepthTestDistance: Number.POSITIVE_INFINITY,
-            distanceDisplayCondition: new Cesium.DistanceDisplayCondition(0, 40000)
-        }
+    } else { // add a new entry
+        e = new Cesium.Entity({
+            id: track.label,
+            position: pos,
+            orientation: orientation,
+
+            point: entityPrototype ? entityPrototype.point : {
+                pixelSize: trackPoint,
+                color: trackColor,
+                outlineColor: Cesium.Color.YELLOW,
+                distanceDisplayCondition: trackPointDC
+            },
+            model: entityPrototype ? entityPrototype.model : {
+                uri: trackModel,
+                color: trackColor,
+                //silhouetteColor: Cesium.Color.ORANGE,
+                //silhouetteAlpha: 1.0,
+                //silhouetteSize: 2.0,
+                minimumPixelSize: trackModelSize,
+                distanceDisplayCondition: trackModelDC
+            },
+            label: {
+                text: track.label,
+                //scale: 0.5,
+                horizontalOrigin: Cesium.HorizontalOrigin.LEFT,
+                font: trackLabelFont,
+                fillColor: trackColor,
+                showBackground: true,
+                backgroundColor: trackLabelBackground, // alpha does not work against model
+                pixelOffset: trackLabelOffset,
+                disableDepthTestDistance: Number.POSITIVE_INFINITY,
+                distanceDisplayCondition: trackLabelDC
+            }
+        });
+
+        if (!entityPrototype) entityPrototype = e;
+
+        viewer.entities.add(e);
+    }
+
+    updateTrackInfo(track,pos);
+}
+
+function updateTrackInfo (track,pos) {
+  let fl = Math.round(track.alt * 0.00656167979) * 5;
+  let hdg = Math.round(track.hdg);
+  let spd = Math.round(track.spd * 1.94384449);
+
+  let trackInfo = `FL${fl} ${hdg}° ${spd}kn`;
+  let trackInfoEntities = trackInfoDataSource.entities;
+
+  var e = trackInfoEntities.getById(track.label);
+  if (e) {
+    e.position = pos;
+    e.label.text = trackInfo;
+
+  } else {
+    e = new Cesium.Entity({
+      id: track.label,
+      position: pos,
+
+      label: {
+        font: trackInfoFont,
+        horizontalOrigin: Cesium.HorizontalOrigin.LEFT,
+        fillColor: trackColor,
+        showBackground: true,
+        backgroundColor: trackLabelBackground, // alpha does not work against model
+        pixelOffset: trackInfoOffset,
+        disableDepthTestDistance: Number.POSITIVE_INFINITY,
+        distanceDisplayCondition: trackInfoDC
+      }
     });
 
-    viewer.entities.add(e);
+    trackInfoEntities.add(e);
+  }
 }

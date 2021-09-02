@@ -24,25 +24,18 @@ import java.lang.reflect.Method
   */
 object ClassUtils {
 
-  def getResourceAs[T] (cls: Class[_], name: String)(f: (ByteArrayOutputStream) => T): Option[T] = {
+  def getResourceAsUtf8String(cls: Class[_], name: String): Option[String] = {
     val is = cls.getResourceAsStream(name)
     if (is != null) {
-      val len = is.available()
-      val buf = new Array[Byte](len)
-      val bao = new ByteArrayOutputStream
-      is.read(buf)
-      bao.write(buf)
-      is.close
-      Some(f(bao))
+      Some( new String(is.readAllBytes(), "UTF-8"))
     } else None
   }
 
-  def getResourceAsString(cls: Class[_], name: String): Option[String] = {
-    getResourceAs(cls,name){ _.toString("UTF-8") }
-  }
-
   def getResourceAsBytes(cls: Class[_], name: String): Option[Array[Byte]] = {
-    getResourceAs(cls,name){ _.toByteArray }
+    val is = cls.getResourceAsStream(name)
+    if (is != null) {
+      Some( is.readAllBytes())
+    } else None
   }
 
   def getMethod(cls: Class[_], name: String, argTypes: Class[_]*): Option[Method] = {
