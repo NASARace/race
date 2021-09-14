@@ -19,6 +19,7 @@ package gov.nasa.race.common
 import gov.nasa.race.common.ImplicitGenerics._
 import gov.nasa.race.uom.DateTime
 
+import java.text.NumberFormat
 import scala.collection.mutable.ArrayBuffer
 
 trait JsonSerializable {
@@ -286,22 +287,26 @@ class JsonWriter (jsonType: ElementType = JsonWriter.RawElements, initSize: Int 
 
   @inline final def writeInt (v: Int): JsonWriter = {
     checkAndArmSeparator
-    buf.append(v);
+    buf.append(v)
     this
   }
   @inline final def writeLong (v: Long): JsonWriter = {
     checkAndArmSeparator
-    buf.append(v);
+    buf.append(v)
     this
   }
   @inline final def writeDouble (v: Double): JsonWriter = {
-    checkAndArmSeparator
-    buf.append(v);
+    if (v.isDefined) { // NaN is not a valid JSON number
+      checkAndArmSeparator
+      buf.append(v)
+    }
     this
   }
   @inline final def writeDouble (v: Double, fmt: String): JsonWriter = {
-    checkAndArmSeparator
-    buf.append(String.format(fmt,v));
+    if (v.isDefined) {
+      checkAndArmSeparator
+      buf.append(String.format(fmt, v));
+    }
     this
   }
   @inline final def writeBoolean (v: Boolean): JsonWriter = {
@@ -323,22 +328,49 @@ class JsonWriter (jsonType: ElementType = JsonWriter.RawElements, initSize: Int 
     armSeparator
   }
 
+  def writeIntMember (k: CharSequence, v: Long, fmt: NumberFormat): JsonWriter = {
+    writeMemberName(k)
+    writeUnQuotedValue(fmt.format(v))
+    armSeparator
+  }
+
   def writeLongMember (k: CharSequence, v: Long): JsonWriter = {
     writeMemberName(k)
     writeLong(v)
     armSeparator
   }
 
-  def writeDoubleMember (k: CharSequence, v: Double): JsonWriter = {
+  def writeLongMember (k: CharSequence, v: Long, fmt: NumberFormat): JsonWriter = {
     writeMemberName(k)
-    writeDouble(v)
+    writeUnQuotedValue(fmt.format(v))
     armSeparator
   }
 
-  def writeDoubleMember (k: CharSequence, v: Double, fmt: String) = {
-    writeMemberName(k)
-    writeDouble(v,fmt)
-    armSeparator
+  def writeDoubleMember (k: CharSequence, v: Double): JsonWriter = {
+    if (v.isDefined) {
+      writeMemberName(k)
+      writeDouble(v)
+      armSeparator
+    }
+    this
+  }
+
+  def writeDoubleMember (k: CharSequence, v: Double, fmt: String): JsonWriter = {
+    if (v.isDefined) {
+      writeMemberName(k)
+      writeDouble(v, fmt)
+      armSeparator
+    }
+    this
+  }
+
+  def writeDoubleMember (k: CharSequence, v: Double, fmt: NumberFormat): JsonWriter = {
+    if (v.isDefined) {
+      writeMemberName(k)
+      writeUnQuotedValue(fmt.format(v))
+      armSeparator
+    }
+    this
   }
 
   def writeStringMember (k: CharSequence, v: String): JsonWriter = {

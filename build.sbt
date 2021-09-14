@@ -144,7 +144,8 @@ lazy val raceNetKafkaTest = createTestProject("race-net-kafka-test", testSetting
   enablePlugins(JavaAppPackaging).
   dependsOn(raceNetKafka,raceTestKit).
   settings(
-    Compile / mainClass := Some("gov.nasa.race.kafka.KafkaServer")
+    Compile / mainClass := Some("gov.nasa.race.kafka.KafkaServer"),
+    evictionErrorLevel := Level.Info // BAD - SBT >1.5.x chokes on org.scala-lang.modules:scala-java8-compat eviction (akka needs newer version)
   ).
   addLibraryDependencies(slf4jSimple,log4jOverSlf4j,kafkaAll).
   addTestLibraryDependencies(akkaRemoting,akkaSlf4j)

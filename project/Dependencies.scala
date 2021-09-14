@@ -122,7 +122,7 @@ object Dependencies {
   val jimfs = "com.google.jimfs" % "jimfs" % "1.2"
 
   //--- Akka
-  val akkaVersion = "2.6.15"
+  val akkaVersion = "2.6.16"
   val akkaOrg = "com.typesafe.akka"
 
   val akkaActor = akkaOrg %% "akka-actor" % akkaVersion
@@ -131,19 +131,19 @@ object Dependencies {
   val akkaCluster = akkaOrg %% "akka-cluster" % akkaVersion // e.g. for multi-jvm testing
   val akkaSlf4j = akkaOrg %% "akka-slf4j" % akkaVersion
   val akkaTestkit = akkaOrg %% "akka-testkit" % akkaVersion
-  val akkaHttp = akkaOrg %% "akka-http" % "10.2.4"
+  val akkaHttp = akkaOrg %% "akka-http" % "10.2.6"
 
   val akkaAll = Seq(akkaActor)
 
   //--- Aeron (for akka-remote)
-  val aeronDriver =  "io.aeron" % "aeron-driver" % "1.34.0"
-  val aeronClient = "io.aeron" % "aeron-client" % "1.34.0"
+  val aeronDriver =  "io.aeron" % "aeron-driver" % "1.35.1"
+  val aeronClient = "io.aeron" % "aeron-client" % "1.35.1"
 
   val akkaRemoting = Seq(akkaRemote,aeronDriver,aeronClient)
 
 
   //--- ActiveMQ
-  val amqVersion = "5.16.2"
+  val amqVersion = "5.16.3"
   val amqOrg = "org.apache.activemq"
   val amqBroker = amqOrg % "activemq-broker" % amqVersion
 

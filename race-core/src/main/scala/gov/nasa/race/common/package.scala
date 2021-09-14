@@ -64,8 +64,8 @@ package object common {
     @inline def =:= (x: Double) = d == x.d
     @inline def ≡ (x: Double) = d == x.d
 
-    @inline def isDefined = d != Double.NaN
-    @inline def isUndefined = d == Double.NaN
+    @inline def isDefined = !java.lang.Double.isNaN(d)
+    @inline def isUndefined = java.lang.Double.isNaN(d)
 
     @inline def round_1 = Math.round(d * 10.0) / 10.0
     @inline def round_2 = Math.round(d * 100.0) / 100.0

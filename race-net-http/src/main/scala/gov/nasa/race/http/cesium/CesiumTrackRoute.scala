@@ -17,26 +17,26 @@
 package gov.nasa.race.http.cesium
 
 import akka.http.scaladsl.model.MediaType.Compressible
-import akka.http.scaladsl.model.{ContentType, ContentTypes, HttpCharsets, HttpEntity, MediaType, MediaTypes, Uri}
 import akka.http.scaladsl.model.ws.{Message, TextMessage}
+import akka.http.scaladsl.model._
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
 import akka.stream.scaladsl.SourceQueueWithComplete
 import com.typesafe.config.Config
+import gov.nasa.race.config.ConfigUtils.ConfigWrapper
 import gov.nasa.race.core.ParentActor
 import gov.nasa.race.http.{BasicWSContext, TrackWSRoute}
 import gov.nasa.race.uom.Length.Meters
-import gov.nasa.race.config.ConfigUtils.ConfigWrapper
-import gov.nasa.race.util.{ClassUtils, FileUtils}
+import gov.nasa.race.util.ClassUtils
 
 import java.net.InetSocketAddress
-import java.util.Base64
 import scala.collection.immutable.Iterable
 
 object CesiumTrackRoute {
   val htmlContent = ClassUtils.getResourceAsUtf8String(getClass,"index.html").get
   val cesiumScript = ClassUtils.getResourceAsUtf8String(getClass,"cesiumTracks.js").get
   val cesiumCSS = ClassUtils.getResourceAsUtf8String(getClass,"cesiumTracks.css").get
+  val mapCursor = ClassUtils.getResourceAsBytes(getClass, "mapcursor-bw-32x32.png").get
 }
 
 /**
@@ -52,18 +52,20 @@ class CesiumTrackRoute (val parent: ParentActor, val config: Config) extends Tra
   val trackPointDist = config.getIntOrElse("track-point-dist", 120000) // in meters
 
   val trackModel = loadTrackModel( config.getStringOrElse("track-model", "track.glb"), trackColor)
-  val trackModelSize = config.getIntOrElse( "track-model-size", 30)  // min size for track model in pixels
+  val trackModelSize = config.getIntOrElse( "track-model-size", 26)  // min size for track model in pixels
 
   val trackLabel = config.getStringOrElse("track-label", "14px sans-serif")
   val trackLabelBg = config.getStringOrElse( "track-label-bg", "rgba(255,255,0,0.7)")
-  val trackLabelOffsetX = config.getIntOrElse ("track-label-offset.x", 15)
-  val trackLabelOffsetY = config.getIntOrElse ("track-label-offset.y", 15)
+  val trackLabelOffsetX = config.getIntOrElse ("track-label-offset.x", 12)
+  val trackLabelOffsetY = config.getIntOrElse ("track-label-offset.y", 12)
   val trackLabelDist = config.getIntOrElse("track-label-dist", 200000) // in meters
 
   val trackInfo = config.getStringOrElse("track-info", "12px sans-serif")
   val trackInfoOffsetX = config.getIntOrElse ("track-info-offset.x", trackLabelOffsetX)
   val trackInfoOffsetY = config.getIntOrElse ("track-info-offset.y", 35)
   val trackInfoDist = config.getIntOrElse("track-info-dist", 80000) // in meters
+
+  val trackPaths = config.getBooleanOrElse("track-paths", false)
 
   def loadTrackModel (fname: String, clrSpec: String): Array[Byte] = {
     ClassUtils.getResourceAsBytes(getClass, fname) match {
@@ -114,6 +116,8 @@ class CesiumTrackRoute (val parent: ParentActor, val config: Config) extends Tra
         complete( HttpEntity( ContentType(MediaTypes.`application/javascript`, HttpCharsets.`UTF-8`), getScript()))
       } ~ path( "track.glb") {
         complete( HttpEntity( ContentType(MediaType.customBinary("model","gltf-binary",Compressible)), getModel()))
+      } ~ path( "mapcursor.png"){
+        complete( HttpEntity( ContentType(MediaType.customBinary("image","png",Compressible)), getMapCursor()))
       }
     }
   }
@@ -145,8 +149,9 @@ class CesiumTrackRoute (val parent: ParentActor, val config: Config) extends Tra
   def getContent(): String = CesiumTrackRoute.htmlContent
 
   def getConfigScript(requestUri: Uri): String = {
-
     s"""
+        //--- server provided client configuration
+
         Cesium.Ion.defaultAccessToken = '$accessToken';
 
         const wsURL = 'ws://${requestUri.authority}/ws';
@@ -167,6 +172,15 @@ class CesiumTrackRoute (val parent: ParentActor, val config: Config) extends Tra
         const trackInfoFont = '$trackInfo';
         const trackInfoOffset = new Cesium.Cartesian2( $trackInfoOffsetX, $trackInfoOffsetY);
         const trackInfoDC = new Cesium.DistanceDisplayCondition( 0, $trackInfoDist);
+
+        const trackPaths = $trackPaths;
+
+        const imageryProvider = new Cesium.OpenStreetMapImageryProvider({
+            url: 'http://tile.stamen.com/terrain'
+        });
+        const terrainProvider = new Cesium.ArcGISTiledElevationTerrainProvider({
+            url: 'https://elevation3d.arcgis.com/arcgis/rest/services/WorldElevation3D/Terrain3D/ImageServer',
+        });
      """
   }
 
@@ -175,4 +189,6 @@ class CesiumTrackRoute (val parent: ParentActor, val config: Config) extends Tra
   def getCSS(): String = CesiumTrackRoute.cesiumCSS
 
   def getModel(): Array[Byte] = trackModel
+
+  def getMapCursor(): Array[Byte] = CesiumTrackRoute.mapCursor
 }

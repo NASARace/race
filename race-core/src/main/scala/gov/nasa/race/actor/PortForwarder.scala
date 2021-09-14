@@ -18,7 +18,7 @@
 package gov.nasa.race.actor
 
 import akka.actor.ActorRef
-import com.jcraft.jsch.JSch
+import com.jcraft.jsch.{JSch, Logger}
 import com.typesafe.config.Config
 import gov.nasa.race._
 import gov.nasa.race.common.UserInfoFactory
@@ -44,13 +44,32 @@ object PortForwarder {
 class PortForwarder (val config: Config) extends PeriodicRaceActor {
   implicit val client = getClass
 
+  class JSchLoggingAdapter extends Logger {
+    // Akka: debug: 4, info: 3, warning: 2, error: 1
+    // JSch: debug: 0, info: 1, warn: 2, error: 3, fatal: 4
+
+    override def isEnabled(level: Int): Boolean = {
+      logLevel.asInt >= 4 - level
+    }
+
+    override def log(level: Int, message: UrlString): Unit = {
+      level match {
+        case Logger.ERROR | Logger.FATAL => error(message)
+        case Logger.WARN => warning(message)
+        case Logger.INFO => info(message)
+        case Logger.DEBUG => debug(message)
+      }
+    }
+  }
+
   var connectTimeout = config.getIntOrElse("connect-timeout", 5000)
   // msec between alive messages if nothing received from server
   val aliveInterval = config.getIntOrElse("alive-interval", 5000)
   // number of un-answered alive msgs before disconnect
-  val aliveMaxCount = config.getIntOrElse("alive-maxcount", 1)
-  val strictHostKey = config.getBooleanOrElse("strict-hostkey", false) // should probably default to true
+  val aliveMaxCount = config.getIntOrElse("alive-maxcount", 4)
+  val strictHostKey = config.getBooleanOrElse("strict-hostkey", true)
   val authPrefs = config.getStringOrElse("authentications", "gssapi-with-mic,publickey,keyboard-interactive,password")
+  val knownHosts = config.getStringOrElse( "known-hosts", System.getProperty("user.home") + "/.ssh/known_hosts")
 
   val user = config.getVaultableStringOrElse("user", System.getProperty("user.name"))
   val host = config.getVaultableString("host")
@@ -59,7 +78,10 @@ class PortForwarder (val config: Config) extends PeriodicRaceActor {
 
   setSystemProperties()
 
+  JSch.setLogger(new JSchLoggingAdapter)
   val jsch = new JSch
+  jsch.setKnownHosts( knownHosts)
+
   val session = jsch.getSession(user, host)
 
   if (forwardL.nonEmpty || forwardR.nonEmpty) {

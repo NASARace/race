@@ -121,15 +121,14 @@ trait TrackedObject extends IdentifiableObject with TrackPoint with MovingObject
       .writeStringMember(ID, id)
       .writeStringMember(LABEL, cs)
       .writeDateTimeMember(DATE, date)
-      .writeUnQuotedMember(LAT, FMT_3_5.format(position.latDeg))
-      .writeUnQuotedMember(LON, FMT_3_5.format(position.lonDeg))
-      .writeUnQuotedMember(ALT, FMT_6.format(position.altMeters))
-      .writeUnQuotedMember(HDG, FMT_3.format(heading.toDegrees))
-      .writeUnQuotedMember(SPD, FMT_3_2.format(speed.toMetersPerSecond))
-
-    if (vr.isDefined) writer.writeUnQuotedMember(VR, FMT_3_2.format(vr.toMetersPerSecond))
-    if (pitch.isDefined) writer.writeUnQuotedMember(PITCH, FMT_3.format(pitch.toDegrees))
-    if (roll.isDefined) writer.writeUnQuotedMember(ROLL, FMT_3.format(roll.toDegrees))
+      .writeDoubleMember(LAT, position.latDeg, FMT_3_5)
+      .writeDoubleMember(LON, position.lonDeg, FMT_3_5)
+      .writeDoubleMember(ALT, position.altMeters, FMT_6)
+      .writeDoubleMember(HDG, heading.toDegrees, FMT_3)
+      .writeDoubleMember(SPD, speed.toMetersPerSecond, FMT_3_2)
+      .writeDoubleMember(VR, vr.toMetersPerSecond, FMT_3_2)
+      .writeDoubleMember(PITCH, pitch.toDegrees, FMT_3)
+      .writeDoubleMember(ROLL, roll.toDegrees, FMT_3)
 
     writer
       .writeIntMember(STATUS, status)
