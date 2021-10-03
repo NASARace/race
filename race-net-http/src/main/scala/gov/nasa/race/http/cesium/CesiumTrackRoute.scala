@@ -51,7 +51,7 @@ class CesiumTrackRoute (val parent: ParentActor, val config: Config) extends Tra
   val trackPoint = config.getIntOrElse("track-point", 5)
   val trackPointDist = config.getIntOrElse("track-point-dist", 120000) // in meters
 
-  val trackModel = loadTrackModel( config.getStringOrElse("track-model", "track.glb"), trackColor)
+  val trackModel = loadTrackModel( config.getStringOrElse("track-model", "paper-plane.glb"), trackColor)
   val trackModelSize = config.getIntOrElse( "track-model-size", 26)  // min size for track model in pixels
 
   val trackLabel = config.getStringOrElse("track-label", "14px sans-serif")

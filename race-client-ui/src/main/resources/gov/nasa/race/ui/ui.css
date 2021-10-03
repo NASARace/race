@@ -1,0 +1,439 @@
+/* generic themed CSS for race-client-ui based documents */
+
+
+/* general (themed root vars are lodaded first) */
+
+::-webkit-scrollbar {
+    width: var(--scrollbar-track-width);
+    height: var(--scrollbar-track-width);
+}
+
+::-webkit-scrollbar-track {
+    width: var(--scrollbar-track-width);
+    height: var(--scrollbar-track-width);
+    background-color: var(--scrollbar-track-color);
+}
+
+ ::-webkit-scrollbar-thumb {
+    width: var(--scrollbar-thumb-width);
+    height: var(--scrollbar-thumb-width);
+    background-color: var(--scrollbar-thumb-color);
+}
+
+::-webkit-scrollbar-corner {
+    background-color: transparent;
+}
+
+
+/* movable windows */
+
+div.ui_window {
+    display: none;
+    position: absolute;
+    z-index: 5;
+    border: var(--window-border);
+    box-shadow: var(--window-shadow);
+}
+
+div.ui_titlebar {
+    padding: 5px;
+    color: var(--titlebar-color);
+    background-color: var(--titlebar-background-color);
+    font-family: var(--font-family);
+    font-size: var(--font-size);
+    font-weight: bold;
+    text-align: center;
+    cursor: move;
+}
+
+div.ui_titlebar button.ui_close_button {
+    position: absolute;
+    top: 3px;
+    right: 3px;
+    background-color: transparent;
+    border: none;
+    color: var(--color);
+}
+
+div.ui_window_content {
+    padding: 5px;
+    color: var(--window-color);
+    background-color: var(--window-background-color);
+    border: none;
+    font-family: var(--font-family);
+    font-size: var(--font-size);
+    cursor: default;
+}
+
+
+/* screen icons */
+
+div.ui_icon {
+    display: block;
+    position: fixed;
+    background: var(--icon-background-color);
+    color: var(--icon-color);
+    border: var(--icon-border);
+    width: var(--icon-size);
+    height: var(--icon-size);
+    z-index: 3;
+}
+
+div.ui_icon svg {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+}
+
+div.ui_icon:hover {
+    background: var(--icon-hover-background-color);
+}
+
+use.ui_icon_svg {
+    stroke: var(--icon-color);
+    fill: var(--icon-fill-color);
+}
+
+use.ui_icon_svg:hover {
+    stroke: var(--icon-hover-color);
+    fill: var(--icon-hover-fill-color);
+}
+
+div.ui_icon.on {
+    color: var(--icon-on-color);
+    background-color: var(--icon-on-background-color);
+    border: var(--icon-on-border);
+}
+
+
+/* collapsible panels */
+
+div.ui_panel_header {
+    margin-top: 10px;
+    border: none;
+    border-top: var(--panel-border-top);
+    font-weight: bold;
+    width: 100%;
+}
+
+div.ui_panel_header.expanded::before {
+    content: "▽ ";
+}
+
+div.ui_panel_header.collapsed::before {
+    content: "▶︎ ";
+}
+
+div.ui_panel_header.collapsed::after {
+    content: "…";
+}
+
+div.ui_panel {
+    transition: max-height 0.4s ease-out;
+    overflow: hidden;
+}
+
+
+/* fields (label + display) */
+
+div.ui_field {
+    margin: 3px;
+}
+
+div.ui_field_label {
+    display: inline-block;
+    padding-right: 3px;
+    text-align: right;
+    width: var(--field-label-width);
+    height: var(--field-height);
+}
+
+input.ui_field {
+    display: inline-block;
+    box-sizing: border-box;
+    color: var(--field-value-color);
+    background: var(--dark-background-color);
+    width: var(--field-value-width);
+    height: var(--field-height);
+    border: var(--field-border);
+}
+
+input.ui_field.num {
+    text-align: right;
+    font-family: var(--font-family-mono);
+}
+
+input.ui_field.text {
+    display: inline-block;
+    font-family: var(--font-family);
+}
+
+
+/* input field */
+
+input.ui_field.input {
+    color: var(--input-color);
+    font-family: var(--font-family);
+}
+
+input.ui_field.input:focus {
+    color: var(--input-active-color);
+    background: var(--input-active-background);
+}
+
+input.ui_field.input:hover {
+    color: var(--input-active-color);
+    background: var(--input-active-background);
+}
+
+
+/* choice fields */
+
+div.ui_choice {
+    margin: 3px;
+}
+
+select.ui_choice {
+    display: inline-block;
+    box-sizing: border-box;
+    color: var(--choice-value-color);
+    background: var(--choice-field-background);
+    width: var(--choice-value-width);
+    height: var(--field-height);
+    border: var(--choice-field-border);
+}
+
+
+/* checkboxes */
+
+div.ui_checkbox {
+    display: flex;
+    flex-direction: row;
+    justify-content: flex-start;
+    align-items: center;
+    background: transparent;
+    margin: 3px;
+    padding: 3px;
+}
+
+div.ui_checkbox:active {
+    color: var(--button-color-pressed);
+}
+
+div.ui_checkbox_button {
+    display: inline-block;
+    /* box-sizing: border-box; */
+    width: var(--checkbox-button-size);
+    height: var(--checkbox-button-size);
+    border: var(--checkbox-button-border);
+    font-size: smaller;
+    font-weight: bold;
+    text-align: center;
+}
+
+div.ui_checkbox:hover div {
+    background: var(--button-hover-background-color);
+}
+
+div.ui_checkbox.checked div.ui_checkbox_button::before {
+    content: "✓";
+}
+
+div.ui_checkbox_label {
+    display: inline-block;
+    text-align: left;
+    vertical-align: middle;
+    padding-left: 3px;
+}
+
+
+/* radio buttons */
+
+div.ui_radio {
+    display: flex;
+    flex-direction: row;
+    justify-content: flex-start;
+    align-items: center;
+    background: transparent;
+    margin: 3px;
+    padding: 3px;
+}
+
+div.ui_radio:active {
+    color: var(--button-color-pressed);
+}
+
+div.ui_radio_button {
+    display: inline-block;
+    box-sizing: border-box;
+    width: var(--radio-button-size);
+    height: var(--radio-button-size);
+    margin: 2px;
+    border: var(--radio-button-border);
+    border-radius: calc(var(--radio-button-size) / 2);
+    text-align: center;
+}
+
+div.ui_radio.selected div.ui_radio_button {
+    background: var(--radio-button-selected-background);
+}
+
+div.ui_radio:hover div {
+    background: var(--button-hover-background-color);
+}
+
+div.ui_radio_label {
+    display: inline-block;
+    text-align: left;
+    vertical-align: middle;
+    padding-left: 3px;
+}
+
+
+/* buttons */
+
+.ui_button {
+    display: inline-block;
+    height: var(--button-height);
+    color: var(--button-color);
+    background: var(--button-background-color);
+    border: var(--button-border);
+    border-radius: var(--button-border-radius);
+    margin: 3px;
+    padding: 2px 5px 2px 5px;
+}
+
+.ui_button:hover {
+    background: var(--button-hover-background-color);
+}
+
+.ui_button:active {
+    border: var(--button-border-pressed);
+    color: var(--button-color-pressed);
+}
+
+
+/* list boxes */
+
+div.ui_list {
+    color: var(--list-color);
+    background: var(--dark-background-color);
+    border: var(--list-border);
+    margin: 3px;
+    padding: 3px;
+    /*max-height: calc( attr(data-rows) * var(--list-item-height) + 2px);  attr() does not work */
+    width: var(--list-width);
+    box-sizing: border-box;
+    overflow-y: auto;
+    overflow-x: auto;
+}
+
+div.ui_list_item {
+    display: flex;
+    flex-direction: row;
+    align-content: center;
+    height: var(--list-item-height);
+    color: var(--field-value-color);
+    padding: var(--list-item-padding);
+}
+
+div.ui_list_item:hover {
+    background: var(--list-hover-background-color);
+}
+
+div.ui_list_item.selected {
+    color: var(--selected-data-color);
+    background: var(--list-selection-background-color);
+}
+
+div.ui_list_item.prototype {
+    display: none;
+}
+
+div.ui_list_subitem {
+    display: inline-block;
+    text-overflow: "…";
+    background: transparent;
+}
+
+
+/* tab lists */
+
+
+/* popup menus */
+
+div.ui_popup_menu {
+    /*display: none;*/
+    position: fixed;
+    visibility: hidden;
+    border: var(--popup-menu-border);
+    border-radius: 5px;
+    background: var(--menuitem-background-color);
+    box-shadow: var(--box-shadow);
+}
+
+div.ui_popup_menu hr {
+    border: 1px inset var(--border-color);
+}
+
+div.ui_menuitem {
+    padding: 2px 1rem 2px 1rem;
+    font: var(--menuitem-font);
+    height: var(--menuitem-height);
+    background: var(--menuitem-background-color);
+}
+
+div.ui_menuitem.disabled {
+    color: var(--disabled-color);
+}
+
+div.ui_menuitem.checked::before {
+    content: "✓ ";
+}
+
+div.ui_menuitem:not([class*="disabled"]):hover {
+    background: var(--menuitem-selection-background-color);
+}
+
+
+/* layout container */
+
+div.ui_flex_row {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+}
+
+div.ui_flex_col {
+    display: flex;
+    flex-direction: column;
+    flex-wrap: nowrap;
+}
+
+div.align_left {
+    align-items: flex-start;
+}
+
+div.align_center {
+    align-items: center;
+}
+
+div.align_right {
+    align-items: flex-end;
+}
+
+
+/* initial window placement */
+
+#console {
+    left: 100px;
+    top: 300px;
+    /*width: 15rem;*/
+}
+
+#consoleIcon {
+    left: 10px;
+    top: 10px;
+}

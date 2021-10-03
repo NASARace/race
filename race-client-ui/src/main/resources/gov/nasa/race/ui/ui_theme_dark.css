@@ -1,0 +1,97 @@
+/* basic dark theme CSS property values */
+
+
+/* common variables */
+
+:root {
+    /* basic values */
+    --color: rgb(200, 200, 200);
+    --data-color: rgb(0, 255, 0);
+    --selected-data-color: yellow;
+    --input-data-color: yellow;
+    --disabled-color: rgba(200, 200, 200, 0.5);
+    --background-color: rgb(64, 64, 84);
+    --selection-background-color: rgb(64, 64, 200);
+    --hover-background-color: rgb(84, 84, 160);
+    --font-family: arial;
+    --font-family-mono: monospace;
+    --font-size: small;
+    --border-color: rgb(130, 130, 130);
+    --box-shadow: 5px 5px 8px rgb(136, 136, 136);
+    /* icons (toplevel buttons with variable stroke/fill color SVGs and explicit 'on' state) */
+    /*   background-color used for transparent image parts, color for image stroke and fill-color for image fill */
+    --icon-size: 32px;
+    --icon-border: 1px solid var(--border-color);
+    --icon-background-color: var(--background-color);
+    --icon-color: rgb(200, 200, 200);
+    --icon-fill-color: rgb(180, 180, 180);
+    --icon-hover-background-color: var(--hover-background-color);
+    --icon-hover-color: cyan;
+    --icon-hover-fill-color: rgb(99, 166, 168);
+    --icon-on-background-color: var(--selection-background-color);
+    --icon-on-color: white;
+    --icon-on-fill-color: rgb(220, 220, 220);
+    --icon-on-border: 1px solid white;
+    /* windows */
+    --titlebar-color: var(--color);
+    --titlebar-background-color: rgb(32, 32, 64);
+    --window-color: var(--color);
+    --window-background-color: var(--background-color);
+    --window-border: 1px solid var(--border-color);
+    --window-shadow: var(--box-shadow);
+    /* panels */
+    --panel-border-top: 1px solid var(--border-color);
+    /* scrollbars */
+    --scrollbar-track-width: 0.5rem;
+    --scrollbar-track-color: rgb(44, 44, 44);
+    --scrollbar-thumb-width: 0.3rem;
+    --scrollbar-thumb-color: rgb(100, 100, 100);
+    /* menus */
+    --popup-menu-border: 1px solid rgb(24, 24, 24);
+    --menuitem-font: 14px arial, sans-serif;
+    --menuitem-height: 1.1rem;
+    --menuitem-background-color: rgb(64, 64, 64);
+    --menuitem-selection-background-color: rgb(64, 64, 200);
+    /* data fields */
+    --field-height: 1.4rem;
+    --field-label-width: 5rem;
+    --field-value-width: 8rem;
+    --field-value-color: var(--data-color);
+    --field-border: 2px inset var(--border-color);
+    /* text input */
+    --input-color: var(--input-data-color);
+    --input-active-color: yellow;
+    --input-active-background: rgb(64, 64, 200);
+    /* choices */
+    --choice-height: var(--field-height);
+    --choice-value-width: var(--field-value-width);
+    --choice-value-color: var(--input-data-color);
+    --choice-field-border: 2px inset var(--border-color);
+    --choice-field-background: transparent;
+    /* pushbuttons */
+    --button-height: 1.4rem;
+    --button-color: rgb(200, 200, 200);
+    --button-background-color: rgb(64, 64, 64);
+    --button-hover-background-color: rgb(64, 64, 200);
+    --button-border: 1px solid rgb(200, 200, 200);
+    --button-border-radius: 5px;
+    --button-color-pressed: yellow;
+    --button-border-pressed: 1px solid yellow;
+    /* checkboxes */
+    --checkbox-size: 1rem;
+    --checkbox-button-size: 0.8rem;
+    --checkbox-button-border: 1px solid var(--border-color);
+    /* radio buttons */
+    --radio-size: 1rem;
+    --radio-button-size: 0.7rem;
+    --radio-button-border: 1px solid var(--border-color);
+    --radio-button-selected-background: rgb(200, 200, 200);
+    /* lists */
+    --list-width: 8rem;
+    --list-item-height: 1.1rem;
+    --list-item-padding: 1px;
+    --list-border: 2px inset var(--border-color);
+    --list-hover-background-color: rgb(80, 80, 80);
+    --list-selection-color: var(--selected-data-color);
+    --list-selection-background-color: var(--selection-background-color);
+}
