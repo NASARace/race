@@ -1,6 +1,6 @@
 # RACE by Example
 
-website: <http://nasarace.github.io/race>  or <a href="../index.html">local</a><br/>
+website: <https://nasarace.github.io/race>  or <a href="../index.html">local</a><br/>
 repository: <https://github.com/nasarace/race><br/>
 
 <p class="author">

@@ -7,7 +7,7 @@
     "self": { "id": "/nodes/node_1", "info": "this is the node_1 node" },
 
     "upstream": [
-      { "id": "/nodes/coordinator", "info": "this is the upstream coordinator", "host": "localhost", "port": 7898, "protocol": "ws", "addrMask": "all" }
+      { "id": "/nodes/coordinator", "info": "this is the upstream coordinator", "host": "localhost", "port": 7800, "protocol": "ws", "addrMask": "all" }
     ],
 
     "peer": [

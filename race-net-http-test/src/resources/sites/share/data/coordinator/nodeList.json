@@ -4,7 +4,7 @@
     "info": "known nodes",
     "date": "2020-06-28T12:00:00.000",
 
-    "self": { "id": "/nodes/coordinator", "info": "this is the coordinator node", "host": "::0", "port": 7898, "protocol": "ws" },
+    "self": { "id": "/nodes/coordinator", "info": "this is the coordinator node", "host": "::0", "port": 7800, "protocol": "ws" },
 
     "upstream": [],
     "peer": [],

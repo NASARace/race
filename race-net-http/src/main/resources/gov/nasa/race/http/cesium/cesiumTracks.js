@@ -281,6 +281,8 @@ function updateTrajectory (track) {
 //--- interaction
 
 function setHomeView() {
+  viewer.selectedEntity = undefined;
+  viewer.trackedEntity = undefined;
   viewer.camera.flyTo({
       destination: Cesium.Cartesian3.fromDegrees(camera.lon, camera.lat, camera.alt),
       orientation: {

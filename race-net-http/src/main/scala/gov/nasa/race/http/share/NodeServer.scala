@@ -23,7 +23,7 @@ import gov.nasa.race.util.{NumUtils, StringUtils}
 
 object NodeServer {
   val DefaultNodeServerIfc = "::0"  // any interface
-  val DefaultNodeServerPort = 7898
+  val DefaultNodeServerPort = 7000
 }
 
 /**
