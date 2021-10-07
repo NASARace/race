@@ -111,7 +111,7 @@ NASA Ames Research Center
   <img src="../images/tais-stats-config.svg" class="left scale20"/>
   <img src="../images/tais-stats.svg" class="right scale35"/>
 </div>
-<div class="run">1: ./race -Darchive=../data/all-080717-1744/tais.ta.gz config/air/swim-tais-stats-replay.conf</div><a class="srv" href="http://localhost:8080/race/statistics"></a>
+<div class="run">1: ./race -Darchive=../data/all-080717-1744/tais.ta.gz config/air/swim-tais-stats-replay.conf</div><a class="srv" href="http://localhost:9100/race/statistics"></a>
 
 
 ## Example 6: Properties can be more Complex - Parallel Approaches
