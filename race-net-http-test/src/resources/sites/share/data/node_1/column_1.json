@@ -14,7 +14,9 @@
       "/data/cat_C/field_1": 1100,
       "/data/cat_C/field_2": 1200,
       "/data/cat_C/field_3": 1300,
-      "/data/cat_C/field_4": 1400
+      "/data/cat_C/field_4": 1400,
+
+      "/data/link":          {"value": "http://localhost:9000/tracks", "date": "2020-06-29T16:06:01.000"}
     }
   }
 }

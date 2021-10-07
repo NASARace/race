@@ -17,17 +17,19 @@
 package gov.nasa.race.http.cesium
 
 import akka.http.scaladsl.model.MediaType.Compressible
-import akka.http.scaladsl.model.ws.{Message, TextMessage}
 import akka.http.scaladsl.model._
+import akka.http.scaladsl.model.ws.{Message, TextMessage}
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
 import akka.stream.scaladsl.SourceQueueWithComplete
 import com.typesafe.config.Config
 import gov.nasa.race.config.ConfigUtils.ConfigWrapper
 import gov.nasa.race.core.ParentActor
-import gov.nasa.race.http.{BasicWSContext, TrackWSRoute}
+import gov.nasa.race.http.{BasicWSContext, CachedProxyRoute, TrackWSRoute}
+import gov.nasa.race.ui._
 import gov.nasa.race.uom.Length.Meters
-import gov.nasa.race.util.ClassUtils
+import gov.nasa.race.util.{ClassUtils, FileUtils}
+import scalatags.Text.all._
 
 import java.net.InetSocketAddress
 import scala.collection.immutable.Iterable
@@ -37,12 +39,14 @@ object CesiumTrackRoute {
   val cesiumScript = ClassUtils.getResourceAsUtf8String(getClass,"cesiumTracks.js").get
   val cesiumCSS = ClassUtils.getResourceAsUtf8String(getClass,"cesiumTracks.css").get
   val mapCursor = ClassUtils.getResourceAsBytes(getClass, "mapcursor-bw-32x32.png").get
+
+  val controlsIcon = ClassUtils.getResourceAsBytes(getClass, "controls.svg").get
 }
 
 /**
   * a TrackRoute that uses Cesium to display tracks as Cesium.Entities
   */
-class CesiumTrackRoute (val parent: ParentActor, val config: Config) extends TrackWSRoute {
+class CesiumTrackRoute (val parent: ParentActor, val config: Config) extends TrackWSRoute with CachedProxyRoute {
   val accessToken = config.getVaultableString("access-token")
 
   //--- graphical track representations
@@ -62,10 +66,22 @@ class CesiumTrackRoute (val parent: ParentActor, val config: Config) extends Tra
 
   val trackInfo = config.getStringOrElse("track-info", "12px sans-serif")
   val trackInfoOffsetX = config.getIntOrElse ("track-info-offset.x", trackLabelOffsetX)
-  val trackInfoOffsetY = config.getIntOrElse ("track-info-offset.y", 35)
+  val trackInfoOffsetY = config.getIntOrElse ("track-info-offset.y", 25)
   val trackInfoDist = config.getIntOrElse("track-info-dist", 80000) // in meters
 
   val trackPaths = config.getBooleanOrElse("track-paths", false)
+
+  val cesiumCache = config.getOptionalString("cesium-cache") // optional cache of Cesium resources
+  val cesiumVersion = config.getStringOrElse("cesium-version", "1.86")
+
+  val mapTileProvider = config.getStringOrElse("maptile-provider", "http://tile.stamen.com/terrain")
+  val mapTileCache = config.getOptionalString("maptile-cache")
+
+  val elevationProvider = config.getStringOrElse("elevation-provider", "https://elevation3d.arcgis.com/arcgis/rest/services/WorldElevation3D/Terrain3D/ImageServer")
+  val elevationCache = config.getOptionalString("elevation-cache")
+
+  val trackCSS = config.getStringOrElse("track-css", "cesiumTracks.css")
+  val trackScript = config.getStringOrElse("track-script", "cesiumTracks.js")
 
   def loadTrackModel (fname: String, clrSpec: String): Array[Byte] = {
     ClassUtils.getResourceAsBytes(getClass, fname) match {
@@ -106,6 +122,7 @@ class CesiumTrackRoute (val parent: ParentActor, val config: Config) extends Tra
       } ~ path("ws") {
         info("opening websocket")
         promoteToWebSocket()
+
       } ~ path("config.js") {
         extractUri { uri =>
           complete(HttpEntity(ContentType(MediaTypes.`application/javascript`, HttpCharsets.`UTF-8`), getConfigScript(uri)))
@@ -116,8 +133,42 @@ class CesiumTrackRoute (val parent: ParentActor, val config: Config) extends Tra
         complete( HttpEntity( ContentType(MediaTypes.`application/javascript`, HttpCharsets.`UTF-8`), getScript()))
       } ~ path( "track.glb") {
         complete( HttpEntity( ContentType(MediaType.customBinary("model","gltf-binary",Compressible)), getModel()))
-      } ~ path( "mapcursor.png"){
-        complete( HttpEntity( ContentType(MediaType.customBinary("image","png",Compressible)), getMapCursor()))
+      } ~ path( "mapcursor.png") {
+        complete(HttpEntity(ContentType(MediaType.customBinary("image", "png", Compressible)), getMapCursor()))
+
+      } ~ path ("ui.js") {
+        complete(HttpEntity(ContentType(MediaTypes.`application/javascript`, HttpCharsets.`UTF-8`), uiScript))
+      } ~ path ("ui.css") {
+        complete(HttpEntity(ContentType(MediaTypes.`text/css`, HttpCharsets.`UTF-8`), uiCSS))
+      } ~ path ("ui_theme.css") {
+        complete(HttpEntity(ContentType(MediaTypes.`text/css`, HttpCharsets.`UTF-8`), uiThemeDarkCSS)) // FIXME - should be user specific
+
+      } ~ pathPrefix ("maptile") {
+        completeCached(mapTileCache.get, mapTileProvider)
+      } ~ pathPrefix ("elevation") {
+        completeCached(elevationCache.get, elevationProvider)
+
+      } ~ pathPrefix( "Build" / "Cesium") {
+        extractUnmatchedPath { p =>
+          val pathName = cesiumCache.get + "/Build/Cesium" + p.toString()
+          FileUtils.fileContentsAsString( pathName) match {
+            case Some(content) => complete( HttpEntity( ContentType(MediaTypes.`application/javascript`, HttpCharsets.`UTF-8`), content))
+            case None => complete( StatusCodes.NotFound, "Build/Cesium" + p.toString())
+          }
+        }
+
+      } ~ pathPrefix( "ui_assets") {
+        extractUnmatchedPath { p =>
+          val pn = p.toString().substring(1)
+          ClassUtils.getResourceAsBytes(getClass, pn) match {
+            case Some(content) =>
+              if (pn.endsWith(".svg")) complete( StatusCodes.OK, HttpEntity(MediaTypes.`image/svg+xml`,content))
+              else if (pn.endsWith(".png")) complete(HttpEntity(ContentType(MediaType.customBinary("image", "png", Compressible)), content))
+              else complete( StatusCodes.NotAcceptable, "unsupported content type: " + pn)
+            case None =>complete( StatusCodes.NotFound, "ui_assets" + pn)
+
+          }
+        }
       }
     }
   }
@@ -146,7 +197,50 @@ class CesiumTrackRoute (val parent: ParentActor, val config: Config) extends Tra
     response
   }
 
-  def getContent(): String = CesiumTrackRoute.htmlContent
+  def cesiumUrl: String = {
+    cesiumCache match {
+      case Some(path) => "Build/Cesium/Cesium.js"
+      case None => s"https://cesium.com/downloads/cesiumjs/releases/$cesiumVersion/Build/Cesium/Cesium.js"
+    }
+  }
+
+  def cesiumWidgetCSS: String = {
+    cesiumCache match {
+      case Some(path) => "Build/Cesium/Widgets/widgets.css"
+      case None => s"https://cesium.com/downloads/cesiumjs/releases/$cesiumVersion/Build/Cesium/Widgets/widgets.css"
+    }
+  }
+
+  def getContent(): String = {
+    html(
+      htmlHead(
+        cssLink("ui_theme.css"),
+        cssLink("ui.css"),
+        extScript("ui.js"),
+
+        cssLink(cesiumWidgetCSS),
+        extScript(cesiumUrl),
+
+        cssLink("cesiumTracks.css"),
+        extScript("config.js"),
+        extScript("cesiumTracks.js") // the client part of the track processing
+      ),
+      body(onload:="uiInit();initCesium();initWS();", onunload:="shutdown()")(
+        fullWindowCesiumContainer(),
+
+        uiWindow("Track Console", "console")(
+          uiPanel("View",true, "console.view")(
+            uiNumField("lat", "console.view.latitude"),
+            uiNumField("lon", "console.view.longitude"),
+            uiNumField("alt", "console.view.altitude"),
+            uiButton("Reset", "setHomeView()")
+          )
+        ),
+
+        uiIcon("ui_assets/controls.svg", "uiToggleWindow('console')", "console_icon")
+      )
+    ).render
+  }
 
   def getConfigScript(requestUri: Uri): String = {
     s"""
@@ -176,10 +270,12 @@ class CesiumTrackRoute (val parent: ParentActor, val config: Config) extends Tra
         const trackPaths = $trackPaths;
 
         const imageryProvider = new Cesium.OpenStreetMapImageryProvider({
-            url: 'http://tile.stamen.com/terrain'
+            url: 'maptile'
+            //url: 'http://tile.stamen.com/terrain'
         });
         const terrainProvider = new Cesium.ArcGISTiledElevationTerrainProvider({
-            url: 'https://elevation3d.arcgis.com/arcgis/rest/services/WorldElevation3D/Terrain3D/ImageServer',
+            url: 'elevation'
+            //url: 'https://elevation3d.arcgis.com/arcgis/rest/services/WorldElevation3D/Terrain3D/ImageServer',
         });
      """
   }

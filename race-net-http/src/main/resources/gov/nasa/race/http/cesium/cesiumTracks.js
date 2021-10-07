@@ -9,6 +9,10 @@ var camera = undefined;
 
 const minLabelDepth = 300.0;
 
+function initializeData() {
+  console.log("initialized")
+}
+
 function initCesium() {
     viewer = new Cesium.Viewer('cesiumContainer', {
         imageryProvider: imageryProvider,
@@ -25,7 +29,11 @@ function initCesium() {
 
     setCanvasSize();
     window.addEventListener('resize', setCanvasSize);
-    viewer.resolutionScale = 1.0;
+    //viewer.resolutionScale = 2.0;
+    viewer.resolutionScale = window.devicePixelRatio;
+
+    viewer.scene.fxaa = false;
+    viewer.scene.fxaaOrderIndependentTranslucency = false;
 
     trackInfoDataSource = new Cesium.CustomDataSource('trackInfo');
     viewer.dataSources.add(trackInfoDataSource);
@@ -44,19 +52,19 @@ function initCesium() {
 
 function updateCamera() {
   let pos = viewer.camera.positionCartographic;
-  document.getElementById("altitude").innerText = Math.round(pos.height).toString();
+  uiSetField("console.view.altitude", Math.round(pos.height).toString());
 }
 
 function updateMouseLocation(e) {
   var ellipsoid = viewer.scene.globe.ellipsoid;
   var cartesian = viewer.camera.pickEllipsoid(new Cesium.Cartesian3(e.clientX, e.clientY), ellipsoid);
   if (cartesian) {
-    var cartographic = ellipsoid.cartesianToCartographic(cartesian);
-    var longitudeString = Cesium.Math.toDegrees(cartographic.longitude).toFixed(5);
-    var latitudeString = Cesium.Math.toDegrees(cartographic.latitude).toFixed(5);
+    let cartographic = ellipsoid.cartesianToCartographic(cartesian);
+    let longitudeString = Cesium.Math.toDegrees(cartographic.longitude).toFixed(5);
+    let latitudeString = Cesium.Math.toDegrees(cartographic.latitude).toFixed(5);
 
-    document.getElementById("latitude").innerText = latitudeString;
-    document.getElementById("longitude").innerText = longitudeString;
+    uiSetField("console.view.latitude", latitudeString);
+    uiSetField("console.view.longitude", longitudeString);
   }
 }
 
@@ -116,6 +124,7 @@ function handleTrackMessage (track) {
 }
 
 function handleTrackListMessage (trackList) {
+console.log("process track message");
   for (track of trackList) {
     updateTrack(track);
   }
@@ -178,7 +187,7 @@ function updateTrack (track) {
             },
             label: {
                 text: track.label,
-                //scale: 0.5,
+                scale: 0.8,
                 horizontalOrigin: Cesium.HorizontalOrigin.LEFT,
                 font: trackLabelFont,
                 fillColor: trackColor,
@@ -222,6 +231,7 @@ function updateTrackInfo (track,pos) {
 
       label: {
         font: trackInfoFont,
+        scale: 0.8,
         horizontalOrigin: Cesium.HorizontalOrigin.LEFT,
         fillColor: trackColor,
         showBackground: true,
@@ -270,21 +280,6 @@ function updateTrajectory (track) {
 
 //--- interaction
 
-function toggleConsolePanel () {
-  let consoleBtn = document.getElementById("consoleButton");
-  let console = document.getElementById("consolePanel");
-
-  if (!isConsolePanelVisible) {
-    console.style.display = "block";
-    consoleBtn.innerText = "▽";
-  } else {
-    console.style.display = "none";
-    consoleBtn.innerText = "▷";
-  }
-
-  isConsolePanelVisible = !isConsolePanelVisible
-}
-
 function setHomeView() {
   viewer.camera.flyTo({
       destination: Cesium.Cartesian3.fromDegrees(camera.lon, camera.lat, camera.alt),
@@ -305,18 +300,6 @@ function setDownView() {
         roll: Cesium.Math.toRadians(0.0)
     }
   });
-}
-
-function toggleTrajectories() {
-  let btn = document.getElementById("trajectoryToggle");
-
-  if (trajectoryDataSource.show){
-    trajectoryDataSource.show = false;
-    btn.style.backgroundColor = "transparent";
-  } else {
-    trajectoryDataSource.show = true;
-    btn.style.backgroundColor = "rgba(10,10,10, 0.5)";
-  }
 }
 
 //--- CustomProperties

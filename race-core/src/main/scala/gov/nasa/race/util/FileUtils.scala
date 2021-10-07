@@ -93,6 +93,24 @@ object FileUtils {
     }
   }
 
+  def setFileContents (path: Path, newContents: Array[Byte]): Boolean = {
+    import StandardOpenOption._
+    try {
+      Files.write(path,newContents,CREATE,TRUNCATE_EXISTING,WRITE) // should we maybe SYNC here?
+      true
+    } catch {
+      case x: Throwable => false
+    }
+  }
+
+  def setFileContents (file: File, newContents: Array[Byte]): Boolean = {
+    setFileContents(file.toPath, newContents)
+  }
+
+  def setFileContents (pathName: String, newContents: Array[Byte]): Boolean = {
+    setFileContents( FileSystems.getDefault.getPath(pathName), newContents)
+  }
+
   def setFileContents (path: Path, newContents: CharSequence): Boolean = {
     import StandardOpenOption._
     try {
@@ -140,7 +158,7 @@ object FileUtils {
   // file extension (without '.')
   def getExtension (fn: String): String = {
     val i = fn.lastIndexOf('.')
-    if (i < 0) "" else fn.substring(i+1)
+    if (i < 0) "" else fn.substring(i+1).toLowerCase
   }
   def getExtension (file: File): String = getExtension(file.getName)
 

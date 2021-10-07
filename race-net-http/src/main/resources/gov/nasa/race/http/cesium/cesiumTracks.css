@@ -5,75 +5,13 @@ html, body {
     margin: 0;
 }
 
-.toolIcon {
-  display: inline-block;
-  background-color: #202020;
-  color: #fff;
-  width: 32px;
-  height: 32px;
-  font-size: 16px;
-  border: 0;
-  z-index: 5;
+#console {
+    left: 100px;
+    top: 300px;
+    /*width: 15rem;*/
 }
 
-.toolIcon:hover {
-  background-color: #202040;
+#console_icon {
+    left: 10px;
+    top: 10px;
 }
-
-#consoleButton {
-  position: fixed;
-  left: 5px;
-  top: 5px;
-}
-
-#consolePanel {
-  display: none;
-  position: absolute;
-  padding: 5px;
-  width: 20rem;
-  color: #00ff00;
-  background-color: rgba(20,20,20, 0.5);
-  z-index: 4;
-}
-
-.consoleSection {
-  border-top: 1px solid green;
-  margin: 10px 3px 3px 3px;
-  width: 100%;
-}
-
-#time {
-  color: yellow;
-  font-family: monospace;
-  font-size: 18pt;
-}
-
-.label {
-  font-family: arial;
-  font-size: 12pt;
-  text-align: right;
-  margin-left: 1rem;
-  width: 10rem;
-}
-
-.button {
-  width: 28px;
-  height: 28px;
-  border: 1px solid cyan;
-  border-radius: 3px;
-  color: cyan;
-  background-color: transparent;
-  font-size: 16px;
-}
-
-.numData {
-  font-family: monospace;
-  font-size: 12pt;
-  color: yellow;
-}
-
-/*
-#cesiumContainer {
-  cursor: url(mapcursor.png) 16 16, crosshair;
-}
-*/

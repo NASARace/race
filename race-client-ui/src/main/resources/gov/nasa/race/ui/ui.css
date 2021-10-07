@@ -24,6 +24,11 @@
     background-color: transparent;
 }
 
+div.ui_full_window {
+    width:100%;
+    height:100%;
+    overflow:hidden;
+}
 
 /* movable windows */
 

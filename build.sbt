@@ -65,8 +65,8 @@ lazy val raceNetDDS = createProject("race-net-dds", commonSettings).
   addLibraryDependencies(omgDDS)
 
 lazy val raceNetHttp = createProject("race-net-http", commonSettings).
-  dependsOn(raceCore).
-  addLibraryDependencies(akkaHttp,scalaTags,scalaTags,argon2,jfreeChart,webauthn)
+  dependsOn(raceCore,raceClientUI).
+  addLibraryDependencies(akkaHttp,scalaTags,argon2,jfreeChart,webauthn)
 
 lazy val raceSwing = createProject("race-swing", commonSettings).
   dependsOn(raceCore).
@@ -121,6 +121,10 @@ lazy val raceAdapter = createProject("race-adapter", commonSettings).
   settings(
     noPublishSettings // not yet published (and only will publish Java)
   )
+
+lazy val raceClientUI = createProject("race-client-ui", commonSettings).
+  dependsOn(raceCore).
+  addLibraryDependencies(scalaTags)
 
 //--- test projects - no artifacts, only used to test this repository
 
