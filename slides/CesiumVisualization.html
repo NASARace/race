@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8"/>
+        <title>RACE</title>
+
+        <link href="./race-slides-html.css" rel="stylesheet"/>
+    </head>
+
+    <body>
+        <div class="slidecounter" id="counter">0 / 0</div>
+        <div class="stopwatch" id="timer">00:00</div>
+        <div class="slide title">
+            <!-- additional divs inserted by renderer extension -->
+            <h1 id="cesium-browser-based-visualization" class="title">Cesium/Browser based Visualization</h1>
+            </div><div class="slide"><h2 id="slides" class="section">Slides</h2>
+            <ul class="nav-list">
+              <li class="level1 active"><a href="#">Cesium/Browser based Visualization</a></li>
+              <li class="level2"><a href="#slides">Slides</a></li>
+              <li class="level2"><a href="#in-process-race-ww">In-Process: race-ww</a></li>
+              <li class="level2"><a href="#worldwind-viewer-infrastructure">WorldWind Viewer Infrastructure</a></li>
+              <li class="level2"><a href="#browser-race-net-http">Browser: race-net-http</a></li>
+              <li class="level2"><a href="#race-httpserver-infrastructure">RACE HttpServer Infrastructure</a></li>
+              <li class="level2"><a href="#cesium">Cesium</a></li>
+            </ul>
+            </div><div class="slide"><h2 id="in-process-race-ww" class="section">In-Process: race-ww</h2>
+            <ul>
+              <li>&check; no serialization/deserialization</li>
+              <li>&check; dense GUI support (race-ww, race-swing)</li>
+              <li>&#9888;︎ foundation has eroded (WorldWind, JOGL, OpenGL) → WorldWind needs major rewrite to make use of contemporary GPUs/drivers</li>
+            </ul>
+            <p><img src="../images/ww-visualization.svg" class="center scale60"/>
+            <div class="run">1: ./race -Darchive=../data/all-080717-1744 config/air/swim-all-sbs-replay-ww.conf</div></p>
+            </div><div class="slide"><h2 id="worldwind-viewer-infrastructure" class="section">WorldWind Viewer Infrastructure</h2>
+            <ul>
+              <li>
+                <p>RACE provides</p>
+                <ul>
+                  <li>async thread-safe data import for <em>Layers</em></li>
+                  <li>extensible UI framework of (Swing) <em>Panels</em></li>
+                </ul>
+              </li>
+            </ul>
+            <img src="../images/race-viewer.svg" class="center scale60">
+            </div><div class="slide"><h2 id="browser-race-net-http" class="section">Browser: race-net-http</h2>
+            <ul>
+              <li>&check; no end-user install, more devices (RACE used as web server)</li>
+              <li>&check; 3rd party libs future proof (akka-http, Cesium), good HW support, full 3D (meshes)</li>
+              <li>&#9888; requires network IO plus serialization/deserialization per app object update</li>
+              <li>&#9888; less interaction (server scalability), UI density</li>
+            </ul>
+            <p><img src="../images/cesium-visualization.svg" class="center scale60"/>
+            <div class="run">1: ./race --vault ../conf -Darchive=../data/all-080717-1744/sbs.txt.gz config/net/cesium-track-server.conf</div><a class="srv" href="http://localhost:9000/tracks"></a></p>
+            </div><div class="slide"><h2 id="race-httpserver-infrastructure" class="section">RACE HttpServer Infrastructure</h2>
+            <ul>
+              <li>department (low/medium traffic) server</li>
+              <li>specifically for dynamic content (track updates)</li>
+            </ul>
+            <img src="../images/http-server.svg" class="center scale75"/>
+            </div><div class="slide"><h2 id="cesium" class="section">Cesium</h2>
+            <ul>
+              <li><a href="https://cesium.com/">Cesium</a> is a geospatial viewer (virtual globe) with open sourced <a href="https://cesium.com/learn/cesiumjs/ref-doc">CesiumJS</a> Javascript API</li>
+              <li>runs in any browser that supports <a href="https://www.khronos.org/webgl/">WebGL</a> standard</li>
+              <li>examples on <a href="https://sandcastle.cesium.com/">Sandcastle</a></li>
+            </ul>
+        </div>
+    </body>
+
+    <script src="./race-slides.js"></script>
+</html>
