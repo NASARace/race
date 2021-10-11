@@ -249,6 +249,34 @@ img.scale100 {
     height: 100vh;
 }
 
+/* most browsers have problems with image scale when printint */
+@media print {
+  img.scale25 {
+      height: 20vh;
+  }
+  img.scale35 {
+      height: 30vh;
+  }
+  img.scale40 {
+      height: 30vh;
+  }
+  img.scale45 {
+      height: 37vh;
+  }
+  img.scale50 {
+      height: 40vh;
+  }
+  img.scale55 {
+      height: 45vh;
+  }
+  img.scale60 {
+      height: 50vh;
+  }
+  img.scale65 {
+      height: 55vh;
+  }
+}
+
 img.back {
    z-index: -1;
 }

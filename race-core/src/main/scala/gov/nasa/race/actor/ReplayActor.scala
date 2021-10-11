@@ -57,7 +57,7 @@ trait Replayer [T <: ArchiveReader] extends ContinuousTimeRaceActor
   // everything lower than that we don't bother to schedule and publish right away
   final val SchedulerThresholdMillis: Long = 30
 
-  val rebaseDates = config.getBooleanOrElse("rebase-dates", false)
+  val rebaseDates = config.getBooleanOrElse("rebase-dates", false) // rebase dates with respect to sim time
   val counterThreshold = config.getIntOrElse("break-after", 20) // reschedule after at most N published messages
   val skipThresholdMillis = config.getIntOrElse("skip-millis", 1000) // skip until current sim time - replay time is within limit
   val maxSkip = config.getIntOrElse("max-skip", 1000) // stop replay if we hit more than max-skip consecutive malformed entries
@@ -80,7 +80,11 @@ trait Replayer [T <: ArchiveReader] extends ContinuousTimeRaceActor
   }
 
   override def onStartRaceActor(originator: ActorRef): Boolean = {
-    if (rebaseDates) reader.setBaseDate(simClock.dateTime)
+    if (rebaseDates) {
+      reader.setBaseDate(simClock.dateTime)
+      val off = config.getOptionalFiniteDuration("rebase-offset")
+      if (off.isDefined) reader.setDateOffsetMillis(off.get.toMillis)
+    }
     super.onStartRaceActor(originator) && scheduleFirst(0)
   }
 

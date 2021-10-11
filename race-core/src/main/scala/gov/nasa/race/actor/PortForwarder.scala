@@ -40,6 +40,13 @@ object PortForwarder {
   *
   * Note also that interactive authentication is the reason why we can't automatically
   * reconnect (we don't want to store user credentials here)
+  *
+  * This can be avoided by using Kerberos, which might in turn require to provide explicit
+  * Kerberos configuration (krb5.{kdc,realm} or krb5.{conf,login}), especially if a platform
+  * uses built-in Kerberos settings that are not known to Java libraries. In case of problems
+  * turn on loglevel=debug and/or set sun.security.[krb5.]debug system properties to debug.
+  * A common problem is a server that still requires weak encryption algorithms that as of Java 17
+  * have to be explicitly enabled in krb5.conf
   */
 class PortForwarder (val config: Config) extends PeriodicRaceActor {
   implicit val client = getClass
@@ -118,9 +125,15 @@ class PortForwarder (val config: Config) extends PeriodicRaceActor {
     //     (see https://docs.oracle.com/en/java/javase/16/security/kerberos-requirements.html)
     // Check if there are application configured fallbacks and set system properties accordingly
     // NOTE - if there is no standard krb5.conf then these overrides should come from the vault for added security
-    config.getOptionalVaultableString("krb5.conf").foreach( s=> System.setProperty("java.security.krb5.conf", s))
-    config.getOptionalVaultableString("krb5.realm").foreach( s=> System.setProperty("java.security.krb5.realm", s))
     config.getOptionalVaultableString("krb5.kdc").foreach( s=> System.setProperty("java.security.krb5.kdc", s))
+    config.getOptionalVaultableString("krb5.realm").foreach( s=> System.setProperty("java.security.krb5.realm", s))
+
+    config.getOptionalVaultableString("krb5.login").foreach ( s=> System.setProperty("java.security.auth.login.config", s))
+    config.getOptionalVaultableString("krb5.conf").foreach( s=> System.setProperty("java.security.krb5.conf", s))
+
+    // set these sysprops from the command line to debug
+    //System.setProperty("sun.security.krb5.debug", "true")
+    //System.setProperty("java.security.debug", "gssloginconfig,configfile,configparser,logincontext")
   }
 
   def setPortForward (spec: String, action: String, f: (Int,String,Int)=>Unit) = {

@@ -25,7 +25,7 @@ import akka.http.scaladsl.server.Route
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.util.FileUtils
 
-import java.io.File
+import java.io.{File, IOException}
 import java.nio.ByteBuffer
 import java.nio.charset.Charset
 import java.nio.file.Files
@@ -114,7 +114,7 @@ trait CachedProxyRoute extends RaceRouteInfo {
     val path = file.toPath
     val view = Files.getFileAttributeView(path, classOf[UserDefinedFileAttributeView])
     if (view != null) {
-      view.write("user.mimetype", Charset.defaultCharset().encode(contentType.mediaType.toString()))
+      view.write("mimetype", Charset.defaultCharset().encode(contentType.mediaType.toString()))
     }
   }
 
@@ -123,14 +123,18 @@ trait CachedProxyRoute extends RaceRouteInfo {
     val view = Files.getFileAttributeView( p, classOf[UserDefinedFileAttributeView])
 
     if (view != null) {
-      val name = "user.mimetype"
-      val buf = ByteBuffer.allocate(view.size(name))
-      view.read(name, buf)
-      buf.flip
-      val value = Charset.defaultCharset.decode(buf).toString
-      ContentType.parse(value) match {
-        case Right(ct) => ct
-        case Left(err) => guessContentType(f)
+      try { // Java < 17 on macOS causes exceptions if the attribute is not there
+        val name = "mimetype"
+        val buf = ByteBuffer.allocate(view.size(name))
+        view.read(name, buf)
+        buf.flip
+        val value = Charset.defaultCharset.decode(buf).toString
+        ContentType.parse(value) match {
+          case Right(ct) => ct
+          case Left(err) => guessContentType(f)
+        }
+      } catch {
+        case x: Throwable => guessContentType(f)
       }
     } else guessContentType(f)
   }

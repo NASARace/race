@@ -111,7 +111,7 @@ class SbsImportActor(val config: Config) extends SbsImporter with SocketImporter
     val checkAfter = dropAfter/2
     var lastDropCheck = UndefinedDateTime
 
-    val updater = new SbsUpdater(updateFunc,dropFunc,defaultZone)
+    val updater = new SbsUpdater(updateFunc,dropFunc,None,defaultZone)  // TODO - should we support date adjustment here?
     var in: InputStream = null
 
     // consecutive failure counts

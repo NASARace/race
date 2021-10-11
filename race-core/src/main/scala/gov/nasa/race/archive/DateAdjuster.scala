@@ -17,7 +17,10 @@
 
 package gov.nasa.race.archive
 
-import gov.nasa.race.uom.DateTime
+import gov.nasa.race.uom.Time.Milliseconds
+import gov.nasa.race.uom.{DateTime, Time}
+
+import scala.concurrent.duration.FiniteDuration
 
 /**
   * a trait for objects that can adjust date based on delta between a original (first)
@@ -27,23 +30,38 @@ import gov.nasa.race.uom.DateTime
   * context
   */
 trait DateAdjuster {
-  var baseDate: DateTime = DateTime.UndefinedDateTime
-  var firstDate: DateTime = DateTime.UndefinedDateTime
+  protected var dateOffset: Time = Time.Time0
+  protected var baseDate: DateTime = DateTime.UndefinedDateTime
+  protected var firstDate: DateTime = DateTime.UndefinedDateTime
+
+  // NOTE - this is a snapshot
+  def asOptionalAdjuster: Option[DateAdjuster] = if (isAdjustingDates) Some(this) else None
+
+  def isAdjustingDates: Boolean = baseDate.isDefined || dateOffset.nonZero
+  def isRebasingDates: Boolean = baseDate.isDefined
+
+  def setDateOffsetMillis (ms: Long): Unit = dateOffset = Milliseconds(ms)
+  def getDateOffsetMillis: Long = dateOffset.toMillis
+  def setDateOffset (dur: FiniteDuration): Unit = setDateOffsetMillis(dur.toMillis)
 
   def setBaseDate(date: DateTime): Unit = baseDate = date
+  def getBaseDate: DateTime = baseDate
 
-  def getDate(date: DateTime): DateTime = {
+  /**
+    * get potentially adjusted date
+    */
+  def getDate (date: DateTime): DateTime = {
     if (baseDate.isUndefined) {
-      date
+      date + dateOffset
     } else {
       if (firstDate.isUndefined) {
         firstDate = date
-        baseDate
+        baseDate + dateOffset
       } else {
         if (date > firstDate) {
-          baseDate + firstDate.timeUntil(date)
+          baseDate + firstDate.timeUntil(date) + dateOffset
         } else {
-          baseDate - firstDate.timeSince(date)
+          baseDate - firstDate.timeSince(date) + dateOffset
         }
       }
     }

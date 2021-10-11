@@ -110,7 +110,8 @@ object Dependencies {
   //--- pure Java implementation of ssh2 (http://www.jcraft.com/jsch/)
   // NOTE this has to be a known version and verified instance so that we don't
   // enter credentials processed by a un-verified jar
-  val jsch = "com.jcraft" % "jsch" % "0.1.55"
+  //val jsch = "com.jcraft" % "jsch" % "0.1.55"
+  val jsch = "com.github.mwiede" % "jsch" % "0.1.68"
 
   //--- argon2 based password hashes ()
   val argon2 = "de.mkammerer" % "argon2-jvm" % "2.10.1"

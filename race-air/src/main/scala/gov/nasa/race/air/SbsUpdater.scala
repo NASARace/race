@@ -1,5 +1,6 @@
 package gov.nasa.race.air
 
+import gov.nasa.race.archive.DateAdjuster
 import gov.nasa.race.common.{ConstAsciiSlice, UTF8CsvPullParser}
 import gov.nasa.race.geo.LatLonPos
 import gov.nasa.race.track.TrackedObject
@@ -8,6 +9,7 @@ import gov.nasa.race.uom.Length._
 import gov.nasa.race.uom.DateTime._
 import gov.nasa.race.uom.{Angle, DateTime, Speed, Time}
 import gov.nasa.race.uom.Speed._
+import gov.nasa.race.withSomeOrElse
 
 import java.time.ZoneId
 import scala.collection.mutable
@@ -52,10 +54,13 @@ import scala.collection.mutable
   *
   *  see also http://mode-s.org/decode/
   */
-class SbsUpdater(updateFunc: TrackedObject=>Boolean,
-                 dropFunc: (String,String,DateTime,Time)=>Unit,
-                 defaultZone: ZoneId = ZoneId.systemDefault()
+class SbsUpdater(
+                  updateFunc: TrackedObject=>Boolean,
+                  dropFunc: (String,String,DateTime,Time)=>Unit,
+                  adjuster: Option[DateAdjuster] = None,
+                  defaultZone: ZoneId = ZoneId.systemDefault()
                 ) extends UTF8CsvPullParser {
+
   /**
     * aux object to store aircraft info we get from type 1,4 MSG records
     * that is required to fill in the missing FlightPos fields when receiving a type 3 MSG
@@ -84,6 +89,10 @@ class SbsUpdater(updateFunc: TrackedObject=>Boolean,
   // frequent than removal (LongMap is an open hashmap that requires reorganization)
   val acCache = new mutable.LongMap[AcCacheEntry](128) // keys are icao24 ids (hex 24bit)
 
+  @inline def getAdjustableDate (date: DateTime): DateTime = {
+    if (adjuster.isDefined) adjuster.get.getDate(date) else date
+  }
+
   /**
     * this has to be called after initalize(data,limit) so that we have something to parse
     */
@@ -93,7 +102,7 @@ class SbsUpdater(updateFunc: TrackedObject=>Boolean,
     def readDate: DateTime = {
       val dateRange = readNextValue.getIntRange
       val timeRange = readNextValue.getIntRange
-      DateTime.parseYMDTBytes(data,dateRange.offset,dateRange.length+timeRange.length+1, defaultZone)
+      getAdjustableDate( DateTime.parseYMDTBytes(data,dateRange.offset,dateRange.length+timeRange.length+1, defaultZone))
     }
 
     while (notDone && skipToNextRecord) {

@@ -98,7 +98,7 @@ NASA Ames Research Center
 
 <div>
   <img src="../images/swim-stats-config.svg" class="left scale15"/>
-  <img src="../images/swim-stats.svg" class="right scale50"/>
+  <img src="../images/swim-stats.svg" class="right scale45"/>
 </div>
 <div class="run">1: ./race --vault ../conf config/air/swim-msg-stats.conf</div><a class="srv" href="http://localhost:8080/race/statistics"></a>
 

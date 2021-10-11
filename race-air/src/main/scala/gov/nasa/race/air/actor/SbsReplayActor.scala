@@ -47,7 +47,7 @@ class SBSReader (val iStream: InputStream, val pathName: String="<unknown>", buf
                                 conf.getMappedStringOrElse("default-zone", ZoneId.of, ZoneId.systemDefault)
                                ) // size has to hold at least 2 records
 
-  class SbsArchiveUpdater extends SbsUpdater(updateTrack,dropTrack, defaultZone) {
+  class SbsArchiveUpdater extends SbsUpdater(updateTrack,dropTrack, Some(this), defaultZone) {
     override protected def acquireMoreData: Boolean = refillBuf
   }
 
