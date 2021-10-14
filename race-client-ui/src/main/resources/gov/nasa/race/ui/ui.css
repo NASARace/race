@@ -25,10 +25,11 @@
 }
 
 div.ui_full_window {
-    width:100%;
-    height:100%;
-    overflow:hidden;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
 }
+
 
 /* movable windows */
 
@@ -44,8 +45,7 @@ div.ui_titlebar {
     padding: 5px;
     color: var(--titlebar-color);
     background-color: var(--titlebar-background-color);
-    font-family: var(--font-family);
-    font-size: var(--font-size);
+    font: var(--font);
     font-weight: bold;
     text-align: center;
     cursor: move;
@@ -65,8 +65,7 @@ div.ui_window_content {
     color: var(--window-color);
     background-color: var(--window-background-color);
     border: none;
-    font-family: var(--font-family);
-    font-size: var(--font-size);
+    font: var(--font);
     cursor: default;
 }
 
@@ -158,21 +157,69 @@ div.ui_field_label {
 input.ui_field {
     display: inline-block;
     box-sizing: border-box;
+    border: var(--field-border);
     color: var(--field-value-color);
-    background: var(--dark-background-color);
+    background: var(--data-background-color);
     width: var(--field-value-width);
     height: var(--field-height);
-    border: var(--field-border);
 }
 
 input.ui_field.num {
     text-align: right;
-    font-family: var(--font-family-mono);
+    font: var(--mono-font);
 }
 
 input.ui_field.text {
     display: inline-block;
-    font-family: var(--font-family);
+    font: var(--font);
+}
+
+
+/* clock widget */
+
+div.ui_clock {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+}
+
+div.ui_clock_wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    border: var(--field-border);
+    background: var(--data-background-color);
+    padding: 5px;
+}
+
+div.ui_clock_date {
+    display: block;
+    color: var(--clock-color);
+    font: var(--clock-date-font);
+}
+
+div.ui_clock_time {
+    display: block;
+    color: var(--clock-color);
+    font: var(--clock-time-font);
+}
+
+
+/* timer widget */
+
+div.ui_timer {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+}
+
+div.ui_timer_value {
+    display: block;
+    color: var(--clock-color);
+    font: var(--clock-time-font);
+    border: var(--field-border);
+    background: var(--data-background-color);
+    padding: 5px;
 }
 
 
@@ -180,7 +227,7 @@ input.ui_field.text {
 
 input.ui_field.input {
     color: var(--input-color);
-    font-family: var(--font-family);
+    font: var(--font);
 }
 
 input.ui_field.input:focus {
@@ -324,7 +371,7 @@ div.ui_radio_label {
 
 div.ui_list {
     color: var(--list-color);
-    background: var(--dark-background-color);
+    background: var(--data-background-color);
     border: var(--list-border);
     margin: 3px;
     padding: 3px;

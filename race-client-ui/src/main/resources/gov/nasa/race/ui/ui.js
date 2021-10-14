@@ -10,7 +10,7 @@ function uiInit() {
     _initializeRadios();
     _initializeLists();
     _initializeMenus();
-
+    _initializeTimeWidgets();
     if (initializeData) initializeData();
 }
 
@@ -237,6 +237,212 @@ function uiGetField(o) {
     }
     throw "not a field";
 }
+
+//--- time & date widgets
+
+var _timer = undefined;
+const _timerClients = [];
+
+const MILLIS_IN_DAY = 86400000;
+
+document.addEventListener("visibilitychange", function() {
+    if (document.visibilityState === 'visible') {
+        if (_timerClients.length > 0) uiStartTime();
+    } else {
+        uiStopTime();
+    }
+});
+
+function _addTimerClient(e) {
+    _timerClients.push(e);
+}
+
+function uiStartTime() {
+    if (!_timer) {
+        let t = Date.now();
+        for (e of _timerClients) {
+            e._uiUpdateTime(t);
+        }
+
+        _timer = setInterval(_timeTick, 1000);
+    }
+}
+
+function _timeTick() {
+    if (_timerClients.length == 0) {
+        clearInterval(_timer);
+        _timer = undefined;
+    } else {
+        let t = Date.now();
+        for (client of _timerClients) {
+            client._uiUpdateTime(t);
+        }
+    }
+}
+
+function uiStopTime() {
+    if (_timer) {
+        clearInterval(_timer);
+        _timer = undefined;
+    }
+}
+
+function _initializeTimeWidgets() {
+    for (e of document.getElementsByClassName("ui_clock")) { _initializeClock(e); }
+    for (e of document.getElementsByClassName("ui_timer")) { _initializeTimer(e); }
+}
+
+function _initializeTimer(e) {
+    if (e.tagName == "DIV") {
+        let id = e.dataset.id;
+        let labelText = e.dataset.label;
+
+        if (labelText) {
+            let label = _createElement("DIV", "ui_field_label", labelText);
+            e.appendChild(label);
+        }
+
+        let tc = _createElement("DIV", "ui_timer_value");
+        tc.id = id;
+        e.appendChild(tc);
+
+        tc._uiT0 = 0; // elapsed
+        tc._uiTimeScale = 1;
+        tc._uiUpdateTime = (t) => { _updateTimer(tc, t); }
+        _addTimerClient(tc);
+    }
+}
+
+function _updateTimer(e, t) {
+    if (e._uiT0 == 0) e._uiT0 = t;
+
+    if (_isShowing(e)) {
+        let dt = Math.round((t - e._uiT0) * e._uiTimeScale);
+        let s = Math.floor(dt / 1000) % 60;
+        let m = Math.floor(dt / 60000) % 60;
+        let h = Math.floor(dt / 3600000);
+
+        let elapsed = h.toString();
+        elapsed += ':';
+        if (m < 10) elapsed += '0';
+        elapsed += m;
+        elapsed += ':';
+        if (s < 10) elapsed += '0';
+        elapsed += s;
+
+        e.textContent = elapsed;
+    }
+}
+
+function _initializeClock(e) {
+    if (e.tagName == "DIV") {
+        let id = e.dataset.id;
+        let labelText = e.dataset.label;
+
+        if (labelText) {
+            let label = _createElement("DIV", "ui_field_label", labelText);
+            e.appendChild(label);
+        }
+
+        let tc = _createElement("DIV", "ui_clock_wrapper");
+        tc.id = id;
+
+        let dateField = _createElement("DIV", "ui_clock_date");
+        let timeField = _createElement("DIV", "ui_clock_time");
+
+        tc.appendChild(dateField);
+        tc.appendChild(timeField);
+
+        e.appendChild(tc);
+
+        var tz = e.dataset.tz;
+        if (!tz) tz = 'UTC';
+        else if (tz == "local") tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+        let dateOpts = {
+            timeZone: tz,
+            weekday: 'short',
+            year: 'numeric',
+            month: 'numeric',
+            day: 'numeric'
+        };
+        tc._uiDateFmt = new Intl.DateTimeFormat('en-US', dateOpts);
+
+        let timeOpts = {
+            timeZone: tz,
+            hour: 'numeric',
+            minute: 'numeric',
+            second: 'numeric',
+            hour12: false,
+            timeZoneName: 'short'
+        };
+        tc._uiTimeFmt = new Intl.DateTimeFormat('en-US', timeOpts);
+
+        tc._uiW0 = 0; // ref wall clock
+        tc._uiS0 = 0; // ref sim clock
+        tc._uiSday = 0; // last sim clock day displayed
+        tc._uiStopped = false;
+        tc._uiTimeScale = 1;
+
+        tc._uiUpdateTime = (t) => { _updateClock(tc, t); };
+        _addTimerClient(tc);
+    }
+}
+
+
+function _updateClock(e, t) {
+    if (e._uiS0 == 0) { // first time initialization w/o previous uiSetClock
+        e._uiS0 = t;
+        e._uiSday = t / MILLIS_IN_DAY;
+        e._uiW0 = t;
+
+        let date = new Date(t);
+        e.children[0].textContent = e._uiDateFmt.format(date);
+        e.children[1].textContent = e._uiTimeFmt.format(date);
+
+    } else {
+        if (e._uiW0 == 0) { // first time init with previous uiSetClock
+            e._uiW0 = t;
+        } else if (_isShowing(e)) {
+            let s = e._uiS0 + (t - e._uiW0) * e._uiTimeScale;
+            let date = new Date(s);
+            let day = s / MILLIS_IN_DAY;
+            if (day != e._uiSday) {
+                e.children[0].textContent = e._uiDateFmt.format(date);
+                e._uiLastDay = day;
+            }
+            e.children[1].textContent = e._uiTimeFmt.format(date);
+        }
+    }
+}
+
+function uiSetClock(o, dateSpec, timeScale) {
+    let e = uiGetClock(o);
+    if (e) {
+        let date = new Date(dateSpec);
+        if (date) {
+            e._uiS0 = date.valueOf();
+            e._uiSday = e._uiS0 / MILLIS_IN_DAY;
+
+            e.children[0].textContent = e._uiDateFmt.format(date);
+            e.children[1].textContent = e._uiTimeFmt.format(date);
+
+            if (timeScale) {
+                e._uiTimeScale = timeScale;
+            }
+        }
+    }
+}
+
+function uiGetClock(o) {
+    let e = _elementOf(o);
+    if (e && e.tagName == "DIV") {
+        if (e.classList.contains("ui_clock_wrapper")) return e;
+        else if (e.classList.contains("ui_clock")) return _firstChildWithClass("ui_clock_wrapper");
+    }
+    throw "not a clock field";
+}
+
 
 //--- choices
 
@@ -830,6 +1036,8 @@ function uiNonEmptyString(v) {
     } else return undefined;
 }
 
+
+
 //--- private functions
 
 function _elementOf(o) {
@@ -999,4 +1207,34 @@ function _hoistChildElement(e) {
     } else {
         parent.parentElement.appendChild(e);
     }
+}
+
+function _createDate(dateSpec) {
+    if (dateSpec) {
+        if (typeof dateSpec === "string") {
+            if (dateSpec == "now") return new Date(Date.now());
+            else return new Date(Date.parse(dateSpec));
+        } else if (typeof dateSpec === "number") {
+            return new Date(dateSpec); // epoch millis
+        }
+    }
+    return undefined;
+}
+
+function _isShowing(e) {
+    if ((e.offsetParent === null) /*|| (e.getClientRects().length == 0)*/ ) return false; // shortcut
+    let style = window.getComputedStyle(e);
+    if (style.visibility !== 'visible' || style.display === 'none') return false;
+
+    e = e.parentElement;
+    while (e) {
+        style = window.getComputedStyle(e);
+        if (style.visibility !== 'visible' || style.display === 'none') return false;
+
+        // we could also check for style.maxHeight == 0
+        if (e.classList.contains('collapsed')) return false;
+        e = e.parentElement;
+    }
+
+    return true;
 }

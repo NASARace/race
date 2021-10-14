@@ -11,11 +11,13 @@
     --input-data-color: yellow;
     --disabled-color: rgba(200, 200, 200, 0.5);
     --background-color: rgb(64, 64, 84);
+    --data-background-color: rgb(20, 20, 20);
     --selection-background-color: rgb(64, 64, 200);
     --hover-background-color: rgb(84, 84, 160);
-    --font-family: arial;
-    --font-family-mono: monospace;
-    --font-size: small;
+    --font: 14px sans-serif;
+    --font-small: 12px sans-serif;
+    --mono-font: 14px monospace;
+    --mono-font-large: 16px monospace;
     --border-color: rgb(130, 130, 130);
     --box-shadow: 5px 5px 8px rgb(136, 136, 136);
     /* icons (toplevel buttons with variable stroke/fill color SVGs and explicit 'on' state) */
@@ -48,7 +50,7 @@
     --scrollbar-thumb-color: rgb(100, 100, 100);
     /* menus */
     --popup-menu-border: 1px solid rgb(24, 24, 24);
-    --menuitem-font: 14px arial, sans-serif;
+    --menuitem-font: var(--font);
     --menuitem-height: 1.1rem;
     --menuitem-background-color: rgb(64, 64, 64);
     --menuitem-selection-background-color: rgb(64, 64, 200);
@@ -94,4 +96,8 @@
     --list-hover-background-color: rgb(80, 80, 80);
     --list-selection-color: var(--selected-data-color);
     --list-selection-background-color: var(--selection-background-color);
+    /* clocks */
+    --clock-date-font: var(--font-small);
+    --clock-time-font: bold 16px monospace;
+    --clock-color: var(--field-value-color);
 }

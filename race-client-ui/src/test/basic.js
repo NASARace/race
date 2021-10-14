@@ -16,10 +16,6 @@ var trackList = [
 function initializeData() {
     console.log("initializing data");
 
-    uiSetField("console.clock.date", "Thu, 09-15-2021");
-    uiSetField("console.clock.time", "  10:13:12 Z");
-    uiSetField("console.clock.elapsed", "01:02:03");
-
     uiSetField("console.position.latitude", "37.54323");
     uiSetField("console.position.longitude", "-121.87432");
 
@@ -31,6 +27,12 @@ function initializeData() {
         "TAIS",
         "ASDE-X"
     ], 0);
+
+    //let d = new Date(Date.now());
+    //uiSetClock("console.time.localClock", d);
+    //uiSetClock("console.time.utcClock", d);
+
+    uiStartTime();
 }
 
 function selectTrack(event) {
