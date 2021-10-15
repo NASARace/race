@@ -1,7 +1,7 @@
 /* example app code for basic.html */
 
-const LINE_PATH = "l";
-const WALL_PATH = "w";
+const LINE_PATH = "~";
+const WALL_PATH = "≈";
 
 var trackList = [
     ["", "UAL1684", "00:00:00"],
@@ -43,8 +43,8 @@ function selectTrack(event) {
     let pathOpt = uiNonEmptyString(v[0]);
     if (pathOpt) {
         uiSetCheckBox("console.tracks.showPath", true);
-        if (pathOpt == "l") uiSelectRadio("console.tracks.showLinePath");
-        else if (pathOpt == "w") uiSelectRadio("console.tracks.showWallPath");
+        if (pathOpt == LINE_PATH) uiSelectRadio("console.tracks.showLinePath");
+        else if (pathOpt == WALL_PATH) uiSelectRadio("console.tracks.showWallPath");
     } else {
         uiSetCheckBox("console.tracks.showPath", false);
         uiClearRadiosOf("console.tracks.options");

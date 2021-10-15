@@ -135,6 +135,9 @@ div.ui_panel_header.collapsed::after {
 }
 
 div.ui_panel {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
     transition: max-height 0.4s ease-out;
     overflow: hidden;
 }
@@ -142,15 +145,15 @@ div.ui_panel {
 
 /* fields (label + display) */
 
-div.ui_field {
-    margin: 3px;
-}
+div.ui_field {}
 
 div.ui_field_label {
     display: inline-block;
     padding-right: 3px;
     text-align: right;
-    width: var(--field-label-width);
+    line-height: var(--field-height);
+    vertical-align: middle;
+    /* width: var(--field-label-width); */
     height: var(--field-height);
 }
 
@@ -243,9 +246,7 @@ input.ui_field.input:hover {
 
 /* choice fields */
 
-div.ui_choice {
-    margin: 3px;
-}
+div.ui_choice {}
 
 select.ui_choice {
     display: inline-block;
@@ -266,7 +267,6 @@ div.ui_checkbox {
     justify-content: flex-start;
     align-items: center;
     background: transparent;
-    margin: 3px;
     padding: 3px;
 }
 
@@ -353,7 +353,7 @@ div.ui_radio_label {
     background: var(--button-background-color);
     border: var(--button-border);
     border-radius: var(--button-border-radius);
-    margin: 3px;
+    margin: var(--margin);
     padding: 2px 5px 2px 5px;
 }
 
@@ -373,7 +373,6 @@ div.ui_list {
     color: var(--list-color);
     background: var(--data-background-color);
     border: var(--list-border);
-    margin: 3px;
     padding: 3px;
     /*max-height: calc( attr(data-rows) * var(--list-item-height) + 2px);  attr() does not work */
     width: var(--list-width);
@@ -452,16 +451,27 @@ div.ui_menuitem:not([class*="disabled"]):hover {
 
 /* layout container */
 
-div.ui_flex_row {
+div.ui_container {
     display: flex;
-    flex-direction: row;
     flex-wrap: nowrap;
+    padding: 3px;
+    gap: 3px;
 }
 
-div.ui_flex_col {
-    display: flex;
+div.ui_container.bordered {
+    display: inline-flex;
+    border: var(--border);
+    background: var(--data-background-color);
+    margin: var(--margin);
+    gap: 0;
+}
+
+div.ui_container.row {
+    flex-direction: row;
+}
+
+div.ui_container.column {
     flex-direction: column;
-    flex-wrap: nowrap;
 }
 
 div.align_left {

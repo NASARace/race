@@ -19,7 +19,9 @@
     --mono-font: 14px monospace;
     --mono-font-large: 16px monospace;
     --border-color: rgb(130, 130, 130);
+    --border: 2px inset var(--border-color);
     --box-shadow: 5px 5px 8px rgb(136, 136, 136);
+    --margin: 3px;
     /* icons (toplevel buttons with variable stroke/fill color SVGs and explicit 'on' state) */
     /*   background-color used for transparent image parts, color for image stroke and fill-color for image fill */
     --icon-size: 32px;
@@ -55,11 +57,11 @@
     --menuitem-background-color: rgb(64, 64, 64);
     --menuitem-selection-background-color: rgb(64, 64, 200);
     /* data fields */
-    --field-height: 1.4rem;
+    --field-height: 1.5rem;
     --field-label-width: 5rem;
     --field-value-width: 8rem;
     --field-value-color: var(--data-color);
-    --field-border: 2px inset var(--border-color);
+    --field-border: var(--border);
     /* text input */
     --input-color: var(--input-data-color);
     --input-active-color: yellow;
@@ -68,7 +70,7 @@
     --choice-height: var(--field-height);
     --choice-value-width: var(--field-value-width);
     --choice-value-color: var(--input-data-color);
-    --choice-field-border: 2px inset var(--border-color);
+    --choice-field-border: var(--border);
     --choice-field-background: transparent;
     /* pushbuttons */
     --button-height: 1.4rem;
@@ -92,7 +94,7 @@
     --list-width: 8rem;
     --list-item-height: 1.1rem;
     --list-item-padding: 1px;
-    --list-border: 2px inset var(--border-color);
+    --list-border: var(--border);
     --list-hover-background-color: rgb(80, 80, 80);
     --list-selection-color: var(--selected-data-color);
     --list-selection-background-color: var(--selection-background-color);

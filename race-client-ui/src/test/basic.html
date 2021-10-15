@@ -14,7 +14,7 @@
 
     <div id="console" class="ui_window" data-title="Console">
         <div class="ui_panel expanded" id="console.time" data-panel="Time">
-            <div class="ui_flex_col align_right">
+            <div class="ui_container column align_right">
                 <div class="ui_clock" data-id="console.time.localClock" data-tz="local" data-label="local:"></div>
                 <div class="ui_clock" data-id="console.time.utcClock" data-tz="UTC" data-label="UTC:"></div>
                 <div class="ui_timer" data-id="console.time.elapsed" data-label="elapsed:"></div>
@@ -22,14 +22,15 @@
         </div>
 
         <div class="ui_panel collapsed" id="console.position" data-panel="Position">
-            <div class="ui_flex_col align_right">
-                <div class="ui_field num" data-id="console.position.latitude" data-label="latitude:"></div>
-                <div class="ui_field num" data-id="console.position.longitude" data-label="longitude:"></div>
+            <div class="ui_container column bordered align_right">
+                <div class="ui_field num" data-id="console.position.latitude" data-label="lat:"></div>
+                <div class="ui_field num" data-id="console.position.longitude" data-label="lon:"></div>
+                <div class="ui_field num" data-id="console.position.altitude" data-label="alt:"></div>
             </div>
         </div>
 
         <div class="ui_panel collapsed" id="console.tracks" data-panel="Tracks">
-            <div class="ui_flex_col align_right">
+            <div class="ui_container column align_right">
                 <div class="ui_choice" data-id="console.tracks.channel" data-label="channel:" onChange="selectChannel(event)"></div>
                 <div class="ui_field text input" data-id="console.tracks.query" data-label="track query:" data-placeholder="enter track query" onChange="queryTracks(event)"></div>
 
@@ -47,7 +48,7 @@
                     </div>
                 </div>
             </div>
-            <div class="ui_flex_row" id="console.tracks.options">
+            <div class="ui_container row" id="console.tracks.options">
                 <div class="ui_checkbox" id="console.tracks.showPath" onclick="showTrackPath(event)" data-label="show path"></div>
 
                 <div class="ui_radio" id="console.tracks.showLinePath" onclick="selectLinePath(event)" data-label="line"></div>

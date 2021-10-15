@@ -195,6 +195,10 @@ function _initializeFields() {
                 let field = _createElement("INPUT", e.classList);
                 field.setAttribute("type", "text");
                 field.id = id;
+                if (_hasBorderedParent(e)) {
+                    field.style.border = 'none';
+                    e.style.margin = '0';
+                }
                 e.appendChild(field);
 
                 if (e.classList.contains("input")) {
@@ -1237,4 +1241,13 @@ function _isShowing(e) {
     }
 
     return true;
+}
+
+function _hasBorderedParent(e) {
+    let p = e.parentElement;
+    if (p) {
+        let cl = p.classList;
+        return (cl.contains('ui_container') && cl.contains('bordered'));
+    }
+    return false;
 }
