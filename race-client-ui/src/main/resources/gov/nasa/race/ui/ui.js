@@ -11,6 +11,7 @@ function uiInit() {
     _initializeLists();
     _initializeMenus();
     _initializeTimeWidgets();
+    _initializeSliderWidgets();
     if (initializeData) initializeData();
 }
 
@@ -75,6 +76,7 @@ function _makeDraggable(e) {
         document.onmousemove = null;
     }
 }
+
 
 function uiShowWindow(o) {
     let e = _elementOf(o);
@@ -145,6 +147,8 @@ function uiTogglePanelExpansion(event) {
         _swapClass(panel, "collapsed", "expanded");
         panel.style.maxHeight = panel.scrollHeight + "px";
     }
+
+    // should we force a reflow on the parent here?
 }
 
 //--- icon functions
@@ -308,6 +312,7 @@ function _initializeTimer(e) {
 
         let tc = _createElement("DIV", "ui_timer_value");
         tc.id = id;
+        tc.textContent = "0:00:00";
         e.appendChild(tc);
 
         tc._uiT0 = 0; // elapsed
@@ -447,6 +452,181 @@ function uiGetClock(o) {
     throw "not a clock field";
 }
 
+//--- slider widgets
+
+const sliderResizeObserver = new ResizeObserver(entries => {
+    for (re of entries) { // this is a ui_slider_track
+        let e = re.target;
+        let trackRect = e.getBoundingClientRect();
+        let rangeRect = e._uiRange.getBoundingClientRect();
+        let thumbRect = e._uiThumb.getBoundingClientRect();
+        let leftRect = e._uiLeftLimit.getBoundingClientRect();
+
+        e._uiThumbWidth = thumbRect.width;
+        e._uiLeftWidth = leftRect.width;
+        e._uiMaxX = trackRect.width - thumbRect.width;
+        e._uiThumbOffsetX = (trackRect.width - rangeRect.width) / 2;
+        e._uiScale = (e._uiMaxValue - e._uiMinValue) / rangeRect.width;
+
+        let rightRect = e._uiRightLimit.getBoundingClientRect();
+        e._uiRightLimit.style.top = (rangeRect.height + 2) + "px";
+        e._uiRightLimit.style.left = (trackRect.width - rightRect.width - 4) + "px";
+
+        _positionThumb(e);
+    }
+});
+
+function _initializeSliderWidgets() {
+    for (e of document.getElementsByClassName("ui_slider")) {
+        let id = e.dataset.id;
+        let labelText = e.dataset.label;
+        // default init - likely to be set by subsequent uiSetSliderRange/Value calls
+        let minValue = _parseInt(e.dataset.minValue, 0);
+        let maxValue = _parseInt(e.dataset.maxValue, 100);
+        let v = _parseInt(e.dataset.value, minValue);
+
+        if (maxValue > minValue) {
+            if (labelText) {
+                let label = _createElement("DIV", "ui_field_label", labelText);
+                e.appendChild(label);
+            }
+
+            let track = _createElement("DIV", "ui_slider_track");
+            track.id = id;
+            track._uiMinValue = minValue;
+            track._uiMaxValue = maxValue;
+            track._uiInc = _parseNumber(e.dataset.inc);
+            track._uiValue = _computeSliderValue(track, v);
+
+            let range = _createElement("DIV", "ui_slider_range");
+            track._uiRange = range;
+            track.appendChild(range);
+
+            let left = _createElement("DIV", "ui_slider_limit", minValue);
+            track._uiLeftLimit = left;
+            track.appendChild(left);
+
+            let thumb = _createElement("DIV", "ui_slider_thumb", "▲");
+            track._uiThumb = thumb;
+            thumb.addEventListener("mousedown", startDrag);
+            track.appendChild(thumb);
+
+            let num = _createElement("DIV", "ui_slider_num");
+            track._uiNum = num;
+            track.appendChild(num);
+
+            let right = _createElement("DIV", "ui_slider_limit", maxValue);
+            track._uiRightLimit = right;
+            track.appendChild(right);
+
+            e.appendChild(track);
+            sliderResizeObserver.observe(track);
+
+        } else {
+            console.log("illegal range for slider " + id);
+        }
+    }
+
+    function startDrag(event) {
+        let offX = event.offsetX;
+        let track = event.target.parentElement;
+        let lastValue = track._uiValue;
+        let trackRect = track.getBoundingClientRect();
+
+        track.addEventListener("mousemove", drag);
+        document.addEventListener("mouseup", stopDrag);
+        event.preventDefault();
+
+        function drag(event) {
+            let e = event.currentTarget; // ui_slider_track
+            let x = Math.min(Math.max(0, event.clientX - trackRect.x - offX), e._uiMaxX);
+            let v = e._uiMinValue + x * e._uiScale;
+            let vv = _computeSliderValue(e, v);
+            e._uiValue = vv;
+            if (e._uiNum) e._uiNum.textContent = vv;
+            _positionThumb(e);
+
+            if (vv != lastValue) {
+                let slider = e.parentElement;
+                slider.dispatchEvent(new Event('change'));
+                lastValue = vv;
+            }
+
+            event.preventDefault();
+        }
+
+        function stopDrag(event) {
+            track.removeEventListener("mousemove", drag);
+            document.removeEventListener("mouseup", stopDrag);
+            event.preventDefault();
+        }
+    }
+}
+
+function _positionThumb(e) {
+    let x = e._uiValue / e._uiScale;
+    e._uiThumb.style.left = x + "px";
+
+    if (e._uiNum) {
+        if (e._uiValue > (e._uiMaxValue - e._uiMinValue) / 2) { // place left of thumb
+            let w = e._uiNum.getBoundingClientRect().width;
+            e._uiNum.style.left = (x - e._uiThumbWidth - w) + "px";
+        } else {
+            e._uiNum.style.left = x + "px";
+        }
+    }
+}
+
+function _computeSliderValue(e, v) {
+    let minValue = e._uiMinValue;
+    let inc = e._uiInc;
+    if (inc) {
+        if (inc == 1) return Math.round(v);
+        else return minValue + Math.round((v - minValue) / inc) * inc;
+    } else {
+        if (v < minValue) return minValue;
+        else if (v > e._uiMaxValue) return e._uiMaxValue;
+        return v;
+    }
+}
+
+
+function uiSetSliderRange(o, min, max, inc) {
+    let e = uiGetSlider(o);
+    if (e) {
+        e._uiMinValue = min;
+        e._uiMaxValue = max;
+        if (inc) e._uiInc = inc;
+
+        if (e._uiLeftLimit) e._uiLeftLimit.textContent = min;
+        if (e._uiRightLimit) e._uiRightLimit.textContent = max;
+    }
+}
+
+function uiSetSliderValue(o, v) {
+    let e = uiGetSlider(o);
+    if (e) {
+        e._uiValue = _computeSliderValue(e, v);
+        if (e._uiNum) e._uiNum.textContent = e._uiValue;
+        if (_hasDimensions(e)) _positionThumb(e);
+    }
+}
+
+function uiGetSliderValue(o) {
+    let e = uiGetSlider(o);
+    if (e) {
+        return e._uiValue;
+    }
+}
+
+function uiGetSlider(o) {
+    let e = _elementOf(o);
+    if (e && e.tagName == "DIV") {
+        if (e.classList.contains("ui_slider_track")) return e;
+        else if (e.classList.contains("ui_slider")) return _firstChildWithClass(e, "ui_slider_track");
+    }
+    throw "not a slider";
+}
 
 //--- choices
 
@@ -1184,7 +1364,7 @@ function _computePopupTop(pageY, h) {
 
 function _peekTop(array) {
     let len = array.length;
-    return (len > 0) ? array.at(len - 1) : undefined;
+    return (len > 0) ? array[len - 1] : undefined;
 }
 
 function _hasNoChildElements(element) {
@@ -1250,4 +1430,22 @@ function _hasBorderedParent(e) {
         return (cl.contains('ui_container') && cl.contains('bordered'));
     }
     return false;
+}
+
+function _parseInt(s, defaultValue) {
+    if (s && s.length > 0) return parseInt(s);
+    else return defaultValue;
+}
+
+function _parseNumber(s, defaultValue) {
+    if (s && s.length > 0) {
+        if (s.contains('.')) return parseFloat(s);
+        else return parseInt(s);
+    } else {
+        return defaultValue;
+    }
+}
+
+function _hasDimensions(e) {
+    return (e.getBoundingClientRect().width > 0);
 }

@@ -16,10 +16,13 @@
     --hover-background-color: rgb(84, 84, 160);
     --font: 14px sans-serif;
     --font-small: 12px sans-serif;
-    --mono-font: 14px monospace;
+    --mono-font: 15px Courier;
     --mono-font-large: 16px monospace;
     --border-color: rgb(130, 130, 130);
-    --border: 2px inset var(--border-color);
+    --border-dark-color: rgb(80, 80, 80);
+    --border-bright-color: rgb(150, 150, 150);
+    --border-width: 2px;
+    --border: var(--border-width) inset var(--border-color);
     --box-shadow: 5px 5px 8px rgb(136, 136, 136);
     --margin: 3px;
     /* icons (toplevel buttons with variable stroke/fill color SVGs and explicit 'on' state) */
@@ -45,6 +48,7 @@
     --window-shadow: var(--box-shadow);
     /* panels */
     --panel-border-top: 1px solid var(--border-color);
+    --panel-background-color: var(--background-color);
     /* scrollbars */
     --scrollbar-track-width: 0.5rem;
     --scrollbar-track-color: rgb(44, 44, 44);
@@ -69,9 +73,9 @@
     /* choices */
     --choice-height: var(--field-height);
     --choice-value-width: var(--field-value-width);
-    --choice-value-color: var(--input-data-color);
     --choice-field-border: var(--border);
-    --choice-field-background: transparent;
+    --choice-value-color: var(--input-data-color);
+    --choice-field-background: var(--data-background-color);
     /* pushbuttons */
     --button-height: 1.4rem;
     --button-color: rgb(200, 200, 200);
@@ -100,6 +104,12 @@
     --list-selection-background-color: var(--selection-background-color);
     /* clocks */
     --clock-date-font: var(--font-small);
-    --clock-time-font: bold 16px monospace;
+    --clock-time-font: bold 120% Courier;
     --clock-color: var(--field-value-color);
+    /* sliders */
+    --slider-border: var(--border);
+    --slider-height: 1.6rem;
+    --slider-width: 10rem;
+    --slider-thumb-size: 1rem;
+    --slider-range-color: rgba(200, 200, 200, 0.5);
 }

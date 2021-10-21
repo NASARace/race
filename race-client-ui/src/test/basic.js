@@ -19,6 +19,9 @@ function initializeData() {
     uiSetField("console.position.latitude", "37.54323");
     uiSetField("console.position.longitude", "-121.87432");
 
+    uiSetSliderRange("console.position.zoom", 0, 100, 10);
+    uiSetSliderValue("console.position.zoom", 50);
+
     uiSetListItemKeyColumn("console.tracks.list", 1);
     uiSetListItems("console.tracks.list", trackList);
 
@@ -27,6 +30,7 @@ function initializeData() {
         "TAIS",
         "ASDE-X"
     ], 0);
+
 
     //let d = new Date(Date.now());
     //uiSetClock("console.time.localClock", d);
@@ -132,4 +136,8 @@ function queryTracks(event) {
 function selectChannel(event) {
     let input = uiGetSelectedChoiceValue(event);
     console.log("select channel: " + input);
+}
+
+function zoomChanged(event) {
+    console.log("new zoom level: " + uiGetSliderValue(event.target));
 }

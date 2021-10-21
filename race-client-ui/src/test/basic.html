@@ -27,6 +27,8 @@
                 <div class="ui_field num" data-id="console.position.longitude" data-label="lon:"></div>
                 <div class="ui_field num" data-id="console.position.altitude" data-label="alt:"></div>
             </div>
+
+            <div class="ui_slider" data-id="console.position.zoom" data-label="zoom:" onchange="zoomChanged(event)"></div>
         </div>
 
         <div class="ui_panel collapsed" id="console.tracks" data-panel="Tracks">
@@ -34,7 +36,7 @@
                 <div class="ui_choice" data-id="console.tracks.channel" data-label="channel:" onChange="selectChannel(event)"></div>
                 <div class="ui_field text input" data-id="console.tracks.query" data-label="track query:" data-placeholder="enter track query" onChange="queryTracks(event)"></div>
 
-                <div id="console.tracks.list" class="ui_list" data-rows="5" data-column-widths="fit: 1rem -5rem #4rem" onclick="selectTrack(event)" oncontextmenu="uiPopupMenu(event,'tracks_menu')">
+                <div id="console.tracks.list" class="ui_list" data-rows="5" data-column-widths="fit: 1rem -5rem #4rem" onclick="selectTrack(event)" oncontextmenu="uiPopupMenu(event, 'tracks_menu')">
                     <div id="tracks_menu" class="ui_popup_menu">
                         <div class="ui_menuitem" onclick="doSomethingWithSelectedTrack()">process selected</div>
                         <hr>
@@ -61,7 +63,7 @@
 
     </div>
 
-    <div class="ui_icon" data-src="resources/controls.svg" onclick="uiToggleWindow('console')"></div>
+    <div class="ui_icon" data-src="resources/controls.svg" onclick="uiToggleWindow( 'console')"></div>
 </body>
 
 </html>
