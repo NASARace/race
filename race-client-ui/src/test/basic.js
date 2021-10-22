@@ -19,8 +19,11 @@ function initializeData() {
     uiSetField("console.position.latitude", "37.54323");
     uiSetField("console.position.longitude", "-121.87432");
 
-    uiSetSliderRange("console.position.zoom", 0, 100, 10);
-    uiSetSliderValue("console.position.zoom", 50);
+    let slider = uiGetSlider("console.position.zoom");
+    uiSetSliderRange(slider, 0, 100, 1);
+    uiSetSliderValue(slider, 50);
+    //uiSetSliderRange(slider, 400000, 1000000, 100000, new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 1 }));
+    //uiSetSliderValue(slider, 400000);
 
     uiSetListItemKeyColumn("console.tracks.list", 1);
     uiSetListItems("console.tracks.list", trackList);

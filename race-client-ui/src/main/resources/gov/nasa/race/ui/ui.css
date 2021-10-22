@@ -274,7 +274,7 @@ div.ui_slider {
     display: flex;
     flex-direction: row;
     align-items: center;
-    padding: 5px;
+    padding: 3px;
 }
 
 div.ui_slider_track {
@@ -302,7 +302,7 @@ div.ui_slider_thumb {
     width: var(--slider-thumb-size);
     height: var(--slider-thumb-size);
     text-align: center;
-    position: relative;
+    position: absolute;
     left: calc(50% - var(--slider-thumb-size)/2);
     cursor: ew-resize;
     z-index: 2;
@@ -313,7 +313,7 @@ div.ui_slider_num {
     color: var(--field-value-color);
     background: var(--data-background-color);
     font: var(--mono-font);
-    position: relative;
+    position: absolute;
     z-index: 2;
 }
 
