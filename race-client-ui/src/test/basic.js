@@ -28,11 +28,7 @@ function initializeData() {
     uiSetListItemKeyColumn("console.tracks.list", 1);
     uiSetListItems("console.tracks.list", trackList);
 
-    uiSetChoiceItems("console.tracks.channel", [
-        "SFDPS",
-        "TAIS",
-        "ASDE-X"
-    ], 0);
+    uiSetChoiceItems("console.tracks.channel", ["SFDPS", "TAIS", "ASDE-X"], 0);
 
 
     //let d = new Date(Date.now());

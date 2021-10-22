@@ -9,9 +9,10 @@ function uiInit() {
     _initializeCheckboxes();
     _initializeRadios();
     _initializeLists();
-    _initializeMenus();
     _initializeTimeWidgets();
     _initializeSliderWidgets();
+    _initializeMenus(); /* has to be last in case widgets add menus */
+
     if (initializeData) initializeData();
 }
 
@@ -312,7 +313,7 @@ function _initializeTimer(e) {
 
         let tc = _createElement("DIV", "ui_timer_value");
         tc.id = id;
-        tc.textContent = "0:00:00";
+        tc.innerText = "0:00:00";
         e.appendChild(tc);
 
         tc._uiT0 = 0; // elapsed
@@ -339,7 +340,7 @@ function _updateTimer(e, t) {
         if (s < 10) elapsed += '0';
         elapsed += s;
 
-        e.textContent = elapsed;
+        e.innerText = elapsed;
     }
 }
 
@@ -406,8 +407,8 @@ function _updateClock(e, t) {
         e._uiW0 = t;
 
         let date = new Date(t);
-        e.children[0].textContent = e._uiDateFmt.format(date);
-        e.children[1].textContent = e._uiTimeFmt.format(date);
+        e.children[0].innerText = e._uiDateFmt.format(date);
+        e.children[1].innerText = e._uiTimeFmt.format(date);
 
     } else {
         if (e._uiW0 == 0) { // first time init with previous uiSetClock
@@ -417,10 +418,10 @@ function _updateClock(e, t) {
             let date = new Date(s);
             let day = s / MILLIS_IN_DAY;
             if (day != e._uiSday) {
-                e.children[0].textContent = e._uiDateFmt.format(date);
+                e.children[0].innerText = e._uiDateFmt.format(date);
                 e._uiLastDay = day;
             }
-            e.children[1].textContent = e._uiTimeFmt.format(date);
+            e.children[1].innerText = e._uiTimeFmt.format(date);
         }
     }
 }
@@ -433,8 +434,8 @@ function uiSetClock(o, dateSpec, timeScale) {
             e._uiS0 = date.valueOf();
             e._uiSday = e._uiS0 / MILLIS_IN_DAY;
 
-            e.children[0].textContent = e._uiDateFmt.format(date);
-            e.children[1].textContent = e._uiTimeFmt.format(date);
+            e.children[0].innerText = e._uiDateFmt.format(date);
+            e.children[1].innerText = e._uiTimeFmt.format(date);
 
             if (timeScale) {
                 e._uiTimeScale = timeScale;
@@ -539,7 +540,7 @@ function _initializeSliderWidgets() {
             let v = e._uiMinValue + (x * e._uiScale);
             let vv = _computeSliderValue(e, v);
             e._uiValue = vv;
-            if (e._uiNum) e._uiNum.textContent = _formattedNum(vv, e._uiNumFormatter);
+            if (e._uiNum) e._uiNum.innerText = _formattedNum(vv, e._uiNumFormatter);
             _positionThumb(e);
 
             if (vv != lastValue) {
@@ -614,8 +615,8 @@ function uiSetSliderRange(o, min, max, step, numFormatter) {
         if (step) e._uiStep = step;
 
         if (numFormatter) e._uiNumFormatter = numFormatter;
-        if (e._uiLeftLimit) e._uiLeftLimit.textContent = _formattedNum(min, e._uiNumFormatter);
-        if (e._uiRightLimit) e._uiRightLimit.textContent = _formattedNum(max, e._uiNumFormatter);
+        if (e._uiLeftLimit) e._uiLeftLimit.innerText = _formattedNum(min, e._uiNumFormatter);
+        if (e._uiRightLimit) e._uiRightLimit.innerText = _formattedNum(max, e._uiNumFormatter);
 
         if (_hasDimensions(e)) {
             _positionLimits(e);
@@ -629,7 +630,7 @@ function uiSetSliderValue(o, v) {
     let e = uiGetSlider(o);
     if (e) {
         e._uiValue = _computeSliderValue(e, v);
-        if (e._uiNum) e._uiNum.textContent = _formattedNum(e._uiValue, e._uiNumFormatter);
+        if (e._uiNum) e._uiNum.innerText = _formattedNum(e._uiValue, e._uiNumFormatter);
         if (_hasDimensions(e)) _positionThumb(e);
     }
 }
@@ -657,16 +658,16 @@ function _initializeChoices() {
         if (e.tagName == "DIV") {
             let id = e.dataset.id;
             let labelText = e.dataset.label;
-            let rows = e.dataset.rows;
 
-            if (id && labelText) {
+            if (labelText) {
                 let label = _createElement("DIV", "ui_field_label", labelText);
                 e.appendChild(label);
             }
 
-            let field = _createElement("SELECT", e.classList);
+            let field = _createElement("DIV", "ui_choice_value");
             field.id = id;
-            if (rows) field.setAttribute("size", rows);
+            field._uiSelIndex = -1;
+
             e.appendChild(field);
         }
     }
@@ -674,31 +675,54 @@ function _initializeChoices() {
 
 function uiSetChoiceItems(o, items, selIndex = -1) {
     let e = uiGetChoice(o);
-    _removeChildrenOf(e);
+    if (e) {
+        let prevChoices = _firstChildWithClass(e.parentElement, "ui_popup_menu");
+        if (prevChoices) e.parentElement.removeChild(prevChoices);
+        e._uiSelIndex = Math.min(selIndex, items.length);
 
-    let i = 0;
-    for (item of items) {
-        let ie = _createElement("OPTION", "ui_choice_item", item);
-        ie.value = i;
-        e.appendChild(ie);
-        i++;
-    }
-    if (selIndex >= 0 && selIndex < i) {
-        e.value = selIndex;
+        let choice = e.parentElement;
+        var i = 0;
+        let menu = _createElement("DIV", "ui_popup_menu");
+        for (item of items) {
+            let idx = i;
+            let mi = _createElement("DIV", "ui_menuitem", item);
+            mi.addEventListener("click", (event) => {
+                event.preventDefault();
+                e.innerText = mi.innerText;
+                if (e._uiSelIndex >= 0) { menu.children[e._uiSelIndex].classList.remove('checked'); }
+                e._uiSelIndex = idx;
+                mi.classList.add('checked');
+                choice.dispatchEvent(new Event('change'));
+            });
+            if (selIndex == i) {
+                mi.classList.add('checked');
+                e.innerText = item;
+            }
+            menu.appendChild(mi);
+            i += 1;
+        }
+
+        choice.appendChild(menu);
+        e.addEventListener("click", (event) => {
+            event.stopPropagation();
+            uiPopupMenu(event, menu);
+            event.preventDefault();
+        });
     }
 }
 
 function uiGetSelectedChoiceValue(o) {
     let e = uiGetChoice(o);
-    let idx = e.value;
-    if (idx >= 0) return _nthChildOf(e, idx).textContent;
+    if (e) {
+        return e.innerText;
+    }
 }
 
 function uiGetChoice(o) {
     let e = _elementOf(o);
-    if (e && e.classList.contains("ui_choice")) {
-        if (e.tagName == "SELECT") return e;
-        else if (e.tagName == "DIV") return e.lastElementChild;
+    if (e) {
+        if (e.classList.contains("ui_choice_value")) return e;
+        else if (e.classList.contains("ui_choice")) return _firstChildWithClass(e, 'ui_choice_value');
     }
     throw "not a choice";
 }
@@ -780,7 +804,7 @@ function uiSelectRadio(o) {
             for (r of e.parentElement.getElementsByClassName("ui_radio")) {
                 if (r !== e) {
                     if (r.classList.contains("selected")) r.classList.remove("selected");
-                    r.firstChild.textContent = undefined;
+                    r.firstChild.innerText = undefined;
                 }
             }
             e.classList.add("selected");
@@ -828,7 +852,7 @@ function _initializeLists() {
         let nRows = _intDataAttrValue(e, "rows", 8);
         e.style.maxHeight = `calc(${nRows} * (${itemHeight} + ${itemPadding}))`; // does not include padding, borders or margin
         e.setAttribute("tabindex", "0");
-        e._isItem = (ie, itemText) => { return ie.textContent == itemText; }
+        e._isItem = (ie, itemText) => { return ie.innerText == itemText; }
         if (e.dataset.columnWidths) _setRowPrototype(e, e.dataset.columnWidths);
         if (e.dataset.keyColumn) _setKeyColumn(e, parseInt(e.dataset.keyColumn));
         if (e.firstElementChild && e.firstElementChild.classList.contains("ui_popup_menu")) _hoistChildElement(e.firstElementChild);
@@ -871,7 +895,7 @@ function _setRowPrototype(e, colSpec) {
     if (fitWidth) e.style.width = "inherit"; // override the theme width
 
     e._uiRowPrototype = re;
-    e._isItem = (ie, itemText) => { return ie.firstElementChild.textContent == itemText; } // per default the first subitem text is the key
+    e._isItem = (ie, itemText) => { return ie.firstElementChild.innerText == itemText; } // per default the first subitem text is the key
 }
 
 function _setKeyColumn(e, keyIdx) {
@@ -911,9 +935,9 @@ function uiGetSelectedListItem(o) {
         let sel = listBox._uiSelectedItem;
         if (sel) {
             if (sel.childElementCount) {
-                return Array.from(sel.children, c => c.textContent);
+                return Array.from(sel.children, c => c.innerText);
             } else {
-                return sel.textContent;
+                return sel.innerText;
             }
         } else return undefined;
 
@@ -927,9 +951,9 @@ function uiGetSelectedListItemText(o) {
         if (sel) {
             let keyIdx = listBox._uiKeyColumnIndex;
             if (sel.childElementCount > 0 && keyIdx) {
-                return sel.children[keyIdx].textContent;
+                return sel.children[keyIdx].innerText;
             } else {
-                return sel.textContent;
+                return sel.innerText;
             }
         } else return undefined;
     } else throw "not a list";
@@ -983,7 +1007,7 @@ function _setSubItemsOf(ie, itemData) {
     let ces = ie.children;
     let n = ces.length;
     for (var i = 0; i < itemData.length && i < n; i++) {
-        ces[i].textContent = itemData[i];
+        ces[i].innerText = itemData[i];
     }
 }
 
@@ -991,7 +1015,7 @@ function _setListItem(ie, itemData) {
     if (ie.childElementCount > 0 && Array.isArray(itemData)) {
         _setSubItemsOf(ie, itemData);
     } else {
-        ie.textContent = itemData;
+        ie.innerText = itemData;
     }
 }
 
@@ -1004,7 +1028,7 @@ function _createListItem(itemData, idx, rowProto = undefined) {
 
     } else {
         ie = _createElement("DIV", "ui_list_item", itemData);
-        ie.textContent = itemData;
+        ie.innerText = itemData;
     }
 
     ie.addEventListener("click", _selectListItem);
@@ -1032,7 +1056,7 @@ function uiSortinListItem(o, item) {
     if (e) {
         let i = 0;
         for (ie of e.children) {
-            if (item < ie.textContent) { // FIXME
+            if (item < ie.innerText) { // FIXME
                 let ieNew = _createElement("DIV", "ui_list_item", item);
                 ieNew._uiItemIndex = i;
                 e.insertBefore(ieNew, ie);
@@ -1118,14 +1142,7 @@ function _initializeMenus() {
     window.addEventListener("click", _windowPopupHandler);
 
     for (e of document.getElementsByClassName("ui_menuitem")) {
-        e.addEventListener("mouseenter", _menuItemHandler);
-        e.addEventListener("click", (event) => {
-            event.stopPropagation();
-            for (var i = _uiActivePopupMenus.length - 1; i >= 0; i--) {
-                _uiActivePopupMenus[i].style.visibility = "hidden";
-            }
-            _uiActivePopupMenus = [];
-        });
+        _initMenuItem(e);
     }
 
     for (e of document.getElementsByClassName("disabled")) {
@@ -1134,6 +1151,17 @@ function _initializeMenus() {
             e.onclick = null;
         }
     }
+}
+
+function _initMenuItem(e) {
+    e.addEventListener("mouseenter", _menuItemHandler);
+    e.addEventListener("click", (event) => {
+        event.stopPropagation();
+        for (var i = _uiActivePopupMenus.length - 1; i >= 0; i--) {
+            _uiActivePopupMenus[i].style.visibility = "hidden";
+        }
+        _uiActivePopupMenus = [];
+    });
 }
 
 function _windowPopupHandler(event) {
@@ -1396,7 +1424,7 @@ function _hasNoChildElements(element) {
 function _createElement(tagName, clsList = undefined, txtContent = undefined) {
     let e = document.createElement(tagName);
     if (clsList) e.classList = clsList;
-    if (txtContent) e.textContent = txtContent;
+    if (txtContent) e.innerText = txtContent;
     return e;
 }
 

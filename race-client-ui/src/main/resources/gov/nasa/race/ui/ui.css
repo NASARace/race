@@ -328,27 +328,37 @@ div.ui_slider_limit {
 
 /* choice fields */
 
+div.ui_choice {}
 
-/*
-div.ui_choice::after {
-    content: "▽";
-    position: relative;
-    left: -1rem;
-    width: 1rem;
-    color: var(--input-active-color);
-}
-*/
-
-select.ui_choice {
+div.ui_choice_value {
     display: inline-block;
-    box-sizing: border-box;
-    color: var(--choice-value-color);
-    background: var(--choice-field-background);
+    box-sizing: content-box;
+    border: var(--choice-field-border);
+    color: var(--field-value-color);
+    background: var(--data-background-color);
     width: var(--choice-value-width);
     height: var(--field-height);
-    border: var(--choice-field-border);
-    /*appearance: none; */
-    -webkit-appearance: none;
+}
+
+div.ui_choice_value::before {
+    display: inline-block;
+    color: var(--field-value-color);
+    background: transparent;
+    width: 1rem;
+    height: 1rem;
+    content: "≣";
+    font-size: larger;
+    /* "∇⋁⩔≣≡" */
+}
+
+div.ui_choice_value.num {
+    font: var(--mono-font);
+    text-align: right;
+}
+
+div.ui_choice_value.text {
+    font: var(--font);
+    text-align: right;
 }
 
 
