@@ -804,7 +804,6 @@ function uiSelectRadio(o) {
             for (r of e.parentElement.getElementsByClassName("ui_radio")) {
                 if (r !== e) {
                     if (r.classList.contains("selected")) r.classList.remove("selected");
-                    r.firstChild.innerText = undefined;
                 }
             }
             e.classList.add("selected");

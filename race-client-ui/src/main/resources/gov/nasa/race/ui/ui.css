@@ -18,6 +18,7 @@
     width: var(--scrollbar-thumb-width);
     height: var(--scrollbar-thumb-width);
     background-color: var(--scrollbar-thumb-color);
+    border: 2px outset var(--border-color);
 }
 
 ::-webkit-scrollbar-corner {
@@ -383,6 +384,8 @@ div.ui_checkbox_button {
     width: var(--checkbox-button-size);
     height: var(--checkbox-button-size);
     border: var(--checkbox-button-border);
+    color: var(--data-color);
+    background: var(--data-background-color);
     font-size: smaller;
     font-weight: bold;
     text-align: center;
@@ -412,7 +415,6 @@ div.ui_radio {
     justify-content: flex-start;
     align-items: center;
     background: transparent;
-    margin: 3px;
     padding: 3px;
 }
 
@@ -421,18 +423,21 @@ div.ui_radio:active {
 }
 
 div.ui_radio_button {
-    display: inline-block;
+    display: flex;
     box-sizing: border-box;
     width: var(--radio-button-size);
     height: var(--radio-button-size);
-    margin: 2px;
     border: var(--radio-button-border);
     border-radius: 50%;
-    text-align: center;
+    color: var(--data-color);
+    background: var(--data-background-color);
+    line-height: var(--radio-button-size);
+    align-items: center;
+    justify-content: center;
 }
 
-div.ui_radio.selected div.ui_radio_button {
-    background: var(--radio-button-selected-background);
+div.ui_radio.selected div.ui_radio_button::before {
+    content: "●";
 }
 
 div.ui_radio:hover div {
@@ -457,7 +462,7 @@ div.ui_radio_label {
     border: var(--button-border);
     border-radius: var(--button-border-radius);
     margin: var(--margin);
-    padding: 2px 5px 2px 5px;
+    padding: 3px 5px 3x 5px;
 }
 
 .ui_button:hover {

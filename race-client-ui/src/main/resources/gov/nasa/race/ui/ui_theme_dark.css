@@ -77,23 +77,24 @@
     --choice-value-color: var(--input-data-color);
     --choice-field-background: var(--data-background-color);
     /* pushbuttons */
-    --button-height: 1.4rem;
+    --button-height: 1.6rem;
     --button-color: rgb(200, 200, 200);
-    --button-background-color: rgb(64, 64, 64);
+    --button-background-color: rgb(74, 74, 74);
     --button-hover-background-color: rgb(64, 64, 200);
-    --button-border: 1px solid rgb(200, 200, 200);
-    --button-border-radius: 5px;
+    --button-border: 3px groove var(--border-color);
+    --button-border-radius: 0px;
     --button-color-pressed: yellow;
-    --button-border-pressed: 1px solid yellow;
+    --button-border-pressed: var(--button-border);
     /* checkboxes */
     --checkbox-size: 1rem;
     --checkbox-button-size: 0.8rem;
     --checkbox-button-border: 1px solid var(--border-color);
     /* radio buttons */
     --radio-size: 1rem;
-    --radio-button-size: 0.7rem;
+    --radio-button-size: 0.9rem;
     --radio-button-border: 1px solid var(--border-color);
-    --radio-button-selected-background: rgb(200, 200, 200);
+    --radio-button-selected-color: var(--data-color);
+    --radio-button-selected-background: var(--data-background-color);
     /* lists */
     --list-width: 8rem;
     --list-item-height: 1.1rem;
