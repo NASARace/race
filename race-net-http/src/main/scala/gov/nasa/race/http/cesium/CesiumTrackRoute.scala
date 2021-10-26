@@ -271,8 +271,13 @@ class CesiumTrackRoute (val parent: ParentActor, val config: Config) extends Tra
 
         const imageryProvider = new Cesium.OpenStreetMapImageryProvider({
             url: 'maptile'
-            //url: 'http://tile.stamen.com/terrain'
         });
+        imageryProvider.defaultBrightness = 0.5;
+        imageryProvider.defaultContrast = 1.5;
+        imageryProvider.defaultHue = Cesium.Math.toRadians(220.0); // in radians
+        imageryProvider.defaultSaturation = 1.0;
+        imageryProvider.defaultGamma = 1.0;
+
         const terrainProvider = new Cesium.ArcGISTiledElevationTerrainProvider({
             url: 'elevation'
             //url: 'https://elevation3d.arcgis.com/arcgis/rest/services/WorldElevation3D/Terrain3D/ImageServer',

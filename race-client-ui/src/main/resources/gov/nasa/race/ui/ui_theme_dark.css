@@ -39,6 +39,7 @@
     --icon-on-color: white;
     --icon-on-fill-color: rgb(220, 220, 220);
     --icon-on-border: 1px solid white;
+    --icon-border-radius: 5px;
     /* windows */
     --titlebar-color: var(--color);
     --titlebar-background-color: rgb(32, 32, 64);

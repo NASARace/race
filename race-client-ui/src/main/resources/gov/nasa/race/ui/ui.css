@@ -100,6 +100,7 @@ div.ui_icon {
     background: var(--icon-background-color);
     color: var(--icon-color);
     border: var(--icon-border);
+    border-radius: var(--icon-border-radius);
     width: var(--icon-size);
     height: var(--icon-size);
     z-index: 3;
@@ -287,6 +288,11 @@ div.ui_slider_track {
     position: relative;
 }
 
+div.ui_slider_track:hover {
+    color: var(--input-active-color);
+    background: var(--input-active-background);
+}
+
 div.ui_slider_range {
     display: block;
     background: var(--field-value-color);
@@ -304,9 +310,14 @@ div.ui_slider_thumb {
     height: var(--slider-thumb-size);
     text-align: center;
     position: absolute;
+    top: 0;
     left: calc(50% - var(--slider-thumb-size)/2);
     cursor: ew-resize;
     z-index: 2;
+}
+
+div.ui_slider_thumb:hover {
+    color: var(--input-active-color);
 }
 
 div.ui_slider_num {
@@ -360,6 +371,10 @@ div.ui_choice_value.num {
 div.ui_choice_value.text {
     font: var(--font);
     text-align: right;
+}
+
+div.ui_choice_value:hover {
+    background: var(--button-hover-background-color);
 }
 
 
@@ -422,6 +437,10 @@ div.ui_radio:active {
     color: var(--button-color-pressed);
 }
 
+div.ui_radio:hover div {
+    background: var(--button-hover-background-color);
+}
+
 div.ui_radio_button {
     display: flex;
     box-sizing: border-box;
@@ -437,11 +456,8 @@ div.ui_radio_button {
 }
 
 div.ui_radio.selected div.ui_radio_button::before {
-    content: "●";
-}
-
-div.ui_radio:hover div {
-    background: var(--button-hover-background-color);
+    content: "◉";
+    background: transparent;
 }
 
 div.ui_radio_label {
