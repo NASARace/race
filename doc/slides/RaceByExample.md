@@ -192,11 +192,11 @@ goal: automatically detect parallel approaches that are angled-in exceeding
 * network re-synchronizes when partitions are re-connected
 
 <img src="../images/share-part.svg" class="center scale20"/>
-<div class="run">1: ./race config/net/share-coordinator.conf</div><a class="srv" href="https://localhost:8000/share?auth=(uid=thor)" target="_blank"></a>
+<div class="run">1: ./race config/share/share-coordinator.conf</div><a class="srv" href="https://localhost:8000/share?auth=(uid=thor)" target="_blank"></a>
 
-<div class="run">2: ./race --vault ../conf config/net/share-node_1.conf</div><a class="srv" href="https://localhost:8001/share?auth=(uid=frodo)" target="_blank"></a>
+<div class="run">2: ./race --vault ../conf config/share/share-node_1.conf</div><a class="srv" href="https://localhost:8001/share?auth=(uid=frodo)" target="_blank"></a>
 
-<div class="run">3: ./race config/net/share-node_2.conf</div><a class="srv" href="https://localhost:8002/share?auth=(uid=gonzo)" target="_blank"></a>
+<div class="run">3: ./race config/share/share-node_2.conf</div><a class="srv" href="https://localhost:8002/share?auth=(uid=gonzo)" target="_blank"></a>
 
 
 ## TL;DR

@@ -18,7 +18,6 @@
 package gov.nasa.race.ww.track
 
 import java.awt.image.BufferedImage
-
 import gov.nasa.race._
 import gov.nasa.race.common.{Query, ThresholdLevel, ThresholdLevelList}
 import gov.nasa.race.config.ConfigUtils._
@@ -36,6 +35,7 @@ import gov.nasa.race.ww.{AltitudeSensitiveRaceLayer, _}
 import gov.nasa.worldwind.geom.Position
 
 import scala.collection.mutable.{Map => MutableMap}
+import scala.reflect.ClassTag
 import scala.util.matching.Regex
 
 
@@ -45,7 +45,7 @@ import scala.util.matching.Regex
   * Since the layer object owns the track collection and hence is responsible for track entry changes,
   * it also has to update/manage related panels (LayerInfo (with list view), TrackEntry)
   */
-trait TrackLayer[T <:TrackedObject] extends SubscribingRaceLayer
+abstract class TrackLayer[T <:TrackedObject :ClassTag] extends SubscribingRaceLayer
                              with ConfigurableRenderingLayer
                              with AltitudeSensitiveRaceLayer
                              with InteractiveRaceLayer[TrackEntry[T]]
@@ -204,13 +204,18 @@ trait TrackLayer[T <:TrackedObject] extends SubscribingRaceLayer
     */
   override def selectObject(o: RaceLayerPickable, a: EventAction): Unit = {
     o.layerItem match {
-      case e: TrackEntry[T] =>
-        a match {
-          case EventAction.LeftClick => selectTrackEntry(e)
-          case EventAction.LeftDoubleClick => setTrackEntryPanel(e)
-          case other => // ignored
+      case te: TrackEntry[_] =>
+        te.obj match {
+          case _: T =>
+            val e = te.asInstanceOf[TrackEntry[T]]
+            a match {
+              case EventAction.LeftClick => selectTrackEntry(e)
+              case EventAction.LeftDoubleClick => setTrackEntryPanel(e)
+              case other => // ignored
+            }
+          case _ => // ignore, not our track type
         }
-      case other => selectNonTrack(o,a)
+      case _ => selectNonTrack(o,a)
     }
   }
 
@@ -389,15 +394,21 @@ trait TrackLayer[T <:TrackedObject] extends SubscribingRaceLayer
 
   protected def setLayerObjectAttribute (lo: LayerObject, guard: (TrackEntry[T])=>Boolean)(action: (TrackEntry[T])=>Unit): Unit = {
     lo match {
-      case e: TrackEntry[T] =>
-        if (e.layer == this) {
-          if (guard(e)) {
-            action(e)
-            panel.updateEntryAttributes // update layerinfo panel
-            entryPanel.updateTrackEntryAttributes // update entry panel
-            redraw // ?? do we need this
-          }
-        } else warning(s"can't set attribute for foreign layer object $e")
+      case te: TrackEntry[_] =>
+        te.obj match {
+          case _:T =>
+            val e = te.asInstanceOf[TrackEntry[T]]
+            if (e.layer == this) {
+              if (guard(e)) {
+                action(e)
+                panel.updateEntryAttributes // update layerinfo panel
+                entryPanel.updateTrackEntryAttributes // update entry panel
+                redraw // ?? do we need this
+              }
+            } else warning(s"can't set attribute for foreign layer object $e")
+          case _ => // not our track type
+        }
+
       case o => warning(s"not a layer object $o")
     }
   }

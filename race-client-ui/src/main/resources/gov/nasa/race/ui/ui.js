@@ -344,6 +344,23 @@ function _updateTimer(e, t) {
     }
 }
 
+function uiGetTimer(o) {
+    let e = _elementOf(o);
+    if (e && e.tagName == "DIV") {
+        if (e.classList.contains("ui_timer_value")) return e;
+        else if (e.classList.contains("ui_timer")) return _firstChildWithClass("ui_timer_value");
+    }
+    throw "not a timer";
+}
+
+function uiResetTimer(o,timeScale) {
+    let e = uiGetTimer(o);
+    if (e) {
+        e._uiT0 = 0;
+        if (timeScale) e._uiTimeScale = timeScale;
+    }
+}
+
 function _initializeClock(e) {
     if (e.tagName == "DIV") {
         let id = e.dataset.id;
@@ -452,6 +469,7 @@ function uiGetClock(o) {
     }
     throw "not a clock field";
 }
+
 
 //--- slider widgets
 

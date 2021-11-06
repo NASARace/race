@@ -23,7 +23,7 @@ import akka.http.scaladsl.server.{PathMatchers, Route}
 import com.typesafe.config.Config
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.config.SubConfigurable
-import gov.nasa.race.core.{ConfigLoggable, Loggable, ParentActor, RaceDataClient}
+import gov.nasa.race.core.{ConfigLoggable, Loggable, ParentActor, RaceActorSystem, RaceDataClient}
 import gov.nasa.race.util.StringUtils
 
 import scala.concurrent.duration._
@@ -109,6 +109,12 @@ trait RaceRouteInfo extends SubConfigurable with ConfigLoggable {
   */
 trait SubscribingRaceRoute extends RaceRouteInfo with RaceDataClient
 
+/**
+  * a RaceRouteInfo that has access to the simClock
+  */
+trait ContinuousTimeRaceRoute extends RaceRouteInfo {
+  val simClock = RaceActorSystem(system).simClock
+}
 
 
 

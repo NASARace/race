@@ -19,7 +19,6 @@ package gov.nasa.race.ww.track
 
 import java.awt.image.BufferedImage
 import java.awt.{Font, Point}
-
 import gov.nasa.race._
 import gov.nasa.race.track.TrackedObject
 import gov.nasa.race.trajectory.MutTrajectory
@@ -29,13 +28,15 @@ import gov.nasa.race.ww._
 import gov.nasa.worldwind.WorldWind
 import gov.nasa.worldwind.render.{Material, Offset, PointPlacemark, PointPlacemarkAttributes}
 
+import scala.reflect.ClassTag
+
 /**
   * the link between rendering agnostic TrackObjects and (WW specific) rendering objects
   *
   * This aggregates all Renderables that can be associated with a given TrackObject based on viewer
   * state (eye position and selected options)
   */
-class TrackEntry[T <: TrackedObject](var obj: T, var trajectory: MutTrajectory, val layer: TrackLayer[T])
+class TrackEntry[T <: TrackedObject :ClassTag](var obj: T, var trajectory: MutTrajectory, val layer: TrackLayer[T])
                       extends LayerObject with LayerSymbolOwner {
 
   //--- the renderables that can be associated with this entry

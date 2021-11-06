@@ -62,8 +62,18 @@ package object ui {
     input(mods: _*)
   }
 
-  def uiNumField (label: String, eid: UiID) = {
-    var mods = List(cls:="ui_field num", data("id"):=eid, data("label"):= label)
+  def uiNumField (label: String, eid: UiID): Text.TypedTag[String] = {
+    val mods = List(cls:="ui_field num", data("id"):=eid, data("label"):= label)
+    div(mods: _*)
+  }
+
+  def uiClock (label: String, eid: UiID, tz: String): Text.TypedTag[String] = {
+    val mods = List(cls:="ui_clock", data("id"):=eid, data("label"):= label, data("tz"):=tz)
+    div(mods: _*)
+  }
+
+  def uiTimer (label: String, eid: UiID): Text.TypedTag[String] = {
+    val mods = List(cls:="ui_timer", data("id"):=eid, data("label"):= label)
     div(mods: _*)
   }
 

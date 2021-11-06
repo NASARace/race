@@ -18,9 +18,10 @@ lazy val testSettings = commonSettings ++ noPublishSettings  // test projects do
 
 //--- root project (only for aggregation)
 lazy val root = createRootProject("race").
-  aggregate(raceCore,raceNetJMS,raceNetKafka,raceNetDDS,raceNetHttp,raceSwing,raceWW,raceAir,raceWWAir,raceSpace,raceLauncher,raceAdapter,
-    raceCL,raceTools,raceTestKit,raceCoreTest,raceNetJMSTest,raceNetHttpTest,raceNetKafkaTest,raceCLTest,raceAirTest,raceSpaceTest).
-  dependsOn(raceCore,raceNetJMS,raceNetKafka,raceNetDDS,raceNetHttp,raceSwing,raceWW,raceAir,raceWWAir,raceSpace,raceLauncher).
+  aggregate(raceCore,raceNetJMS,raceNetKafka,raceNetDDS,raceNetHttp,raceShare,raceSwing,raceWW,raceAir,raceWWAir,raceClientUI,
+    raceCesium,raceSpace,raceLauncher,raceAdapter,
+    raceCL,raceTools,raceTestKit,raceCoreTest,raceNetJMSTest,raceNetHttpTest,raceShareTest,raceNetKafkaTest,raceCLTest,raceAirTest,raceSpaceTest).
+  dependsOn(raceCore,raceNetJMS,raceNetKafka,raceNetDDS,raceNetHttp,raceSwing,raceWW,raceAir,raceWWAir,raceSpace,raceLauncher,raceShare,raceCesium).
   enablePlugins(JavaAppPackaging,LauncherJarPlugin,LaikaPlugin).
   settings(
     commonSettings,
@@ -126,6 +127,12 @@ lazy val raceClientUI = createProject("race-client-ui", commonSettings).
   dependsOn(raceCore).
   addLibraryDependencies(scalaTags)
 
+lazy val raceCesium = createProject("race-cesium", commonSettings).
+  dependsOn(raceNetHttp, raceClientUI)
+
+lazy val raceShare = createProject("race-share", commonSettings).
+  dependsOn(raceNetHttp)
+
 //--- test projects - no artifacts, only used to test this repository
 
 lazy val raceTestKitTest = createTestProject("race-testkit-test", testSettings).
@@ -143,6 +150,9 @@ lazy val raceNetJMSTest = createTestProject("race-net-jms-test", testSettings).
 
 lazy val raceNetHttpTest = createTestProject("race-net-http-test", testSettings).
   dependsOn(raceNetHttp,raceTestKit)
+
+lazy val raceShareTest = createTestProject("race-share-test", testSettings).
+  dependsOn(raceShare,raceTestKit)
 
 lazy val raceNetKafkaTest = createTestProject("race-net-kafka-test", testSettings).
   enablePlugins(JavaAppPackaging).

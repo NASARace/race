@@ -34,7 +34,14 @@ trait T2 [A,B] extends Product2[A,B] {
   var _1: A
   var _2: B
 
-  override def canEqual (other: Any): Boolean = other.isInstanceOf[Product2[A,B]]
+  override def canEqual (other: Any): Boolean = { // we want to be able to compare with normal tuples
+    other match {
+      case p: Product2[_,_] =>
+        _1.getClass == p._1.getClass &&
+          _2.getClass == p._2.getClass
+      case _ => false
+    }
+  }
 
   def toTuple: (A,B) = (_1, _2)
   def ?= (other: Product2[A,B]): Boolean = (other != null) && (other._1 == _1) && (other._2 == _2)
@@ -55,7 +62,15 @@ trait T3 [A,B,C]  extends Product3[A,B,C] {
   var _2: B
   var _3: C
 
-  override def canEqual (other: Any): Boolean = other.isInstanceOf[Product3[A,B,C]]
+  override def canEqual (other: Any): Boolean = {
+    other match {
+      case p: Product3[_,_,_] =>
+        _1.getClass == p._1.getClass &&
+          _2.getClass == p._2.getClass &&
+          _3.getClass == p._3.getClass
+      case _ => false
+    }
+  }
 
   def toTuple: (A,B,C) = (_1, _2, _3)
   def ?= (other: Product3[A,B,C]): Boolean = {
@@ -79,7 +94,16 @@ trait T4 [A,B,C,D] extends Product4[A,B,C,D] {
   var _3: C
   var _4: D
 
-  override def canEqual (other: Any): Boolean = other.isInstanceOf[Product4[A,B,C,D]]
+  override def canEqual (other: Any): Boolean = {
+    other match {
+      case p: Product4[_,_,_,_] =>
+        _1.getClass == p._1.getClass &&
+          _2.getClass == p._2.getClass &&
+          _3.getClass == p._3.getClass &&
+          _4.getClass == p._4.getClass
+      case _ => false
+    }
+  }
 
   def toTuple: (A,B,C,D) = (_1, _2, _3, _4)
   def ?= (other: Product4[A,B,C,D]): Boolean = {
@@ -103,7 +127,17 @@ trait T5 [A,B,C,D,E]  extends Product5[A,B,C,D,E] {
   var _4: D
   var _5: E
 
-  override def canEqual (other: Any): Boolean = other.isInstanceOf[Product5[A,B,C,D,E]]
+  override def canEqual (other: Any): Boolean = {
+    other match {
+      case p: Product5[_,_,_,_,_] =>
+        _1.getClass == p._1.getClass &&
+          _2.getClass == p._2.getClass &&
+          _3.getClass == p._3.getClass &&
+          _4.getClass == p._4.getClass &&
+          _5.getClass == p._5.getClass
+      case _ => false
+    }
+  }
 
   def toTuple: (A,B,C,D,E) = (_1, _2, _3, _4, _5)
   def ?= (other: Product5[A,B,C,D,E]): Boolean = {
@@ -137,7 +171,18 @@ trait T6 [A,B,C,D,E,F] extends Product6[A,B,C,D,E,F] {
   var _5: E
   var _6: F
 
-  override def canEqual (other: Any): Boolean = other.isInstanceOf[Product6[A,B,C,D,E,F]]
+  override def canEqual (other: Any): Boolean = {
+    other match {
+      case p: Product6[_,_,_,_,_,_] =>
+        _1.getClass == p._1.getClass &&
+          _2.getClass == p._2.getClass &&
+          _3.getClass == p._3.getClass &&
+          _4.getClass == p._4.getClass &&
+          _5.getClass == p._5.getClass &&
+          _6.getClass == p._6.getClass
+      case _ => false
+    }
+  }
 
   def toTuple: (A,B,C,D,E,F) = (_1, _2, _3, _4, _5, _6)
   def ?= (other: Product6[A,B,C,D,E,F]): Boolean = {
@@ -172,8 +217,19 @@ trait T7 [A,B,C,D,E,F,G]  extends Product7[A,B,C,D,E,F,G] {
   var _6: F
   var _7: G
 
-  override def canEqual (other: Any): Boolean = other.isInstanceOf[Product7[A,B,C,D,E,F,G]]
-
+  override def canEqual (other: Any): Boolean = {
+    other match {
+      case p: Product7[_,_,_,_,_,_,_] =>
+        _1.getClass == p._1.getClass &&
+          _2.getClass == p._2.getClass &&
+          _3.getClass == p._3.getClass &&
+          _4.getClass == p._4.getClass &&
+          _5.getClass == p._5.getClass &&
+          _6.getClass == p._6.getClass &&
+          _7.getClass == p._7.getClass
+      case _ => false
+    }
+  }
   def toTuple: (A,B,C,D,E,F,G) = (_1, _2, _3, _4, _5, _6, _7)
   def ?= (other: Product7[A,B,C,D,E,F,G]): Boolean = {
     (other != null) && (other._1 == _1) && (other._2 == _2) && (other._3 == _3) &&
