@@ -30,6 +30,11 @@ object CommonRaceSettings {
           , "-opt-inline-from:gov.nasa.race.uom.Length"
 */
         ),
+
+        javaOptions ++= Seq(
+         // "--add-modules", "jdk.incubator.vector"  // disabled for now since it creates a JDK 16 dependency without performance gains
+        ),
+
         resolvers ++= Dependencies.dependencyResolvers,
 
         run / fork := true,
