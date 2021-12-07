@@ -5,12 +5,14 @@
     <meta charset="utf-8">
     <link href="ui_theme.css" rel="stylesheet">
     <link href="ui.css" rel="stylesheet">
-    <script src="ui.js"></script>
+    <script src="ui_data.js" type="module"></script>
+    <script src="ui_util.js" type="module"></script>
+    <script src="ui.js" type="module"></script>
 
-    <script src="basic.js"></script>
+    <script src="basic.js" type="module"></script>
 </head>
 
-<body style="background-image: url('resources/globe.jpg');overflow: hidden;" onload="uiInit()">
+<body style="background-image: url('resources/globe.jpg');overflow: hidden;" onload="app.initialize()">
 
     <div id="console" class="ui_window" data-title="Console">
         <div class="ui_panel expanded" id="console.time" data-panel="Time">
@@ -28,42 +30,42 @@
                 <div class="ui_field num" data-id="console.position.altitude" data-label="alt:"></div>
             </div>
 
-            <div class="ui_slider" data-id="console.position.zoom" data-label="zoom:" onchange="zoomChanged(event)"></div>
+            <div class="ui_slider" data-id="console.position.zoom" data-label="zoom:" onchange="app.zoomChanged(event)"></div>
         </div>
 
         <div class="ui_panel collapsed" id="console.tracks" data-panel="Tracks">
             <div class="ui_container column align_right">
-                <div class="ui_choice" data-id="console.tracks.channel" data-label="channel:" onChange="selectChannel(event)"></div>
-                <div class="ui_field text input" data-id="console.tracks.query" data-label="track query:" data-placeholder="enter track query" onChange="queryTracks(event)"></div>
+                <div class="ui_choice" data-id="console.tracks.channel" data-label="channel:" onChange="app.selectChannel(event)"></div>
+                <div class="ui_field text input" data-id="console.tracks.query" data-label="track query:" data-placeholder="enter track query" onchange="app.queryTracks(event)"></div>
 
-                <div id="console.tracks.list" class="ui_list" data-rows="5" data-column-widths="fit: 1rem -5rem #4rem" onclick="selectTrack(event)" oncontextmenu="uiPopupMenu(event, 'tracks_menu')">
+                <div id="console.tracks.list" class="ui_list" data-rows="5" onclick="app.selectTrack(event)" oncontextmenu="app.popupMenu(event, 'tracks_menu')">
                     <div id="tracks_menu" class="ui_popup_menu">
-                        <div class="ui_menuitem" onclick="doSomethingWithSelectedTrack()">process selected</div>
+                        <div class="ui_menuitem" onclick="app.doSomethingWithSelectedTrack()">process selected</div>
                         <hr>
-                        <div class="ui_menuitem checked" onclick="toggleCheck(event)">check that</div>
-                        <div class="ui_menuitem disabled" id="console.tracks.list.condMenuItem" onclick="doSomethingConditional()">do that if unchecked</div>
+                        <div class="ui_menuitem checked" onclick="app.toggleCheck(event)">check that</div>
+                        <div class="ui_menuitem disabled" id="console.tracks.list.condMenuItem" onclick="app.doSomethingConditional()">do that if unchecked</div>
                         <div class="ui_menuitem">submenu ...
                             <div class="ui_popup_menu">
-                                <div class="ui_menuitem" onclick="doSomethingDifferent()">do something different</div>
+                                <div class="ui_menuitem" onclick="app.doSomethingDifferent()">do something different</div>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
             <div class="ui_container row" id="console.tracks.options">
-                <div class="ui_checkbox" id="console.tracks.showPath" onclick="showTrackPath(event)" data-label="show path"></div>
+                <div class="ui_checkbox" id="console.tracks.showPath" onclick="app.showTrackPath(event)" data-label="show path"></div>
 
-                <div class="ui_radio" id="console.tracks.showLinePath" onclick="selectLinePath(event)" data-label="line"></div>
-                <div class="ui_radio" id="console.tracks.showWallPath" onclick="selectWallPath(event)" data-label="wall"></div>
+                <div class="ui_radio" id="console.tracks.showLinePath" onclick="app.selectLinePath(event)" data-label="line"></div>
+                <div class="ui_radio" id="console.tracks.showWallPath" onclick="app.selectWallPath(event)" data-label="wall"></div>
 
-                <input class="ui_button" type="button" value="Reset" onclick="resetTracks()">
+                <input class="ui_button" type="button" value="Reset" onclick="app.resetTracks()">
             </div>
         </div>
 
 
     </div>
 
-    <div class="ui_icon" data-src="resources/controls.svg" onclick="uiToggleWindow( 'console')"></div>
+    <div class="ui_icon" data-src="resources/controls.svg" onclick="app.toggleWindow( 'console')"></div>
 </body>
 
 </html>

@@ -77,6 +77,8 @@ package object ui {
     div(mods: _*)
   }
 
+  
+
   lazy val uiScript: String = ClassUtils.getResourceAsUtf8String(getClass(), "ui.js").get
   lazy val uiCSS: String = ClassUtils.getResourceAsUtf8String(getClass(), "ui.css").get
   lazy val uiThemeDarkCSS: String = ClassUtils.getResourceAsUtf8String(getClass(), "ui_theme_dark.css").get

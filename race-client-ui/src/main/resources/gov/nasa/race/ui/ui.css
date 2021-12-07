@@ -529,6 +529,7 @@ div.ui_list_item.prototype {
 
 div.ui_list_subitem {
     display: inline-block;
+    overflow: hidden;
     text-overflow: "…";
     background: transparent;
 }

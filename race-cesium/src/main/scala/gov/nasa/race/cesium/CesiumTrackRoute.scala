@@ -293,6 +293,8 @@ class CesiumTrackRoute (val parent: ParentActor, val config: Config) extends Tra
             uiNumField("lon", "console.view.longitude"),
             uiNumField("alt", "console.view.altitude"),
             uiButton("Reset", "setHomeView()")
+          ),
+          uiPanel("Tracks", true, "console.tracks")(
           )
         ),
 

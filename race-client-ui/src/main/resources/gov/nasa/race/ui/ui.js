@@ -1,6 +1,16 @@
+if (window) {
+    // used as an anchor for global properties available from HTML documents
+    window.app = {};
+
+    // functions we directly make available to the global namespace
+    window.app.toggleWindow = toggleWindow;
+    window.app.popupMenu = popupMenu;
+    //.. and more
+}
+
 //--- public functions
 
-function uiInit() {
+export function initialize() {
     _initializeIcons();
     _initializeWindows();
     _initializePanels();
@@ -13,24 +23,24 @@ function uiInit() {
     _initializeSliderWidgets();
     _initializeMenus(); /* has to be last in case widgets add menus */
 
-    if (initializeData) initializeData();
+    return true;
 }
 
 //--- windows
 
 function _initializeWindows() {
-    for (e of document.getElementsByClassName("ui_window")) {
-        uiInitWindow(e);
+    for (let e of document.getElementsByClassName("ui_window")) {
+        initWindow(e);
     }
 }
 
-function uiInitWindow(e) {
+export function initWindow(e) {
     if (e.children.length == 0 || !e.children[0].classList.contains("ui_titlebar")) {
         let tb = _createElement("DIV", "ui_titlebar", e.dataset.title);
         let cb = _createElement("BUTTON", "ui_close_button", "⨉");
         cb.onclick = (event) => {
             let w = event.target.closest('.ui_window');
-            if (w) uiCloseWindow(w);
+            if (w) closeWindow(w);
         };
         cb.setAttribute("tabindex", "-1");
         tb.appendChild(cb);
@@ -79,21 +89,21 @@ function _makeDraggable(e) {
 }
 
 
-function uiShowWindow(o) {
+export function showWindow(o) {
     let e = _elementOf(o);
     if (e) {
         e.style.display = "block";
     }
 }
 
-function uiCloseWindow(o) {
+export function closeWindow(o) {
     let e = _elementOf(o);
     if (e) {
         e.style.display = "none";
     }
 }
 
-function uiToggleWindow(o) {
+export function toggleWindow(o) {
     let e = _elementOf(o);
     if (e) {
         if (!e.style.display || e.style.display == "none") {
@@ -107,7 +117,7 @@ function uiToggleWindow(o) {
 //--- panels
 
 function _initializePanels() {
-    for (panel of document.getElementsByClassName("ui_panel")) {
+    for (let panel of document.getElementsByClassName("ui_panel")) {
         let prev = panel.previousElementSibling;
         if (!prev || !prev.classList.contains("ui_panel_header")) {
             let panelTitle = panel.dataset.panel;
@@ -118,8 +128,8 @@ function _initializePanels() {
         }
     }
 
-    for (panelHeader of document.getElementsByClassName("ui_panel_header")) {
-        panelHeader.addEventListener("click", uiTogglePanelExpansion);
+    for (let panelHeader of document.getElementsByClassName("ui_panel_header")) {
+        panelHeader.addEventListener("click", togglePanelExpansion);
 
         let panel = panelHeader.nextElementSibling;
         if (panelHeader.classList.contains("collapsed")) {
@@ -128,7 +138,7 @@ function _initializePanels() {
     }
 }
 
-function uiTogglePanelExpansion(event) {
+export function togglePanelExpansion(event) {
     const panelHeader = event.target;
     const panel = panelHeader.nextElementSibling;
 
@@ -136,7 +146,7 @@ function uiTogglePanelExpansion(event) {
 
         if (!panel.style.maxHeight) { // we have to give max-height an initial value but without triggering a transition
             panel.style.maxHeight = panel.scrollHeight + "px";
-            setTimeout(() => { uiTogglePanelExpansion(event); }, 100);
+            setTimeout(() => { togglePanelExpansion(event); }, 100);
         } else {
             _swapClass(panelHeader, "expanded", "collapsed");
             _swapClass(panel, "expanded", "collapsed");
@@ -156,7 +166,7 @@ function uiTogglePanelExpansion(event) {
 
 function _initializeIcons() {
     // add boilerplate childnode:  <svg viewBox="0 0 32 32"> <use class="ui_icon_svg" href="${src}#layer1"></use> </svg>
-    for (icon of document.getElementsByClassName("ui_icon")) {
+    for (let icon of document.getElementsByClassName("ui_icon")) {
         let src = icon.dataset.src;
 
         let svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
@@ -170,17 +180,15 @@ function _initializeIcons() {
     }
 }
 
-function uiSetIconOn(event) {
+export function setIconOn(event) {
     event.target.classList.add("on");
 }
 
-function uiSetIconOff(event) {
-    function uiSetIconOn(event) {
-        event.target.classList.remove("on");
-    }
+export function setIconOff(event) {
+    event.target.classList.remove("on");
 }
 
-function uiToggleIcon(event) {
+export function toggleIcon(event) {
     _toggleClass(event.target, "on");
 }
 
@@ -188,7 +196,7 @@ function uiToggleIcon(event) {
 
 function _initializeFields() {
     // expand wrapper fields
-    for (e of document.getElementsByClassName("ui_field")) {
+    for (let e of document.getElementsByClassName("ui_field")) {
         if (e.tagName == "DIV") {
             let id = e.dataset.id;
             let labelText = e.dataset.label;
@@ -223,22 +231,22 @@ function _checkKeyEvent(event) {
     }
 }
 
-function uiSetField(o, newContent) {
-    let e = uiGetField(o);
+export function setField(o, newContent) {
+    let e = getField(o);
     if (e) {
         e.value = newContent;
     }
 }
 
-function uiGetFieldValue(o) {
-    let e = uiGetField(o);
+export function getFieldValue(o) {
+    let e = getField(o);
     if (e) {
         return e.value;
     }
     return undefined;
 }
 
-function uiGetField(o) {
+export function getField(o) {
     let e = _elementOf(o);
     if (e && e.classList.contains("ui_field")) {
         if (e.tagName == "INPUT") return e;
@@ -256,9 +264,9 @@ const MILLIS_IN_DAY = 86400000;
 
 document.addEventListener("visibilitychange", function() {
     if (document.visibilityState === 'visible') {
-        if (_timerClients.length > 0) uiStartTime();
+        if (_timerClients.length > 0) startTime();
     } else {
-        uiStopTime();
+        stopTime();
     }
 });
 
@@ -266,10 +274,10 @@ function _addTimerClient(e) {
     _timerClients.push(e);
 }
 
-function uiStartTime() {
+export function startTime() {
     if (!_timer) {
         let t = Date.now();
-        for (e of _timerClients) {
+        for (let e of _timerClients) {
             e._uiUpdateTime(t);
         }
 
@@ -283,13 +291,13 @@ function _timeTick() {
         _timer = undefined;
     } else {
         let t = Date.now();
-        for (client of _timerClients) {
+        for (let client of _timerClients) {
             client._uiUpdateTime(t);
         }
     }
 }
 
-function uiStopTime() {
+export function stopTime() {
     if (_timer) {
         clearInterval(_timer);
         _timer = undefined;
@@ -297,8 +305,8 @@ function uiStopTime() {
 }
 
 function _initializeTimeWidgets() {
-    for (e of document.getElementsByClassName("ui_clock")) { _initializeClock(e); }
-    for (e of document.getElementsByClassName("ui_timer")) { _initializeTimer(e); }
+    for (let e of document.getElementsByClassName("ui_clock")) { _initializeClock(e); }
+    for (let e of document.getElementsByClassName("ui_timer")) { _initializeTimer(e); }
 }
 
 function _initializeTimer(e) {
@@ -344,7 +352,7 @@ function _updateTimer(e, t) {
     }
 }
 
-function uiGetTimer(o) {
+export function getTimer(o) {
     let e = _elementOf(o);
     if (e && e.tagName == "DIV") {
         if (e.classList.contains("ui_timer_value")) return e;
@@ -353,8 +361,8 @@ function uiGetTimer(o) {
     throw "not a timer";
 }
 
-function uiResetTimer(o,timeScale) {
-    let e = uiGetTimer(o);
+export function resetTimer(o, timeScale) {
+    let e = getTimer(o);
     if (e) {
         e._uiT0 = 0;
         if (timeScale) e._uiTimeScale = timeScale;
@@ -443,8 +451,8 @@ function _updateClock(e, t) {
     }
 }
 
-function uiSetClock(o, dateSpec, timeScale) {
-    let e = uiGetClock(o);
+export function setClock(o, dateSpec, timeScale) {
+    let e = getClock(o);
     if (e) {
         let date = new Date(dateSpec);
         if (date) {
@@ -461,7 +469,7 @@ function uiSetClock(o, dateSpec, timeScale) {
     }
 }
 
-function uiGetClock(o) {
+export function getClock(o) {
     let e = _elementOf(o);
     if (e && e.tagName == "DIV") {
         if (e.classList.contains("ui_clock_wrapper")) return e;
@@ -474,7 +482,7 @@ function uiGetClock(o) {
 //--- slider widgets
 
 const sliderResizeObserver = new ResizeObserver(entries => {
-    for (re of entries) { // this is a ui_slider_track
+    for (let re of entries) { // this is a ui_slider_track
         let e = re.target;
         let trackRect = e.getBoundingClientRect();
         let rangeRect = e._uiRange.getBoundingClientRect();
@@ -488,7 +496,7 @@ const sliderResizeObserver = new ResizeObserver(entries => {
 });
 
 function _initializeSliderWidgets() {
-    for (e of document.getElementsByClassName("ui_slider")) {
+    for (let e of document.getElementsByClassName("ui_slider")) {
         let id = e.dataset.id;
         let labelText = e.dataset.label;
         // default init - likely to be set by subsequent uiSetSliderRange/Value calls
@@ -625,8 +633,8 @@ function _computeSliderValue(e, v) {
 }
 
 
-function uiSetSliderRange(o, min, max, step, numFormatter) {
-    let e = uiGetSlider(o);
+export function setSliderRange(o, min, max, step, numFormatter) {
+    let e = getSlider(o);
     if (e) {
         e._uiMinValue = min;
         e._uiMaxValue = max;
@@ -644,8 +652,8 @@ function uiSetSliderRange(o, min, max, step, numFormatter) {
 }
 
 
-function uiSetSliderValue(o, v) {
-    let e = uiGetSlider(o);
+export function setSliderValue(o, v) {
+    let e = getSlider(o);
     if (e) {
         e._uiValue = _computeSliderValue(e, v);
         if (e._uiNum) e._uiNum.innerText = _formattedNum(e._uiValue, e._uiNumFormatter);
@@ -653,14 +661,14 @@ function uiSetSliderValue(o, v) {
     }
 }
 
-function uiGetSliderValue(o) {
-    let e = uiGetSlider(o);
+export function getSliderValue(o) {
+    let e = getSlider(o);
     if (e) {
         return e._uiValue;
     }
 }
 
-function uiGetSlider(o) {
+export function getSlider(o) {
     let e = _elementOf(o);
     if (e && e.tagName == "DIV") {
         if (e.classList.contains("ui_slider_track")) return e;
@@ -672,7 +680,7 @@ function uiGetSlider(o) {
 //--- choices
 
 function _initializeChoices() {
-    for (e of document.getElementsByClassName("ui_choice")) {
+    for (let e of document.getElementsByClassName("ui_choice")) {
         if (e.tagName == "DIV") {
             let id = e.dataset.id;
             let labelText = e.dataset.label;
@@ -691,8 +699,8 @@ function _initializeChoices() {
     }
 }
 
-function uiSetChoiceItems(o, items, selIndex = -1) {
-    let e = uiGetChoice(o);
+export function setChoiceItems(o, items, selIndex = -1) {
+    let e = getChoice(o);
     if (e) {
         let prevChoices = _firstChildWithClass(e.parentElement, "ui_popup_menu");
         if (prevChoices) e.parentElement.removeChild(prevChoices);
@@ -701,7 +709,7 @@ function uiSetChoiceItems(o, items, selIndex = -1) {
         let choice = e.parentElement;
         var i = 0;
         let menu = _createElement("DIV", "ui_popup_menu");
-        for (item of items) {
+        for (let item of items) {
             let idx = i;
             let mi = _createElement("DIV", "ui_menuitem", item);
             mi.addEventListener("click", (event) => {
@@ -723,20 +731,20 @@ function uiSetChoiceItems(o, items, selIndex = -1) {
         choice.appendChild(menu);
         e.addEventListener("click", (event) => {
             event.stopPropagation();
-            uiPopupMenu(event, menu);
+            popupMenu(event, menu);
             event.preventDefault();
         });
     }
 }
 
-function uiGetSelectedChoiceValue(o) {
-    let e = uiGetChoice(o);
+export function getSelectedChoiceValue(o) {
+    let e = getChoice(o);
     if (e) {
         return e.innerText;
     }
 }
 
-function uiGetChoice(o) {
+export function getChoice(o) {
     let e = _elementOf(o);
     if (e) {
         if (e.classList.contains("ui_choice_value")) return e;
@@ -748,7 +756,7 @@ function uiGetChoice(o) {
 //--- checkboxes
 
 function _initializeCheckboxes() {
-    for (e of document.getElementsByClassName("ui_checkbox")) {
+    for (let e of document.getElementsByClassName("ui_checkbox")) {
         let labelText = e.dataset.label;
         if (_hasNoChildElements(e) && labelText) {
             let btn = _createElement("DIV", "ui_checkbox_button");
@@ -762,23 +770,23 @@ function _initializeCheckboxes() {
     }
 }
 
-function uiToggleCheckbox(o) {
-    let checkbox = uiGetCheckboxOf(o);
+export function toggleCheckbox(o) {
+    let checkbox = getCheckboxOf(o);
     if (checkbox) {
         return _toggleClass(checkbox, "checked");
     }
     throw "not a checkbox";
 }
 
-function uiSetCheckBox(o, check = true) {
-    let e = uiGetCheckboxOf(o);
+export function setCheckBox(o, check = true) {
+    let e = getCheckboxOf(o);
     if (e) {
         if (check) e.classList.add("checked");
         else e.classList.remove("checked");
     }
 }
 
-function uiGetCheckboxOf(o) {
+export function getCheckboxOf(o) {
     let e = _elementOf(o);
     if (e) {
         let eCls = e.classList;
@@ -789,8 +797,8 @@ function uiGetCheckboxOf(o) {
     return undefined;
 }
 
-function uiIsCheckboxSelected(o) {
-    let e = uiGetCheckboxOf(o);
+export function isCheckboxSelected(o) {
+    let e = getCheckboxOf(o);
     if (e) {
         return e.classList.contains("checked");
     }
@@ -801,7 +809,7 @@ function uiIsCheckboxSelected(o) {
 //--- radios
 
 function _initializeRadios() {
-    for (e of document.getElementsByClassName("ui_radio")) {
+    for (let e of document.getElementsByClassName("ui_radio")) {
         let labelText = e.dataset.label;
         if (_hasNoChildElements(e) && labelText) {
             let btn = _createElement("DIV", "ui_radio_button");
@@ -815,11 +823,11 @@ function _initializeRadios() {
     }
 }
 
-function uiSelectRadio(o) {
-    let e = uiGetRadioOf(o);
+export function selectRadio(o) {
+    let e = getRadio(o);
     if (e) {
         if (!e.classList.contains("selected")) {
-            for (r of e.parentElement.getElementsByClassName("ui_radio")) {
+            for (let r of e.parentElement.getElementsByClassName("ui_radio")) {
                 if (r !== e) {
                     if (r.classList.contains("selected")) r.classList.remove("selected");
                 }
@@ -832,15 +840,15 @@ function uiSelectRadio(o) {
     }
 }
 
-function uiIsRadioSelected(o) {
-    let e = uiGetRadioOf(o);
+export function isRadioSelected(o) {
+    let e = getRadio(o);
     if (e) {
         return e.classList.contains("selected");
     }
     throw "not a radio";
 }
 
-function uiGetRadioOf(o) {
+export function getRadio(o) {
     let e = _elementOf(o);
     if (e) {
         let eCls = e.classList;
@@ -851,142 +859,110 @@ function uiGetRadioOf(o) {
     return undefined;
 }
 
-function uiClearRadiosOf(o) {
+export function clearRadiosOf(o) {
     let e = _elementOf(o);
     if (e) {
-        for (r of e.getElementsByClassName("ui_radio")) r.classList.remove("selected");
+        for (let r of e.getElementsByClassName("ui_radio")) r.classList.remove("selected");
     }
 }
 
 //--- lists
 
 function _initializeLists() {
-    // this should be in CSS but unfortunately the 'attr()' function so far only seems to be very limited
+    // this should be in CSS but unfortunately the 'attr()' function so far seems to be very limited
     let itemHeight = _rootVar("--list-item-height");
     let itemPadding = _rootVar("--list-item-padding");
 
-    for (e of document.getElementsByClassName("ui_list")) {
+    for (let e of document.getElementsByClassName("ui_list")) {
         let nRows = _intDataAttrValue(e, "rows", 8);
         e.style.maxHeight = `calc(${nRows} * (${itemHeight} + ${itemPadding}))`; // does not include padding, borders or margin
         e.setAttribute("tabindex", "0");
-        e._isItem = (ie, itemText) => { return ie.innerText == itemText; }
-        if (e.dataset.columnWidths) _setRowPrototype(e, e.dataset.columnWidths);
-        if (e.dataset.keyColumn) _setKeyColumn(e, parseInt(e.dataset.keyColumn));
         if (e.firstElementChild && e.firstElementChild.classList.contains("ui_popup_menu")) _hoistChildElement(e.firstElementChild);
-        e._uiSelectedItem = undefined; // we add a property to keeo track of selections
+        e._uiSelectedItem = undefined; // we add a property to keep track of selections
+        e._uiMapFunc = item => item.toString(); // item => itemElement text
+        e._uiItemMap = new Map(); // item -> itemElement
     }
 }
 
-function _setRowPrototype(e, colSpec) {
-    let colWidths = colSpec.split(' ');
-    let re = _createElement("DIV", "ui_list_item");
-    let fitWidth = false;
-
-    if (colWidths.length > 0) {
-        let i = 0;
-        if (colWidths[0] == "fit:") {
-            fitWidth = true;
-            i++;
-        }
-        for (; i < colWidths.length; i++) {
-            let cw = colWidths[i];
-            let ce = _createElement("DIV", "ui_list_subitem");
-            let textAlign = "right";
-            let j = 0;
-
-            if (cw.charAt(j) == "-") {
-                ce.style.textAlign = "left";
-                j++;
-            }
-            if (cw.charAt(j) == "#") {
-                ce.style.fontFamily = _rootVar("--font-family-mono");
-                j++;
-            }
-            if (j > 0) cw = cw.substring(j);
-            ce.style.width = cw;
-
-            re.appendChild(ce);
-        }
-    }
-
-    if (fitWidth) e.style.width = "inherit"; // override the theme width
-
-    e._uiRowPrototype = re;
-    e._isItem = (ie, itemText) => { return ie.firstElementChild.innerText == itemText; } // per default the first subitem text is the key
-}
-
-function _setKeyColumn(e, keyIdx) {
-    if (e._uiRowPrototype && keyIdx >= 0 && keyIdx < e._uiRowPrototype.childElementCount) {
-        e.isItem = (ie, itemText) => { return ie.children[keyIdx] == itemText; }
-        e._uiKeyColumnIndex = keyIdx;
-    } else throw "illegal key column index";
-}
-
-function uiSetListItemKeyColumn(o, idx) {
-    let listBox = uiGetListOf(o);
-    if (listBox) _setKeyColumn(listBox, idx);
-}
-
-function _itemIndexOf(ie) {
-    var i = -1;
-    var e = ie;
-    while (e) {
-        eCls = e.classList;
-        i++;
-        e = e.previousElementSibling;
-    }
-    return i;
-}
-
-function uiGetSelectedListItemIndex(o) {
-    let listBox = uiGetListOf(o);
-    if (listBox) {
-        if (listBox._uiSelectedItem) return listBox._uiSelectedItem._uiItemIndex;
-        else return -1;
-    } else throw "not a list";
-}
-
-function uiGetSelectedListItem(o) {
-    let listBox = uiGetListOf(o);
-    if (listBox) {
-        let sel = listBox._uiSelectedItem;
-        if (sel) {
-            if (sel.childElementCount) {
-                return Array.from(sel.children, c => c.innerText);
-            } else {
-                return sel.innerText;
-            }
-        } else return undefined;
-
-    } else throw "not a list";
-}
-
-function uiGetSelectedListItemText(o) {
-    let listBox = uiGetListOf(o);
-    if (listBox) {
-        let sel = listBox._uiSelectedItem;
-        if (sel) {
-            let keyIdx = listBox._uiKeyColumnIndex;
-            if (sel.childElementCount > 0 && keyIdx) {
-                return sel.children[keyIdx].innerText;
-            } else {
-                return sel.innerText;
-            }
-        } else return undefined;
-    } else throw "not a list";
-}
-
-function uiAppendListItem(o, item) {
-    let e = uiGetListOf(o);
+// multi-column item display (this will override single column display)
+export function setListItemDisplayColumns(o, listAttrs, colSpecs) {
+    let e = getList(o);
     if (e) {
-        let ie = _createElement("DIV", "ui_list_item", item);
-        ie._uiItemIndex = e.childElementCount;
-        e.appendChild();
+        let defaultWidth = _rootVar("--list-item-column-width", "5rem");
+        let re = _createElement("DIV", "ui_list_item");
+
+        colSpecs.forEach(cs => {
+            let ce = _createElement("DIV", "ui_list_subitem");
+
+            ce._uiMapFunc = cs.map;
+            ce.style.width = cs.width ? cs.width : defaultWidth;
+            if (cs.attrs.includes("alignLeft")) ce.style.textAlign = "left";
+            if (cs.attrs.includes("fixed")) ce.style.font = _rootVar("--mono-font");
+            re.appendChild(ce);
+        });
+
+        if (listAttrs.includes("fit")) e.style.width = "inherit";
+        e._uiRowPrototype = re;
     }
 }
 
-function uiSetListItems(o, items) {
-    let e = uiGetListOf(o);
+// single column item display
+export function setListItemDisplay(o, styleWidth, attrs, mapFunc) {
+    let e = getList(o);
+    if (e) {
+        if (mapFunc) e._uiMapFunc = mapFunc;
+        if (styleWidth) e.style.width = styleWidth;
+        if (attrs.includes("alignLeft")) e.style.textAlign = "left";
+        if (attrs.includes("fixed")) e.style.font = _rootVar("--mono-font");
+    }
+}
+
+function _setSubItemsOf(ie, item) {
+    for (let i = 0; i < ie.childElementCount; i++) {
+        let ce = ie.children[i];
+        ce.innerText = ce._uiMapFunc(item);
+    }
+}
+
+function _setListItem(e, ie, item) {
+    if (ie.childElementCount > 0) {
+        _setSubItemsOf(ie, item);
+    } else {
+        ie.innerText = e._uiMapFunc(item);
+    }
+    ie._uiItem = item;
+    e._uiItemMap.set(item, ie);
+}
+
+function _cloneRowPrototype(proto) {
+    let e = proto.cloneNode(true);
+    for (let i = 0; i < e.childElementCount; i++) {
+        let ce = e.children[i];
+        let pe = proto.children[i];
+
+        ce._uiMapFunc = pe._uiMapFunc;
+    }
+    return e;
+}
+
+function _createListItem(e, item, rowProto = undefined) {
+    let ie = undefined;
+
+    if (rowProto) {
+        ie = _cloneRowPrototype(rowProto);
+        _setSubItemsOf(ie, item);
+    } else {
+        ie = _createElement("DIV", "ui_list_item", e._uiMapFunc(item));
+    }
+    ie._uiItem = item;
+    e._uiItemMap.set(item, ie);
+    ie.addEventListener("click", _selectListItem);
+
+    return ie;
+}
+
+export function setListItems(o, items) {
+    let e = getList(o);
     if (e) {
         // TODO - do we have to store/restore scrollLeft/scrollTop ?
         if (e._uiSelectedItem) {
@@ -995,63 +971,88 @@ function uiSetListItems(o, items) {
         }
 
         let i = 0;
-        let n = items.length;
-        let ies = e.children;
+        let ies = e.children; // the ui_list_item children
         let i1 = ies.length;
         let proto = e._uiRowPrototype;
 
-        for (i = 0; i < n; i++) {
-            if (i < i1) { // update existing element
-                _setListItem(ies[i], items[i]);
-            } else {
-                e.appendChild(_createListItem(items[i], i, proto));
+        items.forEach(item => {
+            if (i < i1) { // replace existing element
+                _setListItem(e, ies[i], item);
+            } else { // append new element
+                let ie = _createListItem(e, item, proto);
+                e.appendChild(ie);
             }
+            i++;
+        });
+    }
+}
+
+export function getSelectedListItem(o) {
+    let listBox = getList(o);
+    if (listBox) {
+        let sel = listBox._uiSelectedItem;
+        if (sel) {
+            return sel._uiItem;
+        } else return undefined;
+
+    } else throw "not a list";
+}
+
+export function appendListItem(o, item) {
+    let e = getList(o);
+    if (e) {
+        let ie = _createElement("DIV", "ui_list_item", item);
+        ie._uiItem = item;
+        e.appendChild(ie);
+    }
+}
+
+export function insertListItem(o, item, idx) {
+    let e = getList(o);
+    if (e) {
+        let ie = _createElement("DIV", "ui_list_item", item);
+        if (idx < e.childElementCount - 1) {
+            let ieNext = e.children[idx];
+            ie.uiItemIndex = idx;
+            e.insertBefore(ie, ieNext);
+
+            while (ieNext) {
+                ieNext._uiItemIndex++;
+            }
+        } else {
+            ie._uiItemIndex = e.childElementCount;
+            e.appendChild(ie);
         }
     }
 }
 
-function uiUpdateListItem(o, idx, itemData) {
-    let e = uiGetListOf(o);
+export function updateListItem(o, item) {
+    let e = getList(o);
     if (e) {
-        let ie = e.children[idx];
+        let ie = e._uiItemMap.get(item);
         if (ie) {
-            _setListItem(ie, itemData);
+            _setListItem(e, ie, item);
         }
     } else throw "not a list";
 }
 
-function _setSubItemsOf(ie, itemData) {
-    let ces = ie.children;
-    let n = ces.length;
-    for (var i = 0; i < itemData.length && i < n; i++) {
-        ces[i].innerText = itemData[i];
+export function removeListItem(o, item) {
+    let e = getList(o);
+    if (e) {
+        let ecs = e.children;
+        let n = e.childElementCount;
+        for (var i = 0; i < n; i++) {
+            let ec = ecs[i];
+            if (e._isItem(ec, item)) {
+                for (let j = i + 1; j < n; j++) {
+                    ecs[j]._uiItemIndex = j - 1;
+                }
+                if (e._uiSelectedItem === ec) e._uiSelectedItem = undefined;
+                e.removeChild(ec);
+                return;
+            }
+        }
     }
-}
-
-function _setListItem(ie, itemData) {
-    if (ie.childElementCount > 0 && Array.isArray(itemData)) {
-        _setSubItemsOf(ie, itemData);
-    } else {
-        ie.innerText = itemData;
-    }
-}
-
-function _createListItem(itemData, idx, rowProto = undefined) {
-    let ie = undefined;
-
-    if (rowProto && Array.isArray(itemData)) {
-        ie = rowProto.cloneNode(true);
-        _setSubItemsOf(ie, itemData);
-
-    } else {
-        ie = _createElement("DIV", "ui_list_item", itemData);
-        ie.innerText = itemData;
-    }
-
-    ie.addEventListener("click", _selectListItem);
-    ie._uiItemIndex = idx;
-
-    return ie;
 }
 
 function _selectListItem(event) {
@@ -1068,11 +1069,12 @@ function _selectListItem(event) {
     }
 }
 
-function uiSortinListItem(o, item) {
-    let e = uiGetListOf(o);
+// DEPRECATED
+export function sortinListItem(o, item) {
+    let e = getList(o);
     if (e) {
         let i = 0;
-        for (ie of e.children) {
+        for (let ie of e.children) {
             if (item < ie.innerText) { // FIXME
                 let ieNew = _createElement("DIV", "ui_list_item", item);
                 ieNew._uiItemIndex = i;
@@ -1089,40 +1091,9 @@ function uiSortinListItem(o, item) {
     }
 }
 
-function uiListItemIndexOf(o, itemText) {
-    let e = uiGetListOf(o);
-    if (e) {
-        let i = 0;
-        for (ie of e.children) {
-            if (e._isItem(ie, itemText)) return i;
-            i++;
-        }
-        return -1;
-    }
-    throw "not a list"
-}
 
-function uiRemoveListItem(o, item) {
-    let e = uiGetListOf(o);
-    if (e) {
-        let ecs = e.children;
-        let n = ecs.length;
-        for (var i = 0; i < n; i++) {
-            let ec = ecs[i];
-            if (e._isItem(ec, item)) {
-                for (var j = i + 1; j < n; j++) {
-                    ecs[j]._uiItemIndex = j - 1;
-                }
-                if (e._uiSelectedItem === ec) e._uiSelectedItem = undefined;
-                e.removeChild(ec);
-                return;
-            }
-        }
-    }
-}
-
-function uiClearListSelection(o) {
-    let e = uiGetListOf(o);
+export function clearListSelection(o) {
+    let e = getList(o);
     if (e) {
         let sel = e._uiSelectedItem;
         if (sel) sel.classList.remove("selected");
@@ -1130,15 +1101,15 @@ function uiClearListSelection(o) {
     }
 }
 
-function uiClearList(o) {
-    let e = uiGetListOf(o);
+export function clearList(o) {
+    let e = getList(o);
     if (e) {
         _removeChildrenOf(e);
         e._uiSelectedItem = undefined;
     }
 }
 
-function uiGetListOf(o) {
+export function getList(o) {
     let e = _elementOf(o);
 
     if (e) {
@@ -1158,11 +1129,11 @@ var _uiActivePopupMenus = [];
 function _initializeMenus() {
     window.addEventListener("click", _windowPopupHandler);
 
-    for (e of document.getElementsByClassName("ui_menuitem")) {
+    for (let e of document.getElementsByClassName("ui_menuitem")) {
         _initMenuItem(e);
     }
 
-    for (e of document.getElementsByClassName("disabled")) {
+    for (let e of document.getElementsByClassName("disabled")) {
         if (e.classList.contains("ui_menuitem")) {
             e._uiSuspendedOnClickHandler = e.onclick;
             e.onclick = null;
@@ -1174,7 +1145,7 @@ function _initMenuItem(e) {
     e.addEventListener("mouseenter", _menuItemHandler);
     e.addEventListener("click", (event) => {
         event.stopPropagation();
-        for (var i = _uiActivePopupMenus.length - 1; i >= 0; i--) {
+        for (let i = _uiActivePopupMenus.length - 1; i >= 0; i--) {
             _uiActivePopupMenus[i].style.visibility = "hidden";
         }
         _uiActivePopupMenus = [];
@@ -1182,7 +1153,7 @@ function _initMenuItem(e) {
 }
 
 function _windowPopupHandler(event) {
-    for (p of _uiActivePopupMenus) {
+    for (let p of _uiActivePopupMenus) {
         p.style.visibility = "hidden";
     }
     _uiActivePopupMenus = [];
@@ -1211,9 +1182,9 @@ function _menuItemHandler(event) {
     }
 }
 
-function uiPopupMenu(event, o) {
+export function popupMenu(event, o) {
     event.preventDefault();
-    let popup = uiGetPopupOf(o);
+    let popup = getPopupMenu(o);
     if (popup) {
         let left = _computePopupLeft(event.pageX, popup.scrollWidth);
         let top = _computePopupTop(event.pageY, popup.scrollHeight);
@@ -1227,7 +1198,7 @@ function uiPopupMenu(event, o) {
 }
 
 
-function uiGetPopupOf(o) {
+export function getPopupMenu(o) {
     let e = _elementOf(o);
     if (e) {
         let eCls = e.classList;
@@ -1238,7 +1209,7 @@ function uiGetPopupOf(o) {
     throw "not a menu";
 }
 
-function uiGetMenuItemOf(o) {
+export function getMenuItem(o) {
     let e = _elementOf(o);
     if (e) {
         let eCls = e.classList;
@@ -1247,16 +1218,16 @@ function uiGetMenuItemOf(o) {
     throw "not a menuitem";
 }
 
-function uiIsMenuItemDisabled(o) {
-    let e = uiGetMenuItemOf(o);
+export function isMenuItemDisabled(o) {
+    let e = getMenuItem(o);
     if (e) {
         return e.classList.contains("disabled");
     }
     throw "not a menuitem";
 }
 
-function uiSetMenuItemDisabled(o, isDisabled = true) {
-    let e = uiGetMenuItemOf(o);
+export function setMenuItemDisabled(o, isDisabled = true) {
+    let e = getMenuItem(o);
     if (e) {
         if (isDisabled) {
             e.classList.add("disabled");
@@ -1269,7 +1240,7 @@ function uiSetMenuItemDisabled(o, isDisabled = true) {
     }
 }
 
-function uiToggleMenuItemCheck(event) {
+export function toggleMenuItemCheck(event) {
     let mi = event.target;
     if (mi && mi.classList.contains("ui_menuitem")) {
         return _toggleClass(mi, "checked");
@@ -1277,16 +1248,6 @@ function uiToggleMenuItemCheck(event) {
         throw "not a menuitem";
     }
 }
-
-//--- general purpose utility functions
-
-function uiNonEmptyString(v) {
-    if (v) {
-        if (v.length > 0) return v;
-        else return undefined;
-    } else return undefined;
-}
-
 
 
 //--- private functions
@@ -1327,8 +1288,10 @@ function _containsAnyClass(element, ...cls) {
     return false;
 }
 
-function _rootVar(varName) {
-    return getComputedStyle(document.documentElement).getPropertyValue(varName);
+function _rootVar(varName, defaultValue = undefined) {
+    let v = getComputedStyle(document.documentElement).getPropertyValue(varName);
+    if (v) return v;
+    else return defaultValue;
 }
 
 function _rootVarInt(varName, defaultValue = 0) {

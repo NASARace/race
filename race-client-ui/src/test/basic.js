@@ -1,142 +1,176 @@
 /* example app code for basic.html */
 
+import { SkipList } from "./ui_data.js";
+import * as util from "./ui_util.js";
+import * as ui from "./ui.js";
+
+
+const NO_PATH = "";
 const LINE_PATH = "~";
 const WALL_PATH = "≈";
 
-var trackList = [
-    ["", "UAL1684", "00:00:00"],
-    [LINE_PATH, "UPS2958", "00:00:00"],
-    ["", "PCM7700", "00:00:00"],
-    [WALL_PATH, "ASA223", "00:00:00"],
-    ["", "PCM7702", "00:00:00"]
-];
+const tracks = new Map(); // map of objects received from server
+const displayTracks = new SkipList((a, b) => a.id < b.id, (a, b) => a.id == b.id); // sorted list of objects to display
+
+_initTracks(tracks);
+
+
+//--- mock data
+function _initTracks(map) {
+    [
+        { id: "UAL1634", pos: { lat: 37.1234, lon: -120.1234 }, date: Date.parse("2021-12-03T10:14:00Z"), path: NO_PATH },
+        { id: "UPS2958", pos: { lat: 37.1324, lon: -120.1023 }, date: Date.parse("2021-12-03T10:14:10Z"), path: NO_PATH },
+        { id: "PCM7700", pos: { lat: 37.4234, lon: -120.1203 }, date: Date.parse("2021-12-03T10:14:05Z"), path: NO_PATH },
+        { id: "ASA2230", pos: { lat: 37.1000, lon: -120.1230 }, date: Date.parse("2021-12-03T10:14:12Z"), path: NO_PATH },
+        { id: "PCM7702", pos: { lat: 37.1200, lon: -120.4123 }, date: Date.parse("2021-12-03T10:14:01Z"), path: NO_PATH },
+        { id: "UAL5121", pos: { lat: 37.3200, lon: -120.3123 }, date: Date.parse("2021-12-03T10:14:42Z"), path: NO_PATH },
+        { id: "UAL4242", pos: { lat: 37.2000, lon: -120.2123 }, date: Date.parse("2021-12-03T10:14:24Z"), path: NO_PATH },
+
+        { id: "PCM7700", pos: { lat: 37.4235, lon: -120.1204 }, date: Date.parse("2021-12-03T10:14:15Z") } // update
+    ].forEach(t => {
+        if (map.has(t.id)) {
+            map.set(t.id, t); // nothing to be done with display list
+        } else {
+            map.set(t.id, t);
+            displayTracks.insert(t);
+        }
+    });
+}
 
 //--- ui initialization and callbacks
 
-function initializeData() {
-    console.log("initializing data");
+app.initialize = function() {
+    if (ui.initialize()) {
+        console.log("initializing data");
 
-    uiSetField("console.position.latitude", "37.54323");
-    uiSetField("console.position.longitude", "-121.87432");
+        ui.setField("console.position.latitude", "37.54323");
+        ui.setField("console.position.longitude", "-121.87432");
 
-    let slider = uiGetSlider("console.position.zoom");
-    uiSetSliderRange(slider, 0, 100, 1);
-    uiSetSliderValue(slider, 50);
-    //uiSetSliderRange(slider, 400000, 1000000, 100000, new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 1 }));
-    //uiSetSliderValue(slider, 400000);
+        let slider = ui.getSlider("console.position.zoom");
+        ui.setSliderRange(slider, 0, 100, 1);
+        ui.setSliderValue(slider, 50);
+        //ui.setSliderRange(slider, 400000, 1000000, 100000, new Intl.NumberFormat('en-US', { notation:) 'compact', maximumFractionDigits: 1 }));
+        //ui.setSliderValue(slider, 400000);
 
-    uiSetListItemKeyColumn("console.tracks.list", 1);
-    uiSetListItems("console.tracks.list", trackList);
+        ui.setListItemDisplayColumns("console.tracks.list", ["fit"], [
+            { name: "path", width: "1rem", attrs: [], map: track => track.path },
+            { name: "id", width: "5rem", attrs: ["alignLeft"], map: track => track.id },
+            { name: "date", width: "5rem", attrs: ["fixed"], map: track => util.toLocalTimeString(track.date) }
+        ]);
+        //ui.setListItemDisplay("console.tracks.list", "8rem", ["alignLeft"], track => track.id); // single column
+        ui.setListItems("console.tracks.list", displayTracks);
 
-    uiSetChoiceItems("console.tracks.channel", ["SFDPS", "TAIS", "ASDE-X"], 0);
+        ui.setChoiceItems("console.tracks.channel", ["SFDPS", "TAIS", "ASDE-X"], 0);
 
+        //let d = new Date(Date.now());
+        //ui.setClock("console.time.localClock", d);
+        //ui.setClock("console.time.utcClock", d);
 
-    //let d = new Date(Date.now());
-    //uiSetClock("console.time.localClock", d);
-    //uiSetClock("console.time.utcClock", d);
-
-    uiStartTime();
-}
-
-function selectTrack(event) {
-    let v = uiGetSelectedListItem(event);
-    let idx = uiGetSelectedListItemIndex(event);
-    console.log("selected " + idx + ": " + v);
-
-    let pathOpt = uiNonEmptyString(v[0]);
-    if (pathOpt) {
-        uiSetCheckBox("console.tracks.showPath", true);
-        if (pathOpt == LINE_PATH) uiSelectRadio("console.tracks.showLinePath");
-        else if (pathOpt == WALL_PATH) uiSelectRadio("console.tracks.showWallPath");
-    } else {
-        uiSetCheckBox("console.tracks.showPath", false);
-        uiClearRadiosOf("console.tracks.options");
+        ui.startTime();
     }
 }
 
-function doSomethingWithSelectedTrack() {
+app.selectTrack = function(event) {
+    let track = ui.getSelectedListItem(event);
+    console.log("selected " + JSON.stringify(track));
+
+    if (track.path) {
+        ui.setCheckBox("console.tracks.showPath", true);
+        switch (track.path) {
+            case LINE_PATH:
+                ui.selectRadio("console.tracks.showLinePath");
+                break;
+            case WALL_PATH:
+                ui.selectRadio("console.tracks.showWallPath");
+                break;
+        }
+    } else {
+        ui.setCheckBox("console.tracks.showPath", false);
+        ui.clearRadiosOf("console.tracks.options");
+    }
+}
+
+app.doSomethingWithSelectedTrack = function() {
     console.log("exec doSomethingWithSelectedTrack");
 }
 
-function toggleCheck(event) {
-    let isChecked = uiToggleMenuItemCheck(event);
-    uiSetMenuItemDisabled("console.tracks.list.condMenuItem", isChecked);
+app.toggleCheck = function(event) {
+    let isChecked = ui.toggleMenuItemCheck(event);
+    ui.setMenuItemDisabled("console.tracks.list.condMenuItem", isChecked);
     console.log("checked: " + isChecked);
 }
 
-function doSomethingDifferent() {
+app.doSomethingDifferent = function() {
     console.log("and now to something completely different");
 }
 
-function doSomethingConditional() {
-    if (uiIsMenuItemDisabled("console.tracks.list.condMenuItem")) throw "this should have been disabled!";
+app.doSomethingConditional = function() {
+    if (ui.isMenuItemDisabled("console.tracks.list.condMenuItem")) throw "this should have been disabled!";
     else console.log("do something if unchecked");
 }
 
-function showTrackPath(event) {
-    let isChecked = uiToggleCheckbox(event);
-    let selIdx = uiGetSelectedListItemIndex("console.tracks.list");
+app.showTrackPath = function(event) {
+    let isChecked = ui.toggleCheckbox(event);
+    let track = ui.getSelectedListItem("console.tracks.list");
 
-    console.log("show track path: " + isChecked);
-    if (isChecked) {
-        uiSelectRadio("console.tracks.showLinePath");
+    if (track) {
+        console.log("show track path: " + isChecked);
+        if (isChecked) {
+            track.path = LINE_PATH;
+            ui.selectRadio("console.tracks.showLinePath");
+        } else {
+            track.path = NO_PATH;
+            ui.clearRadiosOf("console.tracks.options");
+        }
+
+        ui.updateListItem("console.tracks.list", track);
     } else {
-        uiClearRadiosOf("console.tracks.options");
-    }
-
-    if (selIdx >= 0) {
-        let track = trackList[selIdx];
-        if (!isChecked) track[0] = "";
-        else track[0] = LINE_PATH;
-        uiUpdateListItem("console.tracks.list", selIdx, track);
+        console.log("no track selected");
     }
 }
 
-function resetTracks() {
-    uiClearListSelection("console.tracks.list");
-    uiSetCheckBox("console.tracks.showPath", false);
-    uiClearRadiosOf("console.tracks.options");
+app.resetTracks = function() {
+    ui.clearListSelection("console.tracks.list");
+    ui.setCheckBox("console.tracks.showPath", false);
+    ui.clearRadiosOf("console.tracks.options");
 
-    for (var i = 0; i < trackList.length; i++) {
-        let track = trackList[i];
-        track[0] = "";
-        uiUpdateListItem("console.tracks.list", i, track);
-    }
+    displayTracks.forEach(track => {
+        track.path = NO_PATH;
+        ui.updateListItem("console.tracks.list", track);
+    });
 
     console.log("Reset tracks");
 }
 
 function selectPath(event, pathType, pathSymbol) {
-    let selIdx = uiGetSelectedListItemIndex("console.tracks.list");
-    if (uiSelectRadio(event)) {
-        uiSetCheckBox("console.tracks.showPath");
-        console.log(pathType + " path selected: " + selIdx);
-        if (selIdx >= 0) {
-            let track = trackList[selIdx];
-            track[0] = pathSymbol;
-            uiUpdateListItem("console.tracks.list", selIdx, track);
+    if (ui.selectRadio(event)) {
+        let track = ui.getSelectedListItem("console.tracks.list");
+        if (track) {
+            ui.setCheckBox("console.tracks.showPath");
+            track.path = pathSymbol;
+            ui.updateListItem("console.tracks.list", track);
         }
     }
 }
 
-function selectLinePath(event) {
+app.selectLinePath = function(event) {
     selectPath(event, "line", LINE_PATH);
 }
 
-function selectWallPath(event) {
+app.selectWallPath = function(event) {
     selectPath(event, "wall", WALL_PATH);
 }
 
-function queryTracks(event) {
-    let input = uiGetFieldValue(event);
+app.queryTracks = function(event) {
+    let input = ui.getFieldValue(event);
     console.log("query tracks: " + input);
 }
 
-function selectChannel(event) {
-    let input = uiGetSelectedChoiceValue(event);
+app.selectChannel = function(event) {
+    let input = ui.getSelectedChoiceValue(event);
     console.log("select channel: " + input);
 }
 
-function zoomChanged(event) {
-    console.log("new zoom level: " + uiGetSliderValue(event.target));
+app.zoomChanged = function(event) {
+    console.log("new zoom level: " + ui.getSliderValue(event.target));
 }
