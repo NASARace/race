@@ -172,6 +172,21 @@ class SkipList {
 
         n = n.next[0];
         if (n && this.isSame(n.data, data)) {
+            //--- update skip lane widths
+            for (let lvl = 1; lvl <= this.maxLevel; lvl++) {
+                let u = update[lvl];
+                let uw = u.width[lvl];
+                let nodeLevel = n.next.length - 1;
+
+                if (lvl > nodeLevel) { // above our level chain
+                    if (uw > 0) u.width[lvl]--;
+                } else {
+                    if (n.next[lvl]) u.width[lvl] += n.width[lvl] - 1;
+                    else u.width[lvl] = 0;
+                }
+            }
+            if (n.next[0] == null) update[0].width[0] = 0;
+
             for (let lvl = 0; lvl <= this.maxLevel && update[lvl].next[lvl] === n; lvl++) {
                 update[lvl].next[lvl] = n.next[lvl];
             }
@@ -180,7 +195,7 @@ class SkipList {
             this.size--;
             return true;
 
-        } else {
+        } else { // nothing to remove
             return false;
         }
     }
@@ -191,7 +206,10 @@ class SkipList {
         for (let lvl = this.maxLevel; lvl >= 0; lvl--) {
             while (n.width[lvl] && idx >= n.width[lvl]) {
                 idx -= n.width[lvl];
-                if (idx == 0) return n.next[lvl].data;
+                if (idx == 0) {
+                    let nn = n.next[lvl];
+                    return nn ? nn.data : null;
+                }
                 n = n.next[lvl];
             }
         }

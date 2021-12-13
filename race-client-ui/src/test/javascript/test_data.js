@@ -56,19 +56,29 @@
      testIncludes(list, 6, false);
      testIncludes(list, 5, true);
 
-     /*
-           function testRemove (list, v, expect) {
-               let res = list.remove(v);
-               console.log("remove " + v + ": " + res + ", expected: " + expect);
-               assert(res == expect);
-           }
+     console.log("\n-- test remove(v)");
 
-           testRemove(list, 5, true);
-           testRemove(list, 77, false);
-           testRemove(list, 1, true);
-           testRemove(list, 11, true);
-           console.log(list.toString());
-           */
+     function testRemove(list, v, expect) {
+         let res = list.remove(v);
+         console.log("\nremove " + v + ": " + res + ", expected: " + expect + ": " + list.toString());
+         list.dump();
+         assert(res == expect);
+     }
+
+     testRemove(list, 5, true);
+     assert(list.at(5) == 8);
+     assert(list.at(7) == 12);
+
+     testRemove(list, 0, true);
+     assert(list.at(0) == 1);
+     assert(list.at(7) == 42);
+
+     testRemove(list, 42, true);
+     assert(list.at(0) == 1);
+     assert(list.at(6) == 12);
+     assert(list.at(7) == null);
+
+     testRemove(list, 42, false);
 
      console.log("Ok.");
  }
