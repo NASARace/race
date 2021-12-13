@@ -499,7 +499,8 @@ div.ui_list {
     border: var(--list-border);
     padding: 3px;
     /*max-height: calc( attr(data-rows) * var(--list-item-height) + 2px);  attr() does not work */
-    width: var(--list-width);
+    min-width: var(--list-width);
+    min-height: var(--field-height);
     box-sizing: border-box;
     overflow-y: auto;
     overflow-x: auto;

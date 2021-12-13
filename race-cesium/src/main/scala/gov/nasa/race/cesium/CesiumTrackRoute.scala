@@ -124,6 +124,8 @@ class CesiumTrackRoute (val parent: ParentActor, val config: Config) extends Tra
       imageryProvider.defaultGamma = ${_double("maptile-gamma", 1.0)};
 
       const terrainProvider = new Cesium.ArcGISTiledElevationTerrainProvider({url: '$terrain'});
+
+      const maxTraceLength = ${_int("max-trace-length", 100)};
      """
   }
 
@@ -167,9 +169,9 @@ class CesiumTrackRoute (val parent: ParentActor, val config: Config) extends Tra
 
   override def route: Route = {
     get {
-      path(requestPrefixMatcher) {
+      path(requestPrefixMatcher) {  // the static SPA content
         complete( HttpEntity( ContentTypes.`text/html(UTF-8)`, getContent()))
-      } ~ path("ws") {
+      } ~ path("ws") { // the dynamic data updates
         info("opening websocket")
         promoteToWebSocket()
 
@@ -186,8 +188,13 @@ class CesiumTrackRoute (val parent: ParentActor, val config: Config) extends Tra
       } ~ path( "mapcursor.png") {
         complete(HttpEntity(ContentType(MediaType.customBinary("image", "png", Compressible)), getMapCursor()))
 
+        //--- race-client-ui artifacts
       } ~ path ("ui.js") {
         complete(HttpEntity(ContentType(MediaTypes.`application/javascript`, HttpCharsets.`UTF-8`), uiScript))
+      } ~ path ("ui_util.js") {
+        complete(HttpEntity(ContentType(MediaTypes.`application/javascript`, HttpCharsets.`UTF-8`), uiUtilScript))
+      } ~ path ("ui_data.js") {
+        complete(HttpEntity(ContentType(MediaTypes.`application/javascript`, HttpCharsets.`UTF-8`), uiDataScript))
       } ~ path ("ui.css") {
         complete(HttpEntity(ContentType(MediaTypes.`text/css`, HttpCharsets.`UTF-8`), uiCSS))
       } ~ path ("ui_theme.css") {
@@ -269,18 +276,24 @@ class CesiumTrackRoute (val parent: ParentActor, val config: Config) extends Tra
   def getContent(): String = {
     html(
       htmlHead(
+        // race-client-ui resources
         cssLink("ui_theme.css"),
         cssLink("ui.css"),
-        extScript("ui.js"),
 
+        extModule("ui_data.js"),
+        extModule("ui_util.js"),
+        extModule("ui.js"),
+
+        // cesium resources
         cssLink(cesiumWidgetCSS),
         extScript(cesiumUrl),
 
+        // app config and script
         cssLink("cesiumTracks.css"),
         extScript("config.js"),
-        extScript("cesiumTracks.js") // the client part of the track processing
+        extModule("cesiumTracks.js") // the SPA script
       ),
-      body(onload:="uiInit();initCesium();initWS();", onunload:="shutdown()")(
+      body(onload:="app.initialize()", onunload:="app.shutdown()")(
         fullWindowCesiumContainer(),
 
         uiWindow("Track Console", "console")(
@@ -289,16 +302,29 @@ class CesiumTrackRoute (val parent: ParentActor, val config: Config) extends Tra
             uiTimer("elapsed", "console.clock.elapsed")
           ),
           uiPanel("View",true, "console.view")(
-            uiNumField("lat", "console.view.latitude"),
-            uiNumField("lon", "console.view.longitude"),
-            uiNumField("alt", "console.view.altitude"),
-            uiButton("Reset", "setHomeView()")
+            uiFieldGroup()(
+              uiNumField("lat", "console.view.latitude"),
+              uiNumField("lon", "console.view.longitude"),
+              uiNumField("alt", "console.view.altitude")
+            ),
+            uiRowContainer()(
+              uiButton("Reset", "app.setHomeView()"),
+              uiButton("Down", "app.setDownView()")
+            )
           ),
           uiPanel("Tracks", true, "console.tracks")(
-          )
+            uiTextInput("query","console.tracks.query", "app.queryTracks()", "enter track query"),
+            uiList("console.tracks.list", 10,"app.selectTrack(event)"),
+            uiRowContainer()(
+              uiCheckBox("show path", "app.toggleShowPath()"),
+              uiRadio("line", "app.setLinePath(event)"),
+              uiRadio("wall", "app.setWallPath(event)"),
+              uiButton("Reset", "app.resetPath(event)")
+            )
+          ),
         ),
 
-        uiIcon("ui_assets/controls.svg", "uiToggleWindow('console')", "console_icon")
+        uiIcon("ui_assets/controls.svg", "app.toggleWindow('console')", "console_icon")
       )
     ).render
   }

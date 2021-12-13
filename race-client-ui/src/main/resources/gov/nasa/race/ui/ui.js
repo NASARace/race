@@ -1012,15 +1012,8 @@ export function insertListItem(o, item, idx) {
     if (e) {
         let ie = _createElement("DIV", "ui_list_item", item);
         if (idx < e.childElementCount - 1) {
-            let ieNext = e.children[idx];
-            ie.uiItemIndex = idx;
-            e.insertBefore(ie, ieNext);
-
-            while (ieNext) {
-                ieNext._uiItemIndex++;
-            }
+            e.insertBefore(ie, e.children[idx]);
         } else {
-            ie._uiItemIndex = e.childElementCount;
             e.appendChild(ie);
         }
     }

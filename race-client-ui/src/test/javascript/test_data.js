@@ -10,34 +10,65 @@
  function testSkipList() {
      console.log("\n--- testing SkipList");
 
-     let list = new SkipList((a, b) => a < b, (a, b) => a == b);
+     let list = new SkipList(5, (a, b) => a < b, (a, b) => a == b);
 
-     [1, 10, 5, 3, 2, 11].forEach(v => list.insert(v));
+     console.log("-- test insert");
 
-     console.log(list.toString());
+     function testInsert(list, v) {
+         let idx = list.insert(v);
 
+         console.log("\ninsert " + v + " -> " + idx + ": " + list.toString());
+         list.dump();
+     }
 
-     let testIncludes = function(list, v, expect) {
+     //[1, 10, 5, 3, 2, 11].forEach(v => testInsert(list, v));
+     [1, 7, 2, 3, 11, 5, 0, 42, 8, 12].forEach(v => testInsert(list, v));
+
+     //console.log(list.toString());
+
+     console.log("\n-- test at(idx)");
+
+     function testAt(list, i, expect) {
+         let res = list.at(i);
+         console.log("at " + i + " -> " + res);
+         if (expect) assert(res == expect)
+     }
+
+     testAt(list, 0, 0);
+     testAt(list, 1, 1);
+     testAt(list, 2, 2);
+     testAt(list, 3, 3);
+     testAt(list, 4, 5);
+     testAt(list, 5, 7);
+     testAt(list, 6, 8);
+     testAt(list, 7, 11);
+     testAt(list, 8, 12);
+     testAt(list, 9, 42);
+
+     console.log("\n-- test includes(v)");
+
+     function testIncludes(list, v, expect) {
          let res = list.includes(v);
          console.log("includes " + v + ": " + res + ", expected: " + expect);
          assert(res == expect);
      }
 
-     console.log("size = " + list.size);
-     testIncludes(list, 7, false);
+     testIncludes(list, 6, false);
      testIncludes(list, 5, true);
 
-     let testRemove = function(list, v, expect) {
-         let res = list.remove(v);
-         console.log("remove " + v + ": " + res + ", expected: " + expect);
-         assert(res == expect);
-     }
+     /*
+           function testRemove (list, v, expect) {
+               let res = list.remove(v);
+               console.log("remove " + v + ": " + res + ", expected: " + expect);
+               assert(res == expect);
+           }
 
-     testRemove(list, 5, true);
-     testRemove(list, 77, false);
-     testRemove(list, 1, true);
-     testRemove(list, 11, true);
-     console.log(list.toString());
+           testRemove(list, 5, true);
+           testRemove(list, 77, false);
+           testRemove(list, 1, true);
+           testRemove(list, 11, true);
+           console.log(list.toString());
+           */
 
      console.log("Ok.");
  }
@@ -85,4 +116,4 @@
  }
 
  testSkipList();
- testCircularBuffer();
+ //testCircularBuffer();

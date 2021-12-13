@@ -1,3 +1,5 @@
+import { threadId } from "worker_threads";
+
 class LinkedListNode {
     constructor(data, next = null) {
         this.data = data;
@@ -61,84 +63,119 @@ class SkipListNode {
     constructor(data, next) {
         this.data = data;
         this.next = next;
+
+        this.width = new Array(next.length);
+        this.width.fill(0);
     }
 }
 
-const MaxSkipListDepth = 16;
+//const MaxSkipListDepth = 16;
+const MaxSkipListDepth = 5;
 
 class SkipList {
-    constructor(isBefore, isSame) {
+    constructor(depth, isBefore, isSame) {
+        this.depth = depth;
         this.isBefore = isBefore;
         this.isSame = isSame;
 
-        this.head = new SkipListNode(null, new Array(MaxSkipListDepth));
+        this.head = new SkipListNode(null, new Array(depth));
         this.size = 0;
-        this.depth = 0;
+        this.maxLevel = 0; // index - there always is at least one level
     }
 
     includes(data) {
         let n = this.head;
-        for (let lvl = this.depth; lvl >= 0; lvl--) {
+        for (let lvl = this.maxLevel; lvl >= 0; lvl--) {
             while (n.next[lvl] && this.isBefore(n.next[lvl].data, data)) n = n.next[lvl];
         }
         n = n.next[0];
         return (n && this.isSame(data, n.data))
     }
 
-    insert(data) {
-        function randomLevel() {
-            var lvl = 0;
-            while (lvl < MaxSkipListDepth && Math.random() < 0.5) {
-                lvl++;
-            }
-            return lvl;
-        }
+    randomLevel() {
+        var lvl = 0;
+        while (lvl < this.depth && Math.random() < 0.5) lvl++;
+        return lvl;
+    }
 
-        let update = [];
+    insert(data) {
+        let idx = 0; // eventually holds level 0 index of new element
+        let nodeLevel = 0;
+        let update = new Array(this.maxLevel + 1);
+        let updateIdx = new Array(update.length); // index of update node
         let n = this.head;
 
-        for (let lvl = this.depth; lvl >= 0; lvl--) {
-            while (n.next[lvl] && this.isBefore(n.next[lvl].data, data)) n = n.next[lvl];
+        for (let lvl = this.maxLevel; lvl >= 0; lvl--) {
+            while (n.next[lvl] && this.isBefore(n.next[lvl].data, data)) {
+                idx += n.width[lvl];
+                n = n.next[lvl];
+            }
             update[lvl] = n;
+            updateIdx[lvl] = idx - 1;
         }
 
         n = n.next[0];
-        if (n && this.isSame(n.data, data)) {
+        if (n && this.isSame(n.data, data)) { // update (keep it similar to Map)
             n.data = data;
 
-        } else {
-            let newDepth = randomLevel();
-            if (newDepth > this.depth) { // add more layers
-                for (let lvl = this.depth + 1; lvl <= newDepth; lvl++) {
-                    update[lvl] = this.head;
+        } else { // insert or append
+            nodeLevel = this.randomLevel();
+            n = new SkipListNode(data, new Array(nodeLevel + 1));
+            let oldMaxLevel = this.maxLevel;
+
+            if (nodeLevel > oldMaxLevel) { // first node of this level, link new skip lanes from head
+                for (let lvl = oldMaxLevel + 1; lvl <= nodeLevel; lvl++) {
+                    this.head.next[lvl] = n;
+                    this.head.width[lvl] = idx + 1;
                 }
-                this.depth = newDepth;
+                this.maxLevel = nodeLevel;
             }
 
-            n = new SkipListNode(data, []);
-            for (let lvl = 0; lvl <= newDepth; lvl++) {
-                n.next[lvl] = update[lvl].next[lvl];
-                update[lvl].next[lvl] = n;
+            //--- base lane update
+            n.next[0] = update[0].next[0];
+            update[0].next[0] = n;
+            update[0].width[0] = 1;
+            if (n.next[0]) n.width[0] = 1;
+
+            //--- pre-existing skip lane updates
+            for (let lvl = 1; lvl <= oldMaxLevel; lvl++) {
+                let u = update[lvl];
+                let uw = u.width[lvl];
+
+                if (lvl > nodeLevel) { // u is above our level chain
+                    if (uw > 0) u.width[lvl]++;
+
+                } else { // insert into level chain
+                    n.next[lvl] = u.next[lvl];
+                    u.next[lvl] = n;
+
+                    let uIdx = updateIdx[lvl];
+                    u.width[lvl] = (idx - uIdx);
+                    if (uw > 0) n.width[lvl] = uw - (idx - uIdx) + 1;
+                }
             }
+
             this.size++;
         }
+
+        return idx;
     }
 
     remove(data) {
         let update = [];
         let n = this.head;
 
-        for (let lvl = this.depth; lvl >= 0; lvl--) {
+        for (let lvl = this.maxLevel; lvl >= 0; lvl--) {
             while (n.next[lvl] && this.isBefore(n.next[lvl].data, data)) n = n.next[lvl];
             update[lvl] = n;
         }
 
         n = n.next[0];
         if (n && this.isSame(n.data, data)) {
-            for (let lvl = 0; lvl <= this.depth && update[lvl].next[lvl] === n; lvl++) {
+            for (let lvl = 0; lvl <= this.maxLevel && update[lvl].next[lvl] === n; lvl++) {
                 update[lvl].next[lvl] = n.next[lvl];
             }
-            for (let lvl = this.depth; lvl >= 0 && this.head.next[lvl] == null; lvl--) this.depth--;
+            for (let lvl = this.maxLevel; lvl >= 0 && this.head.next[lvl] == null; lvl--) this.maxLevel--;
 
             this.size--;
             return true;
@@ -146,6 +183,19 @@ class SkipList {
         } else {
             return false;
         }
+    }
+
+    at(idx) {
+        let n = this.head;
+        idx++;
+        for (let lvl = this.maxLevel; lvl >= 0; lvl--) {
+            while (n.width[lvl] && idx >= n.width[lvl]) {
+                idx -= n.width[lvl];
+                if (idx == 0) return n.next[lvl].data;
+                n = n.next[lvl];
+            }
+        }
+        return null;
     }
 
     *
@@ -163,10 +213,40 @@ class SkipList {
         for (let data of this) f(data);
     }
 
+    // debug method
+    dump() {
+        function toString(x) {
+            if (x != null) {
+                let s = x.toString();
+                if (s.length < 3) s = " ".repeat(3 - s.length) + s;
+                return s;
+            } else return "  -";
+        }
+
+        function nid(n) {
+            if (n) return "(" + toString(n.data) + ")";
+            else return "     ";
+        }
+
+        function printNode(prefix, n) {
+            let line = prefix + ": (" + toString(n.data) + ") : ";
+            for (let i = 0; i < n.next.length; i++) line += "   " + nid(n.next[i]) + "+" + (n.width[i]);
+            console.log(line);
+        }
+
+        console.log("-------------------------------------------------------------------- size " + this.size);
+        printNode(" hd", this.head);
+        let n = this.head.next[0];
+        for (let i = 0; i < this.size; i++) {
+            printNode(toString(i), n);
+            n = n.next[0];
+        }
+    }
+
     clear() {
-        for (let lvl = this.depth; lvl >= 0; lvl--) this.head.next[lvl] = null;
+        for (let lvl = this.maxLevel; lvl >= 0; lvl--) this.head.next[lvl] = null;
         this.size = 0;
-        this.depth = 0;
+        this.maxLevel = 0;
     }
 
     toString() {
