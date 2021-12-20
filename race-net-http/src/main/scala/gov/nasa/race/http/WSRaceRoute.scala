@@ -20,7 +20,7 @@ import akka.actor.Actor.Receive
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.model.ws.{BinaryMessage, Message, TextMessage}
 import akka.http.scaladsl.server.Directives._
-import akka.http.scaladsl.server.{PathMatchers, Route}
+import akka.http.scaladsl.server.{Directive, PathMatcher, PathMatchers, Route}
 import akka.stream.Materializer
 import akka.stream.scaladsl.{Flow, Sink, SourceQueueWithComplete}
 import akka.{Done, NotUsed}
@@ -38,7 +38,7 @@ import java.net.InetSocketAddress
 import scala.collection.immutable.Iterable
 import scala.collection.mutable.{Map => MutMap}
 import scala.concurrent.Future
-import scala.util.{Failure, Success}
+import scala.util.{Failure, Random, Success}
 
 /**
   * root type for WebSocket RaceRouteInfos
@@ -56,6 +56,55 @@ trait WSContext {
 
 case class BasicWSContext (sockConn: SocketConnection) extends WSContext
 case class AuthWSContext (sockConn: SocketConnection, sessionToken: String) extends WSContext
+
+/**
+  * a WSRaceRoute that can only be used by clients that have received a valid (unused) token
+  * which is normally transmitted in the document that initiates the websocket request.
+  * Clients transmit the token in the websocket URL: wss://<host>/<target>/ws/<token>
+  */
+trait TokenizedWSRaceRoute extends WSRaceRoute {
+  private val registeredTokens: MutMap[String,InetSocketAddress] = MutMap.empty
+
+  /**
+    * register and return a new (un-registered) token for the provided client
+    */
+  protected def registerTokenForClient (clientAddr: InetSocketAddress): String = {
+    var tok = Random.between(0,Int.MaxValue).toString
+    while (registeredTokens.contains(tok)) tok = Random.between(0,Int.MaxValue).toString
+    info(s"registering websocket token $tok for client: $clientAddr")
+    registeredTokens += (tok -> clientAddr)
+    tok
+  }
+
+  /**
+    * only promote websocket requests that have previously been registered
+    */
+  protected def completeTokenizedWSRoute (remove: Boolean): Route = {
+      headerValueByType(classOf[IncomingConnectionHeader]) { sockConn =>
+        val clientAddr = sockConn.remoteAddress
+        extractUnmatchedPath { p =>
+          var tok = p.toString()
+          if (tok.startsWith("/")) tok = tok.substring(1)
+          registeredTokens.get(tok) match {
+            case Some(addr) =>
+              // note that port will differ since this is a new request
+              if (addr.getAddress == clientAddr.getAddress) {
+                if (remove) registeredTokens -= tok // consume it
+                info(s"accepting websocket request for registered token $tok from: $clientAddr")
+                promoteToWebSocket()
+
+              } else { // wrong clientAddr
+                warning(s"wrong client address for registered token: $tok: $clientAddr")
+                complete(StatusCodes.Forbidden, "invalid websocket request")
+              }
+            case None =>
+              warning(s"un-registered request from client: $clientAddr")
+              complete(StatusCodes.Forbidden, "invalid websocket request")
+          }
+        }
+      }
+  }
+}
 
 /**
   * a RaceRoute that completes with a WebSocket to which messages are pushed from an

@@ -611,17 +611,3 @@ div.align_center {
 div.align_right {
     align-items: flex-end;
 }
-
-
-/* initial window placement */
-
-#console {
-    left: 100px;
-    top: 300px;
-    /*width: 15rem;*/
-}
-
-#consoleIcon {
-    left: 10px;
-    top: 10px;
-}

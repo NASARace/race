@@ -6,19 +6,27 @@ const NO_PATH = "";
 const LINE_PATH = "~";
 const WALL_PATH = "≈";
 
+class TrackAssets {
+    constructor(symbol, info = null, path = null) {
+        this.symbol = symbol;
+        this.info = info;
+        this.path = path;
+    }
+}
+
 // object that wraps server-supplied track info with our locally kept trace and display assets
 class TrackEntry {
     constructor(track, assets) {
         this.track = track;
         this.assets = assets;
 
-        this.id = track.id;
+        this.id = track.label;
         this.trace = new CircularBuffer(maxTraceLength);
     }
 
     assetDisplay() {
         let s = "";
-        if (assets) {
+        if (this.assets) {
             if (this.assets.pathEntity) s += LINE_PATH;
             else if (this.assets.wallEntity) s += WALL_PATH;
         }
@@ -38,6 +46,7 @@ var trajectoryDataSource = undefined;
 
 const trackEntries = new Map(); // id -> TrackEntry
 const trackEntryList = new SkipList( // id-sorted list of track objects
+    5, // max depth
     (a, b) => a.id < b.id, // sort function
     (a, b) => a.id == b.id // identity function
 );
@@ -62,11 +71,13 @@ app.initialize = function() {
 function initTrackEntryView() {
     let view = ui.getList("console.tracks.list");
 
-    ui.setListItemDisplayColumns(view, ["fit"], [
-        { name: "assets", width: "2rem", attrs: [], map: te => te.assetDisplay },
-        { name: "id", width: "5rem", attrs: ["alignLeft"], map: te => te.id },
-        { name: "date", width: "5rem", attrs: ["fixed"], map: te => util.toLocalTimeString(te.track.date) }
-    ]);
+    if (view) {
+        ui.setListItemDisplayColumns(view, ["fit"], [
+            { name: "assets", width: "2rem", attrs: [], map: te => te.assetDisplay() },
+            { name: "id", width: "5rem", attrs: ["alignLeft"], map: te => te.id },
+            { name: "date", width: "5rem", attrs: ["fixed"], map: te => util.toLocalTimeString(te.track.date) }
+        ]);
+    }
 
     return view;
 }
@@ -212,64 +223,58 @@ function handleTrackListMessage(tracks) { // bulk update
 }
 
 function updateTrackEntries(track) {
-    let te = trackEntries.get(track.id);
-    if (te) { // update
-        console.log("update track: " + JSON.stringify(track));
-        te.track = track;
-        if (trackEntryFilter(te)) ui.updateListItem(trackEntryView, te);
+    let pitch = track.pitch ? track.pitch : 0.0;
+    let roll = track.roll ? track.roll : 0.0;
+    let hpr = Cesium.HeadingPitchRoll.fromDegrees(track.hdg, pitch, roll);
 
-    } else { // add
-        console.log("add track: " + JSON.stringify(track));
-        te = new TrackEntry(track, null);
+    let pos = Cesium.Cartesian3.fromDegrees(track.lon, track.lat, track.alt);
+    let attitude = Cesium.Transforms.headingPitchRollQuaternion(pos, hpr);
+
+    let te = trackEntries.get(track.label);
+
+    if (te) { // update
+        if (isTrackTerminated(track)) {
+            if (trackEntryFilter(te)) {
+                trackEntryList.remove(te)
+                ui.removeListItem(trackEntryView, te);
+                trackEntries.delete(te.id);
+            }
+            removeAssets(te);
+        } else {
+            te.track = track;
+            if (trackEntryFilter(te)) {
+                ui.updateListItem(trackEntryView, te);
+
+                if (te.assets.symbol) updateTrackSymbol(track, te.assets.symbol, pos, attitude);
+                if (te.assets.info) updateTrackInfo(track, te.assets.info, pos);
+            }
+        }
+
+    } else { // new one
+        //console.log("add track: " + JSON.stringify(track));
+        let assets = new TrackAssets(createTrackSymbol(track, pos, attitude), createTrackInfo(track, pos));
+        te = new TrackEntry(track, assets);
         trackEntries.set(te.id, te);
         if (trackEntryFilter(te)) {
-            trackEntryList.insert(te);
-            ui.
+            let idx = trackEntryList.insert(te);
+            ui.insertListItem(trackEntryView, te, idx);
+
+            viewer.entities.add(assets.symbol);
+            trackInfoDataSource.entities.add(assets.info);
         }
     }
 
-    te.trace.push(track);
+    if (te.trace) te.trace.push(track);
 }
 
-/*
-function updateTrack(track) {
-    // this can make use of the configured constants from config.js
-
-    if (track.status == 4 || track.status == 8) {
-        removeEntities(track);
-        return;
-    }
-
-    let hdg = Cesium.Math.toRadians(track.hdg);
-    let pitch = track.pitch ? track.pitch : 0.0;
-    let roll = track.roll ? track.roll : 0.0;
-
-    let pos = Cesium.Cartesian3.fromDegrees(track.lon, track.lat, track.alt);
-    let hpr = Cesium.HeadingPitchRoll.fromDegrees(track.hdg, pitch, roll);
-    let attitude = Cesium.Transforms.headingPitchRollQuaternion(pos, hpr);
-
-    var e = viewer.entities.getById(track.label);
-    if (e) { // just update position and attitude
-        e.position = pos;
-        e.orientation = attitude;
-
-    } else { // add a new entry
-        let e = createTrackEntity(track, pos, attitude)
-        viewer.entities.add(e);
-    }
-
-    updateTrackInfo(track, pos);
-
-    if (trackPathLength && trackPathLength > 0) {
-        updateTrajectory(track);
-    }
+function isTrackTerminated(track) {
+    return (track.status == 4) || (track.status == 8);
 }
-*/
 
 var entityPrototype = undefined;
 
-function createTrackEntity(track, pos, attitude) {
-    let e = new Cesium.Entity({
+function createTrackSymbol(track, pos, attitude) {
+    let sym = new Cesium.Entity({
         id: track.label,
         position: pos,
         orientation: attitude,
@@ -308,52 +313,53 @@ function createTrackEntity(track, pos, attitude) {
         // track paths are separate entities
     });
 
-    if (!entityPrototype) entityPrototype = e;
+    if (!entityPrototype) entityPrototype = sym;
 
-    return e;
+    return sym;
 }
 
-function removeEntities(track) {
-    let id = track.label;
-    viewer.entities.removeById(id);
-    trackInfoDataSource.entities.remove(id);
-    trajectoryDataSource.entities.remove(id);
+function updateTrackSymbol(track, sym, pos, attitude) {
+    sym.position = pos;
+    sym.orientation = attitude;
 }
 
-function updateTrackInfo(track, pos) {
-    let fl = Math.round(track.alt * 0.00656167979) * 5;
+function createTrackInfo(track, pos) {
+    return new Cesium.Entity({
+        id: trackInfoLabel(track),
+        position: pos,
+
+        label: {
+            font: trackInfoFont,
+            scale: 0.8,
+            horizontalOrigin: Cesium.HorizontalOrigin.LEFT,
+            fillColor: trackColor,
+            showBackground: true,
+            backgroundColor: trackLabelBackground, // alpha does not work against model
+            pixelOffset: trackInfoOffset,
+            disableDepthTestDistance: minLabelDepth,
+            distanceDisplayCondition: trackInfoDC
+        }
+    });
+}
+
+function updateTrackInfo(track, info, pos) {
+    info.label.text = trackInfoLabel(track);
+    info.position = pos;
+}
+
+function trackInfoLabel(track) {
+    let fl = Math.round(track.alt * 0.00656167979) * 5; // m to ft/100 in 5 increment
     let hdg = Math.round(track.hdg);
-    let spd = Math.round(track.spd * 1.94384449);
+    let spd = Math.round(track.spd * 1.94384449); // m/s to knots
 
-    let trackInfo = `FL${fl} ${hdg}° ${spd}kn`;
-    let trackInfoEntities = trackInfoDataSource.entities;
-
-    var e = trackInfoEntities.getById(track.label);
-    if (e) {
-        e.position = pos;
-        e.label.text = trackInfo;
-
-    } else {
-        e = new Cesium.Entity({
-            id: track.label,
-            position: pos,
-
-            label: {
-                font: trackInfoFont,
-                scale: 0.8,
-                horizontalOrigin: Cesium.HorizontalOrigin.LEFT,
-                fillColor: trackColor,
-                showBackground: true,
-                backgroundColor: trackLabelBackground, // alpha does not work against model
-                pixelOffset: trackInfoOffset,
-                disableDepthTestDistance: minLabelDepth,
-                distanceDisplayCondition: trackInfoDC
-            }
-        });
-
-        trackInfoEntities.add(e);
-    }
+    return `FL${fl} ${hdg}° ${spd}kn`;
 }
+
+function removeAssets(te) {
+    if (te.assets.symbol) viewer.entities.removeById(te.id);
+    if (te.assets.info) trackInfoDataSource.entities.remove(te.id);
+}
+
 
 function updateTrajectory(track) {
     var trajectoryEntities = trajectoryDataSource.entities;
@@ -387,7 +393,70 @@ function updateTrajectory(track) {
     }
 }
 
+//--- track queries
+
+const idQuery = /^ *id *= *(.+)$/;
+// ..and more to follow
+
+function getTrackEntryFilter(query) {
+    let res = query.match(idQuery);
+    if (res) {
+        let idQuery = util.glob2regexp(res[1]);
+        return (idQuery == '*') ? noTrackEntryFilter : te => te.id.match(idQuery);
+    }
+    return null;
+}
+
+function resetTrackEntryList() {
+    trackEntryList.clear();
+    trackEntries.forEach((v, k, m) => {
+        if (trackEntryFilter(v)) trackEntryList.insert(v);
+    });
+    ui.setListItems(trackEntryView, trackEntryList);
+}
+
 //--- interaction
+
+app.queryTracks = function(event) {
+    let input = ui.getFieldValue(event);
+
+    let newFilter = getTrackEntryFilter(input);
+    if (newFilter) {
+        trackEntryFilter = newFilter;
+        resetTrackEntryList();
+        // update viewer.entities accordingly
+    }
+}
+
+app.selectTrack = function(event) {
+    let te = ui.getSelectedListItem(event);
+    if (te) {
+        if (te.assets.symbol) viewer.selectedEntity = te.assets.symbol;
+    }
+}
+
+app.toggleShowPath = function(event) {
+    let te = ui.getSelectedListItem(trackEntryView);
+    if (te) {
+        if (ui.toggleCheckbox(event)) {
+            console.log("show path of " + te.id);
+        } else {
+            console.log("hide path of " + te.id);
+        }
+    }
+}
+
+app.setLinePath = function(event) {
+    console.log("show line path");
+}
+
+app.setWallPath = function(event) {
+    console.log("show wall path");
+}
+
+app.resetPaths = function() {
+    console.log("reset path");
+}
 
 //--- view control
 
@@ -418,27 +487,7 @@ function setDownView() {
 app.setDownView = setDownView;
 
 
-//--- track entry path display
-
-app.toggleShowPath = function(event) {
-    console.log("toggle show path");
-    let isChecked = ui.toggleCheckbox(event);
-    let te = ui.getSelectedListItem(trackEntryView);
-}
-
-app.setLinePath = function(event) {
-    console.log("show line path");
-}
-
-app.setWallPath = function(event) {
-    console.log("show wall path");
-}
-
-app.resetPath = function() {
-    console.log("reset path");
-}
-
-//--- CustomProperties
+//--- Cesium CustomProperties
 
 function CustomProperty(value) {
     this._value = value;

@@ -165,7 +165,7 @@ object FileUtils {
   def hasExtension (fn: String): Boolean = fn.lastIndexOf('.') >= 0
   def hasExtension (file: File): Boolean = hasExtension(file.getName)
 
-  def lastModification (file: File): DateTime = DateTime.ofEpochMillis(file.lastModified)
+  def lastModification (file: File): DateTime = DateTime.ofEpochMillis(file.lastModified) // Date0 if not exist
 
   def inputStreamFor (f: File, bufLen: Int): Option[InputStream] = {
     if (f.canRead) {

@@ -103,15 +103,29 @@ export function closeWindow(o) {
     }
 }
 
-export function toggleWindow(o) {
+export function toggleWindow(event, o) {
     let e = _elementOf(o);
     if (e) {
         if (!e.style.display || e.style.display == "none") {
+            if (!e.style.left) _place(e, event.clientX + 20, event.clientY + 20);
             e.style.display = "block";
         } else {
             e.style.display = "none";
         }
     }
+}
+
+function _place(e, x, y) {
+    let w = e.offsetWidth;
+    let h = e.offsetHeight;
+    let sw = window.innerWidth;
+    let sh = window.innerHeight;
+
+    if ((x + w) > sw) x = sw - w;
+    if ((y + h) > sh) y = sh - h;
+
+    e.style.left = x + "px";
+    e.style.top = y + "px";
 }
 
 //--- panels
@@ -143,9 +157,10 @@ export function togglePanelExpansion(event) {
     const panel = panelHeader.nextElementSibling;
 
     if (panelHeader.classList.contains("expanded")) { // collapse
+        panel._uiCurrentHeight = panel.scrollHeight;
 
         if (!panel.style.maxHeight) { // we have to give max-height an initial value but without triggering a transition
-            panel.style.maxHeight = panel.scrollHeight + "px";
+            panel.style.maxHeight = panel._uiCurrentHeight + "px";
             setTimeout(() => { togglePanelExpansion(event); }, 100);
         } else {
             _swapClass(panelHeader, "expanded", "collapsed");
@@ -154,12 +169,21 @@ export function togglePanelExpansion(event) {
         }
 
     } else { // expand
+        let expandHeight = panel._uiCurrentHeight ? panel._uiCurrentHeight : panel.scrollHeight;
+
         _swapClass(panelHeader, "collapsed", "expanded");
         _swapClass(panel, "collapsed", "expanded");
-        panel.style.maxHeight = panel.scrollHeight + "px";
+        panel.style.maxHeight = expandHeight + "px";
     }
 
     // should we force a reflow on the parent here?
+}
+
+function _resetPanelMaxHeight(ce) {
+    let panel = _nearestParentWithClass(ce, "ui_panel");
+    if (panel) {
+        panel.style.maxHeight = "";
+    }
 }
 
 //--- icon functions
@@ -771,7 +795,7 @@ function _initializeCheckboxes() {
 }
 
 export function toggleCheckbox(o) {
-    let checkbox = getCheckboxOf(o);
+    let checkbox = getCheckbox(o);
     if (checkbox) {
         return _toggleClass(checkbox, "checked");
     }
@@ -779,14 +803,14 @@ export function toggleCheckbox(o) {
 }
 
 export function setCheckBox(o, check = true) {
-    let e = getCheckboxOf(o);
+    let e = getCheckbox(o);
     if (e) {
         if (check) e.classList.add("checked");
         else e.classList.remove("checked");
     }
 }
 
-export function getCheckboxOf(o) {
+export function getCheckbox(o) {
     let e = _elementOf(o);
     if (e) {
         let eCls = e.classList;
@@ -798,7 +822,7 @@ export function getCheckboxOf(o) {
 }
 
 export function isCheckboxSelected(o) {
-    let e = getCheckboxOf(o);
+    let e = getCheckbox(o);
     if (e) {
         return e.classList.contains("checked");
     }
@@ -984,6 +1008,10 @@ export function setListItems(o, items) {
             }
             i++;
         });
+
+        if (e.childElementCount > i) _removeLastNchildrenOf(e, e.childElementCount - i);
+
+        _resetPanelMaxHeight(e);
     }
 }
 
@@ -1010,7 +1038,8 @@ export function appendListItem(o, item) {
 export function insertListItem(o, item, idx) {
     let e = getList(o);
     if (e) {
-        let ie = _createElement("DIV", "ui_list_item", item);
+        let proto = e._uiRowPrototype;
+        let ie = _createListItem(e, item, proto);
         if (idx < e.childElementCount - 1) {
             e.insertBefore(ie, e.children[idx]);
         } else {
@@ -1045,6 +1074,13 @@ export function removeListItem(o, item) {
                 return;
             }
         }
+    }
+}
+
+export function removeLastNListItems(o, n) {
+    let e = getList(o);
+    if (e) {
+        _removeLastNchildrenOf(e, n);
     }
 }
 
@@ -1356,6 +1392,15 @@ function _nthChildOf(element, n) {
         c = c.nextElementSibling;
     }
     return undefined;
+}
+
+function _removeLastNchildrenOf(element, n) {
+    let i = 0
+    while (i < n && element.firstChild) {
+        let le = element.lastElementChild;
+        element.removeChild(le);
+        i++;
+    }
 }
 
 function _removeChildrenOf(element, keepFilter = undefined) {

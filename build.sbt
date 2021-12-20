@@ -66,7 +66,7 @@ lazy val raceNetDDS = createProject("race-net-dds", commonSettings).
   addLibraryDependencies(omgDDS)
 
 lazy val raceNetHttp = createProject("race-net-http", commonSettings).
-  dependsOn(raceCore,raceClientUI).
+  dependsOn(raceCore).
   addLibraryDependencies(akkaHttp,scalaTags,argon2,jfreeChart,webauthn)
 
 lazy val raceSwing = createProject("race-swing", commonSettings).
@@ -124,7 +124,7 @@ lazy val raceAdapter = createProject("race-adapter", commonSettings).
   )
 
 lazy val raceClientUI = createProject("race-client-ui", commonSettings).
-  dependsOn(raceCore).
+  dependsOn(raceCore,raceNetHttp).
   addLibraryDependencies(scalaTags)
 
 lazy val raceCesium = createProject("race-cesium", commonSettings).

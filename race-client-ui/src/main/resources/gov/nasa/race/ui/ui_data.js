@@ -1,5 +1,3 @@
-import { threadId } from "worker_threads";
-
 class LinkedListNode {
     constructor(data, next = null) {
         this.data = data;
