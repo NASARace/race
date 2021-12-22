@@ -126,4 +126,4 @@
  }
 
  testSkipList();
- //testCircularBuffer();
+ testCircularBuffer();

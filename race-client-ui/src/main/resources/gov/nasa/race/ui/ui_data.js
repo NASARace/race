@@ -229,41 +229,13 @@ class SkipList {
         for (let data of this) f(data);
     }
 
-    // debug method
-    dump() {
-        function toString(x) {
-            if (x != null) {
-                let s = x.toString();
-                if (s.length < 3) s = " ".repeat(3 - s.length) + s;
-                return s;
-            } else return "  -";
-        }
-
-        function nid(n) {
-            if (n) return "(" + toString(n.data) + ")";
-            else return "     ";
-        }
-
-        function printNode(prefix, n) {
-            let line = prefix + ": (" + toString(n.data) + ") : ";
-            for (let i = 0; i < n.next.length; i++) line += "   " + nid(n.next[i]) + "+" + (n.width[i]);
-            console.log(line);
-        }
-
-        console.log("-------------------------------------------------------------------- size " + this.size);
-        printNode(" hd", this.head);
-        let n = this.head.next[0];
-        for (let i = 0; i < this.size; i++) {
-            printNode(toString(i), n);
-            n = n.next[0];
-        }
-    }
-
     clear() {
         for (let lvl = this.maxLevel; lvl >= 0; lvl--) this.head.next[lvl] = null;
         this.size = 0;
         this.maxLevel = 0;
     }
+
+    //--- debug funcs
 
     toString() {
         let s = "[";
@@ -275,6 +247,61 @@ class SkipList {
         }
         s += ']';
         return s;
+    }
+
+    checkOrder(labelFunc) {
+        let prev = null;
+        let n = this.head.next[0];
+        for (let i = 0; i < this.size; i++) {
+            if (prev) {
+                if (!this.isBefore(prev.data, n.data)) {
+                    console.log("!!! wrong order at index: " + i);
+                    if (labelFunc) this.dumpOrder(labelFunc, i + 1);
+
+                    return false;
+                }
+            }
+            prev = n;
+            n = n.next[0];
+        }
+        return true;
+    }
+
+    dumpOrder(labelFunc, i = this.size) {
+        let n = this.head.next[0];
+        for (let j = 0; j < i; j++) {
+            console.log("  " + j + ": " + labelFunc(n.data));
+            n = n.next[0];
+        }
+    }
+
+    dump(colWidth = 3, labelFunc = undefined) {
+        function toString(x) {
+            if (x != null) {
+                let s = labelFunc ? labelFunc(x) : x.toString();
+                if (s.length < colWidth) s = " ".repeat(colWidth - s.length) + s;
+                return s;
+            } else return "  -";
+        }
+
+        function nid(n) {
+            if (n) return "(" + toString(n.data) + ")";
+            else return "     ";
+        }
+
+        function printNode(prefix, n) {
+            let line = prefix + ": (" + toString(n.data) + ") : ";
+            for (let i = 0; i < n.next.length; i++) line += " ".repeat(colWidth) + nid(n.next[i]) + "+" + (n.width[i]);
+            console.log(line);
+        }
+
+        console.log("-------------------------------------------------------------------- size " + this.size);
+        printNode(" hd", this.head);
+        let n = this.head.next[0];
+        for (let i = 0; i < this.size; i++) {
+            printNode(toString(i), n);
+            n = n.next[0];
+        }
     }
 }
 
@@ -377,5 +404,31 @@ class CircularBuffer {
     }
 }
 
-
 export { LinkedList, SkipList, CircularBuffer };
+
+//--- simple seeded PRNG to support reproducible values for testing (lifted from http://pracrand.sourceforge.net/)
+
+function _sfc32(a, b, c, d) {
+    return function() {
+        a >>>= 0;
+        b >>>= 0;
+        c >>>= 0;
+        d >>>= 0;
+        let t = (a + b) | 0;
+        a = b ^ b >>> 9;
+        b = c + (c << 3) | 0;
+        c = (c << 21 | c >>> 11);
+        d = d + 1 | 0;
+        t = t + d | 0;
+        c = c + t | 0;
+        return (t >>> 0) / 4294967296;
+    }
+}
+
+var _rand = _sfc32(0x9E3779B9, 0x243F6A88, 0xB7E15162, (1337 ^ 0xDEADBEEF));
+for (let i = 0; i < 15; i++) _rand(); // warm up shuffle
+
+// this is a drop-in replacement for math.random() which is non-seedable
+export function pseudoRandom() {
+    return _rand();
+}

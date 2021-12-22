@@ -116,6 +116,7 @@ export function toggleWindow(event, o) {
 }
 
 function _place(e, x, y) {
+    // top right should always be visible so that we can move/hide
     let w = e.offsetWidth;
     let h = e.offsetHeight;
     let sw = window.innerWidth;
@@ -123,6 +124,7 @@ function _place(e, x, y) {
 
     if ((x + w) > sw) x = sw - w;
     if ((y + h) > sh) y = sh - h;
+    if (y < 0) y = 0;
 
     e.style.left = x + "px";
     e.style.top = y + "px";
@@ -1015,6 +1017,17 @@ export function setListItems(o, items) {
     }
 }
 
+export function setSelectedListItem(o, item) {
+    let e = getList(o);
+    if (e) {
+        let ie = e._uiItemMap.get(item);
+        if (ie) {
+            _setSelectedItemElement(e, ie);
+            ie.scrollIntoView();
+        }
+    }
+}
+
 export function getSelectedListItem(o) {
     let listBox = getList(o);
     if (listBox) {
@@ -1040,7 +1053,7 @@ export function insertListItem(o, item, idx) {
     if (e) {
         let proto = e._uiRowPrototype;
         let ie = _createListItem(e, item, proto);
-        if (idx < e.childElementCount - 1) {
+        if (idx < e.childElementCount) {
             e.insertBefore(ie, e.children[idx]);
         } else {
             e.appendChild(ie);
@@ -1084,44 +1097,24 @@ export function removeLastNListItems(o, n) {
     }
 }
 
+function _setSelectedItemElement(listBox, itemElement) {
+    let prevItem = listBox._uiSelectedItem;
+    if (prevItem) prevItem.classList.remove("selected");
+    listBox._uiSelectedItem = itemElement;
+    itemElement.classList.add("selected");
+}
+
 function _selectListItem(event) {
     let tgt = event.target;
     let itemElement = _nearestElementWithClass(tgt, "ui_list_item");
     if (itemElement) {
         let listBox = _nearestParentWithClass(itemElement, "ui_list");
-        if (listBox) {
-            let prevItem = listBox._uiSelectedItem;
-            if (prevItem) prevItem.classList.remove("selected");
-            listBox._uiSelectedItem = itemElement;
-            itemElement.classList.add("selected");
-        }
-    }
-}
-
-// DEPRECATED
-export function sortinListItem(o, item) {
-    let e = getList(o);
-    if (e) {
-        let i = 0;
-        for (let ie of e.children) {
-            if (item < ie.innerText) { // FIXME
-                let ieNew = _createElement("DIV", "ui_list_item", item);
-                ieNew._uiItemIndex = i;
-                e.insertBefore(ieNew, ie);
-                while (ie) {
-                    i++;
-                    ie._uiItemIndex = i;
-                    ie = ie.nextElementSibling;
-                }
-                return;
-            }
-            i++;
-        }
+        if (listBox) _setSelectedItemElement(listBox, itemElement);
     }
 }
 
 
-export function clearListSelection(o) {
+export function clearSelectedListItem(o) {
     let e = getList(o);
     if (e) {
         let sel = e._uiSelectedItem;

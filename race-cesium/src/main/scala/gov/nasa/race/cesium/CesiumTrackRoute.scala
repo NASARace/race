@@ -44,7 +44,7 @@ object CesiumTrackRoute {
   val cesiumCss = new CachedFile( s"$resourceDir/cesiumTracks.css",
     ClassUtils.getResourceAsBytes(getClass,"cesiumTracks.css").get)
   val cesiumTrackModel = new CachedFile( s"$resourceDir/paper-plane.glb",
-    ClassUtils.getResourceAsBytes(getClass,"paper-plane.glb").get)
+    ClassUtils.getResourceAsBytes(getClass,"pp.glb").get)
 
   val mapCursor = ClassUtils.getResourceAsBytes(getClass, "mapcursor-bw-32x32.png").get
   val controlsIcon = ClassUtils.getResourceAsBytes(getClass, "controls.svg").get
@@ -299,7 +299,7 @@ class CesiumTrackRoute (val parent: ParentActor, val config: Config) extends Tra
 
       const trackPointSize = ${_int("track-point-size", 5)};
       const trackPointOutlineColor = Cesium.Color.fromCssColorString('${_string("track-point-outline-color", "black")}');
-      const trackPointOutlineWidth = ${_double("track-point-outline-width", 1.5)};
+      const trackPointOutlineWidth = ${_double("track-point-outline-width", 1)};
       const trackPointDC = new Cesium.DistanceDisplayCondition( $trackPointDist, Number.MAX_VALUE);
 
       const trackModel = '${CesiumTrackRoute.modelResource}';
