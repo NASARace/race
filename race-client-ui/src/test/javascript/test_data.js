@@ -113,6 +113,12 @@
      testPush(buffer, 5, 4);
      assert(buffer.at(0) == 2);
 
+     var i = 0;
+     buffer.forEach(v => {
+         console.log("[" + i + "]: " + v);
+         i++;
+     });
+
      testDropFirst(buffer, 2, 2);
      testDropLast(buffer, 1, 1);
      assert(buffer.at(0) == 4);

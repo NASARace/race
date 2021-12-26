@@ -103,9 +103,10 @@ package object ui {
     div(mods: _*)
   }
 
-  def uiList (eid: UiID, maxRows: Int, clickAction: String=NoAction, contextMenuAction: String=NoAction): Text.TypedTag[String] = {
+  def uiList (eid: UiID, maxRows: Int, selectAction: String=NoAction, clickAction: String=NoAction, contextMenuAction: String=NoAction): Text.TypedTag[String] = {
     var mods = List(cls:="ui_list", id:=eid, data("rows"):=maxRows)
     if (clickAction.nonEmpty) mods = (onclick:=clickAction) :: mods
+    if (selectAction.nonEmpty) mods = (data("onselect"):=selectAction) :: mods
     if (contextMenuAction.nonEmpty) mods = (oncontextmenu:=contextMenuAction) :: mods
     div(mods: _*)
   }

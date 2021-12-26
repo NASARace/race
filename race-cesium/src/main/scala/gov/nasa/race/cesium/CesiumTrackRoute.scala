@@ -230,7 +230,7 @@ class CesiumTrackRoute (val parent: ParentActor, val config: Config) extends Tra
 
         // app config and script
         cssLink("cesiumTracks.css"),
-        extScript("config.js"),
+        extModule("config.js"),
         extModule("cesiumTracks.js") // the SPA script
       ),
       body(onload:="app.initialize()", onunload:="app.shutdown()")(
@@ -248,7 +248,8 @@ class CesiumTrackRoute (val parent: ParentActor, val config: Config) extends Tra
               uiNumField("alt", "console.view.altitude")
             ),
             uiRowContainer()(
-              uiButton("Reset", "app.setHomeView()"),
+              uiCheckBox("fullscreen", "app.toggleFullScreen(event)"),
+              uiButton("Home", "app.setHomeView()"),
               uiButton("Down", "app.setDownView()")
             )
           ),
@@ -256,9 +257,9 @@ class CesiumTrackRoute (val parent: ParentActor, val config: Config) extends Tra
             uiTextInput("query","console.tracks.query", "app.queryTracks(event)", "enter track query"),
             uiList("console.tracks.list", 10,"app.selectTrack(event)"),
             uiRowContainer()(
-              uiCheckBox("show path", "app.toggleShowPath(event)"),
-              uiRadio("line", "app.setLinePath(event)"),
-              uiRadio("wall", "app.setWallPath(event)"),
+              uiCheckBox("show path", "app.toggleShowPath(event)", "console.tracks.path"),
+              uiRadio("line", "app.setLinePath(event)", "console.tracks.line"),
+              uiRadio("wall", "app.setWallPath(event)", "console.tracks.wall"),
               uiButton("Reset", "app.resetPaths()")
             )
           ),
@@ -285,49 +286,50 @@ class CesiumTrackRoute (val parent: ParentActor, val config: Config) extends Tra
     val trackPointDist = _int("track-point-dist", 120000)
 
     s"""
-      //--- server provided client configuration
+      //--- server provided client configuration module
 
-      Cesium.Ion.defaultAccessToken = '${config.getVaultableString("access-token")}';
-      const wsURL = 'ws://${requestUri.authority}/$requestPrefix/ws/$wsToken';
+      export const cesiumAccessToken = '${config.getVaultableString("access-token")}';
 
-      const trackColor = Cesium.Color.fromCssColorString('${_string("color", trackColor)}');
+      export const wsURL = 'ws://${requestUri.authority}/$requestPrefix/ws/$wsToken';
 
-      const trackLabelFont = '${_string("track-label", "16px sans-serif")}';
-      const trackLabelOffset = new Cesium.Cartesian2( $trackLabelOffsetX, ${_int("track-label-offset.y", 12)});
-      const trackLabelBackground = Cesium.Color.fromCssColorString('${_string( "track-label-bg", "black")}');
-      const trackLabelDC = new Cesium.DistanceDisplayCondition( 0, ${_int("track-label-dist", 200000)});
+      export const trackColor = Cesium.Color.fromCssColorString('${_string("color", trackColor)}');
 
-      const trackPointSize = ${_int("track-point-size", 5)};
-      const trackPointOutlineColor = Cesium.Color.fromCssColorString('${_string("track-point-outline-color", "black")}');
-      const trackPointOutlineWidth = ${_double("track-point-outline-width", 1)};
-      const trackPointDC = new Cesium.DistanceDisplayCondition( $trackPointDist, Number.MAX_VALUE);
+      export const trackLabelFont = '${_string("track-label", "16px sans-serif")}';
+      export const trackLabelOffset = new Cesium.Cartesian2( $trackLabelOffsetX, ${_int("track-label-offset.y", 12)});
+      export const trackLabelBackground = Cesium.Color.fromCssColorString('${_string( "track-label-bg", "black")}');
+      export const trackLabelDC = new Cesium.DistanceDisplayCondition( 0, ${_int("track-label-dist", 200000)});
 
-      const trackModel = '${CesiumTrackRoute.modelResource}';
-      const trackModelSize = ${_int( "track-model-size", 20) };
-      const trackModelDC = new Cesium.DistanceDisplayCondition( 0, $trackPointDist);
-      const trackModelOutlineColor = Cesium.Color.fromCssColorString('${_string("track-model-outline-color", "black")}');
-      const trackModelOutlineWidth = ${_double("track-model-outline-width", 2.0)};
-      const trackModelOutlineAlpha = ${_double("track-model-outline-alpha", 1.0)};
+      export const trackPointSize = ${_int("track-point-size", 5)};
+      export const trackPointOutlineColor = Cesium.Color.fromCssColorString('${_string("track-point-outline-color", "black")}');
+      export const trackPointOutlineWidth = ${_double("track-point-outline-width", 1)};
+      export const trackPointDC = new Cesium.DistanceDisplayCondition( $trackPointDist, Number.MAX_VALUE);
 
-      const trackInfoFont = '${_string("track-info", "14px sans-serif")}';
-      const trackInfoOffset = new Cesium.Cartesian2( ${_int("track-info-offset.x", trackLabelOffsetX)}, ${_int("track-info-offset.y", trackLabelOffsetY + 16)});
-      const trackInfoDC = new Cesium.DistanceDisplayCondition( 0, ${_int("track-info-dist", 80000)});
+      export const trackModel = '${CesiumTrackRoute.modelResource}';
+      export const trackModelSize = ${_int( "track-model-size", 20) };
+      export const trackModelDC = new Cesium.DistanceDisplayCondition( 0, $trackPointDist);
+      export const trackModelOutlineColor = Cesium.Color.fromCssColorString('${_string("track-model-outline-color", "black")}');
+      export const trackModelOutlineWidth = ${_double("track-model-outline-width", 2.0)};
+      export const trackModelOutlineAlpha = ${_double("track-model-outline-alpha", 1.0)};
 
-      const trackPathLength = ${_int("track-path-length", 0)};
-      const trackPathDC = new Cesium.DistanceDisplayCondition( 0, ${_int("track-path-dist", 1000000)});
-      const trackPathColor = Cesium.Color.fromCssColorString('${_string("track-path-color", trackColor)}');
-      const trackPathWidth = ${_int("track-path-width", 0)};
+      export const trackInfoFont = '${_string("track-info", "14px sans-serif")}';
+      export const trackInfoOffset = new Cesium.Cartesian2( ${_int("track-info-offset.x", trackLabelOffsetX)}, ${_int("track-info-offset.y", trackLabelOffsetY + 16)});
+      export const trackInfoDC = new Cesium.DistanceDisplayCondition( 0, ${_int("track-info-dist", 80000)});
 
-      const imageryProvider = new Cesium.OpenStreetMapImageryProvider({url: '$imagery'});
+      export const trackPathLength = ${_int("track-path-length", 0)};
+      export const trackPathDC = new Cesium.DistanceDisplayCondition( 0, ${_int("track-path-dist", 1000000)});
+      export const trackPathColor = Cesium.Color.fromCssColorString('${_string("track-path-color", trackColor)}');
+      export const trackPathWidth = ${_int("track-path-width", 1)};
+
+      export const imageryProvider = new Cesium.OpenStreetMapImageryProvider({url: '$imagery'});
       imageryProvider.defaultBrightness = ${_double("maptile-brightness", 0.6)};
       imageryProvider.defaultContrast = ${_double("maptile-contrast", 1.5)};
       imageryProvider.defaultHue = Cesium.Math.toRadians(${_int("maptile-hue", 0)}); // 220 for reddish
       imageryProvider.defaultSaturation = ${_double("maptile-saturation", 1.0)};
       imageryProvider.defaultGamma = ${_double("maptile-gamma", 1.0)};
 
-      const terrainProvider = new Cesium.ArcGISTiledElevationTerrainProvider({url: '$terrain'});
+      export const terrainProvider = new Cesium.ArcGISTiledElevationTerrainProvider({url: '$terrain'});
 
-      const maxTraceLength = ${_int("max-trace-length", 100)};
+      export const maxTraceLength = ${_int("max-trace-length", 200)};
      """
   }
 

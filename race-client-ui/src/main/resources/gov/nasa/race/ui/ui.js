@@ -26,6 +26,39 @@ export function initialize() {
     return true;
 }
 
+//--- fullscreen
+
+var isFullScreen = false;
+
+export function enterFullScreen() {
+    if (!isFullScreen) {
+        isFullScreen = true;
+
+        var e = document.documentElement;
+        if (e.requestFullscreen) {
+            e.requestFullscreen();
+        } else if (e.webkitRequestFullscreen) { /* Safari */
+            e.webkitRequestFullscreen();
+        }
+    }
+}
+
+export function exitFullScreen() {
+    if (isFullScreen) {
+        isFullScreen = false;
+        if (document.exitFullscreen) {
+            document.exitFullscreen();
+        } else if (document.webkitExitFullscreen) { /* Safari */
+            document.webkitExitFullscreen();
+        }
+    }
+}
+
+export function toggleFullScreen() {
+    if (isFullScreen) exitFullScreen();
+    else enterFullScreen();
+}
+
 //--- windows
 
 function _initializeWindows() {
@@ -786,9 +819,11 @@ function _initializeCheckboxes() {
         let labelText = e.dataset.label;
         if (_hasNoChildElements(e) && labelText) {
             let btn = _createElement("DIV", "ui_checkbox_button");
+            btn.addEventListener("click", _clickCheckBox);
             e.appendChild(btn);
 
             let lbl = _createElement("DIV", "ui_checkbox_label", labelText);
+            lbl.addEventListener("click", _clickCheckBox);
             e.appendChild(lbl);
 
             e.setAttribute("tabindex", "0");
@@ -796,8 +831,15 @@ function _initializeCheckboxes() {
     }
 }
 
-export function toggleCheckbox(o) {
-    let checkbox = getCheckbox(o);
+function _clickCheckBox(event) {
+    let checkbox = getCheckBox(event);
+    if (checkbox) {
+        _toggleClass(checkbox, "checked");
+    }
+}
+
+export function toggleCheckBox(o) {
+    let checkbox = getCheckBox(o);
     if (checkbox) {
         return _toggleClass(checkbox, "checked");
     }
@@ -805,14 +847,14 @@ export function toggleCheckbox(o) {
 }
 
 export function setCheckBox(o, check = true) {
-    let e = getCheckbox(o);
+    let e = getCheckBox(o);
     if (e) {
-        if (check) e.classList.add("checked");
+        if (check) _addClass(e, "checked");
         else e.classList.remove("checked");
     }
 }
 
-export function getCheckbox(o) {
+export function getCheckBox(o) {
     let e = _elementOf(o);
     if (e) {
         let eCls = e.classList;
@@ -823,8 +865,8 @@ export function getCheckbox(o) {
     return undefined;
 }
 
-export function isCheckboxSelected(o) {
-    let e = getCheckbox(o);
+export function isCheckBoxSelected(o) {
+    let e = getCheckBox(o);
     if (e) {
         return e.classList.contains("checked");
     }
@@ -839,12 +881,28 @@ function _initializeRadios() {
         let labelText = e.dataset.label;
         if (_hasNoChildElements(e) && labelText) {
             let btn = _createElement("DIV", "ui_radio_button");
+            btn.addEventListener("click", _clickRadio);
             e.appendChild(btn);
 
             let lbl = _createElement("DIV", "ui_radio_label", labelText);
+            lbl.addEventListener("click", _clickRadio);
             e.appendChild(lbl);
 
             e.setAttribute("tabindex", "0");
+        }
+    }
+}
+
+function _clickRadio(event) {
+    let e = getRadio(event);
+    if (e) {
+        if (!e.classList.contains("selected")) {
+            for (let r of e.parentElement.getElementsByClassName("ui_radio")) {
+                if (r !== e) {
+                    if (r.classList.contains("selected")) r.classList.remove("selected");
+                }
+            }
+            e.classList.add("selected");
         }
     }
 }
@@ -858,7 +916,7 @@ export function selectRadio(o) {
                     if (r.classList.contains("selected")) r.classList.remove("selected");
                 }
             }
-            e.classList.add("selected");
+            _addClass(e, "selected");
         }
         return true;
     } else {
@@ -885,10 +943,15 @@ export function getRadio(o) {
     return undefined;
 }
 
-export function clearRadiosOf(o) {
+export function clearRadioGroup(o) {
     let e = _elementOf(o);
-    if (e) {
-        for (let r of e.getElementsByClassName("ui_radio")) r.classList.remove("selected");
+    let n = 0;
+    while (n == 0 && e) {
+        for (let r of e.getElementsByClassName("ui_radio")) {
+            r.classList.remove("selected");
+            n++;
+        }
+        e = e.parentElement;
     }
 }
 
@@ -904,7 +967,15 @@ function _initializeLists() {
         e.style.maxHeight = `calc(${nRows} * (${itemHeight} + ${itemPadding}))`; // does not include padding, borders or margin
         e.setAttribute("tabindex", "0");
         if (e.firstElementChild && e.firstElementChild.classList.contains("ui_popup_menu")) _hoistChildElement(e.firstElementChild);
-        e._uiSelectedItem = undefined; // we add a property to keep track of selections
+
+        let selectAction = _dataAttrValue(e, "onselect");
+        if (selectAction) {
+            e.addEventListener("selectionChanged", Function("event", selectAction));
+            e._uiSelectAction = selectAction;
+        }
+
+        // element state
+        e._uiSelectedItemElement = null; // we add a property to keep track of selections
         e._uiMapFunc = item => item.toString(); // item => itemElement text
         e._uiItemMap = new Map(); // item -> itemElement
     }
@@ -971,7 +1042,7 @@ function _cloneRowPrototype(proto) {
     return e;
 }
 
-function _createListItem(e, item, rowProto = undefined) {
+function _createListItemElement(e, item, rowProto = undefined) {
     let ie = undefined;
 
     if (rowProto) {
@@ -991,10 +1062,7 @@ export function setListItems(o, items) {
     let e = getList(o);
     if (e) {
         // TODO - do we have to store/restore scrollLeft/scrollTop ?
-        if (e._uiSelectedItem) {
-            e._uiSelectedItem.classList.remove("selected");
-            e._uiSelectedItem = undefined;
-        }
+        _setSelectedItemElement(e, null);
 
         let i = 0;
         let ies = e.children; // the ui_list_item children
@@ -1005,7 +1073,7 @@ export function setListItems(o, items) {
             if (i < i1) { // replace existing element
                 _setListItem(e, ies[i], item);
             } else { // append new element
-                let ie = _createListItem(e, item, proto);
+                let ie = _createListItemElement(e, item, proto);
                 e.appendChild(ie);
             }
             i++;
@@ -1031,10 +1099,10 @@ export function setSelectedListItem(o, item) {
 export function getSelectedListItem(o) {
     let listBox = getList(o);
     if (listBox) {
-        let sel = listBox._uiSelectedItem;
+        let sel = listBox._uiSelectedItemElement;
         if (sel) {
             return sel._uiItem;
-        } else return undefined;
+        } else return null;
 
     } else throw "not a list";
 }
@@ -1052,7 +1120,7 @@ export function insertListItem(o, item, idx) {
     let e = getList(o);
     if (e) {
         let proto = e._uiRowPrototype;
-        let ie = _createListItem(e, item, proto);
+        let ie = _createListItemElement(e, item, proto);
         if (idx < e.childElementCount) {
             e.insertBefore(ie, e.children[idx]);
         } else {
@@ -1074,18 +1142,10 @@ export function updateListItem(o, item) {
 export function removeListItem(o, item) {
     let e = getList(o);
     if (e) {
-        let ecs = e.children;
-        let n = e.childElementCount;
-        for (var i = 0; i < n; i++) {
-            let ec = ecs[i];
-            if (e._isItem(ec, item)) {
-                for (let j = i + 1; j < n; j++) {
-                    ecs[j]._uiItemIndex = j - 1;
-                }
-                if (e._uiSelectedItem === ec) e._uiSelectedItem = undefined;
-                e.removeChild(ec);
-                return;
-            }
+        let ie = e._uiItemMap.get(item);
+        if (ie) {
+            if (e._uiSelectedItemElement === ie) _setSelectedItemElement(e, null);
+            e.removeChild(ie);
         }
     }
 }
@@ -1098,10 +1158,35 @@ export function removeLastNListItems(o, n) {
 }
 
 function _setSelectedItemElement(listBox, itemElement) {
-    let prevItem = listBox._uiSelectedItem;
-    if (prevItem) prevItem.classList.remove("selected");
-    listBox._uiSelectedItem = itemElement;
-    itemElement.classList.add("selected");
+    let prevItem = null;
+    let nextItem = null;
+
+    let prevItemElem = listBox._uiSelectedItemElement;
+    if (prevItemElem !== itemElement) {
+        if (prevItemElem) {
+            prevItem = prevItemElem._uiItem;
+            _removeClass(prevItemElem, "selected");
+        }
+
+        if (itemElement) {
+            nextItem = itemElement._uiItem;
+            listBox._uiSelectedItemElement = itemElement;
+            _addClass(itemElement, "selected");
+        } else {
+            listBox._uiSelectedItemElement = null;
+        }
+
+        if (listBox._uiSelectAction) {
+            let event = new CustomEvent("selectionChanged", {
+                bubbles: true,
+                detail: {
+                    curSelection: nextItem,
+                    prevSelection: prevItem
+                }
+            });
+            listBox.dispatchEvent(event);
+        }
+    }
 }
 
 function _selectListItem(event) {
@@ -1113,21 +1198,18 @@ function _selectListItem(event) {
     }
 }
 
-
 export function clearSelectedListItem(o) {
     let e = getList(o);
     if (e) {
-        let sel = e._uiSelectedItem;
-        if (sel) sel.classList.remove("selected");
-        e._uiSelectedItem = undefined;
+        _setSelectedItemElement(e, null);
     }
 }
 
 export function clearList(o) {
     let e = getList(o);
     if (e) {
+        _setSelectedItemElement(e, null);
         _removeChildrenOf(e);
-        e._uiSelectedItem = undefined;
     }
 }
 
@@ -1272,7 +1354,7 @@ export function toggleMenuItemCheck(event) {
 }
 
 
-//--- private functions
+//--- general utility functions
 
 function _elementOf(o) {
     if (typeof o === 'string' || o instanceof String) {
@@ -1300,6 +1382,14 @@ function _toggleClass(element, cls) {
         element.classList.add(cls);
         return true;
     }
+}
+
+function _addClass(element, cls) {
+    if (!element.classList.contains(cls)) element.classList.add(cls);
+}
+
+function _removeClass(element, cls) {
+    element.classList.remove(cls);
 }
 
 function _containsAnyClass(element, ...cls) {
@@ -1332,6 +1422,15 @@ function _rootVarFloat(varName, defaultValue = 0.0) {
     } else {
         return defaultValue;
     }
+}
+
+function _dataAttrValue(element, varName, defaultValue = "") {
+    let data = element.dataset;
+    if (data) {
+        let v = data[varName];
+        if (v) return v;
+    }
+    return defaultValue;
 }
 
 function _intDataAttrValue(element, varName, defaultValue = 0) {
