@@ -45,7 +45,11 @@ package object ui {
   def fullWindowCesiumContainer(): Text.TypedTag[String] = div(id:="cesiumContainer", cls:="ui_full_window")
 
   // shortcuts for UI controls
-  def uiIcon (src: String, action: String, eid: UiID): Text.TypedTag[String] = div(cls:="ui_icon", id:=eid, data("src"):=src, onclick:=action)
+  def uiIcon (src: String, action: String, eid: UiID=NoId): Text.TypedTag[String] = {
+    var mods = List(cls:="ui_icon", data("src"):= src, onclick:=action)
+    if (eid.nonEmpty) mods = (id:=eid) :: mods
+    div(mods: _*)
+  }
 
   def uiWindow (title: String, eid: UiID=NoId): Text.TypedTag[String] = {
     var mods = List(cls:="ui_window", data("title"):=title)
@@ -121,6 +125,20 @@ package object ui {
     div(mods: _*)
   }
 
+  def uiPopupMenu (eid: UiID=NoId): Text.TypedTag[String] = {
+    var mods = List(cls:="ui_popup_menu")
+    if (eid.nonEmpty) mods = (id:=eid) :: mods
+    div(mods: _*)
+  }
+
+  def uiMenuItem (text: String, action: String=NoAction, eid: UiID=NoId, isChecked: Boolean=false, isDisabled: Boolean=false): Text.TypedTag[String] = {
+    var classes = "ui_menuitem"
+    if (isDisabled) classes += " disabled"
+    if (isChecked) classes += " checked"
+    var mods = List(cls:=classes)
+    if (action.nonEmpty) mods = (onclick:=action) :: mods
+    div(mods: _*)(text)
+  }
   
   // our client-side artifacts
   lazy val uiScript: String = ClassUtils.getResourceAsUtf8String(getClass(), "ui.js").get

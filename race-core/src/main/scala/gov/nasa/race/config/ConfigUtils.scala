@@ -38,6 +38,8 @@ import scala.concurrent.duration._
  */
 object ConfigUtils {
 
+  val keyValRE = """ *([^ ]+) *: *([^ ]+)""".r
+
   def showConfig( config: Config) = {
     config.root.render( ConfigRenderOptions.defaults().setComments(false).setOriginComments(false))
   }
@@ -277,6 +279,21 @@ object ConfigUtils {
         }
       } catch {
         case _: ConfigException.Missing => fallBack
+      }
+    }
+
+
+
+    def getKeyValuePairsOrElse(key: String, fallback: Seq[(String,String)]): Seq[(String,String)] = {
+      try {
+        conf.getStringList(key).asScala.toSeq.map { s=>
+          keyValRE.findFirstIn(s) match {
+            case Some(keyValRE(k,v)) => (k,v)
+            case _ => throw new ConfigException.Generic(s"illegal key/value spec: '$s'")
+          }
+        }
+      } catch {
+        case _: ConfigException.Missing => fallback
       }
     }
 

@@ -81,10 +81,10 @@ class DataClientRaceActor(val dataClient: RaceDataClient, val config: Config) ex
     * override if concrete actor type has to consolidate data
     */
   override def handleMessage: Receive = {
-    case BusEvent(_, data: Any, _) => setClientData(data)
+    case e: BusEvent => setClientData(e)
     case msg: String => setClientData(msg)  // mostly for testing purposes
 
-      // we get this directly from our dataClient to publish on our write-to channel
+      // outbound (directly sent from dataClient) - publish to our write-to channel
     case PublishRaceData(data) => publish(data)
   }
 }

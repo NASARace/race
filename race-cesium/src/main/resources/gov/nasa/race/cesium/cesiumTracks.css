@@ -5,13 +5,33 @@ html, body {
     margin: 0;
 }
 
-#console {
+#tracks {
     left: 100px;
     top: 300px;
     /*width: 15rem;*/
 }
 
-#console_icon {
+#time {
+    left: 400px;
+    top: 300px;
+}
+
+#view {
+    left: 600px;
+    top: 300px;
+}
+
+#track_icon {
     left: 10px;
+    top: 10px;
+}
+
+#time_icon {
+    left: 50px;
+    top: 10px;
+}
+
+#view_icon {
+    left: 90px;
     top: 10px;
 }

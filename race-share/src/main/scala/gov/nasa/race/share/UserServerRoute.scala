@@ -26,7 +26,7 @@ import com.typesafe.config.Config
 import gov.nasa.race.common.ConstAsciiSlice.asc
 import gov.nasa.race.common.{BatchedTimeoutMap, BufferedStringJsonPullParser, ByteSlice, JsonParseException, JsonSerializable, JsonWriter, TimeoutSubject}
 import gov.nasa.race.config.ConfigUtils._
-import gov.nasa.race.core.{ParentActor, RaceDataClient}
+import gov.nasa.race.core.{BusEvent, ParentActor, RaceDataClient}
 import gov.nasa.race.http._
 import gov.nasa.race.uom.Time.Milliseconds
 import gov.nasa.race.uom.{DateTime, Time}
@@ -362,13 +362,13 @@ class UserServerRoute (parent: ParentActor, config: Config) extends AuthSiteRout
     * NOTE this is executed async - avoid data races
     */
   override def receiveData: Receive = {
-    case n: Node => node = Some(n)
+    case BusEvent(_,n: Node,_) => node = Some(n)
 
       //--- those go directly out to connected clients
-    case cdc: ColumnDataChange => pushMsg(cdc)
-    case cc: ConstraintChange => pushMsg(cc)
-    case nrc: NodeReachabilityChange => pushMsg(nrc)
-    case uc: UpstreamChange => pushMsg(uc)
+    case BusEvent(_,cdc: ColumnDataChange,_) => pushMsg(cdc)
+    case BusEvent(_,cc: ConstraintChange,_) => pushMsg(cc)
+    case BusEvent(_,nrc: NodeReachabilityChange,_) => pushMsg(nrc)
+    case BusEvent(_,uc: UpstreamChange,_) => pushMsg(uc)
   }
 
   def pushMsg (o: JsonSerializable): Unit = synchronized {

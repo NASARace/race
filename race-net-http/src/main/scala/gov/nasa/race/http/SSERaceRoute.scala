@@ -30,9 +30,8 @@ import java.net.InetSocketAddress
 import scala.concurrent.Future
 import scala.util.{Failure, Success}
 import scala.collection.Seq
-
 import gov.nasa.race.config.ConfigUtils._
-import gov.nasa.race.core.RaceDataClient
+import gov.nasa.race.core.{BusEvent, RaceDataClient}
 import gov.nasa.race.ifSome
 
 
@@ -91,7 +90,7 @@ trait PushSSERoute extends SSERaceRoute with SourceQueueOwner[ServerSentEvent] w
     * NOTE - this is executed from the actor thread and can modify connections so we have to synchronize
     */
   def receiveData: Receive = {
-    case data: Any =>
+    case BusEvent(_,data: Any,_) =>
       synchronized {
         toSSE(data).foreach(push)
       }

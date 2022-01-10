@@ -29,7 +29,7 @@ import akka.stream.scaladsl.SourceQueueWithComplete
 import com.typesafe.config.Config
 import gov.nasa.race.common.ConstAsciiSlice.asc
 import gov.nasa.race.common.{BufferedStringJsonPullParser, JsonParseException, JsonSerializable, JsonWriter, SyncJsonWriter}
-import gov.nasa.race.core.{ContinuousTimeRaceActor, ParentActor, Ping, PingParser, Pong, RaceDataClient}
+import gov.nasa.race.core.{BusEvent, ContinuousTimeRaceActor, ParentActor, Ping, PingParser, Pong, RaceDataClient}
 import gov.nasa.race.http.{BasicPushWSRaceRoute, BasicWSContext, PushWSRaceRoute, SiteRoute, SocketConnection}
 import gov.nasa.race.{ifSome, withSomeOrElse}
 import gov.nasa.race.uom.DateTime
@@ -90,7 +90,7 @@ class NodeServerRoute(val parent: ParentActor, val config: Config)
     * NOTE this is executed async - avoid data races
     */
   override def receiveData: Receive = {
-    case newNode: Node =>
+    case BusEvent(_,newNode: Node,_) =>
       node = Some(newNode)
       if (!parser.isDefined) {
         parser = Some(new IncomingMessageParser(newNode))
@@ -98,9 +98,9 @@ class NodeServerRoute(val parent: ParentActor, val config: Config)
       }
       // no need to send anything since we still get CDCs for changes and node sync is initiated by child nodes
 
-    case cdc: ColumnDataChange => processColumnDataChange(cdc)
+    case BusEvent(_,cdc: ColumnDataChange,_) => processColumnDataChange(cdc)
 
-    case nrc: NodeReachabilityChange => processNodeReachabilityChange(nrc)
+    case BusEvent(_,nrc: NodeReachabilityChange,_) => processNodeReachabilityChange(nrc)
   }
 
   // TODO - this is not very efficient if we don't filter rows. We might move the filtering at least into the serializer

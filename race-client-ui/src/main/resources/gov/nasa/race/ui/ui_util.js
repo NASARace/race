@@ -133,9 +133,25 @@ export function toUtf8Array(str) {
 }
 
 
-/**
- * Date utilities
- */
+//--- string formatting
+
+export function toRightAlignedString(n,minChars) {
+    let s = n.toString();
+    if (s.length < minChars) s = ' '.repeat(minChars - s.length) + s;
+    return s;
+}
+
+//--- unit conversions
+
+export function metersPerSecToKnots (spd) {
+    return (spd * 1.94384449);
+}
+
+export function metersToFlightLevel (alt) {
+    return Math.round(alt * 0.00656167979) * 5;
+}
+
+//--- date utilities
 
 // [h+]:mm:ss
 export function toHMSTimeString(millis) {
@@ -189,12 +205,27 @@ export function timeFormat(timeOpts) {
     return new Intl.DateTimeFormat('en-US', to);
 }
 
-export function toTimeString(d, fmt) {
-    if (!fmt) fmt = defaultTimeFormat;
+export function toTimeString(d, fmt = defaultTimeFormat) {
+    if (d){
+        return fmt.format(d);
+    } else {
+        return "-";
+    }
+}
+
+export function toLocalTimeString(d, fmt = defaultLocalTimeFormat) {
     return fmt.format(d);
 }
 
-export function toLocalTimeString(d, fmt) {
-    if (!fmt) fmt = defaultLocalTimeFormat;
-    return fmt.format(d);
+//--- string interning support
+const _uiInterned = new Map();
+
+export function intern(s) {
+    let sInterned = _uiInterned.get(s);
+    if (!sInterned) {
+        _uiInterned.set(s,s);
+        return s;
+    } else {
+        return sInterned;
+    }
 }

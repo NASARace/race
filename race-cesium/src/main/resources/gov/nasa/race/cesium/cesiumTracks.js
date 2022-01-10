@@ -20,9 +20,10 @@ class TrackAssets {
 
 // object that wraps server-supplied track info with our locally kept trace and display assets
 class TrackEntry {
-    constructor(track, assets) {
+    constructor(track, assets, trackSource) {
         this.track = track;
         this.assets = assets;
+        this.trackSource = trackSource;
 
         this.id = track.label;
         this.trace = new CircularBuffer(config.maxTraceLength);
@@ -40,33 +41,57 @@ class TrackEntry {
     }
 }
 
+class TrackSource {
+    constructor(id){
+        this.id = id;
+
+        this.show = true;
+        this.trackEntries = new Map();
+        this.date = 0; // last change of trackEntries
+        this.dataSource = new Cesium.CustomDataSource(id); // display list for Cesium track entities (don't forget to add to viewer)
+
+        // we keep those in different data sources so that we can control Z-order and 
+        // bulk enable/disable display more efficiently
+        this.trackInfoDataSource = new Cesium.CustomDataSource(id + '-trackInfo');    
+        this.trajectoryDataSource = new Cesium.CustomDataSource(id + '-trajectories');
+
+        this.entityPrototype = null;
+
+        this.trackEntryList = new SkipList( // id-sorted display list for trackEntryView
+            5, // max depth
+            (a, b) => a.id < b.id, // sort function
+            (a, b) => a.id == b.id // identity function
+        );
+    }
+
+    setVisible (isVisible) {
+        if (isVisible != this.show) {
+            this.dataSource.show = isVisible;
+            this.trackInfoDataSource.show = isVisible;
+            this.trajectoryDataSource.show = isVisible;
+            this.show = isVisible;
+        }
+    }
+}
+
 var ws = undefined;
 
 var viewer = undefined;
 var camera = undefined;
 
-const minLabelDepth = 300.0;
-
-// we keep those in different data sources so that we can control Z-order and 
-// bulk enable/disable display more efficiently
-var trackInfoDataSource = undefined;
-var trajectoryDataSource = undefined;
-
-const trackEntries = new Map(); // id -> TrackEntry
-const trackEntryList = new SkipList( // id-sorted list of track objects
-    5, // max depth
-    (a, b) => a.id < b.id, // sort function
-    (a, b) => a.id == b.id // identity function
-);
+var trackSources = []; // ordered list of TrackSource objects
+var selectedTrackSource = undefined;
 
 var trackEntryFilter = noTrackEntryFilter;
-var trackEntryView = undefined; // our UI element to display trackEntries
+var trackEntryView = undefined; // the UI element to display trackEntries
+var trackSourceView = undefined; // the UI element for our track sources
 
 function noTrackEntryFilter(track) { return true; } // all tracks are displayed
 
 // the onload function
 app.initialize = function() {
     if (ui.initialize()) {
+        trackSourceView = initTrackSourceView();
         trackEntryView = initTrackEntryView();
 
         initCesium();
@@ -76,17 +101,28 @@ app.initialize = function() {
     }
 }
 
-function initTrackEntryView() {
-    let view = ui.getList("console.tracks.list");
+function initTrackSourceView() {
+    let view = ui.getList("tracks.sources");
+    if (view) {
+        ui.setListItemDisplayColumns(view, ["fit"], [
+            { name: "show", width: "1rem", attrs: [], map: e => e.show ? "●" : "" },
+            { name: "id", width: "5rem", attrs: ["alignLeft"], map: e => e.id },
+            { name: "size", width: "3rem", attrs: ["fixed", "alignRight"], map: e => e.trackEntries.size.toString() },
+            { name: "date", width: "6rem", attrs: ["fixed", "alignRight"], map: e => util.toLocalTimeString(e.date)}
+        ]);
+    }
+    return view;
+}
 
+function initTrackEntryView() {
+    let view = ui.getList("tracks.list");
     if (view) {
         ui.setListItemDisplayColumns(view, ["fit"], [
             { name: "assets", width: "2rem", attrs: [], map: te => te.assetDisplay() },
             { name: "id", width: "5rem", attrs: ["alignLeft"], map: te => te.id },
-            { name: "date", width: "5rem", attrs: ["fixed"], map: te => util.toLocalTimeString(te.track.date) }
+            { name: "date", width: "5rem", attrs: ["fixed", "alignRight"], map: te => util.toLocalTimeString(te.track.date) }
         ]);
     }
-
     return view;
 }
 
@@ -116,14 +152,6 @@ function initCesium() {
 
     viewer.resolutionScale = window.devicePixelRatio; // 2.0
     viewer.scene.fxaa = true;
-    //viewer.scene.fxaaOrderIndependentTranslucency = false;
-
-    trackInfoDataSource = new Cesium.CustomDataSource('trackInfo');
-    viewer.dataSources.add(trackInfoDataSource);
-
-    trajectoryDataSource = new Cesium.CustomDataSource('trajectories');
-    viewer.dataSources.add(trajectoryDataSource);
-    viewer.dataSources.lowerToBottom(trajectoryDataSource);
 
     // event listeners
     viewer.camera.moveEnd.addEventListener(updateCamera);
@@ -134,23 +162,23 @@ function initCesium() {
 }
 
 // encapsulate in which data source we keep Cesium entities
-function addTrackSymbolEntity(e) {
-    viewer.entities.add(e);
+function addTrackSymbolEntity(ds,e) {
+    ds.entities.add(e);
 }
 
-function removeTrackSymbolEntity(e) {
-    viewer.entities.remove(e);
+function removeTrackSymbolEntity(ds,e) {
+    ds.entities.remove(e);
 }
 
-function addTrackInfoEntity(e) {
-    trackInfoDataSource.entities.add(e);
+function addTrackInfoEntity(ds,e) {
+    ds.entities.add(e);
 }
 
-function removeTrackInfoEntity(e) {
-    trackInfoDataSource.entities.remove(e);
+function removeTrackInfoEntity(ds,e) {
+    ds.entities.remove(e);
 }
 
-function addTrajectoryEntity(e) {
+function addTrajectoryEntity(ds,e) {
     //--- begin flicker hack: avoid flicker for single ConstantProperty positions update (CallbackProperty has position errors)
     let e0 = Object.assign({}, e);
     e0.id = e.id + "-0";
@@ -161,22 +189,26 @@ function addTrajectoryEntity(e) {
         e0.polyline = e.polyline.clone();
         e0.polyline.positions = e.polyline.positions.getValue().slice(0, 2);
     }
-    trajectoryDataSource.entities.add(e0);
+    ds.entities.add(e0);
     //--- end flicker hack
 
-    trajectoryDataSource.entities.add(e);
+    ds.entities.add(e);
 }
 
-function removeTrajectoryEntity(e) {
-    trajectoryDataSource.entities.removeById(e.id + "-0"); // flicker hack
-    trajectoryDataSource.entities.remove(e);
+function removeTrajectoryEntity(ds,e) {
+    ds.entities.removeById(e.id + "-0"); // flicker hack
+    ds.entities.remove(e);
 }
 
 function trackSelection() {
     let sel = viewer.selectedEntity;
-    if (sel && sel.id) {
-        let te = trackEntries.get(sel.id);
-        if (te) ui.setSelectedListItem(trackEntryView, te);
+    if (sel && sel._uiTrackEntry) {
+        let te = sel._uiTrackEntry;
+        if (te.trackSource !== selectedTrackSource) {
+            if (selectedTrackSource) ui.clearSelectedListItem(trackEntryView);
+            ui.setSelectedListItem(trackSourceView, te.trackSource);
+        }
+        ui.setSelectedListItem(trackEntryView, te);
     } else {
         ui.clearSelectedListItem(trackEntryView);
     }
@@ -184,7 +216,7 @@ function trackSelection() {
 
 function updateCamera() {
     let pos = viewer.camera.positionCartographic;
-    ui.setField("console.view.altitude", Math.round(pos.height).toString());
+    ui.setField("view.altitude", Math.round(pos.height).toString());
 }
 
 function updateMouseLocation(e) {
@@ -195,8 +227,8 @@ function updateMouseLocation(e) {
         let longitudeString = Cesium.Math.toDegrees(cartographic.longitude).toFixed(5);
         let latitudeString = Cesium.Math.toDegrees(cartographic.latitude).toFixed(5);
 
-        ui.setField("console.view.latitude", latitudeString);
-        ui.setField("console.view.longitude", longitudeString);
+        ui.setField("view.latitude", latitudeString);
+        ui.setField("view.longitude", longitudeString);
     }
 }
 
@@ -250,20 +282,35 @@ function handleServerMessage(msg) {
         case "setClock":
             handleSetClock(msg.setClock);
             break;
+        case "sources":
+            handleSources(msg.sources);
+            break;
         default:
             console.log("ignoring unknown server message: " + msgType);
     }
 }
 
 function handleSetClock(setClock) {
-    ui.setClock("console.clock.time", setClock.time, setClock.timeScale);
-    ui.resetTimer("console.clock.elapsed", setClock.timeScale);
+    ui.setClock("time.utc", setClock.time, setClock.timeScale);
+    ui.resetTimer("time.elapsed", setClock.timeScale);
     ui.startTime();
 }
 
 function handleCameraMessage(newCamera) {
     camera = newCamera;
     setHomeView();
+}
+
+function handleSources(sources) {
+    trackSources = sources.map( s=> new TrackSource(util.intern(s)));
+
+    //--- add dataSources according to type (track, trackInfo, trajectory) and specified order
+    trackSources.forEach( ts=> viewer.dataSources.add(ts.dataSource));
+    trackSources.forEach( ts=> viewer.dataSources.add(ts.trackInfoDataSource));
+    trackSources.forEach( ts=> viewer.dataSources.add(ts.trajectoryDataSource));
+
+    ui.setListItems(trackSourceView, trackSources);
+    ui.setSelectedListItem(trackSourceView, trackSources[0]);
 }
 
 //--- track messages
@@ -277,69 +324,107 @@ function handleTrackListMessage(tracks) { // bulk update
     for (track of tracks) updateTrackEntries(track);
 }
 
-function updateTrackEntries(track) {
-    let pitch = track.pitch ? track.pitch : 0.0;
-    let roll = track.roll ? track.roll : 0.0;
-    let hpr = Cesium.HeadingPitchRoll.fromDegrees(track.hdg, pitch, roll);
+function updateTrack (track,te,pos,attitude) {
+    let ts = te.trackSource;
+    let trackEntries = ts.trackEntries;
+    let trackEntryList = ts.trackEntryList;
 
-    let pos = Cesium.Cartesian3.fromDegrees(track.lon, track.lat, track.alt);
-    let attitude = Cesium.Transforms.headingPitchRollQuaternion(pos, hpr);
-
-    let te = trackEntries.get(track.label);
-
-    if (te) { // update
-        if (isTrackTerminated(track)) { // remove
-            if (trackEntryFilter(te)) {
-                trackEntryList.remove(te)
+    if (isTrackTerminated(track)) { // remove
+        if (trackEntryFilter(te)) {
+            trackEntryList.remove(te)
+            if (ts === selectedTrackSource){
                 ui.removeListItem(trackEntryView, te);
-                trackEntries.delete(te.id);
             }
-            removeAssets(te);
-
-        } else { // update
-            track.label = te.track.label; // don't store thousands of equal strings
-            te.track = track;
-            te.trace.push(track);
-
-            if (trackEntryFilter(te)) {
-                if (hasTrackIdChanged(track)) {
-                    trackEntryList.remove(te);
-                    ui.removeListItem(trackEntryView, te);
-                    te.id = track.label;
-                    let idx = trackEntryList.insert(te);
-                    ui.insertListItem(trackEntryView, te, idx);
-
-                } else {
-                    ui.updateListItem(trackEntryView, te);
-                }
-
-                if (te.assets.symbol) updateTrackSymbolAsset(te, pos, attitude);
-                if (te.assets.info) updateTrackInfoAsset(te, pos);
-                if (te.assets.trajectory) updateTrajectoryAsset(te);
-            }
+            trackEntries.delete(te.id);
         }
+        removeAssets(te);
 
-    } else { // new one
-        //console.log("add track: " + JSON.stringify(track));
-        let assets = new TrackAssets(null, null, null);
-        te = new TrackEntry(track, assets);
-        trackEntries.set(te.id, te);
+    } else { // update
+        te.track = track;
         te.trace.push(track);
 
+        if (te.assets.symbol) updateTrackSymbolAsset(te, pos, attitude);
+        if (te.assets.info) updateTrackInfoAsset(te, pos);
+        if (te.assets.trajectory) updateTrajectoryAsset(te);
+
+        if (trackEntryFilter(te)) {
+            if (hasTrackIdChanged(track)) {
+                trackEntryList.remove(te);
+                if (ts === selectedTrackSource) {
+                    ui.removeListItem(trackEntryView, te);
+                }
+
+                trackEntries.remove(te.id);
+                te.id = track.label;
+                trackEntries.set(te.id, te);
+
+                let idx = trackEntryList.insert(te);
+                if (ts === selectedTrackSource) {
+                    ui.insertListItem(trackEntryView, te, idx);
+                }
+            } else {
+                if (ts === selectedTrackSource) {
+                    ui.updateListItem(trackEntryView, te);
+                }
+            }
+        }
+    }
+}
+
+function addTrack (ts,track,pos,attitude){
+    let trackEntries = ts.trackEntries;
+    let trackEntryList = ts.trackEntryList;
+
+    //console.log("add track: " + JSON.stringify(track));
+    let assets = new TrackAssets(null, null, null);
+    let te = new TrackEntry(track, assets, ts);
+    trackEntries.set(te.id, te);
+    te.trace.push(track);
+
+    if (ts.show) {
         if (trackEntryFilter(te)) {
             assets.symbol = createTrackSymbolAsset(te, pos, attitude);
             assets.info = createTrackInfoAsset(te, pos);
             // trajectory only created on demand
 
             let idx = trackEntryList.insert(te);
-            ui.insertListItem(trackEntryView, te, idx);
+            if (ts === selectedTrackSource) {
+                ui.insertListItem(trackEntryView, te, idx);
+            }
 
-            addTrackSymbolEntity(assets.symbol);
-            addTrackInfoEntity(assets.info);
+            addTrackSymbolEntity(ts.dataSource, assets.symbol);
+            addTrackInfoEntity(ts.trackInfoDataSource, assets.info);
         }
     }
+}
 
-    if (te.trace) te.trace.push(track);
+function updateTrackEntries(track) {
+    // avoid gazillions of equal string objects
+    track.id = util.intern(track.id);
+    track.label = util.intern(track.label);
+    track.src = util.intern(track.src);
+
+    let ts = trackSources.find( ts=> ts.id === track.src);
+    if (ts){
+        let pitch = track.pitch ? track.pitch : 0.0;
+        let roll = track.roll ? track.roll : 0.0;
+        let hpr = Cesium.HeadingPitchRoll.fromDegrees(track.hdg, pitch, roll);
+
+        let pos = Cesium.Cartesian3.fromDegrees(track.lon, track.lat, track.alt);
+        let attitude = Cesium.Transforms.headingPitchRollQuaternion(pos, hpr);
+
+        let te = ts.trackEntries.get(track.label);
+        if (te) {
+            updateTrack(track,te,pos,attitude);
+        } else {
+            addTrack(ts,track,pos,attitude);
+        }
+
+        ts.date = track.date;
+        ui.updateListItem(trackSourceView,ts);
+    } else {
+        console.log("unknown track source: " + track.src);
+    }
 }
 
 function isTrackTerminated(track) {
@@ -350,11 +435,18 @@ function hasTrackIdChanged(track) {
     return (track.status & 0x20);
 }
 
-var entityPrototype = undefined;
+function getTrackColor(trackSourceId) {
+    let trackColor = config.trackColors.get(trackSourceId);
+    if (!trackColor) trackColor = config.trackColor;
+    return trackColor;
+}
 
 // TODO - support categories (colors etc)
 function createTrackSymbolAsset(trackEntry, pos, attitude) {
+    let trackSource = trackEntry.trackSource;
     let track = trackEntry.track;
+    let trackColor = getTrackColor(trackSource.id);
+    let entityPrototype = trackSource.entityPrototype;
 
     let sym = new Cesium.Entity({
         id: track.label,
@@ -363,14 +455,14 @@ function createTrackSymbolAsset(trackEntry, pos, attitude) {
 
         point: entityPrototype ? entityPrototype.point : {
             pixelSize: config.trackPointSize,
-            color: config.trackColor,
+            color: trackColor,
             outlineColor: config.trackPointOutlineColor,
             outlineWidth: config.trackPointOutlineWidth,
             distanceDisplayCondition: config.trackPointDC
         },
         model: entityPrototype ? entityPrototype.model : {
             uri: config.trackModel,
-            color: config.trackColor,
+            color: trackColor,
             //colorBlendMode: Cesium.ColorBlendMode.HIGHLIGHT,
             colorBlendMode: Cesium.ColorBlendMode.MIX,
             colorBlendAmount: 0.7,
@@ -383,11 +475,12 @@ function createTrackSymbolAsset(trackEntry, pos, attitude) {
             text: track.label,
             scale: 0.8,
             horizontalOrigin: Cesium.HorizontalOrigin.LEFT,
+            verticalOrigin: Cesium.VerticalOrigin.TOP,
             font: config.trackLabelFont,
-            fillColor: config.trackColor,
+            fillColor: trackColor,
             showBackground: true,
             backgroundColor: config.trackLabelBackground, // alpha does not work against model
-            outlineColor: config.trackColor,
+            outlineColor: trackColor,
             outlineWidth: 1,
             pixelOffset: config.trackLabelOffset,
             disableDepthTestDistance: config.minLabelDepth,
@@ -396,7 +489,9 @@ function createTrackSymbolAsset(trackEntry, pos, attitude) {
         // track paths are separate entities
     });
 
-    if (!entityPrototype) entityPrototype = sym; // first one
+    sym._uiTrackEntry = trackEntry; // for entity selection
+
+    if (!entityPrototype) trackSource.entityPrototype = sym; // first one
 
     return sym;
 }
@@ -408,6 +503,8 @@ function updateTrackSymbolAsset(trackEntry, pos, attitude) {
 }
 
 function createTrackInfoAsset(trackEntry, pos) {
+    let trackColor = getTrackColor(trackEntry.trackSource.id);
+
     return new Cesium.Entity({
         id: trackInfoLabel(trackEntry),
         position: pos,
@@ -416,10 +513,11 @@ function createTrackInfoAsset(trackEntry, pos) {
             font: config.trackInfoFont,
             scale: 0.8,
             horizontalOrigin: Cesium.HorizontalOrigin.LEFT,
-            fillColor: config.trackColor,
+            verticalOrigin: Cesium.VerticalOrigin.TOP,
+            fillColor: trackColor,
             showBackground: true,
             backgroundColor: config.trackLabelBackground, // alpha does not work against model
-            outlineColor: config.trackColor,
+            outlineColor: trackColor,
             outlineWidth: 1,
             pixelOffset: config.trackInfoOffset,
             disableDepthTestDistance: config.minLabelDepth,
@@ -434,22 +532,56 @@ function updateTrackInfoAsset(trackEntry, pos) {
     info.position = pos;
 }
 
+const DOWN = '▽'; // '-' '▽' '↓' '⊤' '⎤' '⇩'
+const LEFT = '◁'; // '-' '◁' '↶' '⟲'
+const UP = '△'; // '+' '△' '↑' '⊥' '⎦'
+const RIGHT = '▷'; // '+' '▷' '↷' '⟳'
+const SAME = ' '; // ' ' '⊣' '⎢'
+
 function trackInfoLabel(trackEntry) {
     let track = trackEntry.track;
-    let fl = Math.round(track.alt * 0.00656167979) * 5; // m to ft/100 in 5 increment
-    let hdg = Math.round(track.hdg);
-    let spd = Math.round(track.spd * 1.94384449); // m/s to knots
 
-    let trace = trackEntry.trace;
-    let vr = " ";
-    if (trace.size > 0) {
-        let lastAlt = trace.last().alt
-        if (track.alt > lastAlt) vr = "+";
-        else if (track.alt < lastAlt) vr = "-";
+    let fl  = util.toRightAlignedString(util.metersToFlightLevel(track.alt), 3);
+    let hdg = util.toRightAlignedString(Math.round(track.hdg),3);
+    let spd = util.toRightAlignedString(Math.round(util.metersPerSecToKnots(track.spd)),3);
+
+    var dHdg = 0;
+    var dSpd = 0;
+    var dAlt = 0;
+    let tRef = getRefPoint(trackEntry, 5000);
+    if (tRef) {
+        dHdg = headingTrend(tRef.hdg, track.hdg);
+        dSpd = track.spd - tRef.spd;
+        dAlt = track.alt - tRef.alt;
     }
+    let ind1 = (dAlt > 0) ? UP    : ((dAlt < 0) ? DOWN  : SAME);
+    let ind2 = (dHdg > 0) ? RIGHT : ((dHdg < 0) ? LEFT  : SAME);
+    let ind3 = (dSpd > 0) ? UP    : ((dSpd < 0) ? DOWN  : SAME);
 
     //return `FL${fl} ${hdg}° ${spd}kn`;
-    return `${fl}${vr}│${hdg}°│${spd}`;
+    return `${fl} fl ${ind1}\n${hdg} °  ${ind2}\n${spd} kn ${ind3}`;
+}
+
+function headingTrend (h1,h2) {
+    let d = h2 - h1;
+    if (d > 0) return ((d > 180) ? d - 360 : d);
+    else if (d < 0) return ((d < -180) ? d + 360 : d);
+    else return 0;
+}
+
+function getRefPoint (te, dur) {
+    let track = te.track;
+    let date = track.date;
+    let trace = te.trace;
+
+    let i = 0;
+    while (i < trace.size) {
+        let p = trace.reverseAt(i);
+        if (date - p.date > dur) return p;
+        i++;
+    }
+
+    return null;
 }
 
 function removeAssets(te) {
@@ -472,6 +604,7 @@ function createTrajectoryAssetPositions(trackEntry) {
 function createTrajectoryAsset(trackEntry, isWall) {
     // does not work for polylines (wrong endpoints) or walls (no show) if number of points is changing
     //let posCallback = new Cesium.CallbackProperty(() => { trackEntry.assets.trajectoryPositions }, false);
+    let trackColor = getTrackColor(trackEntry.trackSource.id);
 
     if (isWall) {
         return new Cesium.Entity({
@@ -480,9 +613,9 @@ function createTrajectoryAsset(trackEntry, isWall) {
                 positions: trackEntry.assets.trajectoryPositions, // posCallback,
                 show: true,
                 fill: true,
-                material: Cesium.Color.fromAlpha(config.trackColor, 0.2),
+                material: Cesium.Color.fromAlpha(trackColor, 0.2),
                 outline: true,
-                outlineColor: Cesium.Color.fromAlpha(config.trackColor, 0.5),
+                outlineColor: Cesium.Color.fromAlpha(trackColor, 0.5),
                 outlineWidth: config.trackPathWidth,
                 distanceDisplayCondition: config.trackPathDC
             }
@@ -494,7 +627,7 @@ function createTrajectoryAsset(trackEntry, isWall) {
                 positions: trackEntry.assets.trajectoryPositions, // posCallback,
                 clampToGround: false,
                 width: config.trackPathWidth,
-                material: config.trackColor,
+                material: trackColor,
                 distanceDisplayCondition: config.trackPathDC
             }
         });
@@ -528,49 +661,54 @@ function getTrackEntryFilter(query) {
 }
 
 function resetTrackEntryList() {
-    trackEntryList.clear();
-    trackEntries.forEach((te, id, map) => {
-        if (trackEntryFilter(te)) trackEntryList.insert(te);
-    });
-    ui.setListItems(trackEntryView, trackEntryList);
+    if (selectedTrackSource){
+        selectedTrackSource.trackEntryList.clear();
+        selectedTrackSource.trackEntries.forEach((te, id, map) => {
+            if (trackEntryFilter(te)) selectedTrackSource.trackEntryList.insert(te);
+        });
+        ui.setListItems(trackEntryView, selectedTrackSource.trackEntryList);
+    }
 }
 
 function resetTrackEntryAssets() {
-    trackEntries.forEach((te, id, map) => {
-        let assets = te.assets;
-        if (trackEntryFilter(te)) {
-            let track = te.track;
-            let pitch = track.pitch ? track.pitch : 0.0;
-            let roll = track.roll ? track.roll : 0.0;
-            let hpr = Cesium.HeadingPitchRoll.fromDegrees(track.hdg, pitch, roll);
-            let pos = Cesium.Cartesian3.fromDegrees(track.lon, track.lat, track.alt);
-            let attitude = Cesium.Transforms.headingPitchRollQuaternion(pos, hpr);
+    if (selectedTrackSource){
+        selectedTrackSource.trackEntries.forEach((te, id, map) => {
+            let assets = te.assets;
 
-            if (!assets.symbol) {
-                assets.symbol = createTrackSymbolAsset(track, pos, attitude);
-                // add info here
-                addTrackSymbolEntity(assets.symbol);
+            if (trackEntryFilter(te)) {
+                let track = te.track;
+                let pitch = track.pitch ? track.pitch : 0.0;
+                let roll = track.roll ? track.roll : 0.0;
+                let hpr = Cesium.HeadingPitchRoll.fromDegrees(track.hdg, pitch, roll);
+                let pos = Cesium.Cartesian3.fromDegrees(track.lon, track.lat, track.alt);
+                let attitude = Cesium.Transforms.headingPitchRollQuaternion(pos, hpr);
+
+                if (!assets.symbol) {
+                    assets.symbol = createTrackSymbolAsset(te, pos, attitude);
+                    // add info here
+                    addTrackSymbolEntity(selectedTrackSource.dataSource, assets.symbol);
+                }
+                if (!assets.info) {
+                    assets.info = createTrackInfoAsset(te, pos);
+                    addTrackInfoEntity(selectedTrackSource.trackInfoDataSource, assets.info);
+                }
+            } else { // filtered, check if we need to remove from viewer entities
+                if (assets.symbol) {
+                    removeTrackSymbolEntity(selectedTrackSource.dataSource, assets.symbol);
+                    assets.symbol = null;
+                }
+                if (assets.info) {
+                    removeTrackInfoEntity(selectedTrackSource.trackInfoDataSource, assets.info);
+                    assets.info = null;
+                }
+                if (assets.trajectory) {
+                    removeTrajectoryEntity(selectedTrackSource.trajectoryDataSource, assets.trajectory);
+                    assets.trajectory = null;
+                    assets.trajectoryPositions = null; // don't do this before removing the asset
+                }
             }
-            if (!assets.info) {
-                assets.info = createTrackInfoAsset(track, pos);
-                addTrackInfoEntity(assets.info);
-            }
-        } else { // filtered, check if we need to remove from viewer entities
-            if (assets.symbol) {
-                removeTrackSymbolEntity(assets.symbol);
-                assets.symbol = null;
-            }
-            if (assets.info) {
-                removeTrackInfoEntity(assets.info);
-                assets.info = null;
-            }
-            if (assets.trajectory) {
-                removeTrajectoryEntity(assets.trajectory);
-                assets.trajectory = null;
-                assets.trajectoryPositions = null; // don't do this before removing the asset
-            }
-        }
-    });
+        });
+    }
 }
 
 //--- interaction
@@ -591,16 +729,16 @@ app.selectTrack = function(event) {
     if (te) {
         if (te.assets.symbol) viewer.selectedEntity = te.assets.symbol;
         if (te.assets.trajectory) {
-            ui.setCheckBox("console.tracks.path", true);
-            if (te.assets.trajectory.wall) ui.selectRadio("console.tracks.wall");
-            else ui.selectRadio("console.tracks.line");
+            ui.setCheckBox("tracks.path", true);
+            if (te.assets.trajectory.wall) ui.selectRadio("tracks.wall");
+            else ui.selectRadio("tracks.line");
         } else {
-            ui.setCheckBox("console.tracks.path", false);
-            ui.clearRadioGroup("console.tracks.line");
+            ui.setCheckBox("tracks.path", false);
+            ui.clearRadioGroup("tracks.line");
         }
     } else { // nothing selected
-        ui.setCheckBox("console.tracks.path", false);
-        ui.clearRadioGroup("console.tracks.line");
+        ui.setCheckBox("tracks.path", false);
+        ui.clearRadioGroup("tracks.line");
     }
 }
 
@@ -608,19 +746,19 @@ app.toggleShowPath = function(event) {
     let te = ui.getSelectedListItem(trackEntryView);
     if (te) {
         if (ui.isCheckBoxSelected(event)) {
-            let isWall = ui.isRadioSelected("console.tracks.wall");
-            if (!isWall) ui.selectRadio("console.tracks.line");
+            let isWall = ui.isRadioSelected("tracks.wall");
+            if (!isWall) ui.selectRadio("tracks.line");
 
             te.assets.trajectoryPositions = createTrajectoryAssetPositions(te);
             te.assets.trajectory = createTrajectoryAsset(te, isWall);
-            addTrajectoryEntity(te.assets.trajectory);
+            addTrajectoryEntity( te.trackSource.trajectoryDataSource, te.assets.trajectory);
 
         } else {
             if (te.assets.trajectory) {
-                removeTrajectoryEntity(te.assets.trajectory);
+                removeTrajectoryEntity( te.trackSource.trajectoryDataSource, te.assets.trajectory);
                 te.assets.trajectory = null;
                 te.assets.trajectoryPositions = null;
-                ui.clearRadioGroup("console.tracks.line");
+                ui.clearRadioGroup("tracks.line");
             }
         }
     }
@@ -631,15 +769,15 @@ app.setLinePath = function(event) {
     if (te) {
         if (te.assets.trajectory) {
             if (te.assets.trajectory.wall) {
-                removeTrajectoryEntity(te.assets.trajectory);
+                removeTrajectoryEntity(te.trackSource.trajectoryDataSource, te.assets.trajectory);
                 te.assets.trajectory = createTrajectoryAsset(te, false);
-                addTrajectoryEntity(te.assets.trajectory);
+                addTrajectoryEntity(te.trackSource.trajectoryDataSource, te.assets.trajectory);
             }
         } else {
             te.assets.trajectoryPositions = createTrajectoryAssetPositions(te);
             te.assets.trajectory = createTrajectoryAsset(te, false);
-            addTrajectoryEntity(te.assets.trajectory);
-            ui.setCheckBox("console.tracks.path", true);
+            addTrajectoryEntity(te.trackSource.trajectoryDataSource, te.assets.trajectory);
+            ui.setCheckBox("tracks.path", true);
         }
     }
 }
@@ -649,31 +787,52 @@ app.setWallPath = function(event) {
     if (te) {
         if (te.assets.trajectory) {
             if (te.assets.trajectory.polyline) {
-                removeTrajectoryEntity(te.assets.trajectory);
+                removeTrajectoryEntity(te.trackSource.trajectoryDataSource, te.assets.trajectory);
                 te.assets.trajectory = createTrajectoryAsset(te, true);
-                addTrajectoryEntity(te.assets.trajectory);
+                addTrajectoryEntity(te.trackSource.trajectoryDataSource, te.assets.trajectory);
             }
         } else {
             te.assets.trajectoryPositions = createTrajectoryAssetPositions(te);
             te.assets.trajectory = createTrajectoryAsset(te, true);
-            addTrajectoryEntity(te.assets.trajectory);
-            ui.setCheckBox("console.tracks.path", true);
+            addTrajectoryEntity(te.trackSource.trajectoryDataSource, te.assets.trajectory);
+            ui.setCheckBox("tracks.path", true);
         }
     }
 }
 
 app.resetPaths = function() {
-    trackEntryList.forEach(te => {
-        if (te.assets.trajectory) {
-            removeTrajectoryEntity(te.assets.trajectory);
-            te.assets.trajectory = null;
-            te.assets.trajectoryPositions = null;
-        }
-    });
-    ui.clearSelectedListItem(trackEntryView);
-    ui.setCheckBox("console.tracks.path", false);
-    ui.clearRadioGroup(ui.getRadio("console.tracks.wall"));
-    viewer.selectedEntity = null;
+    if (selectedTrackSource){
+        selectedTrackSource.trackEntryList.forEach(te => {
+            if (te.assets.trajectory) {
+                removeTrajectoryEntity(selectedTrackSource.trajectoryDataSource, te.assets.trajectory);
+                te.assets.trajectory = null;
+                te.assets.trajectoryPositions = null;
+            }
+        });
+        ui.clearSelectedListItem(trackEntryView);
+        ui.setCheckBox("tracks.path", false);
+        ui.clearRadioGroup(ui.getRadio("tracks.wall"));
+        viewer.selectedEntity = null;
+    }
+}
+
+app.selectSource = function(event) {
+    selectedTrackSource = event.detail.curSelection;
+    if (selectedTrackSource) {
+        ui.setListItems(trackEntryView, selectedTrackSource.trackEntryList);
+    } else {
+        ui.clearList(trackEntryView);
+    }
+}
+
+app.toggleShowSource = function(event) {
+    if (selectedTrackSource) {
+        selectedTrackSource.setVisible(ui.toggleMenuItemCheck(event));
+    }
+}
+
+app.showAllSources = function(event) {
+    console.log("@@ show all sources");
 }
 
 //--- view control
@@ -708,19 +867,3 @@ app.toggleFullScreen = function(event) {
     ui.toggleFullScreen();
 }
 
-//--- Cesium CustomProperties
-
-function DynamicProperty(value) {
-    this.v = value;
-    this.isConstant = false;
-    this.definitionChanged = new Cesium.Event(); // create only one
-}
-
-DynamicProperty.prototype.getValue = function(time, result) {
-    return this.v;
-};
-
-DynamicProperty.prototype.setValue = function(value) {
-    this.v = value;
-    this.definitionChanged.raiseEvent(this);
-};

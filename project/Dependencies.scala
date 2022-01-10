@@ -160,7 +160,7 @@ object Dependencies {
   // note - kafka still uses the old log4j
 
   // NOTE - 2.17.0 still has open CVEs but we only use this for a local kafka test server that is never supposed to be public
-  val log4j = "org.apache.logging.log4j" % "log4j" % "2.17.0"
+  val log4j = "org.apache.logging.log4j" % "log4j" % "2.17.1"
   val log4jOverSlf4j = "org.slf4j" % "log4j-over-slf4j" % "2.0.0-alpha1"
 
   //--- Kafka client (this is all we need for importing/exporting)

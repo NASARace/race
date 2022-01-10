@@ -43,8 +43,8 @@ object CesiumTrackRoute {
     ClassUtils.getResourceAsBytes(getClass,"cesiumTracks.js").get)
   val cesiumCss = new CachedFile( s"$resourceDir/cesiumTracks.css",
     ClassUtils.getResourceAsBytes(getClass,"cesiumTracks.css").get)
-  val cesiumTrackModel = new CachedFile( s"$resourceDir/paper-plane.glb",
-    ClassUtils.getResourceAsBytes(getClass,"pp.glb").get)
+  val cesiumTrackModel = new CachedFile( s"$resourceDir/ppp.glb",
+    ClassUtils.getResourceAsBytes(getClass,"ppp.glb").get)
 
   val mapCursor = ClassUtils.getResourceAsBytes(getClass, "mapcursor-bw-32x32.png").get
   val controlsIcon = ClassUtils.getResourceAsBytes(getClass, "controls.svg").get
@@ -66,10 +66,12 @@ class CesiumTrackRoute (val parent: ParentActor, val config: Config) extends Tra
   val accessToken = config.getVaultableString("access-token")
 
   val cesiumCache = config.getOptionalString("cesium-cache") // optional cache of Cesium resources
-  val cesiumVersion = config.getStringOrElse("cesium-version", "1.87")
+  val cesiumVersion = config.getStringOrElse("cesium-version", "1.88")
 
   val trackColor = config.getStringOrElse("color", "yellow")
-  val trackModel = loadTrackModel( config.getStringOrElse("track-model", "paper-plane.glb"), trackColor)
+  val trackModel = loadTrackModel( config.getStringOrElse("track-model", "ppp.glb"), trackColor)
+
+  val trackColors = config.getKeyValuePairsOrElse("track-colors", Seq.empty)
 
   val imageryProvider = config.getStringOrElse("maptile-provider", "http://tile.stamen.com/terrain")
   val imageryCache = config.getOptionalString("maptile-cache")
@@ -96,6 +98,16 @@ class CesiumTrackRoute (val parent: ParentActor, val config: Config) extends Tra
     pushTo(remoteAddr, queue, TextMessage.Strict(msg))
   }
 
+  // TODO we might cache these as they are invariant (unless we add cookie support for client specific settings)
+
+  def sendSourceList (remoteAddr: InetSocketAddress, queue: SourceQueueWithComplete[Message]): Unit = {
+    var srcList = channelMap.values
+    if (srcList.isEmpty) srcList = config.getStrings("read-from")
+
+    val msg = s"""{"sources":${srcList.mkString("[\"","\",\"","\"]")}}"""
+    pushTo(remoteAddr, queue, TextMessage.Strict(msg))
+  }
+
   def sendInitialCameraPosition (remoteAddr: InetSocketAddress, queue: SourceQueueWithComplete[Message]): Unit = {
     // position over center of continental US if nothing specified
     var lat = 40.34
@@ -117,6 +129,7 @@ class CesiumTrackRoute (val parent: ParentActor, val config: Config) extends Tra
   override protected def initializeConnection (ctx: BasicWSContext, queue: SourceQueueWithComplete[Message]): Unit = {
     val remoteAddr = ctx.sockConn.remoteAddress
     sendSetClock(remoteAddr, queue)
+    sendSourceList(remoteAddr, queue)
     sendInitialCameraPosition(remoteAddr, queue)
   }
 
@@ -236,36 +249,47 @@ class CesiumTrackRoute (val parent: ParentActor, val config: Config) extends Tra
       body(onload:="app.initialize()", onunload:="app.shutdown()")(
         fullWindowCesiumContainer(),
 
-        uiWindow("Track Console", "console")(
-          uiPanel("Clock",true, "console.clock")(
-            uiClock("time", "console.clock.time", "UTC"),
-            uiTimer("elapsed", "console.clock.elapsed")
-          ),
-          uiPanel("View",true, "console.view")(
-            uiFieldGroup()(
-              uiNumField("lat", "console.view.latitude"),
-              uiNumField("lon", "console.view.longitude"),
-              uiNumField("alt", "console.view.altitude")
-            ),
-            uiRowContainer()(
-              uiCheckBox("fullscreen", "app.toggleFullScreen(event)"),
-              uiButton("Home", "app.setHomeView()"),
-              uiButton("Down", "app.setDownView()")
-            )
-          ),
-          uiPanel("Tracks", true, "console.tracks")(
-            uiTextInput("query","console.tracks.query", "app.queryTracks(event)", "enter track query"),
-            uiList("console.tracks.list", 10,"app.selectTrack(event)"),
-            uiRowContainer()(
-              uiCheckBox("show path", "app.toggleShowPath(event)", "console.tracks.path"),
-              uiRadio("line", "app.setLinePath(event)", "console.tracks.line"),
-              uiRadio("wall", "app.setWallPath(event)", "console.tracks.wall"),
-              uiButton("Reset", "app.resetPaths()")
-            )
-          ),
+        uiWindow("Time", "time")(
+          uiClock("time", "time.utc", "UTC"),
+          uiTimer("elapsed", "time.elapsed")
         ),
 
-        uiIcon("ui_assets/controls.svg", "app.toggleWindow(event,'console')", "console_icon")
+        uiWindow("View", "view")(
+          uiFieldGroup()(
+            uiNumField("lat", "view.latitude"),
+            uiNumField("lon", "view.longitude"),
+            uiNumField("alt", "view.altitude")
+          ),
+          uiRowContainer()(
+            uiCheckBox("fullscreen", "app.toggleFullScreen(event)"),
+            uiButton("Home", "app.setHomeView()"),
+            uiButton("Down", "app.setDownView()")
+          )
+        ),
+
+        uiWindow("Tracks","tracks")(
+          uiList("tracks.sources", 5, "app.selectSource(event)", NoAction, "app.popupMenu(event,'tracks.sources_menu')")(
+            uiPopupMenu("tracks.sources_menu")(
+              uiMenuItem("show", "app.toggleShowSource(event)",NoId, true),
+              hr(),
+              uiMenuItem("show all", "app.showAllSources(event)")
+            )
+          ),
+
+          uiTextInput("query","tracks.query", "app.queryTracks(event)", "enter track query"),
+          uiList("tracks.list", 10, "app.selectTrack(event)"),
+
+          uiRowContainer()(
+            uiCheckBox("show path", "app.toggleShowPath(event)", "tracks.path"),
+            uiRadio("line", "app.setLinePath(event)", "tracks.line"),
+            uiRadio("wall", "app.setWallPath(event)", "tracks.wall"),
+            uiButton("Reset", "app.resetPaths()")
+          )
+        ),
+
+        uiIcon("ui_assets/track-icon.svg", "app.toggleWindow(event,'tracks')", "track_icon"),
+        uiIcon("ui_assets/time-icon.svg", "app.toggleWindow(event,'time')", "time_icon"),
+        uiIcon("ui_assets/view-icon.svg", "app.toggleWindow(event,'view')", "view_icon")
       )
     ).render
   }
@@ -293,9 +317,10 @@ class CesiumTrackRoute (val parent: ParentActor, val config: Config) extends Tra
       export const wsURL = 'ws://${requestUri.authority}/$requestPrefix/ws/$wsToken';
 
       export const trackColor = Cesium.Color.fromCssColorString('${_string("color", trackColor)}');
+      export const trackColors = new Map(${trackColors.map(e=> s"['${e._1}',Cesium.Color.fromCssColorString('${e._2}')]").mkString("[",",","]")});
 
       export const trackLabelFont = '${_string("track-label", "16px sans-serif")}';
-      export const trackLabelOffset = new Cesium.Cartesian2( $trackLabelOffsetX, ${_int("track-label-offset.y", 12)});
+      export const trackLabelOffset = new Cesium.Cartesian2( $trackLabelOffsetX, ${_int("track-label-offset.y", 10)});
       export const trackLabelBackground = Cesium.Color.fromCssColorString('${_string( "track-label-bg", "black")}');
       export const trackLabelDC = new Cesium.DistanceDisplayCondition( 0, ${_int("track-label-dist", 200000)});
 
@@ -311,7 +336,7 @@ class CesiumTrackRoute (val parent: ParentActor, val config: Config) extends Tra
       export const trackModelOutlineWidth = ${_double("track-model-outline-width", 2.0)};
       export const trackModelOutlineAlpha = ${_double("track-model-outline-alpha", 1.0)};
 
-      export const trackInfoFont = '${_string("track-info", "14px sans-serif")}';
+      export const trackInfoFont = '${_string("track-info", "14px monospace")}';
       export const trackInfoOffset = new Cesium.Cartesian2( ${_int("track-info-offset.x", trackLabelOffsetX)}, ${_int("track-info-offset.y", trackLabelOffsetY + 16)});
       export const trackInfoDC = new Cesium.DistanceDisplayCondition( 0, ${_int("track-info-dist", 80000)});
 

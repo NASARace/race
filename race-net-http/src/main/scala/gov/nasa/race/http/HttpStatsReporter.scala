@@ -85,7 +85,7 @@ class HttpStatsReporter (val parent: ParentActor, val config: Config) extends Su
   }
 
   override def receiveData: Receive = {
-    case newContent: HttpContent => httpContent = newContent // generated from data
+    case BusEvent(_,newContent: HttpContent,_) => httpContent = newContent // generated from data
     case _ => // ignore anything that is not
   }
 

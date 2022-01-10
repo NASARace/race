@@ -27,7 +27,7 @@ import akka.{Done, NotUsed}
 import gov.nasa.race.common.JsonWriter
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.config.NoConfig
-import gov.nasa.race.core.{Ping, Pong, RaceDataClient}
+import gov.nasa.race.core.{BusEvent, Ping, Pong, RaceDataClient}
 import gov.nasa.race.http.webauthn.WebAuthnMethod
 import gov.nasa.race.ifSome
 import gov.nasa.race.uom.Time.Seconds
@@ -148,7 +148,7 @@ trait PushWSRaceRoute[T<:WSContext] extends WSRaceRoute with SourceQueueOwner[Me
     * NOTE - this is executed from the actor thread and can modify connections so we have to synchronize
     */
   def receiveData: Receive = {
-    case data =>
+    case BusEvent(_,data,_) =>
       synchronized {
         push(TextMessage.Strict(data.toString))
       }

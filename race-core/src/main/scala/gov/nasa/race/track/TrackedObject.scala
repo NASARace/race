@@ -115,9 +115,8 @@ trait TrackedObject extends IdentifiableObject with TrackPoint with MovingObject
 
   //--- JSON formatting
 
-  def serializeFormattedTo (writer: JsonWriter): Unit = {
+  def serializeMembersFormattedTo (writer: JsonWriter): Unit = {
     writer
-      .beginObject
       .writeStringMember(ID, id)
       .writeStringMember(LABEL, cs)
       .writeDateTimeMember(DATE, date)
@@ -129,10 +128,13 @@ trait TrackedObject extends IdentifiableObject with TrackPoint with MovingObject
       .writeDoubleMember(VR, vr.toMetersPerSecond, FMT_3_2)
       .writeDoubleMember(PITCH, pitch.toDegrees, FMT_3)
       .writeDoubleMember(ROLL, roll.toDegrees, FMT_3)
-
-    writer
       .writeIntMember(STATUS, status)
-      .endObject
+  }
+
+  def serializeFormattedTo (writer: JsonWriter): Unit = {
+    writer.beginObject
+    serializeMembersFormattedTo(writer)
+    writer.endObject
   }
 
   def serializeFormattedAs (writer: JsonWriter, key: String): Unit = {

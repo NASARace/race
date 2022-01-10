@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="32"
+   height="32"
+   viewBox="0 0 32 32"
+   version="1.1"
+   id="svg5"
+   inkscape:version="1.1.1 (eb90963e84, 2021-10-02)"
+   sodipodi:docname="clock.svg"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview7"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:pageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:document-units="px"
+     showgrid="false"
+     inkscape:zoom="27.28125"
+     inkscape:cx="15.596793"
+     inkscape:cy="16"
+     inkscape:window-width="1716"
+     inkscape:window-height="1095"
+     inkscape:window-x="26"
+     inkscape:window-y="23"
+     inkscape:window-maximized="0"
+     inkscape:current-layer="layer1" />
+  <defs
+     id="defs2" />
+  <g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1">
+    <rect
+       style="fill:none;fill-opacity:1;stroke:#ffffff;stroke-width:0;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+       id="rect2577"
+       width="31.415661"
+       height="31.482384"
+       x="0.29216957"
+       y="0.25880814" />
+    <ellipse
+       style="fill:none;fill-opacity:1;stroke:#f3f3f3;stroke-width:1.6;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+       id="path846"
+       cx="16"
+       cy="16"
+       rx="12.954754"
+       ry="13.570017" />
+    <path
+       style="fill:none;stroke:#e7e7e7;stroke-width:1.6;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+       d="M 21.817296,6.2963917 15.981243,16.007589 10.249427,11.798396"
+       id="path3554"
+       sodipodi:nodetypes="cc" />
+    <circle
+       style="fill:#cccccc;fill-opacity:1;stroke:#e7e7e7;stroke-width:1.17499;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+       id="path4122"
+       cx="16"
+       cy="16"
+       r="2.0358148" />
+  </g>
+</svg>

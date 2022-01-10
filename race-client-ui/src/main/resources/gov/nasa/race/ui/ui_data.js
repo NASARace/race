@@ -357,6 +357,14 @@ class CircularBuffer {
         } else return undefined;
     }
 
+
+    reverseAt (i) {
+        if (i >= 0 && i < this.size) {
+            let idx = (this.i1 - i);
+            if (idx < 0) idx = this.maxSize + idx;
+            return this.buffer[idx];
+        } else return undefined;    }
+
     *
     [Symbol.iterator]() {
         if (this.size > 0) {

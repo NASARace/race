@@ -993,7 +993,10 @@ export function setListItemDisplayColumns(o, listAttrs, colSpecs) {
 
             ce._uiMapFunc = cs.map;
             ce.style.width = cs.width ? cs.width : defaultWidth;
+
             if (cs.attrs.includes("alignLeft")) ce.style.textAlign = "left";
+            else if (cs.attrs.includes("alignRight")) ce.style.textAlign = "right";
+
             if (cs.attrs.includes("fixed")) ce.style.font = _rootVar("--mono-font");
             re.appendChild(ce);
         });
@@ -1009,7 +1012,10 @@ export function setListItemDisplay(o, styleWidth, attrs, mapFunc) {
     if (e) {
         if (mapFunc) e._uiMapFunc = mapFunc;
         if (styleWidth) e.style.width = styleWidth;
+
         if (attrs.includes("alignLeft")) e.style.textAlign = "left";
+        else if (attrs.includes("alignRight")) e.style.textAlign = "right";
+
         if (attrs.includes("fixed")) e.style.font = _rootVar("--mono-font");
     }
 }

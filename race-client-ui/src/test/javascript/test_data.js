@@ -106,18 +106,31 @@
          assert(buffer.size == expectedSize);
      }
 
+
      testPush(buffer, 1, 1);
      testPush(buffer, 2, 2);
      testPush(buffer, 3, 3);
      testPush(buffer, 4, 4);
      testPush(buffer, 5, 4);
+
      assert(buffer.at(0) == 2);
+     assert(buffer.at(1) == 3);
+     assert(buffer.at(2) == 4);
+     assert(buffer.at(3) == 5);
+     assert(buffer.at(4) == undefined);
+
+     assert(buffer.reverseAt(0) == 5);
+     assert(buffer.reverseAt(1) == 4);
+     assert(buffer.reverseAt(2) == 3);
+     assert(buffer.reverseAt(3) == 2);
+     assert(buffer.reverseAt(4) == undefined);
 
      var i = 0;
      buffer.forEach(v => {
          console.log("[" + i + "]: " + v);
          i++;
      });
+
 
      testDropFirst(buffer, 2, 2);
      testDropLast(buffer, 1, 1);
