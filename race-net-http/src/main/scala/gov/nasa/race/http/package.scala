@@ -17,7 +17,7 @@
 package gov.nasa.race
 
 import akka.http.scaladsl.marshalling.ToResponseMarshallable
-import akka.http.scaladsl.model.HttpRequest
+import akka.http.scaladsl.model.{ContentType, HttpCharsets, HttpEntity, HttpRequest, MediaTypes}
 import akka.http.scaladsl.model.Uri.Path
 import akka.http.scaladsl.model.headers.HttpCookie
 import scalatags.generic.TypedTag

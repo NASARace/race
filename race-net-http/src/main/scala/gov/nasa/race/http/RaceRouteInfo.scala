@@ -57,7 +57,6 @@ trait RaceRouteInfo extends SubConfigurable with ConfigLoggable {
 
   def getRequestPrefix: String = config.getStringOrElse("request-prefix", name)
 
-
   // this is the main function that defines the public (user) routes
   def route: Route
 
@@ -101,7 +100,6 @@ trait RaceRouteInfo extends SubConfigurable with ConfigLoggable {
     true
   }
 }
-
 
 /**
   * a RaceRouteInfo that has an associated RaceRouteActor which sets the published content

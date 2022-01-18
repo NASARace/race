@@ -35,15 +35,18 @@ import TrackWSRoute._
 
 /**
   * a RaceRoute that pushes TrackedObject updates over a websocket connection
+  *
+  * Note that we don't imply the client processing here (e.g. Cesium visualization) - this only handles the track data update
+  * No assets are associated with this route fragment
   */
-trait TrackWSRoute extends BasicPushWSRaceRoute {
+trait TrackWSRoute [T <: WSContext] extends PushWSRaceRoute[T] {
   val flatten = config.getBooleanOrElse("flatten", false)
   val writer = new JsonWriter()
 
   val channelMap: Map[String,String] = TreeSeqMap.from(config.getKeyValuePairsOrElse("channel-map", Seq.empty)) // preserve order
 
   // TBD - this will eventually handle client selections
-  override protected def handleIncoming (ctx: BasicWSContext, m: Message): Iterable[Message] = {
+  override protected def handleIncoming (ctx: T, m: Message): Iterable[Message] = {
     info(s"ignoring incoming message $m")
     discardMessage(m)
     Nil

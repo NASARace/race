@@ -1,14 +1,8 @@
-
-html, body {
+html,
+body {
     width: 100%;
     height: 100%;
     margin: 0;
-}
-
-#tracks {
-    left: 100px;
-    top: 300px;
-    /*width: 15rem;*/
 }
 
 #time {
@@ -21,17 +15,12 @@ html, body {
     top: 300px;
 }
 
-#track_icon {
-    left: 10px;
-    top: 10px;
-}
-
 #time_icon {
     left: 50px;
     top: 10px;
 }
 
 #view_icon {
-    left: 90px;
+    left: 10px;
     top: 10px;
 }

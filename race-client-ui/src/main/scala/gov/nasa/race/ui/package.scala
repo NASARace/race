@@ -41,10 +41,8 @@ package object ui {
 
   def embeddedScript (code: String): Text.RawFrag = raw(s"""<script>$code</script>""")
 
-  // id required by Cesium scripts
-  def fullWindowCesiumContainer(): Text.TypedTag[String] = div(id:="cesiumContainer", cls:="ui_full_window")
+  //--- various ui specific document fragments
 
-  // shortcuts for UI controls
   def uiIcon (src: String, action: String, eid: UiID=NoId): Text.TypedTag[String] = {
     var mods = List(cls:="ui_icon", data("src"):= src, onclick:=action)
     if (eid.nonEmpty) mods = (id:=eid) :: mods
@@ -138,6 +136,14 @@ package object ui {
     var mods = List(cls:=classes)
     if (action.nonEmpty) mods = (onclick:=action) :: mods
     div(mods: _*)(text)
+  }
+
+  def basicUiModules(): Seq[Text.TypedTag[String]] = {
+    Seq(
+      extModule("ui_data.js"),
+      extModule("ui_util.js"),
+      extModule("ui.js")
+    )
   }
   
   // our client-side artifacts

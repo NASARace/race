@@ -1,7 +1,9 @@
 import * as config from "./config.js";
+import * as ws from "./ws.js";
 import { SkipList, CircularBuffer } from "./ui_data.js";
 import * as util from "./ui_util.js";
 import * as ui from "./ui.js";
+import * as uiCesium from "./ui_cesium.js";
 
 const NO_PATH = "";
 const LINE_PATH = "~";
@@ -42,7 +44,7 @@ class TrackEntry {
 }
 
 class TrackSource {
-    constructor(id){
+    constructor(id) {
         this.id = id;
 
         this.show = true;
@@ -52,7 +54,7 @@ class TrackSource {
 
         // we keep those in different data sources so that we can control Z-order and 
         // bulk enable/disable display more efficiently
-        this.trackInfoDataSource = new Cesium.CustomDataSource(id + '-trackInfo');    
+        this.trackInfoDataSource = new Cesium.CustomDataSource(id + '-trackInfo');
         this.trajectoryDataSource = new Cesium.CustomDataSource(id + '-trajectories');
 
         this.entityPrototype = null;
@@ -64,7 +66,7 @@ class TrackSource {
         );
     }
 
-    setVisible (isVisible) {
+    setVisible(isVisible) {
         if (isVisible != this.show) {
             this.dataSource.show = isVisible;
             this.trackInfoDataSource.show = isVisible;
@@ -74,10 +76,6 @@ class TrackSource {
     }
 }
 
-var ws = undefined;
-
-var viewer = undefined;
-var camera = undefined;
 
 var trackSources = []; // ordered list of TrackSource objects
 var selectedTrackSource = undefined;
@@ -88,17 +86,14 @@ var trackSourceView = undefined; // the UI element for our track sources
 
 function noTrackEntryFilter(track) { return true; } // all tracks are displayed
 
-// the onload function
-app.initialize = function() {
-    if (ui.initialize()) {
-        trackSourceView = initTrackSourceView();
-        trackEntryView = initTrackEntryView();
+export function initialize() {
+    trackSourceView = initTrackSourceView();
+    trackEntryView = initTrackEntryView();
 
-        initCesium();
-        initWS();
+    uiCesium.setEntitySelectionHandler(trackSelection);
+    ws.addWsHandler(handleWsTrackMessages);
 
-        console.log("initialized");
-    }
+    return true;
 }
 
 function initTrackSourceView() {
@@ -108,7 +103,7 @@ function initTrackSourceView() {
             { name: "show", width: "1rem", attrs: [], map: e => e.show ? "●" : "" },
             { name: "id", width: "5rem", attrs: ["alignLeft"], map: e => e.id },
             { name: "size", width: "3rem", attrs: ["fixed", "alignRight"], map: e => e.trackEntries.size.toString() },
-            { name: "date", width: "6rem", attrs: ["fixed", "alignRight"], map: e => util.toLocalTimeString(e.date)}
+            { name: "date", width: "6rem", attrs: ["fixed", "alignRight"], map: e => util.toLocalTimeString(e.date) }
         ]);
     }
     return view;
@@ -126,60 +121,29 @@ function initTrackEntryView() {
     return view;
 }
 
-// the onunload function
-app.shutdown = function() {
-    ws.close();
-}
 
-function initCesium() {
-    Cesium.Ion.defaultAccessToken = config.cesiumAccessToken;
+// intercept adding/removing entities to enable the non-flicker hack.
+// as of Cesium 1.89 single polylines/walls (and possible other entity properties) within a DataSource
+// cause flicker on update when using ConstantProperty, and get corrupted when using CallbackProperty
+// (draw object end point inserted at splice point).
 
-    viewer = new Cesium.Viewer('cesiumContainer', {
-        imageryProvider: config.imageryProvider,
-        terrainProvider: config.terrainProvider,
-        skyBox: false,
-        infoBox: false,
-        baseLayerPicker: false,
-        sceneModePicker: false,
-        navigationHelpButton: false,
-        homeButton: false,
-        timeline: false,
-        animation: false
-    });
-
-    setCanvasSize();
-    window.addEventListener('resize', setCanvasSize);
-
-    viewer.resolutionScale = window.devicePixelRatio; // 2.0
-    viewer.scene.fxaa = true;
-
-    // event listeners
-    viewer.camera.moveEnd.addEventListener(updateCamera);
-    viewer.scene.canvas.addEventListener('mousemove', updateMouseLocation);
-
-    let selHandler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
-    selHandler.setInputAction(trackSelection, Cesium.ScreenSpaceEventType.LEFT_CLICK);
-}
-
-// encapsulate in which data source we keep Cesium entities
-function addTrackSymbolEntity(ds,e) {
+function addTrackSymbolEntity(ds, e) {
     ds.entities.add(e);
 }
 
-function removeTrackSymbolEntity(ds,e) {
+function removeTrackSymbolEntity(ds, e) {
     ds.entities.remove(e);
 }
 
-function addTrackInfoEntity(ds,e) {
+function addTrackInfoEntity(ds, e) {
     ds.entities.add(e);
 }
 
-function removeTrackInfoEntity(ds,e) {
+function removeTrackInfoEntity(ds, e) {
     ds.entities.remove(e);
 }
 
-function addTrajectoryEntity(ds,e) {
-    //--- begin flicker hack: avoid flicker for single ConstantProperty positions update (CallbackProperty has position errors)
+function addTrajectoryEntity(ds, e) {
     let e0 = Object.assign({}, e);
     e0.id = e.id + "-0";
     if (e.wall) {
@@ -195,13 +159,13 @@ function addTrajectoryEntity(ds,e) {
     ds.entities.add(e);
 }
 
-function removeTrajectoryEntity(ds,e) {
+function removeTrajectoryEntity(ds, e) {
     ds.entities.removeById(e.id + "-0"); // flicker hack
     ds.entities.remove(e);
 }
 
 function trackSelection() {
-    let sel = viewer.selectedEntity;
+    let sel = uiCesium.getSelectedEntity();
     if (sel && sel._uiTrackEntry) {
         let te = sel._uiTrackEntry;
         if (te.trackSource !== selectedTrackSource) {
@@ -214,106 +178,35 @@ function trackSelection() {
     }
 }
 
-function updateCamera() {
-    let pos = viewer.camera.positionCartographic;
-    ui.setField("view.altitude", Math.round(pos.height).toString());
-}
+//--- track related websocket messages
 
-function updateMouseLocation(e) {
-    var ellipsoid = viewer.scene.globe.ellipsoid;
-    var cartesian = viewer.camera.pickEllipsoid(new Cesium.Cartesian3(e.clientX, e.clientY), ellipsoid);
-    if (cartesian) {
-        let cartographic = ellipsoid.cartesianToCartographic(cartesian);
-        let longitudeString = Cesium.Math.toDegrees(cartographic.longitude).toFixed(5);
-        let latitudeString = Cesium.Math.toDegrees(cartographic.latitude).toFixed(5);
-
-        ui.setField("view.latitude", latitudeString);
-        ui.setField("view.longitude", longitudeString);
-    }
-}
-
-function setCanvasSize() {
-    viewer.canvas.width = window.innerWidth;
-    viewer.canvas.height = window.innerHeight;
-}
-
-function initWS() {
-    if ("WebSocket" in window) {
-        console.log("initializing websocket " + config.wsURL);
-        ws = new WebSocket(config.wsURL);
-
-        ws.onopen = function() {
-            // nothing yet
-        };
-
-        ws.onmessage = function(evt) {
-            try {
-                let msg = JSON.parse(evt.data.toString());
-                handleServerMessage(msg);
-            } catch (error) {
-                console.log(error);
-                console.log(evt.data.toString());
-            }
-        }
-
-        ws.onclose = function() {
-            console.log("connection is closed...");
-        };
-    } else {
-        console.log("WebSocket NOT supported by your Browser!");
-    }
-}
-
-function handleServerMessage(msg) {
-    //console.log(JSON.stringify(msg));
-
-    var msgType = Object.keys(msg)[0]; // first member name
-
+function handleWsTrackMessages(msgType, msg) {
     switch (msgType) {
         case "track":
             handleTrackMessage(msg.track);
-            break;
+            return true;
         case "trackList":
             handleTrackListMessage(msg.trackList);
-            break;
-        case "camera":
-            handleCameraMessage(msg.camera);
-            break;
-        case "setClock":
-            handleSetClock(msg.setClock);
-            break;
+            return true;
         case "sources":
             handleSources(msg.sources);
-            break;
+            return true;
         default:
-            console.log("ignoring unknown server message: " + msgType);
+            return false;
     }
 }
 
-function handleSetClock(setClock) {
-    ui.setClock("time.utc", setClock.time, setClock.timeScale);
-    ui.resetTimer("time.elapsed", setClock.timeScale);
-    ui.startTime();
-}
-
-function handleCameraMessage(newCamera) {
-    camera = newCamera;
-    setHomeView();
-}
-
 function handleSources(sources) {
-    trackSources = sources.map( s=> new TrackSource(util.intern(s)));
+    trackSources = sources.map(s => new TrackSource(util.intern(s)));
 
     //--- add dataSources according to type (track, trackInfo, trajectory) and specified order
-    trackSources.forEach( ts=> viewer.dataSources.add(ts.dataSource));
-    trackSources.forEach( ts=> viewer.dataSources.add(ts.trackInfoDataSource));
-    trackSources.forEach( ts=> viewer.dataSources.add(ts.trajectoryDataSource));
+    trackSources.forEach(ts => uiCesium.addDataSource(ts.dataSource));
+    trackSources.forEach(ts => uiCesium.addDataSource(ts.trackInfoDataSource));
+    trackSources.forEach(ts => uiCesium.addDataSource(ts.trajectoryDataSource));
 
     ui.setListItems(trackSourceView, trackSources);
     ui.setSelectedListItem(trackSourceView, trackSources[0]);
 }
-
-//--- track messages
 
 function handleTrackMessage(track) {
     //console.log(JSON.stringify(track));
@@ -324,7 +217,7 @@ function handleTrackListMessage(tracks) { // bulk update
     for (track of tracks) updateTrackEntries(track);
 }
 
-function updateTrack (track,te,pos,attitude) {
+function updateTrack(track, te, pos, attitude) {
     let ts = te.trackSource;
     let trackEntries = ts.trackEntries;
     let trackEntryList = ts.trackEntryList;
@@ -332,7 +225,7 @@ function updateTrack (track,te,pos,attitude) {
     if (isTrackTerminated(track)) { // remove
         if (trackEntryFilter(te)) {
             trackEntryList.remove(te)
-            if (ts === selectedTrackSource){
+            if (ts === selectedTrackSource) {
                 ui.removeListItem(trackEntryView, te);
             }
             trackEntries.delete(te.id);
@@ -371,7 +264,7 @@ function updateTrack (track,te,pos,attitude) {
     }
 }
 
-function addTrack (ts,track,pos,attitude){
+function addTrack(ts, track, pos, attitude) {
     let trackEntries = ts.trackEntries;
     let trackEntryList = ts.trackEntryList;
 
@@ -404,8 +297,8 @@ function updateTrackEntries(track) {
     track.label = util.intern(track.label);
     track.src = util.intern(track.src);
 
-    let ts = trackSources.find( ts=> ts.id === track.src);
-    if (ts){
+    let ts = trackSources.find(ts => ts.id === track.src);
+    if (ts) {
         let pitch = track.pitch ? track.pitch : 0.0;
         let roll = track.roll ? track.roll : 0.0;
         let hpr = Cesium.HeadingPitchRoll.fromDegrees(track.hdg, pitch, roll);
@@ -415,13 +308,13 @@ function updateTrackEntries(track) {
 
         let te = ts.trackEntries.get(track.label);
         if (te) {
-            updateTrack(track,te,pos,attitude);
+            updateTrack(track, te, pos, attitude);
         } else {
-            addTrack(ts,track,pos,attitude);
+            addTrack(ts, track, pos, attitude);
         }
 
         ts.date = track.date;
-        ui.updateListItem(trackSourceView,ts);
+        ui.updateListItem(trackSourceView, ts);
     } else {
         console.log("unknown track source: " + track.src);
     }
@@ -541,9 +434,9 @@ const SAME = ' '; // ' ' '⊣' '⎢'
 function trackInfoLabel(trackEntry) {
     let track = trackEntry.track;
 
-    let fl  = util.toRightAlignedString(util.metersToFlightLevel(track.alt), 3);
-    let hdg = util.toRightAlignedString(Math.round(track.hdg),3);
-    let spd = util.toRightAlignedString(Math.round(util.metersPerSecToKnots(track.spd)),3);
+    let fl = util.toRightAlignedString(util.metersToFlightLevel(track.alt), 3);
+    let hdg = util.toRightAlignedString(Math.round(track.hdg), 3);
+    let spd = util.toRightAlignedString(Math.round(util.metersPerSecToKnots(track.spd)), 3);
 
     var dHdg = 0;
     var dSpd = 0;
@@ -554,22 +447,22 @@ function trackInfoLabel(trackEntry) {
         dSpd = track.spd - tRef.spd;
         dAlt = track.alt - tRef.alt;
     }
-    let ind1 = (dAlt > 0) ? UP    : ((dAlt < 0) ? DOWN  : SAME);
-    let ind2 = (dHdg > 0) ? RIGHT : ((dHdg < 0) ? LEFT  : SAME);
-    let ind3 = (dSpd > 0) ? UP    : ((dSpd < 0) ? DOWN  : SAME);
+    let ind1 = (dAlt > 0) ? UP : ((dAlt < 0) ? DOWN : SAME);
+    let ind2 = (dHdg > 0) ? RIGHT : ((dHdg < 0) ? LEFT : SAME);
+    let ind3 = (dSpd > 0) ? UP : ((dSpd < 0) ? DOWN : SAME);
 
     //return `FL${fl} ${hdg}° ${spd}kn`;
     return `${fl} fl ${ind1}\n${hdg} °  ${ind2}\n${spd} kn ${ind3}`;
 }
 
-function headingTrend (h1,h2) {
+function headingTrend(h1, h2) {
     let d = h2 - h1;
     if (d > 0) return ((d > 180) ? d - 360 : d);
     else if (d < 0) return ((d < -180) ? d + 360 : d);
     else return 0;
 }
 
-function getRefPoint (te, dur) {
+function getRefPoint(te, dur) {
     let track = te.track;
     let date = track.date;
     let trace = te.trace;
@@ -652,16 +545,20 @@ const idQuery = /^ *id *= *(.+)$/;
 // ..and more to follow
 
 function getTrackEntryFilter(query) {
-    let res = query.match(idQuery);
-    if (res) {
-        let idQuery = util.glob2regexp(res[1]);
-        return (idQuery == '*') ? noTrackEntryFilter : te => te.id.match(idQuery);
+    if (!query || query == "*") {
+        return noTrackEntryFilter;
+    } else {
+        let res = query.match(idQuery);
+        if (res) {
+            let idQuery = util.glob2regexp(res[1]);
+            return (idQuery == '*') ? noTrackEntryFilter : te => te.id.match(idQuery);
+        }
+        return null;
     }
-    return null;
 }
 
 function resetTrackEntryList() {
-    if (selectedTrackSource){
+    if (selectedTrackSource) {
         selectedTrackSource.trackEntryList.clear();
         selectedTrackSource.trackEntries.forEach((te, id, map) => {
             if (trackEntryFilter(te)) selectedTrackSource.trackEntryList.insert(te);
@@ -671,7 +568,7 @@ function resetTrackEntryList() {
 }
 
 function resetTrackEntryAssets() {
-    if (selectedTrackSource){
+    if (selectedTrackSource) {
         selectedTrackSource.trackEntries.forEach((te, id, map) => {
             let assets = te.assets;
 
@@ -711,9 +608,9 @@ function resetTrackEntryAssets() {
     }
 }
 
-//--- interaction
+//--- interaction (those cannot be called without a DOM event argument)
 
-app.queryTracks = function(event) {
+ui.exportToMain(function queryTracks(event) {
     let input = ui.getFieldValue(event);
 
     let newFilter = getTrackEntryFilter(input);
@@ -722,12 +619,12 @@ app.queryTracks = function(event) {
         resetTrackEntryList();
         resetTrackEntryAssets();
     }
-}
+});
 
-app.selectTrack = function(event) {
+ui.exportToMain(function selectTrack(event) {
     let te = event.detail.curSelection;
     if (te) {
-        if (te.assets.symbol) viewer.selectedEntity = te.assets.symbol;
+        if (te.assets.symbol) uiCesium.setSelectedEntity(te.assets.symbol);
         if (te.assets.trajectory) {
             ui.setCheckBox("tracks.path", true);
             if (te.assets.trajectory.wall) ui.selectRadio("tracks.wall");
@@ -740,9 +637,9 @@ app.selectTrack = function(event) {
         ui.setCheckBox("tracks.path", false);
         ui.clearRadioGroup("tracks.line");
     }
-}
+});
 
-app.toggleShowPath = function(event) {
+ui.exportToMain(function toggleShowPath(event) {
     let te = ui.getSelectedListItem(trackEntryView);
     if (te) {
         if (ui.isCheckBoxSelected(event)) {
@@ -751,20 +648,20 @@ app.toggleShowPath = function(event) {
 
             te.assets.trajectoryPositions = createTrajectoryAssetPositions(te);
             te.assets.trajectory = createTrajectoryAsset(te, isWall);
-            addTrajectoryEntity( te.trackSource.trajectoryDataSource, te.assets.trajectory);
+            addTrajectoryEntity(te.trackSource.trajectoryDataSource, te.assets.trajectory);
 
         } else {
             if (te.assets.trajectory) {
-                removeTrajectoryEntity( te.trackSource.trajectoryDataSource, te.assets.trajectory);
+                removeTrajectoryEntity(te.trackSource.trajectoryDataSource, te.assets.trajectory);
                 te.assets.trajectory = null;
                 te.assets.trajectoryPositions = null;
                 ui.clearRadioGroup("tracks.line");
             }
         }
     }
-}
+});
 
-app.setLinePath = function(event) {
+ui.exportToMain(function setLinePath(event) {
     let te = ui.getSelectedListItem(trackEntryView);
     if (te) {
         if (te.assets.trajectory) {
@@ -780,9 +677,9 @@ app.setLinePath = function(event) {
             ui.setCheckBox("tracks.path", true);
         }
     }
-}
+});
 
-app.setWallPath = function(event) {
+ui.exportToMain(function setWallPath(event) {
     let te = ui.getSelectedListItem(trackEntryView);
     if (te) {
         if (te.assets.trajectory) {
@@ -798,10 +695,10 @@ app.setWallPath = function(event) {
             ui.setCheckBox("tracks.path", true);
         }
     }
-}
+});
 
-app.resetPaths = function() {
-    if (selectedTrackSource){
+ui.exportToMain(function resetPaths() {
+    if (selectedTrackSource) {
         selectedTrackSource.trackEntryList.forEach(te => {
             if (te.assets.trajectory) {
                 removeTrajectoryEntity(selectedTrackSource.trajectoryDataSource, te.assets.trajectory);
@@ -812,58 +709,25 @@ app.resetPaths = function() {
         ui.clearSelectedListItem(trackEntryView);
         ui.setCheckBox("tracks.path", false);
         ui.clearRadioGroup(ui.getRadio("tracks.wall"));
-        viewer.selectedEntity = null;
+        uiCesium.clearSelectedEntity();
     }
-}
+});
 
-app.selectSource = function(event) {
+ui.exportToMain(function selectSource(event) {
     selectedTrackSource = event.detail.curSelection;
     if (selectedTrackSource) {
         ui.setListItems(trackEntryView, selectedTrackSource.trackEntryList);
     } else {
         ui.clearList(trackEntryView);
     }
-}
+});
 
-app.toggleShowSource = function(event) {
+ui.exportToMain(function toggleShowSource(event) {
     if (selectedTrackSource) {
         selectedTrackSource.setVisible(ui.toggleMenuItemCheck(event));
     }
-}
+});
 
-app.showAllSources = function(event) {
-    console.log("@@ show all sources");
-}
-
-//--- view control
-
-function setHomeView() {
-    viewer.selectedEntity = undefined;
-    viewer.trackedEntity = undefined;
-    viewer.camera.flyTo({
-        destination: Cesium.Cartesian3.fromDegrees(camera.lon, camera.lat, camera.alt),
-        orientation: {
-            heading: Cesium.Math.toRadians(0.0),
-            pitch: Cesium.Math.toRadians(-90.0),
-            roll: Cesium.Math.toRadians(0.0)
-        }
-    });
-}
-app.setHomeView = setHomeView;
-
-function setDownView() {
-    viewer.camera.flyTo({
-        destination: viewer.camera.positionWC,
-        orientation: {
-            heading: Cesium.Math.toRadians(0.0),
-            pitch: Cesium.Math.toRadians(-90.0),
-            roll: Cesium.Math.toRadians(0.0)
-        }
-    });
-}
-app.setDownView = setDownView;
-
-app.toggleFullScreen = function(event) {
-    ui.toggleFullScreen();
-}
-
+ui.exportToMain(function showAllSources(event) {
+    console.log("@@ TBD: show all sources");
+});

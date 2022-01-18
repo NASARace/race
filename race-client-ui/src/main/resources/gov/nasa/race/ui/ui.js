@@ -1,14 +1,12 @@
 if (window) {
-    // used as an anchor for global properties available from HTML documents
-    window.app = {};
-
-    // functions we directly make available to the global namespace
-    window.app.toggleWindow = toggleWindow;
-    window.app.popupMenu = popupMenu;
-    //.. and more
+    if (!window.main) window.main = {}; // used as an anchor for global properties available from document
 }
 
 //--- public functions
+
+export function exportToMain(func) {
+    window.main[func.name] = func;
+}
 
 export function initialize() {
     _initializeIcons();
@@ -22,13 +20,12 @@ export function initialize() {
     _initializeTimeWidgets();
     _initializeSliderWidgets();
     _initializeMenus(); /* has to be last in case widgets add menus */
-
-    return true;
 }
 
 //--- fullscreen
 
 var isFullScreen = false;
+var windows = [];
 
 export function enterFullScreen() {
     if (!isFullScreen) {
@@ -61,6 +58,9 @@ export function toggleFullScreen() {
 
 //--- windows
 
+var topWindowZ = _rootVarInt('--window-z');
+var windows = [];
+
 function _initializeWindows() {
     for (let e of document.getElementsByClassName("ui_window")) {
         initWindow(e);
@@ -85,6 +85,8 @@ export function initWindow(e) {
     }
 
     _makeDraggable(e);
+
+    e.onclick = function() { _raiseWindowToTop(e); };
 }
 
 function _makeDraggable(e) {
@@ -97,6 +99,7 @@ function _makeDraggable(e) {
     titlebar.onmousedown = startDragWindow;
 
     function startDragWindow(mouseEvent) {
+        _raiseWindowToTop(e);
         p3 = mouseEvent.clientX;
         p4 = mouseEvent.clientY;
         document.onmouseup = stopDragWindow;
@@ -121,11 +124,46 @@ function _makeDraggable(e) {
     }
 }
 
+function _setWindowZs() {
+    let z = topWindowZ;
+    for (let i = windows.length - 1; i >= 0; i--) {
+        windows[i].style.zIndex = z;
+        z--;
+    }
+}
+
+function _addWindowOnTop(w) {
+    windows.push(w);
+    _setWindowZs();
+}
+
+function _raiseWindowToTop(w) {
+    var idx = windows.indexOf(w);
+    let iTop = windows.length - 1;
+
+    if (idx >= 0 && idx < iTop) {
+        for (let i = idx; i < iTop; i++) {
+            windows[i] = windows[i + 1];
+        }
+        windows[iTop] = w;
+        _setWindowZs();
+    }
+}
+
+function _removeWindowFromStack(w) {
+    var idx = windows.indexOf(w);
+    if (idx >= 0) {
+        windows.splice(idx, 1);
+        _setWindowZs();
+        w.style.zIndex = -1;
+    }
+}
 
 export function showWindow(o) {
     let e = _elementOf(o);
     if (e) {
         e.style.display = "block";
+        _addWindowOnTop(e);
     }
 }
 
@@ -133,6 +171,7 @@ export function closeWindow(o) {
     let e = _elementOf(o);
     if (e) {
         e.style.display = "none";
+        _removeWindowFromStack(e);
     }
 }
 
@@ -141,12 +180,13 @@ export function toggleWindow(event, o) {
     if (e) {
         if (!e.style.display || e.style.display == "none") {
             if (!e.style.left) _place(e, event.clientX + 20, event.clientY + 20);
-            e.style.display = "block";
+            showWindow(e);
         } else {
-            e.style.display = "none";
+            closeWindow(e);
         }
     }
 }
+exportToMain(toggleWindow);
 
 function _place(e, x, y) {
     // top right should always be visible so that we can move/hide
@@ -1306,6 +1346,7 @@ export function popupMenu(event, o) {
         _uiActivePopupMenus.push(popup);
     }
 }
+exportToMain(popupMenu);
 
 
 export function getPopupMenu(o) {

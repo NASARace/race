@@ -123,7 +123,7 @@ object Dependencies {
   val jimfs = "com.google.jimfs" % "jimfs" % "1.2"
 
   //--- Akka
-  val akkaVersion = "2.6.17"
+  val akkaVersion = "2.6.18"
   val akkaOrg = "com.typesafe.akka"
 
   val akkaActor = akkaOrg %% "akka-actor" % akkaVersion
@@ -168,22 +168,24 @@ object Dependencies {
   // (the new server with old client is supposedly fine). Since there are many old servers out there, we can't
   // use the latest client yet
 
-  val kafkaClients = "org.apache.kafka" % "kafka-clients" % "2.8.0"  
+val kafkaVersion = "3.0.0"
+
+  val kafkaClients = "org.apache.kafka" % "kafka-clients" % kafkaVersion
   //  excludeAll(
   //     ExclusionRule(organization = "log4j", name="log4j"),
   //     ExclusionRule(organization = "org.slf4j", name = "slf4j-log4j12")
   //   )
     
   //--- Kafka broker for testing support (make sure to add log4j to kafkaServer dependencies)
-  val kafka = "org.apache.kafka" %% "kafka" % "2.8.0"
+  val kafka = "org.apache.kafka" %% "kafka" % kafkaVersion
   //  excludeAll(
   //    ExclusionRule(organization = "log4j", name="log4j"),
   //    ExclusionRule(organization = "org.slf4j", name = "slf4j-log4j12")
   //  )
 
   // also for testing support
-  val kafkaTools = "org.apache.kafka" % "kafka-tools" % "2.8.0"
-  val kafkaRaft = "org.apache.kafka" % "kafka-raft" % "2.8.0"
+  val kafkaTools = "org.apache.kafka" % "kafka-tools" % kafkaVersion
+  val kafkaRaft = "org.apache.kafka" % "kafka-raft" % kafkaVersion
 
   val kafkaAll = Seq(kafka,kafkaRaft,kafkaTools) 
 

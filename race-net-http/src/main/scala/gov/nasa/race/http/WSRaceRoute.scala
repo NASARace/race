@@ -20,7 +20,7 @@ import akka.actor.Actor.Receive
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.model.ws.{BinaryMessage, Message, TextMessage}
 import akka.http.scaladsl.server.Directives._
-import akka.http.scaladsl.server.{Directive, PathMatcher, PathMatchers, Route}
+import akka.http.scaladsl.server.{PathMatchers, Route}
 import akka.stream.Materializer
 import akka.stream.scaladsl.{Flow, Sink, SourceQueueWithComplete}
 import akka.{Done, NotUsed}
@@ -32,6 +32,8 @@ import gov.nasa.race.http.webauthn.WebAuthnMethod
 import gov.nasa.race.ifSome
 import gov.nasa.race.uom.Time.Seconds
 import gov.nasa.race.uom.{DateTime, Time}
+import scalatags.Text
+import scalatags.Text.all._
 
 import java.io.File
 import java.net.InetSocketAddress
@@ -39,6 +41,10 @@ import scala.collection.immutable.Iterable
 import scala.collection.mutable.{Map => MutMap}
 import scala.concurrent.Future
 import scala.util.{Failure, Random, Success}
+
+object WSRaceRoute extends CachedFileAssetMap {
+  val sourcePath = "./race-net-http/src/main/resources/gov/nasa/race/http"
+}
 
 /**
   * root type for WebSocket RaceRouteInfos
@@ -48,6 +54,26 @@ trait WSRaceRoute extends RaceRouteInfo {
   implicit val ec = HttpServer.ec // scala.concurrent.ExecutionContext.global
 
   protected def promoteToWebSocket(): Route
+
+  // document fragment to support extensible client-side websocket message handlers
+  def wsResources: Seq[Text.TypedTag[String]] = {
+    Seq( script(src:="ws.js", tpe:="module"))
+  }
+
+  // optional route/content fragment if concrete type wants to use the ws.js handlers
+  def wsAssetRoute: Route = get {
+    path("ws.js") {
+      complete( ResponseData.js(WSRaceRoute.getContent("ws.js")))
+    }
+  }
+
+  def wsRoute: Route = {
+    get {
+      path(requestPrefixMatcher / "ws") { // [AUTH]
+        promoteToWebSocket()
+      }
+    }
+  }
 }
 
 trait WSContext {
@@ -60,7 +86,11 @@ case class AuthWSContext (sockConn: SocketConnection, sessionToken: String) exte
 /**
   * a WSRaceRoute that can only be used by clients that have received a valid (unused) token
   * which is normally transmitted in the document that initiates the websocket request.
-  * Clients transmit the token in the websocket URL: wss://<host>/<target>/ws/<token>
+  * Clients transmit the token in the websocket URL: wss://<host>/<target>/ws/<token>.
+  *
+  * Note this does not imply how the web socket is used
+  *
+  * TODO - do we need an authorized version of this? Auth would happen in the promoteToWebSocket if this is also an AuthorizingWSRaceRoute
   */
 trait TokenizedWSRaceRoute extends WSRaceRoute {
   private val registeredTokens: MutMap[String,InetSocketAddress] = MutMap.empty
@@ -79,7 +109,7 @@ trait TokenizedWSRaceRoute extends WSRaceRoute {
   /**
     * only promote websocket requests that have previously been registered
     */
-  protected def completeTokenizedWSRoute (remove: Boolean): Route = {
+  protected def completeTokenizedWsRoute(consumeToken: Boolean): Route = {
       headerValueByType(classOf[IncomingConnectionHeader]) { sockConn =>
         val clientAddr = sockConn.remoteAddress
         extractUnmatchedPath { p =>
@@ -89,9 +119,9 @@ trait TokenizedWSRaceRoute extends WSRaceRoute {
             case Some(addr) =>
               // note that port will differ since this is a new request
               if (addr.getAddress == clientAddr.getAddress) {
-                if (remove) registeredTokens -= tok // consume it
+                if (consumeToken) registeredTokens -= tok
                 info(s"accepting websocket request for registered token $tok from: $clientAddr")
-                promoteToWebSocket()
+                promoteToWebSocket() // this is where the auth check would happen
 
               } else { // wrong clientAddr
                 warning(s"wrong client address for registered token: $tok: $clientAddr")
@@ -103,6 +133,14 @@ trait TokenizedWSRaceRoute extends WSRaceRoute {
           }
         }
       }
+  }
+
+  override def wsRoute: Route = {
+    get {
+      pathPrefix(requestPrefixMatcher / "ws") { // [AUTH]
+        completeTokenizedWsRoute(true)
+      }
+    }
   }
 }
 

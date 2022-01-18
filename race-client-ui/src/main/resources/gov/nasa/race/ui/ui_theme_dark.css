@@ -47,6 +47,7 @@
     --window-background-color: var(--background-color);
     --window-border: 1px solid var(--border-color);
     --window-shadow: var(--box-shadow);
+    --window-z: 50;
     /* panels */
     --panel-border-top: 1px solid var(--border-color);
     --panel-background-color: var(--background-color);
