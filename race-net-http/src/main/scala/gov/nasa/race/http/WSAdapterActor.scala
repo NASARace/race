@@ -24,6 +24,7 @@ import akka.http.scaladsl.model.{HttpHeader, StatusCodes}
 import akka.http.scaladsl.{ConnectionContext, Http}
 import akka.stream.Materializer
 import akka.stream.scaladsl.{Flow, Keep, Sink, Source, SourceQueueWithComplete}
+import com.typesafe.config.Config
 import gov.nasa.race.actor.FilteringPublisher
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.BusEvent
@@ -325,4 +326,17 @@ trait WSAdapterActor extends FilteringPublisher with SubscribingRaceActor
       // TODO - should we clear 'connection' here or defer it to the handleWsClose (in which case we have to call onDisconnect notifications here)
     }
   }
+}
+
+/**
+  * a WSAdapterActor that indiscriminantly sends out everything it gets from the bus
+  * note that this can still be configured with a reader/writer to deserialize/serialize incoming/outgoing messages
+  */
+class PassThroughWSAdapterActor (val config: Config) extends WSAdapterActor {
+
+  def handlePassThroughMessage: Receive = {
+    case BusEvent(sel,msg,sender) => processOutgoingMessage(msg)
+  }
+
+  override def handleMessage: Receive = handlePassThroughMessage.orElse(handleWsMessage)
 }

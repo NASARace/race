@@ -22,21 +22,52 @@ import gov.nasa.race.util.FileUtils
 import java.io.File
 
 /**
-  * cached file content with a fallback initializer that is only executed once
+  * a generic type that represents a file that can be cached and provides a content getter that only
+  * retrieves the data from the filesystem if the cached content is outdated
+  *
+  * TODO - we need a bounded LRU container that clears caches of rarely used files once we exceed a cache size threshold
   */
-class CachedFile(val file: File, fallback: =>Array[Byte]){
-
-  def this (pathName: String, fallback: =>Array[Byte]) = this(new File(pathName),fallback)
-
+trait CachedFile[T] {
+  val file: File
   protected var lastRead = DateTime.UndefinedDateTime
-  protected var content: Array[Byte] = getContentAsBytes()
+  protected var content: T = getContent()
 
-  def getContentAsBytes(): Array[Byte] = {
+  protected def fileContent(): T
+
+  def getContent(): T = {
     val lastMod = FileUtils.lastModification(file)
-    if (lastMod > lastRead) {
+    if (lastMod > lastRead || !isCached) {
       lastRead = lastMod
-      content = FileUtils.fileContentsAsBytes(file).getOrElse(fallback)
+      content = fileContent()
     }
     content
   }
+
+  def setContent(newContent: T): Unit
+  def clearCache(): Unit
+  def isCached: Boolean
+
+  def lastModified: DateTime = lastRead
+  def fileName: String = file.getName
+  def fileExtension: String = FileUtils.getExtension(file)
+}
+
+class CachedByteFile (val file: File, fallback: =>Array[Byte]) extends CachedFile[Array[Byte]] {
+  def this(f: File) = this(f, Array.empty[Byte])
+  def this (pathName: String, fallback: =>Array[Byte]) = this(new File(pathName),fallback)
+
+  override protected def fileContent(): Array[Byte] = FileUtils.fileContentsAsBytes(file).getOrElse(fallback)
+  override def setContent(bs: Array[Byte]): Unit = FileUtils.setFileContents(file,bs)
+  override def clearCache(): Unit = content = null
+  override def isCached: Boolean = content != null
+}
+
+class CachedStringFile (val file: File, fallback: =>String) extends CachedFile[String] {
+  def this (f: File) = this(f, "")
+  def this (pathName: String, fallback: =>String) = this(new File(pathName),fallback)
+
+  override protected def fileContent(): String = FileUtils.fileContentsAsString(file).getOrElse(fallback)
+  override def setContent(newContent: String): Unit = FileUtils.setFileContents(file,newContent)
+  override def clearCache(): Unit = content = null
+  override def isCached: Boolean = content != null
 }

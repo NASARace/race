@@ -36,7 +36,8 @@ class DateException (msg: String) extends RuntimeException(msg)
   * constructors for Date
   */
 object DateTime {
-  val UNDEFINED_MILLIS = Long.MinValue
+  val UNDEFINED_MILLIS = -9007199254740991L   // we can't use Long.MinValue since it wouldn't map into javascript (Number.MIN_SAFE_INTEGER)
+  val NEVER_MILLIS = Long.MaxValue
 
   final val MsecPerDay = 1000*60*60*24
   final val MsecPerHour = 1000*60*60
@@ -339,6 +340,7 @@ object DateTime {
 
   val Date0 = new DateTime(0)
   val UndefinedDateTime = new DateTime(UNDEFINED_MILLIS)
+  val NeverDateTime = new DateTime(NEVER_MILLIS)
 
   val LocalOffsetMillis: Long = ZonedDateTime.now.getOffset.getTotalSeconds * 1000
   val LocalOffsetHours: Int = ZonedDateTime.now.getOffset.getTotalSeconds / 3600

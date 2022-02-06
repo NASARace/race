@@ -147,7 +147,7 @@ class EnvironmentPage (raceConsole: GUIMain, pageConfig: Config) extends Collaps
     if (!ui.promptPassword("")) fail("please enter password for gateway")
 
     gwSpec match {
-      case UrlRE(_,usr,gwHost,gPort,_) =>
+      case UrlRE(_,usr,gwHost,gPort,_,_) =>
         val user = nonNullOrElse(usr, System.getProperty("user.name"))
         val gwPort = toIntOrElse(gPort, 22)
         val session = jsch.getSession(user,gwHost)

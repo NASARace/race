@@ -225,6 +225,11 @@ object ConfigUtils {
       }
     }
 
+    def getNonEmptyStringsOrElse (key: String, fallback: => Array[String]): Array[String] = {
+      val ss = getStrings(key)
+      if (ss.nonEmpty) ss else fallback
+    }
+
     def getStringListOrElse(key: String, fallbackValue: Seq[String]): Seq[String] = {
       try {
         conf.getStringList(key).asScala.toSeq

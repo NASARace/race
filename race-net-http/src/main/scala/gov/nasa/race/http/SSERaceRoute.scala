@@ -39,6 +39,8 @@ import gov.nasa.race.ifSome
   * RaceRoute that supports server sent events (SSE) as a unidirectional push mechanism
   *
   * this is similar to a WSRaceRoute without the need to handle client messages
+  *
+  * note it is up to the concrete type to translate events into SSEs from within their receiveData handler
   */
 trait SSERaceRoute extends RaceRouteInfo {
 
@@ -51,11 +53,13 @@ trait SSERaceRoute extends RaceRouteInfo {
     // nothing here
   }
 
-  protected def toSSE (msg: Any): Seq[ServerSentEvent] // to be provided by client to
 }
 
 /**
   * SSERaceRoute that pushes messages received from a bus channel to all connected clients
+  *
+  * Note it is still up to the concrete type to provice a receiveData() implementation that handles relevant
+  * data, which then has to be translated and pushed like this:  ..toSSE(data).foreach(push)
   */
 trait PushSSERoute extends SSERaceRoute with SourceQueueOwner[ServerSentEvent] with RaceDataClient {
 
@@ -83,17 +87,6 @@ trait PushSSERoute extends SSERaceRoute with SourceQueueOwner[ServerSentEvent] w
         info(s"dropping connection: $remoteAddr")
         connections = connections.filter( e => e._1 ne remoteAddr)
     }
-  }
-
-  /**
-    * called by associated actor
-    * NOTE - this is executed from the actor thread and can modify connections so we have to synchronize
-    */
-  def receiveData: Receive = {
-    case BusEvent(_,data: Any,_) =>
-      synchronized {
-        toSSE(data).foreach(push)
-      }
   }
 
   protected def handleConnectionLoss (remoteAddress: InetSocketAddress, cause: Any): Unit = {

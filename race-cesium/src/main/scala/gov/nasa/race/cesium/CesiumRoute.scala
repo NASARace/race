@@ -48,11 +48,11 @@ object CesiumRoute extends CachedFileAssetMap {
   * control Cesium appearance. However, config usually also has to provide layer/dataSource (i.e. application-specific)
   * settings and hence we provide only config artifacts here
   */
-trait CesiumRoute [T <: WSContext]
-  extends CachedProxyRoute // we might cache cesium content
+trait CesiumRoute
+  extends FSCachedProxyRoute // we might cache cesium content
     with UiRoute // we provide race-ui windows for controlling Cesium view and entities
     with TokenizedWSRaceRoute  // and need a per-document-request web socket..
-    with PushWSRaceRoute[T] //..to push at least initial globe/time state (concrete type probably needs to push more)
+    with PushWSRaceRoute //..to push at least initial globe/time state (concrete type probably needs to push more)
     with ConfigScriptRaceRoute // requiring a lot of client configuration
     with ContinuousTimeRaceRoute { // we also need sim time
 
@@ -61,23 +61,25 @@ trait CesiumRoute [T <: WSContext]
   val accessToken = config.getVaultableString("access-token")
 
   val cesiumCache = config.getOptionalString("cesium-cache") // optional cache of Cesium resources
-  val cesiumVersion = config.getStringOrElse("cesium-version", "1.88")
+  val cesiumVersion = config.getStringOrElse("cesium-version", "1.90")
 
+  val proxyImagery = config.getBoolean("proxy-maptile-provider")
   val imageryProvider = config.getStringOrElse("maptile-provider", "http://tile.stamen.com/terrain")
-  val imageryCache = config.getOptionalString("maptile-cache")
 
+  val proxyTerrain = config.getBoolean("proxy-elevation-provider")
   val terrainProvider = config.getStringOrElse("elevation-provider", "https://elevation3d.arcgis.com/arcgis/rest/services/WorldElevation3D/Terrain3D/ImageServer")
-  val terrainCache = config.getOptionalString("elevation-cache")
 
   //--- cesium related routes
 
+  override def route: Route = uiCesiumRoute ~ super.route
+
   def uiCesiumRoute: Route = {
     get {
-      //--- dynamic geospatial content requested by Cesium
+      //--- dynamic geospatial content requested by Cesium at runtime
       pathPrefix(CesiumRoute.imageryPrefix) { // we only get this if we act as a proxy
-        completeCached(imageryCache.get, imageryProvider)
+        completeProxied(imageryProvider)
       } ~ pathPrefix(CesiumRoute.terrainPrefix) { // also just when configured as proxy
-        completeCached(terrainCache.get, terrainProvider)
+        completeProxied(terrainProvider)
 
         //--- the standard Cesium assets
       } ~ pathPrefix("Build" / "Cesium") {
@@ -106,10 +108,15 @@ trait CesiumRoute [T <: WSContext]
 
   //--- cesium web socket handling
 
-  protected def initializeCesiumConnection (ctx: BasicWSContext, queue: SourceQueueWithComplete[Message]): Unit = {
-    val remoteAddr = ctx.sockConn.remoteAddress
-    sendSetClock(remoteAddr, queue)
-    sendInitialCameraPosition(remoteAddr, queue)
+  protected override def initializeConnection(ctx: WSContext, queue: SourceQueueWithComplete[Message]): Unit = {
+    super.initializeConnection( ctx, queue)
+    initializeCesiumConnection( ctx,queue)
+  }
+
+  protected def initializeCesiumConnection (ctx: WSContext, queue: SourceQueueWithComplete[Message]): Unit = {
+    val remoteAddr = ctx.remoteAddress
+    sendSetClock( remoteAddr, queue)
+    sendInitialCameraPosition( remoteAddr, queue)
   }
 
   def sendInitialCameraPosition (remoteAddr: InetSocketAddress, queue: SourceQueueWithComplete[Message]): Unit = {
@@ -135,14 +142,29 @@ trait CesiumRoute [T <: WSContext]
     pushTo(remoteAddr, queue, TextMessage.Strict(msg))
   }
 
-  //--- content creator fragments
+  //--- document content fragments
+
+  // we need to load that before any of our own scripts so that we can refer to it during init (e.g. in scripts)
+  override def getPreambleHeaderFragments: Seq[Text.TypedTag[String]] = super.getPreambleHeaderFragments ++ cesiumResources
+
+  override def getHeaderFragments: Seq[Text.TypedTag[String]] = super.getHeaderFragments ++ uiCesiumResources
+
+  override def getPreambleBodyFragments: Seq[Text.TypedTag[String]] = super.getPreambleBodyFragments :+ fullWindowCesiumContainer
+
+  override def getBodyFragments: Seq[Text.TypedTag[String]] = {
+    super.getBodyFragments ++ Seq(uiViewWindow(), uiViewIcon, uiTimeWindow(), uiTimeIcon)
+  }
+
+  override def getConfig (requestUri: Uri, remoteAddr: InetSocketAddress): String = {
+    super.getConfig(requestUri, remoteAddr) + basicCesiumConfig(requestUri,remoteAddr)
+  }
 
   // to be called from the concrete getConfig() implementation
   def basicCesiumConfig (requestUri: Uri, remoteAddr: InetSocketAddress): String = {
     val wsToken = registerTokenForClient(remoteAddr)
 
-    val imagery = if (imageryCache.isDefined) CesiumRoute.imageryPrefix else imageryProvider
-    val terrain = if (terrainCache.isDefined) CesiumRoute.terrainPrefix else terrainProvider
+    val imagery = if (proxyImagery) CesiumRoute.imageryPrefix else imageryProvider
+    val terrain = if (proxyTerrain) CesiumRoute.terrainPrefix else terrainProvider
 
     s"""
       export const cesiumAccessToken = '${config.getVaultableString("access-token")}';
@@ -173,8 +195,6 @@ trait CesiumRoute [T <: WSContext]
     }
   }
 
-  //--- document fragments
-
   // id required by Cesium scripts
   def fullWindowCesiumContainer: Text.TypedTag[String] = div(id:="cesiumContainer", cls:="ui_full_window")
 
@@ -196,7 +216,7 @@ trait CesiumRoute [T <: WSContext]
 
   // positions can be set in main css (ids: 'view', 'view_icon', 'time', 'time_icon')
 
-  def uiViewWindow(title: String): Text.TypedTag[String] = {
+  def uiViewWindow(title: String="View"): Text.TypedTag[String] = {
     uiWindow(title, "view")(
       uiFieldGroup()(
         uiNumField("lat", "view.latitude"),
@@ -215,7 +235,7 @@ trait CesiumRoute [T <: WSContext]
     uiIcon("view-icon.svg", "main.toggleWindow(event,'view')", "view_icon")
   }
 
-  def uiTimeWindow(title: String): Text.TypedTag[String] = {
+  def uiTimeWindow(title: String="Time"): Text.TypedTag[String] = {
     uiWindow(title, "time")(
       uiClock("time", "time.utc", "UTC"),
       uiTimer("elapsed", "time.elapsed")

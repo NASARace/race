@@ -16,30 +16,22 @@
  */
 package gov.nasa.race.share
 
-import java.net.InetSocketAddress
-import java.nio.file.Path
-import akka.Done
 import akka.actor.Actor.Receive
 import akka.http.scaladsl.model.StatusCodes
-import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.model.ws.{Message, TextMessage}
-import akka.http.scaladsl.server.Directives.{get, path}
+import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.{PathMatchers, Route}
-import akka.stream.scaladsl.SourceQueueWithComplete
 import com.typesafe.config.Config
-import gov.nasa.race.common.ConstAsciiSlice.asc
-import gov.nasa.race.common.{BufferedStringJsonPullParser, JsonParseException, JsonSerializable, JsonWriter, SyncJsonWriter}
-import gov.nasa.race.core.{BusEvent, ContinuousTimeRaceActor, ParentActor, Ping, PingParser, Pong, RaceDataClient}
-import gov.nasa.race.http.{BasicPushWSRaceRoute, BasicWSContext, PushWSRaceRoute, SiteRoute, SocketConnection}
-import gov.nasa.race.{ifSome, withSomeOrElse}
+import gov.nasa.race.common.{BufferedStringJsonPullParser, JsonSerializable, JsonWriter}
+import gov.nasa.race.core.{BusEvent, ParentActor, Ping, PingParser, Pong}
+import gov.nasa.race.http.{PushWSRaceRoute, WSContext}
 import gov.nasa.race.uom.DateTime
+import gov.nasa.race.{ifSome, withSomeOrElse}
 
+import java.net.InetSocketAddress
 import scala.collection.immutable.Iterable
-import scala.collection.mutable
-import scala.collection.mutable.{ArrayBuffer, ListBuffer}
-import scala.concurrent.Future
+import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.duration.DurationInt
-import scala.util.Try
 
 object NodeServerRoute {
   val requestPrefix = "share-integrator"
@@ -53,7 +45,7 @@ object NodeServerRoute {
   * server does not need to know client IP addresses a priori
   */
 class NodeServerRoute(val parent: ParentActor, val config: Config)
-                                        extends BasicPushWSRaceRoute with NodeDatesResponder {
+                                        extends PushWSRaceRoute with NodeDatesResponder {
 
   /**
     * the parser for incoming (web socket) messages. Note this is from trusted/checked connections
@@ -172,8 +164,8 @@ class NodeServerRoute(val parent: ParentActor, val config: Config)
     * this is what we receive through the websocket (from connected providers)
     * BEWARE - this is executed in a different (akka-http) thread. Use wsWriter for sync responses
     */
-  override protected def handleIncoming (ctx: BasicWSContext, m: Message): Iterable[Message] = {
-    val remoteAddr = ctx.sockConn.remoteAddress
+  override protected def handleIncoming (ctx: WSContext, m: Message): Iterable[Message] = {
+    val remoteAddr = ctx.remoteAddress
 
     m match {
       case tm: TextMessage.Strict =>

@@ -39,7 +39,7 @@ object CesiumTrackRoute  extends CachedFileAssetMap {
 /**
   * a RaceRoute that uses Cesium to display tracks transmitted over a websocket
   */
-trait CesiumTrackRoute [T <: WSContext] extends CesiumRoute[T] with TrackWSRoute[T] {
+trait CesiumTrackRoute extends CesiumRoute with TrackWSRoute {
 
   val trackColor = config.getStringOrElse("color", "yellow")
   val trackModel = config.getStringOrElse("track-model", "generic_track.glb")
@@ -53,15 +53,11 @@ trait CesiumTrackRoute [T <: WSContext] extends CesiumRoute[T] with TrackWSRoute
     pushTo(remoteAddr, queue, TextMessage.Strict(msg))
   }
 
-  // the track specific initialization messages sent to the client
-  protected def initializeTrackConnection (ctx: BasicWSContext, queue: SourceQueueWithComplete[Message]): Unit = {
-    val remoteAddr = ctx.sockConn.remoteAddress
-    sendSourceList(remoteAddr, queue)
-  }
 
-  /**
-    * the track specific routes
-    */
+  //--- route handling
+
+  override def route: Route = uiCesiumTrackRoute ~ super.route
+
   def uiCesiumTrackRoute: Route = {
     get {
       path ("ui_cesium_tracks.js") {
@@ -74,19 +70,29 @@ trait CesiumTrackRoute [T <: WSContext] extends CesiumRoute[T] with TrackWSRoute
     }
   }
 
-  /**
-    *  parse message from client, returning optional list of reply messages
-    */
-  def parseTrackMessage(ctx: BasicWSContext, msg: String): Option[Iterable[Message]] = {
-    // TBD
-    None
+  //--- websocket communication
+
+  protected override def initializeConnection (ctx: WSContext, queue: SourceQueueWithComplete[Message]): Unit = {
+    super.initializeConnection( ctx, queue)
+    initializeTrackConnection( ctx, queue)
   }
+
+  // the track specific initialization messages sent to the client
+  protected def initializeTrackConnection (ctx: WSContext, queue: SourceQueueWithComplete[Message]): Unit = {
+    sendSourceList(ctx.remoteAddress, queue)
+  }
+
+  protected override def handleIncoming (ctx: WSContext, m: Message): Iterable[Message] = {
+    handleIncomingTrackMessages(ctx,m)
+    super.handleIncoming(ctx,m)
+  }
+
 
   /**
     * this handles track related messages from the client
     * note this has to be called from the concrete type handleIncoming() method, which also has to discard the incoming message
     */
-  protected def handleIncomingTrackMessages (ctx: BasicWSContext, m: Message): Iterable[Message] = {
+  protected def handleIncomingTrackMessages (ctx: WSContext, m: Message): Iterable[Message] = {
     m match {
       case tm: TextMessage.Strict =>
         parseTrackMessage(ctx, tm.text) match {
@@ -97,9 +103,21 @@ trait CesiumTrackRoute [T <: WSContext] extends CesiumRoute[T] with TrackWSRoute
     }
   }
 
-  //--- content getters (can be overridden in subclasses)
+  /**
+    *  parse message from client, returning optional list of reply messages
+    */
+  def parseTrackMessage(ctx: WSContext, msg: String): Option[Iterable[Message]] = {
+    // TBD
+    None
+  }
 
-  def uiTrackWindow(title: String): Text.TypedTag[String] = {
+  //--- document content
+
+  override def getHeaderFragments: Seq[Text.TypedTag[String]] = super.getHeaderFragments ++ uiCesiumTrackResources
+
+  override def getBodyFragments: Seq[Text.TypedTag[String]] = super.getBodyFragments ++ Seq(uiTrackWindow(), uiTrackIcon)
+
+  def uiTrackWindow(title: String="Tracks"): Text.TypedTag[String] = {
     uiWindow(title,"tracks")(
       uiList("tracks.sources", 5, "main.selectSource(event)", NoAction, "main.popupMenu(event,'tracks.sources_menu')")(
         uiPopupMenu("tracks.sources_menu")(
@@ -121,13 +139,16 @@ trait CesiumTrackRoute [T <: WSContext] extends CesiumRoute[T] with TrackWSRoute
     )
   }
 
-  //--- document artifacts
   def uiTrackIcon: Text.TypedTag[String] = {
     uiIcon("track-icon.svg", "main.toggleWindow(event,'tracks')", "track_icon")
   }
 
   def uiCesiumTrackResources: Seq[Text.TypedTag[String]] = {
     Seq( extModule("ui_cesium_tracks.js"))
+  }
+
+  override def getConfig (requestUri: Uri, remoteAddr: InetSocketAddress): String = {
+    super.getConfig(requestUri,remoteAddr) + trackConfig(requestUri,remoteAddr)
   }
 
   /**
@@ -179,88 +200,18 @@ trait CesiumTrackRoute [T <: WSContext] extends CesiumRoute[T] with TrackWSRoute
   }
 }
 
-trait BasicCesiumTrackRoute extends CesiumTrackRoute[BasicWSContext] with BasicPushWSRaceRoute
-
 
 object CesiumTrackApp extends CachedFileAssetMap {
   val sourcePath = "./race-cesium/src/main/resources/gov/nasa/race/cesium"
 }
 
-
 /**
   * a single page application that processes track channels
   */
-class CesiumTrackAppRoute (val parent: ParentActor, val config: Config) extends BasicCesiumTrackRoute with SpaRaceRoute {
+class CesiumTrackApp (val parent: ParentActor, val config: Config) extends MainSpaRoute with CesiumTrackRoute {
+  val mainModule = "main_tracks.js"
+  val mainCss = "main_tracks.css"
 
-  // TODO - should we automatically accumulate this during construction ? The order might not be obvious from the supertype list
-  override def route: Route = appRoute ~ uiCesiumTrackRoute ~ uiCesiumRoute ~ uiRoute ~ wsRoute ~ wsAssetRoute ~ configRoute ~ documentRoute
-
-  // route artifacts
-  def appRoute: Route = {
-    get {
-      path("main_tracks.css") {
-        complete( ResponseData.css( CesiumTrackApp.getContent("main_tracks.css")))
-      } ~ path("main_tracks.js") {
-        complete( ResponseData.js( CesiumTrackApp.getContent("main_tracks.js")))
-      }
-    }
-  }
-
-  // document artifacts
-  def appResources: Seq[Text.TypedTag[String]] = {
-    Seq(
-      cssLink("main_tracks.css"),
-      extModule("main_tracks.js")
-    )
-  }
-
-  /**
-    * what we automatically send when a client request is accepted
-    */
-  override protected def initializeConnection (ctx: BasicWSContext, queue: SourceQueueWithComplete[Message]): Unit = {
-    initializeCesiumConnection(ctx,queue)
-    initializeTrackConnection(ctx,queue)
-  }
-
-  /**
-    * this is what we get from user devices through their web sockets
-    */
-  override protected def handleIncoming (ctx: BasicWSContext, m: Message): Iterable[Message] = {
-    val responses = handleIncomingTrackMessages(ctx,m)
-    discardMessage(m)
-    responses
-  }
-
-  //--- the document constructors
-
-  def getConfig (requestUri: Uri, remoteAddr: InetSocketAddress): String = {
-    basicCesiumConfig(requestUri,remoteAddr) +
-      trackConfig(requestUri,remoteAddr)
-  }
-
-  def getDocument(): String = {
-    html(
-      htmlHead(
-        cesiumResources, // standard CesiumJS (possibly cached)
-        configScript, // our own config.js module
-        wsResources,
-        uiResources,
-        uiCesiumResources,
-        uiCesiumTrackResources,
-        appResources
-      ),
-      body(onload:="main.initialize()", onunload:="main.shutdown()")(
-        fullWindowCesiumContainer(),
-
-        uiTimeWindow("Time"),
-        uiTimeIcon,
-
-        uiViewWindow("View"),
-        uiViewIcon,
-
-        uiTrackWindow("Tracks"),
-        uiTrackIcon
-      )
-    ).render
-  }
+  override def mainModuleContent: Array[Byte] = CesiumTrackApp.getContent(mainModule)
+  override def mainCssContent: Array[Byte] = CesiumTrackApp.getContent(mainCss)
 }

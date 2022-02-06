@@ -27,7 +27,7 @@ import akka.http.scaladsl.server.Route
 import akka.stream.scaladsl.Source
 import com.typesafe.config.Config
 import gov.nasa.race.config.ConfigUtils._
-import gov.nasa.race.core.ParentActor
+import gov.nasa.race.core.{BusEvent, ParentActor}
 import scalatags.Text.all.{head => htmlHead, _}
 
 import scala.collection.immutable.Iterable
@@ -37,6 +37,9 @@ import scala.collection.Seq
  * a collection of generic test routes that can be used to test network connection and client compatibility.
  * We keep this in race-net-http instead of the -test module so that network connection can be checked without
  * the need for a full RACE installation
+ *
+ * the TestXX RouteInfos provided here are used from a number of config/net/ config files, such as
+ * http-server.conf, sse-server.conf, ws-server.conf and more
  */
 
 
@@ -118,7 +121,7 @@ class TestRefresh (val parent: ParentActor, val config: Config) extends Subscrib
     )
   )
 
-  def route = {
+  override def route: Route = {
     get {
       pathPrefix(requestPrefixMatcher) {
         path("data") {
@@ -134,14 +137,20 @@ class TestRefresh (val parent: ParentActor, val config: Config) extends Subscrib
 /**
   * test route that pushes data to all connections
   */
-class TestPusher (val parent: ParentActor, val config: Config) extends BasicPushWSRaceRoute {
+class TestPusher (val parent: ParentActor, val config: Config) extends PushWSRaceRoute {
 
-  override def route = {
+  override def route: Route = {
     get {
       path(requestPrefixMatcher) {
         promoteToWebSocket()
       }
     }
+  }
+
+  override def receiveData: Receive = {
+    case BusEvent(_,msg,_) =>
+      info(s"received from bus: $msg")
+      push( TextMessage.Strict(msg.toString))
   }
 }
 
@@ -149,7 +158,7 @@ class TestPusher (val parent: ParentActor, val config: Config) extends BasicPush
   * test route that serves a user authorized page which uses a web socket to receive data pushed by the server
   * to all connections
   */
-class TestAuthorizedPusher (val parent: ParentActor, val config: Config) extends AuthorizedPushWSRaceRoute {
+class TestAuthorizedPusher (val parent: ParentActor, val config: Config) extends PushWSRaceRoute with AuthWSRaceRoute {
 
   val page = html(
     htmlHead(
@@ -206,11 +215,17 @@ class TestAuthorizedPusher (val parent: ParentActor, val config: Config) extends
   */
 class EchoService (val parent: ParentActor, val config: Config) extends ProtocolWSRaceRoute {
 
-  override protected val handleMessage = {
-    case tm: TextMessage.Strict =>
-      val msgText = tm.text
-      info(s"route $name processing incoming: $msgText")
-      TextMessage.Strict(s"Echo [$msgText]") :: Nil
+  override protected def handleIncoming (ctx: WSContext, m: Message): Iterable[Message] = {
+    m match {
+      case tm: TextMessage.Strict =>
+        val msgText = tm.text
+        info(s"route $name processing incoming: $msgText")
+        discardMessage(m)
+        TextMessage.Strict(s"Echo [$msgText]") :: Nil
+      case _ =>
+        discardMessage(m)
+        Nil
+    }
   }
 
   override def route: Route = {
@@ -228,9 +243,9 @@ class EchoService (val parent: ParentActor, val config: Config) extends Protocol
   *
   * this service echos incoming messages to the requester and otherwise periodically pushes data to all connections
   */
-class AuthorizedEchoPushService (val parent: ParentActor, val config: Config) extends BasicPushWSRaceRoute with BasicAuthorizedWSRoute {
+class AuthorizedEchoPushService (val parent: ParentActor, val config: Config) extends PushWSRaceRoute with PwAuthorizedWSRoute {
 
-  override protected def handleIncoming (ctx: BasicWSContext, m: Message): Iterable[Message] = {
+  override protected def handleIncoming (ctx: WSContext, m: Message): Iterable[Message] = {
     m match {
       case tm: TextMessage.Strict =>
         val msgText = tm.text
@@ -249,6 +264,10 @@ class AuthorizedEchoPushService (val parent: ParentActor, val config: Config) ex
       }
     }
   }
+
+  override def receiveData: Receive = {
+    case BusEvent(_,msg,_) => push(TextMessage.Strict(msg.toString))
+  }
 }
 
 class TestSSERoute (val pa: ParentActor, val conf: Config) extends SiteRoute(pa,conf) with PushSSERoute {
@@ -261,8 +280,8 @@ class TestSSERoute (val pa: ParentActor, val conf: Config) extends SiteRoute(pa,
     }
   }
 
-  override protected def toSSE(msg: Any): Seq[ServerSentEvent] = {
-    val s = msg.toString
-    if (s.nonEmpty) Seq(ServerSentEvent(s)) else Seq.empty
+  // no accumulation here, we just push out whatever we get
+  override def receiveData: Receive = {
+    case BusEvent(_,msg,_) => push(ServerSentEvent(msg.toString))
   }
 }

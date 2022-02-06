@@ -25,25 +25,81 @@ import akka.http.scaladsl.model.{ContentType, HttpCharsets, HttpEntity, MediaTyp
   */
 object ResponseData {
 
-  def js(content: Array[Byte]): ToResponseMarshallable = {
+  val map: Map[String,Array[Byte]=>HttpEntity.Strict] = Map(
+    "html" -> html,
+    "xml" -> xml,
+    "txt" -> txt,
+    "json" -> json,
+    "csv" -> csv,
+    "js" -> js,
+    "css" -> css,
+    "svg" -> svg,
+    "png" -> png,
+    "jpeg" -> jpeg,
+    "glb" -> glb,
+    "kml" -> kml,
+    "kmz" -> kmz
+    //... and many more
+  )
+
+  def forExtension (ext: String, content: Array[Byte]): HttpEntity.Strict = {
+    map.get(ext) match {
+      case Some(f) => f(content)
+      case None => HttpEntity(ContentType(MediaTypes.`application/octet-stream`), content)
+    }
+  }
+
+  def html (content: Array[Byte]): HttpEntity.Strict = {
+    HttpEntity( ContentType(MediaTypes.`text/html`, HttpCharsets.`UTF-8`), content)
+  }
+
+  def xml (content: Array[Byte]): HttpEntity.Strict = {
+    HttpEntity( ContentType(MediaTypes.`text/xml`, HttpCharsets.`UTF-8`), content)
+  }
+
+  def txt (content: Array[Byte]): HttpEntity.Strict = {
+    HttpEntity( ContentType(MediaTypes.`text/plain`, HttpCharsets.`UTF-8`), content)
+  }
+
+  def csv (content: Array[Byte]): HttpEntity.Strict = {
+    HttpEntity( ContentType(MediaTypes.`text/csv`, HttpCharsets.`UTF-8`), content)
+  }
+
+  def json (content: Array[Byte]): HttpEntity.Strict = {
+    HttpEntity( MediaTypes.`application/json`, content)
+  }
+
+  def js(content: Array[Byte]): HttpEntity.Strict = {
     HttpEntity( ContentType(MediaTypes.`application/javascript`, HttpCharsets.`UTF-8`), content)
   }
 
-  def css(content: Array[Byte]): ToResponseMarshallable = {
+  def css(content: Array[Byte]): HttpEntity.Strict = {
     HttpEntity( ContentType(MediaTypes.`text/css`, HttpCharsets.`UTF-8`), content)
   }
 
-  def svg(content: Array[Byte]): ToResponseMarshallable = {
+  def svg(content: Array[Byte]): HttpEntity.Strict = {
     HttpEntity( MediaTypes.`image/svg+xml`,content)
   }
 
-  def png(content: Array[Byte]): ToResponseMarshallable = {
+  def png(content: Array[Byte]): HttpEntity.Strict = {
     HttpEntity( ContentType( MediaType.customBinary("image", "png", Compressible)),content)
   }
 
-  def glb(content: Array[Byte]): ToResponseMarshallable = {
+  def jpeg(content: Array[Byte]): HttpEntity.Strict = {
+    HttpEntity( ContentType( MediaType.customBinary("image", "jpeg", Compressible)),content)
+  }
+
+  def glb(content: Array[Byte]): HttpEntity.Strict = {
     HttpEntity( ContentType(MediaType.customBinary("model","gltf-binary",Compressible)), content)
   }
 
-  //... and more to follow
+  def kml(content: Array[Byte]): HttpEntity.Strict = {
+    HttpEntity( ContentType(MediaTypes.`application/vnd.google-earth.kml+xml`, HttpCharsets.`UTF-8`), content)
+  }
+
+  def kmz(content: Array[Byte]): HttpEntity.Strict = {
+    HttpEntity( ContentType(MediaTypes.`application/vnd.google-earth.kmz`), content)
+  }
+
+  //... and (many) more to follow
 }

@@ -20,12 +20,11 @@ package gov.nasa.race.util
 import java.io._
 import java.nio.ByteBuffer
 import java.nio.channels.FileChannel
-import java.nio.charset.{CharsetDecoder, StandardCharsets}
+import java.nio.charset.{Charset, CharsetDecoder, StandardCharsets}
 import java.nio.file._
-import java.nio.file.attribute.BasicFileAttributes
+import java.nio.file.attribute.{BasicFileAttributes, UserDefinedFileAttributeView}
 import java.security.MessageDigest
 import java.util.zip.{CRC32, GZIPInputStream, GZIPOutputStream}
-
 import scala.io.BufferedSource
 import StringUtils._
 import gov.nasa.race._
@@ -81,6 +80,30 @@ object FileUtils {
     if (file.isFile) Some(Files.readAllBytes(file.toPath)) else None
   }
   @inline def fileContentsAsBytes(pathName: String): Option[Array[Byte]] = fileContentsAsBytes(new File(pathName))
+
+  def getTextFileAttribute (file: File, name: String): Option[String] = {
+    val view = Files.getFileAttributeView( file.toPath, classOf[UserDefinedFileAttributeView])
+    try { // Java < 17 on macOS causes exceptions if the attribute is not there
+      val buf = ByteBuffer.allocate(view.size(name))
+      view.read(name, buf)
+      buf.flip
+      Some( Charset.defaultCharset.decode(buf).toString)
+    } catch {
+      case x: Throwable => None
+    }
+  }
+
+  def getLongFileAttribute (file: File, name: String): Option[Long] = {
+    val view = Files.getFileAttributeView( file.toPath, classOf[UserDefinedFileAttributeView])
+    try { // Java < 17 on macOS causes exceptions if the attribute is not there
+      val buf = ByteBuffer.allocate(view.size(name))
+      view.read(name, buf)
+      buf.flip
+      Some( buf.getLong)
+    } catch {
+      case x: Throwable => None
+    }
+  }
 
   def withLines (file: File)(f: String=>Unit) = {
     val src = new BufferedSource(new FileInputStream(file))
@@ -286,12 +309,11 @@ object FileUtils {
   /**
    * wrapper object for java.nio.file FileSystem matchers
    */
-  class FileFinder(val dir: String, val globPattern: String) extends SimpleFileVisitor[Path] {
-    val fs = FileSystems.getDefault
-    val matcher = fs.getPathMatcher(s"glob:$dir/$globPattern")
-    val base = fs.getPath(dir)
-    var matches = Seq.empty[File]
+  class FileFinder (base: Path, matcher: PathMatcher) extends SimpleFileVisitor[Path] {
 
+    def this (dir: String, globPattern: String) = this(getPath(dir),getGlobPathMatcher(dir,globPattern))
+
+    var matches = Seq.empty[File]
     Files.walkFileTree(base, this)
 
     def find(file: Path): Unit = {
@@ -310,8 +332,31 @@ object FileUtils {
     override def visitFileFailed(file: Path, exception: IOException) = FileVisitResult.CONTINUE
   }
 
+  def getPath(pathName: String): Path = {
+    val fs = FileSystems.getDefault
+    fs.getPath(pathName)
+  }
+
+  def getGlobPathMatcher (dir: String, globPattern: String): PathMatcher = {
+    val fs = FileSystems.getDefault
+    fs.getPathMatcher(s"glob:$dir/$globPattern")
+  }
+
+  def matches(pm: PathMatcher, pathName: String): Boolean = {
+    val fs = FileSystems.getDefault
+    pm.matches(fs.getPath(pathName))
+  }
+
+  def matches(pm: PathMatcher, file: File): Boolean = {
+    pm.matches(file.toPath)
+  }
+
   def getMatchingFilesIn(dir: String, globPattern: String): Seq[File] = {
     new FileFinder(dir, globPattern).matches
+  }
+
+  def getMatchingFilesIn(dir: String, pm: PathMatcher): Seq[File] = {
+    new FileFinder(getPath(dir),pm).matches
   }
 
   def isGlobPattern(pattern: String): Boolean = {

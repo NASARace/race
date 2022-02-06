@@ -135,7 +135,7 @@ export function toUtf8Array(str) {
 
 //--- string formatting
 
-export function toRightAlignedString(n,minChars) {
+export function toRightAlignedString(n, minChars) {
     let s = n.toString();
     if (s.length < minChars) s = ' '.repeat(minChars - s.length) + s;
     return s;
@@ -143,11 +143,11 @@ export function toRightAlignedString(n,minChars) {
 
 //--- unit conversions
 
-export function metersPerSecToKnots (spd) {
+export function metersPerSecToKnots(spd) {
     return (spd * 1.94384449);
 }
 
-export function metersToFlightLevel (alt) {
+export function metersToFlightLevel(alt) {
     return Math.round(alt * 0.00656167979) * 5;
 }
 
@@ -206,7 +206,7 @@ export function timeFormat(timeOpts) {
 }
 
 export function toTimeString(d, fmt = defaultTimeFormat) {
-    if (d){
+    if (d) {
         return fmt.format(d);
     } else {
         return "-";
@@ -217,13 +217,17 @@ export function toLocalTimeString(d, fmt = defaultLocalTimeFormat) {
     return fmt.format(d);
 }
 
+export function isUndefinedDateTime(d) {
+    return d == Number.MIN_SAFE_INTEGER;
+}
+
 //--- string interning support
 const _uiInterned = new Map();
 
 export function intern(s) {
     let sInterned = _uiInterned.get(s);
     if (!sInterned) {
-        _uiInterned.set(s,s);
+        _uiInterned.set(s, s);
         return s;
     } else {
         return sInterned;

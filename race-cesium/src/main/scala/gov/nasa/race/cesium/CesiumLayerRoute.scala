@@ -1,0 +1,121 @@
+/*
+ * Copyright (c) 2022, United States Government, as represented by the
+ * Administrator of the National Aeronautics and Space Administration.
+ * All rights reserved.
+ *
+ * The RACE - Runtime for Airspace Concept Evaluation platform is licensed
+ * under the Apache License, Version 2.0 (the "License"); you may not use
+ * this file except in compliance with the License. You may obtain a copy
+ * of the License at http://www.apache.org/licenses/LICENSE-2.0.
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package gov.nasa.race.cesium
+
+import akka.http.scaladsl.model.ws.{Message, TextMessage}
+import akka.http.scaladsl.server.Directives._
+import akka.http.scaladsl.server.Route
+import akka.stream.scaladsl.SourceQueueWithComplete
+import com.typesafe.config.Config
+import gov.nasa.race.config.ConfigUtils.ConfigWrapper
+import gov.nasa.race.core.ParentActor
+import gov.nasa.race.http._
+import gov.nasa.race.ui.{extModule, uiIcon, uiList, uiWindow}
+import gov.nasa.race.uom.DateTime
+import scalatags.Text
+
+import scala.collection.mutable
+import scala.collection.mutable.SeqMap
+
+object CesiumLayerRoute extends CachedFileAssetMap {
+  val sourcePath = "./race-cesium/src/main/resources/gov/nasa/race/cesium"
+}
+
+case class CesiumLayer (name: String, url: String, date: DateTime) //.. probably more attributes to follow
+
+/**
+  * a CesiumRoute that pushes static file updates containing layers (e.g. kml)
+  */
+trait CesiumLayerRoute extends QueryProxyRoute with FSCachedProxyRoute with CesiumRoute with PushWSRaceRoute {
+
+  //--- init layers
+
+  val layers: mutable.SeqMap[String,CesiumLayer] = config.getConfigSeq("layers").foldLeft(SeqMap.empty[String,CesiumLayer]) { (map, layerConf) =>
+    val name = layerConf.getString("name")
+    val url = layerConf.getString("url")
+    val date = getFileFromRequestUri(url).map(getFileDate).getOrElse(DateTime.UndefinedDateTime) // we can't use UndefinedDateTime since the client side
+    map += name -> CesiumLayer(name,url,date)
+  }
+
+  //--- routes
+
+  def layerRoute: Route = {
+    get {
+      path ("proxy") {
+        completeProxied // the request url is encoded in the query
+      } ~ path("ui_cesium_layers.js") {
+        complete( ResponseData.js( CesiumLayerRoute.getContent("ui_cesium_layers.js")))
+      } ~ path("layer-icon.svg") {
+        complete( ResponseData.svg( CesiumLayerRoute.getContent("layer-icon.svg")))
+      }
+    }
+  }
+
+  override def route: Route = layerRoute ~ super.route
+
+  //--- document content
+
+  def uiLayerWindow(title: String="Layers"): Text.TypedTag[String] = {
+    uiWindow(title, "layers")(
+      uiList("layers.list", 10, "main.selectLayer(event)")
+    )
+  }
+  def uiLayerIcon: Text.TypedTag[String] = {
+    uiIcon("layer-icon.svg", "main.toggleWindow(event,'layers')", "layer_icon")
+  }
+
+  def uiCesiumLayerResources: Seq[Text.TypedTag[String]] = {
+    Seq( extModule("ui_cesium_layers.js"))
+  }
+
+  override def getHeaderFragments: Seq[Text.TypedTag[String]] = super.getHeaderFragments ++ uiCesiumLayerResources
+
+  override def getBodyFragments: Seq[Text.TypedTag[String]] = super.getBodyFragments ++ Seq(uiLayerWindow(), uiLayerIcon)
+
+  //--- websocket
+
+  protected override def initializeConnection (ctx: WSContext, queue: SourceQueueWithComplete[Message]): Unit = {
+    super.initializeConnection(ctx, queue)
+    initializeLayerConnection(ctx,queue)
+  }
+
+  def initializeLayerConnection (ctx: WSContext, queue: SourceQueueWithComplete[Message]): Unit = {
+    val remoteAddr = ctx.remoteAddress
+    layers.foreach{ e=>
+      val layer = e._2
+      val msg = s"""{"layer":{"name":"${layer.name}","date":${layer.date.toEpochMillis},"url":"${layer.url}"}}"""
+      pushTo(remoteAddr,queue, TextMessage.Strict(msg))
+    }
+  }
+}
+
+
+
+object CesiumLayerApp extends CachedFileAssetMap {
+  val sourcePath = "./race-cesium/src/main/resources/gov/nasa/race/cesium"
+}
+
+/**
+  * a single page application that processes track channels
+  */
+class CesiumLayerApp (val parent: ParentActor, val config: Config) extends MainSpaRoute with CesiumLayerRoute {
+  val mainModule = "main_layers.js"
+  val mainCss = "main_layers.css"
+
+  override def mainModuleContent: Array[Byte] = CesiumLayerApp.getContent(mainModule)
+  override def mainCssContent: Array[Byte] = CesiumLayerApp.getContent(mainCss)
+}

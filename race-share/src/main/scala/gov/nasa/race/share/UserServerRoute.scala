@@ -26,7 +26,7 @@ import com.typesafe.config.Config
 import gov.nasa.race.common.ConstAsciiSlice.asc
 import gov.nasa.race.common.{BatchedTimeoutMap, BufferedStringJsonPullParser, ByteSlice, JsonParseException, JsonSerializable, JsonWriter, TimeoutSubject}
 import gov.nasa.race.config.ConfigUtils._
-import gov.nasa.race.core.{BusEvent, ParentActor, RaceDataClient}
+import gov.nasa.race.core.{BusEvent, ParentActor}
 import gov.nasa.race.http._
 import gov.nasa.race.uom.Time.Milliseconds
 import gov.nasa.race.uom.{DateTime, Time}
@@ -47,7 +47,7 @@ import scala.concurrent.duration.DurationInt
   * we assume all our clients will get the same data
   */
 class UserServerRoute (parent: ParentActor, config: Config) extends AuthSiteRoute(parent,config)
-                                                                   with AuthorizedPushWSRaceRoute {
+                              with PushWSRaceRoute with AuthWSRaceRoute {
   /**
     * what we need to keep track of EditRequests - userChange messages are only valid between a requestEdit and
     * endEdit, up to a configurable inactive timeout that is reset upon each userChange
@@ -62,7 +62,7 @@ class UserServerRoute (parent: ParentActor, config: Config) extends AuthSiteRout
   }
 
   /**
-    * JSON parser for incoming device messages
+    * JSON parser for incoming client (device) messages
     * note that we directly execute respective actions instead of just translating JSON into scala
     */
   class IncomingMessageHandler extends BufferedStringJsonPullParser {
@@ -381,18 +381,21 @@ class UserServerRoute (parent: ParentActor, config: Config) extends AuthSiteRout
 
   /**
     * this is what we get from user devices through their web sockets
+    * note we don't delegate un-handled client messages to super types here
     */
-  override protected def handleIncoming (ctx: AuthWSContext, m: Message): Iterable[Message] = {
-    val response = m match {
-      case tm: TextMessage.Strict =>
-        clientHandler.parseMessage(tm.text, ctx) match {
-          case Some(replies) => replies
-          case None => Nil // not handled
-        }
-      case _ => Nil // we don't process streams
+  override protected def handleIncoming (ctx: WSContext, m: Message): Iterable[Message] = {
+    withAuthWSContext(ctx) { authCtx =>
+      val responseMsgs = m match {
+        case tm: TextMessage.Strict =>
+          clientHandler.parseMessage(tm.text, authCtx) match {
+            case Some(replies) => replies
+            case None => Nil // not handled
+          }
+        case _ => Nil // we don't process streams
+      }
+      discardMessage(m)
+      responseMsgs
     }
-    discardMessage(m)
-    response
   }
 
   override def route: Route = {
@@ -407,12 +410,12 @@ class UserServerRoute (parent: ParentActor, config: Config) extends AuthSiteRout
     * we could cache the less likely changed messages (siteIds,CL,RL) but it is not clear if that buys much
     * in case there are frequent changes and a low number of isOnline clients
     */
-  override protected def initializeConnection (ctx: AuthWSContext, queue: SourceQueueWithComplete[Message]): Unit = {
-    val clientAddr = ctx.sockConn.remoteAddress
+  override protected def initializeConnection (ctx: WSContext, queue: SourceQueueWithComplete[Message]): Unit = {
+    val clientAddr = ctx.remoteAddress
     def pushMsg (msg: Option[Message]) = msg.foreach( pushTo(clientAddr, queue, _))
     def pushMsgs (msgs: Seq[Message]) = msgs.foreach( pushTo(clientAddr, queue, _))
 
-    pushMsg( getSessionUIDMessage(ctx))
+    pushMsg( withAuthWSContext(ctx)( getSessionUIDMessage))
     pushMsg( getNodeListMessage)
     pushMsg( getColumnListMessage)
     pushMsg( getRowListMessage)

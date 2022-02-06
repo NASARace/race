@@ -36,27 +36,32 @@ object NetUtils {
 
   val HostPortRE = """([^:/]+)(?::(\d+))?""".r
   val PortHostPortRE = """(\d+):([^:/]+):(\d+)""".r
-  val UrlRE = """(.+)://(?:([\w]+)@)?([^:/]+)(?::(\d+))?(?:/(.+))?""".r // scheme,user,host,port,path
+  val UrlRE = """(.+)://(?:(.+)@)?([^:/]+)(?::(\d+))?(?:/([^?]+))?(?:\?(.+))?""".r // scheme,user,host,port,path,query
+  val PQUrlRE = """(.+)://(?:(.+)@)?([^:/]+)(?::(\d+))?(?:/(.+))?""".r // scheme,user,host,port,path+query
+  val ServerPathRE = """(.+://(?:[\w]+@)?[^:/]+(?::\d+)?)(?:/)(.+)?""".r
+  val SchemeRE = """^https?://""".r
 
   type UrlString = String
 
-  case class UrlSpec(scheme: String, user: String, host: String, port: Int, path: String) {
+  case class UrlSpec(scheme: String, user: String, host: String, port: Int, path: String, query: String) {
     def isSameLocationAs(other: UrlSpec) = scheme == other.scheme && host == other.host && port == other.port
   }
 
   def parseUrl(url: String): Option[UrlSpec] = {
     url match {
-      case UrlRE(scheme, usr, host, port, path) => Some(UrlSpec(scheme, usr, host, port.toInt, path))
+      case UrlRE(scheme, usr, host, port, path, query) => Some(UrlSpec(scheme, usr, host, port.toInt, path, query))
       case other => None
     }
   }
 
   def userInUrl(url: String): Option[String] = {
     url match {
-      case UrlRE(_, user, _, _, _) => Some(user)
+      case UrlRE(_, user, _, _,_,_) => Some(user)
       case other => None
     }
   }
+
+  def hasScheme(url: String): Boolean = SchemeRE.matches(url)
 
   def isSameUrlLocation(url1: String, url2: String): Boolean = {
     liftPredicate(parseUrl(url1), parseUrl(url2)) { (u1, u2) => u1.isSameLocationAs(u2) }

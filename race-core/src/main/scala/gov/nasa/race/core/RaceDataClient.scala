@@ -27,7 +27,7 @@ import gov.nasa.race.core.BusEvent
   * is essentially a bus interface. The DataClient instantiates this actor and hence could break encapsulation, so
   * care has to be taken to avoid data races inside of setData() implementations
   */
-trait RaceDataClient {
+trait RaceDataClient extends ConfigLoggable {
   val parent: ParentActor
   val config: Config
   val name: String
@@ -44,12 +44,23 @@ trait RaceDataClient {
   }
 
   /**
-    * to be provided by concrete type
+    * to be overridden by concrete type. We only provide an empty implementation here in case we have several
+    * RaceDataClient traits that need to chain their receiveData PFs.
+    *
+    * Override handleDataClientMatchError() in case unmatched messages should not just be ignored
     *
     * NOTE - this partial function is directly called by an associated actor and hence has to provide appropriate synchronization
-    * in case DataClient and DataClientRaceActor do not execute in the same thread
+    * in case DataClient and DataClientRaceActor do not execute in the same thread. Since we don't know anything about the
+    * DataClient execution context here (might not be an actor) we can't avoid synchronization, hence any processing
+    * should be kept at a minimum
     */
-  def receiveData: Receive
+  def receiveData: Receive = {
+    case msg => handleDataClientMatchError(msg)
+  }
+
+  def handleDataClientMatchError(a:Any): Unit = {
+    info(s"ignoring unmatched DataClient message: $a")
+  }
 
   def publishData(data: Any): Unit = {
     actorRef ! PublishRaceData(data)
@@ -66,14 +77,12 @@ case class PublishRaceData (data: Any)
   */
 class DataClientRaceActor(val dataClient: RaceDataClient, val config: Config) extends SubscribingRaceActor with PublishingRaceActor {
 
-  def handleDataClientMatchError(a:Any): Unit = {}
-
   /**
     * inform the dataClient of data received from the bus
-    * account for partial receiveData implementations (otherwise causing match errors that would stop the actor)
+    * override in case a specialized DataClientRaceActor has its own means of notifying its DataClient
     */
   def setClientData (newData: Any): Unit = {
-    dataClient.receiveData.applyOrElse(newData, handleDataClientMatchError)
+    dataClient.receiveData.apply(newData)
   }
 
   /**

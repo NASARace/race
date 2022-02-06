@@ -15,7 +15,7 @@ export function initialize(wsUrl = "ws") {
                 handleServerMessage(msg);
             } catch (error) {
                 console.log(error);
-                console.log(evt.data.toString());
+                //console.log(evt.data.toString());
             }
         }
 

@@ -36,16 +36,26 @@ import scala.util.{Failure, Success}
 
 /**
   * a RaceRoute that is a file system cached proxy
+  *
+  * this is a proxy that forwards to an external server which is computed or configured, i.e. provided
+  * by the caller of completeCached(..serverUrl) and not deduced from the request
   */
 trait CachedProxyRoute extends RaceRouteInfo {
 
   val maxRequestSize = config.getIntOrElse("max-request-size", 2000000)
   val maxRequestTimeout = config.getFiniteDurationOrElse("max-request-timeout", 5.seconds)
 
-  //def info(msg: String) = println(s"@@@ $msg")
+  // TODO - should be completeRelProxy and completeAbsProxy
+  // and cache should be an overlay RRI
 
   /**
-    * the main method of this trait
+    * the main method of this trait that completes the route from filesystem content
+    *
+    * note that users of this method must have matched the requestUrl up to a point where the unmatched
+    * path (without parameters) can be used as a filesystem pathname (under the provided fsRoot directory).
+    *
+    * if the content is not stored in the local filesystem it is retrieved from the provided serverUrl, which
+    * is used as a prefix for the unmatched path to form the external request url
     */
   def completeCached (fsRoot: String, serverUrl: String): Route = {
     extractUri { uri=>

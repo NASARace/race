@@ -25,6 +25,7 @@ import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.config.SubConfigurable
 import gov.nasa.race.core.{ConfigLoggable, Loggable, ParentActor, RaceActorSystem, RaceDataClient}
 import gov.nasa.race.util.StringUtils
+import scalatags.Text
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
@@ -57,8 +58,10 @@ trait RaceRouteInfo extends SubConfigurable with ConfigLoggable {
 
   def getRequestPrefix: String = config.getStringOrElse("request-prefix", name)
 
-  // this is the main function that defines the public (user) routes
-  def route: Route
+  // this is the main function that defines the public (user) routes for this RaceRouteInfo object
+  // it should be collected in reverse order of trait linearization (last ones first)
+  // note this has to be the identity element for route accumulation since this is a root type
+  def route: Route = reject
 
   // this can extend public routes with private ones used from within server responses
   // (such as login/logout and common asset routes)
@@ -99,6 +102,18 @@ trait RaceRouteInfo extends SubConfigurable with ConfigLoggable {
   def onRaceTerminated(server: HttpServer): Boolean = {
     true
   }
+
+  //--- document content fragment accululators (need to default to neutral element)
+
+  // loaded before all RACE specific resources, e.g. for 3rd party code we use in own init
+  // NOTE - anything in here should not
+  def getPreambleHeaderFragments: Seq[Text.TypedTag[String]] = Seq.empty
+
+  def getHeaderFragments: Seq[Text.TypedTag[String]] = Seq.empty
+
+  def getPreambleBodyFragments: Seq[Text.TypedTag[String]] = Seq.empty // loaded before all RACE specific resources
+
+  def getBodyFragments: Seq[Text.TypedTag[String]] = Seq.empty
 }
 
 /**

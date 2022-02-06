@@ -25,11 +25,9 @@ import akka.util.ByteString
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.config.NoConfig
 import gov.nasa.race.http.webauthn.WebAuthnMethod
-import gov.nasa.race.uom.DateTime
 import scalatags.Text.all._
 
 import java.net.InetSocketAddress
-import scala.collection.mutable
 import scala.concurrent.duration._
 
 

@@ -16,7 +16,7 @@
  */
 package gov.nasa.race.http
 
-import gov.nasa.race.common.CachedFile
+import gov.nasa.race.common.CachedByteFile
 import gov.nasa.race.util.ClassUtils
 
 object CachedFileAssetMap {
@@ -35,23 +35,23 @@ object CachedFileAssetMap {
   * Note this fallback is executed at most once, if the asset file is not found in the provided path
   */
 trait CachedFileAssetMap {
-  protected var assetPathMap: Map[String, Map[String,CachedFile]] = Map.empty
+  protected var assetPathMap: Map[String, Map[String,CachedByteFile]] = Map.empty
 
   def getContent (path: String, fileName: String, fallBack: =>Array[Byte]):  Array[Byte] = {
     assetPathMap.get(path) match {
       case Some(assetMap) => // path already known
         assetMap.get(fileName) match {
           case Some (cf) =>
-            cf.getContentAsBytes()
+            cf.getContent()
           case None => // no asset for this filename yet
-            val cf = new CachedFile( path + '/' + fileName, fallBack)
+            val cf = new CachedByteFile( path + '/' + fileName, fallBack)
             assetPathMap = assetPathMap + (path -> (assetMap + (fileName -> cf)))
-            cf.getContentAsBytes()
+            cf.getContent()
         }
       case None => // no assets for this path yet
-        val cf = new CachedFile( path + '/' + fileName, fallBack)
+        val cf = new CachedByteFile( path + '/' + fileName, fallBack)
         assetPathMap = assetPathMap + (path -> Map((fileName -> cf)))
-        cf.getContentAsBytes()
+        cf.getContent()
     }
   }
 
@@ -61,3 +61,5 @@ trait CachedFileAssetMap {
     getContent(sourcePath,fileName,CachedFileAssetMap.fromClass(getClass(), fileName))
   }
 }
+
+class CachedFileMap (val sourcePath: String) extends CachedFileAssetMap

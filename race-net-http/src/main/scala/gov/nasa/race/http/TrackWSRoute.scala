@@ -39,14 +39,14 @@ import TrackWSRoute._
   * Note that we don't imply the client processing here (e.g. Cesium visualization) - this only handles the track data update
   * No assets are associated with this route fragment
   */
-trait TrackWSRoute [T <: WSContext] extends PushWSRaceRoute[T] {
+trait TrackWSRoute extends PushWSRaceRoute {
   val flatten = config.getBooleanOrElse("flatten", false)
   val writer = new JsonWriter()
 
   val channelMap: Map[String,String] = TreeSeqMap.from(config.getKeyValuePairsOrElse("channel-map", Seq.empty)) // preserve order
 
   // TBD - this will eventually handle client selections
-  override protected def handleIncoming (ctx: T, m: Message): Iterable[Message] = {
+  override protected def handleIncoming (ctx: WSContext, m: Message): Iterable[Message] = {
     info(s"ignoring incoming message $m")
     discardMessage(m)
     Nil
@@ -77,7 +77,7 @@ trait TrackWSRoute [T <: WSContext] extends PushWSRaceRoute[T] {
   }
 
   // called from associated actor (different thread)
-  override def receiveData: Receive = {
+  def receiveTrackData: Receive = {
     case BusEvent(channel,track: TrackedObject,_) =>
       synchronized {
         serializeTrack(channel, track)
@@ -96,7 +96,7 @@ trait TrackWSRoute [T <: WSContext] extends PushWSRaceRoute[T] {
           push(TextMessage.Strict(writer.toJson))
         }
       }
-
-    case _ => // ignore
   }
+
+  override def receiveData: Receive = receiveTrackData.orElse(super.receiveData)
 }

@@ -138,7 +138,7 @@ package object ui {
     div(mods: _*)(text)
   }
 
-  def basicUiModules(): Seq[Text.TypedTag[String]] = {
+  def basicUiModules: Seq[Text.TypedTag[String]] = {
     Seq(
       extModule("ui_data.js"),
       extModule("ui_util.js"),

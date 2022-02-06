@@ -34,6 +34,10 @@ object UiRoute extends CachedFileAssetMap {
 trait UiRoute extends  RaceRouteInfo {
   val uiThemeCss = config.getStringOrElse("ui-theme", UiRoute.uiDefaultTheme)
 
+  //--- route handling
+
+  override def route: Route = uiRoute ~ super.route
+
   def uiRoute: Route = {
     get {
       path("ui.js") {
@@ -50,10 +54,19 @@ trait UiRoute extends  RaceRouteInfo {
     }
   }
 
+
+  //--- document content
+
+  override def getHeaderFragments: Seq[Text.TypedTag[String]] = super.getHeaderFragments ++ uiResources
+
   def uiResources: Seq[Text.TypedTag[String]] = {
     Seq(
       cssLink(uiThemeCss), // TODO - this should be configurable/request dependent
-      cssLink("ui.css")
+      cssLink("ui.css"),
+
+      extModule("ui_data.js"),  // TODO - should this be optional?
+      extModule("ui_util.js"),
+      extModule("ui.js")
     )
   }
 }

@@ -28,15 +28,19 @@ import java.net.InetSocketAddress
 /**
   * a RaceRoute that needs to serve a 'config.js' script (ECMA module) as part of the content
   */
-trait ConfigScriptRaceRoute {
+trait ConfigScriptRaceRoute extends RaceRouteInfo {
 
   def configScript: Text.TypedTag[String] = script(src:="config.js", tpe:="module")
+
+  override def getHeaderFragments: Seq[Text.TypedTag[String]] = super.getHeaderFragments :+ configScript
 
   /**
     * the content creator to be provided by the concrete type
     * Note this can use the remoteAddr or requestUri parameters to discriminate between users/devices
+    *
+    * note we provide an identity element here so that we can accumulate the config
     */
-  protected def getConfig(requestUri: Uri, remoteAddr: InetSocketAddress): String
+  def getConfig(requestUri: Uri, remoteAddr: InetSocketAddress): String = ""
 
   protected def completeConfigRequest (requestUri: Uri, remoteAddr: InetSocketAddress): Route = {
     complete {
@@ -55,6 +59,8 @@ trait ConfigScriptRaceRoute {
       }
     }
   }
+
+  override def route: Route = configRoute ~ super.route
 }
 
 /**

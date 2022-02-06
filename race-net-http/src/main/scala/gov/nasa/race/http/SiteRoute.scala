@@ -131,7 +131,7 @@ class SiteRoute (val parent: ParentActor, val config: Config) extends RaceRouteI
   }
 
   // this is only enough for static content, otherwise concrete types will override
-  override def route = siteRoute
+  override def route: Route = siteRoute
 }
 
 /**

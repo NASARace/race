@@ -376,7 +376,8 @@ function createTrackSymbolAsset(trackEntry, pos, attitude) {
             outlineColor: trackColor,
             outlineWidth: 1,
             pixelOffset: config.trackLabelOffset,
-            disableDepthTestDistance: config.minLabelDepth,
+            //disableDepthTestDistance: config.minLabelDepth,
+            disableDepthTestDistance: Number.POSITIVE_INFINITY,
             distanceDisplayCondition: config.trackLabelDC
         }
         // track paths are separate entities
@@ -413,7 +414,8 @@ function createTrackInfoAsset(trackEntry, pos) {
             outlineColor: trackColor,
             outlineWidth: 1,
             pixelOffset: config.trackInfoOffset,
-            disableDepthTestDistance: config.minLabelDepth,
+            //disableDepthTestDistance: config.minLabelDepth,
+            disableDepthTestDistance: Number.POSITIVE_INFINITY,
             distanceDisplayCondition: config.trackInfoDC
         }
     });

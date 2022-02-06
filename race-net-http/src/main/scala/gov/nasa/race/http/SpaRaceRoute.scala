@@ -17,8 +17,10 @@
 package gov.nasa.race.http
 
 import akka.http.scaladsl.model.{ContentTypes, HttpEntity}
-import akka.http.scaladsl.server.Directives.{complete, get, path}
+import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
+import scalatags.Text
+import scalatags.Text.all.{script, _}
 
 /**
   * RaceRouteInfo that serves a single page application, i.e. manages a single (possibly dynamic) Document
@@ -26,7 +28,7 @@ import akka.http.scaladsl.server.Route
 trait SpaRaceRoute extends RaceRouteInfo {
 
   protected def completeSpaRequest: Route = {
-    complete( HttpEntity(ContentTypes.`text/html(UTF-8)`, getDocument()))
+    complete( HttpEntity(ContentTypes.`text/html(UTF-8)`, getDocument))
   }
 
   def documentRoute: Route = {
@@ -37,21 +39,50 @@ trait SpaRaceRoute extends RaceRouteInfo {
     }
   }
 
-  /**
-    * the content creator to be provided by the concrete type
+  override def route: Route = documentRoute ~ super.route
+
+   /*
+    * the content creators to be provided by the concrete type
     * TODO - do we need to pass in requestUri and remoteAddr to allow for client specific documents?
     */
-  protected def getDocument(): String
+
+
+  protected def getDocument: String = {
+    html(
+      scalatags.Text.all.head( getPreambleHeaderFragments, getHeaderFragments ),
+      body(onload:="main.initialize()", onunload:="main.shutdown()")( getPreambleBodyFragments, getBodyFragments )
+    ).render
+  }
 }
 
 /**
-  * SpaRaceRoute requiring user-authentication
+  * a SpaRaceRoute that adds a main module and css
   */
-trait AuthSpaRaceRoute extends AuthRaceRoute with SpaRaceRoute {
+trait MainSpaRoute extends SpaRaceRoute {
+  val mainModule: String
+  val mainCss: String
 
-  override def completeSpaRequest: Route = {
-    completeAuthorized() {
-      HttpEntity(ContentTypes.`text/html(UTF-8)`, getDocument())
+  def mainModuleContent: Array[Byte]
+  def mainCssContent: Array[Byte]
+
+  def mainResourceRoute: Route = {
+    get {
+      path(mainCss) {
+        complete( ResponseData.css( mainCssContent))
+      } ~ path(mainModule) {
+        complete( ResponseData.js( mainModuleContent))
+      }
     }
+  }
+
+  override def route: Route = mainResourceRoute ~ super.route
+
+  override def getHeaderFragments: Seq[Text.TypedTag[String]] = super.getHeaderFragments ++ mainResources
+
+  def mainResources: Seq[Text.TypedTag[String]] = {
+    Seq(
+      link(rel:="stylesheet", tpe:="text/css", href:=mainCss),
+      script(src:=mainModule, tpe:="module")
+    )
   }
 }

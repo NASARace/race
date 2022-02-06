@@ -16,13 +16,14 @@
  */
 package gov.nasa.race.http
 
+import akka.actor.Actor.Receive
 import akka.http.scaladsl.model.sse.ServerSentEvent
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.{PathMatchers, Route}
 import com.typesafe.config.Config
 import gov.nasa.race.common.JsonWriter
 import gov.nasa.race.config.ConfigUtils.ConfigWrapper
-import gov.nasa.race.core.ParentActor
+import gov.nasa.race.core.{BusEvent, ParentActor}
 import gov.nasa.race.track.{TrackedObject, TrackedObjects}
 
 import scala.collection.Seq
@@ -34,25 +35,27 @@ trait TrackSSERoute extends PushSSERoute {
   val flatten = config.getBooleanOrElse("flatten", false)
   val writer = new JsonWriter()
 
-  override protected def toSSE(msg: Any): Seq[ServerSentEvent] = {
-    msg match {
-      case track: TrackedObject =>
+  def receiveTrackData: Receive = {
+    case BusEvent(_,track: TrackedObject,_) =>
+      synchronized {
         writer.clear()
         track.serializeFormattedTo(writer)
-        Seq( new ServerSentEvent(writer.toJson, Some("track")))
-
-      case tracks: TrackedObjects[_] =>
+        push( new ServerSentEvent(writer.toJson, Some("track")))
+      }
+    case BusEvent(_,tracks:TrackedObjects[_],_) =>
+      synchronized {
         if (flatten) {
           tracks.map( t=> ServerSentEvent(writer.toNewJson(t), Some("track")))
         } else {
           writer.clear()
           tracks.serializeFormattedTo(writer)
           Seq(new ServerSentEvent(writer.toJson, Some("trackList")))
-        }
+        }.foreach(push)
+      }
 
-      case _ => Seq.empty
-    }
   }
+
+  override def receiveData: Receive = receiveTrackData.orElse(super.receiveData)
 }
 
 /**
