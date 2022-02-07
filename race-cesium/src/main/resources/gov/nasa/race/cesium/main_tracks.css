@@ -1,10 +1,10 @@
-#tracks {
-    left: 100px;
-    top: 300px;
-    /*width: 15rem;*/
-}
-
 #track_icon {
     left: 90px;
     top: 10px;
+}
+
+#tracks {
+    left: 10px;
+    top: 420px;
+    /*width: 15rem;*/
 }

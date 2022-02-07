@@ -179,7 +179,9 @@ export function toggleWindow(event, o) {
     let e = _elementOf(o);
     if (e) {
         if (!e.style.display || e.style.display == "none") {
-            if (!e.style.left) _place(e, event.clientX + 20, event.clientY + 20);
+            if (!window.getComputedStyle(e).left) { // no placement specified in CSS
+                _place(e, event.clientX + 20, event.clientY + 20);
+            }
             showWindow(e);
         } else {
             closeWindow(e);

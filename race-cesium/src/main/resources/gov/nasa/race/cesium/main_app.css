@@ -1,0 +1,21 @@
+#track_icon {
+    left: 90px;
+    top: 10px;
+}
+
+#layer_icon {
+    left: 130px;
+    top: 10px;
+}
+
+#tracks {
+    left: 10px;
+    top: 420px;
+    /*width: 15rem;*/
+}
+
+#layers {
+    left: 10px;
+    top: 800px;
+    /*width: 15rem;*/
+}

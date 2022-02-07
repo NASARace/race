@@ -20,7 +20,7 @@ import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.MediaType.{Binary, WithFixedCharset, WithOpenCharset}
 import akka.http.scaladsl.model.{ContentType, HttpEntity, HttpRequest, HttpResponse, MediaTypes, StatusCodes, Uri}
 import akka.http.scaladsl.server.Directives.{complete, extractUnmatchedPath, extractUri, onComplete, parameterSeq}
-import akka.http.scaladsl.server.Route
+import akka.http.scaladsl.server.{Directive1, Route}
 import akka.http.scaladsl.model.headers.Expires
 import gov.nasa.race.config.ConfigUtils.ConfigWrapper
 import gov.nasa.race.util.{FileUtils, NetUtils}
@@ -33,7 +33,7 @@ import java.nio.file.Files
 import java.nio.file.attribute.UserDefinedFileAttributeView
 import scala.concurrent.Future
 import scala.concurrent.duration.DurationInt
-import scala.util.{Failure, Success}
+import scala.util.{Failure, Success, Try}
 
 
 /**
@@ -62,21 +62,23 @@ trait ProxyRaceRoute extends RaceRouteInfo {
   }
 
   protected def fetchData (unmatchedPath: Uri.Path, reqUri: String): Route = {
-    implicit val system = parent.system
-    implicit val ec = scala.concurrent.ExecutionContext.global
-
-    info(s"sending proxied request: $reqUri")
-    val req: Future[(HttpEntity.Strict,HttpResponse)] = Http().singleRequest( HttpRequest(uri = reqUri)).flatMap{ resp =>
-      resp.entity.toStrict( maxRequestTimeout, maxRequestSize).map( strictEntity=> (strictEntity,resp))
-    }
-
-    onComplete(req) {
+    onComplete(runServerRequest(reqUri)) {
       case Success((strictEntity,resp)) =>
         completeFetchSuccess(reqUri, strictEntity, resp)
 
       case Failure(x) =>
         info(s"proxied request for $reqUri failed with '$x'")
         complete( StatusCodes.BadRequest, s"resource not available: ${unmatchedPath}")
+    }
+  }
+
+  def runServerRequest (reqUri: String): Future[(HttpEntity.Strict,HttpResponse)] = {
+    implicit val system = parent.system
+    implicit val ec = scala.concurrent.ExecutionContext.global
+
+    info(s"sending proxied request: $reqUri")
+    Http().singleRequest( HttpRequest(uri = reqUri)).flatMap{ resp =>
+      resp.entity.toStrict( maxRequestTimeout, maxRequestSize).map( strictEntity=> (strictEntity,resp))
     }
   }
 
@@ -152,20 +154,26 @@ trait FSCachedProxyRoute extends ProxyRaceRoute {
 
   val cacheDir: String = config.getString("cache-dir")
 
+  def fetchFile(file: File, reqUri: String)(saveAction: =>Unit): Unit = {
+    implicit val ec = scala.concurrent.ExecutionContext.global
+
+    runServerRequest(reqUri).onComplete {
+      case Success((strictEntity,response)) =>
+        val data = strictEntity.getData().toArray
+        saveFile(file, data, strictEntity.contentType, response.header[Expires])
+        saveAction
+
+      case Failure(x) =>
+        info(s"fetching file for proxied  $reqUri failed with '$x'")
+    }
+  }
+
   // check filesystem before we reach out
   // FIXME - too much redundancy with ProxyRaceRoute
   override protected def fetchData (unmatchedPath : Uri.Path, reqUri: String): Route = {
 
     def completeWithServerRequest (file: File, reqUri: String): Route = {
-      implicit val system = parent.system
-      implicit val ec = scala.concurrent.ExecutionContext.global
-
-      info(s"sending proxied request: $reqUri")
-      val req: Future[(HttpEntity.Strict,HttpResponse)] = Http().singleRequest( HttpRequest(uri = reqUri)).flatMap{ resp =>
-        resp.entity.toStrict( maxRequestTimeout, maxRequestSize).map( strictEntity=> (strictEntity,resp))
-      }
-
-      onComplete(req) {
+      onComplete(runServerRequest(reqUri)) {
         case Success((strictEntity,response)) =>
           val data = strictEntity.getData().toArray
           saveFile(file, data, strictEntity.contentType, response.header[Expires])

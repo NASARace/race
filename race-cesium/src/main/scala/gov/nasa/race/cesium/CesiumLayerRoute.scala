@@ -24,10 +24,11 @@ import com.typesafe.config.Config
 import gov.nasa.race.config.ConfigUtils.ConfigWrapper
 import gov.nasa.race.core.ParentActor
 import gov.nasa.race.http._
-import gov.nasa.race.ui.{extModule, uiIcon, uiList, uiWindow}
+import gov.nasa.race.ui.{extModule, uiCheckBox, uiIcon, uiList, uiRowContainer, uiWindow}
 import gov.nasa.race.uom.DateTime
 import scalatags.Text
 
+import java.io.File
 import scala.collection.mutable
 import scala.collection.mutable.SeqMap
 
@@ -35,7 +36,9 @@ object CesiumLayerRoute extends CachedFileAssetMap {
   val sourcePath = "./race-cesium/src/main/resources/gov/nasa/race/cesium"
 }
 
-case class CesiumLayer (name: String, url: String, date: DateTime) //.. probably more attributes to follow
+case class CesiumLayer (name: String, url: String, file: Option[File], show: Boolean) { //.. probably more attributes to follow
+  def date = file.map( f=> DateTime.ofEpochMillis(f.lastModified())).getOrElse(DateTime.UndefinedDateTime)
+}
 
 /**
   * a CesiumRoute that pushes static file updates containing layers (e.g. kml)
@@ -47,8 +50,27 @@ trait CesiumLayerRoute extends QueryProxyRoute with FSCachedProxyRoute with Cesi
   val layers: mutable.SeqMap[String,CesiumLayer] = config.getConfigSeq("layers").foldLeft(SeqMap.empty[String,CesiumLayer]) { (map, layerConf) =>
     val name = layerConf.getString("name")
     val url = layerConf.getString("url")
-    val date = getFileFromRequestUri(url).map(getFileDate).getOrElse(DateTime.UndefinedDateTime) // we can't use UndefinedDateTime since the client side
-    map += name -> CesiumLayer(name,url,date)
+    val file = getFileFromRequestUri(url)
+    val show = layerConf.getBooleanOrElse("show", true)
+    map += name -> CesiumLayer(name,url,file,show)
+  }
+
+  override def onRaceStarted(server: HttpServer): Boolean = {
+    layers.values.foreach { layer =>
+      getFileFromRequestUri(layer.url) match {
+        case Some(file) =>
+          fetchFile(file, layer.url){
+            push(layerMessage(layer))
+          }
+        case None => // ignore
+      }
+    }
+    super.onRaceStarted(server)
+  }
+
+  def layerMessage(layer: CesiumLayer): TextMessage.Strict = {
+    val msg = s"""{"layer":{"name":"${layer.name}","date":${layer.date.toEpochMillis},"url":"${layer.url}","show":${layer.show}}}"""
+    TextMessage.Strict(msg)
   }
 
   //--- routes
@@ -71,7 +93,10 @@ trait CesiumLayerRoute extends QueryProxyRoute with FSCachedProxyRoute with Cesi
 
   def uiLayerWindow(title: String="Layers"): Text.TypedTag[String] = {
     uiWindow(title, "layers")(
-      uiList("layers.list", 10, "main.selectLayer(event)")
+      uiList("layers.list", 10, "main.selectLayer(event)"),
+      uiRowContainer()(
+        uiCheckBox("show layer", "main.toggleLayer(event)", "layers.show")
+      )
     )
   }
   def uiLayerIcon: Text.TypedTag[String] = {
@@ -95,10 +120,8 @@ trait CesiumLayerRoute extends QueryProxyRoute with FSCachedProxyRoute with Cesi
 
   def initializeLayerConnection (ctx: WSContext, queue: SourceQueueWithComplete[Message]): Unit = {
     val remoteAddr = ctx.remoteAddress
-    layers.foreach{ e=>
-      val layer = e._2
-      val msg = s"""{"layer":{"name":"${layer.name}","date":${layer.date.toEpochMillis},"url":"${layer.url}"}}"""
-      pushTo(remoteAddr,queue, TextMessage.Strict(msg))
+    layers.values.foreach{ layer=>
+      pushTo( remoteAddr, queue, layerMessage(layer))
     }
   }
 }

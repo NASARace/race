@@ -13,13 +13,20 @@ var layerEntries = new SkipList( // id-sorted display list for trackEntryView
 );
 
 class LayerEntry {
-    constructor(id, date, url) {
+    constructor(id, date, url, show) {
         this.id = id;
         this.date = date; // last change of trackEntries
         this.url = url;
+        this.show = show;
 
-        this.show = true;
         this.dataSource = undefined; // set upon XMLHttpRequest completion
+    }
+
+    setVisible(isVisible) {
+        if (isVisible != this.show) {
+            if (this.dataSource) this.dataSource.show = isVisible;
+            this.show = isVisible;
+        }
     }
 }
 
@@ -36,14 +43,12 @@ function initLayerView() {
     if (view) {
         ui.setListItemDisplayColumns(view, ["fit"], [
             { name: "show", width: "1rem", attrs: [], map: e => e.show ? "●" : "" },
-            { name: "id", width: "10rem", attrs: ["alignLeft"], map: e => e.id },
+            { name: "id", width: "8rem", attrs: ["alignLeft"], map: e => e.id },
             {
                 name: "date",
                 width: "6rem",
                 attrs: ["fixed", "alignRight"],
-                map: e => {
-                    (util.isUndefinedDateTime(e.date)) ? "" : util.toLocalTimeString(e.date);
-                }
+                map: e => util.toLocalTimeString(e.date)
             }
         ]);
     }
@@ -61,26 +66,45 @@ function handleWsLayerMessages(msgType, msg) {
 }
 
 function handleLayerMessage(layer) {
-
-    let e = new LayerEntry(layer.name, layer.date, layer.url);
+    let e = new LayerEntry(layer.name, layer.date, layer.url, layer.show);
     let idx = layerEntries.insert(e);
     ui.insertListItem(layerView, e, idx);
 
-    loadLayer(layer.url);
+    loadLayer(e);
 }
 
-function loadLayer(url) {
+function loadLayer(layerEntry) {
     let viewer = uiCesium.viewer;
 
     let resource = new Cesium.Resource({
-        url: url,
+        url: layerEntry.url,
         proxy: new Cesium.DefaultProxy('proxy') // proxy through RACE since KML is notorious for including non-CORS links
     });
 
-    let ds = Cesium.KmlDataSource.load(resource, {
+    Cesium.KmlDataSource.load(resource, { // FIXME - what about other layer types
         camera: viewer.scene.camera,
         canvas: viewer.scene.canvas
+    }).then(ds => {
+        console.log("layer loaded " + ds.name);
+        ds.show = layerEntry.show;
+        layerEntry.dataSource = ds;
+        viewer.dataSources.add(ds);
     });
-
-    viewer.dataSources.add(ds);
 }
+
+//--- user interface
+
+ui.exportToMain(function selectLayer(event) {
+    let le = event.detail.curSelection;
+    if (le) {
+        ui.setCheckBox("layers.show", le.show);
+    }
+})
+
+ui.exportToMain(function toggleLayer(event) {
+    let le = ui.getSelectedListItem(layerView);
+    if (le) {
+        le.setVisible(ui.isCheckBoxSelected(event));
+        ui.updateListItem(layerView, le);
+    }
+})

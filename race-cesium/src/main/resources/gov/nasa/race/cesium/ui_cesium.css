@@ -5,22 +5,22 @@ body {
     margin: 0;
 }
 
-#time {
-    left: 400px;
-    top: 300px;
-}
-
-#view {
-    left: 600px;
-    top: 300px;
-}
-
 #time_icon {
-    left: 50px;
+    left: 10px;
     top: 10px;
 }
 
 #view_icon {
-    left: 10px;
+    left: 50px;
     top: 10px;
+}
+
+#time {
+    left: 10px;
+    top: 70px;
+}
+
+#view {
+    left: 10px;
+    top: 220px;
 }
