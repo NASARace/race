@@ -552,6 +552,7 @@ div.ui_popup_menu {
     border-radius: 5px;
     background: var(--menuitem-background-color);
     box-shadow: var(--box-shadow);
+    z-index: 5;
 }
 
 div.ui_popup_menu hr {

@@ -29,7 +29,7 @@ import scala.collection.mutable.ArrayBuffer
   * reg test for JsonPullParser
   */
 class JsonPullParserSpec extends AnyFlatSpec with RaceSpec {
-/*
+
   "a JsonPullParser" should "correctly printout Json source" in {
     val p = new StringJsonPullParser
 
@@ -540,7 +540,6 @@ class JsonPullParserSpec extends AnyFlatSpec with RaceSpec {
     assert( pw.get.length == 1)
     println("Ok.")
   }
-  */
 
   "a JsonPullParser" should "read object value strings" in {
     val objSrc = """{"foo":1,"bar":{"x":0,"y":[42,42,42]},"boo":"fortytwo"}"""

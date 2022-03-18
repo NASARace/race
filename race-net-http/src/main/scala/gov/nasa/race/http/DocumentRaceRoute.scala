@@ -25,7 +25,7 @@ import scalatags.Text.all.{script, _}
 /**
   * RaceRouteInfo that serves a single page application, i.e. manages a single (possibly dynamic) Document
   */
-trait SpaRaceRoute extends RaceRouteInfo {
+trait DocumentRaceRoute extends RaceRouteInfo {
 
   protected def completeSpaRequest: Route = {
     complete( HttpEntity(ContentTypes.`text/html(UTF-8)`, getDocument))
@@ -56,9 +56,9 @@ trait SpaRaceRoute extends RaceRouteInfo {
 }
 
 /**
-  * a SpaRaceRoute that adds a main module and css
+  * a DocumentRaceRoute that adds a main module and css
   */
-trait MainSpaRoute extends SpaRaceRoute {
+trait MainDocumentRoute extends DocumentRaceRoute {
   val mainModule: String
   val mainCss: String
 

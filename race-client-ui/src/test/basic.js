@@ -49,7 +49,7 @@ app.initialize = function() {
         let slider = ui.getSlider("console.position.zoom");
         ui.setSliderRange(slider, 0, 100, 1);
         ui.setSliderValue(slider, 50);
-        //ui.setSliderRange(slider, 400000, 1000000, 100000, new Intl.NumberFormat('en-US', { notation:) 'compact', maximumFractionDigits: 1 }));
+        //ui.setSliderRange(slider, 400000, 1000000, 100000, new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 1 }));
         //ui.setSliderValue(slider, 400000);
 
         ui.setListItemDisplayColumns("console.tracks.list", ["fit"], [

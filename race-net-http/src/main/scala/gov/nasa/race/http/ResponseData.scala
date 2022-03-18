@@ -38,7 +38,10 @@ object ResponseData {
     "jpeg" -> jpeg,
     "glb" -> glb,
     "kml" -> kml,
-    "kmz" -> kmz
+    "kmz" -> kmz,
+    "frag" -> glsl,
+    "vert" -> glsl,
+    "nc" -> bytes
     //... and many more
   )
 
@@ -99,6 +102,14 @@ object ResponseData {
 
   def kmz(content: Array[Byte]): HttpEntity.Strict = {
     HttpEntity( ContentType(MediaTypes.`application/vnd.google-earth.kmz`), content)
+  }
+
+  def glsl(content: Array[Byte]): HttpEntity.Strict = {
+    HttpEntity( ContentType(MediaTypes.`text/plain`, HttpCharsets.`UTF-8`), content) // ?? not sure there is one for frag
+  }
+
+  def bytes(content: Array[Byte]): HttpEntity.Strict = {
+    HttpEntity(ContentType(MediaTypes.`application/octet-stream`), content)
   }
 
   //... and (many) more to follow

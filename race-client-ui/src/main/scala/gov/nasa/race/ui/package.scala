@@ -98,6 +98,15 @@ package object ui {
     div(mods: _*)
   }
 
+  def uiColumnContainer (align: String="", eid: UiID=NoId): Text.TypedTag[String] = {
+    var classes = "ui_container column"
+    if (align == "align_right") classes += " align_right"
+
+    var mods = List(cls:=classes)
+    if (eid.nonEmpty) mods = (id:=eid) :: mods
+    div(mods: _*)
+  }
+
   def uiTextInput (label: String, eid: UiID, action: String=NoAction, placeHolder: String=""): Text.TypedTag[String] = {
     var mods = List(cls:="ui_field text input", data("id"):=eid, data("label"):= label)
     if (action.nonEmpty) mods = (onchange:=action) :: mods
@@ -136,6 +145,18 @@ package object ui {
     var mods = List(cls:=classes)
     if (action.nonEmpty) mods = (onclick:=action) :: mods
     div(mods: _*)(text)
+  }
+
+  def uiSlider (label: String, eid: UiID, changeAction: String=NoAction): Text.TypedTag[String] = {
+    var mods = List(cls:="ui_slider", data("id"):=eid, data("label"):=label)
+    if (changeAction.nonEmpty) mods = (onchange:=changeAction) :: mods
+    div(mods: _*)
+  }
+
+  def uiChoice (label: String, eid: UiID, changeAction: String=NoAction): Text.TypedTag[String] = {
+    var mods = List(cls:="ui_choice", data("id"):=eid, data("label"):=label)
+    if (changeAction.nonEmpty) mods = (onchange:=changeAction) :: mods
+    div(mods: _*)
   }
 
   def basicUiModules: Seq[Text.TypedTag[String]] = {

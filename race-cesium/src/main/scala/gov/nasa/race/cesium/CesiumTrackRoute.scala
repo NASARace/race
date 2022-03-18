@@ -208,7 +208,7 @@ object CesiumTrackApp extends CachedFileAssetMap {
 /**
   * a single page application that processes track channels
   */
-class CesiumTrackApp (val parent: ParentActor, val config: Config) extends MainSpaRoute with CesiumTrackRoute {
+class CesiumTrackApp (val parent: ParentActor, val config: Config) extends MainDocumentRoute with CesiumTrackRoute {
   val mainModule = "main_tracks.js"
   val mainCss = "main_tracks.css"
 

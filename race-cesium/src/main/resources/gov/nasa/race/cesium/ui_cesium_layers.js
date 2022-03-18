@@ -12,20 +12,39 @@ var layerEntries = new SkipList( // id-sorted display list for trackEntryView
     (a, b) => a.id == b.id // identity function
 );
 
-class LayerEntry {
-    constructor(id, date, url, show) {
-        this.id = id;
-        this.date = date; // last change of trackEntries
-        this.url = url;
-        this.show = show;
+const REMOTE = "";
+const LOADING = "…";
+const LOADED = "○";
+const SHOWING = "●";
 
+class LayerEntry {
+    constructor(layer) {
+        this.id = layer.name;
+        this.show = layer.show; // layer.show is only the initial value
+        this.layer = layer;
+
+        this.status = REMOTE;
         this.dataSource = undefined; // set upon XMLHttpRequest completion
     }
 
     setVisible(isVisible) {
         if (isVisible != this.show) {
-            if (this.dataSource) this.dataSource.show = isVisible;
             this.show = isVisible;
+            if (this.dataSource) this.dataSource.show = isVisible;
+
+            if (isVisible) {
+                if (this.status == REMOTE) {
+                    this.status = LOADING;
+                    loadLayer(this);
+                } else if (this.status == LOADED) {
+                    this.status = SHOWING;
+                }
+
+            } else {
+                if (this.status == SHOWING) {
+                    this.status = LOADED;
+                }
+            }
         }
     }
 }
@@ -42,13 +61,13 @@ function initLayerView() {
     let view = ui.getList("layers.list");
     if (view) {
         ui.setListItemDisplayColumns(view, ["fit"], [
-            { name: "show", width: "1rem", attrs: [], map: e => e.show ? "●" : "" },
+            { name: "show", width: "1rem", attrs: [], map: e => e.status },
             { name: "id", width: "8rem", attrs: ["alignLeft"], map: e => e.id },
             {
                 name: "date",
                 width: "6rem",
                 attrs: ["fixed", "alignRight"],
-                map: e => util.toLocalTimeString(e.date)
+                map: e => util.toLocalTimeString(e.layer.date)
             }
         ]);
     }
@@ -66,20 +85,23 @@ function handleWsLayerMessages(msgType, msg) {
 }
 
 function handleLayerMessage(layer) {
-    let e = new LayerEntry(layer.name, layer.date, layer.url, layer.show);
+    let e = new LayerEntry(layer);
     let idx = layerEntries.insert(e);
     ui.insertListItem(layerView, e, idx);
 
-    loadLayer(e);
+    if (layer.show) {
+        setTimeout(() => loadLayer(e), 3000); // FIXME - only defer if page is loading
+    }
 }
 
 function loadLayer(layerEntry) {
     let viewer = uiCesium.viewer;
 
     let resource = new Cesium.Resource({
-        url: layerEntry.url,
+        url: layerEntry.layer.url,
         proxy: new Cesium.DefaultProxy('proxy') // proxy through RACE since KML is notorious for including non-CORS links
     });
+
 
     Cesium.KmlDataSource.load(resource, { // FIXME - what about other layer types
         camera: viewer.scene.camera,
@@ -88,6 +110,9 @@ function loadLayer(layerEntry) {
         console.log("layer loaded " + ds.name);
         ds.show = layerEntry.show;
         layerEntry.dataSource = ds;
+        layerEntry.status = layerEntry.show ? SHOWING : LOADED;
+        ui.updateListItem(layerView, layerEntry);
+
         viewer.dataSources.add(ds);
     });
 }

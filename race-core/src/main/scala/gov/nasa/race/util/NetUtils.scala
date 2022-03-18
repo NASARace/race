@@ -26,6 +26,7 @@ import javax.net.SocketFactory
 import javax.net.ssl._
 import gov.nasa.race._
 
+import java.nio.charset.Charset
 import scala.annotation.tailrec
 import scala.jdk.CollectionConverters.EnumerationHasAsScala
 
@@ -52,6 +53,10 @@ object NetUtils {
       case UrlRE(scheme, usr, host, port, path, query) => Some(UrlSpec(scheme, usr, host, port.toInt, path, query))
       case other => None
     }
+  }
+
+  def decodeUri (encUrl: String): String = {
+    URLDecoder.decode(encUrl,Charset.defaultCharset())
   }
 
   def userInUrl(url: String): Option[String] = {

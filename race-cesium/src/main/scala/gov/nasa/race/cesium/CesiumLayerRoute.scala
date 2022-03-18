@@ -51,7 +51,7 @@ trait CesiumLayerRoute extends QueryProxyRoute with FSCachedProxyRoute with Cesi
     val name = layerConf.getString("name")
     val url = layerConf.getString("url")
     val file = getFileFromRequestUri(url)
-    val show = layerConf.getBooleanOrElse("show", true)
+    val show = layerConf.getBooleanOrElse("show", false)
     map += name -> CesiumLayer(name,url,file,show)
   }
 
@@ -135,7 +135,7 @@ object CesiumLayerApp extends CachedFileAssetMap {
 /**
   * a single page application that processes track channels
   */
-class CesiumLayerApp (val parent: ParentActor, val config: Config) extends MainSpaRoute with CesiumLayerRoute {
+class CesiumLayerApp (val parent: ParentActor, val config: Config) extends MainDocumentRoute with CesiumLayerRoute {
   val mainModule = "main_layers.js"
   val mainCss = "main_layers.css"
 

@@ -176,7 +176,7 @@ trait FSCachedProxyRoute extends ProxyRaceRoute {
       onComplete(runServerRequest(reqUri)) {
         case Success((strictEntity,response)) =>
           val data = strictEntity.getData().toArray
-          saveFile(file, data, strictEntity.contentType, response.header[Expires])
+          saveFile(file, data, strictEntity.contentType, None /* response.header[Expires] */)
           complete( HttpEntity( strictEntity.contentType, data))
 
         case Failure(x) =>
@@ -212,8 +212,10 @@ trait FSCachedProxyRoute extends ProxyRaceRoute {
   }
 
   def getFileFromRequestUri(reqUri: String): Option[File] = {
-    reqUri match {
-      case NetUtils.PQUrlRE(_,_,host,_,pq) => Some(new File(cacheDir, host + '/' + pq))  // FIXME - URI query part needs to be encoded
+    NetUtils.decodeUri(reqUri) match {
+      case NetUtils.PQUrlRE(_,_,host,_,pq) =>
+        val file = new File(cacheDir, host + '/' + pq)
+        Some(file)  // FIXME - URI query part needs to be encoded
       case _ => None
     }
   }
@@ -258,7 +260,12 @@ trait FSCachedProxyRoute extends ProxyRaceRoute {
 
   def getExpiration (f: File): DateTime = {
     FileUtils.getTextFileAttribute(f, FATTR_EXPIRES) match {
-      case Some(value) => DateTime.parseISO(value)
+      case Some(value) =>
+        try {
+          DateTime.parseISO(value)
+        } catch {
+          case t: Throwable => DateTime.NeverDateTime // TODO - should we re-fetch this?
+        }
       case None => DateTime.NeverDateTime
     }
   }

@@ -87,7 +87,8 @@ object FileUtils {
       val buf = ByteBuffer.allocate(view.size(name))
       view.read(name, buf)
       buf.flip
-      Some( Charset.defaultCharset.decode(buf).toString)
+      val v = Charset.defaultCharset.decode(buf).toString
+      if (v.nonEmpty) Some(v) else None
     } catch {
       case x: Throwable => None
     }

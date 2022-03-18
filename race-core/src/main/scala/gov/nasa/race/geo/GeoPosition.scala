@@ -88,7 +88,7 @@ case class LatLonPos(val φ: Angle, val λ: Angle, val altitude: Length) extends
   * a GeoPosition that can be mutated
   * (e.g. to iterate through a large number of positions without allocation)
   */
-case class MutLatLonPos (var φ: Angle, var λ: Angle, var altitude: Length) extends GeoPosition {
+case class MutLatLonPos (var φ: Angle = Angle0, var λ: Angle = Angle0, var altitude: Length = Length0) extends GeoPosition {
   def update (lat: Angle, lon: Angle, alt: Length): Unit = {
     φ = lat
     λ = lon
