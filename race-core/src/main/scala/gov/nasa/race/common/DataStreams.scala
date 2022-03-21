@@ -60,3 +60,18 @@ trait DataStreamWriter extends SchemaImplementor {
     dos.write(b,0,n)
   }
 }
+
+
+class StringDataStreamReader extends DataStreamReader {
+
+  def read (dis: DataInputStream): Option[Any] = {
+    val n = dis.available
+
+
+    val bs = new Array[Byte](n)
+    dis.readFully(bs)
+    Some(new String(bs))
+  }
+
+  override val schema: String = "<utf8>"
+}

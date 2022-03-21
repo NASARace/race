@@ -25,9 +25,11 @@ import scala.collection.mutable.{HashMap => MHashMap}
 import scala.concurrent.ExecutionContext.Implicits.global
 import gov.nasa.race._
 import gov.nasa.race.config.ConfigUtils._
-import gov.nasa.race.common.{DataStreamReader, Status}
+import gov.nasa.race.common.{ByteBufferReader, Status}
 import gov.nasa.race.core.Publish
-import gov.nasa.race.util.{SettableDIStream, ThreadUtils}
+import gov.nasa.race.util.ThreadUtils
+
+import java.nio.ByteBuffer
 
 /**
   * a filtering publisher that imports messages from a multicast socket
@@ -46,7 +48,7 @@ class MulticastImportActor (val config: Config) extends FilteringPublisher {
   val groupPort = config.getIntOrElse("group-port", 4242)
   val sockAddr = new InetSocketAddress(groupAddr,groupPort)
 
-  val reader: DataStreamReader = createReader
+  val reader: ByteBufferReader = createReader
 
   //--- if interval == 0 we publish as soon as we get the packets
   val publishInterval = config.getFiniteDurationOrElse("interval", 0.milliseconds)
@@ -69,7 +71,7 @@ class MulticastImportActor (val config: Config) extends FilteringPublisher {
     sock
   }
 
-  protected def createReader: DataStreamReader = getConfigurable[DataStreamReader]("reader")
+  protected def createReader: ByteBufferReader = getConfigurable[ByteBufferReader]("reader")
 
   override def onStartRaceActor(originator: ActorRef) = {
     receiverThread.start
@@ -135,14 +137,15 @@ class MulticastImportActor (val config: Config) extends FilteringPublisher {
       }
 
       info(s"joined multicast $groupAddr")
-      val dis = new SettableDIStream(MaxMsgLen)
-      val packet = new DatagramPacket(dis.getBuffer, dis.getCapacity)
+      val bb = ByteBuffer.allocate(MaxMsgLen)
+      val packet = new DatagramPacket(bb.array, bb.capacity)
 
       while (status == Status.Running) {
+        bb.clear()
         socket.receive(packet)
+        bb.limit(packet.getLength)
 
-        dis.clear
-        reader.read(dis) match {
+        reader.read(bb) match {
           case Some(items: Seq[_]) => storeOrPublish(storeItems(items),items.foreach(publishFiltered))
           case Some(item) => storeOrPublish(storeItem(item),publishFiltered(item))
           case None => // do nothing

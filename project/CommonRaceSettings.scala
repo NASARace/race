@@ -35,8 +35,10 @@ object CommonRaceSettings {
         run / fork := true,
 
         // TODO - get rid of these once we fully moved from WorldWind (in-process) to Cesium (browser) UIs
-        run / javaOptions += "--add-opens java.desktop/sun.awt=ALL-UNNAMED",
-        run / javaOptions += "--add-opens java.desktop/com.apple.eawt=ALL-UNNAMED",
+        run / javaOptions ++= Seq(
+          "--add-opens", "java.desktop/sun.awt=ALL-UNNAMED",
+          "--add-opens", "java.desktop/com.apple.eawt=ALL-UNNAMED"
+        ),
 
         Test / fork := true,
         outputStrategy := Some(StdoutOutput),

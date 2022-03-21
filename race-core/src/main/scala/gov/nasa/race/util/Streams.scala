@@ -215,6 +215,10 @@ class SettableBAIStream (bs: Array[Byte]) extends ByteArrayInputStream(bs) {
     }
   }
 
+  def setCount (newCount: Int): Unit = {
+    count = if (newCount < buf.length) newCount else buf.length
+  }
+
   def getBuffer = buf
   def getCapacity = buf.length
   def getRemainingByteBuffer(): ByteBuffer = ByteBuffer.wrap(bs,pos,count-pos)
@@ -226,6 +230,8 @@ class SettableDIStream(bais: SettableBAIStream) extends DataInputStream(bais) {
 
   def setPosition(newPos: Int): Int = bais.setPosition(newPos)
   def position = bais.position
+
+  def setCount (newCount: Int): Unit = bais.setCount(newCount)
 
   def getBuffer = bais.getBuffer
   def getCapacity = bais.getCapacity
