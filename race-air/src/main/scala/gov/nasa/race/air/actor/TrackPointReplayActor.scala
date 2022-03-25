@@ -82,7 +82,7 @@ class TrackPointReader (val iStream: InputStream, val pathName: String="<unknown
     if (pendingComplete != null) {
       val msg = pendingComplete
       pendingComplete = null
-      someEntry(msg.date,msg)
+      archiveEntry(msg.date,msg)
 
     } else {
       val tp = dfr.next(recCache)
@@ -102,7 +102,7 @@ class TrackPointReader (val iStream: InputStream, val pathName: String="<unknown
 
       if (tp.getCompleted) pendingComplete = TrackCompleted(id,cs,"?",date)
 
-      someEntry(date, fpos)
+      archiveEntry(date, fpos)
     }
   }
 }

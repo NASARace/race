@@ -72,7 +72,7 @@ trait ArchiveReader extends DateAdjuster {
   protected val nextEntry = new ArchiveEntry(DateTime.UndefinedDateTime,null)
   protected val someEntry = Some(nextEntry)
 
-  protected def someEntry(d: DateTime, m: Any): Option[ArchiveEntry] = {
+  protected def archiveEntry(d: DateTime, m: Any): Option[ArchiveEntry] = {
     nextEntry.date = d
     nextEntry.msg = m
     someEntry

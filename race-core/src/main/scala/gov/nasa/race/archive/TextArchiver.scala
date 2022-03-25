@@ -65,7 +65,7 @@ class TextArchiveReader(val iStream: InputStream, val pathName:String="<unknown>
           buf.setLength(0)
           while (true) {
             br.readLine match {
-              case null | END_MARKER => return someEntry(date, buf.toString)
+              case null | END_MARKER => return archiveEntry(date, buf.toString)
               case line: String =>
                 if (buf.length > 0) buf.append('\n')
                 buf.append(line)

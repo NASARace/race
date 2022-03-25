@@ -28,7 +28,7 @@ import gov.nasa.race.core.ChannelTopicRequest
 import gov.nasa.race.core.RaceActorCapabilities._
 import gov.nasa.race.geo.GeoPosition
 import gov.nasa.race.ifSome
-import gov.nasa.race.track.{TrackDropped, TrackedObject}
+import gov.nasa.race.track.{TrackDropped, Tracked3dObject}
 import gov.nasa.race.uom.DateTime._
 import gov.nasa.race.uom.Time._
 import gov.nasa.race.uom.{DateTime, Time}
@@ -104,7 +104,7 @@ class SbsImportActor(val config: Config) extends SbsImporter with SocketImporter
                                  bufLen: Int,
                                  defaultZone: ZoneId,
                                  dropDuration: FiniteDuration,
-                                 updateFunc: TrackedObject=>Boolean,
+                                 updateFunc: Tracked3dObject=>Boolean,
                                  dropFunc: (String,String,DateTime,Time)=>Unit) extends SocketDataAcquisitionThread(name) {
 
     val dropAfter = Milliseconds(dropDuration.toMillis.toInt)
@@ -280,7 +280,7 @@ class SbsImportActor(val config: Config) extends SbsImporter with SocketImporter
     Some(new SbsDataAcquisitionThread(s"$name-input", initBufferSize, defaultZone, dropAfter, publishTrack, dropTrack))
   }
 
-  def publishTrack (track: TrackedObject): Boolean = {
+  def publishTrack (track: Tracked3dObject): Boolean = {
     publish(track)
     true // go on as long as the parser has more data
   }

@@ -18,7 +18,7 @@ package gov.nasa.race.ww.track
 
 import com.typesafe.config.Config
 import gov.nasa.race.config.ConfigUtils._
-import gov.nasa.race.track.TrackedObject
+import gov.nasa.race.track.Tracked3dObject
 import gov.nasa.race.util.StringUtils
 import gov.nasa.race.ww.Implicits._
 import gov.nasa.race.ww._
@@ -37,7 +37,7 @@ object TrackModel {
   def addDefaultModel( key: String, spec: ModelSpec) = map = map + (key -> spec)
 
   // this can be overridden by concrete FlightLayers to add generic models
-  def loadModel[T <: TrackedObject](mc: Config): TrackModel[T] = {
+  def loadModel[T <: Tracked3dObject](mc: Config): TrackModel[T] = {
     var src = mc.getString("source")
     var size0 = 1.0
     var pitch0,yaw0,roll0 = 0.0
@@ -59,7 +59,7 @@ object TrackModel {
     new TrackModel[T](mc.getString("key"), src, size0, pitch0, yaw0, roll0)
   }
 
-  def loadDefaultModel[T <: TrackedObject]: TrackModel[T] = new TrackModel[T](defaultSpec)
+  def loadDefaultModel[T <: Tracked3dObject]: TrackModel[T] = new TrackModel[T](defaultSpec)
 }
 
 /**
@@ -73,9 +73,9 @@ object TrackModel {
   * correctly at the time it is constructed, hence we have to fall back to a default placeholder.
   * This might be changed at some point in WorldWindJava-pcm (which includes the ObjRenderable)
   */
-class TrackModel[T <: TrackedObject](pattern: String, src: String,
-                                     var size0: Double,
-                                     var yaw0: Double, var pitch0: Double, var roll0: Double)
+class TrackModel[T <: Tracked3dObject](pattern: String, src: String,
+                                       var size0: Double,
+                                       var yaw0: Double, var pitch0: Double, var roll0: Double)
                         extends ObjRenderable(FarAway,src) {
 
   def this (ms: ModelSpec) = this("", ms.src, ms.size0, ms.pitch0, ms.yaw0, ms.roll0)

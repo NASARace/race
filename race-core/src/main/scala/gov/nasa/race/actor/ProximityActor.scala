@@ -36,7 +36,7 @@ import scala.collection.mutable.{HashMap => MHashMap, Set => MSet}
   */
 trait ProximityIdentifier {
   val config: Config
-  def getId(pr: ProximityReference, track: TrackedObject, status: Int): String
+  def getId(pr: ProximityReference, track: Tracked3dObject, status: Int): String
 }
 
 trait PrefixedProximityIdentifier extends ProximityIdentifier {
@@ -53,23 +53,23 @@ trait NumberedProximityIdentifier extends ProximityIdentifier {
 }
 
 class StaticProximityId (val config: Config) extends PrefixedProximityIdentifier {
-  override def getId(pr: ProximityReference, track: TrackedObject, status: Int) = prefix
+  override def getId(pr: ProximityReference, track: Tracked3dObject, status: Int) = prefix
 }
 
 class NumberedStaticProximityId  (val config: Config) extends PrefixedProximityIdentifier with NumberedProximityIdentifier {
-  override def getId(pr: ProximityReference, track: TrackedObject, status: Int) = appendNumber(prefix)
+  override def getId(pr: ProximityReference, track: Tracked3dObject, status: Int) = appendNumber(prefix)
 }
 
 class ProximityRefId  (val config: Config) extends ProximityIdentifier {
-  override def getId(pr: ProximityReference, track: TrackedObject, status: Int) = pr.id
+  override def getId(pr: ProximityReference, track: Tracked3dObject, status: Int) = pr.id
 }
 
 class NumberedProximityRefId (val config: Config) extends NumberedProximityIdentifier {
-  override def getId(pr: ProximityReference, track: TrackedObject, status: Int) = appendNumber(pr.id)
+  override def getId(pr: ProximityReference, track: Tracked3dObject, status: Int) = appendNumber(pr.id)
 }
 
 class ProximityCombinationId (val config: Config) extends ProximityIdentifier {
-  override def getId(pr: ProximityReference, track: TrackedObject, status: Int) = {
+  override def getId(pr: ProximityReference, track: Tracked3dObject, status: Int) = {
     val refId = pr.id
     val trackId = track.gid
     if (refId > trackId) s"$trackId-$refId" else s"$refId-$trackId"
@@ -81,10 +81,10 @@ class ProximityCombinationId (val config: Config) extends ProximityIdentifier {
   */
 trait ProximityActor extends SubscribingRaceActor with PublishingRaceActor {
   abstract class RefEntry {
-    val proximities: MHashMap[String,TrackedObject] = MHashMap.empty
+    val proximities: MHashMap[String,Tracked3dObject] = MHashMap.empty
 
-    def updateRef (t: TrackedObject): Unit = {}
-    def checkProximity (t: TrackedObject): Unit
+    def updateRef (t: Tracked3dObject): Unit = {}
+    def checkProximity (t: Tracked3dObject): Unit
     def dropProximity(tId: String, date: DateTime): Unit
   }
 
@@ -98,13 +98,13 @@ trait ProximityActor extends SubscribingRaceActor with PublishingRaceActor {
 
   val refs: MHashMap[String,RefEntry] = MHashMap.empty
 
-  def updateProximities(track: TrackedObject): Unit = refs.foreach( _._2.checkProximity(track))
+  def updateProximities(track: Tracked3dObject): Unit = refs.foreach( _._2.checkProximity(track))
 
   def dropRef (ttm: TrackTerminationMessage) = refs -= ttm.cs
 
   def dropProximities (ttm: TrackTerminationMessage) = refs.foreach( _._2.dropProximity(ttm.cs,ttm.date))
 
-  protected def createProximityEvent (pr: ProximityReference, dist: Length, status: Int, track: TrackedObject): ProximityEvent = {
+  protected def createProximityEvent (pr: ProximityReference, dist: Length, status: Int, track: Tracked3dObject): ProximityEvent = {
     val id = proximityIdentifier.getId(pr,track,status)
     new ProximityEvent(id,proximityType,pr,dist,status,track)
   }
@@ -118,13 +118,13 @@ class StaticProximityActor (val config: Config) extends ProximityActor {
 
   class StaticRefEntry (val id: String, pos: GeoPosition) extends RefEntry {
 
-    def getDistanceInMeters (track: TrackedObject): Double = {
+    def getDistanceInMeters (track: Tracked3dObject): Double = {
       val tLat = track.position.φ.toRadians
       val tLon = track.position.λ.toRadians
       GeoUtils.euclideanDistanceRad(pos.φ.toRadians,pos.λ.toRadians,tLat,tLon,pos.altitude.toMeters)
     }
 
-    override def checkProximity (track: TrackedObject) = {
+    override def checkProximity (track: Tracked3dObject) = {
       val tId = track.cs
       val dist = getDistanceInMeters(track)
 
@@ -162,7 +162,7 @@ class StaticProximityActor (val config: Config) extends ProximityActor {
   }
 
   override def handleMessage = {
-    case BusEvent(_,track:TrackedObject,_) => updateProximities(track)
+    case BusEvent(_,track:Tracked3dObject,_) => updateProximities(track)
   }
 }
 
@@ -180,9 +180,9 @@ class DynamicProximityActor (val config: Config) extends ProximityActor {
   import ProximityEvent._
 
   class DynamicRefEntry (val refEstimator: TrackedObjectEstimator) extends RefEntry {
-    override def updateRef (track: TrackedObject) = refEstimator.addObservation(track)
+    override def updateRef (track: Tracked3dObject) = refEstimator.addObservation(track)
 
-    protected def getDistanceInMeters (track: TrackedObject): Double = {
+    protected def getDistanceInMeters (track: Tracked3dObject): Double = {
       val re = refEstimator
       val tLat = track.position.φ.toRadians
       val tLon = track.position.λ.toRadians
@@ -190,7 +190,7 @@ class DynamicProximityActor (val config: Config) extends ProximityActor {
       GeoUtils.euclideanDistanceRad(re.lat.toRadians,re.lon.toRadians, tLat,tLon, re.altitude.toMeters)
     }
 
-    override def checkProximity (track: TrackedObject) = {
+    override def checkProximity (track: Tracked3dObject) = {
       val re = refEstimator
       val tId = track.cs
 
@@ -238,7 +238,7 @@ class DynamicProximityActor (val config: Config) extends ProximityActor {
   }
 
   override def handleMessage = {
-    case BusEvent(chan:String,track:TrackedObject,_) =>
+    case BusEvent(chan:String,track:Tracked3dObject,_) =>
       // note that both refs and proximities might be on the same channel
       if (readRefFrom.contains(chan)) updateRef(track)
       if (readFrom.contains(chan)) updateProximities(track)
@@ -250,7 +250,7 @@ class DynamicProximityActor (val config: Config) extends ProximityActor {
     case BusEvent(_,msg:Any,_) =>  // all other BusEvents are ignored
   }
 
-  def updateRef(track: TrackedObject): Unit = {
+  def updateRef(track: Tracked3dObject): Unit = {
     if (track.isDroppedOrCompleted) {
       refs -= track.id
     } else {
@@ -277,7 +277,7 @@ class CollisionDetector (config: Config) extends DynamicProximityActor(config) {
   class CollisionRefEntry(refEstimator: TrackedObjectEstimator) extends DynamicRefEntry(refEstimator) {
     var collisions = Set.empty[String] // keep track of reported/ongoing collisions
 
-    override def checkProximity (track: TrackedObject) = {
+    override def checkProximity (track: Tracked3dObject) = {
       val re = refEstimator
       val tcs = track.cs
 
@@ -297,7 +297,7 @@ class CollisionDetector (config: Config) extends DynamicProximityActor(config) {
     }
   }
 
-  override def updateRef(track: TrackedObject): Unit = {
+  override def updateRef(track: Tracked3dObject): Unit = {
     val e = refs.getOrElseUpdate(track.id, new CollisionRefEntry(refEstimatorPrototype.clone))
     e.updateRef(track)
   }

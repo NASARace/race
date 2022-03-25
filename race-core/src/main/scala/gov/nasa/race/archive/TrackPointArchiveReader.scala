@@ -49,6 +49,6 @@ class TrackPointArchiveReader (val iStream: InputStream, val pathName:String="<u
 
   override def readNextEntry = {
     val tp = dfs.next(recCache)
-    someEntry(DateTime.ofEpochMillis(tp.getDate),tp)
+    archiveEntry(DateTime.ofEpochMillis(tp.getDate),tp)
   }
 }

@@ -21,7 +21,7 @@ import java.nio.ByteBuffer
 import gov.nasa.race.cl.CLCommandQueue
 import gov.nasa.race.common._
 import gov.nasa.race.common.BufferRecord
-import gov.nasa.race.track.TrackedObject
+import gov.nasa.race.track.Tracked3dObject
 
 import scala.collection.mutable.{HashMap => MHashMap}
 import scala.concurrent.duration.FiniteDuration
@@ -77,7 +77,7 @@ class TrackBlockExtrapolator (val queue: CLCommandQueue,
   def map = seBuffer.enqueueMap(queue) // has to be called before we can add observations (fixes)
   def unmap = seBuffer.enqueueUnmap(queue)
 
-  def addObservation (track: TrackedObject) = {
+  def addObservation (track: Tracked3dObject) = {
     entryMap.get(track.id) match {
       case Some(e) =>
       case None =>

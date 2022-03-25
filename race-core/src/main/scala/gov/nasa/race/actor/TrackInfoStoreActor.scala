@@ -37,7 +37,7 @@ class TrackInfoStoreActor (val config: Config) extends ChannelTopicProvider with
 
   // this is an optional channel from which we can read tracks to filter which TrackInfos to generate
   val readTracksFrom = MSet.empty[String] // has to be mutable since it can be remotely initialized
-  var relevantTracks: Option[MMap[String,TrackedObject]] = None
+  var relevantTracks: Option[MMap[String,Tracked3dObject]] = None
 
   val store: TrackInfoStore = createStore
   val readers: Array[TrackInfoReader] = createReaders
@@ -68,7 +68,7 @@ class TrackInfoStoreActor (val config: Config) extends ChannelTopicProvider with
 
     if (readTracksFrom.nonEmpty) {
       readTracksFrom.foreach { channel => busFor(channel).subscribe(self, channel) }
-      if (!relevantTracks.isDefined) relevantTracks = Some(MMap.empty[String,TrackedObject])
+      if (!relevantTracks.isDefined) relevantTracks = Some(MMap.empty[String,Tracked3dObject])
     }
 
     readers.foreach { _.initialize(relevantTracks).foreach(updateStore) }
@@ -82,7 +82,7 @@ class TrackInfoStoreActor (val config: Config) extends ChannelTopicProvider with
   }
 
   override def handleMessage = {
-    case BusEvent(chan: String, track: TrackedObject, _) =>
+    case BusEvent(chan: String, track: Tracked3dObject, _) =>
       if (readTracksFrom.contains(chan)) {
         ifSome(relevantTracks) { trackMap =>
           if (track.isDroppedOrCompleted) trackMap -= track.cs

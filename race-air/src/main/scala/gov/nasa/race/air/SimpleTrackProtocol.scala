@@ -125,7 +125,7 @@ class SimpleTrackReader extends DataStreamReader {
     while (list.size < nTracks) list += readTrack(dis)
   }
 
-  def readTrack (dis: DataInputStream): TrackedObject = {
+  def readTrack (dis: DataInputStream): Tracked3dObject = {
     val id = dis.readUTF
     val msgOrd = dis.readInt  // can be used to check consistency
     val flags = dis.readInt
@@ -194,7 +194,7 @@ class SimpleTrackWriter extends DataStreamWriter {
 
   val schema = SimpleTrackProtocol.schema
 
-  def writeTrack (dos: DataOutputStream, t: TrackedObject) = {
+  def writeTrack (dos: DataOutputStream, t: Tracked3dObject) = {
     val latLonPos = t.position
 
     val msgOrd = 0 // TODO - needs to be passed in or added to TrackedObject
@@ -253,7 +253,7 @@ class SimpleTrackWriter extends DataStreamWriter {
         writeProximity(dos,p)
         dos.size
 
-      case t: TrackedObject =>
+      case t: Tracked3dObject =>
         dos.writeShort(TrackMsg)
         dos.writeShort(1)  // one track record
         writeTrack(dos,t)

@@ -16,7 +16,7 @@ trait TrackMessage {
 }
 
 trait TrackListMessage {
-  def tracks: Seq[TrackedObject]
+  def tracks: Seq[Tracked3dObject]
 }
 
 trait TrackTerminationMessage extends TrackMessage

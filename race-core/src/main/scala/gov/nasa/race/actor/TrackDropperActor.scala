@@ -20,7 +20,7 @@ package gov.nasa.race.actor
 import com.typesafe.config.Config
 import gov.nasa.race.core.BusEvent
 import gov.nasa.race.core.SubscribingRaceActor
-import gov.nasa.race.track.{TrackCompleted, TrackCsChanged, TrackDropped, TrackedObject, TrackedObjects}
+import gov.nasa.race.track.{TrackCompleted, TrackCsChanged, TrackDropped, Tracked3dObject, TrackedObjects}
 
 import scala.collection.mutable
 
@@ -32,11 +32,11 @@ import scala.collection.mutable
   * into the concrete class at some point
   */
 class TrackDropperActor(val config: Config) extends SubscribingRaceActor with TrackDropper {
-  val tracks = mutable.HashMap.empty[String,TrackedObject]
+  val tracks = mutable.HashMap.empty[String,Tracked3dObject]
 
-  override def removeStaleTrack(ac: TrackedObject) = tracks -= ac.cs
+  override def removeStaleTrack(ac: Tracked3dObject) = tracks -= ac.cs
 
-  def update (track: TrackedObject): Unit = {
+  def update (track: Tracked3dObject): Unit = {
     if (track.isDroppedOrCompleted) {  // ? do we still need to publish TrackDropped event if the track has a drop status?
       tracks -= track.cs
     } else {
@@ -45,7 +45,7 @@ class TrackDropperActor(val config: Config) extends SubscribingRaceActor with Tr
   }
 
   override def handleMessage = handleFPosDropperMessage orElse {
-    case BusEvent(_,track: TrackedObject,_) => update(track)
+    case BusEvent(_,track: Tracked3dObject,_) => update(track)
     case BusEvent(_,tracks:TrackedObjects[_],_) => tracks.foreach(update)
 
     case BusEvent(_,fcompleted: TrackCompleted,_) => tracks -= fcompleted.cs

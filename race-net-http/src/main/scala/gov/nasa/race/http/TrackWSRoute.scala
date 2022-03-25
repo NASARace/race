@@ -22,7 +22,7 @@ import gov.nasa.race.common.ConstAsciiSlice.asc
 import gov.nasa.race.common.JsonWriter
 import gov.nasa.race.config.ConfigUtils.ConfigWrapper
 import gov.nasa.race.core.BusEvent
-import gov.nasa.race.track.{TrackedObject, TrackedObjects}
+import gov.nasa.race.track.{Tracked3dObject, TrackedObjects}
 
 import scala.collection.immutable.{Iterable, TreeSeqMap}
 
@@ -52,21 +52,21 @@ trait TrackWSRoute extends PushWSRaceRoute {
     Nil
   }
 
-  def writeTrackObject (w: JsonWriter, channel: String, track: TrackedObject): Unit = {
+  def writeTrackObject (w: JsonWriter, channel: String, track: Tracked3dObject): Unit = {
     w.beginObject
     track.serializeMembersFormattedTo(w)
     w.writeStringMember(SRC, channelMap.getOrElse(channel,channel))
     w.endObject
   }
 
-  def serializeTrack (channel: String, track: TrackedObject): Unit = {
+  def serializeTrack (channel: String, track: Tracked3dObject): Unit = {
     writer.clear().writeObject { w=>
       w.writeMemberName(TRACK)
       writeTrackObject(w,channel,track)
     }
   }
 
-  def serializeTracks[T<:TrackedObject] (channel: String, tracks: TrackedObjects[T]): Unit = {
+  def serializeTracks[T<:Tracked3dObject](channel: String, tracks: TrackedObjects[T]): Unit = {
     writer.clear()
       .beginObject
       .writeMemberName(TRACK_LIST)
@@ -78,7 +78,7 @@ trait TrackWSRoute extends PushWSRaceRoute {
 
   // called from associated actor (different thread)
   def receiveTrackData: Receive = {
-    case BusEvent(channel,track: TrackedObject,_) =>
+    case BusEvent(channel,track: Tracked3dObject,_) =>
       synchronized {
         serializeTrack(channel, track)
         push( TextMessage.Strict(writer.toJson))

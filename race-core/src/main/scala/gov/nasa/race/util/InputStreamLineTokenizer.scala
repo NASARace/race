@@ -20,9 +20,11 @@ package gov.nasa.race.util
 import java.io.InputStream
 
 /**
- * a helper trait to tokenize a text line as a list of String objects
- * separated by commas
- */
+  * a helper trait to tokenize a text line as a list of String objects
+  * separated by commas
+  *
+  * TODO - this is inefficient, move this to slices and re-use the token array
+  */
 trait InputStreamLineTokenizer {
   def getLineFields(stream: InputStream) : List[String] = {
     val sb = new StringBuilder(64)
@@ -43,6 +45,6 @@ trait InputStreamLineTokenizer {
     if (sb.size > 0){
       list = sb.toString :: list
     }
-    return list.reverse
+    list.reverse
   }
 }

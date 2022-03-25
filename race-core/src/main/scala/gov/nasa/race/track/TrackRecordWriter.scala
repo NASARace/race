@@ -50,7 +50,7 @@ class TrackRecordWriter(val config: Config) extends DenseRecordWriter[FloatTrack
 
   override def set(recIndex: Int, msg: Any, isNew: Boolean): Result = {
       msg match {
-        case track: TrackedObject =>
+        case track: Tracked3dObject =>
           rec.setRecordIndex(recIndex)
           rec.id := track.id
           rec.cs := track.cs

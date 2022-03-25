@@ -22,9 +22,10 @@ import gov.nasa.race.actor.Replayer
 import gov.nasa.race.air.SbsUpdater
 import gov.nasa.race.archive.ArchiveReader
 import gov.nasa.race.common.ConfigurableStreamCreator.{configuredPathName, createInputStream}
+import gov.nasa.race.common.LineBuffer
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.PeriodicRaceActor
-import gov.nasa.race.track.{TrackDropped, TrackedObject}
+import gov.nasa.race.track.{TrackDropped, Tracked3dObject}
 import gov.nasa.race.uom.Time._
 import gov.nasa.race.uom.{DateTime, Time}
 
@@ -48,64 +49,23 @@ class SBSReader (val iStream: InputStream, val pathName: String="<unknown>", buf
                                ) // size has to hold at least 2 records
 
   class SbsArchiveUpdater extends SbsUpdater(updateTrack,dropTrack, Some(this), defaultZone) {
-    override protected def acquireMoreData: Boolean = refillBuf
+    override protected def acquireMoreData: Boolean = lineBuffer.nextLine() && initialize(lineBuffer)
   }
 
   val updater: SbsUpdater = new SbsArchiveUpdater
   var next: Option[ArchiveEntry] = None
 
-  val buf = new Array[Byte](bufLen)  // the input buffer for reading iStream
-  var limit = 0 // end of data in buf
-  var recLimit = 0 // end of last record in [i0,limit] range
+  val lineBuffer = new LineBuffer(iStream, 512, bufLen)
 
   //--- updater callbacks
 
-  def updateTrack (track: TrackedObject): Boolean = {
-    next = someEntry(track.date, track)
+  def updateTrack (track: Tracked3dObject): Boolean = {
+    next = archiveEntry(track.date, track)
     false // process entries one at a time - stop the parse loop
   }
 
   def dropTrack (id: String, cs: String, date: DateTime, inactive: Time): Unit = {
     // override in derived class that supports drop checks
-  }
-
-  //--- the data acquisition loop
-
-  def refillBuf: Boolean = {
-    var isEnd = false
-
-    @inline def recordLimit(bs: Array[Byte], len: Int): Int = {
-      var i = len-1
-      while (i>=0 && bs(i) != 10) i -= 1
-      i+1
-    }
-
-    limit = if (recLimit < limit){
-      // move leftover bytes to beginning and fill up
-      val l = limit - recLimit
-      System.arraycopy(buf,recLimit,buf,0,l)
-
-      // note this relies on iStream not doing short reads if this is not the end
-      // note also this does not necessarily hold for GZipInputStreams, depending on
-      // inflater buffer size (not clear if this is an error)
-      val max = buf.length - l
-      val nRead = iStream.read(buf,l,max)
-      isEnd = nRead < max
-      l + nRead
-    } else {
-      iStream.read(buf,0,buf.length)
-    }
-
-    if (limit > 0) {
-      if (!isEnd){ // no need to find recordLimit if this was the last data
-        recLimit = recordLimit(buf,limit)
-        if (recLimit <= 0) {
-          throw new RuntimeException(s"buffer not long enough for SBS record (len=$limit)")
-        }
-      }
-      updater.initialize(buf,recLimit)
-      true
-    } else false // end of data reached
   }
 
   //--- ArchiveReader interface

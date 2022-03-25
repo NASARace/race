@@ -16,13 +16,15 @@
  */
 package gov.nasa.race.common
 
+import java.nio.ByteBuffer
+
 
 class CsvParseException (msg: String) extends RuntimeException(msg)
 
 /**
   * slice based pull parser for CSV as defined in https://tools.ietf.org/html/rfc4180
   */
-abstract class CsvPullParser {
+trait CsvPullParser {
 
   protected var data: Array[Byte] = Array.empty[Byte]  // the (abstract) multi-line data buffer, might grow
   protected var limit: Int = 0
@@ -33,10 +35,11 @@ abstract class CsvPullParser {
 
   protected def setData (newData: Array[Byte]): Unit = setData(newData,newData.length)
 
-  protected def setData (newData: Array[Byte], newLimit: Int): Unit = {
+  protected def setData (newData: Array[Byte], newLimit: Int, newIdx: Int = 0): Unit = {
     data = newData
     limit = newLimit
     value.data = newData
+    idx = newIdx
   }
 
   def clear: Unit = {
@@ -170,7 +173,7 @@ abstract class CsvPullParser {
 /**
   * unbuffered CsvPullParser processing String input
   */
-class StringCsvPullParser extends CsvPullParser {
+trait StringCsvPullParser extends CsvPullParser {
   def initialize (s: String): Boolean = {
     clear
     setData(s.getBytes)
@@ -201,7 +204,7 @@ class BufferedStringCsvPullParser (initBufSize: Int = 8192) extends CsvPullParse
 /**
   * buffered CsvPullParser processing ASCII String input
   */
-class BufferedASCIIStringCsvPullParser (initBufSize: Int = 8192) extends CsvPullParser {
+class BufferedAsciiStringCsvPullParser(initBufSize: Int = 8192) extends CsvPullParser {
 
   protected val bb = new AsciiBuffer(initBufSize)
 
@@ -218,15 +221,17 @@ class BufferedASCIIStringCsvPullParser (initBufSize: Int = 8192) extends CsvPull
 /**
   * unbuffered CsvPullParser processing utf-8 byte array input
   */
-class UTF8CsvPullParser extends CsvPullParser {
-  def initialize (bs: Array[Byte], limit: Int): Boolean = {
+trait Utf8CsvPullParser extends CsvPullParser {
+  def initialize (bs: Array[Byte], limit: Int, start: Int=0): Boolean = {
     clear
-    setData(bs,limit)
+    setData(bs,limit,start)
 
     idx = skipRecordSeparator(0)
     (idx < limit)
   }
 
   def initialize (bs: Array[Byte]): Boolean = initialize(bs,bs.length)
+  def initialize (slice: ByteSlice): Boolean = initialize( slice.data, slice.limit, slice.off)
+  def initialize (bb: ByteBuffer): Boolean = initialize( bb.array(), bb.position(), bb.limit())
 }
 

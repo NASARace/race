@@ -17,7 +17,7 @@
 
 package gov.nasa.race.ww.track
 
-import gov.nasa.race.track.TrackedObject
+import gov.nasa.race.track.Tracked3dObject
 import gov.nasa.race.ww._
 import gov.nasa.worldwind.render.Offset
 
@@ -29,7 +29,7 @@ object TrackSymbol{
 /**
   * a LayerSymbol representing a TrackedObject
   */
-class TrackSymbol[T <: TrackedObject](val trackEntry: TrackEntry[T]) extends LayerSymbol(trackEntry) {
+class TrackSymbol[T <: Tracked3dObject](val trackEntry: TrackEntry[T]) extends LayerSymbol(trackEntry) {
 
   // override if there are concrete TrackedObject specifics which are display relevant
   def update (newT: T) = super.update

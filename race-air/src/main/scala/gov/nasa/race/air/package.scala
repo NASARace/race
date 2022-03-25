@@ -18,7 +18,7 @@
 package gov.nasa.race
 
 import gov.nasa.race.common.AssocSeq
-import gov.nasa.race.track.{TrackedObject, TrackedObjects}
+import gov.nasa.race.track.{Tracked3dObject, TrackedObjects}
 import gov.nasa.race.uom.Angle
 
 /**
@@ -29,7 +29,7 @@ import gov.nasa.race.uom.Angle
   */
 package object air {
 
-  trait TrackedAircraft extends TrackedObject {
+  trait TrackedAircraft extends Tracked3dObject {
 
     def acType: String = "?"
 

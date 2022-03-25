@@ -402,11 +402,21 @@ package object race {
     def date: DateTime
   }
 
-  // something that can be identified across channels
+  /**
+    * something that can be identified by ids (channel- and global-)
+    */
   trait IdentifiableObject {
     def id: String // channel specific (track number, tail number etc.)
     def cs: String // call sign (cross-channel id)
     def gid: String = cs // cross channel (global) id
+  }
+
+  /**
+    * an IdentifiableObject that has a role in a given org, both given as numeric codes
+    */
+  trait OrgObject extends IdentifiableObject {
+    def role: Int
+    def org: Int
   }
 
   // something that can translate between two types
@@ -487,6 +497,8 @@ package object race {
     def map[U] (f: T=>U): ResultValue[U] = if (!failed) SuccessValue(f(get)) else failure
     def flatMap[U] (f: T=>ResultValue[U]): ResultValue[U] = if (!failed) f(get) else failure
     // isEmpty, nonEmpty would be a bit non-intuitive with Result
+
+    def asOption: Option[T]
   }
 
   /**
@@ -496,6 +508,7 @@ package object race {
     def failed: Boolean = false
     def failure: Failure = throw new NoSuchElementException("result did succeed")
     def get: T = value
+    def asOption: Option[T] = Some(value)
   }
 
 
@@ -530,6 +543,8 @@ package object race {
     override def ifSuccess (f: =>Unit): Unit = {}
     override def ifFailed (f: =>Unit): Unit = f
     override def ifFailed (f: String=>Unit): Unit = f(msg)
+
+    def asOption: Option[Nothing] = None
   }
 
 }

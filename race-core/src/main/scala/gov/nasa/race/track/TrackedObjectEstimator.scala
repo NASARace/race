@@ -35,7 +35,7 @@ trait TrackedObjectEstimator extends Cloneable {
 
   //--- this is where we store the last observation
   protected var lastObsTime: Long = 0
-  protected var _track: TrackedObject = null
+  protected var _track: Tracked3dObject = null
   def track = _track
 
 
@@ -47,7 +47,7 @@ trait TrackedObjectEstimator extends Cloneable {
   def speed: Speed
 
   //--- the public interface
-  def addObservation (newTrack: TrackedObject): Boolean
+  def addObservation (newTrack: Tracked3dObject): Boolean
   def estimateState (simTimeMillis: Long): Boolean
 
   override def clone: TrackedObjectEstimator = super.clone.asInstanceOf[TrackedObjectEstimator]
@@ -59,7 +59,7 @@ trait TrackedObjectEstimator extends Cloneable {
   * an estimator that doesn't estimate - it only reports the last observed position
   */
 class HoldEstimator extends TrackedObjectEstimator {
-  override def addObservation(obj: TrackedObject) = {
+  override def addObservation(obj: Tracked3dObject) = {
     _track = obj
     true
   }
@@ -91,7 +91,7 @@ class TrackedObjectExtrapolator extends TrackedObjectEstimator {
   override def heading = Degrees(state(3))
   override def speed = MetersPerSecond(state(4))
 
-  override def addObservation (obs: TrackedObject) = {
+  override def addObservation (obs: Tracked3dObject) = {
     val obsMillis = obs.date.toEpochMillis
 
     // TODO - we should add some consistency checks here

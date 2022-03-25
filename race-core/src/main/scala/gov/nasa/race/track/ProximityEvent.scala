@@ -69,7 +69,7 @@ case class ProximityEvent (id: String,
                            ref: ProximityReference,
                            distance: Length,
                            status: Int,
-                           track: TrackedObject) extends TrackedObject {
+                           track: Tracked3dObject) extends Tracked3dObject {
   import ProximityEvent._
 
   override def toString = f"ProximityEvent(ref=${ref.id},track=${track.cs},dist=${distance.toMeters}%.0f m,flags=${flagDescription(status)}"

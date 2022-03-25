@@ -24,7 +24,7 @@ import gov.nasa.race.core.BusEvent
 import gov.nasa.race.core.{RaceContext, SubscribingRaceActor}
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.geo.{Euclidean, GeoPosition}
-import gov.nasa.race.track.{TrackListMessage, TrackPairEvent, TrackTerminationMessage, TrackedObject, TrackedObjects}
+import gov.nasa.race.track.{TrackListMessage, TrackPairEvent, TrackTerminationMessage, Tracked3dObject, TrackedObjects}
 import gov.nasa.race.trajectory._
 import gov.nasa.race.uom.DateTime
 
@@ -46,7 +46,7 @@ class TrackDiffActor (val config: Config) extends SubscribingRaceActor with Filt
 
   class TrackDiffEntry (val id: String, val trajectories: Array[MutTrajectory]) {
     var isClosed: Array[Boolean] = new Array(trajectories.size)
-    val objs: Array[TrackedObject] = new Array(trajectories.size)
+    val objs: Array[Tracked3dObject] = new Array(trajectories.size)
 
     // set once the reference trajectory is complete
     var refTrajectory: Option[Trajectory] = None
@@ -94,7 +94,7 @@ class TrackDiffActor (val config: Config) extends SubscribingRaceActor with Filt
   }
 
   def handleTrackMessage: Receive = {
-    case BusEvent(chan,track:TrackedObject, _) => updateTracks(chan,track)
+    case BusEvent(chan,track:Tracked3dObject, _) => updateTracks(chan,track)
     case BusEvent(chan,tracks:TrackedObjects[_], _) => tracks.foreach( updateTracks(chan,_))
     case BusEvent(chan,tm: TrackTerminationMessage,_) => closeTrack(chan,tm.cs)
   }
@@ -103,7 +103,7 @@ class TrackDiffActor (val config: Config) extends SubscribingRaceActor with Filt
 
   @inline def channelIndex(chan: String): Int = readFrom.indexOf(chan)
 
-  protected def updateTracks(chan: String, o: TrackedObject): Unit = {
+  protected def updateTracks(chan: String, o: Tracked3dObject): Unit = {
     if (pass(o)) { // if we have a filter, only keep trajectories of tracks that pass
       val channelIdx = channelIndex(chan)
       val e = tracks.getOrElseUpdate(o.cs, new TrackDiffEntry(o.cs, createTrajectories))

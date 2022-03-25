@@ -36,13 +36,13 @@ case class TrackPairEvent(
                            classifier: String,
 
                            //--- the participating tracks with respective state at event time
-                           track1: TrackedObject, // first involved track
+                           track1: Tracked3dObject, // first involved track
                            pos1: GeoPosition, // at time of event
                            hdg1: Angle,
                            spd1: Speed,
                            trajectory1: Trajectory,
 
-                           track2: TrackedObject, // second involved track
+                           track2: Tracked3dObject, // second involved track
                            pos2: GeoPosition, // at time of event
                            hdg2: Angle,
                            spd2: Speed,

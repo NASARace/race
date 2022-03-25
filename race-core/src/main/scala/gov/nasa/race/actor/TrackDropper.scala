@@ -22,7 +22,7 @@ import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.RaceTick
 import gov.nasa.race.core.{ContinuousTimeRaceActor, PeriodicRaceActor, PublishingRaceActor}
 import gov.nasa.race.ifTrue
-import gov.nasa.race.track.{TrackDropped, TrackedObject}
+import gov.nasa.race.track.{TrackDropped, Tracked3dObject}
 
 import scala.collection.Map
 import scala.concurrent.duration._
@@ -39,8 +39,8 @@ trait TrackDropper extends PublishingRaceActor with ContinuousTimeRaceActor with
 
   //--- to be provided by concrete class
   val config: Config // actor config to be provided by concrete actor class
-  val tracks: Map[String,TrackedObject] // map with last active FlightPos objects
-  def removeStaleTrack(ac: TrackedObject): Unit // update map in implementor
+  val tracks: Map[String,Tracked3dObject] // map with last active FlightPos objects
+  def removeStaleTrack(ac: Tracked3dObject): Unit // update map in implementor
 
   val publishDropped = config.getBooleanOrElse("publish-dropped", true)
   val dropAfterMillis = config.getFiniteDurationOrElse("drop-after", 60.seconds).toMillis // this is sim time

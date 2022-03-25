@@ -1,15 +1,14 @@
 package gov.nasa.race.air
 
 import gov.nasa.race.archive.DateAdjuster
-import gov.nasa.race.common.{ConstAsciiSlice, UTF8CsvPullParser}
+import gov.nasa.race.common.{ConstAsciiSlice, Utf8CsvPullParser}
 import gov.nasa.race.geo.LatLonPos
-import gov.nasa.race.track.TrackedObject
+import gov.nasa.race.track.{TrackedObject,Tracked3dObject}
 import gov.nasa.race.uom.Angle._
 import gov.nasa.race.uom.Length._
 import gov.nasa.race.uom.DateTime._
 import gov.nasa.race.uom.{Angle, DateTime, Speed, Time}
 import gov.nasa.race.uom.Speed._
-import gov.nasa.race.withSomeOrElse
 
 import java.time.ZoneId
 import scala.collection.mutable
@@ -55,11 +54,11 @@ import scala.collection.mutable
   *  see also http://mode-s.org/decode/
   */
 class SbsUpdater(
-                  updateFunc: TrackedObject=>Boolean,
+                  updateFunc: Tracked3dObject=>Boolean,
                   dropFunc: (String,String,DateTime,Time)=>Unit,
                   adjuster: Option[DateAdjuster] = None,
                   defaultZone: ZoneId = ZoneId.systemDefault()
-                ) extends UTF8CsvPullParser {
+                ) extends Utf8CsvPullParser {
 
   /**
     * aux object to store aircraft info we get from type 1,4 MSG records

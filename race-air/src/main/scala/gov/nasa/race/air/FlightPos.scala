@@ -25,7 +25,7 @@ import gov.nasa.race.common.ConfigurableStreamCreator._
 import gov.nasa.race.core.{AkkaSerializer, SingleTypeAkkaSerializer}
 import gov.nasa.race.geo.GeoPosition
 import gov.nasa.race.track.TrackedObject.TrackProblem
-import gov.nasa.race.track.{MutSrcTracks, TrackedObject}
+import gov.nasa.race.track.{MutSrcTracks, TrackedObject, Tracked3dObject}
 import gov.nasa.race.uom.Angle._
 import gov.nasa.race.uom.Length._
 import gov.nasa.race.uom.Speed._
@@ -193,7 +193,7 @@ class FlightPosArchiveReader (val iStream: InputStream, val pathName: String="<u
         val date = getDate(DateTime.ofEpochMillis(fs.head.toLong)); fs = fs.tail  // we might adjust it on-the-fly
         val status = fs.head.toInt
 
-        someEntry(date, new FlightPos(flightId, cs, GeoPosition(Degrees(phi), Degrees(lambda), Feet(alt)),
+        archiveEntry(date, new FlightPos(flightId, cs, GeoPosition(Degrees(phi), Degrees(lambda), Feet(alt)),
                                       UsMilesPerHour(speed), Degrees(heading), FeetPerMinute(vr), date,status))
       } catch {
         case x: Throwable => None
@@ -227,7 +227,7 @@ class ExtendedFlightPosArchiveReader (iStream: InputStream, pathName: String) ex
         val roll = fs.head.toDouble; fs = fs.tail
         val acType = fs.head.intern
 
-        someEntry(date, new ExtendedFlightPos(flightId, cs, GeoPosition(Degrees(phi), Degrees(lambda), Feet(alt)),
+        archiveEntry(date, new ExtendedFlightPos(flightId, cs, GeoPosition(Degrees(phi), Degrees(lambda), Feet(alt)),
                                               UsMilesPerHour(speed), Degrees(heading), FeetPerMinute(vr), date,status,
                                               Degrees(pitch), Degrees(roll), acType))
       } catch {
@@ -240,8 +240,8 @@ class ExtendedFlightPosArchiveReader (iStream: InputStream, pathName: String) ex
 
 trait FlightPosChecker {
   // overide the ones you need
-  def check (fpos: TrackedObject): Option[TrackProblem] = None
-  def checkPair (fpos: TrackedObject, lastFPos: TrackedObject): Option[TrackProblem] = None
+  def check (fpos: Tracked3dObject): Option[TrackProblem] = None
+  def checkPair (fpos: Tracked3dObject, lastFPos: Tracked3dObject): Option[TrackProblem] = None
 }
 
 object EmptyFlightPosChecker extends FlightPosChecker

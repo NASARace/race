@@ -25,8 +25,8 @@ import gov.nasa.race.common.{ASCII8Internalizer, AsciiBuffer, ByteSlice, ConstAs
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.config.{ConfigurableTranslator, NoConfig}
 import gov.nasa.race.geo.GeoPosition
-import gov.nasa.race.track.TrackedObject._
-import gov.nasa.race.track.{MutSrcTracks, MutSrcTracksHolder, TrackedObject}
+import gov.nasa.race.track.TrackedObject
+import gov.nasa.race.track.{MutSrcTracks, MutSrcTracksHolder, Tracked3dObject}
 import gov.nasa.race.uom.Angle._
 import gov.nasa.race.uom.DateTime
 import gov.nasa.race.uom.Length._
@@ -203,7 +203,7 @@ class AsdexMsgParser(val config: Config=NoConfig) extends UTF8XmlPullParser2
         @inline def process_track = trackId = readInternedStringContent
         @inline def process_time = date = readDateTimeContent
         @inline def process_tgtType = status |= readTargetTypeFlag
-        @inline def process_tse = if (readIntContent == 1) status |= DroppedFlag // track service ends
+        @inline def process_tse = if (readIntContent == 1) status |= TrackedObject.DroppedFlag // track service ends
         @inline def process_aircraftId = acId = readInternedStringContent
         @inline def process_acType = acType = readACType
         @inline def process_altitude = altFt = readDoubleContent
@@ -372,12 +372,12 @@ class FullAsdexMsgParser(_config: Config=NoConfig) extends AsdexMsgParser(_confi
     val cs = fromString(acId, getCallsign(_,trackId), _.cs, trackId)
     val act = fromString(acType, Some(_), _.acType, None)
     var statusFlags = status
-    var changedCS: Option[ChangedCS] = None
+    var changedCS: Option[TrackedObject.ChangedCS] = None
 
     ifSome(lastTracks.get(trackId)) { lastTrack =>
       if (acId != null && lastTrack.cs != cs) {
         statusFlags |= TrackedObject.ChangedCSFlag
-        changedCS = Some(ChangedCS(lastTrack.cs))
+        changedCS = Some(TrackedObject.ChangedCS(lastTrack.cs))
       }
     }
 

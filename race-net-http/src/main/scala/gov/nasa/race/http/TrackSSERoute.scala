@@ -24,7 +24,7 @@ import com.typesafe.config.Config
 import gov.nasa.race.common.JsonWriter
 import gov.nasa.race.config.ConfigUtils.ConfigWrapper
 import gov.nasa.race.core.{BusEvent, ParentActor}
-import gov.nasa.race.track.{TrackedObject, TrackedObjects}
+import gov.nasa.race.track.{Tracked3dObject, TrackedObjects}
 
 import scala.collection.Seq
 
@@ -36,7 +36,7 @@ trait TrackSSERoute extends PushSSERoute {
   val writer = new JsonWriter()
 
   def receiveTrackData: Receive = {
-    case BusEvent(_,track: TrackedObject,_) =>
+    case BusEvent(_,track: Tracked3dObject,_) =>
       synchronized {
         writer.clear()
         track.serializeFormattedTo(writer)

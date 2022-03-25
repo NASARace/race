@@ -75,7 +75,7 @@ class SbsArchiveReader(val iStream: InputStream, val pathName: String="<unknown>
   override def readNextEntry: Option[ArchiveEntry] = {
     try {
       val line = reader.readLine()
-      if (line != null) someEntry( readDate(line), line) else None
+      if (line != null) archiveEntry( readDate(line), line) else None
     } catch {
       case _:Throwable => None
     }

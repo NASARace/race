@@ -21,7 +21,7 @@ import akka.actor.ExtendedActorSystem
 import gov.nasa.race.common._
 import gov.nasa.race.core.{AkkaSerializer, SingleTypeAkkaSerializer}
 import gov.nasa.race.geo.GeoPosition
-import gov.nasa.race.track.{TrackedObject, TrackedObjects}
+import gov.nasa.race.track.{Tracked3dObject, TrackedObjects}
 import gov.nasa.race.uom.{DateTime, _}
 
 import scala.collection.mutable.ArrayBuffer
@@ -47,7 +47,7 @@ case class AsdexTrack(id: String,
                       date: DateTime,
                       status: Int,
                       src: String, // originating airport
-                      acType: Option[String]) extends TrackedObject {
+                      acType: Option[String]) extends Tracked3dObject {
   import AsdexTrack._
 
   def isAircraft = (status & AircraftFlag) != 0

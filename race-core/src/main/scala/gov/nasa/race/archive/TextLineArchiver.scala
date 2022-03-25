@@ -46,6 +46,7 @@ trait TimedTextLineArchiveWriter extends ArchiveWriter {
   }
 }
 
+// TODO - this should use our own buffering so that we can directly parse byte arrays
 trait TextLineArchiveReader extends ArchiveReader {
   val iStream: InputStream
 
@@ -122,7 +123,7 @@ class HexEpochLineArchiveReader (val iStream: InputStream, val pathName: String 
   override def readNextEntry: Option[ArchiveEntry] = {
     try {
       val line = reader.readLine()
-      if (line != null) someEntry(DateTime.ofEpochMillis(hexCharsToLong(line)), line.substring(17)) else None
+      if (line != null) archiveEntry(DateTime.ofEpochMillis(hexCharsToLong(line)), line.substring(17)) else None
     } catch {
       case _:Throwable => None
     }

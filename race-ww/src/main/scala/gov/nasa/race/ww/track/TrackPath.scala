@@ -17,14 +17,14 @@
 package gov.nasa.race.ww.track
 
 import gov.nasa.race.common.TimeSeriesUpdateStats
-import gov.nasa.race.track.{TrackPoint, TrackedObject}
+import gov.nasa.race.track.{TrackPoint, Tracked3dObject}
 import gov.nasa.race.ww.Implicits._
 
 
 /**
   * a extensible WWJ Path to display TrackedObject trajectories
   */
-class TrackPath[T <: TrackedObject](val entry: TrackEntry[T])
+class TrackPath[T <: Tracked3dObject](val entry: TrackEntry[T])
                      extends TrajectoryPath(entry.trajectory, entry.lineMaterial) with TimeSeriesUpdateStats {
 
   def setLineAttrs = setShowPositions(false)

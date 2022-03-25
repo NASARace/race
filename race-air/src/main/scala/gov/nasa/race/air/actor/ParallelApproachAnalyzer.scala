@@ -23,7 +23,7 @@ import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.BusEvent
 import gov.nasa.race.core.{PublishingRaceActor, SubscribingRaceActor}
 import gov.nasa.race.geo.{Euclidean, GeoPosition}
-import gov.nasa.race.track.{TrackDropped, TrackPairEvent, TrackTerminationMessage, TrackedObject, TrackedObjectExtrapolator}
+import gov.nasa.race.track.{TrackDropped, TrackPairEvent, TrackTerminationMessage, Tracked3dObject, TrackedObjectExtrapolator}
 import gov.nasa.race.trajectory.{TDP3, Trajectory, USTrace}
 import gov.nasa.race.uom.Angle._
 import gov.nasa.race.uom.Length._
@@ -59,12 +59,12 @@ class ParallelApproachAnalyzer (val config: Config) extends SubscribingRaceActor
   var nEvents: Int = 0 // reported events
 
   class Candidate {
-    var track: TrackedObject = _
+    var track: Tracked3dObject = _
     val estimator = getConfigurableOrElse("estimator")(new TrackedObjectExtrapolator)
     val trajectory = new USTrace(config.getIntOrElse("max-path",50))
     val checked: MSet[String] = MSet.empty
 
-    def update (newTrack: TrackedObject): Unit = {
+    def update (newTrack: Tracked3dObject): Unit = {
       if (track == null || newTrack.date > track.date) {
         track = newTrack
         estimator.addObservation(newTrack)
@@ -77,7 +77,7 @@ class ParallelApproachAnalyzer (val config: Config) extends SubscribingRaceActor
 
   override def handleMessage = {
     case BusEvent(_,term:TrackTerminationMessage,_) => candidates.remove(term.id)
-    case BusEvent(_,track:TrackedObject,_) => {
+    case BusEvent(_,track:Tracked3dObject,_) => {
       if (track.isDroppedOrCompleted) {
         candidates.remove(track.id)
       } else {
@@ -86,7 +86,7 @@ class ParallelApproachAnalyzer (val config: Config) extends SubscribingRaceActor
     }
   }
 
-  def updateCandidates(track: TrackedObject): Unit = {
+  def updateCandidates(track: Tracked3dObject): Unit = {
     val ownEntry = candidates.getOrElseUpdate(track.id,new Candidate)
     ownEntry.update(track)
 

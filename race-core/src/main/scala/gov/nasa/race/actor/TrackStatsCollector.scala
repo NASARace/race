@@ -25,7 +25,7 @@ import gov.nasa.race._
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.common.{PrintStats, Stats}
 import gov.nasa.race.core.{BusEvent, RaceTick}
-import gov.nasa.race.track.{TrackListMessage, TrackTerminationMessage, TrackedObject}
+import gov.nasa.race.track.{TrackListMessage, TrackTerminationMessage, Tracked3dObject}
 import gov.nasa.race.uom.DateTime
 
 import scala.concurrent.duration._
@@ -68,7 +68,7 @@ class TrackStats (val topic: String, val source: String) extends PrintStats {
 }
 
 class TrackStatsSourceEntry(val source: Option[String]) {
-  val liveTracks = new MutHashMap[String, TrackedObject]
+  val liveTracks = new MutHashMap[String, Tracked3dObject]
   val completions = new MutHashMap[String, DateTime]
 
   def checkExpirations (ts: TrackStats, simMillis: Long, dropAfterMillis: Long): Unit = {
@@ -90,7 +90,7 @@ class TrackStatsSourceEntry(val source: Option[String]) {
     }
   }
 
-  def update (ts: TrackStats, track: TrackedObject, dropAfterMillis: Long): Unit = {
+  def update (ts: TrackStats, track: Tracked3dObject, dropAfterMillis: Long): Unit = {
     val cs = track.cs
 
     ts.nUpdates += 1
@@ -175,12 +175,12 @@ class TrackStatsCollector (val config: Config) extends StatsCollectorActor {
   }
 
   override def handleMessage = {
-    case BusEvent(_, track: TrackedObject, _) => update(track)
+    case BusEvent(_, track: Tracked3dObject, _) => update(track)
     case BusEvent(_, tlm: TrackListMessage, _) => tlm.tracks.foreach(update)
     case BusEvent(_, term: TrackTerminationMessage, _) => terminate(term)
   }
 
-  def update (t: TrackedObject): Unit = getSource(t.source).update(stats,t, dropAfterMillis)
+  def update (t: Tracked3dObject): Unit = getSource(t.source).update(stats,t, dropAfterMillis)
 
   def terminate (tm: TrackTerminationMessage): Unit = getSource(tm.source).terminate(stats,tm)
 

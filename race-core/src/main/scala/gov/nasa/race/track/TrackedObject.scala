@@ -19,7 +19,7 @@ package gov.nasa.race.track
 import gov.nasa.race.IdentifiableObject
 import gov.nasa.race.common.ConstAsciiSlice.asc
 import gov.nasa.race.common.{AssocSeq, JsonSerializable, JsonWriter}
-import gov.nasa.race.uom.DateTime
+import gov.nasa.race.uom.{Angle, DateTime, Speed}
 import gov.nasa.race.util.StringUtils
 
 import java.text.DecimalFormat
@@ -30,6 +30,7 @@ object TrackedObject {
   //--- track status flags
   // note the lower 2 bytes are reserved for general flags defined here,
   // channel specific flags should use the upper two
+  final val UndefinedStatus: Int = 0
 
   final val TrackNoStatus: Int  = 0x00
   final val NewFlag: Int        = 0x01
@@ -46,7 +47,7 @@ object TrackedObject {
   // for all downstream actors so we don't use a fixed field for it
   case class ChangedCS(oldCS: String)
 
-  case class TrackProblem(fpos: TrackedObject, lastFpos: TrackedObject, problem: String)
+  case class TrackProblem(fpos: Tracked3dObject, lastFpos: Tracked3dObject, problem: String)
 
   // lexical constants
   val ID = asc("id")
@@ -55,12 +56,18 @@ object TrackedObject {
   val LAT = asc("lat")
   val LON = asc("lon")
   val ALT = asc("alt")
+
+  val STATUS = asc("status")
+
   val HDG = asc("hdg")
   val SPD = asc("spd")
+
   val VR = asc("vr")
   val ROLL = asc("roll")
   val PITCH = asc("pitch")
-  val STATUS = asc("status")
+
+  val ROLE = asc("role")
+  val ORG = asc("org")
 
   val FMT_3_2 = new DecimalFormat("###.##")
   val FMT_3_5 = new DecimalFormat("###.#####")
@@ -69,14 +76,11 @@ object TrackedObject {
 }
 
 /**
-  * this is the abstract type used for sea, land, air and space objects we can track
+  * object that moves in 3d but does not have an orientation (attitude)
   *
-  * in addition to the super traits, TrackedObjects provide an API to attach arbitrary
-  * non-type-constraint data to its instances. This is a generic extension mechanism for
-  * cases where occasionally associated data (a) should not be type restricted and (b)
-  * are set too rarely to waste storage on all TrackObject instances
+  * this adds track status and optional amendments
   */
-trait TrackedObject extends IdentifiableObject with TrackPoint with MovingObject with AttitudeObject with TrackMessage with JsonSerializable {
+trait TrackedObject extends IdentifiableObject with TrackPoint with JsonSerializable {
   import TrackedObject._
 
   // generic mechanism to dynamically attach per-event data to track objects
@@ -99,6 +103,36 @@ trait TrackedObject extends IdentifiableObject with TrackPoint with MovingObject
     val tgtCls = classTag[T].runtimeClass
     amendments.find( a=> tgtCls.isAssignableFrom(a.getClass)).map( _.asInstanceOf[T])
   }
+}
+
+/**
+  * object that is a moving 3D point, i.e. has a horizontal and vertical speed vector
+  */
+trait Moving3dObject {
+  def heading: Angle
+  def speed: Speed
+  def vr: Speed   // vertical rate
+}
+
+/**
+  * non-point object that has an orientation relative to the horizontal plane
+  * note that pitch and roll default to 0, i.e. have to be overridden if the concrete type sets them
+  */
+trait AttitudeObject {
+  def pitch: Angle = Angle.UndefinedAngle
+  def roll: Angle = Angle.UndefinedAngle
+}
+
+/**
+  * this is the abstract type used for sea, land, air and space objects we can track
+  *
+  * in addition to the super traits, TrackedObjects provide an API to attach arbitrary
+  * non-type-constraint data to its instances. This is a generic extension mechanism for
+  * cases where occasionally associated data (a) should not be type restricted and (b)
+  * are set too rarely to waste storage on all TrackObject instances
+  */
+trait Tracked3dObject extends TrackedObject with Moving3dObject with AttitudeObject with TrackMessage {
+  import TrackedObject._
 
   def toShortString = {
     val d = date
@@ -177,7 +211,7 @@ trait PlannedTrack {
   def arrivalDate: DateTime
 }
 
-trait TrackedObjects[+T <: TrackedObject] extends AssocSeq[T,String] {
+trait TrackedObjects[+T <: Tracked3dObject] extends AssocSeq[T,String] {
 
   def serializeTo (writer: JsonWriter): Unit = {
     writer.beginArray
@@ -202,5 +236,5 @@ trait TrackedObjects[+T <: TrackedObject] extends AssocSeq[T,String] {
 
 trait TrackedObjectEnumerator {
   def numberOfTrackedObjects: Int
-  def foreachTrackedObject (f: TrackedObject=>Unit): Unit
+  def foreachTrackedObject (f: Tracked3dObject=>Unit): Unit
 }

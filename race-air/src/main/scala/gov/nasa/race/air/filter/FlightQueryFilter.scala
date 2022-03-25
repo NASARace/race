@@ -47,7 +47,7 @@ class FlightQueryFilter(val queryString: String, val ctx: TrackQueryContext, val
     case failure: parser.NoSuccess => ctx.reportQueryError(failure.msg); None
   }
 
-  def passAircraft (ac: TrackedObject): Boolean = {
+  def passAircraft (ac: Tracked3dObject): Boolean = {
     query match {
       case Some(filter) => filter.pass(ac)(ctx)
       case None => false
@@ -57,7 +57,7 @@ class FlightQueryFilter(val queryString: String, val ctx: TrackQueryContext, val
   override def pass (o: Any): Boolean = {
     if (o != null) {
       o match {
-        case obj: TrackedObject => passAircraft(obj)
+        case obj: Tracked3dObject => passAircraft(obj)
         case other => false
       }
     } else false

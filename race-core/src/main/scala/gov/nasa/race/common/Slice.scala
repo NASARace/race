@@ -39,6 +39,7 @@ trait ByteSlice {
   def nonEmpty: Boolean = len > 0
 
   @inline final def limit: Int = off + len
+  @inline def asString: String = new String(data,off,len) // don't overload toString() since we have lots of sub-types
 
   // index is absolute (relative to beginning of array)
   @inline final def at (i: Int): Byte = data(i)

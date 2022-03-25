@@ -22,7 +22,7 @@ import gov.nasa.race.common.{ArraySeqImpl, AssocSeqImpl}
 import gov.nasa.race.core.{AkkaSerializer, SingleTypeAkkaSerializer}
 import gov.nasa.race.uom.DateTime
 import gov.nasa.race.geo.{GeoPosition, GreatCircle}
-import gov.nasa.race.track.TrackedObject
+import gov.nasa.race.track.Tracked3dObject
 import gov.nasa.race.uom.Angle._
 import gov.nasa.race.uom._
 
@@ -44,7 +44,7 @@ case class TfmTrack(id: String,
                     src: String,
                     nextPos: Option[GeoPosition],
                     nextDate: DateTime // might be undefined
-                   ) extends TrackedObject {
+                   ) extends Tracked3dObject {
 
   val heading = if (nextPos.isDefined) GreatCircle.initialBearing(position,nextPos.get) else Degrees(0)
   def vr = Speed.UndefinedSpeed // not in current data model

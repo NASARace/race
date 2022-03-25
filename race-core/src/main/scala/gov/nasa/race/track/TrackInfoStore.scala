@@ -61,7 +61,7 @@ trait TrackInfoReader extends NamedConfigurable {
     * Called during init.
     * NOTE - the optional map is not thread safe
     */
-  def initialize (filterMap: Option[MMap[String,TrackedObject]]): Seq[TrackInfo] = Seq.empty
+  def initialize (filterMap: Option[MMap[String,Tracked3dObject]]): Seq[TrackInfo] = Seq.empty
 
   /**
     * the workhorse, which parses messages for TrackInfo relevant information

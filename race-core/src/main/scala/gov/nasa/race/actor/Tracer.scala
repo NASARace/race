@@ -19,12 +19,12 @@ package gov.nasa.race.actor
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.BusEvent
 import gov.nasa.race.core.SubscribingRaceActor
-import gov.nasa.race.track.{TrackTerminationMessage, TrackedObject}
+import gov.nasa.race.track.{TrackTerminationMessage, Tracked3dObject}
 import gov.nasa.race.trajectory.{CompressedTrace, MutTrajectory}
 
 import scala.collection.mutable.{HashMap => MutHashMap}
 
-class TracerEntry (var obj: TrackedObject, val trajectory: MutTrajectory)
+class TracerEntry (var obj: Tracked3dObject, val trajectory: MutTrajectory)
 
 /**
   * base type for actors that create and process trajectory traces for TrackedObject input
@@ -50,7 +50,7 @@ trait Tracer extends SubscribingRaceActor with FilteringPublisher {
 
 
   def handleTrackMessage: Receive = {
-    case BusEvent(_,o: TrackedObject,_) =>
+    case BusEvent(_,o: Tracked3dObject,_) =>
       if (pass(o)) {
         updateTrajectories(o)
         if (rePublish) publish(o)
@@ -67,7 +67,7 @@ trait Tracer extends SubscribingRaceActor with FilteringPublisher {
   override def handleMessage: Receive = handleTrackMessage
 
 
-  def updateTrajectories (o: TrackedObject): Unit = {
+  def updateTrajectories (o: Tracked3dObject): Unit = {
     trajectories.get(o.cs) match {
       case Some(e) =>
         e.obj = o

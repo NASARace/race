@@ -20,7 +20,7 @@ package gov.nasa.race.air
 import java.io.{DataInputStream, DataOutputStream}
 
 import gov.nasa.race.geo.GeoPosition
-import gov.nasa.race.track.TrackedObject
+import gov.nasa.race.track.Tracked3dObject
 import gov.nasa.race.uom.Angle.Degrees
 import gov.nasa.race.uom.Length.Meters
 import gov.nasa.race.uom.Speed.MetersPerSecond
@@ -47,7 +47,7 @@ object ExtendedTrackProtocol {
 class ExtendedTrackReader extends SimpleTrackReader {
   override val schema = ExtendedTrackProtocol.schema
 
-  override def readTrack (dis: DataInputStream): TrackedObject = {
+  override def readTrack (dis: DataInputStream): Tracked3dObject = {
     val id = dis.readUTF.intern // we likely get lots of messages for the same aircraft, avoid tons of strings
     val msgOrd = dis.readInt  // can be used to check consistency
     val flags = dis.readInt
@@ -74,7 +74,7 @@ class ExtendedTrackReader extends SimpleTrackReader {
 class ExtendedTrackWriter extends SimpleTrackWriter {
   override val schema = ExtendedTrackProtocol.schema
 
-  override def writeTrack (dos: DataOutputStream, t: TrackedObject) = {
+  override def writeTrack (dos: DataOutputStream, t: Tracked3dObject) = {
     super.writeTrack(dos,t)
 
     t match {

@@ -64,7 +64,7 @@ abstract class DWArchiveReader (iStream: InputStream, val headerStart: BMSearch)
       if (date.isDefined) {
         if (ss.readTo(headerStart,headerEnd.patternLength)){
           val msg = res.asString(headerEnd.patternLength)
-          someEntry(date,msg)
+          archiveEntry(date,msg)
         } else None // did not find next headerStart, nothing we can do
 
       } else {  // did not find date in header, skip to next chunk

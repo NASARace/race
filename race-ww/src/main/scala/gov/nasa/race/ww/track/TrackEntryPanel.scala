@@ -18,12 +18,12 @@ package gov.nasa.race.ww.track
 
 import gov.nasa.race._
 import gov.nasa.race.swing.FieldPanel
-import gov.nasa.race.track.{PlannedTrack, TrackInfo, TrackedObject}
+import gov.nasa.race.track.{PlannedTrack, TrackInfo, Tracked3dObject}
 import gov.nasa.race.ww.InteractiveLayerObjectPanel
 import gov.nasa.race.uom.DateTime
 
 
-class TrackFields[T <: TrackedObject] extends FieldPanel {
+class TrackFields[T <: Tracked3dObject] extends FieldPanel {
   val cs   = addField("cs:")
   val date = addField("date:")
   val pos  = addField("position:")
@@ -72,7 +72,7 @@ class TrackFields[T <: TrackedObject] extends FieldPanel {
 /**
   * RaceLayer item panel for FlightEntry objects
   */
-class TrackEntryPanel[T <: TrackedObject](override val layer: TrackLayer[T])
+class TrackEntryPanel[T <: Tracked3dObject](override val layer: TrackLayer[T])
                      extends InteractiveLayerObjectPanel[TrackEntry[T],TrackFields[T]](layer) {
 
   override def createFieldPanel = new TrackFields[T]

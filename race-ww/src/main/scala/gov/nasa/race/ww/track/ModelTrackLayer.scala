@@ -20,7 +20,7 @@ import java.util.concurrent.atomic.AtomicInteger
 
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.geo.VarEuclideanDistanceFilter3D
-import gov.nasa.race.track.TrackedObject
+import gov.nasa.race.track.Tracked3dObject
 import gov.nasa.race.uom.Angle._
 import gov.nasa.race.uom.Length._
 import gov.nasa.race.ww.{LayerObject, ViewListener, WWAngle, ViewGoal}
@@ -50,7 +50,7 @@ import scala.concurrent.duration._
   * NOTE - if no model is configured, this should not incur any performance penalties.
   * In particular, eye position and proximity updates should only happen if we have configured models
   */
-trait ModelTrackLayer[T <:TrackedObject] extends TrackLayer[T] with ViewListener  {
+trait ModelTrackLayer[T <:Tracked3dObject] extends TrackLayer[T] with ViewListener  {
 
   //--- 3D models and proximities
   val modelDistance = Meters(config.getDoubleOrElse("model-distance",4000.0))

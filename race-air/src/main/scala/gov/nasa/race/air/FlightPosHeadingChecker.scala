@@ -20,7 +20,7 @@ package gov.nasa.race.air
 import com.typesafe.config.Config
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.geo.GreatCircle.{distance2D, finalBearing}
-import gov.nasa.race.track.TrackedObject
+import gov.nasa.race.track.Tracked3dObject
 import gov.nasa.race.track.TrackedObject.TrackProblem
 import gov.nasa.race.uom.Angle._
 
@@ -42,7 +42,7 @@ class FlightPosHeadingChecker (config: Config) extends FlightPosChecker {
   // don't check if reported headings indicate flight path change
   val maxHeadingChange = Degrees(config.getDoubleOrElse("max-heading-change", 45.0))
 
-  override def checkPair (fpos: TrackedObject, lastFPos: TrackedObject): Option[TrackProblem] = {
+  override def checkPair (fpos: Tracked3dObject, lastFPos: Tracked3dObject): Option[TrackProblem] = {
     if (fpos.id != lastFPos.id) { // Ouch - same c/s for different flights
       Some(TrackProblem(fpos, lastFPos, s"callsign collision ${fpos.cs} (id1=${fpos.id},id2=${lastFPos.id})"))
 

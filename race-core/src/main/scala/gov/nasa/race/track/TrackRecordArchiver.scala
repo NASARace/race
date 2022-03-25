@@ -43,7 +43,7 @@ class TrackRecordArchiveWriter(pathName: String, openOptions: Set[OpenOption])
 
   override protected def set(obj: Any): Boolean = {
     obj match {
-      case track: TrackedObject =>
+      case track: Tracked3dObject =>
         rec.id := track.id
         rec.cs := track.cs
         rec.date := track.date.toEpochMillis
@@ -74,7 +74,7 @@ class FloatTrackRecordArchiveWriter(pathName: String, openOptions: Set[OpenOptio
 
   override protected def set(obj: Any): Boolean = {
     obj match {
-      case track: TrackedObject =>
+      case track: Tracked3dObject =>
         rec.id := track.id
         rec.cs := track.cs
         rec.date := track.date.toEpochMillis

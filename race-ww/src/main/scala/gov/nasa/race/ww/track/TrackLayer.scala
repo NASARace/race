@@ -45,7 +45,7 @@ import scala.util.matching.Regex
   * Since the layer object owns the track collection and hence is responsible for track entry changes,
   * it also has to update/manage related panels (LayerInfo (with list view), TrackEntry)
   */
-abstract class TrackLayer[T <:TrackedObject :ClassTag] extends SubscribingRaceLayer
+abstract class TrackLayer[T <:Tracked3dObject :ClassTag] extends SubscribingRaceLayer
                              with ConfigurableRenderingLayer
                              with AltitudeSensitiveRaceLayer
                              with InteractiveRaceLayer[TrackEntry[T]]
@@ -181,7 +181,7 @@ abstract class TrackLayer[T <:TrackedObject :ClassTag] extends SubscribingRaceLa
 
   def getTrackEntry(track: T): Option[TrackEntry[T]] = trackEntries.get(getTrackKey(track))
 
-  override def queryTrack(key: String): Option[TrackedObject] = {
+  override def queryTrack(key: String): Option[Tracked3dObject] = {
     trackEntries.get(key).orElse(trackEntries.valuesIterator.find(e => e.obj.cs == key)).map( _.obj )
   }
 
@@ -432,7 +432,7 @@ abstract class TrackLayer[T <:TrackedObject :ClassTag] extends SubscribingRaceLa
   }
 
   override def handleMessage: PartialFunction[Any, Unit] = {
-    case BusEvent(_,track: TrackedObject,_) => // ignored - needs to be handled by subclass
+    case BusEvent(_,track: Tracked3dObject,_) => // ignored - needs to be handled by subclass
     case BusEvent(_,tracks: TrackedObjects[_],_) => // ignored - needs to be handled by subclass
     case BusEvent(_,drop: TrackDropped,_) => // ignored - needs to be handled by subclass
 

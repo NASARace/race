@@ -30,14 +30,14 @@ import scala.util.parsing.combinator.RegexParsers
 
 trait TrackQueryContext {
   def queryDate: DateTime
-  def queryTrack(id: String): Option[TrackedObject]
+  def queryTrack(id: String): Option[Tracked3dObject]
   def queryLocation(id: String): Option[GeoPositioned]
   def reportQueryError(msg: String): Unit
 }
 
 //--- data model
 trait TrackFilter {
-  def pass(f: TrackedObject)(implicit ctx: TrackQueryContext): Boolean
+  def pass(f: Tracked3dObject)(implicit ctx: TrackQueryContext): Boolean
 }
 
 /**
@@ -51,17 +51,17 @@ object TrackQuery {
 
   //--- pseudo filters
   object AllFilter extends TrackFilter {
-    override def pass(f: TrackedObject)(implicit ctx:TrackQueryContext) = true
+    override def pass(f: Tracked3dObject)(implicit ctx:TrackQueryContext) = true
     override def toString = "All"
   }
   object NoneFilter extends TrackFilter {
-    override def pass(f: TrackedObject)(implicit ctx:TrackQueryContext) = false
+    override def pass(f: Tracked3dObject)(implicit ctx:TrackQueryContext) = false
     override def toString = "None"
   }
 
   //--- id filters
   class CsFilter (regex: Regex) extends TrackFilter {
-    override def pass(f: TrackedObject)(implicit ctx:TrackQueryContext) = {
+    override def pass(f: Tracked3dObject)(implicit ctx:TrackQueryContext) = {
       regex.findFirstIn(f.cs).isDefined
     }
     override def toString = s"Cs($regex)"
@@ -69,19 +69,19 @@ object TrackQuery {
 
   //--- position filters
   class WithinRadiusFilter (pos: GeoPosition, dist: Length) extends TrackFilter {
-    override def pass(f: TrackedObject)(implicit ctx:TrackQueryContext) = {
+    override def pass(f: Tracked3dObject)(implicit ctx:TrackQueryContext) = {
       GreatCircle.distance(f.position,pos) < dist
     }
     override def toString = s"WithinRadius($pos,$dist)"
   }
   class OutsideRadiusFilter (pos: GeoPosition, dist: Length) extends TrackFilter {
-    override def pass(f: TrackedObject)(implicit ctx:TrackQueryContext) = {
+    override def pass(f: Tracked3dObject)(implicit ctx:TrackQueryContext) = {
       GreatCircle.distance(f.position,pos) > dist
     }
     override def toString = s"OutsideRadius($pos,$dist)"
   }
   class ProximityFilter(cs: String, dist: Length) extends TrackFilter {
-    override def pass(f: TrackedObject)(implicit ctx:TrackQueryContext) = {
+    override def pass(f: Tracked3dObject)(implicit ctx:TrackQueryContext) = {
       ctx.queryTrack(cs) match {
         case Some(otherFlight) => GreatCircle.distance(f.position,otherFlight.position) < dist
         case None => false
@@ -92,21 +92,21 @@ object TrackQuery {
 
   //--- time filters
   class OlderDateFilter (d: DateTime) extends TrackFilter {
-    override def pass(f: TrackedObject)(implicit ctx:TrackQueryContext): Boolean = d > f.date
+    override def pass(f: Tracked3dObject)(implicit ctx:TrackQueryContext): Boolean = d > f.date
     override def toString = s"Older($d)"
   }
   class YoungerDateFilter (d: DateTime) extends TrackFilter {
-    override def pass(f: TrackedObject)(implicit ctx:TrackQueryContext): Boolean = d < f.date
+    override def pass(f: Tracked3dObject)(implicit ctx:TrackQueryContext): Boolean = d < f.date
     override def toString = s"Younger($d)"
   }
   class WithinDurationFilter (dur: Duration) extends TrackFilter {
-    override def pass(f: TrackedObject)(implicit ctx:TrackQueryContext) = {
+    override def pass(f: Tracked3dObject)(implicit ctx:TrackQueryContext) = {
       ctx.queryDate.toEpochMillis - f.date.toEpochMillis < dur.toMillis
     }
     override def toString = s"DateWithin($dur)"
   }
   class OutsideDurationFilter (dur: Duration) extends TrackFilter {
-    override def pass(f: TrackedObject)(implicit ctx:TrackQueryContext) = {
+    override def pass(f: Tracked3dObject)(implicit ctx:TrackQueryContext) = {
       ctx.queryDate.toEpochMillis - f.date.toEpochMillis > dur.toMillis
     }
     override def toString = s"DateOutside($dur)"
@@ -114,11 +114,11 @@ object TrackQuery {
 
   //--- composed filters
   class And (a: TrackFilter, b: TrackFilter) extends TrackFilter {
-    override def pass(f: TrackedObject)(implicit ctx:TrackQueryContext): Boolean = a.pass(f) && b.pass(f)
+    override def pass(f: Tracked3dObject)(implicit ctx:TrackQueryContext): Boolean = a.pass(f) && b.pass(f)
     override def toString = s"And($a,$b)"
   }
   class Or (a: TrackFilter, b: TrackFilter) extends TrackFilter {
-    override def pass(f: TrackedObject)(implicit ctx:TrackQueryContext): Boolean = a.pass(f) || b.pass(f)
+    override def pass(f: Tracked3dObject)(implicit ctx:TrackQueryContext): Boolean = a.pass(f) || b.pass(f)
     override def toString = s"Or($a,$b)"
   }
 }
@@ -182,7 +182,7 @@ class TrackQueryParser(val ctx: TrackQueryContext)  extends RegexParsers {
 /**
   * a Query that can run over Iterables of items that contain TrackObjects (e.g TrackEntries)
   */
-class TrackQuery[T](val ctx: TrackQueryContext, getTrack: T=>TrackedObject) extends Query[T] {
+class TrackQuery[T](val ctx: TrackQueryContext, getTrack: T=>Tracked3dObject) extends Query[T] {
 
   val parser = new TrackQueryParser(ctx)
 

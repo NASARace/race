@@ -33,7 +33,7 @@ class TrackInfoRecordReader  (val config: Config) extends TrackInfoReader {
 
   val pathName = config.getString("pathname")
 
-  override def initialize (filterMap: Option[MMap[String,TrackedObject]]): Seq[TrackInfo] = {
+  override def initialize (filterMap: Option[MMap[String,Tracked3dObject]]): Seq[TrackInfo] = {
     FileUtils.existingNonEmptyFile(pathName) match {
       case Some(file) => read(file)
       case None => Seq.empty
