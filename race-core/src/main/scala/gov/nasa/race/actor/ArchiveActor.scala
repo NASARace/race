@@ -44,7 +44,7 @@ class ArchiveActor (val config: Config) extends ChannelTopicSubscriber with Cont
 
   override def onTerminateRaceActor(originator: ActorRef) = {
     stopArchiving = true
-    writer.close
+    writer.close()
     super.onTerminateRaceActor(originator)
   }
 

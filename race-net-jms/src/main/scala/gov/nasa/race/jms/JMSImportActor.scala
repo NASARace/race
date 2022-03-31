@@ -357,7 +357,7 @@ trait ArchivingJMSImportActor extends JMSImportActor with ContinuousTimeRaceActo
 
   override def onTerminateRaceActor(originator: ActorRef) = {
     stopArchiving = true
-    writer.close
+    writer.close()
     super.onTerminateRaceActor(originator)
   }
 }

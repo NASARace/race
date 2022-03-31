@@ -18,7 +18,7 @@ package gov.nasa.race.share
 
 import gov.nasa.race.{Failure, ResultValue, SuccessValue}
 import gov.nasa.race.common.ConstAsciiSlice.asc
-import gov.nasa.race.common.{CharSeqByteSlice, Glob, Internalizer, JsonParseException, JsonPullParser, JsonSerializable, JsonWriter, PathIdentifier, UTF8JsonPullParser}
+import gov.nasa.race.common.{CharSeqByteSlice, Glob, Internalizer, JsonMessageObject, JsonParseException, JsonPullParser, JsonSerializable, JsonWriter, PathIdentifier, UTF8JsonPullParser}
 import gov.nasa.race.share.NodeMatcher.{allMatcher, noneMatcher}
 import gov.nasa.race.uom.DateTime
 
@@ -114,16 +114,14 @@ abstract class Row[T: ClassTag] extends JsonSerializable {
 
   def serializeValuesTo (w: JsonWriter): Unit = {} // override in concrete Row types that support value sets
 
-  def serializeTo (w:JsonWriter): Unit = {
-    w.writeObject { w=>
-      w.writeStringMember(ID, id)
-      w.writeStringMember(INFO, info)
-      w.writeStringMember(TYPE, typeName)
-      if (receive != defaultReceiveMatcher) w.writeStringMember(RECEIVE, receive.pattern)
-      if (send != defaultSendMatcher) w.writeStringMember(SEND, send.pattern)
-      if (attrs.nonEmpty) w.writeStringArrayMember(ATTRS, attrs)
-      serializeValuesTo(w)
-    }
+  def serializeMembersTo (w:JsonWriter): Unit = {
+    w.writeStringMember(ID, id)
+    w.writeStringMember(INFO, info)
+    w.writeStringMember(TYPE, typeName)
+    if (receive != defaultReceiveMatcher) w.writeStringMember(RECEIVE, receive.pattern)
+    if (send != defaultSendMatcher) w.writeStringMember(SEND, send.pattern)
+    if (attrs.nonEmpty) w.writeStringArrayMember(ATTRS, attrs)
+    serializeValuesTo(w)
   }
 
   // serialize without send/receive info
@@ -330,7 +328,7 @@ object RowList extends JsonConstants {
 /**
   * class representing a versioned, named and ordered collection of Row specs
   */
-case class RowList (id: String, info: String, date: DateTime, rows: SeqMap[String,Row[_]]) extends JsonSerializable {
+case class RowList (id: String, info: String, date: DateTime, rows: SeqMap[String,Row[_]]) extends JsonMessageObject {
   import RowList._
 
   def getUndefinedValue(id: String): Option[CellValue[_]] = rows.get(id).map(_.undefinedCellValue)
@@ -397,23 +395,25 @@ case class RowList (id: String, info: String, date: DateTime, rows: SeqMap[Strin
     }
   }
 
-  def _serializeTo (w: JsonWriter)(serializeRow: (Row[_],JsonWriter)=>Unit): Unit = {
-    w.clear().writeObject( _
-      .writeObjectMember(ROW_LIST) { _
-        .writeStringMember(ID, id)
-        .writeStringMember(INFO, info)
-        .writeDateTimeMember(DATE, date)
-        .writeArrayMember(ROWS){ w=>
-          for (row <- rows.valuesIterator){
-            serializeRow(row, w)
-          }
+  def _serializeMembersTo (w: JsonWriter)(serializeRow: (Row[_],JsonWriter)=>Unit): Unit = {
+    w.writeObjectMember(ROW_LIST) { _
+      .writeStringMember(ID, id)
+      .writeStringMember(INFO, info)
+      .writeDateTimeMember(DATE, date)
+      .writeArrayMember(ROWS){ w=>
+        for (row <- rows.valuesIterator){
+          serializeRow(row, w)
         }
       }
-    )
+    }
   }
 
-  def serializeTo (w: JsonWriter): Unit = _serializeTo(w)( (row,w) => row.serializeTo(w))
-  def shortSerializeTo (w: JsonWriter): Unit = _serializeTo(w)( (row,w) => row.shortSerializeTo(w))
+  def serializeMembersTo (w: JsonWriter): Unit = _serializeMembersTo(w)( (row,w) => row.serializeTo(w))
+  def shortSerializeTo (w: JsonWriter): Unit = {
+    w.clear().writeObject { w=>
+      _serializeMembersTo(w)( (row,w) => row.shortSerializeTo(w))
+    }
+  }
 }
 
 /**

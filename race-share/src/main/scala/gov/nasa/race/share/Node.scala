@@ -17,7 +17,7 @@
 package gov.nasa.race.share
 
 import gov.nasa.race.common.ConstAsciiSlice.asc
-import gov.nasa.race.common.{Clock, ConstAsciiSlice, InetAddressMatcher, JsonParseException, JsonPullParser, JsonSerializable, JsonWriter, PathIdentifier, UTF8JsonPullParser}
+import gov.nasa.race.common.{Clock, ConstAsciiSlice, InetAddressMatcher, JsonMessageObject, JsonParseException, JsonPullParser, JsonSerializable, JsonWriter, PathIdentifier, UTF8JsonPullParser}
 import gov.nasa.race.uom.DateTime
 import gov.nasa.race.util.StringUtils
 
@@ -361,15 +361,13 @@ object NodeInfo extends JsonConstants {
 case class NodeInfo (id: String, info: String, host: String, port: Int, protocol: String, addrMask: InetAddressMatcher) extends JsonSerializable {
   import NodeInfo._
 
-  def serializeTo (w: JsonWriter): Unit = {
-    w.writeObject { _ =>
-      w.writeStringMember(ID,id)
-      w.writeStringMember(INFO,info)
-      if (host.nonEmpty) w.writeStringMember(HOST,host)
-      if (port >= 0) w.writeIntMember(PORT,port)
-      if (protocol.nonEmpty) w.writeStringMember(PROTOCOL,protocol)
-      if (addrMask ne InetAddressMatcher.allMatcher) w.writeStringMember(ADDR_MASK,addrMask.toString)
-    }
+  def serializeMembersTo (w: JsonWriter): Unit = {
+    w.writeStringMember(ID,id)
+    w.writeStringMember(INFO,info)
+    if (host.nonEmpty) w.writeStringMember(HOST,host)
+    if (port >= 0) w.writeIntMember(PORT,port)
+    if (protocol.nonEmpty) w.writeStringMember(PROTOCOL,protocol)
+    if (addrMask ne InetAddressMatcher.allMatcher) w.writeStringMember(ADDR_MASK,addrMask.toString)
   }
 
   /**
@@ -466,8 +464,8 @@ case class NodeList (
                       upstreamNodes: SeqMap[String,NodeInfo],
                       peerNodes: SeqMap[String,NodeInfo],
                       downstreamNodes: SeqMap[String,NodeInfo]
-                    ) extends JsonSerializable {
-import NodeList._
+                    ) extends JsonMessageObject {
+  import NodeList._
 
   def isKnownNode (nid: String): Boolean = {
     upstreamNodes.contains(nid) || peerNodes.contains(nid) || downstreamNodes.contains(nid) || (nid == id)
@@ -477,37 +475,39 @@ import NodeList._
 
   def peerIds: Seq[String] = peerNodes.keys.toSeq
 
-  def _serializeTo (w: JsonWriter)(serializeNodeInfo: (NodeInfo,JsonWriter)=>Unit): Unit = {
-    w.clear().writeObject { _
-      .writeObjectMember(NODE_LIST) { _
-        .writeStringMember(ID, id)
-        .writeStringMember(INFO, info)
-        .writeDateTimeMember(DATE, date)
+  def _serializeMembersTo (w: JsonWriter)(serializeNodeInfo: (NodeInfo,JsonWriter)=>Unit): Unit = {
+    w.writeObjectMember(NODE_LIST) { _
+      .writeStringMember(ID, id)
+      .writeStringMember(INFO, info)
+      .writeDateTimeMember(DATE, date)
 
-        .writeMember(SELF){ w=>
-          serializeNodeInfo(self,w)
+      .writeMember(SELF){ w=>
+        serializeNodeInfo(self,w)
+      }
+      .writeArrayMember(UPSTREAM) { w =>
+        for (nodeInfo <- upstreamNodes.valuesIterator) {
+          serializeNodeInfo(nodeInfo,w)
         }
-        .writeArrayMember(UPSTREAM) { w =>
-          for (nodeInfo <- upstreamNodes.valuesIterator) {
-            serializeNodeInfo(nodeInfo,w)
-          }
+      }
+      .writeArrayMember(PEER) { w =>
+        for (nodeInfo <- peerNodes.valuesIterator) {
+          serializeNodeInfo(nodeInfo,w)
         }
-        .writeArrayMember(PEER) { w =>
-          for (nodeInfo <- peerNodes.valuesIterator) {
-            serializeNodeInfo(nodeInfo,w)
-          }
-        }
-        .writeArrayMember(DOWNSTREAM) { w =>
-          for (nodeInfo <- downstreamNodes.valuesIterator) {
-            serializeNodeInfo(nodeInfo,w)
-          }
+      }
+      .writeArrayMember(DOWNSTREAM) { w =>
+        for (nodeInfo <- downstreamNodes.valuesIterator) {
+          serializeNodeInfo(nodeInfo,w)
         }
       }
     }
   }
 
-  def serializeTo (w: JsonWriter): Unit = _serializeTo(w)( (ni,w)=> ni.serializeTo(w))
-  def shortSerializeTo (w: JsonWriter): Unit = _serializeTo(w)( (ni,w)=> ni.shortSerializeTo(w))
+  def serializeMembersTo (w: JsonWriter): Unit = _serializeMembersTo(w)( (ni,w)=> ni.serializeTo(w))
+  def shortSerializeTo (w: JsonWriter): Unit = {
+    w.clear().writeObject{ w=>
+      _serializeMembersTo(w)( (ni,w)=> ni.shortSerializeTo(w))
+    }
+  }
 }
 
 class NodeListParser extends UTF8JsonPullParser with NodeInfoParser {
@@ -587,31 +587,29 @@ case class NodeDates (nodeId: String,
                       date: DateTime,
                       columnDataDates: Seq[ColumnDatePair],
                       columnDataRowDates: Seq[(String,Seq[RowDatePair])]
-                     ) extends JsonSerializable {
+                     ) extends JsonMessageObject {
   import NodeDates._
 
-  def serializeTo (w: JsonWriter): Unit = {
-    w.clear().writeObject {_
-      .writeObjectMember(NODE_DATES) {_
-        .writeStringMember(ID, nodeId)
-        .writeDateTimeMember(DATE, date)
+  def serializeMembersTo (w: JsonWriter): Unit = {
+    w.writeObjectMember(NODE_DATES) {_
+      .writeStringMember(ID, nodeId)
+      .writeDateTimeMember(DATE, date)
 
-        // "columnDataDates": { "<column-id>": <date>, ... }
-        .writeObjectMember(RO_COLUMNS) { w =>
-          columnDataDates.foreach { e =>
-            w.writeDateTimeMember(e._1, e._2)
-          }
+      // "columnDataDates": { "<column-id>": <date>, ... }
+      .writeObjectMember(RO_COLUMNS) { w =>
+        columnDataDates.foreach { e =>
+          w.writeDateTimeMember(e._1, e._2)
         }
+      }
 
-        // "columnDataRowDates": { "<column-id>": { "<row-id>": <date>, ... }, ... }
-        .writeObjectMember(RW_COLUMNS) { w =>
-          columnDataRowDates.foreach { e =>
-            val (colId,rowDates) = e
+      // "columnDataRowDates": { "<column-id>": { "<row-id>": <date>, ... }, ... }
+      .writeObjectMember(RW_COLUMNS) { w =>
+        columnDataRowDates.foreach { e =>
+          val (colId,rowDates) = e
 
-            w.writeObjectMember(colId) { w=>
-              rowDates.foreach { cvd =>
-                w.writeDateTimeMember(cvd._1, cvd._2)
-              }
+          w.writeObjectMember(colId) { w=>
+            rowDates.foreach { cvd =>
+              w.writeDateTimeMember(cvd._1, cvd._2)
             }
           }
         }
@@ -690,16 +688,14 @@ object NodeReachabilityChange extends JsonConstants {
   * the NSR sends its online downstreams to the UC as part of the sync protocol.
   * the USR sends it to devices in case we establish/loose upstream connection
   */
-case class NodeReachabilityChange (date: DateTime, online: Seq[String], offline: Seq[String]) extends JsonSerializable {
+case class NodeReachabilityChange (date: DateTime, online: Seq[String], offline: Seq[String]) extends JsonMessageObject {
   import NodeReachabilityChange._
 
-  override def serializeTo(w: JsonWriter): Unit = {
-    w.clear().writeObject { _
-      .writeObjectMember(NODE_REACHABILITY_CHANGE) { w=>
-        w.writeDateTimeMember(DATE, date)
-        if (online.nonEmpty) w.writeStringArrayMember(ONLINE, online)
-        if (offline.nonEmpty) w.writeStringArrayMember(OFFLINE, offline)
-      }
+  def serializeMembersTo(w: JsonWriter): Unit = {
+    w.writeObjectMember(NODE_REACHABILITY_CHANGE) { w=>
+      w.writeDateTimeMember(DATE, date)
+      if (online.nonEmpty) w.writeStringArrayMember(ONLINE, online)
+      if (offline.nonEmpty) w.writeStringArrayMember(OFFLINE, offline)
     }
   }
 

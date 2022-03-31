@@ -30,7 +30,7 @@ import scalatags.Text
 import scalatags.Text.all._
 
 import java.net.InetSocketAddress
-import scala.collection.immutable.Iterable
+import scala.collection.immutable.{Iterable, ListMap}
 
 object CesiumTrackRoute  extends CachedFileAssetMap {
   val sourcePath = "./race-cesium/src/main/resources/gov/nasa/race/cesium"
@@ -42,8 +42,12 @@ object CesiumTrackRoute  extends CachedFileAssetMap {
 trait CesiumTrackRoute extends CesiumRoute with TrackWSRoute {
 
   val trackColor = config.getStringOrElse("color", "yellow")
-  val trackModel = config.getStringOrElse("track-model", "generic_track.glb")
+
+  // channel specific colors
   val trackColors = config.getKeyValuePairsOrElse("track-colors", Seq.empty)
+
+  // model and billboard assets. Note we only send/reference the keys - the values are our resource locations and should not be exposed
+  val trackAssets = Map.from(config.getKeyValuePairsOrElse("track-assets", Seq(("model","generic_track.glb"))))
 
   def sendSourceList (remoteAddr: InetSocketAddress, queue: SourceQueueWithComplete[Message]): Unit = {
     var srcList = channelMap.values
@@ -53,6 +57,9 @@ trait CesiumTrackRoute extends CesiumRoute with TrackWSRoute {
     pushTo(remoteAddr, queue, TextMessage.Strict(msg))
   }
 
+  def getAssetContent (key: String): Option[HttpEntity.Strict] = {
+    trackAssets.get(key).map( fileName => CesiumTrackRoute.getContent(fileName))
+  }
 
   //--- route handling
 
@@ -62,8 +69,14 @@ trait CesiumTrackRoute extends CesiumRoute with TrackWSRoute {
     get {
       path ("ui_cesium_tracks.js") {
         complete( ResponseData.js( CesiumTrackRoute.getContent("ui_cesium_tracks.js")))
-      } ~ path( trackModel) {
-        complete( ResponseData.glb( CesiumTrackRoute.getContent(trackModel)))
+
+      } ~ pathPrefix( "track-asset" ~ Slash) {  // mesh-models and images
+        extractUnmatchedPath { p =>
+          getAssetContent( p.toString()) match {
+            case Some(content) => complete(content)
+            case None =>complete(StatusCodes.NotFound,p.toString())
+          }
+        }
       } ~ path ("track-icon.svg") {
         complete( ResponseData.svg( CesiumTrackRoute.getContent("track-icon.svg")))
       }
@@ -104,10 +117,9 @@ trait CesiumTrackRoute extends CesiumRoute with TrackWSRoute {
   }
 
   /**
-    *  parse message from client, returning optional list of reply messages
+    *  parse message from client, returning optional list of reply messages - TODO
     */
   def parseTrackMessage(ctx: WSContext, msg: String): Option[Iterable[Message]] = {
-    // TBD
     None
   }
 
@@ -160,7 +172,6 @@ trait CesiumTrackRoute extends CesiumRoute with TrackWSRoute {
     def _double (key: String, defaultValue: Double): Double = config.getDoubleOrElse(key,defaultValue)
     def _string (key: String, defaultValue: String): String = config.getStringOrElse(key,defaultValue)
 
-
     val trackLabelOffsetX = _int("track-label-offset.x", 12)
     val trackLabelOffsetY = _int("track-label-offset.y", 12)
     val trackPointDist = _int("track-point-dist", 120000)
@@ -179,12 +190,13 @@ trait CesiumTrackRoute extends CesiumRoute with TrackWSRoute {
       export const trackPointOutlineWidth = ${_double("track-point-outline-width", 1)};
       export const trackPointDC = new Cesium.DistanceDisplayCondition( $trackPointDist, Number.MAX_VALUE);
 
-      export const trackModel = '$trackModel';
       export const trackModelSize = ${_int( "track-model-size", 20) };
       export const trackModelDC = new Cesium.DistanceDisplayCondition( 0, $trackPointDist);
       export const trackModelOutlineColor = Cesium.Color.fromCssColorString('${_string("track-model-outline-color", "black")}');
       export const trackModelOutlineWidth = ${_double("track-model-outline-width", 2.0)};
       export const trackModelOutlineAlpha = ${_double("track-model-outline-alpha", 1.0)};
+
+      export const trackBillboardDC = new Cesium.DistanceDisplayCondition( 0, $trackPointDist);
 
       export const trackInfoFont = '${_string("track-info", "14px monospace")}';
       export const trackInfoOffset = new Cesium.Cartesian2( ${_int("track-info-offset.x", trackLabelOffsetX)}, ${_int("track-info-offset.y", trackLabelOffsetY + 16)});

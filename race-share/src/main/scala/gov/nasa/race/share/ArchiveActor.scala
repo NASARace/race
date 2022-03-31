@@ -60,7 +60,7 @@ class ArchiveActor(val config: Config) extends SubscribingRaceActor
   override def onRaceTick(): Unit = saveChangedColumnData
 
   override def onTerminateRaceActor(originator: ActorRef): Boolean = {
-    logWriter.close
+    logWriter.close()
     saveChangedColumnData
     super.onTerminateRaceActor(originator)
   }

@@ -48,25 +48,13 @@ class SBSReader (val iStream: InputStream, val pathName: String="<unknown>", buf
                                 conf.getMappedStringOrElse("default-zone", ZoneId.of, ZoneId.systemDefault)
                                ) // size has to hold at least 2 records
 
-  class SbsArchiveUpdater extends SbsUpdater(updateTrack,dropTrack, Some(this), defaultZone) {
-    override protected def acquireMoreData: Boolean = lineBuffer.nextLine() && initialize(lineBuffer)
-  }
-
-  val updater: SbsUpdater = new SbsArchiveUpdater
+  val updater: SbsUpdater = new SbsUpdater( Some(this), defaultZone)
   var next: Option[ArchiveEntry] = None
 
-  val lineBuffer = new LineBuffer(iStream, 512, bufLen)
+  val lineBuffer = new LineBuffer(iStream, 8192, bufLen)
 
-  //--- updater callbacks
-
-  def updateTrack (track: Tracked3dObject): Boolean = {
-    next = archiveEntry(track.date, track)
-    false // process entries one at a time - stop the parse loop
-  }
-
-  def dropTrack (id: String, cs: String, date: DateTime, inactive: Time): Unit = {
-    // override in derived class that supports drop checks
-  }
+  // override in derived class that supports drop checks
+  def dropTrack (id: String, cs: String, date: DateTime, inactive: Time): Unit = {}
 
   //--- ArchiveReader interface
 
@@ -74,15 +62,21 @@ class SBSReader (val iStream: InputStream, val pathName: String="<unknown>", buf
     updater.hasMoreData || iStream.available > 0
   }
 
-  override def readNextEntry: Option[ArchiveEntry] = {
+  override def readNextEntry(): Option[ArchiveEntry] = {
     next = None
-    updater.parse
+    while (lineBuffer.nextLine() && next.isEmpty) {
+      if (updater.initialize(lineBuffer)){
+        updater.parse( track => {
+          next = archiveEntry(track.date, track)
+        })
+      }
+    }
     next
   }
 
-  override def close: Unit = iStream.close
+  override def close(): Unit = iStream.close()
 
-  def dropStale (date: DateTime, dropAfter: Time): Unit = updater.dropStale(date,dropAfter)
+  def dropStale (date: DateTime, dropAfter: Time): Unit = updater.dropStale(date,dropAfter, dropTrack)
 
   //--- debugging
 
@@ -90,7 +84,7 @@ class SBSReader (val iStream: InputStream, val pathName: String="<unknown>", buf
     var i = 0
     println("--- SBS archive contents:")
     while (hasMoreData) {
-      readNextEntry match {
+      readNextEntry() match {
         case Some(e) =>
           i += 1
           println(s"$i: ${e.date} -> ${e.msg}")
@@ -118,6 +112,6 @@ class SbsReplayActor(val config: Config) extends Replayer[SBSReader] with Period
   val dropAfter = Milliseconds(config.getFiniteDurationOrElse("drop-after", Duration.Zero).toMillis.toInt) // this is sim-time. Zero means don't check for drop
   override def startScheduler = if (dropAfter.nonZero) super.startScheduler  // only start scheduler if we have drop checks
   override def defaultTickInterval = 30.seconds  // wall clock time
-  override def onRaceTick(): Unit = reader.dropStale(updatedSimTime,dropAfter) // FIXME
+  override def onRaceTick(): Unit = reader.dropStale(updatedSimTime,dropAfter)
 
 }

@@ -81,7 +81,7 @@ class OpenSkyArchiveActor (conf: Config) extends OpenSkyImportActor(conf) with C
   }
 
   override def onTerminateRaceActor(originator: ActorRef) = {
-    writer.close
+    writer.close()
     super.onTerminateRaceActor(originator)
   }
 

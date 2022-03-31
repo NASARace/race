@@ -61,7 +61,7 @@ trait ClockAdjuster extends ContinuousTimeRaceActor {
     val elapsedMillis = elapsedSimTimeMillisSince(d)
     val dt = if (allowFutureReset) Math.abs(elapsedMillis) else elapsedMillis
     if (dt > maxSimClockDiff) {
-      requestSimClockReset(d)
+      requestSimClockReset(d,simClock.timeScale)
     }
   }
 

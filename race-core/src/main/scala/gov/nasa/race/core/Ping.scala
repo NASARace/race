@@ -49,17 +49,13 @@ import gov.nasa.race.core.Ping._
   */
 case class Ping (sender: String, receiver: String, request: Int, date: DateTime) extends JsonSerializable {
 
-  def serializeEmbedded (w: JsonWriter): Unit = {
-    w.writeObjectMember(PING) { _
-      .writeStringMember(SENDER,sender.toString)
-      .writeStringMember(RECEIVER,receiver.toString)
-      .writeIntMember(REQUEST,request)
-      .writeDateTimeMember(DATE, date)
+  def serializeMembersTo (w: JsonWriter): Unit = {
+    w.writeObjectMember(PING) { w=>
+      w.writeStringMember(SENDER,sender.toString)
+      w.writeStringMember(RECEIVER,receiver.toString)
+      w.writeIntMember(REQUEST,request)
+      w.writeDateTimeMember(DATE, date)
     }
-  }
-
-  def serializeTo (w: JsonWriter): Unit = {
-    w.clear().writeObject( w=>serializeEmbedded(w) )
   }
 }
 
@@ -103,12 +99,10 @@ object Pong {
   */
 case class Pong(date: DateTime, ping: Ping) extends JsonSerializable {
 
-  def serializeTo (w: JsonWriter): Unit = {
-    w.clear().writeObject { _
-      .writeObjectMember(PONG){ w=>
-        w.writeDateTimeMember(DATE, date)
-        ping.serializeEmbedded(w)
-      }
+  def serializeMembersTo (w: JsonWriter): Unit = {
+    w.writeObjectMember(PONG){ w=>
+      w.writeDateTimeMember(DATE, date)
+      ping.serializeMembersTo(w)
     }
   }
 }

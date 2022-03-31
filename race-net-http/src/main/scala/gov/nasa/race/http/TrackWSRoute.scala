@@ -22,7 +22,7 @@ import gov.nasa.race.common.ConstAsciiSlice.asc
 import gov.nasa.race.common.JsonWriter
 import gov.nasa.race.config.ConfigUtils.ConfigWrapper
 import gov.nasa.race.core.BusEvent
-import gov.nasa.race.track.{Tracked3dObject, TrackedObjects}
+import gov.nasa.race.track.{TrackedObject, TrackedObjects}
 
 import scala.collection.immutable.{Iterable, TreeSeqMap}
 
@@ -30,6 +30,8 @@ object TrackWSRoute {
   val TRACK = asc("track")
   val TRACK_LIST = asc("trackList")
   val SRC = asc("src")
+  val DSP = asc("dsp")
+  val SYM = asc("sym")
 }
 import TrackWSRoute._
 
@@ -52,21 +54,34 @@ trait TrackWSRoute extends PushWSRaceRoute {
     Nil
   }
 
-  def writeTrackObject (w: JsonWriter, channel: String, track: Tracked3dObject): Unit = {
+  // override in concrete route to use type/status/channel specific models or billboards
+  def getTrackSymbol (channel: String, track: TrackedObject): Option[String] = {
+    if (track.hasNoAttitude) Some("marker")
+    else Some("model")
+  }
+
+  // override in concrete route type if we have specialized display needs
+  def writeTrackObject (w: JsonWriter, channel: String, track: TrackedObject): Unit = {
     w.beginObject
     track.serializeMembersFormattedTo(w)
-    w.writeStringMember(SRC, channelMap.getOrElse(channel,channel))
+    w.writeStringMember("label", track.cs) // FIXME - we have to make this more general
+
+    //--- add our display related fields
+    w.writeStringMember(SRC, channelMap.getOrElse(channel,channel)) // we always have one
+    w.writeIntMember(DSP,track.displayAttrs)
+    getTrackSymbol(channel,track).foreach( w.writeStringMember(SYM,_)) // optional
+
     w.endObject
   }
 
-  def serializeTrack (channel: String, track: Tracked3dObject): Unit = {
+  def serializeTrack (channel: String, track: TrackedObject): Unit = {
     writer.clear().writeObject { w=>
       w.writeMemberName(TRACK)
       writeTrackObject(w,channel,track)
     }
   }
 
-  def serializeTracks[T<:Tracked3dObject](channel: String, tracks: TrackedObjects[T]): Unit = {
+  def serializeTracks[T<:TrackedObject](channel: String, tracks: TrackedObjects[T]): Unit = {
     writer.clear()
       .beginObject
       .writeMemberName(TRACK_LIST)
@@ -78,10 +93,10 @@ trait TrackWSRoute extends PushWSRaceRoute {
 
   // called from associated actor (different thread)
   def receiveTrackData: Receive = {
-    case BusEvent(channel,track: Tracked3dObject,_) =>
+    case BusEvent(channel,track: TrackedObject,_) =>
       synchronized {
         serializeTrack(channel, track)
-        push( TextMessage.Strict(writer.toJson))
+        push(TextMessage.Strict(writer.toJson))
       }
 
     case BusEvent(channel,tracks: TrackedObjects[_],_) =>

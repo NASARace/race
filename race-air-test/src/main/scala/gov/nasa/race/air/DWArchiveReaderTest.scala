@@ -58,7 +58,7 @@ object DWArchiveReaderTest {
       var n = 0
 
       while (ar.hasMoreData) {
-        ar.readNextEntry match {
+        ar.readNextEntry() match {
           case Some(e) =>
             n += 1
             val msg = e.msg.toString
@@ -73,7 +73,7 @@ object DWArchiveReaderTest {
 
       println(s"done reading $n entries")
     } finally {
-      ar.close
+      ar.close()
     }
 
   }

@@ -61,7 +61,7 @@ trait CesiumRoute
   val accessToken = config.getVaultableString("access-token")
 
   val cesiumCache = config.getOptionalString("cesium-cache") // optional cache of Cesium resources
-  val cesiumVersion = config.getStringOrElse("cesium-version", "1.90")
+  val cesiumVersion = config.getStringOrElse("cesium-version", "1.91")
 
   val proxyImagery = config.getBoolean("proxy-maptile-provider")
   val imageryProvider = config.getStringOrElse("maptile-provider", "http://tile.stamen.com/terrain")

@@ -46,7 +46,7 @@ object SbsArchiver {
 
 class SbsArchiveWriter(val oStream: OutputStream, val pathName: String = "<unknown>") extends TimedTextLineArchiveWriter {
   def this(conf: Config) = this(createOutputStream(conf), configuredPathName(conf))
-  override def close = oStream.close
+  override def close(): Unit = oStream.close
 }
 
 class SbsArchiveReader(val iStream: InputStream, val pathName: String="<unknown>")  extends TextLineArchiveReader {
@@ -54,7 +54,7 @@ class SbsArchiveReader(val iStream: InputStream, val pathName: String="<unknown>
 
   def this(conf: Config) = this(createInputStream(conf), configuredPathName(conf))
 
-  override def close = iStream.close
+  override def close(): Unit = iStream.close
 
   def readDate (line: String): DateTime = {
     @tailrec def _skipToField (s: String, n: Int, sep: Char, i: Int): Int = {
@@ -72,7 +72,7 @@ class SbsArchiveReader(val iStream: InputStream, val pathName: String="<unknown>
     if (i0 > 0) DateTime.parseYMDT(line.substring(i0,i0+dtgPatternLength-1)) else DateTime.UndefinedDateTime
   }
 
-  override def readNextEntry: Option[ArchiveEntry] = {
+  override def readNextEntry(): Option[ArchiveEntry] = {
     try {
       val line = reader.readLine()
       if (line != null) archiveEntry( readDate(line), line) else None

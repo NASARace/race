@@ -6,7 +6,7 @@ import gov.nasa.race.actor.{TrackDropper, TranslatorActor}
 import gov.nasa.race.air.translator.SBS2FlightPos
 import gov.nasa.race.air._
 import gov.nasa.race.config.ConfigUtils._
-import gov.nasa.race.track.{TrackCsChanged, Tracked3dObject}
+import gov.nasa.race.track.{TrackCsChanged, Tracked3dObject, TrackedObject}
 import gov.nasa.race.track.TrackedObject.TrackProblem
 
 import scala.collection.mutable.{HashMap => MHashMap}
@@ -34,7 +34,7 @@ class SbsTranslatorActor(config: Config) extends TranslatorActor(config) with Tr
 
   override def handleMessage = handleTranslatorMessage orElse handleFPosDropperMessage
 
-  override def removeStaleTrack (fpos: Tracked3dObject) = tracks -= fpos.cs // for FPosDropper
+  override def removeStaleTrack (fpos: TrackedObject) = tracks -= fpos.cs // for FPosDropper
 
   // specialized translation processing, called from TranslatorActor
   override def processTranslationProduct(o: Any) = o match {

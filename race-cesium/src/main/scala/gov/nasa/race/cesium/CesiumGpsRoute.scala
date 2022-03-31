@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, United States Government, as represented by the
+ * Copyright (c) 2021, United States Government, as represented by the
  * Administrator of the National Aeronautics and Space Administration.
  * All rights reserved.
  *
@@ -14,26 +14,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package gov.nasa.race.share
+package gov.nasa.race.cesium
 
-import gov.nasa.race.common.{JsonMessageObject, JsonSerializable, JsonWriter}
+import gov.nasa.race.http.TrackWSRoute
 
-object UpstreamChange {
-  def online (id: String) = UpstreamChange(id,true)
-  def offline (id: String) = UpstreamChange(id,false)
+object CesiumGpsRoute {
+  val sourcePath = "./race-cesium/src/main/resources/gov/nasa/race/cesium"
 }
 
 /**
-  * event to indicate we have a new upstream selection
-  *
-  * if isOnline == false we lost connection to the respective upstream node
+  * a RaceRoute that uses Cesium to display GpsPos tracks transmitted over a websocket
   */
-case class UpstreamChange (id: String, isOnline: Boolean) extends JsonMessageObject {
+trait CesiumGpsRoute extends CesiumRoute with TrackWSRoute {
 
-  def serializeMembersTo (w: JsonWriter): Unit = {
-    w.writeObjectMember("upstreamChange") {_
-      .writeStringMember("id", id)
-      .writeBooleanMember("isOnline", isOnline)
-    }
-  }
 }

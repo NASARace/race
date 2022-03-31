@@ -73,7 +73,7 @@ object TextArchiveExtractor {
 
   def processArchiveEntries(ar: TextArchiveReader): Unit = {
     while (ar.hasMoreData) {
-      ar.readNextEntry match {
+      ar.readNextEntry() match {
         case Some(e) =>
           val dateMillis = e.date.toEpochMillis
           val msg = e.msg.toString

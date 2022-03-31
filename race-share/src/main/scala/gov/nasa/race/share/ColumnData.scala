@@ -17,7 +17,7 @@
 package gov.nasa.race.share
 
 import gov.nasa.race.common.ConstAsciiSlice.asc
-import gov.nasa.race.common.{ConstAsciiSlice, JsonParseException, JsonPullParser, JsonSerializable, JsonWriter, UTF8JsonPullParser}
+import gov.nasa.race.common.{ConstAsciiSlice, JsonMessageObject, JsonParseException, JsonPullParser, JsonSerializable, JsonWriter, UTF8JsonPullParser}
 import gov.nasa.race.uom.DateTime
 
 import scala.collection.mutable
@@ -50,7 +50,7 @@ import gov.nasa.race.share.ColumnData._
   * CDs can be used with different RowLists - the dominant requirement is to〖 avoid redundant data storage (both
   * online and serialized) 〗
   */
-case class ColumnData (id: String, date: DateTime, values: Map[String,CellValue[_]]) extends JsonSerializable {
+case class ColumnData (id: String, date: DateTime, values: Map[String,CellValue[_]]) extends JsonMessageObject {
 
   /**
     * note that apply always returns a value if 'rowId' is a valid RowList key - if 'values' has no 'rowId' entry
@@ -75,18 +75,16 @@ case class ColumnData (id: String, date: DateTime, values: Map[String,CellValue[
     }
   }
 
-  private def _serializeTo (w: JsonWriter)(valueSerializer: JsonWriter=>Unit): Unit = {
-    w.clear().writeObject( _
-      .writeObjectMember("columnData") { _
-        .writeStringMember(ID, id.toString)
-        .writeDateTimeMember(DATE, date)
-        .writeObjectMember(ROWS) { w => valueSerializer(w) }
-      }
-    )
+  private def _serializeMembersTo (w: JsonWriter)(valueSerializer: JsonWriter=>Unit): Unit = {
+    w.writeObjectMember("columnData") { _
+      .writeStringMember(ID, id.toString)
+      .writeDateTimeMember(DATE, date)
+      .writeObjectMember(ROWS) { w => valueSerializer(w) }
+    }
   }
 
-  def serializeTo (w: JsonWriter): Unit = {
-    _serializeTo(w){ w=>
+  def serializeMembersTo (w: JsonWriter): Unit = {
+    _serializeMembersTo(w){ w=>
       values.foreach { cell =>
         w.writeMemberName(cell._1.toString)
         val wasFormatted = w.format(false) // print this dense no matter what
@@ -97,16 +95,18 @@ case class ColumnData (id: String, date: DateTime, values: Map[String,CellValue[
   }
 
   def serializeOrderedTo (w: JsonWriter, rowList: RowList): Unit = {
-    _serializeTo(w) { w =>
-      rowList.foreach { row=>
-        val rid = row.id
-        values.get(rid) match {
-          case Some(v) =>
-            w.writeMemberName(rid.toString)
-            val wasFormatted = w.format(false) // print this dense no matter what
-            v.serializeTo(w)
-            w.format(wasFormatted)
-          case None => // ignore, we don't have a value for this row
+    w.clear().writeObject { w=>
+      _serializeMembersTo(w) { w =>
+        rowList.foreach { row=>
+          val rid = row.id
+          values.get(rid) match {
+            case Some(v) =>
+              w.writeMemberName(rid.toString)
+              val wasFormatted = w.format(false) // print this dense no matter what
+              v.serializeTo(w)
+              w.format(wasFormatted)
+            case None => // ignore, we don't have a value for this row
+          }
         }
       }
     }
@@ -386,23 +386,21 @@ case class ColumnDataChange(columnId: String,
                             changeNodeId: String, // from which node we get the PDC
                             date: DateTime,       // [R] this has to be >= latest date in changedValues
                             changedValues: Seq[CellPair]
-                           ) extends JsonSerializable {
+                           ) extends JsonMessageObject {
   import ColumnDataChange._
 
   /** order of fieldValues should not matter */
-  def serializeTo (w: JsonWriter): Unit = {
-    w.clear().writeObject { _
-      .writeObjectMember(COLUMN_DATA_CHANGE) { _
-        .writeStringMember(COLUMN_ID, columnId.toString)
-        .writeStringMember(CHANGE_NODE_ID, changeNodeId.toString)
-        .writeDateTimeMember(DATE, date)
-        .writeObjectMember(CHANGED_VALUES) { w =>
-          changedValues.foreach { fv =>
-            w.writeMemberName(fv._1.toString)
-            val wasFormatted = w.format(false) // print this dense no matter what
-            fv._2.serializeTo(w)  // this writes both value and date
-            w.format(wasFormatted)
-          }
+  def serializeMembersTo (w: JsonWriter): Unit = {
+    w.writeObjectMember(COLUMN_DATA_CHANGE) { _
+      .writeStringMember(COLUMN_ID, columnId.toString)
+      .writeStringMember(CHANGE_NODE_ID, changeNodeId.toString)
+      .writeDateTimeMember(DATE, date)
+      .writeObjectMember(CHANGED_VALUES) { w =>
+        changedValues.foreach { fv =>
+          w.writeMemberName(fv._1.toString)
+          val wasFormatted = w.format(false) // print this dense no matter what
+          fv._2.serializeTo(w)  // this writes both value and date
+          w.format(wasFormatted)
         }
       }
     }

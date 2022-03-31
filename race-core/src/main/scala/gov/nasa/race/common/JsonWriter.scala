@@ -22,8 +22,48 @@ import gov.nasa.race.uom.DateTime
 import java.text.NumberFormat
 import scala.collection.mutable.ArrayBuffer
 
+/**
+  * something that can serialize to JSON
+  */
 trait JsonSerializable {
-  def serializeTo (writer: JsonWriter): Unit
+
+  // the minimum that needs to be provided
+  def serializeMembersTo (writer: JsonWriter): Unit
+
+  // override if there is specific formatting to be used for fiel values
+  def serializeMembersFormattedTo (writer: JsonWriter): Unit = serializeMembersTo(writer)
+
+  def serializeTo (writer: JsonWriter): Unit = {
+    writer.beginObject
+    serializeMembersTo(writer)
+    writer.endObject
+  }
+
+  def serializeFormattedTo (writer: JsonWriter): Unit = {
+    writer.beginObject
+    serializeMembersFormattedTo(writer)
+    writer.endObject
+  }
+
+  def serializeFormattedAs (writer: JsonWriter, key: String): Unit = {
+    writer.writeMemberName(key)
+    serializeFormattedTo(writer)
+  }
+
+  def serializeAs (writer: JsonWriter, key: String): Unit = {
+    writer.writeMemberName(key)
+    serializeTo(writer)
+  }
+}
+
+/**
+  * a JsonSerializable that only writes message objects, i.e. needs to clear the writer
+  */
+trait JsonMessageObject extends JsonSerializable {
+  override def serializeTo (writer: JsonWriter): Unit = {
+    writer.clear()
+    super.serializeTo(writer)
+  }
 }
 
 object JsonWriter {

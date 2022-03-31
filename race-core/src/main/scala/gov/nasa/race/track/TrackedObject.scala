@@ -30,15 +30,22 @@ object TrackedObject {
   //--- track status flags
   // note the lower 2 bytes are reserved for general flags defined here,
   // channel specific flags should use the upper two
-  final val UndefinedStatus: Int = 0
+  val UndefinedStatus: Int = 0
 
-  final val TrackNoStatus: Int  = 0x00
-  final val NewFlag: Int        = 0x01
-  final val ChangedFlag: Int    = 0x02
-  final val DroppedFlag: Int    = 0x04
-  final val CompletedFlag: Int  = 0x08
-  final val FrozenFlag: Int     = 0x10
-  final val ChangedCSFlag: Int  = 0x20
+  val NoStatus: Int       = 0x00
+  val NewFlag: Int        = 0x01
+  val ChangedFlag: Int    = 0x02
+  val DroppedFlag: Int    = 0x04
+  val CompletedFlag: Int  = 0x08
+  val FrozenFlag: Int     = 0x10
+  val ChangedCSFlag: Int  = 0x20
+
+  //--- display attribute flags
+  val NoDsp               = 0x00
+  val Dsp2dFlag           = 0x01  // object has 2d attitude
+  val Dsp3dFlag           = 0x02  // object has 3d attitude
+  val DspGroundFlag       = 0x04  // display on ground
+  val DspRelativeFlag     = 0x08  // alt is relative to ground
 
   def tempCS (flightId: String) = "?" + flightId
   def isTempCS (cs: String) = cs.charAt(0) == '?'
@@ -58,6 +65,7 @@ object TrackedObject {
   val ALT = asc("alt")
 
   val STATUS = asc("status")
+  val DSP = asc("dsp")
 
   val HDG = asc("hdg")
   val SPD = asc("spd")
@@ -88,6 +96,15 @@ trait TrackedObject extends IdentifiableObject with TrackPoint with JsonSerializ
 
   def status: Int // flag field, can be channel specific (hence no enum)
 
+  // display relevant attributes we associate with the concrete type (i.e. don't have to store in instances)
+  def displayAttrs: Int = Dsp3dFlag | Dsp2dFlag
+
+  def isClampedToGround: Boolean = (displayAttrs & DspGroundFlag) != 0 // display on the ground
+  def isRelativeToGround: Boolean = (displayAttrs & DspRelativeFlag) != 0
+  def has3dAttitude: Boolean = (displayAttrs & Dsp3dFlag) != 0 // display heading/role/pitch
+  def has2dAttitude: Boolean = (displayAttrs & Dsp2dFlag) != 0 // display just heading
+  def hasNoAttitude: Boolean = (displayAttrs & (Dsp2dFlag | Dsp3dFlag)) == 0
+
   def isNew = (status & NewFlag) != 0
   def isChanged = (status & ChangedFlag) != 0
   def isDropped = (status & DroppedFlag) != 0
@@ -103,6 +120,11 @@ trait TrackedObject extends IdentifiableObject with TrackPoint with JsonSerializ
     val tgtCls = classTag[T].runtimeClass
     amendments.find( a=> tgtCls.isAssignableFrom(a.getClass)).map( _.asInstanceOf[T])
   }
+
+  // FIXME - leftover from ads-b tracks
+  def hasTempCS = isTempCS(cs)
+  def tempCS = if (hasTempCS) cs else TrackedObject.tempCS(id)
+  def getOldCS: Option[String] = amendments.find(_.isInstanceOf[ChangedCS]).map(_.asInstanceOf[ChangedCS].oldCS)
 }
 
 /**
@@ -143,13 +165,9 @@ trait Tracked3dObject extends TrackedObject with Moving3dObject with AttitudeObj
     f"$id%-7s $hh%02d:$mm%02d:$ss%02d ${position.altitude.toFeet.toInt}%6dft ${heading.toNormalizedDegrees.toInt}%3d° ${speed.toKnots.toInt}%4dkn"
   }
 
-  def hasTempCS = isTempCS(cs)
-  def tempCS = if (hasTempCS) cs else TrackedObject.tempCS(id)
-  def getOldCS: Option[String] = amendments.find(_.isInstanceOf[ChangedCS]).map(_.asInstanceOf[ChangedCS].oldCS)
-
   //--- JSON formatting
 
-  def serializeMembersFormattedTo (writer: JsonWriter): Unit = {
+  override def serializeMembersFormattedTo (writer: JsonWriter): Unit = {
     writer
       .writeStringMember(ID, id)
       .writeStringMember(LABEL, cs)
@@ -165,20 +183,8 @@ trait Tracked3dObject extends TrackedObject with Moving3dObject with AttitudeObj
       .writeIntMember(STATUS, status)
   }
 
-  def serializeFormattedTo (writer: JsonWriter): Unit = {
-    writer.beginObject
-    serializeMembersFormattedTo(writer)
-    writer.endObject
-  }
-
-  def serializeFormattedAs (writer: JsonWriter, key: String): Unit = {
-    writer.writeMemberName(key)
-    serializeFormattedTo(writer)
-  }
-
-  def serializeTo (writer: JsonWriter): Unit = {
+  def serializeMembersTo (writer: JsonWriter): Unit = {
     writer
-      .beginObject
       .writeStringMember(ID, id)
       .writeStringMember(LABEL, cs)
       .writeDateTimeMember(DATE, date)
@@ -191,12 +197,6 @@ trait Tracked3dObject extends TrackedObject with Moving3dObject with AttitudeObj
       .writeDoubleMember(PITCH, pitch.toDegrees)
       .writeDoubleMember(ROLL, roll.toDegrees)
       .writeIntMember(STATUS, status)
-      .endObject
-  }
-
-  def serializeAs (writer: JsonWriter, key: String): Unit = {
-    writer.writeMemberName(key)
-    serializeTo(writer)
   }
 }
 
@@ -211,7 +211,7 @@ trait PlannedTrack {
   def arrivalDate: DateTime
 }
 
-trait TrackedObjects[+T <: Tracked3dObject] extends AssocSeq[T,String] {
+trait TrackedObjects[+T <: TrackedObject] extends AssocSeq[T,String] {
 
   def serializeTo (writer: JsonWriter): Unit = {
     writer.beginArray

@@ -35,10 +35,12 @@ class LineBuffer (val is: InputStream, val maxBufsize: Int = Int.MaxValue, val i
 
   //--- ByteSlice interface
   def data: Array[Byte] = buf
-  def len: Int = recLimit - off // length of the current record
+  def len: Int = recLimit - recStart // length of the current record
   def off: Int = recStart
 
   def dataLength: Int = dataLimit
+
+  def hasReachedEnd: Boolean = isEnd
 
   protected final def getRecLimit (i0: Int): Int = {
     val lim = dataLimit
@@ -46,10 +48,30 @@ class LineBuffer (val is: InputStream, val maxBufsize: Int = Int.MaxValue, val i
 
     var i = i0
     while (i < lim) {
-      if (bs(i) == '\n') return i
-      i += 1
+      val b = bs(i)
+      if (b == '"') {
+        i = skipQuoted(i)
+      } else {
+        if (b == '\r' || b == '\n') return i  // whatever comes first. Unfortunately they can appear single or combined as \r\n
+        i += 1
+      }
     }
     if (isEnd) i else -1 // no \n in tail of buffer
+  }
+
+  def skipQuoted (i0: Int): Int = {
+    val lim = dataLimit
+    val bs = buf
+    var i=i0
+    while (i < lim) {
+      val b = bs(i)
+      if (b == '"') {
+        i += 1
+        if (i < lim && bs(i) != '"') return i
+      }
+      i += 1
+    }
+    i
   }
 
   protected def growBuffer(): Unit = {
@@ -77,9 +99,9 @@ class LineBuffer (val is: InputStream, val maxBufsize: Int = Int.MaxValue, val i
 
   protected def fillBuffer(): Unit = {
     if (dataLimit > recLimit) {  // left-shift remaining data to beginning of buffer
-      if (off > 0) {
-        val nRemaining = dataLimit - off
-        System.arraycopy(data, off, buf, 0, nRemaining)
+      if (recStart > 0) {
+        val nRemaining = dataLimit - recStart
+        System.arraycopy(buf, recStart, buf, 0, nRemaining)
         dataLimit = nRemaining
       }
 
@@ -91,23 +113,55 @@ class LineBuffer (val is: InputStream, val maxBufsize: Int = Int.MaxValue, val i
     fetchMoreData()
   }
 
+  def getRecStart(): Int = {
+    if (nLines == 0) { // first line - don't skip anything
+      0
+    } else {  // we must have had a previous recLimit
+      var i = recLimit
+      val b = buf(i)
+      if (b == '\r') {  // skip over optionally following '\n'
+        i += 1
+        if (i == dataLimit) {
+          recLimit = i // make sure fillBuffer copies the remainder
+          fillBuffer()
+          i = 0
+        }
+        if (buf(i) == '\n') { // bingo - the accompanying '\n' was in the next chunk
+          i+1
+        } else { // this was a single '\r'
+          i
+        }
+      } else if (b == '\n') { // a single '\n'
+        i+1
+      } else {
+        throw new RuntimeException("no previous line terminator") // can't get here - if this wasn't the first line there had to be a terminator
+      }
+    }
+  }
+
+  protected var nLines = 0
+
   def nextLine(): Boolean = {
     if (!isEnd) {
       if (recLimit == dataLimit) { // buffer not yet initialized or fully consumed
         fillBuffer()
-        if (isEnd && dataLimit <= off) return false // no more data
+        if (isEnd && dataLimit <= recStart) return false // no more data
       }
 
-      if (recLimit > 0) recStart = recLimit + 1
-      recLimit = getRecLimit(off)
+      recStart = getRecStart()
+      recLimit = getRecLimit(recStart)
+
       while (recLimit < 0) { // buf has only partial data of next record
-        val nLeft = dataLimit - off
+        val nLeft = dataLimit - recStart
         fillBuffer() // this always resets recStart
         recLimit = getRecLimit(nLeft)
         if (recLimit < 0) growBuffer()
       }
-      (dataLimit > 0)
 
+      if (dataLimit > 0){
+        nLines += 1
+        true
+      } else false
     } else false
   }
 }

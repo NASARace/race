@@ -115,7 +115,7 @@ class FlightPosArchiveWriter (val oStream: OutputStream, val pathName: String="<
   def this(conf: Config) = this(createOutputStream(conf), configuredPathName(conf))
 
   val ps = new PrintStream (oStream)
-  override def close = ps.close
+  override def close(): Unit = ps.close
 
   protected def writeFlightPos(fpos: FlightPos): Unit = {
     ps.print(fpos.id); ps.print(',')
@@ -173,9 +173,9 @@ class FlightPosArchiveReader (val iStream: InputStream, val pathName: String="<u
   def this(conf: Config) = this(createInputStream(conf), configuredPathName(conf))
 
   def hasMoreData = iStream.available > 0
-  def close = iStream.close
+  def close(): Unit = iStream.close
 
-  override def readNextEntry: Option[ArchiveEntry] = {
+  override def readNextEntry(): Option[ArchiveEntry] = {
     var fs = getLineFields(iStream)
 
     if (fs.size == 10) {
@@ -205,7 +205,7 @@ class FlightPosArchiveReader (val iStream: InputStream, val pathName: String="<u
 class ExtendedFlightPosArchiveReader (iStream: InputStream, pathName: String) extends FlightPosArchiveReader(iStream,pathName) {
   def this(conf: Config) = this(createInputStream(conf), configuredPathName(conf))
 
-  override def readNextEntry: Option[ArchiveEntry] = {
+  override def readNextEntry(): Option[ArchiveEntry] = {
     var fs = getLineFields(iStream)
 
     if (fs.size == 13) {

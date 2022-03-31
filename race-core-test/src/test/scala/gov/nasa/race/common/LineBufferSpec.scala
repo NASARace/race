@@ -27,9 +27,21 @@ import java.util.zip.GZIPInputStream
   */
 class LineBufferSpec extends AnyFlatSpec with RaceSpec {
 
+  "a LineBuffer" should "read a known plain input file" in {
+    val is = new FileInputStream(baseResourceFile("sbs.csv"))
+
+    val lb = new LineBuffer(is,10000, 512)
+    var i=0
+    while (lb.nextLine()) {
+      println(s"${i+1}: [${lb.off},${lb.len} <${lb.dataLength}] = \t\t'${lb.asString}'")
+      i += 1
+    }
+
+    assert(i == 200)
+  }
+
   "a LineBuffer" should "read a known compressed input file" in {
     val fis = new FileInputStream(baseResourceFile("sbs.csv.gz"))
-    //val fis = new FileInputStream(new File("../../data/all-080717-1744/sbs.txt.gz"))
     val is = new GZIPInputStream(fis)
 
     val lb = new LineBuffer(is,1000000, 512)
@@ -41,4 +53,5 @@ class LineBufferSpec extends AnyFlatSpec with RaceSpec {
 
     assert(i == 100)
   }
+
 }

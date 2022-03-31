@@ -53,9 +53,9 @@ class TextArchiveReader(val iStream: InputStream, val pathName:String="<unknown>
   private val buf: StringBuilder = new StringBuilder(4096)
 
   override def hasMoreData = br.ready
-  override def close = br.close
+  override def close(): Unit = br.close
 
-  override def readNextEntry: Option[ArchiveEntry] = {
+  override def readNextEntry(): Option[ArchiveEntry] = {
     while (true){
       br.readLine match {
         case null => return None
@@ -87,7 +87,7 @@ trait PrintStreamArchiveWriter extends ArchiveWriter {
 
   protected val ps = new PrintStream(oStream)
 
-  override def close = ps.close
+  override def close(): Unit = ps.close
 
 }
 

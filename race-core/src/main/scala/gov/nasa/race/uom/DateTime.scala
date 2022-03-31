@@ -46,6 +46,7 @@ object DateTime {
 
   @inline def now: DateTime = new DateTime(System.currentTimeMillis)
   @inline def ofEpochMillis(millis: Long) = new DateTime(millis)
+  @inline def ofEpochSeconds(secs: Long) = new DateTime(secs*1000)
 
   @inline def apply(year: Int, month: Int, day: Int, hour: Int, minutes: Int, secs: Int, ms: Int, zoneId: ZoneId): DateTime = {
     val zdt = ZonedDateTime.of(year,month,day, hour,minutes,secs,ms * 1000000, zoneId)

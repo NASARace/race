@@ -14,47 +14,48 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package gov.nasa.race.track
+package gov.nasa.race.land
 
 import akka.actor.ExtendedActorSystem
 import com.typesafe.config.Config
 import gov.nasa.race.archive.{ArchiveReader, ArchiveWriter}
 import gov.nasa.race.common.ConfigurableStreamCreator.{configuredPathName, createInputStream, createOutputStream}
 import gov.nasa.race.common.ConstAsciiSlice.asc
-import gov.nasa.race.common.{CsvPullParser, JsonPullParser, JsonSerializable, JsonWriter, LineBuffer, Utf8CsvPullParser}
+import gov.nasa.race.common.{JsonPullParser, JsonSerializable, JsonWriter, LineBuffer, Utf8CsvPullParser}
 import gov.nasa.race.config.ConfigUtils.ConfigWrapper
 import gov.nasa.race.core.SingleTypeAkkaSerializer
 import gov.nasa.race.geo.GeoPosition
 import gov.nasa.race.track.TrackedObject._
+import gov.nasa.race.track.{Moving3dObject, TrackedObject}
 import gov.nasa.race.uom.Angle.Degrees
 import gov.nasa.race.uom.Length.Meters
-import gov.nasa.race.uom.Speed.MetersPerSecond
+import gov.nasa.race.uom.Speed.{MetersPerSecond, UndefinedSpeed}
 import gov.nasa.race.uom.{Angle, DateTime, Length, Speed}
 import gov.nasa.race.{Failure, OrgObject, ResultValue, SuccessValue}
 
 import java.io.{InputStream, OutputStream, PrintStream}
 
-object GpsGroundPos {
+object GpsPos {
+  val ACC  = asc("acc")
+  val DIST = asc("dist")
   val HDOP = asc("hdop")
   val VDOP = asc("vdop")
   val PDOP = asc("pdop")
 
-  val UNDEFINED_DOP = 0
-  val UNDEFINED_ROLE = 0
-  val UNDEFINED_ORG = 0
+  val UndefinedDop = 0
+  val UndefinedRole = 0
+  val UndefinedOrg = 0
 
-  @inline def ggpResult(id: String, cs: String, lat: Angle, lon: Angle, alt: Length, date: DateTime, role: Int, org: Int,
-                spd: Speed, hdg: Angle, vr: Speed, hdop: Int, vdop: Int, pdop: Int, status: Int): ResultValue[GpsGroundPos] = {
-    if (id == null && cs == null) return Failure("no ID or LABEL")
-    val _cs = if (cs == null) id else cs
-    val _id = if (id == null) cs else id
+  @inline def gpsPosResult(id: String, date: DateTime, lat: Angle, lon: Angle, alt: Length, accuracy: Length,
+                        hdg: Angle, spd: Speed, dist: Length, org: Int, role: Int, status: Int): ResultValue[GpsPos] = {
+    if (id == null || id.isEmpty) return Failure("no ID")
     if (lat.isUndefined || lon.isUndefined) return Failure("no LAT/LON")
     if (date.isUndefined) return Failure("no DATE")
 
-    SuccessValue(new GpsGroundPos(_id,_cs,GeoPosition(lat,lon,alt),date,role,org,spd,hdg,vr,hdop,vdop,pdop,status))
+    SuccessValue(new GpsPos(id,date, GeoPosition(lat,lon,alt),accuracy, hdg,spd,dist, org,role,status))
   }
 }
-import gov.nasa.race.track.GpsGroundPos._
+import gov.nasa.race.land.GpsPos._
 
 /**
   * a moving GPS track that can have a role/org
@@ -69,149 +70,122 @@ import gov.nasa.race.track.GpsGroundPos._
   *   10-20  Fair - positional measurements should be discarded or used only to indicate a very rough estimate of the current location.
   *   >20    Poor - measurements are inaccurate by as much as 300 meters with a 6-meter accurate device (50 DOP × 6 meters) and should be discarded.
   */
-class GpsGroundPos (
-                     val id: String,
-                     val cs: String,
-                     val position: GeoPosition,
-                     val date: DateTime,
+class GpsPos(
+              val id: String,
+              val date: DateTime,
 
-                     //--- optional fields (sensor/source specific)
+              val position: GeoPosition,
+              val accuracy: Length = Length.UndefinedLength, // error diameter
 
-                     val role: Int = GpsGroundPos.UNDEFINED_ROLE,
-                     val org: Int = GpsGroundPos.UNDEFINED_ORG,
+              val heading: Angle = Angle.UndefinedAngle,
+              val speed: Speed = Speed.UndefinedSpeed,
+              val distance: Length = Length.UndefinedLength,
 
-                     val speed: Speed = Speed.UndefinedSpeed,
-                     val heading: Angle = Angle.UndefinedAngle,
-                     val vr: Speed = Speed.UndefinedSpeed,
+              val org: Int = GpsPos.UndefinedOrg,
+              val role: Int = GpsPos.UndefinedRole,
+              val status: Int = UndefinedStatus
+            ) extends TrackedObject with OrgObject with Moving3dObject with JsonSerializable {
 
-                     val hdop: Int = GpsGroundPos.UNDEFINED_DOP,
-                     val vdop: Int = GpsGroundPos.UNDEFINED_DOP,
-                     val pdop: Int = GpsGroundPos.UNDEFINED_DOP,
+  // type specific overrides
+  def cs: String = id  // we don't have a separate c/s
+  def vr: Speed = UndefinedSpeed // we are on the ground
+  override def toString(): String = f"""GpsGroundPos("$id",$date,${position.toGenericString3D},𝚫=${accuracy.toMeters}%.1fm,↖︎=${heading.toDegrees}%.0f°,d=${distance.toMeters}%.0fm,$org,$role,0x${status.toHexString})"""
+  override def displayAttrs: Int = TrackedObject.DspGroundFlag
 
-                     val status: Int = 0
-                   ) extends TrackedObject with OrgObject with Moving3dObject with JsonSerializable {
-
-  override def toString(): String = s"GpsGroundPos($id,$cs,$position,$role,$org,,0x${status.toHexString},$date)"
-
-  def serializeTo (writer: JsonWriter): Unit = {
+  def serializeMembersTo (writer: JsonWriter): Unit = {
     writer
-      .beginObject
       .writeStringMember(ID, id)
-      .writeStringMember(LABEL, cs)
+      .writeDateTimeMember(DATE, date)
+
       .writeDoubleMember(LAT, position.latDeg)
       .writeDoubleMember(LON, position.lonDeg)
       .writeDoubleMember(ALT, position.altMeters)
-      .writeDateTimeMember(DATE, date)
-
-      .writeIntMember(ROLE, role)
-      .writeIntMember(ORG, org)
+      .writeDoubleMember(ACC, accuracy.toMeters)
 
       .writeDoubleMember(HDG, heading.toDegrees)
       .writeDoubleMember(SPD, speed.toMetersPerSecond)
-      .writeDoubleMember(VR, vr.toMetersPerSecond)
+      .writeDoubleMember(DIST, distance.toMeters)
 
-      .writeIntMember(HDOP, hdop)
-      .writeIntMember(VDOP, vdop)
-      .writeIntMember(PDOP, pdop)
-
+      .writeIntMember(ORG, org)
+      .writeIntMember(ROLE, role)
       .writeIntMember(STATUS, status)
-      .endObject
   }
 
-  def serializeFormattedTo (writer: JsonWriter): Unit = {
+  override def serializeMembersFormattedTo (writer: JsonWriter): Unit = {
     writer
-      .beginObject
       .writeStringMember(ID, id)
-      .writeStringMember(LABEL, cs)
-      .writeDoubleMember(LAT, position.latDeg, FMT_3_5)
-      .writeDoubleMember(LON, position.lonDeg, FMT_3_5)
-      .writeDoubleMember(ALT, position.altMeters, FMT_6)
       .writeDateTimeMember(DATE, date)
 
-      .writeIntMember(ROLE, role)
-      .writeIntMember(ORG, org)
+      .writeDoubleMember(LAT, position.latDeg,FMT_3_5)
+      .writeDoubleMember(LON, position.lonDeg,FMT_3_5)
+      .writeDoubleMember(ALT, position.altMeters,FMT_6)
+      .writeDoubleMember(ACC, accuracy.toMeters)
 
       .writeDoubleMember(HDG, heading.toDegrees, FMT_3)
       .writeDoubleMember(SPD, speed.toMetersPerSecond, FMT_3_2)
-      .writeDoubleMember(VR, vr.toMetersPerSecond, FMT_3_2)
+      .writeDoubleMember(DIST, distance.toMeters, FMT_6)
 
-      .writeIntMember(HDOP, hdop)
-      .writeIntMember(VDOP, vdop)
-      .writeIntMember(PDOP, pdop)
-
+      .writeIntMember(ORG, org)
+      .writeIntMember(ROLE, role)
       .writeIntMember(STATUS, status)
-      .endObject
   }
 
   def serializeCsvTo (ps: PrintStream): Unit = {
-
     ps.print(id); ps.print(',')
-    ps.print(cs); ps.print(',')
+    ps.print(date.toEpochMillis); ps.print(',')
+
     ps.print(position.latDeg); ps.print(',')
     ps.print(position.lonDeg); ps.print(',')
     if (position.altitude.isDefined) ps.print(position.altMeters); ps.print(',')
-    ps.print(date.toEpochMillis); ps.print(',')
-
-    if (role != UNDEFINED_ROLE) ps.print(role); ps.print(',')
-    if (org != UNDEFINED_ORG) ps.println(org); ; ps.print(',')
+    if (accuracy.isDefined) ps.print(accuracy.toMeters); ps.print(',')
 
     if (heading.isDefined) ps.print(heading.toDegrees); ps.print(',')
     if (speed.isDefined) ps.print(speed.toMetersPerSecond); ps.print(',')
-    if (vr.isDefined) ps.print(vr.toMetersPerSecond); ps.print(',')
+    if (distance.isDefined) ps.print(distance.toMeters); ps.print(',')
 
-    if (hdop != UNDEFINED_DOP) ps.print(hdop); ps.print(',')
-    if (vdop != UNDEFINED_DOP) ps.print(vdop); ps.print(',')
-    if (pdop != UNDEFINED_DOP) ps.print(pdop); ps.print(',')
-
+    if (org != UndefinedOrg) ps.println(org); ; ps.print(',')
+    if (role != UndefinedRole) ps.print(role); ps.print(',')
     if (status != UndefinedStatus) ps.print(status)
   }
 }
 
 //--- Akka serialization support (for remote actors)
 
-class GpsGroundPosSerializer (system: ExtendedActorSystem) extends SingleTypeAkkaSerializer[GpsGroundPos](system) {
+class GpsPosSerializer(system: ExtendedActorSystem) extends SingleTypeAkkaSerializer[GpsPos](system) {
   override val initCapacity: Int = 64
 
-  def serialize (gps: GpsGroundPos): Unit = {
+  def serialize (gps: GpsPos): Unit = {
     writeUTF(gps.id)
-    writeUTF(gps.cs)
-    writeGeoPosition(gps.position)
     writeDateTime(gps.date)
 
-    writeInt(gps.role)
-    writeInt(gps.org)
+    writeGeoPosition(gps.position)
+    writeLength(gps.accuracy)
 
-    writeSpeed(gps.speed)
     writeAngle(gps.heading)
-    writeSpeed(gps.vr)
+    writeSpeed(gps.speed)
+    writeLength(gps.distance)
 
-    writeInt(gps.hdop)
-    writeInt(gps.vdop)
-    writeInt(gps.pdop)
-
+    writeInt(gps.org)
+    writeInt(gps.role)
     writeInt(gps.status)
   }
 
-  def deserialize(): GpsGroundPos = {
+  def deserialize(): GpsPos = {
     val id  = readUTF()
-    val cs  = readUTF()
-    val pos = readGeoPosition()
     val date = readDateTime()
 
-    val role = readInt()
-    val org = readInt()
+    val pos = readGeoPosition()
+    val accuracy = readLength()
 
-    val spd = readSpeed()
     val hdg = readAngle()
-    val vr  = readSpeed()
+    val spd = readSpeed()
+    val dist = readLength()
 
-    val hdop = readInt()
-    val vdop = readInt()
-    val pdop = readInt()
-
+    val org = readInt()
+    val role = readInt()
     val status = readInt()
 
-    new GpsGroundPos(id,cs,pos,date, role,org, spd,hdg,vr, hdop,vdop,pdop, status)
+    new GpsPos(id, date, pos, accuracy, hdg, spd, dist, org,role,status)
   }
 }
 
@@ -220,15 +194,15 @@ class GpsGroundPosSerializer (system: ExtendedActorSystem) extends SingleTypeAkk
 /**
   * archive writer that stores as CSV with pre-pended archive/replay time (which can differ from position time)
   */
-class GgpArchiveWriter (val oStream: OutputStream, val pathName: String="<unknown>") extends ArchiveWriter {
+class GpsPosArchiveWriter(val oStream: OutputStream, val pathName: String="<unknown>") extends ArchiveWriter {
   def this(conf: Config) = this(createOutputStream(conf), configuredPathName(conf))
 
   val ps = new PrintStream(oStream)
-  override def close = ps.close
+  override def close(): Unit = ps.close()
 
   override def write(date: DateTime, obj: Any): Boolean = {
     obj match {
-      case gps: GpsGroundPos =>
+      case gps: GpsPos =>
         ps.print(date.toEpochMillis)
         ps.print(',')
         gps.serializeCsvTo(ps)
@@ -241,7 +215,7 @@ class GgpArchiveWriter (val oStream: OutputStream, val pathName: String="<unknow
 /**
   * corresponding archive reader
   */
-class GgpArchiveReader (val iStream: InputStream, val pathName: String="<unknown>", bufLen: Int) extends ArchiveReader with GgpCsvParser {
+class GpsPosArchiveReader(val iStream: InputStream, val pathName: String="<unknown>", bufLen: Int) extends ArchiveReader with GpsPosCsvParser {
   val lineBuffer = new LineBuffer(iStream,bufLen)
 
   def this(conf: Config) = this(createInputStream(conf), configuredPathName(conf), conf.getIntOrElse("buffer-size",4096))
@@ -250,11 +224,11 @@ class GgpArchiveReader (val iStream: InputStream, val pathName: String="<unknown
     iStream.available > 0
   }
 
-  override def readNextEntry: Option[ArchiveEntry] = {
+  override def readNextEntry(): Option[ArchiveEntry] = {
     if (lineBuffer.nextLine()) {
       if (initialize(lineBuffer)){
-        val date = DateTime.ofEpochMillis(readNextValue.toLong)
-        parseGpsGroundPos match {
+        val date = DateTime.ofEpochMillis(readNextValue().toLong)
+        parseGpsPos() match {
           case SuccessValue(gps) => archiveEntry(date,gps)
           case Failure(_) => None
         }
@@ -262,53 +236,47 @@ class GgpArchiveReader (val iStream: InputStream, val pathName: String="<unknown
     } else None
   }
 
-  override def close: Unit = iStream.close
+  override def close(): Unit = iStream.close()
 }
 
 //--- JSON parser
 
 /**
-  * JsonPullParser mixin to read GpsGroundPos objects
+  * JsonPullParser mixin to read GpsPos objects
   */
-trait GgpJsonPullParser extends JsonPullParser {
+trait GpsPosJsonPullParser extends JsonPullParser {
 
-  def parseGpsGroundPos: ResultValue[GpsGroundPos] = {
+  def parseGpsPos(): ResultValue[GpsPos] = {
     var id: String = null
-    var cs: String = null
     var lat: Angle = Angle.UndefinedAngle
     var lon: Angle = Angle.UndefinedAngle
     var alt: Length = Length.UndefinedLength
     var date: DateTime = DateTime.UndefinedDateTime
-    var role: Int = UNDEFINED_ROLE
-    var org: Int = UNDEFINED_DOP
+    var role: Int = UndefinedRole
+    var org: Int = UndefinedDop
     var spd: Speed = Speed.UndefinedSpeed
     var hdg: Angle = Angle.UndefinedAngle
-    var vr: Speed = Speed.UndefinedSpeed
-    var hdop: Int = UNDEFINED_DOP
-    var vdop: Int = UNDEFINED_DOP
-    var pdop: Int = UNDEFINED_DOP
+    var acc: Length = Length.UndefinedLength
+    var dist: Length = Length.UndefinedLength
     var status: Int = TrackedObject.UndefinedStatus
 
     try {
       foreachMemberInCurrentObject {
         case ID => id = quotedValue.intern
-        case LABEL => cs = quotedValue.intern
+        case DATE => date = DateTime.ofEpochMillis(unQuotedValue.toLong)
         case LAT => lat = Degrees(unQuotedValue.toDouble)
         case LON => lon = Degrees(unQuotedValue.toDouble)
         case ALT => alt = Meters(unQuotedValue.toDouble)
-        case DATE => date = DateTime.ofEpochMillis(unQuotedValue.toLong)
-        case ROLE => role = unQuotedValue.toInt
-        case ORG => org = unQuotedValue.toInt
+        case ACC => acc = Meters(unQuotedValue.toDouble)
         case SPD => spd = MetersPerSecond(unQuotedValue.toDouble)
         case HDG => hdg = Degrees(unQuotedValue.toDouble)
-        case VR => vr = MetersPerSecond(unQuotedValue.toDouble)
-        case HDOP => hdop = unQuotedValue.toInt
-        case VDOP => vdop = unQuotedValue.toInt
-        case PDOP => pdop = unQuotedValue.toInt
+        case DIST => dist = Meters(unQuotedValue.toDouble)
+        case ORG => org = unQuotedValue.toInt
+        case ROLE => role = unQuotedValue.toInt
         case STATUS => status = unQuotedValue.toInt
       }
 
-      ggpResult(id,cs,lat,lon,alt,date,role,org,spd,hdg,vr,hdop,vdop,pdop,status)
+      gpsPosResult(id,date, lat,lon,alt,acc, hdg,spd,dist, org,role,status)
 
     } catch { // basic JSON parse error, likely corrupted data
       case x: Throwable => Failure(x.getMessage)
@@ -319,34 +287,34 @@ trait GgpJsonPullParser extends JsonPullParser {
 /**
   * class to parse GpsGroundPos lines
   */
-trait GgpCsvParser extends Utf8CsvPullParser {
+trait GpsPosCsvParser extends Utf8CsvPullParser {
 
-  def parseGpsGroundPos: ResultValue[GpsGroundPos] = {
+  def parseGpsPos(): ResultValue[GpsPos] = {
     def readInternString: String = {
-      val v = readNextValue
+      val v = readNextValue()
       if (v.isEmpty) null
       else v.intern
     }
 
     try {
       val id: String = readInternString
-      val cs: String = readInternString
-      val lat: Angle = Degrees(readNextValue.toDouble)
-      val lon: Angle = Degrees(readNextValue.toDouble)
-      val alt: Length = Meters(readNextValue.toDouble)
-      val date: DateTime = DateTime.ofEpochMillis(readNextValue.toLong)
-      val role: Int = readNextValue.toInt
-      val org: Int = readNextValue.toInt
-      val spd: Speed = MetersPerSecond(readNextValue.toDouble)
-      val hdg: Angle = Degrees(readNextValue.toDouble)
-      val vr: Speed = MetersPerSecond(readNextValue.toDouble)
-      val hdop: Int = readNextValue.toInt
-      val vdop: Int = readNextValue.toInt
-      val pdop: Int = readNextValue.toInt
-      val status: Int = readNextValue.toInt
-      skipToEndOfRecord
+      val date: DateTime = DateTime.ofEpochMillis(readNextValue().toLong)
 
-      ggpResult(id,cs,lat,lon,alt,date,role,org,spd,hdg,vr,hdop,vdop,pdop,status)
+      val lat: Angle = Degrees(readNextValue().toDouble)
+      val lon: Angle = Degrees(readNextValue().toDouble)
+      val alt: Length = Meters(readNextValue().toDouble)
+      val acc: Length = Meters(readNextValue().toDouble)
+
+      val hdg: Angle = Degrees(readNextValue().toDouble)
+      val spd: Speed = MetersPerSecond(readNextValue().toDouble)
+      val dist: Length = Meters(readNextValue().toDouble)
+
+      val org: Int = readNextValue().toInt
+      val role: Int = readNextValue().toInt
+      val status: Int = readNextValue().toInt
+      skipToEndOfRecord()
+
+      gpsPosResult(id,date, lat,lon,alt,acc, hdg,spd,dist, org,role,status)
 
     } catch { // basic CSV parse error, likely corrupted data
       case x: Throwable => Failure(x.getMessage)

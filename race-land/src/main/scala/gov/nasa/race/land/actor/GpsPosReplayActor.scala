@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, United States Government, as represented by the
+ * Copyright (c) 2022, United States Government, as represented by the
  * Administrator of the National Aeronautics and Space Administration.
  * All rights reserved.
  *
@@ -14,26 +14,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package gov.nasa.race.share
+package gov.nasa.race.land.actor
 
-import gov.nasa.race.common.{JsonMessageObject, JsonSerializable, JsonWriter}
-
-object UpstreamChange {
-  def online (id: String) = UpstreamChange(id,true)
-  def offline (id: String) = UpstreamChange(id,false)
-}
+import com.typesafe.config.Config
+import gov.nasa.race.actor.Replayer
+import gov.nasa.race.land.{GpsPos, GpsPosArchiveReader}
 
 /**
-  * event to indicate we have a new upstream selection
-  *
-  * if isOnline == false we lost connection to the respective upstream node
+  * actor to replay archived GpsPos messages
   */
-case class UpstreamChange (id: String, isOnline: Boolean) extends JsonMessageObject {
-
-  def serializeMembersTo (w: JsonWriter): Unit = {
-    w.writeObjectMember("upstreamChange") {_
-      .writeStringMember("id", id)
-      .writeBooleanMember("isOnline", isOnline)
-    }
-  }
+class GpsPosReplayActor (val config: Config) extends Replayer[GpsPosArchiveReader] {
+  override def createReader = new GpsPosArchiveReader(config)
 }

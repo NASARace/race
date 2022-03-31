@@ -139,7 +139,7 @@ abstract class RemoteLauncher extends MainBase with RemoteProtocolLauncher {
     if (opts.showOutput) {
       if (opts.logFile.isDefined) log = new TeeOutputStream(log, new FileOutputStream(opts.logFile.get))
     } else {
-      log = if (opts.logFile.isDefined) new TeeOutputStream(new FileOutputStream(opts.logFile.get)) else new NullOutputStream
+      log = if (opts.logFile.isDefined) new TeeOutputStream(new FileOutputStream(opts.logFile.get)) else NullOutputStream
     }
   }
 

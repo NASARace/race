@@ -23,7 +23,7 @@ import gov.nasa.race.geo.{GeoPosition, XYPos}
 import gov.nasa.race.uom.Angle.Degrees
 import gov.nasa.race.uom.Length.Meters
 import gov.nasa.race.uom.Speed.MetersPerSecond
-import gov.nasa.race.uom.{Angle, DateTime, Speed}
+import gov.nasa.race.uom.{Angle, DateTime, Length, Speed}
 import gov.nasa.race.util.{SettableBAIStream, SettableDataInputStream, SettableDataOutputStream}
 
 import java.io.ByteArrayOutputStream
@@ -248,7 +248,7 @@ abstract class AkkaSerializer (system: ExtendedActorSystem) extends Serializer w
   }
   @inline final def writeSpeed (v: Speed): Unit = dos.writeDouble(v.toMetersPerSecond)
   @inline final def writeAngle (a: Angle): Unit = dos.writeDouble(a.toDegrees)
-
+  @inline final def writeLength (l: Length): Unit = dos.writeDouble(l.toMeters)
 
 
   @inline final def readUTF(): String = dis.readUTF()
@@ -276,6 +276,7 @@ abstract class AkkaSerializer (system: ExtendedActorSystem) extends Serializer w
   }
   @inline final def readSpeed(): Speed = MetersPerSecond(readDouble())
   @inline final def readAngle(): Angle = Degrees(readDouble())
+  @inline final def readLength(): Length = Meters(readDouble())
 
   //--- serializing/de-serializing collections
 

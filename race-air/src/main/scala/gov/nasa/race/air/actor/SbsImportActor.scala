@@ -32,6 +32,7 @@ import gov.nasa.race.track.{TrackDropped, Tracked3dObject}
 import gov.nasa.race.uom.DateTime._
 import gov.nasa.race.uom.Time._
 import gov.nasa.race.uom.{DateTime, Time}
+import gov.nasa.race.util.NullInputStream
 
 import java.time.ZoneId
 import scala.annotation.tailrec
@@ -104,15 +105,15 @@ class SbsImportActor(val config: Config) extends SbsImporter with SocketImporter
                                  bufLen: Int,
                                  defaultZone: ZoneId,
                                  dropDuration: FiniteDuration,
-                                 updateFunc: Tracked3dObject=>Boolean,
+                                 updateFunc: Tracked3dObject=>Unit,
                                  dropFunc: (String,String,DateTime,Time)=>Unit) extends SocketDataAcquisitionThread(name) {
 
     val dropAfter = Milliseconds(dropDuration.toMillis.toInt)
     val checkAfter = dropAfter/2
     var lastDropCheck = UndefinedDateTime
 
-    val updater = new SbsUpdater(updateFunc,dropFunc,None,defaultZone)  // TODO - should we support date adjustment here?
-    var in: InputStream = null
+    val updater = new SbsUpdater()  // TODO - should we support date adjustment here?
+    var in: InputStream = NullInputStream // set during start
 
     // consecutive failure counts
     var reconnects: Int = 0
@@ -130,7 +131,7 @@ class SbsImportActor(val config: Config) extends SbsImporter with SocketImporter
     def dropCheck (): Unit = {
       val tNow = DateTime.now
       if (tNow.timeSince(lastDropCheck) >= checkAfter) {
-        updater.dropStale(tNow,dropAfter)
+        updater.dropStale( tNow, dropAfter, dropFunc)
         lastDropCheck = tNow
       }
     }
@@ -167,7 +168,7 @@ class SbsImportActor(val config: Config) extends SbsImporter with SocketImporter
     def runUpdater (buf: Array[Byte], len: Int): Boolean = {
       try {
         if (updater.initialize(buf, len)) {
-          updater.parse
+          updater.parse( updateFunc)
         }
         dropCheck()
         updateFailures = 0 // updater worked, reset failure count
@@ -280,9 +281,8 @@ class SbsImportActor(val config: Config) extends SbsImporter with SocketImporter
     Some(new SbsDataAcquisitionThread(s"$name-input", initBufferSize, defaultZone, dropAfter, publishTrack, dropTrack))
   }
 
-  def publishTrack (track: Tracked3dObject): Boolean = {
+  def publishTrack (track: Tracked3dObject): Unit = {
     publish(track)
-    true // go on as long as the parser has more data
   }
 
   def dropTrack (id: String, cs: String, date: DateTime, inactive: Time): Unit = {

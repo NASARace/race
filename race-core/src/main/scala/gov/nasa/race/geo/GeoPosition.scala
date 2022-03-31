@@ -58,8 +58,9 @@ trait GeoPosition {
   @inline final def altMeters: Double = altitude.toMeters
   @inline final def altFeet: Int = altitude.toFeet.toInt
 
-  override def toString: String = f"${getClass.getSimpleName}(φ=${φ.toDegrees}%+3.5f°,λ=${λ.toDegrees}%+3.5f°,alt=${altitude.toMeters}%.0fm)"
-  def toGenericString2D: String = f"(φ=${φ.toDegrees}%+3.5f°,λ=${λ.toDegrees}%+3.5f°)"
+  override def toString: String = f"${getClass.getSimpleName}(φ=${φ.toDegrees}%+3.6f°,λ=${λ.toDegrees}%+3.6f°,alt=${altitude.toMeters}%.1fm)"
+  def toGenericString3D: String = f"φ=${φ.toDegrees}%+3.6f°,λ=${λ.toDegrees}%+3.6f°,alt=${altitude.toMeters}%.1fm"
+  def toGenericString2D: String = f"(φ=${φ.toDegrees}%+3.6f°,λ=${λ.toDegrees}%+3.6f°)"
 
   def toLatLonPos: LatLonPos = LatLonPos(φ, λ, altitude)
   def toMutLatLonPos: MutLatLonPos = MutLatLonPos( φ, λ, altitude)

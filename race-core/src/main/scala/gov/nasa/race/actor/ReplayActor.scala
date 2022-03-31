@@ -89,7 +89,7 @@ trait Replayer [T <: ArchiveReader] extends ContinuousTimeRaceActor
   }
 
   override def onTerminateRaceActor(originator: ActorRef) = {
-    reader.close
+    reader.close()
     noMoreData = true
     super.onTerminateRaceActor(originator)
   }
@@ -167,13 +167,13 @@ trait Replayer [T <: ArchiveReader] extends ContinuousTimeRaceActor
 
   def reachedEndOfArchive = {
     info(s"reached end of replay stream ${reader.pathName}")
-    reader.close  // no need to keep it around
+    reader.close()  // no need to keep it around
     noMoreData = true
   }
 
   @tailrec final def scheduleFirst (skipped: Int): Boolean = {
 
-    reader.readNextEntry match {
+    reader.readNextEntry() match {
       case Some(e) =>
         val date = e.date
         val msg = e.msg
@@ -211,7 +211,7 @@ trait Replayer [T <: ArchiveReader] extends ContinuousTimeRaceActor
   // this should only be called after publishing the previous entry to guarantee that we process entries in order
   @tailrec final def scheduleNext (skipped: Int=0): Unit = {
     if (!noMoreData) {
-      reader.readNextEntry match {
+      reader.readNextEntry() match {
         case Some(e) =>
           val date = e.date
           val msg = e.msg
@@ -254,7 +254,7 @@ trait Replayer [T <: ArchiveReader] extends ContinuousTimeRaceActor
 }
 
 /**
-  * generic Replayer that gets configured with a ArchiveReader
+  * generic Replayer that gets configured with an ArchiveReader
   */
 class ReplayActor (val config: Config) extends Replayer[ArchiveReader] {
   override def createReader: ArchiveReader = getConfigurable[ArchiveReader]("reader") // note 2.12.3 can't infer type arg

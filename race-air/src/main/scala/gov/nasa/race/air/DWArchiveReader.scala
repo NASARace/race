@@ -55,9 +55,9 @@ abstract class DWArchiveReader (iStream: InputStream, val headerStart: BMSearch)
   if (!ss.skipTo(headerStart)) throw new RuntimeException(s"not a valid DW archive")
 
   override def hasMoreData = ss.hasMoreData
-  override def close = ss.close
+  override def close(): Unit = ss.close
 
-  override def readNextEntry: Option[ArchiveEntry] = {
+  override def readNextEntry(): Option[ArchiveEntry] = {
     // we are at a headerStart
     if (ss.readTo(headerEnd,headerStart.patternLength)) {
       val date = readDateTime(res.cs,res.startIdx,res.endIdx)

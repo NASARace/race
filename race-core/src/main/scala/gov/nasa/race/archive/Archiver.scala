@@ -51,7 +51,7 @@ trait ArchiveWriter {
   def open (date: DateTime): Unit = open(date, getClass.getName)
   def open (date: DateTime, archiveDescription: String): Unit = {}
   def write (date: DateTime, obj: Any): Boolean
-  def close: Unit
+  def close(): Unit
 
   def checkPathName: Boolean = FileUtils.ensureWritable(pathName).isDefined
   def handlePathNameFailure = throw new RuntimeException(s"not a writable pathname: $pathName")
@@ -68,6 +68,7 @@ trait ArchiveReader extends DateAdjuster {
 
   // NOTE - this breaks immutability of the return value. Use only in a single threaded context
   // that does not store ArchiveEntries
+  // the only reason this exists is to avoid Option allocation while still using their semantics in clients
 
   protected val nextEntry = new ArchiveEntry(DateTime.UndefinedDateTime,null)
   protected val someEntry = Some(nextEntry)
@@ -82,8 +83,8 @@ trait ArchiveReader extends DateAdjuster {
 
   //--- to be provided by subtypes
   def hasMoreData: Boolean
-  def readNextEntry: Option[ArchiveEntry]
-  def close: Unit
+  def readNextEntry(): Option[ArchiveEntry]
+  def close(): Unit
 
   val pathName: String
 }

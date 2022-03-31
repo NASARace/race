@@ -435,7 +435,7 @@ class TfmDataServiceParser(val config: Config=NoConfig) extends UTF8XmlPullParse
             //println(s"@@@ trackInformation $cs: $date $lat $lon $alt $nextWP")
             if (cs != null && (completed ||
               (date.isDefined && lat.isDefined && lon.isDefined && alt.isDefined && nextWP != null))) {
-              val status = if (completed) TrackedObject.CompletedFlag else TrackedObject.TrackNoStatus
+              val status = if (completed) TrackedObject.CompletedFlag else TrackedObject.NoStatus
               val track = if (completed) {
                 TfmTrack(flightRef,cs,GeoPosition(lat,lon,alt),speed,date,status,
                   source,None,DateTime.UndefinedDateTime)

@@ -18,10 +18,10 @@ lazy val testSettings = commonSettings ++ noPublishSettings  // test projects do
 
 //--- root project (only for aggregation)
 lazy val root = createRootProject("race").
-  aggregate(raceCore,raceNetJMS,raceNetKafka,raceNetDDS,raceNetHttp,raceShare,raceSwing,raceWW,raceAir,raceWWAir,raceClientUI,
+  aggregate(raceCore,raceNetJMS,raceNetKafka,raceNetDDS,raceNetHttp,raceShare,raceSwing,raceWW,raceAir,raceWWAir,raceLand,raceClientUI,
     raceCesium,raceSpace,raceLauncher,raceAdapter,
     raceCL,raceTools,raceTestKit,raceCoreTest,raceNetJMSTest,raceNetHttpTest,raceShareTest,raceNetKafkaTest,raceCLTest,raceAirTest,raceSpaceTest).
-  dependsOn(raceCore,raceNetJMS,raceNetKafka,raceNetDDS,raceNetHttp,raceSwing,raceWW,raceAir,raceWWAir,raceSpace,raceLauncher,raceShare,raceCesium).
+  dependsOn(raceCore,raceNetJMS,raceNetKafka,raceNetDDS,raceNetHttp,raceSwing,raceWW,raceAir,raceWWAir,raceLand,raceSpace,raceLauncher,raceShare,raceCesium).
   enablePlugins(JavaAppPackaging,LauncherJarPlugin,LaikaPlugin).
   settings(
     commonSettings,
@@ -83,6 +83,10 @@ lazy val raceSwing = createProject("race-swing", commonSettings).
 lazy val raceAir = createProject("race-air", commonSettings).
   dependsOn(raceCore,raceNetJMS,raceNetHttp).
   addLibraryDependencies(akkaActor,typesafeConfig,scalaParser)
+
+lazy val raceLand = createProject("race-land", commonSettings).
+  dependsOn(raceCore,raceNetHttp).
+  addLibraryDependencies(akkaAll)
 
 lazy val raceWW = createProject("race-ww", commonSettings).
   dependsOn(raceCore,raceSwing).

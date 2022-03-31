@@ -18,7 +18,7 @@
 package gov.nasa.race.share
 
 import gov.nasa.race.common.ConstAsciiSlice.asc
-import gov.nasa.race.common.{CharSeqByteSlice, Glob, JsonParseException, JsonPullParser, JsonSerializable, JsonWriter, PathIdentifier, UTF8JsonPullParser}
+import gov.nasa.race.common.{CharSeqByteSlice, Glob, JsonMessageObject, JsonParseException, JsonPullParser, JsonSerializable, JsonWriter, PathIdentifier, UTF8JsonPullParser}
 import gov.nasa.race.share.NodeMatcher.{noneMatcher, selfMatcher}
 import gov.nasa.race.uom.DateTime
 
@@ -42,15 +42,13 @@ case class Column (id: String, info: String, owner: String, send: NodeMatcher, r
               extends JsonSerializable {
   import Column._
 
-  def serializeTo (w: JsonWriter): Unit = {
-    w.writeObject { w=>
-      w.writeStringMember(ID, id)
-      w.writeStringMember(INFO, info)
-      w.writeStringMember(OWNER,owner)
-      w.writeStringMember(RECEIVE, receive.pattern)
-      w.writeStringMember(SEND, send.pattern)
-      if (attrs.nonEmpty) w.writeStringArrayMember(ATTRS, attrs)
-    }
+  def serializeMembersTo (w: JsonWriter): Unit = {
+    w.writeStringMember(ID, id)
+    w.writeStringMember(INFO, info)
+    w.writeStringMember(OWNER,owner)
+    w.writeStringMember(RECEIVE, receive.pattern)
+    w.writeStringMember(SEND, send.pattern)
+    if (attrs.nonEmpty) w.writeStringArrayMember(ATTRS, attrs)
   }
 
   /**
@@ -114,26 +112,27 @@ object ColumnList extends JsonConstants {
 /**
   * class representing a versioned, named and ordered collection of Column specs
   */
-case class ColumnList (id: String, info: String, date: DateTime, columns: SeqMap[String,Column]) extends JsonSerializable {
+case class ColumnList (id: String, info: String, date: DateTime, columns: SeqMap[String,Column]) extends JsonMessageObject {
   import ColumnList._
 
-  def _serializeTo (w: JsonWriter)(serializeColumn: (Column,JsonWriter)=>Unit): Unit = {
-    w.clear().writeObject(
-      _.writeObjectMember(COLUMN_LIST) {
-        _.writeStringMember(ID, id.toString)
-          .writeStringMember(INFO, info)
-          .writeDateTimeMember(DATE, date)
-          .writeArrayMember(COLUMNS) { w =>
-            for (col <- columns.valuesIterator) {
-              serializeColumn(col,w)
-            }
+  def _serializeMembersTo (w: JsonWriter)(serializeColumn: (Column,JsonWriter)=>Unit): Unit = {
+    w.writeObjectMember(COLUMN_LIST) {
+      _.writeStringMember(ID, id.toString)
+        .writeStringMember(INFO, info)
+        .writeDateTimeMember(DATE, date)
+        .writeArrayMember(COLUMNS) { w =>
+          for (col <- columns.valuesIterator) {
+            serializeColumn(col,w)
           }
-      }
-    )
+        }
+    }
   }
 
-  def serializeTo (w: JsonWriter): Unit = _serializeTo(w)( (col,w) => col.serializeTo(w))
-  def shortSerializeTo (w: JsonWriter): Unit = _serializeTo(w)( (col,w) => col.shortSerializeTo(w))
+  def serializeMembersTo (w: JsonWriter): Unit = _serializeMembersTo(w)( (col,w) => col.serializeTo(w))
+  def shortSerializeTo (w: JsonWriter): Unit = {
+    w.clear()
+    w.writeObject(w=> _serializeMembersTo(w)( (col,w) => col.shortSerializeTo(w)))
+  }
 
   //--- (some) list/map forwarders
   def size: Int = columns.size
@@ -241,17 +240,15 @@ case class ColumnReachabilityChange (nodeId: String, // the node that reports th
                                      date: DateTime, // the date when the change happened (simTime)
                                      isOnline: Boolean, // do columns become online or offline
                                      columns: Seq[String] // the columns that change reachability
-                                    ) extends JsonSerializable {
+                                    ) extends JsonMessageObject {
   import gov.nasa.race.share.ColumnReachabilityChange._
 
-  override def serializeTo(w: JsonWriter): Unit = {
-    w.clear().writeObject { _
-      .writeObjectMember(COL_REACHABILITY_CHANGE) { _
-        .writeStringMember(NODE_ID, nodeId)
-        .writeDateTimeMember(DATE, date)
-        .writeBooleanMember(IS_ONLINE, isOnline)
-        .writeStringArrayMember(COLUMNS, columns)
-      }
+  def serializeMembersTo(w: JsonWriter): Unit = {
+    w.writeObjectMember(COL_REACHABILITY_CHANGE) { _
+      .writeStringMember(NODE_ID, nodeId)
+      .writeDateTimeMember(DATE, date)
+      .writeBooleanMember(IS_ONLINE, isOnline)
+      .writeStringArrayMember(COLUMNS, columns)
     }
   }
 }

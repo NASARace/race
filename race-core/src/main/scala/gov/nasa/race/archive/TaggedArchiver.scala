@@ -131,7 +131,7 @@ trait TaggedArchiveWriter extends ArchiveWriter {
     true
   }
 
-  override def close: Unit = {
+  override def close(): Unit = {
     oStream.close
   }
 }
@@ -261,9 +261,9 @@ trait TaggedArchiveReader extends ArchiveReader {
 
   override def hasMoreData: Boolean = iStream.available > 0
 
-  override def close: Unit = iStream.close
+  override def close(): Unit = iStream.close
 
-  override def readNextEntry: Option[ArchiveEntry] = {
+  override def readNextEntry(): Option[ArchiveEntry] = {
     if (initialized) {
       if (readEntry) someEntry else None
     } else None

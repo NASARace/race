@@ -67,7 +67,7 @@ class HexEpochLineArchiveWriter(val oStream: OutputStream, val pathName: String 
   val buf = new Array[Byte](17)
   buf(16) = ':' // our separator
 
-  def close = oStream.close
+  def close(): Unit = oStream.close
 
   def longToHexCharBytes(buf: Array[Byte], v: Long) = {
     @tailrec def _setHexChar (a: Array[Byte], i: Int, v: Long): Unit = {
@@ -107,7 +107,7 @@ class HexEpochLineArchiveReader (val iStream: InputStream, val pathName: String 
 
   def this (conf: Config) = this(createInputStream(conf),configuredPathName(conf))
 
-  override def close = iStream.close
+  override def close(): Unit = iStream.close
 
   final def hexCharsToLong(line: String): Long = {
     @tailrec def _readHexChar (s: String, i: Int, acc: Long): Long = {
@@ -120,7 +120,7 @@ class HexEpochLineArchiveReader (val iStream: InputStream, val pathName: String 
     _readHexChar(line,0,0)
   }
 
-  override def readNextEntry: Option[ArchiveEntry] = {
+  override def readNextEntry(): Option[ArchiveEntry] = {
     try {
       val line = reader.readLine()
       if (line != null) archiveEntry(DateTime.ofEpochMillis(hexCharsToLong(line)), line.substring(17)) else None

@@ -39,13 +39,22 @@ class TeeOutputStream (val outs: OutputStream*) extends OutputStream {
 
 /**
   * the big output nirvana
+  * nirvana can be shared
   */
-class NullOutputStream extends OutputStream {
+object NullOutputStream extends OutputStream {
   override def flush: Unit = {}
   override def close: Unit = {}
   override def write(b: Int): Unit = {}
   override def write(bs: Array[Byte]): Unit = {}
   override def write(bs: Array[Byte],off: Int, len: Int): Unit = {}
+}
+
+/**
+  * the ultimate nothing input
+  * we definitely need just one of these
+  */
+object NullInputStream extends InputStream {
+  override def read(): Int = -1
 }
 
 /**

@@ -59,7 +59,7 @@ object TextToTaggedArchiveConverter {
         val ar = createArchiveReader(is, inFile.getPath)
         val aw = createArchiveWriter(os, outFile.getPath)
         processArchiveEntries(ar, aw)
-        is.close
+        is.close()
       }
     }
   }
@@ -71,7 +71,7 @@ object TextToTaggedArchiveConverter {
     println(s"converting archive ${ar.pathName} to ${aw.pathName}")
 
     while (ar.hasMoreData) {
-      ar.readNextEntry match {
+      ar.readNextEntry() match {
         case Some(e) =>
           val date: DateTime = e.date
           val msg = e.msg.toString
@@ -88,8 +88,8 @@ object TextToTaggedArchiveConverter {
       }
     }
 
-    ar.close
-    aw.close
+    ar.close()
+    aw.close()
 
     println(s"$nEntries entries written.")
   }

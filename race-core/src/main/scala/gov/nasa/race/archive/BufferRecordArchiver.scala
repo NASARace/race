@@ -57,5 +57,5 @@ abstract class BufferRecordArchiveWriter[R <: BufferRecord](val pathName: String
     */
   protected def set(obj: Any): Boolean
 
-  def close: Unit = channel.close
+  def close(): Unit = channel.close
 }
