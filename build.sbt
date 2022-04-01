@@ -20,7 +20,7 @@ lazy val testSettings = commonSettings ++ noPublishSettings  // test projects do
 lazy val root = createRootProject("race").
   aggregate(raceCore,raceNetJMS,raceNetKafka,raceNetDDS,raceNetHttp,raceShare,raceSwing,raceWW,raceAir,raceWWAir,raceLand,raceClientUI,
     raceCesium,raceSpace,raceLauncher,raceAdapter,
-    raceCL,raceTools,raceTestKit,raceCoreTest,raceNetJMSTest,raceNetHttpTest,raceShareTest,raceNetKafkaTest,raceCLTest,raceAirTest,raceSpaceTest).
+    raceCL,raceTools,raceTestKit,raceCoreTest,raceNetJMSTest,raceNetHttpTest,raceShareTest,raceNetKafkaTest,raceCLTest,raceAirTest,raceLandTest,raceSpaceTest).
   dependsOn(raceCore,raceNetJMS,raceNetKafka,raceNetDDS,raceNetHttp,raceSwing,raceWW,raceAir,raceWWAir,raceLand,raceSpace,raceLauncher,raceShare,raceCesium).
   enablePlugins(JavaAppPackaging,LauncherJarPlugin,LaikaPlugin).
   settings(
@@ -132,7 +132,7 @@ lazy val raceClientUI = createProject("race-client-ui", commonSettings).
   addLibraryDependencies(scalaTags)
 
 lazy val raceCesium = createProject("race-cesium", commonSettings).
-  dependsOn(raceNetHttp, raceClientUI)
+  dependsOn(raceNetHttp, raceClientUI, raceLand)
 
 lazy val raceShare = createProject("race-share", commonSettings).
   dependsOn(raceNetHttp)
@@ -185,6 +185,9 @@ lazy val raceCLTest = createTestProject("race-cl-test", testSettings).
 lazy val raceAirTest = createTestProject("race-air-test", testSettings).
   dependsOn(raceAir,raceTestKit).
   addLibraryDependencies(circeAll)
+
+lazy val raceLandTest = createTestProject("race-land-test", testSettings).
+  dependsOn(raceLand,raceTestKit)
 
 lazy val raceSpaceTest = createTestProject("race-space-test", testSettings).
   dependsOn(raceSpace,raceTestKit)

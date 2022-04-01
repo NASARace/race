@@ -437,7 +437,7 @@ function trackEntityBillboard(trackEntry, trackColor, heightRef, entityPrototype
                 image: "track-asset/" + track.sym,
                 color: trackColor,
                 distanceDisplayCondition: config.trackBillboardDC,
-                //heightReference: heightRef
+                heightReference: heightRef
             };
         } else {
             return undefined;
@@ -653,12 +653,13 @@ function createTrajectoryAsset(trackEntry, isWall) {
             }
         });
     } else {
+        let isGroundPath = isClampedToGround(trackEntry.track);
         return new Cesium.Entity({
             id: trackEntry.id,
             polyline: {
                 positions: trackEntry.assets.trajectoryPositions, // posCallback,
-                clampToGround: isClampedToGround(trackEntry.track),
-                width: config.trackPathWidth,
+                clampToGround: isGroundPath,
+                width: isGroundPath ? config.trackPath2dWidth : config.trackPathWidth,
                 material: trackColor,
                 distanceDisplayCondition: config.trackPathDC
             }

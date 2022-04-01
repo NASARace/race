@@ -17,6 +17,7 @@
 package gov.nasa.race.common
 
 import gov.nasa.race.common.ImplicitGenerics._
+import gov.nasa.race.geo.GeoPosition
 import gov.nasa.race.uom.DateTime
 
 import java.text.NumberFormat
@@ -232,6 +233,14 @@ class JsonWriter (jsonType: ElementType = JsonWriter.RawElements, initSize: Int 
     f(this)
     endObject
   }
+
+  def writeObjectMember(memberName: CharSequence,jsonSerializable: JsonSerializable): JsonWriter = {
+    writeMemberName(memberName)
+    beginObject
+    jsonSerializable.serializeMembersTo(this)
+    endObject
+    this
+  }
   def writeObjectMember(memberName: CharSequence)(f: JsonWriter=>Unit): JsonWriter = {
     writeMemberName(memberName)
     writeObject(f)
@@ -431,6 +440,11 @@ class JsonWriter (jsonType: ElementType = JsonWriter.RawElements, initSize: Int 
     } else {
       writeLongMember(memberName, dt.toEpochMillis)
     }
+  }
+
+  def writeGeoPositionMembers (pos: GeoPosition): JsonWriter = {
+    pos.serializeMembersTo(this)
+    this
   }
 
   def writeMember (k: CharSequence)(f: JsonWriter=>Unit): JsonWriter = {

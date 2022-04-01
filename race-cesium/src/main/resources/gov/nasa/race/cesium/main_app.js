@@ -8,6 +8,7 @@ import * as uiTracks from "./ui_cesium_tracks.js";
 import * as uiLayers from "./ui_cesium_layers.js";
 import * as uiWind from "./ui_cesium_wind.js";
 import * as uiBldg from "./ui_cesium_bldg.js";
+import * as uiSentinel from "./ui_cesium_sentinel.js"
 
 // the 'onload' of the document
 ui.exportToMain(function initialize() {
@@ -20,6 +21,7 @@ ui.exportToMain(function initialize() {
     uiLayers.initialize();
     uiBldg.initialize();
     uiWind.initialize();
+    uiSentinel.initialize();
 
     console.log("main initialized");
 

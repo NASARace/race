@@ -170,7 +170,9 @@ trait CesiumRoute
       export const cesiumAccessToken = '${config.getVaultableString("access-token")}';
       export const wsURL = 'ws://${requestUri.authority}/$requestPrefix/ws/$wsToken';
 
-      export const imageryProvider = new Cesium.OpenStreetMapImageryProvider({url: '$imagery'});
+      //export const imageryProvider = new Cesium.ArcGisMapServerImageryProvider({url:'https://services.arcgisonline.com/ArcGIS/rest/services/NatGeo_World_Map/MapServer/'});
+      export const imageryProvider = new Cesium.ArcGisMapServerImageryProvider({url: '$imagery'});
+      //export const imageryProvider = new Cesium.OpenStreetMapImageryProvider({url: '$imagery'});
       imageryProvider.defaultBrightness = ${config.getDoubleOrElse("maptile-brightness", 0.6)};
       imageryProvider.defaultContrast = ${config.getDoubleOrElse("maptile-contrast", 1.5)};
       imageryProvider.defaultHue = Cesium.Math.toRadians(${config.getIntOrElse("maptile-hue", 0)}); // 220 for reddish

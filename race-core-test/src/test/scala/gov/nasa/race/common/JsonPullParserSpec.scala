@@ -556,4 +556,26 @@ class JsonPullParserSpec extends AnyFlatSpec with RaceSpec {
     println(s"objSrc = '$obj'")
     obj shouldBe(objSrc)
   }
+
+  "a JsonPullParser" should "handle  null properties" in {
+    val sIn = """{"timeRecorded":1648425641,"deviceId":13,"accelerometer":null,"blah":{},"gna":[1,2,{"a":0}],"anemometer":{"angle":324.262,"speed":0.049}}"""
+
+    println()
+    println(s"-- parsing JsonValue object from:\n     '$sIn'")
+    val p = new StringJsonPullParser
+    p.initialize(sIn)
+
+    p.parseJsonValue match {
+      case Some(jsonOut) =>
+        val sOut = jsonOut.toString
+        println(s"  -> '$sOut'")
+        assert( sOut == sIn)
+        println(s" canonical: ${jsonOut.toFormattedString(JsonPrintOptions(noNullMembers = true))}")
+        println(s" pretty: \n${jsonOut.toFormattedString(JsonPrintOptions(noNullMembers=true, pretty=true))}")
+        print(s" nonNull members: ")
+        jsonOut.asInstanceOf[JsonObject].foreachNonNullMember(e => print(s"'${e._1}', "))
+        println()
+      case None => fail("failed to parse")
+    }
+  }
 }

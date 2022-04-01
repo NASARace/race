@@ -179,6 +179,15 @@ object FileUtils {
 
   def existingNonEmptyFile(s: String): Option[File] = existingNonEmptyFile(new File(s))
 
+  def existingNonEmptyFiles (list: IterableOnce[String]): Seq[File] = {
+    list.iterator.foldRight(List.empty[File]){ (f,acc)=>
+      existingNonEmptyFile(f) match {
+        case Some(nof) => nof :: acc
+        case None => acc
+      }
+    }
+  }
+
   // file extension (without '.')
   def getExtension (fn: String): String = {
     val i = fn.lastIndexOf('.')
@@ -203,6 +212,7 @@ object FileUtils {
   def inputStreamFor (pathName: String, bufLen: Int): Option[InputStream] = inputStreamFor(new File(pathName),bufLen)
 
   def outputStreamFor (f: File): Option[OutputStream] = {
+    if (f.isFile) f.delete
     if (f.createNewFile) {
       if (f.getName.endsWith(".gz")){
         Some( new GZIPOutputStream( new FileOutputStream(f)))

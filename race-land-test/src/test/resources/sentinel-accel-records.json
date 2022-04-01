@@ -1,0 +1,83 @@
+{
+  "data": [
+    {
+      "id": 1061829,
+      "timeRecorded": 1648426004,
+      "sensorNo": 8,
+      "deviceId": 17,
+      "accelerometer": {
+        "ax": 1.0,
+        "ay": 2.0,
+        "az": 3.0,
+        "recordId": 12345
+      },
+      "anemometer": {
+        "angle": 1.3349527000556254,
+        "speed": 0.21898783204515354,
+        "recordId": 1066052
+      },
+      "gas": {
+        "gas": 100352,
+        "humidity": 42.719262306674004,
+        "pressure": 991.6752023561882,
+        "altitude": 271.1737573823626,
+        "recordId": 1065953
+      },
+      "gps": {
+        "latitude": 37.328366705311865,
+        "longitude": -122.10084539864475,
+        "recordId": 1065930
+      },
+      "gyroscope": {
+        "gx": -0.03577714421061189,
+        "gy": 0.022592315031764267,
+        "gz": 0.04661926510133899,
+        "recordId": 1065963
+      },
+      "magnetometer": {
+        "mx": 216.47839433802096,
+        "my": -174.04991824143363,
+        "mz": -7.068265921000572,
+        "recordId": 1065952
+      },
+      "thermometer": {
+        "temperature": 25.56047665534409,
+        "recordId": 1065954
+      },
+      "voc": {
+        "TVOC": 0,
+        "eCO2": 400,
+        "recordId": 1066029
+      },
+      "fire": {
+        "fireProb": 0.9633629080320252,
+        "recordId": 1066058
+      },
+      "camera": {
+        "filename": "./camera/572e20d1-7cea-4f30-a118-a12300254fce.webp",
+        "isInfrared": false,
+        "recordId": 1065937
+      }
+    },
+    {
+      "id": 1061851,
+      "timeRecorded": 1648426001,
+      "sensorNo": 7,
+      "deviceId": 17,
+      "accelerometer": null,
+      "anemometer": null,
+      "gas": null,
+      "gps": null,
+      "gyroscope": null,
+      "magnetometer": null,
+      "thermometer": null,
+      "voc": null,
+      "fire": null,
+      "camera": null
+    }
+  ],
+  "count": 2,
+  "total": 866,
+  "page": 1,
+  "pageCount": 9
+}

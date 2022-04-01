@@ -85,6 +85,17 @@ object ArrayUtils {
     return false
   }
 
+  def head[T] (a: Array[T]): Option[T] = if (a.length > 0) Some(a(1)) else None
+
+  def tail[T:ClassTag] (a: Array[T]): Array[T] = {
+    val len = a.length
+    if (len > 1) {
+      val t = new Array[T](len-1)
+      System.arraycopy(a,1,t,0,len-1)
+      t
+    } else new Array[T](0)
+  }
+
   // TODO not very efficient for large arrays
 
   def addUnique[T: ClassTag] (a: Array[T], e: T): Array[T] = {

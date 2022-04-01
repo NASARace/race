@@ -390,6 +390,8 @@ abstract class JsonPullParser extends LogWriter with Thrower {
 
   @inline final def isObjectValue: Boolean = data(idx) == '{'
 
+  @inline final def isNull: Boolean = value == nullValue
+
   @inline final def isObjectEnd (objLevel: Int = env.size): Boolean = {
     //(state == endState || (data(idx) == '}' && objLevel == env.size))
     (data(idx) == '}' && objLevel == env.size)
@@ -657,7 +659,7 @@ abstract class JsonPullParser extends LogWriter with Thrower {
   final def foreachMemberInCurrentObject (f: PartialFunction[CharSeqByteSlice,Unit]): Unit = {
     foreachInAggregate(lastResult, ObjectStart) {
       readNext()
-      f.applyOrElse(member, (_:CharSequence) => {})
+      if (!isNull) f.applyOrElse(member, (_:CharSequence) => {})
     }
   }
 

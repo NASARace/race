@@ -17,6 +17,9 @@
 
 package gov.nasa.race.geo
 
+import gov.nasa.race.Dated
+import gov.nasa.race.common.ConstAsciiSlice.asc
+import gov.nasa.race.common.{JsonSerializable, JsonWriter}
 import gov.nasa.race.uom.Angle._
 import gov.nasa.race.uom.Length._
 import gov.nasa.race.uom._
@@ -34,12 +37,17 @@ object GeoPosition {
   def fromDegreesAndFeet (latDeg: Double, lonDeg: Double, altFeet: Double) = {
     new LatLonPos(Degrees(latDeg), Degrees(lonDeg), Feet(altFeet))
   }
+
+  val LAT = asc("lat")
+  val LON = asc("lon")
+  val ALT = asc("alt")
 }
+import GeoPosition._
 
 /**
   * abstract position
   */
-trait GeoPosition {
+trait GeoPosition extends JsonSerializable {
   def φ: Angle
   @inline final def lat = φ  // just an alias
 
@@ -65,6 +73,22 @@ trait GeoPosition {
   def toLatLonPos: LatLonPos = LatLonPos(φ, λ, altitude)
   def toMutLatLonPos: MutLatLonPos = MutLatLonPos( φ, λ, altitude)
   def toDegreesAndMeters: (Double,Double,Double) = (φ.toDegrees, λ.toDegrees, altitude.toMeters)
+
+  def serializeMembersTo(w: JsonWriter): Unit = {
+    w.writeDoubleMember(LAT,lat.toDegrees)
+    w.writeDoubleMember(LON,lon.toDegrees)
+    w.writeDoubleMember(ALT, altitude.toMeters)
+  }
+}
+
+/**
+  * a GeoPosition with a timestamp
+  */
+trait DatedGeoPosition extends Dated with GeoPosition with JsonSerializable {
+  override def serializeMembersTo(w: JsonWriter): Unit = {
+    w.writeDateTimeMember("date", date)
+    super.serializeMembersTo(w)
+  }
 }
 
 /**

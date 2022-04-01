@@ -206,6 +206,7 @@ trait CesiumTrackRoute extends CesiumRoute with TrackWSRoute {
       export const trackPathDC = new Cesium.DistanceDisplayCondition( 0, ${_int("track-path-dist", 1000000)});
       export const trackPathColor = Cesium.Color.fromCssColorString('${_string("track-path-color", trackColor)}');
       export const trackPathWidth = ${_int("track-path-width", 1)};
+      export const trackPath2dWidth = ${_int("track-path-2d-width", 3)};
 
       export const maxTraceLength = ${_int("max-trace-length", 200)};
      """

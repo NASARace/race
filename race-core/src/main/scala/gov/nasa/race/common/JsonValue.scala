@@ -51,23 +51,46 @@ object JsonValueConverters {
   }
 }
 
+case class JsonPrintOptions(noNullMembers: Boolean=false, pretty: Boolean = false, indent: Int = 4) {
+  var level = 0
+
+  def incLevel() = level += 1
+  def decLevel() = level -= 1
+
+  def printNewLine(w: PrintWriter): Unit = {
+    w.println()
+    printIndent(w)
+  }
+
+  def printIndent (w: PrintWriter): Unit = {
+    var i=0;
+    val n = level * indent
+    while (i < n) {
+      w.print(' ')
+      i += 1
+    }
+  }
+}
+
 /**
   * type system for generic translation of Json strings
   * note we keep containers mutable so that we can also construct / generate Json strings
   */
 sealed trait JsonValue {
-  def printOn(w: PrintWriter): Unit
+  def printOn(w: PrintWriter, opt: JsonPrintOptions): Unit
 
-  def printOn(ps: PrintStream): Unit = {
+  def printOn(ps: PrintStream, opt: JsonPrintOptions): Unit = {
     val pw = new PrintWriter(ps)
-    printOn(pw)
+    printOn(pw, opt)
     pw.flush
   }
 
-  override def toString: String = {
+  override def toString: String = toFormattedString(JsonPrintOptions())
+
+  def toFormattedString(opts: JsonPrintOptions): String = {
     val sw = new StringWriter
     val pw = new PrintWriter(sw)
-    printOn(pw)
+    printOn(pw, opts)
     pw.flush()
     sw.toString
   }
@@ -115,28 +138,41 @@ case class JsonObject(members: mutable.Map[String, JsonValue] = mutable.LinkedHa
   def this (ms: (String,JsonValue)*) = this(mutable.LinkedHashMap[String,JsonValue](ms:_*))
 
   override def size: Int = members.size
-  def apply(key: String): Option[JsonValue] = members.get(key)
+  def apply(key: String): JsonValue = members(key)
+  def get(key: String): Option[JsonValue] = members.get(key)
   def iterator: Iterator[(String, JsonValue)] = members.iterator
+  def nonNullIterator: Iterator[(String, JsonValue)] = members.filter(e=> e._2 ne JsonNull).iterator
+  def foreachMember (f: Tuple2[String,JsonValue]=>Unit): Unit = members.foreach(f)
+  def foreachNonNullMember (f: Tuple2[String,JsonValue]=>Unit): Unit = members.foreach(e=> if (e._2 ne JsonNull) f(e))
   def add(kv: (String, JsonValue)): Unit = members += kv
   def +=(kv: (String, JsonValue)): Unit = members += kv
 
-  def printOn(w: PrintWriter): Unit = {
+  def printOn(w: PrintWriter, opt:JsonPrintOptions): Unit = {
     var i = 0
     w.print('{')
+    opt.incLevel()
+    if (opt.pretty && members.nonEmpty) opt.printNewLine(w)
     members.foreach { e=>
-      if (i > 0) w.print(',')
-      w.print('"')
-      w.print(e._1)
-      w.print("\":")
-      e._2.printOn(w)
-      i += 1
+      if (!opt.noNullMembers ||(e._2 ne JsonNull)) {
+        if (i > 0) {
+          w.print(',')
+          if (opt.pretty) opt.printNewLine(w)
+        }
+        w.print('"')
+        w.print(e._1)
+        w.print("\":")
+        e._2.printOn(w, opt)
+        i += 1
+      }
     }
+    opt.decLevel()
+    if (opt.pretty && members.nonEmpty) opt.printNewLine(w)
     w.print('}')
   }
 }
 
 case object JsonNull extends JsonValue {
-  def printOn(w: PrintWriter): Unit = w.print("null")
+  def printOn(w: PrintWriter,opt:JsonPrintOptions): Unit = w.print("null") // this should never print if noNullMembers
 }
 
 object JsonArray {
@@ -164,18 +200,26 @@ case class JsonArray(elements: mutable.IndexedBuffer[JsonValue] = ArrayBuffer.em
     elements(i)
   }
 
+  def elementsArray: Array[JsonValue] = elements.toArray
   def iterator: Iterator[JsonValue] = elements.iterator
   def add(elem: JsonValue): Unit = elements.addOne(elem)
   def +=(elem: JsonValue): Unit = elements.addOne(elem)
 
-  def printOn(w: PrintWriter): Unit = {
+  def printOn(w: PrintWriter, opt: JsonPrintOptions): Unit = {
     var i = 0
     w.print('[')
+    opt.incLevel()
+    if (opt.pretty && elements.nonEmpty) opt.printNewLine(w)
     elements.foreach { e=>
-      if (i > 0) w.print(',')
-      e.printOn(w)
+      if (i > 0) {
+        w.print(',')
+        if (opt.pretty && !e.isInstanceOf[JsonValue]) opt.printNewLine(w)
+      }
+      e.printOn(w,opt)
       i += 1
     }
+    opt.decLevel()
+    if (opt.pretty && elements.nonEmpty) opt.printNewLine(w)
     w.print(']')
   }
 }
@@ -187,7 +231,7 @@ case class JsonString(value: String) extends JsonValue {
 
   override def isNull: Boolean = (value == null)
 
-  def printOn(w: PrintWriter): Unit = {
+  def printOn(w: PrintWriter,opt: JsonPrintOptions): Unit = {
     if (value != null) {
       w.print('"')
       w.print(value)
@@ -202,17 +246,17 @@ case class JsonLong(value: Long) extends JsonNumber {
   def asLong: Long = value
   def asDouble: Double = value.toDouble
 
-  def printOn(w: PrintWriter): Unit = w.print(value)
+  def printOn(w: PrintWriter,opt: JsonPrintOptions): Unit = w.print(value)
 }
 
 case class JsonDouble(value: Double) extends JsonNumber {
   def asLong: Long = value.round
   def asDouble: Double = value
 
-  def printOn(w: PrintWriter): Unit = w.print(value)
+  def printOn(w: PrintWriter,opt: JsonPrintOptions): Unit = w.print(value)
 }
 
 case class JsonBoolean(value: Boolean) extends JsonValue {
-  def printOn(w: PrintWriter): Unit = w.print(value)
+  def printOn(w: PrintWriter,opt: JsonPrintOptions): Unit = w.print(value)
 }
 

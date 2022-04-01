@@ -13,6 +13,11 @@
     top: 10px;
 }
 
+#sentinel_icon {
+    left: 210px;
+    top: 10px;
+}
+
 #tracks {
     left: 10px;
     top: 420px;
@@ -26,6 +31,11 @@
 }
 
 #wind {
-    left: 40px;
+    left: 10px;
     top: 850px;
+}
+
+#sentinel {
+    left: 40px;
+    top: 870px;
 }
