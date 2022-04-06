@@ -54,7 +54,7 @@ abstract class DWArchiveReader (iStream: InputStream, val headerStart: BMSearch)
 
   if (!ss.skipTo(headerStart)) throw new RuntimeException(s"not a valid DW archive")
 
-  override def hasMoreData = ss.hasMoreData
+  override def hasMoreArchivedData = ss.hasMoreData
   override def close(): Unit = ss.close
 
   override def readNextEntry(): Option[ArchiveEntry] = {

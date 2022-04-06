@@ -43,7 +43,7 @@ class TrackPointArchiveReader (val iStream: InputStream, val pathName:String="<u
   val dfs = new DataFileStream(iStream,new SpecificDatumReader[TrackPoint])
   val recCache = new TrackPoint
 
-  override def hasMoreData = dfs.hasNext
+  override def hasMoreArchivedData = dfs.hasNext
 
   override def close(): Unit = dfs.close
 

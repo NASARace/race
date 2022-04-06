@@ -5,6 +5,7 @@ import * as util from "./ui_util.js";
 import * as ui from "./ui.js";
 import * as uiCesium from "./ui_cesium.js";
 
+const FIRE = "🔥"
 
 var sentinelView = undefined;
 var sentinelEntries = new Map();
@@ -24,11 +25,16 @@ class SentinelEntry {
     constructor(sentinel) {
         this.id = sentinel.id;
         this.sentinel = sentinel;
-        this.status = " ";
 
         this.assets = null;
     }
 
+    status() {
+        if (this.sentinel.fire) {
+            if (this.sentinel.fire.fireProb > 0.5) return FIRE;
+        }
+        return "";
+    }
 }
 
 export function initialize() {
@@ -44,7 +50,7 @@ function initSentinelView() {
     let view = ui.getList("sentinel.list");
     if (view) {
         ui.setListItemDisplayColumns(view, ["fit"], [
-            { name: "show", width: "1rem", attrs: [], map: e => e.status },
+            { name: "status", width: "1rem", attrs: [], map: e => e.status() },
             { name: "id", width: "4rem", attrs: ["alignLeft"], map: e => e.id },
             {
                 name: "date",
@@ -91,6 +97,7 @@ function addSentinelEntry(sentinel) {
 function updateSentinelEntry(e, sentinel) {
     let old = e.sentinel;
 
+    //console.log(JSON.stringify(sentinel));
     e.sentinel = sentinel;
     ui.updateListItem(sentinelView, e);
 
@@ -100,7 +107,7 @@ function updateSentinelEntry(e, sentinel) {
 function createAssets(sentinel) {
     let gps = sentinel.gps;
     if (gps) {
-        console.log("@@ add entity")
+        //console.log("@@ add entity")
         let entity = new Cesium.Entity({
             id: sentinel.id,
             position: Cesium.Cartesian3.fromDegrees(gps.longitude, gps.latitude, 0),

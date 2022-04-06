@@ -18,9 +18,10 @@
 package gov.nasa.race.archive
 
 import java.io.{BufferedReader, InputStream, InputStreamReader, OutputStream}
-
 import com.typesafe.config.Config
+import gov.nasa.race.{Dated, Failure, ResultValue, SuccessValue}
 import gov.nasa.race.common.ConfigurableStreamCreator._
+import gov.nasa.race.common.{ByteSlice, LineBuffer}
 import gov.nasa.race.uom.DateTime
 
 import scala.annotation.tailrec
@@ -51,7 +52,41 @@ trait TextLineArchiveReader extends ArchiveReader {
   val iStream: InputStream
 
   protected val reader = new BufferedReader(new InputStreamReader(iStream))
-  override def hasMoreData = reader.ready
+  override def hasMoreArchivedData = reader.ready
+}
+
+/**
+  * an ArchiveReader that reads text lines containing the replay date
+  * use this as a base for CSV input
+  */
+abstract class LineBufferArchiveReader[T<:Dated] (val iStream: InputStream, val pathName: String="<unknown>", bufLen: Int) extends ArchiveReader {
+  val lineBuffer = new LineBuffer(iStream,bufLen)
+
+  override def hasMoreArchivedData: Boolean = {
+    iStream.available > 0
+  }
+
+  def initialize(data:ByteSlice): Boolean
+  def parseLine(): ResultValue[T]
+
+  def readNextEntry(): Option[ArchiveEntry] = {
+    while (true) {
+      if (lineBuffer.nextLine()) {
+        if (initialize(lineBuffer)) {
+          parseLine() match {
+            case SuccessValue(o) => return archiveEntry(o.date, o)
+            case Failure(msg) => // line did not parse. try next TODO - report error
+          }
+        }
+      } else return None // no more lines
+    }
+    None
+  }
+
+  override def close(): Unit = {
+    iStream.close()
+    lineBuffer.close()
+  }
 }
 
 /**

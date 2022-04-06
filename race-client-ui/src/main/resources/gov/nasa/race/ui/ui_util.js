@@ -132,6 +132,15 @@ export function toUtf8Array(str) {
     return utf8;
 }
 
+//--- number formatting
+
+export const f_0 = new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 0 });
+export const f_1 = new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 1 });
+export const f_2 = new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 2 });
+export const f_3 = new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 3 });
+export const f_4 = new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 4 });
+export const f_5 = new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 5 });
+
 
 //--- string formatting
 

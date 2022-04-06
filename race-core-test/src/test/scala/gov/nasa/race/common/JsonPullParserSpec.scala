@@ -578,4 +578,41 @@ class JsonPullParserSpec extends AnyFlatSpec with RaceSpec {
       case None => fail("failed to parse")
     }
   }
+
+  "a JsonPullParser" should "parse generic JsonNumber values" in {
+    val input =
+      """
+        |{
+        |    "id": 1065384,
+        |    "timeRecorded": 1648425641,
+        |    "sensorNo": 3,
+        |    "deviceId": 14,
+        |    "gps": {
+        |        "latitude": 37.30393367327945,
+        |        "longitude": -122.0726675343592,
+        |        "recordId": 1065384
+        |    },
+        |    "fire": {
+        |        "fireProb": 0.8789603580976209,
+        |        "recordId": 1065393
+        |    }
+        |}
+      """.stripMargin
+
+    println()
+    println(s"-- parsing JsonValue object from:\n     '$input'")
+    val p = new StringJsonPullParser
+    p.initialize(input)
+
+    p.parseJsonValue match {
+      case Some(jsonOut) =>
+        val sOut = jsonOut.toString
+        println(sOut)
+        // NOTE - we can actually check FPs for equality here since we want to make sure we generate the same value as the compiler
+        assert(jsonOut.asJsonObject("gps").asJsonObject("latitude").asJsonDouble.value ==  37.30393367327945)
+        assert(jsonOut.asJsonObject("gps").asJsonObject("longitude").asJsonDouble.value ==  -122.0726675343592)
+        assert(jsonOut.asJsonObject("fire").asJsonObject("fireProb").asJsonDouble.value ==  0.8789603580976209)
+      case _ => fail("failed to parse")
+    }
+  }
 }

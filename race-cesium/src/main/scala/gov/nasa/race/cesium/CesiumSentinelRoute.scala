@@ -99,7 +99,7 @@ trait CesiumSentinelRoute extends  CesiumRoute with PushWSRaceRoute {
 
   def sentinelConfig (requestUri: Uri, remoteAddr: InetSocketAddress): String = {
     s"""
-      export const sentinelColor = Cesium.Color.fromCssColorString('${config.getStringOrElse("sentinelColor", "green")}');
+      export const sentinelColor = Cesium.Color.fromCssColorString('${config.getStringOrElse("sentinelColor", "chartreuse")}');
       export const sentinelBillboardDC = new Cesium.DistanceDisplayCondition( 0, 200000);
       """
   }

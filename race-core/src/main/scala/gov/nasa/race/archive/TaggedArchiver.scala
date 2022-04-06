@@ -259,7 +259,7 @@ trait TaggedArchiveReader extends ArchiveReader {
 
   //--- ArchiveReader interface
 
-  override def hasMoreData: Boolean = iStream.available > 0
+  override def hasMoreArchivedData: Boolean = iStream.available > 0
 
   override def close(): Unit = iStream.close
 

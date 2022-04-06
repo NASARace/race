@@ -178,9 +178,10 @@ export function closeWindow(o) {
 export function toggleWindow(event, o) {
     let e = _elementOf(o);
     if (e) {
-        if (!e.style.display || e.style.display == "none") {
-            if (!window.getComputedStyle(e).left) { // no placement specified in CSS
-                _place(e, event.clientX + 20, event.clientY + 20);
+        if (!e.style.display || e.style.display == 'none') {
+            if (window.getComputedStyle(e).left == 'auto') { // no placement specified in CSS
+                let r = event.target.getBoundingClientRect();
+                _place(e, r.left, r.bottom);
             }
             showWindow(e);
         } else {
@@ -509,7 +510,7 @@ function _initializeClock(e) {
             hour: 'numeric',
             minute: 'numeric',
             second: 'numeric',
-            hour12: false,
+            hourCycle: 'h23',
             timeZoneName: 'short'
         };
         tc._uiTimeFmt = new Intl.DateTimeFormat('en-US', timeOpts);
@@ -590,6 +591,7 @@ const sliderResizeObserver = new ResizeObserver(entries => {
 
         e._uiRangeWidth = rangeRect.width;
         e._uiScale = (e._uiMaxValue - e._uiMinValue) / rangeRect.width;
+        e._uiRangeOffX = (trackRect.width - rangeRect.width) / 2; // left offset of range in track
 
         _positionLimits(e, trackRect, rangeRect);
         _positionThumb(e);
@@ -617,12 +619,14 @@ function _initializeSliderWidgets() {
             track._uiMaxValue = maxValue;
             track._uiStep = _parseNumber(e.dataset.inc);
             track._uiValue = _computeSliderValue(track, v);
+            track.addEventListener("click", clickTrack);
 
             let range = _createElement("DIV", "ui_slider_range");
             track._uiRange = range;
             track.appendChild(range);
 
             let left = _createElement("DIV", "ui_slider_limit", minValue);
+            left.addEventListener("click", clickMin);
             track._uiLeftLimit = left;
             track.appendChild(left);
 
@@ -632,10 +636,12 @@ function _initializeSliderWidgets() {
             track.appendChild(thumb);
 
             let num = _createElement("DIV", "ui_slider_num");
+            num.addEventListener("click", clickNum);
             track._uiNum = num;
             track.appendChild(num);
 
             let right = _createElement("DIV", "ui_slider_limit", maxValue);
+            right.addEventListener("click", clickMax);
             track._uiRightLimit = right;
             track.appendChild(right);
 
@@ -666,17 +672,11 @@ function _initializeSliderWidgets() {
 
             let v = e._uiMinValue + (x * e._uiScale);
             let vv = _computeSliderValue(e, v);
-            e._uiValue = vv;
-            if (e._uiNum) e._uiNum.innerText = _formattedNum(vv, e._uiNumFormatter);
-            _positionThumb(e);
-
             if (vv != lastValue) {
-                let slider = e.parentElement;
-                slider.dispatchEvent(new Event('change'));
                 lastValue = vv;
+                setSliderValue(e, vv);
             }
-
-            event.preventDefault();
+            _consumeEvent(event);
         }
 
         function stopDrag(event) {
@@ -685,7 +685,39 @@ function _initializeSliderWidgets() {
             event.preventDefault();
         }
     }
+
+    function clickTrack(event) {
+        let e = event.target;
+        let x = event.offsetX - e._uiRangeOffX;
+        let v = e._uiMinValue + (x * e._uiScale);
+        let vv = _computeSliderValue(e, v);
+        setSliderValue(e, vv);
+        _consumeEvent(event);
+    }
+
+    function clickMin(event) {
+        let e = event.target.parentElement;
+        setSliderValue(e, e._uiMinValue);
+        _consumeEvent(event);
+    }
+
+    function clickMax(event) {
+        let e = event.target.parentElement;
+        setSliderValue(e, e._uiMaxValue);
+        _consumeEvent(event);
+    }
+
+    function clickNum(event) {
+        let e = event.target;
+        let track = e.parentElement;
+        let x = event.offsetX + e.getBoundingClientRect().x - track.getBoundingClientRect().x - track._uiRangeOffX;
+        let v = track._uiMinValue + (x * track._uiScale);
+        let vv = _computeSliderValue(track, v);
+        setSliderValue(track, vv);
+        _consumeEvent(event);
+    }
 }
+
 
 function _positionLimits(e, tr, rr) {
     let trackRect = tr ? tr : e.getBoundingClientRect();
@@ -706,7 +738,7 @@ function _positionLimits(e, tr, rr) {
     }
 }
 
-function _positionThumb(e) {
+function _positionThumb(e) { // e is ui_slider_track
     let dx = ((e._uiValue - e._uiMinValue) / e._uiScale);
     e._uiThumb.style.left = dx + "px"; // relative pos
 
@@ -759,6 +791,9 @@ export function setSliderValue(o, v) {
         e._uiValue = _computeSliderValue(e, v);
         if (e._uiNum) e._uiNum.innerText = _formattedNum(e._uiValue, e._uiNumFormatter);
         if (_hasDimensions(e)) _positionThumb(e);
+
+        let slider = e.parentElement;
+        slider.dispatchEvent(new Event('change'));
     }
 }
 
@@ -774,6 +809,7 @@ export function getSlider(o) {
     if (e && e.tagName == "DIV") {
         if (e.classList.contains("ui_slider_track")) return e;
         else if (e.classList.contains("ui_slider")) return _firstChildWithClass(e, "ui_slider_track");
+        else if (e.parentElement.classList.contains("ui_slider_track")) return e.parentElement;
     }
     throw "not a slider";
 }
@@ -1661,4 +1697,9 @@ function _hasDimensions(e) {
 
 function _formattedNum(v, fmt) {
     return fmt ? fmt.format(v) : v.toString();
+}
+
+function _consumeEvent(event) {
+    event.preventDefault();
+    event.stopPropagation();
 }

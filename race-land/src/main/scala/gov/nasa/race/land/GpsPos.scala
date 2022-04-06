@@ -220,7 +220,7 @@ class GpsPosArchiveReader(val iStream: InputStream, val pathName: String="<unkno
 
   def this(conf: Config) = this(createInputStream(conf), configuredPathName(conf), conf.getIntOrElse("buffer-size",4096))
 
-  override def hasMoreData: Boolean = {
+  override def hasMoreArchivedData: Boolean = {
     iStream.available > 0
   }
 

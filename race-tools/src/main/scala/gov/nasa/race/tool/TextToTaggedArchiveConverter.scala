@@ -70,7 +70,7 @@ object TextToTaggedArchiveConverter {
 
     println(s"converting archive ${ar.pathName} to ${aw.pathName}")
 
-    while (ar.hasMoreData) {
+    while (ar.hasMoreArchivedData) {
       ar.readNextEntry() match {
         case Some(e) =>
           val date: DateTime = e.date

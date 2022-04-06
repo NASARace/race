@@ -65,7 +65,7 @@ trait Replayer [T <: ArchiveReader] extends ContinuousTimeRaceActor
   val flatten: Boolean = config.getBooleanOrElse("flatten", false) // do we publish collection results separately
 
   val reader: T = createReader
-  var noMoreData = !reader.hasMoreData
+  var noMoreData = !reader.hasMoreArchivedData
 
   var isFirst = true // we haven't scheduled or replayed anything yet
   val pendingMsgs = new ListBuffer[Replay]  // replay messages received in stopped state  that have to be re-scheduled

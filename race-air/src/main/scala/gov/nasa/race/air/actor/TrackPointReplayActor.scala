@@ -75,7 +75,7 @@ class TrackPointReader (val iStream: InputStream, val pathName: String="<unknown
     }
   }
 
-  override def hasMoreData = (pendingComplete != null) || dfr.hasNext
+  override def hasMoreArchivedData = (pendingComplete != null) || dfr.hasNext
   override def close(): Unit = dfr.close
 
   override def readNextEntry(): Option[ArchiveEntry] = {

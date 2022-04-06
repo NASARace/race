@@ -17,25 +17,3 @@
     left: 210px;
     top: 10px;
 }
-
-#tracks {
-    left: 10px;
-    top: 420px;
-    /*width: 15rem;*/
-}
-
-#layers {
-    left: 10px;
-    top: 830px;
-    /*width: 15rem;*/
-}
-
-#wind {
-    left: 10px;
-    top: 850px;
-}
-
-#sentinel {
-    left: 40px;
-    top: 870px;
-}

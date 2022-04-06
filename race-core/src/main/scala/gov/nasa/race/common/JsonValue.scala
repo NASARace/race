@@ -96,6 +96,14 @@ sealed trait JsonValue {
   }
 
   def isNull: Boolean = false
+
+  def asJsonBoolean: JsonBoolean = throw new RuntimeException(s"not a JsonBoolean: $this")
+  def asJsonString: JsonString = throw new RuntimeException(s"not a JsonString: $this")
+  def asJsonNumber: JsonNumber = throw new RuntimeException(s"not a JsonNumber: $this")
+  def asJsonLong: JsonLong = throw new RuntimeException(s"not a JsonLong: $this")
+  def asJsonDouble: JsonDouble = throw new RuntimeException(s"not a JsonDouble: $this")
+  def asJsonObject: JsonObject = throw new RuntimeException(s"not a JsonObject: $this")
+  def asJsonArray: JsonArray = throw new RuntimeException(s"not a JsonArray: $this")
 }
 
 object JsonNumber {
@@ -109,6 +117,8 @@ object JsonNumber {
 sealed trait JsonNumber extends JsonValue {
   def asLong: Long
   def asDouble: Double
+
+  override def asJsonNumber: JsonNumber = this
 }
 
 /**
@@ -169,10 +179,14 @@ case class JsonObject(members: mutable.Map[String, JsonValue] = mutable.LinkedHa
     if (opt.pretty && members.nonEmpty) opt.printNewLine(w)
     w.print('}')
   }
+
+  override def asJsonObject: JsonObject = this
 }
 
 case object JsonNull extends JsonValue {
   def printOn(w: PrintWriter,opt:JsonPrintOptions): Unit = w.print("null") // this should never print if noNullMembers
+
+  //override def asJsonNull: JsonNull = this  // FIXME
 }
 
 object JsonArray {
@@ -222,6 +236,8 @@ case class JsonArray(elements: mutable.IndexedBuffer[JsonValue] = ArrayBuffer.em
     if (opt.pretty && elements.nonEmpty) opt.printNewLine(w)
     w.print(']')
   }
+
+  override def asJsonArray: JsonArray = this
 }
 
 /**
@@ -240,6 +256,8 @@ case class JsonString(value: String) extends JsonValue {
       w.print("null")
     }
   }
+
+  override def asJsonString: JsonString = this
 }
 
 case class JsonLong(value: Long) extends JsonNumber {
@@ -247,6 +265,8 @@ case class JsonLong(value: Long) extends JsonNumber {
   def asDouble: Double = value.toDouble
 
   def printOn(w: PrintWriter,opt: JsonPrintOptions): Unit = w.print(value)
+
+  override def asJsonLong: JsonLong = this
 }
 
 case class JsonDouble(value: Double) extends JsonNumber {
@@ -254,9 +274,13 @@ case class JsonDouble(value: Double) extends JsonNumber {
   def asDouble: Double = value
 
   def printOn(w: PrintWriter,opt: JsonPrintOptions): Unit = w.print(value)
+
+  override def asJsonDouble: JsonDouble = this
 }
 
 case class JsonBoolean(value: Boolean) extends JsonValue {
   def printOn(w: PrintWriter,opt: JsonPrintOptions): Unit = w.print(value)
+
+  override def asJsonBoolean: JsonBoolean = this
 }
 

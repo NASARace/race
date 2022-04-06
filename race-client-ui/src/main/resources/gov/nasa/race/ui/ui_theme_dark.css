@@ -10,14 +10,15 @@
     --selected-data-color: yellow;
     --input-data-color: yellow;
     --disabled-color: rgba(200, 200, 200, 0.5);
-    --background-color: rgb(64, 64, 84);
+    /*--background-color: rgba(64, 64, 84, 1.0);*/
+    --background-color: rgba(42, 42, 64, 1.0);
     --data-background-color: rgb(20, 20, 20);
     --selection-background-color: rgb(64, 64, 200);
     --hover-background-color: rgb(84, 84, 160);
-    --font: 14px sans-serif;
-    --font-small: 12px sans-serif;
-    --mono-font: 15px Courier;
-    --mono-font-large: 16px monospace;
+    --font: 13pt sans-serif;
+    --font-small: 10pt sans-serif;
+    --mono-font: 13pt Courier;
+    --mono-font-large: 16pt monospace;
     --border-color: rgb(130, 130, 130);
     --border-dark-color: rgb(80, 80, 80);
     --border-bright-color: rgb(150, 150, 150);

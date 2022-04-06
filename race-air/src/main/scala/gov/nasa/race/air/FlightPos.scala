@@ -172,7 +172,7 @@ class FlightPosArchiveReader (val iStream: InputStream, val pathName: String="<u
                                                  extends ArchiveReader with InputStreamLineTokenizer {
   def this(conf: Config) = this(createInputStream(conf), configuredPathName(conf))
 
-  def hasMoreData = iStream.available > 0
+  def hasMoreArchivedData = iStream.available > 0
   def close(): Unit = iStream.close
 
   override def readNextEntry(): Option[ArchiveEntry] = {

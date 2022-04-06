@@ -31,7 +31,7 @@ class DWArchiveReaderSpec extends AnyFlatSpec with RaceSpec {
     val ar = new AsdexDWArchiveReader(is)
 
     var n = 0
-    while (ar.hasMoreData){
+    while (ar.hasMoreArchivedData){
       ar.readNextEntry match {
         case Some(e) =>
           println(s"$n: ${e.date}")

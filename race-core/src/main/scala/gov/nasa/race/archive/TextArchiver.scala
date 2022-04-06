@@ -52,7 +52,7 @@ class TextArchiveReader(val iStream: InputStream, val pathName:String="<unknown>
   private val br = new BufferedReader(new InputStreamReader(iStream))
   private val buf: StringBuilder = new StringBuilder(4096)
 
-  override def hasMoreData = br.ready
+  override def hasMoreArchivedData = br.ready
   override def close(): Unit = br.close
 
   override def readNextEntry(): Option[ArchiveEntry] = {

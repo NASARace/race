@@ -310,7 +310,7 @@ trait CharSeqByteSlice extends ByteSlice with CharSequence {
     if (b == '.') {
       i += 1
       var m: Long = 1
-      var frac: Int = 0
+      var frac: Long = 0
       while (i < iMax && {b=data(i); isDigit(b)}){
         frac = (frac*10) + digitValue(b)
         m *= 10

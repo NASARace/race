@@ -58,7 +58,7 @@ class SBSReader (val iStream: InputStream, val pathName: String="<unknown>", buf
 
   //--- ArchiveReader interface
 
-  override def hasMoreData: Boolean = {
+  override def hasMoreArchivedData: Boolean = {
     updater.hasMoreData || iStream.available > 0
   }
 
@@ -83,7 +83,7 @@ class SBSReader (val iStream: InputStream, val pathName: String="<unknown>", buf
   def dumpContents: Unit = {
     var i = 0
     println("--- SBS archive contents:")
-    while (hasMoreData) {
+    while (hasMoreArchivedData) {
       readNextEntry() match {
         case Some(e) =>
           i += 1

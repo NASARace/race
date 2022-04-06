@@ -57,7 +57,7 @@ object DWArchiveReaderTest {
       println("reading archive...")
       var n = 0
 
-      while (ar.hasMoreData) {
+      while (ar.hasMoreArchivedData) {
         ar.readNextEntry() match {
           case Some(e) =>
             n += 1

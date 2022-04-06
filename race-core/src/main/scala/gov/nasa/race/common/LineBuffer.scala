@@ -40,6 +40,17 @@ class LineBuffer (val is: InputStream, val maxBufsize: Int = Int.MaxValue, val i
 
   def dataLength: Int = dataLimit
 
+  /**
+    * free all resources held by this buffer and mark it as finished
+    */
+  def close(): Unit = {
+    buf = Array.empty[Byte]
+    recStart = 0
+    recLimit = 0
+    dataLimit = 0
+    isEnd = true
+  }
+
   def hasReachedEnd: Boolean = isEnd
 
   protected final def getRecLimit (i0: Int): Int = {

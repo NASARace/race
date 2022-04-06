@@ -23,19 +23,59 @@ import akka.http.scaladsl.server.Route
 import akka.stream.scaladsl.SourceQueueWithComplete
 import gov.nasa.race.config.ConfigUtils.ConfigWrapper
 import gov.nasa.race.http._
-import gov.nasa.race.ui._
+import gov.nasa.race.ui.{uiSlider, _}
 import gov.nasa.race.uom.Length.Meters
 import gov.nasa.race.util.FileUtils
 import scalatags.Text
 import scalatags.Text.all._
 
 import java.net.InetSocketAddress
+import java.util.TimeZone
+
+case class ImageryProvider (name: String, url: String, providerCls: String, description: String, proxy: Boolean)
 
 object CesiumRoute extends CachedFileAssetMap {
   def sourcePath = "./race-cesium/src/main/resources/gov/nasa/race/cesium"
 
   val imageryPrefix = "imagery"
   val terrainPrefix = "terrain"
+
+  val defaultImageryProviders: Seq[ImageryProvider] = Seq(
+    ImageryProvider(
+      "arcgis",
+      "https://services.arcgisonline.com/ArcGIS/rest/services/NatGeo_World_Map/MapServer/",
+      "Cesium.ArcGisMapServerImageryProvider",
+      "arcgis geographic",
+      false),
+    ImageryProvider(
+      "stamen_terrain",
+      "http://tile.stamen.com/terrain",
+      "Cesium.OpenStreetMapImageryProvider",
+      "stamen terrain",
+      false),
+    ImageryProvider(
+      "<default>",
+      "<default>",
+      "<default>",
+      "Bing aerial",
+      false
+    )
+  )
+
+  val defaultOverlayProviders: Seq[ImageryProvider] = Seq(
+    ImageryProvider(
+      "goes_conus_ir",
+      "https://mesonet.agron.iastate.edu/cgi-bin/wms/goes/conus_ir.cgi?",
+      "Cesium.WebMapServiceImageryProvider",
+      "goes conus infrared",
+      false),
+    ImageryProvider(
+      "nexrad",
+      "https://mesonet.agron.iastate.edu/cgi-bin/wms/nexrad/n0r.cgi?",
+      "Cesium.WebMapServiceImageryProvider",
+      "nexrad precipitation",
+      false)
+  )
 }
 
 /**
@@ -68,6 +108,16 @@ trait CesiumRoute
 
   val proxyTerrain = config.getBoolean("proxy-elevation-provider")
   val terrainProvider = config.getStringOrElse("elevation-provider", "https://elevation3d.arcgis.com/arcgis/rest/services/WorldElevation3D/Terrain3D/ImageServer")
+
+  val imageryProviders = {
+    // read from config first
+    CesiumRoute.defaultImageryProviders
+  }
+
+  val overlayProviders = {
+    // read from config first
+    CesiumRoute.defaultOverlayProviders
+  }
 
   //--- cesium related routes
 
@@ -138,7 +188,7 @@ trait CesiumRoute
   }
 
   def sendSetClock (remoteAddr: InetSocketAddress, queue: SourceQueueWithComplete[Message]): Unit = {
-    val msg = s"""{"setClock":{"time":${simClock.millis}, "timescale":${simClock.timeScale}}}"""
+    val msg = s"""{"setClock":{"time":${simClock.millis}, "timeScale":${simClock.timeScale}}}"""
     pushTo(remoteAddr, queue, TextMessage.Strict(msg))
   }
 
@@ -159,8 +209,24 @@ trait CesiumRoute
     super.getConfig(requestUri, remoteAddr) + basicCesiumConfig(requestUri,remoteAddr)
   }
 
+  def createMapLayerProviders (providers: Seq[ImageryProvider]): String = {
+    val sb = new StringBuilder
+    sb.append("[")
+    providers.foreach { ip=>
+      if (ip.name == "<default>") {
+        sb.append(s"\n{name:'', provider: undefined}") // the default Bing aerial provider
+      } else {
+        val url = if (ip.proxy) s"${CesiumRoute.imageryPrefix}/${ip.name}" else ip.url
+        sb.append(s"\n{name:'${ip.name}',provider: new ${ip.providerCls}({url:'$url'})},")
+      }
+    }
+    sb.append("\n]")
+    sb.toString()
+  }
+
   // to be called from the concrete getConfig() implementation
   def basicCesiumConfig (requestUri: Uri, remoteAddr: InetSocketAddress): String = {
+
     val wsToken = registerTokenForClient(remoteAddr)
 
     val imagery = if (proxyImagery) CesiumRoute.imageryPrefix else imageryProvider
@@ -173,11 +239,18 @@ trait CesiumRoute
       //export const imageryProvider = new Cesium.ArcGisMapServerImageryProvider({url:'https://services.arcgisonline.com/ArcGIS/rest/services/NatGeo_World_Map/MapServer/'});
       export const imageryProvider = new Cesium.ArcGisMapServerImageryProvider({url: '$imagery'});
       //export const imageryProvider = new Cesium.OpenStreetMapImageryProvider({url: '$imagery'});
-      imageryProvider.defaultBrightness = ${config.getDoubleOrElse("maptile-brightness", 0.6)};
-      imageryProvider.defaultContrast = ${config.getDoubleOrElse("maptile-contrast", 1.5)};
-      imageryProvider.defaultHue = Cesium.Math.toRadians(${config.getIntOrElse("maptile-hue", 0)}); // 220 for reddish
-      imageryProvider.defaultSaturation = ${config.getDoubleOrElse("maptile-saturation", 1.0)};
-      imageryProvider.defaultGamma = ${config.getDoubleOrElse("maptile-gamma", 1.0)};
+
+      export const imageryProviders = ${createMapLayerProviders(imageryProviders)};
+      export const imageryProviderOptions = {
+        defaultBrightness: ${config.getDoubleOrElse("maptile-brightness", 0.6)},
+        defaultContrast: ${config.getDoubleOrElse("maptile-contrast", 1.5)},
+        defaultHue: Cesium.Math.toRadians(${config.getIntOrElse("maptile-hue", 0)}), // 220 for reddish
+        defaultSaturation: ${config.getDoubleOrElse("maptile-saturation", 1.0)},
+        defaultGamma: ${config.getDoubleOrElse("maptile-gamma", 1.0)},
+        defaultAlpha: ${config.getDoubleOrElse("maptile-gamma", 1.0)}
+      };
+
+      export const overlayProviders = ${createMapLayerProviders(overlayProviders)};
 
       export const terrainProvider = new Cesium.ArcGISTiledElevationTerrainProvider({url: '$terrain'});
     """
@@ -229,6 +302,26 @@ trait CesiumRoute
         uiCheckBox("fullscreen", "main.toggleFullScreen(event)"),
         uiButton("Home", "main.setHomeView()"),
         uiButton("Down", "main.setDownView()")
+      ),
+      uiPanel("maps", false)(
+        uiColumnContainer("align_left")(
+          imageryProviders.map( p=> uiRadio(p.description, s"main.setImageryProvider(event,'${p.name}')"))
+        )
+      ),
+      uiPanel("map overlays", false)(
+        uiColumnContainer("align_left")(
+          overlayProviders.map( p=> uiCheckBox(p.description, s"main.toggleOverlayProvider(event,'${p.name}')"))
+        )
+      ),
+      uiPanel("map appearance", false)(
+        uiColumnContainer("align_right")(
+          uiSlider("brightness", "view.map.brightness", "main.setMapBrightness(event)"),
+          uiSlider("contrast", "view.map.contrast", "main.setMapContrast(event)"),
+          uiSlider("hue", "view.map.hue", "main.setMapHue(event)"),
+          uiSlider("saturation", "view.map.saturation","main.setMapSaturation(event)"),
+          uiSlider("gamma", "view.map.gamma", "main.setMapGamma(event)"),
+          uiSlider("alpha", "view.map.alpha", "main.setMapAlpha(event)")
+        )
       )
     )
   }
@@ -239,7 +332,8 @@ trait CesiumRoute
 
   def uiTimeWindow(title: String="Time"): Text.TypedTag[String] = {
     uiWindow(title, "time")(
-      uiClock("time", "time.utc", "UTC"),
+      uiClock("time UTC", "time.utc", "UTC"),
+      uiClock("time loc", "time.loc",  TimeZone.getDefault.getID),
       uiTimer("elapsed", "time.elapsed")
     )
   }

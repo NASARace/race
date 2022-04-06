@@ -247,7 +247,7 @@ function updateTrack(track, te, pos, attitude) {
         removeAssets(te);
 
     } else { // update
-        if (track.date > te.track.date) {
+        if (track.date >= te.track.date) {
             te.track = track;
             te.trace.push(track);
 
