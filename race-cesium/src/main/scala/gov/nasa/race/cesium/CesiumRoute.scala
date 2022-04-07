@@ -303,17 +303,13 @@ trait CesiumRoute
         uiButton("Home", "main.setHomeView()"),
         uiButton("Down", "main.setDownView()")
       ),
-      uiPanel("maps", false)(
+      uiPanel("map layers", true)(
         uiColumnContainer("align_left")(
-          imageryProviders.map( p=> uiRadio(p.description, s"main.setImageryProvider(event,'${p.name}')"))
+          uiList("view.map.list", 10, "main.selectMapLayer(event)"),
+          uiChoice("base map layer","view.map.base", "main.selectBaseMap(event)")
         )
       ),
-      uiPanel("map overlays", false)(
-        uiColumnContainer("align_left")(
-          overlayProviders.map( p=> uiCheckBox(p.description, s"main.toggleOverlayProvider(event,'${p.name}')"))
-        )
-      ),
-      uiPanel("map appearance", false)(
+      uiPanel("layer parameters", false)(
         uiColumnContainer("align_right")(
           uiSlider("brightness", "view.map.brightness", "main.setMapBrightness(event)"),
           uiSlider("contrast", "view.map.contrast", "main.setMapContrast(event)"),

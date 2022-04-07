@@ -176,6 +176,7 @@ class SbsImportActor(val config: Config) extends SbsImporter with SocketImporter
 
       } catch {
         case x: Throwable =>
+          x.printStackTrace()
           if (updateFailures < maxUpdateFailures) {
             updateFailures += 1
             warning(s"detected socket acquisition thread update failure $updateFailures: $x")

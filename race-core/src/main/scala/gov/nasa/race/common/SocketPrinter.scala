@@ -170,7 +170,7 @@ class ClientSocketPrinter (service: String, val host: String, port: Int, log: Lo
           reConnect.acquire // this blocks until we are told to re-connect
         }
       } catch {
-        case cx: ConnectException => log.warning(s"$service cannot connect to $host:$port")
+        case cx: ConnectException => log.warning(s"$service not connected ($host:$port not available)")
         case x: IOException => log.error(s"$service failed with $x")
 
       } finally {

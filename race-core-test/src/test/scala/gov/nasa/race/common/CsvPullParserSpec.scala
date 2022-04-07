@@ -62,7 +62,7 @@ class CsvPullParserSpec extends AnyFlatSpec with RaceSpec {
     val res = new StringBuilder()
     val p = new StringCsvPullParser {}
     if (p.initialize(input)) {
-      while (p.skipToNextRecord()) {
+      while({   // do..while dropped in Scala3
         while (p.parseNextValue()){
           res.append(p.value)
           if (p.hasMoreValues) {
@@ -70,7 +70,9 @@ class CsvPullParserSpec extends AnyFlatSpec with RaceSpec {
           }
         }
         res.append('\n')
-      }
+
+        p.skipToNextRecord()
+      })()
     }
 
     println(res)

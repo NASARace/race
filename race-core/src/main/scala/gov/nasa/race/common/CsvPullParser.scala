@@ -106,6 +106,7 @@ trait CsvPullParser {
 
   @inline final def parseNextNonEmptyValue(): Boolean = parseNextValue() && value.nonEmpty
 
+  // note data(idx) is the separator, i.e. callers might still have to advance
   def skipToEndOfRecord(): Unit = {
     val data = this.data
     var i = idx
@@ -113,7 +114,9 @@ trait CsvPullParser {
     while (i<limit && !isRecordSeparator(data(i))) {
       if (data(i) == '"') i = skipToEndOfStringValue(i+1)
       i += 1
+      if (idx >= limit) acquireMoreData()
     }
+
     idx = i
   }
 
@@ -124,12 +127,22 @@ trait CsvPullParser {
   // override this if the parser is able to obtain more data
   protected def acquireMoreData() = false
 
+  // TODO - do we want to support ignoring empty lines?
+  def skipRecordSeparator (): Boolean = {
+    if (idx < limit && isRecordSeparator(data(idx))) idx +=1
+    (idx < limit)
+  }
+
   def skipToNextRecord(): Boolean = {
     nValues = 0
-    if (idx < limit) {
-      if (isRecordSeparator(data(idx))) idx = skipRecordSeparator(idx+1)
+    skipToEndOfRecord()
+
+    while (idx < limit && isRecordSeparator(data(idx))) {
+      idx += 1
+      if (idx >= limit) acquireMoreData()
     }
-    if (idx < limit) true else acquireMoreData()
+
+    idx < limit
   }
 
   def hasMoreValues: Boolean = isValueSeparator(data(idx))
@@ -138,13 +151,9 @@ trait CsvPullParser {
 
   //--- internals
 
-
   @inline def isRecordSeparator(b: Byte): Boolean = (b == '\r' || b == '\n')
-
   @inline def isValueSeparator(b: Byte): Boolean = (b == ',')
-
   @inline def isSeparator (b: Byte): Boolean = isValueSeparator(b) || isRecordSeparator(b)
-
 
   def skipToEndOfStringValue (i0: Int): Int = {
     val data = this.data

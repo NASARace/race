@@ -74,6 +74,10 @@ class SbsUpdater (adjuster: Option[DateAdjuster] = None, defaultZone: ZoneId = Z
     var vr: Speed = UndefinedSpeed
     var hdg: Angle = UndefinedAngle
     var msg4Date: DateTime = UndefinedDateTime
+
+    def isComplete: Boolean = {
+      (cs != null) && hdg.isDefined && spd.isDefined
+    }
   }
 
   val _MSG_ = ConstAsciiSlice("MSG")
@@ -103,71 +107,75 @@ class SbsUpdater (adjuster: Option[DateAdjuster] = None, defaultZone: ZoneId = Z
       getAdjustableDate( DateTime.parseYMDTBytes(data,dateRange.offset,dateRange.length+timeRange.length+1, defaultZone))
     }
 
-    if (readNextValue() == _MSG_) {
-      readNextValue().toInt match {
-        case 1 => // flight identification (cs)
-          skip(2)
-          parseNextValue()
-          val icao24 = value.toHexLong
-          val icao24String = value.intern
-          skip(5)
-          parseNextValue()
-          value.trimSelf  // dump1090 reports c/s with spaces filled to 8 chars
-          val cs = value.intern
-          val ac = acCache.getOrElseUpdate(icao24, new AcCacheEntry(icao24))
-          ac.cs = cs
-          ac.icao24String = icao24String
+    while (hasMoreData) {
+      if (readNextValue() == _MSG_) {
+        readNextValue().toInt match {
+          case 1 => // flight identification (cs)
+            skip(2)
+            parseNextValue()
+            val icao24 = value.toHexLong
+            val icao24String = value.intern
+            skip(5)
+            parseNextValue()
+            value.trimSelf // dump1090 reports c/s with spaces filled to 8 chars
+            val cs = value.intern
+            val ac = acCache.getOrElseUpdate(icao24, new AcCacheEntry(icao24))
+            ac.cs = cs
+            ac.icao24String = icao24String
 
-        // we could use MSG,2 for (surface movement) to cleanup/drop, but we won't get them with a normal antenna
-        // since ADS-B is line-of-sight and the signal is most likely cutting out close to the ground
+          // we could use MSG,2 for (surface movement) to cleanup/drop, but we won't get them with a normal antenna
+          // since ADS-B is line-of-sight and the signal is most likely cutting out close to the ground
 
-        case 3 => // airborne position (date,lat,lon,alt) - those are the only ones we report once we have a complete data set
-          skip(2)
-          val icao24 = readNextValue().toHexLong
+          case 3 => // airborne position (date,lat,lon,alt) - those are the only ones we report once we have a complete data set
+            skip(2)
+            val icao24 = readNextValue().toHexLong
 
-          val ac = acCache.getOrNull(icao24) // avoid allocation
-          if (ac != null) {
-            if (ac.cs != null && ac.hdg.isDefined && ac.spd.isDefined) {
-              skip(1)
-              val date = readDate
-              skip(3)
-              val alt = if (parseNextNonEmptyValue()) Feet(value.toInt) else UndefinedLength
-              skip(2)
-              val lat = if (parseNextNonEmptyValue()) Degrees(value.toDouble) else UndefinedAngle
-              val lon = if (parseNextNonEmptyValue()) Degrees(value.toDouble) else UndefinedAngle
+            val ac = acCache.getOrNull(icao24) // avoid allocation
+            if (ac != null) {
+              if (ac.isComplete) {
+                skip(1)
+                val date = readDate
+                skip(3)
+                val alt = if (parseNextNonEmptyValue()) Feet(value.toInt) else UndefinedLength
+                skip(2)
+                val lat = if (parseNextNonEmptyValue()) Degrees(value.toDouble) else UndefinedAngle
+                val lon = if (parseNextNonEmptyValue()) Degrees(value.toDouble) else UndefinedAngle
 
-              if (lat.isDefined && lon.isDefined && alt.isDefined) { // Ok, we have something to update
-                nUpdates += 1
-                ac.publishDate = date
-                val status = if (ac.publishDate.isDefined) 0 else TrackedObject.NewFlag
+                if (lat.isDefined && lon.isDefined && alt.isDefined) { // Ok, we have something to update
+                  nUpdates += 1
+                  ac.publishDate = date
+                  val status = if (ac.publishDate.isDefined) 0 else TrackedObject.NewFlag
 
-                val fpos = new FlightPos( ac.icao24String, ac.cs, LatLonPos(lat, lon, alt), ac.spd, ac.hdg, ac.vr, date, status)
-                updateFunc(fpos)
+                  val fpos = new FlightPos(ac.icao24String, ac.cs, LatLonPos(lat, lon, alt), ac.spd, ac.hdg, ac.vr, date, status)
+                  //println(s"@@@ update with ${acCache.size} / ${acCache.values.filter(_.isComplete).size}")
+                  updateFunc(fpos)
+                }
               }
             }
-          }
 
-        case 4 => // airborne velocity (date,spd,vr,hdg)
-          skip(2)
-          val icao24 = readNextValue().toHexLong
-          skip(1)
-          val date = readDate
-          skip(4)
+          case 4 => // airborne velocity (date,spd,vr,hdg)
+            skip(2)
+            val icao24 = readNextValue().toHexLong
+            skip(1)
+            val date = readDate
+            skip(4)
 
-          // apparently some aircraft report MSG4 without speed and heading
-          val spd = if (parseNextNonEmptyValue()) Knots(value.toInt) else UndefinedSpeed
-          val hdg = if (parseNextNonEmptyValue()) Degrees(value.toInt) else UndefinedAngle
-          skip(2)
-          val vr = if (parseNextNonEmptyValue()) FeetPerMinute(value.toInt) else UndefinedSpeed
+            // apparently some aircraft report MSG4 without speed and heading
+            val spd = if (parseNextNonEmptyValue()) Knots(value.toInt) else UndefinedSpeed
+            val hdg = if (parseNextNonEmptyValue()) Degrees(value.toInt) else UndefinedAngle
+            skip(2)
+            val vr = if (parseNextNonEmptyValue()) FeetPerMinute(value.toInt) else UndefinedSpeed
 
-          val ac = acCache.getOrElseUpdate(icao24, new AcCacheEntry(icao24))
-          ac.msg4Date = date
-          ac.spd = spd
-          ac.hdg = hdg
-          ac.vr = vr
+            val ac = acCache.getOrElseUpdate(icao24, new AcCacheEntry(icao24))
+            ac.msg4Date = date
+            ac.spd = spd
+            ac.hdg = hdg
+            ac.vr = vr
 
-        case _ => // ignore other MSG types
+          case _ => // ignore other MSG types
+        }
       }
+      skipToNextRecord()
     }
   }
 

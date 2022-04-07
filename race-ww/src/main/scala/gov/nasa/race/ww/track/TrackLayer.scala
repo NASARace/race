@@ -290,7 +290,7 @@ abstract class TrackLayer[T <:Tracked3dObject :ClassTag] extends SubscribingRace
 
   protected def updateTrackEntry(e: TrackEntry[T], obj: T) = {
     val lastObj = e.obj
-    if (lastObj.date < obj.date) { // don't overwrite new with old data
+    if (lastObj.date <= obj.date) { // don't overwrite new with old data
       e.setNewObj(obj)
       if (e.isFocused) {
         val ep = if (raceViewer.isOrthgonalView) obj.position else {
